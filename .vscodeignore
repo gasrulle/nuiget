@@ -1,0 +1,39 @@
+# Development files
+.vscode/**
+.vscode-test/**
+src/**
+node_modules/**
+scripts/**
+.git/**
+debug/**
+out/**
+
+# Config files
+.gitignore
+.yarnrc
+webpack.config.js
+esbuild.mjs
+eslint.config.mjs
+**/tsconfig.json
+**/.eslintrc.json
+nuget.config
+
+# Source maps and TypeScript
+**/*.map
+**/*.ts
+!dist/**/*.js
+
+# Original icon file (resized version is in resources/)
+package-icon.png
+
+# GitHub/Copilot prompts (not needed in VSIX)
+.github/**
+
+# Documentation (development only)
+ARCHITECTURE.md
+
+# Package manager files
+package-lock.json
+
+# Built packages
+*.vsix

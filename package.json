@@ -1,0 +1,167 @@
+{
+    "name": "nuiget",
+    "displayName": "nUIget - A NuGet Package Manager",
+    "description": "A NuGet package manager with Visual Studio-style UI. Search, install, update, and remove packages across multiple sources.",
+    "version": "1.0.0",
+    "publisher": "Gasrulle",
+    "license": "MIT",
+    "icon": "resources/icon.png",
+    "galleryBanner": {
+        "color": "#512BD4",
+        "theme": "dark"
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/gasrulle/nuiget"
+    },
+    "homepage": "https://github.com/gasrulle/nuiget#readme",
+    "bugs": {
+        "url": "https://github.com/gasrulle/nuiget/issues"
+    },
+    "engines": {
+        "vscode": "^1.85.0"
+    },
+    "categories": [
+        "Other"
+    ],
+    "keywords": [
+        "nuget",
+        "package manager",
+        "package management",
+        "nuget packages",
+        "dotnet packages",
+        "manage nuget",
+        "packages",
+        "dependencies",
+        "nuget.config",
+        "azure devops",
+        "dotnet",
+        ".NET",
+        "C#",
+        "csharp"
+    ],
+    "activationEvents": [
+        "workspaceContains:**/*.csproj",
+        "workspaceContains:**/*.fsproj",
+        "workspaceContains:**/*.vbproj"
+    ],
+    "main": "./dist/extension.js",
+    "contributes": {
+        "commands": [
+            {
+                "command": "nuiget.openManager",
+                "title": "nUIget: Manage NuGet Packages",
+                "shortTitle": "nUIget: Manage Packages",
+                "icon": "$(package)"
+            },
+            {
+                "command": "nuiget.refreshPackages",
+                "title": "nUIget: Refresh Packages",
+                "icon": "$(refresh)"
+            }
+        ],
+        "menus": {
+            "explorer/context": [
+                {
+                    "command": "nuiget.openManager",
+                    "when": "resourceFilename =~ /\\.(csproj|fsproj|vbproj)$/",
+                    "group": "navigation"
+                }
+            ],
+            "view/item/context": [
+                {
+                    "command": "nuiget.openManager",
+                    "when": "view == solutionExplorer && viewItem == Project",
+                    "group": "navigation"
+                }
+            ],
+            "editor/title": [
+                {
+                    "command": "nuiget.openManager",
+                    "when": "resourceFilename =~ /\\.(csproj|fsproj|vbproj)$/",
+                    "group": "navigation"
+                }
+            ]
+        },
+        "configuration": {
+            "title": "nUIget",
+            "properties": {
+                "nuiget.noRestore": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Skip restore after adding packages. Faster but skips compatibility check until next build."
+                },
+                "nuiget.quickSearchResultsPerSource": {
+                    "type": "integer",
+                    "default": 5,
+                    "minimum": 1,
+                    "maximum": 10,
+                    "description": "Number of suggestions to show per source in quick search mode."
+                },
+                "nuiget.searchDebounceMode": {
+                    "type": "string",
+                    "enum": [
+                        "quicksearch",
+                        "full",
+                        "off"
+                    ],
+                    "default": "quicksearch",
+                    "enumDescriptions": [
+                        "Show quick search suggestions as you type (fast, lightweight)",
+                        "Perform full search as you type (slower, shows full results)",
+                        "No automatic search while typing (only on Enter or button click)"
+                    ],
+                    "description": "Controls what happens when typing in the search box after a short delay."
+                },
+                "nuiget.recentSearchesLimit": {
+                    "type": "integer",
+                    "default": 5,
+                    "minimum": 0,
+                    "maximum": 10,
+                    "description": "Maximum number of recent searches to remember. Set to 0 to disable search history."
+                },
+                "nuiget.searchResultLimit": {
+                    "type": "integer",
+                    "default": 20,
+                    "minimum": 1,
+                    "maximum": 100,
+                    "description": "Maximum number of packages to return from full search (dotnet CLI)."
+                }
+            }
+        }
+    },
+    "scripts": {
+        "vscode:prepublish": "npm run package",
+        "compile": "node esbuild.mjs",
+        "watch": "node esbuild.mjs --watch",
+        "package": "node esbuild.mjs --production",
+        "typecheck": "tsc --noEmit",
+        "package:vsix": "npm run typecheck && npm run package && vsce package --out nuiget.vsix",
+        "lint": "eslint src"
+    },
+    "devDependencies": {
+        "@eslint/js": "^9.0.0",
+        "@types/adm-zip": "^0.5.7",
+        "@types/dompurify": "^3.0.5",
+        "@types/node": "20.x",
+        "@types/react": "^19.0.0",
+        "@types/react-dom": "^19.0.0",
+        "@types/vscode": "^1.85.0",
+        "@vscode/vsce": "^3.7.1",
+        "esbuild": "^0.27.2",
+        "eslint": "^9.0.0",
+        "globals": "^17.3.0",
+        "typescript": "^5.3.3",
+        "typescript-eslint": "^8.0.0"
+    },
+    "dependencies": {
+        "adm-zip": "^0.5.16",
+        "dompurify": "^3.3.1",
+        "fast-xml-parser": "^5.3.4",
+        "highlight.js": "^11.11.1",
+        "marked": "^17.0.1",
+        "marked-highlight": "^2.2.3",
+        "react": "^19.2.4",
+        "react-dom": "^19.2.4"
+    }
+}

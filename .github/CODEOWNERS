@@ -1,0 +1,5 @@
+# All files require review from gasrulle
+* @gasrulle
+
+# Protect the CODEOWNERS file itself - only gasrulle can approve changes
+.github/CODEOWNERS @gasrulle

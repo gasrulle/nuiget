@@ -1,0 +1,54 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "type": "npm",
+            "script": "watch",
+            "label": "watch",
+            "isBackground": true,
+            "presentation": {
+                "reveal": "never"
+            },
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": {
+                "owner": "esbuild",
+                "fileLocation": "absolute",
+                "pattern": {
+                    "regexp": "^✘ \\[ERROR\\] (.*)\\n\\n\\s+(.+):(\\d+):(\\d+):",
+                    "message": 1,
+                    "file": 2,
+                    "line": 3,
+                    "column": 4
+                },
+                "background": {
+                    "activeOnStart": true,
+                    "beginsPattern": "^\\[watch\\]",
+                    "endsPattern": "^\\[watch\\] Build started"
+                }
+            }
+        },
+        {
+            "type": "npm",
+            "script": "compile",
+            "label": "compile",
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always"
+            },
+            "group": "build"
+        },
+        {
+            "type": "npm",
+            "script": "package:vsix",
+            "label": "Package VSIX",
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always"
+            },
+            "group": "build"
+        }
+    ]
+}

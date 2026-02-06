@@ -1,0 +1,63 @@
+# Dependencies
+node_modules/
+
+# Build output
+out/
+dist/
+
+# Packaged extension
+*.vsix
+
+# VS Code test folder
+.vscode-test/
+
+# macOS
+.DS_Store
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Runtime data
+pids
+*.pid
+*.seed
+
+# IDE/Editor settings (already tracked in .vscode for this project)
+# .vscode/
+.vscode/settings.json
+
+# TypeScript cache
+*.tsbuildinfo
+
+# Optional npm cache
+.npm
+
+# Test coverage
+.nyc_output/
+coverage/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Alternative package manager lock files (using npm)
+yarn.lock
+pnpm-lock.yaml
+
+# Screenshots and temp files (but not resources/icons or docs/images)
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.bmp
+!resources/*.png
+!docs/images/*.png
+
+# OS generated files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
