@@ -41,9 +41,20 @@
             "group": "build"
         },
         {
-            "type": "npm",
-            "script": "package:vsix",
-            "label": "Package VSIX",
+            "label": "Package nUIget vsix",
+            "type": "shell",
+            "command": "npm install && npx tsc --noEmit && node esbuild.mjs --production && node -e \"const v=require('./package.json').version;require('child_process').execSync('npx vsce package --out nuiget-v'+v+'.vsix',{stdio:'inherit'})\"",
+            "windows": {
+                "options": {
+                    "shell": {
+                        "executable": "cmd.exe",
+                        "args": [
+                            "/d",
+                            "/c"
+                        ]
+                    }
+                }
+            },
             "problemMatcher": [],
             "presentation": {
                 "reveal": "always"

@@ -5,6 +5,13 @@ All notable changes to the nUIget extension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- **Package VSIX task** now auto-installs all dependencies (`npm install`) and explicitly runs a production build before packaging. Works out of the box on a fresh clone with no pre-installed dependencies. Cross-platform (cmd.exe on Windows, default shell on macOS/Linux).
+- Removed stale `scripts/build-vsix.ps1` PowerShell script.
+
 ## [1.0.0] - 2026-02-05
 
 Initial release of nUIget - a Visual Studio-style NuGet Package Manager for VS Code.
