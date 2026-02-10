@@ -90,6 +90,7 @@ npm run package:vsix # Outputs nuiget.vsix
 | Floating version metadata fails | Use `pkg.resolvedVersion` not `pkg.version` for API calls |
 | Transitive not available | `project.assets.json` needs build/restore — use `restoreProject()` if missing |
 | Transitive stale after remove | `dotnet remove` doesn't update assets.json — run `dotnet restore` after |
+| Unreachable custom source blocks loading | `failedEndpointCache` caches failures for 60s. `discoverServiceEndpoints` uses 5s timeout. Never rely on OS TCP timeout. |
 
 ## Code Patterns
 | Issue | Solution |
@@ -108,6 +109,10 @@ npm run package:vsix # Outputs nuiget.vsix
 | LRU caches | Frontend: `useRef<LRUMap>`. Backend: `LRUMap` in NuGetService |
 | useRef state mirror | For synchronous reads across async boundaries. See `transitiveLoadingMetadataRef`, `selectedSourceRef`, `selectedProjectRef`. |
 | Race for first result | `raceForFirstResult()` to resolve early from first source |
+| HTTP request timeouts | `fetchJsonWithDetails` and `fetchJsonHttp1` use `options.timeout` + `req.on('timeout')`. Service index discovery uses 5s, general requests 10s. |
+| Failed endpoint cache | `failedEndpointCache: Map<string, number>` caches unreachable source URLs for 60s. Prevents re-trying dead sources per package (OS TCP timeout is ~21s). |
+| project.assets.json cache | `readAssetsJson()` method with mtime-based invalidation + 30s TTL. Avoids parsing 5-50MB files 2-3x per flow. |
+| Transitive prefetch deferral | `getTransitivePackages` is deferred 2s after installed packages load to reduce network contention. |
 
 ## Security Patterns
 | Pattern | Implementation |

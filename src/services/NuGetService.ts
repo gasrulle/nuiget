@@ -424,6 +424,20 @@ export class NuGetService {
     private autocompleteCache: LRUMap<string, { data: string[]; timestamp: number }> = new LRUMap(50);
     // Autocomplete cache TTL: 30 seconds
     private static readonly AUTOCOMPLETE_CACHE_TTL = 30000;
+    // Cache for failed endpoint discoveries (source URL -> failure timestamp)
+    // Prevents re-trying unreachable sources for every package (OS TCP timeout can be ~21s)
+    private failedEndpointCache: Map<string, number> = new Map();
+    // Failed endpoint cache TTL: 60 seconds (allows retry after connectivity is restored)
+    private static readonly FAILED_ENDPOINT_CACHE_TTL = 60000;
+    // Default timeout for HTTP requests to custom sources (milliseconds)
+    private static readonly HTTP_REQUEST_TIMEOUT = 10000;
+    // Shorter timeout for service index discovery (milliseconds)
+    private static readonly SERVICE_INDEX_TIMEOUT = 5000;
+    // Cache for parsed project.assets.json (path -> { mtime, data })
+    // Avoids re-parsing large files (5-50MB) multiple times in a single flow
+    private assetsJsonCache: Map<string, { mtimeMs: number; data: unknown; timestamp: number }> = new Map();
+    // Assets cache TTL: 30 seconds
+    private static readonly ASSETS_CACHE_TTL = 30000;
     private outputChannel: vscode.LogOutputChannel;
     // Cached credentials from nuget.config (source name -> credentials)
     private nugetConfigCredentials: Map<string, { username?: string; password?: string; isEncrypted: boolean }> | null = null;
@@ -796,6 +810,12 @@ export class NuGetService {
             return cached;
         }
 
+        // Check failed endpoint cache - avoid re-trying unreachable sources within TTL
+        const failedAt = this.failedEndpointCache.get(sourceUrl);
+        if (failedAt && (Date.now() - failedAt) < NuGetService.FAILED_ENDPOINT_CACHE_TTL) {
+            return {};
+        }
+
         const endpoints: ServiceEndpoints = {};
 
         try {
@@ -814,7 +834,7 @@ export class NuGetService {
             const authHeader = await this.getAuthHeader(sourceUrl);
 
             // Use HTTP/1.1 for service index discovery (HTTP/2 has TLS issues)
-            const result = await this.fetchJsonWithDetails<NuGetServiceIndex>(indexUrl, authHeader);
+            const result = await this.fetchJsonWithDetails<NuGetServiceIndex>(indexUrl, authHeader, NuGetService.SERVICE_INDEX_TIMEOUT);
             if (result.error) {
                 throw new Error(result.error.message);
             }
@@ -874,8 +894,9 @@ export class NuGetService {
                 });
             }
 
-            // Don't cache failed requests - return empty object but don't cache it
-            // This allows retry when connectivity is restored (e.g., VPN reconnect)
+            // Cache the failure with a TTL to avoid re-trying the same unreachable source
+            // for every package (OS TCP timeout can be ~21s per attempt)
+            this.failedEndpointCache.set(sourceUrl, Date.now());
             return endpoints;
         }
 
@@ -883,9 +904,54 @@ export class NuGetService {
         // This prevents caching failed requests due to network issues
         if (endpoints.packageBaseAddress || endpoints.registrationsBaseUrl || endpoints.searchQueryService) {
             this.serviceIndexCache.set(sourceUrl, endpoints);
+            // Clear any previous failure entry now that the source is reachable
+            this.failedEndpointCache.delete(sourceUrl);
         }
 
         return endpoints;
+    }
+
+    /**
+     * Read and parse project.assets.json with mtime-based caching.
+     * This file can be 5-50MB for large projects and is read multiple times
+     * during a single flow (getResolvedVersions, getPackageDependencies, getTransitivePackages).
+     * Caching avoids redundant parsing.
+     */
+    private async readAssetsJson<T = unknown>(assetsPath: string): Promise<T | null> {
+        try {
+            const stat = await fs.promises.stat(assetsPath);
+            const now = Date.now();
+            const cached = this.assetsJsonCache.get(assetsPath);
+
+            // Return cached data if mtime hasn't changed and within TTL
+            if (cached &&
+                cached.mtimeMs === stat.mtimeMs &&
+                (now - cached.timestamp) < NuGetService.ASSETS_CACHE_TTL) {
+                return cached.data as T;
+            }
+
+            const content = await readFileAsync(assetsPath, 'utf-8');
+            const data = JSON.parse(content) as T;
+
+            this.assetsJsonCache.set(assetsPath, {
+                mtimeMs: stat.mtimeMs,
+                data,
+                timestamp: now
+            });
+
+            // Evict expired entries to prevent unbounded memory growth
+            if (this.assetsJsonCache.size > 1) {
+                for (const [key, entry] of this.assetsJsonCache) {
+                    if (key !== assetsPath && (now - entry.timestamp) >= NuGetService.ASSETS_CACHE_TTL) {
+                        this.assetsJsonCache.delete(key);
+                    }
+                }
+            }
+
+            return data;
+        } catch {
+            return null;
+        }
     }
 
     /**
@@ -935,14 +1001,13 @@ export class NuGetService {
         const assetsPath = path.join(projectDir, 'obj', 'project.assets.json');
         try {
             if (await fileExists(assetsPath)) {
-                const assetsContent = await readFileAsync(assetsPath, 'utf-8');
-                const assetsData = JSON.parse(assetsContent) as {
+                const assetsData = await this.readAssetsJson<{
                     version: number;
                     targets: Record<string, Record<string, unknown>>;
-                };
+                }>(assetsPath);
 
                 // Get first target framework
-                if (assetsData.targets) {
+                if (assetsData?.targets) {
                     const targetFrameworks = Object.keys(assetsData.targets);
                     if (targetFrameworks.length > 0) {
                         const tfm = targetFrameworks[0];
@@ -979,16 +1044,15 @@ export class NuGetService {
         const assetsPath = path.join(projectDir, 'obj', 'project.assets.json');
         try {
             if (await fileExists(assetsPath)) {
-                const assetsContent = await readFileAsync(assetsPath, 'utf-8');
-                const assetsData = JSON.parse(assetsContent) as {
+                const assetsData = await this.readAssetsJson<{
                     version: number;
                     targets: Record<string, Record<string, {
                         dependencies?: Record<string, string>;
                     }>>;
-                };
+                }>(assetsPath);
 
                 // Get first target framework
-                if (assetsData.targets) {
+                if (assetsData?.targets) {
                     const targetFrameworks = Object.keys(assetsData.targets);
                     if (targetFrameworks.length > 0) {
                         const tfm = targetFrameworks[0];
@@ -3002,7 +3066,7 @@ export class NuGetService {
      * @param url The URL to fetch
      * @param authHeader Optional Authorization header value
      */
-    private fetchJsonWithDetails<T>(url: string, authHeader?: string): Promise<FetchResult<T>> {
+    private fetchJsonWithDetails<T>(url: string, authHeader?: string, timeoutMs?: number): Promise<FetchResult<T>> {
         return new Promise((resolve) => {
             const client = url.startsWith('https://') ? https : http;
             const parsed = new URL(url);
@@ -3014,12 +3078,15 @@ export class NuGetService {
                 headers['Authorization'] = authHeader;
             }
 
+            const effectiveTimeout = timeoutMs ?? NuGetService.HTTP_REQUEST_TIMEOUT;
+
             const options: https.RequestOptions = {
                 hostname: parsed.hostname,
                 port: parsed.port || (parsed.protocol === 'https:' ? 443 : 80),
                 path: parsed.pathname + parsed.search,
                 method: 'GET',
-                headers
+                headers,
+                timeout: effectiveTimeout
             };
 
             const req = client.request(options, (res) => {
@@ -3030,7 +3097,7 @@ export class NuGetService {
                         // Preserve auth header on same-origin redirects only
                         const redirectParsed = new URL(redirectUrl, url);
                         const sameOrigin = redirectParsed.origin === parsed.origin;
-                        this.fetchJsonWithDetails<T>(redirectUrl, sameOrigin ? authHeader : undefined).then(resolve);
+                        this.fetchJsonWithDetails<T>(redirectUrl, sameOrigin ? authHeader : undefined, timeoutMs).then(resolve);
                         return;
                     }
                 }
@@ -3108,6 +3175,17 @@ export class NuGetService {
                 });
             });
 
+            req.on('timeout', () => {
+                req.destroy();
+                resolve({
+                    data: null,
+                    error: {
+                        type: 'network',
+                        message: `Connection timed out after ${effectiveTimeout / 1000}s. The server may be slow or unreachable.`
+                    }
+                });
+            });
+
             req.on('error', (err) => {
                 const errorMsg = err.message || 'Unknown network error';
                 let message = `Network error: ${errorMsg}`;
@@ -3163,7 +3241,8 @@ export class NuGetService {
                 port: parsed.port || (parsed.protocol === 'https:' ? 443 : 80),
                 path: parsed.pathname + parsed.search,
                 method: 'GET',
-                headers
+                headers,
+                timeout: NuGetService.HTTP_REQUEST_TIMEOUT
             };
 
             const req = client.request(options, (res) => {
@@ -3195,6 +3274,11 @@ export class NuGetService {
                         resolve(null);
                     }
                 });
+            });
+
+            req.on('timeout', () => {
+                req.destroy();
+                resolve(null);
             });
 
             req.on('error', () => {
@@ -3471,17 +3555,16 @@ export class NuGetService {
      * This file is always updated by dotnet commands (including remove)
      */
     private async getTransitivePackagesFromAssets(assetsPath: string): Promise<{ frameworks: TransitiveFrameworkSection[] }> {
-        const assetsContent = await readFileAsync(assetsPath, 'utf-8');
-        const assetsData = JSON.parse(assetsContent) as {
+        const assetsData = await this.readAssetsJson<{
             version: number;
             targets: Record<string, Record<string, {
                 type?: string;
                 dependencies?: Record<string, string>;
             }>>;
             projectFileDependencyGroups: Record<string, string[]>;
-        };
+        }>(assetsPath);
 
-        if (!assetsData.targets || !assetsData.projectFileDependencyGroups) {
+        if (!assetsData?.targets || !assetsData.projectFileDependencyGroups) {
             return { frameworks: [] };
         }
 

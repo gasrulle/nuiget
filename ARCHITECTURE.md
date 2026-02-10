@@ -406,6 +406,68 @@ The extension uses a two-tier caching system for performance:
 └─────────────────────────────────────────────────────────────────┘
 ```
 
+### Failed Endpoint Cache
+When a custom NuGet source is unreachable (VPN disconnected, feed down), the OS TCP timeout can take ~21s per connection attempt. Without caching, every installed package triggers a fresh connection attempt to the same dead source.
+
+```typescript
+// Cache failed endpoint discoveries to avoid repeated timeouts
+private failedEndpointCache: Map<string, number> = new Map(); // URL → timestamp
+private static readonly FAILED_ENDPOINT_CACHE_TTL = 60000;    // 60s TTL
+
+async discoverServiceEndpoints(sourceUrl: string): Promise<ServiceEndpoints> {
+    // Check failed cache — skip sources that timed out recently
+    const failedAt = this.failedEndpointCache.get(sourceUrl);
+    if (failedAt && (Date.now() - failedAt) < FAILED_ENDPOINT_CACHE_TTL) {
+        return {}; // Instant return, no network call
+    }
+    // ... attempt connection with 5s timeout ...
+    // On failure: this.failedEndpointCache.set(sourceUrl, Date.now());
+}
+```
+
+**Impact:** With 20 packages from a custom source, reduces worst-case from ~21s (per batch) to ~5s (one timeout, then cached).
+
+### project.assets.json Cache
+Large projects can have 5-50MB `project.assets.json` files. This file is read and parsed in multiple code paths within a single flow (`getResolvedVersions`, `getPackageDependencies`, `getTransitivePackages`). A short-lived mtime-based cache avoids redundant parsing:
+
+```typescript
+private assetsJsonCache: Map<string, { mtimeMs: number; data: unknown; timestamp: number }>;
+private static readonly ASSETS_CACHE_TTL = 30000; // 30s
+
+async readAssetsJson<T>(assetsPath: string): Promise<T | null> {
+    const stat = await fs.promises.stat(assetsPath);
+    const cached = this.assetsJsonCache.get(assetsPath);
+    if (cached && cached.mtimeMs === stat.mtimeMs && (Date.now() - cached.timestamp) < ASSETS_CACHE_TTL) {
+        return cached.data as T;
+    }
+    // Parse and cache...
+}
+```
+
+### HTTP Request Timeouts
+All HTTP/1.1 requests to custom sources use explicit timeouts to prevent unbounded waits:
+
+| Method | Timeout | Purpose |
+|--------|---------|---------|
+| `discoverServiceEndpoints` | 5s | Service index discovery |
+| `fetchJsonWithDetails` | 10s (default) | Metadata/search API calls |
+| `fetchJsonHttp1` | 10s | Generic JSON fetching |
+| `checkUrlExistsHttp1` | 5s | Icon HEAD requests |
+
+Timeouts use `options.timeout` + `req.on('timeout')` handler that calls `req.destroy()`.
+
+### Transitive Prefetch Deferral
+Transitive package fetching is deferred by 2s after installed packages finish loading. This reduces network contention during the critical path (metadata fetch + update checks):
+
+```typescript
+// InstalledTab.tsx — defer to reduce network pressure
+const timer = setTimeout(() => {
+    setLoadingTransitive(true);
+    vscode.postMessage({ type: 'getTransitivePackages', projectPath });
+}, 2000);
+return () => clearTimeout(timer);
+```
+
 ### WorkspaceCache Utility
 Location: `src/services/WorkspaceCache.ts`
 

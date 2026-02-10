@@ -21,12 +21,12 @@
 import React, { forwardRef, useCallback, useDeferredValue, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import type {
     InstalledPackage,
+    LRUMap,
     PackageMetadata,
     PackageSearchResult,
     TransitiveFrameworkSection,
     TransitivePackage,
     VsCodeApi,
-    LRUMap,
 } from '../types';
 import { getPackageId } from '../types';
 import { MemoizedPackageDetailsPanel } from './PackageDetailsPanel';
@@ -383,12 +383,16 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
     // Prefetch transitive packages in background after direct packages are loaded
     useEffect(() => {
         if (selectedProject && !loadingInstalled && installedPackages.length >= 0 && transitiveDataSourceAvailable === null && !loadingTransitive) {
-            // Direct packages finished loading - now fetch transitive packages in background
-            setLoadingTransitive(true);
-            vscode.postMessage({
-                type: 'getTransitivePackages',
-                projectPath: selectedProject
-            });
+            // Direct packages finished loading - defer transitive fetch to reduce network
+            // pressure during metadata/update fetching (runs concurrently with those)
+            const timer = setTimeout(() => {
+                setLoadingTransitive(true);
+                vscode.postMessage({
+                    type: 'getTransitivePackages',
+                    projectPath: selectedProject
+                });
+            }, 2000);
+            return () => clearTimeout(timer);
         }
     }, [selectedProject, loadingInstalled, installedPackages.length, transitiveDataSourceAvailable, loadingTransitive, vscode]);
 
