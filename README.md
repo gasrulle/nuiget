@@ -1,8 +1,6 @@
 # nUIget for VS Code
 
 [![Visual Studio Marketplace Version](https://img.shields.io/visual-studio-marketplace/v/gasrulle.nuiget)](https://marketplace.visualstudio.com/items?itemName=gasrulle.nuiget)
-[![Visual Studio Marketplace Installs](https://img.shields.io/visual-studio-marketplace/i/gasrulle.nuiget)](https://marketplace.visualstudio.com/items?itemName=gasrulle.nuiget)
-[![Visual Studio Marketplace Rating](https://img.shields.io/visual-studio-marketplace/r/gasrulle.nuiget)](https://marketplace.visualstudio.com/items?itemName=gasrulle.nuiget)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 A Visual Studio-style NuGet package manager for VS Code with a modern split-panel UI.

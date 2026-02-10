@@ -487,6 +487,10 @@ export class NuGetPanel {
                     const sourceName = data.sourceName as string;
                     const configFile = data.configFile as string | undefined;
 
+                    // Capture the source URL before removal so the UI can check if it was selected
+                    const sourcesBeforeRemove = await this._nugetService.getSources();
+                    const removedSourceUrl = sourcesBeforeRemove.find(s => s.name === sourceName)?.url;
+
                     const result = await this._nugetService.removeSource(sourceName, configFile);
 
                     if (result.success) {
@@ -497,7 +501,8 @@ export class NuGetPanel {
                             type: 'sources',
                             sources: sources,
                             failedSources: [],
-                            removedSourceName: sourceName // Tell UI which source was removed
+                            removedSourceName: sourceName, // Tell UI which source was removed
+                            removedSourceUrl: removedSourceUrl // URL for selected-source reset check
                         });
                         vscode.window.showInformationMessage(`Removed NuGet source: ${sourceName}`);
                     } else {

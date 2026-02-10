@@ -21,145 +21,101 @@ After completing ANY feature, fix, or change, update these files:
 - **Name:** nUIget (VS Code Extension)
 - **Purpose:** Visual Studio-style GUI to manage NuGet packages via dotnet CLI. Reads sources/credentials from nuget.config and Windows Credential Manager.
 - **Layout:** Split-panel (left: package list; right: details). Tabs: Browse, Installed, Updates.
+- **Architecture:** App.tsx shell (~1650 lines) + tab components (`BrowseTab`, `InstalledTab`, `UpdatesTab`, `PackageDetailsPanel`) in `src/webview/app/components/`. Shared types in `types.ts`. See ARCHITECTURE.md for full details.
 
 # Key Capabilities
-- **Draggable Split Panel:** Resizable sash between package list (default 35%) and details (65%). Drag to adjust (20-80% range). Position persists across workspaces via `globalState`. Double-click to reset to default. Uses `--vscode-sash-hoverBorder` for VS Code-native theming.
-- **React 19.2.4 with Concurrent Features:** `useDeferredValue` for search queries and package lists (non-blocking UI). `useTransition` for tab switching. Stale data indicators with CSS opacity fade (.stale class).
-- **HTTP/2 for nuget.org:** Multiplexing for bulk requests (icons, metadata). Session pool limit (MAX_SESSIONS=10) with LRU eviction. Falls back to HTTP/1.1 for private sources.
-- **Sources:** Resolve via `dotnet nuget list source --format detailed`. Settings cog (⚙️) for enable/disable/add/remove sources.
-- **Authenticated Private Feeds:** CredentialService enables browsing/searching packages from Azure DevOps, GitHub Packages, JFrog, etc. Credentials resolved from: (1) nuget.config `<packageSourceCredentials>`, (2) Windows Credential Manager, (3) Azure Artifacts Credential Provider (non-interactive). Credentials pre-warmed on panel open, cached 30min.
-- **Encrypted Credentials:** When adding sources with password on Windows, encrypts via DPAPI by default. DPAPI decrypted via PowerShell. Non-Windows uses clear text. Supports `%ENV_VAR%` syntax for cross-platform security.
-- **Package Management:** Search/install/update/remove via dotnet CLI. Multi-project support (.csproj, .fsproj, .vbproj).
-- **GUI:** React webview in editor panel. Package icons via flat container API. Verified badge (✓) for reserved prefix packages.
-- **Updates Tab:** Shows packages with newer versions. Badge shows count. Respects prerelease checkbox.
-- **Bulk Operations:** Select all + Uninstall Selected with topological sort for dependency order.
-- **Settings Persistence:** Prerelease checkbox and source dropdown persist via `context.workspaceState`. Split position persists via `context.globalState` (cross-workspace).
-- **Multi-Tier Caching:** Backend LRUMap caches (size-limited: metadata 200, versions 200, icons 500, search 100). Frontend LRU caches via useRef. WorkspaceCache for persistence. TTLs: icons ∞, versions 3min, verified 5min, search 2min, README ∞.
-- **Floating Versions:** Detects `*`, `10.*`, `[1.0,2.0)` - info-only, cannot update from UI.
+- **React 19 + Concurrent Features:** `useDeferredValue`, `useTransition`, stale data indicators. `@tanstack/react-virtual` for Browse/Updates virtualization.
+- **Component Architecture:** `React.memo`-wrapped tab components with `forwardRef`/`useImperativeHandle` for message routing. Props-based data flow (no Context).
+- **Draggable Split Panel:** Resizable sash (20-80% range), persists via `globalState`. `--vscode-sash-hoverBorder` theming.
+- **HTTP/2 for nuget.org:** Multiplexing for bulk requests. Session pool (MAX_SESSIONS=10) with LRU eviction. HTTP/1.1 fallback for private sources.
+- **Sources & Auth:** `dotnet nuget list source`, enable/disable/add/remove. CredentialService for Azure DevOps, GitHub Packages, JFrog. DPAPI encryption on Windows.
+- **Package Management:** Search/install/update/remove via dotnet CLI. Multi-project (.csproj, .fsproj, .vbproj). Floating versions, Updates tab with badge, bulk operations.
 - **Transitive Packages:** Collapsible per-framework sections. Two-stage background prefetch (frameworks → metadata).
-- **Output Channel:** "nUIget" channel. Sanitizes credentials. `nuiget.noRestore` setting adds `--no-restore` flag to install/update commands.
+- **Multi-Tier Caching:** Backend LRUMap (metadata 200, versions 200, icons 500, search 100). Frontend `useRef<LRUMap>`. WorkspaceCache for persistence.
 - **Disposed Panel Safety:** `_disposed` flag + `_postMessage()` helper prevents "Webview is disposed" errors.
-
-# Requirements
-- **VS Code:** 1.85.0+
-- **.NET SDK:** Installed and on PATH
-- **Node.js/NPM:** For build
+- **Settings Persistence:** Prerelease/source via `workspaceState`. Split position via `globalState`.
 
 # Build and Run
 ```bash
 npm install          # Install dependencies
-npm run watch        # Build (watch mode)
-# Press F5 to launch Extension Host
+npm run watch        # Build (watch mode) — F5 to launch Extension Host
+npm run package:vsix # Outputs nuiget.vsix
 ```
-
-# Test the GUI
-**Important:** Open a folder with .csproj files in Extension Host (not the nuiget folder).
-
-- **Command Palette:** "nUIget: Manage NuGet Packages"
-- **Context Menu:** Right-click .csproj → "nUIget: Manage Packages"
-- **Solution Explorer:** Right-click project node → "nUIget: Manage Packages"
-
-Verify: Browse/search, Install, Installed tab with transitive, Updates tab with badge, Settings persistence.
-
-# Package as VSIX
-```bash
-npm run package:vsix  # Outputs nuiget.vsix
-```
+**Test:** Open a folder with .csproj files in Extension Host (not nuiget folder). Command Palette → "nUIget: Manage NuGet Packages" or right-click .csproj.
 
 # Gotchas & Pitfalls
 
 ## VS Code Extension
 | Issue | Solution |
 |-------|----------|
-| Context menu not showing | Use regex: `resourceFilename =~ /\\.(csproj\|fsproj\|vbproj)$/` not `resourceExtname ==` |
+| Context menu not showing | Use regex: `resourceFilename =~ /\\.(csproj\|fsproj\|vbproj)$/` |
 | Watch task hangs preLaunchTask | Use esbuild problemMatcher with `endsPattern: "^\\[watch\\] build finished"` |
 | preLaunchTask fails | Use explicit task label ("watch") not "${defaultBuildTask}" |
 
-## React/Webview
+## React 19 / Webview
 | Issue | Solution |
 |-------|----------|
 | "process is not defined" | Add esbuild define for `process.env.NODE_ENV` |
-| React 19 StrictMode double-render | Expected behavior - verifies cleanup functions work correctly |
-| Stale data during deferred updates | Use `isXxxStale = value !== deferredValue` to add `.stale` class for visual feedback |
-| Package icons not loading | CSP needs `img-src https://api.nuget.org https://*.nuget.org data:;` |
-| Icons not showing | Use flat container `/v3-flatcontainer/{id}/{version}/icon` not registration API iconUrl |
+| StrictMode double-render | Expected behavior — verifies cleanup functions |
+| **setState updater side effects** | **Never** call `postMessage()` or side effects inside `setState(prev => {...})` — StrictMode runs updaters twice. Use flag variable inside, call side effect outside. |
+| **Async setState variable assignment** | **CRITICAL:** Never assign `let x` inside `setState(prev => {...})` and read after — React 19 runs updaters async, `x` stays initial. Use `useRef` mirror pattern (see `transitiveLoadingMetadataRef`). |
+| Stale closures in `useCallback([])` | Use `handleMessageRef` pattern: regular function assigned to `ref.current` each render, one `useEffect([])` listener calls `ref.current(e)`. For state needed in handlers that can't re-register, use `useRef` mirrors (e.g., `selectedSourceRef`, `selectedProjectRef`). |
+| Inline callbacks defeat React.memo | Extract callbacks to `useCallback([])` (e.g., `handleSashReset`, `handleSashDragEnd`, `handleToggleDep`). Inline arrows create new refs every render. |
+| Icons not loading | CSP: `img-src https://api.nuget.org https://*.nuget.org data:;`. Use flat container API, not registration iconUrl. |
 | README images not loading | CSP includes: `github.com`, `githubusercontent.com`, `shields.io`, `opencollective.com`, `codecov.io`, `badge.fury.io`, `travis-ci.*`, `appveyor.com`, `coveralls.io`, `snyk.io`, `codacy.com`, `sonarcloud.io`, `badgen.net`, `circleci.com`, `azure/visualstudio` |
-| Code blocks not highlighted | Use `marked-highlight` + `highlight.js/lib/core` with individual language imports + `ignoreIllegals: true` |
-| XSS in README content | Wrap `marked.parse()` output in `DOMPurify.sanitize()` before `dangerouslySetInnerHTML` |
-| Language labels on code blocks | Use custom `marked.Renderer` to wrap `<pre>` in `<div data-language="...">` wrapper |
-| Colors not adapting to theme | Use `--vscode-*` CSS variables, not hardcoded hex colors. Light themes need `body.vscode-light` overrides. |
+| Code blocks not highlighted | `marked-highlight` + `highlight.js/lib/core` with individual languages + `ignoreIllegals: true` |
+| XSS in README | `DOMPurify.sanitize()` before `dangerouslySetInnerHTML` |
+| Colors not adapting | Use `--vscode-*` CSS variables. Light themes need `body.vscode-light` overrides. |
 
 ## State Management
 | Issue | Solution |
 |-------|----------|
 | Settings reset on panel close | Use `context.workspaceState` via messages, not just `vscode.getState/setState` |
 | Source dropdown resets | Use `settingsLoadedRef` flag to prevent defaults overwriting loaded settings |
-| Details panel shows wrong package | Clear both `selectedPackage` AND `selectedTransitivePackage` - they're mutually exclusive |
-| Version dropdown shows "Loading" on re-click | Use `useRef<Map>` frontend cache. Check cache before fetching. |
+| Details panel shows wrong package | Clear both `selectedPackage` AND `selectedTransitivePackage` — mutually exclusive |
+| Version dropdown "Loading" on re-click | `useRef<LRUMap>` frontend cache. Check cache before fetching. |
+| installedPackages cascading renders | Content comparison in setter: compare `id@version` joined keys, return `prev` if unchanged |
+| Source removal stale closure | `handleMessage` is `useCallback([])` — `sources` state is stale. Backend sends `removedSourceUrl`, frontend compares via `selectedSourceRef.current`. |
+| **Transitive metadata ref mirror** | Use `transitiveLoadingMetadataRef = useRef<Set>()` as synchronous mirror. Read ref in prefetch effect, update both ref and state. Required because React 19 defers setState updaters. |
+| Transitive spinner stuck | `doResetTransitiveState(false)` must set `loadingTransitive = false` — prevents stuck spinner when reset races with in-flight request. |
+| Transitive stale after bulk remove | `bulkRemoveResult` handler must call `resetTransitiveState(true)` after routing. |
 
-## NuGet/dotnet CLI
+## NuGet / dotnet CLI
 | Issue | Solution |
 |-------|----------|
 | `dotnet list package` fails (NU1900) | Parse .csproj directly as primary method |
-| `--source ""` error | Filter empty strings: `sources?.filter(s => s && s.trim())` |
-| "Request path contains unescaped characters" | Skip local sources with `isLocalSource()` check |
-| Metadata fails on private source | Check VPN connection |
-| README not showing | Extract from nupkg using adm-zip (custom sources don't expose ReadmeUriTemplate) |
-| Floating version metadata fails | Use `pkg.resolvedVersion` for API calls, not `pkg.version` (e.g., "10.*" vs "10.2.0") |
-| Transitive packages not available | `project.assets.json` (in obj/) is generated by build/restore - use `restoreProject()` if missing |
-| Transitive stale after `dotnet remove` | `dotnet remove package` does NOT update `project.assets.json` - must run `dotnet restore` after remove |
-| Transitive stale / need refresh | Use the ↻ refresh button in transitive section (runs restore + reload, ignores noRestore setting) |
+| `--source ""` error | Filter: `sources?.filter(s => s && s.trim())` |
+| "Unescaped characters" in request path | Skip local sources with `isLocalSource()` |
+| README not showing | Extract from nupkg via adm-zip (custom sources lack ReadmeUriTemplate) |
+| Floating version metadata fails | Use `pkg.resolvedVersion` not `pkg.version` for API calls |
+| Transitive not available | `project.assets.json` needs build/restore — use `restoreProject()` if missing |
+| Transitive stale after remove | `dotnet remove` doesn't update assets.json — run `dotnet restore` after |
 
 ## Code Patterns
 | Issue | Solution |
 |-------|----------|
-| "Maximum call stack size exceeded" | Helper methods must call actual API, not themselves (e.g., `_postMessage()` → `this._panel.webview.postMessage()`) |
-| "Webview is disposed" error | Check `_disposed` flag before posting messages in async callbacks |
-| Array mutation bugs | Use `[...array].sort()` not `array.sort()` in cache keys |
-| fetchJson masking errors | Check for `null` and throw explicitly if you need to detect failures |
-| Property name typos break VSIX | Use `outputChannel` not `_outputChannel`. Run `npm run package:vsix` to catch TypeScript errors that `watch` doesn't surface. |
-| Package selection duplication | Use `usePackageSelection` hook: `selectDirectPackage(pkg, { selectedVersionValue, metadataVersion, initialVersions })` |
-| Floating version in Installed tab | Pass `metadataVersion: pkg.resolvedVersion \|\| pkg.version` to handle "10.*" → "10.2.0" |
-| Updates tab synthetic package | Create `{ id: pkg.id, version: pkg.installedVersion } as InstalledPackage` before calling `selectDirectPackage` |
+| "Maximum call stack size exceeded" | `_postMessage()` must call `this._panel.webview.postMessage()`, not itself |
+| "Webview is disposed" error | Check `_disposed` flag before posting in async callbacks |
+| Array mutation bugs | `[...array].sort()` not `array.sort()` |
+| Property name typos break VSIX | Run `npm run package:vsix` — catches errors `watch` misses |
+| Package selection | Use `usePackageSelection` hook. Installed: `metadataVersion: pkg.resolvedVersion`. Updates: synthetic `InstalledPackage`. |
 
 ## Performance Patterns
 | Pattern | Implementation |
 |---------|----------------|
-| Async file I/O | Use `fileExists()` helper with `fs.promises.access`, never `fs.existsSync` |
-| Concurrency limiting | Use `batchedPromiseAll(items, processor, 8)` for parallel API calls |
-| Frontend LRU cache | Use `useRef<LRUMap<K,V>>(new LRUMap(maxSize))` for React caches |
-| Backend LRU cache | Use `LRUMap<K,V>(maxSize)` class in NuGetService for all in-memory caches |
-| HTTP/2 session pool | MAX_SESSIONS=10 with LRU eviction in Http2Client |
-| List virtualization | Import `useVirtualizer` from `@tanstack/react-virtual` for large lists |
-| Race for first result | Use `raceForFirstResult()` to resolve early when first source returns data |
+| Async file I/O | `fileExists()` with `fs.promises.access`, never `fs.existsSync` |
+| Concurrency limiting | `batchedPromiseAll(items, processor, 8)` |
+| LRU caches | Frontend: `useRef<LRUMap>`. Backend: `LRUMap` in NuGetService |
+| useRef state mirror | For synchronous reads across async boundaries. See `transitiveLoadingMetadataRef`, `selectedSourceRef`, `selectedProjectRef`. |
+| Race for first result | `raceForFirstResult()` to resolve early from first source |
 
 ## Security Patterns
 | Pattern | Implementation |
 |---------|----------------|
-| Package ID validation | Use `isValidPackageId(id)` before dotnet CLI commands |
-| Version validation | Use `isValidVersion(ver)` before dotnet CLI commands |
-| Source name validation | Use `isValidSourceName(name)` before dotnet nuget source commands |
-| Source URL validation | Use `isValidSourceUrl(url)` before dotnet nuget add source |
-| Base64 validation | Use `isValidBase64(str)` before DPAPI PowerShell decryption |
-| Credential redaction | Use `sanitizeForLogging(text)` before logging any text that might contain secrets |
-| XSS prevention | Use `DOMPurify.sanitize()` before `dangerouslySetInnerHTML` |
-
-# VSIX Optimization
-Add to .vscodeignore: `node_modules/**`, `.github/prompts/**`, `src/**`
-Reduces VSIX from ~1.4 MB to ~73 KB.
+| Input validation | `isValidPackageId()`, `isValidVersion()`, `isValidSourceName()`, `isValidSourceUrl()`, `isValidBase64()` — validate before CLI commands |
+| Credential redaction | `sanitizeForLogging(text)` before logging |
 
 # Debugging Workflow
-When investigating bugs that are hard to reproduce or understand:
-1. **Add temporary debug logs** with a distinctive prefix (e.g., `[DEBUG-XYZ]`) using `console.log()`
-2. **Keep logs focused** - log key state values, conditions, and control flow decisions
-3. **Test with DevTools open** - In webview: Ctrl+Shift+P → "Developer: Open Webview Developer Tools" → Console tab
-4. **Once bug is confirmed fixed, remove all debug logs** - search for the prefix and delete
-5. **Never commit debug logs** - they clutter output and leak implementation details
-
-# Maintenance Checklist
-- [x] Dependencies installed and compiled
-- [x] Watch build running
-- [x] Extension Host launched (F5)
-- [x] GUI verified (all tabs, context menus)
-- [x] Core flows exercised (search, install, update, remove)
-- [x] VSIX packaging optimized
+1. Add temporary `console.log()` with distinctive prefix (e.g., `[DEBUG-XYZ]`)
+2. Webview logs: Ctrl+Shift+P → "Developer: Open Webview Developer Tools" → Console
+3. **Remove all debug logs** after fix confirmed — search for prefix and delete

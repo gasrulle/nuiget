@@ -15,42 +15,10 @@
  */
 
 import { RefObject, useCallback } from 'react';
+import type { LRUMap, PackageMetadata, TransitivePackage, VsCodeApi } from '../types';
 
-// LRU Map type (defined in App.tsx, passed via ref)
-interface LRUMapLike<K, V> {
-    get(key: K): V | undefined;
-    set(key: K, value: V): void;
-}
-
-/**
- * Package metadata returned from extension
- */
-interface PackageMetadata {
-    id: string;
-    version: string;
-    description: string;
-    authors: string;
-    license?: string;
-    licenseUrl?: string;
-    projectUrl?: string;
-    totalDownloads?: number;
-    published?: string;
-    dependencies: { targetFramework: string; dependencies: { id: string; versionRange: string }[] }[];
-    readme?: string;
-}
-
-/**
- * Transitive package type
- */
-interface TransitivePackage {
-    id: string;
-    version: string;
-    requiredByChain: string[];
-    fullChain?: string[];
-    iconUrl?: string;
-    verified?: boolean;
-    authors?: string;
-}
+// LRU Map type (compatible with LRUMap from types.ts)
+type LRUMapLike<K, V> = Pick<LRUMap<K, V>, 'get' | 'set'>;
 
 /**
  * Options for selecting a direct package
@@ -79,13 +47,6 @@ export interface SelectPackageOptions {
      * For Updates: [pkg.latestVersion, pkg.installedVersion]
      */
     initialVersions: string[];
-}
-
-/**
- * VS Code API interface for posting messages
- */
-interface VsCodeApi {
-    postMessage: (msg: unknown) => void;
 }
 
 /**

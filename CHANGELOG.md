@@ -5,12 +5,30 @@ All notable changes to the nUIget extension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.1.0] - 2026-02-10
+
+### Added
+
+- **Installed Tab Filter** - Compact client-side filter input on the Installed tab to quickly find packages by ID. Case-insensitive contains match, no HTTP calls. Clear button (×) and Escape key to reset. Header shows filtered count (e.g., "3 of 12"). Persists across tab switches, clears on panel close.
 
 ### Changed
 
-- **Package VSIX task** now auto-installs all dependencies (`npm install`) and explicitly runs a production build before packaging. Works out of the box on a fresh clone with no pre-installed dependencies. Cross-platform (cmd.exe on Windows, default shell on macOS/Linux).
-- Removed stale `scripts/build-vsix.ps1` PowerShell script.
+- **Architecture: Component Decomposition**
+- **Performance: List Virtualization**
+- **Performance: Memoized README Parsing**
+- **Performance: React.memo on DraggableSash**
+- **Performance: Consolidated Message Handler**
+- **Performance: Memoized Details Panel**
+
+### Fixed
+
+- **Transitive Metadata Circular Dependency**
+- **Transitive Packages Not Loading**
+- **Transitive Spinner Stuck on Project Change**
+- **Transitive Stale After Bulk Remove**
+- **Source Dropdown Not Resetting on Remove**
+- **Missing `useMemo` Deps in InstalledTab**
+- **Inline Callbacks Defeating React.memo**
 
 ## [1.0.0] - 2026-02-05
 

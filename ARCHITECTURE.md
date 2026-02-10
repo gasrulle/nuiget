@@ -16,10 +16,12 @@ This document describes the technical architecture of the nUIget VS Code extensi
 │                                           │                      │
 │  ┌──────────────────────────────────────────────────────────┐  │
 │  │                    Webview (React)                        │  │
+│  │                      App.tsx (shell)                      │  │
 │  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────────┐  │  │
-│  │  │   Browse    │  │  Installed  │  │  Updates [3]    │  │  │
-│  │  └─────────────┘  └─────────────┘  └─────────────────┘  │  │
-│  │                        App.tsx                            │  │
+│  │  │ BrowseTab   │  │InstalledTab │  │  UpdatesTab [3] │  │  │
+│  │  └──────┬──────┘  └──────┬──────┘  └────────┬────────┘  │  │
+│  │         └────────────────┼──────────────────┘            │  │
+│  │                 PackageDetailsPanel                       │  │
 │  └──────────────────────────────────────────────────────────┘  │
 │                                                                  │
 │  ┌──────────────────────────────────────────────────────────┐  │
@@ -45,8 +47,14 @@ src/
 │   ├── NuGetPanel.ts         # WebviewPanel, message handling, state persistence
 │   └── app/
 │       ├── index.tsx         # React entry point with ErrorBoundary
-│       ├── App.tsx           # Main UI component (~3400 lines)
+│       ├── App.tsx           # Application shell (~1650 lines)
 │       ├── App.css           # Styles
+│       ├── types.ts          # Shared types, LRUMap, utility functions
+│       ├── components/
+│       │   ├── BrowseTab.tsx          # Browse tab (~540 lines)
+│       │   ├── InstalledTab.tsx       # Installed tab (~970 lines)
+│       │   ├── UpdatesTab.tsx         # Updates tab (~410 lines)
+│       │   └── PackageDetailsPanel.tsx # Details panel (~280 lines)
 │       └── hooks/
 │           └── usePackageSelection.ts  # Package selection logic hook
 ├── services/
@@ -58,6 +66,84 @@ src/
 └── test/
     └── WorkspaceCache.test.ts # Unit tests for cache utility
 ```
+
+## Component Architecture
+
+The webview UI is decomposed into focused tab components, each managing their own local state while sharing cross-cutting state from the App shell.
+
+### Component Hierarchy
+
+```
+App.tsx (shell)
+├── Tab Bar (Browse | Installed | Updates [badge])
+├── Source Settings (inline)
+├── BrowseTab (forwardRef → BrowseTabHandle)
+│   ├── Search input + Quick search
+│   ├── Virtualized package list (@tanstack/react-virtual)
+│   └── PackageDetailsPanel (via MemoizedPackageDetailsPanel)
+├── InstalledTab (forwardRef → InstalledTabHandle)
+│   ├── Filter bar + Toolbar
+│   ├── Direct packages list
+│   ├── Transitive packages (collapsible per-framework)
+│   └── PackageDetailsPanel (via MemoizedPackageDetailsPanel)
+└── UpdatesTab (forwardRef → UpdatesTabHandle)
+    ├── Bulk operations toolbar
+    ├── Virtualized update list (@tanstack/react-virtual)
+    └── PackageDetailsPanel (via MemoizedPackageDetailsPanel)
+```
+
+### Mounting Strategy
+
+| Component | Strategy | Reason |
+|-----------|----------|--------|
+| BrowseTab | Always mounted, `display:none` | Preserves search state, scroll position |
+| InstalledTab | Always mounted, `display:none` | Preserves filter state, transitive data |
+| UpdatesTab | Conditionally rendered | Re-fetches data on each visit |
+
+### State Ownership
+
+**App.tsx (shared state):** `projects`, `selectedProject`, `installedPackages`, `selectedPackage`, `selectedTransitivePackage`, `packageMetadata`, `packageVersions`, `selectedVersion`, `activeTab`, `includePrerelease`, `selectedSource`, `sources`, `detailsTab`, `sanitizedReadmeHtml`.
+
+**Tab components (local state):** Each tab manages its own UI state (search results, loading flags, filter text, transitive sections, bulk selections) to minimize cross-component coupling.
+
+### Message Routing
+
+App.tsx's `handleMessage` dispatches incoming messages to components via `forwardRef` + `useImperativeHandle`:
+
+```typescript
+// Each tab ref exposes a handleMessage method
+const browseTabCompRef = useRef<BrowseTabHandle>(null);
+const installedTabCompRef = useRef<InstalledTabHandle>(null);
+const updatesTabCompRef = useRef<UpdatesTabHandle>(null);
+
+// In handleMessage:
+if (browseTabCompRef.current?.handleMessage(msg)) return;
+if (installedTabCompRef.current?.handleMessage(msg)) return;
+if (updatesTabCompRef.current?.handleMessage(msg)) return;
+// ...handle remaining messages in App
+```
+
+Each component's `handleMessage` returns `true` if it consumed the message, enabling short-circuit dispatch. InstalledTab and UpdatesTab return `void` (unconditional dispatch for their message types).
+
+### Source Removal Reset
+
+When a source is removed, the backend captures the source URL *before* removal and sends it as `removedSourceUrl` alongside `removedSourceName` in the `sources` response. The frontend compares `removedSourceUrl` directly against `selectedSourceRef.current` to reset the dropdown — avoiding stale closure issues in the `useCallback(fn, [])` handler.
+
+### Props Pattern
+
+Components receive state via props (not React Context) since there's only one level of nesting:
+
+```typescript
+<MemoizedBrowseTab
+    ref={browseTabCompRef}
+    vscode={vscode}
+    isVisible={activeTab === 'browse'}
+    selectedProject={selectedProject}
+    // ...shared state and callbacks
+/>
+```
+
+All tab components are wrapped in `React.memo` for render optimization.
 
 ## Message Flow
 
@@ -135,7 +221,7 @@ public dispose(): void {
 |---------|-----------|---------|
 | `getInstalledPackages` | UI → Ext | Get packages for a project |
 | `installedPackages` | Ext → UI | Return installed packages |
-| `getTransitivePackages` | UI → Ext | Get transitive packages from project.assets.json |
+> **Client-side filter:** The Installed tab includes a local filter input (`installedFilterQuery` state) that filters `sortedInstalledPackages` via `useMemo` with a case-insensitive `includes()` on package ID. No messages are sent — filtering is entirely in-browser on the already-loaded package array. The `uninstallablePackages` memo and "Select all" logic are scoped to the filtered list.| `getTransitivePackages` | UI → Ext | Get transitive packages from project.assets.json |
 | `transitivePackages` | Ext → UI | Return frameworks with transitive packages |
 | `getTransitiveMetadata` | UI → Ext | Fetch metadata for one framework's packages |
 | `transitiveMetadata` | Ext → UI | Return packages with icons/verified/authors |
@@ -392,6 +478,107 @@ return result;
 | Verified status & authors | 5 min | Rarely changes, safe to cache longer |
 | Search results | 2 min | Frequently updated, short cache for freshness |
 | README content | ∞ | Immutable per package@version |
+
+### List Virtualization
+
+The Browse and Updates tabs use `@tanstack/react-virtual` to virtualize package lists, rendering only visible items in the DOM:
+
+```typescript
+// Virtualizer instance per list
+const browseVirtualizer = useVirtualizer({
+    count: searchResults.length,
+    getScrollElement: () => browseScrollRef.current,
+    estimateSize: () => 66, // estimated item height (padding + icon + text)
+    overscan: 5, // render 5 extra items above/below viewport
+});
+
+// Items are absolutely positioned within a relative container
+<div style={{ height: `${virtualizer.getTotalSize()}px`, position: 'relative' }}>
+    {virtualizer.getVirtualItems().map(virtualRow => (
+        <div
+            ref={virtualizer.measureElement}  // dynamic height measurement
+            style={{ position: 'absolute', transform: `translateY(${virtualRow.start}px)` }}
+        />
+    ))}
+</div>
+```
+
+The keyboard navigation handler (`createPackageListKeyHandler`) accepts an optional `scrollToIndex` callback, allowing virtualized lists to scroll to items that may not be in the DOM yet:
+```typescript
+options?: {
+    scrollToIndex?: (index: number) => void; // calls virtualizer.scrollToIndex()
+}
+```
+
+The Installed tab is **not** virtualized because its list is embedded within a complex layout (filter bar, toolbar, collapsible transitive framework sections) that scrolls together.
+
+### Component Memoization
+
+- **Tab components** (`BrowseTab`, `InstalledTab`, `UpdatesTab`) are wrapped in `React.memo` with `forwardRef` + `useImperativeHandle` for parent-to-child communication.
+- **PackageDetailsPanel** is wrapped in `React.memo` as `MemoizedPackageDetailsPanel`, shared by all three tabs.
+- `DraggableSash` is wrapped in `React.memo` as `MemoizedDraggableSash` with memoized `onReset`/`onDragEnd` callbacks (`useCallback` with `[]` deps) to prevent re-renders on unrelated state changes.
+- `sanitizedReadmeHtml` is memoized via `useMemo` keyed on `packageMetadata?.readme`, preventing expensive `marked.parse()` + `DOMPurify.sanitize()` re-computation on every render.
+
+### Message Handler Pattern
+
+The webview message handler uses a `useRef` pattern to avoid the "stale closure" problem without requiring ref-sync effects:
+
+```typescript
+// Ref holds the latest handler
+const handleMessageRef = useRef<(event: MessageEvent) => void>(() => {});
+
+// Handler defined as regular function - captures current state via closures
+const handleMessage = (event: MessageEvent) => {
+    // reads selectedProject, selectedPackage, activeTab, etc. directly
+};
+handleMessageRef.current = handleMessage; // updated every render
+
+// Event listener set up once, calls through ref
+useEffect(() => {
+    const listener = (e: MessageEvent) => handleMessageRef.current(e);
+    window.addEventListener('message', listener);
+    return () => window.removeEventListener('message', listener);
+}, []);
+```
+
+This pattern eliminates the need for individual ref-sync effects (previously 7 separate `useEffect` hooks were used to sync state values like `selectedProject`, `activeTab`, `selectedSource` etc. to refs so the `useCallback(fn, [])` handler could read them).
+
+### Details Panel Component
+
+The package details panel has been extracted into `PackageDetailsPanel.tsx` (~280 lines), wrapped in `React.memo` as `MemoizedPackageDetailsPanel`. Each tab renders its own instance, receiving shared state as props. This replaces the previous `useMemo`-based approach with proper component-level memoization via `React.memo`.
+
+### State Stability Patterns
+
+**Installed packages content comparison:** To prevent cascading re-render chains (where `setInstalledPackages` → triggers `checkPackageUpdates` effect → posts message → response calls `setPackagesWithUpdates`), incoming packages are compared by `id@version` content before updating state:
+
+```typescript
+setInstalledPackages(prev => {
+    const prevKey = prev.map(p => `${p.id}@${p.version}`).sort().join(',');
+    const newKey = incoming.map(p => `${p.id}@${p.version}`).sort().join(',');
+    return prevKey === newKey ? prev : incoming; // same ref = no re-render
+});
+```
+
+**Transitive metadata ref mirror:** The transitive metadata prefetch effect needs to track which frameworks are already being fetched. React 19 runs `setState` updaters asynchronously, so assigning a local variable inside an updater and reading it after `setState` returns always yields the initial value. Instead, a `useRef<Set<string>>` mirrors the state synchronously:
+
+```typescript
+// Ref mirror for synchronous reads — React 19 defers setState updaters
+const transitiveLoadingMetadataRef = useRef<Set<string>>(new Set());
+const [transitiveLoadingMetadata, setTransitiveLoadingMetadata] = useState<Set<string>>(new Set());
+
+// In prefetch effect — read ref synchronously, then update both
+const frameworksToFetch = transitiveFrameworks.filter(f =>
+    !f.metadataLoaded && !transitiveLoadingMetadataRef.current.has(f.targetFramework)
+);
+if (frameworksToFetch.length === 0) return;
+for (const f of frameworksToFetch) {
+    transitiveLoadingMetadataRef.current.add(f.targetFramework);
+}
+setTransitiveLoadingMetadata(new Set(transitiveLoadingMetadataRef.current));
+// Now safe to call postMessage — frameworksToFetch is populated
+```
+
+The ref is also cleared in `doResetTransitiveState` and updated in the `transitiveMetadata` response handler.
 
 ### Frontend Caching (React)
 The webview maintains LRU caches using `useRef<LRUMap>()` to avoid redundant requests with memory bounds:
