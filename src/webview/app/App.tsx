@@ -19,16 +19,16 @@ import { marked } from 'marked';
 import { markedHighlight } from 'marked-highlight';
 import React, { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import './App.css';
-import { usePackageSelection } from './hooks/usePackageSelection';
 import type { BrowseTabHandle } from './components/BrowseTab';
-import type { InstalledTabHandle } from './components/InstalledTab';
-import type { UpdatesTabHandle } from './components/UpdatesTab';
 import { MemoizedBrowseTab } from './components/BrowseTab';
+import type { InstalledTabHandle } from './components/InstalledTab';
 import { MemoizedInstalledTab } from './components/InstalledTab';
-import { MemoizedUpdatesTab } from './components/UpdatesTab';
 import { MemoizedPackageDetailsPanel } from './components/PackageDetailsPanel';
-import type { InstalledPackage, PackageSearchResult, PackageMetadata, TransitivePackage, NuGetSource, FailedSource, Project, PackageUpdate, AppState } from './types';
-import { LRUMap, isSearchResult, getPackageId, decodeHtmlEntities } from './types';
+import type { UpdatesTabHandle } from './components/UpdatesTab';
+import { MemoizedUpdatesTab } from './components/UpdatesTab';
+import { usePackageSelection } from './hooks/usePackageSelection';
+import type { AppState, FailedSource, InstalledPackage, NuGetSource, PackageMetadata, PackageSearchResult, PackageUpdate, Project, TransitivePackage } from './types';
+import { LRUMap, getPackageId } from './types';
 
 // Register highlight.js languages
 hljs.registerLanguage('csharp', csharp);
