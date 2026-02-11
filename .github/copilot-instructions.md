@@ -14,6 +14,12 @@ After completing ANY feature, fix, or change, update these files:
 |------|-------------|
 | **CHANGELOG.md** | New features → `### Added`, bug fixes → `### Fixed`, behavior changes → `### Changed` |
 | **ARCHITECTURE.md** | New message types, state patterns, services, data flows |
+
+### CHANGELOG.md Rules
+- Always add entries under an `## [Unreleased]` section at the top of the changelog (below the header). If the section already exists, append to it.
+- For `### Added` entries: write the **bold headline** followed by a brief description (e.g., `- **New Feature** — Short explanation of what it does`).
+- For `### Fixed` and `### Changed` entries: only write the **bold headline** per bullet (e.g., `- **Some Fix**`). Do NOT add descriptions, explanations, or details after the headline.
+- Never edit or modify content under previously released version sections — only the `## [Unreleased]` section may be changed.
 | **README.md** | User-facing feature changes, new settings/commands |
 | **copilot-instructions.md** | New gotchas, capabilities, common issues |
 
@@ -30,7 +36,7 @@ After completing ANY feature, fix, or change, update these files:
 - **HTTP/2 for nuget.org:** Multiplexing for bulk requests. Session pool (MAX_SESSIONS=10) with LRU eviction. HTTP/1.1 fallback for private sources.
 - **Sources & Auth:** `dotnet nuget list source`, enable/disable/add/remove. CredentialService for Azure DevOps, GitHub Packages, JFrog. DPAPI encryption on Windows.
 - **Package Management:** Search/install/update/remove via dotnet CLI. Multi-project (.csproj, .fsproj, .vbproj). Floating versions, Updates tab with badge, bulk operations.
-- **Transitive Packages:** Collapsible per-framework sections. Two-stage background prefetch (frameworks → metadata).
+- **Transitive Packages:** Collapsible per-framework sections. Two-stage background prefetch (frameworks → metadata). Refresh ↻ icon on direct packages header refreshes both installed and transitive packages, calls `doResetTransitiveState(true, true)` to collapse and re-fetch with `forceRestore`.
 - **Multi-Tier Caching:** Backend LRUMap (metadata 200, versions 200, icons 500, search 100). Frontend `useRef<LRUMap>`. WorkspaceCache for persistence.
 - **Disposed Panel Safety:** `_disposed` flag + `_postMessage()` helper prevents "Webview is disposed" errors.
 - **Settings Persistence:** Prerelease/source via `workspaceState`. Split position via `globalState`.
@@ -90,7 +96,9 @@ npm run package:vsix # Outputs nuiget.vsix
 | Floating version metadata fails | Use `pkg.resolvedVersion` not `pkg.version` for API calls |
 | Transitive not available | `project.assets.json` needs build/restore — use `restoreProject()` if missing |
 | Transitive stale after remove | `dotnet remove` doesn't update assets.json — run `dotnet restore` after |
-| Unreachable custom source blocks loading | `failedEndpointCache` caches failures for 60s. `discoverServiceEndpoints` uses 5s timeout. Never rely on OS TCP timeout. |
+| Unreachable custom source blocks loading | `failedEndpointCache` caches failures for 120s (2 min). `discoverServiceEndpoints` uses 5s timeout. `searchPackages` pre-validates and pre-filters sources via `filterHealthySources()` before CLI. `clearSourceErrors()` clears all caches including `failedEndpointCache`. |
+| Registration API returns null/garbled | Gzip-compressed endpoint selected by mistake. Filter by `!resource['@id']?.includes('-gz-')` in `discoverServiceEndpoints`. HTTP/2 client has no gzip decompression. |
+| Package details missing published/deps | Registration endpoint resolving to `registration5-gz-semver2/` (gzip). Must use `registration5-semver1/` (plain JSON). |
 
 ## Code Patterns
 | Issue | Solution |
@@ -105,14 +113,16 @@ npm run package:vsix # Outputs nuiget.vsix
 | Pattern | Implementation |
 |---------|----------------|
 | Async file I/O | `fileExists()` with `fs.promises.access`, never `fs.existsSync` |
-| Concurrency limiting | `batchedPromiseAll(items, processor, 8)` |
+| Concurrency limiting | `batchedPromiseAll(items, processor, 16)` — sliding-window (starts next item as any slot frees, not batch-then-wait) |
 | LRU caches | Frontend: `useRef<LRUMap>`. Backend: `LRUMap` in NuGetService |
 | useRef state mirror | For synchronous reads across async boundaries. See `transitiveLoadingMetadataRef`, `selectedSourceRef`, `selectedProjectRef`. |
 | Race for first result | `raceForFirstResult()` to resolve early from first source |
 | HTTP request timeouts | `fetchJsonWithDetails` and `fetchJsonHttp1` use `options.timeout` + `req.on('timeout')`. Service index discovery uses 5s, general requests 10s. |
-| Failed endpoint cache | `failedEndpointCache: Map<string, number>` caches unreachable source URLs for 60s. Prevents re-trying dead sources per package (OS TCP timeout is ~21s). |
+| Failed endpoint cache | `failedEndpointCache: Map<string, number>` caches unreachable source URLs for 120s (2 min). Prevents re-trying dead sources per package (OS TCP timeout is ~21s). `clearSourceErrors()` clears it for manual refresh. `searchPackages` uses `preValidateSources()` + `filterHealthySources()` to exclude failed sources before CLI. `fetchPackageVerifiedStatus` also skips failed sources early. |
 | project.assets.json cache | `readAssetsJson()` method with mtime-based invalidation + 30s TTL. Avoids parsing 5-50MB files 2-3x per flow. |
 | Transitive prefetch deferral | `getTransitivePackages` is deferred 2s after installed packages load to reduce network contention. |
+| Unified metadata fetch | `getPackageSearchMetadata(id, version?)` returns `verified`, `authors`, AND `iconUrl` from a single Search API call. Pre-populates icon cache to skip HEAD requests. All 4 tabs use this. Only falls back to `resolveIconUrl` for custom-source-only packages. |
+| Registration endpoint selection | Filter out gzip-compressed Registration endpoints (`-gz-` in URL) — HTTP/2 client doesn't decompress gzip. Use `registration5-semver1/` variant. |
 
 ## Security Patterns
 | Pattern | Implementation |

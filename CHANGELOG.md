@@ -5,33 +5,26 @@ All notable changes to the nUIget extension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.1.3] - 2026-02-12
-
-### Changed
-
-- **Refresh Button Moved to Direct Packages Header** — The ↻ refresh icon on the Installed tab moved from the transitive packages section to the direct packages header. Clicking it now refreshes both installed and transitive packages in parallel and runs `dotnet restore` to ensure transitive data is up to date. The transitive section collapses during refresh for a consistent experience.
-- **Unified Metadata Fetching (2× fewer HTTP calls)** — All four tabs (Browse, Installed, Updates, Transitive) now use a single `getPackageSearchMetadata` call per package that returns `verified`, `authors`, and `iconUrl` together. Previously each package made a separate Search API call **plus** a HEAD request to check for icons — the icon HEAD is now eliminated for nuget.org packages by extracting `iconUrl` from the search response. `fetchPackageVerifiedStatus` and `fetchPackageIcons` methods removed (dead code).
-- **Sliding-Window Concurrency** — `batchedPromiseAll` replaced batch-then-wait model (process N, wait for all N, repeat) with a sliding-window pool that keeps all slots saturated. Concurrency increased from 8 to 16. Eliminates idle time when one request in a batch is slow (e.g. unreachable source).
-
-## [1.1.2] - 2026-02-11
+## [1.2.0] - 2026-02-11
 
 ### Fixed
 
-- **Batch Uninstall Only Removing One Package**
-- **Notification Spam During Batch Uninstall**
-- **Full Search Slow With Unreachable Sources** — `dotnet package search` CLI no longer blocks on sources known to be unreachable. Sources are pre-validated (5s timeout) and pre-filtered via `failedEndpointCache` before passing to the CLI, avoiding OS TCP timeouts (~21s per dead source). `fetchPackageVerifiedStatus` also skips failed sources early.
-- **Refresh Button Not Retrying Sources** — `clearSourceErrors()` now also clears `failedEndpointCache`, so clicking the ⚠️ refresh button genuinely retries the network instead of hitting stale cache entries.
-- **Icon Cache Key Poisoning Custom Source Lookups** — `checkIconExists` cache key `icon:pkgid@version` had no URL component, so a `false` result from nuget.org prevented checking custom sources. The installed tab's custom source icon fallback was dead code. Replaced with `resolveIconUrl` using URL-aware caching (`iconurl:` prefix).
-- **Icon HEAD Requests Missing Auth Headers** — `checkUrlExistsHttp1` didn't pass authentication headers, so private feeds requiring auth always returned 401/403 for icon checks. Added auth support with same-origin redirect safety.
-- **Report Abuse Link Shown for Custom Sources** — Report Abuse link now only appears when the selected source is nuget.org or "All sources", instead of always showing a nuget.org link for private feed packages.
-- **HTTP Redirect Loop Protection** — `checkUrlExistsHttp1` now limits redirects to 5 hops (was unlimited, could stack overflow on circular redirects).
+- **Full Search Slow With Unreachable Sources**
+- **Refresh Button Not Retrying Sources**
+- **Package Details Missing Published Date**
 
 ### Changed
 
-- **Failed Endpoint Cache TTL** increased from 60s to 120s (2 minutes) to reduce frequency of CLI timeouts against persistently unreachable sources. Manual refresh via ⚠️ button bypasses the TTL.
-- **Source-Aware Icon Resolution** — New `resolveIconUrl()` helper replaces `checkIconExists()`. Tries nuget.org flat container first (fast path preserved), falls back to custom sources via discovered `packageBaseAddress` with auth. Circuit breaker skips sources after 5 consecutive icon misses to avoid N×M HEAD requests. Used consistently across Browse, Installed, Updates, and Transitive views.
-- **Autocomplete Queries All Sources** — When "All sources" is selected, `autocompletePackageId()` now queries nuget.org AND custom sources in parallel (was nuget.org only). Uses `SearchAutocompleteService` when available, falls back to `SearchQueryService` for feeds that lack it. Results deduped by package ID. 2-second timeout cap prevents slow sources from blocking typeahead.
-- **Icon Not-Found Cache TTL** — Changed from permanent (never expires) to 24 hours, allowing newly-added icons to be discovered on next session.
+- **Failed Endpoint Cache TTL Increased to 120s**
+- **Refresh Button Moved to Direct Packages Header**
+- **Unified Metadata Fetching (2× Fewer HTTP Calls)**
+- **Sliding-Window Concurrency**
+- **Verified Badge in Package Details Panel**
+
+## [1.1.2] - 2026-02-11
+
+- **Batch Uninstall Only Removing One Package**
+- **Notification Spam During Batch Uninstall**
 
 ## [1.1.1] - 2026-02-10
 

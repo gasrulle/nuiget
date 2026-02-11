@@ -439,7 +439,7 @@ The fix uses a two-layer defense:
 
 `clearSourceErrors()` clears all three caches (`failedSources`, `serviceIndexCache`, `failedEndpointCache`) so the ⚠️ refresh button genuinely retries the network. After TTL expiry (2 min), lazy re-validation occurs automatically on the next search.
 
-`fetchPackageVerifiedStatus` also checks `failedEndpointCache` before iterating custom sources, skipping unreachable ones without entering `discoverServiceEndpoints`.
+The Browse tab's metadata enrichment loop also checks `failedEndpointCache` before iterating custom sources for authors/description, skipping unreachable ones without entering `discoverServiceEndpoints`.
 
 ### project.assets.json Cache
 Large projects can have 5-50MB `project.assets.json` files. This file is read and parsed in multiple code paths within a single flow (`getResolvedVersions`, `getPackageDependencies`, `getTransitivePackages`). A short-lived mtime-based cache avoids redundant parsing:
@@ -715,21 +715,23 @@ const metadataCache = useRef<LRUMap<string, PackageMetadata>>(new LRUMap(100));
 These are checked before sending `getPackageVersions` or metadata requests.
 
 ### Concurrency Limiting
-Parallel API requests are batched to prevent network congestion:
+Parallel API requests use sliding-window concurrency to prevent network congestion while keeping all slots saturated:
 
 ```typescript
-// Execute promises in batches to limit concurrency
+// Sliding-window concurrency: starts next item as any slot frees (not batch-then-wait)
 async function batchedPromiseAll<T, R>(
     items: T[],
     processor: (item: T) => Promise<R>,
     concurrency: number = 6
 ): Promise<R[]>;
 
-// Used for metadata fetching on installed packages
+// Used for metadata fetching on all tabs (Installed, Browse, Updates, Transitive)
 await batchedPromiseAll(packages, async (pkg) => {
-    const iconUrl = await this.resolveIconUrl(pkg.id, pkg.version, enabledSources);
-    const { verified, authors } = await this.getPackageVerifiedAndAuthors(...);
-}, 8); // Max 8 concurrent requests
+    // Single search API call returns verified, authors, AND iconUrl
+    const { verified, authors, iconUrl } = await this.getPackageSearchMetadata(pkg.id, pkg.version);
+    // Falls back to resolveIconUrl only for custom-source-only packages
+    if (!pkg.iconUrl) { pkg.iconUrl = await this.resolveIconUrl(...); }
+}, 16); // Sliding-window with 16 concurrent slots
 ```
 
 ### Async I/O
@@ -961,8 +963,8 @@ Auth headers are preserved on same-origin redirects only (security best practice
 ### Service Index Discovery
 Each NuGet V3 source has a service index at `{source}/index.json` providing:
 - `PackageBaseAddress` - flat container for versions, content, icons
-- `RegistrationsBaseUrl` - package metadata
-- `SearchQueryService` - search
+- `RegistrationsBaseUrl` - package metadata (filtered: excludes gzip-compressed `-gz-` endpoints since HTTP/2 client has no gzip decompression; uses `registration5-semver1/`)
+- `SearchQueryService` - search, also used by `getPackageSearchMetadata` for unified metadata (verified, authors, iconUrl)
 
 ### Local Source Detection
 ```typescript
@@ -1221,11 +1223,13 @@ const sorted = topologicalSort(packages, dependencyGraph);
 
 ### Fetching Data for Package Lists
 ```typescript
-// Fetch icons and verified status in parallel
-await Promise.all([
-    this.fetchPackageIcons(packages),
-    this.fetchPackageVerifiedStatus(packages)
-]);
+// Unified metadata fetch: single search API call per package returns verified, authors, AND iconUrl
+// Used by all 4 tabs (Browse, Installed, Updates, Transitive)
+await batchedPromiseAll(packages, async (pkg) => {
+    const { verified, authors, iconUrl } = await this.getPackageSearchMetadata(pkg.id, pkg.version);
+    if (iconUrl) { pkg.iconUrl = iconUrl; }
+    if (!pkg.iconUrl) { pkg.iconUrl = await this.resolveIconUrl(pkg.id, pkg.version, enabledSources); }
+}, 16);
 ```
 
 ### Handling Installed Packages
