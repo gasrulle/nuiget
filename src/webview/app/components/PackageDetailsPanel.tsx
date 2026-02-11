@@ -12,9 +12,9 @@
 import React from 'react';
 import type {
     InstalledPackage,
+    LRUMap,
     PackageMetadata,
     PackageSearchResult,
-    LRUMap,
     VsCodeApi,
 } from '../types';
 import { decodeHtmlEntities, getPackageId, isSearchResult } from '../types';
@@ -292,10 +292,12 @@ const PackageDetailsPanel: React.FC<PackageDetailsPanelProps> = ({
                                 <a href={packageMetadata.projectUrl} className="details-link">{packageMetadata.projectUrl}</a>
                             </div>
                         )}
-                        <div className="details-row">
-                            <label>Report Abuse:</label>
-                            <a href={`https://www.nuget.org/packages/${packageId}/${selectedVersion}/ReportAbuse`} className="details-link">Report this package</a>
-                        </div>
+                        {(selectedSource === 'all' || selectedSource.includes('nuget.org')) && (
+                            <div className="details-row">
+                                <label>Report Abuse:</label>
+                                <a href={`https://www.nuget.org/packages/${packageId}/${selectedVersion}/ReportAbuse`} className="details-link">Report this package</a>
+                            </div>
+                        )}
 
                         {packageMetadata?.dependencies && packageMetadata.dependencies.length > 0 && (
                             <div className="dependencies-section">

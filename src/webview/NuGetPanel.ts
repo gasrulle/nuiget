@@ -219,9 +219,22 @@ export class NuGetPanel {
                     // Track latest query for race condition prevention
                     this._latestSearchQuery = query;
 
+                    // Defense-in-depth: pre-filter known-unreachable sources before calling searchPackages
+                    let sources = data.sources as string[] | undefined;
+                    if (sources && sources.length > 0) {
+                        const failedSources = this._nugetService.getFailedSources();
+                        if (failedSources.size > 0) {
+                            const filtered = sources.filter(url => !failedSources.has(url));
+                            // Only use filtered list if at least one source remains
+                            if (filtered.length > 0) {
+                                sources = filtered;
+                            }
+                        }
+                    }
+
                     const results = await this._nugetService.searchPackages(
                         query,
-                        data.sources as string[] | undefined,
+                        sources,
                         data.includePrerelease as boolean | undefined
                     );
 

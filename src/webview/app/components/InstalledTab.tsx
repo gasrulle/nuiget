@@ -60,6 +60,7 @@ export interface InstalledTabProps {
     expandedDeps: Set<string>;
 
     // Callbacks from parent
+    onRefreshAll: () => void;
     onSelectDirectPackage: (pkg: InstalledPackage, options: {
         selectedVersionValue: string;
         metadataVersion: string;
@@ -117,7 +118,7 @@ export interface InstalledTabHandle {
     /** Handle installed-tab-specific messages */
     handleMessage: (message: any) => void;
     /** Reset transitive state (optionally refetch) — called after install/update/remove */
-    resetTransitiveState: (refetch?: boolean) => void;
+    resetTransitiveState: (refetch?: boolean, forceRestore?: boolean) => void;
     /** Focus the installed list and select first item */
     focusAndSelectFirst: () => void;
 }
@@ -145,6 +146,7 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
         loadingReadme,
         sanitizedReadmeHtml,
         expandedDeps,
+        onRefreshAll,
         onSelectDirectPackage,
         onSelectTransitivePackage,
         clearSelection,
@@ -355,7 +357,7 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
 
     // ─── Internal reset helper ───────────────────────────────────────────────
 
-    const doResetTransitiveState = useCallback((refetch: boolean) => {
+    const doResetTransitiveState = useCallback((refetch: boolean, forceRestore?: boolean) => {
         setTransitiveFrameworks([]);
         setTransitiveExpandedFrameworks(new Set());
         transitiveLoadingMetadataRef.current = new Set();
@@ -365,7 +367,8 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
             setLoadingTransitive(true);
             vscode.postMessage({
                 type: 'getTransitivePackages',
-                projectPath: selectedProject
+                projectPath: selectedProject,
+                ...(forceRestore ? { forceRestore: true } : {})
             });
         } else {
             // Ensure loadingTransitive is cleared when not refetching,
@@ -493,8 +496,8 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
                     break;
             }
         },
-        resetTransitiveState: (refetch?: boolean) => {
-            doResetTransitiveState(refetch ?? false);
+        resetTransitiveState: (refetch?: boolean, forceRestore?: boolean) => {
+            doResetTransitiveState(refetch ?? false, forceRestore);
         },
         focusAndSelectFirst: () => {
             if (installedListRef.current) {
@@ -688,6 +691,33 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
                                             : `(${installedPackages.length})`}
                                     </span>
                                 </span>
+                                <span
+                                    className="refresh-btn"
+                                    title="Refresh installed and transitive packages"
+                                    role="button"
+                                    tabIndex={0}
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        if (selectedProject && !loadingInstalled && !loadingTransitive) {
+                                            onRefreshAll();
+                                            doResetTransitiveState(true, true);
+                                        }
+                                    }}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter' || e.key === ' ') {
+                                            e.stopPropagation();
+                                            e.preventDefault();
+                                            if (selectedProject && !loadingInstalled && !loadingTransitive) {
+                                                onRefreshAll();
+                                                doResetTransitiveState(true, true);
+                                            }
+                                        }
+                                    }}
+                                    aria-label="Refresh installed and transitive packages"
+                                    aria-disabled={loadingInstalled || loadingTransitive}
+                                >
+                                    ↻
+                                </span>
                             </button>
                             {directPackagesExpanded && (
                                 <div className="direct-packages-content">
@@ -874,43 +904,6 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
                                                 <span className="transitive-count">({framework.packages.length})</span>
                                             </span>
                                             <span className="transitive-framework">{framework.targetFramework}</span>
-                                            {index === 0 && (
-                                                <span
-                                                    className="transitive-refresh-btn"
-                                                    title="Restore project and refresh transitive packages"
-                                                    role="button"
-                                                    tabIndex={0}
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        if (selectedProject && !loadingTransitive) {
-                                                            setLoadingTransitive(true);
-                                                            vscode.postMessage({
-                                                                type: 'getTransitivePackages',
-                                                                projectPath: selectedProject,
-                                                                forceRestore: true
-                                                            });
-                                                        }
-                                                    }}
-                                                    onKeyDown={(e) => {
-                                                        if (e.key === 'Enter' || e.key === ' ') {
-                                                            e.stopPropagation();
-                                                            e.preventDefault();
-                                                            if (selectedProject && !loadingTransitive) {
-                                                                setLoadingTransitive(true);
-                                                                vscode.postMessage({
-                                                                    type: 'getTransitivePackages',
-                                                                    projectPath: selectedProject,
-                                                                    forceRestore: true
-                                                                });
-                                                            }
-                                                        }
-                                                    }}
-                                                    aria-label="Restore project and refresh transitive packages"
-                                                    aria-disabled={loadingTransitive}
-                                                >
-                                                    ↻
-                                                </span>
-                                            )}
                                         </button>
 
                                         {isExpanded && (

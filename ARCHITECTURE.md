@@ -412,9 +412,11 @@ When a custom NuGet source is unreachable (VPN disconnected, feed down), the OS 
 ```typescript
 // Cache failed endpoint discoveries to avoid repeated timeouts
 private failedEndpointCache: Map<string, number> = new Map(); // URL → timestamp
-private static readonly FAILED_ENDPOINT_CACHE_TTL = 60000;    // 60s TTL
+private static readonly FAILED_ENDPOINT_CACHE_TTL = 120000;   // 120s (2 min) TTL
 
 async discoverServiceEndpoints(sourceUrl: string): Promise<ServiceEndpoints> {
+    // Discovers: packageBaseAddress, registrationsBaseUrl, searchQueryService,
+    //            searchAutocompleteService
     // Check failed cache — skip sources that timed out recently
     const failedAt = this.failedEndpointCache.get(sourceUrl);
     if (failedAt && (Date.now() - failedAt) < FAILED_ENDPOINT_CACHE_TTL) {
@@ -426,6 +428,18 @@ async discoverServiceEndpoints(sourceUrl: string): Promise<ServiceEndpoints> {
 ```
 
 **Impact:** With 20 packages from a custom source, reduces worst-case from ~21s (per batch) to ~5s (one timeout, then cached).
+
+#### Search Pre-filtering
+Full search (`searchPackages`) uses the `dotnet package search` CLI which handles its own networking and is unaware of the extension's failure cache. Without pre-filtering, the CLI waits for OS TCP timeouts (~21s) per unreachable source on every search.
+
+The fix uses a two-layer defense:
+1. **Pre-validation** (`preValidateSources`): Before the first CLI search, sources without cached status are tested via `discoverServiceEndpoints` (5s timeout, parallel). This populates `failedEndpointCache`.
+2. **Pre-filtering** (`filterHealthySources`): Sources in `failedEndpointCache` (within TTL) are excluded from CLI arguments. If ALL sources are unreachable, they are passed through as a fallback.
+3. **Panel-level filtering**: `NuGetPanel` also excludes sources from `failedSources` map before calling `searchPackages` (defense-in-depth).
+
+`clearSourceErrors()` clears all three caches (`failedSources`, `serviceIndexCache`, `failedEndpointCache`) so the ⚠️ refresh button genuinely retries the network. After TTL expiry (2 min), lazy re-validation occurs automatically on the next search.
+
+`fetchPackageVerifiedStatus` also checks `failedEndpointCache` before iterating custom sources, skipping unreachable ones without entering `discoverServiceEndpoints`.
 
 ### project.assets.json Cache
 Large projects can have 5-50MB `project.assets.json` files. This file is read and parsed in multiple code paths within a single flow (`getResolvedVersions`, `getPackageDependencies`, `getTransitivePackages`). A short-lived mtime-based cache avoids redundant parsing:
@@ -455,6 +469,40 @@ All HTTP/1.1 requests to custom sources use explicit timeouts to prevent unbound
 | `checkUrlExistsHttp1` | 5s | Icon HEAD requests |
 
 Timeouts use `options.timeout` + `req.on('timeout')` handler that calls `req.destroy()`.
+
+### Source-Aware Icon Resolution (`resolveIconUrl`)
+All icon fetching uses a single `resolveIconUrl()` helper that:
+1. Checks `iconUrlCache` (LRU, stores resolved URL string or `''` for not-found)
+2. Checks `workspaceCache` (persists across panel closes)
+3. Tries nuget.org flat container first — HTTP/2 `HEAD` request (fast path, no auth needed)
+4. Falls back to custom sources — discovers `packageBaseAddress` via service index, tries `{base}/{id}/{version}/icon` with auth headers
+5. Caches the result: found URLs with TTL=∞ (immutable), not-found with TTL=24h
+
+Auth headers are passed to `checkUrlExistsHttp1` but NOT forwarded across origins on redirect (same-origin safety check).
+
+**Circuit breaker**: Tracks consecutive icon misses per source URL (`iconSourceMissCount`). After 5 consecutive misses, that source is skipped for the rest of the session — prevents N×M HEAD requests when a source has no icons. A single hit resets the counter. Cleared on manual refresh via `clearSourceErrors()`.
+
+```typescript
+private async resolveIconUrl(
+    packageId: string, version: string,
+    enabledSources?: Array<{ url: string }>
+): Promise<string | undefined> {
+    // 1. nuget.org flat container (HTTP/2, fast)
+    // 2. Custom sources via discovered packageBaseAddress (with auth + circuit breaker)
+    // 3. Cache result
+}
+```
+
+Methods that process many packages pre-fetch `enabledSources` once to avoid repeated `getSources()` calls.
+
+### Multi-Source Autocomplete
+When "All sources" is selected, `autocompletePackageId()`:
+1. Queries nuget.org AND custom sources **in parallel** using `Promise.allSettled`
+2. Uses `SearchAutocompleteService` when available (lightweight, returns only IDs)
+3. Falls back to `SearchQueryService` for feeds that lack autocomplete (extracts IDs from full results)
+4. Deduplicates by package ID — nuget.org results are processed first, so they "win" on collision
+5. Results are sorted by prefix relevance, then alphabetically
+6. **2-second timeout cap** for multi-source mode — returns whatever results are available by then, so slow custom sources don't block the typeahead UX
 
 ### Transitive Prefetch Deferral
 Transitive package fetching is deferred by 2s after installed packages finish loading. This reduces network contention during the critical path (metadata fetch + update checks):
@@ -494,7 +542,7 @@ const cacheKeys = {
     verifiedStatus: (id: string) =>
         `verified:${id.toLowerCase()}`,
     iconExists: (id: string, version: string) =>
-        `icon:${id.toLowerCase()}@${version}`,
+        `iconurl:${id.toLowerCase()}@${version}`,
     searchResults: (query: string, sources: string[], prerelease: boolean) =>
         `search:${query.toLowerCase()}:${[...sources].sort().join(',')}:${prerelease}`,
     readme: (id: string, version: string) =>
@@ -505,7 +553,8 @@ const cacheKeys = {
 const CACHE_TTL = {
     VERSIONS: 3 * 60 * 1000,        // 3 minutes
     VERIFIED_STATUS: 5 * 60 * 1000, // 5 minutes
-    ICON_EXISTS: 0,                 // Never expires (icons immutable per version)
+    ICON_EXISTS: 0,                 // Never expires for found icons (immutable per version)
+                                     // Not-found icons use 24h TTL to allow new icons to be discovered
     SEARCH_RESULTS: 2 * 60 * 1000,  // 2 minutes
     README: 0,                      // Never expires (immutable per version)
 };
@@ -535,7 +584,8 @@ return result;
 
 | Data | TTL | Rationale |
 |------|-----|-----------|
-| Icon existence | ∞ | Icons are immutable per package@version |
+| Icon URL (found) | ∞ | Icons are immutable per package@version |
+| Icon URL (not found) | 24h | Allows newly-published icons to be discovered |
 | Package versions | 3 min | New versions published occasionally |
 | Verified status & authors | 5 min | Rarely changes, safe to cache longer |
 | Search results | 2 min | Frequently updated, short cache for freshness |
@@ -677,7 +727,7 @@ async function batchedPromiseAll<T, R>(
 
 // Used for metadata fetching on installed packages
 await batchedPromiseAll(packages, async (pkg) => {
-    const iconExists = await this.checkIconExists(...);
+    const iconUrl = await this.resolveIconUrl(pkg.id, pkg.version, enabledSources);
     const { verified, authors } = await this.getPackageVerifiedAndAuthors(...);
 }, 8); // Max 8 concurrent requests
 ```
@@ -714,7 +764,7 @@ class LRUMap<K, V> {
 // Cache size limits in NuGetService
 private serviceIndexCache = new LRUMap<string, ServiceEndpoints>(50);
 private metadataCache = new LRUMap<string, PackageMetadata>(200);
-private iconExistsCache = new LRUMap<string, boolean>(500);
+private iconUrlCache = new LRUMap<string, string>(500);  // Stores resolved icon URL or '' (not found)
 private versionsCache = new LRUMap<string, string[]>(200);
 private verifiedStatusCache = new LRUMap<string, VerifiedStatus>(300);
 private searchResultsCache = new LRUMap<string, PackageSearchResult[]>(100);

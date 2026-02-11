@@ -245,7 +245,7 @@ export const cacheKeys = {
         `verified:${packageId.toLowerCase()}`,
 
     iconExists: (packageId: string, version: string) =>
-        `icon:${packageId.toLowerCase()}@${version}`,
+        `iconurl:${packageId.toLowerCase()}@${version}`,
 
     searchResults: (query: string, sources: string[], prerelease: boolean) =>
         `search:${query.toLowerCase()}:${[...sources].sort().join(',')}:${prerelease}`,

@@ -947,6 +947,14 @@ export const App: React.FC = () => {
         });
     }, [selectedProject]);
 
+    // Refresh installed packages (called from InstalledTab refresh button)
+    const handleRefreshAll = useCallback(() => {
+        const project = selectedProjectRef.current;
+        if (!project) { return; }
+        setLoadingInstalled(true);
+        vscode.postMessage({ type: 'getInstalledPackages', projectPath: project });
+    }, [vscode]);
+
     // Keyboard navigation handler for package lists - returns a keydown handler
     // packages: array to navigate, getCurrentId: get currently selected id, triggerClick: function to call on selection
     // Optional: onAction is called when Ctrl+Enter is pressed on current selection (for install/update)
@@ -1572,6 +1580,7 @@ export const App: React.FC = () => {
                 expandedDeps={expandedDeps}
                 onSelectDirectPackage={selectDirectPackage}
                 onSelectTransitivePackage={selectTransitivePackage}
+                onRefreshAll={handleRefreshAll}
                 clearSelection={clearSelection}
                 onInstall={handleInstall}
                 onRemove={handleRemove}

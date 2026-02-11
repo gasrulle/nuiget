@@ -2339,7 +2339,7 @@
     background: transparent;
 }
 
-.transitive-refresh-btn {
+.refresh-btn {
     margin-left: 8px;
     font-size: 13px;
     padding: 0 4px;
@@ -2351,13 +2351,13 @@
     cursor: pointer;
 }
 
-.transitive-refresh-btn:hover {
+.refresh-btn:hover {
     opacity: 1;
     background: var(--vscode-toolbar-hoverBackground);
     color: var(--vscode-foreground);
 }
 
-.transitive-refresh-btn[aria-disabled="true"] {
+.refresh-btn[aria-disabled="true"] {
     cursor: not-allowed;
     opacity: 0.3;
 }

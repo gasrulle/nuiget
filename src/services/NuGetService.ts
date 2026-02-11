@@ -412,8 +412,9 @@ export class NuGetService {
     private metadataCache: LRUMap<string, PackageMetadata> = new LRUMap(200);
     // Track sources that failed to resolve (url -> error message) - warns once per session
     private failedSources: Map<string, string> = new Map();
-    // LRU cache for icon existence checks (url -> exists, max 500 entries)
-    private iconExistsCache: LRUMap<string, boolean> = new LRUMap(500);
+    // LRU cache for resolved icon URLs (key: packageId@version, max 500 entries)
+    // Stores the resolved icon URL string, or empty string if no icon found from any source
+    private iconUrlCache: LRUMap<string, string> = new LRUMap(500);
     // LRU cache for package versions (key: packageId@source@prerelease@take, max 200 entries)
     private versionsCache: LRUMap<string, string[]> = new LRUMap(200);
     // LRU cache for verified status (key: packageId, max 300 entries)
@@ -427,8 +428,9 @@ export class NuGetService {
     // Cache for failed endpoint discoveries (source URL -> failure timestamp)
     // Prevents re-trying unreachable sources for every package (OS TCP timeout can be ~21s)
     private failedEndpointCache: Map<string, number> = new Map();
-    // Failed endpoint cache TTL: 60 seconds (allows retry after connectivity is restored)
-    private static readonly FAILED_ENDPOINT_CACHE_TTL = 60000;
+    // Failed endpoint cache TTL: 120 seconds (allows retry after connectivity is restored)
+    // Users can force-retry immediately via the ⚠️ refresh button (clearSourceErrors)
+    private static readonly FAILED_ENDPOINT_CACHE_TTL = 120000;
     // Default timeout for HTTP requests to custom sources (milliseconds)
     private static readonly HTTP_REQUEST_TIMEOUT = 10000;
     // Shorter timeout for service index discovery (milliseconds)
@@ -438,6 +440,10 @@ export class NuGetService {
     private assetsJsonCache: Map<string, { mtimeMs: number; data: unknown; timestamp: number }> = new Map();
     // Assets cache TTL: 30 seconds
     private static readonly ASSETS_CACHE_TTL = 30000;
+    // Circuit breaker for icon resolution per source — skip sources after N consecutive misses
+    // Prevents N×M HEAD requests when a source has no icons (N packages × M sources)
+    private iconSourceMissCount: Map<string, number> = new Map();
+    private static readonly ICON_SOURCE_MISS_THRESHOLD = 5;
     private outputChannel: vscode.LogOutputChannel;
     // Cached credentials from nuget.config (source name -> credentials)
     private nugetConfigCredentials: Map<string, { username?: string; password?: string; isEncrypted: boolean }> | null = null;
@@ -1283,14 +1289,10 @@ export class NuGetService {
             // Use resolved version for icon fetching if available (for floating/range versions)
             const versionForIcon = pkg.resolvedVersion || pkg.version;
 
-            // Skip icon fetching for wildcard versions without resolved version
-            if (!versionForIcon.includes('*') && !versionForIcon.includes('[') && !versionForIcon.includes('(')) {
-                // First try nuget.org for icon and metadata
-                const iconUrl = `https://api.nuget.org/v3-flatcontainer/${pkg.id.toLowerCase()}/${versionForIcon.toLowerCase()}/icon`;
-                const iconExists = await this.checkIconExists(pkg.id, versionForIcon, iconUrl);
-                if (iconExists) {
-                    pkg.iconUrl = iconUrl;
-                }
+            // Resolve icon via nuget.org-first, then custom sources fallback
+            const iconUrl = await this.resolveIconUrl(pkg.id, versionForIcon, enabledSources);
+            if (iconUrl) {
+                pkg.iconUrl = iconUrl;
             }
 
             // Fetch verified status and authors using cached method
@@ -1304,22 +1306,13 @@ export class NuGetService {
                 foundMetadata = true;
             }
 
-            // If not found on nuget.org, try custom sources
+            // If not found on nuget.org, try custom sources for authors
             if (!foundMetadata) {
                 for (const source of enabledSources) {
                     if (source.url.includes('nuget.org')) { continue; } // Already tried
 
                     try {
                         const endpoints = await this.discoverServiceEndpoints(source.url);
-
-                        // Try to get icon from custom source (only if we have a valid version)
-                        if (!pkg.iconUrl && endpoints.packageBaseAddress && !versionForIcon.includes('*') && !versionForIcon.includes('[')) {
-                            const customIconUrl = `${endpoints.packageBaseAddress.replace(/\/$/, '')}/${pkg.id.toLowerCase()}/${versionForIcon.toLowerCase()}/icon`;
-                            const customIconExists = await this.checkIconExists(pkg.id, versionForIcon, customIconUrl);
-                            if (customIconExists) {
-                                pkg.iconUrl = customIconUrl;
-                            }
-                        }
 
                         // Try to get authors from search API
                         if (endpoints.searchQueryService) {
@@ -1371,16 +1364,21 @@ export class NuGetService {
         const trimmedQuery = query.trim();
         const validSources = sources?.filter(s => s && s.trim() && !this.isLocalSource(s)) || [];
 
-        // For quick search, prioritize speed:
-        // - If multiple sources ("all"), use only nuget.org for fastest response
-        // - If single source selected, use that source
+        // Determine sources to search:
+        // - Single source selected → use only that source
+        // - Multiple sources ("all") → query nuget.org + custom sources in parallel
         const isMultipleSources = validSources.length > 1 || validSources.length === 0;
+        const nugetOrgUrl = 'https://api.nuget.org/v3/index.json';
         const sourcesToSearch = isMultipleSources
-            ? ['https://api.nuget.org/v3/index.json']
+            ? [nugetOrgUrl, ...validSources.filter(s => !s.includes('nuget.org'))]
             : validSources;
 
-        // Build cache key (include take to respect quickSearchResultsPerSource setting changes)
-        const cacheKey = `${trimmedQuery.toLowerCase()}|${sourcesToSearch[0] || 'nuget.org'}|${includePrerelease ? 'pre' : 'stable'}|${take}`;
+        // Deduplicate source URLs
+        const uniqueSources = [...new Set(sourcesToSearch)];
+
+        // Build cache key from all sources being searched
+        const sourceKey = isMultipleSources ? 'all' : uniqueSources[0] || 'nuget.org';
+        const cacheKey = `${trimmedQuery.toLowerCase()}|${sourceKey}|${includePrerelease ? 'pre' : 'stable'}|${take}`;
 
         // Check cache (30-second TTL)
         const cached = this.autocompleteCache.get(cacheKey);
@@ -1388,48 +1386,102 @@ export class NuGetService {
             return cached.data;
         }
 
-        const allResults: string[] = [];
-        const seenIds = new Set<string>();
-
-        for (const sourceUrl of sourcesToSearch) {
+        // Query all sources in parallel
+        const fetchPromises = uniqueSources.map(async (sourceUrl): Promise<string[]> => {
             try {
                 const endpoints = await this.discoverServiceEndpoints(sourceUrl);
 
-                // Silently skip sources without autocomplete API
-                if (!endpoints.searchAutocompleteService) {
-                    continue;
+                // Try Autocomplete API first (lightweight, returns just IDs)
+                if (endpoints.searchAutocompleteService) {
+                    const params = new URLSearchParams({
+                        q: trimmedQuery,
+                        take: take.toString(),
+                        semVerLevel: '2.0.0'
+                    });
+                    if (includePrerelease) {
+                        params.set('prerelease', 'true');
+                    }
+
+                    const autocompleteUrl = `${endpoints.searchAutocompleteService}?${params.toString()}`;
+                    const authHeader = await this.getAuthHeader(sourceUrl);
+                    const result = await this.fetchJson<{ data: string[]; totalHits?: number }>(autocompleteUrl, authHeader);
+
+                    if (result?.data && Array.isArray(result.data)) {
+                        return result.data;
+                    }
                 }
 
-                // Build autocomplete URL
-                const params = new URLSearchParams({
-                    q: trimmedQuery,
-                    take: take.toString(),
-                    semVerLevel: '2.0.0'
-                });
-                if (includePrerelease) {
-                    params.set('prerelease', 'true');
-                }
+                // Fall back to Search API (heavier, but many private feeds lack autocomplete)
+                if (endpoints.searchQueryService) {
+                    const params = new URLSearchParams({
+                        q: trimmedQuery,
+                        take: take.toString(),
+                        semVerLevel: '2.0.0'
+                    });
+                    if (includePrerelease) {
+                        params.set('prerelease', 'true');
+                    }
 
-                const autocompleteUrl = `${endpoints.searchAutocompleteService}?${params.toString()}`;
+                    const searchUrl = `${endpoints.searchQueryService}?${params.toString()}`;
+                    const authHeader = await this.getAuthHeader(sourceUrl);
+                    const result = await this.fetchJson<{ data: Array<{ id: string }> }>(searchUrl, authHeader);
 
-                // Get auth header for this source
-                const authHeader = await this.getAuthHeader(sourceUrl);
-
-                // Use HTTP/2 for nuget.org sources (TLS 1.2+ now enforced)
-                const result = await this.fetchJson<{ data: string[]; totalHits?: number }>(autocompleteUrl, authHeader);
-
-                if (result?.data && Array.isArray(result.data)) {
-                    for (const packageId of result.data) {
-                        const lowerId = packageId.toLowerCase();
-                        if (!seenIds.has(lowerId)) {
-                            seenIds.add(lowerId);
-                            allResults.push(packageId);
-                        }
+                    if (result?.data && Array.isArray(result.data)) {
+                        return result.data.map(pkg => pkg.id);
                     }
                 }
             } catch {
                 // Silently fail for individual sources
-                continue;
+            }
+            return [];
+        });
+
+        // Wait for all sources with a 2s timeout cap — return whatever we have by then.
+        // This prevents slow custom sources from blocking the typeahead UX.
+        let results: PromiseSettledResult<string[]>[];
+        if (isMultipleSources && uniqueSources.length > 1) {
+            // Track which promises have settled
+            const settled: (string[] | null)[] = new Array(fetchPromises.length).fill(null);
+            const wrappedPromises = fetchPromises.map((p, i) =>
+                p.then(value => { settled[i] = value; return value; })
+                    .catch(() => { settled[i] = []; return [] as string[]; })
+            );
+
+            // Race all promises against a 2s deadline
+            const allDone = Promise.all(wrappedPromises);
+            const timeout = new Promise<null>(resolve => setTimeout(() => resolve(null), 2000));
+            const raceResult = await Promise.race([allDone, timeout]);
+
+            if (raceResult !== null) {
+                // All completed within 2s
+                results = raceResult.map(v => ({ status: 'fulfilled' as const, value: v }));
+            } else {
+                // Timeout — collect whatever has settled so far
+                results = settled.map(v =>
+                    v !== null
+                        ? { status: 'fulfilled' as const, value: v }
+                        : { status: 'fulfilled' as const, value: [] as string[] }
+                );
+            }
+        } else {
+            // Single source — no timeout needed, just wait
+            results = await Promise.allSettled(fetchPromises);
+        }
+
+        // Merge results: nuget.org first (index 0 when isMultipleSources), then custom sources
+        // This ensures nuget.org IDs "win" collisions in the dedup set
+        const allResults: string[] = [];
+        const seenIds = new Set<string>();
+
+        for (const result of results) {
+            if (result.status === 'fulfilled') {
+                for (const packageId of result.value) {
+                    const lowerId = packageId.toLowerCase();
+                    if (!seenIds.has(lowerId)) {
+                        seenIds.add(lowerId);
+                        allResults.push(packageId);
+                    }
+                }
             }
         }
 
@@ -1627,8 +1679,16 @@ export class NuGetService {
             let sourceArg = '';
             // Filter out empty source strings
             const validSources = sources?.filter(s => s && s.trim()) || [];
+
+            // Pre-validate sources that have no cached status yet (populates failedEndpointCache)
             if (validSources.length > 0) {
-                sourceArg = validSources.map(s => `--source "${s}"`).join(' ');
+                await this.preValidateSources(validSources);
+            }
+
+            // Filter out sources known to be unreachable to avoid CLI TCP timeouts (~21s each)
+            const healthySources = validSources.length > 0 ? this.filterHealthySources(validSources) : [];
+            if (healthySources.length > 0) {
+                sourceArg = healthySources.map(s => `--source "${s}"`).join(' ');
             }
 
             const prereleaseArg = includePrerelease ? '--prerelease' : '';
@@ -1684,7 +1744,7 @@ export class NuGetService {
 
             // Fetch icons and verified status for all packages in parallel
             await Promise.all([
-                this.fetchPackageIcons(packages),
+                this.fetchPackageIcons(packages, healthySources),
                 this.fetchPackageVerifiedStatus(packages)
             ]);
 
@@ -1702,17 +1762,22 @@ export class NuGetService {
     }
 
     /**
-     * Fetch icon URLs for packages from NuGet API
-     * Uses the flat container icon endpoint which works for embedded icons
+     * Fetch icon URLs for packages from NuGet API or custom sources
+     * Tries nuget.org first (fast), falls back to custom sources via discovered endpoints
      */
-    private async fetchPackageIcons(packages: PackageSearchResult[]): Promise<void> {
-        const iconPromises = packages.map(async (pkg) => {
-            // Use flat container icon endpoint - works for embedded icons (iconFile)
-            const iconUrl = `https://api.nuget.org/v3-flatcontainer/${pkg.id.toLowerCase()}/${pkg.version.toLowerCase()}/icon`;
+    private async fetchPackageIcons(packages: PackageSearchResult[], sourceUrls?: string[]): Promise<void> {
+        // Pre-fetch enabled sources once for all packages (avoid N getSources calls)
+        let enabledSources: Array<{ url: string }> | undefined;
+        if (sourceUrls && sourceUrls.length > 0) {
+            enabledSources = sourceUrls.map(url => ({ url }));
+        } else {
+            const allSources = await this.getSources();
+            enabledSources = allSources.filter(s => s.enabled);
+        }
 
-            // Check if icon exists (cached)
-            const exists = await this.checkIconExists(pkg.id, pkg.version, iconUrl);
-            if (exists) {
+        const iconPromises = packages.map(async (pkg) => {
+            const iconUrl = await this.resolveIconUrl(pkg.id, pkg.version, enabledSources);
+            if (iconUrl) {
                 pkg.iconUrl = iconUrl;
             }
         });
@@ -1721,38 +1786,103 @@ export class NuGetService {
     }
 
     /**
-     * Check if an icon URL exists, with caching.
-     * Icons are immutable per package version, so cache indefinitely.
+     * Resolve the icon URL for a package, trying nuget.org first for speed,
+     * then falling back to custom sources via discovered endpoints.
+     * Results are cached per packageId@version — the cache stores the found URL
+     * or empty string if no icon was found from any source.
+     *
+     * @param packageId - The package ID
+     * @param version - The package version
+     * @param enabledSources - Pre-fetched enabled sources (avoids repeated getSources calls).
+     *                         If omitted, only nuget.org is tried (no custom source fallback).
+     * @returns The icon URL if found, or undefined
      */
-    private async checkIconExists(packageId: string, version: string, iconUrl: string): Promise<boolean> {
+    private async resolveIconUrl(
+        packageId: string,
+        version: string,
+        enabledSources?: Array<{ url: string }>
+    ): Promise<string | undefined> {
+        // Skip wildcard/range versions
+        if (version.includes('*') || version.includes('[') || version.includes('(')) {
+            return undefined;
+        }
+
         const cacheKey = cacheKeys.iconExists(packageId, version);
 
         // Check in-memory cache first (fastest)
-        const memoryCached = this.iconExistsCache.get(cacheKey);
+        const memoryCached = this.iconUrlCache.get(cacheKey);
         if (memoryCached !== undefined) {
-            return memoryCached;
+            return memoryCached || undefined; // empty string → undefined
         }
 
         // Check workspace cache (persists across panel closes)
-        const workspaceCached = workspaceCache.get<boolean>(cacheKey);
+        const workspaceCached = workspaceCache.get<string>(cacheKey);
         if (workspaceCached !== undefined) {
-            this.iconExistsCache.set(cacheKey, workspaceCached);
-            return workspaceCached;
+            this.iconUrlCache.set(cacheKey, workspaceCached);
+            return workspaceCached || undefined;
         }
 
-        // Fetch and cache result
-        const exists = await this.checkUrlExists(iconUrl);
-        this.iconExistsCache.set(cacheKey, exists);
-        workspaceCache.set(cacheKey, exists, CACHE_TTL.ICON_EXISTS);
-        return exists;
+        const lowerId = packageId.toLowerCase();
+        const lowerVersion = version.toLowerCase();
+
+        // 1. Try nuget.org flat container first (fast path — HTTP/2 multiplexed HEAD)
+        const nugetOrgUrl = `https://api.nuget.org/v3-flatcontainer/${lowerId}/${lowerVersion}/icon`;
+        const nugetOrgExists = await this.checkUrlExists(nugetOrgUrl);
+        if (nugetOrgExists) {
+            this.iconUrlCache.set(cacheKey, nugetOrgUrl);
+            workspaceCache.set(cacheKey, nugetOrgUrl, CACHE_TTL.ICON_EXISTS);
+            return nugetOrgUrl;
+        }
+
+        // 2. Try custom sources via discovered packageBaseAddress
+        if (enabledSources) {
+            for (const source of enabledSources) {
+                // Skip nuget.org (already tried) and local sources
+                if (source.url.includes('nuget.org') || this.isLocalSource(source.url)) {
+                    continue;
+                }
+
+                // Circuit breaker: skip sources that consistently have no icons
+                const missCount = this.iconSourceMissCount.get(source.url) || 0;
+                if (missCount >= NuGetService.ICON_SOURCE_MISS_THRESHOLD) {
+                    continue;
+                }
+
+                try {
+                    const endpoints = await this.discoverServiceEndpoints(source.url);
+                    if (endpoints.packageBaseAddress) {
+                        const customIconUrl = `${endpoints.packageBaseAddress.replace(/\/$/, '')}/${lowerId}/${lowerVersion}/icon`;
+                        const authHeader = await this.getAuthHeader(source.url);
+                        const customExists = await this.checkUrlExists(customIconUrl, authHeader);
+                        if (customExists) {
+                            // Reset miss count on success (source does have icons)
+                            this.iconSourceMissCount.delete(source.url);
+                            this.iconUrlCache.set(cacheKey, customIconUrl);
+                            workspaceCache.set(cacheKey, customIconUrl, CACHE_TTL.ICON_EXISTS);
+                            return customIconUrl;
+                        } else {
+                            // Increment miss count
+                            this.iconSourceMissCount.set(source.url, missCount + 1);
+                        }
+                    }
+                } catch {
+                    // Silently skip failed sources
+                }
+            }
+        }
+
+        // 3. No icon found — cache as empty string with 24h TTL (icon may be added later)
+        this.iconUrlCache.set(cacheKey, '');
+        workspaceCache.set(cacheKey, '', 24 * 60 * 60 * 1000);
+        return undefined;
     }
 
     /**
      * Check if a URL exists (returns 200) - raw HTTP check, no caching
      * Uses HTTP/2 for nuget.org sources for better performance
      */
-    private async checkUrlExists(url: string): Promise<boolean> {
-        // Use HTTP/2 client for nuget.org sources (multiplexing)
+    private async checkUrlExists(url: string, authHeader?: string): Promise<boolean> {
+        // Use HTTP/2 client for nuget.org sources (multiplexing) - no auth needed
         if (url.includes('.nuget.org')) {
             const statusCode = await http2Client.headRequest(url);
             // Handle redirects by following them
@@ -1762,21 +1892,36 @@ export class NuGetService {
             }
             return statusCode === 200;
         }
-        return this.checkUrlExistsHttp1(url);
+        return this.checkUrlExistsHttp1(url, authHeader);
     }
 
     /**
      * HTTP/1.1 URL check with redirect handling
      */
-    private checkUrlExistsHttp1(url: string): Promise<boolean> {
+    private checkUrlExistsHttp1(url: string, authHeader?: string, maxRedirects: number = 5): Promise<boolean> {
         return new Promise((resolve) => {
+            if (maxRedirects <= 0) {
+                resolve(false);
+                return;
+            }
+            const parsedUrl = new URL(url);
             const client = url.startsWith('https://') ? https : http;
-            const req = client.request(url, { method: 'HEAD' }, (res) => {
-                // Handle redirects - follow them
+            const headers: Record<string, string> = {};
+            if (authHeader) {
+                headers['Authorization'] = authHeader;
+            }
+            const req = client.request(url, { method: 'HEAD', headers }, (res) => {
+                // Handle redirects - follow them (with loop protection)
                 if (res.statusCode === 301 || res.statusCode === 302 || res.statusCode === 307 || res.statusCode === 308) {
                     const redirectUrl = res.headers.location;
                     if (redirectUrl) {
-                        this.checkUrlExistsHttp1(redirectUrl).then(resolve);
+                        // Only forward auth if redirect stays on the same origin (security)
+                        let sameOrigin = false;
+                        try {
+                            const redirectParsed = new URL(redirectUrl);
+                            sameOrigin = redirectParsed.origin === parsedUrl.origin;
+                        } catch { /* not same origin */ }
+                        this.checkUrlExistsHttp1(redirectUrl, sameOrigin ? authHeader : undefined, maxRedirects - 1).then(resolve);
                         return;
                     }
                 }
@@ -1867,9 +2012,15 @@ export class NuGetService {
                         }
                     }
 
-                    // Not found on nuget.org, try custom sources
+                    // Not found on nuget.org, try custom sources (skip known-unreachable ones)
                     for (const source of enabledSources) {
                         if (source.url.includes('nuget.org')) { continue; } // Already tried
+
+                        // Skip sources known to be unreachable (within TTL) to avoid delays
+                        const failedAt = this.failedEndpointCache.get(source.url);
+                        if (failedAt && (Date.now() - failedAt) < NuGetService.FAILED_ENDPOINT_CACHE_TTL) {
+                            continue;
+                        }
 
                         const endpoints = await this.discoverServiceEndpoints(source.url);
                         if (endpoints.searchQueryService) {
@@ -2302,6 +2453,10 @@ export class NuGetService {
         this.failedSources.clear();
         // Also clear the service index cache to force re-discovery
         this.serviceIndexCache.clear();
+        // Clear failed endpoint cache so that refreshing actually retries the network
+        this.failedEndpointCache.clear();
+        // Clear icon source circuit breaker so custom sources are re-tried
+        this.iconSourceMissCount.clear();
     }
 
     /**
@@ -2309,6 +2464,75 @@ export class NuGetService {
      */
     getFailedSources(): Map<string, string> {
         return new Map(this.failedSources);
+    }
+
+    /**
+     * Filter out source URLs that are known to be unreachable (in failedEndpointCache within TTL).
+     * If ALL sources would be filtered out, returns the original list to avoid silent empty results.
+     */
+    private filterHealthySources(sourceUrls: string[]): string[] {
+        if (sourceUrls.length === 0) {
+            return sourceUrls;
+        }
+
+        const now = Date.now();
+        const healthy = sourceUrls.filter(url => {
+            const failedAt = this.failedEndpointCache.get(url);
+            if (failedAt && (now - failedAt) < NuGetService.FAILED_ENDPOINT_CACHE_TTL) {
+                this.outputChannel.info(`[Search] Skipping unreachable source: ${this.sanitizeForLogging(url)}`);
+                return false;
+            }
+            return true;
+        });
+
+        // If ALL sources are unreachable, return the original list so the CLI can attempt
+        // them (better to get a CLI error than silently return zero results)
+        if (healthy.length === 0) {
+            this.outputChannel.warn('[Search] All sources are unreachable — passing all to CLI as fallback');
+            return sourceUrls;
+        }
+
+        return healthy;
+    }
+
+    /**
+     * Pre-validate source URLs that have no cached status (neither in serviceIndexCache
+     * nor failedEndpointCache). This populates the failure cache before CLI search so that
+     * filterHealthySources can remove unreachable sources on the first search.
+     */
+    private async preValidateSources(sourceUrls: string[]): Promise<void> {
+        const now = Date.now();
+        const unknownSources = sourceUrls.filter(url => {
+            // Already cached as successful
+            if (this.serviceIndexCache.get(url)) {
+                return false;
+            }
+            // Already cached as failed (within TTL)
+            const failedAt = this.failedEndpointCache.get(url);
+            if (failedAt && (now - failedAt) < NuGetService.FAILED_ENDPOINT_CACHE_TTL) {
+                return false;
+            }
+            // Skip local sources
+            if (this.isLocalSource(url)) {
+                return false;
+            }
+            return true;
+        });
+
+        if (unknownSources.length === 0) {
+            return;
+        }
+
+        this.outputChannel.info(`[Search] Pre-validating ${unknownSources.length} source(s) before CLI search...`);
+
+        // Validate all unknown sources in parallel (5s timeout each via discoverServiceEndpoints)
+        await Promise.all(
+            unknownSources.map(url =>
+                this.discoverServiceEndpoints(url).catch(() => {
+                    // Error already handled in discoverServiceEndpoints
+                })
+            )
+        );
     }
 
     async getPackageVersions(packageId: string, source?: string, includePrerelease?: boolean, take: number = 20): Promise<string[]> {
@@ -2863,6 +3087,10 @@ export class NuGetService {
             authors?: string;
         }[] = [];
 
+        // Pre-fetch enabled sources once for all update checks
+        const allSources = await this.getSources();
+        const enabledSources = allSources.filter(s => s.enabled);
+
         // Check each installed package for updates in parallel
         const updateChecks = installedPackages.map(async (pkg) => {
             try {
@@ -2886,7 +3114,7 @@ export class NuGetService {
 
                 // Standard version comparison
                 if (this.isNewerVersion(latestVersion, pkg.version)) {
-                    const iconUrl = await this.getPackageIconUrl(pkg.id, latestVersion);
+                    const iconUrl = await this.getPackageIconUrl(pkg.id, latestVersion, enabledSources);
                     const { verified, authors } = await this.getPackageVerifiedAndAuthors(pkg.id);
 
                     return {
@@ -2915,12 +3143,14 @@ export class NuGetService {
     }
 
     /**
-     * Helper to get package icon URL (uses cached icon check)
+     * Helper to get package icon URL (uses resolveIconUrl with source-aware fallback)
      */
-    private async getPackageIconUrl(packageId: string, version: string): Promise<string | undefined> {
-        const iconUrl = `https://api.nuget.org/v3-flatcontainer/${packageId.toLowerCase()}/${version.toLowerCase()}/icon`;
-        const hasIcon = await this.checkIconExists(packageId, version, iconUrl);
-        return hasIcon ? iconUrl : undefined;
+    private async getPackageIconUrl(
+        packageId: string,
+        version: string,
+        enabledSources?: Array<{ url: string }>
+    ): Promise<string | undefined> {
+        return this.resolveIconUrl(packageId, version, enabledSources);
     }
 
     /**
@@ -3698,11 +3928,14 @@ export class NuGetService {
      * Uses batched fetching to limit concurrent network operations
      */
     public async fetchTransitivePackageMetadata(packages: TransitivePackage[]): Promise<void> {
+        // Pre-fetch enabled sources once for all packages
+        const allSources = await this.getSources();
+        const enabledSources = allSources.filter(s => s.enabled);
+
         await batchedPromiseAll(packages, async (pkg) => {
-            // Fetch icon (cached)
-            const iconUrl = `https://api.nuget.org/v3-flatcontainer/${pkg.id.toLowerCase()}/${pkg.version.toLowerCase()}/icon`;
-            const iconExists = await this.checkIconExists(pkg.id, pkg.version, iconUrl);
-            if (iconExists) {
+            // Fetch icon (cached, source-aware)
+            const iconUrl = await this.resolveIconUrl(pkg.id, pkg.version, enabledSources);
+            if (iconUrl) {
                 pkg.iconUrl = iconUrl;
             }
 
