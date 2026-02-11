@@ -783,6 +783,12 @@ export class NuGetPanel {
                     const packages = data.packages as string[];
                     const projectPath = data.projectPath as string;
 
+                    if (!packages || packages.length === 0) {
+                        console.warn('[nUIget] confirmBulkRemove received empty packages array');
+                        break;
+                    }
+                    console.log(`[nUIget] confirmBulkRemove: received ${packages.length} packages to remove: ${packages.join(', ')}`);
+
                     // Notify webview that uninstall is starting
                     this._postMessage({
                         type: 'bulkRemoveConfirmed',
@@ -881,7 +887,7 @@ export class NuGetPanel {
                             const success = await this._nugetService.removePackage(
                                 projectPath,
                                 packageId,
-                                { skipChannelSetup: true, skipRestore: true }
+                                { skipChannelSetup: true, skipRestore: true, skipNotification: true }
                             );
 
                             if (success) {
