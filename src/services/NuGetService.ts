@@ -2006,7 +2006,7 @@ export class NuGetService {
         }
     }
 
-    async removePackage(projectPath: string, packageId: string, options?: { skipChannelSetup?: boolean; skipRestore?: boolean }): Promise<boolean> {
+    async removePackage(projectPath: string, packageId: string, options?: { skipChannelSetup?: boolean; skipRestore?: boolean; skipNotification?: boolean }): Promise<boolean> {
         // Validate inputs to prevent command injection
         if (!isValidPackageId(packageId)) {
             vscode.window.showErrorMessage(`Invalid package ID: ${packageId}`);
@@ -2048,7 +2048,9 @@ export class NuGetService {
                 }
             }
 
-            vscode.window.showInformationMessage(`Successfully removed ${packageId}`);
+            if (!options?.skipNotification) {
+                vscode.window.showInformationMessage(`Successfully removed ${packageId}`);
+            }
             return true;
         } catch (error) {
             const command = `dotnet remove "${projectPath}" package ${packageId}`;

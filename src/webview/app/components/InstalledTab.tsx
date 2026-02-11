@@ -180,6 +180,12 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
 
     // Bulk uninstall state
     const [selectedUninstalls, setSelectedUninstalls] = useState<Set<string>>(new Set());
+    // Ref mirror of selectedUninstalls for synchronous reads in callbacks.
+    // React 19 runs setState updaters asynchronously/batched, so reading
+    // state via closure after setState may return stale values. The ref is
+    // updated synchronously each render and used in handleUninstallSelected.
+    const selectedUninstallsRef = useRef<Set<string>>(selectedUninstalls);
+    selectedUninstallsRef.current = selectedUninstalls;
     const [uninstallingAll, setUninstallingAll] = useState(false);
 
     // Transitive packages section state (multi-framework support)
@@ -266,12 +272,18 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
     }, [visibleSelectedCount, uninstallablePackages]);
 
     const handleUninstallSelected = useCallback(() => {
-        if (!selectedProject || selectedUninstalls.size === 0) {
+        // Read from ref to guarantee latest selections (avoids React 19 stale closure)
+        const currentSelections = selectedUninstallsRef.current;
+        if (!selectedProject || currentSelections.size === 0) {
             return;
         }
         const packagesToRemove = installedPackages
-            .filter(p => selectedUninstalls.has(p.id) && !p.isImplicit)
+            .filter(p => currentSelections.has(p.id) && !p.isImplicit)
             .map(p => p.id);
+
+        if (packagesToRemove.length === 0) {
+            return;
+        }
 
         // Request confirmation from extension (shows VS Code dialog with dependency warning)
         vscode.postMessage({
@@ -279,7 +291,7 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
             projectPath: selectedProject,
             packages: packagesToRemove
         });
-    }, [selectedProject, selectedUninstalls, installedPackages, vscode]);
+    }, [selectedProject, installedPackages, vscode]);
 
     // Handle expanding/collapsing individual framework sections (lazy load metadata on first expand)
     const handleToggleTransitiveFramework = useCallback((targetFramework: string) => {

@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Batch Uninstall Only Removing One Package** — Fixed stale closure in `handleUninstallSelected` by using a `selectedUninstallsRef` ref mirror (same pattern as `transitiveLoadingMetadataRef`). React 19 async batching could cause the callback to capture an outdated `selectedUninstalls` Set, resulting in only one package being sent to the backend. Also added backend guard for empty packages array and diagnostic logging.
+- **Notification Spam During Batch Uninstall** — Suppressed per-package `showInformationMessage` notifications during bulk remove operations; only the summary notification is shown.
 - **Slow Installed Tab with Unreachable Sources**
 - **Redundant project.assets.json Parsing**
 - **Transitive Prefetch Network Contention**
