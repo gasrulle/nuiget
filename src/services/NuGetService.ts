@@ -874,8 +874,8 @@ export class NuGetService {
                     if (types.some(t => t && t.includes('PackageBaseAddress'))) {
                         endpoints.packageBaseAddress = resource['@id'];
                     }
-                    // RegistrationsBaseUrl - for package metadata
-                    if (types.some(t => t && t.includes('RegistrationsBaseUrl') && !t.includes('gz'))) {
+                    // RegistrationsBaseUrl - for package metadata (exclude gzip-compressed endpoints)
+                    if (types.some(t => t && t.includes('RegistrationsBaseUrl') && !t.includes('gz')) && !resource['@id']?.includes('-gz-')) {
                         endpoints.registrationsBaseUrl = resource['@id'];
                     }
                     // SearchQueryService - for search
