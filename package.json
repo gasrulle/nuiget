@@ -2,7 +2,7 @@
     "name": "nuiget",
     "displayName": "nUIget - A NuGet Package Manager",
     "description": "A NuGet package manager with Visual Studio-style UI. Search, install, update, and remove packages across multiple sources.",
-    "version": "1.1.1",
+    "version": "1.1.2",
     "publisher": "Gasrulle",
     "license": "MIT",
     "icon": "resources/icon.png",
