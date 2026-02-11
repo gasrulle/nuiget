@@ -91,12 +91,19 @@ async function batchedPromiseAll<T, R>(
     processor: (item: T) => Promise<R>,
     concurrency: number = 6
 ): Promise<R[]> {
-    const results: R[] = [];
-    for (let i = 0; i < items.length; i += concurrency) {
-        const batch = items.slice(i, i + concurrency);
-        const batchResults = await Promise.all(batch.map(processor));
-        results.push(...batchResults);
-    }
+    const results: R[] = new Array(items.length);
+    let nextIndex = 0;
+
+    const runNext = async (): Promise<void> => {
+        while (nextIndex < items.length) {
+            const i = nextIndex++;
+            results[i] = await processor(items[i]);
+        }
+    };
+
+    // Launch `concurrency` workers; each grabs the next item as soon as it finishes
+    const workers = Array.from({ length: Math.min(concurrency, items.length) }, () => runNext());
+    await Promise.all(workers);
     return results;
 }
 
@@ -1289,14 +1296,11 @@ export class NuGetService {
             // Use resolved version for icon fetching if available (for floating/range versions)
             const versionForIcon = pkg.resolvedVersion || pkg.version;
 
-            // Resolve icon via nuget.org-first, then custom sources fallback
-            const iconUrl = await this.resolveIconUrl(pkg.id, versionForIcon, enabledSources);
+            // Single search API call: gets verified, authors, AND iconUrl
+            const { verified, authors, iconUrl } = await this.getPackageSearchMetadata(pkg.id, versionForIcon);
             if (iconUrl) {
                 pkg.iconUrl = iconUrl;
             }
-
-            // Fetch verified status and authors using cached method
-            const { verified, authors } = await this.getPackageVerifiedAndAuthors(pkg.id);
             if (verified !== undefined) {
                 pkg.verified = verified;
                 foundMetadata = true;
@@ -1304,6 +1308,14 @@ export class NuGetService {
             if (authors) {
                 pkg.authors = authors;
                 foundMetadata = true;
+            }
+
+            // If search API didn't return an icon, fall back to resolveIconUrl (custom sources)
+            if (!pkg.iconUrl) {
+                const fallbackIcon = await this.resolveIconUrl(pkg.id, versionForIcon, enabledSources);
+                if (fallbackIcon) {
+                    pkg.iconUrl = fallbackIcon;
+                }
             }
 
             // If not found on nuget.org, try custom sources for authors
@@ -1337,7 +1349,7 @@ export class NuGetService {
                     }
                 }
             }
-        }, 8); // Limit to 8 concurrent requests
+        }, 16); // Sliding-window concurrency (was 8 batch-then-wait)
     }
 
     /**
@@ -1742,11 +1754,94 @@ export class NuGetService {
                 }
             }
 
-            // Fetch icons and verified status for all packages in parallel
-            await Promise.all([
-                this.fetchPackageIcons(packages, healthySources),
-                this.fetchPackageVerifiedStatus(packages)
-            ]);
+            // Fetch metadata for all packages using unified search API call
+            // Pre-fetch enabled sources for icon fallback
+            const allSources = await this.getSources();
+            const enabledSources = allSources.filter(s => s.enabled);
+
+            await batchedPromiseAll(packages, async (pkg) => {
+                // Single search API call: gets verified, authors, description, AND iconUrl
+                const { verified, authors, iconUrl } = await this.getPackageSearchMetadata(pkg.id, pkg.version);
+                let foundMetadata = false;
+                if (iconUrl) {
+                    pkg.iconUrl = iconUrl;
+                }
+                if (verified !== undefined) {
+                    pkg.verified = verified;
+                    foundMetadata = true;
+                }
+                // Authors from search API override CLI-parsed authors (more accurate)
+                if (authors) {
+                    pkg.authors = authors;
+                    foundMetadata = true;
+                }
+
+                // Fill in description from cache (captured by getPackageSearchMetadata)
+                if (!pkg.description) {
+                    const statusCacheKey = cacheKeys.verifiedStatus(pkg.id);
+                    const cached = this.verifiedStatusCache.get(statusCacheKey);
+                    if (cached?.description) {
+                        pkg.description = cached.description;
+                        foundMetadata = true;
+                    }
+                }
+
+                // If search API didn't return an icon, fall back to resolveIconUrl (custom sources)
+                if (!pkg.iconUrl) {
+                    const fallbackIcon = await this.resolveIconUrl(pkg.id, pkg.version, enabledSources);
+                    if (fallbackIcon) {
+                        pkg.iconUrl = fallbackIcon;
+                    }
+                }
+
+                // Not found on nuget.org — try custom sources for authors/description (skip known-unreachable)
+                if (!foundMetadata) {
+                    for (const source of enabledSources) {
+                        if (source.url.includes('nuget.org')) { continue; }
+
+                        const failedAt = this.failedEndpointCache.get(source.url);
+                        if (failedAt && (Date.now() - failedAt) < NuGetService.FAILED_ENDPOINT_CACHE_TTL) {
+                            continue;
+                        }
+
+                        try {
+                            const endpoints = await this.discoverServiceEndpoints(source.url);
+                            if (endpoints.searchQueryService) {
+                                const customAuthHeader = await this.getAuthHeader(source.url);
+                                const customSearchUrl = `${endpoints.searchQueryService}?q=packageid:${encodeURIComponent(pkg.id)}&take=1&prerelease=true`;
+                                const customData = await this.fetchJson<any>(customSearchUrl, customAuthHeader);
+                                const customPackages = customData?.data || customData?.Data || (Array.isArray(customData) ? customData : []);
+
+                                if (customPackages.length > 0) {
+                                    const result = customPackages[0];
+                                    if (result.id?.toLowerCase() === pkg.id.toLowerCase() || result.Id?.toLowerCase() === pkg.id.toLowerCase()) {
+                                        const customAuthors = result.authors || result.Authors;
+                                        if (customAuthors) {
+                                            pkg.authors = Array.isArray(customAuthors) ? customAuthors.join(', ') : customAuthors;
+                                        }
+                                        const desc = result.description || result.Description || result.summary || result.Summary;
+                                        if (desc && !pkg.description) {
+                                            pkg.description = desc;
+                                        }
+                                        // Cache (custom sources don't have verified, default to false)
+                                        const cacheValue = {
+                                            verified: false,
+                                            authors: pkg.authors,
+                                            description: pkg.description
+                                        };
+                                        const statusCacheKey = cacheKeys.verifiedStatus(pkg.id);
+                                        this.verifiedStatusCache.set(statusCacheKey, cacheValue);
+                                        workspaceCache.set(statusCacheKey, cacheValue, CACHE_TTL.VERIFIED_STATUS);
+                                        break; // Found
+                                    }
+                                }
+                            }
+                        } catch {
+                            // Silently fail for individual sources
+                        }
+                    }
+                }
+            }, 16);
 
             // Only cache non-empty results (avoid caching failures)
             if (packages.length > 0) {
@@ -1759,30 +1854,6 @@ export class NuGetService {
             vscode.window.showErrorMessage(`Failed to search packages: ${error}`);
             return [];
         }
-    }
-
-    /**
-     * Fetch icon URLs for packages from NuGet API or custom sources
-     * Tries nuget.org first (fast), falls back to custom sources via discovered endpoints
-     */
-    private async fetchPackageIcons(packages: PackageSearchResult[], sourceUrls?: string[]): Promise<void> {
-        // Pre-fetch enabled sources once for all packages (avoid N getSources calls)
-        let enabledSources: Array<{ url: string }> | undefined;
-        if (sourceUrls && sourceUrls.length > 0) {
-            enabledSources = sourceUrls.map(url => ({ url }));
-        } else {
-            const allSources = await this.getSources();
-            enabledSources = allSources.filter(s => s.enabled);
-        }
-
-        const iconPromises = packages.map(async (pkg) => {
-            const iconUrl = await this.resolveIconUrl(pkg.id, pkg.version, enabledSources);
-            if (iconUrl) {
-                pkg.iconUrl = iconUrl;
-            }
-        });
-
-        await Promise.all(iconPromises);
     }
 
     /**
@@ -1934,136 +2005,6 @@ export class NuGetService {
             });
             req.end();
         });
-    }
-
-    /**
-     * Fetch verified status and authors for packages from NuGet search API or custom sources
-     * The verified field indicates the package ID prefix is reserved by the owner
-     */
-    private async fetchPackageVerifiedStatus(packages: PackageSearchResult[]): Promise<void> {
-        if (packages.length === 0) {
-            return;
-        }
-
-        // Get all enabled sources for fallback
-        const allSources = await this.getSources();
-        const enabledSources = allSources.filter(s => s.enabled);
-
-        try {
-            // Fetch verified status and authors for each package individually
-            const verifiedPromises = packages.map(async (pkg) => {
-                try {
-                    const statusCacheKey = cacheKeys.verifiedStatus(pkg.id);
-
-                    // Check in-memory cache first (fastest)
-                    const memoryCached = this.verifiedStatusCache.get(statusCacheKey);
-                    if (memoryCached) {
-                        pkg.verified = memoryCached.verified;
-                        if (memoryCached.authors) {
-                            pkg.authors = memoryCached.authors;
-                        }
-                        if (memoryCached.description && !pkg.description) {
-                            pkg.description = memoryCached.description;
-                        }
-                        return;
-                    }
-
-                    // Check workspace cache (persists across panel closes)
-                    const workspaceCached = workspaceCache.get<{ verified: boolean; authors?: string; description?: string }>(statusCacheKey);
-                    if (workspaceCached) {
-                        this.verifiedStatusCache.set(statusCacheKey, workspaceCached);
-                        pkg.verified = workspaceCached.verified;
-                        if (workspaceCached.authors) {
-                            pkg.authors = workspaceCached.authors;
-                        }
-                        if (workspaceCached.description && !pkg.description) {
-                            pkg.description = workspaceCached.description;
-                        }
-                        return;
-                    }
-
-                    // First try nuget.org - use dynamic endpoint from service index
-                    const nugetOrgEndpoints = await this.discoverServiceEndpoints('https://api.nuget.org/v3/index.json');
-                    if (!nugetOrgEndpoints.searchQueryService) {
-                        return; // Can't get verified status without search endpoint
-                    }
-                    const searchUrl = `${nugetOrgEndpoints.searchQueryService}?q=packageid:${encodeURIComponent(pkg.id)}&take=1`;
-                    const data = await this.fetchJson<{ data: Array<{ id: string; verified?: boolean; authors?: string[]; description?: string }> }>(searchUrl);
-
-                    if (data?.data?.length && data.data.length > 0) {
-                        const result = data.data[0];
-                        if (result.id?.toLowerCase() === pkg.id.toLowerCase()) {
-                            pkg.verified = result.verified === true;
-                            if (result.authors) {
-                                pkg.authors = result.authors.join(', ');
-                            }
-                            if (result.description && !pkg.description) {
-                                pkg.description = result.description;
-                            }
-                            // Cache the result
-                            const cacheValue = {
-                                verified: pkg.verified,
-                                authors: pkg.authors,
-                                description: result.description
-                            };
-                            this.verifiedStatusCache.set(statusCacheKey, cacheValue);
-                            workspaceCache.set(statusCacheKey, cacheValue, CACHE_TTL.VERIFIED_STATUS);
-                            return; // Found on nuget.org
-                        }
-                    }
-
-                    // Not found on nuget.org, try custom sources (skip known-unreachable ones)
-                    for (const source of enabledSources) {
-                        if (source.url.includes('nuget.org')) { continue; } // Already tried
-
-                        // Skip sources known to be unreachable (within TTL) to avoid delays
-                        const failedAt = this.failedEndpointCache.get(source.url);
-                        if (failedAt && (Date.now() - failedAt) < NuGetService.FAILED_ENDPOINT_CACHE_TTL) {
-                            continue;
-                        }
-
-                        const endpoints = await this.discoverServiceEndpoints(source.url);
-                        if (endpoints.searchQueryService) {
-                            const customAuthHeader = await this.getAuthHeader(source.url);
-                            const customSearchUrl = `${endpoints.searchQueryService}?q=packageid:${encodeURIComponent(pkg.id)}&take=1&prerelease=true`;
-                            const customData = await this.fetchJson<any>(customSearchUrl, customAuthHeader);
-                            const customPackages = customData?.data || customData?.Data || (Array.isArray(customData) ? customData : []);
-
-                            if (customPackages.length > 0) {
-                                const result = customPackages[0];
-                                if (result.id?.toLowerCase() === pkg.id.toLowerCase() || result.Id?.toLowerCase() === pkg.id.toLowerCase()) {
-                                    // Get authors
-                                    const authors = result.authors || result.Authors;
-                                    if (authors) {
-                                        pkg.authors = Array.isArray(authors) ? authors.join(', ') : authors;
-                                    }
-                                    // Get description
-                                    const desc = result.description || result.Description || result.summary || result.Summary;
-                                    if (desc && !pkg.description) {
-                                        pkg.description = desc;
-                                    }
-                                    // Cache the result (custom sources don't have verified, default to false)
-                                    const cacheValue = {
-                                        verified: false,
-                                        authors: pkg.authors,
-                                        description: pkg.description
-                                    };
-                                    this.verifiedStatusCache.set(statusCacheKey, cacheValue);
-                                    workspaceCache.set(statusCacheKey, cacheValue, CACHE_TTL.VERIFIED_STATUS);
-                                    return; // Found
-                                }
-                            }
-                        }
-                    }
-                } catch {
-                    // Silently fail for individual package lookups
-                }
-            });
-
-            await Promise.all(verifiedPromises);
-        } catch {
-            // Silently fail - verified status is optional
-        }
     }
 
     async installPackage(projectPath: string, packageId: string, version?: string, options?: { skipChannelSetup?: boolean }): Promise<boolean> {
@@ -3114,14 +3055,20 @@ export class NuGetService {
 
                 // Standard version comparison
                 if (this.isNewerVersion(latestVersion, pkg.version)) {
-                    const iconUrl = await this.getPackageIconUrl(pkg.id, latestVersion, enabledSources);
-                    const { verified, authors } = await this.getPackageVerifiedAndAuthors(pkg.id);
+                    // Single search API call: gets verified, authors, AND iconUrl
+                    const { verified, authors, iconUrl } = await this.getPackageSearchMetadata(pkg.id, latestVersion);
+
+                    // If search API didn't return an icon, fall back to resolveIconUrl
+                    let finalIconUrl = iconUrl;
+                    if (!finalIconUrl) {
+                        finalIconUrl = await this.getPackageIconUrl(pkg.id, latestVersion, enabledSources);
+                    }
 
                     return {
                         id: pkg.id,
                         installedVersion: pkg.version,
                         latestVersion: latestVersion,
-                        iconUrl,
+                        iconUrl: finalIconUrl,
                         verified,
                         authors
                     };
@@ -3154,22 +3101,45 @@ export class NuGetService {
     }
 
     /**
-     * Helper to get verified status and authors for a package (uses cache)
+     * Get verified status, authors, and iconUrl for a package from the NuGet Search API.
+     * Combines what was previously two calls (search + HEAD) into a single search call
+     * that returns all three fields. The iconUrl from the search response is used to
+     * construct a version-specific flat container URL, eliminating the need for a HEAD request.
+     *
+     * @param packageId - The package ID
+     * @param version - Optional package version for icon URL construction (flat container path)
      */
-    private async getPackageVerifiedAndAuthors(packageId: string): Promise<{ verified?: boolean; authors?: string }> {
+    private async getPackageSearchMetadata(packageId: string, version?: string): Promise<{ verified?: boolean; authors?: string; iconUrl?: string }> {
         const statusCacheKey = cacheKeys.verifiedStatus(packageId);
 
         // Check in-memory cache first (fastest)
         const memoryCached = this.verifiedStatusCache.get(statusCacheKey);
         if (memoryCached) {
-            return { verified: memoryCached.verified, authors: memoryCached.authors };
+            // Reconstruct icon URL from icon cache if we have a version
+            let iconUrl: string | undefined;
+            if (version) {
+                const iconCacheKey = cacheKeys.iconExists(packageId, version);
+                const cachedIcon = this.iconUrlCache.get(iconCacheKey);
+                if (cachedIcon !== undefined) {
+                    iconUrl = cachedIcon || undefined;
+                }
+            }
+            return { verified: memoryCached.verified, authors: memoryCached.authors, iconUrl };
         }
 
         // Check workspace cache (persists across panel closes)
         const workspaceCached = workspaceCache.get<{ verified: boolean; authors?: string; description?: string }>(statusCacheKey);
         if (workspaceCached) {
             this.verifiedStatusCache.set(statusCacheKey, workspaceCached);
-            return { verified: workspaceCached.verified, authors: workspaceCached.authors };
+            let iconUrl: string | undefined;
+            if (version) {
+                const iconCacheKey = cacheKeys.iconExists(packageId, version);
+                const cachedIcon = this.iconUrlCache.get(iconCacheKey) ?? workspaceCache.get<string>(iconCacheKey);
+                if (cachedIcon !== undefined) {
+                    iconUrl = cachedIcon || undefined;
+                }
+            }
+            return { verified: workspaceCached.verified, authors: workspaceCached.authors, iconUrl };
         }
 
         try {
@@ -3179,7 +3149,7 @@ export class NuGetService {
                 return {}; // Can't get verified status without search endpoint
             }
             const searchUrl = `${nugetOrgEndpoints.searchQueryService}?q=packageid:${encodeURIComponent(packageId)}&take=1`;
-            const data = await this.fetchJson<{ data: Array<{ id: string; verified?: boolean; authors?: string[] }> }>(searchUrl);
+            const data = await this.fetchJson<{ data: Array<{ id: string; verified?: boolean; authors?: string[]; iconUrl?: string; description?: string }> }>(searchUrl);
 
             if (data?.data?.length && data.data.length > 0) {
                 const result = data.data[0];
@@ -3187,11 +3157,27 @@ export class NuGetService {
                     const cacheValue = {
                         verified: result.verified === true,
                         authors: result.authors?.join(', '),
-                        description: undefined
+                        description: result.description
                     };
                     this.verifiedStatusCache.set(statusCacheKey, cacheValue);
                     workspaceCache.set(statusCacheKey, cacheValue, CACHE_TTL.VERIFIED_STATUS);
-                    return { verified: cacheValue.verified, authors: cacheValue.authors };
+
+                    // If the search API returned an iconUrl AND we have a version,
+                    // construct the version-specific flat container URL (skip HEAD request).
+                    // The search API confirming iconUrl means the package has an embedded icon.
+                    let iconUrl: string | undefined;
+                    if (result.iconUrl && version && !version.includes('*') && !version.includes('[') && !version.includes('(')) {
+                        const lowerId = packageId.toLowerCase();
+                        const lowerVersion = version.toLowerCase();
+                        const flatContainerUrl = `https://api.nuget.org/v3-flatcontainer/${lowerId}/${lowerVersion}/icon`;
+                        iconUrl = flatContainerUrl;
+                        // Pre-populate icon cache so resolveIconUrl() won't issue a HEAD
+                        const iconCacheKey = cacheKeys.iconExists(packageId, version);
+                        this.iconUrlCache.set(iconCacheKey, flatContainerUrl);
+                        workspaceCache.set(iconCacheKey, flatContainerUrl, CACHE_TTL.ICON_EXISTS);
+                    }
+
+                    return { verified: cacheValue.verified, authors: cacheValue.authors, iconUrl };
                 }
             }
         } catch {
@@ -3933,21 +3919,26 @@ export class NuGetService {
         const enabledSources = allSources.filter(s => s.enabled);
 
         await batchedPromiseAll(packages, async (pkg) => {
-            // Fetch icon (cached, source-aware)
-            const iconUrl = await this.resolveIconUrl(pkg.id, pkg.version, enabledSources);
+            // Single search API call: gets verified, authors, AND iconUrl
+            const { verified, authors, iconUrl } = await this.getPackageSearchMetadata(pkg.id, pkg.version);
             if (iconUrl) {
                 pkg.iconUrl = iconUrl;
             }
-
-            // Fetch verified status and authors (cached)
-            const { verified, authors } = await this.getPackageVerifiedAndAuthors(pkg.id);
             if (verified !== undefined) {
                 pkg.verified = verified;
             }
             if (authors) {
                 pkg.authors = authors;
             }
-        }, 8); // Limit to 8 concurrent requests
+
+            // If search API didn't return an icon, fall back to resolveIconUrl (custom sources)
+            if (!pkg.iconUrl) {
+                const fallbackIcon = await this.resolveIconUrl(pkg.id, pkg.version, enabledSources);
+                if (fallbackIcon) {
+                    pkg.iconUrl = fallbackIcon;
+                }
+            }
+        }, 16); // Sliding-window concurrency (was 8 batch-then-wait)
     }
 
     /**

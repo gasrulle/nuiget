@@ -260,7 +260,12 @@ const PackageDetailsPanel: React.FC<PackageDetailsPanelProps> = ({
                         </div>
                         <div className="details-row">
                             <label>Author(s):</label>
-                            <span>{packageMetadata?.authors || searchResult?.authors || 'Unknown'}</span>
+                            <span>
+                                {searchResult?.verified && (
+                                    <span className="verified-badge" title="The ID prefix of this package has been reserved by its owner on nuget.org">✓</span>
+                                )}
+                                {packageMetadata?.authors || searchResult?.authors || 'Unknown'}
+                            </span>
                         </div>
                         {packageMetadata?.license && (
                             <div className="details-row">

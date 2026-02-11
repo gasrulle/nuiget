@@ -10,6 +10,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - **Refresh Button Moved to Direct Packages Header** — The ↻ refresh icon on the Installed tab moved from the transitive packages section to the direct packages header. Clicking it now refreshes both installed and transitive packages in parallel and runs `dotnet restore` to ensure transitive data is up to date. The transitive section collapses during refresh for a consistent experience.
+- **Unified Metadata Fetching (2× fewer HTTP calls)** — All four tabs (Browse, Installed, Updates, Transitive) now use a single `getPackageSearchMetadata` call per package that returns `verified`, `authors`, and `iconUrl` together. Previously each package made a separate Search API call **plus** a HEAD request to check for icons — the icon HEAD is now eliminated for nuget.org packages by extracting `iconUrl` from the search response. `fetchPackageVerifiedStatus` and `fetchPackageIcons` methods removed (dead code).
+- **Sliding-Window Concurrency** — `batchedPromiseAll` replaced batch-then-wait model (process N, wait for all N, repeat) with a sliding-window pool that keeps all slots saturated. Concurrency increased from 8 to 16. Eliminates idle time when one request in a batch is slow (e.g. unreachable source).
 
 ## [1.1.2] - 2026-02-11
 
