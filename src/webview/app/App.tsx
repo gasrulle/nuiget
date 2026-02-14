@@ -445,16 +445,9 @@ export const App: React.FC = () => {
     const handleMessage = useCallback((event: MessageEvent) => {
         const message = event.data;
 
-        // Helper to sort projects (same logic as sortedProjects memo)
+        // Helper to sort projects alphabetically (same logic as sortedProjects memo)
         const getSortedProjects = (projectList: Project[]) => {
-            const isTestProject = (name: string) => /test/i.test(name);
-            return [...projectList].sort((a, b) => {
-                const aIsTest = isTestProject(a.name);
-                const bIsTest = isTestProject(b.name);
-                if (aIsTest && !bIsTest) { return 1; }
-                if (!aIsTest && bIsTest) { return -1; }
-                return a.name.localeCompare(b.name);
-            });
+            return [...projectList].sort((a, b) => a.name.localeCompare(b.name));
         };
 
         switch (message.type) {
@@ -890,16 +883,9 @@ export const App: React.FC = () => {
         [sources]
     );
 
-    // Sort projects alphabetically, with test projects at the end
+    // Sort projects alphabetically
     const sortedProjects = useMemo(() => {
-        const isTestProject = (name: string) => /test/i.test(name);
-        return [...projects].sort((a, b) => {
-            const aIsTest = isTestProject(a.name);
-            const bIsTest = isTestProject(b.name);
-            if (aIsTest && !bIsTest) { return 1; }
-            if (!aIsTest && bIsTest) { return -1; }
-            return a.name.localeCompare(b.name);
-        });
+        return [...projects].sort((a, b) => a.name.localeCompare(b.name));
     }, [projects]);
 
     // Memoize sanitized README HTML to avoid re-sanitizing on every render
