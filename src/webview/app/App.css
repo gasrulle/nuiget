@@ -58,6 +58,7 @@
     border-bottom: 1px solid var(--vscode-panel-border);
     cursor: pointer;
     transition: background 0.15s;
+    box-sizing: border-box;
 }
 
 .package-item:hover {
@@ -302,6 +303,97 @@
 .update-checkbox:disabled:checked {
     background: var(--vscode-disabledForeground);
     border-color: var(--vscode-disabledForeground);
+}
+
+/* Load All Projects Toolbar */
+.load-all-toolbar {
+    display: flex;
+    align-items: center;
+    padding: 8px 16px;
+    border-bottom: 1px solid var(--vscode-panel-border);
+    background: var(--vscode-sideBar-background);
+}
+
+.load-all-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--vscode-foreground);
+    cursor: pointer;
+    user-select: none;
+}
+
+.load-all-checkbox input[type="checkbox"] {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    border: 1px solid var(--vscode-checkbox-border, var(--vscode-input-border));
+    border-radius: 3px;
+    background: var(--vscode-checkbox-background, var(--vscode-input-background));
+    cursor: pointer;
+    position: relative;
+    flex-shrink: 0;
+}
+
+.load-all-checkbox input[type="checkbox"]:checked {
+    background: var(--vscode-checkbox-selectBackground, var(--vscode-focusBorder));
+    border-color: var(--vscode-checkbox-selectBorder, var(--vscode-focusBorder));
+}
+
+.load-all-checkbox input[type="checkbox"]:checked::after {
+    content: '';
+    position: absolute;
+    left: 4px;
+    top: 1px;
+    width: 5px;
+    height: 8px;
+    border: solid var(--vscode-checkbox-foreground, #fff);
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+}
+
+.load-all-checkbox input[type="checkbox"]:disabled {
+    cursor: not-allowed;
+    opacity: 0.4;
+}
+
+/* Project Group Header for multi-project updates */
+.project-group-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 16px;
+    background: var(--vscode-list-hoverBackground);
+    border-bottom: 1px solid var(--vscode-panel-border);
+    font-weight: 600;
+    color: var(--vscode-foreground);
+    box-sizing: border-box;
+}
+
+.project-group-header .project-name {
+    font-size: 13px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.project-group-header .project-update-count {
+    font-size: 11px;
+    color: var(--vscode-descriptionForeground);
+    flex-shrink: 0;
+    margin-left: 12px;
+}
+
+/* Minimal package item (no icon, for multi-project mode) */
+.package-item-minimal {
+    padding-left: 32px;
+    box-sizing: border-box;
+}
+
+.package-item-minimal .package-info {
+    margin-left: 0;
 }
 
 .package-authors {
@@ -810,6 +902,7 @@
 .package-list-panel {
     border-top: 1px solid var(--vscode-panel-border);
     overflow-y: auto;
+    overflow-x: hidden;
     background: var(--vscode-sideBar-background);
 }
 

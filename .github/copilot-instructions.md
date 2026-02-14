@@ -36,6 +36,7 @@ After completing ANY feature, fix, or change, update these files:
 - **HTTP/2 for nuget.org:** Multiplexing for bulk requests. Session pool (MAX_SESSIONS=10) with LRU eviction. HTTP/1.1 fallback for private sources.
 - **Sources & Auth:** `dotnet nuget list source`, enable/disable/add/remove. CredentialService for Azure DevOps, GitHub Packages, JFrog. DPAPI encryption on Windows.
 - **Package Management:** Search/install/update/remove via dotnet CLI. Multi-project (.csproj, .fsproj, .vbproj). Floating versions, Updates tab with badge, bulk operations.
+- **Load All Projects Updates:** "Load all projects" checkbox on Updates tab fetches updates for all projects simultaneously. Uses `checkPackageUpdatesMinimal` (no metadata) for speed. Results grouped by project with headers. Composite key `projectPath::packageId` for multi-project selection. `bulkUpdateAllProjects` handler iterates per-project with separate output headers.
 - **Transitive Packages:** Collapsible per-framework sections. Two-stage background prefetch (frameworks → metadata). Refresh ↻ icon on direct packages header refreshes both installed and transitive packages, calls `doResetTransitiveState(true, true)` to collapse and re-fetch with `forceRestore`.
 - **Multi-Tier Caching:** Backend LRUMap (metadata 200, versions 200, icons 500, search 100). Frontend `useRef<LRUMap>`. WorkspaceCache for persistence.
 - **Disposed Panel Safety:** `_disposed` flag + `_postMessage()` helper prevents "Webview is disposed" errors.
@@ -85,6 +86,7 @@ npm run package:vsix # Outputs nuiget.vsix
 | **Transitive metadata ref mirror** | Use `transitiveLoadingMetadataRef = useRef<Set>()` as synchronous mirror. Read ref in prefetch effect, update both ref and state. Required because React 19 defers setState updaters. |
 | Transitive spinner stuck | `doResetTransitiveState(false)` must set `loadingTransitive = false` — prevents stuck spinner when reset races with in-flight request. |
 | Transitive stale after bulk remove | `bulkRemoveResult` handler must call `resetTransitiveState(true)` after routing. |
+| Multi-project updates not refreshing | `bulkUpdateAllProjectsResult` handler must re-fetch via `checkAllProjectsUpdates` after forwarding to UpdatesTab. |
 
 ## NuGet / dotnet CLI
 | Issue | Solution |

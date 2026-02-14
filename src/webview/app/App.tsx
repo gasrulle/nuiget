@@ -27,7 +27,7 @@ import { MemoizedPackageDetailsPanel } from './components/PackageDetailsPanel';
 import type { UpdatesTabHandle } from './components/UpdatesTab';
 import { MemoizedUpdatesTab } from './components/UpdatesTab';
 import { usePackageSelection } from './hooks/usePackageSelection';
-import type { AppState, FailedSource, InstalledPackage, NuGetSource, PackageMetadata, PackageSearchResult, PackageUpdate, Project, TransitivePackage } from './types';
+import type { AppState, FailedSource, InstalledPackage, NuGetSource, PackageMetadata, PackageSearchResult, PackageUpdate, Project, ProjectUpdates, TransitivePackage } from './types';
 import { LRUMap, getPackageId } from './types';
 
 // Register highlight.js languages
@@ -290,6 +290,10 @@ export const App: React.FC = () => {
     const [packagesWithUpdates, setPackagesWithUpdates] = useState<PackageUpdate[]>([]);
     const [updateCount, setUpdateCount] = useState<number>(0);
     const [loadingUpdates, setLoadingUpdates] = useState(false);
+    // "Load All Projects" mode for Updates tab
+    const [loadAllProjects, setLoadAllProjects] = useState(false);
+    const [allProjectsUpdates, setAllProjectsUpdates] = useState<ProjectUpdates[]>([]);
+    const [loadingAllProjectsUpdates, setLoadingAllProjectsUpdates] = useState(false);
     const [loadingReadme, setLoadingReadme] = useState(false);
     const [readmeAttempted, setReadmeAttempted] = useState(false);
     const [showSourceSettings, setShowSourceSettings] = useState(false);
@@ -644,6 +648,28 @@ export const App: React.FC = () => {
                     setLoadingUpdates(false);
                 }
                 break;
+            case 'allProjectsUpdates':
+                // All projects updates loaded
+                {
+                    const projectUpdates = message.projectUpdates as ProjectUpdates[];
+                    setAllProjectsUpdates(projectUpdates);
+                    // Calculate total update count across all projects
+                    const totalCount = projectUpdates.reduce((sum, pu) => sum + pu.updates.length, 0);
+                    setUpdateCount(totalCount);
+                    setLoadingAllProjectsUpdates(false);
+                }
+                break;
+            case 'bulkUpdateAllProjectsResult':
+                // Forward to UpdatesTab for state reset
+                updatesTabCompRef.current?.handleMessage(message);
+                // Re-fetch all projects updates to refresh the list and badge
+                setLoadingAllProjectsUpdates(true);
+                setAllProjectsUpdates([]);
+                vscode.postMessage({
+                    type: 'checkAllProjectsUpdates',
+                    includePrerelease: includePrereleaseRef.current
+                });
+                break;
             case 'settings':
                 // Restore persisted settings
                 settingsLoadedRef.current = true;
@@ -818,6 +844,43 @@ export const App: React.FC = () => {
             }
         }
     }, [packagesWithUpdates]);
+
+    // Reset "Load All Projects" mode when switching away from Updates tab
+    useEffect(() => {
+        if (activeTab !== 'updates' && loadAllProjects) {
+            setLoadAllProjects(false);
+            setAllProjectsUpdates([]);
+            setLoadingAllProjectsUpdates(false);
+        }
+    }, [activeTab]);
+
+    // Callback to handle Load All checkbox change
+    const handleLoadAllChange = useCallback((checked: boolean) => {
+        setLoadAllProjects(checked);
+        if (checked) {
+            // Start loading all projects
+            setLoadingAllProjectsUpdates(true);
+            setAllProjectsUpdates([]);
+            vscode.postMessage({
+                type: 'checkAllProjectsUpdates',
+                includePrerelease: includePrerelease
+            });
+        } else {
+            // Switch back to single project mode
+            setAllProjectsUpdates([]);
+            setLoadingAllProjectsUpdates(false);
+            // Re-fetch single project updates
+            if (selectedProject && installedPackages.length > 0) {
+                setLoadingUpdates(true);
+                vscode.postMessage({
+                    type: 'checkPackageUpdates',
+                    projectPath: selectedProject,
+                    installedPackages: installedPackages,
+                    includePrerelease: includePrerelease
+                });
+            }
+        }
+    }, [includePrerelease, selectedProject, installedPackages]);
 
     // Reset readme attempted state when a new package is selected
     useEffect(() => {
@@ -1066,6 +1129,8 @@ export const App: React.FC = () => {
                             value={selectedProject}
                             onChange={(e) => setSelectedProject((e.target as HTMLSelectElement).value)}
                             className="project-selector"
+                            disabled={activeTab === 'updates' && loadAllProjects}
+                            title={activeTab === 'updates' && loadAllProjects ? 'Disabled while "Load all projects" is checked' : undefined}
                         >
                             {sortedProjects.map(p => (
                                 <option key={p.path} value={p.path}>{p.name}</option>
@@ -1610,6 +1675,11 @@ export const App: React.FC = () => {
                     loadingReadme={loadingReadme}
                     sanitizedReadmeHtml={sanitizedReadmeHtml}
                     expandedDeps={expandedDeps}
+                    loadAllProjects={loadAllProjects}
+                    allProjectsUpdates={allProjectsUpdates}
+                    loadingAllProjectsUpdates={loadingAllProjectsUpdates}
+                    onLoadAllChange={handleLoadAllChange}
+                    projects={projects}
                     onSelectPackage={selectDirectPackage}
                     clearSelection={clearSelection}
                     onInstall={handleInstall}

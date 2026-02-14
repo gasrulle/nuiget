@@ -3090,6 +3090,62 @@ export class NuGetService {
     }
 
     /**
+     * Check for package updates without fetching metadata (icons, authors, verified status).
+     * Used for "Load All Projects" mode where speed is prioritized over details.
+     * Returns only package ID, installed version, and latest version.
+     */
+    async checkPackageUpdatesMinimal(
+        installedPackages: InstalledPackage[],
+        includePrerelease: boolean
+    ): Promise<{ id: string; installedVersion: string; latestVersion: string }[]> {
+        const packagesWithUpdates: { id: string; installedVersion: string; latestVersion: string }[] = [];
+
+        // Check each installed package for updates in parallel
+        const updateChecks = installedPackages.map(async (pkg) => {
+            try {
+                // Skip floating versions (*, 10.*, etc.) - cannot be updated from UI
+                if (pkg.versionType === 'floating') {
+                    return null;
+                }
+
+                // Skip range versions ([1.0,2.0), etc.) - cannot be updated from UI
+                if (pkg.versionType === 'range') {
+                    return null;
+                }
+
+                // Get available versions
+                const versions = await this.getPackageVersions(pkg.id, undefined, includePrerelease, 1);
+                if (versions.length === 0) {
+                    return null;
+                }
+
+                const latestVersion = versions[0];
+
+                // Standard version comparison
+                if (this.isNewerVersion(latestVersion, pkg.version)) {
+                    return {
+                        id: pkg.id,
+                        installedVersion: pkg.version,
+                        latestVersion: latestVersion
+                    };
+                }
+            } catch (error) {
+                console.error(`Failed to check updates for ${pkg.id}:`, error);
+            }
+            return null;
+        });
+
+        const results = await Promise.all(updateChecks);
+        for (const result of results) {
+            if (result) {
+                packagesWithUpdates.push(result);
+            }
+        }
+
+        return packagesWithUpdates;
+    }
+
+    /**
      * Helper to get package icon URL (uses resolveIconUrl with source-aware fallback)
      */
     private async getPackageIconUrl(

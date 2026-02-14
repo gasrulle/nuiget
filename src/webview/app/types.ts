@@ -99,6 +99,24 @@ export interface PackageUpdate {
     authors?: string;
 }
 
+/**
+ * Minimal package update info (without metadata) for fast "load all" mode
+ */
+export interface PackageUpdateMinimal {
+    id: string;
+    installedVersion: string;
+    latestVersion: string;
+}
+
+/**
+ * Updates for a single project in "load all" mode
+ */
+export interface ProjectUpdates {
+    projectPath: string;
+    projectName: string;
+    updates: PackageUpdateMinimal[];
+}
+
 export interface TransitivePackage {
     id: string;
     version: string;
@@ -125,6 +143,7 @@ export interface AppState {
     searchQuery: string;
     includePrerelease: boolean;
     recentSearches: string[];
+    loadAllProjects?: boolean;
 }
 
 // ─── VS Code API ─────────────────────────────────────────────────────────────

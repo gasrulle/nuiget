@@ -227,6 +227,8 @@ public dispose(): void {
 | `transitiveMetadata` | Ext → UI | Return packages with icons/verified/authors |
 | `checkPackageUpdates` | UI → Ext | Check for package updates |
 | `packageUpdates` | Ext → UI | Return packages with available updates |
+| `checkAllProjectsUpdates` | UI → Ext | Check updates for all projects ("Load all" mode) |
+| `allProjectsUpdates` | Ext → UI | Return grouped updates per project |
 
 #### Package Operations
 | Message | Direction | Purpose |
@@ -245,6 +247,8 @@ public dispose(): void {
 |---------|-----------|---------|
 | `bulkUpdatePackages` | UI → Ext | Update multiple packages (topological sort) |
 | `bulkUpdateResult` | Ext → UI | Result of bulk update with success/fail counts |
+| `bulkUpdateAllProjects` | UI → Ext | Update packages across multiple projects |
+| `bulkUpdateAllProjectsResult` | Ext → UI | Result of multi-project bulk update |
 | `confirmBulkRemove` | UI → Ext | Request bulk uninstall (triggers confirmation) |
 | `bulkRemoveConfirmed` | Ext → UI | Confirmation to proceed with bulk remove |
 | `bulkRemoveResult` | Ext → UI | Result of bulk remove operation |

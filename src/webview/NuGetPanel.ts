@@ -583,6 +583,106 @@ export class NuGetPanel {
                     });
                     break;
                 }
+            case 'checkAllProjectsUpdates':
+                {
+                    const includePrerelease = data.includePrerelease as boolean;
+                    const projects = await this._nugetService.findProjects();
+                    const allProjectsUpdates: { projectPath: string; projectName: string; updates: { id: string; installedVersion: string; latestVersion: string }[] }[] = [];
+
+                    // Check each project sequentially to avoid overwhelming the system
+                    for (const project of projects) {
+                        try {
+                            const installedPackages = await this._nugetService.getInstalledPackages(project.path);
+                            if (installedPackages.length > 0) {
+                                // Use minimal check (no metadata) for speed
+                                const updates = await this._nugetService.checkPackageUpdatesMinimal(
+                                    installedPackages,
+                                    includePrerelease
+                                );
+                                if (updates.length > 0) {
+                                    allProjectsUpdates.push({
+                                        projectPath: project.path,
+                                        projectName: project.name,
+                                        updates: updates
+                                    });
+                                }
+                            }
+                        } catch (error) {
+                            console.error(`[nUIget] Failed to check updates for ${project.name}:`, error);
+                        }
+                    }
+
+                    this._postMessage({
+                        type: 'allProjectsUpdates',
+                        projectUpdates: allProjectsUpdates
+                    });
+                    break;
+                }
+            case 'bulkUpdateAllProjects':
+                {
+                    const projectUpdates = data.projectUpdates as { projectPath: string; projectName: string; packages: { id: string; version: string }[] }[];
+
+                    if (!projectUpdates || projectUpdates.length === 0) {
+                        console.warn('[nUIget] bulkUpdateAllProjects received empty projectUpdates array');
+                        break;
+                    }
+
+                    // Calculate total package count
+                    const totalPackages = projectUpdates.reduce((sum, pu) => sum + pu.packages.length, 0);
+
+                    // Setup output channel
+                    this._nugetService.setupOutputChannel();
+
+                    await vscode.window.withProgress({
+                        location: vscode.ProgressLocation.Notification,
+                        title: `Updating ${totalPackages} packages across ${projectUpdates.length} projects...`,
+                        cancellable: false
+                    }, async (progress) => {
+                        let totalSuccessCount = 0;
+                        let totalFailCount = 0;
+                        let completedPackages = 0;
+
+                        for (const projectUpdate of projectUpdates) {
+                            const { projectPath, projectName, packages } = projectUpdate;
+
+                            // Log project header to output channel
+                            this._nugetService.logBulkOperationHeader(`Updating ${packages.length} packages for ${projectName}`, 0);
+
+                            for (let i = 0; i < packages.length; i++) {
+                                const pkg = packages[i];
+                                completedPackages++;
+                                progress.report({
+                                    message: `(${completedPackages}/${totalPackages}) ${projectName}: ${pkg.id}`,
+                                    increment: (100 / totalPackages)
+                                });
+
+                                const success = await this._nugetService.updatePackage(
+                                    projectPath,
+                                    pkg.id,
+                                    pkg.version,
+                                    { skipChannelSetup: true }
+                                );
+
+                                if (success) {
+                                    totalSuccessCount++;
+                                } else {
+                                    totalFailCount++;
+                                }
+                            }
+                        }
+
+                        if (totalFailCount === 0) {
+                            vscode.window.showInformationMessage(`Successfully updated ${totalSuccessCount} packages across ${projectUpdates.length} projects.`);
+                        } else {
+                            vscode.window.showWarningMessage(`Updated ${totalSuccessCount} packages, ${totalFailCount} failed across ${projectUpdates.length} projects.`);
+                        }
+                    });
+
+                    this._postMessage({
+                        type: 'bulkUpdateAllProjectsResult'
+                    });
+                    break;
+                }
             case 'getSettings':
                 {
                     // Retrieve persisted settings from workspaceState
