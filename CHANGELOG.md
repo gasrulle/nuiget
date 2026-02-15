@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Sidebar action icons refined**
 - **Sidebar "Load all projects" changed from checkbox to link button**
+- **Sidebar Updates section uses background data** — expanding Updates no longer re-fetches if background check data is already available, making it instant
 
 ### Fixed
 
@@ -28,6 +29,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Sidebar stale closure bugs** — handlers for Update, Update All, and context menu used captured state instead of refs, causing wrong versions or missed updates
 - **Sidebar badge overwritten by single-project update check**
 - **Sidebar background update race condition** — background check no longer pushes per-project results that could overwrite user-initiated loading states
+- **Sidebar section badges not showing on startup**
+- **Stale version displayed after Change Version** — after changing a package version via the context menu, the installed list showed the previous version. Lock file resolved versions were incorrectly overriding the freshly-written .csproj version for standard (non-floating) version specs.
 
 ## [1.3.0] - 2026-02-14
 

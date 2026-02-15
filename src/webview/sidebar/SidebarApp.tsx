@@ -78,6 +78,7 @@ export const SidebarApp: React.FC = () => {
     const [installedPackages, setInstalledPackages] = useState<InstalledPackage[]>([]);
     const [packageUpdates, setPackageUpdates] = useState<PackageUpdateMinimal[]>([]);
     const [allProjectsUpdates, setAllProjectsUpdates] = useState<ProjectUpdates[]>([]);
+    const [backgroundInstalledCount, setBackgroundInstalledCount] = useState(0);
 
     const [expandedSection, setExpandedSection] = useState<'browse' | 'installed' | 'updates' | null>(null);
     const [sources, setSources] = useState<NuGetSource[]>([]);
@@ -161,8 +162,17 @@ export const SidebarApp: React.FC = () => {
                     const pkgs = (message.packages || []) as InstalledPackage[];
                     setInstalledPackages(pkgs);
                     setLoadingInstalled(false);
+                    // Clear background count once real data is loaded
+                    setBackgroundInstalledCount(0);
                     // Auto-check for updates if Updates section is watching
-                    if (pkgs.length > 0) {
+                    // Skip if background data already covers the selected project
+                    const bgProjectData = allProjectsUpdatesRef.current.find(
+                        pu => pu.projectPath === selectedProjectRef.current
+                    );
+                    if (bgProjectData) {
+                        setPackageUpdates(bgProjectData.updates);
+                        setLoadingUpdates(false);
+                    } else if (pkgs.length > 0) {
                         vscode.postMessage({
                             type: 'checkPackageUpdates',
                             installedPackages: pkgs,
@@ -183,11 +193,18 @@ export const SidebarApp: React.FC = () => {
                 setAllProjectsUpdates(message.projectUpdates || []);
                 setLoadingAllUpdates(false);
                 break;
+            case 'installedCountUpdate':
+                setBackgroundInstalledCount(message.count || 0);
+                break;
             case 'installResult':
             case 'updateResult':
             case 'removeResult':
             case 'bulkUpdateResult':
             case 'bulkUpdateAllProjectsResult':
+                // Invalidate background data — it's now stale after mutation
+                // Update both state AND ref synchronously to prevent stale reads
+                setAllProjectsUpdates([]);
+                allProjectsUpdatesRef.current = [];
                 // Refresh installed packages after any mutation
                 if (selectedProjectRef.current) {
                     vscode.postMessage({
@@ -281,6 +298,22 @@ export const SidebarApp: React.FC = () => {
     // ─── Auto-fetch installed when section expands or project changes ────────
     useEffect(() => {
         if (selectedProject && (expandedSection === 'installed' || expandedSection === 'updates')) {
+            // When expanding Updates, check if background data already covers this project
+            if (expandedSection === 'updates' && packageUpdates.length === 0 && !loadingUpdates) {
+                const bgProjectData = allProjectsUpdates.find(pu => pu.projectPath === selectedProject);
+                if (bgProjectData) {
+                    setPackageUpdates(bgProjectData.updates);
+                    // Still fetch installed for the Installed section if not loaded yet
+                    if (installedPackages.length === 0 && !loadingInstalled) {
+                        vscode.postMessage({
+                            type: 'getInstalledPackages',
+                            projectPath: selectedProject
+                        });
+                        setLoadingInstalled(true);
+                    }
+                    return;
+                }
+            }
             if (installedPackages.length === 0 && !loadingInstalled) {
                 vscode.postMessage({
                     type: 'getInstalledPackages',
@@ -289,7 +322,7 @@ export const SidebarApp: React.FC = () => {
                 setLoadingInstalled(true);
             }
         }
-    }, [expandedSection, selectedProject, installedPackages.length, loadingInstalled]);
+    }, [expandedSection, selectedProject, installedPackages.length, loadingInstalled, packageUpdates.length, loadingUpdates, allProjectsUpdates]);
 
     // ─── Load all projects updates ──────────────────────────────────────────
     useEffect(() => {
@@ -404,7 +437,7 @@ export const SidebarApp: React.FC = () => {
     }, [installedPackages]);
 
     // Total update count for badge
-    const totalUpdateCount = loadAllProjects
+    const totalUpdateCount = allProjectsUpdates.length > 0
         ? allProjectsUpdates.reduce((sum, pu) => sum + pu.updates.length, 0)
         : packageUpdates.length;
 
@@ -568,6 +601,8 @@ export const SidebarApp: React.FC = () => {
     }, []);
 
     const handleContextMenu = useCallback((packageId: string, _e: React.MouseEvent, context: 'browse' | 'installed' | 'updates', projectPath?: string) => {
+        // Select the right-clicked item so it's visually highlighted
+        setSelectedPackageId(packageId);
         const installed = installedPackagesRef.current.find(
             p => p.id.toLowerCase() === packageId.toLowerCase()
         );
@@ -730,7 +765,7 @@ export const SidebarApp: React.FC = () => {
             <SectionHeader
                 title="Installed"
                 expanded={expandedSection === 'installed'}
-                count={installedPackages.length}
+                count={installedPackages.length || backgroundInstalledCount}
                 loading={loadingInstalled}
                 onToggle={() => toggleSection('installed')}
             />

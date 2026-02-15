@@ -133,11 +133,16 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
             }
 
             let totalUpdates = 0;
+            let selectedProjectInstalledCount = -1;
             const allProjectUpdates: { projectPath: string; projectName: string; updates: { id: string; installedVersion: string; latestVersion: string }[] }[] = [];
 
             for (const project of projects) {
                 try {
                     const installed = await this._nugetService.getInstalledPackages(project.path, true /* liteMode */);
+                    // Track installed count for the selected project (for sidebar badge)
+                    if (project.path === this._selectedProject) {
+                        selectedProjectInstalledCount = installed.length;
+                    }
                     if (installed.length > 0) {
                         const updates = await this._nugetService.checkPackageUpdatesMinimal(installed, this._includePrerelease);
                         if (updates.length > 0) {
@@ -157,9 +162,12 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
             // Always set badge (works even without webview)
             this.setBadge(totalUpdates);
 
-            // If webview is active, push all-projects results
+            // If webview is active, push all-projects results and installed count
             if (!this._disposed && this._view) {
                 this._postMessage({ type: 'allProjectsUpdates', projectUpdates: allProjectUpdates });
+                if (selectedProjectInstalledCount >= 0) {
+                    this._postMessage({ type: 'installedCountUpdate', count: selectedProjectInstalledCount });
+                }
             }
         } catch {
             // Background check failed silently — don't bother the user

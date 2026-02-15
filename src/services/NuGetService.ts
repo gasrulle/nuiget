@@ -1167,7 +1167,12 @@ export class NuGetService {
 
                 // Parse version specification
                 const versionSpec = parseVersionSpec(version);
-                const resolvedVersion = resolvedVersions.get(id.toLowerCase());
+                // Only use resolved version from lock files for floating/range versions.
+                // Standard (e.g. "10.0.2") and exact (e.g. "[10.0.2]") versions use the
+                // .csproj value directly — lock files may still hold a stale pre-install version.
+                const resolvedVersion = (versionSpec.type === 'floating' || versionSpec.type === 'range')
+                    ? resolvedVersions.get(id.toLowerCase())
+                    : undefined;
 
                 packages.push({
                     id,
@@ -2047,6 +2052,8 @@ export class NuGetService {
             this.logOutput(command, stdout, stderr, true);
             this.logSuccess(`Successfully installed ${packageId}`);
             vscode.window.showInformationMessage(`Successfully installed ${packageId}`);
+            // Invalidate assets cache so next getInstalledPackages reads fresh resolved versions
+            this.assetsJsonCache.clear();
             return true;
         } catch (error) {
             const command = `dotnet add "${projectPath}" package ${packageId} ${version ? `--version ${version}` : ''}`.trim();
@@ -2092,6 +2099,8 @@ export class NuGetService {
             this.logOutput(command, stdout, stderr, true);
             this.logSuccess(`Successfully updated ${packageId}`);
             vscode.window.showInformationMessage(`Successfully updated ${packageId}`);
+            // Invalidate assets cache so next getInstalledPackages reads fresh resolved versions
+            this.assetsJsonCache.clear();
             return true;
         } catch (error) {
             const command = `dotnet add "${projectPath}" package ${packageId} --version ${version}`;
@@ -2131,6 +2140,9 @@ export class NuGetService {
 
             this.logOutput(command, stdout, stderr, true);
             this.logSuccess(`Successfully removed ${packageId}`);
+
+            // Invalidate assets cache so next getInstalledPackages reads fresh resolved versions
+            this.assetsJsonCache.clear();
 
             // Run silent restore to update project.assets.json (dotnet remove doesn't trigger restore)
             // Skip for bulk operations (caller will run restore once at the end) or if noRestore setting is enabled
