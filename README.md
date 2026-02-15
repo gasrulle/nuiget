@@ -73,7 +73,6 @@ One-click updates with version comparison and prerelease support
 | Command | Description |
 |---------|-------------|
 | `nUIget: Manage NuGet Packages` | Open the package manager panel |
-| `nUIget: Refresh Packages` | Refresh package data |
 
 <details>
 <summary><b>⌨️ Keyboard Shortcuts</b></summary>
