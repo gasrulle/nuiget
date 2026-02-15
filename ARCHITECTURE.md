@@ -100,6 +100,12 @@ The sidebar provides a compact package management UI in the VS Code Activity Bar
 ### Message Protocol
 Sidebar messages follow the same patterns as the main panel but always send `liteMode: true`. Context menu actions are delegated: webview sends `showContextMenu` → backend shows QuickPick → backend sends `doInstall`/`doUpdate`/`doRemove` → webview forwards to actual `installPackage`/`updatePackage`/`removePackage`.
 
+### Cross-Panel Sync
+Prerelease, source, and project selections are synced bidirectionally between the main panel and sidebar:
+- **Main → Sidebar**: `NuGetPanel.saveSettings` persists to `workspaceState`, then fires static callbacks (`onPrereleaseChanged`, `onSourceChanged`, `onProjectChanged`) wired in `extension.ts` to call `NuGetSidebarPanel.syncPrerelease()`, `syncSource()`, `syncProject()`.
+- **Sidebar → Main**: QuickPick pickers call `NuGetPanel.syncPrerelease()`, `syncSource()`, `syncProject()` static methods which post messages to the main panel webview.
+- **Anti-echo**: `skipSaveRef`, `skipSourceSaveRef`, `skipProjectSaveRef` in App.tsx prevent the receiving panel from re-persisting the change and creating an infinite loop.
+
 ## Component Architecture
 
 The webview UI is decomposed into focused tab components, each managing their own local state while sharing cross-cutting state from the App shell.
