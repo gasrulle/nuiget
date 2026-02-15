@@ -1123,7 +1123,7 @@ export class NuGetService {
         return projects;
     }
 
-    async getInstalledPackages(projectPath: string): Promise<InstalledPackage[]> {
+    async getInstalledPackages(projectPath: string, liteMode?: boolean): Promise<InstalledPackage[]> {
         const packages: InstalledPackage[] = [];
 
         // Get resolved versions from lock files
@@ -1180,8 +1180,10 @@ export class NuGetService {
             }
 
             if (packages.length > 0) {
-                // Fetch icons, verified status, and authors for packages parsed from csproj
-                await this.fetchInstalledPackageMetadata(packages);
+                // Lite Mode: skip metadata enrichment (icons, verified, authors)
+                if (!liteMode) {
+                    await this.fetchInstalledPackageMetadata(packages);
+                }
                 return packages;
             }
         } catch (parseError) {
@@ -1263,8 +1265,10 @@ export class NuGetService {
                 }
             }
 
-            // Fetch icons, verified status, and authors for installed packages
-            await this.fetchInstalledPackageMetadata(packages);
+            // Fetch icons, verified status, and authors for installed packages (skip in Lite Mode)
+            if (!liteMode) {
+                await this.fetchInstalledPackageMetadata(packages);
+            }
 
             return packages;
         } catch (error) {
@@ -1272,8 +1276,8 @@ export class NuGetService {
             if (packages.length === 0) {
                 console.error('Failed to get installed packages via dotnet CLI:', error);
             }
-            // Fetch icons, verified status, and authors for packages parsed from csproj
-            if (packages.length > 0) {
+            // Fetch icons, verified status, and authors for packages parsed from csproj (skip in Lite Mode)
+            if (packages.length > 0 && !liteMode) {
                 await this.fetchInstalledPackageMetadata(packages);
             }
             return packages;
@@ -1670,10 +1674,10 @@ export class NuGetService {
         return null;
     }
 
-    async searchPackages(query: string, sources?: string[], includePrerelease?: boolean): Promise<PackageSearchResult[]> {
+    async searchPackages(query: string, sources?: string[], includePrerelease?: boolean, liteMode?: boolean): Promise<PackageSearchResult[]> {
         try {
             // Check cache first
-            const searchCacheKey = cacheKeys.searchResults(query, sources || [], includePrerelease ?? false);
+            const searchCacheKey = cacheKeys.searchResults(query, sources || [], includePrerelease ?? false) + (liteMode ? ':lite' : '');
 
             // Check in-memory cache (fastest)
             const memoryCached = this.searchResultsCache.get(searchCacheKey);
@@ -1747,101 +1751,104 @@ export class NuGetService {
                         id: packageId,
                         version: version,
                         description: '',
-                        authors: owners,
+                        authors: liteMode ? '' : owners,
                         totalDownloads: downloads,
                         versions: [version]
                     });
                 }
             }
 
-            // Fetch metadata for all packages using unified search API call
-            // Pre-fetch enabled sources for icon fallback
-            const allSources = await this.getSources();
-            const enabledSources = allSources.filter(s => s.enabled);
+            // Lite Mode: skip metadata enrichment, return raw CLI results
+            if (!liteMode) {
+                // Fetch metadata for all packages using unified search API call
+                // Pre-fetch enabled sources for icon fallback
+                const allSources = await this.getSources();
+                const enabledSources = allSources.filter(s => s.enabled);
 
-            await batchedPromiseAll(packages, async (pkg) => {
-                // Single search API call: gets verified, authors, description, AND iconUrl
-                const { verified, authors, iconUrl } = await this.getPackageSearchMetadata(pkg.id, pkg.version);
-                let foundMetadata = false;
-                if (iconUrl) {
-                    pkg.iconUrl = iconUrl;
-                }
-                if (verified !== undefined) {
-                    pkg.verified = verified;
-                    foundMetadata = true;
-                }
-                // Authors from search API override CLI-parsed authors (more accurate)
-                if (authors) {
-                    pkg.authors = authors;
-                    foundMetadata = true;
-                }
-
-                // Fill in description from cache (captured by getPackageSearchMetadata)
-                if (!pkg.description) {
-                    const statusCacheKey = cacheKeys.verifiedStatus(pkg.id);
-                    const cached = this.verifiedStatusCache.get(statusCacheKey);
-                    if (cached?.description) {
-                        pkg.description = cached.description;
+                await batchedPromiseAll(packages, async (pkg) => {
+                    // Single search API call: gets verified, authors, description, AND iconUrl
+                    const { verified, authors, iconUrl } = await this.getPackageSearchMetadata(pkg.id, pkg.version);
+                    let foundMetadata = false;
+                    if (iconUrl) {
+                        pkg.iconUrl = iconUrl;
+                    }
+                    if (verified !== undefined) {
+                        pkg.verified = verified;
                         foundMetadata = true;
                     }
-                }
-
-                // If search API didn't return an icon, fall back to resolveIconUrl (custom sources)
-                if (!pkg.iconUrl) {
-                    const fallbackIcon = await this.resolveIconUrl(pkg.id, pkg.version, enabledSources);
-                    if (fallbackIcon) {
-                        pkg.iconUrl = fallbackIcon;
+                    // Authors from search API override CLI-parsed authors (more accurate)
+                    if (authors) {
+                        pkg.authors = authors;
+                        foundMetadata = true;
                     }
-                }
 
-                // Not found on nuget.org — try custom sources for authors/description (skip known-unreachable)
-                if (!foundMetadata) {
-                    for (const source of enabledSources) {
-                        if (source.url.includes('nuget.org')) { continue; }
-
-                        const failedAt = this.failedEndpointCache.get(source.url);
-                        if (failedAt && (Date.now() - failedAt) < NuGetService.FAILED_ENDPOINT_CACHE_TTL) {
-                            continue;
+                    // Fill in description from cache (captured by getPackageSearchMetadata)
+                    if (!pkg.description) {
+                        const statusCacheKey = cacheKeys.verifiedStatus(pkg.id);
+                        const cached = this.verifiedStatusCache.get(statusCacheKey);
+                        if (cached?.description) {
+                            pkg.description = cached.description;
+                            foundMetadata = true;
                         }
+                    }
 
-                        try {
-                            const endpoints = await this.discoverServiceEndpoints(source.url);
-                            if (endpoints.searchQueryService) {
-                                const customAuthHeader = await this.getAuthHeader(source.url);
-                                const customSearchUrl = `${endpoints.searchQueryService}?q=packageid:${encodeURIComponent(pkg.id)}&take=1&prerelease=true`;
-                                const customData = await this.fetchJson<any>(customSearchUrl, customAuthHeader);
-                                const customPackages = customData?.data || customData?.Data || (Array.isArray(customData) ? customData : []);
+                    // If search API didn't return an icon, fall back to resolveIconUrl (custom sources)
+                    if (!pkg.iconUrl) {
+                        const fallbackIcon = await this.resolveIconUrl(pkg.id, pkg.version, enabledSources);
+                        if (fallbackIcon) {
+                            pkg.iconUrl = fallbackIcon;
+                        }
+                    }
 
-                                if (customPackages.length > 0) {
-                                    const result = customPackages[0];
-                                    if (result.id?.toLowerCase() === pkg.id.toLowerCase() || result.Id?.toLowerCase() === pkg.id.toLowerCase()) {
-                                        const customAuthors = result.authors || result.Authors;
-                                        if (customAuthors) {
-                                            pkg.authors = Array.isArray(customAuthors) ? customAuthors.join(', ') : customAuthors;
+                    // Not found on nuget.org — try custom sources for authors/description (skip known-unreachable)
+                    if (!foundMetadata) {
+                        for (const source of enabledSources) {
+                            if (source.url.includes('nuget.org')) { continue; }
+
+                            const failedAt = this.failedEndpointCache.get(source.url);
+                            if (failedAt && (Date.now() - failedAt) < NuGetService.FAILED_ENDPOINT_CACHE_TTL) {
+                                continue;
+                            }
+
+                            try {
+                                const endpoints = await this.discoverServiceEndpoints(source.url);
+                                if (endpoints.searchQueryService) {
+                                    const customAuthHeader = await this.getAuthHeader(source.url);
+                                    const customSearchUrl = `${endpoints.searchQueryService}?q=packageid:${encodeURIComponent(pkg.id)}&take=1&prerelease=true`;
+                                    const customData = await this.fetchJson<any>(customSearchUrl, customAuthHeader);
+                                    const customPackages = customData?.data || customData?.Data || (Array.isArray(customData) ? customData : []);
+
+                                    if (customPackages.length > 0) {
+                                        const result = customPackages[0];
+                                        if (result.id?.toLowerCase() === pkg.id.toLowerCase() || result.Id?.toLowerCase() === pkg.id.toLowerCase()) {
+                                            const customAuthors = result.authors || result.Authors;
+                                            if (customAuthors) {
+                                                pkg.authors = Array.isArray(customAuthors) ? customAuthors.join(', ') : customAuthors;
+                                            }
+                                            const desc = result.description || result.Description || result.summary || result.Summary;
+                                            if (desc && !pkg.description) {
+                                                pkg.description = desc;
+                                            }
+                                            // Cache (custom sources don't have verified, default to false)
+                                            const cacheValue = {
+                                                verified: false,
+                                                authors: pkg.authors,
+                                                description: pkg.description
+                                            };
+                                            const statusCacheKey = cacheKeys.verifiedStatus(pkg.id);
+                                            this.verifiedStatusCache.set(statusCacheKey, cacheValue);
+                                            workspaceCache.set(statusCacheKey, cacheValue, CACHE_TTL.VERIFIED_STATUS);
+                                            break; // Found
                                         }
-                                        const desc = result.description || result.Description || result.summary || result.Summary;
-                                        if (desc && !pkg.description) {
-                                            pkg.description = desc;
-                                        }
-                                        // Cache (custom sources don't have verified, default to false)
-                                        const cacheValue = {
-                                            verified: false,
-                                            authors: pkg.authors,
-                                            description: pkg.description
-                                        };
-                                        const statusCacheKey = cacheKeys.verifiedStatus(pkg.id);
-                                        this.verifiedStatusCache.set(statusCacheKey, cacheValue);
-                                        workspaceCache.set(statusCacheKey, cacheValue, CACHE_TTL.VERIFIED_STATUS);
-                                        break; // Found
                                     }
                                 }
+                            } catch {
+                                // Silently fail for individual sources
                             }
-                        } catch {
-                            // Silently fail for individual sources
                         }
                     }
-                }
-            }, 16);
+                }, 16);
+            }
 
             // Only cache non-empty results (avoid caching failures)
             if (packages.length > 0) {

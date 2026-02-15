@@ -19,6 +19,8 @@ export class NuGetPanel {
     private _latestAutocompleteQuery: string = '';
     // Track the latest search query to skip stale requests
     private _latestSearchQuery: string = '';
+    // Lite Mode: skip metadata enrichment for faster loading
+    private _liteMode = false;
 
     public static createOrShow(extensionUri: vscode.Uri, context: vscode.ExtensionContext, outputChannel: vscode.LogOutputChannel, projectPath?: string, initialTab?: 'browse' | 'installed' | 'updates') {
         NuGetPanel._context = context;
@@ -72,6 +74,9 @@ export class NuGetPanel {
         this._pendingProjectPath = projectPath;
         this._pendingInitialTab = initialTab;
 
+        // Read Lite Mode setting
+        this._liteMode = vscode.workspace.getConfiguration('nuiget').get<boolean>('liteMode', false);
+
         // Pre-warm nuget.org service index for faster first quick search
         this._nugetService.prewarmNugetOrgServiceIndex();
 
@@ -117,12 +122,16 @@ export class NuGetPanel {
         vscode.workspace.onDidChangeConfiguration(
             (e) => {
                 if (e.affectsConfiguration('nuiget')) {
-                    const searchDebounceMode = vscode.workspace.getConfiguration('nuiget').get<string>('searchDebounceMode', 'quicksearch');
-                    const recentSearchesLimit = vscode.workspace.getConfiguration('nuiget').get<number>('recentSearchesLimit', 5);
+                    const config = vscode.workspace.getConfiguration('nuiget');
+                    const searchDebounceMode = config.get<string>('searchDebounceMode', 'quicksearch');
+                    const recentSearchesLimit = config.get<number>('recentSearchesLimit', 5);
+                    const liteMode = config.get<boolean>('liteMode', false);
+                    this._liteMode = liteMode;
                     this._postMessage({
                         type: 'settingsChanged',
                         searchDebounceMode: searchDebounceMode,
-                        recentSearchesLimit: recentSearchesLimit
+                        recentSearchesLimit: recentSearchesLimit,
+                        liteMode: liteMode
                     });
                 }
             },
@@ -147,7 +156,7 @@ export class NuGetPanel {
                 }
             case 'getInstalledPackages':
                 {
-                    const packages = await this._nugetService.getInstalledPackages(data.projectPath as string);
+                    const packages = await this._nugetService.getInstalledPackages(data.projectPath as string, this._liteMode);
                     this._postMessage({
                         type: 'installedPackages',
                         packages: packages,
@@ -235,7 +244,8 @@ export class NuGetPanel {
                     const results = await this._nugetService.searchPackages(
                         query,
                         sources,
-                        data.includePrerelease as boolean | undefined
+                        data.includePrerelease as boolean | undefined,
+                        this._liteMode
                     );
 
                     // Skip sending results if a newer query arrived while we were fetching
@@ -355,19 +365,20 @@ export class NuGetPanel {
                         failedSources: failedSourcesArray
                     });
 
-                    // Test connectivity to all sources in background
-                    // This will populate failedSources and show VS Code notifications
-                    this._nugetService.testSourceConnectivity().then(() => {
-                        // After testing, send updated failed sources to UI
-                        const updatedFailedSources = this._nugetService.getFailedSources();
-                        if (updatedFailedSources.size > 0) {
-                            const updatedArray = Array.from(updatedFailedSources.entries()).map(([url, error]) => ({ url, error }));
-                            this._postMessage({
-                                type: 'sourceConnectivityUpdate',
-                                failedSources: updatedArray
-                            });
-                        }
-                    });
+                    // Test connectivity to all sources in background (skip in Lite Mode)
+                    if (!this._liteMode) {
+                        this._nugetService.testSourceConnectivity().then(() => {
+                            // After testing, send updated failed sources to UI
+                            const updatedFailedSources = this._nugetService.getFailedSources();
+                            if (updatedFailedSources.size > 0) {
+                                const updatedArray = Array.from(updatedFailedSources.entries()).map(([url, error]) => ({ url, error }));
+                                this._postMessage({
+                                    type: 'sourceConnectivityUpdate',
+                                    failedSources: updatedArray
+                                });
+                            }
+                        });
+                    }
                     break;
                 }
             case 'refreshSources':
@@ -572,15 +583,28 @@ export class NuGetPanel {
                 }
             case 'checkPackageUpdates':
                 {
-                    const packagesWithUpdates = await this._nugetService.checkPackageUpdates(
-                        data.installedPackages as InstalledPackage[],
-                        data.includePrerelease as boolean
-                    );
-                    this._postMessage({
-                        type: 'packageUpdates',
-                        updates: packagesWithUpdates,
-                        projectPath: data.projectPath
-                    });
+                    if (this._liteMode) {
+                        // Lite Mode: use minimal update check (no icons/verified/authors)
+                        const minimalUpdates = await this._nugetService.checkPackageUpdatesMinimal(
+                            data.installedPackages as InstalledPackage[],
+                            data.includePrerelease as boolean
+                        );
+                        this._postMessage({
+                            type: 'packageUpdatesMinimal',
+                            updates: minimalUpdates,
+                            projectPath: data.projectPath
+                        });
+                    } else {
+                        const packagesWithUpdates = await this._nugetService.checkPackageUpdates(
+                            data.installedPackages as InstalledPackage[],
+                            data.includePrerelease as boolean
+                        );
+                        this._postMessage({
+                            type: 'packageUpdates',
+                            updates: packagesWithUpdates,
+                            projectPath: data.projectPath
+                        });
+                    }
                     break;
                 }
             case 'checkAllProjectsUpdates':
@@ -690,9 +714,11 @@ export class NuGetPanel {
                     const selectedSource = NuGetPanel._context?.workspaceState.get<string>('nuget.selectedSource', '');
                     const recentSearches = NuGetPanel._context?.workspaceState.get<string[]>('nuget.recentSearches', []) ?? [];
                     const isWindows = process.platform === 'win32';
-                    // Read extension settings for search debounce
-                    const searchDebounceMode = vscode.workspace.getConfiguration('nuiget').get<string>('searchDebounceMode', 'quicksearch');
-                    const recentSearchesLimit = vscode.workspace.getConfiguration('nuiget').get<number>('recentSearchesLimit', 5);
+                    // Read extension settings
+                    const config = vscode.workspace.getConfiguration('nuiget');
+                    const searchDebounceMode = config.get<string>('searchDebounceMode', 'quicksearch');
+                    const recentSearchesLimit = config.get<number>('recentSearchesLimit', 5);
+                    const liteMode = config.get<boolean>('liteMode', false);
                     this._postMessage({
                         type: 'settings',
                         includePrerelease: includePrerelease,
@@ -700,7 +726,8 @@ export class NuGetPanel {
                         recentSearches: recentSearches.slice(0, recentSearchesLimit),
                         isWindows: isWindows,
                         searchDebounceMode: searchDebounceMode,
-                        recentSearchesLimit: recentSearchesLimit
+                        recentSearchesLimit: recentSearchesLimit,
+                        liteMode: liteMode
                     });
                     break;
                 }

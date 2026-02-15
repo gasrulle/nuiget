@@ -287,6 +287,9 @@ export const App: React.FC = () => {
     const [searchDebounceMode, setSearchDebounceMode] = useState<'quicksearch' | 'full' | 'off'>('quicksearch');
     const [recentSearchesLimit, setRecentSearchesLimit] = useState<number>(5);
     const recentSearchesLimitRef = useRef<number>(5);
+    // Lite Mode: skip metadata enrichment for faster loading
+    const [liteMode, setLiteMode] = useState(false);
+    const liteModeRef = useRef(false);
     const [packagesWithUpdates, setPackagesWithUpdates] = useState<PackageUpdate[]>([]);
     const [updateCount, setUpdateCount] = useState<number>(0);
     const [loadingUpdates, setLoadingUpdates] = useState(false);
@@ -387,6 +390,11 @@ export const App: React.FC = () => {
         recentSearchesLimitRef.current = recentSearchesLimit;
     }, [recentSearchesLimit]);
 
+    // Keep liteMode ref in sync with state
+    useEffect(() => {
+        liteModeRef.current = liteMode;
+    }, [liteMode]);
+
 
     // Track if installed tab has been visited (to skip refetch on first visit, use prefetched data)
     // NOTE: Currently does not reset when installedPackages changes. If dependent functionality changes
@@ -417,7 +425,7 @@ export const App: React.FC = () => {
     const updatesTabCompRef = useRef<UpdatesTabHandle>(null);
 
     // Package selection hook - consolidates selection logic across all tabs
-    const { selectDirectPackage, selectTransitivePackage, clearSelection } = usePackageSelection<PackageSearchResult | InstalledPackage>({
+    const { selectDirectPackage, selectTransitivePackage, clearSelection, metadataDeferred, loadFullDetails } = usePackageSelection<PackageSearchResult | InstalledPackage>({
         setSelectedPackage,
         setSelectedTransitivePackage,
         setSelectedVersion,
@@ -433,6 +441,7 @@ export const App: React.FC = () => {
         includePrerelease,
         selectedPackage,
         vscode,
+        liteMode,
     });
 
     // Auto-focus the active tab on initial mount
@@ -648,6 +657,21 @@ export const App: React.FC = () => {
                     setLoadingUpdates(false);
                 }
                 break;
+            case 'packageUpdatesMinimal':
+                // Lite Mode: update packages with minimal data (no icons/verified/authors)
+                // Convert minimal updates to PackageUpdate format for consistent handling
+                if (message.projectPath === selectedProjectRef.current) {
+                    const minimalUpdates = (message.updates as Array<{ id: string; installedVersion: string; latestVersion: string }>).map(u => ({
+                        ...u,
+                        iconUrl: undefined,
+                        verified: undefined,
+                        authors: undefined,
+                    })) as PackageUpdate[];
+                    setPackagesWithUpdates(minimalUpdates);
+                    setUpdateCount(minimalUpdates.length);
+                    setLoadingUpdates(false);
+                }
+                break;
             case 'allProjectsUpdates':
                 // All projects updates loaded
                 {
@@ -703,6 +727,9 @@ export const App: React.FC = () => {
                         setRecentSearches(prev => prev.slice(0, message.recentSearchesLimit));
                     }
                 }
+                if (message.liteMode !== undefined) {
+                    setLiteMode(message.liteMode);
+                }
                 break;
             case 'settingsChanged':
                 // Handle live configuration changes from VS Code settings
@@ -718,13 +745,27 @@ export const App: React.FC = () => {
                         setRecentSearches(prev => prev.slice(0, message.recentSearchesLimit));
                     }
                 }
+                if (message.liteMode !== undefined) {
+                    setLiteMode(message.liteMode);
+                }
                 break;
             case 'packageReadme':
                 // Handle lazy-loaded README from nupkg
                 if (selectedPackageRef.current && message.packageId === selectedPackageRef.current.id) {
                     setLoadingReadme(false);
                     if (message.readme) {
-                        setPackageMetadata(prev => prev ? { ...prev, readme: message.readme } : prev);
+                        setPackageMetadata(prev => {
+                            if (prev) return { ...prev, readme: message.readme };
+                            // Lite mode: packageMetadata may be null — create minimal object for readme
+                            return {
+                                id: message.packageId,
+                                version: selectedVersionRef.current || '',
+                                description: '',
+                                authors: '',
+                                dependencies: [],
+                                readme: message.readme
+                            };
+                        });
                     }
                 }
                 break;
@@ -794,7 +835,7 @@ export const App: React.FC = () => {
                     packageId: packageId,
                     source: selectedSource === 'all' ? undefined : selectedSource,
                     includePrerelease: includePrerelease,
-                    take: 20
+                    take: liteModeRef.current ? 5 : 20
                 });
             }
         }
@@ -892,19 +933,26 @@ export const App: React.FC = () => {
         if (
             detailsTab === 'readme' &&
             selectedPackage &&
-            packageMetadata &&
-            !packageMetadata.readme &&
             !loadingReadme &&
             !readmeAttempted
         ) {
+            // Already have readme loaded
+            if (packageMetadata?.readme) return;
+            // In normal mode, wait for packageMetadata to load first
+            if (!packageMetadata && !liteModeRef.current) return;
+
+            const pkgId = packageMetadata?.id || getPackageId(selectedPackage);
+            const version = packageMetadata?.version || selectedVersionRef.current;
+            if (!version) return;
+
             // Mark as attempted so we don't retry
             setReadmeAttempted(true);
             setLoadingReadme(true);
             // Request README extraction from nupkg
             vscode.postMessage({
                 type: 'fetchReadmeFromPackage',
-                packageId: packageMetadata.id,
-                version: packageMetadata.version,
+                packageId: pkgId,
+                version: version,
                 source: selectedSource === 'all' ? undefined : selectedSource
             });
         }
@@ -1562,6 +1610,7 @@ export const App: React.FC = () => {
                 searchDebounceMode={searchDebounceMode}
                 splitPosition={splitPosition}
                 defaultPackageIcon={defaultPackageIcon}
+                liteMode={liteMode}
                 detailsPanelContent={
                     <MemoizedPackageDetailsPanel
                         selectedPackage={selectedPackage}
@@ -1578,6 +1627,9 @@ export const App: React.FC = () => {
                         selectedProject={selectedProject}
                         includePrerelease={includePrerelease}
                         selectedSource={selectedSource}
+                        liteMode={liteMode}
+                        metadataDeferred={metadataDeferred}
+                        onLoadFullDetails={loadFullDetails}
                         onInstall={handleInstall}
                         onRemove={handleRemove}
                         onVersionChange={setSelectedVersion}
@@ -1620,6 +1672,9 @@ export const App: React.FC = () => {
                 defaultPackageIcon={defaultPackageIcon}
                 includePrerelease={includePrerelease}
                 selectedSource={selectedSource}
+                liteMode={liteMode}
+                metadataDeferred={metadataDeferred}
+                onLoadFullDetails={loadFullDetails}
                 packageMetadata={packageMetadata}
                 loadingMetadata={loadingMetadata}
                 loadingVersions={loadingVersions}
@@ -1666,6 +1721,9 @@ export const App: React.FC = () => {
                     includePrerelease={includePrerelease}
                     splitPosition={splitPosition}
                     defaultPackageIcon={defaultPackageIcon}
+                    liteMode={liteMode}
+                    metadataDeferred={metadataDeferred}
+                    onLoadFullDetails={loadFullDetails}
                     packageMetadata={packageMetadata}
                     loadingMetadata={loadingMetadata}
                     loadingVersions={loadingVersions}

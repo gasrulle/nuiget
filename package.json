@@ -96,6 +96,11 @@
         "configuration": {
             "title": "nUIget",
             "properties": {
+                "nuiget.liteMode": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Lite Mode — skip metadata enrichment (icons, verified badges, authors) for faster package loading. Full details available on demand via 'Load full details' in the details panel."
+                },
                 "nuiget.noRestore": {
                     "type": "boolean",
                     "default": false,

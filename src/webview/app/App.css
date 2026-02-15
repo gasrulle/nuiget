@@ -2757,3 +2757,18 @@ body.vscode-light .readme-rendered .hljs-selector-pseudo {
 body.vscode-light .readme-rendered .hljs-name {
     color: var(--vscode-symbolIcon-keywordForeground, #800000);
 }
+
+/* ─── Lite Mode ──────────────────────────────────────────────────────────── */
+
+.lite-mode-details-action {
+    margin-top: 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.lite-mode-hint {
+    font-size: 11px;
+    color: var(--vscode-descriptionForeground);
+    font-style: italic;
+}

@@ -30,6 +30,7 @@ export interface BrowseTabProps {
     searchDebounceMode: 'quicksearch' | 'full' | 'off';
     splitPosition: number;
     defaultPackageIcon: string;
+    liteMode?: boolean;
 
     // Details panel (rendered by parent, reused here)
     detailsPanelContent: React.ReactNode;
@@ -112,6 +113,7 @@ const BrowseTab = forwardRef<BrowseTabHandle, BrowseTabProps>(function BrowseTab
         browseTabRef,
         MemoizedDraggableSash,
     } = props;
+    const { liteMode } = props;
 
     // --- Internal state ---
     const [searchQuery, setSearchQuery] = useState('');
@@ -929,7 +931,7 @@ const BrowseTab = forwardRef<BrowseTabHandle, BrowseTabProps>(function BrowseTab
                                         }}
                                     >
                                         <div className="package-icon">
-                                            {pkg.iconUrl ? (
+                                            {!liteMode && pkg.iconUrl ? (
                                                 <img src={pkg.iconUrl} alt="" onError={(e) => { (e.target as HTMLImageElement).src = defaultPackageIcon; }} />
                                             ) : (
                                                 <img src={defaultPackageIcon} alt="" />
@@ -946,7 +948,7 @@ const BrowseTab = forwardRef<BrowseTabHandle, BrowseTabProps>(function BrowseTab
                                                 )}
                                             </div>
                                             <div className="package-authors">
-                                                {pkg.verified && (
+                                                {!liteMode && pkg.verified && (
                                                     <span className="verified-badge" title="The ID prefix of this package has been reserved by its owner on nuget.org">✓</span>
                                                 )}
                                                 {pkg.authors}

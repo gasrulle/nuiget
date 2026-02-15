@@ -48,6 +48,11 @@ export interface InstalledTabProps {
     includePrerelease: boolean;
     selectedSource: string;
 
+    // Lite Mode
+    liteMode?: boolean;
+    metadataDeferred?: boolean;
+    onLoadFullDetails?: (id: string, version: string) => void;
+
     // Shared state for details panel
     packageMetadata: PackageMetadata | null;
     loadingMetadata: boolean;
@@ -170,6 +175,7 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
         installedTabRef,
         MemoizedDraggableSash,
     } = props;
+    const { liteMode, metadataDeferred, onLoadFullDetails } = props;
 
     // ─── Internal state ──────────────────────────────────────────────────────
 
@@ -300,20 +306,22 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
         const isCurrentlyExpanded = transitiveExpandedFrameworks.has(targetFramework);
 
         if (!isCurrentlyExpanded && selectedProject) {
-            // Expanding - check if we need to load metadata
-            const framework = transitiveFrameworks.find(f => f.targetFramework === targetFramework);
-            if (framework && !framework.metadataLoaded) {
-                // Check ref synchronously — React 19 defers setState updaters,
-                // so we cannot rely on reading values assigned inside an updater.
-                if (!transitiveLoadingMetadataRef.current.has(targetFramework)) {
-                    transitiveLoadingMetadataRef.current.add(targetFramework);
-                    setTransitiveLoadingMetadata(new Set(transitiveLoadingMetadataRef.current));
-                    vscode.postMessage({
-                        type: 'getTransitiveMetadata',
-                        targetFramework: targetFramework,
-                        packages: framework.packages,
-                        projectPath: selectedProject
-                    });
+            // Expanding - check if we need to load metadata (skip in Lite Mode)
+            if (!liteMode) {
+                const framework = transitiveFrameworks.find(f => f.targetFramework === targetFramework);
+                if (framework && !framework.metadataLoaded) {
+                    // Check ref synchronously — React 19 defers setState updaters,
+                    // so we cannot rely on reading values assigned inside an updater.
+                    if (!transitiveLoadingMetadataRef.current.has(targetFramework)) {
+                        transitiveLoadingMetadataRef.current.add(targetFramework);
+                        setTransitiveLoadingMetadata(new Set(transitiveLoadingMetadataRef.current));
+                        vscode.postMessage({
+                            type: 'getTransitiveMetadata',
+                            targetFramework: targetFramework,
+                            packages: framework.packages,
+                            projectPath: selectedProject
+                        });
+                    }
                 }
             }
         }
@@ -332,7 +340,7 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
         if (isCurrentlyExpanded) {
             onSetSelectedTransitivePackage(null);
         }
-    }, [transitiveExpandedFrameworks, selectedProject, transitiveFrameworks, onSetSelectedTransitivePackage, vscode]);
+    }, [transitiveExpandedFrameworks, selectedProject, transitiveFrameworks, onSetSelectedTransitivePackage, vscode, liteMode]);
 
     const handleLoadTransitiveFrameworks = useCallback(() => {
         if (!selectedProject || loadingTransitive) { return; }
@@ -396,7 +404,9 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
     }, [transitiveDataSourceAvailable, selectedProject, loadingTransitive, transitiveFrameworks.length, transitiveExpandedFrameworks.size, vscode]);
 
     // Prefetch transitive packages in background after direct packages are loaded
+    // Skip in Lite Mode — transitive packages loaded on demand via button
     useEffect(() => {
+        if (liteMode) { return; }
         if (selectedProject && !loadingInstalled && installedPackages.length >= 0 && transitiveDataSourceAvailable === null && !loadingTransitive) {
             // Direct packages finished loading - defer transitive fetch to reduce network
             // pressure during metadata/update fetching (runs concurrently with those)
@@ -409,13 +419,15 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
             }, 2000);
             return () => clearTimeout(timer);
         }
-    }, [selectedProject, loadingInstalled, installedPackages.length, transitiveDataSourceAvailable, loadingTransitive, vscode]);
+    }, [selectedProject, loadingInstalled, installedPackages.length, transitiveDataSourceAvailable, loadingTransitive, vscode, liteMode]);
 
     // Prefetch transitive metadata in background after framework list loads
     // This enables instant expansion of transitive sections without loading delay
     // NOTE: transitiveLoadingMetadata is intentionally NOT in deps to avoid circular re-execution.
     // We use the functional update form of setTransitiveLoadingMetadata to read current state.
+    // Skip in Lite Mode — metadata loaded on-demand when expanding frameworks
     useEffect(() => {
+        if (liteMode) { return; }
         if (!selectedProject || transitiveFrameworks.length === 0) {
             return;
         }
@@ -444,7 +456,7 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
                 projectPath: selectedProject
             });
         }
-    }, [selectedProject, transitiveFrameworks, vscode]);
+    }, [selectedProject, transitiveFrameworks, vscode, liteMode]);
 
     // ─── Imperative handle ───────────────────────────────────────────────────
 
@@ -457,7 +469,12 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
                         setTransitiveFrameworks(frameworks);
                         setTransitiveDataSourceAvailable(message.dataSourceAvailable);
                         setLoadingTransitive(false);
-                        // Sections stay collapsed - user expands manually, metadata loads on expand
+                        // Lite Mode: auto-expand all loaded frameworks when loaded on demand
+                        // (user explicitly clicked to load, so expand them immediately)
+                        if (liteMode && frameworks.length > 0) {
+                            setTransitiveExpandedFrameworks(new Set(frameworks.map((f: { targetFramework: string }) => f.targetFramework)));
+                        }
+                        // Otherwise sections stay collapsed - user expands manually, metadata loads on expand
                     }
                     break;
                 case 'transitiveMetadata':
@@ -543,7 +560,7 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
                             <div className="detail-row">
                                 <span className="detail-label">Authors:</span>
                                 <span className="detail-value">
-                                    {selectedTransitivePackage.verified && (
+                                    {!liteMode && selectedTransitivePackage.verified && (
                                         <span className="verified-badge" title="The ID prefix of this package has been reserved by its owner on nuget.org">✓</span>
                                     )}
                                     {selectedTransitivePackage.authors}
@@ -586,6 +603,9 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
                 selectedProject={selectedProject}
                 includePrerelease={includePrerelease}
                 selectedSource={selectedSource}
+                liteMode={liteMode}
+                metadataDeferred={metadataDeferred}
+                onLoadFullDetails={onLoadFullDetails}
                 onInstall={onInstall}
                 onRemove={onRemove}
                 onVersionChange={onVersionChange}
@@ -785,7 +805,7 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
                                                     title={pkg.isImplicit ? 'Implicit/transitive package - cannot be uninstalled directly' : undefined}
                                                 />
                                                 <div className="package-icon">
-                                                    {pkg.iconUrl ? (
+                                                    {!liteMode && pkg.iconUrl ? (
                                                         <img src={pkg.iconUrl} alt="" onError={(e) => { (e.target as HTMLImageElement).src = defaultPackageIcon; }} />
                                                     ) : (
                                                         <img src={defaultPackageIcon} alt="" />
@@ -824,7 +844,7 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
                                                     </div>
                                                     {pkg.authors && (
                                                         <div className="package-authors">
-                                                            {pkg.verified && (
+                                                            {!liteMode && pkg.verified && (
                                                                 <span className="verified-badge" title="The ID prefix of this package has been reserved by its owner on nuget.org">✓</span>
                                                             )}
                                                             {pkg.authors}
@@ -936,7 +956,7 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
                                                                 }}
                                                             >
                                                                 <div className="package-icon package-icon-small">
-                                                                    {pkg.iconUrl ? (
+                                                                    {!liteMode && pkg.iconUrl ? (
                                                                         <img src={pkg.iconUrl} alt="" onError={(e) => { (e.target as HTMLImageElement).src = defaultPackageIcon; }} />
                                                                     ) : (
                                                                         <img src={defaultPackageIcon} alt="" />
@@ -949,7 +969,7 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
                                                                     </div>
                                                                     {pkg.authors && (
                                                                         <div className="package-authors">
-                                                                            {pkg.verified && (
+                                                                            {!liteMode && pkg.verified && (
                                                                                 <span className="verified-badge" title="The ID prefix of this package has been reserved by its owner on nuget.org">✓</span>
                                                                             )}
                                                                             {pkg.authors}
