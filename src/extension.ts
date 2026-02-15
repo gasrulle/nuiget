@@ -27,6 +27,22 @@ export function activate(context: vscode.ExtensionContext) {
     // Pre-warm credentials for authenticated feeds (fire-and-forget)
     nugetService.initializeCredentials().catch(() => { /* ignore */ });
 
+    // Set context key for conditional sidebar visibility
+    let projectFileDebounce: ReturnType<typeof setTimeout> | undefined;
+    const updateProjectFilesContext = async () => {
+        const projects = await nugetService.findProjects();
+        vscode.commands.executeCommand('setContext', 'nuiget.hasProjectFiles', projects.length > 0);
+    };
+    updateProjectFilesContext();
+    const projectFileWatcher = vscode.workspace.createFileSystemWatcher('**/*.{csproj,fsproj,vbproj}');
+    const debouncedUpdate = () => {
+        if (projectFileDebounce) clearTimeout(projectFileDebounce);
+        projectFileDebounce = setTimeout(updateProjectFilesContext, 1500);
+    };
+    projectFileWatcher.onDidCreate(debouncedUpdate);
+    projectFileWatcher.onDidDelete(debouncedUpdate);
+    context.subscriptions.push(projectFileWatcher);
+
     // Register sidebar webview provider
     const sidebarProvider = new NuGetSidebarProvider(context.extensionUri, context, outputChannel, nugetService);
     context.subscriptions.push(

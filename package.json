@@ -71,7 +71,8 @@
                 {
                     "type": "webview",
                     "id": "nuiget.sidebarView",
-                    "name": "Packages"
+                    "name": "Packages",
+                    "when": "nuiget.hasProjectFiles"
                 }
             ]
         },
