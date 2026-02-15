@@ -8,6 +8,34 @@ export class NuGetPanel {
     private static _context: vscode.ExtensionContext | undefined;
     private static _outputChannel: vscode.LogOutputChannel | undefined;
 
+    /** Callback fired when the main panel's prerelease setting changes (wired in extension.ts) */
+    public static onPrereleaseChanged: ((value: boolean) => void) | undefined;
+    /** Callback fired when the main panel's selected source changes (wired in extension.ts) */
+    public static onSourceChanged: ((value: string) => void) | undefined;
+    /** Callback fired when the main panel's selected project changes (wired in extension.ts) */
+    public static onProjectChanged: ((value: string) => void) | undefined;
+
+    /** Push a prerelease change into the main panel webview (called from sidebar sync) */
+    public static syncPrerelease(value: boolean): void {
+        if (NuGetPanel.currentPanel && !NuGetPanel.currentPanel._disposed) {
+            NuGetPanel.currentPanel._postMessage({ type: 'prereleaseChanged', includePrerelease: value });
+        }
+    }
+
+    /** Push a source change into the main panel webview (called from sidebar sync) */
+    public static syncSource(value: string): void {
+        if (NuGetPanel.currentPanel && !NuGetPanel.currentPanel._disposed) {
+            NuGetPanel.currentPanel._postMessage({ type: 'sourceChanged', selectedSource: value });
+        }
+    }
+
+    /** Push a project change into the main panel webview (called from sidebar sync) */
+    public static syncProject(projectPath: string): void {
+        if (NuGetPanel.currentPanel && !NuGetPanel.currentPanel._disposed) {
+            NuGetPanel.currentPanel._postMessage({ type: 'projectChanged', projectPath });
+        }
+    }
+
     private readonly _panel: vscode.WebviewPanel;
     private readonly _extensionUri: vscode.Uri;
     private readonly _nugetService: NuGetService;
@@ -19,10 +47,8 @@ export class NuGetPanel {
     private _latestAutocompleteQuery: string = '';
     // Track the latest search query to skip stale requests
     private _latestSearchQuery: string = '';
-    // Lite Mode: skip metadata enrichment for faster loading
-    private _liteMode = false;
 
-    public static createOrShow(extensionUri: vscode.Uri, context: vscode.ExtensionContext, outputChannel: vscode.LogOutputChannel, projectPath?: string, initialTab?: 'browse' | 'installed' | 'updates') {
+    public static createOrShow(extensionUri: vscode.Uri, context: vscode.ExtensionContext, outputChannel: vscode.LogOutputChannel, nugetService: NuGetService, projectPath?: string, initialTab?: 'browse' | 'installed' | 'updates') {
         NuGetPanel._context = context;
         NuGetPanel._outputChannel = outputChannel;
         const column = vscode.window.activeTextEditor
@@ -50,7 +76,7 @@ export class NuGetPanel {
             }
         );
 
-        NuGetPanel.currentPanel = new NuGetPanel(panel, extensionUri, outputChannel, projectPath, initialTab);
+        NuGetPanel.currentPanel = new NuGetPanel(panel, extensionUri, nugetService, projectPath, initialTab);
     }
 
     public static refresh() {
@@ -67,23 +93,12 @@ export class NuGetPanel {
         });
     }
 
-    private constructor(panel: vscode.WebviewPanel, extensionUri: vscode.Uri, outputChannel: vscode.LogOutputChannel, projectPath?: string, initialTab?: 'browse' | 'installed' | 'updates') {
+    private constructor(panel: vscode.WebviewPanel, extensionUri: vscode.Uri, nugetService: NuGetService, projectPath?: string, initialTab?: 'browse' | 'installed' | 'updates') {
         this._panel = panel;
         this._extensionUri = extensionUri;
-        this._nugetService = new NuGetService(outputChannel);
+        this._nugetService = nugetService;
         this._pendingProjectPath = projectPath;
         this._pendingInitialTab = initialTab;
-
-        // Read Lite Mode setting
-        this._liteMode = vscode.workspace.getConfiguration('nuiget').get<boolean>('liteMode', false);
-
-        // Pre-warm nuget.org service index for faster first quick search
-        this._nugetService.prewarmNugetOrgServiceIndex();
-
-        // Pre-warm credentials for authenticated feeds (fire-and-forget)
-        this._nugetService.initializeCredentials().catch(() => {
-            // Ignore errors - credentials will be loaded on-demand if prewarm fails
-        });
 
         // Set the webview's initial html content
         this._panel.webview.html = this._getHtmlForWebview(this._panel.webview);
@@ -125,13 +140,10 @@ export class NuGetPanel {
                     const config = vscode.workspace.getConfiguration('nuiget');
                     const searchDebounceMode = config.get<string>('searchDebounceMode', 'quicksearch');
                     const recentSearchesLimit = config.get<number>('recentSearchesLimit', 5);
-                    const liteMode = config.get<boolean>('liteMode', false);
-                    this._liteMode = liteMode;
                     this._postMessage({
                         type: 'settingsChanged',
                         searchDebounceMode: searchDebounceMode,
-                        recentSearchesLimit: recentSearchesLimit,
-                        liteMode: liteMode
+                        recentSearchesLimit: recentSearchesLimit
                     });
                 }
             },
@@ -156,7 +168,7 @@ export class NuGetPanel {
                 }
             case 'getInstalledPackages':
                 {
-                    const packages = await this._nugetService.getInstalledPackages(data.projectPath as string, this._liteMode);
+                    const packages = await this._nugetService.getInstalledPackages(data.projectPath as string);
                     this._postMessage({
                         type: 'installedPackages',
                         packages: packages,
@@ -244,8 +256,7 @@ export class NuGetPanel {
                     const results = await this._nugetService.searchPackages(
                         query,
                         sources,
-                        data.includePrerelease as boolean | undefined,
-                        this._liteMode
+                        data.includePrerelease as boolean | undefined
                     );
 
                     // Skip sending results if a newer query arrived while we were fetching
@@ -365,20 +376,18 @@ export class NuGetPanel {
                         failedSources: failedSourcesArray
                     });
 
-                    // Test connectivity to all sources in background (skip in Lite Mode)
-                    if (!this._liteMode) {
-                        this._nugetService.testSourceConnectivity().then(() => {
-                            // After testing, send updated failed sources to UI
-                            const updatedFailedSources = this._nugetService.getFailedSources();
-                            if (updatedFailedSources.size > 0) {
-                                const updatedArray = Array.from(updatedFailedSources.entries()).map(([url, error]) => ({ url, error }));
-                                this._postMessage({
-                                    type: 'sourceConnectivityUpdate',
-                                    failedSources: updatedArray
-                                });
-                            }
-                        });
-                    }
+                    // Test connectivity to all sources in background
+                    this._nugetService.testSourceConnectivity().then(() => {
+                        // After testing, send updated failed sources to UI
+                        const updatedFailedSources = this._nugetService.getFailedSources();
+                        if (updatedFailedSources.size > 0) {
+                            const updatedArray = Array.from(updatedFailedSources.entries()).map(([url, error]) => ({ url, error }));
+                            this._postMessage({
+                                type: 'sourceConnectivityUpdate',
+                                failedSources: updatedArray
+                            });
+                        }
+                    });
                     break;
                 }
             case 'refreshSources':
@@ -583,28 +592,15 @@ export class NuGetPanel {
                 }
             case 'checkPackageUpdates':
                 {
-                    if (this._liteMode) {
-                        // Lite Mode: use minimal update check (no icons/verified/authors)
-                        const minimalUpdates = await this._nugetService.checkPackageUpdatesMinimal(
-                            data.installedPackages as InstalledPackage[],
-                            data.includePrerelease as boolean
-                        );
-                        this._postMessage({
-                            type: 'packageUpdatesMinimal',
-                            updates: minimalUpdates,
-                            projectPath: data.projectPath
-                        });
-                    } else {
-                        const packagesWithUpdates = await this._nugetService.checkPackageUpdates(
-                            data.installedPackages as InstalledPackage[],
-                            data.includePrerelease as boolean
-                        );
-                        this._postMessage({
-                            type: 'packageUpdates',
-                            updates: packagesWithUpdates,
-                            projectPath: data.projectPath
-                        });
-                    }
+                    const packagesWithUpdates = await this._nugetService.checkPackageUpdates(
+                        data.installedPackages as InstalledPackage[],
+                        data.includePrerelease as boolean
+                    );
+                    this._postMessage({
+                        type: 'packageUpdates',
+                        updates: packagesWithUpdates,
+                        projectPath: data.projectPath
+                    });
                     break;
                 }
             case 'checkAllProjectsUpdates':
@@ -718,7 +714,6 @@ export class NuGetPanel {
                     const config = vscode.workspace.getConfiguration('nuiget');
                     const searchDebounceMode = config.get<string>('searchDebounceMode', 'quicksearch');
                     const recentSearchesLimit = config.get<number>('recentSearchesLimit', 5);
-                    const liteMode = config.get<boolean>('liteMode', false);
                     this._postMessage({
                         type: 'settings',
                         includePrerelease: includePrerelease,
@@ -726,8 +721,7 @@ export class NuGetPanel {
                         recentSearches: recentSearches.slice(0, recentSearchesLimit),
                         isWindows: isWindows,
                         searchDebounceMode: searchDebounceMode,
-                        recentSearchesLimit: recentSearchesLimit,
-                        liteMode: liteMode
+                        recentSearchesLimit: recentSearchesLimit
                     });
                     break;
                 }
@@ -737,9 +731,18 @@ export class NuGetPanel {
                     if (NuGetPanel._context) {
                         if (data.includePrerelease !== undefined) {
                             await NuGetPanel._context.workspaceState.update('nuget.includePrerelease', data.includePrerelease);
+                            // Sync to sidebar panel
+                            NuGetPanel.onPrereleaseChanged?.(data.includePrerelease as boolean);
                         }
                         if (data.selectedSource !== undefined) {
                             await NuGetPanel._context.workspaceState.update('nuget.selectedSource', data.selectedSource);
+                            // Sync to sidebar panel
+                            NuGetPanel.onSourceChanged?.(data.selectedSource as string);
+                        }
+                        if (data.selectedProject !== undefined) {
+                            await NuGetPanel._context.workspaceState.update('nuget.selectedProject', data.selectedProject);
+                            // Sync to sidebar panel
+                            NuGetPanel.onProjectChanged?.(data.selectedProject as string);
                         }
                         if (data.recentSearches !== undefined) {
                             await NuGetPanel._context.workspaceState.update('nuget.recentSearches', data.recentSearches);

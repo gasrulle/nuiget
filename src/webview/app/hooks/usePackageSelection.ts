@@ -14,7 +14,7 @@
  * - Updates: Creates synthetic package, shows both latestVersion and installedVersion as initial versions
  */
 
-import { RefObject, useCallback, useState } from 'react';
+import { RefObject, useCallback } from 'react';
 import type { LRUMap, PackageMetadata, TransitivePackage, VsCodeApi } from '../types';
 
 // LRU Map type (compatible with LRUMap from types.ts)
@@ -77,9 +77,6 @@ export interface UsePackageSelectionDeps<T extends { id: string }> {
 
     // VS Code API
     vscode: VsCodeApi;
-
-    // Lite Mode: skip metadata enrichment
-    liteMode?: boolean;
 }
 
 /**
@@ -111,11 +108,7 @@ export function usePackageSelection<T extends { id: string }>(
         includePrerelease,
         selectedPackage,
         vscode,
-        liteMode,
     } = deps;
-
-    // Track whether metadata was deferred (Lite Mode skipped auto-fetch)
-    const [metadataDeferred, setMetadataDeferred] = useState(false);
 
     /**
      * Build cache key for versions lookup
@@ -173,33 +166,25 @@ export function usePackageSelection<T extends { id: string }>(
                 packageId: pkg.id,
                 source: selectedSource === 'all' ? undefined : selectedSource,
                 includePrerelease: includePrerelease,
-                take: liteMode ? 5 : 20
+                take: 20
             });
         }
 
-        // Metadata: Lite Mode defers metadata fetch until user clicks "Load full details"
-        if (liteMode) {
-            setPackageMetadata(null);
+        // Metadata: check cache first
+        const metadataCacheKey = buildMetadataCacheKey(pkg.id, options.metadataVersion);
+        const cachedMetadata = metadataCache.current?.get(metadataCacheKey);
+        if (cachedMetadata) {
+            setPackageMetadata(cachedMetadata);
             setLoadingMetadata(false);
-            setMetadataDeferred(true);
         } else {
-            setMetadataDeferred(false);
-            // Metadata: check cache first
-            const metadataCacheKey = buildMetadataCacheKey(pkg.id, options.metadataVersion);
-            const cachedMetadata = metadataCache.current?.get(metadataCacheKey);
-            if (cachedMetadata) {
-                setPackageMetadata(cachedMetadata);
-                setLoadingMetadata(false);
-            } else {
-                setPackageMetadata(null);
-                setLoadingMetadata(true);
-                vscode.postMessage({
-                    type: 'getPackageMetadata',
-                    packageId: pkg.id,
-                    version: options.metadataVersion,
-                    source: selectedSource === 'all' ? undefined : selectedSource
-                });
-            }
+            setPackageMetadata(null);
+            setLoadingMetadata(true);
+            vscode.postMessage({
+                type: 'getPackageMetadata',
+                packageId: pkg.id,
+                version: options.metadataVersion,
+                source: selectedSource === 'all' ? undefined : selectedSource
+            });
         }
 
         return true;
@@ -221,30 +206,7 @@ export function usePackageSelection<T extends { id: string }>(
         selectedSource,
         includePrerelease,
         vscode,
-        liteMode,
     ]);
-
-    /**
-     * Load full metadata for the currently selected package (Lite Mode on-demand)
-     * Called when user clicks "Load full details" button in PackageDetailsPanel
-     */
-    const loadFullDetails = useCallback((packageId: string, metadataVersion: string): void => {
-        setMetadataDeferred(false);
-        const metadataCacheKey = buildMetadataCacheKey(packageId, metadataVersion);
-        const cachedMetadata = metadataCache.current?.get(metadataCacheKey);
-        if (cachedMetadata) {
-            setPackageMetadata(cachedMetadata);
-            setLoadingMetadata(false);
-        } else {
-            setLoadingMetadata(true);
-            vscode.postMessage({
-                type: 'getPackageMetadata',
-                packageId: packageId,
-                version: metadataVersion,
-                source: selectedSource === 'all' ? undefined : selectedSource
-            });
-        }
-    }, [buildMetadataCacheKey, metadataCache, selectedSource, setLoadingMetadata, setPackageMetadata, vscode]);
 
     /**
      * Select a transitive package (from Installed tab transitive section)
@@ -268,7 +230,5 @@ export function usePackageSelection<T extends { id: string }>(
         selectDirectPackage,
         selectTransitivePackage,
         clearSelection,
-        metadataDeferred,
-        loadFullDetails,
     };
 }

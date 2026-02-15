@@ -36,18 +36,40 @@ const webviewConfig = {
     logLevel: 'info',
 };
 
+/** @type {import('esbuild').BuildOptions} */
+const sidebarConfig = {
+    entryPoints: ['src/webview/sidebar/index.tsx'],
+    bundle: true,
+    outfile: 'dist/sidebar.js',
+    platform: 'browser',
+    format: 'iife',
+    sourcemap: !isProduction,
+    minify: isProduction,
+    jsx: 'automatic',
+    define: {
+        'process.env.NODE_ENV': isProduction ? '"production"' : '"development"',
+    },
+    loader: {
+        '.tsx': 'tsx',
+        '.ts': 'ts',
+    },
+    logLevel: 'info',
+};
+
 async function build() {
     try {
         if (isWatch) {
             // Use context API for watch mode
-            const [extCtx, webCtx] = await Promise.all([
+            const [extCtx, webCtx, sidebarCtx] = await Promise.all([
                 esbuild.context(extensionConfig),
                 esbuild.context(webviewConfig),
+                esbuild.context(sidebarConfig),
             ]);
 
             await Promise.all([
                 extCtx.watch(),
                 webCtx.watch(),
+                sidebarCtx.watch(),
             ]);
 
             console.log('[watch] Build started. Watching for changes...');
@@ -56,6 +78,7 @@ async function build() {
             await Promise.all([
                 esbuild.build(extensionConfig),
                 esbuild.build(webviewConfig),
+                esbuild.build(sidebarConfig),
             ]);
 
             console.log(isProduction ? '[production] Build complete' : '[development] Build complete');

@@ -41,11 +41,6 @@ export interface UpdatesTabProps {
     splitPosition: number;
     defaultPackageIcon: string;
 
-    // Lite Mode
-    liteMode?: boolean;
-    metadataDeferred?: boolean;
-    onLoadFullDetails?: (id: string, version: string) => void;
-
     // "Load All Projects" mode
     loadAllProjects: boolean;
     allProjectsUpdates: ProjectUpdates[];
@@ -171,7 +166,6 @@ const UpdatesTab = forwardRef<UpdatesTabHandle, UpdatesTabProps>((props, ref) =>
         updatesTabRef,
         MemoizedDraggableSash,
     } = props;
-    const { liteMode, metadataDeferred, onLoadFullDetails } = props;
 
     // ─── Local state ─────────────────────────────────────────────────────────
     const [selectedUpdates, setSelectedUpdates] = useState<Set<string>>(new Set());
@@ -545,7 +539,7 @@ const UpdatesTab = forwardRef<UpdatesTabHandle, UpdatesTabProps>((props, ref) =>
                                                     disabled={updatingAll}
                                                 />
                                                 <div className="package-icon">
-                                                    {!liteMode && pkg.iconUrl ? (
+                                                    {pkg.iconUrl ? (
                                                         <img src={pkg.iconUrl} alt="" onError={(e) => { (e.target as HTMLImageElement).src = defaultPackageIcon; }} />
                                                     ) : (
                                                         <img src={defaultPackageIcon} alt="" />
@@ -560,7 +554,7 @@ const UpdatesTab = forwardRef<UpdatesTabHandle, UpdatesTabProps>((props, ref) =>
                                                     </div>
                                                     {pkg.authors && (
                                                         <div className="package-authors">
-                                                            {!liteMode && pkg.verified && (
+                                                            {pkg.verified && (
                                                                 <span className="verified-badge" title="The ID prefix of this package has been reserved by its owner on nuget.org">✓</span>
                                                             )}
                                                             {pkg.authors}
@@ -598,9 +592,6 @@ const UpdatesTab = forwardRef<UpdatesTabHandle, UpdatesTabProps>((props, ref) =>
                         selectedProject={selectedProject}
                         includePrerelease={includePrerelease}
                         selectedSource={selectedSource}
-                        liteMode={liteMode}
-                        metadataDeferred={metadataDeferred}
-                        onLoadFullDetails={onLoadFullDetails}
                         onInstall={onInstall}
                         onRemove={onRemove}
                         onVersionChange={onVersionChange}

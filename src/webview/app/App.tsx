@@ -287,9 +287,6 @@ export const App: React.FC = () => {
     const [searchDebounceMode, setSearchDebounceMode] = useState<'quicksearch' | 'full' | 'off'>('quicksearch');
     const [recentSearchesLimit, setRecentSearchesLimit] = useState<number>(5);
     const recentSearchesLimitRef = useRef<number>(5);
-    // Lite Mode: skip metadata enrichment for faster loading
-    const [liteMode, setLiteMode] = useState(false);
-    const liteModeRef = useRef(false);
     const [packagesWithUpdates, setPackagesWithUpdates] = useState<PackageUpdate[]>([]);
     const [updateCount, setUpdateCount] = useState<number>(0);
     const [loadingUpdates, setLoadingUpdates] = useState(false);
@@ -381,6 +378,11 @@ export const App: React.FC = () => {
 
     // Use ref to track latest includePrerelease for message handler
     const includePrereleaseRef = useRef(includePrerelease);
+    // Flag to skip saveSettings when prerelease was synced from backend (prevents echo loop)
+    const skipSaveRef = useRef(false);
+    // Flags to skip saveSettings when source/project were synced from backend (prevents echo loop)
+    const skipSourceSaveRef = useRef(false);
+    const skipProjectSaveRef = useRef(false);
     useEffect(() => {
         includePrereleaseRef.current = includePrerelease;
     }, [includePrerelease]);
@@ -389,12 +391,6 @@ export const App: React.FC = () => {
     useEffect(() => {
         recentSearchesLimitRef.current = recentSearchesLimit;
     }, [recentSearchesLimit]);
-
-    // Keep liteMode ref in sync with state
-    useEffect(() => {
-        liteModeRef.current = liteMode;
-    }, [liteMode]);
-
 
     // Track if installed tab has been visited (to skip refetch on first visit, use prefetched data)
     // NOTE: Currently does not reset when installedPackages changes. If dependent functionality changes
@@ -425,7 +421,7 @@ export const App: React.FC = () => {
     const updatesTabCompRef = useRef<UpdatesTabHandle>(null);
 
     // Package selection hook - consolidates selection logic across all tabs
-    const { selectDirectPackage, selectTransitivePackage, clearSelection, metadataDeferred, loadFullDetails } = usePackageSelection<PackageSearchResult | InstalledPackage>({
+    const { selectDirectPackage, selectTransitivePackage, clearSelection } = usePackageSelection<PackageSearchResult | InstalledPackage>({
         setSelectedPackage,
         setSelectedTransitivePackage,
         setSelectedVersion,
@@ -441,7 +437,6 @@ export const App: React.FC = () => {
         includePrerelease,
         selectedPackage,
         vscode,
-        liteMode,
     });
 
     // Auto-focus the active tab on initial mount
@@ -657,21 +652,6 @@ export const App: React.FC = () => {
                     setLoadingUpdates(false);
                 }
                 break;
-            case 'packageUpdatesMinimal':
-                // Lite Mode: update packages with minimal data (no icons/verified/authors)
-                // Convert minimal updates to PackageUpdate format for consistent handling
-                if (message.projectPath === selectedProjectRef.current) {
-                    const minimalUpdates = (message.updates as Array<{ id: string; installedVersion: string; latestVersion: string }>).map(u => ({
-                        ...u,
-                        iconUrl: undefined,
-                        verified: undefined,
-                        authors: undefined,
-                    })) as PackageUpdate[];
-                    setPackagesWithUpdates(minimalUpdates);
-                    setUpdateCount(minimalUpdates.length);
-                    setLoadingUpdates(false);
-                }
-                break;
             case 'allProjectsUpdates':
                 // All projects updates loaded
                 {
@@ -727,8 +707,26 @@ export const App: React.FC = () => {
                         setRecentSearches(prev => prev.slice(0, message.recentSearchesLimit));
                     }
                 }
-                if (message.liteMode !== undefined) {
-                    setLiteMode(message.liteMode);
+                break;
+            case 'prereleaseChanged':
+                // Synced from sidebar — update state but skip re-saving to backend
+                if (message.includePrerelease !== undefined) {
+                    skipSaveRef.current = true;
+                    setIncludePrerelease(message.includePrerelease);
+                }
+                break;
+            case 'sourceChanged':
+                // Synced from sidebar — update state but skip re-saving to backend
+                if (message.selectedSource !== undefined) {
+                    skipSourceSaveRef.current = true;
+                    setSelectedSource(message.selectedSource);
+                }
+                break;
+            case 'projectChanged':
+                // Synced from sidebar — update state but skip re-saving to backend
+                if (message.projectPath !== undefined) {
+                    skipProjectSaveRef.current = true;
+                    setSelectedProject(message.projectPath);
                 }
                 break;
             case 'settingsChanged':
@@ -745,9 +743,6 @@ export const App: React.FC = () => {
                         setRecentSearches(prev => prev.slice(0, message.recentSearchesLimit));
                     }
                 }
-                if (message.liteMode !== undefined) {
-                    setLiteMode(message.liteMode);
-                }
                 break;
             case 'packageReadme':
                 // Handle lazy-loaded README from nupkg
@@ -756,7 +751,7 @@ export const App: React.FC = () => {
                     if (message.readme) {
                         setPackageMetadata(prev => {
                             if (prev) return { ...prev, readme: message.readme };
-                            // Lite mode: packageMetadata may be null — create minimal object for readme
+                            // packageMetadata may be null — create minimal object for readme
                             return {
                                 id: message.packageId,
                                 version: selectedVersionRef.current || '',
@@ -820,6 +815,10 @@ export const App: React.FC = () => {
     // Save includePrerelease setting when it changes (only after settings loaded)
     useEffect(() => {
         if (settingsLoadedRef.current) {
+            if (skipSaveRef.current) {
+                skipSaveRef.current = false;
+                return;
+            }
             vscode.postMessage({ type: 'saveSettings', includePrerelease });
         }
     }, [includePrerelease]);
@@ -835,7 +834,7 @@ export const App: React.FC = () => {
                     packageId: packageId,
                     source: selectedSource === 'all' ? undefined : selectedSource,
                     includePrerelease: includePrerelease,
-                    take: liteModeRef.current ? 5 : 20
+                    take: 20
                 });
             }
         }
@@ -844,9 +843,24 @@ export const App: React.FC = () => {
     // Save selectedSource setting when it changes (only after settings loaded)
     useEffect(() => {
         if (settingsLoadedRef.current && selectedSource) {
+            if (skipSourceSaveRef.current) {
+                skipSourceSaveRef.current = false;
+                return;
+            }
             vscode.postMessage({ type: 'saveSettings', selectedSource });
         }
     }, [selectedSource]);
+
+    // Save selectedProject to workspaceState when it changes (only after settings loaded)
+    useEffect(() => {
+        if (settingsLoadedRef.current && selectedProject) {
+            if (skipProjectSaveRef.current) {
+                skipProjectSaveRef.current = false;
+                return;
+            }
+            vscode.postMessage({ type: 'saveSettings', selectedProject });
+        }
+    }, [selectedProject]);
 
     // Save recentSearches when it changes (only after settings loaded)
     useEffect(() => {
@@ -939,7 +953,7 @@ export const App: React.FC = () => {
             // Already have readme loaded
             if (packageMetadata?.readme) return;
             // In normal mode, wait for packageMetadata to load first
-            if (!packageMetadata && !liteModeRef.current) return;
+            if (!packageMetadata) return;
 
             const pkgId = packageMetadata?.id || getPackageId(selectedPackage);
             const version = packageMetadata?.version || selectedVersionRef.current;
@@ -1610,7 +1624,6 @@ export const App: React.FC = () => {
                 searchDebounceMode={searchDebounceMode}
                 splitPosition={splitPosition}
                 defaultPackageIcon={defaultPackageIcon}
-                liteMode={liteMode}
                 detailsPanelContent={
                     <MemoizedPackageDetailsPanel
                         selectedPackage={selectedPackage}
@@ -1627,9 +1640,6 @@ export const App: React.FC = () => {
                         selectedProject={selectedProject}
                         includePrerelease={includePrerelease}
                         selectedSource={selectedSource}
-                        liteMode={liteMode}
-                        metadataDeferred={metadataDeferred}
-                        onLoadFullDetails={loadFullDetails}
                         onInstall={handleInstall}
                         onRemove={handleRemove}
                         onVersionChange={setSelectedVersion}
@@ -1672,9 +1682,6 @@ export const App: React.FC = () => {
                 defaultPackageIcon={defaultPackageIcon}
                 includePrerelease={includePrerelease}
                 selectedSource={selectedSource}
-                liteMode={liteMode}
-                metadataDeferred={metadataDeferred}
-                onLoadFullDetails={loadFullDetails}
                 packageMetadata={packageMetadata}
                 loadingMetadata={loadingMetadata}
                 loadingVersions={loadingVersions}
@@ -1721,9 +1728,6 @@ export const App: React.FC = () => {
                     includePrerelease={includePrerelease}
                     splitPosition={splitPosition}
                     defaultPackageIcon={defaultPackageIcon}
-                    liteMode={liteMode}
-                    metadataDeferred={metadataDeferred}
-                    onLoadFullDetails={loadFullDetails}
                     packageMetadata={packageMetadata}
                     loadingMetadata={loadingMetadata}
                     loadingVersions={loadingVersions}

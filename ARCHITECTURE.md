@@ -5,58 +5,72 @@ This document describes the technical architecture of the nUIget VS Code extensi
 ## Overview
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                         VS Code                                  │
-│  ┌──────────────────┐     ┌──────────────────────────────────┐ │
-│  │   extension.ts   │────▶│      NuGetPanel.ts               │ │
-│  │  (Entry Point)   │     │   (WebviewPanel + Messages)      │ │
-│  └──────────────────┘     └───────────────┬──────────────────┘ │
-│                                           │                      │
-│                                    postMessage                   │
-│                                           │                      │
-│  ┌──────────────────────────────────────────────────────────┐  │
-│  │                    Webview (React)                        │  │
-│  │                      App.tsx (shell)                      │  │
-│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────────┐  │  │
-│  │  │ BrowseTab   │  │InstalledTab │  │  UpdatesTab [3] │  │  │
-│  │  └──────┬──────┘  └──────┬──────┘  └────────┬────────┘  │  │
-│  │         └────────────────┼──────────────────┘            │  │
-│  │                 PackageDetailsPanel                       │  │
-│  └──────────────────────────────────────────────────────────┘  │
-│                                                                  │
-│  ┌──────────────────────────────────────────────────────────┐  │
-│  │                      Services                             │  │
-│  │  ┌────────────────────┐  ┌────────────────────────────┐ │  │
-│  │  │   NuGetService.ts  │  │  NuGetConfigParser.ts      │ │  │
-│  │  │   (CLI + API)      │  │  (Source Resolution)       │ │  │
-│  │  └────────────────────┘  └────────────────────────────┘ │  │
-│  │  ┌────────────────────┐  ┌────────────────────────────┐ │  │
-│  │  │ CredentialService  │  │  Http2Client.ts            │ │  │
-│  │  │ (Auth for feeds)   │  │  (HTTP/2 multiplexing)     │ │  │
-│  │  └────────────────────┘  └────────────────────────────┘ │  │
-│  └──────────────────────────────────────────────────────────┘  │
-└─────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────┐
+│                            VS Code                                    │
+│                                                                        │
+│  ┌──────────────────┐     ┌──────────────────────────────────┐       │
+│  │   extension.ts   │────▶│      NuGetPanel.ts               │       │
+│  │  (Entry Point)   │     │   (WebviewPanel + Messages)      │       │
+│  │                   │     └───────────────┬──────────────────┘       │
+│  │  Shared           │                     │ postMessage              │
+│  │  NuGetService ◄───┤     ┌───────────────▼────────────────────┐    │
+│  │  singleton        │     │          Main Webview (React)       │    │
+│  │                   │     │  App.tsx + BrowseTab, InstalledTab  │    │
+│  │                   │     │  UpdatesTab, PackageDetailsPanel    │    │
+│  └──────┬───────────┘     └─────────────────────────────────────┘    │
+│         │                                                              │
+│         │              ┌──────────────────────────────────┐           │
+│         └─────────────▶│    NuGetSidebarPanel.ts          │           │
+│                        │  (WebviewViewProvider + Messages) │           │
+│                        └───────────────┬──────────────────┘           │
+│                                        │ postMessage                   │
+│                        ┌───────────────▼────────────────────┐         │
+│                        │      Sidebar Webview (React)        │         │
+│                        │  SidebarApp.tsx (compact layout)    │         │
+│                        │  SectionHeader, PackageRow          │         │
+│                        └─────────────────────────────────────┘         │
+│                                                                        │
+│  ┌──────────────────────────────────────────────────────────────┐    │
+│  │                        Services                               │    │
+│  │  ┌────────────────────┐  ┌────────────────────────────┐     │    │
+│  │  │   NuGetService.ts  │  │  NuGetConfigParser.ts      │     │    │
+│  │  │   (CLI + API)      │  │  (Source Resolution)       │     │    │
+│  │  └────────────────────┘  └────────────────────────────┘     │    │
+│  │  ┌────────────────────┐  ┌────────────────────────────┐     │    │
+│  │  │ CredentialService  │  │  Http2Client.ts            │     │    │
+│  │  │ (Auth for feeds)   │  │  (HTTP/2 multiplexing)     │     │    │
+│  │  └────────────────────┘  └────────────────────────────┘     │    │
+│  └──────────────────────────────────────────────────────────────┘    │
+└──────────────────────────────────────────────────────────────────────┘
 ```
 
 ## File Structure
 
 ```
 src/
-├── extension.ts              # Extension entry point, command registration
+├── extension.ts              # Extension entry point, command registration, shared NuGetService
 ├── webview/
 │   ├── NuGetPanel.ts         # WebviewPanel, message handling, state persistence
-│   └── app/
-│       ├── index.tsx         # React entry point with ErrorBoundary
-│       ├── App.tsx           # Application shell (~1650 lines)
-│       ├── App.css           # Styles
-│       ├── types.ts          # Shared types, LRUMap, utility functions
-│       ├── components/
-│       │   ├── BrowseTab.tsx          # Browse tab (~540 lines)
-│       │   ├── InstalledTab.tsx       # Installed tab (~970 lines)
-│       │   ├── UpdatesTab.tsx         # Updates tab (~410 lines)
-│       │   └── PackageDetailsPanel.tsx # Details panel (~280 lines)
-│       └── hooks/
-│           └── usePackageSelection.ts  # Package selection logic hook
+│   ├── NuGetSidebarPanel.ts  # WebviewViewProvider for Activity Bar sidebar
+│   ├── app/
+│   │   ├── index.tsx         # React entry point with ErrorBoundary
+│   │   ├── App.tsx           # Application shell (~1650 lines)
+│   │   ├── App.css           # Styles
+│   │   ├── types.ts          # Shared types, LRUMap, utility functions
+│   │   ├── components/
+│   │   │   ├── BrowseTab.tsx          # Browse tab (~540 lines)
+│   │   │   ├── InstalledTab.tsx       # Installed tab (~970 lines)
+│   │   │   ├── UpdatesTab.tsx         # Updates tab (~410 lines)
+│   │   │   └── PackageDetailsPanel.tsx # Details panel (~280 lines)
+│   │   └── hooks/
+│   │       └── usePackageSelection.ts  # Package selection logic hook
+│   └── sidebar/
+│       ├── index.tsx              # Sidebar React entry point
+│       ├── SidebarApp.tsx         # Sidebar main component (accordion sections)
+│       ├── SidebarApp.css         # Sidebar styles
+│       └── components/
+│           ├── SectionHeader.tsx   # Collapsible section header
+│           └── PackageRow.tsx      # Compact package row with hover actions
 ├── services/
 │   ├── NuGetService.ts       # dotnet CLI integration, NuGet API calls
 │   ├── NuGetConfigParser.ts  # nuget.config parsing, credential resolution
@@ -66,6 +80,25 @@ src/
 └── test/
     └── WorkspaceCache.test.ts # Unit tests for cache utility
 ```
+
+## Sidebar Panel Architecture
+
+The sidebar provides a compact package management UI in the VS Code Activity Bar, always using lite mode for speed.
+
+### Architecture
+- **Backend**: `NuGetSidebarPanel.ts` — `WebviewViewProvider` that shares the singleton `NuGetService` with the main panel. Handles all backend operations (search, install, update, remove) and delegates source/project/prerelease selection to VS Code QuickPick commands registered in `extension.ts`.
+- **Frontend**: `SidebarApp.tsx` — Single React component with three accordion sections (Browse, Installed, Updates). Uses `SectionHeader` and `PackageRow` sub-components.
+- **Build**: Separate esbuild entry point (`src/webview/sidebar/index.tsx` → `dist/sidebar.js`).
+
+### Key Design Decisions
+- **Always lite mode**: No metadata enrichment, no icons, no README — optimized for speed and compact display.
+- **QuickPick for options**: Source, project, and prerelease toggle are title bar icon commands that open VS Code QuickPick dialogs (not inline dropdowns), saving sidebar width.
+- **Hybrid package actions**: Hover reveals a primary action button (Install/Uninstall/Update); right-click sends `showContextMenu` to backend which shows a QuickPick with all available actions.
+- **Cross-view sync**: After install/update/remove, sidebar calls `vscode.commands.executeCommand('nuiget.refreshPackages')` to notify the main panel.
+- **Badge API**: `webviewView.badge` displays update count on the Activity Bar icon.
+
+### Message Protocol
+Sidebar messages follow the same patterns as the main panel but always send `liteMode: true`. Context menu actions are delegated: webview sends `showContextMenu` → backend shows QuickPick → backend sends `doInstall`/`doUpdate`/`doRemove` → webview forwards to actual `installPackage`/`updatePackage`/`removePackage`.
 
 ## Component Architecture
 

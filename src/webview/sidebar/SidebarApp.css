@@ -1,0 +1,382 @@
+/* ─── nUIget Sidebar Styles ─────────────────────────────────────────────── */
+
+/* ─── Search Input ───────────────────────────────────────────────────────── */
+.sidebar-search-container {
+    padding: 8px 8px 4px 8px;
+    position: relative;
+}
+
+.sidebar-search {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 4px 8px;
+    font-size: var(--vscode-font-size);
+    font-family: var(--vscode-font-family);
+    color: var(--vscode-input-foreground);
+    background-color: var(--vscode-input-background);
+    border: 1px solid var(--vscode-input-border, transparent);
+    border-radius: 2px;
+    outline: none;
+}
+
+.sidebar-search:focus {
+    border-color: var(--vscode-focusBorder);
+}
+
+.sidebar-search::placeholder {
+    color: var(--vscode-input-placeholderForeground);
+}
+
+/* ─── Recent Searches Dropdown ───────────────────────────────────────────── */
+.recent-searches {
+    position: absolute;
+    top: 100%;
+    left: 8px;
+    right: 8px;
+    z-index: 100;
+    background: var(--vscode-editorSuggestWidget-background, var(--vscode-dropdown-background));
+    border: 1px solid var(--vscode-editorSuggestWidget-border, var(--vscode-dropdown-border));
+    border-radius: 3px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.recent-searches-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 4px 8px;
+    font-size: 11px;
+    color: var(--vscode-descriptionForeground);
+    border-bottom: 1px solid var(--vscode-widget-border, var(--vscode-editorSuggestWidget-border));
+}
+
+.recent-searches-clear {
+    cursor: pointer;
+    color: var(--vscode-textLink-foreground);
+    background: none;
+    border: none;
+    font-size: 11px;
+    padding: 0;
+}
+
+.recent-searches-clear:hover {
+    text-decoration: underline;
+}
+
+.recent-search-item {
+    padding: 4px 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: var(--vscode-font-size);
+}
+
+.recent-search-item:hover {
+    background: var(--vscode-list-hoverBackground);
+}
+
+.recent-search-icon {
+    opacity: 0.6;
+    font-size: 12px;
+}
+
+/* ─── Status Bar ─────────────────────────────────────────────────────────── */
+.sidebar-status {
+    padding: 2px 8px;
+    font-size: 11px;
+    color: var(--vscode-descriptionForeground);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.sidebar-status-project {
+    font-weight: 600;
+    max-width: 150px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ─── Section Header ─────────────────────────────────────────────────────── */
+.section-header {
+    display: flex;
+    align-items: center;
+    padding: 4px 8px;
+    cursor: pointer;
+    user-select: none;
+    background: var(--vscode-sideBarSectionHeader-background);
+    border-top: 1px solid var(--vscode-sideBarSectionHeader-border, transparent);
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--vscode-sideBarSectionHeader-foreground, var(--vscode-foreground));
+    min-height: 22px;
+}
+
+.section-header:hover {
+    background: var(--vscode-list-hoverBackground);
+}
+
+.section-header:focus-visible {
+    outline: 1px solid var(--vscode-focusBorder);
+    outline-offset: -1px;
+}
+
+.section-chevron {
+    font-size: 9px;
+    margin-right: 4px;
+    flex-shrink: 0;
+    width: 14px;
+    text-align: center;
+}
+
+.section-title {
+    flex: 1;
+    min-width: 0;
+}
+
+.section-badge {
+    background: var(--vscode-badge-background);
+    color: var(--vscode-badge-foreground);
+    font-size: 10px;
+    font-weight: 600;
+    min-width: 16px;
+    height: 16px;
+    line-height: 16px;
+    text-align: center;
+    border-radius: 8px;
+    padding: 0 4px;
+    margin-left: 6px;
+    flex-shrink: 0;
+}
+
+.section-spinner {
+    width: 12px;
+    height: 12px;
+    border: 2px solid var(--vscode-progressBar-background);
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin-left: 6px;
+    flex-shrink: 0;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.section-actions {
+    display: flex;
+    gap: 2px;
+    margin-left: 4px;
+}
+
+.section-action-btn {
+    background: none;
+    border: none;
+    color: var(--vscode-foreground);
+    cursor: pointer;
+    padding: 0 3px;
+    font-size: 13px;
+    opacity: 0.7;
+    border-radius: 3px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.section-action-btn:hover {
+    opacity: 1;
+    background: var(--vscode-toolbar-hoverBackground, rgba(127, 127, 127, 0.15));
+}
+
+/* ─── Section Content ────────────────────────────────────────────────────── */
+.section-content {
+    overflow-y: auto;
+    max-height: 500px;
+    outline: none;
+}
+
+/* ─── Package Row ────────────────────────────────────────────────────────── */
+.package-row {
+    display: flex;
+    align-items: flex-start;
+    padding: 4px 8px 4px 22px;
+    cursor: pointer;
+    position: relative;
+    gap: 4px;
+    transition: background 0.15s;
+}
+
+.package-row.selected {
+    background: var(--vscode-list-activeSelectionBackground);
+    color: var(--vscode-list-activeSelectionForeground);
+}
+
+.package-row:hover {
+    background: var(--vscode-list-hoverBackground);
+}
+
+/* Selected + hover: keep selection background (higher specificity wins) */
+.package-row.selected:hover {
+    background: var(--vscode-list-activeSelectionBackground);
+}
+
+.package-row:focus-visible {
+    outline: none;
+}
+
+.package-row-main {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.package-row-header {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    line-height: 1.4;
+}
+
+.package-row-name {
+    font-weight: 600;
+    font-size: var(--vscode-font-size);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex-shrink: 1;
+    min-width: 0;
+}
+
+.package-row-version {
+    font-size: 11px;
+    color: var(--vscode-descriptionForeground);
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.package-row-description {
+    font-size: 11px;
+    color: var(--vscode-descriptionForeground);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.3;
+    margin-top: 1px;
+}
+
+.package-row-action {
+    visibility: hidden;
+    opacity: 0;
+    background: transparent;
+    color: var(--vscode-foreground);
+    border: none;
+    border-radius: 3px;
+    font-size: 14px;
+    width: 16px;
+    height: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+    margin-top: 2px;
+    padding: 0;
+    transition: opacity 0.1s, visibility 0.1s;
+}
+
+.package-row-action svg {
+    width: 14px;
+    height: 14px;
+}
+
+.package-row:hover .package-row-action,
+.package-row.selected .package-row-action {
+    visibility: visible;
+    opacity: 0.8;
+}
+
+.package-row-action:hover {
+    opacity: 1;
+    background: var(--vscode-toolbar-hoverBackground, rgba(127, 127, 127, 0.15));
+}
+
+/* ─── Empty State ────────────────────────────────────────────────────────── */
+.sidebar-empty {
+    padding: 12px 22px;
+    font-size: 12px;
+    color: var(--vscode-descriptionForeground);
+    font-style: italic;
+}
+
+/* ─── Updates Section Extras ─────────────────────────────────────────────── */
+.updates-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 4px 8px;
+    font-size: 11px;
+}
+
+.link-btn {
+    background: none;
+    border: none;
+    padding: 0;
+    font-size: 11px;
+    cursor: pointer;
+    color: var(--vscode-textLink-foreground);
+    white-space: nowrap;
+}
+
+.link-btn:hover {
+    color: var(--vscode-textLink-activeForeground);
+    text-decoration: underline;
+}
+
+
+
+/* ─── Project Group Headers (Load All Projects mode) ─────────────────────── */
+.project-group-header {
+    padding: 4px 8px 2px 14px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--vscode-descriptionForeground);
+    border-bottom: 1px solid var(--vscode-widget-border, transparent);
+    margin-top: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ─── Welcome / No Project State ─────────────────────────────────────────── */
+.sidebar-welcome {
+    padding: 16px 12px;
+    text-align: center;
+    color: var(--vscode-descriptionForeground);
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.sidebar-welcome p {
+    margin: 0 0 8px 0;
+}
+
+.sidebar-welcome-action {
+    color: var(--vscode-textLink-foreground);
+    cursor: pointer;
+    background: none;
+    border: none;
+    font-size: 12px;
+    text-decoration: underline;
+}

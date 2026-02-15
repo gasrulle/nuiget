@@ -30,7 +30,6 @@ export interface BrowseTabProps {
     searchDebounceMode: 'quicksearch' | 'full' | 'off';
     splitPosition: number;
     defaultPackageIcon: string;
-    liteMode?: boolean;
 
     // Details panel (rendered by parent, reused here)
     detailsPanelContent: React.ReactNode;
@@ -113,7 +112,6 @@ const BrowseTab = forwardRef<BrowseTabHandle, BrowseTabProps>(function BrowseTab
         browseTabRef,
         MemoizedDraggableSash,
     } = props;
-    const { liteMode } = props;
 
     // --- Internal state ---
     const [searchQuery, setSearchQuery] = useState('');
@@ -765,7 +763,7 @@ const BrowseTab = forwardRef<BrowseTabHandle, BrowseTabProps>(function BrowseTab
                                     <div className="quick-search-version-header">
                                         <span
                                             className="quick-search-back-hint"
-                                            title="Back to results [←]"
+                                            title="Back to results (←)"
                                             onMouseDown={(e) => {
                                                 e.preventDefault();
                                                 e.stopPropagation();
@@ -851,7 +849,7 @@ const BrowseTab = forwardRef<BrowseTabHandle, BrowseTabProps>(function BrowseTab
                                                             <span className="search-history-text">{packageId}</span>
                                                             <span
                                                                 className="quick-search-expand-hint"
-                                                                title="Show versions [→]"
+                                                                title="Show versions (→)"
                                                                 onMouseDown={(e) => {
                                                                     e.preventDefault();
                                                                     e.stopPropagation();
@@ -931,7 +929,7 @@ const BrowseTab = forwardRef<BrowseTabHandle, BrowseTabProps>(function BrowseTab
                                         }}
                                     >
                                         <div className="package-icon">
-                                            {!liteMode && pkg.iconUrl ? (
+                                            {pkg.iconUrl ? (
                                                 <img src={pkg.iconUrl} alt="" onError={(e) => { (e.target as HTMLImageElement).src = defaultPackageIcon; }} />
                                             ) : (
                                                 <img src={defaultPackageIcon} alt="" />
@@ -948,7 +946,7 @@ const BrowseTab = forwardRef<BrowseTabHandle, BrowseTabProps>(function BrowseTab
                                                 )}
                                             </div>
                                             <div className="package-authors">
-                                                {!liteMode && pkg.verified && (
+                                                {pkg.verified && (
                                                     <span className="verified-badge" title="The ID prefix of this package has been reserved by its owner on nuget.org">✓</span>
                                                 )}
                                                 {pkg.authors}

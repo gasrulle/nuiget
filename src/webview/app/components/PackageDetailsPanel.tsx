@@ -45,11 +45,6 @@ export interface PackageDetailsPanelProps {
     onMetadataChange: (metadata: PackageMetadata | null) => void;
     onLoadingMetadataChange: (loading: boolean) => void;
 
-    // Lite Mode
-    liteMode?: boolean;
-    metadataDeferred?: boolean;
-    onLoadFullDetails?: (packageId: string, metadataVersion: string) => void;
-
     // Dependencies
     metadataCache: React.RefObject<LRUMap<string, PackageMetadata>>;
     vscode: VsCodeApi;
@@ -76,9 +71,6 @@ const PackageDetailsPanel: React.FC<PackageDetailsPanelProps> = ({
     onReadmeAttemptedChange,
     onMetadataChange,
     onLoadingMetadataChange,
-    liteMode,
-    metadataDeferred,
-    onLoadFullDetails,
     metadataCache,
     vscode,
 }) => {
@@ -169,7 +161,7 @@ const PackageDetailsPanel: React.FC<PackageDetailsPanelProps> = ({
                                 className="btn btn-danger"
                                 onClick={() => onRemove(packageId)}
                                 disabled={installedPkg?.isImplicit}
-                                title={installedPkg?.isImplicit ? 'Implicit/transitive package - cannot be uninstalled directly' : undefined}
+                                title={installedPkg?.isImplicit ? 'Implicit/transitive package - cannot be uninstalled directly' : 'Uninstall (Del)'}
                             >
                                 Uninstall
                             </button>
@@ -189,10 +181,6 @@ const PackageDetailsPanel: React.FC<PackageDetailsPanelProps> = ({
                                     const newVersion = (e.target as HTMLSelectElement).value;
                                     onVersionChange(newVersion);
                                     onReadmeAttemptedChange(false);
-                                    // Lite Mode: skip metadata auto-fetch on version change when deferred
-                                    if (liteMode && metadataDeferred) {
-                                        return;
-                                    }
                                     // Check frontend cache for metadata
                                     const metadataCacheKey = `${packageId.toLowerCase()}@${newVersion.toLowerCase()}|${selectedSource === 'all' ? '' : selectedSource}`;
                                     const cachedMetadata = metadataCache.current.get(metadataCacheKey);
@@ -226,7 +214,7 @@ const PackageDetailsPanel: React.FC<PackageDetailsPanelProps> = ({
                             title={
                                 isFloatingOrRange
                                     ? 'Updates disabled for floating/range versions - edit .csproj directly'
-                                    : (isInstalled && selectedVersion === installedPkg?.version ? 'Already at this version' : undefined)
+                                    : (isInstalled && selectedVersion === installedPkg?.version ? 'Already at this version' : `${buttonText} (Ctrl+Enter)`)
                             }
                         >
                             {buttonText}
@@ -270,41 +258,6 @@ const PackageDetailsPanel: React.FC<PackageDetailsPanelProps> = ({
                         ) : (
                             <p className="empty-state">No readme available for this package</p>
                         )}
-                    </div>
-                ) : metadataDeferred ? (
-                    <div className="details-info">
-                        {/* Lite Mode: show available data from search result */}
-                        {searchResult?.description && (
-                            <div className="details-row">
-                                <label>Description:</label>
-                                <span>{decodeHtmlEntities(searchResult.description)}</span>
-                            </div>
-                        )}
-                        <div className="details-row">
-                            <label>Version:</label>
-                            <span>{selectedVersion}</span>
-                        </div>
-                        {searchResult?.authors && (
-                            <div className="details-row">
-                                <label>Author(s):</label>
-                                <span>{searchResult.authors}</span>
-                            </div>
-                        )}
-                        {(searchResult?.totalDownloads) && (
-                            <div className="details-row">
-                                <label>Downloads:</label>
-                                <span>{searchResult.totalDownloads.toLocaleString()}</span>
-                            </div>
-                        )}
-                        <div className="lite-mode-details-action">
-                            <button
-                                className="btn btn-secondary"
-                                onClick={() => onLoadFullDetails?.(packageId, selectedVersion)}
-                            >
-                                Load full details
-                            </button>
-                            <span className="lite-mode-hint">Lite Mode — metadata skipped for faster loading</span>
-                        </div>
                     </div>
                 ) : loadingMetadata ? (
                     <p className="empty-state">Loading package details...</p>

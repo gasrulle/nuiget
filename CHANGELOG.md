@@ -9,7 +9,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Sidebar Panel** — Brand new Activity Bar panel with Browse, Installed, and Updates sections in a compact single-column layout. Always uses lite mode for maximum speed. Source/project/prerelease selection via title bar QuickPick commands. Package actions via hover buttons and right-click context menus. Update badge on the Activity Bar icon. Cross-view sync with the main panel.
+- **Sidebar Keyboard Navigation** — Arrow Up/Down, Home/End, Enter, Ctrl+Enter (install/update), and Delete (uninstall) in sidebar package lists, matching the main panel's keyboard behavior
+- **Sidebar Background Update Monitoring** — Updates are checked automatically in the background (5s after activation, on project file changes, and every 10 minutes). The Activity Bar badge shows the update count without needing to open the sidebar.
+- **Cross-panel source & project sync** — Source and project selections are now shared bidirectionally between the main panel and sidebar. Changing either in one view updates the other in real time.
 - **Lite Mode** — New `nuiget.liteMode` setting that skips metadata enrichment for significantly faster package loading
+
+### Removed
+
+- **Lite Mode setting removed from main panel** — The `nuiget.liteMode` setting has been removed. The sidebar always uses lite mode internally; the main panel now always uses full mode with icons, verified badges, and metadata enrichment.
+
+### Changed
+
+- **Sidebar action icons refined**
+- **Sidebar "Load all projects" changed from checkbox to link button**
+
+### Fixed
+
+- **Sidebar hover highlight visibility**
+- **Sidebar source/project selection not persisted across reload**
+- **Sidebar stale closure bugs** — handlers for Update, Update All, and context menu used captured state instead of refs, causing wrong versions or missed updates
+- **Sidebar badge overwritten by single-project update check**
+- **Sidebar background update race condition** — background check no longer pushes per-project results that could overwrite user-initiated loading states
 
 ## [1.3.0] - 2026-02-14
 

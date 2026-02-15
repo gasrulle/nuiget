@@ -57,6 +57,24 @@
     ],
     "main": "./dist/extension.js",
     "contributes": {
+        "viewsContainers": {
+            "activitybar": [
+                {
+                    "id": "nuiget-sidebar",
+                    "title": "nUIget",
+                    "icon": "resources/sidebar-icon.svg"
+                }
+            ]
+        },
+        "views": {
+            "nuiget-sidebar": [
+                {
+                    "type": "webview",
+                    "id": "nuiget.sidebarView",
+                    "name": "Packages"
+                }
+            ]
+        },
         "commands": [
             {
                 "command": "nuiget.openManager",
@@ -68,6 +86,34 @@
                 "command": "nuiget.refreshPackages",
                 "title": "nUIget: Refresh Packages",
                 "icon": "$(refresh)"
+            },
+            {
+                "command": "nuiget.sidebar.selectSource",
+                "title": "nUIget: Select Package Source",
+                "icon": "$(remote)"
+            },
+            {
+                "command": "nuiget.sidebar.selectProject",
+                "title": "nUIget: Select Project",
+                "icon": "$(project)"
+            },
+            {
+                "command": "nuiget.sidebar.togglePrerelease",
+                "title": "nUIget: Include Pre-release",
+                "icon": "$(beaker)"
+            },
+            {
+                "command": "nuiget.sidebar.togglePrereleaseOff",
+                "title": "nUIget: Exclude Pre-release",
+                "icon": {
+                    "dark": "resources/beaker-filled.svg",
+                    "light": "resources/beaker-filled-light.svg"
+                }
+            },
+            {
+                "command": "nuiget.sidebar.openFullView",
+                "title": "nUIget: Open Full Manager",
+                "icon": "$(link-external)"
             }
         ],
         "menus": {
@@ -91,16 +137,38 @@
                     "when": "resourceFilename =~ /\\.(csproj|fsproj|vbproj)$/",
                     "group": "navigation"
                 }
+            ],
+            "view/title": [
+                {
+                    "command": "nuiget.sidebar.selectSource",
+                    "when": "view == nuiget.sidebarView",
+                    "group": "navigation@1"
+                },
+                {
+                    "command": "nuiget.sidebar.selectProject",
+                    "when": "view == nuiget.sidebarView",
+                    "group": "navigation@2"
+                },
+                {
+                    "command": "nuiget.sidebar.togglePrerelease",
+                    "when": "view == nuiget.sidebarView && !nuiget.prereleaseEnabled",
+                    "group": "navigation@3"
+                },
+                {
+                    "command": "nuiget.sidebar.togglePrereleaseOff",
+                    "when": "view == nuiget.sidebarView && nuiget.prereleaseEnabled",
+                    "group": "navigation@3"
+                },
+                {
+                    "command": "nuiget.sidebar.openFullView",
+                    "when": "view == nuiget.sidebarView",
+                    "group": "navigation@4"
+                }
             ]
         },
         "configuration": {
             "title": "nUIget",
             "properties": {
-                "nuiget.liteMode": {
-                    "type": "boolean",
-                    "default": false,
-                    "description": "Lite Mode — skip metadata enrichment (icons, verified badges, authors) for faster package loading. Full details available on demand via 'Load full details' in the details panel."
-                },
                 "nuiget.noRestore": {
                     "type": "boolean",
                     "default": false,
