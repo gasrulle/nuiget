@@ -111,12 +111,47 @@
                 }
             },
             {
+                "command": "nuiget.sidebar.refresh",
+                "title": "nUIget: Refresh Sidebar",
+                "icon": "$(refresh)"
+            },
+            {
                 "command": "nuiget.sidebar.openFullView",
                 "title": "nUIget: Open Full Manager",
                 "icon": "$(link-external)"
             }
         ],
         "menus": {
+            "commandPalette": [
+                {
+                    "command": "nuiget.refreshPackages",
+                    "when": "false"
+                },
+                {
+                    "command": "nuiget.sidebar.selectSource",
+                    "when": "false"
+                },
+                {
+                    "command": "nuiget.sidebar.selectProject",
+                    "when": "false"
+                },
+                {
+                    "command": "nuiget.sidebar.togglePrerelease",
+                    "when": "false"
+                },
+                {
+                    "command": "nuiget.sidebar.togglePrereleaseOff",
+                    "when": "false"
+                },
+                {
+                    "command": "nuiget.sidebar.openFullView",
+                    "when": "false"
+                },
+                {
+                    "command": "nuiget.sidebar.refresh",
+                    "when": "false"
+                }
+            ],
             "explorer/context": [
                 {
                     "command": "nuiget.openManager",
@@ -160,9 +195,14 @@
                     "group": "navigation@3"
                 },
                 {
-                    "command": "nuiget.sidebar.openFullView",
+                    "command": "nuiget.sidebar.refresh",
                     "when": "view == nuiget.sidebarView",
                     "group": "navigation@4"
+                },
+                {
+                    "command": "nuiget.sidebar.openFullView",
+                    "when": "view == nuiget.sidebarView",
+                    "group": "navigation@5"
                 }
             ]
         },

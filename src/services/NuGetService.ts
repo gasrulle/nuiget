@@ -2192,7 +2192,7 @@ export class NuGetService {
     }
 
     /** Invalidate the short-lived sources cache (call after enable/disable/add/remove). */
-    private invalidateSourcesCache(): void {
+    public invalidateSourcesCache(): void {
         this._sourcesCache = null;
         this._sourcesCacheTime = 0;
     }

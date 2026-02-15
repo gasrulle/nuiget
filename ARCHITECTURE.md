@@ -94,8 +94,9 @@ The sidebar provides a compact package management UI in the VS Code Activity Bar
 - **Always lite mode**: No metadata enrichment, no icons, no README — optimized for speed and compact display.
 - **QuickPick for options**: Source, project, and prerelease toggle are title bar icon commands that open VS Code QuickPick dialogs (not inline dropdowns), saving sidebar width.
 - **Hybrid package actions**: Hover reveals a primary action button (Install/Uninstall/Update); right-click sends `showContextMenu` to backend which shows a QuickPick with all available actions.
-- **Cross-view sync**: After install/update/remove, sidebar calls `vscode.commands.executeCommand('nuiget.refreshPackages')` to notify the main panel.
+- **Cross-view sync**: After install/update/remove, sidebar calls `vscode.commands.executeCommand('nuiget.refreshPackages')` to notify the main panel. `refreshPackages` is internal-only (hidden from Command Palette) — it only calls `NuGetPanel.refresh()`.
 - **Badge API**: `webviewView.badge` displays update count on the Activity Bar icon.
+- **Sidebar refresh button**: Title bar `$(refresh)` icon at `navigation@4` clears the sources cache (`invalidateSourcesCache()`) and re-checks updates via `checkUpdatesInBackground()`. "Open Full View" is at `navigation@5`.
 
 ### Message Protocol
 Sidebar messages follow the same patterns as the main panel but always send `liteMode: true`. Context menu actions are delegated: webview sends `showContextMenu` → backend shows QuickPick → backend sends `doInstall`/`doUpdate`/`doRemove` → webview forwards to actual `installPackage`/`updatePackage`/`removePackage`.

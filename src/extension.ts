@@ -86,6 +86,7 @@ export function activate(context: vscode.ExtensionContext) {
 
     context.subscriptions.push(
         vscode.commands.registerCommand('nuiget.refreshPackages', () => {
+            // Internal command: sidebar calls this after install/update/remove to sync main panel
             NuGetPanel.refresh();
         })
     );
@@ -121,6 +122,12 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(
         vscode.commands.registerCommand('nuiget.sidebar.togglePrereleaseOff', () => {
             sidebarProvider.togglePrerelease();
+        })
+    );
+    context.subscriptions.push(
+        vscode.commands.registerCommand('nuiget.sidebar.refresh', () => {
+            nugetService.invalidateSourcesCache();
+            sidebarProvider.checkUpdatesInBackground();
         })
     );
     context.subscriptions.push(
