@@ -320,6 +320,17 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
         }
     }
 
+    /** Full sidebar refresh: re-send sources, tell webview to re-fetch, and update badge */
+    public async refreshSidebar(): Promise<void> {
+        // Re-send sources (cache was just cleared by the caller)
+        const sources = await this._nugetService.getSources();
+        this._postMessage({ type: 'sources', sources: sources.filter(s => s.enabled) });
+        // Tell webview to re-fetch installed packages and updates
+        this._postMessage({ type: 'forceRefresh' });
+        // Re-check updates for badge
+        await this.checkUpdatesInBackground();
+    }
+
     /** Update the sidebar title bar with the current project name */
     private _updateTitle(projectName?: string): void {
         if (!this._view) return;

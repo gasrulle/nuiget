@@ -127,7 +127,7 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(
         vscode.commands.registerCommand('nuiget.sidebar.refresh', () => {
             nugetService.invalidateSourcesCache();
-            sidebarProvider.checkUpdatesInBackground();
+            sidebarProvider.refreshSidebar();
         })
     );
     context.subscriptions.push(

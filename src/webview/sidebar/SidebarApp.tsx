@@ -196,6 +196,19 @@ export const SidebarApp: React.FC = () => {
             case 'installedCountUpdate':
                 setBackgroundInstalledCount(message.count || 0);
                 break;
+            case 'forceRefresh':
+                // Full refresh triggered by sidebar refresh button
+                if (selectedProjectRef.current) {
+                    vscode.postMessage({
+                        type: 'getInstalledPackages',
+                        projectPath: selectedProjectRef.current
+                    });
+                    setLoadingInstalled(true);
+                }
+                // Clear stale background data so fresh checks take effect
+                setAllProjectsUpdates([]);
+                allProjectsUpdatesRef.current = [];
+                break;
             case 'installResult':
             case 'updateResult':
             case 'removeResult':
