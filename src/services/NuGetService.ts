@@ -447,6 +447,11 @@ export class NuGetService {
     private assetsJsonCache: Map<string, { mtimeMs: number; data: unknown; timestamp: number }> = new Map();
     // Assets cache TTL: 30 seconds
     private static readonly ASSETS_CACHE_TTL = 30000;
+    // Cache for getSources() to avoid repeated CLI spawns (dotnet nuget list source)
+    // Multiple parallel getPackageVersions calls share a single CLI result
+    private _sourcesCache: NuGetSource[] | null = null;
+    private _sourcesCacheTime: number = 0;
+    private static readonly SOURCES_CACHE_TTL = 30000; // 30 seconds
     // Circuit breaker for icon resolution per source — skip sources after N consecutive misses
     // Prevents N×M HEAD requests when a source has no icons (N packages × M sources)
     private iconSourceMissCount: Map<string, number> = new Map();
@@ -2176,7 +2181,20 @@ export class NuGetService {
     }
 
     async getSources(): Promise<NuGetSource[]> {
-        return await this.configParser.getSources();
+        const now = Date.now();
+        if (this._sourcesCache && (now - this._sourcesCacheTime) < NuGetService.SOURCES_CACHE_TTL) {
+            return this._sourcesCache;
+        }
+        const sources = await this.configParser.getSources();
+        this._sourcesCache = sources;
+        this._sourcesCacheTime = now;
+        return sources;
+    }
+
+    /** Invalidate the short-lived sources cache (call after enable/disable/add/remove). */
+    private invalidateSourcesCache(): void {
+        this._sourcesCache = null;
+        this._sourcesCacheTime = 0;
     }
 
     /**
@@ -2197,6 +2215,7 @@ export class NuGetService {
             const { stdout, stderr } = await execWithTimeout(command, { cwd: workspaceFolder });
             this.logOutput(command, stdout, stderr, true);
             this.logSuccess(`Enabled source: ${sourceName}`);
+            this.invalidateSourcesCache();
             return true;
         } catch (error) {
             const execErr = error as ExecError;
@@ -2226,6 +2245,7 @@ export class NuGetService {
             const { stdout, stderr } = await execWithTimeout(command, { cwd: workspaceFolder });
             this.logOutput(command, stdout, stderr, true);
             this.logSuccess(`Disabled source: ${sourceName}`);
+            this.invalidateSourcesCache();
             return true;
         } catch (error) {
             const execErr = error as ExecError;
@@ -2324,6 +2344,7 @@ export class NuGetService {
             const { stdout, stderr } = await execWithTimeout(command, { cwd: workspaceFolder });
             this.logOutput(command, stdout, stderr, true);
             this.logSuccess(`Added source: ${name || url}`);
+            this.invalidateSourcesCache();
             return { success: true };
         } catch (error) {
             const execErr = error as ExecError;
@@ -2364,6 +2385,7 @@ export class NuGetService {
             const { stdout, stderr } = await execWithTimeout(command, { cwd: workspaceFolder });
             this.logOutput(command, stdout, stderr, true);
             this.logSuccess(`Removed source: ${sourceName}`);
+            this.invalidateSourcesCache();
             return { success: true };
         } catch (error) {
             const execErr = error as ExecError;
@@ -2417,6 +2439,8 @@ export class NuGetService {
         this.failedEndpointCache.clear();
         // Clear icon source circuit breaker so custom sources are re-tried
         this.iconSourceMissCount.clear();
+        // Clear sources cache so fresh sources are fetched
+        this.invalidateSourcesCache();
     }
 
     /**
@@ -2504,16 +2528,18 @@ export class NuGetService {
 
                 // Race pattern: resolve as soon as first source returns non-empty results
                 // Remaining requests will complete in background but we don't wait for them
-                return await this.raceForFirstResult(
+                const result = await this.raceForFirstResult(
                     enabledSources.map(src =>
                         this.getPackageVersionsFromSource(packageId, src.url, includePrerelease, take)
                             .catch(() => [] as string[])
                     ),
                     (versions) => versions.length > 0
                 );
+                return result;
             }
 
-            return await this.getPackageVersionsFromSource(packageId, source, includePrerelease, take);
+            const result = await this.getPackageVersionsFromSource(packageId, source, includePrerelease, take);
+            return result;
         } catch (error) {
             console.error(`[NuGet] Failed to fetch versions for ${packageId}:`, error);
             return [];

@@ -25,9 +25,7 @@ export function activate(context: vscode.ExtensionContext) {
     nugetService.prewarmNugetOrgServiceIndex();
 
     // Pre-warm credentials for authenticated feeds (fire-and-forget)
-    nugetService.initializeCredentials().catch(() => {
-        // Ignore errors - credentials will be loaded on-demand if prewarm fails
-    });
+    nugetService.initializeCredentials().catch(() => { /* ignore */ });
 
     // Register sidebar webview provider
     const sidebarProvider = new NuGetSidebarProvider(context.extensionUri, context, outputChannel, nugetService);

@@ -93,8 +93,10 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
      * the sidebar webview is opened.
      */
     public startBackgroundMonitoring(): void {
-        // Initial background check after a 5-second delay to avoid competing with activation
-        setTimeout(() => this.checkUpdatesInBackground(), 5000);
+        // Initial background check after a 2-second delay to let activation settle
+        setTimeout(() => {
+            this.checkUpdatesInBackground();
+        }, 2000);
 
         // Periodic re-check every 10 minutes (catches new upstream versions)
         this._backgroundCheckTimer = setInterval(() => {
@@ -136,26 +138,33 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
             let selectedProjectInstalledCount = -1;
             const allProjectUpdates: { projectPath: string; projectName: string; updates: { id: string; installedVersion: string; latestVersion: string }[] }[] = [];
 
-            for (const project of projects) {
+            // Check all projects in parallel for faster badge display
+            const projectResults = await Promise.all(projects.map(async (project) => {
                 try {
                     const installed = await this._nugetService.getInstalledPackages(project.path, true /* liteMode */);
-                    // Track installed count for the selected project (for sidebar badge)
-                    if (project.path === this._selectedProject) {
-                        selectedProjectInstalledCount = installed.length;
-                    }
+
+                    let updates: { id: string; installedVersion: string; latestVersion: string }[] = [];
                     if (installed.length > 0) {
-                        const updates = await this._nugetService.checkPackageUpdatesMinimal(installed, this._includePrerelease);
-                        if (updates.length > 0) {
-                            totalUpdates += updates.length;
-                            allProjectUpdates.push({
-                                projectPath: project.path,
-                                projectName: project.name,
-                                updates
-                            });
-                        }
+                        updates = await this._nugetService.checkPackageUpdatesMinimal(installed, this._includePrerelease);
                     }
+                    return { project, installed, updates };
                 } catch {
-                    // Skip individual project errors silently
+                    return { project, installed: [] as import('../services/NuGetService').InstalledPackage[], updates: [] as { id: string; installedVersion: string; latestVersion: string }[] };
+                }
+            }));
+
+            // Aggregate results
+            for (const { project, installed, updates } of projectResults) {
+                if (project.path === this._selectedProject) {
+                    selectedProjectInstalledCount = installed.length;
+                }
+                if (updates.length > 0) {
+                    totalUpdates += updates.length;
+                    allProjectUpdates.push({
+                        projectPath: project.path,
+                        projectName: project.name,
+                        updates
+                    });
                 }
             }
 

@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Sidebar action icons refined**
 - **Sidebar "Load all projects" changed from checkbox to link button**
 - **Sidebar Updates section uses background data** — expanding Updates no longer re-fetches if background check data is already available, making it instant
+- **Faster sidebar badge display** — sources cache eliminates redundant `dotnet nuget list source` CLI spawns (was 1 per package, now 1 per 30s window), initial delay reduced from 5s to 2s, and projects are checked in parallel instead of sequentially
 
 ### Fixed
 
