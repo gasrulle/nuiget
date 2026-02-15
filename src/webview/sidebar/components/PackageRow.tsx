@@ -13,7 +13,7 @@ const IconClose = () => (
 );
 const IconArrowUp = () => (
     <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-        <path fillRule="evenodd" clipRule="evenodd" d="M8 1L3 6h3v9h1V6h4L8 1zm3.5 5L8 2.207 4.5 6H8h3.5z" />
+        <path d="M8 1L3 6h3v9h4V6h3L8 1z" />
     </svg>
 );
 

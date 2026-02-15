@@ -283,7 +283,7 @@
     visibility: hidden;
     opacity: 0;
     background: transparent;
-    color: var(--vscode-foreground);
+    color: var(--vscode-icon-foreground, var(--vscode-foreground));
     border: none;
     border-radius: 3px;
     font-size: 14px;
@@ -307,7 +307,7 @@
 .package-row:hover .package-row-action,
 .package-row.selected .package-row-action {
     visibility: visible;
-    opacity: 0.8;
+    opacity: 1;
 }
 
 .package-row-action:hover {
