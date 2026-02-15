@@ -2,7 +2,7 @@
     "name": "nuiget",
     "displayName": "nUIget - A NuGet Package Manager",
     "description": "A NuGet package manager with Visual Studio-style UI. Search, install, update, and remove packages across multiple sources.",
-    "version": "1.3.0",
+    "version": "1.4.0",
     "publisher": "Gasrulle",
     "license": "MIT",
     "icon": "resources/icon.png",
@@ -57,6 +57,24 @@
     ],
     "main": "./dist/extension.js",
     "contributes": {
+        "viewsContainers": {
+            "activitybar": [
+                {
+                    "id": "nuiget-sidebar",
+                    "title": "nUIget",
+                    "icon": "resources/sidebar-icon.svg"
+                }
+            ]
+        },
+        "views": {
+            "nuiget-sidebar": [
+                {
+                    "type": "webview",
+                    "id": "nuiget.sidebarView",
+                    "name": "Packages"
+                }
+            ]
+        },
         "commands": [
             {
                 "command": "nuiget.openManager",
@@ -68,9 +86,72 @@
                 "command": "nuiget.refreshPackages",
                 "title": "nUIget: Refresh Packages",
                 "icon": "$(refresh)"
+            },
+            {
+                "command": "nuiget.sidebar.selectSource",
+                "title": "nUIget: Select Package Source",
+                "icon": "$(remote)"
+            },
+            {
+                "command": "nuiget.sidebar.selectProject",
+                "title": "nUIget: Select Project",
+                "icon": "$(project)"
+            },
+            {
+                "command": "nuiget.sidebar.togglePrerelease",
+                "title": "nUIget: Include Pre-release",
+                "icon": "$(beaker)"
+            },
+            {
+                "command": "nuiget.sidebar.togglePrereleaseOff",
+                "title": "nUIget: Exclude Pre-release",
+                "icon": {
+                    "dark": "resources/beaker-filled.svg",
+                    "light": "resources/beaker-filled-light.svg"
+                }
+            },
+            {
+                "command": "nuiget.sidebar.refresh",
+                "title": "nUIget: Refresh Sidebar",
+                "icon": "$(refresh)"
+            },
+            {
+                "command": "nuiget.sidebar.openFullView",
+                "title": "nUIget: Open Full Manager",
+                "icon": "$(link-external)"
             }
         ],
         "menus": {
+            "commandPalette": [
+                {
+                    "command": "nuiget.refreshPackages",
+                    "when": "false"
+                },
+                {
+                    "command": "nuiget.sidebar.selectSource",
+                    "when": "false"
+                },
+                {
+                    "command": "nuiget.sidebar.selectProject",
+                    "when": "false"
+                },
+                {
+                    "command": "nuiget.sidebar.togglePrerelease",
+                    "when": "false"
+                },
+                {
+                    "command": "nuiget.sidebar.togglePrereleaseOff",
+                    "when": "false"
+                },
+                {
+                    "command": "nuiget.sidebar.openFullView",
+                    "when": "false"
+                },
+                {
+                    "command": "nuiget.sidebar.refresh",
+                    "when": "false"
+                }
+            ],
             "explorer/context": [
                 {
                     "command": "nuiget.openManager",
@@ -90,6 +171,38 @@
                     "command": "nuiget.openManager",
                     "when": "resourceFilename =~ /\\.(csproj|fsproj|vbproj)$/",
                     "group": "navigation"
+                }
+            ],
+            "view/title": [
+                {
+                    "command": "nuiget.sidebar.selectSource",
+                    "when": "view == nuiget.sidebarView",
+                    "group": "navigation@1"
+                },
+                {
+                    "command": "nuiget.sidebar.selectProject",
+                    "when": "view == nuiget.sidebarView",
+                    "group": "navigation@2"
+                },
+                {
+                    "command": "nuiget.sidebar.togglePrerelease",
+                    "when": "view == nuiget.sidebarView && !nuiget.prereleaseEnabled",
+                    "group": "navigation@3"
+                },
+                {
+                    "command": "nuiget.sidebar.togglePrereleaseOff",
+                    "when": "view == nuiget.sidebarView && nuiget.prereleaseEnabled",
+                    "group": "navigation@3"
+                },
+                {
+                    "command": "nuiget.sidebar.refresh",
+                    "when": "view == nuiget.sidebarView",
+                    "group": "navigation@4"
+                },
+                {
+                    "command": "nuiget.sidebar.openFullView",
+                    "when": "view == nuiget.sidebarView",
+                    "group": "navigation@5"
                 }
             ]
         },

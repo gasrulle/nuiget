@@ -5,58 +5,72 @@ This document describes the technical architecture of the nUIget VS Code extensi
 ## Overview
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                         VS Code                                  │
-│  ┌──────────────────┐     ┌──────────────────────────────────┐ │
-│  │   extension.ts   │────▶│      NuGetPanel.ts               │ │
-│  │  (Entry Point)   │     │   (WebviewPanel + Messages)      │ │
-│  └──────────────────┘     └───────────────┬──────────────────┘ │
-│                                           │                      │
-│                                    postMessage                   │
-│                                           │                      │
-│  ┌──────────────────────────────────────────────────────────┐  │
-│  │                    Webview (React)                        │  │
-│  │                      App.tsx (shell)                      │  │
-│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────────┐  │  │
-│  │  │ BrowseTab   │  │InstalledTab │  │  UpdatesTab [3] │  │  │
-│  │  └──────┬──────┘  └──────┬──────┘  └────────┬────────┘  │  │
-│  │         └────────────────┼──────────────────┘            │  │
-│  │                 PackageDetailsPanel                       │  │
-│  └──────────────────────────────────────────────────────────┘  │
-│                                                                  │
-│  ┌──────────────────────────────────────────────────────────┐  │
-│  │                      Services                             │  │
-│  │  ┌────────────────────┐  ┌────────────────────────────┐ │  │
-│  │  │   NuGetService.ts  │  │  NuGetConfigParser.ts      │ │  │
-│  │  │   (CLI + API)      │  │  (Source Resolution)       │ │  │
-│  │  └────────────────────┘  └────────────────────────────┘ │  │
-│  │  ┌────────────────────┐  ┌────────────────────────────┐ │  │
-│  │  │ CredentialService  │  │  Http2Client.ts            │ │  │
-│  │  │ (Auth for feeds)   │  │  (HTTP/2 multiplexing)     │ │  │
-│  │  └────────────────────┘  └────────────────────────────┘ │  │
-│  └──────────────────────────────────────────────────────────┘  │
-└─────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────┐
+│                            VS Code                                    │
+│                                                                        │
+│  ┌──────────────────┐     ┌──────────────────────────────────┐       │
+│  │   extension.ts   │────▶│      NuGetPanel.ts               │       │
+│  │  (Entry Point)   │     │   (WebviewPanel + Messages)      │       │
+│  │                   │     └───────────────┬──────────────────┘       │
+│  │  Shared           │                     │ postMessage              │
+│  │  NuGetService ◄───┤     ┌───────────────▼────────────────────┐    │
+│  │  singleton        │     │          Main Webview (React)       │    │
+│  │                   │     │  App.tsx + BrowseTab, InstalledTab  │    │
+│  │                   │     │  UpdatesTab, PackageDetailsPanel    │    │
+│  └──────┬───────────┘     └─────────────────────────────────────┘    │
+│         │                                                              │
+│         │              ┌──────────────────────────────────┐           │
+│         └─────────────▶│    NuGetSidebarPanel.ts          │           │
+│                        │  (WebviewViewProvider + Messages) │           │
+│                        └───────────────┬──────────────────┘           │
+│                                        │ postMessage                   │
+│                        ┌───────────────▼────────────────────┐         │
+│                        │      Sidebar Webview (React)        │         │
+│                        │  SidebarApp.tsx (compact layout)    │         │
+│                        │  SectionHeader, PackageRow          │         │
+│                        └─────────────────────────────────────┘         │
+│                                                                        │
+│  ┌──────────────────────────────────────────────────────────────┐    │
+│  │                        Services                               │    │
+│  │  ┌────────────────────┐  ┌────────────────────────────┐     │    │
+│  │  │   NuGetService.ts  │  │  NuGetConfigParser.ts      │     │    │
+│  │  │   (CLI + API)      │  │  (Source Resolution)       │     │    │
+│  │  └────────────────────┘  └────────────────────────────┘     │    │
+│  │  ┌────────────────────┐  ┌────────────────────────────┐     │    │
+│  │  │ CredentialService  │  │  Http2Client.ts            │     │    │
+│  │  │ (Auth for feeds)   │  │  (HTTP/2 multiplexing)     │     │    │
+│  │  └────────────────────┘  └────────────────────────────┘     │    │
+│  └──────────────────────────────────────────────────────────────┘    │
+└──────────────────────────────────────────────────────────────────────┘
 ```
 
 ## File Structure
 
 ```
 src/
-├── extension.ts              # Extension entry point, command registration
+├── extension.ts              # Extension entry point, command registration, shared NuGetService
 ├── webview/
 │   ├── NuGetPanel.ts         # WebviewPanel, message handling, state persistence
-│   └── app/
-│       ├── index.tsx         # React entry point with ErrorBoundary
-│       ├── App.tsx           # Application shell (~1650 lines)
-│       ├── App.css           # Styles
-│       ├── types.ts          # Shared types, LRUMap, utility functions
-│       ├── components/
-│       │   ├── BrowseTab.tsx          # Browse tab (~540 lines)
-│       │   ├── InstalledTab.tsx       # Installed tab (~970 lines)
-│       │   ├── UpdatesTab.tsx         # Updates tab (~410 lines)
-│       │   └── PackageDetailsPanel.tsx # Details panel (~280 lines)
-│       └── hooks/
-│           └── usePackageSelection.ts  # Package selection logic hook
+│   ├── NuGetSidebarPanel.ts  # WebviewViewProvider for Activity Bar sidebar
+│   ├── app/
+│   │   ├── index.tsx         # React entry point with ErrorBoundary
+│   │   ├── App.tsx           # Application shell (~1650 lines)
+│   │   ├── App.css           # Styles
+│   │   ├── types.ts          # Shared types, LRUMap, utility functions
+│   │   ├── components/
+│   │   │   ├── BrowseTab.tsx          # Browse tab (~540 lines)
+│   │   │   ├── InstalledTab.tsx       # Installed tab (~970 lines)
+│   │   │   ├── UpdatesTab.tsx         # Updates tab (~410 lines)
+│   │   │   └── PackageDetailsPanel.tsx # Details panel (~280 lines)
+│   │   └── hooks/
+│   │       └── usePackageSelection.ts  # Package selection logic hook
+│   └── sidebar/
+│       ├── index.tsx              # Sidebar React entry point
+│       ├── SidebarApp.tsx         # Sidebar main component (accordion sections)
+│       ├── SidebarApp.css         # Sidebar styles
+│       └── components/
+│           ├── SectionHeader.tsx   # Collapsible section header
+│           └── PackageRow.tsx      # Compact package row with hover actions
 ├── services/
 │   ├── NuGetService.ts       # dotnet CLI integration, NuGet API calls
 │   ├── NuGetConfigParser.ts  # nuget.config parsing, credential resolution
@@ -66,6 +80,32 @@ src/
 └── test/
     └── WorkspaceCache.test.ts # Unit tests for cache utility
 ```
+
+## Sidebar Panel Architecture
+
+The sidebar provides a compact package management UI in the VS Code Activity Bar, always using lite mode for speed.
+
+### Architecture
+- **Backend**: `NuGetSidebarPanel.ts` — `WebviewViewProvider` that shares the singleton `NuGetService` with the main panel. Handles all backend operations (search, install, update, remove) and delegates source/project/prerelease selection to VS Code QuickPick commands registered in `extension.ts`.
+- **Frontend**: `SidebarApp.tsx` — Single React component with three accordion sections (Browse, Installed, Updates). Uses `SectionHeader` and `PackageRow` sub-components.
+- **Build**: Separate esbuild entry point (`src/webview/sidebar/index.tsx` → `dist/sidebar.js`).
+
+### Key Design Decisions
+- **Always lite mode**: No metadata enrichment, no icons, no README — optimized for speed and compact display.
+- **QuickPick for options**: Source, project, and prerelease toggle are title bar icon commands that open VS Code QuickPick dialogs (not inline dropdowns), saving sidebar width.
+- **Hybrid package actions**: Hover reveals a primary action button (Install/Uninstall/Update); right-click sends `showContextMenu` to backend which shows a QuickPick with all available actions.
+- **Cross-view sync**: After install/update/remove, sidebar calls `vscode.commands.executeCommand('nuiget.refreshPackages')` to notify the main panel. `refreshPackages` is internal-only (hidden from Command Palette) — it only calls `NuGetPanel.refresh()`.
+- **Badge API**: `webviewView.badge` displays update count on the Activity Bar icon.
+- **Sidebar refresh button**: Title bar `$(refresh)` icon at `navigation@4` clears the sources cache (`invalidateSourcesCache()`) and re-checks updates via `checkUpdatesInBackground()`. "Open Full View" is at `navigation@5`.
+
+### Message Protocol
+Sidebar messages follow the same patterns as the main panel but always send `liteMode: true`. Context menu actions are delegated: webview sends `showContextMenu` → backend shows QuickPick → backend sends `doInstall`/`doUpdate`/`doRemove` → webview forwards to actual `installPackage`/`updatePackage`/`removePackage`.
+
+### Cross-Panel Sync
+Prerelease, source, and project selections are synced bidirectionally between the main panel and sidebar:
+- **Main → Sidebar**: `NuGetPanel.saveSettings` persists to `workspaceState`, then fires static callbacks (`onPrereleaseChanged`, `onSourceChanged`, `onProjectChanged`) wired in `extension.ts` to call `NuGetSidebarPanel.syncPrerelease()`, `syncSource()`, `syncProject()`.
+- **Sidebar → Main**: QuickPick pickers call `NuGetPanel.syncPrerelease()`, `syncSource()`, `syncProject()` static methods which post messages to the main panel webview.
+- **Anti-echo**: `skipSaveRef`, `skipSourceSaveRef`, `skipProjectSaveRef` in App.tsx prevent the receiving panel from re-persisting the change and creating an infinite loop.
 
 ## Component Architecture
 
@@ -441,7 +481,7 @@ The fix uses a two-layer defense:
 2. **Pre-filtering** (`filterHealthySources`): Sources in `failedEndpointCache` (within TTL) are excluded from CLI arguments. If ALL sources are unreachable, they are passed through as a fallback.
 3. **Panel-level filtering**: `NuGetPanel` also excludes sources from `failedSources` map before calling `searchPackages` (defense-in-depth).
 
-`clearSourceErrors()` clears all three caches (`failedSources`, `serviceIndexCache`, `failedEndpointCache`) so the ⚠️ refresh button genuinely retries the network. After TTL expiry (2 min), lazy re-validation occurs automatically on the next search.
+`clearSourceErrors()` clears all four caches (`failedSources`, `serviceIndexCache`, `failedEndpointCache`, `_sourcesCache`) so the ⚠️ refresh button genuinely retries the network. After TTL expiry (2 min), lazy re-validation occurs automatically on the next search.
 
 The Browse tab's metadata enrichment loop also checks `failedEndpointCache` before iterating custom sources for authors/description, skipping unreachable ones without entering `discoverServiceEndpoints`.
 
@@ -461,6 +501,27 @@ async readAssetsJson<T>(assetsPath: string): Promise<T | null> {
     // Parse and cache...
 }
 ```
+
+### Sources Cache
+`getSources()` spawns `dotnet nuget list source --format detailed` via CLI. Without caching, every parallel `getPackageVersions()` call spawns a separate CLI process (e.g., 17 packages = 17 CLI spawns, each ~1s). A short-lived cache eliminates this:
+
+```typescript
+private _sourcesCache: NuGetSource[] | null = null;
+private _sourcesCacheTime: number = 0;
+private static readonly SOURCES_CACHE_TTL = 30000; // 30s
+
+async getSources(): Promise<NuGetSource[]> {
+    if (this._sourcesCache && (Date.now() - this._sourcesCacheTime) < SOURCES_CACHE_TTL) {
+        return this._sourcesCache;
+    }
+    const sources = await this.configParser.getSources();
+    this._sourcesCache = sources;
+    this._sourcesCacheTime = Date.now();
+    return sources;
+}
+```
+
+Invalidated by `invalidateSourcesCache()` on enable/disable/add/remove source and `clearSourceErrors()`.
 
 ### HTTP Request Timeouts
 All HTTP/1.1 requests to custom sources use explicit timeouts to prevent unbounded waits:

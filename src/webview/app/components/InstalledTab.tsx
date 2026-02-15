@@ -457,7 +457,7 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
                         setTransitiveFrameworks(frameworks);
                         setTransitiveDataSourceAvailable(message.dataSourceAvailable);
                         setLoadingTransitive(false);
-                        // Sections stay collapsed - user expands manually, metadata loads on expand
+                        // Otherwise sections stay collapsed - user expands manually, metadata loads on expand
                     }
                     break;
                 case 'transitiveMetadata':
@@ -670,7 +670,7 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
                                             setInstalledFilterQuery('');
                                             installedFilterInputRef.current?.focus();
                                         }}
-                                        title="Clear filter"
+                                        title="Clear filter (Esc)"
                                         aria-label="Clear filter"
                                     >
                                         ×

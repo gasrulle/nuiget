@@ -763,7 +763,7 @@ const BrowseTab = forwardRef<BrowseTabHandle, BrowseTabProps>(function BrowseTab
                                     <div className="quick-search-version-header">
                                         <span
                                             className="quick-search-back-hint"
-                                            title="Back to results [←]"
+                                            title="Back to results (←)"
                                             onMouseDown={(e) => {
                                                 e.preventDefault();
                                                 e.stopPropagation();
@@ -849,7 +849,7 @@ const BrowseTab = forwardRef<BrowseTabHandle, BrowseTabProps>(function BrowseTab
                                                             <span className="search-history-text">{packageId}</span>
                                                             <span
                                                                 className="quick-search-expand-hint"
-                                                                title="Show versions [→]"
+                                                                title="Show versions (→)"
                                                                 onMouseDown={(e) => {
                                                                     e.preventDefault();
                                                                     e.stopPropagation();

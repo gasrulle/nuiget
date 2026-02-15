@@ -161,7 +161,7 @@ const PackageDetailsPanel: React.FC<PackageDetailsPanelProps> = ({
                                 className="btn btn-danger"
                                 onClick={() => onRemove(packageId)}
                                 disabled={installedPkg?.isImplicit}
-                                title={installedPkg?.isImplicit ? 'Implicit/transitive package - cannot be uninstalled directly' : undefined}
+                                title={installedPkg?.isImplicit ? 'Implicit/transitive package - cannot be uninstalled directly' : 'Uninstall (Del)'}
                             >
                                 Uninstall
                             </button>
@@ -214,7 +214,7 @@ const PackageDetailsPanel: React.FC<PackageDetailsPanelProps> = ({
                             title={
                                 isFloatingOrRange
                                     ? 'Updates disabled for floating/range versions - edit .csproj directly'
-                                    : (isInstalled && selectedVersion === installedPkg?.version ? 'Already at this version' : undefined)
+                                    : (isInstalled && selectedVersion === installedPkg?.version ? 'Already at this version' : `${buttonText} (Ctrl+Enter)`)
                             }
                         >
                             {buttonText}
@@ -246,9 +246,22 @@ const PackageDetailsPanel: React.FC<PackageDetailsPanelProps> = ({
             </div>
 
             <div className="details-content">
-                {loadingMetadata ? (
+                {detailsTab === 'readme' ? (
+                    <div className="readme-content">
+                        {loadingReadme ? (
+                            <p className="empty-state">Loading readme from package...</p>
+                        ) : sanitizedReadmeHtml ? (
+                            <div
+                                className="readme-rendered"
+                                dangerouslySetInnerHTML={{ __html: sanitizedReadmeHtml }}
+                            />
+                        ) : (
+                            <p className="empty-state">No readme available for this package</p>
+                        )}
+                    </div>
+                ) : loadingMetadata ? (
                     <p className="empty-state">Loading package details...</p>
-                ) : detailsTab === 'details' ? (
+                ) : (
                     <div className="details-info">
                         <div className="details-row">
                             <label>Description:</label>
@@ -341,19 +354,6 @@ const PackageDetailsPanel: React.FC<PackageDetailsPanelProps> = ({
                                     })}
                                 </div>
                             </div>
-                        )}
-                    </div>
-                ) : (
-                    <div className="readme-content">
-                        {loadingReadme ? (
-                            <p className="empty-state">Loading readme from package...</p>
-                        ) : sanitizedReadmeHtml ? (
-                            <div
-                                className="readme-rendered"
-                                dangerouslySetInnerHTML={{ __html: sanitizedReadmeHtml }}
-                            />
-                        ) : (
-                            <p className="empty-state">No readme available for this package</p>
                         )}
                     </div>
                 )}

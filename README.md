@@ -23,7 +23,8 @@ A Visual Studio-style NuGet package manager for VS Code with a modern split-pane
 - 🔐 **Authenticated Private Feeds** - Browse and search packages from private feeds
 - 📖 **README Display** - View package docs with syntax-highlighted code blocks and copy button
 - ⚠️ **Source Status Warnings** - Visual notification when NuGet sources are unreachable
-- 🔧 **Output Channel** - "nUIget" channel shows all CLI commands for troubleshooting
+- � **Sidebar Panel** - Compact Activity Bar panel with Browse, Installed, Updates sections and background update badge
+- �🔧 **Output Channel** - "nUIget" channel shows all CLI commands for troubleshooting
 
 ## 🚀 Quick Start
 

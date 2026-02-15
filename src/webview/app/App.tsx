@@ -378,6 +378,11 @@ export const App: React.FC = () => {
 
     // Use ref to track latest includePrerelease for message handler
     const includePrereleaseRef = useRef(includePrerelease);
+    // Flag to skip saveSettings when prerelease was synced from backend (prevents echo loop)
+    const skipSaveRef = useRef(false);
+    // Flags to skip saveSettings when source/project were synced from backend (prevents echo loop)
+    const skipSourceSaveRef = useRef(false);
+    const skipProjectSaveRef = useRef(false);
     useEffect(() => {
         includePrereleaseRef.current = includePrerelease;
     }, [includePrerelease]);
@@ -386,7 +391,6 @@ export const App: React.FC = () => {
     useEffect(() => {
         recentSearchesLimitRef.current = recentSearchesLimit;
     }, [recentSearchesLimit]);
-
 
     // Track if installed tab has been visited (to skip refetch on first visit, use prefetched data)
     // NOTE: Currently does not reset when installedPackages changes. If dependent functionality changes
@@ -704,6 +708,27 @@ export const App: React.FC = () => {
                     }
                 }
                 break;
+            case 'prereleaseChanged':
+                // Synced from sidebar — update state but skip re-saving to backend
+                if (message.includePrerelease !== undefined) {
+                    skipSaveRef.current = true;
+                    setIncludePrerelease(message.includePrerelease);
+                }
+                break;
+            case 'sourceChanged':
+                // Synced from sidebar — update state but skip re-saving to backend
+                if (message.selectedSource !== undefined) {
+                    skipSourceSaveRef.current = true;
+                    setSelectedSource(message.selectedSource);
+                }
+                break;
+            case 'projectChanged':
+                // Synced from sidebar — update state but skip re-saving to backend
+                if (message.projectPath !== undefined) {
+                    skipProjectSaveRef.current = true;
+                    setSelectedProject(message.projectPath);
+                }
+                break;
             case 'settingsChanged':
                 // Handle live configuration changes from VS Code settings
                 if (message.searchDebounceMode) {
@@ -724,7 +749,18 @@ export const App: React.FC = () => {
                 if (selectedPackageRef.current && message.packageId === selectedPackageRef.current.id) {
                     setLoadingReadme(false);
                     if (message.readme) {
-                        setPackageMetadata(prev => prev ? { ...prev, readme: message.readme } : prev);
+                        setPackageMetadata(prev => {
+                            if (prev) return { ...prev, readme: message.readme };
+                            // packageMetadata may be null — create minimal object for readme
+                            return {
+                                id: message.packageId,
+                                version: selectedVersionRef.current || '',
+                                description: '',
+                                authors: '',
+                                dependencies: [],
+                                readme: message.readme
+                            };
+                        });
                     }
                 }
                 break;
@@ -779,6 +815,10 @@ export const App: React.FC = () => {
     // Save includePrerelease setting when it changes (only after settings loaded)
     useEffect(() => {
         if (settingsLoadedRef.current) {
+            if (skipSaveRef.current) {
+                skipSaveRef.current = false;
+                return;
+            }
             vscode.postMessage({ type: 'saveSettings', includePrerelease });
         }
     }, [includePrerelease]);
@@ -803,9 +843,24 @@ export const App: React.FC = () => {
     // Save selectedSource setting when it changes (only after settings loaded)
     useEffect(() => {
         if (settingsLoadedRef.current && selectedSource) {
+            if (skipSourceSaveRef.current) {
+                skipSourceSaveRef.current = false;
+                return;
+            }
             vscode.postMessage({ type: 'saveSettings', selectedSource });
         }
     }, [selectedSource]);
+
+    // Save selectedProject to workspaceState when it changes (only after settings loaded)
+    useEffect(() => {
+        if (settingsLoadedRef.current && selectedProject) {
+            if (skipProjectSaveRef.current) {
+                skipProjectSaveRef.current = false;
+                return;
+            }
+            vscode.postMessage({ type: 'saveSettings', selectedProject });
+        }
+    }, [selectedProject]);
 
     // Save recentSearches when it changes (only after settings loaded)
     useEffect(() => {
@@ -892,19 +947,26 @@ export const App: React.FC = () => {
         if (
             detailsTab === 'readme' &&
             selectedPackage &&
-            packageMetadata &&
-            !packageMetadata.readme &&
             !loadingReadme &&
             !readmeAttempted
         ) {
+            // Already have readme loaded
+            if (packageMetadata?.readme) return;
+            // In normal mode, wait for packageMetadata to load first
+            if (!packageMetadata) return;
+
+            const pkgId = packageMetadata?.id || getPackageId(selectedPackage);
+            const version = packageMetadata?.version || selectedVersionRef.current;
+            if (!version) return;
+
             // Mark as attempted so we don't retry
             setReadmeAttempted(true);
             setLoadingReadme(true);
             // Request README extraction from nupkg
             vscode.postMessage({
                 type: 'fetchReadmeFromPackage',
-                packageId: packageMetadata.id,
-                version: packageMetadata.version,
+                packageId: pkgId,
+                version: version,
                 source: selectedSource === 'all' ? undefined : selectedSource
             });
         }

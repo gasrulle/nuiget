@@ -8,6 +8,34 @@ export class NuGetPanel {
     private static _context: vscode.ExtensionContext | undefined;
     private static _outputChannel: vscode.LogOutputChannel | undefined;
 
+    /** Callback fired when the main panel's prerelease setting changes (wired in extension.ts) */
+    public static onPrereleaseChanged: ((value: boolean) => void) | undefined;
+    /** Callback fired when the main panel's selected source changes (wired in extension.ts) */
+    public static onSourceChanged: ((value: string) => void) | undefined;
+    /** Callback fired when the main panel's selected project changes (wired in extension.ts) */
+    public static onProjectChanged: ((value: string) => void) | undefined;
+
+    /** Push a prerelease change into the main panel webview (called from sidebar sync) */
+    public static syncPrerelease(value: boolean): void {
+        if (NuGetPanel.currentPanel && !NuGetPanel.currentPanel._disposed) {
+            NuGetPanel.currentPanel._postMessage({ type: 'prereleaseChanged', includePrerelease: value });
+        }
+    }
+
+    /** Push a source change into the main panel webview (called from sidebar sync) */
+    public static syncSource(value: string): void {
+        if (NuGetPanel.currentPanel && !NuGetPanel.currentPanel._disposed) {
+            NuGetPanel.currentPanel._postMessage({ type: 'sourceChanged', selectedSource: value });
+        }
+    }
+
+    /** Push a project change into the main panel webview (called from sidebar sync) */
+    public static syncProject(projectPath: string): void {
+        if (NuGetPanel.currentPanel && !NuGetPanel.currentPanel._disposed) {
+            NuGetPanel.currentPanel._postMessage({ type: 'projectChanged', projectPath });
+        }
+    }
+
     private readonly _panel: vscode.WebviewPanel;
     private readonly _extensionUri: vscode.Uri;
     private readonly _nugetService: NuGetService;
@@ -20,7 +48,7 @@ export class NuGetPanel {
     // Track the latest search query to skip stale requests
     private _latestSearchQuery: string = '';
 
-    public static createOrShow(extensionUri: vscode.Uri, context: vscode.ExtensionContext, outputChannel: vscode.LogOutputChannel, projectPath?: string, initialTab?: 'browse' | 'installed' | 'updates') {
+    public static createOrShow(extensionUri: vscode.Uri, context: vscode.ExtensionContext, outputChannel: vscode.LogOutputChannel, nugetService: NuGetService, projectPath?: string, initialTab?: 'browse' | 'installed' | 'updates') {
         NuGetPanel._context = context;
         NuGetPanel._outputChannel = outputChannel;
         const column = vscode.window.activeTextEditor
@@ -48,7 +76,7 @@ export class NuGetPanel {
             }
         );
 
-        NuGetPanel.currentPanel = new NuGetPanel(panel, extensionUri, outputChannel, projectPath, initialTab);
+        NuGetPanel.currentPanel = new NuGetPanel(panel, extensionUri, nugetService, projectPath, initialTab);
     }
 
     public static refresh() {
@@ -65,20 +93,12 @@ export class NuGetPanel {
         });
     }
 
-    private constructor(panel: vscode.WebviewPanel, extensionUri: vscode.Uri, outputChannel: vscode.LogOutputChannel, projectPath?: string, initialTab?: 'browse' | 'installed' | 'updates') {
+    private constructor(panel: vscode.WebviewPanel, extensionUri: vscode.Uri, nugetService: NuGetService, projectPath?: string, initialTab?: 'browse' | 'installed' | 'updates') {
         this._panel = panel;
         this._extensionUri = extensionUri;
-        this._nugetService = new NuGetService(outputChannel);
+        this._nugetService = nugetService;
         this._pendingProjectPath = projectPath;
         this._pendingInitialTab = initialTab;
-
-        // Pre-warm nuget.org service index for faster first quick search
-        this._nugetService.prewarmNugetOrgServiceIndex();
-
-        // Pre-warm credentials for authenticated feeds (fire-and-forget)
-        this._nugetService.initializeCredentials().catch(() => {
-            // Ignore errors - credentials will be loaded on-demand if prewarm fails
-        });
 
         // Set the webview's initial html content
         this._panel.webview.html = this._getHtmlForWebview(this._panel.webview);
@@ -117,8 +137,9 @@ export class NuGetPanel {
         vscode.workspace.onDidChangeConfiguration(
             (e) => {
                 if (e.affectsConfiguration('nuiget')) {
-                    const searchDebounceMode = vscode.workspace.getConfiguration('nuiget').get<string>('searchDebounceMode', 'quicksearch');
-                    const recentSearchesLimit = vscode.workspace.getConfiguration('nuiget').get<number>('recentSearchesLimit', 5);
+                    const config = vscode.workspace.getConfiguration('nuiget');
+                    const searchDebounceMode = config.get<string>('searchDebounceMode', 'quicksearch');
+                    const recentSearchesLimit = config.get<number>('recentSearchesLimit', 5);
                     this._postMessage({
                         type: 'settingsChanged',
                         searchDebounceMode: searchDebounceMode,
@@ -356,7 +377,6 @@ export class NuGetPanel {
                     });
 
                     // Test connectivity to all sources in background
-                    // This will populate failedSources and show VS Code notifications
                     this._nugetService.testSourceConnectivity().then(() => {
                         // After testing, send updated failed sources to UI
                         const updatedFailedSources = this._nugetService.getFailedSources();
@@ -690,9 +710,10 @@ export class NuGetPanel {
                     const selectedSource = NuGetPanel._context?.workspaceState.get<string>('nuget.selectedSource', '');
                     const recentSearches = NuGetPanel._context?.workspaceState.get<string[]>('nuget.recentSearches', []) ?? [];
                     const isWindows = process.platform === 'win32';
-                    // Read extension settings for search debounce
-                    const searchDebounceMode = vscode.workspace.getConfiguration('nuiget').get<string>('searchDebounceMode', 'quicksearch');
-                    const recentSearchesLimit = vscode.workspace.getConfiguration('nuiget').get<number>('recentSearchesLimit', 5);
+                    // Read extension settings
+                    const config = vscode.workspace.getConfiguration('nuiget');
+                    const searchDebounceMode = config.get<string>('searchDebounceMode', 'quicksearch');
+                    const recentSearchesLimit = config.get<number>('recentSearchesLimit', 5);
                     this._postMessage({
                         type: 'settings',
                         includePrerelease: includePrerelease,
@@ -710,9 +731,18 @@ export class NuGetPanel {
                     if (NuGetPanel._context) {
                         if (data.includePrerelease !== undefined) {
                             await NuGetPanel._context.workspaceState.update('nuget.includePrerelease', data.includePrerelease);
+                            // Sync to sidebar panel
+                            NuGetPanel.onPrereleaseChanged?.(data.includePrerelease as boolean);
                         }
                         if (data.selectedSource !== undefined) {
                             await NuGetPanel._context.workspaceState.update('nuget.selectedSource', data.selectedSource);
+                            // Sync to sidebar panel
+                            NuGetPanel.onSourceChanged?.(data.selectedSource as string);
+                        }
+                        if (data.selectedProject !== undefined) {
+                            await NuGetPanel._context.workspaceState.update('nuget.selectedProject', data.selectedProject);
+                            // Sync to sidebar panel
+                            NuGetPanel.onProjectChanged?.(data.selectedProject as string);
                         }
                         if (data.recentSearches !== undefined) {
                             await NuGetPanel._context.workspaceState.update('nuget.recentSearches', data.recentSearches);

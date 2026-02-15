@@ -447,6 +447,11 @@ export class NuGetService {
     private assetsJsonCache: Map<string, { mtimeMs: number; data: unknown; timestamp: number }> = new Map();
     // Assets cache TTL: 30 seconds
     private static readonly ASSETS_CACHE_TTL = 30000;
+    // Cache for getSources() to avoid repeated CLI spawns (dotnet nuget list source)
+    // Multiple parallel getPackageVersions calls share a single CLI result
+    private _sourcesCache: NuGetSource[] | null = null;
+    private _sourcesCacheTime: number = 0;
+    private static readonly SOURCES_CACHE_TTL = 30000; // 30 seconds
     // Circuit breaker for icon resolution per source — skip sources after N consecutive misses
     // Prevents N×M HEAD requests when a source has no icons (N packages × M sources)
     private iconSourceMissCount: Map<string, number> = new Map();
@@ -1123,7 +1128,7 @@ export class NuGetService {
         return projects;
     }
 
-    async getInstalledPackages(projectPath: string): Promise<InstalledPackage[]> {
+    async getInstalledPackages(projectPath: string, liteMode?: boolean): Promise<InstalledPackage[]> {
         const packages: InstalledPackage[] = [];
 
         // Get resolved versions from lock files
@@ -1167,7 +1172,12 @@ export class NuGetService {
 
                 // Parse version specification
                 const versionSpec = parseVersionSpec(version);
-                const resolvedVersion = resolvedVersions.get(id.toLowerCase());
+                // Only use resolved version from lock files for floating/range versions.
+                // Standard (e.g. "10.0.2") and exact (e.g. "[10.0.2]") versions use the
+                // .csproj value directly — lock files may still hold a stale pre-install version.
+                const resolvedVersion = (versionSpec.type === 'floating' || versionSpec.type === 'range')
+                    ? resolvedVersions.get(id.toLowerCase())
+                    : undefined;
 
                 packages.push({
                     id,
@@ -1180,8 +1190,10 @@ export class NuGetService {
             }
 
             if (packages.length > 0) {
-                // Fetch icons, verified status, and authors for packages parsed from csproj
-                await this.fetchInstalledPackageMetadata(packages);
+                // Lite Mode: skip metadata enrichment (icons, verified, authors)
+                if (!liteMode) {
+                    await this.fetchInstalledPackageMetadata(packages);
+                }
                 return packages;
             }
         } catch (parseError) {
@@ -1263,8 +1275,10 @@ export class NuGetService {
                 }
             }
 
-            // Fetch icons, verified status, and authors for installed packages
-            await this.fetchInstalledPackageMetadata(packages);
+            // Fetch icons, verified status, and authors for installed packages (skip in Lite Mode)
+            if (!liteMode) {
+                await this.fetchInstalledPackageMetadata(packages);
+            }
 
             return packages;
         } catch (error) {
@@ -1272,8 +1286,8 @@ export class NuGetService {
             if (packages.length === 0) {
                 console.error('Failed to get installed packages via dotnet CLI:', error);
             }
-            // Fetch icons, verified status, and authors for packages parsed from csproj
-            if (packages.length > 0) {
+            // Fetch icons, verified status, and authors for packages parsed from csproj (skip in Lite Mode)
+            if (packages.length > 0 && !liteMode) {
                 await this.fetchInstalledPackageMetadata(packages);
             }
             return packages;
@@ -1670,10 +1684,10 @@ export class NuGetService {
         return null;
     }
 
-    async searchPackages(query: string, sources?: string[], includePrerelease?: boolean): Promise<PackageSearchResult[]> {
+    async searchPackages(query: string, sources?: string[], includePrerelease?: boolean, liteMode?: boolean): Promise<PackageSearchResult[]> {
         try {
             // Check cache first
-            const searchCacheKey = cacheKeys.searchResults(query, sources || [], includePrerelease ?? false);
+            const searchCacheKey = cacheKeys.searchResults(query, sources || [], includePrerelease ?? false) + (liteMode ? ':lite' : '');
 
             // Check in-memory cache (fastest)
             const memoryCached = this.searchResultsCache.get(searchCacheKey);
@@ -1747,101 +1761,104 @@ export class NuGetService {
                         id: packageId,
                         version: version,
                         description: '',
-                        authors: owners,
+                        authors: liteMode ? '' : owners,
                         totalDownloads: downloads,
                         versions: [version]
                     });
                 }
             }
 
-            // Fetch metadata for all packages using unified search API call
-            // Pre-fetch enabled sources for icon fallback
-            const allSources = await this.getSources();
-            const enabledSources = allSources.filter(s => s.enabled);
+            // Lite Mode: skip metadata enrichment, return raw CLI results
+            if (!liteMode) {
+                // Fetch metadata for all packages using unified search API call
+                // Pre-fetch enabled sources for icon fallback
+                const allSources = await this.getSources();
+                const enabledSources = allSources.filter(s => s.enabled);
 
-            await batchedPromiseAll(packages, async (pkg) => {
-                // Single search API call: gets verified, authors, description, AND iconUrl
-                const { verified, authors, iconUrl } = await this.getPackageSearchMetadata(pkg.id, pkg.version);
-                let foundMetadata = false;
-                if (iconUrl) {
-                    pkg.iconUrl = iconUrl;
-                }
-                if (verified !== undefined) {
-                    pkg.verified = verified;
-                    foundMetadata = true;
-                }
-                // Authors from search API override CLI-parsed authors (more accurate)
-                if (authors) {
-                    pkg.authors = authors;
-                    foundMetadata = true;
-                }
-
-                // Fill in description from cache (captured by getPackageSearchMetadata)
-                if (!pkg.description) {
-                    const statusCacheKey = cacheKeys.verifiedStatus(pkg.id);
-                    const cached = this.verifiedStatusCache.get(statusCacheKey);
-                    if (cached?.description) {
-                        pkg.description = cached.description;
+                await batchedPromiseAll(packages, async (pkg) => {
+                    // Single search API call: gets verified, authors, description, AND iconUrl
+                    const { verified, authors, iconUrl } = await this.getPackageSearchMetadata(pkg.id, pkg.version);
+                    let foundMetadata = false;
+                    if (iconUrl) {
+                        pkg.iconUrl = iconUrl;
+                    }
+                    if (verified !== undefined) {
+                        pkg.verified = verified;
                         foundMetadata = true;
                     }
-                }
-
-                // If search API didn't return an icon, fall back to resolveIconUrl (custom sources)
-                if (!pkg.iconUrl) {
-                    const fallbackIcon = await this.resolveIconUrl(pkg.id, pkg.version, enabledSources);
-                    if (fallbackIcon) {
-                        pkg.iconUrl = fallbackIcon;
+                    // Authors from search API override CLI-parsed authors (more accurate)
+                    if (authors) {
+                        pkg.authors = authors;
+                        foundMetadata = true;
                     }
-                }
 
-                // Not found on nuget.org — try custom sources for authors/description (skip known-unreachable)
-                if (!foundMetadata) {
-                    for (const source of enabledSources) {
-                        if (source.url.includes('nuget.org')) { continue; }
-
-                        const failedAt = this.failedEndpointCache.get(source.url);
-                        if (failedAt && (Date.now() - failedAt) < NuGetService.FAILED_ENDPOINT_CACHE_TTL) {
-                            continue;
+                    // Fill in description from cache (captured by getPackageSearchMetadata)
+                    if (!pkg.description) {
+                        const statusCacheKey = cacheKeys.verifiedStatus(pkg.id);
+                        const cached = this.verifiedStatusCache.get(statusCacheKey);
+                        if (cached?.description) {
+                            pkg.description = cached.description;
+                            foundMetadata = true;
                         }
+                    }
 
-                        try {
-                            const endpoints = await this.discoverServiceEndpoints(source.url);
-                            if (endpoints.searchQueryService) {
-                                const customAuthHeader = await this.getAuthHeader(source.url);
-                                const customSearchUrl = `${endpoints.searchQueryService}?q=packageid:${encodeURIComponent(pkg.id)}&take=1&prerelease=true`;
-                                const customData = await this.fetchJson<any>(customSearchUrl, customAuthHeader);
-                                const customPackages = customData?.data || customData?.Data || (Array.isArray(customData) ? customData : []);
+                    // If search API didn't return an icon, fall back to resolveIconUrl (custom sources)
+                    if (!pkg.iconUrl) {
+                        const fallbackIcon = await this.resolveIconUrl(pkg.id, pkg.version, enabledSources);
+                        if (fallbackIcon) {
+                            pkg.iconUrl = fallbackIcon;
+                        }
+                    }
 
-                                if (customPackages.length > 0) {
-                                    const result = customPackages[0];
-                                    if (result.id?.toLowerCase() === pkg.id.toLowerCase() || result.Id?.toLowerCase() === pkg.id.toLowerCase()) {
-                                        const customAuthors = result.authors || result.Authors;
-                                        if (customAuthors) {
-                                            pkg.authors = Array.isArray(customAuthors) ? customAuthors.join(', ') : customAuthors;
+                    // Not found on nuget.org — try custom sources for authors/description (skip known-unreachable)
+                    if (!foundMetadata) {
+                        for (const source of enabledSources) {
+                            if (source.url.includes('nuget.org')) { continue; }
+
+                            const failedAt = this.failedEndpointCache.get(source.url);
+                            if (failedAt && (Date.now() - failedAt) < NuGetService.FAILED_ENDPOINT_CACHE_TTL) {
+                                continue;
+                            }
+
+                            try {
+                                const endpoints = await this.discoverServiceEndpoints(source.url);
+                                if (endpoints.searchQueryService) {
+                                    const customAuthHeader = await this.getAuthHeader(source.url);
+                                    const customSearchUrl = `${endpoints.searchQueryService}?q=packageid:${encodeURIComponent(pkg.id)}&take=1&prerelease=true`;
+                                    const customData = await this.fetchJson<any>(customSearchUrl, customAuthHeader);
+                                    const customPackages = customData?.data || customData?.Data || (Array.isArray(customData) ? customData : []);
+
+                                    if (customPackages.length > 0) {
+                                        const result = customPackages[0];
+                                        if (result.id?.toLowerCase() === pkg.id.toLowerCase() || result.Id?.toLowerCase() === pkg.id.toLowerCase()) {
+                                            const customAuthors = result.authors || result.Authors;
+                                            if (customAuthors) {
+                                                pkg.authors = Array.isArray(customAuthors) ? customAuthors.join(', ') : customAuthors;
+                                            }
+                                            const desc = result.description || result.Description || result.summary || result.Summary;
+                                            if (desc && !pkg.description) {
+                                                pkg.description = desc;
+                                            }
+                                            // Cache (custom sources don't have verified, default to false)
+                                            const cacheValue = {
+                                                verified: false,
+                                                authors: pkg.authors,
+                                                description: pkg.description
+                                            };
+                                            const statusCacheKey = cacheKeys.verifiedStatus(pkg.id);
+                                            this.verifiedStatusCache.set(statusCacheKey, cacheValue);
+                                            workspaceCache.set(statusCacheKey, cacheValue, CACHE_TTL.VERIFIED_STATUS);
+                                            break; // Found
                                         }
-                                        const desc = result.description || result.Description || result.summary || result.Summary;
-                                        if (desc && !pkg.description) {
-                                            pkg.description = desc;
-                                        }
-                                        // Cache (custom sources don't have verified, default to false)
-                                        const cacheValue = {
-                                            verified: false,
-                                            authors: pkg.authors,
-                                            description: pkg.description
-                                        };
-                                        const statusCacheKey = cacheKeys.verifiedStatus(pkg.id);
-                                        this.verifiedStatusCache.set(statusCacheKey, cacheValue);
-                                        workspaceCache.set(statusCacheKey, cacheValue, CACHE_TTL.VERIFIED_STATUS);
-                                        break; // Found
                                     }
                                 }
+                            } catch {
+                                // Silently fail for individual sources
                             }
-                        } catch {
-                            // Silently fail for individual sources
                         }
                     }
-                }
-            }, 16);
+                }, 16);
+            }
 
             // Only cache non-empty results (avoid caching failures)
             if (packages.length > 0) {
@@ -2040,6 +2057,8 @@ export class NuGetService {
             this.logOutput(command, stdout, stderr, true);
             this.logSuccess(`Successfully installed ${packageId}`);
             vscode.window.showInformationMessage(`Successfully installed ${packageId}`);
+            // Invalidate assets cache so next getInstalledPackages reads fresh resolved versions
+            this.assetsJsonCache.clear();
             return true;
         } catch (error) {
             const command = `dotnet add "${projectPath}" package ${packageId} ${version ? `--version ${version}` : ''}`.trim();
@@ -2085,6 +2104,8 @@ export class NuGetService {
             this.logOutput(command, stdout, stderr, true);
             this.logSuccess(`Successfully updated ${packageId}`);
             vscode.window.showInformationMessage(`Successfully updated ${packageId}`);
+            // Invalidate assets cache so next getInstalledPackages reads fresh resolved versions
+            this.assetsJsonCache.clear();
             return true;
         } catch (error) {
             const command = `dotnet add "${projectPath}" package ${packageId} --version ${version}`;
@@ -2125,6 +2146,9 @@ export class NuGetService {
             this.logOutput(command, stdout, stderr, true);
             this.logSuccess(`Successfully removed ${packageId}`);
 
+            // Invalidate assets cache so next getInstalledPackages reads fresh resolved versions
+            this.assetsJsonCache.clear();
+
             // Run silent restore to update project.assets.json (dotnet remove doesn't trigger restore)
             // Skip for bulk operations (caller will run restore once at the end) or if noRestore setting is enabled
             const noRestoreSetting = this.getNoRestoreFlag() !== '';
@@ -2157,7 +2181,20 @@ export class NuGetService {
     }
 
     async getSources(): Promise<NuGetSource[]> {
-        return await this.configParser.getSources();
+        const now = Date.now();
+        if (this._sourcesCache && (now - this._sourcesCacheTime) < NuGetService.SOURCES_CACHE_TTL) {
+            return this._sourcesCache;
+        }
+        const sources = await this.configParser.getSources();
+        this._sourcesCache = sources;
+        this._sourcesCacheTime = now;
+        return sources;
+    }
+
+    /** Invalidate the short-lived sources cache (call after enable/disable/add/remove). */
+    public invalidateSourcesCache(): void {
+        this._sourcesCache = null;
+        this._sourcesCacheTime = 0;
     }
 
     /**
@@ -2178,6 +2215,7 @@ export class NuGetService {
             const { stdout, stderr } = await execWithTimeout(command, { cwd: workspaceFolder });
             this.logOutput(command, stdout, stderr, true);
             this.logSuccess(`Enabled source: ${sourceName}`);
+            this.invalidateSourcesCache();
             return true;
         } catch (error) {
             const execErr = error as ExecError;
@@ -2207,6 +2245,7 @@ export class NuGetService {
             const { stdout, stderr } = await execWithTimeout(command, { cwd: workspaceFolder });
             this.logOutput(command, stdout, stderr, true);
             this.logSuccess(`Disabled source: ${sourceName}`);
+            this.invalidateSourcesCache();
             return true;
         } catch (error) {
             const execErr = error as ExecError;
@@ -2305,6 +2344,7 @@ export class NuGetService {
             const { stdout, stderr } = await execWithTimeout(command, { cwd: workspaceFolder });
             this.logOutput(command, stdout, stderr, true);
             this.logSuccess(`Added source: ${name || url}`);
+            this.invalidateSourcesCache();
             return { success: true };
         } catch (error) {
             const execErr = error as ExecError;
@@ -2345,6 +2385,7 @@ export class NuGetService {
             const { stdout, stderr } = await execWithTimeout(command, { cwd: workspaceFolder });
             this.logOutput(command, stdout, stderr, true);
             this.logSuccess(`Removed source: ${sourceName}`);
+            this.invalidateSourcesCache();
             return { success: true };
         } catch (error) {
             const execErr = error as ExecError;
@@ -2398,6 +2439,8 @@ export class NuGetService {
         this.failedEndpointCache.clear();
         // Clear icon source circuit breaker so custom sources are re-tried
         this.iconSourceMissCount.clear();
+        // Clear sources cache so fresh sources are fetched
+        this.invalidateSourcesCache();
     }
 
     /**
@@ -2485,16 +2528,18 @@ export class NuGetService {
 
                 // Race pattern: resolve as soon as first source returns non-empty results
                 // Remaining requests will complete in background but we don't wait for them
-                return await this.raceForFirstResult(
+                const result = await this.raceForFirstResult(
                     enabledSources.map(src =>
                         this.getPackageVersionsFromSource(packageId, src.url, includePrerelease, take)
                             .catch(() => [] as string[])
                     ),
                     (versions) => versions.length > 0
                 );
+                return result;
             }
 
-            return await this.getPackageVersionsFromSource(packageId, source, includePrerelease, take);
+            const result = await this.getPackageVersionsFromSource(packageId, source, includePrerelease, take);
+            return result;
         } catch (error) {
             console.error(`[NuGet] Failed to fetch versions for ${packageId}:`, error);
             return [];
