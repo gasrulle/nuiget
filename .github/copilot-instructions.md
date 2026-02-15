@@ -41,7 +41,7 @@ After completing ANY feature, fix, or change, update these files:
 - **Multi-Tier Caching:** Backend LRUMap (metadata 200, versions 200, icons 500, search 100). Frontend `useRef<LRUMap>`. WorkspaceCache for persistence.
 - **Disposed Panel Safety:** `_disposed` flag + `_postMessage()` helper prevents "Webview is disposed" errors.
 - **Settings Persistence:** Prerelease/source/project via `workspaceState`. Split position via `globalState`.
-- **Sidebar Panel:** `NuGetSidebarPanel.ts` + `SidebarApp.tsx` in `src/webview/sidebar/`. Compact Activity Bar panel with Browse, Installed, Updates sections. Always uses lite mode internally. Background update monitoring with badge. Sections default to all-collapsed.
+- **Sidebar Panel:** `NuGetSidebarPanel.ts` + `SidebarApp.tsx` in `src/webview/sidebar/`. Compact Activity Bar panel with Browse, Installed, Updates sections. Always uses lite mode internally. Background update monitoring (2s initial delay, parallel project checks, sources cached 30s) with Activity Bar badge. Sections default to all-collapsed. Keyboard: Enter=install (Browse, only if not installed), Enter=update (Updates), Del=uninstall (Browse/Installed).
 - **Cross-Panel Sync:** Prerelease, source, and project selections sync bidirectionally between main panel and sidebar via static callbacks on `NuGetPanel` wired in `extension.ts`. Anti-echo guards (`skipSaveRef`, `skipSourceSaveRef`, `skipProjectSaveRef`) prevent infinite loops.
 
 # Build and Run
@@ -99,9 +99,11 @@ npm run package:vsix # Outputs nuiget.vsix
 | "Unescaped characters" in request path | Skip local sources with `isLocalSource()` |
 | README not showing | Extract from nupkg via adm-zip (custom sources lack ReadmeUriTemplate) |
 | Floating version metadata fails | Use `pkg.resolvedVersion` not `pkg.version` for API calls |
+| Version spec guard for lock file | Only `floating` and `range` version types use lock file `resolvedVersion`. Standard versions (e.g., `10.0.2`) read directly from .csproj. Guard: `versionSpec.type === 'floating' || versionSpec.type === 'range'`. |
+| Version spec guard for lock file | Only `floating` and `range` version types use lock file `resolvedVersion`. Standard versions (e.g., `10.0.2`) read directly from .csproj. Guard: `versionSpec.type === 'floating' \|\| versionSpec.type === 'range'`. |
 | Transitive not available | `project.assets.json` needs build/restore — use `restoreProject()` if missing |
 | Transitive stale after remove | `dotnet remove` doesn't update assets.json — run `dotnet restore` after |
-| Unreachable custom source blocks loading | `failedEndpointCache` caches failures for 120s (2 min). `discoverServiceEndpoints` uses 5s timeout. `searchPackages` pre-validates and pre-filters sources via `filterHealthySources()` before CLI. `clearSourceErrors()` clears all caches including `failedEndpointCache`. |
+| Unreachable custom source blocks loading | `failedEndpointCache` caches failures for 120s (2 min). `discoverServiceEndpoints` uses 5s timeout. `searchPackages` pre-validates and pre-filters sources via `filterHealthySources()` before CLI. `clearSourceErrors()` clears all caches including `failedEndpointCache` and sources cache. |
 | Registration API returns null/garbled | Gzip-compressed endpoint selected by mistake. Filter by `!resource['@id']?.includes('-gz-')` in `discoverServiceEndpoints`. HTTP/2 client has no gzip decompression. |
 | Package details missing published/deps | Registration endpoint resolving to `registration5-gz-semver2/` (gzip). Must use `registration5-semver1/` (plain JSON). |
 
@@ -125,6 +127,8 @@ npm run package:vsix # Outputs nuiget.vsix
 | HTTP request timeouts | `fetchJsonWithDetails` and `fetchJsonHttp1` use `options.timeout` + `req.on('timeout')`. Service index discovery uses 5s, general requests 10s. |
 | Failed endpoint cache | `failedEndpointCache: Map<string, number>` caches unreachable source URLs for 120s (2 min). Prevents re-trying dead sources per package (OS TCP timeout is ~21s). `clearSourceErrors()` clears it for manual refresh. `searchPackages` uses `preValidateSources()` + `filterHealthySources()` to exclude failed sources before CLI. `fetchPackageVerifiedStatus` also skips failed sources early. |
 | project.assets.json cache | `readAssetsJson()` method with mtime-based invalidation + 30s TTL. Avoids parsing 5-50MB files 2-3x per flow. |
+| Sources cache | `getSources()` caches `dotnet nuget list source` CLI result for 30s (`SOURCES_CACHE_TTL`). Prevents N CLI spawns when N packages check versions in parallel. Invalidated on enable/disable/add/remove/`clearSourceErrors()`. |
+| Parallel background checks | `checkUpdatesInBackground()` checks all projects via `Promise.all` instead of sequentially. Combined with sources cache, eliminates redundant CLI spawns. |
 | Transitive prefetch deferral | `getTransitivePackages` is deferred 2s after installed packages load to reduce network contention. |
 | Unified metadata fetch | `getPackageSearchMetadata(id, version?)` returns `verified`, `authors`, AND `iconUrl` from a single Search API call. Pre-populates icon cache to skip HEAD requests. All 4 tabs use this. Only falls back to `resolveIconUrl` for custom-source-only packages. |
 | Registration endpoint selection | Filter out gzip-compressed Registration endpoints (`-gz-` in URL) — HTTP/2 client doesn't decompress gzip. Use `registration5-semver1/` variant. |

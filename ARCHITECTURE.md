@@ -480,7 +480,7 @@ The fix uses a two-layer defense:
 2. **Pre-filtering** (`filterHealthySources`): Sources in `failedEndpointCache` (within TTL) are excluded from CLI arguments. If ALL sources are unreachable, they are passed through as a fallback.
 3. **Panel-level filtering**: `NuGetPanel` also excludes sources from `failedSources` map before calling `searchPackages` (defense-in-depth).
 
-`clearSourceErrors()` clears all three caches (`failedSources`, `serviceIndexCache`, `failedEndpointCache`) so the ⚠️ refresh button genuinely retries the network. After TTL expiry (2 min), lazy re-validation occurs automatically on the next search.
+`clearSourceErrors()` clears all four caches (`failedSources`, `serviceIndexCache`, `failedEndpointCache`, `_sourcesCache`) so the ⚠️ refresh button genuinely retries the network. After TTL expiry (2 min), lazy re-validation occurs automatically on the next search.
 
 The Browse tab's metadata enrichment loop also checks `failedEndpointCache` before iterating custom sources for authors/description, skipping unreachable ones without entering `discoverServiceEndpoints`.
 
@@ -500,6 +500,27 @@ async readAssetsJson<T>(assetsPath: string): Promise<T | null> {
     // Parse and cache...
 }
 ```
+
+### Sources Cache
+`getSources()` spawns `dotnet nuget list source --format detailed` via CLI. Without caching, every parallel `getPackageVersions()` call spawns a separate CLI process (e.g., 17 packages = 17 CLI spawns, each ~1s). A short-lived cache eliminates this:
+
+```typescript
+private _sourcesCache: NuGetSource[] | null = null;
+private _sourcesCacheTime: number = 0;
+private static readonly SOURCES_CACHE_TTL = 30000; // 30s
+
+async getSources(): Promise<NuGetSource[]> {
+    if (this._sourcesCache && (Date.now() - this._sourcesCacheTime) < SOURCES_CACHE_TTL) {
+        return this._sourcesCache;
+    }
+    const sources = await this.configParser.getSources();
+    this._sourcesCache = sources;
+    this._sourcesCacheTime = Date.now();
+    return sources;
+}
+```
+
+Invalidated by `invalidateSourcesCache()` on enable/disable/add/remove source and `clearSourceErrors()`.
 
 ### HTTP Request Timeouts
 All HTTP/1.1 requests to custom sources use explicit timeouts to prevent unbounded waits:

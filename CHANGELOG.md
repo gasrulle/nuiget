@@ -5,7 +5,7 @@ All notable changes to the nUIget extension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.4.0] - 2026-02-15
 
 ### Added
 
@@ -15,23 +15,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Cross-panel source & project sync** — Source and project selections are now shared bidirectionally between the main panel and sidebar. Changing either in one view updates the other in real time.
 - **Sidebar default collapsed sections** — All sidebar sections start collapsed for a cleaner initial look. Searching auto-expands the Browse section.
 - **Keyboard shortcut hints in tooltips** — Action buttons now show keyboard shortcuts in parentheses (e.g., Install (Enter), Uninstall (Del), Clear filter (Esc))
-
-### Changed
-
-- **Sidebar action icons refined**
-- **Sidebar "Load all projects" changed from checkbox to link button**
-- **Sidebar Updates section uses background data** — expanding Updates no longer re-fetches if background check data is already available, making it instant
-- **Faster sidebar badge display** — sources cache eliminates redundant `dotnet nuget list source` CLI spawns (was 1 per package, now 1 per 30s window), initial delay reduced from 5s to 2s, and projects are checked in parallel instead of sequentially
-
-### Fixed
-
-- **Sidebar hover highlight visibility**
-- **Sidebar source/project selection not persisted across reload**
-- **Sidebar stale closure bugs** — handlers for Update, Update All, and context menu used captured state instead of refs, causing wrong versions or missed updates
-- **Sidebar badge overwritten by single-project update check**
-- **Sidebar background update race condition** — background check no longer pushes per-project results that could overwrite user-initiated loading states
-- **Sidebar section badges not showing on startup**
-- **Stale version displayed after Change Version** — after changing a package version via the context menu, the installed list showed the previous version. Lock file resolved versions were incorrectly overriding the freshly-written .csproj version for standard (non-floating) version specs.
 
 ## [1.3.0] - 2026-02-14
 
