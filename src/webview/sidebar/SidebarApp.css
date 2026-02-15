@@ -206,6 +206,10 @@
     outline: none;
 }
 
+.section-content [role="listbox"] {
+    outline: none;
+}
+
 /* ─── Package Row ────────────────────────────────────────────────────────── */
 .package-row {
     display: flex;

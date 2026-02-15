@@ -727,8 +727,13 @@ export const SidebarApp: React.FC = () => {
                         searchResults,
                         (pkg) => pkg.id,
                         {
-                            onAction: (pkg) => handleBrowsePrimaryAction(pkg.id),
+                            onAction: (pkg) => {
+                                // Enter in Browse: only install if not already installed
+                                const inst = installedMap.get(pkg.id.toLowerCase());
+                                if (!inst) handleBrowsePrimaryAction(pkg.id);
+                            },
                             onDelete: (pkg) => {
+                                // Delete in Browse: uninstall if installed
                                 const inst = installedMap.get(pkg.id.toLowerCase());
                                 if (inst) handleBrowsePrimaryAction(pkg.id);
                             }
@@ -779,7 +784,6 @@ export const SidebarApp: React.FC = () => {
                         filteredInstalled,
                         (pkg) => pkg.id,
                         {
-                            onAction: (pkg) => handleInstalledPrimaryAction(pkg.id),
                             onDelete: (pkg) => handleInstalledPrimaryAction(pkg.id)
                         }
                     )}
