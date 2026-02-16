@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Sidebar updates not refreshing on external .csproj changes (e.g. git checkout)**
 - **"Update All" button not updating packages on first click**
 - **Garbled output channel header for "Update All" across multiple projects**
+- **Notification spam during batch update**
 
 ### Changed
 

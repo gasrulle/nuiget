@@ -2125,7 +2125,7 @@ export class NuGetService {
         }
     }
 
-    async updatePackage(projectPath: string, packageId: string, version: string, options?: { skipChannelSetup?: boolean }): Promise<boolean> {
+    async updatePackage(projectPath: string, packageId: string, version: string, options?: { skipChannelSetup?: boolean; skipNotification?: boolean }): Promise<boolean> {
         // Validate inputs to prevent command injection
         if (!isValidPackageId(packageId)) {
             vscode.window.showErrorMessage(`Invalid package ID: ${packageId}`);
@@ -2153,13 +2153,17 @@ export class NuGetService {
             if (hasError) {
                 this.logOutput(command, stdout, stderr, false);
                 this.logError(`Failed to update ${packageId}`);
-                vscode.window.showErrorMessage(`Failed to update ${packageId}: ${stderr}`);
+                if (!options?.skipNotification) {
+                    vscode.window.showErrorMessage(`Failed to update ${packageId}: ${stderr}`);
+                }
                 return false;
             }
 
             this.logOutput(command, stdout, stderr, true);
             this.logSuccess(`Successfully updated ${packageId}`);
-            vscode.window.showInformationMessage(`Successfully updated ${packageId}`);
+            if (!options?.skipNotification) {
+                vscode.window.showInformationMessage(`Successfully updated ${packageId}`);
+            }
             // Invalidate assets cache so next getInstalledPackages reads fresh resolved versions
             this.assetsJsonCache.clear();
             return true;
@@ -2173,7 +2177,9 @@ export class NuGetService {
             const errorOutput = execErr.stderr || execErr.stdout || String(error);
             this.logOutput(command, execErr.stdout || '', errorOutput, false);
             this.logError(`Failed to update ${packageId}`);
-            vscode.window.showErrorMessage(`Failed to update ${packageId}: ${errorOutput}`);
+            if (!options?.skipNotification) {
+                vscode.window.showErrorMessage(`Failed to update ${packageId}: ${errorOutput}`);
+            }
             return false;
         }
     }

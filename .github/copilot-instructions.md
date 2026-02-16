@@ -142,6 +142,7 @@ npm run package:vsix # Outputs nuiget.vsix
 | Array mutation bugs | `[...array].sort()` not `array.sort()` |
 | Property name typos break VSIX | Run `npm run package:vsix` — catches errors `watch` misses |
 | Package selection | Use `usePackageSelection` hook. Installed: `metadataVersion: pkg.resolvedVersion`. Updates: synthetic `InstalledPackage`. |
+| Bulk operation notification spam | `updatePackage()` and `removePackage()` have `skipNotification` option. All bulk callers (`bulkUpdatePackages`, `bulkUpdateAllProjects`, `confirmBulkRemove`) must pass `{ skipNotification: true }` — the bulk loop's summary notification handles reporting. |
 
 # Debugging Workflow
 1. Add temporary `console.log()` with distinctive prefix (e.g., `[DEBUG-XYZ]`)

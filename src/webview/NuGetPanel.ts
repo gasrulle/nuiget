@@ -726,7 +726,7 @@ export class NuGetPanel {
                                     projectPath,
                                     pkg.id,
                                     pkg.version,
-                                    { skipChannelSetup: true }
+                                    { skipChannelSetup: true, skipNotification: true }
                                 );
 
                                 if (success) {
@@ -945,7 +945,7 @@ export class NuGetPanel {
                                 projectPath,
                                 pkg.id,
                                 pkg.version,
-                                { skipChannelSetup: true }
+                                { skipChannelSetup: true, skipNotification: true }
                             );
 
                             if (success) {

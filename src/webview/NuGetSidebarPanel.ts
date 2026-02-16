@@ -529,7 +529,7 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
                                 increment: 100 / packages.length
                             });
                             const success = await this._nugetService.updatePackage(
-                                projectPath, pkg.id, pkg.version, { skipChannelSetup: true }
+                                projectPath, pkg.id, pkg.version, { skipChannelSetup: true, skipNotification: true }
                             );
                             if (success) successCount++; else failCount++;
                         }
@@ -571,7 +571,7 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
                                     increment: 100 / totalPackages
                                 });
                                 const success = await this._nugetService.updatePackage(
-                                    pu.projectPath, pkg.id, pkg.version, { skipChannelSetup: true }
+                                    pu.projectPath, pkg.id, pkg.version, { skipChannelSetup: true, skipNotification: true }
                                 );
                                 if (success) totalSuccess++; else totalFail++;
                             }
