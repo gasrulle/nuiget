@@ -4,16 +4,12 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { promisify } from 'util';
 import * as vscode from 'vscode';
+import type { NuGetSource } from './NuGetTypes';
+
+export type { NuGetSource } from './NuGetTypes';
 
 const readFileAsync = promisify(fs.readFile);
 const execAsync = promisify(exec);
-
-export interface NuGetSource {
-    name: string;
-    url: string;
-    enabled: boolean;
-    configFile?: string;
-}
 
 export class NuGetConfigParser {
     private parser: XMLParser;

@@ -1,257 +1,24 @@
-import DOMPurify from 'dompurify';
-import hljs from 'highlight.js/lib/core';
-import bash from 'highlight.js/lib/languages/bash';
-import csharp from 'highlight.js/lib/languages/csharp';
-import css from 'highlight.js/lib/languages/css';
-import dockerfile from 'highlight.js/lib/languages/dockerfile';
-import fsharp from 'highlight.js/lib/languages/fsharp';
-import ini from 'highlight.js/lib/languages/ini';
-import javascript from 'highlight.js/lib/languages/javascript';
-import json from 'highlight.js/lib/languages/json';
-import markdown from 'highlight.js/lib/languages/markdown';
-import plaintext from 'highlight.js/lib/languages/plaintext';
-import powershell from 'highlight.js/lib/languages/powershell';
-import sql from 'highlight.js/lib/languages/sql';
-import typescript from 'highlight.js/lib/languages/typescript';
-import xml from 'highlight.js/lib/languages/xml';
-import yaml from 'highlight.js/lib/languages/yaml';
-import { marked } from 'marked';
-import { markedHighlight } from 'marked-highlight';
 import React, { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import './App.css';
 import type { BrowseTabHandle } from './components/BrowseTab';
 import { MemoizedBrowseTab } from './components/BrowseTab';
+import { MemoizedDraggableSash } from './components/DraggableSash';
 import type { InstalledTabHandle } from './components/InstalledTab';
 import { MemoizedInstalledTab } from './components/InstalledTab';
 import { MemoizedPackageDetailsPanel } from './components/PackageDetailsPanel';
+import type { SourceSettingsOverlayHandle } from './components/SourceSettingsOverlay';
+import { MemoizedSourceSettingsOverlay } from './components/SourceSettingsOverlay';
 import type { UpdatesTabHandle } from './components/UpdatesTab';
 import { MemoizedUpdatesTab } from './components/UpdatesTab';
 import { usePackageSelection } from './hooks/usePackageSelection';
+import { renderMarkdownToHtml } from './markdownSetup';
 import type { AppState, FailedSource, InstalledPackage, NuGetSource, PackageMetadata, PackageSearchResult, PackageUpdate, Project, ProjectUpdates, TransitivePackage } from './types';
 import { LRUMap, getPackageId } from './types';
-
-// Register highlight.js languages
-hljs.registerLanguage('csharp', csharp);
-hljs.registerLanguage('cs', csharp);
-hljs.registerLanguage('fsharp', fsharp);
-hljs.registerLanguage('fs', fsharp);
-hljs.registerLanguage('xml', xml);
-hljs.registerLanguage('html', xml);
-hljs.registerLanguage('json', json);
-hljs.registerLanguage('bash', bash);
-hljs.registerLanguage('shell', bash);
-hljs.registerLanguage('powershell', powershell);
-hljs.registerLanguage('ps1', powershell);
-hljs.registerLanguage('sql', sql);
-hljs.registerLanguage('yaml', yaml);
-hljs.registerLanguage('yml', yaml);
-hljs.registerLanguage('javascript', javascript);
-hljs.registerLanguage('js', javascript);
-hljs.registerLanguage('typescript', typescript);
-hljs.registerLanguage('ts', typescript);
-hljs.registerLanguage('css', css);
-hljs.registerLanguage('dockerfile', dockerfile);
-hljs.registerLanguage('docker', dockerfile);
-hljs.registerLanguage('markdown', markdown);
-hljs.registerLanguage('md', markdown);
-hljs.registerLanguage('ini', ini);
-hljs.registerLanguage('toml', ini);
-hljs.registerLanguage('plaintext', plaintext);
-hljs.registerLanguage('text', plaintext);
-
-// Configure marked with syntax highlighting
-marked.use(
-    markedHighlight({
-        langPrefix: 'hljs language-',
-        highlight(code, lang) {
-            const language = hljs.getLanguage(lang) ? lang : 'plaintext';
-            // ignoreIllegals: true prevents exceptions on malformed code in README content
-            return hljs.highlight(code, { language, ignoreIllegals: true }).value;
-        }
-    })
-);
 
 // Get the default package icon URL from the root element data attribute
 const defaultPackageIcon = document.getElementById('root')?.dataset.packageIcon || '';
 // Get initial tab from HTML (set when opened from context menu)
 const htmlInitialTab = document.getElementById('root')?.dataset.initialTab as 'browse' | 'installed' | 'updates' | '' | undefined;
-
-// DraggableSash component for resizable split panels
-interface DraggableSashProps {
-    onDrag: (newPosition: number) => void;
-    onReset: () => void;
-    onDragEnd?: (finalPosition: number) => void;
-}
-
-function DraggableSash({ onDrag, onReset, onDragEnd }: DraggableSashProps) {
-    const sashRef = useRef<HTMLDivElement>(null);
-    const [isDragging, setIsDragging] = useState(false);
-    // Track cleanup function for document event listeners
-    const cleanupRef = useRef<(() => void) | null>(null);
-
-    // Cleanup on unmount to prevent event listener leaks
-    useEffect(() => {
-        return () => {
-            // If unmounted during drag, clean up document listeners
-            if (cleanupRef.current) {
-                cleanupRef.current();
-                cleanupRef.current = null;
-            }
-        };
-    }, []);
-
-    const handleMouseDown = useCallback((e: React.MouseEvent) => {
-        e.preventDefault();
-        setIsDragging(true);
-
-        const handleMouseMove = (moveEvent: MouseEvent) => {
-            const container = sashRef.current?.parentElement;
-            if (!container) {
-                return;
-            }
-
-            const containerRect = container.getBoundingClientRect();
-            const newPosition = ((moveEvent.clientX - containerRect.left) / containerRect.width) * 100;
-            // Clamp to 20-80% range
-            const clampedPosition = Math.max(20, Math.min(80, newPosition));
-            onDrag(clampedPosition);
-            // Store last position for onDragEnd
-            (handleMouseMove as any).lastPosition = clampedPosition;
-        };
-
-        const handleMouseUp = () => {
-            setIsDragging(false);
-            // Call onDragEnd with final position if provided
-            if (onDragEnd && (handleMouseMove as any).lastPosition !== undefined) {
-                onDragEnd((handleMouseMove as any).lastPosition);
-            }
-            document.removeEventListener('mousemove', handleMouseMove);
-            document.removeEventListener('mouseup', handleMouseUp);
-            document.body.style.cursor = '';
-            document.body.style.userSelect = '';
-            cleanupRef.current = null;
-        };
-
-        // Store cleanup function for potential unmount during drag
-        cleanupRef.current = () => {
-            document.removeEventListener('mousemove', handleMouseMove);
-            document.removeEventListener('mouseup', handleMouseUp);
-            document.body.style.cursor = '';
-            document.body.style.userSelect = '';
-        };
-
-        document.addEventListener('mousemove', handleMouseMove);
-        document.addEventListener('mouseup', handleMouseUp);
-        document.body.style.cursor = 'col-resize';
-        document.body.style.userSelect = 'none';
-    }, [onDrag]);
-
-    return (
-        <div
-            ref={sashRef}
-            className={`sash${isDragging ? ' dragging' : ''}`}
-            onMouseDown={handleMouseDown}
-            onDoubleClick={onReset}
-            title="Drag to resize. Double-click to reset."
-        />
-    );
-}
-
-const MemoizedDraggableSash = React.memo(DraggableSash);
-
-// Language display names for code block labels
-const languageDisplayNames: Record<string, string> = {
-    'csharp': 'C#',
-    'cs': 'C#',
-    'fsharp': 'F#',
-    'fs': 'F#',
-    'xml': 'XML',
-    'html': 'HTML',
-    'json': 'JSON',
-    'bash': 'Bash',
-    'shell': 'Shell',
-    'powershell': 'PowerShell',
-    'ps1': 'PowerShell',
-    'sql': 'SQL',
-    'yaml': 'YAML',
-    'yml': 'YAML',
-    'plaintext': 'Text',
-    'text': 'Text',
-    'javascript': 'JavaScript',
-    'js': 'JavaScript',
-    'typescript': 'TypeScript',
-    'ts': 'TypeScript',
-    'css': 'CSS',
-    'dockerfile': 'Dockerfile',
-    'docker': 'Docker',
-    'markdown': 'Markdown',
-    'md': 'Markdown',
-    'ini': 'INI',
-    'toml': 'TOML'
-};
-
-// Custom renderer to add unified header button with copy icon and language label to code blocks
-const renderer = new marked.Renderer();
-const originalCodeRenderer = renderer.code.bind(renderer);
-
-// GitHub Octicon SVGs (MIT licensed)
-const COPY_ICON_SVG = `<svg class="copy-icon" aria-hidden="true" height="16" viewBox="0 0 16 16" width="16" fill="currentColor"><path d="M0 6.75C0 5.784.784 5 1.75 5h1.5a.75.75 0 0 1 0 1.5h-1.5a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-1.5a.75.75 0 0 1 1.5 0v1.5A1.75 1.75 0 0 1 9.25 16h-7.5A1.75 1.75 0 0 1 0 14.25Z"></path><path d="M5 1.75C5 .784 5.784 0 6.75 0h7.5C15.216 0 16 .784 16 1.75v7.5A1.75 1.75 0 0 1 14.25 11h-7.5A1.75 1.75 0 0 1 5 9.25Zm1.75-.25a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-7.5a.25.25 0 0 0-.25-.25Z"></path></svg>`;
-const CHECK_ICON_SVG = `<svg class="check-icon" aria-hidden="true" height="16" viewBox="0 0 16 16" width="16" fill="currentColor"><path d="M13.78 4.22a.75.75 0 0 1 0 1.06l-7.25 7.25a.75.75 0 0 1-1.06 0L2.22 9.28a.751.751 0 0 1 .018-1.042.751.751 0 0 1 1.042-.018L6 10.94l6.72-6.72a.75.75 0 0 1 1.06 0Z"></path></svg>`;
-
-renderer.code = function (code: { text: string; lang?: string; escaped?: boolean; type?: string; raw?: string }) {
-    const lang = code.lang || '';
-    const displayLang = languageDisplayNames[lang.toLowerCase()] || lang.toUpperCase() || 'Code';
-    const html = originalCodeRenderer(code as Parameters<typeof originalCodeRenderer>[0]);
-
-    // Unified header button with copy/check icons and language label
-    const headerBtn = `<button class="code-header-btn" title="Copy to clipboard" aria-label="Copy ${displayLang} code to clipboard">${COPY_ICON_SVG}${CHECK_ICON_SVG}<span class="code-lang-label">${displayLang}</span></button>`;
-    return `<div class="code-block-wrapper">${headerBtn}${html}</div>`;
-};
-
-marked.use({ renderer });
-
-// Configure marked for safe rendering
-marked.setOptions({
-    breaks: true,
-    gfm: true
-});
-
-// Known domains that support HTTPS - upgrade http:// to https:// for these
-const httpsUpgradeDomains = [
-    'img.shields.io',
-    'shields.io',
-    'github.com',
-    'raw.githubusercontent.com',
-    'user-images.githubusercontent.com',
-    'avatars.githubusercontent.com',
-    'camo.githubusercontent.com',
-    'badge.fury.io',
-    'travis-ci.org',
-    'travis-ci.com',
-    'ci.appveyor.com',
-    'codecov.io',
-    'coveralls.io',
-    'david-dm.org',
-    'snyk.io',
-    'api.codacy.com',
-    'sonarcloud.io',
-    'img.badgesize.io',
-    'badgen.net',
-    'flat.badgen.net'
-];
-
-/**
- * Upgrade http:// URLs to https:// for known-safe domains
- * This fixes broken images in READMEs that use http:// for domains that support https://
- */
-function upgradeHttpToHttps(markdown: string): string {
-    const pattern = new RegExp(
-        `http://(?:www\\.)?(${httpsUpgradeDomains.map(d => d.replace(/\./g, '\\.')).join('|')})`,
-        'gi'
-    );
-    return markdown.replace(pattern, 'https://$1');
-}
-
 
 declare const acquireVsCodeApi: () => {
     postMessage: (msg: unknown) => void;
@@ -298,20 +65,11 @@ export const App: React.FC = () => {
     const [readmeAttempted, setReadmeAttempted] = useState(false);
     const [showSourceSettings, setShowSourceSettings] = useState(false);
     const [togglingSource, setTogglingSource] = useState<string | null>(null);
-    const [showAddSourcePanel, setShowAddSourcePanel] = useState(false);
     const [configFiles, setConfigFiles] = useState<{ label: string; path: string }[]>([]);
     const [selectedConfigFile, setSelectedConfigFile] = useState<string>('');
-    const [addSourceUrl, setAddSourceUrl] = useState('');
-    const [addSourceName, setAddSourceName] = useState('');
-    const [addSourceUsername, setAddSourceUsername] = useState('');
-    const [addSourcePassword, setAddSourcePassword] = useState('');
-    const [storeEncrypted, setStoreEncrypted] = useState(true);
     const [isWindows, setIsWindows] = useState(true);
-    const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
-    const [addSourceError, setAddSourceError] = useState<string | null>(null);
-    const [addingSource, setAddingSource] = useState(false);
     const [removingSource, setRemovingSource] = useState<string | null>(null);
-    const [confirmRemoveSource, setConfirmRemoveSource] = useState<{ name: string; configFile?: string } | null>(null);
+    const sourceSettingsRef = useRef<SourceSettingsOverlayHandle>(null);
 
     // Split panel position state (35% default, range 20-80%)
     const [splitPosition, setSplitPosition] = useState(35);
@@ -554,7 +312,6 @@ export const App: React.FC = () => {
                         setSelectedSource('all');
                     }
                     setRemovingSource(null);
-                    setConfirmRemoveSource(null);
                 }
                 // Don't set default here - let settings handler do it
                 break;
@@ -572,20 +329,7 @@ export const App: React.FC = () => {
                 }
                 break;
             case 'addSourceResult':
-                setAddingSource(false);
-                if (message.success) {
-                    // Clear form and close panel
-                    setAddSourceUrl('');
-                    setAddSourceName('');
-                    setAddSourceUsername('');
-                    setAddSourcePassword('');
-                    setStoreEncrypted(isWindows);
-                    setAddSourceError(null);
-                    setShowAdvancedOptions(false);
-                    setShowAddSourcePanel(false);
-                } else {
-                    setAddSourceError(message.error || 'Failed to add source.');
-                }
+                sourceSettingsRef.current?.handleAddSourceResult(message.success, message.error);
                 break;
             case 'installResult':
             case 'updateResult':
@@ -712,8 +456,6 @@ export const App: React.FC = () => {
                 }
                 if (message.isWindows !== undefined) {
                     setIsWindows(message.isWindows);
-                    // Default storeEncrypted to true only on Windows
-                    setStoreEncrypted(message.isWindows);
                 }
                 if (message.searchDebounceMode) {
                     setSearchDebounceMode(message.searchDebounceMode);
@@ -823,6 +565,7 @@ export const App: React.FC = () => {
     useEffect(() => {
         if (selectedProject) {
             setLoadingInstalled(true);
+            setInstalledPackages([]);
             vscode.postMessage({ type: 'getInstalledPackages', projectPath: selectedProject });
             setSelectedPackage(null);
             // Reset installed tab visit tracking when project changes
@@ -1051,10 +794,7 @@ export const App: React.FC = () => {
     // Memoize sanitized README HTML to avoid re-sanitizing on every render
     const sanitizedReadmeHtml = useMemo(() => {
         if (!packageMetadata?.readme) return '';
-        return DOMPurify.sanitize(
-            marked.parse(upgradeHttpToHttps(packageMetadata.readme)) as string,
-            { ADD_TAGS: ['button'], ADD_ATTR: ['aria-label'] }
-        );
+        return renderMarkdownToHtml(packageMetadata.readme);
     }, [packageMetadata?.readme]);
 
     const handleSashReset = useCallback(() => setSplitPosition(35), []);
@@ -1277,268 +1017,28 @@ export const App: React.FC = () => {
 
             {/* Source Settings Overlay */}
             {showSourceSettings && (
-                <div className="source-settings-overlay" onClick={() => {
-                    setShowSourceSettings(false);
-                    setShowAddSourcePanel(false);
-                    setConfirmRemoveSource(null);
-                }}>
-                    <div className="source-settings-modal" onClick={(e) => e.stopPropagation()}>
-                        {/* Main Panel */}
-                        <div className={`source-settings-main ${showAddSourcePanel ? 'slide-out' : ''}`}>
-                            <div className="source-settings-header">
-                                <h3>NuGet Sources</h3>
-                                <button className="source-settings-close" onClick={() => {
-                                    setShowSourceSettings(false);
-                                    setShowAddSourcePanel(false);
-                                    setConfirmRemoveSource(null);
-                                }}>✕</button>
-                            </div>
-                            <div className="source-settings-content">
-                                {sources.length === 0 ? (
-                                    <p className="empty-state">No NuGet sources configured.</p>
-                                ) : (
-                                    sources.map(source => (
-                                        <div key={source.url} className="source-settings-item">
-                                            <label className="source-toggle">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={source.enabled}
-                                                    disabled={togglingSource === source.name || removingSource === source.name}
-                                                    onChange={() => {
-                                                        setTogglingSource(source.name);
-                                                        if (source.enabled) {
-                                                            vscode.postMessage({
-                                                                type: 'disableSource',
-                                                                sourceName: source.name,
-                                                                sourceUrl: source.url
-                                                            });
-                                                        } else {
-                                                            vscode.postMessage({
-                                                                type: 'enableSource',
-                                                                sourceName: source.name
-                                                            });
-                                                        }
-                                                    }}
-                                                />
-                                                <span className="toggle-slider"></span>
-                                            </label>
-                                            <div className="source-info">
-                                                <span className={`source-name ${!source.enabled ? 'disabled' : ''}`}>
-                                                    {source.name}
-                                                    {togglingSource === source.name && <span className="toggling-indicator"> ⏳</span>}
-                                                    {removingSource === source.name && <span className="toggling-indicator"> ⏳</span>}
-                                                </span>
-                                                <span className="source-url">{source.url}</span>
-                                            </div>
-                                            <button
-                                                className="source-remove-btn"
-                                                title="Remove from nearest config file"
-                                                disabled={removingSource === source.name}
-                                                onClick={() => setConfirmRemoveSource({ name: source.name, configFile: source.configFile })}
-                                            >
-                                                🗑️
-                                            </button>
-                                        </div>
-                                    ))
-                                )}
-                            </div>
-                            <div className="source-settings-footer">
-                                <button
-                                    className="btn btn-secondary add-source-btn"
-                                    onClick={() => {
-                                        setShowAddSourcePanel(true);
-                                        setAddSourceError(null);
-                                    }}
-                                >
-                                    + Add Source
-                                </button>
-                                <span className="source-settings-hint">Sources from all configs. Remove deletes from nearest config.</span>
-                            </div>
-                        </div>
-
-                        {/* Add Source Panel (slides in) */}
-                        <div className={`source-add-panel ${showAddSourcePanel ? 'slide-in' : ''}`}>
-                            <div className="source-settings-header">
-                                <button
-                                    className="source-back-btn"
-                                    onClick={() => {
-                                        setShowAddSourcePanel(false);
-                                        setAddSourceError(null);
-                                    }}
-                                >
-                                    ← Back
-                                </button>
-                                <h3>Add New Source</h3>
-                                <div style={{ width: '60px' }}></div>
-                            </div>
-                            <div className="source-add-content">
-                                {configFiles.length > 0 && (
-                                    <div className="form-group">
-                                        <label>Add to config:</label>
-                                        <select
-                                            value={selectedConfigFile}
-                                            onChange={(e) => setSelectedConfigFile((e.target as HTMLSelectElement).value)}
-                                            className="config-select"
-                                        >
-                                            {configFiles.map(cf => (
-                                                <option key={cf.path} value={cf.path}>{cf.label}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                )}
-                                <div className="form-group">
-                                    <label>URL *</label>
-                                    <div className="input-with-warning">
-                                        <input
-                                            type="text"
-                                            value={addSourceUrl}
-                                            onChange={(e) => {
-                                                setAddSourceUrl((e.target as HTMLInputElement).value);
-                                                setAddSourceError(null);
-                                            }}
-                                            placeholder="https://api.nuget.org/v3/index.json"
-                                            className={addSourceError ? 'input-error' : ''}
-                                        />
-                                        {addSourceUrl.startsWith('http://') && (
-                                            <span className="http-warning" title="HTTP connections are insecure. HTTPS is recommended.">⚠️</span>
-                                        )}
-                                    </div>
-                                    {addSourceError && (
-                                        <span className="error-message">{addSourceError}</span>
-                                    )}
-                                </div>
-                                <div className="form-group">
-                                    <label>Name (optional)</label>
-                                    <input
-                                        type="text"
-                                        value={addSourceName}
-                                        onChange={(e) => setAddSourceName((e.target as HTMLInputElement).value)}
-                                        placeholder="Auto-generated from URL if empty"
-                                    />
-                                </div>
-                                <div className="advanced-section">
-                                    <button
-                                        className="advanced-toggle"
-                                        onClick={() => setShowAdvancedOptions(!showAdvancedOptions)}
-                                    >
-                                        {showAdvancedOptions ? '▼' : '▶'} Advanced
-                                    </button>
-                                    {showAdvancedOptions && (
-                                        <div className="advanced-content">
-                                            <div className="form-group">
-                                                <label>Username</label>
-                                                <input
-                                                    type="text"
-                                                    value={addSourceUsername}
-                                                    onChange={(e) => setAddSourceUsername((e.target as HTMLInputElement).value)}
-                                                    placeholder="Optional"
-                                                />
-                                            </div>
-                                            <div className="form-group">
-                                                <label>Password</label>
-                                                <input
-                                                    type="password"
-                                                    value={addSourcePassword}
-                                                    onChange={(e) => setAddSourcePassword((e.target as HTMLInputElement).value)}
-                                                    placeholder="Optional - supports %ENV_VAR% syntax"
-                                                />
-                                            </div>
-                                            {addSourcePassword && (
-                                                <div className="form-group">
-                                                    <label className="preview-checkbox" title={isWindows ? 'Encrypt password using Windows DPAPI (same machine/user only)' : 'Password encryption is only available on Windows'}>
-                                                        <input
-                                                            type="checkbox"
-                                                            checked={storeEncrypted}
-                                                            onChange={(e) => setStoreEncrypted((e.target as HTMLInputElement).checked)}
-                                                            disabled={!isWindows}
-                                                        />
-                                                        Store encrypted {!isWindows && '(Windows only)'}
-                                                    </label>
-                                                    {!storeEncrypted && isWindows && (
-                                                        <span className="warning-text">⚠️ Password will be stored in clear text</span>
-                                                    )}
-                                                </div>
-                                            )}
-                                            <div className="security-info">
-                                                <a href="https://learn.microsoft.com/en-us/nuget/consume-packages/consuming-packages-authenticated-feeds#security-best-practices-for-managing-credentials" target="_blank" rel="noopener noreferrer">Security best practices for credentials →</a>
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                            <div className="source-add-footer">
-                                <button
-                                    className="btn btn-secondary"
-                                    onClick={() => {
-                                        setShowAddSourcePanel(false);
-                                        setAddSourceUrl('');
-                                        setAddSourceName('');
-                                        setAddSourceUsername('');
-                                        setAddSourcePassword('');
-                                        setStoreEncrypted(isWindows);
-                                        setAddSourceError(null);
-                                        setShowAdvancedOptions(false);
-                                    }}
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    className="btn btn-primary"
-                                    disabled={!addSourceUrl.trim() || addingSource}
-                                    onClick={() => {
-                                        setAddingSource(true);
-                                        setAddSourceError(null);
-                                        vscode.postMessage({
-                                            type: 'addSource',
-                                            url: addSourceUrl.trim(),
-                                            name: addSourceName.trim() || undefined,
-                                            username: addSourceUsername.trim() || undefined,
-                                            password: addSourcePassword || undefined,
-                                            configFile: selectedConfigFile || undefined,
-                                            allowInsecure: addSourceUrl.startsWith('http://'),
-                                            storeEncrypted: addSourcePassword ? storeEncrypted : undefined
-                                        });
-                                    }}
-                                >
-                                    {addingSource ? 'Adding...' : 'Add Source'}
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Confirm Remove Source Dialog */}
-            {confirmRemoveSource && (
-                <div className="source-settings-overlay" onClick={() => setConfirmRemoveSource(null)}>
-                    <div className="confirm-dialog" onClick={(e) => e.stopPropagation()}>
-                        <div className="confirm-dialog-header">
-                            <h3>Remove Source</h3>
-                        </div>
-                        <div className="confirm-dialog-content">
-                            <p>Are you sure you want to remove the source "{confirmRemoveSource.name}"?</p>
-                            <p className="confirm-warning">This action cannot be undone.</p>
-                        </div>
-                        <div className="confirm-dialog-footer">
-                            <button className="btn btn-secondary" onClick={() => setConfirmRemoveSource(null)}>
-                                Cancel
-                            </button>
-                            <button
-                                className="btn btn-danger"
-                                onClick={() => {
-                                    setRemovingSource(confirmRemoveSource.name);
-                                    vscode.postMessage({
-                                        type: 'removeSource',
-                                        sourceName: confirmRemoveSource.name,
-                                        configFile: confirmRemoveSource.configFile
-                                    });
-                                }}
-                            >
-                                Remove
-                            </button>
-                        </div>
-                    </div>
-                </div>
+                <MemoizedSourceSettingsOverlay
+                    ref={sourceSettingsRef}
+                    sources={sources}
+                    configFiles={configFiles}
+                    selectedConfigFile={selectedConfigFile}
+                    onSelectedConfigFileChange={setSelectedConfigFile}
+                    isWindows={isWindows}
+                    togglingSource={togglingSource}
+                    removingSource={removingSource}
+                    vscode={vscode}
+                    onClose={() => setShowSourceSettings(false)}
+                    onToggleSource={(source) => {
+                        setTogglingSource(source.name);
+                        vscode.postMessage(source.enabled
+                            ? { type: 'disableSource', sourceName: source.name, sourceUrl: source.url }
+                            : { type: 'enableSource', sourceName: source.name });
+                    }}
+                    onRemoveSource={(name, configFile) => {
+                        setRemovingSource(name);
+                        vscode.postMessage({ type: 'removeSource', sourceName: name, configFile });
+                    }}
+                />
             )}
 
             <div className="tabs">

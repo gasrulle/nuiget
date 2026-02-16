@@ -218,6 +218,21 @@ export function isSearchResult(pkg: PackageSearchResult | InstalledPackage | nul
 }
 
 /**
+ * Compare two version strings numerically (ignoring prerelease suffixes).
+ * Returns: positive if a > b, negative if a < b, 0 if equal.
+ */
+export function compareVersions(a: string, b: string): number {
+    const partsA = a.split('-')[0].split('.').map(p => parseInt(p, 10) || 0);
+    const partsB = b.split('-')[0].split('.').map(p => parseInt(p, 10) || 0);
+    for (let i = 0; i < Math.max(partsA.length, partsB.length); i++) {
+        const partA = partsA[i] || 0;
+        const partB = partsB[i] || 0;
+        if (partA !== partB) { return partA - partB; }
+    }
+    return 0;
+}
+
+/**
  * Extract package ID from either PackageSearchResult or InstalledPackage
  */
 export function getPackageId(pkg: PackageSearchResult | InstalledPackage | null): string {

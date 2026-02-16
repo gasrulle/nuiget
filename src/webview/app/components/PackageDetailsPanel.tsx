@@ -17,7 +17,7 @@ import type {
     PackageSearchResult,
     VsCodeApi,
 } from '../types';
-import { decodeHtmlEntities, getPackageId, isSearchResult } from '../types';
+import { compareVersions, decodeHtmlEntities, getPackageId, isSearchResult } from '../types';
 
 export interface PackageDetailsPanelProps {
     selectedPackage: PackageSearchResult | InstalledPackage | null;
@@ -101,22 +101,7 @@ const PackageDetailsPanel: React.FC<PackageDetailsPanelProps> = ({
             if (selectedIndex === -1 || installedIndex === -1) {
                 // Version not in list (e.g., prerelease installed but checkbox unchecked)
                 // Fall back to numeric comparison
-                const parseVersionParts = (version: string): number[] => {
-                    const baseVersion = version.split('-')[0]; // Strip prerelease suffix
-                    return baseVersion.split('.').map(part => parseInt(part, 10) || 0);
-                };
-                const compareVersionsNumeric = (a: string, b: string): number => {
-                    const partsA = parseVersionParts(a);
-                    const partsB = parseVersionParts(b);
-                    for (let i = 0; i < Math.max(partsA.length, partsB.length); i++) {
-                        const partA = partsA[i] || 0;
-                        const partB = partsB[i] || 0;
-                        if (partA > partB) return 1;
-                        if (partA < partB) return -1;
-                    }
-                    return 0;
-                };
-                const cmp = compareVersionsNumeric(selectedVersion, compareVersion || '');
+                const cmp = compareVersions(selectedVersion, compareVersion || '');
                 if (cmp > 0) {
                     buttonText = 'Update';    // Selected is newer
                 } else if (cmp < 0) {

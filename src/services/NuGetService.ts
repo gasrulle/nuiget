@@ -1,5 +1,4 @@
 import AdmZip from 'adm-zip';
-import { exec } from 'child_process';
 import * as fs from 'fs';
 import * as http from 'http';
 import * as https from 'https';
@@ -10,368 +9,24 @@ import * as vscode from 'vscode';
 import { credentialService, CredentialService } from './CredentialService';
 import { http2Client } from './Http2Client';
 import { NuGetConfigParser } from './NuGetConfigParser';
+import {
+    InstalledPackage, NuGetSource, PackageDependency, PackageDependencyGroup,
+    PackageMetadata, PackageSearchResult, Project,
+    QuickSearchSourceResult, TransitiveFrameworkSection, TransitivePackage,
+    TransitivePackagesResult
+} from './NuGetTypes';
+import {
+    batchedPromiseAll, ExecError, execWithTimeout, fileExists,
+    isNewerVersion, isValidPackageId, isValidSourceName, isValidSourceUrl,
+    isValidVersion, LRUMap, parseVersionSpec
+} from './NuGetUtils';
 import { CACHE_TTL, cacheKeys, workspaceCache } from './WorkspaceCache';
+
+// Re-export types for backward compatibility with existing consumers
+export type { InstalledPackage, NuGetSource, PackageDependency, PackageDependencyGroup, PackageMetadata, PackageSearchResult, Project, QuickSearchSourceResult, TransitiveFrameworkSection, TransitivePackage, TransitivePackagesResult, VersionSpec, VersionType } from './NuGetTypes';
 
 const readFileAsync = promisify(fs.readFile);
 const writeFileAsync = promisify(fs.writeFile);
-
-// Async file existence check (non-blocking alternative to fs.existsSync)
-async function fileExists(filePath: string): Promise<boolean> {
-    try {
-        await fs.promises.access(filePath, fs.constants.F_OK);
-        return true;
-    } catch {
-        return false;
-    }
-}
-
-/**
- * LRU (Least Recently Used) Map with maximum size limit.
- * Automatically evicts oldest entries when capacity is reached.
- * Used for in-memory caches to prevent unbounded memory growth.
- */
-class LRUMap<K, V> {
-    private cache: Map<K, V> = new Map();
-    private readonly maxSize: number;
-
-    constructor(maxSize: number) {
-        this.maxSize = maxSize;
-    }
-
-    get(key: K): V | undefined {
-        const value = this.cache.get(key);
-        if (value !== undefined) {
-            // Move to end (most recently used)
-            this.cache.delete(key);
-            this.cache.set(key, value);
-        }
-        return value;
-    }
-
-    set(key: K, value: V): void {
-        // If key exists, delete it first to update position
-        if (this.cache.has(key)) {
-            this.cache.delete(key);
-        } else if (this.cache.size >= this.maxSize) {
-            // Evict oldest entry (first in iteration order)
-            const oldestKey = this.cache.keys().next().value;
-            if (oldestKey !== undefined) {
-                this.cache.delete(oldestKey);
-            }
-        }
-        this.cache.set(key, value);
-    }
-
-    has(key: K): boolean {
-        return this.cache.has(key);
-    }
-
-    delete(key: K): boolean {
-        return this.cache.delete(key);
-    }
-
-    clear(): void {
-        this.cache.clear();
-    }
-
-    get size(): number {
-        return this.cache.size;
-    }
-}
-
-/**
- * Execute promises in batches to limit concurrency.
- * Prevents overwhelming the network with too many simultaneous requests.
- * @param items Array of items to process
- * @param processor Async function to process each item
- * @param concurrency Maximum concurrent operations (default: 6)
- */
-async function batchedPromiseAll<T, R>(
-    items: T[],
-    processor: (item: T) => Promise<R>,
-    concurrency: number = 6
-): Promise<R[]> {
-    const results: R[] = new Array(items.length);
-    let nextIndex = 0;
-
-    const runNext = async (): Promise<void> => {
-        while (nextIndex < items.length) {
-            const i = nextIndex++;
-            results[i] = await processor(items[i]);
-        }
-    };
-
-    // Launch `concurrency` workers; each grabs the next item as soon as it finishes
-    const workers = Array.from({ length: Math.min(concurrency, items.length) }, () => runNext());
-    await Promise.all(workers);
-    return results;
-}
-
-// Command timeout (60 seconds)
-const COMMAND_TIMEOUT = 60000;
-
-// Custom error type that includes stdout/stderr from failed commands
-interface ExecError extends Error {
-    stdout?: string;
-    stderr?: string;
-    code?: number;
-}
-
-// Execute command with timeout
-async function execWithTimeout(
-    command: string,
-    timeoutOrOptions?: number | { timeout?: number; cwd?: string },
-    legacyCwd?: string
-): Promise<{ stdout: string; stderr: string }> {
-    // Handle both old signature (command, timeout) and options object
-    let timeout = COMMAND_TIMEOUT;
-    let cwd: string | undefined;
-
-    if (typeof timeoutOrOptions === 'number') {
-        timeout = timeoutOrOptions;
-        cwd = legacyCwd;
-    } else if (timeoutOrOptions) {
-        timeout = timeoutOrOptions.timeout ?? COMMAND_TIMEOUT;
-        cwd = timeoutOrOptions.cwd;
-    }
-
-    return new Promise((resolve, reject) => {
-        exec(command, { timeout, cwd }, (error, stdout, stderr) => {
-            if (error) {
-                // Include stdout/stderr in the error for better diagnostics
-                const execError = error as ExecError;
-                execError.stdout = stdout;
-                execError.stderr = stderr;
-                reject(execError);
-            } else {
-                resolve({ stdout, stderr });
-            }
-        });
-    });
-}
-
-// Validate package ID to prevent command injection
-function isValidPackageId(packageId: string): boolean {
-    // NuGet package IDs: alphanumeric, dots, underscores, hyphens
-    return /^[a-zA-Z0-9._-]+$/.test(packageId);
-}
-
-// Validate version string
-function isValidVersion(version: string): boolean {
-    // SemVer-like: digits, dots, hyphens, plus, alphanumeric
-    return /^[a-zA-Z0-9._+-]+$/.test(version);
-}
-
-// Validate source name to prevent command injection in dotnet nuget commands
-function isValidSourceName(name: string): boolean {
-    // Source names: alphanumeric, dots, underscores, hyphens, spaces
-    // Reject shell metacharacters: "; & | $ ` \ < > ( ) { } ! # etc.
-    return /^[a-zA-Z0-9._\- ]+$/.test(name) && name.length > 0 && name.length <= 256;
-}
-
-// Validate URL for safe shell command use
-function isValidSourceUrl(url: string): boolean {
-    // Allow file:// for local folders, http(s):// for network sources
-    // Reject shell-dangerous characters
-    const dangerousChars = /["'`\\|><;{}\r\n\t&$!#()]/;
-    if (dangerousChars.test(url)) {
-        return false;
-    }
-    // Validate URL structure
-    try {
-        const parsed = new URL(url);
-        return ['http:', 'https:', 'file:'].includes(parsed.protocol);
-    } catch {
-        // If not a URL, it might be a local path
-        // Allow Windows and Unix paths (alphanumeric, :, \, /, ., -, _, space)
-        return /^[a-zA-Z0-9.:/_\- \\]+$/.test(url);
-    }
-}
-
-/**
- * Version specification types for NuGet packages
- */
-export type VersionType = 'floating' | 'range' | 'exact' | 'standard';
-
-/**
- * Parsed version specification result
- */
-export interface VersionSpec {
-    type: VersionType;
-    /** Original version string from csproj */
-    original: string;
-    /** For floating versions: the prefix before the wildcard (e.g., "10" from "10.*") */
-    floatingPrefix?: string;
-    /** For floating versions: the depth of the wildcard (major=1, minor=2, patch=3) */
-    floatingDepth?: number;
-    /** Whether this is a pure wildcard (*) that always gets latest */
-    isAlwaysLatest?: boolean;
-}
-
-/**
- * Parse a version specification to determine its type and extract metadata
- * Supports: floating (*, 10.*, 1.0.*, 1.*-*), range ([1.0,2.0), (,2.0]), exact ([1.0.0]), standard (1.0.0)
- */
-function parseVersionSpec(version: string): VersionSpec {
-    const trimmed = version.trim();
-
-    // Pure wildcard - always gets latest
-    if (trimmed === '*' || trimmed === '*-*') {
-        return {
-            type: 'floating',
-            original: version,
-            isAlwaysLatest: true,
-            floatingDepth: 0
-        };
-    }
-
-    // Floating versions with wildcards: 10.*, 1.0.*, 1.*-*, 1.0.0-*
-    // Patterns: N.*, N.N.*, N.N.N-*, N.*-*
-    const floatingMatch = trimmed.match(/^(\d+(?:\.\d+)*)\.?\*(-\*)?$/);
-    if (floatingMatch) {
-        const prefix = floatingMatch[1];
-        const parts = prefix.split('.');
-        return {
-            type: 'floating',
-            original: version,
-            floatingPrefix: prefix,
-            floatingDepth: parts.length,
-            isAlwaysLatest: false
-        };
-    }
-
-    // Prerelease floating: 1.0.0-* or 1.0.0-beta.*
-    const prereleaseFloatingMatch = trimmed.match(/^(\d+\.\d+\.\d+)-(.*)?\*$/);
-    if (prereleaseFloatingMatch) {
-        return {
-            type: 'floating',
-            original: version,
-            floatingPrefix: prereleaseFloatingMatch[1],
-            floatingDepth: 3,
-            isAlwaysLatest: false
-        };
-    }
-
-    // Exact version: [1.0.0]
-    if (/^\[\d+(\.\d+)*(-[\w.]+)?\]$/.test(trimmed)) {
-        return {
-            type: 'exact',
-            original: version
-        };
-    }
-
-    // Range with brackets: [1.0,2.0], (1.0,2.0], [1.0,2.0), (1.0,2.0)
-    // Also: [1.0,), (,2.0], (1.0,), (,2.0)
-    if (/^[[(].*,.*[)\]]$/.test(trimmed)) {
-        return {
-            type: 'range',
-            original: version
-        };
-    }
-
-    // Standard version (could be implicit minimum version)
-    return {
-        type: 'standard',
-        original: version
-    };
-}
-
-export interface Project {
-    name: string;
-    path: string;
-}
-
-export interface InstalledPackage {
-    id: string;
-    /** The version as specified in the csproj (may be floating like "10.*" or range like "[1.0,2.0)") */
-    version: string;
-    /** The actual resolved version from lock file (e.g., "10.2.0") */
-    resolvedVersion?: string;
-    /** Type of version specification */
-    versionType: VersionType;
-    /** For floating versions: the prefix (e.g., "10" from "10.*") */
-    floatingPrefix?: string;
-    /** For pure wildcards (*) that always get the latest version */
-    isAlwaysLatest?: boolean;
-    /** Implicit/transitive packages that cannot be uninstalled */
-    isImplicit?: boolean;
-    iconUrl?: string;
-    verified?: boolean;
-    authors?: string;
-}
-
-export interface PackageSearchResult {
-    id: string;
-    version: string;
-    description: string;
-    authors: string;
-    totalDownloads?: number;
-    versions: string[];
-    iconUrl?: string;
-    verified?: boolean;
-}
-
-export interface PackageDependency {
-    id: string;
-    versionRange: string;
-}
-
-export interface PackageDependencyGroup {
-    targetFramework: string;
-    dependencies: PackageDependency[];
-}
-
-export interface PackageMetadata {
-    id: string;
-    version: string;
-    description: string;
-    authors: string;
-    license?: string;
-    licenseUrl?: string;
-    projectUrl?: string;
-    totalDownloads?: number;
-    published?: string;
-    dependencies: PackageDependencyGroup[];
-    readme?: string;
-}
-
-export interface NuGetSource {
-    name: string;
-    url: string;
-    enabled: boolean;
-}
-
-/**
- * Represents a transitive (indirect) package dependency
- */
-export interface TransitivePackage {
-    id: string;
-    version: string;
-    /** Chain of packages that require this package (up to 5 levels, full chain in tooltip) */
-    requiredByChain: string[];
-    /** Full chain for tooltip if truncated */
-    fullChain?: string[];
-    iconUrl?: string;
-    verified?: boolean;
-    authors?: string;
-}
-
-/**
- * Transitive packages for a specific target framework
- */
-export interface TransitiveFrameworkSection {
-    targetFramework: string;
-    packages: TransitivePackage[];
-}
-
-/**
- * Result of getTransitivePackages - includes data source status and all frameworks
- */
-export interface TransitivePackagesResult {
-    frameworks: TransitiveFrameworkSection[];
-    /** Whether project.assets.json exists (project has been built/restored) */
-    dataSourceAvailable: boolean;
-}
 
 // Service index endpoint types
 interface NuGetServiceIndex {
@@ -388,15 +43,6 @@ interface ServiceEndpoints {
     registrationsBaseUrl?: string; // registration for metadata
     searchQueryService?: string; // search
     searchAutocompleteService?: string; // autocomplete for quick search
-}
-
-/**
- * Result from grouped quick search - one entry per source
- */
-export interface QuickSearchSourceResult {
-    sourceName: string;
-    sourceUrl: string;
-    packageIds: string[];
 }
 
 /**
@@ -442,6 +88,12 @@ export class NuGetService {
     private static readonly HTTP_REQUEST_TIMEOUT = 10000;
     // Shorter timeout for service index discovery (milliseconds)
     private static readonly SERVICE_INDEX_TIMEOUT = 5000;
+    // Maximum download size for nupkg files (50 MB) to prevent disk exhaustion
+    private static readonly MAX_DOWNLOAD_SIZE = 50 * 1024 * 1024;
+    // Maximum number of HTTP redirects to follow before aborting
+    private static readonly MAX_REDIRECTS = 5;
+    // Maximum response body size for text/JSON fetches (10 MB) to prevent out-of-memory
+    private static readonly MAX_RESPONSE_SIZE = 10 * 1024 * 1024;
     // Cache for parsed project.assets.json (path -> { mtime, data })
     // Avoids re-parsing large files (5-50MB) multiple times in a single flow
     private assetsJsonCache: Map<string, { mtimeMs: number; data: unknown; timestamp: number }> = new Map();
@@ -2756,7 +2408,7 @@ export class NuGetService {
                         allVersions = allVersions.filter(v => !v.includes('-'));
                     }
                     // Return latest versions first, limited to 'take' count
-                    const result = allVersions.reverse().slice(0, take);
+                    const result = [...allVersions].reverse().slice(0, take);
 
                     // Only cache non-empty results (avoid caching failures)
                     if (result.length > 0) {
@@ -2780,7 +2432,7 @@ export class NuGetService {
             }
 
             // Return latest versions first, limited to 'take' count
-            const result = allVersions.reverse().slice(0, take);
+            const result = [...allVersions].reverse().slice(0, take);
 
             // Only cache non-empty results (avoid caching failures)
             if (result.length > 0) {
@@ -3172,8 +2824,8 @@ export class NuGetService {
         const allSources = await this.getSources();
         const enabledSources = allSources.filter(s => s.enabled);
 
-        // Check each installed package for updates in parallel
-        const updateChecks = installedPackages.map(async (pkg) => {
+        // Check each installed package for updates with concurrency limit
+        const results = await batchedPromiseAll(installedPackages, async (pkg) => {
             try {
                 // Skip floating versions (*, 10.*, etc.) - cannot be updated from UI
                 if (pkg.versionType === 'floating') {
@@ -3194,7 +2846,7 @@ export class NuGetService {
                 const latestVersion = versions[0];
 
                 // Standard version comparison
-                if (this.isNewerVersion(latestVersion, pkg.version)) {
+                if (isNewerVersion(latestVersion, pkg.version)) {
                     // Single search API call: gets verified, authors, AND iconUrl
                     const { verified, authors, iconUrl } = await this.getPackageSearchMetadata(pkg.id, latestVersion);
 
@@ -3217,9 +2869,8 @@ export class NuGetService {
                 console.error(`Failed to check updates for ${pkg.id}:`, error);
             }
             return null;
-        });
+        }, 16);
 
-        const results = await Promise.all(updateChecks);
         for (const result of results) {
             if (result) {
                 packagesWithUpdates.push(result);
@@ -3240,8 +2891,8 @@ export class NuGetService {
     ): Promise<{ id: string; installedVersion: string; latestVersion: string }[]> {
         const packagesWithUpdates: { id: string; installedVersion: string; latestVersion: string }[] = [];
 
-        // Check each installed package for updates in parallel
-        const updateChecks = installedPackages.map(async (pkg) => {
+        // Check each installed package for updates with concurrency limit
+        const results = await batchedPromiseAll(installedPackages, async (pkg) => {
             try {
                 // Skip floating versions (*, 10.*, etc.) - cannot be updated from UI
                 if (pkg.versionType === 'floating') {
@@ -3262,7 +2913,7 @@ export class NuGetService {
                 const latestVersion = versions[0];
 
                 // Standard version comparison
-                if (this.isNewerVersion(latestVersion, pkg.version)) {
+                if (isNewerVersion(latestVersion, pkg.version)) {
                     return {
                         id: pkg.id,
                         installedVersion: pkg.version,
@@ -3273,9 +2924,8 @@ export class NuGetService {
                 console.error(`Failed to check updates for ${pkg.id}:`, error);
             }
             return null;
-        });
+        }, 16);
 
-        const results = await Promise.all(updateChecks);
         for (const result of results) {
             if (result) {
                 packagesWithUpdates.push(result);
@@ -3382,50 +3032,13 @@ export class NuGetService {
         return {};
     }
 
-    /**
-     * Simple version comparison - returns true if version1 is newer than version2
-     */
-    private isNewerVersion(version1: string, version2: string): boolean {
-        // Normalize versions for comparison
-        const v1 = version1.toLowerCase();
-        const v2 = version2.toLowerCase();
-
-        if (v1 === v2) { return false; }
-
-        // Parse version parts
-        const parseVersion = (v: string) => {
-            const [main, prerelease] = v.split('-');
-            const parts = main.split('.').map(p => parseInt(p, 10) || 0);
-            return { parts, prerelease: prerelease || null };
-        };
-
-        const parsed1 = parseVersion(v1);
-        const parsed2 = parseVersion(v2);
-
-        // Compare main version parts
-        const maxLen = Math.max(parsed1.parts.length, parsed2.parts.length);
-        for (let i = 0; i < maxLen; i++) {
-            const p1 = parsed1.parts[i] || 0;
-            const p2 = parsed2.parts[i] || 0;
-            if (p1 > p2) { return true; }
-            if (p1 < p2) { return false; }
-        }
-
-        // Main versions are equal, check prerelease
-        // A stable version is considered newer than a prerelease of the same version
-        if (!parsed1.prerelease && parsed2.prerelease) { return true; }
-        if (parsed1.prerelease && !parsed2.prerelease) { return false; }
-
-        // Both are prerelease, compare lexicographically
-        if (parsed1.prerelease && parsed2.prerelease) {
-            return parsed1.prerelease > parsed2.prerelease;
-        }
-
-        return false;
-    }
-
-    private fetchText(url: string, authHeader?: string): Promise<string | undefined> {
+    private fetchText(url: string, authHeader?: string, maxRedirects: number = NuGetService.MAX_REDIRECTS): Promise<string | undefined> {
         return new Promise((resolve) => {
+            if (maxRedirects <= 0) {
+                resolve(undefined);
+                return;
+            }
+
             const client = url.startsWith('https://') ? https : http;
             const parsed = new URL(url);
 
@@ -3439,7 +3052,8 @@ export class NuGetService {
                 port: parsed.port || (parsed.protocol === 'https:' ? 443 : 80),
                 path: parsed.pathname + parsed.search,
                 method: 'GET',
-                headers
+                headers,
+                timeout: NuGetService.HTTP_REQUEST_TIMEOUT
             };
 
             const req = client.request(options, (res) => {
@@ -3450,9 +3064,9 @@ export class NuGetService {
                         try {
                             const redirectParsed = new URL(redirectUrl, url);
                             const sameOrigin = redirectParsed.origin === parsed.origin;
-                            this.fetchText(redirectParsed.href, sameOrigin ? authHeader : undefined).then(resolve);
+                            this.fetchText(redirectParsed.href, sameOrigin ? authHeader : undefined, maxRedirects - 1).then(resolve);
                         } catch {
-                            this.fetchText(redirectUrl, undefined).then(resolve);
+                            this.fetchText(redirectUrl, undefined, maxRedirects - 1).then(resolve);
                         }
                         return;
                     }
@@ -3463,8 +3077,19 @@ export class NuGetService {
                 }
 
                 let data = '';
-                res.on('data', chunk => data += chunk);
+                res.on('data', (chunk) => {
+                    data += chunk;
+                    if (data.length > NuGetService.MAX_RESPONSE_SIZE) {
+                        req.destroy();
+                        resolve(undefined);
+                    }
+                });
                 res.on('end', () => resolve(data));
+            });
+
+            req.on('timeout', () => {
+                req.destroy();
+                resolve(undefined);
             });
 
             req.on('error', () => {
@@ -3480,8 +3105,19 @@ export class NuGetService {
      * @param url The URL to fetch
      * @param authHeader Optional Authorization header value
      */
-    private fetchJsonWithDetails<T>(url: string, authHeader?: string, timeoutMs?: number): Promise<FetchResult<T>> {
+    private fetchJsonWithDetails<T>(url: string, authHeader?: string, timeoutMs?: number, maxRedirects: number = NuGetService.MAX_REDIRECTS): Promise<FetchResult<T>> {
         return new Promise((resolve) => {
+            if (maxRedirects <= 0) {
+                resolve({
+                    data: null,
+                    error: {
+                        type: 'network',
+                        message: 'Too many redirects. The server may be misconfigured.'
+                    }
+                });
+                return;
+            }
+
             const client = url.startsWith('https://') ? https : http;
             const parsed = new URL(url);
 
@@ -3511,7 +3147,7 @@ export class NuGetService {
                         // Preserve auth header on same-origin redirects only
                         const redirectParsed = new URL(redirectUrl, url);
                         const sameOrigin = redirectParsed.origin === parsed.origin;
-                        this.fetchJsonWithDetails<T>(redirectUrl, sameOrigin ? authHeader : undefined, timeoutMs).then(resolve);
+                        this.fetchJsonWithDetails<T>(redirectUrl, sameOrigin ? authHeader : undefined, timeoutMs, maxRedirects - 1).then(resolve);
                         return;
                     }
                 }
@@ -3638,7 +3274,7 @@ export class NuGetService {
         return this.fetchJsonHttp1<T>(url, authHeader);
     }
 
-    private fetchJsonHttp1<T>(url: string, authHeader?: string): Promise<T | null> {
+    private fetchJsonHttp1<T>(url: string, authHeader?: string, maxRedirects: number = 5): Promise<T | null> {
         return new Promise((resolve) => {
             const client = url.startsWith('https://') ? https : http;
             const parsed = new URL(url);
@@ -3663,11 +3299,11 @@ export class NuGetService {
                 // Handle redirects
                 if (res.statusCode === 301 || res.statusCode === 302 || res.statusCode === 307 || res.statusCode === 308) {
                     const redirectUrl = res.headers.location;
-                    if (redirectUrl) {
+                    if (redirectUrl && maxRedirects > 0) {
                         // Preserve auth header on same-origin redirects only
                         const redirectParsed = new URL(redirectUrl, url);
                         const sameOrigin = redirectParsed.origin === parsed.origin;
-                        this.fetchJsonHttp1<T>(redirectUrl, sameOrigin ? authHeader : undefined).then(resolve);
+                        this.fetchJsonHttp1<T>(redirectUrl, sameOrigin ? authHeader : undefined, maxRedirects - 1).then(resolve);
                         return;
                     }
                 }
@@ -3902,38 +3538,88 @@ export class NuGetService {
     /**
      * Download a file from URL to local path
      */
-    private downloadFile(url: string, destPath: string): Promise<boolean> {
+    private downloadFile(url: string, destPath: string, maxRedirects: number = NuGetService.MAX_REDIRECTS): Promise<boolean> {
         return new Promise((resolve) => {
+            if (maxRedirects <= 0) {
+                resolve(false);
+                return;
+            }
+
             const client = url.startsWith('https://') ? https : http;
             const file = fs.createWriteStream(destPath);
+            let totalBytes = 0;
+            let destroyed = false;
 
-            client.get(url, (res) => {
+            const cleanup = (success: boolean) => {
+                if (destroyed) { return; }
+                destroyed = true;
+                file.close();
+                if (!success) {
+                    try { fs.unlinkSync(destPath); } catch { /* ignore */ }
+                }
+                resolve(success);
+            };
+
+            file.on('error', () => {
+                cleanup(false);
+            });
+
+            const parsed = new URL(url);
+            const options: https.RequestOptions = {
+                hostname: parsed.hostname,
+                port: parsed.port || (parsed.protocol === 'https:' ? 443 : 80),
+                path: parsed.pathname + parsed.search,
+                method: 'GET',
+                timeout: NuGetService.HTTP_REQUEST_TIMEOUT
+            };
+
+            const req = client.request(options, (res) => {
                 // Handle redirects
                 if (res.statusCode === 301 || res.statusCode === 302 || res.statusCode === 307 || res.statusCode === 308) {
                     const redirectUrl = res.headers.location;
                     if (redirectUrl) {
                         file.close();
-                        this.downloadFile(redirectUrl, destPath).then(resolve);
+                        destroyed = true;
+                        this.downloadFile(redirectUrl, destPath, maxRedirects - 1).then(resolve);
                         return;
                     }
                 }
 
                 if (res.statusCode !== 200) {
-                    file.close();
-                    resolve(false);
+                    cleanup(false);
                     return;
                 }
 
-                res.pipe(file);
-                file.on('finish', () => {
-                    file.close();
-                    resolve(true);
+                res.on('data', (chunk: Buffer) => {
+                    totalBytes += chunk.length;
+                    if (totalBytes > NuGetService.MAX_DOWNLOAD_SIZE) {
+                        req.destroy();
+                        cleanup(false);
+                        return;
+                    }
+                    file.write(chunk);
                 });
-            }).on('error', () => {
-                file.close();
-                try { fs.unlinkSync(destPath); } catch { /* ignore */ }
-                resolve(false);
+
+                res.on('end', () => {
+                    file.end(() => {
+                        if (!destroyed) {
+                            destroyed = true;
+                            resolve(true);
+                        }
+                    });
+                });
             });
+
+            req.on('timeout', () => {
+                req.destroy();
+                cleanup(false);
+            });
+
+            req.on('error', () => {
+                cleanup(false);
+            });
+
+            req.end();
         });
     }
 
@@ -4037,12 +3723,18 @@ export class NuGetService {
                 }
             }
 
-            // Build full chain for each transitive package (recursive)
+            // Build full chain for each transitive package (recursive, with memoization)
+            const chainCache = new Map<string, string[]>();
             const buildChain = (packageId: string, visited: Set<string> = new Set()): string[] => {
+                const cacheKey = packageId.toLowerCase();
+                const cached = chainCache.get(cacheKey);
+                if (cached) { return [...cached]; }
+
                 const chain: string[] = [];
-                const parents = dependedOnBy.get(packageId.toLowerCase());
+                const parents = dependedOnBy.get(cacheKey);
 
                 if (!parents || parents.size === 0) {
+                    chainCache.set(cacheKey, chain);
                     return chain;
                 }
 
@@ -4064,6 +3756,7 @@ export class NuGetService {
                     }
                 }
 
+                chainCache.set(cacheKey, [...chain]);
                 return chain;
             };
 

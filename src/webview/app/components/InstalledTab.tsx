@@ -18,6 +18,7 @@
  *   - focusAndSelectFirst(): focuses list and selects first item
  */
 
+import { useVirtualizer } from '@tanstack/react-virtual';
 import React, { forwardRef, useCallback, useDeferredValue, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import type {
     InstalledPackage,
@@ -30,6 +31,8 @@ import type {
 } from '../types';
 import { getPackageId } from '../types';
 import { MemoizedPackageDetailsPanel } from './PackageDetailsPanel';
+
+const ESTIMATED_ITEM_HEIGHT = 66; // padding (12*2) + icon (32) + gaps
 
 // ─── Props ───────────────────────────────────────────────────────────────────
 
@@ -206,6 +209,8 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
 
     // Ref for the installed package list container
     const installedListRef = useRef<HTMLDivElement>(null);
+    // Scroll container ref for the virtualizer (the package-list-panel div)
+    const installedScrollRef = useRef<HTMLDivElement>(null);
 
     // ─── Derived state ───────────────────────────────────────────────────────
 
@@ -224,6 +229,14 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
     // React 19: Deferred value for non-blocking UI during heavy list updates
     const deferredInstalledPackages = useDeferredValue(filteredInstalledPackages);
     const isInstalledStale = filteredInstalledPackages !== deferredInstalledPackages;
+
+    // Virtualizer for direct packages list (same pattern as BrowseTab)
+    const installedVirtualizer = useVirtualizer({
+        count: deferredInstalledPackages.length,
+        getScrollElement: () => installedScrollRef.current,
+        estimateSize: () => ESTIMATED_ITEM_HEIGHT,
+        overscan: 5,
+    });
 
     // Packages that can be uninstalled (not implicit/transitive) — scoped to filtered list
     const uninstallablePackages = useMemo(() =>
@@ -629,7 +642,7 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
     return (
         <div className="content browse-content" style={{ display: activeTab === 'installed' ? '' : 'none' }}>
             <div className="split-panel">
-                <div className="package-list-panel" style={{ width: `${splitPosition}%` }}>
+                <div ref={installedScrollRef} className="package-list-panel" style={{ width: `${splitPosition}%` }}>
                     {loadingInstalled ? (
                         <div className="loading-spinner-container" aria-busy="true" aria-label="Loading installed packages">
                             <div className="loading-spinner"></div>
@@ -759,80 +772,88 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
                                                 onExitTop: () => {
                                                     clearSelection();
                                                     installedTabRef.current?.focus();
-                                                }
+                                                },
+                                                scrollToIndex: (i: number) => installedVirtualizer.scrollToIndex(i, { align: 'auto' })
                                             }
                                         )}
+                                        style={{ height: `${installedVirtualizer.getTotalSize()}px`, position: 'relative' }}
                                     >
-                                        {deferredInstalledPackages.map(pkg => (
-                                            <div
-                                                key={pkg.id}
-                                                className={`package-item ${selectedPackage && getPackageId(selectedPackage).toLowerCase() === pkg.id.toLowerCase() ? 'selected' : ''}`}
-                                                onClick={() => {
-                                                    onSelectDirectPackage(pkg, {
-                                                        selectedVersionValue: pkg.version,
-                                                        metadataVersion: pkg.resolvedVersion || pkg.version,
-                                                        initialVersions: [pkg.version],
-                                                    });
-                                                }}
-                                            >
-                                                <input
-                                                    type="checkbox"
-                                                    className="update-checkbox"
-                                                    checked={selectedUninstalls.has(pkg.id)}
-                                                    onChange={() => handleToggleUninstallSelection(pkg.id)}
-                                                    onClick={(e) => e.stopPropagation()}
-                                                    disabled={uninstallingAll || pkg.isImplicit}
-                                                    title={pkg.isImplicit ? 'Implicit/transitive package - cannot be uninstalled directly' : undefined}
-                                                />
-                                                <div className="package-icon">
-                                                    {pkg.iconUrl ? (
-                                                        <img src={pkg.iconUrl} alt="" onError={(e) => { (e.target as HTMLImageElement).src = defaultPackageIcon; }} />
-                                                    ) : (
-                                                        <img src={defaultPackageIcon} alt="" />
-                                                    )}
-                                                </div>
-                                                <div className="package-info">
-                                                    <div className="package-name">
-                                                        {pkg.id}
-                                                        {pkg.isImplicit && (
-                                                            <span className="implicit-badge" title="SDK-managed package - not directly referenced in project file">SDK</span>
-                                                        )}
-                                                        {pkg.versionType === 'floating' && (
-                                                            <span className="floating-badge" title="This package uses a floating version pattern">🔄</span>
-                                                        )}
-                                                        {pkg.versionType === 'range' && (
-                                                            <span className="floating-badge" title="This package uses a version range">📏</span>
-                                                        )}
-                                                    </div>
-                                                    <div className="package-meta">
-                                                        {pkg.isAlwaysLatest ? (
-                                                            <span className="package-version" title="This package always gets the latest version">
-                                                                * (always latest{pkg.resolvedVersion ? `: ${pkg.resolvedVersion}` : ''})
-                                                            </span>
-                                                        ) : pkg.versionType === 'floating' || pkg.versionType === 'range' ? (
-                                                            <span className="package-version">
-                                                                {pkg.version}
-                                                                {pkg.resolvedVersion ? (
-                                                                    <span className="resolved-version"> ({pkg.resolvedVersion})</span>
-                                                                ) : (
-                                                                    <span className="resolved-version resolved-unknown"> (run restore)</span>
-                                                                )}
-                                                            </span>
+                                        {installedVirtualizer.getVirtualItems().map(virtualRow => {
+                                            const pkg = deferredInstalledPackages[virtualRow.index];
+                                            return (
+                                                <div
+                                                    key={pkg.id}
+                                                    data-index={virtualRow.index}
+                                                    ref={installedVirtualizer.measureElement}
+                                                    className={`package-item ${selectedPackage && getPackageId(selectedPackage).toLowerCase() === pkg.id.toLowerCase() ? 'selected' : ''}`}
+                                                    style={{ position: 'absolute', top: 0, left: 0, width: '100%', transform: `translateY(${virtualRow.start}px)` }}
+                                                    onClick={() => {
+                                                        onSelectDirectPackage(pkg, {
+                                                            selectedVersionValue: pkg.version,
+                                                            metadataVersion: pkg.resolvedVersion || pkg.version,
+                                                            initialVersions: [pkg.version],
+                                                        });
+                                                    }}
+                                                >
+                                                    <input
+                                                        type="checkbox"
+                                                        className="update-checkbox"
+                                                        checked={selectedUninstalls.has(pkg.id)}
+                                                        onChange={() => handleToggleUninstallSelection(pkg.id)}
+                                                        onClick={(e) => e.stopPropagation()}
+                                                        disabled={uninstallingAll || pkg.isImplicit}
+                                                        title={pkg.isImplicit ? 'Implicit/transitive package - cannot be uninstalled directly' : undefined}
+                                                    />
+                                                    <div className="package-icon">
+                                                        {pkg.iconUrl ? (
+                                                            <img src={pkg.iconUrl} alt="" onError={(e) => { (e.target as HTMLImageElement).src = defaultPackageIcon; }} />
                                                         ) : (
-                                                            <span className="package-version">v{pkg.version}</span>
+                                                            <img src={defaultPackageIcon} alt="" />
                                                         )}
                                                     </div>
-                                                    {pkg.authors && (
-                                                        <div className="package-authors">
-                                                            {pkg.verified && (
-                                                                <span className="verified-badge" title="The ID prefix of this package has been reserved by its owner on nuget.org">✓</span>
+                                                    <div className="package-info">
+                                                        <div className="package-name">
+                                                            {pkg.id}
+                                                            {pkg.isImplicit && (
+                                                                <span className="implicit-badge" title="SDK-managed package - not directly referenced in project file">SDK</span>
                                                             )}
-                                                            {pkg.authors}
+                                                            {pkg.versionType === 'floating' && (
+                                                                <span className="floating-badge" title="This package uses a floating version pattern">🔄</span>
+                                                            )}
+                                                            {pkg.versionType === 'range' && (
+                                                                <span className="floating-badge" title="This package uses a version range">📏</span>
+                                                            )}
                                                         </div>
-                                                    )}
+                                                        <div className="package-meta">
+                                                            {pkg.isAlwaysLatest ? (
+                                                                <span className="package-version" title="This package always gets the latest version">
+                                                                    * (always latest{pkg.resolvedVersion ? `: ${pkg.resolvedVersion}` : ''})
+                                                                </span>
+                                                            ) : pkg.versionType === 'floating' || pkg.versionType === 'range' ? (
+                                                                <span className="package-version">
+                                                                    {pkg.version}
+                                                                    {pkg.resolvedVersion ? (
+                                                                        <span className="resolved-version"> ({pkg.resolvedVersion})</span>
+                                                                    ) : (
+                                                                        <span className="resolved-version resolved-unknown"> (run restore)</span>
+                                                                    )}
+                                                                </span>
+                                                            ) : (
+                                                                <span className="package-version">v{pkg.version}</span>
+                                                            )}
+                                                        </div>
+                                                        {pkg.authors && (
+                                                            <div className="package-authors">
+                                                                {pkg.verified && (
+                                                                    <span className="verified-badge" title="The ID prefix of this package has been reserved by its owner on nuget.org">✓</span>
+                                                                )}
+                                                                {pkg.authors}
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        ))}
+                                            );
+                                        })}
                                         {installedFilterQuery.trim() && deferredInstalledPackages.length === 0 && (
                                             <div className="installed-filter-empty">
                                                 No packages match &lsquo;{installedFilterQuery.trim()}&rsquo;

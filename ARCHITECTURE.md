@@ -54,14 +54,17 @@ src/
 │   ├── NuGetSidebarPanel.ts  # WebviewViewProvider for Activity Bar sidebar
 │   ├── app/
 │   │   ├── index.tsx         # React entry point with ErrorBoundary
-│   │   ├── App.tsx           # Application shell (~1650 lines)
+│   │   ├── App.tsx           # Application shell (~1230 lines)
 │   │   ├── App.css           # Styles
 │   │   ├── types.ts          # Shared types, LRUMap, utility functions
+│   │   ├── markdownSetup.ts  # hljs language registration, marked config, renderMarkdownToHtml()
 │   │   ├── components/
-│   │   │   ├── BrowseTab.tsx          # Browse tab (~540 lines)
-│   │   │   ├── InstalledTab.tsx       # Installed tab (~970 lines)
-│   │   │   ├── UpdatesTab.tsx         # Updates tab (~410 lines)
-│   │   │   └── PackageDetailsPanel.tsx # Details panel (~280 lines)
+│   │   │   ├── BrowseTab.tsx              # Browse tab (~540 lines)
+│   │   │   ├── InstalledTab.tsx           # Installed tab (~970 lines)
+│   │   │   ├── UpdatesTab.tsx             # Updates tab (~410 lines)
+│   │   │   ├── PackageDetailsPanel.tsx    # Details panel (~280 lines)
+│   │   │   ├── DraggableSash.tsx          # Resizable split panel sash
+│   │   │   └── SourceSettingsOverlay.tsx  # Source settings modal (forwardRef, owns form state)
 │   │   └── hooks/
 │   │       └── usePackageSelection.ts  # Package selection logic hook
 │   └── sidebar/
@@ -72,7 +75,9 @@ src/
 │           ├── SectionHeader.tsx   # Collapsible section header
 │           └── PackageRow.tsx      # Compact package row with hover actions
 ├── services/
-│   ├── NuGetService.ts       # dotnet CLI integration, NuGet API calls
+│   ├── NuGetService.ts       # dotnet CLI integration, NuGet API calls (~3400 lines)
+│   ├── NuGetTypes.ts         # Shared NuGet types (VersionSpec, Project, PackageMetadata, etc.)
+│   ├── NuGetUtils.ts         # Standalone utilities (LRUMap, batchedPromiseAll, validators, isNewerVersion)
 │   ├── NuGetConfigParser.ts  # nuget.config parsing, credential resolution
 │   ├── CredentialService.ts  # Authentication for private feeds (DPAPI, Cred Provider)
 │   ├── Http2Client.ts        # HTTP/2 client with session reuse for nuget.org
@@ -80,6 +85,19 @@ src/
 └── test/
     └── WorkspaceCache.test.ts # Unit tests for cache utility
 ```
+
+### Module Split: NuGetService
+`NuGetService.ts` delegates shared types and standalone utilities to separate modules:
+- **`NuGetTypes.ts`** — All exported types/interfaces (`VersionSpec`, `Project`, `InstalledPackage`, `PackageMetadata`, `NuGetSource`, etc.). `NuGetService.ts` re-exports these for backward compatibility.
+- **`NuGetUtils.ts`** — Stateless utility functions (`LRUMap`, `batchedPromiseAll`, `execWithTimeout`, input validators, `parseVersionSpec`, `isNewerVersion`). No class dependency.
+- `NuGetService.ts` retains internal types (`NuGetServiceIndex`, `ServiceEndpoints`, `FetchResult<T>`) and all class methods.
+- `NuGetConfigParser.ts` imports and re-exports `NuGetSource` from `NuGetTypes.ts` — there is a single canonical definition.
+
+### Module Split: App.tsx
+`App.tsx` delegates module-level setup and UI components to separate modules:
+- **`markdownSetup.ts`** — highlight.js language registrations (16 languages, 30 aliases), marked config with custom code renderer, `renderMarkdownToHtml()` (combines upgradeHttpToHttps + marked.parse + DOMPurify.sanitize).
+- **`DraggableSash.tsx`** — Standalone resizable split panel sash component (`MemoizedDraggableSash`).
+- **`SourceSettingsOverlay.tsx`** — Self-contained source settings modal with `forwardRef`/`useImperativeHandle`. Owns internal form state (add source form, confirm remove dialog). Parent forwards `addSourceResult` messages via `sourceSettingsRef.current?.handleAddSourceResult()`.
 
 ## Sidebar Panel Architecture
 
@@ -127,19 +145,22 @@ The webview UI is decomposed into focused tab components, each managing their ow
 ```
 App.tsx (shell)
 ├── Tab Bar (Browse | Installed | Updates [badge])
-├── Source Settings (inline)
+├── SourceSettingsOverlay (forwardRef → SourceSettingsOverlayHandle, conditional)
 ├── BrowseTab (forwardRef → BrowseTabHandle)
 │   ├── Search input + Quick search
 │   ├── Virtualized package list (@tanstack/react-virtual)
+│   ├── DraggableSash (MemoizedDraggableSash)
 │   └── PackageDetailsPanel (via MemoizedPackageDetailsPanel)
 ├── InstalledTab (forwardRef → InstalledTabHandle)
 │   ├── Filter bar + Toolbar
-│   ├── Direct packages list
+│   ├── Virtualized direct packages list (@tanstack/react-virtual)
 │   ├── Transitive packages (collapsible per-framework)
+│   ├── DraggableSash (MemoizedDraggableSash)
 │   └── PackageDetailsPanel (via MemoizedPackageDetailsPanel)
 └── UpdatesTab (forwardRef → UpdatesTabHandle)
     ├── Bulk operations toolbar
     ├── Virtualized update list (@tanstack/react-virtual)
+    ├── DraggableSash (MemoizedDraggableSash)
     └── PackageDetailsPanel (via MemoizedPackageDetailsPanel)
 ```
 
@@ -154,6 +175,8 @@ App.tsx (shell)
 ### State Ownership
 
 **App.tsx (shared state):** `projects`, `selectedProject`, `installedPackages`, `selectedPackage`, `selectedTransitivePackage`, `packageMetadata`, `packageVersions`, `selectedVersion`, `activeTab`, `includePrerelease`, `selectedSource`, `sources`, `detailsTab`, `sanitizedReadmeHtml`.
+
+**SourceSettingsOverlay (internal state):** `showAddSourcePanel`, `addSourceUrl`, `addSourceName`, `addSourceUsername`, `addSourcePassword`, `storeEncrypted`, `showAdvancedOptions`, `addSourceError`, `addingSource`, `confirmRemoveSource`. Receives `addSourceResult` via `forwardRef`/`useImperativeHandle` handle.
 
 **Tab components (local state):** Each tab manages its own UI state (search results, loading flags, filter text, transitive sections, bulk selections) to minimize cross-component coupling.
 
@@ -553,7 +576,7 @@ All HTTP/1.1 requests to custom sources use explicit timeouts to prevent unbound
 |--------|---------|---------|
 | `discoverServiceEndpoints` | 5s | Service index discovery |
 | `fetchJsonWithDetails` | 10s (default) | Metadata/search API calls |
-| `fetchJsonHttp1` | 10s | Generic JSON fetching |
+| `fetchJsonHttp1` | 10s | Generic JSON fetching (max 5 redirects) |
 | `checkUrlExistsHttp1` | 5s | Icon HEAD requests |
 
 Timeouts use `options.timeout` + `req.on('timeout')` handler that calls `req.destroy()`.
@@ -681,7 +704,7 @@ return result;
 
 ### List Virtualization
 
-The Browse and Updates tabs use `@tanstack/react-virtual` to virtualize package lists, rendering only visible items in the DOM:
+All three tabs (Browse, Installed, Updates) use `@tanstack/react-virtual` to virtualize package lists, rendering only visible items in the DOM:
 
 ```typescript
 // Virtualizer instance per list
@@ -710,14 +733,14 @@ options?: {
 }
 ```
 
-The Installed tab is **not** virtualized because its list is embedded within a complex layout (filter bar, toolbar, collapsible transitive framework sections) that scrolls together.
+The Installed tab's direct packages list is also virtualized, with the scroll container being the `package-list-panel` div that wraps the entire left column. The virtualizer handles the offset automatically since items use absolute positioning within their `position: relative` parent.
 
 ### Component Memoization
 
 - **Tab components** (`BrowseTab`, `InstalledTab`, `UpdatesTab`) are wrapped in `React.memo` with `forwardRef` + `useImperativeHandle` for parent-to-child communication.
 - **PackageDetailsPanel** is wrapped in `React.memo` as `MemoizedPackageDetailsPanel`, shared by all three tabs.
 - `DraggableSash` is wrapped in `React.memo` as `MemoizedDraggableSash` with memoized `onReset`/`onDragEnd` callbacks (`useCallback` with `[]` deps) to prevent re-renders on unrelated state changes.
-- `sanitizedReadmeHtml` is memoized via `useMemo` keyed on `packageMetadata?.readme`, preventing expensive `marked.parse()` + `DOMPurify.sanitize()` re-computation on every render.
+- `sanitizedReadmeHtml` is memoized via `useMemo` keyed on `packageMetadata?.readme`, preventing expensive `renderMarkdownToHtml()` re-computation on every render.
 
 ### Message Handler Pattern
 
@@ -826,7 +849,7 @@ await batchedPromiseAll(packages, async (pkg) => {
 All file system operations use async methods to avoid blocking the event loop:
 
 ```typescript
-// Helper for non-blocking file existence check
+// NuGetUtils.ts - Helper for non-blocking file existence check
 async function fileExists(filePath: string): Promise<boolean> {
     try {
         await fs.promises.access(filePath, fs.constants.F_OK);
@@ -842,7 +865,7 @@ if (await fileExists(assetsPath)) { ... }
 The extension backend uses LRU caches with size limits to prevent unbounded memory growth:
 
 ```typescript
-// LRUMap implementation with automatic eviction
+// NuGetUtils.ts - LRUMap implementation with automatic eviction
 class LRUMap<K, V> {
     constructor(maxSize: number);
     get(key: K): V | undefined;   // Returns value, moves to MRU
@@ -975,6 +998,12 @@ Location: `src/services/Http2Client.ts`
 - **Session Reuse**: Single TCP handshake for entire session
 - **Head-of-Line Blocking**: Eliminated (unlike HTTP/1.1)
 
+### Safety Features
+All HTTP methods (HTTP/2 and HTTP/1.1) include:
+- **Request timeouts** (10s) — prevents indefinite hangs
+- **Max redirect depth** (5) — prevents redirect loops / stack overflow
+- **Response body size limits** (10 MB) — prevents out-of-memory from oversized responses
+
 ### Performance Impact
 | Scenario | HTTP/1.1 | HTTP/2 | Improvement |
 |----------|----------|--------|-------------|
@@ -1105,7 +1134,7 @@ const zip = new AdmZip(tempFile);
 All user input is validated before use in shell commands to prevent command injection:
 
 ```typescript
-// NuGetService.ts - Validate before dotnet CLI commands
+// NuGetUtils.ts - Validate before dotnet CLI commands
 function isValidPackageId(id: string): boolean {
     return /^[a-zA-Z0-9._-]+$/.test(id);  // Alphanumeric, dots, underscores, hyphens
 }
@@ -1152,13 +1181,14 @@ private sanitizeForLogging(text: string): string {
 ```
 
 ### XSS Prevention
-README content is sanitized before rendering:
+README content is sanitized before rendering via `renderMarkdownToHtml()` in `markdownSetup.ts`:
 
 ```typescript
-import DOMPurify from 'dompurify';
+// markdownSetup.ts — combines upgradeHttpToHttps + marked.parse + DOMPurify.sanitize
+import { renderMarkdownToHtml } from './markdownSetup';
 
 <div dangerouslySetInnerHTML={{
-    __html: DOMPurify.sanitize(marked.parse(readme))
+    __html: renderMarkdownToHtml(readme)
 }} />
 ```
 
@@ -1281,12 +1311,17 @@ When user expands a section: instant if prefetch completed, shows loading if pre
 ## Bulk Operations
 
 ### Topological Sort for Dependencies
-Both bulk update and bulk uninstall use topological sorting to handle dependencies correctly:
+Both bulk update and bulk uninstall use the shared `topologicalSortByDependency<T>()` utility function (defined in `NuGetPanel.ts`) to handle dependencies correctly:
 
 ```typescript
-// Sort packages so dependencies are processed before dependents
-const sorted = topologicalSort(packages, dependencyGraph);
+// Sort packages so dependencies are processed before dependents (for updates)
+const sorted = topologicalSortByDependency(packages, p => p.id.toLowerCase(), dependencyMap, selectedKeys, true);
+
+// Sort packages so dependents are processed before dependencies (for removals)
+const sorted = topologicalSortByDependency(packages, p => p.toLowerCase(), dependencyMap, selectedKeys, false);
 ```
+
+The utility uses Kahn's algorithm and supports any item type via a `getKey` callback. It handles cycles by appending remaining items.
 
 ### Bulk Update Flow
 1. UI sends `bulkUpdatePackages` with list of packages

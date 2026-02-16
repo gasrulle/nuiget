@@ -32,6 +32,7 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
     private _backgroundCheckTimer?: ReturnType<typeof setInterval>;
     private _fileWatcherDebounce?: ReturnType<typeof setTimeout>;
     private _backgroundCheckInProgress = false;
+    private _forceCheckPending = false;
     private _pendingProjectUpdates: { projectPath: string; projectName: string; updates: { id: string; installedVersion: string; latestVersion: string }[] }[] = [];
     private _pendingInstalledCount = -1;
     private _disposables: vscode.Disposable[] = [];
@@ -129,7 +130,10 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
      * webview if it's active. Uses lite mode + minimal checks.
      */
     public async checkUpdatesInBackground(force = false): Promise<void> {
-        if (this._backgroundCheckInProgress && !force) return;
+        if (this._backgroundCheckInProgress) {
+            if (force) { this._forceCheckPending = true; }
+            return;
+        }
         this._backgroundCheckInProgress = true;
 
         try {
@@ -191,6 +195,10 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
             this._outputChannel.error('checkUpdatesInBackground error:', String(err));
         } finally {
             this._backgroundCheckInProgress = false;
+            if (this._forceCheckPending) {
+                this._forceCheckPending = false;
+                this.checkUpdatesInBackground(true);
+            }
         }
     }
 

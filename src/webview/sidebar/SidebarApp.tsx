@@ -13,48 +13,10 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { InstalledPackage, NuGetSource, PackageSearchResult, PackageUpdateMinimal, Project, ProjectUpdates } from '../app/types';
 import { PackageRow } from './components/PackageRow';
 import { SectionHeader } from './components/SectionHeader';
 import './SidebarApp.css';
-
-// ─── Types ───────────────────────────────────────────────────────────────────
-
-interface Project { name: string; path: string; }
-interface NuGetSource { name: string; url: string; enabled: boolean; }
-
-interface PackageSearchResult {
-    id: string;
-    version: string;
-    description: string;
-    authors: string;
-    totalDownloads?: number;
-    versions: string[];
-    iconUrl?: string;
-    verified?: boolean;
-}
-
-interface InstalledPackage {
-    id: string;
-    version: string;
-    resolvedVersion?: string;
-    versionType?: string;
-    iconUrl?: string;
-    verified?: boolean;
-    authors?: string;
-    isImplicit?: boolean;
-}
-
-interface PackageUpdateMinimal {
-    id: string;
-    installedVersion: string;
-    latestVersion: string;
-}
-
-interface ProjectUpdates {
-    projectPath: string;
-    projectName: string;
-    updates: PackageUpdateMinimal[];
-}
 
 // ─── VS Code API ─────────────────────────────────────────────────────────────
 

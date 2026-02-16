@@ -78,8 +78,8 @@ npm run package:vsix # Outputs nuiget.vsix
 | Inline callbacks defeat React.memo | Extract callbacks to `useCallback([])` (e.g., `handleSashReset`, `handleSashDragEnd`, `handleToggleDep`). Inline arrows create new refs every render. |
 | Icons not loading | CSP: `img-src https://api.nuget.org https://*.nuget.org data:;`. Use flat container API, not registration iconUrl. |
 | README images not loading | CSP includes: `github.com`, `githubusercontent.com`, `shields.io`, `opencollective.com`, `codecov.io`, `badge.fury.io`, `travis-ci.*`, `appveyor.com`, `coveralls.io`, `snyk.io`, `codacy.com`, `sonarcloud.io`, `badgen.net`, `circleci.com`, `azure/visualstudio` |
-| Code blocks not highlighted | `marked-highlight` + `highlight.js/lib/core` with individual languages + `ignoreIllegals: true` |
-| XSS in README | `DOMPurify.sanitize()` before `dangerouslySetInnerHTML` |
+| Code blocks not highlighted | `marked-highlight` + `highlight.js/lib/core` with individual languages + `ignoreIllegals: true`. All config in `markdownSetup.ts`. |
+| XSS in README | `renderMarkdownToHtml()` in `markdownSetup.ts` handles `DOMPurify.sanitize()` + `marked.parse()` + `upgradeHttpToHttps()`. Never call these separately in components. |
 | Colors not adapting | Use `--vscode-*` CSS variables. Light themes need `body.vscode-light` overrides. |
 
 ## State Management
@@ -88,6 +88,7 @@ npm run package:vsix # Outputs nuiget.vsix
 | Settings reset on panel close | Use `context.workspaceState` via messages, not just `vscode.getState/setState` |
 | Source dropdown resets | Use `settingsLoadedRef` flag to prevent defaults overwriting loaded settings |
 | Details panel shows wrong package | Clear both `selectedPackage` AND `selectedTransitivePackage` — mutually exclusive |
+| Stale packages on project switch | `selectedProject` effect must `setInstalledPackages([])` before fetching. Without it, stale data triggers `checkPackageUpdates` for the wrong project. |
 | Version dropdown "Loading" on re-click | `useRef<LRUMap>` frontend cache. Check cache before fetching. |
 | installedPackages cascading renders | Content comparison in setter: compare `id@version` joined keys, return `prev` if unchanged |
 | Source removal stale closure | `handleMessage` is `useCallback([])` — `sources` state is stale. Backend sends `removedSourceUrl`, frontend compares via `selectedSourceRef.current`. |
@@ -96,6 +97,7 @@ npm run package:vsix # Outputs nuiget.vsix
 | Transitive stale after bulk remove | `bulkRemoveResult` handler must call `resetTransitiveState(true)` after routing. |
 | Multi-project updates not refreshing | `bulkUpdateAllProjectsResult` handler must re-fetch via `checkAllProjectsUpdates` after forwarding to UpdatesTab. |
 | Cross-panel sync echo loop | Use `skipSaveRef`/`skipSourceSaveRef`/`skipProjectSaveRef` refs in App.tsx. Set `true` before setState, save effect checks and resets. |
+| SourceSettingsOverlay state ownership | Source settings form state (`addSourceUrl`, `addSourceName`, `addingSource`, `confirmRemoveSource`, etc.) lives INSIDE `SourceSettingsOverlay.tsx`, NOT in App.tsx. App.tsx forwards `addSourceResult` via `sourceSettingsRef.current?.handleAddSourceResult()`. Don't re-add these state vars to App.tsx. |
 
 ## Sidebar
 | Issue | Solution |
@@ -133,14 +135,20 @@ npm run package:vsix # Outputs nuiget.vsix
 | .NET 10 noun-first syntax | SDK 10+ uses `dotnet package add/remove/list --project`. SDK ≤9 uses `dotnet add/remove/list <proj> package`. Per-project detection via `getSdkMajorVersion()` + `useNounFirstSyntax()`. Cache: `_sdkVersionCache` (per-directory). Invalidated by `global.json` watcher. Falls back to SDK 9 (old syntax). |
 | `logBulkOperationHeader` double-formatting | When `packageCount = 0`, the method uses `operationType` as the full header string. Callers passing pre-formatted strings (all-projects bulk ops) must pass `packageCount = 0` and include trailing `...` in `operationType`. Don't pass a formatted message AND a non-zero count — it appends `${count} packages...` again. |
 | `dotnet package search` always noun-first | Introduced in .NET 8.0.2xx SDK as a new command — always noun-first, no old equivalent. No SDK detection needed. |
+| `execWithTimeout` maxBuffer | Set to 10 MB. Default Node.js `exec` buffer is 1 MB — large `dotnet list package` output exceeds it. Don't reduce below 10 MB. |
 
 ## Code Patterns
 | Issue | Solution |
 |-------|----------|
 | "Maximum call stack size exceeded" | `_postMessage()` must call `this._panel.webview.postMessage()`, not itself |
 | "Webview is disposed" error | Check `_disposed` flag before posting in async callbacks |
-| Array mutation bugs | `[...array].sort()` not `array.sort()` |
+| Array mutation bugs | `[...array].sort()` / `[...array].reverse()` not `array.sort()` / `array.reverse()` |
 | Property name typos break VSIX | Run `npm run package:vsix` — catches errors `watch` misses |
+| Module extraction locations | Validators (`isValidPackageId`, etc.) are in `NuGetUtils.ts`. Types (`NuGetSource`, `Project`, etc.) are in `NuGetTypes.ts`. `NuGetConfigParser` re-exports `NuGetSource` from `NuGetTypes`. Markdown rendering is in `markdownSetup.ts`. |
+| `fetchJsonHttp1` redirect safety | Has `maxRedirects = 5` default — never remove. Without it, a redirect loop causes unbounded recursion → stack overflow. |
+| `fetchJsonHttp1` truncated response | `resolved` flag guards `res.on('end')` after `req.destroy()` for MAX_RESPONSE_SIZE. Don't remove — `end` fires after destroy and `JSON.parse` throws on truncated data. |
+| Concurrent mutating operations | `_operationInProgress` boolean in `NuGetPanel`. Guards 6 cases: `installPackage`, `updatePackage`, `removePackage`, `bulkUpdateAllProjects`, `bulkUpdatePackages`, `confirmBulkRemove`. Each uses `if (this._operationInProgress) { break; }` + try/finally. |
+| Sidebar `_forceCheckPending` | When `checkUpdatesInBackground(force=true)` is called during an in-flight check, `_forceCheckPending` queues a re-run in `finally`. Don't bypass — prevents dropped `.csproj` change events. |
 | Package selection | Use `usePackageSelection` hook. Installed: `metadataVersion: pkg.resolvedVersion`. Updates: synthetic `InstalledPackage`. |
 | Bulk operation notification spam | `updatePackage()` and `removePackage()` have `skipNotification` option. All bulk callers (`bulkUpdatePackages`, `bulkUpdateAllProjects`, `confirmBulkRemove`) must pass `{ skipNotification: true }` — the bulk loop's summary notification handles reporting. |
 | Bulk operation per-package restore | `updatePackage()` and `removePackage()` have `skipRestore` option. All bulk callers must pass `{ skipRestore: true }` and call `restoreProject()` once after the loop. `dotnet add package` does implicit restore — `--no-restore` suppresses it. `dotnet remove package` does not restore — explicit call needed. |

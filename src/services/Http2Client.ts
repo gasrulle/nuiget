@@ -27,6 +27,10 @@ export class Http2Client {
 
     // Maximum concurrent HTTP/2 sessions to prevent memory accumulation
     private static readonly MAX_SESSIONS = 10;
+    // Maximum response body size (10 MB) to prevent out-of-memory
+    private static readonly MAX_RESPONSE_SIZE = 10 * 1024 * 1024;
+    // Default timeout for individual HTTP requests (milliseconds)
+    private static readonly REQUEST_TIMEOUT = 10000;
 
     // HTTP/2 sessions keyed by origin (e.g., "https://api.nuget.org")
     private sessions: Map<string, http2.ClientHttp2Session> = new Map();
@@ -142,11 +146,11 @@ export class Http2Client {
      * @param url The URL to fetch
      * @param authHeader Optional Authorization header value (e.g., "Basic xxxxx")
      */
-    public fetchJson<T>(url: string, authHeader?: string): Promise<T | null> {
+    public fetchJson<T>(url: string, authHeader?: string, maxRedirects: number = 5): Promise<T | null> {
         if (this.shouldUseHttp2(url)) {
-            return this.fetchJsonHttp2<T>(url);
+            return this.fetchJsonHttp2<T>(url, maxRedirects);
         }
-        return this.fetchJsonHttp1<T>(url, authHeader);
+        return this.fetchJsonHttp1<T>(url, authHeader, maxRedirects);
     }
 
     /**
@@ -155,18 +159,29 @@ export class Http2Client {
      * @param url The URL to fetch
      * @param authHeader Optional Authorization header value
      */
-    public fetchJsonWithDetails<T>(url: string, authHeader?: string): Promise<FetchResult<T>> {
+    public fetchJsonWithDetails<T>(url: string, authHeader?: string, maxRedirects: number = 5): Promise<FetchResult<T>> {
         if (this.shouldUseHttp2(url)) {
-            return this.fetchJsonHttp2WithDetails<T>(url);
+            return this.fetchJsonHttp2WithDetails<T>(url, maxRedirects);
         }
-        return this.fetchJsonHttp1WithDetails<T>(url, authHeader);
+        return this.fetchJsonHttp1WithDetails<T>(url, authHeader, maxRedirects);
     }
 
     /**
      * HTTP/2 JSON fetch with multiplexing and error details
      */
-    private fetchJsonHttp2WithDetails<T>(url: string): Promise<FetchResult<T>> {
+    private fetchJsonHttp2WithDetails<T>(url: string, maxRedirects: number = 5): Promise<FetchResult<T>> {
         return new Promise((resolve) => {
+            if (maxRedirects <= 0) {
+                resolve({
+                    data: null,
+                    error: {
+                        type: 'network',
+                        message: 'Too many redirects. The server may be misconfigured.'
+                    }
+                });
+                return;
+            }
+
             try {
                 const parsed = new URL(url);
                 const origin = `${parsed.protocol}//${parsed.host}`;
@@ -193,7 +208,7 @@ export class Http2Client {
                         if (location) {
                             redirected = true;
                             req.close();
-                            this.fetchJsonWithDetails<T>(location).then(resolve);
+                            this.fetchJsonWithDetails<T>(location, undefined, maxRedirects - 1).then(resolve);
                         }
                     }
                 });
@@ -201,6 +216,17 @@ export class Http2Client {
                 req.on('data', (chunk) => {
                     if (!redirected) {
                         data += chunk;
+                        if (data.length > Http2Client.MAX_RESPONSE_SIZE) {
+                            redirected = true;
+                            req.close();
+                            resolve({
+                                data: null,
+                                error: {
+                                    type: 'network',
+                                    message: 'Response too large'
+                                }
+                            });
+                        }
                     }
                 });
 
@@ -244,6 +270,19 @@ export class Http2Client {
                     }
                 });
 
+                req.setTimeout(Http2Client.REQUEST_TIMEOUT, () => {
+                    if (!redirected) {
+                        resolve({
+                            data: null,
+                            error: {
+                                type: 'network',
+                                message: 'Request timed out.'
+                            }
+                        });
+                    }
+                    req.close();
+                });
+
                 req.end();
             } catch (err) {
                 resolve({
@@ -260,8 +299,19 @@ export class Http2Client {
     /**
      * HTTP/1.1 JSON fetch with error details
      */
-    private fetchJsonHttp1WithDetails<T>(url: string, authHeader?: string): Promise<FetchResult<T>> {
+    private fetchJsonHttp1WithDetails<T>(url: string, authHeader?: string, maxRedirects: number = 5): Promise<FetchResult<T>> {
         return new Promise((resolve) => {
+            if (maxRedirects <= 0) {
+                resolve({
+                    data: null,
+                    error: {
+                        type: 'network',
+                        message: 'Too many redirects. The server may be misconfigured.'
+                    }
+                });
+                return;
+            }
+
             const client = url.startsWith('https://') ? https : http;
             const parsed = new URL(url);
 
@@ -278,7 +328,8 @@ export class Http2Client {
                 path: parsed.pathname + parsed.search,
                 method: 'GET',
                 headers,
-                agent: url.startsWith('https://') ? this.httpsAgent : undefined
+                agent: url.startsWith('https://') ? this.httpsAgent : undefined,
+                timeout: Http2Client.REQUEST_TIMEOUT
             };
 
             const req = client.request(options, (res) => {
@@ -288,7 +339,7 @@ export class Http2Client {
                     if (redirectUrl) {
                         const redirectParsed = new URL(redirectUrl, url);
                         const sameOrigin = redirectParsed.origin === parsed.origin;
-                        this.fetchJsonHttp1WithDetails<T>(redirectUrl, sameOrigin ? authHeader : undefined).then(resolve);
+                        this.fetchJsonHttp1WithDetails<T>(redirectUrl, sameOrigin ? authHeader : undefined, maxRedirects - 1).then(resolve);
                         return;
                     }
                 }
@@ -306,7 +357,19 @@ export class Http2Client {
                 }
 
                 let data = '';
-                res.on('data', chunk => data += chunk);
+                res.on('data', (chunk) => {
+                    data += chunk;
+                    if (data.length > Http2Client.MAX_RESPONSE_SIZE) {
+                        req.destroy();
+                        resolve({
+                            data: null,
+                            error: {
+                                type: 'network',
+                                message: 'Response too large'
+                            }
+                        });
+                    }
+                });
                 res.on('end', () => {
                     try {
                         resolve({ data: JSON.parse(data) });
@@ -318,6 +381,17 @@ export class Http2Client {
                                 message: 'Failed to parse JSON response'
                             }
                         });
+                    }
+                });
+            });
+
+            req.on('timeout', () => {
+                req.destroy();
+                resolve({
+                    data: null,
+                    error: {
+                        type: 'network',
+                        message: 'Request timed out.'
                     }
                 });
             });
@@ -339,8 +413,13 @@ export class Http2Client {
     /**
      * HTTP/2 JSON fetch with multiplexing
      */
-    private fetchJsonHttp2<T>(url: string): Promise<T | null> {
+    private fetchJsonHttp2<T>(url: string, maxRedirects: number = 5): Promise<T | null> {
         return new Promise((resolve) => {
+            if (maxRedirects <= 0) {
+                resolve(null);
+                return;
+            }
+
             try {
                 const parsed = new URL(url);
                 const origin = `${parsed.protocol}//${parsed.host}`;
@@ -367,7 +446,7 @@ export class Http2Client {
                         if (location) {
                             redirected = true;
                             req.close();
-                            this.fetchJson<T>(location).then(resolve);
+                            this.fetchJson<T>(location, undefined, maxRedirects - 1).then(resolve);
                         }
                     }
                 });
@@ -375,6 +454,11 @@ export class Http2Client {
                 req.on('data', (chunk) => {
                     if (!redirected) {
                         data += chunk;
+                        if (data.length > Http2Client.MAX_RESPONSE_SIZE) {
+                            redirected = true;
+                            req.close();
+                            resolve(null);
+                        }
                     }
                 });
 
@@ -399,6 +483,13 @@ export class Http2Client {
                     }
                 });
 
+                req.setTimeout(Http2Client.REQUEST_TIMEOUT, () => {
+                    if (!redirected) {
+                        resolve(null);
+                    }
+                    req.close();
+                });
+
                 req.end();
             } catch {
                 resolve(null);
@@ -411,8 +502,13 @@ export class Http2Client {
      * @param url The URL to fetch
      * @param authHeader Optional Authorization header value
      */
-    private fetchJsonHttp1<T>(url: string, authHeader?: string): Promise<T | null> {
+    private fetchJsonHttp1<T>(url: string, authHeader?: string, maxRedirects: number = 5): Promise<T | null> {
         return new Promise((resolve) => {
+            if (maxRedirects <= 0) {
+                resolve(null);
+                return;
+            }
+
             const client = url.startsWith('https://') ? https : http;
             const parsed = new URL(url);
 
@@ -429,7 +525,8 @@ export class Http2Client {
                 path: parsed.pathname + parsed.search,
                 method: 'GET',
                 headers,
-                agent: url.startsWith('https://') ? this.httpsAgent : undefined
+                agent: url.startsWith('https://') ? this.httpsAgent : undefined,
+                timeout: Http2Client.REQUEST_TIMEOUT
             };
 
             const req = client.request(options, (res) => {
@@ -440,7 +537,7 @@ export class Http2Client {
                         // Preserve auth header on same-origin redirects only
                         const redirectParsed = new URL(redirectUrl, url);
                         const sameOrigin = redirectParsed.origin === parsed.origin;
-                        this.fetchJsonHttp1<T>(redirectUrl, sameOrigin ? authHeader : undefined).then(resolve);
+                        this.fetchJsonHttp1<T>(redirectUrl, sameOrigin ? authHeader : undefined, maxRedirects - 1).then(resolve);
                         return;
                     }
                 }
@@ -451,14 +548,28 @@ export class Http2Client {
                 }
 
                 let data = '';
-                res.on('data', chunk => data += chunk);
+                let resolved = false;
+                res.on('data', (chunk) => {
+                    data += chunk;
+                    if (data.length > Http2Client.MAX_RESPONSE_SIZE) {
+                        resolved = true;
+                        req.destroy();
+                        resolve(null);
+                    }
+                });
                 res.on('end', () => {
+                    if (resolved) return;
                     try {
                         resolve(JSON.parse(data));
                     } catch {
                         resolve(null);
                     }
                 });
+            });
+
+            req.on('timeout', () => {
+                req.destroy();
+                resolve(null);
             });
 
             req.on('error', () => {
