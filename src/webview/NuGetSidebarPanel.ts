@@ -109,7 +109,13 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
         const watcher = vscode.workspace.createFileSystemWatcher('**/*.{csproj,fsproj,vbproj}');
         const triggerDebounced = () => {
             if (this._fileWatcherDebounce) clearTimeout(this._fileWatcherDebounce);
-            this._fileWatcherDebounce = setTimeout(() => this.checkUpdatesInBackground(), 5000);
+            this._fileWatcherDebounce = setTimeout(() => {
+                // Tell webview to re-fetch installed packages (csproj content changed)
+                if (!this._disposed && this._view) {
+                    this._postMessage({ type: 'forceRefresh' });
+                }
+                this.checkUpdatesInBackground(true);
+            }, 5000);
         };
         watcher.onDidChange(triggerDebounced);
         watcher.onDidCreate(triggerDebounced);

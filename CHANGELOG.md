@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Refresh button not clearing stale update data**
 - **"Update to Version" context menu installing directly instead of showing version picker**
 - **Background update check blocked on refresh**
+- **Sidebar updates not refreshing on external .csproj changes (e.g. git checkout)**
 
 ## [1.4.2] - 2026-02-16
 
