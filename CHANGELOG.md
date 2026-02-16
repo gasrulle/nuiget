@@ -5,12 +5,7 @@ All notable changes to the nUIget extension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
-
-### Added
-
-- **View Package Details from Sidebar** — Right-click any package in the sidebar and select "View Package Details" to open the main panel with the package searched, selected, and its details displayed (including README tab)
-- **Main Panel → Sidebar Sync** — Installing, updating, or removing packages in the main panel now automatically refreshes the sidebar (badge count, installed list, and updates)
+## [1.5.0] - 2026-02-16
 
 ### Fixed
 

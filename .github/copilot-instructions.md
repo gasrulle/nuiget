@@ -111,6 +111,10 @@ npm run package:vsix # Outputs nuiget.vsix
 | Section chevrons | SVG `chevron-right` icon with CSS `.section-chevron.expanded { transform: rotate(90deg) }` and `transition: 0.1s`. Not Unicode characters. |
 | Search wrapper pattern | Search input is wrapped in `.sidebar-search-wrapper` (flex container with border). Input itself is transparent/borderless. Clear button is a sibling inside the wrapper. `focus-within` on wrapper provides focus ring. |
 | Pending data for first open | `_pendingProjectUpdates` and `_pendingInstalledCount` are cached before sidebar resolves. `_sendInitialData()` delivers then clears them. Don't remove this caching. |
+| Context menu `label.includes()` substring trap | `'Update to 8.0.5'.includes('Update to ')` is true, but so is `'Update to Version...'.includes('Update to ')`. Guard with `&& !label.includes('Update to Version')` to distinguish direct update from version picker. |
+| `.csproj` file watcher must forceRefresh webview | The debounced `.csproj` watcher must both send `forceRefresh` to the webview (to clear stale state) AND call `checkUpdatesInBackground(true)` with force. Just calling the background check is insufficient — the webview still shows old data. |
+| `handleUpdateAll` data source mismatch | Badge count uses 3-tier fallback (`allProjectsUpdates` sum → `packageUpdates.length` → single-project lookup). But `handleUpdateAll` in single-project mode only reads `packageUpdatesRef`. Must fallback to `allProjectsUpdatesRef.current.find(...)` when `packageUpdatesRef` is empty. |
+| `totalUpdateCount` 3-tier fallback | Tier 1: sum of all `allProjectsUpdates[].updates.length`. Tier 2: `packageUpdates.length`. Tier 3: `allProjectsUpdates.find(selected project)?.updates.length`. Any code consuming the badge count must handle that the data may come from any tier. |
 
 ## NuGet / dotnet CLI
 | Issue | Solution |
@@ -126,6 +130,9 @@ npm run package:vsix # Outputs nuiget.vsix
 | Unreachable custom source blocks loading | `failedEndpointCache` caches failures for 120s (2 min). `discoverServiceEndpoints` uses 5s timeout. `searchPackages` pre-validates and pre-filters sources via `filterHealthySources()` before CLI. `clearSourceErrors()` clears all caches including `failedEndpointCache` and sources cache. |
 | Registration API returns null/garbled | Gzip-compressed endpoint selected by mistake. Filter by `!resource['@id']?.includes('-gz-')` in `discoverServiceEndpoints`. HTTP/2 client has no gzip decompression. |
 | Package details missing published/deps | Registration endpoint resolving to `registration5-gz-semver2/` (gzip). Must use `registration5-semver1/` (plain JSON). |
+| .NET 10 noun-first syntax | SDK 10+ uses `dotnet package add/remove/list --project`. SDK ≤9 uses `dotnet add/remove/list <proj> package`. Per-project detection via `getSdkMajorVersion()` + `useNounFirstSyntax()`. Cache: `_sdkVersionCache` (per-directory). Invalidated by `global.json` watcher. Falls back to SDK 9 (old syntax). |
+| `logBulkOperationHeader` double-formatting | When `packageCount = 0`, the method uses `operationType` as the full header string. Callers passing pre-formatted strings (all-projects bulk ops) must pass `packageCount = 0` and include trailing `...` in `operationType`. Don't pass a formatted message AND a non-zero count — it appends `${count} packages...` again. |
+| `dotnet package search` always noun-first | Introduced in .NET 8.0.2xx SDK as a new command — always noun-first, no old equivalent. No SDK detection needed. |
 
 ## Code Patterns
 | Issue | Solution |
