@@ -143,6 +143,7 @@ npm run package:vsix # Outputs nuiget.vsix
 | Property name typos break VSIX | Run `npm run package:vsix` — catches errors `watch` misses |
 | Package selection | Use `usePackageSelection` hook. Installed: `metadataVersion: pkg.resolvedVersion`. Updates: synthetic `InstalledPackage`. |
 | Bulk operation notification spam | `updatePackage()` and `removePackage()` have `skipNotification` option. All bulk callers (`bulkUpdatePackages`, `bulkUpdateAllProjects`, `confirmBulkRemove`) must pass `{ skipNotification: true }` — the bulk loop's summary notification handles reporting. |
+| Bulk operation per-package restore | `updatePackage()` and `removePackage()` have `skipRestore` option. All bulk callers must pass `{ skipRestore: true }` and call `restoreProject()` once after the loop. `dotnet add package` does implicit restore — `--no-restore` suppresses it. `dotnet remove package` does not restore — explicit call needed. |
 
 # Debugging Workflow
 1. Add temporary `console.log()` with distinctive prefix (e.g., `[DEBUG-XYZ]`)

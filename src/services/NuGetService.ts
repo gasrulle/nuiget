@@ -2125,7 +2125,7 @@ export class NuGetService {
         }
     }
 
-    async updatePackage(projectPath: string, packageId: string, version: string, options?: { skipChannelSetup?: boolean; skipNotification?: boolean }): Promise<boolean> {
+    async updatePackage(projectPath: string, packageId: string, version: string, options?: { skipChannelSetup?: boolean; skipNotification?: boolean; skipRestore?: boolean }): Promise<boolean> {
         // Validate inputs to prevent command injection
         if (!isValidPackageId(packageId)) {
             vscode.window.showErrorMessage(`Invalid package ID: ${packageId}`);
@@ -2140,7 +2140,8 @@ export class NuGetService {
         this.setupOutputChannel(options?.skipChannelSetup);
 
         try {
-            const noRestoreArg = this.getNoRestoreFlag();
+            // For bulk operations, always use --no-restore to defer restore to end of batch
+            const noRestoreArg = options?.skipRestore ? '--no-restore' : this.getNoRestoreFlag();
             const projectDir = path.dirname(projectPath);
             const nounFirst = await this.useNounFirstSyntax(projectPath);
             const command = nounFirst

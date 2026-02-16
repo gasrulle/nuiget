@@ -529,9 +529,15 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
                                 increment: 100 / packages.length
                             });
                             const success = await this._nugetService.updatePackage(
-                                projectPath, pkg.id, pkg.version, { skipChannelSetup: true, skipNotification: true }
+                                projectPath, pkg.id, pkg.version, { skipChannelSetup: true, skipNotification: true, skipRestore: true }
                             );
                             if (success) successCount++; else failCount++;
+                        }
+
+                        // Run a single restore after all packages are updated
+                        if (successCount > 0) {
+                            progress.report({ message: 'Restoring project...' });
+                            await this._nugetService.restoreProject(projectPath);
                         }
 
                         if (failCount === 0) {
@@ -571,9 +577,15 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
                                     increment: 100 / totalPackages
                                 });
                                 const success = await this._nugetService.updatePackage(
-                                    pu.projectPath, pkg.id, pkg.version, { skipChannelSetup: true, skipNotification: true }
+                                    pu.projectPath, pkg.id, pkg.version, { skipChannelSetup: true, skipNotification: true, skipRestore: true }
                                 );
                                 if (success) totalSuccess++; else totalFail++;
+                            }
+
+                            // Run a single restore per project after all its packages are updated
+                            if (pu.packages.length > 0) {
+                                progress.report({ message: `Restoring ${pu.projectName}...` });
+                                await this._nugetService.restoreProject(pu.projectPath);
                             }
                         }
 

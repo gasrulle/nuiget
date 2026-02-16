@@ -726,7 +726,7 @@ export class NuGetPanel {
                                     projectPath,
                                     pkg.id,
                                     pkg.version,
-                                    { skipChannelSetup: true, skipNotification: true }
+                                    { skipChannelSetup: true, skipNotification: true, skipRestore: true }
                                 );
 
                                 if (success) {
@@ -734,6 +734,12 @@ export class NuGetPanel {
                                 } else {
                                     totalFailCount++;
                                 }
+                            }
+
+                            // Run a single restore per project after all its packages are updated
+                            if (packages.length > 0) {
+                                progress.report({ message: `Restoring ${projectName}...` });
+                                await this._nugetService.restoreProject(projectPath);
                             }
                         }
 
@@ -945,7 +951,7 @@ export class NuGetPanel {
                                 projectPath,
                                 pkg.id,
                                 pkg.version,
-                                { skipChannelSetup: true, skipNotification: true }
+                                { skipChannelSetup: true, skipNotification: true, skipRestore: true }
                             );
 
                             if (success) {
@@ -953,6 +959,12 @@ export class NuGetPanel {
                             } else {
                                 failCount++;
                             }
+                        }
+
+                        // Run a single restore after all packages are updated
+                        if (successCount > 0) {
+                            progress.report({ message: 'Restoring project...' });
+                            await this._nugetService.restoreProject(projectPath);
                         }
 
                         if (failCount === 0) {
