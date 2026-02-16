@@ -563,7 +563,7 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
                         let completed = 0;
 
                         for (const pu of projectUpdates) {
-                            this._nugetService.logBulkOperationHeader(`Updating ${pu.packages.length} packages for ${pu.projectName}`, 0);
+                            this._nugetService.logBulkOperationHeader(`Updating ${pu.packages.length} package${pu.packages.length !== 1 ? 's' : ''} for ${pu.projectName}...`, 0);
                             for (const pkg of pu.packages) {
                                 completed++;
                                 progress.report({

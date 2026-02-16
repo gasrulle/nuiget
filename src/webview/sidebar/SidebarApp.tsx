@@ -707,7 +707,15 @@ export const SidebarApp: React.FC = () => {
                 projectUpdates: projectUpdatesPayload
             });
         } else {
-            const packages = packageUpdatesRef.current.map(u => ({ id: u.id, version: u.latestVersion }));
+            let packages = packageUpdatesRef.current.map(u => ({ id: u.id, version: u.latestVersion }));
+            if (packages.length === 0) {
+                const projectUpdate = allProjectsUpdatesRef.current.find(
+                    pu => pu.projectPath === selectedProjectRef.current
+                );
+                if (projectUpdate) {
+                    packages = projectUpdate.updates.map(u => ({ id: u.id, version: u.latestVersion }));
+                }
+            }
             vscode.postMessage({
                 type: 'bulkUpdatePackages',
                 packages,

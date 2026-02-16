@@ -19,6 +19,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **"Update to Version" context menu installing directly instead of showing version picker**
 - **Background update check blocked on refresh**
 - **Sidebar updates not refreshing on external .csproj changes (e.g. git checkout)**
+- **"Update All" button not updating packages on first click**
+- **Garbled output channel header for "Update All" across multiple projects**
+
+### Changed
+
+- **CLI commands use .NET 10 noun-first syntax on SDK 10+**
 
 ## [1.4.2] - 2026-02-16
 

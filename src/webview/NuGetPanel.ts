@@ -712,7 +712,7 @@ export class NuGetPanel {
                             const { projectPath, projectName, packages } = projectUpdate;
 
                             // Log project header to output channel
-                            this._nugetService.logBulkOperationHeader(`Updating ${packages.length} packages for ${projectName}`, 0);
+                            this._nugetService.logBulkOperationHeader(`Updating ${packages.length} package${packages.length !== 1 ? 's' : ''} for ${projectName}...`, 0);
 
                             for (let i = 0; i < packages.length; i++) {
                                 const pkg = packages[i];

@@ -463,6 +463,9 @@ export class NuGetService {
     private sourceUrlToName: Map<string, string> = new Map();
     // Track sources that need interactive auth (show warning once per session)
     private sourcesNeedingAuth: Set<string> = new Set();
+    // Cache for detected SDK major version per project directory (dir -> major version number)
+    // Used to choose between old (SDK ≤ 9) and new (SDK ≥ 10) CLI syntax
+    private _sdkVersionCache: Map<string, number> = new Map();
 
     constructor(outputChannel: vscode.LogOutputChannel) {
         this.configParser = new NuGetConfigParser();
@@ -576,6 +579,43 @@ export class NuGetService {
     }
 
     /**
+     * Detect the .NET SDK major version for a given project path.
+     * Runs `dotnet --version` with cwd set to the project's directory so that
+     * directory-local global.json files are respected. Result is cached per directory.
+     * Falls back to 9 on any error (old syntax works as aliases on SDK 10+).
+     */
+    private async getSdkMajorVersion(projectPath: string): Promise<number> {
+        const projectDir = path.dirname(projectPath);
+        const cached = this._sdkVersionCache.get(projectDir);
+        if (cached !== undefined) return cached;
+
+        try {
+            const { stdout } = await execWithTimeout('dotnet --version', { timeout: 10000, cwd: projectDir });
+            const versionStr = stdout.trim(); // e.g. "10.0.100-preview.1.25120.13"
+            const major = parseInt(versionStr.split('.')[0], 10);
+            const result = isNaN(major) ? 9 : major;
+            this._sdkVersionCache.set(projectDir, result);
+            return result;
+        } catch {
+            // Fallback to old syntax (safe: old syntax still works as aliases on SDK 10+)
+            this._sdkVersionCache.set(projectDir, 9);
+            return 9;
+        }
+    }
+
+    /**
+     * Check if the SDK for a project uses noun-first CLI syntax (SDK >= 10).
+     */
+    private async useNounFirstSyntax(projectPath: string): Promise<boolean> {
+        return (await this.getSdkMajorVersion(projectPath)) >= 10;
+    }
+
+    /** Clear the cached SDK version detection (e.g. after global.json changes) */
+    clearSdkVersionCache(): void {
+        this._sdkVersionCache.clear();
+    }
+
+    /**
      * Setup output channel before an operation (show channel)
      */
     setupOutputChannel(skipSetup: boolean = false): void {
@@ -686,7 +726,9 @@ export class NuGetService {
      * Log a summary header for bulk operations
      */
     logBulkOperationHeader(operationType: string, packageCount: number): void {
-        const header = `${operationType} ${packageCount} packages...`;
+        const header = packageCount > 0
+            ? `${operationType} ${packageCount} packages...`
+            : operationType;
         this.outputChannel.info(header);
         this.outputChannel.info('='.repeat(header.length));
         this.outputChannel.trace('');
@@ -1202,12 +1244,16 @@ export class NuGetService {
 
         // Fallback: try dotnet CLI
         try {
-            const { stdout } = await execWithTimeout(`dotnet list "${projectPath}" package`);
+            const projectDir = path.dirname(projectPath);
+            const nounFirst = await this.useNounFirstSyntax(projectPath);
+            const listCommand = nounFirst
+                ? `dotnet package list --project "${projectPath}"`
+                : `dotnet list "${projectPath}" package`;
+            const { stdout } = await execWithTimeout(listCommand, { cwd: projectDir });
 
             // Get direct package references from csproj and Directory.Build.props for cross-reference
             // Some SDK-implicit packages appear as "top-level" but aren't user-added PackageReferences
             const directPackageIds = new Set<string>();
-            const projectDir = path.dirname(projectPath);
             let successfullyReadCsproj = false;
 
             // Files to check for PackageReference elements
@@ -2042,9 +2088,12 @@ export class NuGetService {
         try {
             const versionArg = version ? `--version ${version}` : '';
             const noRestoreArg = this.getNoRestoreFlag();
-            const command = `dotnet add "${projectPath}" package ${packageId} ${versionArg} ${noRestoreArg}`.trim();
-            const workspaceFolder = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-            const { stdout, stderr } = await execWithTimeout(command, { cwd: workspaceFolder });
+            const projectDir = path.dirname(projectPath);
+            const nounFirst = await this.useNounFirstSyntax(projectPath);
+            const command = nounFirst
+                ? `dotnet package add ${packageId} --project "${projectPath}" ${versionArg} ${noRestoreArg}`.trim()
+                : `dotnet add "${projectPath}" package ${packageId} ${versionArg} ${noRestoreArg}`.trim();
+            const { stdout, stderr } = await execWithTimeout(command, { cwd: projectDir });
 
             // Check for actual errors (case-insensitive) - dotnet uses "error" or "Error"
             const hasError = stderr && /\berror\b/i.test(stderr);
@@ -2062,7 +2111,10 @@ export class NuGetService {
             this.assetsJsonCache.clear();
             return true;
         } catch (error) {
-            const command = `dotnet add "${projectPath}" package ${packageId} ${version ? `--version ${version}` : ''}`.trim();
+            const nounFirst = this._sdkVersionCache.get(path.dirname(projectPath)) ?? 9;
+            const command = nounFirst >= 10
+                ? `dotnet package add ${packageId} --project "${projectPath}" ${version ? `--version ${version}` : ''}`.trim()
+                : `dotnet add "${projectPath}" package ${packageId} ${version ? `--version ${version}` : ''}`.trim();
             // Extract stderr from ExecError if available for better diagnostics
             const execErr = error as ExecError;
             const errorOutput = execErr.stderr || execErr.stdout || String(error);
@@ -2089,9 +2141,12 @@ export class NuGetService {
 
         try {
             const noRestoreArg = this.getNoRestoreFlag();
-            const command = `dotnet add "${projectPath}" package ${packageId} --version ${version} ${noRestoreArg}`.trim();
-            const workspaceFolder = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-            const { stdout, stderr } = await execWithTimeout(command, { cwd: workspaceFolder });
+            const projectDir = path.dirname(projectPath);
+            const nounFirst = await this.useNounFirstSyntax(projectPath);
+            const command = nounFirst
+                ? `dotnet package add ${packageId} --project "${projectPath}" --version ${version} ${noRestoreArg}`.trim()
+                : `dotnet add "${projectPath}" package ${packageId} --version ${version} ${noRestoreArg}`.trim();
+            const { stdout, stderr } = await execWithTimeout(command, { cwd: projectDir });
 
             // Check for actual errors (case-insensitive) - dotnet uses "error" or "Error"
             const hasError = stderr && /\berror\b/i.test(stderr);
@@ -2109,7 +2164,10 @@ export class NuGetService {
             this.assetsJsonCache.clear();
             return true;
         } catch (error) {
-            const command = `dotnet add "${projectPath}" package ${packageId} --version ${version}`;
+            const nounFirst = this._sdkVersionCache.get(path.dirname(projectPath)) ?? 9;
+            const command = nounFirst >= 10
+                ? `dotnet package add ${packageId} --project "${projectPath}" --version ${version}`
+                : `dotnet add "${projectPath}" package ${packageId} --version ${version}`;
             // Extract stderr from ExecError if available for better diagnostics
             const execErr = error as ExecError;
             const errorOutput = execErr.stderr || execErr.stdout || String(error);
@@ -2131,9 +2189,12 @@ export class NuGetService {
         this.setupOutputChannel(options?.skipChannelSetup);
 
         try {
-            const command = `dotnet remove "${projectPath}" package ${packageId}`;
-            const workspaceFolder = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-            const { stdout, stderr } = await execWithTimeout(command, { cwd: workspaceFolder });
+            const projectDir = path.dirname(projectPath);
+            const nounFirst = await this.useNounFirstSyntax(projectPath);
+            const command = nounFirst
+                ? `dotnet package remove ${packageId} --project "${projectPath}"`
+                : `dotnet remove "${projectPath}" package ${packageId}`;
+            const { stdout, stderr } = await execWithTimeout(command, { cwd: projectDir });
 
             // Check for actual errors (case-insensitive) - dotnet uses "error" or "Error"
             const hasError = stderr && /\berror\b/i.test(stderr);
@@ -2156,7 +2217,7 @@ export class NuGetService {
             if (!options?.skipRestore && !noRestoreSetting) {
                 try {
                     const restoreCommand = `dotnet restore "${projectPath}"`;
-                    const { stdout: restoreOut, stderr: restoreErr } = await execWithTimeout(restoreCommand, { cwd: workspaceFolder, timeout: 60000 });
+                    const { stdout: restoreOut, stderr: restoreErr } = await execWithTimeout(restoreCommand, { cwd: projectDir, timeout: 60000 });
                     this.logOutput(restoreCommand, restoreOut, restoreErr, true);
                 } catch (restoreError) {
                     // Restore failure is not critical - transitive data may be stale but package was removed
@@ -2170,7 +2231,10 @@ export class NuGetService {
             }
             return true;
         } catch (error) {
-            const command = `dotnet remove "${projectPath}" package ${packageId}`;
+            const nounFirst = this._sdkVersionCache.get(path.dirname(projectPath)) ?? 9;
+            const command = nounFirst >= 10
+                ? `dotnet package remove ${packageId} --project "${projectPath}"`
+                : `dotnet remove "${projectPath}" package ${packageId}`;
             // Extract stderr from ExecError if available for better diagnostics
             const execErr = error as ExecError;
             const errorOutput = execErr.stderr || execErr.stdout || String(error);

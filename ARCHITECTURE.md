@@ -539,6 +539,9 @@ async getSources(): Promise<NuGetSource[]> {
 }
 ```
 
+### SDK Version Detection
+`getSdkMajorVersion(projectPath)` runs `dotnet --version` with `cwd` set to the project's directory, respecting directory-level `global.json` files that pin specific SDK versions. The result is cached per directory for the session in `_sdkVersionCache: Map<string, number>`. On SDK 10+, CLI commands use the new noun-first syntax (`dotnet package add/remove/list --project`); on SDK ≤ 9, the old verb-first syntax (`dotnet add/remove/list <project> package`). A `global.json` file watcher in `extension.ts` invalidates the cache when SDK pinning changes. Falls back to SDK 9 (old syntax) on detection failure — safe because the old syntax still works as aliases on SDK 10+. The `cwd` for all project-specific CLI commands is set to `path.dirname(projectPath)` to ensure the correct SDK processes the command.
+
 Invalidated by `invalidateSourcesCache()` on enable/disable/add/remove source and `clearSourceErrors()`.
 
 ### HTTP Request Timeouts

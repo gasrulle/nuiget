@@ -43,6 +43,14 @@ export function activate(context: vscode.ExtensionContext) {
     projectFileWatcher.onDidDelete(debouncedUpdate);
     context.subscriptions.push(projectFileWatcher);
 
+    // Watch global.json for SDK version changes → invalidate SDK version cache
+    const globalJsonWatcher = vscode.workspace.createFileSystemWatcher('**/global.json');
+    const invalidateSdkCache = () => nugetService.clearSdkVersionCache();
+    globalJsonWatcher.onDidChange(invalidateSdkCache);
+    globalJsonWatcher.onDidCreate(invalidateSdkCache);
+    globalJsonWatcher.onDidDelete(invalidateSdkCache);
+    context.subscriptions.push(globalJsonWatcher);
+
     // Register sidebar webview provider
     const sidebarProvider = new NuGetSidebarProvider(context.extensionUri, context, outputChannel, nugetService);
     context.subscriptions.push(
