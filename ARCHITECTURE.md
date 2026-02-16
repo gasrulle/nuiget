@@ -116,8 +116,8 @@ The sidebar provides a compact package management UI in the VS Code Activity Bar
 - **Hybrid package actions**: Hover reveals a primary action button (Install/Uninstall/Update); right-click sends `showContextMenu` to backend which shows a QuickPick with all available actions.
 - **Cross-view sync**: After install/update/remove, sidebar calls `vscode.commands.executeCommand('nuiget.refreshPackages')` to notify the main panel. `refreshPackages` is internal-only (hidden from Command Palette) — it only calls `NuGetPanel.refresh()`.
 - **Badge API**: Activity Bar badge has been removed — section header badges provide sufficient update count visibility. `setBadge()` is retained as a no-op for API compatibility. Pending data (`_pendingProjectUpdates`, `_pendingInstalledCount`) is still cached so update data appears instantly on first sidebar open.
-- **Sidebar refresh button**: Title bar `$(refresh)` icon at `navigation@4` clears the sources cache (`invalidateSourcesCache()`) and re-checks updates via `checkUpdatesInBackground()`. "Open Full View" is at `navigation@5`.
-- **`.csproj` file watcher**: `NuGetSidebarPanel` registers a debounced (500ms) `FileSystemWatcher` for `**/*.csproj` changes (content, create, delete). On trigger, it sends `forceRefresh` to the sidebar webview (clearing stale `packageUpdates` and `allProjectsUpdates`) and calls `checkUpdatesInBackground(true)`. This handles external changes like `git checkout`, branch switches, or manual .csproj edits.
+- **Sidebar refresh button**: Title bar `$(refresh)` icon at `navigation@4` clears all source error caches (`clearSourceErrors()` — clears `failedEndpointCache`, `serviceIndexCache`, `failedSources`, `iconSourceMissCount`, and `_sourcesCache`) and re-checks updates via `checkUpdatesInBackground()`. This ensures reconnecting to a previously-unavailable source (e.g., after VPN reconnection) actually retries the network. "Open Full View" is at `navigation@5`.
+- **`.csproj` file watcher**: `NuGetSidebarPanel` registers a debounced (5000ms) `FileSystemWatcher` for `**/*.{csproj,fsproj,vbproj}` changes (content, create, delete). On trigger, it sends `forceRefresh` to the sidebar webview (clearing stale `packageUpdates` and `allProjectsUpdates`), calls `checkUpdatesInBackground(true)`, and calls `_notifyMainPanel()` to refresh the main panel. This handles external changes like `git checkout`, branch switches, or manual .csproj edits.
 - **`totalUpdateCount` 3-tier fallback**: The sidebar badge count (`totalUpdateCount`) uses a priority chain: (1) sum of `allProjectsUpdates[].updates.length` when load-all is active, (2) `packageUpdates.length` when available for the selected project, (3) `allProjectsUpdates.find(selectedProject)?.updates.length` as a last resort before data is fully loaded. The `handleUpdateAll` action must read from all tiers to match the displayed count.
 
 ### Message Protocol
@@ -126,7 +126,7 @@ Sidebar messages follow the same patterns as the main panel but always send `lit
 ### Cross-Panel Sync
 Prerelease, source, and project selections are synced bidirectionally between the main panel and sidebar:
 - **Main → Sidebar (settings)**: `NuGetPanel.saveSettings` persists to `workspaceState`, then fires static callbacks (`onPrereleaseChanged`, `onSourceChanged`, `onProjectChanged`) wired in `extension.ts` to call `NuGetSidebarPanel.syncPrerelease()`, `syncSource()`, `syncProject()`.
-- **Main → Sidebar (package changes)**: After any install/update/remove/bulk operation, `NuGetPanel` fires the static `onPackageChanged` callback, wired in `extension.ts` to call `NuGetSidebarPanel.refreshSidebar()`. This re-sends sources, posts a `forceRefresh` message to the sidebar webview, and re-runs `checkUpdatesInBackground(force: true)` to bypass the in-progress guard.
+- **Main → Sidebar (package changes)**: After any install/update/remove/bulk operation, `NuGetPanel` fires the static `onPackageChanged` callback, wired in `extension.ts` to call `NuGetSidebarPanel.refreshSidebar()`. This re-sends sources, posts a `forceRefresh` message to the sidebar webview, and re-runs `checkUpdatesInBackground(force: true)`. If a check is already in progress, `_forceCheckPending` queues a re-run in the `finally` block to prevent dropped events.
 - **Sidebar → Main**: QuickPick pickers call `NuGetPanel.syncPrerelease()`, `syncSource()`, `syncProject()` static methods which post messages to the main panel webview.
 - **Anti-echo**: `skipSaveRef`, `skipSourceSaveRef`, `skipProjectSaveRef` in App.tsx prevent the receiving panel from re-persisting the change and creating an infinite loop.
 
@@ -264,6 +264,25 @@ public dispose(): void {
 ```
 
 **Critical:** The `_postMessage()` helper must call `this._panel.webview.postMessage()`, not itself, to avoid infinite recursion.
+
+### Concurrent Operation Guard
+
+`NuGetPanel` uses an `_operationInProgress` boolean to prevent concurrent mutating operations (e.g., double-clicking install or clicking update while an install is running). Six message cases are guarded: `installPackage`, `updatePackage`, `removePackage`, `bulkUpdateAllProjects`, `bulkUpdatePackages`, `confirmBulkRemove`. Each uses:
+
+```typescript
+case 'installPackage': {
+    if (this._operationInProgress) { break; }
+    this._operationInProgress = true;
+    try {
+        // ... perform operation ...
+    } finally {
+        this._operationInProgress = false;
+    }
+    break;
+}
+```
+
+This is safe because JavaScript is single-threaded — the guard only needs to prevent re-entrant `_handleMessage` calls from queued webview messages.
 
 ### Key Message Types
 

@@ -116,6 +116,8 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
                     this._postMessage({ type: 'forceRefresh' });
                 }
                 this.checkUpdatesInBackground(true);
+                // Notify main panel so it also refreshes on external .csproj changes
+                NuGetSidebarProvider._notifyMainPanel();
             }, 5000);
         };
         watcher.onDidChange(triggerDebounced);
