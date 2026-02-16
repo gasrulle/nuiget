@@ -6,9 +6,9 @@ const IconAdd = () => (
         <path d="M14 7v1H8v6H7V8H1V7h6V1h1v6h6z" />
     </svg>
 );
-const IconClose = () => (
+const IconTrash = () => (
     <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-        <path fillRule="evenodd" clipRule="evenodd" d="M8 8.707l3.646 3.647.708-.707L8.707 8l3.647-3.646-.707-.708L8 7.293 4.354 3.646l-.707.708L7.293 8l-3.646 3.646.707.708L8 8.707z" />
+        <path fillRule="evenodd" clipRule="evenodd" d="M10 3h3v1h-1v9l-1 1H5l-1-1V4H3V3h3V2a1 1 0 011-1h2a1 1 0 011 1v1zM9 2H7v1h2V2zM5 4v9h6V4H5zm1 2h1v5H6V6zm3 0h1v5H9V6z" />
     </svg>
 );
 const IconArrowUp = () => (
@@ -70,14 +70,14 @@ export const PackageRow: React.FC<PackageRowProps> = ({
     if (context === 'browse') {
         if (installedVersion) {
             actionLabel = 'Uninstall (Del)';
-            ActionIcon = IconClose;
+            ActionIcon = IconTrash;
         } else {
             actionLabel = 'Install (Enter)';
             ActionIcon = IconAdd;
         }
     } else if (context === 'installed') {
         actionLabel = 'Uninstall (Del)';
-        ActionIcon = IconClose;
+        ActionIcon = IconTrash;
     } else {
         actionLabel = 'Update (Enter)';
         ActionIcon = IconArrowUp;

@@ -187,6 +187,15 @@ Components receive state via props (not React Context) since there's only one le
 
 All tab components are wrapped in `React.memo` for render optimization.
 
+### Draggable Split Panel
+
+Each tab features a draggable split panel (left: package list, right: details). The `DraggableSash` component handles resize:
+
+- **Range:** 20–80% width, clamped to prevent layout collapse
+- **Persistence:** Split position saved to `context.globalState` (cross-workspace) via `saveSplitPosition` message
+- **Theming:** Uses `--vscode-sash-hoverBorder` for hover indicator, matching VS Code's native sash style
+- **Memoization:** Wrapped as `MemoizedDraggableSash` with `useCallback([])` handlers (`onReset`, `onDragEnd`) to prevent re-renders
+
 ## Message Flow
 
 The extension uses VS Code's webview message passing for communication:
@@ -1273,6 +1282,14 @@ const sorted = topologicalSort(packages, dependencyGraph);
 3. Each package updated sequentially (with `skipChannelSetup` option)
 4. Single `dotnet restore` at the end (not per-package)
 5. Returns `bulkUpdateResult` with success/fail counts
+
+### Load All Projects Updates
+The Updates tab supports checking updates for ALL projects simultaneously:
+- Triggered by the "Load all projects" toggle in the Updates section header
+- Uses `checkPackageUpdatesMinimal` (no metadata enrichment) for speed
+- Results grouped by project path with section headers
+- **Composite key:** `projectPath::packageId` for unique multi-project package selection
+- `bulkUpdateAllProjects` handler iterates per-project with separate output channel headers
 
 ### Bulk Remove Flow
 1. UI sends `confirmBulkRemove` with package list

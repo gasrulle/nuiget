@@ -1,8 +1,21 @@
 <!-- Workspace-specific instructions for agents working on this project. Keep concise, actionable, and up to date. -->
+<!-- For full technical documentation, see ARCHITECTURE.md -->
 
 # Agent Guidelines
 - **Use Context7 for Documentation:** Use `resolve-library-id` then `get-library-docs` for React, VS Code Extension API, esbuild, ESLint, TypeScript docs.
 - **Use Microsoft Docs MCP for VS Code APIs:** Use `microsoft_docs_search`, `microsoft_code_sample_search`, `microsoft_docs_fetch` for official VS Code extension documentation.
+
+## MANDATORY: Read ARCHITECTURE.md Before Making Changes
+**ARCHITECTURE.md is the single source of truth** for all technical details: component hierarchy, message protocol, state management patterns, caching strategies, auth flow, security, performance patterns, and sidebar architecture. This file (copilot-instructions.md) only contains agent rules, build commands, and gotchas/pitfalls — it does NOT duplicate architecture details.
+
+**Before** modifying any TypeScript, React, or CSS file, read the relevant section(s) of ARCHITECTURE.md to understand:
+- How components communicate (message types, forwardRef routing, cross-panel sync)
+- State ownership (what lives in App.tsx vs tab components vs sidebar)
+- Caching layers (backend LRUMap, frontend useRef<LRUMap>, WorkspaceCache)
+- Performance patterns (batchedPromiseAll, failedEndpointCache, HTTP/2 session pool)
+- Security constraints (input validation, credential redaction, CSP)
+
+Failing to consult ARCHITECTURE.md risks re-introducing bugs, duplicating logic, or breaking established patterns.
 
 ## MANDATORY: VSIX Packaging Verification
 After making changes to TypeScript files (especially `NuGetService.ts`, `NuGetPanel.ts`, or `extension.ts`), run `npm run package:vsix` to verify the build succeeds. TypeScript errors (typos, missing properties) will break VSIX packaging even if `npm run watch` succeeds.
@@ -13,38 +26,31 @@ After completing ANY feature, fix, or change, update these files:
 | File | Update When |
 |------|-------------|
 | **CHANGELOG.md** | New features → `### Added`, bug fixes → `### Fixed`, behavior changes → `### Changed` |
-| **ARCHITECTURE.md** | New message types, state patterns, services, data flows |
+| **ARCHITECTURE.md** | New message types, state patterns, services, data flows, capabilities |
+| **README.md** | User-facing feature changes, new settings/commands |
+| **copilot-instructions.md** | New gotchas or common issues |
 
 ### CHANGELOG.md Rules
 - Always add entries under an `## [Unreleased]` section at the top of the changelog (below the header). If the section already exists, append to it.
 - For `### Added` entries: write the **bold headline** followed by a brief description (e.g., `- **New Feature** — Short explanation of what it does`).
 - For `### Fixed` and `### Changed` entries: only write the **bold headline** per bullet (e.g., `- **Some Fix**`). Do NOT add descriptions, explanations, or details after the headline.
 - Never edit or modify content under previously released version sections — only the `## [Unreleased]` section may be changed.
-| **README.md** | User-facing feature changes, new settings/commands |
-| **copilot-instructions.md** | New gotchas, capabilities, common issues |
 
-# Project Overview
-- **Name:** nUIget (VS Code Extension)
-- **Purpose:** Visual Studio-style GUI to manage NuGet packages via dotnet CLI. Reads sources/credentials from nuget.config and Windows Credential Manager.
-- **Layout:** Split-panel (left: package list; right: details). Tabs: Browse, Installed, Updates.
-- **Architecture:** App.tsx shell (~1650 lines) + tab components (`BrowseTab`, `InstalledTab`, `UpdatesTab`, `PackageDetailsPanel`) in `src/webview/app/components/`. Shared types in `types.ts`. See ARCHITECTURE.md for full details.
+### ARCHITECTURE.md vs copilot-instructions.md — What Goes Where
+These two files serve different purposes. **Never duplicate content between them.**
 
-# Key Capabilities
-- **React 19 + Concurrent Features:** `useDeferredValue`, `useTransition`, stale data indicators. `@tanstack/react-virtual` for Browse/Updates virtualization.
-- **Component Architecture:** `React.memo`-wrapped tab components with `forwardRef`/`useImperativeHandle` for message routing. Props-based data flow (no Context).
-- **Draggable Split Panel:** Resizable sash (20-80% range), persists via `globalState`. `--vscode-sash-hoverBorder` theming.
-- **HTTP/2 for nuget.org:** Multiplexing for bulk requests. Session pool (MAX_SESSIONS=10) with LRU eviction. HTTP/1.1 fallback for private sources.
-- **Sources & Auth:** `dotnet nuget list source`, enable/disable/add/remove. CredentialService for Azure DevOps, GitHub Packages, JFrog. DPAPI encryption on Windows.
-- **Package Management:** Search/install/update/remove via dotnet CLI. Multi-project (.csproj, .fsproj, .vbproj). Floating versions, Updates tab with badge, bulk operations.
-- **Load All Projects Updates:** "Load all projects" link button on Updates tab fetches updates for all projects simultaneously. Uses `checkPackageUpdatesMinimal` (no metadata) for speed. Results grouped by project with headers. Composite key `projectPath::packageId` for multi-project selection. `bulkUpdateAllProjects` handler iterates per-project with separate output headers.
-- **Transitive Packages:** Collapsible per-framework sections. Two-stage background prefetch (frameworks → metadata). Refresh ↻ icon on direct packages header refreshes both installed and transitive packages, calls `doResetTransitiveState(true, true)` to collapse and re-fetch with `forceRestore`.
-- **Multi-Tier Caching:** Backend LRUMap (metadata 200, versions 200, icons 500, search 100). Frontend `useRef<LRUMap>`. WorkspaceCache for persistence.
-- **Disposed Panel Safety:** `_disposed` flag + `_postMessage()` helper prevents "Webview is disposed" errors.
-- **Settings Persistence:** Prerelease/source/project via `workspaceState`. Split position via `globalState`.
-- **Sidebar Panel:** `NuGetSidebarPanel.ts` + `SidebarApp.tsx` in `src/webview/sidebar/`. Extensions-view-inspired search UX: empty search → Installed + Updates sections (collapsible accordion), plain text + Enter → NuGet browse results (flat list, sections hidden), `@installed <query>` → filtered installed, `@updates <query>` → filtered updates, typing `@` → auto-completing filter dropdown. `parseSearchQuery()` returns `{ mode, filterText }` driving all rendering. Browse section header removed. Recent searches removed. Always uses lite mode internally. Background update monitoring (2s initial delay, parallel project checks, sources cached 30s). Cached pending data (`_pendingProjectUpdates`, `_pendingInstalledCount`) ensures instant data on first sidebar open (cleared after delivery). Activity Bar badge removed — section header badges suffice. Keyboard: Enter=install (Browse, only if not installed), Enter=update (Updates), Del=uninstall (Browse/Installed). Title bar icons: Source (@1), Project (@2), Prerelease (@3), Refresh (@4), Open Full View (@5). Refresh button clears sources cache + re-checks updates.
-- **Cross-Panel Sync:** Prerelease, source, and project selections sync bidirectionally between main panel and sidebar via static callbacks on `NuGetPanel` wired in `extension.ts`. Anti-echo guards (`skipSaveRef`, `skipSourceSaveRef`, `skipProjectSaveRef`) prevent infinite loops. `nuiget.refreshPackages` is internal-only (hidden from Command Palette via `"when": "false"`) — sidebar calls it after mutations to sync the main panel. All sidebar commands are also hidden from the Command Palette.
+| | **ARCHITECTURE.md** | **copilot-instructions.md** |
+|---|---|---|
+| **Purpose** | Describes *how the system works* (descriptive) | Tells agents *how to work on it* (prescriptive) |
+| **Audience** | Any developer needing to understand the codebase | AI agents making changes |
+| **Content** | Component architecture, message protocol tables, state management patterns, caching strategies, auth flow, security model, performance patterns, data flows, code examples | Agent rules, mandatory checks, build/test commands, gotchas & pitfalls (issue→solution tables) |
+| **Add here when** | New component, message type, state pattern, service, cache layer, API integration, data flow, or architectural decision | New bug trap, footgun, or "don't do X" rule discovered during development |
+| **Style** | Explanatory sections with diagrams/code blocks | Terse tables and bullet points |
+| **Example** | "The sidebar uses `parseSearchQuery()` returning `{ mode, filterText }` to drive all rendering..." | "Browse section removed — No Browse `SectionHeader` exists. Don't re-add." |
 
-# Build and Run
+**Rule of thumb:** If it explains *what* or *how* the system works → ARCHITECTURE.md. If it warns about a mistake or prescribes a workflow → copilot-instructions.md.
+
+## Build and Run
 ```bash
 npm install          # Install dependencies
 npm run watch        # Build (watch mode) — F5 to launch Extension Host
@@ -129,29 +135,6 @@ npm run package:vsix # Outputs nuiget.vsix
 | Array mutation bugs | `[...array].sort()` not `array.sort()` |
 | Property name typos break VSIX | Run `npm run package:vsix` — catches errors `watch` misses |
 | Package selection | Use `usePackageSelection` hook. Installed: `metadataVersion: pkg.resolvedVersion`. Updates: synthetic `InstalledPackage`. |
-
-## Performance Patterns
-| Pattern | Implementation |
-|---------|----------------|
-| Async file I/O | `fileExists()` with `fs.promises.access`, never `fs.existsSync` |
-| Concurrency limiting | `batchedPromiseAll(items, processor, 16)` — sliding-window (starts next item as any slot frees, not batch-then-wait) |
-| LRU caches | Frontend: `useRef<LRUMap>`. Backend: `LRUMap` in NuGetService |
-| useRef state mirror | For synchronous reads across async boundaries. See `transitiveLoadingMetadataRef`, `selectedSourceRef`, `selectedProjectRef`. |
-| Race for first result | `raceForFirstResult()` to resolve early from first source |
-| HTTP request timeouts | `fetchJsonWithDetails` and `fetchJsonHttp1` use `options.timeout` + `req.on('timeout')`. Service index discovery uses 5s, general requests 10s. |
-| Failed endpoint cache | `failedEndpointCache: Map<string, number>` caches unreachable source URLs for 120s (2 min). Prevents re-trying dead sources per package (OS TCP timeout is ~21s). `clearSourceErrors()` clears it for manual refresh. `searchPackages` uses `preValidateSources()` + `filterHealthySources()` to exclude failed sources before CLI. `fetchPackageVerifiedStatus` also skips failed sources early. |
-| project.assets.json cache | `readAssetsJson()` method with mtime-based invalidation + 30s TTL. Avoids parsing 5-50MB files 2-3x per flow. |
-| Sources cache | `getSources()` caches `dotnet nuget list source` CLI result for 30s (`SOURCES_CACHE_TTL`). Prevents N CLI spawns when N packages check versions in parallel. Invalidated on enable/disable/add/remove/`clearSourceErrors()`/sidebar refresh button. `invalidateSourcesCache()` is public for use by the sidebar refresh command. |
-| Parallel background checks | `checkUpdatesInBackground()` checks all projects via `Promise.all` instead of sequentially. Combined with sources cache, eliminates redundant CLI spawns. |
-| Transitive prefetch deferral | `getTransitivePackages` is deferred 2s after installed packages load to reduce network contention. |
-| Unified metadata fetch | `getPackageSearchMetadata(id, version?)` returns `verified`, `authors`, AND `iconUrl` from a single Search API call. Pre-populates icon cache to skip HEAD requests. All 4 tabs use this. Only falls back to `resolveIconUrl` for custom-source-only packages. |
-| Registration endpoint selection | Filter out gzip-compressed Registration endpoints (`-gz-` in URL) — HTTP/2 client doesn't decompress gzip. Use `registration5-semver1/` variant. |
-
-## Security Patterns
-| Pattern | Implementation |
-|---------|----------------|
-| Input validation | `isValidPackageId()`, `isValidVersion()`, `isValidSourceName()`, `isValidSourceUrl()`, `isValidBase64()` — validate before CLI commands |
-| Credential redaction | `sanitizeForLogging(text)` before logging |
 
 # Debugging Workflow
 1. Add temporary `console.log()` with distinctive prefix (e.g., `[DEBUG-XYZ]`)
