@@ -5,6 +5,28 @@ All notable changes to the nUIget extension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **Sidebar Refresh Button** — New refresh icon in the sidebar title bar clears the sources cache and re-checks for updates
+- **Native Sidebar Styling** — Search input now matches the Extensions view (wrapper with clear button), section chevrons use SVG with rotation animation, section headers match native VS Code padding and height
+
+### Changed
+
+- **Activity Bar badge removed** — Section header badges now provide update counts; the Activity Bar icon badge has been removed
+- **Extensions-style sidebar search** — Search box now works like VS Code Extensions view: plain text searches NuGet with 300ms debounce (min 2 chars), `@installed` filters installed packages, `@updates` filters updates. Typing `@` shows an auto-completing filter dropdown. Sections hidden during search; Installed + Updates sections shown by default.
+
+### Removed
+
+- **Recent searches**
+- **Browse section header**
+
+### Fixed
+
+- **Activity Bar badge race condition** — Update data (`_pendingProjectUpdates`, `_pendingInstalledCount`) is cached so it appears instantly when the sidebar is first opened. Pending data is cleared after delivery to prevent stale re-sends.
+- **Refresh Packages command hidden** — The internal `nuiget.refreshPackages` command is no longer shown in the Command Palette (it's for internal cross-panel sync only)
+
 ## [1.4.1] - 2026-02-16
 
 ### Fixed

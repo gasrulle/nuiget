@@ -41,7 +41,7 @@ After completing ANY feature, fix, or change, update these files:
 - **Multi-Tier Caching:** Backend LRUMap (metadata 200, versions 200, icons 500, search 100). Frontend `useRef<LRUMap>`. WorkspaceCache for persistence.
 - **Disposed Panel Safety:** `_disposed` flag + `_postMessage()` helper prevents "Webview is disposed" errors.
 - **Settings Persistence:** Prerelease/source/project via `workspaceState`. Split position via `globalState`.
-- **Sidebar Panel:** `NuGetSidebarPanel.ts` + `SidebarApp.tsx` in `src/webview/sidebar/`. Compact Activity Bar panel with Browse, Installed, Updates sections. Always uses lite mode internally. Background update monitoring (2s initial delay, parallel project checks, sources cached 30s) with Activity Bar badge. Sections default to all-collapsed. Keyboard: Enter=install (Browse, only if not installed), Enter=update (Updates), Del=uninstall (Browse/Installed). Title bar icons: Source (@1), Project (@2), Prerelease (@3), Refresh (@4), Open Full View (@5). Refresh button clears sources cache + re-checks updates.
+- **Sidebar Panel:** `NuGetSidebarPanel.ts` + `SidebarApp.tsx` in `src/webview/sidebar/`. Extensions-view-inspired search UX: empty search → Installed + Updates sections (collapsible accordion), plain text + Enter → NuGet browse results (flat list, sections hidden), `@installed <query>` → filtered installed, `@updates <query>` → filtered updates, typing `@` → auto-completing filter dropdown. `parseSearchQuery()` returns `{ mode, filterText }` driving all rendering. Browse section header removed. Recent searches removed. Always uses lite mode internally. Background update monitoring (2s initial delay, parallel project checks, sources cached 30s). Cached pending data (`_pendingProjectUpdates`, `_pendingInstalledCount`) ensures instant data on first sidebar open (cleared after delivery). Activity Bar badge removed — section header badges suffice. Keyboard: Enter=install (Browse, only if not installed), Enter=update (Updates), Del=uninstall (Browse/Installed). Title bar icons: Source (@1), Project (@2), Prerelease (@3), Refresh (@4), Open Full View (@5). Refresh button clears sources cache + re-checks updates.
 - **Cross-Panel Sync:** Prerelease, source, and project selections sync bidirectionally between main panel and sidebar via static callbacks on `NuGetPanel` wired in `extension.ts`. Anti-echo guards (`skipSaveRef`, `skipSourceSaveRef`, `skipProjectSaveRef`) prevent infinite loops. `nuiget.refreshPackages` is internal-only (hidden from Command Palette via `"when": "false"`) — sidebar calls it after mutations to sync the main panel. All sidebar commands are also hidden from the Command Palette.
 
 # Build and Run
@@ -91,6 +91,21 @@ npm run package:vsix # Outputs nuiget.vsix
 | Multi-project updates not refreshing | `bulkUpdateAllProjectsResult` handler must re-fetch via `checkAllProjectsUpdates` after forwarding to UpdatesTab. |
 | Cross-panel sync echo loop | Use `skipSaveRef`/`skipSourceSaveRef`/`skipProjectSaveRef` refs in App.tsx. Set `true` before setState, save effect checks and resets. |
 
+## Sidebar
+| Issue | Solution |
+|-------|----------|
+| Activity Bar badge removed | `setBadge()` is a no-op — don't set `webviewView.badge`. Section header badges provide update counts. `_pendingBadgeCount` field removed. |
+| Search mode model | All sidebar rendering is driven by `parseSearchQuery(query)` → `{ mode: 'default' \| 'browse' \| 'installed' \| 'updates', filterText }`. Never check `expandedSection` outside default mode. |
+| Browse section removed | No Browse `SectionHeader` exists. Browse results render directly when `searchMode === 'browse'` (plain text + Enter). |
+| Recent searches removed | No state, effects, handlers, CSS, or backend cases (`getRecentSearches`, `clearRecentSearches`, `_addRecentSearch`) exist. Don't re-add. |
+| @-prefix dropdown | Shows when text starts with `@` but isn't yet a complete valid prefix. Auto-filters as typed (`@up` → only `@updates`). Keyboard: ArrowDown/Up navigate, Enter/Tab select, Escape dismiss. |
+| Client-side filtering | `@installed`/`@updates` filter client-side (live, no Enter). Browse mode uses 300ms debounce (min 2 chars) — Enter bypasses debounce for immediate search. `browseDebounceRef` holds the timer. Stale results discarded via backend `_latestSearchQuery` guard. |
+| `searchModeRef` for handlers | `searchMode` is derived via `useMemo`, so stale in `useCallback([])`. Use `searchModeRef.current` in handlers. Same pattern as `selectedProjectRef`, `selectedSourceRef`. |
+| Codicon font not in webviews | Codicon font is NOT available in webview HTML. Use inline SVGs matching codicon paths (e.g., chevron-right `d="M5.7 13.7L5 13l4.6-4.6L5 3.7l.7-.7 5.3 5.3-5.3 5.4z"`). |
+| Section chevrons | SVG `chevron-right` icon with CSS `.section-chevron.expanded { transform: rotate(90deg) }` and `transition: 0.1s`. Not Unicode characters. |
+| Search wrapper pattern | Search input is wrapped in `.sidebar-search-wrapper` (flex container with border). Input itself is transparent/borderless. Clear button is a sibling inside the wrapper. `focus-within` on wrapper provides focus ring. |
+| Pending data for first open | `_pendingProjectUpdates` and `_pendingInstalledCount` are cached before sidebar resolves. `_sendInitialData()` delivers then clears them. Don't remove this caching. |
+
 ## NuGet / dotnet CLI
 | Issue | Solution |
 |-------|----------|
@@ -99,7 +114,6 @@ npm run package:vsix # Outputs nuiget.vsix
 | "Unescaped characters" in request path | Skip local sources with `isLocalSource()` |
 | README not showing | Extract from nupkg via adm-zip (custom sources lack ReadmeUriTemplate) |
 | Floating version metadata fails | Use `pkg.resolvedVersion` not `pkg.version` for API calls |
-| Version spec guard for lock file | Only `floating` and `range` version types use lock file `resolvedVersion`. Standard versions (e.g., `10.0.2`) read directly from .csproj. Guard: `versionSpec.type === 'floating' || versionSpec.type === 'range'`. |
 | Version spec guard for lock file | Only `floating` and `range` version types use lock file `resolvedVersion`. Standard versions (e.g., `10.0.2`) read directly from .csproj. Guard: `versionSpec.type === 'floating' \|\| versionSpec.type === 'range'`. |
 | Transitive not available | `project.assets.json` needs build/restore — use `restoreProject()` if missing |
 | Transitive stale after remove | `dotnet remove` doesn't update assets.json — run `dotnet restore` after |

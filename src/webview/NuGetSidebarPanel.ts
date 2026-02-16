@@ -32,6 +32,8 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
     private _backgroundCheckTimer?: ReturnType<typeof setInterval>;
     private _fileWatcherDebounce?: ReturnType<typeof setTimeout>;
     private _backgroundCheckInProgress = false;
+    private _pendingProjectUpdates: { projectPath: string; projectName: string; updates: { id: string; installedVersion: string; latestVersion: string }[] }[] = [];
+    private _pendingInstalledCount = -1;
     private _disposables: vscode.Disposable[] = [];
 
     constructor(
@@ -121,7 +123,7 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
      * webview if it's active. Uses lite mode + minimal checks.
      */
     public async checkUpdatesInBackground(): Promise<void> {
-        if (this._backgroundCheckInProgress) return; // skip if already running
+        if (this._backgroundCheckInProgress) return;
         this._backgroundCheckInProgress = true;
 
         try {
@@ -168,8 +170,9 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
                 }
             }
 
-            // Always set badge (works even without webview)
-            this.setBadge(totalUpdates);
+            // Cache results for when the webview resolves later
+            this._pendingProjectUpdates = allProjectUpdates;
+            this._pendingInstalledCount = selectedProjectInstalledCount;
 
             // If webview is active, push all-projects results and installed count
             if (!this._disposed && this._view) {
@@ -178,8 +181,8 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
                     this._postMessage({ type: 'installedCountUpdate', count: selectedProjectInstalledCount });
                 }
             }
-        } catch {
-            // Background check failed silently — don't bother the user
+        } catch (err) {
+            this._outputChannel.error('checkUpdatesInBackground error:', String(err));
         } finally {
             this._backgroundCheckInProgress = false;
         }
@@ -311,13 +314,9 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
         this._updateTitle(projectName);
     }
 
-    /** Update the Activity Bar badge with update count */
-    public setBadge(count: number): void {
-        if (this._view) {
-            this._view.badge = count > 0
-                ? { value: count, tooltip: `${count} package update${count !== 1 ? 's' : ''} available` }
-                : undefined;
-        }
+    /** Update the Activity Bar badge with update count (no-op — section badges suffice) */
+    public setBadge(_count: number): void {
+        // Badge removed; section header badges provide update counts
     }
 
     /** Full sidebar refresh: re-send sources, tell webview to re-fetch, and update badge */
@@ -377,9 +376,6 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
 
                     if (this._latestSearchQuery !== query) break;
 
-                    // Save to recent searches
-                    await this._addRecentSearch(query);
-
                     this._postMessage({ type: 'searchResults', results, query });
                     break;
                 }
@@ -436,7 +432,6 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
                     }
 
                     this._postMessage({ type: 'allProjectsUpdates', projectUpdates: allProjectsUpdates });
-                    this.setBadge(totalUpdates);
                     break;
                 }
             case 'installPackage':
@@ -606,22 +601,7 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
                     await this._showContextMenu(data);
                     break;
                 }
-            case 'getRecentSearches':
-                {
-                    const searches = this._context.workspaceState.get<string[]>('nuget.recentSearches', []);
-                    const limit = vscode.workspace.getConfiguration('nuiget').get<number>('recentSearchesLimit', 5);
-                    this._postMessage({
-                        type: 'recentSearches',
-                        searches: searches.slice(0, limit)
-                    });
-                    break;
-                }
-            case 'clearRecentSearches':
-                {
-                    await this._context.workspaceState.update('nuget.recentSearches', []);
-                    this._postMessage({ type: 'recentSearches', searches: [] });
-                    break;
-                }
+
         }
     }
 
@@ -730,18 +710,13 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
             this._updateTitle();
         }
 
-        // Send recent searches
-        const recentSearches = this._context.workspaceState.get<string[]>('nuget.recentSearches', []);
-        const limit = vscode.workspace.getConfiguration('nuiget').get<number>('recentSearchesLimit', 5);
-
         // Send current state FIRST so the webview knows selectedProject
         // before receiving the projects list (avoids wrong auto-select)
         this._postMessage({
             type: 'state',
             selectedSource: this._selectedSource,
             selectedProject: this._selectedProject,
-            includePrerelease: this._includePrerelease,
-            recentSearches: recentSearches.slice(0, limit)
+            includePrerelease: this._includePrerelease
         });
 
         // Send projects (webview already has selectedProject set)
@@ -750,6 +725,17 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
         // Send sources
         const sources = await this._nugetService.getSources();
         this._postMessage({ type: 'sources', sources: sources.filter(s => s.enabled) });
+
+        // Send cached background data if available (background check may have
+        // completed before the webview resolved)
+        if (this._pendingProjectUpdates.length > 0) {
+            this._postMessage({ type: 'allProjectsUpdates', projectUpdates: this._pendingProjectUpdates });
+            this._pendingProjectUpdates = [];
+        }
+        if (this._pendingInstalledCount >= 0) {
+            this._postMessage({ type: 'installedCountUpdate', count: this._pendingInstalledCount });
+            this._pendingInstalledCount = -1;
+        }
     }
 
     private _sendState(): void {
@@ -759,16 +745,6 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
             selectedProject: this._selectedProject,
             includePrerelease: this._includePrerelease
         });
-    }
-
-    private async _addRecentSearch(query: string): Promise<void> {
-        const limit = vscode.workspace.getConfiguration('nuiget').get<number>('recentSearchesLimit', 5);
-        if (limit === 0) return;
-
-        let searches = this._context.workspaceState.get<string[]>('nuget.recentSearches', []);
-        // Remove duplicates and add to front
-        searches = [query, ...searches.filter(s => s.toLowerCase() !== query.toLowerCase())].slice(0, limit);
-        await this._context.workspaceState.update('nuget.recentSearches', searches);
     }
 
     private _postMessage(message: unknown): void {

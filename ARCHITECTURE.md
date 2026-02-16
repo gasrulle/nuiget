@@ -83,19 +83,21 @@ src/
 
 ## Sidebar Panel Architecture
 
-The sidebar provides a compact package management UI in the VS Code Activity Bar, always using lite mode for speed.
+The sidebar provides a compact package management UI in the VS Code Activity Bar, using an Extensions-view-inspired search UX.
 
 ### Architecture
 - **Backend**: `NuGetSidebarPanel.ts` — `WebviewViewProvider` that shares the singleton `NuGetService` with the main panel. Handles all backend operations (search, install, update, remove) and delegates source/project/prerelease selection to VS Code QuickPick commands registered in `extension.ts`.
-- **Frontend**: `SidebarApp.tsx` — Single React component with three accordion sections (Browse, Installed, Updates). Uses `SectionHeader` and `PackageRow` sub-components.
+- **Frontend**: `SidebarApp.tsx` — Single React component with a search-mode model. Uses `SectionHeader` and `PackageRow` sub-components.
 - **Build**: Separate esbuild entry point (`src/webview/sidebar/index.tsx` → `dist/sidebar.js`).
 
 ### Key Design Decisions
+- **Extensions-style search UX**: The search box is the single control point. Empty → shows Installed + Updates sections (collapsible accordion). Plain text + Enter → NuGet browse results (flat list, sections hidden). `@installed <query>` → filtered installed packages. `@updates <query>` → filtered updates. Typing `@` shows an auto-completing filter dropdown.
+- **Search mode model**: `parseSearchQuery(query)` returns `{ mode: 'default' | 'browse' | 'installed' | 'updates', filterText: string }`. All rendering conditionals and auto-fetch effects are driven by this parsed mode.
 - **Always lite mode**: No metadata enrichment, no icons, no README — optimized for speed and compact display.
 - **QuickPick for options**: Source, project, and prerelease toggle are title bar icon commands that open VS Code QuickPick dialogs (not inline dropdowns), saving sidebar width.
 - **Hybrid package actions**: Hover reveals a primary action button (Install/Uninstall/Update); right-click sends `showContextMenu` to backend which shows a QuickPick with all available actions.
 - **Cross-view sync**: After install/update/remove, sidebar calls `vscode.commands.executeCommand('nuiget.refreshPackages')` to notify the main panel. `refreshPackages` is internal-only (hidden from Command Palette) — it only calls `NuGetPanel.refresh()`.
-- **Badge API**: `webviewView.badge` displays update count on the Activity Bar icon.
+- **Badge API**: Activity Bar badge has been removed — section header badges provide sufficient update count visibility. `setBadge()` is retained as a no-op for API compatibility. Pending data (`_pendingProjectUpdates`, `_pendingInstalledCount`) is still cached so update data appears instantly on first sidebar open.
 - **Sidebar refresh button**: Title bar `$(refresh)` icon at `navigation@4` clears the sources cache (`invalidateSourcesCache()`) and re-checks updates via `checkUpdatesInBackground()`. "Open Full View" is at `navigation@5`.
 
 ### Message Protocol

@@ -35,16 +35,20 @@ export const SectionHeader: React.FC<SectionHeaderProps> = ({
             tabIndex={0}
             aria-expanded={expanded}
         >
-            <span className="section-chevron">{expanded ? '\u25BC' : '\u25B6'}</span>
+            <span className={`section-chevron${expanded ? ' expanded' : ''}`}>
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                    <path d="M5.7 13.7L5 13l4.6-4.6L5 3.7l.7-.7 5.3 5.3-5.3 5.4z" />
+                </svg>
+            </span>
             <span className="section-title">{title}</span>
             {loading && <span className="section-spinner" />}
-            {!loading && count !== undefined && count > 0 && (
-                <span className="section-badge">{count}</span>
-            )}
             {actions && (
                 <span className="section-actions" onClick={(e) => e.stopPropagation()}>
                     {actions}
                 </span>
+            )}
+            {!loading && count !== undefined && count > 0 && (
+                <span className="section-badge">{count}</span>
             )}
         </div>
     );

@@ -2,33 +2,62 @@
 
 /* ─── Search Input ───────────────────────────────────────────────────────── */
 .sidebar-search-container {
-    padding: 8px 8px 4px 8px;
+    padding: 6px 8px;
     position: relative;
 }
 
-.sidebar-search {
-    width: 100%;
-    box-sizing: border-box;
-    padding: 4px 8px;
-    font-size: var(--vscode-font-size);
-    font-family: var(--vscode-font-family);
-    color: var(--vscode-input-foreground);
+.sidebar-search-wrapper {
+    display: flex;
+    align-items: center;
     background-color: var(--vscode-input-background);
     border: 1px solid var(--vscode-input-border, transparent);
     border-radius: 2px;
-    outline: none;
+    height: 24px;
 }
 
-.sidebar-search:focus {
+.sidebar-search-wrapper:focus-within {
     border-color: var(--vscode-focusBorder);
+}
+
+.sidebar-search {
+    flex: 1;
+    min-width: 0;
+    box-sizing: border-box;
+    padding: 2px 6px;
+    font-size: var(--vscode-font-size);
+    font-family: var(--vscode-font-family);
+    color: var(--vscode-input-foreground);
+    background: transparent;
+    border: none;
+    outline: none;
+    height: 100%;
 }
 
 .sidebar-search::placeholder {
     color: var(--vscode-input-placeholderForeground);
 }
 
-/* ─── Recent Searches Dropdown ───────────────────────────────────────────── */
-.recent-searches {
+.sidebar-search-clear {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 100%;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--vscode-input-foreground);
+    opacity: 0.6;
+    flex-shrink: 0;
+    padding: 0;
+}
+
+.sidebar-search-clear:hover {
+    opacity: 1;
+}
+
+/* ─── @-Prefix Filter Dropdown ───────────────────────────────────────────── */
+.filter-dropdown {
     position: absolute;
     top: 100%;
     left: 8px;
@@ -38,49 +67,28 @@
     border: 1px solid var(--vscode-editorSuggestWidget-border, var(--vscode-dropdown-border));
     border-radius: 3px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-    max-height: 200px;
-    overflow-y: auto;
+    overflow: hidden;
 }
 
-.recent-searches-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 4px 8px;
-    font-size: 11px;
-    color: var(--vscode-descriptionForeground);
-    border-bottom: 1px solid var(--vscode-widget-border, var(--vscode-editorSuggestWidget-border));
-}
-
-.recent-searches-clear {
-    cursor: pointer;
-    color: var(--vscode-textLink-foreground);
-    background: none;
-    border: none;
-    font-size: 11px;
-    padding: 0;
-}
-
-.recent-searches-clear:hover {
-    text-decoration: underline;
-}
-
-.recent-search-item {
+.filter-dropdown-item {
     padding: 4px 8px;
     cursor: pointer;
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 2px;
     font-size: var(--vscode-font-size);
+    color: var(--vscode-editorSuggestWidget-foreground, var(--vscode-foreground));
 }
 
-.recent-search-item:hover {
-    background: var(--vscode-list-hoverBackground);
+.filter-dropdown-item:hover,
+.filter-dropdown-item.active {
+    background: var(--vscode-editorSuggestWidget-selectedBackground, var(--vscode-list-activeSelectionBackground));
+    color: var(--vscode-editorSuggestWidget-selectedForeground, var(--vscode-list-activeSelectionForeground));
 }
 
-.recent-search-icon {
-    opacity: 0.6;
-    font-size: 12px;
+.filter-dropdown-prefix {
+    color: var(--vscode-editorSuggestWidget-highlightForeground, var(--vscode-textLink-foreground));
+    font-weight: 600;
 }
 
 /* ─── Status Bar ─────────────────────────────────────────────────────────── */
@@ -107,7 +115,7 @@
 .section-header {
     display: flex;
     align-items: center;
-    padding: 4px 8px;
+    padding: 0 10px 0 2px;
     cursor: pointer;
     user-select: none;
     background: var(--vscode-sideBarSectionHeader-background);
@@ -117,7 +125,7 @@
     text-transform: uppercase;
     letter-spacing: 0.04em;
     color: var(--vscode-sideBarSectionHeader-foreground, var(--vscode-foreground));
-    min-height: 22px;
+    height: 22px;
 }
 
 .section-header:hover {
@@ -130,11 +138,17 @@
 }
 
 .section-chevron {
-    font-size: 9px;
-    margin-right: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 22px;
     flex-shrink: 0;
-    width: 14px;
-    text-align: center;
+    transition: transform 0.1s ease;
+}
+
+.section-chevron.expanded {
+    transform: rotate(90deg);
 }
 
 .section-title {
@@ -321,31 +335,6 @@
     font-size: 12px;
     color: var(--vscode-descriptionForeground);
     font-style: italic;
-}
-
-/* ─── Updates Section Extras ─────────────────────────────────────────────── */
-.updates-toolbar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    padding: 4px 8px;
-    font-size: 11px;
-}
-
-.link-btn {
-    background: none;
-    border: none;
-    padding: 0;
-    font-size: 11px;
-    cursor: pointer;
-    color: var(--vscode-textLink-foreground);
-    white-space: nowrap;
-}
-
-.link-btn:hover {
-    color: var(--vscode-textLink-activeForeground);
-    text-decoration: underline;
 }
 
 
