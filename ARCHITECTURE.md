@@ -105,9 +105,16 @@ Sidebar messages follow the same patterns as the main panel but always send `lit
 
 ### Cross-Panel Sync
 Prerelease, source, and project selections are synced bidirectionally between the main panel and sidebar:
-- **Main → Sidebar**: `NuGetPanel.saveSettings` persists to `workspaceState`, then fires static callbacks (`onPrereleaseChanged`, `onSourceChanged`, `onProjectChanged`) wired in `extension.ts` to call `NuGetSidebarPanel.syncPrerelease()`, `syncSource()`, `syncProject()`.
+- **Main → Sidebar (settings)**: `NuGetPanel.saveSettings` persists to `workspaceState`, then fires static callbacks (`onPrereleaseChanged`, `onSourceChanged`, `onProjectChanged`) wired in `extension.ts` to call `NuGetSidebarPanel.syncPrerelease()`, `syncSource()`, `syncProject()`.
+- **Main → Sidebar (package changes)**: After any install/update/remove/bulk operation, `NuGetPanel` fires the static `onPackageChanged` callback, wired in `extension.ts` to call `NuGetSidebarPanel.refreshSidebar()`. This re-sends sources, posts a `forceRefresh` message to the sidebar webview, and re-runs `checkUpdatesInBackground(force: true)` to bypass the in-progress guard.
 - **Sidebar → Main**: QuickPick pickers call `NuGetPanel.syncPrerelease()`, `syncSource()`, `syncProject()` static methods which post messages to the main panel webview.
 - **Anti-echo**: `skipSaveRef`, `skipSourceSaveRef`, `skipProjectSaveRef` in App.tsx prevent the receiving panel from re-persisting the change and creating an infinite loop.
+
+### Navigate to Package (View Package Details)
+Sidebar context menu "View Package Details" opens the main panel and navigates to a specific package:
+- **Flow**: Sidebar QuickPick → `vscode.commands.executeCommand('nuiget.viewPackageDetails', { packageId, version })` → `NuGetPanel.navigateToPackage()` → `createOrShow()` + posts `{ type: 'navigateToPackage', packageId, version }` to webview.
+- **App.tsx handler**: Sets `pendingNavigationRef` with the target package, switches `activeTab` to `'browse'`, and calls `browseTabCompRef.current.navigateToPackage(packageId)` which sets the search query and triggers a `searchPackages` message.
+- **Auto-select on results**: When `searchResults` arrives and `pendingNavigationRef.current` is set, App.tsx finds the matching package by ID in results and calls `selectDirectPackage()` to load versions, metadata, and display the details panel. The ref is then cleared.
 
 ## Component Architecture
 

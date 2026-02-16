@@ -323,6 +323,9 @@ export const App: React.FC = () => {
     const settingsLoadedRef = useRef(false);
     const [settingsLoaded, setSettingsLoaded] = useState(false);
 
+    // Pending navigation from sidebar "View Package Details" — auto-select when search results arrive
+    const pendingNavigationRef = useRef<{ packageId: string; version?: string } | null>(null);
+
     // Persist state when it changes
     useEffect(() => {
         vscode.setState({
@@ -517,6 +520,23 @@ export const App: React.FC = () => {
             case 'autocompleteResults':
             case 'restoreSearchQuery':
                 browseTabCompRef.current?.handleMessage(message);
+                // Auto-select package after navigateToPackage triggered a search
+                if (message.type === 'searchResults' && pendingNavigationRef.current) {
+                    const nav = pendingNavigationRef.current;
+                    pendingNavigationRef.current = null;
+                    const results = message.results as PackageSearchResult[];
+                    const match = results.find(
+                        (p: PackageSearchResult) => p.id.toLowerCase() === nav.packageId.toLowerCase()
+                    );
+                    if (match) {
+                        const version = nav.version || match.version;
+                        selectDirectPackage(match, {
+                            selectedVersionValue: version,
+                            metadataVersion: version,
+                            initialVersions: match.versions || []
+                        });
+                    }
+                }
                 break;
             case 'sources':
                 setSources(message.sources);
@@ -768,6 +788,21 @@ export const App: React.FC = () => {
                 // Restore persisted split position (cross-workspace)
                 if (message.position !== undefined) {
                     setSplitPosition(message.position);
+                }
+                break;
+            case 'navigateToPackage':
+                // Triggered from sidebar "View Package Details" — switch to Browse tab and search for the package
+                if (message.packageId) {
+                    pendingNavigationRef.current = { packageId: message.packageId, version: message.version };
+                    startTabTransition(() => {
+                        setActiveTab('browse');
+                    });
+                    // Use a short timeout to ensure BrowseTab has mounted after tab switch
+                    // requestAnimationFrame alone isn't enough since useTransition defers the update
+                    setTimeout(() => {
+                        browseTabRef.current?.focus();
+                        browseTabCompRef.current?.navigateToPackage(message.packageId);
+                    }, 50);
                 }
                 break;
         }

@@ -14,6 +14,8 @@ export class NuGetPanel {
     public static onSourceChanged: ((value: string) => void) | undefined;
     /** Callback fired when the main panel's selected project changes (wired in extension.ts) */
     public static onProjectChanged: ((value: string) => void) | undefined;
+    /** Callback fired when a package is installed/updated/removed in the main panel (wired in extension.ts) */
+    public static onPackageChanged: (() => void) | undefined;
 
     /** Push a prerelease change into the main panel webview (called from sidebar sync) */
     public static syncPrerelease(value: boolean): void {
@@ -42,6 +44,7 @@ export class NuGetPanel {
     private _disposables: vscode.Disposable[] = [];
     private _pendingProjectPath: string | undefined;
     private _pendingInitialTab: 'browse' | 'installed' | 'updates' | undefined;
+    private _pendingNavigatePackage: { packageId: string; version?: string } | undefined;
     private _disposed = false;
     // Track the latest autocomplete query to skip stale requests
     private _latestAutocompleteQuery: string = '';
@@ -91,6 +94,29 @@ export class NuGetPanel {
             projectPath: projectPath,
             initialTab: initialTab
         });
+    }
+
+    /**
+     * Navigate to a specific package in the main panel.
+     * Opens/reveals the panel, switches to Browse tab, searches for the package, and auto-selects it.
+     */
+    public static navigateToPackage(extensionUri: vscode.Uri, context: vscode.ExtensionContext, outputChannel: vscode.LogOutputChannel, nugetService: NuGetService, packageId: string, version?: string) {
+        // Check if panel already exists (webview is ready to receive messages)
+        const panelExisted = !!NuGetPanel.currentPanel;
+        NuGetPanel.createOrShow(extensionUri, context, outputChannel, nugetService);
+        if (NuGetPanel.currentPanel && !NuGetPanel.currentPanel._disposed) {
+            if (panelExisted) {
+                // Panel already exists — webview is ready, send directly
+                NuGetPanel.currentPanel._postMessage({
+                    type: 'navigateToPackage',
+                    packageId,
+                    version
+                });
+            } else {
+                // Panel was just created — webview not ready yet, queue for delivery on first message
+                NuGetPanel.currentPanel._pendingNavigatePackage = { packageId, version };
+            }
+        }
     }
 
     private constructor(panel: vscode.WebviewPanel, extensionUri: vscode.Uri, nugetService: NuGetService, projectPath?: string, initialTab?: 'browse' | 'installed' | 'updates') {
@@ -164,6 +190,20 @@ export class NuGetPanel {
                     });
                     // Clear pending after sending
                     this._pendingProjectPath = undefined;
+
+                    // Send pending navigateToPackage if queued (panel was just created)
+                    if (this._pendingNavigatePackage) {
+                        const nav = this._pendingNavigatePackage;
+                        this._pendingNavigatePackage = undefined;
+                        // Small delay to let the webview finish initial setup (sources, settings)
+                        setTimeout(() => {
+                            this._postMessage({
+                                type: 'navigateToPackage',
+                                packageId: nav.packageId,
+                                version: nav.version
+                            });
+                        }, 200);
+                    }
                     break;
                 }
             case 'getInstalledPackages':
@@ -256,7 +296,10 @@ export class NuGetPanel {
                     const results = await this._nugetService.searchPackages(
                         query,
                         sources,
-                        data.includePrerelease as boolean | undefined
+                        data.includePrerelease as boolean | undefined,
+                        undefined,
+                        data.take as number | undefined,
+                        data.exactMatch as boolean | undefined
                     );
 
                     // Skip sending results if a newer query arrived while we were fetching
@@ -321,6 +364,7 @@ export class NuGetPanel {
                             projectPath: data.projectPath
                         });
                     });
+                    NuGetPanel.onPackageChanged?.();
                     break;
                 }
             case 'updatePackage':
@@ -342,6 +386,7 @@ export class NuGetPanel {
                             projectPath: data.projectPath
                         });
                     });
+                    NuGetPanel.onPackageChanged?.();
                     break;
                 }
             case 'removePackage':
@@ -362,6 +407,7 @@ export class NuGetPanel {
                             projectPath: data.projectPath
                         });
                     });
+                    NuGetPanel.onPackageChanged?.();
                     break;
                 }
             case 'getSources':
@@ -701,6 +747,7 @@ export class NuGetPanel {
                     this._postMessage({
                         type: 'bulkUpdateAllProjectsResult'
                     });
+                    NuGetPanel.onPackageChanged?.();
                     break;
                 }
             case 'getSettings':
@@ -919,6 +966,7 @@ export class NuGetPanel {
                         type: 'bulkUpdateResult',
                         projectPath: projectPath
                     });
+                    NuGetPanel.onPackageChanged?.();
                     break;
                 }
             case 'confirmBulkRemove':
@@ -1057,6 +1105,7 @@ export class NuGetPanel {
                         type: 'bulkRemoveResult',
                         projectPath: projectPath
                     });
+                    NuGetPanel.onPackageChanged?.();
                     break;
                 }
         }

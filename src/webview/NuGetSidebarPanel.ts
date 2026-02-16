@@ -122,8 +122,8 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
      * Sets the Activity Bar badge and optionally sends results to the
      * webview if it's active. Uses lite mode + minimal checks.
      */
-    public async checkUpdatesInBackground(): Promise<void> {
-        if (this._backgroundCheckInProgress) return;
+    public async checkUpdatesInBackground(force = false): Promise<void> {
+        if (this._backgroundCheckInProgress && !force) return;
         this._backgroundCheckInProgress = true;
 
         try {
@@ -326,8 +326,8 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
         this._postMessage({ type: 'sources', sources: sources.filter(s => s.enabled) });
         // Tell webview to re-fetch installed packages and updates
         this._postMessage({ type: 'forceRefresh' });
-        // Re-check updates for badge
-        await this.checkUpdatesInBackground();
+        // Re-check updates for badge (force bypass the in-progress guard)
+        await this.checkUpdatesInBackground(true);
     }
 
     /** Update the sidebar title bar with the current project name */
@@ -506,6 +506,7 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
                     const projectPath = data.projectPath as string;
 
                     this._nugetService.setupOutputChannel();
+                    this._nugetService.logBulkOperationHeader('Updating', packages.length);
 
                     await vscode.window.withProgress({
                         location: vscode.ProgressLocation.Notification,
@@ -640,6 +641,7 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
         }
 
         items.push({ label: '$(clippy) Copy Package ID', description: packageId });
+        items.push({ label: '$(eye) View Package Details', description: 'Open in full view' });
 
         const selected = await vscode.window.showQuickPick(items, {
             placeHolder: `${packageId} — Actions`,
@@ -650,7 +652,7 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
 
         const label = selected.label;
 
-        if (label.includes('Install Latest') || label.includes('Update to ')) {
+        if (label.includes('Install Latest') || (label.includes('Update to ') && !label.includes('Update to Version'))) {
             const version = latestVersion || '';
             if (label.includes('Install')) {
                 this._postMessage({ type: 'doInstall', packageId, version, projectPath });
@@ -695,6 +697,11 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
         } else if (label.includes('Copy Package ID')) {
             await vscode.env.clipboard.writeText(packageId);
             vscode.window.setStatusBarMessage(`Copied "${packageId}" to clipboard`, 2000);
+        } else if (label.includes('View Package Details')) {
+            vscode.commands.executeCommand('nuiget.viewPackageDetails', {
+                packageId,
+                version: latestVersion || installedVersion
+            });
         }
     }
 

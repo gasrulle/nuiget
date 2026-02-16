@@ -89,6 +89,8 @@ export interface BrowseTabHandle {
     handleMessage: (message: any) => boolean;
     /** Focus the search input (for keyboard navigation from tab button) */
     focusSearchInput: () => void;
+    /** Navigate to a specific package: set search query, trigger search, and return */
+    navigateToPackage: (packageId: string) => void;
 }
 
 const ESTIMATED_ITEM_HEIGHT = 66; // padding (12*2) + icon (32) + gaps
@@ -253,6 +255,29 @@ const BrowseTab = forwardRef<BrowseTabHandle, BrowseTabProps>(function BrowseTab
         },
         focusSearchInput() {
             searchInputRef.current?.focus();
+        },
+        navigateToPackage(packageId: string) {
+            skipQuickSearchRef.current = true;
+            setSearchQuery(packageId);
+            setShowQuickSearch(false);
+            setQuickSearchSuggestions([]);
+            setQuickSearchLoading(false);
+            setSelectedSuggestionIndex(-1);
+            setShowSearchHistory(false);
+            setLoading(true);
+            onSetSelectedPackage(null);
+            onSetSelectedTransitivePackage(null);
+            const sourcesToSearch = selectedSource === 'all'
+                ? enabledSourcesRef.current.map(s => s.url)
+                : [selectedSource];
+            vscode.postMessage({
+                type: 'searchPackages',
+                query: packageId,
+                sources: sourcesToSearch,
+                includePrerelease: includePrerelease,
+                take: 1,
+                exactMatch: true
+            });
         },
     }));
 

@@ -120,6 +120,10 @@ export function activate(context: vscode.ExtensionContext) {
     NuGetPanel.onProjectChanged = (value: string) => {
         sidebarProvider.syncProject(value);
     };
+    // Wire up cross-panel package change sync: main panel → sidebar
+    NuGetPanel.onPackageChanged = () => {
+        sidebarProvider.refreshSidebar();
+    };
     context.subscriptions.push(
         vscode.commands.registerCommand('nuiget.sidebar.selectSource', () => {
             sidebarProvider.showSourcePicker();
@@ -149,6 +153,13 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(
         vscode.commands.registerCommand('nuiget.sidebar.openFullView', () => {
             NuGetPanel.createOrShow(context.extensionUri, context, outputChannel, nugetService);
+        })
+    );
+    context.subscriptions.push(
+        vscode.commands.registerCommand('nuiget.viewPackageDetails', (args: { packageId: string; version?: string }) => {
+            if (args?.packageId) {
+                NuGetPanel.navigateToPackage(context.extensionUri, context, outputChannel, nugetService, args.packageId, args.version);
+            }
         })
     );
 }

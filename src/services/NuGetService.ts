@@ -1684,10 +1684,10 @@ export class NuGetService {
         return null;
     }
 
-    async searchPackages(query: string, sources?: string[], includePrerelease?: boolean, liteMode?: boolean): Promise<PackageSearchResult[]> {
+    async searchPackages(query: string, sources?: string[], includePrerelease?: boolean, liteMode?: boolean, take?: number, exactMatch?: boolean): Promise<PackageSearchResult[]> {
         try {
             // Check cache first
-            const searchCacheKey = cacheKeys.searchResults(query, sources || [], includePrerelease ?? false) + (liteMode ? ':lite' : '');
+            const searchCacheKey = cacheKeys.searchResults(query, sources || [], includePrerelease ?? false) + (liteMode ? ':lite' : '') + (take ? `:take${take}` : '') + (exactMatch ? ':exact' : '');
 
             // Check in-memory cache (fastest)
             const memoryCached = this.searchResultsCache.get(searchCacheKey);
@@ -1720,10 +1720,11 @@ export class NuGetService {
             const prereleaseArg = includePrerelease ? '--prerelease' : '';
 
             const config = vscode.workspace.getConfiguration('nuiget');
-            const searchResultLimit = config.get<number>('searchResultLimit', 20);
+            const searchResultLimit = take ?? config.get<number>('searchResultLimit', 20);
+            const exactMatchArg = exactMatch ? '--exact-match' : '';
 
             const workspaceFolder = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-            const command = `dotnet package search "${query}" ${sourceArg} ${prereleaseArg} --take ${searchResultLimit}`;
+            const command = `dotnet package search "${query}" ${sourceArg} ${prereleaseArg} ${exactMatchArg} --take ${searchResultLimit}`;
             const { stdout, stderr } = await execWithTimeout(command, { cwd: workspaceFolder });
             this.logOutput(command, stdout, stderr, true);
 
@@ -2526,16 +2527,39 @@ export class NuGetService {
                 const allSources = await this.getSources();
                 const enabledSources = allSources.filter(s => s.enabled);
 
-                // Race pattern: resolve as soon as first source returns non-empty results
-                // Remaining requests will complete in background but we don't wait for them
-                const result = await this.raceForFirstResult(
+                if (take <= 1) {
+                    // For update checks (take=1), race for speed — first non-empty result wins
+                    const result = await this.raceForFirstResult(
+                        enabledSources.map(src =>
+                            this.getPackageVersionsFromSource(packageId, src.url, includePrerelease, take)
+                                .catch(() => [] as string[])
+                        ),
+                        (versions) => versions.length > 0
+                    );
+                    return result;
+                }
+
+                // For version listing (take > 1), collect from ALL sources and merge.
+                // A single source may only host a few versions; merging gives the full picture.
+                const allResults = await Promise.all(
                     enabledSources.map(src =>
                         this.getPackageVersionsFromSource(packageId, src.url, includePrerelease, take)
                             .catch(() => [] as string[])
-                    ),
-                    (versions) => versions.length > 0
+                    )
                 );
-                return result;
+
+                // Merge, deduplicate, sort descending by semver-ish comparison, and take
+                const merged = new Set<string>();
+                for (const versions of allResults) {
+                    for (const v of versions) {
+                        merged.add(v);
+                    }
+                }
+                const sorted = [...merged].sort((a, b) => {
+                    // Reverse sort: higher versions first
+                    return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }) * -1;
+                });
+                return sorted.slice(0, take);
             }
 
             const result = await this.getPackageVersionsFromSource(packageId, source, includePrerelease, take);
