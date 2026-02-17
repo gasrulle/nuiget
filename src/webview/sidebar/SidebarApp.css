@@ -63,14 +63,18 @@ body {
     background: none;
     border: none;
     cursor: pointer;
-    color: var(--vscode-input-foreground);
-    opacity: 0.6;
+    color: var(--vscode-descriptionForeground);
     flex-shrink: 0;
     padding: 0;
 }
 
 .sidebar-search-clear:hover {
-    opacity: 1;
+    color: var(--vscode-foreground);
+}
+
+.sidebar-search-clear:focus-visible {
+    outline: 1px solid var(--vscode-focusBorder);
+    outline-offset: -1px;
 }
 
 /* ─── @-Prefix Filter Dropdown ───────────────────────────────────────────── */
@@ -83,7 +87,7 @@ body {
     background: var(--vscode-editorSuggestWidget-background, var(--vscode-dropdown-background));
     border: 1px solid var(--vscode-editorSuggestWidget-border, var(--vscode-dropdown-border));
     border-radius: 3px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 2px 8px var(--vscode-widget-shadow, rgba(0, 0, 0, 0.36));
     overflow: hidden;
 }
 
@@ -206,11 +210,10 @@ body {
 .section-action-btn {
     background: none;
     border: none;
-    color: var(--vscode-foreground);
+    color: var(--vscode-descriptionForeground);
     cursor: pointer;
     padding: 0 3px;
     font-size: 13px;
-    opacity: 0.7;
     border-radius: 3px;
     display: flex;
     align-items: center;
@@ -218,8 +221,13 @@ body {
 }
 
 .section-action-btn:hover {
-    opacity: 1;
+    color: var(--vscode-foreground);
     background: var(--vscode-toolbar-hoverBackground, rgba(127, 127, 127, 0.15));
+}
+
+.section-action-btn:focus-visible {
+    outline: 1px solid var(--vscode-focusBorder);
+    outline-offset: -1px;
 }
 
 /* ─── Section Content ────────────────────────────────────────────────────── */
@@ -293,6 +301,9 @@ body {
     text-overflow: ellipsis;
     flex-shrink: 1;
     min-width: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
 }
 
 .package-row-description {

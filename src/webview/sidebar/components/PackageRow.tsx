@@ -1,21 +1,5 @@
 import React, { useCallback } from 'react';
-
-// ─── Inline SVG Codicons (16×16 viewBox, fill=currentColor) ─────────────────
-const IconAdd = () => (
-    <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-        <path d="M14 7v1H8v6H7V8H1V7h6V1h1v6h6z" />
-    </svg>
-);
-const IconTrash = () => (
-    <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-        <path fillRule="evenodd" clipRule="evenodd" d="M10 3h3v1h-1v9l-1 1H5l-1-1V4H3V3h3V2a1 1 0 011-1h2a1 1 0 011 1v1zM9 2H7v1h2V2zM5 4v9h6V4H5zm1 2h1v5H6V6zm3 0h1v5H9V6z" />
-    </svg>
-);
-const IconArrowUp = () => (
-    <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-        <path d="M8 1L3 6h3v9h4V6h3L8 1z" />
-    </svg>
-);
+import { ArrowRightIcon, ArrowUpIcon, PlusIcon, TrashIcon } from '../../app/icons';
 
 interface PackageRowProps {
     packageId: string;
@@ -66,28 +50,32 @@ export const PackageRow: React.FC<PackageRowProps> = ({
 
     // Determine primary action label and icon
     let actionLabel: string;
-    let ActionIcon: React.FC;
+    let ActionIcon: React.FC<{ size?: number }>;
     if (context === 'browse') {
         if (installedVersion) {
             actionLabel = 'Uninstall (Del)';
-            ActionIcon = IconTrash;
+            ActionIcon = TrashIcon;
         } else {
             actionLabel = 'Install (Enter)';
-            ActionIcon = IconAdd;
+            ActionIcon = PlusIcon;
         }
     } else if (context === 'installed') {
         actionLabel = 'Uninstall (Del)';
-        ActionIcon = IconTrash;
+        ActionIcon = TrashIcon;
     } else {
         actionLabel = 'Update (Enter)';
-        ActionIcon = IconArrowUp;
+        ActionIcon = ArrowUpIcon;
     }
 
     const displayVersion = context === 'updates'
-        ? `${installedVersion} → ${latestVersion}`
+        ? `${installedVersion} \u2192 ${latestVersion}`
         : context === 'installed'
             ? (installedVersion || version)
             : version;
+
+    const versionContent = context === 'updates'
+        ? <>{installedVersion} <ArrowRightIcon size={10} /> {latestVersion}</>
+        : displayVersion;
 
     const className = `package-row${selected ? ' selected' : ''}`;
 
@@ -104,7 +92,7 @@ export const PackageRow: React.FC<PackageRowProps> = ({
             <div className="package-row-main">
                 <div className="package-row-header" title={`${packageId} ${displayVersion}`}>
                     <span className="package-row-name">{packageId}</span>
-                    <span className="package-row-version">{displayVersion}</span>
+                    <span className="package-row-version">{versionContent}</span>
                 </div>
                 {description && (
                     <div className="package-row-description" title={description}>
@@ -119,7 +107,7 @@ export const PackageRow: React.FC<PackageRowProps> = ({
                 aria-label={`${actionLabel} ${packageId}`}
                 tabIndex={-1}
             >
-                <ActionIcon />
+                <ActionIcon size={14} />
             </button>
         </div>
     );

@@ -13,6 +13,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { AllProjectsIcon, ArrowUpIcon, CloseIcon, SingleProjectIcon } from '../app/icons';
 import type { InstalledPackage, NuGetSource, PackageSearchResult, PackageUpdateMinimal, Project, ProjectUpdates } from '../app/types';
 import { PackageRow } from './components/PackageRow';
 import { SectionHeader } from './components/SectionHeader';
@@ -873,7 +874,7 @@ export const SidebarApp: React.FC = () => {
     return (
         <div className="sidebar-app">
             {/* Search Input */}
-            <div className="sidebar-search-container">
+            <div className="sidebar-search-container" role="search">
                 <div className="sidebar-search-wrapper">
                     <input
                         ref={searchInputRef}
@@ -886,6 +887,8 @@ export const SidebarApp: React.FC = () => {
                         onBlur={handleSearchBlur}
                         spellCheck={false}
                         autoComplete="off"
+                        role="searchbox"
+                        aria-label="Search NuGet packages"
                     />
                     {searchQuery && (
                         <button
@@ -894,21 +897,21 @@ export const SidebarApp: React.FC = () => {
                             aria-label="Clear search"
                             tabIndex={-1}
                         >
-                            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                                <path d="M10 12.6l.7.7 1.6-1.6 1.6 1.6.8-.7L13 11l1.7-1.6-.8-.8-1.6 1.7-1.6-1.7-.7.8 1.6 1.6-1.6 1.6zM1 4h14V3H1v1zm0 3h14V6H1v1zm0 3h8V9H1v1zm0 3h8v-1H1v1z" />
-                            </svg>
+                            <CloseIcon size={16} />
                         </button>
                     )}
                 </div>
                 {/* @-prefix filter dropdown */}
                 {showFilterDropdown && matchingFilters.length > 0 && (
-                    <div className="filter-dropdown" ref={filterDropdownRef}>
+                    <div className="filter-dropdown" ref={filterDropdownRef} role="listbox">
                         {matchingFilters.map((filter, index) => (
                             <div
                                 key={filter}
                                 className={`filter-dropdown-item${index === filterDropdownIndex ? ' active' : ''}`}
                                 onMouseDown={(e) => { e.preventDefault(); selectFilter(filter); }}
                                 onMouseEnter={() => setFilterDropdownIndex(index)}
+                                role="option"
+                                aria-selected={index === filterDropdownIndex}
                             >
                                 <span className="filter-dropdown-prefix">@</span>
                                 <span>{filter.slice(1)}</span>
@@ -928,7 +931,7 @@ export const SidebarApp: React.FC = () => {
             {!selectedProject && projects.length > 0 && (
                 <div className="sidebar-welcome">
                     <p>Select a project to get started.</p>
-                    <p>Use the <strong>$(project)</strong> button in the title bar.</p>
+                    <p>Use the project picker button in the title bar.</p>
                 </div>
             )}
 
@@ -967,20 +970,12 @@ export const SidebarApp: React.FC = () => {
                                     className="section-action-btn"
                                     onClick={() => { setLoadAllProjects(prev => !prev); setExpandedSection('updates'); }}
                                     title={loadAllProjects ? 'All projects' : 'Selected project'}
+                                    aria-label={loadAllProjects ? 'All projects' : 'Selected project'}
                                 >
                                     {loadAllProjects ? (
-                                        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                                            <g opacity="0.55">
-                                                <rect x="2" y="4" width="5" height="8" rx="0.5" />
-                                                <rect x="5" y="6" width="6" height="8" rx="0.5" />
-                                                <rect x="8" y="2" width="6" height="8" rx="0.5" />
-                                            </g>
-                                            <path d="M13.5 1H8.5C8.10218 1 7.72064 1.15804 7.43934 1.43934C7.15804 1.72064 7 2.10218 7 2.5V3H2.5C2.10218 3 1.72064 3.15804 1.43934 3.43934C1.15804 3.72064 1 4.10218 1 4.5V11.5C1 11.8978 1.15804 12.2794 1.43934 12.5607C1.72064 12.842 2.10218 13 2.5 13H4V13.5C4 13.8978 4.15804 14.2794 4.43934 14.5607C4.72064 14.842 5.10218 15 5.5 15H10.5C10.8978 15 11.2794 14.842 11.5607 14.5607C11.842 14.2794 12 13.8978 12 13.5V11H13.5C13.8978 11 14.2794 10.842 14.5607 10.5607C14.842 10.2794 15 9.89782 15 9.5V2.5C15 2.10218 14.842 1.72064 14.5607 1.43934C14.2794 1.15804 13.8978 1 13.5 1ZM2.5 12C2.36739 12 2.24021 11.9473 2.14645 11.8536C2.05268 11.7598 2 11.6326 2 11.5V4.5C2 4.36739 2.05268 4.24021 2.14645 4.14645C2.24021 4.05268 2.36739 4 2.5 4H7V5H5.5C5.10218 5 4.72064 5.15804 4.43934 5.43934C4.15804 5.72064 4 6.10218 4 6.5V12H2.5ZM11 13.5C11 13.6326 10.9473 13.7598 10.8536 13.8536C10.7598 13.9473 10.6326 14 10.5 14H5.5C5.36739 14 5.24021 13.9473 5.14645 13.8536C5.05268 13.7598 5 13.6326 5 13.5V6.5C5 6.36739 5.05268 6.24021 5.14645 6.14645C5.24021 6.05268 5.36739 6 5.5 6H10.5C10.6326 6 10.7598 6.05268 10.8536 6.14645C10.9473 6.24021 11 6.36739 11 6.5V13.5ZM14 9.5C14 9.63261 13.9473 9.75979 13.8536 9.85355C13.7598 9.94732 13.6326 10 13.5 10H12V6.5C12 6.10218 11.842 5.72064 11.5607 5.43934C11.2794 5.15804 10.8978 5 10.5 5H8V2.5C8 2.36739 8.05268 2.24021 8.14645 2.14645C8.24021 2.05268 8.36739 2 8.5 2H13.5C13.6326 2 13.7598 2.05268 13.8536 2.14645C13.9473 2.24021 14 2.36739 14 2.5V9.5Z" />
-                                        </svg>
+                                        <AllProjectsIcon size={16} />
                                     ) : (
-                                        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                                            <path d="M13.5 1H8.5C8.10218 1 7.72064 1.15804 7.43934 1.43934C7.15804 1.72064 7 2.10218 7 2.5V3H2.5C2.10218 3 1.72064 3.15804 1.43934 3.43934C1.15804 3.72064 1 4.10218 1 4.5V11.5C1 11.8978 1.15804 12.2794 1.43934 12.5607C1.72064 12.842 2.10218 13 2.5 13H4V13.5C4 13.8978 4.15804 14.2794 4.43934 14.5607C4.72064 14.842 5.10218 15 5.5 15H10.5C10.8978 15 11.2794 14.842 11.5607 14.5607C11.842 14.2794 12 13.8978 12 13.5V11H13.5C13.8978 11 14.2794 10.842 14.5607 10.5607C14.842 10.2794 15 9.89782 15 9.5V2.5C15 2.10218 14.842 1.72064 14.5607 1.43934C14.2794 1.15804 13.8978 1 13.5 1ZM2.5 12C2.36739 12 2.24021 11.9473 2.14645 11.8536C2.05268 11.7598 2 11.6326 2 11.5V4.5C2 4.36739 2.05268 4.24021 2.14645 4.14645C2.24021 4.05268 2.36739 4 2.5 4H7V5H5.5C5.10218 5 4.72064 5.15804 4.43934 5.43934C4.15804 5.72064 4 6.10218 4 6.5V12H2.5ZM11 13.5C11 13.6326 10.9473 13.7598 10.8536 13.8536C10.7598 13.9473 10.6326 14 10.5 14H5.5C5.36739 14 5.24021 13.9473 5.14645 13.8536C5.05268 13.7598 5 13.6326 5 13.5V6.5C5 6.36739 5.05268 6.24021 5.14645 6.14645C5.24021 6.05268 5.36739 6 5.5 6H10.5C10.6326 6 10.7598 6.05268 10.8536 6.14645C10.9473 6.24021 11 6.36739 11 6.5V13.5ZM14 9.5C14 9.63261 13.9473 9.75979 13.8536 9.85355C13.7598 9.94732 13.6326 10 13.5 10H12V6.5C12 6.10218 11.842 5.72064 11.5607 5.43934C11.2794 5.15804 10.8978 5 10.5 5H8V2.5C8 2.36739 8.05268 2.24021 8.14645 2.14645C8.24021 2.05268 8.36739 2 8.5 2H13.5C13.6326 2 13.7598 2.05268 13.8536 2.14645C13.9473 2.24021 14 2.36739 14 2.5V9.5Z" />
-                                        </svg>
+                                        <SingleProjectIcon size={16} />
                                     )}
                                 </button>
                                 {totalUpdateCount > 0 && (
@@ -988,10 +983,9 @@ export const SidebarApp: React.FC = () => {
                                         className="section-action-btn"
                                         onClick={handleUpdateAll}
                                         title={`Update all packages (${totalUpdateCount})`}
+                                        aria-label={`Update all packages (${totalUpdateCount})`}
                                     >
-                                        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                                            <path d="M8 1l-4.5 6H7v6h2V7h3.5L8 1z" />
-                                        </svg>
+                                        <ArrowUpIcon size={16} />
                                     </button>
                                 )}
                             </>
