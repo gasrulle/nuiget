@@ -10,9 +10,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - **Native VS Code icon system** — Replaced all emoji/Unicode character icons (⚙️, ⚠️, ✓, ▶/▼, 🔄, 📏, ⬇, ⏳, 🗑️, ←/→, ✕, ℹ️) with inline SVG components matching VS Code's codicon system in new `icons.tsx` module
-- **High-contrast theme support** — Added `body.vscode-high-contrast` and `body.vscode-high-contrast-light` CSS rules with `--vscode-contrastBorder` and `--vscode-contrastActiveBorder` for all interactive elements
-- **Reduced-motion accessibility** — Added `@media (prefers-reduced-motion: reduce)` rules to disable spinner, icon, and tab transition animations
+- **High-contrast theme support** — Added `body.vscode-high-contrast` and `body.vscode-high-contrast-light` CSS rules with `--vscode-contrastBorder` and `--vscode-contrastActiveBorder` for all interactive elements in both main panel and sidebar
+- **Reduced-motion accessibility** — Added `@media (prefers-reduced-motion: reduce)` rules to disable spinner, icon, and tab transition animations in both main panel and sidebar
 - **Icon CSS utilities** — Added `.inline-icon`, `.codicon-loading` spin animation, and icon-specific color rules for verified badges, warnings, and settings gear
+- **Sidebar ARIA improvements** — Added `role="search"` wrapper, `role="searchbox"` and `aria-label` on search input, `role="listbox"`/`role="option"` on filter dropdown, `aria-label` on action buttons, `:focus-visible` outlines on section action buttons and search clear button
 
 ### Changed
 
@@ -24,13 +25,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Button border tokens** — Primary and secondary buttons now include `--vscode-button-border` for proper theme integration
 - **List selection foreground** — Selected package items now set `--vscode-list-activeSelectionForeground` for correct text color
 - **Removed all `!important` overrides** — Replaced 6 `!important` usages with higher-specificity selectors
+- **Sidebar icons consolidated** — Removed inline SVG definitions from `PackageRow.tsx`, `SectionHeader.tsx`, and `SidebarApp.tsx`; all icons now import from shared `icons.tsx` module
+- **Sidebar icon visibility uses color tokens** — Section action buttons and search clear button switched from `opacity` to `color: var(--vscode-descriptionForeground)` / `var(--vscode-foreground)` pattern
+- **Sidebar filter dropdown shadow** — Uses `var(--vscode-widget-shadow)` instead of hardcoded `rgba(0, 0, 0, 0.3)`
 
 ### Fixed
 
 - **Hardcoded highlight.js colors** — Replaced hardcoded `#6a9955`, `#608b4e`, `#008000` comment/doctag colors with `var(--vscode-editorLineNumber-activeForeground)` fallbacks
 - **Settings gear icon barely visible**
 - **Verified badge not vertically aligned with author text**
+- **Update arrow misaligned in updates tab**
+- **Close button double-opacity compounding**
 - **CSP hardened for style-src** — Moved inline `<style>` blocks from NuGetPanel.ts and NuGetSidebarPanel.ts to external CSS files, removing `'unsafe-inline'` from `style-src` directive
+- **`$(project)` literal text in sidebar** — Was displaying `$(project)` as literal text in welcome message (codicon syntax doesn't render in webviews)
+- **Sidebar Unicode arrow `→`** — Replaced with `ArrowRightIcon` SVG component in package update version display
 
 ## [1.5.3] - 2026-02-16
 

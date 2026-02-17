@@ -96,7 +96,7 @@ src/
 
 ### Module Split: App.tsx
 `App.tsx` delegates module-level setup and UI components to separate modules:
-- **`icons.tsx`** — Inline SVG icon components matching VS Code's codicon system. All icons use `currentColor` for theme-aware rendering. Exports: `ChevronRightIcon`, `ChevronDownIcon`, `SettingsGearIcon`, `WarningIcon`, `CloseIcon`, `CheckIcon`, `ArrowRightIcon`, `ArrowLeftIcon`, `CloudDownloadIcon`, `InfoIcon`, `SyncIcon`, `RulerIcon`, `LoadingIcon`, `TrashIcon`, `VerifiedIcon`, `ExternalLinkIcon`. Codicon fonts are NOT available in webviews — inline SVGs are the required approach.
+- **`icons.tsx`** — Inline SVG icon components matching VS Code's codicon system. All icons use `currentColor` for theme-aware rendering. Exports: `ChevronRightIcon`, `ChevronDownIcon`, `SettingsGearIcon`, `WarningIcon`, `CloseIcon`, `CheckIcon`, `ArrowRightIcon`, `ArrowLeftIcon`, `CloudDownloadIcon`, `InfoIcon`, `SyncIcon`, `RulerIcon`, `LoadingIcon`, `TrashIcon`, `VerifiedIcon`, `ExternalLinkIcon`, `PlusIcon`, `ArrowUpIcon`, `SingleProjectIcon`, `AllProjectsIcon`. Codicon fonts are NOT available in webviews — inline SVGs are the required approach. Both main panel and sidebar import from this single module.
 - **`markdownSetup.ts`** — highlight.js language registrations (16 languages, 30 aliases), marked config with custom code renderer, `renderMarkdownToHtml()` (combines upgradeHttpToHttps + marked.parse + DOMPurify.sanitize).
 - **`DraggableSash.tsx`** — Standalone resizable split panel sash component (`MemoizedDraggableSash`).
 - **`SourceSettingsOverlay.tsx`** — Self-contained source settings modal with `forwardRef`/`useImperativeHandle`. Owns internal form state (add source form, confirm remove dialog). Parent forwards `addSourceResult` messages via `sourceSettingsRef.current?.handleAddSourceResult()`.
@@ -107,7 +107,7 @@ The sidebar provides a compact package management UI in the VS Code Activity Bar
 
 ### Architecture
 - **Backend**: `NuGetSidebarPanel.ts` — `WebviewViewProvider` that shares the singleton `NuGetService` with the main panel. Handles all backend operations (search, install, update, remove) and delegates source/project/prerelease selection to VS Code QuickPick commands registered in `extension.ts`.
-- **Frontend**: `SidebarApp.tsx` — Single React component with a search-mode model. Uses `SectionHeader` and `PackageRow` sub-components.
+- **Frontend**: `SidebarApp.tsx` — Single React component with a search-mode model. Uses `SectionHeader` and `PackageRow` sub-components. All icons imported from shared `icons.tsx` module — no inline SVG definitions in sidebar components.
 - **Build**: Separate esbuild entry point (`src/webview/sidebar/index.tsx` → `dist/sidebar.js`).
 
 ### Key Design Decisions
@@ -1234,14 +1234,22 @@ const csp = `
 
 ## Theme Compliance
 
-The webview CSS uses VS Code CSS variables for full theme adaptation:
+The webview CSS uses VS Code CSS variables for full theme adaptation. Both the main panel (`App.css`) and sidebar (`SidebarApp.css`) follow the same patterns.
 
 ### Core UI Elements
-- Backgrounds: `--vscode-editor-background`, `--vscode-list-hoverBackground`
+- Backgrounds: `--vscode-editor-background`, `--vscode-list-hoverBackground`, `--vscode-sideBar-background`
 - Text: `--vscode-foreground`, `--vscode-descriptionForeground`
-- Selection: `--vscode-list-activeSelectionBackground`, `--vscode-focusBorder`
-- Buttons: `--vscode-button-*`, `--vscode-inputValidation-error*`
+- Selection: `--vscode-list-activeSelectionBackground`, `--vscode-list-activeSelectionForeground`, `--vscode-focusBorder`
+- Buttons: `--vscode-button-*`, `--vscode-button-border`, `--vscode-inputValidation-error*`
+- Tabs: `--vscode-tab-activeForeground`, `--vscode-tab-inactiveForeground`, `--vscode-tab-hoverBackground`, `--vscode-tab-activeBorderTop`
 - Shadows: `--vscode-widget-shadow`
+- Icons: Color-based visibility using `--vscode-descriptionForeground` (muted) → `--vscode-foreground` (active/hover). Never use `opacity` for icon visibility — it compounds when parent and SVG both have it.
+
+### Accessibility
+- **High-contrast themes**: `body.vscode-high-contrast` and `body.vscode-high-contrast-light` rules add `--vscode-contrastBorder` on interactive elements and `--vscode-contrastActiveBorder` on `:focus-visible` in both main panel and sidebar CSS.
+- **Reduced motion**: `body.vscode-reduce-motion` disables all `transition` and `animation` properties. Applied to spinners, chevron rotations, row hover animations, and tab transitions.
+- **ARIA**: Sidebar search has `role="search"` wrapper, `role="searchbox"` input, filter dropdown uses `role="listbox"`/`role="option"`, action buttons have `aria-label` matching `title`, all SVG icons have `aria-hidden={!title}`.
+- **Focus indicators**: All interactive elements (buttons, inputs, rows, dropdown items) have `:focus-visible` outlines using `--vscode-focusBorder`.
 
 ### Syntax Highlighting (README code blocks)
 Uses `--vscode-symbolIcon-*` and `--vscode-debugTokenExpression-*` variables with dark theme fallbacks:
@@ -1261,7 +1269,7 @@ body.vscode-light .readme-rendered .hljs-keyword { color: var(--vscode-symbolIco
 ## Build System
 
 ### esbuild Configuration
-- Two separate builds: extension (Node.js/CJS) and webview (browser/IIFE)
+- Three separate builds: extension (Node.js/CJS), webview (browser/IIFE), and sidebar (browser/IIFE)
 - esbuild `define` for `process.env.NODE_ENV` (required by React)
 - `jsx: 'automatic'` for React 17+ JSX transform
 - Source maps disabled in production builds
@@ -1272,7 +1280,9 @@ body.vscode-light .readme-rendered .hljs-keyword { color: var(--vscode-symbolIco
 dist/
 ├── extension.js      # Main extension code (no source map in production)
 ├── webview.js        # React webview bundle
-└── webview.css       # External CSS file
+├── webview.css       # External CSS file (main panel)
+├── sidebar.js        # Sidebar React bundle
+└── sidebar.css       # External CSS file (sidebar)
 ```
 
 ## Testing the Extension
