@@ -1,3 +1,20 @@
+/* Base webview body styles */
+body {
+    padding: 0;
+    margin: 0;
+    font-family: var(--vscode-font-family);
+    font-size: var(--vscode-font-size);
+    color: var(--vscode-foreground);
+    background-color: var(--vscode-editor-background);
+}
+
+#root {
+    width: 100%;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
 .app {
     display: flex;
     flex-direction: column;
@@ -67,6 +84,7 @@
 
 .package-item.selected {
     background: var(--vscode-list-activeSelectionBackground);
+    color: var(--vscode-list-activeSelectionForeground);
     border-left: 3px solid var(--vscode-focusBorder);
     padding-left: 13px;
 }
@@ -116,6 +134,8 @@
 .package-update-arrow {
     color: var(--vscode-charts-green, #4ec9b0);
     font-weight: bold;
+    display: inline-flex;
+    align-items: center;
 }
 
 .package-version-new {
@@ -251,58 +271,85 @@
     text-decoration: none;
 }
 
-/* Custom VS Code-style Checkbox */
-.update-checkbox {
+/* ============================================
+   SHARED VS CODE-STYLE CHECKBOX
+   Base styles for all checkbox variants
+   ============================================ */
+.update-checkbox,
+.load-all-checkbox input[type="checkbox"],
+.preview-checkbox input[type="checkbox"] {
     appearance: none;
     -webkit-appearance: none;
-    width: 18px;
-    height: 18px;
+    width: 16px;
+    height: 16px;
     border: 1px solid var(--vscode-checkbox-border, var(--vscode-input-border));
     border-radius: 3px;
     background: var(--vscode-checkbox-background, var(--vscode-input-background));
     cursor: pointer;
-    flex-shrink: 0;
-    margin-right: 8px;
     position: relative;
+    flex-shrink: 0;
     transition: background 0.1s, border-color 0.1s;
-    margin-top: 5px;
 }
 
-.update-checkbox:hover {
+.update-checkbox:hover,
+.load-all-checkbox input[type="checkbox"]:hover,
+.preview-checkbox input[type="checkbox"]:hover {
     border-color: var(--vscode-focusBorder);
 }
 
-.update-checkbox:focus {
+.update-checkbox:focus,
+.load-all-checkbox input[type="checkbox"]:focus,
+.preview-checkbox input[type="checkbox"]:focus {
     outline: 1px solid var(--vscode-focusBorder);
     outline-offset: 1px;
 }
 
-.update-checkbox:checked {
+.update-checkbox:checked,
+.load-all-checkbox input[type="checkbox"]:checked,
+.preview-checkbox input[type="checkbox"]:checked {
     background: var(--vscode-checkbox-selectBackground, var(--vscode-focusBorder));
     border-color: var(--vscode-checkbox-selectBorder, var(--vscode-focusBorder));
 }
 
-.update-checkbox:checked::after {
+.update-checkbox:checked::after,
+.load-all-checkbox input[type="checkbox"]:checked::after,
+.preview-checkbox input[type="checkbox"]:checked::after {
     content: '';
     position: absolute;
-    left: 5px;
-    top: 2px;
+    left: 4px;
+    top: 1px;
     width: 5px;
-    height: 9px;
+    height: 8px;
     border: solid var(--vscode-checkbox-foreground, #fff);
     border-width: 0 2px 2px 0;
     transform: rotate(45deg);
 }
 
-.update-checkbox:disabled {
+.vscode-checkbox:disabled,
+.update-checkbox:disabled,
+.load-all-checkbox input[type="checkbox"]:disabled,
+.preview-checkbox input[type="checkbox"]:disabled {
     cursor: not-allowed;
     opacity: 0.4;
-    background: var(--vscode-checkbox-background, var(--vscode-input-background));
 }
 
 .update-checkbox:disabled:checked {
     background: var(--vscode-disabledForeground);
     border-color: var(--vscode-disabledForeground);
+}
+
+/* Update checkbox overrides (larger, with margin) */
+.update-checkbox {
+    width: 18px;
+    height: 18px;
+    margin-right: 8px;
+    margin-top: 5px;
+}
+
+.update-checkbox:checked::after {
+    left: 5px;
+    top: 2px;
+    height: 9px;
 }
 
 /* Load All Projects Toolbar */
@@ -325,38 +372,7 @@
 }
 
 .load-all-checkbox input[type="checkbox"] {
-    appearance: none;
-    -webkit-appearance: none;
-    width: 16px;
-    height: 16px;
-    border: 1px solid var(--vscode-checkbox-border, var(--vscode-input-border));
-    border-radius: 3px;
-    background: var(--vscode-checkbox-background, var(--vscode-input-background));
-    cursor: pointer;
-    position: relative;
-    flex-shrink: 0;
-}
-
-.load-all-checkbox input[type="checkbox"]:checked {
-    background: var(--vscode-checkbox-selectBackground, var(--vscode-focusBorder));
-    border-color: var(--vscode-checkbox-selectBorder, var(--vscode-focusBorder));
-}
-
-.load-all-checkbox input[type="checkbox"]:checked::after {
-    content: '';
-    position: absolute;
-    left: 4px;
-    top: 1px;
-    width: 5px;
-    height: 8px;
-    border: solid var(--vscode-checkbox-foreground, #fff);
-    border-width: 0 2px 2px 0;
-    transform: rotate(45deg);
-}
-
-.load-all-checkbox input[type="checkbox"]:disabled {
-    cursor: not-allowed;
-    opacity: 0.4;
+    /* Shared styles via .vscode-checkbox group selector above */
 }
 
 /* Project Group Header for multi-project updates */
@@ -408,6 +424,9 @@
     font-weight: bold;
     margin-right: 4px;
     cursor: help;
+    display: inline-flex;
+    align-items: center;
+    vertical-align: text-bottom;
 }
 
 .package-actions {
@@ -472,6 +491,7 @@
 .tabs {
     display: flex;
     gap: 0;
+    background: var(--vscode-editorGroupHeader-tabsBackground, transparent);
 }
 
 .tab {
@@ -479,21 +499,23 @@
     background: transparent;
     border: none;
     border-bottom: 2px solid transparent;
-    color: var(--vscode-foreground);
+    color: var(--vscode-tab-inactiveForeground, var(--vscode-foreground));
     font-family: var(--vscode-font-family);
     font-size: 13px;
     cursor: pointer;
-    transition: all 0.15s;
-    opacity: 0.7;
+    transition: color 0.15s, background 0.15s;
+    opacity: 0.8;
 }
 
 .tab:hover {
     opacity: 1;
-    background: var(--vscode-toolbar-hoverBackground);
+    color: var(--vscode-tab-hoverForeground, var(--vscode-foreground));
+    background: var(--vscode-tab-hoverBackground, var(--vscode-toolbar-hoverBackground));
 }
 
 .tab.active {
-    border-bottom-color: var(--vscode-focusBorder);
+    border-bottom-color: var(--vscode-tab-activeBorderTop, var(--vscode-focusBorder));
+    color: var(--vscode-tab-activeForeground, var(--vscode-foreground));
     opacity: 1;
     font-weight: 500;
 }
@@ -716,8 +738,9 @@
     color: var(--vscode-list-activeSelectionForeground);
 }
 
-.quick-search-expand-hint:hover {
-    opacity: 1 !important;
+.quick-search-item .quick-search-expand-hint:hover,
+.quick-search-item.selected .quick-search-expand-hint:hover {
+    opacity: 1;
     background-color: var(--vscode-toolbar-hoverBackground, rgba(90, 93, 94, 0.31));
 }
 
@@ -810,42 +833,7 @@
 }
 
 .preview-checkbox input[type="checkbox"] {
-    appearance: none;
-    -webkit-appearance: none;
-    width: 16px;
-    height: 16px;
-    border: 1px solid var(--vscode-checkbox-border, var(--vscode-input-border));
-    border-radius: 3px;
-    background: var(--vscode-checkbox-background, var(--vscode-input-background));
-    cursor: pointer;
-    position: relative;
-    transition: background 0.1s, border-color 0.1s;
-}
-
-.preview-checkbox input[type="checkbox"]:hover {
-    border-color: var(--vscode-focusBorder);
-}
-
-.preview-checkbox input[type="checkbox"]:focus {
-    outline: 1px solid var(--vscode-focusBorder);
-    outline-offset: 1px;
-}
-
-.preview-checkbox input[type="checkbox"]:checked {
-    background: var(--vscode-checkbox-selectBackground, var(--vscode-focusBorder));
-    border-color: var(--vscode-checkbox-selectBorder, var(--vscode-focusBorder));
-}
-
-.preview-checkbox input[type="checkbox"]:checked::after {
-    content: '';
-    position: absolute;
-    left: 4px;
-    top: 1px;
-    width: 5px;
-    height: 9px;
-    border: solid var(--vscode-checkbox-foreground, #fff);
-    border-width: 0 2px 2px 0;
-    transform: rotate(45deg);
+    /* Shared styles via .vscode-checkbox group selector above */
 }
 
 .source-selector-container {
@@ -1019,7 +1007,7 @@
     width: 32px;
     height: 32px;
     border: 3px solid var(--vscode-editor-inactiveSelectionBackground);
-    border-top-color: var(--vscode-focusBorder);
+    border-top-color: var(--vscode-progressBar-background, var(--vscode-focusBorder));
     border-radius: 50%;
     animation: spin 0.8s linear infinite;
 }
@@ -1055,6 +1043,7 @@
 .btn-primary {
     background: var(--vscode-button-background);
     color: var(--vscode-button-foreground);
+    border: 1px solid var(--vscode-button-border, transparent);
 }
 
 .btn-primary:hover:not(:disabled) {
@@ -1064,6 +1053,7 @@
 .btn-secondary {
     background: var(--vscode-button-secondaryBackground);
     color: var(--vscode-button-secondaryForeground);
+    border: 1px solid var(--vscode-button-border, transparent);
 }
 
 .btn-secondary:hover:not(:disabled) {
@@ -1236,15 +1226,17 @@
     word-break: break-all;
 }
 
-.details-link {
-    color: var(--vscode-textLink-foreground) !important;
+.details-info .details-row .details-link,
+a.details-link {
+    color: var(--vscode-textLink-foreground);
     text-decoration: none;
     cursor: pointer;
 }
 
-.details-link:hover {
+.details-info .details-row .details-link:hover,
+a.details-link:hover {
     text-decoration: underline;
-    color: var(--vscode-textLink-activeForeground) !important;
+    color: var(--vscode-textLink-activeForeground);
 }
 
 /* Dependencies Section */
@@ -1541,13 +1533,13 @@
 /* Comments */
 .readme-rendered .hljs-comment,
 .readme-rendered .hljs-quote {
-    color: #6a9955;
+    color: var(--vscode-editorLineNumber-activeForeground, #6a9955);
     font-style: italic;
 }
 
 /* XML doc tags in comments */
 .readme-rendered .hljs-doctag {
-    color: #608b4e;
+    color: var(--vscode-editorLineNumber-activeForeground, #608b4e);
 }
 
 /* Variables and parameters */
@@ -1794,7 +1786,6 @@
     cursor: pointer;
     padding: 4px 6px;
     font-size: 14px;
-    opacity: 0.7;
     transition: opacity 0.15s;
 }
 
@@ -1809,16 +1800,18 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0, 0, 0, 0.5);
+    background: var(--vscode-editor-background, rgba(0, 0, 0, 0.5));
+    background: color-mix(in srgb, var(--vscode-editor-background) 60%, transparent);
     display: flex;
     align-items: center;
     justify-content: center;
     z-index: 1000;
+    backdrop-filter: blur(2px);
 }
 
 .source-settings-modal {
-    background: var(--vscode-editor-background);
-    border: 1px solid var(--vscode-panel-border);
+    background: var(--vscode-editorWidget-background, var(--vscode-editor-background));
+    border: 1px solid var(--vscode-editorWidget-border, var(--vscode-panel-border));
     border-radius: 8px;
     width: 90%;
     max-width: 500px;
@@ -1849,12 +1842,11 @@
     cursor: pointer;
     font-size: 16px;
     color: var(--vscode-foreground);
-    opacity: 0.7;
     padding: 4px 8px;
 }
 
 .source-settings-close:hover {
-    opacity: 1;
+    color: var(--vscode-foreground);
 }
 
 .source-settings-content {
@@ -2270,9 +2262,9 @@
     margin-bottom: 0;
 }
 
-.confirm-warning {
-    font-size: 12px !important;
-    color: var(--vscode-descriptionForeground) !important;
+.confirm-dialog-content p.confirm-warning {
+    font-size: 12px;
+    color: var(--vscode-descriptionForeground);
     font-style: italic;
 }
 
@@ -2559,6 +2551,7 @@
 
 .transitive-package-item.selected {
     background: var(--vscode-list-activeSelectionBackground);
+    color: var(--vscode-list-activeSelectionForeground);
     border-left: 3px solid var(--vscode-focusBorder);
     padding-left: 13px;
 }
@@ -2598,9 +2591,9 @@
 }
 
 /* Required by section in transitive package details */
-.required-by-section {
+.details-info .details-row.required-by-section {
     flex-direction: column;
-    align-items: flex-start !important;
+    align-items: flex-start;
     gap: 4px;
 }
 
@@ -2664,12 +2657,12 @@
 /* Comments need darker color for light backgrounds */
 body.vscode-light .readme-rendered .hljs-comment,
 body.vscode-light .readme-rendered .hljs-quote {
-    color: #008000;
+    color: var(--vscode-editorLineNumber-activeForeground, #008000);
 }
 
 /* XML doc tags in comments */
 body.vscode-light .readme-rendered .hljs-doctag {
-    color: #008000;
+    color: var(--vscode-editorLineNumber-activeForeground, #008000);
 }
 
 /* Keywords - use darker blue for light themes */
@@ -2756,4 +2749,174 @@ body.vscode-light .readme-rendered .hljs-selector-pseudo {
 /* Name fallback */
 body.vscode-light .readme-rendered .hljs-name {
     color: var(--vscode-symbolIcon-keywordForeground, #800000);
+}
+
+/* ============================================
+   SVG ICON UTILITIES
+   Shared styles for inline SVG icons replacing emoji
+   ============================================ */
+
+/* Inline icon alignment — use on SVG icons placed inline with text */
+.inline-icon {
+    display: inline-block;
+    vertical-align: middle;
+    position: relative;
+    top: -1px;
+}
+
+/* SVG icons inherit color from parent by default (currentColor) */
+svg {
+    flex-shrink: 0;
+}
+
+/* Loading spinner icon animation */
+.codicon-loading {
+    animation: codicon-spin 1.5s linear infinite;
+}
+
+@keyframes codicon-spin {
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+/* Verified badge icon — uses VS Code's blue accent */
+.verified-badge svg {
+    color: var(--vscode-textLink-foreground);
+}
+
+/* Source warning indicator icon */
+.source-warning-indicator svg {
+    color: var(--vscode-notificationsWarningIcon-foreground, var(--vscode-editorWarning-foreground));
+}
+
+/* Settings gear button icon — color-based visibility, not opacity */
+.source-settings-btn svg {
+    color: var(--vscode-descriptionForeground);
+}
+
+.source-settings-btn:hover svg {
+    color: var(--vscode-foreground);
+}
+
+/* Close button icon — color-based visibility, not opacity */
+.source-settings-close svg {
+    color: var(--vscode-descriptionForeground);
+}
+
+.source-settings-close:hover svg {
+    color: var(--vscode-foreground);
+}
+
+/* Expand/collapse arrow icons */
+.expand-icon svg,
+.direct-packages-arrow svg,
+.transitive-arrow svg {
+    transition: transform 0.1s ease;
+}
+
+/* Update arrow icon — muted */
+.package-update-arrow svg {
+    color: var(--vscode-descriptionForeground);
+}
+
+/* No-lockfile warning icon */
+.no-lockfile-icon svg {
+    color: var(--vscode-notificationsWarningIcon-foreground, var(--vscode-editorWarning-foreground));
+}
+
+/* Floating/range badge icons */
+.floating-version-badge svg,
+.floating-badge svg {
+    opacity: 0.85;
+}
+
+/* ============================================
+   HIGH CONTRAST THEME SUPPORT
+   VS Code webviews must support all theme categories
+   ============================================ */
+
+body.vscode-high-contrast .tab,
+body.vscode-high-contrast-light .tab {
+    border: 1px solid var(--vscode-contrastBorder, transparent);
+}
+
+body.vscode-high-contrast .tab.active,
+body.vscode-high-contrast-light .tab.active {
+    border-color: var(--vscode-contrastActiveBorder, var(--vscode-focusBorder));
+}
+
+body.vscode-high-contrast .btn,
+body.vscode-high-contrast-light .btn {
+    border: 1px solid var(--vscode-contrastBorder, transparent);
+}
+
+body.vscode-high-contrast .btn:focus-visible,
+body.vscode-high-contrast-light .btn:focus-visible {
+    outline: 2px solid var(--vscode-contrastActiveBorder, var(--vscode-focusBorder));
+    outline-offset: 1px;
+}
+
+body.vscode-high-contrast select,
+body.vscode-high-contrast-light select {
+    border: 1px solid var(--vscode-contrastBorder, var(--vscode-dropdown-border));
+}
+
+body.vscode-high-contrast input[type="text"],
+body.vscode-high-contrast input[type="password"],
+body.vscode-high-contrast-light input[type="text"],
+body.vscode-high-contrast-light input[type="password"] {
+    border: 1px solid var(--vscode-contrastBorder, var(--vscode-input-border));
+}
+
+body.vscode-high-contrast .package-item:focus-visible,
+body.vscode-high-contrast-light .package-item:focus-visible {
+    outline: 2px solid var(--vscode-contrastActiveBorder, var(--vscode-focusBorder));
+    outline-offset: -2px;
+}
+
+body.vscode-high-contrast .source-settings-modal,
+body.vscode-high-contrast-light .source-settings-modal {
+    border: 2px solid var(--vscode-contrastBorder, var(--vscode-editorWidget-border));
+}
+
+body.vscode-high-contrast .verified-badge svg,
+body.vscode-high-contrast-light .verified-badge svg {
+    color: var(--vscode-contrastActiveBorder, var(--vscode-textLink-foreground));
+}
+
+/* ============================================
+   REDUCED MOTION SUPPORT
+   Respect user preference for reduced motion
+   ============================================ */
+
+@media (prefers-reduced-motion: reduce) {
+    .loading-spinner {
+        animation: none;
+        border-top-color: var(--vscode-progressBar-background, var(--vscode-focusBorder));
+        opacity: 0.7;
+    }
+
+    .codicon-loading {
+        animation: none;
+    }
+
+    .tab {
+        transition: none;
+    }
+
+    .btn {
+        transition: none;
+    }
+
+    .expand-icon svg,
+    .direct-packages-arrow svg,
+    .transitive-arrow svg {
+        transition: none;
+    }
+
+    .source-settings-main,
+    .source-add-panel {
+        transition: none;
+    }
 }

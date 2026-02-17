@@ -1,5 +1,6 @@
 import { useVirtualizer } from '@tanstack/react-virtual';
 import React, { forwardRef, useCallback, useDeferredValue, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
+import { CloudDownloadIcon, LoadingIcon, VerifiedIcon } from '../icons';
 import {
     type InstalledPackage,
     type NuGetSource,
@@ -799,7 +800,7 @@ const BrowseTab = forwardRef<BrowseTabHandle, BrowseTabProps>(function BrowseTab
                                     </div>
                                     {quickVersionsLoading ? (
                                         <div className="search-history-item quick-search-loading">
-                                            <span className="search-history-icon">⏳</span>
+                                            <span className="search-history-icon"><LoadingIcon size={14} /></span>
                                             <span className="search-history-text">Loading versions...</span>
                                         </div>
                                     ) : quickVersionsError ? (
@@ -839,7 +840,7 @@ const BrowseTab = forwardRef<BrowseTabHandle, BrowseTabProps>(function BrowseTab
                                 /* Package list mode */
                                 quickSearchLoading && quickSearchSuggestions.length === 0 ? (
                                     <div className="search-history-item quick-search-loading">
-                                        <span className="search-history-icon">⏳</span>
+                                        <span className="search-history-icon"><LoadingIcon size={14} /></span>
                                         <span className="search-history-text">Loading...</span>
                                     </div>
                                 ) : (
@@ -966,13 +967,13 @@ const BrowseTab = forwardRef<BrowseTabHandle, BrowseTabProps>(function BrowseTab
                                                 <span className="package-version">v{pkg.version}</span>
                                                 {pkg.totalDownloads && (
                                                     <span className="package-downloads">
-                                                        ⬇ {pkg.totalDownloads.toLocaleString()}
+                                                        <CloudDownloadIcon size={12} className="inline-icon" /> {pkg.totalDownloads.toLocaleString()}
                                                     </span>
                                                 )}
                                             </div>
                                             <div className="package-authors">
                                                 {pkg.verified && (
-                                                    <span className="verified-badge" title="The ID prefix of this package has been reserved by its owner on nuget.org">✓</span>
+                                                    <span className="verified-badge" title="The ID prefix of this package has been reserved by its owner on nuget.org"><VerifiedIcon size={14} /></span>
                                                 )}
                                                 {pkg.authors}
                                             </div>

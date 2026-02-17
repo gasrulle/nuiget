@@ -10,6 +10,7 @@
  */
 
 import React from 'react';
+import { ArrowRightIcon, ChevronDownIcon, ChevronRightIcon, InfoIcon, RulerIcon, SyncIcon, VerifiedIcon } from '../icons';
 import type {
     InstalledPackage,
     LRUMap,
@@ -130,11 +131,11 @@ const PackageDetailsPanel: React.FC<PackageDetailsPanelProps> = ({
                             {isFloatingOrRange ? (
                                 <div className="floating-version-info">
                                     <span className="floating-version-badge">
-                                        {installedPkg.versionType === 'floating' ? '🔄 Floating' : '📏 Range'}
+                                        {installedPkg.versionType === 'floating' ? <><SyncIcon size={12} className="inline-icon" /> Floating</> : <><RulerIcon size={12} className="inline-icon" /> Range</>}
                                     </span>
                                     <span className="floating-version-pattern">{installedPkg.version}</span>
                                     {installedPkg.resolvedVersion && (
-                                        <span className="floating-version-resolved">→ {installedPkg.resolvedVersion}</span>
+                                        <span className="floating-version-resolved"><ArrowRightIcon size={12} className="inline-icon" /> {installedPkg.resolvedVersion}</span>
                                     )}
                                 </div>
                             ) : (
@@ -208,7 +209,7 @@ const PackageDetailsPanel: React.FC<PackageDetailsPanelProps> = ({
                     {/* Info message for floating/range versions */}
                     {isFloatingOrRange && isInstalled && (
                         <div className="floating-version-notice">
-                            <span className="info-icon">ℹ️</span>
+                            <span className="info-icon"><InfoIcon size={14} /></span>
                             <span>To change this version, edit the .csproj file directly.</span>
                         </div>
                     )}
@@ -260,7 +261,7 @@ const PackageDetailsPanel: React.FC<PackageDetailsPanelProps> = ({
                             <label>Author(s):</label>
                             <span>
                                 {searchResult?.verified && (
-                                    <span className="verified-badge" title="The ID prefix of this package has been reserved by its owner on nuget.org">✓</span>
+                                    <span className="verified-badge" title="The ID prefix of this package has been reserved by its owner on nuget.org"><VerifiedIcon size={14} /></span>
                                 )}
                                 {packageMetadata?.authors || searchResult?.authors || 'Unknown'}
                             </span>
@@ -315,7 +316,7 @@ const PackageDetailsPanel: React.FC<PackageDetailsPanelProps> = ({
                                                     onClick={() => onToggleDep(key)}
                                                 >
                                                     <span className="expand-icon">
-                                                        {expandedDeps.has(key) ? '▼' : '▶'}
+                                                        {expandedDeps.has(key) ? <ChevronDownIcon size={14} /> : <ChevronRightIcon size={14} />}
                                                     </span>
                                                     <span className="framework-name">{group.targetFramework || 'All Frameworks'}</span>
                                                     <span className="dep-count">({group.dependencies?.length || 0})</span>

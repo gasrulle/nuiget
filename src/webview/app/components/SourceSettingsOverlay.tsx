@@ -4,6 +4,7 @@
  */
 
 import React, { forwardRef, useEffect, useImperativeHandle, useState } from 'react';
+import { ArrowLeftIcon, ChevronDownIcon, ChevronRightIcon, CloseIcon, ExternalLinkIcon, LoadingIcon, TrashIcon, WarningIcon } from '../icons';
 import type { NuGetSource, VsCodeApi } from '../types';
 
 interface SourceSettingsOverlayProps {
@@ -86,7 +87,7 @@ const SourceSettingsOverlay = forwardRef<SourceSettingsOverlayHandle, SourceSett
                         <div className={`source-settings-main ${showAddSourcePanel ? 'slide-out' : ''}`}>
                             <div className="source-settings-header">
                                 <h3>NuGet Sources</h3>
-                                <button className="source-settings-close" onClick={handleClose}>✕</button>
+                                <button className="source-settings-close" onClick={handleClose}><CloseIcon size={16} /></button>
                             </div>
                             <div className="source-settings-content">
                                 {sources.length === 0 ? (
@@ -106,8 +107,8 @@ const SourceSettingsOverlay = forwardRef<SourceSettingsOverlayHandle, SourceSett
                                             <div className="source-info">
                                                 <span className={`source-name ${!source.enabled ? 'disabled' : ''}`}>
                                                     {source.name}
-                                                    {togglingSource === source.name && <span className="toggling-indicator"> ⏳</span>}
-                                                    {removingSource === source.name && <span className="toggling-indicator"> ⏳</span>}
+                                                    {togglingSource === source.name && <span className="toggling-indicator"> <LoadingIcon size={12} /></span>}
+                                                    {removingSource === source.name && <span className="toggling-indicator"> <LoadingIcon size={12} /></span>}
                                                 </span>
                                                 <span className="source-url">{source.url}</span>
                                             </div>
@@ -117,7 +118,7 @@ const SourceSettingsOverlay = forwardRef<SourceSettingsOverlayHandle, SourceSett
                                                 disabled={removingSource === source.name}
                                                 onClick={() => setConfirmRemoveSource({ name: source.name, configFile: source.configFile })}
                                             >
-                                                🗑️
+                                                <TrashIcon size={14} />
                                             </button>
                                         </div>
                                     ))
@@ -147,7 +148,7 @@ const SourceSettingsOverlay = forwardRef<SourceSettingsOverlayHandle, SourceSett
                                         setAddSourceError(null);
                                     }}
                                 >
-                                    ← Back
+                                    <ArrowLeftIcon size={14} className="inline-icon" /> Back
                                 </button>
                                 <h3>Add New Source</h3>
                                 <div style={{ width: '60px' }}></div>
@@ -181,7 +182,7 @@ const SourceSettingsOverlay = forwardRef<SourceSettingsOverlayHandle, SourceSett
                                             className={addSourceError ? 'input-error' : ''}
                                         />
                                         {addSourceUrl.startsWith('http://') && (
-                                            <span className="http-warning" title="HTTP connections are insecure. HTTPS is recommended.">⚠️</span>
+                                            <span className="http-warning" title="HTTP connections are insecure. HTTPS is recommended."><WarningIcon size={14} /></span>
                                         )}
                                     </div>
                                     {addSourceError && (
@@ -202,7 +203,7 @@ const SourceSettingsOverlay = forwardRef<SourceSettingsOverlayHandle, SourceSett
                                         className="advanced-toggle"
                                         onClick={() => setShowAdvancedOptions(!showAdvancedOptions)}
                                     >
-                                        {showAdvancedOptions ? '▼' : '▶'} Advanced
+                                        {showAdvancedOptions ? <ChevronDownIcon size={14} className="inline-icon" /> : <ChevronRightIcon size={14} className="inline-icon" />} Advanced
                                     </button>
                                     {showAdvancedOptions && (
                                         <div className="advanced-content">
@@ -236,12 +237,12 @@ const SourceSettingsOverlay = forwardRef<SourceSettingsOverlayHandle, SourceSett
                                                         Store encrypted {!isWindows && '(Windows only)'}
                                                     </label>
                                                     {!storeEncrypted && isWindows && (
-                                                        <span className="warning-text">⚠️ Password will be stored in clear text</span>
+                                                        <span className="warning-text"><WarningIcon size={12} className="inline-icon" /> Password will be stored in clear text</span>
                                                     )}
                                                 </div>
                                             )}
                                             <div className="security-info">
-                                                <a href="https://learn.microsoft.com/en-us/nuget/consume-packages/consuming-packages-authenticated-feeds#security-best-practices-for-managing-credentials" target="_blank" rel="noopener noreferrer">Security best practices for credentials →</a>
+                                                <a href="https://learn.microsoft.com/en-us/nuget/consume-packages/consuming-packages-authenticated-feeds#security-best-practices-for-managing-credentials" target="_blank" rel="noopener noreferrer">Security best practices for credentials <ExternalLinkIcon size={12} className="inline-icon" /></a>
                                             </div>
                                         </div>
                                     )}

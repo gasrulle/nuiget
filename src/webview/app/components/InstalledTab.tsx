@@ -20,6 +20,7 @@
 
 import { useVirtualizer } from '@tanstack/react-virtual';
 import React, { forwardRef, useCallback, useDeferredValue, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
+import { ChevronDownIcon, ChevronRightIcon, CloseIcon, RulerIcon, SyncIcon, VerifiedIcon, WarningIcon } from '../icons';
 import type {
     InstalledPackage,
     LRUMap,
@@ -557,7 +558,7 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
                                 <span className="detail-label">Authors:</span>
                                 <span className="detail-value">
                                     {selectedTransitivePackage.verified && (
-                                        <span className="verified-badge" title="The ID prefix of this package has been reserved by its owner on nuget.org">✓</span>
+                                        <span className="verified-badge" title="The ID prefix of this package has been reserved by its owner on nuget.org"><VerifiedIcon size={14} /></span>
                                     )}
                                     {selectedTransitivePackage.authors}
                                 </span>
@@ -686,7 +687,7 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
                                         title="Clear filter (Esc)"
                                         aria-label="Clear filter"
                                     >
-                                        ×
+                                        <CloseIcon size={14} />
                                     </button>
                                 )}
                             </div>
@@ -695,7 +696,7 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
                                 onClick={() => setDirectPackagesExpanded(!directPackagesExpanded)}
                                 aria-expanded={directPackagesExpanded}
                             >
-                                <span className="direct-packages-arrow">{directPackagesExpanded ? '▼' : '▶'}</span>
+                                <span className="direct-packages-arrow">{directPackagesExpanded ? <ChevronDownIcon size={14} /> : <ChevronRightIcon size={14} />}</span>
                                 <span className="direct-packages-title">
                                     Direct packages
                                     <span className="direct-packages-count">
@@ -818,10 +819,10 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
                                                                 <span className="implicit-badge" title="SDK-managed package - not directly referenced in project file">SDK</span>
                                                             )}
                                                             {pkg.versionType === 'floating' && (
-                                                                <span className="floating-badge" title="This package uses a floating version pattern">🔄</span>
+                                                                <span className="floating-badge" title="This package uses a floating version pattern"><SyncIcon size={12} /></span>
                                                             )}
                                                             {pkg.versionType === 'range' && (
-                                                                <span className="floating-badge" title="This package uses a version range">📏</span>
+                                                                <span className="floating-badge" title="This package uses a version range"><RulerIcon size={12} /></span>
                                                             )}
                                                         </div>
                                                         <div className="package-meta">
@@ -845,7 +846,7 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
                                                         {pkg.authors && (
                                                             <div className="package-authors">
                                                                 {pkg.verified && (
-                                                                    <span className="verified-badge" title="The ID prefix of this package has been reserved by its owner on nuget.org">✓</span>
+                                                                    <span className="verified-badge" title="The ID prefix of this package has been reserved by its owner on nuget.org"><VerifiedIcon size={14} /></span>
                                                                 )}
                                                                 {pkg.authors}
                                                             </div>
@@ -875,7 +876,7 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
                             </div>
                         ) : transitiveDataSourceAvailable === false ? (
                             <div className="transitive-no-lockfile">
-                                <div className="no-lockfile-icon">⚠</div>
+                                <div className="no-lockfile-icon"><WarningIcon size={32} /></div>
                                 <div className="no-lockfile-message">
                                     <strong>No dependency data available</strong>
                                     <p>Restore the project to see transitive package dependencies.</p>
@@ -896,14 +897,14 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
                                     className="transitive-header"
                                     onClick={handleLoadTransitiveFrameworks}
                                 >
-                                    <span className="transitive-arrow">▶</span>
+                                    <span className="transitive-arrow"><ChevronRightIcon size={14} /></span>
                                     <span className="transitive-title">Transitive packages</span>
                                 </button>
                             </div>
                         ) : transitiveFrameworks.length === 0 ? (
                             <div className="transitive-section">
                                 <div className="transitive-header transitive-header-disabled">
-                                    <span className="transitive-arrow">▶</span>
+                                    <span className="transitive-arrow"><ChevronRightIcon size={14} /></span>
                                     <span className="transitive-title">Transitive packages <span className="transitive-count">(0)</span></span>
                                 </div>
                             </div>
@@ -919,7 +920,7 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
                                             onClick={() => handleToggleTransitiveFramework(framework.targetFramework)}
                                             aria-expanded={isExpanded}
                                         >
-                                            <span className="transitive-arrow">{isExpanded ? '▼' : '▶'}</span>
+                                            <span className="transitive-arrow">{isExpanded ? <ChevronDownIcon size={14} /> : <ChevronRightIcon size={14} />}</span>
                                             <span className="transitive-title">
                                                 Transitive packages
                                                 <span className="transitive-count">({framework.packages.length})</span>
@@ -971,7 +972,7 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
                                                                     {pkg.authors && (
                                                                         <div className="package-authors">
                                                                             {pkg.verified && (
-                                                                                <span className="verified-badge" title="The ID prefix of this package has been reserved by its owner on nuget.org">✓</span>
+                                                                                <span className="verified-badge" title="The ID prefix of this package has been reserved by its owner on nuget.org"><VerifiedIcon size={14} /></span>
                                                                             )}
                                                                             {pkg.authors}
                                                                         </div>

@@ -11,6 +11,7 @@ import { MemoizedSourceSettingsOverlay } from './components/SourceSettingsOverla
 import type { UpdatesTabHandle } from './components/UpdatesTab';
 import { MemoizedUpdatesTab } from './components/UpdatesTab';
 import { usePackageSelection } from './hooks/usePackageSelection';
+import { SettingsGearIcon, WarningIcon } from './icons';
 import { renderMarkdownToHtml } from './markdownSetup';
 import type { AppState, FailedSource, InstalledPackage, NuGetSource, PackageMetadata, PackageSearchResult, PackageUpdate, Project, ProjectUpdates, TransitivePackage } from './types';
 import { LRUMap, getPackageId } from './types';
@@ -987,7 +988,7 @@ export const App: React.FC = () => {
                                 const isFailed = failedSources.some(f => f.url === s.url);
                                 return (
                                     <option key={s.url} value={s.url}>
-                                        {isFailed ? '⚠️ ' : ''}{s.name}
+                                        {isFailed ? '⚠ ' : ''}{s.name}
                                     </option>
                                 );
                             })}
@@ -1000,7 +1001,7 @@ export const App: React.FC = () => {
                                 vscode.postMessage({ type: 'getConfigFiles' });
                             }}
                         >
-                            ⚙️
+                            <SettingsGearIcon size={16} />
                         </button>
                         {failedSources.length > 0 && (
                             <span
@@ -1008,7 +1009,7 @@ export const App: React.FC = () => {
                                 title={`${failedSources.length} source(s) unreachable. Click to refresh.`}
                                 onClick={() => vscode.postMessage({ type: 'refreshSources' })}
                             >
-                                ⚠️
+                                <WarningIcon size={16} />
                             </span>
                         )}
                     </div>

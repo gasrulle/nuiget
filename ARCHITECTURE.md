@@ -55,8 +55,9 @@ src/
 │   ├── app/
 │   │   ├── index.tsx         # React entry point with ErrorBoundary
 │   │   ├── App.tsx           # Application shell (~1230 lines)
-│   │   ├── App.css           # Styles
+│   │   ├── App.css           # Styles (includes high-contrast, reduced-motion, icon utilities)
 │   │   ├── types.ts          # Shared types, LRUMap, utility functions
+│   │   ├── icons.tsx          # Inline SVG icon components (codicon-compatible, theme-aware)
 │   │   ├── markdownSetup.ts  # hljs language registration, marked config, renderMarkdownToHtml()
 │   │   ├── components/
 │   │   │   ├── BrowseTab.tsx              # Browse tab (~540 lines)
@@ -95,6 +96,7 @@ src/
 
 ### Module Split: App.tsx
 `App.tsx` delegates module-level setup and UI components to separate modules:
+- **`icons.tsx`** — Inline SVG icon components matching VS Code's codicon system. All icons use `currentColor` for theme-aware rendering. Exports: `ChevronRightIcon`, `ChevronDownIcon`, `SettingsGearIcon`, `WarningIcon`, `CloseIcon`, `CheckIcon`, `ArrowRightIcon`, `ArrowLeftIcon`, `CloudDownloadIcon`, `InfoIcon`, `SyncIcon`, `RulerIcon`, `LoadingIcon`, `TrashIcon`, `VerifiedIcon`, `ExternalLinkIcon`. Codicon fonts are NOT available in webviews — inline SVGs are the required approach.
 - **`markdownSetup.ts`** — highlight.js language registrations (16 languages, 30 aliases), marked config with custom code renderer, `renderMarkdownToHtml()` (combines upgradeHttpToHttps + marked.parse + DOMPurify.sanitize).
 - **`DraggableSash.tsx`** — Standalone resizable split panel sash component (`MemoizedDraggableSash`).
 - **`SourceSettingsOverlay.tsx`** — Self-contained source settings modal with `forwardRef`/`useImperativeHandle`. Owns internal form state (add source form, confirm remove dialog). Parent forwards `addSourceResult` messages via `sourceSettingsRef.current?.handleAddSourceResult()`.
@@ -1213,12 +1215,12 @@ import { renderMarkdownToHtml } from './markdownSetup';
 
 ## Content Security Policy
 
-The webview requires specific CSP for external resources:
+The webview uses a hardened CSP. Inline styles have been moved to external CSS files (`App.css` / `SidebarApp.css`), allowing `'unsafe-inline'` to be removed from `style-src`:
 
 ```typescript
 const csp = `
     default-src 'none';
-    style-src ${webview.cspSource} 'unsafe-inline';
+    style-src ${webview.cspSource};
     script-src ${webview.cspSource} 'unsafe-inline';
     connect-src ${webview.cspSource};
     img-src https://api.nuget.org https://*.nuget.org
@@ -1228,7 +1230,7 @@ const csp = `
 `;
 ```
 
-**Note:** The expanded `img-src` list supports README images from GitHub and badge images from shields.io.
+**Note:** The expanded `img-src` list supports README images from GitHub and badge images from shields.io. `'unsafe-inline'` remains on `script-src` for esbuild compatibility.
 
 ## Theme Compliance
 

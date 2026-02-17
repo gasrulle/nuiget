@@ -14,6 +14,7 @@
 
 import { useVirtualizer } from '@tanstack/react-virtual';
 import React, { forwardRef, useCallback, useDeferredValue, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
+import { ArrowRightIcon, VerifiedIcon } from '../icons';
 import type {
     InstalledPackage,
     LRUMap,
@@ -473,7 +474,7 @@ const UpdatesTab = forwardRef<UpdatesTabHandle, UpdatesTabProps>((props, ref) =>
                                                     <div className="package-name">{item.id}</div>
                                                     <div className="package-meta">
                                                         <span className="package-version">v{item.installedVersion}</span>
-                                                        <span className="package-update-arrow">→</span>
+                                                        <span className="package-update-arrow"><ArrowRightIcon size={12} /></span>
                                                         <span className="package-version package-version-new">v{item.latestVersion}</span>
                                                     </div>
                                                 </div>
@@ -549,13 +550,13 @@ const UpdatesTab = forwardRef<UpdatesTabHandle, UpdatesTabProps>((props, ref) =>
                                                     <div className="package-name">{pkg.id}</div>
                                                     <div className="package-meta">
                                                         <span className="package-version">v{pkg.installedVersion}</span>
-                                                        <span className="package-update-arrow">→</span>
+                                                        <span className="package-update-arrow"><ArrowRightIcon size={12} /></span>
                                                         <span className="package-version package-version-new">v{pkg.latestVersion}</span>
                                                     </div>
                                                     {pkg.authors && (
                                                         <div className="package-authors">
                                                             {pkg.verified && (
-                                                                <span className="verified-badge" title="The ID prefix of this package has been reserved by its owner on nuget.org">✓</span>
+                                                                <span className="verified-badge" title="The ID prefix of this package has been reserved by its owner on nuget.org"><VerifiedIcon size={14} /></span>
                                                             )}
                                                             {pkg.authors}
                                                         </div>

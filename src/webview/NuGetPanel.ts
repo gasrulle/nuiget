@@ -1165,26 +1165,10 @@ export class NuGetPanel {
             <html lang="en">
             <head>
                 <meta charset="UTF-8">
-                <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src ${webview.cspSource} 'unsafe-inline'; connect-src ${webview.cspSource}; img-src ${webview.cspSource} https://api.nuget.org https://*.nuget.org https://raw.githubusercontent.com https://*.githubusercontent.com https://github.com https://shields.io https://*.shields.io https://img.shields.io https://opencollective.com https://*.opencollective.com https://codecov.io https://*.codecov.io https://badge.fury.io https://*.travis-ci.org https://*.travis-ci.com https://ci.appveyor.com https://coveralls.io https://*.coveralls.io https://david-dm.org https://snyk.io https://*.snyk.io https://api.codacy.com https://sonarcloud.io https://*.sonarcloud.io https://img.badgesize.io https://badgen.net https://*.badgen.net https://circleci.com https://*.circleci.com https://dev.azure.com https://*.visualstudio.com data:;">
+                <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource}; script-src ${webview.cspSource} 'unsafe-inline'; connect-src ${webview.cspSource}; img-src ${webview.cspSource} https://api.nuget.org https://*.nuget.org https://raw.githubusercontent.com https://*.githubusercontent.com https://github.com https://shields.io https://*.shields.io https://img.shields.io https://opencollective.com https://*.opencollective.com https://codecov.io https://*.codecov.io https://badge.fury.io https://*.travis-ci.org https://*.travis-ci.com https://ci.appveyor.com https://coveralls.io https://*.coveralls.io https://david-dm.org https://snyk.io https://*.snyk.io https://api.codacy.com https://sonarcloud.io https://*.sonarcloud.io https://img.badgesize.io https://badgen.net https://*.badgen.net https://circleci.com https://*.circleci.com https://dev.azure.com https://*.visualstudio.com data:;">
                 <meta name="viewport" content="width=device-width, initial-scale=1.0">
                 <title>nUIget</title>
                 <link rel="stylesheet" href="${cssUri}">
-                <style>
-                    body {
-                        padding: 0;
-                        margin: 0;
-                        font-family: var(--vscode-font-family);
-                        font-size: var(--vscode-font-size);
-                        color: var(--vscode-foreground);
-                        background-color: var(--vscode-editor-background);
-                    }
-                    #root {
-                        width: 100%;
-                        height: 100vh;
-                        display: flex;
-                        flex-direction: column;
-                    }
-                </style>
             </head>
             <body>
                 <div id="root" data-package-icon="${packageIconUri}" data-initial-tab="${this._pendingInitialTab || ''}"></div>

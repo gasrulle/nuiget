@@ -1,5 +1,22 @@
 /* ─── nUIget Sidebar Styles ─────────────────────────────────────────────── */
 
+/* Base webview body styles */
+body {
+    padding: 0;
+    margin: 0;
+    font-family: var(--vscode-font-family);
+    font-size: var(--vscode-font-size);
+    color: var(--vscode-foreground);
+    background-color: var(--vscode-sideBar-background, var(--vscode-editor-background));
+}
+
+#sidebar-root {
+    width: 100%;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
 /* ─── Search Input ───────────────────────────────────────────────────────── */
 .sidebar-search-container {
     padding: 6px 8px;
@@ -367,4 +384,42 @@
     border: none;
     font-size: 12px;
     text-decoration: underline;
+}
+
+/* ============================================
+   REDUCED MOTION
+   ============================================ */
+body.vscode-reduce-motion .section-chevron {
+    transition: none;
+}
+
+body.vscode-reduce-motion .package-row {
+    transition: none;
+}
+
+body.vscode-reduce-motion .package-row-action {
+    transition: none;
+}
+
+body.vscode-reduce-motion .section-spinner {
+    animation: none;
+}
+
+/* ============================================
+   HIGH CONTRAST THEMES
+   ============================================ */
+body.vscode-high-contrast .section-header,
+body.vscode-high-contrast-light .section-header {
+    border: 1px solid var(--vscode-contrastBorder);
+}
+
+body.vscode-high-contrast .sidebar-search-wrapper,
+body.vscode-high-contrast-light .sidebar-search-wrapper {
+    border: 1px solid var(--vscode-contrastBorder);
+}
+
+body.vscode-high-contrast .package-row:focus-visible,
+body.vscode-high-contrast-light .package-row:focus-visible {
+    outline: 1px solid var(--vscode-contrastActiveBorder, var(--vscode-contrastBorder));
+    outline-offset: -1px;
 }

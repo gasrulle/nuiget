@@ -1,0 +1,147 @@
+/**
+ * Inline SVG icon components matching VS Code's codicon system.
+ * Codicon fonts are NOT available in webviews — inline SVGs are required.
+ * All icons use `currentColor` to inherit from CSS (theme-aware by default).
+ *
+ * SVG paths sourced from VS Code codicon set (MIT license).
+ * @see https://github.com/microsoft/vscode-codicons
+ */
+import React from 'react';
+
+interface IconProps {
+    size?: number;
+    className?: string;
+    title?: string;
+    style?: React.CSSProperties;
+}
+
+const defaultSize = 16;
+
+/** Codicon: chevron-right */
+export const ChevronRightIcon: React.FC<IconProps> = ({ size = defaultSize, className, title, style }) => (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="currentColor" className={className} style={style} aria-hidden={!title} role={title ? 'img' : undefined}>
+        {title && <title>{title}</title>}
+        <path d="M5.7 13.7L5 13l4.6-4.6L5 3.7l.7-.7 5.3 5.3-5.3 5.4z" />
+    </svg>
+);
+
+/** Codicon: chevron-down */
+export const ChevronDownIcon: React.FC<IconProps> = ({ size = defaultSize, className, title, style }) => (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="currentColor" className={className} style={style} aria-hidden={!title} role={title ? 'img' : undefined}>
+        {title && <title>{title}</title>}
+        <path d="M7.976 10.072l4.357-4.357.62.618L7.977 11.3 3 6.333l.619-.618 4.357 4.357z" />
+    </svg>
+);
+
+/** Codicon: settings-gear */
+export const SettingsGearIcon: React.FC<IconProps> = ({ size = defaultSize, className, title, style }) => (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="currentColor" className={className} style={style} aria-hidden={!title} role={title ? 'img' : undefined}>
+        {title && <title>{title}</title>}
+        <path fillRule="evenodd" clipRule="evenodd" d="M9.1 4.4L8.6 2H7.4l-.5 2.4-.7.3-2-1.3-.9.8 1.3 2-.2.7-2.4.5v1.2l2.4.5.3.8-1.3 2 .8.8 2-1.3.8.3.4 2.3h1.2l.5-2.4.8-.3 2 1.3.8-.8-1.3-2 .3-.8 2.3-.4V7.1l-2.4-.5-.3-.7 1.3-2-.8-.9-2 1.3-.7-.2zM9.4 1l.5 2.4L12 2.1l2 2-1.4 2.1 2.4.4v2.8l-2.4.5L14 12l-2 2-2.1-1.4-.5 2.4H6.6l-.5-2.4L4 14l-2-2 1.4-2.1L1 9.4V6.6l2.4-.5L2 4l2-2 2.1 1.4.4-2.4h2.8zm.6 7a2 2 0 11-4 0 2 2 0 014 0zm1 0a3 3 0 11-6 0 3 3 0 016 0z" />
+    </svg>
+);
+
+/** Codicon: warning */
+export const WarningIcon: React.FC<IconProps> = ({ size = defaultSize, className, title, style }) => (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="currentColor" className={className} style={style} aria-hidden={!title} role={title ? 'img' : undefined}>
+        {title && <title>{title}</title>}
+        <path fillRule="evenodd" clipRule="evenodd" d="M7.56 1h.88l6.54 12.26-.44.74H1.44l-.42-.74L7.56 1zm.44 1.56L2.2 13H13.8L8 2.56zM8 11a1 1 0 110 2 1 1 0 010-2zm-.5-5h1v4h-1V6z" />
+    </svg>
+);
+
+/** Codicon: close (x) */
+export const CloseIcon: React.FC<IconProps> = ({ size = defaultSize, className, title, style }) => (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="currentColor" className={className} style={style} aria-hidden={!title} role={title ? 'img' : undefined}>
+        {title && <title>{title}</title>}
+        <path fillRule="evenodd" clipRule="evenodd" d="M8 8.707l3.646 3.647.708-.707L8.707 8l3.647-3.646-.707-.708L8 7.293 4.354 3.646l-.707.708L7.293 8l-3.646 3.646.707.708L8 8.707z" />
+    </svg>
+);
+
+/** Codicon: check — used by VerifiedIcon, available for general use */
+export const CheckIcon: React.FC<IconProps> = ({ size = defaultSize, className, title, style }) => (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="currentColor" className={className} style={style} aria-hidden={!title} role={title ? 'img' : undefined}>
+        {title && <title>{title}</title>}
+        <path fillRule="evenodd" clipRule="evenodd" d="M14.431 3.323l-8.47 10-.79-.036-3.35-4.77.818-.574 2.978 4.24 8.051-9.506.763.646z" />
+    </svg>
+);
+
+/** Codicon: arrow-right */
+export const ArrowRightIcon: React.FC<IconProps> = ({ size = defaultSize, className, title, style }) => (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="currentColor" className={className} style={style} aria-hidden={!title} role={title ? 'img' : undefined}>
+        {title && <title>{title}</title>}
+        <path fillRule="evenodd" clipRule="evenodd" d="M9 13.887l5-5.5-5-5.5-.74.672L12.014 8H1v.75h11.014L8.26 13.215 9 13.887z" />
+    </svg>
+);
+
+/** Codicon: arrow-left */
+export const ArrowLeftIcon: React.FC<IconProps> = ({ size = defaultSize, className, title, style }) => (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="currentColor" className={className} style={style} aria-hidden={!title} role={title ? 'img' : undefined}>
+        {title && <title>{title}</title>}
+        <path fillRule="evenodd" clipRule="evenodd" d="M7 3.093L2 8.593l5 5.5.74-.672L3.986 9H15v-.75H3.986L7.74 3.765 7 3.093z" />
+    </svg>
+);
+
+/** Codicon: cloud-download */
+export const CloudDownloadIcon: React.FC<IconProps> = ({ size = defaultSize, className, title, style }) => (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="currentColor" className={className} style={style} aria-hidden={!title} role={title ? 'img' : undefined}>
+        {title && <title>{title}</title>}
+        <path fillRule="evenodd" clipRule="evenodd" d="M11.957 6h.088a2.96 2.96 0 012.955 2.955 2.96 2.96 0 01-2.955 2.955h-1.6l-.2-.8h1.8a2.158 2.158 0 002.155-2.155A2.158 2.158 0 0012.045 6.8h-.7l-.1-.7A3.503 3.503 0 007.8 3.2a3.502 3.502 0 00-3.4 2.9l-.1.7h-.7A2.158 2.158 0 001.445 8.955 2.158 2.158 0 003.6 11.11h1.6l-.2.8H3.6A2.96 2.96 0 01.645 8.955 2.96 2.96 0 013.6 6h.088A4.3 4.3 0 017.8 2.4 4.3 4.3 0 0111.957 6zM7.8 7.6L5.2 10.8H7v3.2h1.6v-3.2h1.8L7.8 7.6z" />
+    </svg>
+);
+
+/** Codicon: info */
+export const InfoIcon: React.FC<IconProps> = ({ size = defaultSize, className, title, style }) => (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="currentColor" className={className} style={style} aria-hidden={!title} role={title ? 'img' : undefined}>
+        {title && <title>{title}</title>}
+        <path fillRule="evenodd" clipRule="evenodd" d="M8.568 1.031A6.8 6.8 0 0112.76 3.05a7.06 7.06 0 01.46 9.39 6.85 6.85 0 01-8.58 1.74 7 7 0 01-3.12-3.5 7.12 7.12 0 01-.23-4.71 7 7 0 012.77-3.79 6.8 6.8 0 014.508-1.149zM8 14.88a6.06 6.06 0 003.75-1.3 6.27 6.27 0 002.09-3.18 6.3 6.3 0 00-.4-4.17 6.15 6.15 0 00-2.78-2.97A5.89 5.89 0 005.72 3.1a6.19 6.19 0 00-2.45 3.36 6.31 6.31 0 00.21 4.18A6.12 6.12 0 006.1 14.1 5.94 5.94 0 008 14.88zM9 4H7v2h2V4zm0 3H7v6h2V7z" />
+    </svg>
+);
+
+/** Codicon: sync (rotating refresh) */
+export const SyncIcon: React.FC<IconProps> = ({ size = defaultSize, className, title, style }) => (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="currentColor" className={className} style={style} aria-hidden={!title} role={title ? 'img' : undefined}>
+        {title && <title>{title}</title>}
+        <path fillRule="evenodd" clipRule="evenodd" d="M2.006 8.267L.78 9.5 0 8.73l2.09-2.07.76.01 2.09 2.12-.76.69-1.167-1.18a5 5 0 009.4 1.96l.72.37a5.74 5.74 0 01-2.3 2.63 5.68 5.68 0 01-3.32 1.03 5.74 5.74 0 01-5.506-4.386zM13.994 7.733L15.22 6.5l.78.77-2.09 2.07-.76-.01-2.09-2.12.76-.69 1.167 1.18a5 5 0 00-9.4-1.96l-.72-.37a5.74 5.74 0 012.3-2.63 5.68 5.68 0 013.32-1.03 5.74 5.74 0 015.506 4.386z" />
+    </svg>
+);
+
+/** Codicon: symbol-ruler (range) */
+export const RulerIcon: React.FC<IconProps> = ({ size = defaultSize, className, title, style }) => (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="currentColor" className={className} style={style} aria-hidden={!title} role={title ? 'img' : undefined}>
+        {title && <title>{title}</title>}
+        <path d="M14 2H6l-4 4 4 4h8l2-4-2-4zM6.5 3h1v2h-1V3zm2 0h1v3h-1V3zm2 0h1v2h-1V3zm-4 7H5.414L2.207 6.793 5.414 3.586V5.5h1V3h1v3h1V3h1v2.5h1V3h1.586L14.793 6 11.586 10H6.5z" />
+    </svg>
+);
+
+/** Codicon: loading~spin (hourglass/spinner) */
+export const LoadingIcon: React.FC<IconProps> = ({ size = defaultSize, className, title, style }) => (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="currentColor" className={`codicon-loading ${className || ''}`} style={style} aria-hidden={!title} role={title ? 'img' : undefined}>
+        {title && <title>{title}</title>}
+        <path d="M13.917 7A6.002 6.002 0 002.083 7H1.071a7.002 7.002 0 0113.858 0h-1.012z" />
+    </svg>
+);
+
+/** Codicon: trash */
+export const TrashIcon: React.FC<IconProps> = ({ size = defaultSize, className, title, style }) => (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="currentColor" className={className} style={style} aria-hidden={!title} role={title ? 'img' : undefined}>
+        {title && <title>{title}</title>}
+        <path fillRule="evenodd" clipRule="evenodd" d="M10 3h3v1h-1v9l-1 1H5l-1-1V4H3V3h3V2a1 1 0 011-1h2a1 1 0 011 1v1zM9 2H7v1h2V2zM5 4v9h6V4H5zm1 2h1v5H6V6zm3 0h1v5H9V6z" />
+    </svg>
+);
+
+/** NuGet verified prefix badge — uses check mark (matches nuget.org visual) */
+export const VerifiedIcon: React.FC<IconProps> = ({ size = 14, className, title, style }) => (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="currentColor" className={className} style={style} aria-hidden={!title} role={title ? 'img' : undefined}>
+        {title && <title>{title}</title>}
+        <path fillRule="evenodd" clipRule="evenodd" d="M14.431 3.323l-8.47 10-.79-.036-3.35-4.77.818-.574 2.978 4.24 8.051-9.506.763.646z" />
+    </svg>
+);
+
+/** Codicon: link-external */
+export const ExternalLinkIcon: React.FC<IconProps> = ({ size = defaultSize, className, title, style }) => (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="currentColor" className={className} style={style} aria-hidden={!title} role={title ? 'img' : undefined}>
+        {title && <title>{title}</title>}
+        <path d="M1.5 1H6v1H2v12h12v-4h1v4.5l-.5.5h-13l-.5-.5v-13l.5-.5z" />
+        <path d="M15 1.5V8h-1V2.707L7.243 9.465l-.707-.708L13.293 2H8V1h6.5l.5.5z" />
+    </svg>
+);

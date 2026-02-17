@@ -5,6 +5,33 @@ All notable changes to the nUIget extension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **Native VS Code icon system** — Replaced all emoji/Unicode character icons (⚙️, ⚠️, ✓, ▶/▼, 🔄, 📏, ⬇, ⏳, 🗑️, ←/→, ✕, ℹ️) with inline SVG components matching VS Code's codicon system in new `icons.tsx` module
+- **High-contrast theme support** — Added `body.vscode-high-contrast` and `body.vscode-high-contrast-light` CSS rules with `--vscode-contrastBorder` and `--vscode-contrastActiveBorder` for all interactive elements
+- **Reduced-motion accessibility** — Added `@media (prefers-reduced-motion: reduce)` rules to disable spinner, icon, and tab transition animations
+- **Icon CSS utilities** — Added `.inline-icon`, `.codicon-loading` spin animation, and icon-specific color rules for verified badges, warnings, and settings gear
+
+### Changed
+
+- **Tab bar uses VS Code tab tokens** — Tabs now use `--vscode-tab-activeForeground`, `--vscode-tab-inactiveForeground`, `--vscode-tab-hoverBackground`, `--vscode-tab-activeBorderTop`, and `--vscode-editorGroupHeader-tabsBackground`
+- **Modal overlay uses theme-aware backdrop** — Source settings overlay uses `color-mix()` with `--vscode-editor-background` and `backdrop-filter: blur(2px)` instead of hardcoded `rgba(0,0,0,0.5)`
+- **Modal uses widget tokens** — Source settings modal uses `--vscode-editorWidget-background` and `--vscode-editorWidget-border`
+- **Spinner uses progress bar token** — Loading spinner accent color uses `--vscode-progressBar-background` instead of `--vscode-focusBorder`
+- **Deduplicated checkbox CSS** — Consolidated three near-identical checkbox styling blocks into a single shared selector group
+- **Button border tokens** — Primary and secondary buttons now include `--vscode-button-border` for proper theme integration
+- **List selection foreground** — Selected package items now set `--vscode-list-activeSelectionForeground` for correct text color
+- **Removed all `!important` overrides** — Replaced 6 `!important` usages with higher-specificity selectors
+
+### Fixed
+
+- **Hardcoded highlight.js colors** — Replaced hardcoded `#6a9955`, `#608b4e`, `#008000` comment/doctag colors with `var(--vscode-editorLineNumber-activeForeground)` fallbacks
+- **Settings gear icon barely visible**
+- **Verified badge not vertically aligned with author text**
+- **CSP hardened for style-src** — Moved inline `<style>` blocks from NuGetPanel.ts and NuGetSidebarPanel.ts to external CSS files, removing `'unsafe-inline'` from `style-src` directive
+
 ## [1.5.3] - 2026-02-16
 
 ### Changed

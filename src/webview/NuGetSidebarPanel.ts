@@ -805,26 +805,10 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
             <html lang="en">
             <head>
                 <meta charset="UTF-8">
-                <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src ${webview.cspSource} 'unsafe-inline'; connect-src ${webview.cspSource}; img-src ${webview.cspSource} https: data:;">
+                <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource}; script-src ${webview.cspSource} 'unsafe-inline'; connect-src ${webview.cspSource}; img-src ${webview.cspSource} https: data:;">
                 <meta name="viewport" content="width=device-width, initial-scale=1.0">
                 <title>nUIget Sidebar</title>
                 <link rel="stylesheet" href="${cssUri}">
-                <style>
-                    body {
-                        padding: 0;
-                        margin: 0;
-                        font-family: var(--vscode-font-family);
-                        font-size: var(--vscode-font-size);
-                        color: var(--vscode-foreground);
-                        background-color: var(--vscode-sideBar-background, var(--vscode-editor-background));
-                    }
-                    #sidebar-root {
-                        width: 100%;
-                        min-height: 100vh;
-                        display: flex;
-                        flex-direction: column;
-                    }
-                </style>
             </head>
             <body>
                 <div id="sidebar-root" data-package-icon="${packageIconUri}"></div>
