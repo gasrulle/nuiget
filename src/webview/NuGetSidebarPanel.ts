@@ -805,7 +805,7 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
             <html lang="en">
             <head>
                 <meta charset="UTF-8">
-                <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource}; script-src ${webview.cspSource} 'unsafe-inline'; connect-src ${webview.cspSource}; img-src ${webview.cspSource} https: data:;">
+                <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource}; script-src ${webview.cspSource}; connect-src ${webview.cspSource}; img-src ${webview.cspSource} https: data:;">
                 <meta name="viewport" content="width=device-width, initial-scale=1.0">
                 <title>nUIget Sidebar</title>
                 <link rel="stylesheet" href="${cssUri}">

@@ -37,6 +37,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Update arrow misaligned in updates tab**
 - **Close button double-opacity compounding**
 - **CSP hardened for style-src** — Moved inline `<style>` blocks from NuGetPanel.ts and NuGetSidebarPanel.ts to external CSS files, removing `'unsafe-inline'` from `style-src` directive
+- **CSP hardened for script-src** — Removed `'unsafe-inline'` from `script-src` directive; both panels only use external `<script src>` tags
 - **`$(project)` literal text in sidebar** — Was displaying `$(project)` as literal text in welcome message (codicon syntax doesn't render in webviews)
 - **Sidebar Unicode arrow `→`** — Replaced with `ArrowRightIcon` SVG component in package update version display
 

@@ -1221,7 +1221,7 @@ The webview uses a hardened CSP. Inline styles have been moved to external CSS f
 const csp = `
     default-src 'none';
     style-src ${webview.cspSource};
-    script-src ${webview.cspSource} 'unsafe-inline';
+    script-src ${webview.cspSource};
     connect-src ${webview.cspSource};
     img-src https://api.nuget.org https://*.nuget.org
             https://raw.githubusercontent.com https://*.githubusercontent.com
@@ -1230,7 +1230,7 @@ const csp = `
 `;
 ```
 
-**Note:** The expanded `img-src` list supports README images from GitHub and badge images from shields.io. `'unsafe-inline'` remains on `script-src` for esbuild compatibility.
+**Note:** The expanded `img-src` list supports README images from GitHub and badge images from shields.io. Both `style-src` and `script-src` are free of `'unsafe-inline'` — all styles are in external CSS files and all scripts are loaded via external `<script src>` tags (esbuild IIFE bundles).
 
 ## Theme Compliance
 
