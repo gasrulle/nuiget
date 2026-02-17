@@ -60,6 +60,11 @@ npm run package:vsix # Outputs nuiget.vsix
 
 # Gotchas & Pitfalls
 
+## Known Issues
+| Issue | Status |
+|-------|--------|
+| 9 moderate `npm audit` warnings (ajv@6.12.6 ReDoS) | Dev-only, not in VSIX. Root cause: eslint 9/10 depends on ajv v6 which has no patched release. Override to ajv 8.18.0 breaks eslint (incompatible API). `eslint-plugin-react-hooks` also blocks eslint 10 upgrade. **Revisit when eslint drops ajv v6 or react-hooks plugin supports eslint 10.** |
+
 ## VS Code Extension
 | Issue | Solution |
 |-------|----------|

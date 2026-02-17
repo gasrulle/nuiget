@@ -81,6 +81,8 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
             if (webviewView.visible) {
                 // Send current state when sidebar becomes visible
                 this._sendState();
+                // Focus the search input like native sidebar panels
+                this._postMessage({ type: 'focusSearch' });
             }
         });
 
@@ -346,7 +348,7 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
         await this.checkUpdatesInBackground(true);
     }
 
-    /** Update the sidebar title bar with the current project name */
+    /** Update the sidebar title bar description with the current project name */
     private _updateTitle(projectName?: string): void {
         if (!this._view) return;
         if (projectName) {
@@ -355,7 +357,7 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
             const base = this._selectedProject.split(/[\\/]/).pop() || '';
             this._view.title = base.replace(/\.(csproj|fsproj|vbproj)$/, '');
         } else {
-            this._view.title = 'Packages';
+            this._view.title = undefined;
         }
     }
 
