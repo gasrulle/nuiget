@@ -102,8 +102,8 @@ export const PackageRow: React.FC<PackageRowProps> = ({
             data-package-id={packageId}
         >
             <div className="package-row-main">
-                <div className="package-row-header">
-                    <span className="package-row-name" title={packageId}>{packageId}</span>
+                <div className="package-row-header" title={`${packageId} ${displayVersion}`}>
+                    <span className="package-row-name">{packageId}</span>
                     <span className="package-row-version">{displayVersion}</span>
                 </div>
                 {description && (

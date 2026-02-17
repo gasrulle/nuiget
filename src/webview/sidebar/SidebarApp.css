@@ -271,7 +271,7 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    flex-shrink: 1;
+    flex-shrink: 0;
     min-width: 0;
 }
 
@@ -279,7 +279,10 @@
     font-size: 11px;
     color: var(--vscode-descriptionForeground);
     white-space: nowrap;
-    flex-shrink: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex-shrink: 1;
+    min-width: 0;
 }
 
 .package-row-description {

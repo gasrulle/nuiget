@@ -176,8 +176,13 @@
             ],
             "view/title": [
                 {
-                    "command": "nuiget.sidebar.selectSource",
-                    "when": "view == nuiget.sidebarView",
+                    "command": "nuiget.sidebar.togglePrerelease",
+                    "when": "view == nuiget.sidebarView && !nuiget.prereleaseEnabled",
+                    "group": "navigation@1"
+                },
+                {
+                    "command": "nuiget.sidebar.togglePrereleaseOff",
+                    "when": "view == nuiget.sidebarView && nuiget.prereleaseEnabled",
                     "group": "navigation@1"
                 },
                 {
@@ -186,13 +191,8 @@
                     "group": "navigation@2"
                 },
                 {
-                    "command": "nuiget.sidebar.togglePrerelease",
-                    "when": "view == nuiget.sidebarView && !nuiget.prereleaseEnabled",
-                    "group": "navigation@3"
-                },
-                {
-                    "command": "nuiget.sidebar.togglePrereleaseOff",
-                    "when": "view == nuiget.sidebarView && nuiget.prereleaseEnabled",
+                    "command": "nuiget.sidebar.selectSource",
+                    "when": "view == nuiget.sidebarView",
                     "group": "navigation@3"
                 },
                 {

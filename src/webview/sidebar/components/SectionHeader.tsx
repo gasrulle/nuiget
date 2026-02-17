@@ -41,12 +41,12 @@ export const SectionHeader: React.FC<SectionHeaderProps> = ({
                 </svg>
             </span>
             <span className="section-title">{title}</span>
-            {loading && <span className="section-spinner" />}
             {actions && (
                 <span className="section-actions" onClick={(e) => e.stopPropagation()}>
                     {actions}
                 </span>
             )}
+            {loading && <span className="section-spinner" />}
             {!loading && count !== undefined && count > 0 && (
                 <span className="section-badge">{count}</span>
             )}
