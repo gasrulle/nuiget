@@ -921,6 +921,25 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
                                             <CheckAllIcon size={16} />
                                         </button>
                                     )}
+                                    <span className="toolbar-separator" />
+                                    <button
+                                        className="toolbar-icon-btn"
+                                        onClick={() => { setDirectPackagesExpanded(false); setTransitiveExpandedFrameworks(new Set()); }}
+                                        disabled={uninstallingAll}
+                                        title="Collapse all"
+                                        aria-label="Collapse all"
+                                    >
+                                        <CollapseAllIcon size={16} />
+                                    </button>
+                                    <button
+                                        className="toolbar-icon-btn"
+                                        onClick={() => { setDirectPackagesExpanded(true); setTransitiveExpandedFrameworks(new Set(transitiveFrameworks.map(f => f.targetFramework))); }}
+                                        disabled={uninstallingAll}
+                                        title="Expand all"
+                                        aria-label="Expand all"
+                                    >
+                                        <ExpandAllIcon size={16} />
+                                    </button>
                                 </div>
                                 {loadAllProjectsInstalled ? (
                                     !loadingAllProjectsInstalled && allProjectsInstalled.length > 0 && (

@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Sidebar project toggle tooltips mismatch**
+- **Installed tab collapse/expand all buttons hidden in single-project mode**
+
 ### Added
 
 - **All-Projects Installed View** — Load installed packages across all projects in both the Installed tab (full manager) and sidebar Installed section, with collapsible per-project sections, client-side filtering, and bulk uninstall across all projects

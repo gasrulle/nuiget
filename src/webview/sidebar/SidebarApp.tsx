@@ -1043,8 +1043,8 @@ export const SidebarApp: React.FC = () => {
                             <button
                                 className="section-action-btn"
                                 onClick={() => { setLoadAllProjectsInstalled(prev => !prev); setExpandedSection('installed'); }}
-                                title={loadAllProjectsInstalled ? 'All projects' : 'Selected project'}
-                                aria-label={loadAllProjectsInstalled ? 'All projects' : 'Selected project'}
+                                title={loadAllProjectsInstalled ? 'Show single project' : 'Load all projects'}
+                                aria-label={loadAllProjectsInstalled ? 'Show single project' : 'Load all projects'}
                             >
                                 {loadAllProjectsInstalled ? (
                                     <AllProjectsIcon size={16} />
@@ -1068,8 +1068,8 @@ export const SidebarApp: React.FC = () => {
                                 <button
                                     className="section-action-btn"
                                     onClick={() => { setLoadAllProjects(prev => !prev); setExpandedSection('updates'); }}
-                                    title={loadAllProjects ? 'All projects' : 'Selected project'}
-                                    aria-label={loadAllProjects ? 'All projects' : 'Selected project'}
+                                    title={loadAllProjects ? 'Show single project' : 'Load all projects'}
+                                    aria-label={loadAllProjects ? 'Show single project' : 'Load all projects'}
                                 >
                                     {loadAllProjects ? (
                                         <AllProjectsIcon size={16} />
