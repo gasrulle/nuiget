@@ -333,6 +333,8 @@ This is safe because JavaScript is single-threaded — the guard only needs to p
 | `packageUpdates` | Ext → UI | Return packages with available updates |
 | `checkAllProjectsUpdates` | UI → Ext | Check updates for all projects ("Load all" mode) |
 | `allProjectsUpdates` | Ext → UI | Return grouped updates per project |
+| `checkAllProjectsInstalled` | UI → Ext | Get installed packages for all projects ("Load all" mode) |
+| `allProjectsInstalled` | Ext → UI | Return grouped installed packages per project |
 
 #### Package Operations
 | Message | Direction | Purpose |
@@ -356,6 +358,9 @@ This is safe because JavaScript is single-threaded — the guard only needs to p
 | `confirmBulkRemove` | UI → Ext | Request bulk uninstall (triggers confirmation) |
 | `bulkRemoveConfirmed` | Ext → UI | Confirmation to proceed with bulk remove |
 | `bulkRemoveResult` | Ext → UI | Result of bulk remove operation |
+| `confirmBulkRemoveAllProjects` | UI → Ext | Request bulk uninstall across multiple projects |
+| `bulkRemoveAllProjectsConfirmed` | Ext → UI | Confirmation to proceed with multi-project bulk remove |
+| `bulkRemoveAllProjectsResult` | Ext → UI | Result of multi-project bulk remove operation |
 
 #### Settings & State
 | Message | Direction | Purpose |

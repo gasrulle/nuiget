@@ -13,7 +13,7 @@ import { MemoizedUpdatesTab } from './components/UpdatesTab';
 import { usePackageSelection } from './hooks/usePackageSelection';
 import { SettingsGearIcon, WarningIcon } from './icons';
 import { renderMarkdownToHtml } from './markdownSetup';
-import type { AppState, FailedSource, InstalledPackage, NuGetSource, PackageMetadata, PackageSearchResult, PackageUpdate, Project, ProjectUpdates, TransitivePackage } from './types';
+import type { AppState, FailedSource, InstalledPackage, NuGetSource, PackageMetadata, PackageSearchResult, PackageUpdate, Project, ProjectInstalled, ProjectUpdates, TransitivePackage } from './types';
 import { LRUMap, getPackageId } from './types';
 
 // Get the default package icon URL from the root element data attribute
@@ -62,6 +62,10 @@ export const App: React.FC = () => {
     const [loadAllProjects, setLoadAllProjects] = useState(false);
     const [allProjectsUpdates, setAllProjectsUpdates] = useState<ProjectUpdates[]>([]);
     const [loadingAllProjectsUpdates, setLoadingAllProjectsUpdates] = useState(false);
+    // "Load All Projects" mode for Installed tab
+    const [loadAllProjectsInstalled, setLoadAllProjectsInstalled] = useState(false);
+    const [allProjectsInstalled, setAllProjectsInstalled] = useState<ProjectInstalled[]>([]);
+    const [loadingAllProjectsInstalled, setLoadingAllProjectsInstalled] = useState(false);
     const [loadingReadme, setLoadingReadme] = useState(false);
     const [readmeAttempted, setReadmeAttempted] = useState(false);
     const [showSourceSettings, setShowSourceSettings] = useState(false);
@@ -439,6 +443,26 @@ export const App: React.FC = () => {
                     includePrerelease: includePrereleaseRef.current
                 });
                 break;
+            case 'allProjectsInstalled':
+                // All projects installed packages loaded
+                {
+                    const projectInstalled = message.projectInstalled as ProjectInstalled[];
+                    setAllProjectsInstalled(projectInstalled);
+                    setLoadingAllProjectsInstalled(false);
+                }
+                break;
+            case 'bulkRemoveAllProjectsConfirmed':
+                // Forward to InstalledTab for state
+                installedTabCompRef.current?.handleMessage(message);
+                break;
+            case 'bulkRemoveAllProjectsResult':
+                // Forward to InstalledTab for state reset
+                installedTabCompRef.current?.handleMessage(message);
+                // Re-fetch all projects installed to refresh the list
+                setLoadingAllProjectsInstalled(true);
+                setAllProjectsInstalled([]);
+                vscode.postMessage({ type: 'checkAllProjectsInstalled' });
+                break;
             case 'settings':
                 // Restore persisted settings
                 settingsLoadedRef.current = true;
@@ -688,6 +712,15 @@ export const App: React.FC = () => {
         }
     }, [activeTab]);
 
+    // Reset "Load All Projects" mode for Installed tab when switching away
+    useEffect(() => {
+        if (activeTab !== 'installed' && loadAllProjectsInstalled) {
+            setLoadAllProjectsInstalled(false);
+            setAllProjectsInstalled([]);
+            setLoadingAllProjectsInstalled(false);
+        }
+    }, [activeTab]);
+
     // Callback to handle Load All checkbox change
     const handleLoadAllChange = useCallback((checked: boolean) => {
         setLoadAllProjects(checked);
@@ -715,6 +748,21 @@ export const App: React.FC = () => {
             }
         }
     }, [includePrerelease, selectedProject, installedPackages]);
+
+    // Callback to handle Load All Installed checkbox change
+    const handleLoadAllInstalledChange = useCallback((checked: boolean) => {
+        setLoadAllProjectsInstalled(checked);
+        if (checked) {
+            // Start loading all projects installed packages
+            setLoadingAllProjectsInstalled(true);
+            setAllProjectsInstalled([]);
+            vscode.postMessage({ type: 'checkAllProjectsInstalled' });
+        } else {
+            // Switch back to single project mode
+            setAllProjectsInstalled([]);
+            setLoadingAllProjectsInstalled(false);
+        }
+    }, []);
 
     // Reset readme attempted state when a new package is selected
     useEffect(() => {
@@ -1250,6 +1298,11 @@ export const App: React.FC = () => {
                 vscode={vscode}
                 installedTabRef={installedTabRef}
                 MemoizedDraggableSash={MemoizedDraggableSash}
+                loadAllProjectsInstalled={loadAllProjectsInstalled}
+                allProjectsInstalled={allProjectsInstalled}
+                loadingAllProjectsInstalled={loadingAllProjectsInstalled}
+                onLoadAllInstalledChange={handleLoadAllInstalledChange}
+                projects={projects}
             />
 
             {activeTab === 'updates' && (

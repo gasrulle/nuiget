@@ -2350,6 +2350,13 @@ a.details-link:hover {
     margin-left: 4px;
 }
 
+/* Project section header in all-projects installed mode (extends direct-packages-header) */
+.project-section-header {
+    height: 40px;
+    box-sizing: border-box;
+    padding: 8px 16px;
+}
+
 .direct-packages-content {
     display: flex;
     flex-direction: column;

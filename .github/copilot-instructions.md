@@ -100,6 +100,7 @@ npm run package:vsix # Outputs nuiget.vsix
 | **Transitive metadata ref mirror** | Use `transitiveLoadingMetadataRef = useRef<Set>()` as synchronous mirror. Read ref in prefetch effect, update both ref and state. Required because React 19 defers setState updaters. |
 | Transitive spinner stuck | `doResetTransitiveState(false)` must set `loadingTransitive = false` — prevents stuck spinner when reset races with in-flight request. |
 | Transitive stale after bulk remove | `bulkRemoveResult` handler must call `resetTransitiveState(true)` after routing. |
+| Transitive hidden in all-projects installed | Transitive packages sections are hidden when `loadAllProjectsInstalled` is true for performance. Don't render transitive sections in all-projects installed mode. |
 | Multi-project updates not refreshing | `bulkUpdateAllProjectsResult` handler must re-fetch via `checkAllProjectsUpdates` after forwarding to UpdatesTab. |
 | Cross-panel sync echo loop | Use `skipSaveRef`/`skipSourceSaveRef`/`skipProjectSaveRef` refs in App.tsx. Set `true` before setState, save effect checks and resets. |
 | SourceSettingsOverlay state ownership | Source settings form state (`addSourceUrl`, `addSourceName`, `addingSource`, `confirmRemoveSource`, etc.) lives INSIDE `SourceSettingsOverlay.tsx`, NOT in App.tsx. App.tsx forwards `addSourceResult` via `sourceSettingsRef.current?.handleAddSourceResult()`. Don't re-add these state vars to App.tsx. |

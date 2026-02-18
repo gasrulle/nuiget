@@ -14,7 +14,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AllProjectsIcon, ArrowUpIcon, ClearAllIcon, SingleProjectIcon } from '../app/icons';
-import type { InstalledPackage, NuGetSource, PackageSearchResult, PackageUpdateMinimal, Project, ProjectUpdates } from '../app/types';
+import type { InstalledPackage, NuGetSource, PackageSearchResult, PackageUpdateMinimal, Project, ProjectInstalled, ProjectUpdates } from '../app/types';
 import { PackageRow } from './components/PackageRow';
 import { SectionHeader } from './components/SectionHeader';
 import './SidebarApp.css';
@@ -82,6 +82,11 @@ export const SidebarApp: React.FC = () => {
     const [loadingAllUpdates, setLoadingAllUpdates] = useState(false);
     const [loadAllProjects, setLoadAllProjects] = useState(false);
 
+    // All-projects installed mode state
+    const [loadAllProjectsInstalled, setLoadAllProjectsInstalled] = useState(false);
+    const [allProjectsInstalled, setAllProjectsInstalled] = useState<ProjectInstalled[]>([]);
+    const [loadingAllInstalled, setLoadingAllInstalled] = useState(false);
+
     const [showFilterDropdown, setShowFilterDropdown] = useState(false);
     const [filterDropdownIndex, setFilterDropdownIndex] = useState(-1);
     const [selectedPackageId, setSelectedPackageId] = useState<string | null>(null);
@@ -100,6 +105,7 @@ export const SidebarApp: React.FC = () => {
     const packageUpdatesRef = useRef(packageUpdates);
     const allProjectsUpdatesRef = useRef(allProjectsUpdates);
     const searchModeRef = useRef(searchMode);
+    const loadAllProjectsInstalledRef = useRef(loadAllProjectsInstalled);
     const searchInputRef = useRef<HTMLInputElement>(null);
     const browseListRef = useRef<HTMLDivElement>(null);
     const installedListRef = useRef<HTMLDivElement>(null);
@@ -118,6 +124,7 @@ export const SidebarApp: React.FC = () => {
     useEffect(() => { packageUpdatesRef.current = packageUpdates; }, [packageUpdates]);
     useEffect(() => { allProjectsUpdatesRef.current = allProjectsUpdates; }, [allProjectsUpdates]);
     useEffect(() => { searchModeRef.current = searchMode; }, [searchMode]);
+    useEffect(() => { loadAllProjectsInstalledRef.current = loadAllProjectsInstalled; }, [loadAllProjectsInstalled]);
 
     // ─── @-prefix dropdown logic ─────────────────────────────────────────────
     const matchingFilters = useMemo(() => {
@@ -217,6 +224,10 @@ export const SidebarApp: React.FC = () => {
                 setAllProjectsUpdates(message.projectUpdates || []);
                 setLoadingAllUpdates(false);
                 break;
+            case 'allProjectsInstalled':
+                setAllProjectsInstalled(message.projectInstalled || []);
+                setLoadingAllInstalled(false);
+                break;
             case 'installedCountUpdate':
                 setBackgroundInstalledCount(message.count || 0);
                 break;
@@ -238,6 +249,8 @@ export const SidebarApp: React.FC = () => {
             case 'removeResult':
             case 'bulkUpdateResult':
             case 'bulkUpdateAllProjectsResult':
+            case 'bulkRemoveResult':
+            case 'bulkRemoveAllProjectsResult':
                 setAllProjectsUpdates([]);
                 allProjectsUpdatesRef.current = [];
                 setPackageUpdates([]);
@@ -255,6 +268,11 @@ export const SidebarApp: React.FC = () => {
                         includePrerelease: includePrereleaseRef.current
                     });
                     setLoadingAllUpdates(true);
+                }
+                if (loadAllProjectsInstalledRef.current) {
+                    setAllProjectsInstalled([]);
+                    vscode.postMessage({ type: 'checkAllProjectsInstalled' });
+                    setLoadingAllInstalled(true);
                 }
                 break;
             case 'sourceChanged':
@@ -369,6 +387,14 @@ export const SidebarApp: React.FC = () => {
             setLoadingAllUpdates(true);
         }
     }, [loadAllProjects, searchMode, expandedSection, includePrerelease]);
+
+    // ─── Load all projects installed ────────────────────────────────────────
+    useEffect(() => {
+        if (loadAllProjectsInstalled && (searchMode === 'installed' || (searchMode === 'default' && expandedSection === 'installed'))) {
+            vscode.postMessage({ type: 'checkAllProjectsInstalled' });
+            setLoadingAllInstalled(true);
+        }
+    }, [loadAllProjectsInstalled, searchMode, expandedSection]);
 
     // ─── Search Handlers ─────────────────────────────────────────────────────
 
@@ -750,40 +776,87 @@ export const SidebarApp: React.FC = () => {
     );
 
     const renderInstalledList = () => (
-        <div
-            className="section-content"
-            role="listbox"
-            tabIndex={0}
-            ref={installedListRef}
-            onKeyDown={createSidebarKeyHandler(
-                filteredInstalled,
-                (pkg) => pkg.id,
-                {
-                    onDelete: (pkg) => handleInstalledPrimaryAction(pkg.id)
-                }
-            )}
-        >
-            {!loadingInstalled && filteredInstalled.length === 0 && (
-                <div className="sidebar-empty">
-                    {filterText || searchQuery ? 'No matching packages.' : selectedProject ? 'No packages installed.' : 'Select a project first.'}
+        <div className="section-content">
+            {/* Single project installed */}
+            {!loadAllProjectsInstalled && (
+                <div
+                    role="listbox"
+                    tabIndex={0}
+                    ref={installedListRef}
+                    onKeyDown={createSidebarKeyHandler(
+                        filteredInstalled,
+                        (pkg) => pkg.id,
+                        {
+                            onDelete: (pkg) => handleInstalledPrimaryAction(pkg.id)
+                        }
+                    )}
+                >
+                    {!loadingInstalled && filteredInstalled.length === 0 && (
+                        <div className="sidebar-empty">
+                            {filterText || searchQuery ? 'No matching packages.' : selectedProject ? 'No packages installed.' : 'Select a project first.'}
+                        </div>
+                    )}
+                    {loadingInstalled && filteredInstalled.length === 0 && (
+                        <div className="sidebar-empty">Loading...</div>
+                    )}
+                    {filteredInstalled.map((pkg) => (
+                        <PackageRow
+                            key={pkg.id}
+                            packageId={pkg.id}
+                            version={pkg.version}
+                            installedVersion={pkg.resolvedVersion || pkg.version}
+                            context="installed"
+                            selected={selectedPackageId === pkg.id}
+                            onPrimaryAction={handleInstalledPrimaryAction}
+                            onContextMenu={(id, e) => handleContextMenu(id, e, 'installed')}
+                            onClick={(id) => setSelectedPackageId(id)}
+                        />
+                    ))}
                 </div>
             )}
-            {loadingInstalled && filteredInstalled.length === 0 && (
-                <div className="sidebar-empty">Loading...</div>
+
+            {/* All projects installed — flat list with project headers */}
+            {loadAllProjectsInstalled && (
+                <div
+                    role="listbox"
+                    tabIndex={0}
+                    ref={installedListRef}
+                >
+                    {!loadingAllInstalled && allProjectsInstalled.length === 0 && (
+                        <div className="sidebar-empty">No installed packages found.</div>
+                    )}
+                    {loadingAllInstalled && allProjectsInstalled.length === 0 && (
+                        <div className="sidebar-empty">Loading all projects...</div>
+                    )}
+                    {allProjectsInstalled.map((pi) => {
+                        const q = filterText.toLowerCase();
+                        const filtered = q
+                            ? pi.packages.filter(p => p.id.toLowerCase().includes(q))
+                            : pi.packages;
+                        if (filtered.length === 0 && q) { return null; }
+                        return (
+                            <div key={pi.projectPath}>
+                                <div className="project-group-header" title={pi.projectPath}>
+                                    {pi.projectName} ({filtered.length})
+                                </div>
+                                {filtered.map((pkg) => (
+                                    <PackageRow
+                                        key={`${pi.projectPath}::${pkg.id}`}
+                                        packageId={pkg.id}
+                                        version={pkg.version}
+                                        installedVersion={pkg.resolvedVersion || pkg.version}
+                                        context="installed"
+                                        selected={selectedPackageId === `${pi.projectPath}::${pkg.id}`}
+                                        onPrimaryAction={handleInstalledPrimaryAction}
+                                        onContextMenu={(id, e) => handleContextMenu(id, e, 'installed')}
+                                        onClick={() => setSelectedPackageId(`${pi.projectPath}::${pkg.id}`)}
+                                    />
+                                ))}
+                            </div>
+                        );
+                    })}
+                </div>
             )}
-            {filteredInstalled.map((pkg) => (
-                <PackageRow
-                    key={pkg.id}
-                    packageId={pkg.id}
-                    version={pkg.version}
-                    installedVersion={pkg.resolvedVersion || pkg.version}
-                    context="installed"
-                    selected={selectedPackageId === pkg.id}
-                    onPrimaryAction={handleInstalledPrimaryAction}
-                    onContextMenu={(id, e) => handleContextMenu(id, e, 'installed')}
-                    onClick={(id) => setSelectedPackageId(id)}
-                />
-            ))}
         </div>
     );
 
@@ -961,9 +1034,25 @@ export const SidebarApp: React.FC = () => {
                     <SectionHeader
                         title="Installed"
                         expanded={expandedSection === 'installed'}
-                        count={installedPackages.length || backgroundInstalledCount}
-                        loading={loadingInstalled}
+                        count={loadAllProjectsInstalled
+                            ? allProjectsInstalled.reduce((sum, pi) => sum + pi.packages.length, 0)
+                            : (installedPackages.length || backgroundInstalledCount)}
+                        loading={loadingInstalled || loadingAllInstalled}
                         onToggle={() => toggleSection('installed')}
+                        actions={projects.length > 1 ? (
+                            <button
+                                className="section-action-btn"
+                                onClick={() => { setLoadAllProjectsInstalled(prev => !prev); setExpandedSection('installed'); }}
+                                title={loadAllProjectsInstalled ? 'All projects' : 'Selected project'}
+                                aria-label={loadAllProjectsInstalled ? 'All projects' : 'Selected project'}
+                            >
+                                {loadAllProjectsInstalled ? (
+                                    <AllProjectsIcon size={16} />
+                                ) : (
+                                    <SingleProjectIcon size={16} />
+                                )}
+                            </button>
+                        ) : undefined}
                     />
                     {expandedSection === 'installed' && renderInstalledList()}
 

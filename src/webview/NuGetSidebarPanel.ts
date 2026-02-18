@@ -452,6 +452,32 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
                     this._postMessage({ type: 'allProjectsUpdates', projectUpdates: allProjectsUpdates });
                     break;
                 }
+            case 'checkAllProjectsInstalled':
+                {
+                    const projects = await this._nugetService.findProjects();
+                    const allProjectsInstalled: { projectPath: string; projectName: string; packages: { id: string; version: string; resolvedVersion?: string; isImplicit?: boolean }[] }[] = [];
+
+                    for (const project of projects) {
+                        try {
+                            const installedPackages = await this._nugetService.getInstalledPackages(project.path, true /* liteMode */);
+                            allProjectsInstalled.push({
+                                projectPath: project.path,
+                                projectName: project.name,
+                                packages: installedPackages.map(p => ({
+                                    id: p.id,
+                                    version: p.version,
+                                    resolvedVersion: p.resolvedVersion,
+                                    isImplicit: p.isImplicit,
+                                }))
+                            });
+                        } catch (error) {
+                            console.error(`[nUIget Sidebar] Failed to get installed packages for ${project.name}:`, error);
+                        }
+                    }
+
+                    this._postMessage({ type: 'allProjectsInstalled', projectInstalled: allProjectsInstalled });
+                    break;
+                }
             case 'installPackage':
                 {
                     await vscode.window.withProgress({

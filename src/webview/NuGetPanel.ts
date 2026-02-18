@@ -791,6 +791,36 @@ export class NuGetPanel {
                     });
                     break;
                 }
+            case 'checkAllProjectsInstalled':
+                {
+                    const projects = await this._nugetService.findProjects();
+                    const allProjectsInstalled: { projectPath: string; projectName: string; packages: { id: string; version: string; resolvedVersion?: string; isImplicit?: boolean }[] }[] = [];
+
+                    // Check each project sequentially to avoid overwhelming the system
+                    for (const project of projects) {
+                        try {
+                            const installedPackages = await this._nugetService.getInstalledPackages(project.path, true /* liteMode */);
+                            allProjectsInstalled.push({
+                                projectPath: project.path,
+                                projectName: project.name,
+                                packages: installedPackages.map(p => ({
+                                    id: p.id,
+                                    version: p.version,
+                                    resolvedVersion: p.resolvedVersion,
+                                    isImplicit: p.isImplicit,
+                                }))
+                            });
+                        } catch (error) {
+                            console.error(`[nUIget] Failed to get installed packages for ${project.name}:`, error);
+                        }
+                    }
+
+                    this._postMessage({
+                        type: 'allProjectsInstalled',
+                        projectInstalled: allProjectsInstalled
+                    });
+                    break;
+                }
             case 'bulkUpdateAllProjects':
                 {
                     if (this._operationInProgress) { break; }
@@ -1123,6 +1153,92 @@ export class NuGetPanel {
                             type: 'bulkRemoveResult',
                             projectPath: projectPath
                         });
+                        NuGetPanel.onPackageChanged?.();
+                    } finally {
+                        this._operationInProgress = false;
+                    }
+                    break;
+                }
+            case 'confirmBulkRemoveAllProjects':
+                {
+                    if (this._operationInProgress) { break; }
+                    this._operationInProgress = true;
+                    try {
+                        const projectRemovals = data.projectRemovals as { projectPath: string; projectName: string; packages: string[] }[];
+
+                        if (!projectRemovals || projectRemovals.length === 0) {
+                            console.warn('[nUIget] confirmBulkRemoveAllProjects received empty projectRemovals array');
+                            break;
+                        }
+
+                        // Notify webview that uninstall is starting
+                        this._postMessage({ type: 'bulkRemoveAllProjectsConfirmed' });
+
+                        // Calculate total package count
+                        const totalPackages = projectRemovals.reduce((sum, pr) => sum + pr.packages.length, 0);
+
+                        // Setup output channel
+                        this._nugetService.setupOutputChannel();
+                        this._nugetService.logBulkOperationHeader(`Uninstalling from ${projectRemovals.length} projects`, 0);
+
+                        await vscode.window.withProgress({
+                            location: vscode.ProgressLocation.Notification,
+                            title: `Uninstalling ${totalPackages} packages from ${projectRemovals.length} projects...`,
+                            cancellable: false
+                        }, async (progress) => {
+                            let successCount = 0;
+                            let failCount = 0;
+                            let processed = 0;
+
+                            for (const projectRemoval of projectRemovals) {
+                                // Get package dependencies for correct uninstall order per project
+                                const dependencyMap = await this._nugetService.getPackageDependencies(projectRemoval.projectPath);
+                                const packagesToRemove = new Set(projectRemoval.packages.map(p => p.toLowerCase()));
+
+                                // Topological sort: dependents first (opposite of update)
+                                const sortedPackages = topologicalSortByDependency(
+                                    projectRemoval.packages,
+                                    p => p.toLowerCase(),
+                                    dependencyMap,
+                                    packagesToRemove,
+                                    false // dependentsFirst
+                                );
+
+                                for (const packageId of sortedPackages) {
+                                    processed++;
+                                    progress.report({
+                                        message: `(${processed}/${totalPackages}) ${projectRemoval.projectName}: ${packageId}`,
+                                        increment: (100 / totalPackages)
+                                    });
+
+                                    const success = await this._nugetService.removePackage(
+                                        projectRemoval.projectPath,
+                                        packageId,
+                                        { skipChannelSetup: true, skipRestore: true, skipNotification: true }
+                                    );
+
+                                    if (success) {
+                                        successCount++;
+                                    } else {
+                                        failCount++;
+                                    }
+                                }
+
+                                // Run a single restore after all packages are removed from this project
+                                if (sortedPackages.length > 0) {
+                                    progress.report({ message: `Restoring ${projectRemoval.projectName}...` });
+                                    await this._nugetService.restoreProject(projectRemoval.projectPath);
+                                }
+                            }
+
+                            if (failCount === 0) {
+                                vscode.window.showInformationMessage(`Successfully uninstalled ${successCount} packages from ${projectRemovals.length} projects.`);
+                            } else {
+                                vscode.window.showWarningMessage(`Uninstalled ${successCount} packages, ${failCount} failed across ${projectRemovals.length} projects.`);
+                            }
+                        });
+
+                        this._postMessage({ type: 'bulkRemoveAllProjectsResult' });
                         NuGetPanel.onPackageChanged?.();
                     } finally {
                         this._operationInProgress = false;

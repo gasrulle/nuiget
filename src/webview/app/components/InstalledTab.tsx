@@ -26,14 +26,17 @@ import type {
     LRUMap,
     PackageMetadata,
     PackageSearchResult,
+    Project,
+    ProjectInstalled,
     TransitiveFrameworkSection,
     TransitivePackage,
-    VsCodeApi,
+    VsCodeApi
 } from '../types';
 import { getPackageId } from '../types';
 import { MemoizedPackageDetailsPanel } from './PackageDetailsPanel';
 
 const ESTIMATED_ITEM_HEIGHT = 66; // padding (12*2) + icon (32) + gaps
+const HEADER_HEIGHT = 40; // project group header height in all-projects mode
 
 // ─── Props ───────────────────────────────────────────────────────────────────
 
@@ -114,6 +117,13 @@ export interface InstalledTabProps {
         onReset: () => void;
         onDragEnd?: (pos: number) => void;
     }>>;
+
+    // All-projects mode
+    loadAllProjectsInstalled: boolean;
+    allProjectsInstalled: ProjectInstalled[];
+    loadingAllProjectsInstalled: boolean;
+    onLoadAllInstalledChange: (checked: boolean) => void;
+    projects: Project[];
 }
 
 // ─── Handle ──────────────────────────────────────────────────────────────────
@@ -173,6 +183,11 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
         vscode,
         installedTabRef,
         MemoizedDraggableSash,
+        loadAllProjectsInstalled,
+        allProjectsInstalled,
+        loadingAllProjectsInstalled,
+        onLoadAllInstalledChange,
+        projects,
     } = props;
 
     // ─── Internal state ──────────────────────────────────────────────────────
@@ -193,6 +208,12 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
     const selectedUninstallsRef = useRef<Set<string>>(selectedUninstalls);
     selectedUninstallsRef.current = selectedUninstalls;
     const [uninstallingAll, setUninstallingAll] = useState(false);
+
+    // All-projects installed mode state
+    const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
+    const [selectedUninstallsAllProjects, setSelectedUninstallsAllProjects] = useState<Set<string>>(new Set());
+    const selectedUninstallsAllProjectsRef = useRef<Set<string>>(selectedUninstallsAllProjects);
+    selectedUninstallsAllProjectsRef.current = selectedUninstallsAllProjects;
 
     // Transitive packages section state (multi-framework support)
     const [transitiveFrameworks, setTransitiveFrameworks] = useState<TransitiveFrameworkSection[]>([]);
@@ -231,11 +252,62 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
     const deferredInstalledPackages = useDeferredValue(filteredInstalledPackages);
     const isInstalledStale = filteredInstalledPackages !== deferredInstalledPackages;
 
+    // ─── All-projects installed flattening ────────────────────────────────
+
+    type FlattenedInstalledItem =
+        | { type: 'header'; projectPath: string; projectName: string; packageCount: number }
+        | { type: 'package'; projectPath: string; id: string; version: string; resolvedVersion?: string; isImplicit?: boolean };
+
+    const flattenedAllProjectsInstalled = useMemo((): FlattenedInstalledItem[] => {
+        if (!loadAllProjectsInstalled) { return []; }
+        const q = installedFilterQuery.trim().toLowerCase();
+        const items: FlattenedInstalledItem[] = [];
+        for (const project of allProjectsInstalled) {
+            const filtered = q
+                ? project.packages.filter(p => p.id.toLowerCase().includes(q))
+                : project.packages;
+            items.push({
+                type: 'header',
+                projectPath: project.projectPath,
+                projectName: project.projectName,
+                packageCount: filtered.length
+            });
+            if (expandedProjects.has(project.projectPath)) {
+                const sorted = [...filtered].sort((a, b) => a.id.localeCompare(b.id));
+                for (const pkg of sorted) {
+                    items.push({ type: 'package', projectPath: project.projectPath, ...pkg });
+                }
+            }
+        }
+        return items;
+    }, [loadAllProjectsInstalled, allProjectsInstalled, expandedProjects, installedFilterQuery]);
+
+    const deferredFlattenedInstalled = useDeferredValue(flattenedAllProjectsInstalled);
+    const isAllProjectsInstalledStale = flattenedAllProjectsInstalled !== deferredFlattenedInstalled;
+
+    // Total uninstallable packages across all projects (non-implicit)
+    const allProjectsUninstallableCount = useMemo(() => {
+        if (!loadAllProjectsInstalled) { return 0; }
+        let count = 0;
+        for (const project of allProjectsInstalled) {
+            count += project.packages.filter(p => !p.isImplicit).length;
+        }
+        return count;
+    }, [loadAllProjectsInstalled, allProjectsInstalled]);
+
     // Virtualizer for direct packages list (same pattern as BrowseTab)
+    const installedVirtualizerCount = loadAllProjectsInstalled
+        ? deferredFlattenedInstalled.length
+        : deferredInstalledPackages.length;
     const installedVirtualizer = useVirtualizer({
-        count: deferredInstalledPackages.length,
+        count: installedVirtualizerCount,
         getScrollElement: () => installedScrollRef.current,
-        estimateSize: () => ESTIMATED_ITEM_HEIGHT,
+        estimateSize: (index) => {
+            if (loadAllProjectsInstalled && deferredFlattenedInstalled[index]?.type === 'header') {
+                return HEADER_HEIGHT;
+            }
+            return ESTIMATED_ITEM_HEIGHT;
+        },
         overscan: 5,
     });
 
@@ -308,6 +380,98 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
             packages: packagesToRemove
         });
     }, [selectedProject, installedPackages, vscode]);
+
+    // ─── All-Projects Mode Callbacks ─────────────────────────────────────────
+
+    // Initialize expanded projects when all-projects data arrives
+    useEffect(() => {
+        if (allProjectsInstalled.length > 0) {
+            setExpandedProjects(new Set(allProjectsInstalled.map(p => p.projectPath)));
+        }
+    }, [allProjectsInstalled]);
+
+    // Reset selections when all-projects mode changes
+    useEffect(() => {
+        setSelectedUninstallsAllProjects(new Set());
+    }, [allProjectsInstalled, loadAllProjectsInstalled]);
+
+    const handleToggleProject = useCallback((projectPath: string) => {
+        setExpandedProjects(prev => {
+            const next = new Set(prev);
+            if (next.has(projectPath)) {
+                next.delete(projectPath);
+            } else {
+                next.add(projectPath);
+            }
+            return next;
+        });
+    }, []);
+
+    const handleToggleUninstallAllProjects = useCallback((compositeKey: string) => {
+        setSelectedUninstallsAllProjects(prev => {
+            const next = new Set(prev);
+            if (next.has(compositeKey)) {
+                next.delete(compositeKey);
+            } else {
+                next.add(compositeKey);
+            }
+            return next;
+        });
+    }, []);
+
+    const handleToggleSelectAllAllProjects = useCallback(() => {
+        // Collect all uninstallable composite keys across all projects
+        const allKeys: string[] = [];
+        for (const project of allProjectsInstalled) {
+            for (const pkg of project.packages) {
+                if (!pkg.isImplicit) {
+                    allKeys.push(`${project.projectPath}::${pkg.id}`);
+                }
+            }
+        }
+
+        if (selectedUninstallsAllProjects.size === allKeys.length && allKeys.length > 0) {
+            // All selected -> deselect all
+            setSelectedUninstallsAllProjects(new Set());
+        } else {
+            // Select all
+            setSelectedUninstallsAllProjects(new Set(allKeys));
+        }
+    }, [allProjectsInstalled, selectedUninstallsAllProjects]);
+
+    const handleUninstallSelectedAllProjects = useCallback(() => {
+        const currentSelections = selectedUninstallsAllProjectsRef.current;
+        if (currentSelections.size === 0) { return; }
+
+        // Group selected packages by project
+        const projectMap = new Map<string, { projectPath: string; projectName: string; packages: string[] }>();
+        for (const compositeKey of currentSelections) {
+            const separatorIndex = compositeKey.indexOf('::');
+            if (separatorIndex === -1) { continue; }
+            const projectPath = compositeKey.substring(0, separatorIndex);
+            const packageId = compositeKey.substring(separatorIndex + 2);
+
+            let entry = projectMap.get(projectPath);
+            if (!entry) {
+                const project = allProjectsInstalled.find(p => p.projectPath === projectPath);
+                entry = {
+                    projectPath,
+                    projectName: project?.projectName ?? projectPath,
+                    packages: []
+                };
+                projectMap.set(projectPath, entry);
+            }
+            entry.packages.push(packageId);
+        }
+
+        const projectRemovals = [...projectMap.values()];
+        if (projectRemovals.length === 0) { return; }
+
+        vscode.postMessage({
+            type: 'confirmBulkRemoveAllProjects',
+            projectRemovals
+        });
+    }, [allProjectsInstalled, vscode]);
 
     // Handle expanding/collapsing individual framework sections (lazy load metadata on first expand)
     const handleToggleTransitiveFramework = useCallback((targetFramework: string) => {
@@ -508,6 +672,14 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
                     // User confirmed the bulk remove, start the operation
                     setUninstallingAll(true);
                     break;
+                case 'bulkRemoveAllProjectsConfirmed':
+                    // User confirmed the bulk remove across all projects
+                    setUninstallingAll(true);
+                    break;
+                case 'bulkRemoveAllProjectsResult':
+                    setUninstallingAll(false);
+                    setSelectedUninstallsAllProjects(new Set());
+                    break;
             }
         },
         resetTransitiveState: (refetch?: boolean, forceRestore?: boolean) => {
@@ -691,304 +863,430 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
                                     </button>
                                 )}
                             </div>
-                            <button
-                                className="direct-packages-header"
-                                onClick={() => setDirectPackagesExpanded(!directPackagesExpanded)}
-                                aria-expanded={directPackagesExpanded}
-                            >
-                                <span className="direct-packages-arrow">{directPackagesExpanded ? <ChevronDownIcon size={14} /> : <ChevronRightIcon size={14} />}</span>
-                                <span className="direct-packages-title">
-                                    Direct packages
-                                    <span className="direct-packages-count">
-                                        {installedFilterQuery.trim()
-                                            ? `(${filteredInstalledPackages.length} of ${installedPackages.length})`
-                                            : `(${installedPackages.length})`}
-                                    </span>
-                                </span>
-                                <span
-                                    className="refresh-btn"
-                                    title="Refresh installed and transitive packages"
-                                    role="button"
-                                    tabIndex={0}
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        if (selectedProject && !loadingInstalled && !loadingTransitive) {
-                                            onRefreshAll();
-                                            doResetTransitiveState(true, true);
-                                        }
-                                    }}
-                                    onKeyDown={(e) => {
-                                        if (e.key === 'Enter' || e.key === ' ') {
-                                            e.stopPropagation();
-                                            e.preventDefault();
-                                            if (selectedProject && !loadingInstalled && !loadingTransitive) {
-                                                onRefreshAll();
-                                                doResetTransitiveState(true, true);
-                                            }
-                                        }
-                                    }}
-                                    aria-label="Refresh installed and transitive packages"
-                                    aria-disabled={loadingInstalled || loadingTransitive}
-                                >
-                                    ↻
-                                </span>
-                            </button>
-                            {directPackagesExpanded && (
-                                <div className="direct-packages-content">
+                            {projects.length > 1 && (
+                                <div className="load-all-toolbar">
+                                    <label className="load-all-checkbox">
+                                        <input
+                                            type="checkbox"
+                                            checked={loadAllProjectsInstalled}
+                                            onChange={(e) => onLoadAllInstalledChange(e.target.checked)}
+                                            disabled={loadingInstalled || uninstallingAll || loadingAllProjectsInstalled}
+                                        />
+                                        Load all projects
+                                    </label>
+                                </div>
+                            )}
+                            {/* Unified toolbar — same position for single-project and all-projects modes */}
+                            {loadAllProjectsInstalled ? (
+                                !loadingAllProjectsInstalled && allProjectsInstalled.length > 0 && (
                                     <div className="updates-toolbar">
                                         <button
                                             className="btn-link"
-                                            onClick={handleToggleSelectAllInstalled}
-                                            disabled={uninstallingAll || uninstallablePackages.length === 0}
+                                            onClick={handleToggleSelectAllAllProjects}
+                                            disabled={uninstallingAll || allProjectsUninstallableCount === 0}
                                         >
-                                            {visibleSelectedCount === uninstallablePackages.length && uninstallablePackages.length > 0 ? 'Deselect all' : 'Select all'}
+                                            {selectedUninstallsAllProjects.size === allProjectsUninstallableCount && allProjectsUninstallableCount > 0 ? 'Deselect all' : 'Select all'}
                                         </button>
                                         <button
                                             className="btn btn-danger"
-                                            onClick={handleUninstallSelected}
-                                            disabled={visibleSelectedCount === 0 || uninstallingAll}
+                                            onClick={handleUninstallSelectedAllProjects}
+                                            disabled={selectedUninstallsAllProjects.size === 0 || uninstallingAll}
                                         >
-                                            {uninstallingAll ? 'Uninstalling...' : `Uninstall Selected (${visibleSelectedCount})`}
+                                            {uninstallingAll ? 'Uninstalling...' : `Uninstall Selected (${selectedUninstallsAllProjects.size})`}
                                         </button>
                                     </div>
-                                    <div
-                                        ref={installedListRef}
-                                        className={`package-list${isInstalledStale ? ' stale' : ''}`}
-                                        tabIndex={0}
-                                        onKeyDown={createPackageListKeyHandler(
-                                            deferredInstalledPackages,
-                                            () => selectedPackage ? getPackageId(selectedPackage) : null,
-                                            (pkg) => {
-                                                onSelectDirectPackage(pkg, {
-                                                    selectedVersionValue: pkg.version,
-                                                    metadataVersion: pkg.resolvedVersion || pkg.version,
-                                                    initialVersions: [pkg.version],
-                                                });
-                                            },
-                                            {
-                                                onDelete: (pkg) => !pkg.isImplicit && onRemove(pkg.id),
-                                                onToggle: (pkg) => !pkg.isImplicit && handleToggleUninstallSelection(pkg.id),
-                                                onLeftArrow: () => detailsTab === 'readme' && onDetailsTabChange('details'),
-                                                onRightArrow: () => detailsTab === 'details' && onDetailsTabChange('readme'),
-                                                onExitTop: () => {
-                                                    clearSelection();
-                                                    installedTabRef.current?.focus();
-                                                },
-                                                scrollToIndex: (i: number) => installedVirtualizer.scrollToIndex(i, { align: 'auto' })
-                                            }
-                                        )}
-                                        style={{ height: `${installedVirtualizer.getTotalSize()}px`, position: 'relative' }}
+                                )
+                            ) : (
+                                <div className="updates-toolbar">
+                                    <button
+                                        className="btn-link"
+                                        onClick={handleToggleSelectAllInstalled}
+                                        disabled={uninstallingAll || uninstallablePackages.length === 0}
                                     >
-                                        {installedVirtualizer.getVirtualItems().map(virtualRow => {
-                                            const pkg = deferredInstalledPackages[virtualRow.index];
-                                            return (
-                                                <div
-                                                    key={pkg.id}
-                                                    data-index={virtualRow.index}
-                                                    ref={installedVirtualizer.measureElement}
-                                                    className={`package-item ${selectedPackage && getPackageId(selectedPackage).toLowerCase() === pkg.id.toLowerCase() ? 'selected' : ''}`}
-                                                    style={{ position: 'absolute', top: 0, left: 0, width: '100%', transform: `translateY(${virtualRow.start}px)` }}
-                                                    onClick={() => {
+                                        {visibleSelectedCount === uninstallablePackages.length && uninstallablePackages.length > 0 ? 'Deselect all' : 'Select all'}
+                                    </button>
+                                    <button
+                                        className="btn btn-danger"
+                                        onClick={handleUninstallSelected}
+                                        disabled={visibleSelectedCount === 0 || uninstallingAll}
+                                    >
+                                        {uninstallingAll ? 'Uninstalling...' : `Uninstall Selected (${visibleSelectedCount})`}
+                                    </button>
+                                </div>
+                            )}
+                            {loadAllProjectsInstalled ? (
+                                <div className="direct-packages-content">
+                                    {loadingAllProjectsInstalled ? (
+                                        <div className="loading-spinner-container" aria-busy="true" aria-label="Loading all projects installed packages">
+                                            <div className="loading-spinner"></div>
+                                            <p>Loading installed packages for all projects...</p>
+                                        </div>
+                                    ) : allProjectsInstalled.length === 0 ? (
+                                        <p className="empty-state">No installed packages found across projects</p>
+                                    ) : (
+                                        <>
+                                            <div
+                                                ref={installedListRef}
+                                                className={`package-list${isAllProjectsInstalledStale ? ' stale' : ''}`}
+                                                tabIndex={0}
+                                                style={{ height: `${installedVirtualizer.getTotalSize()}px`, position: 'relative' }}
+                                            >
+                                                {installedVirtualizer.getVirtualItems().map(virtualRow => {
+                                                    const item = deferredFlattenedInstalled[virtualRow.index];
+                                                    if (!item) { return null; }
+
+                                                    if (item.type === 'header') {
+                                                        const isExpanded = expandedProjects.has(item.projectPath);
+                                                        return (
+                                                            <button
+                                                                key={`header-${item.projectPath}`}
+                                                                data-index={virtualRow.index}
+                                                                ref={installedVirtualizer.measureElement}
+                                                                className="direct-packages-header project-section-header"
+                                                                onClick={() => handleToggleProject(item.projectPath)}
+                                                                aria-expanded={isExpanded}
+                                                                title={item.projectPath}
+                                                                style={{ position: 'absolute', top: 0, left: 0, width: '100%', transform: `translateY(${virtualRow.start}px)` }}
+                                                            >
+                                                                <span className="direct-packages-arrow">{isExpanded ? <ChevronDownIcon size={14} /> : <ChevronRightIcon size={14} />}</span>
+                                                                <span className="direct-packages-title">
+                                                                    {item.projectName}
+                                                                    <span className="direct-packages-count">({item.packageCount})</span>
+                                                                </span>
+                                                            </button>
+                                                        );
+                                                    }
+
+                                                    // Package item (minimal — no icons)
+                                                    const compositeKey = `${item.projectPath}::${item.id}`;
+                                                    return (
+                                                        <div
+                                                            key={compositeKey}
+                                                            data-index={virtualRow.index}
+                                                            ref={installedVirtualizer.measureElement}
+                                                            className="package-item package-item-minimal"
+                                                            style={{ position: 'absolute', top: 0, left: 0, width: '100%', transform: `translateY(${virtualRow.start}px)` }}
+                                                        >
+                                                            <input
+                                                                type="checkbox"
+                                                                className="update-checkbox"
+                                                                checked={selectedUninstallsAllProjects.has(compositeKey)}
+                                                                onChange={() => handleToggleUninstallAllProjects(compositeKey)}
+                                                                onClick={(e) => e.stopPropagation()}
+                                                                disabled={uninstallingAll || item.isImplicit}
+                                                                title={item.isImplicit ? 'Implicit/transitive package - cannot be uninstalled directly' : undefined}
+                                                            />
+                                                            <div className="package-info">
+                                                                <div className="package-name">
+                                                                    {item.id}
+                                                                    {item.isImplicit && (
+                                                                        <span className="implicit-badge" title="SDK-managed package">SDK</span>
+                                                                    )}
+                                                                </div>
+                                                                <div className="package-meta">
+                                                                    <span className="package-version">v{item.resolvedVersion || item.version}</span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                                {installedFilterQuery.trim() && deferredFlattenedInstalled.filter(i => i.type === 'package').length === 0 && (
+                                                    <div className="installed-filter-empty">
+                                                        No packages match &lsquo;{installedFilterQuery.trim()}&rsquo;
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </>
+                                    )}
+                                </div>
+                            ) : (
+                                <>
+                                    <button
+                                        className="direct-packages-header"
+                                        onClick={() => setDirectPackagesExpanded(!directPackagesExpanded)}
+                                        aria-expanded={directPackagesExpanded}
+                                    >
+                                        <span className="direct-packages-arrow">{directPackagesExpanded ? <ChevronDownIcon size={14} /> : <ChevronRightIcon size={14} />}</span>
+                                        <span className="direct-packages-title">
+                                            Direct packages
+                                            <span className="direct-packages-count">
+                                                {installedFilterQuery.trim()
+                                                    ? `(${filteredInstalledPackages.length} of ${installedPackages.length})`
+                                                    : `(${installedPackages.length})`}
+                                            </span>
+                                        </span>
+                                        <span
+                                            className="refresh-btn"
+                                            title="Refresh installed and transitive packages"
+                                            role="button"
+                                            tabIndex={0}
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                if (selectedProject && !loadingInstalled && !loadingTransitive) {
+                                                    onRefreshAll();
+                                                    doResetTransitiveState(true, true);
+                                                }
+                                            }}
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter' || e.key === ' ') {
+                                                    e.stopPropagation();
+                                                    e.preventDefault();
+                                                    if (selectedProject && !loadingInstalled && !loadingTransitive) {
+                                                        onRefreshAll();
+                                                        doResetTransitiveState(true, true);
+                                                    }
+                                                }
+                                            }}
+                                            aria-label="Refresh installed and transitive packages"
+                                            aria-disabled={loadingInstalled || loadingTransitive}
+                                        >
+                                            ↻
+                                        </span>
+                                    </button>
+                                    {directPackagesExpanded && (
+                                        <div className="direct-packages-content">
+                                            <div
+                                                ref={installedListRef}
+                                                className={`package-list${isInstalledStale ? ' stale' : ''}`}
+                                                tabIndex={0}
+                                                onKeyDown={createPackageListKeyHandler(
+                                                    deferredInstalledPackages,
+                                                    () => selectedPackage ? getPackageId(selectedPackage) : null,
+                                                    (pkg) => {
                                                         onSelectDirectPackage(pkg, {
                                                             selectedVersionValue: pkg.version,
                                                             metadataVersion: pkg.resolvedVersion || pkg.version,
                                                             initialVersions: [pkg.version],
                                                         });
-                                                    }}
-                                                >
-                                                    <input
-                                                        type="checkbox"
-                                                        className="update-checkbox"
-                                                        checked={selectedUninstalls.has(pkg.id)}
-                                                        onChange={() => handleToggleUninstallSelection(pkg.id)}
-                                                        onClick={(e) => e.stopPropagation()}
-                                                        disabled={uninstallingAll || pkg.isImplicit}
-                                                        title={pkg.isImplicit ? 'Implicit/transitive package - cannot be uninstalled directly' : undefined}
-                                                    />
-                                                    <div className="package-icon">
-                                                        {pkg.iconUrl ? (
-                                                            <img src={pkg.iconUrl} alt="" onError={(e) => { (e.target as HTMLImageElement).src = defaultPackageIcon; }} />
-                                                        ) : (
-                                                            <img src={defaultPackageIcon} alt="" />
-                                                        )}
-                                                    </div>
-                                                    <div className="package-info">
-                                                        <div className="package-name">
-                                                            {pkg.id}
-                                                            {pkg.isImplicit && (
-                                                                <span className="implicit-badge" title="SDK-managed package - not directly referenced in project file">SDK</span>
-                                                            )}
-                                                            {pkg.versionType === 'floating' && (
-                                                                <span className="floating-badge" title="This package uses a floating version pattern"><SyncIcon size={12} /></span>
-                                                            )}
-                                                            {pkg.versionType === 'range' && (
-                                                                <span className="floating-badge" title="This package uses a version range"><RulerIcon size={12} /></span>
-                                                            )}
-                                                        </div>
-                                                        <div className="package-meta">
-                                                            {pkg.isAlwaysLatest ? (
-                                                                <span className="package-version" title="This package always gets the latest version">
-                                                                    * (always latest{pkg.resolvedVersion ? `: ${pkg.resolvedVersion}` : ''})
-                                                                </span>
-                                                            ) : pkg.versionType === 'floating' || pkg.versionType === 'range' ? (
-                                                                <span className="package-version">
-                                                                    {pkg.version}
-                                                                    {pkg.resolvedVersion ? (
-                                                                        <span className="resolved-version"> ({pkg.resolvedVersion})</span>
-                                                                    ) : (
-                                                                        <span className="resolved-version resolved-unknown"> (run restore)</span>
-                                                                    )}
-                                                                </span>
-                                                            ) : (
-                                                                <span className="package-version">v{pkg.version}</span>
-                                                            )}
-                                                        </div>
-                                                        {pkg.authors && (
-                                                            <div className="package-authors">
-                                                                {pkg.verified && (
-                                                                    <span className="verified-badge" title="The ID prefix of this package has been reserved by its owner on nuget.org"><VerifiedIcon size={14} /></span>
+                                                    },
+                                                    {
+                                                        onDelete: (pkg) => !pkg.isImplicit && onRemove(pkg.id),
+                                                        onToggle: (pkg) => !pkg.isImplicit && handleToggleUninstallSelection(pkg.id),
+                                                        onLeftArrow: () => detailsTab === 'readme' && onDetailsTabChange('details'),
+                                                        onRightArrow: () => detailsTab === 'details' && onDetailsTabChange('readme'),
+                                                        onExitTop: () => {
+                                                            clearSelection();
+                                                            installedTabRef.current?.focus();
+                                                        },
+                                                        scrollToIndex: (i: number) => installedVirtualizer.scrollToIndex(i, { align: 'auto' })
+                                                    }
+                                                )}
+                                                style={{ height: `${installedVirtualizer.getTotalSize()}px`, position: 'relative' }}
+                                            >
+                                                {installedVirtualizer.getVirtualItems().map(virtualRow => {
+                                                    const pkg = deferredInstalledPackages[virtualRow.index];
+                                                    return (
+                                                        <div
+                                                            key={pkg.id}
+                                                            data-index={virtualRow.index}
+                                                            ref={installedVirtualizer.measureElement}
+                                                            className={`package-item ${selectedPackage && getPackageId(selectedPackage).toLowerCase() === pkg.id.toLowerCase() ? 'selected' : ''}`}
+                                                            style={{ position: 'absolute', top: 0, left: 0, width: '100%', transform: `translateY(${virtualRow.start}px)` }}
+                                                            onClick={() => {
+                                                                onSelectDirectPackage(pkg, {
+                                                                    selectedVersionValue: pkg.version,
+                                                                    metadataVersion: pkg.resolvedVersion || pkg.version,
+                                                                    initialVersions: [pkg.version],
+                                                                });
+                                                            }}
+                                                        >
+                                                            <input
+                                                                type="checkbox"
+                                                                className="update-checkbox"
+                                                                checked={selectedUninstalls.has(pkg.id)}
+                                                                onChange={() => handleToggleUninstallSelection(pkg.id)}
+                                                                onClick={(e) => e.stopPropagation()}
+                                                                disabled={uninstallingAll || pkg.isImplicit}
+                                                                title={pkg.isImplicit ? 'Implicit/transitive package - cannot be uninstalled directly' : undefined}
+                                                            />
+                                                            <div className="package-icon">
+                                                                {pkg.iconUrl ? (
+                                                                    <img src={pkg.iconUrl} alt="" onError={(e) => { (e.target as HTMLImageElement).src = defaultPackageIcon; }} />
+                                                                ) : (
+                                                                    <img src={defaultPackageIcon} alt="" />
                                                                 )}
-                                                                {pkg.authors}
                                                             </div>
-                                                        )}
+                                                            <div className="package-info">
+                                                                <div className="package-name">
+                                                                    {pkg.id}
+                                                                    {pkg.isImplicit && (
+                                                                        <span className="implicit-badge" title="SDK-managed package - not directly referenced in project file">SDK</span>
+                                                                    )}
+                                                                    {pkg.versionType === 'floating' && (
+                                                                        <span className="floating-badge" title="This package uses a floating version pattern"><SyncIcon size={12} /></span>
+                                                                    )}
+                                                                    {pkg.versionType === 'range' && (
+                                                                        <span className="floating-badge" title="This package uses a version range"><RulerIcon size={12} /></span>
+                                                                    )}
+                                                                </div>
+                                                                <div className="package-meta">
+                                                                    {pkg.isAlwaysLatest ? (
+                                                                        <span className="package-version" title="This package always gets the latest version">
+                                                                            * (always latest{pkg.resolvedVersion ? `: ${pkg.resolvedVersion}` : ''})
+                                                                        </span>
+                                                                    ) : pkg.versionType === 'floating' || pkg.versionType === 'range' ? (
+                                                                        <span className="package-version">
+                                                                            {pkg.version}
+                                                                            {pkg.resolvedVersion ? (
+                                                                                <span className="resolved-version"> ({pkg.resolvedVersion})</span>
+                                                                            ) : (
+                                                                                <span className="resolved-version resolved-unknown"> (run restore)</span>
+                                                                            )}
+                                                                        </span>
+                                                                    ) : (
+                                                                        <span className="package-version">v{pkg.version}</span>
+                                                                    )}
+                                                                </div>
+                                                                {pkg.authors && (
+                                                                    <div className="package-authors">
+                                                                        {pkg.verified && (
+                                                                            <span className="verified-badge" title="The ID prefix of this package has been reserved by its owner on nuget.org"><VerifiedIcon size={14} /></span>
+                                                                        )}
+                                                                        {pkg.authors}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                                {installedFilterQuery.trim() && deferredInstalledPackages.length === 0 && (
+                                                    <div className="installed-filter-empty">
+                                                        No packages match &lsquo;{installedFilterQuery.trim()}&rsquo;
                                                     </div>
-                                                </div>
-                                            );
-                                        })}
-                                        {installedFilterQuery.trim() && deferredInstalledPackages.length === 0 && (
-                                            <div className="installed-filter-empty">
-                                                No packages match &lsquo;{installedFilterQuery.trim()}&rsquo;
+                                                )}
                                             </div>
-                                        )}
-                                    </div>
-                                </div>
+                                        </div>
+                                    )}
+                                </>
                             )}
                         </div>
                     )}
 
-                    {/* Transitive packages sections - one per target framework */}
-                    <div className="transitive-sections">
-                        {/* Show loading state or no data source message at top level */}
-                        {loadingTransitive ? (
-                            <div className="transitive-loading">
-                                <div className="loading-spinner"></div>
-                                <span>Loading transitive packages...</span>
-                            </div>
-                        ) : transitiveDataSourceAvailable === false ? (
-                            <div className="transitive-no-lockfile">
-                                <div className="no-lockfile-icon"><WarningIcon size={32} /></div>
-                                <div className="no-lockfile-message">
-                                    <strong>No dependency data available</strong>
-                                    <p>Restore the project to see transitive package dependencies.</p>
+                    {/* Transitive packages sections - one per target framework (hidden in all-projects mode) */}
+                    {!loadAllProjectsInstalled && (
+                        <div className="transitive-sections">
+                            {/* Show loading state or no data source message at top level */}
+                            {loadingTransitive ? (
+                                <div className="transitive-loading">
+                                    <div className="loading-spinner"></div>
+                                    <span>Loading transitive packages...</span>
                                 </div>
-                                <button
-                                    className="btn btn-primary"
-                                    onClick={handleRestoreProject}
-                                    disabled={restoringProject}
-                                    title="dotnet restore"
-                                >
-                                    {restoringProject ? 'Restoring...' : 'Restore Project'}
-                                </button>
-                            </div>
-                        ) : transitiveDataSourceAvailable === null ? (
-                            /* Haven't loaded yet - show a button to load */
-                            <div className="transitive-section">
-                                <button
-                                    className="transitive-header"
-                                    onClick={handleLoadTransitiveFrameworks}
-                                >
-                                    <span className="transitive-arrow"><ChevronRightIcon size={14} /></span>
-                                    <span className="transitive-title">Transitive packages</span>
-                                </button>
-                            </div>
-                        ) : transitiveFrameworks.length === 0 ? (
-                            <div className="transitive-section">
-                                <div className="transitive-header transitive-header-disabled">
-                                    <span className="transitive-arrow"><ChevronRightIcon size={14} /></span>
-                                    <span className="transitive-title">Transitive packages <span className="transitive-count">(0)</span></span>
-                                </div>
-                            </div>
-                        ) : (
-                            /* Render each framework as a collapsible section */
-                            transitiveFrameworks.map((framework, index) => {
-                                const isExpanded = transitiveExpandedFrameworks.has(framework.targetFramework);
-                                const isLoadingMetadata = transitiveLoadingMetadata.has(framework.targetFramework);
-                                return (
-                                    <div key={framework.targetFramework} className="transitive-section">
-                                        <button
-                                            className="transitive-header"
-                                            onClick={() => handleToggleTransitiveFramework(framework.targetFramework)}
-                                            aria-expanded={isExpanded}
-                                        >
-                                            <span className="transitive-arrow">{isExpanded ? <ChevronDownIcon size={14} /> : <ChevronRightIcon size={14} />}</span>
-                                            <span className="transitive-title">
-                                                Transitive packages
-                                                <span className="transitive-count">({framework.packages.length})</span>
-                                            </span>
-                                            <span className="transitive-framework">{framework.targetFramework}</span>
-                                        </button>
-
-                                        {isExpanded && (
-                                            <div className="transitive-content">
-                                                {isLoadingMetadata ? (
-                                                    <div className="transitive-loading">
-                                                        <div className="loading-spinner"></div>
-                                                        <span>Loading package details...</span>
-                                                    </div>
-                                                ) : framework.packages.length === 0 ? (
-                                                    <p className="transitive-empty">No transitive packages found</p>
-                                                ) : (
-                                                    <div
-                                                        className="transitive-list"
-                                                        tabIndex={0}
-                                                        onKeyDown={createPackageListKeyHandler(
-                                                            framework.packages,
-                                                            () => selectedTransitivePackage?.id || null,
-                                                            (pkg) => {
-                                                                onSelectTransitivePackage(pkg);
-                                                            }
-                                                        )}
-                                                    >
-                                                        {framework.packages.map(pkg => (
-                                                            <div
-                                                                key={pkg.id}
-                                                                className={`transitive-package-item ${selectedTransitivePackage?.id === pkg.id ? 'selected' : ''}`}
-                                                                onClick={() => {
-                                                                    onSelectTransitivePackage(pkg);
-                                                                }}
-                                                            >
-                                                                <div className="package-icon package-icon-small">
-                                                                    {pkg.iconUrl ? (
-                                                                        <img src={pkg.iconUrl} alt="" onError={(e) => { (e.target as HTMLImageElement).src = defaultPackageIcon; }} />
-                                                                    ) : (
-                                                                        <img src={defaultPackageIcon} alt="" />
-                                                                    )}
-                                                                </div>
-                                                                <div className="package-info">
-                                                                    <div className="package-name">{pkg.id}</div>
-                                                                    <div className="package-meta">
-                                                                        <span className="package-version">v{pkg.version}</span>
-                                                                    </div>
-                                                                    {pkg.authors && (
-                                                                        <div className="package-authors">
-                                                                            {pkg.verified && (
-                                                                                <span className="verified-badge" title="The ID prefix of this package has been reserved by its owner on nuget.org"><VerifiedIcon size={14} /></span>
-                                                                            )}
-                                                                            {pkg.authors}
-                                                                        </div>
-                                                                    )}
-                                                                </div>
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                )}
-                                            </div>
-                                        )}
+                            ) : transitiveDataSourceAvailable === false ? (
+                                <div className="transitive-no-lockfile">
+                                    <div className="no-lockfile-icon"><WarningIcon size={32} /></div>
+                                    <div className="no-lockfile-message">
+                                        <strong>No dependency data available</strong>
+                                        <p>Restore the project to see transitive package dependencies.</p>
                                     </div>
-                                );
-                            })
-                        )}
-                    </div>
+                                    <button
+                                        className="btn btn-primary"
+                                        onClick={handleRestoreProject}
+                                        disabled={restoringProject}
+                                        title="dotnet restore"
+                                    >
+                                        {restoringProject ? 'Restoring...' : 'Restore Project'}
+                                    </button>
+                                </div>
+                            ) : transitiveDataSourceAvailable === null ? (
+                                /* Haven't loaded yet - show a button to load */
+                                <div className="transitive-section">
+                                    <button
+                                        className="transitive-header"
+                                        onClick={handleLoadTransitiveFrameworks}
+                                    >
+                                        <span className="transitive-arrow"><ChevronRightIcon size={14} /></span>
+                                        <span className="transitive-title">Transitive packages</span>
+                                    </button>
+                                </div>
+                            ) : transitiveFrameworks.length === 0 ? (
+                                <div className="transitive-section">
+                                    <div className="transitive-header transitive-header-disabled">
+                                        <span className="transitive-arrow"><ChevronRightIcon size={14} /></span>
+                                        <span className="transitive-title">Transitive packages <span className="transitive-count">(0)</span></span>
+                                    </div>
+                                </div>
+                            ) : (
+                                /* Render each framework as a collapsible section */
+                                transitiveFrameworks.map((framework, index) => {
+                                    const isExpanded = transitiveExpandedFrameworks.has(framework.targetFramework);
+                                    const isLoadingMetadata = transitiveLoadingMetadata.has(framework.targetFramework);
+                                    return (
+                                        <div key={framework.targetFramework} className="transitive-section">
+                                            <button
+                                                className="transitive-header"
+                                                onClick={() => handleToggleTransitiveFramework(framework.targetFramework)}
+                                                aria-expanded={isExpanded}
+                                            >
+                                                <span className="transitive-arrow">{isExpanded ? <ChevronDownIcon size={14} /> : <ChevronRightIcon size={14} />}</span>
+                                                <span className="transitive-title">
+                                                    Transitive packages
+                                                    <span className="transitive-count">({framework.packages.length})</span>
+                                                </span>
+                                                <span className="transitive-framework">{framework.targetFramework}</span>
+                                            </button>
+
+                                            {isExpanded && (
+                                                <div className="transitive-content">
+                                                    {isLoadingMetadata ? (
+                                                        <div className="transitive-loading">
+                                                            <div className="loading-spinner"></div>
+                                                            <span>Loading package details...</span>
+                                                        </div>
+                                                    ) : framework.packages.length === 0 ? (
+                                                        <p className="transitive-empty">No transitive packages found</p>
+                                                    ) : (
+                                                        <div
+                                                            className="transitive-list"
+                                                            tabIndex={0}
+                                                            onKeyDown={createPackageListKeyHandler(
+                                                                framework.packages,
+                                                                () => selectedTransitivePackage?.id || null,
+                                                                (pkg) => {
+                                                                    onSelectTransitivePackage(pkg);
+                                                                }
+                                                            )}
+                                                        >
+                                                            {framework.packages.map(pkg => (
+                                                                <div
+                                                                    key={pkg.id}
+                                                                    className={`transitive-package-item ${selectedTransitivePackage?.id === pkg.id ? 'selected' : ''}`}
+                                                                    onClick={() => {
+                                                                        onSelectTransitivePackage(pkg);
+                                                                    }}
+                                                                >
+                                                                    <div className="package-icon package-icon-small">
+                                                                        {pkg.iconUrl ? (
+                                                                            <img src={pkg.iconUrl} alt="" onError={(e) => { (e.target as HTMLImageElement).src = defaultPackageIcon; }} />
+                                                                        ) : (
+                                                                            <img src={defaultPackageIcon} alt="" />
+                                                                        )}
+                                                                    </div>
+                                                                    <div className="package-info">
+                                                                        <div className="package-name">{pkg.id}</div>
+                                                                        <div className="package-meta">
+                                                                            <span className="package-version">v{pkg.version}</span>
+                                                                        </div>
+                                                                        {pkg.authors && (
+                                                                            <div className="package-authors">
+                                                                                {pkg.verified && (
+                                                                                    <span className="verified-badge" title="The ID prefix of this package has been reserved by its owner on nuget.org"><VerifiedIcon size={14} /></span>
+                                                                                )}
+                                                                                {pkg.authors}
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })
+                            )}
+                        </div>
+                    )}
                 </div>
 
                 <MemoizedDraggableSash

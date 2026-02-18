@@ -117,6 +117,25 @@ export interface ProjectUpdates {
     updates: PackageUpdateMinimal[];
 }
 
+/**
+ * Installed packages for a single project in "load all" mode (minimal data for performance)
+ */
+export interface ProjectInstalled {
+    projectPath: string;
+    projectName: string;
+    packages: InstalledPackageMinimal[];
+}
+
+/**
+ * Minimal installed package data for all-projects mode (no icons, authors, or version spec details)
+ */
+export interface InstalledPackageMinimal {
+    id: string;
+    version: string;
+    resolvedVersion?: string;
+    isImplicit?: boolean;
+}
+
 export interface TransitivePackage {
     id: string;
     version: string;

@@ -14,7 +14,7 @@
 
 import { useVirtualizer } from '@tanstack/react-virtual';
 import React, { forwardRef, useCallback, useDeferredValue, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
-import { ArrowRightIcon, VerifiedIcon } from '../icons';
+import { ArrowRightIcon, ChevronDownIcon, ChevronRightIcon, VerifiedIcon } from '../icons';
 import type {
     InstalledPackage,
     LRUMap,
@@ -171,6 +171,7 @@ const UpdatesTab = forwardRef<UpdatesTabHandle, UpdatesTabProps>((props, ref) =>
     // ─── Local state ─────────────────────────────────────────────────────────
     const [selectedUpdates, setSelectedUpdates] = useState<Set<string>>(new Set());
     const [updatingAll, setUpdatingAll] = useState(false);
+    const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
 
     // ─── Refs ────────────────────────────────────────────────────────────────
     const updatesScrollRef = useRef<HTMLDivElement>(null);
@@ -181,6 +182,13 @@ const UpdatesTab = forwardRef<UpdatesTabHandle, UpdatesTabProps>((props, ref) =>
     useEffect(() => {
         setSelectedUpdates(new Set());
     }, [packagesWithUpdates, allProjectsUpdates, loadAllProjects]);
+
+    // Initialize all projects as expanded when data arrives
+    useEffect(() => {
+        if (allProjectsUpdates.length > 0) {
+            setExpandedProjects(new Set(allProjectsUpdates.map(p => p.projectPath)));
+        }
+    }, [allProjectsUpdates]);
 
     // ─── Derived data ────────────────────────────────────────────────────────
     const sortedPackagesWithUpdates = useMemo(() =>
@@ -207,18 +215,20 @@ const UpdatesTab = forwardRef<UpdatesTabHandle, UpdatesTabProps>((props, ref) =>
                 projectName: project.projectName,
                 updateCount: project.updates.length
             });
-            // Add sorted package updates
-            const sortedUpdates = [...project.updates].sort((a, b) => a.id.localeCompare(b.id));
-            for (const update of sortedUpdates) {
-                items.push({
-                    type: 'package',
-                    projectPath: project.projectPath,
-                    ...update
-                });
+            // Only add package items if project is expanded
+            if (expandedProjects.has(project.projectPath)) {
+                const sortedUpdates = [...project.updates].sort((a, b) => a.id.localeCompare(b.id));
+                for (const update of sortedUpdates) {
+                    items.push({
+                        type: 'package',
+                        projectPath: project.projectPath,
+                        ...update
+                    });
+                }
             }
         }
         return items;
-    }, [loadAllProjects, allProjectsUpdates]);
+    }, [loadAllProjects, allProjectsUpdates, expandedProjects]);
 
     const deferredFlattenedItems = useDeferredValue(flattenedAllProjectsUpdates);
     const isAllProjectsStale = flattenedAllProjectsUpdates !== deferredFlattenedItems;
@@ -438,17 +448,32 @@ const UpdatesTab = forwardRef<UpdatesTabHandle, UpdatesTabProps>((props, ref) =>
                                         const item = deferredFlattenedItems[virtualRow.index];
 
                                         if (item.type === 'header') {
+                                            const isExpanded = expandedProjects.has(item.projectPath);
                                             return (
-                                                <div
+                                                <button
                                                     key={`header-${item.projectPath}`}
                                                     data-index={virtualRow.index}
                                                     ref={updatesVirtualizer.measureElement}
-                                                    className="project-group-header"
+                                                    className="direct-packages-header project-section-header"
+                                                    onClick={() => setExpandedProjects(prev => {
+                                                        const next = new Set(prev);
+                                                        if (next.has(item.projectPath)) {
+                                                            next.delete(item.projectPath);
+                                                        } else {
+                                                            next.add(item.projectPath);
+                                                        }
+                                                        return next;
+                                                    })}
+                                                    aria-expanded={isExpanded}
+                                                    title={item.projectPath}
                                                     style={{ position: 'absolute', top: 0, left: 0, width: '100%', transform: `translateY(${virtualRow.start}px)` }}
                                                 >
-                                                    <span className="project-name">{item.projectName}</span>
-                                                    <span className="project-update-count">{item.updateCount} update{item.updateCount !== 1 ? 's' : ''}</span>
-                                                </div>
+                                                    <span className="direct-packages-arrow">{isExpanded ? <ChevronDownIcon size={14} /> : <ChevronRightIcon size={14} />}</span>
+                                                    <span className="direct-packages-title">
+                                                        {item.projectName}
+                                                        <span className="direct-packages-count">({item.updateCount} update{item.updateCount !== 1 ? 's' : ''})</span>
+                                                    </span>
+                                                </button>
                                             );
                                         }
 
