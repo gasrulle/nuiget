@@ -5,11 +5,15 @@ All notable changes to the nUIget extension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.6.0] - 2026-02-18
 
 ### Added
 
 - **Native VS Code icon system** — Replaced all emoji/Unicode character icons (⚙️, ⚠️, ✓, ▶/▼, 🔄, 📏, ⬇, ⏳, 🗑️, ←/→, ✕, ℹ️) with inline SVG components matching VS Code's codicon system in new `icons.tsx` module
+
+### Fixed
+
+- **README audit fixes** — Fixed broken emoji characters, updated outdated sidebar description (removed Browse section/Activity Bar badge refs), added missing `nuiget.searchResultLimit` setting, aligned `noRestore` description with package.json, documented Cross-Project Updates/Installed Tab Filter/Cross-Panel Sync/Bulk Operations, added editor title bar tip
 - **High-contrast theme support** — Added `body.vscode-high-contrast` and `body.vscode-high-contrast-light` CSS rules with `--vscode-contrastBorder` and `--vscode-contrastActiveBorder` for all interactive elements in both main panel and sidebar
 - **Reduced-motion accessibility** — Added `@media (prefers-reduced-motion: reduce)` rules to disable spinner, icon, and tab transition animations in both main panel and sidebar
 - **Icon CSS utilities** — Added `.inline-icon`, `.codicon-loading` spin animation, and icon-specific color rules for verified badges, warnings, and settings gear

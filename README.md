@@ -17,14 +17,17 @@ A Visual Studio-style NuGet package manager for VS Code with a modern split-pane
 - ⌨️ **Keyboard Navigation** - Arrow keys to navigate, `Ctrl+Enter` to quick install
 - 🚀 **Multi-Project Support** - Manage packages across .csproj, .fsproj, and .vbproj files
 - 🔗 **Transitive Dependencies** - View the full dependency graph with "Required by" chains
-- 📊 **Bulk Operations** - Update All or Uninstall Selected for batch management
+- 📊 **Bulk Operations** - Update All, Bulk Update selected, or Bulk Uninstall across single or all projects
+- 🔄 **Cross-Project Updates** - Load updates from all projects at once with grouped results and one-click Update All
+- 🔎 **Installed Tab Filter** - Client-side filter to quickly find packages by name with live count display
 - ⚙️ **Source Management** - Enable, disable, add, or remove NuGet sources via settings cog (⚙️)
 - ✅ **Verified Badges** - Shows ✓ for packages with reserved prefix on nuget.org
 - 🔐 **Authenticated Private Feeds** - Browse and search packages from private feeds
 - 📖 **README Display** - View package docs with syntax-highlighted code blocks and copy button
 - ⚠️ **Source Status Warnings** - Visual notification when NuGet sources are unreachable
-- � **Sidebar Panel** - Compact Activity Bar panel with Browse, Installed, Updates sections and background update badge
-- �🔧 **Output Channel** - "nUIget" channel shows all CLI commands for troubleshooting
+- 📌 **Sidebar Panel** - Compact Activity Bar panel with search-driven browse, Installed and Updates sections with update count badges
+- 🔁 **Cross-Panel Sync** - Source, project, and prerelease selections shared between main panel and sidebar in real time
+- 🔧 **Output Channel** - "nUIget" channel shows all CLI commands for troubleshooting
 
 ## 🚀 Quick Start
 
@@ -36,13 +39,15 @@ A Visual Studio-style NuGet package manager for VS Code with a modern split-pane
 
 > 💡 **Tip:** Right-click any project in Solution Explorer → "nUIget: Manage Packages"
 
+> 💡 **Tip:** Click the nUIget icon in the editor title bar when a .csproj file is open
+
 ## 📸 Screenshots
 
 <table>
 <tr>
 <td width="50%">
 
-### � Installed Packages
+### 📋 Installed Packages
 See direct and transitive dependencies with "Required by" chains
 
 <a href="https://raw.githubusercontent.com/gasrulle/nuiget/main/docs/images/installed.png"><img src="https://raw.githubusercontent.com/gasrulle/nuiget/main/docs/images/installed.png" alt="Installed packages"></a>
@@ -63,10 +68,11 @@ One-click updates with version comparison and prerelease support
 
 | Setting | Default | Description |
 |---------|---------|-------------|
-| `nuiget.noRestore` | `false` | Skip `dotnet restore` after package operations. Faster but transitive dependencies won't update until next build. |
+| `nuiget.noRestore` | `false` | Skip restore after adding packages. Faster but skips compatibility check until next build. |
 | `nuiget.searchDebounceMode` | `quicksearch` | `quicksearch`: Show suggestions. `full`: Full search as you type. `off`: Manual only. |
 | `nuiget.quickSearchResultsPerSource` | `5` | Suggestions per source in quick search (1-10) |
 | `nuiget.recentSearchesLimit` | `5` | Recent searches to remember (0-10, 0 to disable) |
+| `nuiget.searchResultLimit` | `20` | Maximum number of packages to return from full search (1-100) |
 
 ## 📋 Commands
 
