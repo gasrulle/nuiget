@@ -352,7 +352,7 @@ body {
     height: 9px;
 }
 
-/* Load All Projects Toolbar */
+/* Load All Projects Toolbar (legacy — kept for checkbox styles) */
 .load-all-toolbar {
     display: flex;
     align-items: center;
@@ -373,6 +373,62 @@ body {
 
 .load-all-checkbox input[type="checkbox"] {
     /* Shared styles via .vscode-checkbox group selector above */
+}
+
+/* ============================================
+   TOOLBAR ICON BUTTONS
+   Compact icon buttons for toolbar actions
+   ============================================ */
+.toolbar-actions-left {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.toolbar-icon-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    border: none;
+    border-radius: 5px;
+    background: transparent;
+    color: var(--vscode-descriptionForeground);
+    cursor: pointer;
+    transition: background 0.1s, color 0.1s;
+}
+
+.toolbar-icon-btn:hover {
+    background: var(--vscode-toolbar-hoverBackground, rgba(90, 93, 94, 0.31));
+    color: var(--vscode-foreground);
+}
+
+.toolbar-icon-btn:active {
+    background: var(--vscode-toolbar-activeBackground, rgba(90, 93, 94, 0.45));
+}
+
+.toolbar-icon-btn.active {
+    color: var(--vscode-foreground);
+}
+
+.toolbar-icon-btn:disabled {
+    color: var(--vscode-disabledForeground);
+    cursor: not-allowed;
+    background: transparent;
+}
+
+.toolbar-icon-btn:disabled:hover {
+    background: transparent;
+}
+
+/* Separator between icon button groups */
+.toolbar-separator {
+    width: 1px;
+    height: 18px;
+    background: var(--vscode-panel-border);
+    margin: 0 4px;
 }
 
 /* Project Group Header for multi-project updates */
@@ -406,6 +462,7 @@ body {
 .package-item-minimal {
     padding-left: 32px;
     box-sizing: border-box;
+    min-height: 66px;
 }
 
 .package-item-minimal .package-info {
@@ -2424,7 +2481,6 @@ a.details-link:hover {
 /* Transitive packages sections container */
 .transitive-sections {
     border-top: 1px solid var(--vscode-panel-border);
-    margin-top: 4px;
 }
 
 /* Individual framework section */

@@ -20,7 +20,7 @@
 
 import { useVirtualizer } from '@tanstack/react-virtual';
 import React, { forwardRef, useCallback, useDeferredValue, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
-import { ChevronDownIcon, ChevronRightIcon, CloseIcon, RulerIcon, SyncIcon, VerifiedIcon, WarningIcon } from '../icons';
+import { AllProjectsIcon, CheckAllIcon, ChevronDownIcon, ChevronRightIcon, CloseIcon, CollapseAllIcon, ExpandAllIcon, RulerIcon, SingleProjectIcon, SyncIcon, VerifiedIcon, WarningIcon } from '../icons';
 import type {
     InstalledPackage,
     LRUMap,
@@ -863,30 +863,67 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
                                     </button>
                                 )}
                             </div>
-                            {projects.length > 1 && (
-                                <div className="load-all-toolbar">
-                                    <label className="load-all-checkbox">
-                                        <input
-                                            type="checkbox"
-                                            checked={loadAllProjectsInstalled}
-                                            onChange={(e) => onLoadAllInstalledChange(e.target.checked)}
-                                            disabled={loadingInstalled || uninstallingAll || loadingAllProjectsInstalled}
-                                        />
-                                        Load all projects
-                                    </label>
-                                </div>
-                            )}
                             {/* Unified toolbar — same position for single-project and all-projects modes */}
-                            {loadAllProjectsInstalled ? (
-                                !loadingAllProjectsInstalled && allProjectsInstalled.length > 0 && (
-                                    <div className="updates-toolbar">
+                            <div className="updates-toolbar">
+                                <div className="toolbar-actions-left">
+                                    {projects.length > 1 && (
                                         <button
-                                            className="btn-link"
-                                            onClick={handleToggleSelectAllAllProjects}
-                                            disabled={uninstallingAll || allProjectsUninstallableCount === 0}
+                                            className={`toolbar-icon-btn${loadAllProjectsInstalled ? ' active' : ''}`}
+                                            onClick={() => onLoadAllInstalledChange(!loadAllProjectsInstalled)}
+                                            disabled={loadingInstalled || uninstallingAll || loadingAllProjectsInstalled}
+                                            title={loadAllProjectsInstalled ? 'Show single project' : 'Load all projects'}
+                                            aria-label={loadAllProjectsInstalled ? 'Show single project' : 'Load all projects'}
                                         >
-                                            {selectedUninstallsAllProjects.size === allProjectsUninstallableCount && allProjectsUninstallableCount > 0 ? 'Deselect all' : 'Select all'}
+                                            {loadAllProjectsInstalled ? <AllProjectsIcon size={16} /> : <SingleProjectIcon size={16} />}
                                         </button>
+                                    )}
+                                    {loadAllProjectsInstalled ? (
+                                        !loadingAllProjectsInstalled && allProjectsInstalled.length > 0 && (
+                                            <>
+                                                <button
+                                                    className={`toolbar-icon-btn${selectedUninstallsAllProjects.size === allProjectsUninstallableCount && allProjectsUninstallableCount > 0 ? ' active' : ''}`}
+                                                    onClick={handleToggleSelectAllAllProjects}
+                                                    disabled={uninstallingAll || allProjectsUninstallableCount === 0}
+                                                    title={selectedUninstallsAllProjects.size === allProjectsUninstallableCount && allProjectsUninstallableCount > 0 ? 'Deselect all' : 'Select all'}
+                                                    aria-label={selectedUninstallsAllProjects.size === allProjectsUninstallableCount && allProjectsUninstallableCount > 0 ? 'Deselect all' : 'Select all'}
+                                                >
+                                                    <CheckAllIcon size={16} />
+                                                </button>
+                                                <span className="toolbar-separator" />
+                                                <button
+                                                    className="toolbar-icon-btn"
+                                                    onClick={() => setExpandedProjects(new Set())}
+                                                    disabled={uninstallingAll}
+                                                    title="Collapse all"
+                                                    aria-label="Collapse all"
+                                                >
+                                                    <CollapseAllIcon size={16} />
+                                                </button>
+                                                <button
+                                                    className="toolbar-icon-btn"
+                                                    onClick={() => setExpandedProjects(new Set(allProjectsInstalled.map(p => p.projectPath)))}
+                                                    disabled={uninstallingAll}
+                                                    title="Expand all"
+                                                    aria-label="Expand all"
+                                                >
+                                                    <ExpandAllIcon size={16} />
+                                                </button>
+                                            </>
+                                        )
+                                    ) : (
+                                        <button
+                                            className={`toolbar-icon-btn${visibleSelectedCount === uninstallablePackages.length && uninstallablePackages.length > 0 ? ' active' : ''}`}
+                                            onClick={handleToggleSelectAllInstalled}
+                                            disabled={uninstallingAll || uninstallablePackages.length === 0}
+                                            title={visibleSelectedCount === uninstallablePackages.length && uninstallablePackages.length > 0 ? 'Deselect all' : 'Select all'}
+                                            aria-label={visibleSelectedCount === uninstallablePackages.length && uninstallablePackages.length > 0 ? 'Deselect all' : 'Select all'}
+                                        >
+                                            <CheckAllIcon size={16} />
+                                        </button>
+                                    )}
+                                </div>
+                                {loadAllProjectsInstalled ? (
+                                    !loadingAllProjectsInstalled && allProjectsInstalled.length > 0 && (
                                         <button
                                             className="btn btn-danger"
                                             onClick={handleUninstallSelectedAllProjects}
@@ -894,17 +931,8 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
                                         >
                                             {uninstallingAll ? 'Uninstalling...' : `Uninstall Selected (${selectedUninstallsAllProjects.size})`}
                                         </button>
-                                    </div>
-                                )
-                            ) : (
-                                <div className="updates-toolbar">
-                                    <button
-                                        className="btn-link"
-                                        onClick={handleToggleSelectAllInstalled}
-                                        disabled={uninstallingAll || uninstallablePackages.length === 0}
-                                    >
-                                        {visibleSelectedCount === uninstallablePackages.length && uninstallablePackages.length > 0 ? 'Deselect all' : 'Select all'}
-                                    </button>
+                                    )
+                                ) : (
                                     <button
                                         className="btn btn-danger"
                                         onClick={handleUninstallSelected}
@@ -912,8 +940,8 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
                                     >
                                         {uninstallingAll ? 'Uninstalling...' : `Uninstall Selected (${visibleSelectedCount})`}
                                     </button>
-                                </div>
-                            )}
+                                )}
+                            </div>
                             {loadAllProjectsInstalled ? (
                                 <div className="direct-packages-content">
                                     {loadingAllProjectsInstalled ? (
