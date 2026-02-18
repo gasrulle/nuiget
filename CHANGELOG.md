@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Open full manager clears sidebar search** — Opening the full manager no longer clears the sidebar's active search results; cross-panel sync now guards against redundant source/project change messages
 - **Remove source icon invisible on dark themes** — Replaced `opacity`-based visibility with `color` CSS variables (`--vscode-descriptionForeground` / `--vscode-errorForeground`) per project icon visibility conventions
 - **Sidebar clear icon updated to clear-all codicon** — Replaced `CloseIcon` with `ClearAllIcon` for consistency with VS Code's standard search clear icon
+- **VSIX package size bloat** — Excluded `docs/` directory (contains demo GIF) from VSIX packaging; README references the GIF via absolute GitHub URL so marketplace rendering is unaffected
 
 ### Changed
 

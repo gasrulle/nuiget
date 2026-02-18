@@ -31,6 +31,7 @@ package-icon.png
 
 # Documentation (development only)
 ARCHITECTURE.md
+docs/**
 
 # Package manager files
 package-lock.json
