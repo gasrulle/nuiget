@@ -1,6 +1,6 @@
 import { useVirtualizer } from '@tanstack/react-virtual';
 import React, { forwardRef, useCallback, useDeferredValue, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
-import { CloudDownloadIcon, LoadingIcon, VerifiedIcon } from '../icons';
+import { ClearAllIcon, CloudDownloadIcon, LoadingIcon, VerifiedIcon } from '../icons';
 import {
     type InstalledPackage,
     type NuGetSource,
@@ -194,12 +194,16 @@ const BrowseTab = forwardRef<BrowseTabHandle, BrowseTabProps>(function BrowseTab
 
                 case 'restoreSearchQuery':
                     if (message.query) {
+                        setSearchQuery(message.query);
                         setLoading(true);
+                        const sourcesToRestore = selectedSource === 'all'
+                            ? enabledSourcesRef.current.map(s => s.url)
+                            : [selectedSource];
                         vscode.postMessage({
                             type: 'searchPackages',
                             query: message.query,
-                            sources: [],
-                            includePrerelease: false
+                            sources: sourcesToRestore,
+                            includePrerelease: includePrerelease
                         });
                     }
                     return true;
@@ -751,6 +755,21 @@ const BrowseTab = forwardRef<BrowseTabHandle, BrowseTabProps>(function BrowseTab
                         }}
                         className="search-input"
                     />
+                    {searchQuery && (
+                        <button
+                            className="search-clear-btn"
+                            onClick={() => {
+                                setSearchQuery('');
+                                setSearchResults([]);
+                                onSetSelectedPackage(null);
+                                searchInputRef.current?.focus();
+                            }}
+                            aria-label="Clear search"
+                            tabIndex={-1}
+                        >
+                            <ClearAllIcon size={16} />
+                        </button>
+                    )}
                     {/* Recent searches dropdown */}
                     {showSearchHistory && !searchQuery.trim() && recentSearches.length > 0 && (
                         <div className={`search-history-dropdown${isKeyboardNavActive ? ' keyboard-nav' : ''}`} onMouseLeave={() => setSelectedSuggestionIndex(-1)}>

@@ -13,7 +13,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AllProjectsIcon, ArrowUpIcon, CloseIcon, SingleProjectIcon } from '../app/icons';
+import { AllProjectsIcon, ArrowUpIcon, ClearAllIcon, SingleProjectIcon } from '../app/icons';
 import type { InstalledPackage, NuGetSource, PackageSearchResult, PackageUpdateMinimal, Project, ProjectUpdates } from '../app/types';
 import { PackageRow } from './components/PackageRow';
 import { SectionHeader } from './components/SectionHeader';
@@ -155,6 +155,10 @@ export const SidebarApp: React.FC = () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const handleMessage = useCallback((message: any) => {
         switch (message.type) {
+            case 'focusSearch':
+                // Focus search input when sidebar becomes visible (like native sidebar panels)
+                setTimeout(() => searchInputRef.current?.focus(), 50);
+                break;
             case 'state':
                 if (message.selectedSource) setSelectedSource(message.selectedSource);
                 if (message.selectedProject) {
@@ -254,21 +258,25 @@ export const SidebarApp: React.FC = () => {
                 }
                 break;
             case 'sourceChanged':
-                setSelectedSource(message.source);
-                setSearchResults([]);
+                if (message.source !== selectedSourceRef.current) {
+                    setSelectedSource(message.source);
+                    setSearchResults([]);
+                }
                 break;
             case 'projectChanged':
-                setSelectedProject(message.projectPath);
-                setSelectedProjectName((message.projectName || '').replace(/\.(csproj|fsproj|vbproj)$/, ''));
-                setInstalledPackages([]);
-                setPackageUpdates([]);
-                setAllProjectsUpdates([]);
-                setSelectedPackageId(null);
-                vscode.postMessage({
-                    type: 'getInstalledPackages',
-                    projectPath: message.projectPath
-                });
-                setLoadingInstalled(true);
+                if (message.projectPath !== selectedProjectRef.current) {
+                    setSelectedProject(message.projectPath);
+                    setSelectedProjectName((message.projectName || '').replace(/\.(csproj|fsproj|vbproj)$/, ''));
+                    setInstalledPackages([]);
+                    setPackageUpdates([]);
+                    setAllProjectsUpdates([]);
+                    setSelectedPackageId(null);
+                    vscode.postMessage({
+                        type: 'getInstalledPackages',
+                        projectPath: message.projectPath
+                    });
+                    setLoadingInstalled(true);
+                }
                 break;
             case 'prereleaseChanged':
                 setIncludePrerelease(message.includePrerelease);
@@ -317,6 +325,8 @@ export const SidebarApp: React.FC = () => {
         const listener = (event: MessageEvent) => handleMessageRef.current(event.data);
         window.addEventListener('message', listener);
         vscode.postMessage({ type: 'ready' });
+        // Auto-focus search input on initial mount (like native sidebar panels)
+        setTimeout(() => searchInputRef.current?.focus(), 100);
         return () => window.removeEventListener('message', listener);
     }, []);
 
@@ -897,7 +907,7 @@ export const SidebarApp: React.FC = () => {
                             aria-label="Clear search"
                             tabIndex={-1}
                         >
-                            <CloseIcon size={16} />
+                            <ClearAllIcon size={16} />
                         </button>
                     )}
                 </div>

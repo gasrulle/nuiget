@@ -55,6 +55,7 @@ pnpm-lock.yaml
 *.gif
 *.bmp
 !resources/*.png
+!docs/images/*.gif
 !docs/images/*.png
 
 # OS generated files

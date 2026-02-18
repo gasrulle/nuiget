@@ -3,17 +3,15 @@
 [![Visual Studio Marketplace Version](https://img.shields.io/visual-studio-marketplace/v/gasrulle.nuiget)](https://marketplace.visualstudio.com/items?itemName=gasrulle.nuiget)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-A Visual Studio-style NuGet package manager for VS Code with a modern split-panel UI.
+A Visual Studio-style NuGet package manager for VS Code with a modern split-panel UI and Activity Bar sidebar.
 
-<a href="https://raw.githubusercontent.com/gasrulle/nuiget/main/docs/images/browse.png">
-  <img src="https://raw.githubusercontent.com/gasrulle/nuiget/main/docs/images/browse.png" alt="nUIget - Browse packages" width="800">
-</a>
+![nUIget demo](https://raw.githubusercontent.com/gasrulle/nuiget/main/docs/images/nuiget.gif)
 
 ## ✨ Features
 
 - 🎨 **Visual Studio-Style GUI** - Familiar split-panel layout with Browse, Installed, and Updates tabs
 - 📦 **Full Package Management** - Install, update, and remove NuGet packages via dotnet CLI
-- 🔍 **Quick Search** - Real-time suggestions as you type with recent search history
+- 🔍 **Quick Search** - Real-time suggestions as you type
 - ⌨️ **Keyboard Navigation** - Arrow keys to navigate, `Ctrl+Enter` to quick install
 - 🚀 **Multi-Project Support** - Manage packages across .csproj, .fsproj, and .vbproj files
 - 🔗 **Transitive Dependencies** - View the full dependency graph with "Required by" chains
@@ -27,6 +25,8 @@ A Visual Studio-style NuGet package manager for VS Code with a modern split-pane
 - ⚠️ **Source Status Warnings** - Visual notification when NuGet sources are unreachable
 - 📌 **Sidebar Panel** - Compact Activity Bar panel with search-driven browse, Installed and Updates sections with update count badges
 - 🔁 **Cross-Panel Sync** - Source, project, and prerelease selections shared between main panel and sidebar in real time
+- ♿ **Accessible** - High-contrast themes, reduced motion, and ARIA roles for screen readers
+- 🧩 **.NET 10 Support** - Automatic detection of .NET 10 noun-first CLI syntax
 - 🔧 **Output Channel** - "nUIget" channel shows all CLI commands for troubleshooting
 
 ## 🚀 Quick Start
@@ -41,28 +41,7 @@ A Visual Studio-style NuGet package manager for VS Code with a modern split-pane
 
 > 💡 **Tip:** Click the nUIget icon in the editor title bar when a .csproj file is open
 
-## 📸 Screenshots
-
-<table>
-<tr>
-<td width="50%">
-
-### 📋 Installed Packages
-See direct and transitive dependencies with "Required by" chains
-
-<a href="https://raw.githubusercontent.com/gasrulle/nuiget/main/docs/images/installed.png"><img src="https://raw.githubusercontent.com/gasrulle/nuiget/main/docs/images/installed.png" alt="Installed packages"></a>
-
-</td>
-<td width="50%">
-
-### 🔄 Updates
-One-click updates with version comparison and prerelease support
-
-<a href="https://raw.githubusercontent.com/gasrulle/nuiget/main/docs/images/updates.png"><img src="https://raw.githubusercontent.com/gasrulle/nuiget/main/docs/images/updates.png" alt="Updates available"></a>
-
-</td>
-</tr>
-</table>
+> 💡 **Tip:** Use the nUIget icon in the Activity Bar for quick browse, installed, and updates at a glance
 
 ## ⚙️ Settings
 
@@ -190,6 +169,7 @@ See [Microsoft's security best practices](https://learn.microsoft.com/en-us/nuge
 | Source shows ⚠️ warning | Source is unreachable. Check network or disable in settings. |
 | Transitive packages empty | Click ↻ refresh button. Project needs to be restored first. |
 | Packages not updating | Check Output panel (View → Output → "nUIget") for CLI errors. |
+| Sidebar not showing | Only appears when workspace contains .csproj, .fsproj, or .vbproj files. |
 
 ## Requirements
 

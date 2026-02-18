@@ -5,6 +5,25 @@ All notable changes to the nUIget extension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.0] - 2026-02-18
+
+### Added
+
+- **Full manager search clear button** — Inline clear button in the Browse tab search box using the standard VS Code `clear-all` codicon
+- **ClearAllIcon component** — New `ClearAllIcon` SVG icon component matching the VS Code `clear-all` codicon for consistent search clear buttons
+
+### Fixed
+
+- **Spinner stuck on full manager open** — Fixed "Searching..." spinner persisting indefinitely when opening the full manager with a cached search query; the `restoreSearchQuery` handler now correctly sets `searchQuery` state and uses proper sources/prerelease settings
+- **Sidebar search focus on open** — Search input now auto-focuses when the sidebar panel is opened or re-shown, matching native VS Code sidebar behavior
+- **Open full manager clears sidebar search** — Opening the full manager no longer clears the sidebar's active search results; cross-panel sync now guards against redundant source/project change messages
+- **Remove source icon invisible on dark themes** — Replaced `opacity`-based visibility with `color` CSS variables (`--vscode-descriptionForeground` / `--vscode-errorForeground`) per project icon visibility conventions
+- **Sidebar clear icon updated to clear-all codicon** — Replaced `CloseIcon` with `ClearAllIcon` for consistency with VS Code's standard search clear icon
+
+### Changed
+
+- **README overhaul**
+
 ## [1.6.0] - 2026-02-18
 
 ### Added
