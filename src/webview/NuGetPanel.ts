@@ -132,6 +132,7 @@ export class NuGetPanel {
     private _pendingProjectPath: string | undefined;
     private _pendingInitialTab: 'browse' | 'installed' | 'updates' | undefined;
     private _pendingNavigatePackage: { packageId: string; version?: string } | undefined;
+    private _pendingOpenSourceSettings = false;
     private _disposed = false;
     // Track the latest autocomplete query to skip stale requests
     private _latestAutocompleteQuery: string = '';
@@ -183,6 +184,21 @@ export class NuGetPanel {
             projectPath: projectPath,
             initialTab: initialTab
         });
+    }
+
+    /**
+     * Open the main panel with the source settings overlay visible.
+     */
+    public static openSourceSettings(extensionUri: vscode.Uri, context: vscode.ExtensionContext, outputChannel: vscode.LogOutputChannel, nugetService: NuGetService) {
+        const panelExisted = !!NuGetPanel.currentPanel;
+        NuGetPanel.createOrShow(extensionUri, context, outputChannel, nugetService);
+        if (NuGetPanel.currentPanel && !NuGetPanel.currentPanel._disposed) {
+            if (panelExisted) {
+                NuGetPanel.currentPanel._postMessage({ type: 'openSourceSettings' });
+            } else {
+                NuGetPanel.currentPanel._pendingOpenSourceSettings = true;
+            }
+        }
     }
 
     /**
@@ -291,6 +307,14 @@ export class NuGetPanel {
                                 packageId: nav.packageId,
                                 version: nav.version
                             });
+                        }, 200);
+                    }
+
+                    // Send pending openSourceSettings if queued (panel was just created)
+                    if (this._pendingOpenSourceSettings) {
+                        this._pendingOpenSourceSettings = false;
+                        setTimeout(() => {
+                            this._postMessage({ type: 'openSourceSettings' });
                         }, 200);
                     }
                     break;

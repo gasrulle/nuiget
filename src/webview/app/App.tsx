@@ -600,6 +600,11 @@ export const App: React.FC = () => {
                     setSplitPosition(message.position);
                 }
                 break;
+            case 'openSourceSettings':
+                // Triggered from sidebar "Manage NuGet Sources…" — open source settings overlay
+                setShowSourceSettings(true);
+                vscode.postMessage({ type: 'getConfigFiles' });
+                break;
             case 'navigateToPackage':
                 // Triggered from sidebar "View Package Details" — switch to Browse tab and search for the package
                 if (message.packageId) {

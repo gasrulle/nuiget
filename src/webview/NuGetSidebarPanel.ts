@@ -228,6 +228,7 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
         const sources = await this._nugetService.getSources();
         const enabledSources = sources.filter(s => s.enabled);
 
+        const manageLabel = '$(gear) Manage NuGet Sources…';
         const items: vscode.QuickPickItem[] = [
             { label: 'All Sources', description: 'Search across all enabled sources', picked: this._selectedSource === 'all' }
         ];
@@ -238,6 +239,8 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
                 picked: this._selectedSource === source.url
             });
         }
+        // Manage sources action (icon differentiates from source items)
+        items.push({ label: manageLabel, alwaysShow: true });
 
         const selected = await vscode.window.showQuickPick(items, {
             placeHolder: 'Select package source',
@@ -245,16 +248,21 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
         });
 
         if (selected) {
-            if (selected.label === 'All Sources') {
+            if (selected.label === manageLabel) {
+                // Open main panel with source settings overlay
+                NuGetPanel.openSourceSettings(this._extensionUri, this._context, this._outputChannel, this._nugetService);
+            } else if (selected.label === 'All Sources') {
                 this._selectedSource = 'all';
+                this._postMessage({ type: 'sourceChanged', source: this._selectedSource });
+                this._context.workspaceState.update('nuget.selectedSource', this._selectedSource);
+                NuGetPanel.syncSource(this._selectedSource);
             } else {
                 const source = enabledSources.find(s => s.name === selected.label);
                 this._selectedSource = source?.url || 'all';
+                this._postMessage({ type: 'sourceChanged', source: this._selectedSource });
+                this._context.workspaceState.update('nuget.selectedSource', this._selectedSource);
+                NuGetPanel.syncSource(this._selectedSource);
             }
-            this._postMessage({ type: 'sourceChanged', source: this._selectedSource });
-            this._context.workspaceState.update('nuget.selectedSource', this._selectedSource);
-            // Sync to main panel
-            NuGetPanel.syncSource(this._selectedSource);
         }
     }
 

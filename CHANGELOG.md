@@ -5,7 +5,11 @@ All notable changes to the nUIget extension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.9.0] - 2026-02-19
+
+### Added
+
+- **"Manage NuGet Sources…" in sidebar source picker** — Source picker quick pick now includes a divider and a gear-icon action at the bottom that opens the main panel with the source settings overlay
 
 ### Changed
 
