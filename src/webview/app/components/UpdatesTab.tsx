@@ -207,7 +207,12 @@ const UpdatesTab = forwardRef<UpdatesTabHandle, UpdatesTabProps>((props, ref) =>
     const flattenedAllProjectsUpdates = useMemo((): FlattenedItem[] => {
         if (!loadAllProjects) { return []; }
         const items: FlattenedItem[] = [];
-        for (const project of allProjectsUpdates) {
+        const sortedProjects = [...allProjectsUpdates].sort((a, b) => {
+            if (a.projectPath === selectedProject) { return -1; }
+            if (b.projectPath === selectedProject) { return 1; }
+            return a.projectName.localeCompare(b.projectName);
+        });
+        for (const project of sortedProjects) {
             // Add project header
             items.push({
                 type: 'header',
@@ -228,7 +233,7 @@ const UpdatesTab = forwardRef<UpdatesTabHandle, UpdatesTabProps>((props, ref) =>
             }
         }
         return items;
-    }, [loadAllProjects, allProjectsUpdates, expandedProjects]);
+    }, [loadAllProjects, allProjectsUpdates, expandedProjects, selectedProject]);
 
     const deferredFlattenedItems = useDeferredValue(flattenedAllProjectsUpdates);
     const isAllProjectsStale = flattenedAllProjectsUpdates !== deferredFlattenedItems;

@@ -71,6 +71,7 @@ const PackageDetailsPanel: React.FC<PackageDetailsPanelProps> = ({
     loadingReadme,
     sanitizedReadmeHtml,
     expandedDeps,
+    selectedProject,
     selectedSource,
     projects = [],
     allProjectsInstalled = [],
@@ -275,40 +276,46 @@ const PackageDetailsPanel: React.FC<PackageDetailsPanelProps> = ({
                                     <div className="multi-install-backdrop" onClick={() => setMultiInstallOpen(false)} />
                                     <div className="multi-install-dropdown">
                                         <div className="multi-install-list">
-                                            {projects.map(project => {
-                                                const installedVersion = projectPackageVersions.get(project.path);
-                                                const sameVersionInstalled = installedVersion !== undefined && installedVersion === selectedVersion;
-                                                const differentVersionInstalled = installedVersion !== undefined && installedVersion !== selectedVersion;
-                                                const isChecked = selectedInstallProjects.has(project.path);
-                                                const fileName = project.path.split(/[\\/]/).pop() || project.name;
-                                                return (
-                                                    <label
-                                                        key={project.path}
-                                                        className={`multi-install-project${sameVersionInstalled ? ' installed' : ''}`}
-                                                        title={project.path}
-                                                    >
-                                                        <input
-                                                            type="checkbox"
-                                                            checked={isChecked}
-                                                            disabled={sameVersionInstalled}
-                                                            onChange={() => {
-                                                                setSelectedInstallProjects(prev => {
-                                                                    const next = new Set(prev);
-                                                                    if (next.has(project.path)) {
-                                                                        next.delete(project.path);
-                                                                    } else {
-                                                                        next.add(project.path);
-                                                                    }
-                                                                    return next;
-                                                                });
-                                                            }}
-                                                        />
-                                                        <span className="multi-install-project-name">{fileName}</span>
-                                                        {sameVersionInstalled && <span className="multi-install-installed-badge">(v{installedVersion})</span>}
-                                                        {differentVersionInstalled && <span className="multi-install-version-badge">(v{installedVersion})</span>}
-                                                    </label>
-                                                );
-                                            })}
+                                            {[...projects]
+                                                .sort((a, b) => {
+                                                    if (a.path === selectedProject) { return -1; }
+                                                    if (b.path === selectedProject) { return 1; }
+                                                    return a.name.localeCompare(b.name);
+                                                })
+                                                .map(project => {
+                                                    const installedVersion = projectPackageVersions.get(project.path);
+                                                    const sameVersionInstalled = installedVersion !== undefined && installedVersion === selectedVersion;
+                                                    const differentVersionInstalled = installedVersion !== undefined && installedVersion !== selectedVersion;
+                                                    const isChecked = selectedInstallProjects.has(project.path);
+                                                    const fileName = project.path.split(/[\\/]/).pop() || project.name;
+                                                    return (
+                                                        <label
+                                                            key={project.path}
+                                                            className={`multi-install-project${sameVersionInstalled ? ' installed' : ''}`}
+                                                            title={project.path}
+                                                        >
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={isChecked}
+                                                                disabled={sameVersionInstalled}
+                                                                onChange={() => {
+                                                                    setSelectedInstallProjects(prev => {
+                                                                        const next = new Set(prev);
+                                                                        if (next.has(project.path)) {
+                                                                            next.delete(project.path);
+                                                                        } else {
+                                                                            next.add(project.path);
+                                                                        }
+                                                                        return next;
+                                                                    });
+                                                                }}
+                                                            />
+                                                            <span className="multi-install-project-name">{fileName}</span>
+                                                            {sameVersionInstalled && <span className="multi-install-installed-badge">(v{installedVersion})</span>}
+                                                            {differentVersionInstalled && <span className="multi-install-version-badge">(v{installedVersion})</span>}
+                                                        </label>
+                                                    );
+                                                })}
                                         </div>
                                         <div className="multi-install-action">
                                             <button

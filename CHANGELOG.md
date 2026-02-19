@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - **Multi Install hidden when package is installed** — Multi Install button only appears when the package is not installed in the currently selected project to avoid scope confusion with the single-project Uninstall button
+- **Consistent project sorting across all multi-project views** — All multi-project sections (Installed tab, Updates tab, sidebar Installed/Updates, Multi Install dropdown) now sort projects alphabetically by name with the currently selected project always pinned first, matching the project selector dropdown order
 
 ### Fixed
 

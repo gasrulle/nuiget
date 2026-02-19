@@ -262,7 +262,12 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
         if (!loadAllProjectsInstalled) { return []; }
         const q = installedFilterQuery.trim().toLowerCase();
         const items: FlattenedInstalledItem[] = [];
-        for (const project of allProjectsInstalled) {
+        const sortedProjects = [...allProjectsInstalled].sort((a, b) => {
+            if (a.projectPath === selectedProject) { return -1; }
+            if (b.projectPath === selectedProject) { return 1; }
+            return a.projectName.localeCompare(b.projectName);
+        });
+        for (const project of sortedProjects) {
             const filtered = q
                 ? project.packages.filter(p => p.id.toLowerCase().includes(q))
                 : project.packages;
@@ -280,7 +285,7 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
             }
         }
         return items;
-    }, [loadAllProjectsInstalled, allProjectsInstalled, expandedProjects, installedFilterQuery]);
+    }, [loadAllProjectsInstalled, allProjectsInstalled, expandedProjects, installedFilterQuery, selectedProject]);
 
     const deferredFlattenedInstalled = useDeferredValue(flattenedAllProjectsInstalled);
     const isAllProjectsInstalledStale = flattenedAllProjectsInstalled !== deferredFlattenedInstalled;

@@ -828,33 +828,39 @@ export const SidebarApp: React.FC = () => {
                     {loadingAllInstalled && allProjectsInstalled.length === 0 && (
                         <div className="sidebar-empty">Loading all projects...</div>
                     )}
-                    {allProjectsInstalled.map((pi) => {
-                        const q = filterText.toLowerCase();
-                        const filtered = q
-                            ? pi.packages.filter(p => p.id.toLowerCase().includes(q))
-                            : pi.packages;
-                        if (filtered.length === 0 && q) { return null; }
-                        return (
-                            <div key={pi.projectPath}>
-                                <div className="project-group-header" title={pi.projectPath}>
-                                    {pi.projectName} ({filtered.length})
+                    {[...allProjectsInstalled]
+                        .sort((a, b) => {
+                            if (a.projectPath === selectedProject) { return -1; }
+                            if (b.projectPath === selectedProject) { return 1; }
+                            return a.projectName.localeCompare(b.projectName);
+                        })
+                        .map((pi) => {
+                            const q = filterText.toLowerCase();
+                            const filtered = q
+                                ? pi.packages.filter(p => p.id.toLowerCase().includes(q))
+                                : pi.packages;
+                            if (filtered.length === 0 && q) { return null; }
+                            return (
+                                <div key={pi.projectPath}>
+                                    <div className="project-group-header" title={pi.projectPath}>
+                                        {pi.projectName} ({filtered.length})
+                                    </div>
+                                    {filtered.map((pkg) => (
+                                        <PackageRow
+                                            key={`${pi.projectPath}::${pkg.id}`}
+                                            packageId={pkg.id}
+                                            version={pkg.version}
+                                            installedVersion={pkg.resolvedVersion || pkg.version}
+                                            context="installed"
+                                            selected={selectedPackageId === `${pi.projectPath}::${pkg.id}`}
+                                            onPrimaryAction={handleInstalledPrimaryAction}
+                                            onContextMenu={(id, e) => handleContextMenu(id, e, 'installed')}
+                                            onClick={() => setSelectedPackageId(`${pi.projectPath}::${pkg.id}`)}
+                                        />
+                                    ))}
                                 </div>
-                                {filtered.map((pkg) => (
-                                    <PackageRow
-                                        key={`${pi.projectPath}::${pkg.id}`}
-                                        packageId={pkg.id}
-                                        version={pkg.version}
-                                        installedVersion={pkg.resolvedVersion || pkg.version}
-                                        context="installed"
-                                        selected={selectedPackageId === `${pi.projectPath}::${pkg.id}`}
-                                        onPrimaryAction={handleInstalledPrimaryAction}
-                                        onContextMenu={(id, e) => handleContextMenu(id, e, 'installed')}
-                                        onClick={() => setSelectedPackageId(`${pi.projectPath}::${pkg.id}`)}
-                                    />
-                                ))}
-                            </div>
-                        );
-                    })}
+                            );
+                        })}
                 </div>
             )}
         </div>
@@ -927,27 +933,33 @@ export const SidebarApp: React.FC = () => {
                     {loadingAllUpdates && allProjectsUpdates.length === 0 && (
                         <div className="sidebar-empty">Checking all projects...</div>
                     )}
-                    {allProjectsUpdates.map((pu) => (
-                        <div key={pu.projectPath}>
-                            <div className="project-group-header" title={pu.projectPath}>
-                                {pu.projectName} ({pu.updates.length})
+                    {[...allProjectsUpdates]
+                        .sort((a, b) => {
+                            if (a.projectPath === selectedProject) { return -1; }
+                            if (b.projectPath === selectedProject) { return 1; }
+                            return a.projectName.localeCompare(b.projectName);
+                        })
+                        .map((pu) => (
+                            <div key={pu.projectPath}>
+                                <div className="project-group-header" title={pu.projectPath}>
+                                    {pu.projectName} ({pu.updates.length})
+                                </div>
+                                {pu.updates.map((pkg) => (
+                                    <PackageRow
+                                        key={`${pu.projectPath}::${pkg.id}`}
+                                        packageId={pkg.id}
+                                        version={pkg.installedVersion}
+                                        latestVersion={pkg.latestVersion}
+                                        installedVersion={pkg.installedVersion}
+                                        context="updates"
+                                        selected={selectedPackageId === `${pu.projectPath}::${pkg.id}`}
+                                        onPrimaryAction={handleAllProjectsUpdatePrimaryAction}
+                                        onContextMenu={(id, e) => handleContextMenu(id, e, 'updates', pu.projectPath)}
+                                        onClick={() => setSelectedPackageId(`${pu.projectPath}::${pkg.id}`)}
+                                    />
+                                ))}
                             </div>
-                            {pu.updates.map((pkg) => (
-                                <PackageRow
-                                    key={`${pu.projectPath}::${pkg.id}`}
-                                    packageId={pkg.id}
-                                    version={pkg.installedVersion}
-                                    latestVersion={pkg.latestVersion}
-                                    installedVersion={pkg.installedVersion}
-                                    context="updates"
-                                    selected={selectedPackageId === `${pu.projectPath}::${pkg.id}`}
-                                    onPrimaryAction={handleAllProjectsUpdatePrimaryAction}
-                                    onContextMenu={(id, e) => handleContextMenu(id, e, 'updates', pu.projectPath)}
-                                    onClick={() => setSelectedPackageId(`${pu.projectPath}::${pkg.id}`)}
-                                />
-                            ))}
-                        </div>
-                    ))}
+                        ))}
                 </div>
             )}
         </div>
