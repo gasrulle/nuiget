@@ -391,31 +391,9 @@ const UpdatesTab = forwardRef<UpdatesTabHandle, UpdatesTabProps>((props, ref) =>
                 <div ref={updatesScrollRef} className="package-list-panel" style={{ width: `${splitPosition}%` }}>
                     {isLoading ? (
                         <>
-                            {projects.length > 1 && (
-                                <div className="updates-toolbar">
-                                    <div className="toolbar-actions-left">
-                                        <button
-                                            className={`toolbar-icon-btn${loadAllProjects ? ' active' : ''}`}
-                                            onClick={() => onLoadAllChange(!loadAllProjects)}
-                                            disabled={isLoading || updatingAll}
-                                            title={loadAllProjects ? 'Show single project' : 'Load all projects'}
-                                            aria-label={loadAllProjects ? 'Show single project' : 'Load all projects'}
-                                        >
-                                            {loadAllProjects ? <AllProjectsIcon size={16} /> : <SingleProjectIcon size={16} />}
-                                        </button>
-                                    </div>
-                                </div>
-                            )}
-                            <div className="loading-spinner-container" aria-busy="true" aria-label="Checking for updates">
-                                <div className="loading-spinner"></div>
-                                <p>{loadAllProjects ? 'Checking updates for all projects...' : 'Checking for updates...'}</p>
-                            </div>
-                        </>
-                    ) : hasNoUpdates ? (
-                        <>
-                            {projects.length > 1 && (
-                                <div className="updates-toolbar">
-                                    <div className="toolbar-actions-left">
+                            <div className="updates-toolbar">
+                                <div className="toolbar-actions-left">
+                                    {projects.length > 1 && (
                                         <button
                                             className={`toolbar-icon-btn${loadAllProjects ? ' active' : ''}`}
                                             onClick={() => onLoadAllChange(!loadAllProjects)}
@@ -425,9 +403,75 @@ const UpdatesTab = forwardRef<UpdatesTabHandle, UpdatesTabProps>((props, ref) =>
                                         >
                                             {loadAllProjects ? <AllProjectsIcon size={16} /> : <SingleProjectIcon size={16} />}
                                         </button>
-                                    </div>
+                                    )}
+                                    <button
+                                        className="toolbar-icon-btn"
+                                        disabled
+                                        title="Select all"
+                                        aria-label="Select all"
+                                    >
+                                        <CheckAllIcon size={16} />
+                                    </button>
+                                    {loadAllProjects && (
+                                        <>
+                                            <span className="toolbar-separator" />
+                                            <button className="toolbar-icon-btn" disabled title="Collapse all" aria-label="Collapse all">
+                                                <CollapseAllIcon size={16} />
+                                            </button>
+                                            <button className="toolbar-icon-btn" disabled title="Expand all" aria-label="Expand all">
+                                                <ExpandAllIcon size={16} />
+                                            </button>
+                                        </>
+                                    )}
                                 </div>
-                            )}
+                                <button className="btn btn-primary" disabled>
+                                    Update All (0)
+                                </button>
+                            </div>
+                            <div className="loading-spinner-container" aria-busy="true" aria-label="Checking for updates">
+                                <div className="loading-spinner"></div>
+                                <p>{loadAllProjects ? 'Checking updates for all projects...' : 'Checking for updates...'}</p>
+                            </div>
+                        </>
+                    ) : hasNoUpdates ? (
+                        <>
+                            <div className="updates-toolbar">
+                                <div className="toolbar-actions-left">
+                                    {projects.length > 1 && (
+                                        <button
+                                            className={`toolbar-icon-btn${loadAllProjects ? ' active' : ''}`}
+                                            onClick={() => onLoadAllChange(!loadAllProjects)}
+                                            disabled={updatingAll}
+                                            title={loadAllProjects ? 'Show single project' : 'Load all projects'}
+                                            aria-label={loadAllProjects ? 'Show single project' : 'Load all projects'}
+                                        >
+                                            {loadAllProjects ? <AllProjectsIcon size={16} /> : <SingleProjectIcon size={16} />}
+                                        </button>
+                                    )}
+                                    <button
+                                        className="toolbar-icon-btn"
+                                        disabled
+                                        title="Select all"
+                                        aria-label="Select all"
+                                    >
+                                        <CheckAllIcon size={16} />
+                                    </button>
+                                    {loadAllProjects && (
+                                        <>
+                                            <span className="toolbar-separator" />
+                                            <button className="toolbar-icon-btn" disabled title="Collapse all" aria-label="Collapse all">
+                                                <CollapseAllIcon size={16} />
+                                            </button>
+                                            <button className="toolbar-icon-btn" disabled title="Expand all" aria-label="Expand all">
+                                                <ExpandAllIcon size={16} />
+                                            </button>
+                                        </>
+                                    )}
+                                </div>
+                                <button className="btn btn-primary" disabled>
+                                    Update All (0)
+                                </button>
+                            </div>
                             <p className="empty-state">
                                 {loadAllProjects
                                     ? 'All packages are up to date across all projects'

@@ -878,38 +878,36 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
                                         </button>
                                     )}
                                     {loadAllProjectsInstalled ? (
-                                        !loadingAllProjectsInstalled && allProjectsInstalled.length > 0 && (
-                                            <>
-                                                <button
-                                                    className={`toolbar-icon-btn${selectedUninstallsAllProjects.size === allProjectsUninstallableCount && allProjectsUninstallableCount > 0 ? ' active' : ''}`}
-                                                    onClick={handleToggleSelectAllAllProjects}
-                                                    disabled={uninstallingAll || allProjectsUninstallableCount === 0}
-                                                    title={selectedUninstallsAllProjects.size === allProjectsUninstallableCount && allProjectsUninstallableCount > 0 ? 'Deselect all' : 'Select all'}
-                                                    aria-label={selectedUninstallsAllProjects.size === allProjectsUninstallableCount && allProjectsUninstallableCount > 0 ? 'Deselect all' : 'Select all'}
-                                                >
-                                                    <CheckAllIcon size={16} />
-                                                </button>
-                                                <span className="toolbar-separator" />
-                                                <button
-                                                    className="toolbar-icon-btn"
-                                                    onClick={() => setExpandedProjects(new Set())}
-                                                    disabled={uninstallingAll}
-                                                    title="Collapse all"
-                                                    aria-label="Collapse all"
-                                                >
-                                                    <CollapseAllIcon size={16} />
-                                                </button>
-                                                <button
-                                                    className="toolbar-icon-btn"
-                                                    onClick={() => setExpandedProjects(new Set(allProjectsInstalled.map(p => p.projectPath)))}
-                                                    disabled={uninstallingAll}
-                                                    title="Expand all"
-                                                    aria-label="Expand all"
-                                                >
-                                                    <ExpandAllIcon size={16} />
-                                                </button>
-                                            </>
-                                        )
+                                        <>
+                                            <button
+                                                className={`toolbar-icon-btn${selectedUninstallsAllProjects.size === allProjectsUninstallableCount && allProjectsUninstallableCount > 0 ? ' active' : ''}`}
+                                                onClick={handleToggleSelectAllAllProjects}
+                                                disabled={loadingAllProjectsInstalled || uninstallingAll || allProjectsUninstallableCount === 0}
+                                                title={selectedUninstallsAllProjects.size === allProjectsUninstallableCount && allProjectsUninstallableCount > 0 ? 'Deselect all' : 'Select all'}
+                                                aria-label={selectedUninstallsAllProjects.size === allProjectsUninstallableCount && allProjectsUninstallableCount > 0 ? 'Deselect all' : 'Select all'}
+                                            >
+                                                <CheckAllIcon size={16} />
+                                            </button>
+                                            <span className="toolbar-separator" />
+                                            <button
+                                                className="toolbar-icon-btn"
+                                                onClick={() => setExpandedProjects(new Set())}
+                                                disabled={loadingAllProjectsInstalled || uninstallingAll}
+                                                title="Collapse all"
+                                                aria-label="Collapse all"
+                                            >
+                                                <CollapseAllIcon size={16} />
+                                            </button>
+                                            <button
+                                                className="toolbar-icon-btn"
+                                                onClick={() => setExpandedProjects(new Set(allProjectsInstalled.map(p => p.projectPath)))}
+                                                disabled={loadingAllProjectsInstalled || uninstallingAll}
+                                                title="Expand all"
+                                                aria-label="Expand all"
+                                            >
+                                                <ExpandAllIcon size={16} />
+                                            </button>
+                                        </>
                                     ) : (
                                         <button
                                             className={`toolbar-icon-btn${visibleSelectedCount === uninstallablePackages.length && uninstallablePackages.length > 0 ? ' active' : ''}`}
@@ -921,36 +919,38 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
                                             <CheckAllIcon size={16} />
                                         </button>
                                     )}
-                                    <span className="toolbar-separator" />
-                                    <button
-                                        className="toolbar-icon-btn"
-                                        onClick={() => { setDirectPackagesExpanded(false); setTransitiveExpandedFrameworks(new Set()); }}
-                                        disabled={uninstallingAll}
-                                        title="Collapse all"
-                                        aria-label="Collapse all"
-                                    >
-                                        <CollapseAllIcon size={16} />
-                                    </button>
-                                    <button
-                                        className="toolbar-icon-btn"
-                                        onClick={() => { setDirectPackagesExpanded(true); setTransitiveExpandedFrameworks(new Set(transitiveFrameworks.map(f => f.targetFramework))); }}
-                                        disabled={uninstallingAll}
-                                        title="Expand all"
-                                        aria-label="Expand all"
-                                    >
-                                        <ExpandAllIcon size={16} />
-                                    </button>
+                                    {!loadAllProjectsInstalled && (
+                                        <>
+                                            <span className="toolbar-separator" />
+                                            <button
+                                                className="toolbar-icon-btn"
+                                                onClick={() => { setDirectPackagesExpanded(false); setTransitiveExpandedFrameworks(new Set()); }}
+                                                disabled={uninstallingAll}
+                                                title="Collapse all"
+                                                aria-label="Collapse all"
+                                            >
+                                                <CollapseAllIcon size={16} />
+                                            </button>
+                                            <button
+                                                className="toolbar-icon-btn"
+                                                onClick={() => { setDirectPackagesExpanded(true); setTransitiveExpandedFrameworks(new Set(transitiveFrameworks.map(f => f.targetFramework))); }}
+                                                disabled={uninstallingAll}
+                                                title="Expand all"
+                                                aria-label="Expand all"
+                                            >
+                                                <ExpandAllIcon size={16} />
+                                            </button>
+                                        </>
+                                    )}
                                 </div>
                                 {loadAllProjectsInstalled ? (
-                                    !loadingAllProjectsInstalled && allProjectsInstalled.length > 0 && (
-                                        <button
-                                            className="btn btn-danger"
-                                            onClick={handleUninstallSelectedAllProjects}
-                                            disabled={selectedUninstallsAllProjects.size === 0 || uninstallingAll}
-                                        >
-                                            {uninstallingAll ? 'Uninstalling...' : `Uninstall Selected (${selectedUninstallsAllProjects.size})`}
-                                        </button>
-                                    )
+                                    <button
+                                        className="btn btn-danger"
+                                        onClick={handleUninstallSelectedAllProjects}
+                                        disabled={loadingAllProjectsInstalled || selectedUninstallsAllProjects.size === 0 || uninstallingAll}
+                                    >
+                                        {uninstallingAll ? 'Uninstalling...' : `Uninstall Selected (${selectedUninstallsAllProjects.size})`}
+                                    </button>
                                 ) : (
                                     <button
                                         className="btn btn-danger"
