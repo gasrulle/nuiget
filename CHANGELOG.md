@@ -5,7 +5,7 @@ All notable changes to the nUIget extension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.8.0] - 2026-02-18
 
 ### Fixed
 
@@ -14,8 +14,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Multi Install** — Install a package to multiple projects at once from the Browse tab details panel with a project picker dropdown
 - **All-Projects Installed View** — Load installed packages across all projects in both the Installed tab (full manager) and sidebar Installed section, with collapsible per-project sections, client-side filtering, and bulk uninstall across all projects
 - **Toolbar icon buttons** — Replaced text-based "Select all/Deselect all" and "Load all projects" controls with compact codicon icon buttons (check-all, expand-all, collapse-all, single/all-projects toggle) in both Installed and Updates tab toolbars
+
+### Changed
+
+- **Multi Install hidden when package is installed** — Multi Install button only appears when the package is not installed in the currently selected project to avoid scope confusion with the single-project Uninstall button
+
+### Fixed
+
+- **Multi Install version-aware dropdown**
 
 ## [1.7.0] - 2026-02-18
 

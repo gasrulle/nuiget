@@ -269,7 +269,7 @@ public dispose(): void {
 
 ### Concurrent Operation Guard
 
-`NuGetPanel` uses an `_operationInProgress` boolean to prevent concurrent mutating operations (e.g., double-clicking install or clicking update while an install is running). Six message cases are guarded: `installPackage`, `updatePackage`, `removePackage`, `bulkUpdateAllProjects`, `bulkUpdatePackages`, `confirmBulkRemove`. Each uses:
+`NuGetPanel` uses an `_operationInProgress` boolean to prevent concurrent mutating operations (e.g., double-clicking install or clicking update while an install is running). Seven message cases are guarded: `installPackage`, `updatePackage`, `removePackage`, `bulkInstall`, `bulkUpdateAllProjects`, `bulkUpdatePackages`, `confirmBulkRemove`. Each uses:
 
 ```typescript
 case 'installPackage': {
@@ -333,8 +333,8 @@ This is safe because JavaScript is single-threaded — the guard only needs to p
 | `packageUpdates` | Ext → UI | Return packages with available updates |
 | `checkAllProjectsUpdates` | UI → Ext | Check updates for all projects ("Load all" mode) |
 | `allProjectsUpdates` | Ext → UI | Return grouped updates per project |
-| `checkAllProjectsInstalled` | UI → Ext | Get installed packages for all projects ("Load all" mode) |
-| `allProjectsInstalled` | Ext → UI | Return grouped installed packages per project |
+| `checkAllProjectsInstalled` | UI → Ext | Get installed packages for all projects (Installed tab "Load all" mode + Multi Install dropdown via `context` field) |
+| `allProjectsInstalled` | Ext → UI | Return grouped installed packages per project (echoes `context` field for routing) |
 
 #### Package Operations
 | Message | Direction | Purpose |
@@ -361,6 +361,8 @@ This is safe because JavaScript is single-threaded — the guard only needs to p
 | `confirmBulkRemoveAllProjects` | UI → Ext | Request bulk uninstall across multiple projects |
 | `bulkRemoveAllProjectsConfirmed` | Ext → UI | Confirmation to proceed with multi-project bulk remove |
 | `bulkRemoveAllProjectsResult` | Ext → UI | Result of multi-project bulk remove operation |
+| `bulkInstall` | UI → Ext | Install a package to multiple projects at once |
+| `bulkInstallResult` | Ext → UI | Per-project success/failure results of bulk install (includes `version` for optimistic update) |
 
 #### Settings & State
 | Message | Direction | Purpose |

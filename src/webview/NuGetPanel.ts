@@ -462,6 +462,69 @@ export class NuGetPanel {
                     }
                     break;
                 }
+            case 'bulkInstall':
+                {
+                    if (this._operationInProgress) { break; }
+                    this._operationInProgress = true;
+                    try {
+                        const projectPaths = data.projectPaths as string[];
+                        const packageId = data.packageId as string;
+                        const version = data.version as string | undefined;
+
+                        if (!projectPaths || projectPaths.length === 0) {
+                            console.warn('[nUIget] bulkInstall received empty projectPaths array');
+                            break;
+                        }
+
+                        this._nugetService.setupOutputChannel();
+                        this._nugetService.logBulkOperationHeader(`Installing ${packageId} to ${projectPaths.length} project${projectPaths.length !== 1 ? 's' : ''}...`, 0);
+
+                        const results: { projectPath: string; projectName: string; success: boolean }[] = [];
+
+                        await vscode.window.withProgress({
+                            location: vscode.ProgressLocation.Notification,
+                            title: `Installing ${packageId} to ${projectPaths.length} projects...`,
+                            cancellable: false
+                        }, async (progress) => {
+                            for (let i = 0; i < projectPaths.length; i++) {
+                                const projectPath = projectPaths[i];
+                                const projectName = projectPath.split(/[\\/]/).pop() || projectPath;
+                                progress.report({
+                                    message: `(${i + 1}/${projectPaths.length}) ${projectName}`,
+                                    increment: (100 / projectPaths.length)
+                                });
+
+                                const success = await this._nugetService.installPackage(
+                                    projectPath,
+                                    packageId,
+                                    version
+                                );
+
+                                results.push({ projectPath, projectName, success });
+                            }
+
+                            const successCount = results.filter(r => r.success).length;
+                            const failCount = results.length - successCount;
+
+                            if (failCount === 0) {
+                                vscode.window.showInformationMessage(`Successfully installed ${packageId} to ${successCount} project${successCount !== 1 ? 's' : ''}.`);
+                            } else {
+                                vscode.window.showWarningMessage(`Installed ${packageId} to ${successCount}/${results.length} projects, ${failCount} failed.`);
+                            }
+                        });
+
+                        this._postMessage({
+                            type: 'bulkInstallResult',
+                            packageId: packageId,
+                            version: version,
+                            results: results
+                        });
+                        NuGetPanel.onPackageChanged?.();
+                    } finally {
+                        this._operationInProgress = false;
+                    }
+                    break;
+                }
             case 'updatePackage':
                 {
                     if (this._operationInProgress) { break; }
@@ -817,6 +880,7 @@ export class NuGetPanel {
 
                     this._postMessage({
                         type: 'allProjectsInstalled',
+                        context: data.context,
                         projectInstalled: allProjectsInstalled
                     });
                     break;

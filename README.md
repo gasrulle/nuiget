@@ -15,7 +15,7 @@ A Visual Studio-style NuGet package manager for VS Code with a modern split-pane
 - ⌨️ **Keyboard Navigation** - Arrow keys to navigate, `Ctrl+Enter` to quick install
 - 🚀 **Multi-Project Support** - Manage packages across .csproj, .fsproj, and .vbproj files
 - 🔗 **Transitive Dependencies** - View the full dependency graph with "Required by" chains
-- 📊 **Bulk Operations** - Update All, Bulk Update selected, or Bulk Uninstall across single or all projects
+- 📊 **Bulk Operations** - Update All, Bulk Update selected, Bulk Uninstall, or Multi Install to multiple projects at once
 - 🔄 **Cross-Project Updates** - Load updates from all projects at once with grouped results and one-click Update All
 - 🔎 **Installed Tab Filter** - Client-side filter to quickly find packages by name with live count display
 - ⚙️ **Source Management** - Enable, disable, add, or remove NuGet sources via settings cog (⚙️)

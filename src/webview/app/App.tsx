@@ -66,6 +66,8 @@ export const App: React.FC = () => {
     const [loadAllProjectsInstalled, setLoadAllProjectsInstalled] = useState(false);
     const [allProjectsInstalled, setAllProjectsInstalled] = useState<ProjectInstalled[]>([]);
     const [loadingAllProjectsInstalled, setLoadingAllProjectsInstalled] = useState(false);
+    // Dedicated per-project installed data for Multi Install dropdown (not cleared on tab switch)
+    const [multiInstallProjectData, setMultiInstallProjectData] = useState<ProjectInstalled[]>([]);
     const [loadingReadme, setLoadingReadme] = useState(false);
     const [readmeAttempted, setReadmeAttempted] = useState(false);
     const [showSourceSettings, setShowSourceSettings] = useState(false);
@@ -358,6 +360,41 @@ export const App: React.FC = () => {
                     installedTabCompRef.current?.resetTransitiveState(true);
                 }
                 break;
+            case 'bulkInstallResult':
+                {
+                    const bulkResults = message.results as { projectPath: string; projectName: string; success: boolean }[];
+                    const bulkPackageId = message.packageId as string;
+                    const bulkVersion = message.version as string;
+                    // Optimistically update multi-install data for immediate UI feedback
+                    if (bulkResults?.length > 0 && bulkVersion) {
+                        setMultiInstallProjectData(prev => {
+                            const updated = prev.map(p => ({ ...p, packages: [...p.packages] }));
+                            for (const result of bulkResults) {
+                                if (!result.success) { continue; }
+                                let entry = updated.find(p => p.projectPath === result.projectPath);
+                                if (!entry) {
+                                    entry = { projectPath: result.projectPath, projectName: result.projectName, packages: [] };
+                                    updated.push(entry);
+                                }
+                                const pkgIdx = entry.packages.findIndex(pkg => pkg.id.toLowerCase() === bulkPackageId.toLowerCase());
+                                if (pkgIdx >= 0) {
+                                    entry.packages[pkgIdx] = { ...entry.packages[pkgIdx], version: bulkVersion, resolvedVersion: bulkVersion };
+                                } else {
+                                    entry.packages.push({ id: bulkPackageId, version: bulkVersion, resolvedVersion: bulkVersion });
+                                }
+                            }
+                            return updated;
+                        });
+                    }
+                    // Also re-fetch for full accuracy
+                    vscode.postMessage({ type: 'checkAllProjectsInstalled', context: 'multiInstall' });
+                    // Refresh current project's installed packages
+                    if (bulkResults?.some(r => r.success && r.projectPath === selectedProjectRef.current)) {
+                        vscode.postMessage({ type: 'getInstalledPackages', projectPath: selectedProjectRef.current });
+                        installedTabCompRef.current?.resetTransitiveState(true);
+                    }
+                }
+                break;
             case 'refresh':
                 vscode.postMessage({ type: 'getProjects' });
                 if (selectedProjectRef.current) {
@@ -447,8 +484,14 @@ export const App: React.FC = () => {
                 // All projects installed packages loaded
                 {
                     const projectInstalled = message.projectInstalled as ProjectInstalled[];
-                    setAllProjectsInstalled(projectInstalled);
-                    setLoadingAllProjectsInstalled(false);
+                    if (message.context === 'multiInstall') {
+                        setMultiInstallProjectData(projectInstalled);
+                    } else {
+                        setAllProjectsInstalled(projectInstalled);
+                        setLoadingAllProjectsInstalled(false);
+                        // Also update multi-install data so it stays fresh
+                        setMultiInstallProjectData(projectInstalled);
+                    }
                 }
                 break;
             case 'bulkRemoveAllProjectsConfirmed':
@@ -871,6 +914,21 @@ export const App: React.FC = () => {
         });
     }, [selectedProject]);
 
+    const handleMultiInstall = useCallback((packageId: string, version: string, projectPaths: string[]) => {
+        if (projectPaths.length === 0) { return; }
+        vscode.postMessage({
+            type: 'bulkInstall',
+            packageId,
+            version,
+            projectPaths
+        });
+    }, []);
+
+    const handleMultiInstallOpen = useCallback(() => {
+        // Fetch per-project installed data for the Multi Install dropdown
+        vscode.postMessage({ type: 'checkAllProjectsInstalled', context: 'multiInstall' });
+    }, []);
+
     const handleRemove = useCallback((packageId: string) => {
         if (!selectedProject) {
             return;
@@ -1224,7 +1282,11 @@ export const App: React.FC = () => {
                         selectedProject={selectedProject}
                         includePrerelease={includePrerelease}
                         selectedSource={selectedSource}
+                        projects={projects}
+                        allProjectsInstalled={multiInstallProjectData}
                         onInstall={handleInstall}
+                        onMultiInstall={handleMultiInstall}
+                        onMultiInstallOpen={handleMultiInstallOpen}
                         onRemove={handleRemove}
                         onVersionChange={setSelectedVersion}
                         onDetailsTabChange={setDetailsTab}

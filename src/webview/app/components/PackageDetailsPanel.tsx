@@ -9,13 +9,15 @@
  * Wrapped in React.memo to prevent re-renders when unrelated state changes.
  */
 
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { ArrowRightIcon, ChevronDownIcon, ChevronRightIcon, InfoIcon, RulerIcon, SyncIcon, VerifiedIcon } from '../icons';
 import type {
     InstalledPackage,
     LRUMap,
     PackageMetadata,
     PackageSearchResult,
+    Project,
+    ProjectInstalled,
     VsCodeApi,
 } from '../types';
 import { compareVersions, decodeHtmlEntities, getPackageId, isSearchResult } from '../types';
@@ -36,8 +38,14 @@ export interface PackageDetailsPanelProps {
     includePrerelease: boolean;
     selectedSource: string;
 
+    // Multi-install (optional — only needed on Browse tab)
+    projects?: Project[];
+    allProjectsInstalled?: ProjectInstalled[];
+
     // Callbacks
     onInstall: (packageId: string, version: string) => void;
+    onMultiInstall?: (packageId: string, version: string, projectPaths: string[]) => void;
+    onMultiInstallOpen?: () => void;
     onRemove: (packageId: string) => void;
     onVersionChange: (newVersion: string) => void;
     onDetailsTabChange: (tab: 'details' | 'readme') => void;
@@ -64,7 +72,11 @@ const PackageDetailsPanel: React.FC<PackageDetailsPanelProps> = ({
     sanitizedReadmeHtml,
     expandedDeps,
     selectedSource,
+    projects = [],
+    allProjectsInstalled = [],
     onInstall,
+    onMultiInstall,
+    onMultiInstallOpen,
     onRemove,
     onVersionChange,
     onDetailsTabChange,
@@ -75,6 +87,29 @@ const PackageDetailsPanel: React.FC<PackageDetailsPanelProps> = ({
     metadataCache,
     vscode,
 }) => {
+    // Multi-install state
+    const [multiInstallOpen, setMultiInstallOpen] = useState(false);
+    const [selectedInstallProjects, setSelectedInstallProjects] = useState<Set<string>>(new Set());
+    const multiInstallRef = useRef<HTMLDivElement>(null);
+
+    // Reset multi-install state when selected package changes
+    useEffect(() => {
+        setSelectedInstallProjects(new Set());
+        setMultiInstallOpen(false);
+    }, [selectedPackage]);
+
+    // Close dropdown on Escape key
+    useEffect(() => {
+        if (!multiInstallOpen) { return; }
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                setMultiInstallOpen(false);
+            }
+        };
+        document.addEventListener('keydown', handleKeyDown);
+        return () => document.removeEventListener('keydown', handleKeyDown);
+    }, [multiInstallOpen]);
+
     if (!selectedPackage) {
         return <p className="empty-state">Select a package to view details</p>;
     }
@@ -86,6 +121,15 @@ const PackageDetailsPanel: React.FC<PackageDetailsPanelProps> = ({
 
     // Check if this is a floating or range version (cannot be updated from UI)
     const isFloatingOrRange = installedPkg?.versionType === 'floating' || installedPkg?.versionType === 'range';
+
+    // Build a map of project paths → installed version for this package
+    const projectPackageVersions = new Map<string, string>();
+    for (const pi of allProjectsInstalled) {
+        const pkg = pi.packages.find(p => p.id.toLowerCase() === packageId.toLowerCase());
+        if (pkg) {
+            projectPackageVersions.set(pi.projectPath, pkg.resolvedVersion || pkg.version);
+        }
+    }
 
     // Compute button text: Install (not installed), Update (newer), Downgrade (older)
     let buttonText = 'Install';
@@ -211,6 +255,79 @@ const PackageDetailsPanel: React.FC<PackageDetailsPanelProps> = ({
                         <div className="floating-version-notice">
                             <span className="info-icon"><InfoIcon size={14} /></span>
                             <span>To change this version, edit the .csproj file directly.</span>
+                        </div>
+                    )}
+                    {/* Multi Install - only shown when multiple projects exist and package is not installed in current project */}
+                    {projects.length > 1 && onMultiInstall && !isInstalled && (
+                        <div className="multi-install-row" ref={multiInstallRef}>
+                            <button
+                                className={`btn btn-secondary multi-install-btn${multiInstallOpen ? ' open' : ''}`}
+                                onClick={() => {
+                                    if (!multiInstallOpen && onMultiInstallOpen) { onMultiInstallOpen(); }
+                                    setMultiInstallOpen(prev => !prev);
+                                }}
+                                title="Install this package to multiple projects"
+                            >
+                                Multi Install <ChevronDownIcon size={12} className={`multi-install-chevron${multiInstallOpen ? ' open' : ''}`} />
+                            </button>
+                            {multiInstallOpen && (
+                                <>
+                                    <div className="multi-install-backdrop" onClick={() => setMultiInstallOpen(false)} />
+                                    <div className="multi-install-dropdown">
+                                        <div className="multi-install-list">
+                                            {projects.map(project => {
+                                                const installedVersion = projectPackageVersions.get(project.path);
+                                                const sameVersionInstalled = installedVersion !== undefined && installedVersion === selectedVersion;
+                                                const differentVersionInstalled = installedVersion !== undefined && installedVersion !== selectedVersion;
+                                                const isChecked = selectedInstallProjects.has(project.path);
+                                                const fileName = project.path.split(/[\\/]/).pop() || project.name;
+                                                return (
+                                                    <label
+                                                        key={project.path}
+                                                        className={`multi-install-project${sameVersionInstalled ? ' installed' : ''}`}
+                                                        title={project.path}
+                                                    >
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={isChecked}
+                                                            disabled={sameVersionInstalled}
+                                                            onChange={() => {
+                                                                setSelectedInstallProjects(prev => {
+                                                                    const next = new Set(prev);
+                                                                    if (next.has(project.path)) {
+                                                                        next.delete(project.path);
+                                                                    } else {
+                                                                        next.add(project.path);
+                                                                    }
+                                                                    return next;
+                                                                });
+                                                            }}
+                                                        />
+                                                        <span className="multi-install-project-name">{fileName}</span>
+                                                        {sameVersionInstalled && <span className="multi-install-installed-badge">(v{installedVersion})</span>}
+                                                        {differentVersionInstalled && <span className="multi-install-version-badge">(v{installedVersion})</span>}
+                                                    </label>
+                                                );
+                                            })}
+                                        </div>
+                                        <div className="multi-install-action">
+                                            <button
+                                                className="btn btn-primary multi-install-action-btn"
+                                                disabled={selectedInstallProjects.size === 0}
+                                                onClick={() => {
+                                                    onMultiInstall(packageId, selectedVersion, [...selectedInstallProjects]);
+                                                    setMultiInstallOpen(false);
+                                                    setSelectedInstallProjects(new Set());
+                                                }}
+                                            >
+                                                {selectedInstallProjects.size > 0
+                                                    ? `Install to ${selectedInstallProjects.size} project${selectedInstallProjects.size !== 1 ? 's' : ''}`
+                                                    : 'Select projects'}
+                                            </button>
+                                        </div>
+                                    </div>
+                                </>
+                            )}
                         </div>
                     )}
                 </div>
