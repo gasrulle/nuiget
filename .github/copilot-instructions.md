@@ -63,7 +63,7 @@ npm run package:vsix # Outputs nuiget.vsix
 ## Known Issues
 | Issue | Status |
 |-------|--------|
-| 9 moderate `npm audit` warnings (ajv@6.12.6 ReDoS) | Dev-only, not in VSIX. Root cause: eslint 9/10 depends on ajv v6 which has no patched release. Override to ajv 8.18.0 breaks eslint (incompatible API). `eslint-plugin-react-hooks` also blocks eslint 10 upgrade. **Revisit when eslint drops ajv v6 or react-hooks plugin supports eslint 10.** |
+| 13 dev-only `npm audit` warnings (3 moderate ajv + 10 high minimatch) | All dev-only, not in VSIX. Root cause: eslint 9 depends on ajv v6 (no patched release) and minimatch v3 (needs v10.2.1+). Override ajv to v8 breaks eslint. eslint 10 fixes minimatch but `eslint-plugin-react-hooks` stable doesn't support eslint 10 yet (canary 7.1.0 from Feb 2026 does). **Revisit when react-hooks stable supports eslint 10.** |
 
 ## VS Code Extension
 | Issue | Solution |
