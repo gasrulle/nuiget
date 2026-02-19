@@ -544,6 +544,23 @@ async discoverServiceEndpoints(sourceUrl: string): Promise<ServiceEndpoints> {
 
 **Impact:** With 20 packages from a custom source, reduces worst-case from ~21s (per batch) to ~5s (one timeout, then cached).
 
+#### API-First Search for Single nuget.org Source
+When only a single nuget.org source is active (or no sources specified, defaulting to nuget.org), `searchPackages()` bypasses the CLI entirely and calls the NuGet V3 `SearchQueryService` API directly via `searchPackagesViaApi()`.
+
+**Why:** The CLI path spawns `dotnet package search` (500–2000ms process startup) which returns only 4 fields (id, version, owners, totalDownloads), then makes N individual `getPackageSearchMetadata()` API calls (batched 6 at a time) to fetch verified, authors, description, and iconUrl. With 20 results, that's 1 CLI spawn + ~20 HTTP requests.
+
+The SearchQueryService returns **all** fields in a single HTTP/2 call (~100–300ms): `id`, `version`, `description`, `authors`, `totalDownloads`, `iconUrl`, `verified`, `versions[]`. The V3 Search API is [not rate-limited on nuget.org](https://learn.microsoft.com/en-us/nuget/api/rate-limits).
+
+**Detection:** `searchPackages()` checks `validSources` (the original, pre-health-filter list) — never the post-filter `healthySources`. If `validSources` has exactly 1 entry and it's a nuget.org URL (`api.nuget.org` or `nuget.org/v3`), the API path triggers. If `validSources` is empty (caller wants all configured sources), `getSources()` is called to verify that the sole enabled remote source is nuget.org. When multiple sources are specified, the CLI path always runs so all sources are queried.
+
+**Visual parity:** The API returns rich metadata (description, all versions, verified), but the search result list intentionally mirrors CLI output: `description: ''`, `versions: [latestVersion]`, and `verified: undefined` in liteMode. The full metadata is still pre-populated in `verifiedStatusCache` so it loads instantly when the user clicks a package.
+
+**Fallback:** If the API call fails (network error, unexpected response), `searchPackagesViaApi()` returns `null` and `searchPackages()` falls through to the existing CLI path. No user-visible regression.
+
+**Cache population:** The API response proactively populates `verifiedStatusCache`, `iconUrlCache`, and `workspaceCache` for each result, so subsequent `getPackageSearchMetadata()` calls (e.g., when the user clicks a package) are instant cache hits.
+
+**exactMatch handling:** Uses `?q=packageid:{query}&take=1` syntax (same as `getPackageSearchMetadata`).
+
 #### Search Pre-filtering
 Full search (`searchPackages`) uses the `dotnet package search` CLI which handles its own networking and is unaware of the extension's failure cache. Without pre-filtering, the CLI waits for OS TCP timeouts (~21s) per unreachable source on every search.
 

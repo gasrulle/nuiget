@@ -1382,6 +1382,131 @@ export class NuGetService {
         return null;
     }
 
+    /**
+     * Search packages directly via the NuGet SearchQueryService API.
+     * Used when only a single nuget.org source is active — returns all metadata fields
+     * in a single HTTP/2 call, eliminating the CLI spawn + N enrichment API calls.
+     *
+     * @param query - The search query
+     * @param includePrerelease - Whether to include prerelease packages
+     * @param liteMode - If true, skip cache population for enrichment data
+     * @param take - Maximum number of results
+     * @param exactMatch - If true, search by exact package ID
+     * @returns Array of PackageSearchResult, or null if the API call failed (caller should fall back to CLI)
+     */
+    private async searchPackagesViaApi(
+        query: string,
+        includePrerelease: boolean,
+        liteMode: boolean,
+        take: number,
+        exactMatch: boolean
+    ): Promise<PackageSearchResult[] | null> {
+        try {
+            const nugetOrgUrl = 'https://api.nuget.org/v3/index.json';
+            const endpoints = await this.discoverServiceEndpoints(nugetOrgUrl);
+            if (!endpoints.searchQueryService) {
+                return null;
+            }
+
+            // Build query: exactMatch uses packageid: prefix for precise lookup
+            const searchQuery = exactMatch ? `packageid:${query}` : query;
+            const params = new URLSearchParams({
+                q: searchQuery,
+                take: take.toString(),
+                semVerLevel: '2.0.0'
+            });
+            if (includePrerelease) {
+                params.set('prerelease', 'true');
+            }
+
+            const searchUrl = `${endpoints.searchQueryService}?${params.toString()}`;
+            const data = await this.fetchJson<{
+                totalHits?: number;
+                data: Array<{
+                    id: string;
+                    version: string;
+                    description?: string;
+                    authors?: string | string[];
+                    totalDownloads?: number;
+                    iconUrl?: string;
+                    verified?: boolean;
+                    versions?: Array<{ version: string; downloads?: number }>;
+                }>;
+            }>(searchUrl);
+
+            if (!data?.data || !Array.isArray(data.data)) {
+                return null;
+            }
+
+            this.outputChannel.debug(`[API Search] nuget.org returned ${data.data.length} results (totalHits: ${data.totalHits ?? '?'})`);
+
+            const packages: PackageSearchResult[] = [];
+            for (const item of data.data) {
+                if (!item.id || !item.version) {
+                    continue;
+                }
+
+                // Normalize authors: API may return string or string[]
+                const authors = Array.isArray(item.authors)
+                    ? item.authors.join(', ')
+                    : (item.authors ?? '');
+
+                // Extract all version strings for cache, but only expose latest in result
+                // to match CLI output shape (CLI returns only [latestVersion])
+                const allVersions = item.versions?.map(v => v.version) ?? [item.version];
+
+                const pkg: PackageSearchResult = {
+                    id: item.id,
+                    version: item.version,
+                    // Match CLI output: CLI returns empty description — detailed description
+                    // is cached below and loaded on-demand when the user clicks a package.
+                    description: '',
+                    authors: liteMode ? '' : authors,
+                    totalDownloads: item.totalDownloads,
+                    versions: [item.version],
+                    iconUrl: undefined,
+                    // In liteMode (sidebar), CLI never returns verified — keep parity
+                    verified: liteMode ? undefined : item.verified
+                };
+
+                // Construct flat container icon URL if the search API confirms an icon exists
+                if (item.iconUrl && !item.version.includes('*') && !item.version.includes('[') && !item.version.includes('(')) {
+                    const lowerId = item.id.toLowerCase();
+                    const lowerVersion = item.version.toLowerCase();
+                    const flatContainerUrl = `https://api.nuget.org/v3-flatcontainer/${lowerId}/${lowerVersion}/icon`;
+                    pkg.iconUrl = flatContainerUrl;
+
+                    // Pre-populate icon cache so resolveIconUrl() won't issue a HEAD
+                    if (!liteMode) {
+                        const iconCacheKey = cacheKeys.iconExists(item.id, item.version);
+                        this.iconUrlCache.set(iconCacheKey, flatContainerUrl);
+                        workspaceCache.set(iconCacheKey, flatContainerUrl, CACHE_TTL.ICON_EXISTS);
+                    }
+                }
+
+                // Pre-populate verified/authors/description cache so getPackageSearchMetadata()
+                // won't re-fetch when user clicks on a package for details
+                if (!liteMode) {
+                    const statusCacheKey = cacheKeys.verifiedStatus(item.id);
+                    const cacheValue = {
+                        verified: item.verified === true,
+                        authors: authors || undefined,
+                        description: item.description
+                    };
+                    this.verifiedStatusCache.set(statusCacheKey, cacheValue);
+                    workspaceCache.set(statusCacheKey, cacheValue, CACHE_TTL.VERIFIED_STATUS);
+                }
+
+                packages.push(pkg);
+            }
+
+            return packages;
+        } catch (error) {
+            this.outputChannel.debug(`[API Search] Failed, will fall back to CLI: ${error}`);
+            return null; // Signal caller to fall back to CLI
+        }
+    }
+
     async searchPackages(query: string, sources?: string[], includePrerelease?: boolean, liteMode?: boolean, take?: number, exactMatch?: boolean): Promise<PackageSearchResult[]> {
         try {
             // Check cache first
@@ -1411,6 +1536,47 @@ export class NuGetService {
 
             // Filter out sources known to be unreachable to avoid CLI TCP timeouts (~21s each)
             const healthySources = validSources.length > 0 ? this.filterHealthySources(validSources) : [];
+
+            // Optimization: when only a single nuget.org source is active, use the SearchQueryService
+            // API directly instead of spawning a CLI process + N enrichment API calls.
+            // The V3 Search API is not rate-limited on nuget.org and returns all metadata fields
+            // (id, version, description, authors, totalDownloads, iconUrl, verified, versions[])
+            // in a single HTTP/2 call.
+            // IMPORTANT: Check validSources (original, pre-health-filter), not healthySources.
+            // Using post-filter sources would wrongly trigger API path when a private source
+            // is temporarily unreachable, causing its results to be silently skipped.
+            const isNugetOrg = (url: string) => url.includes('api.nuget.org') || url.includes('nuget.org/v3');
+            let isSingleNugetOrgSource = false;
+            if (validSources.length === 1 && isNugetOrg(validSources[0])) {
+                isSingleNugetOrgSource = true;
+            } else if (validSources.length === 0) {
+                // No explicit sources passed = caller wants all configured sources.
+                // Only use API path if nuget.org is the sole configured remote source.
+                const configuredSources = await this.getSources();
+                const remoteSources = configuredSources.filter(s => s.enabled && !this.isLocalSource(s.url));
+                isSingleNugetOrgSource = remoteSources.length === 1 && isNugetOrg(remoteSources[0].url);
+            }
+
+            if (isSingleNugetOrgSource) {
+                const config = vscode.workspace.getConfiguration('nuiget');
+                const searchResultLimit = take ?? config.get<number>('searchResultLimit', 20);
+
+                const apiResults = await this.searchPackagesViaApi(
+                    query, includePrerelease ?? false, liteMode ?? false, searchResultLimit, exactMatch ?? false
+                );
+
+                if (apiResults !== null) {
+                    // Cache and return API results
+                    if (apiResults.length > 0) {
+                        this.searchResultsCache.set(searchCacheKey, apiResults);
+                        workspaceCache.set(searchCacheKey, apiResults, CACHE_TTL.SEARCH_RESULTS);
+                    }
+                    return apiResults;
+                }
+                // API failed — fall through to CLI path below
+                this.outputChannel.debug('[API Search] Falling back to CLI path');
+            }
+
             if (healthySources.length > 0) {
                 sourceArg = healthySources.map(s => `--source "${s}"`).join(' ');
             }

@@ -5,6 +5,17 @@ All notable changes to the nUIget extension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- **API-first search for single nuget.org source** — When only one nuget.org source is active, Browse tab search uses the NuGet V3 SearchQueryService API directly via HTTP/2 instead of spawning a CLI process + N enrichment API calls, reducing search latency from ~2-4s to ~100-300ms
+
+### Fixed
+
+- **API-first search skipping private source results**
+- **API-first search visual mismatch with CLI results**
+
 ## [1.8.0] - 2026-02-18
 
 ### Fixed
