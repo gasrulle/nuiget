@@ -1379,6 +1379,17 @@ const sorted = topologicalSortByDependency(packages, p => p.toLowerCase(), depen
 
 The utility uses Kahn's algorithm and supports any item type via a `getKey` callback. It handles cycles by appending remaining items.
 
+### Project-Level Dependency Ordering
+Multi-project bulk operations (`bulkUpdateAllProjects`, `confirmBulkRemoveAllProjects`) sort projects by inter-project dependency order using `<ProjectReference>` elements parsed from `.csproj` files:
+
+1. **`getProjectReferences(projectPath)`** — Parses `<ProjectReference Include="...">` elements from a project file, returns absolute paths of referenced projects.
+2. **`getProjectDependencyMap(projectPaths)`** — Builds a `Map<normalizedPath, normalizedRefPaths[]>` for all projects in the operation. Only includes references to projects within the provided list (ignores external references). Uses case-insensitive path comparison on Windows.
+3. The existing `topologicalSortByDependency<T>()` is reused with project paths as keys:
+   - **Updates:** `dependenciesFirst: true` — referenced (dependency) projects are updated before dependent projects.
+   - **Removals:** `dependenciesFirst: false` — dependent projects are processed before their dependencies.
+
+This prevents intermediate restore failures when projects reference each other (e.g., `MyApi.Test.csproj` → `MyApi.csproj`).
+
 ### Bulk Update Flow
 1. UI sends `bulkUpdatePackages` with list of packages
 2. Extension sorts by dependency order
@@ -1386,13 +1397,23 @@ The utility uses Kahn's algorithm and supports any item type via a `getKey` call
 4. Single `dotnet restore` at the end (not per-package)
 5. Returns `bulkUpdateResult` with success/fail counts
 
+### Multi-Project Bulk Update Flow
+1. UI sends `bulkUpdateAllProjects` with per-project package lists
+2. Extension builds project dependency map from `<ProjectReference>` elements
+3. Projects sorted topologically (dependency projects first)
+4. **Phase 1 — Updates:** For each project (in dependency order), packages are topologically sorted by NuGet package dependencies and updated sequentially with `skipRestore: true`
+5. **Phase 2 — Restores:** After ALL projects' packages are updated, each modified project is restored in dependency order
+6. Returns `bulkUpdateAllProjectsResult`
+
+The two-phase approach (all updates, then all restores) prevents intermediate restore failures that occur when a dependent project is restored before its dependency project has been updated.
+
 ### Load All Projects Updates
 The Updates tab supports checking updates for ALL projects simultaneously:
 - Triggered by the "Load all projects" toggle in the Updates section header
 - Uses `checkPackageUpdatesMinimal` (no metadata enrichment) for speed
 - Results grouped by project path with section headers
 - **Composite key:** `projectPath::packageId` for unique multi-project package selection
-- `bulkUpdateAllProjects` handler iterates per-project with separate output channel headers
+- `bulkUpdateAllProjects` handler sorts projects by `<ProjectReference>` dependency order
 
 ### Bulk Remove Flow
 1. UI sends `confirmBulkRemove` with package list
@@ -1400,6 +1421,14 @@ The Updates tab supports checking updates for ALL projects simultaneously:
 3. Packages removed in reverse dependency order (dependents first)
 4. Single `dotnet restore` at the end
 5. Returns `bulkRemoveResult` with success/fail counts
+
+### Multi-Project Bulk Remove Flow
+1. UI sends `confirmBulkRemoveAllProjects` with per-project package lists
+2. Extension builds project dependency map from `<ProjectReference>` elements
+3. Projects sorted topologically (dependent projects first for removal)
+4. **Phase 1 — Removals:** For each project (dependents first), packages are topologically sorted (dependents first) and removed sequentially with `skipRestore: true`
+5. **Phase 2 — Restores:** After ALL removals, each modified project is restored in reverse order (dependencies first)
+6. Returns `bulkRemoveAllProjectsResult`
 
 ### Performance Optimization
 - `skipChannelSetup: true` - Don't reveal output channel for each package

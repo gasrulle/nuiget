@@ -1,3 +1,4 @@
+import * as path from 'path';
 import * as vscode from 'vscode';
 import { InstalledPackage, NuGetService } from '../services/NuGetService';
 
@@ -12,7 +13,7 @@ import { InstalledPackage, NuGetService } from '../services/NuGetService';
  *                          if false, dependents are placed first (for removals)
  * @returns Sorted copy of items
  */
-function topologicalSortByDependency<T>(
+export function topologicalSortByDependency<T>(
     items: T[],
     getKey: (item: T) => string,
     dependencyMap: Map<string, string[]>,
@@ -921,29 +922,62 @@ export class NuGetPanel {
                             break;
                         }
 
+                        // Build project-level dependency map from <ProjectReference> elements
+                        // so we update dependency projects before dependent projects
+                        const isWindows = process.platform === 'win32';
+                        const normalizeProjectPath = (p: string) => {
+                            const normalized = path.normalize(p);
+                            return isWindows ? normalized.toLowerCase() : normalized;
+                        };
+                        const allProjectPaths = projectUpdates.map(pu => pu.projectPath);
+                        const projectDepMap = await this._nugetService.getProjectDependencyMap(allProjectPaths);
+                        const selectedProjectKeys = new Set(allProjectPaths.map(normalizeProjectPath));
+
+                        // Topological sort: dependencies first (update referenced projects before dependents)
+                        const sortedProjectUpdates = topologicalSortByDependency(
+                            projectUpdates,
+                            pu => normalizeProjectPath(pu.projectPath),
+                            projectDepMap,
+                            selectedProjectKeys,
+                            true // dependenciesFirst
+                        );
+
                         // Calculate total package count
-                        const totalPackages = projectUpdates.reduce((sum, pu) => sum + pu.packages.length, 0);
+                        const totalPackages = sortedProjectUpdates.reduce((sum, pu) => sum + pu.packages.length, 0);
 
                         // Setup output channel
                         this._nugetService.setupOutputChannel();
 
                         await vscode.window.withProgress({
                             location: vscode.ProgressLocation.Notification,
-                            title: `Updating ${totalPackages} packages across ${projectUpdates.length} projects...`,
+                            title: `Updating ${totalPackages} packages across ${sortedProjectUpdates.length} projects...`,
                             cancellable: false
                         }, async (progress) => {
                             let totalSuccessCount = 0;
                             let totalFailCount = 0;
                             let completedPackages = 0;
+                            const projectsWithChanges: { projectPath: string; projectName: string }[] = [];
 
-                            for (const projectUpdate of projectUpdates) {
+                            // Phase 1: Update all packages across all projects (no restores)
+                            for (const projectUpdate of sortedProjectUpdates) {
                                 const { projectPath, projectName, packages } = projectUpdate;
 
-                                // Log project header to output channel
-                                this._nugetService.logBulkOperationHeader(`Updating ${packages.length} package${packages.length !== 1 ? 's' : ''} for ${projectName}...`, 0);
+                                // Topological sort packages within each project (dependencies first)
+                                const dependencyMap = await this._nugetService.getPackageDependencies(projectPath);
+                                const packagesToUpdate = new Set(packages.map(p => p.id.toLowerCase()));
+                                const sortedPackages = topologicalSortByDependency(
+                                    packages,
+                                    p => p.id.toLowerCase(),
+                                    dependencyMap,
+                                    packagesToUpdate,
+                                    true // dependenciesFirst
+                                );
 
-                                for (let i = 0; i < packages.length; i++) {
-                                    const pkg = packages[i];
+                                // Log project header to output channel
+                                this._nugetService.logBulkOperationHeader(`Updating ${sortedPackages.length} package${sortedPackages.length !== 1 ? 's' : ''} for ${projectName}...`, 0);
+
+                                let projectSuccess = false;
+                                for (const pkg of sortedPackages) {
                                     completedPackages++;
                                     progress.report({
                                         message: `(${completedPackages}/${totalPackages}) ${projectName}: ${pkg.id}`,
@@ -959,22 +993,27 @@ export class NuGetPanel {
 
                                     if (success) {
                                         totalSuccessCount++;
+                                        projectSuccess = true;
                                     } else {
                                         totalFailCount++;
                                     }
                                 }
 
-                                // Run a single restore per project after all its packages are updated
-                                if (packages.length > 0) {
-                                    progress.report({ message: `Restoring ${projectName}...` });
-                                    await this._nugetService.restoreProject(projectPath);
+                                if (projectSuccess) {
+                                    projectsWithChanges.push({ projectPath, projectName });
                                 }
                             }
 
+                            // Phase 2: Restore all projects in dependency order (after all updates)
+                            for (const project of projectsWithChanges) {
+                                progress.report({ message: `Restoring ${project.projectName}...` });
+                                await this._nugetService.restoreProject(project.projectPath);
+                            }
+
                             if (totalFailCount === 0) {
-                                vscode.window.showInformationMessage(`Successfully updated ${totalSuccessCount} packages across ${projectUpdates.length} projects.`);
+                                vscode.window.showInformationMessage(`Successfully updated ${totalSuccessCount} packages across ${sortedProjectUpdates.length} projects.`);
                             } else {
-                                vscode.window.showWarningMessage(`Updated ${totalSuccessCount} packages, ${totalFailCount} failed across ${projectUpdates.length} projects.`);
+                                vscode.window.showWarningMessage(`Updated ${totalSuccessCount} packages, ${totalFailCount} failed across ${sortedProjectUpdates.length} projects.`);
                             }
                         });
 
@@ -1262,23 +1301,45 @@ export class NuGetPanel {
                         // Notify webview that uninstall is starting
                         this._postMessage({ type: 'bulkRemoveAllProjectsConfirmed' });
 
+                        // Build project-level dependency map from <ProjectReference> elements
+                        // so we remove from dependent projects first, then dependency projects
+                        const isWindows = process.platform === 'win32';
+                        const normalizeProjectPath = (p: string) => {
+                            const normalized = path.normalize(p);
+                            return isWindows ? normalized.toLowerCase() : normalized;
+                        };
+                        const allProjectPaths = projectRemovals.map(pr => pr.projectPath);
+                        const projectDepMap = await this._nugetService.getProjectDependencyMap(allProjectPaths);
+                        const selectedProjectKeys = new Set(allProjectPaths.map(normalizeProjectPath));
+
+                        // Topological sort: dependents first (remove from dependents before dependencies)
+                        const sortedProjectRemovals = topologicalSortByDependency(
+                            projectRemovals,
+                            pr => normalizeProjectPath(pr.projectPath),
+                            projectDepMap,
+                            selectedProjectKeys,
+                            false // dependentsFirst — remove from projects that reference others first
+                        );
+
                         // Calculate total package count
-                        const totalPackages = projectRemovals.reduce((sum, pr) => sum + pr.packages.length, 0);
+                        const totalPackages = sortedProjectRemovals.reduce((sum, pr) => sum + pr.packages.length, 0);
 
                         // Setup output channel
                         this._nugetService.setupOutputChannel();
-                        this._nugetService.logBulkOperationHeader(`Uninstalling from ${projectRemovals.length} projects`, 0);
+                        this._nugetService.logBulkOperationHeader(`Uninstalling from ${sortedProjectRemovals.length} projects`, 0);
 
                         await vscode.window.withProgress({
                             location: vscode.ProgressLocation.Notification,
-                            title: `Uninstalling ${totalPackages} packages from ${projectRemovals.length} projects...`,
+                            title: `Uninstalling ${totalPackages} packages from ${sortedProjectRemovals.length} projects...`,
                             cancellable: false
                         }, async (progress) => {
                             let successCount = 0;
                             let failCount = 0;
                             let processed = 0;
+                            const projectsWithChanges: { projectPath: string; projectName: string }[] = [];
 
-                            for (const projectRemoval of projectRemovals) {
+                            // Phase 1: Remove all packages across all projects (no restores)
+                            for (const projectRemoval of sortedProjectRemovals) {
                                 // Get package dependencies for correct uninstall order per project
                                 const dependencyMap = await this._nugetService.getPackageDependencies(projectRemoval.projectPath);
                                 const packagesToRemove = new Set(projectRemoval.packages.map(p => p.toLowerCase()));
@@ -1292,6 +1353,7 @@ export class NuGetPanel {
                                     false // dependentsFirst
                                 );
 
+                                let projectSuccess = false;
                                 for (const packageId of sortedPackages) {
                                     processed++;
                                     progress.report({
@@ -1307,22 +1369,31 @@ export class NuGetPanel {
 
                                     if (success) {
                                         successCount++;
+                                        projectSuccess = true;
                                     } else {
                                         failCount++;
                                     }
                                 }
 
-                                // Run a single restore after all packages are removed from this project
-                                if (sortedPackages.length > 0) {
-                                    progress.report({ message: `Restoring ${projectRemoval.projectName}...` });
-                                    await this._nugetService.restoreProject(projectRemoval.projectPath);
+                                if (projectSuccess) {
+                                    projectsWithChanges.push({
+                                        projectPath: projectRemoval.projectPath,
+                                        projectName: projectRemoval.projectName
+                                    });
                                 }
                             }
 
+                            // Phase 2: Restore all projects in dependency order (dependencies first)
+                            // Reverse the removal order so dependencies restore before dependents
+                            for (const project of [...projectsWithChanges].reverse()) {
+                                progress.report({ message: `Restoring ${project.projectName}...` });
+                                await this._nugetService.restoreProject(project.projectPath);
+                            }
+
                             if (failCount === 0) {
-                                vscode.window.showInformationMessage(`Successfully uninstalled ${successCount} packages from ${projectRemovals.length} projects.`);
+                                vscode.window.showInformationMessage(`Successfully uninstalled ${successCount} packages from ${sortedProjectRemovals.length} projects.`);
                             } else {
-                                vscode.window.showWarningMessage(`Uninstalled ${successCount} packages, ${failCount} failed across ${projectRemovals.length} projects.`);
+                                vscode.window.showWarningMessage(`Uninstalled ${successCount} packages, ${failCount} failed across ${sortedProjectRemovals.length} projects.`);
                             }
                         });
 

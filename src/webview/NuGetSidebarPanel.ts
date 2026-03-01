@@ -1,6 +1,7 @@
+import * as path from 'path';
 import * as vscode from 'vscode';
 import { InstalledPackage, NuGetService } from '../services/NuGetService';
-import { NuGetPanel } from './NuGetPanel';
+import { NuGetPanel, topologicalSortByDependency } from './NuGetPanel';
 
 /**
  * NuGetSidebarProvider — WebviewViewProvider for the sidebar panel.
@@ -35,6 +36,7 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
     private _forceCheckPending = false;
     private _pendingProjectUpdates: { projectPath: string; projectName: string; updates: { id: string; installedVersion: string; latestVersion: string }[] }[] = [];
     private _pendingInstalledCount = -1;
+    private _pendingInstalledProject = '';
     private _disposables: vscode.Disposable[] = [];
 
     constructor(
@@ -187,6 +189,7 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
             // Cache results for when the webview resolves later
             this._pendingProjectUpdates = allProjectUpdates;
             this._pendingInstalledCount = selectedProjectInstalledCount;
+            this._pendingInstalledProject = this._selectedProject || '';
 
             // If webview is active, push all-projects results and installed count
             if (!this._disposed && this._view) {
@@ -602,21 +605,55 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
                     const projectUpdates = data.projectUpdates as { projectPath: string; projectName: string; packages: { id: string; version: string }[] }[];
                     if (!projectUpdates || projectUpdates.length === 0) break;
 
-                    const totalPackages = projectUpdates.reduce((sum, pu) => sum + pu.packages.length, 0);
+                    // Build project-level dependency map from <ProjectReference> elements
+                    const isWindows = process.platform === 'win32';
+                    const normalizeProjectPath = (p: string) => {
+                        const normalized = path.normalize(p);
+                        return isWindows ? normalized.toLowerCase() : normalized;
+                    };
+                    const allProjectPaths = projectUpdates.map(pu => pu.projectPath);
+                    const projectDepMap = await this._nugetService.getProjectDependencyMap(allProjectPaths);
+                    const selectedProjectKeys = new Set(allProjectPaths.map(normalizeProjectPath));
+
+                    // Topological sort: dependencies first (update referenced projects before dependents)
+                    const sortedProjectUpdates = topologicalSortByDependency(
+                        projectUpdates,
+                        pu => normalizeProjectPath(pu.projectPath),
+                        projectDepMap,
+                        selectedProjectKeys,
+                        true // dependenciesFirst
+                    );
+
+                    const totalPackages = sortedProjectUpdates.reduce((sum, pu) => sum + pu.packages.length, 0);
                     this._nugetService.setupOutputChannel();
 
                     await vscode.window.withProgress({
                         location: vscode.ProgressLocation.Notification,
-                        title: `Updating ${totalPackages} packages across ${projectUpdates.length} projects...`,
+                        title: `Updating ${totalPackages} packages across ${sortedProjectUpdates.length} projects...`,
                         cancellable: false
                     }, async (progress) => {
                         let totalSuccess = 0;
                         let totalFail = 0;
                         let completed = 0;
+                        const projectsWithChanges: { projectPath: string; projectName: string }[] = [];
 
-                        for (const pu of projectUpdates) {
-                            this._nugetService.logBulkOperationHeader(`Updating ${pu.packages.length} package${pu.packages.length !== 1 ? 's' : ''} for ${pu.projectName}...`, 0);
-                            for (const pkg of pu.packages) {
+                        // Phase 1: Update all packages across all projects (no restores)
+                        for (const pu of sortedProjectUpdates) {
+                            // Topological sort packages within each project (dependencies first)
+                            const dependencyMap = await this._nugetService.getPackageDependencies(pu.projectPath);
+                            const packagesToUpdate = new Set(pu.packages.map(p => p.id.toLowerCase()));
+                            const sortedPackages = topologicalSortByDependency(
+                                pu.packages,
+                                p => p.id.toLowerCase(),
+                                dependencyMap,
+                                packagesToUpdate,
+                                true // dependenciesFirst
+                            );
+
+                            this._nugetService.logBulkOperationHeader(`Updating ${sortedPackages.length} package${sortedPackages.length !== 1 ? 's' : ''} for ${pu.projectName}...`, 0);
+
+                            let projectSuccess = false;
+                            for (const pkg of sortedPackages) {
                                 completed++;
                                 progress.report({
                                     message: `(${completed}/${totalPackages}) ${pu.projectName}: ${pkg.id}`,
@@ -625,20 +662,24 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
                                 const success = await this._nugetService.updatePackage(
                                     pu.projectPath, pkg.id, pkg.version, { skipChannelSetup: true, skipNotification: true, skipRestore: true }
                                 );
-                                if (success) totalSuccess++; else totalFail++;
+                                if (success) { totalSuccess++; projectSuccess = true; } else { totalFail++; }
                             }
 
-                            // Run a single restore per project after all its packages are updated
-                            if (pu.packages.length > 0) {
-                                progress.report({ message: `Restoring ${pu.projectName}...` });
-                                await this._nugetService.restoreProject(pu.projectPath);
+                            if (projectSuccess) {
+                                projectsWithChanges.push({ projectPath: pu.projectPath, projectName: pu.projectName });
                             }
                         }
 
+                        // Phase 2: Restore all projects in dependency order (after all updates)
+                        for (const project of projectsWithChanges) {
+                            progress.report({ message: `Restoring ${project.projectName}...` });
+                            await this._nugetService.restoreProject(project.projectPath);
+                        }
+
                         if (totalFail === 0) {
-                            vscode.window.showInformationMessage(`Updated ${totalSuccess} packages across ${projectUpdates.length} projects.`);
+                            vscode.window.showInformationMessage(`Updated ${totalSuccess} packages across ${sortedProjectUpdates.length} projects.`);
                         } else {
-                            vscode.window.showWarningMessage(`Updated ${totalSuccess}, failed ${totalFail} across ${projectUpdates.length} projects.`);
+                            vscode.window.showWarningMessage(`Updated ${totalSuccess}, failed ${totalFail} across ${sortedProjectUpdates.length} projects.`);
                         }
                     });
 
@@ -803,10 +844,11 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
             this._postMessage({ type: 'allProjectsUpdates', projectUpdates: this._pendingProjectUpdates });
             this._pendingProjectUpdates = [];
         }
-        if (this._pendingInstalledCount >= 0) {
+        if (this._pendingInstalledCount >= 0 && this._pendingInstalledProject === this._selectedProject) {
             this._postMessage({ type: 'installedCountUpdate', count: this._pendingInstalledCount });
-            this._pendingInstalledCount = -1;
         }
+        this._pendingInstalledCount = -1;
+        this._pendingInstalledProject = '';
     }
 
     private _sendState(): void {

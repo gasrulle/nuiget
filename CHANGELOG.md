@@ -5,6 +5,13 @@ All notable changes to the nUIget extension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.2] - 2026-03-01
+
+### Fixed
+
+- **Multi-project bulk update/remove ordering** — Projects are now topologically sorted by `<ProjectReference>` dependency order before processing, and all `dotnet restore` calls are deferred to a final phase after all updates/removals complete. Prevents C# Dev Kit "unable to restore" errors during batch operations across interdependent projects.
+- **Per-package topological sort in multi-project bulk update** — Packages within each project are now sorted by NuGet dependency order during multi-project bulk updates, consistent with single-project bulk update behavior.
+
 ## [1.9.1] - 2026-02-19
 
 ### Fixed

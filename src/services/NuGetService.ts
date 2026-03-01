@@ -819,7 +819,66 @@ export class NuGetService {
             }
         }
 
+        projects.sort((a, b) => a.name.localeCompare(b.name));
         return projects;
+    }
+
+    /**
+     * Parse <ProjectReference> elements from a .csproj/.fsproj/.vbproj file.
+     * Returns an array of absolute, normalized paths to referenced projects.
+     */
+    async getProjectReferences(projectPath: string): Promise<string[]> {
+        const references: string[] = [];
+        try {
+            const content = await readFileAsync(projectPath, 'utf-8');
+            const projectDir = path.dirname(projectPath);
+
+            // Match <ProjectReference Include="..\SomeProject\SomeProject.csproj" />
+            // Handles self-closing and with closing tag
+            const projectRefRegex = /<ProjectReference\s+[^>]*Include\s*=\s*"([^"]+)"[^>]*(?:\/>|>[\s\S]*?<\/ProjectReference>)/gi;
+            let match;
+            while ((match = projectRefRegex.exec(content)) !== null) {
+                const relativePath = match[1];
+                const absolutePath = path.normalize(path.resolve(projectDir, relativePath));
+                references.push(absolutePath);
+            }
+        } catch {
+            // If the file can't be read, return empty array
+        }
+        return references;
+    }
+
+    /**
+     * Build a project-level dependency map from ProjectReference elements.
+     * Returns a map of normalizedProjectPath → [normalizedReferencedProjectPaths].
+     * Only includes references to projects within the provided list.
+     *
+     * @param projectPaths Array of absolute project paths to analyze
+     * @returns Map where keys are lowercase normalized project paths and values are
+     *          arrays of lowercase normalized paths of projects they depend on
+     */
+    async getProjectDependencyMap(projectPaths: string[]): Promise<Map<string, string[]>> {
+        const isWindows = process.platform === 'win32';
+        const normalizePath = (p: string) => {
+            const normalized = path.normalize(p);
+            return isWindows ? normalized.toLowerCase() : normalized;
+        };
+
+        // Build set of known project paths for filtering
+        const knownProjects = new Set(projectPaths.map(normalizePath));
+        const dependencyMap = new Map<string, string[]>();
+
+        for (const projectPath of projectPaths) {
+            const key = normalizePath(projectPath);
+            const refs = await this.getProjectReferences(projectPath);
+            // Only include references to projects within the provided list
+            const filteredRefs = refs
+                .map(normalizePath)
+                .filter(ref => knownProjects.has(ref) && ref !== key);
+            dependencyMap.set(key, filteredRefs);
+        }
+
+        return dependencyMap;
     }
 
     async getInstalledPackages(projectPath: string, liteMode?: boolean): Promise<InstalledPackage[]> {
