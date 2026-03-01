@@ -54,16 +54,16 @@ src/
 │   ├── NuGetSidebarPanel.ts  # WebviewViewProvider for Activity Bar sidebar
 │   ├── app/
 │   │   ├── index.tsx         # React entry point with ErrorBoundary
-│   │   ├── App.tsx           # Application shell (~1230 lines)
+│   │   ├── App.tsx           # Application shell (~1430 lines)
 │   │   ├── App.css           # Styles (includes high-contrast, reduced-motion, icon utilities)
 │   │   ├── types.ts          # Shared types, LRUMap, utility functions
 │   │   ├── icons.tsx          # Inline SVG icon components (codicon-compatible, theme-aware)
 │   │   ├── markdownSetup.ts  # hljs language registration, marked config, renderMarkdownToHtml()
 │   │   ├── components/
-│   │   │   ├── BrowseTab.tsx              # Browse tab (~540 lines)
-│   │   │   ├── InstalledTab.tsx           # Installed tab (~970 lines)
-│   │   │   ├── UpdatesTab.tsx             # Updates tab (~410 lines)
-│   │   │   ├── PackageDetailsPanel.tsx    # Details panel (~280 lines)
+│   │   │   ├── BrowseTab.tsx              # Browse tab (~1020 lines)
+│   │   │   ├── InstalledTab.tsx           # Installed tab (~1360 lines)
+│   │   │   ├── UpdatesTab.tsx             # Updates tab (~750 lines)
+│   │   │   ├── PackageDetailsPanel.tsx    # Details panel (~480 lines)
 │   │   │   ├── DraggableSash.tsx          # Resizable split panel sash
 │   │   │   └── SourceSettingsOverlay.tsx  # Source settings modal (forwardRef, owns form state)
 │   │   └── hooks/
@@ -76,27 +76,25 @@ src/
 │           ├── SectionHeader.tsx   # Collapsible section header
 │           └── PackageRow.tsx      # Compact package row with hover actions
 ├── services/
-│   ├── NuGetService.ts       # dotnet CLI integration, NuGet API calls (~3400 lines)
+│   ├── NuGetService.ts       # dotnet CLI integration, NuGet API calls (~4080 lines)
 │   ├── NuGetTypes.ts         # Shared NuGet types (VersionSpec, Project, PackageMetadata, etc.)
 │   ├── NuGetUtils.ts         # Standalone utilities (LRUMap, batchedPromiseAll, validators, isNewerVersion)
 │   ├── NuGetConfigParser.ts  # nuget.config parsing, credential resolution
 │   ├── CredentialService.ts  # Authentication for private feeds (DPAPI, Cred Provider)
 │   ├── Http2Client.ts        # HTTP/2 client with session reuse for nuget.org
 │   └── WorkspaceCache.ts     # Persistent caching with TTL support
-└── test/
-    └── WorkspaceCache.test.ts # Unit tests for cache utility
 ```
 
 ### Module Split: NuGetService
 `NuGetService.ts` delegates shared types and standalone utilities to separate modules:
 - **`NuGetTypes.ts`** — All exported types/interfaces (`VersionSpec`, `Project`, `InstalledPackage`, `PackageMetadata`, `NuGetSource`, etc.). `NuGetService.ts` re-exports these for backward compatibility.
-- **`NuGetUtils.ts`** — Stateless utility functions (`LRUMap`, `batchedPromiseAll`, `execWithTimeout`, input validators, `parseVersionSpec`, `isNewerVersion`). No class dependency.
-- `NuGetService.ts` retains internal types (`NuGetServiceIndex`, `ServiceEndpoints`, `FetchResult<T>`) and all class methods.
+- **`NuGetUtils.ts`** — Stateless utility functions (`LRUMap`, `batchedPromiseAll`, `execWithTimeout`, `fileExists`, `COMMAND_TIMEOUT`, input validators, `parseVersionSpec`, `isNewerVersion`). No class dependency.
+- `NuGetService.ts` retains internal types (`NuGetServiceIndex`, `ServiceEndpoints`) and all class methods. `FetchResult<T>` is defined in `Http2Client.ts`.
 - `NuGetConfigParser.ts` imports and re-exports `NuGetSource` from `NuGetTypes.ts` — there is a single canonical definition.
 
 ### Module Split: App.tsx
 `App.tsx` delegates module-level setup and UI components to separate modules:
-- **`icons.tsx`** — Inline SVG icon components matching VS Code's codicon system. All icons use `currentColor` for theme-aware rendering. Exports: `ChevronRightIcon`, `ChevronDownIcon`, `SettingsGearIcon`, `WarningIcon`, `CloseIcon`, `CheckIcon`, `ArrowRightIcon`, `ArrowLeftIcon`, `CloudDownloadIcon`, `InfoIcon`, `SyncIcon`, `RulerIcon`, `LoadingIcon`, `TrashIcon`, `VerifiedIcon`, `ExternalLinkIcon`, `PlusIcon`, `ArrowUpIcon`, `SingleProjectIcon`, `AllProjectsIcon`, `CheckAllIcon`, `CollapseAllIcon`, `ExpandAllIcon`. Codicon fonts are NOT available in webviews — inline SVGs are the required approach. Both main panel and sidebar import from this single module.
+- **`icons.tsx`** — Inline SVG icon components matching VS Code's codicon system. All icons use `currentColor` for theme-aware rendering. Exports: `ChevronRightIcon`, `ChevronDownIcon`, `SettingsGearIcon`, `WarningIcon`, `CloseIcon`, `CheckIcon`, `ArrowRightIcon`, `ArrowLeftIcon`, `CloudDownloadIcon`, `InfoIcon`, `SyncIcon`, `RulerIcon`, `LoadingIcon`, `ClearAllIcon`, `TrashIcon`, `VerifiedIcon`, `ExternalLinkIcon`, `PlusIcon`, `ArrowUpIcon`, `SingleProjectIcon`, `AllProjectsIcon`, `CheckAllIcon`, `CollapseAllIcon`, `ExpandAllIcon`. Codicon fonts are NOT available in webviews — inline SVGs are the required approach. Both main panel and sidebar import from this single module.
 - **`markdownSetup.ts`** — highlight.js language registrations (16 languages, 30 aliases), marked config with custom code renderer, `renderMarkdownToHtml()` (combines upgradeHttpToHttps + marked.parse + DOMPurify.sanitize).
 - **`DraggableSash.tsx`** — Standalone resizable split panel sash component (`MemoizedDraggableSash`).
 - **`SourceSettingsOverlay.tsx`** — Self-contained source settings modal with `forwardRef`/`useImperativeHandle`. Owns internal form state (add source form, confirm remove dialog). Parent forwards `addSourceResult` messages via `sourceSettingsRef.current?.handleAddSourceResult()`.
@@ -185,22 +183,31 @@ App.tsx (shell)
 
 ### Message Routing
 
-App.tsx's `handleMessage` dispatches incoming messages to components via `forwardRef` + `useImperativeHandle`:
+App.tsx's `handleMessage` dispatches incoming messages to components via `forwardRef` + `useImperativeHandle`. Each tab ref exposes a `handleMessage` method:
 
 ```typescript
-// Each tab ref exposes a handleMessage method
 const browseTabCompRef = useRef<BrowseTabHandle>(null);
 const installedTabCompRef = useRef<InstalledTabHandle>(null);
 const updatesTabCompRef = useRef<UpdatesTabHandle>(null);
 
-// In handleMessage:
-if (browseTabCompRef.current?.handleMessage(msg)) return;
-if (installedTabCompRef.current?.handleMessage(msg)) return;
-if (updatesTabCompRef.current?.handleMessage(msg)) return;
-// ...handle remaining messages in App
+// In handleMessage (useCallback with [] deps):
+switch (message.type) {
+    case 'transitivePackages':
+    case 'transitiveMetadata':
+    case 'restoreProjectResult':
+    case 'bulkRemoveConfirmed':
+        installedTabCompRef.current?.handleMessage(message);
+        break;
+    case 'searchResults':
+    case 'autocompleteResults':
+    case 'restoreSearchQuery':
+        browseTabCompRef.current?.handleMessage(message);
+        break;
+    // ... other types handled directly in App
+}
 ```
 
-Each component's `handleMessage` returns `true` if it consumed the message, enabling short-circuit dispatch. InstalledTab and UpdatesTab return `void` (unconditional dispatch for their message types).
+BrowseTab's `handleMessage` returns `boolean` (consumed or not); InstalledTab and UpdatesTab return `void` (unconditional dispatch for their message types). App.tsx routes specific message types to specific tab refs via a `switch` statement — it does **not** sequentially try each tab.
 
 ### Source Removal Reset
 
@@ -270,7 +277,7 @@ public dispose(): void {
 
 ### Concurrent Operation Guard
 
-`NuGetPanel` uses an `_operationInProgress` boolean to prevent concurrent mutating operations (e.g., double-clicking install or clicking update while an install is running). Seven message cases are guarded: `installPackage`, `updatePackage`, `removePackage`, `bulkInstall`, `bulkUpdateAllProjects`, `bulkUpdatePackages`, `confirmBulkRemove`. Each uses:
+`NuGetPanel` uses an `_operationInProgress` boolean to prevent concurrent mutating operations (e.g., double-clicking install or clicking update while an install is running). Eight message cases are guarded: `installPackage`, `updatePackage`, `removePackage`, `bulkInstall`, `bulkUpdateAllProjects`, `bulkUpdatePackages`, `confirmBulkRemove`, `confirmBulkRemoveAllProjects`. Each uses:
 
 ```typescript
 case 'installPackage': {
@@ -570,7 +577,7 @@ The fix uses a two-layer defense:
 2. **Pre-filtering** (`filterHealthySources`): Sources in `failedEndpointCache` (within TTL) are excluded from CLI arguments. If ALL sources are unreachable, they are passed through as a fallback.
 3. **Panel-level filtering**: `NuGetPanel` also excludes sources from `failedSources` map before calling `searchPackages` (defense-in-depth).
 
-`clearSourceErrors()` clears all four caches (`failedSources`, `serviceIndexCache`, `failedEndpointCache`, `_sourcesCache`) so the ⚠️ refresh button genuinely retries the network. After TTL expiry (2 min), lazy re-validation occurs automatically on the next search.
+`clearSourceErrors()` clears all five caches (`failedSources`, `serviceIndexCache`, `failedEndpointCache`, `iconSourceMissCount`, `_sourcesCache`) so the ⚠️ refresh button genuinely retries the network. After TTL expiry (2 min), lazy re-validation occurs automatically on the next search.
 
 The Browse tab's metadata enrichment loop also checks `failedEndpointCache` before iterating custom sources for authors/description, skipping unreachable ones without entering `discoverServiceEndpoints`.
 
@@ -624,8 +631,9 @@ All HTTP/1.1 requests to custom sources use explicit timeouts to prevent unbound
 | `fetchJsonWithDetails` | 10s (default) | Metadata/search API calls |
 | `fetchJsonHttp1` | 10s | Generic JSON fetching (max 5 redirects) |
 | `checkUrlExistsHttp1` | 5s | Icon HEAD requests |
+| HTTP/2 session idle | 60s | Auto-close after inactivity |
 
-Timeouts use `options.timeout` + `req.on('timeout')` handler that calls `req.destroy()`.
+Timeouts use `options.timeout` + `req.on('timeout')` handler that calls `req.destroy()`. HTTP/2 sessions are closed automatically via `session.setTimeout(60000)` after inactivity.
 
 ### Source-Aware Icon Resolution (`resolveIconUrl`)
 All icon fetching uses a single `resolveIconUrl()` helper that:
@@ -786,35 +794,47 @@ The Installed tab's direct packages list is also virtualized, with the scroll co
 - **Tab components** (`BrowseTab`, `InstalledTab`, `UpdatesTab`) are wrapped in `React.memo` with `forwardRef` + `useImperativeHandle` for parent-to-child communication.
 - **PackageDetailsPanel** is wrapped in `React.memo` as `MemoizedPackageDetailsPanel`, shared by all three tabs.
 - `DraggableSash` is wrapped in `React.memo` as `MemoizedDraggableSash` with memoized `onReset`/`onDragEnd` callbacks (`useCallback` with `[]` deps) to prevent re-renders on unrelated state changes.
+- **SourceSettingsOverlay** is wrapped in `React.memo` as `MemoizedSourceSettingsOverlay` with `forwardRef`/`useImperativeHandle` for handling `addSourceResult` messages from the parent.
 - `sanitizedReadmeHtml` is memoized via `useMemo` keyed on `packageMetadata?.readme`, preventing expensive `renderMarkdownToHtml()` re-computation on every render.
 
-### Message Handler Pattern
+### Message Handler Patterns
 
-The webview message handler uses a `useRef` pattern to avoid the "stale closure" problem without requiring ref-sync effects:
+**App.tsx** uses `useCallback(fn, [])` as the message handler with individual `useRef` mirrors to read current state without re-registering the listener:
 
 ```typescript
-// Ref holds the latest handler
-const handleMessageRef = useRef<(event: MessageEvent) => void>(() => {});
+// Individual refs mirror state for access inside the stable useCallback
+const selectedProjectRef = useRef(selectedProject);
+useEffect(() => { selectedProjectRef.current = selectedProject; }, [selectedProject]);
 
-// Handler defined as regular function - captures current state via closures
-const handleMessage = (event: MessageEvent) => {
-    // reads selectedProject, selectedPackage, activeTab, etc. directly
-};
-handleMessageRef.current = handleMessage; // updated every render
+const selectedSourceRef = useRef(selectedSource);
+useEffect(() => { selectedSourceRef.current = selectedSource; }, [selectedSource]);
 
-// Event listener set up once, calls through ref
-useEffect(() => {
-    const listener = (e: MessageEvent) => handleMessageRef.current(e);
-    window.addEventListener('message', listener);
-    return () => window.removeEventListener('message', listener);
+const activeTabRef = useRef(activeTab);
+useEffect(() => { activeTabRef.current = activeTab; }, [activeTab]);
+
+// Stable handler reads refs instead of stale closure state
+const handleMessage = useCallback((event: MessageEvent) => {
+    const msg = event.data;
+    switch (msg.type) {
+        case 'projects':
+            // reads selectedProjectRef.current, not selectedProject
+            break;
+        // ...
+    }
 }, []);
+
+// Listener set up once
+useEffect(() => {
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+}, [handleMessage]);
 ```
 
-This pattern eliminates the need for individual ref-sync effects (previously 7 separate `useEffect` hooks were used to sync state values like `selectedProject`, `activeTab`, `selectedSource` etc. to refs so the `useCallback(fn, [])` handler could read them).
+**SidebarApp.tsx** uses the `handleMessageRef` pattern instead — a regular function assigned to `ref.current` each render, with a single `useEffect([])` listener that calls `ref.current(e)`. This avoids ref-sync effects but requires the handler to be redefined every render.
 
 ### Details Panel Component
 
-The package details panel has been extracted into `PackageDetailsPanel.tsx` (~280 lines), wrapped in `React.memo` as `MemoizedPackageDetailsPanel`. Each tab renders its own instance, receiving shared state as props. This replaces the previous `useMemo`-based approach with proper component-level memoization via `React.memo`.
+The package details panel has been extracted into `PackageDetailsPanel.tsx` (~480 lines), wrapped in `React.memo` as `MemoizedPackageDetailsPanel`. Each tab renders its own instance, receiving shared state as props. This replaces the previous `useMemo`-based approach with proper component-level memoization via `React.memo`.
 
 ### State Stability Patterns
 
@@ -925,9 +945,9 @@ private serviceIndexCache = new LRUMap<string, ServiceEndpoints>(50);
 private metadataCache = new LRUMap<string, PackageMetadata>(200);
 private iconUrlCache = new LRUMap<string, string>(500);  // Stores resolved icon URL or '' (not found)
 private versionsCache = new LRUMap<string, string[]>(200);
-private verifiedStatusCache = new LRUMap<string, VerifiedStatus>(300);
+private verifiedStatusCache = new LRUMap<string, { verified: boolean; authors?: string; description?: string }>(300);
 private searchResultsCache = new LRUMap<string, PackageSearchResult[]>(100);
-private autocompleteCache = new LRUMap<string, AutocompleteEntry>(50);
+private autocompleteCache = new LRUMap<string, { data: string[]; timestamp: number }>(50);  // 30s TTL
 ```
 
 ### HTTP/2 Session Pool
@@ -994,21 +1014,24 @@ return await this.raceForFirstResult(
 ```
 
 ### React 19 Concurrent Rendering
-The webview leverages React 19's concurrent features for responsive UI during heavy operations:
+The webview leverages React 19's concurrent features for responsive UI during heavy operations. `useDeferredValue` is used in the **tab components** (BrowseTab, InstalledTab, UpdatesTab), while `useTransition` is used in **App.tsx** for tab switching:
 
 ```typescript
+// In BrowseTab/InstalledTab/UpdatesTab:
 // Deferred search - keeps UI responsive while typing
 const [searchQuery, setSearchQuery] = useState('');
 const deferredSearchQuery = useDeferredValue(searchQuery);
 const isSearchStale = searchQuery !== deferredSearchQuery;
 // Effect uses deferredSearchQuery for API calls
 
+// In InstalledTab/UpdatesTab:
 // Deferred lists - smooth sorting/filtering feedback
 const sortedInstalledPackages = useMemo(() => [...packages].sort(...), [packages]);
 const deferredInstalledPackages = useDeferredValue(sortedInstalledPackages);
 const isInstalledStale = sortedInstalledPackages !== deferredInstalledPackages;
 // Render uses deferredInstalledPackages with stale class for opacity fade
 
+// In App.tsx:
 // Non-blocking tab transitions
 const [isTabPending, startTabTransition] = useTransition();
 startTabTransition(() => {
@@ -1070,9 +1093,10 @@ All other sources use HTTP/1.1 with keepAlive connection pooling.
 The extension supports authenticated API calls for private NuGet feeds (Azure DevOps, GitHub Packages, JFrog, etc.) via the `CredentialService`.
 
 ### Credential Resolution Priority
-1. **nuget.config `<packageSourceCredentials>`** - Parsed by `NuGetConfigParser.getCredentials()`
-2. **Windows Credential Manager** - Via PowerShell `Get-StoredCredential` cmdlet
-3. **Azure Artifacts Credential Provider** - Non-interactive mode (cached tokens only)
+1. **nuget.config `<packageSourceCredentials>`** — Parsed by `NuGetConfigParser.getCredentials()`
+2. **Azure Artifacts Credential Provider** — Non-interactive mode (cached tokens only)
+3. **External Feed Endpoints env var** — `ARTIFACTS_CREDENTIALPROVIDER_EXTERNAL_FEED_ENDPOINTS` (JSON format, preferred for CI/automated scenarios)
+4. **Access Token env var** — `ARTIFACTS_CREDENTIALPROVIDER_ACCESSTOKEN` or `VSS_NUGET_ACCESSTOKEN` (Azure Artifacts only)
 
 ### Credential Flow
 ```
@@ -1089,8 +1113,9 @@ initializeCredentials() ──▶ NuGetConfigParser.getCredentials()
 CredentialService.prewarmCredentials()
     │
     ├── nuget.config credentials (already loaded)
-    ├── Windows Credential Manager lookup
-    └── Credential Provider invocation
+    ├── Credential Provider invocation (non-interactive)
+    ├── External Feed Endpoints env var
+    └── Access Token env var (Azure Artifacts only)
 ```
 
 ### DPAPI Decryption
@@ -1248,14 +1273,22 @@ const csp = `
     style-src ${webview.cspSource};
     script-src ${webview.cspSource};
     connect-src ${webview.cspSource};
-    img-src https://api.nuget.org https://*.nuget.org
+    img-src ${webview.cspSource}
+            https://api.nuget.org https://*.nuget.org
             https://raw.githubusercontent.com https://*.githubusercontent.com
             https://github.com https://shields.io https://*.shields.io
-            https://img.shields.io data:;
+            https://img.shields.io https://opencollective.com https://*.opencollective.com
+            https://codecov.io https://*.codecov.io https://badge.fury.io
+            https://*.travis-ci.org https://*.travis-ci.com https://ci.appveyor.com
+            https://coveralls.io https://*.coveralls.io https://david-dm.org
+            https://snyk.io https://*.snyk.io https://api.codacy.com
+            https://sonarcloud.io https://*.sonarcloud.io https://img.badgesize.io
+            https://badgen.net https://*.badgen.net https://circleci.com https://*.circleci.com
+            https://dev.azure.com https://*.visualstudio.com data:;
 `;
 ```
 
-**Note:** The expanded `img-src` list supports README images from GitHub and badge images from shields.io. Both `style-src` and `script-src` are free of `'unsafe-inline'` — all styles are in external CSS files and all scripts are loaded via external `<script src>` tags (esbuild IIFE bundles).
+**Note:** The expanded `img-src` list supports README images from GitHub, badge images (shields.io, badgen.net, codecov, etc.), CI status badges (Travis CI, AppVeyor, CircleCI), and Azure DevOps resources. The sidebar WebviewView uses a broader `img-src https:` since it displays package icons from arbitrary custom sources. Both `style-src` and `script-src` are free of `'unsafe-inline'` — all styles are in external CSS files and all scripts are loaded via external `<script src>` tags (esbuild IIFE bundles).
 
 ## Theme Compliance
 

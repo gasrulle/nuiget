@@ -63,7 +63,7 @@ npm run package:vsix # Outputs nuiget.vsix
 ## Known Issues
 | Issue | Status |
 |-------|--------|
-| 13 dev-only `npm audit` warnings (3 moderate ajv + 10 high minimatch) | All dev-only, not in VSIX. Root cause: eslint 9 depends on ajv v6 (no patched release) and minimatch v3 (needs v10.2.1+). Override ajv to v8 breaks eslint. eslint 10 fixes minimatch but `eslint-plugin-react-hooks` stable doesn't support eslint 10 yet (canary 7.1.0 from Feb 2026 does). **Revisit when react-hooks stable supports eslint 10.** |
+| 3 dev-only `npm audit` vulnerabilities (1 low, 1 moderate, 1 high) | All dev-only, not in VSIX. Root cause: eslint 9 depends on ajv v6 (moderate — no patched v6 release) and minimatch v3 (high — needs v10.2.1+). `@vscode/vsce` also depends on minimatch v3 and contributes 1 low-severity transitive vulnerability. Override ajv to v8 breaks eslint. eslint 10 fixes both ajv and minimatch, but `eslint-plugin-react-hooks` stable (v7.0.1) doesn't support eslint 10 yet. **Revisit when react-hooks stable supports eslint 10.** |
 
 ## VS Code Extension
 | Issue | Solution |
@@ -79,7 +79,7 @@ npm run package:vsix # Outputs nuiget.vsix
 | StrictMode double-render | Expected behavior — verifies cleanup functions |
 | **setState updater side effects** | **Never** call `postMessage()` or side effects inside `setState(prev => {...})` — StrictMode runs updaters twice. Use flag variable inside, call side effect outside. |
 | **Async setState variable assignment** | **CRITICAL:** Never assign `let x` inside `setState(prev => {...})` and read after — React 19 runs updaters async, `x` stays initial. Use `useRef` mirror pattern (see `transitiveLoadingMetadataRef`). |
-| Stale closures in `useCallback([])` | Use `handleMessageRef` pattern: regular function assigned to `ref.current` each render, one `useEffect([])` listener calls `ref.current(e)`. For state needed in handlers that can't re-register, use `useRef` mirrors (e.g., `selectedSourceRef`, `selectedProjectRef`). |
+| Stale closures in `useCallback([])` | App.tsx uses `useCallback(fn, [])` with individual `useRef` mirrors (`selectedProjectRef`, `selectedSourceRef`, `activeTabRef`, etc.) synced via `useEffect`. SidebarApp.tsx uses the `handleMessageRef` pattern: regular function assigned to `ref.current` each render, one `useEffect([])` listener calls `ref.current(e)`. |
 | Inline callbacks defeat React.memo | Extract callbacks to `useCallback([])` (e.g., `handleSashReset`, `handleSashDragEnd`, `handleToggleDep`). Inline arrows create new refs every render. |
 | Icons not loading | CSP: `img-src https://api.nuget.org https://*.nuget.org data:;`. Use flat container API, not registration iconUrl. |
 | README images not loading | CSP includes: `github.com`, `githubusercontent.com`, `shields.io`, `opencollective.com`, `codecov.io`, `badge.fury.io`, `travis-ci.*`, `appveyor.com`, `coveralls.io`, `snyk.io`, `codacy.com`, `sonarcloud.io`, `badgen.net`, `circleci.com`, `azure/visualstudio` |
@@ -156,7 +156,7 @@ npm run package:vsix # Outputs nuiget.vsix
 | Module extraction locations | Validators (`isValidPackageId`, etc.) are in `NuGetUtils.ts`. Types (`NuGetSource`, `Project`, etc.) are in `NuGetTypes.ts`. `NuGetConfigParser` re-exports `NuGetSource` from `NuGetTypes`. Markdown rendering is in `markdownSetup.ts`. |
 | `fetchJsonHttp1` redirect safety | Has `maxRedirects = 5` default — never remove. Without it, a redirect loop causes unbounded recursion → stack overflow. |
 | `fetchJsonHttp1` truncated response | `resolved` flag guards `res.on('end')` after `req.destroy()` for MAX_RESPONSE_SIZE. Don't remove — `end` fires after destroy and `JSON.parse` throws on truncated data. |
-| Concurrent mutating operations | `_operationInProgress` boolean in `NuGetPanel`. Guards 7 cases: `installPackage`, `updatePackage`, `removePackage`, `bulkInstall`, `bulkUpdateAllProjects`, `bulkUpdatePackages`, `confirmBulkRemove`. Each uses `if (this._operationInProgress) { break; }` + try/finally. |
+| Concurrent mutating operations | `_operationInProgress` boolean in `NuGetPanel`. Guards 8 cases: `installPackage`, `updatePackage`, `removePackage`, `bulkInstall`, `bulkUpdateAllProjects`, `bulkUpdatePackages`, `confirmBulkRemove`, `confirmBulkRemoveAllProjects`. Each uses `if (this._operationInProgress) { break; }` + try/finally. |
 | Sidebar `_forceCheckPending` | When `checkUpdatesInBackground(force=true)` is called during an in-flight check, `_forceCheckPending` queues a re-run in `finally`. Don't bypass — prevents dropped `.csproj` change events. |
 | Package selection | Use `usePackageSelection` hook. Installed: `metadataVersion: pkg.resolvedVersion`. Updates: synthetic `InstalledPackage`. |
 | Bulk operation notification spam | `updatePackage()` and `removePackage()` have `skipNotification` option. All bulk callers (`bulkUpdatePackages`, `bulkUpdateAllProjects`, `confirmBulkRemove`) must pass `{ skipNotification: true }` — the bulk loop's summary notification handles reporting. |

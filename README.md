@@ -131,8 +131,8 @@ nUIget provides **browse and search** capabilities for authenticated NuGet feeds
 Credentials are resolved in priority order:
 
 1. **nuget.config** - `<packageSourceCredentials>` section (recommended)
-2. **Windows Credential Manager** - Cached credentials from `dotnet restore --interactive`
-3. **Azure Artifacts Credential Provider** - For Azure DevOps feeds (if installed)
+2. **Azure Artifacts Credential Provider** - For Azure DevOps feeds (if installed)
+3. **Environment variable tokens** - `VSS_NUGET_ACCESSTOKEN` or `ARTIFACTS_CREDENTIALPROVIDER_ACCESSTOKEN`
 
 ### Credential Security
 
