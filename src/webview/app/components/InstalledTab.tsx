@@ -1259,7 +1259,7 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
                                 </div>
                             ) : (
                                 /* Render each framework as a collapsible section */
-                                transitiveFrameworks.map((framework, index) => {
+                                transitiveFrameworks.map((framework, _index) => {
                                     const isExpanded = transitiveExpandedFrameworks.has(framework.targetFramework);
                                     const isLoadingMetadata = transitiveLoadingMetadata.has(framework.targetFramework);
                                     return (

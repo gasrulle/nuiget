@@ -69,7 +69,7 @@ npm run package:vsix # Outputs nuiget.vsix
 | Issue | Solution |
 |-------|----------|
 | Context menu not showing | Use regex: `resourceFilename =~ /\\.(csproj\|fsproj\|vbproj)$/` |
-| Watch task hangs preLaunchTask | Use esbuild problemMatcher with `endsPattern: "^\\[watch\\] build finished"` |
+| Watch task hangs preLaunchTask | Compound `watch` task uses `dependsOn` with `npm: watch:esbuild` + `npm: watch:tsc`. esbuild plugin emits `[watch] build started`/`[watch] build finished`. tsc uses `$tsc-watch` matcher. |
 | preLaunchTask fails | Use explicit task label ("watch") not "${defaultBuildTask}" |
 
 ## React 19 / Webview

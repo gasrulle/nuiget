@@ -2,32 +2,55 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "type": "npm",
-            "script": "watch",
             "label": "watch",
-            "isBackground": true,
+            "dependsOn": [
+                "npm: watch:tsc",
+                "npm: watch:esbuild"
+            ],
             "presentation": {
                 "reveal": "never"
             },
             "group": {
                 "kind": "build",
                 "isDefault": true
-            },
+            }
+        },
+        {
+            "type": "npm",
+            "script": "watch:esbuild",
+            "group": "build",
             "problemMatcher": {
                 "owner": "esbuild",
                 "fileLocation": "absolute",
                 "pattern": {
-                    "regexp": "^✘ \\[ERROR\\] (.*)\\n\\n\\s+(.+):(\\d+):(\\d+):",
-                    "message": 1,
-                    "file": 2,
-                    "line": 3,
-                    "column": 4
+                    "regexp": "^\\s+(.+):(\\d+):(\\d+):$",
+                    "file": 1,
+                    "line": 2,
+                    "column": 3
                 },
                 "background": {
                     "activeOnStart": true,
-                    "beginsPattern": "^\\[watch\\]",
-                    "endsPattern": "^\\[watch\\] Build started"
+                    "beginsPattern": "^\\[watch\\] build started$",
+                    "endsPattern": "^\\[watch\\] build finished$"
                 }
+            },
+            "isBackground": true,
+            "label": "npm: watch:esbuild",
+            "presentation": {
+                "group": "watch",
+                "reveal": "never"
+            }
+        },
+        {
+            "type": "npm",
+            "script": "watch:tsc",
+            "group": "build",
+            "problemMatcher": "$tsc-watch",
+            "isBackground": true,
+            "label": "npm: watch:tsc",
+            "presentation": {
+                "group": "watch",
+                "reveal": "never"
             }
         },
         {
@@ -43,21 +66,11 @@
         {
             "label": "Package nUIget vsix",
             "type": "shell",
-            "command": "npm install && npx tsc --noEmit && node esbuild.mjs --production && node -e \"const v=require('./package.json').version;require('child_process').execSync('npx vsce package --out nuiget-v'+v+'.vsix',{stdio:'inherit'})\"",
-            "windows": {
-                "options": {
-                    "shell": {
-                        "executable": "cmd.exe",
-                        "args": [
-                            "/d",
-                            "/c"
-                        ]
-                    }
-                }
-            },
+            "command": "npm run package:vsix",
             "problemMatcher": [],
             "presentation": {
-                "reveal": "always"
+                "reveal": "always",
+                "panel": "new"
             },
             "group": "build"
         }

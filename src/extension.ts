@@ -36,7 +36,7 @@ export function activate(context: vscode.ExtensionContext) {
     updateProjectFilesContext();
     const projectFileWatcher = vscode.workspace.createFileSystemWatcher('**/*.{csproj,fsproj,vbproj}');
     const debouncedUpdate = () => {
-        if (projectFileDebounce) clearTimeout(projectFileDebounce);
+        if (projectFileDebounce) {clearTimeout(projectFileDebounce);}
         projectFileDebounce = setTimeout(updateProjectFilesContext, 1500);
     };
     projectFileWatcher.onDidCreate(debouncedUpdate);

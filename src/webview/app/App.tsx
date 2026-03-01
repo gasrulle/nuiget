@@ -580,7 +580,7 @@ export const App: React.FC = () => {
                     setLoadingReadme(false);
                     if (message.readme) {
                         setPackageMetadata(prev => {
-                            if (prev) return { ...prev, readme: message.readme };
+                            if (prev) { return { ...prev, readme: message.readme }; }
                             // packageMetadata may be null — create minimal object for readme
                             return {
                                 id: message.packageId,
@@ -621,6 +621,7 @@ export const App: React.FC = () => {
                 }
                 break;
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- Intentional: uses useRef mirrors for all state (see ARCHITECTURE.md stale closures pattern)
     }, []);
 
     useEffect(() => {
@@ -689,6 +690,7 @@ export const App: React.FC = () => {
                 });
             }
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- Intentional: selectedPackage/selectedSource read via refs, only triggers on includePrerelease change
     }, [includePrerelease]);
 
     // Save selectedSource setting when it changes (only after settings loaded)
@@ -749,6 +751,7 @@ export const App: React.FC = () => {
                 setSelectedVersion(updatedPkg.latestVersion);
             }
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- Intentional: reads activeTab/selectedPackage/selectedVersion without re-triggering on their changes
     }, [packagesWithUpdates]);
 
     // Reset "Load All Projects" mode when switching away from Updates tab
@@ -758,6 +761,7 @@ export const App: React.FC = () => {
             setAllProjectsUpdates([]);
             setLoadingAllProjectsUpdates(false);
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- Intentional: loadAllProjects is a guard condition, not a trigger
     }, [activeTab]);
 
     // Reset "Load All Projects" mode for Installed tab when switching away
@@ -767,6 +771,7 @@ export const App: React.FC = () => {
             setAllProjectsInstalled([]);
             setLoadingAllProjectsInstalled(false);
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- Intentional: loadAllProjectsInstalled is a guard condition, not a trigger
     }, [activeTab]);
 
     // Callback to handle Load All checkbox change
@@ -826,13 +831,13 @@ export const App: React.FC = () => {
             !readmeAttempted
         ) {
             // Already have readme loaded
-            if (packageMetadata?.readme) return;
+            if (packageMetadata?.readme) { return; }
             // In normal mode, wait for packageMetadata to load first
-            if (!packageMetadata) return;
+            if (!packageMetadata) { return; }
 
             const pkgId = packageMetadata?.id || getPackageId(selectedPackage);
             const version = packageMetadata?.version || selectedVersionRef.current;
-            if (!version) return;
+            if (!version) { return; }
 
             // Mark as attempted so we don't retry
             setReadmeAttempted(true);
@@ -890,7 +895,7 @@ export const App: React.FC = () => {
 
     // Memoize sanitized README HTML to avoid re-sanitizing on every render
     const sanitizedReadmeHtml = useMemo(() => {
-        if (!packageMetadata?.readme) return '';
+        if (!packageMetadata?.readme) { return ''; }
         return renderMarkdownToHtml(packageMetadata.readme);
     }, [packageMetadata?.readme]);
 
@@ -902,7 +907,7 @@ export const App: React.FC = () => {
     const handleToggleDep = useCallback((key: string) => {
         setExpandedDeps(prev => {
             const next = new Set(prev);
-            if (next.has(key)) next.delete(key); else next.add(key);
+            if (next.has(key)) { next.delete(key); } else { next.add(key); }
             return next;
         });
     }, []);
@@ -951,7 +956,7 @@ export const App: React.FC = () => {
         if (!project) { return; }
         setLoadingInstalled(true);
         vscode.postMessage({ type: 'getInstalledPackages', projectPath: project });
-    }, [vscode]);
+    }, []);
 
     // Keyboard navigation handler for package lists - returns a keydown handler
     // packages: array to navigate, getCurrentId: get currently selected id, triggerClick: function to call on selection

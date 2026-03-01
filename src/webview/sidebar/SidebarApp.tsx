@@ -42,7 +42,7 @@ const FILTER_PREFIXES = ['@installed', '@updates'] as const;
 
 function parseSearchQuery(query: string): ParsedQuery {
     const trimmed = query.trim();
-    if (!trimmed) return { mode: 'default', filterText: '' };
+    if (!trimmed) { return { mode: 'default', filterText: '' }; }
 
     const lower = trimmed.toLowerCase();
     for (const prefix of FILTER_PREFIXES) {
@@ -69,10 +69,10 @@ export const SidebarApp: React.FC = () => {
 
     // Accordion state for default mode (only 'installed' | 'updates' | null)
     const [expandedSection, setExpandedSection] = useState<'installed' | 'updates' | null>(null);
-    const [sources, setSources] = useState<NuGetSource[]>([]);
+    const [, setSources] = useState<NuGetSource[]>([]);
     const [selectedSource, setSelectedSource] = useState('all');
     const [selectedProject, setSelectedProject] = useState('');
-    const [selectedProjectName, setSelectedProjectName] = useState('');
+    const [, setSelectedProjectName] = useState('');
     const [projects, setProjects] = useState<Project[]>([]);
     const [includePrerelease, setIncludePrerelease] = useState(false);
 
@@ -130,10 +130,10 @@ export const SidebarApp: React.FC = () => {
     const matchingFilters = useMemo(() => {
         const trimmed = searchQuery.trim().toLowerCase();
         // Show dropdown when text starts with @ but is not yet a complete valid prefix
-        if (!trimmed.startsWith('@')) return [];
+        if (!trimmed.startsWith('@')) { return []; }
         // If already a complete prefix (possibly with filter text), don't show dropdown
         for (const prefix of FILTER_PREFIXES) {
-            if (trimmed === prefix || trimmed.startsWith(prefix + ' ')) return [];
+            if (trimmed === prefix || trimmed.startsWith(prefix + ' ')) { return []; }
         }
         // Filter the available prefixes by what the user has typed so far
         return FILTER_PREFIXES.filter(p => p.startsWith(trimmed));
@@ -159,7 +159,7 @@ export const SidebarApp: React.FC = () => {
 
     // ─── Message Handler ─────────────────────────────────────────────────────
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     const handleMessage = useCallback((message: any) => {
         switch (message.type) {
             case 'focusSearch':
@@ -167,13 +167,13 @@ export const SidebarApp: React.FC = () => {
                 setTimeout(() => searchInputRef.current?.focus(), 50);
                 break;
             case 'state':
-                if (message.selectedSource) setSelectedSource(message.selectedSource);
+                if (message.selectedSource) { setSelectedSource(message.selectedSource); }
                 if (message.selectedProject) {
                     setSelectedProject(message.selectedProject);
                     const name = message.selectedProject.split(/[\\/]/).pop()?.replace(/\.(csproj|fsproj|vbproj)$/, '') || '';
                     setSelectedProjectName(name);
                 }
-                if (message.includePrerelease !== undefined) setIncludePrerelease(message.includePrerelease);
+                if (message.includePrerelease !== undefined) { setIncludePrerelease(message.includePrerelease); }
                 break;
             case 'projects':
                 setProjects(message.projects || []);
@@ -352,7 +352,7 @@ export const SidebarApp: React.FC = () => {
     // In default mode: fetch when Installed or Updates section is expanded
     // In @installed/@updates mode: fetch if not already loaded
     useEffect(() => {
-        if (!selectedProject) return;
+        if (!selectedProject) { return; }
 
         const needsInstalled = (
             (searchMode === 'default' && (expandedSection === 'installed' || expandedSection === 'updates')) ||
@@ -399,7 +399,7 @@ export const SidebarApp: React.FC = () => {
     // ─── Search Handlers ─────────────────────────────────────────────────────
 
     const dispatchBrowseSearch = useCallback((query: string) => {
-        if (!query.trim() || query.trim().length < 2) return;
+        if (!query.trim() || query.trim().length < 2) { return; }
         setLoadingSearch(true);
         const sourcesToSearch = selectedSourceRef.current === 'all'
             ? undefined
@@ -481,14 +481,14 @@ export const SidebarApp: React.FC = () => {
         if (e.key === 'ArrowDown' && !showFilterDropdown) {
             e.preventDefault();
             const mode = searchModeRef.current;
-            if (mode === 'browse') browseListRef.current?.focus();
-            else if (mode === 'installed') installedListRef.current?.focus();
-            else if (mode === 'updates') updatesListRef.current?.focus();
+            if (mode === 'browse') { browseListRef.current?.focus(); }
+            else if (mode === 'installed') { installedListRef.current?.focus(); }
+            else if (mode === 'updates') { updatesListRef.current?.focus(); }
             else {
                 // Default mode — focus the expanded section's list
                 const section = expandedSectionRef.current;
-                if (section === 'installed') installedListRef.current?.focus();
-                else if (section === 'updates') updatesListRef.current?.focus();
+                if (section === 'installed') { installedListRef.current?.focus(); }
+                else if (section === 'updates') { updatesListRef.current?.focus(); }
             }
         }
     }, [showFilterDropdown, matchingFilters, filterDropdownIndex, selectFilter, dispatchBrowseSearch, searchQuery]);
@@ -501,7 +501,7 @@ export const SidebarApp: React.FC = () => {
     // Client-side filter for Installed / Updates
     const filteredInstalled = useMemo(() => {
         const q = (searchMode === 'installed' ? filterText : searchQuery).toLowerCase();
-        if (!q) return installedPackages;
+        if (!q) { return installedPackages; }
         return installedPackages.filter(p =>
             p.id.toLowerCase().includes(q) ||
             (p.authors && p.authors.toLowerCase().includes(q))
@@ -510,7 +510,7 @@ export const SidebarApp: React.FC = () => {
 
     const filteredUpdates = useMemo(() => {
         const q = (searchMode === 'updates' ? filterText : searchQuery).toLowerCase();
-        if (!q) return packageUpdates;
+        if (!q) { return packageUpdates; }
         return packageUpdates.filter(p => p.id.toLowerCase().includes(q));
     }, [packageUpdates, searchQuery, searchMode, filterText]);
 
@@ -548,7 +548,7 @@ export const SidebarApp: React.FC = () => {
         }
     ) => {
         return (e: React.KeyboardEvent<HTMLDivElement>) => {
-            if (packages.length === 0) return;
+            if (packages.length === 0) { return; }
 
             const currentId = selectedPackageIdRef.current;
             const currentIndex = currentId
@@ -576,7 +576,7 @@ export const SidebarApp: React.FC = () => {
             if (e.key === 'ArrowDown') {
                 e.preventDefault();
                 newIndex = currentIndex < packages.length - 1 ? currentIndex + 1 : currentIndex;
-                if (currentIndex === -1) newIndex = 0;
+                if (currentIndex === -1) { newIndex = 0; }
             } else if (e.key === 'ArrowUp') {
                 e.preventDefault();
                 if (currentIndex <= 0) {
@@ -610,7 +610,7 @@ export const SidebarApp: React.FC = () => {
     // ─── Package Actions ─────────────────────────────────────────────────────
 
     const handleBrowsePrimaryAction = useCallback((packageId: string) => {
-        if (!selectedProjectRef.current) return;
+        if (!selectedProjectRef.current) { return; }
         const installed = installedPackagesRef.current.find(
             p => p.id.toLowerCase() === packageId.toLowerCase()
         );
@@ -630,7 +630,7 @@ export const SidebarApp: React.FC = () => {
     }, []);
 
     const handleInstalledPrimaryAction = useCallback((packageId: string) => {
-        if (!selectedProjectRef.current) return;
+        if (!selectedProjectRef.current) { return; }
         vscode.postMessage({
             type: 'removePackage',
             projectPath: selectedProjectRef.current,
@@ -639,7 +639,7 @@ export const SidebarApp: React.FC = () => {
     }, []);
 
     const handleUpdatesPrimaryAction = useCallback((packageId: string) => {
-        if (!selectedProjectRef.current) return;
+        if (!selectedProjectRef.current) { return; }
         const update = packageUpdatesRef.current.find(
             u => u.id.toLowerCase() === packageId.toLowerCase()
         );
@@ -693,7 +693,7 @@ export const SidebarApp: React.FC = () => {
     }, []);
 
     const handleUpdateAll = useCallback(() => {
-        if (!selectedProjectRef.current) return;
+        if (!selectedProjectRef.current) { return; }
 
         if (loadAllProjectsRef.current) {
             const projectUpdatesPayload = allProjectsUpdatesRef.current.map(pu => ({
@@ -737,11 +737,11 @@ export const SidebarApp: React.FC = () => {
                 {
                     onAction: (pkg) => {
                         const inst = installedMap.get(pkg.id.toLowerCase());
-                        if (!inst) handleBrowsePrimaryAction(pkg.id);
+                        if (!inst) { handleBrowsePrimaryAction(pkg.id); }
                     },
                     onDelete: (pkg) => {
                         const inst = installedMap.get(pkg.id.toLowerCase());
-                        if (inst) handleBrowsePrimaryAction(pkg.id);
+                        if (inst) { handleBrowsePrimaryAction(pkg.id); }
                     }
                 }
             )}

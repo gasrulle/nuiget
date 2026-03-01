@@ -558,7 +558,7 @@ export class Http2Client {
                     }
                 });
                 res.on('end', () => {
-                    if (resolved) return;
+                    if (resolved) {return;}
                     try {
                         resolve(JSON.parse(data));
                     } catch {

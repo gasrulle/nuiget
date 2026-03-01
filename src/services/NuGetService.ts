@@ -239,7 +239,7 @@ export class NuGetService {
     private async getSdkMajorVersion(projectPath: string): Promise<number> {
         const projectDir = path.dirname(projectPath);
         const cached = this._sdkVersionCache.get(projectDir);
-        if (cached !== undefined) return cached;
+        if (cached !== undefined) { return cached; }
 
         try {
             const { stdout } = await execWithTimeout('dotnet --version', { timeout: 10000, cwd: projectDir });
@@ -1509,10 +1509,6 @@ export class NuGetService {
                 const authors = Array.isArray(item.authors)
                     ? item.authors.join(', ')
                     : (item.authors ?? '');
-
-                // Extract all version strings for cache, but only expose latest in result
-                // to match CLI output shape (CLI returns only [latestVersion])
-                const allVersions = item.versions?.map(v => v.version) ?? [item.version];
 
                 const pkg: PackageSearchResult = {
                     id: item.id,

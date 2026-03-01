@@ -113,7 +113,7 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
         // File watcher: *.csproj, *.fsproj, *.vbproj changes → debounced re-check
         const watcher = vscode.workspace.createFileSystemWatcher('**/*.{csproj,fsproj,vbproj}');
         const triggerDebounced = () => {
-            if (this._fileWatcherDebounce) clearTimeout(this._fileWatcherDebounce);
+            if (this._fileWatcherDebounce) { clearTimeout(this._fileWatcherDebounce); }
             this._fileWatcherDebounce = setTimeout(() => {
                 // Tell webview to re-fetch installed packages (csproj content changed)
                 if (!this._disposed && this._view) {
@@ -144,7 +144,7 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
 
         try {
             const projects = await this._nugetService.findProjects();
-            if (projects.length === 0) return;
+            if (projects.length === 0) { return; }
 
             // Auto-select first project if none selected
             if (!this._selectedProject && projects.length > 0) {
@@ -152,7 +152,6 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
                 this._updateTitle();
             }
 
-            let totalUpdates = 0;
             let selectedProjectInstalledCount = -1;
             const allProjectUpdates: { projectPath: string; projectName: string; updates: { id: string; installedVersion: string; latestVersion: string }[] }[] = [];
 
@@ -177,7 +176,6 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
                     selectedProjectInstalledCount = installed.length;
                 }
                 if (updates.length > 0) {
-                    totalUpdates += updates.length;
                     allProjectUpdates.push({
                         projectPath: project.path,
                         projectName: project.name,
@@ -361,7 +359,7 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
 
     /** Update the sidebar title bar description with the current project name */
     private _updateTitle(projectName?: string): void {
-        if (!this._view) return;
+        if (!this._view) { return; }
         if (projectName) {
             this._view.title = projectName.replace(/\.(csproj|fsproj|vbproj)$/, '');
         } else if (this._selectedProject) {
@@ -403,7 +401,7 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
                         query, sources, data.includePrerelease as boolean | undefined, true /* liteMode */
                     );
 
-                    if (this._latestSearchQuery !== query) break;
+                    if (this._latestSearchQuery !== query) { break; }
 
                     this._postMessage({ type: 'searchResults', results, query });
                     break;
@@ -439,7 +437,6 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
                     const includePrerelease = data.includePrerelease as boolean;
                     const projects = await this._nugetService.findProjects();
                     const allProjectsUpdates: { projectPath: string; projectName: string; updates: { id: string; installedVersion: string; latestVersion: string }[] }[] = [];
-                    let totalUpdates = 0;
 
                     for (const project of projects) {
                         try {
@@ -447,7 +444,6 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
                             if (installedPackages.length > 0) {
                                 const updates = await this._nugetService.checkPackageUpdatesMinimal(installedPackages, includePrerelease);
                                 if (updates.length > 0) {
-                                    totalUpdates += updates.length;
                                     allProjectsUpdates.push({
                                         projectPath: project.path,
                                         projectName: project.name,
@@ -580,7 +576,7 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
                             const success = await this._nugetService.updatePackage(
                                 projectPath, pkg.id, pkg.version, { skipChannelSetup: true, skipNotification: true, skipRestore: true }
                             );
-                            if (success) successCount++; else failCount++;
+                            if (success) { successCount++; } else { failCount++; }
                         }
 
                         // Run a single restore after all packages are updated
@@ -603,7 +599,7 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
             case 'bulkUpdateAllProjects':
                 {
                     const projectUpdates = data.projectUpdates as { projectPath: string; projectName: string; packages: { id: string; version: string }[] }[];
-                    if (!projectUpdates || projectUpdates.length === 0) break;
+                    if (!projectUpdates || projectUpdates.length === 0) { break; }
 
                     // Build project-level dependency map from <ProjectReference> elements
                     const isWindows = process.platform === 'win32';
@@ -753,7 +749,7 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
             title: `nUIget — ${packageId}`
         });
 
-        if (!selected) return;
+        if (!selected) { return; }
 
         const label = selected.label;
 

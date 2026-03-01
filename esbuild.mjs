@@ -3,6 +3,24 @@ import * as esbuild from 'esbuild';
 const isProduction = process.argv.includes('--production');
 const isWatch = process.argv.includes('--watch');
 
+/** @type {import('esbuild').Plugin} */
+const esbuildProblemMatcherPlugin = {
+    name: 'esbuild-problem-matcher',
+    setup(build) {
+        build.onStart(() => {
+            console.log('[watch] build started');
+        });
+        build.onEnd((result) => {
+            result.errors.forEach(({ text, location }) => {
+                console.error(`\u2718 [ERROR] ${text}`);
+                if (location == null) return;
+                console.error(`    ${location.file}:${location.line}:${location.column}:`);
+            });
+            console.log('[watch] build finished');
+        });
+    },
+};
+
 /** @type {import('esbuild').BuildOptions} */
 const extensionConfig = {
     entryPoints: ['src/extension.ts'],
@@ -13,7 +31,8 @@ const extensionConfig = {
     external: ['vscode'],
     sourcemap: !isProduction, // Source maps only in development
     minify: isProduction,
-    logLevel: 'info',
+    plugins: [esbuildProblemMatcherPlugin],
+    logLevel: 'warning',
 };
 
 /** @type {import('esbuild').BuildOptions} */
@@ -33,7 +52,8 @@ const webviewConfig = {
         '.tsx': 'tsx',
         '.ts': 'ts',
     },
-    logLevel: 'info',
+    plugins: [esbuildProblemMatcherPlugin],
+    logLevel: 'warning',
 };
 
 /** @type {import('esbuild').BuildOptions} */
@@ -53,7 +73,8 @@ const sidebarConfig = {
         '.tsx': 'tsx',
         '.ts': 'ts',
     },
-    logLevel: 'info',
+    plugins: [esbuildProblemMatcherPlugin],
+    logLevel: 'warning',
 };
 
 async function build() {
@@ -72,7 +93,7 @@ async function build() {
                 sidebarCtx.watch(),
             ]);
 
-            console.log('[watch] Build started. Watching for changes...');
+            console.log('[watch] Watching for changes...');
         } else {
             // One-shot build
             await Promise.all([

@@ -351,6 +351,7 @@ const BrowseTab = forwardRef<BrowseTabHandle, BrowseTabProps>(function BrowseTab
                 clearTimeout(quickSearchTimeoutRef.current);
             }
         };
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- vscode is outer-scope constant, stable across renders
     }, [activeTab, deferredSearchQuery, selectedSource, includePrerelease, searchDebounceMode]);
 
     // --- Full search debounce - 300ms ---
@@ -387,6 +388,7 @@ const BrowseTab = forwardRef<BrowseTabHandle, BrowseTabProps>(function BrowseTab
                 clearTimeout(fullSearchTimeoutRef.current);
             }
         };
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- vscode is outer-scope constant; onSetSelectedPackage is stable useCallback prop
     }, [activeTab, searchQuery, selectedSource, includePrerelease, searchDebounceMode]);
 
     // --- Recent search tracking ---
@@ -418,6 +420,7 @@ const BrowseTab = forwardRef<BrowseTabHandle, BrowseTabProps>(function BrowseTab
                 clearTimeout(recentSearchTimeoutRef.current);
             }
         };
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- onSetRecentSearches is stable useCallback prop
     }, [activeTab, searchQuery, selectedSource, includePrerelease, searchDebounceMode]);
 
     // --- Callbacks ---
@@ -447,6 +450,7 @@ const BrowseTab = forwardRef<BrowseTabHandle, BrowseTabProps>(function BrowseTab
                 includePrerelease: includePrerelease
             });
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- vscode/onSet* are stable outer-scope or useCallback props
     }, [searchQuery, selectedSource, enabledSources, includePrerelease]);
 
     const selectQuickSearchItem = useCallback((packageId: string) => {
@@ -474,6 +478,7 @@ const BrowseTab = forwardRef<BrowseTabHandle, BrowseTabProps>(function BrowseTab
                 return [packageId, ...filtered].slice(0, recentSearchesLimitRef.current);
             });
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- vscode/onSet* are stable outer-scope or useCallback props
     }, [selectedSource, enabledSources, includePrerelease]);
 
     const getSourceForFlatIndex = useCallback((flatIndex: number): string => {
@@ -514,6 +519,7 @@ const BrowseTab = forwardRef<BrowseTabHandle, BrowseTabProps>(function BrowseTab
             includePrerelease: includePrerelease,
             take: 5
         });
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- vscode is outer-scope constant; versionsCache is a ref
     }, [getSourceForFlatIndex, includePrerelease]);
 
     const collapseQuickSearchVersions = useCallback(() => {
@@ -546,6 +552,7 @@ const BrowseTab = forwardRef<BrowseTabHandle, BrowseTabProps>(function BrowseTab
             packageId,
             version
         });
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- vscode/onSetRecentSearches are stable outer-scope or useCallback props
     }, [selectedProject, collapseQuickSearchVersions]);
 
     const selectRecentSearchItem = useCallback((search: string) => {
@@ -566,6 +573,7 @@ const BrowseTab = forwardRef<BrowseTabHandle, BrowseTabProps>(function BrowseTab
             sources: sourcesToSearch,
             includePrerelease: includePrerelease
         });
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- vscode/onSet* are stable outer-scope or useCallback props
     }, [selectedSource, enabledSources, includePrerelease]);
 
     // --- Render ---
