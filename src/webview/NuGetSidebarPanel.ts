@@ -348,6 +348,8 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
 
     /** Full sidebar refresh: re-send sources, tell webview to re-fetch, and update badge */
     public async refreshSidebar(): Promise<void> {
+        // Clear dotnet NuGet HTTP cache so freshly published versions are discovered
+        await this._nugetService.clearNuGetHttpCache();
         // Re-send sources (cache was just cleared by the caller)
         const sources = await this._nugetService.getSources();
         this._postMessage({ type: 'sources', sources: sources.filter(s => s.enabled) });
@@ -715,6 +717,8 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
         const latestVersion = data.latestVersion as string | undefined;
         const context = data.context as 'browse' | 'installed' | 'updates';
         const projectPath = data.projectPath as string;
+        const versionType = data.versionType as string | undefined;
+        const isFloatingOrRange = versionType === 'floating' || versionType === 'range';
 
         if (!projectPath) {
             vscode.window.showWarningMessage('Please select a project first.');
@@ -736,7 +740,10 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
             items.push({ label: '$(list-ordered) Change Version...', description: 'Select a specific version' });
             items.push({ label: '$(close) Uninstall', description: installedVersion || '' });
         } else if (context === 'updates') {
-            items.push({ label: '$(arrow-up) Update to ' + (latestVersion || 'latest'), description: '' });
+            // Don't offer direct update for floating/range versions — they use patterns, not fixed versions
+            if (!isFloatingOrRange) {
+                items.push({ label: '$(arrow-up) Update to ' + (latestVersion || 'latest'), description: '' });
+            }
             items.push({ label: '$(list-ordered) Update to Version...', description: 'Select a specific version' });
             items.push({ label: '$(close) Uninstall', description: installedVersion || '' });
         }

@@ -179,6 +179,25 @@ export class WorkspaceCache {
     }
 
     /**
+     * Clear all cache entries whose key starts with the given prefix.
+     * Useful for invalidating a category of cached data (e.g., all version entries).
+     */
+    clearByPrefix(prefix: string): void {
+        const fullPrefix = WorkspaceCache.CACHE_PREFIX + prefix;
+        const keysToDelete: string[] = [];
+        this.memoryCache.forEach((_, key) => {
+            if (key.startsWith(fullPrefix)) {
+                keysToDelete.push(key);
+            }
+        });
+
+        for (const key of keysToDelete) {
+            this.memoryCache.delete(key);
+            this.context?.workspaceState.update(key, undefined);
+        }
+    }
+
+    /**
      * Get cache statistics for debugging.
      */
     getStats(): { entries: number; keys: string[] } {

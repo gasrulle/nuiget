@@ -288,7 +288,11 @@ export const SidebarApp: React.FC = () => {
                     setInstalledPackages([]);
                     setPackageUpdates([]);
                     setAllProjectsUpdates([]);
+                    setAllProjectsInstalled([]);
                     setSelectedPackageId(null);
+                    // Reset "load all projects" toggles so icons don't show stale state
+                    setLoadAllProjects(false);
+                    setLoadAllProjectsInstalled(false);
                     vscode.postMessage({
                         type: 'getInstalledPackages',
                         projectPath: message.projectPath
@@ -687,6 +691,7 @@ export const SidebarApp: React.FC = () => {
             packageId,
             installedVersion: installed?.resolvedVersion || installed?.version,
             latestVersion,
+            versionType: installed?.versionType,
             context,
             projectPath: projectPath || selectedProjectRef.current
         });

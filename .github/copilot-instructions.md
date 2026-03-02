@@ -126,6 +126,11 @@ npm run package:vsix # Outputs nuiget.vsix
 | `.csproj` file watcher must forceRefresh webview | The debounced `.csproj` watcher must both send `forceRefresh` to the webview (to clear stale state) AND call `checkUpdatesInBackground(true)` with force AND call `_notifyMainPanel()`. Just calling the background check is insufficient — the webview still shows old data, and omitting the main panel notification means external changes (e.g. `git checkout .`) won't refresh the main panel. |
 | `handleUpdateAll` data source mismatch | Badge count uses 3-tier fallback (`allProjectsUpdates` sum → `packageUpdates.length` → single-project lookup). But `handleUpdateAll` in single-project mode only reads `packageUpdatesRef`. Must fallback to `allProjectsUpdatesRef.current.find(...)` when `packageUpdatesRef` is empty. |
 | `totalUpdateCount` 3-tier fallback | Tier 1: sum of all `allProjectsUpdates[].updates.length`. Tier 2: `packageUpdates.length`. Tier 3: `allProjectsUpdates.find(selected project)?.updates.length`. Any code consuming the badge count must handle that the data may come from any tier. |
+| `loadAllProjects` not reset on project change | `projectChanged` handler must `setLoadAllProjects(false)` and `setLoadAllProjectsInstalled(false)`. Without this, toggling "all projects" in one project stays visually toggled after switching to another. |
+| `section-content` no hardcoded max-height | Uses `flex: 1; min-height: 0;` to fill available space. Don't add `max-height` — it causes premature scroll when the sidebar has plenty of vertical room. |
+| Floating version context menu | `showContextMenu` message includes `versionType`. `_showContextMenu` skips "Update to X" for floating/range. Backend already filters floating from update checks — this is defense-in-depth for the context menu. |
+| `versionsCache` has no TTL | In-memory LRU cache never expires. `clearSourceErrors()` now calls `clearVersionsCache()` which clears both `versionsCache` and `workspaceCache` version entries. Without this, refresh doesn't pick up newly published versions. |
+| dotnet NuGet HTTP cache stale | `refreshSidebar()` calls `clearNuGetHttpCache()` (runs `dotnet nuget locals http-cache --clear`) before re-checking updates. Without this, the dotnet CLI serves stale version listings from its local HTTP cache. |
 
 ## NuGet / dotnet CLI
 | Issue | Solution |

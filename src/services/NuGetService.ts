@@ -2386,6 +2386,32 @@ export class NuGetService {
         this.iconSourceMissCount.clear();
         // Clear sources cache so fresh sources are fetched
         this.invalidateSourcesCache();
+        // Clear version caches so update checks see newly published versions
+        this.clearVersionsCache();
+    }
+
+    /**
+     * Clear all cached package version data (in-memory LRU + workspace persistent cache).
+     * Called on manual refresh to ensure update checks see newly published versions.
+     */
+    clearVersionsCache(): void {
+        this.versionsCache.clear();
+        workspaceCache.clearByPrefix('versions:');
+    }
+
+    /**
+     * Clear the dotnet NuGet HTTP cache so that fresh version listings
+     * are fetched from the server on next restore/update check.
+     * Runs `dotnet nuget locals http-cache --clear` silently.
+     */
+    async clearNuGetHttpCache(): Promise<void> {
+        try {
+            await execWithTimeout('dotnet nuget locals http-cache --clear', { timeout: 15000 });
+            this.outputChannel.info('[NuGet] Cleared dotnet NuGet HTTP cache');
+        } catch (err) {
+            // Non-critical — log and continue
+            this.outputChannel.warn('[NuGet] Failed to clear dotnet NuGet HTTP cache:', String(err));
+        }
     }
 
     /**
