@@ -67,7 +67,6 @@ export interface InstalledTabProps {
     expandedDeps: Set<string>;
 
     // Callbacks from parent
-    onRefreshAll: () => void;
     onSelectDirectPackage: (pkg: InstalledPackage, options: {
         selectedVersionValue: string;
         metadataVersion: string;
@@ -160,7 +159,6 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
         loadingReadme,
         sanitizedReadmeHtml,
         expandedDeps,
-        onRefreshAll,
         onSelectDirectPackage,
         onSelectTransitivePackage,
         clearSelection,
@@ -1066,33 +1064,6 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
                                                     ? `(${filteredInstalledPackages.length} of ${installedPackages.length})`
                                                     : `(${installedPackages.length})`}
                                             </span>
-                                        </span>
-                                        <span
-                                            className="refresh-btn"
-                                            title="Refresh installed and transitive packages"
-                                            role="button"
-                                            tabIndex={0}
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                if (selectedProject && !loadingInstalled && !loadingTransitive) {
-                                                    onRefreshAll();
-                                                    doResetTransitiveState(true, true);
-                                                }
-                                            }}
-                                            onKeyDown={(e) => {
-                                                if (e.key === 'Enter' || e.key === ' ') {
-                                                    e.stopPropagation();
-                                                    e.preventDefault();
-                                                    if (selectedProject && !loadingInstalled && !loadingTransitive) {
-                                                        onRefreshAll();
-                                                        doResetTransitiveState(true, true);
-                                                    }
-                                                }
-                                            }}
-                                            aria-label="Refresh installed and transitive packages"
-                                            aria-disabled={loadingInstalled || loadingTransitive}
-                                        >
-                                            ↻
                                         </span>
                                     </button>
                                     {directPackagesExpanded && (

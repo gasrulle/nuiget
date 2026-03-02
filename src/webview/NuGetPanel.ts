@@ -104,6 +104,8 @@ export class NuGetPanel {
     public static onProjectChanged: ((value: string) => void) | undefined;
     /** Callback fired when a package is installed/updated/removed in the main panel (wired in extension.ts) */
     public static onPackageChanged: (() => void) | undefined;
+    /** Callback fired when the main panel's full refresh button is pressed (wired in extension.ts) */
+    public static onRefreshAll: (() => void) | undefined;
 
     /** Push a prerelease change into the main panel webview (called from sidebar sync) */
     public static syncPrerelease(value: boolean): void {
@@ -653,6 +655,34 @@ export class NuGetPanel {
                             });
                         }
                     });
+                    break;
+                }
+            case 'fullRefresh':
+                {
+                    // Full refresh: clear all caches, re-fetch sources, refresh webview, and sync sidebar
+                    this._nugetService.clearSourceErrors();
+                    await this._nugetService.clearNuGetHttpCache();
+                    const freshSources = await this._nugetService.getSources();
+                    this._postMessage({
+                        type: 'sources',
+                        sources: freshSources,
+                        failedSources: []
+                    });
+                    // Tell webview to re-fetch projects and installed packages
+                    this._postMessage({ type: 'refresh' });
+                    // Test connectivity in background
+                    this._nugetService.testSourceConnectivity().then(() => {
+                        const updatedFailedSources = this._nugetService.getFailedSources();
+                        if (updatedFailedSources.size > 0) {
+                            const updatedArray = Array.from(updatedFailedSources.entries()).map(([url, error]) => ({ url, error }));
+                            this._postMessage({
+                                type: 'sourceConnectivityUpdate',
+                                failedSources: updatedArray
+                            });
+                        }
+                    });
+                    // Sync sidebar: trigger full sidebar refresh
+                    NuGetPanel.onRefreshAll?.();
                     break;
                 }
             case 'enableSource':

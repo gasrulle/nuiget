@@ -36,7 +36,7 @@ export function activate(context: vscode.ExtensionContext) {
     updateProjectFilesContext();
     const projectFileWatcher = vscode.workspace.createFileSystemWatcher('**/*.{csproj,fsproj,vbproj}');
     const debouncedUpdate = () => {
-        if (projectFileDebounce) {clearTimeout(projectFileDebounce);}
+        if (projectFileDebounce) { clearTimeout(projectFileDebounce); }
         projectFileDebounce = setTimeout(updateProjectFilesContext, 1500);
     };
     projectFileWatcher.onDidCreate(debouncedUpdate);
@@ -130,6 +130,10 @@ export function activate(context: vscode.ExtensionContext) {
     };
     // Wire up cross-panel package change sync: main panel → sidebar
     NuGetPanel.onPackageChanged = () => {
+        sidebarProvider.refreshSidebar();
+    };
+    // Wire up cross-panel full refresh sync: main panel → sidebar
+    NuGetPanel.onRefreshAll = () => {
         sidebarProvider.refreshSidebar();
     };
     context.subscriptions.push(

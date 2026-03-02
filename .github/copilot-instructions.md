@@ -167,6 +167,7 @@ npm run package:vsix # Outputs nuiget.vsix
 | Bulk operation notification spam | `updatePackage()` and `removePackage()` have `skipNotification` option. All bulk callers (`bulkUpdatePackages`, `bulkUpdateAllProjects`, `confirmBulkRemove`) must pass `{ skipNotification: true }` — the bulk loop's summary notification handles reporting. |
 | Bulk operation per-package restore | `updatePackage()` and `removePackage()` have `skipRestore` option. All bulk callers must pass `{ skipRestore: true }` and call `restoreProject()` once after the loop. `dotnet add package` does implicit restore — `--no-restore` suppresses it. `dotnet remove package` does not restore — explicit call needed. |
 | Multi-project bulk op ordering | `bulkUpdateAllProjects` and `confirmBulkRemoveAllProjects` topologically sort projects by `<ProjectReference>` dependency order using `getProjectDependencyMap()`. Updates: dependencies first. Removals: dependents first. All restores deferred to a final phase after all updates/removals complete. Don't restore per-project mid-loop — causes C# Dev Kit "unable to restore" errors. |
+| InstalledTab refresh button removed | Use header-level `handleFullRefresh` + `fullRefresh` message instead. Don't re-add per-tab refresh buttons. |
 
 # Debugging Workflow
 1. Add temporary `console.log()` with distinctive prefix (e.g., `[DEBUG-XYZ]`)

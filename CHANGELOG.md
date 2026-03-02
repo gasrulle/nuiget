@@ -5,7 +5,15 @@ All notable changes to the nUIget extension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.10.0] - 2026-03-02
+
+### Added
+
+- **Centralized refresh button** — Main panel header now has a refresh button (sync icon) to the right of the source settings gear, clearing all server and client caches and syncing the sidebar
+
+### Changed
+
+- **InstalledTab per-section refresh button removed** — Replaced by the centralized header-level refresh button
 
 ### Fixed
 

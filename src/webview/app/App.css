@@ -2629,28 +2629,7 @@ a.details-link:hover {
     background: transparent;
 }
 
-.refresh-btn {
-    margin-left: 8px;
-    font-size: 13px;
-    padding: 0 4px;
-    border-radius: 3px;
-    color: var(--vscode-descriptionForeground);
-    opacity: 0.5;
-    transition: opacity 0.15s ease, background 0.15s ease, color 0.15s ease;
-    flex-shrink: 0;
-    cursor: pointer;
-}
 
-.refresh-btn:hover {
-    opacity: 1;
-    background: var(--vscode-toolbar-hoverBackground);
-    color: var(--vscode-foreground);
-}
-
-.refresh-btn[aria-disabled="true"] {
-    cursor: not-allowed;
-    opacity: 0.3;
-}
 
 .transitive-arrow {
     font-size: 10px;
@@ -3001,6 +2980,45 @@ svg {
 
 .source-settings-btn:hover svg {
     color: var(--vscode-foreground);
+}
+
+/* Header Refresh Button */
+.header-refresh-btn {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 4px 6px;
+    border-radius: 3px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.header-refresh-btn svg {
+    color: var(--vscode-descriptionForeground);
+    transition: color 0.15s ease;
+}
+
+.header-refresh-btn:hover svg {
+    color: var(--vscode-foreground);
+}
+
+.header-refresh-btn:hover {
+    background: var(--vscode-toolbar-hoverBackground, rgba(127, 127, 127, 0.15));
+}
+
+.header-refresh-btn:focus-visible {
+    outline: 1px solid var(--vscode-focusBorder);
+    outline-offset: -1px;
+}
+
+.header-refresh-btn:disabled {
+    cursor: not-allowed;
+}
+
+.header-refresh-btn:disabled svg {
+    color: var(--vscode-disabledForeground);
 }
 
 /* Close button icon — color-based visibility, not opacity */

@@ -167,7 +167,7 @@ See [Microsoft's security best practices](https://learn.microsoft.com/en-us/nuge
 | Private feed not loading | Check VPN connection. Click ⚙️ to verify source status. |
 | "dotnet not found" error | Ensure .NET SDK is installed and `dotnet` is on your PATH. |
 | Source shows ⚠️ warning | Source is unreachable. Check network or disable in settings. |
-| Transitive packages empty | Click ↻ refresh button. Project needs to be restored first. |
+| Transitive packages empty | Click the refresh button in the header. Project needs to be restored first. |
 | Packages not updating | Check Output panel (View → Output → "nUIget") for CLI errors. |
 | Sidebar not showing | Only appears when workspace contains .csproj, .fsproj, or .vbproj files. |
 

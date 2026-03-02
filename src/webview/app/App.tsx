@@ -11,7 +11,7 @@ import { MemoizedSourceSettingsOverlay } from './components/SourceSettingsOverla
 import type { UpdatesTabHandle } from './components/UpdatesTab';
 import { MemoizedUpdatesTab } from './components/UpdatesTab';
 import { usePackageSelection } from './hooks/usePackageSelection';
-import { SettingsGearIcon, WarningIcon } from './icons';
+import { LoadingIcon, SettingsGearIcon, SyncIcon, WarningIcon } from './icons';
 import { renderMarkdownToHtml } from './markdownSetup';
 import type { AppState, FailedSource, InstalledPackage, NuGetSource, PackageMetadata, PackageSearchResult, PackageUpdate, Project, ProjectInstalled, ProjectUpdates, TransitivePackage } from './types';
 import { LRUMap, getPackageId } from './types';
@@ -950,12 +950,16 @@ export const App: React.FC = () => {
         });
     }, [selectedProject]);
 
-    // Refresh installed packages (called from InstalledTab refresh button)
-    const handleRefreshAll = useCallback(() => {
+    // Full refresh: clear all caches and re-fetch everything (header refresh button)
+    const handleFullRefresh = useCallback(() => {
         const project = selectedProjectRef.current;
         if (!project) { return; }
         setLoadingInstalled(true);
-        vscode.postMessage({ type: 'getInstalledPackages', projectPath: project });
+        // Clear frontend caches so stale data isn't served
+        versionsCache.current.clear();
+        metadataCache.current.clear();
+        // Tell backend to clear all server-side caches and re-send everything
+        vscode.postMessage({ type: 'fullRefresh' });
     }, []);
 
     // Keyboard navigation handler for package lists - returns a keydown handler
@@ -1129,6 +1133,15 @@ export const App: React.FC = () => {
                             </span>
                         )}
                     </div>
+                    <button
+                        className="header-refresh-btn"
+                        title="Refresh all"
+                        aria-label="Refresh all"
+                        disabled={loadingInstalled}
+                        onClick={handleFullRefresh}
+                    >
+                        {loadingInstalled ? <LoadingIcon size={16} /> : <SyncIcon size={16} />}
+                    </button>
                 </div>
             </div>
 
@@ -1349,7 +1362,6 @@ export const App: React.FC = () => {
                 expandedDeps={expandedDeps}
                 onSelectDirectPackage={selectDirectPackage}
                 onSelectTransitivePackage={selectTransitivePackage}
-                onRefreshAll={handleRefreshAll}
                 clearSelection={clearSelection}
                 onInstall={handleInstall}
                 onRemove={handleRemove}
