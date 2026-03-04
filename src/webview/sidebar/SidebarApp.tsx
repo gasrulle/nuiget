@@ -244,30 +244,113 @@ export const SidebarApp: React.FC = () => {
                     setLoadingInstalled(true);
                 }
                 break;
+            case 'packageChanged':
+                {
+                    // Operation-aware notification from main panel via sidebar backend
+                    // Surgically update state instead of clearing everything and re-fetching
+                    const op = message.operation as { type: string; packageId?: string; projectPath?: string } | undefined;
+                    const opPkgId = op?.packageId?.toLowerCase();
+                    if (opPkgId && (op?.type === 'update' || op?.type === 'remove')) {
+                        setPackageUpdates(prev => { const f = prev.filter(p => p.id.toLowerCase() !== opPkgId); packageUpdatesRef.current = f; return f; });
+                        setAllProjectsUpdates(prev => {
+                            const updated = prev.map(pu => ({ ...pu, updates: pu.updates.filter(u => u.id.toLowerCase() !== opPkgId) })).filter(pu => pu.updates.length > 0);
+                            allProjectsUpdatesRef.current = updated;
+                            return updated;
+                        });
+                    }
+                    // Re-fetch installed packages for transitive accuracy (lightweight — just .csproj parse)
+                    if (selectedProjectRef.current) {
+                        vscode.postMessage({ type: 'getInstalledPackages', projectPath: selectedProjectRef.current });
+                        setLoadingInstalled(true);
+                    }
+                }
+                break;
             case 'installResult':
             case 'updateResult':
             case 'removeResult':
+                {
+                    // Single operation result from sidebar's own operations
+                    // Only update optimistically if the operation succeeded
+                    if (message.success) {
+                        const opPkgId = (message.packageId as string)?.toLowerCase();
+                        if (opPkgId && (message.type === 'updateResult' || message.type === 'removeResult')) {
+                            setPackageUpdates(prev => { const f = prev.filter(p => p.id.toLowerCase() !== opPkgId); packageUpdatesRef.current = f; return f; });
+                            setAllProjectsUpdates(prev => {
+                                const updated = prev.map(pu => ({ ...pu, updates: pu.updates.filter(u => u.id.toLowerCase() !== opPkgId) })).filter(pu => pu.updates.length > 0);
+                                allProjectsUpdatesRef.current = updated;
+                                return updated;
+                            });
+                        }
+                        if (selectedProjectRef.current) {
+                            vscode.postMessage({ type: 'getInstalledPackages', projectPath: selectedProjectRef.current });
+                            setLoadingInstalled(true);
+                        }
+                    }
+                }
+                break;
             case 'bulkUpdateResult':
+                {
+                    // Optimistically clear updates, keeping only failed packages
+                    const failedIds = (message.failedPackageIds as string[] | undefined) || [];
+                    const failedSet = new Set(failedIds.map(id => id.toLowerCase()));
+                    if (failedIds.length > 0) {
+                        setPackageUpdates(prev => { const f = prev.filter(p => failedSet.has(p.id.toLowerCase())); packageUpdatesRef.current = f; return f; });
+                        setAllProjectsUpdates(prev => {
+                            const projPath = message.projectPath as string;
+                            const updated = prev.map(pu => {
+                                if (pu.projectPath !== projPath) { return pu; }
+                                return { ...pu, updates: pu.updates.filter(u => failedSet.has(u.id.toLowerCase())) };
+                            }).filter(pu => pu.updates.length > 0);
+                            allProjectsUpdatesRef.current = updated;
+                            return updated;
+                        });
+                    } else {
+                        setPackageUpdates([]); packageUpdatesRef.current = [];
+                        setAllProjectsUpdates(prev => {
+                            const projPath = message.projectPath as string;
+                            const updated = prev.map(pu => {
+                                if (pu.projectPath !== projPath) { return pu; }
+                                return { ...pu, updates: [] };
+                            }).filter(pu => pu.updates.length > 0);
+                            allProjectsUpdatesRef.current = updated;
+                            return updated;
+                        });
+                    }
+                    if (selectedProjectRef.current) {
+                        vscode.postMessage({ type: 'getInstalledPackages', projectPath: selectedProjectRef.current });
+                        setLoadingInstalled(true);
+                    }
+                }
+                break;
             case 'bulkUpdateAllProjectsResult':
+                {
+                    // Optimistically clear all project updates, respecting per-project failures
+                    const perProjectFailed = (message.perProjectFailedIds as { projectPath: string; failedPackageIds: string[] }[] | undefined) || [];
+                    setAllProjectsUpdates(prev => {
+                        const updated = prev.map(pu => {
+                            const projectFailed = perProjectFailed.find(pf => pf.projectPath === pu.projectPath);
+                            if (!projectFailed) { return { ...pu, updates: [] }; }
+                            const failedSet = new Set(projectFailed.failedPackageIds.map(id => id.toLowerCase()));
+                            return { ...pu, updates: pu.updates.filter(u => failedSet.has(u.id.toLowerCase())) };
+                        }).filter(pu => pu.updates.length > 0);
+                        allProjectsUpdatesRef.current = updated;
+                        return updated;
+                    });
+                    setPackageUpdates([]); packageUpdatesRef.current = [];
+                    if (selectedProjectRef.current) {
+                        vscode.postMessage({ type: 'getInstalledPackages', projectPath: selectedProjectRef.current });
+                        setLoadingInstalled(true);
+                    }
+                }
+                break;
             case 'bulkRemoveResult':
             case 'bulkRemoveAllProjectsResult':
-                setAllProjectsUpdates([]);
-                allProjectsUpdatesRef.current = [];
-                setPackageUpdates([]);
-                packageUpdatesRef.current = [];
+                // Removed packages can't have updates — clear update state
+                setPackageUpdates([]); packageUpdatesRef.current = [];
+                setAllProjectsUpdates([]); allProjectsUpdatesRef.current = [];
                 if (selectedProjectRef.current) {
-                    vscode.postMessage({
-                        type: 'getInstalledPackages',
-                        projectPath: selectedProjectRef.current
-                    });
+                    vscode.postMessage({ type: 'getInstalledPackages', projectPath: selectedProjectRef.current });
                     setLoadingInstalled(true);
-                }
-                if (loadAllProjectsRef.current) {
-                    vscode.postMessage({
-                        type: 'checkAllProjectsUpdates',
-                        includePrerelease: includePrereleaseRef.current
-                    });
-                    setLoadingAllUpdates(true);
                 }
                 if (loadAllProjectsInstalledRef.current) {
                     setAllProjectsInstalled([]);

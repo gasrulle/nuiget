@@ -5,6 +5,29 @@ All notable changes to the nUIget extension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **Optimistic UI updates after package operations** — Install, update, remove, and bulk operations now immediately update the updates list and badge counts without waiting for a full re-check, significantly improving perceived responsiveness
+- **Per-package failure tracking in bulk operations** — Bulk update/remove result messages now include `failedPackageIds` (single-project) and `perProjectFailedIds` (all-projects), enabling accurate optimistic state when some packages fail
+- **Operation-aware cross-panel sync** — Main panel now sends operation details (type, packageId, projectPath) to the sidebar instead of triggering a full refresh, enabling surgical sidebar state updates
+- **Lightweight sidebar notification path** — New `notifySidebarOfChange()` method skips `clearNuGetHttpCache()` and source re-fetch after operations, eliminating a 0–15 second process spawn per operation
+
+### Fixed
+
+- **Failed operations no longer trigger optimistic sidebar updates**
+- **Sidebar's own failed operations no longer clear update badges**
+- **Sidebar `_notifyMainPanel()` no longer fires after failed operations** — install/update/remove from sidebar only refresh main panel when the operation succeeded
+- **Bulk install no longer notifies sidebar when all installs failed**
+
+### Changed
+
+- **Sidebar no longer does full re-fetch after every operation** — Previously cleared all updates and re-requested `checkAllProjectsUpdates` + `checkAllProjectsInstalled` after every install/update/remove. Now surgically filters affected packages from update lists
+- **Main panel refresh handler debounced** — Rapid refresh messages from sidebar operations are collapsed with a 300ms debounce to avoid redundant re-fetches
+- **`checkPackageUpdates` effect skip on optimistic update** — After an operation where the update outcome is already known, the `installedPackages` change effect skips the redundant `checkPackageUpdates` request
+- **`bulkUpdateAllProjectsResult` no longer triggers `checkAllProjectsUpdates`** — Optimistic state clearing replaces the expensive full re-check; background timer or manual refresh reconciles if needed
+
 ## [1.10.0] - 2026-03-02
 
 ### Added

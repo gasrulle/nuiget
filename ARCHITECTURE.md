@@ -126,7 +126,7 @@ Sidebar messages follow the same patterns as the main panel but always send `lit
 ### Cross-Panel Sync
 Prerelease, source, and project selections are synced bidirectionally between the main panel and sidebar:
 - **Main → Sidebar (settings)**: `NuGetPanel.saveSettings` persists to `workspaceState`, then fires static callbacks (`onPrereleaseChanged`, `onSourceChanged`, `onProjectChanged`) wired in `extension.ts` to call `NuGetSidebarPanel.syncPrerelease()`, `syncSource()`, `syncProject()`.
-- **Main → Sidebar (package changes)**: After any install/update/remove/bulk operation, `NuGetPanel` fires the static `onPackageChanged` callback, wired in `extension.ts` to call `NuGetSidebarPanel.refreshSidebar()`. This re-sends sources, posts a `forceRefresh` message to the sidebar webview, and re-runs `checkUpdatesInBackground(force: true)`. If a check is already in progress, `_forceCheckPending` queues a re-run in the `finally` block to prevent dropped events.
+- **Main → Sidebar (package changes)**: After any install/update/remove/bulk operation, `NuGetPanel` fires the static `onPackageChanged(operation)` callback with operation details (`{ type, packageId?, projectPath? }`), wired in `extension.ts` to call `NuGetSidebarPanel.notifySidebarOfChange(operation)`. This lightweight path posts a `{ type: 'packageChanged', operation }` message to the sidebar webview for surgical state updates, then re-runs `checkUpdatesInBackground(force: true)`. Unlike `refreshSidebar()`, it does **not** call `clearNuGetHttpCache()` or re-fetch sources — the operation just communicated with the registry successfully, so the cache is fresh. If a check is already in progress, `_forceCheckPending` queues a re-run in the `finally` block to prevent dropped events.
 - **Main → Sidebar (full refresh)**: The main panel header's refresh button sends `{ type: 'fullRefresh' }` to `NuGetPanel`, which clears all caches (`clearSourceErrors()`, `clearNuGetHttpCache()`), re-fetches sources, sends `{ type: 'refresh' }` to the webview, and fires the static `onRefreshAll` callback wired in `extension.ts` to call `NuGetSidebarPanel.refreshSidebar()`. No echo loop: `refreshSidebar()` → `checkUpdatesInBackground()` does not call `_notifyMainPanel()`.
 - **Sidebar → Main**: QuickPick pickers call `NuGetPanel.syncPrerelease()`, `syncSource()`, `syncProject()` static methods which post messages to the main panel webview.
 - **Sidebar → Main (source settings)**: "Manage NuGet Sources…" in the source picker calls `NuGetPanel.openSourceSettings()` which creates/shows the main panel and sends `{ type: 'openSourceSettings' }`. If the panel is freshly created, the message is queued via `_pendingOpenSourceSettings` and delivered after `getProjects` with a 200ms delay (same pattern as `navigateToPackage`). App.tsx handler sets `showSourceSettings(true)` and requests `getConfigFiles`.
@@ -361,17 +361,18 @@ This is safe because JavaScript is single-threaded — the guard only needs to p
 | Message | Direction | Purpose |
 |---------|-----------|---------|
 | `bulkUpdatePackages` | UI → Ext | Update multiple packages (topological sort) |
-| `bulkUpdateResult` | Ext → UI | Result of bulk update with success/fail counts |
+| `bulkUpdateResult` | Ext → UI | Result of bulk update with `failedPackageIds[]` for optimistic UI updates |
 | `bulkUpdateAllProjects` | UI → Ext | Update packages across multiple projects |
-| `bulkUpdateAllProjectsResult` | Ext → UI | Result of multi-project bulk update |
+| `bulkUpdateAllProjectsResult` | Ext → UI | Result of multi-project bulk update with `perProjectFailedIds[]` for optimistic UI updates |
 | `confirmBulkRemove` | UI → Ext | Request bulk uninstall (triggers confirmation) |
 | `bulkRemoveConfirmed` | Ext → UI | Confirmation to proceed with bulk remove |
-| `bulkRemoveResult` | Ext → UI | Result of bulk remove operation |
+| `bulkRemoveResult` | Ext → UI | Result of bulk remove with `failedPackageIds[]` for optimistic UI updates |
 | `confirmBulkRemoveAllProjects` | UI → Ext | Request bulk uninstall across multiple projects |
 | `bulkRemoveAllProjectsConfirmed` | Ext → UI | Confirmation to proceed with multi-project bulk remove |
-| `bulkRemoveAllProjectsResult` | Ext → UI | Result of multi-project bulk remove operation |
+| `bulkRemoveAllProjectsResult` | Ext → UI | Result of multi-project bulk remove with `perProjectFailedIds[]` for optimistic UI updates |
 | `bulkInstall` | UI → Ext | Install a package to multiple projects at once |
 | `bulkInstallResult` | Ext → UI | Per-project success/failure results of bulk install (includes `version` for optimistic update) |
+| `packageChanged` | Ext → UI (sidebar) | Operation-aware notification from main panel via `notifySidebarOfChange()` with `{ operation: { type, packageId?, projectPath? } }` for surgical sidebar state updates |
 
 #### Settings & State
 | Message | Direction | Purpose |
@@ -1429,7 +1430,7 @@ This prevents intermediate restore failures when projects reference each other (
 2. Extension sorts by dependency order
 3. Each package updated sequentially (with `skipChannelSetup` option)
 4. Single `dotnet restore` at the end (not per-package)
-5. Returns `bulkUpdateResult` with success/fail counts
+5. Returns `bulkUpdateResult` with `failedPackageIds[]` — frontend optimistically clears updates list, keeping only failed packages
 
 ### Multi-Project Bulk Update Flow
 1. UI sends `bulkUpdateAllProjects` with per-project package lists
@@ -1437,7 +1438,7 @@ This prevents intermediate restore failures when projects reference each other (
 3. Projects sorted topologically (dependency projects first)
 4. **Phase 1 — Updates:** For each project (in dependency order), packages are topologically sorted by NuGet package dependencies and updated sequentially with `skipRestore: true`
 5. **Phase 2 — Restores:** After ALL projects' packages are updated, each modified project is restored in dependency order
-6. Returns `bulkUpdateAllProjectsResult`
+6. Returns `bulkUpdateAllProjectsResult` with `perProjectFailedIds[]` — frontend optimistically clears all-project updates, keeping only failed packages per project
 
 The two-phase approach (all updates, then all restores) prevents intermediate restore failures that occur when a dependent project is restored before its dependency project has been updated.
 
@@ -1454,7 +1455,7 @@ The Updates tab supports checking updates for ALL projects simultaneously:
 2. Extension sends `bulkRemoveConfirmed` (no modal, direct proceed)
 3. Packages removed in reverse dependency order (dependents first)
 4. Single `dotnet restore` at the end
-5. Returns `bulkRemoveResult` with success/fail counts
+5. Returns `bulkRemoveResult` with `failedPackageIds[]` — frontend optimistically clears updates for removed packages
 
 ### Multi-Project Bulk Remove Flow
 1. UI sends `confirmBulkRemoveAllProjects` with per-project package lists
@@ -1462,11 +1463,20 @@ The Updates tab supports checking updates for ALL projects simultaneously:
 3. Projects sorted topologically (dependent projects first for removal)
 4. **Phase 1 — Removals:** For each project (dependents first), packages are topologically sorted (dependents first) and removed sequentially with `skipRestore: true`
 5. **Phase 2 — Restores:** After ALL removals, each modified project is restored in reverse order (dependencies first)
-6. Returns `bulkRemoveAllProjectsResult`
+6. Returns `bulkRemoveAllProjectsResult` with `perProjectFailedIds[]` — frontend optimistically clears updates/installed state
 
 ### Performance Optimization
 - `skipChannelSetup: true` - Don't reveal output channel for each package
 - `skipRestore: true` - Skip per-package restore, run once at end
+
+### Optimistic UI Updates After Operations
+After install/update/remove/bulk operations, the UI applies **optimistic state updates** instead of re-fetching all data:
+- **`skipNextUpdateCheckRef`** (App.tsx): When an operation handler already knows the update outcome, it sets this flag to `true`. The `[installedPackages]` effect checks this flag before firing `checkPackageUpdates` — if set, it resets the flag and skips the redundant network request.
+- **`refreshDebounceRef`** (App.tsx): The `refresh` message handler uses a 300ms debounce to collapse rapid refresh messages from sidebar operations into a single re-fetch.
+- **`notifySidebarOfChange(operation)`** (NuGetSidebarPanel): Lightweight cross-panel notification that skips `clearNuGetHttpCache()` (0–15s process spawn) and source re-fetch. Posts operation details directly to sidebar webview for surgical state filtering.
+- **Per-package failure data**: Bulk results include `failedPackageIds[]` or `perProjectFailedIds[]`, enabling the frontend to keep failed packages in the updates list while clearing succeeded ones.
+- **Installed packages are still re-fetched** after every operation (via `getInstalledPackages`) because NuGet's dependency resolver can silently change transitive dependencies and unify package versions. The optimization is in NOT re-checking for updates when the outcome is already known.
+- **Manual refresh and file watcher** still use the full `refreshSidebar()` path (with HTTP cache clearing and source re-fetch) as the escape hatch for truly stale data.
 - Progress notification shows current/total count
 
 ## Common Patterns

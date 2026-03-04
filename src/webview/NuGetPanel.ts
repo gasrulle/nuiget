@@ -103,7 +103,7 @@ export class NuGetPanel {
     /** Callback fired when the main panel's selected project changes (wired in extension.ts) */
     public static onProjectChanged: ((value: string) => void) | undefined;
     /** Callback fired when a package is installed/updated/removed in the main panel (wired in extension.ts) */
-    public static onPackageChanged: (() => void) | undefined;
+    public static onPackageChanged: ((operation: { type: string; packageId?: string; projectPath?: string }) => void) | undefined;
     /** Callback fired when the main panel's full refresh button is pressed (wired in extension.ts) */
     public static onRefreshAll: (() => void) | undefined;
 
@@ -466,6 +466,7 @@ export class NuGetPanel {
                     if (this._operationInProgress) { break; }
                     this._operationInProgress = true;
                     try {
+                        let installSuccess = false;
                         await vscode.window.withProgress({
                             location: vscode.ProgressLocation.Notification,
                             title: `Installing ${data.packageId}...`,
@@ -476,6 +477,7 @@ export class NuGetPanel {
                                 data.packageId as string,
                                 data.version as string | undefined
                             );
+                            installSuccess = success;
                             this._postMessage({
                                 type: 'installResult',
                                 success: success,
@@ -483,7 +485,9 @@ export class NuGetPanel {
                                 projectPath: data.projectPath
                             });
                         });
-                        NuGetPanel.onPackageChanged?.();
+                        if (installSuccess) {
+                            NuGetPanel.onPackageChanged?.({ type: 'install', packageId: data.packageId as string, projectPath: data.projectPath as string });
+                        }
                     } finally {
                         this._operationInProgress = false;
                     }
@@ -546,7 +550,9 @@ export class NuGetPanel {
                             version: version,
                             results: results
                         });
-                        NuGetPanel.onPackageChanged?.();
+                        if (results.some(r => r.success)) {
+                            NuGetPanel.onPackageChanged?.({ type: 'bulkInstall' });
+                        }
                     } finally {
                         this._operationInProgress = false;
                     }
@@ -557,6 +563,7 @@ export class NuGetPanel {
                     if (this._operationInProgress) { break; }
                     this._operationInProgress = true;
                     try {
+                        let updateSuccess = false;
                         await vscode.window.withProgress({
                             location: vscode.ProgressLocation.Notification,
                             title: `Updating ${data.packageId}...`,
@@ -567,6 +574,7 @@ export class NuGetPanel {
                                 data.packageId as string,
                                 data.version as string
                             );
+                            updateSuccess = success;
                             this._postMessage({
                                 type: 'updateResult',
                                 success: success,
@@ -574,7 +582,9 @@ export class NuGetPanel {
                                 projectPath: data.projectPath
                             });
                         });
-                        NuGetPanel.onPackageChanged?.();
+                        if (updateSuccess) {
+                            NuGetPanel.onPackageChanged?.({ type: 'update', packageId: data.packageId as string, projectPath: data.projectPath as string });
+                        }
                     } finally {
                         this._operationInProgress = false;
                     }
@@ -585,6 +595,7 @@ export class NuGetPanel {
                     if (this._operationInProgress) { break; }
                     this._operationInProgress = true;
                     try {
+                        let removeSuccess = false;
                         await vscode.window.withProgress({
                             location: vscode.ProgressLocation.Notification,
                             title: `Removing ${data.packageId}...`,
@@ -594,6 +605,7 @@ export class NuGetPanel {
                                 data.projectPath as string,
                                 data.packageId as string
                             );
+                            removeSuccess = success;
                             this._postMessage({
                                 type: 'removeResult',
                                 success: success,
@@ -601,7 +613,9 @@ export class NuGetPanel {
                                 projectPath: data.projectPath
                             });
                         });
-                        NuGetPanel.onPackageChanged?.();
+                        if (removeSuccess) {
+                            NuGetPanel.onPackageChanged?.({ type: 'remove', packageId: data.packageId as string, projectPath: data.projectPath as string });
+                        }
                     } finally {
                         this._operationInProgress = false;
                     }
@@ -978,6 +992,7 @@ export class NuGetPanel {
                         // Setup output channel
                         this._nugetService.setupOutputChannel();
 
+                        const perProjectFailedIds: { projectPath: string; failedPackageIds: string[] }[] = [];
                         await vscode.window.withProgress({
                             location: vscode.ProgressLocation.Notification,
                             title: `Updating ${totalPackages} packages across ${sortedProjectUpdates.length} projects...`,
@@ -1007,6 +1022,7 @@ export class NuGetPanel {
                                 this._nugetService.logBulkOperationHeader(`Updating ${sortedPackages.length} package${sortedPackages.length !== 1 ? 's' : ''} for ${projectName}...`, 0);
 
                                 let projectSuccess = false;
+                                const projectFailedIds: string[] = [];
                                 for (const pkg of sortedPackages) {
                                     completedPackages++;
                                     progress.report({
@@ -1026,11 +1042,15 @@ export class NuGetPanel {
                                         projectSuccess = true;
                                     } else {
                                         totalFailCount++;
+                                        projectFailedIds.push(pkg.id);
                                     }
                                 }
 
                                 if (projectSuccess) {
                                     projectsWithChanges.push({ projectPath, projectName });
+                                }
+                                if (projectFailedIds.length > 0) {
+                                    perProjectFailedIds.push({ projectPath, failedPackageIds: projectFailedIds });
                                 }
                             }
 
@@ -1048,9 +1068,10 @@ export class NuGetPanel {
                         });
 
                         this._postMessage({
-                            type: 'bulkUpdateAllProjectsResult'
+                            type: 'bulkUpdateAllProjectsResult',
+                            perProjectFailedIds: perProjectFailedIds
                         });
-                        NuGetPanel.onPackageChanged?.();
+                        NuGetPanel.onPackageChanged?.({ type: 'bulkUpdateAllProjects' });
                     } finally {
                         this._operationInProgress = false;
                     }
@@ -1175,6 +1196,7 @@ export class NuGetPanel {
                         this._nugetService.setupOutputChannel();
                         this._nugetService.logBulkOperationHeader('Updating', sortedPackages.length);
 
+                        const failedPackageIds: string[] = [];
                         await vscode.window.withProgress({
                             location: vscode.ProgressLocation.Notification,
                             title: `Updating ${sortedPackages.length} packages...`,
@@ -1201,6 +1223,7 @@ export class NuGetPanel {
                                     successCount++;
                                 } else {
                                     failCount++;
+                                    failedPackageIds.push(pkg.id);
                                 }
                             }
 
@@ -1219,9 +1242,10 @@ export class NuGetPanel {
 
                         this._postMessage({
                             type: 'bulkUpdateResult',
-                            projectPath: projectPath
+                            projectPath: projectPath,
+                            failedPackageIds: failedPackageIds
                         });
-                        NuGetPanel.onPackageChanged?.();
+                        NuGetPanel.onPackageChanged?.({ type: 'bulkUpdate', projectPath: projectPath });
                     } finally {
                         this._operationInProgress = false;
                     }
@@ -1265,6 +1289,7 @@ export class NuGetPanel {
                         this._nugetService.setupOutputChannel();
                         this._nugetService.logBulkOperationHeader('Uninstalling', sortedPackages.length);
 
+                        const failedPackageIds: string[] = [];
                         await vscode.window.withProgress({
                             location: vscode.ProgressLocation.Notification,
                             title: `Uninstalling ${sortedPackages.length} packages...`,
@@ -1290,6 +1315,7 @@ export class NuGetPanel {
                                     successCount++;
                                 } else {
                                     failCount++;
+                                    failedPackageIds.push(packageId);
                                 }
                             }
 
@@ -1308,9 +1334,10 @@ export class NuGetPanel {
 
                         this._postMessage({
                             type: 'bulkRemoveResult',
-                            projectPath: projectPath
+                            projectPath: projectPath,
+                            failedPackageIds: failedPackageIds
                         });
-                        NuGetPanel.onPackageChanged?.();
+                        NuGetPanel.onPackageChanged?.({ type: 'bulkRemove', projectPath: projectPath });
                     } finally {
                         this._operationInProgress = false;
                     }
@@ -1358,6 +1385,7 @@ export class NuGetPanel {
                         this._nugetService.setupOutputChannel();
                         this._nugetService.logBulkOperationHeader(`Uninstalling from ${sortedProjectRemovals.length} projects`, 0);
 
+                        const perProjectFailedIds: { projectPath: string; failedPackageIds: string[] }[] = [];
                         await vscode.window.withProgress({
                             location: vscode.ProgressLocation.Notification,
                             title: `Uninstalling ${totalPackages} packages from ${sortedProjectRemovals.length} projects...`,
@@ -1402,6 +1430,10 @@ export class NuGetPanel {
                                         projectSuccess = true;
                                     } else {
                                         failCount++;
+                                        if (!perProjectFailedIds.find(p => p.projectPath === projectRemoval.projectPath)) {
+                                            perProjectFailedIds.push({ projectPath: projectRemoval.projectPath, failedPackageIds: [] });
+                                        }
+                                        perProjectFailedIds.find(p => p.projectPath === projectRemoval.projectPath)!.failedPackageIds.push(packageId);
                                     }
                                 }
 
@@ -1427,8 +1459,8 @@ export class NuGetPanel {
                             }
                         });
 
-                        this._postMessage({ type: 'bulkRemoveAllProjectsResult' });
-                        NuGetPanel.onPackageChanged?.();
+                        this._postMessage({ type: 'bulkRemoveAllProjectsResult', perProjectFailedIds: perProjectFailedIds });
+                        NuGetPanel.onPackageChanged?.({ type: 'bulkRemoveAllProjects' });
                     } finally {
                         this._operationInProgress = false;
                     }

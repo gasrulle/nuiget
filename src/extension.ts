@@ -129,8 +129,9 @@ export function activate(context: vscode.ExtensionContext) {
         sidebarProvider.syncProject(value);
     };
     // Wire up cross-panel package change sync: main panel → sidebar
-    NuGetPanel.onPackageChanged = () => {
-        sidebarProvider.refreshSidebar();
+    // Uses lightweight notification path that skips HTTP cache clearing and source re-fetch
+    NuGetPanel.onPackageChanged = (operation) => {
+        sidebarProvider.notifySidebarOfChange(operation);
     };
     // Wire up cross-panel full refresh sync: main panel → sidebar
     NuGetPanel.onRefreshAll = () => {

@@ -151,6 +151,10 @@ export const App: React.FC = () => {
     // Flags to skip saveSettings when source/project were synced from backend (prevents echo loop)
     const skipSourceSaveRef = useRef(false);
     const skipProjectSaveRef = useRef(false);
+    // Skip next checkPackageUpdates effect fire when we already know the update outcome (optimistic)
+    const skipNextUpdateCheckRef = useRef(false);
+    // Debounce rapid refresh messages from sidebar operations
+    const refreshDebounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
     useEffect(() => {
         includePrereleaseRef.current = includePrerelease;
     }, [includePrerelease]);
@@ -342,6 +346,16 @@ export const App: React.FC = () => {
             case 'updateResult':
             case 'removeResult':
                 if (message.success && message.projectPath === selectedProjectRef.current) {
+                    // Optimistically remove the changed package from updates list
+                    const changedId = (message.packageId as string)?.toLowerCase();
+                    if (changedId && (message.type === 'updateResult' || message.type === 'removeResult')) {
+                        setPackagesWithUpdates(prev => {
+                            const filtered = prev.filter(p => p.id.toLowerCase() !== changedId);
+                            setUpdateCount(filtered.length);
+                            return filtered;
+                        });
+                    }
+                    skipNextUpdateCheckRef.current = true;
                     vscode.postMessage({ type: 'getInstalledPackages', projectPath: selectedProjectRef.current });
                     installedTabCompRef.current?.resetTransitiveState(true);
                 }
@@ -349,6 +363,20 @@ export const App: React.FC = () => {
             case 'bulkUpdateResult':
                 updatesTabCompRef.current?.handleMessage(message);
                 if (message.projectPath === selectedProjectRef.current) {
+                    // Optimistically clear updates, keeping only failed packages
+                    const failedUpdateIds = (message.failedPackageIds as string[] | undefined) || [];
+                    if (failedUpdateIds.length > 0) {
+                        const failedSet = new Set(failedUpdateIds.map(id => id.toLowerCase()));
+                        setPackagesWithUpdates(prev => {
+                            const remaining = prev.filter(p => failedSet.has(p.id.toLowerCase()));
+                            setUpdateCount(remaining.length);
+                            return remaining;
+                        });
+                    } else {
+                        setPackagesWithUpdates([]);
+                        setUpdateCount(0);
+                    }
+                    skipNextUpdateCheckRef.current = true;
                     vscode.postMessage({ type: 'getInstalledPackages', projectPath: selectedProjectRef.current });
                     installedTabCompRef.current?.resetTransitiveState(true);
                 }
@@ -356,6 +384,21 @@ export const App: React.FC = () => {
             case 'bulkRemoveResult':
                 installedTabCompRef.current?.handleMessage(message);
                 if (message.projectPath === selectedProjectRef.current) {
+                    // Optimistically remove deleted packages from updates list
+                    const failedRemoveIds = (message.failedPackageIds as string[] | undefined) || [];
+                    if (failedRemoveIds.length > 0) {
+                        const failedRemoveSet = new Set(failedRemoveIds.map(id => id.toLowerCase()));
+                        setPackagesWithUpdates(prev => {
+                            // Keep updates only for packages that failed to remove (still installed)
+                            const remaining = prev.filter(p => failedRemoveSet.has(p.id.toLowerCase()));
+                            setUpdateCount(remaining.length);
+                            return remaining;
+                        });
+                    } else {
+                        setPackagesWithUpdates([]);
+                        setUpdateCount(0);
+                    }
+                    skipNextUpdateCheckRef.current = true;
                     vscode.postMessage({ type: 'getInstalledPackages', projectPath: selectedProjectRef.current });
                     installedTabCompRef.current?.resetTransitiveState(true);
                 }
@@ -396,10 +439,14 @@ export const App: React.FC = () => {
                 }
                 break;
             case 'refresh':
-                vscode.postMessage({ type: 'getProjects' });
-                if (selectedProjectRef.current) {
-                    vscode.postMessage({ type: 'getInstalledPackages', projectPath: selectedProjectRef.current });
-                }
+                // Debounce rapid refresh messages (e.g., multiple sidebar operations in quick succession)
+                if (refreshDebounceRef.current) { clearTimeout(refreshDebounceRef.current); }
+                refreshDebounceRef.current = setTimeout(() => {
+                    vscode.postMessage({ type: 'getProjects' });
+                    if (selectedProjectRef.current) {
+                        vscode.postMessage({ type: 'getInstalledPackages', projectPath: selectedProjectRef.current });
+                    }
+                }, 300);
                 break;
             case 'packageVersions':
                 // First try browse tab (handles quicksearch expansion and Ctrl+Enter)
@@ -472,13 +519,35 @@ export const App: React.FC = () => {
             case 'bulkUpdateAllProjectsResult':
                 // Forward to UpdatesTab for state reset
                 updatesTabCompRef.current?.handleMessage(message);
-                // Re-fetch all projects updates to refresh the list and badge
-                setLoadingAllProjectsUpdates(true);
-                setAllProjectsUpdates([]);
-                vscode.postMessage({
-                    type: 'checkAllProjectsUpdates',
-                    includePrerelease: includePrereleaseRef.current
-                });
+                {
+                    // Optimistically clear updates, keeping only failed packages across projects
+                    const perProjectFailed = (message.perProjectFailedIds as { projectPath: string; failedPackageIds: string[] }[] | undefined) || [];
+                    setAllProjectsUpdates(prev => {
+                        let next: typeof prev;
+                        if (perProjectFailed.length > 0) {
+                            next = prev.map(pu => {
+                                const projectFailed = perProjectFailed.find(pf => pf.projectPath === pu.projectPath);
+                                if (!projectFailed) { return { ...pu, updates: [] }; }
+                                const failedSet = new Set(projectFailed.failedPackageIds.map(id => id.toLowerCase()));
+                                return { ...pu, updates: pu.updates.filter(u => failedSet.has(u.id.toLowerCase())) };
+                            }).filter(pu => pu.updates.length > 0);
+                        } else {
+                            next = [];
+                        }
+                        const totalCount = next.reduce((sum, pu) => sum + pu.updates.length, 0);
+                        setUpdateCount(totalCount);
+                        return next;
+                    });
+                    setLoadingAllProjectsUpdates(false);
+                    // Don't re-request checkAllProjectsUpdates — optimistic state is sufficient.
+                    // Background check (10-min timer) or manual refresh will reconcile if needed.
+                    // Still refresh current project's installed packages for transitive accuracy.
+                    if (selectedProjectRef.current) {
+                        skipNextUpdateCheckRef.current = true;
+                        vscode.postMessage({ type: 'getInstalledPackages', projectPath: selectedProjectRef.current });
+                        installedTabCompRef.current?.resetTransitiveState(true);
+                    }
+                }
                 break;
             case 'allProjectsInstalled':
                 // All projects installed packages loaded
@@ -501,10 +570,26 @@ export const App: React.FC = () => {
             case 'bulkRemoveAllProjectsResult':
                 // Forward to InstalledTab for state reset
                 installedTabCompRef.current?.handleMessage(message);
-                // Re-fetch all projects installed to refresh the list
+                // Optimistic: removed packages can't have updates — clear update state
+                setAllProjectsUpdates(prev => {
+                    // Keep updates only for projects/packages that weren't affected
+                    const perProjectFailed = (message.perProjectFailedIds as { projectPath: string; failedPackageIds: string[] }[] | undefined) || [];
+                    // If we have failure info, keep updates for failed packages
+                    if (perProjectFailed.length > 0) {
+                        return prev; // Don't clear — failed removals mean packages are still installed
+                    }
+                    return []; // All removals succeeded — clear all updates
+                });
+                // Still re-fetch all projects installed since transitive deps changed
                 setLoadingAllProjectsInstalled(true);
                 setAllProjectsInstalled([]);
                 vscode.postMessage({ type: 'checkAllProjectsInstalled' });
+                // Refresh current project installed for transitive accuracy
+                if (selectedProjectRef.current) {
+                    skipNextUpdateCheckRef.current = true;
+                    vscode.postMessage({ type: 'getInstalledPackages', projectPath: selectedProjectRef.current });
+                    installedTabCompRef.current?.resetTransitiveState(true);
+                }
                 break;
             case 'settings':
                 // Restore persisted settings
@@ -647,6 +732,9 @@ export const App: React.FC = () => {
             // Reset transitive packages state when project changes
             installedTabCompRef.current?.resetTransitiveState(false);
             setSelectedTransitivePackage(null);
+            // Clear any pending skip flag so project switch doesn't suppress the
+            // else-if branch in checkPackageUpdates effect that clears stale updates
+            skipNextUpdateCheckRef.current = false;
         }
     }, [selectedProject]);
 
@@ -725,6 +813,11 @@ export const App: React.FC = () => {
     // Check for package updates when project, packages, or prerelease setting changes (for badge count)
     // Wait for settings to be loaded to ensure includePrerelease has the persisted value
     useEffect(() => {
+        // Skip update check when we already know the outcome (optimistic update just happened)
+        if (skipNextUpdateCheckRef.current) {
+            skipNextUpdateCheckRef.current = false;
+            return;
+        }
         if (settingsLoaded && selectedProject && installedPackages.length > 0) {
             setLoadingUpdates(true);
             setPackagesWithUpdates([]);

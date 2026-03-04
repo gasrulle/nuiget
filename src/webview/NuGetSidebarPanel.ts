@@ -346,6 +346,16 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
         // Badge removed; section header badges provide update counts
     }
 
+    /** Lightweight sidebar notification after a package operation from the main panel.
+     * Skips HTTP cache clearing and source re-fetch (operation just talked to registry successfully).
+     * Forwards operation details to sidebar webview for optimistic state updates. */
+    public async notifySidebarOfChange(operation: { type: string; packageId?: string; projectPath?: string }): Promise<void> {
+        // Forward operation details to sidebar webview for surgical UI updates
+        this._postMessage({ type: 'packageChanged', operation });
+        // Re-check updates in background for badge accuracy
+        await this.checkUpdatesInBackground(true);
+    }
+
     /** Full sidebar refresh: re-send sources, tell webview to re-fetch, and update badge */
     public async refreshSidebar(): Promise<void> {
         // Clear dotnet NuGet HTTP cache so freshly published versions are discovered
@@ -505,8 +515,8 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
                             packageId: data.packageId,
                             projectPath: data.projectPath
                         });
-                        // Also notify the main panel if open
-                        NuGetSidebarProvider._notifyMainPanel();
+                        // Only notify the main panel on success to avoid unnecessary refresh
+                        if (success) { NuGetSidebarProvider._notifyMainPanel(); }
                     });
                     break;
                 }
@@ -528,7 +538,7 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
                             packageId: data.packageId,
                             projectPath: data.projectPath
                         });
-                        NuGetSidebarProvider._notifyMainPanel();
+                        if (success) { NuGetSidebarProvider._notifyMainPanel(); }
                     });
                     break;
                 }
@@ -549,7 +559,7 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
                             packageId: data.packageId,
                             projectPath: data.projectPath
                         });
-                        NuGetSidebarProvider._notifyMainPanel();
+                        if (success) { NuGetSidebarProvider._notifyMainPanel(); }
                     });
                     break;
                 }
@@ -561,6 +571,7 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
                     this._nugetService.setupOutputChannel();
                     this._nugetService.logBulkOperationHeader('Updating', packages.length);
 
+                    const failedPackageIds: string[] = [];
                     await vscode.window.withProgress({
                         location: vscode.ProgressLocation.Notification,
                         title: `Updating ${packages.length} packages...`,
@@ -578,7 +589,7 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
                             const success = await this._nugetService.updatePackage(
                                 projectPath, pkg.id, pkg.version, { skipChannelSetup: true, skipNotification: true, skipRestore: true }
                             );
-                            if (success) { successCount++; } else { failCount++; }
+                            if (success) { successCount++; } else { failCount++; failedPackageIds.push(pkg.id); }
                         }
 
                         // Run a single restore after all packages are updated
@@ -594,8 +605,8 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
                         }
                     });
 
-                    this._postMessage({ type: 'bulkUpdateResult', projectPath });
-                    NuGetSidebarProvider._notifyMainPanel();
+                    this._postMessage({ type: 'bulkUpdateResult', projectPath, failedPackageIds });
+                    if (failedPackageIds.length < packages.length) { NuGetSidebarProvider._notifyMainPanel(); }
                     break;
                 }
             case 'bulkUpdateAllProjects':
@@ -625,6 +636,7 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
                     const totalPackages = sortedProjectUpdates.reduce((sum, pu) => sum + pu.packages.length, 0);
                     this._nugetService.setupOutputChannel();
 
+                    const perProjectFailedIds: { projectPath: string; failedPackageIds: string[] }[] = [];
                     await vscode.window.withProgress({
                         location: vscode.ProgressLocation.Notification,
                         title: `Updating ${totalPackages} packages across ${sortedProjectUpdates.length} projects...`,
@@ -651,6 +663,7 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
                             this._nugetService.logBulkOperationHeader(`Updating ${sortedPackages.length} package${sortedPackages.length !== 1 ? 's' : ''} for ${pu.projectName}...`, 0);
 
                             let projectSuccess = false;
+                            const projectFailedIds: string[] = [];
                             for (const pkg of sortedPackages) {
                                 completed++;
                                 progress.report({
@@ -660,11 +673,14 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
                                 const success = await this._nugetService.updatePackage(
                                     pu.projectPath, pkg.id, pkg.version, { skipChannelSetup: true, skipNotification: true, skipRestore: true }
                                 );
-                                if (success) { totalSuccess++; projectSuccess = true; } else { totalFail++; }
+                                if (success) { totalSuccess++; projectSuccess = true; } else { totalFail++; projectFailedIds.push(pkg.id); }
                             }
 
                             if (projectSuccess) {
                                 projectsWithChanges.push({ projectPath: pu.projectPath, projectName: pu.projectName });
+                            }
+                            if (projectFailedIds.length > 0) {
+                                perProjectFailedIds.push({ projectPath: pu.projectPath, failedPackageIds: projectFailedIds });
                             }
                         }
 
@@ -681,8 +697,10 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
                         }
                     });
 
-                    this._postMessage({ type: 'bulkUpdateAllProjectsResult' });
-                    NuGetSidebarProvider._notifyMainPanel();
+                    this._postMessage({ type: 'bulkUpdateAllProjectsResult', perProjectFailedIds });
+                    // Only notify main panel if at least one package succeeded across all projects
+                    const totalFailed = perProjectFailedIds.reduce((sum, p) => sum + p.failedPackageIds.length, 0);
+                    if (totalFailed < totalPackages) { NuGetSidebarProvider._notifyMainPanel(); }
                     break;
                 }
             case 'getPackageVersions':
