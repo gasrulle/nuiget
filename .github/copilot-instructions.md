@@ -118,7 +118,7 @@ npm run package:vsix # Outputs nuiget.vsix
 | Issue | Solution |
 |-------|----------|
 | Activity Bar badge removed | `setBadge()` is a no-op — don't set `webviewView.badge`. Section header badges provide update counts. `_pendingBadgeCount` field removed. |
-| Search mode model | All sidebar rendering is driven by `parseSearchQuery(query)` → `{ mode: 'default' \| 'browse' \| 'installed' \| 'updates', filterText }`. Never check `expandedSection` outside default mode. |
+| Search mode model | All sidebar rendering is driven by `parseSearchQuery(query)` → `{ mode: 'default' \| 'browse' \| 'installed' \| 'updates', filterText }`. Never check `installedExpanded`/`updatesExpanded` outside default mode. |
 | Browse section removed | No Browse `SectionHeader` exists. Browse results render directly when `searchMode === 'browse'` (plain text + Enter). |
 | Recent searches removed | No state, effects, handlers, CSS, or backend cases (`getRecentSearches`, `clearRecentSearches`, `_addRecentSearch`) exist. Don't re-add. |
 | @-prefix dropdown | Shows when text starts with `@` but isn't yet a complete valid prefix. Auto-filters as typed (`@up` → only `@updates`). Keyboard: ArrowDown/Up navigate, Enter/Tab select, Escape dismiss. |
@@ -136,6 +136,7 @@ npm run package:vsix # Outputs nuiget.vsix
 | `totalUpdateCount` 3-tier fallback | Tier 1: sum of all `allProjectsUpdates[].updates.length`. Tier 2: `packageUpdates.length`. Tier 3: `allProjectsUpdates.find(selected project)?.updates.length`. Any code consuming the badge count must handle that the data may come from any tier. |
 | `loadAllProjects` not reset on project change | `projectChanged` handler must `setLoadAllProjects(false)` and `setLoadAllProjectsInstalled(false)`. Without this, toggling "all projects" in one project stays visually toggled after switching to another. |
 | `section-content` no hardcoded max-height | Uses `flex: 1; min-height: 0;` to fill available space. Don't add `max-height` — it causes premature scroll when the sidebar has plenty of vertical room. |
+| Sections independently collapsible | Both Installed and Updates sections can be open simultaneously with a `MemoizedDraggableSash` (orientation="vertical") between them. `sectionSplit` state (default 50) controls the percentage split (20-80 clamped). Sash only renders when both sections are expanded. Double-click resets to 50/50. |
 | Floating version context menu | `showContextMenu` message includes `versionType`. `_showContextMenu` skips "Update to X" for floating/range. Backend already filters floating from update checks — this is defense-in-depth for the context menu. |
 | `versionsCache` has no TTL | In-memory LRU cache never expires. `clearSourceErrors()` now calls `clearVersionsCache()` which clears both `versionsCache` and `workspaceCache` version entries. Without this, refresh doesn't pick up newly published versions. |
 | dotnet NuGet HTTP cache stale | `refreshSidebar()` calls `clearNuGetHttpCache()` (runs `dotnet nuget locals http-cache --clear`) before re-checking updates. Without this, the dotnet CLI serves stale version listings from its local HTTP cache. |

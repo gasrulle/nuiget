@@ -2,7 +2,7 @@
  * SidebarApp — Main React component for the nUIget sidebar panel.
  *
  * Extensions-view-inspired search UX:
- *   - Empty search → Installed + Updates sections (collapsible accordion)
+ *   - Empty search → Installed + Updates sections (independently collapsible with draggable split)
  *   - Plain text + Enter → NuGet browse results (flat list, sections hidden)
  *   - @installed <query> → filtered installed packages (sections hidden)
  *   - @updates <query> → filtered updates (sections hidden)
@@ -13,6 +13,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { MemoizedDraggableSash } from '../app/components/DraggableSash';
 import { AllProjectsIcon, ArrowUpIcon, ClearAllIcon, SingleProjectIcon } from '../app/icons';
 import type { InstalledPackage, NuGetSource, PackageSearchResult, PackageUpdateMinimal, Project, ProjectInstalled, ProjectUpdates } from '../app/types';
 import { PackageRow } from './components/PackageRow';
@@ -67,8 +68,10 @@ export const SidebarApp: React.FC = () => {
     const [allProjectsUpdates, setAllProjectsUpdates] = useState<ProjectUpdates[]>([]);
     const [backgroundInstalledCount, setBackgroundInstalledCount] = useState(0);
 
-    // Accordion state for default mode (only 'installed' | 'updates' | null)
-    const [expandedSection, setExpandedSection] = useState<'installed' | 'updates' | null>(null);
+    // Independent section expand/collapse — both can be open (VS Code native style)
+    const [installedExpanded, setInstalledExpanded] = useState(true);
+    const [updatesExpanded, setUpdatesExpanded] = useState(true);
+    const [sectionSplit, setSectionSplit] = useState(50);
     const [, setSources] = useState<NuGetSource[]>([]);
     const [selectedSource, setSelectedSource] = useState('all');
     const [selectedProject, setSelectedProject] = useState('');
@@ -99,7 +102,8 @@ export const SidebarApp: React.FC = () => {
     const selectedSourceRef = useRef(selectedSource);
     const includePrereleaseRef = useRef(includePrerelease);
     const installedPackagesRef = useRef(installedPackages);
-    const expandedSectionRef = useRef(expandedSection);
+    const installedExpandedRef = useRef(installedExpanded);
+    const updatesExpandedRef = useRef(updatesExpanded);
     const loadAllProjectsRef = useRef(loadAllProjects);
     const selectedPackageIdRef = useRef(selectedPackageId);
     const packageUpdatesRef = useRef(packageUpdates);
@@ -118,7 +122,8 @@ export const SidebarApp: React.FC = () => {
     useEffect(() => { selectedSourceRef.current = selectedSource; }, [selectedSource]);
     useEffect(() => { includePrereleaseRef.current = includePrerelease; }, [includePrerelease]);
     useEffect(() => { installedPackagesRef.current = installedPackages; }, [installedPackages]);
-    useEffect(() => { expandedSectionRef.current = expandedSection; }, [expandedSection]);
+    useEffect(() => { installedExpandedRef.current = installedExpanded; }, [installedExpanded]);
+    useEffect(() => { updatesExpandedRef.current = updatesExpanded; }, [updatesExpanded]);
     useEffect(() => { loadAllProjectsRef.current = loadAllProjects; }, [loadAllProjects]);
     useEffect(() => { selectedPackageIdRef.current = selectedPackageId; }, [selectedPackageId]);
     useEffect(() => { packageUpdatesRef.current = packageUpdates; }, [packageUpdates]);
@@ -442,14 +447,14 @@ export const SidebarApp: React.FC = () => {
         if (!selectedProject) { return; }
 
         const needsInstalled = (
-            (searchMode === 'default' && (expandedSection === 'installed' || expandedSection === 'updates')) ||
+            (searchMode === 'default' && (installedExpanded || updatesExpanded)) ||
             searchMode === 'installed' ||
             searchMode === 'updates'
         );
 
         if (needsInstalled && installedPackages.length === 0 && !loadingInstalled) {
             // When entering updates mode, check if background data already covers this project
-            if ((searchMode === 'updates' || expandedSection === 'updates') && packageUpdates.length === 0 && !loadingUpdates) {
+            if ((searchMode === 'updates' || updatesExpanded) && packageUpdates.length === 0 && !loadingUpdates) {
                 const bgProjectData = allProjectsUpdates.find(pu => pu.projectPath === selectedProject);
                 if (bgProjectData) {
                     setPackageUpdates(bgProjectData.updates);
@@ -462,26 +467,26 @@ export const SidebarApp: React.FC = () => {
             });
             setLoadingInstalled(true);
         }
-    }, [searchMode, expandedSection, selectedProject, installedPackages.length, loadingInstalled, packageUpdates.length, loadingUpdates, allProjectsUpdates]);
+    }, [searchMode, installedExpanded, updatesExpanded, selectedProject, installedPackages.length, loadingInstalled, packageUpdates.length, loadingUpdates, allProjectsUpdates]);
 
     // ─── Load all projects updates ──────────────────────────────────────────
     useEffect(() => {
-        if (loadAllProjects && (searchMode === 'updates' || (searchMode === 'default' && expandedSection === 'updates'))) {
+        if (loadAllProjects && (searchMode === 'updates' || (searchMode === 'default' && updatesExpanded))) {
             vscode.postMessage({
                 type: 'checkAllProjectsUpdates',
                 includePrerelease
             });
             setLoadingAllUpdates(true);
         }
-    }, [loadAllProjects, searchMode, expandedSection, includePrerelease]);
+    }, [loadAllProjects, searchMode, updatesExpanded, includePrerelease]);
 
     // ─── Load all projects installed ────────────────────────────────────────
     useEffect(() => {
-        if (loadAllProjectsInstalled && (searchMode === 'installed' || (searchMode === 'default' && expandedSection === 'installed'))) {
+        if (loadAllProjectsInstalled && (searchMode === 'installed' || (searchMode === 'default' && installedExpanded))) {
             vscode.postMessage({ type: 'checkAllProjectsInstalled' });
             setLoadingAllInstalled(true);
         }
-    }, [loadAllProjectsInstalled, searchMode, expandedSection]);
+    }, [loadAllProjectsInstalled, searchMode, installedExpanded]);
 
     // ─── Search Handlers ─────────────────────────────────────────────────────
 
@@ -572,10 +577,9 @@ export const SidebarApp: React.FC = () => {
             else if (mode === 'installed') { installedListRef.current?.focus(); }
             else if (mode === 'updates') { updatesListRef.current?.focus(); }
             else {
-                // Default mode — focus the expanded section's list
-                const section = expandedSectionRef.current;
-                if (section === 'installed') { installedListRef.current?.focus(); }
-                else if (section === 'updates') { updatesListRef.current?.focus(); }
+                // Default mode — focus the first expanded section's list
+                if (installedExpandedRef.current) { installedListRef.current?.focus(); }
+                else if (updatesExpandedRef.current) { updatesListRef.current?.focus(); }
             }
         }
     }, [showFilterDropdown, matchingFilters, filterDropdownIndex, selectFilter, dispatchBrowseSearch, searchQuery]);
@@ -619,10 +623,18 @@ export const SidebarApp: React.FC = () => {
 
     // ─── Section Toggle (default mode only) ──────────────────────────────────
 
-    const toggleSection = useCallback((section: 'installed' | 'updates') => {
-        setExpandedSection(prev => prev === section ? null : section);
+    const toggleInstalled = useCallback(() => {
+        setInstalledExpanded(prev => !prev);
         setSelectedPackageId(null);
     }, []);
+
+    const toggleUpdates = useCallback(() => {
+        setUpdatesExpanded(prev => !prev);
+        setSelectedPackageId(null);
+    }, []);
+
+    const handleSectionSashDrag = useCallback((pos: number) => setSectionSplit(pos), []);
+    const handleSectionSashReset = useCallback(() => setSectionSplit(50), []);
 
     // ─── Keyboard Navigation ─────────────────────────────────────────────────
 
@@ -1129,69 +1141,94 @@ export const SidebarApp: React.FC = () => {
 
             {/* ─── Default Mode (sections) ─────────────────────────────── */}
             {searchMode === 'default' && (
-                <>
+                <div className="sidebar-sections-container">
                     {/* Installed Section */}
-                    <SectionHeader
-                        title="Installed"
-                        expanded={expandedSection === 'installed'}
-                        count={loadAllProjectsInstalled
-                            ? allProjectsInstalled.reduce((sum, pi) => sum + pi.packages.length, 0)
-                            : (installedPackages.length || backgroundInstalledCount)}
-                        loading={loadingInstalled || loadingAllInstalled}
-                        onToggle={() => toggleSection('installed')}
-                        actions={projects.length > 1 ? (
-                            <button
-                                className="section-action-btn"
-                                onClick={() => { setLoadAllProjectsInstalled(prev => !prev); setExpandedSection('installed'); }}
-                                title={loadAllProjectsInstalled ? 'Show single project' : 'Load all projects'}
-                                aria-label={loadAllProjectsInstalled ? 'Show single project' : 'Load all projects'}
-                            >
-                                {loadAllProjectsInstalled ? (
-                                    <AllProjectsIcon size={16} />
-                                ) : (
-                                    <SingleProjectIcon size={16} />
-                                )}
-                            </button>
-                        ) : undefined}
-                    />
-                    {expandedSection === 'installed' && renderInstalledList()}
-
-                    {/* Updates Section */}
-                    <SectionHeader
-                        title="Updates"
-                        expanded={expandedSection === 'updates'}
-                        count={totalUpdateCount}
-                        loading={loadingUpdates || loadingAllUpdates}
-                        onToggle={() => toggleSection('updates')}
-                        actions={
-                            <>
+                    <div
+                        className={`sidebar-section${!installedExpanded ? ' collapsed' : ''}`}
+                        style={installedExpanded
+                            ? (updatesExpanded ? { flex: `0 0 ${sectionSplit}%` } : { flex: 1 })
+                            : undefined}
+                    >
+                        <SectionHeader
+                            title="Installed"
+                            expanded={installedExpanded}
+                            count={loadAllProjectsInstalled
+                                ? allProjectsInstalled.reduce((sum, pi) => sum + pi.packages.length, 0)
+                                : (installedPackages.length || backgroundInstalledCount)}
+                            loading={loadingInstalled || loadingAllInstalled}
+                            onToggle={toggleInstalled}
+                            actions={projects.length > 1 ? (
                                 <button
                                     className="section-action-btn"
-                                    onClick={() => { setLoadAllProjects(prev => !prev); setExpandedSection('updates'); }}
-                                    title={loadAllProjects ? 'Show single project' : 'Load all projects'}
-                                    aria-label={loadAllProjects ? 'Show single project' : 'Load all projects'}
+                                    onClick={() => { setLoadAllProjectsInstalled(prev => !prev); setInstalledExpanded(true); }}
+                                    title={loadAllProjectsInstalled ? 'Show single project' : 'Load all projects'}
+                                    aria-label={loadAllProjectsInstalled ? 'Show single project' : 'Load all projects'}
                                 >
-                                    {loadAllProjects ? (
+                                    {loadAllProjectsInstalled ? (
                                         <AllProjectsIcon size={16} />
                                     ) : (
                                         <SingleProjectIcon size={16} />
                                     )}
                                 </button>
-                                {totalUpdateCount > 0 && (
-                                    <button
-                                        className="section-action-btn"
-                                        onClick={handleUpdateAll}
-                                        title={`Update all packages (${totalUpdateCount})`}
-                                        aria-label={`Update all packages (${totalUpdateCount})`}
-                                    >
-                                        <ArrowUpIcon size={16} />
-                                    </button>
-                                )}
-                            </>
-                        }
-                    />
-                    {expandedSection === 'updates' && renderUpdatesList()}
-                </>
+                            ) : undefined}
+                        />
+                        {installedExpanded && renderInstalledList()}
+                    </div>
+
+                    {/* Draggable sash between sections (visible only when both expanded) */}
+                    {installedExpanded && updatesExpanded && (
+                        <MemoizedDraggableSash
+                            orientation="vertical"
+                            onDrag={handleSectionSashDrag}
+                            onReset={handleSectionSashReset}
+                        />
+                    )}
+
+                    {/* Updates Section */}
+                    <div
+                        className={`sidebar-section${!updatesExpanded ? ' collapsed' : ''}`}
+                        style={updatesExpanded
+                            ? { flex: 1 }
+                            : undefined}
+                    >
+                        <SectionHeader
+                            title="Updates"
+                            expanded={updatesExpanded}
+                            count={totalUpdateCount}
+                            loading={loadingUpdates || loadingAllUpdates}
+                            onToggle={toggleUpdates}
+                            actions={
+                                <>
+                                    {projects.length > 1 && (
+                                        <button
+                                            className="section-action-btn"
+                                            onClick={() => { setLoadAllProjects(prev => !prev); setUpdatesExpanded(true); }}
+                                            title={loadAllProjects ? 'Show single project' : 'Load all projects'}
+                                            aria-label={loadAllProjects ? 'Show single project' : 'Load all projects'}
+                                        >
+                                            {loadAllProjects ? (
+                                                <AllProjectsIcon size={16} />
+                                            ) : (
+                                                <SingleProjectIcon size={16} />
+                                            )}
+                                        </button>
+                                    )}
+                                    {totalUpdateCount > 0 && (
+                                        <button
+                                            className="section-action-btn"
+                                            onClick={handleUpdateAll}
+                                            title={`Update all packages (${totalUpdateCount})`}
+                                            aria-label={`Update all packages (${totalUpdateCount})`}
+                                        >
+                                            <ArrowUpIcon size={16} />
+                                        </button>
+                                    )}
+                                </>
+                            }
+                        />
+                        {updatesExpanded && renderUpdatesList()}
+                    </div>
+                </div>
             )}
         </div>
     );

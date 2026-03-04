@@ -1,6 +1,7 @@
 /**
  * Resizable split panel sash component.
  * Handles mouse drag events to resize adjacent panels with 20-80% clamping.
+ * Supports both horizontal (col-resize) and vertical (row-resize) orientations.
  */
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -9,9 +10,11 @@ interface DraggableSashProps {
     onDrag: (newPosition: number) => void;
     onReset: () => void;
     onDragEnd?: (finalPosition: number) => void;
+    /** 'horizontal' = vertical sash line (col-resize), 'vertical' = horizontal sash line (row-resize). Default: 'horizontal'. */
+    orientation?: 'horizontal' | 'vertical';
 }
 
-function DraggableSash({ onDrag, onReset, onDragEnd }: DraggableSashProps) {
+function DraggableSash({ onDrag, onReset, onDragEnd, orientation = 'horizontal' }: DraggableSashProps) {
     const sashRef = useRef<HTMLDivElement>(null);
     const [isDragging, setIsDragging] = useState(false);
     // Track cleanup function for document event listeners
@@ -28,6 +31,9 @@ function DraggableSash({ onDrag, onReset, onDragEnd }: DraggableSashProps) {
         };
     }, []);
 
+    const isVertical = orientation === 'vertical';
+    const cursorStyle = isVertical ? 'row-resize' : 'col-resize';
+
     const handleMouseDown = useCallback((e: React.MouseEvent) => {
         e.preventDefault();
         setIsDragging(true);
@@ -39,7 +45,9 @@ function DraggableSash({ onDrag, onReset, onDragEnd }: DraggableSashProps) {
             }
 
             const containerRect = container.getBoundingClientRect();
-            const newPosition = ((moveEvent.clientX - containerRect.left) / containerRect.width) * 100;
+            const newPosition = isVertical
+                ? ((moveEvent.clientY - containerRect.top) / containerRect.height) * 100
+                : ((moveEvent.clientX - containerRect.left) / containerRect.width) * 100;
             // Clamp to 20-80% range
             const clampedPosition = Math.max(20, Math.min(80, newPosition));
             onDrag(clampedPosition);
@@ -70,14 +78,14 @@ function DraggableSash({ onDrag, onReset, onDragEnd }: DraggableSashProps) {
 
         document.addEventListener('mousemove', handleMouseMove);
         document.addEventListener('mouseup', handleMouseUp);
-        document.body.style.cursor = 'col-resize';
+        document.body.style.cursor = cursorStyle;
         document.body.style.userSelect = 'none';
-    }, [onDrag, onDragEnd]);
+    }, [onDrag, onDragEnd, isVertical, cursorStyle]);
 
     return (
         <div
             ref={sashRef}
-            className={`sash${isDragging ? ' dragging' : ''}`}
+            className={`sash${isDragging ? ' dragging' : ''}${isVertical ? ' sash-vertical' : ''}`}
             onMouseDown={handleMouseDown}
             onDoubleClick={onReset}
             title="Drag to resize. Double-click to reset."

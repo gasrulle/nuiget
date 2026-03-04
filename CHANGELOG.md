@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **"Load all projects" toggle visible in Updates section with single project**
 - **Failed operations no longer trigger optimistic sidebar updates**
 - **Sidebar's own failed operations no longer clear update badges**
 - **Sidebar `_notifyMainPanel()` no longer fires after failed operations** — install/update/remove from sidebar only refresh main panel when the operation succeeded
@@ -24,6 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - **Sidebar no longer does full re-fetch after every operation** — Previously cleared all updates and re-requested `checkAllProjectsUpdates` + `checkAllProjectsInstalled` after every install/update/remove. Now surgically filters affected packages from update lists
+- **Sidebar sections independently expandable** — Both Installed and Updates sections can be open simultaneously with a draggable divider between them (mimics native VS Code sidebar behavior). Default is 50/50 split; double-click sash to reset
 - **Main panel refresh handler debounced** — Rapid refresh messages from sidebar operations are collapsed with a 300ms debounce to avoid redundant re-fetches
 - **`checkPackageUpdates` effect skip on optimistic update** — After an operation where the update outcome is already known, the `installedPackages` change effect skips the redundant `checkPackageUpdates` request
 - **`bulkUpdateAllProjectsResult` no longer triggers `checkAllProjectsUpdates`** — Optimistic state clearing replaces the expensive full re-check; background timer or manual refresh reconciles if needed

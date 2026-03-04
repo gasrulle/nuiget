@@ -1003,6 +1003,15 @@ body {
     background-color: var(--vscode-sash-hoverBorder, var(--vscode-focusBorder));
 }
 
+/* Vertical sash (horizontal line, row-resize) for stacked panels */
+.sash.sash-vertical {
+    width: auto;
+    height: 4px;
+    cursor: row-resize;
+    border-left: none;
+    border-top: 1px solid var(--vscode-sideBarSectionHeader-border, var(--vscode-panel-border));
+}
+
 .package-details-panel {
     overflow-y: auto;
     padding: 16px 20px;

@@ -70,7 +70,7 @@ src/
 │   │       └── usePackageSelection.ts  # Package selection logic hook
 │   └── sidebar/
 │       ├── index.tsx              # Sidebar React entry point
-│       ├── SidebarApp.tsx         # Sidebar main component (accordion sections)
+│       ├── SidebarApp.tsx         # Sidebar main component (split-panel sections)
 │       ├── SidebarApp.css         # Sidebar styles
 │       └── components/
 │           ├── SectionHeader.tsx   # Collapsible section header
@@ -109,7 +109,7 @@ The sidebar provides a compact package management UI in the VS Code Activity Bar
 - **Build**: Separate esbuild entry point (`src/webview/sidebar/index.tsx` → `dist/sidebar.js`).
 
 ### Key Design Decisions
-- **Extensions-style search UX**: The search box is the single control point. Empty → shows Installed + Updates sections (collapsible accordion). Plain text + Enter → NuGet browse results (flat list, sections hidden). `@installed <query>` → filtered installed packages. `@updates <query>` → filtered updates. Typing `@` shows an auto-completing filter dropdown.
+- **Extensions-style search UX**: The search box is the single control point. Empty → shows Installed + Updates sections (independently collapsible with draggable split). Plain text + Enter → NuGet browse results (flat list, sections hidden). `@installed <query>` → filtered installed packages. `@updates <query>` → filtered updates. Typing `@` shows an auto-completing filter dropdown.
 - **Search mode model**: `parseSearchQuery(query)` returns `{ mode: 'default' | 'browse' | 'installed' | 'updates', filterText: string }`. All rendering conditionals and auto-fetch effects are driven by this parsed mode.
 - **Always lite mode**: No metadata enrichment, no icons, no README — optimized for speed and compact display.
 - **QuickPick for options**: Source, project, and prerelease toggle are title bar icon commands that open VS Code QuickPick dialogs (not inline dropdowns), saving sidebar width.

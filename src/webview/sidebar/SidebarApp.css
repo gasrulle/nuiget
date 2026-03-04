@@ -407,6 +407,48 @@ body {
     text-decoration: underline;
 }
 
+/* ─── Sections Container (split-panel layout for Installed + Updates) ──── */
+.sidebar-sections-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.sidebar-section {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+    transition: flex 0.1s ease;
+}
+
+.sidebar-section.collapsed {
+    flex: 0 0 auto !important;
+}
+
+/* ─── Vertical Sash (horizontal divider between sections) ─────────────── */
+.sash.sash-vertical {
+    width: auto;
+    height: 4px;
+    cursor: row-resize;
+    background: transparent;
+    border-left: none;
+    border-top: 1px solid var(--vscode-sideBarSectionHeader-border, transparent);
+    flex-shrink: 0;
+    transition: background-color 0.1s ease;
+    z-index: 10;
+}
+
+.sash.sash-vertical:hover {
+    background-color: var(--vscode-sash-hoverBorder, var(--vscode-focusBorder));
+}
+
+.sash.sash-vertical.dragging {
+    background-color: var(--vscode-sash-hoverBorder, var(--vscode-focusBorder));
+}
+
 /* ============================================
    REDUCED MOTION
    ============================================ */
@@ -424,6 +466,14 @@ body.vscode-reduce-motion .package-row-action {
 
 body.vscode-reduce-motion .section-spinner {
     animation: none;
+}
+
+body.vscode-reduce-motion .sidebar-section {
+    transition: none;
+}
+
+body.vscode-reduce-motion .sash.sash-vertical {
+    transition: none;
 }
 
 /* ============================================
