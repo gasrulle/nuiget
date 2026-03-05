@@ -421,7 +421,6 @@ body {
     flex-direction: column;
     min-height: 0;
     overflow: hidden;
-    transition: flex 0.1s ease;
 }
 
 .sidebar-section.collapsed {
@@ -466,10 +465,6 @@ body.vscode-reduce-motion .package-row-action {
 
 body.vscode-reduce-motion .section-spinner {
     animation: none;
-}
-
-body.vscode-reduce-motion .sidebar-section {
-    transition: none;
 }
 
 body.vscode-reduce-motion .sash.sash-vertical {

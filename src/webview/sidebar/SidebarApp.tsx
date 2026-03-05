@@ -179,6 +179,7 @@ export const SidebarApp: React.FC = () => {
                     setSelectedProjectName(name);
                 }
                 if (message.includePrerelease !== undefined) { setIncludePrerelease(message.includePrerelease); }
+                if (message.sectionSplit !== undefined) { setSectionSplit(message.sectionSplit); }
                 break;
             case 'projects':
                 setProjects(message.projects || []);
@@ -634,7 +635,13 @@ export const SidebarApp: React.FC = () => {
     }, []);
 
     const handleSectionSashDrag = useCallback((pos: number) => setSectionSplit(pos), []);
-    const handleSectionSashReset = useCallback(() => setSectionSplit(50), []);
+    const handleSectionSashDragEnd = useCallback((pos: number) => {
+        vscode.postMessage({ type: 'saveSectionSplit', position: pos });
+    }, []);
+    const handleSectionSashReset = useCallback(() => {
+        setSectionSplit(50);
+        vscode.postMessage({ type: 'saveSectionSplit', position: 50 });
+    }, []);
 
     // ─── Keyboard Navigation ─────────────────────────────────────────────────
 
@@ -1180,6 +1187,7 @@ export const SidebarApp: React.FC = () => {
                         <MemoizedDraggableSash
                             orientation="vertical"
                             onDrag={handleSectionSashDrag}
+                            onDragEnd={handleSectionSashDragEnd}
                             onReset={handleSectionSashReset}
                         />
                     )}

@@ -392,6 +392,14 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
                     await this._sendInitialData();
                     break;
                 }
+            case 'saveSectionSplit':
+                {
+                    const position = data.position as number | undefined;
+                    if (position !== undefined) {
+                        await this._context.workspaceState.update('nuget.sidebarSectionSplit', position);
+                    }
+                    break;
+                }
             case 'searchPackages':
                 {
                     const query = data.query as string;
