@@ -63,7 +63,7 @@ npm run package:vsix # Outputs nuiget.vsix
 ## Known Issues
 | Issue | Status |
 |-------|--------|
-| 3 dev-only `npm audit` vulnerabilities (1 low, 1 moderate, 1 high) | All dev-only, not in VSIX. Root cause: eslint 9 depends on ajv v6 (moderate — no patched v6 release) and minimatch v3 (high — needs v10.2.1+). `@vscode/vsce` also depends on minimatch v3 and contributes 1 low-severity transitive vulnerability. Override ajv to v8 breaks eslint. eslint 10 fixes both ajv and minimatch, but `eslint-plugin-react-hooks` stable (v7.0.1) doesn't support eslint 10 yet. **Revisit when react-hooks stable supports eslint 10.** |
+| No known `npm audit` vulnerabilities | All 5 previously tracked vulnerabilities (ajv, minimatch, underscore, dompurify, fast-xml-parser) resolved via `npm audit fix`. **Re-run `npm audit` periodically to check for regressions.** |
 
 ## VS Code Extension
 | Issue | Solution |

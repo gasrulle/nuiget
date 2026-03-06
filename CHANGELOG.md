@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **All 5 npm audit vulnerabilities resolved** — Updated dompurify (XSS), fast-xml-parser (stack overflow), ajv (ReDoS), minimatch (ReDoS), and underscore (DoS)
 - **Sidebar sash position not persisted across VS Code sessions**
 - **"Load all projects" toggle visible in Updates section with single project**
 - **Failed operations no longer trigger optimistic sidebar updates**
