@@ -853,11 +853,13 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
 
         // Send current state FIRST so the webview knows selectedProject
         // before receiving the projects list (avoids wrong auto-select)
+        const sectionSplit = this._context.workspaceState.get<number>('nuget.sidebarSectionSplit');
         this._postMessage({
             type: 'state',
             selectedSource: this._selectedSource,
             selectedProject: this._selectedProject,
-            includePrerelease: this._includePrerelease
+            includePrerelease: this._includePrerelease,
+            ...(sectionSplit !== undefined && { sectionSplit })
         });
 
         // Send projects (webview already has selectedProject set)
