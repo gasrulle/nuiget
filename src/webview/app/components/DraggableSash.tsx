@@ -38,6 +38,8 @@ function DraggableSash({ onDrag, onReset, onDragEnd, orientation = 'horizontal' 
         e.preventDefault();
         setIsDragging(true);
 
+        let lastPosition: number | undefined;
+
         const handleMouseMove = (moveEvent: MouseEvent) => {
             const container = sashRef.current?.parentElement;
             if (!container) {
@@ -51,15 +53,14 @@ function DraggableSash({ onDrag, onReset, onDragEnd, orientation = 'horizontal' 
             // Clamp to 20-80% range
             const clampedPosition = Math.max(20, Math.min(80, newPosition));
             onDrag(clampedPosition);
-            // Store last position for onDragEnd
-            (handleMouseMove as any).lastPosition = clampedPosition;
+            lastPosition = clampedPosition;
         };
 
         const handleMouseUp = () => {
             setIsDragging(false);
             // Call onDragEnd with final position if provided
-            if (onDragEnd && (handleMouseMove as any).lastPosition !== undefined) {
-                onDragEnd((handleMouseMove as any).lastPosition);
+            if (onDragEnd && lastPosition !== undefined) {
+                onDragEnd(lastPosition);
             }
             document.removeEventListener('mousemove', handleMouseMove);
             document.removeEventListener('mouseup', handleMouseUp);

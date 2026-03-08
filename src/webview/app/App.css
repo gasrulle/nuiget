@@ -166,6 +166,83 @@ body {
     cursor: help;
 }
 
+/* Vulnerability badge on package name */
+.vulnerability-badge {
+    display: inline-flex;
+    align-items: center;
+    margin-left: 6px;
+    font-size: 11px;
+    cursor: help;
+}
+
+.vulnerability-badge.vuln-Low {
+    color: var(--vscode-charts-blue, #3794ff);
+}
+
+.vulnerability-badge.vuln-Moderate {
+    color: var(--vscode-charts-yellow, #cca700);
+}
+
+.vulnerability-badge.vuln-High {
+    color: var(--vscode-charts-orange, #d18616);
+}
+
+.vulnerability-badge.vuln-Critical {
+    color: var(--vscode-errorForeground, #f14c4c);
+}
+
+/* Vulnerability details in PackageDetailsPanel */
+.vulnerability-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.vulnerability-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+}
+
+.vulnerability-item.vuln-Low {
+    color: var(--vscode-charts-blue, #3794ff);
+}
+
+.vulnerability-item.vuln-Moderate {
+    color: var(--vscode-charts-yellow, #cca700);
+}
+
+.vulnerability-item.vuln-High {
+    color: var(--vscode-charts-orange, #d18616);
+}
+
+.vulnerability-item.vuln-Critical {
+    color: var(--vscode-errorForeground, #f14c4c);
+}
+
+.vuln-severity {
+    font-weight: 600;
+}
+
+.vuln-link {
+    font-weight: normal;
+}
+
+/* Offline metadata indicator */
+.offline-indicator {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    margin-bottom: 8px;
+    font-size: 12px;
+    color: var(--vscode-charts-yellow, #cca700);
+    background: var(--vscode-inputValidation-warningBackground, rgba(204, 167, 0, 0.1));
+    border: 1px solid var(--vscode-inputValidation-warningBorder, rgba(204, 167, 0, 0.4));
+    border-radius: 3px;
+}
+
 /* SDK badge for transitive packages in details panel */
 .sdk-badge {
     display: inline-block;

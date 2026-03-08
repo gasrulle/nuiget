@@ -45,6 +45,7 @@ export interface InstalledPackage {
     iconUrl?: string;
     verified?: boolean;
     authors?: string;
+    vulnerabilities?: PackageVulnerability[];
 }
 
 export interface PackageSearchResult {
@@ -80,6 +81,22 @@ export interface PackageMetadata {
     published?: string;
     dependencies: PackageDependencyGroup[];
     readme?: string;
+    packageSize?: number;
+    vulnerabilities?: PackageVulnerability[];
+    offline?: boolean;
+}
+
+/**
+ * Vulnerability severity levels matching NuGet V3 API integer values
+ */
+export type VulnerabilitySeverity = 'Low' | 'Moderate' | 'High' | 'Critical';
+
+/**
+ * Known vulnerability for a package version
+ */
+export interface PackageVulnerability {
+    advisoryUrl: string;
+    severity: VulnerabilitySeverity;
 }
 
 export interface NuGetSource {

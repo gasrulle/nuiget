@@ -155,6 +155,8 @@ export const App: React.FC = () => {
     const skipNextUpdateCheckRef = useRef(false);
     // Debounce rapid refresh messages from sidebar operations
     const refreshDebounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+    // Clean up debounce timer on unmount
+    useEffect(() => () => { if (refreshDebounceRef.current) { clearTimeout(refreshDebounceRef.current); } }, []);
     useEffect(() => {
         includePrereleaseRef.current = includePrerelease;
     }, [includePrerelease]);
@@ -275,7 +277,13 @@ export const App: React.FC = () => {
                 break;
             case 'installedPackages':
                 if (message.projectPath === selectedProjectRef.current) {
-                    setInstalledPackages(message.packages);
+                    setInstalledPackages(prev => {
+                        const incoming = message.packages;
+                        if (prev.length !== incoming.length) { return incoming; }
+                        const prevKey = prev.map((p: { id: string; version: string }) => `${p.id}@${p.version}`).join('|');
+                        const newKey = incoming.map((p: { id: string; version: string }) => `${p.id}@${p.version}`).join('|');
+                        return prevKey === newKey ? prev : incoming;
+                    });
                     setLoadingInstalled(false);
                 }
                 break;

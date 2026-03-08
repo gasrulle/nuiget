@@ -36,6 +36,8 @@ export class Http2Client {
     private sessions: Map<string, http2.ClientHttp2Session> = new Map();
     // Track session order for LRU eviction (oldest first)
     private sessionOrder: string[] = [];
+    // Periodic stale session cleanup interval
+    private staleCleanupTimer: ReturnType<typeof setInterval> | undefined;
 
     // HTTP/1.1 agent with keepAlive for non-HTTP/2 sources
     private httpsAgent = new https.Agent({
@@ -52,7 +54,19 @@ export class Http2Client {
         'https://api.nuget.org'
     ]);
 
-    private constructor() { }
+    private constructor() {
+        // Periodically clean up stale sessions (closed/destroyed by event handlers)
+        this.staleCleanupTimer = setInterval(() => {
+            for (let i = this.sessionOrder.length - 1; i >= 0; i--) {
+                const o = this.sessionOrder[i];
+                const s = this.sessions.get(o);
+                if (!s || s.closed || s.destroyed) {
+                    this.sessionOrder.splice(i, 1);
+                    this.sessions.delete(o);
+                }
+            }
+        }, 30_000);
+    }
 
     public static getInstance(): Http2Client {
         if (!Http2Client.instance) {
@@ -92,19 +106,6 @@ export class Http2Client {
         }
 
         // Evict oldest session if at capacity
-        if (this.sessions.size >= Http2Client.MAX_SESSIONS) {
-            // Clean up stale entries first (sessions closed by event handlers)
-            for (let i = this.sessionOrder.length - 1; i >= 0; i--) {
-                const o = this.sessionOrder[i];
-                const s = this.sessions.get(o);
-                if (!s || s.closed || s.destroyed) {
-                    this.sessionOrder.splice(i, 1);
-                    this.sessions.delete(o);
-                }
-            }
-        }
-
-        // If still at capacity after cleanup, evict the oldest active session
         if (this.sessions.size >= Http2Client.MAX_SESSIONS) {
             const oldestOrigin = this.sessionOrder.shift();
             if (oldestOrigin) {
@@ -667,9 +668,55 @@ export class Http2Client {
     }
 
     /**
+     * HTTP/1.1 HEAD request — returns Content-Length if available, otherwise -1.
+     */
+    public headRequestContentLength(url: string, authHeader?: string): Promise<number> {
+        return new Promise((resolve) => {
+            try {
+                let resolved = false;
+                const done = (value: number) => { if (!resolved) { resolved = true; resolve(value); } };
+
+                const client = url.startsWith('https://') ? https : http;
+                const parsed = new URL(url);
+
+                const headers: Record<string, string> = {};
+                if (authHeader) { headers['Authorization'] = authHeader; }
+
+                const options = {
+                    hostname: parsed.hostname,
+                    port: parsed.port || (parsed.protocol === 'https:' ? 443 : 80),
+                    path: parsed.pathname + parsed.search,
+                    method: 'HEAD' as const,
+                    headers,
+                    agent: url.startsWith('https://') ? this.httpsAgent : undefined
+                };
+
+                const req = client.request(options, (res) => {
+                    if (res.statusCode === 200) {
+                        const cl = res.headers['content-length'];
+                        done(cl ? parseInt(cl, 10) : -1);
+                    } else {
+                        done(-1);
+                    }
+                });
+
+                req.on('error', () => { done(-1); });
+                req.setTimeout(5000, () => { req.destroy(); done(-1); });
+                req.end();
+            } catch {
+                resolve(-1);
+            }
+        });
+    }
+
+    /**
      * Close all HTTP/2 sessions (call on extension deactivate)
      */
     public closeAll(): void {
+        if (this.staleCleanupTimer) {
+            clearInterval(this.staleCleanupTimer);
+            this.staleCleanupTimer = undefined;
+        }
         for (const session of this.sessions.values()) {
             try {
                 session.close();

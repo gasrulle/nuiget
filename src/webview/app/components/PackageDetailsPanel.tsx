@@ -10,7 +10,7 @@
  */
 
 import React, { useEffect, useRef, useState } from 'react';
-import { ArrowRightIcon, ChevronDownIcon, ChevronRightIcon, InfoIcon, RulerIcon, SyncIcon, VerifiedIcon } from '../icons';
+import { ArrowRightIcon, ChevronDownIcon, ChevronRightIcon, InfoIcon, RulerIcon, ShieldIcon, SyncIcon, VerifiedIcon } from '../icons';
 import type {
     InstalledPackage,
     LRUMap,
@@ -21,6 +21,12 @@ import type {
     VsCodeApi,
 } from '../types';
 import { compareVersions, decodeHtmlEntities, getPackageId, isSearchResult } from '../types';
+
+function formatPackageSize(bytes: number): string {
+    if (bytes < 1024) { return `${bytes} B`; }
+    if (bytes < 1048576) { return `${(bytes / 1024).toFixed(1)} KB`; }
+    return `${(bytes / 1048576).toFixed(1)} MB`;
+}
 
 export interface PackageDetailsPanelProps {
     selectedPackage: PackageSearchResult | InstalledPackage | null;
@@ -373,6 +379,11 @@ const PackageDetailsPanel: React.FC<PackageDetailsPanelProps> = ({
                     <p className="empty-state">Loading package details...</p>
                 ) : (
                     <div className="details-info">
+                        {packageMetadata?.offline && (
+                            <div className="offline-indicator" title="Metadata loaded from local NuGet cache (source unavailable)">
+                                <InfoIcon size={14} /> Offline — loaded from local cache
+                            </div>
+                        )}
                         <div className="details-row">
                             <label>Description:</label>
                             <span>{decodeHtmlEntities(packageMetadata?.description || searchResult?.description || 'No description available')}</span>
@@ -408,6 +419,30 @@ const PackageDetailsPanel: React.FC<PackageDetailsPanelProps> = ({
                                 <span>{(searchResult?.totalDownloads || packageMetadata?.totalDownloads)?.toLocaleString()}</span>
                             </div>
                         )}
+                        {packageMetadata?.packageSize !== undefined && packageMetadata.packageSize > 0 && (
+                            <div className="details-row">
+                                <label>Package Size:</label>
+                                <span>{formatPackageSize(packageMetadata.packageSize)}</span>
+                            </div>
+                        )}
+                        {(() => {
+                            const vulns = packageMetadata?.vulnerabilities || (selectedPackage && 'vulnerabilities' in selectedPackage ? selectedPackage.vulnerabilities : undefined);
+                            if (!vulns || vulns.length === 0) { return null; }
+                            return (
+                                <div className="details-row vulnerabilities-row">
+                                    <label>Vulnerabilities:</label>
+                                    <div className="vulnerability-list">
+                                        {vulns.map((v, i) => (
+                                            <div key={i} className={`vulnerability-item vuln-${v.severity}`}>
+                                                <ShieldIcon size={14} />
+                                                <span className="vuln-severity">{v.severity}</span>
+                                                <a href={v.advisoryUrl} className="details-link vuln-link">Advisory</a>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            );
+                        })()}
                         {packageMetadata?.published && (
                             <div className="details-row">
                                 <label>Date Published:</label>

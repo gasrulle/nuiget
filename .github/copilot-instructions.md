@@ -160,6 +160,9 @@ npm run package:vsix # Outputs nuiget.vsix
 | `logBulkOperationHeader` double-formatting | When `packageCount = 0`, the method uses `operationType` as the full header string. Callers passing pre-formatted strings (all-projects bulk ops) must pass `packageCount = 0` and include trailing `...` in `operationType`. Don't pass a formatted message AND a non-zero count — it appends `${count} packages...` again. |
 | `dotnet package search` always noun-first | Introduced in .NET 8.0.2xx SDK as a new command — always noun-first, no old equivalent. No SDK detection needed. |
 | `execWithTimeout` maxBuffer | Set to 10 MB. Default Node.js `exec` buffer is 1 MB — large `dotnet list package` output exceeds it. Don't reduce below 10 MB. |
+| Vulnerability data 1h TTL | `vulnerabilityData` Map + `vulnerabilityDataTimestamp`. `clearSourceErrors()` clears it. `fetchVulnerabilityData()` skips re-fetch within TTL. Don't cache offline metadata — prefer fresh data when sources recover. |
+| Offline metadata not cached | `getOfflineMetadata()` results (with `offline: true`) are NOT stored in `metadataCache`. This ensures fresh API data replaces offline data once sources recover. |
+| `_globalPackagesFolder` cached once | Resolved via `dotnet nuget locals global-packages --list`, falls back to `~/.nuget/packages`. Cached for extension lifetime — acceptable since the path rarely changes. |
 
 ## Code Patterns
 | Issue | Solution |

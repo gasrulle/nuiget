@@ -280,11 +280,13 @@ export function isNewerVersion(version1: string, version2: string): boolean {
 
     if (v1 === v2) { return false; }
 
-    // Parse version parts
+    // Parse version parts (strip build metadata per SemVer 2.0 — +build suffix is ignored in comparisons)
     const parseVersion = (v: string) => {
-        const [main, prerelease] = v.split('-');
+        const withoutBuild = v.split('+')[0];
+        const [main, ...prereleaseParts] = withoutBuild.split('-');
+        const prerelease = prereleaseParts.length > 0 ? prereleaseParts.join('-') : null;
         const parts = main.split('.').map(p => parseInt(p, 10) || 0);
-        return { parts, prerelease: prerelease || null };
+        return { parts, prerelease };
     };
 
     const parsed1 = parseVersion(v1);
@@ -336,6 +338,64 @@ export function isNewerVersion(version1: string, version2: string): boolean {
     }
 
     return false;
+}
+
+/**
+ * Compare two version strings numerically, returning -1, 0, or 1.
+ * Handles prerelease suffixes per SemVer 2.0 rules.
+ */
+function compareVersionNumbers(a: string, b: string): number {
+    if (isNewerVersion(a, b)) { return 1; }
+    if (isNewerVersion(b, a)) { return -1; }
+    return 0;
+}
+
+/**
+ * Check if a package version falls within a NuGet version range.
+ * Supports NuGet interval notation:
+ *   (,2.0.0)    — all versions below 2.0.0
+ *   [1.0.0,)    — 1.0.0 and above
+ *   [1.0.0,2.0) — 1.0.0 inclusive to 2.0.0 exclusive
+ *   (1.0.0,2.0] — 1.0.0 exclusive to 2.0.0 inclusive
+ */
+export function isVersionInRange(version: string, rangeStr: string): boolean {
+    const trimmed = rangeStr.trim();
+    if (!trimmed) { return false; }
+
+    const firstChar = trimmed[0];
+    const lastChar = trimmed[trimmed.length - 1];
+
+    // Check if it's interval notation
+    if ((firstChar === '[' || firstChar === '(') && (lastChar === ']' || lastChar === ')')) {
+        const inner = trimmed.slice(1, -1);
+        const commaIdx = inner.indexOf(',');
+        if (commaIdx === -1) {
+            // Exact version: [1.0.0]
+            return firstChar === '[' && lastChar === ']' && compareVersionNumbers(version, inner.trim()) === 0;
+        }
+
+        const minStr = inner.slice(0, commaIdx).trim();
+        const maxStr = inner.slice(commaIdx + 1).trim();
+        const minInclusive = firstChar === '[';
+        const maxInclusive = lastChar === ']';
+
+        // Check minimum bound
+        if (minStr) {
+            const cmp = compareVersionNumbers(version, minStr);
+            if (minInclusive ? cmp < 0 : cmp <= 0) { return false; }
+        }
+
+        // Check maximum bound
+        if (maxStr) {
+            const cmp = compareVersionNumbers(version, maxStr);
+            if (maxInclusive ? cmp > 0 : cmp >= 0) { return false; }
+        }
+
+        return true;
+    }
+
+    // Plain version string — treat as minimum inclusive (NuGet default)
+    return compareVersionNumbers(version, trimmed) >= 0;
 }
 
 /**

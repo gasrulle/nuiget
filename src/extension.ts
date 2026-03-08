@@ -33,7 +33,9 @@ export function activate(context: vscode.ExtensionContext) {
         const projects = await nugetService.findProjects();
         vscode.commands.executeCommand('setContext', 'nuiget.hasProjectFiles', projects.length > 0);
     };
-    updateProjectFilesContext();
+    updateProjectFilesContext().catch(error => {
+        console.error('[nUIget] Failed to update project files context:', error);
+    });
     const projectFileWatcher = vscode.workspace.createFileSystemWatcher('**/*.{csproj,fsproj,vbproj}');
     const debouncedUpdate = () => {
         if (projectFileDebounce) { clearTimeout(projectFileDebounce); }

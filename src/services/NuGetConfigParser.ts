@@ -141,8 +141,8 @@ export class NuGetConfigParser {
             }
         }
 
-        const results = await Promise.all(candidates.map(c => this.fileExists(c)));
-        return candidates.filter((_, i) => results[i]);
+        const results = await Promise.allSettled(candidates.map(c => this.fileExists(c)));
+        return candidates.filter((_, i) => results[i].status === 'fulfilled' && results[i].value);
     }
 
     /**

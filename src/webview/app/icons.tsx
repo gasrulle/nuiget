@@ -195,6 +195,14 @@ export const AllProjectsIcon: React.FC<IconProps> = ({ size = defaultSize, class
     </svg>
 );
 
+/** Codicon: shield — used for vulnerability indicators */
+export const ShieldIcon: React.FC<IconProps> = ({ size = defaultSize, className, title, style }) => (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="currentColor" className={className} style={style} aria-hidden={!title} role={title ? 'img' : undefined}>
+        {title && <title>{title}</title>}
+        <path fillRule="evenodd" clipRule="evenodd" d="M8 1L2 3.5V7C2 10.87 4.56 14.43 8 15.5C11.44 14.43 14 10.87 14 7V3.5L8 1ZM13 7C13 10.31 10.94 13.37 8 14.44C5.06 13.37 3 10.31 3 7V4.21L8 2.09L13 4.21V7ZM8 11A1 1 0 110 2 1 1 0 010-2zm-.5-5h1v4h-1V6Z" transform="translate(0,0)" />
+    </svg>
+);
+
 /** Codicon: check-all (multi-checkmark) */
 export const CheckAllIcon: React.FC<IconProps> = ({ size = defaultSize, className, title, style }) => (
     <svg width={size} height={size} viewBox="0 0 16 16" fill="currentColor" className={className} style={style} aria-hidden={!title} role={title ? 'img' : undefined}>

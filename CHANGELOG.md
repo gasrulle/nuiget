@@ -7,8 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Vulnerability scanning for installed packages** — Fetches NuGet V3 VulnerabilityInfo index, enriches installed packages with vulnerability data (severity + advisory URL), displays color-coded shield badges on package rows and detailed advisory links in the details panel
+- **Package size display** — Shows nupkg download size (via HEAD request to flat container) in the details panel, formatted as KB/MB
+- **Offline metadata fallback** — When all NuGet sources are unreachable, reads `.nuspec` from the local global-packages cache (`~/.nuget/packages/`) to display basic metadata (description, authors, dependencies) with an "Offline" indicator
+
 ### Fixed
 
+- **`getPackageSize` nupkg URL missing trailing slash normalization**
+- **`headRequestContentLength` double-resolve on timeout**
+- **Vulnerability badge pluralization typo ("vulnerabilityy")**
+- **Offline nuspec dependency parsing ignoring ungrouped deps and attribute order**
+- **`getPackageSize` blocking metadata flow sequentially instead of parallel**
+- **`getVulnerabilities` missing `private` access modifier**
+- **`isNewerVersion` incorrect comparison when SemVer build metadata present**
+- **Extension activation unhandled promise rejection on project file discovery**
+- **`findNuGetConfigs` single filesystem error aborting all config file discovery**
+- **WorkspaceCache arbitrary eviction ordering for permanent (no-TTL) entries**
+- **Sidebar package rows missing keyboard focus-visible indicator**
+- **DraggableSash storing mutable state on function object via `as any`**
+- **NuGetPanel message handler missing `default` case in switch**
+- **`refreshDebounceRef` not cleared on App unmount**
+- **CSP `img-src` redundant domain entries covered by wildcards**
 - **Http2Client double-resolve in `fetchJsonHttp1WithDetails`**
 - **CredentialService DPAPI command injection hardening**
 - **Sidebar missing concurrent operation guard**
@@ -29,6 +50,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`detailsPanelContent` memoized with `useMemo`** — BrowseTab no longer re-renders when unrelated App state changes
 - **`findNuGetConfigs` parallelized** — File existence checks now run concurrently via `Promise.all`
 - **DraggableSash ARIA attributes** — Added `role="separator"`, `aria-orientation`, and `aria-label`
+- **TypeScript target bumped from ES2020 to ES2022** — Enables `Array.at()`, `Object.hasOwn()`, Error `cause`, and RegExp `/d` flag
+- **Dependencies updated** — `@tanstack/react-virtual` 3.13.18→3.13.21, `marked` 17.0.1→17.0.4, `esbuild` 0.27.2→0.27.3, `@types/vscode` 1.108.1→1.109.0, `typescript-eslint` 8.56.0→8.56.1
+- **HTTP/2 stale session cleanup moved to periodic interval** — Removes per-request O(n) scan of all sessions; stale entries now pruned every 30 seconds
+- **`installedPackages` setter uses content comparison** — Skips re-render when the same `id@version` set is received, preventing cascading downstream effects
+- **Transitive prefetch delay reduced from 2 000 ms to 500 ms** — Transitive dependency data loads sooner after direct packages finish
 - **Dependency group headers keyboard accessible** — Added `role="button"`, `tabIndex`, `aria-expanded`, and Enter/Space key handlers
 - **Source settings and warning indicator accessibility** — Added `aria-label`, `role="button"`, `tabIndex`, and keyboard handlers
 

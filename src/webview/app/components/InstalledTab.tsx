@@ -20,7 +20,7 @@
 
 import { useVirtualizer } from '@tanstack/react-virtual';
 import React, { forwardRef, useCallback, useDeferredValue, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
-import { AllProjectsIcon, CheckAllIcon, ChevronDownIcon, ChevronRightIcon, CloseIcon, CollapseAllIcon, ExpandAllIcon, RulerIcon, SingleProjectIcon, SyncIcon, VerifiedIcon, WarningIcon } from '../icons';
+import { AllProjectsIcon, CheckAllIcon, ChevronDownIcon, ChevronRightIcon, CloseIcon, CollapseAllIcon, ExpandAllIcon, RulerIcon, ShieldIcon, SingleProjectIcon, SyncIcon, VerifiedIcon, WarningIcon } from '../icons';
 import type {
     InstalledPackage,
     LRUMap,
@@ -30,7 +30,8 @@ import type {
     ProjectInstalled,
     TransitiveFrameworkSection,
     TransitivePackage,
-    VsCodeApi
+    VsCodeApi,
+    VulnerabilitySeverity
 } from '../types';
 import { getPackageId } from '../types';
 import { MemoizedPackageDetailsPanel } from './PackageDetailsPanel';
@@ -577,6 +578,7 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
     }, [transitiveDataSourceAvailable, selectedProject, loadingTransitive, transitiveFrameworks.length, transitiveExpandedFrameworks.size, vscode]);
 
     // Prefetch transitive packages in background after direct packages are loaded
+    const TRANSITIVE_PREFETCH_DELAY_MS = 500;
     useEffect(() => {
         if (selectedProject && !loadingInstalled && installedPackages.length >= 0 && transitiveDataSourceAvailable === null && !loadingTransitive) {
             // Direct packages finished loading - defer transitive fetch to reduce network
@@ -587,7 +589,7 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
                     type: 'getTransitivePackages',
                     projectPath: selectedProject
                 });
-            }, 2000);
+            }, TRANSITIVE_PREFETCH_DELAY_MS);
             return () => clearTimeout(timer);
         }
     }, [selectedProject, loadingInstalled, installedPackages.length, transitiveDataSourceAvailable, loadingTransitive, vscode]);
@@ -1140,6 +1142,17 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
                                                                     )}
                                                                     {pkg.versionType === 'range' && (
                                                                         <span className="floating-badge" title="This package uses a version range"><RulerIcon size={12} /></span>
+                                                                    )}
+                                                                    {pkg.vulnerabilities && pkg.vulnerabilities.length > 0 && (
+                                                                        <span
+                                                                            className={`vulnerability-badge vuln-${pkg.vulnerabilities.reduce<VulnerabilitySeverity>((max, v) => {
+                                                                                const order = { Low: 0, Moderate: 1, High: 2, Critical: 3 };
+                                                                                return order[v.severity] > order[max] ? v.severity : max;
+                                                                            }, 'Low')}`}
+                                                                            title={`${pkg.vulnerabilities.length} known vulnerabilit${pkg.vulnerabilities.length > 1 ? 'ies' : 'y'}`}
+                                                                        >
+                                                                            <ShieldIcon size={12} />
+                                                                        </span>
                                                                     )}
                                                                 </div>
                                                                 <div className="package-meta">

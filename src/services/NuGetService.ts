@@ -11,14 +11,14 @@ import { http2Client } from './Http2Client';
 import { NuGetConfigParser } from './NuGetConfigParser';
 import {
     InstalledPackage, NuGetSource, PackageDependency, PackageDependencyGroup,
-    PackageMetadata, PackageSearchResult, Project,
+    PackageMetadata, PackageSearchResult, PackageVulnerability, Project,
     QuickSearchSourceResult, TransitiveFrameworkSection, TransitivePackage,
-    TransitivePackagesResult
+    TransitivePackagesResult, VulnerabilitySeverity
 } from './NuGetTypes';
 import {
     batchedPromiseAll, ExecError, execWithTimeout, fileExists,
     isNewerVersion, isValidPackageId, isValidSourceName, isValidSourceUrl,
-    isValidVersion, LRUMap, parseVersionSpec
+    isValidVersion, isVersionInRange, LRUMap, parseVersionSpec
 } from './NuGetUtils';
 import { CACHE_TTL, cacheKeys, workspaceCache } from './WorkspaceCache';
 
@@ -43,6 +43,7 @@ interface ServiceEndpoints {
     registrationsBaseUrl?: string; // registration for metadata
     searchQueryService?: string; // search
     searchAutocompleteService?: string; // autocomplete for quick search
+    vulnerabilityInfoUrl?: string; // vulnerability data index
 }
 
 /**
@@ -94,6 +95,12 @@ export class NuGetService {
     private static readonly MAX_REDIRECTS = 5;
     // Maximum response body size for text/JSON fetches (10 MB) to prevent out-of-memory
     private static readonly MAX_RESPONSE_SIZE = 10 * 1024 * 1024;
+    // In-memory vulnerability data: Map<lowercasePackageId, Array<{severity, url, versions}>>
+    private vulnerabilityData: Map<string, { severity: number; url: string; versions: string }[]> = new Map();
+    // Timestamp of last vulnerability data fetch
+    private vulnerabilityDataTimestamp: number = 0;
+    // Vulnerability data TTL: 1 hour
+    private static readonly VULNERABILITY_CACHE_TTL = 3600000;
     // Cache for parsed project.assets.json (path -> { mtime, data })
     // Avoids re-parsing large files (5-50MB) multiple times in a single flow
     private assetsJsonCache: Map<string, { mtimeMs: number; data: unknown; timestamp: number }> = new Map();
@@ -106,6 +113,8 @@ export class NuGetService {
     private _sourcesCache: NuGetSource[] | null = null;
     private _sourcesCacheTime: number = 0;
     private static readonly SOURCES_CACHE_TTL = 30000; // 30 seconds
+    // Cached global-packages folder path (resolved once via dotnet CLI)
+    private _globalPackagesFolder: string | null = null;
     // Circuit breaker for icon resolution per source — skip sources after N consecutive misses
     // Prevents N×M HEAD requests when a source has no icons (N packages × M sources)
     private iconSourceMissCount: Map<string, number> = new Map();
@@ -586,6 +595,10 @@ export class NuGetService {
                     // SearchAutocompleteService - for quick search/typeahead
                     if (types.some(t => t && t.includes('SearchAutocompleteService'))) {
                         endpoints.searchAutocompleteService = resource['@id'];
+                    }
+                    // VulnerabilityInfo - for known package vulnerabilities
+                    if (types.some(t => t && t.includes('VulnerabilityInfo'))) {
+                        endpoints.vulnerabilityInfoUrl = resource['@id'];
                     }
                 }
             }
@@ -1069,6 +1082,121 @@ export class NuGetService {
     }
 
     /**
+     * Fetch and cache vulnerability data from all enabled sources.
+     * Downloads vulnerability index + page files, builds an in-memory lookup map.
+     * Data is cached for 1 hour (VULNERABILITY_CACHE_TTL).
+     */
+    private async fetchVulnerabilityData(): Promise<void> {
+        // Return cached data if still fresh
+        if (this.vulnerabilityData.size > 0 && (Date.now() - this.vulnerabilityDataTimestamp) < NuGetService.VULNERABILITY_CACHE_TTL) {
+            return;
+        }
+
+        const allSources = await this.getSources();
+        const enabledSources = allSources.filter(s => s.enabled && !this.isLocalSource(s.url));
+
+        const newData = new Map<string, { severity: number; url: string; versions: string }[]>();
+
+        for (const source of enabledSources) {
+            try {
+                const endpoints = await this.discoverServiceEndpoints(source.url);
+                if (!endpoints.vulnerabilityInfoUrl) { continue; }
+
+                const authHeader = await this.getAuthHeader(source.url);
+                // Fetch vulnerability index (array of page references)
+                const index = await this.fetchJson<{ '@name': string; '@id': string; '@updated': string }[]>(
+                    endpoints.vulnerabilityInfoUrl, authHeader
+                );
+                if (!Array.isArray(index) || index.length === 0) { continue; }
+
+                // Fetch each vulnerability page and merge into lookup
+                for (const page of index) {
+                    if (!page['@id']) { continue; }
+                    try {
+                        const pageData = await this.fetchJson<Record<string, { severity: number; url: string; versions: string }[]>>(
+                            page['@id'], authHeader
+                        );
+                        if (!pageData || typeof pageData !== 'object') { continue; }
+
+                        for (const [pkgId, vulns] of Object.entries(pageData)) {
+                            if (!Array.isArray(vulns)) { continue; }
+                            const lowerPkgId = pkgId.toLowerCase();
+                            const existing = newData.get(lowerPkgId) || [];
+                            for (const v of vulns) {
+                                if (v && typeof v.severity === 'number' && v.url && v.versions) {
+                                    existing.push({ severity: v.severity, url: v.url, versions: v.versions });
+                                }
+                            }
+                            if (existing.length > 0) {
+                                newData.set(lowerPkgId, existing);
+                            }
+                        }
+                    } catch {
+                        // Skip individual page failures
+                    }
+                }
+            } catch {
+                // Skip source failures — vulnerability data is best-effort
+            }
+        }
+
+        this.vulnerabilityData = newData;
+        this.vulnerabilityDataTimestamp = Date.now();
+    }
+
+    /**
+     * Map NuGet vulnerability severity integer to named severity.
+     */
+    private static mapSeverity(severity: number): VulnerabilitySeverity {
+        switch (severity) {
+            case 0: return 'Low';
+            case 1: return 'Moderate';
+            case 2: return 'High';
+            case 3: return 'Critical';
+            default: return 'Low';
+        }
+    }
+
+    /**
+     * Look up known vulnerabilities for a specific package version.
+     * Checks the cached vulnerability data against the package's version using NuGet range syntax.
+     */
+    private getVulnerabilities(packageId: string, version: string): PackageVulnerability[] {
+        const vulns = this.vulnerabilityData.get(packageId.toLowerCase());
+        if (!vulns || vulns.length === 0) { return []; }
+
+        const matches: PackageVulnerability[] = [];
+        for (const v of vulns) {
+            if (isVersionInRange(version, v.versions)) {
+                matches.push({
+                    advisoryUrl: v.url,
+                    severity: NuGetService.mapSeverity(v.severity)
+                });
+            }
+        }
+        return matches;
+    }
+
+    /**
+     * Get the download size of a package (in bytes) via HEAD request to the flat container nupkg URL.
+     * Returns -1 if size cannot be determined.
+     */
+    async getPackageSize(packageId: string, version: string, sourceUrl?: string): Promise<number> {
+        try {
+            const source = sourceUrl || 'https://api.nuget.org/v3/index.json';
+            const endpoints = await this.discoverServiceEndpoints(source);
+            if (!endpoints.packageBaseAddress) { return -1; }
+
+            const baseUrl = endpoints.packageBaseAddress.replace(/\/$/, '');
+            const nupkgUrl = `${baseUrl}/${packageId.toLowerCase()}/${version.toLowerCase()}/${packageId.toLowerCase()}.${version.toLowerCase()}.nupkg`;
+            const authHeader = await this.getAuthHeader(source);
+            return await http2Client.headRequestContentLength(nupkgUrl, authHeader);
+        } catch {
+            return -1;
+        }
+    }
+
+    /**
      * Fetch icon URLs, verified status, and authors for installed packages from NuGet API or custom sources
      * Uses NuGet search API for verified status and authors
      * Batches requests to limit concurrent network operations
@@ -1138,6 +1266,20 @@ export class NuGetService {
                 }
             }
         }, 16); // Sliding-window concurrency (was 8 batch-then-wait)
+
+        // Enrich with vulnerability data (best-effort, non-blocking)
+        try {
+            await this.fetchVulnerabilityData();
+            for (const pkg of packages) {
+                const version = pkg.resolvedVersion || pkg.version;
+                const vulns = this.getVulnerabilities(pkg.id, version);
+                if (vulns.length > 0) {
+                    pkg.vulnerabilities = vulns;
+                }
+            }
+        } catch {
+            // Vulnerability enrichment is best-effort — don't fail the whole flow
+        }
     }
 
     /**
@@ -2401,6 +2543,9 @@ export class NuGetService {
         this.failedEndpointCache.clear();
         // Clear icon source circuit breaker so custom sources are re-tried
         this.iconSourceMissCount.clear();
+        // Clear vulnerability cache so fresh data is fetched
+        this.vulnerabilityData.clear();
+        this.vulnerabilityDataTimestamp = 0;
         // Clear sources cache so fresh sources are fetched
         this.invalidateSourcesCache();
         // Clear version caches so update checks see newly published versions
@@ -2711,6 +2856,117 @@ export class NuGetService {
         }
     }
 
+    /**
+     * Resolve the NuGet global-packages folder path via dotnet CLI.
+     * Cached after first successful resolution.
+     */
+    private async resolveGlobalPackagesFolder(): Promise<string | null> {
+        if (this._globalPackagesFolder) { return this._globalPackagesFolder; }
+        try {
+            const { stdout } = await execWithTimeout('dotnet nuget locals global-packages --list', { timeout: 10000 });
+            // Output format: "global-packages: C:\Users\xxx\.nuget\packages\"
+            const match = stdout.match(/global-packages:\s*(.+)/i);
+            if (match) {
+                const folder = match[1].trim().replace(/[\\/]+$/, '');
+                if (fs.existsSync(folder)) {
+                    this._globalPackagesFolder = folder;
+                    return folder;
+                }
+            }
+        } catch {
+            // CLI not available — try default path
+        }
+        const defaultFolder = path.join(os.homedir(), '.nuget', 'packages');
+        if (fs.existsSync(defaultFolder)) {
+            this._globalPackagesFolder = defaultFolder;
+            return defaultFolder;
+        }
+        return null;
+    }
+
+    /**
+     * Get package metadata from the local NuGet global-packages cache (offline fallback).
+     * Reads the .nuspec file from ~/.nuget/packages/{id}/{version}/{id}.nuspec
+     */
+    private async getOfflineMetadata(packageId: string, version: string): Promise<PackageMetadata | null> {
+        try {
+            const globalFolder = await this.resolveGlobalPackagesFolder();
+            if (!globalFolder) { return null; }
+
+            const lowerId = packageId.toLowerCase();
+            const lowerVersion = version.toLowerCase();
+            const nuspecPath = path.join(globalFolder, lowerId, lowerVersion, `${lowerId}.nuspec`);
+
+            if (!fs.existsSync(nuspecPath)) { return null; }
+
+            const nuspecContent = await readFileAsync(nuspecPath, 'utf8');
+
+            // Parse basic metadata from nuspec XML
+            const getTag = (tag: string): string | undefined => {
+                const match = nuspecContent.match(new RegExp(`<${tag}[^>]*>([\\s\\S]*?)</${tag}>`, 'i'));
+                return match ? match[1].trim() : undefined;
+            };
+
+            const id = getTag('id') || packageId;
+            const ver = getTag('version') || version;
+            const description = getTag('description') || '';
+            const authors = getTag('authors') || '';
+            const licenseUrl = getTag('licenseUrl');
+            const projectUrl = getTag('projectUrl');
+
+            // Parse dependencies
+            const dependencies: PackageDependencyGroup[] = [];
+            const groupRegex = /<group\s+targetFramework="([^"]*)"[^>]*>([\s\S]*?)<\/group>/gi;
+            let groupMatch: RegExpExecArray | null;
+
+            const parseDeps = (xml: string): PackageDependency[] => {
+                const deps: PackageDependency[] = [];
+                const depTagRegex = /<dependency\s+([^>]+?)\/?\s*>/gi;
+                let depTag: RegExpExecArray | null;
+                while ((depTag = depTagRegex.exec(xml)) !== null) {
+                    const attrs = depTag[1];
+                    const idMatch = attrs.match(/\bid="([^"]+)"/i);
+                    const verMatch = attrs.match(/\bversion="([^"]+)"/i);
+                    if (idMatch) {
+                        deps.push({ id: idMatch[1], versionRange: verMatch?.[1] || '*' });
+                    }
+                }
+                return deps;
+            };
+
+            while ((groupMatch = groupRegex.exec(nuspecContent)) !== null) {
+                dependencies.push({
+                    targetFramework: groupMatch[1] || 'Any',
+                    dependencies: parseDeps(groupMatch[2])
+                });
+            }
+
+            // Handle ungrouped dependencies (no <group> wrapper)
+            if (dependencies.length === 0) {
+                const depsMatch = nuspecContent.match(/<dependencies[^>]*>([\s\S]*?)<\/dependencies>/i);
+                if (depsMatch) {
+                    const ungrouped = parseDeps(depsMatch[1]);
+                    if (ungrouped.length > 0) {
+                        dependencies.push({ targetFramework: 'Any', dependencies: ungrouped });
+                    }
+                }
+            }
+
+            return {
+                id,
+                version: ver,
+                description,
+                authors,
+                licenseUrl,
+                projectUrl,
+                dependencies: dependencies,
+                offline: true
+            };
+        } catch {
+            return null;
+        }
+    }
+
     async getPackageMetadata(packageId: string, version: string, source?: string): Promise<PackageMetadata | null> {
         try {
             // Check memory cache first
@@ -2749,9 +3005,17 @@ export class NuGetService {
             // Cache the result if we found metadata
             if (metadata) {
                 this.metadataCache.set(cacheKey, metadata);
+                return metadata;
             }
 
-            return metadata;
+            // Offline fallback: try local global-packages cache
+            const offlineMetadata = await this.getOfflineMetadata(packageId, version);
+            if (offlineMetadata) {
+                // Don't cache offline metadata — prefer fresh data when sources recover
+                return offlineMetadata;
+            }
+
+            return null;
         } catch (error) {
             console.error(`[NuGet] Failed to fetch metadata for ${packageId}@${version}:`, error);
             return null;
@@ -2911,9 +3175,17 @@ export class NuGetService {
                 }
             }
 
+            const metadataVersion = catalogEntry.version || registrationData.version || version;
+            // Look up vulnerability data if available
+            // Fetch vulnerability data and package size in parallel (both best-effort)
+            const [vulns, packageSize] = await Promise.all([
+                Promise.resolve(this.getVulnerabilities(packageId, metadataVersion)),
+                this.getPackageSize(packageId, metadataVersion, source)
+            ]);
+
             return {
                 id: catalogEntry.id || registrationData.id || packageId,
-                version: catalogEntry.version || registrationData.version || version,
+                version: metadataVersion,
                 description: catalogEntry.description || registrationData.description || '',
                 authors: catalogEntry.authors || registrationData.authors || '',
                 license: catalogEntry.licenseExpression || registrationData.licenseExpression || undefined,
@@ -2922,7 +3194,9 @@ export class NuGetService {
                 totalDownloads: undefined, // Not available in catalog API
                 published: catalogEntry.published || registrationData.published || undefined,
                 dependencies: dependencies,
-                readme: readme
+                readme: readme,
+                vulnerabilities: vulns.length > 0 ? vulns : undefined,
+                packageSize: packageSize > 0 ? packageSize : undefined
             };
         } catch (error) {
             console.error(`[NuGet] Failed to fetch metadata for ${packageId}@${version}:`, error);

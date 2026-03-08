@@ -1215,6 +1215,33 @@ Uses dynamic endpoint discovery from nuget.org's service index (`/v3/index.json`
 2. Package index + page traversal (for Nexus-style feeds)
 3. Nuspec from flat container
 4. Search API as last resort
+5. **Offline fallback** — reads `.nuspec` from local `~/.nuget/packages/{id}/{version}/` cache when all sources are unreachable
+
+### Vulnerability Scanning
+Uses the NuGet V3 `VulnerabilityInfo/6.7.0` resource type:
+1. `discoverServiceEndpoints` discovers `vulnerabilityInfoUrl` from the service index
+2. `fetchVulnerabilityData()` fetches the vulnerability index (array of page refs) and each page
+3. Pages contain JSON objects keyed by lowercase packageId → array of `{severity: 0-3, url, versions: "NuGet range syntax"}`
+4. `getVulnerabilities(packageId, version)` cross-references installed packages via `isVersionInRange()`
+5. Severity mapping: 0=Low, 1=Moderate, 2=High, 3=Critical
+6. In-memory cache with 1-hour TTL (`VULNERABILITY_CACHE_TTL`)
+7. UI: color-coded `ShieldIcon` badges on InstalledTab rows; advisory links in PackageDetailsPanel
+
+### Package Size
+Retrieved via HTTP HEAD request to the flat container nupkg URL:
+```
+{packageBaseAddress}/{id.lower()}/{version.lower()}/{id.lower()}.{version.lower()}.nupkg
+```
+- `headRequestContentLength()` in `Http2Client.ts` returns `Content-Length` (or -1 on failure)
+- `getPackageSize()` in `NuGetService.ts` constructs the URL and delegates to the HTTP client
+- Displayed in PackageDetailsPanel as formatted KB/MB via `formatPackageSize()`
+
+### Offline Metadata
+When all NuGet source API calls return null, `getPackageMetadata()` falls back to:
+1. `resolveGlobalPackagesFolder()` — resolves via `dotnet nuget locals global-packages --list`, cached after first call
+2. `getOfflineMetadata(packageId, version)` — reads `{globalFolder}/{id.lower()}/{version.lower()}/{id.lower()}.nuspec`
+3. Parses basic XML tags (id, version, description, authors, licenseUrl, projectUrl, dependencies)
+4. Returns metadata with `offline: true` flag — UI shows an "Offline — loaded from local cache" indicator
 
 ### README Extraction from nupkg
 Custom sources (Nexus, ProGet) often don't expose `ReadmeUriTemplate`.

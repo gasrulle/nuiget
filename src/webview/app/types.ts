@@ -15,6 +15,19 @@ export interface Project {
  */
 export type VersionType = 'floating' | 'range' | 'exact' | 'standard';
 
+/**
+ * Vulnerability severity levels matching NuGet V3 API integer values
+ */
+export type VulnerabilitySeverity = 'Low' | 'Moderate' | 'High' | 'Critical';
+
+/**
+ * Known vulnerability for a package version
+ */
+export interface PackageVulnerability {
+    advisoryUrl: string;
+    severity: VulnerabilitySeverity;
+}
+
 export interface InstalledPackage {
     id: string;
     /** The version as specified in the csproj (may be floating like "10.*" or range like "[1.0,2.0)") */
@@ -32,6 +45,7 @@ export interface InstalledPackage {
     iconUrl?: string;
     verified?: boolean;
     authors?: string;
+    vulnerabilities?: PackageVulnerability[];
 }
 
 export interface PackageSearchResult {
@@ -88,6 +102,9 @@ export interface PackageMetadata {
     published?: string;
     dependencies: PackageDependencyGroup[];
     readme?: string;
+    packageSize?: number;
+    vulnerabilities?: PackageVulnerability[];
+    offline?: boolean;
 }
 
 export interface PackageUpdate {

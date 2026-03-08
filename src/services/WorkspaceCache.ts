@@ -6,6 +6,7 @@ import * as vscode from 'vscode';
 interface CacheEntry<T> {
     value: T;
     expiresAt: number; // Unix timestamp, 0 = never expires
+    storedAt: number; // Unix timestamp when entry was stored
 }
 
 /**
@@ -75,13 +76,13 @@ export class WorkspaceCache {
             const entriesToEvict = this.memoryCache.size - WorkspaceCache.MAX_ENTRIES;
             const entries = Array.from(this.memoryCache.entries());
 
-            // Sort by expiration: entries with TTL first (ascending), then never-expires
+            // Sort by expiration: entries with TTL first (ascending), then never-expires (oldest first)
             entries.sort((a, b) => {
                 const aExpires = a[1].expiresAt;
                 const bExpires = b[1].expiresAt;
-                // Never-expires (0) should be last
+                // Both never-expire: evict oldest first (FIFO)
                 if (aExpires === 0 && bExpires === 0) {
-                    return 0;
+                    return (a[1].storedAt || 0) - (b[1].storedAt || 0);
                 }
                 if (aExpires === 0) {
                     return 1;
@@ -135,7 +136,8 @@ export class WorkspaceCache {
         const fullKey = WorkspaceCache.CACHE_PREFIX + key;
         const entry: CacheEntry<T> = {
             value,
-            expiresAt: ttlMs > 0 ? Date.now() + ttlMs : 0
+            expiresAt: ttlMs > 0 ? Date.now() + ttlMs : 0,
+            storedAt: Date.now()
         };
 
         this.memoryCache.set(fullKey, entry);
