@@ -1,0 +1,501 @@
+import * as path from 'path';
+import * as vscode from 'vscode';
+import type { NuGetService } from './NuGetService';
+import { topologicalSortByDependency } from './NuGetUtils';
+
+// --- Shared types ---
+
+/** Panel-agnostic context for executing NuGet operations. */
+export interface OperationContext {
+    nugetService: NuGetService;
+    postMessage: (message: unknown) => void;
+    notifyOtherPanel: (operation: { type: string; packageId?: string; projectPath?: string }) => void;
+}
+
+type SingleOperationType = 'install' | 'update' | 'remove';
+
+const singleOpConfig: Record<SingleOperationType, {
+    serviceMethod: 'installPackage' | 'updatePackage' | 'removePackage';
+    progressVerb: string;
+    resultType: string;
+}> = {
+    install: { serviceMethod: 'installPackage', progressVerb: 'Installing', resultType: 'installResult' },
+    update: { serviceMethod: 'updatePackage', progressVerb: 'Updating', resultType: 'updateResult' },
+    remove: { serviceMethod: 'removePackage', progressVerb: 'Removing', resultType: 'removeResult' },
+};
+
+// --- Single operations ---
+
+/**
+ * Execute a single install/update/remove operation.
+ * Returns true if the operation succeeded.
+ */
+export async function executeSingleOperation(
+    ctx: OperationContext,
+    operationType: SingleOperationType,
+    projectPath: string,
+    packageId: string,
+    version?: string
+): Promise<boolean> {
+    const config = singleOpConfig[operationType];
+    let success = false;
+
+    await vscode.window.withProgress({
+        location: vscode.ProgressLocation.Notification,
+        title: `${config.progressVerb} ${packageId}...`,
+        cancellable: false
+    }, async () => {
+        if (operationType === 'install') {
+            success = await ctx.nugetService.installPackage(projectPath, packageId, version);
+        } else if (operationType === 'update') {
+            success = await ctx.nugetService.updatePackage(projectPath, packageId, version!);
+        } else {
+            success = await ctx.nugetService.removePackage(projectPath, packageId);
+        }
+        ctx.postMessage({
+            type: config.resultType,
+            success,
+            packageId,
+            projectPath
+        });
+    });
+
+    if (success) {
+        ctx.notifyOtherPanel({ type: operationType, packageId, projectPath });
+    }
+
+    return success;
+}
+
+// --- Bulk Install (main panel only) ---
+
+export async function executeBulkInstall(
+    ctx: OperationContext,
+    projectPaths: string[],
+    packageId: string,
+    version?: string
+): Promise<void> {
+    if (!projectPaths || projectPaths.length === 0) {
+        console.warn('[nUIget] bulkInstall received empty projectPaths array');
+        ctx.postMessage({ type: 'bulkInstallResult', packageId, version, results: [] });
+        return;
+    }
+
+    // Topological sort: install to dependency projects first
+    const projectDepMap = await ctx.nugetService.getProjectDependencyMap(projectPaths);
+    const isWindows = process.platform === 'win32';
+    const normalizeProjectPath = (p: string) => {
+        const normalized = path.normalize(p);
+        return isWindows ? normalized.toLowerCase() : normalized;
+    };
+    const selectedProjectKeys = new Set(projectPaths.map(normalizeProjectPath));
+    const sortedProjectPaths = topologicalSortByDependency(
+        projectPaths,
+        p => normalizeProjectPath(p),
+        projectDepMap,
+        selectedProjectKeys,
+        true // dependenciesFirst
+    );
+
+    ctx.nugetService.setupOutputChannel();
+    ctx.nugetService.logBulkOperationHeader(`Installing ${packageId} to ${sortedProjectPaths.length} project${sortedProjectPaths.length !== 1 ? 's' : ''}...`, 0);
+
+    const results: { projectPath: string; projectName: string; success: boolean }[] = [];
+
+    await vscode.window.withProgress({
+        location: vscode.ProgressLocation.Notification,
+        title: `Installing ${packageId} to ${projectPaths.length} projects...`,
+        cancellable: false
+    }, async (progress) => {
+        for (let i = 0; i < sortedProjectPaths.length; i++) {
+            const projPath = sortedProjectPaths[i];
+            const projectName = projPath.split(/[\\/]/).pop() || projPath;
+            progress.report({
+                message: `(${i + 1}/${sortedProjectPaths.length}) ${projectName}`,
+                increment: (100 / sortedProjectPaths.length)
+            });
+
+            const success = await ctx.nugetService.installPackage(projPath, packageId, version);
+            results.push({ projectPath: projPath, projectName, success });
+        }
+
+        const successCount = results.filter(r => r.success).length;
+        const failCount = results.length - successCount;
+
+        if (failCount === 0) {
+            vscode.window.showInformationMessage(`Successfully installed ${packageId} to ${successCount} project${successCount !== 1 ? 's' : ''}.`);
+        } else {
+            vscode.window.showWarningMessage(`Installed ${packageId} to ${successCount}/${sortedProjectPaths.length} projects, ${failCount} failed.`);
+        }
+    });
+
+    ctx.postMessage({ type: 'bulkInstallResult', packageId, version, results });
+    if (results.some(r => r.success)) {
+        ctx.notifyOtherPanel({ type: 'bulkInstall' });
+    }
+}
+
+// --- Bulk Update Packages (single project) ---
+
+export async function executeBulkUpdatePackages(
+    ctx: OperationContext,
+    packages: { id: string; version: string }[],
+    projectPath: string
+): Promise<void> {
+    if (!packages || packages.length === 0) {
+        console.warn('[nUIget] bulkUpdatePackages received empty packages array');
+        ctx.postMessage({ type: 'bulkUpdateResult', projectPath, failedPackageIds: [] });
+        return;
+    }
+
+    // Topological sort: dependencies first
+    const dependencyMap = await ctx.nugetService.getPackageDependencies(projectPath);
+    const packagesToUpdate = new Set(packages.map(p => p.id.toLowerCase()));
+    const sortedPackages = topologicalSortByDependency(
+        packages,
+        p => p.id.toLowerCase(),
+        dependencyMap,
+        packagesToUpdate,
+        true // dependenciesFirst
+    );
+
+    ctx.nugetService.setupOutputChannel();
+    ctx.nugetService.logBulkOperationHeader('Updating', sortedPackages.length);
+
+    const failedPackageIds: string[] = [];
+    await vscode.window.withProgress({
+        location: vscode.ProgressLocation.Notification,
+        title: `Updating ${sortedPackages.length} packages...`,
+        cancellable: false
+    }, async (progress) => {
+        let successCount = 0;
+        let failCount = 0;
+
+        for (let i = 0; i < sortedPackages.length; i++) {
+            const pkg = sortedPackages[i];
+            progress.report({
+                message: `(${i + 1}/${sortedPackages.length}) ${pkg.id}`,
+                increment: 100 / sortedPackages.length
+            });
+
+            const success = await ctx.nugetService.updatePackage(
+                projectPath, pkg.id, pkg.version,
+                { skipChannelSetup: true, skipNotification: true, skipRestore: true }
+            );
+
+            if (success) { successCount++; } else { failCount++; failedPackageIds.push(pkg.id); }
+        }
+
+        // Run a single restore after all packages are updated
+        if (successCount > 0) {
+            progress.report({ message: 'Restoring project...' });
+            await ctx.nugetService.restoreProject(projectPath);
+        }
+
+        if (failCount === 0) {
+            vscode.window.showInformationMessage(`Successfully updated ${successCount} packages.`);
+        } else {
+            vscode.window.showWarningMessage(`Updated ${successCount} packages, ${failCount} failed.`);
+        }
+    });
+
+    ctx.postMessage({ type: 'bulkUpdateResult', projectPath, failedPackageIds });
+    if (failedPackageIds.length < packages.length) {
+        ctx.notifyOtherPanel({ type: 'bulkUpdate', projectPath });
+    }
+}
+
+// --- Bulk Remove Packages (single project) ---
+
+export async function executeBulkRemovePackages(
+    ctx: OperationContext,
+    packages: string[],
+    projectPath: string
+): Promise<void> {
+    if (!packages || packages.length === 0) {
+        console.warn('[nUIget] confirmBulkRemove received empty packages array');
+        ctx.postMessage({ type: 'bulkRemoveResult', projectPath, failedPackageIds: [] });
+        return;
+    }
+
+    // Notify webview that uninstall is starting
+    ctx.postMessage({ type: 'bulkRemoveConfirmed', projectPath });
+
+    // Topological sort: dependents first (opposite of update)
+    const dependencyMap = await ctx.nugetService.getPackageDependencies(projectPath);
+    const packagesToRemove = new Set(packages.map(p => p.toLowerCase()));
+    const sortedPackages = topologicalSortByDependency(
+        packages,
+        p => p.toLowerCase(),
+        dependencyMap,
+        packagesToRemove,
+        false // dependentsFirst
+    );
+
+    ctx.nugetService.setupOutputChannel();
+    ctx.nugetService.logBulkOperationHeader('Uninstalling', sortedPackages.length);
+
+    const failedPackageIds: string[] = [];
+    await vscode.window.withProgress({
+        location: vscode.ProgressLocation.Notification,
+        title: `Uninstalling ${sortedPackages.length} packages...`,
+        cancellable: false
+    }, async (progress) => {
+        let successCount = 0;
+        let failCount = 0;
+
+        for (let i = 0; i < sortedPackages.length; i++) {
+            const packageId = sortedPackages[i];
+            progress.report({
+                message: `(${i + 1}/${sortedPackages.length}) ${packageId}`,
+                increment: (100 / sortedPackages.length)
+            });
+
+            const success = await ctx.nugetService.removePackage(
+                projectPath, packageId,
+                { skipChannelSetup: true, skipRestore: true, skipNotification: true }
+            );
+
+            if (success) { successCount++; } else { failCount++; failedPackageIds.push(packageId); }
+        }
+
+        // Run a single restore after all packages are removed
+        if (successCount > 0) {
+            progress.report({ message: 'Restoring project...' });
+            await ctx.nugetService.restoreProject(projectPath);
+        }
+
+        if (failCount === 0) {
+            vscode.window.showInformationMessage(`Successfully uninstalled ${successCount} packages.`);
+        } else {
+            vscode.window.showWarningMessage(`Uninstalled ${successCount} packages, ${failCount} failed.`);
+        }
+    });
+
+    ctx.postMessage({ type: 'bulkRemoveResult', projectPath, failedPackageIds });
+    if (failedPackageIds.length < packages.length) {
+        ctx.notifyOtherPanel({ type: 'bulkRemove', projectPath });
+    }
+}
+
+// --- Shared helper for multi-project topo sort ---
+
+function buildProjectTopoSort<T>(
+    items: T[],
+    getProjectPath: (item: T) => string,
+    projectDepMap: Map<string, string[]>,
+    dependenciesFirst: boolean
+): T[] {
+    const isWindows = process.platform === 'win32';
+    const normalizeProjectPath = (p: string) => {
+        const normalized = path.normalize(p);
+        return isWindows ? normalized.toLowerCase() : normalized;
+    };
+    const allProjectPaths = items.map(item => getProjectPath(item));
+    const selectedProjectKeys = new Set(allProjectPaths.map(normalizeProjectPath));
+
+    return topologicalSortByDependency(
+        items,
+        item => normalizeProjectPath(getProjectPath(item)),
+        projectDepMap,
+        selectedProjectKeys,
+        dependenciesFirst
+    );
+}
+
+// --- Bulk Update All Projects ---
+
+export async function executeBulkUpdateAllProjects(
+    ctx: OperationContext,
+    projectUpdates: { projectPath: string; projectName: string; packages: { id: string; version: string }[] }[]
+): Promise<void> {
+    if (!projectUpdates || projectUpdates.length === 0) {
+        console.warn('[nUIget] bulkUpdateAllProjects received empty projectUpdates array');
+        ctx.postMessage({ type: 'bulkUpdateAllProjectsResult', perProjectFailedIds: [] });
+        return;
+    }
+
+    // Build project-level dependency map and sort
+    const allProjectPaths = projectUpdates.map(pu => pu.projectPath);
+    const projectDepMap = await ctx.nugetService.getProjectDependencyMap(allProjectPaths);
+    const sortedProjectUpdates = buildProjectTopoSort(
+        projectUpdates, pu => pu.projectPath, projectDepMap, true // dependenciesFirst
+    );
+
+    const totalPackages = sortedProjectUpdates.reduce((sum, pu) => sum + pu.packages.length, 0);
+    ctx.nugetService.setupOutputChannel();
+
+    const perProjectFailedIds: { projectPath: string; failedPackageIds: string[] }[] = [];
+    await vscode.window.withProgress({
+        location: vscode.ProgressLocation.Notification,
+        title: `Updating ${totalPackages} packages across ${sortedProjectUpdates.length} projects...`,
+        cancellable: false
+    }, async (progress) => {
+        let totalSuccessCount = 0;
+        let totalFailCount = 0;
+        let completedPackages = 0;
+        const projectsWithChanges: { projectPath: string; projectName: string }[] = [];
+
+        // Phase 1: Update all packages across all projects (no restores)
+        for (const pu of sortedProjectUpdates) {
+            // Topological sort packages within each project (dependencies first)
+            const dependencyMap = await ctx.nugetService.getPackageDependencies(pu.projectPath);
+            const packagesToUpdate = new Set(pu.packages.map(p => p.id.toLowerCase()));
+            const sortedPackages = topologicalSortByDependency(
+                pu.packages,
+                p => p.id.toLowerCase(),
+                dependencyMap,
+                packagesToUpdate,
+                true // dependenciesFirst
+            );
+
+            ctx.nugetService.logBulkOperationHeader(`Updating ${sortedPackages.length} package${sortedPackages.length !== 1 ? 's' : ''} for ${pu.projectName}...`, 0);
+
+            let projectSuccess = false;
+            const projectFailedIds: string[] = [];
+            for (const pkg of sortedPackages) {
+                completedPackages++;
+                progress.report({
+                    message: `(${completedPackages}/${totalPackages}) ${pu.projectName}: ${pkg.id}`,
+                    increment: 100 / totalPackages
+                });
+
+                const success = await ctx.nugetService.updatePackage(
+                    pu.projectPath, pkg.id, pkg.version,
+                    { skipChannelSetup: true, skipNotification: true, skipRestore: true }
+                );
+
+                if (success) { totalSuccessCount++; projectSuccess = true; } else { totalFailCount++; projectFailedIds.push(pkg.id); }
+            }
+
+            if (projectSuccess) {
+                projectsWithChanges.push({ projectPath: pu.projectPath, projectName: pu.projectName });
+            }
+            if (projectFailedIds.length > 0) {
+                perProjectFailedIds.push({ projectPath: pu.projectPath, failedPackageIds: projectFailedIds });
+            }
+        }
+
+        // Phase 2: Restore all projects in dependency order (after all updates)
+        for (const project of projectsWithChanges) {
+            progress.report({ message: `Restoring ${project.projectName}...` });
+            await ctx.nugetService.restoreProject(project.projectPath);
+        }
+
+        if (totalFailCount === 0) {
+            vscode.window.showInformationMessage(`Successfully updated ${totalSuccessCount} packages across ${sortedProjectUpdates.length} projects.`);
+        } else {
+            vscode.window.showWarningMessage(`Updated ${totalSuccessCount} packages, ${totalFailCount} failed across ${sortedProjectUpdates.length} projects.`);
+        }
+    });
+
+    ctx.postMessage({ type: 'bulkUpdateAllProjectsResult', perProjectFailedIds });
+    // Only notify if at least one package succeeded
+    const totalFailed = perProjectFailedIds.reduce((sum, p) => sum + p.failedPackageIds.length, 0);
+    if (totalFailed < totalPackages) {
+        ctx.notifyOtherPanel({ type: 'bulkUpdateAllProjects' });
+    }
+}
+
+// --- Bulk Remove All Projects ---
+
+export async function executeBulkRemoveAllProjects(
+    ctx: OperationContext,
+    projectRemovals: { projectPath: string; projectName: string; packages: string[] }[]
+): Promise<void> {
+    if (!projectRemovals || projectRemovals.length === 0) {
+        console.warn('[nUIget] confirmBulkRemoveAllProjects received empty projectRemovals array');
+        ctx.postMessage({ type: 'bulkRemoveAllProjectsResult', perProjectFailedIds: [] });
+        return;
+    }
+
+    // Notify webview that uninstall is starting
+    ctx.postMessage({ type: 'bulkRemoveAllProjectsConfirmed' });
+
+    // Build project-level dependency map and sort: dependents first
+    const allProjectPaths = projectRemovals.map(pr => pr.projectPath);
+    const projectDepMap = await ctx.nugetService.getProjectDependencyMap(allProjectPaths);
+    const sortedProjectRemovals = buildProjectTopoSort(
+        projectRemovals, pr => pr.projectPath, projectDepMap, false // dependentsFirst
+    );
+
+    const totalPackages = sortedProjectRemovals.reduce((sum, pr) => sum + pr.packages.length, 0);
+    ctx.nugetService.setupOutputChannel();
+    ctx.nugetService.logBulkOperationHeader(`Uninstalling from ${sortedProjectRemovals.length} projects`, 0);
+
+    const perProjectFailedIds: { projectPath: string; failedPackageIds: string[] }[] = [];
+    await vscode.window.withProgress({
+        location: vscode.ProgressLocation.Notification,
+        title: `Uninstalling ${totalPackages} packages from ${sortedProjectRemovals.length} projects...`,
+        cancellable: false
+    }, async (progress) => {
+        let successCount = 0;
+        let failCount = 0;
+        let processed = 0;
+        const projectsWithChanges: { projectPath: string; projectName: string }[] = [];
+
+        // Phase 1: Remove all packages across all projects (no restores)
+        for (const pr of sortedProjectRemovals) {
+            // Per-project package topo sort: dependents first
+            const dependencyMap = await ctx.nugetService.getPackageDependencies(pr.projectPath);
+            const packagesToRemove = new Set(pr.packages.map(p => p.toLowerCase()));
+            const sortedPackages = topologicalSortByDependency(
+                pr.packages,
+                p => p.toLowerCase(),
+                dependencyMap,
+                packagesToRemove,
+                false // dependentsFirst
+            );
+
+            let projectSuccess = false;
+            for (const packageId of sortedPackages) {
+                processed++;
+                progress.report({
+                    message: `(${processed}/${totalPackages}) ${pr.projectName}: ${packageId}`,
+                    increment: (100 / totalPackages)
+                });
+
+                const success = await ctx.nugetService.removePackage(
+                    pr.projectPath, packageId,
+                    { skipChannelSetup: true, skipRestore: true, skipNotification: true }
+                );
+
+                if (success) {
+                    successCount++;
+                    projectSuccess = true;
+                } else {
+                    failCount++;
+                    let entry = perProjectFailedIds.find(p => p.projectPath === pr.projectPath);
+                    if (!entry) {
+                        entry = { projectPath: pr.projectPath, failedPackageIds: [] };
+                        perProjectFailedIds.push(entry);
+                    }
+                    entry.failedPackageIds.push(packageId);
+                }
+            }
+
+            if (projectSuccess) {
+                projectsWithChanges.push({ projectPath: pr.projectPath, projectName: pr.projectName });
+            }
+        }
+
+        // Phase 2: Restore all projects — reverse order so dependencies restore before dependents
+        for (const project of [...projectsWithChanges].reverse()) {
+            progress.report({ message: `Restoring ${project.projectName}...` });
+            await ctx.nugetService.restoreProject(project.projectPath);
+        }
+
+        if (failCount === 0) {
+            vscode.window.showInformationMessage(`Successfully uninstalled ${successCount} packages from ${sortedProjectRemovals.length} projects.`);
+        } else {
+            vscode.window.showWarningMessage(`Uninstalled ${successCount} packages, ${failCount} failed across ${sortedProjectRemovals.length} projects.`);
+        }
+    });
+
+    ctx.postMessage({ type: 'bulkRemoveAllProjectsResult', perProjectFailedIds });
+    // Only notify if at least one package succeeded
+    const totalFailed = perProjectFailedIds.reduce((sum, p) => sum + p.failedPackageIds.length, 0);
+    if (totalFailed < totalPackages) {
+        ctx.notifyOtherPanel({ type: 'bulkRemoveAllProjects' });
+    }
+}

@@ -41,6 +41,7 @@ export function activate(context: vscode.ExtensionContext) {
     };
     projectFileWatcher.onDidCreate(debouncedUpdate);
     projectFileWatcher.onDidDelete(debouncedUpdate);
+    context.subscriptions.push({ dispose: () => { if (projectFileDebounce) { clearTimeout(projectFileDebounce); } } });
     context.subscriptions.push(projectFileWatcher);
 
     // Watch global.json for SDK version changes → invalidate SDK version cache

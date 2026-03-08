@@ -78,7 +78,8 @@ src/
 ├── services/
 │   ├── NuGetService.ts       # dotnet CLI integration, NuGet API calls (~4080 lines)
 │   ├── NuGetTypes.ts         # Shared NuGet types (VersionSpec, Project, PackageMetadata, etc.)
-│   ├── NuGetUtils.ts         # Standalone utilities (LRUMap, batchedPromiseAll, validators, isNewerVersion)
+│   ├── NuGetUtils.ts         # Standalone utilities (LRUMap, batchedPromiseAll, validators, isNewerVersion, topologicalSortByDependency)
+│   ├── NuGetOperations.ts    # Shared package operation functions (install/update/remove, bulk variants)
 │   ├── NuGetConfigParser.ts  # nuget.config parsing, credential resolution
 │   ├── CredentialService.ts  # Authentication for private feeds (DPAPI, Cred Provider)
 │   ├── Http2Client.ts        # HTTP/2 client with session reuse for nuget.org
@@ -88,7 +89,8 @@ src/
 ### Module Split: NuGetService
 `NuGetService.ts` delegates shared types and standalone utilities to separate modules:
 - **`NuGetTypes.ts`** — All exported types/interfaces (`VersionSpec`, `Project`, `InstalledPackage`, `PackageMetadata`, `NuGetSource`, etc.). `NuGetService.ts` re-exports these for backward compatibility.
-- **`NuGetUtils.ts`** — Stateless utility functions (`LRUMap`, `batchedPromiseAll`, `execWithTimeout`, `fileExists`, `COMMAND_TIMEOUT`, input validators, `parseVersionSpec`, `isNewerVersion`). No class dependency.
+- **`NuGetUtils.ts`** — Stateless utility functions (`LRUMap`, `batchedPromiseAll`, `execWithTimeout`, `fileExists`, `COMMAND_TIMEOUT`, input validators, `parseVersionSpec`, `isNewerVersion`, `topologicalSortByDependency`). No class dependency.
+- **`NuGetOperations.ts`** — Shared package operation functions used by both `NuGetPanel` and `NuGetSidebarPanel`. Exports an `OperationContext` interface (`{ nugetService, postMessage, notifyOtherPanel }`) and pure async functions: `executeSingleOperation` (install/update/remove), `executeBulkInstall`, `executeBulkUpdatePackages`, `executeBulkRemovePackages`, `executeBulkUpdateAllProjects`, `executeBulkRemoveAllProjects`. Each panel builds an `OperationContext` via `_opCtx()` and delegates from thin message-handler dispatchers.
 - `NuGetService.ts` retains internal types (`NuGetServiceIndex`, `ServiceEndpoints`) and all class methods. `FetchResult<T>` is defined in `Http2Client.ts`.
 - `NuGetConfigParser.ts` imports and re-exports `NuGetSource` from `NuGetTypes.ts` — there is a single canonical definition.
 
@@ -237,6 +239,7 @@ Each tab features a draggable split panel (left: package list, right: details). 
 - **Range:** 20–80% width, clamped to prevent layout collapse
 - **Persistence:** Split position saved to `context.globalState` (cross-workspace) via `saveSplitPosition` message
 - **Theming:** Uses `--vscode-sash-hoverBorder` for hover indicator, matching VS Code's native sash style
+- **Accessibility:** `role="separator"`, `aria-orientation` (horizontal for vertical sash, vertical for horizontal), and `aria-label="Drag to resize panels"`
 - **Memoization:** Wrapped as `MemoizedDraggableSash` with `useCallback([])` handlers (`onReset`, `onDragEnd`) to prevent re-renders
 
 ## Message Flow
@@ -278,7 +281,7 @@ public dispose(): void {
 
 ### Concurrent Operation Guard
 
-`NuGetPanel` uses an `_operationInProgress` boolean to prevent concurrent mutating operations (e.g., double-clicking install or clicking update while an install is running). Eight message cases are guarded: `installPackage`, `updatePackage`, `removePackage`, `bulkInstall`, `bulkUpdateAllProjects`, `bulkUpdatePackages`, `confirmBulkRemove`, `confirmBulkRemoveAllProjects`. Each uses:
+Both `NuGetPanel` and `NuGetSidebarProvider` use an `_operationInProgress` boolean to prevent concurrent mutating operations (e.g., double-clicking install or clicking update while an install is running). In `NuGetPanel`, eight message cases are guarded: `installPackage`, `updatePackage`, `removePackage`, `bulkInstall`, `bulkUpdateAllProjects`, `bulkUpdatePackages`, `confirmBulkRemove`, `confirmBulkRemoveAllProjects`. In `NuGetSidebarProvider`, five message cases are guarded: `installPackage`, `updatePackage`, `removePackage`, `bulkUpdatePackages`, `bulkUpdateAllProjects`. Each uses:
 
 ```typescript
 case 'installPackage': {
@@ -589,6 +592,7 @@ Large projects can have 5-50MB `project.assets.json` files. This file is read an
 ```typescript
 private assetsJsonCache: Map<string, { mtimeMs: number; data: unknown; timestamp: number }>;
 private static readonly ASSETS_CACHE_TTL = 30000; // 30s
+private static readonly MAX_ASSETS_CACHE_ENTRIES = 5;
 
 async readAssetsJson<T>(assetsPath: string): Promise<T | null> {
     const stat = await fs.promises.stat(assetsPath);
@@ -596,6 +600,7 @@ async readAssetsJson<T>(assetsPath: string): Promise<T | null> {
     if (cached && cached.mtimeMs === stat.mtimeMs && (Date.now() - cached.timestamp) < ASSETS_CACHE_TTL) {
         return cached.data as T;
     }
+    // Evict expired entries + enforce max size cap before adding
     // Parse and cache...
 }
 ```
@@ -838,6 +843,14 @@ useEffect(() => {
 
 The package details panel has been extracted into `PackageDetailsPanel.tsx` (~480 lines), wrapped in `React.memo` as `MemoizedPackageDetailsPanel`. Each tab renders its own instance, receiving shared state as props. This replaces the previous `useMemo`-based approach with proper component-level memoization via `React.memo`.
 
+### Accessibility
+
+Interactive elements follow WCAG patterns:
+- **DraggableSash**: `role="separator"`, `aria-orientation`, `aria-label` (see Draggable Split Panel section above)
+- **Dependency group headers**: `role="button"`, `tabIndex={0}`, `aria-expanded`, Enter/Space key handlers for toggle
+- **Source settings & warning indicators**: `aria-label`, `role="button"`, `tabIndex`, keyboard handlers where custom interactive elements are used
+- **SourceSettingsOverlay**: Semantic HTML (`<label>`, `<button>`, `<select>`, `<input>`) avoids needing custom ARIA in most cases
+
 ### State Stability Patterns
 
 **Installed packages content comparison:** To prevent cascading re-render chains (where `setInstalledPackages` → triggers `checkPackageUpdates` effect → posts message → response calls `setPackagesWithUpdates`), incoming packages are compared by `id@version` content before updating state:
@@ -963,9 +976,20 @@ private sessionOrder: string[] = []; // LRU tracking
 
 // When creating new session, evict oldest if at capacity
 if (this.sessions.size >= Http2Client.MAX_SESSIONS) {
-    const oldestOrigin = this.sessionOrder.shift();
-    this.sessions.get(oldestOrigin)?.close();
-    this.sessions.delete(oldestOrigin);
+    // Phase 1: Clean stale entries (sessions closed by error/timeout handlers)
+    for (let i = this.sessionOrder.length - 1; i >= 0; i--) {
+        const s = this.sessions.get(this.sessionOrder[i]);
+        if (!s || s.closed || s.destroyed) {
+            this.sessionOrder.splice(i, 1);
+            this.sessions.delete(this.sessionOrder[i]);
+        }
+    }
+    // Phase 2: If still at capacity, LRU-evict oldest active session
+    if (this.sessions.size >= Http2Client.MAX_SESSIONS) {
+        const oldestOrigin = this.sessionOrder.shift();
+        this.sessions.get(oldestOrigin)?.close();
+        this.sessions.delete(oldestOrigin);
+    }
 }
 ```
 

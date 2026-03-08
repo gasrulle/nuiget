@@ -1,7 +1,7 @@
-import * as path from 'path';
 import * as vscode from 'vscode';
+import { executeBulkUpdateAllProjects, executeBulkUpdatePackages, executeSingleOperation, OperationContext } from '../services/NuGetOperations';
 import { InstalledPackage, NuGetService } from '../services/NuGetService';
-import { NuGetPanel, topologicalSortByDependency } from './NuGetPanel';
+import { NuGetPanel } from './NuGetPanel';
 
 /**
  * NuGetSidebarProvider — WebviewViewProvider for the sidebar panel.
@@ -37,6 +37,7 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
     private _pendingProjectUpdates: { projectPath: string; projectName: string; updates: { id: string; installedVersion: string; latestVersion: string }[] }[] = [];
     private _pendingInstalledCount = -1;
     private _pendingInstalledProject = '';
+    private _operationInProgress = false;
     private _disposables: vscode.Disposable[] = [];
 
     constructor(
@@ -502,213 +503,52 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
                         }
                     }
 
-                    this._postMessage({ type: 'allProjectsInstalled', projectInstalled: allProjectsInstalled });
+                    this._postMessage({ type: 'allProjectsInstalled', projectInstalled: allProjectsInstalled, context: data.context });
                     break;
                 }
             case 'installPackage':
                 {
-                    await vscode.window.withProgress({
-                        location: vscode.ProgressLocation.Notification,
-                        title: `Installing ${data.packageId}...`,
-                        cancellable: false
-                    }, async () => {
-                        const success = await this._nugetService.installPackage(
-                            data.projectPath as string,
-                            data.packageId as string,
-                            data.version as string | undefined
-                        );
-                        this._postMessage({
-                            type: 'installResult',
-                            success,
-                            packageId: data.packageId,
-                            projectPath: data.projectPath
-                        });
-                        // Only notify the main panel on success to avoid unnecessary refresh
-                        if (success) { NuGetSidebarProvider._notifyMainPanel(); }
-                    });
+                    if (this._operationInProgress) { break; }
+                    this._operationInProgress = true;
+                    try {
+                        await executeSingleOperation(this._opCtx(), 'install', data.projectPath as string, data.packageId as string, data.version as string | undefined);
+                    } finally { this._operationInProgress = false; }
                     break;
                 }
             case 'updatePackage':
                 {
-                    await vscode.window.withProgress({
-                        location: vscode.ProgressLocation.Notification,
-                        title: `Updating ${data.packageId}...`,
-                        cancellable: false
-                    }, async () => {
-                        const success = await this._nugetService.updatePackage(
-                            data.projectPath as string,
-                            data.packageId as string,
-                            data.version as string
-                        );
-                        this._postMessage({
-                            type: 'updateResult',
-                            success,
-                            packageId: data.packageId,
-                            projectPath: data.projectPath
-                        });
-                        if (success) { NuGetSidebarProvider._notifyMainPanel(); }
-                    });
+                    if (this._operationInProgress) { break; }
+                    this._operationInProgress = true;
+                    try {
+                        await executeSingleOperation(this._opCtx(), 'update', data.projectPath as string, data.packageId as string, data.version as string);
+                    } finally { this._operationInProgress = false; }
                     break;
                 }
             case 'removePackage':
                 {
-                    await vscode.window.withProgress({
-                        location: vscode.ProgressLocation.Notification,
-                        title: `Removing ${data.packageId}...`,
-                        cancellable: false
-                    }, async () => {
-                        const success = await this._nugetService.removePackage(
-                            data.projectPath as string,
-                            data.packageId as string
-                        );
-                        this._postMessage({
-                            type: 'removeResult',
-                            success,
-                            packageId: data.packageId,
-                            projectPath: data.projectPath
-                        });
-                        if (success) { NuGetSidebarProvider._notifyMainPanel(); }
-                    });
+                    if (this._operationInProgress) { break; }
+                    this._operationInProgress = true;
+                    try {
+                        await executeSingleOperation(this._opCtx(), 'remove', data.projectPath as string, data.packageId as string);
+                    } finally { this._operationInProgress = false; }
                     break;
                 }
             case 'bulkUpdatePackages':
                 {
-                    const packages = data.packages as { id: string; version: string }[];
-                    const projectPath = data.projectPath as string;
-
-                    this._nugetService.setupOutputChannel();
-                    this._nugetService.logBulkOperationHeader('Updating', packages.length);
-
-                    const failedPackageIds: string[] = [];
-                    await vscode.window.withProgress({
-                        location: vscode.ProgressLocation.Notification,
-                        title: `Updating ${packages.length} packages...`,
-                        cancellable: false
-                    }, async (progress) => {
-                        let successCount = 0;
-                        let failCount = 0;
-
-                        for (let i = 0; i < packages.length; i++) {
-                            const pkg = packages[i];
-                            progress.report({
-                                message: `(${i + 1}/${packages.length}) ${pkg.id}`,
-                                increment: 100 / packages.length
-                            });
-                            const success = await this._nugetService.updatePackage(
-                                projectPath, pkg.id, pkg.version, { skipChannelSetup: true, skipNotification: true, skipRestore: true }
-                            );
-                            if (success) { successCount++; } else { failCount++; failedPackageIds.push(pkg.id); }
-                        }
-
-                        // Run a single restore after all packages are updated
-                        if (successCount > 0) {
-                            progress.report({ message: 'Restoring project...' });
-                            await this._nugetService.restoreProject(projectPath);
-                        }
-
-                        if (failCount === 0) {
-                            vscode.window.showInformationMessage(`Updated ${successCount} packages successfully.`);
-                        } else {
-                            vscode.window.showWarningMessage(`Updated ${successCount}, failed ${failCount}.`);
-                        }
-                    });
-
-                    this._postMessage({ type: 'bulkUpdateResult', projectPath, failedPackageIds });
-                    if (failedPackageIds.length < packages.length) { NuGetSidebarProvider._notifyMainPanel(); }
+                    if (this._operationInProgress) { break; }
+                    this._operationInProgress = true;
+                    try {
+                        await executeBulkUpdatePackages(this._opCtx(), data.packages as { id: string; version: string }[], data.projectPath as string);
+                    } finally { this._operationInProgress = false; }
                     break;
                 }
             case 'bulkUpdateAllProjects':
                 {
-                    const projectUpdates = data.projectUpdates as { projectPath: string; projectName: string; packages: { id: string; version: string }[] }[];
-                    if (!projectUpdates || projectUpdates.length === 0) { break; }
-
-                    // Build project-level dependency map from <ProjectReference> elements
-                    const isWindows = process.platform === 'win32';
-                    const normalizeProjectPath = (p: string) => {
-                        const normalized = path.normalize(p);
-                        return isWindows ? normalized.toLowerCase() : normalized;
-                    };
-                    const allProjectPaths = projectUpdates.map(pu => pu.projectPath);
-                    const projectDepMap = await this._nugetService.getProjectDependencyMap(allProjectPaths);
-                    const selectedProjectKeys = new Set(allProjectPaths.map(normalizeProjectPath));
-
-                    // Topological sort: dependencies first (update referenced projects before dependents)
-                    const sortedProjectUpdates = topologicalSortByDependency(
-                        projectUpdates,
-                        pu => normalizeProjectPath(pu.projectPath),
-                        projectDepMap,
-                        selectedProjectKeys,
-                        true // dependenciesFirst
-                    );
-
-                    const totalPackages = sortedProjectUpdates.reduce((sum, pu) => sum + pu.packages.length, 0);
-                    this._nugetService.setupOutputChannel();
-
-                    const perProjectFailedIds: { projectPath: string; failedPackageIds: string[] }[] = [];
-                    await vscode.window.withProgress({
-                        location: vscode.ProgressLocation.Notification,
-                        title: `Updating ${totalPackages} packages across ${sortedProjectUpdates.length} projects...`,
-                        cancellable: false
-                    }, async (progress) => {
-                        let totalSuccess = 0;
-                        let totalFail = 0;
-                        let completed = 0;
-                        const projectsWithChanges: { projectPath: string; projectName: string }[] = [];
-
-                        // Phase 1: Update all packages across all projects (no restores)
-                        for (const pu of sortedProjectUpdates) {
-                            // Topological sort packages within each project (dependencies first)
-                            const dependencyMap = await this._nugetService.getPackageDependencies(pu.projectPath);
-                            const packagesToUpdate = new Set(pu.packages.map(p => p.id.toLowerCase()));
-                            const sortedPackages = topologicalSortByDependency(
-                                pu.packages,
-                                p => p.id.toLowerCase(),
-                                dependencyMap,
-                                packagesToUpdate,
-                                true // dependenciesFirst
-                            );
-
-                            this._nugetService.logBulkOperationHeader(`Updating ${sortedPackages.length} package${sortedPackages.length !== 1 ? 's' : ''} for ${pu.projectName}...`, 0);
-
-                            let projectSuccess = false;
-                            const projectFailedIds: string[] = [];
-                            for (const pkg of sortedPackages) {
-                                completed++;
-                                progress.report({
-                                    message: `(${completed}/${totalPackages}) ${pu.projectName}: ${pkg.id}`,
-                                    increment: 100 / totalPackages
-                                });
-                                const success = await this._nugetService.updatePackage(
-                                    pu.projectPath, pkg.id, pkg.version, { skipChannelSetup: true, skipNotification: true, skipRestore: true }
-                                );
-                                if (success) { totalSuccess++; projectSuccess = true; } else { totalFail++; projectFailedIds.push(pkg.id); }
-                            }
-
-                            if (projectSuccess) {
-                                projectsWithChanges.push({ projectPath: pu.projectPath, projectName: pu.projectName });
-                            }
-                            if (projectFailedIds.length > 0) {
-                                perProjectFailedIds.push({ projectPath: pu.projectPath, failedPackageIds: projectFailedIds });
-                            }
-                        }
-
-                        // Phase 2: Restore all projects in dependency order (after all updates)
-                        for (const project of projectsWithChanges) {
-                            progress.report({ message: `Restoring ${project.projectName}...` });
-                            await this._nugetService.restoreProject(project.projectPath);
-                        }
-
-                        if (totalFail === 0) {
-                            vscode.window.showInformationMessage(`Updated ${totalSuccess} packages across ${sortedProjectUpdates.length} projects.`);
-                        } else {
-                            vscode.window.showWarningMessage(`Updated ${totalSuccess}, failed ${totalFail} across ${sortedProjectUpdates.length} projects.`);
-                        }
-                    });
-
-                    this._postMessage({ type: 'bulkUpdateAllProjectsResult', perProjectFailedIds });
-                    // Only notify main panel if at least one package succeeded across all projects
-                    const totalFailed = perProjectFailedIds.reduce((sum, p) => sum + p.failedPackageIds.length, 0);
-                    if (totalFailed < totalPackages) { NuGetSidebarProvider._notifyMainPanel(); }
+                    if (this._operationInProgress) { break; }
+                    this._operationInProgress = true;
+                    try {
+                        await executeBulkUpdateAllProjects(this._opCtx(), data.projectUpdates as { projectPath: string; projectName: string; packages: { id: string; version: string }[] }[]);
+                    } finally { this._operationInProgress = false; }
                     break;
                 }
             case 'getPackageVersions':
@@ -891,6 +731,15 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
         });
     }
 
+    /** Build an OperationContext for shared operation functions. */
+    private _opCtx(): OperationContext {
+        return {
+            nugetService: this._nugetService,
+            postMessage: (msg: unknown) => this._postMessage(msg),
+            notifyOtherPanel: () => NuGetSidebarProvider._notifyMainPanel(),
+        };
+    }
+
     private _postMessage(message: unknown): void {
         if (!this._disposed && this._view) {
             this._view.webview.postMessage(message);
@@ -912,7 +761,7 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
             <html lang="en">
             <head>
                 <meta charset="UTF-8">
-                <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource}; script-src ${webview.cspSource}; connect-src ${webview.cspSource}; img-src ${webview.cspSource} https: data:;">
+                <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource}; script-src ${webview.cspSource}; connect-src ${webview.cspSource}; img-src ${webview.cspSource};">
                 <meta name="viewport" content="width=device-width, initial-scale=1.0">
                 <title>nUIget Sidebar</title>
                 <link rel="stylesheet" href="${cssUri}">

@@ -1162,6 +1162,43 @@ export const App: React.FC = () => {
         };
     }, []);
 
+    const browseDetailsPanelContent = useMemo(() => (
+        <MemoizedPackageDetailsPanel
+            selectedPackage={selectedPackage}
+            packageMetadata={packageMetadata}
+            loadingMetadata={loadingMetadata}
+            loadingVersions={loadingVersions}
+            packageVersions={packageVersions}
+            selectedVersion={selectedVersion}
+            installedPackages={installedPackages}
+            detailsTab={detailsTab}
+            loadingReadme={loadingReadme}
+            sanitizedReadmeHtml={sanitizedReadmeHtml}
+            expandedDeps={expandedDeps}
+            selectedProject={selectedProject}
+            includePrerelease={includePrerelease}
+            selectedSource={selectedSource}
+            projects={projects}
+            allProjectsInstalled={multiInstallProjectData}
+            onInstall={handleInstall}
+            onMultiInstall={handleMultiInstall}
+            onMultiInstallOpen={handleMultiInstallOpen}
+            onRemove={handleRemove}
+            onVersionChange={setSelectedVersion}
+            onDetailsTabChange={setDetailsTab}
+            onToggleDep={handleToggleDep}
+            onReadmeAttemptedChange={setReadmeAttempted}
+            onMetadataChange={setPackageMetadata}
+            onLoadingMetadataChange={setLoadingMetadata}
+            metadataCache={metadataCache}
+            vscode={vscode}
+        />
+    ), [selectedPackage, packageMetadata, loadingMetadata, loadingVersions, packageVersions,
+        selectedVersion, installedPackages, detailsTab, loadingReadme, sanitizedReadmeHtml,
+        expandedDeps, selectedProject, includePrerelease, selectedSource, projects,
+        multiInstallProjectData, handleInstall, handleMultiInstall, handleMultiInstallOpen,
+        handleRemove, handleToggleDep]);
+
     return (
         <div className="app">
             <div className="header">
@@ -1209,6 +1246,7 @@ export const App: React.FC = () => {
                         <button
                             className="source-settings-btn"
                             title="Manage NuGet sources"
+                            aria-label="Manage NuGet sources"
                             onClick={() => {
                                 setShowSourceSettings(true);
                                 vscode.postMessage({ type: 'getConfigFiles' });
@@ -1219,8 +1257,12 @@ export const App: React.FC = () => {
                         {failedSources.length > 0 && (
                             <span
                                 className="source-warning-indicator"
+                                role="button"
+                                tabIndex={0}
                                 title={`${failedSources.length} source(s) unreachable. Click to refresh.`}
+                                aria-label={`${failedSources.length} source(s) unreachable. Click to refresh.`}
                                 onClick={() => vscode.postMessage({ type: 'refreshSources' })}
+                                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); vscode.postMessage({ type: 'refreshSources' }); } }}
                             >
                                 <WarningIcon size={16} />
                             </span>
@@ -1382,38 +1424,7 @@ export const App: React.FC = () => {
                 searchDebounceMode={searchDebounceMode}
                 splitPosition={splitPosition}
                 defaultPackageIcon={defaultPackageIcon}
-                detailsPanelContent={
-                    <MemoizedPackageDetailsPanel
-                        selectedPackage={selectedPackage}
-                        packageMetadata={packageMetadata}
-                        loadingMetadata={loadingMetadata}
-                        loadingVersions={loadingVersions}
-                        packageVersions={packageVersions}
-                        selectedVersion={selectedVersion}
-                        installedPackages={installedPackages}
-                        detailsTab={detailsTab}
-                        loadingReadme={loadingReadme}
-                        sanitizedReadmeHtml={sanitizedReadmeHtml}
-                        expandedDeps={expandedDeps}
-                        selectedProject={selectedProject}
-                        includePrerelease={includePrerelease}
-                        selectedSource={selectedSource}
-                        projects={projects}
-                        allProjectsInstalled={multiInstallProjectData}
-                        onInstall={handleInstall}
-                        onMultiInstall={handleMultiInstall}
-                        onMultiInstallOpen={handleMultiInstallOpen}
-                        onRemove={handleRemove}
-                        onVersionChange={setSelectedVersion}
-                        onDetailsTabChange={setDetailsTab}
-                        onToggleDep={handleToggleDep}
-                        onReadmeAttemptedChange={setReadmeAttempted}
-                        onMetadataChange={setPackageMetadata}
-                        onLoadingMetadataChange={setLoadingMetadata}
-                        metadataCache={metadataCache}
-                        vscode={vscode}
-                    />
-                }
+                detailsPanelContent={browseDetailsPanelContent}
                 versionsCache={versionsCache}
                 onSelectPackage={selectDirectPackage}
                 clearSelection={clearSelection}

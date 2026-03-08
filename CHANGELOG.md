@@ -5,6 +5,33 @@ All notable changes to the nUIget extension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- **Http2Client double-resolve in `fetchJsonHttp1WithDetails`**
+- **CredentialService DPAPI command injection hardening**
+- **Sidebar missing concurrent operation guard**
+- **Sidebar CSP overly permissive for `img-src`**
+- **Bulk operation early exits leaving UI in loading state**
+- **`bulkInstall` missing topological sort for project dependencies**
+- **Sidebar `bulkUpdatePackages` missing topological sort**
+- **Sidebar `checkAllProjectsInstalled` not echoing `context` field**
+- **`getTransitiveMetadata` missing error response on failure**
+- **Sidebar `bulkUpdateAllProjects` early exit missing response message**
+- **`assetsJsonCache` unbounded growth within TTL window**
+- **HTTP/2 session pool stale entry cleanup before eviction**
+- **File watcher debounce timeout not cleaned on extension disposal**
+
+### Changed
+
+- **Panel operation logic extracted to `NuGetOperations.ts`** — Install, update, remove, and all bulk operation variants deduplicated into shared functions with `OperationContext` interface. `topologicalSortByDependency` moved to `NuGetUtils.ts`.
+- **`detailsPanelContent` memoized with `useMemo`** — BrowseTab no longer re-renders when unrelated App state changes
+- **`findNuGetConfigs` parallelized** — File existence checks now run concurrently via `Promise.all`
+- **DraggableSash ARIA attributes** — Added `role="separator"`, `aria-orientation`, and `aria-label`
+- **Dependency group headers keyboard accessible** — Added `role="button"`, `tabIndex`, `aria-expanded`, and Enter/Space key handlers
+- **Source settings and warning indicator accessibility** — Added `aria-label`, `role="button"`, `tabIndex`, and keyboard handlers
+
 ## [1.11.0]
 
 ### Added

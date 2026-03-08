@@ -93,6 +93,19 @@ export class Http2Client {
 
         // Evict oldest session if at capacity
         if (this.sessions.size >= Http2Client.MAX_SESSIONS) {
+            // Clean up stale entries first (sessions closed by event handlers)
+            for (let i = this.sessionOrder.length - 1; i >= 0; i--) {
+                const o = this.sessionOrder[i];
+                const s = this.sessions.get(o);
+                if (!s || s.closed || s.destroyed) {
+                    this.sessionOrder.splice(i, 1);
+                    this.sessions.delete(o);
+                }
+            }
+        }
+
+        // If still at capacity after cleanup, evict the oldest active session
+        if (this.sessions.size >= Http2Client.MAX_SESSIONS) {
             const oldestOrigin = this.sessionOrder.shift();
             if (oldestOrigin) {
                 const oldSession = this.sessions.get(oldestOrigin);
@@ -357,9 +370,11 @@ export class Http2Client {
                 }
 
                 let data = '';
+                let resolved = false;
                 res.on('data', (chunk) => {
                     data += chunk;
-                    if (data.length > Http2Client.MAX_RESPONSE_SIZE) {
+                    if (data.length > Http2Client.MAX_RESPONSE_SIZE && !resolved) {
+                        resolved = true;
                         req.destroy();
                         resolve({
                             data: null,
@@ -371,6 +386,7 @@ export class Http2Client {
                     }
                 });
                 res.on('end', () => {
+                    if (resolved) { return; }
                     try {
                         resolve({ data: JSON.parse(data) });
                     } catch {
@@ -558,7 +574,7 @@ export class Http2Client {
                     }
                 });
                 res.on('end', () => {
-                    if (resolved) {return;}
+                    if (resolved) { return; }
                     try {
                         resolve(JSON.parse(data));
                     } catch {

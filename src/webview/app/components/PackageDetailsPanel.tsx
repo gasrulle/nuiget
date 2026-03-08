@@ -437,7 +437,11 @@ const PackageDetailsPanel: React.FC<PackageDetailsPanelProps> = ({
                                             <div key={idx} className="dependency-group">
                                                 <div
                                                     className="dependency-group-header"
+                                                    role="button"
+                                                    tabIndex={0}
+                                                    aria-expanded={expandedDeps.has(key)}
                                                     onClick={() => onToggleDep(key)}
+                                                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onToggleDep(key); } }}
                                                 >
                                                     <span className="expand-icon">
                                                         {expandedDeps.has(key) ? <ChevronDownIcon size={14} /> : <ChevronRightIcon size={14} />}

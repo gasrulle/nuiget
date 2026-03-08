@@ -122,43 +122,27 @@ export class NuGetConfigParser {
     }
 
     private async findNuGetConfigs(): Promise<string[]> {
-        const configs: string[] = [];
+        // Collect all candidate paths first, then check existence in parallel
+        const candidates: string[] = [];
 
-        // User-level config
         const userProfile = process.env.USERPROFILE || process.env.HOME || '';
         if (userProfile) {
-            const userConfig = path.join(userProfile, '.nuget', 'NuGet', 'NuGet.Config');
-            if (await this.fileExists(userConfig)) {
-                configs.push(userConfig);
-            }
-
-            // Also check AppData location on Windows
+            candidates.push(path.join(userProfile, '.nuget', 'NuGet', 'NuGet.Config'));
             if (process.platform === 'win32') {
-                const appDataConfig = path.join(userProfile, 'AppData', 'Roaming', 'NuGet', 'NuGet.Config');
-                if (await this.fileExists(appDataConfig)) {
-                    configs.push(appDataConfig);
-                }
+                candidates.push(path.join(userProfile, 'AppData', 'Roaming', 'NuGet', 'NuGet.Config'));
             }
         }
 
-        // Workspace-level configs
         const workspaceFolders = vscode.workspace.workspaceFolders;
         if (workspaceFolders) {
             for (const folder of workspaceFolders) {
-                const workspaceConfig = path.join(folder.uri.fsPath, 'nuget.config');
-                if (await this.fileExists(workspaceConfig)) {
-                    configs.push(workspaceConfig);
-                }
-
-                // Also check NuGet.Config (capitalized)
-                const workspaceConfigAlt = path.join(folder.uri.fsPath, 'NuGet.Config');
-                if (await this.fileExists(workspaceConfigAlt)) {
-                    configs.push(workspaceConfigAlt);
-                }
+                candidates.push(path.join(folder.uri.fsPath, 'nuget.config'));
+                candidates.push(path.join(folder.uri.fsPath, 'NuGet.Config'));
             }
         }
 
-        return configs;
+        const results = await Promise.all(candidates.map(c => this.fileExists(c)));
+        return candidates.filter((_, i) => results[i]);
     }
 
     /**

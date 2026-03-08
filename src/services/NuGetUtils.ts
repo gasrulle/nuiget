@@ -337,3 +337,90 @@ export function isNewerVersion(version1: string, version2: string): boolean {
 
     return false;
 }
+
+/**
+ * Topological sort using Kahn's algorithm for packages with inter-dependencies.
+ *
+ * @param items The items to sort
+ * @param getKey Extract a lowercase key from each item (used for graph edges)
+ * @param dependencyMap Maps packageId (lowercase) -> array of dependency packageIds (lowercase)
+ * @param selectedKeys Set of lowercase keys that are in the items list
+ * @param dependenciesFirst If true, dependencies are placed first (for updates);
+ *                          if false, dependents are placed first (for removals)
+ * @returns Sorted copy of items
+ */
+export function topologicalSortByDependency<T>(
+    items: T[],
+    getKey: (item: T) => string,
+    dependencyMap: Map<string, string[]>,
+    selectedKeys: Set<string>,
+    dependenciesFirst: boolean
+): T[] {
+    const inDegree = new Map<string, number>();
+    const graph = new Map<string, string[]>(); // edges from source -> targets (reduce in-degree when source is processed)
+
+    // Initialize
+    for (const item of items) {
+        const key = getKey(item);
+        inDegree.set(key, 0);
+        graph.set(key, []);
+    }
+
+    // Build dependency graph for selected items only
+    for (const item of items) {
+        const key = getKey(item);
+        const deps = dependencyMap.get(key) || [];
+        for (const dep of deps) {
+            if (selectedKeys.has(dep)) {
+                if (dependenciesFirst) {
+                    // For updates: if A depends on B, B should go first
+                    // A gets higher in-degree, B's edge points to A
+                    inDegree.set(key, (inDegree.get(key) || 0) + 1);
+                    graph.get(dep)?.push(key);
+                } else {
+                    // For removals: if A depends on B, A should go first
+                    // B gets higher in-degree, A's edge points to B
+                    inDegree.set(dep, (inDegree.get(dep) || 0) + 1);
+                    graph.get(key)?.push(dep);
+                }
+            }
+        }
+    }
+
+    // Kahn's algorithm
+    const sorted: T[] = [];
+    const queue: string[] = [];
+
+    for (const [key, degree] of inDegree) {
+        if (degree === 0) {
+            queue.push(key);
+        }
+    }
+
+    while (queue.length > 0) {
+        const key = queue.shift()!;
+        const original = items.find(item => getKey(item) === key);
+        if (original) {
+            sorted.push(original);
+        }
+
+        for (const target of graph.get(key) || []) {
+            const newDegree = (inDegree.get(target) || 1) - 1;
+            inDegree.set(target, newDegree);
+            if (newDegree === 0) {
+                queue.push(target);
+            }
+        }
+    }
+
+    // If there's a cycle or missing items, add remaining ones
+    if (sorted.length < items.length) {
+        for (const item of items) {
+            if (!sorted.some(s => getKey(s) === getKey(item))) {
+                sorted.push(item);
+            }
+        }
+    }
+
+    return sorted;
+}

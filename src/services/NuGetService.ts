@@ -99,6 +99,8 @@ export class NuGetService {
     private assetsJsonCache: Map<string, { mtimeMs: number; data: unknown; timestamp: number }> = new Map();
     // Assets cache TTL: 30 seconds
     private static readonly ASSETS_CACHE_TTL = 30000;
+    // Maximum number of cached assets files (one per project typically)
+    private static readonly MAX_ASSETS_CACHE_ENTRIES = 5;
     // Cache for getSources() to avoid repeated CLI spawns (dotnet nuget list source)
     // Multiple parallel getPackageVersions calls share a single CLI result
     private _sourcesCache: NuGetSource[] | null = null;
@@ -651,13 +653,28 @@ export class NuGetService {
                 timestamp: now
             });
 
-            // Evict expired entries to prevent unbounded memory growth
+            // Evict expired entries and enforce max size to prevent unbounded memory growth
             if (this.assetsJsonCache.size > 1) {
+                const keysToDelete: string[] = [];
                 for (const [key, entry] of this.assetsJsonCache) {
                     if (key !== assetsPath && (now - entry.timestamp) >= NuGetService.ASSETS_CACHE_TTL) {
-                        this.assetsJsonCache.delete(key);
+                        keysToDelete.push(key);
                     }
                 }
+                for (const key of keysToDelete) {
+                    this.assetsJsonCache.delete(key);
+                }
+            }
+
+            // Hard cap: if still over max, evict oldest entries
+            if (this.assetsJsonCache.size > NuGetService.MAX_ASSETS_CACHE_ENTRIES) {
+                let oldest = { key: '', timestamp: Infinity };
+                for (const [key, entry] of this.assetsJsonCache) {
+                    if (key !== assetsPath && entry.timestamp < oldest.timestamp) {
+                        oldest = { key, timestamp: entry.timestamp };
+                    }
+                }
+                if (oldest.key) { this.assetsJsonCache.delete(oldest.key); }
             }
 
             return data;

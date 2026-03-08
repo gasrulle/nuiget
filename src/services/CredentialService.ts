@@ -274,15 +274,11 @@ export class CredentialService {
 
         try {
             // PowerShell command to decrypt using DPAPI
-            // The encrypted password in nuget.config is base64-encoded cipher text
-            const psCommand = `
-                Add-Type -AssemblyName System.Security
-                $encrypted = [Convert]::FromBase64String('${encryptedBase64}')
-                $decrypted = [System.Security.Cryptography.ProtectedData]::Unprotect($encrypted, $null, [System.Security.Cryptography.DataProtectionScope]::CurrentUser)
-                [System.Text.Encoding]::UTF8.GetString($decrypted)
-            `.replace(/\n/g, ' ');
+            // Uses -EncodedCommand to avoid string interpolation injection risks
+            const psCommand = `Add-Type -AssemblyName System.Security; $encrypted = [Convert]::FromBase64String('${encryptedBase64}'); $decrypted = [System.Security.Cryptography.ProtectedData]::Unprotect($encrypted, $null, [System.Security.Cryptography.DataProtectionScope]::CurrentUser); [System.Text.Encoding]::UTF8.GetString($decrypted)`;
+            const encodedCommand = Buffer.from(psCommand, 'utf16le').toString('base64');
 
-            const { stdout } = await execAsync(`powershell -NoProfile -Command "${psCommand}"`, {
+            const { stdout } = await execAsync(`powershell -NoProfile -EncodedCommand ${encodedCommand}`, {
                 timeout: 5000
             });
 
