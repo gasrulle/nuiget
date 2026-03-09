@@ -7,14 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.11.0]
+
 ### Added
 
 - **Vulnerability scanning for installed packages** — Fetches NuGet V3 VulnerabilityInfo index, enriches installed packages with vulnerability data (severity + advisory URL), displays color-coded shield badges on package rows and detailed advisory links in the details panel
 - **Package size display** — Shows nupkg download size (via HEAD request to flat container) in the details panel, formatted as KB/MB
 - **Offline metadata fallback** — When all NuGet sources are unreachable, reads `.nuspec` from the local global-packages cache (`~/.nuget/packages/`) to display basic metadata (description, authors, dependencies) with an "Offline" indicator
+- **Optimistic UI updates after package operations** — Install, update, remove, and bulk operations now immediately update the updates list and badge counts without waiting for a full re-check, significantly improving perceived responsiveness
+- **Per-package failure tracking in bulk operations** — Bulk update/remove result messages now include `failedPackageIds` (single-project) and `perProjectFailedIds` (all-projects), enabling accurate optimistic state when some packages fail
+- **Operation-aware cross-panel sync** — Main panel now sends operation details (type, packageId, projectPath) to the sidebar instead of triggering a full refresh, enabling surgical sidebar state updates
+- **Lightweight sidebar notification path** — New `notifySidebarOfChange()` method skips `clearNuGetHttpCache()` and source re-fetch after operations, eliminating a 0–15 second process spawn per operation
 
 ### Fixed
 
+- **Sidebar installed packages now sorted alphabetically**
+- **Sidebar updates now sorted alphabetically**
 - **`getPackageSize` nupkg URL missing trailing slash normalization**
 - **`headRequestContentLength` double-resolve on timeout**
 - **Vulnerability badge pluralization typo ("vulnerabilityy")**
@@ -43,6 +51,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`assetsJsonCache` unbounded growth within TTL window**
 - **HTTP/2 session pool stale entry cleanup before eviction**
 - **File watcher debounce timeout not cleaned on extension disposal**
+- **All 5 npm audit vulnerabilities resolved** — Updated dompurify (XSS), fast-xml-parser (stack overflow), ajv (ReDoS), minimatch (ReDoS), and underscore (DoS)
+- **Sidebar sash position not persisted across VS Code sessions**
+- **"Load all projects" toggle visible in Updates section with single project**
+- **Failed operations no longer trigger optimistic sidebar updates**
+- **Sidebar's own failed operations no longer clear update badges**
+- **Sidebar `_notifyMainPanel()` no longer fires after failed operations** — install/update/remove from sidebar only refresh main panel when the operation succeeded
+- **Bulk install no longer notifies sidebar when all installs failed**
 
 ### Changed
 
@@ -57,28 +72,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Transitive prefetch delay reduced from 2 000 ms to 500 ms** — Transitive dependency data loads sooner after direct packages finish
 - **Dependency group headers keyboard accessible** — Added `role="button"`, `tabIndex`, `aria-expanded`, and Enter/Space key handlers
 - **Source settings and warning indicator accessibility** — Added `aria-label`, `role="button"`, `tabIndex`, and keyboard handlers
-
-## [1.11.0]
-
-### Added
-
-- **Optimistic UI updates after package operations** — Install, update, remove, and bulk operations now immediately update the updates list and badge counts without waiting for a full re-check, significantly improving perceived responsiveness
-- **Per-package failure tracking in bulk operations** — Bulk update/remove result messages now include `failedPackageIds` (single-project) and `perProjectFailedIds` (all-projects), enabling accurate optimistic state when some packages fail
-- **Operation-aware cross-panel sync** — Main panel now sends operation details (type, packageId, projectPath) to the sidebar instead of triggering a full refresh, enabling surgical sidebar state updates
-- **Lightweight sidebar notification path** — New `notifySidebarOfChange()` method skips `clearNuGetHttpCache()` and source re-fetch after operations, eliminating a 0–15 second process spawn per operation
-
-### Fixed
-
-- **All 5 npm audit vulnerabilities resolved** — Updated dompurify (XSS), fast-xml-parser (stack overflow), ajv (ReDoS), minimatch (ReDoS), and underscore (DoS)
-- **Sidebar sash position not persisted across VS Code sessions**
-- **"Load all projects" toggle visible in Updates section with single project**
-- **Failed operations no longer trigger optimistic sidebar updates**
-- **Sidebar's own failed operations no longer clear update badges**
-- **Sidebar `_notifyMainPanel()` no longer fires after failed operations** — install/update/remove from sidebar only refresh main panel when the operation succeeded
-- **Bulk install no longer notifies sidebar when all installs failed**
-
-### Changed
-
 - **Sidebar no longer does full re-fetch after every operation** — Previously cleared all updates and re-requested `checkAllProjectsUpdates` + `checkAllProjectsInstalled` after every install/update/remove. Now surgically filters affected packages from update lists
 - **Sidebar sections independently expandable** — Both Installed and Updates sections can be open simultaneously with a draggable divider between them (mimics native VS Code sidebar behavior). Default is 50/50 split; double-click sash to reset
 - **Main panel refresh handler debounced** — Rapid refresh messages from sidebar operations are collapsed with a 300ms debounce to avoid redundant re-fetches

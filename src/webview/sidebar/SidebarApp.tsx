@@ -593,8 +593,9 @@ export const SidebarApp: React.FC = () => {
     // Client-side filter for Installed / Updates
     const filteredInstalled = useMemo(() => {
         const q = (searchMode === 'installed' ? filterText : searchQuery).toLowerCase();
-        if (!q) { return installedPackages; }
-        return installedPackages.filter(p =>
+        const sorted = [...installedPackages].sort((a, b) => a.id.localeCompare(b.id));
+        if (!q) { return sorted; }
+        return sorted.filter(p =>
             p.id.toLowerCase().includes(q) ||
             (p.authors && p.authors.toLowerCase().includes(q))
         );
@@ -602,8 +603,9 @@ export const SidebarApp: React.FC = () => {
 
     const filteredUpdates = useMemo(() => {
         const q = (searchMode === 'updates' ? filterText : searchQuery).toLowerCase();
-        if (!q) { return packageUpdates; }
-        return packageUpdates.filter(p => p.id.toLowerCase().includes(q));
+        const sorted = [...packageUpdates].sort((a, b) => a.id.localeCompare(b.id));
+        if (!q) { return sorted; }
+        return sorted.filter(p => p.id.toLowerCase().includes(q));
     }, [packageUpdates, searchQuery, searchMode, filterText]);
 
     // Map installed packages by ID for quick lookup in Browse
@@ -947,12 +949,13 @@ export const SidebarApp: React.FC = () => {
                                 ? pi.packages.filter(p => p.id.toLowerCase().includes(q))
                                 : pi.packages;
                             if (filtered.length === 0 && q) { return null; }
+                            const sorted = [...filtered].sort((a, b) => a.id.localeCompare(b.id));
                             return (
                                 <div key={pi.projectPath}>
                                     <div className="project-group-header" title={pi.projectPath}>
-                                        {pi.projectName} ({filtered.length})
+                                        {pi.projectName} ({sorted.length})
                                     </div>
-                                    {filtered.map((pkg) => (
+                                    {sorted.map((pkg) => (
                                         <PackageRow
                                             key={`${pi.projectPath}::${pkg.id}`}
                                             packageId={pkg.id}
@@ -1051,7 +1054,7 @@ export const SidebarApp: React.FC = () => {
                                 <div className="project-group-header" title={pu.projectPath}>
                                     {pu.projectName} ({pu.updates.length})
                                 </div>
-                                {pu.updates.map((pkg) => (
+                                {[...pu.updates].sort((a, b) => a.id.localeCompare(b.id)).map((pkg) => (
                                     <PackageRow
                                         key={`${pu.projectPath}::${pkg.id}`}
                                         packageId={pkg.id}
