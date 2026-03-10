@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **VS Code-style search progress indicator** — Sidebar now shows a native-style indeterminate linear progress bar (animated 2px dash sliding left-to-right) below the search input during browse searches, installed loading, and update checks
+
+### Changed
+
+- **Native sash styling** — Sidebar and main panel sashes now use the native VS Code pattern: transparent hit area with a `::before` pseudo-element for the accent line, plus a 300ms hover delay to prevent flash on cursor pass-through
+
 ## [1.11.0]
 
 ### Added

@@ -1078,6 +1078,11 @@ export const SidebarApp: React.FC = () => {
     // ─── Render ──────────────────────────────────────────────────────────────
     return (
         <div className="sidebar-app">
+            {/* VS Code-style indeterminate progress bar — above search, at top of view */}
+            <div className={`sidebar-progress-container${loadingSearch || loadingInstalled || loadingUpdates || loadingAllUpdates || loadingAllInstalled ? ' active' : ''}`}
+                role="progressbar" aria-label="Searching">
+                <div className="progress-bit" />
+            </div>
             {/* Search Input */}
             <div className="sidebar-search-container" role="search">
                 <div className="sidebar-search-wrapper">

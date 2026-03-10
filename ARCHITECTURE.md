@@ -108,6 +108,7 @@ The sidebar provides a compact package management UI in the VS Code Activity Bar
 ### Architecture
 - **Backend**: `NuGetSidebarPanel.ts` — `WebviewViewProvider` that shares the singleton `NuGetService` with the main panel. Handles all backend operations (search, install, update, remove) and delegates source/project/prerelease selection to VS Code QuickPick commands registered in `extension.ts`.
 - **Frontend**: `SidebarApp.tsx` — Single React component with a search-mode model. Uses `SectionHeader` and `PackageRow` sub-components. All icons imported from shared `icons.tsx` module — no inline SVG definitions in sidebar components.
+- **Progress indicator**: A VS Code-native-style indeterminate linear progress bar (2px tall, animated dash sliding left-to-right) renders below the search input inside `.sidebar-search-container`. Driven by existing `loading*` state variables (`loadingSearch`, `loadingInstalled`, `loadingUpdates`, `loadingAllUpdates`, `loadingAllInstalled`) — the container gets class `active` when any is true. CSS animation replicates VS Code's `monaco-progress-container` pattern: `@keyframes sidebar-progress` with `translateX`/`scaleX` over 4s, using `--vscode-progressBar-background`.
 - **Build**: Separate esbuild entry point (`src/webview/sidebar/index.tsx` → `dist/sidebar.js`).
 
 ### Key Design Decisions

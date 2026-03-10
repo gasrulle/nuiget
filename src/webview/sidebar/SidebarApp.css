@@ -86,6 +86,46 @@ body {
     outline-offset: -1px;
 }
 
+/* ─── Search Progress Bar (VS Code native style) ────────────────────────── */
+.sidebar-progress-container {
+    width: 100%;
+    height: 2px;
+    overflow: hidden;
+    position: relative;
+}
+
+.sidebar-progress-container .progress-bit {
+    width: 2%;
+    height: 2px;
+    position: absolute;
+    left: 0;
+    background-color: var(--vscode-progressBar-background, #0E70C0);
+    display: none;
+}
+
+.sidebar-progress-container.active .progress-bit {
+    display: inherit;
+    animation-name: sidebar-progress;
+    animation-duration: 4s;
+    animation-iteration-count: infinite;
+    animation-timing-function: linear;
+    transform: translate3d(0px, 0px, 0px);
+}
+
+@keyframes sidebar-progress {
+    from {
+        transform: translateX(0%) scaleX(1);
+    }
+
+    50% {
+        transform: translateX(2500%) scaleX(3);
+    }
+
+    to {
+        transform: translateX(4900%) scaleX(1);
+    }
+}
+
 /* ─── @-Prefix Filter Dropdown ───────────────────────────────────────────── */
 .filter-dropdown {
     position: absolute;
@@ -429,7 +469,9 @@ body {
 }
 
 /* ─── Vertical Sash (horizontal divider between sections) ─────────────── */
+/* Matches native VS Code sash: transparent 4px hit area with ::before accent line */
 .sash.sash-vertical {
+    position: relative;
     width: auto;
     height: 4px;
     cursor: row-resize;
@@ -437,15 +479,23 @@ body {
     border-left: none;
     border-top: 1px solid var(--vscode-sideBarSectionHeader-border, transparent);
     flex-shrink: 0;
-    transition: background-color 0.1s ease;
     z-index: 10;
 }
 
-.sash.sash-vertical:hover {
-    background-color: var(--vscode-sash-hoverBorder, var(--vscode-focusBorder));
+.sash.sash-vertical::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    width: 100%;
+    height: 4px;
+    top: calc(50% - 2px);
+    background: transparent;
+    pointer-events: none;
+    transition: background-color 0.1s ease-out;
 }
 
-.sash.sash-vertical.dragging {
+.sash.sash-vertical.hover::before,
+.sash.sash-vertical.dragging::before {
     background-color: var(--vscode-sash-hoverBorder, var(--vscode-focusBorder));
 }
 
@@ -468,7 +518,7 @@ body.vscode-reduce-motion .section-spinner {
     animation: none;
 }
 
-body.vscode-reduce-motion .sash.sash-vertical {
+body.vscode-reduce-motion .sash.sash-vertical::before {
     transition: none;
 }
 

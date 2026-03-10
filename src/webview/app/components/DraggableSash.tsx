@@ -17,18 +17,38 @@ interface DraggableSashProps {
 function DraggableSash({ onDrag, onReset, onDragEnd, orientation = 'horizontal' }: DraggableSashProps) {
     const sashRef = useRef<HTMLDivElement>(null);
     const [isDragging, setIsDragging] = useState(false);
+    const [isHovered, setIsHovered] = useState(false);
     // Track cleanup function for document event listeners
     const cleanupRef = useRef<(() => void) | null>(null);
+    const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     // Cleanup on unmount to prevent event listener leaks
     useEffect(() => {
         return () => {
-            // If unmounted during drag, clean up document listeners
             if (cleanupRef.current) {
                 cleanupRef.current();
                 cleanupRef.current = null;
             }
+            if (hoverTimerRef.current) {
+                clearTimeout(hoverTimerRef.current);
+            }
         };
+    }, []);
+
+    const handleMouseEnter = useCallback(() => {
+        if (isDragging) {
+            setIsHovered(true);
+            return;
+        }
+        hoverTimerRef.current = setTimeout(() => setIsHovered(true), 300);
+    }, [isDragging]);
+
+    const handleMouseLeave = useCallback(() => {
+        if (hoverTimerRef.current) {
+            clearTimeout(hoverTimerRef.current);
+            hoverTimerRef.current = null;
+        }
+        setIsHovered(false);
     }, []);
 
     const isVertical = orientation === 'vertical';
@@ -86,11 +106,13 @@ function DraggableSash({ onDrag, onReset, onDragEnd, orientation = 'horizontal' 
     return (
         <div
             ref={sashRef}
-            className={`sash${isDragging ? ' dragging' : ''}${isVertical ? ' sash-vertical' : ''}`}
+            className={`sash${isDragging ? ' dragging' : ''}${isHovered ? ' hover' : ''}${isVertical ? ' sash-vertical' : ''}`}
             role="separator"
             aria-orientation={isVertical ? 'horizontal' : 'vertical'}
             aria-label="Drag to resize panels"
             onMouseDown={handleMouseDown}
+            onMouseEnter={handleMouseEnter}
+            onMouseLeave={handleMouseLeave}
             onDoubleClick={onReset}
             title="Drag to resize. Double-click to reset."
         />
