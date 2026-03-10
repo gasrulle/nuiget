@@ -5,7 +5,7 @@ All notable changes to the nUIget extension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.12.0]
 
 ### Added
 
@@ -14,6 +14,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - **Native sash styling** — Sidebar and main panel sashes now use the native VS Code pattern: transparent hit area with a `::before` pseudo-element for the accent line, plus a 300ms hover delay to prevent flash on cursor pass-through
+
+### Fixed
+
+- **Vulnerability data not loading** — Vulnerability base JSON (~15-20 MB) exceeded the 10 MB response size limit, silently returning no data. Vulnerability fetches now use gzip/deflate compression (~2-3 MB transfer), fixing missing shield badges on installed packages
 
 ## [1.11.0]
 

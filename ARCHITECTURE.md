@@ -1222,11 +1222,12 @@ Uses dynamic endpoint discovery from nuget.org's service index (`/v3/index.json`
 Uses the NuGet V3 `VulnerabilityInfo/6.7.0` resource type:
 1. `discoverServiceEndpoints` discovers `vulnerabilityInfoUrl` from the service index
 2. `fetchVulnerabilityData()` fetches the vulnerability index (array of page refs) and each page
-3. Pages contain JSON objects keyed by lowercase packageId → array of `{severity: 0-3, url, versions: "NuGet range syntax"}`
-4. `getVulnerabilities(packageId, version)` cross-references installed packages via `isVersionInRange()`
-5. Severity mapping: 0=Low, 1=Moderate, 2=High, 3=Critical
-6. In-memory cache with 1-hour TTL (`VULNERABILITY_CACHE_TTL`)
-7. UI: color-coded `ShieldIcon` badges on InstalledTab rows; advisory links in PackageDetailsPanel
+3. Uses `fetchJsonWithCompression()` (HTTP/1.1 with `Accept-Encoding: gzip, deflate`) — the base vulnerability JSON is ~15-20 MB uncompressed (~2-3 MB compressed), which exceeds the standard 10 MB `MAX_RESPONSE_SIZE`. Decompressed size is capped at `MAX_VULNERABILITY_RESPONSE_SIZE` (50 MB).
+4. Pages contain JSON objects keyed by lowercase packageId → array of `{severity: 0-3, url, versions: "NuGet range syntax"}`
+5. `getVulnerabilities(packageId, version)` cross-references installed packages via `isVersionInRange()`
+6. Severity mapping: 0=Low, 1=Moderate, 2=High, 3=Critical
+7. In-memory cache with 1-hour TTL (`VULNERABILITY_CACHE_TTL`)
+8. UI: color-coded `WarningIcon` badges on InstalledTab rows; advisory links in PackageDetailsPanel
 
 ### Package Size
 Retrieved via HTTP HEAD request to the flat container nupkg URL:

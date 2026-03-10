@@ -20,7 +20,7 @@
 
 import { useVirtualizer } from '@tanstack/react-virtual';
 import React, { forwardRef, useCallback, useDeferredValue, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
-import { AllProjectsIcon, CheckAllIcon, ChevronDownIcon, ChevronRightIcon, CloseIcon, CollapseAllIcon, ExpandAllIcon, RulerIcon, ShieldIcon, SingleProjectIcon, SyncIcon, VerifiedIcon, WarningIcon } from '../icons';
+import { AllProjectsIcon, CheckAllIcon, ChevronDownIcon, ChevronRightIcon, CloseIcon, CollapseAllIcon, ExpandAllIcon, RulerIcon, SingleProjectIcon, SyncIcon, VerifiedIcon, WarningIcon } from '../icons';
 import type {
     InstalledPackage,
     LRUMap,
@@ -1151,7 +1151,7 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
                                                                             }, 'Low')}`}
                                                                             title={`${pkg.vulnerabilities.length} known vulnerabilit${pkg.vulnerabilities.length > 1 ? 'ies' : 'y'}`}
                                                                         >
-                                                                            <ShieldIcon size={12} />
+                                                                            <WarningIcon size={12} />
                                                                         </span>
                                                                     )}
                                                                 </div>

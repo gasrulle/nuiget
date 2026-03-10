@@ -6,6 +6,7 @@ import * as os from 'os';
 import * as path from 'path';
 import { promisify } from 'util';
 import * as vscode from 'vscode';
+import * as zlib from 'zlib';
 import { credentialService, CredentialService } from './CredentialService';
 import { http2Client } from './Http2Client';
 import { NuGetConfigParser } from './NuGetConfigParser';
@@ -95,6 +96,9 @@ export class NuGetService {
     private static readonly MAX_REDIRECTS = 5;
     // Maximum response body size for text/JSON fetches (10 MB) to prevent out-of-memory
     private static readonly MAX_RESPONSE_SIZE = 10 * 1024 * 1024;
+    // Maximum decompressed response size for vulnerability data (50 MB)
+    // Vulnerability base JSON is ~15-20 MB uncompressed but ~2-3 MB with gzip
+    private static readonly MAX_VULNERABILITY_RESPONSE_SIZE = 50 * 1024 * 1024;
     // In-memory vulnerability data: Map<lowercasePackageId, Array<{severity, url, versions}>>
     private vulnerabilityData: Map<string, { severity: number; url: string; versions: string }[]> = new Map();
     // Timestamp of last vulnerability data fetch
@@ -1104,7 +1108,7 @@ export class NuGetService {
 
                 const authHeader = await this.getAuthHeader(source.url);
                 // Fetch vulnerability index (array of page references)
-                const index = await this.fetchJson<{ '@name': string; '@id': string; '@updated': string }[]>(
+                const index = await this.fetchJsonWithCompression<{ '@name': string; '@id': string; '@updated': string }[]>(
                     endpoints.vulnerabilityInfoUrl, authHeader
                 );
                 if (!Array.isArray(index) || index.length === 0) { continue; }
@@ -1113,10 +1117,13 @@ export class NuGetService {
                 for (const page of index) {
                     if (!page['@id']) { continue; }
                     try {
-                        const pageData = await this.fetchJson<Record<string, { severity: number; url: string; versions: string }[]>>(
+                        const pageData = await this.fetchJsonWithCompression<Record<string, { severity: number; url: string; versions: string }[]>>(
                             page['@id'], authHeader
                         );
-                        if (!pageData || typeof pageData !== 'object') { continue; }
+                        if (!pageData || typeof pageData !== 'object') {
+                            console.warn(`[NuGet] Vulnerability page returned no data: ${page['@id']}`);
+                            continue;
+                        }
 
                         for (const [pkgId, vulns] of Object.entries(pageData)) {
                             if (!Array.isArray(vulns)) { continue; }
@@ -3861,6 +3868,114 @@ export class NuGetService {
                     } catch {
                         resolve(null);
                     }
+                });
+            });
+
+            req.on('timeout', () => {
+                req.destroy();
+                resolve(null);
+            });
+
+            req.on('error', () => {
+                resolve(null);
+            });
+
+            req.end();
+        });
+    }
+
+    /**
+     * Fetch JSON with gzip/deflate decompression support.
+     * Used for vulnerability data which can exceed 10 MB uncompressed.
+     * Uses HTTP/1.1 for straightforward zlib stream piping.
+     */
+    private fetchJsonWithCompression<T>(url: string, authHeader?: string, maxRedirects: number = NuGetService.MAX_REDIRECTS): Promise<T | null> {
+        return new Promise((resolve) => {
+            if (maxRedirects <= 0) {
+                resolve(null);
+                return;
+            }
+
+            const client = url.startsWith('https://') ? https : http;
+            const parsed = new URL(url);
+
+            const headers: Record<string, string> = {
+                'Accept': 'application/json',
+                'Accept-Encoding': 'gzip, deflate'
+            };
+            if (authHeader) {
+                headers['Authorization'] = authHeader;
+            }
+
+            const options: https.RequestOptions = {
+                hostname: parsed.hostname,
+                port: parsed.port || (parsed.protocol === 'https:' ? 443 : 80),
+                path: parsed.pathname + parsed.search,
+                method: 'GET',
+                headers,
+                timeout: NuGetService.HTTP_REQUEST_TIMEOUT
+            };
+
+            const req = client.request(options, (res) => {
+                // Handle redirects
+                if (res.statusCode === 301 || res.statusCode === 302 || res.statusCode === 307 || res.statusCode === 308) {
+                    const redirectUrl = res.headers.location;
+                    if (redirectUrl && maxRedirects > 0) {
+                        const redirectParsed = new URL(redirectUrl, url);
+                        const sameOrigin = redirectParsed.origin === parsed.origin;
+                        this.fetchJsonWithCompression<T>(redirectParsed.href, sameOrigin ? authHeader : undefined, maxRedirects - 1).then(resolve);
+                        return;
+                    }
+                }
+                if (res.statusCode !== 200) {
+                    if (res.statusCode !== 404) {
+                        console.error(`[NuGet] HTTP ${res.statusCode} fetching compressed JSON: ${url}`);
+                    }
+                    resolve(null);
+                    return;
+                }
+
+                // Select decompression stream based on content-encoding
+                const encoding = res.headers['content-encoding'];
+                let stream: NodeJS.ReadableStream = res;
+                if (encoding === 'gzip' || encoding === 'x-gzip') {
+                    stream = res.pipe(zlib.createGunzip());
+                } else if (encoding === 'deflate') {
+                    stream = res.pipe(zlib.createInflate());
+                }
+
+                const chunks: Buffer[] = [];
+                let totalSize = 0;
+                let resolved = false;
+
+                stream.on('data', (chunk: Buffer) => {
+                    if (resolved) { return; }
+                    totalSize += chunk.length;
+                    if (totalSize > NuGetService.MAX_VULNERABILITY_RESPONSE_SIZE) {
+                        resolved = true;
+                        req.destroy();
+                        console.warn(`[NuGet] Vulnerability response exceeded ${NuGetService.MAX_VULNERABILITY_RESPONSE_SIZE} bytes (decompressed): ${url}`);
+                        resolve(null);
+                        return;
+                    }
+                    chunks.push(chunk);
+                });
+
+                stream.on('end', () => {
+                    if (resolved) { return; }
+                    resolved = true;
+                    try {
+                        const data = Buffer.concat(chunks).toString('utf8');
+                        resolve(JSON.parse(data));
+                    } catch {
+                        resolve(null);
+                    }
+                });
+
+                stream.on('error', () => {
+                    if (resolved) { return; }
+                    resolved = true;
+                    resolve(null);
                 });
             });
 

@@ -10,7 +10,7 @@
  */
 
 import React, { useEffect, useRef, useState } from 'react';
-import { ArrowRightIcon, ChevronDownIcon, ChevronRightIcon, InfoIcon, RulerIcon, ShieldIcon, SyncIcon, VerifiedIcon } from '../icons';
+import { ArrowRightIcon, ChevronDownIcon, ChevronRightIcon, InfoIcon, RulerIcon, SyncIcon, VerifiedIcon, WarningIcon } from '../icons';
 import type {
     InstalledPackage,
     LRUMap,
@@ -434,7 +434,7 @@ const PackageDetailsPanel: React.FC<PackageDetailsPanelProps> = ({
                                     <div className="vulnerability-list">
                                         {vulns.map((v, i) => (
                                             <div key={i} className={`vulnerability-item vuln-${v.severity}`}>
-                                                <ShieldIcon size={14} />
+                                                <WarningIcon size={14} />
                                                 <span className="vuln-severity">{v.severity}</span>
                                                 <a href={v.advisoryUrl} className="details-link vuln-link">Advisory</a>
                                             </div>
