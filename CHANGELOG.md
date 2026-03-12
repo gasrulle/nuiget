@@ -10,7 +10,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - **Bulk install deferred restore** — `executeBulkInstall` now uses `--no-restore` per project and runs a single `dotnet restore` at the end of the batch, matching the existing bulk update/remove pattern and properly respecting the `noRestore` setting
-- **Non-interactive CLI commands** — All dotnet CLI commands (`package search`, `package list`, `package add`, `package remove`, `restore`) now pass `--interactive false` to prevent authentication prompts from blocking the extension, as some SDK versions default `--interactive` to `True`
 
 ## [1.13.0] - 2025-03-12
 

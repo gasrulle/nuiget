@@ -1074,8 +1074,8 @@ export class NuGetService {
             const projectDir = path.dirname(projectPath);
             const nounFirst = await this.useNounFirstSyntax(projectPath);
             const listCommand = nounFirst
-                ? `dotnet package list --project "${projectPath}" --interactive false`
-                : `dotnet list "${projectPath}" package --interactive false`;
+                ? `dotnet package list --project "${projectPath}"`
+                : `dotnet list "${projectPath}" package`;
             const { stdout } = await execWithTimeout(listCommand, { cwd: projectDir });
 
             // Get direct package references from csproj and Directory.Build.props for cross-reference
@@ -1887,7 +1887,7 @@ export class NuGetService {
             const exactMatchArg = exactMatch ? '--exact-match' : '';
 
             const workspaceFolder = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-            const command = `dotnet package search "${query}" ${sourceArg} ${prereleaseArg} ${exactMatchArg} --take ${searchResultLimit} --interactive false`;
+            const command = `dotnet package search "${query}" ${sourceArg} ${prereleaseArg} ${exactMatchArg} --take ${searchResultLimit}`;
             const { stdout, stderr } = await execWithTimeout(command, { cwd: workspaceFolder });
             this.logOutput(command, stdout, stderr, true);
 
@@ -2210,8 +2210,8 @@ export class NuGetService {
             const projectDir = path.dirname(projectPath);
             const nounFirst = await this.useNounFirstSyntax(projectPath);
             const command = nounFirst
-                ? `dotnet package add ${packageId} --project "${projectPath}" ${versionArg} ${sourceArg} ${noRestoreArg} --interactive false`.trim()
-                : `dotnet add "${projectPath}" package ${packageId} ${versionArg} ${sourceArg} ${noRestoreArg} --interactive false`.trim();
+                ? `dotnet package add ${packageId} --project "${projectPath}" ${versionArg} ${sourceArg} ${noRestoreArg}`.trim()
+                : `dotnet add "${projectPath}" package ${packageId} ${versionArg} ${sourceArg} ${noRestoreArg}`.trim();
             const { stdout, stderr } = await execWithTimeout(command, { cwd: projectDir });
 
             // Check for actual errors (case-insensitive) - dotnet uses "error" or "Error"
@@ -2265,8 +2265,8 @@ export class NuGetService {
             const projectDir = path.dirname(projectPath);
             const nounFirst = await this.useNounFirstSyntax(projectPath);
             const command = nounFirst
-                ? `dotnet package add ${packageId} --project "${projectPath}" --version ${version} ${sourceArg} ${noRestoreArg} --interactive false`.trim()
-                : `dotnet add "${projectPath}" package ${packageId} --version ${version} ${sourceArg} ${noRestoreArg} --interactive false`.trim();
+                ? `dotnet package add ${packageId} --project "${projectPath}" --version ${version} ${sourceArg} ${noRestoreArg}`.trim()
+                : `dotnet add "${projectPath}" package ${packageId} --version ${version} ${sourceArg} ${noRestoreArg}`.trim();
             const { stdout, stderr } = await execWithTimeout(command, { cwd: projectDir });
 
             // Check for actual errors (case-insensitive) - dotnet uses "error" or "Error"
@@ -2319,8 +2319,8 @@ export class NuGetService {
             const projectDir = path.dirname(projectPath);
             const nounFirst = await this.useNounFirstSyntax(projectPath);
             const command = nounFirst
-                ? `dotnet package remove ${packageId} --project "${projectPath}" --interactive false`
-                : `dotnet remove "${projectPath}" package ${packageId} --interactive false`;
+                ? `dotnet package remove ${packageId} --project "${projectPath}"`
+                : `dotnet remove "${projectPath}" package ${packageId}`;
             const { stdout, stderr } = await execWithTimeout(command, { cwd: projectDir });
 
             // Check for actual errors (case-insensitive) - dotnet uses "error" or "Error"
@@ -2343,7 +2343,7 @@ export class NuGetService {
             const noRestoreSetting = this.getNoRestoreFlag() !== '';
             if (!options?.skipRestore && !noRestoreSetting) {
                 try {
-                    const restoreCommand = `dotnet restore "${projectPath}" --interactive false`;
+                    const restoreCommand = `dotnet restore "${projectPath}"`;
                     const { stdout: restoreOut, stderr: restoreErr } = await execWithTimeout(restoreCommand, { cwd: projectDir, timeout: 60000 });
                     this.logOutput(restoreCommand, restoreOut, restoreErr, true);
                 } catch (restoreError) {
@@ -4630,7 +4630,7 @@ export class NuGetService {
      */
     async restoreProject(projectPath: string): Promise<boolean> {
         this.setupOutputChannel(true); // Don't auto-reveal for this operation
-        const command = `dotnet restore "${projectPath}" --interactive false`;
+        const command = `dotnet restore "${projectPath}"`;
 
         try {
             const workspaceFolder = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
