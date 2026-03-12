@@ -35,7 +35,8 @@ export async function executeSingleOperation(
     operationType: SingleOperationType,
     projectPath: string,
     packageId: string,
-    version?: string
+    version?: string,
+    sourceUrl?: string
 ): Promise<boolean> {
     const config = singleOpConfig[operationType];
     let success = false;
@@ -46,9 +47,9 @@ export async function executeSingleOperation(
         cancellable: false
     }, async () => {
         if (operationType === 'install') {
-            success = await ctx.nugetService.installPackage(projectPath, packageId, version);
+            success = await ctx.nugetService.installPackage(projectPath, packageId, version, { sourceUrl });
         } else if (operationType === 'update') {
-            success = await ctx.nugetService.updatePackage(projectPath, packageId, version!);
+            success = await ctx.nugetService.updatePackage(projectPath, packageId, version!, { sourceUrl });
         } else {
             success = await ctx.nugetService.removePackage(projectPath, packageId);
         }
@@ -115,12 +116,23 @@ export async function executeBulkInstall(
                 increment: (100 / sortedProjectPaths.length)
             });
 
-            const success = await ctx.nugetService.installPackage(projPath, packageId, version);
+            const success = await ctx.nugetService.installPackage(projPath, packageId, version,
+                { skipChannelSetup: true, skipRestore: true });
             results.push({ projectPath: projPath, projectName, success });
         }
 
         const successCount = results.filter(r => r.success).length;
         const failCount = results.length - successCount;
+
+        // Run a single restore after all installs
+        if (successCount > 0) {
+            progress.report({ message: 'Restoring projects...' });
+            for (const r of results) {
+                if (r.success) {
+                    await ctx.nugetService.restoreProject(r.projectPath);
+                }
+            }
+        }
 
         if (failCount === 0) {
             vscode.window.showInformationMessage(`Successfully installed ${packageId} to ${successCount} project${successCount !== 1 ? 's' : ''}.`);
@@ -139,7 +151,7 @@ export async function executeBulkInstall(
 
 export async function executeBulkUpdatePackages(
     ctx: OperationContext,
-    packages: { id: string; version: string }[],
+    packages: { id: string; version: string; sourceUrl?: string }[],
     projectPath: string
 ): Promise<void> {
     if (!packages || packages.length === 0) {
@@ -180,7 +192,7 @@ export async function executeBulkUpdatePackages(
 
             const success = await ctx.nugetService.updatePackage(
                 projectPath, pkg.id, pkg.version,
-                { skipChannelSetup: true, skipNotification: true, skipRestore: true }
+                { skipChannelSetup: true, skipNotification: true, skipRestore: true, sourceUrl: pkg.sourceUrl }
             );
 
             if (success) { successCount++; } else { failCount++; failedPackageIds.push(pkg.id); }
@@ -307,7 +319,7 @@ function buildProjectTopoSort<T>(
 
 export async function executeBulkUpdateAllProjects(
     ctx: OperationContext,
-    projectUpdates: { projectPath: string; projectName: string; packages: { id: string; version: string }[] }[]
+    projectUpdates: { projectPath: string; projectName: string; packages: { id: string; version: string; sourceUrl?: string }[] }[]
 ): Promise<void> {
     if (!projectUpdates || projectUpdates.length === 0) {
         console.warn('[nUIget] bulkUpdateAllProjects received empty projectUpdates array');
@@ -362,7 +374,7 @@ export async function executeBulkUpdateAllProjects(
 
                 const success = await ctx.nugetService.updatePackage(
                     pu.projectPath, pkg.id, pkg.version,
-                    { skipChannelSetup: true, skipNotification: true, skipRestore: true }
+                    { skipChannelSetup: true, skipNotification: true, skipRestore: true, sourceUrl: pkg.sourceUrl }
                 );
 
                 if (success) { totalSuccessCount++; projectSuccess = true; } else { totalFailCount++; projectFailedIds.push(pkg.id); }

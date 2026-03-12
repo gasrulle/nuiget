@@ -5,6 +5,26 @@ All notable changes to the nUIget extension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- **Bulk install deferred restore** — `executeBulkInstall` now uses `--no-restore` per project and runs a single `dotnet restore` at the end of the batch, matching the existing bulk update/remove pattern and properly respecting the `noRestore` setting
+- **Non-interactive CLI commands** — All dotnet CLI commands (`package search`, `package list`, `package add`, `package remove`, `restore`) now pass `--interactive false` to prevent authentication prompts from blocking the extension, as some SDK versions default `--interactive` to `True`
+
+## [1.13.0] - 2025-03-12
+
+### Added
+
+- **Source-targeted install and update operations** — Install and update CLI commands now pass `--source` to `dotnet add package` when the winning source is known, avoiding redundant probing of all configured NuGet sources and significantly speeding up single and bulk operations in multi-source environments
+- **Clear NuGet HTTP Cache command** — New `nUIget: Clear NuGet HTTP Cache` command in the Command Palette for explicitly clearing the dotnet NuGet HTTP cache when needed
+
+### Changed
+
+- **Background source health monitor** — Source validation moved from blocking per-search pre-validation to a self-scheduling background monitor that validates all sources at startup and re-checks at TTL expiry (120s for failures, 5min when healthy), eliminating 3s search delays in multi-source environments
+- **Pre-validation timeout reduced to 3 seconds** — Source health pre-validation timeout lowered from 5s to 3s for faster search startup when unreachable sources are present
+- **Refresh no longer clears NuGet HTTP cache** — Refresh buttons in both the full manager and sidebar no longer run `dotnet nuget locals http-cache --clear` (0–15s process spawn), making refresh near-instant
+
 ## [1.12.0]
 
 ### Added

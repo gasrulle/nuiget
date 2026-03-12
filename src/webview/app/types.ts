@@ -114,6 +114,7 @@ export interface PackageUpdate {
     iconUrl?: string;
     verified?: boolean;
     authors?: string;
+    sourceUrl?: string;
 }
 
 /**
@@ -123,6 +124,7 @@ export interface PackageUpdateMinimal {
     id: string;
     installedVersion: string;
     latestVersion: string;
+    sourceUrl?: string;
 }
 
 /**

@@ -383,7 +383,7 @@ export class NuGetPanel {
                     if (this._operationInProgress) { break; }
                     this._operationInProgress = true;
                     try {
-                        await executeSingleOperation(this._opCtx(), 'install', data.projectPath as string, data.packageId as string, data.version as string | undefined);
+                        await executeSingleOperation(this._opCtx(), 'install', data.projectPath as string, data.packageId as string, data.version as string | undefined, data.sourceUrl as string | undefined);
                     } finally { this._operationInProgress = false; }
                     break;
                 }
@@ -401,7 +401,7 @@ export class NuGetPanel {
                     if (this._operationInProgress) { break; }
                     this._operationInProgress = true;
                     try {
-                        await executeSingleOperation(this._opCtx(), 'update', data.projectPath as string, data.packageId as string, data.version as string);
+                        await executeSingleOperation(this._opCtx(), 'update', data.projectPath as string, data.packageId as string, data.version as string, data.sourceUrl as string | undefined);
                     } finally { this._operationInProgress = false; }
                     break;
                 }
@@ -468,7 +468,6 @@ export class NuGetPanel {
                 {
                     // Full refresh: clear all caches, re-fetch sources, refresh webview, and sync sidebar
                     this._nugetService.clearSourceErrors();
-                    await this._nugetService.clearNuGetHttpCache();
                     const freshSources = await this._nugetService.getSources();
                     this._postMessage({
                         type: 'sources',
@@ -752,7 +751,7 @@ export class NuGetPanel {
                     if (this._operationInProgress) { break; }
                     this._operationInProgress = true;
                     try {
-                        await executeBulkUpdateAllProjects(this._opCtx(), data.projectUpdates as { projectPath: string; projectName: string; packages: { id: string; version: string }[] }[]);
+                        await executeBulkUpdateAllProjects(this._opCtx(), data.projectUpdates as { projectPath: string; projectName: string; packages: { id: string; version: string; sourceUrl?: string }[] }[]);
                     } finally { this._operationInProgress = false; }
                     break;
                 }
@@ -854,7 +853,7 @@ export class NuGetPanel {
                     if (this._operationInProgress) { break; }
                     this._operationInProgress = true;
                     try {
-                        await executeBulkUpdatePackages(this._opCtx(), data.packages as { id: string; version: string }[], data.projectPath as string);
+                        await executeBulkUpdatePackages(this._opCtx(), data.packages as { id: string; version: string; sourceUrl?: string }[], data.projectPath as string);
                     } finally { this._operationInProgress = false; }
                     break;
                 }

@@ -415,7 +415,8 @@ export const SidebarApp: React.FC = () => {
                     type: 'updatePackage',
                     projectPath: message.projectPath,
                     packageId: message.packageId,
-                    version: message.version
+                    version: message.version,
+                    sourceUrl: message.sourceUrl
                 });
                 break;
             case 'doRemove':
@@ -756,7 +757,8 @@ export const SidebarApp: React.FC = () => {
                 type: 'updatePackage',
                 projectPath: selectedProjectRef.current,
                 packageId,
-                version: update.latestVersion
+                version: update.latestVersion,
+                sourceUrl: update.sourceUrl
             });
         }
     }, []);
@@ -771,7 +773,8 @@ export const SidebarApp: React.FC = () => {
                     type: 'updatePackage',
                     projectPath: pu.projectPath,
                     packageId,
-                    version: update.latestVersion
+                    version: update.latestVersion,
+                    sourceUrl: update.sourceUrl
                 });
                 return;
             }
@@ -785,9 +788,11 @@ export const SidebarApp: React.FC = () => {
         );
 
         let latestVersion: string | undefined;
+        let sourceUrl: string | undefined;
         if (context === 'updates') {
             const update = packageUpdatesRef.current.find(u => u.id.toLowerCase() === packageId.toLowerCase());
             latestVersion = update?.latestVersion;
+            sourceUrl = update?.sourceUrl;
         }
 
         vscode.postMessage({
@@ -795,6 +800,7 @@ export const SidebarApp: React.FC = () => {
             packageId,
             installedVersion: installed?.resolvedVersion || installed?.version,
             latestVersion,
+            sourceUrl,
             versionType: installed?.versionType,
             context,
             projectPath: projectPath || selectedProjectRef.current
@@ -808,20 +814,20 @@ export const SidebarApp: React.FC = () => {
             const projectUpdatesPayload = allProjectsUpdatesRef.current.map(pu => ({
                 projectPath: pu.projectPath,
                 projectName: pu.projectName,
-                packages: pu.updates.map(u => ({ id: u.id, version: u.latestVersion }))
+                packages: pu.updates.map(u => ({ id: u.id, version: u.latestVersion, sourceUrl: u.sourceUrl }))
             }));
             vscode.postMessage({
                 type: 'bulkUpdateAllProjects',
                 projectUpdates: projectUpdatesPayload
             });
         } else {
-            let packages = packageUpdatesRef.current.map(u => ({ id: u.id, version: u.latestVersion }));
+            let packages = packageUpdatesRef.current.map(u => ({ id: u.id, version: u.latestVersion, sourceUrl: u.sourceUrl }));
             if (packages.length === 0) {
                 const projectUpdate = allProjectsUpdatesRef.current.find(
                     pu => pu.projectPath === selectedProjectRef.current
                 );
                 if (projectUpdate) {
-                    packages = projectUpdate.updates.map(u => ({ id: u.id, version: u.latestVersion }));
+                    packages = projectUpdate.updates.map(u => ({ id: u.id, version: u.latestVersion, sourceUrl: u.sourceUrl }));
                 }
             }
             vscode.postMessage({

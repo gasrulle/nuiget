@@ -21,8 +21,10 @@ export function activate(context: vscode.ExtensionContext) {
     // Create shared NuGetService singleton — reused by both main panel and sidebar
     nugetService = new NuGetService(outputChannel);
 
-    // Pre-warm nuget.org service index for faster first search
-    nugetService.prewarmNugetOrgServiceIndex();
+    // Start background source health monitor — validates all enabled sources at startup,
+    // then self-schedules: 120s if any fail, 5min if all healthy. Replaces per-search blocking.
+    nugetService.startSourceHealthMonitor();
+    context.subscriptions.push({ dispose: () => nugetService.stopSourceHealthMonitor() });
 
     // Pre-warm credentials for authenticated feeds (fire-and-forget)
     nugetService.initializeCredentials().catch(() => { /* ignore */ });
@@ -169,6 +171,12 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(
         vscode.commands.registerCommand('nuiget.sidebar.openFullView', () => {
             NuGetPanel.createOrShow(context.extensionUri, context, outputChannel, nugetService);
+        })
+    );
+    context.subscriptions.push(
+        vscode.commands.registerCommand('nuiget.clearHttpCache', async () => {
+            await nugetService.clearNuGetHttpCache();
+            vscode.window.showInformationMessage('nUIget: NuGet HTTP cache cleared.');
         })
     );
     context.subscriptions.push(

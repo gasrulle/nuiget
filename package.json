@@ -2,7 +2,7 @@
     "name": "nuiget",
     "displayName": "nUIget - A NuGet Package Manager",
     "description": "A NuGet package manager with Visual Studio-style UI. Search, install, update, and remove packages across multiple sources.",
-    "version": "1.12.0",
+    "version": "1.13.0",
     "publisher": "Gasrulle",
     "license": "MIT",
     "icon": "resources/icon.png",
@@ -120,6 +120,10 @@
                 "command": "nuiget.sidebar.openFullView",
                 "title": "nUIget: Open Full Manager",
                 "icon": "$(link-external)"
+            },
+            {
+                "command": "nuiget.clearHttpCache",
+                "title": "nUIget: Clear NuGet HTTP Cache"
             }
         ],
         "menus": {

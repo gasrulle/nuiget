@@ -307,7 +307,7 @@ const UpdatesTab = forwardRef<UpdatesTabHandle, UpdatesTabProps>((props, ref) =>
 
         if (loadAllProjects) {
             // Multi-project mode: group packages by project
-            const projectUpdatesMap = new Map<string, { projectPath: string; projectName: string; packages: { id: string; version: string }[] }>();
+            const projectUpdatesMap = new Map<string, { projectPath: string; projectName: string; packages: { id: string; version: string; sourceUrl?: string }[] }>();
 
             for (const key of selectedUpdates) {
                 const [projectPath, packageId] = key.split('::');
@@ -324,7 +324,8 @@ const UpdatesTab = forwardRef<UpdatesTabHandle, UpdatesTabProps>((props, ref) =>
                     }
                     projectUpdatesMap.get(projectPath)!.packages.push({
                         id: update.id,
-                        version: update.latestVersion
+                        version: update.latestVersion,
+                        sourceUrl: update.sourceUrl
                     });
                 }
             }
@@ -339,7 +340,7 @@ const UpdatesTab = forwardRef<UpdatesTabHandle, UpdatesTabProps>((props, ref) =>
             if (!selectedProject) { return; }
             const packagesToUpdate = packagesWithUpdates
                 .filter(p => selectedUpdates.has(p.id))
-                .map(p => ({ id: p.id, version: p.latestVersion }));
+                .map(p => ({ id: p.id, version: p.latestVersion, sourceUrl: p.sourceUrl }));
 
             setUpdatingAll(true);
             vscode.postMessage({

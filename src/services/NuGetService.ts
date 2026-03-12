@@ -89,7 +89,11 @@ export class NuGetService {
     // Default timeout for HTTP requests to custom sources (milliseconds)
     private static readonly HTTP_REQUEST_TIMEOUT = 10000;
     // Shorter timeout for service index discovery (milliseconds)
-    private static readonly SERVICE_INDEX_TIMEOUT = 5000;
+    private static readonly SERVICE_INDEX_TIMEOUT = 3000;
+    // Interval for background source health checks when all sources are healthy (5 minutes)
+    private static readonly HEALTHY_CHECK_INTERVAL = 300000;
+    // Timer for self-scheduling background source health monitor
+    private _sourceHealthTimer?: ReturnType<typeof setTimeout>;
     // Maximum download size for nupkg files (50 MB) to prevent disk exhaustion
     private static readonly MAX_DOWNLOAD_SIZE = 50 * 1024 * 1024;
     // Maximum number of HTTP redirects to follow before aborting
@@ -235,6 +239,84 @@ export class NuGetService {
         this.discoverServiceEndpoints(sourceUrl).catch(() => {
             // Silently ignore - this is just a prewarm optimization
         });
+    }
+
+    /**
+     * Validate all enabled non-local NuGet sources in parallel.
+     * Calls discoverServiceEndpoints() on each source, which populates
+     * serviceIndexCache on success and failedEndpointCache on failure.
+     * @returns true if any sources failed validation
+     */
+    private async validateAllSources(): Promise<boolean> {
+        const sources = await this.getSources();
+        const remoteSources = sources.filter(s => s.enabled && !this.isLocalSource(s.url));
+
+        if (remoteSources.length === 0) {
+            return false;
+        }
+
+        this.outputChannel.info(`[SourceHealth] Validating ${remoteSources.length} source(s) in background...`);
+
+        const results = await Promise.allSettled(
+            remoteSources.map(src =>
+                this.discoverServiceEndpoints(src.url)
+                    .then(endpoints => ({ url: src.url, ok: Object.keys(endpoints).length > 0 }))
+                    .catch(() => ({ url: src.url, ok: false }))
+            )
+        );
+
+        const failedCount = results.filter(r => r.status === 'fulfilled' && !r.value.ok).length;
+        if (failedCount > 0) {
+            this.outputChannel.info(`[SourceHealth] ${failedCount}/${remoteSources.length} source(s) unreachable`);
+        } else {
+            this.outputChannel.info(`[SourceHealth] All ${remoteSources.length} source(s) healthy`);
+        }
+
+        return failedCount > 0;
+    }
+
+    /**
+     * Start the background source health monitor. Validates all sources immediately,
+     * then self-schedules the next check based on results:
+     * - If any sources failed: re-check at FAILED_ENDPOINT_CACHE_TTL (120s)
+     * - If all healthy: re-check at HEALTHY_CHECK_INTERVAL (5min)
+     *
+     * Can be called multiple times safely — cancels the previous timer first.
+     * Called at activation, on clearSourceErrors(), and after source mutations.
+     */
+    public startSourceHealthMonitor(): void {
+        // Cancel any existing timer
+        if (this._sourceHealthTimer) {
+            clearTimeout(this._sourceHealthTimer);
+            this._sourceHealthTimer = undefined;
+        }
+
+        // Fire-and-forget the validation + schedule next run
+        this.validateAllSources()
+            .then(hasFailures => {
+                const nextInterval = hasFailures
+                    ? NuGetService.FAILED_ENDPOINT_CACHE_TTL
+                    : NuGetService.HEALTHY_CHECK_INTERVAL;
+                this._sourceHealthTimer = setTimeout(() => {
+                    this.startSourceHealthMonitor();
+                }, nextInterval);
+            })
+            .catch(() => {
+                // Schedule a retry at the failure interval
+                this._sourceHealthTimer = setTimeout(() => {
+                    this.startSourceHealthMonitor();
+                }, NuGetService.FAILED_ENDPOINT_CACHE_TTL);
+            });
+    }
+
+    /**
+     * Stop the background source health monitor. Call on extension disposal.
+     */
+    public stopSourceHealthMonitor(): void {
+        if (this._sourceHealthTimer) {
+            clearTimeout(this._sourceHealthTimer);
+            this._sourceHealthTimer = undefined;
+        }
     }
 
     /**
@@ -992,8 +1074,8 @@ export class NuGetService {
             const projectDir = path.dirname(projectPath);
             const nounFirst = await this.useNounFirstSyntax(projectPath);
             const listCommand = nounFirst
-                ? `dotnet package list --project "${projectPath}"`
-                : `dotnet list "${projectPath}" package`;
+                ? `dotnet package list --project "${projectPath}" --interactive false`
+                : `dotnet list "${projectPath}" package --interactive false`;
             const { stdout } = await execWithTimeout(listCommand, { cwd: projectDir });
 
             // Get direct package references from csproj and Directory.Build.props for cross-reference
@@ -1750,12 +1832,8 @@ export class NuGetService {
             // Filter out empty source strings
             const validSources = sources?.filter(s => s && s.trim()) || [];
 
-            // Pre-validate sources that have no cached status yet (populates failedEndpointCache)
-            if (validSources.length > 0) {
-                await this.preValidateSources(validSources);
-            }
-
             // Filter out sources known to be unreachable to avoid CLI TCP timeouts (~21s each)
+            // failedEndpointCache is populated by the background source health monitor
             const healthySources = validSources.length > 0 ? this.filterHealthySources(validSources) : [];
 
             // Optimization: when only a single nuget.org source is active, use the SearchQueryService
@@ -1809,7 +1887,7 @@ export class NuGetService {
             const exactMatchArg = exactMatch ? '--exact-match' : '';
 
             const workspaceFolder = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-            const command = `dotnet package search "${query}" ${sourceArg} ${prereleaseArg} ${exactMatchArg} --take ${searchResultLimit}`;
+            const command = `dotnet package search "${query}" ${sourceArg} ${prereleaseArg} ${exactMatchArg} --take ${searchResultLimit} --interactive false`;
             const { stdout, stderr } = await execWithTimeout(command, { cwd: workspaceFolder });
             this.logOutput(command, stdout, stderr, true);
 
@@ -2110,7 +2188,7 @@ export class NuGetService {
         });
     }
 
-    async installPackage(projectPath: string, packageId: string, version?: string, options?: { skipChannelSetup?: boolean }): Promise<boolean> {
+    async installPackage(projectPath: string, packageId: string, version?: string, options?: { skipChannelSetup?: boolean; skipRestore?: boolean; sourceUrl?: string }): Promise<boolean> {
         // Validate inputs to prevent command injection
         if (!isValidPackageId(packageId)) {
             vscode.window.showErrorMessage(`Invalid package ID: ${packageId}`);
@@ -2126,12 +2204,14 @@ export class NuGetService {
 
         try {
             const versionArg = version ? `--version ${version}` : '';
-            const noRestoreArg = this.getNoRestoreFlag();
+            // For bulk operations, always use --no-restore to defer restore to end of batch
+            const noRestoreArg = options?.skipRestore ? '--no-restore' : this.getNoRestoreFlag();
+            const sourceArg = options?.sourceUrl && isValidSourceUrl(options.sourceUrl) ? `--source "${options.sourceUrl}"` : '';
             const projectDir = path.dirname(projectPath);
             const nounFirst = await this.useNounFirstSyntax(projectPath);
             const command = nounFirst
-                ? `dotnet package add ${packageId} --project "${projectPath}" ${versionArg} ${noRestoreArg}`.trim()
-                : `dotnet add "${projectPath}" package ${packageId} ${versionArg} ${noRestoreArg}`.trim();
+                ? `dotnet package add ${packageId} --project "${projectPath}" ${versionArg} ${sourceArg} ${noRestoreArg} --interactive false`.trim()
+                : `dotnet add "${projectPath}" package ${packageId} ${versionArg} ${sourceArg} ${noRestoreArg} --interactive false`.trim();
             const { stdout, stderr } = await execWithTimeout(command, { cwd: projectDir });
 
             // Check for actual errors (case-insensitive) - dotnet uses "error" or "Error"
@@ -2164,7 +2244,7 @@ export class NuGetService {
         }
     }
 
-    async updatePackage(projectPath: string, packageId: string, version: string, options?: { skipChannelSetup?: boolean; skipNotification?: boolean; skipRestore?: boolean }): Promise<boolean> {
+    async updatePackage(projectPath: string, packageId: string, version: string, options?: { skipChannelSetup?: boolean; skipNotification?: boolean; skipRestore?: boolean; sourceUrl?: string }): Promise<boolean> {
         // Validate inputs to prevent command injection
         if (!isValidPackageId(packageId)) {
             vscode.window.showErrorMessage(`Invalid package ID: ${packageId}`);
@@ -2181,11 +2261,12 @@ export class NuGetService {
         try {
             // For bulk operations, always use --no-restore to defer restore to end of batch
             const noRestoreArg = options?.skipRestore ? '--no-restore' : this.getNoRestoreFlag();
+            const sourceArg = options?.sourceUrl && isValidSourceUrl(options.sourceUrl) ? `--source "${options.sourceUrl}"` : '';
             const projectDir = path.dirname(projectPath);
             const nounFirst = await this.useNounFirstSyntax(projectPath);
             const command = nounFirst
-                ? `dotnet package add ${packageId} --project "${projectPath}" --version ${version} ${noRestoreArg}`.trim()
-                : `dotnet add "${projectPath}" package ${packageId} --version ${version} ${noRestoreArg}`.trim();
+                ? `dotnet package add ${packageId} --project "${projectPath}" --version ${version} ${sourceArg} ${noRestoreArg} --interactive false`.trim()
+                : `dotnet add "${projectPath}" package ${packageId} --version ${version} ${sourceArg} ${noRestoreArg} --interactive false`.trim();
             const { stdout, stderr } = await execWithTimeout(command, { cwd: projectDir });
 
             // Check for actual errors (case-insensitive) - dotnet uses "error" or "Error"
@@ -2238,8 +2319,8 @@ export class NuGetService {
             const projectDir = path.dirname(projectPath);
             const nounFirst = await this.useNounFirstSyntax(projectPath);
             const command = nounFirst
-                ? `dotnet package remove ${packageId} --project "${projectPath}"`
-                : `dotnet remove "${projectPath}" package ${packageId}`;
+                ? `dotnet package remove ${packageId} --project "${projectPath}" --interactive false`
+                : `dotnet remove "${projectPath}" package ${packageId} --interactive false`;
             const { stdout, stderr } = await execWithTimeout(command, { cwd: projectDir });
 
             // Check for actual errors (case-insensitive) - dotnet uses "error" or "Error"
@@ -2262,7 +2343,7 @@ export class NuGetService {
             const noRestoreSetting = this.getNoRestoreFlag() !== '';
             if (!options?.skipRestore && !noRestoreSetting) {
                 try {
-                    const restoreCommand = `dotnet restore "${projectPath}"`;
+                    const restoreCommand = `dotnet restore "${projectPath}" --interactive false`;
                     const { stdout: restoreOut, stderr: restoreErr } = await execWithTimeout(restoreCommand, { cwd: projectDir, timeout: 60000 });
                     this.logOutput(restoreCommand, restoreOut, restoreErr, true);
                 } catch (restoreError) {
@@ -2327,6 +2408,7 @@ export class NuGetService {
             this.logOutput(command, stdout, stderr, true);
             this.logSuccess(`Enabled source: ${sourceName}`);
             this.invalidateSourcesCache();
+            this.startSourceHealthMonitor();
             return true;
         } catch (error) {
             const execErr = error as ExecError;
@@ -2357,6 +2439,7 @@ export class NuGetService {
             this.logOutput(command, stdout, stderr, true);
             this.logSuccess(`Disabled source: ${sourceName}`);
             this.invalidateSourcesCache();
+            this.startSourceHealthMonitor();
             return true;
         } catch (error) {
             const execErr = error as ExecError;
@@ -2456,6 +2539,7 @@ export class NuGetService {
             this.logOutput(command, stdout, stderr, true);
             this.logSuccess(`Added source: ${name || url}`);
             this.invalidateSourcesCache();
+            this.startSourceHealthMonitor();
             return { success: true };
         } catch (error) {
             const execErr = error as ExecError;
@@ -2497,6 +2581,7 @@ export class NuGetService {
             this.logOutput(command, stdout, stderr, true);
             this.logSuccess(`Removed source: ${sourceName}`);
             this.invalidateSourcesCache();
+            this.startSourceHealthMonitor();
             return { success: true };
         } catch (error) {
             const execErr = error as ExecError;
@@ -2557,6 +2642,8 @@ export class NuGetService {
         this.invalidateSourcesCache();
         // Clear version caches so update checks see newly published versions
         this.clearVersionsCache();
+        // Re-validate all sources immediately in background
+        this.startSourceHealthMonitor();
     }
 
     /**
@@ -2624,41 +2711,6 @@ export class NuGetService {
      * nor failedEndpointCache). This populates the failure cache before CLI search so that
      * filterHealthySources can remove unreachable sources on the first search.
      */
-    private async preValidateSources(sourceUrls: string[]): Promise<void> {
-        const now = Date.now();
-        const unknownSources = sourceUrls.filter(url => {
-            // Already cached as successful
-            if (this.serviceIndexCache.get(url)) {
-                return false;
-            }
-            // Already cached as failed (within TTL)
-            const failedAt = this.failedEndpointCache.get(url);
-            if (failedAt && (now - failedAt) < NuGetService.FAILED_ENDPOINT_CACHE_TTL) {
-                return false;
-            }
-            // Skip local sources
-            if (this.isLocalSource(url)) {
-                return false;
-            }
-            return true;
-        });
-
-        if (unknownSources.length === 0) {
-            return;
-        }
-
-        this.outputChannel.info(`[Search] Pre-validating ${unknownSources.length} source(s) before CLI search...`);
-
-        // Validate all unknown sources in parallel (5s timeout each via discoverServiceEndpoints)
-        await Promise.all(
-            unknownSources.map(url =>
-                this.discoverServiceEndpoints(url).catch(() => {
-                    // Error already handled in discoverServiceEndpoints
-                })
-            )
-        );
-    }
-
     async getPackageVersions(packageId: string, source?: string, includePrerelease?: boolean, take: number = 20): Promise<string[]> {
         try {
             // If no specific source, try all enabled sources in parallel
@@ -2710,6 +2762,33 @@ export class NuGetService {
     }
 
     /**
+     * Like getPackageVersions but also returns the URL of the source that provided the result.
+     * Used by update checks to track which source a package update came from,
+     * so that install/update commands can pass --source for faster execution.
+     */
+    async getPackageVersionsWithSource(packageId: string, includePrerelease?: boolean): Promise<{ versions: string[]; sourceUrl?: string }> {
+        try {
+            const allSources = await this.getSources();
+            const enabledSources = allSources.filter(s => s.enabled);
+
+            const { result, winnerIndex } = await this.raceForFirstResultWithIndex(
+                enabledSources.map(src =>
+                    this.getPackageVersionsFromSource(packageId, src.url, includePrerelease, 1)
+                        .catch(() => [] as string[])
+                ),
+                (versions) => versions.length > 0
+            );
+            return {
+                versions: result,
+                sourceUrl: winnerIndex >= 0 ? enabledSources[winnerIndex].url : undefined
+            };
+        } catch (error) {
+            console.error(`[NuGet] Failed to fetch versions with source for ${packageId}:`, error);
+            return { versions: [] };
+        }
+    }
+
+    /**
      * Race multiple promises and resolve with first result that matches predicate.
      * Remaining promises continue in background but we don't wait for them.
      * Falls back to default value if no result matches.
@@ -2757,6 +2836,64 @@ export class NuGetService {
                     completed++;
                     if (completed === promises.length && !resolved) {
                         resolve(results.find(predicate) ?? defaultValue);
+                    }
+                });
+            });
+        });
+    }
+
+    /**
+     * Race multiple promises and resolve with the first result matching predicate,
+     * also returning the index of the winning promise (for source tracking).
+     */
+    private raceForFirstResultWithIndex<T>(
+        promises: Promise<T>[],
+        predicate: (result: T) => boolean,
+        defaultValue: T = [] as unknown as T
+    ): Promise<{ result: T; winnerIndex: number }> {
+        return new Promise((resolve) => {
+            let resolved = false;
+            let completed = 0;
+            const results: T[] = [];
+
+            if (promises.length === 0) {
+                resolve({ result: defaultValue, winnerIndex: -1 });
+                return;
+            }
+
+            promises.forEach((promise, index) => {
+                promise.then((result) => {
+                    if (resolved) {
+                        return;
+                    }
+
+                    if (predicate(result)) {
+                        resolved = true;
+                        resolve({ result, winnerIndex: index });
+                        return;
+                    }
+
+                    results[index] = result;
+                    completed++;
+
+                    if (completed === promises.length) {
+                        const fallbackIndex = results.findIndex(predicate);
+                        resolve({
+                            result: fallbackIndex >= 0 ? results[fallbackIndex] : defaultValue,
+                            winnerIndex: fallbackIndex
+                        });
+                    }
+                }).catch(() => {
+                    if (resolved) {
+                        return;
+                    }
+                    completed++;
+                    if (completed === promises.length && !resolved) {
+                        const fallbackIndex = results.findIndex(predicate);
+                        resolve({
+                            result: fallbackIndex >= 0 ? results[fallbackIndex] : defaultValue,
+                            winnerIndex: fallbackIndex
+                        });
                     }
                 });
             });
@@ -3355,6 +3492,7 @@ export class NuGetService {
         iconUrl?: string;
         verified?: boolean;
         authors?: string;
+        sourceUrl?: string;
     }[]> {
         const packagesWithUpdates: {
             id: string;
@@ -3363,6 +3501,7 @@ export class NuGetService {
             iconUrl?: string;
             verified?: boolean;
             authors?: string;
+            sourceUrl?: string;
         }[] = [];
 
         // Pre-fetch enabled sources once for all update checks
@@ -3382,8 +3521,8 @@ export class NuGetService {
                     return null;
                 }
 
-                // Get available versions
-                const versions = await this.getPackageVersions(pkg.id, undefined, includePrerelease, 1);
+                // Get available versions with source tracking
+                const { versions, sourceUrl } = await this.getPackageVersionsWithSource(pkg.id, includePrerelease);
                 if (versions.length === 0) {
                     return null;
                 }
@@ -3407,7 +3546,8 @@ export class NuGetService {
                         latestVersion: latestVersion,
                         iconUrl: finalIconUrl,
                         verified,
-                        authors
+                        authors,
+                        sourceUrl
                     };
                 }
             } catch (error) {
@@ -3433,8 +3573,8 @@ export class NuGetService {
     async checkPackageUpdatesMinimal(
         installedPackages: InstalledPackage[],
         includePrerelease: boolean
-    ): Promise<{ id: string; installedVersion: string; latestVersion: string }[]> {
-        const packagesWithUpdates: { id: string; installedVersion: string; latestVersion: string }[] = [];
+    ): Promise<{ id: string; installedVersion: string; latestVersion: string; sourceUrl?: string }[]> {
+        const packagesWithUpdates: { id: string; installedVersion: string; latestVersion: string; sourceUrl?: string }[] = [];
 
         // Check each installed package for updates with concurrency limit
         const results = await batchedPromiseAll(installedPackages, async (pkg) => {
@@ -3449,8 +3589,8 @@ export class NuGetService {
                     return null;
                 }
 
-                // Get available versions
-                const versions = await this.getPackageVersions(pkg.id, undefined, includePrerelease, 1);
+                // Get available versions with source tracking
+                const { versions, sourceUrl } = await this.getPackageVersionsWithSource(pkg.id, includePrerelease);
                 if (versions.length === 0) {
                     return null;
                 }
@@ -3462,7 +3602,8 @@ export class NuGetService {
                     return {
                         id: pkg.id,
                         installedVersion: pkg.version,
-                        latestVersion: latestVersion
+                        latestVersion: latestVersion,
+                        sourceUrl
                     };
                 }
             } catch (error) {
@@ -4489,7 +4630,7 @@ export class NuGetService {
      */
     async restoreProject(projectPath: string): Promise<boolean> {
         this.setupOutputChannel(true); // Don't auto-reveal for this operation
-        const command = `dotnet restore "${projectPath}"`;
+        const command = `dotnet restore "${projectPath}" --interactive false`;
 
         try {
             const workspaceFolder = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;

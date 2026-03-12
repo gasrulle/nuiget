@@ -130,7 +130,7 @@ Sidebar messages follow the same patterns as the main panel but always send `lit
 Prerelease, source, and project selections are synced bidirectionally between the main panel and sidebar:
 - **Main → Sidebar (settings)**: `NuGetPanel.saveSettings` persists to `workspaceState`, then fires static callbacks (`onPrereleaseChanged`, `onSourceChanged`, `onProjectChanged`) wired in `extension.ts` to call `NuGetSidebarPanel.syncPrerelease()`, `syncSource()`, `syncProject()`.
 - **Main → Sidebar (package changes)**: After any install/update/remove/bulk operation, `NuGetPanel` fires the static `onPackageChanged(operation)` callback with operation details (`{ type, packageId?, projectPath? }`), wired in `extension.ts` to call `NuGetSidebarPanel.notifySidebarOfChange(operation)`. This lightweight path posts a `{ type: 'packageChanged', operation }` message to the sidebar webview for surgical state updates, then re-runs `checkUpdatesInBackground(force: true)`. Unlike `refreshSidebar()`, it does **not** call `clearNuGetHttpCache()` or re-fetch sources — the operation just communicated with the registry successfully, so the cache is fresh. If a check is already in progress, `_forceCheckPending` queues a re-run in the `finally` block to prevent dropped events.
-- **Main → Sidebar (full refresh)**: The main panel header's refresh button sends `{ type: 'fullRefresh' }` to `NuGetPanel`, which clears all caches (`clearSourceErrors()`, `clearNuGetHttpCache()`), re-fetches sources, sends `{ type: 'refresh' }` to the webview, and fires the static `onRefreshAll` callback wired in `extension.ts` to call `NuGetSidebarPanel.refreshSidebar()`. No echo loop: `refreshSidebar()` → `checkUpdatesInBackground()` does not call `_notifyMainPanel()`.
+- **Main → Sidebar (full refresh)**: The main panel header's refresh button sends `{ type: 'fullRefresh' }` to `NuGetPanel`, which clears source caches (`clearSourceErrors()`), re-fetches sources, sends `{ type: 'refresh' }` to the webview, and fires the static `onRefreshAll` callback wired in `extension.ts` to call `NuGetSidebarPanel.refreshSidebar()`. Note: refresh does **not** call `clearNuGetHttpCache()` (0–15s process spawn) — use the `nUIget: Clear NuGet HTTP Cache` Command Palette command for that. No echo loop: `refreshSidebar()` → `checkUpdatesInBackground()` does not call `_notifyMainPanel()`.
 - **Sidebar → Main**: QuickPick pickers call `NuGetPanel.syncPrerelease()`, `syncSource()`, `syncProject()` static methods which post messages to the main panel webview.
 - **Sidebar → Main (source settings)**: "Manage NuGet Sources…" in the source picker calls `NuGetPanel.openSourceSettings()` which creates/shows the main panel and sends `{ type: 'openSourceSettings' }`. If the panel is freshly created, the message is queued via `_pendingOpenSourceSettings` and delivered after `getProjects` with a 200ms delay (same pattern as `navigateToPackage`). App.tsx handler sets `showSourceSettings(true)` and requests `getConfigFiles`.
 - **Anti-echo**: `skipSaveRef`, `skipSourceSaveRef`, `skipProjectSaveRef` in App.tsx prevent the receiving panel from re-persisting the change and creating an infinite loop.
@@ -579,11 +579,11 @@ The SearchQueryService returns **all** fields in a single HTTP/2 call (~100–30
 Full search (`searchPackages`) uses the `dotnet package search` CLI which handles its own networking and is unaware of the extension's failure cache. Without pre-filtering, the CLI waits for OS TCP timeouts (~21s) per unreachable source on every search.
 
 The fix uses a two-layer defense:
-1. **Pre-validation** (`preValidateSources`): Before the first CLI search, sources without cached status are tested via `discoverServiceEndpoints` (5s timeout, parallel). This populates `failedEndpointCache`.
+1. **Background health monitor** (`startSourceHealthMonitor`): A self-scheduling background monitor validates all enabled non-local sources at startup and re-checks at TTL expiry (120s on failures, 5min when healthy). This keeps `failedEndpointCache` warm without blocking any search request. See [Background Source Health Monitor](#background-source-health-monitor).
 2. **Pre-filtering** (`filterHealthySources`): Sources in `failedEndpointCache` (within TTL) are excluded from CLI arguments. If ALL sources are unreachable, they are passed through as a fallback.
 3. **Panel-level filtering**: `NuGetPanel` also excludes sources from `failedSources` map before calling `searchPackages` (defense-in-depth).
 
-`clearSourceErrors()` clears all five caches (`failedSources`, `serviceIndexCache`, `failedEndpointCache`, `iconSourceMissCount`, `_sourcesCache`) so the ⚠️ refresh button genuinely retries the network. After TTL expiry (2 min), lazy re-validation occurs automatically on the next search.
+`clearSourceErrors()` clears all five caches (`failedSources`, `serviceIndexCache`, `failedEndpointCache`, `iconSourceMissCount`, `_sourcesCache`) and triggers an immediate health monitor re-validation via `startSourceHealthMonitor()`, so the ⚠️ refresh button genuinely retries the network.
 
 The Browse tab's metadata enrichment loop also checks `failedEndpointCache` before iterating custom sources for authors/description, skipping unreachable ones without entering `discoverServiceEndpoints`.
 
@@ -1033,11 +1033,39 @@ private raceForFirstResult<T>(
     // Remaining promises continue in background but we don't wait
 }
 
-// Usage: getPackageVersions with "all" sources
-return await this.raceForFirstResult(
-    enabledSources.map(src => this.getPackageVersionsFromSource(...)),
-    (versions) => versions.length > 0  // First non-empty wins
-);
+// Variant that tracks which source won the race
+private raceForFirstResultWithIndex<T>(
+    promises: Promise<T>[],
+    predicate: (result: T) => boolean,
+    defaultValue: T
+): Promise<{ result: T; winnerIndex: number }> {
+    // Returns winnerIndex = -1 when no promise matches predicate
+    // Used by getPackageVersionsWithSource() to identify the winning source
+}
+
+// Usage: checkPackageUpdates passes --source to CLI
+const { versions, sourceUrl } = await this.getPackageVersionsWithSource(packageId, ...);
+// sourceUrl is propagated through PackageUpdate → UI → message → updatePackage(options.sourceUrl)
+// dotnet add package ... --source "https://api.nuget.org/v3/index.json"
+```
+
+### Background Source Health Monitor
+Instead of blocking every search with per-request source validation, the extension runs a self-scheduling background monitor that keeps `failedEndpointCache` warm:
+
+```typescript
+// NuGetService.ts - Background source health monitor
+public startSourceHealthMonitor(): void {
+    // 1. Cancel any existing timer
+    // 2. validateAllSources() — probes all enabled non-local sources in parallel
+    //    via discoverServiceEndpoints() (populates serviceIndexCache + failedEndpointCache)
+    // 3. Self-schedule next check:
+    //    - If any failures: re-check at FAILED_ENDPOINT_CACHE_TTL (120s)
+    //    - If all healthy: re-check at HEALTHY_CHECK_INTERVAL (5min)
+}
+
+// Called at: extension activation, clearSourceErrors(), add/remove/enable/disableSource()
+// searchPackages() uses filterHealthySources() which reads the pre-populated failedEndpointCache
+// — no blocking validation needed in the search hot path
 ```
 
 ### React 19 Concurrent Rendering

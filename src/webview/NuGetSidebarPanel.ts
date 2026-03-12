@@ -359,8 +359,6 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
 
     /** Full sidebar refresh: re-send sources, tell webview to re-fetch, and update badge */
     public async refreshSidebar(): Promise<void> {
-        // Clear dotnet NuGet HTTP cache so freshly published versions are discovered
-        await this._nugetService.clearNuGetHttpCache();
         // Re-send sources (cache was just cleared by the caller)
         const sources = await this._nugetService.getSources();
         this._postMessage({ type: 'sources', sources: sources.filter(s => s.enabled) });
@@ -511,7 +509,7 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
                     if (this._operationInProgress) { break; }
                     this._operationInProgress = true;
                     try {
-                        await executeSingleOperation(this._opCtx(), 'install', data.projectPath as string, data.packageId as string, data.version as string | undefined);
+                        await executeSingleOperation(this._opCtx(), 'install', data.projectPath as string, data.packageId as string, data.version as string | undefined, data.sourceUrl as string | undefined);
                     } finally { this._operationInProgress = false; }
                     break;
                 }
@@ -520,7 +518,7 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
                     if (this._operationInProgress) { break; }
                     this._operationInProgress = true;
                     try {
-                        await executeSingleOperation(this._opCtx(), 'update', data.projectPath as string, data.packageId as string, data.version as string);
+                        await executeSingleOperation(this._opCtx(), 'update', data.projectPath as string, data.packageId as string, data.version as string, data.sourceUrl as string | undefined);
                     } finally { this._operationInProgress = false; }
                     break;
                 }
@@ -538,7 +536,7 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
                     if (this._operationInProgress) { break; }
                     this._operationInProgress = true;
                     try {
-                        await executeBulkUpdatePackages(this._opCtx(), data.packages as { id: string; version: string }[], data.projectPath as string);
+                        await executeBulkUpdatePackages(this._opCtx(), data.packages as { id: string; version: string; sourceUrl?: string }[], data.projectPath as string);
                     } finally { this._operationInProgress = false; }
                     break;
                 }
@@ -547,7 +545,7 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
                     if (this._operationInProgress) { break; }
                     this._operationInProgress = true;
                     try {
-                        await executeBulkUpdateAllProjects(this._opCtx(), data.projectUpdates as { projectPath: string; projectName: string; packages: { id: string; version: string }[] }[]);
+                        await executeBulkUpdateAllProjects(this._opCtx(), data.projectUpdates as { projectPath: string; projectName: string; packages: { id: string; version: string; sourceUrl?: string }[] }[]);
                     } finally { this._operationInProgress = false; }
                     break;
                 }
@@ -584,6 +582,7 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
         const context = data.context as 'browse' | 'installed' | 'updates';
         const projectPath = data.projectPath as string;
         const versionType = data.versionType as string | undefined;
+        const sourceUrl = data.sourceUrl as string | undefined;
         const isFloatingOrRange = versionType === 'floating' || versionType === 'range';
 
         if (!projectPath) {
@@ -631,7 +630,7 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
             if (label.includes('Install')) {
                 this._postMessage({ type: 'doInstall', packageId, version, projectPath });
             } else {
-                this._postMessage({ type: 'doUpdate', packageId, version, projectPath });
+                this._postMessage({ type: 'doUpdate', packageId, version, projectPath, sourceUrl });
             }
         } else if (label.includes('Install Version') || label.includes('Change Version') || label.includes('Update to Version')) {
             // Fetch versions and show picker
