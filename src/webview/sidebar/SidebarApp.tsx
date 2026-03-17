@@ -174,7 +174,19 @@ export const SidebarApp: React.FC = () => {
             case 'state':
                 if (message.selectedSource) { setSelectedSource(message.selectedSource); }
                 if (message.selectedProject) {
+                    // Clear stale data when project changed (e.g. sidebar re-shown after backend project change)
+                    if (message.selectedProject !== selectedProjectRef.current) {
+                        setInstalledPackages([]);
+                        setPackageUpdates([]);
+                        setAllProjectsUpdates([]);
+                        setAllProjectsInstalled([]);
+                        setLoadAllProjects(false);
+                        setLoadAllProjectsInstalled(false);
+                    }
                     setSelectedProject(message.selectedProject);
+                    // Immediately sync ref so the 'projects' handler's auto-select guard
+                    // sees the correct value (useEffect ref sync is deferred after paint)
+                    selectedProjectRef.current = message.selectedProject;
                     const name = message.selectedProject.split(/[\\/]/).pop()?.replace(/\.(csproj|fsproj|vbproj)$/, '') || '';
                     setSelectedProjectName(name);
                 }
@@ -199,6 +211,8 @@ export const SidebarApp: React.FC = () => {
                 break;
             case 'installedPackages':
                 {
+                    // Discard stale response if project changed while request was in-flight
+                    if (message.projectPath && message.projectPath !== selectedProjectRef.current) { break; }
                     const pkgs = (message.packages || []) as InstalledPackage[];
                     setInstalledPackages(pkgs);
                     setLoadingInstalled(false);
@@ -223,6 +237,8 @@ export const SidebarApp: React.FC = () => {
                 }
                 break;
             case 'packageUpdatesMinimal':
+                // Discard stale response if project changed while request was in-flight
+                if (message.projectPath && message.projectPath !== selectedProjectRef.current) { break; }
                 setPackageUpdates(message.updates || []);
                 setLoadingUpdates(false);
                 break;
@@ -371,23 +387,25 @@ export const SidebarApp: React.FC = () => {
                 }
                 break;
             case 'projectChanged':
-                if (message.projectPath !== selectedProjectRef.current) {
-                    setSelectedProject(message.projectPath);
-                    setSelectedProjectName((message.projectName || '').replace(/\.(csproj|fsproj|vbproj)$/, ''));
-                    setInstalledPackages([]);
-                    setPackageUpdates([]);
-                    setAllProjectsUpdates([]);
-                    setAllProjectsInstalled([]);
-                    setSelectedPackageId(null);
-                    // Reset "load all projects" toggles so icons don't show stale state
-                    setLoadAllProjects(false);
-                    setLoadAllProjectsInstalled(false);
-                    vscode.postMessage({
-                        type: 'getInstalledPackages',
-                        projectPath: message.projectPath
-                    });
-                    setLoadingInstalled(true);
-                }
+                // Always clear and re-fetch — no same-project guard. This allows
+                // re-selecting the current project as a manual refresh, and avoids
+                // stale data when title and webview state disagree.
+                setSelectedProject(message.projectPath);
+                selectedProjectRef.current = message.projectPath;
+                setSelectedProjectName((message.projectName || '').replace(/\.(csproj|fsproj|vbproj)$/, ''));
+                setInstalledPackages([]);
+                setPackageUpdates([]);
+                setAllProjectsUpdates([]);
+                setAllProjectsInstalled([]);
+                setSelectedPackageId(null);
+                // Reset "load all projects" toggles so icons don't show stale state
+                setLoadAllProjects(false);
+                setLoadAllProjectsInstalled(false);
+                vscode.postMessage({
+                    type: 'getInstalledPackages',
+                    projectPath: message.projectPath
+                });
+                setLoadingInstalled(true);
                 break;
             case 'prereleaseChanged':
                 setIncludePrerelease(message.includePrerelease);
