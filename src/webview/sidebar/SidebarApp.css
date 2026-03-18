@@ -92,6 +92,29 @@ body {
     pointer-events: none;
 }
 
+.sidebar-filter-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 100%;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--vscode-descriptionForeground);
+    flex-shrink: 0;
+    padding: 0;
+}
+
+.sidebar-filter-btn:hover {
+    color: var(--vscode-foreground);
+}
+
+.sidebar-filter-btn:focus-visible {
+    outline: 1px solid var(--vscode-focusBorder);
+    outline-offset: -1px;
+}
+
 /* ─── Search Progress Bar (VS Code native style) ────────────────────────── */
 .sidebar-progress-container {
     width: 100%;

@@ -20,7 +20,7 @@
 
 import { useVirtualizer } from '@tanstack/react-virtual';
 import React, { forwardRef, useCallback, useDeferredValue, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
-import { AllProjectsIcon, CheckAllIcon, ChevronDownIcon, ChevronRightIcon, ClearAllIcon, CollapseAllIcon, ExpandAllIcon, RulerIcon, SingleProjectIcon, SyncIcon, VerifiedIcon, WarningIcon } from '../icons';
+import { AllProjectsIcon, CheckAllIcon, ChevronDownIcon, ChevronRightIcon, ClearAllIcon, CollapseAllIcon, ExpandAllIcon, FilterIcon, RulerIcon, SingleProjectIcon, SyncIcon, VerifiedIcon, WarningIcon } from '../icons';
 import type {
     InstalledPackage,
     LRUMap,
@@ -210,6 +210,7 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
     // @-prefix dropdown state
     const [showFilterDropdown, setShowFilterDropdown] = useState(false);
     const [filterDropdownIndex, setFilterDropdownIndex] = useState(-1);
+    const [filterButtonTriggered, setFilterButtonTriggered] = useState(false);
     const filterDropdownRef = useRef<HTMLDivElement>(null);
 
     // Direct packages section state (default expanded)
@@ -259,13 +260,15 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
 
     // @-prefix dropdown matching logic
     const matchingFilters = useMemo(() => {
+        // Filter button shows all available prefixes
+        if (filterButtonTriggered) { return [...INSTALLED_FILTER_PREFIXES]; }
         const trimmed = installedFilterQuery.trim().toLowerCase();
         if (!trimmed.startsWith('@')) { return []; }
         for (const prefix of INSTALLED_FILTER_PREFIXES) {
             if (trimmed === prefix || trimmed.startsWith(prefix + ' ')) { return []; }
         }
         return INSTALLED_FILTER_PREFIXES.filter(p => p.startsWith(trimmed));
-    }, [installedFilterQuery]);
+    }, [installedFilterQuery, filterButtonTriggered]);
 
     useEffect(() => {
         if (matchingFilters.length > 0) {
@@ -281,6 +284,7 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
         setInstalledFilterQuery(filter + ' ');
         setShowFilterDropdown(false);
         setFilterDropdownIndex(-1);
+        setFilterButtonTriggered(false);
         installedFilterInputRef.current?.focus();
     }, []);
 
@@ -913,6 +917,7 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
                                             if (e.key === 'Escape') {
                                                 e.preventDefault();
                                                 setShowFilterDropdown(false);
+                                                setFilterButtonTriggered(false);
                                                 return;
                                             }
                                         }
@@ -930,7 +935,7 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
                                     }}
                                     onBlur={() => {
                                         // Delay to allow onMouseDown on dropdown items to fire first
-                                        setTimeout(() => setShowFilterDropdown(false), 150);
+                                        setTimeout(() => { setShowFilterDropdown(false); setFilterButtonTriggered(false); }, 150);
                                     }}
                                     aria-label="Filter installed packages"
                                 />
@@ -946,6 +951,26 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
                                     tabIndex={-1}
                                 >
                                     <ClearAllIcon size={16} />
+                                </button>
+                                <button
+                                    className="installed-filter-btn"
+                                    onMouseDown={(e) => {
+                                        e.preventDefault();
+                                        if (showFilterDropdown && filterButtonTriggered) {
+                                            setShowFilterDropdown(false);
+                                            setFilterButtonTriggered(false);
+                                        } else {
+                                            setFilterButtonTriggered(true);
+                                            setShowFilterDropdown(true);
+                                            setFilterDropdownIndex(0);
+                                        }
+                                        installedFilterInputRef.current?.focus();
+                                    }}
+                                    aria-label="Filter"
+                                    title="Filter"
+                                    tabIndex={-1}
+                                >
+                                    <FilterIcon size={16} />
                                 </button>
                                 {/* @-prefix filter dropdown */}
                                 {showFilterDropdown && matchingFilters.length > 0 && (

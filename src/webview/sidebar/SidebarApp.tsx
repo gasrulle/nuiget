@@ -14,7 +14,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { MemoizedDraggableSash } from '../app/components/DraggableSash';
-import { AllProjectsIcon, ArrowUpIcon, ClearAllIcon, SingleProjectIcon } from '../app/icons';
+import { AllProjectsIcon, ArrowUpIcon, ClearAllIcon, FilterIcon, SingleProjectIcon } from '../app/icons';
 import type { InstalledPackage, NuGetSource, PackageSearchResult, PackageUpdateMinimal, Project, ProjectInstalled, ProjectUpdates } from '../app/types';
 import { PackageRow } from './components/PackageRow';
 import { SectionHeader } from './components/SectionHeader';
@@ -92,6 +92,7 @@ export const SidebarApp: React.FC = () => {
 
     const [showFilterDropdown, setShowFilterDropdown] = useState(false);
     const [filterDropdownIndex, setFilterDropdownIndex] = useState(-1);
+    const [filterButtonTriggered, setFilterButtonTriggered] = useState(false);
     const [selectedPackageId, setSelectedPackageId] = useState<string | null>(null);
 
     // ─── Derived search mode ─────────────────────────────────────────────────
@@ -133,6 +134,8 @@ export const SidebarApp: React.FC = () => {
 
     // ─── @-prefix dropdown logic ─────────────────────────────────────────────
     const matchingFilters = useMemo(() => {
+        // Filter button shows all available prefixes
+        if (filterButtonTriggered) { return [...FILTER_PREFIXES]; }
         const trimmed = searchQuery.trim().toLowerCase();
         // Show dropdown when text starts with @ but is not yet a complete valid prefix
         if (!trimmed.startsWith('@')) { return []; }
@@ -142,7 +145,7 @@ export const SidebarApp: React.FC = () => {
         }
         // Filter the available prefixes by what the user has typed so far
         return FILTER_PREFIXES.filter(p => p.startsWith(trimmed));
-    }, [searchQuery]);
+    }, [searchQuery, filterButtonTriggered]);
 
     // Show/hide the filter dropdown
     useEffect(() => {
@@ -159,6 +162,7 @@ export const SidebarApp: React.FC = () => {
         setSearchQuery(filter + ' ');
         setShowFilterDropdown(false);
         setFilterDropdownIndex(-1);
+        setFilterButtonTriggered(false);
         searchInputRef.current?.focus();
     }, []);
 
@@ -565,6 +569,7 @@ export const SidebarApp: React.FC = () => {
             }
             if (e.key === 'Escape') {
                 setShowFilterDropdown(false);
+                setFilterButtonTriggered(false);
                 return;
             }
         }
@@ -606,7 +611,7 @@ export const SidebarApp: React.FC = () => {
 
     // Close dropdown on blur (with delay for click events)
     const handleSearchBlur = useCallback(() => {
-        setTimeout(() => setShowFilterDropdown(false), 200);
+        setTimeout(() => { setShowFilterDropdown(false); setFilterButtonTriggered(false); }, 200);
     }, []);
 
     // Client-side filter for Installed / Updates
@@ -1131,6 +1136,26 @@ export const SidebarApp: React.FC = () => {
                         tabIndex={-1}
                     >
                         <ClearAllIcon size={16} />
+                    </button>
+                    <button
+                        className="sidebar-filter-btn"
+                        onMouseDown={(e) => {
+                            e.preventDefault();
+                            if (showFilterDropdown && filterButtonTriggered) {
+                                setShowFilterDropdown(false);
+                                setFilterButtonTriggered(false);
+                            } else {
+                                setFilterButtonTriggered(true);
+                                setShowFilterDropdown(true);
+                                setFilterDropdownIndex(0);
+                            }
+                            searchInputRef.current?.focus();
+                        }}
+                        aria-label="Filter"
+                        title="Filter"
+                        tabIndex={-1}
+                    >
+                        <FilterIcon size={16} />
                     </button>
                 </div>
                 {/* @-prefix filter dropdown */}

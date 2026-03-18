@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Installed tab count badge** — The Installed tab in the main panel now shows a count badge with the number of installed packages, matching the existing Updates tab badge and the sidebar's Installed section header badge
 - **Installed tab vulnerability badge** — The Installed tab shows a severity-colored vulnerability badge (with warning icon and count) when any installed packages have known vulnerabilities, colored by highest severity (Low/Moderate/High/Critical)
 - **Installed tab @vulnerable filter** — Type `@vulnerable` in the Installed tab filter to show only packages with known security vulnerabilities, with `@`-prefix dropdown auto-complete matching the sidebar pattern
+- **Filter funnel button** — Added a filter funnel icon button (matching VS Code's native Extensions sidebar) to both the sidebar search and Installed tab filter bar, providing one-click access to all available `@`-prefix filters
 
 ### Fixed
 
