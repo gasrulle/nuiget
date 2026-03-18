@@ -1124,16 +1124,14 @@ export const SidebarApp: React.FC = () => {
                         role="searchbox"
                         aria-label="Search NuGet packages"
                     />
-                    {searchQuery && (
-                        <button
-                            className="sidebar-search-clear"
-                            onClick={() => { setSearchQuery(''); setSearchResults([]); searchInputRef.current?.focus(); }}
-                            aria-label="Clear search"
-                            tabIndex={-1}
-                        >
-                            <ClearAllIcon size={16} />
-                        </button>
-                    )}
+                    <button
+                        className={`sidebar-search-clear${searchQuery ? '' : ' disabled'}`}
+                        onClick={() => { if (!searchQuery) { return; } setSearchQuery(''); setSearchResults([]); searchInputRef.current?.focus(); }}
+                        aria-label="Clear search"
+                        tabIndex={-1}
+                    >
+                        <ClearAllIcon size={16} />
+                    </button>
                 </div>
                 {/* @-prefix filter dropdown */}
                 {showFilterDropdown && matchingFilters.length > 0 && (

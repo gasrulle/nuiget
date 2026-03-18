@@ -86,6 +86,12 @@ body {
     outline-offset: -1px;
 }
 
+.sidebar-search-clear.disabled {
+    opacity: 0.3;
+    cursor: default;
+    pointer-events: none;
+}
+
 /* ─── Search Progress Bar (VS Code native style) ────────────────────────── */
 .sidebar-progress-container {
     width: 100%;

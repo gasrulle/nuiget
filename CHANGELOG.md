@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Installed tab count badge** — The Installed tab in the main panel now shows a count badge with the number of installed packages, matching the existing Updates tab badge and the sidebar's Installed section header badge
+- **Installed tab vulnerability badge** — The Installed tab shows a severity-colored vulnerability badge (with warning icon and count) when any installed packages have known vulnerabilities, colored by highest severity (Low/Moderate/High/Critical)
+- **Installed tab @vulnerable filter** — Type `@vulnerable` in the Installed tab filter to show only packages with known security vulnerabilities, with `@`-prefix dropdown auto-complete matching the sidebar pattern
+
 ### Fixed
 
 - **Sidebar wrong-project packages on startup** — Fixed multi-project workspaces showing packages for the wrong project when opening the sidebar, caused by a ref timing race between `state` and `projects` message handlers. Also added `projectPath` validation on `installedPackages`/`packageUpdatesMinimal` responses to discard stale out-of-order replies, and removed the same-project guard in `projectChanged` so re-selecting the current project triggers a refresh

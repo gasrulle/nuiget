@@ -629,6 +629,8 @@ body {
 }
 
 .tab {
+    display: inline-flex;
+    align-items: center;
     padding: 6px 16px;
     background: transparent;
     border: none;
@@ -682,6 +684,8 @@ body {
 }
 
 .tab-badge {
+    display: inline-flex;
+    align-items: center;
     background: var(--vscode-badge-background);
     color: var(--vscode-badge-foreground);
     font-size: 11px;
@@ -689,6 +693,38 @@ body {
     padding: 1px 6px;
     border-radius: 10px;
     margin-left: 6px;
+}
+
+.tab-badge-vuln {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 11px;
+    font-weight: 500;
+    padding: 1px 6px;
+    border-radius: 10px;
+    margin-left: 4px;
+    cursor: help;
+}
+
+.tab-badge-vuln.vuln-Low {
+    background: color-mix(in srgb, var(--vscode-charts-blue, #3794ff) 18%, transparent);
+    color: var(--vscode-charts-blue, #3794ff);
+}
+
+.tab-badge-vuln.vuln-Moderate {
+    background: color-mix(in srgb, var(--vscode-charts-yellow, #cca700) 18%, transparent);
+    color: var(--vscode-charts-yellow, #cca700);
+}
+
+.tab-badge-vuln.vuln-High {
+    background: color-mix(in srgb, var(--vscode-charts-orange, #d18616) 18%, transparent);
+    color: var(--vscode-charts-orange, #d18616);
+}
+
+.tab-badge-vuln.vuln-Critical {
+    background: color-mix(in srgb, var(--vscode-errorForeground, #f14c4c) 18%, transparent);
+    color: var(--vscode-errorForeground, #f14c4c);
 }
 
 .project-selector {
@@ -782,6 +818,12 @@ body {
 .search-clear-btn:focus-visible {
     outline: 1px solid var(--vscode-focusBorder);
     outline-offset: -1px;
+}
+
+.search-clear-btn.disabled {
+    opacity: 0.3;
+    cursor: default;
+    pointer-events: none;
 }
 
 /* Search History Dropdown */
@@ -2666,6 +2708,9 @@ a.details-link:hover {
     right: 16px;
     top: 50%;
     transform: translateY(-50%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
     background: none;
     border: none;
     color: var(--vscode-input-foreground);
@@ -2680,6 +2725,47 @@ a.details-link:hover {
 .installed-filter-clear:hover {
     opacity: 1;
     background: var(--vscode-toolbar-hoverBackground);
+}
+
+.installed-filter-clear.disabled {
+    opacity: 0.3;
+    cursor: default;
+    pointer-events: none;
+}
+
+/* @-prefix filter dropdown for installed tab */
+.installed-filter-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 12px;
+    right: 12px;
+    z-index: 100;
+    background: var(--vscode-editorSuggestWidget-background, var(--vscode-dropdown-background));
+    border: 1px solid var(--vscode-editorSuggestWidget-border, var(--vscode-dropdown-border));
+    border-radius: 3px;
+    box-shadow: 0 2px 8px var(--vscode-widget-shadow, rgba(0, 0, 0, 0.36));
+    overflow: hidden;
+}
+
+.installed-filter-dropdown-item {
+    padding: 4px 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    font-size: var(--vscode-font-size);
+    color: var(--vscode-editorSuggestWidget-foreground, var(--vscode-foreground));
+}
+
+.installed-filter-dropdown-item:hover,
+.installed-filter-dropdown-item.active {
+    background: var(--vscode-editorSuggestWidget-selectedBackground, var(--vscode-list-activeSelectionBackground));
+    color: var(--vscode-editorSuggestWidget-selectedForeground, var(--vscode-list-activeSelectionForeground));
+}
+
+.installed-filter-dropdown-prefix {
+    color: var(--vscode-editorSuggestWidget-highlightForeground, var(--vscode-textLink-foreground));
+    font-weight: 600;
 }
 
 .installed-filter-empty {

@@ -763,21 +763,20 @@ const BrowseTab = forwardRef<BrowseTabHandle, BrowseTabProps>(function BrowseTab
                         }}
                         className="search-input"
                     />
-                    {searchQuery && (
-                        <button
-                            className="search-clear-btn"
-                            onClick={() => {
-                                setSearchQuery('');
-                                setSearchResults([]);
-                                onSetSelectedPackage(null);
-                                searchInputRef.current?.focus();
-                            }}
-                            aria-label="Clear search"
-                            tabIndex={-1}
-                        >
-                            <ClearAllIcon size={16} />
-                        </button>
-                    )}
+                    <button
+                        className={`search-clear-btn${searchQuery ? '' : ' disabled'}`}
+                        onClick={() => {
+                            if (!searchQuery) { return; }
+                            setSearchQuery('');
+                            setSearchResults([]);
+                            onSetSelectedPackage(null);
+                            searchInputRef.current?.focus();
+                        }}
+                        aria-label="Clear search"
+                        tabIndex={-1}
+                    >
+                        <ClearAllIcon size={16} />
+                    </button>
                     {/* Recent searches dropdown */}
                     {showSearchHistory && !searchQuery.trim() && recentSearches.length > 0 && (
                         <div className={`search-history-dropdown${isKeyboardNavActive ? ' keyboard-nav' : ''}`} onMouseLeave={() => setSelectedSuggestionIndex(-1)}>

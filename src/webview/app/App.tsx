@@ -13,7 +13,7 @@ import { MemoizedUpdatesTab } from './components/UpdatesTab';
 import { usePackageSelection } from './hooks/usePackageSelection';
 import { LoadingIcon, SettingsGearIcon, SyncIcon, WarningIcon } from './icons';
 import { renderMarkdownToHtml } from './markdownSetup';
-import type { AppState, FailedSource, InstalledPackage, NuGetSource, PackageMetadata, PackageSearchResult, PackageUpdate, Project, ProjectInstalled, ProjectUpdates, TransitivePackage } from './types';
+import type { AppState, FailedSource, InstalledPackage, NuGetSource, PackageMetadata, PackageSearchResult, PackageUpdate, Project, ProjectInstalled, ProjectUpdates, TransitivePackage, VulnerabilitySeverity } from './types';
 import { LRUMap, getPackageId } from './types';
 
 // Get the default package icon URL from the root element data attribute
@@ -983,6 +983,24 @@ export const App: React.FC = () => {
         return () => document.removeEventListener('click', handleCopyClick);
     }, []);
 
+    // Compute vulnerability count and highest severity from installed packages
+    const { vulnPackageCount, highestVulnSeverity } = useMemo(() => {
+        const severityOrder: Record<VulnerabilitySeverity, number> = { Low: 0, Moderate: 1, High: 2, Critical: 3 };
+        let count = 0;
+        let highest: VulnerabilitySeverity = 'Low';
+        for (const pkg of installedPackages) {
+            if (pkg.vulnerabilities && pkg.vulnerabilities.length > 0) {
+                count++;
+                for (const v of pkg.vulnerabilities) {
+                    if (severityOrder[v.severity] > severityOrder[highest]) {
+                        highest = v.severity;
+                    }
+                }
+            }
+        }
+        return { vulnPackageCount: count, highestVulnSeverity: highest };
+    }, [installedPackages]);
+
     // Memoize enabled sources to avoid recalculation on every render
     const enabledSources = useMemo(() =>
         sources.filter(s => s.enabled),
@@ -1384,6 +1402,16 @@ export const App: React.FC = () => {
                     }}
                 >
                     Installed
+                    {installedPackages.length > 0 && <span className="tab-badge">{installedPackages.length}</span>}
+                    {vulnPackageCount > 0 && (
+                        <span
+                            className={`tab-badge-vuln vuln-${highestVulnSeverity}`}
+                            title={`${vulnPackageCount} package${vulnPackageCount > 1 ? 's' : ''} with known vulnerabilities`}
+                        >
+                            <WarningIcon size={12} />
+                            {vulnPackageCount}
+                        </span>
+                    )}
                 </button>
                 <button
                     ref={updatesTabRef}
