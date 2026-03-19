@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.14.1] - 2026-03-19
+
 ### Fixed
 
 - **Sidebar browse install uses wildcard version** — The sidebar "+" button now explicitly passes `--version <latest>` to the `dotnet add package` CLI command, preventing wildcard or floating version references in the `.csproj` file
