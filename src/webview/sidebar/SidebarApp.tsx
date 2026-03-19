@@ -111,6 +111,7 @@ export const SidebarApp: React.FC = () => {
     const allProjectsUpdatesRef = useRef(allProjectsUpdates);
     const searchModeRef = useRef(searchMode);
     const loadAllProjectsInstalledRef = useRef(loadAllProjectsInstalled);
+    const searchResultsRef = useRef(searchResults);
     const searchInputRef = useRef<HTMLInputElement>(null);
     const browseListRef = useRef<HTMLDivElement>(null);
     const installedListRef = useRef<HTMLDivElement>(null);
@@ -131,6 +132,7 @@ export const SidebarApp: React.FC = () => {
     useEffect(() => { allProjectsUpdatesRef.current = allProjectsUpdates; }, [allProjectsUpdates]);
     useEffect(() => { searchModeRef.current = searchMode; }, [searchMode]);
     useEffect(() => { loadAllProjectsInstalledRef.current = loadAllProjectsInstalled; }, [loadAllProjectsInstalled]);
+    useEffect(() => { searchResultsRef.current = searchResults; }, [searchResults]);
 
     // ─── @-prefix dropdown logic ─────────────────────────────────────────────
     const matchingFilters = useMemo(() => {
@@ -753,10 +755,14 @@ export const SidebarApp: React.FC = () => {
                 packageId
             });
         } else {
+            const pkg = searchResultsRef.current.find(
+                p => p.id.toLowerCase() === packageId.toLowerCase()
+            );
             vscode.postMessage({
                 type: 'installPackage',
                 projectPath: selectedProjectRef.current,
-                packageId
+                packageId,
+                version: pkg?.version
             });
         }
     }, []);
