@@ -109,6 +109,7 @@ export const SidebarApp: React.FC = () => {
     const selectedPackageIdRef = useRef(selectedPackageId);
     const packageUpdatesRef = useRef(packageUpdates);
     const allProjectsUpdatesRef = useRef(allProjectsUpdates);
+    const searchResultsRef = useRef(searchResults);
     const searchModeRef = useRef(searchMode);
     const loadAllProjectsInstalledRef = useRef(loadAllProjectsInstalled);
     const searchInputRef = useRef<HTMLInputElement>(null);
@@ -129,6 +130,7 @@ export const SidebarApp: React.FC = () => {
     useEffect(() => { selectedPackageIdRef.current = selectedPackageId; }, [selectedPackageId]);
     useEffect(() => { packageUpdatesRef.current = packageUpdates; }, [packageUpdates]);
     useEffect(() => { allProjectsUpdatesRef.current = allProjectsUpdates; }, [allProjectsUpdates]);
+    useEffect(() => { searchResultsRef.current = searchResults; }, [searchResults]);
     useEffect(() => { searchModeRef.current = searchMode; }, [searchMode]);
     useEffect(() => { loadAllProjectsInstalledRef.current = loadAllProjectsInstalled; }, [loadAllProjectsInstalled]);
 
@@ -753,10 +755,14 @@ export const SidebarApp: React.FC = () => {
                 packageId
             });
         } else {
+            const searchPkg = searchResultsRef.current.find(
+                p => p.id.toLowerCase() === packageId.toLowerCase()
+            );
             vscode.postMessage({
                 type: 'installPackage',
                 projectPath: selectedProjectRef.current,
-                packageId
+                packageId,
+                version: searchPkg?.version
             });
         }
     }, []);
