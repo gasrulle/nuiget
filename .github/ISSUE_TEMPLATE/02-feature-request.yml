@@ -1,0 +1,105 @@
+name: "\U0001F4A1 Feature Request"
+description: Suggest a new feature or enhancement.
+title: "[Feature]: "
+labels: ["enhancement", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting an improvement!
+
+        > **Agent routing hints** (for automated resolution):
+        > New features should follow existing patterns documented in `ARCHITECTURE.md`:
+        > - **Message protocol**: Add new message types to the webview ↔ extension messaging in `NuGetPanel.ts` / `NuGetSidebarPanel.ts`
+        > - **State management**: Follow `useRef` mirror pattern for `useCallback([])` closures (see `copilot-instructions.md`)
+        > - **Operations**: Add mutating operations to `src/services/NuGetOperations.ts` via `OperationContext` interface
+        > - **Caching**: Use existing cache layers (`LRUMap`, `WorkspaceCache`, `metadataCache`) before adding new ones
+        > - **Components**: Follow React.memo + extracted useCallback pattern in `src/webview/app/components/`
+        >
+        > Use the **Affected Component** field to identify where the feature belongs:
+        >
+        > | Component | Primary files |
+        > |-----------|--------------|
+        > | Main Panel | `src/webview/NuGetPanel.ts`, `src/webview/app/App.tsx`, `src/webview/app/components/` |
+        > | Sidebar | `src/webview/NuGetSidebarPanel.ts`, `src/webview/sidebar/SidebarApp.tsx`, `src/webview/sidebar/components/` |
+        > | NuGet Service / API | `src/services/NuGetService.ts`, `src/services/NuGetOperations.ts` |
+        > | Config / Sources | `src/services/NuGetConfigParser.ts`, `src/services/NuGetTypes.ts` |
+        > | CLI / dotnet Integration | `src/services/NuGetService.ts` (search for `exec`/`spawn` calls) |
+        > | Extension Core | `src/extension.ts` |
+        > | HTTP / Networking | `src/services/Http2Client.ts` |
+        > | Credentials / Auth | `src/services/CredentialService.ts` |
+        > | Caching | `src/services/WorkspaceCache.ts` |
+
+  - type: checkboxes
+    id: prerequisites
+    attributes:
+      label: Prerequisites
+      description: Please confirm the following before submitting.
+      options:
+        - label: I have searched the [existing issues](https://github.com/gasrulle/nuiget/issues) for duplicate feature requests.
+          required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem / Motivation
+      description: What problem does this feature solve? Is it related to a frustration?
+      placeholder: "I'm always frustrated when..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed-solution
+    attributes:
+      label: Proposed Solution
+      description: Describe the desired behavior. Be as specific as possible — include expected UI changes, interactions, settings, or commands.
+      placeholder: "I'd like to see..."
+    validations:
+      required: true
+
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Scope / Size
+      description: How large is this change? This helps estimate implementation effort.
+      options:
+        - "Small tweak — config change, text update, minor UI adjustment"
+        - "New feature — new UI element, service logic, or command"
+        - "Major feature — new component, architectural change, or multi-file refactor"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: affected-component
+    attributes:
+      label: Affected Component
+      description: Where does this feature primarily belong?
+      options:
+        - Main Panel (Browse / Installed / Updates tabs)
+        - Sidebar (Installed / Updates sections)
+        - NuGet Service / API (package search, metadata, versions)
+        - Config / Sources (nuget.config, source management)
+        - CLI / dotnet Integration (install, update, remove commands)
+        - Extension Core (activation, commands, lifecycle)
+        - HTTP / Networking (timeouts, connection errors)
+        - Credentials / Auth (private feeds, authentication)
+        - Caching (stale data, cache not clearing)
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternative Solutions Considered
+      description: Describe any alternative solutions or workarounds you've considered.
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional Context
+      description: Add any other context, mockups, or screenshots about the feature request here.
+    validations:
+      required: false

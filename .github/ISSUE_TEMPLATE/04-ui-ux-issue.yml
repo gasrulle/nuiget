@@ -1,0 +1,143 @@
+name: "\U0001F3A8 UI / UX Issue"
+description: Report visual glitches, layout problems, or theme issues.
+title: "[UI]: "
+labels: ["ui", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a UI issue!
+
+        > **Agent routing hints** (for automated resolution):
+        > UI-related source files:
+        >
+        > | Area | Files |
+        > |------|-------|
+        > | Main panel styles | `src/webview/app/App.css` |
+        > | Sidebar styles | `src/webview/sidebar/SidebarApp.css` |
+        > | Main panel components | `src/webview/app/components/BrowseTab.tsx`, `InstalledTab.tsx`, `UpdatesTab.tsx`, `PackageDetailsPanel.tsx`, `SourceSettingsOverlay.tsx`, `DraggableSash.tsx` |
+        > | Sidebar components | `src/webview/sidebar/components/PackageRow.tsx`, `SectionHeader.tsx` |
+        > | Icons | `src/webview/app/icons.tsx` (SVG components — codicon font NOT available in webviews) |
+        > | Markdown rendering | `src/webview/app/markdownSetup.ts` |
+        >
+        > Key conventions:
+        > - Use `--vscode-*` CSS variables for all colors — never hardcode colors
+        > - Light theme overrides use `body.vscode-light` selector
+        > - Icon visibility: use `color`, not `opacity` (opacity compounds on nested elements)
+        > - Codicon font and `$(name)` syntax do NOT work in webviews — use SVG components from `icons.tsx`
+
+  - type: checkboxes
+    id: prerequisites
+    attributes:
+      label: Prerequisites
+      description: Please confirm the following before submitting.
+      options:
+        - label: I have searched the [existing issues](https://github.com/gasrulle/nuiget/issues) for duplicates.
+          required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Issue Description
+      description: Describe the visual or UX problem.
+      placeholder: "The package details panel overflows when..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected-behavior
+    attributes:
+      label: Expected Visual Behavior
+      description: What should it look like or how should it behave?
+      placeholder: "The panel should resize to fit..."
+    validations:
+      required: true
+
+  - type: dropdown
+    id: ui-area
+    attributes:
+      label: UI Area
+      description: Which part of the UI is affected?
+      options:
+        - Browse tab
+        - Installed tab
+        - Updates tab
+        - Package details panel
+        - Source settings overlay
+        - "Sidebar — Installed section"
+        - "Sidebar — Updates section"
+        - "Sidebar — Search"
+        - Icons / badges
+        - Theme / colors
+        - Layout / sizing
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: theme
+    attributes:
+      label: VS Code Theme
+      description: Which theme(s) does the issue occur with?
+      multiple: true
+      options:
+        - Dark theme (e.g., Dark+, One Dark)
+        - Light theme (e.g., Light+, Quiet Light)
+        - High Contrast
+        - High Contrast Light
+        - "All themes"
+    validations:
+      required: true
+
+  - type: textarea
+    id: screenshot-current
+    attributes:
+      label: "Screenshot — Current Behavior"
+      description: A screenshot showing the problem. Drag and drop an image here.
+    validations:
+      required: true
+
+  - type: textarea
+    id: screenshot-expected
+    attributes:
+      label: "Screenshot — Expected Behavior (optional)"
+      description: If you have a mockup or reference showing the expected behavior, add it here.
+    validations:
+      required: false
+
+  - type: input
+    id: vscode-version
+    attributes:
+      label: VS Code Version
+      description: "Run `code --version` or check Help → About."
+      placeholder: "e.g., 1.96.0"
+    validations:
+      required: true
+
+  - type: input
+    id: extension-version
+    attributes:
+      label: Extension Version
+      description: "Check Extensions sidebar → nUIget → version number."
+      placeholder: "e.g., 1.14.1"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating System
+      options:
+        - Windows
+        - macOS
+        - Linux
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional Context
+      description: Any other context, such as custom CSS, zoom level, specific theme name, or display scaling.
+    validations:
+      required: false

@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **GitHub Pull Request Template** — Structured PR template optimized for autonomous coding agent review, with PR type selection, structured change manifest table, strict testing/verification and security review checklists, manual testing steps, and collapsible agent-routing hints with component-to-file mapping
+- **GitHub Issue Templates** — Five structured YAML issue form templates (bug report, feature request, performance, UI/UX, documentation) optimized for autonomous agent resolution, with component-to-file mapping hints, required environment fields, severity/scope dropdowns, and blank issues blocked
+
 ## [1.14.1] - 2026-03-19
 
 ### Fixed

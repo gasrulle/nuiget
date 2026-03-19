@@ -1,0 +1,78 @@
+name: "\U0001F4DD Documentation"
+description: Report missing, incorrect, or unclear documentation.
+title: "[Docs]: "
+labels: ["documentation", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping improve the documentation!
+
+        > **Agent routing hints** (for automated resolution):
+        > Documentation files:
+        >
+        > | Document | Path | Purpose |
+        > |----------|------|---------|
+        > | README | `README.md` | User-facing feature docs, troubleshooting, installation |
+        > | Architecture | `ARCHITECTURE.md` | Technical architecture, component interactions, data flows |
+        > | Changelog | `CHANGELOG.md` | Version history and release notes |
+        > | Agent instructions | `.github/copilot-instructions.md` | Coding agent guidelines and known gotchas |
+        > | Instruction files | `.github/instructions/*.instructions.md` | Domain-specific Copilot instruction files |
+        >
+        > When fixing documentation:
+        > - Follow `markdown.instructions.md` for formatting standards
+        > - Follow `update-docs-on-code-change.instructions.md` for which docs to update
+        > - Check `ARCHITECTURE.md` as the single source of truth for technical details
+
+  - type: checkboxes
+    id: prerequisites
+    attributes:
+      label: Prerequisites
+      description: Please confirm the following before submitting.
+      options:
+        - label: I have searched the [existing issues](https://github.com/gasrulle/nuiget/issues) for duplicates.
+          required: true
+
+  - type: dropdown
+    id: issue-type
+    attributes:
+      label: Documentation Issue Type
+      options:
+        - Missing documentation
+        - Incorrect / outdated information
+        - Unclear / confusing explanation
+        - Typo / grammar error
+    validations:
+      required: true
+
+  - type: dropdown
+    id: which-document
+    attributes:
+      label: Which Document?
+      description: Which documentation file is affected?
+      options:
+        - README.md
+        - ARCHITECTURE.md
+        - CHANGELOG.md
+        - In-code comments / JSDoc
+        - copilot-instructions.md
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What's Wrong or Missing?
+      description: Describe the documentation issue. Include the section or heading if possible.
+      placeholder: "The Troubleshooting section doesn't mention how to..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: suggested-fix
+    attributes:
+      label: Suggested Fix
+      description: If you know what the documentation should say, describe or provide the corrected text.
+    validations:
+      required: false

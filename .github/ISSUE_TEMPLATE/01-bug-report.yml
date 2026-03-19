@@ -1,0 +1,172 @@
+name: "\U0001F41E Bug Report"
+description: Something is broken or not working as expected.
+title: "[Bug]: "
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a bug report!
+
+        > **Agent routing hints** (for automated resolution):
+        > Use the **Affected Component** field below to locate relevant source files:
+        >
+        > | Component | Primary files |
+        > |-----------|--------------|
+        > | Main Panel | `src/webview/NuGetPanel.ts`, `src/webview/app/App.tsx`, `src/webview/app/components/` |
+        > | Sidebar | `src/webview/NuGetSidebarPanel.ts`, `src/webview/sidebar/SidebarApp.tsx`, `src/webview/sidebar/components/` |
+        > | NuGet Service / API | `src/services/NuGetService.ts`, `src/services/NuGetOperations.ts` |
+        > | Config / Sources | `src/services/NuGetConfigParser.ts`, `src/services/NuGetTypes.ts` |
+        > | CLI / dotnet Integration | `src/services/NuGetService.ts` (search for `exec`/`spawn` calls) |
+        > | Extension Core | `src/extension.ts` |
+        > | HTTP / Networking | `src/services/Http2Client.ts` |
+        > | Credentials / Auth | `src/services/CredentialService.ts` |
+        > | Caching | `src/services/WorkspaceCache.ts` |
+        >
+        > Cross-reference `ARCHITECTURE.md` for component interactions and `copilot-instructions.md` (`.github/copilot-instructions.md`) for known gotchas and pitfalls.
+
+  - type: checkboxes
+    id: prerequisites
+    attributes:
+      label: Prerequisites
+      description: Please confirm the following before submitting.
+      options:
+        - label: I have searched the [existing issues](https://github.com/gasrulle/nuiget/issues) for duplicates.
+          required: true
+        - label: I am using the latest version of the extension.
+          required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug Description
+      description: A clear and concise description of what the bug is.
+      placeholder: "Describe what happened..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected-behavior
+    attributes:
+      label: Expected Behavior
+      description: What did you expect to happen instead?
+      placeholder: "I expected..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps-to-reproduce
+    attributes:
+      label: Steps to Reproduce
+      description: Detailed steps to reproduce the behavior. The more precise, the faster the fix.
+      placeholder: |
+        1. Open a workspace with a .csproj file
+        2. Open the NuGet panel (Command Palette → "nUIget: Manage NuGet Packages")
+        3. Navigate to '...'
+        4. Click on '...'
+        5. See error
+    validations:
+      required: true
+
+  - type: dropdown
+    id: affected-component
+    attributes:
+      label: Affected Component
+      description: Which part of the extension is affected? This helps route to the correct source files.
+      options:
+        - Main Panel (Browse / Installed / Updates tabs)
+        - Sidebar (Installed / Updates sections)
+        - NuGet Service / API (package search, metadata, versions)
+        - Config / Sources (nuget.config, source management)
+        - CLI / dotnet Integration (install, update, remove commands)
+        - Extension Core (activation, commands, lifecycle)
+        - HTTP / Networking (timeouts, connection errors)
+        - Credentials / Auth (private feeds, authentication)
+        - Caching (stale data, cache not clearing)
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      description: How severely does this affect your workflow?
+      options:
+        - "Critical — crash, data loss, or extension unusable"
+        - "High — major feature broken, no workaround"
+        - "Medium — feature impaired, workaround exists"
+        - "Low — cosmetic or minor inconvenience"
+    validations:
+      required: true
+
+  - type: input
+    id: vscode-version
+    attributes:
+      label: VS Code Version
+      description: "Run `code --version` or check Help → About."
+      placeholder: "e.g., 1.96.0"
+    validations:
+      required: true
+
+  - type: input
+    id: extension-version
+    attributes:
+      label: Extension Version
+      description: "Check Extensions sidebar → nUIget → version number."
+      placeholder: "e.g., 1.14.1"
+    validations:
+      required: true
+
+  - type: input
+    id: dotnet-sdk-version
+    attributes:
+      label: .NET SDK Version
+      description: "Run `dotnet --version` in a terminal."
+      placeholder: "e.g., 9.0.100"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating System
+      options:
+        - Windows
+        - macOS
+        - Linux
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant Log Output
+      description: |
+        Paste any relevant error messages or logs. To get extension logs:
+        1. Open Command Palette → "Developer: Toggle Developer Tools" → Console tab
+        2. Or open Command Palette → "Developer: Open Webview Developer Tools" → Console tab (for webview errors)
+      render: shell
+    validations:
+      required: false
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots
+      description: If applicable, add screenshots to help explain the problem. Drag and drop images here.
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional Context
+      description: |
+        Any other context about the problem. For example:
+        - Does it happen with specific NuGet sources (nuget.org, private feeds, local)?
+        - Does it happen with specific project types (.csproj, .fsproj, .vbproj)?
+        - Is it reproducible in a fresh workspace?
+        - Relevant nuget.config contents (redact credentials)?
+    validations:
+      required: false

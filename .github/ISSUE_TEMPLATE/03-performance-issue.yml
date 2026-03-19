@@ -1,0 +1,165 @@
+name: "\U0001F3CE\uFE0F Performance Issue"
+description: Report slowness, high resource usage, or latency problems.
+title: "[Perf]: "
+labels: ["performance", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a performance issue!
+
+        > **Agent routing hints** (for automated resolution):
+        > Performance-critical areas in the codebase:
+        >
+        > | Area | Files & patterns |
+        > |------|-----------------|
+        > | HTTP/2 session pool | `src/services/Http2Client.ts` — session pool, `MAX_SESSIONS`, stale cleanup |
+        > | Batch operations | `src/services/NuGetService.ts` — `batchedPromiseAll`, concurrent request limiting |
+        > | Endpoint caching | `src/services/NuGetService.ts` — `failedEndpointCache` (120s TTL), source health monitor |
+        > | Workspace cache | `src/services/WorkspaceCache.ts` — disk-backed cache with TTL |
+        > | Frontend caches | `src/webview/app/App.tsx` — `useRef<LRUMap>` for metadata/versions, content comparison in setters |
+        > | Assets.json cache | `src/services/NuGetService.ts` — `assetsJsonCache` (max 5 entries, TTL sweep) |
+        > | Sidebar debounce | `src/webview/sidebar/SidebarApp.tsx` — `browseDebounceRef` (300ms), `refreshDebounceRef` |
+        >
+        > Reference `ARCHITECTURE.md` for caching layers and performance patterns.
+        > Reference `copilot-instructions.md` for known performance pitfalls.
+
+  - type: checkboxes
+    id: prerequisites
+    attributes:
+      label: Prerequisites
+      description: Please confirm the following before submitting.
+      options:
+        - label: I have searched the [existing issues](https://github.com/gasrulle/nuiget/issues) for duplicates.
+          required: true
+        - label: I am using the latest version of the extension.
+          required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Performance Problem
+      description: Describe the performance issue. What feels slow or resource-intensive?
+      placeholder: "When I search for packages, it takes 10+ seconds to show results..."
+    validations:
+      required: true
+
+  - type: dropdown
+    id: slow-operation
+    attributes:
+      label: What Operation Is Slow?
+      description: Which operation is experiencing the performance problem?
+      options:
+        - Package search
+        - Package install / update / remove
+        - Loading installed packages
+        - Loading package details / versions
+        - Sidebar loading
+        - Extension startup / activation
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: latency
+    attributes:
+      label: Approximate Latency / Resource Impact
+      description: How long does the operation take, or how much memory/CPU is consumed?
+      placeholder: "e.g., ~10s delay, 500MB memory usage, CPU spike to 100%"
+    validations:
+      required: false
+
+  - type: dropdown
+    id: affected-component
+    attributes:
+      label: Affected Component
+      description: Which part of the extension is affected?
+      options:
+        - Main Panel (Browse / Installed / Updates tabs)
+        - Sidebar (Installed / Updates sections)
+        - NuGet Service / API (package search, metadata, versions)
+        - Config / Sources (nuget.config, source management)
+        - CLI / dotnet Integration (install, update, remove commands)
+        - Extension Core (activation, commands, lifecycle)
+        - HTTP / Networking (timeouts, connection errors)
+        - Credentials / Auth (private feeds, authentication)
+        - Caching (stale data, cache not clearing)
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: vscode-version
+    attributes:
+      label: VS Code Version
+      description: "Run `code --version` or check Help → About."
+      placeholder: "e.g., 1.96.0"
+    validations:
+      required: true
+
+  - type: input
+    id: extension-version
+    attributes:
+      label: Extension Version
+      description: "Check Extensions sidebar → nUIget → version number."
+      placeholder: "e.g., 1.14.1"
+    validations:
+      required: true
+
+  - type: input
+    id: dotnet-sdk-version
+    attributes:
+      label: .NET SDK Version
+      description: "Run `dotnet --version` in a terminal."
+      placeholder: "e.g., 9.0.100"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating System
+      options:
+        - Windows
+        - macOS
+        - Linux
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps-to-reproduce
+    attributes:
+      label: Steps to Reproduce
+      description: Detailed steps to reproduce the performance issue.
+      placeholder: |
+        1. Open a workspace with N .csproj files
+        2. Open the NuGet panel
+        3. Search for 'Newtonsoft'
+        4. Observe ~10s delay before results appear
+    validations:
+      required: true
+
+  - type: textarea
+    id: profiler-output
+    attributes:
+      label: Profiler / Log Output
+      description: |
+        If available, paste profiler data, performance traces, or relevant log output.
+        - VS Code: Developer Tools → Performance tab
+        - Extension host logs: Output panel → "Extension Host" channel
+      render: shell
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional Context
+      description: |
+        Any other context. For example:
+        - Number of NuGet sources configured
+        - Number of projects in the workspace
+        - Whether any sources are unreachable (VPN, corporate proxy)
+        - Whether the issue is intermittent or consistent
+    validations:
+      required: false
