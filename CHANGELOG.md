@@ -37,6 +37,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Eliminated all `any` types** — Replaced `fetchJson<any>` with typed NuGet API response interfaces (`NuGetSearchResponse`, `NuGetRegistrationEntry`, `NuGetRegistrationPage`); replaced `catch (error: any)` with `unknown`; replaced `handleMessage(message: any)` with `WebviewMessage` type
 - **Resolved npm audit vulnerabilities** — Fixed `brace-expansion` and `picomatch` transitive vulnerabilities
 
+## [1.15.1] - 2026-03-27
+
+### Fixed
+
+- **SSRF redirect handling for relative URLs** — `isSafeRedirectTarget()` now resolves relative `Location` headers against the original URL; all 11 redirect sites across Http2Client.ts and NuGetService.ts pass the resolved absolute URL to recursive calls
+- **Update operation version guard** — `executeSingleOperation()` now throws early if version is missing for update operations instead of silently passing an empty string
+
 ## [1.14.1] - 2026-03-19
 
 ### Fixed

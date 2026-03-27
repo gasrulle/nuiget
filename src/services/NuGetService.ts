@@ -2168,15 +2168,14 @@ export class NuGetService {
                 // Handle redirects - follow them (with SSRF protection)
                 if (res.statusCode === 301 || res.statusCode === 302 || res.statusCode === 307 || res.statusCode === 308) {
                     const redirectUrl = res.headers.location;
-                    if (redirectUrl && isSafeRedirectTarget(redirectUrl, url)) {
-                        // Only forward auth if redirect stays on the same origin (security)
-                        let sameOrigin = false;
-                        try {
-                            const redirectParsed = new URL(redirectUrl);
-                            sameOrigin = redirectParsed.origin === parsedUrl.origin;
-                        } catch { /* not same origin */ }
-                        this.checkUrlExistsHttp1(redirectUrl, sameOrigin ? authHeader : undefined, maxRedirects - 1).then(resolve);
-                        return;
+                    if (redirectUrl) {
+                        const redirectParsed = new URL(redirectUrl, url);
+                        const redirectHref = redirectParsed.href;
+                        if (isSafeRedirectTarget(redirectHref, url)) {
+                            const sameOrigin = redirectParsed.origin === parsedUrl.origin;
+                            this.checkUrlExistsHttp1(redirectHref, sameOrigin ? authHeader : undefined, maxRedirects - 1).then(resolve);
+                            return;
+                        }
                     }
                 }
                 resolve(res.statusCode === 200);
@@ -3753,15 +3752,14 @@ export class NuGetService {
                 // Handle redirects - preserve auth header for same-origin redirects (with SSRF protection)
                 if (res.statusCode === 301 || res.statusCode === 302 || res.statusCode === 307 || res.statusCode === 308) {
                     const redirectUrl = res.headers.location;
-                    if (redirectUrl && isSafeRedirectTarget(redirectUrl, url)) {
-                        try {
-                            const redirectParsed = new URL(redirectUrl, url);
+                    if (redirectUrl) {
+                        const redirectParsed = new URL(redirectUrl, url);
+                        const redirectHref = redirectParsed.href;
+                        if (isSafeRedirectTarget(redirectHref, url)) {
                             const sameOrigin = redirectParsed.origin === parsed.origin;
-                            this.fetchText(redirectParsed.href, sameOrigin ? authHeader : undefined, maxRedirects - 1).then(resolve);
-                        } catch {
-                            this.fetchText(redirectUrl, undefined, maxRedirects - 1).then(resolve);
+                            this.fetchText(redirectHref, sameOrigin ? authHeader : undefined, maxRedirects - 1).then(resolve);
+                            return;
                         }
-                        return;
                     }
                 }
                 if (res.statusCode !== 200) {
@@ -3836,12 +3834,14 @@ export class NuGetService {
                 // Handle redirects (with SSRF protection)
                 if (res.statusCode === 301 || res.statusCode === 302 || res.statusCode === 307 || res.statusCode === 308) {
                     const redirectUrl = res.headers.location;
-                    if (redirectUrl && isSafeRedirectTarget(redirectUrl, url)) {
-                        // Preserve auth header on same-origin redirects only
+                    if (redirectUrl) {
                         const redirectParsed = new URL(redirectUrl, url);
-                        const sameOrigin = redirectParsed.origin === parsed.origin;
-                        this.fetchJsonWithDetails<T>(redirectUrl, sameOrigin ? authHeader : undefined, timeoutMs, maxRedirects - 1).then(resolve);
-                        return;
+                        const redirectHref = redirectParsed.href;
+                        if (isSafeRedirectTarget(redirectHref, url)) {
+                            const sameOrigin = redirectParsed.origin === parsed.origin;
+                            this.fetchJsonWithDetails<T>(redirectHref, sameOrigin ? authHeader : undefined, timeoutMs, maxRedirects - 1).then(resolve);
+                            return;
+                        }
                     }
                 }
 
@@ -3992,12 +3992,14 @@ export class NuGetService {
                 // Handle redirects (with SSRF protection)
                 if (res.statusCode === 301 || res.statusCode === 302 || res.statusCode === 307 || res.statusCode === 308) {
                     const redirectUrl = res.headers.location;
-                    if (redirectUrl && maxRedirects > 0 && isSafeRedirectTarget(redirectUrl, url)) {
-                        // Preserve auth header on same-origin redirects only
+                    if (redirectUrl && maxRedirects > 0) {
                         const redirectParsed = new URL(redirectUrl, url);
-                        const sameOrigin = redirectParsed.origin === parsed.origin;
-                        this.fetchJsonHttp1<T>(redirectUrl, sameOrigin ? authHeader : undefined, maxRedirects - 1).then(resolve);
-                        return;
+                        const redirectHref = redirectParsed.href;
+                        if (isSafeRedirectTarget(redirectHref, url)) {
+                            const sameOrigin = redirectParsed.origin === parsed.origin;
+                            this.fetchJsonHttp1<T>(redirectHref, sameOrigin ? authHeader : undefined, maxRedirects - 1).then(resolve);
+                            return;
+                        }
                     }
                 }
                 if (res.statusCode !== 200) {
@@ -4068,11 +4070,14 @@ export class NuGetService {
                 // Handle redirects (with SSRF protection)
                 if (res.statusCode === 301 || res.statusCode === 302 || res.statusCode === 307 || res.statusCode === 308) {
                     const redirectUrl = res.headers.location;
-                    if (redirectUrl && maxRedirects > 0 && isSafeRedirectTarget(redirectUrl, url)) {
+                    if (redirectUrl && maxRedirects > 0) {
                         const redirectParsed = new URL(redirectUrl, url);
-                        const sameOrigin = redirectParsed.origin === parsed.origin;
-                        this.fetchJsonWithCompression<T>(redirectParsed.href, sameOrigin ? authHeader : undefined, maxRedirects - 1).then(resolve);
-                        return;
+                        const redirectHref = redirectParsed.href;
+                        if (isSafeRedirectTarget(redirectHref, url)) {
+                            const sameOrigin = redirectParsed.origin === parsed.origin;
+                            this.fetchJsonWithCompression<T>(redirectHref, sameOrigin ? authHeader : undefined, maxRedirects - 1).then(resolve);
+                            return;
+                        }
                     }
                 }
                 if (res.statusCode !== 200) {

@@ -10,8 +10,8 @@ import * as tls from 'tls';
  */
 export function isSafeRedirectTarget(redirectUrl: string, originalUrl: string): boolean {
     try {
-        const parsed = new URL(redirectUrl);
         const originalParsed = new URL(originalUrl);
+        const parsed = new URL(redirectUrl, originalUrl);
 
         // Block HTTPS → HTTP downgrade
         if (originalParsed.protocol === 'https:' && parsed.protocol === 'http:') {
@@ -272,14 +272,15 @@ export class Http2Client {
                     // Handle redirects (with SSRF protection)
                     if (statusCode === 301 || statusCode === 302 || statusCode === 307 || statusCode === 308) {
                         const location = headers['location'] as string;
-                        if (location && isSafeRedirectTarget(location, url)) {
+                        if (location) {
+                            const resolvedLocation = new URL(location, url).href;
                             redirected = true;
                             req.close();
-                            this.fetchJsonWithDetails<T>(location, undefined, maxRedirects - 1).then(resolve);
-                        } else if (location) {
-                            redirected = true;
-                            req.close();
-                            resolve({ data: null, error: { type: 'network', message: 'Redirect to disallowed target blocked' } });
+                            if (isSafeRedirectTarget(resolvedLocation, url)) {
+                                this.fetchJsonWithDetails<T>(resolvedLocation, undefined, maxRedirects - 1).then(resolve);
+                            } else {
+                                resolve({ data: null, error: { type: 'network', message: 'Redirect to disallowed target blocked' } });
+                            }
                         }
                     }
                 });
@@ -407,14 +408,17 @@ export class Http2Client {
                 // Handle redirects (with SSRF protection)
                 if (res.statusCode === 301 || res.statusCode === 302 || res.statusCode === 307 || res.statusCode === 308) {
                     const redirectUrl = res.headers.location;
-                    if (redirectUrl && isSafeRedirectTarget(redirectUrl, url)) {
+                    if (redirectUrl) {
                         const redirectParsed = new URL(redirectUrl, url);
-                        const sameOrigin = redirectParsed.origin === parsed.origin;
-                        this.fetchJsonHttp1WithDetails<T>(redirectUrl, sameOrigin ? authHeader : undefined, maxRedirects - 1).then(resolve);
-                        return;
-                    } else if (redirectUrl) {
-                        resolve({ data: null, error: { type: 'network', message: 'Redirect to disallowed target blocked' } });
-                        return;
+                        const redirectHref = redirectParsed.href;
+                        if (isSafeRedirectTarget(redirectHref, url)) {
+                            const sameOrigin = redirectParsed.origin === parsed.origin;
+                            this.fetchJsonHttp1WithDetails<T>(redirectHref, sameOrigin ? authHeader : undefined, maxRedirects - 1).then(resolve);
+                            return;
+                        } else {
+                            resolve({ data: null, error: { type: 'network', message: 'Redirect to disallowed target blocked' } });
+                            return;
+                        }
                     }
                 }
 
@@ -520,14 +524,15 @@ export class Http2Client {
                     // Handle redirects (with SSRF protection)
                     if (statusCode === 301 || statusCode === 302 || statusCode === 307 || statusCode === 308) {
                         const location = headers['location'] as string;
-                        if (location && isSafeRedirectTarget(location, url)) {
+                        if (location) {
+                            const resolvedLocation = new URL(location, url).href;
                             redirected = true;
                             req.close();
-                            this.fetchJson<T>(location, undefined, maxRedirects - 1).then(resolve);
-                        } else if (location) {
-                            redirected = true;
-                            req.close();
-                            resolve(null);
+                            if (isSafeRedirectTarget(resolvedLocation, url)) {
+                                this.fetchJson<T>(resolvedLocation, undefined, maxRedirects - 1).then(resolve);
+                            } else {
+                                resolve(null);
+                            }
                         }
                     }
                 });
@@ -614,15 +619,17 @@ export class Http2Client {
                 // Handle redirects (with SSRF protection)
                 if (res.statusCode === 301 || res.statusCode === 302 || res.statusCode === 307 || res.statusCode === 308) {
                     const redirectUrl = res.headers.location;
-                    if (redirectUrl && isSafeRedirectTarget(redirectUrl, url)) {
-                        // Preserve auth header on same-origin redirects only
+                    if (redirectUrl) {
                         const redirectParsed = new URL(redirectUrl, url);
-                        const sameOrigin = redirectParsed.origin === parsed.origin;
-                        this.fetchJsonHttp1<T>(redirectUrl, sameOrigin ? authHeader : undefined, maxRedirects - 1).then(resolve);
-                        return;
-                    } else if (redirectUrl) {
-                        resolve(null);
-                        return;
+                        const redirectHref = redirectParsed.href;
+                        if (isSafeRedirectTarget(redirectHref, url)) {
+                            const sameOrigin = redirectParsed.origin === parsed.origin;
+                            this.fetchJsonHttp1<T>(redirectHref, sameOrigin ? authHeader : undefined, maxRedirects - 1).then(resolve);
+                            return;
+                        } else {
+                            resolve(null);
+                            return;
+                        }
                     }
                 }
 
