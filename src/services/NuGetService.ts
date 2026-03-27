@@ -8,10 +8,12 @@ import { promisify } from 'util';
 import * as vscode from 'vscode';
 import * as zlib from 'zlib';
 import { credentialService, CredentialService } from './CredentialService';
-import { http2Client } from './Http2Client';
+import { http2Client, isSafeRedirectTarget } from './Http2Client';
 import { NuGetConfigParser } from './NuGetConfigParser';
 import {
-    InstalledPackage, NuGetSource, PackageDependency, PackageDependencyGroup,
+    InstalledPackage, NuGetRegistrationEntry, NuGetRegistrationPage,
+    NuGetSearchEntry, NuGetSearchResponse, NuGetSource,
+    PackageDependency, PackageDependencyGroup,
     PackageMetadata, PackageSearchResult, PackageVulnerability, Project,
     QuickSearchSourceResult, TransitiveFrameworkSection, TransitivePackage,
     TransitivePackagesResult, VulnerabilitySeverity
@@ -24,7 +26,7 @@ import {
 import { CACHE_TTL, cacheKeys, workspaceCache } from './WorkspaceCache';
 
 // Re-export types for backward compatibility with existing consumers
-export type { InstalledPackage, NuGetSource, PackageDependency, PackageDependencyGroup, PackageMetadata, PackageSearchResult, Project, QuickSearchSourceResult, TransitiveFrameworkSection, TransitivePackage, TransitivePackagesResult, VersionSpec, VersionType } from './NuGetTypes';
+export type { InstalledPackage, NuGetRegistrationEntry, NuGetRegistrationPage, NuGetSearchEntry, NuGetSearchResponse, NuGetSource, PackageDependency, PackageDependencyGroup, PackageMetadata, PackageSearchResult, Project, QuickSearchSourceResult, TransitiveFrameworkSection, TransitivePackage, TransitivePackagesResult, VersionSpec, VersionType } from './NuGetTypes';
 
 const readFileAsync = promisify(fs.readFile);
 const writeFileAsync = promisify(fs.writeFile);
@@ -1335,8 +1337,8 @@ export class NuGetService {
                         if (endpoints.searchQueryService) {
                             const customAuthHeader = await this.getAuthHeader(source.url);
                             const customSearchUrl = `${endpoints.searchQueryService}?q=packageid:${encodeURIComponent(pkg.id)}&take=1&prerelease=true`;
-                            const customData = await this.fetchJson<any>(customSearchUrl, customAuthHeader);
-                            const customPackages = customData?.data || customData?.Data || (Array.isArray(customData) ? customData : []);
+                            const customData = await this.fetchJson<NuGetSearchResponse>(customSearchUrl, customAuthHeader);
+                            const customPackages: NuGetSearchEntry[] = customData?.data || customData?.Data || (Array.isArray(customData) ? customData : []);
 
                             if (customPackages.length > 0) {
                                 const result = customPackages[0];
@@ -1989,8 +1991,8 @@ export class NuGetService {
                                 if (endpoints.searchQueryService) {
                                     const customAuthHeader = await this.getAuthHeader(source.url);
                                     const customSearchUrl = `${endpoints.searchQueryService}?q=packageid:${encodeURIComponent(pkg.id)}&take=1&prerelease=true`;
-                                    const customData = await this.fetchJson<any>(customSearchUrl, customAuthHeader);
-                                    const customPackages = customData?.data || customData?.Data || (Array.isArray(customData) ? customData : []);
+                                    const customData = await this.fetchJson<NuGetSearchResponse>(customSearchUrl, customAuthHeader);
+                                    const customPackages: NuGetSearchEntry[] = customData?.data || customData?.Data || (Array.isArray(customData) ? customData : []);
 
                                     if (customPackages.length > 0) {
                                         const result = customPackages[0];
@@ -2163,18 +2165,17 @@ export class NuGetService {
                 headers['Authorization'] = authHeader;
             }
             const req = client.request(url, { method: 'HEAD', headers }, (res) => {
-                // Handle redirects - follow them (with loop protection)
+                // Handle redirects - follow them (with SSRF protection)
                 if (res.statusCode === 301 || res.statusCode === 302 || res.statusCode === 307 || res.statusCode === 308) {
                     const redirectUrl = res.headers.location;
                     if (redirectUrl) {
-                        // Only forward auth if redirect stays on the same origin (security)
-                        let sameOrigin = false;
-                        try {
-                            const redirectParsed = new URL(redirectUrl);
-                            sameOrigin = redirectParsed.origin === parsedUrl.origin;
-                        } catch { /* not same origin */ }
-                        this.checkUrlExistsHttp1(redirectUrl, sameOrigin ? authHeader : undefined, maxRedirects - 1).then(resolve);
-                        return;
+                        const redirectParsed = new URL(redirectUrl, url);
+                        const redirectHref = redirectParsed.href;
+                        if (isSafeRedirectTarget(redirectHref, url)) {
+                            const sameOrigin = redirectParsed.origin === parsedUrl.origin;
+                            this.checkUrlExistsHttp1(redirectHref, sameOrigin ? authHeader : undefined, maxRedirects - 1).then(resolve);
+                            return;
+                        }
                     }
                 }
                 resolve(res.statusCode === 200);
@@ -3186,17 +3187,17 @@ export class NuGetService {
             const flatContainerBaseUrl = endpoints.packageBaseAddress?.replace(/\/$/, '');
             const searchUrl = endpoints.searchQueryService;
 
-            let registrationData: any = null;
+            let registrationData: NuGetRegistrationEntry | null = null;
 
             // Step 1: Try direct version-specific registration endpoint (only if we have registration URL)
             if (registrationBaseUrl) {
                 const registrationUrl = `${registrationBaseUrl}/${packageId.toLowerCase()}/${version.toLowerCase()}.json`;
-                registrationData = await this.fetchJson<any>(registrationUrl, authHeader);
+                registrationData = await this.fetchJson<NuGetRegistrationEntry>(registrationUrl, authHeader);
 
                 // Step 1b: If direct fetch fails, try the package index and find the version
                 if (!registrationData) {
                     const packageIndexUrl = `${registrationBaseUrl}/${packageId.toLowerCase()}/index.json`;
-                    const packageIndex = await this.fetchJson<any>(packageIndexUrl, authHeader);
+                    const packageIndex = await this.fetchJson<NuGetRegistrationEntry>(packageIndexUrl, authHeader);
 
                     if (packageIndex?.items) {
                         // Nexus/ProGet style: items contains pages, each page has items with catalogEntry
@@ -3204,9 +3205,10 @@ export class NuGetService {
                             // Page might have inline items or need separate fetch
                             const pageItems = page.items || [];
                             for (const item of pageItems) {
-                                const itemVersion = item.catalogEntry?.version || item.version;
+                                const entry = typeof item.catalogEntry === 'object' ? item.catalogEntry : null;
+                                const itemVersion = entry?.version || item.version;
                                 if (itemVersion?.toLowerCase() === version.toLowerCase()) {
-                                    registrationData = item.catalogEntry || item;
+                                    registrationData = entry || item;
                                     break;
                                 }
                             }
@@ -3214,12 +3216,13 @@ export class NuGetService {
 
                             // If no inline items, may need to fetch the page
                             if (!pageItems.length && page['@id']) {
-                                const pageData = await this.fetchJson<any>(page['@id'], authHeader);
+                                const pageData = await this.fetchJson<NuGetRegistrationPage>(page['@id'], authHeader);
                                 if (pageData?.items) {
                                     for (const item of pageData.items) {
-                                        const itemVersion = item.catalogEntry?.version || item.version;
+                                        const entry = typeof item.catalogEntry === 'object' ? item.catalogEntry : null;
+                                        const itemVersion = entry?.version || item.version;
                                         if (itemVersion?.toLowerCase() === version.toLowerCase()) {
-                                            registrationData = item.catalogEntry || item;
+                                            registrationData = entry || item;
                                             break;
                                         }
                                     }
@@ -3249,10 +3252,10 @@ export class NuGetService {
             }
 
             // Step 2: Try to get catalog entry if available (nuget.org specific)
-            let catalogEntry = registrationData;
+            let catalogEntry: NuGetRegistrationEntry = registrationData;
             const catalogEntryUrl = registrationData.catalogEntry;
             if (catalogEntryUrl && typeof catalogEntryUrl === 'string') {
-                const fetchedEntry = await this.fetchJson<any>(catalogEntryUrl, authHeader);
+                const fetchedEntry = await this.fetchJson<NuGetRegistrationEntry>(catalogEntryUrl, authHeader);
                 if (fetchedEntry) {
                     catalogEntry = fetchedEntry;
                 }
@@ -3327,11 +3330,14 @@ export class NuGetService {
                 this.getPackageSize(packageId, metadataVersion, source)
             ]);
 
+            const rawAuthors = catalogEntry.authors || registrationData.authors || '';
+            const authorsStr = Array.isArray(rawAuthors) ? rawAuthors.join(', ') : rawAuthors;
+
             return {
                 id: catalogEntry.id || registrationData.id || packageId,
                 version: metadataVersion,
                 description: catalogEntry.description || registrationData.description || '',
-                authors: catalogEntry.authors || registrationData.authors || '',
+                authors: authorsStr,
                 license: catalogEntry.licenseExpression || registrationData.licenseExpression || undefined,
                 licenseUrl: catalogEntry.licenseUrl || registrationData.licenseUrl || undefined,
                 projectUrl: catalogEntry.projectUrl || registrationData.projectUrl || undefined,
@@ -3354,10 +3360,10 @@ export class NuGetService {
     private async getPackageMetadataFromSearch(packageId: string, version: string, searchUrl: string, authHeader?: string): Promise<PackageMetadata | null> {
         try {
             const url = `${searchUrl}?q=packageid:${encodeURIComponent(packageId)}&take=1&prerelease=true`;
-            const searchResult = await this.fetchJson<any>(url, authHeader);
+            const searchResult = await this.fetchJson<NuGetSearchResponse>(url, authHeader);
 
             // Handle different response formats (nuget.org uses 'data', some servers use 'Data' or root array)
-            const packages = searchResult?.data || searchResult?.Data || (Array.isArray(searchResult) ? searchResult : []);
+            const packages: NuGetSearchEntry[] = searchResult?.data || searchResult?.Data || (Array.isArray(searchResult) ? searchResult : []);
 
             if (packages.length > 0) {
                 const pkg = packages[0];
@@ -3369,7 +3375,7 @@ export class NuGetService {
                 } else if (pkg.Authors) {
                     authors = Array.isArray(pkg.Authors) ? pkg.Authors.join(', ') : pkg.Authors;
                 } else if (pkg.owner || pkg.Owner) {
-                    authors = pkg.owner || pkg.Owner;
+                    authors = pkg.owner ?? pkg.Owner ?? '';
                 }
 
                 // Handle different field names for description
@@ -3743,18 +3749,17 @@ export class NuGetService {
             };
 
             const req = client.request(options, (res) => {
-                // Handle redirects - preserve auth header for same-origin redirects
+                // Handle redirects - preserve auth header for same-origin redirects (with SSRF protection)
                 if (res.statusCode === 301 || res.statusCode === 302 || res.statusCode === 307 || res.statusCode === 308) {
                     const redirectUrl = res.headers.location;
                     if (redirectUrl) {
-                        try {
-                            const redirectParsed = new URL(redirectUrl, url);
+                        const redirectParsed = new URL(redirectUrl, url);
+                        const redirectHref = redirectParsed.href;
+                        if (isSafeRedirectTarget(redirectHref, url)) {
                             const sameOrigin = redirectParsed.origin === parsed.origin;
-                            this.fetchText(redirectParsed.href, sameOrigin ? authHeader : undefined, maxRedirects - 1).then(resolve);
-                        } catch {
-                            this.fetchText(redirectUrl, undefined, maxRedirects - 1).then(resolve);
+                            this.fetchText(redirectHref, sameOrigin ? authHeader : undefined, maxRedirects - 1).then(resolve);
+                            return;
                         }
-                        return;
                     }
                 }
                 if (res.statusCode !== 200) {
@@ -3826,15 +3831,17 @@ export class NuGetService {
             };
 
             const req = client.request(options, (res) => {
-                // Handle redirects
+                // Handle redirects (with SSRF protection)
                 if (res.statusCode === 301 || res.statusCode === 302 || res.statusCode === 307 || res.statusCode === 308) {
                     const redirectUrl = res.headers.location;
                     if (redirectUrl) {
-                        // Preserve auth header on same-origin redirects only
                         const redirectParsed = new URL(redirectUrl, url);
-                        const sameOrigin = redirectParsed.origin === parsed.origin;
-                        this.fetchJsonWithDetails<T>(redirectUrl, sameOrigin ? authHeader : undefined, timeoutMs, maxRedirects - 1).then(resolve);
-                        return;
+                        const redirectHref = redirectParsed.href;
+                        if (isSafeRedirectTarget(redirectHref, url)) {
+                            const sameOrigin = redirectParsed.origin === parsed.origin;
+                            this.fetchJsonWithDetails<T>(redirectHref, sameOrigin ? authHeader : undefined, timeoutMs, maxRedirects - 1).then(resolve);
+                            return;
+                        }
                     }
                 }
 
@@ -3982,15 +3989,17 @@ export class NuGetService {
             };
 
             const req = client.request(options, (res) => {
-                // Handle redirects
+                // Handle redirects (with SSRF protection)
                 if (res.statusCode === 301 || res.statusCode === 302 || res.statusCode === 307 || res.statusCode === 308) {
                     const redirectUrl = res.headers.location;
                     if (redirectUrl && maxRedirects > 0) {
-                        // Preserve auth header on same-origin redirects only
                         const redirectParsed = new URL(redirectUrl, url);
-                        const sameOrigin = redirectParsed.origin === parsed.origin;
-                        this.fetchJsonHttp1<T>(redirectUrl, sameOrigin ? authHeader : undefined, maxRedirects - 1).then(resolve);
-                        return;
+                        const redirectHref = redirectParsed.href;
+                        if (isSafeRedirectTarget(redirectHref, url)) {
+                            const sameOrigin = redirectParsed.origin === parsed.origin;
+                            this.fetchJsonHttp1<T>(redirectHref, sameOrigin ? authHeader : undefined, maxRedirects - 1).then(resolve);
+                            return;
+                        }
                     }
                 }
                 if (res.statusCode !== 200) {
@@ -4058,14 +4067,17 @@ export class NuGetService {
             };
 
             const req = client.request(options, (res) => {
-                // Handle redirects
+                // Handle redirects (with SSRF protection)
                 if (res.statusCode === 301 || res.statusCode === 302 || res.statusCode === 307 || res.statusCode === 308) {
                     const redirectUrl = res.headers.location;
                     if (redirectUrl && maxRedirects > 0) {
                         const redirectParsed = new URL(redirectUrl, url);
-                        const sameOrigin = redirectParsed.origin === parsed.origin;
-                        this.fetchJsonWithCompression<T>(redirectParsed.href, sameOrigin ? authHeader : undefined, maxRedirects - 1).then(resolve);
-                        return;
+                        const redirectHref = redirectParsed.href;
+                        if (isSafeRedirectTarget(redirectHref, url)) {
+                            const sameOrigin = redirectParsed.origin === parsed.origin;
+                            this.fetchJsonWithCompression<T>(redirectHref, sameOrigin ? authHeader : undefined, maxRedirects - 1).then(resolve);
+                            return;
+                        }
                     }
                 }
                 if (res.statusCode !== 200) {
@@ -4274,11 +4286,16 @@ export class NuGetService {
                 // First, find and parse the nuspec to get the readme path
                 let readmePath: string | null = null;
                 for (const entry of zipEntries) {
-                    if (entry.entryName.toLowerCase().endsWith('.nuspec')) {
+                    if (entry.entryName.toLowerCase().endsWith('.nuspec') &&
+                        !entry.entryName.includes('..') && !entry.entryName.startsWith('/')) {
                         const nuspecContent = entry.getData().toString('utf8');
                         const readmeMatch = nuspecContent.match(/<readme>([^<]+)<\/readme>/i);
                         if (readmeMatch) {
-                            readmePath = readmeMatch[1].trim();
+                            const candidate = readmeMatch[1].trim();
+                            // Reject path traversal in nuspec-provided readme path
+                            if (!candidate.includes('..') && !candidate.startsWith('/') && !candidate.includes('\\')) {
+                                readmePath = candidate;
+                            }
                         }
                         break;
                     }
@@ -4297,6 +4314,10 @@ export class NuGetService {
 
                 for (const entry of zipEntries) {
                     const entryName = entry.entryName;
+                    // Reject entries with path traversal patterns
+                    if (entryName.includes('..') || entryName.startsWith('/') || entryName.includes('\\')) {
+                        continue;
+                    }
                     for (const possiblePath of possibleReadmePaths) {
                         if (entryName.toLowerCase() === possiblePath.toLowerCase() ||
                             entryName.toLowerCase().endsWith('/' + possiblePath.toLowerCase())) {
@@ -4368,10 +4389,10 @@ export class NuGetService {
             };
 
             const req = client.request(options, (res) => {
-                // Handle redirects
+                // Handle redirects (with SSRF protection)
                 if (res.statusCode === 301 || res.statusCode === 302 || res.statusCode === 307 || res.statusCode === 308) {
                     const redirectUrl = res.headers.location;
-                    if (redirectUrl) {
+                    if (redirectUrl && isSafeRedirectTarget(redirectUrl, url)) {
                         file.close();
                         destroyed = true;
                         this.downloadFile(redirectUrl, destPath, maxRedirects - 1).then(resolve);
@@ -4512,7 +4533,8 @@ export class NuGetService {
                         if (!dependedOnBy.has(depIdLower)) {
                             dependedOnBy.set(depIdLower, new Set());
                         }
-                        dependedOnBy.get(depIdLower)!.add(packageId);
+                        const deps = dependedOnBy.get(depIdLower);
+                        if (deps) { deps.add(packageId); }
                     }
                 }
             }

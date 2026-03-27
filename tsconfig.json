@@ -10,11 +10,17 @@
         "sourceMap": true,
         "rootDir": "src",
         "strict": true,
+        "noImplicitReturns": true,
+        "noFallthroughCasesInSwitch": true,
+        "noImplicitOverride": true,
         "esModuleInterop": true,
         "skipLibCheck": true,
         "forceConsistentCasingInFileNames": true,
         "resolveJsonModule": true,
-        "jsx": "react-jsx"
+        "jsx": "react-jsx",
+        "types": [
+            "node"
+        ]
     },
     "exclude": [
         "node_modules",

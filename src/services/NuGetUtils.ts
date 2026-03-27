@@ -458,7 +458,8 @@ export function topologicalSortByDependency<T>(
     }
 
     while (queue.length > 0) {
-        const key = queue.shift()!;
+        const key = queue.shift();
+        if (key === undefined) { break; }
         const original = items.find(item => getKey(item) === key);
         if (original) {
             sorted.push(original);

@@ -8,6 +8,7 @@ import {
     type QuickSearchSourceResult,
     type TransitivePackage,
     type VsCodeApi,
+    type WebviewMessage,
     LRUMap,
     getPackageId,
 } from '../types';
@@ -87,7 +88,7 @@ export interface BrowseTabProps {
 
 export interface BrowseTabHandle {
     /** Handle a message from the extension. Returns true if the message was consumed. */
-    handleMessage: (message: any) => boolean;
+    handleMessage: (message: WebviewMessage) => boolean;
     /** Focus the search input (for keyboard navigation from tab button) */
     focusSearchInput: () => void;
     /** Navigate to a specific package: set search query, trigger search, and return */
@@ -176,7 +177,7 @@ const BrowseTab = forwardRef<BrowseTabHandle, BrowseTabProps>(function BrowseTab
 
     // --- Imperative handle ---
     useImperativeHandle(ref, () => ({
-        handleMessage(message: any): boolean {
+        handleMessage(message: WebviewMessage): boolean {
             switch (message.type) {
                 case 'searchResults':
                     if (!message.query || message.query.trim().toLowerCase() === searchQuery.trim().toLowerCase()) {
@@ -951,7 +952,7 @@ const BrowseTab = forwardRef<BrowseTabHandle, BrowseTabProps>(function BrowseTab
                                     });
                                 },
                                 {
-                                    onAction: () => onInstall(getPackageId(selectedPackage!), selectedVersion || (selectedPackage as PackageSearchResult).version),
+                                    onAction: () => { if (selectedPackage) { onInstall(getPackageId(selectedPackage), selectedVersion || (selectedPackage as PackageSearchResult).version); } },
                                     onLeftArrow: () => detailsTab === 'readme' && onDetailsTabChange('details'),
                                     onRightArrow: () => detailsTab === 'details' && onDetailsTabChange('readme'),
                                     onExitTop: () => {

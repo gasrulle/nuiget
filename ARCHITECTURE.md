@@ -88,7 +88,7 @@ src/
 
 ### Module Split: NuGetService
 `NuGetService.ts` delegates shared types and standalone utilities to separate modules:
-- **`NuGetTypes.ts`** — All exported types/interfaces (`VersionSpec`, `Project`, `InstalledPackage`, `PackageMetadata`, `NuGetSource`, etc.). `NuGetService.ts` re-exports these for backward compatibility.
+- **`NuGetTypes.ts`** — All exported types/interfaces (`VersionSpec`, `Project`, `InstalledPackage`, `PackageMetadata`, `NuGetSource`, `NuGetSearchResponse`, `NuGetSearchEntry`, `NuGetRegistrationEntry`, `NuGetRegistrationPage`, etc.). `NuGetService.ts` re-exports these for backward compatibility. NuGet V3 API response types use vendor-polymorphic field names (e.g., `id`/`Id`, `authors`/`Authors`) to handle differences between nuget.org, Nexus, ProGet, and other server implementations.
 - **`NuGetUtils.ts`** — Stateless utility functions (`LRUMap`, `batchedPromiseAll`, `execWithTimeout`, `fileExists`, `COMMAND_TIMEOUT`, input validators, `parseVersionSpec`, `isNewerVersion`, `topologicalSortByDependency`). No class dependency.
 - **`NuGetOperations.ts`** — Shared package operation functions used by both `NuGetPanel` and `NuGetSidebarPanel`. Exports an `OperationContext` interface (`{ nugetService, postMessage, notifyOtherPanel }`) and pure async functions: `executeSingleOperation` (install/update/remove), `executeBulkInstall`, `executeBulkUpdatePackages`, `executeBulkRemovePackages`, `executeBulkUpdateAllProjects`, `executeBulkRemoveAllProjects`. Each panel builds an `OperationContext` via `_opCtx()` and delegates from thin message-handler dispatchers.
 - `NuGetService.ts` retains internal types (`NuGetServiceIndex`, `ServiceEndpoints`) and all class methods. `FetchResult<T>` is defined in `Http2Client.ts`.
@@ -1345,6 +1345,20 @@ import { renderMarkdownToHtml } from './markdownSetup';
     __html: renderMarkdownToHtml(readme)
 }} />
 ```
+
+DOMPurify is configured with explicit restrictions: `ALLOWED_URI_REGEXP` (https/http/mailto only), `FORBID_TAGS` (style, form, input, textarea, select, button), `FORBID_ATTR` (style).
+
+### SSRF Prevention
+All HTTP redirect handlers across Http2Client.ts and NuGetService.ts use `isSafeRedirectTarget()` (exported from Http2Client.ts) to block:
+- Redirects to private/loopback IPs (10.x, 172.16-31.x, 192.168.x, 169.254.x, localhost, ::1)
+- Link-local IPv6 (fe80::/10, fc00::/7)
+- HTTPS→HTTP protocol downgrades
+- Non-HTTP/HTTPS protocols
+
+Auth headers are preserved on same-origin redirects only. Max redirect depth is 5.
+
+### ZIP Path Traversal Prevention
+nupkg README extraction validates all zip entry paths before reading, rejecting entries containing `..`, starting with `/`, or containing `\`. Nuspec-provided readme paths are also validated against the same traversal patterns.
 
 ## Content Security Policy
 

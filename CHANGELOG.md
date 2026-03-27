@@ -5,12 +5,44 @@ All notable changes to the nUIget extension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.15.0] - 2026-03-27
 
 ### Added
 
 - **GitHub Pull Request Template** — Structured PR template optimized for autonomous coding agent review, with PR type selection, structured change manifest table, strict testing/verification and security review checklists, manual testing steps, and collapsible agent-routing hints with component-to-file mapping
 - **GitHub Issue Templates** — Five structured YAML issue form templates (bug report, feature request, performance, UI/UX, documentation) optimized for autonomous agent resolution, with component-to-file mapping hints, required environment fields, severity/scope dropdowns, and blank issues blocked
+- **Bundle analysis flag** — `node esbuild.mjs --analyze` prints per-bundle size breakdowns via esbuild metafile
+- **EditorConfig** — `.editorconfig` for consistent cross-editor formatting (indent, line endings, trailing whitespace)
+- **CSS module type declaration** — `src/global.d.ts` declares `*.css` modules for TypeScript 6.0 `noUncheckedSideEffectImports` compatibility
+
+### Changed
+
+- **TypeScript 6.0**
+- **ESLint ecmaVersion 2020 → 2022**
+- **All dependencies updated to latest**
+- **Removed unused `@exodus/bytes` devDependency**
+- **Resolved `fast-xml-parser` moderate vulnerability (GHSA-jp2q-39xq-3w4g)**
+- **Fixed `no-useless-assignment` lint error in `App.tsx` keyboard navigation**
+
+### Security
+
+- **SSRF redirect validation** — All HTTP redirect handlers (Http2Client + NuGetService) now validate redirect targets via `isSafeRedirectTarget()`, blocking redirects to private/loopback IPs (10.x, 172.16-31.x, 192.168.x, 169.254.x, localhost, ::1) and HTTPS→HTTP downgrades
+- **ZIP-SLIP path traversal prevention** — nupkg README extraction now rejects zip entries with `..`, leading `/`, or backslash path traversal patterns; nuspec-provided readme paths are also validated
+- **DOMPurify hardening** — Explicit `ALLOWED_URI_REGEXP` (https/http/mailto only), `FORBID_TAGS` (style, form, input, textarea, select, button), and `FORBID_ATTR` (style) restrictions added to markdown sanitization
+
+### Changed
+
+- **TypeScript strictness** — Added `noImplicitReturns`, `noFallthroughCasesInSwitch`, `noImplicitOverride` to tsconfig.json
+- **ESLint strict enforcement** — Promoted all `warn` rules to `error` (`curly`, `eqeqeq`, `no-throw-literal`, `semi`, `prefer-const`, `@typescript-eslint/no-unused-vars`, `react-hooks/exhaustive-deps`); added `no-explicit-any` (warn), `no-non-null-assertion` (warn), `no-console` (warn, allows warn/error)
+- **Eliminated all `any` types** — Replaced `fetchJson<any>` with typed NuGet API response interfaces (`NuGetSearchResponse`, `NuGetRegistrationEntry`, `NuGetRegistrationPage`); replaced `catch (error: any)` with `unknown`; replaced `handleMessage(message: any)` with `WebviewMessage` type
+- **Resolved npm audit vulnerabilities** — Fixed `brace-expansion` and `picomatch` transitive vulnerabilities
+
+## [1.15.1] - 2026-03-27
+
+### Fixed
+
+- **SSRF redirect handling for relative URLs** — `isSafeRedirectTarget()` now resolves relative `Location` headers against the original URL; all 11 redirect sites across Http2Client.ts and NuGetService.ts pass the resolved absolute URL to recursive calls
+- **Update operation version guard** — `executeSingleOperation()` now throws early if version is missing for update operations instead of silently passing an empty string
 
 ## [1.14.1] - 2026-03-19
 

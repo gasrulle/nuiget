@@ -2,6 +2,7 @@ import * as esbuild from 'esbuild';
 
 const isProduction = process.argv.includes('--production');
 const isWatch = process.argv.includes('--watch');
+const isAnalyze = process.argv.includes('--analyze');
 
 /** @type {import('esbuild').Plugin} */
 const esbuildProblemMatcherPlugin = {
@@ -96,11 +97,21 @@ async function build() {
             console.log('[watch] Watching for changes...');
         } else {
             // One-shot build
-            await Promise.all([
-                esbuild.build(extensionConfig),
-                esbuild.build(webviewConfig),
-                esbuild.build(sidebarConfig),
+            const metafile = isAnalyze;
+            const [extResult, webResult, sidebarResult] = await Promise.all([
+                esbuild.build({ ...extensionConfig, metafile }),
+                esbuild.build({ ...webviewConfig, metafile }),
+                esbuild.build({ ...sidebarConfig, metafile }),
             ]);
+
+            if (isAnalyze) {
+                console.log('\n=== Extension Bundle ===');
+                console.log(await esbuild.analyzeMetafile(extResult.metafile));
+                console.log('\n=== Webview Bundle ===');
+                console.log(await esbuild.analyzeMetafile(webResult.metafile));
+                console.log('\n=== Sidebar Bundle ===');
+                console.log(await esbuild.analyzeMetafile(sidebarResult.metafile));
+            }
 
             console.log(isProduction ? '[production] Build complete' : '[development] Build complete');
         }

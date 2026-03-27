@@ -322,11 +322,14 @@ const UpdatesTab = forwardRef<UpdatesTabHandle, UpdatesTabProps>((props, ref) =>
                             packages: []
                         });
                     }
-                    projectUpdatesMap.get(projectPath)!.packages.push({
-                        id: update.id,
-                        version: update.latestVersion,
-                        sourceUrl: update.sourceUrl
-                    });
+                    const entry = projectUpdatesMap.get(projectPath);
+                    if (entry) {
+                        entry.packages.push({
+                            id: update.id,
+                            version: update.latestVersion,
+                            sourceUrl: update.sourceUrl
+                        });
+                    }
                 }
             }
 

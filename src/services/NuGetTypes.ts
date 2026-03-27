@@ -146,3 +146,92 @@ export interface QuickSearchSourceResult {
     sourceUrl: string;
     packageIds: string[];
 }
+
+// ─── NuGet V3 API response types (vendor-polymorphic) ────────────────────────
+
+/**
+ * A single package entry in a NuGet search response.
+ * Field names vary across server implementations (nuget.org, Nexus, ProGet, etc.).
+ */
+export interface NuGetSearchEntry {
+    id?: string;
+    Id?: string;
+    version?: string;
+    Version?: string;
+    description?: string;
+    Description?: string;
+    summary?: string;
+    Summary?: string;
+    authors?: string | string[];
+    Authors?: string | string[];
+    owner?: string;
+    Owner?: string;
+    totalDownloads?: number;
+    TotalDownloads?: number;
+    versions?: Array<{ version: string; downloads?: number }>;
+    Versions?: Array<{ version: string; downloads?: number }>;
+    iconUrl?: string;
+    verified?: boolean;
+    packageTypes?: Array<{ name: string }>;
+    licenseExpression?: string;
+    LicenseExpression?: string;
+    licenseUrl?: string;
+    LicenseUrl?: string;
+    projectUrl?: string;
+    ProjectUrl?: string;
+}
+
+/**
+ * NuGet V3 search API response (e.g., SearchQueryService).
+ * nuget.org uses `data`, some servers use `Data` or return a root array.
+ */
+export interface NuGetSearchResponse {
+    data?: NuGetSearchEntry[];
+    Data?: NuGetSearchEntry[];
+    totalHits?: number;
+    TotalHits?: number;
+}
+
+/**
+ * A catalog entry or registration leaf in the NuGet V3 registration API.
+ * May appear inline or behind a `catalogEntry` URL.
+ */
+export interface NuGetRegistrationEntry {
+    '@id'?: string;
+    id?: string;
+    version?: string;
+    description?: string;
+    authors?: string | string[];
+    summary?: string;
+    title?: string;
+    catalogEntry?: string | NuGetRegistrationEntry;
+    dependencyGroups?: Array<{
+        targetFramework?: string;
+        '@id'?: string;
+        dependencies?: Array<{
+            id?: string;
+            range?: string;
+            version?: string;
+            '@id'?: string;
+        }>;
+    }>;
+    listed?: boolean;
+    published?: string;
+    packageContent?: string;
+    licenseExpression?: string;
+    licenseUrl?: string;
+    projectUrl?: string;
+    iconUrl?: string;
+    items?: NuGetRegistrationPage[];
+}
+
+/**
+ * A page in a NuGet V3 registration index. Pages may inline items
+ * or require a separate fetch via `@id`.
+ */
+export interface NuGetRegistrationPage {
+    '@id'?: string;
+    items?: NuGetRegistrationEntry[];
+    lower?: string;
+    upper?: string;
+}
