@@ -166,5 +166,9 @@ export function upgradeHttpToHttps(markdown: string): string {
 export function renderMarkdownToHtml(markdownContent: string): string {
     const upgraded = upgradeHttpToHttps(markdownContent);
     const rawHtml = marked.parse(upgraded) as string;
-    return DOMPurify.sanitize(rawHtml);
+    return DOMPurify.sanitize(rawHtml, {
+        ALLOWED_URI_REGEXP: /^(?:(?:https?|mailto):|[^a-z]|[a-z+.-]+(?:[^a-z+.\-:]|$))/i,
+        FORBID_TAGS: ['style', 'form', 'input', 'textarea', 'select', 'button'],
+        FORBID_ATTR: ['style']
+    });
 }

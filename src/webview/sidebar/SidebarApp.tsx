@@ -15,7 +15,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { MemoizedDraggableSash } from '../app/components/DraggableSash';
 import { AllProjectsIcon, ArrowUpIcon, ClearAllIcon, FilterIcon, SingleProjectIcon } from '../app/icons';
-import type { InstalledPackage, NuGetSource, PackageSearchResult, PackageUpdateMinimal, Project, ProjectInstalled, ProjectUpdates } from '../app/types';
+import type { InstalledPackage, NuGetSource, PackageSearchResult, PackageUpdateMinimal, Project, ProjectInstalled, ProjectUpdates, WebviewMessage } from '../app/types';
 import { PackageRow } from './components/PackageRow';
 import { SectionHeader } from './components/SectionHeader';
 import './SidebarApp.css';
@@ -171,7 +171,7 @@ export const SidebarApp: React.FC = () => {
     // ─── Message Handler ─────────────────────────────────────────────────────
 
 
-    const handleMessage = useCallback((message: any) => {
+    const handleMessage = useCallback((message: WebviewMessage) => {
         switch (message.type) {
             case 'focusSearch':
                 // Focus search input when sidebar becomes visible (like native sidebar panels)

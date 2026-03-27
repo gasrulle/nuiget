@@ -49,7 +49,7 @@ export async function executeSingleOperation(
         if (operationType === 'install') {
             success = await ctx.nugetService.installPackage(projectPath, packageId, version, { sourceUrl });
         } else if (operationType === 'update') {
-            success = await ctx.nugetService.updatePackage(projectPath, packageId, version!, { sourceUrl });
+            success = await ctx.nugetService.updatePackage(projectPath, packageId, version ?? '', { sourceUrl });
         } else {
             success = await ctx.nugetService.removePackage(projectPath, packageId);
         }

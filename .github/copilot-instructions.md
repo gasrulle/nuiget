@@ -63,7 +63,10 @@ npm run package:vsix # Outputs nuiget.vsix
 ## Known Issues
 | Issue | Status |
 |-------|--------|
-| No known `npm audit` vulnerabilities | All 5 previously tracked vulnerabilities (ajv, minimatch, underscore, dompurify, fast-xml-parser) resolved via `npm audit fix`. **Re-run `npm audit` periodically to check for regressions.** |
+| No known `npm audit` vulnerabilities | All previously tracked vulnerabilities resolved. **Re-run `npm audit` periodically to check for regressions.** |
+| TypeScript 6.0 + typescript-eslint peer dep warning | `typescript-eslint@8.x` has peer dep `<6.0.0`. Functional — linting works. `.npmrc` has `legacy-peer-deps=true`. Remove `.npmrc` when typescript-eslint adds TS 6 support. |
+| ESLint 10 not yet adoptable | `eslint-plugin-react-hooks@7.x` requires eslint `^9.0.0`. Blocked until react-hooks plugin adds `^10.0.0` peer. |
+| `no-explicit-any` is warn, not error | `WebviewMessage` type uses `Record<string, any>` because webview messages are inherently untyped (50+ message types). Upgrading to `error` requires a full discriminated union refactor. |
 
 ## VS Code Extension
 | Issue | Solution |
@@ -175,7 +178,9 @@ npm run package:vsix # Outputs nuiget.vsix
 | Array mutation bugs | `[...array].sort()` / `[...array].reverse()` not `array.sort()` / `array.reverse()` |
 | Property name typos break VSIX | Run `npm run package:vsix` — catches errors `watch` misses |
 | Module extraction locations | Validators (`isValidPackageId`, etc.) are in `NuGetUtils.ts`. Types (`NuGetSource`, `Project`, etc.) are in `NuGetTypes.ts`. `NuGetConfigParser` re-exports `NuGetSource` from `NuGetTypes`. Markdown rendering is in `markdownSetup.ts`. Shared operation functions (`executeSingleOperation`, `executeBulkInstall`, etc.) are in `NuGetOperations.ts` with `OperationContext` interface. `topologicalSortByDependency` is in `NuGetUtils.ts`. |
-| `fetchJsonHttp1` redirect safety | Has `maxRedirects = 5` default — never remove. Without it, a redirect loop causes unbounded recursion → stack overflow. |
+| `fetchJsonHttp1` redirect safety | Has `maxRedirects = 5` default — never remove. Without it, a redirect loop causes unbounded recursion → stack overflow. All redirect handlers use `isSafeRedirectTarget()` (exported from Http2Client.ts) to block SSRF (private IPs, HTTPS→HTTP downgrade). Never follow redirects without this check. |
+| `isSafeRedirectTarget` SSRF guard | Blocks redirects to loopback (localhost, 127.0.0.1, ::1), private IPs (10.x, 172.16-31.x, 192.168.x, 169.254.x), link-local IPv6 (fe80::/10, fc00::/7), and HTTPS→HTTP downgrades. Applied to ALL 11 redirect sites across Http2Client.ts and NuGetService.ts. Don't add new redirect handling without calling this function. |
+| ZIP entry path validation | nupkg README extraction rejects entries with `..`, leading `/`, or `\\`. Nuspec readme paths are also validated. Don't extract zip entries without path traversal checks. |
 | `fetchJsonHttp1` truncated response | `resolved` flag guards `res.on('end')` after `req.destroy()` for MAX_RESPONSE_SIZE. Don't remove — `end` fires after destroy and `JSON.parse` throws on truncated data. Same pattern exists in `fetchJsonHttp1WithDetails`. |
 | HTTP/2 session pool stale cleanup | Before LRU-evicting, loop `sessionOrder` and remove entries whose session is `closed` or `destroyed`. Without this, stale map entries from error/timeout handlers count toward `MAX_SESSIONS` but are unusable, preventing new connections. |
 | Concurrent mutating operations | `_operationInProgress` boolean in both `NuGetPanel` and `NuGetSidebarProvider`. Panel guards 8 cases: `installPackage`, `updatePackage`, `removePackage`, `bulkInstall`, `bulkUpdatePackages`, `bulkUpdateAllProjects`, `confirmBulkRemove`, `confirmBulkRemoveAllProjects`. Sidebar guards 5 cases: `installPackage`, `updatePackage`, `removePackage`, `bulkUpdatePackages`, `bulkUpdateAllProjects`. Each uses `if (this._operationInProgress) { break; }` + try/finally. |

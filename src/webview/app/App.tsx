@@ -1139,7 +1139,7 @@ export const App: React.FC = () => {
                 return;
             }
 
-            let newIndex = currentIndex;
+            let newIndex: number;
 
             if (e.key === 'ArrowDown') {
                 e.preventDefault();

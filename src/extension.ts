@@ -9,14 +9,13 @@ let outputChannel: vscode.LogOutputChannel;
 let nugetService: NuGetService;
 
 export function activate(context: vscode.ExtensionContext) {
-    console.log('nUIget extension is now active');
-
     // Initialize workspace cache for persistent caching
     workspaceCache.initialize(context);
 
     // Create log output channel for package operations (supports color-coded log levels)
     outputChannel = vscode.window.createOutputChannel('nUIget', { log: true });
     context.subscriptions.push(outputChannel);
+    outputChannel.info('nUIget extension is now active');
 
     // Create shared NuGetService singleton — reused by both main panel and sidebar
     nugetService = new NuGetService(outputChannel);

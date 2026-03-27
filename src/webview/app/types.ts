@@ -186,6 +186,16 @@ export interface AppState {
 
 // ─── VS Code API ─────────────────────────────────────────────────────────────
 
+/**
+ * Incoming message from the extension host to the webview.
+ * Messages are dispatched via postMessage and are inherently untyped — field
+ * names and shapes vary by `type`. A full discriminated union would be ideal
+ * but requires enumerating 50+ message shapes; the index signature provides
+ * a practical middle ground that eliminates bare `any` on public interfaces.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type WebviewMessage = { type: string } & Record<string, any>;
+
 export interface VsCodeApi {
     postMessage: (msg: unknown) => void;
     getState: () => AppState | undefined;

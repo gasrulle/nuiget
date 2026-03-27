@@ -1,7 +1,60 @@
 import * as http from 'http';
 import * as http2 from 'http2';
 import * as https from 'https';
+import * as net from 'net';
 import * as tls from 'tls';
+
+/**
+ * Check if a redirect target is safe to follow.
+ * Blocks redirects to private/loopback IPs (SSRF) and HTTPS→HTTP downgrades.
+ */
+export function isSafeRedirectTarget(redirectUrl: string, originalUrl: string): boolean {
+    try {
+        const parsed = new URL(redirectUrl);
+        const originalParsed = new URL(originalUrl);
+
+        // Block HTTPS → HTTP downgrade
+        if (originalParsed.protocol === 'https:' && parsed.protocol === 'http:') {
+            return false;
+        }
+
+        // Only allow http/https protocols
+        if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+            return false;
+        }
+
+        const hostname = parsed.hostname;
+
+        // Block loopback
+        if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1' || hostname === '[::1]') {
+            return false;
+        }
+
+        // Block private/reserved IPv4 ranges
+        if (net.isIPv4(hostname)) {
+            const parts = hostname.split('.').map(Number);
+            if (parts[0] === 10) { return false; }                                 // 10.0.0.0/8
+            if (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) { return false; } // 172.16.0.0/12
+            if (parts[0] === 192 && parts[1] === 168) { return false; }             // 192.168.0.0/16
+            if (parts[0] === 169 && parts[1] === 254) { return false; }             // 169.254.0.0/16 (link-local / cloud metadata)
+            if (parts[0] === 0) { return false; }                                  // 0.0.0.0/8
+        }
+
+        // Block private IPv6 (fc00::/7, fe80::/10, ::1)
+        if (net.isIPv6(hostname) || hostname.startsWith('[')) {
+            const bare = hostname.replace(/^\[|\]$/g, '').toLowerCase();
+            if (bare.startsWith('fc') || bare.startsWith('fd') || bare.startsWith('fe8') ||
+                bare.startsWith('fe9') || bare.startsWith('fea') || bare.startsWith('feb') ||
+                bare === '::1' || bare === '::') {
+                return false;
+            }
+        }
+
+        return true;
+    } catch {
+        return false;
+    }
+}
 
 /**
  * Result type for HTTP fetch operations with error information.
@@ -216,13 +269,17 @@ export class Http2Client {
                 req.on('response', (headers) => {
                     statusCode = headers[':status'] || 0;
 
-                    // Handle redirects
+                    // Handle redirects (with SSRF protection)
                     if (statusCode === 301 || statusCode === 302 || statusCode === 307 || statusCode === 308) {
                         const location = headers['location'] as string;
-                        if (location) {
+                        if (location && isSafeRedirectTarget(location, url)) {
                             redirected = true;
                             req.close();
                             this.fetchJsonWithDetails<T>(location, undefined, maxRedirects - 1).then(resolve);
+                        } else if (location) {
+                            redirected = true;
+                            req.close();
+                            resolve({ data: null, error: { type: 'network', message: 'Redirect to disallowed target blocked' } });
                         }
                     }
                 });
@@ -347,13 +404,16 @@ export class Http2Client {
             };
 
             const req = client.request(options, (res) => {
-                // Handle redirects
+                // Handle redirects (with SSRF protection)
                 if (res.statusCode === 301 || res.statusCode === 302 || res.statusCode === 307 || res.statusCode === 308) {
                     const redirectUrl = res.headers.location;
-                    if (redirectUrl) {
+                    if (redirectUrl && isSafeRedirectTarget(redirectUrl, url)) {
                         const redirectParsed = new URL(redirectUrl, url);
                         const sameOrigin = redirectParsed.origin === parsed.origin;
                         this.fetchJsonHttp1WithDetails<T>(redirectUrl, sameOrigin ? authHeader : undefined, maxRedirects - 1).then(resolve);
+                        return;
+                    } else if (redirectUrl) {
+                        resolve({ data: null, error: { type: 'network', message: 'Redirect to disallowed target blocked' } });
                         return;
                     }
                 }
@@ -457,13 +517,17 @@ export class Http2Client {
                 req.on('response', (headers) => {
                     statusCode = headers[':status'] || 0;
 
-                    // Handle redirects
+                    // Handle redirects (with SSRF protection)
                     if (statusCode === 301 || statusCode === 302 || statusCode === 307 || statusCode === 308) {
                         const location = headers['location'] as string;
-                        if (location) {
+                        if (location && isSafeRedirectTarget(location, url)) {
                             redirected = true;
                             req.close();
                             this.fetchJson<T>(location, undefined, maxRedirects - 1).then(resolve);
+                        } else if (location) {
+                            redirected = true;
+                            req.close();
+                            resolve(null);
                         }
                     }
                 });
@@ -547,14 +611,17 @@ export class Http2Client {
             };
 
             const req = client.request(options, (res) => {
-                // Handle redirects
+                // Handle redirects (with SSRF protection)
                 if (res.statusCode === 301 || res.statusCode === 302 || res.statusCode === 307 || res.statusCode === 308) {
                     const redirectUrl = res.headers.location;
-                    if (redirectUrl) {
+                    if (redirectUrl && isSafeRedirectTarget(redirectUrl, url)) {
                         // Preserve auth header on same-origin redirects only
                         const redirectParsed = new URL(redirectUrl, url);
                         const sameOrigin = redirectParsed.origin === parsed.origin;
                         this.fetchJsonHttp1<T>(redirectUrl, sameOrigin ? authHeader : undefined, maxRedirects - 1).then(resolve);
+                        return;
+                    } else if (redirectUrl) {
+                        resolve(null);
                         return;
                     }
                 }

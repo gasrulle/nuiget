@@ -31,7 +31,8 @@ import type {
     TransitiveFrameworkSection,
     TransitivePackage,
     VsCodeApi,
-    VulnerabilitySeverity
+    VulnerabilitySeverity,
+    WebviewMessage
 } from '../types';
 import { getPackageId } from '../types';
 import { MemoizedPackageDetailsPanel } from './PackageDetailsPanel';
@@ -142,7 +143,7 @@ export interface InstalledTabProps {
 
 export interface InstalledTabHandle {
     /** Handle installed-tab-specific messages */
-    handleMessage: (message: any) => void;
+    handleMessage: (message: WebviewMessage) => void;
     /** Reset transitive state (optionally refetch) — called after install/update/remove */
     resetTransitiveState: (refetch?: boolean, forceRestore?: boolean) => void;
     /** Focus the installed list and select first item */
@@ -648,6 +649,7 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
             }, TRANSITIVE_PREFETCH_DELAY_MS);
             return () => clearTimeout(timer);
         }
+        return undefined;
     }, [selectedProject, loadingInstalled, installedPackages.length, transitiveDataSourceAvailable, loadingTransitive, vscode]);
 
     // Prefetch transitive metadata in background after framework list loads
@@ -688,7 +690,7 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
     // ─── Imperative handle ───────────────────────────────────────────────────
 
     useImperativeHandle(ref, () => ({
-        handleMessage: (message: any) => {
+        handleMessage: (message: WebviewMessage) => {
             switch (message.type) {
                 case 'transitivePackages':
                     if (message.projectPath === selectedProject) {

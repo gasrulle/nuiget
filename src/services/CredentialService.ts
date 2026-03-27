@@ -388,9 +388,10 @@ export class CredentialService {
                     suggestedAction: 'dotnet restore --interactive'
                 }
             };
-        } catch (error: any) {
+        } catch (error: unknown) {
             // Check if it's an interactive auth requirement
-            const errorMsg = error.stderr || error.message || String(error);
+            const errorObj = error as { stderr?: string; message?: string };
+            const errorMsg = errorObj.stderr || errorObj.message || String(error);
 
             if (errorMsg.includes('interactive') || errorMsg.includes('device flow') || errorMsg.includes('login')) {
                 return {

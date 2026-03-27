@@ -8,7 +8,7 @@ export default tseslint.config(
     ...tseslint.configs.recommended,
     {
         languageOptions: {
-            ecmaVersion: 2020,
+            ecmaVersion: 2022,
             sourceType: 'module',
             globals: {
                 ...globals.node,
@@ -20,15 +20,17 @@ export default tseslint.config(
         },
         rules: {
             '@typescript-eslint/naming-convention': 'off', // Too strict for React components and API responses
-            '@typescript-eslint/no-explicit-any': 'off', // NuGet APIs have varying response formats
-            '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
-            'curly': 'warn',
-            'eqeqeq': 'warn',
-            'no-throw-literal': 'warn',
-            'semi': 'warn',
-            'prefer-const': 'warn',
+            '@typescript-eslint/no-explicit-any': 'warn',
+            '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+            '@typescript-eslint/no-non-null-assertion': 'warn',
+            'curly': 'error',
+            'eqeqeq': 'error',
+            'no-throw-literal': 'error',
+            'semi': 'error',
+            'prefer-const': 'error',
+            'no-console': ['warn', { allow: ['warn', 'error'] }],
             'react-hooks/rules-of-hooks': 'error',
-            'react-hooks/exhaustive-deps': 'warn',
+            'react-hooks/exhaustive-deps': 'error',
         },
     },
     {
