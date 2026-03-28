@@ -254,6 +254,11 @@
                     "minimum": 1,
                     "maximum": 100,
                     "description": "Maximum number of packages to return from full search (dotnet CLI)."
+                },
+                "nuiget.showActivityBarBadge": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Show a badge on the nUIget Activity Bar icon with the number of available package updates."
                 }
             }
         }

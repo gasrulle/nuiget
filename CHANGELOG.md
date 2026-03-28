@@ -5,6 +5,12 @@ All notable changes to the nUIget extension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **Activity Bar Badge** — Shows the number of available NuGet package updates on the nUIget sidebar icon, with per-project update breakdown in the tooltip for multi-project workspaces. Configurable via `nuiget.showActivityBarBadge` (default: on). Uses runtime detection for compatibility with older VS Code versions.
+
 ## [1.15.0] - 2026-03-27
 
 ### Added

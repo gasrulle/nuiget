@@ -120,7 +120,7 @@ npm run package:vsix # Outputs nuiget.vsix
 ## Sidebar
 | Issue | Solution |
 |-------|----------|
-| Activity Bar badge removed | `setBadge()` is a no-op — don't set `webviewView.badge`. Section header badges provide update counts. `_pendingBadgeCount` field removed. |
+| Activity Bar badge | `setBadge(count, tooltip)` sets `webviewView.badge` with runtime guard (`'badge' in this._view`). Controlled by `nuiget.showActivityBarBadge` (default `true`). Tooltip shows per-project breakdown for multi-project workspaces. `_pendingBadgeCount`/`_pendingBadgeTooltip` cache badge data before view resolves. Configuration change listener re-applies or clears badge dynamically. |
 | Search mode model | All sidebar rendering is driven by `parseSearchQuery(query)` → `{ mode: 'default' \| 'browse' \| 'installed' \| 'updates', filterText }`. Never check `installedExpanded`/`updatesExpanded` outside default mode. |
 | Browse section removed | No Browse `SectionHeader` exists. Browse results render directly when `searchMode === 'browse'` (plain text + Enter). |
 | Recent searches removed | No state, effects, handlers, CSS, or backend cases (`getRecentSearches`, `clearRecentSearches`, `_addRecentSearch`) exist. Don't re-add. |

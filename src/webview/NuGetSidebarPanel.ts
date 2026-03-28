@@ -37,6 +37,9 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
     private _pendingProjectUpdates: { projectPath: string; projectName: string; updates: { id: string; installedVersion: string; latestVersion: string }[] }[] = [];
     private _pendingInstalledCount = -1;
     private _pendingInstalledProject = '';
+    private _pendingBadgeCount = 0;
+    private _pendingBadgeTooltip = '';
+    private _showActivityBarBadge: boolean;
     private _operationInProgress = false;
     private _disposables: vscode.Disposable[] = [];
 
@@ -52,6 +55,25 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
         this._selectedProject = this._context.workspaceState.get<string>('nuget.selectedProject', '');
         // Set initial context key for prerelease toggle icon
         vscode.commands.executeCommand('setContext', 'nuiget.prereleaseEnabled', this._includePrerelease);
+
+        // Read badge setting
+        this._showActivityBarBadge = vscode.workspace.getConfiguration('nuiget').get<boolean>('showActivityBarBadge', true);
+
+        // Listen for configuration changes
+        this._disposables.push(
+            vscode.workspace.onDidChangeConfiguration(e => {
+                if (e.affectsConfiguration('nuiget.showActivityBarBadge')) {
+                    this._showActivityBarBadge = vscode.workspace.getConfiguration('nuiget').get<boolean>('showActivityBarBadge', true);
+                    if (this._showActivityBarBadge) {
+                        // Re-apply cached badge
+                        this.setBadge(this._pendingBadgeCount, this._pendingBadgeTooltip);
+                    } else {
+                        // Clear the badge
+                        this._clearBadge();
+                    }
+                }
+            })
+        );
     }
 
     public resolveWebviewView(
@@ -190,6 +212,11 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
             this._pendingInstalledCount = selectedProjectInstalledCount;
             this._pendingInstalledProject = this._selectedProject || '';
 
+            // Update Activity Bar badge with total update count
+            const totalUpdateCount = allProjectUpdates.reduce((sum, pu) => sum + pu.updates.length, 0);
+            const badgeTooltip = this._buildBadgeTooltip(allProjectUpdates);
+            this.setBadge(totalUpdateCount, badgeTooltip);
+
             // If webview is active, push all-projects results and installed count
             if (!this._disposed && this._view) {
                 this._postMessage({ type: 'allProjectsUpdates', projectUpdates: allProjectUpdates });
@@ -210,6 +237,7 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
 
     /** Dispose background monitoring resources */
     public dispose(): void {
+        this._clearBadge();
         if (this._backgroundCheckTimer) {
             clearInterval(this._backgroundCheckTimer);
             this._backgroundCheckTimer = undefined;
@@ -342,9 +370,37 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
         this._updateTitle(projectName);
     }
 
-    /** Update the Activity Bar badge with update count (no-op — section badges suffice) */
-    public setBadge(_count: number): void {
-        // Badge removed; section header badges provide update counts
+    /** Update the Activity Bar badge with update count and per-project tooltip */
+    public setBadge(count: number, tooltip?: string): void {
+        this._pendingBadgeCount = count;
+        this._pendingBadgeTooltip = tooltip || '';
+
+        if (!this._showActivityBarBadge) { return; }
+
+        if (this._view && 'badge' in this._view) {
+            (this._view as vscode.WebviewView).badge = count > 0
+                ? { value: count, tooltip: tooltip || `${count} update${count === 1 ? '' : 's'} available` }
+                : undefined;
+        }
+    }
+
+    /** Clear the badge from the Activity Bar */
+    private _clearBadge(): void {
+        if (this._view && 'badge' in this._view) {
+            (this._view as vscode.WebviewView).badge = undefined;
+        }
+    }
+
+    /** Build a per-project tooltip string from project update data */
+    private _buildBadgeTooltip(projectUpdates: { projectName: string; updates: { id: string }[] }[]): string {
+        if (projectUpdates.length === 0) { return ''; }
+        if (projectUpdates.length === 1) {
+            const count = projectUpdates[0].updates.length;
+            return `${count} update${count === 1 ? '' : 's'} available`;
+        }
+        return projectUpdates
+            .map(pu => `${pu.projectName} — ${pu.updates.length} update${pu.updates.length === 1 ? '' : 's'}`)
+            .join('\n');
     }
 
     /** Lightweight sidebar notification after a package operation from the main panel.
@@ -719,6 +775,11 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
         }
         this._pendingInstalledCount = -1;
         this._pendingInstalledProject = '';
+
+        // Apply pending badge (may have been set before view resolved)
+        if (this._pendingBadgeCount > 0) {
+            this.setBadge(this._pendingBadgeCount, this._pendingBadgeTooltip);
+        }
     }
 
     private _sendState(): void {
