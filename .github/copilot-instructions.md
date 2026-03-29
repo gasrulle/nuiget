@@ -221,7 +221,7 @@ The VS Code task "Run Tests" (`Ctrl+Shift+T` or Task menu) runs `npm test` with 
 | Issue | Solution |
 |-------|----------|
 | VS Code API not available in tests | `vitest.config.mts` aliases `vscode` to `src/test/__mocks__/vscode.ts`. Don't import `vscode` directly in test files — the alias handles it. |
-| Frontend tests need jsdom setup | `src/test/setup-frontend.ts` stubs `CSS.supports`, `ResizeObserver`, `scrollIntoView`. Added automatically for frontend project. |
+| Frontend tests need jsdom setup | `src/test/setup-frontend.ts` imports `@testing-library/jest-dom/vitest` matchers and shims `acquireVsCodeApi`. Added automatically for frontend project. |
 | `coverage/` inflates VSIX | `.vscodeignore` excludes `coverage/**`. Don't remove this exclusion. |
 | Test file ESLint rules | `no-explicit-any` and `no-non-null-assertion` are turned OFF for test files (`src/**/*.test.{ts,tsx}`, `src/test/**/*.{ts,tsx}`) in `eslint.config.mjs`. Don't add these rules back for tests. |
 | Singleton `resetInstance()` | `CredentialService.resetInstance()` and `Http2Client.resetInstance()` exist for test isolation. `instance` fields are typed `Type \| undefined` (not `Type`). |

@@ -141,7 +141,6 @@ describe('SourceSettingsOverlay', () => {
         fireEvent.click(screen.getByText('+ Add Source'));
         const urlInput = screen.getByPlaceholderText('https://api.nuget.org/v3/index.json');
         fireEvent.change(urlInput, { target: { value: 'http://insecure-feed.com/v3/index.json' } });
-        render(<div />); // just need to query existing
         expect(screen.getByTitle('HTTP connections are insecure. HTTPS is recommended.')).toBeInTheDocument();
     });
 
