@@ -80,8 +80,18 @@ jobs:
           npx vsce package --out "nuiget-v${VERSION}.vsix"
 
       - name: Upload VSIX
+        id: upload-vsix
         uses: actions/upload-artifact@v6
         with:
           name: nuiget-vsix
           path: nuiget-v*.vsix
           retention-days: 30
+
+      - name: Add VSIX link to summary
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "## 📦 VSIX Artifact" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**nuiget-v${VERSION}.vsix** — ready to publish" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "[⬇ Download VSIX](${{ steps.upload-vsix.outputs.artifact-url }})" >> $GITHUB_STEP_SUMMARY
