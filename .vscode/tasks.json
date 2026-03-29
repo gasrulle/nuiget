@@ -64,6 +64,17 @@
             "group": "build"
         },
         {
+            "label": "Run Tests",
+            "type": "shell",
+            "command": "npm test",
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            },
+            "group": "test"
+        },
+        {
             "label": "Package nUIget vsix",
             "type": "shell",
             "command": "npm run package:vsix",

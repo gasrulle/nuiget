@@ -17,8 +17,19 @@
 
 Failing to consult ARCHITECTURE.md risks re-introducing bugs, duplicating logic, or breaking established patterns.
 
+## MANDATORY: Tests
+Tests are **NOT OPTIONAL**. Every code change must satisfy all of the following:
+
+1. **Run tests before finishing.** Run `npm test` (or `npm run package:vsix`) and confirm **all tests pass**. Never submit, commit, or declare work complete with failing tests. If a test fails, fix it before moving on.
+2. **Update existing tests.** When changing behavior, update every test that covers the changed code path so it reflects the new behavior. Do NOT delete or skip tests to make the suite pass.
+3. **Add new tests.** When adding new functions, message handlers, React components, hooks, or non-trivial logic, write tests for them. Follow the existing patterns in the codebase (see `src/test/` helpers and fixtures). At minimum, cover the happy path and one error/edge case.
+4. **Maintain coverage thresholds.** The CI pipeline enforces minimum coverage (65% lines, 50% branches, 55% functions). New code must not drop coverage below these thresholds. Run `npm run test:coverage` to verify.
+5. **Never skip, `.only`, or comment-out tests** as a workaround. If a test is flaky or blocking, fix the root cause.
+
+Test infrastructure details are in the **Testing** section of ARCHITECTURE.md.
+
 ## MANDATORY: VSIX Packaging Verification
-After making changes to TypeScript files (especially `NuGetService.ts`, `NuGetPanel.ts`, or `extension.ts`), run `npm run package:vsix` to verify the build succeeds. TypeScript errors (typos, missing properties) will break VSIX packaging even if `npm run watch` succeeds.
+After making changes to TypeScript files (especially `NuGetService.ts`, `NuGetPanel.ts`, or `extension.ts`), run `npm run package:vsix` to verify the build succeeds. This runs the full pipeline: `install → check-types → test (945 tests) → lint+bundle → vsce package`. TypeScript errors (typos, missing properties) will break VSIX packaging even if `npm run watch` succeeds.
 
 ## MANDATORY: Documentation Updates
 After completing ANY feature, fix, or change, update these files:
@@ -54,8 +65,19 @@ These two files serve different purposes. **Never duplicate content between them
 ```bash
 npm install          # Install dependencies
 npm run watch        # Build (watch mode) — F5 to launch Extension Host
-npm run package:vsix # Outputs nuiget.vsix
+npm run package:vsix # Runs: install → check-types → test → lint+bundle → vsce package
 ```
+
+### Testing
+```bash
+npm test               # Run all tests (backend + frontend)
+npm run test:watch      # Watch mode
+npm run test:backend    # Backend tests only (Node.js)
+npm run test:frontend   # Frontend tests only (jsdom)
+npm run test:coverage   # Generate coverage report
+```
+The VS Code task "Run Tests" (`Ctrl+Shift+T` or Task menu) runs `npm test` with output visible in terminal.
+
 **Test:** Open a folder with .csproj files in Extension Host (not nuiget folder). Command Palette → "nUIget: Manage NuGet Packages" or right-click .csproj.
 
 # Gotchas & Pitfalls
@@ -63,10 +85,10 @@ npm run package:vsix # Outputs nuiget.vsix
 ## Known Issues
 | Issue | Status |
 |-------|--------|
-| No known `npm audit` vulnerabilities | All previously tracked vulnerabilities resolved. **Re-run `npm audit` periodically to check for regressions.** |
+| No known `npm audit` vulnerabilities | All previously tracked vulnerabilities resolved. `@vscode/test-cli` and `@vscode/test-electron` removed (unused, caused vuln chain). **Re-run `npm audit` periodically to check for regressions.** |
 | TypeScript 6.0 + typescript-eslint peer dep warning | `typescript-eslint@8.x` has peer dep `<6.0.0`. Functional — linting works. `.npmrc` has `legacy-peer-deps=true`. Remove `.npmrc` when typescript-eslint adds TS 6 support. |
 | ESLint 10 not yet adoptable | `eslint-plugin-react-hooks@7.x` requires eslint `^9.0.0`. Blocked until react-hooks plugin adds `^10.0.0` peer. |
-| `no-explicit-any` is warn, not error | `WebviewMessage` type uses `Record<string, any>` because webview messages are inherently untyped (50+ message types). Upgrading to `error` requires a full discriminated union refactor. |
+| `no-explicit-any` is warn, not error | `WebviewMessage` type uses `Record<string, any>` because webview messages are inherently untyped (50+ message types). Upgrading to `error` requires a full discriminated union refactor. ESLint turns off `no-explicit-any` and `no-non-null-assertion` in test files via override in `eslint.config.mjs`. |
 
 ## VS Code Extension
 | Issue | Solution |
@@ -194,6 +216,15 @@ npm run package:vsix # Outputs nuiget.vsix
 | Bulk operation early exit must send response | Every `break` early exit in bulk operations MUST send a result message (even empty) to the webview. Without it, the UI stays in permanent loading state. |
 | `browseDetailsPanelContent` useMemo | BrowseTab's details panel JSX is memoized via `useMemo` in App.tsx. InstalledTab and UpdatesTab render their own `MemoizedPackageDetailsPanel` internally. |
 | `assetsJsonCache` max entries | Capped at `MAX_ASSETS_CACHE_ENTRIES = 5` with TTL sweep. Don't remove the cap — concurrent flows can grow the cache unbounded within TTL. |
+
+## Testing
+| Issue | Solution |
+|-------|----------|
+| VS Code API not available in tests | `vitest.config.mts` aliases `vscode` to `src/test/__mocks__/vscode.ts`. Don't import `vscode` directly in test files — the alias handles it. |
+| Frontend tests need jsdom setup | `src/test/setup-frontend.ts` stubs `CSS.supports`, `ResizeObserver`, `scrollIntoView`. Added automatically for frontend project. |
+| `coverage/` inflates VSIX | `.vscodeignore` excludes `coverage/**`. Don't remove this exclusion. |
+| Test file ESLint rules | `no-explicit-any` and `no-non-null-assertion` are turned OFF for test files (`src/**/*.test.{ts,tsx}`, `src/test/**/*.{ts,tsx}`) in `eslint.config.mjs`. Don't add these rules back for tests. |
+| Singleton `resetInstance()` | `CredentialService.resetInstance()` and `Http2Client.resetInstance()` exist for test isolation. `instance` fields are typed `Type \| undefined` (not `Type`). |
 
 # Debugging Workflow
 1. Add temporary `console.log()` with distinctive prefix (e.g., `[DEBUG-XYZ]`)

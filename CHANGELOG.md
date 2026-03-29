@@ -10,6 +10,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - **Activity Bar Badge** — Shows the number of available NuGet package updates on the nUIget sidebar icon, with per-project update breakdown in the tooltip for multi-project workspaces. Configurable via `nuiget.showActivityBarBadge` (default: on). Uses runtime detection for compatibility with older VS Code versions.
+- **Test Infrastructure** — Vitest (backend/frontend projects), React Testing Library, VS Code API mocks, test fixtures, coverage with V8 provider
+- **CI/CD Pipeline** — GitHub Actions workflow with lint, test (with coverage upload), and build/package jobs. Concurrency control cancels stale PR runs. VSIX artifact uploaded on successful builds
+- **Comprehensive Test Coverage** — 945 tests across 22 test files covering all services, panels, React components, and hooks. Coverage thresholds enforced: 65% lines/statements, 50% branches, 55% functions
+
+### Fixed
+
+- **Resolved all npm audit vulnerabilities**
+- **Eliminated all 848 ESLint warnings from build output**
 
 ## [1.15.0] - 2026-03-27
 
