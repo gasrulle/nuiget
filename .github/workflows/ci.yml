@@ -91,14 +91,6 @@ jobs:
             echo "| Statements | ${STATEMENTS}% | 65% |" >> $GITHUB_STEP_SUMMARY
           fi
 
-      - name: Upload coverage report
-        if: always()
-        uses: actions/upload-artifact@v6
-        with:
-          name: coverage-report
-          path: coverage/
-          retention-days: 14
-
   build:
     name: Build & Package
     needs: [lint, test]
@@ -124,19 +116,9 @@ jobs:
           VERSION=$(node -p "require('./package.json').version")
           npx vsce package --out "nuiget-v${VERSION}.vsix"
 
-      - name: Upload VSIX
-        id: upload-vsix
-        uses: actions/upload-artifact@v6
-        with:
-          name: nuiget-vsix
-          path: nuiget-v*.vsix
-          retention-days: 30
-
-      - name: Add VSIX link to summary
+      - name: Add build info to summary
         run: |
           VERSION=$(node -p "require('./package.json').version")
           echo "## 📦 VSIX Artifact" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**nuiget-v${VERSION}.vsix** — ready to publish" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "[⬇ Download VSIX](${{ steps.upload-vsix.outputs.artifact-url }})" >> $GITHUB_STEP_SUMMARY
