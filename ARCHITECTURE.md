@@ -84,6 +84,20 @@ src/
 │   ├── CredentialService.ts  # Authentication for private feeds (DPAPI, Cred Provider)
 │   ├── Http2Client.ts        # HTTP/2 client with session reuse for nuget.org
 │   └── WorkspaceCache.ts     # Persistent caching with TTL support
+├── test/
+│   ├── __mocks__/
+│   │   └── vscode.ts         # VS Code API mock (commands, window, workspace, Uri, etc.)
+│   ├── fixtures/
+│   │   ├── api-responses.ts  # Typed NuGet API response fixtures
+│   │   ├── sample.csproj     # Sample .csproj for parsing tests
+│   │   ├── multi-version.csproj  # Multi-framework .csproj fixture
+│   │   ├── project.assets.json   # Transitive dependency fixture
+│   │   └── nuget.config      # NuGet config fixture
+│   ├── helpers/
+│   │   ├── index.ts          # Re-exports for test helpers
+│   │   ├── backend.ts        # Backend test utilities (mock services, exec helpers)
+│   │   └── frontend.tsx      # Frontend test utilities (render with VS Code context)
+│   └── setup-frontend.ts    # jsdom setup (jest-dom matchers, acquireVsCodeApi shim)
 ```
 
 ### Module Split: NuGetService
@@ -1421,6 +1435,70 @@ body.vscode-light .readme-rendered .hljs-comment { color: #008000; }
 body.vscode-light .readme-rendered .hljs-keyword { color: var(--vscode-symbolIcon-keywordForeground, #0000ff); }
 ```
 
+## Testing
+
+### Framework
+Vitest 4.x with two project configurations:
+
+| Project | Environment | Includes | Setup |
+|---------|------------|----------|-------|
+| `backend` | Node.js | `src/services/**/*.test.ts`, `src/extension.test.ts` | — |
+| `frontend` | jsdom | `src/webview/**/*.test.{ts,tsx}` | `src/test/setup-frontend.ts` |
+
+Configuration: `vitest.config.mts` at project root.
+
+### Test Commands
+```bash
+npm test               # Run all tests (both projects)
+npm run test:watch      # Watch mode
+npm run test:backend    # Backend tests only
+npm run test:frontend   # Frontend tests only
+npm run test:coverage   # Run with V8 coverage report
+```
+
+### Coverage
+- Provider: `@vitest/coverage-v8`
+- Reports: `text` (console), `lcov`, `html` → `coverage/` directory
+- Thresholds (enforced in CI and `package:vsix`):
+
+| Metric | Threshold |
+|--------|-----------|
+| Statements | 65% |
+| Lines | 65% |
+| Branches | 50% |
+| Functions | 55% |
+
+- Excludes: `src/test/**`, `src/global.d.ts`, `src/extension.ts`, `src/services/NuGetTypes.ts`, entry points (`index.tsx`)
+
+### VS Code API Mock
+`src/test/__mocks__/vscode.ts` provides a comprehensive mock of the `vscode` namespace, resolved via Vitest `resolve.alias`. Covers: `commands`, `window`, `workspace`, `env`, `Uri`, `EventEmitter`, `CancellationTokenSource`, `Disposable`, `RelativePattern`, `ProgressLocation`, `ViewColumn`, and factory helpers (`createMockExtensionContext`, `resetAllMocks`). Each test file gets a fresh mock instance via `vi.mock()`.
+
+### Test Helpers
+- **`src/test/helpers/backend.ts`** — Mock service factories (`createMockNuGetService()`, `createMockCredentialService()`, etc.), `execWithTimeout` mock, output channel mock
+- **`src/test/helpers/frontend.tsx`** — `renderWithVSCode()` wrapper that provides the `vscode` acquireVsCodeApi context to React components
+- **`src/test/setup-frontend.ts`** — jsdom environment setup: imports `@testing-library/jest-dom/vitest` matchers and shims the `acquireVsCodeApi` webview global
+
+### Test Fixtures
+`src/test/fixtures/` contains typed, reusable test data:
+- `api-responses.ts` — NuGet V3 API response objects (search results, registration entries, versions)
+- `sample.csproj` / `multi-version.csproj` — `.csproj` files for parsing tests
+- `project.assets.json` — Transitive dependency graph fixture
+- `nuget.config` — NuGet configuration fixture with sources and credentials
+
+### ESLint Test Overrides
+`eslint.config.mjs` includes an override for test files (`src/**/*.test.{ts,tsx}`, `src/test/**/*.{ts,tsx}`) that turns off `@typescript-eslint/no-explicit-any` and `@typescript-eslint/no-non-null-assertion`. Test code frequently uses `any` for mock typing and `!` for known-present test data.
+
+### CI/CD Pipeline
+GitHub Actions workflow (`.github/workflows/ci.yml`) with three jobs:
+
+| Job | Depends On | Steps |
+|-----|-----------|-------|
+| `lint` | — | `npm ci` → `npm run lint` |
+| `test` | — | `npm ci` → `vitest run --coverage` → upload coverage artifact (14-day retention) |
+| `build` | `lint`, `test` | `npm ci` → type check → esbuild → `vsce package` → upload VSIX artifact (30-day retention) |
+
+Concurrency: `ci-${{ github.ref }}` with `cancel-in-progress: true` (cancels stale PR runs). Node 22.
+
 ## Build System
 
 ### esbuild Configuration
@@ -1439,6 +1517,13 @@ dist/
 ├── sidebar.js        # Sidebar React bundle
 └── sidebar.css       # External CSS file (sidebar)
 ```
+
+### VSIX Packaging Pipeline
+The `npm run package:vsix` script runs a full pipeline:
+```
+npm install → check-types → npm test (945 tests) → lint + bundle → vsce package
+```
+Tests must pass before the VSIX is produced. The `coverage/` directory is excluded from the VSIX via `.vscodeignore`.
 
 ## Testing the Extension
 

@@ -1,0 +1,142 @@
+name: CI
+
+on:
+  push:
+    branches: [main, "labs/**"]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Run ESLint
+        run: |
+          set +e
+          npx eslint src --format json -o eslint-report.json
+          LINT_EXIT=$?
+
+          ERRORS=$(node -p "require('./eslint-report.json').reduce((s,f)=>s+f.errorCount,0)")
+          WARNINGS=$(node -p "require('./eslint-report.json').reduce((s,f)=>s+f.warningCount,0)")
+
+          {
+            echo "## 🔍 Lint Results"
+            echo ""
+            if [ "$ERRORS" -eq 0 ] && [ "$WARNINGS" -eq 0 ]; then
+              echo "✅ **Clean** — no errors or warnings"
+            else
+              echo "| Metric | Count |"
+              echo "|--------|------:|"
+              echo "| ❌ Errors | $ERRORS |"
+              echo "| ⚠️ Warnings | $WARNINGS |"
+            fi
+            echo ""
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$ERRORS" -gt 0 ] || [ "$WARNINGS" -gt 0 ]; then
+            npx eslint src || true
+          fi
+
+          exit $LINT_EXIT
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Run tests with coverage
+        run: npx vitest run --coverage
+
+      - name: Add coverage to summary
+        if: always()
+        run: |
+          if [ -f coverage/coverage-summary.json ]; then
+            LINES=$(node -p "require('./coverage/coverage-summary.json').total.lines.pct")
+            BRANCHES=$(node -p "require('./coverage/coverage-summary.json').total.branches.pct")
+            FUNCTIONS=$(node -p "require('./coverage/coverage-summary.json').total.functions.pct")
+            STATEMENTS=$(node -p "require('./coverage/coverage-summary.json').total.statements.pct")
+            echo "## 📊 Code Coverage" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "| Metric | Coverage | Threshold |" >> $GITHUB_STEP_SUMMARY
+            echo "|--------|----------|-----------|" >> $GITHUB_STEP_SUMMARY
+            echo "| Lines | ${LINES}% | 65% |" >> $GITHUB_STEP_SUMMARY
+            echo "| Branches | ${BRANCHES}% | 50% |" >> $GITHUB_STEP_SUMMARY
+            echo "| Functions | ${FUNCTIONS}% | 55% |" >> $GITHUB_STEP_SUMMARY
+            echo "| Statements | ${STATEMENTS}% | 65% |" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: coverage-report
+          path: coverage/
+          retention-days: 14
+
+  build:
+    name: Build & Package
+    needs: [lint, test]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Type check
+        run: npm run check-types
+
+      - name: Build extension
+        run: node esbuild.mjs --production
+
+      - name: Package VSIX
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          npx vsce package --out "nuiget-v${VERSION}.vsix"
+
+      - name: Upload VSIX
+        id: upload-vsix
+        uses: actions/upload-artifact@v6
+        with:
+          name: nuiget-vsix
+          path: nuiget-v*.vsix
+          retention-days: 30
+
+      - name: Add VSIX link to summary
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "## 📦 VSIX Artifact" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**nuiget-v${VERSION}.vsix** — ready to publish" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "[⬇ Download VSIX](${{ steps.upload-vsix.outputs.artifact-url }})" >> $GITHUB_STEP_SUMMARY

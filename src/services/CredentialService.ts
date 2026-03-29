@@ -49,7 +49,7 @@ interface CachedCredential {
  * On Windows, encrypted passwords are decrypted using DPAPI via PowerShell.
  */
 export class CredentialService {
-    private static instance: CredentialService;
+    private static instance: CredentialService | undefined;
 
     // Cache of credentials by source URL (case-insensitive)
     private credentialCache: Map<string, CachedCredential> = new Map();
@@ -70,6 +70,13 @@ export class CredentialService {
             CredentialService.instance = new CredentialService();
         }
         return CredentialService.instance;
+    }
+
+    /**
+     * Reset the singleton instance. Used only in tests for isolation.
+     */
+    public static resetInstance(): void {
+        CredentialService.instance = undefined;
     }
 
     /**

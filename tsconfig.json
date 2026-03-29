@@ -24,6 +24,10 @@
     },
     "exclude": [
         "node_modules",
-        ".vscode-test"
+        ".vscode-test",
+        "src/test",
+        "src/**/*.test.ts",
+        "src/**/*.test.tsx",
+        "vitest.config.mts"
     ]
 }

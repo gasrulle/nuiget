@@ -76,7 +76,7 @@ export interface FetchResult<T> {
  * Includes session pool limit (MAX_SESSIONS) with LRU eviction to prevent memory accumulation.
  */
 export class Http2Client {
-    private static instance: Http2Client;
+    private static instance: Http2Client | undefined;
 
     // Maximum concurrent HTTP/2 sessions to prevent memory accumulation
     private static readonly MAX_SESSIONS = 10;
@@ -126,6 +126,17 @@ export class Http2Client {
             Http2Client.instance = new Http2Client();
         }
         return Http2Client.instance;
+    }
+
+    /**
+     * Reset the singleton instance. Used only in tests for isolation.
+     * Closes all existing sessions before resetting.
+     */
+    public static resetInstance(): void {
+        if (Http2Client.instance) {
+            Http2Client.instance.closeAll();
+        }
+        Http2Client.instance = undefined;
     }
 
     /**
