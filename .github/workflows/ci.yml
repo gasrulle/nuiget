@@ -14,6 +14,9 @@ concurrency:
 permissions:
   contents: read
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   lint:
     name: Lint
@@ -48,7 +51,7 @@ jobs:
 
       - name: Upload coverage report
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v4
         with:
           name: coverage-report
           path: coverage/
@@ -80,7 +83,7 @@ jobs:
           npx vsce package --out "nuiget-v${VERSION}.vsix"
 
       - name: Upload VSIX
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v4
         with:
           name: nuiget-vsix
           path: nuiget-v*.vsix
