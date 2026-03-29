@@ -28,7 +28,34 @@ jobs:
 
       - run: npm ci
 
-      - run: npm run lint
+      - name: Run ESLint
+        run: |
+          set +e
+          npx eslint src --format json -o eslint-report.json
+          LINT_EXIT=$?
+
+          ERRORS=$(node -p "require('./eslint-report.json').reduce((s,f)=>s+f.errorCount,0)")
+          WARNINGS=$(node -p "require('./eslint-report.json').reduce((s,f)=>s+f.warningCount,0)")
+
+          {
+            echo "## 🔍 Lint Results"
+            echo ""
+            if [ "$ERRORS" -eq 0 ] && [ "$WARNINGS" -eq 0 ]; then
+              echo "✅ **Clean** — no errors or warnings"
+            else
+              echo "| Metric | Count |"
+              echo "|--------|------:|"
+              echo "| ❌ Errors | $ERRORS |"
+              echo "| ⚠️ Warnings | $WARNINGS |"
+            fi
+            echo ""
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$ERRORS" -gt 0 ] || [ "$WARNINGS" -gt 0 ]; then
+            npx eslint src || true
+          fi
+
+          exit $LINT_EXIT
 
   test:
     name: Test
