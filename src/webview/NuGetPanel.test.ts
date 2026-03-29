@@ -996,4 +996,44 @@ describe('NuGetPanel', () => {
             expect(searchCalls[0][0]).toMatchObject({ query: 'fast' });
         });
     });
+
+    // ──────────────────────────────────────────────
+    // Error resilience: stuck spinner prevention
+    // ──────────────────────────────────────────────
+    describe('error resilience (stuck spinner prevention)', () => {
+        beforeEach(() => {
+            NuGetPanel.createOrShow(vscode.Uri.file('/ext'), mockContext, mockOutputChannel, mockService as any);
+            mockPanel.webview.postMessage.mockClear();
+            expect(messageListener).toBeDefined();
+        });
+
+        it('getInstalledPackages sends empty response on error', async () => {
+            (mockService as any).getInstalledPackages.mockRejectedValue(new Error('file not found'));
+            mockPanel.webview.postMessage.mockClear();
+            await messageListener!({ type: 'getInstalledPackages', projectPath: '/gone.csproj' });
+
+            expect(mockPanel.webview.postMessage).toHaveBeenCalledWith({
+                type: 'installedPackages',
+                packages: [],
+                projectPath: '/gone.csproj'
+            });
+        });
+
+        it('checkPackageUpdates sends empty response on error', async () => {
+            (mockService as any).checkPackageUpdates.mockRejectedValue(new Error('network error'));
+            mockPanel.webview.postMessage.mockClear();
+            await messageListener!({
+                type: 'checkPackageUpdates',
+                installedPackages: [{ id: 'Pkg', version: '1.0' }],
+                includePrerelease: false,
+                projectPath: '/proj.csproj'
+            });
+
+            expect(mockPanel.webview.postMessage).toHaveBeenCalledWith({
+                type: 'packageUpdates',
+                updates: [],
+                projectPath: '/proj.csproj'
+            });
+        });
+    });
 });

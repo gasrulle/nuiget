@@ -955,4 +955,141 @@ describe('NuGetSidebarProvider', () => {
             });
         });
     });
+
+    // ──────────────────────────────────────────────
+    // Error resilience: stuck spinner prevention
+    // ──────────────────────────────────────────────
+    describe('error resilience (stuck spinner prevention)', () => {
+        beforeEach(() => {
+            view = resolveView(provider);
+            view.webview.postMessage.mockClear();
+            expect(messageListener).toBeDefined();
+        });
+
+        it('getInstalledPackages sends empty response on error', async () => {
+            (service as any).getInstalledPackages.mockRejectedValue(new Error('file not found'));
+            await messageListener!({ type: 'getInstalledPackages', projectPath: '/gone.csproj' });
+
+            expect(view.webview.postMessage).toHaveBeenCalledWith({
+                type: 'installedPackages',
+                packages: [],
+                projectPath: '/gone.csproj'
+            });
+        });
+
+        it('checkPackageUpdates sends empty response on error', async () => {
+            (service as any).checkPackageUpdatesMinimal.mockRejectedValue(new Error('network error'));
+            await messageListener!({
+                type: 'checkPackageUpdates',
+                installedPackages: [{ id: 'Pkg', version: '1.0' }],
+                includePrerelease: false,
+                projectPath: '/proj.csproj'
+            });
+
+            expect(view.webview.postMessage).toHaveBeenCalledWith({
+                type: 'packageUpdatesMinimal',
+                updates: [],
+                projectPath: '/proj.csproj'
+            });
+        });
+
+        it('searchPackages sends empty response on error', async () => {
+            (service as any).searchPackages.mockRejectedValue(new Error('timeout'));
+            await messageListener!({ type: 'searchPackages', query: 'test', includePrerelease: false });
+
+            expect(view.webview.postMessage).toHaveBeenCalledWith({
+                type: 'searchResults',
+                results: [],
+                query: 'test'
+            });
+        });
+
+        it('checkAllProjectsUpdates sends empty response when findProjects throws', async () => {
+            (service as any).findProjects.mockRejectedValue(new Error('workspace error'));
+            await messageListener!({ type: 'checkAllProjectsUpdates', includePrerelease: false });
+
+            expect(view.webview.postMessage).toHaveBeenCalledWith({
+                type: 'allProjectsUpdates',
+                projectUpdates: []
+            });
+        });
+
+        it('checkAllProjectsInstalled sends empty response when findProjects throws', async () => {
+            (service as any).findProjects.mockRejectedValue(new Error('workspace error'));
+            await messageListener!({ type: 'checkAllProjectsInstalled', context: 'installed' });
+
+            expect(view.webview.postMessage).toHaveBeenCalledWith({
+                type: 'allProjectsInstalled',
+                projectInstalled: [],
+                context: 'installed'
+            });
+        });
+    });
+
+    // ──────────────────────────────────────────────
+    // Stale project validation
+    // ──────────────────────────────────────────────
+    describe('stale project validation', () => {
+        it('_sendInitialData resets stale project to first available', async () => {
+            const ctx = createMockContext();
+            (ctx.workspaceState as any)._store.set('nuget.selectedProject', '/old/removed.csproj');
+            const { provider: p, service: svc } = createProvider(undefined, ctx);
+            const v = resolveView(p);
+
+            (svc as any).findProjects.mockResolvedValue([
+                { name: 'New.csproj', path: '/new/New.csproj' }
+            ]);
+            (svc as any).getSources.mockResolvedValue([]);
+            v.webview.postMessage.mockClear();
+
+            await messageListener!({ type: 'ready' });
+
+            // Should have reset to the first available project
+            expect(ctx.workspaceState.update).toHaveBeenCalledWith('nuget.selectedProject', '/new/New.csproj');
+            expect(v.webview.postMessage).toHaveBeenCalledWith(expect.objectContaining({
+                type: 'state',
+                selectedProject: '/new/New.csproj'
+            }));
+            p.dispose();
+        });
+
+        it('_sendInitialData keeps valid persisted project', async () => {
+            const ctx = createMockContext();
+            (ctx.workspaceState as any)._store.set('nuget.selectedProject', '/A.csproj');
+            const { provider: p, service: svc } = createProvider(undefined, ctx);
+            const v = resolveView(p);
+
+            (svc as any).findProjects.mockResolvedValue([
+                { name: 'A.csproj', path: '/A.csproj' },
+                { name: 'B.csproj', path: '/B.csproj' }
+            ]);
+            (svc as any).getSources.mockResolvedValue([]);
+            v.webview.postMessage.mockClear();
+
+            await messageListener!({ type: 'ready' });
+
+            // Should keep the existing valid project
+            expect(v.webview.postMessage).toHaveBeenCalledWith(expect.objectContaining({
+                type: 'state',
+                selectedProject: '/A.csproj'
+            }));
+            p.dispose();
+        });
+
+        it('checkUpdatesInBackground resets stale project to first available', async () => {
+            const ctx = createMockContext();
+            (ctx.workspaceState as any)._store.set('nuget.selectedProject', '/old/gone.csproj');
+            const { provider: p, service: svc } = createProvider(undefined, ctx);
+
+            (svc as any).findProjects.mockResolvedValue([
+                { name: 'Current.csproj', path: '/current/Current.csproj' }
+            ]);
+            (svc as any).getInstalledPackages.mockResolvedValue([]);
+
+            await p.checkUpdatesInBackground();
+
+            expect(ctx.workspaceState.update).toHaveBeenCalledWith('nuget.selectedProject', '/current/Current.csproj');
+            p.dispose();
+        });
+    });
 });

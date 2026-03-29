@@ -169,6 +169,14 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
             const projects = await this._nugetService.findProjects();
             if (projects.length === 0) { return; }
 
+            // Validate persisted project: if it no longer exists on disk, reset to first available
+            if (this._selectedProject && !projects.some(p => p.path === this._selectedProject)) {
+                this._outputChannel.info(`[Sidebar BG] Persisted project no longer exists: ${this._selectedProject}. Resetting to ${projects[0].path}`);
+                this._selectedProject = projects[0].path;
+                this._context.workspaceState.update('nuget.selectedProject', this._selectedProject);
+                this._updateTitle();
+            }
+
             // Auto-select first project if none selected
             if (!this._selectedProject && projects.length > 0) {
                 this._selectedProject = projects[0].path;
@@ -460,57 +468,90 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
                     const query = data.query as string;
                     this._latestSearchQuery = query;
 
-                    // Always use lite mode for sidebar
-                    let sources = data.sources as string[] | undefined;
-                    if (sources && sources.length > 0) {
-                        const failedSources = this._nugetService.getFailedSources();
-                        if (failedSources.size > 0) {
-                            const filtered = sources.filter(url => !failedSources.has(url));
-                            if (filtered.length > 0) {
-                                sources = filtered;
+                    try {
+                        // Always use lite mode for sidebar
+                        let sources = data.sources as string[] | undefined;
+                        if (sources && sources.length > 0) {
+                            const failedSources = this._nugetService.getFailedSources();
+                            if (failedSources.size > 0) {
+                                const filtered = sources.filter(url => !failedSources.has(url));
+                                if (filtered.length > 0) {
+                                    sources = filtered;
+                                }
                             }
                         }
+
+                        const results = await this._nugetService.searchPackages(
+                            query, sources, data.includePrerelease as boolean | undefined, true /* liteMode */
+                        );
+
+                        if (this._latestSearchQuery !== query) { break; }
+
+                        this._postMessage({ type: 'searchResults', results, query });
+                    } catch (error) {
+                        console.error('[nUIget Sidebar] searchPackages error:', error);
+                        if (this._latestSearchQuery === query) {
+                            this._postMessage({ type: 'searchResults', results: [], query });
+                        }
                     }
-
-                    const results = await this._nugetService.searchPackages(
-                        query, sources, data.includePrerelease as boolean | undefined, true /* liteMode */
-                    );
-
-                    if (this._latestSearchQuery !== query) { break; }
-
-                    this._postMessage({ type: 'searchResults', results, query });
                     break;
                 }
             case 'getInstalledPackages':
                 {
-                    const packages = await this._nugetService.getInstalledPackages(
-                        data.projectPath as string, true /* liteMode */
-                    );
-                    this._postMessage({
-                        type: 'installedPackages',
-                        packages,
-                        projectPath: data.projectPath
-                    });
+                    try {
+                        const packages = await this._nugetService.getInstalledPackages(
+                            data.projectPath as string, true /* liteMode */
+                        );
+                        this._postMessage({
+                            type: 'installedPackages',
+                            packages,
+                            projectPath: data.projectPath
+                        });
+                    } catch (error) {
+                        console.error('[nUIget Sidebar] getInstalledPackages error:', error);
+                        // Send empty response so the webview's loading spinner stops
+                        this._postMessage({
+                            type: 'installedPackages',
+                            packages: [],
+                            projectPath: data.projectPath
+                        });
+                    }
                     break;
                 }
             case 'checkPackageUpdates':
                 {
-                    // Always use minimal for sidebar
-                    const minimalUpdates = await this._nugetService.checkPackageUpdatesMinimal(
-                        data.installedPackages as InstalledPackage[],
-                        data.includePrerelease as boolean
-                    );
-                    this._postMessage({
-                        type: 'packageUpdatesMinimal',
-                        updates: minimalUpdates,
-                        projectPath: data.projectPath
-                    });
+                    try {
+                        // Always use minimal for sidebar
+                        const minimalUpdates = await this._nugetService.checkPackageUpdatesMinimal(
+                            data.installedPackages as InstalledPackage[],
+                            data.includePrerelease as boolean
+                        );
+                        this._postMessage({
+                            type: 'packageUpdatesMinimal',
+                            updates: minimalUpdates,
+                            projectPath: data.projectPath
+                        });
+                    } catch (error) {
+                        console.error('[nUIget Sidebar] checkPackageUpdates error:', error);
+                        this._postMessage({
+                            type: 'packageUpdatesMinimal',
+                            updates: [],
+                            projectPath: data.projectPath
+                        });
+                    }
                     break;
                 }
             case 'checkAllProjectsUpdates':
                 {
+                    let projects: { path: string; name: string }[];
+                    try {
+                        projects = await this._nugetService.findProjects();
+                    } catch (error) {
+                        console.error('[nUIget Sidebar] checkAllProjectsUpdates findProjects error:', error);
+                        this._postMessage({ type: 'allProjectsUpdates', projectUpdates: [] });
+                        break;
+                    }
                     const includePrerelease = data.includePrerelease as boolean;
-                    const projects = await this._nugetService.findProjects();
                     const allProjectsUpdates: { projectPath: string; projectName: string; updates: { id: string; installedVersion: string; latestVersion: string }[] }[] = [];
 
                     for (const project of projects) {
@@ -536,7 +577,14 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
                 }
             case 'checkAllProjectsInstalled':
                 {
-                    const projects = await this._nugetService.findProjects();
+                    let projects: { path: string; name: string }[];
+                    try {
+                        projects = await this._nugetService.findProjects();
+                    } catch (error) {
+                        console.error('[nUIget Sidebar] checkAllProjectsInstalled findProjects error:', error);
+                        this._postMessage({ type: 'allProjectsInstalled', projectInstalled: [], context: data.context });
+                        break;
+                    }
                     const allProjectsInstalled: { projectPath: string; projectName: string; packages: { id: string; version: string; resolvedVersion?: string; isImplicit?: boolean }[] }[] = [];
 
                     for (const project of projects) {
@@ -739,6 +787,15 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
     private async _sendInitialData(): Promise<void> {
         // Fetch projects first to auto-select if needed
         const projects = await this._nugetService.findProjects();
+
+        // Validate persisted project: if it no longer exists on disk, reset to first available.
+        // This prevents a stuck loading spinner when the project was moved/renamed/deleted.
+        if (this._selectedProject && projects.length > 0 && !projects.some(p => p.path === this._selectedProject)) {
+            this._outputChannel.info(`[Sidebar] Persisted project no longer exists: ${this._selectedProject}. Resetting to ${projects[0].path}`);
+            this._selectedProject = projects[0].path;
+            this._context.workspaceState.update('nuget.selectedProject', this._selectedProject);
+            this._updateTitle();
+        }
 
         // Auto-select first project if none selected (before sending state)
         if (!this._selectedProject && projects.length > 0) {

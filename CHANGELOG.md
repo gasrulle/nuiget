@@ -16,6 +16,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Sidebar stuck loading spinner when project path becomes invalid**
+- **Main panel stuck loading spinner on backend errors**
 - **Resolved all npm audit vulnerabilities**
 - **Eliminated all 848 ESLint warnings from build output**
 

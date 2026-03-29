@@ -237,12 +237,21 @@ export class NuGetPanel {
                 }
             case 'getInstalledPackages':
                 {
-                    const packages = await this._nugetService.getInstalledPackages(data.projectPath as string);
-                    this._postMessage({
-                        type: 'installedPackages',
-                        packages: packages,
-                        projectPath: data.projectPath
-                    });
+                    try {
+                        const packages = await this._nugetService.getInstalledPackages(data.projectPath as string);
+                        this._postMessage({
+                            type: 'installedPackages',
+                            packages: packages,
+                            projectPath: data.projectPath
+                        });
+                    } catch (error) {
+                        console.error('[nUIget] getInstalledPackages error:', error);
+                        this._postMessage({
+                            type: 'installedPackages',
+                            packages: [],
+                            projectPath: data.projectPath
+                        });
+                    }
                     break;
                 }
             case 'getTransitivePackages':
@@ -669,15 +678,24 @@ export class NuGetPanel {
                 }
             case 'checkPackageUpdates':
                 {
-                    const packagesWithUpdates = await this._nugetService.checkPackageUpdates(
-                        data.installedPackages as InstalledPackage[],
-                        data.includePrerelease as boolean
-                    );
-                    this._postMessage({
-                        type: 'packageUpdates',
-                        updates: packagesWithUpdates,
-                        projectPath: data.projectPath
-                    });
+                    try {
+                        const packagesWithUpdates = await this._nugetService.checkPackageUpdates(
+                            data.installedPackages as InstalledPackage[],
+                            data.includePrerelease as boolean
+                        );
+                        this._postMessage({
+                            type: 'packageUpdates',
+                            updates: packagesWithUpdates,
+                            projectPath: data.projectPath
+                        });
+                    } catch (error) {
+                        console.error('[nUIget] checkPackageUpdates error:', error);
+                        this._postMessage({
+                            type: 'packageUpdates',
+                            updates: [],
+                            projectPath: data.projectPath
+                        });
+                    }
                     break;
                 }
             case 'checkAllProjectsUpdates':
