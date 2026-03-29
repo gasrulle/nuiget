@@ -502,11 +502,13 @@ describe('CredentialService', () => {
         });
 
         it('uses NUGET_NETCORE_PLUGIN_PATHS env override', async () => {
-            Object.defineProperty(process, 'platform', { value: 'win32', configurable: true });
-            process.env.NUGET_NETCORE_PLUGIN_PATHS = 'C:\\custom\\path\\CredentialProvider.Microsoft.exe';
+            const credPath = process.platform === 'win32'
+                ? 'C:\\custom\\path\\CredentialProvider.Microsoft.exe'
+                : '/custom/path/CredentialProvider.Microsoft.exe';
+            process.env.NUGET_NETCORE_PLUGIN_PATHS = credPath;
 
             mockFsAccess.mockImplementation((p: string) => {
-                if (p === 'C:\\custom\\path\\CredentialProvider.Microsoft.exe') {
+                if (p === credPath) {
                     return Promise.resolve();
                 }
                 return Promise.reject(new Error('ENOENT'));

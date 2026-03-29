@@ -75,7 +75,7 @@ export class Uri {
         this.path = path;
         this.query = query;
         this.fragment = fragment;
-        this.fsPath = path.replace(/\//g, '\\');
+        this.fsPath = process.platform === 'win32' ? path.replace(/\//g, '\\') : path;
     }
 
     with(change: { scheme?: string; authority?: string; path?: string; query?: string; fragment?: string }): Uri {
