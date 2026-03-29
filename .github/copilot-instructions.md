@@ -1,6 +1,22 @@
 <!-- Workspace-specific instructions for agents working on this project. Keep concise, actionable, and up to date. -->
 <!-- For full technical documentation, see ARCHITECTURE.md -->
 
+# Project Overview
+**nUIget** is a VS Code extension providing a Visual Studio-style NuGet package manager UI. Users can search, install, update, and remove NuGet packages across multiple .NET projects and sources. Built with TypeScript 6, React 19 (webview UI), esbuild (3 bundles), and the VS Code Extension API. Communicates with the dotnet CLI and NuGet HTTP APIs (v3 service index, registration, search).
+
+## Project Structure
+| Directory | Purpose |
+|-----------|---------|
+| `src/extension.ts` | Extension entry point — registers commands, panels, sidebar |
+| `src/services/` | Backend: NuGet API client, CLI wrapper, config parser, caching, logging |
+| `src/webview/NuGetPanel.ts` | Main panel message router (40+ cases), cross-panel sync |
+| `src/webview/NuGetSidebarPanel.ts` | Sidebar provider, background update checks, badge |
+| `src/webview/app/` | React app: App.tsx (state machine), tabs, components, hooks |
+| `src/webview/sidebar/` | React sidebar: SidebarApp.tsx, PackageRow, SectionHeader |
+| `src/test/` | Test helpers, mocks (`vscode.ts`), fixtures (`.csproj`, `project.assets.json`) |
+| `resources/` | Extension icons (SVG, PNG) |
+| `.github/` | CI workflow, Copilot instructions, agents, prompts |
+
 # Agent Guidelines
 - **Use Context7 for Documentation:** Use `resolve-library-id` then `get-library-docs` for React, VS Code Extension API, esbuild, ESLint, TypeScript docs.
 - **Use Microsoft Docs MCP for VS Code APIs:** Use `microsoft_docs_search`, `microsoft_code_sample_search`, `microsoft_docs_fetch` for official VS Code extension documentation.
