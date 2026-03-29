@@ -1,0 +1,207 @@
+{
+  "version": 2,
+  "dgSpecHash": "41I8iju/eP4=",
+  "success": false,
+  "projectFilePath": "C:\\github\\nuiget\\src\\test\\fixtures\\sample.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\Mattias\\.nuget\\packages\\newtonsoft.json\\13.0.3\\newtonsoft.json.13.0.3.nupkg.sha512",
+    "C:\\Users\\Mattias\\.nuget\\packages\\serilog\\4.0.0\\serilog.4.0.0.nupkg.sha512",
+    "C:\\Users\\Mattias\\.nuget\\packages\\xunit\\2.9.0\\xunit.2.9.0.nupkg.sha512",
+    "C:\\Users\\Mattias\\.nuget\\packages\\xunit.abstractions\\2.0.3\\xunit.abstractions.2.0.3.nupkg.sha512",
+    "C:\\Users\\Mattias\\.nuget\\packages\\xunit.analyzers\\1.15.0\\xunit.analyzers.1.15.0.nupkg.sha512",
+    "C:\\Users\\Mattias\\.nuget\\packages\\xunit.assert\\2.9.0\\xunit.assert.2.9.0.nupkg.sha512",
+    "C:\\Users\\Mattias\\.nuget\\packages\\xunit.core\\2.9.0\\xunit.core.2.9.0.nupkg.sha512",
+    "C:\\Users\\Mattias\\.nuget\\packages\\xunit.extensibility.core\\2.9.0\\xunit.extensibility.core.2.9.0.nupkg.sha512",
+    "C:\\Users\\Mattias\\.nuget\\packages\\xunit.extensibility.execution\\2.9.0\\xunit.extensibility.execution.2.9.0.nupkg.sha512",
+    "C:\\Users\\Mattias\\.nuget\\packages\\microsoft.netcore.app.ref\\8.0.25\\microsoft.netcore.app.ref.8.0.25.nupkg.sha512",
+    "C:\\Users\\Mattias\\.nuget\\packages\\microsoft.windowsdesktop.app.ref\\8.0.25\\microsoft.windowsdesktop.app.ref.8.0.25.nupkg.sha512",
+    "C:\\Users\\Mattias\\.nuget\\packages\\microsoft.aspnetcore.app.ref\\8.0.25\\microsoft.aspnetcore.app.ref.8.0.25.nupkg.sha512"
+  ],
+  "logs": [
+    {
+      "code": "NU1301",
+      "level": "Error",
+      "message": "Unable to load the service index for source https://pkgs.dev.azure.com/myorg/_packaging/myfeed/nuget/v3/index.json.\r\n  Response status code does not indicate success: 401 (Unauthorized).",
+      "projectPath": "C:\\github\\nuiget\\src\\test\\fixtures\\sample.csproj",
+      "filePath": "C:\\github\\nuiget\\src\\test\\fixtures\\sample.csproj",
+      "targetGraphs": []
+    },
+    {
+      "code": "NU1301",
+      "level": "Error",
+      "message": "Unable to load the service index for source https://pkgs.dev.azure.com/myorg/_packaging/myfeed/nuget/v3/index.json.\r\n  Response status code does not indicate success: 401 (Unauthorized).",
+      "projectPath": "C:\\github\\nuiget\\src\\test\\fixtures\\sample.csproj",
+      "filePath": "C:\\github\\nuiget\\src\\test\\fixtures\\sample.csproj",
+      "targetGraphs": []
+    },
+    {
+      "code": "NU1301",
+      "level": "Error",
+      "message": "Unable to load the service index for source https://pkgs.dev.azure.com/myorg/_packaging/myfeed/nuget/v3/index.json.\r\n  Response status code does not indicate success: 401 (Unauthorized).",
+      "projectPath": "C:\\github\\nuiget\\src\\test\\fixtures\\sample.csproj",
+      "filePath": "C:\\github\\nuiget\\src\\test\\fixtures\\sample.csproj",
+      "targetGraphs": []
+    },
+    {
+      "code": "NU1301",
+      "level": "Error",
+      "message": "Unable to load the service index for source https://pkgs.dev.azure.com/myorg/_packaging/myfeed/nuget/v3/index.json.\r\n  Response status code does not indicate success: 401 (Unauthorized).",
+      "projectPath": "C:\\github\\nuiget\\src\\test\\fixtures\\sample.csproj",
+      "filePath": "C:\\github\\nuiget\\src\\test\\fixtures\\sample.csproj",
+      "targetGraphs": []
+    },
+    {
+      "code": "NU1301",
+      "level": "Error",
+      "message": "Unable to load the service index for source https://pkgs.dev.azure.com/myorg/_packaging/myfeed/nuget/v3/index.json.\r\n  Response status code does not indicate success: 401 (Unauthorized).",
+      "projectPath": "C:\\github\\nuiget\\src\\test\\fixtures\\sample.csproj",
+      "filePath": "C:\\github\\nuiget\\src\\test\\fixtures\\sample.csproj",
+      "targetGraphs": []
+    },
+    {
+      "code": "NU1301",
+      "level": "Error",
+      "message": "Unable to load the service index for source https://pkgs.dev.azure.com/myorg/_packaging/myfeed/nuget/v3/index.json.\r\n  Response status code does not indicate success: 401 (Unauthorized).",
+      "projectPath": "C:\\github\\nuiget\\src\\test\\fixtures\\sample.csproj",
+      "filePath": "C:\\github\\nuiget\\src\\test\\fixtures\\sample.csproj",
+      "targetGraphs": []
+    },
+    {
+      "code": "NU1301",
+      "level": "Error",
+      "message": "Unable to load the service index for source https://pkgs.dev.azure.com/myorg/_packaging/myfeed/nuget/v3/index.json.\r\n  Response status code does not indicate success: 401 (Unauthorized).",
+      "projectPath": "C:\\github\\nuiget\\src\\test\\fixtures\\sample.csproj",
+      "filePath": "C:\\github\\nuiget\\src\\test\\fixtures\\sample.csproj",
+      "targetGraphs": []
+    },
+    {
+      "code": "NU1301",
+      "level": "Error",
+      "message": "Unable to load the service index for source https://pkgs.dev.azure.com/myorg/_packaging/myfeed/nuget/v3/index.json.\r\n  Response status code does not indicate success: 401 (Unauthorized).",
+      "projectPath": "C:\\github\\nuiget\\src\\test\\fixtures\\sample.csproj",
+      "filePath": "C:\\github\\nuiget\\src\\test\\fixtures\\sample.csproj",
+      "targetGraphs": []
+    },
+    {
+      "code": "NU1301",
+      "level": "Error",
+      "message": "Unable to load the service index for source https://pkgs.dev.azure.com/myorg/_packaging/myfeed/nuget/v3/index.json.\r\n  Response status code does not indicate success: 401 (Unauthorized).",
+      "projectPath": "C:\\github\\nuiget\\src\\test\\fixtures\\sample.csproj",
+      "filePath": "C:\\github\\nuiget\\src\\test\\fixtures\\sample.csproj",
+      "targetGraphs": []
+    },
+    {
+      "code": "NU1301",
+      "level": "Error",
+      "message": "Unable to load the service index for source https://pkgs.dev.azure.com/myorg/_packaging/myfeed/nuget/v3/index.json.\r\n  Response status code does not indicate success: 401 (Unauthorized).",
+      "projectPath": "C:\\github\\nuiget\\src\\test\\fixtures\\sample.csproj",
+      "filePath": "C:\\github\\nuiget\\src\\test\\fixtures\\sample.csproj",
+      "targetGraphs": []
+    },
+    {
+      "code": "NU1301",
+      "level": "Error",
+      "message": "Unable to load the service index for source https://pkgs.dev.azure.com/myorg/_packaging/myfeed/nuget/v3/index.json.\r\n  Response status code does not indicate success: 401 (Unauthorized).",
+      "projectPath": "C:\\github\\nuiget\\src\\test\\fixtures\\sample.csproj",
+      "filePath": "C:\\github\\nuiget\\src\\test\\fixtures\\sample.csproj",
+      "targetGraphs": []
+    },
+    {
+      "code": "NU1301",
+      "level": "Error",
+      "message": "Unable to load the service index for source https://pkgs.dev.azure.com/myorg/_packaging/myfeed/nuget/v3/index.json.\r\n  Response status code does not indicate success: 401 (Unauthorized).",
+      "projectPath": "C:\\github\\nuiget\\src\\test\\fixtures\\sample.csproj",
+      "filePath": "C:\\github\\nuiget\\src\\test\\fixtures\\sample.csproj",
+      "targetGraphs": []
+    },
+    {
+      "code": "NU1301",
+      "level": "Error",
+      "message": "Unable to load the service index for source https://pkgs.dev.azure.com/myorg/_packaging/myfeed/nuget/v3/index.json.\r\n  Response status code does not indicate success: 401 (Unauthorized).",
+      "projectPath": "C:\\github\\nuiget\\src\\test\\fixtures\\sample.csproj",
+      "filePath": "C:\\github\\nuiget\\src\\test\\fixtures\\sample.csproj",
+      "targetGraphs": []
+    },
+    {
+      "code": "NU1301",
+      "level": "Error",
+      "message": "Unable to load the service index for source https://pkgs.dev.azure.com/myorg/_packaging/myfeed/nuget/v3/index.json.\r\n  Response status code does not indicate success: 401 (Unauthorized).",
+      "projectPath": "C:\\github\\nuiget\\src\\test\\fixtures\\sample.csproj",
+      "filePath": "C:\\github\\nuiget\\src\\test\\fixtures\\sample.csproj",
+      "targetGraphs": []
+    },
+    {
+      "code": "NU1301",
+      "level": "Error",
+      "message": "Unable to load the service index for source https://pkgs.dev.azure.com/myorg/_packaging/myfeed/nuget/v3/index.json.\r\n  Response status code does not indicate success: 401 (Unauthorized).",
+      "projectPath": "C:\\github\\nuiget\\src\\test\\fixtures\\sample.csproj",
+      "filePath": "C:\\github\\nuiget\\src\\test\\fixtures\\sample.csproj",
+      "targetGraphs": []
+    },
+    {
+      "code": "NU1301",
+      "level": "Error",
+      "message": "Unable to load the service index for source https://pkgs.dev.azure.com/myorg/_packaging/myfeed/nuget/v3/index.json.\r\n  Response status code does not indicate success: 401 (Unauthorized).",
+      "projectPath": "C:\\github\\nuiget\\src\\test\\fixtures\\sample.csproj",
+      "filePath": "C:\\github\\nuiget\\src\\test\\fixtures\\sample.csproj",
+      "targetGraphs": []
+    },
+    {
+      "code": "NU1301",
+      "level": "Error",
+      "message": "Unable to load the service index for source https://pkgs.dev.azure.com/myorg/_packaging/myfeed/nuget/v3/index.json.\r\n  Response status code does not indicate success: 401 (Unauthorized).",
+      "projectPath": "C:\\github\\nuiget\\src\\test\\fixtures\\sample.csproj",
+      "filePath": "C:\\github\\nuiget\\src\\test\\fixtures\\sample.csproj",
+      "targetGraphs": []
+    },
+    {
+      "code": "NU1301",
+      "level": "Error",
+      "message": "Unable to load the service index for source https://pkgs.dev.azure.com/myorg/_packaging/myfeed/nuget/v3/index.json.\r\n  Response status code does not indicate success: 401 (Unauthorized).",
+      "projectPath": "C:\\github\\nuiget\\src\\test\\fixtures\\sample.csproj",
+      "filePath": "C:\\github\\nuiget\\src\\test\\fixtures\\sample.csproj",
+      "targetGraphs": []
+    },
+    {
+      "code": "NU1301",
+      "level": "Error",
+      "message": "Unable to load the service index for source https://pkgs.dev.azure.com/myorg/_packaging/myfeed/nuget/v3/index.json.\r\n  Response status code does not indicate success: 401 (Unauthorized).",
+      "projectPath": "C:\\github\\nuiget\\src\\test\\fixtures\\sample.csproj",
+      "filePath": "C:\\github\\nuiget\\src\\test\\fixtures\\sample.csproj",
+      "targetGraphs": []
+    },
+    {
+      "code": "NU1301",
+      "level": "Error",
+      "message": "Unable to load the service index for source https://pkgs.dev.azure.com/myorg/_packaging/myfeed/nuget/v3/index.json.\r\n  Response status code does not indicate success: 401 (Unauthorized).",
+      "projectPath": "C:\\github\\nuiget\\src\\test\\fixtures\\sample.csproj",
+      "filePath": "C:\\github\\nuiget\\src\\test\\fixtures\\sample.csproj",
+      "targetGraphs": []
+    },
+    {
+      "code": "NU1301",
+      "level": "Error",
+      "message": "Unable to load the service index for source https://pkgs.dev.azure.com/myorg/_packaging/myfeed/nuget/v3/index.json.\r\n  Response status code does not indicate success: 401 (Unauthorized).",
+      "projectPath": "C:\\github\\nuiget\\src\\test\\fixtures\\sample.csproj",
+      "filePath": "C:\\github\\nuiget\\src\\test\\fixtures\\sample.csproj",
+      "targetGraphs": []
+    },
+    {
+      "code": "NU1301",
+      "level": "Error",
+      "message": "Unable to load the service index for source https://pkgs.dev.azure.com/myorg/_packaging/myfeed/nuget/v3/index.json.\r\n  Response status code does not indicate success: 401 (Unauthorized).",
+      "projectPath": "C:\\github\\nuiget\\src\\test\\fixtures\\sample.csproj",
+      "filePath": "C:\\github\\nuiget\\src\\test\\fixtures\\sample.csproj",
+      "targetGraphs": []
+    },
+    {
+      "code": "NU1900",
+      "level": "Warning",
+      "message": "Error occurred while getting package vulnerability data: Unable to load the service index for source https://pkgs.dev.azure.com/myorg/_packaging/myfeed/nuget/v3/index.json.",
+      "projectPath": "C:\\github\\nuiget\\src\\test\\fixtures\\sample.csproj",
+      "warningLevel": 1,
+      "filePath": "C:\\github\\nuiget\\src\\test\\fixtures\\sample.csproj",
+      "targetGraphs": []
+    }
+  ]
+}
