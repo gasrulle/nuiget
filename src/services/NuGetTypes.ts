@@ -235,3 +235,322 @@ export interface NuGetRegistrationPage {
     lower?: string;
     upper?: string;
 }
+
+// ─── Webview ↔ Extension Host Message Protocol ──────────────────────────────
+//
+// Discriminated unions for messages sent from the webview to the extension host.
+// Using typed messages eliminates unsafe `as` casts in message handlers and
+// enables exhaustive switch checking.
+
+/** Package reference for bulk update operations */
+export interface BulkPackageRef {
+    id: string;
+    version: string;
+    sourceUrl?: string;
+}
+
+/** Project update data for all-projects bulk update */
+export interface ProjectBulkUpdate {
+    projectPath: string;
+    projectName: string;
+    packages: BulkPackageRef[];
+}
+
+/** Project removal data for all-projects bulk remove */
+export interface ProjectBulkRemoval {
+    projectPath: string;
+    projectName: string;
+    packages: string[];
+}
+
+/** Transitive package reference for metadata fetching (subset of TransitivePackage) */
+export interface TransitivePackageRef {
+    id: string;
+    version: string;
+    requiredByChain: string[];
+    fullChain?: string[];
+}
+
+// ─── Shared Messages (used by both main panel and sidebar) ───────────────────
+
+export interface GetInstalledPackagesMsg {
+    type: 'getInstalledPackages';
+    projectPath: string;
+}
+
+export interface SearchPackagesMsg {
+    type: 'searchPackages';
+    query: string;
+    sources?: string[];
+    includePrerelease?: boolean;
+    take?: number;
+    exactMatch?: boolean;
+}
+
+export interface CheckPackageUpdatesMsg {
+    type: 'checkPackageUpdates';
+    installedPackages: InstalledPackage[];
+    includePrerelease: boolean;
+    projectPath: string;
+}
+
+export interface CheckAllProjectsUpdatesMsg {
+    type: 'checkAllProjectsUpdates';
+    includePrerelease: boolean;
+}
+
+export interface CheckAllProjectsInstalledMsg {
+    type: 'checkAllProjectsInstalled';
+    context?: string;
+}
+
+export interface InstallPackageMsg {
+    type: 'installPackage';
+    projectPath: string;
+    packageId: string;
+    version?: string;
+    sourceUrl?: string;
+}
+
+export interface UpdatePackageMsg {
+    type: 'updatePackage';
+    projectPath: string;
+    packageId: string;
+    version: string;
+    sourceUrl?: string;
+}
+
+export interface RemovePackageMsg {
+    type: 'removePackage';
+    projectPath: string;
+    packageId: string;
+}
+
+export interface BulkUpdatePackagesMsg {
+    type: 'bulkUpdatePackages';
+    packages: BulkPackageRef[];
+    projectPath: string;
+}
+
+export interface BulkUpdateAllProjectsMsg {
+    type: 'bulkUpdateAllProjects';
+    projectUpdates: ProjectBulkUpdate[];
+}
+
+export interface GetPackageVersionsMsg {
+    type: 'getPackageVersions';
+    packageId: string;
+    source?: string;
+    includePrerelease?: boolean;
+    take?: number;
+}
+
+// ─── Panel-Only Messages ─────────────────────────────────────────────────────
+
+export interface GetProjectsMsg {
+    type: 'getProjects';
+}
+
+export interface GetTransitivePackagesMsg {
+    type: 'getTransitivePackages';
+    projectPath: string;
+    forceRestore?: boolean;
+}
+
+export interface GetTransitiveMetadataMsg {
+    type: 'getTransitiveMetadata';
+    packages: TransitivePackageRef[];
+    targetFramework: string;
+    projectPath: string;
+}
+
+export interface RestoreProjectMsg {
+    type: 'restoreProject';
+    projectPath: string;
+}
+
+export interface AutocompletePackagesMsg {
+    type: 'autocompletePackages';
+    query: string;
+    sources: Array<{ name: string; url: string }>;
+    includePrerelease?: boolean;
+}
+
+export interface BulkInstallMsg {
+    type: 'bulkInstall';
+    projectPaths: string[];
+    packageId: string;
+    version?: string;
+}
+
+export interface GetSourcesMsg {
+    type: 'getSources';
+}
+
+export interface RefreshSourcesMsg {
+    type: 'refreshSources';
+}
+
+export interface FullRefreshMsg {
+    type: 'fullRefresh';
+}
+
+export interface EnableSourceMsg {
+    type: 'enableSource';
+    sourceName: string;
+}
+
+export interface DisableSourceMsg {
+    type: 'disableSource';
+    sourceName: string;
+    sourceUrl: string;
+}
+
+export interface AddSourceMsg {
+    type: 'addSource';
+    url: string;
+    name?: string;
+    username?: string;
+    password?: string;
+    configFile?: string;
+    allowInsecure?: boolean;
+    storeEncrypted?: boolean;
+}
+
+export interface RemoveSourceMsg {
+    type: 'removeSource';
+    sourceName: string;
+    configFile?: string;
+}
+
+export interface GetConfigFilesMsg {
+    type: 'getConfigFiles';
+}
+
+export interface GetPackageMetadataMsg {
+    type: 'getPackageMetadata';
+    packageId: string;
+    version: string;
+    source?: string;
+}
+
+export interface GetSettingsMsg {
+    type: 'getSettings';
+}
+
+export interface SaveSettingsMsg {
+    type: 'saveSettings';
+    includePrerelease?: boolean;
+    selectedSource?: string;
+    selectedProject?: string;
+    recentSearches?: string[];
+}
+
+export interface GetSplitPositionMsg {
+    type: 'getSplitPosition';
+}
+
+export interface SaveSplitPositionMsg {
+    type: 'saveSplitPosition';
+    position: number;
+}
+
+export interface PrewarmSourceMsg {
+    type: 'prewarmSource';
+    sourceUrl: string;
+}
+
+export interface FetchReadmeFromPackageMsg {
+    type: 'fetchReadmeFromPackage';
+    packageId: string;
+    version: string;
+    source?: string;
+}
+
+export interface ConfirmBulkRemoveMsg {
+    type: 'confirmBulkRemove';
+    packages: string[];
+    projectPath: string;
+}
+
+export interface ConfirmBulkRemoveAllProjectsMsg {
+    type: 'confirmBulkRemoveAllProjects';
+    projectRemovals: ProjectBulkRemoval[];
+}
+
+// ─── Sidebar-Only Messages ───────────────────────────────────────────────────
+
+export interface SidebarReadyMsg {
+    type: 'ready';
+}
+
+export interface SaveSectionSplitMsg {
+    type: 'saveSectionSplit';
+    position?: number;
+}
+
+export interface ShowContextMenuMsg {
+    type: 'showContextMenu';
+    packageId: string;
+    installedVersion?: string;
+    latestVersion?: string;
+    context: 'browse' | 'installed' | 'updates';
+    projectPath: string;
+    versionType?: string;
+    sourceUrl?: string;
+}
+
+// ─── Union Types ─────────────────────────────────────────────────────────────
+
+/** All messages the main panel webview can send to the extension host */
+export type PanelRequestMessage =
+    | GetProjectsMsg | GetInstalledPackagesMsg | GetTransitivePackagesMsg | GetTransitiveMetadataMsg
+    | RestoreProjectMsg | SearchPackagesMsg | AutocompletePackagesMsg
+    | InstallPackageMsg | BulkInstallMsg | UpdatePackageMsg | RemovePackageMsg
+    | GetSourcesMsg | RefreshSourcesMsg | FullRefreshMsg
+    | EnableSourceMsg | DisableSourceMsg | AddSourceMsg | RemoveSourceMsg
+    | GetConfigFilesMsg | GetPackageVersionsMsg | GetPackageMetadataMsg
+    | CheckPackageUpdatesMsg | CheckAllProjectsUpdatesMsg | CheckAllProjectsInstalledMsg
+    | BulkUpdateAllProjectsMsg | GetSettingsMsg | SaveSettingsMsg
+    | GetSplitPositionMsg | SaveSplitPositionMsg
+    | PrewarmSourceMsg | FetchReadmeFromPackageMsg
+    | BulkUpdatePackagesMsg | ConfirmBulkRemoveMsg | ConfirmBulkRemoveAllProjectsMsg;
+
+/** All messages the sidebar webview can send to the extension host */
+export type SidebarRequestMessage =
+    | SidebarReadyMsg | SaveSectionSplitMsg | SearchPackagesMsg
+    | GetInstalledPackagesMsg | CheckPackageUpdatesMsg
+    | CheckAllProjectsUpdatesMsg | CheckAllProjectsInstalledMsg
+    | InstallPackageMsg | UpdatePackageMsg | RemovePackageMsg
+    | BulkUpdatePackagesMsg | BulkUpdateAllProjectsMsg
+    | GetPackageVersionsMsg | ShowContextMenuMsg;
+
+// ─── Service Infrastructure Types ────────────────────────────────────────────
+
+/** NuGet V3 service index response */
+export interface NuGetServiceIndex {
+    version: string;
+    resources: Array<{
+        '@id': string;
+        '@type': string | string[];
+    }>;
+}
+
+/** Resolved service endpoints from a NuGet source's service index */
+export interface ServiceEndpoints {
+    packageBaseAddress?: string;
+    registrationsBaseUrl?: string;
+    searchQueryService?: string;
+    searchAutocompleteService?: string;
+    vulnerabilityInfoUrl?: string;
+}
+
+/** Result from fetchJsonWithDetails — includes error information for better diagnostics */
+export interface FetchResult<T> {
+    data: T | null;
+    error?: {
+        type: 'network' | 'auth' | 'not-found' | 'server-error' | 'invalid-json' | 'unknown';
+        statusCode?: number;
+        message: string;
+    };
+}

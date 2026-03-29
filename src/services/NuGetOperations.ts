@@ -514,3 +514,80 @@ export async function executeBulkRemoveAllProjects(
         ctx.notifyOtherPanel({ type: 'bulkRemoveAllProjects' });
     }
 }
+
+// --- Shared query functions (used by both main panel and sidebar) ---
+
+export interface ProjectUpdatesResult {
+    projectPath: string;
+    projectName: string;
+    updates: { id: string; installedVersion: string; latestVersion: string }[];
+}
+
+export interface ProjectInstalledResult {
+    projectPath: string;
+    projectName: string;
+    packages: { id: string; version: string; resolvedVersion?: string; isImplicit?: boolean }[];
+}
+
+/**
+ * Query all projects for available package updates.
+ * @param liteMode When true, uses lightweight installed-package retrieval (sidebar). Panel passes false.
+ */
+export async function queryAllProjectsUpdates(
+    nugetService: NuGetService,
+    includePrerelease: boolean,
+    liteMode: boolean
+): Promise<ProjectUpdatesResult[]> {
+    const projects = await nugetService.findProjects();
+    const results: ProjectUpdatesResult[] = [];
+
+    for (const project of projects) {
+        try {
+            const installedPackages = await nugetService.getInstalledPackages(project.path, liteMode);
+            if (installedPackages.length > 0) {
+                const updates = await nugetService.checkPackageUpdatesMinimal(installedPackages, includePrerelease);
+                if (updates.length > 0) {
+                    results.push({
+                        projectPath: project.path,
+                        projectName: project.name,
+                        updates,
+                    });
+                }
+            }
+        } catch (error) {
+            console.error(`[nUIget] Failed to check updates for ${project.name}:`, error);
+        }
+    }
+
+    return results;
+}
+
+/**
+ * Query all projects for installed packages (lite mode).
+ */
+export async function queryAllProjectsInstalled(
+    nugetService: NuGetService
+): Promise<ProjectInstalledResult[]> {
+    const projects = await nugetService.findProjects();
+    const results: ProjectInstalledResult[] = [];
+
+    for (const project of projects) {
+        try {
+            const installedPackages = await nugetService.getInstalledPackages(project.path, true /* liteMode */);
+            results.push({
+                projectPath: project.path,
+                projectName: project.name,
+                packages: installedPackages.map(p => ({
+                    id: p.id,
+                    version: p.version,
+                    resolvedVersion: p.resolvedVersion,
+                    isImplicit: p.isImplicit,
+                })),
+            });
+        } catch (error) {
+            console.error(`[nUIget] Failed to get installed packages for ${project.name}:`, error);
+        }
+    }
+
+    return results;
+}

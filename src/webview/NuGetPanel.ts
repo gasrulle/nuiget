@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
-import { executeBulkInstall, executeBulkRemoveAllProjects, executeBulkRemovePackages, executeBulkUpdateAllProjects, executeBulkUpdatePackages, executeSingleOperation, OperationContext } from '../services/NuGetOperations';
-import { InstalledPackage, NuGetService } from '../services/NuGetService';
+import { executeBulkInstall, executeBulkRemoveAllProjects, executeBulkRemovePackages, executeBulkUpdateAllProjects, executeBulkUpdatePackages, executeSingleOperation, OperationContext, queryAllProjectsInstalled, queryAllProjectsUpdates } from '../services/NuGetOperations';
+import { NuGetService } from '../services/NuGetService';
+import type { PanelRequestMessage } from '../services/NuGetTypes';
 
 export class NuGetPanel {
     public static currentPanel: NuGetPanel | undefined;
@@ -199,7 +200,7 @@ export class NuGetPanel {
         );
     }
 
-    private async _handleMessage(data: Record<string, unknown>) {
+    private async _handleMessage(data: PanelRequestMessage) {
         switch (data.type) {
             case 'getProjects':
                 {
@@ -237,7 +238,7 @@ export class NuGetPanel {
                 }
             case 'getInstalledPackages':
                 {
-                    const packages = await this._nugetService.getInstalledPackages(data.projectPath as string);
+                    const packages = await this._nugetService.getInstalledPackages(data.projectPath);
                     this._postMessage({
                         type: 'installedPackages',
                         packages: packages,
@@ -251,10 +252,10 @@ export class NuGetPanel {
                         // If forceRestore is true (explicit refresh by user), run restore first
                         // This ignores the noRestore setting since user explicitly requested refresh
                         if (data.forceRestore) {
-                            await this._nugetService.restoreProject(data.projectPath as string);
+                            await this._nugetService.restoreProject(data.projectPath);
                         }
                         const result = await this._nugetService.getTransitivePackages(
-                            data.projectPath as string
+                            data.projectPath
                         );
                         this._postMessage({
                             type: 'transitivePackages',
@@ -277,7 +278,7 @@ export class NuGetPanel {
             case 'getTransitiveMetadata':
                 {
                     // Fetch metadata for packages in a specific framework section
-                    const packages = data.packages as Array<{ id: string; version: string; requiredByChain: string[]; fullChain?: string[] }>;
+                    const packages = data.packages;
                     try {
                         await this._nugetService.fetchTransitivePackageMetadata(packages);
                     } catch (error) {
@@ -298,7 +299,7 @@ export class NuGetPanel {
                         title: 'Restoring project...',
                         cancellable: false
                     }, async () => {
-                        const success = await this._nugetService.restoreProject(data.projectPath as string);
+                        const success = await this._nugetService.restoreProject(data.projectPath);
                         this._postMessage({
                             type: 'restoreProjectResult',
                             success: success,
@@ -309,12 +310,12 @@ export class NuGetPanel {
                 }
             case 'searchPackages':
                 {
-                    const query = data.query as string;
+                    const query = data.query;
                     // Track latest query for race condition prevention
                     this._latestSearchQuery = query;
 
                     // Defense-in-depth: pre-filter known-unreachable sources before calling searchPackages
-                    let sources = data.sources as string[] | undefined;
+                    let sources = data.sources;
                     if (sources && sources.length > 0) {
                         const failedSources = this._nugetService.getFailedSources();
                         if (failedSources.size > 0) {
@@ -329,10 +330,10 @@ export class NuGetPanel {
                     const results = await this._nugetService.searchPackages(
                         query,
                         sources,
-                        data.includePrerelease as boolean | undefined,
+                        data.includePrerelease,
                         undefined,
-                        data.take as number | undefined,
-                        data.exactMatch as boolean | undefined
+                        data.take,
+                        data.exactMatch
                     );
 
                     // Skip sending results if a newer query arrived while we were fetching
@@ -351,7 +352,7 @@ export class NuGetPanel {
                 }
             case 'autocompletePackages':
                 {
-                    const query = data.query as string;
+                    const query = data.query;
                     // Track latest query for coalescing
                     this._latestAutocompleteQuery = query;
 
@@ -361,8 +362,8 @@ export class NuGetPanel {
 
                     const groupedResults = await this._nugetService.quickSearchGrouped(
                         query,
-                        data.sources as Array<{ name: string; url: string }> || [],
-                        data.includePrerelease as boolean | undefined,
+                        data.sources || [],
+                        data.includePrerelease,
                         resultsPerSource
                     );
 
@@ -383,7 +384,7 @@ export class NuGetPanel {
                     if (this._operationInProgress) { break; }
                     this._operationInProgress = true;
                     try {
-                        await executeSingleOperation(this._opCtx(), 'install', data.projectPath as string, data.packageId as string, data.version as string | undefined, data.sourceUrl as string | undefined);
+                        await executeSingleOperation(this._opCtx(), 'install', data.projectPath, data.packageId, data.version, data.sourceUrl);
                     } finally { this._operationInProgress = false; }
                     break;
                 }
@@ -392,7 +393,7 @@ export class NuGetPanel {
                     if (this._operationInProgress) { break; }
                     this._operationInProgress = true;
                     try {
-                        await executeBulkInstall(this._opCtx(), data.projectPaths as string[], data.packageId as string, data.version as string | undefined);
+                        await executeBulkInstall(this._opCtx(), data.projectPaths, data.packageId, data.version);
                     } finally { this._operationInProgress = false; }
                     break;
                 }
@@ -401,7 +402,7 @@ export class NuGetPanel {
                     if (this._operationInProgress) { break; }
                     this._operationInProgress = true;
                     try {
-                        await executeSingleOperation(this._opCtx(), 'update', data.projectPath as string, data.packageId as string, data.version as string, data.sourceUrl as string | undefined);
+                        await executeSingleOperation(this._opCtx(), 'update', data.projectPath, data.packageId, data.version, data.sourceUrl);
                     } finally { this._operationInProgress = false; }
                     break;
                 }
@@ -410,7 +411,7 @@ export class NuGetPanel {
                     if (this._operationInProgress) { break; }
                     this._operationInProgress = true;
                     try {
-                        await executeSingleOperation(this._opCtx(), 'remove', data.projectPath as string, data.packageId as string);
+                        await executeSingleOperation(this._opCtx(), 'remove', data.projectPath, data.packageId);
                     } finally { this._operationInProgress = false; }
                     break;
                 }
@@ -493,7 +494,7 @@ export class NuGetPanel {
                 }
             case 'enableSource':
                 {
-                    const sourceName = data.sourceName as string;
+                    const sourceName = data.sourceName;
                     const success = await this._nugetService.enableSource(sourceName);
                     if (success) {
                         // Refresh sources list after enabling
@@ -520,8 +521,8 @@ export class NuGetPanel {
                 }
             case 'disableSource':
                 {
-                    const sourceName = data.sourceName as string;
-                    const disabledSourceUrl = data.sourceUrl as string;
+                    const sourceName = data.sourceName;
+                    const disabledSourceUrl = data.sourceUrl;
                     const success = await this._nugetService.disableSource(sourceName);
                     if (success) {
                         // Refresh sources list after disabling
@@ -549,13 +550,13 @@ export class NuGetPanel {
                 }
             case 'addSource':
                 {
-                    const url = data.url as string;
-                    const name = data.name as string | undefined;
-                    const username = data.username as string | undefined;
-                    const password = data.password as string | undefined;
-                    const configFile = data.configFile as string | undefined;
-                    const allowInsecure = data.allowInsecure as boolean | undefined;
-                    const storeEncrypted = data.storeEncrypted as boolean | undefined;
+                    const url = data.url;
+                    const name = data.name;
+                    const username = data.username;
+                    const password = data.password;
+                    const configFile = data.configFile;
+                    const allowInsecure = data.allowInsecure;
+                    const storeEncrypted = data.storeEncrypted;
 
                     const result = await this._nugetService.addSource(url, name, username, password, configFile, allowInsecure, storeEncrypted);
 
@@ -594,8 +595,8 @@ export class NuGetPanel {
                 }
             case 'removeSource':
                 {
-                    const sourceName = data.sourceName as string;
-                    const configFile = data.configFile as string | undefined;
+                    const sourceName = data.sourceName;
+                    const configFile = data.configFile;
 
                     // Capture the source URL before removal so the UI can check if it was selected
                     const sourcesBeforeRemove = await this._nugetService.getSources();
@@ -640,10 +641,10 @@ export class NuGetPanel {
             case 'getPackageVersions':
                 {
                     const versions = await this._nugetService.getPackageVersions(
-                        data.packageId as string,
-                        data.source as string | undefined,
-                        data.includePrerelease as boolean | undefined,
-                        data.take as number | undefined
+                        data.packageId,
+                        data.source,
+                        data.includePrerelease,
+                        data.take
                     );
                     this._postMessage({
                         type: 'packageVersions',
@@ -655,9 +656,9 @@ export class NuGetPanel {
             case 'getPackageMetadata':
                 {
                     const metadata = await this._nugetService.getPackageMetadata(
-                        data.packageId as string,
-                        data.version as string,
-                        data.source as string | undefined
+                        data.packageId,
+                        data.version,
+                        data.source
                     );
                     this._postMessage({
                         type: 'packageMetadata',
@@ -670,8 +671,8 @@ export class NuGetPanel {
             case 'checkPackageUpdates':
                 {
                     const packagesWithUpdates = await this._nugetService.checkPackageUpdates(
-                        data.installedPackages as InstalledPackage[],
-                        data.includePrerelease as boolean
+                        data.installedPackages,
+                        data.includePrerelease
                     );
                     this._postMessage({
                         type: 'packageUpdates',
@@ -682,68 +683,16 @@ export class NuGetPanel {
                 }
             case 'checkAllProjectsUpdates':
                 {
-                    const includePrerelease = data.includePrerelease as boolean;
-                    const projects = await this._nugetService.findProjects();
-                    const allProjectsUpdates: { projectPath: string; projectName: string; updates: { id: string; installedVersion: string; latestVersion: string }[] }[] = [];
-
-                    // Check each project sequentially to avoid overwhelming the system
-                    for (const project of projects) {
-                        try {
-                            const installedPackages = await this._nugetService.getInstalledPackages(project.path);
-                            if (installedPackages.length > 0) {
-                                // Use minimal check (no metadata) for speed
-                                const updates = await this._nugetService.checkPackageUpdatesMinimal(
-                                    installedPackages,
-                                    includePrerelease
-                                );
-                                if (updates.length > 0) {
-                                    allProjectsUpdates.push({
-                                        projectPath: project.path,
-                                        projectName: project.name,
-                                        updates: updates
-                                    });
-                                }
-                            }
-                        } catch (error) {
-                            console.error(`[nUIget] Failed to check updates for ${project.name}:`, error);
-                        }
-                    }
-
-                    this._postMessage({
-                        type: 'allProjectsUpdates',
-                        projectUpdates: allProjectsUpdates
-                    });
+                    const projectUpdates = await queryAllProjectsUpdates(
+                        this._nugetService, data.includePrerelease, false /* liteMode */
+                    );
+                    this._postMessage({ type: 'allProjectsUpdates', projectUpdates });
                     break;
                 }
             case 'checkAllProjectsInstalled':
                 {
-                    const projects = await this._nugetService.findProjects();
-                    const allProjectsInstalled: { projectPath: string; projectName: string; packages: { id: string; version: string; resolvedVersion?: string; isImplicit?: boolean }[] }[] = [];
-
-                    // Check each project sequentially to avoid overwhelming the system
-                    for (const project of projects) {
-                        try {
-                            const installedPackages = await this._nugetService.getInstalledPackages(project.path, true /* liteMode */);
-                            allProjectsInstalled.push({
-                                projectPath: project.path,
-                                projectName: project.name,
-                                packages: installedPackages.map(p => ({
-                                    id: p.id,
-                                    version: p.version,
-                                    resolvedVersion: p.resolvedVersion,
-                                    isImplicit: p.isImplicit,
-                                }))
-                            });
-                        } catch (error) {
-                            console.error(`[nUIget] Failed to get installed packages for ${project.name}:`, error);
-                        }
-                    }
-
-                    this._postMessage({
-                        type: 'allProjectsInstalled',
-                        context: data.context,
-                        projectInstalled: allProjectsInstalled
-                    });
+                    const projectInstalled = await queryAllProjectsInstalled(this._nugetService);
+                    this._postMessage({ type: 'allProjectsInstalled', context: data.context, projectInstalled });
                     break;
                 }
             case 'bulkUpdateAllProjects':
@@ -751,7 +700,7 @@ export class NuGetPanel {
                     if (this._operationInProgress) { break; }
                     this._operationInProgress = true;
                     try {
-                        await executeBulkUpdateAllProjects(this._opCtx(), data.projectUpdates as { projectPath: string; projectName: string; packages: { id: string; version: string; sourceUrl?: string }[] }[]);
+                        await executeBulkUpdateAllProjects(this._opCtx(), data.projectUpdates);
                     } finally { this._operationInProgress = false; }
                     break;
                 }
@@ -784,17 +733,17 @@ export class NuGetPanel {
                         if (data.includePrerelease !== undefined) {
                             await NuGetPanel._context.workspaceState.update('nuget.includePrerelease', data.includePrerelease);
                             // Sync to sidebar panel
-                            NuGetPanel.onPrereleaseChanged?.(data.includePrerelease as boolean);
+                            NuGetPanel.onPrereleaseChanged?.(data.includePrerelease);
                         }
                         if (data.selectedSource !== undefined) {
                             await NuGetPanel._context.workspaceState.update('nuget.selectedSource', data.selectedSource);
                             // Sync to sidebar panel
-                            NuGetPanel.onSourceChanged?.(data.selectedSource as string);
+                            NuGetPanel.onSourceChanged?.(data.selectedSource);
                         }
                         if (data.selectedProject !== undefined) {
                             await NuGetPanel._context.workspaceState.update('nuget.selectedProject', data.selectedProject);
                             // Sync to sidebar panel
-                            NuGetPanel.onProjectChanged?.(data.selectedProject as string);
+                            NuGetPanel.onProjectChanged?.(data.selectedProject);
                         }
                         if (data.recentSearches !== undefined) {
                             await NuGetPanel._context.workspaceState.update('nuget.recentSearches', data.recentSearches);
@@ -823,7 +772,7 @@ export class NuGetPanel {
             case 'prewarmSource':
                 {
                     // Pre-warm service index when user selects a source
-                    const sourceUrl = data.sourceUrl as string;
+                    const sourceUrl = data.sourceUrl;
                     if (sourceUrl && sourceUrl !== 'all') {
                         this._nugetService.prewarmServiceIndex(sourceUrl);
                     } else {
@@ -836,9 +785,9 @@ export class NuGetPanel {
                 {
                     // Lazy load README from nupkg when readme tab is clicked and no readme was fetched
                     const readme = await this._nugetService.extractReadmeFromPackage(
-                        data.packageId as string,
-                        data.version as string,
-                        data.source as string | undefined
+                        data.packageId,
+                        data.version,
+                        data.source
                     );
                     this._postMessage({
                         type: 'packageReadme',
@@ -853,7 +802,7 @@ export class NuGetPanel {
                     if (this._operationInProgress) { break; }
                     this._operationInProgress = true;
                     try {
-                        await executeBulkUpdatePackages(this._opCtx(), data.packages as { id: string; version: string; sourceUrl?: string }[], data.projectPath as string);
+                        await executeBulkUpdatePackages(this._opCtx(), data.packages, data.projectPath);
                     } finally { this._operationInProgress = false; }
                     break;
                 }
@@ -862,7 +811,7 @@ export class NuGetPanel {
                     if (this._operationInProgress) { break; }
                     this._operationInProgress = true;
                     try {
-                        await executeBulkRemovePackages(this._opCtx(), data.packages as string[], data.projectPath as string);
+                        await executeBulkRemovePackages(this._opCtx(), data.packages, data.projectPath);
                     } finally { this._operationInProgress = false; }
                     break;
                 }
@@ -871,7 +820,7 @@ export class NuGetPanel {
                     if (this._operationInProgress) { break; }
                     this._operationInProgress = true;
                     try {
-                        await executeBulkRemoveAllProjects(this._opCtx(), data.projectRemovals as { projectPath: string; projectName: string; packages: string[] }[]);
+                        await executeBulkRemoveAllProjects(this._opCtx(), data.projectRemovals);
                     } finally { this._operationInProgress = false; }
                     break;
                 }

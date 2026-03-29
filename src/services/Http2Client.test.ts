@@ -3,7 +3,7 @@ import * as http from 'http';
 import * as http2 from 'http2';
 import * as https from 'https';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { Http2Client, isSafeRedirectTarget } from '../services/Http2Client';
+import { Http2Client, isRedirectStatus, isSafeRedirectTarget, resolveRedirect } from '../services/Http2Client';
 
 // Mock Node.js network modules to avoid real connections
 vi.mock('http', () => ({
@@ -208,6 +208,96 @@ describe('isSafeRedirectTarget', () => {
             // new URL('', 'https://api.nuget.org') resolves to the original URL
             expect(isSafeRedirectTarget('', ORIG)).toBe(true);
         });
+    });
+});
+
+// ──────────────────────────────────────────────
+// isRedirectStatus — redirect status code detection
+// ──────────────────────────────────────────────
+
+describe('isRedirectStatus', () => {
+    it('returns true for redirect status codes', () => {
+        expect(isRedirectStatus(301)).toBe(true);
+        expect(isRedirectStatus(302)).toBe(true);
+        expect(isRedirectStatus(307)).toBe(true);
+        expect(isRedirectStatus(308)).toBe(true);
+    });
+
+    it('returns false for non-redirect status codes', () => {
+        expect(isRedirectStatus(200)).toBe(false);
+        expect(isRedirectStatus(404)).toBe(false);
+        expect(isRedirectStatus(500)).toBe(false);
+        expect(isRedirectStatus(303)).toBe(false);
+    });
+
+    it('returns false for undefined', () => {
+        expect(isRedirectStatus(undefined)).toBe(false);
+    });
+});
+
+// ──────────────────────────────────────────────
+// resolveRedirect — redirect resolution with SSRF checks
+// ──────────────────────────────────────────────
+
+describe('resolveRedirect', () => {
+    const ORIG = 'https://api.nuget.org/v3/index.json';
+
+    it('returns null for non-redirect status codes', () => {
+        expect(resolveRedirect(200, 'https://other.nuget.org/', ORIG)).toBeNull();
+        expect(resolveRedirect(404, 'https://other.nuget.org/', ORIG)).toBeNull();
+    });
+
+    it('returns null when location header is missing', () => {
+        expect(resolveRedirect(301, undefined, ORIG)).toBeNull();
+        expect(resolveRedirect(302, '', ORIG)).toBeNull();
+    });
+
+    it('resolves a safe redirect with correct URL', () => {
+        const result = resolveRedirect(301, 'https://other.nuget.org/v3/data', ORIG);
+        expect(result).not.toBeNull();
+        expect(result!.redirectUrl).toBe('https://other.nuget.org/v3/data');
+    });
+
+    it('resolves relative location against original URL', () => {
+        const result = resolveRedirect(302, '/v3/registration/pkg/index.json', ORIG);
+        expect(result).not.toBeNull();
+        expect(result!.redirectUrl).toBe('https://api.nuget.org/v3/registration/pkg/index.json');
+    });
+
+    it('forwards auth for same-origin redirects', () => {
+        const result = resolveRedirect(301, 'https://api.nuget.org/v3/other', ORIG, 'Basic abc123');
+        expect(result).not.toBeNull();
+        expect(result!.forwardAuth).toBe('Basic abc123');
+    });
+
+    it('drops auth for cross-origin redirects', () => {
+        const result = resolveRedirect(301, 'https://other.nuget.org/v3/data', ORIG, 'Basic abc123');
+        expect(result).not.toBeNull();
+        expect(result!.forwardAuth).toBeUndefined();
+    });
+
+    it('returns null when no auth is provided (forwardAuth is undefined for same-origin)', () => {
+        const result = resolveRedirect(301, 'https://api.nuget.org/v3/other', ORIG);
+        expect(result).not.toBeNull();
+        expect(result!.forwardAuth).toBeUndefined();
+    });
+
+    it('returns null for unsafe redirect targets (SSRF)', () => {
+        expect(resolveRedirect(302, 'https://127.0.0.1/api', ORIG)).toBeNull();
+        expect(resolveRedirect(302, 'https://localhost/api', ORIG)).toBeNull();
+        expect(resolveRedirect(302, 'https://10.0.0.1/', ORIG)).toBeNull();
+        expect(resolveRedirect(302, 'https://192.168.1.1/', ORIG)).toBeNull();
+    });
+
+    it('returns null for HTTPS→HTTP downgrade', () => {
+        expect(resolveRedirect(301, 'http://api.nuget.org/v3/other', ORIG)).toBeNull();
+    });
+
+    it('handles all redirect status codes', () => {
+        for (const code of [301, 302, 307, 308]) {
+            const result = resolveRedirect(code, 'https://other.nuget.org/', ORIG);
+            expect(result).not.toBeNull();
+        }
     });
 });
 

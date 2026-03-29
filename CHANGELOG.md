@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Discriminated Union Message Types** — All 48 webview↔extension host message types defined as typed interfaces in `NuGetTypes.ts` with `PanelRequestMessage` and `SidebarRequestMessage` unions, eliminating `as` type casts from both panel message handlers
+- **Shared Query Functions** — `queryAllProjectsUpdates()` and `queryAllProjectsInstalled()` extracted to `NuGetOperations.ts`, deduplicating identical loops from `NuGetPanel.ts` and `NuGetSidebarPanel.ts`
+- **Centralized HTTP Redirect Handling** — `resolveRedirect()` and `isRedirectStatus()` helpers in `Http2Client.ts` replace inline redirect logic across 10 sites in Http2Client.ts and NuGetService.ts, consolidating status detection, URL resolution, SSRF validation, and same-origin auth forwarding
+- **NuGetLogger and NuGetCliService Extraction** — Logging utilities and dotnet CLI operations extracted from `NuGetService` into `NuGetLogger.ts` and `NuGetCliService.ts`, reducing the god class by ~320 lines while preserving the public facade API
+- **NuGetSourceService Extraction** — Source CRUD operations, config file management, and source name generation extracted from `NuGetService` into `NuGetSourceService.ts`, continuing the facade decomposition
+- **NuGetProjectService Extraction** — Project discovery, .csproj parsing, installed packages, transitive dependency resolution, and `project.assets.json` caching extracted from `NuGetService` into `NuGetProjectService.ts` (~440 lines), further reducing the god class
+- **NuGetPackageService Extraction** — Package search, metadata resolution, version queries, vulnerability data, icon URL resolution, autocomplete, update checking, README extraction, and size fetching extracted from `NuGetService` into `NuGetPackageService.ts` (~1250 lines), reducing the god class from ~3400 to ~1200 lines (64% reduction)
 - **Activity Bar Badge** — Shows the number of available NuGet package updates on the nUIget sidebar icon, with per-project update breakdown in the tooltip for multi-project workspaces. Configurable via `nuiget.showActivityBarBadge` (default: on). Uses runtime detection for compatibility with older VS Code versions.
 - **Test Infrastructure** — Vitest (backend/frontend projects), React Testing Library, VS Code API mocks, test fixtures, coverage with V8 provider
 - **CI/CD Pipeline** — GitHub Actions workflow with lint, test (with coverage upload), and build/package jobs. Concurrency control cancels stale PR runs. VSIX artifact uploaded on successful builds

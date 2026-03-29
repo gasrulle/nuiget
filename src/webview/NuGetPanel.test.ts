@@ -11,6 +11,8 @@ const hoisted = vi.hoisted(() => ({
     mockExecuteBulkRemovePackages: vi.fn().mockResolvedValue(undefined),
     mockExecuteBulkUpdateAllProjects: vi.fn().mockResolvedValue(undefined),
     mockExecuteBulkRemoveAllProjects: vi.fn().mockResolvedValue(undefined),
+    mockQueryAllProjectsUpdates: vi.fn().mockResolvedValue([]),
+    mockQueryAllProjectsInstalled: vi.fn().mockResolvedValue([]),
 }));
 
 vi.mock('../services/NuGetOperations', () => ({
@@ -20,6 +22,8 @@ vi.mock('../services/NuGetOperations', () => ({
     executeBulkRemovePackages: hoisted.mockExecuteBulkRemovePackages,
     executeBulkUpdateAllProjects: hoisted.mockExecuteBulkUpdateAllProjects,
     executeBulkRemoveAllProjects: hoisted.mockExecuteBulkRemoveAllProjects,
+    queryAllProjectsUpdates: hoisted.mockQueryAllProjectsUpdates,
+    queryAllProjectsInstalled: hoisted.mockQueryAllProjectsInstalled,
 }));
 
 vi.mock('../services/NuGetService', () => ({
@@ -886,18 +890,15 @@ describe('NuGetPanel', () => {
         });
 
         it('checks updates for all projects and sends combined results', async () => {
-            (mockService as any).findProjects.mockResolvedValue([
-                { path: '/projA.csproj', name: 'ProjA' },
-                { path: '/projB.csproj', name: 'ProjB' }
-            ]);
-            (mockService as any).getInstalledPackages
-                .mockResolvedValueOnce([{ id: 'Pkg', version: '1.0', versionType: 'standard' }])
-                .mockResolvedValueOnce([]);
-            (mockService as any).checkPackageUpdatesMinimal
-                .mockResolvedValueOnce([{ id: 'Pkg', installedVersion: '1.0', latestVersion: '2.0' }]);
+            hoisted.mockQueryAllProjectsUpdates.mockResolvedValueOnce([{
+                projectPath: '/projA.csproj',
+                projectName: 'ProjA',
+                updates: [{ id: 'Pkg', installedVersion: '1.0', latestVersion: '2.0' }]
+            }]);
 
             await messageListener!({ type: 'checkAllProjectsUpdates', includePrerelease: false });
 
+            expect(hoisted.mockQueryAllProjectsUpdates).toHaveBeenCalledWith(mockService, false, false);
             expect(mockPanel.webview.postMessage).toHaveBeenCalledWith({
                 type: 'allProjectsUpdates',
                 projectUpdates: [{
@@ -909,14 +910,7 @@ describe('NuGetPanel', () => {
         });
 
         it('skips projects that throw errors', async () => {
-            (mockService as any).findProjects.mockResolvedValue([
-                { path: '/bad.csproj', name: 'Bad' },
-                { path: '/good.csproj', name: 'Good' }
-            ]);
-            (mockService as any).getInstalledPackages
-                .mockRejectedValueOnce(new Error('parse error'))
-                .mockResolvedValueOnce([{ id: 'A', version: '1.0', versionType: 'standard' }]);
-            (mockService as any).checkPackageUpdatesMinimal.mockResolvedValueOnce([]);
+            hoisted.mockQueryAllProjectsUpdates.mockResolvedValueOnce([]);
 
             await messageListener!({ type: 'checkAllProjectsUpdates', includePrerelease: false });
 
@@ -934,15 +928,14 @@ describe('NuGetPanel', () => {
         });
 
         it('collects installed packages from all projects', async () => {
-            (mockService as any).findProjects.mockResolvedValue([
-                { path: '/projA.csproj', name: 'ProjA' }
-            ]);
-            (mockService as any).getInstalledPackages.mockResolvedValue([
-                { id: 'Pkg', version: '1.0', resolvedVersion: '1.0.0', isImplicit: false }
-            ]);
+            hoisted.mockQueryAllProjectsInstalled.mockResolvedValueOnce([{
+                projectPath: '/projA.csproj',
+                projectName: 'ProjA',
+                packages: [{ id: 'Pkg', version: '1.0', resolvedVersion: '1.0.0', isImplicit: false }]
+            }]);
             await messageListener!({ type: 'checkAllProjectsInstalled', context: 'multiInstall' });
 
-            expect((mockService as any).getInstalledPackages).toHaveBeenCalledWith('/projA.csproj', true);
+            expect(hoisted.mockQueryAllProjectsInstalled).toHaveBeenCalledWith(mockService);
             expect(mockPanel.webview.postMessage).toHaveBeenCalledWith({
                 type: 'allProjectsInstalled',
                 context: 'multiInstall',
@@ -955,10 +948,7 @@ describe('NuGetPanel', () => {
         });
 
         it('skips projects that throw errors', async () => {
-            (mockService as any).findProjects.mockResolvedValue([
-                { path: '/bad.csproj', name: 'Bad' }
-            ]);
-            (mockService as any).getInstalledPackages.mockRejectedValue(new Error('fail'));
+            hoisted.mockQueryAllProjectsInstalled.mockResolvedValueOnce([]);
             await messageListener!({ type: 'checkAllProjectsInstalled' });
 
             expect(mockPanel.webview.postMessage).toHaveBeenCalledWith({
