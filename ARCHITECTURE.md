@@ -102,7 +102,7 @@ src/
 │   │   ├── index.ts          # Re-exports for test helpers
 │   │   ├── backend.ts        # Backend test utilities (mock services, exec helpers)
 │   │   └── frontend.tsx      # Frontend test utilities (render with VS Code context)
-│   └── setup-frontend.ts    # jsdom setup (CSS.supports stub, ResizeObserver mock)
+│   └── setup-frontend.ts    # jsdom setup (jest-dom matchers, acquireVsCodeApi shim)
 ```
 
 ### Module Split: NuGetService
@@ -1486,12 +1486,12 @@ npm run test:coverage   # Run with V8 coverage report
 - Excludes: `src/test/**`, `src/global.d.ts`, `src/extension.ts`, `src/services/NuGetTypes.ts`, entry points (`index.tsx`)
 
 ### VS Code API Mock
-`src/test/__mocks__/vscode.ts` provides a comprehensive mock of the `vscode` namespace, resolved via Vitest `resolve.alias`. Covers: `commands`, `window`, `workspace`, `Uri`, `EventEmitter`, `ExtensionContext`, `RelativePattern`, `TreeItem`, `ThemeIcon`, `MarkdownString`, and more. Each test file gets a fresh mock instance via `vi.mock()`.
+`src/test/__mocks__/vscode.ts` provides a comprehensive mock of the `vscode` namespace, resolved via Vitest `resolve.alias`. Covers: `commands`, `window`, `workspace`, `env`, `Uri`, `EventEmitter`, `CancellationTokenSource`, `Disposable`, `RelativePattern`, `ProgressLocation`, `ViewColumn`, and factory helpers (`createMockExtensionContext`, `resetAllMocks`). Each test file gets a fresh mock instance via `vi.mock()`.
 
 ### Test Helpers
 - **`src/test/helpers/backend.ts`** — Mock service factories (`createMockNuGetService()`, `createMockCredentialService()`, etc.), `execWithTimeout` mock, output channel mock
 - **`src/test/helpers/frontend.tsx`** — `renderWithVSCode()` wrapper that provides the `vscode` acquireVsCodeApi context to React components
-- **`src/test/setup-frontend.ts`** — jsdom environment setup: `CSS.supports` stub, `ResizeObserver` mock, `scrollIntoView` mock
+- **`src/test/setup-frontend.ts`** — jsdom environment setup: imports `@testing-library/jest-dom/vitest` matchers and shims the `acquireVsCodeApi` webview global
 
 ### Test Fixtures
 `src/test/fixtures/` contains typed, reusable test data:
