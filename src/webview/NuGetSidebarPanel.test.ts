@@ -312,6 +312,36 @@ describe('NuGetSidebarProvider', () => {
             provider.dispose();
             expect(view.badge).toBeUndefined();
         });
+
+        it('sets _disposed to true', () => {
+            view = resolveView(provider);
+            expect((provider as any)._disposed).toBe(false);
+
+            provider.dispose();
+            expect((provider as any)._disposed).toBe(true);
+        });
+
+        it('clears background check timer', () => {
+            view = resolveView(provider);
+            provider.startBackgroundMonitoring();
+
+            expect((provider as any)._backgroundCheckTimer).toBeDefined();
+
+            provider.dispose();
+            expect((provider as any)._backgroundCheckTimer).toBeUndefined();
+        });
+
+        it('clears file watcher debounce', () => {
+            view = resolveView(provider);
+            provider.startBackgroundMonitoring();
+
+            // Simulate a debounce timer being set
+            (provider as any)._fileWatcherDebounce = setTimeout(() => { /* noop */ }, 10000);
+            expect((provider as any)._fileWatcherDebounce).toBeDefined();
+
+            provider.dispose();
+            expect((provider as any)._fileWatcherDebounce).toBeUndefined();
+        });
     });
 
     // ──────────────────────────────────────────────

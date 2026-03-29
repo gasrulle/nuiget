@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Sub-Service Unit Tests** — New test files for `NuGetLogger` (22 tests), `NuGetCliService` (27 tests), `NuGetSourceService` (32 tests), and `NuGetProjectService` (24 tests), covering credential sanitization, SDK detection, CLI operations, source CRUD/caching, project discovery, .csproj parsing, transitive dependency resolution, and assets.json caching
+
+### Fixed
+
+- **Main panel stuck loading spinner on checkAllProjectsUpdates/checkAllProjectsInstalled errors**
+- **Sidebar post-disposal messaging when dispose() called directly**
+
 ## [1.15.2] - 2026-03-29
 
 ### Added

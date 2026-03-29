@@ -701,16 +701,26 @@ export class NuGetPanel {
                 }
             case 'checkAllProjectsUpdates':
                 {
-                    const projectUpdates = await queryAllProjectsUpdates(
-                        this._nugetService, data.includePrerelease, false /* liteMode */
-                    );
-                    this._postMessage({ type: 'allProjectsUpdates', projectUpdates });
+                    try {
+                        const projectUpdates = await queryAllProjectsUpdates(
+                            this._nugetService, data.includePrerelease, false /* liteMode */
+                        );
+                        this._postMessage({ type: 'allProjectsUpdates', projectUpdates });
+                    } catch (error) {
+                        console.error('[nUIget] checkAllProjectsUpdates error:', error);
+                        this._postMessage({ type: 'allProjectsUpdates', projectUpdates: [] });
+                    }
                     break;
                 }
             case 'checkAllProjectsInstalled':
                 {
-                    const projectInstalled = await queryAllProjectsInstalled(this._nugetService);
-                    this._postMessage({ type: 'allProjectsInstalled', context: data.context, projectInstalled });
+                    try {
+                        const projectInstalled = await queryAllProjectsInstalled(this._nugetService);
+                        this._postMessage({ type: 'allProjectsInstalled', context: data.context, projectInstalled });
+                    } catch (error) {
+                        console.error('[nUIget] checkAllProjectsInstalled error:', error);
+                        this._postMessage({ type: 'allProjectsInstalled', context: data.context, projectInstalled: [] });
+                    }
                     break;
                 }
             case 'bulkUpdateAllProjects':

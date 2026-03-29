@@ -1025,5 +1025,34 @@ describe('NuGetPanel', () => {
                 projectPath: '/proj.csproj'
             });
         });
+
+        it('checkAllProjectsUpdates sends empty response on error', async () => {
+            hoisted.mockQueryAllProjectsUpdates.mockRejectedValue(new Error('network error'));
+            mockPanel.webview.postMessage.mockClear();
+            await messageListener!({
+                type: 'checkAllProjectsUpdates',
+                includePrerelease: false
+            });
+
+            expect(mockPanel.webview.postMessage).toHaveBeenCalledWith({
+                type: 'allProjectsUpdates',
+                projectUpdates: []
+            });
+        });
+
+        it('checkAllProjectsInstalled sends empty response on error', async () => {
+            hoisted.mockQueryAllProjectsInstalled.mockRejectedValue(new Error('network error'));
+            mockPanel.webview.postMessage.mockClear();
+            await messageListener!({
+                type: 'checkAllProjectsInstalled',
+                context: 'multiInstall'
+            });
+
+            expect(mockPanel.webview.postMessage).toHaveBeenCalledWith({
+                type: 'allProjectsInstalled',
+                context: 'multiInstall',
+                projectInstalled: []
+            });
+        });
     });
 });

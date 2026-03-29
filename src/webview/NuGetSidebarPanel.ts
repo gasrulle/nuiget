@@ -246,6 +246,7 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
 
     /** Dispose background monitoring resources */
     public dispose(): void {
+        this._disposed = true;
         this._clearBadge();
         if (this._backgroundCheckTimer) {
             clearInterval(this._backgroundCheckTimer);
