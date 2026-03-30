@@ -200,7 +200,11 @@ export function isValidSourceUrl(url: string): boolean {
 /**
  * Validate a credential value (username or password) for safe shell command use.
  * Rejects characters that could break out of double-quoted shell arguments:
- * double quotes, backticks, dollar signs, backslashes, and control characters.
+ * double quotes, backticks, dollar signs, backslashes, exclamation marks,
+ * and control characters.
+ *
+ * Note: Backslash is rejected, so Windows `DOMAIN\user` format is not supported.
+ * Use the plain username instead (dotnet CLI handles auth separately).
  */
 export function isValidCredentialValue(value: string): boolean {
     if (!value || value.length === 0 || value.length > 512) {
