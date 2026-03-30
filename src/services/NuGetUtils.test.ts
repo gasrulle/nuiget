@@ -7,6 +7,7 @@ import {
     execWithTimeout,
     fileExists,
     isNewerVersion,
+    isValidCredentialValue,
     isValidPackageId,
     isValidSourceName,
     isValidSourceUrl,
@@ -211,6 +212,61 @@ describe('NuGetUtils', () => {
             expect(isValidSourceUrl('https://evil.com<input')).toBe(false);
             expect(isValidSourceUrl('https://evil.com{json}')).toBe(false);
             expect(isValidSourceUrl('https://evil.com\r\n')).toBe(false);
+        });
+    });
+
+    // ──────────────────────────────────────────────
+    // isValidCredentialValue
+    // ──────────────────────────────────────────────
+    describe('isValidCredentialValue', () => {
+        it('accepts normal usernames', () => {
+            expect(isValidCredentialValue('user@domain.com')).toBe(true);
+            expect(isValidCredentialValue('DOMAIN\\user')).toBe(false); // backslash rejected
+            expect(isValidCredentialValue('admin')).toBe(true);
+            expect(isValidCredentialValue('user_name')).toBe(true);
+            expect(isValidCredentialValue('user-name.123')).toBe(true);
+        });
+
+        it('accepts normal passwords', () => {
+            expect(isValidCredentialValue('MyP@ssw0rd')).toBe(true);
+            expect(isValidCredentialValue('p4ss-w0rd_2024')).toBe(true);
+            expect(isValidCredentialValue("single'quote")).toBe(true);
+        });
+
+        it('rejects empty string', () => {
+            expect(isValidCredentialValue('')).toBe(false);
+        });
+
+        it('rejects values exceeding max length', () => {
+            expect(isValidCredentialValue('a'.repeat(512))).toBe(true);
+            expect(isValidCredentialValue('a'.repeat(513))).toBe(false);
+        });
+
+        it('rejects double quotes (shell breakout)', () => {
+            expect(isValidCredentialValue('pass"word')).toBe(false);
+            expect(isValidCredentialValue('"injected"')).toBe(false);
+        });
+
+        it('rejects backticks (command substitution)', () => {
+            expect(isValidCredentialValue('pass`id`word')).toBe(false);
+        });
+
+        it('rejects dollar signs (variable expansion)', () => {
+            expect(isValidCredentialValue('pass$HOME')).toBe(false);
+            expect(isValidCredentialValue('$(cmd)')).toBe(false);
+        });
+
+        it('rejects backslashes (escape sequences)', () => {
+            expect(isValidCredentialValue('pass\\nword')).toBe(false);
+        });
+
+        it('rejects exclamation marks (history expansion)', () => {
+            expect(isValidCredentialValue('pass!word')).toBe(false);
+        });
+
+        it('rejects control characters', () => {
+            expect(isValidCredentialValue('pass\rword')).toBe(false);
+            expect(isValidCredentialValue('pass\nword')).toBe(false);
         });
     });
 

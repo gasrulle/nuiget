@@ -81,12 +81,22 @@ export function resolveRedirect(
 ): RedirectResult | null {
     if (!isRedirectStatus(statusCode) || !locationHeader) { return null; }
 
-    const redirectParsed = new URL(locationHeader, originalUrl);
-    const redirectUrl = redirectParsed.href;
+    let redirectParsed: URL;
+    let redirectUrl: string;
+    let originalParsed: URL;
 
-    if (!isSafeRedirectTarget(redirectUrl, originalUrl)) { return null; }
+    try {
+        redirectParsed = new URL(locationHeader, originalUrl);
+        redirectUrl = redirectParsed.href;
 
-    const originalParsed = new URL(originalUrl);
+        if (!isSafeRedirectTarget(redirectUrl, originalUrl)) { return null; }
+
+        originalParsed = new URL(originalUrl);
+    } catch {
+        // Malformed redirect or original URL – treat as no valid redirect target.
+        return null;
+    }
+
     const sameOrigin = redirectParsed.origin === originalParsed.origin;
 
     return {

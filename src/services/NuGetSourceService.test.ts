@@ -182,6 +182,18 @@ describe('NuGetSourceService', () => {
             expect(cmd).toContain('--password "pass"');
         });
 
+        it('rejects username with shell metacharacters', async () => {
+            const result = await service.addSource('https://feed.example.com/v3/index.json', 'feed', 'user"$(id)');
+            expect(result.success).toBe(false);
+            expect(result.error).toContain('Invalid username');
+        });
+
+        it('rejects password with shell metacharacters', async () => {
+            const result = await service.addSource('https://feed.example.com/v3/index.json', 'feed', 'user', 'pass`cmd`');
+            expect(result.success).toBe(false);
+            expect(result.error).toContain('Invalid password');
+        });
+
         it('returns specific error for duplicate source name', async () => {
             hoisted.mockExecWithTimeout.mockRejectedValueOnce({ stderr: 'has already been added', stdout: '' });
             const result = await service.addSource('https://api.nuget.org/v3/index.json', 'dup');
