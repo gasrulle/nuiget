@@ -5,7 +5,7 @@
  * list with bulk uninstall, transitive packages per-framework sections, and
  * details panel (transitive details or shared PackageDetailsPanel).
  *
- * Owns: installedFilterQuery, directPackagesExpanded, selectedUninstalls,
+ * Owns: directPackagesExpanded, selectedUninstalls,
  *       uninstallingAll, transitive* state, restoringProject.
  * Receives: installedPackages, loadingInstalled, selectedPackage, etc. as props.
  *
@@ -20,7 +20,7 @@
 
 import { useVirtualizer } from '@tanstack/react-virtual';
 import React, { forwardRef, useCallback, useDeferredValue, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
-import { AllProjectsIcon, CheckAllIcon, ChevronDownIcon, ChevronRightIcon, ClearAllIcon, CollapseAllIcon, ExpandAllIcon, FilterIcon, RulerIcon, SingleProjectIcon, SyncIcon, VerifiedIcon, WarningIcon } from '../icons';
+import { AllProjectsIcon, CheckAllIcon, ChevronDownIcon, ChevronRightIcon, CollapseAllIcon, ExpandAllIcon, RulerIcon, SingleProjectIcon, SyncIcon, VerifiedIcon, WarningIcon } from '../icons';
 import type {
     InstalledPackage,
     LRUMap,
@@ -39,18 +39,6 @@ import { MemoizedPackageDetailsPanel } from './PackageDetailsPanel';
 
 const ESTIMATED_ITEM_HEIGHT = 66; // padding (12*2) + icon (32) + gaps
 const HEADER_HEIGHT = 40; // project group header height in all-projects mode
-
-// @-prefix filter constants
-const INSTALLED_FILTER_PREFIXES = ['@vulnerable'] as const;
-
-/** Parse filter input into mode + text. */
-function parseInstalledFilter(query: string): { mode: 'plain' | 'vulnerable'; filterText: string } {
-    const trimmed = query.trim().toLowerCase();
-    if (trimmed === '@vulnerable' || trimmed.startsWith('@vulnerable ')) {
-        return { mode: 'vulnerable', filterText: trimmed.slice('@vulnerable'.length).trim() };
-    }
-    return { mode: 'plain', filterText: trimmed };
-}
 
 // ─── Props ───────────────────────────────────────────────────────────────────
 
@@ -102,6 +90,10 @@ export interface InstalledTabProps {
     setSplitPosition: (pos: number) => void;
     handleSashReset: () => void;
     handleSashDragEnd: (pos: number) => void;
+
+    // External filter (from unified search bar in App.tsx)
+    externalFilter: string;
+    externalFilterMode: 'plain' | 'vulnerable';
 
     // Keyboard handler factory
     createPackageListKeyHandler: <T extends { id: string }>(
@@ -190,6 +182,8 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
         setSplitPosition,
         handleSashReset,
         handleSashDragEnd,
+        externalFilter = '',
+        externalFilterMode = 'plain',
         createPackageListKeyHandler,
         metadataCache,
         vscode,
@@ -203,16 +197,6 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
     } = props;
 
     // ─── Internal state ──────────────────────────────────────────────────────
-
-    // Installed tab local filter (client-side only, no HTTP calls)
-    const [installedFilterQuery, setInstalledFilterQuery] = useState('');
-    const installedFilterInputRef = useRef<HTMLInputElement>(null);
-
-    // @-prefix dropdown state
-    const [showFilterDropdown, setShowFilterDropdown] = useState(false);
-    const [filterDropdownIndex, setFilterDropdownIndex] = useState(-1);
-    const [filterButtonTriggered, setFilterButtonTriggered] = useState(false);
-    const filterDropdownRef = useRef<HTMLDivElement>(null);
 
     // Direct packages section state (default expanded)
     const [directPackagesExpanded, setDirectPackagesExpanded] = useState(true);
@@ -259,47 +243,17 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
         [installedPackages]
     );
 
-    // @-prefix dropdown matching logic
-    const matchingFilters = useMemo(() => {
-        // Filter button shows all available prefixes
-        if (filterButtonTriggered) { return [...INSTALLED_FILTER_PREFIXES]; }
-        const trimmed = installedFilterQuery.trim().toLowerCase();
-        if (!trimmed.startsWith('@')) { return []; }
-        for (const prefix of INSTALLED_FILTER_PREFIXES) {
-            if (trimmed === prefix || trimmed.startsWith(prefix + ' ')) { return []; }
-        }
-        return INSTALLED_FILTER_PREFIXES.filter(p => p.startsWith(trimmed));
-    }, [installedFilterQuery, filterButtonTriggered]);
-
-    useEffect(() => {
-        if (matchingFilters.length > 0) {
-            setShowFilterDropdown(true);
-            setFilterDropdownIndex(0);
-        } else {
-            setShowFilterDropdown(false);
-            setFilterDropdownIndex(-1);
-        }
-    }, [matchingFilters]);
-
-    const selectFilter = useCallback((filter: string) => {
-        setInstalledFilterQuery(filter + ' ');
-        setShowFilterDropdown(false);
-        setFilterDropdownIndex(-1);
-        setFilterButtonTriggered(false);
-        installedFilterInputRef.current?.focus();
-    }, []);
-
     // Installed tab: client-side filter by package ID (case-insensitive contains)
-    // Supports @vulnerable prefix to show only packages with known vulnerabilities
+    // Uses external filter/mode from the unified search bar in App.tsx
     const filteredInstalledPackages = useMemo(() => {
-        const { mode, filterText } = parseInstalledFilter(installedFilterQuery);
         let base = sortedInstalledPackages;
-        if (mode === 'vulnerable') {
+        if (externalFilterMode === 'vulnerable') {
             base = base.filter(pkg => pkg.vulnerabilities && pkg.vulnerabilities.length > 0);
         }
-        if (!filterText) { return base; }
-        return base.filter(pkg => pkg.id.toLowerCase().includes(filterText));
-    }, [sortedInstalledPackages, installedFilterQuery]);
+        if (!externalFilter) { return base; }
+        const lower = externalFilter.toLowerCase();
+        return base.filter(pkg => pkg.id.toLowerCase().includes(lower));
+    }, [sortedInstalledPackages, externalFilter, externalFilterMode]);
 
     // React 19: Deferred value for non-blocking UI during heavy list updates
     const deferredInstalledPackages = useDeferredValue(filteredInstalledPackages);
@@ -313,10 +267,9 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
 
     const flattenedAllProjectsInstalled = useMemo((): FlattenedInstalledItem[] => {
         if (!loadAllProjectsInstalled) { return []; }
-        const { mode, filterText } = parseInstalledFilter(installedFilterQuery);
         // Note: @vulnerable not supported in all-projects mode (InstalledPackageMinimal lacks vulnerability data)
-        // so we treat it as no filter in that mode
-        const q = mode === 'vulnerable' ? filterText : installedFilterQuery.trim().toLowerCase();
+        // so we use externalFilter directly
+        const q = externalFilter.toLowerCase();
         const items: FlattenedInstalledItem[] = [];
         const sortedProjects = [...allProjectsInstalled].sort((a, b) => {
             if (a.projectPath === selectedProject) { return -1; }
@@ -341,7 +294,7 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
             }
         }
         return items;
-    }, [loadAllProjectsInstalled, allProjectsInstalled, expandedProjects, installedFilterQuery, selectedProject]);
+    }, [loadAllProjectsInstalled, allProjectsInstalled, expandedProjects, externalFilter, selectedProject]);
 
     const deferredFlattenedInstalled = useDeferredValue(flattenedAllProjectsInstalled);
     const isAllProjectsInstalledStale = flattenedAllProjectsInstalled !== deferredFlattenedInstalled;
@@ -888,111 +841,6 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
                         <p className="empty-state">No packages installed</p>
                     ) : (
                         <div className="direct-packages-section">
-                            {/* Installed tab local filter */}
-                            <div className="installed-filter-bar">
-                                <input
-                                    ref={installedFilterInputRef}
-                                    type="text"
-                                    className="installed-filter-input"
-                                    placeholder="Filter packages... (@ for filters)"
-                                    value={installedFilterQuery}
-                                    onChange={(e) => setInstalledFilterQuery(e.target.value)}
-                                    onKeyDown={(e) => {
-                                        // @-prefix dropdown keyboard navigation
-                                        if (showFilterDropdown && matchingFilters.length > 0) {
-                                            if (e.key === 'ArrowDown') {
-                                                e.preventDefault();
-                                                setFilterDropdownIndex(prev => Math.min(prev + 1, matchingFilters.length - 1));
-                                                return;
-                                            }
-                                            if (e.key === 'ArrowUp') {
-                                                e.preventDefault();
-                                                setFilterDropdownIndex(prev => Math.max(prev - 1, 0));
-                                                return;
-                                            }
-                                            if (e.key === 'Enter' || e.key === 'Tab') {
-                                                e.preventDefault();
-                                                const idx = filterDropdownIndex >= 0 ? filterDropdownIndex : 0;
-                                                selectFilter(matchingFilters[idx]);
-                                                return;
-                                            }
-                                            if (e.key === 'Escape') {
-                                                e.preventDefault();
-                                                setShowFilterDropdown(false);
-                                                setFilterButtonTriggered(false);
-                                                return;
-                                            }
-                                        }
-                                        if (e.key === 'Escape') {
-                                            e.preventDefault();
-                                            if (installedFilterQuery) {
-                                                setInstalledFilterQuery('');
-                                            } else {
-                                                installedFilterInputRef.current?.blur();
-                                            }
-                                        } else if (e.key === 'ArrowDown') {
-                                            e.preventDefault();
-                                            installedListRef.current?.focus();
-                                        }
-                                    }}
-                                    onBlur={() => {
-                                        // Delay to allow onMouseDown on dropdown items to fire first
-                                        setTimeout(() => { setShowFilterDropdown(false); setFilterButtonTriggered(false); }, 150);
-                                    }}
-                                    aria-label="Filter installed packages"
-                                />
-                                <button
-                                    className={`installed-filter-clear${installedFilterQuery ? '' : ' disabled'}`}
-                                    onClick={() => {
-                                        if (!installedFilterQuery) { return; }
-                                        setInstalledFilterQuery('');
-                                        installedFilterInputRef.current?.focus();
-                                    }}
-                                    title="Clear filter (Esc)"
-                                    aria-label="Clear filter"
-                                    tabIndex={-1}
-                                >
-                                    <ClearAllIcon size={16} />
-                                </button>
-                                <button
-                                    className="installed-filter-btn"
-                                    onMouseDown={(e) => {
-                                        e.preventDefault();
-                                        if (showFilterDropdown && filterButtonTriggered) {
-                                            setShowFilterDropdown(false);
-                                            setFilterButtonTriggered(false);
-                                        } else {
-                                            setFilterButtonTriggered(true);
-                                            setShowFilterDropdown(true);
-                                            setFilterDropdownIndex(0);
-                                        }
-                                        installedFilterInputRef.current?.focus();
-                                    }}
-                                    aria-label="Filter"
-                                    title="Filter"
-                                    tabIndex={-1}
-                                >
-                                    <FilterIcon size={16} />
-                                </button>
-                                {/* @-prefix filter dropdown */}
-                                {showFilterDropdown && matchingFilters.length > 0 && (
-                                    <div className="installed-filter-dropdown" ref={filterDropdownRef} role="listbox">
-                                        {matchingFilters.map((filter, index) => (
-                                            <div
-                                                key={filter}
-                                                className={`installed-filter-dropdown-item${index === filterDropdownIndex ? ' active' : ''}`}
-                                                onMouseDown={(e) => { e.preventDefault(); selectFilter(filter); }}
-                                                onMouseEnter={() => setFilterDropdownIndex(index)}
-                                                role="option"
-                                                aria-selected={index === filterDropdownIndex}
-                                            >
-                                                <span className="installed-filter-dropdown-prefix">@</span>
-                                                <span>{filter.slice(1)}</span>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
                             {/* Unified toolbar — same position for single-project and all-projects modes */}
                             <div className="updates-toolbar">
                                 <div className="toolbar-actions-left">
@@ -1168,9 +1016,9 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
                                                     );
                                                 })}
                                             </div>
-                                            {installedFilterQuery.trim() && deferredFlattenedInstalled.filter(i => i.type === 'package').length === 0 && (
+                                            {externalFilter.trim() && deferredFlattenedInstalled.filter(i => i.type === 'package').length === 0 && (
                                                 <div className="installed-filter-empty">
-                                                    No packages match &lsquo;{installedFilterQuery.trim()}&rsquo;
+                                                    No packages match &lsquo;{externalFilter.trim()}&rsquo;
                                                 </div>
                                             )}
                                         </>
@@ -1187,7 +1035,7 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
                                         <span className="direct-packages-title">
                                             Direct packages
                                             <span className="direct-packages-count">
-                                                {installedFilterQuery.trim()
+                                                {externalFilter.trim()
                                                     ? `(${filteredInstalledPackages.length} of ${installedPackages.length})`
                                                     : `(${installedPackages.length})`}
                                             </span>
@@ -1311,9 +1159,9 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
                                                     );
                                                 })}
                                             </div>
-                                            {installedFilterQuery.trim() && deferredInstalledPackages.length === 0 && (
+                                            {externalFilter.trim() && deferredInstalledPackages.length === 0 && (
                                                 <div className="installed-filter-empty">
-                                                    No packages match &lsquo;{installedFilterQuery.trim()}&rsquo;
+                                                    No packages match &lsquo;{externalFilter.trim()}&rsquo;
                                                 </div>
                                             )}
                                         </div>

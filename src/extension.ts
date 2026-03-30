@@ -105,9 +105,8 @@ export function activate(context: vscode.ExtensionContext) {
                 }
             }
 
-            // Default to 'installed' tab when opened from context menu (project-specific intent)
-            // Default to 'browse' tab when opened from command palette (discovery intent)
-            const initialTab = projectPath ? 'installed' : 'browse';
+            // Always start on 'installed' tab — browse is now an inline search mode, not a separate tab
+            const initialTab: 'installed' | 'updates' = 'installed';
             NuGetPanel.createOrShow(context.extensionUri, context, outputChannel, nugetService, projectPath, initialTab);
         })
     );

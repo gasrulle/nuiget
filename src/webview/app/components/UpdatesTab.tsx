@@ -31,6 +31,9 @@ import { MemoizedPackageDetailsPanel } from './PackageDetailsPanel';
 // ─── Props ───────────────────────────────────────────────────────────────────
 
 export interface UpdatesTabProps {
+    // External filter from unified search bar (text after @updates prefix)
+    externalFilter: string;
+
     // Data
     packagesWithUpdates: PackageUpdate[];
     loadingUpdates: boolean;
@@ -122,6 +125,7 @@ const ESTIMATED_ITEM_HEIGHT = 66;
 
 const UpdatesTab = forwardRef<UpdatesTabHandle, UpdatesTabProps>((props, ref) => {
     const {
+        externalFilter = '',
         packagesWithUpdates,
         loadingUpdates,
         installedPackages,
@@ -191,10 +195,12 @@ const UpdatesTab = forwardRef<UpdatesTabHandle, UpdatesTabProps>((props, ref) =>
     }, [allProjectsUpdates]);
 
     // ─── Derived data ────────────────────────────────────────────────────────
-    const sortedPackagesWithUpdates = useMemo(() =>
-        [...packagesWithUpdates].sort((a, b) => a.id.localeCompare(b.id)),
-        [packagesWithUpdates]
-    );
+    const sortedPackagesWithUpdates = useMemo(() => {
+        const sorted = [...packagesWithUpdates].sort((a, b) => a.id.localeCompare(b.id));
+        if (!externalFilter.trim()) { return sorted; }
+        const lower = externalFilter.trim().toLowerCase();
+        return sorted.filter(p => p.id.toLowerCase().includes(lower));
+    }, [packagesWithUpdates, externalFilter]);
     const deferredPackagesWithUpdates = useDeferredValue(sortedPackagesWithUpdates);
     const isUpdatesStale = sortedPackagesWithUpdates !== deferredPackagesWithUpdates;
 
@@ -206,6 +212,7 @@ const UpdatesTab = forwardRef<UpdatesTabHandle, UpdatesTabProps>((props, ref) =>
     // Flatten allProjectsUpdates into a single list for virtualization
     const flattenedAllProjectsUpdates = useMemo((): FlattenedItem[] => {
         if (!loadAllProjects) { return []; }
+        const lower = externalFilter.trim().toLowerCase();
         const items: FlattenedItem[] = [];
         const sortedProjects = [...allProjectsUpdates].sort((a, b) => {
             if (a.projectPath === selectedProject) { return -1; }
@@ -213,16 +220,20 @@ const UpdatesTab = forwardRef<UpdatesTabHandle, UpdatesTabProps>((props, ref) =>
             return a.projectName.localeCompare(b.projectName);
         });
         for (const project of sortedProjects) {
+            const filteredUpdates = lower
+                ? project.updates.filter(u => u.id.toLowerCase().includes(lower))
+                : project.updates;
+            if (filteredUpdates.length === 0) { continue; }
             // Add project header
             items.push({
                 type: 'header',
                 projectPath: project.projectPath,
                 projectName: project.projectName,
-                updateCount: project.updates.length
+                updateCount: filteredUpdates.length
             });
             // Only add package items if project is expanded
             if (expandedProjects.has(project.projectPath)) {
-                const sortedUpdates = [...project.updates].sort((a, b) => a.id.localeCompare(b.id));
+                const sortedUpdates = [...filteredUpdates].sort((a, b) => a.id.localeCompare(b.id));
                 for (const update of sortedUpdates) {
                     items.push({
                         type: 'package',
@@ -233,7 +244,7 @@ const UpdatesTab = forwardRef<UpdatesTabHandle, UpdatesTabProps>((props, ref) =>
             }
         }
         return items;
-    }, [loadAllProjects, allProjectsUpdates, expandedProjects, selectedProject]);
+    }, [loadAllProjects, allProjectsUpdates, expandedProjects, selectedProject, externalFilter]);
 
     const deferredFlattenedItems = useDeferredValue(flattenedAllProjectsUpdates);
     const isAllProjectsStale = flattenedAllProjectsUpdates !== deferredFlattenedItems;

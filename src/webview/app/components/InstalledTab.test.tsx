@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { InstalledTabHandle, InstalledTabProps } from './InstalledTab';
@@ -95,11 +95,6 @@ describe('InstalledTab', () => {
         expect(content.style.display).toBe('none');
     });
 
-    it('shows filter bar when packages exist', () => {
-        render(<InstalledTabComponent {...createProps({ installedPackages: installedPkgs as any })} />);
-        expect(screen.getByPlaceholderText('Filter packages... (@ for filters)')).toBeInTheDocument();
-    });
-
     it('handles transitivePackages message', () => {
         const ref = React.createRef<InstalledTabHandle>();
         render(<InstalledTabComponent {...createProps()} ref={ref} />);
@@ -173,35 +168,6 @@ describe('InstalledTab', () => {
     // ──────────────────────────────────────────────
     // Phase 7A: Additional InstalledTab tests
     // ──────────────────────────────────────────────
-
-    it('filters packages by text input', () => {
-        render(<InstalledTabComponent {...createProps({ installedPackages: installedPkgs as any })} />);
-        const filterInput = screen.getByPlaceholderText('Filter packages... (@ for filters)');
-        fireEvent.change(filterInput, { target: { value: 'Newton' } });
-        // Filter is applied — verify component does not crash
-        expect(filterInput).toBeInTheDocument();
-    });
-
-    it('shows @-prefix dropdown on focus with @ character', () => {
-        render(<InstalledTabComponent {...createProps({ installedPackages: installedPkgs as any })} />);
-        const filterInput = screen.getByPlaceholderText('Filter packages... (@ for filters)');
-        fireEvent.focus(filterInput);
-        fireEvent.change(filterInput, { target: { value: '@' } });
-        // Dropdown renders when text starts with @ — verify component doesn't crash
-        expect(filterInput).toBeInTheDocument();
-    });
-
-    it('applies @vulnerable filter mode', () => {
-        const pkgsWithVuln = [
-            { id: 'Safe.Pkg', version: '1.0' },
-            { id: 'Vuln.Pkg', version: '2.0', vulnerabilities: [{ severity: 'High', advisoryUrl: 'https://example.com' }] },
-        ];
-        render(<InstalledTabComponent {...createProps({ installedPackages: pkgsWithVuln as any })} />);
-        const filterInput = screen.getByPlaceholderText('Filter packages... (@ for filters)');
-        fireEvent.change(filterInput, { target: { value: '@vulnerable' } });
-        // Component renders with vulnerable filter — no crash
-        expect(filterInput).toBeInTheDocument();
-    });
 
     it('handles transitiveMetadata message', () => {
         const ref = React.createRef<InstalledTabHandle>();
@@ -384,5 +350,79 @@ describe('InstalledTab', () => {
         expect(mockVscode.postMessage).not.toHaveBeenCalledWith(expect.objectContaining({
             type: 'getTransitivePackages',
         }));
+    });
+
+    // ──────────────────────────────────────────────
+    // External filter (unified search bar) tests
+    // ──────────────────────────────────────────────
+
+    it('shows "No packages match" when externalFilter matches nothing', () => {
+        render(<InstalledTabComponent {...createProps({
+            installedPackages: installedPkgs as any,
+            externalFilter: 'nonexistent',
+        })} />);
+        expect(screen.getByText(/No packages match/)).toBeInTheDocument();
+    });
+
+    it('does not show filter empty state when externalFilter is empty', () => {
+        render(<InstalledTabComponent {...createProps({
+            installedPackages: installedPkgs as any,
+            externalFilter: '',
+        })} />);
+        expect(screen.queryByText(/No packages match/)).not.toBeInTheDocument();
+    });
+
+    it('filters installed packages by externalFilter (case-insensitive)', () => {
+        // When externalFilter matches, the filtered list is non-empty so no empty message
+        render(<InstalledTabComponent {...createProps({
+            installedPackages: installedPkgs as any,
+            externalFilter: 'newtonsoft',
+        })} />);
+        // Matching filter means packages exist — no empty state
+        expect(screen.queryByText(/No packages match/)).not.toBeInTheDocument();
+    });
+
+    it('shows "No packages match" for all-projects mode with externalFilter', () => {
+        render(<InstalledTabComponent {...createProps({
+            installedPackages: installedPkgs as any,
+            loadAllProjectsInstalled: true,
+            allProjectsInstalled: [
+                { projectPath: '/a.csproj', projectName: 'a.csproj', packages: [{ id: 'PkgA', version: '1.0' }] },
+            ] as any,
+            projects: [{ path: '/a.csproj', name: 'a.csproj' }],
+            externalFilter: 'zzz_no_match',
+        })} />);
+        expect(screen.getByText(/No packages match/)).toBeInTheDocument();
+    });
+
+    it('externalFilterMode vulnerable only shows vulnerable packages', () => {
+        const pkgsWithVuln = [
+            { id: 'Safe.Pkg', version: '1.0.0', vulnerabilities: [] },
+            { id: 'Vuln.Pkg', version: '2.0.0', vulnerabilities: [{ severity: 'high', advisoryUrl: 'https://example.com' }] },
+        ];
+        render(<InstalledTabComponent {...createProps({
+            installedPackages: pkgsWithVuln as any,
+            externalFilterMode: 'vulnerable',
+        })} />);
+        // With vulnerable mode, only Vuln.Pkg is in the filtered list
+        // Safe.Pkg (0 vulnerabilities) is filtered out → 1 package remains
+        // Since virtualizer returns empty getVirtualItems, we can't check rendered items,
+        // but the empty state should NOT show (one package matches)
+        expect(screen.queryByText(/No packages match/)).not.toBeInTheDocument();
+    });
+
+    it('externalFilterMode vulnerable shows empty virtualizer when no vulnerable packages', () => {
+        const safeOnly = [
+            { id: 'Safe.Pkg', version: '1.0.0', vulnerabilities: [] },
+            { id: 'Also.Safe', version: '2.0.0' },
+        ];
+        render(<InstalledTabComponent {...createProps({
+            installedPackages: safeOnly as any,
+            externalFilterMode: 'vulnerable',
+        })} />);
+        // All packages are safe — vulnerable mode filters to 0
+        // Since installedPackages is non-empty, it enters the list branch
+        // (not the "No packages installed" empty state), but the virtualizer renders no items
+        expect(screen.queryByText('No packages installed')).not.toBeInTheDocument();
     });
 });

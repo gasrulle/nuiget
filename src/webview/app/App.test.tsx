@@ -3,8 +3,22 @@ import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Mock all child components and modules
-vi.mock('./components/BrowseTab', () => ({
-    MemoizedBrowseTab: React.forwardRef((_p: any, _r: any) => <div data-testid="browse-tab-comp" />)
+vi.mock('@tanstack/react-virtual', () => ({
+    useVirtualizer: () => ({
+        getVirtualItems: () => [],
+        getTotalSize: () => 0,
+        measureElement: () => { },
+    }),
+}));
+vi.mock('./utils/parseSearchQuery', () => ({
+    parseSearchQuery: (q: string) => {
+        if (!q || !q.trim()) { return { mode: 'default' as const, filterText: '' }; }
+        if (q.startsWith('@installed')) { return { mode: 'installed' as const, filterText: q.slice(10).trim() }; }
+        if (q.startsWith('@updates')) { return { mode: 'updates' as const, filterText: q.slice(8).trim() }; }
+        if (q.startsWith('@vulnerable')) { return { mode: 'vulnerable' as const, filterText: q.slice(11).trim() }; }
+        return { mode: 'browse' as const, filterText: q.trim() };
+    },
+    FILTER_PREFIXES: ['@installed', '@updates', '@vulnerable'],
 }));
 vi.mock('./components/InstalledTab', () => ({
     MemoizedInstalledTab: React.forwardRef((_p: any, _r: any) => <div data-testid="installed-tab-comp" />)
@@ -29,9 +43,13 @@ vi.mock('./hooks/usePackageSelection', () => ({
     })
 }));
 vi.mock('./icons', () => ({
+    ClearAllIcon: () => null,
+    CloudDownloadIcon: () => null,
+    FilterIcon: () => null,
     LoadingIcon: () => null,
     SettingsGearIcon: () => null,
     SyncIcon: () => null,
+    VerifiedIcon: () => null,
     WarningIcon: () => null,
 }));
 vi.mock('./markdownSetup', () => ({
@@ -74,11 +92,11 @@ describe('App', () => {
         expect(screen.getByText('Manage NuGet packages')).toBeDefined();
     });
 
-    it('renders tab buttons', () => {
+    it('renders tab buttons (Installed and Updates only)', () => {
         render(<App />);
-        expect(screen.getByText('Browse')).toBeDefined();
         expect(screen.getByRole('button', { name: /Installed/ })).toBeDefined();
         expect(screen.getByRole('button', { name: /Updates/ })).toBeDefined();
+        expect(screen.queryByText('Browse')).toBeNull();
     });
 
     it('sends initial data requests on mount', () => {
@@ -89,10 +107,10 @@ describe('App', () => {
         expect(mockVsCode.postMessage).toHaveBeenCalledWith({ type: 'getSplitPosition' });
     });
 
-    it('browse tab is active by default', () => {
+    it('installed tab is active by default', () => {
         render(<App />);
-        const browseBtn = screen.getByText('Browse');
-        expect(browseBtn.className).toContain('active');
+        const installedBtn = screen.getByRole('button', { name: /Installed/ });
+        expect(installedBtn.className).toContain('active');
     });
 
     it('handles projects message and populates selector', () => {
@@ -448,7 +466,7 @@ describe('App', () => {
         expect(screen.getByText('Manage NuGet packages')).toBeDefined();
     });
 
-    it('handles selectProject and switches to browse tab', () => {
+    it('handles selectProject and stays on installed tab', () => {
         render(<App />);
         sendMessage({
             type: 'projects',
@@ -457,14 +475,11 @@ describe('App', () => {
                 { name: 'Lib.csproj', path: '/Lib.csproj' }
             ]
         });
-        // Switch to installed tab first
-        fireEvent.click(screen.getByRole('button', { name: /Installed/ }));
 
-        sendMessage({ type: 'selectProject', projectPath: '/Lib.csproj', initialTab: 'browse' });
+        sendMessage({ type: 'selectProject', projectPath: '/Lib.csproj', initialTab: 'installed' });
 
-        // Should switch to browse tab
-        const browseBtn = screen.getByText('Browse');
-        expect(browseBtn.className).toContain('active');
+        const installedBtn = screen.getByRole('button', { name: /Installed/ });
+        expect(installedBtn.className).toContain('active');
     });
 
     it('handles refresh message with debounce', async () => {
@@ -501,15 +516,135 @@ describe('App', () => {
         expect(screen.getByText('Manage NuGet packages')).toBeDefined();
     });
 
-    it('handles navigateToPackage message sets pending navigation', () => {
+    it('handles navigateToPackage message and triggers search', () => {
         render(<App />);
+        sendMessage({
+            type: 'projects',
+            projects: [{ name: 'App.csproj', path: '/App.csproj' }]
+        });
+        sendMessage({
+            type: 'sources',
+            sources: [{ name: 'nuget.org', url: 'https://api.nuget.org/v3/index.json', enabled: true }]
+        });
+        mockVsCode.postMessage.mockClear();
         sendMessage({
             type: 'navigateToPackage',
             packageId: 'Newtonsoft.Json',
             version: '13.0.3'
         });
-        // Should switch to browse tab
-        const browseBtn = screen.getByText('Browse');
-        expect(browseBtn.className).toContain('active');
+        // Should trigger a search for the package
+        expect(mockVsCode.postMessage).toHaveBeenCalledWith(
+            expect.objectContaining({ type: 'searchPackages', query: 'Newtonsoft.Json' })
+        );
+    });
+
+    // ──────────────────────────────────────────────
+    // Unified Search Bar tests
+    // ──────────────────────────────────────────────
+
+    it('renders search input always visible', () => {
+        render(<App />);
+        expect(screen.getByPlaceholderText(/Search packages/)).toBeDefined();
+    });
+
+    it('renders clear and filter buttons', () => {
+        render(<App />);
+        expect(screen.getByLabelText('Clear search')).toBeDefined();
+        expect(screen.getByLabelText('Filter packages')).toBeDefined();
+    });
+
+    it('typing in search bar updates the input value', () => {
+        render(<App />);
+        const input = screen.getByPlaceholderText(/Search packages/) as HTMLInputElement;
+        fireEvent.change(input, { target: { value: 'serilog' } });
+        expect(input.value).toBe('serilog');
+    });
+
+    it('clear button clears search text', () => {
+        render(<App />);
+        const input = screen.getByPlaceholderText(/Search packages/) as HTMLInputElement;
+        fireEvent.change(input, { target: { value: 'some query' } });
+        expect(input.value).toBe('some query');
+
+        fireEvent.click(screen.getByLabelText('Clear search'));
+        expect(input.value).toBe('');
+    });
+
+    it('tabs are visible in default mode (no search)', () => {
+        render(<App />);
+        expect(screen.getByRole('button', { name: /Installed/ })).toBeDefined();
+        expect(screen.getByRole('button', { name: /Updates/ })).toBeDefined();
+    });
+
+    it('tabs are hidden when in browse mode (text typed)', () => {
+        render(<App />);
+        sendMessage({
+            type: 'projects',
+            projects: [{ name: 'App.csproj', path: '/App.csproj' }]
+        });
+        sendMessage({
+            type: 'sources',
+            sources: [{ name: 'nuget.org', url: 'https://api.nuget.org/v3/index.json', enabled: true }]
+        });
+
+        const input = screen.getByPlaceholderText(/Search packages/) as HTMLInputElement;
+        fireEvent.change(input, { target: { value: 'Newtonsoft.Json' } });
+
+        // In browse mode, tabs should be hidden
+        expect(screen.queryByRole('button', { name: /^Installed/ })).toBeNull();
+        expect(screen.queryByRole('button', { name: /^Updates/ })).toBeNull();
+    });
+
+    it('tabs remain visible with @installed prefix', () => {
+        render(<App />);
+        const input = screen.getByPlaceholderText(/Search packages/) as HTMLInputElement;
+        fireEvent.change(input, { target: { value: '@installed serilog' } });
+
+        // @installed mode shows tabs
+        expect(screen.getByRole('button', { name: /Installed/ })).toBeDefined();
+    });
+
+    it('tabs remain visible with @updates prefix', () => {
+        render(<App />);
+        const input = screen.getByPlaceholderText(/Search packages/) as HTMLInputElement;
+        fireEvent.change(input, { target: { value: '@updates' } });
+
+        // @updates mode shows tabs
+        expect(screen.getByRole('button', { name: /Updates/ })).toBeDefined();
+    });
+
+    it('handles restoreSearchQuery and fills search bar', () => {
+        render(<App />);
+        sendMessage({
+            type: 'restoreSearchQuery',
+            query: 'restored query'
+        });
+
+        const input = screen.getByPlaceholderText(/Search packages/) as HTMLInputElement;
+        expect(input.value).toBe('restored query');
+    });
+
+    it('searchResults message does not crash', () => {
+        render(<App />);
+        sendMessage({
+            type: 'projects',
+            projects: [{ name: 'App.csproj', path: '/App.csproj' }]
+        });
+        sendMessage({
+            type: 'searchResults',
+            results: [{ id: 'Pkg.A', version: '1.0.0', description: 'Test' }],
+            query: 'Pkg'
+        });
+        expect(screen.getByText('Manage NuGet packages')).toBeDefined();
+    });
+
+    it('autocompleteResults message does not crash', () => {
+        render(<App />);
+        sendMessage({
+            type: 'autocompleteResults',
+            suggestions: [{ sourceUrl: 'https://api.nuget.org', packageIds: ['Pkg.A'] }],
+            query: 'Pk'
+        });
+        expect(screen.getByText('Manage NuGet packages')).toBeDefined();
     });
 });

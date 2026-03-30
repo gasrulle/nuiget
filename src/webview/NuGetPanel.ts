@@ -47,7 +47,7 @@ export class NuGetPanel {
     private readonly _nugetService: NuGetService;
     private _disposables: vscode.Disposable[] = [];
     private _pendingProjectPath: string | undefined;
-    private _pendingInitialTab: 'browse' | 'installed' | 'updates' | undefined;
+    private _pendingInitialTab: 'installed' | 'updates' | undefined;
     private _pendingNavigatePackage: { packageId: string; version?: string } | undefined;
     private _pendingOpenSourceSettings = false;
     private _disposed = false;
@@ -58,7 +58,7 @@ export class NuGetPanel {
     // Prevent concurrent mutating operations (install/update/remove)
     private _operationInProgress = false;
 
-    public static createOrShow(extensionUri: vscode.Uri, context: vscode.ExtensionContext, outputChannel: vscode.LogOutputChannel, nugetService: NuGetService, projectPath?: string, initialTab?: 'browse' | 'installed' | 'updates') {
+    public static createOrShow(extensionUri: vscode.Uri, context: vscode.ExtensionContext, outputChannel: vscode.LogOutputChannel, nugetService: NuGetService, projectPath?: string, initialTab?: 'installed' | 'updates') {
         NuGetPanel._context = context;
         NuGetPanel._outputChannel = outputChannel;
         const column = vscode.window.activeTextEditor
@@ -95,7 +95,7 @@ export class NuGetPanel {
         }
     }
 
-    public selectProject(projectPath: string, initialTab?: 'browse' | 'installed' | 'updates') {
+    public selectProject(projectPath: string, initialTab?: 'installed' | 'updates') {
         this._postMessage({
             type: 'selectProject',
             projectPath: projectPath,
@@ -120,7 +120,7 @@ export class NuGetPanel {
 
     /**
      * Navigate to a specific package in the main panel.
-     * Opens/reveals the panel, switches to Browse tab, searches for the package, and auto-selects it.
+     * Opens/reveals the panel, fills the search bar with the package, and auto-selects it.
      */
     public static navigateToPackage(extensionUri: vscode.Uri, context: vscode.ExtensionContext, outputChannel: vscode.LogOutputChannel, nugetService: NuGetService, packageId: string, version?: string) {
         // Check if panel already exists (webview is ready to receive messages)
@@ -141,7 +141,7 @@ export class NuGetPanel {
         }
     }
 
-    private constructor(panel: vscode.WebviewPanel, extensionUri: vscode.Uri, nugetService: NuGetService, projectPath?: string, initialTab?: 'browse' | 'installed' | 'updates') {
+    private constructor(panel: vscode.WebviewPanel, extensionUri: vscode.Uri, nugetService: NuGetService, projectPath?: string, initialTab?: 'installed' | 'updates') {
         this._panel = panel;
         this._extensionUri = extensionUri;
         this._nugetService = nugetService;

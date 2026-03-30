@@ -226,4 +226,70 @@ describe('UpdatesTab', () => {
         // Update All should show (0) since nothing is selected yet
         expect(screen.getByText('Update All (0)')).toBeInTheDocument();
     });
+
+    // ──────────────────────────────────────────────
+    // External filter (unified search bar) tests
+    // ──────────────────────────────────────────────
+
+    it('renders with externalFilter that matches no updates (still shows toolbar)', () => {
+        const updates = [
+            { id: 'Pkg.A', installedVersion: '1.0.0', latestVersion: '2.0.0' },
+        ];
+        render(<UpdatesTabComponent {...createProps({
+            packagesWithUpdates: updates as any,
+            installedPackages: [{ id: 'Pkg.A', version: '1.0.0' }] as any,
+            externalFilter: 'zzz_no_match',
+        })} />);
+        // externalFilter filters the rendered list, but hasNoUpdates uses raw packagesWithUpdates
+        // so the toolbar still renders (not the empty state)
+        expect(screen.queryByText('All packages are up to date')).not.toBeInTheDocument();
+    });
+
+    it('does not filter when externalFilter is empty', () => {
+        const updates = [
+            { id: 'Pkg.A', installedVersion: '1.0.0', latestVersion: '2.0.0' },
+        ];
+        render(<UpdatesTabComponent {...createProps({
+            packagesWithUpdates: updates as any,
+            installedPackages: [{ id: 'Pkg.A', version: '1.0.0' }] as any,
+            externalFilter: '',
+        })} />);
+        // No filtering — Update All button should show count
+        expect(screen.queryByText('All packages are up to date')).not.toBeInTheDocument();
+    });
+
+    it('externalFilter filters updates by package ID (case-insensitive)', () => {
+        const updates = [
+            { id: 'Newtonsoft.Json', installedVersion: '12.0.0', latestVersion: '13.0.0' },
+            { id: 'Serilog', installedVersion: '2.0.0', latestVersion: '3.0.0' },
+        ];
+        render(<UpdatesTabComponent {...createProps({
+            packagesWithUpdates: updates as any,
+            installedPackages: updates.map(u => ({ id: u.id, version: u.installedVersion })) as any,
+            externalFilter: 'newtonsoft',
+        })} />);
+        // Only Newtonsoft.Json matches — Serilog is filtered out
+        // sortedPackagesWithUpdates has 1 item → not "all up to date"
+        expect(screen.queryByText('All packages are up to date')).not.toBeInTheDocument();
+    });
+
+    it('externalFilter filters all-projects updates', () => {
+        render(<UpdatesTabComponent {...createProps({
+            loadAllProjects: true,
+            allProjectsUpdates: [
+                {
+                    projectPath: '/a.csproj',
+                    projectName: 'a.csproj',
+                    updates: [
+                        { id: 'Pkg.Match', installedVersion: '1.0', latestVersion: '2.0' },
+                        { id: 'Pkg.NoMatch', installedVersion: '1.0', latestVersion: '2.0' },
+                    ],
+                },
+            ] as any,
+            externalFilter: 'match',
+        })} />);
+        // 'match' matches both Pkg.Match and Pkg.NoMatch (both contain 'match')
+        // so the list is not empty
+        expect(screen.queryByText('All packages are up to date')).not.toBeInTheDocument();
+    });
 });

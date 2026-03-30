@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Unified Search Bar** — Removed the Browse tab or InstalledTab filter bar; a single always-visible search bar drives browse, @installed, @updates, and @vulnerable modes with @-prefix dropdown, quick search suggestions, recent searches, and keyboard navigation — matching the sidebar's search UX
 - **Sub-Service Unit Tests** — New test files for `NuGetLogger` (22 tests), `NuGetCliService` (27 tests), `NuGetSourceService` (32 tests), and `NuGetProjectService` (24 tests), covering credential sanitization, SDK detection, CLI operations, source CRUD/caching, project discovery, .csproj parsing, transitive dependency resolution, and assets.json caching
 
 ### Fixed

@@ -174,10 +174,13 @@ export interface TransitiveFrameworkSection {
     metadataLoaded?: boolean;
 }
 
+/** Tab type for the main panel (Browse tab removed — search is now unified) */
+export type TabType = 'installed' | 'updates';
+
 export interface AppState {
     selectedProject: string;
     selectedSource: string;
-    activeTab: 'browse' | 'installed' | 'updates';
+    activeTab: TabType;
     searchQuery: string;
     includePrerelease: boolean;
     recentSearches: string[];
