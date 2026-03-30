@@ -7,6 +7,8 @@ import {
     executeBulkUpdateAllProjects,
     executeBulkUpdatePackages,
     executeSingleOperation,
+    queryAllProjectsInstalled,
+    queryAllProjectsUpdates,
     type OperationContext,
 } from '../services/NuGetOperations';
 
@@ -447,5 +449,113 @@ describe('executeBulkRemoveAllProjects', () => {
         // The last project processed should be restored first (reverse dependency order)
         expect(restoreCalls[0]).toBe(removals[1].projectPath);
         expect(restoreCalls[1]).toBe(removals[0].projectPath);
+    });
+});
+
+// ──────────────────────────────────────────────
+// Shared query functions
+// ──────────────────────────────────────────────
+
+describe('queryAllProjectsUpdates', () => {
+    function createQueryService() {
+        return {
+            findProjects: vi.fn().mockResolvedValue([]),
+            getInstalledPackages: vi.fn().mockResolvedValue([]),
+            checkPackageUpdatesMinimal: vi.fn().mockResolvedValue([]),
+        } as any;
+    }
+
+    it('returns updates for projects with outdated packages', async () => {
+        const svc = createQueryService();
+        svc.findProjects.mockResolvedValue([
+            { path: '/a.csproj', name: 'A' },
+            { path: '/b.csproj', name: 'B' },
+        ]);
+        svc.getInstalledPackages
+            .mockResolvedValueOnce([{ id: 'Pkg', version: '1.0' }])
+            .mockResolvedValueOnce([]);
+        svc.checkPackageUpdatesMinimal
+            .mockResolvedValueOnce([{ id: 'Pkg', installedVersion: '1.0', latestVersion: '2.0' }]);
+
+        const result = await queryAllProjectsUpdates(svc, false, false);
+
+        expect(result).toEqual([{
+            projectPath: '/a.csproj',
+            projectName: 'A',
+            updates: [{ id: 'Pkg', installedVersion: '1.0', latestVersion: '2.0' }],
+        }]);
+        expect(svc.getInstalledPackages).toHaveBeenCalledWith('/a.csproj', false);
+    });
+
+    it('passes liteMode to getInstalledPackages', async () => {
+        const svc = createQueryService();
+        svc.findProjects.mockResolvedValue([{ path: '/a.csproj', name: 'A' }]);
+        svc.getInstalledPackages.mockResolvedValue([]);
+
+        await queryAllProjectsUpdates(svc, true, true);
+
+        expect(svc.getInstalledPackages).toHaveBeenCalledWith('/a.csproj', true);
+        expect(svc.checkPackageUpdatesMinimal).not.toHaveBeenCalled();
+    });
+
+    it('skips erroring projects and continues', async () => {
+        const svc = createQueryService();
+        svc.findProjects.mockResolvedValue([
+            { path: '/bad.csproj', name: 'Bad' },
+            { path: '/good.csproj', name: 'Good' },
+        ]);
+        svc.getInstalledPackages
+            .mockRejectedValueOnce(new Error('fail'))
+            .mockResolvedValueOnce([{ id: 'A', version: '1.0' }]);
+        svc.checkPackageUpdatesMinimal.mockResolvedValueOnce([]);
+
+        const result = await queryAllProjectsUpdates(svc, false, false);
+
+        expect(result).toEqual([]);
+    });
+});
+
+describe('queryAllProjectsInstalled', () => {
+    function createQueryService() {
+        return {
+            findProjects: vi.fn().mockResolvedValue([]),
+            getInstalledPackages: vi.fn().mockResolvedValue([]),
+        } as any;
+    }
+
+    it('collects installed packages from all projects', async () => {
+        const svc = createQueryService();
+        svc.findProjects.mockResolvedValue([{ path: '/a.csproj', name: 'A' }]);
+        svc.getInstalledPackages.mockResolvedValue([
+            { id: 'Pkg', version: '1.0', resolvedVersion: '1.0.0', isImplicit: false },
+        ]);
+
+        const result = await queryAllProjectsInstalled(svc);
+
+        expect(result).toEqual([{
+            projectPath: '/a.csproj',
+            projectName: 'A',
+            packages: [{ id: 'Pkg', version: '1.0', resolvedVersion: '1.0.0', isImplicit: false }],
+        }]);
+        expect(svc.getInstalledPackages).toHaveBeenCalledWith('/a.csproj', true);
+    });
+
+    it('skips erroring projects and continues', async () => {
+        const svc = createQueryService();
+        svc.findProjects.mockResolvedValue([
+            { path: '/bad.csproj', name: 'Bad' },
+            { path: '/good.csproj', name: 'Good' },
+        ]);
+        svc.getInstalledPackages
+            .mockRejectedValueOnce(new Error('fail'))
+            .mockResolvedValueOnce([{ id: 'A', version: '2.0' }]);
+
+        const result = await queryAllProjectsInstalled(svc);
+
+        expect(result).toEqual([{
+            projectPath: '/good.csproj',
+            projectName: 'Good',
+            packages: [{ id: 'A', version: '2.0', resolvedVersion: undefined, isImplicit: undefined }],
+        }]);
     });
 });

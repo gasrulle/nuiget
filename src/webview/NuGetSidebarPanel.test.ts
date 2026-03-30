@@ -8,12 +8,16 @@ const hoisted = vi.hoisted(() => ({
     mockExecuteSingleOperation: vi.fn().mockResolvedValue(undefined),
     mockExecuteBulkUpdatePackages: vi.fn().mockResolvedValue(undefined),
     mockExecuteBulkUpdateAllProjects: vi.fn().mockResolvedValue(undefined),
+    mockQueryAllProjectsUpdates: vi.fn().mockResolvedValue([]),
+    mockQueryAllProjectsInstalled: vi.fn().mockResolvedValue([]),
 }));
 
 vi.mock('../services/NuGetOperations', () => ({
     executeSingleOperation: hoisted.mockExecuteSingleOperation,
     executeBulkUpdatePackages: hoisted.mockExecuteBulkUpdatePackages,
     executeBulkUpdateAllProjects: hoisted.mockExecuteBulkUpdateAllProjects,
+    queryAllProjectsUpdates: hoisted.mockQueryAllProjectsUpdates,
+    queryAllProjectsInstalled: hoisted.mockQueryAllProjectsInstalled,
 }));
 
 vi.mock('../services/NuGetService', () => ({
@@ -307,6 +311,36 @@ describe('NuGetSidebarProvider', () => {
 
             provider.dispose();
             expect(view.badge).toBeUndefined();
+        });
+
+        it('sets _disposed to true', () => {
+            view = resolveView(provider);
+            expect((provider as any)._disposed).toBe(false);
+
+            provider.dispose();
+            expect((provider as any)._disposed).toBe(true);
+        });
+
+        it('clears background check timer', () => {
+            view = resolveView(provider);
+            provider.startBackgroundMonitoring();
+
+            expect((provider as any)._backgroundCheckTimer).toBeDefined();
+
+            provider.dispose();
+            expect((provider as any)._backgroundCheckTimer).toBeUndefined();
+        });
+
+        it('clears file watcher debounce', () => {
+            view = resolveView(provider);
+            provider.startBackgroundMonitoring();
+
+            // Simulate a debounce timer being set
+            (provider as any)._fileWatcherDebounce = setTimeout(() => { /* noop */ }, 10000);
+            expect((provider as any)._fileWatcherDebounce).toBeDefined();
+
+            provider.dispose();
+            expect((provider as any)._fileWatcherDebounce).toBeUndefined();
         });
     });
 
@@ -653,18 +687,15 @@ describe('NuGetSidebarProvider', () => {
         it('checks updates for all projects and sends combined results', async () => {
             view = resolveView(provider);
             view.webview.postMessage.mockClear();
-            (service as any).findProjects.mockResolvedValue([
-                { path: '/projA.csproj', name: 'ProjA' },
-                { path: '/projB.csproj', name: 'ProjB' }
-            ]);
-            (service as any).getInstalledPackages
-                .mockResolvedValueOnce([{ id: 'Pkg', version: '1.0', versionType: 'standard' }])
-                .mockResolvedValueOnce([]);
-            (service as any).checkPackageUpdatesMinimal
-                .mockResolvedValueOnce([{ id: 'Pkg', installedVersion: '1.0', latestVersion: '2.0' }]);
+            hoisted.mockQueryAllProjectsUpdates.mockResolvedValueOnce([{
+                projectPath: '/projA.csproj',
+                projectName: 'ProjA',
+                updates: [{ id: 'Pkg', installedVersion: '1.0', latestVersion: '2.0' }]
+            }]);
 
             await messageListener!({ type: 'checkAllProjectsUpdates', includePrerelease: false });
 
+            expect(hoisted.mockQueryAllProjectsUpdates).toHaveBeenCalledWith(service, false, true);
             expect(view.webview.postMessage).toHaveBeenCalledWith({
                 type: 'allProjectsUpdates',
                 projectUpdates: [{
@@ -678,14 +709,7 @@ describe('NuGetSidebarProvider', () => {
         it('skips projects that throw errors', async () => {
             view = resolveView(provider);
             view.webview.postMessage.mockClear();
-            (service as any).findProjects.mockResolvedValue([
-                { path: '/bad.csproj', name: 'Bad' },
-                { path: '/good.csproj', name: 'Good' }
-            ]);
-            (service as any).getInstalledPackages
-                .mockRejectedValueOnce(new Error('parse error'))
-                .mockResolvedValueOnce([{ id: 'A', version: '1.0', versionType: 'standard' }]);
-            (service as any).checkPackageUpdatesMinimal.mockResolvedValueOnce([]);
+            hoisted.mockQueryAllProjectsUpdates.mockResolvedValueOnce([]);
 
             await messageListener!({ type: 'checkAllProjectsUpdates', includePrerelease: true });
 
@@ -700,33 +724,29 @@ describe('NuGetSidebarProvider', () => {
         it('collects installed packages from all projects', async () => {
             view = resolveView(provider);
             view.webview.postMessage.mockClear();
-            (service as any).findProjects.mockResolvedValue([
-                { path: '/projA.csproj', name: 'ProjA' }
-            ]);
-            (service as any).getInstalledPackages.mockResolvedValue([
-                { id: 'Pkg', version: '1.0', resolvedVersion: '1.0.0', isImplicit: false }
-            ]);
+            hoisted.mockQueryAllProjectsInstalled.mockResolvedValueOnce([{
+                projectPath: '/projA.csproj',
+                projectName: 'ProjA',
+                packages: [{ id: 'Pkg', version: '1.0', resolvedVersion: '1.0.0', isImplicit: false }]
+            }]);
             await messageListener!({ type: 'checkAllProjectsInstalled', context: 'multiInstall' });
 
-            expect((service as any).getInstalledPackages).toHaveBeenCalledWith('/projA.csproj', true);
+            expect(hoisted.mockQueryAllProjectsInstalled).toHaveBeenCalledWith(service);
             expect(view.webview.postMessage).toHaveBeenCalledWith({
                 type: 'allProjectsInstalled',
-                context: 'multiInstall',
                 projectInstalled: [{
                     projectPath: '/projA.csproj',
                     projectName: 'ProjA',
                     packages: [{ id: 'Pkg', version: '1.0', resolvedVersion: '1.0.0', isImplicit: false }]
-                }]
+                }],
+                context: 'multiInstall'
             });
         });
 
         it('skips projects that throw errors', async () => {
             view = resolveView(provider);
             view.webview.postMessage.mockClear();
-            (service as any).findProjects.mockResolvedValue([
-                { path: '/bad.csproj', name: 'Bad' }
-            ]);
-            (service as any).getInstalledPackages.mockRejectedValue(new Error('fail'));
+            hoisted.mockQueryAllProjectsInstalled.mockResolvedValueOnce([]);
             await messageListener!({ type: 'checkAllProjectsInstalled' });
 
             expect(view.webview.postMessage).toHaveBeenCalledWith({

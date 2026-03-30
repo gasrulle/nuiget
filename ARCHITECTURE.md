@@ -76,10 +76,15 @@ src/
 │           ├── SectionHeader.tsx   # Collapsible section header
 │           └── PackageRow.tsx      # Compact package row with hover actions
 ├── services/
-│   ├── NuGetService.ts       # dotnet CLI integration, NuGet API calls (~4080 lines)
+│   ├── NuGetService.ts       # Facade: delegates to sub-services, retains HTTP/source health/CLI (~1200 lines)
+│   ├── NuGetPackageService.ts # Package search, metadata, versions, vulnerabilities, icons, updates (~1250 lines)
+│   ├── NuGetCliService.ts    # dotnet CLI operations (install/update/remove/restore, SDK detection)
+│   ├── NuGetSourceService.ts # Source CRUD, config file management, source name generation
+│   ├── NuGetProjectService.ts # Project discovery, .csproj parsing, transitive deps, assets.json caching
+│   ├── NuGetLogger.ts        # Logging utilities (setupOutputChannel, logOutput/Success/Warning/Error, sanitize)
 │   ├── NuGetTypes.ts         # Shared NuGet types (VersionSpec, Project, PackageMetadata, etc.)
 │   ├── NuGetUtils.ts         # Standalone utilities (LRUMap, batchedPromiseAll, validators, isNewerVersion, topologicalSortByDependency)
-│   ├── NuGetOperations.ts    # Shared package operation functions (install/update/remove, bulk variants)
+│   ├── NuGetOperations.ts    # Shared package operation + query functions (install/update/remove, bulk variants, all-projects queries)
 │   ├── NuGetConfigParser.ts  # nuget.config parsing, credential resolution
 │   ├── CredentialService.ts  # Authentication for private feeds (DPAPI, Cred Provider)
 │   ├── Http2Client.ts        # HTTP/2 client with session reuse for nuget.org
@@ -101,11 +106,19 @@ src/
 ```
 
 ### Module Split: NuGetService
-`NuGetService.ts` delegates shared types and standalone utilities to separate modules:
-- **`NuGetTypes.ts`** — All exported types/interfaces (`VersionSpec`, `Project`, `InstalledPackage`, `PackageMetadata`, `NuGetSource`, `NuGetSearchResponse`, `NuGetSearchEntry`, `NuGetRegistrationEntry`, `NuGetRegistrationPage`, etc.). `NuGetService.ts` re-exports these for backward compatibility. NuGet V3 API response types use vendor-polymorphic field names (e.g., `id`/`Id`, `authors`/`Authors`) to handle differences between nuget.org, Nexus, ProGet, and other server implementations.
+`NuGetService.ts` is a facade that delegates to five sub-services:
+- **`NuGetPackageService.ts`** (~1250 lines) — Package search (`searchPackages`, `searchPackagesViaApi`, `quickSearchGrouped`), metadata resolution (`getPackageMetadata`, `getPackageMetadataFromSource/Search/Nuspec`), version queries (`getPackageVersions`, `getPackageVersionsFromSource`), vulnerability data (`fetchVulnerabilityData`, `getVulnerabilities`), icon URL resolution (`resolveIconUrl`, `getPackageIconUrl`), autocomplete, update checking (`checkPackageUpdates`, `checkPackageUpdatesMinimal`), README extraction, size fetching, and installed package metadata. Uses `PackageServiceDeps` interface for dependency injection — receives HTTP, source, and endpoint methods from `NuGetService` via arrow function bindings. Owns caches: `metadataCache(200)`, `iconUrlCache(500)`, `versionsCache(200)`, `verifiedStatusCache(300)`, `searchResultsCache(100)`, `autocompleteCache(50)`, `vulnerabilityData(Map)`.
+- **`NuGetCliService.ts`** — dotnet CLI operations (install/update/remove/restore), SDK detection (`getSdkMajorVersion`, `useNounFirstSyntax`), HTTP cache clearing, `dotnet package search`.
+- **`NuGetSourceService.ts`** — Source CRUD (`getSources`, `addSource`, `removeSource`, `enableSource`, `disableSource`), nuget.config file management, source name generation.
+- **`NuGetProjectService.ts`** (~440 lines) — Project discovery, `.csproj` parsing, installed packages, transitive dependency resolution, `project.assets.json` caching.
+- **`NuGetLogger.ts`** — Logging utilities (`setupOutputChannel`, `sanitizeForLogging`, `logOutput`, `logSuccess`, `logWarning`, `logError`, `logBulkOperationHeader`).
+
+`NuGetService.ts` retains: HTTP fetch methods (`fetchJson`, `fetchJsonHttp1`, `fetchJsonWithCompression`, `fetchJsonWithDetails`, `fetchText`, `downloadFile`), service index discovery/caching, source health monitoring, failed endpoint cache, credential management, and the public facade API. Internal types (`NuGetServiceIndex`, `ServiceEndpoints`) remain in `NuGetService.ts`. `FetchResult<T>` is defined in `Http2Client.ts`.
+
+Additional module splits:
+- **`NuGetTypes.ts`** — All exported types/interfaces (`VersionSpec`, `Project`, `InstalledPackage`, `PackageMetadata`, `NuGetSource`, `NuGetSearchResponse`, `NuGetSearchEntry`, `NuGetRegistrationEntry`, `NuGetRegistrationPage`, etc.). Also exports discriminated union message types: 48 message interfaces (e.g., `GetProjectsMsg`, `InstallPackageMsg`, `ShowContextMenuMsg`), `PanelRequestMessage` (34 variants), and `SidebarRequestMessage` (14 variants) — used by `_handleMessage` in both panels for type-safe switch/case narrowing. `NuGetService.ts` re-exports these for backward compatibility. NuGet V3 API response types use vendor-polymorphic field names (e.g., `id`/`Id`, `authors`/`Authors`) to handle differences between nuget.org, Nexus, ProGet, and other server implementations.
 - **`NuGetUtils.ts`** — Stateless utility functions (`LRUMap`, `batchedPromiseAll`, `execWithTimeout`, `fileExists`, `COMMAND_TIMEOUT`, input validators, `parseVersionSpec`, `isNewerVersion`, `topologicalSortByDependency`). No class dependency.
-- **`NuGetOperations.ts`** — Shared package operation functions used by both `NuGetPanel` and `NuGetSidebarPanel`. Exports an `OperationContext` interface (`{ nugetService, postMessage, notifyOtherPanel }`) and pure async functions: `executeSingleOperation` (install/update/remove), `executeBulkInstall`, `executeBulkUpdatePackages`, `executeBulkRemovePackages`, `executeBulkUpdateAllProjects`, `executeBulkRemoveAllProjects`. Each panel builds an `OperationContext` via `_opCtx()` and delegates from thin message-handler dispatchers.
-- `NuGetService.ts` retains internal types (`NuGetServiceIndex`, `ServiceEndpoints`) and all class methods. `FetchResult<T>` is defined in `Http2Client.ts`.
+- **`NuGetOperations.ts`** — Shared package operation functions used by both `NuGetPanel` and `NuGetSidebarPanel`. Exports an `OperationContext` interface (`{ nugetService, postMessage, notifyOtherPanel }`) and pure async functions: `executeSingleOperation` (install/update/remove), `executeBulkInstall`, `executeBulkUpdatePackages`, `executeBulkRemovePackages`, `executeBulkUpdateAllProjects`, `executeBulkRemoveAllProjects`. Also exports shared query functions: `queryAllProjectsUpdates(nugetService, includePrerelease, liteMode)` and `queryAllProjectsInstalled(nugetService)` with typed return interfaces (`ProjectUpdatesResult[]`, `ProjectInstalledResult[]`). Each panel builds an `OperationContext` via `_opCtx()` and delegates from thin message-handler dispatchers.
 - `NuGetConfigParser.ts` imports and re-exports `NuGetSource` from `NuGetTypes.ts` — there is a single canonical definition.
 
 ### Module Split: App.tsx
@@ -957,7 +970,7 @@ async function fileExists(filePath: string): Promise<boolean> {
 if (await fileExists(assetsPath)) { ... }
 ```
 
-### Backend Caching (NuGetService)
+### Backend Caching (NuGetService / NuGetPackageService)
 The extension backend uses LRU caches with size limits to prevent unbounded memory growth:
 
 ```typescript
@@ -970,8 +983,10 @@ class LRUMap<K, V> {
     delete(key: K): boolean;
 }
 
-// Cache size limits in NuGetService
+// Cache size limits in NuGetService (facade)
 private serviceIndexCache = new LRUMap<string, ServiceEndpoints>(50);
+
+// Cache size limits in NuGetPackageService (sub-service)
 private metadataCache = new LRUMap<string, PackageMetadata>(200);
 private iconUrlCache = new LRUMap<string, string>(500);  // Stores resolved icon URL or '' (not found)
 private versionsCache = new LRUMap<string, string[]>(200);
@@ -1363,7 +1378,7 @@ import { renderMarkdownToHtml } from './markdownSetup';
 DOMPurify is configured with explicit restrictions: `ALLOWED_URI_REGEXP` (https/http/mailto only), `FORBID_TAGS` (style, form, input, textarea, select, button), `FORBID_ATTR` (style).
 
 ### SSRF Prevention
-All HTTP redirect handlers across Http2Client.ts and NuGetService.ts use `isSafeRedirectTarget()` (exported from Http2Client.ts) to block:
+All HTTP redirect handling is centralized in `resolveRedirect()` (exported from Http2Client.ts), which combines status detection (`isRedirectStatus()` — 301/302/307/308), URL resolution, `isSafeRedirectTarget()` SSRF validation, and same-origin auth forwarding into one call. All 10 redirect sites across Http2Client.ts and NuGetService.ts use `resolveRedirect()` instead of inline redirect logic. It blocks:
 - Redirects to private/loopback IPs (10.x, 172.16-31.x, 192.168.x, 169.254.x, localhost, ::1)
 - Link-local IPv6 (fe80::/10, fc00::/7)
 - HTTPS→HTTP protocol downgrades

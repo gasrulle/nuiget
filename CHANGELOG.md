@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Discriminated Union Message Types** — All 48 webview↔extension host message types defined as typed interfaces in `NuGetTypes.ts` with `PanelRequestMessage` and `SidebarRequestMessage` unions, eliminating `as` type casts from both panel message handlers
+- **Shared Query Functions** — `queryAllProjectsUpdates()` and `queryAllProjectsInstalled()` extracted to `NuGetOperations.ts`, deduplicating identical loops from `NuGetPanel.ts` and `NuGetSidebarPanel.ts`
+- **Centralized HTTP Redirect Handling** — `resolveRedirect()` and `isRedirectStatus()` helpers in `Http2Client.ts` replace inline redirect logic across 10 sites in Http2Client.ts and NuGetService.ts, consolidating status detection, URL resolution, SSRF validation, and same-origin auth forwarding
+- **NuGetLogger and NuGetCliService Extraction** — Logging utilities and dotnet CLI operations extracted from `NuGetService` into `NuGetLogger.ts` and `NuGetCliService.ts`, reducing the god class by ~320 lines while preserving the public facade API
+- **NuGetSourceService Extraction** — Source CRUD operations, config file management, and source name generation extracted from `NuGetService` into `NuGetSourceService.ts`, continuing the facade decomposition
+- **NuGetProjectService Extraction** — Project discovery, .csproj parsing, installed packages, transitive dependency resolution, and `project.assets.json` caching extracted from `NuGetService` into `NuGetProjectService.ts` (~440 lines), further reducing the god class
+- **NuGetPackageService Extraction** — Package search, metadata resolution, version queries, vulnerability data, icon URL resolution, autocomplete, update checking, README extraction, and size fetching extracted from `NuGetService` into `NuGetPackageService.ts` (~1250 lines), reducing the god class from ~3400 to ~1200 lines (64% reduction)
+- **Sub-Service Unit Tests** — New test files for `NuGetLogger` (22 tests), `NuGetCliService` (27 tests), `NuGetSourceService` (32 tests), and `NuGetProjectService` (24 tests), covering credential sanitization, SDK detection, CLI operations, source CRUD/caching, project discovery, .csproj parsing, transitive dependency resolution, and assets.json caching
+- **Credential Validation** — `isValidCredentialValue()` validator in `NuGetUtils.ts` prevents command injection via username/password fields in `addSource()`
+
+### Fixed
+
+- **Main panel stuck loading spinner on checkAllProjectsUpdates/checkAllProjectsInstalled errors**
+- **Sidebar post-disposal messaging when dispose() called directly**
+- **HTTP redirect URL parsing crash** — `resolveRedirect()` now catches malformed `Location` headers instead of throwing
+- **Removed internal refactor script** — Deleted `_replace_methods.cjs` from repository root (was incorrectly shipped in VSIX)
+
 ## [1.15.2] - 2026-03-29
 
 ### Added

@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
-import { executeBulkUpdateAllProjects, executeBulkUpdatePackages, executeSingleOperation, OperationContext } from '../services/NuGetOperations';
-import { InstalledPackage, NuGetService } from '../services/NuGetService';
+import { executeBulkUpdateAllProjects, executeBulkUpdatePackages, executeSingleOperation, OperationContext, queryAllProjectsInstalled, queryAllProjectsUpdates } from '../services/NuGetOperations';
+import { NuGetService } from '../services/NuGetService';
+import type { ShowContextMenuMsg, SidebarRequestMessage } from '../services/NuGetTypes';
 import { NuGetPanel } from './NuGetPanel';
 
 /**
@@ -245,6 +246,7 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
 
     /** Dispose background monitoring resources */
     public dispose(): void {
+        this._disposed = true;
         this._clearBadge();
         if (this._backgroundCheckTimer) {
             clearInterval(this._backgroundCheckTimer);
@@ -447,7 +449,7 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
 
     // ------ Private message handling ------
 
-    private async _handleMessage(data: Record<string, unknown>): Promise<void> {
+    private async _handleMessage(data: SidebarRequestMessage): Promise<void> {
         switch (data.type) {
             case 'ready':
                 {
@@ -457,7 +459,7 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
                 }
             case 'saveSectionSplit':
                 {
-                    const position = data.position as number | undefined;
+                    const position = data.position;
                     if (position !== undefined) {
                         await this._context.workspaceState.update('nuget.sidebarSectionSplit', position);
                     }
@@ -465,7 +467,7 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
                 }
             case 'searchPackages':
                 {
-                    const query = data.query as string;
+                    const query = data.query;
                     this._latestSearchQuery = query;
 
                     try {
@@ -523,8 +525,8 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
                     try {
                         // Always use minimal for sidebar
                         const minimalUpdates = await this._nugetService.checkPackageUpdatesMinimal(
-                            data.installedPackages as InstalledPackage[],
-                            data.includePrerelease as boolean
+                            data.installedPackages,
+                            data.includePrerelease
                         );
                         this._postMessage({
                             type: 'packageUpdatesMinimal',
@@ -543,69 +545,26 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
                 }
             case 'checkAllProjectsUpdates':
                 {
-                    let projects: { path: string; name: string }[];
                     try {
-                        projects = await this._nugetService.findProjects();
+                        const projectUpdates = await queryAllProjectsUpdates(
+                            this._nugetService, data.includePrerelease, true /* liteMode */
+                        );
+                        this._postMessage({ type: 'allProjectsUpdates', projectUpdates });
                     } catch (error) {
-                        console.error('[nUIget Sidebar] checkAllProjectsUpdates findProjects error:', error);
+                        console.error('[nUIget Sidebar] checkAllProjectsUpdates error:', error);
                         this._postMessage({ type: 'allProjectsUpdates', projectUpdates: [] });
-                        break;
                     }
-                    const includePrerelease = data.includePrerelease as boolean;
-                    const allProjectsUpdates: { projectPath: string; projectName: string; updates: { id: string; installedVersion: string; latestVersion: string }[] }[] = [];
-
-                    for (const project of projects) {
-                        try {
-                            const installedPackages = await this._nugetService.getInstalledPackages(project.path, true);
-                            if (installedPackages.length > 0) {
-                                const updates = await this._nugetService.checkPackageUpdatesMinimal(installedPackages, includePrerelease);
-                                if (updates.length > 0) {
-                                    allProjectsUpdates.push({
-                                        projectPath: project.path,
-                                        projectName: project.name,
-                                        updates
-                                    });
-                                }
-                            }
-                        } catch (error) {
-                            console.error(`[nUIget Sidebar] Failed to check updates for ${project.name}:`, error);
-                        }
-                    }
-
-                    this._postMessage({ type: 'allProjectsUpdates', projectUpdates: allProjectsUpdates });
                     break;
                 }
             case 'checkAllProjectsInstalled':
                 {
-                    let projects: { path: string; name: string }[];
                     try {
-                        projects = await this._nugetService.findProjects();
+                        const projectInstalled = await queryAllProjectsInstalled(this._nugetService);
+                        this._postMessage({ type: 'allProjectsInstalled', projectInstalled, context: data.context });
                     } catch (error) {
-                        console.error('[nUIget Sidebar] checkAllProjectsInstalled findProjects error:', error);
+                        console.error('[nUIget Sidebar] checkAllProjectsInstalled error:', error);
                         this._postMessage({ type: 'allProjectsInstalled', projectInstalled: [], context: data.context });
-                        break;
                     }
-                    const allProjectsInstalled: { projectPath: string; projectName: string; packages: { id: string; version: string; resolvedVersion?: string; isImplicit?: boolean }[] }[] = [];
-
-                    for (const project of projects) {
-                        try {
-                            const installedPackages = await this._nugetService.getInstalledPackages(project.path, true /* liteMode */);
-                            allProjectsInstalled.push({
-                                projectPath: project.path,
-                                projectName: project.name,
-                                packages: installedPackages.map(p => ({
-                                    id: p.id,
-                                    version: p.version,
-                                    resolvedVersion: p.resolvedVersion,
-                                    isImplicit: p.isImplicit,
-                                }))
-                            });
-                        } catch (error) {
-                            console.error(`[nUIget Sidebar] Failed to get installed packages for ${project.name}:`, error);
-                        }
-                    }
-
-                    this._postMessage({ type: 'allProjectsInstalled', projectInstalled: allProjectsInstalled, context: data.context });
                     break;
                 }
             case 'installPackage':
@@ -613,7 +572,7 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
                     if (this._operationInProgress) { break; }
                     this._operationInProgress = true;
                     try {
-                        await executeSingleOperation(this._opCtx(), 'install', data.projectPath as string, data.packageId as string, data.version as string | undefined, data.sourceUrl as string | undefined);
+                        await executeSingleOperation(this._opCtx(), 'install', data.projectPath, data.packageId, data.version, data.sourceUrl);
                     } finally { this._operationInProgress = false; }
                     break;
                 }
@@ -622,7 +581,7 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
                     if (this._operationInProgress) { break; }
                     this._operationInProgress = true;
                     try {
-                        await executeSingleOperation(this._opCtx(), 'update', data.projectPath as string, data.packageId as string, data.version as string, data.sourceUrl as string | undefined);
+                        await executeSingleOperation(this._opCtx(), 'update', data.projectPath, data.packageId, data.version, data.sourceUrl);
                     } finally { this._operationInProgress = false; }
                     break;
                 }
@@ -631,7 +590,7 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
                     if (this._operationInProgress) { break; }
                     this._operationInProgress = true;
                     try {
-                        await executeSingleOperation(this._opCtx(), 'remove', data.projectPath as string, data.packageId as string);
+                        await executeSingleOperation(this._opCtx(), 'remove', data.projectPath, data.packageId);
                     } finally { this._operationInProgress = false; }
                     break;
                 }
@@ -640,7 +599,7 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
                     if (this._operationInProgress) { break; }
                     this._operationInProgress = true;
                     try {
-                        await executeBulkUpdatePackages(this._opCtx(), data.packages as { id: string; version: string; sourceUrl?: string }[], data.projectPath as string);
+                        await executeBulkUpdatePackages(this._opCtx(), data.packages, data.projectPath);
                     } finally { this._operationInProgress = false; }
                     break;
                 }
@@ -649,17 +608,17 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
                     if (this._operationInProgress) { break; }
                     this._operationInProgress = true;
                     try {
-                        await executeBulkUpdateAllProjects(this._opCtx(), data.projectUpdates as { projectPath: string; projectName: string; packages: { id: string; version: string; sourceUrl?: string }[] }[]);
+                        await executeBulkUpdateAllProjects(this._opCtx(), data.projectUpdates);
                     } finally { this._operationInProgress = false; }
                     break;
                 }
             case 'getPackageVersions':
                 {
                     const versions = await this._nugetService.getPackageVersions(
-                        data.packageId as string,
-                        data.source as string | undefined,
-                        data.includePrerelease as boolean | undefined,
-                        data.take as number | undefined
+                        data.packageId,
+                        data.source,
+                        data.includePrerelease,
+                        data.take
                     );
                     this._postMessage({
                         type: 'packageVersions',
@@ -679,14 +638,14 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
 
     // ------ Context menu ------
 
-    private async _showContextMenu(data: Record<string, unknown>): Promise<void> {
-        const packageId = data.packageId as string;
-        const installedVersion = data.installedVersion as string | undefined;
-        const latestVersion = data.latestVersion as string | undefined;
-        const context = data.context as 'browse' | 'installed' | 'updates';
-        const projectPath = data.projectPath as string;
-        const versionType = data.versionType as string | undefined;
-        const sourceUrl = data.sourceUrl as string | undefined;
+    private async _showContextMenu(data: ShowContextMenuMsg): Promise<void> {
+        const packageId = data.packageId;
+        const installedVersion = data.installedVersion;
+        const latestVersion = data.latestVersion;
+        const context = data.context;
+        const projectPath = data.projectPath;
+        const versionType = data.versionType;
+        const sourceUrl = data.sourceUrl;
         const isFloatingOrRange = versionType === 'floating' || versionType === 'range';
 
         if (!projectPath) {

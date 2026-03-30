@@ -14,7 +14,8 @@ const hoisted = vi.hoisted(() => {
         if (promisifyCallCount === 1) { return mockReadFileAsync; } // readFile
         return vi.fn(); // writeFile and others
     };
-    return { mockExecWithTimeout, mockFileExists, mockReadFileAsync, getNextPromisified };
+    const mockIsSafeRedirectTarget = vi.fn().mockReturnValue(true);
+    return { mockExecWithTimeout, mockFileExists, mockReadFileAsync, getNextPromisified, mockIsSafeRedirectTarget };
 });
 
 vi.mock('./NuGetUtils', async (importOriginal) => {
@@ -37,7 +38,26 @@ vi.mock('./Http2Client', () => ({
         headRequest: vi.fn().mockResolvedValue(false),
         headRequestContentLength: vi.fn().mockResolvedValue(-1),
     },
-    isSafeRedirectTarget: vi.fn().mockReturnValue(true),
+    isSafeRedirectTarget: hoisted.mockIsSafeRedirectTarget,
+    isRedirectStatus(statusCode: number | undefined): boolean {
+        return statusCode === 301 || statusCode === 302 || statusCode === 307 || statusCode === 308;
+    },
+    resolveRedirect(
+        statusCode: number | undefined,
+        locationHeader: string | undefined,
+        originalUrl: string,
+        authHeader?: string,
+    ) {
+        if (!(statusCode === 301 || statusCode === 302 || statusCode === 307 || statusCode === 308) || !locationHeader) {
+            return null;
+        }
+        const redirectParsed = new URL(locationHeader, originalUrl);
+        const redirectUrl = redirectParsed.href;
+        if (!hoisted.mockIsSafeRedirectTarget(redirectUrl, originalUrl)) { return null; }
+        const originalParsed = new URL(originalUrl);
+        const sameOrigin = redirectParsed.origin === originalParsed.origin;
+        return { redirectUrl, forwardAuth: sameOrigin ? authHeader : undefined };
+    },
 }));
 
 vi.mock('./CredentialService', () => ({
@@ -96,6 +116,8 @@ vi.mock('fs', () => ({
     promises: {
         stat: vi.fn(),
         access: vi.fn(),
+        writeFile: vi.fn(),
+        readFile: vi.fn(),
     },
     constants: { F_OK: 0 },
 }));
@@ -493,7 +515,8 @@ describe('NuGetService', () => {
     // ──────────────────────────────────────────────
     describe('getProjectReferences', () => {
         it('parses ProjectReference elements', async () => {
-            hoisted.mockReadFileAsync.mockResolvedValue(
+            const fs = await import('fs');
+            vi.mocked(fs.promises.readFile).mockResolvedValue(
                 '<Project><ItemGroup><ProjectReference Include="..\\Lib\\Lib.csproj" /></ItemGroup></Project>'
             );
             const refs = await service.getProjectReferences('/src/App/App.csproj');
@@ -502,7 +525,8 @@ describe('NuGetService', () => {
         });
 
         it('returns empty array on read error', async () => {
-            hoisted.mockReadFileAsync.mockRejectedValue(new Error('ENOENT'));
+            const fs = await import('fs');
+            vi.mocked(fs.promises.readFile).mockRejectedValue(new Error('ENOENT'));
             const refs = await service.getProjectReferences('/nonexistent.csproj');
             expect(refs).toEqual([]);
         });
@@ -513,8 +537,9 @@ describe('NuGetService', () => {
     // ──────────────────────────────────────────────
     describe('getProjectDependencyMap', () => {
         it('builds dependency map from ProjectReferences', async () => {
-            hoisted.mockReadFileAsync.mockImplementation(async (path: string) => {
-                if (path.includes('App')) {
+            const fs = await import('fs');
+            vi.mocked(fs.promises.readFile).mockImplementation(async (path: any) => {
+                if (String(path).includes('App')) {
                     return '<Project><ItemGroup><ProjectReference Include="..\\Lib\\Lib.csproj" /></ItemGroup></Project>';
                 }
                 return '<Project></Project>';
@@ -1002,7 +1027,7 @@ describe('NuGetService', () => {
         it('uses HTTP/2 for nuget.org URLs', async () => {
             vi.mocked(http2Client.headRequest).mockResolvedValue(200);
 
-            const result = await (service as any).checkUrlExists('https://api.nuget.org/v3/content/pkg.nupkg');
+            const result = await (service as any)._packageService.checkUrlExists('https://api.nuget.org/v3/content/pkg.nupkg');
             expect(result).toBe(true);
             expect(http2Client.headRequest).toHaveBeenCalled();
         });
@@ -1010,7 +1035,7 @@ describe('NuGetService', () => {
         it('returns false for nuget.org 404', async () => {
             vi.mocked(http2Client.headRequest).mockResolvedValue(404);
 
-            const result = await (service as any).checkUrlExists('https://api.nuget.org/v3/missing.nupkg');
+            const result = await (service as any)._packageService.checkUrlExists('https://api.nuget.org/v3/missing.nupkg');
             expect(result).toBe(false);
         });
 
@@ -1025,7 +1050,7 @@ describe('NuGetService', () => {
                 return req;
             });
 
-            const result = await (service as any).checkUrlExists('https://api.nuget.org/v3/redirect');
+            const result = await (service as any)._packageService.checkUrlExists('https://api.nuget.org/v3/redirect');
             expect(result).toBe(true);
         });
 
@@ -1038,7 +1063,7 @@ describe('NuGetService', () => {
                 return req;
             });
 
-            const result = await (service as any).checkUrlExists('https://myserver.com/pkg.nupkg');
+            const result = await (service as any)._packageService.checkUrlExists('https://myserver.com/pkg.nupkg');
             expect(result).toBe(true);
             expect(http2Client.headRequest).not.toHaveBeenCalled();
         });
@@ -1054,7 +1079,7 @@ describe('NuGetService', () => {
                 return req;
             });
 
-            const result = await (service as any).checkUrlExistsHttp1('https://example.com/exists');
+            const result = await (service as any)._packageService.checkUrlExistsHttp1('https://example.com/exists');
             expect(result).toBe(true);
         });
 
@@ -1067,7 +1092,7 @@ describe('NuGetService', () => {
                 return req;
             });
 
-            const result = await (service as any).checkUrlExistsHttp1('https://example.com/missing');
+            const result = await (service as any)._packageService.checkUrlExistsHttp1('https://example.com/missing');
             expect(result).toBe(false);
         });
 
@@ -1078,12 +1103,12 @@ describe('NuGetService', () => {
                 return req;
             });
 
-            const result = await (service as any).checkUrlExistsHttp1('https://example.com/broken');
+            const result = await (service as any)._packageService.checkUrlExistsHttp1('https://example.com/broken');
             expect(result).toBe(false);
         });
 
         it('returns false when max redirects exceeded', async () => {
-            const result = await (service as any).checkUrlExistsHttp1('https://example.com/loop', undefined, 0);
+            const result = await (service as any)._packageService.checkUrlExistsHttp1('https://example.com/loop', undefined, 0);
             expect(result).toBe(false);
         });
 
@@ -1106,7 +1131,7 @@ describe('NuGetService', () => {
                 return req;
             });
 
-            const result = await (service as any).checkUrlExistsHttp1('https://example.com/redirect');
+            const result = await (service as any)._packageService.checkUrlExistsHttp1('https://example.com/redirect');
             expect(result).toBe(true);
             expect(isSafeRedirectTarget).toHaveBeenCalled();
         });
@@ -1422,7 +1447,7 @@ describe('NuGetService', () => {
             });
             vi.spyOn(service as any, 'fetchJson').mockResolvedValue(searchResponse);
 
-            const result = await (service as any).searchPackagesViaApi('Newtonsoft', false, false, 20, false);
+            const result = await (service as any)._packageService.searchPackagesViaApi('Newtonsoft', false, false, 20, false);
             expect(result).toHaveLength(1);
             expect(result[0].id).toBe('Newtonsoft.Json');
             expect(result[0].verified).toBe(true);
@@ -1432,7 +1457,7 @@ describe('NuGetService', () => {
         it('returns null when SearchQueryService endpoint not found', async () => {
             vi.spyOn(service as any, 'discoverServiceEndpoints').mockResolvedValue({});
 
-            const result = await (service as any).searchPackagesViaApi('test', false, false, 20, false);
+            const result = await (service as any)._packageService.searchPackagesViaApi('test', false, false, 20, false);
             expect(result).toBeNull();
         });
 
@@ -1442,14 +1467,14 @@ describe('NuGetService', () => {
             });
             vi.spyOn(service as any, 'fetchJson').mockResolvedValue(null);
 
-            const result = await (service as any).searchPackagesViaApi('test', false, false, 20, false);
+            const result = await (service as any)._packageService.searchPackagesViaApi('test', false, false, 20, false);
             expect(result).toBeNull();
         });
 
         it('returns null on exception (falls back to CLI)', async () => {
             vi.spyOn(service as any, 'discoverServiceEndpoints').mockRejectedValue(new Error('network'));
 
-            const result = await (service as any).searchPackagesViaApi('test', false, false, 20, false);
+            const result = await (service as any)._packageService.searchPackagesViaApi('test', false, false, 20, false);
             expect(result).toBeNull();
         });
 
@@ -1459,7 +1484,7 @@ describe('NuGetService', () => {
             });
             const fetchSpy = vi.spyOn(service as any, 'fetchJson').mockResolvedValue({ data: [] });
 
-            await (service as any).searchPackagesViaApi('Newtonsoft.Json', false, false, 20, true);
+            await (service as any)._packageService.searchPackagesViaApi('Newtonsoft.Json', false, false, 20, true);
 
             const url = fetchSpy.mock.calls[0][0] as string;
             expect(url).toContain('packageid%3ANewtonsoft.Json');
@@ -1471,7 +1496,7 @@ describe('NuGetService', () => {
             });
             const fetchSpy = vi.spyOn(service as any, 'fetchJson').mockResolvedValue({ data: [] });
 
-            await (service as any).searchPackagesViaApi('test', true, false, 20, false);
+            await (service as any)._packageService.searchPackagesViaApi('test', true, false, 20, false);
 
             const url = fetchSpy.mock.calls[0][0] as string;
             expect(url).toContain('prerelease=true');
@@ -1494,7 +1519,7 @@ describe('NuGetService', () => {
             });
             vi.spyOn(service as any, 'fetchJson').mockResolvedValue(searchResponse);
 
-            const result = await (service as any).searchPackagesViaApi('test', false, true, 20, false);
+            const result = await (service as any)._packageService.searchPackagesViaApi('test', false, true, 20, false);
             expect(result[0].authors).toBe('');
             expect(result[0].verified).toBeUndefined();
             // In liteMode, icon cache should NOT be populated
@@ -1518,7 +1543,7 @@ describe('NuGetService', () => {
             });
             vi.spyOn(service as any, 'fetchJson').mockResolvedValue(searchResponse);
 
-            const result = await (service as any).searchPackagesViaApi('test', false, false, 20, false);
+            const result = await (service as any)._packageService.searchPackagesViaApi('test', false, false, 20, false);
             expect(result[0].iconUrl).toBeUndefined();
         });
 
@@ -1536,7 +1561,7 @@ describe('NuGetService', () => {
             });
             vi.spyOn(service as any, 'fetchJson').mockResolvedValue(searchResponse);
 
-            const result = await (service as any).searchPackagesViaApi('test', false, false, 20, false);
+            const result = await (service as any)._packageService.searchPackagesViaApi('test', false, false, 20, false);
             expect(result[0].authors).toBe('Author One, Author Two');
         });
     });
@@ -1742,7 +1767,7 @@ describe('NuGetService', () => {
     describe('searchPackages', () => {
         it('returns cached results from in-memory cache', async () => {
             // Populate cache via API path first
-            vi.spyOn(service as any, 'searchPackagesViaApi').mockResolvedValue([
+            vi.spyOn((service as any)._packageService, 'searchPackagesViaApi').mockResolvedValue([
                 { id: 'CachedPkg', version: '1.0.0', description: '', authors: '', versions: ['1.0.0'] }
             ]);
             vi.spyOn(service as any, 'getSources').mockResolvedValue([]);
@@ -1751,7 +1776,7 @@ describe('NuGetService', () => {
             await service.searchPackages('cached', ['https://api.nuget.org/v3/index.json'], false, true);
 
             // Clear spy and call again — should hit cache
-            const apiSpy = vi.spyOn(service as any, 'searchPackagesViaApi');
+            const apiSpy = vi.spyOn((service as any)._packageService, 'searchPackagesViaApi');
             apiSpy.mockClear();
 
             const result = await service.searchPackages('cached', ['https://api.nuget.org/v3/index.json'], false, true);
@@ -1760,7 +1785,7 @@ describe('NuGetService', () => {
         });
 
         it('uses API path for single nuget.org source', async () => {
-            const apiSpy = vi.spyOn(service as any, 'searchPackagesViaApi').mockResolvedValue([
+            const apiSpy = vi.spyOn((service as any)._packageService, 'searchPackagesViaApi').mockResolvedValue([
                 { id: 'ApiPkg', version: '2.0.0', description: '', authors: '', versions: ['2.0.0'] }
             ]);
 
@@ -1770,7 +1795,7 @@ describe('NuGetService', () => {
         });
 
         it('falls back to CLI when API returns null', async () => {
-            vi.spyOn(service as any, 'searchPackagesViaApi').mockResolvedValue(null);
+            vi.spyOn((service as any)._packageService, 'searchPackagesViaApi').mockResolvedValue(null);
 
             // CLI returns table output
             hoisted.mockExecWithTimeout.mockResolvedValue({
@@ -1837,7 +1862,7 @@ describe('NuGetService', () => {
 
         it('returns empty array on exception', async () => {
             vi.mocked(workspaceCache.get).mockReturnValue(null);
-            vi.spyOn(service as any, 'searchPackagesViaApi').mockRejectedValue(new Error('crash'));
+            vi.spyOn((service as any)._packageService, 'searchPackagesViaApi').mockRejectedValue(new Error('crash'));
             hoisted.mockExecWithTimeout.mockRejectedValue(new Error('crash'));
 
             const result = await service.searchPackages('crash', ['https://api.nuget.org/v3/index.json'], false, true);
@@ -1852,7 +1877,7 @@ describe('NuGetService', () => {
     describe('getPackageMetadata', () => {
         it('returns cached metadata from metadataCache', async () => {
             const cached = { id: 'Pkg', version: '1.0.0', description: 'test', authors: 'A' };
-            (service as any).metadataCache.set('pkg@1.0.0', cached);
+            (service as any)._packageService.metadataCache.set('pkg@1.0.0', cached);
 
             const result = await service.getPackageMetadata('Pkg', '1.0.0');
             expect(result).toBe(cached);
@@ -1864,39 +1889,39 @@ describe('NuGetService', () => {
                 { url: 'https://source1.com/v3/index.json', enabled: true },
                 { url: 'https://source2.com/v3/index.json', enabled: false },
             ]);
-            vi.spyOn(service as any, 'getPackageMetadataFromSource').mockImplementation(
+            vi.spyOn((service as any)._packageService, 'getPackageMetadataFromSource').mockImplementation(
                 async (...args: unknown[]) => args[2] === 'https://source1.com/v3/index.json' ? metadata : null
             );
 
             const result = await service.getPackageMetadata('Pkg', '1.0.0');
             expect(result).toEqual(metadata);
             // Should be cached now
-            expect((service as any).metadataCache.get('pkg@1.0.0')).toBe(metadata);
+            expect((service as any)._packageService.metadataCache.get('pkg@1.0.0')).toBe(metadata);
         });
 
         it('fetches from specific source when source provided', async () => {
             const metadata = { id: 'Pkg', version: '2.0.0', description: 'd', authors: 'A' };
-            vi.spyOn(service as any, 'getPackageMetadataFromSource').mockResolvedValue(metadata);
+            vi.spyOn((service as any)._packageService, 'getPackageMetadataFromSource').mockResolvedValue(metadata);
 
             const result = await service.getPackageMetadata('Pkg', '2.0.0', 'https://custom.com/v3/index.json');
             expect(result).toEqual(metadata);
-            expect((service as any).getPackageMetadataFromSource).toHaveBeenCalledWith('Pkg', '2.0.0', 'https://custom.com/v3/index.json');
+            expect((service as any)._packageService.getPackageMetadataFromSource).toHaveBeenCalledWith('Pkg', '2.0.0', 'https://custom.com/v3/index.json');
         });
 
         it('falls back to offline metadata when sources fail', async () => {
             const offline = { id: 'Pkg', version: '1.0.0', description: '', authors: '', offline: true };
-            vi.spyOn(service as any, 'getPackageMetadataFromSource').mockResolvedValue(null);
-            vi.spyOn(service as any, 'getOfflineMetadata').mockResolvedValue(offline);
+            vi.spyOn((service as any)._packageService, 'getPackageMetadataFromSource').mockResolvedValue(null);
+            vi.spyOn((service as any)._packageService, 'getOfflineMetadata').mockResolvedValue(offline);
 
             const result = await service.getPackageMetadata('Pkg', '1.0.0', 'https://fail.com');
             expect(result).toEqual(offline);
             // Offline metadata should NOT be cached
-            expect((service as any).metadataCache.get('pkg@1.0.0')).toBeUndefined();
+            expect((service as any)._packageService.metadataCache.get('pkg@1.0.0')).toBeUndefined();
         });
 
         it('returns null when all strategies fail', async () => {
-            vi.spyOn(service as any, 'getPackageMetadataFromSource').mockResolvedValue(null);
-            vi.spyOn(service as any, 'getOfflineMetadata').mockResolvedValue(null);
+            vi.spyOn((service as any)._packageService, 'getPackageMetadataFromSource').mockResolvedValue(null);
+            vi.spyOn((service as any)._packageService, 'getOfflineMetadata').mockResolvedValue(null);
 
             const result = await service.getPackageMetadata('Pkg', '1.0.0', 'https://fail.com');
             expect(result).toBeNull();
@@ -1912,14 +1937,14 @@ describe('NuGetService', () => {
 
     describe('getPackageMetadataFromSource', () => {
         it('returns null for local sources', async () => {
-            const result = await (service as any).getPackageMetadataFromSource('Pkg', '1.0.0', 'C:\\local\\packages');
+            const result = await (service as any)._packageService.getPackageMetadataFromSource('Pkg', '1.0.0', 'C:\\local\\packages');
             expect(result).toBeNull();
         });
 
         it('returns null when no endpoints discovered', async () => {
             vi.spyOn(service as any, 'discoverServiceEndpoints').mockResolvedValue({});
 
-            const result = await (service as any).getPackageMetadataFromSource('Pkg', '1.0.0', 'https://empty.com/v3/index.json');
+            const result = await (service as any)._packageService.getPackageMetadataFromSource('Pkg', '1.0.0', 'https://empty.com/v3/index.json');
             expect(result).toBeNull();
         });
 
@@ -1930,7 +1955,7 @@ describe('NuGetService', () => {
                 packageBaseAddress: 'https://api.nuget.org/v3-flatcontainer',
             });
             vi.spyOn(service as any, 'getAuthHeader').mockResolvedValue(undefined);
-            vi.spyOn(service as any, 'getVulnerabilities').mockReturnValue([]);
+            vi.spyOn((service as any)._packageService, 'getVulnerabilities').mockReturnValue([]);
             vi.spyOn(service as any, 'getPackageSize').mockResolvedValue(-1);
             vi.spyOn(service as any, 'fetchText').mockResolvedValue(undefined);
             vi.spyOn(service as any, 'fetchJson').mockImplementation(async (...args: unknown[]) => {
@@ -1941,7 +1966,7 @@ describe('NuGetService', () => {
                 return null;
             });
 
-            const result = await (service as any).getPackageMetadataFromSource('Pkg', '1.0.0', 'https://api.nuget.org/v3/index.json');
+            const result = await (service as any)._packageService.getPackageMetadataFromSource('Pkg', '1.0.0', 'https://api.nuget.org/v3/index.json');
             expect(result).not.toBeNull();
             expect(result.id).toBe('Pkg');
             expect(result.description).toBe('A package');
@@ -1952,7 +1977,7 @@ describe('NuGetService', () => {
                 registrationsBaseUrl: 'https://registry.example.com/v3/registration',
             });
             vi.spyOn(service as any, 'getAuthHeader').mockResolvedValue(undefined);
-            vi.spyOn(service as any, 'getVulnerabilities').mockReturnValue([]);
+            vi.spyOn((service as any)._packageService, 'getVulnerabilities').mockReturnValue([]);
             vi.spyOn(service as any, 'getPackageSize').mockResolvedValue(-1);
             vi.spyOn(service as any, 'fetchText').mockResolvedValue(undefined);
             vi.spyOn(service as any, 'fetchJson').mockImplementation(async (...args: unknown[]) => {
@@ -1968,7 +1993,7 @@ describe('NuGetService', () => {
                 return null;
             });
 
-            const result = await (service as any).getPackageMetadataFromSource('Pkg', '1.0.0', 'https://registry.example.com');
+            const result = await (service as any)._packageService.getPackageMetadataFromSource('Pkg', '1.0.0', 'https://registry.example.com');
             expect(result).not.toBeNull();
             expect(result.description).toBe('From index');
         });
@@ -1980,11 +2005,11 @@ describe('NuGetService', () => {
             });
             vi.spyOn(service as any, 'getAuthHeader').mockResolvedValue(undefined);
             vi.spyOn(service as any, 'fetchJson').mockResolvedValue(null);
-            vi.spyOn(service as any, 'getPackageMetadataFromNuspec').mockResolvedValue({
+            vi.spyOn((service as any)._packageService, 'getPackageMetadataFromNuspec').mockResolvedValue({
                 id: 'Pkg', version: '1.0.0', description: 'From nuspec', authors: 'NuspecAuthor'
             });
 
-            const result = await (service as any).getPackageMetadataFromSource('Pkg', '1.0.0', 'https://source.com');
+            const result = await (service as any)._packageService.getPackageMetadataFromSource('Pkg', '1.0.0', 'https://source.com');
             expect(result).not.toBeNull();
             expect(result.description).toBe('From nuspec');
         });
@@ -1995,11 +2020,11 @@ describe('NuGetService', () => {
             });
             vi.spyOn(service as any, 'getAuthHeader').mockResolvedValue(undefined);
             vi.spyOn(service as any, 'fetchJson').mockResolvedValue(null);
-            vi.spyOn(service as any, 'getPackageMetadataFromSearch').mockResolvedValue({
+            vi.spyOn((service as any)._packageService, 'getPackageMetadataFromSearch').mockResolvedValue({
                 id: 'Pkg', version: '1.0.0', description: 'From search', authors: 'SearchAuthor'
             });
 
-            const result = await (service as any).getPackageMetadataFromSource('Pkg', '1.0.0', 'https://source.com');
+            const result = await (service as any)._packageService.getPackageMetadataFromSource('Pkg', '1.0.0', 'https://source.com');
             expect(result).not.toBeNull();
             expect(result.description).toBe('From search');
         });
@@ -2007,7 +2032,7 @@ describe('NuGetService', () => {
         it('returns null on exception', async () => {
             vi.spyOn(service as any, 'discoverServiceEndpoints').mockRejectedValue(new Error('fail'));
 
-            const result = await (service as any).getPackageMetadataFromSource('Pkg', '1.0.0', 'https://source.com');
+            const result = await (service as any)._packageService.getPackageMetadataFromSource('Pkg', '1.0.0', 'https://source.com');
             expect(result).toBeNull();
         });
     });
@@ -2018,7 +2043,7 @@ describe('NuGetService', () => {
                 data: [{ id: 'Pkg', description: 'Search desc', authors: ['Author1', 'Author2'], totalDownloads: 5000, projectUrl: 'https://example.com' }]
             });
 
-            const result = await (service as any).getPackageMetadataFromSearch('Pkg', '1.0.0', 'https://search.example.com/query');
+            const result = await (service as any)._packageService.getPackageMetadataFromSearch('Pkg', '1.0.0', 'https://search.example.com/query');
             expect(result).not.toBeNull();
             expect(result.description).toBe('Search desc');
             expect(result.authors).toBe('Author1, Author2');
@@ -2030,7 +2055,7 @@ describe('NuGetService', () => {
                 Data: [{ Id: 'Pkg', Description: 'CaseDesc', Authors: 'SingleAuthor', LicenseUrl: 'https://lic.example.com' }]
             });
 
-            const result = await (service as any).getPackageMetadataFromSearch('Pkg', '1.0.0', 'https://search.example.com/query');
+            const result = await (service as any)._packageService.getPackageMetadataFromSearch('Pkg', '1.0.0', 'https://search.example.com/query');
             expect(result).not.toBeNull();
             expect(result.description).toBe('CaseDesc');
             expect(result.authors).toBe('SingleAuthor');
@@ -2042,7 +2067,7 @@ describe('NuGetService', () => {
                 [{ id: 'Pkg', description: 'Root array', authors: 'A' }]
             );
 
-            const result = await (service as any).getPackageMetadataFromSearch('Pkg', '1.0.0', 'https://search.example.com/query');
+            const result = await (service as any)._packageService.getPackageMetadataFromSearch('Pkg', '1.0.0', 'https://search.example.com/query');
             expect(result).not.toBeNull();
             expect(result.description).toBe('Root array');
         });
@@ -2050,14 +2075,14 @@ describe('NuGetService', () => {
         it('returns null when no matching package found', async () => {
             vi.spyOn(service as any, 'fetchJson').mockResolvedValue({ data: [] });
 
-            const result = await (service as any).getPackageMetadataFromSearch('Pkg', '1.0.0', 'https://search.example.com/query');
+            const result = await (service as any)._packageService.getPackageMetadataFromSearch('Pkg', '1.0.0', 'https://search.example.com/query');
             expect(result).toBeNull();
         });
 
         it('returns null on exception', async () => {
             vi.spyOn(service as any, 'fetchJson').mockRejectedValue(new Error('network error'));
 
-            const result = await (service as any).getPackageMetadataFromSearch('Pkg', '1.0.0', 'https://search.example.com/query');
+            const result = await (service as any)._packageService.getPackageMetadataFromSearch('Pkg', '1.0.0', 'https://search.example.com/query');
             expect(result).toBeNull();
         });
     });
@@ -2075,7 +2100,7 @@ describe('NuGetService', () => {
 </metadata></package>`;
             vi.spyOn(service as any, 'fetchText').mockResolvedValue(nuspec);
 
-            const result = await (service as any).getPackageMetadataFromNuspec('TestPkg', '2.0.0', 'https://flat.example.com');
+            const result = await (service as any)._packageService.getPackageMetadataFromNuspec('TestPkg', '2.0.0', 'https://flat.example.com');
             expect(result).not.toBeNull();
             expect(result.id).toBe('TestPkg');
             expect(result.description).toBe('A test package');
@@ -2099,7 +2124,7 @@ describe('NuGetService', () => {
 </metadata></package>`;
             vi.spyOn(service as any, 'fetchText').mockResolvedValue(nuspec);
 
-            const result = await (service as any).getPackageMetadataFromNuspec('Pkg', '1.0.0', 'https://flat.example.com');
+            const result = await (service as any)._packageService.getPackageMetadataFromNuspec('Pkg', '1.0.0', 'https://flat.example.com');
             expect(result.dependencies).toHaveLength(2);
             expect(result.dependencies[0].targetFramework).toBe('.NETStandard2.0');
             expect(result.dependencies[0].dependencies).toHaveLength(2);
@@ -2115,7 +2140,7 @@ describe('NuGetService', () => {
 </metadata></package>`;
             vi.spyOn(service as any, 'fetchText').mockResolvedValue(nuspec);
 
-            const result = await (service as any).getPackageMetadataFromNuspec('Pkg', '1.0.0', 'https://flat.example.com');
+            const result = await (service as any)._packageService.getPackageMetadataFromNuspec('Pkg', '1.0.0', 'https://flat.example.com');
             expect(result.dependencies).toHaveLength(1);
             expect(result.dependencies[0].targetFramework).toBe('Any');
             expect(result.dependencies[0].dependencies[0].id).toBe('FlatDep');
@@ -2124,32 +2149,32 @@ describe('NuGetService', () => {
         it('returns null when fetchText returns null', async () => {
             vi.spyOn(service as any, 'fetchText').mockResolvedValue(undefined);
 
-            const result = await (service as any).getPackageMetadataFromNuspec('Pkg', '1.0.0', 'https://flat.example.com');
+            const result = await (service as any)._packageService.getPackageMetadataFromNuspec('Pkg', '1.0.0', 'https://flat.example.com');
             expect(result).toBeNull();
         });
 
         it('returns null on exception', async () => {
             vi.spyOn(service as any, 'fetchText').mockRejectedValue(new Error('fail'));
 
-            const result = await (service as any).getPackageMetadataFromNuspec('Pkg', '1.0.0', 'https://flat.example.com');
+            const result = await (service as any)._packageService.getPackageMetadataFromNuspec('Pkg', '1.0.0', 'https://flat.example.com');
             expect(result).toBeNull();
         });
     });
 
     describe('getOfflineMetadata', () => {
         it('returns null when global folder not resolved', async () => {
-            vi.spyOn(service as any, 'resolveGlobalPackagesFolder').mockResolvedValue(null);
+            vi.spyOn((service as any)._packageService, 'resolveGlobalPackagesFolder').mockResolvedValue(null);
 
-            const result = await (service as any).getOfflineMetadata('Pkg', '1.0.0');
+            const result = await (service as any)._packageService.getOfflineMetadata('Pkg', '1.0.0');
             expect(result).toBeNull();
         });
 
         it('returns null when nuspec file does not exist', async () => {
-            vi.spyOn(service as any, 'resolveGlobalPackagesFolder').mockResolvedValue('/home/user/.nuget/packages');
+            vi.spyOn((service as any)._packageService, 'resolveGlobalPackagesFolder').mockResolvedValue('/home/user/.nuget/packages');
             const fs = await import('fs');
             vi.mocked(fs.existsSync).mockReturnValue(false);
 
-            const result = await (service as any).getOfflineMetadata('Pkg', '1.0.0');
+            const result = await (service as any)._packageService.getOfflineMetadata('Pkg', '1.0.0');
             expect(result).toBeNull();
         });
 
@@ -2159,12 +2184,12 @@ describe('NuGetService', () => {
   <description>Local desc</description><authors>Local Author</authors>
   <licenseUrl>https://lic.example.com</licenseUrl>
 </metadata></package>`;
-            vi.spyOn(service as any, 'resolveGlobalPackagesFolder').mockResolvedValue('/home/user/.nuget/packages');
+            vi.spyOn((service as any)._packageService, 'resolveGlobalPackagesFolder').mockResolvedValue('/home/user/.nuget/packages');
             const fs = await import('fs');
             vi.mocked(fs.existsSync).mockReturnValue(true);
             hoisted.mockReadFileAsync.mockResolvedValue(nuspec);
 
-            const result = await (service as any).getOfflineMetadata('LocalPkg', '3.0.0');
+            const result = await (service as any)._packageService.getOfflineMetadata('LocalPkg', '3.0.0');
             expect(result).not.toBeNull();
             expect(result.id).toBe('LocalPkg');
             expect(result.description).toBe('Local desc');
@@ -2181,12 +2206,12 @@ describe('NuGetService', () => {
     </group>
   </dependencies>
 </metadata></package>`;
-            vi.spyOn(service as any, 'resolveGlobalPackagesFolder').mockResolvedValue('/home/user/.nuget/packages');
+            vi.spyOn((service as any)._packageService, 'resolveGlobalPackagesFolder').mockResolvedValue('/home/user/.nuget/packages');
             const fs = await import('fs');
             vi.mocked(fs.existsSync).mockReturnValue(true);
             hoisted.mockReadFileAsync.mockResolvedValue(nuspec);
 
-            const result = await (service as any).getOfflineMetadata('Pkg', '1.0.0');
+            const result = await (service as any)._packageService.getOfflineMetadata('Pkg', '1.0.0');
             expect(result.dependencies).toHaveLength(1);
             expect(result.dependencies[0].targetFramework).toBe('net6.0');
             expect(result.dependencies[0].dependencies[0].id).toBe('DepA');
@@ -2200,12 +2225,12 @@ describe('NuGetService', () => {
     <dependency id="Flat2" version="3.0.0" />
   </dependencies>
 </metadata></package>`;
-            vi.spyOn(service as any, 'resolveGlobalPackagesFolder').mockResolvedValue('/home/user/.nuget/packages');
+            vi.spyOn((service as any)._packageService, 'resolveGlobalPackagesFolder').mockResolvedValue('/home/user/.nuget/packages');
             const fs = await import('fs');
             vi.mocked(fs.existsSync).mockReturnValue(true);
             hoisted.mockReadFileAsync.mockResolvedValue(nuspec);
 
-            const result = await (service as any).getOfflineMetadata('Pkg', '1.0.0');
+            const result = await (service as any)._packageService.getOfflineMetadata('Pkg', '1.0.0');
             expect(result.dependencies).toHaveLength(1);
             expect(result.dependencies[0].targetFramework).toBe('Any');
             expect(result.dependencies[0].dependencies).toHaveLength(2);
@@ -2213,55 +2238,55 @@ describe('NuGetService', () => {
         });
 
         it('returns null on exception', async () => {
-            vi.spyOn(service as any, 'resolveGlobalPackagesFolder').mockRejectedValue(new Error('fail'));
+            vi.spyOn((service as any)._packageService, 'resolveGlobalPackagesFolder').mockRejectedValue(new Error('fail'));
 
-            const result = await (service as any).getOfflineMetadata('Pkg', '1.0.0');
+            const result = await (service as any)._packageService.getOfflineMetadata('Pkg', '1.0.0');
             expect(result).toBeNull();
         });
     });
 
     describe('resolveIconUrl', () => {
         it('returns undefined for wildcard versions', async () => {
-            const result = await (service as any).resolveIconUrl('Pkg', '1.*');
+            const result = await (service as any)._packageService.resolveIconUrl('Pkg', '1.*');
             expect(result).toBeUndefined();
         });
 
         it('returns undefined for range versions', async () => {
-            const result = await (service as any).resolveIconUrl('Pkg', '[1.0,2.0)');
+            const result = await (service as any)._packageService.resolveIconUrl('Pkg', '[1.0,2.0)');
             expect(result).toBeUndefined();
         });
 
         it('returns cached icon URL from memory', async () => {
-            (service as any).iconUrlCache.set('iconurl:test', 'https://icon.example.com/icon.png');
+            (service as any)._packageService.iconUrlCache.set('iconurl:test', 'https://icon.example.com/icon.png');
 
-            const result = await (service as any).resolveIconUrl('Pkg', '1.0.0');
+            const result = await (service as any)._packageService.resolveIconUrl('Pkg', '1.0.0');
             expect(result).toBe('https://icon.example.com/icon.png');
         });
 
         it('returns undefined when memory cache has empty string (no icon)', async () => {
-            (service as any).iconUrlCache.set('iconurl:test', '');
+            (service as any)._packageService.iconUrlCache.set('iconurl:test', '');
 
-            const result = await (service as any).resolveIconUrl('Pkg', '1.0.0');
+            const result = await (service as any)._packageService.resolveIconUrl('Pkg', '1.0.0');
             expect(result).toBeUndefined();
         });
 
         it('returns cached icon URL from workspace cache', async () => {
             vi.mocked(workspaceCache.get).mockReturnValue('https://ws-cached-icon.com/icon');
 
-            const result = await (service as any).resolveIconUrl('Pkg', '1.0.0');
+            const result = await (service as any)._packageService.resolveIconUrl('Pkg', '1.0.0');
             expect(result).toBe('https://ws-cached-icon.com/icon');
             vi.mocked(workspaceCache.get).mockReturnValue(undefined);
         });
 
         it('finds icon on nuget.org via HEAD request', async () => {
-            vi.spyOn(service as any, 'checkUrlExists').mockResolvedValue(true);
+            vi.spyOn((service as any)._packageService, 'checkUrlExists').mockResolvedValue(true);
 
-            const result = await (service as any).resolveIconUrl('Pkg', '1.0.0');
+            const result = await (service as any)._packageService.resolveIconUrl('Pkg', '1.0.0');
             expect(result).toContain('api.nuget.org/v3-flatcontainer/pkg/1.0.0/icon');
         });
 
         it('falls back to custom sources when nuget.org has no icon', async () => {
-            vi.spyOn(service as any, 'checkUrlExists').mockImplementation(async (...args: unknown[]) => {
+            vi.spyOn((service as any)._packageService, 'checkUrlExists').mockImplementation(async (...args: unknown[]) => {
                 const url = args[0] as string;
                 if (url.includes('nuget.org')) { return false; }
                 if (url.includes('custom.com')) { return true; }
@@ -2272,34 +2297,34 @@ describe('NuGetService', () => {
             });
             vi.spyOn(service as any, 'getAuthHeader').mockResolvedValue(undefined);
 
-            const result = await (service as any).resolveIconUrl('Pkg', '1.0.0', [{ url: 'https://custom.com/v3/index.json' }]);
+            const result = await (service as any)._packageService.resolveIconUrl('Pkg', '1.0.0', [{ url: 'https://custom.com/v3/index.json' }]);
             expect(result).toContain('custom.com');
         });
 
         it('skips sources past circuit breaker threshold', async () => {
-            vi.spyOn(service as any, 'checkUrlExists').mockResolvedValue(false);
+            vi.spyOn((service as any)._packageService, 'checkUrlExists').mockResolvedValue(false);
             const discoverSpy = vi.spyOn(service as any, 'discoverServiceEndpoints').mockResolvedValue({});
-            (service as any).iconSourceMissCount.set('https://missed.com/v3/index.json', 5);
+            (service as any)._packageService.iconSourceMissCount.set('https://missed.com/v3/index.json', 5);
 
-            const result = await (service as any).resolveIconUrl('Pkg', '1.0.0', [{ url: 'https://missed.com/v3/index.json' }]);
+            const result = await (service as any)._packageService.resolveIconUrl('Pkg', '1.0.0', [{ url: 'https://missed.com/v3/index.json' }]);
             expect(result).toBeUndefined();
             // Should NOT have tried to discover endpoints for the skipped source
             expect(discoverSpy).not.toHaveBeenCalled();
         });
 
         it('caches empty string when no icon found', async () => {
-            vi.spyOn(service as any, 'checkUrlExists').mockResolvedValue(false);
+            vi.spyOn((service as any)._packageService, 'checkUrlExists').mockResolvedValue(false);
 
-            await (service as any).resolveIconUrl('Pkg', '1.0.0');
-            expect((service as any).iconUrlCache.get('iconurl:test')).toBe('');
+            await (service as any)._packageService.resolveIconUrl('Pkg', '1.0.0');
+            expect((service as any)._packageService.iconUrlCache.get('iconurl:test')).toBe('');
         });
     });
 
     describe('getPackageSearchMetadata', () => {
         it('returns cached result from verifiedStatusCache', async () => {
-            (service as any).verifiedStatusCache.set('verified:test', { verified: true, authors: 'Author' });
+            (service as any)._packageService.verifiedStatusCache.set('verified:test', { verified: true, authors: 'Author' });
 
-            const result = await (service as any).getPackageSearchMetadata('Pkg');
+            const result = await (service as any)._packageService.getPackageSearchMetadata('Pkg');
             expect(result.verified).toBe(true);
             expect(result.authors).toBe('Author');
         });
@@ -2307,7 +2332,7 @@ describe('NuGetService', () => {
         it('returns cached result from workspace cache', async () => {
             vi.mocked(workspaceCache.get).mockReturnValue({ verified: false, authors: 'WsAuthor', description: 'desc' });
 
-            const result = await (service as any).getPackageSearchMetadata('Pkg');
+            const result = await (service as any)._packageService.getPackageSearchMetadata('Pkg');
             expect(result.verified).toBe(false);
             expect(result.authors).toBe('WsAuthor');
             vi.mocked(workspaceCache.get).mockReturnValue(undefined);
@@ -2321,11 +2346,11 @@ describe('NuGetService', () => {
                 data: [{ id: 'Pkg', verified: true, authors: ['Auth1', 'Auth2'], description: 'A package' }]
             });
 
-            const result = await (service as any).getPackageSearchMetadata('Pkg');
+            const result = await (service as any)._packageService.getPackageSearchMetadata('Pkg');
             expect(result.verified).toBe(true);
             expect(result.authors).toBe('Auth1, Auth2');
             // Should be cached in verifiedStatusCache
-            expect((service as any).verifiedStatusCache.get('verified:test')).toBeDefined();
+            expect((service as any)._packageService.verifiedStatusCache.get('verified:test')).toBeDefined();
         });
 
         it('pre-populates icon cache when search API returns iconUrl', async () => {
@@ -2336,16 +2361,16 @@ describe('NuGetService', () => {
                 data: [{ id: 'Pkg', verified: true, authors: ['Auth'], iconUrl: 'https://icon.example.com/icon.png' }]
             });
 
-            const result = await (service as any).getPackageSearchMetadata('Pkg', '1.0.0');
+            const result = await (service as any)._packageService.getPackageSearchMetadata('Pkg', '1.0.0');
             expect(result.iconUrl).toContain('api.nuget.org/v3-flatcontainer/pkg/1.0.0/icon');
             // Icon should be cached
-            expect((service as any).iconUrlCache.get('iconurl:test')).toContain('flatcontainer');
+            expect((service as any)._packageService.iconUrlCache.get('iconurl:test')).toContain('flatcontainer');
         });
 
         it('returns empty object when no search endpoint discovered', async () => {
             vi.spyOn(service as any, 'discoverServiceEndpoints').mockResolvedValue({});
 
-            const result = await (service as any).getPackageSearchMetadata('Pkg');
+            const result = await (service as any)._packageService.getPackageSearchMetadata('Pkg');
             expect(result).toEqual({});
         });
 
@@ -2357,23 +2382,23 @@ describe('NuGetService', () => {
                 data: [{ id: 'OtherPkg', verified: true, authors: ['A'] }]
             });
 
-            const result = await (service as any).getPackageSearchMetadata('Pkg');
+            const result = await (service as any)._packageService.getPackageSearchMetadata('Pkg');
             expect(result).toEqual({});
         });
 
         it('returns empty object on exception', async () => {
             vi.spyOn(service as any, 'discoverServiceEndpoints').mockRejectedValue(new Error('fail'));
 
-            const result = await (service as any).getPackageSearchMetadata('Pkg');
+            const result = await (service as any)._packageService.getPackageSearchMetadata('Pkg');
             expect(result).toEqual({});
         });
     });
 
     describe('resolveGlobalPackagesFolder', () => {
         it('returns cached folder on subsequent calls', async () => {
-            (service as any)._globalPackagesFolder = '/cached/path';
+            (service as any)._packageService._globalPackagesFolder = '/cached/path';
 
-            const result = await (service as any).resolveGlobalPackagesFolder();
+            const result = await (service as any)._packageService.resolveGlobalPackagesFolder();
             expect(result).toBe('/cached/path');
         });
 
@@ -2385,8 +2410,8 @@ describe('NuGetService', () => {
                 stderr: ''
             });
 
-            (service as any)._globalPackagesFolder = null;
-            const result = await (service as any).resolveGlobalPackagesFolder();
+            (service as any)._packageService._globalPackagesFolder = null;
+            const result = await (service as any)._packageService.resolveGlobalPackagesFolder();
             expect(result).toBe('/home/user/.nuget/packages');
             vi.mocked(fs.existsSync).mockReturnValue(false);
         });
@@ -2396,8 +2421,8 @@ describe('NuGetService', () => {
             hoisted.mockExecWithTimeout.mockRejectedValue(new Error('no dotnet'));
             vi.mocked(fs.existsSync).mockReturnValue(true);
 
-            (service as any)._globalPackagesFolder = null;
-            const result = await (service as any).resolveGlobalPackagesFolder();
+            (service as any)._packageService._globalPackagesFolder = null;
+            const result = await (service as any)._packageService.resolveGlobalPackagesFolder();
             expect(result).toContain('.nuget');
             expect(result).toContain('packages');
             vi.mocked(fs.existsSync).mockReturnValue(false);
@@ -2408,8 +2433,8 @@ describe('NuGetService', () => {
             const fs = await import('fs');
             vi.mocked(fs.existsSync).mockReturnValue(false);
 
-            (service as any)._globalPackagesFolder = null;
-            const result = await (service as any).resolveGlobalPackagesFolder();
+            (service as any)._packageService._globalPackagesFolder = null;
+            const result = await (service as any)._packageService.resolveGlobalPackagesFolder();
             expect(result).toBeNull();
         });
     });
@@ -2420,22 +2445,22 @@ describe('NuGetService', () => {
 
     describe('getPackageVersionsFromSource', () => {
         it('returns empty array for local sources', async () => {
-            const result = await (service as any).getPackageVersionsFromSource('Pkg', 'C:\\local\\packages');
+            const result = await (service as any)._packageService.getPackageVersionsFromSource('Pkg', 'C:\\local\\packages');
             expect(result).toEqual([]);
         });
 
         it('returns cached versions from memory', async () => {
             const versions = ['3.0.0', '2.0.0', '1.0.0'];
-            (service as any).versionsCache.set('versions:test', versions);
+            (service as any)._packageService.versionsCache.set('versions:test', versions);
 
-            const result = await (service as any).getPackageVersionsFromSource('Pkg', 'https://source.com');
+            const result = await (service as any)._packageService.getPackageVersionsFromSource('Pkg', 'https://source.com');
             expect(result).toEqual(versions);
         });
 
         it('returns cached versions from workspace cache', async () => {
             vi.mocked(workspaceCache.get).mockReturnValue(['5.0.0', '4.0.0']);
 
-            const result = await (service as any).getPackageVersionsFromSource('Pkg', 'https://source.com');
+            const result = await (service as any)._packageService.getPackageVersionsFromSource('Pkg', 'https://source.com');
             expect(result).toEqual(['5.0.0', '4.0.0']);
             vi.mocked(workspaceCache.get).mockReturnValue(undefined);
         });
@@ -2449,7 +2474,7 @@ describe('NuGetService', () => {
                 versions: ['1.0.0', '2.0.0', '3.0.0']
             });
 
-            const result = await (service as any).getPackageVersionsFromSource('Pkg', 'https://api.nuget.org/v3/index.json');
+            const result = await (service as any)._packageService.getPackageVersionsFromSource('Pkg', 'https://api.nuget.org/v3/index.json');
             expect(result).toEqual(['3.0.0', '2.0.0', '1.0.0']); // Reversed
         });
 
@@ -2468,7 +2493,7 @@ describe('NuGetService', () => {
                 return null;
             });
 
-            const result = await (service as any).getPackageVersionsFromSource('Pkg', 'https://source.com', false, 20);
+            const result = await (service as any)._packageService.getPackageVersionsFromSource('Pkg', 'https://source.com', false, 20);
             expect(result).toEqual(['2.0.0', '1.0.0']);
         });
 
@@ -2481,7 +2506,7 @@ describe('NuGetService', () => {
                 versions: ['1.0.0', '2.0.0-beta', '2.0.0', '3.0.0-rc1']
             });
 
-            const result = await (service as any).getPackageVersionsFromSource('Pkg', 'https://source.com', false);
+            const result = await (service as any)._packageService.getPackageVersionsFromSource('Pkg', 'https://source.com', false);
             expect(result).toEqual(['2.0.0', '1.0.0']);
         });
 
@@ -2494,21 +2519,21 @@ describe('NuGetService', () => {
                 versions: ['1.0.0', '2.0.0-beta', '2.0.0']
             });
 
-            const result = await (service as any).getPackageVersionsFromSource('Pkg', 'https://source.com', true);
+            const result = await (service as any)._packageService.getPackageVersionsFromSource('Pkg', 'https://source.com', true);
             expect(result).toHaveLength(3);
         });
 
         it('returns empty array when no endpoints discovered', async () => {
             vi.spyOn(service as any, 'discoverServiceEndpoints').mockResolvedValue({});
 
-            const result = await (service as any).getPackageVersionsFromSource('Pkg', 'https://source.com');
+            const result = await (service as any)._packageService.getPackageVersionsFromSource('Pkg', 'https://source.com');
             expect(result).toEqual([]);
         });
 
         it('returns empty array on exception', async () => {
             vi.spyOn(service as any, 'discoverServiceEndpoints').mockRejectedValue(new Error('fail'));
 
-            const result = await (service as any).getPackageVersionsFromSource('Pkg', 'https://source.com');
+            const result = await (service as any)._packageService.getPackageVersionsFromSource('Pkg', 'https://source.com');
             expect(result).toEqual([]);
         });
 
@@ -2521,15 +2546,15 @@ describe('NuGetService', () => {
                 versions: ['1.0.0']
             });
 
-            await (service as any).getPackageVersionsFromSource('Pkg', 'https://source.com');
-            expect((service as any).versionsCache.get('versions:test')).toBeDefined();
+            await (service as any)._packageService.getPackageVersionsFromSource('Pkg', 'https://source.com');
+            expect((service as any)._packageService.versionsCache.get('versions:test')).toBeDefined();
             expect(vi.mocked(workspaceCache.set)).toHaveBeenCalled();
         });
     });
 
     describe('getPackageVersions', () => {
         it('fetches from specific source when source provided', async () => {
-            vi.spyOn(service as any, 'getPackageVersionsFromSource').mockResolvedValue(['3.0.0', '2.0.0']);
+            vi.spyOn((service as any)._packageService, 'getPackageVersionsFromSource').mockResolvedValue(['3.0.0', '2.0.0']);
 
             const result = await service.getPackageVersions('Pkg', 'https://source.com');
             expect(result).toEqual(['3.0.0', '2.0.0']);
@@ -2540,7 +2565,7 @@ describe('NuGetService', () => {
                 { url: 'https://s1.com', enabled: true },
                 { url: 'https://s2.com', enabled: true },
             ]);
-            vi.spyOn(service as any, 'getPackageVersionsFromSource').mockImplementation(
+            vi.spyOn((service as any)._packageService, 'getPackageVersionsFromSource').mockImplementation(
                 async (...args: unknown[]) => args[1] === 'https://s1.com' ? ['1.0.0', '3.0.0'] : ['2.0.0', '3.0.0']
             );
 
@@ -2565,9 +2590,9 @@ describe('NuGetService', () => {
             vi.spyOn(service as any, 'getSources').mockResolvedValue([
                 { url: 'https://source1.com', enabled: true },
             ]);
-            vi.spyOn(service as any, 'getPackageVersionsFromSource').mockResolvedValue(['5.0.0']);
+            vi.spyOn((service as any)._packageService, 'getPackageVersionsFromSource').mockResolvedValue(['5.0.0']);
 
-            const result = await service.getPackageVersionsWithSource('Pkg');
+            const result = await (service as any)._packageService.getPackageVersionsWithSource('Pkg');
             expect(result.versions).toEqual(['5.0.0']);
             expect(result.sourceUrl).toBe('https://source1.com');
         });
@@ -2576,9 +2601,9 @@ describe('NuGetService', () => {
             vi.spyOn(service as any, 'getSources').mockResolvedValue([
                 { url: 'https://source1.com', enabled: true },
             ]);
-            vi.spyOn(service as any, 'getPackageVersionsFromSource').mockResolvedValue([]);
+            vi.spyOn((service as any)._packageService, 'getPackageVersionsFromSource').mockResolvedValue([]);
 
-            const result = await service.getPackageVersionsWithSource('Pkg');
+            const result = await (service as any)._packageService.getPackageVersionsWithSource('Pkg');
             expect(result.versions).toEqual([]);
             expect(result.sourceUrl).toBeUndefined();
         });
@@ -2586,7 +2611,7 @@ describe('NuGetService', () => {
         it('returns empty versions on exception', async () => {
             vi.spyOn(service as any, 'getSources').mockRejectedValue(new Error('crash'));
 
-            const result = await service.getPackageVersionsWithSource('Pkg');
+            const result = await (service as any)._packageService.getPackageVersionsWithSource('Pkg');
             expect(result.versions).toEqual([]);
         });
     });
@@ -2614,8 +2639,8 @@ describe('NuGetService', () => {
 
         it('returns update when newer version available', async () => {
             vi.spyOn(service as any, 'getSources').mockResolvedValue([]);
-            vi.spyOn(service as any, 'getPackageVersionsWithSource').mockResolvedValue({ versions: ['2.0.0'], sourceUrl: 'https://nuget.org' });
-            vi.spyOn(service as any, 'getPackageSearchMetadata').mockResolvedValue({ verified: true, authors: 'Author', iconUrl: 'https://icon.com' });
+            vi.spyOn((service as any)._packageService, 'getPackageVersionsWithSource').mockResolvedValue({ versions: ['2.0.0'], sourceUrl: 'https://nuget.org' });
+            vi.spyOn((service as any)._packageService, 'getPackageSearchMetadata').mockResolvedValue({ verified: true, authors: 'Author', iconUrl: 'https://icon.com' });
 
             const result = await service.checkPackageUpdates(
                 [{ id: 'Pkg', version: '1.0.0', versionType: 'standard' as const }],
@@ -2630,7 +2655,7 @@ describe('NuGetService', () => {
 
         it('skips packages already at latest version', async () => {
             vi.spyOn(service as any, 'getSources').mockResolvedValue([]);
-            vi.spyOn(service as any, 'getPackageVersionsWithSource').mockResolvedValue({ versions: ['1.0.0'], sourceUrl: 'https://nuget.org' });
+            vi.spyOn((service as any)._packageService, 'getPackageVersionsWithSource').mockResolvedValue({ versions: ['1.0.0'], sourceUrl: 'https://nuget.org' });
 
             const result = await service.checkPackageUpdates(
                 [{ id: 'Pkg', version: '1.0.0', versionType: 'standard' as const }],
@@ -2641,9 +2666,9 @@ describe('NuGetService', () => {
 
         it('falls back to resolveIconUrl when search API has no icon', async () => {
             vi.spyOn(service as any, 'getSources').mockResolvedValue([]);
-            vi.spyOn(service as any, 'getPackageVersionsWithSource').mockResolvedValue({ versions: ['2.0.0'], sourceUrl: 'https://nuget.org' });
-            vi.spyOn(service as any, 'getPackageSearchMetadata').mockResolvedValue({ verified: false });
-            vi.spyOn(service as any, 'getPackageIconUrl').mockResolvedValue('https://fallback-icon.com');
+            vi.spyOn((service as any)._packageService, 'getPackageVersionsWithSource').mockResolvedValue({ versions: ['2.0.0'], sourceUrl: 'https://nuget.org' });
+            vi.spyOn((service as any)._packageService, 'getPackageSearchMetadata').mockResolvedValue({ verified: false });
+            vi.spyOn((service as any)._packageService, 'getPackageIconUrl').mockResolvedValue('https://fallback-icon.com');
 
             const result = await service.checkPackageUpdates(
                 [{ id: 'Pkg', version: '1.0.0', versionType: 'standard' as const }],
@@ -2654,11 +2679,11 @@ describe('NuGetService', () => {
 
         it('handles errors per-package without failing entire check', async () => {
             vi.spyOn(service as any, 'getSources').mockResolvedValue([]);
-            vi.spyOn(service as any, 'getPackageVersionsWithSource').mockImplementation(async (...args: unknown[]) => {
+            vi.spyOn((service as any)._packageService, 'getPackageVersionsWithSource').mockImplementation(async (...args: unknown[]) => {
                 if (args[0] === 'BadPkg') { throw new Error('fail'); }
                 return { versions: ['2.0.0'], sourceUrl: 'https://nuget.org' };
             });
-            vi.spyOn(service as any, 'getPackageSearchMetadata').mockResolvedValue({});
+            vi.spyOn((service as any)._packageService, 'getPackageSearchMetadata').mockResolvedValue({});
 
             const result = await service.checkPackageUpdates(
                 [{ id: 'BadPkg', version: '1.0.0', versionType: 'standard' as const }, { id: 'GoodPkg', version: '1.0.0', versionType: 'standard' as const }],
@@ -2680,7 +2705,7 @@ describe('NuGetService', () => {
         });
 
         it('returns update with minimal fields only', async () => {
-            vi.spyOn(service as any, 'getPackageVersionsWithSource').mockResolvedValue({ versions: ['3.0.0'], sourceUrl: 'https://source.com' });
+            vi.spyOn((service as any)._packageService, 'getPackageVersionsWithSource').mockResolvedValue({ versions: ['3.0.0'], sourceUrl: 'https://source.com' });
 
             const result = await service.checkPackageUpdatesMinimal(
                 [{ id: 'Pkg', version: '1.0.0', versionType: 'standard' as const }],
@@ -2699,7 +2724,7 @@ describe('NuGetService', () => {
         });
 
         it('skips packages at latest version', async () => {
-            vi.spyOn(service as any, 'getPackageVersionsWithSource').mockResolvedValue({ versions: ['1.0.0'], sourceUrl: 'https://source.com' });
+            vi.spyOn((service as any)._packageService, 'getPackageVersionsWithSource').mockResolvedValue({ versions: ['1.0.0'], sourceUrl: 'https://source.com' });
 
             const result = await service.checkPackageUpdatesMinimal(
                 [{ id: 'Pkg', version: '1.0.0', versionType: 'standard' as const }],
@@ -2709,7 +2734,7 @@ describe('NuGetService', () => {
         });
 
         it('handles per-package errors gracefully', async () => {
-            vi.spyOn(service as any, 'getPackageVersionsWithSource').mockRejectedValue(new Error('fail'));
+            vi.spyOn((service as any)._packageService, 'getPackageVersionsWithSource').mockRejectedValue(new Error('fail'));
 
             const result = await service.checkPackageUpdatesMinimal(
                 [{ id: 'Pkg', version: '1.0.0', versionType: 'standard' as const }],
@@ -2734,7 +2759,7 @@ describe('NuGetService', () => {
         it('returns frameworks from assets file', async () => {
             hoisted.mockFileExists.mockResolvedValue(true);
             const fakeResult = { frameworks: [{ targetFramework: 'net8.0', packages: [] }] };
-            vi.spyOn(service as any, 'getTransitivePackagesFromAssets').mockResolvedValue(fakeResult);
+            vi.spyOn((service as any)._projectService, 'getTransitivePackagesFromAssets').mockResolvedValue(fakeResult);
 
             const result = await service.getTransitivePackages('/project/test.csproj');
             expect(result.dataSourceAvailable).toBe(true);
@@ -2744,7 +2769,7 @@ describe('NuGetService', () => {
 
         it('returns empty frameworks on parse error', async () => {
             hoisted.mockFileExists.mockResolvedValue(true);
-            vi.spyOn(service as any, 'getTransitivePackagesFromAssets').mockRejectedValue(new Error('parse fail'));
+            vi.spyOn((service as any)._projectService, 'getTransitivePackagesFromAssets').mockRejectedValue(new Error('parse fail'));
 
             const result = await service.getTransitivePackages('/project/test.csproj');
             expect(result).toEqual({ frameworks: [], dataSourceAvailable: true });
@@ -2753,25 +2778,25 @@ describe('NuGetService', () => {
 
     describe('getTransitivePackagesFromAssets', () => {
         it('returns empty frameworks when assets data has no targets', async () => {
-            vi.spyOn(service as any, 'readAssetsJson').mockResolvedValue({});
+            vi.spyOn((service as any)._projectService, 'readAssetsJson').mockResolvedValue({});
 
-            const result = await (service as any).getTransitivePackagesFromAssets('/obj/project.assets.json');
+            const result = await (service as any)._projectService.getTransitivePackagesFromAssets('/obj/project.assets.json');
             expect(result.frameworks).toEqual([]);
         });
 
         it('handles frameworks with no transitive packages', async () => {
-            vi.spyOn(service as any, 'readAssetsJson').mockResolvedValue({
+            vi.spyOn((service as any)._projectService, 'readAssetsJson').mockResolvedValue({
                 targets: { 'net8.0': {} },
                 projectFileDependencyGroups: { 'net8.0': [] },
             });
 
-            const result = await (service as any).getTransitivePackagesFromAssets('/obj/project.assets.json');
+            const result = await (service as any)._projectService.getTransitivePackagesFromAssets('/obj/project.assets.json');
             expect(result.frameworks).toHaveLength(1);
             expect(result.frameworks[0].packages).toEqual([]);
         });
 
         it('identifies transitive packages from asset targets', async () => {
-            vi.spyOn(service as any, 'readAssetsJson').mockResolvedValue({
+            vi.spyOn((service as any)._projectService, 'readAssetsJson').mockResolvedValue({
                 targets: {
                     'net8.0': {
                         'DirectPkg/1.0.0': {
@@ -2785,7 +2810,7 @@ describe('NuGetService', () => {
                 },
             });
 
-            const result = await (service as any).getTransitivePackagesFromAssets('/obj/project.assets.json');
+            const result = await (service as any)._projectService.getTransitivePackagesFromAssets('/obj/project.assets.json');
             expect(result.frameworks).toHaveLength(1);
             expect(result.frameworks[0].targetFramework).toBe('net8.0');
             expect(result.frameworks[0].packages).toHaveLength(1);
@@ -2794,7 +2819,7 @@ describe('NuGetService', () => {
         });
 
         it('builds requiredByChain for transitive packages', async () => {
-            vi.spyOn(service as any, 'readAssetsJson').mockResolvedValue({
+            vi.spyOn((service as any)._projectService, 'readAssetsJson').mockResolvedValue({
                 targets: {
                     'net8.0': {
                         'Direct/1.0.0': { dependencies: { 'Mid': '1.0.0' } },
@@ -2807,16 +2832,16 @@ describe('NuGetService', () => {
                 },
             });
 
-            const result = await (service as any).getTransitivePackagesFromAssets('/obj/project.assets.json');
+            const result = await (service as any)._projectService.getTransitivePackagesFromAssets('/obj/project.assets.json');
             const leaf = result.frameworks[0].packages.find((p: { id: string }) => p.id === 'Leaf');
             expect(leaf).toBeDefined();
             expect(leaf.requiredByChain.length).toBeGreaterThan(0);
         });
 
         it('returns null when readAssetsJson returns null', async () => {
-            vi.spyOn(service as any, 'readAssetsJson').mockResolvedValue(null);
+            vi.spyOn((service as any)._projectService, 'readAssetsJson').mockResolvedValue(null);
 
-            const result = await (service as any).getTransitivePackagesFromAssets('/obj/project.assets.json');
+            const result = await (service as any)._projectService.getTransitivePackagesFromAssets('/obj/project.assets.json');
             expect(result.frameworks).toEqual([]);
         });
     });
@@ -2824,7 +2849,7 @@ describe('NuGetService', () => {
     describe('fetchTransitivePackageMetadata', () => {
         it('enriches packages with metadata from search API', async () => {
             vi.spyOn(service as any, 'getSources').mockResolvedValue([{ name: 'nuget', url: 'https://api.nuget.org/v3/index.json', enabled: true }]);
-            vi.spyOn(service as any, 'getPackageSearchMetadata').mockResolvedValue({
+            vi.spyOn((service as any)._packageService, 'getPackageSearchMetadata').mockResolvedValue({
                 verified: true, authors: 'Author1', iconUrl: 'https://icon.com/pkg.png',
             });
 
@@ -2838,10 +2863,10 @@ describe('NuGetService', () => {
 
         it('falls back to resolveIconUrl when search API returns no icon', async () => {
             vi.spyOn(service as any, 'getSources').mockResolvedValue([{ name: 'nuget', url: 'https://api.nuget.org/v3/index.json', enabled: true }]);
-            vi.spyOn(service as any, 'getPackageSearchMetadata').mockResolvedValue({
+            vi.spyOn((service as any)._packageService, 'getPackageSearchMetadata').mockResolvedValue({
                 verified: false, authors: null, iconUrl: undefined,
             });
-            vi.spyOn(service as any, 'resolveIconUrl').mockResolvedValue('https://fallback.com/icon.png');
+            vi.spyOn((service as any)._packageService, 'resolveIconUrl').mockResolvedValue('https://fallback.com/icon.png');
 
             const packages = [{ id: 'Pkg', version: '1.0.0', requiredByChain: ['Direct'] }];
             await service.fetchTransitivePackageMetadata(packages);
@@ -2860,17 +2885,17 @@ describe('NuGetService', () => {
 
     describe('fetchVulnerabilityData', () => {
         it('skips fetch when cache is still fresh', async () => {
-            (service as any).vulnerabilityData = new Map([['pkg', [{ severity: 2, url: 'https://adv.com', versions: '(,2.0)' }]]]);
-            (service as any).vulnerabilityDataTimestamp = Date.now();
+            (service as any)._packageService.vulnerabilityData = new Map([['pkg', [{ severity: 2, url: 'https://adv.com', versions: '(,2.0)' }]]]);
+            (service as any)._packageService.vulnerabilityDataTimestamp = Date.now();
             const getSourcesSpy = vi.spyOn(service as any, 'getSources');
 
-            await (service as any).fetchVulnerabilityData();
+            await (service as any)._packageService.fetchVulnerabilityData();
             expect(getSourcesSpy).not.toHaveBeenCalled();
         });
 
         it('fetches and parses vulnerability data from sources', async () => {
-            (service as any).vulnerabilityData = new Map();
-            (service as any).vulnerabilityDataTimestamp = 0;
+            (service as any)._packageService.vulnerabilityData = new Map();
+            (service as any)._packageService.vulnerabilityDataTimestamp = 0;
             vi.spyOn(service as any, 'getSources').mockResolvedValue([
                 { name: 'nuget', url: 'https://api.nuget.org/v3/index.json', enabled: true },
             ]);
@@ -2885,14 +2910,14 @@ describe('NuGetService', () => {
                     'VulnPkg': [{ severity: 2, url: 'https://advisory.com/1', versions: '(,3.0)' }],
                 });
 
-            await (service as any).fetchVulnerabilityData();
-            expect((service as any).vulnerabilityData.size).toBe(1);
-            expect((service as any).vulnerabilityData.has('vulnpkg')).toBe(true);
+            await (service as any)._packageService.fetchVulnerabilityData();
+            expect((service as any)._packageService.vulnerabilityData.size).toBe(1);
+            expect((service as any)._packageService.vulnerabilityData.has('vulnpkg')).toBe(true);
         });
 
         it('skips sources without vulnerabilityInfoUrl', async () => {
-            (service as any).vulnerabilityData = new Map();
-            (service as any).vulnerabilityDataTimestamp = 0;
+            (service as any)._packageService.vulnerabilityData = new Map();
+            (service as any)._packageService.vulnerabilityDataTimestamp = 0;
             vi.spyOn(service as any, 'getSources').mockResolvedValue([
                 { name: 'custom', url: 'https://custom.com/v3/index.json', enabled: true },
             ]);
@@ -2900,39 +2925,39 @@ describe('NuGetService', () => {
             vi.spyOn(service as any, 'discoverServiceEndpoints').mockResolvedValue({});
             const fetchSpy = vi.spyOn(service as any, 'fetchJsonWithCompression');
 
-            await (service as any).fetchVulnerabilityData();
+            await (service as any)._packageService.fetchVulnerabilityData();
             expect(fetchSpy).not.toHaveBeenCalled();
         });
 
         it('skips local sources', async () => {
-            (service as any).vulnerabilityData = new Map();
-            (service as any).vulnerabilityDataTimestamp = 0;
+            (service as any)._packageService.vulnerabilityData = new Map();
+            (service as any)._packageService.vulnerabilityDataTimestamp = 0;
             vi.spyOn(service as any, 'getSources').mockResolvedValue([
                 { name: 'local', url: 'C:\\packages', enabled: true },
             ]);
             vi.spyOn(service as any, 'isLocalSource').mockReturnValue(true);
             const discoverSpy = vi.spyOn(service as any, 'discoverServiceEndpoints');
 
-            await (service as any).fetchVulnerabilityData();
+            await (service as any)._packageService.fetchVulnerabilityData();
             expect(discoverSpy).not.toHaveBeenCalled();
         });
 
         it('handles source errors gracefully', async () => {
-            (service as any).vulnerabilityData = new Map();
-            (service as any).vulnerabilityDataTimestamp = 0;
+            (service as any)._packageService.vulnerabilityData = new Map();
+            (service as any)._packageService.vulnerabilityDataTimestamp = 0;
             vi.spyOn(service as any, 'getSources').mockResolvedValue([
                 { name: 'broken', url: 'https://broken.com/v3/index.json', enabled: true },
             ]);
             vi.spyOn(service as any, 'isLocalSource').mockReturnValue(false);
             vi.spyOn(service as any, 'discoverServiceEndpoints').mockRejectedValue(new Error('network'));
 
-            await (service as any).fetchVulnerabilityData();
-            expect((service as any).vulnerabilityData.size).toBe(0);
+            await (service as any)._packageService.fetchVulnerabilityData();
+            expect((service as any)._packageService.vulnerabilityData.size).toBe(0);
         });
 
         it('skips invalid vulnerability entries', async () => {
-            (service as any).vulnerabilityData = new Map();
-            (service as any).vulnerabilityDataTimestamp = 0;
+            (service as any)._packageService.vulnerabilityData = new Map();
+            (service as any)._packageService.vulnerabilityDataTimestamp = 0;
             vi.spyOn(service as any, 'getSources').mockResolvedValue([
                 { name: 'nuget', url: 'https://api.nuget.org/v3/index.json', enabled: true },
             ]);
@@ -2951,8 +2976,8 @@ describe('NuGetService', () => {
                     ],
                 });
 
-            await (service as any).fetchVulnerabilityData();
-            const entries = (service as any).vulnerabilityData.get('somepkg');
+            await (service as any)._packageService.fetchVulnerabilityData();
+            const entries = (service as any)._packageService.vulnerabilityData.get('somepkg');
             expect(entries).toHaveLength(1);
             expect(entries[0].severity).toBe(1);
         });
@@ -2960,21 +2985,21 @@ describe('NuGetService', () => {
 
     describe('getVulnerabilities', () => {
         it('returns empty array when no vulnerability data', () => {
-            (service as any).vulnerabilityData = new Map();
+            (service as any)._packageService.vulnerabilityData = new Map();
 
-            const result = (service as any).getVulnerabilities('Pkg', '1.0.0');
+            const result = (service as any)._packageService.getVulnerabilities('Pkg', '1.0.0');
             expect(result).toEqual([]);
         });
 
         it('matches vulnerabilities based on version range', () => {
-            (service as any).vulnerabilityData = new Map([
+            (service as any)._packageService.vulnerabilityData = new Map([
                 ['pkg', [
                     { severity: 2, url: 'https://advisory.com/1', versions: '(,2.0.0)' },
                     { severity: 3, url: 'https://advisory.com/2', versions: '(,1.0.0)' },
                 ]],
             ]);
 
-            const result = (service as any).getVulnerabilities('Pkg', '1.5.0');
+            const result = (service as any)._packageService.getVulnerabilities('Pkg', '1.5.0');
             // 1.5.0 matches (,2.0.0) but not (,1.0.0)
             expect(result).toHaveLength(1);
             expect(result[0].severity).toBe('High');
@@ -2982,7 +3007,7 @@ describe('NuGetService', () => {
         });
 
         it('maps severity integers correctly', () => {
-            (service as any).vulnerabilityData = new Map([
+            (service as any)._packageService.vulnerabilityData = new Map([
                 ['pkg', [
                     { severity: 0, url: 'https://a.com/0', versions: '[0.0.0,)' },
                     { severity: 1, url: 'https://a.com/1', versions: '[0.0.0,)' },
@@ -2991,7 +3016,7 @@ describe('NuGetService', () => {
                 ]],
             ]);
 
-            const result = (service as any).getVulnerabilities('Pkg', '1.0.0');
+            const result = (service as any)._packageService.getVulnerabilities('Pkg', '1.0.0');
             const severities = result.map((r: { severity: string }) => r.severity);
             expect(severities).toContain('Low');
             expect(severities).toContain('Moderate');
@@ -3000,11 +3025,11 @@ describe('NuGetService', () => {
         });
 
         it('uses case-insensitive package ID lookup', () => {
-            (service as any).vulnerabilityData = new Map([
+            (service as any)._packageService.vulnerabilityData = new Map([
                 ['mypkg', [{ severity: 1, url: 'https://a.com', versions: '[0.0.0,)' }]],
             ]);
 
-            const result = (service as any).getVulnerabilities('MyPkg', '1.0.0');
+            const result = (service as any)._packageService.getVulnerabilities('MyPkg', '1.0.0');
             expect(result).toHaveLength(1);
         });
     });
@@ -3221,7 +3246,8 @@ describe('NuGetService', () => {
 
     describe('getInstalledPackages', () => {
         it('parses PackageReference from csproj content', async () => {
-            hoisted.mockReadFileAsync.mockResolvedValue(`
+            const fs = await import('fs');
+            vi.mocked(fs.promises.readFile).mockResolvedValue(`
 				<Project Sdk="Microsoft.NET.Sdk">
 					<ItemGroup>
 						<PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
@@ -3229,7 +3255,7 @@ describe('NuGetService', () => {
 					</ItemGroup>
 				</Project>
 			`);
-            vi.spyOn(service as any, 'getResolvedVersions').mockResolvedValue(new Map());
+            vi.spyOn((service as any)._projectService, 'getResolvedVersions').mockResolvedValue(new Map());
             vi.spyOn(service as any, 'fetchInstalledPackageMetadata').mockResolvedValue(undefined);
 
             const result = await service.getInstalledPackages('/project/test.csproj');
@@ -3240,7 +3266,8 @@ describe('NuGetService', () => {
         });
 
         it('parses nested Version element', async () => {
-            hoisted.mockReadFileAsync.mockResolvedValue(`
+            const fs = await import('fs');
+            vi.mocked(fs.promises.readFile).mockResolvedValue(`
 				<Project>
 					<ItemGroup>
 						<PackageReference Include="MyPkg">
@@ -3249,7 +3276,7 @@ describe('NuGetService', () => {
 					</ItemGroup>
 				</Project>
 			`);
-            vi.spyOn(service as any, 'getResolvedVersions').mockResolvedValue(new Map());
+            vi.spyOn((service as any)._projectService, 'getResolvedVersions').mockResolvedValue(new Map());
             vi.spyOn(service as any, 'fetchInstalledPackageMetadata').mockResolvedValue(undefined);
 
             const result = await service.getInstalledPackages('/project/test.csproj');
@@ -3258,14 +3285,15 @@ describe('NuGetService', () => {
         });
 
         it('skips metadata in liteMode', async () => {
-            hoisted.mockReadFileAsync.mockResolvedValue(`
+            const fs = await import('fs');
+            vi.mocked(fs.promises.readFile).mockResolvedValue(`
 				<Project>
 					<ItemGroup>
 						<PackageReference Include="Pkg" Version="1.0.0" />
 					</ItemGroup>
 				</Project>
 			`);
-            vi.spyOn(service as any, 'getResolvedVersions').mockResolvedValue(new Map());
+            vi.spyOn((service as any)._projectService, 'getResolvedVersions').mockResolvedValue(new Map());
             const metaSpy = vi.spyOn(service as any, 'fetchInstalledPackageMetadata');
 
             const result = await service.getInstalledPackages('/project/test.csproj', true);
@@ -3274,14 +3302,15 @@ describe('NuGetService', () => {
         });
 
         it('uses resolved version for floating specs', async () => {
-            hoisted.mockReadFileAsync.mockResolvedValue(`
+            const fs = await import('fs');
+            vi.mocked(fs.promises.readFile).mockResolvedValue(`
 				<Project>
 					<ItemGroup>
 						<PackageReference Include="FloatingPkg" Version="10.*" />
 					</ItemGroup>
 				</Project>
 			`);
-            vi.spyOn(service as any, 'getResolvedVersions').mockResolvedValue(
+            vi.spyOn((service as any)._projectService, 'getResolvedVersions').mockResolvedValue(
                 new Map([['floatingpkg', '10.5.3']])
             );
             vi.spyOn(service as any, 'fetchInstalledPackageMetadata').mockResolvedValue(undefined);
@@ -3292,8 +3321,9 @@ describe('NuGetService', () => {
         });
 
         it('falls back to CLI when csproj has no packages', async () => {
-            hoisted.mockReadFileAsync.mockResolvedValue('<Project></Project>');
-            vi.spyOn(service as any, 'getResolvedVersions').mockResolvedValue(new Map());
+            const fs = await import('fs');
+            vi.mocked(fs.promises.readFile).mockResolvedValue('<Project></Project>');
+            vi.spyOn((service as any)._projectService, 'getResolvedVersions').mockResolvedValue(new Map());
             vi.spyOn(service as any, 'useNounFirstSyntax').mockResolvedValue(false);
             hoisted.mockExecWithTimeout.mockResolvedValue({
                 stdout: `Project 'test' has the following package references\n   Top-level Package\n   > Newtonsoft.Json   13.0.3   13.0.3\n`,
@@ -3306,8 +3336,9 @@ describe('NuGetService', () => {
         });
 
         it('returns empty array on total failure', async () => {
-            hoisted.mockReadFileAsync.mockRejectedValue(new Error('file not found'));
-            vi.spyOn(service as any, 'getResolvedVersions').mockResolvedValue(new Map());
+            const fs = await import('fs');
+            vi.mocked(fs.promises.readFile).mockRejectedValue(new Error('file not found'));
+            vi.spyOn((service as any)._projectService, 'getResolvedVersions').mockResolvedValue(new Map());
             vi.spyOn(service as any, 'useNounFirstSyntax').mockResolvedValue(false);
             hoisted.mockExecWithTimeout.mockRejectedValue(new Error('dotnet not found'));
 
@@ -3322,20 +3353,20 @@ describe('NuGetService', () => {
             (service as any).failedSources.set('https://bad.com', 'error');
             (service as any).serviceIndexCache.set('key', { packageBaseAddress: 'x' });
             (service as any).failedEndpointCache.set('key', Date.now());
-            (service as any).iconSourceMissCount.set('key', 5);
-            (service as any).vulnerabilityData.set('pkg', []);
-            (service as any).vulnerabilityDataTimestamp = 1000;
-            (service as any).versionsCache.set('key', ['1.0']);
+            (service as any)._packageService.iconSourceMissCount.set('key', 5);
+            (service as any)._packageService.vulnerabilityData.set('pkg', []);
+            (service as any)._packageService.vulnerabilityDataTimestamp = 1000;
+            (service as any)._packageService.versionsCache.set('key', ['1.0']);
 
             service.clearSourceErrors();
 
             expect((service as any).failedSources.size).toBe(0);
             expect((service as any).serviceIndexCache.size).toBe(0);
             expect((service as any).failedEndpointCache.size).toBe(0);
-            expect((service as any).iconSourceMissCount.size).toBe(0);
-            expect((service as any).vulnerabilityData.size).toBe(0);
-            expect((service as any).vulnerabilityDataTimestamp).toBe(0);
-            expect((service as any).versionsCache.size).toBe(0);
+            expect((service as any)._packageService.iconSourceMissCount.size).toBe(0);
+            expect((service as any)._packageService.vulnerabilityData.size).toBe(0);
+            expect((service as any)._packageService.vulnerabilityDataTimestamp).toBe(0);
+            expect((service as any)._packageService.versionsCache.size).toBe(0);
         });
 
         it('restarts source health monitor', () => {
@@ -3396,38 +3427,38 @@ describe('NuGetService', () => {
         it('returns parsed JSON data', async () => {
             const fs = await import('fs');
             vi.mocked(fs.promises.stat).mockResolvedValue({ mtimeMs: 1000 } as any);
-            hoisted.mockReadFileAsync.mockResolvedValue('{"version": 3, "targets": {}}');
+            vi.mocked(fs.promises.readFile).mockResolvedValue('{"version": 3, "targets": {}}');
 
-            const result = await (service as any).readAssetsJson('/obj/project.assets.json');
+            const result = await (service as any)._projectService.readAssetsJson('/obj/project.assets.json');
             expect(result).toEqual({ version: 3, targets: {} });
         });
 
         it('returns cached data when mtime unchanged and within TTL', async () => {
             const fs = await import('fs');
             vi.mocked(fs.promises.stat).mockResolvedValue({ mtimeMs: 1000 } as any);
-            (service as any).assetsJsonCache.set('/obj/project.assets.json', {
+            (service as any)._projectService.assetsJsonCache.set('/obj/project.assets.json', {
                 mtimeMs: 1000,
                 data: { cached: true },
                 timestamp: Date.now(),
             });
 
-            const result = await (service as any).readAssetsJson('/obj/project.assets.json');
+            const result = await (service as any)._projectService.readAssetsJson('/obj/project.assets.json');
             expect(result).toEqual({ cached: true });
-            // readFileAsync should NOT have been called (cache hit)
-            expect(hoisted.mockReadFileAsync).not.toHaveBeenCalledWith('/obj/project.assets.json', 'utf-8');
+            // fs.promises.readFile should NOT have been called (cache hit)
+            expect(vi.mocked(fs.promises.readFile)).not.toHaveBeenCalledWith('/obj/project.assets.json', 'utf-8');
         });
 
         it('refreshes when mtime changes', async () => {
             const fs = await import('fs');
             vi.mocked(fs.promises.stat).mockResolvedValue({ mtimeMs: 2000 } as any);
-            (service as any).assetsJsonCache.set('/obj/project.assets.json', {
+            (service as any)._projectService.assetsJsonCache.set('/obj/project.assets.json', {
                 mtimeMs: 1000,
                 data: { old: true },
                 timestamp: Date.now(),
             });
-            hoisted.mockReadFileAsync.mockResolvedValue('{"fresh": true}');
+            vi.mocked(fs.promises.readFile).mockResolvedValue('{"fresh": true}');
 
-            const result = await (service as any).readAssetsJson('/obj/project.assets.json');
+            const result = await (service as any)._projectService.readAssetsJson('/obj/project.assets.json');
             expect(result).toEqual({ fresh: true });
         });
 
@@ -3435,31 +3466,31 @@ describe('NuGetService', () => {
             const fs = await import('fs');
             vi.mocked(fs.promises.stat).mockRejectedValue(new Error('ENOENT'));
 
-            const result = await (service as any).readAssetsJson('/nonexistent');
+            const result = await (service as any)._projectService.readAssetsJson('/nonexistent');
             expect(result).toBeNull();
         });
     });
 
     describe('generateSourceNameFromUrl', () => {
         it('generates name from nuget.org URL', () => {
-            const name = (service as any).generateSourceNameFromUrl('https://api.nuget.org/v3/index.json', new Set());
+            const name = (service as any)._sourceService.generateSourceNameFromUrl('https://api.nuget.org/v3/index.json', new Set());
             expect(name).toBe('nuget.org');
         });
 
         it('deduplicates against existing names', () => {
-            const name = (service as any).generateSourceNameFromUrl('https://api.nuget.org/v3/index.json', new Set(['nuget.org']));
+            const name = (service as any)._sourceService.generateSourceNameFromUrl('https://api.nuget.org/v3/index.json', new Set(['nuget.org']));
             expect(name).toBe('nuget.org-2');
         });
 
         it('generates name from generic URL', () => {
-            const name = (service as any).generateSourceNameFromUrl('https://mycompany.com/nuget/v3/index.json', new Set());
+            const name = (service as any)._sourceService.generateSourceNameFromUrl('https://mycompany.com/nuget/v3/index.json', new Set());
             expect(name).toBeTruthy();
             expect(name.length).toBeGreaterThan(0);
         });
 
         it('falls back to custom-source for unparseable URLs', () => {
             // isValidSourceUrl allows local paths, but generateSourceNameFromUrl wraps URL() in try/catch
-            const name = (service as any).generateSourceNameFromUrl('', new Set());
+            const name = (service as any)._sourceService.generateSourceNameFromUrl('', new Set());
             expect(name).toBeTruthy();
         });
     });
@@ -3497,10 +3528,10 @@ describe('NuGetService', () => {
 
     describe('clearVersionsCache', () => {
         it('clears in-memory and workspace version caches', () => {
-            (service as any).versionsCache.set('key', ['1.0']);
+            (service as any)._packageService.versionsCache.set('key', ['1.0']);
 
             (service as any).clearVersionsCache();
-            expect((service as any).versionsCache.size).toBe(0);
+            expect((service as any)._packageService.versionsCache.size).toBe(0);
             expect(workspaceCache.clearByPrefix).toHaveBeenCalledWith('versions:');
         });
     });

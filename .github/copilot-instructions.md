@@ -1,6 +1,22 @@
 <!-- Workspace-specific instructions for agents working on this project. Keep concise, actionable, and up to date. -->
 <!-- For full technical documentation, see ARCHITECTURE.md -->
 
+# Project Overview
+**nUIget** is a VS Code extension providing a Visual Studio-style NuGet package manager UI. Users can search, install, update, and remove NuGet packages across multiple .NET projects and sources. Built with TypeScript 6, React 19 (webview UI), esbuild (3 bundles), and the VS Code Extension API. Communicates with the dotnet CLI and NuGet HTTP APIs (v3 service index, registration, search).
+
+## Project Structure
+| Directory | Purpose |
+|-----------|---------|
+| `src/extension.ts` | Extension entry point — registers commands, panels, sidebar |
+| `src/services/` | Backend: NuGet API client, CLI wrapper, config parser, caching, logging |
+| `src/webview/NuGetPanel.ts` | Main panel message router (40+ cases), cross-panel sync |
+| `src/webview/NuGetSidebarPanel.ts` | Sidebar provider, background update checks, badge |
+| `src/webview/app/` | React app: App.tsx (state machine), tabs, components, hooks |
+| `src/webview/sidebar/` | React sidebar: SidebarApp.tsx, PackageRow, SectionHeader |
+| `src/test/` | Test helpers, mocks (`vscode.ts`), fixtures (`.csproj`, `project.assets.json`) |
+| `resources/` | Extension icons (SVG, PNG) |
+| `.github/` | CI workflow, Copilot instructions, agents, prompts |
+
 # Agent Guidelines
 - **Use Context7 for Documentation:** Use `resolve-library-id` then `get-library-docs` for React, VS Code Extension API, esbuild, ESLint, TypeScript docs.
 - **Use Microsoft Docs MCP for VS Code APIs:** Use `microsoft_docs_search`, `microsoft_code_sample_search`, `microsoft_docs_fetch` for official VS Code extension documentation.
@@ -199,9 +215,9 @@ The VS Code task "Run Tests" (`Ctrl+Shift+T` or Task menu) runs `npm test` with 
 | "Webview is disposed" error | Check `_disposed` flag before posting in async callbacks |
 | Array mutation bugs | `[...array].sort()` / `[...array].reverse()` not `array.sort()` / `array.reverse()` |
 | Property name typos break VSIX | Run `npm run package:vsix` — catches errors `watch` misses |
-| Module extraction locations | Validators (`isValidPackageId`, etc.) are in `NuGetUtils.ts`. Types (`NuGetSource`, `Project`, etc.) are in `NuGetTypes.ts`. `NuGetConfigParser` re-exports `NuGetSource` from `NuGetTypes`. Markdown rendering is in `markdownSetup.ts`. Shared operation functions (`executeSingleOperation`, `executeBulkInstall`, etc.) are in `NuGetOperations.ts` with `OperationContext` interface. `topologicalSortByDependency` is in `NuGetUtils.ts`. |
-| `fetchJsonHttp1` redirect safety | Has `maxRedirects = 5` default — never remove. Without it, a redirect loop causes unbounded recursion → stack overflow. All redirect handlers use `isSafeRedirectTarget()` (exported from Http2Client.ts) to block SSRF (private IPs, HTTPS→HTTP downgrade). Never follow redirects without this check. |
-| `isSafeRedirectTarget` SSRF guard | Blocks redirects to loopback (localhost, 127.0.0.1, ::1), private IPs (10.x, 172.16-31.x, 192.168.x, 169.254.x), link-local IPv6 (fe80::/10, fc00::/7), and HTTPS→HTTP downgrades. Applied to ALL 11 redirect sites across Http2Client.ts and NuGetService.ts. Don't add new redirect handling without calling this function. |
+| Module extraction locations | Validators (`isValidPackageId`, etc.) are in `NuGetUtils.ts`. Types (`NuGetSource`, `Project`, etc.) are in `NuGetTypes.ts`. `NuGetConfigParser` re-exports `NuGetSource` from `NuGetTypes`. Markdown rendering is in `markdownSetup.ts`. Shared operation functions (`executeSingleOperation`, `executeBulkInstall`, etc.) are in `NuGetOperations.ts` with `OperationContext` interface. `topologicalSortByDependency` is in `NuGetUtils.ts`. Logging utilities (`setupOutputChannel`, `sanitizeForLogging`, `logOutput`, `logSuccess`, `logWarning`, `logError`, `logBulkOperationHeader`) are in `NuGetLogger.ts`. CLI operations (`installPackage`, `updatePackage`, `removePackage`, `restoreProject`, `clearNuGetHttpCache`, SDK detection) are in `NuGetCliService.ts`. Source CRUD (`getSources`, `addSource`, `removeSource`, `enableSource`, `disableSource`), config file management, and source name generation are in `NuGetSourceService.ts`. Project discovery, .csproj parsing, installed packages, transitive dependency resolution, and `project.assets.json` caching are in `NuGetProjectService.ts`. Package search, metadata, versions, vulnerabilities, icon URLs, autocomplete, update checking, README extraction, and size fetching are in `NuGetPackageService.ts` (~1250 lines) with `PackageServiceDeps` interface for dependency injection. `NuGetService` is a facade (~1200 lines) composing these sub-services, retaining HTTP fetch methods, service index discovery, source health monitoring, and credential management. |
+| `fetchJsonHttp1` redirect safety | Has `maxRedirects = 5` default — never remove. Without it, a redirect loop causes unbounded recursion → stack overflow. All redirect sites use `resolveRedirect()` (exported from Http2Client.ts) which combines status check + URL resolution + SSRF validation + same-origin auth forwarding. Never follow redirects without this function. |
+| `resolveRedirect` centralized SSRF guard | Combines `isRedirectStatus()` (301/302/307/308), URL resolution, `isSafeRedirectTarget()` (blocks loopback, private IPs, link-local IPv6, HTTPS→HTTP downgrades), and same-origin auth forwarding. Used by all 10 redirect sites across Http2Client.ts and NuGetService.ts. Don't add new redirect handling without calling `resolveRedirect()`. |
 | ZIP entry path validation | nupkg README extraction rejects entries with `..`, leading `/`, or `\\`. Nuspec readme paths are also validated. Don't extract zip entries without path traversal checks. |
 | `fetchJsonHttp1` truncated response | `resolved` flag guards `res.on('end')` after `req.destroy()` for MAX_RESPONSE_SIZE. Don't remove — `end` fires after destroy and `JSON.parse` throws on truncated data. Same pattern exists in `fetchJsonHttp1WithDetails`. |
 | HTTP/2 session pool stale cleanup | Before LRU-evicting, loop `sessionOrder` and remove entries whose session is `closed` or `destroyed`. Without this, stale map entries from error/timeout handlers count toward `MAX_SESSIONS` but are unusable, preventing new connections. |

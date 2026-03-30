@@ -56,6 +56,55 @@ export function isSafeRedirectTarget(redirectUrl: string, originalUrl: string): 
     }
 }
 
+/** Returns true if the HTTP status code is a redirect (301, 302, 307, 308). */
+export function isRedirectStatus(statusCode: number | undefined): boolean {
+    return statusCode === 301 || statusCode === 302 || statusCode === 307 || statusCode === 308;
+}
+
+/** Result of resolving an HTTP redirect with SSRF checks. */
+export interface RedirectResult {
+    /** The resolved absolute URL to redirect to. */
+    redirectUrl: string;
+    /** Auth header to forward (only for same-origin redirects), or undefined. */
+    forwardAuth: string | undefined;
+}
+
+/**
+ * Resolve an HTTP redirect, applying SSRF checks and same-origin auth forwarding.
+ * Returns null if the response is not a redirect, has no location header, or the target is unsafe.
+ */
+export function resolveRedirect(
+    statusCode: number | undefined,
+    locationHeader: string | undefined,
+    originalUrl: string,
+    authHeader?: string,
+): RedirectResult | null {
+    if (!isRedirectStatus(statusCode) || !locationHeader) { return null; }
+
+    let redirectParsed: URL;
+    let redirectUrl: string;
+    let originalParsed: URL;
+
+    try {
+        redirectParsed = new URL(locationHeader, originalUrl);
+        redirectUrl = redirectParsed.href;
+
+        if (!isSafeRedirectTarget(redirectUrl, originalUrl)) { return null; }
+
+        originalParsed = new URL(originalUrl);
+    } catch {
+        // Malformed redirect or original URL – treat as no valid redirect target.
+        return null;
+    }
+
+    const sameOrigin = redirectParsed.origin === originalParsed.origin;
+
+    return {
+        redirectUrl,
+        forwardAuth: sameOrigin ? authHeader : undefined,
+    };
+}
+
 /**
  * Result type for HTTP fetch operations with error information.
  * Allows callers to distinguish between "not found" and "network error".
@@ -281,18 +330,15 @@ export class Http2Client {
                     statusCode = headers[':status'] || 0;
 
                     // Handle redirects (with SSRF protection)
-                    if (statusCode === 301 || statusCode === 302 || statusCode === 307 || statusCode === 308) {
-                        const location = headers['location'] as string;
-                        if (location) {
-                            const resolvedLocation = new URL(location, url).href;
-                            redirected = true;
-                            req.close();
-                            if (isSafeRedirectTarget(resolvedLocation, url)) {
-                                this.fetchJsonWithDetails<T>(resolvedLocation, undefined, maxRedirects - 1).then(resolve);
-                            } else {
-                                resolve({ data: null, error: { type: 'network', message: 'Redirect to disallowed target blocked' } });
-                            }
-                        }
+                    const redirect = resolveRedirect(statusCode, headers['location'] as string, url);
+                    if (redirect) {
+                        redirected = true;
+                        req.close();
+                        this.fetchJsonWithDetails<T>(redirect.redirectUrl, undefined, maxRedirects - 1).then(resolve);
+                    } else if (isRedirectStatus(statusCode)) {
+                        redirected = true;
+                        req.close();
+                        resolve({ data: null, error: { type: 'network', message: 'Redirect to disallowed target blocked' } });
                     }
                 });
 
@@ -417,20 +463,13 @@ export class Http2Client {
 
             const req = client.request(options, (res) => {
                 // Handle redirects (with SSRF protection)
-                if (res.statusCode === 301 || res.statusCode === 302 || res.statusCode === 307 || res.statusCode === 308) {
-                    const redirectUrl = res.headers.location;
-                    if (redirectUrl) {
-                        const redirectParsed = new URL(redirectUrl, url);
-                        const redirectHref = redirectParsed.href;
-                        if (isSafeRedirectTarget(redirectHref, url)) {
-                            const sameOrigin = redirectParsed.origin === parsed.origin;
-                            this.fetchJsonHttp1WithDetails<T>(redirectHref, sameOrigin ? authHeader : undefined, maxRedirects - 1).then(resolve);
-                            return;
-                        } else {
-                            resolve({ data: null, error: { type: 'network', message: 'Redirect to disallowed target blocked' } });
-                            return;
-                        }
-                    }
+                const redirect = resolveRedirect(res.statusCode, res.headers.location, url, authHeader);
+                if (redirect) {
+                    this.fetchJsonHttp1WithDetails<T>(redirect.redirectUrl, redirect.forwardAuth, maxRedirects - 1).then(resolve);
+                    return;
+                } else if (isRedirectStatus(res.statusCode)) {
+                    resolve({ data: null, error: { type: 'network', message: 'Redirect to disallowed target blocked' } });
+                    return;
                 }
 
                 if (res.statusCode !== 200) {
@@ -533,18 +572,15 @@ export class Http2Client {
                     statusCode = headers[':status'] || 0;
 
                     // Handle redirects (with SSRF protection)
-                    if (statusCode === 301 || statusCode === 302 || statusCode === 307 || statusCode === 308) {
-                        const location = headers['location'] as string;
-                        if (location) {
-                            const resolvedLocation = new URL(location, url).href;
-                            redirected = true;
-                            req.close();
-                            if (isSafeRedirectTarget(resolvedLocation, url)) {
-                                this.fetchJson<T>(resolvedLocation, undefined, maxRedirects - 1).then(resolve);
-                            } else {
-                                resolve(null);
-                            }
-                        }
+                    const redirect = resolveRedirect(statusCode, headers['location'] as string, url);
+                    if (redirect) {
+                        redirected = true;
+                        req.close();
+                        this.fetchJson<T>(redirect.redirectUrl, undefined, maxRedirects - 1).then(resolve);
+                    } else if (isRedirectStatus(statusCode)) {
+                        redirected = true;
+                        req.close();
+                        resolve(null);
                     }
                 });
 
@@ -628,20 +664,13 @@ export class Http2Client {
 
             const req = client.request(options, (res) => {
                 // Handle redirects (with SSRF protection)
-                if (res.statusCode === 301 || res.statusCode === 302 || res.statusCode === 307 || res.statusCode === 308) {
-                    const redirectUrl = res.headers.location;
-                    if (redirectUrl) {
-                        const redirectParsed = new URL(redirectUrl, url);
-                        const redirectHref = redirectParsed.href;
-                        if (isSafeRedirectTarget(redirectHref, url)) {
-                            const sameOrigin = redirectParsed.origin === parsed.origin;
-                            this.fetchJsonHttp1<T>(redirectHref, sameOrigin ? authHeader : undefined, maxRedirects - 1).then(resolve);
-                            return;
-                        } else {
-                            resolve(null);
-                            return;
-                        }
-                    }
+                const redirect = resolveRedirect(res.statusCode, res.headers.location, url, authHeader);
+                if (redirect) {
+                    this.fetchJsonHttp1<T>(redirect.redirectUrl, redirect.forwardAuth, maxRedirects - 1).then(resolve);
+                    return;
+                } else if (isRedirectStatus(res.statusCode)) {
+                    resolve(null);
+                    return;
                 }
 
                 if (res.statusCode !== 200) {
