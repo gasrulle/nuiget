@@ -1167,12 +1167,12 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
                                                         </div>
                                                     );
                                                 })}
-                                                {installedFilterQuery.trim() && deferredFlattenedInstalled.filter(i => i.type === 'package').length === 0 && (
-                                                    <div className="installed-filter-empty">
-                                                        No packages match &lsquo;{installedFilterQuery.trim()}&rsquo;
-                                                    </div>
-                                                )}
                                             </div>
+                                            {installedFilterQuery.trim() && deferredFlattenedInstalled.filter(i => i.type === 'package').length === 0 && (
+                                                <div className="installed-filter-empty">
+                                                    No packages match &lsquo;{installedFilterQuery.trim()}&rsquo;
+                                                </div>
+                                            )}
                                         </>
                                     )}
                                 </div>
@@ -1310,12 +1310,12 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
                                                         </div>
                                                     );
                                                 })}
-                                                {installedFilterQuery.trim() && deferredInstalledPackages.length === 0 && (
-                                                    <div className="installed-filter-empty">
-                                                        No packages match &lsquo;{installedFilterQuery.trim()}&rsquo;
-                                                    </div>
-                                                )}
                                             </div>
+                                            {installedFilterQuery.trim() && deferredInstalledPackages.length === 0 && (
+                                                <div className="installed-filter-empty">
+                                                    No packages match &lsquo;{installedFilterQuery.trim()}&rsquo;
+                                                </div>
+                                            )}
                                         </div>
                                     )}
                                 </>
