@@ -299,6 +299,15 @@ describe('resolveRedirect', () => {
             expect(result).not.toBeNull();
         }
     });
+
+    it('returns null for malformed Location header (absolute URL)', () => {
+        // An absolute URL with invalid syntax triggers URL parse error
+        expect(resolveRedirect(301, 'http://[::1', ORIG)).toBeNull();
+    });
+
+    it('returns null for malformed original URL', () => {
+        expect(resolveRedirect(301, 'https://other.nuget.org/', 'not-a-valid-url')).toBeNull();
+    });
 });
 
 // ──────────────────────────────────────────────

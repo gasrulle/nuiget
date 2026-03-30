@@ -198,6 +198,19 @@ export function isValidSourceUrl(url: string): boolean {
 }
 
 /**
+ * Validate a credential value (username or password) for safe shell command use.
+ * Rejects characters that could break out of double-quoted shell arguments:
+ * double quotes, backticks, dollar signs, backslashes, and control characters.
+ */
+export function isValidCredentialValue(value: string): boolean {
+    if (!value || value.length === 0 || value.length > 512) {
+        return false;
+    }
+    const dangerousChars = /["`$\\!\r\n]/;
+    return !dangerousChars.test(value);
+}
+
+/**
  * Parse a version specification to determine its type and extract metadata.
  * Supports: floating (*, 10.*, 1.0.*, 1.*-*), range ([1.0,2.0), (,2.0]), exact ([1.0.0]), standard (1.0.0).
  */

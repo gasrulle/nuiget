@@ -3,7 +3,7 @@ import * as vscode from 'vscode';
 import { NuGetConfigParser } from './NuGetConfigParser';
 import { NuGetLogger } from './NuGetLogger';
 import { NuGetSource } from './NuGetTypes';
-import { ExecError, execWithTimeout, isValidSourceName, isValidSourceUrl } from './NuGetUtils';
+import { ExecError, execWithTimeout, isValidCredentialValue, isValidSourceName, isValidSourceUrl } from './NuGetUtils';
 
 /**
  * NuGetSourceService — Manages NuGet source CRUD operations, caching,
@@ -114,6 +114,12 @@ export class NuGetSourceService {
         }
         if (name && !isValidSourceName(name)) {
             return { success: false, error: 'Invalid source name. Names must contain only letters, numbers, dots, underscores, hyphens, and spaces.' };
+        }
+        if (username && !isValidCredentialValue(username)) {
+            return { success: false, error: 'Invalid username. Must not contain double quotes, backticks, dollar signs, backslashes, or control characters.' };
+        }
+        if (password && !isValidCredentialValue(password)) {
+            return { success: false, error: 'Invalid password. Must not contain double quotes, backticks, dollar signs, backslashes, or control characters.' };
         }
 
         this.logger.setupOutputChannel(true);
