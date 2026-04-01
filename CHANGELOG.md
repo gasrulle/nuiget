@@ -5,7 +5,12 @@ All notable changes to the nUIget extension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.16.0] - 2026-04-01
+
+### Added
+
+- **Unified Search Bar** — Removed the Browse tab and InstalledTab filter bar; a single always-visible search bar drives browse, @installed, @updates, and @vulnerable modes with @-prefix dropdown, quick search suggestions, recent searches, and keyboard navigation — matching the sidebar's search UX
+- **Unified search bar tests** — 19 new tests covering filter dropdown keyboard navigation (ArrowDown/Up/Enter/Tab/Escape), @-prefix auto-show, tab auto-activation on @-prefix, clear search restoring tabs, browse mode Enter/Escape, vulnerability badge, debounce suppression for @-prefix queries, and searchDebounceMode settings integration
 
 ### Fixed
 
@@ -13,10 +18,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Filter dropdown Escape key re-opening immediately**
 - **Filter icon button not showing dropdown when search is empty**
 - **@-prefix typing triggering search debounce instead of filter dropdown**
-
-### Added
-
-- **Unified search bar tests** — 19 new tests covering filter dropdown keyboard navigation (ArrowDown/Up/Enter/Tab/Escape), @-prefix auto-show, tab auto-activation on @-prefix, clear search restoring tabs, browse mode Enter/Escape, vulnerability badge, debounce suppression for @-prefix queries, and searchDebounceMode settings integration
 
 ## [1.15.3] - 2026-03-30
 
@@ -38,16 +39,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Sidebar post-disposal messaging when dispose() called directly**
 - **HTTP redirect URL parsing crash** — `resolveRedirect()` now catches malformed `Location` headers instead of throwing
 - **Removed internal refactor script** — Deleted `_replace_methods.cjs` from repository root (was incorrectly shipped in VSIX)
-
-### Added
-
-- **Unified Search Bar** — Removed the Browse tab or InstalledTab filter bar; a single always-visible search bar drives browse, @installed, @updates, and @vulnerable modes with @-prefix dropdown, quick search suggestions, recent searches, and keyboard navigation — matching the sidebar's search UX
-- **Sub-Service Unit Tests** — New test files for `NuGetLogger` (22 tests), `NuGetCliService` (27 tests), `NuGetSourceService` (32 tests), and `NuGetProjectService` (24 tests), covering credential sanitization, SDK detection, CLI operations, source CRUD/caching, project discovery, .csproj parsing, transitive dependency resolution, and assets.json caching
-
-### Fixed
-
-- **Main panel stuck loading spinner on checkAllProjectsUpdates/checkAllProjectsInstalled errors**
-- **Sidebar post-disposal messaging when dispose() called directly**
 
 ## [1.15.2] - 2026-03-29
 
