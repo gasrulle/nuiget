@@ -1920,7 +1920,8 @@ export const App: React.FC = () => {
                                     }
                                 } else if (searchResults.length > 0) {
                                     browseListRef.current?.focus({ preventScroll: true });
-                                    if (!selectedPackageRef.current || !searchResults.find(p => getPackageId(p) === getPackageId(selectedPackageRef.current!))) {
+                                    const currentPkg = selectedPackageRef.current;
+                                    if (!currentPkg || !searchResults.find(p => getPackageId(p) === getPackageId(currentPkg))) {
                                         const firstPkg = searchResults[0];
                                         setSelectedPackage(firstPkg);
                                         setSelectedTransitivePackage(null);

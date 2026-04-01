@@ -28,6 +28,12 @@ nuget.config
 # Original icon file (resized version is in resources/)
 package-icon.png
 
+# Redundant files (not referenced by extension code)
+_replace_methods.cjs
+codicon.csv
+resources/icon_old.png
+resources/beaker-outline.svg
+
 # GitHub/Copilot prompts (not needed in VSIX)
 .github/**
 
