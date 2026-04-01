@@ -573,7 +573,10 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
                     this._operationInProgress = true;
                     try {
                         await executeSingleOperation(this._opCtx(), 'install', data.projectPath, data.packageId, data.version, data.sourceUrl);
-                    } finally { this._operationInProgress = false; }
+                    } finally {
+                        this._operationInProgress = false;
+                        this.checkUpdatesInBackground(true);
+                    }
                     break;
                 }
             case 'updatePackage':
@@ -582,7 +585,10 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
                     this._operationInProgress = true;
                     try {
                         await executeSingleOperation(this._opCtx(), 'update', data.projectPath, data.packageId, data.version, data.sourceUrl);
-                    } finally { this._operationInProgress = false; }
+                    } finally {
+                        this._operationInProgress = false;
+                        this.checkUpdatesInBackground(true);
+                    }
                     break;
                 }
             case 'removePackage':
@@ -591,7 +597,10 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
                     this._operationInProgress = true;
                     try {
                         await executeSingleOperation(this._opCtx(), 'remove', data.projectPath, data.packageId);
-                    } finally { this._operationInProgress = false; }
+                    } finally {
+                        this._operationInProgress = false;
+                        this.checkUpdatesInBackground(true);
+                    }
                     break;
                 }
             case 'bulkUpdatePackages':
@@ -600,7 +609,10 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
                     this._operationInProgress = true;
                     try {
                         await executeBulkUpdatePackages(this._opCtx(), data.packages, data.projectPath);
-                    } finally { this._operationInProgress = false; }
+                    } finally {
+                        this._operationInProgress = false;
+                        this.checkUpdatesInBackground(true);
+                    }
                     break;
                 }
             case 'bulkUpdateAllProjects':
@@ -609,7 +621,10 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
                     this._operationInProgress = true;
                     try {
                         await executeBulkUpdateAllProjects(this._opCtx(), data.projectUpdates);
-                    } finally { this._operationInProgress = false; }
+                    } finally {
+                        this._operationInProgress = false;
+                        this.checkUpdatesInBackground(true);
+                    }
                     break;
                 }
             case 'getPackageVersions':

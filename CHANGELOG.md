@@ -5,6 +5,19 @@ All notable changes to the nUIget extension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- **Activity Bar badge not updating after sidebar operations**
+- **Filter dropdown Escape key re-opening immediately**
+- **Filter icon button not showing dropdown when search is empty**
+- **@-prefix typing triggering search debounce instead of filter dropdown**
+
+### Added
+
+- **Unified search bar tests** — 19 new tests covering filter dropdown keyboard navigation (ArrowDown/Up/Enter/Tab/Escape), @-prefix auto-show, tab auto-activation on @-prefix, clear search restoring tabs, browse mode Enter/Escape, vulnerability badge, debounce suppression for @-prefix queries, and searchDebounceMode settings integration
+
 ## [1.15.3] - 2026-03-30
 
 ### Added

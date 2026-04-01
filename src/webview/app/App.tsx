@@ -1087,11 +1087,12 @@ export const App: React.FC = () => {
     );
 
     const matchingFilters = useMemo(() => {
-        const query = searchQuery.trim().toLowerCase();
-        if (!query.startsWith('@')) { return []; }
+        // Filter button always shows all prefixes regardless of search query
         if (showFilterDropdown && filterButtonTriggered) {
             return [...FILTER_PREFIXES];
         }
+        const query = searchQuery.trim().toLowerCase();
+        if (!query.startsWith('@')) { return []; }
         const isExactMatch = FILTER_PREFIXES.some(p => query === p || query.startsWith(p + ' '));
         if (isExactMatch) { return []; }
         return FILTER_PREFIXES.filter(p => p.startsWith(query));
@@ -1137,6 +1138,16 @@ export const App: React.FC = () => {
         }
     }, [searchMode.mode]);
 
+    // Auto-show @-prefix dropdown when matchingFilters become available (e.g., user types '@')
+    useEffect(() => {
+        if (matchingFilters.length > 0 && !showFilterDropdown && searchQuery.trim().startsWith('@')) {
+            setShowFilterDropdown(true);
+            setFilterDropdownIndex(0);
+        } else if (matchingFilters.length === 0 && showFilterDropdown && !filterButtonTriggered) {
+            setShowFilterDropdown(false);
+        }
+    }, [matchingFilters, searchQuery, showFilterDropdown, filterButtonTriggered]);
+
     // Reset selection when suggestions become empty
     useEffect(() => {
         if (quickSearchSuggestions.length === 0) {
@@ -1158,7 +1169,9 @@ export const App: React.FC = () => {
             return;
         }
 
-        if (searchMode.mode === 'browse' && deferredSearchQuery.trim().length >= 2 && searchInputFocusedRef.current) {
+        // Skip autocomplete when typing a filter prefix (e.g., @installed, @updates)
+        const trimmedQuery = deferredSearchQuery.trim();
+        if (searchMode.mode === 'browse' && trimmedQuery.length >= 2 && !trimmedQuery.startsWith('@') && searchInputFocusedRef.current) {
             if (quickSearchTimeoutRef.current) {
                 clearTimeout(quickSearchTimeoutRef.current);
             }
@@ -1201,7 +1214,9 @@ export const App: React.FC = () => {
             return;
         }
 
-        if (searchMode.mode === 'browse' && searchQuery.trim().length >= 2) {
+        // Skip full search when typing a filter prefix (e.g., @installed, @updates)
+        const trimmedFullQuery = searchQuery.trim();
+        if (searchMode.mode === 'browse' && trimmedFullQuery.length >= 2 && !trimmedFullQuery.startsWith('@')) {
             if (fullSearchTimeoutRef.current) {
                 clearTimeout(fullSearchTimeoutRef.current);
             }
@@ -1836,15 +1851,9 @@ export const App: React.FC = () => {
                                     selectFilter(matchingFilters[filterDropdownIndex]);
                                 } else if (e.key === 'Escape') {
                                     e.preventDefault();
-                                    setShowFilterDropdown(false);
-                                    setFilterButtonTriggered(false);
+                                    handleClearSearch();
                                 }
                                 return;
-                            }
-                            // Auto-show @-prefix dropdown as user types
-                            if (!showFilterDropdown && matchingFilters.length > 0) {
-                                setShowFilterDropdown(true);
-                                setFilterDropdownIndex(0);
                             }
 
                             // Version expansion mode navigation

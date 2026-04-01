@@ -647,4 +647,368 @@ describe('App', () => {
         });
         expect(screen.getByText('Manage NuGet packages')).toBeDefined();
     });
+
+    it('filter button shows dropdown with all prefixes when search is empty', () => {
+        render(<App />);
+        const filterBtn = screen.getByLabelText('Filter packages');
+        fireEvent.mouseDown(filterBtn);
+
+        // Should show all three filter prefixes
+        expect(screen.getByText('@installed')).toBeDefined();
+        expect(screen.getByText('@updates')).toBeDefined();
+        expect(screen.getByText('@vulnerable')).toBeDefined();
+    });
+
+    it('typing @ shows filter dropdown with all prefixes', () => {
+        render(<App />);
+        const input = screen.getByPlaceholderText(/Search packages/) as HTMLInputElement;
+        fireEvent.change(input, { target: { value: '@' } });
+
+        // Should show the @-prefix filter dropdown
+        expect(screen.getByText('@installed')).toBeDefined();
+        expect(screen.getByText('@updates')).toBeDefined();
+        expect(screen.getByText('@vulnerable')).toBeDefined();
+    });
+
+    it('typing @up narrows filter dropdown', () => {
+        render(<App />);
+        const input = screen.getByPlaceholderText(/Search packages/) as HTMLInputElement;
+        fireEvent.change(input, { target: { value: '@up' } });
+
+        // Only @updates starts with @up
+        expect(screen.getByText('@updates')).toBeDefined();
+        expect(screen.queryByText('@installed')).toBeNull();
+        expect(screen.queryByText('@vulnerable')).toBeNull();
+    });
+
+    it('filter dropdown closes when exact prefix is typed', () => {
+        render(<App />);
+        const input = screen.getByPlaceholderText(/Search packages/) as HTMLInputElement;
+
+        // First show it
+        fireEvent.change(input, { target: { value: '@' } });
+        expect(screen.getByText('@installed')).toBeDefined();
+
+        // Now type exact match — dropdown should close (matchingFilters=[])
+        fireEvent.change(input, { target: { value: '@installed' } });
+        expect(screen.queryByText('@updates')).toBeNull();
+        expect(screen.queryByText('@vulnerable')).toBeNull();
+    });
+
+    it('filter dropdown keyboard: ArrowDown moves selection', () => {
+        render(<App />);
+        const input = screen.getByPlaceholderText(/Search packages/) as HTMLInputElement;
+        fireEvent.change(input, { target: { value: '@' } });
+
+        // First item should be selected by default (index 0)
+        const items = screen.getAllByText(/^@(installed|updates|vulnerable)$/);
+        expect(items[0].closest('.filter-dropdown-item')?.className).toContain('selected');
+
+        // ArrowDown should move to second item
+        fireEvent.keyDown(input, { key: 'ArrowDown' });
+        const itemsAfter = screen.getAllByText(/^@(installed|updates|vulnerable)$/);
+        expect(itemsAfter[1].closest('.filter-dropdown-item')?.className).toContain('selected');
+        expect(itemsAfter[0].closest('.filter-dropdown-item')?.className).not.toContain('selected');
+    });
+
+    it('filter dropdown keyboard: ArrowUp moves selection back', () => {
+        render(<App />);
+        const input = screen.getByPlaceholderText(/Search packages/) as HTMLInputElement;
+        fireEvent.change(input, { target: { value: '@' } });
+
+        // Move down first
+        fireEvent.keyDown(input, { key: 'ArrowDown' });
+        // Then move back up
+        fireEvent.keyDown(input, { key: 'ArrowUp' });
+
+        const items = screen.getAllByText(/^@(installed|updates|vulnerable)$/);
+        expect(items[0].closest('.filter-dropdown-item')?.className).toContain('selected');
+    });
+
+    it('filter dropdown keyboard: Enter selects the filter', () => {
+        render(<App />);
+        const input = screen.getByPlaceholderText(/Search packages/) as HTMLInputElement;
+        fireEvent.change(input, { target: { value: '@' } });
+        expect(screen.getByText('@installed')).toBeDefined();
+
+        // Press Enter to select first item (@installed)
+        fireEvent.keyDown(input, { key: 'Enter' });
+
+        // Search bar should contain the selected prefix + space
+        expect(input.value).toBe('@installed ');
+        // Filter dropdown should be closed
+        expect(screen.queryByText('@updates')).toBeNull();
+    });
+
+    it('filter dropdown keyboard: Tab selects the filter', () => {
+        render(<App />);
+        const input = screen.getByPlaceholderText(/Search packages/) as HTMLInputElement;
+        fireEvent.change(input, { target: { value: '@' } });
+
+        // Navigate to @updates
+        fireEvent.keyDown(input, { key: 'ArrowDown' });
+        // Press Tab to select
+        fireEvent.keyDown(input, { key: 'Tab' });
+
+        expect(input.value).toBe('@updates ');
+    });
+
+    it('filter dropdown keyboard: Escape clears search and closes dropdown', () => {
+        render(<App />);
+        const input = screen.getByPlaceholderText(/Search packages/) as HTMLInputElement;
+        fireEvent.change(input, { target: { value: '@' } });
+        expect(screen.getByText('@installed')).toBeDefined();
+
+        fireEvent.keyDown(input, { key: 'Escape' });
+
+        // Escape cancels the filter operation: clears query and closes dropdown
+        expect(input.value).toBe('');
+        expect(screen.queryByText('@installed')).toBeNull();
+        expect(screen.queryByText('@updates')).toBeNull();
+    });
+
+    it('clicking a filter dropdown item sets the search query', () => {
+        render(<App />);
+        const input = screen.getByPlaceholderText(/Search packages/) as HTMLInputElement;
+        fireEvent.change(input, { target: { value: '@' } });
+
+        // Click on @updates
+        const updatesItem = screen.getByText('@updates');
+        fireEvent.mouseDown(updatesItem);
+
+        expect(input.value).toBe('@updates ');
+    });
+
+    it('@installed prefix activates Installed tab', () => {
+        render(<App />);
+        const input = screen.getByPlaceholderText(/Search packages/) as HTMLInputElement;
+        fireEvent.change(input, { target: { value: '@installed' } });
+
+        const installedBtn = screen.getByRole('button', { name: /Installed/ });
+        expect(installedBtn.className).toContain('active');
+    });
+
+    it('@updates prefix activates Updates tab', () => {
+        render(<App />);
+        const input = screen.getByPlaceholderText(/Search packages/) as HTMLInputElement;
+        fireEvent.change(input, { target: { value: '@updates' } });
+
+        const updatesBtn = screen.getByRole('button', { name: /Updates/ });
+        expect(updatesBtn.className).toContain('active');
+    });
+
+    it('clear search restores tabs after browse mode', () => {
+        render(<App />);
+        sendMessage({
+            type: 'projects',
+            projects: [{ name: 'App.csproj', path: '/App.csproj' }]
+        });
+        sendMessage({
+            type: 'sources',
+            sources: [{ name: 'nuget.org', url: 'https://api.nuget.org/v3/index.json', enabled: true }]
+        });
+
+        const input = screen.getByPlaceholderText(/Search packages/) as HTMLInputElement;
+
+        // Enter browse mode
+        fireEvent.change(input, { target: { value: 'Newtonsoft' } });
+        expect(screen.queryByRole('button', { name: /^Installed/ })).toBeNull();
+
+        // Clear search
+        fireEvent.click(screen.getByLabelText('Clear search'));
+
+        // Tabs should be visible again
+        expect(screen.getByRole('button', { name: /Installed/ })).toBeDefined();
+        expect(screen.getByRole('button', { name: /Updates/ })).toBeDefined();
+        expect(input.value).toBe('');
+    });
+
+    it('@-prefix typing does not trigger search API calls', () => {
+        vi.useFakeTimers();
+        render(<App />);
+        sendMessage({
+            type: 'projects',
+            projects: [{ name: 'App.csproj', path: '/App.csproj' }]
+        });
+        sendMessage({
+            type: 'sources',
+            sources: [{ name: 'nuget.org', url: 'https://api.nuget.org/v3/index.json', enabled: true }]
+        });
+        mockVsCode.postMessage.mockClear();
+
+        const input = screen.getByPlaceholderText(/Search packages/) as HTMLInputElement;
+        fireEvent.change(input, { target: { value: '@ins' } });
+
+        // Advance past both debounce timers
+        act(() => { vi.advanceTimersByTime(500); });
+
+        // Should NOT have sent autocomplete or search messages
+        expect(mockVsCode.postMessage).not.toHaveBeenCalledWith(
+            expect.objectContaining({ type: 'autocompletePackages' })
+        );
+        expect(mockVsCode.postMessage).not.toHaveBeenCalledWith(
+            expect.objectContaining({ type: 'searchPackages' })
+        );
+        vi.useRealTimers();
+    });
+
+    it('Enter key in browse mode triggers search', () => {
+        render(<App />);
+        sendMessage({
+            type: 'projects',
+            projects: [{ name: 'App.csproj', path: '/App.csproj' }]
+        });
+        sendMessage({
+            type: 'sources',
+            sources: [{ name: 'nuget.org', url: 'https://api.nuget.org/v3/index.json', enabled: true }]
+        });
+        mockVsCode.postMessage.mockClear();
+
+        const input = screen.getByPlaceholderText(/Search packages/) as HTMLInputElement;
+        fireEvent.change(input, { target: { value: 'Newtonsoft.Json' } });
+        fireEvent.keyDown(input, { key: 'Enter' });
+
+        expect(mockVsCode.postMessage).toHaveBeenCalledWith(
+            expect.objectContaining({ type: 'searchPackages', query: 'Newtonsoft.Json' })
+        );
+    });
+
+    it('Escape key in browse mode clears search and returns to tabs', () => {
+        render(<App />);
+        sendMessage({
+            type: 'projects',
+            projects: [{ name: 'App.csproj', path: '/App.csproj' }]
+        });
+        sendMessage({
+            type: 'sources',
+            sources: [{ name: 'nuget.org', url: 'https://api.nuget.org/v3/index.json', enabled: true }]
+        });
+
+        const input = screen.getByPlaceholderText(/Search packages/) as HTMLInputElement;
+        fireEvent.change(input, { target: { value: 'Serilog' } });
+        expect(screen.queryByRole('button', { name: /^Installed/ })).toBeNull();
+
+        // Escape clears search
+        fireEvent.keyDown(input, { key: 'Escape' });
+
+        expect(input.value).toBe('');
+        expect(screen.getByRole('button', { name: /Installed/ })).toBeDefined();
+    });
+
+    it('filter button toggles dropdown off on second click', () => {
+        render(<App />);
+        const filterBtn = screen.getByLabelText('Filter packages');
+
+        // First click opens
+        fireEvent.mouseDown(filterBtn);
+        expect(screen.getByText('@installed')).toBeDefined();
+
+        // Second click closes
+        fireEvent.mouseDown(filterBtn);
+        expect(screen.queryByText('@installed')).toBeNull();
+    });
+
+    it('vulnerability badge appears on Installed tab with vulnerable packages', () => {
+        render(<App />);
+        sendMessage({
+            type: 'projects',
+            projects: [{ name: 'App.csproj', path: '/App.csproj' }]
+        });
+        sendMessage({
+            type: 'installedPackages',
+            packages: [
+                { id: 'Pkg.A', version: '1.0.0', vulnerabilities: [{ severity: 'High', advisoryUrl: '' }] },
+                { id: 'Pkg.B', version: '2.0.0' }
+            ],
+            projectPath: '/App.csproj'
+        });
+
+        // Vulnerability badge shows count and has severity class + tooltip
+        const vulnBadge = document.querySelector('.tab-badge-vuln');
+        expect(vulnBadge).not.toBeNull();
+        expect(vulnBadge?.className).toContain('vuln-High');
+        expect(vulnBadge?.getAttribute('title')).toContain('vulnerabilities');
+    });
+
+    it('filter button shows all prefixes with non-@ search text', () => {
+        render(<App />);
+        const input = screen.getByPlaceholderText(/Search packages/) as HTMLInputElement;
+        fireEvent.change(input, { target: { value: 'serilog' } });
+
+        const filterBtn = screen.getByLabelText('Filter packages');
+        fireEvent.mouseDown(filterBtn);
+
+        // Should show all three filter prefixes regardless of current search text
+        expect(screen.getByText('@installed')).toBeDefined();
+        expect(screen.getByText('@updates')).toBeDefined();
+        expect(screen.getByText('@vulnerable')).toBeDefined();
+    });
+
+    it('searchResults message renders browse content area', () => {
+        render(<App />);
+        sendMessage({
+            type: 'projects',
+            projects: [{ name: 'App.csproj', path: '/App.csproj' }]
+        });
+        sendMessage({
+            type: 'sources',
+            sources: [{ name: 'nuget.org', url: 'https://api.nuget.org/v3/index.json', enabled: true }]
+        });
+
+        const input = screen.getByPlaceholderText(/Search packages/) as HTMLInputElement;
+        fireEvent.change(input, { target: { value: 'Newtonsoft' } });
+
+        sendMessage({
+            type: 'searchResults',
+            results: [{ id: 'Newtonsoft.Json', version: '13.0.3', description: 'Popular JSON parser' }],
+            query: 'Newtonsoft'
+        });
+
+        // In browse mode the tabs should be hidden and browse content should exist
+        expect(screen.queryByRole('button', { name: /^Installed/ })).toBeNull();
+    });
+
+    it('@installed with filter text keeps Installed tab active', () => {
+        render(<App />);
+        const input = screen.getByPlaceholderText(/Search packages/) as HTMLInputElement;
+        fireEvent.change(input, { target: { value: '@installed Newtonsoft' } });
+
+        // Installed tab should be active — the filter text is passed via externalFilter
+        expect(screen.getByRole('button', { name: /Installed/ })).toBeDefined();
+        const installedBtn = screen.getByRole('button', { name: /Installed/ });
+        expect(installedBtn.className).toContain('active');
+    });
+
+    it('settings message with searchDebounceMode updates state', () => {
+        vi.useFakeTimers();
+        render(<App />);
+        sendMessage({
+            type: 'projects',
+            projects: [{ name: 'App.csproj', path: '/App.csproj' }]
+        });
+        sendMessage({
+            type: 'sources',
+            sources: [{ name: 'nuget.org', url: 'https://api.nuget.org/v3/index.json', enabled: true }]
+        });
+        // Change debounce mode to 'off'
+        sendMessage({
+            type: 'settings',
+            searchDebounceMode: 'off'
+        });
+
+        mockVsCode.postMessage.mockClear();
+
+        const input = screen.getByPlaceholderText(/Search packages/) as HTMLInputElement;
+        fireEvent.change(input, { target: { value: 'serilog' } });
+
+        // With debounce mode 'off', no auto-search should fire
+        act(() => { vi.advanceTimersByTime(500); });
+        expect(mockVsCode.postMessage).not.toHaveBeenCalledWith(
+            expect.objectContaining({ type: 'autocompletePackages' })
+        );
+        expect(mockVsCode.postMessage).not.toHaveBeenCalledWith(
+            expect.objectContaining({ type: 'searchPackages' })
+        );
+        vi.useRealTimers();
+    });
 });
