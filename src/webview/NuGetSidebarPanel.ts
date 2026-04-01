@@ -408,9 +408,12 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
             const count = projectUpdates[0].updates.length;
             return `${count} update${count === 1 ? '' : 's'} available`;
         }
-        return projectUpdates
+        const totalCount = projectUpdates.reduce((sum, pu) => sum + pu.updates.length, 0);
+        const summary = `${totalCount} update${totalCount === 1 ? '' : 's'} available`;
+        const perProject = projectUpdates
             .map(pu => `${pu.projectName} — ${pu.updates.length} update${pu.updates.length === 1 ? '' : 's'}`)
             .join('\n');
+        return `${summary}\n${perProject}`;
     }
 
     /** Lightweight sidebar notification after a package operation from the main panel.
