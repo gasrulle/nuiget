@@ -5,6 +5,41 @@ All notable changes to the nUIget extension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **Unified "All Projects" toggle** — Replaced per-section toggle icons in Installed and Updates tabs (and sidebar sections) with a single "All Projects (N)" option in the project selector dropdown (full manager) and QuickPick dialog (sidebar). Selecting "All Projects" drives both Installed and Updates views simultaneously, persists across tab switches, and auto-downgrades to a single project when only one project remains in the workspace.
+- **Package icons in all-projects mode** — All-projects views in the full manager now display package icons using progressive/lazy loading. Icons resolve in the background after the initial data loads, providing fast initial render with icons appearing shortly after.
+- **Collapsible project groups in sidebar** — All-projects mode in the sidebar now renders project groups as collapsible tree-view items with chevron icons, matching VS Code's native explorer behavior. Project headers show a badge count and toggle their children on click or Enter/Space.
+
+### Changed
+
+- **VS Code-native sidebar styling** — Project group headers and package rows in the sidebar now match VS Code explorer typography: 22px row height, native font size, bold group headers, and proper tree-view indentation with hover/focus states.
+
+### Fixed
+
+- **Updates and badge out of sync between sidebar and full manager**
+- **Refresh in all-projects mode not re-fetching data**
+- **All-projects Installed tab showing "No packages installed" instead of package list**
+- **Packages not selectable in all-projects Installed and Updates tabs**
+- **Activity Bar badge not clearing after bulk "Update All" with all projects selected**
+- **Activity Bar badge not clearing on refresh when background update check fails or finds no projects**
+- **Project picker always highlighting "All Projects"** — Sidebar project picker now correctly highlights the currently selected project instead of always defaulting to the first item
+- **Install not working when "All Projects" is selected** — Full manager disables the Install button with a tooltip directing users to Multi Install; sidebar shows a one-time project picker for install actions without changing the overall project selection
+- **Stuck loading spinner when rapidly switching between All Projects and single project**
+- **Sidebar context menu UX in all-projects browse mode** — Right-clicking a browse package with "All Projects" selected now shows the actions QuickPick first. Project-independent actions (Copy Package ID, View Package Details) execute immediately. Project-dependent actions (Install, Uninstall, Change Version) show a project picker after selection. Uninstall/Change Version picker is filtered to projects where the package is installed; Install picker shows all projects with installed markers.
+- **Sidebar browse row icon not updating after install/remove in all-projects mode**
+- **Sidebar context menu failing for installed packages in all-projects mode**
+- **Install/Update button disabled in full manager when package is selected from all-projects Installed or Updates tab**
+- **Sidebar browse showing "+" instead of trashcan for installed packages in all-projects mode** — Browse rows now correctly show the uninstall (trashcan) icon when a package is already installed in any project. Tooltip shows which project(s) the package will be removed from. Clicking the trashcan removes directly for single-project installs or shows a project picker for multi-project installs.
+- **"All Projects" selection not carrying over when opening full manager from sidebar**
+- **Install button not disabled for currently installed version in all-projects mode**
+- **Sidebar showing empty installed/updates sections after switching to all-projects mode**
+- **Quick search dropdown opening when navigating to package details from sidebar**
+- **Sidebar trashcan icon doing nothing for installed packages in all-projects mode** — Clicking the trashcan now removes the package from the specific project it's listed under, instead of sending the sentinel value as the project path
+- **Slow full manager refresh after uninstall/install/update with sidebar open** — Sidebar background update check no longer sends a redundant refresh command back to the main panel that initiated the operation, eliminating a second full reload cycle (installed packages + update check + icon resolution)
+
 ## [1.16.0] - 2026-04-01
 
 ### Added

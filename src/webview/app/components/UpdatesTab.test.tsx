@@ -1,4 +1,5 @@
-import { act, render, screen } from '@testing-library/react';
+import { useVirtualizer } from '@tanstack/react-virtual';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { UpdatesTabHandle, UpdatesTabProps } from './UpdatesTab';
@@ -28,11 +29,11 @@ function createProps(overrides: Partial<UpdatesTabProps> = {}): UpdatesTabProps 
         includePrerelease: false,
         splitPosition: 50,
         defaultPackageIcon: 'data:image/png;base64,abc',
-        loadAllProjects: false,
+        isAllProjects: false,
         allProjectsUpdates: [],
         loadingAllProjectsUpdates: false,
-        onLoadAllChange: vi.fn(),
-        projects: [{ path: '/proj.csproj', name: 'proj.csproj' }],
+        activeProjectPath: '',
+        onActiveProjectPathChange: vi.fn(),
         packageMetadata: null,
         loadingMetadata: false,
         loadingVersions: false,
@@ -94,8 +95,8 @@ describe('UpdatesTab', () => {
         expect(screen.getByText('Update All (0)')).toBeDisabled();
     });
 
-    it('shows all-projects empty state in loadAllProjects mode', () => {
-        render(<UpdatesTabComponent {...createProps({ loadAllProjects: true })} />);
+    it('shows all-projects empty state in isAllProjects mode', () => {
+        render(<UpdatesTabComponent {...createProps({ isAllProjects: true })} />);
         expect(screen.getByText('All packages are up to date across all projects')).toBeInTheDocument();
     });
 
@@ -156,7 +157,7 @@ describe('UpdatesTab', () => {
 
     it('shows all-projects loading state', () => {
         render(<UpdatesTabComponent {...createProps({
-            loadAllProjects: true,
+            isAllProjects: true,
             loadingAllProjectsUpdates: true,
         })} />);
         expect(screen.getByText('Checking updates for all projects...')).toBeInTheDocument();
@@ -164,7 +165,7 @@ describe('UpdatesTab', () => {
 
     it('shows all-projects updates with project data', () => {
         render(<UpdatesTabComponent {...createProps({
-            loadAllProjects: true,
+            isAllProjects: true,
             allProjectsUpdates: [
                 {
                     projectPath: '/a.csproj',
@@ -191,20 +192,9 @@ describe('UpdatesTab', () => {
         expect(screen.getByText('Update All (0)')).toBeDisabled();
     });
 
-    it('shows all-projects toggle when multiple projects', () => {
-        const projects = [
-            { path: '/a.csproj', name: 'a.csproj' },
-            { path: '/b.csproj', name: 'b.csproj' },
-        ];
-        render(<UpdatesTabComponent {...createProps({ projects })} />);
-        const toggleBtn = screen.queryByTitle(/all projects/i) || screen.queryByTitle(/single project/i);
-        // Multi-project toggle exists when multiple projects
-        expect(toggleBtn || true).toBeTruthy();
-    });
-
     it('shows correct badge count for all-projects updates', () => {
         render(<UpdatesTabComponent {...createProps({
-            loadAllProjects: true,
+            isAllProjects: true,
             allProjectsUpdates: [
                 {
                     projectPath: '/a.csproj',
@@ -275,7 +265,7 @@ describe('UpdatesTab', () => {
 
     it('externalFilter filters all-projects updates', () => {
         render(<UpdatesTabComponent {...createProps({
-            loadAllProjects: true,
+            isAllProjects: true,
             allProjectsUpdates: [
                 {
                     projectPath: '/a.csproj',
@@ -291,5 +281,39 @@ describe('UpdatesTab', () => {
         // 'match' matches both Pkg.Match and Pkg.NoMatch (both contain 'match')
         // so the list is not empty
         expect(screen.queryByText('All packages are up to date')).not.toBeInTheDocument();
+    });
+
+    it('clicking a package in all-projects mode calls onSelectPackage', async () => {
+        const onSelectPackage = vi.fn();
+        const allUpdates = [
+            {
+                projectPath: '/a.csproj', projectName: 'a.csproj', updates: [
+                    { id: 'PkgA', installedVersion: '1.0.0', latestVersion: '2.0.0' },
+                ]
+            },
+        ];
+        // Override virtualizer to return header (index 0) and package (index 1)
+        vi.mocked(useVirtualizer).mockReturnValue({
+            getTotalSize: () => 500,
+            getVirtualItems: () => [
+                { index: 0, key: 0, start: 0, size: 30, end: 30, lane: 0 },
+                { index: 1, key: 1, start: 30, size: 40, end: 70, lane: 0 },
+            ],
+            measureElement: vi.fn(),
+            scrollToIndex: vi.fn(),
+        } as any);
+        await act(async () => {
+            render(<UpdatesTabComponent {...createProps({
+                isAllProjects: true,
+                allProjectsUpdates: allUpdates as any,
+                onSelectPackage,
+            })} />);
+        });
+        const pkgItem = screen.getByText('PkgA').closest('.package-item')!;
+        fireEvent.click(pkgItem);
+        expect(onSelectPackage).toHaveBeenCalledWith(
+            expect.objectContaining({ id: 'PkgA' }),
+            expect.objectContaining({ metadataVersion: '2.0.0' }),
+        );
     });
 });

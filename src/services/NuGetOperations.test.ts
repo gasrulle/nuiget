@@ -9,6 +9,7 @@ import {
     executeSingleOperation,
     queryAllProjectsInstalled,
     queryAllProjectsUpdates,
+    resolveAllProjectsIcons,
     type OperationContext,
 } from '../services/NuGetOperations';
 
@@ -36,7 +37,7 @@ function createMockCtx(nugetService?: OperationContext['nugetService']): Operati
     };
 }
 
- 
+
 const mockWithProgress = () => {
     (vscode.window.withProgress as any) = vi.fn(
         (_opts: unknown, task: (progress: { report: ReturnType<typeof vi.fn> }) => Promise<unknown>) =>
@@ -557,5 +558,59 @@ describe('queryAllProjectsInstalled', () => {
             projectName: 'Good',
             packages: [{ id: 'A', version: '2.0', resolvedVersion: undefined, isImplicit: undefined }],
         }]);
+    });
+});
+
+describe('resolveAllProjectsIcons', () => {
+    it('deduplicates packages and returns icon map', async () => {
+        const svc = createMockNuGetService();
+        (svc as any).getPackageIconUrl = vi.fn()
+            .mockResolvedValueOnce('https://icon/a.png')
+            .mockResolvedValueOnce('https://icon/b.png');
+
+        const result = await resolveAllProjectsIcons(svc as any, [
+            { id: 'A', version: '1.0' },
+            { id: 'A', version: '1.0' }, // duplicate
+            { id: 'B', version: '2.0' },
+        ]);
+
+        expect((svc as any).getPackageIconUrl).toHaveBeenCalledTimes(2);
+        expect(result).toEqual({
+            'A@1.0': 'https://icon/a.png',
+            'B@2.0': 'https://icon/b.png',
+        });
+    });
+
+    it('skips packages with no icon', async () => {
+        const svc = createMockNuGetService();
+        (svc as any).getPackageIconUrl = vi.fn().mockResolvedValue(undefined);
+
+        const result = await resolveAllProjectsIcons(svc as any, [
+            { id: 'A', version: '1.0' },
+        ]);
+
+        expect(result).toEqual({});
+    });
+
+    it('handles errors gracefully per-package', async () => {
+        const svc = createMockNuGetService();
+        (svc as any).getPackageIconUrl = vi.fn()
+            .mockRejectedValueOnce(new Error('fail'))
+            .mockResolvedValueOnce('https://icon/b.png');
+
+        const result = await resolveAllProjectsIcons(svc as any, [
+            { id: 'A', version: '1.0' },
+            { id: 'B', version: '2.0' },
+        ]);
+
+        expect(result).toEqual({
+            'B@2.0': 'https://icon/b.png',
+        });
+    });
+
+    it('returns empty map for empty input', async () => {
+        const svc = createMockNuGetService();
+        const result = await resolveAllProjectsIcons(svc as any, []);
+        expect(result).toEqual({});
     });
 });

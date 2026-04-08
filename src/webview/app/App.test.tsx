@@ -56,6 +56,7 @@ vi.mock('./markdownSetup', () => ({
     renderMarkdownToHtml: (md: string) => md
 }));
 vi.mock('./types', () => ({
+    ALL_PROJECTS_SENTINEL: '__all_projects__',
     LRUMap: class {
         _m = new Map();
         get(k: string) { return this._m.get(k); }
@@ -127,6 +128,22 @@ describe('App', () => {
             o => o.textContent === 'App.csproj' || o.textContent === 'Lib.csproj'
         );
         expect(projectOptions.length).toBe(2);
+    });
+
+    it('restores all-projects mode when selectProjectPath is ALL_PROJECTS_SENTINEL', () => {
+        render(<App />);
+        sendMessage({
+            type: 'projects',
+            projects: [
+                { name: 'App.csproj', path: '/App.csproj' },
+                { name: 'Lib.csproj', path: '/Lib.csproj' }
+            ],
+            selectProjectPath: '__all_projects__'
+        });
+        // The "All Projects" option should be selected in the project dropdown
+        const options = screen.getAllByRole('option') as HTMLOptionElement[];
+        const selected = options.find(o => o.selected);
+        expect(selected?.value).toBe('__all_projects__');
     });
 
     it('handles sources message and populates source selector', () => {
@@ -466,6 +483,34 @@ describe('App', () => {
         expect(screen.getByText('Manage NuGet packages')).toBeDefined();
     });
 
+    it('handles allProjectsIcons and enriches existing state', () => {
+        render(<App />);
+        // First load all-projects data
+        sendMessage({
+            type: 'allProjectsUpdates',
+            projectUpdates: [{
+                projectPath: '/projA.csproj',
+                projectName: 'ProjA',
+                updates: [{ id: 'Pkg', installedVersion: '1.0', latestVersion: '2.0' }]
+            }]
+        });
+        sendMessage({
+            type: 'allProjectsInstalled',
+            projectInstalled: [{
+                projectPath: '/projA.csproj',
+                projectName: 'ProjA',
+                packages: [{ id: 'Lib', version: '3.0', resolvedVersion: '3.0.0' }]
+            }]
+        });
+        // Then enrich with icons
+        sendMessage({
+            type: 'allProjectsIcons',
+            iconMap: { 'Pkg@1.0': 'https://icon/pkg.png', 'Lib@3.0.0': 'https://icon/lib.png' }
+        });
+        // No crash, state merged
+        expect(screen.getByText('Manage NuGet packages')).toBeDefined();
+    });
+
     it('handles selectProject and stays on installed tab', () => {
         render(<App />);
         sendMessage({
@@ -504,6 +549,42 @@ describe('App', () => {
         vi.useRealTimers();
     });
 
+    it('handles refresh message in all-projects mode', async () => {
+        vi.useFakeTimers();
+        render(<App />);
+        // Set up multiple projects so "All Projects" option is available
+        sendMessage({
+            type: 'projects',
+            projects: [
+                { name: 'A.csproj', path: '/A.csproj' },
+                { name: 'B.csproj', path: '/B.csproj' }
+            ]
+        });
+        // Select "All Projects" via projectChanged message (like sidebar sync)
+        await act(async () => {
+            sendMessage({ type: 'projectChanged', projectPath: '__all_projects__' });
+        });
+        mockVsCode.postMessage.mockClear();
+
+        sendMessage({ type: 'refresh' });
+        act(() => { vi.advanceTimersByTime(350); });
+
+        expect(mockVsCode.postMessage).toHaveBeenCalledWith(
+            expect.objectContaining({ type: 'getProjects' })
+        );
+        expect(mockVsCode.postMessage).toHaveBeenCalledWith(
+            expect.objectContaining({ type: 'checkAllProjectsUpdates' })
+        );
+        expect(mockVsCode.postMessage).toHaveBeenCalledWith(
+            expect.objectContaining({ type: 'checkAllProjectsInstalled' })
+        );
+        // Should NOT send getInstalledPackages with sentinel path
+        expect(mockVsCode.postMessage).not.toHaveBeenCalledWith(
+            expect.objectContaining({ type: 'getInstalledPackages', projectPath: '__all_projects__' })
+        );
+        vi.useRealTimers();
+    });
+
     it('handles packageReadme message', () => {
         render(<App />);
         sendMessage({
@@ -536,6 +617,33 @@ describe('App', () => {
         expect(mockVsCode.postMessage).toHaveBeenCalledWith(
             expect.objectContaining({ type: 'searchPackages', query: 'Newtonsoft.Json' })
         );
+    });
+
+    it('navigateToPackage does not trigger autocomplete/quick search', async () => {
+        vi.useFakeTimers();
+        render(<App />);
+        sendMessage({
+            type: 'projects',
+            projects: [{ name: 'App.csproj', path: '/App.csproj' }]
+        });
+        sendMessage({
+            type: 'sources',
+            sources: [{ name: 'nuget.org', url: 'https://api.nuget.org/v3/index.json', enabled: true }]
+        });
+        mockVsCode.postMessage.mockClear();
+        sendMessage({
+            type: 'navigateToPackage',
+            packageId: 'Newtonsoft.Json',
+            version: '13.0.3'
+        });
+        // Advance past the quick search debounce (150ms)
+        await act(async () => { vi.advanceTimersByTime(300); });
+        // Should NOT have sent autocompletePackages
+        const autocompleteCalls = mockVsCode.postMessage.mock.calls.filter(
+            (c: any[]) => c[0]?.type === 'autocompletePackages'
+        );
+        expect(autocompleteCalls).toHaveLength(0);
+        vi.useRealTimers();
     });
 
     // ──────────────────────────────────────────────

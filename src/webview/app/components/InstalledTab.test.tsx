@@ -1,4 +1,5 @@
-import { act, render, screen } from '@testing-library/react';
+import { useVirtualizer } from '@tanstack/react-virtual';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { InstalledTabHandle, InstalledTabProps } from './InstalledTab';
@@ -60,11 +61,11 @@ function createProps(overrides: Partial<InstalledTabProps> = {}): InstalledTabPr
         vscode: mockVscode,
         installedTabRef: { current: null },
         MemoizedDraggableSash: React.memo((_props: any) => <div data-testid="sash" />) as any,
-        loadAllProjectsInstalled: false,
+        isAllProjects: false,
         allProjectsInstalled: [],
         loadingAllProjectsInstalled: false,
-        onLoadAllInstalledChange: vi.fn(),
-        projects: [{ path: '/proj.csproj', name: 'proj.csproj' }],
+        activeProjectPath: '',
+        onActiveProjectPathChange: vi.fn(),
         ...overrides,
     };
 }
@@ -219,7 +220,7 @@ describe('InstalledTab', () => {
     it('handles bulkRemoveAllProjectsResult message', () => {
         const ref = React.createRef<InstalledTabHandle>();
         render(<InstalledTabComponent {...createProps({
-            loadAllProjectsInstalled: true,
+            isAllProjects: true,
             allProjectsInstalled: [
                 { projectPath: '/a.csproj', projectName: 'a', packages: installedPkgs as any },
             ],
@@ -284,7 +285,7 @@ describe('InstalledTab', () => {
     it('shows all-projects loading state', () => {
         render(<InstalledTabComponent {...createProps({
             installedPackages: installedPkgs as any,
-            loadAllProjectsInstalled: true,
+            isAllProjects: true,
             loadingAllProjectsInstalled: true,
         })} />);
         expect(screen.getByText('Loading installed packages for all projects...')).toBeInTheDocument();
@@ -293,7 +294,7 @@ describe('InstalledTab', () => {
     it('shows all-projects empty state', () => {
         render(<InstalledTabComponent {...createProps({
             installedPackages: installedPkgs as any,
-            loadAllProjectsInstalled: true,
+            isAllProjects: true,
             loadingAllProjectsInstalled: false,
             allProjectsInstalled: [],
         })} />);
@@ -307,17 +308,28 @@ describe('InstalledTab', () => {
         ];
         render(<InstalledTabComponent {...createProps({
             installedPackages: installedPkgs as any,
-            loadAllProjectsInstalled: true,
+            isAllProjects: true,
             allProjectsInstalled: allProjects as any,
-            projects: [
-                { path: '/a.csproj', name: 'a.csproj' },
-                { path: '/b.csproj', name: 'b.csproj' },
-            ],
         })} />);
         // Virtualizer mock returns empty getVirtualItems, so headers are not rendered.
         // Verify the all-projects toolbars render (Collapse/Expand all buttons)
         expect(screen.getByTitle('Collapse all')).toBeInTheDocument();
         expect(screen.getByTitle('Expand all')).toBeInTheDocument();
+    });
+
+    it('renders all-projects content when installedPackages is empty', () => {
+        const allProjects = [
+            { projectPath: '/a.csproj', projectName: 'a.csproj', packages: [{ id: 'PkgA', version: '1.0' }] },
+        ];
+        render(<InstalledTabComponent {...createProps({
+            installedPackages: [],
+            isAllProjects: true,
+            allProjectsInstalled: allProjects as any,
+        })} />);
+        // Should NOT show "No packages installed" (single-project empty state)
+        expect(screen.queryByText('No packages installed')).not.toBeInTheDocument();
+        // Should show all-projects toolbar
+        expect(screen.getByTitle('Collapse all')).toBeInTheDocument();
     });
 
     it('discards transitivePackages for wrong project', () => {
@@ -385,11 +397,10 @@ describe('InstalledTab', () => {
     it('shows "No packages match" for all-projects mode with externalFilter', () => {
         render(<InstalledTabComponent {...createProps({
             installedPackages: installedPkgs as any,
-            loadAllProjectsInstalled: true,
+            isAllProjects: true,
             allProjectsInstalled: [
                 { projectPath: '/a.csproj', projectName: 'a.csproj', packages: [{ id: 'PkgA', version: '1.0' }] },
             ] as any,
-            projects: [{ path: '/a.csproj', name: 'a.csproj' }],
             externalFilter: 'zzz_no_match',
         })} />);
         expect(screen.getByText(/No packages match/)).toBeInTheDocument();
@@ -424,5 +435,36 @@ describe('InstalledTab', () => {
         // Since installedPackages is non-empty, it enters the list branch
         // (not the "No packages installed" empty state), but the virtualizer renders no items
         expect(screen.queryByText('No packages installed')).not.toBeInTheDocument();
+    });
+
+    it('clicking a package in all-projects mode calls onSelectDirectPackage', async () => {
+        const onSelectDirectPackage = vi.fn();
+        const allProjects = [
+            { projectPath: '/a.csproj', projectName: 'a.csproj', packages: [{ id: 'PkgA', version: '1.0.0', resolvedVersion: '1.0.0' }] },
+        ];
+        // Override virtualizer to return header (index 0) and package (index 1)
+        vi.mocked(useVirtualizer).mockReturnValue({
+            getTotalSize: () => 500,
+            getVirtualItems: () => [
+                { index: 0, key: 0, start: 0, size: 30, end: 30, lane: 0 },
+                { index: 1, key: 1, start: 30, size: 40, end: 70, lane: 0 },
+            ],
+            measureElement: vi.fn(),
+            scrollToIndex: vi.fn(),
+        } as any);
+        await act(async () => {
+            render(<InstalledTabComponent {...createProps({
+                installedPackages: [],
+                isAllProjects: true,
+                allProjectsInstalled: allProjects as any,
+                onSelectDirectPackage,
+            })} />);
+        });
+        const pkgItem = screen.getByText('PkgA').closest('.package-item')!;
+        fireEvent.click(pkgItem);
+        expect(onSelectDirectPackage).toHaveBeenCalledWith(
+            expect.objectContaining({ id: 'PkgA' }),
+            expect.objectContaining({ metadataVersion: '1.0.0' }),
+        );
     });
 });

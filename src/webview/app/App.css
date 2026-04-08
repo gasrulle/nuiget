@@ -535,17 +535,6 @@ body {
     margin-left: 12px;
 }
 
-/* Minimal package item (no icon, for multi-project mode) */
-.package-item-minimal {
-    padding-left: 32px;
-    box-sizing: border-box;
-    min-height: 66px;
-}
-
-.package-item-minimal .package-info {
-    margin-left: 0;
-}
-
 .package-authors {
     font-size: 11px;
     color: var(--vscode-descriptionForeground);

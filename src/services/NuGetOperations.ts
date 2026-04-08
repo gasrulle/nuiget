@@ -1,7 +1,7 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
 import type { NuGetService } from './NuGetService';
-import { topologicalSortByDependency } from './NuGetUtils';
+import { batchedPromiseAll, topologicalSortByDependency } from './NuGetUtils';
 
 // --- Shared types ---
 
@@ -520,13 +520,13 @@ export async function executeBulkRemoveAllProjects(
 export interface ProjectUpdatesResult {
     projectPath: string;
     projectName: string;
-    updates: { id: string; installedVersion: string; latestVersion: string }[];
+    updates: { id: string; installedVersion: string; latestVersion: string; iconUrl?: string }[];
 }
 
 export interface ProjectInstalledResult {
     projectPath: string;
     projectName: string;
-    packages: { id: string; version: string; resolvedVersion?: string; isImplicit?: boolean }[];
+    packages: { id: string; version: string; resolvedVersion?: string; isImplicit?: boolean; iconUrl?: string }[];
 }
 
 /**
@@ -590,4 +590,39 @@ export async function queryAllProjectsInstalled(
     }
 
     return results;
+}
+
+/**
+ * Resolve icon URLs for unique packages across all projects.
+ * Returns a map of `packageId@version` → `iconUrl`.
+ * Uses deduplication to avoid redundant fetches for packages shared across projects.
+ */
+export async function resolveAllProjectsIcons(
+    nugetService: NuGetService,
+    packages: Array<{ id: string; version: string }>
+): Promise<Record<string, string>> {
+    // Deduplicate by packageId@version
+    const uniqueKeys = new Map<string, { id: string; version: string }>();
+    for (const pkg of packages) {
+        const key = `${pkg.id}@${pkg.version}`;
+        if (!uniqueKeys.has(key)) {
+            uniqueKeys.set(key, pkg);
+        }
+    }
+
+    const uniquePackages = [...uniqueKeys.values()];
+    const iconMap: Record<string, string> = {};
+
+    await batchedPromiseAll(uniquePackages, async (pkg) => {
+        try {
+            const iconUrl = await nugetService.getPackageIconUrl(pkg.id, pkg.version);
+            if (iconUrl) {
+                iconMap[`${pkg.id}@${pkg.version}`] = iconUrl;
+            }
+        } catch {
+            // Icon resolution is non-critical — skip failures silently
+        }
+    }, 10);
+
+    return iconMap;
 }

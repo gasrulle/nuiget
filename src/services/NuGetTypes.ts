@@ -3,6 +3,9 @@
  * Extracted from NuGetService.ts for modularity and reuse.
  */
 
+/** Sentinel value representing "All Projects" in the project selector. */
+export const ALL_PROJECTS_SENTINEL = '__all_projects__';
+
 /**
  * Version specification types for NuGet packages
  */
@@ -312,6 +315,19 @@ export interface InstallPackageMsg {
     sourceUrl?: string;
 }
 
+export interface PickProjectForInstallMsg {
+    type: 'pickProjectForInstall';
+    packageId: string;
+    version?: string;
+}
+
+export interface PickProjectForRemoveMsg {
+    type: 'pickProjectForRemove';
+    packageId: string;
+    /** Project paths where the package is installed (pre-filtered by webview) */
+    projectPaths: string[];
+}
+
 export interface UpdatePackageMsg {
     type: 'updatePackage';
     projectPath: string;
@@ -498,6 +514,8 @@ export interface ShowContextMenuMsg {
     projectPath: string;
     versionType?: string;
     sourceUrl?: string;
+    /** Projects where this package is installed (for all-projects browse context menu) */
+    installedProjects?: Array<{ projectPath: string; projectName: string; version: string }>;
 }
 
 // ─── Union Types ─────────────────────────────────────────────────────────────
@@ -523,7 +541,8 @@ export type SidebarRequestMessage =
     | CheckAllProjectsUpdatesMsg | CheckAllProjectsInstalledMsg
     | InstallPackageMsg | UpdatePackageMsg | RemovePackageMsg
     | BulkUpdatePackagesMsg | BulkUpdateAllProjectsMsg
-    | GetPackageVersionsMsg | ShowContextMenuMsg;
+    | GetPackageVersionsMsg | ShowContextMenuMsg
+    | PickProjectForInstallMsg | PickProjectForRemoveMsg;
 
 // ─── Service Infrastructure Types ────────────────────────────────────────────
 

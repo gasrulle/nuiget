@@ -13,7 +13,7 @@ import { usePackageSelection } from './hooks/usePackageSelection';
 import { ClearAllIcon, CloudDownloadIcon, FilterIcon, LoadingIcon, SettingsGearIcon, SyncIcon, VerifiedIcon, WarningIcon } from './icons';
 import { renderMarkdownToHtml } from './markdownSetup';
 import type { AppState, FailedSource, InstalledPackage, NuGetSource, PackageMetadata, PackageSearchResult, PackageUpdate, Project, ProjectInstalled, ProjectUpdates, QuickSearchSourceResult, TabType, TransitivePackage, VulnerabilitySeverity } from './types';
-import { LRUMap, getPackageId } from './types';
+import { ALL_PROJECTS_SENTINEL, LRUMap, getPackageId } from './types';
 import { FILTER_PREFIXES, parseSearchQuery } from './utils/parseSearchQuery';
 
 // Get the default package icon URL from the root element data attribute
@@ -63,14 +63,16 @@ export const App: React.FC = () => {
     const [packagesWithUpdates, setPackagesWithUpdates] = useState<PackageUpdate[]>([]);
     const [updateCount, setUpdateCount] = useState<number>(0);
     const [loadingUpdates, setLoadingUpdates] = useState(false);
-    // "Load All Projects" mode for Updates tab
-    const [loadAllProjects, setLoadAllProjects] = useState(false);
+    // "All Projects" mode data (driven by selectedProject === ALL_PROJECTS_SENTINEL)
     const [allProjectsUpdates, setAllProjectsUpdates] = useState<ProjectUpdates[]>([]);
     const [loadingAllProjectsUpdates, setLoadingAllProjectsUpdates] = useState(false);
-    // "Load All Projects" mode for Installed tab
-    const [loadAllProjectsInstalled, setLoadAllProjectsInstalled] = useState(false);
     const [allProjectsInstalled, setAllProjectsInstalled] = useState<ProjectInstalled[]>([]);
     const [loadingAllProjectsInstalled, setLoadingAllProjectsInstalled] = useState(false);
+    // Derived: is "All Projects" currently selected?
+    const isAllProjects = selectedProject === ALL_PROJECTS_SENTINEL;
+    // When a package is selected from an all-projects list, this holds the specific project path
+    const [activeProjectPath, setActiveProjectPath] = useState<string>('');
+    const activeProjectPathRef = useRef('');
     // Dedicated per-project installed data for Multi Install dropdown (not cleared on tab switch)
     const [multiInstallProjectData, setMultiInstallProjectData] = useState<ProjectInstalled[]>([]);
     const [loadingReadme, setLoadingReadme] = useState(false);
@@ -132,6 +134,11 @@ export const App: React.FC = () => {
     useEffect(() => {
         selectedProjectRef.current = selectedProject;
     }, [selectedProject]);
+
+    // Sync activeProjectPath ref
+    useEffect(() => {
+        activeProjectPathRef.current = activeProjectPath;
+    }, [activeProjectPath]);
 
     // Use ref to track latest selectedPackage for message handler
     const selectedPackageRef = useRef(selectedPackage);
@@ -273,20 +280,41 @@ export const App: React.FC = () => {
                 setProjects(message.projects);
                 // If a specific project was requested (from context menu), select it
                 if (message.selectProjectPath) {
-                    const matchingProject = message.projects.find(
-                        (p: Project) => p.path === message.selectProjectPath
-                    );
-                    if (matchingProject) {
-                        setSelectedProject(matchingProject.path);
-                    } else if (message.projects.length > 0 && !selectedProjectRef.current) {
-                        // Select first from sorted list
-                        const sorted = getSortedProjects(message.projects);
-                        setSelectedProject(sorted[0].path);
+                    if (message.selectProjectPath === ALL_PROJECTS_SENTINEL && message.projects.length > 1) {
+                        // Restore all-projects mode from persisted state
+                        setSelectedProject(ALL_PROJECTS_SENTINEL);
+                    } else {
+                        const matchingProject = message.projects.find(
+                            (p: Project) => p.path === message.selectProjectPath
+                        );
+                        if (matchingProject) {
+                            setSelectedProject(matchingProject.path);
+                        } else if (message.projects.length > 0 && !selectedProjectRef.current) {
+                            // Select first from sorted list
+                            const sorted = getSortedProjects(message.projects);
+                            setSelectedProject(sorted[0].path);
+                        }
                     }
+                } else if (selectedProjectRef.current === ALL_PROJECTS_SENTINEL) {
+                    // Auto-downgrade: sentinel saved but only 1 project → select it
+                    if (message.projects.length <= 1) {
+                        const sorted = getSortedProjects(message.projects);
+                        if (sorted.length > 0) {
+                            setSelectedProject(sorted[0].path);
+                        }
+                    }
+                    // else: sentinel is valid (>1 project), keep it
                 } else if (message.projects.length > 0 && !selectedProjectRef.current) {
                     // Select first from sorted list
                     const sorted = getSortedProjects(message.projects);
                     setSelectedProject(sorted[0].path);
+                } else if (message.projects.length > 0 && selectedProjectRef.current) {
+                    // Verify saved project still exists, fallback to first
+                    const exists = message.projects.some((p: Project) => p.path === selectedProjectRef.current);
+                    if (!exists) {
+                        const sorted = getSortedProjects(message.projects);
+                        setSelectedProject(sorted[0].path);
+                    }
                 }
                 break;
             case 'selectProject':
@@ -501,7 +529,16 @@ export const App: React.FC = () => {
                 if (refreshDebounceRef.current) { clearTimeout(refreshDebounceRef.current); }
                 refreshDebounceRef.current = setTimeout(() => {
                     vscode.postMessage({ type: 'getProjects' });
-                    if (selectedProjectRef.current) {
+                    if (selectedProjectRef.current === ALL_PROJECTS_SENTINEL) {
+                        // All-projects mode: re-fetch all-projects data (not getInstalledPackages with sentinel)
+                        setLoadingAllProjectsUpdates(true);
+                        vscode.postMessage({
+                            type: 'checkAllProjectsUpdates',
+                            includePrerelease: includePrereleaseRef.current
+                        });
+                        setLoadingAllProjectsInstalled(true);
+                        vscode.postMessage({ type: 'checkAllProjectsInstalled' });
+                    } else if (selectedProjectRef.current) {
                         vscode.postMessage({ type: 'getInstalledPackages', projectPath: selectedProjectRef.current });
                     }
                 }, 300);
@@ -645,6 +682,26 @@ export const App: React.FC = () => {
                     }
                 }
                 break;
+            case 'allProjectsIcons':
+                // Progressive icon enrichment — merge icon URLs into existing all-projects state
+                {
+                    const iconMap = message.iconMap as Record<string, string>;
+                    setAllProjectsUpdates(prev => prev.map(pu => ({
+                        ...pu,
+                        updates: pu.updates.map(u => {
+                            const url = iconMap[`${u.id}@${u.installedVersion}`];
+                            return url ? { ...u, iconUrl: url } : u;
+                        }),
+                    })));
+                    setAllProjectsInstalled(prev => prev.map(pi => ({
+                        ...pi,
+                        packages: pi.packages.map(p => {
+                            const url = iconMap[`${p.id}@${p.resolvedVersion || p.version}`];
+                            return url ? { ...p, iconUrl: url } : p;
+                        }),
+                    })));
+                }
+                break;
             case 'bulkRemoveAllProjectsConfirmed':
                 // Forward to InstalledTab for state
                 installedTabCompRef.current?.handleMessage(message);
@@ -776,6 +833,7 @@ export const App: React.FC = () => {
                 // Triggered from sidebar "View Package Details" — fill search bar and search
                 if (message.packageId) {
                     pendingNavigationRef.current = { packageId: message.packageId, version: message.version };
+                    skipQuickSearchRef.current = true;
                     setSearchQuery(message.packageId);
                     setSearchLoading(true);
                     setShowQuickSearch(false);
@@ -816,7 +874,41 @@ export const App: React.FC = () => {
     }, [handleMessage]);
 
     useEffect(() => {
-        if (selectedProject) {
+        // Clear active project path on any project switch
+        setActiveProjectPath('');
+
+        if (selectedProject === ALL_PROJECTS_SENTINEL) {
+            // "All Projects" selected — clear single-project data and fetch all-projects data
+            setInstalledPackages([]);
+            setPackagesWithUpdates([]);
+            setUpdateCount(0);
+            setSelectedPackage(null);
+            setSelectedTransitivePackage(null);
+            hasVisitedInstalledTabRef.current = false;
+            installedTabCompRef.current?.resetTransitiveState(false);
+            skipNextUpdateCheckRef.current = false;
+            // Reset single-project loading flags — prevents stuck spinners when
+            // stale responses are discarded by projectPath guards after rapid switching
+            setLoadingInstalled(false);
+            setLoadingUpdates(false);
+            // Trigger all-projects fetches
+            setLoadingAllProjectsUpdates(true);
+            setAllProjectsUpdates([]);
+            vscode.postMessage({
+                type: 'checkAllProjectsUpdates',
+                includePrerelease: includePrereleaseRef.current
+            });
+            setLoadingAllProjectsInstalled(true);
+            setAllProjectsInstalled([]);
+            vscode.postMessage({ type: 'checkAllProjectsInstalled' });
+        } else if (selectedProject) {
+            // Single project selected — clear all-projects data and fetch single-project data
+            setAllProjectsUpdates([]);
+            setAllProjectsInstalled([]);
+            setLoadingAllProjectsUpdates(false);
+            setLoadingAllProjectsInstalled(false);
+            // Reset stale single-project updates loading from a previous project
+            setLoadingUpdates(false);
             setLoadingInstalled(true);
             setInstalledPackages([]);
             vscode.postMessage({ type: 'getInstalledPackages', projectPath: selectedProject });
@@ -834,7 +926,7 @@ export const App: React.FC = () => {
 
     // Refresh installed packages when switching to installed tab (skip first visit to use prefetched data)
     useEffect(() => {
-        if (activeTab === 'installed' && selectedProject) {
+        if (activeTab === 'installed' && selectedProject && selectedProject !== ALL_PROJECTS_SENTINEL) {
             if (hasVisitedInstalledTabRef.current) {
                 // Subsequent visit - refetch to pick up changes
                 setLoadingInstalled(true);
@@ -907,6 +999,8 @@ export const App: React.FC = () => {
     // Check for package updates when project, packages, or prerelease setting changes (for badge count)
     // Wait for settings to be loaded to ensure includePrerelease has the persisted value
     useEffect(() => {
+        // Skip when "All Projects" is selected — all-projects fetch handles updates
+        if (selectedProject === ALL_PROJECTS_SENTINEL) { return; }
         // Skip update check when we already know the outcome (optimistic update just happened)
         if (skipNextUpdateCheckRef.current) {
             skipNextUpdateCheckRef.current = false;
@@ -940,69 +1034,6 @@ export const App: React.FC = () => {
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps -- Intentional: reads activeTab/selectedPackage/selectedVersion without re-triggering on their changes
     }, [packagesWithUpdates]);
-
-    // Reset "Load All Projects" mode when switching away from Updates tab
-    useEffect(() => {
-        if (activeTab !== 'updates' && loadAllProjects) {
-            setLoadAllProjects(false);
-            setAllProjectsUpdates([]);
-            setLoadingAllProjectsUpdates(false);
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps -- Intentional: loadAllProjects is a guard condition, not a trigger
-    }, [activeTab]);
-
-    // Reset "Load All Projects" mode for Installed tab when switching away
-    useEffect(() => {
-        if (activeTab !== 'installed' && loadAllProjectsInstalled) {
-            setLoadAllProjectsInstalled(false);
-            setAllProjectsInstalled([]);
-            setLoadingAllProjectsInstalled(false);
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps -- Intentional: loadAllProjectsInstalled is a guard condition, not a trigger
-    }, [activeTab]);
-
-    // Callback to handle Load All checkbox change
-    const handleLoadAllChange = useCallback((checked: boolean) => {
-        setLoadAllProjects(checked);
-        if (checked) {
-            // Start loading all projects
-            setLoadingAllProjectsUpdates(true);
-            setAllProjectsUpdates([]);
-            vscode.postMessage({
-                type: 'checkAllProjectsUpdates',
-                includePrerelease: includePrerelease
-            });
-        } else {
-            // Switch back to single project mode
-            setAllProjectsUpdates([]);
-            setLoadingAllProjectsUpdates(false);
-            // Re-fetch single project updates
-            if (selectedProject && installedPackages.length > 0) {
-                setLoadingUpdates(true);
-                vscode.postMessage({
-                    type: 'checkPackageUpdates',
-                    projectPath: selectedProject,
-                    installedPackages: installedPackages,
-                    includePrerelease: includePrerelease
-                });
-            }
-        }
-    }, [includePrerelease, selectedProject, installedPackages]);
-
-    // Callback to handle Load All Installed checkbox change
-    const handleLoadAllInstalledChange = useCallback((checked: boolean) => {
-        setLoadAllProjectsInstalled(checked);
-        if (checked) {
-            // Start loading all projects installed packages
-            setLoadingAllProjectsInstalled(true);
-            setAllProjectsInstalled([]);
-            vscode.postMessage({ type: 'checkAllProjectsInstalled' });
-        } else {
-            // Switch back to single project mode
-            setAllProjectsInstalled([]);
-            setLoadingAllProjectsInstalled(false);
-        }
-    }, []);
 
     // Reset readme attempted state when a new package is selected
     useEffect(() => {
@@ -1509,16 +1540,17 @@ export const App: React.FC = () => {
     }, []);
 
     const handleInstall = useCallback((packageId: string, version: string) => {
-        if (!selectedProject) {
+        const projectPath = activeProjectPathRef.current || selectedProjectRef.current;
+        if (!projectPath || projectPath === ALL_PROJECTS_SENTINEL) {
             return;
         }
         vscode.postMessage({
             type: 'installPackage',
-            projectPath: selectedProject,
+            projectPath,
             packageId,
             version
         });
-    }, [selectedProject]);
+    }, []);
 
     const handleMultiInstall = useCallback((packageId: string, version: string, projectPaths: string[]) => {
         if (projectPaths.length === 0) { return; }
@@ -1536,15 +1568,16 @@ export const App: React.FC = () => {
     }, []);
 
     const handleRemove = useCallback((packageId: string) => {
-        if (!selectedProject) {
+        const projectPath = activeProjectPathRef.current || selectedProjectRef.current;
+        if (!projectPath || projectPath === ALL_PROJECTS_SENTINEL) {
             return;
         }
         vscode.postMessage({
             type: 'removePackage',
-            projectPath: selectedProject,
+            projectPath,
             packageId
         });
-    }, [selectedProject]);
+    }, []);
 
     // Full refresh: clear all caches and re-fetch everything (header refresh button)
     const handleFullRefresh = useCallback(() => {
@@ -1720,9 +1753,12 @@ export const App: React.FC = () => {
                             value={selectedProject}
                             onChange={(e) => setSelectedProject((e.target as HTMLSelectElement).value)}
                             className="project-selector"
-                            disabled={activeTab === 'updates' && loadAllProjects}
-                            title={activeTab === 'updates' && loadAllProjects ? 'Disabled while "Load all projects" is checked' : undefined}
                         >
+                            {sortedProjects.length > 1 && (
+                                <option key={ALL_PROJECTS_SENTINEL} value={ALL_PROJECTS_SENTINEL}>
+                                    All Projects ({sortedProjects.length})
+                                </option>
+                            )}
                             {sortedProjects.map(p => (
                                 <option key={p.path} value={p.path}>{p.name}</option>
                             ))}
@@ -2430,11 +2466,11 @@ export const App: React.FC = () => {
                     vscode={vscode}
                     installedTabRef={installedTabRef}
                     MemoizedDraggableSash={MemoizedDraggableSash}
-                    loadAllProjectsInstalled={loadAllProjectsInstalled}
+                    isAllProjects={isAllProjects}
                     allProjectsInstalled={allProjectsInstalled}
                     loadingAllProjectsInstalled={loadingAllProjectsInstalled}
-                    onLoadAllInstalledChange={handleLoadAllInstalledChange}
-                    projects={projects}
+                    activeProjectPath={activeProjectPath}
+                    onActiveProjectPathChange={setActiveProjectPath}
                 />
             )}
 
@@ -2460,11 +2496,11 @@ export const App: React.FC = () => {
                     sanitizedReadmeHtml={sanitizedReadmeHtml}
                     expandedDeps={expandedDeps}
                     externalFilter={filterText}
-                    loadAllProjects={loadAllProjects}
+                    isAllProjects={isAllProjects}
                     allProjectsUpdates={allProjectsUpdates}
                     loadingAllProjectsUpdates={loadingAllProjectsUpdates}
-                    onLoadAllChange={handleLoadAllChange}
-                    projects={projects}
+                    activeProjectPath={activeProjectPath}
+                    onActiveProjectPathChange={setActiveProjectPath}
                     onSelectPackage={selectDirectPackage}
                     clearSelection={clearSelection}
                     onInstall={handleInstall}

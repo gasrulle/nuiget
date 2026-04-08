@@ -1913,7 +1913,7 @@ export class NuGetPackageService {
     /**
      * Helper to get package icon URL (uses resolveIconUrl with source-aware fallback)
      */
-    private async getPackageIconUrl(
+    async getPackageIconUrl(
         packageId: string,
         version: string,
         enabledSources?: Array<{ url: string }>

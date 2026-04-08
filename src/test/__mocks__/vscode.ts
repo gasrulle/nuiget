@@ -126,6 +126,11 @@ export const ViewColumn = {
     Three: 3,
 } as const;
 
+export const QuickPickItemKind = {
+    Separator: -1,
+    Default: 0,
+} as const;
+
 // ---------- RelativePattern ----------
 
 export class RelativePattern {
@@ -165,6 +170,32 @@ export const window = {
         return task(progress, token);
     }),
     showQuickPick: vi.fn(),
+    createQuickPick: vi.fn(() => {
+        let onAcceptCb: (() => void) | undefined;
+        let onHideCb: (() => void) | undefined;
+        const qp: any = {
+            items: [] as any[],
+            activeItems: [] as any[],
+            selectedItems: [] as any[],
+            placeholder: '',
+            title: '',
+            onDidAccept: vi.fn((cb: () => void) => { onAcceptCb = cb; return new Disposable(() => { }); }),
+            onDidHide: vi.fn((cb: () => void) => { onHideCb = cb; return new Disposable(() => { }); }),
+            show: vi.fn(() => {
+                // Auto-resolve: if _autoSelect is set, simulate accept; otherwise simulate hide (dismiss)
+                if (qp._autoSelect) {
+                    qp.selectedItems = [qp._autoSelect];
+                    onAcceptCb?.();
+                } else {
+                    onHideCb?.();
+                }
+            }),
+            dispose: vi.fn(),
+            hide: vi.fn(),
+            _autoSelect: undefined as any,
+        };
+        return qp;
+    }),
     showInformationMessage: vi.fn().mockResolvedValue(undefined),
     showWarningMessage: vi.fn().mockResolvedValue(undefined),
     showErrorMessage: vi.fn().mockResolvedValue(undefined),

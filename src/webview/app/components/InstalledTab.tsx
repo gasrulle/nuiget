@@ -20,13 +20,12 @@
 
 import { useVirtualizer } from '@tanstack/react-virtual';
 import React, { forwardRef, useCallback, useDeferredValue, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
-import { AllProjectsIcon, CheckAllIcon, ChevronDownIcon, ChevronRightIcon, CollapseAllIcon, ExpandAllIcon, RulerIcon, SingleProjectIcon, SyncIcon, VerifiedIcon, WarningIcon } from '../icons';
+import { CheckAllIcon, ChevronDownIcon, ChevronRightIcon, CollapseAllIcon, ExpandAllIcon, RulerIcon, SyncIcon, VerifiedIcon, WarningIcon } from '../icons';
 import type {
     InstalledPackage,
     LRUMap,
     PackageMetadata,
     PackageSearchResult,
-    Project,
     ProjectInstalled,
     TransitiveFrameworkSection,
     TransitivePackage,
@@ -124,11 +123,13 @@ export interface InstalledTabProps {
     }>>;
 
     // All-projects mode
-    loadAllProjectsInstalled: boolean;
+    isAllProjects: boolean;
     allProjectsInstalled: ProjectInstalled[];
     loadingAllProjectsInstalled: boolean;
-    onLoadAllInstalledChange: (checked: boolean) => void;
-    projects: Project[];
+
+    // Active project path (set when clicking a package in all-projects mode)
+    activeProjectPath: string;
+    onActiveProjectPathChange: (path: string) => void;
 }
 
 // ─── Handle ──────────────────────────────────────────────────────────────────
@@ -189,11 +190,11 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
         vscode,
         installedTabRef,
         MemoizedDraggableSash,
-        loadAllProjectsInstalled,
+        isAllProjects,
         allProjectsInstalled,
         loadingAllProjectsInstalled,
-        onLoadAllInstalledChange,
-        projects,
+        activeProjectPath,
+        onActiveProjectPathChange,
     } = props;
 
     // ─── Internal state ──────────────────────────────────────────────────────
@@ -263,10 +264,10 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
 
     type FlattenedInstalledItem =
         | { type: 'header'; projectPath: string; projectName: string; packageCount: number }
-        | { type: 'package'; projectPath: string; id: string; version: string; resolvedVersion?: string; isImplicit?: boolean };
+        | { type: 'package'; projectPath: string; id: string; version: string; resolvedVersion?: string; isImplicit?: boolean; iconUrl?: string };
 
     const flattenedAllProjectsInstalled = useMemo((): FlattenedInstalledItem[] => {
-        if (!loadAllProjectsInstalled) { return []; }
+        if (!isAllProjects) { return []; }
         // Note: @vulnerable not supported in all-projects mode (InstalledPackageMinimal lacks vulnerability data)
         // so we use externalFilter directly
         const q = externalFilter.toLowerCase();
@@ -294,30 +295,30 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
             }
         }
         return items;
-    }, [loadAllProjectsInstalled, allProjectsInstalled, expandedProjects, externalFilter, selectedProject]);
+    }, [isAllProjects, allProjectsInstalled, expandedProjects, externalFilter, selectedProject]);
 
     const deferredFlattenedInstalled = useDeferredValue(flattenedAllProjectsInstalled);
     const isAllProjectsInstalledStale = flattenedAllProjectsInstalled !== deferredFlattenedInstalled;
 
     // Total uninstallable packages across all projects (non-implicit)
     const allProjectsUninstallableCount = useMemo(() => {
-        if (!loadAllProjectsInstalled) { return 0; }
+        if (!isAllProjects) { return 0; }
         let count = 0;
         for (const project of allProjectsInstalled) {
             count += project.packages.filter(p => !p.isImplicit).length;
         }
         return count;
-    }, [loadAllProjectsInstalled, allProjectsInstalled]);
+    }, [isAllProjects, allProjectsInstalled]);
 
     // Virtualizer for direct packages list (same pattern as BrowseTab)
-    const installedVirtualizerCount = loadAllProjectsInstalled
+    const installedVirtualizerCount = isAllProjects
         ? deferredFlattenedInstalled.length
         : deferredInstalledPackages.length;
     const installedVirtualizer = useVirtualizer({
         count: installedVirtualizerCount,
         getScrollElement: () => installedScrollRef.current,
         estimateSize: (index) => {
-            if (loadAllProjectsInstalled && deferredFlattenedInstalled[index]?.type === 'header') {
+            if (isAllProjects && deferredFlattenedInstalled[index]?.type === 'header') {
                 return HEADER_HEIGHT;
             }
             return ESTIMATED_ITEM_HEIGHT;
@@ -407,7 +408,7 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
     // Reset selections when all-projects mode changes
     useEffect(() => {
         setSelectedUninstallsAllProjects(new Set());
-    }, [allProjectsInstalled, loadAllProjectsInstalled]);
+    }, [allProjectsInstalled, isAllProjects]);
 
     const handleToggleProject = useCallback((projectPath: string) => {
         setExpandedProjects(prev => {
@@ -788,6 +789,8 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
                 selectedProject={selectedProject}
                 includePrerelease={includePrerelease}
                 selectedSource={selectedSource}
+                activeProjectPath={activeProjectPath}
+                allProjectsInstalled={allProjectsInstalled}
                 onInstall={onInstall}
                 onRemove={onRemove}
                 onVersionChange={onVersionChange}
@@ -826,36 +829,27 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
         selectedProject,
         includePrerelease,
         selectedSource,
+        activeProjectPath,
+        allProjectsInstalled,
     ]);
 
     return (
         <div className="content browse-content" style={{ display: activeTab === 'installed' ? '' : 'none' }}>
             <div className="split-panel">
                 <div ref={installedScrollRef} className="package-list-panel" style={{ width: `${splitPosition}%` }}>
-                    {loadingInstalled ? (
+                    {!isAllProjects && loadingInstalled ? (
                         <div className="loading-spinner-container" aria-busy="true" aria-label="Loading installed packages">
                             <div className="loading-spinner"></div>
                             <p>Loading installed packages...</p>
                         </div>
-                    ) : installedPackages.length === 0 ? (
+                    ) : !isAllProjects && installedPackages.length === 0 ? (
                         <p className="empty-state">No packages installed</p>
                     ) : (
                         <div className="direct-packages-section">
                             {/* Unified toolbar — same position for single-project and all-projects modes */}
                             <div className="updates-toolbar">
                                 <div className="toolbar-actions-left">
-                                    {projects.length > 1 && (
-                                        <button
-                                            className={`toolbar-icon-btn${loadAllProjectsInstalled ? ' active' : ''}`}
-                                            onClick={() => onLoadAllInstalledChange(!loadAllProjectsInstalled)}
-                                            disabled={loadingInstalled || uninstallingAll || loadingAllProjectsInstalled}
-                                            title={loadAllProjectsInstalled ? 'Show single project' : 'Load all projects'}
-                                            aria-label={loadAllProjectsInstalled ? 'Show single project' : 'Load all projects'}
-                                        >
-                                            {loadAllProjectsInstalled ? <AllProjectsIcon size={16} /> : <SingleProjectIcon size={16} />}
-                                        </button>
-                                    )}
-                                    {loadAllProjectsInstalled ? (
+                                    {isAllProjects ? (
                                         <>
                                             <button
                                                 className={`toolbar-icon-btn${selectedUninstallsAllProjects.size === allProjectsUninstallableCount && allProjectsUninstallableCount > 0 ? ' active' : ''}`}
@@ -897,7 +891,7 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
                                             <CheckAllIcon size={16} />
                                         </button>
                                     )}
-                                    {!loadAllProjectsInstalled && (
+                                    {!isAllProjects && (
                                         <>
                                             <span className="toolbar-separator" />
                                             <button
@@ -921,7 +915,7 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
                                         </>
                                     )}
                                 </div>
-                                {loadAllProjectsInstalled ? (
+                                {isAllProjects ? (
                                     <button
                                         className="btn btn-danger"
                                         onClick={handleUninstallSelectedAllProjects}
@@ -939,7 +933,7 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
                                     </button>
                                 )}
                             </div>
-                            {loadAllProjectsInstalled ? (
+                            {isAllProjects ? (
                                 <div className="direct-packages-content">
                                     {loadingAllProjectsInstalled ? (
                                         <div className="loading-spinner-container" aria-busy="true" aria-label="Loading all projects installed packages">
@@ -982,15 +976,23 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
                                                         );
                                                     }
 
-                                                    // Package item (minimal — no icons)
+                                                    // Package item
                                                     const compositeKey = `${item.projectPath}::${item.id}`;
                                                     return (
                                                         <div
                                                             key={compositeKey}
                                                             data-index={virtualRow.index}
                                                             ref={installedVirtualizer.measureElement}
-                                                            className="package-item package-item-minimal"
+                                                            className={`package-item${selectedPackage && getPackageId(selectedPackage).toLowerCase() === item.id.toLowerCase() ? ' selected' : ''}`}
                                                             style={{ position: 'absolute', top: 0, left: 0, width: '100%', transform: `translateY(${virtualRow.start}px)` }}
+                                                            onClick={() => {
+                                                                onActiveProjectPathChange(item.projectPath);
+                                                                onSelectDirectPackage(item as any, {
+                                                                    selectedVersionValue: item.version,
+                                                                    metadataVersion: item.resolvedVersion || item.version,
+                                                                    initialVersions: [item.version],
+                                                                });
+                                                            }}
                                                         >
                                                             <input
                                                                 type="checkbox"
@@ -1001,6 +1003,13 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
                                                                 disabled={uninstallingAll || item.isImplicit}
                                                                 title={item.isImplicit ? 'Implicit/transitive package - cannot be uninstalled directly' : undefined}
                                                             />
+                                                            <div className="package-icon">
+                                                                {item.iconUrl ? (
+                                                                    <img src={item.iconUrl} alt="" onError={(e) => { (e.target as HTMLImageElement).src = defaultPackageIcon; }} />
+                                                                ) : (
+                                                                    <img src={defaultPackageIcon} alt="" />
+                                                                )}
+                                                            </div>
                                                             <div className="package-info">
                                                                 <div className="package-name">
                                                                     {item.id}
@@ -1051,6 +1060,7 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
                                                     deferredInstalledPackages,
                                                     () => selectedPackage ? getPackageId(selectedPackage) : null,
                                                     (pkg) => {
+                                                        onActiveProjectPathChange('');
                                                         onSelectDirectPackage(pkg, {
                                                             selectedVersionValue: pkg.version,
                                                             metadataVersion: pkg.resolvedVersion || pkg.version,
@@ -1081,6 +1091,7 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
                                                             className={`package-item ${selectedPackage && getPackageId(selectedPackage).toLowerCase() === pkg.id.toLowerCase() ? 'selected' : ''}`}
                                                             style={{ position: 'absolute', top: 0, left: 0, width: '100%', transform: `translateY(${virtualRow.start}px)` }}
                                                             onClick={() => {
+                                                                onActiveProjectPathChange('');
                                                                 onSelectDirectPackage(pkg, {
                                                                     selectedVersionValue: pkg.version,
                                                                     metadataVersion: pkg.resolvedVersion || pkg.version,
@@ -1172,7 +1183,7 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
                     )}
 
                     {/* Transitive packages sections - one per target framework (hidden in all-projects mode) */}
-                    {!loadAllProjectsInstalled && (
+                    {!isAllProjects && (
                         <div className="transitive-sections">
                             {/* Show loading state or no data source message at top level */}
                             {loadingTransitive ? (

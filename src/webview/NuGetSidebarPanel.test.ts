@@ -264,6 +264,20 @@ describe('NuGetSidebarProvider', () => {
             }));
             expect(view.title).toBe('MyProject');
         });
+
+        it('syncProject handles All Projects sentinel', async () => {
+            (service as any).findProjects.mockResolvedValue([
+                { name: 'A.csproj', path: '/A.csproj' },
+                { name: 'B.csproj', path: '/B.csproj' },
+            ]);
+            await provider.syncProject('__all_projects__');
+            expect(view.webview.postMessage).toHaveBeenCalledWith(expect.objectContaining({
+                type: 'projectChanged',
+                projectPath: '__all_projects__',
+                projectName: 'All Projects (2)',
+            }));
+            expect(view.title).toBe('All Projects (2)');
+        });
     });
 
     // ──────────────────────────────────────────────
@@ -279,6 +293,19 @@ describe('NuGetSidebarProvider', () => {
                 type: 'packageChanged',
                 operation: { type: 'install', packageId: 'Pkg', projectPath: '/proj.csproj' }
             });
+        });
+
+        it('does not notify main panel back (avoids redundant refresh loop)', async () => {
+            view = resolveView(provider);
+            (service as any).findProjects.mockResolvedValue([{ name: 'A.csproj', path: '/A.csproj' }]);
+            (service as any).getInstalledPackages.mockResolvedValue([{ id: 'Pkg', version: '1.0' }]);
+            (service as any).checkPackageUpdatesMinimal.mockResolvedValue([]);
+            (vscode.commands.executeCommand as any).mockClear();
+
+            await provider.notifySidebarOfChange({ type: 'remove', packageId: 'Pkg', projectPath: '/A.csproj' });
+
+            // checkUpdatesInBackground ran (for badge), but should NOT have notified main panel
+            expect(vscode.commands.executeCommand).not.toHaveBeenCalledWith('nuiget.refreshPackages');
         });
     });
 
@@ -406,6 +433,42 @@ describe('NuGetSidebarProvider', () => {
             // findProjects called twice total: first check + queued re-run
             expect((service as any).findProjects).toHaveBeenCalledTimes(2);
         });
+
+        it('clears badge when no projects are found', async () => {
+            view = resolveView(provider);
+            provider.setBadge(3, '3 updates');
+            expect(view.badge).toEqual({ value: 3, tooltip: '3 updates' });
+
+            (service as any).findProjects.mockResolvedValue([]);
+            await provider.checkUpdatesInBackground();
+
+            expect(view.badge).toBeUndefined();
+        });
+
+        it('clears badge when checkUpdatesInBackground throws', async () => {
+            view = resolveView(provider);
+            provider.setBadge(2, '2 updates');
+            expect(view.badge).toEqual({ value: 2, tooltip: '2 updates' });
+
+            (service as any).findProjects.mockRejectedValue(new Error('network error'));
+            await provider.checkUpdatesInBackground();
+
+            expect(view.badge).toBeUndefined();
+        });
+
+        it('notifies main panel after background check so it re-fetches', async () => {
+            view = resolveView(provider);
+            (service as any).findProjects.mockResolvedValue([{ name: 'A.csproj', path: '/A.csproj' }]);
+            (service as any).getInstalledPackages.mockResolvedValue([{ id: 'Pkg', version: '1.0' }]);
+            (service as any).checkPackageUpdatesMinimal.mockResolvedValue([
+                { id: 'Pkg', installedVersion: '1.0', latestVersion: '2.0' }
+            ]);
+            (vscode.commands.executeCommand as any).mockClear();
+
+            await provider.checkUpdatesInBackground();
+
+            expect(vscode.commands.executeCommand).toHaveBeenCalledWith('nuiget.refreshPackages');
+        });
     });
 
     // ──────────────────────────────────────────────
@@ -516,6 +579,84 @@ describe('NuGetSidebarProvider', () => {
             );
         });
 
+        it('pickProjectForInstall shows project picker and installs on selection', async () => {
+            (service as any).findProjects.mockResolvedValue([
+                { name: 'A.csproj', path: '/A.csproj' },
+                { name: 'B.csproj', path: '/B.csproj' },
+            ]);
+            // Pre-configure createQuickPick to auto-select a project
+            vi.mocked(vscode.window.showQuickPick).mockResolvedValueOnce(
+                { label: 'B.csproj', description: '/B.csproj' } as any
+            );
+
+            await messageListener!({ type: 'pickProjectForInstall', packageId: 'Newtonsoft.Json', version: '13.0.3' });
+            expect(hoisted.mockExecuteSingleOperation).toHaveBeenCalledWith(
+                expect.objectContaining({ nugetService: service }),
+                'install', '/B.csproj', 'Newtonsoft.Json', '13.0.3'
+            );
+        });
+
+        it('pickProjectForInstall does nothing when user dismisses picker', async () => {
+            (service as any).findProjects.mockResolvedValue([
+                { name: 'A.csproj', path: '/A.csproj' },
+            ]);
+            vi.mocked(vscode.window.showQuickPick).mockResolvedValueOnce(undefined);
+
+            await messageListener!({ type: 'pickProjectForInstall', packageId: 'Pkg', version: '1.0' });
+            expect(hoisted.mockExecuteSingleOperation).not.toHaveBeenCalled();
+        });
+
+        it('pickProjectForRemove removes directly when single project matches', async () => {
+            (service as any).findProjects.mockResolvedValue([
+                { name: 'A.csproj', path: '/A.csproj' },
+                { name: 'B.csproj', path: '/B.csproj' },
+            ]);
+
+            await messageListener!({ type: 'pickProjectForRemove', packageId: 'Newtonsoft.Json', projectPaths: ['/A.csproj'] });
+            expect(hoisted.mockExecuteSingleOperation).toHaveBeenCalledWith(
+                expect.objectContaining({ nugetService: service }),
+                'remove', '/A.csproj', 'Newtonsoft.Json'
+            );
+            expect(vscode.window.showQuickPick).not.toHaveBeenCalled();
+        });
+
+        it('pickProjectForRemove shows picker when multiple projects match', async () => {
+            (service as any).findProjects.mockResolvedValue([
+                { name: 'A.csproj', path: '/A.csproj' },
+                { name: 'B.csproj', path: '/B.csproj' },
+            ]);
+            vi.mocked(vscode.window.showQuickPick).mockResolvedValueOnce(
+                { label: 'B.csproj', description: '/B.csproj' } as any
+            );
+
+            await messageListener!({ type: 'pickProjectForRemove', packageId: 'Pkg', projectPaths: ['/A.csproj', '/B.csproj'] });
+            expect(vscode.window.showQuickPick).toHaveBeenCalled();
+            expect(hoisted.mockExecuteSingleOperation).toHaveBeenCalledWith(
+                expect.objectContaining({ nugetService: service }),
+                'remove', '/B.csproj', 'Pkg'
+            );
+        });
+
+        it('pickProjectForRemove does nothing when user dismisses picker', async () => {
+            (service as any).findProjects.mockResolvedValue([
+                { name: 'A.csproj', path: '/A.csproj' },
+                { name: 'B.csproj', path: '/B.csproj' },
+            ]);
+            vi.mocked(vscode.window.showQuickPick).mockResolvedValueOnce(undefined);
+
+            await messageListener!({ type: 'pickProjectForRemove', packageId: 'Pkg', projectPaths: ['/A.csproj', '/B.csproj'] });
+            expect(hoisted.mockExecuteSingleOperation).not.toHaveBeenCalled();
+        });
+
+        it('pickProjectForRemove does nothing when no project paths match', async () => {
+            (service as any).findProjects.mockResolvedValue([
+                { name: 'A.csproj', path: '/A.csproj' },
+            ]);
+
+            await messageListener!({ type: 'pickProjectForRemove', packageId: 'Pkg', projectPaths: ['/Z.csproj'] });
+            expect(hoisted.mockExecuteSingleOperation).not.toHaveBeenCalled();
+        });
+
         it('updatePackage delegates to executeSingleOperation', async () => {
             await messageListener!({ type: 'updatePackage', projectPath: '/p.csproj', packageId: 'Pkg', version: '2.0' });
             expect(hoisted.mockExecuteSingleOperation).toHaveBeenCalledWith(
@@ -594,6 +735,20 @@ describe('NuGetSidebarProvider', () => {
             expect(checkUpdatesSpy).toHaveBeenCalledWith(true);
         });
 
+        it('clears badge immediately after bulkUpdatePackages', async () => {
+            provider.setBadge(5, '5 updates');
+            expect(view.badge).toEqual({ value: 5, tooltip: '5 updates' });
+            await messageListener!({ type: 'bulkUpdatePackages', packages: [{ id: 'Pkg', version: '2.0' }], projectPath: '/p.csproj' });
+            expect(view.badge).toBeUndefined();
+        });
+
+        it('clears badge immediately after bulkUpdateAllProjects', async () => {
+            provider.setBadge(4, '4 updates');
+            expect(view.badge).toEqual({ value: 4, tooltip: '4 updates' });
+            await messageListener!({ type: 'bulkUpdateAllProjects', projectUpdates: [] });
+            expect(view.badge).toBeUndefined();
+        });
+
         it('recalculates badge even when operation fails', async () => {
             hoisted.mockExecuteSingleOperation.mockRejectedValueOnce(new Error('fail'));
             await messageListener!({ type: 'updatePackage', projectPath: '/p.csproj', packageId: 'Pkg', version: '2.0' }).catch(() => { });
@@ -639,18 +794,51 @@ describe('NuGetSidebarProvider', () => {
     // showProjectPicker
     // ──────────────────────────────────────────────
     describe('showProjectPicker', () => {
-        it('shows quick pick with projects sorted alphabetically', async () => {
+        it('shows quick pick with projects sorted alphabetically and All Projects option', async () => {
             view = resolveView(provider);
             (service as any).findProjects.mockResolvedValue([
                 { name: 'B.csproj', path: '/B.csproj' },
                 { name: 'A.csproj', path: '/A.csproj' },
             ]);
-            vi.mocked(vscode.window.showQuickPick).mockResolvedValue(undefined);
+            // Default: createQuickPick auto-dismisses (no _autoSelect)
 
             await provider.showProjectPicker();
-            const items = vi.mocked(vscode.window.showQuickPick).mock.calls[0][0] as vscode.QuickPickItem[];
-            expect((items as vscode.QuickPickItem[])[0].label).toBe('A.csproj');
-            expect((items as vscode.QuickPickItem[])[1].label).toBe('B.csproj');
+            const qp = vi.mocked(vscode.window.createQuickPick).mock.results[0].value;
+            const items = qp.items as vscode.QuickPickItem[];
+            // First item: "All Projects (2)", then separator, then sorted projects
+            expect(items[0].label).toBe('All Projects (2)');
+            expect(items[1].kind).toBe(vscode.QuickPickItemKind.Separator);
+            expect(items[2].label).toBe('A.csproj');
+            expect(items[3].label).toBe('B.csproj');
+        });
+
+        it('does not show All Projects option for single project', async () => {
+            view = resolveView(provider);
+            (service as any).findProjects.mockResolvedValue([
+                { name: 'A.csproj', path: '/A.csproj' },
+            ]);
+
+            await provider.showProjectPicker();
+            const qp = vi.mocked(vscode.window.createQuickPick).mock.results[0].value;
+            const items = qp.items as vscode.QuickPickItem[];
+            expect(items).toHaveLength(1);
+            expect(items[0].label).toBe('A.csproj');
+        });
+
+        it('selects All Projects and syncs sentinel to main panel', async () => {
+            view = resolveView(provider);
+            (service as any).findProjects.mockResolvedValue([
+                { name: 'A.csproj', path: '/A.csproj' },
+                { name: 'B.csproj', path: '/B.csproj' },
+            ]);
+            const mockQp = vi.mocked(vscode.window.createQuickPick)();
+            mockQp._autoSelect = { label: 'All Projects (2)', description: 'Show packages from all projects' };
+            vi.mocked(vscode.window.createQuickPick).mockReturnValueOnce(mockQp);
+
+            await provider.showProjectPicker();
+            expect(context.workspaceState.update).toHaveBeenCalledWith('nuget.selectedProject', '__all_projects__');
+            expect(NuGetPanel.syncProject).toHaveBeenCalledWith('__all_projects__');
+            expect(view.title).toBe('All Projects (2)');
         });
 
         it('selects project and syncs to main panel', async () => {
@@ -658,11 +846,51 @@ describe('NuGetSidebarProvider', () => {
             (service as any).findProjects.mockResolvedValue([
                 { name: 'A.csproj', path: '/A.csproj' },
             ]);
-            vi.mocked(vscode.window.showQuickPick).mockResolvedValue({ label: 'A.csproj', description: '/A.csproj' } as any);
+            const mockQp = vi.mocked(vscode.window.createQuickPick)();
+            mockQp._autoSelect = { label: 'A.csproj', description: '/A.csproj' };
+            vi.mocked(vscode.window.createQuickPick).mockReturnValueOnce(mockQp);
 
             await provider.showProjectPicker();
             expect(context.workspaceState.update).toHaveBeenCalledWith('nuget.selectedProject', '/A.csproj');
             expect(NuGetPanel.syncProject).toHaveBeenCalledWith('/A.csproj');
+        });
+
+        it('highlights currently selected project in QuickPick', async () => {
+            // Set a selected project before opening picker
+            const ctx = createMockContext();
+            ctx.workspaceState._store.set('nuget.selectedProject', '/B.csproj');
+            const svc = createMockNuGetService();
+            const ch = createMockOutputChannel();
+            const p = new NuGetSidebarProvider(vscode.Uri.file('/ext'), ctx, ch, svc as any);
+            resolveView(p);
+            (svc as any).findProjects.mockResolvedValue([
+                { name: 'A.csproj', path: '/A.csproj' },
+                { name: 'B.csproj', path: '/B.csproj' },
+            ]);
+
+            await p.showProjectPicker();
+            const qp = vi.mocked(vscode.window.createQuickPick).mock.results.at(-1)!.value;
+            // activeItems should contain the item matching /B.csproj
+            expect(qp.activeItems).toHaveLength(1);
+            expect(qp.activeItems[0].description).toBe('/B.csproj');
+        });
+
+        it('highlights All Projects when sentinel is selected', async () => {
+            const ctx = createMockContext();
+            ctx.workspaceState._store.set('nuget.selectedProject', '__all_projects__');
+            const svc = createMockNuGetService();
+            const ch = createMockOutputChannel();
+            const p = new NuGetSidebarProvider(vscode.Uri.file('/ext'), ctx, ch, svc as any);
+            resolveView(p);
+            (svc as any).findProjects.mockResolvedValue([
+                { name: 'A.csproj', path: '/A.csproj' },
+                { name: 'B.csproj', path: '/B.csproj' },
+            ]);
+
+            await p.showProjectPicker();
+            const qp = vi.mocked(vscode.window.createQuickPick).mock.results.at(-1)!.value;
+            expect(qp.activeItems).toHaveLength(1);
+            expect(qp.activeItems[0].label).toBe('All Projects (2)');
         });
 
         it('shows info message when no projects found', async () => {
@@ -713,6 +941,28 @@ describe('NuGetSidebarProvider', () => {
             // Pending data should be delivered
             expect(view.webview.postMessage).toHaveBeenCalledWith(expect.objectContaining({
                 type: 'allProjectsUpdates',
+            }));
+        });
+
+        it('auto-downgrades All Projects sentinel when only 1 project', async () => {
+            // Set sentinel as persisted project
+            const ctx = createMockContext();
+            (ctx.workspaceState as any)._store.set('nuget.selectedProject', '__all_projects__');
+            const svc = createMockNuGetService();
+            const ch = createMockOutputChannel();
+            const p = new NuGetSidebarProvider(vscode.Uri.file('/ext'), ctx, ch, svc as any);
+            const v = resolveView(p);
+            (svc as any).findProjects.mockResolvedValue([{ name: 'Only.csproj', path: '/Only.csproj' }]);
+            (svc as any).getSources.mockResolvedValue([]);
+            v.webview.postMessage.mockClear();
+
+            await messageListener!({ type: 'ready' });
+
+            // Should downgrade sentinel to the single project
+            expect(ctx.workspaceState.update).toHaveBeenCalledWith('nuget.selectedProject', '/Only.csproj');
+            expect(v.webview.postMessage).toHaveBeenCalledWith(expect.objectContaining({
+                type: 'state',
+                selectedProject: '/Only.csproj',
             }));
         });
     });
@@ -862,11 +1112,166 @@ describe('NuGetSidebarProvider', () => {
     });
 
     describe('showContextMenu message', () => {
-        it('shows warning when no projectPath is provided', async () => {
+        it('shows warning when no projectPath is provided for non-browse context', async () => {
             view = resolveView(provider);
-            await messageListener!({ type: 'showContextMenu', packageId: 'Pkg', context: 'browse' });
+            await messageListener!({ type: 'showContextMenu', packageId: 'Pkg', context: 'installed' });
 
-            expect(vscode.window.showWarningMessage).toHaveBeenCalledWith('Please select a project first.');
+            expect(vscode.window.showWarningMessage).toHaveBeenCalledWith('Please select a specific project for this action.');
+        });
+
+        it('triggers project picker for browse context without projectPath', async () => {
+            view = resolveView(provider);
+            (service as any).findProjects.mockResolvedValue([
+                { name: 'A.csproj', path: '/A.csproj' },
+            ]);
+            // First QuickPick: actions menu — user picks Install Latest
+            // Second QuickPick: project picker — user cancels
+            vi.mocked(vscode.window.showQuickPick)
+                .mockResolvedValueOnce({ label: '$(add) Install Latest', description: '2.0.0' } as any)
+                .mockResolvedValueOnce(undefined);
+
+            await messageListener!({ type: 'showContextMenu', packageId: 'Pkg', latestVersion: '2.0.0', context: 'browse' });
+
+            // Should show actions QuickPick first (not project picker, not warning)
+            expect(vscode.window.showWarningMessage).not.toHaveBeenCalled();
+            expect(vscode.window.showQuickPick).toHaveBeenCalledTimes(2);
+        });
+
+        it('shows actions QuickPick first in all-projects browse mode, then project picker', async () => {
+            view = resolveView(provider);
+            view.webview.postMessage.mockClear();
+            (service as any).findProjects.mockResolvedValue([
+                { name: 'A.csproj', path: '/A.csproj' },
+                { name: 'B.csproj', path: '/B.csproj' },
+            ]);
+            // First QuickPick: actions menu — user picks Install Latest
+            // Second QuickPick: project picker — user selects A.csproj
+            vi.mocked(vscode.window.showQuickPick)
+                .mockResolvedValueOnce({ label: '$(add) Install Latest', description: '2.0.0' } as any)
+                .mockResolvedValueOnce({ label: 'A.csproj', description: '', detail: '/A.csproj' } as any);
+
+            await messageListener!({
+                type: 'showContextMenu',
+                packageId: 'Pkg',
+                latestVersion: '2.0.0',
+                context: 'browse',
+                projectPath: '__all_projects__'
+            });
+
+            // First QuickPick: actions menu with Install Latest
+            expect(vscode.window.showQuickPick).toHaveBeenCalledTimes(2);
+            expect(vi.mocked(vscode.window.showQuickPick).mock.calls[0][0]).toEqual(
+                expect.arrayContaining([
+                    expect.objectContaining({ label: '$(add) Install Latest' })
+                ])
+            );
+            // Should have sent doInstall to the selected project
+            expect(view.webview.postMessage).toHaveBeenCalledWith({
+                type: 'doInstall',
+                packageId: 'Pkg',
+                version: '2.0.0',
+                projectPath: '/A.csproj'
+            });
+        });
+
+        it('Copy Package ID executes immediately without project picker in all-projects browse', async () => {
+            view = resolveView(provider);
+            vi.mocked(vscode.window.showQuickPick)
+                .mockResolvedValueOnce({ label: '$(clippy) Copy Package ID', description: 'Pkg' } as any);
+
+            await messageListener!({
+                type: 'showContextMenu',
+                packageId: 'Pkg',
+                context: 'browse',
+                projectPath: '__all_projects__'
+            });
+
+            // Only one QuickPick call (the actions menu) — no project picker needed
+            expect(vscode.window.showQuickPick).toHaveBeenCalledTimes(1);
+            expect(vscode.env.clipboard.writeText).toHaveBeenCalledWith('Pkg');
+        });
+
+        it('View Package Details executes immediately without project picker in all-projects browse', async () => {
+            view = resolveView(provider);
+            vi.mocked(vscode.window.showQuickPick)
+                .mockResolvedValueOnce({ label: '$(eye) View Package Details', description: '' } as any);
+
+            await messageListener!({
+                type: 'showContextMenu',
+                packageId: 'Pkg',
+                latestVersion: '2.0.0',
+                context: 'browse',
+                projectPath: '__all_projects__'
+            });
+
+            expect(vscode.window.showQuickPick).toHaveBeenCalledTimes(1);
+            expect(vscode.commands.executeCommand).toHaveBeenCalledWith('nuiget.viewPackageDetails', {
+                packageId: 'Pkg',
+                version: '2.0.0'
+            });
+        });
+
+        it('Uninstall in all-projects browse shows project picker filtered to installed projects', async () => {
+            view = resolveView(provider);
+            view.webview.postMessage.mockClear();
+            const installedProjects = [
+                { projectPath: '/A.csproj', projectName: 'A.csproj', version: '1.0.0' },
+                { projectPath: '/B.csproj', projectName: 'B.csproj', version: '1.2.0' }
+            ];
+            // First: actions menu — pick Uninstall
+            // Second: project picker — pick A.csproj
+            vi.mocked(vscode.window.showQuickPick)
+                .mockResolvedValueOnce({ label: '$(close) Uninstall', description: '1.0.0' } as any)
+                .mockResolvedValueOnce({ label: 'A.csproj', description: 'v1.0.0', detail: '/A.csproj' } as any);
+
+            await messageListener!({
+                type: 'showContextMenu',
+                packageId: 'Pkg',
+                installedVersion: '1.0.0',
+                context: 'browse',
+                projectPath: '__all_projects__',
+                installedProjects
+            });
+
+            expect(vscode.window.showQuickPick).toHaveBeenCalledTimes(2);
+            // Second picker should only show installed projects (not findProjects)
+            expect((service as any).findProjects).not.toHaveBeenCalled();
+            expect(view.webview.postMessage).toHaveBeenCalledWith({
+                type: 'doRemove',
+                packageId: 'Pkg',
+                projectPath: '/A.csproj'
+            });
+        });
+
+        it('Install Version in all-projects browse shows version picker then project picker', async () => {
+            view = resolveView(provider);
+            view.webview.postMessage.mockClear();
+            (service as any).getPackageVersions.mockResolvedValue(['3.0.0', '2.0.0', '1.0.0']);
+            (service as any).findProjects.mockResolvedValue([
+                { name: 'A.csproj', path: '/A.csproj' },
+            ]);
+            // First: actions menu — pick Install Version
+            // Second: version picker — pick 2.0.0
+            // Third: project picker — pick A.csproj
+            vi.mocked(vscode.window.showQuickPick)
+                .mockResolvedValueOnce({ label: '$(list-ordered) Install Version...', description: 'Select a specific version' } as any)
+                .mockResolvedValueOnce({ label: '2.0.0', description: '' } as any)
+                .mockResolvedValueOnce({ label: 'A.csproj', description: '', detail: '/A.csproj' } as any);
+
+            await messageListener!({
+                type: 'showContextMenu',
+                packageId: 'Pkg',
+                context: 'browse',
+                projectPath: '__all_projects__'
+            });
+
+            expect(vscode.window.showQuickPick).toHaveBeenCalledTimes(3);
+            expect(view.webview.postMessage).toHaveBeenCalledWith({
+                type: 'doInstall',
+                packageId: 'Pkg',
+                version: '2.0.0',
+                projectPath: '/A.csproj'
+            });
         });
 
         it('shows install options for browse context', async () => {
@@ -1158,6 +1563,40 @@ describe('NuGetSidebarProvider', () => {
             await p.checkUpdatesInBackground();
 
             expect(ctx.workspaceState.update).toHaveBeenCalledWith('nuget.selectedProject', '/current/Current.csproj');
+            p.dispose();
+        });
+    });
+
+    describe('sentinel guards', () => {
+        const SENTINEL = '__all_projects__';
+
+        it('getInstalledPackages ignores sentinel projectPath', async () => {
+            const svc = createMockNuGetService();
+            const ctx = createMockContext();
+            const p = new NuGetSidebarProvider(svc as any, ctx, createMockOutputChannel());
+            resolveView(p, createMockWebviewView());
+            await messageListener!({ type: 'getInstalledPackages', projectPath: SENTINEL });
+            expect(svc.getInstalledPackages).not.toHaveBeenCalled();
+            p.dispose();
+        });
+
+        it('installPackage ignores sentinel projectPath', async () => {
+            const svc = createMockNuGetService();
+            const ctx = createMockContext();
+            const p = new NuGetSidebarProvider(svc as any, ctx, createMockOutputChannel());
+            resolveView(p, createMockWebviewView());
+            await messageListener!({ type: 'installPackage', projectPath: SENTINEL, packageId: 'Pkg', version: '1.0.0' });
+            expect(hoisted.mockExecuteSingleOperation).not.toHaveBeenCalled();
+            p.dispose();
+        });
+
+        it('showContextMenu warns when projectPath is sentinel', async () => {
+            const svc = createMockNuGetService();
+            const ctx = createMockContext();
+            const p = new NuGetSidebarProvider(svc as any, ctx, createMockOutputChannel());
+            resolveView(p, createMockWebviewView());
+            await messageListener!({ type: 'showContextMenu', projectPath: SENTINEL, packageId: 'Pkg', context: 'installed' });
+            expect(vscode.window.showWarningMessage).toHaveBeenCalledWith('Please select a specific project for this action.');
             p.dispose();
         });
     });
