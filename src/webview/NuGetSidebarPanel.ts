@@ -74,6 +74,9 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
                         this._clearBadge();
                     }
                 }
+                if (e.affectsConfiguration('workbench.tree.indent')) {
+                    this._postMessage({ type: 'treeIndent', value: this._getTreeIndent() });
+                }
             })
         );
     }
@@ -888,7 +891,7 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
         }
 
         // ─── RESOLVE PROJECT (for all-projects browse, pick project after action) ─
-        let resolvedProjectPath = projectPath;
+        let resolvedProjectPath: string | undefined = projectPath;
         if (isAllProjectsBrowse) {
             // Version picker first for version-selection actions
             let selectedVersion: string | undefined;
@@ -909,6 +912,8 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
                 return;
             }
         }
+
+        if (!resolvedProjectPath) { return; }
 
         // ─── EXECUTE PROJECT-DEPENDENT ACTIONS ───────────────────────────────
         if (label.includes('Install Latest') || (label.includes('Update to ') && !label.includes('Update to Version'))) {
@@ -1040,6 +1045,7 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
             selectedSource: this._selectedSource,
             selectedProject: this._selectedProject,
             includePrerelease: this._includePrerelease,
+            treeIndent: this._getTreeIndent(),
             ...(sectionSplit !== undefined && { sectionSplit })
         });
 
@@ -1073,8 +1079,14 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
             type: 'state',
             selectedSource: this._selectedSource,
             selectedProject: this._selectedProject,
-            includePrerelease: this._includePrerelease
+            includePrerelease: this._includePrerelease,
+            treeIndent: this._getTreeIndent()
         });
+    }
+
+    /** Read the user's workbench.tree.indent setting (default 8). */
+    private _getTreeIndent(): number {
+        return vscode.workspace.getConfiguration('workbench.tree').get<number>('indent', 8);
     }
 
     /** Build an OperationContext for shared operation functions. */

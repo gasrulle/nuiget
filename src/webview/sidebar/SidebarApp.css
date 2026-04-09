@@ -447,11 +447,11 @@ body {
     display: flex;
     align-items: center;
     height: 22px;
-    padding: 0 10px 0 0;
+    padding: 0 10px 0 14px;
     cursor: pointer;
     user-select: none;
     font-size: var(--vscode-font-size, 13px);
-    font-weight: 700;
+    font-weight: normal;
     color: var(--vscode-foreground);
     white-space: nowrap;
     overflow: hidden;
@@ -474,7 +474,7 @@ body {
     width: 16px;
     height: 22px;
     flex-shrink: 0;
-    margin-left: 2px;
+    margin-left: 0;
     transition: transform 0.1s ease;
     color: var(--vscode-foreground);
 }
@@ -507,7 +507,7 @@ body {
 
 /* Package rows under collapsible project groups get tree-view indent */
 [role="treeitem"]>.package-row {
-    padding-left: 26px;
+    padding-left: calc(var(--tree-indent, 8px) + 30px);
 }
 
 /* ─── Welcome / No Project State ─────────────────────────────────────────── */

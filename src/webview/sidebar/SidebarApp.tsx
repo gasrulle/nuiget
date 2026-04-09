@@ -182,6 +182,9 @@ export const SidebarApp: React.FC = () => {
                 // Focus search input when sidebar becomes visible (like native sidebar panels)
                 setTimeout(() => searchInputRef.current?.focus(), 50);
                 break;
+            case 'treeIndent':
+                if (message.value !== undefined) { document.documentElement.style.setProperty('--tree-indent', `${message.value}px`); }
+                break;
             case 'state':
                 if (message.selectedSource) { setSelectedSource(message.selectedSource); }
                 if (message.selectedProject) {
@@ -213,6 +216,9 @@ export const SidebarApp: React.FC = () => {
                 }
                 if (message.includePrerelease !== undefined) { setIncludePrerelease(message.includePrerelease); }
                 if (message.sectionSplit !== undefined) { setSectionSplit(message.sectionSplit); }
+                if (message.treeIndent !== undefined) {
+                    document.documentElement.style.setProperty('--tree-indent', `${message.treeIndent}px`);
+                }
                 break;
             case 'projects':
                 setProjects(message.projects || []);
