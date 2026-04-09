@@ -987,7 +987,14 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
                                                             style={{ position: 'absolute', top: 0, left: 0, width: '100%', transform: `translateY(${virtualRow.start}px)` }}
                                                             onClick={() => {
                                                                 onActiveProjectPathChange(item.projectPath);
-                                                                onSelectDirectPackage(item as any, {
+                                                                const pkg: InstalledPackage = {
+                                                                    id: item.id,
+                                                                    version: item.version,
+                                                                    resolvedVersion: item.resolvedVersion,
+                                                                    isImplicit: item.isImplicit,
+                                                                    iconUrl: item.iconUrl,
+                                                                };
+                                                                onSelectDirectPackage(pkg, {
                                                                     selectedVersionValue: item.version,
                                                                     metadataVersion: item.resolvedVersion || item.version,
                                                                     initialVersions: [item.version],
