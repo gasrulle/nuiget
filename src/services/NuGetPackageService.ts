@@ -13,7 +13,7 @@ import {
     NuGetSearchEntry, NuGetSearchResponse, NuGetSource,
     PackageDependency, PackageDependencyGroup,
     PackageMetadata, PackageSearchResult, PackageVulnerability,
-    QuickSearchSourceResult, ServiceEndpoints, TransitivePackage,
+    QuickSearchSourceResult, ResolvedSource, ServiceEndpoints, TransitivePackage,
     VulnerabilitySeverity
 } from './NuGetTypes';
 import {
@@ -98,6 +98,139 @@ export class NuGetPackageService {
     clearVersionsCache(): void {
         this.versionsCache.clear();
         workspaceCache.clearByPrefix('versions:');
+    }
+
+    // ── Pre-resolved source helpers (batch optimization) ────────────────
+
+    /**
+     * Pre-resolve all enabled, healthy, non-local sources with their endpoints and auth headers.
+     * Call once before a batch version-checking loop to avoid per-package re-discovery
+     * (eliminates the service-index stampede when 16 concurrent workers all call
+     * discoverServiceEndpoints simultaneously).
+     */
+    async resolveSourcesForBatch(): Promise<ResolvedSource[]> {
+        const allSources = await this._deps.getSources();
+        const enabledNonLocal = allSources.filter(s => s.enabled && !this._deps.isLocalSource(s.url));
+        const healthyUrls = this._deps.filterHealthySources(enabledNonLocal.map(s => s.url));
+        const healthySources = enabledNonLocal.filter(s => healthyUrls.includes(s.url));
+
+        const resolved = await Promise.all(
+            healthySources.map(async (src) => {
+                try {
+                    const endpoints = await this._deps.discoverServiceEndpoints(src.url);
+                    if (!endpoints.packageBaseAddress && !endpoints.searchQueryService) { return null; }
+                    const authHeader = await this._deps.getAuthHeader(src.url);
+                    return { url: src.url, endpoints, authHeader } as ResolvedSource;
+                } catch {
+                    return null;
+                }
+            })
+        );
+
+        return resolved.filter((s): s is ResolvedSource => s !== null);
+    }
+
+    /**
+     * Fetch package versions from a pre-resolved source (no endpoint discovery or auth lookup).
+     * Used by the batch update-checking path.
+     */
+    private async getPackageVersionsFromResolvedSource(
+        packageId: string,
+        source: ResolvedSource,
+        includePrerelease?: boolean,
+        take: number = 20
+    ): Promise<string[]> {
+        try {
+            const memoryCacheKey = cacheKeys.versions(packageId, source.url, includePrerelease ?? false, take);
+
+            const memoryCached = this.versionsCache.get(memoryCacheKey);
+            if (memoryCached) { return memoryCached; }
+
+            const workspaceCached = workspaceCache.get<string[]>(memoryCacheKey);
+            if (workspaceCached) {
+                this.versionsCache.set(memoryCacheKey, workspaceCached);
+                return workspaceCached;
+            }
+
+            const baseUrl = source.endpoints.packageBaseAddress?.replace(/\/$/, '');
+            const searchUrl = source.endpoints.searchQueryService;
+
+            // Try flat container first
+            if (baseUrl) {
+                const url = `${baseUrl}/${packageId.toLowerCase()}/index.json`;
+                const versions = await this._deps.fetchJson<{ versions: string[] }>(url, source.authHeader);
+
+                if (versions?.versions) {
+                    let allVersions = versions.versions;
+                    if (!includePrerelease) {
+                        allVersions = allVersions.filter(v => !v.includes('-'));
+                    }
+                    const result = [...allVersions].reverse().slice(0, take);
+                    if (result.length > 0) {
+                        this.versionsCache.set(memoryCacheKey, result);
+                        workspaceCache.set(memoryCacheKey, result, CACHE_TTL.VERSIONS);
+                    }
+                    return result;
+                }
+            }
+
+            // Fallback to search API (better for Nexus/ProGet)
+            if (searchUrl) {
+                const searchResult = await this._deps.fetchJson<{
+                    data: Array<{
+                        id: string;
+                        version: string;
+                        versions: Array<{ version: string; '@id': string }>;
+                    }>;
+                }>(`${searchUrl}?q=packageid:${encodeURIComponent(packageId)}&take=1&prerelease=${includePrerelease ?? false}`, source.authHeader);
+
+                if (searchResult?.data?.[0]?.versions) {
+                    const pkgVersions = searchResult.data[0].versions.map(v => v.version);
+                    let allVersions = pkgVersions;
+                    if (!includePrerelease) {
+                        allVersions = allVersions.filter(v => !v.includes('-'));
+                    }
+                    const result = [...allVersions].reverse().slice(0, take);
+                    if (result.length > 0) {
+                        this.versionsCache.set(memoryCacheKey, result);
+                        workspaceCache.set(memoryCacheKey, result, CACHE_TTL.VERSIONS);
+                    }
+                    return result;
+                }
+            }
+
+            return [];
+        } catch (error) {
+            console.error(`[NuGet] Failed to fetch versions for ${packageId} from resolved source:`, error);
+            return [];
+        }
+    }
+
+    /**
+     * Get latest package version by racing pre-resolved sources.
+     * Returns the first source that has a non-empty version list.
+     */
+    private async getPackageVersionsWithResolvedSources(
+        packageId: string,
+        resolvedSources: ResolvedSource[],
+        includePrerelease?: boolean
+    ): Promise<{ versions: string[]; sourceUrl?: string }> {
+        try {
+            const { result, winnerIndex } = await this.raceForFirstResultWithIndex(
+                resolvedSources.map(src =>
+                    this.getPackageVersionsFromResolvedSource(packageId, src, includePrerelease, 1)
+                        .catch(() => [] as string[])
+                ),
+                (versions) => versions.length > 0
+            );
+            return {
+                versions: result,
+                sourceUrl: winnerIndex >= 0 ? resolvedSources[winnerIndex].url : undefined
+            };
+        } catch (error) {
+            console.error(`[NuGet] Failed to fetch versions with resolved sources for ${packageId}:`, error);
+            return { versions: [] };
+        }
     }
 
     // ── Vulnerability data ──────────────────────────────────────────────
@@ -1807,8 +1940,10 @@ export class NuGetPackageService {
             sourceUrl?: string;
         }[] = [];
 
-        const allSources = await this._deps.getSources();
-        const enabledSources = allSources.filter(s => s.enabled);
+        // Pre-resolve sources, endpoints, and auth once before the batch loop
+        // (avoids 16 concurrent workers all calling discoverServiceEndpoints simultaneously)
+        const resolvedSources = await this.resolveSourcesForBatch();
+        if (resolvedSources.length === 0) { return []; }
 
         const results = await batchedPromiseAll(installedPackages, async (pkg) => {
             try {
@@ -1819,7 +1954,7 @@ export class NuGetPackageService {
                     return null;
                 }
 
-                const { versions, sourceUrl } = await this.getPackageVersionsWithSource(pkg.id, includePrerelease);
+                const { versions, sourceUrl } = await this.getPackageVersionsWithResolvedSources(pkg.id, resolvedSources, includePrerelease);
                 if (versions.length === 0) {
                     return null;
                 }
@@ -1831,7 +1966,7 @@ export class NuGetPackageService {
 
                     let finalIconUrl = iconUrl;
                     if (!finalIconUrl) {
-                        finalIconUrl = await this.getPackageIconUrl(pkg.id, latestVersion, enabledSources);
+                        finalIconUrl = await this.getPackageIconUrl(pkg.id, latestVersion, resolvedSources);
                     }
 
                     return {
@@ -1869,6 +2004,10 @@ export class NuGetPackageService {
     ): Promise<{ id: string; installedVersion: string; latestVersion: string; sourceUrl?: string }[]> {
         const packagesWithUpdates: { id: string; installedVersion: string; latestVersion: string; sourceUrl?: string }[] = [];
 
+        // Pre-resolve sources, endpoints, and auth once before the batch loop
+        const resolvedSources = await this.resolveSourcesForBatch();
+        if (resolvedSources.length === 0) { return []; }
+
         const results = await batchedPromiseAll(installedPackages, async (pkg) => {
             try {
                 if (pkg.versionType === 'floating') {
@@ -1878,7 +2017,7 @@ export class NuGetPackageService {
                     return null;
                 }
 
-                const { versions, sourceUrl } = await this.getPackageVersionsWithSource(pkg.id, includePrerelease);
+                const { versions, sourceUrl } = await this.getPackageVersionsWithResolvedSources(pkg.id, resolvedSources, includePrerelease);
                 if (versions.length === 0) {
                     return null;
                 }

@@ -108,7 +108,7 @@ src/
 
 ### Module Split: NuGetService
 `NuGetService.ts` is a facade that delegates to five sub-services:
-- **`NuGetPackageService.ts`** (~1250 lines) — Package search (`searchPackages`, `searchPackagesViaApi`, `quickSearchGrouped`), metadata resolution (`getPackageMetadata`, `getPackageMetadataFromSource/Search/Nuspec`), version queries (`getPackageVersions`, `getPackageVersionsFromSource`), vulnerability data (`fetchVulnerabilityData`, `getVulnerabilities`), icon URL resolution (`resolveIconUrl`, `getPackageIconUrl`), autocomplete, update checking (`checkPackageUpdates`, `checkPackageUpdatesMinimal`), README extraction, size fetching, and installed package metadata. Uses `PackageServiceDeps` interface for dependency injection — receives HTTP, source, and endpoint methods from `NuGetService` via arrow function bindings. Owns caches: `metadataCache(200)`, `iconUrlCache(500)`, `versionsCache(200)`, `verifiedStatusCache(300)`, `searchResultsCache(100)`, `autocompleteCache(50)`, `vulnerabilityData(Map)`.
+- **`NuGetPackageService.ts`** (~1250 lines) — Package search (`searchPackages`, `searchPackagesViaApi`, `quickSearchGrouped`), metadata resolution (`getPackageMetadata`, `getPackageMetadataFromSource/Search/Nuspec`), version queries (`getPackageVersions`, `getPackageVersionsFromSource`), vulnerability data (`fetchVulnerabilityData`, `getVulnerabilities`), icon URL resolution (`resolveIconUrl`, `getPackageIconUrl`), autocomplete, update checking (`checkPackageUpdates`, `checkPackageUpdatesMinimal` — both pre-resolve sources via `resolveSourcesForBatch()` before batch loop), README extraction, size fetching, and installed package metadata. Uses `PackageServiceDeps` interface for dependency injection — receives HTTP, source, and endpoint methods from `NuGetService` via arrow function bindings. Owns caches: `metadataCache(200)`, `iconUrlCache(500)`, `versionsCache(200)`, `verifiedStatusCache(300)`, `searchResultsCache(100)`, `autocompleteCache(50)`, `vulnerabilityData(Map)`.
 - **`NuGetCliService.ts`** — dotnet CLI operations (install/update/remove/restore), SDK detection (`getSdkMajorVersion`, `useNounFirstSyntax`), HTTP cache clearing, `dotnet package search`.
 - **`NuGetSourceService.ts`** — Source CRUD (`getSources`, `addSource`, `removeSource`, `enableSource`, `disableSource`), nuget.config file management, source name generation.
 - **`NuGetProjectService.ts`** (~440 lines) — Project discovery, `.csproj` parsing, installed packages, transitive dependency resolution, `project.assets.json` caching.
@@ -147,10 +147,9 @@ The sidebar provides a compact package management UI in the VS Code Activity Bar
 - **QuickPick for options**: Source, project, and prerelease toggle are title bar icon commands that open VS Code QuickPick dialogs (not inline dropdowns), saving sidebar width.
 - **Hybrid package actions**: Hover reveals a primary action button (Install/Uninstall/Update); right-click sends `showContextMenu` to backend which shows a QuickPick with all available actions.
 - **Cross-view sync**: After install/update/remove, sidebar calls `vscode.commands.executeCommand('nuiget.refreshPackages')` to notify the main panel. `refreshPackages` is internal-only (hidden from Command Palette) — it only calls `NuGetPanel.refresh()`.
-- **Badge API**: Activity Bar badge shows the total number of available package updates on the nUIget icon. Controlled by `nuiget.showActivityBarBadge` setting (default: `true`). `setBadge(count, tooltip)` uses runtime detection (`'badge' in this._view`) for compatibility with older VS Code versions that lack `WebviewView.badge`. The tooltip shows per-project update breakdown for multi-project workspaces (e.g., `"MyApp.csproj — 3 updates\nMyLib.csproj — 2 updates"`). Badge count is computed in `checkUpdatesInBackground()` and cached in `_pendingBadgeCount`/`_pendingBadgeTooltip` for when the view resolves later. Pending data (`_pendingProjectUpdates`, `_pendingInstalledCount`) is still cached so update data appears instantly on first sidebar open.
 - **Sidebar refresh button**: Title bar `$(refresh)` icon at `navigation@4` clears all source error caches (`clearSourceErrors()` — clears `failedEndpointCache`, `serviceIndexCache`, `failedSources`, `iconSourceMissCount`, and `_sourcesCache`) and re-checks updates via `checkUpdatesInBackground()`. This ensures reconnecting to a previously-unavailable source (e.g., after VPN reconnection) actually retries the network. "Open Full View" is at `navigation@5`.
 - **`.csproj` file watcher**: `NuGetSidebarPanel` registers a debounced (5000ms) `FileSystemWatcher` for `**/*.{csproj,fsproj,vbproj}` changes (content, create, delete). On trigger, it sends `forceRefresh` to the sidebar webview (clearing stale `packageUpdates` and `allProjectsUpdates`), calls `checkUpdatesInBackground(true)`, and calls `_notifyMainPanel()` to refresh the main panel. This handles external changes like `git checkout`, branch switches, or manual .csproj edits.
-- **`totalUpdateCount` 3-tier fallback**: The sidebar badge count (`totalUpdateCount`) uses a priority chain: (1) sum of `allProjectsUpdates[].updates.length` when load-all is active, (2) `packageUpdates.length` when available for the selected project, (3) `allProjectsUpdates.find(selectedProject)?.updates.length` as a last resort before data is fully loaded. The `handleUpdateAll` action must read from all tiers to match the displayed count.
+- **`totalUpdateCount` in sidebar UI**: The sidebar section header update count (`totalUpdateCount`) uses a priority chain: (1) sum of `allProjectsUpdates[].updates.length` when load-all is active, (2) `packageUpdates.length` when available for the selected project, (3) `allProjectsUpdates.find(selectedProject)?.updates.length` as a last resort before data is fully loaded. The `handleUpdateAll` action must read from all tiers to match the displayed count.
 
 ### Message Protocol
 Sidebar messages follow the same patterns as the main panel but always send `liteMode: true`. Context menu actions are delegated: webview sends `showContextMenu` → backend shows QuickPick → backend sends `doInstall`/`doUpdate`/`doRemove` → webview forwards to actual `installPackage`/`updatePackage`/`removePackage`.
@@ -980,6 +979,26 @@ await batchedPromiseAll(packages, async (pkg) => {
     // Falls back to resolveIconUrl only for custom-source-only packages
     if (!pkg.iconUrl) { pkg.iconUrl = await this.resolveIconUrl(...); }
 }, 16); // Sliding-window with 16 concurrent slots
+```
+
+### Pre-resolved Source Batch Optimization
+Update checking (`checkPackageUpdates`, `checkPackageUpdatesMinimal`) pre-resolves all sources before starting the batch version-check loop. This eliminates the "service index stampede" where concurrent workers all race to discover the same endpoints:
+
+```typescript
+// ResolvedSource (NuGetTypes.ts) holds pre-fetched endpoints + auth
+interface ResolvedSource {
+    url: string;
+    endpoints: ServiceEndpoints;
+    authHeader?: string;
+}
+
+// resolveSourcesForBatch() — called once, before batchedPromiseAll
+// 1. getSources() — read config once
+// 2. Filter: enabled, non-local, healthy (failedEndpointCache)
+// 3. discoverServiceEndpoints() per source (S calls, not S×N)
+// 4. getAuthHeader() per source
+// Then batchedPromiseAll uses getPackageVersionsWithResolvedSources()
+// which races pre-resolved sources — zero per-package discovery overhead
 ```
 
 ### Async I/O

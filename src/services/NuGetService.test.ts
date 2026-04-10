@@ -2617,8 +2617,10 @@ describe('NuGetService', () => {
     });
 
     describe('checkPackageUpdates', () => {
+        const mockResolvedSources = [{ url: 'https://api.nuget.org/v3/index.json', endpoints: { packageBaseAddress: 'https://api.nuget.org/v3-flatcontainer/' }, authHeader: undefined }];
+
         it('skips floating version packages', async () => {
-            vi.spyOn(service as any, 'getSources').mockResolvedValue([]);
+            vi.spyOn((service as any)._packageService, 'resolveSourcesForBatch').mockResolvedValue(mockResolvedSources);
 
             const result = await service.checkPackageUpdates(
                 [{ id: 'Pkg', version: '1.*', versionType: 'floating' as const }],
@@ -2628,7 +2630,7 @@ describe('NuGetService', () => {
         });
 
         it('skips range version packages', async () => {
-            vi.spyOn(service as any, 'getSources').mockResolvedValue([]);
+            vi.spyOn((service as any)._packageService, 'resolveSourcesForBatch').mockResolvedValue(mockResolvedSources);
 
             const result = await service.checkPackageUpdates(
                 [{ id: 'Pkg', version: '[1.0,2.0)', versionType: 'range' as const }],
@@ -2638,8 +2640,8 @@ describe('NuGetService', () => {
         });
 
         it('returns update when newer version available', async () => {
-            vi.spyOn(service as any, 'getSources').mockResolvedValue([]);
-            vi.spyOn((service as any)._packageService, 'getPackageVersionsWithSource').mockResolvedValue({ versions: ['2.0.0'], sourceUrl: 'https://nuget.org' });
+            vi.spyOn((service as any)._packageService, 'resolveSourcesForBatch').mockResolvedValue(mockResolvedSources);
+            vi.spyOn((service as any)._packageService, 'getPackageVersionsWithResolvedSources').mockResolvedValue({ versions: ['2.0.0'], sourceUrl: 'https://nuget.org' });
             vi.spyOn((service as any)._packageService, 'getPackageSearchMetadata').mockResolvedValue({ verified: true, authors: 'Author', iconUrl: 'https://icon.com' });
 
             const result = await service.checkPackageUpdates(
@@ -2654,8 +2656,8 @@ describe('NuGetService', () => {
         });
 
         it('skips packages already at latest version', async () => {
-            vi.spyOn(service as any, 'getSources').mockResolvedValue([]);
-            vi.spyOn((service as any)._packageService, 'getPackageVersionsWithSource').mockResolvedValue({ versions: ['1.0.0'], sourceUrl: 'https://nuget.org' });
+            vi.spyOn((service as any)._packageService, 'resolveSourcesForBatch').mockResolvedValue(mockResolvedSources);
+            vi.spyOn((service as any)._packageService, 'getPackageVersionsWithResolvedSources').mockResolvedValue({ versions: ['1.0.0'], sourceUrl: 'https://nuget.org' });
 
             const result = await service.checkPackageUpdates(
                 [{ id: 'Pkg', version: '1.0.0', versionType: 'standard' as const }],
@@ -2665,8 +2667,8 @@ describe('NuGetService', () => {
         });
 
         it('falls back to resolveIconUrl when search API has no icon', async () => {
-            vi.spyOn(service as any, 'getSources').mockResolvedValue([]);
-            vi.spyOn((service as any)._packageService, 'getPackageVersionsWithSource').mockResolvedValue({ versions: ['2.0.0'], sourceUrl: 'https://nuget.org' });
+            vi.spyOn((service as any)._packageService, 'resolveSourcesForBatch').mockResolvedValue(mockResolvedSources);
+            vi.spyOn((service as any)._packageService, 'getPackageVersionsWithResolvedSources').mockResolvedValue({ versions: ['2.0.0'], sourceUrl: 'https://nuget.org' });
             vi.spyOn((service as any)._packageService, 'getPackageSearchMetadata').mockResolvedValue({ verified: false });
             vi.spyOn((service as any)._packageService, 'getPackageIconUrl').mockResolvedValue('https://fallback-icon.com');
 
@@ -2678,8 +2680,8 @@ describe('NuGetService', () => {
         });
 
         it('handles errors per-package without failing entire check', async () => {
-            vi.spyOn(service as any, 'getSources').mockResolvedValue([]);
-            vi.spyOn((service as any)._packageService, 'getPackageVersionsWithSource').mockImplementation(async (...args: unknown[]) => {
+            vi.spyOn((service as any)._packageService, 'resolveSourcesForBatch').mockResolvedValue(mockResolvedSources);
+            vi.spyOn((service as any)._packageService, 'getPackageVersionsWithResolvedSources').mockImplementation(async (...args: unknown[]) => {
                 if (args[0] === 'BadPkg') { throw new Error('fail'); }
                 return { versions: ['2.0.0'], sourceUrl: 'https://nuget.org' };
             });
@@ -2693,10 +2695,24 @@ describe('NuGetService', () => {
             expect(result).toHaveLength(1);
             expect(result[0].id).toBe('GoodPkg');
         });
+
+        it('returns empty array when no sources are resolved', async () => {
+            vi.spyOn((service as any)._packageService, 'resolveSourcesForBatch').mockResolvedValue([]);
+
+            const result = await service.checkPackageUpdates(
+                [{ id: 'Pkg', version: '1.0.0', versionType: 'standard' as const }],
+                false
+            );
+            expect(result).toEqual([]);
+        });
     });
 
     describe('checkPackageUpdatesMinimal', () => {
+        const mockResolvedSources = [{ url: 'https://api.nuget.org/v3/index.json', endpoints: { packageBaseAddress: 'https://api.nuget.org/v3-flatcontainer/' }, authHeader: undefined }];
+
         it('skips floating version packages', async () => {
+            vi.spyOn((service as any)._packageService, 'resolveSourcesForBatch').mockResolvedValue(mockResolvedSources);
+
             const result = await service.checkPackageUpdatesMinimal(
                 [{ id: 'Pkg', version: '1.*', versionType: 'floating' as const }],
                 false
@@ -2705,7 +2721,8 @@ describe('NuGetService', () => {
         });
 
         it('returns update with minimal fields only', async () => {
-            vi.spyOn((service as any)._packageService, 'getPackageVersionsWithSource').mockResolvedValue({ versions: ['3.0.0'], sourceUrl: 'https://source.com' });
+            vi.spyOn((service as any)._packageService, 'resolveSourcesForBatch').mockResolvedValue(mockResolvedSources);
+            vi.spyOn((service as any)._packageService, 'getPackageVersionsWithResolvedSources').mockResolvedValue({ versions: ['3.0.0'], sourceUrl: 'https://source.com' });
 
             const result = await service.checkPackageUpdatesMinimal(
                 [{ id: 'Pkg', version: '1.0.0', versionType: 'standard' as const }],
@@ -2724,7 +2741,8 @@ describe('NuGetService', () => {
         });
 
         it('skips packages at latest version', async () => {
-            vi.spyOn((service as any)._packageService, 'getPackageVersionsWithSource').mockResolvedValue({ versions: ['1.0.0'], sourceUrl: 'https://source.com' });
+            vi.spyOn((service as any)._packageService, 'resolveSourcesForBatch').mockResolvedValue(mockResolvedSources);
+            vi.spyOn((service as any)._packageService, 'getPackageVersionsWithResolvedSources').mockResolvedValue({ versions: ['1.0.0'], sourceUrl: 'https://source.com' });
 
             const result = await service.checkPackageUpdatesMinimal(
                 [{ id: 'Pkg', version: '1.0.0', versionType: 'standard' as const }],
@@ -2734,13 +2752,119 @@ describe('NuGetService', () => {
         });
 
         it('handles per-package errors gracefully', async () => {
-            vi.spyOn((service as any)._packageService, 'getPackageVersionsWithSource').mockRejectedValue(new Error('fail'));
+            vi.spyOn((service as any)._packageService, 'resolveSourcesForBatch').mockResolvedValue(mockResolvedSources);
+            vi.spyOn((service as any)._packageService, 'getPackageVersionsWithResolvedSources').mockRejectedValue(new Error('fail'));
 
             const result = await service.checkPackageUpdatesMinimal(
                 [{ id: 'Pkg', version: '1.0.0', versionType: 'standard' as const }],
                 false
             );
             expect(result).toEqual([]);
+        });
+
+        it('returns empty array when no sources are resolved', async () => {
+            vi.spyOn((service as any)._packageService, 'resolveSourcesForBatch').mockResolvedValue([]);
+
+            const result = await service.checkPackageUpdatesMinimal(
+                [{ id: 'Pkg', version: '1.0.0', versionType: 'standard' as const }],
+                false
+            );
+            expect(result).toEqual([]);
+        });
+    });
+
+    // ──────────────────────────────────────────────
+    // Phase 4D+: resolveSourcesForBatch (pre-resolution optimization)
+    // ──────────────────────────────────────────────
+
+    describe('resolveSourcesForBatch', () => {
+        it('pre-resolves endpoints and auth for all healthy sources', async () => {
+            vi.spyOn(service as any, 'getSources').mockResolvedValue([
+                { name: 'nuget.org', url: 'https://api.nuget.org/v3/index.json', enabled: true },
+                { name: 'private', url: 'https://private.feed.com/v3/index.json', enabled: true },
+            ]);
+            vi.spyOn(service as any, 'isLocalSource').mockReturnValue(false);
+            vi.spyOn(service as any, 'filterHealthySources').mockImplementation((urls: string[]) => urls);
+            vi.spyOn(service as any, 'discoverServiceEndpoints').mockImplementation(async (url: string) => {
+                if (url.includes('nuget.org')) { return { packageBaseAddress: 'https://api.nuget.org/v3-flatcontainer/' }; }
+                return { searchQueryService: 'https://private.feed.com/v3/query' };
+            });
+            vi.spyOn(service as any, 'getAuthHeader').mockImplementation(async (url: string) => {
+                if (url.includes('private')) { return 'Basic abc'; }
+                return undefined;
+            });
+
+            const result = await (service as any)._packageService.resolveSourcesForBatch();
+            expect(result).toHaveLength(2);
+            expect(result[0]).toEqual({ url: 'https://api.nuget.org/v3/index.json', endpoints: { packageBaseAddress: 'https://api.nuget.org/v3-flatcontainer/' }, authHeader: undefined });
+            expect(result[1]).toEqual({ url: 'https://private.feed.com/v3/index.json', endpoints: { searchQueryService: 'https://private.feed.com/v3/query' }, authHeader: 'Basic abc' });
+        });
+
+        it('filters out disabled and local sources', async () => {
+            vi.spyOn(service as any, 'getSources').mockResolvedValue([
+                { name: 'nuget.org', url: 'https://api.nuget.org/v3/index.json', enabled: true },
+                { name: 'disabled', url: 'https://disabled.com/v3/index.json', enabled: false },
+                { name: 'local', url: 'C:\\packages', enabled: true },
+            ]);
+            vi.spyOn(service as any, 'isLocalSource').mockImplementation((url: string) => url.startsWith('C:'));
+            vi.spyOn(service as any, 'filterHealthySources').mockImplementation((urls: string[]) => urls);
+            vi.spyOn(service as any, 'discoverServiceEndpoints').mockResolvedValue({ packageBaseAddress: 'https://api.nuget.org/v3-flatcontainer/' });
+            vi.spyOn(service as any, 'getAuthHeader').mockResolvedValue(undefined);
+
+            const result = await (service as any)._packageService.resolveSourcesForBatch();
+            expect(result).toHaveLength(1);
+            expect(result[0].url).toBe('https://api.nuget.org/v3/index.json');
+        });
+
+        it('filters out unhealthy sources', async () => {
+            vi.spyOn(service as any, 'getSources').mockResolvedValue([
+                { name: 'nuget.org', url: 'https://api.nuget.org/v3/index.json', enabled: true },
+                { name: 'unreachable', url: 'https://unreachable.com/v3/index.json', enabled: true },
+            ]);
+            vi.spyOn(service as any, 'isLocalSource').mockReturnValue(false);
+            vi.spyOn(service as any, 'filterHealthySources').mockReturnValue(['https://api.nuget.org/v3/index.json']);
+            vi.spyOn(service as any, 'discoverServiceEndpoints').mockResolvedValue({ packageBaseAddress: 'https://api.nuget.org/v3-flatcontainer/' });
+            vi.spyOn(service as any, 'getAuthHeader').mockResolvedValue(undefined);
+
+            const result = await (service as any)._packageService.resolveSourcesForBatch();
+            expect(result).toHaveLength(1);
+            expect(result[0].url).toBe('https://api.nuget.org/v3/index.json');
+        });
+
+        it('excludes sources with no usable endpoints', async () => {
+            vi.spyOn(service as any, 'getSources').mockResolvedValue([
+                { name: 'nuget.org', url: 'https://api.nuget.org/v3/index.json', enabled: true },
+                { name: 'broken', url: 'https://broken.com/v3/index.json', enabled: true },
+            ]);
+            vi.spyOn(service as any, 'isLocalSource').mockReturnValue(false);
+            vi.spyOn(service as any, 'filterHealthySources').mockImplementation((urls: string[]) => urls);
+            vi.spyOn(service as any, 'discoverServiceEndpoints').mockImplementation(async (url: string) => {
+                if (url.includes('broken')) { return {}; } // no endpoints
+                return { packageBaseAddress: 'https://api.nuget.org/v3-flatcontainer/' };
+            });
+            vi.spyOn(service as any, 'getAuthHeader').mockResolvedValue(undefined);
+
+            const result = await (service as any)._packageService.resolveSourcesForBatch();
+            expect(result).toHaveLength(1);
+            expect(result[0].url).toBe('https://api.nuget.org/v3/index.json');
+        });
+
+        it('handles endpoint discovery errors gracefully', async () => {
+            vi.spyOn(service as any, 'getSources').mockResolvedValue([
+                { name: 'nuget.org', url: 'https://api.nuget.org/v3/index.json', enabled: true },
+                { name: 'error', url: 'https://error.com/v3/index.json', enabled: true },
+            ]);
+            vi.spyOn(service as any, 'isLocalSource').mockReturnValue(false);
+            vi.spyOn(service as any, 'filterHealthySources').mockImplementation((urls: string[]) => urls);
+            vi.spyOn(service as any, 'discoverServiceEndpoints').mockImplementation(async (url: string) => {
+                if (url.includes('error')) { throw new Error('connection refused'); }
+                return { packageBaseAddress: 'https://api.nuget.org/v3-flatcontainer/' };
+            });
+            vi.spyOn(service as any, 'getAuthHeader').mockResolvedValue(undefined);
+
+            const result = await (service as any)._packageService.resolveSourcesForBatch();
+            expect(result).toHaveLength(1);
+            expect(result[0].url).toBe('https://api.nuget.org/v3/index.json');
         });
     });
 

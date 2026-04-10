@@ -564,6 +564,13 @@ export interface ServiceEndpoints {
     vulnerabilityInfoUrl?: string;
 }
 
+/** Pre-resolved source with endpoints and auth for batch operations (avoids per-package re-discovery) */
+export interface ResolvedSource {
+    url: string;
+    endpoints: ServiceEndpoints;
+    authHeader?: string;
+}
+
 /** Result from fetchJsonWithDetails — includes error information for better diagnostics */
 export interface FetchResult<T> {
     data: T | null;

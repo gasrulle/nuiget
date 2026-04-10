@@ -50,6 +50,7 @@ function createMockNuGetService() {
         getSources: vi.fn().mockResolvedValue([]),
         getFailedSources: vi.fn().mockReturnValue(new Map()),
         getPackageVersions: vi.fn().mockResolvedValue([]),
+        clearVersionsCache: vi.fn(),
     } as unknown;
 }
 
@@ -101,7 +102,6 @@ function createMockWebviewView() {
         onDidDispose: vi.fn(() => ({ dispose: vi.fn() })),
         visible: true,
         title: undefined as string | undefined,
-        badge: undefined as { value: number; tooltip: string } | undefined,
     };
 }
 
@@ -178,44 +178,6 @@ describe('NuGetSidebarProvider', () => {
         it('enables scripts and sets local resource roots', () => {
             view = resolveView(provider);
             expect(view.webview.options).toEqual(expect.objectContaining({ enableScripts: true }));
-        });
-    });
-
-    // ──────────────────────────────────────────────
-    // setBadge / _clearBadge
-    // ──────────────────────────────────────────────
-    describe('badge management', () => {
-        it('sets badge when view is resolved and setting enabled', () => {
-            view = resolveView(provider);
-            provider.setBadge(5, '5 updates');
-            expect(view.badge).toEqual({ value: 5, tooltip: '5 updates' });
-        });
-
-        it('clears badge when count is 0', () => {
-            view = resolveView(provider);
-            provider.setBadge(5, '5 updates');
-            provider.setBadge(0);
-            expect(view.badge).toBeUndefined();
-        });
-
-        it('caches badge values for pending delivery', () => {
-            // No view resolved yet
-            provider.setBadge(3, '3 updates');
-            // Values are cached internally (verified by resolving view later)
-            view = resolveView(provider);
-            // Badge applied on _sendInitialData when ready message arrives
-        });
-
-        it('uses default tooltip when none provided', () => {
-            view = resolveView(provider);
-            provider.setBadge(1);
-            expect(view.badge).toEqual({ value: 1, tooltip: '1 update available' });
-        });
-
-        it('pluralizes tooltip correctly', () => {
-            view = resolveView(provider);
-            provider.setBadge(3);
-            expect(view.badge).toEqual({ value: 3, tooltip: '3 updates available' });
         });
     });
 
@@ -304,7 +266,7 @@ describe('NuGetSidebarProvider', () => {
 
             await provider.notifySidebarOfChange({ type: 'remove', packageId: 'Pkg', projectPath: '/A.csproj' });
 
-            // checkUpdatesInBackground ran (for badge), but should NOT have notified main panel
+            // checkUpdatesInBackground ran, but should NOT have notified main panel
             expect(vscode.commands.executeCommand).not.toHaveBeenCalledWith('nuiget.refreshPackages');
         });
     });
@@ -331,31 +293,12 @@ describe('NuGetSidebarProvider', () => {
     // dispose
     // ──────────────────────────────────────────────
     describe('dispose', () => {
-        it('clears timers and badge', () => {
-            view = resolveView(provider);
-            provider.setBadge(5);
-            expect(view.badge).toBeDefined();
-
-            provider.dispose();
-            expect(view.badge).toBeUndefined();
-        });
-
         it('sets _disposed to true', () => {
             view = resolveView(provider);
             expect((provider as any)._disposed).toBe(false);
 
             provider.dispose();
             expect((provider as any)._disposed).toBe(true);
-        });
-
-        it('clears background check timer', () => {
-            view = resolveView(provider);
-            provider.startBackgroundMonitoring();
-
-            expect((provider as any)._backgroundCheckTimer).toBeDefined();
-
-            provider.dispose();
-            expect((provider as any)._backgroundCheckTimer).toBeUndefined();
         });
 
         it('clears file watcher debounce', () => {
@@ -375,7 +318,7 @@ describe('NuGetSidebarProvider', () => {
     // checkUpdatesInBackground
     // ──────────────────────────────────────────────
     describe('checkUpdatesInBackground', () => {
-        it('fetches projects and sets badge', async () => {
+        it('fetches projects and checks updates', async () => {
             view = resolveView(provider);
             (service as any).findProjects.mockResolvedValue([{ name: 'A.csproj', path: '/A.csproj' }]);
             (service as any).getInstalledPackages.mockResolvedValue([{ id: 'Pkg', version: '1.0' }]);
@@ -385,7 +328,7 @@ describe('NuGetSidebarProvider', () => {
 
             await provider.checkUpdatesInBackground();
 
-            expect(view.badge).toEqual({ value: 1, tooltip: '1 update available' });
+            expect((service as any).checkPackageUpdatesMinimal).toHaveBeenCalled();
         });
 
         it('sends updates to webview when active', async () => {
@@ -434,26 +377,11 @@ describe('NuGetSidebarProvider', () => {
             expect((service as any).findProjects).toHaveBeenCalledTimes(2);
         });
 
-        it('clears badge when no projects are found', async () => {
-            view = resolveView(provider);
-            provider.setBadge(3, '3 updates');
-            expect(view.badge).toEqual({ value: 3, tooltip: '3 updates' });
-
+        it('returns early when no projects are found', async () => {
             (service as any).findProjects.mockResolvedValue([]);
             await provider.checkUpdatesInBackground();
 
-            expect(view.badge).toBeUndefined();
-        });
-
-        it('clears badge when checkUpdatesInBackground throws', async () => {
-            view = resolveView(provider);
-            provider.setBadge(2, '2 updates');
-            expect(view.badge).toEqual({ value: 2, tooltip: '2 updates' });
-
-            (service as any).findProjects.mockRejectedValue(new Error('network error'));
-            await provider.checkUpdatesInBackground();
-
-            expect(view.badge).toBeUndefined();
+            expect((service as any).getInstalledPackages).not.toHaveBeenCalled();
         });
 
         it('notifies main panel after background check so it re-fetches', async () => {
@@ -468,6 +396,18 @@ describe('NuGetSidebarProvider', () => {
             await provider.checkUpdatesInBackground();
 
             expect(vscode.commands.executeCommand).toHaveBeenCalledWith('nuiget.refreshPackages');
+        });
+
+        it('clears versions cache when force=true', async () => {
+            (service as any).findProjects.mockResolvedValue([]);
+            await provider.checkUpdatesInBackground(true);
+            expect((service as any).clearVersionsCache).toHaveBeenCalled();
+        });
+
+        it('does not clear versions cache when force=false', async () => {
+            (service as any).findProjects.mockResolvedValue([]);
+            await provider.checkUpdatesInBackground();
+            expect((service as any).clearVersionsCache).not.toHaveBeenCalled();
         });
     });
 
@@ -694,9 +634,9 @@ describe('NuGetSidebarProvider', () => {
     });
 
     // ──────────────────────────────────────────────
-    // Badge recalculation after sidebar operations
+    // Update re-check after sidebar operations
     // ──────────────────────────────────────────────
-    describe('badge recalculation after operations', () => {
+    describe('update re-check after operations', () => {
         let checkUpdatesSpy: ReturnType<typeof vi.spyOn>;
 
         beforeEach(() => {
@@ -710,46 +650,32 @@ describe('NuGetSidebarProvider', () => {
             checkUpdatesSpy.mockRestore();
         });
 
-        it('recalculates badge after installPackage', async () => {
+        it('re-checks updates after installPackage', async () => {
             await messageListener!({ type: 'installPackage', projectPath: '/p.csproj', packageId: 'Pkg', version: '1.0' });
             expect(checkUpdatesSpy).toHaveBeenCalledWith(true, true);
         });
 
-        it('recalculates badge after updatePackage', async () => {
+        it('re-checks updates after updatePackage', async () => {
             await messageListener!({ type: 'updatePackage', projectPath: '/p.csproj', packageId: 'Pkg', version: '2.0' });
             expect(checkUpdatesSpy).toHaveBeenCalledWith(true, true);
         });
 
-        it('recalculates badge after removePackage', async () => {
+        it('re-checks updates after removePackage', async () => {
             await messageListener!({ type: 'removePackage', projectPath: '/p.csproj', packageId: 'Pkg' });
             expect(checkUpdatesSpy).toHaveBeenCalledWith(true, true);
         });
 
-        it('recalculates badge after bulkUpdatePackages', async () => {
+        it('re-checks updates after bulkUpdatePackages', async () => {
             await messageListener!({ type: 'bulkUpdatePackages', packages: [{ id: 'Pkg', version: '2.0' }], projectPath: '/p.csproj' });
             expect(checkUpdatesSpy).toHaveBeenCalledWith(true, true);
         });
 
-        it('recalculates badge after bulkUpdateAllProjects', async () => {
+        it('re-checks updates after bulkUpdateAllProjects', async () => {
             await messageListener!({ type: 'bulkUpdateAllProjects', projectUpdates: [] });
             expect(checkUpdatesSpy).toHaveBeenCalledWith(true, true);
         });
 
-        it('clears badge immediately after bulkUpdatePackages', async () => {
-            provider.setBadge(5, '5 updates');
-            expect(view.badge).toEqual({ value: 5, tooltip: '5 updates' });
-            await messageListener!({ type: 'bulkUpdatePackages', packages: [{ id: 'Pkg', version: '2.0' }], projectPath: '/p.csproj' });
-            expect(view.badge).toBeUndefined();
-        });
-
-        it('clears badge immediately after bulkUpdateAllProjects', async () => {
-            provider.setBadge(4, '4 updates');
-            expect(view.badge).toEqual({ value: 4, tooltip: '4 updates' });
-            await messageListener!({ type: 'bulkUpdateAllProjects', projectUpdates: [] });
-            expect(view.badge).toBeUndefined();
-        });
-
-        it('does NOT recalculate badge when operation fails', async () => {
+        it('does NOT re-check updates when operation fails', async () => {
             hoisted.mockExecuteSingleOperation.mockRejectedValueOnce(new Error('fail'));
             await messageListener!({ type: 'updatePackage', projectPath: '/p.csproj', packageId: 'Pkg', version: '2.0' }).catch(() => { });
             expect(checkUpdatesSpy).not.toHaveBeenCalled();

@@ -32,7 +32,6 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
     private _latestSearchQuery = '';
 
     // Background update checking
-    private _backgroundCheckTimer?: ReturnType<typeof setInterval>;
     private _fileWatcherDebounce?: ReturnType<typeof setTimeout>;
     private _backgroundCheckInProgress = false;
     private _forceCheckPending = false;
@@ -40,9 +39,6 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
     private _pendingProjectUpdates: { projectPath: string; projectName: string; updates: { id: string; installedVersion: string; latestVersion: string }[] }[] = [];
     private _pendingInstalledCount = -1;
     private _pendingInstalledProject = '';
-    private _pendingBadgeCount = 0;
-    private _pendingBadgeTooltip = '';
-    private _showActivityBarBadge: boolean;
     private _operationInProgress = false;
     private _disposables: vscode.Disposable[] = [];
 
@@ -59,22 +55,9 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
         // Set initial context key for prerelease toggle icon
         vscode.commands.executeCommand('setContext', 'nuiget.prereleaseEnabled', this._includePrerelease);
 
-        // Read badge setting
-        this._showActivityBarBadge = vscode.workspace.getConfiguration('nuiget').get<boolean>('showActivityBarBadge', true);
-
         // Listen for configuration changes
         this._disposables.push(
             vscode.workspace.onDidChangeConfiguration(e => {
-                if (e.affectsConfiguration('nuiget.showActivityBarBadge')) {
-                    this._showActivityBarBadge = vscode.workspace.getConfiguration('nuiget').get<boolean>('showActivityBarBadge', true);
-                    if (this._showActivityBarBadge) {
-                        // Re-apply cached badge
-                        this.setBadge(this._pendingBadgeCount, this._pendingBadgeTooltip);
-                    } else {
-                        // Clear the badge
-                        this._clearBadge();
-                    }
-                }
                 if (e.affectsConfiguration('workbench.tree.indent')) {
                     this._postMessage({ type: 'treeIndent', value: this._getTreeIndent() });
                 }
@@ -134,11 +117,6 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
             this.checkUpdatesInBackground();
         }, 2000);
 
-        // Periodic re-check every 10 minutes (catches new upstream versions)
-        this._backgroundCheckTimer = setInterval(() => {
-            this.checkUpdatesInBackground();
-        }, 10 * 60 * 1000);
-
         // File watcher: *.csproj, *.fsproj, *.vbproj changes → debounced re-check
         const watcher = vscode.workspace.createFileSystemWatcher('**/*.{csproj,fsproj,vbproj}');
         const triggerDebounced = () => {
@@ -164,8 +142,8 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
 
     /**
      * Check for updates in the background (without requiring webview).
-     * Sets the Activity Bar badge and optionally sends results to the
-     * webview if it's active. Uses lite mode + minimal checks.
+     * Sends results to the webview if it's active and optionally
+     * notifies the main panel. Uses lite mode + minimal checks.
      */
     public async checkUpdatesInBackground(force = false, skipMainPanelNotify = false): Promise<void> {
         if (this._backgroundCheckInProgress) {
@@ -178,9 +156,16 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
         }
         this._backgroundCheckInProgress = true;
 
+        // When force=true (post-operation re-check), clear the in-memory versions cache
+        // so the re-check fetches fresh version lists from the API instead of returning
+        // stale cached versions that still show "updates available" for just-updated packages.
+        if (force) {
+            this._nugetService.clearVersionsCache();
+        }
+
         try {
             const projects = await this._nugetService.findProjects();
-            if (projects.length === 0) { this.setBadge(0); return; }
+            if (projects.length === 0) { return; }
 
             // Validate persisted project: if it no longer exists on disk, reset to first available
             if (this._selectedProject === ALL_PROJECTS_SENTINEL) {
@@ -207,7 +192,7 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
             let selectedProjectInstalledCount = -1;
             const allProjectUpdates: { projectPath: string; projectName: string; updates: { id: string; installedVersion: string; latestVersion: string }[] }[] = [];
 
-            // Check all projects in parallel for faster badge display
+            // Check all projects in parallel for faster display
             const projectResults = await Promise.all(projects.map(async (project) => {
                 try {
                     const installed = await this._nugetService.getInstalledPackages(project.path, true /* liteMode */);
@@ -241,11 +226,6 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
             this._pendingInstalledCount = selectedProjectInstalledCount;
             this._pendingInstalledProject = this._selectedProject || '';
 
-            // Update Activity Bar badge with total update count
-            const totalUpdateCount = allProjectUpdates.reduce((sum, pu) => sum + pu.updates.length, 0);
-            const badgeTooltip = this._buildBadgeTooltip(allProjectUpdates);
-            this.setBadge(totalUpdateCount, badgeTooltip);
-
             // If webview is active, push all-projects results and installed count
             if (!this._disposed && this._view) {
                 this._postMessage({ type: 'allProjectsUpdates', projectUpdates: allProjectUpdates });
@@ -262,8 +242,6 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
             }
         } catch (err) {
             this._outputChannel.error('checkUpdatesInBackground error:', String(err));
-            // Clear stale badge on error — don't leave old count visible
-            this.setBadge(0);
         } finally {
             this._backgroundCheckInProgress = false;
             if (this._forceCheckPending) {
@@ -286,11 +264,6 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
     /** Dispose background monitoring resources */
     public dispose(): void {
         this._disposed = true;
-        this._clearBadge();
-        if (this._backgroundCheckTimer) {
-            clearInterval(this._backgroundCheckTimer);
-            this._backgroundCheckTimer = undefined;
-        }
         this._cancelFileWatcherDebounce();
         for (const d of this._disposables) {
             d.dispose();
@@ -423,7 +396,7 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
         this._postMessage({ type: 'prereleaseChanged', includePrerelease: this._includePrerelease });
         // Sync to main panel
         NuGetPanel.syncPrerelease(this._includePrerelease);
-        // Re-check updates so badge reflects the new prerelease setting
+        // Re-check updates so sidebar reflects the new prerelease setting
         this.checkUpdatesInBackground();
         // Show feedback
         vscode.window.setStatusBarMessage(
@@ -437,7 +410,7 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
         this._includePrerelease = value;
         vscode.commands.executeCommand('setContext', 'nuiget.prereleaseEnabled', value);
         this._postMessage({ type: 'prereleaseChanged', includePrerelease: value });
-        // Re-check updates so badge reflects the new prerelease setting
+        // Re-check updates so sidebar reflects the new prerelease setting
         this.checkUpdatesInBackground();
     }
 
@@ -467,42 +440,6 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
         this._updateTitle(projectName);
     }
 
-    /** Update the Activity Bar badge with update count and per-project tooltip */
-    public setBadge(count: number, tooltip?: string): void {
-        this._pendingBadgeCount = count;
-        this._pendingBadgeTooltip = tooltip || '';
-
-        if (!this._showActivityBarBadge) { return; }
-
-        if (this._view && 'badge' in this._view) {
-            (this._view as vscode.WebviewView).badge = count > 0
-                ? { value: count, tooltip: tooltip || `${count} update${count === 1 ? '' : 's'} available` }
-                : undefined;
-        }
-    }
-
-    /** Clear the badge from the Activity Bar */
-    private _clearBadge(): void {
-        if (this._view && 'badge' in this._view) {
-            (this._view as vscode.WebviewView).badge = undefined;
-        }
-    }
-
-    /** Build a per-project tooltip string from project update data */
-    private _buildBadgeTooltip(projectUpdates: { projectName: string; updates: { id: string }[] }[]): string {
-        if (projectUpdates.length === 0) { return ''; }
-        if (projectUpdates.length === 1) {
-            const count = projectUpdates[0].updates.length;
-            return `${count} update${count === 1 ? '' : 's'} available`;
-        }
-        const totalCount = projectUpdates.reduce((sum, pu) => sum + pu.updates.length, 0);
-        const summary = `${totalCount} update${totalCount === 1 ? '' : 's'} available`;
-        const perProject = projectUpdates
-            .map(pu => `${pu.projectName} — ${pu.updates.length} update${pu.updates.length === 1 ? '' : 's'}`)
-            .join('\n');
-        return `${summary}\n${perProject}`;
-    }
-
     /** Lightweight sidebar notification after a package operation from the main panel.
      * Skips HTTP cache clearing and source re-fetch (operation just talked to registry successfully).
      * Forwards operation details to sidebar webview for optimistic state updates. */
@@ -512,20 +449,20 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
         this._cancelFileWatcherDebounce();
         // Forward operation details to sidebar webview for surgical UI updates
         this._postMessage({ type: 'packageChanged', operation });
-        // Re-check updates in background for badge accuracy.
+        // Re-check updates in background for data accuracy.
         // skipMainPanelNotify=true because the main panel initiated this change and
         // already has fresh data — a redundant refresh causes a slow second reload.
         await this.checkUpdatesInBackground(true, /* skipMainPanelNotify */ true);
     }
 
-    /** Full sidebar refresh: re-send sources, tell webview to re-fetch, and update badge */
+    /** Full sidebar refresh: re-send sources, tell webview to re-fetch, and re-check updates */
     public async refreshSidebar(): Promise<void> {
         // Re-send sources (cache was just cleared by the caller)
         const sources = await this._nugetService.getSources();
         this._postMessage({ type: 'sources', sources: sources.filter(s => s.enabled) });
         // Tell webview to re-fetch installed packages and updates
         this._postMessage({ type: 'forceRefresh' });
-        // Re-check updates for badge (force bypass the in-progress guard)
+        // Re-check updates (force bypass the in-progress guard)
         await this.checkUpdatesInBackground(true);
     }
 
@@ -733,8 +670,6 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
                     } finally {
                         this._operationInProgress = false;
                         this._cancelFileWatcherDebounce();
-                        // Clear badge immediately so stale count doesn't linger
-                        this.setBadge(0);
                         this.checkUpdatesInBackground(true, true);
                     }
                     break;
@@ -748,8 +683,6 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
                     } finally {
                         this._operationInProgress = false;
                         this._cancelFileWatcherDebounce();
-                        // Clear badge immediately so stale count doesn't linger
-                        this.setBadge(0);
                         this.checkUpdatesInBackground(true, true);
                     }
                     break;
@@ -1105,11 +1038,6 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
         }
         this._pendingInstalledCount = -1;
         this._pendingInstalledProject = '';
-
-        // Apply pending badge (may have been set before view resolved)
-        if (this._pendingBadgeCount > 0) {
-            this.setBadge(this._pendingBadgeCount, this._pendingBadgeTooltip);
-        }
     }
 
     private _sendState(): void {

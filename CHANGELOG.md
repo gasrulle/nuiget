@@ -16,17 +16,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - **VS Code-native sidebar styling** — Project group headers and package rows in the sidebar now match VS Code explorer typography: 22px row height, native font size, bold group headers, and proper tree-view indentation with hover/focus states.
+- **Update checking performance** — Pre-resolves all NuGet sources, service endpoints, and auth headers once before starting the batch version-check loop. Eliminates the "service index stampede" where 16 concurrent workers all made redundant HTTP calls to the same service index URLs, and removes per-package source/endpoint/auth resolution overhead.
 
 ### Fixed
 
 - **Sidebar batch update causes mid-operation UI refresh spam**
-- **Activity Bar badge showing stale count after batch "Update All"**
-- **Updates and badge out of sync between sidebar and full manager**
+- **Updates out of sync between sidebar and full manager**
 - **Refresh in all-projects mode not re-fetching data**
 - **All-projects Installed tab showing "No packages installed" instead of package list**
 - **Packages not selectable in all-projects Installed and Updates tabs**
-- **Activity Bar badge not clearing after bulk "Update All" with all projects selected**
-- **Activity Bar badge not clearing on refresh when background update check fails or finds no projects**
 - **Project picker always highlighting "All Projects"** — Sidebar project picker now correctly highlights the currently selected project instead of always defaulting to the first item
 - **Install not working when "All Projects" is selected** — Full manager disables the Install button with a tooltip directing users to Multi Install; sidebar shows a one-time project picker for install actions without changing the overall project selection
 - **Stuck loading spinner when rapidly switching between All Projects and single project**
@@ -41,6 +39,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Quick search dropdown opening when navigating to package details from sidebar**
 - **Sidebar trashcan icon doing nothing for installed packages in all-projects mode** — Clicking the trashcan now removes the package from the specific project it's listed under, instead of sending the sentinel value as the project path
 - **Slow full manager refresh after uninstall/install/update with sidebar open** — Sidebar background update check no longer sends a redundant refresh command back to the main panel that initiated the operation, eliminating a second full reload cycle (installed packages + update check + icon resolution)
+
+### Removed
+
+- **Activity Bar badge** — Removed the update count badge from the sidebar Activity Bar icon and the `nuiget.showActivityBarBadge` setting. The sidebar's Updates section already displays accurate update counts via its section header, making the badge redundant. This removal eliminates significant complexity (badge caching, 10-minute background timer, dual TreeView/WebviewView routing, stale-count edge cases) with no loss of functionality.
 
 ## [1.16.0] - 2026-04-01
 
