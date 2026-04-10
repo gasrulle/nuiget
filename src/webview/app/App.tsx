@@ -683,7 +683,7 @@ export const App: React.FC = () => {
                 }
                 break;
             case 'allProjectsIcons':
-                // Progressive icon enrichment — merge icon URLs into existing all-projects state
+                // Progressive icon enrichment for all-projects updates (installed icons arrive inline)
                 {
                     const iconMap = message.iconMap as Record<string, string>;
                     setAllProjectsUpdates(prev => prev.map(pu => ({
@@ -691,13 +691,6 @@ export const App: React.FC = () => {
                         updates: pu.updates.map(u => {
                             const url = iconMap[`${u.id}@${u.installedVersion}`];
                             return url ? { ...u, iconUrl: url } : u;
-                        }),
-                    })));
-                    setAllProjectsInstalled(prev => prev.map(pi => ({
-                        ...pi,
-                        packages: pi.packages.map(p => {
-                            const url = iconMap[`${p.id}@${p.resolvedVersion || p.version}`];
-                            return url ? { ...p, iconUrl: url } : p;
                         }),
                     })));
                 }
@@ -852,9 +845,8 @@ export const App: React.FC = () => {
                         take: 1,
                         exactMatch: true
                     });
-                    requestAnimationFrame(() => {
-                        searchInputRef.current?.focus();
-                    });
+                    // Blur search input to prevent quick search dropdown from appearing
+                    searchInputRef.current?.blur();
                 }
                 break;
         }

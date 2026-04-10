@@ -531,14 +531,14 @@ describe('queryAllProjectsInstalled', () => {
             { id: 'Pkg', version: '1.0', resolvedVersion: '1.0.0', isImplicit: false },
         ]);
 
-        const result = await queryAllProjectsInstalled(svc);
+        const result = await queryAllProjectsInstalled(svc, false);
 
         expect(result).toEqual([{
             projectPath: '/a.csproj',
             projectName: 'A',
             packages: [{ id: 'Pkg', version: '1.0', resolvedVersion: '1.0.0', isImplicit: false }],
         }]);
-        expect(svc.getInstalledPackages).toHaveBeenCalledWith('/a.csproj', true);
+        expect(svc.getInstalledPackages).toHaveBeenCalledWith('/a.csproj', false);
     });
 
     it('skips erroring projects and continues', async () => {
@@ -551,8 +551,7 @@ describe('queryAllProjectsInstalled', () => {
             .mockRejectedValueOnce(new Error('fail'))
             .mockResolvedValueOnce([{ id: 'A', version: '2.0' }]);
 
-        const result = await queryAllProjectsInstalled(svc);
-
+        const result = await queryAllProjectsInstalled(svc, true);
         expect(result).toEqual([{
             projectPath: '/good.csproj',
             projectName: 'Good',

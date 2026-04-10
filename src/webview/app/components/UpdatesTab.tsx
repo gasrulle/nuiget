@@ -561,7 +561,7 @@ const UpdatesTab = forwardRef<UpdatesTabHandle, UpdatesTabProps>((props, ref) =>
                                                     <span className="direct-packages-arrow">{isExpanded ? <ChevronDownIcon size={14} /> : <ChevronRightIcon size={14} />}</span>
                                                     <span className="direct-packages-title">
                                                         {item.projectName}
-                                                        <span className="direct-packages-count">({item.updateCount} update{item.updateCount !== 1 ? 's' : ''})</span>
+                                                        {!isExpanded && <span className="direct-packages-count">({item.updateCount} update{item.updateCount !== 1 ? 's' : ''})</span>}
                                                     </span>
                                                 </button>
                                             );

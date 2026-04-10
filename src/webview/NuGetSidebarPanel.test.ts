@@ -1030,7 +1030,7 @@ describe('NuGetSidebarProvider', () => {
             }]);
             await messageListener!({ type: 'checkAllProjectsInstalled', context: 'multiInstall' });
 
-            expect(hoisted.mockQueryAllProjectsInstalled).toHaveBeenCalledWith(service);
+            expect(hoisted.mockQueryAllProjectsInstalled).toHaveBeenCalledWith(service, true);
             expect(view.webview.postMessage).toHaveBeenCalledWith({
                 type: 'allProjectsInstalled',
                 projectInstalled: [{

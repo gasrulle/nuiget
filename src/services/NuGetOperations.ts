@@ -1,6 +1,7 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
 import type { NuGetService } from './NuGetService';
+import type { InstalledPackage } from './NuGetTypes';
 import { batchedPromiseAll, topologicalSortByDependency } from './NuGetUtils';
 
 // --- Shared types ---
@@ -526,7 +527,7 @@ export interface ProjectUpdatesResult {
 export interface ProjectInstalledResult {
     projectPath: string;
     projectName: string;
-    packages: { id: string; version: string; resolvedVersion?: string; isImplicit?: boolean; iconUrl?: string }[];
+    packages: InstalledPackage[];
 }
 
 /**
@@ -541,7 +542,8 @@ export async function queryAllProjectsUpdates(
     const projects = await nugetService.findProjects();
     const results: ProjectUpdatesResult[] = [];
 
-    for (const project of projects) {
+    // Parallelize per-project fetching (up to 4 concurrent) for faster loading
+    await batchedPromiseAll(projects, async (project) => {
         try {
             const installedPackages = await nugetService.getInstalledPackages(project.path, liteMode);
             if (installedPackages.length > 0) {
@@ -557,37 +559,35 @@ export async function queryAllProjectsUpdates(
         } catch (error) {
             console.error(`[nUIget] Failed to check updates for ${project.name}:`, error);
         }
-    }
+    }, 4);
 
     return results;
 }
 
 /**
- * Query all projects for installed packages (lite mode).
+ * Query all projects for installed packages.
+ * @param liteMode When true, skips metadata enrichment (sidebar). Panel passes false for full data.
  */
 export async function queryAllProjectsInstalled(
-    nugetService: NuGetService
+    nugetService: NuGetService,
+    liteMode: boolean
 ): Promise<ProjectInstalledResult[]> {
     const projects = await nugetService.findProjects();
     const results: ProjectInstalledResult[] = [];
 
-    for (const project of projects) {
+    // Parallelize per-project fetching (up to 4 concurrent) for faster loading
+    await batchedPromiseAll(projects, async (project) => {
         try {
-            const installedPackages = await nugetService.getInstalledPackages(project.path, true /* liteMode */);
+            const installedPackages = await nugetService.getInstalledPackages(project.path, liteMode);
             results.push({
                 projectPath: project.path,
                 projectName: project.name,
-                packages: installedPackages.map(p => ({
-                    id: p.id,
-                    version: p.version,
-                    resolvedVersion: p.resolvedVersion,
-                    isImplicit: p.isImplicit,
-                })),
+                packages: installedPackages,
             });
         } catch (error) {
             console.error(`[nUIget] Failed to get installed packages for ${project.name}:`, error);
         }
-    }
+    }, 4);
 
     return results;
 }

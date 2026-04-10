@@ -143,6 +143,73 @@ export interface InstalledTabHandle {
     focusAndSelectFirst: () => void;
 }
 
+// ─── Shared package row content (icon + badges + version + authors) ──────────
+
+function PackageRowContent({ pkg, defaultPackageIcon }: { pkg: InstalledPackage; defaultPackageIcon: string }) {
+    return (
+        <>
+            <div className="package-icon">
+                {pkg.iconUrl ? (
+                    <img src={pkg.iconUrl} alt="" onError={(e) => { (e.target as HTMLImageElement).src = defaultPackageIcon; }} />
+                ) : (
+                    <img src={defaultPackageIcon} alt="" />
+                )}
+            </div>
+            <div className="package-info">
+                <div className="package-name">
+                    {pkg.id}
+                    {pkg.isImplicit && (
+                        <span className="implicit-badge" title="SDK-managed package - not directly referenced in project file">SDK</span>
+                    )}
+                    {pkg.versionType === 'floating' && (
+                        <span className="floating-badge" title="This package uses a floating version pattern"><SyncIcon size={12} /></span>
+                    )}
+                    {pkg.versionType === 'range' && (
+                        <span className="floating-badge" title="This package uses a version range"><RulerIcon size={12} /></span>
+                    )}
+                    {pkg.vulnerabilities && pkg.vulnerabilities.length > 0 && (
+                        <span
+                            className={`vulnerability-badge vuln-${pkg.vulnerabilities.reduce<VulnerabilitySeverity>((max, v) => {
+                                const order = { Low: 0, Moderate: 1, High: 2, Critical: 3 };
+                                return order[v.severity] > order[max] ? v.severity : max;
+                            }, 'Low')}`}
+                            title={`${pkg.vulnerabilities.length} known vulnerabilit${pkg.vulnerabilities.length > 1 ? 'ies' : 'y'}`}
+                        >
+                            <WarningIcon size={12} />
+                        </span>
+                    )}
+                </div>
+                <div className="package-meta">
+                    {pkg.isAlwaysLatest ? (
+                        <span className="package-version" title="This package always gets the latest version">
+                            * (always latest{pkg.resolvedVersion ? `: ${pkg.resolvedVersion}` : ''})
+                        </span>
+                    ) : pkg.versionType === 'floating' || pkg.versionType === 'range' ? (
+                        <span className="package-version">
+                            {pkg.version}
+                            {pkg.resolvedVersion ? (
+                                <span className="resolved-version"> ({pkg.resolvedVersion})</span>
+                            ) : (
+                                <span className="resolved-version resolved-unknown"> (run restore)</span>
+                            )}
+                        </span>
+                    ) : (
+                        <span className="package-version">v{pkg.version}</span>
+                    )}
+                </div>
+                {pkg.authors && (
+                    <div className="package-authors">
+                        {pkg.verified && (
+                            <span className="verified-badge" title="The ID prefix of this package has been reserved by its owner on nuget.org"><VerifiedIcon size={14} /></span>
+                        )}
+                        {pkg.authors}
+                    </div>
+                )}
+            </div>
+        </>
+    );
+}
+
 // ─── Component ───────────────────────────────────────────────────────────────
 
 const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function InstalledTab(props, ref) {
@@ -264,12 +331,10 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
 
     type FlattenedInstalledItem =
         | { type: 'header'; projectPath: string; projectName: string; packageCount: number }
-        | { type: 'package'; projectPath: string; id: string; version: string; resolvedVersion?: string; isImplicit?: boolean; iconUrl?: string };
+        | ({ type: 'package'; projectPath: string } & InstalledPackage);
 
     const flattenedAllProjectsInstalled = useMemo((): FlattenedInstalledItem[] => {
         if (!isAllProjects) { return []; }
-        // Note: @vulnerable not supported in all-projects mode (InstalledPackageMinimal lacks vulnerability data)
-        // so we use externalFilter directly
         const q = externalFilter.toLowerCase();
         const items: FlattenedInstalledItem[] = [];
         const sortedProjects = [...allProjectsInstalled].sort((a, b) => {
@@ -278,9 +343,13 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
             return a.projectName.localeCompare(b.projectName);
         });
         for (const project of sortedProjects) {
+            let base = project.packages;
+            if (externalFilterMode === 'vulnerable') {
+                base = base.filter(p => p.vulnerabilities && p.vulnerabilities.length > 0);
+            }
             const filtered = q
-                ? project.packages.filter(p => p.id.toLowerCase().includes(q))
-                : project.packages;
+                ? base.filter(p => p.id.toLowerCase().includes(q))
+                : base;
             items.push({
                 type: 'header',
                 projectPath: project.projectPath,
@@ -295,7 +364,7 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
             }
         }
         return items;
-    }, [isAllProjects, allProjectsInstalled, expandedProjects, externalFilter, selectedProject]);
+    }, [isAllProjects, allProjectsInstalled, expandedProjects, externalFilter, externalFilterMode, selectedProject]);
 
     const deferredFlattenedInstalled = useDeferredValue(flattenedAllProjectsInstalled);
     const isAllProjectsInstalledStale = flattenedAllProjectsInstalled !== deferredFlattenedInstalled;
@@ -970,7 +1039,7 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
                                                                 <span className="direct-packages-arrow">{isExpanded ? <ChevronDownIcon size={14} /> : <ChevronRightIcon size={14} />}</span>
                                                                 <span className="direct-packages-title">
                                                                     {item.projectName}
-                                                                    <span className="direct-packages-count">({item.packageCount})</span>
+                                                                    {!isExpanded && <span className="direct-packages-count">({item.packageCount})</span>}
                                                                 </span>
                                                             </button>
                                                         );
@@ -987,14 +1056,7 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
                                                             style={{ position: 'absolute', top: 0, left: 0, width: '100%', transform: `translateY(${virtualRow.start}px)` }}
                                                             onClick={() => {
                                                                 onActiveProjectPathChange(item.projectPath);
-                                                                const pkg: InstalledPackage = {
-                                                                    id: item.id,
-                                                                    version: item.version,
-                                                                    resolvedVersion: item.resolvedVersion,
-                                                                    isImplicit: item.isImplicit,
-                                                                    iconUrl: item.iconUrl,
-                                                                };
-                                                                onSelectDirectPackage(pkg, {
+                                                                onSelectDirectPackage(item, {
                                                                     selectedVersionValue: item.version,
                                                                     metadataVersion: item.resolvedVersion || item.version,
                                                                     initialVersions: [item.version],
@@ -1010,24 +1072,7 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
                                                                 disabled={uninstallingAll || item.isImplicit}
                                                                 title={item.isImplicit ? 'Implicit/transitive package - cannot be uninstalled directly' : undefined}
                                                             />
-                                                            <div className="package-icon">
-                                                                {item.iconUrl ? (
-                                                                    <img src={item.iconUrl} alt="" onError={(e) => { (e.target as HTMLImageElement).src = defaultPackageIcon; }} />
-                                                                ) : (
-                                                                    <img src={defaultPackageIcon} alt="" />
-                                                                )}
-                                                            </div>
-                                                            <div className="package-info">
-                                                                <div className="package-name">
-                                                                    {item.id}
-                                                                    {item.isImplicit && (
-                                                                        <span className="implicit-badge" title="SDK-managed package">SDK</span>
-                                                                    )}
-                                                                </div>
-                                                                <div className="package-meta">
-                                                                    <span className="package-version">v{item.resolvedVersion || item.version}</span>
-                                                                </div>
-                                                            </div>
+                                                            <PackageRowContent pkg={item} defaultPackageIcon={defaultPackageIcon} />
                                                         </div>
                                                     );
                                                 })}
@@ -1035,6 +1080,11 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
                                             {externalFilter.trim() && deferredFlattenedInstalled.filter(i => i.type === 'package').length === 0 && (
                                                 <div className="installed-filter-empty">
                                                     No packages match &lsquo;{externalFilter.trim()}&rsquo;
+                                                </div>
+                                            )}
+                                            {!externalFilter.trim() && externalFilterMode === 'vulnerable' && deferredFlattenedInstalled.filter(i => i.type === 'package').length === 0 && (
+                                                <div className="installed-filter-empty">
+                                                    No vulnerable packages found
                                                 </div>
                                             )}
                                         </>
@@ -1115,64 +1165,7 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
                                                                 disabled={uninstallingAll || pkg.isImplicit}
                                                                 title={pkg.isImplicit ? 'Implicit/transitive package - cannot be uninstalled directly' : undefined}
                                                             />
-                                                            <div className="package-icon">
-                                                                {pkg.iconUrl ? (
-                                                                    <img src={pkg.iconUrl} alt="" onError={(e) => { (e.target as HTMLImageElement).src = defaultPackageIcon; }} />
-                                                                ) : (
-                                                                    <img src={defaultPackageIcon} alt="" />
-                                                                )}
-                                                            </div>
-                                                            <div className="package-info">
-                                                                <div className="package-name">
-                                                                    {pkg.id}
-                                                                    {pkg.isImplicit && (
-                                                                        <span className="implicit-badge" title="SDK-managed package - not directly referenced in project file">SDK</span>
-                                                                    )}
-                                                                    {pkg.versionType === 'floating' && (
-                                                                        <span className="floating-badge" title="This package uses a floating version pattern"><SyncIcon size={12} /></span>
-                                                                    )}
-                                                                    {pkg.versionType === 'range' && (
-                                                                        <span className="floating-badge" title="This package uses a version range"><RulerIcon size={12} /></span>
-                                                                    )}
-                                                                    {pkg.vulnerabilities && pkg.vulnerabilities.length > 0 && (
-                                                                        <span
-                                                                            className={`vulnerability-badge vuln-${pkg.vulnerabilities.reduce<VulnerabilitySeverity>((max, v) => {
-                                                                                const order = { Low: 0, Moderate: 1, High: 2, Critical: 3 };
-                                                                                return order[v.severity] > order[max] ? v.severity : max;
-                                                                            }, 'Low')}`}
-                                                                            title={`${pkg.vulnerabilities.length} known vulnerabilit${pkg.vulnerabilities.length > 1 ? 'ies' : 'y'}`}
-                                                                        >
-                                                                            <WarningIcon size={12} />
-                                                                        </span>
-                                                                    )}
-                                                                </div>
-                                                                <div className="package-meta">
-                                                                    {pkg.isAlwaysLatest ? (
-                                                                        <span className="package-version" title="This package always gets the latest version">
-                                                                            * (always latest{pkg.resolvedVersion ? `: ${pkg.resolvedVersion}` : ''})
-                                                                        </span>
-                                                                    ) : pkg.versionType === 'floating' || pkg.versionType === 'range' ? (
-                                                                        <span className="package-version">
-                                                                            {pkg.version}
-                                                                            {pkg.resolvedVersion ? (
-                                                                                <span className="resolved-version"> ({pkg.resolvedVersion})</span>
-                                                                            ) : (
-                                                                                <span className="resolved-version resolved-unknown"> (run restore)</span>
-                                                                            )}
-                                                                        </span>
-                                                                    ) : (
-                                                                        <span className="package-version">v{pkg.version}</span>
-                                                                    )}
-                                                                </div>
-                                                                {pkg.authors && (
-                                                                    <div className="package-authors">
-                                                                        {pkg.verified && (
-                                                                            <span className="verified-badge" title="The ID prefix of this package has been reserved by its owner on nuget.org"><VerifiedIcon size={14} /></span>
-                                                                        )}
-                                                                        {pkg.authors}
-                                                                    </div>
-                                                                )}
-                                                            </div>
+                                                            <PackageRowContent pkg={pkg} defaultPackageIcon={defaultPackageIcon} />
                                                         </div>
                                                     );
                                                 })}
@@ -1180,6 +1173,11 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
                                             {externalFilter.trim() && deferredInstalledPackages.length === 0 && (
                                                 <div className="installed-filter-empty">
                                                     No packages match &lsquo;{externalFilter.trim()}&rsquo;
+                                                </div>
+                                            )}
+                                            {!externalFilter.trim() && externalFilterMode === 'vulnerable' && deferredInstalledPackages.length === 0 && (
+                                                <div className="installed-filter-empty">
+                                                    No vulnerable packages found
                                                 </div>
                                             )}
                                         </div>

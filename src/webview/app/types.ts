@@ -143,23 +143,13 @@ export interface ProjectUpdates {
 }
 
 /**
- * Installed packages for a single project in "load all" mode (minimal data for performance)
+ * Installed packages for a single project in "load all" mode.
+ * Full manager uses full InstalledPackage data; sidebar defines its own lightweight types.
  */
 export interface ProjectInstalled {
     projectPath: string;
     projectName: string;
-    packages: InstalledPackageMinimal[];
-}
-
-/**
- * Minimal installed package data for all-projects mode
- */
-export interface InstalledPackageMinimal {
-    id: string;
-    version: string;
-    resolvedVersion?: string;
-    isImplicit?: boolean;
-    iconUrl?: string;
+    packages: InstalledPackage[];
 }
 
 export interface TransitivePackage {

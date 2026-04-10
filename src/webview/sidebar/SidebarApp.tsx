@@ -94,8 +94,9 @@ export const SidebarApp: React.FC = () => {
     const [filterButtonTriggered, setFilterButtonTriggered] = useState(false);
     const [selectedPackageId, setSelectedPackageId] = useState<string | null>(null);
 
-    // Collapsible project groups in all-projects mode
-    const [collapsedProjects, setCollapsedProjects] = useState<Set<string>>(new Set());
+    // Collapsible project groups in all-projects mode (separate per section)
+    const [collapsedInstalledProjects, setCollapsedInstalledProjects] = useState<Set<string>>(new Set());
+    const [collapsedUpdatesProjects, setCollapsedUpdatesProjects] = useState<Set<string>>(new Set());
 
     // ─── Derived "All Projects" mode ─────────────────────────────────────────
     const isAllProjects = selectedProject === ALL_PROJECTS_SENTINEL;
@@ -861,8 +862,15 @@ export const SidebarApp: React.FC = () => {
     }, []);
 
     // ─── Project Group Collapse (all-projects tree view) ─────────────────────
-    const toggleProjectCollapse = useCallback((projectPath: string) => {
-        setCollapsedProjects(prev => {
+    const toggleInstalledProjectCollapse = useCallback((projectPath: string) => {
+        setCollapsedInstalledProjects(prev => {
+            const next = new Set(prev);
+            if (next.has(projectPath)) { next.delete(projectPath); } else { next.add(projectPath); }
+            return next;
+        });
+    }, []);
+    const toggleUpdatesProjectCollapse = useCallback((projectPath: string) => {
+        setCollapsedUpdatesProjects(prev => {
             const next = new Set(prev);
             if (next.has(projectPath)) { next.delete(projectPath); } else { next.add(projectPath); }
             return next;
@@ -1169,17 +1177,17 @@ export const SidebarApp: React.FC = () => {
                                 : pi.packages;
                             if (filtered.length === 0 && q) { return null; }
                             const sorted = [...filtered].sort((a, b) => a.id.localeCompare(b.id));
-                            const isCollapsed = collapsedProjects.has(pi.projectPath);
+                            const isCollapsed = collapsedInstalledProjects.has(pi.projectPath);
                             return (
                                 <div key={pi.projectPath} role="treeitem" aria-expanded={!isCollapsed}>
                                     <div
                                         className="project-group-header"
                                         title={pi.projectPath}
-                                        onClick={() => toggleProjectCollapse(pi.projectPath)}
+                                        onClick={() => toggleInstalledProjectCollapse(pi.projectPath)}
                                         onKeyDown={(e) => {
                                             if (e.key === 'Enter' || e.key === ' ') {
                                                 e.preventDefault();
-                                                toggleProjectCollapse(pi.projectPath);
+                                                toggleInstalledProjectCollapse(pi.projectPath);
                                             }
                                         }}
                                         role="button"
@@ -1190,7 +1198,7 @@ export const SidebarApp: React.FC = () => {
                                             <ChevronRightIcon size={16} />
                                         </span>
                                         <span className="project-group-name">{pi.projectName}</span>
-                                        <span className="project-group-count">{sorted.length}</span>
+                                        {isCollapsed && <span className="project-group-count">{sorted.length}</span>}
                                     </div>
                                     {!isCollapsed && sorted.map((pkg) => (
                                         <PackageRow
@@ -1293,18 +1301,18 @@ export const SidebarApp: React.FC = () => {
                             return a.projectName.localeCompare(b.projectName);
                         })
                         .map((pu) => {
-                            const isCollapsed = collapsedProjects.has(pu.projectPath);
+                            const isCollapsed = collapsedUpdatesProjects.has(pu.projectPath);
                             const sortedUpdates = [...pu.updates].sort((a, b) => a.id.localeCompare(b.id));
                             return (
                                 <div key={pu.projectPath} role="treeitem" aria-expanded={!isCollapsed}>
                                     <div
                                         className="project-group-header"
                                         title={pu.projectPath}
-                                        onClick={() => toggleProjectCollapse(pu.projectPath)}
+                                        onClick={() => toggleUpdatesProjectCollapse(pu.projectPath)}
                                         onKeyDown={(e) => {
                                             if (e.key === 'Enter' || e.key === ' ') {
                                                 e.preventDefault();
-                                                toggleProjectCollapse(pu.projectPath);
+                                                toggleUpdatesProjectCollapse(pu.projectPath);
                                             }
                                         }}
                                         role="button"
@@ -1315,7 +1323,7 @@ export const SidebarApp: React.FC = () => {
                                             <ChevronRightIcon size={16} />
                                         </span>
                                         <span className="project-group-name">{pu.projectName}</span>
-                                        <span className="project-group-count">{pu.updates.length}</span>
+                                        {isCollapsed && <span className="project-group-count">{pu.updates.length}</span>}
                                     </div>
                                     {!isCollapsed && sortedUpdates.map((pkg) => (
                                         <PackageRow

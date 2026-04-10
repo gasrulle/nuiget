@@ -953,7 +953,7 @@ describe('NuGetPanel', () => {
             }]);
             await messageListener!({ type: 'checkAllProjectsInstalled', context: 'multiInstall' });
 
-            expect(hoisted.mockQueryAllProjectsInstalled).toHaveBeenCalledWith(mockService);
+            expect(hoisted.mockQueryAllProjectsInstalled).toHaveBeenCalledWith(mockService, false);
             expect(mockPanel.webview.postMessage).toHaveBeenCalledWith({
                 type: 'allProjectsInstalled',
                 context: 'multiInstall',
@@ -1022,25 +1022,17 @@ describe('NuGetPanel', () => {
             expect(iconMsg).toBeUndefined();
         });
 
-        it('sends allProjectsIcons after checkAllProjectsInstalled (non-multiInstall)', async () => {
+        it('does not resolve icons separately (icons arrive inline via enrichment)', async () => {
             hoisted.mockQueryAllProjectsInstalled.mockResolvedValueOnce([{
                 projectPath: '/projA.csproj',
                 projectName: 'ProjA',
                 packages: [{ id: 'Pkg', version: '1.0', resolvedVersion: '1.0.0' }]
             }]);
-            hoisted.mockResolveAllProjectsIcons.mockResolvedValueOnce({ 'Pkg@1.0.0': 'https://icon/pkg.png' });
 
             await messageListener!({ type: 'checkAllProjectsInstalled' });
             await new Promise(r => setTimeout(r, 10));
 
-            expect(hoisted.mockResolveAllProjectsIcons).toHaveBeenCalledWith(
-                mockService,
-                [{ id: 'Pkg', version: '1.0.0' }]
-            );
-            expect(mockPanel.webview.postMessage).toHaveBeenCalledWith({
-                type: 'allProjectsIcons',
-                iconMap: { 'Pkg@1.0.0': 'https://icon/pkg.png' }
-            });
+            expect(hoisted.mockResolveAllProjectsIcons).not.toHaveBeenCalled();
         });
 
         it('skips icon resolution for multiInstall context', async () => {

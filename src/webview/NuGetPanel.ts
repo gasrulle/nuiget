@@ -738,21 +738,8 @@ export class NuGetPanel {
             case 'checkAllProjectsInstalled':
                 {
                     try {
-                        const projectInstalled = await queryAllProjectsInstalled(this._nugetService);
+                        const projectInstalled = await queryAllProjectsInstalled(this._nugetService, false /* full enrichment */);
                         this._postMessage({ type: 'allProjectsInstalled', context: data.context, projectInstalled });
-                        // Phase 2: resolve icons in background after initial data is sent
-                        if (data.context !== 'multiInstall') {
-                            const installedPackages = projectInstalled.flatMap(pi =>
-                                pi.packages.map(p => ({ id: p.id, version: p.resolvedVersion || p.version }))
-                            );
-                            if (installedPackages.length > 0) {
-                                resolveAllProjectsIcons(this._nugetService, installedPackages).then(iconMap => {
-                                    if (Object.keys(iconMap).length > 0) {
-                                        this._postMessage({ type: 'allProjectsIcons', iconMap });
-                                    }
-                                }).catch(() => { /* non-critical */ });
-                            }
-                        }
                     } catch (error) {
                         console.error('[nUIget] checkAllProjectsInstalled error:', error);
                         this._postMessage({ type: 'allProjectsInstalled', context: data.context, projectInstalled: [] });

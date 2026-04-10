@@ -638,7 +638,7 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
             case 'checkAllProjectsInstalled':
                 {
                     try {
-                        const projectInstalled = await queryAllProjectsInstalled(this._nugetService);
+                        const projectInstalled = await queryAllProjectsInstalled(this._nugetService, true /* liteMode — sidebar stays lightweight */);
                         this._postMessage({ type: 'allProjectsInstalled', projectInstalled, context: data.context });
                     } catch (error) {
                         console.error('[nUIget Sidebar] checkAllProjectsInstalled error:', error);
