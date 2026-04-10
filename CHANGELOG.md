@@ -19,6 +19,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Sidebar batch update causes mid-operation UI refresh spam**
+- **Activity Bar badge showing stale count after batch "Update All"**
 - **Updates and badge out of sync between sidebar and full manager**
 - **Refresh in all-projects mode not re-fetching data**
 - **All-projects Installed tab showing "No packages installed" instead of package list**

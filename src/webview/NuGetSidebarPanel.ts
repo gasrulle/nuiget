@@ -36,6 +36,7 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
     private _fileWatcherDebounce?: ReturnType<typeof setTimeout>;
     private _backgroundCheckInProgress = false;
     private _forceCheckPending = false;
+    private _forceCheckSkipMainPanel = false;
     private _pendingProjectUpdates: { projectPath: string; projectName: string; updates: { id: string; installedVersion: string; latestVersion: string }[] }[] = [];
     private _pendingInstalledCount = -1;
     private _pendingInstalledProject = '';
@@ -143,6 +144,9 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
         const triggerDebounced = () => {
             if (this._fileWatcherDebounce) { clearTimeout(this._fileWatcherDebounce); }
             this._fileWatcherDebounce = setTimeout(() => {
+                // Skip if an operation is in progress — the operation handler
+                // manages its own post-op refresh cycle.
+                if (this._operationInProgress) { return; }
                 // Tell webview to re-fetch installed packages (csproj content changed)
                 if (!this._disposed && this._view) {
                     this._postMessage({ type: 'forceRefresh' });
@@ -165,7 +169,11 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
      */
     public async checkUpdatesInBackground(force = false, skipMainPanelNotify = false): Promise<void> {
         if (this._backgroundCheckInProgress) {
-            if (force) { this._forceCheckPending = true; }
+            if (force) {
+                this._forceCheckPending = true;
+                // Preserve the most restrictive skipMainPanelNotify (true wins)
+                if (skipMainPanelNotify) { this._forceCheckSkipMainPanel = true; }
+            }
             return;
         }
         this._backgroundCheckInProgress = true;
@@ -260,8 +268,18 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
             this._backgroundCheckInProgress = false;
             if (this._forceCheckPending) {
                 this._forceCheckPending = false;
-                this.checkUpdatesInBackground(true);
+                const skipNotify = this._forceCheckSkipMainPanel;
+                this._forceCheckSkipMainPanel = false;
+                this.checkUpdatesInBackground(true, skipNotify);
             }
+        }
+    }
+
+    /** Cancel any pending file watcher debounce to avoid redundant refreshes after operations */
+    private _cancelFileWatcherDebounce(): void {
+        if (this._fileWatcherDebounce) {
+            clearTimeout(this._fileWatcherDebounce);
+            this._fileWatcherDebounce = undefined;
         }
     }
 
@@ -273,10 +291,7 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
             clearInterval(this._backgroundCheckTimer);
             this._backgroundCheckTimer = undefined;
         }
-        if (this._fileWatcherDebounce) {
-            clearTimeout(this._fileWatcherDebounce);
-            this._fileWatcherDebounce = undefined;
-        }
+        this._cancelFileWatcherDebounce();
         for (const d of this._disposables) {
             d.dispose();
         }
@@ -492,6 +507,9 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
      * Skips HTTP cache clearing and source re-fetch (operation just talked to registry successfully).
      * Forwards operation details to sidebar webview for optimistic state updates. */
     public async notifySidebarOfChange(operation: { type: string; packageId?: string; projectPath?: string }): Promise<void> {
+        // Cancel any pending file watcher debounce — the main panel operation already
+        // completed the .csproj changes; we handle the refresh below.
+        this._cancelFileWatcherDebounce();
         // Forward operation details to sidebar webview for surgical UI updates
         this._postMessage({ type: 'packageChanged', operation });
         // Re-check updates in background for badge accuracy.
@@ -658,6 +676,7 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
                         installSuccess = await executeSingleOperation(this._opCtx(), 'install', data.projectPath, data.packageId, data.version, data.sourceUrl);
                     } finally {
                         this._operationInProgress = false;
+                        this._cancelFileWatcherDebounce();
                         if (installSuccess) { this.checkUpdatesInBackground(true, true); }
                     }
                     break;
@@ -684,6 +703,7 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
                         updateSuccess = await executeSingleOperation(this._opCtx(), 'update', data.projectPath, data.packageId, data.version, data.sourceUrl);
                     } finally {
                         this._operationInProgress = false;
+                        this._cancelFileWatcherDebounce();
                         if (updateSuccess) { this.checkUpdatesInBackground(true, true); }
                     }
                     break;
@@ -698,6 +718,7 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
                         removeSuccess = await executeSingleOperation(this._opCtx(), 'remove', data.projectPath, data.packageId);
                     } finally {
                         this._operationInProgress = false;
+                        this._cancelFileWatcherDebounce();
                         if (removeSuccess) { this.checkUpdatesInBackground(true, true); }
                     }
                     break;
@@ -711,6 +732,7 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
                         await executeBulkUpdatePackages(this._opCtx(), data.packages, data.projectPath);
                     } finally {
                         this._operationInProgress = false;
+                        this._cancelFileWatcherDebounce();
                         // Clear badge immediately so stale count doesn't linger
                         this.setBadge(0);
                         this.checkUpdatesInBackground(true, true);
@@ -725,6 +747,7 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
                         await executeBulkUpdateAllProjects(this._opCtx(), data.projectUpdates);
                     } finally {
                         this._operationInProgress = false;
+                        this._cancelFileWatcherDebounce();
                         // Clear badge immediately so stale count doesn't linger
                         this.setBadge(0);
                         this.checkUpdatesInBackground(true, true);
@@ -781,6 +804,7 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
             pickInstallSuccess = await executeSingleOperation(this._opCtx(), 'install', project.path, data.packageId, data.version);
         } finally {
             this._operationInProgress = false;
+            this._cancelFileWatcherDebounce();
             if (pickInstallSuccess) { this.checkUpdatesInBackground(true, true); }
         }
     }
@@ -802,6 +826,7 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
                 singleRemoveSuccess = await executeSingleOperation(this._opCtx(), 'remove', matching[0].path, data.packageId);
             } finally {
                 this._operationInProgress = false;
+                this._cancelFileWatcherDebounce();
                 if (singleRemoveSuccess) { this.checkUpdatesInBackground(true, true); }
             }
             return;
@@ -827,6 +852,7 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
             pickRemoveSuccess = await executeSingleOperation(this._opCtx(), 'remove', project.path, data.packageId);
         } finally {
             this._operationInProgress = false;
+            this._cancelFileWatcherDebounce();
             if (pickRemoveSuccess) { this.checkUpdatesInBackground(true, true); }
         }
     }

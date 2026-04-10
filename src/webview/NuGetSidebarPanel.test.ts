@@ -754,6 +754,69 @@ describe('NuGetSidebarProvider', () => {
             await messageListener!({ type: 'updatePackage', projectPath: '/p.csproj', packageId: 'Pkg', version: '2.0' }).catch(() => { });
             expect(checkUpdatesSpy).not.toHaveBeenCalled();
         });
+
+        it('cancels file watcher debounce after operation completes', async () => {
+            // Simulate pending file watcher debounce
+            (provider as any)._fileWatcherDebounce = setTimeout(() => { /* noop */ }, 10000);
+            expect((provider as any)._fileWatcherDebounce).toBeDefined();
+
+            await messageListener!({ type: 'installPackage', projectPath: '/p.csproj', packageId: 'Pkg', version: '1.0' });
+            expect((provider as any)._fileWatcherDebounce).toBeUndefined();
+        });
+
+        it('cancels file watcher debounce after bulk update completes', async () => {
+            (provider as any)._fileWatcherDebounce = setTimeout(() => { /* noop */ }, 10000);
+            await messageListener!({ type: 'bulkUpdatePackages', packages: [{ id: 'Pkg', version: '2.0' }], projectPath: '/p.csproj' });
+            expect((provider as any)._fileWatcherDebounce).toBeUndefined();
+        });
+    });
+
+    // ──────────────────────────────────────────────
+    // notifySidebarOfChange — file watcher cancellation
+    // ──────────────────────────────────────────────
+    describe('notifySidebarOfChange file watcher', () => {
+        it('cancels file watcher debounce when main panel notifies', async () => {
+            view = resolveView(provider);
+            (provider as any)._fileWatcherDebounce = setTimeout(() => { /* noop */ }, 10000);
+            expect((provider as any)._fileWatcherDebounce).toBeDefined();
+
+            await provider.notifySidebarOfChange({ type: 'update', packageId: 'Pkg', projectPath: '/p.csproj' });
+            expect((provider as any)._fileWatcherDebounce).toBeUndefined();
+        });
+    });
+
+    // ──────────────────────────────────────────────
+    // _forceCheckPending — skipMainPanelNotify propagation
+    // ──────────────────────────────────────────────
+    describe('checkUpdatesInBackground force-pending', () => {
+        it('propagates skipMainPanelNotify through force-pending re-run', async () => {
+            view = resolveView(provider);
+            // Make findProjects slow enough that the second call arrives while first is in progress
+            let resolveFirst!: (v: { name: string; path: string }[]) => void;
+            (service as any).findProjects.mockImplementationOnce(() => new Promise(r => { resolveFirst = r; }));
+            (service as any).findProjects.mockResolvedValue([{ name: 'A.csproj', path: '/A.csproj' }]);
+            (service as any).getInstalledPackages.mockResolvedValue([]);
+            (service as any).checkPackageUpdatesMinimal.mockResolvedValue([]);
+            (vscode.commands.executeCommand as any).mockClear();
+
+            // Start first check (will block on findProjects)
+            const first = provider.checkUpdatesInBackground(true, true);
+            // Queue second with skipMainPanelNotify=true while first is in progress
+            await provider.checkUpdatesInBackground(true, true);
+            expect((provider as any)._forceCheckPending).toBe(true);
+            expect((provider as any)._forceCheckSkipMainPanel).toBe(true);
+
+            // Let first complete — triggers force-pending re-run
+            resolveFirst([{ name: 'A.csproj', path: '/A.csproj' }]);
+            await first;
+            // Wait for the force-pending re-run to finish
+            await vi.waitFor(() => {
+                expect((provider as any)._backgroundCheckInProgress).toBe(false);
+            });
+
+            // Force-pending re-run should NOT have notified main panel
+            expect(vscode.commands.executeCommand).not.toHaveBeenCalledWith('nuiget.refreshPackages');
+        });
     });
 
     // ──────────────────────────────────────────────
