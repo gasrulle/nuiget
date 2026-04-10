@@ -205,8 +205,8 @@ describe('SidebarApp', () => {
         // Rapidly switch back to single project before all-projects responses arrive
         sendMessage({ type: 'projectChanged', projectPath: '/App.csproj', projectName: 'App.csproj' });
         // Stale all-projects responses arrive — should NOT cause stuck spinner
-        sendMessage({ type: 'allProjectsUpdates', updates: [] });
-        sendMessage({ type: 'allProjectsInstalled', projects: [] });
+        sendMessage({ type: 'allProjectsUpdates', projectUpdates: [] });
+        sendMessage({ type: 'allProjectsInstalled', projectInstalled: [] });
         // Single-project responses arrive for the correct project
         sendMessage({
             type: 'installedPackages',
@@ -228,8 +228,8 @@ describe('SidebarApp', () => {
         sendMessage({ type: 'state', selectedProject: '__all_projects__' });
         sendMessage({ type: 'projects', projects: [{ name: 'App.csproj', path: '/App.csproj' }, { name: 'Lib.csproj', path: '/Lib.csproj' }] });
         // Simulate all-projects data loaded
-        sendMessage({ type: 'allProjectsUpdates', updates: [] });
-        sendMessage({ type: 'allProjectsInstalled', projects: [] });
+        sendMessage({ type: 'allProjectsUpdates', projectUpdates: [] });
+        sendMessage({ type: 'allProjectsInstalled', projectInstalled: [] });
         // Switch to single project — all-projects loading flags should be cleared
         sendMessage({ type: 'projectChanged', projectPath: '/App.csproj', projectName: 'App.csproj' });
         // Wait for getInstalledPackages response to arrive, then check progress bar
@@ -273,7 +273,7 @@ describe('SidebarApp', () => {
         render(<SidebarApp />);
         sendMessage({ type: 'state', selectedProject: '__all_projects__' });
         sendMessage({ type: 'allProjectsInstalled', projectInstalled: [] });
-        sendMessage({ type: 'allProjectsUpdates', updates: [] });
+        sendMessage({ type: 'allProjectsUpdates', projectUpdates: [] });
         mockVsCode.postMessage.mockClear();
         sendMessage({ type: 'forceRefresh' });
         expect(mockVsCode.postMessage).toHaveBeenCalledWith({ type: 'checkAllProjectsInstalled' });

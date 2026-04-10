@@ -387,7 +387,9 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
                 return;
             }
 
-            const project = projects.find(p => p.name === selected.label);
+            const project = selected.description
+                ? projects.find(p => p.path === selected.description)
+                : undefined;
             if (project) {
                 this._selectedProject = project.path;
                 this._context.workspaceState.update('nuget.selectedProject', this._selectedProject);
@@ -651,11 +653,12 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
                     if (this._operationInProgress) { break; }
                     if (data.projectPath === ALL_PROJECTS_SENTINEL) { break; }
                     this._operationInProgress = true;
+                    let installSuccess = false;
                     try {
-                        await executeSingleOperation(this._opCtx(), 'install', data.projectPath, data.packageId, data.version, data.sourceUrl);
+                        installSuccess = await executeSingleOperation(this._opCtx(), 'install', data.projectPath, data.packageId, data.version, data.sourceUrl);
                     } finally {
                         this._operationInProgress = false;
-                        this.checkUpdatesInBackground(true);
+                        if (installSuccess) { this.checkUpdatesInBackground(true, true); }
                     }
                     break;
                 }
@@ -676,11 +679,12 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
                     if (this._operationInProgress) { break; }
                     if (data.projectPath === ALL_PROJECTS_SENTINEL) { break; }
                     this._operationInProgress = true;
+                    let updateSuccess = false;
                     try {
-                        await executeSingleOperation(this._opCtx(), 'update', data.projectPath, data.packageId, data.version, data.sourceUrl);
+                        updateSuccess = await executeSingleOperation(this._opCtx(), 'update', data.projectPath, data.packageId, data.version, data.sourceUrl);
                     } finally {
                         this._operationInProgress = false;
-                        this.checkUpdatesInBackground(true);
+                        if (updateSuccess) { this.checkUpdatesInBackground(true, true); }
                     }
                     break;
                 }
@@ -689,11 +693,12 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
                     if (this._operationInProgress) { break; }
                     if (data.projectPath === ALL_PROJECTS_SENTINEL) { break; }
                     this._operationInProgress = true;
+                    let removeSuccess = false;
                     try {
-                        await executeSingleOperation(this._opCtx(), 'remove', data.projectPath, data.packageId);
+                        removeSuccess = await executeSingleOperation(this._opCtx(), 'remove', data.projectPath, data.packageId);
                     } finally {
                         this._operationInProgress = false;
-                        this.checkUpdatesInBackground(true);
+                        if (removeSuccess) { this.checkUpdatesInBackground(true, true); }
                     }
                     break;
                 }
@@ -708,7 +713,7 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
                         this._operationInProgress = false;
                         // Clear badge immediately so stale count doesn't linger
                         this.setBadge(0);
-                        this.checkUpdatesInBackground(true);
+                        this.checkUpdatesInBackground(true, true);
                     }
                     break;
                 }
@@ -722,7 +727,7 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
                         this._operationInProgress = false;
                         // Clear badge immediately so stale count doesn't linger
                         this.setBadge(0);
-                        this.checkUpdatesInBackground(true);
+                        this.checkUpdatesInBackground(true, true);
                     }
                     break;
                 }
@@ -765,15 +770,18 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
         });
 
         if (!selected) { return; }
-        const project = projects.find(p => p.name === selected.label);
+        const project = selected.description
+            ? projects.find(p => p.path === selected.description)
+            : undefined;
         if (!project) { return; }
 
         this._operationInProgress = true;
+        let pickInstallSuccess = false;
         try {
-            await executeSingleOperation(this._opCtx(), 'install', project.path, data.packageId, data.version);
+            pickInstallSuccess = await executeSingleOperation(this._opCtx(), 'install', project.path, data.packageId, data.version);
         } finally {
             this._operationInProgress = false;
-            this.checkUpdatesInBackground(true);
+            if (pickInstallSuccess) { this.checkUpdatesInBackground(true, true); }
         }
     }
 
@@ -789,11 +797,12 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
         // Single project — remove directly without picker
         if (matching.length === 1) {
             this._operationInProgress = true;
+            let singleRemoveSuccess = false;
             try {
-                await executeSingleOperation(this._opCtx(), 'remove', matching[0].path, data.packageId);
+                singleRemoveSuccess = await executeSingleOperation(this._opCtx(), 'remove', matching[0].path, data.packageId);
             } finally {
                 this._operationInProgress = false;
-                this.checkUpdatesInBackground(true);
+                if (singleRemoveSuccess) { this.checkUpdatesInBackground(true, true); }
             }
             return;
         }
@@ -807,15 +816,18 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
         });
 
         if (!selected) { return; }
-        const project = projects.find(p => p.name === selected.label);
+        const project = selected.description
+            ? projects.find(p => p.path === selected.description)
+            : undefined;
         if (!project) { return; }
 
         this._operationInProgress = true;
+        let pickRemoveSuccess = false;
         try {
-            await executeSingleOperation(this._opCtx(), 'remove', project.path, data.packageId);
+            pickRemoveSuccess = await executeSingleOperation(this._opCtx(), 'remove', project.path, data.packageId);
         } finally {
             this._operationInProgress = false;
-            this.checkUpdatesInBackground(true);
+            if (pickRemoveSuccess) { this.checkUpdatesInBackground(true, true); }
         }
     }
 

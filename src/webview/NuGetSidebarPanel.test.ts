@@ -5,7 +5,7 @@ import * as vscode from 'vscode';
 // Mock NuGetOperations
 // ──────────────────────────────────────────────
 const hoisted = vi.hoisted(() => ({
-    mockExecuteSingleOperation: vi.fn().mockResolvedValue(undefined),
+    mockExecuteSingleOperation: vi.fn().mockResolvedValue(true),
     mockExecuteBulkUpdatePackages: vi.fn().mockResolvedValue(undefined),
     mockExecuteBulkUpdateAllProjects: vi.fn().mockResolvedValue(undefined),
     mockQueryAllProjectsUpdates: vi.fn().mockResolvedValue([]),
@@ -712,27 +712,27 @@ describe('NuGetSidebarProvider', () => {
 
         it('recalculates badge after installPackage', async () => {
             await messageListener!({ type: 'installPackage', projectPath: '/p.csproj', packageId: 'Pkg', version: '1.0' });
-            expect(checkUpdatesSpy).toHaveBeenCalledWith(true);
+            expect(checkUpdatesSpy).toHaveBeenCalledWith(true, true);
         });
 
         it('recalculates badge after updatePackage', async () => {
             await messageListener!({ type: 'updatePackage', projectPath: '/p.csproj', packageId: 'Pkg', version: '2.0' });
-            expect(checkUpdatesSpy).toHaveBeenCalledWith(true);
+            expect(checkUpdatesSpy).toHaveBeenCalledWith(true, true);
         });
 
         it('recalculates badge after removePackage', async () => {
             await messageListener!({ type: 'removePackage', projectPath: '/p.csproj', packageId: 'Pkg' });
-            expect(checkUpdatesSpy).toHaveBeenCalledWith(true);
+            expect(checkUpdatesSpy).toHaveBeenCalledWith(true, true);
         });
 
         it('recalculates badge after bulkUpdatePackages', async () => {
             await messageListener!({ type: 'bulkUpdatePackages', packages: [{ id: 'Pkg', version: '2.0' }], projectPath: '/p.csproj' });
-            expect(checkUpdatesSpy).toHaveBeenCalledWith(true);
+            expect(checkUpdatesSpy).toHaveBeenCalledWith(true, true);
         });
 
         it('recalculates badge after bulkUpdateAllProjects', async () => {
             await messageListener!({ type: 'bulkUpdateAllProjects', projectUpdates: [] });
-            expect(checkUpdatesSpy).toHaveBeenCalledWith(true);
+            expect(checkUpdatesSpy).toHaveBeenCalledWith(true, true);
         });
 
         it('clears badge immediately after bulkUpdatePackages', async () => {
@@ -749,10 +749,10 @@ describe('NuGetSidebarProvider', () => {
             expect(view.badge).toBeUndefined();
         });
 
-        it('recalculates badge even when operation fails', async () => {
+        it('does NOT recalculate badge when operation fails', async () => {
             hoisted.mockExecuteSingleOperation.mockRejectedValueOnce(new Error('fail'));
             await messageListener!({ type: 'updatePackage', projectPath: '/p.csproj', packageId: 'Pkg', version: '2.0' }).catch(() => { });
-            expect(checkUpdatesSpy).toHaveBeenCalledWith(true);
+            expect(checkUpdatesSpy).not.toHaveBeenCalled();
         });
     });
 
