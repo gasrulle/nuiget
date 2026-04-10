@@ -566,6 +566,11 @@ body {
     z-index: 10;
 }
 
+/* Hide border-top on section header following the sash to avoid double border */
+.sash.sash-vertical + .sidebar-section > .section-header {
+    border-top-color: transparent;
+}
+
 .sash.sash-vertical::before {
     content: '';
     position: absolute;
