@@ -3,6 +3,11 @@
  * Extracted from App.tsx to enable component decomposition.
  */
 
+// ─── Constants ───────────────────────────────────────────────────────────────
+
+/** Sentinel value used as `selectedProject` when "All Projects" is selected */
+export const ALL_PROJECTS_SENTINEL = '__all_projects__';
+
 // ─── Data Models ─────────────────────────────────────────────────────────────
 
 export interface Project {
@@ -125,6 +130,7 @@ export interface PackageUpdateMinimal {
     installedVersion: string;
     latestVersion: string;
     sourceUrl?: string;
+    iconUrl?: string;
 }
 
 /**
@@ -137,22 +143,13 @@ export interface ProjectUpdates {
 }
 
 /**
- * Installed packages for a single project in "load all" mode (minimal data for performance)
+ * Installed packages for a single project in "load all" mode.
+ * Full manager uses full InstalledPackage data; sidebar defines its own lightweight types.
  */
 export interface ProjectInstalled {
     projectPath: string;
     projectName: string;
-    packages: InstalledPackageMinimal[];
-}
-
-/**
- * Minimal installed package data for all-projects mode (no icons, authors, or version spec details)
- */
-export interface InstalledPackageMinimal {
-    id: string;
-    version: string;
-    resolvedVersion?: string;
-    isImplicit?: boolean;
+    packages: InstalledPackage[];
 }
 
 export interface TransitivePackage {
@@ -174,14 +171,16 @@ export interface TransitiveFrameworkSection {
     metadataLoaded?: boolean;
 }
 
+/** Tab type for the main panel (Browse tab removed — search is now unified) */
+export type TabType = 'installed' | 'updates';
+
 export interface AppState {
     selectedProject: string;
     selectedSource: string;
-    activeTab: 'browse' | 'installed' | 'updates';
+    activeTab: TabType;
     searchQuery: string;
     includePrerelease: boolean;
     recentSearches: string[];
-    loadAllProjects?: boolean;
 }
 
 // ─── VS Code API ─────────────────────────────────────────────────────────────

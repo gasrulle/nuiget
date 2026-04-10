@@ -14,14 +14,13 @@
 
 import { useVirtualizer } from '@tanstack/react-virtual';
 import React, { forwardRef, useCallback, useDeferredValue, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
-import { AllProjectsIcon, ArrowRightIcon, CheckAllIcon, ChevronDownIcon, ChevronRightIcon, CollapseAllIcon, ExpandAllIcon, SingleProjectIcon, VerifiedIcon } from '../icons';
+import { ArrowRightIcon, CheckAllIcon, ChevronDownIcon, ChevronRightIcon, CollapseAllIcon, ExpandAllIcon, VerifiedIcon } from '../icons';
 import type {
     InstalledPackage,
     LRUMap,
     PackageMetadata,
     PackageSearchResult,
     PackageUpdate,
-    Project,
     ProjectUpdates,
     VsCodeApi,
 } from '../types';
@@ -31,6 +30,9 @@ import { MemoizedPackageDetailsPanel } from './PackageDetailsPanel';
 // ─── Props ───────────────────────────────────────────────────────────────────
 
 export interface UpdatesTabProps {
+    // External filter from unified search bar (text after @updates prefix)
+    externalFilter: string;
+
     // Data
     packagesWithUpdates: PackageUpdate[];
     loadingUpdates: boolean;
@@ -43,11 +45,13 @@ export interface UpdatesTabProps {
     defaultPackageIcon: string;
 
     // "Load All Projects" mode
-    loadAllProjects: boolean;
+    isAllProjects: boolean;
     allProjectsUpdates: ProjectUpdates[];
     loadingAllProjectsUpdates: boolean;
-    onLoadAllChange: (checked: boolean) => void;
-    projects: Project[];
+
+    // Active project path (set when clicking a package in all-projects mode)
+    activeProjectPath: string;
+    onActiveProjectPathChange: (path: string) => void;
 
     // Shared state for details panel
     packageMetadata: PackageMetadata | null;
@@ -122,6 +126,7 @@ const ESTIMATED_ITEM_HEIGHT = 66;
 
 const UpdatesTab = forwardRef<UpdatesTabHandle, UpdatesTabProps>((props, ref) => {
     const {
+        externalFilter = '',
         packagesWithUpdates,
         loadingUpdates,
         installedPackages,
@@ -131,11 +136,11 @@ const UpdatesTab = forwardRef<UpdatesTabHandle, UpdatesTabProps>((props, ref) =>
         includePrerelease,
         splitPosition,
         defaultPackageIcon,
-        loadAllProjects,
+        isAllProjects,
         allProjectsUpdates,
         loadingAllProjectsUpdates,
-        onLoadAllChange,
-        projects,
+        activeProjectPath,
+        onActiveProjectPathChange,
         packageMetadata,
         loadingMetadata,
         loadingVersions,
@@ -181,7 +186,7 @@ const UpdatesTab = forwardRef<UpdatesTabHandle, UpdatesTabProps>((props, ref) =>
     // Reset selections when packages change (e.g., project switch) or load-all mode changes
     useEffect(() => {
         setSelectedUpdates(new Set());
-    }, [packagesWithUpdates, allProjectsUpdates, loadAllProjects]);
+    }, [packagesWithUpdates, allProjectsUpdates, isAllProjects]);
 
     // Initialize all projects as expanded when data arrives
     useEffect(() => {
@@ -191,21 +196,24 @@ const UpdatesTab = forwardRef<UpdatesTabHandle, UpdatesTabProps>((props, ref) =>
     }, [allProjectsUpdates]);
 
     // ─── Derived data ────────────────────────────────────────────────────────
-    const sortedPackagesWithUpdates = useMemo(() =>
-        [...packagesWithUpdates].sort((a, b) => a.id.localeCompare(b.id)),
-        [packagesWithUpdates]
-    );
+    const sortedPackagesWithUpdates = useMemo(() => {
+        const sorted = [...packagesWithUpdates].sort((a, b) => a.id.localeCompare(b.id));
+        if (!externalFilter.trim()) { return sorted; }
+        const lower = externalFilter.trim().toLowerCase();
+        return sorted.filter(p => p.id.toLowerCase().includes(lower));
+    }, [packagesWithUpdates, externalFilter]);
     const deferredPackagesWithUpdates = useDeferredValue(sortedPackagesWithUpdates);
     const isUpdatesStale = sortedPackagesWithUpdates !== deferredPackagesWithUpdates;
 
     // Type for flattened list items: either a project header or a package update
     type FlattenedItem =
         | { type: 'header'; projectPath: string; projectName: string; updateCount: number }
-        | { type: 'package'; projectPath: string; id: string; installedVersion: string; latestVersion: string };
+        | { type: 'package'; projectPath: string; id: string; installedVersion: string; latestVersion: string; iconUrl?: string };
 
     // Flatten allProjectsUpdates into a single list for virtualization
     const flattenedAllProjectsUpdates = useMemo((): FlattenedItem[] => {
-        if (!loadAllProjects) { return []; }
+        if (!isAllProjects) { return []; }
+        const lower = externalFilter.trim().toLowerCase();
         const items: FlattenedItem[] = [];
         const sortedProjects = [...allProjectsUpdates].sort((a, b) => {
             if (a.projectPath === selectedProject) { return -1; }
@@ -213,16 +221,20 @@ const UpdatesTab = forwardRef<UpdatesTabHandle, UpdatesTabProps>((props, ref) =>
             return a.projectName.localeCompare(b.projectName);
         });
         for (const project of sortedProjects) {
+            const filteredUpdates = lower
+                ? project.updates.filter(u => u.id.toLowerCase().includes(lower))
+                : project.updates;
+            if (filteredUpdates.length === 0) { continue; }
             // Add project header
             items.push({
                 type: 'header',
                 projectPath: project.projectPath,
                 projectName: project.projectName,
-                updateCount: project.updates.length
+                updateCount: filteredUpdates.length
             });
             // Only add package items if project is expanded
             if (expandedProjects.has(project.projectPath)) {
-                const sortedUpdates = [...project.updates].sort((a, b) => a.id.localeCompare(b.id));
+                const sortedUpdates = [...filteredUpdates].sort((a, b) => a.id.localeCompare(b.id));
                 for (const update of sortedUpdates) {
                     items.push({
                         type: 'package',
@@ -233,7 +245,7 @@ const UpdatesTab = forwardRef<UpdatesTabHandle, UpdatesTabProps>((props, ref) =>
             }
         }
         return items;
-    }, [loadAllProjects, allProjectsUpdates, expandedProjects, selectedProject]);
+    }, [isAllProjects, allProjectsUpdates, expandedProjects, selectedProject, externalFilter]);
 
     const deferredFlattenedItems = useDeferredValue(flattenedAllProjectsUpdates);
     const isAllProjectsStale = flattenedAllProjectsUpdates !== deferredFlattenedItems;
@@ -245,7 +257,7 @@ const UpdatesTab = forwardRef<UpdatesTabHandle, UpdatesTabProps>((props, ref) =>
 
     // ─── Virtualizer ─────────────────────────────────────────────────────────
     // Use different virtualizer counts based on mode
-    const virtualizerCount = loadAllProjects
+    const virtualizerCount = isAllProjects
         ? deferredFlattenedItems.length
         : deferredPackagesWithUpdates.length;
 
@@ -254,7 +266,7 @@ const UpdatesTab = forwardRef<UpdatesTabHandle, UpdatesTabProps>((props, ref) =>
         count: virtualizerCount,
         getScrollElement: () => updatesScrollRef.current,
         estimateSize: (index) => {
-            if (loadAllProjects && deferredFlattenedItems[index]?.type === 'header') {
+            if (isAllProjects && deferredFlattenedItems[index]?.type === 'header') {
                 return HEADER_HEIGHT;
             }
             return ESTIMATED_ITEM_HEIGHT;
@@ -277,7 +289,7 @@ const UpdatesTab = forwardRef<UpdatesTabHandle, UpdatesTabProps>((props, ref) =>
     }, []);
 
     const handleToggleSelectAll = useCallback(() => {
-        if (loadAllProjects) {
+        if (isAllProjects) {
             // Multi-project mode: use composite keys
             if (selectedUpdates.size === allProjectsPackageCount) {
                 setSelectedUpdates(new Set());
@@ -298,14 +310,14 @@ const UpdatesTab = forwardRef<UpdatesTabHandle, UpdatesTabProps>((props, ref) =>
                 setSelectedUpdates(new Set(packagesWithUpdates.map(p => p.id)));
             }
         }
-    }, [loadAllProjects, selectedUpdates.size, allProjectsPackageCount, allProjectsUpdates, packagesWithUpdates]);
+    }, [isAllProjects, selectedUpdates.size, allProjectsPackageCount, allProjectsUpdates, packagesWithUpdates]);
 
     const handleUpdateAll = useCallback(() => {
         if (selectedUpdates.size === 0) {
             return;
         }
 
-        if (loadAllProjects) {
+        if (isAllProjects) {
             // Multi-project mode: group packages by project
             const projectUpdatesMap = new Map<string, { projectPath: string; projectName: string; packages: { id: string; version: string; sourceUrl?: string }[] }>();
 
@@ -352,7 +364,7 @@ const UpdatesTab = forwardRef<UpdatesTabHandle, UpdatesTabProps>((props, ref) =>
                 packages: packagesToUpdate
             });
         }
-    }, [loadAllProjects, selectedProject, selectedUpdates, packagesWithUpdates, allProjectsUpdates, vscode]);
+    }, [isAllProjects, selectedProject, selectedUpdates, packagesWithUpdates, allProjectsUpdates, vscode]);
 
     // ─── Imperative handle ───────────────────────────────────────────────────
     useImperativeHandle(ref, () => ({
@@ -385,13 +397,13 @@ const UpdatesTab = forwardRef<UpdatesTabHandle, UpdatesTabProps>((props, ref) =>
 
     // ─── Render ──────────────────────────────────────────────────────────────
     // Determine which loading state to show
-    const isLoading = loadAllProjects ? loadingAllProjectsUpdates : loadingUpdates;
+    const isLoading = isAllProjects ? loadingAllProjectsUpdates : loadingUpdates;
     // Determine which empty state to show
-    const hasNoUpdates = loadAllProjects
+    const hasNoUpdates = isAllProjects
         ? allProjectsUpdates.length === 0
         : packagesWithUpdates.length === 0;
     // Determine correct "all selected" state
-    const totalSelectableCount = loadAllProjects ? allProjectsPackageCount : packagesWithUpdates.length;
+    const totalSelectableCount = isAllProjects ? allProjectsPackageCount : packagesWithUpdates.length;
     const allSelected = selectedUpdates.size === totalSelectableCount && totalSelectableCount > 0;
 
     return (
@@ -402,17 +414,6 @@ const UpdatesTab = forwardRef<UpdatesTabHandle, UpdatesTabProps>((props, ref) =>
                         <>
                             <div className="updates-toolbar">
                                 <div className="toolbar-actions-left">
-                                    {projects.length > 1 && (
-                                        <button
-                                            className={`toolbar-icon-btn${loadAllProjects ? ' active' : ''}`}
-                                            onClick={() => onLoadAllChange(!loadAllProjects)}
-                                            disabled={updatingAll}
-                                            title={loadAllProjects ? 'Show single project' : 'Load all projects'}
-                                            aria-label={loadAllProjects ? 'Show single project' : 'Load all projects'}
-                                        >
-                                            {loadAllProjects ? <AllProjectsIcon size={16} /> : <SingleProjectIcon size={16} />}
-                                        </button>
-                                    )}
                                     <button
                                         className="toolbar-icon-btn"
                                         disabled
@@ -421,7 +422,7 @@ const UpdatesTab = forwardRef<UpdatesTabHandle, UpdatesTabProps>((props, ref) =>
                                     >
                                         <CheckAllIcon size={16} />
                                     </button>
-                                    {loadAllProjects && (
+                                    {isAllProjects && (
                                         <>
                                             <span className="toolbar-separator" />
                                             <button className="toolbar-icon-btn" disabled title="Collapse all" aria-label="Collapse all">
@@ -439,24 +440,13 @@ const UpdatesTab = forwardRef<UpdatesTabHandle, UpdatesTabProps>((props, ref) =>
                             </div>
                             <div className="loading-spinner-container" aria-busy="true" aria-label="Checking for updates">
                                 <div className="loading-spinner"></div>
-                                <p>{loadAllProjects ? 'Checking updates for all projects...' : 'Checking for updates...'}</p>
+                                <p>{isAllProjects ? 'Checking updates for all projects...' : 'Checking for updates...'}</p>
                             </div>
                         </>
                     ) : hasNoUpdates ? (
                         <>
                             <div className="updates-toolbar">
                                 <div className="toolbar-actions-left">
-                                    {projects.length > 1 && (
-                                        <button
-                                            className={`toolbar-icon-btn${loadAllProjects ? ' active' : ''}`}
-                                            onClick={() => onLoadAllChange(!loadAllProjects)}
-                                            disabled={updatingAll}
-                                            title={loadAllProjects ? 'Show single project' : 'Load all projects'}
-                                            aria-label={loadAllProjects ? 'Show single project' : 'Load all projects'}
-                                        >
-                                            {loadAllProjects ? <AllProjectsIcon size={16} /> : <SingleProjectIcon size={16} />}
-                                        </button>
-                                    )}
                                     <button
                                         className="toolbar-icon-btn"
                                         disabled
@@ -465,7 +455,7 @@ const UpdatesTab = forwardRef<UpdatesTabHandle, UpdatesTabProps>((props, ref) =>
                                     >
                                         <CheckAllIcon size={16} />
                                     </button>
-                                    {loadAllProjects && (
+                                    {isAllProjects && (
                                         <>
                                             <span className="toolbar-separator" />
                                             <button className="toolbar-icon-btn" disabled title="Collapse all" aria-label="Collapse all">
@@ -482,7 +472,7 @@ const UpdatesTab = forwardRef<UpdatesTabHandle, UpdatesTabProps>((props, ref) =>
                                 </button>
                             </div>
                             <p className="empty-state">
-                                {loadAllProjects
+                                {isAllProjects
                                     ? 'All packages are up to date across all projects'
                                     : installedPackages.length === 0
                                         ? 'No packages installed'
@@ -493,17 +483,6 @@ const UpdatesTab = forwardRef<UpdatesTabHandle, UpdatesTabProps>((props, ref) =>
                         <>
                             <div className="updates-toolbar">
                                 <div className="toolbar-actions-left">
-                                    {projects.length > 1 && (
-                                        <button
-                                            className={`toolbar-icon-btn${loadAllProjects ? ' active' : ''}`}
-                                            onClick={() => onLoadAllChange(!loadAllProjects)}
-                                            disabled={updatingAll}
-                                            title={loadAllProjects ? 'Show single project' : 'Load all projects'}
-                                            aria-label={loadAllProjects ? 'Show single project' : 'Load all projects'}
-                                        >
-                                            {loadAllProjects ? <AllProjectsIcon size={16} /> : <SingleProjectIcon size={16} />}
-                                        </button>
-                                    )}
                                     <button
                                         className={`toolbar-icon-btn${allSelected ? ' active' : ''}`}
                                         onClick={handleToggleSelectAll}
@@ -513,7 +492,7 @@ const UpdatesTab = forwardRef<UpdatesTabHandle, UpdatesTabProps>((props, ref) =>
                                     >
                                         <CheckAllIcon size={16} />
                                     </button>
-                                    {loadAllProjects && allProjectsUpdates.length > 0 && (
+                                    {isAllProjects && allProjectsUpdates.length > 0 && (
                                         <>
                                             <span className="toolbar-separator" />
                                             <button
@@ -546,7 +525,7 @@ const UpdatesTab = forwardRef<UpdatesTabHandle, UpdatesTabProps>((props, ref) =>
                                 </button>
                             </div>
 
-                            {loadAllProjects ? (
+                            {isAllProjects ? (
                                 /* Multi-project mode: render flattened list with project headers */
                                 <div
                                     ref={updatesListRef}
@@ -556,6 +535,7 @@ const UpdatesTab = forwardRef<UpdatesTabHandle, UpdatesTabProps>((props, ref) =>
                                 >
                                     {updatesVirtualizer.getVirtualItems().map(virtualRow => {
                                         const item = deferredFlattenedItems[virtualRow.index];
+                                        if (!item) { return null; }
 
                                         if (item.type === 'header') {
                                             const isExpanded = expandedProjects.has(item.projectPath);
@@ -581,7 +561,7 @@ const UpdatesTab = forwardRef<UpdatesTabHandle, UpdatesTabProps>((props, ref) =>
                                                     <span className="direct-packages-arrow">{isExpanded ? <ChevronDownIcon size={14} /> : <ChevronRightIcon size={14} />}</span>
                                                     <span className="direct-packages-title">
                                                         {item.projectName}
-                                                        <span className="direct-packages-count">({item.updateCount} update{item.updateCount !== 1 ? 's' : ''})</span>
+                                                        {!isExpanded && <span className="direct-packages-count">({item.updateCount} update{item.updateCount !== 1 ? 's' : ''})</span>}
                                                     </span>
                                                 </button>
                                             );
@@ -594,8 +574,17 @@ const UpdatesTab = forwardRef<UpdatesTabHandle, UpdatesTabProps>((props, ref) =>
                                                 key={compositeKey}
                                                 data-index={virtualRow.index}
                                                 ref={updatesVirtualizer.measureElement}
-                                                className="package-item package-item-minimal"
+                                                className={`package-item${selectedPackage && getPackageId(selectedPackage).toLowerCase() === item.id.toLowerCase() ? ' selected' : ''}`}
                                                 style={{ position: 'absolute', top: 0, left: 0, width: '100%', transform: `translateY(${virtualRow.start}px)` }}
+                                                onClick={() => {
+                                                    const installedPkg = { id: item.id, version: item.installedVersion } as InstalledPackage;
+                                                    onActiveProjectPathChange(item.projectPath);
+                                                    onSelectPackage(installedPkg, {
+                                                        selectedVersionValue: item.latestVersion,
+                                                        metadataVersion: item.latestVersion,
+                                                        initialVersions: [item.latestVersion, item.installedVersion],
+                                                    });
+                                                }}
                                             >
                                                 <input
                                                     type="checkbox"
@@ -605,6 +594,13 @@ const UpdatesTab = forwardRef<UpdatesTabHandle, UpdatesTabProps>((props, ref) =>
                                                     onClick={(e) => e.stopPropagation()}
                                                     disabled={updatingAll}
                                                 />
+                                                <div className="package-icon">
+                                                    {item.iconUrl ? (
+                                                        <img src={item.iconUrl} alt="" onError={(e) => { (e.target as HTMLImageElement).src = defaultPackageIcon; }} />
+                                                    ) : (
+                                                        <img src={defaultPackageIcon} alt="" />
+                                                    )}
+                                                </div>
                                                 <div className="package-info">
                                                     <div className="package-name">{item.id}</div>
                                                     <div className="package-meta">
@@ -628,6 +624,7 @@ const UpdatesTab = forwardRef<UpdatesTabHandle, UpdatesTabProps>((props, ref) =>
                                         () => selectedPackage ? getPackageId(selectedPackage) : null,
                                         (pkg) => {
                                             const installedPkg = { id: pkg.id, version: pkg.installedVersion } as InstalledPackage;
+                                            onActiveProjectPathChange('');
                                             onSelectPackage(installedPkg, {
                                                 selectedVersionValue: pkg.latestVersion,
                                                 metadataVersion: pkg.latestVersion,
@@ -659,6 +656,7 @@ const UpdatesTab = forwardRef<UpdatesTabHandle, UpdatesTabProps>((props, ref) =>
                                                 style={{ position: 'absolute', top: 0, left: 0, width: '100%', transform: `translateY(${virtualRow.start}px)` }}
                                                 onClick={() => {
                                                     const installedPkg = { id: pkg.id, version: pkg.installedVersion } as InstalledPackage;
+                                                    onActiveProjectPathChange('');
                                                     onSelectPackage(installedPkg, {
                                                         selectedVersionValue: pkg.latestVersion,
                                                         metadataVersion: pkg.latestVersion,
@@ -728,6 +726,7 @@ const UpdatesTab = forwardRef<UpdatesTabHandle, UpdatesTabProps>((props, ref) =>
                         selectedProject={selectedProject}
                         includePrerelease={includePrerelease}
                         selectedSource={selectedSource}
+                        activeProjectPath={activeProjectPath}
                         onInstall={onInstall}
                         onRemove={onRemove}
                         onVersionChange={onVersionChange}

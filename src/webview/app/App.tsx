@@ -1,7 +1,6 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
+import { useVirtualizer } from '@tanstack/react-virtual';
+import React, { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import './App.css';
-import type { BrowseTabHandle } from './components/BrowseTab';
-import { MemoizedBrowseTab } from './components/BrowseTab';
 import { MemoizedDraggableSash } from './components/DraggableSash';
 import type { InstalledTabHandle } from './components/InstalledTab';
 import { MemoizedInstalledTab } from './components/InstalledTab';
@@ -11,15 +10,16 @@ import { MemoizedSourceSettingsOverlay } from './components/SourceSettingsOverla
 import type { UpdatesTabHandle } from './components/UpdatesTab';
 import { MemoizedUpdatesTab } from './components/UpdatesTab';
 import { usePackageSelection } from './hooks/usePackageSelection';
-import { LoadingIcon, SettingsGearIcon, SyncIcon, WarningIcon } from './icons';
+import { ClearAllIcon, CloudDownloadIcon, FilterIcon, LoadingIcon, SettingsGearIcon, SyncIcon, VerifiedIcon, WarningIcon } from './icons';
 import { renderMarkdownToHtml } from './markdownSetup';
-import type { AppState, FailedSource, InstalledPackage, NuGetSource, PackageMetadata, PackageSearchResult, PackageUpdate, Project, ProjectInstalled, ProjectUpdates, TransitivePackage, VulnerabilitySeverity } from './types';
-import { LRUMap, getPackageId } from './types';
+import type { AppState, FailedSource, InstalledPackage, NuGetSource, PackageMetadata, PackageSearchResult, PackageUpdate, Project, ProjectInstalled, ProjectUpdates, QuickSearchSourceResult, TabType, TransitivePackage, VulnerabilitySeverity } from './types';
+import { ALL_PROJECTS_SENTINEL, LRUMap, getPackageId } from './types';
+import { FILTER_PREFIXES, parseSearchQuery } from './utils/parseSearchQuery';
 
 // Get the default package icon URL from the root element data attribute
 const defaultPackageIcon = document.getElementById('root')?.dataset.packageIcon || '';
 // Get initial tab from HTML (set when opened from context menu)
-const htmlInitialTab = document.getElementById('root')?.dataset.initialTab as 'browse' | 'installed' | 'updates' | '' | undefined;
+const htmlInitialTab = document.getElementById('root')?.dataset.initialTab as TabType | '' | undefined;
 
 declare const acquireVsCodeApi: () => {
     postMessage: (msg: unknown) => void;
@@ -37,7 +37,12 @@ export const App: React.FC = () => {
     const [sources, setSources] = useState<NuGetSource[]>([]);
     const [failedSources, setFailedSources] = useState<FailedSource[]>([]);
     const [selectedSource, setSelectedSource] = useState<string>(savedState?.selectedSource || '');
-    const [activeTab, setActiveTab] = useState<'browse' | 'installed' | 'updates'>(htmlInitialTab || savedState?.activeTab || 'browse');
+    const [activeTab, setActiveTab] = useState<TabType>(() => {
+        const raw: string | undefined = htmlInitialTab || savedState?.activeTab;
+        // Migrate legacy 'browse' tab to 'installed'
+        if (!raw || raw === 'browse') { return 'installed'; }
+        return raw as TabType;
+    });
     // React 19: Transition for tab switching to keep UI responsive
     const [isTabPending, startTabTransition] = useTransition();
     const [loadingInstalled, setLoadingInstalled] = useState(false);
@@ -58,14 +63,16 @@ export const App: React.FC = () => {
     const [packagesWithUpdates, setPackagesWithUpdates] = useState<PackageUpdate[]>([]);
     const [updateCount, setUpdateCount] = useState<number>(0);
     const [loadingUpdates, setLoadingUpdates] = useState(false);
-    // "Load All Projects" mode for Updates tab
-    const [loadAllProjects, setLoadAllProjects] = useState(false);
+    // "All Projects" mode data (driven by selectedProject === ALL_PROJECTS_SENTINEL)
     const [allProjectsUpdates, setAllProjectsUpdates] = useState<ProjectUpdates[]>([]);
     const [loadingAllProjectsUpdates, setLoadingAllProjectsUpdates] = useState(false);
-    // "Load All Projects" mode for Installed tab
-    const [loadAllProjectsInstalled, setLoadAllProjectsInstalled] = useState(false);
     const [allProjectsInstalled, setAllProjectsInstalled] = useState<ProjectInstalled[]>([]);
     const [loadingAllProjectsInstalled, setLoadingAllProjectsInstalled] = useState(false);
+    // Derived: is "All Projects" currently selected?
+    const isAllProjects = selectedProject === ALL_PROJECTS_SENTINEL;
+    // When a package is selected from an all-projects list, this holds the specific project path
+    const [activeProjectPath, setActiveProjectPath] = useState<string>('');
+    const activeProjectPathRef = useRef('');
     // Dedicated per-project installed data for Multi Install dropdown (not cleared on tab switch)
     const [multiInstallProjectData, setMultiInstallProjectData] = useState<ProjectInstalled[]>([]);
     const [loadingReadme, setLoadingReadme] = useState(false);
@@ -83,6 +90,25 @@ export const App: React.FC = () => {
 
     const [selectedTransitivePackage, setSelectedTransitivePackage] = useState<TransitivePackage | null>(null);
 
+    // --- Unified search bar state (lifted from BrowseTab) ---
+    const [searchQuery, setSearchQuery] = useState('');
+    const [searchResults, setSearchResults] = useState<PackageSearchResult[]>([]);
+    const [searchLoading, setSearchLoading] = useState(false);
+    const [showQuickSearch, setShowQuickSearch] = useState(false);
+    const [quickSearchSuggestions, setQuickSearchSuggestions] = useState<QuickSearchSourceResult[]>([]);
+    const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(-1);
+    const [expandedQuickSearchIndex, setExpandedQuickSearchIndex] = useState<number | null>(null);
+    const [quickSearchVersions, setQuickSearchVersions] = useState<string[]>([]);
+    const [selectedQuickVersionIndex, setSelectedQuickVersionIndex] = useState(0);
+    const [quickSearchLoading, setQuickSearchLoading] = useState(false);
+    const [quickVersionsLoading, setQuickVersionsLoading] = useState(false);
+    const [quickVersionsError, setQuickVersionsError] = useState<string | null>(null);
+    const isKeyboardNavigationRef = useRef(false);
+    const [isKeyboardNavActive, setIsKeyboardNavActive] = useState(false);
+    const [showSearchHistory, setShowSearchHistory] = useState(false);
+    const [showFilterDropdown, setShowFilterDropdown] = useState(false);
+    const [filterDropdownIndex, setFilterDropdownIndex] = useState(0);
+    const [filterButtonTriggered, setFilterButtonTriggered] = useState(false);
 
     // Track if settings have been loaded from extension
     const settingsLoadedRef = useRef(false);
@@ -108,6 +134,11 @@ export const App: React.FC = () => {
     useEffect(() => {
         selectedProjectRef.current = selectedProject;
     }, [selectedProject]);
+
+    // Sync activeProjectPath ref
+    useEffect(() => {
+        activeProjectPathRef.current = activeProjectPath;
+    }, [activeProjectPath]);
 
     // Use ref to track latest selectedPackage for message handler
     const selectedPackageRef = useRef(selectedPackage);
@@ -185,14 +216,28 @@ export const App: React.FC = () => {
 
 
     // Refs for tab buttons to enable focus transfer when switching tabs
-    const browseTabRef = useRef<HTMLButtonElement>(null);
     const installedTabRef = useRef<HTMLButtonElement>(null);
     const updatesTabRef = useRef<HTMLButtonElement>(null);
 
     // Component refs for tab message routing
-    const browseTabCompRef = useRef<BrowseTabHandle>(null);
     const installedTabCompRef = useRef<InstalledTabHandle>(null);
     const updatesTabCompRef = useRef<UpdatesTabHandle>(null);
+
+    // --- Unified search bar refs ---
+    const searchInputRef = useRef<HTMLInputElement>(null);
+    const searchInputFocusedRef = useRef(false);
+    const browseScrollRef = useRef<HTMLDivElement>(null);
+    const browseListRef = useRef<HTMLDivElement>(null);
+    const expandingQuickSearchPackageRef = useRef<{ packageId: string; sourceUrl: string } | null>(null);
+    const pendingQuickInstallRef = useRef<{ packageId: string; sourceUrl: string } | null>(null);
+    const skipQuickSearchRef = useRef(false);
+    const quickSearchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const fullSearchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const recentSearchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const lastSearchParamsRef = useRef<{ query: string; source: string; prerelease: boolean }>({ query: '', source: '', prerelease: false });
+    const enabledSourcesRef = useRef<NuGetSource[]>([]);
+    const searchQueryRef = useRef('');
+    const lastActiveTabRef = useRef<TabType>('installed');
 
     // Package selection hook - consolidates selection logic across all tabs
     const { selectDirectPackage, selectTransitivePackage, clearSelection } = usePackageSelection<PackageSearchResult | InstalledPackage>({
@@ -215,12 +260,10 @@ export const App: React.FC = () => {
 
     // Auto-focus the active tab on initial mount
     useEffect(() => {
-        if (htmlInitialTab === 'installed') {
-            installedTabRef.current?.focus();
-        } else if (htmlInitialTab === 'updates') {
+        if (htmlInitialTab === 'updates') {
             updatesTabRef.current?.focus();
         } else {
-            browseTabRef.current?.focus();
+            installedTabRef.current?.focus();
         }
     }, []);
 
@@ -237,20 +280,41 @@ export const App: React.FC = () => {
                 setProjects(message.projects);
                 // If a specific project was requested (from context menu), select it
                 if (message.selectProjectPath) {
-                    const matchingProject = message.projects.find(
-                        (p: Project) => p.path === message.selectProjectPath
-                    );
-                    if (matchingProject) {
-                        setSelectedProject(matchingProject.path);
-                    } else if (message.projects.length > 0 && !selectedProjectRef.current) {
-                        // Select first from sorted list
-                        const sorted = getSortedProjects(message.projects);
-                        setSelectedProject(sorted[0].path);
+                    if (message.selectProjectPath === ALL_PROJECTS_SENTINEL && message.projects.length > 1) {
+                        // Restore all-projects mode from persisted state
+                        setSelectedProject(ALL_PROJECTS_SENTINEL);
+                    } else {
+                        const matchingProject = message.projects.find(
+                            (p: Project) => p.path === message.selectProjectPath
+                        );
+                        if (matchingProject) {
+                            setSelectedProject(matchingProject.path);
+                        } else if (message.projects.length > 0 && !selectedProjectRef.current) {
+                            // Select first from sorted list
+                            const sorted = getSortedProjects(message.projects);
+                            setSelectedProject(sorted[0].path);
+                        }
                     }
+                } else if (selectedProjectRef.current === ALL_PROJECTS_SENTINEL) {
+                    // Auto-downgrade: sentinel saved but only 1 project → select it
+                    if (message.projects.length <= 1) {
+                        const sorted = getSortedProjects(message.projects);
+                        if (sorted.length > 0) {
+                            setSelectedProject(sorted[0].path);
+                        }
+                    }
+                    // else: sentinel is valid (>1 project), keep it
                 } else if (message.projects.length > 0 && !selectedProjectRef.current) {
                     // Select first from sorted list
                     const sorted = getSortedProjects(message.projects);
                     setSelectedProject(sorted[0].path);
+                } else if (message.projects.length > 0 && selectedProjectRef.current) {
+                    // Verify saved project still exists, fallback to first
+                    const exists = message.projects.some((p: Project) => p.path === selectedProjectRef.current);
+                    if (!exists) {
+                        const sorted = getSortedProjects(message.projects);
+                        setSelectedProject(sorted[0].path);
+                    }
                 }
                 break;
             case 'selectProject':
@@ -260,17 +324,15 @@ export const App: React.FC = () => {
                 }
                 // Switch to initial tab if specified (e.g., 'installed' from context menu)
                 if (message.initialTab) {
+                    const tab = (message.initialTab === 'browse' ? 'installed' : message.initialTab) as TabType;
                     startTabTransition(() => {
-                        setActiveTab(message.initialTab as 'browse' | 'installed' | 'updates');
+                        setActiveTab(tab);
                     });
-                    // Focus the correct tab to move focus ring from Browse
                     requestAnimationFrame(() => {
-                        if (message.initialTab === 'installed') {
-                            installedTabRef.current?.focus();
-                        } else if (message.initialTab === 'updates') {
+                        if (tab === 'updates') {
                             updatesTabRef.current?.focus();
                         } else {
-                            browseTabRef.current?.focus();
+                            installedTabRef.current?.focus();
                         }
                     });
                 }
@@ -294,11 +356,10 @@ export const App: React.FC = () => {
                 installedTabCompRef.current?.handleMessage(message);
                 break;
             case 'searchResults':
-            case 'autocompleteResults':
-            case 'restoreSearchQuery':
-                browseTabCompRef.current?.handleMessage(message);
+                setSearchResults(message.results);
+                setSearchLoading(false);
                 // Auto-select package after navigateToPackage triggered a search
-                if (message.type === 'searchResults' && pendingNavigationRef.current) {
+                if (pendingNavigationRef.current) {
                     const nav = pendingNavigationRef.current;
                     pendingNavigationRef.current = null;
                     const results = message.results as PackageSearchResult[];
@@ -313,6 +374,23 @@ export const App: React.FC = () => {
                             initialVersions: match.versions || []
                         });
                     }
+                }
+                break;
+            case 'autocompleteResults':
+                setQuickSearchSuggestions(message.groupedResults || []);
+                setQuickSearchLoading(false);
+                break;
+            case 'restoreSearchQuery':
+                if (message.query) {
+                    setSearchQuery(message.query);
+                    setSearchLoading(true);
+                    vscode.postMessage({
+                        type: 'searchPackages',
+                        query: message.query,
+                        source: selectedSourceRef.current === 'all' ? undefined : selectedSourceRef.current,
+                        includePrerelease: includePrereleaseRef.current,
+                        take: 100
+                    });
                 }
                 break;
             case 'sources':
@@ -451,14 +529,47 @@ export const App: React.FC = () => {
                 if (refreshDebounceRef.current) { clearTimeout(refreshDebounceRef.current); }
                 refreshDebounceRef.current = setTimeout(() => {
                     vscode.postMessage({ type: 'getProjects' });
-                    if (selectedProjectRef.current) {
+                    if (selectedProjectRef.current === ALL_PROJECTS_SENTINEL) {
+                        // All-projects mode: re-fetch all-projects data (not getInstalledPackages with sentinel)
+                        setLoadingAllProjectsUpdates(true);
+                        vscode.postMessage({
+                            type: 'checkAllProjectsUpdates',
+                            includePrerelease: includePrereleaseRef.current
+                        });
+                        setLoadingAllProjectsInstalled(true);
+                        vscode.postMessage({ type: 'checkAllProjectsInstalled' });
+                    } else if (selectedProjectRef.current) {
                         vscode.postMessage({ type: 'getInstalledPackages', projectPath: selectedProjectRef.current });
                     }
                 }, 300);
                 break;
             case 'packageVersions':
-                // First try browse tab (handles quicksearch expansion and Ctrl+Enter)
-                if (browseTabCompRef.current?.handleMessage(message)) {
+                // Handle quicksearch version expansion
+                if (expandingQuickSearchPackageRef.current &&
+                    message.packageId === expandingQuickSearchPackageRef.current.packageId) {
+                    expandingQuickSearchPackageRef.current = null;
+                    setQuickSearchVersions(message.versions || []);
+                    setQuickVersionsLoading(false);
+                    setSelectedQuickVersionIndex(0);
+                    break;
+                }
+                // Handle pending quick install (Ctrl+Enter)
+                if (pendingQuickInstallRef.current &&
+                    message.packageId === pendingQuickInstallRef.current.packageId) {
+                    const pending = pendingQuickInstallRef.current;
+                    pendingQuickInstallRef.current = null;
+                    const versions = message.versions as string[];
+                    if (versions && versions.length > 0 && selectedProjectRef.current) {
+                        vscode.postMessage({
+                            type: 'installPackage',
+                            projectPath: selectedProjectRef.current,
+                            packageId: pending.packageId,
+                            version: versions[0],
+                            source: pending.sourceUrl || undefined
+                        });
+                        setShowQuickSearch(false);
+                        setQuickSearchSuggestions([]);
+                    }
                     break;
                 }
                 // Update versions for the selected package
@@ -569,6 +680,19 @@ export const App: React.FC = () => {
                         // Also update multi-install data so it stays fresh
                         setMultiInstallProjectData(projectInstalled);
                     }
+                }
+                break;
+            case 'allProjectsIcons':
+                // Progressive icon enrichment for all-projects updates (installed icons arrive inline)
+                {
+                    const iconMap = message.iconMap as Record<string, string>;
+                    setAllProjectsUpdates(prev => prev.map(pu => ({
+                        ...pu,
+                        updates: pu.updates.map(u => {
+                            const url = iconMap[`${u.id}@${u.installedVersion}`];
+                            return url ? { ...u, iconUrl: url } : u;
+                        }),
+                    })));
                 }
                 break;
             case 'bulkRemoveAllProjectsConfirmed':
@@ -699,18 +823,30 @@ export const App: React.FC = () => {
                 vscode.postMessage({ type: 'getConfigFiles' });
                 break;
             case 'navigateToPackage':
-                // Triggered from sidebar "View Package Details" — switch to Browse tab and search for the package
+                // Triggered from sidebar "View Package Details" — fill search bar and search
                 if (message.packageId) {
                     pendingNavigationRef.current = { packageId: message.packageId, version: message.version };
-                    startTabTransition(() => {
-                        setActiveTab('browse');
+                    skipQuickSearchRef.current = true;
+                    setSearchQuery(message.packageId);
+                    setSearchLoading(true);
+                    setShowQuickSearch(false);
+                    setQuickSearchSuggestions([]);
+                    setShowSearchHistory(false);
+                    setSelectedPackage(null);
+                    setSelectedTransitivePackage(null);
+                    const sourcesToSearch = selectedSourceRef.current === 'all'
+                        ? enabledSourcesRef.current.map(s => s.url)
+                        : [selectedSourceRef.current];
+                    vscode.postMessage({
+                        type: 'searchPackages',
+                        query: message.packageId,
+                        sources: sourcesToSearch,
+                        includePrerelease: includePrereleaseRef.current,
+                        take: 1,
+                        exactMatch: true
                     });
-                    // Use a short timeout to ensure BrowseTab has mounted after tab switch
-                    // requestAnimationFrame alone isn't enough since useTransition defers the update
-                    setTimeout(() => {
-                        browseTabRef.current?.focus();
-                        browseTabCompRef.current?.navigateToPackage(message.packageId);
-                    }, 50);
+                    // Blur search input to prevent quick search dropdown from appearing
+                    searchInputRef.current?.blur();
                 }
                 break;
         }
@@ -730,7 +866,41 @@ export const App: React.FC = () => {
     }, [handleMessage]);
 
     useEffect(() => {
-        if (selectedProject) {
+        // Clear active project path on any project switch
+        setActiveProjectPath('');
+
+        if (selectedProject === ALL_PROJECTS_SENTINEL) {
+            // "All Projects" selected — clear single-project data and fetch all-projects data
+            setInstalledPackages([]);
+            setPackagesWithUpdates([]);
+            setUpdateCount(0);
+            setSelectedPackage(null);
+            setSelectedTransitivePackage(null);
+            hasVisitedInstalledTabRef.current = false;
+            installedTabCompRef.current?.resetTransitiveState(false);
+            skipNextUpdateCheckRef.current = false;
+            // Reset single-project loading flags — prevents stuck spinners when
+            // stale responses are discarded by projectPath guards after rapid switching
+            setLoadingInstalled(false);
+            setLoadingUpdates(false);
+            // Trigger all-projects fetches
+            setLoadingAllProjectsUpdates(true);
+            setAllProjectsUpdates([]);
+            vscode.postMessage({
+                type: 'checkAllProjectsUpdates',
+                includePrerelease: includePrereleaseRef.current
+            });
+            setLoadingAllProjectsInstalled(true);
+            setAllProjectsInstalled([]);
+            vscode.postMessage({ type: 'checkAllProjectsInstalled' });
+        } else if (selectedProject) {
+            // Single project selected — clear all-projects data and fetch single-project data
+            setAllProjectsUpdates([]);
+            setAllProjectsInstalled([]);
+            setLoadingAllProjectsUpdates(false);
+            setLoadingAllProjectsInstalled(false);
+            // Reset stale single-project updates loading from a previous project
+            setLoadingUpdates(false);
             setLoadingInstalled(true);
             setInstalledPackages([]);
             vscode.postMessage({ type: 'getInstalledPackages', projectPath: selectedProject });
@@ -748,7 +918,7 @@ export const App: React.FC = () => {
 
     // Refresh installed packages when switching to installed tab (skip first visit to use prefetched data)
     useEffect(() => {
-        if (activeTab === 'installed' && selectedProject) {
+        if (activeTab === 'installed' && selectedProject && selectedProject !== ALL_PROJECTS_SENTINEL) {
             if (hasVisitedInstalledTabRef.current) {
                 // Subsequent visit - refetch to pick up changes
                 setLoadingInstalled(true);
@@ -821,6 +991,8 @@ export const App: React.FC = () => {
     // Check for package updates when project, packages, or prerelease setting changes (for badge count)
     // Wait for settings to be loaded to ensure includePrerelease has the persisted value
     useEffect(() => {
+        // Skip when "All Projects" is selected — all-projects fetch handles updates
+        if (selectedProject === ALL_PROJECTS_SENTINEL) { return; }
         // Skip update check when we already know the outcome (optimistic update just happened)
         if (skipNextUpdateCheckRef.current) {
             skipNextUpdateCheckRef.current = false;
@@ -854,69 +1026,6 @@ export const App: React.FC = () => {
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps -- Intentional: reads activeTab/selectedPackage/selectedVersion without re-triggering on their changes
     }, [packagesWithUpdates]);
-
-    // Reset "Load All Projects" mode when switching away from Updates tab
-    useEffect(() => {
-        if (activeTab !== 'updates' && loadAllProjects) {
-            setLoadAllProjects(false);
-            setAllProjectsUpdates([]);
-            setLoadingAllProjectsUpdates(false);
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps -- Intentional: loadAllProjects is a guard condition, not a trigger
-    }, [activeTab]);
-
-    // Reset "Load All Projects" mode for Installed tab when switching away
-    useEffect(() => {
-        if (activeTab !== 'installed' && loadAllProjectsInstalled) {
-            setLoadAllProjectsInstalled(false);
-            setAllProjectsInstalled([]);
-            setLoadingAllProjectsInstalled(false);
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps -- Intentional: loadAllProjectsInstalled is a guard condition, not a trigger
-    }, [activeTab]);
-
-    // Callback to handle Load All checkbox change
-    const handleLoadAllChange = useCallback((checked: boolean) => {
-        setLoadAllProjects(checked);
-        if (checked) {
-            // Start loading all projects
-            setLoadingAllProjectsUpdates(true);
-            setAllProjectsUpdates([]);
-            vscode.postMessage({
-                type: 'checkAllProjectsUpdates',
-                includePrerelease: includePrerelease
-            });
-        } else {
-            // Switch back to single project mode
-            setAllProjectsUpdates([]);
-            setLoadingAllProjectsUpdates(false);
-            // Re-fetch single project updates
-            if (selectedProject && installedPackages.length > 0) {
-                setLoadingUpdates(true);
-                vscode.postMessage({
-                    type: 'checkPackageUpdates',
-                    projectPath: selectedProject,
-                    installedPackages: installedPackages,
-                    includePrerelease: includePrerelease
-                });
-            }
-        }
-    }, [includePrerelease, selectedProject, installedPackages]);
-
-    // Callback to handle Load All Installed checkbox change
-    const handleLoadAllInstalledChange = useCallback((checked: boolean) => {
-        setLoadAllProjectsInstalled(checked);
-        if (checked) {
-            // Start loading all projects installed packages
-            setLoadingAllProjectsInstalled(true);
-            setAllProjectsInstalled([]);
-            vscode.postMessage({ type: 'checkAllProjectsInstalled' });
-        } else {
-            // Switch back to single project mode
-            setAllProjectsInstalled([]);
-            setLoadingAllProjectsInstalled(false);
-        }
-    }, []);
 
     // Reset readme attempted state when a new package is selected
     useEffect(() => {
@@ -983,6 +1092,395 @@ export const App: React.FC = () => {
         return () => document.removeEventListener('click', handleCopyClick);
     }, []);
 
+    // --- Unified search: derived values ---
+
+    const searchMode = useMemo(() => parseSearchQuery(searchQuery), [searchQuery]);
+    const searchModeRef = useRef(searchMode);
+    useEffect(() => { searchModeRef.current = searchMode; }, [searchMode]);
+
+    // Sync searchQueryRef for useCallback([]) handlers
+    useEffect(() => { searchQueryRef.current = searchQuery; }, [searchQuery]);
+
+    const filterText = searchMode.filterText;
+    const filterMode: 'plain' | 'vulnerable' = searchMode.mode === 'vulnerable' ? 'vulnerable' : 'plain';
+
+    const flatSuggestions = useMemo(() =>
+        quickSearchSuggestions.flatMap(s => s.packageIds),
+        [quickSearchSuggestions]
+    );
+
+    const matchingFilters = useMemo(() => {
+        // Filter button always shows all prefixes regardless of search query
+        if (showFilterDropdown && filterButtonTriggered) {
+            return [...FILTER_PREFIXES];
+        }
+        const query = searchQuery.trim().toLowerCase();
+        if (!query.startsWith('@')) { return []; }
+        const isExactMatch = FILTER_PREFIXES.some(p => query === p || query.startsWith(p + ' '));
+        if (isExactMatch) { return []; }
+        return FILTER_PREFIXES.filter(p => p.startsWith(query));
+    }, [searchQuery, showFilterDropdown, filterButtonTriggered]);
+
+    const deferredSearchQuery = useDeferredValue(searchQuery);
+    const isSearchStale = searchQuery !== deferredSearchQuery;
+
+    const browseVirtualizer = useVirtualizer({
+        count: searchResults.length,
+        getScrollElement: () => browseScrollRef.current,
+        estimateSize: () => 66,
+        overscan: 5,
+    });
+
+    // --- Unified search: effects ---
+
+    // Track lastActiveTab for clear-to-last-tab behavior
+    useEffect(() => {
+        lastActiveTabRef.current = activeTab;
+    }, [activeTab]);
+
+    // Force-activate corresponding tab when using @-prefix filters
+    useEffect(() => {
+        if (searchMode.mode === 'installed' || searchMode.mode === 'vulnerable') {
+            if (activeTab !== 'installed') {
+                startTabTransition(() => { setActiveTab('installed'); });
+            }
+        } else if (searchMode.mode === 'updates') {
+            if (activeTab !== 'updates') {
+                startTabTransition(() => { setActiveTab('updates'); });
+            }
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- Only react to searchMode changes, not activeTab
+    }, [searchMode.mode]);
+
+    // Reset quicksearch when leaving browse mode
+    useEffect(() => {
+        if (searchMode.mode !== 'browse') {
+            setShowQuickSearch(false);
+            setQuickSearchSuggestions([]);
+            setQuickSearchLoading(false);
+        }
+    }, [searchMode.mode]);
+
+    // Auto-show @-prefix dropdown when matchingFilters become available (e.g., user types '@')
+    useEffect(() => {
+        if (matchingFilters.length > 0 && !showFilterDropdown && searchQuery.trim().startsWith('@')) {
+            setShowFilterDropdown(true);
+            setFilterDropdownIndex(0);
+        } else if (matchingFilters.length === 0 && showFilterDropdown && !filterButtonTriggered) {
+            setShowFilterDropdown(false);
+        }
+    }, [matchingFilters, searchQuery, showFilterDropdown, filterButtonTriggered]);
+
+    // Reset selection when suggestions become empty
+    useEffect(() => {
+        if (quickSearchSuggestions.length === 0) {
+            setSelectedSuggestionIndex(-1);
+        }
+    }, [quickSearchSuggestions]);
+
+    // Quick search (autocomplete) debounce - 150ms
+    useEffect(() => {
+        if (skipQuickSearchRef.current) {
+            skipQuickSearchRef.current = false;
+            return;
+        }
+
+        if (searchDebounceMode !== 'quicksearch') {
+            setQuickSearchSuggestions([]);
+            setShowQuickSearch(false);
+            setQuickSearchLoading(false);
+            return;
+        }
+
+        // Skip autocomplete when typing a filter prefix (e.g., @installed, @updates)
+        const trimmedQuery = deferredSearchQuery.trim();
+        if (searchMode.mode === 'browse' && trimmedQuery.length >= 2 && !trimmedQuery.startsWith('@') && searchInputFocusedRef.current) {
+            if (quickSearchTimeoutRef.current) {
+                clearTimeout(quickSearchTimeoutRef.current);
+            }
+
+            setShowSearchHistory(false);
+            setShowQuickSearch(true);
+            setQuickSearchLoading(true);
+
+            quickSearchTimeoutRef.current = setTimeout(() => {
+                const sourcesToSearch = selectedSourceRef.current === 'all'
+                    ? enabledSourcesRef.current.map(s => ({ name: s.name, url: s.url }))
+                    : enabledSourcesRef.current
+                        .filter(s => s.url === selectedSourceRef.current)
+                        .map(s => ({ name: s.name, url: s.url }));
+
+                vscode.postMessage({
+                    type: 'autocompletePackages',
+                    query: deferredSearchQuery.trim(),
+                    sources: sourcesToSearch,
+                    includePrerelease: includePrerelease,
+                    take: 5
+                });
+            }, 150);
+        } else {
+            setQuickSearchSuggestions([]);
+            setShowQuickSearch(false);
+            setQuickSearchLoading(false);
+        }
+
+        return () => {
+            if (quickSearchTimeoutRef.current) {
+                clearTimeout(quickSearchTimeoutRef.current);
+            }
+        };
+    }, [searchMode.mode, deferredSearchQuery, selectedSource, includePrerelease, searchDebounceMode]);
+
+    // Full search debounce - 300ms
+    useEffect(() => {
+        if (searchDebounceMode !== 'full') {
+            return;
+        }
+
+        // Skip full search when typing a filter prefix (e.g., @installed, @updates)
+        const trimmedFullQuery = searchQuery.trim();
+        if (searchMode.mode === 'browse' && trimmedFullQuery.length >= 2 && !trimmedFullQuery.startsWith('@')) {
+            if (fullSearchTimeoutRef.current) {
+                clearTimeout(fullSearchTimeoutRef.current);
+            }
+
+            fullSearchTimeoutRef.current = setTimeout(() => {
+                const sourcesToSearch = selectedSourceRef.current === 'all'
+                    ? enabledSourcesRef.current.map(s => s.url)
+                    : [selectedSourceRef.current];
+
+                setSearchLoading(true);
+                setSearchResults([]);
+                setSelectedPackage(null);
+
+                vscode.postMessage({
+                    type: 'searchPackages',
+                    query: searchQuery.trim(),
+                    sources: sourcesToSearch,
+                    includePrerelease: includePrerelease
+                });
+            }, 300);
+        }
+
+        return () => {
+            if (fullSearchTimeoutRef.current) {
+                clearTimeout(fullSearchTimeoutRef.current);
+            }
+        };
+    }, [searchMode.mode, searchQuery, selectedSource, includePrerelease, searchDebounceMode]);
+
+    // Recent search tracking
+    useEffect(() => {
+        if (searchMode.mode === 'browse' && searchQuery) {
+            const queryChanged = searchQuery !== lastSearchParamsRef.current.query;
+
+            if (queryChanged) {
+                lastSearchParamsRef.current = { query: searchQuery, source: selectedSource, prerelease: includePrerelease };
+            }
+
+            if (queryChanged && searchDebounceMode === 'full' && recentSearchesLimitRef.current > 0) {
+                if (recentSearchTimeoutRef.current) {
+                    clearTimeout(recentSearchTimeoutRef.current);
+                }
+                recentSearchTimeoutRef.current = setTimeout(() => {
+                    const trimmedQuery = searchQuery.trim();
+                    if (trimmedQuery && recentSearchesLimitRef.current > 0) {
+                        setRecentSearches(prev => {
+                            const filtered = prev.filter(s => s.toLowerCase() !== trimmedQuery.toLowerCase());
+                            return [trimmedQuery, ...filtered].slice(0, recentSearchesLimitRef.current);
+                        });
+                    }
+                }, 2000);
+            }
+        }
+        return () => {
+            if (recentSearchTimeoutRef.current) {
+                clearTimeout(recentSearchTimeoutRef.current);
+            }
+        };
+    }, [searchMode.mode, searchQuery, selectedSource, includePrerelease, searchDebounceMode]);
+
+    // Clean up search timeouts on unmount
+    useEffect(() => () => {
+        if (quickSearchTimeoutRef.current) { clearTimeout(quickSearchTimeoutRef.current); }
+        if (fullSearchTimeoutRef.current) { clearTimeout(fullSearchTimeoutRef.current); }
+        if (recentSearchTimeoutRef.current) { clearTimeout(recentSearchTimeoutRef.current); }
+    }, []);
+
+    // --- Unified search: callbacks ---
+
+    const handleSearch = useCallback((addToRecent: boolean = false) => {
+        const query = searchQueryRef.current;
+        if (query.trim()) {
+            setSearchLoading(true);
+            setSelectedPackage(null);
+            setSelectedTransitivePackage(null);
+            setShowSearchHistory(false);
+            setShowQuickSearch(false);
+            setQuickSearchSuggestions([]);
+            if (addToRecent && recentSearchesLimitRef.current > 0) {
+                const trimmedQuery = query.trim();
+                setRecentSearches(prev => {
+                    const filtered = prev.filter(s => s.toLowerCase() !== trimmedQuery.toLowerCase());
+                    return [trimmedQuery, ...filtered].slice(0, recentSearchesLimitRef.current);
+                });
+            }
+            const sourcesToSearch = selectedSourceRef.current === 'all'
+                ? enabledSourcesRef.current.map(s => s.url)
+                : [selectedSourceRef.current];
+            vscode.postMessage({
+                type: 'searchPackages',
+                query: query,
+                sources: sourcesToSearch,
+                includePrerelease: includePrereleaseRef.current
+            });
+        }
+    }, []);
+
+    const selectQuickSearchItem = useCallback((packageId: string) => {
+        skipQuickSearchRef.current = true;
+        setSearchQuery(packageId);
+        setShowQuickSearch(false);
+        setQuickSearchSuggestions([]);
+        setQuickSearchLoading(false);
+        setSelectedSuggestionIndex(-1);
+        setSearchLoading(true);
+        setSelectedPackage(null);
+        setSelectedTransitivePackage(null);
+        const sourcesToSearch = selectedSourceRef.current === 'all'
+            ? enabledSourcesRef.current.map(s => s.url)
+            : [selectedSourceRef.current];
+        vscode.postMessage({
+            type: 'searchPackages',
+            query: packageId,
+            sources: sourcesToSearch,
+            includePrerelease: includePrereleaseRef.current
+        });
+        if (recentSearchesLimitRef.current > 0) {
+            setRecentSearches(prev => {
+                const filtered = prev.filter(s => s.toLowerCase() !== packageId.toLowerCase());
+                return [packageId, ...filtered].slice(0, recentSearchesLimitRef.current);
+            });
+        }
+    }, []);
+
+    const getSourceForFlatIndex = useCallback((flatIndex: number): string => {
+        let currentIndex = 0;
+        for (const sourceResult of quickSearchSuggestions) {
+            if (flatIndex < currentIndex + sourceResult.packageIds.length) {
+                return sourceResult.sourceUrl;
+            }
+            currentIndex += sourceResult.packageIds.length;
+        }
+        return selectedSourceRef.current === 'all' ? '' : selectedSourceRef.current;
+    }, [quickSearchSuggestions]);
+
+    const expandQuickSearchItem = useCallback((flatIndex: number, packageId: string) => {
+        const sourceUrl = getSourceForFlatIndex(flatIndex);
+        const cacheKey = `${packageId.toLowerCase()}|${sourceUrl}|${includePrereleaseRef.current}`;
+        const cached = versionsCache.current.get(cacheKey);
+        if (cached && cached.length > 0) {
+            setExpandedQuickSearchIndex(flatIndex);
+            setQuickSearchVersions(cached.slice(0, 5));
+            setSelectedQuickVersionIndex(0);
+            setQuickVersionsError(null);
+            setQuickVersionsLoading(false);
+            return;
+        }
+
+        setExpandedQuickSearchIndex(flatIndex);
+        setQuickSearchVersions([]);
+        setSelectedQuickVersionIndex(0);
+        setQuickVersionsLoading(true);
+        setQuickVersionsError(null);
+        expandingQuickSearchPackageRef.current = { packageId, sourceUrl };
+
+        vscode.postMessage({
+            type: 'getPackageVersions',
+            packageId,
+            source: sourceUrl || undefined,
+            includePrerelease: includePrereleaseRef.current,
+            take: 5
+        });
+    }, [getSourceForFlatIndex]);
+
+    const collapseQuickSearchVersions = useCallback(() => {
+        setExpandedQuickSearchIndex(null);
+        setQuickSearchVersions([]);
+        setSelectedQuickVersionIndex(0);
+        setQuickVersionsLoading(false);
+        setQuickVersionsError(null);
+        expandingQuickSearchPackageRef.current = null;
+    }, []);
+
+    const installFromQuickSearch = useCallback((packageId: string, version: string) => {
+        if (!selectedProjectRef.current) { return; }
+        setShowQuickSearch(false);
+        setQuickSearchSuggestions([]);
+        setQuickSearchLoading(false);
+        setSelectedSuggestionIndex(-1);
+        collapseQuickSearchVersions();
+
+        if (recentSearchesLimitRef.current > 0) {
+            setRecentSearches(prev => {
+                const filtered = prev.filter(s => s.toLowerCase() !== packageId.toLowerCase());
+                return [packageId, ...filtered].slice(0, recentSearchesLimitRef.current);
+            });
+        }
+
+        vscode.postMessage({
+            type: 'installPackage',
+            projectPath: selectedProjectRef.current,
+            packageId,
+            version
+        });
+    }, [collapseQuickSearchVersions]);
+
+    const selectRecentSearchItem = useCallback((search: string) => {
+        skipQuickSearchRef.current = true;
+        setSearchQuery(search);
+        setShowSearchHistory(false);
+        setShowQuickSearch(false);
+        setSelectedSuggestionIndex(-1);
+        setSearchLoading(true);
+        setSelectedPackage(null);
+        setSelectedTransitivePackage(null);
+        const sourcesToSearch = selectedSourceRef.current === 'all'
+            ? enabledSourcesRef.current.map(s => s.url)
+            : [selectedSourceRef.current];
+        vscode.postMessage({
+            type: 'searchPackages',
+            query: search,
+            sources: sourcesToSearch,
+            includePrerelease: includePrereleaseRef.current
+        });
+    }, []);
+
+    const selectFilter = useCallback((prefix: string) => {
+        setSearchQuery(prefix + ' ');
+        setShowFilterDropdown(false);
+        setFilterButtonTriggered(false);
+        setFilterDropdownIndex(0);
+        searchInputRef.current?.focus();
+    }, []);
+
+    const handleClearSearch = useCallback(() => {
+        setSearchQuery('');
+        setSearchResults([]);
+        setSearchLoading(false);
+        setShowQuickSearch(false);
+        setQuickSearchSuggestions([]);
+        setShowSearchHistory(false);
+        setShowFilterDropdown(false);
+        setSelectedPackage(null);
+        setSelectedTransitivePackage(null);
+        // Return to last active tab
+        startTabTransition(() => {
+            setActiveTab(lastActiveTabRef.current);
+        });
+        searchInputRef.current?.focus();
+    }, [startTabTransition]);
+
     // Compute vulnerability count and highest severity from installed packages
     const { vulnPackageCount, highestVulnSeverity } = useMemo(() => {
         const severityOrder: Record<VulnerabilitySeverity, number> = { Low: 0, Moderate: 1, High: 2, Critical: 3 };
@@ -1006,6 +1504,8 @@ export const App: React.FC = () => {
         sources.filter(s => s.enabled),
         [sources]
     );
+    // Sync enabledSourcesRef for useCallback([]) handlers
+    useEffect(() => { enabledSourcesRef.current = enabledSources; }, [enabledSources]);
 
     // Sort projects alphabetically
     const sortedProjects = useMemo(() => {
@@ -1032,16 +1532,17 @@ export const App: React.FC = () => {
     }, []);
 
     const handleInstall = useCallback((packageId: string, version: string) => {
-        if (!selectedProject) {
+        const projectPath = activeProjectPathRef.current || selectedProjectRef.current;
+        if (!projectPath || projectPath === ALL_PROJECTS_SENTINEL) {
             return;
         }
         vscode.postMessage({
             type: 'installPackage',
-            projectPath: selectedProject,
+            projectPath,
             packageId,
             version
         });
-    }, [selectedProject]);
+    }, []);
 
     const handleMultiInstall = useCallback((packageId: string, version: string, projectPaths: string[]) => {
         if (projectPaths.length === 0) { return; }
@@ -1059,15 +1560,16 @@ export const App: React.FC = () => {
     }, []);
 
     const handleRemove = useCallback((packageId: string) => {
-        if (!selectedProject) {
+        const projectPath = activeProjectPathRef.current || selectedProjectRef.current;
+        if (!projectPath || projectPath === ALL_PROJECTS_SENTINEL) {
             return;
         }
         vscode.postMessage({
             type: 'removePackage',
-            projectPath: selectedProject,
+            projectPath,
             packageId
         });
-    }, [selectedProject]);
+    }, []);
 
     // Full refresh: clear all caches and re-fetch everything (header refresh button)
     const handleFullRefresh = useCallback(() => {
@@ -1243,9 +1745,12 @@ export const App: React.FC = () => {
                             value={selectedProject}
                             onChange={(e) => setSelectedProject((e.target as HTMLSelectElement).value)}
                             className="project-selector"
-                            disabled={activeTab === 'updates' && loadAllProjects}
-                            title={activeTab === 'updates' && loadAllProjects ? 'Disabled while "Load all projects" is checked' : undefined}
                         >
+                            {sortedProjects.length > 1 && (
+                                <option key={ALL_PROJECTS_SENTINEL} value={ALL_PROJECTS_SENTINEL}>
+                                    All Projects ({sortedProjects.length})
+                                </option>
+                            )}
                             {sortedProjects.map(p => (
                                 <option key={p.path} value={p.path}>{p.name}</option>
                             ))}
@@ -1332,204 +1837,636 @@ export const App: React.FC = () => {
                 />
             )}
 
-            <div className="tabs">
-                <button
-                    ref={browseTabRef}
-                    className={`tab ${activeTab === 'browse' ? 'active' : ''} ${isTabPending ? 'pending' : ''}`}
-                    onClick={() => {
-                        startTabTransition(() => {
-                            setActiveTab('browse');
-                            setSelectedPackage(null);
-                            setSelectedTransitivePackage(null);
-                        });
-                    }}
-                    onKeyDown={(e) => {
-                        if (e.key === 'ArrowDown') {
+            {/* Unified Search Bar */}
+            <div className="search-container" role="search" aria-label="Search NuGet packages">
+                <div className="search-wrapper">
+                    <input
+                        ref={searchInputRef}
+                        type="text"
+                        placeholder="Search packages... (@installed, @updates, @vulnerable)"
+                        value={searchQuery}
+                        onChange={(e) => {
+                            const newValue = (e.target as HTMLInputElement).value;
+                            if (expandedQuickSearchIndex !== null) {
+                                collapseQuickSearchVersions();
+                            }
+                            setSearchQuery(newValue);
+                            if (newValue.trim()) {
+                                setSelectedSuggestionIndex(-1);
+                                isKeyboardNavigationRef.current = false;
+                            }
+                            if (!newValue.trim() && recentSearchesLimit > 0) {
+                                setShowSearchHistory(true);
+                                setShowQuickSearch(false);
+                                setSelectedSuggestionIndex(-1);
+                            } else if (!newValue.trim()) {
+                                setShowSearchHistory(false);
+                            }
+                            setShowFilterDropdown(false);
+                            setFilterButtonTriggered(false);
+                        }}
+                        onKeyDown={(e) => {
+                            // @-prefix dropdown navigation
+                            if (showFilterDropdown && matchingFilters.length > 0) {
+                                if (e.key === 'ArrowDown') {
+                                    e.preventDefault();
+                                    setFilterDropdownIndex(prev => prev < matchingFilters.length - 1 ? prev + 1 : prev);
+                                } else if (e.key === 'ArrowUp') {
+                                    e.preventDefault();
+                                    setFilterDropdownIndex(prev => prev > 0 ? prev - 1 : 0);
+                                } else if (e.key === 'Enter' || e.key === 'Tab') {
+                                    e.preventDefault();
+                                    selectFilter(matchingFilters[filterDropdownIndex]);
+                                } else if (e.key === 'Escape') {
+                                    e.preventDefault();
+                                    handleClearSearch();
+                                }
+                                return;
+                            }
+
+                            // Version expansion mode navigation
+                            if (showQuickSearch && expandedQuickSearchIndex !== null) {
+                                if (e.key === 'ArrowDown') {
+                                    e.preventDefault();
+                                    if (quickSearchVersions.length > 0) {
+                                        setSelectedQuickVersionIndex(prev =>
+                                            prev < quickSearchVersions.length - 1 ? prev + 1 : prev
+                                        );
+                                    }
+                                } else if (e.key === 'ArrowUp') {
+                                    e.preventDefault();
+                                    if (quickSearchVersions.length > 0) {
+                                        setSelectedQuickVersionIndex(prev => prev > 0 ? prev - 1 : 0);
+                                    }
+                                } else if (e.key === 'ArrowLeft') {
+                                    e.preventDefault();
+                                    collapseQuickSearchVersions();
+                                } else if (e.key === 'ArrowRight') {
+                                    if (quickVersionsError && flatSuggestions[expandedQuickSearchIndex]) {
+                                        e.preventDefault();
+                                        expandQuickSearchItem(expandedQuickSearchIndex, flatSuggestions[expandedQuickSearchIndex]);
+                                    }
+                                } else if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    if (quickSearchVersions.length > 0 && flatSuggestions[expandedQuickSearchIndex]) {
+                                        installFromQuickSearch(
+                                            flatSuggestions[expandedQuickSearchIndex],
+                                            quickSearchVersions[selectedQuickVersionIndex]
+                                        );
+                                    }
+                                } else if (e.key === 'Escape') {
+                                    e.preventDefault();
+                                    setShowSearchHistory(false);
+                                    setShowQuickSearch(false);
+                                    setSelectedSuggestionIndex(-1);
+                                    collapseQuickSearchVersions();
+                                }
+                                return;
+                            }
+
+                            // Normal quicksearch/history navigation
+                            if (e.key === 'ArrowDown') {
+                                e.preventDefault();
+                                if (showSearchHistory && recentSearches.length > 0) {
+                                    setSelectedSuggestionIndex(prev =>
+                                        prev < recentSearches.length - 1 ? prev + 1 : prev
+                                    );
+                                    isKeyboardNavigationRef.current = true;
+                                    setIsKeyboardNavActive(true);
+                                } else if (showQuickSearch && flatSuggestions.length > 0) {
+                                    setSelectedSuggestionIndex(prev =>
+                                        prev < flatSuggestions.length - 1 ? prev + 1 : prev
+                                    );
+                                    isKeyboardNavigationRef.current = true;
+                                    setIsKeyboardNavActive(true);
+                                } else if (searchMode.mode !== 'browse') {
+                                    // Focus the active tab's list
+                                    if (activeTabRef.current === 'installed') {
+                                        installedTabCompRef.current?.focusAndSelectFirst();
+                                    } else if (activeTabRef.current === 'updates') {
+                                        updatesTabCompRef.current?.focusAndSelectFirst();
+                                    }
+                                } else if (searchResults.length > 0) {
+                                    browseListRef.current?.focus({ preventScroll: true });
+                                    const currentPkg = selectedPackageRef.current;
+                                    if (!currentPkg || !searchResults.find(p => getPackageId(p) === getPackageId(currentPkg))) {
+                                        const firstPkg = searchResults[0];
+                                        setSelectedPackage(firstPkg);
+                                        setSelectedTransitivePackage(null);
+                                        setSelectedVersion(firstPkg.version);
+                                        setDetailsTab('details');
+                                    }
+                                }
+                            } else if (e.key === 'ArrowUp') {
+                                e.preventDefault();
+                                if (showSearchHistory && recentSearches.length > 0) {
+                                    setSelectedSuggestionIndex(prev => prev > -1 ? prev - 1 : -1);
+                                    isKeyboardNavigationRef.current = true;
+                                    setIsKeyboardNavActive(true);
+                                } else if (showQuickSearch && flatSuggestions.length > 0) {
+                                    setSelectedSuggestionIndex(prev => prev > -1 ? prev - 1 : -1);
+                                    isKeyboardNavigationRef.current = true;
+                                    setIsKeyboardNavActive(true);
+                                }
+                            } else if (e.key === 'ArrowRight') {
+                                if (showQuickSearch && selectedSuggestionIndex >= 0 && flatSuggestions[selectedSuggestionIndex]) {
+                                    e.preventDefault();
+                                    expandQuickSearchItem(selectedSuggestionIndex, flatSuggestions[selectedSuggestionIndex]);
+                                }
+                            } else if (e.ctrlKey && e.key === 'Enter') {
+                                if (showQuickSearch && selectedSuggestionIndex >= 0 && flatSuggestions[selectedSuggestionIndex]) {
+                                    e.preventDefault();
+                                    const packageId = flatSuggestions[selectedSuggestionIndex];
+                                    const sourceUrl = getSourceForFlatIndex(selectedSuggestionIndex);
+                                    const cacheKey = `${packageId.toLowerCase()}|${sourceUrl}|${includePrereleaseRef.current}`;
+                                    const cached = versionsCache.current.get(cacheKey);
+                                    if (cached && cached.length > 0 && selectedProjectRef.current) {
+                                        setShowQuickSearch(false);
+                                        setQuickSearchSuggestions([]);
+                                        setQuickSearchLoading(false);
+                                        setSelectedSuggestionIndex(-1);
+                                        if (recentSearchesLimitRef.current > 0) {
+                                            setRecentSearches(prev => {
+                                                const filtered = prev.filter(s => s.toLowerCase() !== packageId.toLowerCase());
+                                                return [packageId, ...filtered].slice(0, recentSearchesLimitRef.current);
+                                            });
+                                        }
+                                        vscode.postMessage({
+                                            type: 'installPackage',
+                                            projectPath: selectedProjectRef.current,
+                                            packageId,
+                                            version: cached[0]
+                                        });
+                                    } else {
+                                        pendingQuickInstallRef.current = { packageId, sourceUrl };
+                                        vscode.postMessage({
+                                            type: 'getPackageVersions',
+                                            packageId,
+                                            source: sourceUrl || undefined,
+                                            includePrerelease: includePrereleaseRef.current,
+                                            take: 1
+                                        });
+                                    }
+                                }
+                            } else if (e.key === 'Enter') {
+                                if (showSearchHistory && isKeyboardNavigationRef.current && selectedSuggestionIndex >= 0 && recentSearches[selectedSuggestionIndex]) {
+                                    e.preventDefault();
+                                    selectRecentSearchItem(recentSearches[selectedSuggestionIndex]);
+                                } else if (showQuickSearch && isKeyboardNavigationRef.current && selectedSuggestionIndex >= 0 && flatSuggestions[selectedSuggestionIndex]) {
+                                    e.preventDefault();
+                                    selectQuickSearchItem(flatSuggestions[selectedSuggestionIndex]);
+                                } else if (searchMode.mode === 'browse' || searchQueryRef.current.trim().length >= 2) {
+                                    handleSearch(true);
+                                }
+                            } else if (e.key === 'Escape') {
+                                if (showSearchHistory || showQuickSearch) {
+                                    setShowSearchHistory(false);
+                                    setShowQuickSearch(false);
+                                    setSelectedSuggestionIndex(-1);
+                                } else if (searchQuery) {
+                                    handleClearSearch();
+                                }
+                            }
+                        }}
+                        onFocus={() => {
+                            searchInputFocusedRef.current = true;
+                            if (!searchQuery.trim() && recentSearchesLimit > 0 && searchMode.mode === 'default') {
+                                setShowSearchHistory(true);
+                                setSelectedSuggestionIndex(-1);
+                            }
+                        }}
+                        onBlur={() => {
+                            searchInputFocusedRef.current = false;
+                            setTimeout(() => {
+                                setShowSearchHistory(false);
+                                setShowQuickSearch(false);
+                                setShowFilterDropdown(false);
+                                setFilterButtonTriggered(false);
+                            }, 150);
+                        }}
+                        className="search-input"
+                    />
+                    <button
+                        className={`search-clear-btn${searchQuery ? '' : ' disabled'}`}
+                        onClick={() => {
+                            if (!searchQuery) { return; }
+                            handleClearSearch();
+                        }}
+                        aria-label="Clear search"
+                        tabIndex={-1}
+                    >
+                        <ClearAllIcon size={16} />
+                    </button>
+                    <button
+                        className="search-filter-btn"
+                        aria-label="Filter packages"
+                        tabIndex={-1}
+                        onMouseDown={(e) => {
                             e.preventDefault();
-                            // Navigate to search input
-                            browseTabCompRef.current?.focusSearchInput();
-                        } else if (e.key === 'ArrowRight') {
-                            e.preventDefault();
+                            setFilterButtonTriggered(true);
+                            setShowFilterDropdown(prev => !prev);
+                            setFilterDropdownIndex(0);
+                            setShowSearchHistory(false);
+                            setShowQuickSearch(false);
+                        }}
+                    >
+                        <FilterIcon size={16} />
+                    </button>
+                </div>
+                {/* @-prefix filter dropdown */}
+                {showFilterDropdown && matchingFilters.length > 0 && (
+                    <div className="filter-dropdown">
+                        {matchingFilters.map((prefix, idx) => (
+                            <div
+                                key={prefix}
+                                className={`filter-dropdown-item${idx === filterDropdownIndex ? ' selected' : ''}`}
+                                onMouseEnter={() => setFilterDropdownIndex(idx)}
+                                onMouseDown={(e) => { e.preventDefault(); selectFilter(prefix); }}
+                            >
+                                {prefix}
+                            </div>
+                        ))}
+                    </div>
+                )}
+                {/* Recent searches dropdown */}
+                {showSearchHistory && !searchQuery.trim() && recentSearches.length > 0 && (
+                    <div className={`search-history-dropdown${isKeyboardNavActive ? ' keyboard-nav' : ''}`} onMouseLeave={() => setSelectedSuggestionIndex(-1)}>
+                        <div className="search-history-header">Recent Searches</div>
+                        {recentSearches.map((search, idx) => {
+                            const isSelected = idx === selectedSuggestionIndex;
+                            return (
+                                <div
+                                    key={idx}
+                                    className={`search-history-item${isSelected ? ' selected' : ''}`}
+                                    ref={el => {
+                                        if (isSelected && el) {
+                                            el.scrollIntoView({ block: 'nearest' });
+                                        }
+                                    }}
+                                    onMouseEnter={() => {
+                                        setIsKeyboardNavActive(false);
+                                        isKeyboardNavigationRef.current = false;
+                                        setSelectedSuggestionIndex(idx);
+                                    }}
+                                    onMouseDown={() => selectRecentSearchItem(search)}
+                                >
+                                    <span className="search-history-icon">🕒</span>
+                                    <span className="search-history-text">{search}</span>
+                                </div>
+                            );
+                        })}
+                    </div>
+                )}
+                {/* Quick search suggestions dropdown */}
+                {showQuickSearch && searchQuery.trim().length >= 2 && (quickSearchLoading || quickSearchSuggestions.some(g => g.packageIds.length > 0) || expandedQuickSearchIndex !== null) && (
+                    <div className={`search-history-dropdown${isKeyboardNavActive ? ' keyboard-nav' : ''}`} onMouseLeave={() => setSelectedSuggestionIndex(-1)}>
+                        {expandedQuickSearchIndex !== null ? (
+                            <>
+                                <div className="quick-search-version-header">
+                                    <span
+                                        className="quick-search-back-hint"
+                                        title="Back to results (←)"
+                                        onMouseDown={(e) => {
+                                            e.preventDefault();
+                                            e.stopPropagation();
+                                            collapseQuickSearchVersions();
+                                        }}
+                                    >‹</span>
+                                    <span className="quick-search-package-name">{flatSuggestions[expandedQuickSearchIndex]}</span>
+                                </div>
+                                {quickVersionsLoading ? (
+                                    <div className="search-history-item quick-search-loading">
+                                        <span className="search-history-icon"><LoadingIcon size={14} /></span>
+                                        <span className="search-history-text">Loading versions...</span>
+                                    </div>
+                                ) : quickVersionsError ? (
+                                    <div className="search-history-item quick-search-error">
+                                        <span className="search-history-text">{quickVersionsError}. Press → to retry.</span>
+                                    </div>
+                                ) : quickSearchVersions.length > 0 ? (
+                                    quickSearchVersions.map((version, idx) => {
+                                        const isVersionSelected = idx === selectedQuickVersionIndex;
+                                        return (
+                                            <div
+                                                key={version}
+                                                className={`search-history-item quick-search-version-item${isVersionSelected ? ' selected' : ''}`}
+                                                ref={el => {
+                                                    if (isVersionSelected && el) {
+                                                        el.scrollIntoView({ block: 'nearest' });
+                                                    }
+                                                }}
+                                                onMouseEnter={() => {
+                                                    setIsKeyboardNavActive(false);
+                                                    isKeyboardNavigationRef.current = false;
+                                                    setSelectedQuickVersionIndex(idx);
+                                                }}
+                                                onMouseDown={() => installFromQuickSearch(flatSuggestions[expandedQuickSearchIndex], version)}
+                                            >
+                                                <span className="search-history-text">{version}</span>
+                                            </div>
+                                        );
+                                    })
+                                ) : (
+                                    <div className="search-history-item quick-search-error">
+                                        <span className="search-history-text">No versions available</span>
+                                    </div>
+                                )}
+                            </>
+                        ) : (
+                            quickSearchLoading && quickSearchSuggestions.length === 0 ? (
+                                <div className="search-history-item quick-search-loading">
+                                    <span className="search-history-icon"><LoadingIcon size={14} /></span>
+                                    <span className="search-history-text">Loading...</span>
+                                </div>
+                            ) : (
+                                (() => {
+                                    let flatIndex = 0;
+                                    return quickSearchSuggestions.map((sourceResult) => (
+                                        <div key={sourceResult.sourceUrl}>
+                                            {quickSearchSuggestions.length > 1 && (
+                                                <div className="quick-search-source-divider">
+                                                    {sourceResult.sourceName}
+                                                </div>
+                                            )}
+                                            {sourceResult.packageIds.map((packageId) => {
+                                                const currentFlatIndex = flatIndex++;
+                                                const isSuggestionSelected = currentFlatIndex === selectedSuggestionIndex;
+                                                return (
+                                                    <div
+                                                        key={`${sourceResult.sourceUrl}-${packageId}`}
+                                                        className={`search-history-item quick-search-item${isSuggestionSelected ? ' selected' : ''}`}
+                                                        ref={el => {
+                                                            if (isSuggestionSelected && el) {
+                                                                el.scrollIntoView({ block: 'nearest' });
+                                                            }
+                                                        }}
+                                                        onMouseEnter={() => {
+                                                            setIsKeyboardNavActive(false);
+                                                            isKeyboardNavigationRef.current = false;
+                                                            setSelectedSuggestionIndex(currentFlatIndex);
+                                                        }}
+                                                        onMouseDown={() => selectQuickSearchItem(packageId)}
+                                                    >
+                                                        <span className="search-history-text">{packageId}</span>
+                                                        <span
+                                                            className="quick-search-expand-hint"
+                                                            title="Show versions (→)"
+                                                            onMouseDown={(e2) => {
+                                                                e2.preventDefault();
+                                                                e2.stopPropagation();
+                                                                expandQuickSearchItem(currentFlatIndex, packageId);
+                                                            }}
+                                                        >›</span>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    ));
+                                })()
+                            )
+                        )}
+                    </div>
+                )}
+            </div>
+
+            {/* Tabs — hidden when showing browse search results */}
+            {searchMode.mode !== 'browse' && (
+                <div className="tabs">
+                    <button
+                        ref={installedTabRef}
+                        className={`tab ${activeTab === 'installed' ? 'active' : ''} ${isTabPending ? 'pending' : ''}`}
+                        onClick={() => {
                             startTabTransition(() => {
                                 setActiveTab('installed');
                                 setSelectedPackage(null);
                                 setSelectedTransitivePackage(null);
                             });
-                            // Focus the new tab after state update
-                            requestAnimationFrame(() => {
-                                installedTabRef.current?.focus();
-                            });
-                        }
-                    }}
-                >
-                    Browse
-                </button>
-                <button
-                    ref={installedTabRef}
-                    className={`tab ${activeTab === 'installed' ? 'active' : ''} ${isTabPending ? 'pending' : ''}`}
-                    onClick={() => {
-                        startTabTransition(() => {
-                            setActiveTab('installed');
-                            setSelectedPackage(null);
-                            setSelectedTransitivePackage(null);
-                        });
-                    }}
-                    onKeyDown={(e) => {
-                        if (e.key === 'ArrowDown') {
-                            e.preventDefault();
-                            installedTabCompRef.current?.focusAndSelectFirst();
-                        } else if (e.key === 'ArrowLeft') {
-                            e.preventDefault();
-                            startTabTransition(() => {
-                                setActiveTab('browse');
-                                setSelectedPackage(null);
-                                setSelectedTransitivePackage(null);
-                            });
-                            requestAnimationFrame(() => {
-                                browseTabRef.current?.focus();
-                            });
-                        } else if (e.key === 'ArrowRight') {
-                            e.preventDefault();
+                        }}
+                        onKeyDown={(e) => {
+                            if (e.key === 'ArrowDown') {
+                                e.preventDefault();
+                                installedTabCompRef.current?.focusAndSelectFirst();
+                            } else if (e.key === 'ArrowUp') {
+                                e.preventDefault();
+                                searchInputRef.current?.focus();
+                            } else if (e.key === 'ArrowRight') {
+                                e.preventDefault();
+                                startTabTransition(() => {
+                                    setActiveTab('updates');
+                                    setSelectedPackage(null);
+                                    setSelectedTransitivePackage(null);
+                                });
+                                requestAnimationFrame(() => {
+                                    updatesTabRef.current?.focus();
+                                });
+                            }
+                        }}
+                    >
+                        Installed
+                        {installedPackages.length > 0 && <span className="tab-badge">{installedPackages.length}</span>}
+                        {vulnPackageCount > 0 && (
+                            <span
+                                className={`tab-badge-vuln vuln-${highestVulnSeverity}`}
+                                title={`${vulnPackageCount} package${vulnPackageCount > 1 ? 's' : ''} with known vulnerabilities`}
+                            >
+                                <WarningIcon size={12} />
+                                {vulnPackageCount}
+                            </span>
+                        )}
+                    </button>
+                    <button
+                        ref={updatesTabRef}
+                        className={`tab ${activeTab === 'updates' ? 'active' : ''} ${isTabPending ? 'pending' : ''}`}
+                        onClick={() => {
                             startTabTransition(() => {
                                 setActiveTab('updates');
                                 setSelectedPackage(null);
                                 setSelectedTransitivePackage(null);
                             });
-                            requestAnimationFrame(() => {
-                                updatesTabRef.current?.focus();
-                            });
-                        }
-                    }}
-                >
-                    Installed
-                    {installedPackages.length > 0 && <span className="tab-badge">{installedPackages.length}</span>}
-                    {vulnPackageCount > 0 && (
-                        <span
-                            className={`tab-badge-vuln vuln-${highestVulnSeverity}`}
-                            title={`${vulnPackageCount} package${vulnPackageCount > 1 ? 's' : ''} with known vulnerabilities`}
-                        >
-                            <WarningIcon size={12} />
-                            {vulnPackageCount}
-                        </span>
-                    )}
-                </button>
-                <button
-                    ref={updatesTabRef}
-                    className={`tab ${activeTab === 'updates' ? 'active' : ''} ${isTabPending ? 'pending' : ''}`}
-                    onClick={() => {
-                        startTabTransition(() => {
-                            setActiveTab('updates');
-                            setSelectedPackage(null);
-                            setSelectedTransitivePackage(null);
-                        });
-                    }}
-                    onKeyDown={(e) => {
-                        if (e.key === 'ArrowDown') {
-                            e.preventDefault();
-                            updatesTabCompRef.current?.focusAndSelectFirst();
-                        } else if (e.key === 'ArrowLeft') {
-                            e.preventDefault();
-                            startTabTransition(() => {
-                                setActiveTab('installed');
-                                setSelectedPackage(null);
-                                setSelectedTransitivePackage(null);
-                            });
-                            requestAnimationFrame(() => {
-                                installedTabRef.current?.focus();
-                            });
-                        }
-                    }}
-                >
-                    Updates
-                    {updateCount > 0 && <span className="tab-badge">{updateCount}</span>}
-                </button>
-            </div>
+                        }}
+                        onKeyDown={(e) => {
+                            if (e.key === 'ArrowDown') {
+                                e.preventDefault();
+                                updatesTabCompRef.current?.focusAndSelectFirst();
+                            } else if (e.key === 'ArrowUp') {
+                                e.preventDefault();
+                                searchInputRef.current?.focus();
+                            } else if (e.key === 'ArrowLeft') {
+                                e.preventDefault();
+                                startTabTransition(() => {
+                                    setActiveTab('installed');
+                                    setSelectedPackage(null);
+                                    setSelectedTransitivePackage(null);
+                                });
+                                requestAnimationFrame(() => {
+                                    installedTabRef.current?.focus();
+                                });
+                            }
+                        }}
+                    >
+                        Updates
+                        {updateCount > 0 && <span className="tab-badge">{updateCount}</span>}
+                    </button>
+                </div>
+            )}
 
-            <MemoizedBrowseTab
-                ref={browseTabCompRef}
-                activeTab={activeTab}
-                selectedPackage={selectedPackage}
-                selectedVersion={selectedVersion}
-                detailsTab={detailsTab}
-                includePrerelease={includePrerelease}
-                selectedSource={selectedSource}
-                enabledSources={enabledSources}
-                selectedProject={selectedProject}
-                recentSearches={recentSearches}
-                recentSearchesLimit={recentSearchesLimit}
-                searchDebounceMode={searchDebounceMode}
-                splitPosition={splitPosition}
-                defaultPackageIcon={defaultPackageIcon}
-                detailsPanelContent={browseDetailsPanelContent}
-                versionsCache={versionsCache}
-                onSelectPackage={selectDirectPackage}
-                clearSelection={clearSelection}
-                onInstall={handleInstall}
-                onSetSelectedPackage={setSelectedPackage}
-                onSetSelectedTransitivePackage={setSelectedTransitivePackage}
-                onSetSelectedVersion={setSelectedVersion}
-                onSetRecentSearches={setRecentSearches}
-                onDetailsTabChange={setDetailsTab}
-                setSplitPosition={setSplitPosition}
-                handleSashReset={handleSashReset}
-                handleSashDragEnd={handleSashDragEnd}
-                createPackageListKeyHandler={createPackageListKeyHandler}
-                vscode={vscode}
-                browseTabRef={browseTabRef}
-                MemoizedDraggableSash={MemoizedDraggableSash}
-            />
+            {/* Browse search results — shown when in browse mode */}
+            {searchMode.mode === 'browse' && (
+                <div className="content browse-content">
+                    <div className="split-panel">
+                        <div ref={browseScrollRef} className="package-list-panel" style={{ width: `${splitPosition}%` }}>
+                            {searchLoading ? (
+                                <div className="loading-spinner-container" aria-busy="true" aria-label="Searching packages">
+                                    <div className="loading-spinner"></div>
+                                    <p>Searching...</p>
+                                </div>
+                            ) : searchResults.length === 0 ? (
+                                <p className="empty-state">
+                                    {searchQuery.trim() ? 'No packages found' : 'Search for packages above'}
+                                </p>
+                            ) : (
+                                <div
+                                    ref={browseListRef}
+                                    className={`package-list${isSearchStale ? ' stale' : ''}`}
+                                    tabIndex={0}
+                                    onKeyDown={createPackageListKeyHandler(
+                                        searchResults,
+                                        () => selectedPackage ? getPackageId(selectedPackage) : null,
+                                        (pkg) => {
+                                            selectDirectPackage(pkg, {
+                                                selectedVersionValue: pkg.version,
+                                                metadataVersion: pkg.version,
+                                                initialVersions: [pkg.version],
+                                            });
+                                        },
+                                        {
+                                            onAction: () => { if (selectedPackage) { handleInstall(getPackageId(selectedPackage), selectedVersion || (selectedPackage as PackageSearchResult).version); } },
+                                            onLeftArrow: () => detailsTab === 'readme' && setDetailsTab('details'),
+                                            onRightArrow: () => detailsTab === 'details' && setDetailsTab('readme'),
+                                            onExitTop: () => {
+                                                clearSelection();
+                                                searchInputRef.current?.focus();
+                                            },
+                                        }
+                                    )}
+                                    style={{ height: `${browseVirtualizer.getTotalSize()}px`, position: 'relative' }}
+                                >
+                                    {browseVirtualizer.getVirtualItems().map(virtualRow => {
+                                        const pkg = searchResults[virtualRow.index];
+                                        return (
+                                            <div
+                                                key={pkg.id}
+                                                data-index={virtualRow.index}
+                                                ref={browseVirtualizer.measureElement}
+                                                className={`package-item ${selectedPackage && getPackageId(selectedPackage).toLowerCase() === pkg.id.toLowerCase() ? 'selected' : ''}`}
+                                                style={{ position: 'absolute', top: 0, left: 0, width: '100%', transform: `translateY(${virtualRow.start}px)` }}
+                                                onClick={() => {
+                                                    selectDirectPackage(pkg, {
+                                                        selectedVersionValue: pkg.version,
+                                                        metadataVersion: pkg.version,
+                                                        initialVersions: [pkg.version],
+                                                    });
+                                                }}
+                                            >
+                                                <div className="package-icon">
+                                                    {pkg.iconUrl ? (
+                                                        <img src={pkg.iconUrl} alt="" onError={(ev) => { (ev.target as HTMLImageElement).src = defaultPackageIcon; }} />
+                                                    ) : (
+                                                        <img src={defaultPackageIcon} alt="" />
+                                                    )}
+                                                </div>
+                                                <div className="package-info">
+                                                    <div className="package-name">{pkg.id}</div>
+                                                    <div className="package-meta">
+                                                        <span className="package-version">v{pkg.version}</span>
+                                                        {pkg.totalDownloads && (
+                                                            <span className="package-downloads">
+                                                                <CloudDownloadIcon size={12} className="inline-icon" /> {pkg.totalDownloads.toLocaleString()}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <div className="package-authors">
+                                                        {pkg.verified && (
+                                                            <span className="verified-badge" title="The ID prefix of this package has been reserved by its owner on nuget.org"><VerifiedIcon size={14} /></span>
+                                                        )}
+                                                        {pkg.authors}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
 
-            <MemoizedInstalledTab
-                ref={installedTabCompRef}
-                activeTab={activeTab}
-                installedPackages={installedPackages}
-                loadingInstalled={loadingInstalled}
-                selectedPackage={selectedPackage}
-                selectedTransitivePackage={selectedTransitivePackage}
-                selectedProject={selectedProject}
-                splitPosition={splitPosition}
-                defaultPackageIcon={defaultPackageIcon}
-                includePrerelease={includePrerelease}
-                selectedSource={selectedSource}
-                packageMetadata={packageMetadata}
-                loadingMetadata={loadingMetadata}
-                loadingVersions={loadingVersions}
-                packageVersions={packageVersions}
-                selectedVersion={selectedVersion}
-                detailsTab={detailsTab}
-                loadingReadme={loadingReadme}
-                sanitizedReadmeHtml={sanitizedReadmeHtml}
-                expandedDeps={expandedDeps}
-                onSelectDirectPackage={selectDirectPackage}
-                onSelectTransitivePackage={selectTransitivePackage}
-                clearSelection={clearSelection}
-                onInstall={handleInstall}
-                onRemove={handleRemove}
-                onDetailsTabChange={setDetailsTab}
-                onVersionChange={setSelectedVersion}
-                onToggleDep={handleToggleDep}
-                onReadmeAttemptedChange={setReadmeAttempted}
-                onMetadataChange={setPackageMetadata}
-                onLoadingMetadataChange={setLoadingMetadata}
-                onSetSelectedPackage={setSelectedPackage}
-                onSetSelectedTransitivePackage={setSelectedTransitivePackage}
-                onSetSelectedVersion={setSelectedVersion}
-                setSplitPosition={setSplitPosition}
-                handleSashReset={handleSashReset}
-                handleSashDragEnd={handleSashDragEnd}
-                createPackageListKeyHandler={createPackageListKeyHandler}
-                metadataCache={metadataCache}
-                vscode={vscode}
-                installedTabRef={installedTabRef}
-                MemoizedDraggableSash={MemoizedDraggableSash}
-                loadAllProjectsInstalled={loadAllProjectsInstalled}
-                allProjectsInstalled={allProjectsInstalled}
-                loadingAllProjectsInstalled={loadingAllProjectsInstalled}
-                onLoadAllInstalledChange={handleLoadAllInstalledChange}
-                projects={projects}
-            />
+                        <MemoizedDraggableSash
+                            onDrag={setSplitPosition}
+                            onReset={handleSashReset}
+                            onDragEnd={handleSashDragEnd}
+                        />
 
-            {activeTab === 'updates' && (
+                        <div className="package-details-panel" style={{ width: `${100 - splitPosition}%` }}>
+                            {browseDetailsPanelContent}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {searchMode.mode !== 'browse' && (
+                <MemoizedInstalledTab
+                    ref={installedTabCompRef}
+                    activeTab={activeTab}
+                    installedPackages={installedPackages}
+                    loadingInstalled={loadingInstalled}
+                    selectedPackage={selectedPackage}
+                    selectedTransitivePackage={selectedTransitivePackage}
+                    selectedProject={selectedProject}
+                    splitPosition={splitPosition}
+                    defaultPackageIcon={defaultPackageIcon}
+                    includePrerelease={includePrerelease}
+                    selectedSource={selectedSource}
+                    packageMetadata={packageMetadata}
+                    loadingMetadata={loadingMetadata}
+                    loadingVersions={loadingVersions}
+                    packageVersions={packageVersions}
+                    selectedVersion={selectedVersion}
+                    detailsTab={detailsTab}
+                    loadingReadme={loadingReadme}
+                    sanitizedReadmeHtml={sanitizedReadmeHtml}
+                    expandedDeps={expandedDeps}
+                    externalFilter={filterText}
+                    externalFilterMode={filterMode}
+                    onSelectDirectPackage={selectDirectPackage}
+                    onSelectTransitivePackage={selectTransitivePackage}
+                    clearSelection={clearSelection}
+                    onInstall={handleInstall}
+                    onRemove={handleRemove}
+                    onDetailsTabChange={setDetailsTab}
+                    onVersionChange={setSelectedVersion}
+                    onToggleDep={handleToggleDep}
+                    onReadmeAttemptedChange={setReadmeAttempted}
+                    onMetadataChange={setPackageMetadata}
+                    onLoadingMetadataChange={setLoadingMetadata}
+                    onSetSelectedPackage={setSelectedPackage}
+                    onSetSelectedTransitivePackage={setSelectedTransitivePackage}
+                    onSetSelectedVersion={setSelectedVersion}
+                    setSplitPosition={setSplitPosition}
+                    handleSashReset={handleSashReset}
+                    handleSashDragEnd={handleSashDragEnd}
+                    createPackageListKeyHandler={createPackageListKeyHandler}
+                    metadataCache={metadataCache}
+                    vscode={vscode}
+                    installedTabRef={installedTabRef}
+                    MemoizedDraggableSash={MemoizedDraggableSash}
+                    isAllProjects={isAllProjects}
+                    allProjectsInstalled={allProjectsInstalled}
+                    loadingAllProjectsInstalled={loadingAllProjectsInstalled}
+                    activeProjectPath={activeProjectPath}
+                    onActiveProjectPathChange={setActiveProjectPath}
+                />
+            )}
+
+            {activeTab === 'updates' && searchMode.mode !== 'browse' && (
                 <MemoizedUpdatesTab
                     ref={updatesTabCompRef}
                     packagesWithUpdates={packagesWithUpdates}
@@ -1550,11 +2487,12 @@ export const App: React.FC = () => {
                     loadingReadme={loadingReadme}
                     sanitizedReadmeHtml={sanitizedReadmeHtml}
                     expandedDeps={expandedDeps}
-                    loadAllProjects={loadAllProjects}
+                    externalFilter={filterText}
+                    isAllProjects={isAllProjects}
                     allProjectsUpdates={allProjectsUpdates}
                     loadingAllProjectsUpdates={loadingAllProjectsUpdates}
-                    onLoadAllChange={handleLoadAllChange}
-                    projects={projects}
+                    activeProjectPath={activeProjectPath}
+                    onActiveProjectPathChange={setActiveProjectPath}
                     onSelectPackage={selectDirectPackage}
                     clearSelection={clearSelection}
                     onInstall={handleInstall}

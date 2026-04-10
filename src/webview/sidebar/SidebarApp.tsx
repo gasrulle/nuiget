@@ -14,8 +14,9 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { MemoizedDraggableSash } from '../app/components/DraggableSash';
-import { AllProjectsIcon, ArrowUpIcon, ClearAllIcon, FilterIcon, SingleProjectIcon } from '../app/icons';
+import { ArrowUpIcon, ChevronRightIcon, ClearAllIcon, FilterIcon } from '../app/icons';
 import type { InstalledPackage, NuGetSource, PackageSearchResult, PackageUpdateMinimal, Project, ProjectInstalled, ProjectUpdates, WebviewMessage } from '../app/types';
+import { ALL_PROJECTS_SENTINEL } from '../app/types';
 import { PackageRow } from './components/PackageRow';
 import { SectionHeader } from './components/SectionHeader';
 import './SidebarApp.css';
@@ -83,10 +84,8 @@ export const SidebarApp: React.FC = () => {
     const [loadingInstalled, setLoadingInstalled] = useState(false);
     const [loadingUpdates, setLoadingUpdates] = useState(false);
     const [loadingAllUpdates, setLoadingAllUpdates] = useState(false);
-    const [loadAllProjects, setLoadAllProjects] = useState(false);
 
     // All-projects installed mode state
-    const [loadAllProjectsInstalled, setLoadAllProjectsInstalled] = useState(false);
     const [allProjectsInstalled, setAllProjectsInstalled] = useState<ProjectInstalled[]>([]);
     const [loadingAllInstalled, setLoadingAllInstalled] = useState(false);
 
@@ -94,6 +93,13 @@ export const SidebarApp: React.FC = () => {
     const [filterDropdownIndex, setFilterDropdownIndex] = useState(-1);
     const [filterButtonTriggered, setFilterButtonTriggered] = useState(false);
     const [selectedPackageId, setSelectedPackageId] = useState<string | null>(null);
+
+    // Collapsible project groups in all-projects mode (separate per section)
+    const [collapsedInstalledProjects, setCollapsedInstalledProjects] = useState<Set<string>>(new Set());
+    const [collapsedUpdatesProjects, setCollapsedUpdatesProjects] = useState<Set<string>>(new Set());
+
+    // ─── Derived "All Projects" mode ─────────────────────────────────────────
+    const isAllProjects = selectedProject === ALL_PROJECTS_SENTINEL;
 
     // ─── Derived search mode ─────────────────────────────────────────────────
     const { mode: searchMode, filterText } = useMemo(() => parseSearchQuery(searchQuery), [searchQuery]);
@@ -105,13 +111,13 @@ export const SidebarApp: React.FC = () => {
     const installedPackagesRef = useRef(installedPackages);
     const installedExpandedRef = useRef(installedExpanded);
     const updatesExpandedRef = useRef(updatesExpanded);
-    const loadAllProjectsRef = useRef(loadAllProjects);
+    const isAllProjectsRef = useRef(isAllProjects);
     const selectedPackageIdRef = useRef(selectedPackageId);
     const packageUpdatesRef = useRef(packageUpdates);
     const allProjectsUpdatesRef = useRef(allProjectsUpdates);
+    const allProjectsInstalledRef = useRef(allProjectsInstalled);
     const searchResultsRef = useRef(searchResults);
     const searchModeRef = useRef(searchMode);
-    const loadAllProjectsInstalledRef = useRef(loadAllProjectsInstalled);
     const searchInputRef = useRef<HTMLInputElement>(null);
     const browseListRef = useRef<HTMLDivElement>(null);
     const installedListRef = useRef<HTMLDivElement>(null);
@@ -126,13 +132,13 @@ export const SidebarApp: React.FC = () => {
     useEffect(() => { installedPackagesRef.current = installedPackages; }, [installedPackages]);
     useEffect(() => { installedExpandedRef.current = installedExpanded; }, [installedExpanded]);
     useEffect(() => { updatesExpandedRef.current = updatesExpanded; }, [updatesExpanded]);
-    useEffect(() => { loadAllProjectsRef.current = loadAllProjects; }, [loadAllProjects]);
+    useEffect(() => { isAllProjectsRef.current = isAllProjects; }, [isAllProjects]);
     useEffect(() => { selectedPackageIdRef.current = selectedPackageId; }, [selectedPackageId]);
     useEffect(() => { packageUpdatesRef.current = packageUpdates; }, [packageUpdates]);
     useEffect(() => { allProjectsUpdatesRef.current = allProjectsUpdates; }, [allProjectsUpdates]);
+    useEffect(() => { allProjectsInstalledRef.current = allProjectsInstalled; }, [allProjectsInstalled]);
     useEffect(() => { searchResultsRef.current = searchResults; }, [searchResults]);
     useEffect(() => { searchModeRef.current = searchMode; }, [searchMode]);
-    useEffect(() => { loadAllProjectsInstalledRef.current = loadAllProjectsInstalled; }, [loadAllProjectsInstalled]);
 
     // ─── @-prefix dropdown logic ─────────────────────────────────────────────
     const matchingFilters = useMemo(() => {
@@ -177,17 +183,30 @@ export const SidebarApp: React.FC = () => {
                 // Focus search input when sidebar becomes visible (like native sidebar panels)
                 setTimeout(() => searchInputRef.current?.focus(), 50);
                 break;
+            case 'treeIndent':
+                if (message.value !== undefined) { document.documentElement.style.setProperty('--tree-indent', `${message.value}px`); }
+                break;
             case 'state':
                 if (message.selectedSource) { setSelectedSource(message.selectedSource); }
                 if (message.selectedProject) {
+                    const projectChanged = message.selectedProject !== selectedProjectRef.current;
                     // Clear stale data when project changed (e.g. sidebar re-shown after backend project change)
-                    if (message.selectedProject !== selectedProjectRef.current) {
+                    if (projectChanged) {
                         setInstalledPackages([]);
                         setPackageUpdates([]);
                         setAllProjectsUpdates([]);
                         setAllProjectsInstalled([]);
-                        setLoadAllProjects(false);
-                        setLoadAllProjectsInstalled(false);
+                        // Re-fetch for all-projects mode since effects won't re-trigger
+                        if (message.selectedProject === ALL_PROJECTS_SENTINEL) {
+                            if (installedExpandedRef.current || searchModeRef.current === 'installed') {
+                                vscode.postMessage({ type: 'checkAllProjectsInstalled' });
+                                setLoadingAllInstalled(true);
+                            }
+                            if (updatesExpandedRef.current || searchModeRef.current === 'updates') {
+                                vscode.postMessage({ type: 'checkAllProjectsUpdates', includePrerelease: includePrereleaseRef.current });
+                                setLoadingAllUpdates(true);
+                            }
+                        }
                     }
                     setSelectedProject(message.selectedProject);
                     // Immediately sync ref so the 'projects' handler's auto-select guard
@@ -198,6 +217,9 @@ export const SidebarApp: React.FC = () => {
                 }
                 if (message.includePrerelease !== undefined) { setIncludePrerelease(message.includePrerelease); }
                 if (message.sectionSplit !== undefined) { setSectionSplit(message.sectionSplit); }
+                if (message.treeIndent !== undefined) {
+                    document.documentElement.style.setProperty('--tree-indent', `${message.treeIndent}px`);
+                }
                 break;
             case 'projects':
                 setProjects(message.projects || []);
@@ -264,7 +286,18 @@ export const SidebarApp: React.FC = () => {
                 packageUpdatesRef.current = [];
                 setAllProjectsUpdates([]);
                 allProjectsUpdatesRef.current = [];
-                if (selectedProjectRef.current) {
+                if (selectedProjectRef.current === ALL_PROJECTS_SENTINEL) {
+                    if (installedExpandedRef.current || searchModeRef.current === 'installed') {
+                        setAllProjectsInstalled([]);
+                        allProjectsInstalledRef.current = [];
+                        vscode.postMessage({ type: 'checkAllProjectsInstalled' });
+                        setLoadingAllInstalled(true);
+                    }
+                    if (updatesExpandedRef.current || searchModeRef.current === 'updates') {
+                        vscode.postMessage({ type: 'checkAllProjectsUpdates', includePrerelease: includePrereleaseRef.current });
+                        setLoadingAllUpdates(true);
+                    }
+                } else if (selectedProjectRef.current) {
                     vscode.postMessage({
                         type: 'getInstalledPackages',
                         projectPath: selectedProjectRef.current
@@ -287,7 +320,7 @@ export const SidebarApp: React.FC = () => {
                         });
                     }
                     // Re-fetch installed packages for transitive accuracy (lightweight — just .csproj parse)
-                    if (selectedProjectRef.current) {
+                    if (selectedProjectRef.current && selectedProjectRef.current !== ALL_PROJECTS_SENTINEL) {
                         vscode.postMessage({ type: 'getInstalledPackages', projectPath: selectedProjectRef.current });
                         setLoadingInstalled(true);
                     }
@@ -309,9 +342,50 @@ export const SidebarApp: React.FC = () => {
                                 return updated;
                             });
                         }
-                        if (selectedProjectRef.current) {
+                        if (selectedProjectRef.current && selectedProjectRef.current !== ALL_PROJECTS_SENTINEL) {
                             vscode.postMessage({ type: 'getInstalledPackages', projectPath: selectedProjectRef.current });
                             setLoadingInstalled(true);
+                        } else if (selectedProjectRef.current === ALL_PROJECTS_SENTINEL && opPkgId) {
+                            const opProjectPath = message.projectPath as string | undefined;
+                            // In all-projects mode, optimistically update installedPackages so
+                            // browse rows reflect the install/remove immediately (icon change).
+                            if (message.type === 'installResult') {
+                                setInstalledPackages(prev => {
+                                    if (prev.some(p => p.id.toLowerCase() === opPkgId)) { return prev; }
+                                    const searchPkg = searchResultsRef.current.find(p => p.id.toLowerCase() === opPkgId);
+                                    const ver = searchPkg?.version || '';
+                                    return [...prev, { id: message.packageId as string, version: ver, resolvedVersion: ver }];
+                                });
+                                // Also update allProjectsInstalled for the specific project
+                                if (opProjectPath) {
+                                    setAllProjectsInstalled(prev => {
+                                        const searchPkg = searchResultsRef.current.find(p => p.id.toLowerCase() === opPkgId);
+                                        const ver = searchPkg?.version || '';
+                                        const updated = prev.map(pi => {
+                                            if (pi.projectPath !== opProjectPath) { return pi; }
+                                            if (pi.packages.some(p => p.id.toLowerCase() === opPkgId)) { return pi; }
+                                            return { ...pi, packages: [...pi.packages, { id: message.packageId as string, version: ver, resolvedVersion: ver }] };
+                                        });
+                                        allProjectsInstalledRef.current = updated;
+                                        return updated;
+                                    });
+                                }
+                            } else if (message.type === 'removeResult') {
+                                // Remove from allProjectsInstalled for the specific project
+                                if (opProjectPath) {
+                                    setAllProjectsInstalled(prev => {
+                                        const updated = prev.map(pi => {
+                                            if (pi.projectPath !== opProjectPath) { return pi; }
+                                            return { ...pi, packages: pi.packages.filter(p => p.id.toLowerCase() !== opPkgId) };
+                                        });
+                                        allProjectsInstalledRef.current = updated;
+                                        return updated;
+                                    });
+                                }
+                                // Also check if the package is still installed in any project
+                                // If not, remove from the flat installedPackages too
+                                setInstalledPackages(prev => prev.filter(p => p.id.toLowerCase() !== opPkgId));
+                            }
                         }
                     }
                 }
@@ -344,7 +418,7 @@ export const SidebarApp: React.FC = () => {
                             return updated;
                         });
                     }
-                    if (selectedProjectRef.current) {
+                    if (selectedProjectRef.current && selectedProjectRef.current !== ALL_PROJECTS_SENTINEL) {
                         vscode.postMessage({ type: 'getInstalledPackages', projectPath: selectedProjectRef.current });
                         setLoadingInstalled(true);
                     }
@@ -365,7 +439,7 @@ export const SidebarApp: React.FC = () => {
                         return updated;
                     });
                     setPackageUpdates([]); packageUpdatesRef.current = [];
-                    if (selectedProjectRef.current) {
+                    if (selectedProjectRef.current && selectedProjectRef.current !== ALL_PROJECTS_SENTINEL) {
                         vscode.postMessage({ type: 'getInstalledPackages', projectPath: selectedProjectRef.current });
                         setLoadingInstalled(true);
                     }
@@ -376,11 +450,11 @@ export const SidebarApp: React.FC = () => {
                 // Removed packages can't have updates — clear update state
                 setPackageUpdates([]); packageUpdatesRef.current = [];
                 setAllProjectsUpdates([]); allProjectsUpdatesRef.current = [];
-                if (selectedProjectRef.current) {
+                if (selectedProjectRef.current && selectedProjectRef.current !== ALL_PROJECTS_SENTINEL) {
                     vscode.postMessage({ type: 'getInstalledPackages', projectPath: selectedProjectRef.current });
                     setLoadingInstalled(true);
                 }
-                if (loadAllProjectsInstalledRef.current) {
+                if (isAllProjectsRef.current) {
                     setAllProjectsInstalled([]);
                     vscode.postMessage({ type: 'checkAllProjectsInstalled' });
                     setLoadingAllInstalled(true);
@@ -404,14 +478,29 @@ export const SidebarApp: React.FC = () => {
                 setAllProjectsUpdates([]);
                 setAllProjectsInstalled([]);
                 setSelectedPackageId(null);
-                // Reset "load all projects" toggles so icons don't show stale state
-                setLoadAllProjects(false);
-                setLoadAllProjectsInstalled(false);
-                vscode.postMessage({
-                    type: 'getInstalledPackages',
-                    projectPath: message.projectPath
-                });
-                setLoadingInstalled(true);
+                // Reset all loading flags — prevents stuck spinners when stale
+                // responses are discarded by projectPath guards after rapid switching
+                setLoadingInstalled(false);
+                setLoadingUpdates(false);
+                setLoadingAllUpdates(false);
+                setLoadingAllInstalled(false);
+                // Fetch appropriate data based on mode
+                if (message.projectPath === ALL_PROJECTS_SENTINEL) {
+                    if (installedExpandedRef.current || searchModeRef.current === 'installed') {
+                        vscode.postMessage({ type: 'checkAllProjectsInstalled' });
+                        setLoadingAllInstalled(true);
+                    }
+                    if (updatesExpandedRef.current || searchModeRef.current === 'updates') {
+                        vscode.postMessage({ type: 'checkAllProjectsUpdates', includePrerelease: includePrereleaseRef.current });
+                        setLoadingAllUpdates(true);
+                    }
+                } else {
+                    vscode.postMessage({
+                        type: 'getInstalledPackages',
+                        projectPath: message.projectPath
+                    });
+                    setLoadingInstalled(true);
+                }
                 break;
             case 'prereleaseChanged':
                 setIncludePrerelease(message.includePrerelease);
@@ -470,7 +559,7 @@ export const SidebarApp: React.FC = () => {
     // In default mode: fetch when Installed or Updates section is expanded
     // In @installed/@updates mode: fetch if not already loaded
     useEffect(() => {
-        if (!selectedProject) { return; }
+        if (!selectedProject || selectedProject === ALL_PROJECTS_SENTINEL) { return; }
 
         const needsInstalled = (
             (searchMode === 'default' && (installedExpanded || updatesExpanded)) ||
@@ -497,22 +586,22 @@ export const SidebarApp: React.FC = () => {
 
     // ─── Load all projects updates ──────────────────────────────────────────
     useEffect(() => {
-        if (loadAllProjects && (searchMode === 'updates' || (searchMode === 'default' && updatesExpanded))) {
+        if (isAllProjects && (searchMode === 'updates' || (searchMode === 'default' && updatesExpanded))) {
             vscode.postMessage({
                 type: 'checkAllProjectsUpdates',
                 includePrerelease
             });
             setLoadingAllUpdates(true);
         }
-    }, [loadAllProjects, searchMode, updatesExpanded, includePrerelease]);
+    }, [isAllProjects, searchMode, updatesExpanded, includePrerelease]);
 
     // ─── Load all projects installed ────────────────────────────────────────
     useEffect(() => {
-        if (loadAllProjectsInstalled && (searchMode === 'installed' || (searchMode === 'default' && installedExpanded))) {
+        if (isAllProjects && (searchMode === 'installed' || (searchMode === 'default' && installedExpanded))) {
             vscode.postMessage({ type: 'checkAllProjectsInstalled' });
             setLoadingAllInstalled(true);
         }
-    }, [loadAllProjectsInstalled, searchMode, installedExpanded]);
+    }, [isAllProjects, searchMode, installedExpanded]);
 
     // ─── Search Handlers ─────────────────────────────────────────────────────
 
@@ -637,14 +726,45 @@ export const SidebarApp: React.FC = () => {
     // Map installed packages by ID for quick lookup in Browse
     const installedMap = useMemo(() => {
         const map = new Map<string, InstalledPackage>();
+        if (isAllProjects) {
+            // In all-projects mode, aggregate from allProjectsInstalled
+            for (const pi of allProjectsInstalled) {
+                for (const pkg of pi.packages) {
+                    const key = pkg.id.toLowerCase();
+                    if (!map.has(key)) {
+                        map.set(key, { id: pkg.id, version: pkg.version, resolvedVersion: pkg.resolvedVersion });
+                    }
+                }
+            }
+        }
+        // Also include single-project installedPackages (used for optimistic updates)
         for (const pkg of installedPackages) {
-            map.set(pkg.id.toLowerCase(), pkg);
+            const key = pkg.id.toLowerCase();
+            if (!map.has(key)) {
+                map.set(key, pkg);
+            }
         }
         return map;
-    }, [installedPackages]);
+    }, [installedPackages, isAllProjects, allProjectsInstalled]);
+
+    // Map packageId → list of project names where it's installed (for browse tooltip in all-projects mode)
+    const packageProjectsMap = useMemo(() => {
+        const map = new Map<string, string[]>();
+        if (!isAllProjects) { return map; }
+        for (const pi of allProjectsInstalled) {
+            const projName = pi.projectName.replace(/\.(csproj|fsproj|vbproj)$/, '');
+            for (const pkg of pi.packages) {
+                const key = pkg.id.toLowerCase();
+                const list = map.get(key);
+                if (list) { list.push(projName); }
+                else { map.set(key, [projName]); }
+            }
+        }
+        return map;
+    }, [isAllProjects, allProjectsInstalled]);
 
     // Total update count for badge
-    const totalUpdateCount = loadAllProjects && allProjectsUpdates.length > 0
+    const totalUpdateCount = isAllProjects && allProjectsUpdates.length > 0
         ? allProjectsUpdates.reduce((sum, pu) => sum + pu.updates.length, 0)
         : packageUpdates.length > 0
             ? packageUpdates.length
@@ -741,29 +861,74 @@ export const SidebarApp: React.FC = () => {
         };
     }, []);
 
+    // ─── Project Group Collapse (all-projects tree view) ─────────────────────
+    const toggleInstalledProjectCollapse = useCallback((projectPath: string) => {
+        setCollapsedInstalledProjects(prev => {
+            const next = new Set(prev);
+            if (next.has(projectPath)) { next.delete(projectPath); } else { next.add(projectPath); }
+            return next;
+        });
+    }, []);
+    const toggleUpdatesProjectCollapse = useCallback((projectPath: string) => {
+        setCollapsedUpdatesProjects(prev => {
+            const next = new Set(prev);
+            if (next.has(projectPath)) { next.delete(projectPath); } else { next.add(projectPath); }
+            return next;
+        });
+    }, []);
+
     // ─── Package Actions ─────────────────────────────────────────────────────
 
     const handleBrowsePrimaryAction = useCallback((packageId: string) => {
         if (!selectedProjectRef.current) { return; }
-        const installed = installedPackagesRef.current.find(
-            p => p.id.toLowerCase() === packageId.toLowerCase()
-        );
-        if (installed) {
-            vscode.postMessage({
-                type: 'removePackage',
-                projectPath: selectedProjectRef.current,
-                packageId
-            });
+        const pkgLower = packageId.toLowerCase();
+
+        // Check if installed — in all-projects mode, also check allProjectsInstalled
+        let isInstalled = installedPackagesRef.current.some(p => p.id.toLowerCase() === pkgLower);
+        if (!isInstalled && isAllProjectsRef.current) {
+            isInstalled = allProjectsInstalledRef.current.some(
+                pi => pi.packages.some(p => p.id.toLowerCase() === pkgLower)
+            );
+        }
+
+        if (isInstalled) {
+            if (selectedProjectRef.current === ALL_PROJECTS_SENTINEL) {
+                // Find which projects have this package and ask backend to show picker
+                const projectPaths = allProjectsInstalledRef.current
+                    .filter(pi => pi.packages.some(p => p.id.toLowerCase() === pkgLower))
+                    .map(pi => pi.projectPath);
+                if (projectPaths.length === 0) { return; }
+                vscode.postMessage({
+                    type: 'pickProjectForRemove',
+                    packageId,
+                    projectPaths
+                });
+            } else {
+                vscode.postMessage({
+                    type: 'removePackage',
+                    projectPath: selectedProjectRef.current,
+                    packageId
+                });
+            }
         } else {
             const searchPkg = searchResultsRef.current.find(
-                p => p.id.toLowerCase() === packageId.toLowerCase()
+                p => p.id.toLowerCase() === pkgLower
             );
-            vscode.postMessage({
-                type: 'installPackage',
-                projectPath: selectedProjectRef.current,
-                packageId,
-                version: searchPkg?.version
-            });
+            if (selectedProjectRef.current === ALL_PROJECTS_SENTINEL) {
+                // In all-projects mode, ask the backend to show a project picker
+                vscode.postMessage({
+                    type: 'pickProjectForInstall',
+                    packageId,
+                    version: searchPkg?.version
+                });
+            } else {
+                vscode.postMessage({
+                    type: 'installPackage',
+                    projectPath: selectedProjectRef.current,
+                    packageId,
+                    version: searchPkg?.version
+                });
+            }
         }
     }, []);
 
@@ -812,14 +977,35 @@ export const SidebarApp: React.FC = () => {
 
     const handleContextMenu = useCallback((packageId: string, _e: React.MouseEvent, context: 'browse' | 'installed' | 'updates', projectPath?: string) => {
         setSelectedPackageId(packageId);
-        const installed = installedPackagesRef.current.find(
-            p => p.id.toLowerCase() === packageId.toLowerCase()
+        const pkgLower = packageId.toLowerCase();
+        let installed = installedPackagesRef.current.find(
+            p => p.id.toLowerCase() === pkgLower
         );
+
+        // In all-projects mode, also check allProjectsInstalled for browse context
+        let installedProjects: Array<{ projectPath: string; projectName: string; version: string }> | undefined;
+        if (isAllProjectsRef.current && context === 'browse') {
+            const matches: Array<{ projectPath: string; projectName: string; version: string }> = [];
+            for (const pi of allProjectsInstalledRef.current) {
+                const match = pi.packages.find(p => p.id.toLowerCase() === pkgLower);
+                if (match) {
+                    matches.push({
+                        projectPath: pi.projectPath,
+                        projectName: pi.projectName,
+                        version: match.resolvedVersion || match.version
+                    });
+                    if (!installed) {
+                        installed = { id: match.id, version: match.version, resolvedVersion: match.resolvedVersion };
+                    }
+                }
+            }
+            if (matches.length > 0) { installedProjects = matches; }
+        }
 
         let latestVersion: string | undefined;
         let sourceUrl: string | undefined;
         if (context === 'updates') {
-            const update = packageUpdatesRef.current.find(u => u.id.toLowerCase() === packageId.toLowerCase());
+            const update = packageUpdatesRef.current.find(u => u.id.toLowerCase() === pkgLower);
             latestVersion = update?.latestVersion;
             sourceUrl = update?.sourceUrl;
         }
@@ -832,14 +1018,15 @@ export const SidebarApp: React.FC = () => {
             sourceUrl,
             versionType: installed?.versionType,
             context,
-            projectPath: projectPath || selectedProjectRef.current
+            projectPath: projectPath || selectedProjectRef.current,
+            installedProjects
         });
     }, []);
 
     const handleUpdateAll = useCallback(() => {
         if (!selectedProjectRef.current) { return; }
 
-        if (loadAllProjectsRef.current) {
+        if (isAllProjectsRef.current) {
             const projectUpdatesPayload = allProjectsUpdatesRef.current.map(pu => ({
                 projectPath: pu.projectPath,
                 projectName: pu.projectName,
@@ -900,6 +1087,10 @@ export const SidebarApp: React.FC = () => {
             )}
             {searchResults.map((pkg) => {
                 const installed = installedMap.get(pkg.id.toLowerCase());
+                const projectNames = packageProjectsMap.get(pkg.id.toLowerCase());
+                const tooltip = installed && projectNames?.length
+                    ? `Uninstall from: ${projectNames.join(', ')}`
+                    : undefined;
                 return (
                     <PackageRow
                         key={pkg.id}
@@ -913,6 +1104,7 @@ export const SidebarApp: React.FC = () => {
                         onPrimaryAction={handleBrowsePrimaryAction}
                         onContextMenu={(id, e) => handleContextMenu(id, e, 'browse')}
                         onClick={(id) => setSelectedPackageId(id)}
+                        actionTooltip={tooltip}
                     />
                 );
             })}
@@ -922,7 +1114,7 @@ export const SidebarApp: React.FC = () => {
     const renderInstalledList = () => (
         <div className="section-content">
             {/* Single project installed */}
-            {!loadAllProjectsInstalled && (
+            {!isAllProjects && (
                 <div
                     role="listbox"
                     tabIndex={0}
@@ -960,7 +1152,7 @@ export const SidebarApp: React.FC = () => {
             )}
 
             {/* All projects installed — flat list with project headers */}
-            {loadAllProjectsInstalled && (
+            {isAllProjects && (
                 <div
                     role="listbox"
                     tabIndex={0}
@@ -985,12 +1177,30 @@ export const SidebarApp: React.FC = () => {
                                 : pi.packages;
                             if (filtered.length === 0 && q) { return null; }
                             const sorted = [...filtered].sort((a, b) => a.id.localeCompare(b.id));
+                            const isCollapsed = collapsedInstalledProjects.has(pi.projectPath);
                             return (
-                                <div key={pi.projectPath}>
-                                    <div className="project-group-header" title={pi.projectPath}>
-                                        {pi.projectName} ({sorted.length})
+                                <div key={pi.projectPath} role="treeitem" aria-expanded={!isCollapsed}>
+                                    <div
+                                        className="project-group-header"
+                                        title={pi.projectPath}
+                                        onClick={() => toggleInstalledProjectCollapse(pi.projectPath)}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter' || e.key === ' ') {
+                                                e.preventDefault();
+                                                toggleInstalledProjectCollapse(pi.projectPath);
+                                            }
+                                        }}
+                                        role="button"
+                                        tabIndex={0}
+                                        aria-expanded={!isCollapsed}
+                                    >
+                                        <span className={`project-group-chevron${isCollapsed ? '' : ' expanded'}`}>
+                                            <ChevronRightIcon size={16} />
+                                        </span>
+                                        <span className="project-group-name">{pi.projectName}</span>
+                                        {isCollapsed && <span className="project-group-count">{sorted.length}</span>}
                                     </div>
-                                    {sorted.map((pkg) => (
+                                    {!isCollapsed && sorted.map((pkg) => (
                                         <PackageRow
                                             key={`${pi.projectPath}::${pkg.id}`}
                                             packageId={pkg.id}
@@ -998,8 +1208,14 @@ export const SidebarApp: React.FC = () => {
                                             installedVersion={pkg.resolvedVersion || pkg.version}
                                             context="installed"
                                             selected={selectedPackageId === `${pi.projectPath}::${pkg.id}`}
-                                            onPrimaryAction={handleInstalledPrimaryAction}
-                                            onContextMenu={(id, e) => handleContextMenu(id, e, 'installed')}
+                                            onPrimaryAction={(id) => {
+                                                vscode.postMessage({
+                                                    type: 'removePackage',
+                                                    projectPath: pi.projectPath,
+                                                    packageId: id
+                                                });
+                                            }}
+                                            onContextMenu={(id, e) => handleContextMenu(id, e, 'installed', pi.projectPath)}
                                             onClick={() => setSelectedPackageId(`${pi.projectPath}::${pkg.id}`)}
                                         />
                                     ))}
@@ -1015,7 +1231,7 @@ export const SidebarApp: React.FC = () => {
         <div className="section-content">
 
             {/* Single project updates */}
-            {!loadAllProjects && (
+            {!isAllProjects && (
                 <div
                     role="listbox"
                     tabIndex={0}
@@ -1054,7 +1270,7 @@ export const SidebarApp: React.FC = () => {
             )}
 
             {/* All projects updates — flat list with project headers */}
-            {loadAllProjects && (
+            {isAllProjects && (
                 <div
                     role="listbox"
                     tabIndex={0}
@@ -1084,27 +1300,48 @@ export const SidebarApp: React.FC = () => {
                             if (b.projectPath === selectedProject) { return 1; }
                             return a.projectName.localeCompare(b.projectName);
                         })
-                        .map((pu) => (
-                            <div key={pu.projectPath}>
-                                <div className="project-group-header" title={pu.projectPath}>
-                                    {pu.projectName} ({pu.updates.length})
+                        .map((pu) => {
+                            const isCollapsed = collapsedUpdatesProjects.has(pu.projectPath);
+                            const sortedUpdates = [...pu.updates].sort((a, b) => a.id.localeCompare(b.id));
+                            return (
+                                <div key={pu.projectPath} role="treeitem" aria-expanded={!isCollapsed}>
+                                    <div
+                                        className="project-group-header"
+                                        title={pu.projectPath}
+                                        onClick={() => toggleUpdatesProjectCollapse(pu.projectPath)}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter' || e.key === ' ') {
+                                                e.preventDefault();
+                                                toggleUpdatesProjectCollapse(pu.projectPath);
+                                            }
+                                        }}
+                                        role="button"
+                                        tabIndex={0}
+                                        aria-expanded={!isCollapsed}
+                                    >
+                                        <span className={`project-group-chevron${isCollapsed ? '' : ' expanded'}`}>
+                                            <ChevronRightIcon size={16} />
+                                        </span>
+                                        <span className="project-group-name">{pu.projectName}</span>
+                                        {isCollapsed && <span className="project-group-count">{pu.updates.length}</span>}
+                                    </div>
+                                    {!isCollapsed && sortedUpdates.map((pkg) => (
+                                        <PackageRow
+                                            key={`${pu.projectPath}::${pkg.id}`}
+                                            packageId={pkg.id}
+                                            version={pkg.installedVersion}
+                                            latestVersion={pkg.latestVersion}
+                                            installedVersion={pkg.installedVersion}
+                                            context="updates"
+                                            selected={selectedPackageId === `${pu.projectPath}::${pkg.id}`}
+                                            onPrimaryAction={handleAllProjectsUpdatePrimaryAction}
+                                            onContextMenu={(id, e) => handleContextMenu(id, e, 'updates', pu.projectPath)}
+                                            onClick={() => setSelectedPackageId(`${pu.projectPath}::${pkg.id}`)}
+                                        />
+                                    ))}
                                 </div>
-                                {[...pu.updates].sort((a, b) => a.id.localeCompare(b.id)).map((pkg) => (
-                                    <PackageRow
-                                        key={`${pu.projectPath}::${pkg.id}`}
-                                        packageId={pkg.id}
-                                        version={pkg.installedVersion}
-                                        latestVersion={pkg.latestVersion}
-                                        installedVersion={pkg.installedVersion}
-                                        context="updates"
-                                        selected={selectedPackageId === `${pu.projectPath}::${pkg.id}`}
-                                        onPrimaryAction={handleAllProjectsUpdatePrimaryAction}
-                                        onContextMenu={(id, e) => handleContextMenu(id, e, 'updates', pu.projectPath)}
-                                        onClick={() => setSelectedPackageId(`${pu.projectPath}::${pkg.id}`)}
-                                    />
-                                ))}
-                            </div>
-                        ))}
+                            );
+                        })}
                 </div>
             )}
         </div>
@@ -1220,25 +1457,12 @@ export const SidebarApp: React.FC = () => {
                         <SectionHeader
                             title="Installed"
                             expanded={installedExpanded}
-                            count={loadAllProjectsInstalled
+                            count={isAllProjects
                                 ? allProjectsInstalled.reduce((sum, pi) => sum + pi.packages.length, 0)
                                 : (installedPackages.length || backgroundInstalledCount)}
                             loading={loadingInstalled || loadingAllInstalled}
                             onToggle={toggleInstalled}
-                            actions={projects.length > 1 ? (
-                                <button
-                                    className="section-action-btn"
-                                    onClick={() => { setLoadAllProjectsInstalled(prev => !prev); setInstalledExpanded(true); }}
-                                    title={loadAllProjectsInstalled ? 'Show single project' : 'Load all projects'}
-                                    aria-label={loadAllProjectsInstalled ? 'Show single project' : 'Load all projects'}
-                                >
-                                    {loadAllProjectsInstalled ? (
-                                        <AllProjectsIcon size={16} />
-                                    ) : (
-                                        <SingleProjectIcon size={16} />
-                                    )}
-                                </button>
-                            ) : undefined}
+                            style={{ paddingTop: 4, height: 'auto' }}
                         />
                         {installedExpanded && renderInstalledList()}
                     </div>
@@ -1266,34 +1490,16 @@ export const SidebarApp: React.FC = () => {
                             count={totalUpdateCount}
                             loading={loadingUpdates || loadingAllUpdates}
                             onToggle={toggleUpdates}
-                            actions={
-                                <>
-                                    {projects.length > 1 && (
-                                        <button
-                                            className="section-action-btn"
-                                            onClick={() => { setLoadAllProjects(prev => !prev); setUpdatesExpanded(true); }}
-                                            title={loadAllProjects ? 'Show single project' : 'Load all projects'}
-                                            aria-label={loadAllProjects ? 'Show single project' : 'Load all projects'}
-                                        >
-                                            {loadAllProjects ? (
-                                                <AllProjectsIcon size={16} />
-                                            ) : (
-                                                <SingleProjectIcon size={16} />
-                                            )}
-                                        </button>
-                                    )}
-                                    {totalUpdateCount > 0 && (
-                                        <button
-                                            className="section-action-btn"
-                                            onClick={handleUpdateAll}
-                                            title={`Update all packages (${totalUpdateCount})`}
-                                            aria-label={`Update all packages (${totalUpdateCount})`}
-                                        >
-                                            <ArrowUpIcon size={16} />
-                                        </button>
-                                    )}
-                                </>
-                            }
+                            actions={totalUpdateCount > 0 ? (
+                                <button
+                                    className="section-action-btn"
+                                    onClick={handleUpdateAll}
+                                    title={`Update all packages (${totalUpdateCount})`}
+                                    aria-label={`Update all packages (${totalUpdateCount})`}
+                                >
+                                    <ArrowUpIcon size={16} />
+                                </button>
+                            ) : undefined}
                         />
                         {updatesExpanded && renderUpdatesList()}
                     </div>

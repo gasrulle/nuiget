@@ -142,6 +142,82 @@ describe('PackageDetailsPanel', () => {
             })} />);
             expect(screen.getByText('Uninstall')).toBeDisabled();
         });
+
+        it('disables Install button when all-projects mode is active', () => {
+            render(<MemoizedPackageDetailsPanel {...createProps({
+                selectedPackage: searchPkg,
+                selectedVersion: '13.0.3',
+                selectedProject: '__all_projects__',
+            })} />);
+            const btn = screen.getByText('Install');
+            expect(btn).toBeDisabled();
+            expect(btn).toHaveAttribute('title', 'Select a specific project or use Multi Install below');
+        });
+
+        it('enables Install button in all-projects mode when activeProjectPath is set', () => {
+            render(<MemoizedPackageDetailsPanel {...createProps({
+                selectedPackage: searchPkg,
+                selectedVersion: '13.0.3',
+                selectedProject: '__all_projects__',
+                activeProjectPath: '/App.csproj',
+            })} />);
+            const btn = screen.getByText('Install');
+            expect(btn).not.toBeDisabled();
+        });
+
+        it('enables Update button in all-projects mode when activeProjectPath is set and version differs', () => {
+            const onInstall = vi.fn();
+            render(<MemoizedPackageDetailsPanel {...createProps({
+                selectedPackage: { id: 'Newtonsoft.Json', version: '13.0.2' },
+                installedPackages: [{ id: 'Newtonsoft.Json', version: '13.0.2' }],
+                selectedVersion: '13.0.3',
+                packageVersions: ['13.0.3', '13.0.2'],
+                selectedProject: '__all_projects__',
+                activeProjectPath: '/App.csproj',
+                onInstall,
+            })} />);
+            const btn = screen.getByText('Update');
+            expect(btn).not.toBeDisabled();
+            fireEvent.click(btn);
+            expect(onInstall).toHaveBeenCalledWith('Newtonsoft.Json', '13.0.3');
+        });
+
+        it('disables button when selected version matches installed in allProjectsInstalled', () => {
+            render(<MemoizedPackageDetailsPanel {...createProps({
+                selectedPackage: searchPkg,
+                selectedVersion: '13.0.3',
+                packageVersions: ['13.0.3', '13.0.2'],
+                selectedProject: '__all_projects__',
+                activeProjectPath: '/App.csproj',
+                allProjectsInstalled: [{ projectPath: '/App.csproj', projectName: 'App', packages: [{ id: 'Newtonsoft.Json', version: '13.0.3' }] }],
+            })} />);
+            const btn = screen.getByText('Update');
+            expect(btn).toBeDisabled();
+            expect(btn).toHaveAttribute('title', 'Already at this version');
+        });
+
+        it('shows Update button via allProjectsInstalled when newer version selected', () => {
+            render(<MemoizedPackageDetailsPanel {...createProps({
+                selectedPackage: searchPkg,
+                selectedVersion: '13.0.3',
+                packageVersions: ['13.0.3', '13.0.2'],
+                selectedProject: '__all_projects__',
+                activeProjectPath: '/App.csproj',
+                allProjectsInstalled: [{ projectPath: '/App.csproj', projectName: 'App', packages: [{ id: 'Newtonsoft.Json', version: '13.0.2' }] }],
+            })} />);
+            expect(screen.getByText('Update')).not.toBeDisabled();
+        });
+
+        it('shows Uninstall button for package installed via allProjectsInstalled', () => {
+            render(<MemoizedPackageDetailsPanel {...createProps({
+                selectedPackage: searchPkg,
+                selectedVersion: '13.0.3',
+                selectedProject: '__all_projects__',
+                activeProjectPath: '/App.csproj',
+                allProjectsInstalled: [{ projectPath: '/App.csproj', projectName: 'App', packages: [{ id: 'Newtonsoft.Json', version: '13.0.3' }] }],
+            })} />);
+            expect(screen.getByText('Uninstall')).toBeInTheDocument();
+        });
     });
 
     describe('details tab', () => {

@@ -13,6 +13,7 @@ const hoisted = vi.hoisted(() => ({
     mockExecuteBulkRemoveAllProjects: vi.fn().mockResolvedValue(undefined),
     mockQueryAllProjectsUpdates: vi.fn().mockResolvedValue([]),
     mockQueryAllProjectsInstalled: vi.fn().mockResolvedValue([]),
+    mockResolveAllProjectsIcons: vi.fn().mockResolvedValue({}),
 }));
 
 vi.mock('../services/NuGetOperations', () => ({
@@ -24,6 +25,7 @@ vi.mock('../services/NuGetOperations', () => ({
     executeBulkRemoveAllProjects: hoisted.mockExecuteBulkRemoveAllProjects,
     queryAllProjectsUpdates: hoisted.mockQueryAllProjectsUpdates,
     queryAllProjectsInstalled: hoisted.mockQueryAllProjectsInstalled,
+    resolveAllProjectsIcons: hoisted.mockResolveAllProjectsIcons,
 }));
 
 vi.mock('../services/NuGetService', () => ({
@@ -351,6 +353,22 @@ describe('NuGetPanel', () => {
             expect(mockPanel.webview.postMessage).toHaveBeenCalledWith(expect.objectContaining({
                 type: 'projects',
                 projects: [{ name: 'A.csproj', path: '/A.csproj' }],
+            }));
+        });
+
+        it('getProjects falls back to persisted project from workspaceState when no pending project', async () => {
+            // Pre-set the workspace state to ALL_PROJECTS_SENTINEL (simulating sidebar sync)
+            (mockContext.workspaceState as any)._store.set('nuget.selectedProject', '__all_projects__');
+            (mockService as any).findProjects.mockResolvedValue([
+                { name: 'A.csproj', path: '/A.csproj' },
+                { name: 'B.csproj', path: '/B.csproj' }
+            ]);
+
+            await messageListener!({ type: 'getProjects' });
+
+            expect(mockPanel.webview.postMessage).toHaveBeenCalledWith(expect.objectContaining({
+                type: 'projects',
+                selectProjectPath: '__all_projects__'
             }));
         });
 
@@ -935,7 +953,7 @@ describe('NuGetPanel', () => {
             }]);
             await messageListener!({ type: 'checkAllProjectsInstalled', context: 'multiInstall' });
 
-            expect(hoisted.mockQueryAllProjectsInstalled).toHaveBeenCalledWith(mockService);
+            expect(hoisted.mockQueryAllProjectsInstalled).toHaveBeenCalledWith(mockService, false);
             expect(mockPanel.webview.postMessage).toHaveBeenCalledWith({
                 type: 'allProjectsInstalled',
                 context: 'multiInstall',
@@ -956,6 +974,78 @@ describe('NuGetPanel', () => {
                 context: undefined,
                 projectInstalled: []
             });
+        });
+    });
+
+    describe('all-projects icon enrichment', () => {
+        beforeEach(() => {
+            NuGetPanel.createOrShow(vscode.Uri.file('/ext'), mockContext, mockOutputChannel, mockService as any);
+            mockPanel.webview.postMessage.mockClear();
+        });
+
+        it('sends allProjectsIcons after checkAllProjectsUpdates with packages', async () => {
+            hoisted.mockQueryAllProjectsUpdates.mockResolvedValueOnce([{
+                projectPath: '/projA.csproj',
+                projectName: 'ProjA',
+                updates: [{ id: 'Pkg', installedVersion: '1.0', latestVersion: '2.0' }]
+            }]);
+            hoisted.mockResolveAllProjectsIcons.mockResolvedValueOnce({ 'Pkg@1.0': 'https://icon/pkg.png' });
+
+            await messageListener!({ type: 'checkAllProjectsUpdates', includePrerelease: false });
+            // Allow background icon resolution promise to settle
+            await new Promise(r => setTimeout(r, 10));
+
+            expect(hoisted.mockResolveAllProjectsIcons).toHaveBeenCalledWith(
+                mockService,
+                [{ id: 'Pkg', version: '1.0' }]
+            );
+            expect(mockPanel.webview.postMessage).toHaveBeenCalledWith({
+                type: 'allProjectsIcons',
+                iconMap: { 'Pkg@1.0': 'https://icon/pkg.png' }
+            });
+        });
+
+        it('does not send allProjectsIcons when icon map is empty', async () => {
+            hoisted.mockQueryAllProjectsUpdates.mockResolvedValueOnce([{
+                projectPath: '/projA.csproj',
+                projectName: 'ProjA',
+                updates: [{ id: 'Pkg', installedVersion: '1.0', latestVersion: '2.0' }]
+            }]);
+            hoisted.mockResolveAllProjectsIcons.mockResolvedValueOnce({});
+
+            await messageListener!({ type: 'checkAllProjectsUpdates', includePrerelease: false });
+            await new Promise(r => setTimeout(r, 10));
+
+            const iconMsg = mockPanel.webview.postMessage.mock.calls.find(
+                (c: any[]) => c[0]?.type === 'allProjectsIcons'
+            );
+            expect(iconMsg).toBeUndefined();
+        });
+
+        it('does not resolve icons separately (icons arrive inline via enrichment)', async () => {
+            hoisted.mockQueryAllProjectsInstalled.mockResolvedValueOnce([{
+                projectPath: '/projA.csproj',
+                projectName: 'ProjA',
+                packages: [{ id: 'Pkg', version: '1.0', resolvedVersion: '1.0.0' }]
+            }]);
+
+            await messageListener!({ type: 'checkAllProjectsInstalled' });
+            await new Promise(r => setTimeout(r, 10));
+
+            expect(hoisted.mockResolveAllProjectsIcons).not.toHaveBeenCalled();
+        });
+
+        it('skips icon resolution for multiInstall context', async () => {
+            hoisted.mockQueryAllProjectsInstalled.mockResolvedValueOnce([{
+                projectPath: '/projA.csproj',
+                projectName: 'ProjA',
+                packages: [{ id: 'Pkg', version: '1.0' }]
+            }]);
+
+            await messageListener!({ type: 'checkAllProjectsInstalled', context: 'multiInstall' });
+            await new Promise(r => setTimeout(r, 10));
+
+            expect(hoisted.mockResolveAllProjectsIcons).not.toHaveBeenCalled();
         });
     });
 
@@ -1053,6 +1143,49 @@ describe('NuGetPanel', () => {
                 context: 'multiInstall',
                 projectInstalled: []
             });
+        });
+    });
+
+    describe('sentinel guards', () => {
+        const SENTINEL = '__all_projects__';
+
+        beforeEach(() => {
+            NuGetPanel.createOrShow(vscode.Uri.file('/ext'), mockContext, mockOutputChannel, mockService as any);
+        });
+
+        it('getInstalledPackages ignores sentinel projectPath', async () => {
+            await messageListener!({ type: 'getInstalledPackages', projectPath: SENTINEL });
+            expect((mockService as any).getInstalledPackages).not.toHaveBeenCalled();
+        });
+
+        it('installPackage ignores sentinel projectPath', async () => {
+            await messageListener!({ type: 'installPackage', projectPath: SENTINEL, packageId: 'Pkg', version: '1.0.0' });
+            expect(hoisted.mockExecuteSingleOperation).not.toHaveBeenCalled();
+        });
+
+        it('updatePackage ignores sentinel projectPath', async () => {
+            await messageListener!({ type: 'updatePackage', projectPath: SENTINEL, packageId: 'Pkg', version: '2.0.0' });
+            expect(hoisted.mockExecuteSingleOperation).not.toHaveBeenCalled();
+        });
+
+        it('removePackage ignores sentinel projectPath', async () => {
+            await messageListener!({ type: 'removePackage', projectPath: SENTINEL, packageId: 'Pkg' });
+            expect(hoisted.mockExecuteSingleOperation).not.toHaveBeenCalled();
+        });
+
+        it('bulkInstall filters sentinel from projectPaths', async () => {
+            await messageListener!({ type: 'bulkInstall', projectPaths: [SENTINEL], packageId: 'Pkg', version: '1.0.0' });
+            expect(hoisted.mockExecuteBulkInstall).not.toHaveBeenCalled();
+        });
+
+        it('bulkUpdatePackages ignores sentinel projectPath', async () => {
+            await messageListener!({ type: 'bulkUpdatePackages', projectPath: SENTINEL, packages: [] });
+            expect(hoisted.mockExecuteBulkUpdatePackages).not.toHaveBeenCalled();
+        });
+
+        it('confirmBulkRemove ignores sentinel projectPath', async () => {
+            await messageListener!({ type: 'confirmBulkRemove', projectPath: SENTINEL, packages: [] });
+            expect(hoisted.mockExecuteBulkRemovePackages).not.toHaveBeenCalled();
         });
     });
 });

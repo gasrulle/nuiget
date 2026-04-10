@@ -15,8 +15,8 @@ This document describes the technical architecture of the nUIget VS Code extensi
 │  │  Shared           │                     │ postMessage              │
 │  │  NuGetService ◄───┤     ┌───────────────▼────────────────────┐    │
 │  │  singleton        │     │          Main Webview (React)       │    │
-│  │                   │     │  App.tsx + BrowseTab, InstalledTab  │    │
-│  │                   │     │  UpdatesTab, PackageDetailsPanel    │    │
+│  │                   │     │  App.tsx + InstalledTab, UpdatesTab  │    │
+│  │                   │     │  PackageDetailsPanel                │    │
 │  └──────┬───────────┘     └─────────────────────────────────────┘    │
 │         │                                                              │
 │         │              ┌──────────────────────────────────┐           │
@@ -54,13 +54,14 @@ src/
 │   ├── NuGetSidebarPanel.ts  # WebviewViewProvider for Activity Bar sidebar
 │   ├── app/
 │   │   ├── index.tsx         # React entry point with ErrorBoundary
-│   │   ├── App.tsx           # Application shell (~1430 lines)
+│   │   ├── App.tsx           # Application shell with unified search bar (~1700 lines)
 │   │   ├── App.css           # Styles (includes high-contrast, reduced-motion, icon utilities)
 │   │   ├── types.ts          # Shared types, LRUMap, utility functions
 │   │   ├── icons.tsx          # Inline SVG icon components (codicon-compatible, theme-aware)
 │   │   ├── markdownSetup.ts  # hljs language registration, marked config, renderMarkdownToHtml()
+│   │   ├── utils/
+│   │   │   └── parseSearchQuery.ts  # Shared search parser (SearchMode, FILTER_PREFIXES)
 │   │   ├── components/
-│   │   │   ├── BrowseTab.tsx              # Browse tab (~1020 lines)
 │   │   │   ├── InstalledTab.tsx           # Installed tab (~1360 lines)
 │   │   │   ├── UpdatesTab.tsx             # Updates tab (~750 lines)
 │   │   │   ├── PackageDetailsPanel.tsx    # Details panel (~480 lines)
@@ -118,12 +119,13 @@ src/
 Additional module splits:
 - **`NuGetTypes.ts`** — All exported types/interfaces (`VersionSpec`, `Project`, `InstalledPackage`, `PackageMetadata`, `NuGetSource`, `NuGetSearchResponse`, `NuGetSearchEntry`, `NuGetRegistrationEntry`, `NuGetRegistrationPage`, etc.). Also exports discriminated union message types: 48 message interfaces (e.g., `GetProjectsMsg`, `InstallPackageMsg`, `ShowContextMenuMsg`), `PanelRequestMessage` (34 variants), and `SidebarRequestMessage` (14 variants) — used by `_handleMessage` in both panels for type-safe switch/case narrowing. `NuGetService.ts` re-exports these for backward compatibility. NuGet V3 API response types use vendor-polymorphic field names (e.g., `id`/`Id`, `authors`/`Authors`) to handle differences between nuget.org, Nexus, ProGet, and other server implementations.
 - **`NuGetUtils.ts`** — Stateless utility functions (`LRUMap`, `batchedPromiseAll`, `execWithTimeout`, `fileExists`, `COMMAND_TIMEOUT`, input validators, `parseVersionSpec`, `isNewerVersion`, `topologicalSortByDependency`). No class dependency.
-- **`NuGetOperations.ts`** — Shared package operation functions used by both `NuGetPanel` and `NuGetSidebarPanel`. Exports an `OperationContext` interface (`{ nugetService, postMessage, notifyOtherPanel }`) and pure async functions: `executeSingleOperation` (install/update/remove), `executeBulkInstall`, `executeBulkUpdatePackages`, `executeBulkRemovePackages`, `executeBulkUpdateAllProjects`, `executeBulkRemoveAllProjects`. Also exports shared query functions: `queryAllProjectsUpdates(nugetService, includePrerelease, liteMode)` and `queryAllProjectsInstalled(nugetService)` with typed return interfaces (`ProjectUpdatesResult[]`, `ProjectInstalledResult[]`). Each panel builds an `OperationContext` via `_opCtx()` and delegates from thin message-handler dispatchers.
+- **`NuGetOperations.ts`** — Shared package operation functions used by both `NuGetPanel` and `NuGetSidebarPanel`. Exports an `OperationContext` interface (`{ nugetService, postMessage, notifyOtherPanel }`) and pure async functions: `executeSingleOperation` (install/update/remove), `executeBulkInstall`, `executeBulkUpdatePackages`, `executeBulkRemovePackages`, `executeBulkUpdateAllProjects`, `executeBulkRemoveAllProjects`. Also exports shared query functions: `queryAllProjectsUpdates(nugetService, includePrerelease, liteMode)` and `queryAllProjectsInstalled(nugetService)` with typed return interfaces (`ProjectUpdatesResult[]`, `ProjectInstalledResult[]`). Also exports `resolveAllProjectsIcons(nugetService, packages)` — deduplicates by `packageId@version`, resolves icon URLs via `batchedPromiseAll` (concurrency 10), returns `Record<string, string>` map for progressive UI enrichment. Each panel builds an `OperationContext` via `_opCtx()` and delegates from thin message-handler dispatchers.
 - `NuGetConfigParser.ts` imports and re-exports `NuGetSource` from `NuGetTypes.ts` — there is a single canonical definition.
 
 ### Module Split: App.tsx
 `App.tsx` delegates module-level setup and UI components to separate modules:
-- **`icons.tsx`** — Inline SVG icon components matching VS Code's codicon system. All icons use `currentColor` for theme-aware rendering. Exports: `ChevronRightIcon`, `ChevronDownIcon`, `SettingsGearIcon`, `WarningIcon`, `CloseIcon`, `CheckIcon`, `ArrowRightIcon`, `ArrowLeftIcon`, `CloudDownloadIcon`, `InfoIcon`, `SyncIcon`, `RulerIcon`, `LoadingIcon`, `ClearAllIcon`, `TrashIcon`, `VerifiedIcon`, `ExternalLinkIcon`, `PlusIcon`, `ArrowUpIcon`, `SingleProjectIcon`, `AllProjectsIcon`, `CheckAllIcon`, `CollapseAllIcon`, `ExpandAllIcon`. Codicon fonts are NOT available in webviews — inline SVGs are the required approach. Both main panel and sidebar import from this single module.
+- **`parseSearchQuery.ts`** — Shared search query parser (`parseSearchQuery()`) returning `{ mode: SearchMode, filterText: string }`. Modes: `'default'`, `'browse'`, `'installed'`, `'updates'`, `'vulnerable'`. Exports `FILTER_PREFIXES` array (`['@installed', '@updates', '@vulnerable']`). Shared between `App.tsx` (main panel) and `SidebarApp.tsx` (sidebar).
+- **`icons.tsx`** — Inline SVG icon components matching VS Code's codicon system. All icons use `currentColor` for theme-aware rendering. Exports: `ChevronRightIcon`, `ChevronDownIcon`, `SettingsGearIcon`, `WarningIcon`, `CloseIcon`, `CheckIcon`, `ArrowRightIcon`, `ArrowLeftIcon`, `CloudDownloadIcon`, `InfoIcon`, `SyncIcon`, `RulerIcon`, `LoadingIcon`, `ClearAllIcon`, `TrashIcon`, `VerifiedIcon`, `ExternalLinkIcon`, `PlusIcon`, `ArrowUpIcon`, `SingleProjectIcon`, `AllProjectsIcon`, `CheckAllIcon`, `CollapseAllIcon`, `ExpandAllIcon`, `FilterIcon`. Codicon fonts are NOT available in webviews — inline SVGs are the required approach. Both main panel and sidebar import from this single module.
 - **`markdownSetup.ts`** — highlight.js language registrations (16 languages, 30 aliases), marked config with custom code renderer, `renderMarkdownToHtml()` (combines upgradeHttpToHttps + marked.parse + DOMPurify.sanitize).
 - **`DraggableSash.tsx`** — Standalone resizable split panel sash component (`MemoizedDraggableSash`).
 - **`SourceSettingsOverlay.tsx`** — Self-contained source settings modal with `forwardRef`/`useImperativeHandle`. Owns internal form state (add source form, confirm remove dialog). Parent forwards `addSourceResult` messages via `sourceSettingsRef.current?.handleAddSourceResult()`.
@@ -165,59 +167,80 @@ Prerelease, source, and project selections are synced bidirectionally between th
 ### Navigate to Package (View Package Details)
 Sidebar context menu "View Package Details" opens the main panel and navigates to a specific package:
 - **Flow**: Sidebar QuickPick → `vscode.commands.executeCommand('nuiget.viewPackageDetails', { packageId, version })` → `NuGetPanel.navigateToPackage()` → `createOrShow()` + posts `{ type: 'navigateToPackage', packageId, version }` to webview.
-- **App.tsx handler**: Sets `pendingNavigationRef` with the target package, switches `activeTab` to `'browse'`, and calls `browseTabCompRef.current.navigateToPackage(packageId)` which sets the search query and triggers a `searchPackages` message.
+- **App.tsx handler**: Sets `pendingNavigationRef` with the target package, fills the unified search bar with the package ID, and dispatches a `searchPackages` message. The tab bar is hidden (browse mode) and results appear in the browse results area.
 - **Auto-select on results**: When `searchResults` arrives and `pendingNavigationRef.current` is set, App.tsx finds the matching package by ID in results and calls `selectDirectPackage()` to load versions, metadata, and display the details panel. The ref is then cleared.
 
 ## Component Architecture
 
-The webview UI is decomposed into focused tab components, each managing their own local state while sharing cross-cutting state from the App shell.
+The webview UI uses a unified search bar in the App shell that drives all search modes (browse, @installed, @updates, @vulnerable). Tab-specific components manage their own local state while sharing cross-cutting state from App.
 
 ### Component Hierarchy
 
 ```
 App.tsx (shell)
-├── Tab Bar (Browse | Installed | Updates [badge])
+├── Unified Search Bar (search input + filter button + clear button)
+│   ├── @-prefix filter dropdown (conditional)
+│   ├── Recent searches dropdown (conditional)
+│   └── Quick search suggestions (conditional, with version expansion)
+├── Tab Bar (Installed | Updates [badge]) — hidden in browse mode
 ├── SourceSettingsOverlay (forwardRef → SourceSettingsOverlayHandle, conditional)
-├── BrowseTab (forwardRef → BrowseTabHandle)
-│   ├── Search input + Quick search
+├── Browse Results Area (visible in browse mode)
 │   ├── Virtualized package list (@tanstack/react-virtual)
 │   ├── DraggableSash (MemoizedDraggableSash)
-│   └── PackageDetailsPanel (via MemoizedPackageDetailsPanel)
-├── InstalledTab (forwardRef → InstalledTabHandle)
-│   ├── Filter bar + Toolbar
+│   └── PackageDetailsPanel (via browseDetailsPanelContent useMemo)
+├── InstalledTab (forwardRef → InstalledTabHandle) — hidden in browse mode
+│   ├── Toolbar
 │   ├── Virtualized direct packages list (@tanstack/react-virtual)
 │   ├── Transitive packages (collapsible per-framework)
 │   ├── DraggableSash (MemoizedDraggableSash)
 │   └── PackageDetailsPanel (via MemoizedPackageDetailsPanel)
-└── UpdatesTab (forwardRef → UpdatesTabHandle)
+└── UpdatesTab (forwardRef → UpdatesTabHandle) — hidden in browse mode
     ├── Bulk operations toolbar
     ├── Virtualized update list (@tanstack/react-virtual)
     ├── DraggableSash (MemoizedDraggableSash)
     └── PackageDetailsPanel (via MemoizedPackageDetailsPanel)
 ```
 
+### Unified Search Bar
+
+The search bar replaces the former Browse tab and InstalledTab filter bar, matching the sidebar's Extensions-style search UX:
+
+- **Default mode**: Empty search shows Installed/Updates tabs normally.
+- **Browse mode**: Plain text + Enter dispatches `searchPackages`, hides tabs, shows virtualized browse results with split details panel. Quick search suggestions (150ms debounce) appear while typing (before Enter).
+- **Filter modes**: `@installed <query>` filters the InstalledTab client-side. `@updates <query>` filters the UpdatesTab. `@vulnerable` shows only vulnerable packages. Typing `@` shows an auto-completing prefix dropdown.
+- **Recent searches**: Up to 10 recent browse queries shown on focus when the search bar is empty.
+- **Quick search**: 150ms debounce autocomplete. Expandable per-source results with version lists. Install directly from quick search, or click to fill search bar.
+- **Keyboard navigation**: ArrowDown/Up navigate dropdowns, Enter selects, Escape dismisses, Tab selects filter prefix.
+
+### Search Mode Model
+
+Both the main panel and sidebar use the same `parseSearchQuery()` utility (from `utils/parseSearchQuery.ts`):
+```typescript
+parseSearchQuery(query) → { mode: 'default' | 'browse' | 'installed' | 'updates' | 'vulnerable', filterText: string }
+```
+All rendering conditionals, auto-fetch effects, and tab visibility are driven by this parsed mode.
+
 ### Mounting Strategy
 
 | Component | Strategy | Reason |
 |-----------|----------|--------|
-| BrowseTab | Always mounted, `display:none` | Preserves search state, scroll position |
-| InstalledTab | Always mounted, `display:none` | Preserves filter state, transitive data |
-| UpdatesTab | Conditionally rendered | Re-fetches data on each visit |
+| Browse Results | Conditionally rendered | Only shown when `searchMode.mode === 'browse'` |
+| InstalledTab | Always mounted, `display:none` | Preserves transitive data; hidden in browse mode |
+| UpdatesTab | Conditionally rendered | Re-fetches data on each visit; hidden in browse mode |
 
 ### State Ownership
 
-**App.tsx (shared state):** `projects`, `selectedProject`, `installedPackages`, `selectedPackage`, `selectedTransitivePackage`, `packageMetadata`, `packageVersions`, `selectedVersion`, `activeTab`, `includePrerelease`, `selectedSource`, `sources`, `detailsTab`, `sanitizedReadmeHtml`.
+**App.tsx (shared state):** `projects`, `selectedProject`, `installedPackages`, `selectedPackage`, `selectedTransitivePackage`, `packageMetadata`, `packageVersions`, `selectedVersion`, `activeTab`, `includePrerelease`, `selectedSource`, `sources`, `detailsTab`, `sanitizedReadmeHtml`. Also owns all search state: `searchQuery`, `searchResults`, `searchLoading`, `quickSearchSuggestions`, `recentSearches`, `showFilterDropdown`, `showRecentDropdown`, `showQuickSearch`, `quickSearchIndex`, `expandedQuickSearchItems`, `searchMode` (derived).
 
 **SourceSettingsOverlay (internal state):** `showAddSourcePanel`, `addSourceUrl`, `addSourceName`, `addSourceUsername`, `addSourcePassword`, `storeEncrypted`, `showAdvancedOptions`, `addSourceError`, `addingSource`, `confirmRemoveSource`. Receives `addSourceResult` via `forwardRef`/`useImperativeHandle` handle.
 
-**Tab components (local state):** Each tab manages its own UI state (search results, loading flags, filter text, transitive sections, bulk selections) to minimize cross-component coupling.
+**Tab components (local state):** Each tab manages its own UI state (loading flags, transitive sections, bulk selections) to minimize cross-component coupling. InstalledTab and UpdatesTab receive `externalFilter` and `externalFilterMode` props from App.tsx for client-side filtering driven by the unified search bar.
 
 ### Message Routing
 
 App.tsx's `handleMessage` dispatches incoming messages to components via `forwardRef` + `useImperativeHandle`. Each tab ref exposes a `handleMessage` method:
 
 ```typescript
-const browseTabCompRef = useRef<BrowseTabHandle>(null);
 const installedTabCompRef = useRef<InstalledTabHandle>(null);
 const updatesTabCompRef = useRef<UpdatesTabHandle>(null);
 
@@ -232,13 +255,13 @@ switch (message.type) {
     case 'searchResults':
     case 'autocompleteResults':
     case 'restoreSearchQuery':
-        browseTabCompRef.current?.handleMessage(message);
+        // Handled directly in App.tsx (search state is in App shell)
         break;
     // ... other types handled directly in App
 }
 ```
 
-BrowseTab's `handleMessage` returns `boolean` (consumed or not); InstalledTab and UpdatesTab return `void` (unconditional dispatch for their message types). App.tsx routes specific message types to specific tab refs via a `switch` statement — it does **not** sequentially try each tab.
+Search-related messages (`searchResults`, `autocompleteResults`, `packageVersions` for quick search) are handled directly in App.tsx since the unified search bar state lives in the shell. InstalledTab and UpdatesTab return `void` (unconditional dispatch for their message types). App.tsx routes specific message types to specific tab refs via a `switch` statement — it does **not** sequentially try each tab.
 
 ### Source Removal Reset
 
@@ -249,11 +272,13 @@ When a source is removed, the backend captures the source URL *before* removal a
 Components receive state via props (not React Context) since there's only one level of nesting:
 
 ```typescript
-<MemoizedBrowseTab
-    ref={browseTabCompRef}
+<MemoizedInstalledTab
+    ref={installedTabCompRef}
     vscode={vscode}
-    isVisible={activeTab === 'browse'}
+    isVisible={activeTab === 'installed' && searchMode.mode !== 'browse'}
     selectedProject={selectedProject}
+    externalFilter={filterText}
+    externalFilterMode={filterMode}
     // ...shared state and callbacks
 />
 ```
@@ -371,10 +396,11 @@ This is safe because JavaScript is single-threaded — the guard only needs to p
 | `transitiveMetadata` | Ext → UI | Return packages with icons/verified/authors |
 | `checkPackageUpdates` | UI → Ext | Check for package updates |
 | `packageUpdates` | Ext → UI | Return packages with available updates |
-| `checkAllProjectsUpdates` | UI → Ext | Check updates for all projects ("Load all" mode) |
+| `checkAllProjectsUpdates` | UI → Ext | Check updates for all projects (sentinel "All Projects" mode) |
 | `allProjectsUpdates` | Ext → UI | Return grouped updates per project |
-| `checkAllProjectsInstalled` | UI → Ext | Get installed packages for all projects (Installed tab "Load all" mode + Multi Install dropdown via `context` field) |
+| `checkAllProjectsInstalled` | UI → Ext | Get installed packages for all projects (sentinel "All Projects" mode + Multi Install dropdown via `context` field) |
 | `allProjectsInstalled` | Ext → UI | Return grouped installed packages per project (echoes `context` field for routing) |
+| `allProjectsIcons` | Ext → UI | Progressive icon enrichment: map of `packageId@version` → icon URL, merged into existing all-projects state |
 
 #### Package Operations
 | Message | Direction | Purpose |
@@ -695,6 +721,8 @@ private async resolveIconUrl(
 
 Methods that process many packages pre-fetch `enabledSources` once to avoid repeated `getSources()` calls.
 
+**All-projects progressive icon enrichment**: In all-projects mode, `NuGetPanel` uses a two-phase response pattern. First, `checkAllProjectsUpdates`/`checkAllProjectsInstalled` sends the data immediately (fast render). Then, a background `resolveAllProjectsIcons()` call deduplicates packages by `packageId@version`, resolves icon URLs via `batchedPromiseAll` (concurrency 10), and sends an `allProjectsIcons` message with the icon map. The frontend merges icons into existing `allProjectsUpdates` and `allProjectsInstalled` state. This avoids blocking the initial data with N icon HEAD requests. Sidebar skips icon enrichment (compact layout doesn't display icons).
+
 ### Multi-Source Autocomplete
 When "All sources" is selected, `autocompletePackageId()`:
 1. Queries nuget.org AND custom sources **in parallel** using `Promise.allSettled`
@@ -826,7 +854,7 @@ The Installed tab's direct packages list is also virtualized, with the scroll co
 
 ### Component Memoization
 
-- **Tab components** (`BrowseTab`, `InstalledTab`, `UpdatesTab`) are wrapped in `React.memo` with `forwardRef` + `useImperativeHandle` for parent-to-child communication.
+- **Tab components** (`InstalledTab`, `UpdatesTab`) are wrapped in `React.memo` with `forwardRef` + `useImperativeHandle` for parent-to-child communication.
 - **PackageDetailsPanel** is wrapped in `React.memo` as `MemoizedPackageDetailsPanel`, shared by all three tabs.
 - `DraggableSash` is wrapped in `React.memo` as `MemoizedDraggableSash` with memoized `onReset`/`onDragEnd` callbacks (`useCallback` with `[]` deps) to prevent re-renders on unrelated state changes.
 - **SourceSettingsOverlay** is wrapped in `React.memo` as `MemoizedSourceSettingsOverlay` with `forwardRef`/`useImperativeHandle` for handling `addSourceResult` messages from the parent.
@@ -1098,10 +1126,10 @@ public startSourceHealthMonitor(): void {
 ```
 
 ### React 19 Concurrent Rendering
-The webview leverages React 19's concurrent features for responsive UI during heavy operations. `useDeferredValue` is used in the **tab components** (BrowseTab, InstalledTab, UpdatesTab), while `useTransition` is used in **App.tsx** for tab switching:
+The webview leverages React 19's concurrent features for responsive UI during heavy operations. `useDeferredValue` is used in **App.tsx** (browse results, search query) and the **tab components** (InstalledTab, UpdatesTab), while `useTransition` is used in **App.tsx** for tab switching:
 
 ```typescript
-// In BrowseTab/InstalledTab/UpdatesTab:
+// In App.tsx/InstalledTab/UpdatesTab:
 // Deferred search - keeps UI responsive while typing
 const [searchQuery, setSearchQuery] = useState('');
 const deferredSearchQuery = useDeferredValue(searchQuery);
@@ -1638,8 +1666,12 @@ This prevents intermediate restore failures when projects reference each other (
 The two-phase approach (all updates, then all restores) prevents intermediate restore failures that occur when a dependent project is restored before its dependency project has been updated.
 
 ### Load All Projects Updates
-The Updates tab supports checking updates for ALL projects simultaneously:
-- Triggered by the "Load all projects" toggle in the Updates section header
+The Updates and Installed tabs/sections support showing data from ALL projects simultaneously via the "All Projects" sentinel:
+- Triggered by selecting "All Projects (N)" in the project selector dropdown (full manager) or QuickPick dialog (sidebar)
+- `ALL_PROJECTS_SENTINEL = '__all_projects__'` is the special `selectedProject` value (defined in `NuGetTypes.ts` for backend, `types.ts` for webview)
+- `isAllProjects` is derived: `selectedProject === ALL_PROJECTS_SENTINEL` — no independent toggle state
+- Auto-downgrade: When only 1 project exists, sentinel is automatically replaced with that project's path
+- Backend sentinel guards: `NuGetPanel.ts` and `NuGetSidebarPanel.ts` reject sentinel in CLI-bound handlers (install/update/remove/getInstalledPackages) as defense-in-depth
 - Uses `checkPackageUpdatesMinimal` (no metadata enrichment) for speed
 - Results grouped by project path with section headers
 - **Composite key:** `projectPath::packageId` for unique multi-project package selection

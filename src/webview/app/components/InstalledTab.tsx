@@ -5,7 +5,7 @@
  * list with bulk uninstall, transitive packages per-framework sections, and
  * details panel (transitive details or shared PackageDetailsPanel).
  *
- * Owns: installedFilterQuery, directPackagesExpanded, selectedUninstalls,
+ * Owns: directPackagesExpanded, selectedUninstalls,
  *       uninstallingAll, transitive* state, restoringProject.
  * Receives: installedPackages, loadingInstalled, selectedPackage, etc. as props.
  *
@@ -20,13 +20,12 @@
 
 import { useVirtualizer } from '@tanstack/react-virtual';
 import React, { forwardRef, useCallback, useDeferredValue, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
-import { AllProjectsIcon, CheckAllIcon, ChevronDownIcon, ChevronRightIcon, ClearAllIcon, CollapseAllIcon, ExpandAllIcon, FilterIcon, RulerIcon, SingleProjectIcon, SyncIcon, VerifiedIcon, WarningIcon } from '../icons';
+import { CheckAllIcon, ChevronDownIcon, ChevronRightIcon, CollapseAllIcon, ExpandAllIcon, RulerIcon, SyncIcon, VerifiedIcon, WarningIcon } from '../icons';
 import type {
     InstalledPackage,
     LRUMap,
     PackageMetadata,
     PackageSearchResult,
-    Project,
     ProjectInstalled,
     TransitiveFrameworkSection,
     TransitivePackage,
@@ -39,18 +38,6 @@ import { MemoizedPackageDetailsPanel } from './PackageDetailsPanel';
 
 const ESTIMATED_ITEM_HEIGHT = 66; // padding (12*2) + icon (32) + gaps
 const HEADER_HEIGHT = 40; // project group header height in all-projects mode
-
-// @-prefix filter constants
-const INSTALLED_FILTER_PREFIXES = ['@vulnerable'] as const;
-
-/** Parse filter input into mode + text. */
-function parseInstalledFilter(query: string): { mode: 'plain' | 'vulnerable'; filterText: string } {
-    const trimmed = query.trim().toLowerCase();
-    if (trimmed === '@vulnerable' || trimmed.startsWith('@vulnerable ')) {
-        return { mode: 'vulnerable', filterText: trimmed.slice('@vulnerable'.length).trim() };
-    }
-    return { mode: 'plain', filterText: trimmed };
-}
 
 // ─── Props ───────────────────────────────────────────────────────────────────
 
@@ -103,6 +90,10 @@ export interface InstalledTabProps {
     handleSashReset: () => void;
     handleSashDragEnd: (pos: number) => void;
 
+    // External filter (from unified search bar in App.tsx)
+    externalFilter: string;
+    externalFilterMode: 'plain' | 'vulnerable';
+
     // Keyboard handler factory
     createPackageListKeyHandler: <T extends { id: string }>(
         packages: T[],
@@ -132,11 +123,13 @@ export interface InstalledTabProps {
     }>>;
 
     // All-projects mode
-    loadAllProjectsInstalled: boolean;
+    isAllProjects: boolean;
     allProjectsInstalled: ProjectInstalled[];
     loadingAllProjectsInstalled: boolean;
-    onLoadAllInstalledChange: (checked: boolean) => void;
-    projects: Project[];
+
+    // Active project path (set when clicking a package in all-projects mode)
+    activeProjectPath: string;
+    onActiveProjectPathChange: (path: string) => void;
 }
 
 // ─── Handle ──────────────────────────────────────────────────────────────────
@@ -148,6 +141,73 @@ export interface InstalledTabHandle {
     resetTransitiveState: (refetch?: boolean, forceRestore?: boolean) => void;
     /** Focus the installed list and select first item */
     focusAndSelectFirst: () => void;
+}
+
+// ─── Shared package row content (icon + badges + version + authors) ──────────
+
+function PackageRowContent({ pkg, defaultPackageIcon }: { pkg: InstalledPackage; defaultPackageIcon: string }) {
+    return (
+        <>
+            <div className="package-icon">
+                {pkg.iconUrl ? (
+                    <img src={pkg.iconUrl} alt="" onError={(e) => { (e.target as HTMLImageElement).src = defaultPackageIcon; }} />
+                ) : (
+                    <img src={defaultPackageIcon} alt="" />
+                )}
+            </div>
+            <div className="package-info">
+                <div className="package-name">
+                    {pkg.id}
+                    {pkg.isImplicit && (
+                        <span className="implicit-badge" title="SDK-managed package - not directly referenced in project file">SDK</span>
+                    )}
+                    {pkg.versionType === 'floating' && (
+                        <span className="floating-badge" title="This package uses a floating version pattern"><SyncIcon size={12} /></span>
+                    )}
+                    {pkg.versionType === 'range' && (
+                        <span className="floating-badge" title="This package uses a version range"><RulerIcon size={12} /></span>
+                    )}
+                    {pkg.vulnerabilities && pkg.vulnerabilities.length > 0 && (
+                        <span
+                            className={`vulnerability-badge vuln-${pkg.vulnerabilities.reduce<VulnerabilitySeverity>((max, v) => {
+                                const order = { Low: 0, Moderate: 1, High: 2, Critical: 3 };
+                                return order[v.severity] > order[max] ? v.severity : max;
+                            }, 'Low')}`}
+                            title={`${pkg.vulnerabilities.length} known vulnerabilit${pkg.vulnerabilities.length > 1 ? 'ies' : 'y'}`}
+                        >
+                            <WarningIcon size={12} />
+                        </span>
+                    )}
+                </div>
+                <div className="package-meta">
+                    {pkg.isAlwaysLatest ? (
+                        <span className="package-version" title="This package always gets the latest version">
+                            * (always latest{pkg.resolvedVersion ? `: ${pkg.resolvedVersion}` : ''})
+                        </span>
+                    ) : pkg.versionType === 'floating' || pkg.versionType === 'range' ? (
+                        <span className="package-version">
+                            {pkg.version}
+                            {pkg.resolvedVersion ? (
+                                <span className="resolved-version"> ({pkg.resolvedVersion})</span>
+                            ) : (
+                                <span className="resolved-version resolved-unknown"> (run restore)</span>
+                            )}
+                        </span>
+                    ) : (
+                        <span className="package-version">v{pkg.version}</span>
+                    )}
+                </div>
+                {pkg.authors && (
+                    <div className="package-authors">
+                        {pkg.verified && (
+                            <span className="verified-badge" title="The ID prefix of this package has been reserved by its owner on nuget.org"><VerifiedIcon size={14} /></span>
+                        )}
+                        {pkg.authors}
+                    </div>
+                )}
+            </div>
+        </>
+    );
 }
 
 // ─── Component ───────────────────────────────────────────────────────────────
@@ -190,29 +250,21 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
         setSplitPosition,
         handleSashReset,
         handleSashDragEnd,
+        externalFilter = '',
+        externalFilterMode = 'plain',
         createPackageListKeyHandler,
         metadataCache,
         vscode,
         installedTabRef,
         MemoizedDraggableSash,
-        loadAllProjectsInstalled,
+        isAllProjects,
         allProjectsInstalled,
         loadingAllProjectsInstalled,
-        onLoadAllInstalledChange,
-        projects,
+        activeProjectPath,
+        onActiveProjectPathChange,
     } = props;
 
     // ─── Internal state ──────────────────────────────────────────────────────
-
-    // Installed tab local filter (client-side only, no HTTP calls)
-    const [installedFilterQuery, setInstalledFilterQuery] = useState('');
-    const installedFilterInputRef = useRef<HTMLInputElement>(null);
-
-    // @-prefix dropdown state
-    const [showFilterDropdown, setShowFilterDropdown] = useState(false);
-    const [filterDropdownIndex, setFilterDropdownIndex] = useState(-1);
-    const [filterButtonTriggered, setFilterButtonTriggered] = useState(false);
-    const filterDropdownRef = useRef<HTMLDivElement>(null);
 
     // Direct packages section state (default expanded)
     const [directPackagesExpanded, setDirectPackagesExpanded] = useState(true);
@@ -259,47 +311,17 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
         [installedPackages]
     );
 
-    // @-prefix dropdown matching logic
-    const matchingFilters = useMemo(() => {
-        // Filter button shows all available prefixes
-        if (filterButtonTriggered) { return [...INSTALLED_FILTER_PREFIXES]; }
-        const trimmed = installedFilterQuery.trim().toLowerCase();
-        if (!trimmed.startsWith('@')) { return []; }
-        for (const prefix of INSTALLED_FILTER_PREFIXES) {
-            if (trimmed === prefix || trimmed.startsWith(prefix + ' ')) { return []; }
-        }
-        return INSTALLED_FILTER_PREFIXES.filter(p => p.startsWith(trimmed));
-    }, [installedFilterQuery, filterButtonTriggered]);
-
-    useEffect(() => {
-        if (matchingFilters.length > 0) {
-            setShowFilterDropdown(true);
-            setFilterDropdownIndex(0);
-        } else {
-            setShowFilterDropdown(false);
-            setFilterDropdownIndex(-1);
-        }
-    }, [matchingFilters]);
-
-    const selectFilter = useCallback((filter: string) => {
-        setInstalledFilterQuery(filter + ' ');
-        setShowFilterDropdown(false);
-        setFilterDropdownIndex(-1);
-        setFilterButtonTriggered(false);
-        installedFilterInputRef.current?.focus();
-    }, []);
-
     // Installed tab: client-side filter by package ID (case-insensitive contains)
-    // Supports @vulnerable prefix to show only packages with known vulnerabilities
+    // Uses external filter/mode from the unified search bar in App.tsx
     const filteredInstalledPackages = useMemo(() => {
-        const { mode, filterText } = parseInstalledFilter(installedFilterQuery);
         let base = sortedInstalledPackages;
-        if (mode === 'vulnerable') {
+        if (externalFilterMode === 'vulnerable') {
             base = base.filter(pkg => pkg.vulnerabilities && pkg.vulnerabilities.length > 0);
         }
-        if (!filterText) { return base; }
-        return base.filter(pkg => pkg.id.toLowerCase().includes(filterText));
-    }, [sortedInstalledPackages, installedFilterQuery]);
+        if (!externalFilter) { return base; }
+        const lower = externalFilter.toLowerCase();
+        return base.filter(pkg => pkg.id.toLowerCase().includes(lower));
+    }, [sortedInstalledPackages, externalFilter, externalFilterMode]);
 
     // React 19: Deferred value for non-blocking UI during heavy list updates
     const deferredInstalledPackages = useDeferredValue(filteredInstalledPackages);
@@ -309,14 +331,11 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
 
     type FlattenedInstalledItem =
         | { type: 'header'; projectPath: string; projectName: string; packageCount: number }
-        | { type: 'package'; projectPath: string; id: string; version: string; resolvedVersion?: string; isImplicit?: boolean };
+        | ({ type: 'package'; projectPath: string } & InstalledPackage);
 
     const flattenedAllProjectsInstalled = useMemo((): FlattenedInstalledItem[] => {
-        if (!loadAllProjectsInstalled) { return []; }
-        const { mode, filterText } = parseInstalledFilter(installedFilterQuery);
-        // Note: @vulnerable not supported in all-projects mode (InstalledPackageMinimal lacks vulnerability data)
-        // so we treat it as no filter in that mode
-        const q = mode === 'vulnerable' ? filterText : installedFilterQuery.trim().toLowerCase();
+        if (!isAllProjects) { return []; }
+        const q = externalFilter.toLowerCase();
         const items: FlattenedInstalledItem[] = [];
         const sortedProjects = [...allProjectsInstalled].sort((a, b) => {
             if (a.projectPath === selectedProject) { return -1; }
@@ -324,9 +343,13 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
             return a.projectName.localeCompare(b.projectName);
         });
         for (const project of sortedProjects) {
+            let base = project.packages;
+            if (externalFilterMode === 'vulnerable') {
+                base = base.filter(p => p.vulnerabilities && p.vulnerabilities.length > 0);
+            }
             const filtered = q
-                ? project.packages.filter(p => p.id.toLowerCase().includes(q))
-                : project.packages;
+                ? base.filter(p => p.id.toLowerCase().includes(q))
+                : base;
             items.push({
                 type: 'header',
                 projectPath: project.projectPath,
@@ -341,30 +364,30 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
             }
         }
         return items;
-    }, [loadAllProjectsInstalled, allProjectsInstalled, expandedProjects, installedFilterQuery, selectedProject]);
+    }, [isAllProjects, allProjectsInstalled, expandedProjects, externalFilter, externalFilterMode, selectedProject]);
 
     const deferredFlattenedInstalled = useDeferredValue(flattenedAllProjectsInstalled);
     const isAllProjectsInstalledStale = flattenedAllProjectsInstalled !== deferredFlattenedInstalled;
 
     // Total uninstallable packages across all projects (non-implicit)
     const allProjectsUninstallableCount = useMemo(() => {
-        if (!loadAllProjectsInstalled) { return 0; }
+        if (!isAllProjects) { return 0; }
         let count = 0;
         for (const project of allProjectsInstalled) {
             count += project.packages.filter(p => !p.isImplicit).length;
         }
         return count;
-    }, [loadAllProjectsInstalled, allProjectsInstalled]);
+    }, [isAllProjects, allProjectsInstalled]);
 
     // Virtualizer for direct packages list (same pattern as BrowseTab)
-    const installedVirtualizerCount = loadAllProjectsInstalled
+    const installedVirtualizerCount = isAllProjects
         ? deferredFlattenedInstalled.length
         : deferredInstalledPackages.length;
     const installedVirtualizer = useVirtualizer({
         count: installedVirtualizerCount,
         getScrollElement: () => installedScrollRef.current,
         estimateSize: (index) => {
-            if (loadAllProjectsInstalled && deferredFlattenedInstalled[index]?.type === 'header') {
+            if (isAllProjects && deferredFlattenedInstalled[index]?.type === 'header') {
                 return HEADER_HEIGHT;
             }
             return ESTIMATED_ITEM_HEIGHT;
@@ -454,7 +477,7 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
     // Reset selections when all-projects mode changes
     useEffect(() => {
         setSelectedUninstallsAllProjects(new Set());
-    }, [allProjectsInstalled, loadAllProjectsInstalled]);
+    }, [allProjectsInstalled, isAllProjects]);
 
     const handleToggleProject = useCallback((projectPath: string) => {
         setExpandedProjects(prev => {
@@ -835,6 +858,8 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
                 selectedProject={selectedProject}
                 includePrerelease={includePrerelease}
                 selectedSource={selectedSource}
+                activeProjectPath={activeProjectPath}
+                allProjectsInstalled={allProjectsInstalled}
                 onInstall={onInstall}
                 onRemove={onRemove}
                 onVersionChange={onVersionChange}
@@ -873,141 +898,27 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
         selectedProject,
         includePrerelease,
         selectedSource,
+        activeProjectPath,
+        allProjectsInstalled,
     ]);
 
     return (
         <div className="content browse-content" style={{ display: activeTab === 'installed' ? '' : 'none' }}>
             <div className="split-panel">
                 <div ref={installedScrollRef} className="package-list-panel" style={{ width: `${splitPosition}%` }}>
-                    {loadingInstalled ? (
+                    {!isAllProjects && loadingInstalled ? (
                         <div className="loading-spinner-container" aria-busy="true" aria-label="Loading installed packages">
                             <div className="loading-spinner"></div>
                             <p>Loading installed packages...</p>
                         </div>
-                    ) : installedPackages.length === 0 ? (
+                    ) : !isAllProjects && installedPackages.length === 0 ? (
                         <p className="empty-state">No packages installed</p>
                     ) : (
                         <div className="direct-packages-section">
-                            {/* Installed tab local filter */}
-                            <div className="installed-filter-bar">
-                                <input
-                                    ref={installedFilterInputRef}
-                                    type="text"
-                                    className="installed-filter-input"
-                                    placeholder="Filter packages... (@ for filters)"
-                                    value={installedFilterQuery}
-                                    onChange={(e) => setInstalledFilterQuery(e.target.value)}
-                                    onKeyDown={(e) => {
-                                        // @-prefix dropdown keyboard navigation
-                                        if (showFilterDropdown && matchingFilters.length > 0) {
-                                            if (e.key === 'ArrowDown') {
-                                                e.preventDefault();
-                                                setFilterDropdownIndex(prev => Math.min(prev + 1, matchingFilters.length - 1));
-                                                return;
-                                            }
-                                            if (e.key === 'ArrowUp') {
-                                                e.preventDefault();
-                                                setFilterDropdownIndex(prev => Math.max(prev - 1, 0));
-                                                return;
-                                            }
-                                            if (e.key === 'Enter' || e.key === 'Tab') {
-                                                e.preventDefault();
-                                                const idx = filterDropdownIndex >= 0 ? filterDropdownIndex : 0;
-                                                selectFilter(matchingFilters[idx]);
-                                                return;
-                                            }
-                                            if (e.key === 'Escape') {
-                                                e.preventDefault();
-                                                setShowFilterDropdown(false);
-                                                setFilterButtonTriggered(false);
-                                                return;
-                                            }
-                                        }
-                                        if (e.key === 'Escape') {
-                                            e.preventDefault();
-                                            if (installedFilterQuery) {
-                                                setInstalledFilterQuery('');
-                                            } else {
-                                                installedFilterInputRef.current?.blur();
-                                            }
-                                        } else if (e.key === 'ArrowDown') {
-                                            e.preventDefault();
-                                            installedListRef.current?.focus();
-                                        }
-                                    }}
-                                    onBlur={() => {
-                                        // Delay to allow onMouseDown on dropdown items to fire first
-                                        setTimeout(() => { setShowFilterDropdown(false); setFilterButtonTriggered(false); }, 150);
-                                    }}
-                                    aria-label="Filter installed packages"
-                                />
-                                <button
-                                    className={`installed-filter-clear${installedFilterQuery ? '' : ' disabled'}`}
-                                    onClick={() => {
-                                        if (!installedFilterQuery) { return; }
-                                        setInstalledFilterQuery('');
-                                        installedFilterInputRef.current?.focus();
-                                    }}
-                                    title="Clear filter (Esc)"
-                                    aria-label="Clear filter"
-                                    tabIndex={-1}
-                                >
-                                    <ClearAllIcon size={16} />
-                                </button>
-                                <button
-                                    className="installed-filter-btn"
-                                    onMouseDown={(e) => {
-                                        e.preventDefault();
-                                        if (showFilterDropdown && filterButtonTriggered) {
-                                            setShowFilterDropdown(false);
-                                            setFilterButtonTriggered(false);
-                                        } else {
-                                            setFilterButtonTriggered(true);
-                                            setShowFilterDropdown(true);
-                                            setFilterDropdownIndex(0);
-                                        }
-                                        installedFilterInputRef.current?.focus();
-                                    }}
-                                    aria-label="Filter"
-                                    title="Filter"
-                                    tabIndex={-1}
-                                >
-                                    <FilterIcon size={16} />
-                                </button>
-                                {/* @-prefix filter dropdown */}
-                                {showFilterDropdown && matchingFilters.length > 0 && (
-                                    <div className="installed-filter-dropdown" ref={filterDropdownRef} role="listbox">
-                                        {matchingFilters.map((filter, index) => (
-                                            <div
-                                                key={filter}
-                                                className={`installed-filter-dropdown-item${index === filterDropdownIndex ? ' active' : ''}`}
-                                                onMouseDown={(e) => { e.preventDefault(); selectFilter(filter); }}
-                                                onMouseEnter={() => setFilterDropdownIndex(index)}
-                                                role="option"
-                                                aria-selected={index === filterDropdownIndex}
-                                            >
-                                                <span className="installed-filter-dropdown-prefix">@</span>
-                                                <span>{filter.slice(1)}</span>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
                             {/* Unified toolbar — same position for single-project and all-projects modes */}
                             <div className="updates-toolbar">
                                 <div className="toolbar-actions-left">
-                                    {projects.length > 1 && (
-                                        <button
-                                            className={`toolbar-icon-btn${loadAllProjectsInstalled ? ' active' : ''}`}
-                                            onClick={() => onLoadAllInstalledChange(!loadAllProjectsInstalled)}
-                                            disabled={loadingInstalled || uninstallingAll || loadingAllProjectsInstalled}
-                                            title={loadAllProjectsInstalled ? 'Show single project' : 'Load all projects'}
-                                            aria-label={loadAllProjectsInstalled ? 'Show single project' : 'Load all projects'}
-                                        >
-                                            {loadAllProjectsInstalled ? <AllProjectsIcon size={16} /> : <SingleProjectIcon size={16} />}
-                                        </button>
-                                    )}
-                                    {loadAllProjectsInstalled ? (
+                                    {isAllProjects ? (
                                         <>
                                             <button
                                                 className={`toolbar-icon-btn${selectedUninstallsAllProjects.size === allProjectsUninstallableCount && allProjectsUninstallableCount > 0 ? ' active' : ''}`}
@@ -1049,7 +960,7 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
                                             <CheckAllIcon size={16} />
                                         </button>
                                     )}
-                                    {!loadAllProjectsInstalled && (
+                                    {!isAllProjects && (
                                         <>
                                             <span className="toolbar-separator" />
                                             <button
@@ -1073,7 +984,7 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
                                         </>
                                     )}
                                 </div>
-                                {loadAllProjectsInstalled ? (
+                                {isAllProjects ? (
                                     <button
                                         className="btn btn-danger"
                                         onClick={handleUninstallSelectedAllProjects}
@@ -1091,7 +1002,7 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
                                     </button>
                                 )}
                             </div>
-                            {loadAllProjectsInstalled ? (
+                            {isAllProjects ? (
                                 <div className="direct-packages-content">
                                     {loadingAllProjectsInstalled ? (
                                         <div className="loading-spinner-container" aria-busy="true" aria-label="Loading all projects installed packages">
@@ -1128,21 +1039,29 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
                                                                 <span className="direct-packages-arrow">{isExpanded ? <ChevronDownIcon size={14} /> : <ChevronRightIcon size={14} />}</span>
                                                                 <span className="direct-packages-title">
                                                                     {item.projectName}
-                                                                    <span className="direct-packages-count">({item.packageCount})</span>
+                                                                    {!isExpanded && <span className="direct-packages-count">({item.packageCount})</span>}
                                                                 </span>
                                                             </button>
                                                         );
                                                     }
 
-                                                    // Package item (minimal — no icons)
+                                                    // Package item
                                                     const compositeKey = `${item.projectPath}::${item.id}`;
                                                     return (
                                                         <div
                                                             key={compositeKey}
                                                             data-index={virtualRow.index}
                                                             ref={installedVirtualizer.measureElement}
-                                                            className="package-item package-item-minimal"
+                                                            className={`package-item${selectedPackage && getPackageId(selectedPackage).toLowerCase() === item.id.toLowerCase() ? ' selected' : ''}`}
                                                             style={{ position: 'absolute', top: 0, left: 0, width: '100%', transform: `translateY(${virtualRow.start}px)` }}
+                                                            onClick={() => {
+                                                                onActiveProjectPathChange(item.projectPath);
+                                                                onSelectDirectPackage(item, {
+                                                                    selectedVersionValue: item.version,
+                                                                    metadataVersion: item.resolvedVersion || item.version,
+                                                                    initialVersions: [item.version],
+                                                                });
+                                                            }}
                                                         >
                                                             <input
                                                                 type="checkbox"
@@ -1153,24 +1072,19 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
                                                                 disabled={uninstallingAll || item.isImplicit}
                                                                 title={item.isImplicit ? 'Implicit/transitive package - cannot be uninstalled directly' : undefined}
                                                             />
-                                                            <div className="package-info">
-                                                                <div className="package-name">
-                                                                    {item.id}
-                                                                    {item.isImplicit && (
-                                                                        <span className="implicit-badge" title="SDK-managed package">SDK</span>
-                                                                    )}
-                                                                </div>
-                                                                <div className="package-meta">
-                                                                    <span className="package-version">v{item.resolvedVersion || item.version}</span>
-                                                                </div>
-                                                            </div>
+                                                            <PackageRowContent pkg={item} defaultPackageIcon={defaultPackageIcon} />
                                                         </div>
                                                     );
                                                 })}
                                             </div>
-                                            {installedFilterQuery.trim() && deferredFlattenedInstalled.filter(i => i.type === 'package').length === 0 && (
+                                            {externalFilter.trim() && deferredFlattenedInstalled.filter(i => i.type === 'package').length === 0 && (
                                                 <div className="installed-filter-empty">
-                                                    No packages match &lsquo;{installedFilterQuery.trim()}&rsquo;
+                                                    No packages match &lsquo;{externalFilter.trim()}&rsquo;
+                                                </div>
+                                            )}
+                                            {!externalFilter.trim() && externalFilterMode === 'vulnerable' && deferredFlattenedInstalled.filter(i => i.type === 'package').length === 0 && (
+                                                <div className="installed-filter-empty">
+                                                    No vulnerable packages found
                                                 </div>
                                             )}
                                         </>
@@ -1187,7 +1101,7 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
                                         <span className="direct-packages-title">
                                             Direct packages
                                             <span className="direct-packages-count">
-                                                {installedFilterQuery.trim()
+                                                {externalFilter.trim()
                                                     ? `(${filteredInstalledPackages.length} of ${installedPackages.length})`
                                                     : `(${installedPackages.length})`}
                                             </span>
@@ -1203,6 +1117,7 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
                                                     deferredInstalledPackages,
                                                     () => selectedPackage ? getPackageId(selectedPackage) : null,
                                                     (pkg) => {
+                                                        onActiveProjectPathChange('');
                                                         onSelectDirectPackage(pkg, {
                                                             selectedVersionValue: pkg.version,
                                                             metadataVersion: pkg.resolvedVersion || pkg.version,
@@ -1233,6 +1148,7 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
                                                             className={`package-item ${selectedPackage && getPackageId(selectedPackage).toLowerCase() === pkg.id.toLowerCase() ? 'selected' : ''}`}
                                                             style={{ position: 'absolute', top: 0, left: 0, width: '100%', transform: `translateY(${virtualRow.start}px)` }}
                                                             onClick={() => {
+                                                                onActiveProjectPathChange('');
                                                                 onSelectDirectPackage(pkg, {
                                                                     selectedVersionValue: pkg.version,
                                                                     metadataVersion: pkg.resolvedVersion || pkg.version,
@@ -1249,71 +1165,19 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
                                                                 disabled={uninstallingAll || pkg.isImplicit}
                                                                 title={pkg.isImplicit ? 'Implicit/transitive package - cannot be uninstalled directly' : undefined}
                                                             />
-                                                            <div className="package-icon">
-                                                                {pkg.iconUrl ? (
-                                                                    <img src={pkg.iconUrl} alt="" onError={(e) => { (e.target as HTMLImageElement).src = defaultPackageIcon; }} />
-                                                                ) : (
-                                                                    <img src={defaultPackageIcon} alt="" />
-                                                                )}
-                                                            </div>
-                                                            <div className="package-info">
-                                                                <div className="package-name">
-                                                                    {pkg.id}
-                                                                    {pkg.isImplicit && (
-                                                                        <span className="implicit-badge" title="SDK-managed package - not directly referenced in project file">SDK</span>
-                                                                    )}
-                                                                    {pkg.versionType === 'floating' && (
-                                                                        <span className="floating-badge" title="This package uses a floating version pattern"><SyncIcon size={12} /></span>
-                                                                    )}
-                                                                    {pkg.versionType === 'range' && (
-                                                                        <span className="floating-badge" title="This package uses a version range"><RulerIcon size={12} /></span>
-                                                                    )}
-                                                                    {pkg.vulnerabilities && pkg.vulnerabilities.length > 0 && (
-                                                                        <span
-                                                                            className={`vulnerability-badge vuln-${pkg.vulnerabilities.reduce<VulnerabilitySeverity>((max, v) => {
-                                                                                const order = { Low: 0, Moderate: 1, High: 2, Critical: 3 };
-                                                                                return order[v.severity] > order[max] ? v.severity : max;
-                                                                            }, 'Low')}`}
-                                                                            title={`${pkg.vulnerabilities.length} known vulnerabilit${pkg.vulnerabilities.length > 1 ? 'ies' : 'y'}`}
-                                                                        >
-                                                                            <WarningIcon size={12} />
-                                                                        </span>
-                                                                    )}
-                                                                </div>
-                                                                <div className="package-meta">
-                                                                    {pkg.isAlwaysLatest ? (
-                                                                        <span className="package-version" title="This package always gets the latest version">
-                                                                            * (always latest{pkg.resolvedVersion ? `: ${pkg.resolvedVersion}` : ''})
-                                                                        </span>
-                                                                    ) : pkg.versionType === 'floating' || pkg.versionType === 'range' ? (
-                                                                        <span className="package-version">
-                                                                            {pkg.version}
-                                                                            {pkg.resolvedVersion ? (
-                                                                                <span className="resolved-version"> ({pkg.resolvedVersion})</span>
-                                                                            ) : (
-                                                                                <span className="resolved-version resolved-unknown"> (run restore)</span>
-                                                                            )}
-                                                                        </span>
-                                                                    ) : (
-                                                                        <span className="package-version">v{pkg.version}</span>
-                                                                    )}
-                                                                </div>
-                                                                {pkg.authors && (
-                                                                    <div className="package-authors">
-                                                                        {pkg.verified && (
-                                                                            <span className="verified-badge" title="The ID prefix of this package has been reserved by its owner on nuget.org"><VerifiedIcon size={14} /></span>
-                                                                        )}
-                                                                        {pkg.authors}
-                                                                    </div>
-                                                                )}
-                                                            </div>
+                                                            <PackageRowContent pkg={pkg} defaultPackageIcon={defaultPackageIcon} />
                                                         </div>
                                                     );
                                                 })}
                                             </div>
-                                            {installedFilterQuery.trim() && deferredInstalledPackages.length === 0 && (
+                                            {externalFilter.trim() && deferredInstalledPackages.length === 0 && (
                                                 <div className="installed-filter-empty">
-                                                    No packages match &lsquo;{installedFilterQuery.trim()}&rsquo;
+                                                    No packages match &lsquo;{externalFilter.trim()}&rsquo;
+                                                </div>
+                                            )}
+                                            {!externalFilter.trim() && externalFilterMode === 'vulnerable' && deferredInstalledPackages.length === 0 && (
+                                                <div className="installed-filter-empty">
+                                                    No vulnerable packages found
                                                 </div>
                                             )}
                                         </div>
@@ -1324,7 +1188,7 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
                     )}
 
                     {/* Transitive packages sections - one per target framework (hidden in all-projects mode) */}
-                    {!loadAllProjectsInstalled && (
+                    {!isAllProjects && (
                         <div className="transitive-sections">
                             {/* Show loading state or no data source message at top level */}
                             {loadingTransitive ? (

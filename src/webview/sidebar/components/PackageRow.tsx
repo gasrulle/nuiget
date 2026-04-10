@@ -8,6 +8,8 @@ interface PackageRowProps {
     authors?: string;
     installedVersion?: string;
     latestVersion?: string;
+    /** Override the default action button tooltip (e.g., to list projects) */
+    actionTooltip?: string;
     context: 'browse' | 'installed' | 'updates';
     selected?: boolean;
     onPrimaryAction: (packageId: string) => void;
@@ -27,6 +29,7 @@ export const PackageRow: React.FC<PackageRowProps> = ({
     description,
     installedVersion,
     latestVersion,
+    actionTooltip,
     context,
     selected,
     onPrimaryAction,
@@ -103,7 +106,7 @@ export const PackageRow: React.FC<PackageRowProps> = ({
             <button
                 className="package-row-action"
                 onClick={handlePrimaryAction}
-                title={actionLabel}
+                title={actionTooltip || actionLabel}
                 aria-label={`${actionLabel} ${packageId}`}
                 tabIndex={-1}
             >

@@ -1,7 +1,8 @@
 import * as vscode from 'vscode';
-import { executeBulkInstall, executeBulkRemoveAllProjects, executeBulkRemovePackages, executeBulkUpdateAllProjects, executeBulkUpdatePackages, executeSingleOperation, OperationContext, queryAllProjectsInstalled, queryAllProjectsUpdates } from '../services/NuGetOperations';
+import { executeBulkInstall, executeBulkRemoveAllProjects, executeBulkRemovePackages, executeBulkUpdateAllProjects, executeBulkUpdatePackages, executeSingleOperation, OperationContext, queryAllProjectsInstalled, queryAllProjectsUpdates, resolveAllProjectsIcons } from '../services/NuGetOperations';
 import { NuGetService } from '../services/NuGetService';
 import type { PanelRequestMessage } from '../services/NuGetTypes';
+import { ALL_PROJECTS_SENTINEL } from '../services/NuGetTypes';
 
 export class NuGetPanel {
     public static currentPanel: NuGetPanel | undefined;
@@ -47,7 +48,7 @@ export class NuGetPanel {
     private readonly _nugetService: NuGetService;
     private _disposables: vscode.Disposable[] = [];
     private _pendingProjectPath: string | undefined;
-    private _pendingInitialTab: 'browse' | 'installed' | 'updates' | undefined;
+    private _pendingInitialTab: 'installed' | 'updates' | undefined;
     private _pendingNavigatePackage: { packageId: string; version?: string } | undefined;
     private _pendingOpenSourceSettings = false;
     private _disposed = false;
@@ -58,7 +59,7 @@ export class NuGetPanel {
     // Prevent concurrent mutating operations (install/update/remove)
     private _operationInProgress = false;
 
-    public static createOrShow(extensionUri: vscode.Uri, context: vscode.ExtensionContext, outputChannel: vscode.LogOutputChannel, nugetService: NuGetService, projectPath?: string, initialTab?: 'browse' | 'installed' | 'updates') {
+    public static createOrShow(extensionUri: vscode.Uri, context: vscode.ExtensionContext, outputChannel: vscode.LogOutputChannel, nugetService: NuGetService, projectPath?: string, initialTab?: 'installed' | 'updates') {
         NuGetPanel._context = context;
         NuGetPanel._outputChannel = outputChannel;
         const column = vscode.window.activeTextEditor
@@ -95,7 +96,7 @@ export class NuGetPanel {
         }
     }
 
-    public selectProject(projectPath: string, initialTab?: 'browse' | 'installed' | 'updates') {
+    public selectProject(projectPath: string, initialTab?: 'installed' | 'updates') {
         this._postMessage({
             type: 'selectProject',
             projectPath: projectPath,
@@ -120,7 +121,7 @@ export class NuGetPanel {
 
     /**
      * Navigate to a specific package in the main panel.
-     * Opens/reveals the panel, switches to Browse tab, searches for the package, and auto-selects it.
+     * Opens/reveals the panel, fills the search bar with the package, and auto-selects it.
      */
     public static navigateToPackage(extensionUri: vscode.Uri, context: vscode.ExtensionContext, outputChannel: vscode.LogOutputChannel, nugetService: NuGetService, packageId: string, version?: string) {
         // Check if panel already exists (webview is ready to receive messages)
@@ -141,7 +142,7 @@ export class NuGetPanel {
         }
     }
 
-    private constructor(panel: vscode.WebviewPanel, extensionUri: vscode.Uri, nugetService: NuGetService, projectPath?: string, initialTab?: 'browse' | 'installed' | 'updates') {
+    private constructor(panel: vscode.WebviewPanel, extensionUri: vscode.Uri, nugetService: NuGetService, projectPath?: string, initialTab?: 'installed' | 'updates') {
         this._panel = panel;
         this._extensionUri = extensionUri;
         this._nugetService = nugetService;
@@ -205,10 +206,13 @@ export class NuGetPanel {
             case 'getProjects':
                 {
                     const projects = await this._nugetService.findProjects();
+                    // Use pending project (from context menu), or fall back to persisted selection (from sidebar sync)
+                    const selectProjectPath = this._pendingProjectPath
+                        ?? NuGetPanel._context?.workspaceState.get<string>('nuget.selectedProject');
                     this._postMessage({
                         type: 'projects',
                         projects: projects,
-                        selectProjectPath: this._pendingProjectPath
+                        selectProjectPath
                     });
                     // Clear pending after sending
                     this._pendingProjectPath = undefined;
@@ -238,6 +242,7 @@ export class NuGetPanel {
                 }
             case 'getInstalledPackages':
                 {
+                    if (data.projectPath === ALL_PROJECTS_SENTINEL) { break; }
                     try {
                         const packages = await this._nugetService.getInstalledPackages(data.projectPath as string);
                         this._postMessage({
@@ -257,6 +262,7 @@ export class NuGetPanel {
                 }
             case 'getTransitivePackages':
                 {
+                    if (data.projectPath === ALL_PROJECTS_SENTINEL) { break; }
                     try {
                         // If forceRestore is true (explicit refresh by user), run restore first
                         // This ignores the noRestore setting since user explicitly requested refresh
@@ -303,6 +309,7 @@ export class NuGetPanel {
                 }
             case 'restoreProject':
                 {
+                    if (data.projectPath === ALL_PROJECTS_SENTINEL) { break; }
                     await vscode.window.withProgress({
                         location: vscode.ProgressLocation.Notification,
                         title: 'Restoring project...',
@@ -391,6 +398,7 @@ export class NuGetPanel {
             case 'installPackage':
                 {
                     if (this._operationInProgress) { break; }
+                    if (data.projectPath === ALL_PROJECTS_SENTINEL) { break; }
                     this._operationInProgress = true;
                     try {
                         await executeSingleOperation(this._opCtx(), 'install', data.projectPath, data.packageId, data.version, data.sourceUrl);
@@ -400,15 +408,18 @@ export class NuGetPanel {
             case 'bulkInstall':
                 {
                     if (this._operationInProgress) { break; }
+                    const paths = (data.projectPaths as string[])?.filter(p => p !== ALL_PROJECTS_SENTINEL);
+                    if (!paths?.length) { break; }
                     this._operationInProgress = true;
                     try {
-                        await executeBulkInstall(this._opCtx(), data.projectPaths, data.packageId, data.version);
+                        await executeBulkInstall(this._opCtx(), paths, data.packageId, data.version);
                     } finally { this._operationInProgress = false; }
                     break;
                 }
             case 'updatePackage':
                 {
                     if (this._operationInProgress) { break; }
+                    if (data.projectPath === ALL_PROJECTS_SENTINEL) { break; }
                     this._operationInProgress = true;
                     try {
                         await executeSingleOperation(this._opCtx(), 'update', data.projectPath, data.packageId, data.version, data.sourceUrl);
@@ -418,6 +429,7 @@ export class NuGetPanel {
             case 'removePackage':
                 {
                     if (this._operationInProgress) { break; }
+                    if (data.projectPath === ALL_PROJECTS_SENTINEL) { break; }
                     this._operationInProgress = true;
                     try {
                         await executeSingleOperation(this._opCtx(), 'remove', data.projectPath, data.packageId);
@@ -706,6 +718,17 @@ export class NuGetPanel {
                             this._nugetService, data.includePrerelease, false /* liteMode */
                         );
                         this._postMessage({ type: 'allProjectsUpdates', projectUpdates });
+                        // Phase 2: resolve icons in background after initial data is sent
+                        const updatePackages = projectUpdates.flatMap(pu =>
+                            pu.updates.map(u => ({ id: u.id, version: u.installedVersion }))
+                        );
+                        if (updatePackages.length > 0) {
+                            resolveAllProjectsIcons(this._nugetService, updatePackages).then(iconMap => {
+                                if (Object.keys(iconMap).length > 0) {
+                                    this._postMessage({ type: 'allProjectsIcons', iconMap });
+                                }
+                            }).catch(() => { /* non-critical */ });
+                        }
                     } catch (error) {
                         console.error('[nUIget] checkAllProjectsUpdates error:', error);
                         this._postMessage({ type: 'allProjectsUpdates', projectUpdates: [] });
@@ -715,7 +738,7 @@ export class NuGetPanel {
             case 'checkAllProjectsInstalled':
                 {
                     try {
-                        const projectInstalled = await queryAllProjectsInstalled(this._nugetService);
+                        const projectInstalled = await queryAllProjectsInstalled(this._nugetService, false /* full enrichment */);
                         this._postMessage({ type: 'allProjectsInstalled', context: data.context, projectInstalled });
                     } catch (error) {
                         console.error('[nUIget] checkAllProjectsInstalled error:', error);
@@ -828,6 +851,7 @@ export class NuGetPanel {
             case 'bulkUpdatePackages':
                 {
                     if (this._operationInProgress) { break; }
+                    if (data.projectPath === ALL_PROJECTS_SENTINEL) { break; }
                     this._operationInProgress = true;
                     try {
                         await executeBulkUpdatePackages(this._opCtx(), data.packages, data.projectPath);
@@ -837,6 +861,7 @@ export class NuGetPanel {
             case 'confirmBulkRemove':
                 {
                     if (this._operationInProgress) { break; }
+                    if (data.projectPath === ALL_PROJECTS_SENTINEL) { break; }
                     this._operationInProgress = true;
                     try {
                         await executeBulkRemovePackages(this._opCtx(), data.packages, data.projectPath);

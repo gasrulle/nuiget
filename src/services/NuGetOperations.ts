@@ -1,7 +1,8 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
 import type { NuGetService } from './NuGetService';
-import { topologicalSortByDependency } from './NuGetUtils';
+import type { InstalledPackage } from './NuGetTypes';
+import { batchedPromiseAll, topologicalSortByDependency } from './NuGetUtils';
 
 // --- Shared types ---
 
@@ -520,13 +521,13 @@ export async function executeBulkRemoveAllProjects(
 export interface ProjectUpdatesResult {
     projectPath: string;
     projectName: string;
-    updates: { id: string; installedVersion: string; latestVersion: string }[];
+    updates: { id: string; installedVersion: string; latestVersion: string; iconUrl?: string }[];
 }
 
 export interface ProjectInstalledResult {
     projectPath: string;
     projectName: string;
-    packages: { id: string; version: string; resolvedVersion?: string; isImplicit?: boolean }[];
+    packages: InstalledPackage[];
 }
 
 /**
@@ -541,7 +542,8 @@ export async function queryAllProjectsUpdates(
     const projects = await nugetService.findProjects();
     const results: ProjectUpdatesResult[] = [];
 
-    for (const project of projects) {
+    // Parallelize per-project fetching (up to 4 concurrent) for faster loading
+    await batchedPromiseAll(projects, async (project) => {
         try {
             const installedPackages = await nugetService.getInstalledPackages(project.path, liteMode);
             if (installedPackages.length > 0) {
@@ -557,37 +559,70 @@ export async function queryAllProjectsUpdates(
         } catch (error) {
             console.error(`[nUIget] Failed to check updates for ${project.name}:`, error);
         }
-    }
+    }, 4);
 
     return results;
 }
 
 /**
- * Query all projects for installed packages (lite mode).
+ * Query all projects for installed packages.
+ * @param liteMode When true, skips metadata enrichment (sidebar). Panel passes false for full data.
  */
 export async function queryAllProjectsInstalled(
-    nugetService: NuGetService
+    nugetService: NuGetService,
+    liteMode: boolean
 ): Promise<ProjectInstalledResult[]> {
     const projects = await nugetService.findProjects();
     const results: ProjectInstalledResult[] = [];
 
-    for (const project of projects) {
+    // Parallelize per-project fetching (up to 4 concurrent) for faster loading
+    await batchedPromiseAll(projects, async (project) => {
         try {
-            const installedPackages = await nugetService.getInstalledPackages(project.path, true /* liteMode */);
+            const installedPackages = await nugetService.getInstalledPackages(project.path, liteMode);
             results.push({
                 projectPath: project.path,
                 projectName: project.name,
-                packages: installedPackages.map(p => ({
-                    id: p.id,
-                    version: p.version,
-                    resolvedVersion: p.resolvedVersion,
-                    isImplicit: p.isImplicit,
-                })),
+                packages: installedPackages,
             });
         } catch (error) {
             console.error(`[nUIget] Failed to get installed packages for ${project.name}:`, error);
         }
-    }
+    }, 4);
 
     return results;
+}
+
+/**
+ * Resolve icon URLs for unique packages across all projects.
+ * Returns a map of `packageId@version` → `iconUrl`.
+ * Uses deduplication to avoid redundant fetches for packages shared across projects.
+ */
+export async function resolveAllProjectsIcons(
+    nugetService: NuGetService,
+    packages: Array<{ id: string; version: string }>
+): Promise<Record<string, string>> {
+    // Deduplicate by packageId@version
+    const uniqueKeys = new Map<string, { id: string; version: string }>();
+    for (const pkg of packages) {
+        const key = `${pkg.id}@${pkg.version}`;
+        if (!uniqueKeys.has(key)) {
+            uniqueKeys.set(key, pkg);
+        }
+    }
+
+    const uniquePackages = [...uniqueKeys.values()];
+    const iconMap: Record<string, string> = {};
+
+    await batchedPromiseAll(uniquePackages, async (pkg) => {
+        try {
+            const iconUrl = await nugetService.getPackageIconUrl(pkg.id, pkg.version);
+            if (iconUrl) {
+                iconMap[`${pkg.id}@${pkg.version}`] = iconUrl;
+            }
+        } catch {
+            // Icon resolution is non-critical — skip failures silently
+        }
+    }, 10);
+
+    return iconMap;
 }

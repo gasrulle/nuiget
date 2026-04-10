@@ -689,6 +689,11 @@ export class NuGetService {
         return this._packageService.checkPackageUpdatesMinimal(installedPackages, includePrerelease);
     }
 
+    async getPackageIconUrl(packageId: string, version: string): Promise<string | undefined> {
+        const sources = await this.getSources();
+        const enabledSources = sources.filter(s => s.enabled);
+        return this._packageService.getPackageIconUrl(packageId, version, enabledSources);
+    }
 
 
     private fetchText(url: string, authHeader?: string, maxRedirects: number = NuGetService.MAX_REDIRECTS): Promise<string | undefined> {

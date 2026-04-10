@@ -1,7 +1,8 @@
 import * as vscode from 'vscode';
 import { executeBulkUpdateAllProjects, executeBulkUpdatePackages, executeSingleOperation, OperationContext, queryAllProjectsInstalled, queryAllProjectsUpdates } from '../services/NuGetOperations';
 import { NuGetService } from '../services/NuGetService';
-import type { ShowContextMenuMsg, SidebarRequestMessage } from '../services/NuGetTypes';
+import type { PickProjectForInstallMsg, PickProjectForRemoveMsg, ShowContextMenuMsg, SidebarRequestMessage } from '../services/NuGetTypes';
+import { ALL_PROJECTS_SENTINEL } from '../services/NuGetTypes';
 import { NuGetPanel } from './NuGetPanel';
 
 /**
@@ -72,6 +73,9 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
                         // Clear the badge
                         this._clearBadge();
                     }
+                }
+                if (e.affectsConfiguration('workbench.tree.indent')) {
+                    this._postMessage({ type: 'treeIndent', value: this._getTreeIndent() });
                 }
             })
         );
@@ -159,7 +163,7 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
      * Sets the Activity Bar badge and optionally sends results to the
      * webview if it's active. Uses lite mode + minimal checks.
      */
-    public async checkUpdatesInBackground(force = false): Promise<void> {
+    public async checkUpdatesInBackground(force = false, skipMainPanelNotify = false): Promise<void> {
         if (this._backgroundCheckInProgress) {
             if (force) { this._forceCheckPending = true; }
             return;
@@ -168,10 +172,18 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
 
         try {
             const projects = await this._nugetService.findProjects();
-            if (projects.length === 0) { return; }
+            if (projects.length === 0) { this.setBadge(0); return; }
 
             // Validate persisted project: if it no longer exists on disk, reset to first available
-            if (this._selectedProject && !projects.some(p => p.path === this._selectedProject)) {
+            if (this._selectedProject === ALL_PROJECTS_SENTINEL) {
+                // Auto-downgrade sentinel to single project when workspace shrinks to 1 project
+                if (projects.length === 1) {
+                    this._outputChannel.info(`[Sidebar BG] Only 1 project in workspace. Downgrading from All Projects to ${projects[0].path}`);
+                    this._selectedProject = projects[0].path;
+                    this._context.workspaceState.update('nuget.selectedProject', this._selectedProject);
+                    this._updateTitle();
+                }
+            } else if (this._selectedProject && !projects.some(p => p.path === this._selectedProject)) {
                 this._outputChannel.info(`[Sidebar BG] Persisted project no longer exists: ${this._selectedProject}. Resetting to ${projects[0].path}`);
                 this._selectedProject = projects[0].path;
                 this._context.workspaceState.update('nuget.selectedProject', this._selectedProject);
@@ -233,8 +245,17 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
                     this._postMessage({ type: 'installedCountUpdate', count: selectedProjectInstalledCount });
                 }
             }
+
+            // Notify main panel so it re-fetches installed packages and updates
+            // (prevents stale data when sidebar detects changes the main panel missed)
+            // Skip when the main panel initiated the change — it already has fresh data.
+            if (!skipMainPanelNotify) {
+                NuGetSidebarProvider._notifyMainPanel();
+            }
         } catch (err) {
             this._outputChannel.error('checkUpdatesInBackground error:', String(err));
+            // Clear stale badge on error — don't leave old count visible
+            this.setBadge(0);
         } finally {
             this._backgroundCheckInProgress = false;
             if (this._forceCheckPending) {
@@ -314,19 +335,61 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
         }
 
         const sorted = [...projects].sort((a, b) => a.name.localeCompare(b.name));
-        const items: vscode.QuickPickItem[] = sorted.map(p => ({
-            label: p.name,
-            description: p.path,
-            picked: this._selectedProject === p.path
-        }));
+        const items: vscode.QuickPickItem[] = [];
 
-        const selected = await vscode.window.showQuickPick(items, {
-            placeHolder: 'Select project',
-            title: 'nUIget — Project'
+        // "All Projects" option (only when multiple projects)
+        if (sorted.length > 1) {
+            items.push({
+                label: `All Projects (${sorted.length})`,
+                description: 'Show packages from all projects'
+            });
+            items.push({ label: '', kind: vscode.QuickPickItemKind.Separator });
+        }
+
+        // Individual projects
+        items.push(...sorted.map(p => ({
+            label: p.name,
+            description: p.path
+        })));
+
+        // Use createQuickPick to control activeItems (showQuickPick ignores `picked` for single-select)
+        const selected = await new Promise<vscode.QuickPickItem | undefined>(resolve => {
+            const qp = vscode.window.createQuickPick();
+            qp.items = items;
+            qp.placeholder = 'Select project';
+            qp.title = 'nUIget — Project';
+
+            // Set the active (highlighted) item to match current selection
+            const activeItem = this._selectedProject === ALL_PROJECTS_SENTINEL
+                ? items.find(i => i.label.startsWith('All Projects ('))
+                : items.find(i => i.description === this._selectedProject);
+            if (activeItem) { qp.activeItems = [activeItem]; }
+
+            qp.onDidAccept(() => {
+                resolve(qp.selectedItems[0]);
+                qp.dispose();
+            });
+            qp.onDidHide(() => {
+                resolve(undefined);
+                qp.dispose();
+            });
+            qp.show();
         });
 
         if (selected) {
-            const project = projects.find(p => p.name === selected.label);
+            // "All Projects" selected
+            if (selected.label.startsWith('All Projects (')) {
+                this._selectedProject = ALL_PROJECTS_SENTINEL;
+                this._context.workspaceState.update('nuget.selectedProject', this._selectedProject);
+                this._postMessage({ type: 'projectChanged', projectPath: ALL_PROJECTS_SENTINEL, projectName: `All Projects (${sorted.length})` });
+                this._updateTitle(`All Projects (${sorted.length})`);
+                NuGetPanel.syncProject(ALL_PROJECTS_SENTINEL);
+                return;
+            }
+
+            const project = selected.description
+                ? projects.find(p => p.path === selected.description)
+                : undefined;
             if (project) {
                 this._selectedProject = project.path;
                 this._context.workspaceState.update('nuget.selectedProject', this._selectedProject);
@@ -372,6 +435,15 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
     /** Update project selection from an external source (main panel sync) without writing back to workspaceState */
     public async syncProject(projectPath: string): Promise<void> {
         this._selectedProject = projectPath;
+
+        if (projectPath === ALL_PROJECTS_SENTINEL) {
+            const projects = await this._nugetService.findProjects();
+            const projectName = `All Projects (${projects.length})`;
+            this._postMessage({ type: 'projectChanged', projectPath: ALL_PROJECTS_SENTINEL, projectName });
+            this._updateTitle(projectName);
+            return;
+        }
+
         // Derive project name from path
         const projects = await this._nugetService.findProjects();
         const project = projects.find(p => p.path === projectPath);
@@ -408,9 +480,12 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
             const count = projectUpdates[0].updates.length;
             return `${count} update${count === 1 ? '' : 's'} available`;
         }
-        return projectUpdates
+        const totalCount = projectUpdates.reduce((sum, pu) => sum + pu.updates.length, 0);
+        const summary = `${totalCount} update${totalCount === 1 ? '' : 's'} available`;
+        const perProject = projectUpdates
             .map(pu => `${pu.projectName} — ${pu.updates.length} update${pu.updates.length === 1 ? '' : 's'}`)
             .join('\n');
+        return `${summary}\n${perProject}`;
     }
 
     /** Lightweight sidebar notification after a package operation from the main panel.
@@ -419,8 +494,10 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
     public async notifySidebarOfChange(operation: { type: string; packageId?: string; projectPath?: string }): Promise<void> {
         // Forward operation details to sidebar webview for surgical UI updates
         this._postMessage({ type: 'packageChanged', operation });
-        // Re-check updates in background for badge accuracy
-        await this.checkUpdatesInBackground(true);
+        // Re-check updates in background for badge accuracy.
+        // skipMainPanelNotify=true because the main panel initiated this change and
+        // already has fresh data — a redundant refresh causes a slow second reload.
+        await this.checkUpdatesInBackground(true, /* skipMainPanelNotify */ true);
     }
 
     /** Full sidebar refresh: re-send sources, tell webview to re-fetch, and update badge */
@@ -437,7 +514,10 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
     /** Update the sidebar title bar description with the current project name */
     private _updateTitle(projectName?: string): void {
         if (!this._view) { return; }
-        if (projectName) {
+        if (this._selectedProject === ALL_PROJECTS_SENTINEL) {
+            // projectName may already be "All Projects (N)" from the caller
+            this._view.title = projectName && projectName.startsWith('All Projects') ? projectName : 'All Projects';
+        } else if (projectName) {
             this._view.title = projectName.replace(/\.(csproj|fsproj|vbproj)$/, '');
         } else if (this._selectedProject) {
             const base = this._selectedProject.split(/[\\/]/).pop() || '';
@@ -500,6 +580,7 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
                 }
             case 'getInstalledPackages':
                 {
+                    if (data.projectPath === ALL_PROJECTS_SENTINEL) { break; }
                     try {
                         const packages = await this._nugetService.getInstalledPackages(
                             data.projectPath as string, true /* liteMode */
@@ -559,7 +640,7 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
             case 'checkAllProjectsInstalled':
                 {
                     try {
-                        const projectInstalled = await queryAllProjectsInstalled(this._nugetService);
+                        const projectInstalled = await queryAllProjectsInstalled(this._nugetService, true /* liteMode — sidebar stays lightweight */);
                         this._postMessage({ type: 'allProjectsInstalled', projectInstalled, context: data.context });
                     } catch (error) {
                         console.error('[nUIget Sidebar] checkAllProjectsInstalled error:', error);
@@ -570,37 +651,70 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
             case 'installPackage':
                 {
                     if (this._operationInProgress) { break; }
+                    if (data.projectPath === ALL_PROJECTS_SENTINEL) { break; }
                     this._operationInProgress = true;
+                    let installSuccess = false;
                     try {
-                        await executeSingleOperation(this._opCtx(), 'install', data.projectPath, data.packageId, data.version, data.sourceUrl);
-                    } finally { this._operationInProgress = false; }
+                        installSuccess = await executeSingleOperation(this._opCtx(), 'install', data.projectPath, data.packageId, data.version, data.sourceUrl);
+                    } finally {
+                        this._operationInProgress = false;
+                        if (installSuccess) { this.checkUpdatesInBackground(true, true); }
+                    }
+                    break;
+                }
+            case 'pickProjectForInstall':
+                {
+                    if (this._operationInProgress) { break; }
+                    await this._pickProjectAndInstall(data);
+                    break;
+                }
+            case 'pickProjectForRemove':
+                {
+                    if (this._operationInProgress) { break; }
+                    await this._pickProjectAndRemove(data);
                     break;
                 }
             case 'updatePackage':
                 {
                     if (this._operationInProgress) { break; }
+                    if (data.projectPath === ALL_PROJECTS_SENTINEL) { break; }
                     this._operationInProgress = true;
+                    let updateSuccess = false;
                     try {
-                        await executeSingleOperation(this._opCtx(), 'update', data.projectPath, data.packageId, data.version, data.sourceUrl);
-                    } finally { this._operationInProgress = false; }
+                        updateSuccess = await executeSingleOperation(this._opCtx(), 'update', data.projectPath, data.packageId, data.version, data.sourceUrl);
+                    } finally {
+                        this._operationInProgress = false;
+                        if (updateSuccess) { this.checkUpdatesInBackground(true, true); }
+                    }
                     break;
                 }
             case 'removePackage':
                 {
                     if (this._operationInProgress) { break; }
+                    if (data.projectPath === ALL_PROJECTS_SENTINEL) { break; }
                     this._operationInProgress = true;
+                    let removeSuccess = false;
                     try {
-                        await executeSingleOperation(this._opCtx(), 'remove', data.projectPath, data.packageId);
-                    } finally { this._operationInProgress = false; }
+                        removeSuccess = await executeSingleOperation(this._opCtx(), 'remove', data.projectPath, data.packageId);
+                    } finally {
+                        this._operationInProgress = false;
+                        if (removeSuccess) { this.checkUpdatesInBackground(true, true); }
+                    }
                     break;
                 }
             case 'bulkUpdatePackages':
                 {
                     if (this._operationInProgress) { break; }
+                    if (data.projectPath === ALL_PROJECTS_SENTINEL) { break; }
                     this._operationInProgress = true;
                     try {
                         await executeBulkUpdatePackages(this._opCtx(), data.packages, data.projectPath);
-                    } finally { this._operationInProgress = false; }
+                    } finally {
+                        this._operationInProgress = false;
+                        // Clear badge immediately so stale count doesn't linger
+                        this.setBadge(0);
+                        this.checkUpdatesInBackground(true, true);
+                    }
                     break;
                 }
             case 'bulkUpdateAllProjects':
@@ -609,7 +723,12 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
                     this._operationInProgress = true;
                     try {
                         await executeBulkUpdateAllProjects(this._opCtx(), data.projectUpdates);
-                    } finally { this._operationInProgress = false; }
+                    } finally {
+                        this._operationInProgress = false;
+                        // Clear badge immediately so stale count doesn't linger
+                        this.setBadge(0);
+                        this.checkUpdatesInBackground(true, true);
+                    }
                     break;
                 }
             case 'getPackageVersions':
@@ -636,6 +755,82 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
         }
     }
 
+    // ------ Project picker for install (all-projects mode) ------
+
+    private async _pickProjectAndInstall(data: PickProjectForInstallMsg): Promise<void> {
+        const projects = await this._nugetService.findProjects();
+        if (projects.length === 0) { return; }
+
+        const sorted = [...projects].sort((a, b) => a.name.localeCompare(b.name));
+        const items = sorted.map(p => ({ label: p.name, description: p.path }));
+
+        const selected = await vscode.window.showQuickPick(items, {
+            placeHolder: `Select project to install ${data.packageId}`,
+            title: `nUIget — Install ${data.packageId}`
+        });
+
+        if (!selected) { return; }
+        const project = selected.description
+            ? projects.find(p => p.path === selected.description)
+            : undefined;
+        if (!project) { return; }
+
+        this._operationInProgress = true;
+        let pickInstallSuccess = false;
+        try {
+            pickInstallSuccess = await executeSingleOperation(this._opCtx(), 'install', project.path, data.packageId, data.version);
+        } finally {
+            this._operationInProgress = false;
+            if (pickInstallSuccess) { this.checkUpdatesInBackground(true, true); }
+        }
+    }
+
+    private async _pickProjectAndRemove(data: PickProjectForRemoveMsg): Promise<void> {
+        const projects = await this._nugetService.findProjects();
+        if (projects.length === 0) { return; }
+
+        // Filter to only the projects where this package is installed
+        const pathSet = new Set(data.projectPaths.map(p => p.toLowerCase()));
+        const matching = projects.filter(p => pathSet.has(p.path.toLowerCase()));
+        if (matching.length === 0) { return; }
+
+        // Single project — remove directly without picker
+        if (matching.length === 1) {
+            this._operationInProgress = true;
+            let singleRemoveSuccess = false;
+            try {
+                singleRemoveSuccess = await executeSingleOperation(this._opCtx(), 'remove', matching[0].path, data.packageId);
+            } finally {
+                this._operationInProgress = false;
+                if (singleRemoveSuccess) { this.checkUpdatesInBackground(true, true); }
+            }
+            return;
+        }
+
+        const sorted = [...matching].sort((a, b) => a.name.localeCompare(b.name));
+        const items = sorted.map(p => ({ label: p.name, description: p.path }));
+
+        const selected = await vscode.window.showQuickPick(items, {
+            placeHolder: `Select project to uninstall ${data.packageId} from`,
+            title: `nUIget — Uninstall ${data.packageId}`
+        });
+
+        if (!selected) { return; }
+        const project = selected.description
+            ? projects.find(p => p.path === selected.description)
+            : undefined;
+        if (!project) { return; }
+
+        this._operationInProgress = true;
+        let pickRemoveSuccess = false;
+        try {
+            pickRemoveSuccess = await executeSingleOperation(this._opCtx(), 'remove', project.path, data.packageId);
+        } finally {
+            this._operationInProgress = false;
+            if (pickRemoveSuccess) { this.checkUpdatesInBackground(true, true); }
+        }
+    }
+
     // ------ Context menu ------
 
     private async _showContextMenu(data: ShowContextMenuMsg): Promise<void> {
@@ -647,12 +842,17 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
         const versionType = data.versionType;
         const sourceUrl = data.sourceUrl;
         const isFloatingOrRange = versionType === 'floating' || versionType === 'range';
+        const isAllProjectsBrowse = (!projectPath || projectPath === ALL_PROJECTS_SENTINEL) && context === 'browse';
 
-        if (!projectPath) {
-            vscode.window.showWarningMessage('Please select a project first.');
-            return;
+        // Non-browse contexts with sentinel should never happen (installed/updates pass real projectPath)
+        if (!projectPath || projectPath === ALL_PROJECTS_SENTINEL) {
+            if (!isAllProjectsBrowse) {
+                vscode.window.showWarningMessage('Please select a specific project for this action.');
+                return;
+            }
         }
 
+        // ─── BUILD ACTIONS QUICKPICK ─────────────────────────────────────────
         const items: vscode.QuickPickItem[] = [];
 
         if (context === 'browse') {
@@ -688,57 +888,137 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
 
         const label = selected.label;
 
-        if (label.includes('Install Latest') || (label.includes('Update to ') && !label.includes('Update to Version'))) {
-            const version = latestVersion || '';
-            if (label.includes('Install')) {
-                this._postMessage({ type: 'doInstall', packageId, version, projectPath });
-            } else {
-                this._postMessage({ type: 'doUpdate', packageId, version, projectPath, sourceUrl });
-            }
-        } else if (label.includes('Install Version') || label.includes('Change Version') || label.includes('Update to Version')) {
-            // Fetch versions and show picker
-            const versions = await this._nugetService.getPackageVersions(
-                packageId,
-                this._selectedSource === 'all' ? undefined : this._selectedSource,
-                this._includePrerelease,
-                50
-            );
-            if (versions.length === 0) {
-                vscode.window.showInformationMessage(`No versions found for ${packageId}`);
-                return;
-            }
-
-            const versionItems = versions.map(v => ({
-                label: v,
-                description: v === installedVersion ? '(installed)' : ''
-            }));
-
-            const selectedVersion = await vscode.window.showQuickPick(versionItems, {
-                placeHolder: `Select version for ${packageId}`,
-                title: `nUIget — ${packageId} Versions`
-            });
-
-            if (selectedVersion) {
-                if (label.includes('Install Version')) {
-                    this._postMessage({ type: 'doInstall', packageId, version: selectedVersion.label, projectPath });
-                } else if (label.includes('Change Version')) {
-                    // Change version = install specific version (dotnet add package replaces existing)
-                    this._postMessage({ type: 'doInstall', packageId, version: selectedVersion.label, projectPath });
-                } else {
-                    this._postMessage({ type: 'doUpdate', packageId, version: selectedVersion.label, projectPath });
-                }
-            }
-        } else if (label.includes('Uninstall')) {
-            this._postMessage({ type: 'doRemove', packageId, projectPath });
-        } else if (label.includes('Copy Package ID')) {
+        // ─── PROJECT-INDEPENDENT ACTIONS (execute immediately) ────────────────
+        if (label.includes('Copy Package ID')) {
             await vscode.env.clipboard.writeText(packageId);
             vscode.window.setStatusBarMessage(`Copied "${packageId}" to clipboard`, 2000);
-        } else if (label.includes('View Package Details')) {
+            return;
+        }
+        if (label.includes('View Package Details')) {
             vscode.commands.executeCommand('nuiget.viewPackageDetails', {
                 packageId,
                 version: latestVersion || installedVersion
             });
+            return;
         }
+
+        // ─── RESOLVE PROJECT (for all-projects browse, pick project after action) ─
+        let resolvedProjectPath: string | undefined = projectPath;
+        if (isAllProjectsBrowse) {
+            // Version picker first for version-selection actions
+            let selectedVersion: string | undefined;
+            if (label.includes('Install Version') || label.includes('Change Version')) {
+                selectedVersion = await this._pickVersion(packageId, installedVersion);
+                if (!selectedVersion) { return; }
+            }
+
+            // Now pick the project
+            resolvedProjectPath = await this._pickProjectForAction(
+                packageId, label, data.installedProjects
+            );
+            if (!resolvedProjectPath) { return; }
+
+            // Execute version-based actions that already have a version
+            if (selectedVersion) {
+                this._postMessage({ type: 'doInstall', packageId, version: selectedVersion, projectPath: resolvedProjectPath });
+                return;
+            }
+        }
+
+        if (!resolvedProjectPath) { return; }
+
+        // ─── EXECUTE PROJECT-DEPENDENT ACTIONS ───────────────────────────────
+        if (label.includes('Install Latest') || (label.includes('Update to ') && !label.includes('Update to Version'))) {
+            const version = latestVersion || '';
+            if (label.includes('Install')) {
+                this._postMessage({ type: 'doInstall', packageId, version, projectPath: resolvedProjectPath });
+            } else {
+                this._postMessage({ type: 'doUpdate', packageId, version, projectPath: resolvedProjectPath, sourceUrl });
+            }
+        } else if (label.includes('Install Version') || label.includes('Change Version') || label.includes('Update to Version')) {
+            const selectedVersion = await this._pickVersion(packageId, installedVersion);
+            if (selectedVersion) {
+                if (label.includes('Update to Version')) {
+                    this._postMessage({ type: 'doUpdate', packageId, version: selectedVersion, projectPath: resolvedProjectPath, sourceUrl });
+                } else {
+                    this._postMessage({ type: 'doInstall', packageId, version: selectedVersion, projectPath: resolvedProjectPath });
+                }
+            }
+        } else if (label.includes('Uninstall')) {
+            this._postMessage({ type: 'doRemove', packageId, projectPath: resolvedProjectPath });
+        }
+    }
+
+    /** Show version picker QuickPick and return the selected version, or undefined if cancelled. */
+    private async _pickVersion(packageId: string, installedVersion?: string): Promise<string | undefined> {
+        const versions = await this._nugetService.getPackageVersions(
+            packageId,
+            this._selectedSource === 'all' ? undefined : this._selectedSource,
+            this._includePrerelease,
+            50
+        );
+        if (versions.length === 0) {
+            vscode.window.showInformationMessage(`No versions found for ${packageId}`);
+            return undefined;
+        }
+
+        const versionItems = versions.map(v => ({
+            label: v,
+            description: v === installedVersion ? '(installed)' : ''
+        }));
+
+        const selectedVersion = await vscode.window.showQuickPick(versionItems, {
+            placeHolder: `Select version for ${packageId}`,
+            title: `nUIget — ${packageId} Versions`
+        });
+
+        return selectedVersion?.label;
+    }
+
+    /**
+     * Show project picker for all-projects browse context menu.
+     * For Uninstall/Change Version: only shows projects where the package is installed.
+     * For Install: shows all projects, marking already-installed ones.
+     */
+    private async _pickProjectForAction(
+        packageId: string,
+        actionLabel: string,
+        installedProjects?: Array<{ projectPath: string; projectName: string; version: string }>
+    ): Promise<string | undefined> {
+        const isUninstallOrChange = actionLabel.includes('Uninstall') || actionLabel.includes('Change Version');
+
+        if (isUninstallOrChange && installedProjects && installedProjects.length > 0) {
+            // Only show projects where the package is installed
+            const items = installedProjects
+                .sort((a, b) => a.projectName.localeCompare(b.projectName))
+                .map(p => ({ label: p.projectName, description: `v${p.version}`, detail: p.projectPath }));
+            const selected = await vscode.window.showQuickPick(items, {
+                placeHolder: `Select project to ${actionLabel.includes('Uninstall') ? 'uninstall from' : 'change version in'}`,
+                title: `nUIget — ${packageId}`
+            });
+            return selected?.detail;
+        }
+
+        // For install actions: show all projects, mark installed ones
+        const projects = await this._nugetService.findProjects();
+        if (projects.length === 0) { return undefined; }
+        const installedMap = new Map(
+            (installedProjects || []).map(p => [p.projectPath, p.version])
+        );
+        const sorted = [...projects].sort((a, b) => a.name.localeCompare(b.name));
+        const items = sorted.map(p => {
+            const ver = installedMap.get(p.path);
+            return {
+                label: p.name,
+                description: ver ? `(installed v${ver})` : '',
+                detail: p.path
+            };
+        });
+        const selected = await vscode.window.showQuickPick(items, {
+            placeHolder: `Select project to install ${packageId}`,
+            title: `nUIget — ${packageId}`
+        });
+        return selected?.detail;
     }
 
     // ------ Helpers ------
@@ -747,9 +1027,16 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
         // Fetch projects first to auto-select if needed
         const projects = await this._nugetService.findProjects();
 
-        // Validate persisted project: if it no longer exists on disk, reset to first available.
-        // This prevents a stuck loading spinner when the project was moved/renamed/deleted.
-        if (this._selectedProject && projects.length > 0 && !projects.some(p => p.path === this._selectedProject)) {
+        // Validate persisted project: sentinel or missing
+        if (this._selectedProject === ALL_PROJECTS_SENTINEL) {
+            // Auto-downgrade sentinel when workspace shrinks to 1 project
+            if (projects.length <= 1 && projects.length > 0) {
+                this._outputChannel.info(`[Sidebar] Only ${projects.length} project(s) in workspace. Downgrading from All Projects to ${projects[0].path}`);
+                this._selectedProject = projects[0].path;
+                this._context.workspaceState.update('nuget.selectedProject', this._selectedProject);
+                this._updateTitle();
+            }
+        } else if (this._selectedProject && projects.length > 0 && !projects.some(p => p.path === this._selectedProject)) {
             this._outputChannel.info(`[Sidebar] Persisted project no longer exists: ${this._selectedProject}. Resetting to ${projects[0].path}`);
             this._selectedProject = projects[0].path;
             this._context.workspaceState.update('nuget.selectedProject', this._selectedProject);
@@ -770,6 +1057,7 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
             selectedSource: this._selectedSource,
             selectedProject: this._selectedProject,
             includePrerelease: this._includePrerelease,
+            treeIndent: this._getTreeIndent(),
             ...(sectionSplit !== undefined && { sectionSplit })
         });
 
@@ -803,8 +1091,14 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
             type: 'state',
             selectedSource: this._selectedSource,
             selectedProject: this._selectedProject,
-            includePrerelease: this._includePrerelease
+            includePrerelease: this._includePrerelease,
+            treeIndent: this._getTreeIndent()
         });
+    }
+
+    /** Read the user's workbench.tree.indent setting (default 8). */
+    private _getTreeIndent(): number {
+        return vscode.workspace.getConfiguration('workbench.tree').get<number>('indent', 8);
     }
 
     /** Build an OperationContext for shared operation functions. */

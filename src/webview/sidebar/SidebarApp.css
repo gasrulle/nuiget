@@ -28,7 +28,7 @@ body {
 
 /* ─── Search Input ───────────────────────────────────────────────────────── */
 .sidebar-search-container {
-    padding: 6px 8px;
+    padding: 6px 8px 10px;
     position: relative;
 }
 
@@ -364,7 +364,7 @@ body {
 }
 
 .package-row-name {
-    font-weight: 600;
+    font-weight: normal;
     font-size: var(--vscode-font-size);
     white-space: nowrap;
     overflow: hidden;
@@ -442,17 +442,72 @@ body {
 
 
 
-/* ─── Project Group Headers (Load All Projects mode) ─────────────────────── */
+/* ─── Project Group Headers (All Projects tree view) ─────────────────────── */
 .project-group-header {
-    padding: 4px 8px 2px 14px;
-    font-size: 11px;
-    font-weight: 600;
-    color: var(--vscode-descriptionForeground);
-    border-bottom: 1px solid var(--vscode-widget-border, transparent);
-    margin-top: 4px;
+    display: flex;
+    align-items: center;
+    height: 22px;
+    padding: 0 10px 0 14px;
+    cursor: pointer;
+    user-select: none;
+    font-size: var(--vscode-font-size, 13px);
+    font-weight: normal;
+    color: var(--vscode-foreground);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+}
+
+.project-group-header:hover {
+    background: var(--vscode-list-hoverBackground);
+}
+
+.project-group-header:focus-visible {
+    outline: 1px solid var(--vscode-focusBorder);
+    outline-offset: -1px;
+}
+
+.project-group-chevron {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 22px;
+    flex-shrink: 0;
+    margin-left: 0;
+    transition: transform 0.1s ease;
+    color: var(--vscode-foreground);
+}
+
+.project-group-chevron.expanded {
+    transform: rotate(90deg);
+}
+
+.project-group-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.project-group-count {
+    background: var(--vscode-badge-background);
+    color: var(--vscode-badge-foreground);
+    font-size: 10px;
+    font-weight: 600;
+    min-width: 16px;
+    height: 16px;
+    line-height: 16px;
+    text-align: center;
+    border-radius: 8px;
+    padding: 0 4px;
+    margin-left: auto;
+    flex-shrink: 0;
+}
+
+/* Package rows under collapsible project groups get tree-view indent */
+[role="treeitem"]>.package-row {
+    padding-left: calc(var(--tree-indent, 8px) + 30px);
 }
 
 /* ─── Welcome / No Project State ─────────────────────────────────────────── */
@@ -511,6 +566,11 @@ body {
     z-index: 10;
 }
 
+/* Hide border-top on section header following the sash to avoid double border */
+.sash.sash-vertical+.sidebar-section>.section-header {
+    border-top-color: transparent;
+}
+
 .sash.sash-vertical::before {
     content: '';
     position: absolute;
@@ -535,6 +595,10 @@ body.vscode-reduce-motion .section-chevron {
     transition: none;
 }
 
+body.vscode-reduce-motion .project-group-chevron {
+    transition: none;
+}
+
 body.vscode-reduce-motion .package-row {
     transition: none;
 }
@@ -556,6 +620,11 @@ body.vscode-reduce-motion .sash.sash-vertical::before {
    ============================================ */
 body.vscode-high-contrast .section-header,
 body.vscode-high-contrast-light .section-header {
+    border: 1px solid var(--vscode-contrastBorder);
+}
+
+body.vscode-high-contrast .project-group-header,
+body.vscode-high-contrast-light .project-group-header {
     border: 1px solid var(--vscode-contrastBorder);
 }
 

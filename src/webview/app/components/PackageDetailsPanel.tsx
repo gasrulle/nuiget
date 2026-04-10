@@ -20,7 +20,7 @@ import type {
     ProjectInstalled,
     VsCodeApi,
 } from '../types';
-import { compareVersions, decodeHtmlEntities, getPackageId, isSearchResult } from '../types';
+import { ALL_PROJECTS_SENTINEL, compareVersions, decodeHtmlEntities, getPackageId, isSearchResult } from '../types';
 
 function formatPackageSize(bytes: number): string {
     if (bytes < 1024) { return `${bytes} B`; }
@@ -43,6 +43,9 @@ export interface PackageDetailsPanelProps {
     selectedProject: string;
     includePrerelease: boolean;
     selectedSource: string;
+
+    // Active project path when in all-projects mode (enables Install/Update buttons)
+    activeProjectPath?: string;
 
     // Multi-install (optional — only needed on Browse tab)
     projects?: Project[];
@@ -79,6 +82,7 @@ const PackageDetailsPanel: React.FC<PackageDetailsPanelProps> = ({
     expandedDeps,
     selectedProject,
     selectedSource,
+    activeProjectPath,
     projects = [],
     allProjectsInstalled = [],
     onInstall,
@@ -123,7 +127,7 @@ const PackageDetailsPanel: React.FC<PackageDetailsPanelProps> = ({
 
     const packageId = getPackageId(selectedPackage);
     const installedPkg = installedPackages.find(p => p.id.toLowerCase() === packageId.toLowerCase());
-    const isInstalled = !!installedPkg;
+    const isAllProjects = selectedProject === ALL_PROJECTS_SENTINEL;
     const searchResult = isSearchResult(selectedPackage) ? selectedPackage : null;
 
     // Check if this is a floating or range version (cannot be updated from UI)
@@ -138,6 +142,15 @@ const PackageDetailsPanel: React.FC<PackageDetailsPanelProps> = ({
         }
     }
 
+    // In all-projects mode, fall back to allProjectsInstalled for the active project
+    const activeProjectPkg = (!installedPkg && isAllProjects && activeProjectPath)
+        ? allProjectsInstalled.find(pi => pi.projectPath === activeProjectPath)
+            ?.packages.find(p => p.id.toLowerCase() === packageId.toLowerCase())
+        : undefined;
+    const isInstalled = !!installedPkg || !!activeProjectPkg;
+    const effectiveVersion = installedPkg?.version || activeProjectPkg?.version;
+    const effectiveResolvedVersion = installedPkg?.resolvedVersion || installedPkg?.version || activeProjectPkg?.resolvedVersion || activeProjectPkg?.version;
+
     // Compute button text: Install (not installed), Update (newer), Downgrade (older)
     let buttonText = 'Install';
     if (isInstalled) {
@@ -146,7 +159,7 @@ const PackageDetailsPanel: React.FC<PackageDetailsPanelProps> = ({
             buttonText = 'Update';
         } else {
             // Use resolved version for floating versions (e.g., "10.*" → "10.2.0")
-            const compareVersion = installedPkg?.resolvedVersion || installedPkg?.version;
+            const compareVersion = effectiveResolvedVersion;
             const selectedIndex = packageVersions.indexOf(selectedVersion);
             const installedIndex = packageVersions.indexOf(compareVersion || '');
 
@@ -179,7 +192,7 @@ const PackageDetailsPanel: React.FC<PackageDetailsPanelProps> = ({
                     {isInstalled && (
                         <div className="installed-version-row">
                             <label>Installed:</label>
-                            {isFloatingOrRange ? (
+                            {isFloatingOrRange && installedPkg ? (
                                 <div className="floating-version-info">
                                     <span className="floating-version-badge">
                                         {installedPkg.versionType === 'floating' ? <><SyncIcon size={12} className="inline-icon" /> Floating</> : <><RulerIcon size={12} className="inline-icon" /> Range</>}
@@ -191,14 +204,14 @@ const PackageDetailsPanel: React.FC<PackageDetailsPanelProps> = ({
                                 </div>
                             ) : (
                                 <select className="version-selector" disabled>
-                                    <option>{installedPkg.version}</option>
+                                    <option>{effectiveVersion}</option>
                                 </select>
                             )}
                             <button
                                 className="btn btn-danger"
                                 onClick={() => onRemove(packageId)}
-                                disabled={installedPkg?.isImplicit}
-                                title={installedPkg?.isImplicit ? 'Implicit/transitive package - cannot be uninstalled directly' : 'Uninstall (Del)'}
+                                disabled={(installedPkg || activeProjectPkg)?.isImplicit}
+                                title={(installedPkg || activeProjectPkg)?.isImplicit ? 'Implicit/transitive package - cannot be uninstalled directly' : 'Uninstall (Del)'}
                             >
                                 Uninstall
                             </button>
@@ -247,11 +260,13 @@ const PackageDetailsPanel: React.FC<PackageDetailsPanelProps> = ({
                         <button
                             className="btn btn-primary"
                             onClick={() => onInstall(packageId, selectedVersion)}
-                            disabled={isFloatingOrRange || (isInstalled && selectedVersion === installedPkg?.version)}
+                            disabled={(isAllProjects && !activeProjectPath) || isFloatingOrRange || (isInstalled && selectedVersion === effectiveVersion)}
                             title={
-                                isFloatingOrRange
-                                    ? 'Updates disabled for floating/range versions - edit .csproj directly'
-                                    : (isInstalled && selectedVersion === installedPkg?.version ? 'Already at this version' : `${buttonText} (Ctrl+Enter)`)
+                                (isAllProjects && !activeProjectPath)
+                                    ? 'Select a specific project or use Multi Install below'
+                                    : isFloatingOrRange
+                                        ? 'Updates disabled for floating/range versions - edit .csproj directly'
+                                        : (isInstalled && selectedVersion === effectiveVersion ? 'Already at this version' : `${buttonText} (Ctrl+Enter)`)
                             }
                         >
                             {buttonText}
