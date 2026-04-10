@@ -8,6 +8,7 @@ interface SectionHeaderProps {
     loading?: boolean;
     onToggle: () => void;
     actions?: React.ReactNode;
+    style?: React.CSSProperties;
 }
 
 /**
@@ -20,11 +21,13 @@ export const SectionHeader: React.FC<SectionHeaderProps> = ({
     count,
     loading,
     onToggle,
-    actions
+    actions,
+    style
 }) => {
     return (
         <div
             className={`section-header ${expanded ? 'expanded' : ''}`}
+            style={style}
             onClick={onToggle}
             onKeyDown={(e) => {
                 if (e.key === 'Enter' || e.key === ' ') {

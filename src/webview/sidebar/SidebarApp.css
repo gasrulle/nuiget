@@ -567,7 +567,7 @@ body {
 }
 
 /* Hide border-top on section header following the sash to avoid double border */
-.sash.sash-vertical + .sidebar-section > .section-header {
+.sash.sash-vertical+.sidebar-section>.section-header {
     border-top-color: transparent;
 }
 
