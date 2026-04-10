@@ -17,6 +17,7 @@ import { MemoizedDraggableSash } from '../app/components/DraggableSash';
 import { ArrowUpIcon, ChevronRightIcon, ClearAllIcon, FilterIcon } from '../app/icons';
 import type { InstalledPackage, NuGetSource, PackageSearchResult, PackageUpdateMinimal, Project, ProjectInstalled, ProjectUpdates, WebviewMessage } from '../app/types';
 import { ALL_PROJECTS_SENTINEL } from '../app/types';
+import { FILTER_PREFIXES, parseSearchQuery } from '../app/utils/parseSearchQuery';
 import { PackageRow } from './components/PackageRow';
 import { SectionHeader } from './components/SectionHeader';
 import './SidebarApp.css';
@@ -30,33 +31,6 @@ declare function acquireVsCodeApi(): {
 };
 
 const vscode = acquireVsCodeApi();
-
-// ─── Search Mode Parser ─────────────────────────────────────────────────────
-
-type SearchMode = 'default' | 'browse' | 'installed' | 'updates';
-
-interface ParsedQuery {
-    mode: SearchMode;
-    filterText: string;
-}
-
-const FILTER_PREFIXES = ['@installed', '@updates'] as const;
-
-function parseSearchQuery(query: string): ParsedQuery {
-    const trimmed = query.trim();
-    if (!trimmed) { return { mode: 'default', filterText: '' }; }
-
-    const lower = trimmed.toLowerCase();
-    for (const prefix of FILTER_PREFIXES) {
-        if (lower === prefix || lower.startsWith(prefix + ' ')) {
-            const filterText = trimmed.slice(prefix.length).trim();
-            const mode = prefix.slice(1) as 'installed' | 'updates';
-            return { mode, filterText };
-        }
-    }
-
-    return { mode: 'browse', filterText: trimmed };
-}
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
@@ -141,19 +115,21 @@ export const SidebarApp: React.FC = () => {
     useEffect(() => { searchModeRef.current = searchMode; }, [searchMode]);
 
     // ─── @-prefix dropdown logic ─────────────────────────────────────────────
+    // Sidebar only supports @installed and @updates (not @vulnerable which is main-panel-only)
+    const sidebarPrefixes = useMemo(() => FILTER_PREFIXES.filter(p => p !== '@vulnerable'), []);
     const matchingFilters = useMemo(() => {
         // Filter button shows all available prefixes
-        if (filterButtonTriggered) { return [...FILTER_PREFIXES]; }
+        if (filterButtonTriggered) { return [...sidebarPrefixes]; }
         const trimmed = searchQuery.trim().toLowerCase();
         // Show dropdown when text starts with @ but is not yet a complete valid prefix
         if (!trimmed.startsWith('@')) { return []; }
         // If already a complete prefix (possibly with filter text), don't show dropdown
-        for (const prefix of FILTER_PREFIXES) {
+        for (const prefix of sidebarPrefixes) {
             if (trimmed === prefix || trimmed.startsWith(prefix + ' ')) { return []; }
         }
         // Filter the available prefixes by what the user has typed so far
-        return FILTER_PREFIXES.filter(p => p.startsWith(trimmed));
-    }, [searchQuery, filterButtonTriggered]);
+        return sidebarPrefixes.filter(p => p.startsWith(trimmed));
+    }, [searchQuery, filterButtonTriggered, sidebarPrefixes]);
 
     // Show/hide the filter dropdown
     useEffect(() => {

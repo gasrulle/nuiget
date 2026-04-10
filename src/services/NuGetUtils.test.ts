@@ -6,6 +6,7 @@ import {
     COMMAND_TIMEOUT,
     execWithTimeout,
     fileExists,
+    isExecError,
     isNewerVersion,
     isValidCredentialValue,
     isValidPackageId,
@@ -33,7 +34,7 @@ vi.mock('fs', () => ({
     },
 }));
 
- 
+
 const mockedExec = vi.mocked(exec) as any;
 const mockedFsAccess = vi.mocked(fs.promises.access);
 
@@ -620,6 +621,52 @@ describe('NuGetUtils', () => {
         it('handles single item', async () => {
             const results = await batchedPromiseAll([42], async (n) => n * 2);
             expect(results).toEqual([84]);
+        });
+    });
+
+    // ──────────────────────────────────────────────
+    // isExecError
+    // ──────────────────────────────────────────────
+    describe('isExecError', () => {
+        it('returns true for object with stderr', () => {
+            expect(isExecError({ stderr: 'some error', message: '' })).toBe(true);
+        });
+
+        it('returns true for object with stdout', () => {
+            expect(isExecError({ stdout: 'output' })).toBe(true);
+        });
+
+        it('returns true for object with both stderr and stdout', () => {
+            expect(isExecError({ stderr: 'err', stdout: 'out', code: 1 })).toBe(true);
+        });
+
+        it('returns true for Error instance with stderr', () => {
+            const err = Object.assign(new Error('fail'), { stderr: 'oops', stdout: '' });
+            expect(isExecError(err)).toBe(true);
+        });
+
+        it('returns false for plain Error without stderr/stdout', () => {
+            expect(isExecError(new Error('plain'))).toBe(false);
+        });
+
+        it('returns false for null', () => {
+            expect(isExecError(null)).toBe(false);
+        });
+
+        it('returns false for undefined', () => {
+            expect(isExecError(undefined)).toBe(false);
+        });
+
+        it('returns false for string', () => {
+            expect(isExecError('error text')).toBe(false);
+        });
+
+        it('returns false for number', () => {
+            expect(isExecError(42)).toBe(false);
+        });
+
+        it('returns false for empty object', () => {
+            expect(isExecError({})).toBe(false);
         });
     });
 

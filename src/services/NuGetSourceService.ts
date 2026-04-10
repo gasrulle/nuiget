@@ -3,7 +3,7 @@ import * as vscode from 'vscode';
 import { NuGetConfigParser } from './NuGetConfigParser';
 import { NuGetLogger } from './NuGetLogger';
 import { NuGetSource } from './NuGetTypes';
-import { ExecError, execWithTimeout, isValidCredentialValue, isValidSourceName, isValidSourceUrl } from './NuGetUtils';
+import { execWithTimeout, isExecError, isValidCredentialValue, isValidSourceName, isValidSourceUrl } from './NuGetUtils';
 
 /**
  * NuGetSourceService — Manages NuGet source CRUD operations, caching,
@@ -88,9 +88,8 @@ export class NuGetSourceService {
             this._onSourceMutated();
             return true;
         } catch (error) {
-            const execErr = error as ExecError;
-            const errorOutput = execErr.stderr || execErr.stdout || String(error);
-            this.logger.logOutput(command, execErr.stdout || '', execErr.stderr || '', false);
+            const errorOutput = isExecError(error) ? (error.stderr || error.stdout || String(error)) : String(error);
+            this.logger.logOutput(command, isExecError(error) ? (error.stdout || '') : '', isExecError(error) ? (error.stderr || '') : '', false);
             this.logger.logError(`Failed to ${action} source "${sourceName}": ${errorOutput}`);
             vscode.window.showErrorMessage(`Failed to ${action} source "${sourceName}": ${errorOutput}`);
             return false;
@@ -179,9 +178,8 @@ export class NuGetSourceService {
             this._onSourceMutated();
             return { success: true };
         } catch (error) {
-            const execErr = error as ExecError;
-            const errorOutput = execErr.stderr || execErr.stdout || String(error);
-            this.logger.logOutput(command, execErr.stdout || '', execErr.stderr || '', false);
+            const errorOutput = isExecError(error) ? (error.stderr || error.stdout || String(error)) : String(error);
+            this.logger.logOutput(command, isExecError(error) ? (error.stdout || '') : '', isExecError(error) ? (error.stderr || '') : '', false);
             this.logger.logError(`Failed to add source: ${errorOutput}`);
 
             if (errorOutput.includes('already been added') || errorOutput.includes('already exists')) {
@@ -216,9 +214,8 @@ export class NuGetSourceService {
             this._onSourceMutated();
             return { success: true };
         } catch (error) {
-            const execErr = error as ExecError;
-            const errorOutput = execErr.stderr || execErr.stdout || String(error);
-            this.logger.logOutput(command, execErr.stdout || '', execErr.stderr || '', false);
+            const errorOutput = isExecError(error) ? (error.stderr || error.stdout || String(error)) : String(error);
+            this.logger.logOutput(command, isExecError(error) ? (error.stdout || '') : '', isExecError(error) ? (error.stderr || '') : '', false);
             this.logger.logError(`Failed to remove source "${sourceName}": ${errorOutput}`);
 
             if (errorOutput.includes('Unable to find') || errorOutput.includes('does not exist')) {

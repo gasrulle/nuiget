@@ -116,6 +116,16 @@ export interface ExecError extends Error {
 }
 
 /**
+ * Type guard for ExecError — use instead of `as ExecError` casts.
+ * Returns true when the caught value is an Error-like object with stdout/stderr/code properties
+ * (as produced by Node.js child_process.exec callbacks).
+ */
+export function isExecError(error: unknown): error is ExecError {
+    if (typeof error !== 'object' || error === null) { return false; }
+    return 'stderr' in error || 'stdout' in error;
+}
+
+/**
  * Execute command with timeout.
  * Supports both legacy signature (command, timeout, cwd) and options object.
  */

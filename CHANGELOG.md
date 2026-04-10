@@ -17,6 +17,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **VS Code-native sidebar styling** — Project group headers and package rows in the sidebar now match VS Code explorer typography: 22px row height, native font size, bold group headers, and proper tree-view indentation with hover/focus states.
 - **Update checking performance** — Pre-resolves all NuGet sources, service endpoints, and auth headers once before starting the batch version-check loop. Eliminates the "service index stampede" where 16 concurrent workers all made redundant HTTP calls to the same service index URLs, and removes per-package source/endpoint/auth resolution overhead.
+- **Type-safe error handling** — Replaced `as ExecError` type assertion casts with `isExecError()` type guard across CLI and source services
+- **Deduplicated `parseSearchQuery`** — Sidebar now imports the shared implementation from `utils/parseSearchQuery` instead of maintaining a local copy
+- **`httpsUpgradeDomains` uses `Set`** — Converted from array to `Set` for O(1) lookups in markdown HTTP-to-HTTPS domain matching
+- **Memoized SVG icon components** — All 26 icon components in `icons.tsx` wrapped with `React.memo` to prevent unnecessary re-renders
 
 ### Fixed
 

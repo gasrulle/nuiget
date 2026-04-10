@@ -1,7 +1,7 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { NuGetLogger } from './NuGetLogger';
-import { ExecError, execWithTimeout, isValidPackageId, isValidSourceUrl, isValidVersion } from './NuGetUtils';
+import { execWithTimeout, isExecError, isValidPackageId, isValidSourceUrl, isValidVersion } from './NuGetUtils';
 
 /**
  * Handles all dotnet CLI operations: install, update, remove, restore,
@@ -97,9 +97,8 @@ export class NuGetCliService {
             const command = nounFirst >= 10
                 ? `dotnet package add ${packageId} --project "${projectPath}" ${version ? `--version ${version}` : ''}`.trim()
                 : `dotnet add "${projectPath}" package ${packageId} ${version ? `--version ${version}` : ''}`.trim();
-            const execErr = error as ExecError;
-            const errorOutput = execErr.stderr || execErr.stdout || String(error);
-            this.logger.logOutput(command, execErr.stdout || '', errorOutput, false);
+            const errorOutput = isExecError(error) ? (error.stderr || error.stdout || String(error)) : String(error);
+            this.logger.logOutput(command, isExecError(error) ? (error.stdout || '') : '', errorOutput, false);
             this.logger.logError(`Failed to install ${packageId}`);
             vscode.window.showErrorMessage(`Failed to install ${packageId}: ${errorOutput}`);
             return false;
@@ -149,9 +148,8 @@ export class NuGetCliService {
             const command = nounFirst >= 10
                 ? `dotnet package add ${packageId} --project "${projectPath}" --version ${version}`
                 : `dotnet add "${projectPath}" package ${packageId} --version ${version}`;
-            const execErr = error as ExecError;
-            const errorOutput = execErr.stderr || execErr.stdout || String(error);
-            this.logger.logOutput(command, execErr.stdout || '', errorOutput, false);
+            const errorOutput = isExecError(error) ? (error.stderr || error.stdout || String(error)) : String(error);
+            this.logger.logOutput(command, isExecError(error) ? (error.stdout || '') : '', errorOutput, false);
             this.logger.logError(`Failed to update ${packageId}`);
             if (!options?.skipNotification) {
                 vscode.window.showErrorMessage(`Failed to update ${packageId}: ${errorOutput}`);
@@ -196,8 +194,7 @@ export class NuGetCliService {
                     const { stdout: restoreOut, stderr: restoreErr } = await execWithTimeout(restoreCommand, { cwd: projectDir, timeout: 60000 });
                     this.logger.logOutput(restoreCommand, restoreOut, restoreErr, true);
                 } catch (restoreError) {
-                    const restoreErr = restoreError as ExecError;
-                    this.logger.logOutput(`dotnet restore "${projectPath}"`, restoreErr.stdout || '', restoreErr.stderr || '', false);
+                    this.logger.logOutput(`dotnet restore "${projectPath}"`, isExecError(restoreError) ? (restoreError.stdout || '') : '', isExecError(restoreError) ? (restoreError.stderr || '') : '', false);
                 }
             }
 
@@ -210,9 +207,8 @@ export class NuGetCliService {
             const command = nounFirst >= 10
                 ? `dotnet package remove ${packageId} --project "${projectPath}"`
                 : `dotnet remove "${projectPath}" package ${packageId}`;
-            const execErr = error as ExecError;
-            const errorOutput = execErr.stderr || execErr.stdout || String(error);
-            this.logger.logOutput(command, execErr.stdout || '', errorOutput, false);
+            const errorOutput = isExecError(error) ? (error.stderr || error.stdout || String(error)) : String(error);
+            this.logger.logOutput(command, isExecError(error) ? (error.stdout || '') : '', errorOutput, false);
             this.logger.logError(`Failed to remove ${packageId}`);
             vscode.window.showErrorMessage(`Failed to remove ${packageId}: ${errorOutput}`);
             return false;
@@ -232,9 +228,8 @@ export class NuGetCliService {
             this.logger.logSuccess('Project restored successfully');
             return true;
         } catch (error) {
-            const execErr = error as ExecError;
-            const errorOutput = execErr.stderr || execErr.stdout || String(error);
-            this.logger.logOutput(command, execErr.stdout || '', execErr.stderr || '', false);
+            const errorOutput = isExecError(error) ? (error.stderr || error.stdout || String(error)) : String(error);
+            this.logger.logOutput(command, isExecError(error) ? (error.stdout || '') : '', isExecError(error) ? (error.stderr || '') : '', false);
             this.logger.logError(`Failed to restore project: ${errorOutput}`);
             vscode.window.showErrorMessage(`Failed to restore project: ${errorOutput}`);
             return false;

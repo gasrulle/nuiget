@@ -123,7 +123,7 @@ marked.setOptions({
 });
 
 // Known domains that support HTTPS - upgrade http:// to https:// for these
-const httpsUpgradeDomains = [
+const httpsUpgradeDomains = new Set([
     'img.shields.io',
     'shields.io',
     'github.com',
@@ -144,7 +144,7 @@ const httpsUpgradeDomains = [
     'img.badgesize.io',
     'badgen.net',
     'flat.badgen.net'
-];
+]);
 
 /**
  * Upgrade http:// URLs to https:// for known-safe domains.
@@ -152,7 +152,7 @@ const httpsUpgradeDomains = [
  */
 export function upgradeHttpToHttps(markdown: string): string {
     const pattern = new RegExp(
-        `http://(?:www\\.)?(${httpsUpgradeDomains.map(d => d.replace(/\./g, '\\.')).join('|')})`,
+        `http://(?:www\\.)?(${[...httpsUpgradeDomains].map(d => d.replace(/\./g, '\\.')).join('|')})`,
         'gi'
     );
     return markdown.replace(pattern, 'https://$1');
