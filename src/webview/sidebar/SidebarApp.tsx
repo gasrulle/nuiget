@@ -1356,7 +1356,7 @@ export const SidebarApp: React.FC = () => {
                 <div className="progress-bit" />
             </div>
             {/* Search Input */}
-            <div className="sidebar-search-container" style={{ paddingBottom: 10 }} role="search">
+            <div className="sidebar-search-container" role="search">
                 <div className="sidebar-search-wrapper">
                     <input
                         ref={searchInputRef}

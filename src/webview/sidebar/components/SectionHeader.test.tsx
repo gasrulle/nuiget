@@ -88,4 +88,10 @@ describe('SectionHeader', () => {
         render(<SectionHeader {...defaultProps} expanded={true} />);
         expect(screen.getByRole('button')).toHaveClass('expanded');
     });
+
+    it('forwards style prop to the container element', () => {
+        render(<SectionHeader {...defaultProps} style={{ paddingTop: 4, height: 'auto' }} />);
+        const header = screen.getByRole('button');
+        expect(header).toHaveStyle({ paddingTop: '4px', height: 'auto' });
+    });
 });
