@@ -66,6 +66,15 @@ export class LRUMap<K, V> {
         return this.cache.delete(key);
     }
 
+    /** Delete all entries whose key (must be a string) starts with the given prefix. */
+    deleteByKeyPrefix(prefix: string): void {
+        for (const key of [...this.cache.keys()]) {
+            if (typeof key === 'string' && key.startsWith(prefix)) {
+                this.cache.delete(key);
+            }
+        }
+    }
+
     clear(): void {
         this.cache.clear();
     }

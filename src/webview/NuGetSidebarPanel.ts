@@ -36,6 +36,7 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
     private _backgroundCheckInProgress = false;
     private _forceCheckPending = false;
     private _forceCheckSkipMainPanel = false;
+    private _forceCheckScope?: { packageIds?: string[]; projectPath?: string };
     private _pendingProjectUpdates: { projectPath: string; projectName: string; updates: { id: string; installedVersion: string; latestVersion: string }[] }[] = [];
     private _pendingInstalledCount = -1;
     private _pendingInstalledProject = '';
@@ -144,23 +145,47 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
      * Check for updates in the background (without requiring webview).
      * Sends results to the webview if it's active and optionally
      * notifies the main panel. Uses lite mode + minimal checks.
+     *
+     * @param scope Optional scope to limit cache invalidation and project re-checking.
+     *   - packageIds: Only invalidate version cache for these packages (instead of clearing all).
+     *   - projectPath: Only re-check this project (keep cached data for other projects).
+     *   When omitted, all projects are re-checked and the full versions cache is cleared on force.
      */
-    public async checkUpdatesInBackground(force = false, skipMainPanelNotify = false): Promise<void> {
+    public async checkUpdatesInBackground(force = false, skipMainPanelNotify = false, scope?: { packageIds?: string[]; projectPath?: string }): Promise<void> {
         if (this._backgroundCheckInProgress) {
             if (force) {
                 this._forceCheckPending = true;
                 // Preserve the most restrictive skipMainPanelNotify (true wins)
                 if (skipMainPanelNotify) { this._forceCheckSkipMainPanel = true; }
+                // Widen scope: if pending scope or new scope is unscoped, result is unscoped
+                if (!scope || !this._forceCheckScope) {
+                    this._forceCheckScope = undefined;
+                } else {
+                    // Merge: combine affected packageIds and clear projectPath if different
+                    const mergedPkgs = new Set([
+                        ...(this._forceCheckScope.packageIds ?? []),
+                        ...(scope.packageIds ?? []),
+                    ]);
+                    this._forceCheckScope = {
+                        packageIds: mergedPkgs.size > 0 ? [...mergedPkgs] : undefined,
+                        projectPath: this._forceCheckScope.projectPath === scope.projectPath ? scope.projectPath : undefined,
+                    };
+                }
             }
             return;
         }
         this._backgroundCheckInProgress = true;
 
-        // When force=true (post-operation re-check), clear the in-memory versions cache
-        // so the re-check fetches fresh version lists from the API instead of returning
-        // stale cached versions that still show "updates available" for just-updated packages.
+        // When force=true (post-operation re-check), invalidate stale version cache entries
+        // so the re-check fetches fresh version lists from the API.
+        // With a scope, only invalidate the affected packages — avoids re-fetching
+        // versions for all packages (saves 20-30 HTTP requests per operation).
         if (force) {
-            this._nugetService.clearVersionsCache();
+            if (scope?.packageIds && scope.packageIds.length > 0) {
+                this._nugetService.clearVersionsCacheForPackages(scope.packageIds);
+            } else {
+                this._nugetService.clearVersionsCache();
+            }
         }
 
         try {
@@ -190,10 +215,17 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
             }
 
             let selectedProjectInstalledCount = -1;
-            const allProjectUpdates: { projectPath: string; projectName: string; updates: { id: string; installedVersion: string; latestVersion: string }[] }[] = [];
+            let allProjectUpdates: { projectPath: string; projectName: string; updates: { id: string; installedVersion: string; latestVersion: string }[] }[];
 
-            // Check all projects in parallel for faster display
-            const projectResults = await Promise.all(projects.map(async (project) => {
+            // When scoped to a single project, only re-check that project and
+            // merge results with the existing cached data for other projects.
+            const scopedProjectPath = scope?.projectPath;
+            const projectsToCheck = scopedProjectPath
+                ? projects.filter(p => p.path === scopedProjectPath)
+                : projects;
+
+            // Check projects in parallel for faster display
+            const projectResults = await Promise.all(projectsToCheck.map(async (project) => {
                 try {
                     const installed = await this._nugetService.getInstalledPackages(project.path, true /* liteMode */);
 
@@ -207,17 +239,39 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
                 }
             }));
 
-            // Aggregate results
-            for (const { project, installed, updates } of projectResults) {
-                if (project.path === this._selectedProject) {
-                    selectedProjectInstalledCount = installed.length;
+            if (scopedProjectPath) {
+                // Merge: replace the scoped project's data in cached results, keep others unchanged
+                allProjectUpdates = this._pendingProjectUpdates.filter(pu => pu.projectPath !== scopedProjectPath);
+                for (const { project, installed, updates } of projectResults) {
+                    if (project.path === this._selectedProject) {
+                        selectedProjectInstalledCount = installed.length;
+                    }
+                    if (updates.length > 0) {
+                        allProjectUpdates.push({
+                            projectPath: project.path,
+                            projectName: project.name,
+                            updates
+                        });
+                    }
                 }
-                if (updates.length > 0) {
-                    allProjectUpdates.push({
-                        projectPath: project.path,
-                        projectName: project.name,
-                        updates
-                    });
+                // Preserve cached installed count for unaffected selected project
+                if (selectedProjectInstalledCount === -1 && this._pendingInstalledProject === this._selectedProject) {
+                    selectedProjectInstalledCount = this._pendingInstalledCount;
+                }
+            } else {
+                // Full re-check: aggregate all results
+                allProjectUpdates = [];
+                for (const { project, installed, updates } of projectResults) {
+                    if (project.path === this._selectedProject) {
+                        selectedProjectInstalledCount = installed.length;
+                    }
+                    if (updates.length > 0) {
+                        allProjectUpdates.push({
+                            projectPath: project.path,
+                            projectName: project.name,
+                            updates
+                        });
+                    }
                 }
             }
 
@@ -248,7 +302,9 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
                 this._forceCheckPending = false;
                 const skipNotify = this._forceCheckSkipMainPanel;
                 this._forceCheckSkipMainPanel = false;
-                this.checkUpdatesInBackground(true, skipNotify);
+                const pendingScope = this._forceCheckScope;
+                this._forceCheckScope = undefined;
+                this.checkUpdatesInBackground(true, skipNotify, pendingScope);
             }
         }
     }
@@ -443,7 +499,7 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
     /** Lightweight sidebar notification after a package operation from the main panel.
      * Skips HTTP cache clearing and source re-fetch (operation just talked to registry successfully).
      * Forwards operation details to sidebar webview for optimistic state updates. */
-    public async notifySidebarOfChange(operation: { type: string; packageId?: string; projectPath?: string }): Promise<void> {
+    public async notifySidebarOfChange(operation: { type: string; packageId?: string; packageIds?: string[]; projectPath?: string }): Promise<void> {
         // Cancel any pending file watcher debounce — the main panel operation already
         // completed the .csproj changes; we handle the refresh below.
         this._cancelFileWatcherDebounce();
@@ -452,7 +508,14 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
         // Re-check updates in background for data accuracy.
         // skipMainPanelNotify=true because the main panel initiated this change and
         // already has fresh data — a redundant refresh causes a slow second reload.
-        await this.checkUpdatesInBackground(true, /* skipMainPanelNotify */ true);
+        // Pass operation metadata for selective cache invalidation (only affected packages,
+        // not the entire versions cache) and scoped project re-checking.
+        // Merge packageId (single ops) and packageIds (bulk ops) into a single list.
+        const ids = operation.packageIds ?? (operation.packageId ? [operation.packageId] : undefined);
+        await this.checkUpdatesInBackground(true, /* skipMainPanelNotify */ true, {
+            packageIds: ids,
+            projectPath: operation.projectPath,
+        });
     }
 
     /** Full sidebar refresh: re-send sources, tell webview to re-fetch, and re-check updates */
@@ -614,7 +677,7 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
                     } finally {
                         this._operationInProgress = false;
                         this._cancelFileWatcherDebounce();
-                        if (installSuccess) { this.checkUpdatesInBackground(true, true); }
+                        if (installSuccess) { this.checkUpdatesInBackground(true, true, { packageIds: [data.packageId], projectPath: data.projectPath }); }
                     }
                     break;
                 }
@@ -641,7 +704,7 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
                     } finally {
                         this._operationInProgress = false;
                         this._cancelFileWatcherDebounce();
-                        if (updateSuccess) { this.checkUpdatesInBackground(true, true); }
+                        if (updateSuccess) { this.checkUpdatesInBackground(true, true, { packageIds: [data.packageId], projectPath: data.projectPath }); }
                     }
                     break;
                 }
@@ -656,7 +719,7 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
                     } finally {
                         this._operationInProgress = false;
                         this._cancelFileWatcherDebounce();
-                        if (removeSuccess) { this.checkUpdatesInBackground(true, true); }
+                        if (removeSuccess) { this.checkUpdatesInBackground(true, true, { packageIds: [data.packageId], projectPath: data.projectPath }); }
                     }
                     break;
                 }
@@ -670,7 +733,7 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
                     } finally {
                         this._operationInProgress = false;
                         this._cancelFileWatcherDebounce();
-                        this.checkUpdatesInBackground(true, true);
+                        this.checkUpdatesInBackground(true, true, { packageIds: data.packages.map((p: { id: string }) => p.id), projectPath: data.projectPath });
                     }
                     break;
                 }
@@ -683,7 +746,9 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
                     } finally {
                         this._operationInProgress = false;
                         this._cancelFileWatcherDebounce();
-                        this.checkUpdatesInBackground(true, true);
+                        // Bulk all-projects: collect all affected packageIds, no single project scope
+                        const allPkgIds = (data.projectUpdates as { packages: { id: string }[] }[]).flatMap((pu: { packages: { id: string }[] }) => pu.packages.map((p: { id: string }) => p.id));
+                        this.checkUpdatesInBackground(true, true, { packageIds: allPkgIds });
                     }
                     break;
                 }
@@ -738,7 +803,7 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
         } finally {
             this._operationInProgress = false;
             this._cancelFileWatcherDebounce();
-            if (pickInstallSuccess) { this.checkUpdatesInBackground(true, true); }
+            if (pickInstallSuccess) { this.checkUpdatesInBackground(true, true, { packageIds: [data.packageId], projectPath: project.path }); }
         }
     }
 
@@ -760,7 +825,7 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
             } finally {
                 this._operationInProgress = false;
                 this._cancelFileWatcherDebounce();
-                if (singleRemoveSuccess) { this.checkUpdatesInBackground(true, true); }
+                if (singleRemoveSuccess) { this.checkUpdatesInBackground(true, true, { packageIds: [data.packageId], projectPath: matching[0].path }); }
             }
             return;
         }
@@ -786,7 +851,7 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
         } finally {
             this._operationInProgress = false;
             this._cancelFileWatcherDebounce();
-            if (pickRemoveSuccess) { this.checkUpdatesInBackground(true, true); }
+            if (pickRemoveSuccess) { this.checkUpdatesInBackground(true, true, { packageIds: [data.packageId], projectPath: project.path }); }
         }
     }
 

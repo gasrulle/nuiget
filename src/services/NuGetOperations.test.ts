@@ -129,7 +129,7 @@ describe('executeBulkInstall', () => {
                 expect.objectContaining({ success: true }),
             ]),
         }));
-        expect(ctx.notifyOtherPanel).toHaveBeenCalledWith(expect.objectContaining({ type: 'bulkInstall' }));
+        expect(ctx.notifyOtherPanel).toHaveBeenCalledWith(expect.objectContaining({ type: 'bulkInstall', packageId: 'Newtonsoft.Json' }));
     });
 
     it('handles partial failure', async () => {
@@ -314,7 +314,7 @@ describe('executeBulkUpdateAllProjects', () => {
             type: 'bulkUpdateAllProjectsResult',
             perProjectFailedIds: [],
         }));
-        expect(ctx.notifyOtherPanel).toHaveBeenCalledWith(expect.objectContaining({ type: 'bulkUpdateAllProjects' }));
+        expect(ctx.notifyOtherPanel).toHaveBeenCalledWith(expect.objectContaining({ type: 'bulkUpdateAllProjects', packageIds: expect.arrayContaining(['P1', 'P2']) }));
     });
 
     it('tracks per-project failures', async () => {
@@ -395,7 +395,7 @@ describe('executeBulkRemoveAllProjects', () => {
             type: 'bulkRemoveAllProjectsResult',
             perProjectFailedIds: [],
         }));
-        expect(ctx.notifyOtherPanel).toHaveBeenCalledWith(expect.objectContaining({ type: 'bulkRemoveAllProjects' }));
+        expect(ctx.notifyOtherPanel).toHaveBeenCalledWith(expect.objectContaining({ type: 'bulkRemoveAllProjects', packageIds: expect.arrayContaining(['PkgA', 'PkgB']) }));
     });
 
     it('tracks per-project failures', async () => {

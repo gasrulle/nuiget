@@ -295,11 +295,9 @@ export const SidebarApp: React.FC = () => {
                             return updated;
                         });
                     }
-                    // Re-fetch installed packages for transitive accuracy (lightweight — just .csproj parse)
-                    if (selectedProjectRef.current && selectedProjectRef.current !== ALL_PROJECTS_SENTINEL) {
-                        vscode.postMessage({ type: 'getInstalledPackages', projectPath: selectedProjectRef.current });
-                        setLoadingInstalled(true);
-                    }
+                    // Note: no getInstalledPackages request here — the backend's
+                    // checkUpdatesInBackground (called by notifySidebarOfChange) already
+                    // sends fresh installedPackages + packageUpdatesMinimal messages.
                 }
                 break;
             case 'installResult':

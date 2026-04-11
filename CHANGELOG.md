@@ -7,6 +7,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.17.4] - 2026-04-11
+
+### Changed
+
+- **Selective cache invalidation after operations** — Install/update/remove operations now invalidate only the affected package's version cache entries instead of clearing the entire cache. Saves 20-30 redundant HTTP requests per operation in workspaces with many packages.
+- **Scoped background update checks** — Post-operation background re-checks now scope to the affected project instead of re-checking all projects. Multi-project workspaces see proportional speedup.
+- **Removed redundant sidebar getInstalledPackages request** — The sidebar `packageChanged` handler no longer sends a separate `getInstalledPackages` request; the background update check already provides fresh installed data.
+- **Bulk operations include packageIds for cross-panel sync** — All bulk operation notifications (bulkInstall, bulkUpdate, bulkRemove, bulkUpdateAllProjects, bulkRemoveAllProjects) now include the affected package IDs, enabling selective cache invalidation in the receiving panel.
+
+## [1.17.3] - 2026-04-10
+
+### Changed
+
+- **Type-safe error handling** — Replaced `as ExecError` type assertion casts with `isExecError()` type guard across CLI and source services
+- **Deduplicated `parseSearchQuery`** — Sidebar now imports the shared implementation from `utils/parseSearchQuery` instead of maintaining a local copy
+- **`httpsUpgradeDomains` uses `Set`** — Converted from array to `Set` for O(1) lookups in markdown HTTP-to-HTTPS domain matching
+- **Memoized SVG icon components** — All 26 icon components in `icons.tsx` wrapped with `React.memo` to prevent unnecessary re-renders
+
+## [1.17.2] - 2026-04-10
+
+### Changed
+
+- **Update checking performance** — Pre-resolves all NuGet sources, service endpoints, and auth headers once before starting the batch version-check loop. Eliminates the "service index stampede" where 16 concurrent workers all made redundant HTTP calls to the same service index URLs, and removes per-package source/endpoint/auth resolution overhead.
+
+### Removed
+
+- **Activity Bar badge** — Removed the update count badge from the sidebar Activity Bar icon and the `nuiget.showActivityBarBadge` setting. The sidebar's Updates section already displays accurate update counts via its section header, making the badge redundant. This removal eliminates significant complexity (badge caching, 10-minute background timer, dual TreeView/WebviewView routing, stale-count edge cases) with no loss of functionality.
+
+## [1.17.1] - 2026-04-10
+
+### Fixed
+
+- **Sidebar batch update causes mid-operation UI refresh spam**
+
+## [1.17.0] - 2026-04-10
+
 ### Added
 
 - **Unified "All Projects" toggle** — Replaced per-section toggle icons in Installed and Updates tabs (and sidebar sections) with a single "All Projects (N)" option in the project selector dropdown (full manager) and QuickPick dialog (sidebar). Selecting "All Projects" drives both Installed and Updates views simultaneously, persists across tab switches, and auto-downgrades to a single project when only one project remains in the workspace.
@@ -16,15 +52,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - **VS Code-native sidebar styling** — Project group headers and package rows in the sidebar now match VS Code explorer typography: 22px row height, native font size, bold group headers, and proper tree-view indentation with hover/focus states.
-- **Update checking performance** — Pre-resolves all NuGet sources, service endpoints, and auth headers once before starting the batch version-check loop. Eliminates the "service index stampede" where 16 concurrent workers all made redundant HTTP calls to the same service index URLs, and removes per-package source/endpoint/auth resolution overhead.
-- **Type-safe error handling** — Replaced `as ExecError` type assertion casts with `isExecError()` type guard across CLI and source services
-- **Deduplicated `parseSearchQuery`** — Sidebar now imports the shared implementation from `utils/parseSearchQuery` instead of maintaining a local copy
-- **`httpsUpgradeDomains` uses `Set`** — Converted from array to `Set` for O(1) lookups in markdown HTTP-to-HTTPS domain matching
-- **Memoized SVG icon components** — All 26 icon components in `icons.tsx` wrapped with `React.memo` to prevent unnecessary re-renders
 
 ### Fixed
 
-- **Sidebar batch update causes mid-operation UI refresh spam**
 - **Updates out of sync between sidebar and full manager**
 - **Refresh in all-projects mode not re-fetching data**
 - **All-projects Installed tab showing "No packages installed" instead of package list**
@@ -43,10 +73,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Quick search dropdown opening when navigating to package details from sidebar**
 - **Sidebar trashcan icon doing nothing for installed packages in all-projects mode** — Clicking the trashcan now removes the package from the specific project it's listed under, instead of sending the sentinel value as the project path
 - **Slow full manager refresh after uninstall/install/update with sidebar open** — Sidebar background update check no longer sends a redundant refresh command back to the main panel that initiated the operation, eliminating a second full reload cycle (installed packages + update check + icon resolution)
-
-### Removed
-
-- **Activity Bar badge** — Removed the update count badge from the sidebar Activity Bar icon and the `nuiget.showActivityBarBadge` setting. The sidebar's Updates section already displays accurate update counts via its section header, making the badge redundant. This removal eliminates significant complexity (badge caching, 10-minute background timer, dual TreeView/WebviewView routing, stale-count edge cases) with no loss of functionality.
 
 ## [1.16.0] - 2026-04-01
 

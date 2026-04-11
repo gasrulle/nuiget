@@ -10,7 +10,7 @@ import { batchedPromiseAll, topologicalSortByDependency } from './NuGetUtils';
 export interface OperationContext {
     nugetService: NuGetService;
     postMessage: (message: unknown) => void;
-    notifyOtherPanel: (operation: { type: string; packageId?: string; projectPath?: string }) => void;
+    notifyOtherPanel: (operation: { type: string; packageId?: string; packageIds?: string[]; projectPath?: string }) => void;
 }
 
 type SingleOperationType = 'install' | 'update' | 'remove';
@@ -147,7 +147,8 @@ export async function executeBulkInstall(
 
     ctx.postMessage({ type: 'bulkInstallResult', packageId, version, results });
     if (results.some(r => r.success)) {
-        ctx.notifyOtherPanel({ type: 'bulkInstall' });
+        const successProjectPaths = results.filter(r => r.success).map(r => r.projectPath);
+        ctx.notifyOtherPanel({ type: 'bulkInstall', packageId, projectPath: successProjectPaths[0] });
     }
 }
 
@@ -217,7 +218,8 @@ export async function executeBulkUpdatePackages(
 
     ctx.postMessage({ type: 'bulkUpdateResult', projectPath, failedPackageIds });
     if (failedPackageIds.length < packages.length) {
-        ctx.notifyOtherPanel({ type: 'bulkUpdate', projectPath });
+        const successIds = packages.map(p => p.id).filter(id => !failedPackageIds.includes(id));
+        ctx.notifyOtherPanel({ type: 'bulkUpdate', packageIds: successIds, projectPath });
     }
 }
 
@@ -290,7 +292,8 @@ export async function executeBulkRemovePackages(
 
     ctx.postMessage({ type: 'bulkRemoveResult', projectPath, failedPackageIds });
     if (failedPackageIds.length < packages.length) {
-        ctx.notifyOtherPanel({ type: 'bulkRemove', projectPath });
+        const successIds = packages.filter(id => !failedPackageIds.includes(id));
+        ctx.notifyOtherPanel({ type: 'bulkRemove', packageIds: successIds, projectPath });
     }
 }
 
@@ -409,7 +412,10 @@ export async function executeBulkUpdateAllProjects(
     // Only notify if at least one package succeeded
     const totalFailed = perProjectFailedIds.reduce((sum, p) => sum + p.failedPackageIds.length, 0);
     if (totalFailed < totalPackages) {
-        ctx.notifyOtherPanel({ type: 'bulkUpdateAllProjects' });
+        const allFailedIds = new Set(perProjectFailedIds.flatMap(p => p.failedPackageIds));
+        const allPackageIds = [...new Set(projectUpdates.flatMap(pu => pu.packages.map(p => p.id)))];
+        const successIds = allPackageIds.filter(id => !allFailedIds.has(id));
+        ctx.notifyOtherPanel({ type: 'bulkUpdateAllProjects', packageIds: successIds });
     }
 }
 
@@ -512,7 +518,10 @@ export async function executeBulkRemoveAllProjects(
     // Only notify if at least one package succeeded
     const totalFailed = perProjectFailedIds.reduce((sum, p) => sum + p.failedPackageIds.length, 0);
     if (totalFailed < totalPackages) {
-        ctx.notifyOtherPanel({ type: 'bulkRemoveAllProjects' });
+        const allFailedIds = new Set(perProjectFailedIds.flatMap(p => p.failedPackageIds));
+        const allPackageIds = [...new Set(projectRemovals.flatMap(pr => pr.packages))];
+        const successIds = allPackageIds.filter(id => !allFailedIds.has(id));
+        ctx.notifyOtherPanel({ type: 'bulkRemoveAllProjects', packageIds: successIds });
     }
 }
 

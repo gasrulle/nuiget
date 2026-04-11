@@ -51,6 +51,7 @@ function createMockNuGetService() {
         getFailedSources: vi.fn().mockReturnValue(new Map()),
         getPackageVersions: vi.fn().mockResolvedValue([]),
         clearVersionsCache: vi.fn(),
+        clearVersionsCacheForPackages: vi.fn(),
     } as unknown;
 }
 
@@ -409,6 +410,20 @@ describe('NuGetSidebarProvider', () => {
             await provider.checkUpdatesInBackground();
             expect((service as any).clearVersionsCache).not.toHaveBeenCalled();
         });
+
+        it('clears only scoped packages when scope.packageIds provided', async () => {
+            (service as any).findProjects.mockResolvedValue([]);
+            await provider.checkUpdatesInBackground(true, false, { packageIds: ['PkgA', 'PkgB'] });
+            expect((service as any).clearVersionsCacheForPackages).toHaveBeenCalledWith(['PkgA', 'PkgB']);
+            expect((service as any).clearVersionsCache).not.toHaveBeenCalled();
+        });
+
+        it('falls back to full cache clear when scope has no packageIds', async () => {
+            (service as any).findProjects.mockResolvedValue([]);
+            await provider.checkUpdatesInBackground(true, false, { projectPath: '/proj.csproj' });
+            expect((service as any).clearVersionsCache).toHaveBeenCalled();
+            expect((service as any).clearVersionsCacheForPackages).not.toHaveBeenCalled();
+        });
     });
 
     // ──────────────────────────────────────────────
@@ -652,27 +667,27 @@ describe('NuGetSidebarProvider', () => {
 
         it('re-checks updates after installPackage', async () => {
             await messageListener!({ type: 'installPackage', projectPath: '/p.csproj', packageId: 'Pkg', version: '1.0' });
-            expect(checkUpdatesSpy).toHaveBeenCalledWith(true, true);
+            expect(checkUpdatesSpy).toHaveBeenCalledWith(true, true, { packageIds: ['Pkg'], projectPath: '/p.csproj' });
         });
 
         it('re-checks updates after updatePackage', async () => {
             await messageListener!({ type: 'updatePackage', projectPath: '/p.csproj', packageId: 'Pkg', version: '2.0' });
-            expect(checkUpdatesSpy).toHaveBeenCalledWith(true, true);
+            expect(checkUpdatesSpy).toHaveBeenCalledWith(true, true, { packageIds: ['Pkg'], projectPath: '/p.csproj' });
         });
 
         it('re-checks updates after removePackage', async () => {
             await messageListener!({ type: 'removePackage', projectPath: '/p.csproj', packageId: 'Pkg' });
-            expect(checkUpdatesSpy).toHaveBeenCalledWith(true, true);
+            expect(checkUpdatesSpy).toHaveBeenCalledWith(true, true, { packageIds: ['Pkg'], projectPath: '/p.csproj' });
         });
 
         it('re-checks updates after bulkUpdatePackages', async () => {
             await messageListener!({ type: 'bulkUpdatePackages', packages: [{ id: 'Pkg', version: '2.0' }], projectPath: '/p.csproj' });
-            expect(checkUpdatesSpy).toHaveBeenCalledWith(true, true);
+            expect(checkUpdatesSpy).toHaveBeenCalledWith(true, true, { packageIds: ['Pkg'], projectPath: '/p.csproj' });
         });
 
         it('re-checks updates after bulkUpdateAllProjects', async () => {
             await messageListener!({ type: 'bulkUpdateAllProjects', projectUpdates: [] });
-            expect(checkUpdatesSpy).toHaveBeenCalledWith(true, true);
+            expect(checkUpdatesSpy).toHaveBeenCalledWith(true, true, expect.objectContaining({ packageIds: expect.any(Array) }));
         });
 
         it('does NOT re-check updates when operation fails', async () => {

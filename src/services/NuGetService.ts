@@ -602,6 +602,15 @@ export class NuGetService {
     }
 
     /**
+     * Clear cached version data for specific packages only.
+     * Used after operations to invalidate only the affected packages
+     * instead of the entire versions cache (avoids unnecessary HTTP requests).
+     */
+    clearVersionsCacheForPackages(packageIds: string[]): void {
+        this._packageService.clearVersionsCacheForPackages(packageIds);
+    }
+
+    /**
      * Clear the dotnet NuGet HTTP cache so that fresh version listings
      * are fetched from the server on next restore/update check.
      * Runs `dotnet nuget locals http-cache --clear` silently.

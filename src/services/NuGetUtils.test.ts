@@ -550,6 +550,30 @@ describe('NuGetUtils', () => {
             expect(cache.get('b')).toBe(2);
             expect(cache.size).toBe(1);
         });
+
+        it('deleteByKeyPrefix removes matching entries', () => {
+            const cache = new LRUMap<string, number>(10);
+            cache.set('versions:pkga:src1', 1);
+            cache.set('versions:pkga:src2', 2);
+            cache.set('versions:pkgb:src1', 3);
+            cache.set('metadata:pkga', 4);
+
+            cache.deleteByKeyPrefix('versions:pkga:');
+
+            expect(cache.get('versions:pkga:src1')).toBeUndefined();
+            expect(cache.get('versions:pkga:src2')).toBeUndefined();
+            expect(cache.get('versions:pkgb:src1')).toBe(3);
+            expect(cache.get('metadata:pkga')).toBe(4);
+            expect(cache.size).toBe(2);
+        });
+
+        it('deleteByKeyPrefix no-ops when no keys match', () => {
+            const cache = new LRUMap<string, number>(5);
+            cache.set('a', 1);
+            cache.set('b', 2);
+            cache.deleteByKeyPrefix('z:');
+            expect(cache.size).toBe(2);
+        });
     });
 
     // ──────────────────────────────────────────────

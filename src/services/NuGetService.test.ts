@@ -450,6 +450,17 @@ describe('NuGetService', () => {
     });
 
     // ──────────────────────────────────────────────
+    // clearVersionsCacheForPackages
+    // ──────────────────────────────────────────────
+    describe('clearVersionsCacheForPackages', () => {
+        it('delegates to _packageService.clearVersionsCacheForPackages', () => {
+            const spy = vi.spyOn((service as any)._packageService, 'clearVersionsCacheForPackages');
+            service.clearVersionsCacheForPackages(['PkgA', 'PkgB']);
+            expect(spy).toHaveBeenCalledWith(['PkgA', 'PkgB']);
+        });
+    });
+
+    // ──────────────────────────────────────────────
     // clearSdkVersionCache
     // ──────────────────────────────────────────────
     describe('clearSdkVersionCache', () => {

@@ -100,6 +100,19 @@ export class NuGetPackageService {
         workspaceCache.clearByPrefix('versions:');
     }
 
+    /**
+     * Clear cached version data for specific packages only.
+     * Used after operations to invalidate only the affected packages
+     * instead of the entire versions cache (avoids 20-30 unnecessary HTTP requests).
+     */
+    clearVersionsCacheForPackages(packageIds: string[]): void {
+        for (const id of packageIds) {
+            const prefix = `versions:${id.toLowerCase()}:`;
+            this.versionsCache.deleteByKeyPrefix(prefix);
+            workspaceCache.clearByPrefix(prefix);
+        }
+    }
+
     // ── Pre-resolved source helpers (batch optimization) ────────────────
 
     /**
