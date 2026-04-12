@@ -1,0 +1,7 @@
+{
+    "window.titleBarStyle": "custom",
+    "workbench.colorTheme": "Default Dark Modern",
+    "extensions.ignoreRecommendations": true,
+    "telemetry.telemetryLevel": "off",
+    "update.mode": "none"
+}

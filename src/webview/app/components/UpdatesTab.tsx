@@ -407,7 +407,7 @@ const UpdatesTab = forwardRef<UpdatesTabHandle, UpdatesTabProps>((props, ref) =>
     const allSelected = selectedUpdates.size === totalSelectableCount && totalSelectableCount > 0;
 
     return (
-        <div className="content browse-content">
+        <div className="content browse-content" data-testid="updates-tab">
             <div className="split-panel">
                 <div ref={updatesScrollRef} className="package-list-panel" style={{ width: `${splitPosition}%` }}>
                     {isLoading ? (
@@ -485,6 +485,7 @@ const UpdatesTab = forwardRef<UpdatesTabHandle, UpdatesTabProps>((props, ref) =>
                                 <div className="toolbar-actions-left">
                                     <button
                                         className={`toolbar-icon-btn${allSelected ? ' active' : ''}`}
+                                        data-testid="select-all-button"
                                         onClick={handleToggleSelectAll}
                                         disabled={updatingAll}
                                         title={allSelected ? 'Deselect all' : 'Select all'}
@@ -518,6 +519,7 @@ const UpdatesTab = forwardRef<UpdatesTabHandle, UpdatesTabProps>((props, ref) =>
                                 </div>
                                 <button
                                     className="btn btn-primary"
+                                    data-testid="update-all-button"
                                     onClick={handleUpdateAll}
                                     disabled={selectedUpdates.size === 0 || updatingAll}
                                 >

@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Integration test infrastructure** — Vitest `integration` project with 53 tests across 8 files covering NuGetPackageService, NuGetProjectService, NuGetSourceService, NuGetService, NuGetPanel, NuGetSidebarPanel, CrossPanelSync, and CacheInvalidation
+- **Performance benchmark infrastructure** — 13 benchmark files using Vitest bench (tinybench) covering utils, csproj parsing, cache operations, search, metadata, project parsing, update checking, source health, markdown rendering, HTTP client, search query parsing, and React rendering
+- **E2E test infrastructure** — 8 test files using @vscode/test-electron + Mocha for Extension Host testing (extension activation, commands, panel, sidebar, install/update flows, source management, file watcher, settings persistence)
+- **UI test infrastructure** — 11 test files using vscode-extension-tester (ExTester) for Selenium-based UI testing (activation, panel open, search/install/update/remove flows, sidebar interaction, source settings, keyboard navigation, context menu, theme switching)
+- **data-testid attributes** — Added to 9 React components (App, SidebarApp, PackageDetailsPanel, InstalledTab, UpdatesTab, SourceSettingsOverlay, DraggableSash, PackageRow, SectionHeader) for UI test targeting
+- **VS Code tasks for test layers** — 7 new tasks: Run Integration Tests, Run E2E Tests, Run UI Tests, Run Benchmarks, Save Benchmark Baseline, Compare Benchmarks, Run All Test Layers
+- **npm scripts for test layers** — `test:integration`, `test:e2e`, `test:ui`, `bench`, `bench:save`, `bench:compare`
+- **Benchmark baseline comparison in CI** — PR benchmark job compares against committed `benchmarks/baseline.json` and reports to GitHub Actions summary
+
+### Fixed
+
+- **Benchmark suite not working** — Service benchmarks (search, HTTP, metadata, source-health, update-checking) were hanging due to MSW inability to intercept HTTP/2 and Http2Client's custom HTTPS agent. Replaced MSW with direct `fetchJson`/`fetchJsonWithDetails` spies returning fixture data. Benchmarks now run in ~90s under the `backend` vitest project only.
+
+### Changed
+
+- **ESLint config** — Added overrides for E2E, UI, and benchmark test files (disabled `no-unused-expressions`, `no-require-imports`, `no-unused-vars`)
+- **Benchmark npm scripts** — Added `--run` flag (non-watch mode) and `--project backend` to all bench scripts
+
 ## [1.17.4] - 2026-04-11
 
 ### Changed

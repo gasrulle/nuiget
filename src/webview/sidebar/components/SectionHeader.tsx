@@ -38,6 +38,7 @@ export const SectionHeader: React.FC<SectionHeaderProps> = ({
             role="button"
             tabIndex={0}
             aria-expanded={expanded}
+            data-testid={`section-header-${title?.toLowerCase().replace(/\s+/g, '-')}`}
         >
             <span className={`section-chevron${expanded ? ' expanded' : ''}`}>
                 <ChevronRightIcon size={16} />

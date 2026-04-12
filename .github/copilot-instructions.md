@@ -36,16 +36,21 @@ Failing to consult ARCHITECTURE.md risks re-introducing bugs, duplicating logic,
 ## MANDATORY: Tests
 Tests are **NOT OPTIONAL**. Every code change must satisfy all of the following:
 
-1. **Run tests before finishing.** Run `npm test` (or `npm run package:vsix`) and confirm **all tests pass**. Never submit, commit, or declare work complete with failing tests. If a test fails, fix it before moving on.
+1. **Run ALL test suites before finishing.** Run these commands and confirm **all pass** before declaring work complete:
+   - `npm test` — Unit tests (backend + frontend, ~1225 tests)
+   - `npm run bench` — Benchmarks (~57 benchmarks, ~90s)
+   - `npm run test:ui` — UI tests (ExTester/Selenium, requires VS Code + VSIX build). If this command fails due to environment constraints (no display, CI-only), note it in your summary but do not block on it.
+   If any test or benchmark fails, fix it before moving on. Never submit, commit, or declare work complete with failures.
 2. **Update existing tests.** When changing behavior, update every test that covers the changed code path so it reflects the new behavior. Do NOT delete or skip tests to make the suite pass.
 3. **Add new tests.** When adding new functions, message handlers, React components, hooks, or non-trivial logic, write tests for them. Follow the existing patterns in the codebase (see `src/test/` helpers and fixtures). At minimum, cover the happy path and one error/edge case.
-4. **Maintain coverage thresholds.** The CI pipeline enforces minimum coverage (65% lines, 50% branches, 55% functions). New code must not drop coverage below these thresholds. Run `npm run test:coverage` to verify.
-5. **Never skip, `.only`, or comment-out tests** as a workaround. If a test is flaky or blocking, fix the root cause.
+4. **Maintain benchmark suite.** When adding or changing performance-sensitive code (services, caching, HTTP, parsing), add or update benchmarks in `src/test/benchmarks/`. Service benchmarks use `mockServiceHttp(service)` from `setup.ts` — never use MSW (it can't intercept HTTP/2). After performance-affecting changes, regenerate the baseline: `npm run bench:save` and commit `benchmarks/baseline.json`.
+5. **Maintain coverage thresholds.** The CI pipeline enforces minimum coverage (65% lines, 50% branches, 55% functions). New code must not drop coverage below these thresholds. Run `npm run test:coverage` to verify.
+6. **Never skip, `.only`, or comment-out tests** as a workaround. If a test is flaky or blocking, fix the root cause.
 
 Test infrastructure details are in the **Testing** section of ARCHITECTURE.md.
 
 ## MANDATORY: VSIX Packaging Verification
-After making changes to TypeScript files (especially `NuGetService.ts`, `NuGetPanel.ts`, or `extension.ts`), run `npm run package:vsix` to verify the build succeeds. This runs the full pipeline: `install → check-types → test (945 tests) → lint+bundle → vsce package`. TypeScript errors (typos, missing properties) will break VSIX packaging even if `npm run watch` succeeds.
+After making changes to TypeScript files (especially `NuGetService.ts`, `NuGetPanel.ts`, or `extension.ts`), run `npm run package:vsix` to verify the build succeeds. This runs the full pipeline: `install → check-types → test → lint+bundle → vsce package`. TypeScript errors (typos, missing properties) will break VSIX packaging even if `npm run watch` succeeds.
 
 ## MANDATORY: Documentation Updates
 After completing ANY feature, fix, or change, update these files:
@@ -86,11 +91,15 @@ npm run package:vsix # Runs: install → check-types → test → lint+bundle �
 
 ### Testing
 ```bash
-npm test               # Run all tests (backend + frontend)
-npm run test:watch      # Watch mode
+npm test               # Run all unit tests (backend + frontend) — MANDATORY before finishing
+npm run bench          # Run all benchmarks — MANDATORY before finishing
+npm run test:ui        # UI tests (ExTester/Selenium) — MANDATORY (env-dependent, see Rule 1)
+npm run test:watch      # Watch mode (unit tests)
 npm run test:backend    # Backend tests only (Node.js)
 npm run test:frontend   # Frontend tests only (jsdom)
 npm run test:coverage   # Generate coverage report
+npm run bench:save      # Save benchmark baseline (commit after perf changes)
+npm run bench:compare   # Compare current run against baseline
 ```
 The VS Code task "Run Tests" (`Ctrl+Shift+T` or Task menu) runs `npm test` with output visible in terminal.
 
@@ -251,6 +260,10 @@ The VS Code task "Run Tests" (`Ctrl+Shift+T` or Task menu) runs `npm test` with 
 | `coverage/` inflates VSIX | `.vscodeignore` excludes `coverage/**`. Don't remove this exclusion. |
 | Test file ESLint rules | `no-explicit-any` and `no-non-null-assertion` are turned OFF for test files (`src/**/*.test.{ts,tsx}`, `src/test/**/*.{ts,tsx}`) in `eslint.config.mjs`. Don't add these rules back for tests. |
 | Singleton `resetInstance()` | `CredentialService.resetInstance()` and `Http2Client.resetInstance()` exist for test isolation. `instance` fields are typed `Type \| undefined` (not `Type`). |
+| Benchmarks mock HTTP at NuGetService level | Service benchmarks spy on `fetchJson`/`fetchJsonWithDetails` directly (not MSW). MSW can't intercept Http2Client's HTTP/2 or custom HTTPS agent. Use `mockServiceHttp(service)` from `setup.ts`. |
+| Benchmarks run in backend project only | npm bench scripts use `--project backend`. Don't remove — without it, benchmarks run 3x (once per vitest project). |
+| WorkspaceCache spam in benchmarks | `[WorkspaceCache] Cache not initialized` warnings in stderr are expected. The cache gracefully returns early — doesn't block. |
+| `benchmarks/baseline.json` is committed | Regenerate with `npm run bench:save` after performance-affecting changes. CI compares PRs against this baseline. |
 
 # Debugging Workflow
 1. Add temporary `console.log()` with distinctive prefix (e.g., `[DEBUG-XYZ]`)

@@ -84,6 +84,83 @@
                 "panel": "new"
             },
             "group": "build"
+        },
+        {
+            "label": "Run Integration Tests",
+            "type": "shell",
+            "command": "npm run test:integration",
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            },
+            "group": "test"
+        },
+        {
+            "label": "Run E2E Tests",
+            "type": "shell",
+            "command": "npm run test:e2e",
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            },
+            "group": "test"
+        },
+        {
+            "label": "Run UI Tests",
+            "type": "shell",
+            "command": "npm run test:ui",
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "new"
+            },
+            "group": "test"
+        },
+        {
+            "label": "Run Benchmarks",
+            "type": "shell",
+            "command": "npm run bench",
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            },
+            "group": "test"
+        },
+        {
+            "label": "Save Benchmark Baseline",
+            "type": "shell",
+            "command": "npm run bench:save",
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            },
+            "group": "test"
+        },
+        {
+            "label": "Compare Benchmarks",
+            "type": "shell",
+            "command": "npm run bench:compare",
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            },
+            "group": "test"
+        },
+        {
+            "label": "Run All Tests (Unit + Integration)",
+            "type": "shell",
+            "command": "npm test && npm run test:integration",
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            },
+            "group": "test"
         }
     ]
 }

@@ -91,9 +91,47 @@ jobs:
             echo "| Statements | ${STATEMENTS}% | 65% |" >> $GITHUB_STEP_SUMMARY
           fi
 
+  integration:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Run integration tests
+        run: npm run test:integration
+
+  e2e:
+    name: E2E Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Build extension
+        run: node esbuild.mjs --production
+
+      - name: Compile E2E tests
+        run: npx tsc -p tsconfig.test.json
+
+      - name: Run E2E tests
+        run: xvfb-run -a npm run test:e2e
+
   build:
     name: Build & Package
-    needs: [lint, test]
+    needs: [lint, test, integration, e2e]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -122,3 +160,30 @@ jobs:
           echo "## 📦 VSIX Artifact" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**nuiget-v${VERSION}.vsix** — ready to publish" >> $GITHUB_STEP_SUMMARY
+
+  benchmark:
+    name: Benchmark
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Run benchmarks against baseline
+        run: npm run bench:compare
+
+      - name: Add benchmark summary
+        if: always()
+        run: |
+          if [ -f benchmarks/latest.json ]; then
+            echo "## Benchmark Results" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Benchmarks compared against committed \`benchmarks/baseline.json\`." >> $GITHUB_STEP_SUMMARY
+            echo "To update the baseline: \`npm run bench:save\` and commit." >> $GITHUB_STEP_SUMMARY
+          fi

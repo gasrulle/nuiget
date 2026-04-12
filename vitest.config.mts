@@ -52,6 +52,19 @@ export default defineConfig({
                     setupFiles: ['src/test/setup-frontend.ts'],
                 },
             },
+            {
+                extends: true,
+                test: {
+                    name: 'integration',
+                    environment: 'node',
+                    include: ['src/test/integration/**/*.integration.test.ts'],
+                    testTimeout: 30_000,
+                },
+            },
         ],
+        benchmark: {
+            include: ['src/test/benchmarks/**/*.bench.ts'],
+            outputJson: 'benchmarks/latest.json',
+        },
     },
 });

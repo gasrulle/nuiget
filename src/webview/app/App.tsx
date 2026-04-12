@@ -1728,7 +1728,7 @@ export const App: React.FC = () => {
         handleRemove, handleToggleDep]);
 
     return (
-        <div className="app">
+        <div className="app" data-testid="nuiget-app">
             <div className="header">
                 <h2>Manage NuGet packages</h2>
                 <div className="header-selectors">
@@ -1745,6 +1745,7 @@ export const App: React.FC = () => {
                             value={selectedProject}
                             onChange={(e) => setSelectedProject((e.target as HTMLSelectElement).value)}
                             className="project-selector"
+                            data-testid="project-selector"
                         >
                             {sortedProjects.length > 1 && (
                                 <option key={ALL_PROJECTS_SENTINEL} value={ALL_PROJECTS_SENTINEL}>
@@ -1763,6 +1764,7 @@ export const App: React.FC = () => {
                             value={selectedSource}
                             onChange={(e) => setSelectedSource((e.target as HTMLSelectElement).value)}
                             className="source-selector"
+                            data-testid="source-selector"
                         >
                             <option value="all">All Sources</option>
                             {enabledSources.map(s => {
@@ -1843,6 +1845,7 @@ export const App: React.FC = () => {
                     <input
                         ref={searchInputRef}
                         type="text"
+                        data-testid="search-input"
                         placeholder="Search packages... (@installed, @updates, @vulnerable)"
                         value={searchQuery}
                         onChange={(e) => {
@@ -2231,7 +2234,7 @@ export const App: React.FC = () => {
 
             {/* Tabs — hidden when showing browse search results */}
             {searchMode.mode !== 'browse' && (
-                <div className="tabs">
+                <div className="tabs" data-testid="tab-bar">
                     <button
                         ref={installedTabRef}
                         className={`tab ${activeTab === 'installed' ? 'active' : ''} ${isTabPending ? 'pending' : ''}`}

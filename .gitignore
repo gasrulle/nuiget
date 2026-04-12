@@ -44,6 +44,9 @@ pids
 .nyc_output/
 coverage/
 
+# Benchmark ephemeral output (baseline.json is committed)
+benchmarks/latest.json
+
 # Environment files
 .env
 .env.local

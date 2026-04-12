@@ -185,7 +185,7 @@ const PackageDetailsPanel: React.FC<PackageDetailsPanelProps> = ({
     }
 
     return (
-        <div className="package-details">
+        <div className="package-details" data-testid="package-details-panel">
             <div className="details-header">
                 <h3>{packageId}</h3>
                 <div className="details-actions">
@@ -209,6 +209,7 @@ const PackageDetailsPanel: React.FC<PackageDetailsPanelProps> = ({
                             )}
                             <button
                                 className="btn btn-danger"
+                                data-testid="uninstall-button"
                                 onClick={() => onRemove(packageId)}
                                 disabled={(installedPkg || activeProjectPkg)?.isImplicit}
                                 title={(installedPkg || activeProjectPkg)?.isImplicit ? 'Implicit/transitive package - cannot be uninstalled directly' : 'Uninstall (Del)'}
@@ -249,6 +250,7 @@ const PackageDetailsPanel: React.FC<PackageDetailsPanelProps> = ({
                                     }
                                 }}
                                 className="version-selector"
+                                data-testid="version-selector"
                                 disabled={isFloatingOrRange}
                                 title={isFloatingOrRange ? 'Version selection disabled for floating/range versions' : undefined}
                             >
@@ -259,6 +261,7 @@ const PackageDetailsPanel: React.FC<PackageDetailsPanelProps> = ({
                         )}
                         <button
                             className="btn btn-primary"
+                            data-testid="install-update-button"
                             onClick={() => onInstall(packageId, selectedVersion)}
                             disabled={(isAllProjects && !activeProjectPath) || isFloatingOrRange || (isInstalled && selectedVersion === effectiveVersion)}
                             title={
