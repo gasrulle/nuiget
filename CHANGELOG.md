@@ -159,13 +159,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Resolved all npm audit vulnerabilities**
 - **Eliminated all 848 ESLint warnings from build output**
 
-## [1.15.1] - 2026-03-27
-
-### Fixed
-
-- **SSRF redirect handling for relative URLs** — `isSafeRedirectTarget()` now resolves relative `Location` headers against the original URL; all 11 redirect sites across Http2Client.ts and NuGetService.ts pass the resolved absolute URL to recursive calls
-- **Update operation version guard** — `executeSingleOperation()` now throws early if version is missing for update operations instead of silently passing an empty string
-
 ## [1.15.0] - 2026-03-27
 
 ### Added
@@ -198,6 +191,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Eliminated all `any` types** — Replaced `fetchJson<any>` with typed NuGet API response interfaces (`NuGetSearchResponse`, `NuGetRegistrationEntry`, `NuGetRegistrationPage`); replaced `catch (error: any)` with `unknown`; replaced `handleMessage(message: any)` with `WebviewMessage` type
 - **Resolved npm audit vulnerabilities** — Fixed `brace-expansion` and `picomatch` transitive vulnerabilities
 
+## [1.15.1] - 2026-03-27
+
+### Fixed
+
+- **SSRF redirect handling for relative URLs** — `isSafeRedirectTarget()` now resolves relative `Location` headers against the original URL; all 11 redirect sites across Http2Client.ts and NuGetService.ts pass the resolved absolute URL to recursive calls
+- **Update operation version guard** — `executeSingleOperation()` now throws early if version is missing for update operations instead of silently passing an empty string
+
 ## [1.14.1] - 2026-03-19
 
 ### Fixed
@@ -218,7 +218,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Sidebar wrong-project packages on startup** — Fixed multi-project workspaces showing packages for the wrong project when opening the sidebar, caused by a ref timing race between `state` and `projects` message handlers. Also added `projectPath` validation on `installedPackages`/`packageUpdatesMinimal` responses to discard stale out-of-order replies, and removed the same-project guard in `projectChanged` so re-selecting the current project triggers a refresh
 - **Bulk install deferred restore** — `executeBulkInstall` now uses `--no-restore` per project and runs a single `dotnet restore` at the end of the batch, matching the existing bulk update/remove pattern and properly respecting the `noRestore` setting
 
-## [1.13.0] - 2026-03-12
+## [1.13.0] - 2025-03-12
 
 ### Added
 
@@ -231,7 +231,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Pre-validation timeout reduced to 3 seconds** — Source health pre-validation timeout lowered from 5s to 3s for faster search startup when unreachable sources are present
 - **Refresh no longer clears NuGet HTTP cache** — Refresh buttons in both the full manager and sidebar no longer run `dotnet nuget locals http-cache --clear` (0–15s process spawn), making refresh near-instant
 
-## [1.12.0] - 2026-03-10
+## [1.12.0]
 
 ### Added
 
@@ -245,7 +245,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Vulnerability data not loading** — Vulnerability base JSON (~15-20 MB) exceeded the 10 MB response size limit, silently returning no data. Vulnerability fetches now use gzip/deflate compression (~2-3 MB transfer), fixing missing shield badges on installed packages
 
-## [1.11.0] - 2026-03-08
+## [1.11.0]
 
 ### Added
 

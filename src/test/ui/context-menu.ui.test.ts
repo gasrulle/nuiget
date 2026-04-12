@@ -19,13 +19,11 @@ describe('Context Menu', () => {
         await new Promise(resolve => setTimeout(resolve, 1500));
 
         const picks = await input.getQuickPicks();
-        const found = picks.some(async (pick) => {
-            const label = await pick.getLabel();
-            return label.includes('nUIget');
-        });
+        const labels = await Promise.all(picks.map(pick => pick.getLabel()));
         await input.cancel();
 
-        expect(picks.length, 'Command should appear in command palette').to.be.greaterThan(0);
+        const found = labels.some(label => label.includes('nUIget'));
+        expect(found, 'nUIget command should appear in command palette').to.be.true;
     });
 
     afterEach(async function () {

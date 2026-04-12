@@ -55,8 +55,9 @@ describe('Update Flow', () => {
         }
         await new Promise(resolve => setTimeout(resolve, 3000));
 
-        // Select All button exists when there are updates
-        const selectAllExists = await hasTestId(webview, 'select-all-button');
-        expect(typeof selectAllExists).to.equal('boolean');
+        // Select All button may or may not exist depending on whether updates are available.
+        // If no updates, the button won't render — verify the tab itself rendered.
+        const updatesTabExists = await hasTestId(webview, 'updates-tab');
+        expect(updatesTabExists, 'Updates tab should render').to.be.true;
     });
 });

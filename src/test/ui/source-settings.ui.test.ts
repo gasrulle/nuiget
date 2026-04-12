@@ -54,6 +54,8 @@ describe('Source Settings', () => {
         await new Promise(resolve => setTimeout(resolve, 1000));
 
         const modalExists = await hasTestId(webview, 'source-settings-modal');
-        expect(typeof modalExists).to.equal('boolean');
+        // After clicking the gear button, some form of settings UI should be visible
+        const overlayExists = await hasTestId(webview, 'source-settings-overlay');
+        expect(modalExists || overlayExists, 'Source settings UI should open after clicking gear').to.be.true;
     });
 });
