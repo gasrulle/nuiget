@@ -4,44 +4,26 @@ This document describes the technical architecture of the nUIget VS Code extensi
 
 ## Overview
 
-```
-┌──────────────────────────────────────────────────────────────────────┐
-│                            VS Code                                    │
-│                                                                        │
-│  ┌──────────────────┐     ┌──────────────────────────────────┐       │
-│  │   extension.ts   │────▶│      NuGetPanel.ts               │       │
-│  │  (Entry Point)   │     │   (WebviewPanel + Messages)      │       │
-│  │                   │     └───────────────┬──────────────────┘       │
-│  │  Shared           │                     │ postMessage              │
-│  │  NuGetService ◄───┤     ┌───────────────▼────────────────────┐    │
-│  │  singleton        │     │          Main Webview (React)       │    │
-│  │                   │     │  App.tsx + InstalledTab, UpdatesTab  │    │
-│  │                   │     │  PackageDetailsPanel                │    │
-│  └──────┬───────────┘     └─────────────────────────────────────┘    │
-│         │                                                              │
-│         │              ┌──────────────────────────────────┐           │
-│         └─────────────▶│    NuGetSidebarPanel.ts          │           │
-│                        │  (WebviewViewProvider + Messages) │           │
-│                        └───────────────┬──────────────────┘           │
-│                                        │ postMessage                   │
-│                        ┌───────────────▼────────────────────┐         │
-│                        │      Sidebar Webview (React)        │         │
-│                        │  SidebarApp.tsx (compact layout)    │         │
-│                        │  SectionHeader, PackageRow          │         │
-│                        └─────────────────────────────────────┘         │
-│                                                                        │
-│  ┌──────────────────────────────────────────────────────────────┐    │
-│  │                        Services                               │    │
-│  │  ┌────────────────────┐  ┌────────────────────────────┐     │    │
-│  │  │   NuGetService.ts  │  │  NuGetConfigParser.ts      │     │    │
-│  │  │   (CLI + API)      │  │  (Source Resolution)       │     │    │
-│  │  └────────────────────┘  └────────────────────────────┘     │    │
-│  │  ┌────────────────────┐  ┌────────────────────────────┐     │    │
-│  │  │ CredentialService  │  │  Http2Client.ts            │     │    │
-│  │  │ (Auth for feeds)   │  │  (HTTP/2 multiplexing)     │     │    │
-│  │  └────────────────────┘  └────────────────────────────┘     │    │
-│  └──────────────────────────────────────────────────────────────┘    │
-└──────────────────────────────────────────────────────────────────────┘
+```mermaid
+graph TD
+    subgraph VS Code
+        EXT["extension.ts<br/>(Entry Point)"] -->|creates| PANEL["NuGetPanel.ts<br/>(WebviewPanel + Messages)"]
+        EXT -->|creates| SIDEBAR["NuGetSidebarPanel.ts<br/>(WebviewViewProvider + Messages)"]
+        EXT -.-|shared singleton| SVC
+
+        PANEL -->|postMessage| MAIN_WV["Main Webview (React)<br/>App.tsx + InstalledTab, UpdatesTab<br/>PackageDetailsPanel"]
+        SIDEBAR -->|postMessage| SIDE_WV["Sidebar Webview (React)<br/>SidebarApp.tsx (compact layout)<br/>SectionHeader, PackageRow"]
+
+        subgraph Services
+            SVC["NuGetService.ts<br/>(CLI + API)"]
+            CFG["NuGetConfigParser.ts<br/>(Source Resolution)"]
+            CRED["CredentialService<br/>(Auth for feeds)"]
+            HTTP["Http2Client.ts<br/>(HTTP/2 multiplexing)"]
+        end
+
+        PANEL --- SVC
+        SIDEBAR --- SVC
+    end
 ```
 
 ## File Structure
@@ -54,7 +36,7 @@ src/
 │   ├── NuGetSidebarPanel.ts  # WebviewViewProvider for Activity Bar sidebar
 │   ├── app/
 │   │   ├── index.tsx         # React entry point with ErrorBoundary
-│   │   ├── App.tsx           # Application shell with unified search bar (~1700 lines)
+│   │   ├── App.tsx           # Application shell with unified search bar (~2420 lines)
 │   │   ├── App.css           # Styles (includes high-contrast, reduced-motion, icon utilities)
 │   │   ├── types.ts          # Shared types, LRUMap, utility functions
 │   │   ├── icons.tsx          # Inline SVG icon components (codicon-compatible, theme-aware)
@@ -62,9 +44,9 @@ src/
 │   │   ├── utils/
 │   │   │   └── parseSearchQuery.ts  # Shared search parser (SearchMode, FILTER_PREFIXES)
 │   │   ├── components/
-│   │   │   ├── InstalledTab.tsx           # Installed tab (~1360 lines)
-│   │   │   ├── UpdatesTab.tsx             # Updates tab (~750 lines)
-│   │   │   ├── PackageDetailsPanel.tsx    # Details panel (~480 lines)
+│   │   │   ├── InstalledTab.tsx           # Installed tab (~1250 lines)
+│   │   │   ├── UpdatesTab.tsx             # Updates tab (~710 lines)
+│   │   │   ├── PackageDetailsPanel.tsx    # Details panel (~510 lines)
 │   │   │   ├── DraggableSash.tsx          # Resizable split panel sash
 │   │   │   └── SourceSettingsOverlay.tsx  # Source settings modal (forwardRef, owns form state)
 │   │   └── hooks/
@@ -77,8 +59,8 @@ src/
 │           ├── SectionHeader.tsx   # Collapsible section header
 │           └── PackageRow.tsx      # Compact package row with hover actions
 ├── services/
-│   ├── NuGetService.ts       # Facade: delegates to sub-services, retains HTTP/source health/CLI (~1200 lines)
-│   ├── NuGetPackageService.ts # Package search, metadata, versions, vulnerabilities, icons, updates (~1250 lines)
+│   ├── NuGetService.ts       # Facade: delegates to sub-services, retains HTTP/source health/CLI (~1020 lines)
+│   ├── NuGetPackageService.ts # Package search, metadata, versions, vulnerabilities, icons, updates (~2060 lines)
 │   ├── NuGetCliService.ts    # dotnet CLI operations (install/update/remove/restore, SDK detection)
 │   ├── NuGetSourceService.ts # Source CRUD, config file management, source name generation
 │   ├── NuGetProjectService.ts # Project discovery, .csproj parsing, transitive deps, assets.json caching
@@ -98,20 +80,29 @@ src/
 │   │   ├── sample.csproj     # Sample .csproj for parsing tests
 │   │   ├── multi-version.csproj  # Multi-framework .csproj fixture
 │   │   ├── project.assets.json   # Transitive dependency fixture
-│   │   └── nuget.config      # NuGet config fixture
+│   │   ├── nuget.config      # NuGet config fixture
+│   │   ├── registration-response.json  # NuGet registration API fixture
+│   │   ├── search-response.json        # NuGet search API fixture
+│   │   ├── service-index.json          # NuGet service index fixture
+│   │   ├── bin/              # Build output fixture
+│   │   └── obj/              # Restore output fixture (project.assets.json)
 │   ├── helpers/
 │   │   ├── index.ts          # Re-exports for test helpers
 │   │   ├── backend.ts        # Backend test utilities (mock services, exec helpers)
 │   │   └── frontend.tsx      # Frontend test utilities (render with VS Code context)
+│   ├── benchmarks/           # Performance benchmarks (*.bench.ts)
+│   ├── integration/          # Integration tests with MSW (*.integration.test.ts)
+│   ├── e2e/                  # End-to-end tests (VS Code Test)
+│   ├── ui/                   # UI tests (ExTester/Selenium)
 │   └── setup-frontend.ts    # jsdom setup (jest-dom matchers, acquireVsCodeApi shim)
 ```
 
 ### Module Split: NuGetService
 `NuGetService.ts` is a facade that delegates to five sub-services:
-- **`NuGetPackageService.ts`** (~1250 lines) — Package search (`searchPackages`, `searchPackagesViaApi`, `quickSearchGrouped`), metadata resolution (`getPackageMetadata`, `getPackageMetadataFromSource/Search/Nuspec`), version queries (`getPackageVersions`, `getPackageVersionsFromSource`), vulnerability data (`fetchVulnerabilityData`, `getVulnerabilities`), icon URL resolution (`resolveIconUrl`, `getPackageIconUrl`), autocomplete, update checking (`checkPackageUpdates`, `checkPackageUpdatesMinimal` — both pre-resolve sources via `resolveSourcesForBatch()` before batch loop), README extraction, size fetching, and installed package metadata. Uses `PackageServiceDeps` interface for dependency injection — receives HTTP, source, and endpoint methods from `NuGetService` via arrow function bindings. Owns caches: `metadataCache(200)`, `iconUrlCache(500)`, `versionsCache(200)`, `verifiedStatusCache(300)`, `searchResultsCache(100)`, `autocompleteCache(50)`, `vulnerabilityData(Map)`.
+- **`NuGetPackageService.ts`** (~2060 lines) — Package search (`searchPackages`, `searchPackagesViaApi`, `quickSearchGrouped`), metadata resolution (`getPackageMetadata`, `getPackageMetadataFromSource/Search/Nuspec`), version queries (`getPackageVersions`, `getPackageVersionsFromSource`), vulnerability data (`fetchVulnerabilityData`, `getVulnerabilities`), icon URL resolution (`resolveIconUrl`, `getPackageIconUrl`), autocomplete, update checking (`checkPackageUpdates`, `checkPackageUpdatesMinimal` — both pre-resolve sources via `resolveSourcesForBatch()` before batch loop), README extraction, size fetching, and installed package metadata. Uses `PackageServiceDeps` interface for dependency injection — receives HTTP, source, and endpoint methods from `NuGetService` via arrow function bindings. Owns caches: `metadataCache(200)`, `iconUrlCache(500)`, `versionsCache(200)`, `verifiedStatusCache(300)`, `searchResultsCache(100)`, `autocompleteCache(50)`, `vulnerabilityData(Map)`.
 - **`NuGetCliService.ts`** — dotnet CLI operations (install/update/remove/restore), SDK detection (`getSdkMajorVersion`, `useNounFirstSyntax`), HTTP cache clearing, `dotnet package search`.
 - **`NuGetSourceService.ts`** — Source CRUD (`getSources`, `addSource`, `removeSource`, `enableSource`, `disableSource`), nuget.config file management, source name generation.
-- **`NuGetProjectService.ts`** (~440 lines) — Project discovery, `.csproj` parsing, installed packages, transitive dependency resolution, `project.assets.json` caching.
+- **`NuGetProjectService.ts`** (~470 lines) — Project discovery, `.csproj` parsing, installed packages, transitive dependency resolution, `project.assets.json` caching.
 - **`NuGetLogger.ts`** — Logging utilities (`setupOutputChannel`, `sanitizeForLogging`, `logOutput`, `logSuccess`, `logWarning`, `logError`, `logBulkOperationHeader`).
 
 `NuGetService.ts` retains: HTTP fetch methods (`fetchJson`, `fetchJsonHttp1`, `fetchJsonWithCompression`, `fetchJsonWithDetails`, `fetchText`, `downloadFile`), service index discovery/caching, source health monitoring, failed endpoint cache, credential management, and the public facade API. Internal types (`NuGetServiceIndex`, `ServiceEndpoints`) remain in `NuGetService.ts`. `FetchResult<T>` is defined in `Http2Client.ts`.
@@ -298,16 +289,15 @@ Each tab features a draggable split panel (left: package list, right: details). 
 
 The extension uses VS Code's webview message passing for communication:
 
-```
-React (App.tsx)                          Extension (NuGetPanel.ts)
-     │                                           │
-     │──── postMessage({ type: 'getProjects' })──▶│
-     │                                           │
-     │◀── postMessage({ type: 'projects', ... })─│
-     │                                           │
-     │──── postMessage({ type: 'searchPackages' })▶│
-     │                                           │
-     │◀── postMessage({ type: 'searchResults' })──│
+```mermaid
+sequenceDiagram
+    participant UI as React (App.tsx)
+    participant EXT as Extension (NuGetPanel.ts)
+
+    UI->>EXT: postMessage({ type: 'getProjects' })
+    EXT->>UI: postMessage({ type: 'projects', ... })
+    UI->>EXT: postMessage({ type: 'searchPackages' })
+    EXT->>UI: postMessage({ type: 'searchResults' })
 ```
 
 ### Disposed Panel Safety
@@ -575,16 +565,9 @@ selectDirectPackage(installedPkg, {
 ### Multi-Tier Cache Architecture
 The extension uses a two-tier caching system for performance:
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                      Cache Architecture                          │
-│  ┌──────────────────────┐    ┌──────────────────────────────┐  │
-│  │  In-Memory Cache     │───▶│  Workspace Cache             │  │
-│  │  (Map objects)       │    │  (workspaceState via         │  │
-│  │  Fastest lookups     │    │   WorkspaceCache utility)    │  │
-│  │  Session lifetime    │    │  Persists across panels      │  │
-│  └──────────────────────┘    └──────────────────────────────┘  │
-└─────────────────────────────────────────────────────────────────┘
+```mermaid
+graph LR
+    MEM["In-Memory Cache<br/>(Map objects)<br/>Fastest lookups<br/>Session lifetime"] -->|promote/fallback| WS["Workspace Cache<br/>(workspaceState via<br/>WorkspaceCache utility)<br/>Persists across panels"]
 ```
 
 ### Failed Endpoint Cache
@@ -896,7 +879,7 @@ useEffect(() => {
 
 ### Details Panel Component
 
-The package details panel has been extracted into `PackageDetailsPanel.tsx` (~480 lines), wrapped in `React.memo` as `MemoizedPackageDetailsPanel`. Each tab renders its own instance, receiving shared state as props. This replaces the previous `useMemo`-based approach with proper component-level memoization via `React.memo`.
+The package details panel has been extracted into `PackageDetailsPanel.tsx` (~510 lines), wrapped in `React.memo` as `MemoizedPackageDetailsPanel`. Each tab renders its own instance, receiving shared state as props. This replaces the previous `useMemo`-based approach with proper component-level memoization via `React.memo`.
 
 ### Accessibility
 
@@ -1183,14 +1166,11 @@ Stale indicators provide visual feedback with CSS opacity fade:
 Location: `src/services/Http2Client.ts`
 
 ### Architecture
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                       HTTP Client Selection                      │
-│                                                                  │
-│  URL contains .nuget.org?                                        │
-│     ├── YES → HTTP/2 Client (multiplexing, session reuse)       │
-│     └── NO  → HTTP/1.1 Client (keepAlive agent)                 │
-└─────────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    Q{URL contains .nuget.org?}
+    Q -->|YES| H2["HTTP/2 Client<br/>(multiplexing, session reuse)"]
+    Q -->|NO| H1["HTTP/1.1 Client<br/>(keepAlive agent)"]
 ```
 
 ### HTTP/2 Benefits
@@ -1230,23 +1210,18 @@ The extension supports authenticated API calls for private NuGet feeds (Azure De
 4. **Access Token env var** — `ARTIFACTS_CREDENTIALPROVIDER_ACCESSTOKEN` or `VSS_NUGET_ACCESSTOKEN` (Azure Artifacts only)
 
 ### Credential Flow
-```
-NuGetPanel opens
-    │
-    ▼
-initializeCredentials() ──▶ NuGetConfigParser.getCredentials()
-    │                              │
-    ▼                              ├── Parse ClearTextPassword
-    │                              ├── Decrypt DPAPI Password
-    │                              └── Resolve %ENV_VAR% syntax
-    │
-    ▼
-CredentialService.prewarmCredentials()
-    │
-    ├── nuget.config credentials (already loaded)
-    ├── Credential Provider invocation (non-interactive)
-    ├── External Feed Endpoints env var
-    └── Access Token env var (Azure Artifacts only)
+```mermaid
+flowchart TD
+    A[NuGetPanel opens] --> B[initializeCredentials]
+    B --> C[NuGetConfigParser.getCredentials]
+    C --> C1[Parse ClearTextPassword]
+    C --> C2[Decrypt DPAPI Password]
+    C --> C3[Resolve %ENV_VAR% syntax]
+    B --> D[CredentialService.prewarmCredentials]
+    D --> D1[nuget.config credentials - already loaded]
+    D --> D2[Credential Provider invocation - non-interactive]
+    D --> D3[External Feed Endpoints env var]
+    D --> D4[Access Token env var - Azure Artifacts only]
 ```
 
 ### DPAPI Decryption
@@ -1500,12 +1475,15 @@ body.vscode-light .readme-rendered .hljs-keyword { color: var(--vscode-symbolIco
 ## Testing
 
 ### Framework
-Vitest 4.x with two project configurations:
+Vitest 4.x with three project configurations:
 
 | Project | Environment | Includes | Setup |
 |---------|------------|----------|-------|
 | `backend` | Node.js | `src/services/**/*.test.ts`, `src/extension.test.ts` | — |
 | `frontend` | jsdom | `src/webview/**/*.test.{ts,tsx}` | `src/test/setup-frontend.ts` |
+| `integration` | Node.js | `src/test/integration/**/*.integration.test.ts` | 30s test timeout |
+
+Benchmarks: `src/test/benchmarks/**/*.bench.ts` (run via `npm run bench`, backend project only).
 
 Configuration: `vitest.config.mts` at project root.
 
@@ -1583,7 +1561,7 @@ dist/
 ### VSIX Packaging Pipeline
 The `npm run package:vsix` script runs a full pipeline:
 ```
-npm install → check-types → npm test (945 tests) → lint + bundle → vsce package
+npm install → check-types → npm test (~1227 tests) → lint + bundle → vsce package
 ```
 Tests must pass before the VSIX is produced. The `coverage/` directory is excluded from the VSIX via `.vscodeignore`.
 
