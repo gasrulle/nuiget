@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Resolved `diff` and `serialize-javascript` vulnerabilities**
+
+## [1.18.0] - 2026-04-12
+
 ### Added
 
 - **Integration test infrastructure** — Vitest `integration` project with 53 tests across 8 files covering NuGetPackageService, NuGetProjectService, NuGetSourceService, NuGetService, NuGetPanel, NuGetSidebarPanel, CrossPanelSync, and CacheInvalidation
@@ -20,15 +26,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- **Cache key race condition on source/prerelease switch** — `packageVersions` and `packageMetadata` responses now echo source and includePrerelease from the request; frontend cache keys use echoed values instead of current state refs that may have changed during the async roundtrip
-- **Full main panel refresh after sidebar operations** — Sidebar-initiated operations now send a scoped refresh (`nuiget.refreshPackagesScoped`) that re-fetches installed packages but skips the expensive full `checkPackageUpdates` cycle, since the sidebar already performed a scoped update check
-- **Redundant Installed tab re-fetch on tab switch** — Removed the `getInstalledPackages` re-fetch when switching back to the Installed tab; the file watcher and cross-panel sync already keep installed packages current via `retainContextWhenHidden`
-- **Benchmark suite not working** — Service benchmarks (search, HTTP, metadata, source-health, update-checking) were hanging due to MSW inability to intercept HTTP/2 and Http2Client's custom HTTPS agent. Replaced MSW with direct `fetchJson`/`fetchJsonWithDetails` spies returning fixture data. Benchmarks now run in ~90s under the `backend` vitest project only.
+- **Uninstall Selected button invisible in light themes**
+- **Cache key race condition on source/prerelease switch**
+- **Full main panel refresh after sidebar operations**
+- **Redundant Installed tab re-fetch on tab switch**
+- **Benchmark suite not working**
 
 ### Changed
 
-- **ESLint config** — Added overrides for E2E, UI, and benchmark test files (disabled `no-unused-expressions`, `no-require-imports`, `no-unused-vars`)
-- **Benchmark npm scripts** — Added `--run` flag (non-watch mode) and `--project backend` to all bench scripts
+- **ESLint config**
+- **Benchmark npm scripts**
 
 ## [1.17.4] - 2026-04-11
 
@@ -155,6 +162,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Resolved all npm audit vulnerabilities**
 - **Eliminated all 848 ESLint warnings from build output**
 
+## [1.15.1] - 2026-03-27
+
+### Fixed
+
+- **SSRF redirect handling for relative URLs** — `isSafeRedirectTarget()` now resolves relative `Location` headers against the original URL; all 11 redirect sites across Http2Client.ts and NuGetService.ts pass the resolved absolute URL to recursive calls
+- **Update operation version guard** — `executeSingleOperation()` now throws early if version is missing for update operations instead of silently passing an empty string
+
 ## [1.15.0] - 2026-03-27
 
 ### Added
@@ -187,13 +201,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Eliminated all `any` types** — Replaced `fetchJson<any>` with typed NuGet API response interfaces (`NuGetSearchResponse`, `NuGetRegistrationEntry`, `NuGetRegistrationPage`); replaced `catch (error: any)` with `unknown`; replaced `handleMessage(message: any)` with `WebviewMessage` type
 - **Resolved npm audit vulnerabilities** — Fixed `brace-expansion` and `picomatch` transitive vulnerabilities
 
-## [1.15.1] - 2026-03-27
-
-### Fixed
-
-- **SSRF redirect handling for relative URLs** — `isSafeRedirectTarget()` now resolves relative `Location` headers against the original URL; all 11 redirect sites across Http2Client.ts and NuGetService.ts pass the resolved absolute URL to recursive calls
-- **Update operation version guard** — `executeSingleOperation()` now throws early if version is missing for update operations instead of silently passing an empty string
-
 ## [1.14.1] - 2026-03-19
 
 ### Fixed
@@ -214,7 +221,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Sidebar wrong-project packages on startup** — Fixed multi-project workspaces showing packages for the wrong project when opening the sidebar, caused by a ref timing race between `state` and `projects` message handlers. Also added `projectPath` validation on `installedPackages`/`packageUpdatesMinimal` responses to discard stale out-of-order replies, and removed the same-project guard in `projectChanged` so re-selecting the current project triggers a refresh
 - **Bulk install deferred restore** — `executeBulkInstall` now uses `--no-restore` per project and runs a single `dotnet restore` at the end of the batch, matching the existing bulk update/remove pattern and properly respecting the `noRestore` setting
 
-## [1.13.0] - 2025-03-12
+## [1.13.0] - 2026-03-12
 
 ### Added
 
@@ -227,7 +234,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Pre-validation timeout reduced to 3 seconds** — Source health pre-validation timeout lowered from 5s to 3s for faster search startup when unreachable sources are present
 - **Refresh no longer clears NuGet HTTP cache** — Refresh buttons in both the full manager and sidebar no longer run `dotnet nuget locals http-cache --clear` (0–15s process spawn), making refresh near-instant
 
-## [1.12.0]
+## [1.12.0] - 2026-03-10
 
 ### Added
 
@@ -241,7 +248,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Vulnerability data not loading** — Vulnerability base JSON (~15-20 MB) exceeded the 10 MB response size limit, silently returning no data. Vulnerability fetches now use gzip/deflate compression (~2-3 MB transfer), fixing missing shield badges on installed packages
 
-## [1.11.0]
+## [1.11.0] - 2026-03-08
 
 ### Added
 
