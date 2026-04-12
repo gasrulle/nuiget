@@ -3,6 +3,10 @@
 **/bin/
 **/obj/
 
+# Keep test fixture obj/ directory (needed by integration tests)
+!src/test/fixtures/obj/
+!src/test/fixtures/obj/**
+
 # Dependencies
 node_modules/
 

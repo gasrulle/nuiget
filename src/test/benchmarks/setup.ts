@@ -23,10 +23,10 @@ export function mockServiceHttp(service: NuGetService): void {
 
     vi.spyOn(svc as never, 'fetchJson' as never).mockImplementation(async (url: string) => {
         const lower = url.toLowerCase();
-        if (lower.includes('/query') || lower.includes('searchqueryservice')) return searchResponse;
-        if (lower.includes('flatcontainer') && lower.includes('index.json')) return versionList;
-        if (lower.includes('registration5-semver1')) return registrationResponse;
-        if (lower.includes('autocomplete')) return autocompleteData;
+        if (lower.includes('/query') || lower.includes('searchqueryservice')) { return searchResponse; }
+        if (lower.includes('flatcontainer') && lower.includes('index.json')) { return versionList; }
+        if (lower.includes('registration5-semver1')) { return registrationResponse; }
+        if (lower.includes('autocomplete')) { return autocompleteData; }
         return null;
     });
 
