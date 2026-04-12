@@ -2,7 +2,7 @@
  * Benchmarks for markdown rendering with various README sizes.
  * Uses jsdom environment for DOMPurify.
  */
-import { bench, describe } from 'vitest';
+import { beforeAll, bench, describe } from 'vitest';
 
 // Note: renderMarkdownToHtml requires DOM (DOMPurify).
 // These benchmarks only run in jsdom environment.

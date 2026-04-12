@@ -56,17 +56,19 @@ describe('Keyboard Navigation', () => {
         const tabBar = await findByTestId(webview, 'tab-bar');
         const buttons = await tabBar.findElements({ css: 'button' });
 
-        if (buttons.length > 0) {
-            await buttons[0].click();
-            await new Promise(resolve => setTimeout(resolve, 500));
+        expect(buttons.length, 'Tab bar should contain tab buttons').to.be.greaterThan(0);
 
-            // Should be able to press Enter to select
-            const driver = webview.getDriver();
-            await driver.actions().sendKeys(Key.ENTER).perform();
-            await new Promise(resolve => setTimeout(resolve, 500));
+        await buttons[0].click();
+        await new Promise(resolve => setTimeout(resolve, 500));
 
-            expect(true).to.be.true; // No crash
-        }
+        // Should be able to press Enter to select
+        const driver = webview.getDriver();
+        await driver.actions().sendKeys(Key.ENTER).perform();
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        // Verify the tab button is still accessible after keyboard interaction
+        const activeElement = await driver.switchTo().activeElement();
+        expect(activeElement).to.not.be.undefined;
     });
 
     it('should handle Escape key in search', async function () {
@@ -82,6 +84,8 @@ describe('Keyboard Navigation', () => {
         await driver.actions().sendKeys(Key.ESCAPE).perform();
         await new Promise(resolve => setTimeout(resolve, 500));
 
-        expect(true).to.be.true; // No crash
+        // Verify the search input is still accessible after Escape
+        const value = await searchInput.getAttribute('value');
+        expect(value).to.be.a('string');
     });
 });

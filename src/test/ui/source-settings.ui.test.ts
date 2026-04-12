@@ -23,37 +23,37 @@ describe('Source Settings', () => {
 
         // Find and click the source settings gear icon
         // The gear icon is typically next to the source selector
+        let gearBtn;
         try {
-            const gearBtn = await webview.findWebElement(
+            gearBtn = await webview.findWebElement(
                 { css: '.source-settings-btn, [title*="Source"], [aria-label*="Source Settings"]' },
             );
-            await gearBtn.click();
-            await new Promise(resolve => setTimeout(resolve, 1000));
-
-            const overlayExists = await hasTestId(webview, 'source-settings-overlay');
-            expect(overlayExists, 'Source settings overlay should open').to.be.true;
         } catch {
-            // Gear icon may have a different selector — test passes if no crash
-            expect(true).to.be.true;
+            return this.skip();
         }
+        await gearBtn.click();
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
+        const overlayExists = await hasTestId(webview, 'source-settings-overlay');
+        expect(overlayExists, 'Source settings overlay should open').to.be.true;
     });
 
     it('should show source settings modal', async function () {
         this.timeout(60_000);
         webview = await openNuGetPanelWebview();
 
+        let gearBtn;
         try {
-            const gearBtn = await webview.findWebElement(
+            gearBtn = await webview.findWebElement(
                 { css: '.source-settings-btn, [title*="Source"], [aria-label*="Source Settings"]' },
             );
-            await gearBtn.click();
-            await new Promise(resolve => setTimeout(resolve, 1000));
-
-            const modalExists = await hasTestId(webview, 'source-settings-modal');
-            expect(typeof modalExists).to.equal('boolean');
         } catch {
-            // Skip if gear icon not found
-            expect(true).to.be.true;
+            return this.skip();
         }
+        await gearBtn.click();
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
+        const modalExists = await hasTestId(webview, 'source-settings-modal');
+        expect(typeof modalExists).to.equal('boolean');
     });
 });

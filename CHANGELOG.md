@@ -7,10 +7,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Fixed
-
-- **Resolved `diff` and `serialize-javascript` vulnerabilities**
-
 ## [1.18.0] - 2026-04-12
 
 ### Added
@@ -31,6 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Full main panel refresh after sidebar operations**
 - **Redundant Installed tab re-fetch on tab switch**
 - **Benchmark suite not working**
+- **Resolved `diff` and `serialize-javascript` vulnerabilities**
 
 ### Changed
 

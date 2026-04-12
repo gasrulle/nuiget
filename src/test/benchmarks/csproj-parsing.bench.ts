@@ -5,7 +5,7 @@
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
-import { beforeAll, bench, describe, vi } from 'vitest';
+import { afterAll, beforeAll, bench, describe, vi } from 'vitest';
 import { NuGetProjectService } from '../../services/NuGetProjectService';
 
 let tempDir: string;
@@ -37,9 +37,10 @@ beforeAll(() => {
         csprojPaths[count] = filePath;
     }
 
-    return () => {
-        fs.rmSync(tempDir, { recursive: true, force: true });
-    };
+});
+
+afterAll(() => {
+    fs.rmSync(tempDir, { recursive: true, force: true });
 });
 
 describe('.csproj parsing', () => {

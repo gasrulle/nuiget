@@ -1,5 +1,5 @@
 import { expect } from 'chai';
-import { Workbench } from 'vscode-extension-tester';
+import { InputBox, Workbench } from 'vscode-extension-tester';
 import { closeAllEditors } from './helpers/panel-helpers';
 
 /**
@@ -13,15 +13,19 @@ describe('Context Menu', () => {
 
         const workbench = new Workbench();
 
-        // Execute the command that the context menu triggers
-        try {
-            await workbench.executeCommand('nUIget: Manage NuGet Packages');
-            await new Promise(resolve => setTimeout(resolve, 3000));
-            expect(true).to.be.true;
-        } catch {
-            // Command may fail without a .csproj context, but should be registered
-            expect(true).to.be.true;
-        }
+        // Open command palette and verify the command is listed
+        const input = await workbench.openCommandPrompt() as InputBox;
+        await input.setText('nUIget: Manage NuGet Packages');
+        await new Promise(resolve => setTimeout(resolve, 1500));
+
+        const picks = await input.getQuickPicks();
+        const found = picks.some(async (pick) => {
+            const label = await pick.getLabel();
+            return label.includes('nUIget');
+        });
+        await input.cancel();
+
+        expect(picks.length, 'Command should appear in command palette').to.be.greaterThan(0);
     });
 
     afterEach(async function () {

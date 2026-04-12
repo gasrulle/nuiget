@@ -62,9 +62,9 @@ export default defineConfig({
                 },
             },
         ],
-        benchmark: {
-            include: ['src/test/benchmarks/**/*.bench.ts'],
-            outputJson: 'benchmarks/latest.json',
-        },
+    },
+    benchmark: {
+        include: ['src/test/benchmarks/**/*.bench.ts'],
+        outputJson: 'benchmarks/latest.json',
     },
 });

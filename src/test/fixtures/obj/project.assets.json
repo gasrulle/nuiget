@@ -296,20 +296,20 @@
     ]
   },
   "packageFolders": {
-    "C:\\Users\\Mattias\\.nuget\\packages\\": {}
+    "C:\\Users\\testuser\\.nuget\\packages\\": {}
   },
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\github\\nuiget\\src\\test\\fixtures\\sample.csproj",
+      "projectUniqueName": "C:\\project\\src\\test\\fixtures\\sample.csproj",
       "projectName": "sample",
-      "projectPath": "C:\\github\\nuiget\\src\\test\\fixtures\\sample.csproj",
-      "packagesPath": "C:\\Users\\Mattias\\.nuget\\packages\\",
-      "outputPath": "C:\\github\\nuiget\\src\\test\\fixtures\\obj\\",
+      "projectPath": "C:\\project\\src\\test\\fixtures\\sample.csproj",
+      "packagesPath": "C:\\Users\\testuser\\.nuget\\packages\\",
+      "outputPath": "C:\\project\\src\\test\\fixtures\\obj\\",
       "projectStyle": "PackageReference",
       "configFilePaths": [
-        "C:\\github\\nuiget\\src\\test\\fixtures\\NuGet.Config",
-        "C:\\Users\\Mattias\\AppData\\Roaming\\NuGet\\NuGet.Config"
+        "C:\\project\\src\\test\\fixtures\\NuGet.Config",
+        "C:\\Users\\testuser\\AppData\\Roaming\\NuGet\\NuGet.Config"
       ],
       "originalTargetFrameworks": [
         "net8.0"
