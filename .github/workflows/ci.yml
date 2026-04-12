@@ -127,7 +127,40 @@ jobs:
         run: npx tsc -p tsconfig.test.json
 
       - name: Run E2E tests
-        run: xvfb-run -a npm run test:e2e
+        run: xvfb-run -a npm run test:e2e 2>&1 | tee e2e-output.txt
+
+      - name: Add E2E summary
+        if: always()
+        run: |
+          {
+            echo "## 🧪 E2E Test Results"
+            echo ""
+            if [ -f e2e-output.txt ]; then
+              CLEAN=$(sed 's/\x1b\[[0-9;]*[a-zA-Z]//g' e2e-output.txt)
+              PASSING=$(echo "$CLEAN" | grep -oP '\d+(?= passing)' | tail -1)
+              FAILING=$(echo "$CLEAN" | grep -oP '\d+(?= failing)' | tail -1)
+              PENDING=$(echo "$CLEAN" | grep -oP '\d+(?= pending)' | tail -1)
+              PASSING=${PASSING:-0}
+              FAILING=${FAILING:-0}
+              PENDING=${PENDING:-0}
+              if [ "$PASSING" = "0" ] && [ "$FAILING" = "0" ]; then
+                echo "⚠️ Could not parse test results from output"
+              else
+                echo "| Metric | Count |"
+                echo "|--------|------:|"
+                echo "| ✅ Passing | $PASSING |"
+                if [ "$FAILING" != "0" ]; then
+                  echo "| ❌ Failing | $FAILING |"
+                fi
+                if [ "$PENDING" != "0" ]; then
+                  echo "| ⏭️ Pending | $PENDING |"
+                fi
+              fi
+            else
+              echo "⚠️ No test output captured"
+            fi
+            echo ""
+          } >> "$GITHUB_STEP_SUMMARY"
 
   build:
     name: Build & Package
@@ -176,14 +209,31 @@ jobs:
       - run: npm ci
 
       - name: Run benchmarks against baseline
-        run: npm run bench:compare
+        run: npx vitest bench --run --project backend --compare benchmarks/baseline.json --outputJson benchmarks/latest.json
 
       - name: Add benchmark summary
         if: always()
         run: |
-          if [ -f benchmarks/latest.json ]; then
-            echo "## Benchmark Results" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "Benchmarks compared against committed \`benchmarks/baseline.json\`." >> $GITHUB_STEP_SUMMARY
-            echo "To update the baseline: \`npm run bench:save\` and commit." >> $GITHUB_STEP_SUMMARY
-          fi
+          {
+            echo "## ⚡ Benchmark Results"
+            echo ""
+            if [ -f benchmarks/latest.json ]; then
+              node -e "
+                const d = require('./benchmarks/latest.json');
+                const files = d.files.length;
+                const groups = d.files.reduce((s, f) => s + f.groups.length, 0);
+                const benches = d.files.reduce((s, f) => s + f.groups.reduce((gs, g) => gs + g.benchmarks.length, 0), 0);
+                console.log('| Metric | Count |');
+                console.log('|--------|------:|');
+                console.log('| Benchmark files | ' + files + ' |');
+                console.log('| Benchmark groups | ' + groups + ' |');
+                console.log('| Total benchmarks | ' + benches + ' |');
+              "
+              echo ""
+              echo "Compared against committed \`benchmarks/baseline.json\`."
+              echo "To update the baseline: \`npm run bench:save\` and commit."
+            else
+              echo "⚠️ No benchmark output generated"
+            fi
+            echo ""
+          } >> "$GITHUB_STEP_SUMMARY"
