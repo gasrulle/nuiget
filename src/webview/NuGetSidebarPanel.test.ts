@@ -505,14 +505,16 @@ describe('NuGetSidebarProvider', () => {
             }));
         });
 
-        it('getPackageVersions fetches and sends versions', async () => {
+        it('getPackageVersions fetches and sends versions with echoed source and prerelease', async () => {
             (service as any).getPackageVersions.mockResolvedValue(['1.0', '2.0']);
-            await messageListener!({ type: 'getPackageVersions', packageId: 'Pkg', includePrerelease: true });
+            await messageListener!({ type: 'getPackageVersions', packageId: 'Pkg', source: 'https://nuget.org', includePrerelease: true });
 
             expect(view.webview.postMessage).toHaveBeenCalledWith(expect.objectContaining({
                 type: 'packageVersions',
                 packageId: 'Pkg',
-                versions: ['1.0', '2.0']
+                versions: ['1.0', '2.0'],
+                source: 'https://nuget.org',
+                includePrerelease: true
             }));
         });
     });

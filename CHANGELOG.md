@@ -20,6 +20,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Cache key race condition on source/prerelease switch** — `packageVersions` and `packageMetadata` responses now echo source and includePrerelease from the request; frontend cache keys use echoed values instead of current state refs that may have changed during the async roundtrip
+- **Full main panel refresh after sidebar operations** — Sidebar-initiated operations now send a scoped refresh (`nuiget.refreshPackagesScoped`) that re-fetches installed packages but skips the expensive full `checkPackageUpdates` cycle, since the sidebar already performed a scoped update check
+- **Redundant Installed tab re-fetch on tab switch** — Removed the `getInstalledPackages` re-fetch when switching back to the Installed tab; the file watcher and cross-panel sync already keep installed packages current via `retainContextWhenHidden`
 - **Benchmark suite not working** — Service benchmarks (search, HTTP, metadata, source-health, update-checking) were hanging due to MSW inability to intercept HTTP/2 and Http2Client's custom HTTPS agent. Replaced MSW with direct `fetchJson`/`fetchJsonWithDetails` spies returning fixture data. Benchmarks now run in ~90s under the `backend` vitest project only.
 
 ### Changed

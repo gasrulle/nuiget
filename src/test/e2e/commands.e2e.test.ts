@@ -32,6 +32,12 @@ suite('Commands', () => {
         );
     });
 
+    test('nuiget.refreshPackagesScoped does not throw', async () => {
+        await assert.doesNotReject(
+            Promise.resolve(vscode.commands.executeCommand('nuiget.refreshPackagesScoped', { type: 'install', packageId: 'TestPkg' }))
+        );
+    });
+
     test('nuiget.clearHttpCache completes without error', async () => {
         await assert.doesNotReject(
             Promise.resolve(vscode.commands.executeCommand('nuiget.clearHttpCache'))

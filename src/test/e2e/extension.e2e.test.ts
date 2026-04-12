@@ -39,6 +39,7 @@ suite('Extension Activation', () => {
         const expectedCommands = [
             'nuiget.openManager',
             'nuiget.refreshPackages',
+            'nuiget.refreshPackagesScoped',
             'nuiget.sidebar.selectSource',
             'nuiget.sidebar.selectProject',
             'nuiget.sidebar.togglePrerelease',
