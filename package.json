@@ -268,7 +268,7 @@
         "check-types": "tsc --noEmit",
         "package:vsix": "npm install && npm run check-types && npm test && npm run package && node -e \"const v=require('./package.json').version;require('child_process').execSync('npx vsce package --out nuiget-v'+v+'.vsix',{stdio:'inherit'})\"",
         "lint": "eslint src",
-        "test": "vitest run --project backend --project frontend",
+        "test": "vitest run",
         "test:watch": "vitest",
         "test:backend": "vitest run --project backend",
         "test:frontend": "vitest run --project frontend",

@@ -16,7 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **E2E test infrastructure** — 8 test files using @vscode/test-electron + Mocha for Extension Host testing (extension activation, commands, panel, sidebar, install/update flows, source management, file watcher, settings persistence)
 - **UI test infrastructure** — 11 test files using vscode-extension-tester (ExTester) for Selenium-based UI testing (activation, panel open, search/install/update/remove flows, sidebar interaction, source settings, keyboard navigation, context menu, theme switching)
 - **data-testid attributes** — Added to 9 React components (App, SidebarApp, PackageDetailsPanel, InstalledTab, UpdatesTab, SourceSettingsOverlay, DraggableSash, PackageRow, SectionHeader) for UI test targeting
-- **VS Code tasks for test layers** — 7 new tasks: Run Integration Tests, Run E2E Tests, Run UI Tests, Run Benchmarks, Save Benchmark Baseline, Compare Benchmarks, Run All Test Layers
+- **VS Code tasks for test layers** — 7 new tasks: Run Integration Tests, Run E2E Tests, Run UI Tests, Run Benchmarks, Save Benchmark Baseline, Compare Benchmarks, Run All Tests (Unit + Integration)
 - **npm scripts for test layers** — `test:integration`, `test:e2e`, `test:ui`, `bench`, `bench:save`, `bench:compare`
 - **Benchmark baseline comparison in CI** — PR benchmark job compares against committed `benchmarks/baseline.json` and reports to GitHub Actions summary
 
