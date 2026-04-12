@@ -118,6 +118,18 @@ export function activate(context: vscode.ExtensionContext) {
         })
     );
 
+    context.subscriptions.push(
+        vscode.commands.registerCommand('nuiget.refreshPackagesScoped', (operation?: { type: string; packageId?: string; packageIds?: string[]; projectPath?: string }) => {
+            // Internal command: sidebar calls this with operation scope after install/update/remove
+            // to sync main panel without triggering a full update check (sidebar already checked)
+            if (operation) {
+                NuGetPanel.refreshScoped(operation);
+            } else {
+                NuGetPanel.refresh();
+            }
+        })
+    );
+
     // Sidebar title bar commands
     // Wire up cross-panel prerelease sync: main panel → sidebar
     NuGetPanel.onPrereleaseChanged = (value: boolean) => {

@@ -36,16 +36,21 @@ Failing to consult ARCHITECTURE.md risks re-introducing bugs, duplicating logic,
 ## MANDATORY: Tests
 Tests are **NOT OPTIONAL**. Every code change must satisfy all of the following:
 
-1. **Run tests before finishing.** Run `npm test` (or `npm run package:vsix`) and confirm **all tests pass**. Never submit, commit, or declare work complete with failing tests. If a test fails, fix it before moving on.
+1. **Run ALL test suites before finishing.** Run these commands and confirm **all pass** before declaring work complete:
+   - `npm test` — Unit tests (backend + frontend, ~1225 tests)
+   - `npm run bench` — Benchmarks (~57 benchmarks, ~90s)
+   - `npm run test:ui` — UI tests (ExTester/Selenium, requires VS Code + VSIX build). If this command fails due to environment constraints (no display, CI-only), note it in your summary but do not block on it.
+   If any test or benchmark fails, fix it before moving on. Never submit, commit, or declare work complete with failures.
 2. **Update existing tests.** When changing behavior, update every test that covers the changed code path so it reflects the new behavior. Do NOT delete or skip tests to make the suite pass.
 3. **Add new tests.** When adding new functions, message handlers, React components, hooks, or non-trivial logic, write tests for them. Follow the existing patterns in the codebase (see `src/test/` helpers and fixtures). At minimum, cover the happy path and one error/edge case.
-4. **Maintain coverage thresholds.** The CI pipeline enforces minimum coverage (65% lines, 50% branches, 55% functions). New code must not drop coverage below these thresholds. Run `npm run test:coverage` to verify.
-5. **Never skip, `.only`, or comment-out tests** as a workaround. If a test is flaky or blocking, fix the root cause.
+4. **Maintain benchmark suite.** When adding or changing performance-sensitive code (services, caching, HTTP, parsing), add or update benchmarks in `src/test/benchmarks/`. Service benchmarks use `mockServiceHttp(service)` from `setup.ts` — never use MSW (it can't intercept HTTP/2). After performance-affecting changes, regenerate the baseline: `npm run bench:save` and commit `benchmarks/baseline.json`.
+5. **Maintain coverage thresholds.** The CI pipeline enforces minimum coverage (65% lines, 50% branches, 55% functions). New code must not drop coverage below these thresholds. Run `npm run test:coverage` to verify.
+6. **Never skip, `.only`, or comment-out tests** as a workaround. If a test is flaky or blocking, fix the root cause.
 
 Test infrastructure details are in the **Testing** section of ARCHITECTURE.md.
 
 ## MANDATORY: VSIX Packaging Verification
-After making changes to TypeScript files (especially `NuGetService.ts`, `NuGetPanel.ts`, or `extension.ts`), run `npm run package:vsix` to verify the build succeeds. This runs the full pipeline: `install → check-types → test (945 tests) → lint+bundle → vsce package`. TypeScript errors (typos, missing properties) will break VSIX packaging even if `npm run watch` succeeds.
+After making changes to TypeScript files (especially `NuGetService.ts`, `NuGetPanel.ts`, or `extension.ts`), run `npm run package:vsix` to verify the build succeeds. This runs the full pipeline: `install → check-types → test → lint+bundle → vsce package`. TypeScript errors (typos, missing properties) will break VSIX packaging even if `npm run watch` succeeds.
 
 ## MANDATORY: Documentation Updates
 After completing ANY feature, fix, or change, update these files:
@@ -86,11 +91,15 @@ npm run package:vsix # Runs: install → check-types → test → lint+bundle �
 
 ### Testing
 ```bash
-npm test               # Run all tests (backend + frontend)
-npm run test:watch      # Watch mode
+npm test               # Run all unit tests (backend + frontend) — MANDATORY before finishing
+npm run bench          # Run all benchmarks — MANDATORY before finishing
+npm run test:ui        # UI tests (ExTester/Selenium) — MANDATORY (env-dependent, see Rule 1)
+npm run test:watch      # Watch mode (unit tests)
 npm run test:backend    # Backend tests only (Node.js)
 npm run test:frontend   # Frontend tests only (jsdom)
 npm run test:coverage   # Generate coverage report
+npm run bench:save      # Save benchmark baseline (commit after perf changes)
+npm run bench:compare   # Compare current run against baseline
 ```
 The VS Code task "Run Tests" (`Ctrl+Shift+T` or Task menu) runs `npm test` with output visible in terminal.
 
@@ -139,6 +148,9 @@ The VS Code task "Run Tests" (`Ctrl+Shift+T` or Task menu) runs `npm test` with 
 | Details panel shows wrong package | Clear both `selectedPackage` AND `selectedTransitivePackage` — mutually exclusive |
 | Stale packages on project switch | `selectedProject` effect must `setInstalledPackages([])` before fetching. Without it, stale data triggers `checkPackageUpdates` for the wrong project. |
 | Version dropdown "Loading" on re-click | `useRef<LRUMap>` frontend cache. Check cache before fetching. |
+| Cache key uses echoed response values | `packageVersions` and `packageMetadata` responses echo `source` (and `includePrerelease`) from the request. Frontend cache keys use echoed values — never `selectedSourceRef.current` or `includePrereleaseRef.current`, which may have changed during the async roundtrip. |
+| Installed tab no re-fetch on switch-back | `hasVisitedInstalledTabRef` marks first visit only. Subsequent visits rely on file watcher + cross-panel sync (`retainContextWhenHidden: true`) to keep `installedPackages` current. Don't re-add re-fetch on tab switch. |
+| `refreshScoped` vs `refresh` message | `refreshScoped` sets `skipNextUpdateCheckRef.current = true` + re-fetches only installed packages. Used by sidebar-initiated `_notifyMainPanel(operation)`. `refresh` is the full reload path (file watcher, manual refresh). Don't send `refresh` after sidebar operations — costs ~2s extra for redundant `checkPackageUpdates`. |
 | installedPackages cascading renders | Content comparison in setter: compare `id@version` joined keys, return `prev` if unchanged |
 | Source removal stale closure | `handleMessage` is `useCallback([])` — `sources` state is stale. Backend sends `removedSourceUrl`, frontend compares via `selectedSourceRef.current`. |
 | **Transitive metadata ref mirror** | Use `transitiveLoadingMetadataRef = useRef<Set>()` as synchronous mirror. Read ref in prefetch effect, update both ref and state. Required because React 19 defers setState updaters. |
@@ -152,7 +164,7 @@ The VS Code task "Run Tests" (`Ctrl+Shift+T` or Task menu) runs `npm test` with 
 | `skipNextUpdateCheckRef` skips update re-check | After an operation with known outcome, set `skipNextUpdateCheckRef.current = true` before requesting `getInstalledPackages`. The `[installedPackages]` effect checks and resets the flag, skipping the redundant `checkPackageUpdates`. The `selectedProject` effect resets the flag to `false` — without this, a lingering flag would skip the else-if branch that clears stale updates after project switch. |
 | `notifySidebarOfChange` vs `refreshSidebar` | `notifySidebarOfChange(operation)` is the lightweight post-operation path — skips `clearNuGetHttpCache()` and source re-fetch, sends `packageChanged` message for surgical UI updates. Passes `scope` to `checkUpdatesInBackground(true, skipMainPanelNotify=true, scope)` for selective cache invalidation (only affected packages) and scoped project re-checking (only affected project). `refreshSidebar()` is for manual refresh button and file watcher only. Don't swap them. |
 | `checkUpdatesInBackground` scope parameter | Third parameter `scope?: { packageIds?: string[]; projectPath?: string }`. When `packageIds` provided, calls `clearVersionsCacheForPackages(ids)` instead of `clearVersionsCache()`. When `projectPath` provided, only re-checks that project and merges with cached `_pendingProjectUpdates`. Scope is merged when queued via `_forceCheckPending` (union of packageIds, projectPath cleared if different). |
-| `checkUpdatesInBackground` skipMainPanelNotify | When the main panel initiates an operation, `notifySidebarOfChange` passes `skipMainPanelNotify=true` to avoid a redundant `refresh` → `getInstalledPackages` → `checkPackageUpdates` → icon resolution cycle on the main panel. Without this, every install/update/remove causes a slow second reload visible to the user. Only callers where the main panel doesn't already know about the change (file watcher, periodic check, sidebar operations) should allow `_notifyMainPanel()`. |
+| `checkUpdatesInBackground` skipMainPanelNotify | When the main panel initiates an operation, `notifySidebarOfChange` passes `skipMainPanelNotify=true` to avoid a redundant `refresh` → `getInstalledPackages` → `checkPackageUpdates` → icon resolution cycle on the main panel. Without this, every install/update/remove causes a slow second reload visible to the user. Only callers where the main panel doesn't already know about the change (file watcher, periodic check) should allow full `_notifyMainPanel()`. Sidebar operations use `_notifyMainPanel(operation)` which dispatches `nuiget.refreshPackagesScoped` for a lightweight scoped refresh. |
 | Bulk ops must include packageIds | `notifyOtherPanel` calls in `NuGetOperations.ts` bulk functions must include `packageIds` (successful package IDs). `notifySidebarOfChange` merges `packageId` (single) and `packageIds` (bulk) into a single list for selective cache invalidation. Without `packageIds`, bulk operations fall back to full cache clear. |
 | Sidebar `packageChanged` no getInstalledPackages | The sidebar `packageChanged` handler must NOT send `getInstalledPackages` — the `checkUpdatesInBackground` call already provides fresh installed data. Sending it caused a redundant re-fetch. |
 | `onPackageChanged` only on success | Single-op handlers (`installPackage`, `updatePackage`, `removePackage`) must only call `NuGetPanel.onPackageChanged?.()` when the operation succeeded. The `success` variable is hoisted outside `withProgress` (e.g. `let installSuccess = false;`). Without this guard, a failed operation still triggers sidebar optimistic updates that remove the package from the updates list. `bulkInstall` must check `results.some(r => r.success)`. |
@@ -251,6 +263,10 @@ The VS Code task "Run Tests" (`Ctrl+Shift+T` or Task menu) runs `npm test` with 
 | `coverage/` inflates VSIX | `.vscodeignore` excludes `coverage/**`. Don't remove this exclusion. |
 | Test file ESLint rules | `no-explicit-any` and `no-non-null-assertion` are turned OFF for test files (`src/**/*.test.{ts,tsx}`, `src/test/**/*.{ts,tsx}`) in `eslint.config.mjs`. Don't add these rules back for tests. |
 | Singleton `resetInstance()` | `CredentialService.resetInstance()` and `Http2Client.resetInstance()` exist for test isolation. `instance` fields are typed `Type \| undefined` (not `Type`). |
+| Benchmarks mock HTTP at NuGetService level | Service benchmarks spy on `fetchJson`/`fetchJsonWithDetails` directly (not MSW). MSW can't intercept Http2Client's HTTP/2 or custom HTTPS agent. Use `mockServiceHttp(service)` from `setup.ts`. |
+| Benchmarks run in backend project only | npm bench scripts use `--project backend`. Don't remove — without it, benchmarks run 3x (once per vitest project). |
+| WorkspaceCache spam in benchmarks | `[WorkspaceCache] Cache not initialized` warnings in stderr are expected. The cache gracefully returns early — doesn't block. |
+| `benchmarks/baseline.json` is committed | Regenerate with `npm run bench:save` after performance-affecting changes. CI compares PRs against this baseline. |
 
 # Debugging Workflow
 1. Add temporary `console.log()` with distinctive prefix (e.g., `[DEBUG-XYZ]`)

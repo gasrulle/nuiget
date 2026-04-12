@@ -903,7 +903,7 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
     ]);
 
     return (
-        <div className="content browse-content" style={{ display: activeTab === 'installed' ? '' : 'none' }}>
+        <div className="content browse-content" data-testid="installed-tab" style={{ display: activeTab === 'installed' ? '' : 'none' }}>
             <div className="split-panel">
                 <div ref={installedScrollRef} className="package-list-panel" style={{ width: `${splitPosition}%` }}>
                     {!isAllProjects && loadingInstalled ? (
@@ -987,6 +987,7 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
                                 {isAllProjects ? (
                                     <button
                                         className="btn btn-danger"
+                                        data-testid="uninstall-selected-button"
                                         onClick={handleUninstallSelectedAllProjects}
                                         disabled={loadingAllProjectsInstalled || selectedUninstallsAllProjects.size === 0 || uninstallingAll}
                                     >
@@ -995,6 +996,7 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
                                 ) : (
                                     <button
                                         className="btn btn-danger"
+                                        data-testid="uninstall-selected-button"
                                         onClick={handleUninstallSelected}
                                         disabled={visibleSelectedCount === 0 || uninstallingAll}
                                     >

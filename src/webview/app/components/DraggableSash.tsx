@@ -107,6 +107,7 @@ function DraggableSash({ onDrag, onReset, onDragEnd, orientation = 'horizontal' 
         <div
             ref={sashRef}
             className={`sash${isDragging ? ' dragging' : ''}${isHovered ? ' hover' : ''}${isVertical ? ' sash-vertical' : ''}`}
+            data-testid="draggable-sash"
             role="separator"
             aria-orientation={isVertical ? 'horizontal' : 'vertical'}
             aria-label="Drag to resize panels"

@@ -1,0 +1,40 @@
+{
+    "version": "3.0.0",
+    "resources": [
+        {
+            "@id": "https://api.nuget.org/v3/registration5-semver1/",
+            "@type": "RegistrationsBaseUrl",
+            "comment": "Base URL of NuGet package registration info"
+        },
+        {
+            "@id": "https://api.nuget.org/v3-flatcontainer/",
+            "@type": "PackageBaseAddress/3.0.0",
+            "comment": "Base URL of where NuGet packages are stored"
+        },
+        {
+            "@id": "https://azuresearch-usnc.nuget.org/query",
+            "@type": "SearchQueryService",
+            "comment": "Query endpoint of NuGet Search service"
+        },
+        {
+            "@id": "https://azuresearch-usnc.nuget.org/autocomplete",
+            "@type": "SearchAutocompleteService",
+            "comment": "Autocomplete endpoint of NuGet Search service"
+        },
+        {
+            "@id": "https://api.nuget.org/v3/registration5-semver1/",
+            "@type": "RegistrationsBaseUrl/3.6.0",
+            "comment": "Base URL of NuGet package registration info (SemVer 2.0.0)"
+        },
+        {
+            "@id": "https://api.nuget.org/v3/vulnerability/index.json",
+            "@type": "VulnerabilityInfo/6.7.0",
+            "comment": "Vulnerability info"
+        },
+        {
+            "@id": "https://api.nuget.org/v3/catalog0/index.json",
+            "@type": "Catalog/3.0.0",
+            "comment": "NuGet Catalog"
+        }
+    ]
+}

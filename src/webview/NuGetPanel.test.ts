@@ -220,6 +220,23 @@ describe('NuGetPanel', () => {
     });
 
     // ──────────────────────────────────────────────
+    // Static method: refreshScoped
+    // ──────────────────────────────────────────────
+    describe('refreshScoped', () => {
+        it('sends refreshScoped message with operation when panel exists', () => {
+            NuGetPanel.createOrShow(vscode.Uri.file('/ext'), mockContext, mockOutputChannel, mockService as any);
+            const operation = { type: 'install', packageId: 'Pkg', projectPath: '/p.csproj' };
+            NuGetPanel.refreshScoped(operation);
+            expect(mockPanel.webview.postMessage).toHaveBeenCalledWith({ type: 'refreshScoped', operation });
+        });
+
+        it('does nothing when no panel exists', () => {
+            NuGetPanel.refreshScoped({ type: 'install', packageId: 'Pkg' });
+            expect(mockPanel.webview.postMessage).not.toHaveBeenCalled();
+        });
+    });
+
+    // ──────────────────────────────────────────────
     // Cross-panel sync
     // ──────────────────────────────────────────────
     describe('cross-panel sync', () => {
@@ -417,26 +434,29 @@ describe('NuGetPanel', () => {
             expect(searchResultCalls[0][0].query).toBe('new');
         });
 
-        it('getPackageVersions fetches and sends versions', async () => {
+        it('getPackageVersions fetches and sends versions with echoed source and prerelease', async () => {
             (mockService as any).getPackageVersions.mockResolvedValue(['1.0', '2.0']);
             await messageListener!({ type: 'getPackageVersions', packageId: 'Pkg', source: 'https://nuget.org', includePrerelease: true });
 
             expect(mockPanel.webview.postMessage).toHaveBeenCalledWith(expect.objectContaining({
                 type: 'packageVersions',
                 packageId: 'Pkg',
-                versions: ['1.0', '2.0']
+                versions: ['1.0', '2.0'],
+                source: 'https://nuget.org',
+                includePrerelease: true
             }));
         });
 
-        it('getPackageMetadata fetches and sends metadata', async () => {
+        it('getPackageMetadata fetches and sends metadata with echoed source', async () => {
             (mockService as any).getPackageMetadata.mockResolvedValue({ description: 'Test' });
-            await messageListener!({ type: 'getPackageMetadata', packageId: 'Pkg', version: '1.0' });
+            await messageListener!({ type: 'getPackageMetadata', packageId: 'Pkg', version: '1.0', source: 'https://nuget.org' });
 
             expect(mockPanel.webview.postMessage).toHaveBeenCalledWith(expect.objectContaining({
                 type: 'packageMetadata',
                 packageId: 'Pkg',
                 version: '1.0',
-                metadata: { description: 'Test' }
+                metadata: { description: 'Test' },
+                source: 'https://nuget.org'
             }));
         });
 

@@ -44,5 +44,8 @@ docs/**
 # Package manager files
 package-lock.json
 
+# Benchmarks
+benchmarks/**
+
 # Built packages
 *.vsix

@@ -91,6 +91,7 @@ export const PackageRow: React.FC<PackageRowProps> = ({
             aria-selected={!!selected}
             aria-label={`${packageId} ${displayVersion}`}
             data-package-id={packageId}
+            data-testid={`package-row-${packageId}`}
         >
             <div className="package-row-main">
                 <div className="package-row-header" title={`${packageId} ${displayVersion}`}>

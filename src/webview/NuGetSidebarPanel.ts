@@ -763,7 +763,9 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
                     this._postMessage({
                         type: 'packageVersions',
                         packageId: data.packageId,
-                        versions
+                        versions,
+                        source: data.source,
+                        includePrerelease: data.includePrerelease
                     });
                     break;
                 }
@@ -1125,7 +1127,7 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
         return {
             nugetService: this._nugetService,
             postMessage: (msg: unknown) => this._postMessage(msg),
-            notifyOtherPanel: () => NuGetSidebarProvider._notifyMainPanel(),
+            notifyOtherPanel: (op) => NuGetSidebarProvider._notifyMainPanel(op),
         };
     }
 
@@ -1135,10 +1137,16 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
         }
     }
 
-    /** Notify the main panel to refresh if it's open */
-    private static _notifyMainPanel(): void {
+    /** Notify the main panel to refresh if it's open.
+     * When operation scope is provided, sends a scoped refresh (skips expensive full update check).
+     * Falls back to full refresh for file-watcher and other non-operation callers. */
+    private static _notifyMainPanel(operation?: { type: string; packageId?: string; packageIds?: string[]; projectPath?: string }): void {
         // Import would be circular, so use command
-        vscode.commands.executeCommand('nuiget.refreshPackages');
+        if (operation) {
+            vscode.commands.executeCommand('nuiget.refreshPackagesScoped', operation);
+        } else {
+            vscode.commands.executeCommand('nuiget.refreshPackages');
+        }
     }
 
     private _getHtmlForWebview(webview: vscode.Webview): string {

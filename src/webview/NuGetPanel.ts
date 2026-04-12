@@ -96,6 +96,14 @@ export class NuGetPanel {
         }
     }
 
+    /** Scoped refresh: re-fetch installed packages but skip full update check
+     * (the sidebar already performed a scoped update check for the affected packages). */
+    public static refreshScoped(operation: { type: string; packageId?: string; packageIds?: string[]; projectPath?: string }) {
+        if (NuGetPanel.currentPanel) {
+            NuGetPanel.currentPanel._panel.webview.postMessage({ type: 'refreshScoped', operation });
+        }
+    }
+
     public selectProject(projectPath: string, initialTab?: 'installed' | 'updates') {
         this._postMessage({
             type: 'selectProject',
@@ -670,7 +678,9 @@ export class NuGetPanel {
                     this._postMessage({
                         type: 'packageVersions',
                         packageId: data.packageId,
-                        versions: versions
+                        versions: versions,
+                        source: data.source,
+                        includePrerelease: data.includePrerelease,
                     });
                     break;
                 }
@@ -685,7 +695,8 @@ export class NuGetPanel {
                         type: 'packageMetadata',
                         packageId: data.packageId,
                         version: data.version,
-                        metadata: metadata
+                        metadata: metadata,
+                        source: data.source,
                     });
                     break;
                 }

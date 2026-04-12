@@ -91,9 +91,64 @@ jobs:
             echo "| Statements | ${STATEMENTS}% | 65% |" >> $GITHUB_STEP_SUMMARY
           fi
 
+  e2e:
+    name: E2E Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Build extension
+        run: node esbuild.mjs --production
+
+      - name: Compile E2E tests
+        run: npx tsc -p tsconfig.test.json
+
+      - name: Run E2E tests
+        run: xvfb-run -a npm run test:e2e 2>&1 | tee e2e-output.txt
+
+      - name: Add E2E summary
+        if: always()
+        run: |
+          {
+            echo "## 🧪 E2E Test Results"
+            echo ""
+            if [ -f e2e-output.txt ]; then
+              CLEAN=$(sed 's/\x1b\[[0-9;]*[a-zA-Z]//g' e2e-output.txt)
+              PASSING=$(echo "$CLEAN" | grep -oP '\d+(?= passing)' | tail -1)
+              FAILING=$(echo "$CLEAN" | grep -oP '\d+(?= failing)' | tail -1)
+              PENDING=$(echo "$CLEAN" | grep -oP '\d+(?= pending)' | tail -1)
+              PASSING=${PASSING:-0}
+              FAILING=${FAILING:-0}
+              PENDING=${PENDING:-0}
+              if [ "$PASSING" = "0" ] && [ "$FAILING" = "0" ]; then
+                echo "⚠️ Could not parse test results from output"
+              else
+                echo "| Metric | Count |"
+                echo "|--------|------:|"
+                echo "| ✅ Passing | $PASSING |"
+                if [ "$FAILING" != "0" ]; then
+                  echo "| ❌ Failing | $FAILING |"
+                fi
+                if [ "$PENDING" != "0" ]; then
+                  echo "| ⏭️ Pending | $PENDING |"
+                fi
+              fi
+            else
+              echo "⚠️ No test output captured"
+            fi
+            echo ""
+          } >> "$GITHUB_STEP_SUMMARY"
+
   build:
     name: Build & Package
-    needs: [lint, test]
+    needs: [lint, test, e2e]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -122,3 +177,47 @@ jobs:
           echo "## 📦 VSIX Artifact" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**nuiget-v${VERSION}.vsix** — ready to publish" >> $GITHUB_STEP_SUMMARY
+
+  benchmark:
+    name: Benchmark
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Run benchmarks against baseline
+        run: npx vitest bench --run --project backend --compare benchmarks/baseline.json --outputJson benchmarks/latest.json
+
+      - name: Add benchmark summary
+        if: always()
+        run: |
+          {
+            echo "## ⚡ Benchmark Results"
+            echo ""
+            if [ -f benchmarks/latest.json ]; then
+              node -e "
+                const d = require('./benchmarks/latest.json');
+                const files = d.files.length;
+                const groups = d.files.reduce((s, f) => s + f.groups.length, 0);
+                const benches = d.files.reduce((s, f) => s + f.groups.reduce((gs, g) => gs + g.benchmarks.length, 0), 0);
+                console.log('| Metric | Count |');
+                console.log('|--------|------:|');
+                console.log('| Benchmark files | ' + files + ' |');
+                console.log('| Benchmark groups | ' + groups + ' |');
+                console.log('| Total benchmarks | ' + benches + ' |');
+              "
+              echo ""
+              echo "Compared against committed \`benchmarks/baseline.json\`."
+              echo "To update the baseline: \`npm run bench:save\` and commit."
+            else
+              echo "⚠️ No benchmark output generated"
+            fi
+            echo ""
+          } >> "$GITHUB_STEP_SUMMARY"

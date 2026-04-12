@@ -58,6 +58,7 @@ A Visual Studio-style NuGet package manager for VS Code with a modern split-pane
 | Command | Description |
 |---------|-------------|
 | `nUIget: Manage NuGet Packages` | Open the package manager panel |
+| `nUIget: Clear NuGet HTTP Cache` | Clear the dotnet NuGet HTTP cache (use when packages/versions seem stale) |
 
 <details>
 <summary><b>⌨️ Keyboard Shortcuts</b></summary>

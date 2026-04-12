@@ -81,8 +81,8 @@ const SourceSettingsOverlay = forwardRef<SourceSettingsOverlayHandle, SourceSett
         return (
             <>
                 {/* Source Settings Modal */}
-                <div className="source-settings-overlay" onClick={handleClose}>
-                    <div className="source-settings-modal" onClick={(e) => e.stopPropagation()}>
+                <div className="source-settings-overlay" data-testid="source-settings-overlay" onClick={handleClose}>
+                    <div className="source-settings-modal" data-testid="source-settings-modal" onClick={(e) => e.stopPropagation()}>
                         {/* Main Panel */}
                         <div className={`source-settings-main ${showAddSourcePanel ? 'slide-out' : ''}`}>
                             <div className="source-settings-header">
@@ -139,7 +139,7 @@ const SourceSettingsOverlay = forwardRef<SourceSettingsOverlayHandle, SourceSett
                         </div>
 
                         {/* Add Source Panel (slides in) */}
-                        <div className={`source-add-panel ${showAddSourcePanel ? 'slide-in' : ''}`}>
+                        <div className={`source-add-panel ${showAddSourcePanel ? 'slide-in' : ''}`} data-testid="add-source-panel">
                             <div className="source-settings-header">
                                 <button
                                     className="source-back-btn"

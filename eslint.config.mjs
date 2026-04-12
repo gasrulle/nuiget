@@ -41,6 +41,15 @@ export default tseslint.config(
         },
     },
     {
+        // E2E (Mocha), UI (ExTester/Chai), and benchmark tests use assertion styles and scaffolded imports
+        files: ['src/test/e2e/**/*.ts', 'src/test/ui/**/*.ts', 'src/test/benchmarks/**/*.ts'],
+        rules: {
+            '@typescript-eslint/no-unused-expressions': 'off',
+            '@typescript-eslint/no-require-imports': 'off',
+            '@typescript-eslint/no-unused-vars': 'off',
+        },
+    },
+    {
         ignores: ['out/**', 'dist/**', '**/*.d.ts'],
     }
 );

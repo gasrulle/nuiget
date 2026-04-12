@@ -1323,7 +1323,7 @@ export const SidebarApp: React.FC = () => {
 
     // ─── Render ──────────────────────────────────────────────────────────────
     return (
-        <div className="sidebar-app">
+        <div className="sidebar-app" data-testid="nuiget-sidebar">
             {/* VS Code-style indeterminate progress bar — above search, at top of view */}
             <div className={`sidebar-progress-container${loadingSearch || loadingInstalled || loadingUpdates || loadingAllUpdates || loadingAllInstalled ? ' active' : ''}`}
                 role="progressbar" aria-label="Searching">
@@ -1336,6 +1336,7 @@ export const SidebarApp: React.FC = () => {
                         ref={searchInputRef}
                         type="text"
                         className="sidebar-search"
+                        data-testid="sidebar-search-input"
                         placeholder="Search NuGet packages"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}

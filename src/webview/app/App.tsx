@@ -543,6 +543,28 @@ export const App: React.FC = () => {
                     }
                 }, 300);
                 break;
+            case 'refreshScoped':
+                // Scoped refresh from sidebar operation: re-fetch installed packages but skip
+                // the expensive full checkPackageUpdates (sidebar already did a scoped check)
+                if (refreshDebounceRef.current) { clearTimeout(refreshDebounceRef.current); }
+                refreshDebounceRef.current = setTimeout(() => {
+                    // Skip the automatic update check that fires when installedPackages changes —
+                    // the sidebar's checkUpdatesInBackground(force, skipMainPanelNotify=true, scope)
+                    // already performed a scoped version check for the affected packages.
+                    skipNextUpdateCheckRef.current = true;
+                    if (selectedProjectRef.current === ALL_PROJECTS_SENTINEL) {
+                        setLoadingAllProjectsUpdates(true);
+                        vscode.postMessage({
+                            type: 'checkAllProjectsUpdates',
+                            includePrerelease: includePrereleaseRef.current
+                        });
+                        setLoadingAllProjectsInstalled(true);
+                        vscode.postMessage({ type: 'checkAllProjectsInstalled' });
+                    } else if (selectedProjectRef.current) {
+                        vscode.postMessage({ type: 'getInstalledPackages', projectPath: selectedProjectRef.current });
+                    }
+                }, 300);
+                break;
             case 'packageVersions':
                 // Handle quicksearch version expansion
                 if (expandingQuickSearchPackageRef.current &&
@@ -575,9 +597,11 @@ export const App: React.FC = () => {
                 // Update versions for the selected package
                 if (selectedPackageRef.current && message.packageId === selectedPackageRef.current.id) {
                     setPackageVersions(message.versions);
-                    // Cache the versions in frontend cache
+                    // Cache the versions in frontend cache (use echoed request context, not current refs,
+                    // to avoid cache key mismatch if user changed source/prerelease between request and response)
                     if (message.versions.length > 0) {
-                        const cacheKey = `${message.packageId.toLowerCase()}|${selectedSourceRef.current === 'all' ? '' : selectedSourceRef.current}|${includePrereleaseRef.current}`;
+                        const echoedSource = message.source === 'all' || !message.source ? '' : message.source;
+                        const cacheKey = `${message.packageId.toLowerCase()}|${echoedSource}|${message.includePrerelease ?? includePrereleaseRef.current}`;
                         versionsCache.current.set(cacheKey, message.versions);
                     }
                     // Determine the correct version to select based on the current tab
@@ -608,9 +632,11 @@ export const App: React.FC = () => {
                 // Update metadata for the selected package
                 if (selectedPackageRef.current && message.packageId === selectedPackageRef.current.id) {
                     setPackageMetadata(message.metadata);
-                    // Cache the metadata
+                    // Cache the metadata (use echoed source from response, not current ref,
+                    // to avoid cache key mismatch if user changed source between request and response)
                     if (message.metadata) {
-                        const cacheKey = `${message.packageId.toLowerCase()}@${message.version || message.metadata.version}|${selectedSourceRef.current === 'all' ? '' : selectedSourceRef.current}`;
+                        const echoedSource = message.source === 'all' || !message.source ? '' : message.source;
+                        const cacheKey = `${message.packageId.toLowerCase()}@${message.version || message.metadata.version}|${echoedSource}`;
                         metadataCache.current.set(cacheKey, message.metadata);
                     }
                     setLoadingMetadata(false);
@@ -917,13 +943,12 @@ export const App: React.FC = () => {
     }, [selectedProject]);
 
     // Refresh installed packages when switching to installed tab (skip first visit to use prefetched data)
+    // Track first visit to installed tab (skip re-fetch; prefetched data is used).
+    // Subsequent visits no longer re-fetch because the file watcher and cross-panel
+    // sync keep installedPackages current via retainContextWhenHidden.
     useEffect(() => {
         if (activeTab === 'installed' && selectedProject && selectedProject !== ALL_PROJECTS_SENTINEL) {
-            if (hasVisitedInstalledTabRef.current) {
-                // Subsequent visit - refetch to pick up changes
-                setLoadingInstalled(true);
-                vscode.postMessage({ type: 'getInstalledPackages', projectPath: selectedProject });
-            } else {
+            if (!hasVisitedInstalledTabRef.current) {
                 // First visit - mark as visited, use prefetched data
                 hasVisitedInstalledTabRef.current = true;
             }
@@ -1728,7 +1753,7 @@ export const App: React.FC = () => {
         handleRemove, handleToggleDep]);
 
     return (
-        <div className="app">
+        <div className="app" data-testid="nuiget-app">
             <div className="header">
                 <h2>Manage NuGet packages</h2>
                 <div className="header-selectors">
@@ -1745,6 +1770,7 @@ export const App: React.FC = () => {
                             value={selectedProject}
                             onChange={(e) => setSelectedProject((e.target as HTMLSelectElement).value)}
                             className="project-selector"
+                            data-testid="project-selector"
                         >
                             {sortedProjects.length > 1 && (
                                 <option key={ALL_PROJECTS_SENTINEL} value={ALL_PROJECTS_SENTINEL}>
@@ -1763,6 +1789,7 @@ export const App: React.FC = () => {
                             value={selectedSource}
                             onChange={(e) => setSelectedSource((e.target as HTMLSelectElement).value)}
                             className="source-selector"
+                            data-testid="source-selector"
                         >
                             <option value="all">All Sources</option>
                             {enabledSources.map(s => {
@@ -1843,6 +1870,7 @@ export const App: React.FC = () => {
                     <input
                         ref={searchInputRef}
                         type="text"
+                        data-testid="search-input"
                         placeholder="Search packages... (@installed, @updates, @vulnerable)"
                         value={searchQuery}
                         onChange={(e) => {
@@ -2231,7 +2259,7 @@ export const App: React.FC = () => {
 
             {/* Tabs — hidden when showing browse search results */}
             {searchMode.mode !== 'browse' && (
-                <div className="tabs">
+                <div className="tabs" data-testid="tab-bar">
                     <button
                         ref={installedTabRef}
                         className={`tab ${activeTab === 'installed' ? 'active' : ''} ${isTabPending ? 'pending' : ''}`}
