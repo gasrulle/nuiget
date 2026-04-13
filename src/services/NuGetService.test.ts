@@ -2782,6 +2782,20 @@ describe('NuGetService', () => {
             );
             expect(result).toEqual([]);
         });
+
+        it('skips internal source resolution when preResolvedSources are provided', async () => {
+            const resolveSpy = vi.spyOn((service as any)._packageService, 'resolveSourcesForBatch');
+            const preResolved = [{ url: 'https://api.nuget.org/v3/index.json', endpoints: { SearchQueryService: ['https://api.nuget.org/query'] }, authHeader: undefined }];
+            vi.spyOn((service as any)._packageService, 'getPackageVersionsWithResolvedSources').mockResolvedValue(['1.0.0']);
+
+            await service.checkPackageUpdatesMinimal(
+                [{ id: 'Pkg', version: '1.0.0', versionType: 'standard' as const }],
+                false,
+                preResolved
+            );
+
+            expect(resolveSpy).not.toHaveBeenCalled();
+        });
     });
 
     // ──────────────────────────────────────────────

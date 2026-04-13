@@ -551,12 +551,17 @@ export async function queryAllProjectsUpdates(
     const projects = await nugetService.findProjects();
     const results: ProjectUpdatesResult[] = [];
 
+    // Pre-resolve sources once for ALL projects (avoids per-project re-discovery
+    // of service endpoints, auth headers, and health checks)
+    const resolvedSources = await nugetService.resolveSourcesForBatch();
+    if (resolvedSources.length === 0) { return []; }
+
     // Parallelize per-project fetching (up to 4 concurrent) for faster loading
     await batchedPromiseAll(projects, async (project) => {
         try {
             const installedPackages = await nugetService.getInstalledPackages(project.path, liteMode);
             if (installedPackages.length > 0) {
-                const updates = await nugetService.checkPackageUpdatesMinimal(installedPackages, includePrerelease);
+                const updates = await nugetService.checkPackageUpdatesMinimal(installedPackages, includePrerelease, resolvedSources);
                 if (updates.length > 0) {
                     results.push({
                         projectPath: project.path,

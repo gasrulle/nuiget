@@ -224,6 +224,10 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
                 ? projects.filter(p => p.path === scopedProjectPath)
                 : projects;
 
+            // Pre-resolve sources once for ALL projects (avoids per-project re-discovery
+            // of service endpoints, auth headers, and health checks)
+            const resolvedSources = await this._nugetService.resolveSourcesForBatch();
+
             // Check projects in parallel for faster display
             const projectResults = await Promise.all(projectsToCheck.map(async (project) => {
                 try {
@@ -231,7 +235,7 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
 
                     let updates: { id: string; installedVersion: string; latestVersion: string }[] = [];
                     if (installed.length > 0) {
-                        updates = await this._nugetService.checkPackageUpdatesMinimal(installed, this._includePrerelease);
+                        updates = await this._nugetService.checkPackageUpdatesMinimal(installed, this._includePrerelease, resolvedSources);
                     }
                     return { project, installed, updates };
                 } catch {

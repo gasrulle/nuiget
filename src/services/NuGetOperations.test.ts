@@ -458,11 +458,14 @@ describe('executeBulkRemoveAllProjects', () => {
 // ──────────────────────────────────────────────
 
 describe('queryAllProjectsUpdates', () => {
+    const mockResolvedSources = [{ url: 'https://api.nuget.org/v3/index.json', endpoints: {}, authHeader: undefined }];
+
     function createQueryService() {
         return {
             findProjects: vi.fn().mockResolvedValue([]),
             getInstalledPackages: vi.fn().mockResolvedValue([]),
             checkPackageUpdatesMinimal: vi.fn().mockResolvedValue([]),
+            resolveSourcesForBatch: vi.fn().mockResolvedValue(mockResolvedSources),
         } as any;
     }
 
@@ -513,6 +516,40 @@ describe('queryAllProjectsUpdates', () => {
         const result = await queryAllProjectsUpdates(svc, false, false);
 
         expect(result).toEqual([]);
+    });
+
+    it('resolves sources once and passes to all project checks', async () => {
+        const svc = createQueryService();
+        svc.findProjects.mockResolvedValue([
+            { path: '/a.csproj', name: 'A' },
+            { path: '/b.csproj', name: 'B' },
+        ]);
+        svc.getInstalledPackages
+            .mockResolvedValueOnce([{ id: 'X', version: '1.0' }])
+            .mockResolvedValueOnce([{ id: 'Y', version: '2.0' }]);
+        svc.checkPackageUpdatesMinimal.mockResolvedValue([]);
+
+        await queryAllProjectsUpdates(svc, false, false);
+
+        expect(svc.resolveSourcesForBatch).toHaveBeenCalledTimes(1);
+        expect(svc.checkPackageUpdatesMinimal).toHaveBeenCalledTimes(2);
+        expect(svc.checkPackageUpdatesMinimal).toHaveBeenCalledWith(
+            [{ id: 'X', version: '1.0' }], false, mockResolvedSources
+        );
+        expect(svc.checkPackageUpdatesMinimal).toHaveBeenCalledWith(
+            [{ id: 'Y', version: '2.0' }], false, mockResolvedSources
+        );
+    });
+
+    it('returns empty when no sources are resolved', async () => {
+        const svc = createQueryService();
+        svc.resolveSourcesForBatch.mockResolvedValue([]);
+        svc.findProjects.mockResolvedValue([{ path: '/a.csproj', name: 'A' }]);
+
+        const result = await queryAllProjectsUpdates(svc, false, false);
+
+        expect(result).toEqual([]);
+        expect(svc.getInstalledPackages).not.toHaveBeenCalled();
     });
 });
 

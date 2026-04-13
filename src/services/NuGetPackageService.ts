@@ -1933,7 +1933,8 @@ export class NuGetPackageService {
      */
     async checkPackageUpdates(
         installedPackages: InstalledPackage[],
-        includePrerelease: boolean
+        includePrerelease: boolean,
+        preResolvedSources?: ResolvedSource[]
     ): Promise<{
         id: string;
         installedVersion: string;
@@ -1953,9 +1954,8 @@ export class NuGetPackageService {
             sourceUrl?: string;
         }[] = [];
 
-        // Pre-resolve sources, endpoints, and auth once before the batch loop
-        // (avoids 16 concurrent workers all calling discoverServiceEndpoints simultaneously)
-        const resolvedSources = await this.resolveSourcesForBatch();
+        // Use pre-resolved sources if provided (multi-project batch), otherwise resolve now
+        const resolvedSources = preResolvedSources ?? await this.resolveSourcesForBatch();
         if (resolvedSources.length === 0) { return []; }
 
         const results = await batchedPromiseAll(installedPackages, async (pkg) => {
@@ -2013,12 +2013,13 @@ export class NuGetPackageService {
      */
     async checkPackageUpdatesMinimal(
         installedPackages: InstalledPackage[],
-        includePrerelease: boolean
+        includePrerelease: boolean,
+        preResolvedSources?: ResolvedSource[]
     ): Promise<{ id: string; installedVersion: string; latestVersion: string; sourceUrl?: string }[]> {
         const packagesWithUpdates: { id: string; installedVersion: string; latestVersion: string; sourceUrl?: string }[] = [];
 
-        // Pre-resolve sources, endpoints, and auth once before the batch loop
-        const resolvedSources = await this.resolveSourcesForBatch();
+        // Use pre-resolved sources if provided (multi-project batch), otherwise resolve now
+        const resolvedSources = preResolvedSources ?? await this.resolveSourcesForBatch();
         if (resolvedSources.length === 0) { return []; }
 
         const results = await batchedPromiseAll(installedPackages, async (pkg) => {

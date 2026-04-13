@@ -429,9 +429,12 @@ export const SidebarApp: React.FC = () => {
                             if (!projectFailed) { return { ...pu, updates: [] }; }
                             const failedSet = new Set(projectFailed.failedPackageIds.map(id => id.toLowerCase()));
                             return { ...pu, updates: pu.updates.filter(u => failedSet.has(u.id.toLowerCase())) };
-                        }).filter(pu => pu.updates.length > 0);
+                        });
+                        // Keep zero-update entries in ref so the installedPackages handler's
+                        // bgProjectData lookup succeeds (returns empty updates) instead of
+                        // falling back to a redundant checkPackageUpdates request
                         allProjectsUpdatesRef.current = updated;
-                        return updated;
+                        return updated.filter(pu => pu.updates.length > 0);
                     });
                     setPackageUpdates([]); packageUpdatesRef.current = [];
                     if (selectedProjectRef.current && selectedProjectRef.current !== ALL_PROJECTS_SENTINEL) {

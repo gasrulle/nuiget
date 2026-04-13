@@ -565,11 +565,23 @@ export const App: React.FC = () => {
                     // already performed a scoped version check for the affected packages.
                     skipNextUpdateCheckRef.current = true;
                     if (selectedProjectRef.current === ALL_PROJECTS_SENTINEL) {
-                        setLoadingAllProjectsUpdates(true);
-                        vscode.postMessage({
-                            type: 'checkAllProjectsUpdates',
-                            includePrerelease: includePrereleaseRef.current
-                        });
+                        // All-projects mode: optimistically update allProjectsUpdates using the
+                        // operation data instead of re-fetching (sidebar's checkUpdatesInBackground
+                        // already does a full re-check — avoid duplicate source resolution).
+                        const op = message.operation as { type: string; packageId?: string; packageIds?: string[]; projectPath?: string } | undefined;
+                        const opIds = op ? [...(op.packageIds || []), ...(op.packageId ? [op.packageId] : [])] : [];
+                        if (opIds.length > 0) {
+                            const idsLower = new Set(opIds.map(id => id.toLowerCase()));
+                            setAllProjectsUpdates(prev => {
+                                const updated = prev.map(pu => {
+                                    // For project-scoped ops, only filter that project's updates
+                                    if (op?.projectPath && pu.projectPath !== op.projectPath) { return pu; }
+                                    return { ...pu, updates: pu.updates.filter(u => !idsLower.has(u.id.toLowerCase())) };
+                                }).filter(pu => pu.updates.length > 0);
+                                return updated;
+                            });
+                        }
+                        // Re-fetch installed data (cheap — just reads .csproj files)
                         setLoadingAllProjectsInstalled(true);
                         vscode.postMessage({ type: 'checkAllProjectsInstalled' });
                     } else if (selectedProjectRef.current) {

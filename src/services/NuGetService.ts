@@ -15,7 +15,7 @@ import type { FetchResult, NuGetServiceIndex } from './NuGetTypes';
 import {
     InstalledPackage, NuGetSource,
     PackageMetadata, PackageSearchResult, Project,
-    QuickSearchSourceResult, ServiceEndpoints, TransitivePackage,
+    QuickSearchSourceResult, ResolvedSource, ServiceEndpoints, TransitivePackage,
     TransitivePackagesResult
 } from './NuGetTypes';
 import { LRUMap } from './NuGetUtils';
@@ -677,7 +677,8 @@ export class NuGetService {
 
     async checkPackageUpdates(
         installedPackages: InstalledPackage[],
-        includePrerelease: boolean
+        includePrerelease: boolean,
+        preResolvedSources?: ResolvedSource[]
     ): Promise<{
         id: string;
         installedVersion: string;
@@ -687,15 +688,24 @@ export class NuGetService {
         authors?: string;
         sourceUrl?: string;
     }[]> {
-        return this._packageService.checkPackageUpdates(installedPackages, includePrerelease);
+        return this._packageService.checkPackageUpdates(installedPackages, includePrerelease, preResolvedSources);
     }
 
 
     async checkPackageUpdatesMinimal(
         installedPackages: InstalledPackage[],
-        includePrerelease: boolean
+        includePrerelease: boolean,
+        preResolvedSources?: ResolvedSource[]
     ): Promise<{ id: string; installedVersion: string; latestVersion: string; sourceUrl?: string }[]> {
-        return this._packageService.checkPackageUpdatesMinimal(installedPackages, includePrerelease);
+        return this._packageService.checkPackageUpdatesMinimal(installedPackages, includePrerelease, preResolvedSources);
+    }
+
+    /**
+     * Pre-resolve all enabled, healthy, non-local sources with endpoints and auth.
+     * Call once before a multi-project batch loop to share resolved sources across projects.
+     */
+    async resolveSourcesForBatch(): Promise<ResolvedSource[]> {
+        return this._packageService.resolveSourcesForBatch();
     }
 
     async getPackageIconUrl(packageId: string, version: string): Promise<string | undefined> {
