@@ -454,6 +454,60 @@ describe('App', () => {
         );
     });
 
+    it('handles removeResult in all-projects mode by re-fetching all-projects data', () => {
+        render(<App />);
+        sendMessage({
+            type: 'projects',
+            projects: [
+                { name: 'App.csproj', path: '/App.csproj' },
+                { name: 'Lib.csproj', path: '/Lib.csproj' }
+            ],
+            selectProjectPath: '__all_projects__'
+        });
+        mockVsCode.postMessage.mockClear();
+
+        sendMessage({
+            type: 'removeResult',
+            success: true,
+            packageId: 'Pkg.A',
+            projectPath: '/App.csproj'
+        });
+
+        expect(mockVsCode.postMessage).toHaveBeenCalledWith(
+            expect.objectContaining({ type: 'checkAllProjectsInstalled' })
+        );
+        expect(mockVsCode.postMessage).toHaveBeenCalledWith(
+            expect.objectContaining({ type: 'checkAllProjectsUpdates' })
+        );
+    });
+
+    it('handles installResult in all-projects mode by re-fetching all-projects data', () => {
+        render(<App />);
+        sendMessage({
+            type: 'projects',
+            projects: [
+                { name: 'App.csproj', path: '/App.csproj' },
+                { name: 'Lib.csproj', path: '/Lib.csproj' }
+            ],
+            selectProjectPath: '__all_projects__'
+        });
+        mockVsCode.postMessage.mockClear();
+
+        sendMessage({
+            type: 'installResult',
+            success: true,
+            packageId: 'NewPkg',
+            projectPath: '/App.csproj'
+        });
+
+        expect(mockVsCode.postMessage).toHaveBeenCalledWith(
+            expect.objectContaining({ type: 'checkAllProjectsInstalled' })
+        );
+        expect(mockVsCode.postMessage).toHaveBeenCalledWith(
+            expect.objectContaining({ type: 'checkAllProjectsUpdates' })
+        );
+    });
+
     it('handles allProjectsInstalled with default context', () => {
         render(<App />);
         sendMessage({

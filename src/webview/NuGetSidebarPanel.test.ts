@@ -715,16 +715,18 @@ describe('NuGetSidebarProvider', () => {
     });
 
     // ──────────────────────────────────────────────
-    // notifySidebarOfChange — file watcher cancellation
+    // notifySidebarOfChange — file watcher kept as safety net
     // ──────────────────────────────────────────────
     describe('notifySidebarOfChange file watcher', () => {
-        it('cancels file watcher debounce when main panel notifies', async () => {
+        it('does not cancel file watcher debounce (safety net for missed updates)', async () => {
             view = resolveView(provider);
             (provider as any)._fileWatcherDebounce = setTimeout(() => { /* noop */ }, 10000);
             expect((provider as any)._fileWatcherDebounce).toBeDefined();
 
             await provider.notifySidebarOfChange({ type: 'update', packageId: 'Pkg', projectPath: '/p.csproj' });
-            expect((provider as any)._fileWatcherDebounce).toBeUndefined();
+            // File watcher debounce is preserved — serves as safety net for full refresh
+            expect((provider as any)._fileWatcherDebounce).toBeDefined();
+            clearTimeout((provider as any)._fileWatcherDebounce);
         });
     });
 

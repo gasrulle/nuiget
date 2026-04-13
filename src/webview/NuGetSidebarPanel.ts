@@ -498,11 +498,10 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
 
     /** Lightweight sidebar notification after a package operation from the main panel.
      * Skips HTTP cache clearing and source re-fetch (operation just talked to registry successfully).
-     * Forwards operation details to sidebar webview for optimistic state updates. */
+     * Forwards operation details to sidebar webview for optimistic state updates.
+     * Does NOT cancel the file watcher debounce — let it serve as a safety net
+     * for any gaps in the optimistic update logic (~5s delayed full refresh). */
     public async notifySidebarOfChange(operation: { type: string; packageId?: string; packageIds?: string[]; projectPath?: string }): Promise<void> {
-        // Cancel any pending file watcher debounce — the main panel operation already
-        // completed the .csproj changes; we handle the refresh below.
-        this._cancelFileWatcherDebounce();
         // Forward operation details to sidebar webview for surgical UI updates
         this._postMessage({ type: 'packageChanged', operation });
         // Re-check updates in background for data accuracy.

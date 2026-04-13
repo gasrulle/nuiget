@@ -295,9 +295,30 @@ export const SidebarApp: React.FC = () => {
                             return updated;
                         });
                     }
-                    // Note: no getInstalledPackages request here — the backend's
-                    // checkUpdatesInBackground (called by notifySidebarOfChange) already
-                    // sends fresh installedPackages + packageUpdatesMinimal messages.
+                    // Optimistically update installed packages for remove operations
+                    if (opPkgId && op?.type === 'remove' && op?.projectPath) {
+                        setAllProjectsInstalled(prev => {
+                            const updated = prev.map(pi => {
+                                if (pi.projectPath !== op.projectPath) { return pi; }
+                                return { ...pi, packages: pi.packages.filter(p => p.id.toLowerCase() !== opPkgId) };
+                            });
+                            allProjectsInstalledRef.current = updated;
+                            return updated;
+                        });
+                        if (selectedProjectRef.current === op.projectPath || selectedProjectRef.current === ALL_PROJECTS_SENTINEL) {
+                            setInstalledPackages(prev => prev.filter(p => p.id.toLowerCase() !== opPkgId));
+                        }
+                    }
+                    // For install operations, trigger a re-fetch since we lack version info
+                    if (opPkgId && op?.type === 'install') {
+                        if (selectedProjectRef.current === ALL_PROJECTS_SENTINEL) {
+                            vscode.postMessage({ type: 'checkAllProjectsInstalled' });
+                            setLoadingAllInstalled(true);
+                        } else if (selectedProjectRef.current) {
+                            vscode.postMessage({ type: 'getInstalledPackages', projectPath: selectedProjectRef.current });
+                            setLoadingInstalled(true);
+                        }
+                    }
                 }
                 break;
             case 'installResult':

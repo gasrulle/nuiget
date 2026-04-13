@@ -431,19 +431,31 @@ export const App: React.FC = () => {
             case 'installResult':
             case 'updateResult':
             case 'removeResult':
-                if (message.success && message.projectPath === selectedProjectRef.current) {
-                    // Optimistically remove the changed package from updates list
-                    const changedId = (message.packageId as string)?.toLowerCase();
-                    if (changedId && (message.type === 'updateResult' || message.type === 'removeResult')) {
-                        setPackagesWithUpdates(prev => {
-                            const filtered = prev.filter(p => p.id.toLowerCase() !== changedId);
-                            setUpdateCount(filtered.length);
-                            return filtered;
+                if (message.success) {
+                    if (selectedProjectRef.current === ALL_PROJECTS_SENTINEL) {
+                        // All-projects mode: re-fetch all-projects data
+                        skipNextUpdateCheckRef.current = true;
+                        setLoadingAllProjectsUpdates(true);
+                        vscode.postMessage({
+                            type: 'checkAllProjectsUpdates',
+                            includePrerelease: includePrereleaseRef.current
                         });
+                        setLoadingAllProjectsInstalled(true);
+                        vscode.postMessage({ type: 'checkAllProjectsInstalled' });
+                    } else if (message.projectPath === selectedProjectRef.current) {
+                        // Single-project mode: refresh installed packages
+                        const changedId = (message.packageId as string)?.toLowerCase();
+                        if (changedId && (message.type === 'updateResult' || message.type === 'removeResult')) {
+                            setPackagesWithUpdates(prev => {
+                                const filtered = prev.filter(p => p.id.toLowerCase() !== changedId);
+                                setUpdateCount(filtered.length);
+                                return filtered;
+                            });
+                        }
+                        skipNextUpdateCheckRef.current = true;
+                        vscode.postMessage({ type: 'getInstalledPackages', projectPath: selectedProjectRef.current });
+                        installedTabCompRef.current?.resetTransitiveState(true);
                     }
-                    skipNextUpdateCheckRef.current = true;
-                    vscode.postMessage({ type: 'getInstalledPackages', projectPath: selectedProjectRef.current });
-                    installedTabCompRef.current?.resetTransitiveState(true);
                 }
                 break;
             case 'bulkUpdateResult':

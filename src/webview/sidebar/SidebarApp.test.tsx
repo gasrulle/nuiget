@@ -596,6 +596,59 @@ describe('SidebarApp', () => {
         expect(row.getAttribute('data-installed-version')).toBe('');
     });
 
+    it('packageChanged from main panel optimistically removes from allProjectsInstalled', () => {
+        render(<SidebarApp />);
+        sendMessage({ type: 'state', selectedProject: '__all_projects__' });
+        sendMessage({
+            type: 'projects', projects: [
+                { name: 'App.csproj', path: '/App.csproj' },
+                { name: 'Lib.csproj', path: '/Lib.csproj' }
+            ]
+        });
+        sendMessage({
+            type: 'allProjectsInstalled',
+            projectInstalled: [
+                { projectPath: '/App.csproj', projectName: 'App.csproj', packages: [{ id: 'PkgA', version: '1.0.0' }, { id: 'PkgB', version: '2.0.0' }] },
+                { projectPath: '/Lib.csproj', projectName: 'Lib.csproj', packages: [{ id: 'PkgC', version: '3.0.0' }] }
+            ]
+        });
+
+        // PkgA should be visible
+        expect(screen.getByTestId('package-row-PkgA')).toBeDefined();
+
+        // Simulate main panel removing PkgA from App.csproj
+        sendMessage({
+            type: 'packageChanged',
+            operation: { type: 'remove', packageId: 'PkgA', projectPath: '/App.csproj' }
+        });
+
+        // PkgA should be gone, PkgB and PkgC still present
+        expect(screen.queryByTestId('package-row-PkgA')).toBeNull();
+        expect(screen.getByTestId('package-row-PkgB')).toBeDefined();
+        expect(screen.getByTestId('package-row-PkgC')).toBeDefined();
+    });
+
+    it('packageChanged install from main panel triggers re-fetch in all-projects mode', () => {
+        render(<SidebarApp />);
+        sendMessage({ type: 'state', selectedProject: '__all_projects__' });
+        sendMessage({
+            type: 'projects', projects: [
+                { name: 'App.csproj', path: '/App.csproj' },
+                { name: 'Lib.csproj', path: '/Lib.csproj' }
+            ]
+        });
+        mockVsCode.postMessage.mockClear();
+
+        sendMessage({
+            type: 'packageChanged',
+            operation: { type: 'install', packageId: 'NewPkg', projectPath: '/App.csproj' }
+        });
+
+        expect(mockVsCode.postMessage).toHaveBeenCalledWith(
+            expect.objectContaining({ type: 'checkAllProjectsInstalled' })
+        );
+    });
+
     it('collapses and expands project groups in all-projects installed mode', () => {
         render(<SidebarApp />);
         sendMessage({ type: 'state', selectedProject: '__all_projects__' });
