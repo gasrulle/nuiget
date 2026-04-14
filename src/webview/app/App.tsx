@@ -349,6 +349,27 @@ export const App: React.FC = () => {
                     setLoadingInstalled(false);
                 }
                 break;
+            case 'installedPackagesMetadata':
+                // Phase 2: merge enriched metadata (icons, authors, verified) into existing packages
+                if (message.projectPath === selectedProjectRef.current) {
+                    skipNextUpdateCheckRef.current = true;
+                    setInstalledPackages(prev => {
+                        const enriched = message.packages as { id: string; iconUrl?: string; verified?: boolean; authors?: string }[];
+                        const metaMap = new Map(enriched.map(p => [p.id.toLowerCase(), p]));
+                        let changed = false;
+                        const result = prev.map(pkg => {
+                            const meta = metaMap.get(pkg.id.toLowerCase());
+                            if (!meta) { return pkg; }
+                            if (pkg.iconUrl === meta.iconUrl && pkg.verified === meta.verified && pkg.authors === meta.authors) {
+                                return pkg;
+                            }
+                            changed = true;
+                            return { ...pkg, iconUrl: meta.iconUrl, verified: meta.verified, authors: meta.authors };
+                        });
+                        return changed ? result : prev;
+                    });
+                }
+                break;
             case 'transitivePackages':
             case 'transitiveMetadata':
             case 'restoreProjectResult':
@@ -374,6 +395,24 @@ export const App: React.FC = () => {
                             initialVersions: match.versions || []
                         });
                     }
+                }
+                break;
+            case 'searchResultsMetadata':
+                // Phase 2 of two-phase CLI search: merge enriched metadata into existing results
+                if (message.query === searchQueryRef.current) {
+                    setSearchResults(prev => {
+                        const enriched = message.results as PackageSearchResult[];
+                        let changed = false;
+                        const merged = prev.map(pkg => {
+                            const match = enriched.find(r => r.id === pkg.id);
+                            if (match && (match.iconUrl !== pkg.iconUrl || match.verified !== pkg.verified || match.authors !== pkg.authors || (match.description && match.description !== pkg.description))) {
+                                changed = true;
+                                return { ...pkg, iconUrl: match.iconUrl ?? pkg.iconUrl, verified: match.verified ?? pkg.verified, authors: match.authors || pkg.authors, description: match.description || pkg.description };
+                            }
+                            return pkg;
+                        });
+                        return changed ? merged : prev;
+                    });
                 }
                 break;
             case 'autocompleteResults':
@@ -666,8 +705,21 @@ export const App: React.FC = () => {
                     setLoadingMetadata(false);
                 }
                 break;
+            case 'packageUpdateFound':
+                // Progressive streaming: a single update was found during checkPackageUpdates
+                if (message.projectPath === selectedProjectRef.current) {
+                    setPackagesWithUpdates(prev => {
+                        const update = message.update as PackageUpdate;
+                        if (prev.some(u => u.id === update.id)) { return prev; }
+                        return [...prev, update];
+                    });
+                    // Optimistic count increment — final packageUpdates sets authoritative count.
+                    // Backend sends each package once so duplicates don't happen in practice.
+                    setUpdateCount(prev => prev + 1);
+                }
+                break;
             case 'packageUpdates':
-                // Update packages with available updates
+                // Final authoritative result: replace progressive updates with complete data
                 if (message.projectPath === selectedProjectRef.current) {
                     setPackagesWithUpdates(message.updates);
                     setUpdateCount(message.updates.length);
@@ -729,6 +781,42 @@ export const App: React.FC = () => {
                         setLoadingAllProjectsInstalled(false);
                         // Also update multi-install data so it stays fresh
                         setMultiInstallProjectData(projectInstalled);
+                    }
+                }
+                break;
+            case 'allProjectsInstalledMetadata':
+                // Phase 2: merge enriched metadata (icons, authors, verified) into all-projects installed
+                {
+                    const enrichedProjects = message.projectInstalled as ProjectInstalled[];
+                    const enrichedMap = new Map<string, Map<string, ProjectInstalled['packages'][0]>>();
+                    for (const proj of enrichedProjects) {
+                        const pkgMap = new Map(proj.packages.map(p => [p.id.toLowerCase(), p]));
+                        enrichedMap.set(proj.projectPath, pkgMap);
+                    }
+                    const mergeMetadata = (prev: ProjectInstalled[]) => {
+                        let changed = false;
+                        const result = prev.map(proj => {
+                            const pkgMap = enrichedMap.get(proj.projectPath);
+                            if (!pkgMap) { return proj; }
+                            let projChanged = false;
+                            const pkgs = proj.packages.map(pkg => {
+                                const meta = pkgMap.get(pkg.id.toLowerCase());
+                                if (!meta) { return pkg; }
+                                if (pkg.iconUrl === meta.iconUrl && pkg.verified === meta.verified && pkg.authors === meta.authors) { return pkg; }
+                                projChanged = true;
+                                return { ...pkg, iconUrl: meta.iconUrl, verified: meta.verified, authors: meta.authors };
+                            });
+                            if (!projChanged) { return proj; }
+                            changed = true;
+                            return { ...proj, packages: pkgs };
+                        });
+                        return changed ? result : prev;
+                    };
+                    if (message.context === 'multiInstall') {
+                        setMultiInstallProjectData(mergeMetadata);
+                    } else {
+                        setAllProjectsInstalled(mergeMetadata);
+                        setMultiInstallProjectData(mergeMetadata);
                     }
                 }
                 break;

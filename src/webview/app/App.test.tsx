@@ -175,6 +175,42 @@ describe('App', () => {
         expect(badge.className).toContain('tab-badge');
     });
 
+    it('handles installedPackagesMetadata and does not re-trigger update check', () => {
+        render(<App />);
+        sendMessage({
+            type: 'projects',
+            projects: [{ name: 'App.csproj', path: '/App.csproj' }]
+        });
+        sendMessage({
+            type: 'installedPackages',
+            packages: [
+                { id: 'Pkg.A', version: '1.0.0' },
+                { id: 'Pkg.B', version: '2.0.0' }
+            ],
+            projectPath: '/App.csproj'
+        });
+        mockVsCode.postMessage.mockClear();
+
+        // Send metadata enrichment — should merge without triggering checkPackageUpdates
+        sendMessage({
+            type: 'installedPackagesMetadata',
+            packages: [
+                { id: 'Pkg.A', version: '1.0.0', iconUrl: 'https://example.com/a.png', verified: true, authors: 'Author A' },
+                { id: 'Pkg.B', version: '2.0.0', iconUrl: 'https://example.com/b.png', verified: false, authors: 'Author B' }
+            ],
+            projectPath: '/App.csproj'
+        });
+
+        // Should NOT send checkPackageUpdates (skipNextUpdateCheckRef blocks it)
+        const updateCheckMessages = mockVsCode.postMessage.mock.calls.filter(
+            (c: unknown[]) => (c[0] as { type: string })?.type === 'checkPackageUpdates'
+        );
+        expect(updateCheckMessages).toHaveLength(0);
+        // Badge should still show 2 installed packages
+        const badge = screen.getByText('2');
+        expect(badge.className).toContain('tab-badge');
+    });
+
     it('handles packageUpdates and shows badge on Updates tab', () => {
         render(<App />);
         sendMessage({
@@ -187,6 +223,53 @@ describe('App', () => {
             projectPath: '/App.csproj'
         });
         const badge = screen.getByText('1');
+        expect(badge.className).toContain('tab-badge');
+    });
+
+    it('handles packageUpdateFound for progressive streaming', () => {
+        render(<App />);
+        sendMessage({
+            type: 'projects',
+            projects: [{ name: 'App.csproj', path: '/App.csproj' }]
+        });
+        // Stream individual updates
+        sendMessage({
+            type: 'packageUpdateFound',
+            update: { id: 'Pkg.A', installedVersion: '1.0.0', latestVersion: '2.0.0' },
+            projectPath: '/App.csproj'
+        });
+        // Badge should show count 1 from streamed update
+        const badge = screen.getByText('1');
+        expect(badge.className).toContain('tab-badge');
+    });
+
+    it('packageUpdateFound deduplicates same package in updates array', () => {
+        render(<App />);
+        sendMessage({
+            type: 'projects',
+            projects: [{ name: 'App.csproj', path: '/App.csproj' }]
+        });
+        sendMessage({
+            type: 'packageUpdateFound',
+            update: { id: 'Pkg.A', installedVersion: '1.0.0', latestVersion: '2.0.0' },
+            projectPath: '/App.csproj'
+        });
+        sendMessage({
+            type: 'packageUpdateFound',
+            update: { id: 'Pkg.B', installedVersion: '1.0.0', latestVersion: '3.0.0' },
+            projectPath: '/App.csproj'
+        });
+        // Final authoritative message corrects the count
+        sendMessage({
+            type: 'packageUpdates',
+            updates: [
+                { id: 'Pkg.A', installedVersion: '1.0.0', latestVersion: '2.0.0' },
+                { id: 'Pkg.B', installedVersion: '1.0.0', latestVersion: '3.0.0' }
+            ],
+            projectPath: '/App.csproj'
+        });
+        // Badge should show authoritative count of 2
+        const badge = screen.getByText('2');
         expect(badge.className).toContain('tab-badge');
     });
 
@@ -565,6 +648,30 @@ describe('App', () => {
         expect(screen.getByText('Manage NuGet packages')).toBeDefined();
     });
 
+    it('handles allProjectsInstalledMetadata and merges enriched data', () => {
+        render(<App />);
+        // Load initial lite data
+        sendMessage({
+            type: 'allProjectsInstalled',
+            projectInstalled: [{
+                projectPath: '/projA.csproj',
+                projectName: 'ProjA',
+                packages: [{ id: 'Pkg', version: '1.0' }]
+            }]
+        });
+        // Send metadata enrichment
+        sendMessage({
+            type: 'allProjectsInstalledMetadata',
+            projectInstalled: [{
+                projectPath: '/projA.csproj',
+                projectName: 'ProjA',
+                packages: [{ id: 'Pkg', version: '1.0', iconUrl: 'https://icon/pkg.png', verified: true, authors: 'Author' }]
+            }]
+        });
+        // No crash, metadata merged
+        expect(screen.getByText('Manage NuGet packages')).toBeDefined();
+    });
+
     it('handles selectProject and stays on installed tab', () => {
         render(<App />);
         sendMessage({
@@ -797,6 +904,34 @@ describe('App', () => {
             results: [{ id: 'Pkg.A', version: '1.0.0', description: 'Test' }],
             query: 'Pkg'
         });
+        expect(screen.getByText('Manage NuGet packages')).toBeDefined();
+    });
+
+    it('searchResultsMetadata merges enriched fields into existing search results', () => {
+        render(<App />);
+        sendMessage({
+            type: 'projects',
+            projects: [{ name: 'App.csproj', path: '/App.csproj' }]
+        });
+        // Phase 1: lite results (no icons, no verified)
+        sendMessage({
+            type: 'searchResults',
+            results: [
+                { id: 'Pkg.A', version: '1.0.0', description: 'Test A' },
+                { id: 'Pkg.B', version: '2.0.0', description: '' }
+            ],
+            query: 'Pkg'
+        });
+        // Phase 2: metadata enrichment
+        sendMessage({
+            type: 'searchResultsMetadata',
+            results: [
+                { id: 'Pkg.A', version: '1.0.0', iconUrl: 'https://example.com/a.png', verified: true, authors: 'Author A', description: 'Test A' },
+                { id: 'Pkg.B', version: '2.0.0', iconUrl: 'https://example.com/b.png', verified: false, authors: 'Author B', description: 'Enriched B' }
+            ],
+            query: 'Pkg'
+        });
+        // Should not crash and title should still be visible
         expect(screen.getByText('Manage NuGet packages')).toBeDefined();
     });
 

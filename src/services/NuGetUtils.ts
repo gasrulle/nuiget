@@ -94,7 +94,8 @@ export class LRUMap<K, V> {
 export async function batchedPromiseAll<T, R>(
     items: T[],
     processor: (item: T) => Promise<R>,
-    concurrency: number = 6
+    concurrency: number = 6,
+    onProgress?: (result: R, index: number) => void
 ): Promise<R[]> {
     const results: R[] = new Array(items.length);
     let nextIndex = 0;
@@ -103,6 +104,7 @@ export async function batchedPromiseAll<T, R>(
         while (nextIndex < items.length) {
             const i = nextIndex++;
             results[i] = await processor(items[i]);
+            onProgress?.(results[i], i);
         }
     };
 

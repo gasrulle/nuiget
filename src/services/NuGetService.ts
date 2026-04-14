@@ -14,14 +14,14 @@ import { NuGetSourceService } from './NuGetSourceService';
 import type { FetchResult, NuGetServiceIndex } from './NuGetTypes';
 import {
     InstalledPackage, NuGetSource,
-    PackageMetadata, PackageSearchResult, Project,
+    PackageMetadata, PackageSearchResult, PackageUpdate, Project,
     QuickSearchSourceResult, ResolvedSource, ServiceEndpoints, TransitivePackage,
     TransitivePackagesResult
 } from './NuGetTypes';
 import { LRUMap } from './NuGetUtils';
 
 // Re-export types for backward compatibility with existing consumers
-export type { FetchResult, InstalledPackage, NuGetRegistrationEntry, NuGetRegistrationPage, NuGetSearchEntry, NuGetSearchResponse, NuGetSource, PackageDependency, PackageDependencyGroup, PackageMetadata, PackageSearchResult, Project, QuickSearchSourceResult, ServiceEndpoints, TransitiveFrameworkSection, TransitivePackage, TransitivePackagesResult, VersionSpec, VersionType } from './NuGetTypes';
+export type { FetchResult, InstalledPackage, NuGetRegistrationEntry, NuGetRegistrationPage, NuGetSearchEntry, NuGetSearchResponse, NuGetSource, PackageDependency, PackageDependencyGroup, PackageMetadata, PackageSearchResult, PackageUpdate, Project, QuickSearchSourceResult, ServiceEndpoints, TransitiveFrameworkSection, TransitivePackage, TransitivePackagesResult, VersionSpec, VersionType } from './NuGetTypes';
 
 export class NuGetService {
     private configParser: NuGetConfigParser;
@@ -457,7 +457,9 @@ export class NuGetService {
         return this._projectService.getInstalledPackages(projectPath, liteMode);
     }
 
-
+    async enrichInstalledPackageMetadata(packages: InstalledPackage[]): Promise<void> {
+        return this._packageService.fetchInstalledPackageMetadata(packages);
+    }
 
 
 
@@ -468,16 +470,6 @@ export class NuGetService {
 
     private async fetchInstalledPackageMetadata(packages: InstalledPackage[]): Promise<void> {
         return this._packageService.fetchInstalledPackageMetadata(packages);
-    }
-
-
-    async autocompletePackageId(
-        query: string,
-        sources?: string[],
-        includePrerelease?: boolean,
-        take: number = 10
-    ): Promise<string[]> {
-        return this._packageService.autocompletePackageId(query, sources, includePrerelease, take);
     }
 
 
@@ -496,6 +488,10 @@ export class NuGetService {
 
     async searchPackages(query: string, sources?: string[], includePrerelease?: boolean, liteMode?: boolean, take?: number, exactMatch?: boolean): Promise<PackageSearchResult[]> {
         return this._packageService.searchPackages(query, sources, includePrerelease, liteMode, take, exactMatch);
+    }
+
+    async enrichSearchResultMetadata(packages: PackageSearchResult[]): Promise<void> {
+        return this._packageService.enrichSearchResultMetadata(packages);
     }
 
 
@@ -678,17 +674,10 @@ export class NuGetService {
     async checkPackageUpdates(
         installedPackages: InstalledPackage[],
         includePrerelease: boolean,
-        preResolvedSources?: ResolvedSource[]
-    ): Promise<{
-        id: string;
-        installedVersion: string;
-        latestVersion: string;
-        iconUrl?: string;
-        verified?: boolean;
-        authors?: string;
-        sourceUrl?: string;
-    }[]> {
-        return this._packageService.checkPackageUpdates(installedPackages, includePrerelease, preResolvedSources);
+        preResolvedSources?: ResolvedSource[],
+        onUpdateFound?: (update: PackageUpdate) => void
+    ): Promise<PackageUpdate[]> {
+        return this._packageService.checkPackageUpdates(installedPackages, includePrerelease, preResolvedSources, onUpdateFound);
     }
 
 

@@ -402,6 +402,8 @@ const UpdatesTab = forwardRef<UpdatesTabHandle, UpdatesTabProps>((props, ref) =>
     const hasNoUpdates = isAllProjects
         ? allProjectsUpdates.length === 0
         : packagesWithUpdates.length === 0;
+    // Progressive: updates are streaming in (loading but have partial results)
+    const isStreaming = isLoading && !hasNoUpdates && !isAllProjects;
     // Determine correct "all selected" state
     const totalSelectableCount = isAllProjects ? allProjectsPackageCount : packagesWithUpdates.length;
     const allSelected = selectedUpdates.size === totalSelectableCount && totalSelectableCount > 0;
@@ -410,7 +412,7 @@ const UpdatesTab = forwardRef<UpdatesTabHandle, UpdatesTabProps>((props, ref) =>
         <div className="content browse-content" data-testid="updates-tab">
             <div className="split-panel">
                 <div ref={updatesScrollRef} className="package-list-panel" style={{ width: `${splitPosition}%` }}>
-                    {isLoading ? (
+                    {isLoading && !isStreaming ? (
                         <>
                             <div className="updates-toolbar">
                                 <div className="toolbar-actions-left">
@@ -700,6 +702,12 @@ const UpdatesTab = forwardRef<UpdatesTabHandle, UpdatesTabProps>((props, ref) =>
                                             </div>
                                         );
                                     })}
+                                </div>
+                            )}
+                            {isStreaming && (
+                                <div className="streaming-indicator" aria-busy="true" aria-label="Checking for more updates">
+                                    <div className="loading-spinner loading-spinner-small"></div>
+                                    <span>Checking for more updates...</span>
                                 </div>
                             )}
                         </>
