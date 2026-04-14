@@ -617,20 +617,22 @@ export class NuGetPackageService {
     // ── Search packages ─────────────────────────────────────────────────
 
     /**
-     * Search for packages via the NuGet Search API (nuget.org only).
-     * Returns null if the API is not available (triggers CLI fallback).
+     * Search for packages via the NuGet V3 Search API across one or more resolved sources.
+     * Queries each source's SearchQueryService in parallel, merges and deduplicates results.
+     * Returns null if no source has a usable SearchQueryService (triggers CLI fallback).
      */
     private async searchPackagesViaApi(
         query: string,
         includePrerelease: boolean,
         liteMode: boolean,
         take: number,
-        exactMatch: boolean
+        exactMatch: boolean,
+        resolvedSources?: ResolvedSource[]
     ): Promise<PackageSearchResult[] | null> {
         try {
-            const nugetOrgUrl = 'https://api.nuget.org/v3/index.json';
-            const endpoints = await this._deps.discoverServiceEndpoints(nugetOrgUrl);
-            if (!endpoints.searchQueryService) {
+            // If no resolved sources provided, fall back to nuget.org only (legacy path)
+            const sources = resolvedSources?.filter(s => s.endpoints.searchQueryService);
+            if (!sources || sources.length === 0) {
                 return null;
             }
 
@@ -643,69 +645,97 @@ export class NuGetPackageService {
             if (includePrerelease) {
                 params.set('prerelease', 'true');
             }
+            const queryString = params.toString();
 
-            const searchUrl = `${endpoints.searchQueryService}?${params.toString()}`;
-            const data = await this._deps.fetchJson<{
-                totalHits?: number;
-                data: Array<{
-                    id: string;
-                    version: string;
-                    description?: string;
-                    authors?: string | string[];
-                    totalDownloads?: number;
-                    verified?: boolean;
-                    iconUrl?: string;
-                }>;
-            }>(searchUrl);
+            // Query all sources in parallel
+            const perSourceResults = await Promise.all(
+                sources.map(async (source) => {
+                    try {
+                        const searchUrl = `${source.endpoints.searchQueryService}?${queryString}`;
+                        const data = await this._deps.fetchJson<NuGetSearchResponse>(searchUrl, source.authHeader);
 
-            if (!data?.data || !Array.isArray(data.data)) {
-                return null;
+                        const entries: NuGetSearchEntry[] = data?.data || data?.Data || (Array.isArray(data) ? data as NuGetSearchEntry[] : []);
+                        return { source, entries };
+                    } catch {
+                        return { source, entries: [] as NuGetSearchEntry[] };
+                    }
+                })
+            );
+
+            // Merge and deduplicate across sources (highest-download-count entry wins)
+            const packageMap = new Map<string, { entry: NuGetSearchEntry; source: ResolvedSource }>();
+            for (const { source, entries } of perSourceResults) {
+                for (const entry of entries) {
+                    const id = entry.id || entry.Id;
+                    if (!id) { continue; }
+                    const key = id.toLowerCase();
+                    const existing = packageMap.get(key);
+                    const entryDownloads = entry.totalDownloads ?? entry.TotalDownloads ?? 0;
+                    const existingDownloads = existing
+                        ? (existing.entry.totalDownloads ?? existing.entry.TotalDownloads ?? 0)
+                        : -1;
+                    if (!existing || entryDownloads > existingDownloads) {
+                        packageMap.set(key, { entry, source });
+                    }
+                }
             }
 
-            // Transform results
+            // Transform merged entries into PackageSearchResult[]
             const packages: PackageSearchResult[] = [];
-            for (const item of data.data) {
-                if (!item.id || !item.version) {
-                    continue;
-                }
+            const isNugetOrg = (url: string) => url.includes('api.nuget.org') || url.includes('nuget.org/v3');
+
+            for (const { entry: item, source } of packageMap.values()) {
+                const id = item.id || item.Id;
+                const version = item.version || item.Version;
+                if (!id || !version) { continue; }
 
                 // Normalize authors to string
-                const authors = Array.isArray(item.authors)
-                    ? item.authors.join(', ')
-                    : (item.authors || '');
+                const rawAuthors = item.authors || item.Authors;
+                const authors = Array.isArray(rawAuthors)
+                    ? rawAuthors.join(', ')
+                    : (rawAuthors || '');
+
+                const description = item.description || item.Description || item.summary || item.Summary || '';
 
                 const pkg: PackageSearchResult = {
-                    id: item.id,
-                    version: item.version,
+                    id,
+                    version,
                     versions: [],
-                    verified: liteMode ? undefined : item.verified,
-                    description: '',
+                    verified: liteMode ? undefined : (item.verified ?? false),
+                    description: liteMode ? '' : description,
                     authors: liteMode ? '' : authors,
-                    totalDownloads: item.totalDownloads,
+                    totalDownloads: item.totalDownloads ?? item.TotalDownloads,
                 };
 
-                // Try to resolve icon URL from flat container (version-specific, no HEAD needed)
-                // The search API's iconUrl field confirms an icon exists in the package
-                if (item.iconUrl && !item.version.includes('*') && !item.version.includes('[') && !item.version.includes('(')) {
-                    const lowerId = item.id.toLowerCase();
-                    const lowerVersion = item.version.toLowerCase();
-                    const flatContainerUrl = `https://api.nuget.org/v3-flatcontainer/${lowerId}/${lowerVersion}/icon`;
-                    pkg.iconUrl = flatContainerUrl;
+                // Resolve icon URL from flat container (version-specific, no HEAD needed)
+                if (item.iconUrl && !version.includes('*') && !version.includes('[') && !version.includes('(')) {
+                    const lowerId = id.toLowerCase();
+                    const lowerVersion = version.toLowerCase();
+
+                    if (isNugetOrg(source.url)) {
+                        // nuget.org: use known flat container pattern
+                        const flatContainerUrl = `https://api.nuget.org/v3-flatcontainer/${lowerId}/${lowerVersion}/icon`;
+                        pkg.iconUrl = flatContainerUrl;
+                    } else if (source.endpoints.packageBaseAddress) {
+                        // Custom source: use discovered packageBaseAddress
+                        const baseAddr = source.endpoints.packageBaseAddress.replace(/\/$/, '');
+                        pkg.iconUrl = `${baseAddr}/${lowerId}/${lowerVersion}/icon`;
+                    }
 
                     // Pre-populate icon cache
-                    if (!liteMode) {
-                        const iconCacheKey = cacheKeys.iconExists(item.id, item.version);
-                        this.iconUrlCache.set(iconCacheKey, flatContainerUrl);
+                    if (!liteMode && pkg.iconUrl) {
+                        const iconCacheKey = cacheKeys.iconExists(id, version);
+                        this.iconUrlCache.set(iconCacheKey, pkg.iconUrl);
                     }
                 }
 
                 // Pre-populate verified status cache
                 if (!liteMode) {
-                    const statusCacheKey = cacheKeys.verifiedStatus(item.id);
+                    const statusCacheKey = cacheKeys.verifiedStatus(id);
                     const cacheValue = {
                         verified: item.verified === true,
                         authors: authors || undefined,
-                        description: item.description
+                        description
                     };
                     this.verifiedStatusCache.set(statusCacheKey, cacheValue);
                 }
@@ -713,14 +743,61 @@ export class NuGetPackageService {
                 packages.push(pkg);
             }
 
-            return packages;
+            // Sort merged results: prefix matches first, then by totalDownloads descending.
+            // Each source returns results in its own relevance order, but after merging
+            // across sources we need a unified sort so that e.g. a custom source's exact
+            // prefix match isn't buried behind nuget.org's high-download generic matches.
+            if (sources.length > 1) {
+                const queryLower = query.toLowerCase();
+                packages.sort((a, b) => {
+                    const aPrefix = a.id.toLowerCase().startsWith(queryLower) ? 0 : 1;
+                    const bPrefix = b.id.toLowerCase().startsWith(queryLower) ? 0 : 1;
+                    if (aPrefix !== bPrefix) { return aPrefix - bPrefix; }
+                    return (b.totalDownloads ?? 0) - (a.totalDownloads ?? 0);
+                });
+            }
+
+            return packages.length > 0 || packageMap.size === 0 ? packages : null;
         } catch {
             return null; // Signal caller to fall back to CLI
         }
     }
 
     /**
+     * Resolve specific source URLs into ResolvedSource[] for search.
+     * Filters unhealthy/local sources, discovers endpoints, and fetches auth headers.
+     * When no sourceUrls are provided, resolves all configured sources (delegates to resolveSourcesForBatch).
+     */
+    private async resolveSourcesForSearch(sourceUrls?: string[]): Promise<ResolvedSource[]> {
+        if (!sourceUrls || sourceUrls.length === 0) {
+            return this.resolveSourcesForBatch();
+        }
+
+        const validUrls = sourceUrls.filter(s => s && s.trim() && !this._deps.isLocalSource(s));
+        if (validUrls.length === 0) { return []; }
+
+        const healthyUrls = this._deps.filterHealthySources(validUrls);
+        if (healthyUrls.length === 0) { return []; }
+
+        const resolved = await Promise.all(
+            healthyUrls.map(async (url) => {
+                try {
+                    const endpoints = await this._deps.discoverServiceEndpoints(url);
+                    const authHeader = await this._deps.getAuthHeader(url);
+                    return { url, endpoints, authHeader } as ResolvedSource;
+                } catch {
+                    return null;
+                }
+            })
+        );
+
+        return resolved.filter((s): s is ResolvedSource => s !== null);
+    }
+
+    /**
      * Search for packages using API or CLI fallback.
+     * Prefers V3 Search API for any source with a SearchQueryService endpoint.
+     * Falls back to CLI only for sources without V3 endpoints.
      */
     async searchPackages(query: string, sources?: string[], includePrerelease?: boolean, liteMode?: boolean, take?: number, exactMatch?: boolean): Promise<PackageSearchResult[]> {
         try {
@@ -738,109 +815,121 @@ export class NuGetPackageService {
                 return workspaceCached;
             }
 
-            let sourceArg = '';
-
-            const validSources = sources?.filter(s => s && s.trim()) || [];
-
-            // Filter out unhealthy sources before CLI call
-            const healthySources = validSources.length > 0 ? this._deps.filterHealthySources(validSources) : [];
-
-            // Check if we're effectively using only nuget.org → can use API instead of CLI
-            const isNugetOrg = (url: string) => url.includes('api.nuget.org') || url.includes('nuget.org/v3');
-            let isSingleNugetOrgSource = false;
-            if (validSources.length === 1 && isNugetOrg(validSources[0])) {
-                isSingleNugetOrgSource = true;
-            } else if (validSources.length === 0) {
-                const configuredSources = await this._deps.getSources();
-                const remoteSources = configuredSources.filter(s => s.enabled && !this._deps.isLocalSource(s.url));
-                isSingleNugetOrgSource = remoteSources.length === 1 && isNugetOrg(remoteSources[0].url);
-            }
-
-            if (isSingleNugetOrgSource) {
-                const config = vscode.workspace.getConfiguration('nuiget');
-                const searchResultLimit = take ?? config.get<number>('searchResultLimit', 20);
-
-                const apiResults = await this.searchPackagesViaApi(
-                    query, includePrerelease ?? false, liteMode ?? false, searchResultLimit, exactMatch ?? false);
-                if (apiResults !== null) {
-                    // Cache and return
-                    if (apiResults.length > 0) {
-                        this.searchResultsCache.set(searchCacheKey, apiResults);
-                        workspaceCache.set(searchCacheKey, apiResults, CACHE_TTL.SEARCH_RESULTS);
-                    }
-                    return apiResults;
-                }
-            }
-
-            // Build source argument for CLI
-            if (healthySources.length > 0) {
-                sourceArg = healthySources.map(s => `--source "${s}"`).join(' ');
-            }
-
-            const prereleaseArg = includePrerelease ? '--prerelease' : '';
-
             const config = vscode.workspace.getConfiguration('nuiget');
             const searchResultLimit = take ?? config.get<number>('searchResultLimit', 20);
-            const exactMatchArg = exactMatch ? '--exact-match' : '';
 
-            const workspaceFolder = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-            const command = `dotnet package search "${query}" ${sourceArg} ${prereleaseArg} ${exactMatchArg} --take ${searchResultLimit}`;
-            const { stdout } = await execWithTimeout(command, { cwd: workspaceFolder });
+            // Collect ALL input source URLs (including local, unhealthy) for CLI fallback.
+            // resolveSourcesForSearch filters local/unhealthy sources during API resolution,
+            // but CLI should still search them — it has its own timeout/error handling.
+            const validInputSources = sources?.filter(s => s && s.trim());
+            let allInputUrls: string[];
+            if (validInputSources && validInputSources.length > 0) {
+                allInputUrls = validInputSources;
+            } else {
+                const allSources = await this._deps.getSources();
+                allInputUrls = allSources.filter(s => s.enabled).map(s => s.url);
+            }
 
-            // Parse CLI output
-            const packages: PackageSearchResult[] = [];
-            const lines = stdout.split('\n');
-            const seenIds = new Set<string>();
+            // Resolve remote+healthy sources → API endpoints and auth headers
+            const resolvedSources = await this.resolveSourcesForSearch(validInputSources);
 
-            for (const line of lines) {
-                // Skip header lines and separators
-                if (line.includes('---')) {
-                    continue;
-                }
+            // Partition: sources with SearchQueryService → API path
+            const apiSources = resolvedSources.filter(s => s.endpoints.searchQueryService);
 
-                const parts = line.split('|').map(p => p.trim()).filter(p => p);
-                if (parts.length >= 2) {
-                    const packageId = parts[0];
-                    const version = parts[1];
+            // CLI fallback: any input source NOT handled by API — includes local sources,
+            // sources that failed endpoint discovery, and sources without SearchQueryService.
+            const apiSourceUrls = new Set(apiSources.map(s => s.url));
+            const cliSourceUrls = this._deps.filterHealthySources(
+                allInputUrls.filter(url => !apiSourceUrls.has(url))
+            );
 
-                    // Skip header row
-                    if (packageId === 'Package ID' || !packageId || !version) {
-                        continue;
-                    }
+            let apiResults: PackageSearchResult[] = [];
+            const cliResults: PackageSearchResult[] = [];
 
-                    // Deduplicate
-                    if (seenIds.has(packageId)) {
-                        continue;
-                    }
-
-                    const owners = parts[2] || '';
-                    const downloads = parts[3] ? parseInt(parts[3].replace(/[^\d]/g, ''), 10) : undefined;
-
-                    packages.push({
-                        id: packageId,
-                        version: version,
-                        versions: [],
-                        description: '',
-                        authors: liteMode ? '' : owners,
-                        totalDownloads: downloads,
-                    });
-
-                    seenIds.add(packageId);
+            // Try API path for sources with SearchQueryService
+            if (apiSources.length > 0) {
+                const results = await this.searchPackagesViaApi(
+                    query, includePrerelease ?? false, liteMode ?? false, searchResultLimit, exactMatch ?? false, apiSources);
+                if (results !== null) {
+                    apiResults = results;
                 }
             }
 
-            // Enrich with metadata if not in lite mode
-            if (!liteMode) {
-                await this.enrichSearchResultMetadata(packages);
+            // CLI fallback for sources not handled by API path
+            if (cliSourceUrls.length > 0) {
+                const sourceArg = cliSourceUrls.map(s => `--source "${s}"`).join(' ');
+
+                const prereleaseArg = includePrerelease ? '--prerelease' : '';
+                const exactMatchArg = exactMatch ? '--exact-match' : '';
+
+                try {
+                    const workspaceFolder = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+                    const command = `dotnet package search "${query}" ${sourceArg} ${prereleaseArg} ${exactMatchArg} --take ${searchResultLimit}`;
+                    const { stdout } = await execWithTimeout(command, { cwd: workspaceFolder });
+
+                    // Parse CLI output
+                    const lines = stdout.split('\n');
+
+                    for (const line of lines) {
+                        if (line.includes('---')) { continue; }
+
+                        const parts = line.split('|').map(p => p.trim()).filter(p => p);
+                        if (parts.length >= 2) {
+                            const packageId = parts[0];
+                            const version = parts[1];
+
+                            if (packageId === 'Package ID' || !packageId || !version) { continue; }
+
+                            const owners = parts[2] || '';
+                            const downloads = parts[3] ? parseInt(parts[3].replace(/[^\d]/g, ''), 10) : undefined;
+
+                            cliResults.push({
+                                id: packageId,
+                                version: version,
+                                versions: [],
+                                description: '',
+                                authors: liteMode ? '' : owners,
+                                totalDownloads: downloads,
+                            });
+                        }
+                    }
+                } catch {
+                    // CLI search failed — continue with whatever API results we have
+                }
+            }
+
+            // Merge API + CLI results, deduplicate (API results take priority)
+            const seenIds = new Set<string>(apiResults.map(p => p.id.toLowerCase()));
+            const merged = [...apiResults];
+            for (const pkg of cliResults) {
+                if (!seenIds.has(pkg.id.toLowerCase())) {
+                    merged.push(pkg);
+                    seenIds.add(pkg.id.toLowerCase());
+                }
+            }
+
+            // Cap merged results to searchResultLimit (API queries each source with `take`,
+            // so multi-source merges can exceed the limit before dedup)
+            const finalResults = merged.length > searchResultLimit ? merged.slice(0, searchResultLimit) : merged;
+
+            // Enrich CLI-only results with metadata if not in lite mode
+            if (!liteMode && cliResults.length > 0) {
+                // Only enrich packages that came from CLI (not already enriched by API)
+                const cliPackagesInFinal = finalResults.filter(p =>
+                    p.iconUrl === undefined && p.verified === undefined
+                );
+                if (cliPackagesInFinal.length > 0) {
+                    await this.enrichSearchResultMetadata(cliPackagesInFinal);
+                }
             }
 
             // Cache results
-            if (packages.length > 0) {
-                this.searchResultsCache.set(searchCacheKey, packages);
-                workspaceCache.set(searchCacheKey, packages, CACHE_TTL.SEARCH_RESULTS);
+            if (finalResults.length > 0) {
+                this.searchResultsCache.set(searchCacheKey, finalResults);
+                workspaceCache.set(searchCacheKey, finalResults, CACHE_TTL.SEARCH_RESULTS);
             }
 
-            return packages;
+            return finalResults;
         } catch (error) {
             vscode.window.showErrorMessage(`Failed to search packages: ${error}`);
             return [];

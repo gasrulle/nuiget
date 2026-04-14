@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.18.3] - 2026-04-15
 
+### Added
+
+- **Generalized API search for all V3 NuGet sources** — Package search now uses the V3 SearchQueryService API for ANY NuGet source that supports it (not just nuget.org). Multiple sources are queried in parallel with results merged and deduplicated. Auth headers are passed for authenticated feeds. Handles both camelCase and PascalCase response fields (BaGet/ProGet compatibility). CLI is used only as fallback for V2 feeds and local sources.
+
 ### Changed
 
 - **Two-phase installed packages delivery**
@@ -17,6 +21,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Removed
 
 - **Dead `autocompletePackageId` code** — Removed the unused `autocompletePackageId()` method, its `autocompleteCache`, facade method, tests, and benchmark. `quickSearchGrouped()` is the sole autocomplete path.
+
+### Fixed
+
+- **API search description dropped**
+- **Local/failed sources dropped from search**
+- **Multi-source search result ordering**
+- **Multi-source search result count exceeding limit**
 
 ## [1.18.2] - 2026-04-13
 

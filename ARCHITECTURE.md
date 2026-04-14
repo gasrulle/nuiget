@@ -597,18 +597,24 @@ async discoverServiceEndpoints(sourceUrl: string): Promise<ServiceEndpoints> {
 
 **Impact:** With 20 packages from a custom source, reduces worst-case from ~21s (per batch) to ~5s (one timeout, then cached).
 
-#### API-First Search for Single nuget.org Source
-When only a single nuget.org source is active (or no sources specified, defaulting to nuget.org), `searchPackages()` bypasses the CLI entirely and calls the NuGet V3 `SearchQueryService` API directly via `searchPackagesViaApi()`.
+#### Generalized API Search for V3 Sources
+`searchPackages()` resolves all specified sources via `resolveSourcesForSearch()`, partitions them into API-capable sources (those with `SearchQueryService` endpoints) and CLI-only sources, then queries API sources in parallel via `searchPackagesViaApi()` with CLI as the fallback for remaining sources. Results are merged and deduplicated (API results take priority).
 
 **Why:** The CLI path spawns `dotnet package search` (500–2000ms process startup) which returns only 4 fields (id, version, owners, totalDownloads), then makes N individual `getPackageSearchMetadata()` API calls (batched 6 at a time) to fetch verified, authors, description, and iconUrl. With 20 results, that's 1 CLI spawn + ~20 HTTP requests.
 
 The SearchQueryService returns **all** fields in a single HTTP/2 call (~100–300ms): `id`, `version`, `description`, `authors`, `totalDownloads`, `iconUrl`, `verified`, `versions[]`. The V3 Search API is [not rate-limited on nuget.org](https://learn.microsoft.com/en-us/nuget/api/rate-limits).
 
-**Detection:** `searchPackages()` checks `validSources` (the original, pre-health-filter list) — never the post-filter `healthySources`. If `validSources` has exactly 1 entry and it's a nuget.org URL (`api.nuget.org` or `nuget.org/v3`), the API path triggers. If `validSources` is empty (caller wants all configured sources), `getSources()` is called to verify that the sole enabled remote source is nuget.org. When multiple sources are specified, the CLI path always runs so all sources are queried.
+**Source resolution:** `resolveSourcesForSearch(sourceUrls?)` filters local sources, calls `filterHealthySources()`, discovers V3 endpoints via `discoverServiceEndpoints()`, and resolves auth headers via `getAuthHeader()`. Returns `ResolvedSource[]` with `{ url, endpoints, authHeader? }`. When no URLs are passed, delegates to `resolveSourcesForBatch()` which resolves all configured sources.
 
-**Visual parity:** The API returns rich metadata (description, all versions, verified), but the search result list intentionally mirrors CLI output: `description: ''`, `versions: [latestVersion]`, and `verified: undefined` in liteMode. The full metadata is still pre-populated in `verifiedStatusCache` so it loads instantly when the user clicks a package.
+**Multi-source parallel API:** `searchPackagesViaApi(query, includePrerelease, liteMode, limit, exactMatch, resolvedSources)` queries each source's `searchQueryService` in parallel via `Promise.all`. Results are merged and deduplicated across sources — when the same package ID appears from multiple sources, the entry with the highest `totalDownloads` wins. Handles both camelCase (`id`, `version`, `description`) and PascalCase (`Id`, `Version`, `Description`) response fields for BaGet/ProGet compatibility.
 
-**Fallback:** If the API call fails (network error, unexpected response), `searchPackagesViaApi()` returns `null` and `searchPackages()` falls through to the existing CLI path. No user-visible regression.
+**Icon resolution:** Each source's `packageBaseAddress` is used to resolve icon URLs (not hardcoded to nuget.org's flat container). Falls back to the entry's `iconUrl` field if `packageBaseAddress` is unavailable.
+
+**Visual parity:** The API returns rich metadata (description, all versions, verified), but in liteMode the search result list intentionally omits descriptions: `description: liteMode ? '' : description`. The full metadata is still pre-populated in `verifiedStatusCache` so it loads instantly when the user clicks a package.
+
+**Fallback:** If a source's API call fails, it's skipped (logged as warning). If all API sources fail, `searchPackagesViaApi()` returns `null` and flow falls through to the CLI path. Source-level failures don't block other sources.
+
+**CLI fallback:** Sources without `SearchQueryService` (V2 feeds, local folders) go to `dotnet package search` CLI. CLI results are merged with API results, with API results taking priority for duplicate package IDs.
 
 **Cache population:** The API response proactively populates `verifiedStatusCache`, `iconUrlCache`, and `workspaceCache` for each result, so subsequent `getPackageSearchMetadata()` calls (e.g., when the user clicks a package) are instant cache hits.
 

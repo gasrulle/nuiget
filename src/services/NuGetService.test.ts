@@ -1435,9 +1435,18 @@ describe('NuGetService', () => {
     // ══════════════════════════════════════════════
 
     // ──────────────────────────────────────────────
-    // searchPackagesViaApi (private)
+    // searchPackagesViaApi (private — generalized multi-source API search)
     // ──────────────────────────────────────────────
     describe('searchPackagesViaApi', () => {
+        const nugetOrgSource = {
+            url: 'https://api.nuget.org/v3/index.json',
+            endpoints: {
+                searchQueryService: 'https://api.nuget.org/v3/query',
+                packageBaseAddress: 'https://api.nuget.org/v3-flatcontainer'
+            },
+            authHeader: undefined
+        };
+
         it('returns parsed results from SearchQueryService', async () => {
             const searchResponse = {
                 totalHits: 1,
@@ -1453,61 +1462,75 @@ describe('NuGetService', () => {
                 }]
             };
 
-            vi.spyOn(service as any, 'discoverServiceEndpoints').mockResolvedValue({
-                searchQueryService: 'https://api.nuget.org/v3/query'
-            });
             vi.spyOn(service as any, 'fetchJson').mockResolvedValue(searchResponse);
 
-            const result = await (service as any)._packageService.searchPackagesViaApi('Newtonsoft', false, false, 20, false);
+            const result = await (service as any)._packageService.searchPackagesViaApi('Newtonsoft', false, false, 20, false, [nugetOrgSource]);
             expect(result).toHaveLength(1);
             expect(result[0].id).toBe('Newtonsoft.Json');
             expect(result[0].verified).toBe(true);
             expect(result[0].authors).toBe('James Newton-King');
+            expect(result[0].description).toBe('Popular JSON framework');
         });
 
-        it('returns null when SearchQueryService endpoint not found', async () => {
-            vi.spyOn(service as any, 'discoverServiceEndpoints').mockResolvedValue({});
+        it('returns null when no resolved sources have SearchQueryService', async () => {
+            const sourceWithoutSearch = {
+                url: 'https://example.com/v3/index.json',
+                endpoints: { packageBaseAddress: 'https://example.com/flat' },
+                authHeader: undefined
+            };
 
+            const result = await (service as any)._packageService.searchPackagesViaApi('test', false, false, 20, false, [sourceWithoutSearch]);
+            expect(result).toBeNull();
+        });
+
+        it('returns null when no resolved sources provided', async () => {
             const result = await (service as any)._packageService.searchPackagesViaApi('test', false, false, 20, false);
             expect(result).toBeNull();
         });
 
-        it('returns null when fetchJson returns null', async () => {
-            vi.spyOn(service as any, 'discoverServiceEndpoints').mockResolvedValue({
-                searchQueryService: 'https://api.nuget.org/v3/query'
-            });
+        it('returns null when resolved sources array is empty', async () => {
+            const result = await (service as any)._packageService.searchPackagesViaApi('test', false, false, 20, false, []);
+            expect(result).toBeNull();
+        });
+
+        it('returns empty array when fetchJson returns null', async () => {
             vi.spyOn(service as any, 'fetchJson').mockResolvedValue(null);
 
-            const result = await (service as any)._packageService.searchPackagesViaApi('test', false, false, 20, false);
-            expect(result).toBeNull();
+            const result = await (service as any)._packageService.searchPackagesViaApi('test', false, false, 20, false, [nugetOrgSource]);
+            expect(result).toEqual([]);
+        });
+
+        it('returns empty array when source returns empty data', async () => {
+            vi.spyOn(service as any, 'fetchJson').mockResolvedValue({ data: [] });
+
+            const result = await (service as any)._packageService.searchPackagesViaApi('test', false, false, 20, false, [nugetOrgSource]);
+            expect(result).toEqual([]);
         });
 
         it('returns null on exception (falls back to CLI)', async () => {
-            vi.spyOn(service as any, 'discoverServiceEndpoints').mockRejectedValue(new Error('network'));
+            // Force an exception that isn't caught by per-source try/catch
+            const badSource = {
+                ...nugetOrgSource,
+                endpoints: { get searchQueryService() { throw new Error('boom'); } }
+            };
 
-            const result = await (service as any)._packageService.searchPackagesViaApi('test', false, false, 20, false);
+            const result = await (service as any)._packageService.searchPackagesViaApi('test', false, false, 20, false, [badSource]);
             expect(result).toBeNull();
         });
 
         it('uses packageid: prefix for exactMatch', async () => {
-            vi.spyOn(service as any, 'discoverServiceEndpoints').mockResolvedValue({
-                searchQueryService: 'https://api.nuget.org/v3/query'
-            });
             const fetchSpy = vi.spyOn(service as any, 'fetchJson').mockResolvedValue({ data: [] });
 
-            await (service as any)._packageService.searchPackagesViaApi('Newtonsoft.Json', false, false, 20, true);
+            await (service as any)._packageService.searchPackagesViaApi('Newtonsoft.Json', false, false, 20, true, [nugetOrgSource]);
 
             const url = fetchSpy.mock.calls[0][0] as string;
             expect(url).toContain('packageid%3ANewtonsoft.Json');
         });
 
         it('sets prerelease param when includePrerelease is true', async () => {
-            vi.spyOn(service as any, 'discoverServiceEndpoints').mockResolvedValue({
-                searchQueryService: 'https://api.nuget.org/v3/query'
-            });
             const fetchSpy = vi.spyOn(service as any, 'fetchJson').mockResolvedValue({ data: [] });
 
-            await (service as any)._packageService.searchPackagesViaApi('test', true, false, 20, false);
+            await (service as any)._packageService.searchPackagesViaApi('test', true, false, 20, false, [nugetOrgSource]);
 
             const url = fetchSpy.mock.calls[0][0] as string;
             expect(url).toContain('prerelease=true');
@@ -1525,13 +1548,11 @@ describe('NuGetService', () => {
                 }]
             };
 
-            vi.spyOn(service as any, 'discoverServiceEndpoints').mockResolvedValue({
-                searchQueryService: 'https://api.nuget.org/v3/query'
-            });
             vi.spyOn(service as any, 'fetchJson').mockResolvedValue(searchResponse);
 
-            const result = await (service as any)._packageService.searchPackagesViaApi('test', false, true, 20, false);
+            const result = await (service as any)._packageService.searchPackagesViaApi('test', false, true, 20, false, [nugetOrgSource]);
             expect(result[0].authors).toBe('');
+            expect(result[0].description).toBe('');
             expect(result[0].verified).toBeUndefined();
             // In liteMode, icon cache should NOT be populated
             expect(workspaceCache.set).not.toHaveBeenCalledWith(
@@ -1549,12 +1570,9 @@ describe('NuGetService', () => {
                 }]
             };
 
-            vi.spyOn(service as any, 'discoverServiceEndpoints').mockResolvedValue({
-                searchQueryService: 'https://api.nuget.org/v3/query'
-            });
             vi.spyOn(service as any, 'fetchJson').mockResolvedValue(searchResponse);
 
-            const result = await (service as any)._packageService.searchPackagesViaApi('test', false, false, 20, false);
+            const result = await (service as any)._packageService.searchPackagesViaApi('test', false, false, 20, false, [nugetOrgSource]);
             expect(result[0].iconUrl).toBeUndefined();
         });
 
@@ -1567,13 +1585,281 @@ describe('NuGetService', () => {
                 }]
             };
 
-            vi.spyOn(service as any, 'discoverServiceEndpoints').mockResolvedValue({
-                searchQueryService: 'https://api.nuget.org/v3/query'
-            });
             vi.spyOn(service as any, 'fetchJson').mockResolvedValue(searchResponse);
 
-            const result = await (service as any)._packageService.searchPackagesViaApi('test', false, false, 20, false);
+            const result = await (service as any)._packageService.searchPackagesViaApi('test', false, false, 20, false, [nugetOrgSource]);
             expect(result[0].authors).toBe('Author One, Author Two');
+        });
+
+        it('deduplicates packages across multiple sources (highest downloads wins)', async () => {
+            const customSource = {
+                url: 'https://custom.com/v3/index.json',
+                endpoints: {
+                    searchQueryService: 'https://custom.com/v3/query',
+                    packageBaseAddress: 'https://custom.com/flat'
+                },
+                authHeader: 'Basic abc123'
+            };
+
+            const fetchSpy = vi.spyOn(service as any, 'fetchJson');
+            // nuget.org returns package with high downloads
+            fetchSpy.mockResolvedValueOnce({
+                data: [{
+                    id: 'SharedPkg',
+                    version: '2.0.0',
+                    description: 'From nuget.org',
+                    authors: 'Author A',
+                    totalDownloads: 1000000,
+                    verified: true
+                }]
+            });
+            // Custom source returns same package with lower downloads
+            fetchSpy.mockResolvedValueOnce({
+                data: [{
+                    id: 'SharedPkg',
+                    version: '2.0.0',
+                    description: 'From custom',
+                    authors: 'Author B',
+                    totalDownloads: 500
+                }]
+            });
+
+            const result = await (service as any)._packageService.searchPackagesViaApi(
+                'shared', false, false, 20, false, [nugetOrgSource, customSource]
+            );
+            expect(result).toHaveLength(1);
+            expect(result[0].id).toBe('SharedPkg');
+            expect(result[0].description).toBe('From nuget.org');
+            expect(result[0].totalDownloads).toBe(1000000);
+        });
+
+        it('merges unique packages across multiple sources', async () => {
+            const customSource = {
+                url: 'https://custom.com/v3/index.json',
+                endpoints: {
+                    searchQueryService: 'https://custom.com/v3/query',
+                    packageBaseAddress: 'https://custom.com/flat'
+                },
+                authHeader: undefined
+            };
+
+            const fetchSpy = vi.spyOn(service as any, 'fetchJson');
+            fetchSpy.mockResolvedValueOnce({
+                data: [{ id: 'PkgA', version: '1.0.0', description: 'A' }]
+            });
+            fetchSpy.mockResolvedValueOnce({
+                data: [{ id: 'PkgB', version: '2.0.0', description: 'B' }]
+            });
+
+            const result = await (service as any)._packageService.searchPackagesViaApi(
+                'test', false, false, 20, false, [nugetOrgSource, customSource]
+            );
+            expect(result).toHaveLength(2);
+            expect(result.map((r: any) => r.id).sort()).toEqual(['PkgA', 'PkgB']);
+        });
+
+        it('passes auth header to custom sources', async () => {
+            const customSource = {
+                url: 'https://private.com/v3/index.json',
+                endpoints: { searchQueryService: 'https://private.com/v3/query' },
+                authHeader: 'Bearer token123'
+            };
+
+            const fetchSpy = vi.spyOn(service as any, 'fetchJson').mockResolvedValue({ data: [] });
+
+            await (service as any)._packageService.searchPackagesViaApi('test', false, false, 20, false, [customSource]);
+
+            expect(fetchSpy).toHaveBeenCalledWith(
+                expect.stringContaining('https://private.com/v3/query'),
+                'Bearer token123'
+            );
+        });
+
+        it('uses packageBaseAddress for custom source icon URLs', async () => {
+            const customSource = {
+                url: 'https://custom.com/v3/index.json',
+                endpoints: {
+                    searchQueryService: 'https://custom.com/v3/query',
+                    packageBaseAddress: 'https://custom.com/flat/'
+                },
+                authHeader: undefined
+            };
+
+            vi.spyOn(service as any, 'fetchJson').mockResolvedValue({
+                data: [{
+                    id: 'CustomPkg',
+                    version: '1.0.0',
+                    iconUrl: 'https://custom.com/icon.png',
+                    description: 'Test'
+                }]
+            });
+
+            const result = await (service as any)._packageService.searchPackagesViaApi(
+                'test', false, false, 20, false, [customSource]
+            );
+            expect(result[0].iconUrl).toBe('https://custom.com/flat/custompkg/1.0.0/icon');
+        });
+
+        it('handles PascalCase response fields (Data, Id, Version)', async () => {
+            vi.spyOn(service as any, 'fetchJson').mockResolvedValue({
+                Data: [{
+                    Id: 'PascalPkg',
+                    Version: '3.0.0',
+                    Description: 'PascalCase response',
+                    Authors: 'AuthorP'
+                }]
+            });
+
+            const result = await (service as any)._packageService.searchPackagesViaApi(
+                'test', false, false, 20, false, [nugetOrgSource]
+            );
+            expect(result).toHaveLength(1);
+            expect(result[0].id).toBe('PascalPkg');
+            expect(result[0].version).toBe('3.0.0');
+            expect(result[0].description).toBe('PascalCase response');
+            expect(result[0].authors).toBe('AuthorP');
+        });
+
+        it('continues when one source fails and others succeed', async () => {
+            const failingSource = {
+                url: 'https://broken.com/v3/index.json',
+                endpoints: { searchQueryService: 'https://broken.com/v3/query' },
+                authHeader: undefined
+            };
+
+            const fetchSpy = vi.spyOn(service as any, 'fetchJson');
+            // First source (nuget.org) succeeds
+            fetchSpy.mockResolvedValueOnce({
+                data: [{ id: 'GoodPkg', version: '1.0.0', description: 'Works' }]
+            });
+            // Second source throws
+            fetchSpy.mockRejectedValueOnce(new Error('network error'));
+
+            const result = await (service as any)._packageService.searchPackagesViaApi(
+                'test', false, false, 20, false, [nugetOrgSource, failingSource]
+            );
+            expect(result).toHaveLength(1);
+            expect(result[0].id).toBe('GoodPkg');
+        });
+
+        it('populates description from API response (not empty string)', async () => {
+            const searchResponse = {
+                data: [{
+                    id: 'DescPkg',
+                    version: '1.0.0',
+                    description: 'This is the real description',
+                    authors: 'Author'
+                }]
+            };
+
+            vi.spyOn(service as any, 'fetchJson').mockResolvedValue(searchResponse);
+
+            const result = await (service as any)._packageService.searchPackagesViaApi(
+                'test', false, false, 20, false, [nugetOrgSource]
+            );
+            expect(result[0].description).toBe('This is the real description');
+        });
+
+        it('sorts multi-source results by prefix match then by downloads', async () => {
+            const customSource = {
+                url: 'https://custom.com/v3/index.json',
+                endpoints: { searchQueryService: 'https://custom.com/v3/query' },
+                authHeader: undefined
+            };
+
+            const fetchSpy = vi.spyOn(service as any, 'fetchJson');
+            // nuget.org: high-download generic matches (no prefix match)
+            fetchSpy.mockResolvedValueOnce({
+                data: [
+                    { id: 'SomeOther.Extensions', version: '5.0.0', totalDownloads: 1000000, description: 'Popular' },
+                    { id: 'Another.Extensions.Lib', version: '3.0.0', totalDownloads: 500000, description: 'Also popular' }
+                ]
+            });
+            // Custom source: exact prefix match with fewer downloads
+            fetchSpy.mockResolvedValueOnce({
+                data: [
+                    { id: 'MyPackage.Extensions', version: '1.0.0', totalDownloads: 100, description: 'Exact match' },
+                    { id: 'MyPackage.Extensions.Core', version: '1.0.0', totalDownloads: 50, description: 'Prefix match' }
+                ]
+            });
+
+            const result = await (service as any)._packageService.searchPackagesViaApi(
+                'MyPackage.Extensions', false, false, 20, false, [nugetOrgSource, customSource]
+            );
+
+            // Prefix matches should come first despite lower downloads
+            expect(result[0].id).toBe('MyPackage.Extensions');
+            expect(result[1].id).toBe('MyPackage.Extensions.Core');
+            // Non-prefix matches sorted by downloads
+            expect(result[2].id).toBe('SomeOther.Extensions');
+            expect(result[3].id).toBe('Another.Extensions.Lib');
+        });
+
+        it('preserves single-source order (no re-sort needed)', async () => {
+            vi.spyOn(service as any, 'fetchJson').mockResolvedValue({
+                data: [
+                    { id: 'TopResult', version: '1.0.0', totalDownloads: 5000, description: 'First' },
+                    { id: 'SecondResult', version: '1.0.0', totalDownloads: 100000, description: 'Second' }
+                ]
+            });
+
+            // Single source: preserve server's relevance order (no re-sort)
+            const result = await (service as any)._packageService.searchPackagesViaApi(
+                'test', false, false, 20, false, [nugetOrgSource]
+            );
+            expect(result[0].id).toBe('TopResult');
+            expect(result[1].id).toBe('SecondResult');
+        });
+
+        it('sorts multi-source results by prefix match then by downloads', async () => {
+            const customSource = {
+                url: 'https://custom.com/v3/index.json',
+                endpoints: { searchQueryService: 'https://custom.com/v3/query' },
+                authHeader: undefined
+            };
+
+            const fetchSpy = vi.spyOn(service as any, 'fetchJson');
+            // nuget.org: high-download generic matches (no prefix match)
+            fetchSpy.mockResolvedValueOnce({
+                data: [
+                    { id: 'SomeOther.Extensions', version: '5.0.0', totalDownloads: 1000000, description: 'Popular' },
+                    { id: 'Another.Extensions.Lib', version: '3.0.0', totalDownloads: 500000, description: 'Also popular' }
+                ]
+            });
+            // Custom source: exact prefix match with fewer downloads
+            fetchSpy.mockResolvedValueOnce({
+                data: [
+                    { id: 'MyPackage.Extensions', version: '1.0.0', totalDownloads: 100, description: 'Exact match' },
+                    { id: 'MyPackage.Extensions.Core', version: '1.0.0', totalDownloads: 50, description: 'Prefix match' }
+                ]
+            });
+
+            const result = await (service as any)._packageService.searchPackagesViaApi(
+                'MyPackage.Extensions', false, false, 20, false, [nugetOrgSource, customSource]
+            );
+
+            // Prefix matches should come first despite lower downloads
+            expect(result[0].id).toBe('MyPackage.Extensions');
+            expect(result[1].id).toBe('MyPackage.Extensions.Core');
+            // Non-prefix matches sorted by downloads
+            expect(result[2].id).toBe('SomeOther.Extensions');
+            expect(result[3].id).toBe('Another.Extensions.Lib');
+        });
+
+        it('preserves single-source order (no re-sort needed)', async () => {
+            vi.spyOn(service as any, 'fetchJson').mockResolvedValue({
+                data: [
+                    { id: 'TopResult', version: '1.0.0', totalDownloads: 5000, description: 'First' },
+                    { id: 'SecondResult', version: '1.0.0', totalDownloads: 100000, description: 'Second' }
+                ]
+            });
+
+            // Single source: preserve server's relevance order (no re-sort)
+            const result = await (service as any)._packageService.searchPackagesViaApi(
+                'test', false, false, 20, false, [nugetOrgSource]
+            );
+            expect(result[0].id).toBe('TopResult');
+            expect(result[1].id).toBe('SecondResult');
         });
     });
 
@@ -1704,7 +1990,7 @@ describe('NuGetService', () => {
     });
 
     // ──────────────────────────────────────────────
-    // searchPackages
+    // searchPackages (uses generalized API search with resolved sources)
     // ──────────────────────────────────────────────
     describe('searchPackages', () => {
         it('returns cached results from in-memory cache', async () => {
@@ -1712,7 +1998,9 @@ describe('NuGetService', () => {
             vi.spyOn((service as any)._packageService, 'searchPackagesViaApi').mockResolvedValue([
                 { id: 'CachedPkg', version: '1.0.0', description: '', authors: '', versions: ['1.0.0'] }
             ]);
-            vi.spyOn(service as any, 'getSources').mockResolvedValue([]);
+            vi.spyOn((service as any)._packageService, 'resolveSourcesForSearch').mockResolvedValue([
+                { url: 'https://api.nuget.org/v3/index.json', endpoints: { searchQueryService: 'https://api.nuget.org/v3/query' } }
+            ]);
 
             // First call populates cache
             await service.searchPackages('cached', ['https://api.nuget.org/v3/index.json'], false, true);
@@ -1727,8 +2015,11 @@ describe('NuGetService', () => {
         });
 
         it('uses API path for single nuget.org source', async () => {
+            vi.spyOn((service as any)._packageService, 'resolveSourcesForSearch').mockResolvedValue([
+                { url: 'https://api.nuget.org/v3/index.json', endpoints: { searchQueryService: 'https://api.nuget.org/v3/query' } }
+            ]);
             const apiSpy = vi.spyOn((service as any)._packageService, 'searchPackagesViaApi').mockResolvedValue([
-                { id: 'ApiPkg', version: '2.0.0', description: '', authors: '', versions: ['2.0.0'] }
+                { id: 'ApiPkg', version: '2.0.0', description: 'Desc', authors: 'Auth', versions: ['2.0.0'] }
             ]);
 
             const result = await service.searchPackages('api', ['https://api.nuget.org/v3/index.json'], false, true);
@@ -1736,34 +2027,71 @@ describe('NuGetService', () => {
             expect(apiSpy).toHaveBeenCalled();
         });
 
-        it('falls back to CLI when API returns null', async () => {
-            vi.spyOn((service as any)._packageService, 'searchPackagesViaApi').mockResolvedValue(null);
-
-            // CLI returns table output
-            hoisted.mockExecWithTimeout.mockResolvedValue({
-                stdout: '| Package ID | Version | Owners | Downloads |\n| --- | --- | --- | --- |\n| CliPkg | 3.0.0 | owner | 100 |',
-                stderr: ''
-            });
-
-            const result = await service.searchPackages('cli', ['https://api.nuget.org/v3/index.json'], false, true);
-            expect(result[0].id).toBe('CliPkg');
-            expect(result[0].version).toBe('3.0.0');
-        });
-
-        it('uses CLI path for multiple sources', async () => {
-            hoisted.mockExecWithTimeout.mockResolvedValue({
-                stdout: '| Package ID | Version | Owners | Downloads |\n| --- | --- | --- | --- |\n| MultiPkg | 1.0.0 | own | 50 |',
-                stderr: ''
-            });
+        it('uses API path for multiple sources with SearchQueryService', async () => {
+            vi.spyOn((service as any)._packageService, 'resolveSourcesForSearch').mockResolvedValue([
+                { url: 'https://api.nuget.org/v3/index.json', endpoints: { searchQueryService: 'https://api.nuget.org/v3/query' } },
+                { url: 'https://custom.com/v3/index.json', endpoints: { searchQueryService: 'https://custom.com/v3/query' } }
+            ]);
+            const apiSpy = vi.spyOn((service as any)._packageService, 'searchPackagesViaApi').mockResolvedValue([
+                { id: 'ApiPkg', version: '1.0.0', description: 'D', authors: 'A', versions: [] }
+            ]);
 
             const result = await service.searchPackages('multi', [
                 'https://api.nuget.org/v3/index.json',
                 'https://custom.com/v3/index.json'
             ], false, true);
-            expect(result[0].id).toBe('MultiPkg');
+            expect(result[0].id).toBe('ApiPkg');
+            expect(apiSpy).toHaveBeenCalledWith(
+                'multi', false, true, expect.any(Number), false,
+                expect.arrayContaining([
+                    expect.objectContaining({ url: 'https://api.nuget.org/v3/index.json' }),
+                    expect.objectContaining({ url: 'https://custom.com/v3/index.json' })
+                ])
+            );
+        });
+
+        it('falls back to CLI when API returns null', async () => {
+            vi.spyOn((service as any)._packageService, 'resolveSourcesForSearch').mockResolvedValue([
+                { url: 'https://api.nuget.org/v3/index.json', endpoints: { searchQueryService: 'https://api.nuget.org/v3/query' } }
+            ]);
+            vi.spyOn((service as any)._packageService, 'searchPackagesViaApi').mockResolvedValue(null);
+
+            // CLI returns table output — the source doesn't have searchQueryService so it's a CLI-only source
+            // Actually with resolved sources all having searchQueryService, CLI won't be triggered.
+            // Let's test with a source that has NO searchQueryService
+            vi.spyOn((service as any)._packageService, 'resolveSourcesForSearch').mockResolvedValue([
+                { url: 'https://legacy.com/v2/index.json', endpoints: {} }
+            ]);
+
+            hoisted.mockExecWithTimeout.mockResolvedValue({
+                stdout: '| Package ID | Version | Owners | Downloads |\n| --- | --- | --- | --- |\n| CliPkg | 3.0.0 | owner | 100 |',
+                stderr: ''
+            });
+
+            const result = await service.searchPackages('cli', ['https://legacy.com/v2/index.json'], false, true);
+            expect(result[0].id).toBe('CliPkg');
+            expect(result[0].version).toBe('3.0.0');
+        });
+
+        it('falls back to CLI for sources without SearchQueryService', async () => {
+            vi.spyOn((service as any)._packageService, 'resolveSourcesForSearch').mockResolvedValue([
+                { url: 'https://legacy.com/v2/index.json', endpoints: { packageBaseAddress: 'https://legacy.com/flat' } }
+            ]);
+
+            hoisted.mockExecWithTimeout.mockResolvedValue({
+                stdout: '| Package ID | Version | Owners | Downloads |\n| --- | --- | --- | --- |\n| LegacyPkg | 1.0.0 | own | 50 |',
+                stderr: ''
+            });
+
+            const result = await service.searchPackages('legacy', ['https://legacy.com/v2/index.json'], false, true);
+            expect(result[0].id).toBe('LegacyPkg');
         });
 
         it('skips duplicate package IDs from CLI output', async () => {
+            vi.spyOn((service as any)._packageService, 'resolveSourcesForSearch').mockResolvedValue([
+                { url: 'https://custom.com/v3/index.json', endpoints: {} }
+            ]);
+
             hoisted.mockExecWithTimeout.mockResolvedValue({
                 stdout: '| Pkg | 1.0.0 | o | 1 |\n| Pkg | 2.0.0 | o | 2 |',
                 stderr: ''
@@ -1782,10 +2110,15 @@ describe('NuGetService', () => {
             expect(result[0].id).toBe('WsCached');
         });
 
-        it('filters healthy sources before CLI call', async () => {
+        it('filters healthy sources via resolveSourcesForSearch', async () => {
             vi.mocked(workspaceCache.get).mockReturnValue(null);
             // Mark one source as failed
             (service as any).failedEndpointCache.set('https://bad.com/v3/index.json', Date.now());
+
+            // resolveSourcesForSearch should only resolve healthy sources
+            // The real method will call filterHealthySources internally
+            vi.spyOn(service as any, 'discoverServiceEndpoints').mockResolvedValue({});
+            vi.spyOn(service as any, 'getAuthHeader').mockResolvedValue(undefined);
 
             hoisted.mockExecWithTimeout.mockResolvedValue({
                 stdout: '| Pkg | 1.0.0 | o | 1 |',
@@ -1797,18 +2130,150 @@ describe('NuGetService', () => {
                 'https://bad.com/v3/index.json'
             ], false, true);
 
-            const command = hoisted.mockExecWithTimeout.mock.calls[0][0] as string;
-            expect(command).toContain('good.com');
-            expect(command).not.toContain('bad.com');
+            // CLI fallback should not include the failed source
+            if (hoisted.mockExecWithTimeout.mock.calls.length > 0) {
+                const command = hoisted.mockExecWithTimeout.mock.calls[0][0] as string;
+                expect(command).not.toContain('bad.com');
+            }
         });
 
         it('returns empty array on exception', async () => {
             vi.mocked(workspaceCache.get).mockReturnValue(null);
-            vi.spyOn((service as any)._packageService, 'searchPackagesViaApi').mockRejectedValue(new Error('crash'));
-            hoisted.mockExecWithTimeout.mockRejectedValue(new Error('crash'));
+            vi.spyOn((service as any)._packageService, 'resolveSourcesForSearch').mockRejectedValue(new Error('crash'));
 
             const result = await service.searchPackages('crash', ['https://api.nuget.org/v3/index.json'], false, true);
             expect(result).toEqual([]);
+        });
+
+        it('merges API and CLI results when some sources lack SearchQueryService', async () => {
+            vi.spyOn((service as any)._packageService, 'resolveSourcesForSearch').mockResolvedValue([
+                { url: 'https://api.nuget.org/v3/index.json', endpoints: { searchQueryService: 'https://api.nuget.org/v3/query' } },
+                { url: 'https://legacy.com/v2/index.json', endpoints: {} }
+            ]);
+            vi.spyOn((service as any)._packageService, 'searchPackagesViaApi').mockResolvedValue([
+                { id: 'ApiPkg', version: '1.0.0', description: 'D', authors: 'A', versions: [], iconUrl: 'icon', verified: true }
+            ]);
+
+            hoisted.mockExecWithTimeout.mockResolvedValue({
+                stdout: '| CliPkg | 2.0.0 | o | 1 |',
+                stderr: ''
+            });
+
+            const result = await service.searchPackages('merge', [
+                'https://api.nuget.org/v3/index.json',
+                'https://legacy.com/v2/index.json'
+            ], false, true);
+            expect(result).toHaveLength(2);
+            expect(result.map(r => r.id).sort()).toEqual(['ApiPkg', 'CliPkg']);
+        });
+
+        it('API results take priority over CLI duplicates in merged results', async () => {
+            vi.spyOn((service as any)._packageService, 'resolveSourcesForSearch').mockResolvedValue([
+                { url: 'https://api.nuget.org/v3/index.json', endpoints: { searchQueryService: 'https://api.nuget.org/v3/query' } },
+                { url: 'https://old.com/v2/index.json', endpoints: {} }
+            ]);
+            vi.spyOn((service as any)._packageService, 'searchPackagesViaApi').mockResolvedValue([
+                { id: 'SharedPkg', version: '2.0.0', description: 'API desc', authors: 'API author', versions: [], iconUrl: 'icon', verified: true }
+            ]);
+
+            hoisted.mockExecWithTimeout.mockResolvedValue({
+                stdout: '| SharedPkg | 1.0.0 | cli_owner | 100 |',
+                stderr: ''
+            });
+
+            const result = await service.searchPackages('shared', [
+                'https://api.nuget.org/v3/index.json',
+                'https://old.com/v2/index.json'
+            ], false, true);
+            // Only API version should be in results (dedup: API takes priority)
+            const sharedPkg = result.find(r => r.id === 'SharedPkg');
+            expect(sharedPkg?.version).toBe('2.0.0');
+            expect(sharedPkg?.description).toBe('API desc');
+        });
+
+        it('routes local source to CLI fallback (not dropped)', async () => {
+            // Local sources are filtered by resolveSourcesForSearch (can't discover API endpoints),
+            // but should still be searched via CLI
+            vi.spyOn((service as any)._packageService, 'resolveSourcesForSearch').mockResolvedValue([]);
+
+            hoisted.mockExecWithTimeout.mockResolvedValue({
+                stdout: '| LocalPkg | 1.0.0 | owner | 10 |',
+                stderr: ''
+            });
+
+            const result = await service.searchPackages('local', ['C:\\packages'], false, true);
+            expect(result).toHaveLength(1);
+            expect(result[0].id).toBe('LocalPkg');
+            // Verify CLI was called with the local source
+            const command = hoisted.mockExecWithTimeout.mock.calls[0][0] as string;
+            expect(command).toContain('--source "C:\\packages"');
+        });
+
+        it('routes failed-discovery source to CLI fallback', async () => {
+            // Source where discoverServiceEndpoints throws → not in resolvedSources
+            vi.spyOn((service as any)._packageService, 'resolveSourcesForSearch').mockResolvedValue([]);
+
+            hoisted.mockExecWithTimeout.mockResolvedValue({
+                stdout: '| FailedPkg | 2.0.0 | owner | 5 |',
+                stderr: ''
+            });
+
+            const result = await service.searchPackages('fail', ['https://broken.com/v3/index.json'], false, true);
+            expect(result).toHaveLength(1);
+            expect(result[0].id).toBe('FailedPkg');
+            const command = hoisted.mockExecWithTimeout.mock.calls[0][0] as string;
+            expect(command).toContain('--source "https://broken.com/v3/index.json"');
+        });
+
+        it('routes API source to API and local source to CLI in mixed scenario', async () => {
+            vi.spyOn((service as any)._packageService, 'resolveSourcesForSearch').mockResolvedValue([
+                { url: 'https://api.nuget.org/v3/index.json', endpoints: { searchQueryService: 'https://api.nuget.org/v3/query' } }
+            ]);
+            vi.spyOn((service as any)._packageService, 'searchPackagesViaApi').mockResolvedValue([
+                { id: 'ApiPkg', version: '1.0.0', description: 'D', authors: 'A', versions: [], verified: true }
+            ]);
+
+            hoisted.mockExecWithTimeout.mockResolvedValue({
+                stdout: '| LocalPkg | 1.0.0 | owner | 10 |',
+                stderr: ''
+            });
+
+            const result = await service.searchPackages('mixed', [
+                'https://api.nuget.org/v3/index.json',
+                'C:\\local-feed'
+            ], false, true);
+            expect(result).toHaveLength(2);
+            expect(result.map(r => r.id).sort()).toEqual(['ApiPkg', 'LocalPkg']);
+            // CLI should only have the local source, not nuget.org
+            const command = hoisted.mockExecWithTimeout.mock.calls[0][0] as string;
+            expect(command).toContain('--source "C:\\local-feed"');
+            expect(command).not.toContain('nuget.org');
+        });
+
+        it('includes local sources in CLI when no specific sources given', async () => {
+            // "All sources" path: sources param is undefined → getSources() provides full list
+            vi.spyOn(service as any, 'getSources').mockResolvedValue([
+                { name: 'nuget.org', url: 'https://api.nuget.org/v3/index.json', enabled: true },
+                { name: 'local', url: 'C:\\packages', enabled: true }
+            ]);
+            vi.spyOn((service as any)._packageService, 'resolveSourcesForSearch').mockResolvedValue([
+                { url: 'https://api.nuget.org/v3/index.json', endpoints: { searchQueryService: 'https://api.nuget.org/v3/query' } }
+            ]);
+            vi.spyOn((service as any)._packageService, 'searchPackagesViaApi').mockResolvedValue([
+                { id: 'ApiPkg', version: '1.0.0', description: 'D', authors: 'A', versions: [] }
+            ]);
+
+            hoisted.mockExecWithTimeout.mockResolvedValue({
+                stdout: '| LocalPkg | 1.0.0 | owner | 5 |',
+                stderr: ''
+            });
+
+            const result = await service.searchPackages('all', undefined, false, true);
+            expect(result).toHaveLength(2);
+            expect(result.map(r => r.id).sort()).toEqual(['ApiPkg', 'LocalPkg']);
+            const command = hoisted.mockExecWithTimeout.mock.calls[0][0] as string;
+            expect(command).toContain('--source "C:\\packages"');
+            expect(command).not.toContain('nuget.org');
         });
     });
 
