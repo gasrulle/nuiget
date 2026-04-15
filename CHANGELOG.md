@@ -5,14 +5,14 @@ All notable changes to the nUIget extension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.18.3] - 2026-04-15
 
 ### Changed
 
-- **Two-phase installed packages delivery** — Installed packages now appear immediately after .csproj parsing (~20ms), with icons, authors, and vulnerability data enriched asynchronously in the background. Applies to both single-project and all-projects modes.
-- **Two-phase CLI search results delivery** — Search results from custom/multiple sources now appear immediately with basic data, with icons, verified status, authors, and descriptions enriched asynchronously in the background. API-path results (nuget.org) are unaffected.
-- **Incremental streaming update results** — Update checking now streams each found update to the UI as it's discovered via `packageUpdateFound` messages, instead of waiting for all packages to finish. Users see updates appear progressively in the Updates tab while the check continues in the background.
-- **Quick search LRU cache** — `quickSearchGrouped()` now caches results in a 100-entry LRU cache with 30s TTL. Repeated keystrokes for the same prefix return instantly from cache instead of firing fresh HTTP requests to all sources.
+- **Two-phase installed packages delivery**
+- **Two-phase CLI search results delivery**
+- **Incremental streaming update results**
+- **Quick search LRU cache**
 
 ### Removed
 

@@ -705,7 +705,13 @@ const UpdatesTab = forwardRef<UpdatesTabHandle, UpdatesTabProps>((props, ref) =>
                                 </div>
                             )}
                             {isStreaming && (
-                                <div className="streaming-indicator" aria-busy="true" aria-label="Checking for more updates">
+                                <div
+                                    className="streaming-indicator"
+                                    role="status"
+                                    aria-live="polite"
+                                    aria-atomic="true"
+                                    aria-busy="true"
+                                >
                                     <div className="loading-spinner loading-spinner-small"></div>
                                     <span>Checking for more updates...</span>
                                 </div>

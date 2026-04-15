@@ -62,6 +62,7 @@ export const App: React.FC = () => {
     const recentSearchesLimitRef = useRef<number>(5);
     const [packagesWithUpdates, setPackagesWithUpdates] = useState<PackageUpdate[]>([]);
     const [updateCount, setUpdateCount] = useState<number>(0);
+    const streamedUpdateIdsRef = useRef(new Set<string>());
     const [loadingUpdates, setLoadingUpdates] = useState(false);
     // "All Projects" mode data (driven by selectedProject === ALL_PROJECTS_SENTINEL)
     const [allProjectsUpdates, setAllProjectsUpdates] = useState<ProjectUpdates[]>([]);
@@ -350,22 +351,25 @@ export const App: React.FC = () => {
                 }
                 break;
             case 'installedPackagesMetadata':
-                // Phase 2: merge enriched metadata (icons, authors, verified) into existing packages
+                // Phase 2: merge enriched metadata into existing packages
                 if (message.projectPath === selectedProjectRef.current) {
-                    skipNextUpdateCheckRef.current = true;
                     setInstalledPackages(prev => {
-                        const enriched = message.packages as { id: string; iconUrl?: string; verified?: boolean; authors?: string }[];
+                        const enriched = message.packages as Array<Partial<InstalledPackage> & { id: string }>;
                         const metaMap = new Map(enriched.map(p => [p.id.toLowerCase(), p]));
                         let changed = false;
                         const result = prev.map(pkg => {
                             const meta = metaMap.get(pkg.id.toLowerCase());
                             if (!meta) { return pkg; }
-                            if (pkg.iconUrl === meta.iconUrl && pkg.verified === meta.verified && pkg.authors === meta.authors) {
-                                return pkg;
-                            }
+                            const patchEntries = Object.entries(meta).filter(([key, value]) => key !== 'id' && value !== undefined);
+                            if (patchEntries.length === 0) { return pkg; }
+                            const hasChanges = patchEntries.some(([key, value]) => pkg[key as keyof InstalledPackage] !== value);
+                            if (!hasChanges) { return pkg; }
                             changed = true;
-                            return { ...pkg, iconUrl: meta.iconUrl, verified: meta.verified, authors: meta.authors };
+                            return { ...pkg, ...Object.fromEntries(patchEntries) };
                         });
+                        if (changed) {
+                            skipNextUpdateCheckRef.current = true;
+                        }
                         return changed ? result : prev;
                     });
                 }
@@ -402,9 +406,10 @@ export const App: React.FC = () => {
                 if (message.query === searchQueryRef.current) {
                     setSearchResults(prev => {
                         const enriched = message.results as PackageSearchResult[];
+                        const metaMap = new Map(enriched.map(r => [r.id.toLowerCase(), r]));
                         let changed = false;
                         const merged = prev.map(pkg => {
-                            const match = enriched.find(r => r.id === pkg.id);
+                            const match = metaMap.get(pkg.id.toLowerCase());
                             if (match && (match.iconUrl !== pkg.iconUrl || match.verified !== pkg.verified || match.authors !== pkg.authors || (match.description && match.description !== pkg.description))) {
                                 changed = true;
                                 return { ...pkg, iconUrl: match.iconUrl ?? pkg.iconUrl, verified: match.verified ?? pkg.verified, authors: match.authors || pkg.authors, description: match.description || pkg.description };
@@ -511,6 +516,7 @@ export const App: React.FC = () => {
                         });
                     } else {
                         setPackagesWithUpdates([]);
+                        streamedUpdateIdsRef.current.clear();
                         setUpdateCount(0);
                     }
                     skipNextUpdateCheckRef.current = true;
@@ -533,6 +539,7 @@ export const App: React.FC = () => {
                         });
                     } else {
                         setPackagesWithUpdates([]);
+                        streamedUpdateIdsRef.current.clear();
                         setUpdateCount(0);
                     }
                     skipNextUpdateCheckRef.current = true;
@@ -706,21 +713,22 @@ export const App: React.FC = () => {
                 }
                 break;
             case 'packageUpdateFound':
-                // Progressive streaming: a single update was found during checkPackageUpdates
+                // Progressive streaming: a single update was found during checkPackageUpdates.
+                // Use ref-tracked IDs to guard both state updates identically,
+                // preventing count inflation on deduplication.
                 if (message.projectPath === selectedProjectRef.current) {
-                    setPackagesWithUpdates(prev => {
-                        const update = message.update as PackageUpdate;
-                        if (prev.some(u => u.id === update.id)) { return prev; }
-                        return [...prev, update];
-                    });
-                    // Optimistic count increment — final packageUpdates sets authoritative count.
-                    // Backend sends each package once so duplicates don't happen in practice.
-                    setUpdateCount(prev => prev + 1);
+                    const update = message.update as PackageUpdate;
+                    if (!streamedUpdateIdsRef.current.has(update.id)) {
+                        streamedUpdateIdsRef.current.add(update.id);
+                        setPackagesWithUpdates(prev => [...prev, update]);
+                        setUpdateCount(prev => prev + 1);
+                    }
                 }
                 break;
             case 'packageUpdates':
                 // Final authoritative result: replace progressive updates with complete data
                 if (message.projectPath === selectedProjectRef.current) {
+                    streamedUpdateIdsRef.current.clear();
                     setPackagesWithUpdates(message.updates);
                     setUpdateCount(message.updates.length);
                     setLoadingUpdates(false);
@@ -785,12 +793,12 @@ export const App: React.FC = () => {
                 }
                 break;
             case 'allProjectsInstalledMetadata':
-                // Phase 2: merge enriched metadata (icons, authors, verified) into all-projects installed
+                // Phase 2: merge enriched metadata into all-projects installed
                 {
                     const enrichedProjects = message.projectInstalled as ProjectInstalled[];
-                    const enrichedMap = new Map<string, Map<string, ProjectInstalled['packages'][0]>>();
+                    const enrichedMap = new Map<string, Map<string, Partial<InstalledPackage> & { id: string }>>();
                     for (const proj of enrichedProjects) {
-                        const pkgMap = new Map(proj.packages.map(p => [p.id.toLowerCase(), p]));
+                        const pkgMap = new Map(proj.packages.map(p => [p.id.toLowerCase(), p as Partial<InstalledPackage> & { id: string }]));
                         enrichedMap.set(proj.projectPath, pkgMap);
                     }
                     const mergeMetadata = (prev: ProjectInstalled[]) => {
@@ -802,9 +810,12 @@ export const App: React.FC = () => {
                             const pkgs = proj.packages.map(pkg => {
                                 const meta = pkgMap.get(pkg.id.toLowerCase());
                                 if (!meta) { return pkg; }
-                                if (pkg.iconUrl === meta.iconUrl && pkg.verified === meta.verified && pkg.authors === meta.authors) { return pkg; }
+                                const patchEntries = Object.entries(meta).filter(([key, value]) => key !== 'id' && value !== undefined);
+                                if (patchEntries.length === 0) { return pkg; }
+                                const hasChanges = patchEntries.some(([key, value]) => pkg[key as keyof InstalledPackage] !== value);
+                                if (!hasChanges) { return pkg; }
                                 projChanged = true;
-                                return { ...pkg, iconUrl: meta.iconUrl, verified: meta.verified, authors: meta.authors };
+                                return { ...pkg, ...Object.fromEntries(patchEntries) };
                             });
                             if (!projChanged) { return proj; }
                             changed = true;
@@ -1011,6 +1022,7 @@ export const App: React.FC = () => {
             // "All Projects" selected — clear single-project data and fetch all-projects data
             setInstalledPackages([]);
             setPackagesWithUpdates([]);
+            streamedUpdateIdsRef.current.clear();
             setUpdateCount(0);
             setSelectedPackage(null);
             setSelectedTransitivePackage(null);
@@ -1138,6 +1150,7 @@ export const App: React.FC = () => {
         if (settingsLoaded && selectedProject && installedPackages.length > 0) {
             setLoadingUpdates(true);
             setPackagesWithUpdates([]);
+            streamedUpdateIdsRef.current.clear();
             vscode.postMessage({
                 type: 'checkPackageUpdates',
                 projectPath: selectedProject,
@@ -1147,6 +1160,7 @@ export const App: React.FC = () => {
         } else if (settingsLoaded && selectedProject && installedPackages.length === 0) {
             // Clear updates when all packages are uninstalled
             setPackagesWithUpdates([]);
+            streamedUpdateIdsRef.current.clear();
             setUpdateCount(0);
         }
     }, [settingsLoaded, selectedProject, installedPackages, includePrerelease]);
