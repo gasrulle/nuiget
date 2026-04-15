@@ -94,6 +94,8 @@ function createMockNuGetService() {
         prewarmServiceIndex: vi.fn(),
         prewarmNugetOrgServiceIndex: vi.fn(),
         extractReadmeFromPackage: vi.fn().mockResolvedValue(null),
+        enrichInstalledPackageMetadata: vi.fn().mockResolvedValue(undefined),
+        enrichSearchResultMetadata: vi.fn().mockResolvedValue(undefined),
     } as unknown;
 }
 
@@ -389,11 +391,12 @@ describe('NuGetPanel', () => {
             }));
         });
 
-        it('getInstalledPackages fetches and sends packages', async () => {
+        it('getInstalledPackages fetches lite and sends packages immediately', async () => {
             (mockService as any).getInstalledPackages.mockResolvedValue([{ id: 'Pkg', version: '1.0' }]);
+            (mockService as any).enrichInstalledPackageMetadata.mockResolvedValue(undefined);
             await messageListener!({ type: 'getInstalledPackages', projectPath: '/proj.csproj' });
 
-            expect((mockService as any).getInstalledPackages).toHaveBeenCalledWith('/proj.csproj');
+            expect((mockService as any).getInstalledPackages).toHaveBeenCalledWith('/proj.csproj', true);
             expect(mockPanel.webview.postMessage).toHaveBeenCalledWith(expect.objectContaining({
                 type: 'installedPackages',
                 packages: [{ id: 'Pkg', version: '1.0' }],
@@ -401,14 +404,65 @@ describe('NuGetPanel', () => {
             }));
         });
 
-        it('searchPackages sends results and caches query', async () => {
+        it('getInstalledPackages sends metadata follow-up after enrichment', async () => {
+            const packages = [{ id: 'Pkg', version: '1.0' }];
+            (mockService as any).getInstalledPackages.mockResolvedValue(packages);
+            (mockService as any).enrichInstalledPackageMetadata.mockImplementation(async (pkgs: { iconUrl?: string }[]) => {
+                pkgs[0].iconUrl = 'https://example.com/icon.png';
+            });
+            await messageListener!({ type: 'getInstalledPackages', projectPath: '/proj.csproj' });
+            // Wait for the fire-and-forget .then() to complete
+            await vi.waitFor(() => {
+                expect(mockPanel.webview.postMessage).toHaveBeenCalledWith(expect.objectContaining({
+                    type: 'installedPackagesMetadata',
+                    projectPath: '/proj.csproj'
+                }));
+            });
+        });
+
+        it('getInstalledPackages skips enrichment for empty packages', async () => {
+            (mockService as any).getInstalledPackages.mockResolvedValue([]);
+            await messageListener!({ type: 'getInstalledPackages', projectPath: '/proj.csproj' });
+
+            expect((mockService as any).enrichInstalledPackageMetadata).not.toHaveBeenCalled();
+        });
+
+        it('searchPackages sends lite results immediately and caches query', async () => {
             (mockService as any).searchPackages.mockResolvedValue([{ id: 'Newtonsoft.Json' }]);
             await messageListener!({ type: 'searchPackages', query: 'Newtonsoft', includePrerelease: false });
 
+            expect((mockService as any).searchPackages).toHaveBeenCalledWith(
+                'Newtonsoft', undefined, false, true, undefined, undefined
+            );
             expect(mockPanel.webview.postMessage).toHaveBeenCalledWith(expect.objectContaining({
                 type: 'searchResults',
                 query: 'Newtonsoft'
             }));
+        });
+
+        it('searchPackages sends metadata follow-up for CLI results', async () => {
+            const results = [{ id: 'Pkg', version: '1.0', iconUrl: undefined, verified: undefined }];
+            (mockService as any).searchPackages.mockResolvedValue(results);
+            (mockService as any).enrichSearchResultMetadata.mockImplementation(async (pkgs: { iconUrl?: string }[]) => {
+                pkgs[0].iconUrl = 'https://example.com/icon.png';
+            });
+            await messageListener!({ type: 'searchPackages', query: 'Pkg', includePrerelease: false });
+            // Wait for the fire-and-forget .then() to complete
+            await vi.waitFor(() => {
+                expect(mockPanel.webview.postMessage).toHaveBeenCalledWith(expect.objectContaining({
+                    type: 'searchResultsMetadata',
+                    query: 'Pkg'
+                }));
+            });
+        });
+
+        it('searchPackages skips enrichment for API results with metadata', async () => {
+            (mockService as any).searchPackages.mockResolvedValue([
+                { id: 'Pkg', version: '1.0', iconUrl: 'https://icon.png', verified: true }
+            ]);
+            await messageListener!({ type: 'searchPackages', query: 'Pkg', includePrerelease: false });
+
+            expect((mockService as any).enrichSearchResultMetadata).not.toHaveBeenCalled();
         });
 
         it('searchPackages skips stale results', async () => {
@@ -592,6 +646,35 @@ describe('NuGetPanel', () => {
             expect(mockPanel.webview.postMessage).toHaveBeenCalledWith(expect.objectContaining({
                 type: 'packageUpdates',
                 updates: [{ id: 'Pkg', latestVersion: '2.0' }],
+                projectPath: '/proj.csproj'
+            }));
+        });
+
+        it('checkPackageUpdates streams individual updates via onUpdateFound callback', async () => {
+            (mockService as any).checkPackageUpdates.mockImplementation(
+                async (_pkgs: unknown[], _pre: boolean, _sources: unknown, onUpdateFound?: (update: unknown) => void) => {
+                    const update = { id: 'Pkg', installedVersion: '1.0', latestVersion: '2.0' };
+                    onUpdateFound?.(update);
+                    return [update];
+                }
+            );
+            await messageListener!({
+                type: 'checkPackageUpdates',
+                installedPackages: [{ id: 'Pkg', version: '1.0' }],
+                includePrerelease: false,
+                projectPath: '/proj.csproj'
+            });
+
+            // Should have sent a streaming message for the individual update
+            expect(mockPanel.webview.postMessage).toHaveBeenCalledWith(expect.objectContaining({
+                type: 'packageUpdateFound',
+                update: { id: 'Pkg', installedVersion: '1.0', latestVersion: '2.0' },
+                projectPath: '/proj.csproj'
+            }));
+            // And the final authoritative packageUpdates message
+            expect(mockPanel.webview.postMessage).toHaveBeenCalledWith(expect.objectContaining({
+                type: 'packageUpdates',
+                updates: [{ id: 'Pkg', installedVersion: '1.0', latestVersion: '2.0' }],
                 projectPath: '/proj.csproj'
             }));
         });
@@ -965,15 +1048,16 @@ describe('NuGetPanel', () => {
             mockPanel.webview.postMessage.mockClear();
         });
 
-        it('collects installed packages from all projects', async () => {
+        it('collects installed packages from all projects (lite mode)', async () => {
             hoisted.mockQueryAllProjectsInstalled.mockResolvedValueOnce([{
                 projectPath: '/projA.csproj',
                 projectName: 'ProjA',
                 packages: [{ id: 'Pkg', version: '1.0', resolvedVersion: '1.0.0', isImplicit: false }]
             }]);
+            (mockService as any).enrichInstalledPackageMetadata.mockResolvedValue(undefined);
             await messageListener!({ type: 'checkAllProjectsInstalled', context: 'multiInstall' });
 
-            expect(hoisted.mockQueryAllProjectsInstalled).toHaveBeenCalledWith(mockService, false);
+            expect(hoisted.mockQueryAllProjectsInstalled).toHaveBeenCalledWith(mockService, true);
             expect(mockPanel.webview.postMessage).toHaveBeenCalledWith({
                 type: 'allProjectsInstalled',
                 context: 'multiInstall',
@@ -982,6 +1066,24 @@ describe('NuGetPanel', () => {
                     projectName: 'ProjA',
                     packages: [{ id: 'Pkg', version: '1.0', resolvedVersion: '1.0.0', isImplicit: false }]
                 }]
+            });
+        });
+
+        it('sends allProjectsInstalledMetadata follow-up after enrichment', async () => {
+            hoisted.mockQueryAllProjectsInstalled.mockResolvedValueOnce([{
+                projectPath: '/projA.csproj',
+                projectName: 'ProjA',
+                packages: [{ id: 'Pkg', version: '1.0' }]
+            }]);
+            (mockService as any).enrichInstalledPackageMetadata.mockImplementation(async (pkgs: { iconUrl?: string }[]) => {
+                pkgs[0].iconUrl = 'https://example.com/icon.png';
+            });
+            await messageListener!({ type: 'checkAllProjectsInstalled' });
+            await vi.waitFor(() => {
+                expect(mockPanel.webview.postMessage).toHaveBeenCalledWith(expect.objectContaining({
+                    type: 'allProjectsInstalledMetadata',
+                    context: undefined
+                }));
             });
         });
 
@@ -1042,12 +1144,13 @@ describe('NuGetPanel', () => {
             expect(iconMsg).toBeUndefined();
         });
 
-        it('does not resolve icons separately (icons arrive inline via enrichment)', async () => {
+        it('does not resolve icons separately for installed (two-phase metadata is used instead)', async () => {
             hoisted.mockQueryAllProjectsInstalled.mockResolvedValueOnce([{
                 projectPath: '/projA.csproj',
                 projectName: 'ProjA',
                 packages: [{ id: 'Pkg', version: '1.0', resolvedVersion: '1.0.0' }]
             }]);
+            (mockService as any).enrichInstalledPackageMetadata.mockResolvedValue(undefined);
 
             await messageListener!({ type: 'checkAllProjectsInstalled' });
             await new Promise(r => setTimeout(r, 10));

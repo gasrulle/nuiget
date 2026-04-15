@@ -20,7 +20,6 @@ export function createMockNuGetService(overrides?: Record<string, unknown>) {
 
         // Search & discovery
         searchPackages: vi.fn(async () => []),
-        autocompletePackageId: vi.fn(async () => []),
         quickSearchGrouped: vi.fn(async () => []),
 
         // Package info

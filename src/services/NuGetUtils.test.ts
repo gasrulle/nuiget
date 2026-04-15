@@ -646,6 +646,38 @@ describe('NuGetUtils', () => {
             const results = await batchedPromiseAll([42], async (n) => n * 2);
             expect(results).toEqual([84]);
         });
+
+        it('calls onProgress callback for each completed item', async () => {
+            const items = [10, 20, 30];
+            const progressCalls: { result: number; index: number }[] = [];
+            const results = await batchedPromiseAll(
+                items,
+                async (n) => n * 2,
+                2,
+                (result, index) => { progressCalls.push({ result, index }); }
+            );
+            expect(results).toEqual([20, 40, 60]);
+            expect(progressCalls).toHaveLength(3);
+            // Each item's result and index should be reported
+            expect(progressCalls).toContainEqual({ result: 20, index: 0 });
+            expect(progressCalls).toContainEqual({ result: 40, index: 1 });
+            expect(progressCalls).toContainEqual({ result: 60, index: 2 });
+        });
+
+        it('onProgress is called as items complete (not all at end)', async () => {
+            const completed: number[] = [];
+            await batchedPromiseAll(
+                [1, 2, 3],
+                async (n) => {
+                    await new Promise(r => setTimeout(r, n * 10));
+                    return n;
+                },
+                1, // concurrency 1 so they run sequentially
+                (result) => { completed.push(result); }
+            );
+            // With concurrency 1, items complete in order
+            expect(completed).toEqual([1, 2, 3]);
+        });
     });
 
     // ──────────────────────────────────────────────

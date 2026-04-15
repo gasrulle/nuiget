@@ -44,9 +44,9 @@ describe('searchPackages', () => {
     });
 });
 
-describe('autocompletePackageId', () => {
-    bench('autocomplete', async () => {
+describe('quickSearchGrouped', () => {
+    bench('quick search grouped', async () => {
         service.clearSourceErrors();
-        await service.autocompletePackageId('Newtonsoft', 'https://api.nuget.org/v3/index.json');
+        await service.quickSearchGrouped('Newtonsoft', [{ name: 'nuget.org', url: 'https://api.nuget.org/v3/index.json' }]);
     });
 });

@@ -62,6 +62,7 @@ export const App: React.FC = () => {
     const recentSearchesLimitRef = useRef<number>(5);
     const [packagesWithUpdates, setPackagesWithUpdates] = useState<PackageUpdate[]>([]);
     const [updateCount, setUpdateCount] = useState<number>(0);
+    const streamedUpdateIdsRef = useRef(new Set<string>());
     const [loadingUpdates, setLoadingUpdates] = useState(false);
     // "All Projects" mode data (driven by selectedProject === ALL_PROJECTS_SENTINEL)
     const [allProjectsUpdates, setAllProjectsUpdates] = useState<ProjectUpdates[]>([]);
@@ -349,6 +350,30 @@ export const App: React.FC = () => {
                     setLoadingInstalled(false);
                 }
                 break;
+            case 'installedPackagesMetadata':
+                // Phase 2: merge enriched metadata into existing packages
+                if (message.projectPath === selectedProjectRef.current) {
+                    setInstalledPackages(prev => {
+                        const enriched = message.packages as Array<Partial<InstalledPackage> & { id: string }>;
+                        const metaMap = new Map(enriched.map(p => [p.id.toLowerCase(), p]));
+                        let changed = false;
+                        const result = prev.map(pkg => {
+                            const meta = metaMap.get(pkg.id.toLowerCase());
+                            if (!meta) { return pkg; }
+                            const patchEntries = Object.entries(meta).filter(([key, value]) => key !== 'id' && value !== undefined);
+                            if (patchEntries.length === 0) { return pkg; }
+                            const hasChanges = patchEntries.some(([key, value]) => pkg[key as keyof InstalledPackage] !== value);
+                            if (!hasChanges) { return pkg; }
+                            changed = true;
+                            return { ...pkg, ...Object.fromEntries(patchEntries) };
+                        });
+                        if (changed) {
+                            skipNextUpdateCheckRef.current = true;
+                        }
+                        return changed ? result : prev;
+                    });
+                }
+                break;
             case 'transitivePackages':
             case 'transitiveMetadata':
             case 'restoreProjectResult':
@@ -374,6 +399,25 @@ export const App: React.FC = () => {
                             initialVersions: match.versions || []
                         });
                     }
+                }
+                break;
+            case 'searchResultsMetadata':
+                // Phase 2 of two-phase CLI search: merge enriched metadata into existing results
+                if (message.query === searchQueryRef.current) {
+                    setSearchResults(prev => {
+                        const enriched = message.results as PackageSearchResult[];
+                        const metaMap = new Map(enriched.map(r => [r.id.toLowerCase(), r]));
+                        let changed = false;
+                        const merged = prev.map(pkg => {
+                            const match = metaMap.get(pkg.id.toLowerCase());
+                            if (match && (match.iconUrl !== pkg.iconUrl || match.verified !== pkg.verified || match.authors !== pkg.authors || (match.description && match.description !== pkg.description))) {
+                                changed = true;
+                                return { ...pkg, iconUrl: match.iconUrl ?? pkg.iconUrl, verified: match.verified ?? pkg.verified, authors: match.authors || pkg.authors, description: match.description || pkg.description };
+                            }
+                            return pkg;
+                        });
+                        return changed ? merged : prev;
+                    });
                 }
                 break;
             case 'autocompleteResults':
@@ -472,6 +516,7 @@ export const App: React.FC = () => {
                         });
                     } else {
                         setPackagesWithUpdates([]);
+                        streamedUpdateIdsRef.current.clear();
                         setUpdateCount(0);
                     }
                     skipNextUpdateCheckRef.current = true;
@@ -494,6 +539,7 @@ export const App: React.FC = () => {
                         });
                     } else {
                         setPackagesWithUpdates([]);
+                        streamedUpdateIdsRef.current.clear();
                         setUpdateCount(0);
                     }
                     skipNextUpdateCheckRef.current = true;
@@ -666,9 +712,23 @@ export const App: React.FC = () => {
                     setLoadingMetadata(false);
                 }
                 break;
-            case 'packageUpdates':
-                // Update packages with available updates
+            case 'packageUpdateFound':
+                // Progressive streaming: a single update was found during checkPackageUpdates.
+                // Use ref-tracked IDs to guard both state updates identically,
+                // preventing count inflation on deduplication.
                 if (message.projectPath === selectedProjectRef.current) {
+                    const update = message.update as PackageUpdate;
+                    if (!streamedUpdateIdsRef.current.has(update.id)) {
+                        streamedUpdateIdsRef.current.add(update.id);
+                        setPackagesWithUpdates(prev => [...prev, update]);
+                        setUpdateCount(prev => prev + 1);
+                    }
+                }
+                break;
+            case 'packageUpdates':
+                // Final authoritative result: replace progressive updates with complete data
+                if (message.projectPath === selectedProjectRef.current) {
+                    streamedUpdateIdsRef.current.clear();
                     setPackagesWithUpdates(message.updates);
                     setUpdateCount(message.updates.length);
                     setLoadingUpdates(false);
@@ -729,6 +789,45 @@ export const App: React.FC = () => {
                         setLoadingAllProjectsInstalled(false);
                         // Also update multi-install data so it stays fresh
                         setMultiInstallProjectData(projectInstalled);
+                    }
+                }
+                break;
+            case 'allProjectsInstalledMetadata':
+                // Phase 2: merge enriched metadata into all-projects installed
+                {
+                    const enrichedProjects = message.projectInstalled as ProjectInstalled[];
+                    const enrichedMap = new Map<string, Map<string, Partial<InstalledPackage> & { id: string }>>();
+                    for (const proj of enrichedProjects) {
+                        const pkgMap = new Map(proj.packages.map(p => [p.id.toLowerCase(), p as Partial<InstalledPackage> & { id: string }]));
+                        enrichedMap.set(proj.projectPath, pkgMap);
+                    }
+                    const mergeMetadata = (prev: ProjectInstalled[]) => {
+                        let changed = false;
+                        const result = prev.map(proj => {
+                            const pkgMap = enrichedMap.get(proj.projectPath);
+                            if (!pkgMap) { return proj; }
+                            let projChanged = false;
+                            const pkgs = proj.packages.map(pkg => {
+                                const meta = pkgMap.get(pkg.id.toLowerCase());
+                                if (!meta) { return pkg; }
+                                const patchEntries = Object.entries(meta).filter(([key, value]) => key !== 'id' && value !== undefined);
+                                if (patchEntries.length === 0) { return pkg; }
+                                const hasChanges = patchEntries.some(([key, value]) => pkg[key as keyof InstalledPackage] !== value);
+                                if (!hasChanges) { return pkg; }
+                                projChanged = true;
+                                return { ...pkg, ...Object.fromEntries(patchEntries) };
+                            });
+                            if (!projChanged) { return proj; }
+                            changed = true;
+                            return { ...proj, packages: pkgs };
+                        });
+                        return changed ? result : prev;
+                    };
+                    if (message.context === 'multiInstall') {
+                        setMultiInstallProjectData(mergeMetadata);
+                    } else {
+                        setAllProjectsInstalled(mergeMetadata);
+                        setMultiInstallProjectData(mergeMetadata);
                     }
                 }
                 break;
@@ -923,6 +1022,7 @@ export const App: React.FC = () => {
             // "All Projects" selected — clear single-project data and fetch all-projects data
             setInstalledPackages([]);
             setPackagesWithUpdates([]);
+            streamedUpdateIdsRef.current.clear();
             setUpdateCount(0);
             setSelectedPackage(null);
             setSelectedTransitivePackage(null);
@@ -1050,6 +1150,7 @@ export const App: React.FC = () => {
         if (settingsLoaded && selectedProject && installedPackages.length > 0) {
             setLoadingUpdates(true);
             setPackagesWithUpdates([]);
+            streamedUpdateIdsRef.current.clear();
             vscode.postMessage({
                 type: 'checkPackageUpdates',
                 projectPath: selectedProject,
@@ -1059,6 +1160,7 @@ export const App: React.FC = () => {
         } else if (settingsLoaded && selectedProject && installedPackages.length === 0) {
             // Clear updates when all packages are uninstalled
             setPackagesWithUpdates([]);
+            streamedUpdateIdsRef.current.clear();
             setUpdateCount(0);
         }
     }, [settingsLoaded, selectedProject, installedPackages, includePrerelease]);

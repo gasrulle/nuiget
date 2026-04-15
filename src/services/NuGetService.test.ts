@@ -1578,113 +1578,6 @@ describe('NuGetService', () => {
     });
 
     // ──────────────────────────────────────────────
-    // autocompletePackageId
-    // ──────────────────────────────────────────────
-    describe('autocompletePackageId', () => {
-        it('returns empty array for short query (< 2 chars)', async () => {
-            const result = await service.autocompletePackageId('a');
-            expect(result).toEqual([]);
-        });
-
-        it('returns empty array for empty query', async () => {
-            const result = await service.autocompletePackageId('');
-            expect(result).toEqual([]);
-        });
-
-        it('returns package IDs from autocomplete API', async () => {
-            vi.spyOn(service as any, 'discoverServiceEndpoints').mockResolvedValue({
-                searchAutocompleteService: 'https://api.nuget.org/v3/autocomplete'
-            });
-            vi.spyOn(service as any, 'fetchJson').mockResolvedValue({
-                data: ['Newtonsoft.Json', 'Newtonsoft.Json.Schema', 'Newtonsoft.Json.Bson']
-            });
-
-            const result = await service.autocompletePackageId('newtonsoft', undefined, false, 5);
-            expect(result).toHaveLength(3);
-            expect(result).toContain('Newtonsoft.Json');
-        });
-
-        it('falls back to Search API when autocomplete not available', async () => {
-            vi.spyOn(service as any, 'discoverServiceEndpoints').mockResolvedValue({
-                searchQueryService: 'https://api.nuget.org/v3/query'
-            });
-            vi.spyOn(service as any, 'fetchJson').mockResolvedValue({
-                data: [{ id: 'PackageA' }, { id: 'PackageB' }]
-            });
-
-            const result = await service.autocompletePackageId('pack');
-            expect(result).toEqual(['PackageA', 'PackageB']);
-        });
-
-        it('returns cached results within TTL', async () => {
-            vi.spyOn(service as any, 'discoverServiceEndpoints').mockResolvedValue({
-                searchAutocompleteService: 'https://api.nuget.org/v3/autocomplete'
-            });
-            const fetchSpy = vi.spyOn(service as any, 'fetchJson').mockResolvedValue({
-                data: ['CachedPkg']
-            });
-
-            await service.autocompletePackageId('cached');
-            fetchSpy.mockClear();
-
-            const result = await service.autocompletePackageId('cached');
-            expect(result).toEqual(['CachedPkg']);
-            expect(fetchSpy).not.toHaveBeenCalled();
-        });
-
-        it('deduplicates results across multiple sources', async () => {
-            vi.spyOn(service as any, 'discoverServiceEndpoints').mockResolvedValue({
-                searchAutocompleteService: 'https://api.nuget.org/v3/autocomplete'
-            });
-            // Both sources return the same ID with different casing
-            vi.spyOn(service as any, 'fetchJson').mockResolvedValue({
-                data: ['DuplicatePkg']
-            });
-
-            const result = await service.autocompletePackageId('dup', ['https://source1.com/v3/index.json', 'https://source2.com/v3/index.json']);
-            // Should not have duplicates — dedup is by lowercase ID
-            const lowered = result.map((r: string) => r.toLowerCase());
-            const unique = [...new Set(lowered)];
-            expect(unique.length).toBe(lowered.length);
-        });
-
-        it('sorts by prefix match first, then alphabetically', async () => {
-            vi.spyOn(service as any, 'discoverServiceEndpoints').mockResolvedValue({
-                searchAutocompleteService: 'https://api.nuget.org/v3/autocomplete'
-            });
-            vi.spyOn(service as any, 'fetchJson').mockResolvedValue({
-                data: ['ZebPkg', 'TestPkg.Utils', 'TestPkg']
-            });
-
-            const result = await service.autocompletePackageId('test', ['https://api.nuget.org/v3/index.json']);
-            // test* should come before Zeb*
-            const testIndex = result.indexOf('TestPkg');
-            const zebIndex = result.indexOf('ZebPkg');
-            expect(testIndex).toBeLessThan(zebIndex);
-        });
-
-        it('returns empty array when all sources fail', async () => {
-            vi.spyOn(service as any, 'discoverServiceEndpoints').mockRejectedValue(new Error('fail'));
-
-            const result = await service.autocompletePackageId('test');
-            expect(result).toEqual([]);
-        });
-
-        it('filters out local sources', async () => {
-            const discoverSpy = vi.spyOn(service as any, 'discoverServiceEndpoints').mockResolvedValue({
-                searchAutocompleteService: 'https://api.nuget.org/v3/autocomplete'
-            });
-            vi.spyOn(service as any, 'fetchJson').mockResolvedValue({ data: ['Pkg'] });
-
-            await service.autocompletePackageId('test', ['C:\\local\\packages', 'https://api.nuget.org/v3/index.json']);
-            // discoverServiceEndpoints should NOT be called for local source
-            for (const call of discoverSpy.mock.calls) {
-                expect(call[0]).not.toBe('C:\\local\\packages');
-            }
-        });
-    });
-
-    // ──────────────────────────────────────────────
     // quickSearchGrouped
     // ──────────────────────────────────────────────
     describe('quickSearchGrouped', () => {
@@ -1769,6 +1662,44 @@ describe('NuGetService', () => {
             expect(result).toHaveLength(1);
             expect(result[0].sourceName).toBe('Custom Feed');
             expect(result[0].packageIds).toEqual(['CustomPkg1', 'CustomPkg2']);
+        });
+
+        it('returns cached results within TTL', async () => {
+            vi.spyOn(service as any, 'discoverServiceEndpoints').mockResolvedValue({
+                searchAutocompleteService: 'https://api.nuget.org/v3/autocomplete'
+            });
+            const fetchSpy = vi.spyOn(service as any, 'fetchJson').mockResolvedValue({
+                data: ['CachedQuickPkg']
+            });
+
+            const sources = [{ name: 'nuget.org', url: 'https://api.nuget.org/v3/index.json' }];
+            await service.quickSearchGrouped('cached', sources);
+            fetchSpy.mockClear();
+
+            const result = await service.quickSearchGrouped('cached', sources);
+            expect(result).toHaveLength(1);
+            expect(result[0].packageIds).toContain('CachedQuickPkg');
+            expect(fetchSpy).not.toHaveBeenCalled();
+        });
+
+        it('cache is cleared by clearSourceErrors', async () => {
+            vi.spyOn(service as any, 'discoverServiceEndpoints').mockResolvedValue({
+                searchAutocompleteService: 'https://api.nuget.org/v3/autocomplete'
+            });
+            const fetchSpy = vi.spyOn(service as any, 'fetchJson').mockResolvedValue({
+                data: ['ClearCachePkg']
+            });
+
+            const sources = [{ name: 'nuget.org', url: 'https://api.nuget.org/v3/index.json' }];
+            await service.quickSearchGrouped('clearme', sources);
+            fetchSpy.mockClear();
+
+            // Clear caches
+            service.clearSourceErrors();
+
+            // Should hit API again after clear
+            await service.quickSearchGrouped('clearme', sources);
+            expect(fetchSpy).toHaveBeenCalled();
         });
     });
 

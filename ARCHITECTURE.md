@@ -99,7 +99,7 @@ src/
 
 ### Module Split: NuGetService
 `NuGetService.ts` is a facade that delegates to five sub-services:
-- **`NuGetPackageService.ts`** (~2060 lines) — Package search (`searchPackages`, `searchPackagesViaApi`, `quickSearchGrouped`), metadata resolution (`getPackageMetadata`, `getPackageMetadataFromSource/Search/Nuspec`), version queries (`getPackageVersions`, `getPackageVersionsFromSource`), vulnerability data (`fetchVulnerabilityData`, `getVulnerabilities`), icon URL resolution (`resolveIconUrl`, `getPackageIconUrl`), autocomplete, update checking (`checkPackageUpdates`, `checkPackageUpdatesMinimal` — both pre-resolve sources via `resolveSourcesForBatch()` before batch loop), README extraction, size fetching, and installed package metadata. Uses `PackageServiceDeps` interface for dependency injection — receives HTTP, source, and endpoint methods from `NuGetService` via arrow function bindings. Owns caches: `metadataCache(200)`, `iconUrlCache(500)`, `versionsCache(200)`, `verifiedStatusCache(300)`, `searchResultsCache(100)`, `autocompleteCache(50)`, `vulnerabilityData(Map)`.
+- **`NuGetPackageService.ts`** (~1920 lines) — Package search (`searchPackages`, `searchPackagesViaApi`, `quickSearchGrouped`), metadata resolution (`getPackageMetadata`, `getPackageMetadataFromSource/Search/Nuspec`), version queries (`getPackageVersions`, `getPackageVersionsFromSource`), vulnerability data (`fetchVulnerabilityData`, `getVulnerabilities`), icon URL resolution (`resolveIconUrl`, `getPackageIconUrl`), update checking (`checkPackageUpdates`, `checkPackageUpdatesMinimal` — both pre-resolve sources via `resolveSourcesForBatch()` before batch loop), README extraction, size fetching, and installed package metadata. Uses `PackageServiceDeps` interface for dependency injection — receives HTTP, source, and endpoint methods from `NuGetService` via arrow function bindings. Owns caches: `metadataCache(200)`, `iconUrlCache(500)`, `versionsCache(200)`, `verifiedStatusCache(300)`, `searchResultsCache(100)`, `quickSearchCache(100, 30s TTL)`, `vulnerabilityData(Map)`.
 - **`NuGetCliService.ts`** — dotnet CLI operations (install/update/remove/restore), SDK detection (`getSdkMajorVersion`, `useNounFirstSyntax`), HTTP cache clearing, `dotnet package search`.
 - **`NuGetSourceService.ts`** — Source CRUD (`getSources`, `addSource`, `removeSource`, `enableSource`, `disableSource`), nuget.config file management, source name generation.
 - **`NuGetProjectService.ts`** (~470 lines) — Project discovery, `.csproj` parsing, installed packages, transitive dependency resolution, `project.assets.json` caching.
@@ -108,7 +108,7 @@ src/
 `NuGetService.ts` retains: HTTP fetch methods (`fetchJson`, `fetchJsonHttp1`, `fetchJsonWithCompression`, `fetchJsonWithDetails`, `fetchText`, `downloadFile`), service index discovery/caching, source health monitoring, failed endpoint cache, credential management, and the public facade API. Internal types (`NuGetServiceIndex`, `ServiceEndpoints`) remain in `NuGetService.ts`. `FetchResult<T>` is defined in `Http2Client.ts`.
 
 Additional module splits:
-- **`NuGetTypes.ts`** — All exported types/interfaces (`VersionSpec`, `Project`, `InstalledPackage`, `PackageMetadata`, `NuGetSource`, `NuGetSearchResponse`, `NuGetSearchEntry`, `NuGetRegistrationEntry`, `NuGetRegistrationPage`, etc.). Also exports discriminated union message types: 48 message interfaces (e.g., `GetProjectsMsg`, `InstallPackageMsg`, `ShowContextMenuMsg`), `PanelRequestMessage` (34 variants), and `SidebarRequestMessage` (14 variants) — used by `_handleMessage` in both panels for type-safe switch/case narrowing. `NuGetService.ts` re-exports these for backward compatibility. NuGet V3 API response types use vendor-polymorphic field names (e.g., `id`/`Id`, `authors`/`Authors`) to handle differences between nuget.org, Nexus, ProGet, and other server implementations.
+- **`NuGetTypes.ts`** — All exported types/interfaces (`VersionSpec`, `Project`, `InstalledPackage`, `PackageMetadata`, `PackageUpdate`, `NuGetSource`, `NuGetSearchResponse`, `NuGetSearchEntry`, `NuGetRegistrationEntry`, `NuGetRegistrationPage`, etc.). Also exports discriminated union message types: 48 message interfaces (e.g., `GetProjectsMsg`, `InstallPackageMsg`, `ShowContextMenuMsg`), `PanelRequestMessage` (34 variants), and `SidebarRequestMessage` (14 variants) — used by `_handleMessage` in both panels for type-safe switch/case narrowing. `NuGetService.ts` re-exports these for backward compatibility. NuGet V3 API response types use vendor-polymorphic field names (e.g., `id`/`Id`, `authors`/`Authors`) to handle differences between nuget.org, Nexus, ProGet, and other server implementations.
 - **`NuGetUtils.ts`** — Stateless utility functions (`LRUMap`, `batchedPromiseAll`, `execWithTimeout`, `fileExists`, `COMMAND_TIMEOUT`, input validators, `parseVersionSpec`, `isNewerVersion`, `topologicalSortByDependency`). No class dependency.
 - **`NuGetOperations.ts`** — Shared package operation functions used by both `NuGetPanel` and `NuGetSidebarPanel`. Exports an `OperationContext` interface (`{ nugetService, postMessage, notifyOtherPanel }`) and pure async functions: `executeSingleOperation` (install/update/remove), `executeBulkInstall`, `executeBulkUpdatePackages`, `executeBulkRemovePackages`, `executeBulkUpdateAllProjects`, `executeBulkRemoveAllProjects`. Also exports shared query functions: `queryAllProjectsUpdates(nugetService, includePrerelease, liteMode)` and `queryAllProjectsInstalled(nugetService)` with typed return interfaces (`ProjectUpdatesResult[]`, `ProjectInstalledResult[]`). Also exports `resolveAllProjectsIcons(nugetService, packages)` — deduplicates by `packageId@version`, resolves icon URLs via `batchedPromiseAll` (concurrency 10), returns `Record<string, string>` map for progressive UI enrichment. Each panel builds an `OperationContext` via `_opCtx()` and delegates from thin message-handler dispatchers.
 - `NuGetConfigParser.ts` imports and re-exports `NuGetSource` from `NuGetTypes.ts` — there is a single canonical definition.
@@ -364,7 +364,8 @@ This is safe because JavaScript is single-threaded — the guard only needs to p
 | Message | Direction | Purpose |
 |---------|-----------|---------|
 | `searchPackages` | UI → Ext | Search NuGet for packages |
-| `searchResults` | Ext → UI | Return search results |
+| `searchResults` | Ext → UI | Return search results (lite: no icons/authors/verified for CLI-path results) |
+| `searchResultsMetadata` | Ext → UI | Two-phase follow-up: enriched metadata (icons, authors, verified, description) merged into existing search results |
 | `autocompletePackages` | UI → Ext | Quick search for package ID suggestions (150ms debounce) |
 | `autocompleteResults` | Ext → UI | Return array of package ID strings |
 | `getPackageVersions` | UI → Ext | Get all versions for a package |
@@ -378,17 +379,20 @@ This is safe because JavaScript is single-threaded — the guard only needs to p
 | Message | Direction | Purpose |
 |---------|-----------|---------|
 | `getInstalledPackages` | UI → Ext | Get packages for a project |
-| `installedPackages` | Ext → UI | Return installed packages |
+| `installedPackages` | Ext → UI | Return installed packages (lite: no icons/authors/verified) |
+| `installedPackagesMetadata` | Ext → UI | Two-phase follow-up: enriched metadata (icons, authors, verified, vulnerabilities) merged into existing state |
 > **Client-side filter:** The Installed tab includes a local filter input (`installedFilterQuery` state) that filters `sortedInstalledPackages` via `useMemo` with a case-insensitive `includes()` on package ID. No messages are sent — filtering is entirely in-browser on the already-loaded package array. The `uninstallablePackages` memo and "Select all" logic are scoped to the filtered list.| `getTransitivePackages` | UI → Ext | Get transitive packages from project.assets.json |
 | `transitivePackages` | Ext → UI | Return frameworks with transitive packages |
 | `getTransitiveMetadata` | UI → Ext | Fetch metadata for one framework's packages |
 | `transitiveMetadata` | Ext → UI | Return packages with icons/verified/authors |
 | `checkPackageUpdates` | UI → Ext | Check for package updates |
-| `packageUpdates` | Ext → UI | Return packages with available updates |
+| `packageUpdateFound` | Ext → UI | Streaming: single update found during check (progressive) |
+| `packageUpdates` | Ext → UI | Return packages with available updates (final authoritative) |
 | `checkAllProjectsUpdates` | UI → Ext | Check updates for all projects (sentinel "All Projects" mode) |
 | `allProjectsUpdates` | Ext → UI | Return grouped updates per project |
 | `checkAllProjectsInstalled` | UI → Ext | Get installed packages for all projects (sentinel "All Projects" mode + Multi Install dropdown via `context` field) |
-| `allProjectsInstalled` | Ext → UI | Return grouped installed packages per project (echoes `context` field for routing) |
+| `allProjectsInstalled` | Ext → UI | Return grouped installed packages per project (echoes `context` field for routing) — lite mode |
+| `allProjectsInstalledMetadata` | Ext → UI | Two-phase follow-up: enriched metadata for all-projects installed, merged into existing state |
 | `allProjectsIcons` | Ext → UI | Progressive icon enrichment: map of `packageId@version` → icon URL, merged into existing all-projects state |
 
 #### Package Operations
@@ -703,16 +707,18 @@ private async resolveIconUrl(
 
 Methods that process many packages pre-fetch `enabledSources` once to avoid repeated `getSources()` calls.
 
+**Two-phase installed packages delivery**: `getInstalledPackages` uses a two-phase response pattern for faster perceived load. Phase 1: sends `installedPackages` immediately after .csproj parsing with `liteMode: true` (~20ms — basic package data with no icons/authors/verified). Phase 2: background `enrichInstalledPackageMetadata()` call resolves icons, authors, and verified status via API, then sends `installedPackagesMetadata` message. The frontend merges enriched metadata fields into existing state using a functional `setInstalledPackages` updater with generic per-field change detection (no re-render if metadata is identical). `skipNextUpdateCheckRef` is set inside the updater only when changes are detected, preventing both a redundant `checkPackageUpdates` and a stale flag when the merge is a no-op. Empty package lists skip Phase 2 entirely.
+
+**Two-phase CLI search results delivery**: `searchPackages` uses the same two-phase pattern when results come from the CLI path (custom/multiple sources). Phase 1: sends `searchResults` immediately with `liteMode: true` (bare id/version/owners/downloads, no icons/verified/description). Phase 2: if any result has `iconUrl === undefined && verified === undefined` (CLI-path indicator), a fire-and-forget `enrichSearchResultMetadata()` call resolves icons, verified status, authors, and descriptions, then sends `searchResultsMetadata` message. Frontend merges via `setSearchResults` updater with per-field change detection. Both phases are guarded by `_latestSearchQuery` staleness check. API-path results (single nuget.org source) already have metadata — Phase 2 is skipped.
+
+**Two-phase all-projects installed delivery**: `checkAllProjectsInstalled` follows the same pattern — sends `allProjectsInstalled` with `liteMode: true` immediately, then sends `allProjectsInstalledMetadata` after background enrichment of icons, authors, and verified status. The frontend merges those metadata fields by `projectPath + packageId` key into both `allProjectsInstalled` and `multiInstallProjectData` states, respecting the echoed `context` field.
+
 **All-projects progressive icon enrichment**: In all-projects mode, `NuGetPanel` uses a two-phase response pattern. First, `checkAllProjectsUpdates`/`checkAllProjectsInstalled` sends the data immediately (fast render). Then, a background `resolveAllProjectsIcons()` call deduplicates packages by `packageId@version`, resolves icon URLs via `batchedPromiseAll` (concurrency 10), and sends an `allProjectsIcons` message with the icon map. The frontend merges icons into existing `allProjectsUpdates` and `allProjectsInstalled` state. This avoids blocking the initial data with N icon HEAD requests. Sidebar skips icon enrichment (compact layout doesn't display icons).
 
-### Multi-Source Autocomplete
-When "All sources" is selected, `autocompletePackageId()`:
-1. Queries nuget.org AND custom sources **in parallel** using `Promise.allSettled`
-2. Uses `SearchAutocompleteService` when available (lightweight, returns only IDs)
-3. Falls back to `SearchQueryService` for feeds that lack autocomplete (extracts IDs from full results)
-4. Deduplicates by package ID — nuget.org results are processed first, so they "win" on collision
-5. Results are sorted by prefix relevance, then alphabetically
-6. **2-second timeout cap** for multi-source mode — returns whatever results are available by then, so slow custom sources don't block the typeahead UX
+**Incremental streaming update results**: `checkPackageUpdates` accepts an optional `onUpdateFound` callback. As each package's update is discovered (inside `batchedPromiseAll` with concurrency 16), the callback fires immediately — NuGetPanel sends a `packageUpdateFound` message per update. The final authoritative `packageUpdates` message follows when all packages finish. Frontend handles `packageUpdateFound` by appending to `packagesWithUpdates` with dedup guard (prevents same package appearing twice) and incrementing `updateCount` optimistically. The final `packageUpdates` replaces progressive state with authoritative data and sets `loadingUpdates = false`. UpdatesTab renders progressively: when `isLoading && !hasNoUpdates && !isAllProjects` (`isStreaming`), it shows the found packages list with a streaming indicator instead of just a spinner. Scope: single-project only — all-projects mode and sidebar `checkPackageUpdatesMinimal` are unaffected.
+
+### Quick Search Cache
+`quickSearchGrouped()` uses an LRU cache (100 entries, 30s TTL) keyed by `qs|{query}|{sortedSourceUrls}|{prerelease}|{take}`. Cache is checked before any HTTP calls — typing "newtonsoft" character by character reuses the cache for repeated prefixes within the TTL window. The cache is cleared by `clearCaches()` (called from `clearSourceErrors()`), which also clears icon/vulnerability caches. The old `autocompletePackageId()` method was removed — `quickSearchGrouped()` is the sole autocomplete path.
 
 ### Transitive Prefetch Deferral
 Transitive package fetching is deferred by 2s after installed packages finish loading. This reduces network contention during the critical path (metadata fetch + update checks):
@@ -952,7 +958,8 @@ Parallel API requests use sliding-window concurrency to prevent network congesti
 async function batchedPromiseAll<T, R>(
     items: T[],
     processor: (item: T) => Promise<R>,
-    concurrency: number = 6
+    concurrency: number = 6,
+    onProgress?: (result: R, index: number) => void  // fires after each item completes
 ): Promise<R[]>;
 
 // Used for metadata fetching on all tabs (Installed, Browse, Updates, Transitive)
@@ -1022,7 +1029,7 @@ private iconUrlCache = new LRUMap<string, string>(500);  // Stores resolved icon
 private versionsCache = new LRUMap<string, string[]>(200);
 private verifiedStatusCache = new LRUMap<string, { verified: boolean; authors?: string; description?: string }>(300);
 private searchResultsCache = new LRUMap<string, PackageSearchResult[]>(100);
-private autocompleteCache = new LRUMap<string, { data: string[]; timestamp: number }>(50);  // 30s TTL
+private quickSearchCache = new LRUMap<string, { data: QuickSearchSourceResult[]; timestamp: number }>(100);  // 30s TTL
 ```
 
 ### HTTP/2 Session Pool

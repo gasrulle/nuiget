@@ -252,12 +252,23 @@ export class NuGetPanel {
                 {
                     if (data.projectPath === ALL_PROJECTS_SENTINEL) { break; }
                     try {
-                        const packages = await this._nugetService.getInstalledPackages(data.projectPath as string);
+                        // Phase 1: send lite packages immediately (~20ms, .csproj parsing only)
+                        const packages = await this._nugetService.getInstalledPackages(data.projectPath as string, true /* liteMode */);
                         this._postMessage({
                             type: 'installedPackages',
                             packages: packages,
                             projectPath: data.projectPath
                         });
+                        // Phase 2: enrich metadata in background, send follow-up
+                        if (packages.length > 0) {
+                            this._nugetService.enrichInstalledPackageMetadata(packages).then(() => {
+                                this._postMessage({
+                                    type: 'installedPackagesMetadata',
+                                    packages: packages,
+                                    projectPath: data.projectPath
+                                });
+                            }).catch(() => { /* non-critical: packages are already visible */ });
+                        }
                     } catch (error) {
                         console.error('[nUIget] getInstalledPackages error:', error);
                         this._postMessage({
@@ -351,11 +362,12 @@ export class NuGetPanel {
                         }
                     }
 
+                    // Phase 1: send lite results immediately (CLI path returns fast without enrichment)
                     const results = await this._nugetService.searchPackages(
                         query,
                         sources,
                         data.includePrerelease,
-                        undefined,
+                        true, // liteMode — skip metadata enrichment
                         data.take,
                         data.exactMatch
                     );
@@ -372,6 +384,18 @@ export class NuGetPanel {
                         results: results,
                         query: query
                     });
+
+                    // Phase 2: enrich metadata in background if results lack it (CLI path)
+                    if (results.length > 0 && results.some(r => r.iconUrl === undefined && r.verified === undefined)) {
+                        this._nugetService.enrichSearchResultMetadata(results).then(() => {
+                            if (this._latestSearchQuery !== query || this._disposed) { return; }
+                            this._postMessage({
+                                type: 'searchResultsMetadata',
+                                results: results,
+                                query: query
+                            });
+                        }).catch(() => { /* non-critical: results are already visible */ });
+                    }
                     break;
                 }
             case 'autocompletePackages':
@@ -705,7 +729,16 @@ export class NuGetPanel {
                     try {
                         const packagesWithUpdates = await this._nugetService.checkPackageUpdates(
                             data.installedPackages,
-                            data.includePrerelease
+                            data.includePrerelease,
+                            undefined,
+                            (update) => {
+                                // Stream each found update to the webview immediately
+                                this._postMessage({
+                                    type: 'packageUpdateFound',
+                                    update,
+                                    projectPath: data.projectPath
+                                });
+                            }
                         );
                         this._postMessage({
                             type: 'packageUpdates',
@@ -749,8 +782,16 @@ export class NuGetPanel {
             case 'checkAllProjectsInstalled':
                 {
                     try {
-                        const projectInstalled = await queryAllProjectsInstalled(this._nugetService, false /* full enrichment */);
+                        // Phase 1: send lite data immediately (fast .csproj parsing only)
+                        const projectInstalled = await queryAllProjectsInstalled(this._nugetService, true /* liteMode */);
                         this._postMessage({ type: 'allProjectsInstalled', context: data.context, projectInstalled });
+                        // Phase 2: enrich metadata in background, send follow-up with icons/authors
+                        const allPackages = projectInstalled.flatMap(pi => pi.packages);
+                        if (allPackages.length > 0) {
+                            this._nugetService.enrichInstalledPackageMetadata(allPackages).then(() => {
+                                this._postMessage({ type: 'allProjectsInstalledMetadata', context: data.context, projectInstalled });
+                            }).catch(() => { /* non-critical */ });
+                        }
                     } catch (error) {
                         console.error('[nUIget] checkAllProjectsInstalled error:', error);
                         this._postMessage({ type: 'allProjectsInstalled', context: data.context, projectInstalled: [] });

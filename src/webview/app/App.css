@@ -1295,6 +1295,21 @@ body {
     }
 }
 
+.loading-spinner-small {
+    width: 16px;
+    height: 16px;
+    border-width: 2px;
+}
+
+.streaming-indicator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    color: var(--vscode-descriptionForeground);
+    font-size: 12px;
+}
+
 /* Buttons */
 .btn {
     padding: 6px 14px;

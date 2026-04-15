@@ -62,6 +62,16 @@ export interface PackageSearchResult {
     verified?: boolean;
 }
 
+export interface PackageUpdate {
+    id: string;
+    installedVersion: string;
+    latestVersion: string;
+    iconUrl?: string;
+    verified?: boolean;
+    authors?: string;
+    sourceUrl?: string;
+}
+
 export interface PackageDependency {
     id: string;
     versionRange: string;
