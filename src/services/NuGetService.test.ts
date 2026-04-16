@@ -1760,7 +1760,7 @@ describe('NuGetService', () => {
             expect(result[0].description).toBe('This is the real description');
         });
 
-        it('sorts multi-source results by prefix match then by downloads', async () => {
+        it('sorts multi-source results by relevance tiers then by downloads', async () => {
             const customSource = {
                 url: 'https://custom.com/v3/index.json',
                 endpoints: { searchQueryService: 'https://custom.com/v3/query' },
@@ -1768,14 +1768,14 @@ describe('NuGetService', () => {
             };
 
             const fetchSpy = vi.spyOn(service as any, 'fetchJson');
-            // nuget.org: high-download generic matches (no prefix match)
+            // nuget.org: high-download generic matches (no prefix/substring match)
             fetchSpy.mockResolvedValueOnce({
                 data: [
                     { id: 'SomeOther.Extensions', version: '5.0.0', totalDownloads: 1000000, description: 'Popular' },
                     { id: 'Another.Extensions.Lib', version: '3.0.0', totalDownloads: 500000, description: 'Also popular' }
                 ]
             });
-            // Custom source: exact prefix match with fewer downloads
+            // Custom source: exact and prefix matches with fewer downloads
             fetchSpy.mockResolvedValueOnce({
                 data: [
                     { id: 'MyPackage.Extensions', version: '1.0.0', totalDownloads: 100, description: 'Exact match' },
@@ -1787,31 +1787,15 @@ describe('NuGetService', () => {
                 'MyPackage.Extensions', false, false, 20, false, [nugetOrgSource, customSource]
             );
 
-            // Prefix matches should come first despite lower downloads
+            // Exact + prefix matches should come first despite lower downloads
             expect(result[0].id).toBe('MyPackage.Extensions');
             expect(result[1].id).toBe('MyPackage.Extensions.Core');
-            // Non-prefix matches sorted by downloads
+            // Non-matching packages sorted by downloads
             expect(result[2].id).toBe('SomeOther.Extensions');
             expect(result[3].id).toBe('Another.Extensions.Lib');
         });
 
-        it('preserves single-source order (no re-sort needed)', async () => {
-            vi.spyOn(service as any, 'fetchJson').mockResolvedValue({
-                data: [
-                    { id: 'TopResult', version: '1.0.0', totalDownloads: 5000, description: 'First' },
-                    { id: 'SecondResult', version: '1.0.0', totalDownloads: 100000, description: 'Second' }
-                ]
-            });
-
-            // Single source: preserve server's relevance order (no re-sort)
-            const result = await (service as any)._packageService.searchPackagesViaApi(
-                'test', false, false, 20, false, [nugetOrgSource]
-            );
-            expect(result[0].id).toBe('TopResult');
-            expect(result[1].id).toBe('SecondResult');
-        });
-
-        it('sorts multi-source results by prefix match then by downloads', async () => {
+        it('ranks substring matches above unrelated high-download packages', async () => {
             const customSource = {
                 url: 'https://custom.com/v3/index.json',
                 endpoints: { searchQueryService: 'https://custom.com/v3/query' },
@@ -1819,31 +1803,32 @@ describe('NuGetService', () => {
             };
 
             const fetchSpy = vi.spyOn(service as any, 'fetchJson');
-            // nuget.org: high-download generic matches (no prefix match)
+            // nuget.org: high-download packages whose IDs contain the query tokens but not as substring
             fetchSpy.mockResolvedValueOnce({
                 data: [
-                    { id: 'SomeOther.Extensions', version: '5.0.0', totalDownloads: 1000000, description: 'Popular' },
-                    { id: 'Another.Extensions.Lib', version: '3.0.0', totalDownloads: 500000, description: 'Also popular' }
+                    { id: 'Microsoft.Extensions.Logging.Abstractions', version: '9.0.0', totalDownloads: 5000000, description: 'Popular' },
+                    { id: 'Microsoft.Extensions.Logging', version: '9.0.0', totalDownloads: 4000000, description: 'Also popular' },
+                    { id: 'Serilog.Extensions.Logging', version: '8.0.0', totalDownloads: 3000000, description: 'Third' }
                 ]
             });
-            // Custom source: exact prefix match with fewer downloads
+            // Custom source: substring match with very few downloads
             fetchSpy.mockResolvedValueOnce({
                 data: [
-                    { id: 'MyPackage.Extensions', version: '1.0.0', totalDownloads: 100, description: 'Exact match' },
-                    { id: 'MyPackage.Extensions.Core', version: '1.0.0', totalDownloads: 50, description: 'Prefix match' }
+                    { id: 'Ica.Logging.Extensions', version: '1.0.12', totalDownloads: 200, description: 'Custom' }
                 ]
             });
 
             const result = await (service as any)._packageService.searchPackagesViaApi(
-                'MyPackage.Extensions', false, false, 20, false, [nugetOrgSource, customSource]
+                'logging.extensions', false, false, 20, false, [nugetOrgSource, customSource]
             );
 
-            // Prefix matches should come first despite lower downloads
-            expect(result[0].id).toBe('MyPackage.Extensions');
-            expect(result[1].id).toBe('MyPackage.Extensions.Core');
-            // Non-prefix matches sorted by downloads
-            expect(result[2].id).toBe('SomeOther.Extensions');
-            expect(result[3].id).toBe('Another.Extensions.Lib');
+            // Ica.Logging.Extensions contains "logging.extensions" as substring (tier 2)
+            // Microsoft packages only match query tokens in segments (tier 3)
+            expect(result[0].id).toBe('Ica.Logging.Extensions');
+            // Token-match tier sorted by downloads
+            expect(result[1].id).toBe('Microsoft.Extensions.Logging.Abstractions');
+            expect(result[2].id).toBe('Microsoft.Extensions.Logging');
+            expect(result[3].id).toBe('Serilog.Extensions.Logging');
         });
 
         it('preserves single-source order (no re-sort needed)', async () => {

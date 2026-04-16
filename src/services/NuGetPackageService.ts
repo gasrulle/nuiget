@@ -76,6 +76,22 @@ export class NuGetPackageService {
     private iconSourceMissCount: Map<string, number> = new Map();
     private static readonly ICON_SOURCE_MISS_THRESHOLD = 5;
 
+    /**
+     * Compute a relevance tier for sorting search results.
+     * Tier 0: exact ID match, Tier 1: prefix, Tier 2: substring, Tier 3: all query tokens in segments, Tier 4: rest.
+     */
+    private static searchRelevanceTier(id: string, queryLower: string, queryTokens: string[]): number {
+        const idLower = id.toLowerCase();
+        if (idLower === queryLower) { return 0; }
+        if (idLower.startsWith(queryLower)) { return 1; }
+        if (idLower.includes(queryLower)) { return 2; }
+        if (queryTokens.length > 1) {
+            const idSegments = idLower.split('.');
+            if (queryTokens.every(token => idSegments.some(seg => seg.includes(token)))) { return 3; }
+        }
+        return 4;
+    }
+
     private readonly _deps: PackageServiceDeps;
 
     constructor(deps: PackageServiceDeps) {
@@ -743,16 +759,21 @@ export class NuGetPackageService {
                 packages.push(pkg);
             }
 
-            // Sort merged results: prefix matches first, then by totalDownloads descending.
-            // Each source returns results in its own relevance order, but after merging
-            // across sources we need a unified sort so that e.g. a custom source's exact
-            // prefix match isn't buried behind nuget.org's high-download generic matches.
+            // Sort merged results by relevance tiers, then totalDownloads descending.
+            // Tier 0: exact ID match (case-insensitive)
+            // Tier 1: ID starts with query
+            // Tier 2: ID contains query as substring (e.g. "Ica.Logging.Extensions" contains "logging.extensions")
+            // Tier 3: query tokens all appear in ID segments (e.g. "logging" + "extensions" in "Microsoft.Extensions.Logging")
+            // Tier 4: everything else
+            // This ensures custom-source packages with strong name matches rank above
+            // high-download packages from nuget.org that only weakly match.
             if (sources.length > 1) {
                 const queryLower = query.toLowerCase();
+                const queryTokens = queryLower.split('.').filter(Boolean);
                 packages.sort((a, b) => {
-                    const aPrefix = a.id.toLowerCase().startsWith(queryLower) ? 0 : 1;
-                    const bPrefix = b.id.toLowerCase().startsWith(queryLower) ? 0 : 1;
-                    if (aPrefix !== bPrefix) { return aPrefix - bPrefix; }
+                    const aTier = NuGetPackageService.searchRelevanceTier(a.id, queryLower, queryTokens);
+                    const bTier = NuGetPackageService.searchRelevanceTier(b.id, queryLower, queryTokens);
+                    if (aTier !== bTier) { return aTier - bTier; }
                     return (b.totalDownloads ?? 0) - (a.totalDownloads ?? 0);
                 });
             }
@@ -906,6 +927,19 @@ export class NuGetPackageService {
                     merged.push(pkg);
                     seenIds.add(pkg.id.toLowerCase());
                 }
+            }
+
+            // Re-sort merged results when CLI results were added, so CLI packages with
+            // strong name matches aren't buried after all API results.
+            if (cliResults.length > 0 && merged.length > apiResults.length) {
+                const queryLower = query.toLowerCase();
+                const queryTokens = queryLower.split('.').filter(Boolean);
+                merged.sort((a, b) => {
+                    const aTier = NuGetPackageService.searchRelevanceTier(a.id, queryLower, queryTokens);
+                    const bTier = NuGetPackageService.searchRelevanceTier(b.id, queryLower, queryTokens);
+                    if (aTier !== bTier) { return aTier - bTier; }
+                    return (b.totalDownloads ?? 0) - (a.totalDownloads ?? 0);
+                });
             }
 
             // Cap merged results to searchResultLimit (API queries each source with `take`,
