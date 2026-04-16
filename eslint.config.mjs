@@ -57,6 +57,6 @@ export default tseslint.config(
         },
     },
     {
-        ignores: ['out/**', 'dist/**', '**/*.d.ts'],
+        ignores: ['out/**', 'dist/**', '.vscode-test/**', '**/*.d.ts'],
     }
 );
