@@ -1,9 +1,9 @@
 import eslint from '@eslint/js';
 import reactHooks from 'eslint-plugin-react-hooks';
 import globals from 'globals';
-import tseslint from 'typescript-eslint';
 import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import tseslint from 'typescript-eslint';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
