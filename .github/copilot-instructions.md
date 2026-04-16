@@ -111,8 +111,8 @@ The VS Code task "Run Tests" (`Ctrl+Shift+T` or Task menu) runs `npm test` with 
 | Issue | Status |
 |-------|--------|
 | No known `npm audit` vulnerabilities | All previously tracked vulnerabilities resolved. `@vscode/test-cli` and `@vscode/test-electron` removed (unused, caused vuln chain). **Re-run `npm audit` periodically to check for regressions.** |
-| TypeScript 6.0 + typescript-eslint peer dep warning | `typescript-eslint@8.x` has peer dep `<6.0.0`. Functional — linting works. `.npmrc` has `legacy-peer-deps=true`. Remove `.npmrc` when typescript-eslint adds TS 6 support. |
-| ESLint 10 not yet adoptable | `eslint-plugin-react-hooks@7.x` requires eslint `^9.0.0`. Blocked until react-hooks plugin adds `^10.0.0` peer. |
+| TypeScript 6.0 + typescript-eslint peer dep | Resolved — `typescript-eslint@8.58.2` supports `<6.1.0`. |
+| `eslint-plugin-react-hooks` peer dep | `eslint-plugin-react-hooks@7.x` declares `eslint ^9.0.0` only. Bypassed via `overrides` in `package.json`. `.npmrc` removed. Remove override when react-hooks ships `^10.0.0` support. |
 | `no-explicit-any` is warn, not error | `WebviewMessage` type uses `Record<string, any>` because webview messages are inherently untyped (50+ message types). Upgrading to `error` requires a full discriminated union refactor. ESLint turns off `no-explicit-any` and `no-non-null-assertion` in test files via override in `eslint.config.mjs`. |
 
 ## VS Code Extension

@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **ESLint 10**
+- **Removed `.npmrc`** — `legacy-peer-deps=true` no longer needed; `eslint-plugin-react-hooks` peer dep handled via `overrides` in `package.json`
+
+### Fixed
+
+- **Resolved `dompurify` moderate vulnerability (GHSA-39q2-94rc-95cp)**
+- **Resolved `typescript-eslint` peer dependency warning for TypeScript 6.0**
+
 ## [1.18.4] - 2026-04-16
 
 ### Added
