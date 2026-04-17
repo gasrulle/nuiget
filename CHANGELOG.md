@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Multi-project install from sidebar** — When "All Projects" is selected in the sidebar, installing a package (via "+" icon or right-click context menu) now shows a multi-select project picker. Users can select multiple projects at once; single selection uses the existing install path, multiple selections use bulk install with topological sort and deferred restore.
+
 ### Changed
 
 - **Refresh buttons now clear NuGet HTTP cache**
@@ -18,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Resolved `dompurify` moderate vulnerability (GHSA-39q2-94rc-95cp)**
 - **Resolved `typescript-eslint` peer dependency warning for TypeScript 6.0**
 - **Multi-source API search sorting drops custom source packages** — Replaced 2-tier prefix-only relevance sort with 5-tier scoring (exact match → prefix → substring/contains → token match → rest), so custom-source packages like `Ica.Logging.Extensions` rank above high-download nuget.org packages for query `logging.extensions`. Also re-sorts merged API+CLI results before capping at 20.
+- **CI lockfile sync failures** — Replaced `npm ci` with `npm install` in CI workflow to prevent recurring `@emnapi` transitive dependency drift breaking all CI jobs
 
 ## [1.18.4] - 2026-04-16
 

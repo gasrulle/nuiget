@@ -114,6 +114,7 @@ The VS Code task "Run Tests" (`Ctrl+Shift+T` or Task menu) runs `npm test` with 
 | TypeScript 6.0 + typescript-eslint peer dep | Resolved — `typescript-eslint@8.58.2` supports `<6.1.0`. |
 | `eslint-plugin-react-hooks` peer dep | `eslint-plugin-react-hooks@7.x` declares `eslint ^9.0.0` only. Bypassed via `overrides` in `package.json`. `.npmrc` removed. Remove override when react-hooks ships `^10.0.0` support. |
 | `no-explicit-any` is warn, not error | `WebviewMessage` type uses `Record<string, any>` because webview messages are inherently untyped (50+ message types). Upgrading to `error` requires a full discriminated union refactor. ESLint turns off `no-explicit-any` and `no-non-null-assertion` in test files via override in `eslint.config.mjs`. |
+| CI uses `npm install` not `npm ci` | `@emnapi/core` and `@emnapi/runtime` are transitive optional deps (via `@rolldown/binding-wasm32-wasi`) whose resolved versions differ between npm patch versions. `npm ci` fails on any drift. CI uses `npm install --no-audit --no-fund` instead — reads the lockfile when compatible, resolves fresh when not. |
 
 ## VS Code Extension
 | Issue | Solution |
