@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [main, "labs/**"]
+    branches: [ main, "labs/**" ]
   pull_request:
-    branches: [main]
+    branches: [ main ]
   workflow_dispatch:
 
 concurrency:
@@ -148,7 +148,7 @@ jobs:
 
   build:
     name: Build & Package
-    needs: [lint, test, e2e]
+    needs: [ lint, test, e2e ]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -193,7 +193,8 @@ jobs:
       - run: npm install --no-audit --no-fund
 
       - name: Run benchmarks against baseline
-        run: npx vitest bench --run --project backend --compare benchmarks/baseline.json --outputJson benchmarks/latest.json
+        run: npx vitest bench --run --project backend --compare benchmarks/baseline.json
+          --outputJson benchmarks/latest.json
 
       - name: Add benchmark summary
         if: always()

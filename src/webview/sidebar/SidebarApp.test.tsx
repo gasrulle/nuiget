@@ -18,6 +18,8 @@ vi.mock('./components/PackageRow', () => ({
             data-context={props.context}
             data-installed-version={props.installedVersion || ''}
             data-action-tooltip={props.actionTooltip || ''}
+            data-partially-installed={props.partiallyInstalled ? 'true' : ''}
+            data-install-count={props.installCount || ''}
             onContextMenu={(e: any) => props.onContextMenu?.(props.packageId, e)}
         >
             {props.packageId}
@@ -292,6 +294,114 @@ describe('SidebarApp', () => {
         expect(screen.getByTestId('section-updates').textContent).toContain('Updates (0)');
     });
 
+    it('handles bulkInstallResult and optimistically updates installedPackages', () => {
+        render(<SidebarApp />);
+        sendMessage({ type: 'state', selectedProject: '__all_projects__' });
+        sendMessage({
+            type: 'projects', projects: [
+                { name: 'App.csproj', path: '/App.csproj' },
+                { name: 'Lib.csproj', path: '/Lib.csproj' }
+            ]
+        });
+
+        // Trigger browse mode to show search results
+        const input = screen.getByRole('searchbox');
+        fireEvent.change(input, { target: { value: 'Serilog' } });
+        fireEvent.keyDown(input, { key: 'Enter' });
+        sendMessage({
+            type: 'searchResults',
+            results: [{ id: 'Serilog', version: '4.0.0', description: 'Logging', authors: 'Author' }]
+        });
+
+        // Before bulk install, the browse row should have no installed version
+        const row = screen.getByTestId('package-row-Serilog');
+        expect(row.getAttribute('data-installed-version')).toBe('');
+
+        // Simulate bulkInstallResult from multi-project install
+        sendMessage({
+            type: 'bulkInstallResult',
+            packageId: 'Serilog',
+            version: '4.0.0',
+            results: [
+                { projectPath: '/App.csproj', projectName: 'App.csproj', success: true },
+                { projectPath: '/Lib.csproj', projectName: 'Lib.csproj', success: true }
+            ]
+        });
+
+        // After bulk install, the browse row should show installed version
+        expect(row.getAttribute('data-installed-version')).toBe('4.0.0');
+    });
+
+    it('bulkInstallResult re-fetches checkAllProjectsInstalled in all-projects mode', () => {
+        render(<SidebarApp />);
+        sendMessage({ type: 'state', selectedProject: '__all_projects__' });
+        sendMessage({
+            type: 'projects', projects: [
+                { name: 'App.csproj', path: '/App.csproj' }
+            ]
+        });
+        mockVsCode.postMessage.mockClear();
+
+        sendMessage({
+            type: 'bulkInstallResult',
+            packageId: 'Pkg',
+            version: '1.0.0',
+            results: [{ projectPath: '/App.csproj', projectName: 'App.csproj', success: true }]
+        });
+
+        expect(mockVsCode.postMessage).toHaveBeenCalledWith(
+            expect.objectContaining({ type: 'checkAllProjectsInstalled' })
+        );
+    });
+
+    it('bulkInstallResult refreshes single project when user switched away from all-projects', () => {
+        render(<SidebarApp />);
+        // Start in all-projects mode, then switch to a single project
+        sendMessage({ type: 'state', selectedProject: '__all_projects__' });
+        sendMessage({ type: 'projectChanged', projectPath: '/App.csproj' });
+        mockVsCode.postMessage.mockClear();
+
+        sendMessage({
+            type: 'bulkInstallResult',
+            packageId: 'Pkg',
+            version: '1.0.0',
+            results: [
+                { projectPath: '/App.csproj', projectName: 'App.csproj', success: true },
+                { projectPath: '/Other.csproj', projectName: 'Other.csproj', success: true }
+            ]
+        });
+
+        // Should refresh the current single project since it was a successful target
+        expect(mockVsCode.postMessage).toHaveBeenCalledWith(
+            expect.objectContaining({ type: 'getInstalledPackages', projectPath: '/App.csproj' })
+        );
+        // Should NOT re-fetch all-projects data since we're not in all-projects mode
+        expect(mockVsCode.postMessage).not.toHaveBeenCalledWith(
+            expect.objectContaining({ type: 'checkAllProjectsInstalled' })
+        );
+    });
+
+    it('bulkInstallResult with empty version skips optimistic update but still re-fetches', () => {
+        render(<SidebarApp />);
+        sendMessage({ type: 'state', selectedProject: '__all_projects__' });
+        sendMessage({ type: 'projects', projects: [{ name: 'App.csproj', path: '/App.csproj' }] });
+        mockVsCode.postMessage.mockClear();
+
+        sendMessage({
+            type: 'bulkInstallResult',
+            packageId: 'Pkg',
+            version: '',  // Empty version — optimistic update should be skipped
+            results: [
+                { projectPath: '/App.csproj', projectName: 'App.csproj', success: true }
+            ]
+        });
+
+        // Re-fetch should still fire regardless of empty version
+        expect(mockVsCode.postMessage).toHaveBeenCalledWith(
+            expect.objectContaining({ type: 'checkAllProjectsInstalled' })
+        );
+    });
+
     it('update all button dispatches bulkUpdatePackages', () => {
         render(<SidebarApp />);
         sendMessage({ type: 'state', selectedProject: '/App.csproj' });
@@ -478,9 +588,144 @@ describe('SidebarApp', () => {
             results: [{ id: 'Microsoft.Extensions.Primitives', version: '10.0.0', description: 'Primitives', authors: 'Microsoft' }]
         });
 
-        // The browse row should show the installed version from allProjectsInstalled
+        // Package is installed in 1 of 2 projects — partially installed (+ icon, no installedVersion)
         const row = screen.getByTestId('package-row-Microsoft.Extensions.Primitives');
-        expect(row.getAttribute('data-installed-version')).toBe('9.0.0');
+        expect(row.getAttribute('data-installed-version')).toBe('');
+    });
+
+    it('marks partially installed packages with badge and no installedVersion', () => {
+        render(<SidebarApp />);
+        sendMessage({ type: 'state', selectedProject: '__all_projects__' });
+        sendMessage({
+            type: 'projects', projects: [
+                { name: 'App.csproj', path: '/App.csproj' },
+                { name: 'Lib.csproj', path: '/Lib.csproj' },
+                { name: 'Web.csproj', path: '/Web.csproj' }
+            ]
+        });
+        sendMessage({
+            type: 'allProjectsInstalled',
+            projectInstalled: [
+                { projectPath: '/App.csproj', projectName: 'App.csproj', packages: [{ id: 'PkgA', version: '1.0.0' }] },
+                { projectPath: '/Lib.csproj', projectName: 'Lib.csproj', packages: [{ id: 'PkgA', version: '1.0.0' }] }
+            ]
+        });
+
+        const input = screen.getByRole('searchbox');
+        fireEvent.change(input, { target: { value: 'PkgA' } });
+        fireEvent.keyDown(input, { key: 'Enter' });
+        sendMessage({
+            type: 'searchResults',
+            results: [{ id: 'PkgA', version: '2.0.0', description: 'Test', authors: 'Author' }]
+        });
+
+        const row = screen.getByTestId('package-row-PkgA');
+        // Partially installed: 2/3 projects → no installedVersion, shows badge
+        expect(row.getAttribute('data-installed-version')).toBe('');
+        expect(row.getAttribute('data-partially-installed')).toBe('true');
+        expect(row.getAttribute('data-install-count')).toBe('2/3');
+    });
+
+    it('marks fully installed packages with installedVersion and not partial', () => {
+        render(<SidebarApp />);
+        sendMessage({ type: 'state', selectedProject: '__all_projects__' });
+        sendMessage({
+            type: 'projects', projects: [
+                { name: 'App.csproj', path: '/App.csproj' },
+                { name: 'Lib.csproj', path: '/Lib.csproj' }
+            ]
+        });
+        sendMessage({
+            type: 'allProjectsInstalled',
+            projectInstalled: [
+                { projectPath: '/App.csproj', projectName: 'App.csproj', packages: [{ id: 'PkgA', version: '1.0.0' }] },
+                { projectPath: '/Lib.csproj', projectName: 'Lib.csproj', packages: [{ id: 'PkgA', version: '1.0.0' }] }
+            ]
+        });
+
+        const input = screen.getByRole('searchbox');
+        fireEvent.change(input, { target: { value: 'PkgA' } });
+        fireEvent.keyDown(input, { key: 'Enter' });
+        sendMessage({
+            type: 'searchResults',
+            results: [{ id: 'PkgA', version: '2.0.0', description: 'Test', authors: 'Author' }]
+        });
+
+        const row = screen.getByTestId('package-row-PkgA');
+        // Fully installed: 2/2 projects → shows installedVersion, not partial
+        expect(row.getAttribute('data-installed-version')).toBe('1.0.0');
+        expect(row.getAttribute('data-partially-installed')).toBe('');
+        expect(row.getAttribute('data-install-count')).toBe('');
+    });
+
+    it('partially installed browse row primary action sends install message', () => {
+        render(<SidebarApp />);
+        sendMessage({ type: 'state', selectedProject: '__all_projects__' });
+        sendMessage({
+            type: 'projects', projects: [
+                { name: 'App.csproj', path: '/App.csproj' },
+                { name: 'Lib.csproj', path: '/Lib.csproj' }
+            ]
+        });
+        sendMessage({
+            type: 'allProjectsInstalled',
+            projectInstalled: [
+                { projectPath: '/App.csproj', projectName: 'App.csproj', packages: [{ id: 'PkgA', version: '1.0.0' }] }
+            ]
+        });
+
+        const input = screen.getByRole('searchbox');
+        fireEvent.change(input, { target: { value: 'PkgA' } });
+        fireEvent.keyDown(input, { key: 'Enter' });
+        sendMessage({
+            type: 'searchResults',
+            results: [{ id: 'PkgA', version: '2.0.0', description: 'Test', authors: 'Author' }]
+        });
+
+        // Click the + action on the partially installed package
+        const actionBtn = screen.getByTestId('action-PkgA');
+        fireEvent.click(actionBtn);
+
+        // Should send pickProjectForInstall (install path, not remove path)
+        const installMsgs = mockVsCode.postMessage.mock.calls.filter(
+            (c: any) => c[0]?.type === 'pickProjectForInstall'
+        );
+        expect(installMsgs.length).toBe(1);
+    });
+
+    it('sends partiallyInstalled flag in context menu for partial packages', () => {
+        render(<SidebarApp />);
+        sendMessage({ type: 'state', selectedProject: '__all_projects__' });
+        sendMessage({
+            type: 'projects', projects: [
+                { name: 'App.csproj', path: '/App.csproj' },
+                { name: 'Lib.csproj', path: '/Lib.csproj' }
+            ]
+        });
+        sendMessage({
+            type: 'allProjectsInstalled',
+            projectInstalled: [
+                { projectPath: '/App.csproj', projectName: 'App.csproj', packages: [{ id: 'PkgA', version: '1.0.0' }] }
+            ]
+        });
+
+        const input = screen.getByRole('searchbox');
+        fireEvent.change(input, { target: { value: 'PkgA' } });
+        fireEvent.keyDown(input, { key: 'Enter' });
+        sendMessage({
+            type: 'searchResults',
+            results: [{ id: 'PkgA', version: '2.0.0', description: 'Test', authors: 'Author' }]
+        });
+
+        const row = screen.getByTestId('package-row-PkgA');
+        fireEvent.contextMenu(row);
+
+        const ctxMsgs = mockVsCode.postMessage.mock.calls.filter(
+            (c: any) => c[0]?.type === 'showContextMenu'
+        );
+        expect(ctxMsgs.length).toBe(1);
+        expect(ctxMsgs[0][0].partiallyInstalled).toBe(true);
+        expect(ctxMsgs[0][0].installedVersion).toBe('1.0.0');
     });
 
     it('shows actionTooltip with project names for browse rows in all-projects mode', () => {
@@ -587,9 +832,9 @@ describe('SidebarApp', () => {
         const row = screen.getByTestId('package-row-PkgA');
         expect(row.getAttribute('data-installed-version')).toBe('1.0.0');
 
-        // Remove from App.csproj — still installed in Lib.csproj
+        // Remove from App.csproj — still installed in Lib.csproj (now partially installed)
         sendMessage({ type: 'removeResult', success: true, packageId: 'PkgA', projectPath: '/App.csproj' });
-        expect(row.getAttribute('data-installed-version')).toBe('1.0.0');
+        expect(row.getAttribute('data-installed-version')).toBe('');
 
         // Remove from Lib.csproj — now fully removed
         sendMessage({ type: 'removeResult', success: true, packageId: 'PkgA', projectPath: '/Lib.csproj' });

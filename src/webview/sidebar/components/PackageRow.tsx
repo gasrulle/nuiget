@@ -10,6 +10,10 @@ interface PackageRowProps {
     latestVersion?: string;
     /** Override the default action button tooltip (e.g., to list projects) */
     actionTooltip?: string;
+    /** True when the package is installed in some but not all projects (all-projects browse mode) */
+    partiallyInstalled?: boolean;
+    /** Display string showing install count (e.g., "2/5") */
+    installCount?: string;
     context: 'browse' | 'installed' | 'updates';
     selected?: boolean;
     onPrimaryAction: (packageId: string) => void;
@@ -30,6 +34,8 @@ export const PackageRow: React.FC<PackageRowProps> = ({
     installedVersion,
     latestVersion,
     actionTooltip,
+    partiallyInstalled,
+    installCount,
     context,
     selected,
     onPrimaryAction,
@@ -55,7 +61,10 @@ export const PackageRow: React.FC<PackageRowProps> = ({
     let actionLabel: string;
     let ActionIcon: React.FC<{ size?: number }>;
     if (context === 'browse') {
-        if (installedVersion) {
+        if (partiallyInstalled) {
+            actionLabel = 'Install in more projects';
+            ActionIcon = PlusIcon;
+        } else if (installedVersion) {
             actionLabel = 'Uninstall (Del)';
             ActionIcon = TrashIcon;
         } else {
@@ -96,7 +105,14 @@ export const PackageRow: React.FC<PackageRowProps> = ({
             <div className="package-row-main">
                 <div className="package-row-header" title={`${packageId} ${displayVersion}`}>
                     <span className="package-row-name">{packageId}</span>
-                    <span className="package-row-version">{versionContent}</span>
+                    <span className="package-row-version">
+                        {versionContent}
+                        {installCount && (
+                            <span className="install-count-badge" title={`Installed in ${installCount} projects`}>
+                                {installCount}
+                            </span>
+                        )}
+                    </span>
                 </div>
                 {description && (
                     <div className="package-row-description" title={description}>

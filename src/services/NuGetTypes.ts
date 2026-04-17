@@ -329,6 +329,8 @@ export interface PickProjectForInstallMsg {
     type: 'pickProjectForInstall';
     packageId: string;
     version?: string;
+    /** Optional pre-fetched installed info — avoids redundant queryAllProjectsInstalled call */
+    installedProjects?: Array<{ projectPath: string; version: string }>;
 }
 
 export interface PickProjectForRemoveMsg {
@@ -526,6 +528,8 @@ export interface ShowContextMenuMsg {
     sourceUrl?: string;
     /** Projects where this package is installed (for all-projects browse context menu) */
     installedProjects?: Array<{ projectPath: string; projectName: string; version: string }>;
+    /** True when the package is installed in some but not all projects (all-projects browse mode) */
+    partiallyInstalled?: boolean;
 }
 
 // ─── Union Types ─────────────────────────────────────────────────────────────

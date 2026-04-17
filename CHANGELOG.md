@@ -7,28 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
-
-- **Multi-project install from sidebar** — When "All Projects" is selected in the sidebar, installing a package (via "+" icon or right-click context menu) now shows a multi-select project picker. Users can select multiple projects at once; single selection uses the existing install path, multiple selections use bulk install with topological sort and deferred restore.
-
-### Changed
-
-- **Refresh buttons now clear NuGet HTTP cache**
-- **ESLint 10**
-- **Removed `.npmrc`** — `legacy-peer-deps=true` no longer needed; `eslint-plugin-react-hooks` peer dep handled via `overrides` in `package.json`
-
-### Fixed
-
-- **Resolved `dompurify` moderate vulnerability (GHSA-39q2-94rc-95cp)**
-- **Resolved `typescript-eslint` peer dependency warning for TypeScript 6.0**
-- **Multi-source API search sorting drops custom source packages** — Replaced 2-tier prefix-only relevance sort with 5-tier scoring (exact match → prefix → substring/contains → token match → rest), so custom-source packages like `Ica.Logging.Extensions` rank above high-download nuget.org packages for query `logging.extensions`. Also re-sorts merged API+CLI results before capping at 20.
-- **CI lockfile sync failures** — Replaced `npm ci` with `npm install` in CI workflow to prevent recurring `@emnapi` transitive dependency drift breaking all CI jobs
-
 ## [1.18.4] - 2026-04-16
 
 ### Added
 
 - **Generalized API search for all V3 NuGet sources** — Package search now uses the V3 SearchQueryService API for ANY NuGet source that supports it (not just nuget.org). Multiple sources are queried in parallel with results merged and deduplicated. Auth headers are passed for authenticated feeds. Handles both camelCase and PascalCase response fields (BaGet/ProGet compatibility). CLI is used only as fallback for V2 feeds and local sources.
+- **Multi-project install from sidebar** — When "All Projects" is selected in the sidebar, installing a package (via "+" icon or right-click context menu) now shows a multi-select project picker. Users can select multiple projects at once; single selection uses the existing install path, multiple selections use bulk install with topological sort and deferred restore.
+- **Partially-installed package UX in sidebar** — In all-projects mode, packages installed in some but not all projects now show a `+` icon (for installing in remaining projects) with an N/M badge indicating install count. Context menu shows both install and uninstall actions. Fully installed packages show the trash icon as before.
 
 ### Fixed
 
@@ -36,6 +21,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Local/failed sources dropped from search**
 - **Multi-source search result ordering**
 - **Multi-source search result count exceeding limit**
+- **Resolved `dompurify` moderate vulnerability (GHSA-39q2-94rc-95cp)**
+- **Resolved `typescript-eslint` peer dependency warning for TypeScript 6.0**
+- **Multi-source API search sorting drops custom source packages** — Replaced 2-tier prefix-only relevance sort with 5-tier scoring (exact match → prefix → substring/contains → token match → rest), so custom-source packages like `Ica.Logging.Extensions` rank above high-download nuget.org packages for query `logging.extensions`. Also re-sorts merged API+CLI results before capping at 20.
+- **CI lockfile sync failures** — Replaced `npm ci` with `npm install` in CI workflow to prevent recurring `@emnapi` transitive dependency drift breaking all CI jobs
+- **Sidebar keyboard shortcuts respect partially-installed state**
+- **Sidebar context-menu install rechecks operation lock to reduce race window**
+- **Sidebar `+` button passes pre-fetched installed info to avoid redundant query**
+- **Sidebar `fullyInstalledSet` guards against flicker during refresh**
 
 ## [1.18.3] - 2026-04-15
 
@@ -45,6 +38,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Two-phase CLI search results delivery**
 - **Incremental streaming update results**
 - **Quick search LRU cache**
+- **Refresh buttons now clear NuGet HTTP cache**
+- **ESLint 10**
+- **Removed `.npmrc`** — `legacy-peer-deps=true` no longer needed; `eslint-plugin-react-hooks` peer dep handled via `overrides` in `package.json`
 
 ### Removed
 

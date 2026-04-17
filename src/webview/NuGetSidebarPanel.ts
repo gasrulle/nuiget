@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { executeBulkUpdateAllProjects, executeBulkUpdatePackages, executeSingleOperation, OperationContext, queryAllProjectsInstalled, queryAllProjectsUpdates } from '../services/NuGetOperations';
+import { executeBulkInstall, executeBulkUpdateAllProjects, executeBulkUpdatePackages, executeSingleOperation, OperationContext, queryAllProjectsInstalled, queryAllProjectsUpdates } from '../services/NuGetOperations';
 import { NuGetService } from '../services/NuGetService';
 import type { PickProjectForInstallMsg, PickProjectForRemoveMsg, ShowContextMenuMsg, SidebarRequestMessage } from '../services/NuGetTypes';
 import { ALL_PROJECTS_SENTINEL } from '../services/NuGetTypes';
@@ -783,32 +783,87 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
 
     // ------ Project picker for install (all-projects mode) ------
 
-    private async _pickProjectAndInstall(data: PickProjectForInstallMsg): Promise<void> {
+    /**
+     * Show a multi-select QuickPick to choose projects for package installation.
+     * Projects where the package is already installed are marked and unchecked by default.
+     * @param knownInstalledProjects Optional pre-fetched installed info from the frontend
+     *   to avoid redundant `queryAllProjectsInstalled` calls (context menu path).
+     * Returns selected project paths, or undefined if cancelled.
+     */
+    private async _pickProjectsForInstall(
+        packageId: string,
+        knownInstalledProjects?: Array<{ projectPath: string; version: string }>
+    ): Promise<string[] | undefined> {
+        // Always use findProjects() as the authoritative project list — queryAllProjectsInstalled
+        // may silently drop projects that fail installed-package enumeration
         const projects = await this._nugetService.findProjects();
-        if (projects.length === 0) { return; }
+        if (projects.length === 0) { return undefined; }
+
+        // Build installed overlay — prefer pre-fetched data to skip expensive re-query
+        const installedMap = new Map<string, string>();
+        if (knownInstalledProjects) {
+            for (const ip of knownInstalledProjects) {
+                installedMap.set(ip.projectPath, ip.version);
+            }
+        } else {
+            try {
+                const allInstalled = await queryAllProjectsInstalled(this._nugetService, true);
+                for (const pi of allInstalled) {
+                    const pkg = pi.packages.find(p => p.id.toLowerCase() === packageId.toLowerCase());
+                    if (pkg) { installedMap.set(pi.projectPath, pkg.resolvedVersion || pkg.version || ''); }
+                }
+            } catch { /* Proceed without installed info */ }
+        }
 
         const sorted = [...projects].sort((a, b) => a.name.localeCompare(b.name));
-        const items = sorted.map(p => ({ label: p.name, description: p.path }));
-
-        const selected = await vscode.window.showQuickPick(items, {
-            placeHolder: `Select project to install ${data.packageId}`,
-            title: `nUIget — Install ${data.packageId}`
+        const items = sorted.map(p => {
+            const installedVer = installedMap.get(p.path);
+            return {
+                label: p.name,
+                description: installedVer ? `(installed v${installedVer})` : '',
+                detail: p.path,
+                picked: !installedVer
+            };
         });
 
-        if (!selected) { return; }
-        const project = selected.description
-            ? projects.find(p => p.path === selected.description)
-            : undefined;
-        if (!project) { return; }
+        const selected = await vscode.window.showQuickPick(items, {
+            placeHolder: `Select projects to install ${packageId}`,
+            title: `nUIget — Install ${packageId}`,
+            canPickMany: true
+        });
 
-        this._operationInProgress = true;
-        let pickInstallSuccess = false;
-        try {
-            pickInstallSuccess = await executeSingleOperation(this._opCtx(), 'install', project.path, data.packageId, data.version);
-        } finally {
-            this._operationInProgress = false;
-            this._cancelFileWatcherDebounce();
-            if (pickInstallSuccess) { this.checkUpdatesInBackground(true, true, { packageIds: [data.packageId], projectPath: project.path }); }
+        if (!selected || selected.length === 0) { return undefined; }
+        return selected.map(s => s.detail ?? '').filter(d => d !== '');
+    }
+
+    private async _pickProjectAndInstall(data: PickProjectForInstallMsg): Promise<void> {
+        const selectedPaths = await this._pickProjectsForInstall(data.packageId, data.installedProjects);
+        if (!selectedPaths) { return; }
+
+        // Re-check after async picker — another operation may have started while picker was open
+        if (this._operationInProgress) { return; }
+
+        if (selectedPaths.length === 1) {
+            // Single project — use existing single operation path
+            this._operationInProgress = true;
+            let pickInstallSuccess = false;
+            try {
+                pickInstallSuccess = await executeSingleOperation(this._opCtx(), 'install', selectedPaths[0], data.packageId, data.version);
+            } finally {
+                this._operationInProgress = false;
+                this._cancelFileWatcherDebounce();
+                if (pickInstallSuccess) { this.checkUpdatesInBackground(true, true, { packageIds: [data.packageId], projectPath: selectedPaths[0] }); }
+            }
+        } else {
+            // Multiple projects — use shared bulk install
+            this._operationInProgress = true;
+            try {
+                await executeBulkInstall(this._opCtx(), selectedPaths, data.packageId, data.version);
+            } finally {
+                this._operationInProgress = false;
+                this._cancelFileWatcherDebounce();
+                this.checkUpdatesInBackground(true, true, { packageIds: [data.packageId] });
+            }
         }
     }
 
@@ -885,8 +940,14 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
         const items: vscode.QuickPickItem[] = [];
 
         if (context === 'browse') {
-            if (installedVersion) {
-                // Already installed
+            if (data.partiallyInstalled && installedVersion) {
+                // Partially installed — show both install and uninstall actions
+                items.push({ label: '$(add) Install Latest', description: latestVersion || '' });
+                items.push({ label: '$(list-ordered) Install Version...', description: 'Select a specific version' });
+                items.push({ label: '$(close) Uninstall', description: installedVersion });
+                items.push({ label: '$(list-ordered) Change Version...', description: 'Select a specific version' });
+            } else if (installedVersion) {
+                // Fully installed
                 items.push({ label: '$(close) Uninstall', description: installedVersion });
                 items.push({ label: '$(list-ordered) Change Version...', description: 'Select a specific version' });
             } else {
@@ -934,6 +995,8 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
         // ─── RESOLVE PROJECT (for all-projects browse, pick project after action) ─
         let resolvedProjectPath: string | undefined = projectPath;
         if (isAllProjectsBrowse) {
+            const isInstallAction = label.includes('Install Latest') || label.includes('Install Version');
+
             // Version picker first for version-selection actions
             let selectedVersion: string | undefined;
             if (label.includes('Install Version') || label.includes('Change Version')) {
@@ -941,7 +1004,40 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
                 if (!selectedVersion) { return; }
             }
 
-            // Now pick the project
+            if (isInstallAction) {
+                // Multi-select project picker — pass known installed data to avoid redundant query
+                const knownInstalled = data.installedProjects?.map(ip => ({ projectPath: ip.projectPath, version: ip.version }));
+                const selectedPaths = await this._pickProjectsForInstall(packageId, knownInstalled);
+                if (!selectedPaths) { return; }
+
+                const version = selectedVersion || latestVersion || '';
+
+                if (selectedPaths.length === 1) {
+                    // Single project — route through webview `doInstall` handler (which sets its own
+                    // _operationInProgress guard). This asymmetry with `_pickProjectAndInstall` (which
+                    // calls executeSingleOperation directly) is intentional: the webview handler provides
+                    // richer single-project UX (progress indicator, success notification).
+                    // Recheck _operationInProgress here to reduce the race window — another op may have
+                    // started while the picker/version picker was open, in which case the backend would
+                    // silently drop the resulting installPackage message.
+                    if (this._operationInProgress) { return; }
+                    this._postMessage({ type: 'doInstall', packageId, version, projectPath: selectedPaths[0] });
+                } else {
+                    // Multiple projects — call executeBulkInstall directly
+                    if (this._operationInProgress) { return; }
+                    this._operationInProgress = true;
+                    try {
+                        await executeBulkInstall(this._opCtx(), selectedPaths, packageId, version || undefined);
+                    } finally {
+                        this._operationInProgress = false;
+                        this._cancelFileWatcherDebounce();
+                        this.checkUpdatesInBackground(true, true, { packageIds: [packageId] });
+                    }
+                }
+                return;
+            }
+
+            // Non-install actions: single-select project picker
             resolvedProjectPath = await this._pickProjectForAction(
                 packageId, label, data.installedProjects
             );
