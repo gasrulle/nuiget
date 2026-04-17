@@ -6,6 +6,7 @@ import * as vscode from 'vscode';
 // ──────────────────────────────────────────────
 const hoisted = vi.hoisted(() => ({
     mockExecuteSingleOperation: vi.fn().mockResolvedValue(true),
+    mockExecuteBulkInstall: vi.fn().mockResolvedValue(undefined),
     mockExecuteBulkUpdatePackages: vi.fn().mockResolvedValue(undefined),
     mockExecuteBulkUpdateAllProjects: vi.fn().mockResolvedValue(undefined),
     mockQueryAllProjectsUpdates: vi.fn().mockResolvedValue([]),
@@ -14,6 +15,7 @@ const hoisted = vi.hoisted(() => ({
 
 vi.mock('../services/NuGetOperations', () => ({
     executeSingleOperation: hoisted.mockExecuteSingleOperation,
+    executeBulkInstall: hoisted.mockExecuteBulkInstall,
     executeBulkUpdatePackages: hoisted.mockExecuteBulkUpdatePackages,
     executeBulkUpdateAllProjects: hoisted.mockExecuteBulkUpdateAllProjects,
     queryAllProjectsUpdates: hoisted.mockQueryAllProjectsUpdates,
@@ -537,14 +539,18 @@ describe('NuGetSidebarProvider', () => {
             );
         });
 
-        it('pickProjectForInstall shows project picker and installs on selection', async () => {
-            (service as any).findProjects.mockResolvedValue([
+        it('pickProjectForInstall shows multi-select picker and installs single project', async () => {
+            (service as any).findProjects.mockResolvedValueOnce([
                 { name: 'A.csproj', path: '/A.csproj' },
                 { name: 'B.csproj', path: '/B.csproj' },
             ]);
-            // Pre-configure createQuickPick to auto-select a project
+            hoisted.mockQueryAllProjectsInstalled.mockResolvedValueOnce([
+                { projectPath: '/A.csproj', projectName: 'A.csproj', packages: [] },
+                { projectPath: '/B.csproj', projectName: 'B.csproj', packages: [] },
+            ]);
+            // Multi-select picker returns an array with one item
             vi.mocked(vscode.window.showQuickPick).mockResolvedValueOnce(
-                { label: 'B.csproj', description: '/B.csproj' } as any
+                [{ label: 'B.csproj', description: '', detail: '/B.csproj' }] as any
             );
 
             await messageListener!({ type: 'pickProjectForInstall', packageId: 'Newtonsoft.Json', version: '13.0.3' });
@@ -554,14 +560,169 @@ describe('NuGetSidebarProvider', () => {
             );
         });
 
-        it('pickProjectForInstall does nothing when user dismisses picker', async () => {
-            (service as any).findProjects.mockResolvedValue([
+        it('pickProjectForInstall calls executeBulkInstall for multiple projects', async () => {
+            (service as any).findProjects.mockResolvedValueOnce([
                 { name: 'A.csproj', path: '/A.csproj' },
+                { name: 'B.csproj', path: '/B.csproj' },
+            ]);
+            hoisted.mockQueryAllProjectsInstalled.mockResolvedValueOnce([
+                { projectPath: '/A.csproj', projectName: 'A.csproj', packages: [] },
+                { projectPath: '/B.csproj', projectName: 'B.csproj', packages: [] },
+            ]);
+            // Multi-select picker returns an array with two items
+            vi.mocked(vscode.window.showQuickPick).mockResolvedValueOnce(
+                [
+                    { label: 'A.csproj', description: '', detail: '/A.csproj' },
+                    { label: 'B.csproj', description: '', detail: '/B.csproj' },
+                ] as any
+            );
+
+            await messageListener!({ type: 'pickProjectForInstall', packageId: 'Newtonsoft.Json', version: '13.0.3' });
+            expect(hoisted.mockExecuteBulkInstall).toHaveBeenCalledWith(
+                expect.objectContaining({ nugetService: service }),
+                ['/A.csproj', '/B.csproj'], 'Newtonsoft.Json', '13.0.3'
+            );
+            expect(hoisted.mockExecuteSingleOperation).not.toHaveBeenCalled();
+        });
+
+        it('pickProjectForInstall does nothing when user dismisses picker', async () => {
+            (service as any).findProjects.mockResolvedValueOnce([
+                { name: 'A.csproj', path: '/A.csproj' },
+            ]);
+            hoisted.mockQueryAllProjectsInstalled.mockResolvedValueOnce([
+                { projectPath: '/A.csproj', projectName: 'A.csproj', packages: [] },
             ]);
             vi.mocked(vscode.window.showQuickPick).mockResolvedValueOnce(undefined);
 
             await messageListener!({ type: 'pickProjectForInstall', packageId: 'Pkg', version: '1.0' });
             expect(hoisted.mockExecuteSingleOperation).not.toHaveBeenCalled();
+            expect(hoisted.mockExecuteBulkInstall).not.toHaveBeenCalled();
+        });
+
+        it('pickProjectForInstall marks already-installed projects with resolved version', async () => {
+            (service as any).findProjects.mockResolvedValueOnce([
+                { name: 'A.csproj', path: '/A.csproj' },
+                { name: 'B.csproj', path: '/B.csproj' },
+            ]);
+            hoisted.mockQueryAllProjectsInstalled.mockResolvedValueOnce([
+                { projectPath: '/A.csproj', projectName: 'A.csproj', packages: [{ id: 'Pkg', version: '1.*', resolvedVersion: '1.5.0' }] },
+                { projectPath: '/B.csproj', projectName: 'B.csproj', packages: [] },
+            ]);
+            vi.mocked(vscode.window.showQuickPick).mockResolvedValueOnce(undefined);
+
+            await messageListener!({ type: 'pickProjectForInstall', packageId: 'Pkg', version: '2.0' });
+            const quickPickArgs = vi.mocked(vscode.window.showQuickPick).mock.calls[0];
+            const items = quickPickArgs[0] as any[];
+            const options = quickPickArgs[1] as any;
+            // Should have canPickMany: true
+            expect(options.canPickMany).toBe(true);
+            // A.csproj should show resolvedVersion and be unchecked
+            const itemA = items.find((i: any) => i.label === 'A.csproj');
+            expect(itemA.description).toContain('1.5.0');
+            expect(itemA.picked).toBe(false);
+            // B.csproj should be pre-checked (not installed)
+            const itemB = items.find((i: any) => i.label === 'B.csproj');
+            expect(itemB.picked).toBe(true);
+        });
+
+        it('pickProjectForInstall always uses findProjects as the project list source', async () => {
+            hoisted.mockQueryAllProjectsInstalled.mockResolvedValueOnce([]);
+            (service as any).findProjects.mockResolvedValueOnce([
+                { name: 'C.csproj', path: '/C.csproj' },
+            ]);
+            vi.mocked(vscode.window.showQuickPick).mockResolvedValueOnce(
+                [{ label: 'C.csproj', description: '', detail: '/C.csproj' }] as any
+            );
+
+            await messageListener!({ type: 'pickProjectForInstall', packageId: 'Pkg', version: '1.0' });
+            expect((service as any).findProjects).toHaveBeenCalled();
+            expect(hoisted.mockExecuteSingleOperation).toHaveBeenCalledWith(
+                expect.objectContaining({ nugetService: service }),
+                'install', '/C.csproj', 'Pkg', '1.0'
+            );
+        });
+
+        it('pickProjectForInstall shows all projects even when queryAllProjectsInstalled returns partial results', async () => {
+            // queryAllProjectsInstalled only returns Project A (Project B failed enumeration)
+            hoisted.mockQueryAllProjectsInstalled.mockResolvedValueOnce([
+                { projectPath: '/A.csproj', projectName: 'A.csproj', packages: [{ id: 'Pkg', version: '1.0', resolvedVersion: '1.0.0' }] },
+            ]);
+            // findProjects returns both projects
+            (service as any).findProjects.mockResolvedValueOnce([
+                { name: 'A.csproj', path: '/A.csproj' },
+                { name: 'B.csproj', path: '/B.csproj' },
+            ]);
+            vi.mocked(vscode.window.showQuickPick).mockResolvedValueOnce(
+                [{ label: 'B.csproj', description: '', detail: '/B.csproj' }] as any
+            );
+
+            await messageListener!({ type: 'pickProjectForInstall', packageId: 'Pkg', version: '2.0' });
+            // Both projects should appear in the picker
+            const pickerItems = vi.mocked(vscode.window.showQuickPick).mock.calls[0][0] as any[];
+            expect(pickerItems).toHaveLength(2);
+            // A.csproj should show installed version and be unchecked
+            const itemA = pickerItems.find((i: any) => i.label === 'A.csproj');
+            expect(itemA.description).toContain('installed v1.0.0');
+            expect(itemA.picked).toBe(false);
+            // B.csproj should have no installed info and be pre-checked
+            const itemB = pickerItems.find((i: any) => i.label === 'B.csproj');
+            expect(itemB.description).toBe('');
+            expect(itemB.picked).toBe(true);
+        });
+
+        it('pickProjectForInstall falls back to findProjects when queryAllProjectsInstalled throws', async () => {
+            hoisted.mockQueryAllProjectsInstalled.mockRejectedValueOnce(new Error('network error'));
+            (service as any).findProjects.mockResolvedValueOnce([
+                { name: 'A.csproj', path: '/A.csproj' },
+                { name: 'B.csproj', path: '/B.csproj' },
+            ]);
+            vi.mocked(vscode.window.showQuickPick).mockResolvedValueOnce(
+                [{ label: 'A.csproj', description: '', detail: '/A.csproj' }] as any
+            );
+
+            await messageListener!({ type: 'pickProjectForInstall', packageId: 'Pkg', version: '1.0' });
+            // All projects should still appear (no installed markers)
+            const pickerItems = vi.mocked(vscode.window.showQuickPick).mock.calls[0][0] as any[];
+            expect(pickerItems).toHaveLength(2);
+            expect(pickerItems.every((i: any) => i.description === '')).toBe(true);
+            expect(pickerItems.every((i: any) => i.picked === true)).toBe(true);
+            expect(hoisted.mockExecuteSingleOperation).toHaveBeenCalled();
+        });
+
+        it('pickProjectForInstall uses knownInstalledProjects from context menu and skips queryAllProjectsInstalled', async () => {
+            // This tests the optimization path where the context menu sends known installed data
+            (service as any).findProjects.mockResolvedValueOnce([
+                { name: 'A.csproj', path: '/A.csproj' },
+                { name: 'B.csproj', path: '/B.csproj' },
+            ]);
+            // Action picker → Install Latest
+            // Multi-project picker → select B only
+            vi.mocked(vscode.window.showQuickPick)
+                .mockResolvedValueOnce({ label: '$(add) Install Latest', description: '3.0.0' } as any)
+                .mockResolvedValueOnce(
+                    [{ label: 'B.csproj', description: '', detail: '/B.csproj' }] as any
+                );
+
+            await messageListener!({
+                type: 'showContextMenu',
+                packageId: 'Pkg',
+                latestVersion: '3.0.0',
+                installedVersion: '2.0.0',
+                context: 'browse',
+                projectPath: '__all_projects__',
+                partiallyInstalled: true,
+                installedProjects: [{ projectPath: '/A.csproj', projectName: 'A.csproj', version: '2.0.0' }]
+            });
+
+            // queryAllProjectsInstalled should NOT be called — known data was provided
+            expect(hoisted.mockQueryAllProjectsInstalled).not.toHaveBeenCalled();
+            // But the picker items should show A as installed
+            const multiPickCalls = vi.mocked(vscode.window.showQuickPick).mock.calls;
+            // Second call is the multi-project picker
+            const pickerItems = multiPickCalls[1][0] as any[];
+            const itemA = pickerItems.find((i: any) => i.label === 'A.csproj');
+            expect(itemA.description).toContain('installed v2.0.0');
+            expect(itemA.picked).toBe(false);
         });
 
         it('pickProjectForRemove removes directly when single project matches', async () => {
@@ -1146,18 +1307,22 @@ describe('NuGetSidebarProvider', () => {
             expect(vscode.window.showQuickPick).toHaveBeenCalledTimes(2);
         });
 
-        it('shows actions QuickPick first in all-projects browse mode, then project picker', async () => {
+        it('shows actions QuickPick first in all-projects browse mode, then multi-select project picker', async () => {
             view = resolveView(provider);
             view.webview.postMessage.mockClear();
-            (service as any).findProjects.mockResolvedValue([
+            (service as any).findProjects.mockResolvedValueOnce([
                 { name: 'A.csproj', path: '/A.csproj' },
                 { name: 'B.csproj', path: '/B.csproj' },
             ]);
+            hoisted.mockQueryAllProjectsInstalled.mockResolvedValueOnce([
+                { projectPath: '/A.csproj', projectName: 'A.csproj', packages: [] },
+                { projectPath: '/B.csproj', projectName: 'B.csproj', packages: [] },
+            ]);
             // First QuickPick: actions menu — user picks Install Latest
-            // Second QuickPick: project picker — user selects A.csproj
+            // Second QuickPick: multi-select project picker — user selects A.csproj (single)
             vi.mocked(vscode.window.showQuickPick)
                 .mockResolvedValueOnce({ label: '$(add) Install Latest', description: '2.0.0' } as any)
-                .mockResolvedValueOnce({ label: 'A.csproj', description: '', detail: '/A.csproj' } as any);
+                .mockResolvedValueOnce([{ label: 'A.csproj', description: '', detail: '/A.csproj' }] as any);
 
             await messageListener!({
                 type: 'showContextMenu',
@@ -1174,13 +1339,51 @@ describe('NuGetSidebarProvider', () => {
                     expect.objectContaining({ label: '$(add) Install Latest' })
                 ])
             );
-            // Should have sent doInstall to the selected project
+            // Single project selected → doInstall sent to webview
             expect(view.webview.postMessage).toHaveBeenCalledWith({
                 type: 'doInstall',
                 packageId: 'Pkg',
                 version: '2.0.0',
                 projectPath: '/A.csproj'
             });
+        });
+
+        it('Install Latest in all-projects browse with multiple projects calls executeBulkInstall', async () => {
+            view = resolveView(provider);
+            view.webview.postMessage.mockClear();
+            (service as any).findProjects.mockResolvedValueOnce([
+                { name: 'A.csproj', path: '/A.csproj' },
+                { name: 'B.csproj', path: '/B.csproj' },
+            ]);
+            hoisted.mockQueryAllProjectsInstalled.mockResolvedValueOnce([
+                { projectPath: '/A.csproj', projectName: 'A.csproj', packages: [] },
+                { projectPath: '/B.csproj', projectName: 'B.csproj', packages: [] },
+            ]);
+            // First QuickPick: actions menu — Install Latest
+            // Second QuickPick: multi-select — both projects
+            vi.mocked(vscode.window.showQuickPick)
+                .mockResolvedValueOnce({ label: '$(add) Install Latest', description: '2.0.0' } as any)
+                .mockResolvedValueOnce([
+                    { label: 'A.csproj', description: '', detail: '/A.csproj' },
+                    { label: 'B.csproj', description: '', detail: '/B.csproj' },
+                ] as any);
+
+            await messageListener!({
+                type: 'showContextMenu',
+                packageId: 'Pkg',
+                latestVersion: '2.0.0',
+                context: 'browse',
+                projectPath: '__all_projects__'
+            });
+
+            // Multiple projects → executeBulkInstall called directly (no doInstall message)
+            expect(hoisted.mockExecuteBulkInstall).toHaveBeenCalledWith(
+                expect.objectContaining({ nugetService: service }),
+                ['/A.csproj', '/B.csproj'], 'Pkg', '2.0.0'
+            );
+            expect(view.webview.postMessage).not.toHaveBeenCalledWith(
+                expect.objectContaining({ type: 'doInstall' })
+            );
         });
 
         it('Copy Package ID executes immediately without project picker in all-projects browse', async () => {
@@ -1252,20 +1455,23 @@ describe('NuGetSidebarProvider', () => {
             });
         });
 
-        it('Install Version in all-projects browse shows version picker then project picker', async () => {
+        it('Install Version in all-projects browse shows version picker then multi-select project picker', async () => {
             view = resolveView(provider);
             view.webview.postMessage.mockClear();
             (service as any).getPackageVersions.mockResolvedValue(['3.0.0', '2.0.0', '1.0.0']);
-            (service as any).findProjects.mockResolvedValue([
+            (service as any).findProjects.mockResolvedValueOnce([
                 { name: 'A.csproj', path: '/A.csproj' },
+            ]);
+            hoisted.mockQueryAllProjectsInstalled.mockResolvedValueOnce([
+                { projectPath: '/A.csproj', projectName: 'A.csproj', packages: [] },
             ]);
             // First: actions menu — pick Install Version
             // Second: version picker — pick 2.0.0
-            // Third: project picker — pick A.csproj
+            // Third: multi-select project picker — pick A.csproj (single)
             vi.mocked(vscode.window.showQuickPick)
                 .mockResolvedValueOnce({ label: '$(list-ordered) Install Version...', description: 'Select a specific version' } as any)
                 .mockResolvedValueOnce({ label: '2.0.0', description: '' } as any)
-                .mockResolvedValueOnce({ label: 'A.csproj', description: '', detail: '/A.csproj' } as any);
+                .mockResolvedValueOnce([{ label: 'A.csproj', description: '', detail: '/A.csproj' }] as any);
 
             await messageListener!({
                 type: 'showContextMenu',
@@ -1419,6 +1625,93 @@ describe('NuGetSidebarProvider', () => {
             });
 
             expect(vscode.env.clipboard.writeText).toHaveBeenCalledWith('Pkg');
+        });
+
+        it('shows all 4 actions for partially installed package in browse context', async () => {
+            view = resolveView(provider);
+            view.webview.postMessage.mockClear();
+            vi.mocked(vscode.window.showQuickPick).mockResolvedValue(undefined); // user cancels
+
+            await messageListener!({
+                type: 'showContextMenu',
+                packageId: 'Pkg',
+                latestVersion: '3.0.0',
+                installedVersion: '2.0.0',
+                context: 'browse',
+                projectPath: '/proj.csproj',
+                partiallyInstalled: true
+            });
+
+            // Should show all 4 actions + Copy ID + View Details = 6 items
+            const quickPickItems = vi.mocked(vscode.window.showQuickPick).mock.calls[0][0] as any[];
+            const labels = quickPickItems.map((item: any) => item.label);
+            expect(labels).toContain('$(add) Install Latest');
+            expect(labels).toContain('$(list-ordered) Install Version...');
+            expect(labels).toContain('$(close) Uninstall');
+            expect(labels).toContain('$(list-ordered) Change Version...');
+        });
+
+        it('partially installed Install Latest routes through multi-project picker', async () => {
+            view = resolveView(provider);
+            view.webview.postMessage.mockClear();
+            (service as any).findProjects.mockResolvedValueOnce([
+                { name: 'A.csproj', path: '/A.csproj' },
+                { name: 'B.csproj', path: '/B.csproj' },
+            ]);
+            hoisted.mockQueryAllProjectsInstalled.mockResolvedValueOnce([
+                { projectPath: '/A.csproj', projectName: 'A.csproj', packages: [{ id: 'Pkg', version: '2.0.0' }] },
+                { projectPath: '/B.csproj', projectName: 'B.csproj', packages: [] },
+            ]);
+            // First QuickPick: actions menu — user picks Install Latest
+            // Second QuickPick: multi-select project picker — user selects B.csproj
+            vi.mocked(vscode.window.showQuickPick)
+                .mockResolvedValueOnce({ label: '$(add) Install Latest', description: '3.0.0' } as any)
+                .mockResolvedValueOnce([{ label: 'B.csproj', description: '', detail: '/B.csproj' }] as any);
+
+            await messageListener!({
+                type: 'showContextMenu',
+                packageId: 'Pkg',
+                latestVersion: '3.0.0',
+                installedVersion: '2.0.0',
+                context: 'browse',
+                projectPath: '__all_projects__',
+                partiallyInstalled: true
+            });
+
+            // Single project selected → doInstall sent to webview
+            expect(view.webview.postMessage).toHaveBeenCalledWith({
+                type: 'doInstall',
+                packageId: 'Pkg',
+                version: '3.0.0',
+                projectPath: '/B.csproj'
+            });
+        });
+
+        it('partially installed Uninstall routes through single-project picker', async () => {
+            view = resolveView(provider);
+            view.webview.postMessage.mockClear();
+            // Action QuickPick: user picks Uninstall
+            // Project picker: user picks A.csproj
+            vi.mocked(vscode.window.showQuickPick)
+                .mockResolvedValueOnce({ label: '$(close) Uninstall', description: '2.0.0' } as any)
+                .mockResolvedValueOnce({ label: 'A.csproj', detail: '/A.csproj' } as any);
+
+            await messageListener!({
+                type: 'showContextMenu',
+                packageId: 'Pkg',
+                latestVersion: '3.0.0',
+                installedVersion: '2.0.0',
+                context: 'browse',
+                projectPath: '__all_projects__',
+                partiallyInstalled: true,
+                installedProjects: ['A.csproj']
+            });
+
+            expect(view.webview.postMessage).toHaveBeenCalledWith({
+                type: 'doRemove',
+                packageId: 'Pkg',
+                projectPath: '/A.csproj'
+            });
         });
 
         it('executes viewPackageDetails command', async () => {

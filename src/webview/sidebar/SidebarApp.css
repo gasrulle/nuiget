@@ -386,6 +386,19 @@ body {
     gap: 2px;
 }
 
+.install-count-badge {
+    display: inline-block;
+    font-size: 10px;
+    line-height: 14px;
+    padding: 0 4px;
+    margin-left: 4px;
+    border-radius: 7px;
+    background: var(--vscode-badge-background);
+    color: var(--vscode-badge-foreground);
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
 .package-row-description {
     font-size: 11px;
     color: var(--vscode-descriptionForeground);

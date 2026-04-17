@@ -520,7 +520,8 @@ export class NuGetPanel {
                 }
             case 'fullRefresh':
                 {
-                    // Full refresh: clear all caches, re-fetch sources, refresh webview, and sync sidebar
+                    // Full refresh: clear dotnet HTTP cache, clear all in-memory caches, re-fetch sources, refresh webview, and sync sidebar
+                    await this._nugetService.clearNuGetHttpCache();
                     this._nugetService.clearSourceErrors();
                     const freshSources = await this._nugetService.getSources();
                     this._postMessage({

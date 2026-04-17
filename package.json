@@ -2,7 +2,7 @@
     "name": "nuiget",
     "displayName": "nUIget - A NuGet Package Manager",
     "description": "A NuGet package manager with Visual Studio-style UI. Search, install, update, and remove packages across multiple sources.",
-    "version": "1.18.3",
+    "version": "1.18.4",
     "publisher": "Gasrulle",
     "license": "MIT",
     "icon": "resources/icon.png",
@@ -19,6 +19,7 @@
         "url": "https://github.com/gasrulle/nuiget/issues"
     },
     "engines": {
+        "node": ">=22",
         "vscode": "^1.85.0"
     },
     "extensionKind": [
@@ -281,7 +282,7 @@
         "bench:compare": "vitest bench --run --project backend --compare benchmarks/baseline.json"
     },
     "devDependencies": {
-        "@eslint/js": "^9.39.4",
+        "@eslint/js": "^10.0.0",
         "@testing-library/dom": "^10.4.1",
         "@testing-library/jest-dom": "^6.9.1",
         "@testing-library/react": "^16.3.2",
@@ -299,7 +300,7 @@
         "@vscode/vsce": "^3.7.1",
         "chai": "^6.2.2",
         "esbuild": "^0.27.2",
-        "eslint": "^9.39.4",
+        "eslint": "^10.0.0",
         "eslint-plugin-react-hooks": "^7.0.1",
         "globals": "^17.3.0",
         "jsdom": "^29.0.1",
@@ -307,7 +308,7 @@
         "msw": "^2.12.14",
         "npm-run-all": "^4.1.5",
         "typescript": "^6.0.2",
-        "typescript-eslint": "^8.56.0",
+        "typescript-eslint": "^8.58.2",
         "vitest": "^4.1.2",
         "vscode-extension-tester": "^8.23.0"
     },
@@ -324,6 +325,9 @@
     },
     "overrides": {
         "diff": "^8.0.3",
-        "serialize-javascript": "^7.0.5"
+        "serialize-javascript": "^7.0.5",
+        "eslint-plugin-react-hooks": {
+            "eslint": "$eslint"
+        }
     }
 }

@@ -92,6 +92,7 @@ export const SidebarApp: React.FC = () => {
     const allProjectsInstalledRef = useRef(allProjectsInstalled);
     const searchResultsRef = useRef(searchResults);
     const searchModeRef = useRef(searchMode);
+    const fullyInstalledSetRef = useRef<Set<string>>(new Set());
     const searchInputRef = useRef<HTMLInputElement>(null);
     const browseListRef = useRef<HTMLDivElement>(null);
     const installedListRef = useRef<HTMLDivElement>(null);
@@ -381,6 +382,44 @@ export const SidebarApp: React.FC = () => {
                                 // If not, remove from the flat installedPackages too
                                 setInstalledPackages(prev => prev.filter(p => p.id.toLowerCase() !== opPkgId));
                             }
+                        }
+                    }
+                }
+                break;
+            case 'bulkInstallResult':
+                {
+                    // Multi-project bulk install result from sidebar's own operations
+                    const bulkResults = message.results as { projectPath: string; projectName: string; success: boolean }[];
+                    const bulkPkgId = message.packageId as string;
+                    const bulkVer = message.version as string;
+                    if (bulkResults?.length > 0 && bulkVer) {
+                        const bulkPkgIdLower = bulkPkgId.toLowerCase();
+                        // Optimistically add installed package to flat list (for browse row icon)
+                        setInstalledPackages(prev => {
+                            if (prev.some(p => p.id.toLowerCase() === bulkPkgIdLower)) { return prev; }
+                            if (!bulkResults.some(r => r.success)) { return prev; }
+                            return [...prev, { id: bulkPkgId, version: bulkVer, resolvedVersion: bulkVer }];
+                        });
+                        // Optimistically update allProjectsInstalled per project
+                        setAllProjectsInstalled(prev => {
+                            const updated = prev.map(pi => {
+                                const result = bulkResults.find(r => r.projectPath === pi.projectPath);
+                                if (!result?.success) { return pi; }
+                                if (pi.packages.some(p => p.id.toLowerCase() === bulkPkgIdLower)) { return pi; }
+                                return { ...pi, packages: [...pi.packages, { id: bulkPkgId, version: bulkVer, resolvedVersion: bulkVer }] };
+                            });
+                            allProjectsInstalledRef.current = updated;
+                            return updated;
+                        });
+                    }
+                    // Re-fetch for full accuracy
+                    if (isAllProjectsRef.current) {
+                        vscode.postMessage({ type: 'checkAllProjectsInstalled' });
+                        setLoadingAllInstalled(true);
+                    } else if (selectedProjectRef.current && selectedProjectRef.current !== ALL_PROJECTS_SENTINEL) {
+                        // User switched to a single project during bulk install — refresh if it was a target
+                        if (bulkResults.some(r => r.success && r.projectPath === selectedProjectRef.current)) {
+                            vscode.postMessage({ type: 'getInstalledPackages', projectPath: selectedProjectRef.current });
                         }
                     }
                 }
@@ -761,6 +800,21 @@ export const SidebarApp: React.FC = () => {
         return map;
     }, [isAllProjects, allProjectsInstalled]);
 
+    // Set of package IDs that are installed in ALL projects (fully installed — show trash icon)
+    // Packages in installedMap but NOT in fullyInstalledSet are "partially installed" (show + icon)
+    // Guard with allProjectsInstalled.length > 0 so partial state doesn't flash during the brief
+    // window between `projects` arriving and the first `allProjectsInstalled` response.
+    const fullyInstalledSet = useMemo(() => {
+        const set = new Set<string>();
+        if (!isAllProjects || projects.length === 0 || allProjectsInstalled.length === 0) { return set; }
+        const totalProjects = projects.length;
+        for (const [key, projectNames] of packageProjectsMap) {
+            if (projectNames.length >= totalProjects) { set.add(key); }
+        }
+        return set;
+    }, [isAllProjects, projects.length, allProjectsInstalled.length, packageProjectsMap]);
+    useEffect(() => { fullyInstalledSetRef.current = fullyInstalledSet; }, [fullyInstalledSet]);
+
     // Total update count for badge
     const totalUpdateCount = isAllProjects && allProjectsUpdates.length > 0
         ? allProjectsUpdates.reduce((sum, pu) => sum + pu.updates.length, 0)
@@ -889,7 +943,16 @@ export const SidebarApp: React.FC = () => {
             );
         }
 
-        if (isInstalled) {
+        // In all-projects mode, partially installed packages use the install path (+ icon)
+        // Only treat as partial when allProjectsInstalled tracks the package (has cross-project data)
+        const isInAllProjectsData = isAllProjectsRef.current &&
+            allProjectsInstalledRef.current.some(
+                pi => pi.packages.some(p => p.id.toLowerCase() === pkgLower)
+            );
+        const isPartial = isInstalled && isInAllProjectsData &&
+            !fullyInstalledSetRef.current.has(pkgLower);
+
+        if (isInstalled && !isPartial) {
             if (selectedProjectRef.current === ALL_PROJECTS_SENTINEL) {
                 // Find which projects have this package and ask backend to show picker
                 const projectPaths = allProjectsInstalledRef.current
@@ -913,11 +976,19 @@ export const SidebarApp: React.FC = () => {
                 p => p.id.toLowerCase() === pkgLower
             );
             if (selectedProjectRef.current === ALL_PROJECTS_SENTINEL) {
-                // In all-projects mode, ask the backend to show a project picker
+                // In all-projects mode, ask the backend to show a project picker.
+                // Pass pre-computed installed info so the backend can skip a redundant
+                // queryAllProjectsInstalled call (same optimization as the context-menu path).
+                const installedProjects = allProjectsInstalledRef.current
+                    .flatMap(pi => {
+                        const pkg = pi.packages.find(p => p.id.toLowerCase() === pkgLower);
+                        return pkg ? [{ projectPath: pi.projectPath, version: pkg.resolvedVersion || pkg.version || '' }] : [];
+                    });
                 vscode.postMessage({
                     type: 'pickProjectForInstall',
                     packageId,
-                    version: searchPkg?.version
+                    version: searchPkg?.version,
+                    installedProjects
                 });
             } else {
                 vscode.postMessage({
@@ -1008,6 +1079,10 @@ export const SidebarApp: React.FC = () => {
             sourceUrl = update?.sourceUrl;
         }
 
+        // Determine if partially installed in all-projects mode
+        const isPartiallyInstalled = isAllProjectsRef.current && context === 'browse' &&
+            installedProjects !== undefined && !fullyInstalledSetRef.current.has(pkgLower);
+
         vscode.postMessage({
             type: 'showContextMenu',
             packageId,
@@ -1017,7 +1092,8 @@ export const SidebarApp: React.FC = () => {
             versionType: installed?.versionType,
             context,
             projectPath: projectPath || selectedProjectRef.current,
-            installedProjects
+            installedProjects,
+            partiallyInstalled: isPartiallyInstalled || undefined
         });
     }, []);
 
@@ -1065,12 +1141,18 @@ export const SidebarApp: React.FC = () => {
                 (pkg) => pkg.id,
                 {
                     onAction: (pkg) => {
-                        const inst = installedMap.get(pkg.id.toLowerCase());
-                        if (!inst) { handleBrowsePrimaryAction(pkg.id); }
+                        const pkgLower = pkg.id.toLowerCase();
+                        const inst = installedMap.get(pkgLower);
+                        const isPartial = isAllProjects && !!inst && !fullyInstalledSet.has(pkgLower);
+                        // Enter triggers install when not installed OR partially installed (visible icon is +)
+                        if (!inst || isPartial) { handleBrowsePrimaryAction(pkg.id); }
                     },
                     onDelete: (pkg) => {
-                        const inst = installedMap.get(pkg.id.toLowerCase());
-                        if (inst) { handleBrowsePrimaryAction(pkg.id); }
+                        const pkgLower = pkg.id.toLowerCase();
+                        const inst = installedMap.get(pkgLower);
+                        const isPartial = isAllProjects && !!inst && !fullyInstalledSet.has(pkgLower);
+                        // Delete triggers uninstall only when fully installed (visible icon is trash)
+                        if (inst && !isPartial) { handleBrowsePrimaryAction(pkg.id); }
                     }
                 }
             )}
@@ -1084,11 +1166,20 @@ export const SidebarApp: React.FC = () => {
                 <div className="sidebar-empty">Searching...</div>
             )}
             {searchResults.map((pkg) => {
-                const installed = installedMap.get(pkg.id.toLowerCase());
-                const projectNames = packageProjectsMap.get(pkg.id.toLowerCase());
-                const tooltip = installed && projectNames?.length
-                    ? `Uninstall from: ${projectNames.join(', ')}`
+                const pkgLower = pkg.id.toLowerCase();
+                const installed = installedMap.get(pkgLower);
+                const projectNames = packageProjectsMap.get(pkgLower);
+                const isFullyInstalled = fullyInstalledSet.has(pkgLower);
+                // Only mark as partial when we have cross-project data (packageProjectsMap tracks it)
+                const isPartial = !!installed && isAllProjects && !!projectNames && !isFullyInstalled;
+                const installCount = isPartial && projectNames
+                    ? `${projectNames.length}/${projects.length}`
                     : undefined;
+                const tooltip = isPartial && projectNames?.length
+                    ? `Installed in: ${projectNames.join(', ')}\nClick + to install in more projects`
+                    : installed && projectNames?.length
+                        ? `Uninstall from: ${projectNames.join(', ')}`
+                        : undefined;
                 return (
                     <PackageRow
                         key={pkg.id}
@@ -1096,7 +1187,9 @@ export const SidebarApp: React.FC = () => {
                         version={pkg.version}
                         description={pkg.description}
                         authors={pkg.authors}
-                        installedVersion={installed?.resolvedVersion || installed?.version}
+                        installedVersion={isPartial ? undefined : (installed?.resolvedVersion || installed?.version)}
+                        partiallyInstalled={isPartial}
+                        installCount={installCount}
                         context="browse"
                         selected={selectedPackageId === pkg.id}
                         onPrimaryAction={handleBrowsePrimaryAction}

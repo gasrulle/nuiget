@@ -33,7 +33,7 @@ beforeAll(() => {
 });
 
 describe('searchPackages', () => {
-    bench('single source search', async () => {
+    bench('single source search (API path)', async () => {
         service.clearSourceErrors();
         await service.searchPackages('Newtonsoft', ['https://api.nuget.org/v3/index.json']);
     });
@@ -41,6 +41,14 @@ describe('searchPackages', () => {
     bench('search with prerelease', async () => {
         service.clearSourceErrors();
         await service.searchPackages('Newtonsoft', ['https://api.nuget.org/v3/index.json'], true);
+    });
+
+    bench('multi-source search (API path)', async () => {
+        service.clearSourceErrors();
+        await service.searchPackages('Newtonsoft', [
+            'https://api.nuget.org/v3/index.json',
+            'https://custom.example.com/v3/index.json'
+        ]);
     });
 });
 

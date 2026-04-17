@@ -1,7 +1,11 @@
 import eslint from '@eslint/js';
 import reactHooks from 'eslint-plugin-react-hooks';
 import globals from 'globals';
+import { dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import tseslint from 'typescript-eslint';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export default tseslint.config(
     eslint.configs.recommended,
@@ -13,6 +17,9 @@ export default tseslint.config(
             globals: {
                 ...globals.node,
                 ...globals.browser,
+            },
+            parserOptions: {
+                tsconfigRootDir: __dirname,
             },
         },
         plugins: {
@@ -50,6 +57,6 @@ export default tseslint.config(
         },
     },
     {
-        ignores: ['out/**', 'dist/**', '**/*.d.ts'],
+        ignores: ['out/**', 'dist/**', '.vscode-test/**', '**/*.d.ts'],
     }
 );

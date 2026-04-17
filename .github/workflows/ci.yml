@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [main, "labs/**"]
+    branches: [ main, "labs/**" ]
   pull_request:
-    branches: [main]
+    branches: [ main ]
   workflow_dispatch:
 
 concurrency:
@@ -23,10 +23,10 @@ jobs:
 
       - uses: actions/setup-node@v5
         with:
-          node-version: 22
+          node-version-file: .nvmrc
           cache: npm
 
-      - run: npm ci
+      - run: npm install --no-audit --no-fund
 
       - name: Run ESLint
         run: |
@@ -65,10 +65,10 @@ jobs:
 
       - uses: actions/setup-node@v5
         with:
-          node-version: 22
+          node-version-file: .nvmrc
           cache: npm
 
-      - run: npm ci
+      - run: npm install --no-audit --no-fund
 
       - name: Run tests with coverage
         run: npx vitest run --coverage
@@ -99,10 +99,10 @@ jobs:
 
       - uses: actions/setup-node@v5
         with:
-          node-version: 22
+          node-version-file: .nvmrc
           cache: npm
 
-      - run: npm ci
+      - run: npm install --no-audit --no-fund
 
       - name: Build extension
         run: node esbuild.mjs --production
@@ -148,17 +148,17 @@ jobs:
 
   build:
     name: Build & Package
-    needs: [lint, test, e2e]
+    needs: [ lint, test, e2e ]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
 
       - uses: actions/setup-node@v5
         with:
-          node-version: 22
+          node-version-file: .nvmrc
           cache: npm
 
-      - run: npm ci
+      - run: npm install --no-audit --no-fund
 
       - name: Type check
         run: npm run check-types
@@ -187,13 +187,15 @@ jobs:
 
       - uses: actions/setup-node@v5
         with:
-          node-version: 22
+          node-version-file: .nvmrc
           cache: npm
 
-      - run: npm ci
+      - run: npm install --no-audit --no-fund
 
       - name: Run benchmarks against baseline
-        run: npx vitest bench --run --project backend --compare benchmarks/baseline.json --outputJson benchmarks/latest.json
+        run: |
+          npx vitest bench --run --project backend --compare benchmarks/baseline.json \
+            --outputJson benchmarks/latest.json
 
       - name: Add benchmark summary
         if: always()
