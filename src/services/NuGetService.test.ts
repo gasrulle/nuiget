@@ -1493,11 +1493,11 @@ describe('NuGetService', () => {
             expect(result).toBeNull();
         });
 
-        it('returns empty array when fetchJson returns null', async () => {
+        it('returns null when fetchJson returns null for all sources (triggers CLI fallback)', async () => {
             vi.spyOn(service as any, 'fetchJson').mockResolvedValue(null);
 
             const result = await (service as any)._packageService.searchPackagesViaApi('test', false, false, 20, false, [nugetOrgSource]);
-            expect(result).toEqual([]);
+            expect(result).toBeNull();
         });
 
         it('returns empty array when source returns empty data', async () => {

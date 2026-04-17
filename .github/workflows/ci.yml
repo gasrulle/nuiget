@@ -193,8 +193,9 @@ jobs:
       - run: npm install --no-audit --no-fund
 
       - name: Run benchmarks against baseline
-        run: npx vitest bench --run --project backend --compare benchmarks/baseline.json
-          --outputJson benchmarks/latest.json
+        run: |
+          npx vitest bench --run --project backend --compare benchmarks/baseline.json \
+            --outputJson benchmarks/latest.json
 
       - name: Add benchmark summary
         if: always()

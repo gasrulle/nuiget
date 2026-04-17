@@ -669,14 +669,23 @@ export class NuGetPackageService {
                     try {
                         const searchUrl = `${source.endpoints.searchQueryService}?${queryString}`;
                         const data = await this._deps.fetchJson<NuGetSearchResponse>(searchUrl, source.authHeader);
+                        if (data === null) {
+                            // fetchJson returns null on failure (does not throw)
+                            return { source, entries: [] as NuGetSearchEntry[], failed: true };
+                        }
 
                         const entries: NuGetSearchEntry[] = data?.data || data?.Data || (Array.isArray(data) ? data as NuGetSearchEntry[] : []);
-                        return { source, entries };
+                        return { source, entries, failed: false };
                     } catch {
-                        return { source, entries: [] as NuGetSearchEntry[] };
+                        return { source, entries: [] as NuGetSearchEntry[], failed: true };
                     }
                 })
             );
+
+            // If every API source failed, return null so the caller triggers CLI fallback.
+            if (perSourceResults.every(r => r.failed)) {
+                return null;
+            }
 
             // Merge and deduplicate across sources (highest-download-count entry wins)
             const packageMap = new Map<string, { entry: NuGetSearchEntry; source: ResolvedSource }>();
@@ -717,7 +726,7 @@ export class NuGetPackageService {
                     id,
                     version,
                     versions: [],
-                    verified: liteMode ? undefined : (item.verified ?? false),
+                    verified: liteMode ? undefined : (item.verified === true ? true : undefined),
                     description: liteMode ? '' : description,
                     authors: liteMode ? '' : authors,
                     totalDownloads: item.totalDownloads ?? item.TotalDownloads,
