@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Refresh buttons now clear NuGet HTTP cache**
 - **ESLint 10**
 - **Removed `.npmrc`** — `legacy-peer-deps=true` no longer needed; `eslint-plugin-react-hooks` peer dep handled via `overrides` in `package.json`
 

@@ -79,6 +79,7 @@ function createMockNuGetService() {
         getFailedSources: vi.fn().mockReturnValue(new Map()),
         testSourceConnectivity: vi.fn().mockResolvedValue(undefined),
         clearSourceErrors: vi.fn(),
+        clearNuGetHttpCache: vi.fn().mockResolvedValue(undefined),
         enableSource: vi.fn().mockResolvedValue(true),
         disableSource: vi.fn().mockResolvedValue(true),
         addSource: vi.fn().mockResolvedValue({ success: true }),
@@ -594,6 +595,7 @@ describe('NuGetPanel', () => {
 
             await messageListener!({ type: 'fullRefresh' });
 
+            expect((mockService as any).clearNuGetHttpCache).toHaveBeenCalled();
             expect((mockService as any).clearSourceErrors).toHaveBeenCalled();
             expect(mockPanel.webview.postMessage).toHaveBeenCalledWith({ type: 'refresh' });
             expect(onRefreshAll).toHaveBeenCalled();

@@ -208,7 +208,7 @@ The VS Code task "Run Tests" (`Ctrl+Shift+T` or Task menu) runs `npm test` with 
 | Sections independently collapsible | Both Installed and Updates sections can be open simultaneously with a `MemoizedDraggableSash` (orientation="vertical") between them. `sectionSplit` state (default 50) controls the percentage split (20-80 clamped). Sash only renders when both sections are expanded. Double-click resets to 50/50. |
 | Floating version context menu | `showContextMenu` message includes `versionType`. `_showContextMenu` skips "Update to X" for floating/range. Backend already filters floating from update checks — this is defense-in-depth for the context menu. |
 | `versionsCache` has no TTL | In-memory LRU cache never expires. `clearSourceErrors()` now calls `clearVersionsCache()` which clears both `versionsCache` and `workspaceCache` version entries. Without this, refresh doesn't pick up newly published versions. `checkUpdatesInBackground(force=true)` also calls `clearVersionsCache()` — without this, post-operation re-checks return stale cached versions. |
-| dotnet NuGet HTTP cache stale | Refresh buttons do NOT clear the HTTP cache (too slow at 0–15s). Use Command Palette → `nUIget: Clear NuGet HTTP Cache` (`nuiget.clearHttpCache`) to explicitly clear it. `clearSourceErrors()` already re-validates sources via `startSourceHealthMonitor()`. |
+| dotnet NuGet HTTP cache stale | Refresh buttons (main panel + sidebar) now call `clearNuGetHttpCache()` before refreshing (adds 0–15s). Command Palette → `nUIget: Clear NuGet HTTP Cache` (`nuiget.clearHttpCache`) is also still available standalone. `clearSourceErrors()` already re-validates sources via `startSourceHealthMonitor()`. |
 
 ## NuGet / dotnet CLI
 | Issue | Solution |
