@@ -1,6 +1,7 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { NuGetLogger } from './NuGetLogger';
+import { isPerfEnabled, startTimer } from './NuGetPerf';
 import { execWithTimeout, isExecError, isValidPackageId, isValidSourceUrl, isValidVersion } from './NuGetUtils';
 
 /**
@@ -25,15 +26,19 @@ export class NuGetCliService {
         const cached = this._sdkVersionCache.get(projectDir);
         if (cached !== undefined) { return cached; }
 
+        // Cold-path SDK probe: measured separately to validate Plan 02's prewarm gate.
+        const t = isPerfEnabled() ? startTimer('sdkProbe', projectPath) : undefined;
         try {
             const { stdout } = await execWithTimeout('dotnet --version', { timeout: 10000, cwd: projectDir });
             const versionStr = stdout.trim();
             const major = parseInt(versionStr.split('.')[0], 10);
             const result = isNaN(major) ? 9 : major;
             this._sdkVersionCache.set(projectDir, result);
+            t?.end({ major: result });
             return result;
         } catch {
             this._sdkVersionCache.set(projectDir, 9);
+            t?.end({ major: 9, error: 1 });
             return 9;
         }
     }
