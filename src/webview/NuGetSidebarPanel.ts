@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { executeBulkInstall, executeBulkUpdateAllProjects, executeBulkUpdatePackages, executeSingleOperation, OperationContext, queryAllProjectsInstalled, queryAllProjectsUpdates } from '../services/NuGetOperations';
+import { isPerfEnabled, startTimer } from '../services/NuGetPerf';
 import { NuGetService } from '../services/NuGetService';
 import type { PickProjectForInstallMsg, PickProjectForRemoveMsg, ShowContextMenuMsg, SidebarRequestMessage } from '../services/NuGetTypes';
 import { ALL_PROJECTS_SENTINEL } from '../services/NuGetTypes';
@@ -42,6 +43,9 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
     private _pendingInstalledProject = '';
     private _operationInProgress = false;
     private _disposables: vscode.Disposable[] = [];
+    // Plan 01 perf: track time from sidebar resolve to first 'ready' from webview
+    private _sidebarResolvedAt = 0;
+    private _readyLogged = false;
 
     constructor(
         private readonly _extensionUri: vscode.Uri,
@@ -73,6 +77,8 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
     ): void {
         this._view = webviewView;
         this._disposed = false;
+        this._sidebarResolvedAt = performance.now();
+        this._readyLogged = false;
         this._updateTitle();
 
         webviewView.webview.options = {
@@ -554,8 +560,17 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
         switch (data.type) {
             case 'ready':
                 {
+                    if (!this._readyLogged) {
+                        this._readyLogged = true;
+                        if (isPerfEnabled()) {
+                            const ms = performance.now() - this._sidebarResolvedAt;
+                            this._outputChannel.info(`[perf] sidebarResolve→ready ${ms.toFixed(1)}ms`);
+                        }
+                    }
                     // Sidebar webview is ready — send initial state
+                    const t = startTimer('sidebar.sendInitialData');
                     await this._sendInitialData();
+                    t.end();
                     break;
                 }
             case 'saveSectionSplit':

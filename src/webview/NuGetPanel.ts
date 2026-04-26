@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { executeBulkInstall, executeBulkRemoveAllProjects, executeBulkRemovePackages, executeBulkUpdateAllProjects, executeBulkUpdatePackages, executeSingleOperation, OperationContext, queryAllProjectsInstalled, queryAllProjectsUpdates, resolveAllProjectsIcons } from '../services/NuGetOperations';
+import { isPerfEnabled, startTimer } from '../services/NuGetPerf';
 import { NuGetService } from '../services/NuGetService';
 import type { PanelRequestMessage } from '../services/NuGetTypes';
 import { ALL_PROJECTS_SENTINEL } from '../services/NuGetTypes';
@@ -58,6 +59,10 @@ export class NuGetPanel {
     private _latestSearchQuery: string = '';
     // Prevent concurrent mutating operations (install/update/remove)
     private _operationInProgress = false;
+    // Perf instrumentation (Plan 01)
+    private readonly _panelOpenedAt: number = performance.now();
+    private _webviewReady = false;
+    private _firstRenderLogged = false;
 
     public static createOrShow(extensionUri: vscode.Uri, context: vscode.ExtensionContext, outputChannel: vscode.LogOutputChannel, nugetService: NuGetService, projectPath?: string, initialTab?: 'installed' | 'updates') {
         NuGetPanel._context = context;
@@ -211,6 +216,28 @@ export class NuGetPanel {
 
     private async _handleMessage(data: PanelRequestMessage) {
         switch (data.type) {
+            case 'webviewReady':
+                {
+                    if (!this._webviewReady) {
+                        this._webviewReady = true;
+                        if (isPerfEnabled()) {
+                            const ms = performance.now() - this._panelOpenedAt;
+                            NuGetPanel._outputChannel?.info(`[perf] panelOpen→webviewReady ${ms.toFixed(1)}ms`);
+                        }
+                    }
+                    break;
+                }
+            case 'firstUsefulRender':
+                {
+                    if (!this._firstRenderLogged) {
+                        this._firstRenderLogged = true;
+                        if (isPerfEnabled()) {
+                            const ms = performance.now() - this._panelOpenedAt;
+                            NuGetPanel._outputChannel?.info(`[perf] panelOpen→firstUsefulRender ${ms.toFixed(1)}ms source=${data.source}`);
+                        }
+                    }
+                    break;
+                }
             case 'getProjects':
                 {
                     const projects = await this._nugetService.findProjects();
@@ -251,9 +278,11 @@ export class NuGetPanel {
             case 'getInstalledPackages':
                 {
                     if (data.projectPath === ALL_PROJECTS_SENTINEL) { break; }
+                    const t = startTimer('getInstalledPackages', data.projectPath as string);
                     try {
                         // Phase 1: send lite packages immediately (~20ms, .csproj parsing only)
                         const packages = await this._nugetService.getInstalledPackages(data.projectPath as string, true /* liteMode */);
+                        t.mark('lite');
                         this._postMessage({
                             type: 'installedPackages',
                             packages: packages,
@@ -269,6 +298,7 @@ export class NuGetPanel {
                                 });
                             }).catch(() => { /* non-critical: packages are already visible */ });
                         }
+                        t.end({ count: packages.length });
                     } catch (error) {
                         console.error('[nUIget] getInstalledPackages error:', error);
                         this._postMessage({
@@ -276,6 +306,7 @@ export class NuGetPanel {
                             packages: [],
                             projectPath: data.projectPath
                         });
+                        t.end({ error: 1 });
                     }
                     break;
                 }
@@ -348,6 +379,7 @@ export class NuGetPanel {
                     const query = data.query;
                     // Track latest query for race condition prevention
                     this._latestSearchQuery = query;
+                    const t = startTimer('searchPackages');
 
                     // Defense-in-depth: pre-filter known-unreachable sources before calling searchPackages
                     let sources = data.sources;
@@ -371,9 +403,11 @@ export class NuGetPanel {
                         data.take,
                         data.exactMatch
                     );
+                    t.mark('lite');
 
                     // Skip sending results if a newer query arrived while we were fetching
                     if (this._latestSearchQuery !== query) {
+                        t.end({ stale: 1 });
                         break;
                     }
 
@@ -384,6 +418,7 @@ export class NuGetPanel {
                         results: results,
                         query: query
                     });
+                    t.end({ count: results.length });
 
                     // Phase 2: enrich metadata in background if results lack it (CLI path)
                     if (results.length > 0 && results.some(r => r.iconUrl === undefined && r.verified === undefined)) {
@@ -432,9 +467,10 @@ export class NuGetPanel {
                     if (this._operationInProgress) { break; }
                     if (data.projectPath === ALL_PROJECTS_SENTINEL) { break; }
                     this._operationInProgress = true;
+                    const t = startTimer('installPackage', data.projectPath);
                     try {
                         await executeSingleOperation(this._opCtx(), 'install', data.projectPath, data.packageId, data.version, data.sourceUrl);
-                    } finally { this._operationInProgress = false; }
+                    } finally { this._operationInProgress = false; t.end({ pkg: data.packageId }); }
                     break;
                 }
             case 'bulkInstall':
@@ -453,9 +489,10 @@ export class NuGetPanel {
                     if (this._operationInProgress) { break; }
                     if (data.projectPath === ALL_PROJECTS_SENTINEL) { break; }
                     this._operationInProgress = true;
+                    const t = startTimer('updatePackage', data.projectPath);
                     try {
                         await executeSingleOperation(this._opCtx(), 'update', data.projectPath, data.packageId, data.version, data.sourceUrl);
-                    } finally { this._operationInProgress = false; }
+                    } finally { this._operationInProgress = false; t.end({ pkg: data.packageId }); }
                     break;
                 }
             case 'removePackage':
@@ -463,9 +500,10 @@ export class NuGetPanel {
                     if (this._operationInProgress) { break; }
                     if (data.projectPath === ALL_PROJECTS_SENTINEL) { break; }
                     this._operationInProgress = true;
+                    const t = startTimer('removePackage', data.projectPath);
                     try {
                         await executeSingleOperation(this._opCtx(), 'remove', data.projectPath, data.packageId);
-                    } finally { this._operationInProgress = false; }
+                    } finally { this._operationInProgress = false; t.end({ pkg: data.packageId }); }
                     break;
                 }
             case 'getSources':

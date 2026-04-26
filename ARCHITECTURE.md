@@ -1176,6 +1176,46 @@ Stale indicators provide visual feedback with CSS opacity fade:
 .tab.pending { opacity: 0.7; }
 ```
 
+## Performance Instrumentation
+
+Location: `src/services/NuGetPerf.ts`
+
+Optional, lightweight timing instrumentation gated by the `nuiget.enablePerformanceLogging` setting (default: `false`). When disabled, every call is a no-op — no `performance.now()` calls, no log writes, no allocations beyond a shared no-op timer.
+
+### API
+
+```ts
+configurePerf(channel: vscode.LogOutputChannel): vscode.Disposable  // wire up at activation
+isPerfEnabled(): boolean                                            // hot-path guard
+startTimer(label: string, projectPath?: string): PerfTimer          // returns { mark, end }
+timed(label, projectPath, async fn): Promise<T>                     // single-phase wrapper
+```
+
+### Output format
+
+- Total: `[perf] <label> <ms>ms key=val key=val` (logged via `channel.info`)
+- Sub-phase: `[perf] <label> <phase> <ms>ms` (logged via `channel.debug`)
+- Multi-root tag: `[perf] [<workspaceFolder.name>] <label> ...` — only emitted when `vscode.workspace.workspaceFolders.length >= 2`. Single-root workspaces get untagged lines.
+
+### Where it's wired
+
+- **Webview ↔ host handshake.** The main panel posts `{ type: 'webviewReady' }` as the first message after mount; `NuGetPanel` records `panelOpen→webviewReady` and (on first non-empty installed-data state) `panelOpen→firstUsefulRender`. The sidebar's existing `{ type: 'ready' }` is timed against `resolveWebviewView` as `sidebarResolve→ready`.
+- **Hot handlers.** `getInstalledPackages`, `searchPackages`, `installPackage`, `updatePackage`, `removePackage` are wrapped with entry-level timers. Two-phase paths (`searchPackages` lite-then-enrich, `getInstalledPackages` lite-then-icons) emit a `mark('lite')` after Phase 1; Phase 2 enrichment runs un-timed in the background.
+- **Sidebar initial data.** `_sendInitialData()` is wrapped with `sidebar.sendInitialData`.
+
+### Adding new timers
+
+1. `import { startTimer } from '../services/NuGetPerf';`
+2. `const t = startTimer('myOperation', projectPath);`
+3. `t.mark('phase1')` for sub-phase boundaries (optional).
+4. `t.end({ count, hit: 1 })` to log totals plus arbitrary diagnostic key/value pairs.
+
+Always pass `projectPath` for project-scoped operations so multi-root workspaces can correlate timings to the right repo. Skip the parameter for global operations (source health, HTTP cache clear, panel chrome).
+
+### Benchmarks vs. live perf
+
+Microbenchmarks under `src/test/benchmarks/` measure isolated code paths (caching, parsing, sort) against `benchmarks/baseline.json` with a ±15 % single-machine tolerance — see `benchmarks/README.md`. The `[perf]` log channel is the complement: it captures real user-perceived latency (panel open → first paint, install → UI updated) on actual workspaces. Use both.
+
 ## HTTP/2 Client
 
 Location: `src/services/Http2Client.ts`

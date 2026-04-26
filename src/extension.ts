@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { http2Client } from './services/Http2Client';
+import { configurePerf } from './services/NuGetPerf';
 import { NuGetService } from './services/NuGetService';
 import { workspaceCache } from './services/WorkspaceCache';
 import { NuGetPanel } from './webview/NuGetPanel';
@@ -16,6 +17,9 @@ export function activate(context: vscode.ExtensionContext) {
     outputChannel = vscode.window.createOutputChannel('nUIget', { log: true });
     context.subscriptions.push(outputChannel);
     outputChannel.info('nUIget extension is now active');
+
+    // Initialize performance instrumentation (no-op unless nuiget.enablePerformanceLogging)
+    context.subscriptions.push(configurePerf(outputChannel));
 
     // Create shared NuGetService singleton — reused by both main panel and sidebar
     nugetService = new NuGetService(outputChannel);

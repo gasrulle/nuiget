@@ -512,6 +512,19 @@ export interface SidebarReadyMsg {
     type: 'ready';
 }
 
+/** Webview→host handshake; sent once on App.tsx mount before any data requests. */
+export interface PanelWebviewReadyMsg {
+    type: 'webviewReady';
+}
+
+/** Webview→host first useful render ack; sent once after the first state commit
+ * of installedPackages / allProjectsInstalled / allProjectsInstalledStart. */
+export interface PanelFirstUsefulRenderMsg {
+    type: 'firstUsefulRender';
+    /** Source of the first render so the host can categorize it in perf logs */
+    source: 'installedPackages' | 'allProjectsInstalled' | 'allProjectsInstalledStart';
+}
+
 export interface SaveSectionSplitMsg {
     type: 'saveSectionSplit';
     position?: number;
@@ -546,7 +559,8 @@ export type PanelRequestMessage =
     | BulkUpdateAllProjectsMsg | GetSettingsMsg | SaveSettingsMsg
     | GetSplitPositionMsg | SaveSplitPositionMsg
     | PrewarmSourceMsg | FetchReadmeFromPackageMsg
-    | BulkUpdatePackagesMsg | ConfirmBulkRemoveMsg | ConfirmBulkRemoveAllProjectsMsg;
+    | BulkUpdatePackagesMsg | ConfirmBulkRemoveMsg | ConfirmBulkRemoveAllProjectsMsg
+    | PanelWebviewReadyMsg | PanelFirstUsefulRenderMsg;
 
 /** All messages the sidebar webview can send to the extension host */
 export type SidebarRequestMessage =

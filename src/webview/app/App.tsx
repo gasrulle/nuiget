@@ -1003,6 +1003,8 @@ export const App: React.FC = () => {
     }, []);
 
     useEffect(() => {
+        // Handshake: signal panel→webview render readiness BEFORE first data requests.
+        vscode.postMessage({ type: 'webviewReady' });
         // Request initial data
         vscode.postMessage({ type: 'getProjects' });
         vscode.postMessage({ type: 'getSources' });
@@ -1013,6 +1015,19 @@ export const App: React.FC = () => {
         window.addEventListener('message', handleMessage);
         return () => window.removeEventListener('message', handleMessage);
     }, [handleMessage]);
+
+    // Plan 01 perf: ack the first useful render once installed data lands.
+    const firstRenderSentRef = useRef(false);
+    useEffect(() => {
+        if (firstRenderSentRef.current) { return; }
+        if (installedPackages.length > 0) {
+            firstRenderSentRef.current = true;
+            vscode.postMessage({ type: 'firstUsefulRender', source: 'installedPackages' });
+        } else if (allProjectsInstalled.length > 0) {
+            firstRenderSentRef.current = true;
+            vscode.postMessage({ type: 'firstUsefulRender', source: 'allProjectsInstalled' });
+        }
+    }, [installedPackages, allProjectsInstalled]);
 
     useEffect(() => {
         // Clear active project path on any project switch

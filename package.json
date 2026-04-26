@@ -255,6 +255,11 @@
                     "minimum": 1,
                     "maximum": 100,
                     "description": "Maximum number of packages to return from full search (dotnet CLI)."
+                },
+                "nuiget.enablePerformanceLogging": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Emit [perf] timing lines to the nUIget output channel for hot user-perceived flows (panel open, project switch, install/update/remove, search, update check). Use to diagnose slow operations or compare branches; keep off in normal use."
                 }
             }
         }
