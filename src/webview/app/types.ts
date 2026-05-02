@@ -152,6 +152,13 @@ export interface ProjectInstalled {
     /** Workspace folder name (multi-root grouping). */
     workspaceFolder?: string;
     packages: InstalledPackage[];
+    /**
+     * Plan 10 (I4): when the streamed enumeration of a single project failed
+     * (for example a `dotnet list package` error), the error message is
+     * surfaced here so the row can render a non-fatal error state instead of
+     * dropping the project silently.
+     */
+    error?: string;
 }
 
 export interface TransitivePackage {

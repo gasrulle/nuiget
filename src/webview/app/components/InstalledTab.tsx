@@ -337,7 +337,7 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
 
     type FlattenedInstalledItem =
         | { type: 'folderHeader'; folder: string }
-        | { type: 'header'; projectPath: string; projectName: string; packageCount: number }
+        | { type: 'header'; projectPath: string; projectName: string; packageCount: number; error?: string }
         | ({ type: 'package'; projectPath: string } & InstalledPackage);
 
     const flattenedAllProjectsInstalled = useMemo((): FlattenedInstalledItem[] => {
@@ -366,7 +366,9 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
                 type: 'header',
                 projectPath: project.projectPath,
                 projectName: project.projectName,
-                packageCount: filtered.length
+                packageCount: filtered.length,
+                // Plan 10 (I4): surface per-project enumeration errors inline.
+                error: project.error,
             });
             if (expandedProjects.has(project.projectPath)) {
                 const sorted = [...filtered].sort((a, b) => a.id.localeCompare(b.id));
@@ -1047,7 +1049,12 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
                             </div>
                             {isAllProjects ? (
                                 <div className="direct-packages-content">
-                                    {loadingAllProjectsInstalled ? (
+                                    {loadingAllProjectsInstalled && allProjectsInstalled.length === 0 ? (
+                                        // Plan 10 fix (B1): only show the full-screen spinner while the
+                                        // streamed response has produced zero rows. Once the first
+                                        // `allProjectsInstalledProjectFound` chunk lands we render the
+                                        // (partial) list immediately so users see progressive results
+                                        // instead of a spinner that masks the whole stream.
                                         <div className="loading-spinner-container" aria-busy="true" aria-label="Loading all projects installed packages">
                                             <div className="loading-spinner"></div>
                                             <p>Loading installed packages for all projects...</p>
@@ -1056,6 +1063,19 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
                                         <p className="empty-state">No installed packages found across projects</p>
                                     ) : (
                                         <>
+                                            {loadingAllProjectsInstalled && (
+                                                // Inline indicator visible while streaming continues
+                                                // after the first project arrives.
+                                                <div
+                                                    className="streaming-indicator"
+                                                    role="status"
+                                                    aria-live="polite"
+                                                    aria-label="Still loading remaining projects"
+                                                >
+                                                    <span className="loading-spinner loading-spinner-small" aria-hidden="true"></span>
+                                                    <span>Loading remaining projects…</span>
+                                                </div>
+                                            )}
                                             <div
                                                 ref={installedListRef}
                                                 className={`package-list${isAllProjectsInstalledStale ? ' stale' : ''}`}
@@ -1093,16 +1113,17 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
                                                                 key={`header-${item.projectPath}`}
                                                                 data-index={virtualRow.index}
                                                                 ref={installedVirtualizer.measureElement}
-                                                                className="direct-packages-header project-section-header"
+                                                                className={`direct-packages-header project-section-header${item.error ? ' project-section-header-error' : ''}`}
                                                                 onClick={() => handleToggleProject(item.projectPath)}
                                                                 aria-expanded={isExpanded}
-                                                                title={item.projectPath}
+                                                                title={item.error ? `${item.projectPath}\n\nError: ${item.error}` : item.projectPath}
                                                                 style={{ position: 'absolute', top: 0, left: 0, width: '100%', transform: `translateY(${virtualRow.start}px)` }}
                                                             >
                                                                 <span className="direct-packages-arrow">{isExpanded ? <ChevronDownIcon size={14} /> : <ChevronRightIcon size={14} />}</span>
                                                                 <span className="direct-packages-title">
                                                                     {item.projectName}
                                                                     {!isExpanded && <span className="direct-packages-count">({item.packageCount})</span>}
+                                                                    {item.error && <span className="project-section-header-error-label" role="status"> — failed to load: {item.error}</span>}
                                                                 </span>
                                                             </button>
                                                         );

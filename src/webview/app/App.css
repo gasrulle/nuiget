@@ -2747,6 +2747,17 @@ a.details-link:hover {
     padding: 8px 16px;
 }
 
+.project-section-header-error {
+    border-left: 3px solid var(--vscode-errorForeground, #f48771);
+}
+
+.project-section-header-error-label {
+    color: var(--vscode-errorForeground, #f48771);
+    font-style: italic;
+    margin-left: 6px;
+    font-size: 11px;
+}
+
 .direct-packages-content {
     display: flex;
     flex-direction: column;

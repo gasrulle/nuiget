@@ -847,8 +847,16 @@ export const App: React.FC = () => {
                     setLoadingAllProjectsUpdates(false);
                     // Don't re-request checkAllProjectsUpdates — optimistic state is sufficient.
                     // Background check (10-min timer) or manual refresh will reconcile if needed.
-                    // Still refresh current project's installed packages for transitive accuracy.
-                    if (selectedProjectRef.current) {
+                    // Refresh installed packages so the visible row's version flips after the
+                    // bulk operation. Plan 10 fix (B2): in all-projects mode the legacy
+                    // single-project `getInstalledPackages` request was silently rejected
+                    // by the backend (sentinel is not a real path), leaving stale rows
+                    // until the next file-watcher tick. Use the streamed all-projects
+                    // path so rows refresh deterministically and with progressive paint.
+                    if (selectedProjectRef.current === ALL_PROJECTS_SENTINEL) {
+                        setLoadingAllProjectsInstalled(true);
+                        requestStreamedAllProjectsInstalled();
+                    } else if (selectedProjectRef.current) {
                         skipNextUpdateCheckRef.current = true;
                         vscode.postMessage({ type: 'getInstalledPackages', projectPath: selectedProjectRef.current });
                         installedTabCompRef.current?.resetTransitiveState(true);
@@ -938,6 +946,9 @@ export const App: React.FC = () => {
                     const projectName = (message.projectName as string | undefined) ?? projectPath;
                     const workspaceFolder = message.workspaceFolder as string | undefined;
                     const installed = (message.installed as InstalledPackage[] | undefined) ?? [];
+                    // Plan 10 (I4): backend may report a per-project failure via `error`.
+                    // Thread it through so the UI can render an inline error row.
+                    const error = message.error as string | undefined;
                     const upsert = (prev: ProjectInstalled[]) => {
                         const idx = prev.findIndex(p => p.projectPath === projectPath);
                         // Preserve workspaceFolder set in Start chunk if ProjectFound omits it.
@@ -947,6 +958,7 @@ export const App: React.FC = () => {
                             projectName,
                             workspaceFolder: workspaceFolder ?? existing?.workspaceFolder,
                             packages: installed,
+                            error,
                         };
                         if (idx === -1) { return [...prev, slot]; }
                         const next = prev.slice();
@@ -1052,7 +1064,9 @@ export const App: React.FC = () => {
                 setAllProjectsInstalled([]);
                 requestStreamedAllProjectsInstalled();
                 // Refresh current project installed for transitive accuracy
-                if (selectedProjectRef.current) {
+                // (skip when in all-projects mode — the streamed re-fetch above covers it
+                // and the backend rejects the sentinel)
+                if (selectedProjectRef.current && selectedProjectRef.current !== ALL_PROJECTS_SENTINEL) {
                     skipNextUpdateCheckRef.current = true;
                     vscode.postMessage({ type: 'getInstalledPackages', projectPath: selectedProjectRef.current });
                     installedTabCompRef.current?.resetTransitiveState(true);

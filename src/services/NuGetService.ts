@@ -292,6 +292,11 @@ export class NuGetService {
         this._cliService.hydrateSdkVersionCache(store, key, extensionVersion);
     }
 
+    /** Plan 11: await all pending SDK-cache persistence writes (test/diagnostic helper). */
+    async flushPersistedSdkCache(): Promise<void> {
+        await this._cliService.flushPersistedSdkCache();
+    }
+
     setupOutputChannel(skipSetup: boolean = false): void {
         this.logger.setupOutputChannel(skipSetup);
     }

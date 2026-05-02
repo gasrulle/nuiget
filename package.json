@@ -2,7 +2,7 @@
     "name": "nuiget",
     "displayName": "nUIget - A NuGet Package Manager",
     "description": "A NuGet package manager with Visual Studio-style UI. Search, install, update, and remove packages across multiple sources.",
-    "version": "1.18.5-preview9",
+    "version": "1.18.5-preview10",
     "publisher": "Gasrulle",
     "license": "MIT",
     "icon": "resources/icon.png",
@@ -125,6 +125,10 @@
             {
                 "command": "nuiget.clearHttpCache",
                 "title": "nUIget: Clear NuGet HTTP Cache"
+            },
+            {
+                "command": "nuiget.clearSdkVersionCache",
+                "title": "nUIget: Clear SDK Version Cache"
             }
         ],
         "menus": {

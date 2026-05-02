@@ -8,10 +8,35 @@ import { execWithTimeout, isExecError, isValidPackageId, isValidSourceUrl, isVal
  * Handles all dotnet CLI operations: install, update, remove, restore,
  * SDK version detection, and NuGet HTTP cache management.
  */
+/**
+ * Plan 11: cap on the persisted SDK-version map. Each entry is a directory →
+ * SDK-major number, ~50–100 bytes after JSON encoding. 256 entries (~25 KB)
+ * is plenty for any realistic monorepo while bounding `globalState` growth
+ * across long-lived installs that touch many transient project paths.
+ */
+const SDK_VERSION_CACHE_MAX = 256;
+
 export class NuGetCliService {
     private _sdkVersionCache: Map<string, number> = new Map();
     private _persistStore?: vscode.Memento;
     private _persistKey?: string;
+    private _persistVersion?: string;
+    /**
+     * Plan 11: serialize all `globalState.update()` writes for the SDK cache so
+     * concurrent `set()` and `clearSdkVersionCache()` calls cannot race and
+     * resurrect a cleared snapshot. Each operation chains onto this promise; we
+     * always recompute the snapshot at write time so the latest in-memory state
+     * is what gets persisted.
+     */
+    private _persistChain: Promise<void> = Promise.resolve();
+    /**
+     * Plan 11 (post-rubber-duck fix): epoch counter incremented by
+     * `clearSdkVersionCache()`. In-flight `getSdkMajorVersion()` calls capture
+     * the epoch before probing and skip writing back if the epoch changed mid
+     * probe. Without this, a slow `dotnet --version` that resolves AFTER a
+     * clear would resurrect stale data and re-persist it.
+     */
+    private _cacheEpoch = 0;
 
     constructor(private readonly logger: NuGetLogger) { }
 
@@ -30,14 +55,23 @@ export class NuGetCliService {
         try {
             const raw = store.get<{ v: string; entries: Record<string, number> }>(key);
             if (raw && raw.v === extensionVersion && raw.entries && typeof raw.entries === 'object') {
+                // Hydrate up to MAX entries. If the persisted snapshot exceeds the
+                // cap (e.g. carry-over from an older build that had no cap), keep
+                // the first N — entry order in JSON.parse follows insertion order
+                // which mirrors LRU recency from the previous session.
+                let count = 0;
                 for (const [dir, major] of Object.entries(raw.entries)) {
+                    if (count >= SDK_VERSION_CACHE_MAX) { break; }
                     if (typeof major === 'number' && Number.isFinite(major)) {
                         this._sdkVersionCache.set(dir, major);
+                        count++;
                     }
                 }
             } else if (raw) {
                 // Stale snapshot from a different extension version — drop it.
-                void store.update(key, undefined);
+                this._persistChain = this._persistChain
+                    .then(() => store.update(key, undefined))
+                    .catch(() => { /* best-effort */ });
             }
         } catch {
             // Best-effort hydration; ignore corrupt state.
@@ -46,13 +80,34 @@ export class NuGetCliService {
         this._persistVersion = extensionVersion;
     }
 
-    private _persistVersion?: string;
+    /**
+     * Plan 11: enforce LRU cap on the in-memory SDK cache. Map iteration order
+     * is insertion order, so the first key is the oldest. We delete-and-reinsert
+     * on hits elsewhere if we ever need true LRU; current callers only hit
+     * `set()` once per directory per session, so insertion order is good enough.
+     */
+    private trimSdkCache(): void {
+        while (this._sdkVersionCache.size > SDK_VERSION_CACHE_MAX) {
+            const oldest = this._sdkVersionCache.keys().next().value;
+            if (oldest === undefined) { break; }
+            this._sdkVersionCache.delete(oldest);
+        }
+    }
 
     private persistSdkCache(): void {
         if (!this._persistStore || !this._persistKey || !this._persistVersion) { return; }
+        const store = this._persistStore;
+        const key = this._persistKey;
+        const version = this._persistVersion;
+        // Snapshot synchronously so each chained write reflects the cache at the
+        // time of scheduling, not the (possibly mutated) cache when the chain
+        // drains. This keeps sequential writes deterministic.
         const entries: Record<string, number> = {};
         for (const [dir, major] of this._sdkVersionCache) { entries[dir] = major; }
-        void this._persistStore.update(this._persistKey, { v: this._persistVersion, entries });
+        const snapshot = { v: version, entries };
+        this._persistChain = this._persistChain
+            .then(() => store.update(key, snapshot))
+            .catch(() => { /* best-effort persistence */ });
     }
 
     /**
@@ -66,6 +121,10 @@ export class NuGetCliService {
         const cached = this._sdkVersionCache.get(projectDir);
         if (cached !== undefined) { return cached; }
 
+        // Capture the epoch before the async probe so a concurrent
+        // clearSdkVersionCache() can invalidate this in-flight result.
+        const startedEpoch = this._cacheEpoch;
+
         // Cold-path SDK probe: measured separately to validate Plan 02's prewarm gate.
         const t = isPerfEnabled() ? startTimer('sdkProbe', projectPath) : undefined;
         try {
@@ -73,13 +132,19 @@ export class NuGetCliService {
             const versionStr = stdout.trim();
             const major = parseInt(versionStr.split('.')[0], 10);
             const result = isNaN(major) ? 9 : major;
-            this._sdkVersionCache.set(projectDir, result);
-            this.persistSdkCache();
+            if (this._cacheEpoch === startedEpoch) {
+                this._sdkVersionCache.set(projectDir, result);
+                this.trimSdkCache();
+                this.persistSdkCache();
+            }
             t?.end({ major: result });
             return result;
         } catch {
-            this._sdkVersionCache.set(projectDir, 9);
-            this.persistSdkCache();
+            if (this._cacheEpoch === startedEpoch) {
+                this._sdkVersionCache.set(projectDir, 9);
+                this.trimSdkCache();
+                // B3: don't persist failed probes (see clearSdkVersionCache notes).
+            }
             t?.end({ major: 9, error: 1 });
             return 9;
         }
@@ -95,9 +160,23 @@ export class NuGetCliService {
     /** Clear the cached SDK version detection (e.g. after global.json changes). */
     clearSdkVersionCache(): void {
         this._sdkVersionCache.clear();
+        // Bump epoch so any in-flight probe started before this clear discards
+        // its result instead of resurrecting stale data after a flush.
+        this._cacheEpoch++;
         if (this._persistStore && this._persistKey) {
-            void this._persistStore.update(this._persistKey, undefined);
+            const store = this._persistStore;
+            const key = this._persistKey;
+            // Chain through the same queue as persistSdkCache() so a clear
+            // cannot race with an in-flight write and resurrect old entries.
+            this._persistChain = this._persistChain
+                .then(() => store.update(key, undefined))
+                .catch(() => { /* best-effort */ });
         }
+    }
+
+    /** Test/diagnostic helper: await all pending persistence writes. */
+    async flushPersistedSdkCache(): Promise<void> {
+        await this._persistChain;
     }
 
     // ── Package Operations ─────────────────────────────────────────────
