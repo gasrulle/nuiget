@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - **Performance instrumentation** — Optional `[perf]` timing logs in the nUIget output channel, gated by the new `nuiget.enablePerformanceLogging` setting (default: off). When enabled, hot paths (panel open, installed-package load, search, install/update/remove, sidebar resolve) emit total wall time and sub-phase deltas. Multi-root workspaces tag each line with the owning workspace folder name.
+- **Hover prefetch** — Hovering a package row in the Browse, Installed, and Updates tabs prefetches its versions list and (when known) its metadata after a 150ms dwell. The details panel and version dropdown now usually appear instantly on click instead of showing a loading flash. Prefetches are deduplicated, capped to 4 concurrent backend lookups, and skipped when the data is already cached.
 
 ### Changed
 

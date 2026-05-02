@@ -10,6 +10,7 @@ import { MemoizedSourceSettingsOverlay } from './components/SourceSettingsOverla
 import type { UpdatesTabHandle } from './components/UpdatesTab';
 import { MemoizedUpdatesTab } from './components/UpdatesTab';
 import { usePackageSelection } from './hooks/usePackageSelection';
+import { useHoverPrefetch } from './hooks/useHoverPrefetch';
 import { ClearAllIcon, CloudDownloadIcon, FilterIcon, LoadingIcon, SettingsGearIcon, SyncIcon, VerifiedIcon, WarningIcon } from './icons';
 import { renderMarkdownToHtml } from './markdownSetup';
 import type { AppState, FailedSource, InstalledPackage, NuGetSource, PackageMetadata, PackageSearchResult, PackageUpdate, Project, ProjectInstalled, ProjectUpdates, QuickSearchSourceResult, TabType, TransitivePackage, VulnerabilitySeverity } from './types';
@@ -257,6 +258,15 @@ export const App: React.FC = () => {
         includePrerelease,
         selectedPackage,
         vscode,
+    });
+
+    // Hover prefetch — prefetches metadata + versions on row hover (150ms debounce, 4-concurrent backend cap)
+    const hoverPrefetch = useHoverPrefetch({
+        versionsCache,
+        metadataCache,
+        selectedSourceRef,
+        includePrereleaseRef,
+        postMessage: (msg) => vscode.postMessage(msg),
     });
 
     // Auto-focus the active tab on initial mount
@@ -710,6 +720,25 @@ export const App: React.FC = () => {
                         metadataCache.current.set(cacheKey, message.metadata);
                     }
                     setLoadingMetadata(false);
+                }
+                break;
+            case 'packageVersionsPrefetched':
+                {
+                    const key = `${(message.packageId as string).toLowerCase()}|${(!message.source || message.source === 'all') ? '' : message.source}|${!!message.includePrerelease}`;
+                    hoverPrefetch.pendingVersions.current.delete(key);
+                    if (!message.dropped && Array.isArray(message.versions) && message.versions.length > 0) {
+                        versionsCache.current.set(key, message.versions);
+                    }
+                }
+                break;
+            case 'packageMetadataPrefetched':
+                {
+                    const echoedSource = (!message.source || message.source === 'all') ? '' : message.source;
+                    const key = `${(message.packageId as string).toLowerCase()}@${message.version}|${echoedSource}`;
+                    hoverPrefetch.pendingMetadata.current.delete(key);
+                    if (!message.dropped && message.metadata) {
+                        metadataCache.current.set(key, message.metadata);
+                    }
                 }
                 break;
             case 'packageUpdateFound':
@@ -2536,6 +2565,8 @@ export const App: React.FC = () => {
                                                         initialVersions: [pkg.version],
                                                     });
                                                 }}
+                                                onMouseEnter={() => hoverPrefetch.onMouseEnterRow(pkg.id, pkg.version)}
+                                                onMouseLeave={hoverPrefetch.onMouseLeaveRow}
                                             >
                                                 <div className="package-icon">
                                                     {pkg.iconUrl ? (
@@ -2625,6 +2656,8 @@ export const App: React.FC = () => {
                     createPackageListKeyHandler={createPackageListKeyHandler}
                     metadataCache={metadataCache}
                     vscode={vscode}
+                    onRowMouseEnter={hoverPrefetch.onMouseEnterRow}
+                    onRowMouseLeave={hoverPrefetch.onMouseLeaveRow}
                     installedTabRef={installedTabRef}
                     MemoizedDraggableSash={MemoizedDraggableSash}
                     isAllProjects={isAllProjects}
@@ -2681,6 +2714,8 @@ export const App: React.FC = () => {
                     createPackageListKeyHandler={createPackageListKeyHandler}
                     metadataCache={metadataCache}
                     vscode={vscode}
+                    onRowMouseEnter={hoverPrefetch.onMouseEnterRow}
+                    onRowMouseLeave={hoverPrefetch.onMouseLeaveRow}
                     updatesTabRef={updatesTabRef}
                     MemoizedDraggableSash={MemoizedDraggableSash}
                 />

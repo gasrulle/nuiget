@@ -373,6 +373,14 @@ export interface GetPackageVersionsMsg {
     take?: number;
 }
 
+export interface PrefetchPackageVersionsMsg {
+    type: 'prefetchPackageVersions';
+    packageId: string;
+    source?: string;
+    includePrerelease?: boolean;
+    take?: number;
+}
+
 // ─── Panel-Only Messages ─────────────────────────────────────────────────────
 
 export interface GetProjectsMsg {
@@ -457,6 +465,13 @@ export interface GetConfigFilesMsg {
 
 export interface GetPackageMetadataMsg {
     type: 'getPackageMetadata';
+    packageId: string;
+    version: string;
+    source?: string;
+}
+
+export interface PrefetchPackageMetadataMsg {
+    type: 'prefetchPackageMetadata';
     packageId: string;
     version: string;
     source?: string;
@@ -555,6 +570,7 @@ export type PanelRequestMessage =
     | GetSourcesMsg | RefreshSourcesMsg | FullRefreshMsg
     | EnableSourceMsg | DisableSourceMsg | AddSourceMsg | RemoveSourceMsg
     | GetConfigFilesMsg | GetPackageVersionsMsg | GetPackageMetadataMsg
+    | PrefetchPackageVersionsMsg | PrefetchPackageMetadataMsg
     | CheckPackageUpdatesMsg | CheckAllProjectsUpdatesMsg | CheckAllProjectsInstalledMsg
     | BulkUpdateAllProjectsMsg | GetSettingsMsg | SaveSettingsMsg
     | GetSplitPositionMsg | SaveSplitPositionMsg

@@ -114,6 +114,10 @@ export interface InstalledTabProps {
     metadataCache: React.RefObject<LRUMap<string, PackageMetadata>>;
     vscode: VsCodeApi;
 
+    // Hover prefetch
+    onRowMouseEnter?: (packageId: string, version?: string) => void;
+    onRowMouseLeave?: () => void;
+
     // External refs
     installedTabRef: React.RefObject<HTMLButtonElement | null>;
     MemoizedDraggableSash: React.MemoExoticComponent<React.FC<{
@@ -255,6 +259,8 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
         createPackageListKeyHandler,
         metadataCache,
         vscode,
+        onRowMouseEnter,
+        onRowMouseLeave,
         installedTabRef,
         MemoizedDraggableSash,
         isAllProjects,
@@ -1064,6 +1070,8 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
                                                                     initialVersions: [item.version],
                                                                 });
                                                             }}
+                                                            onMouseEnter={onRowMouseEnter ? () => onRowMouseEnter(item.id, item.resolvedVersion || item.version) : undefined}
+                                                            onMouseLeave={onRowMouseLeave}
                                                         >
                                                             <input
                                                                 type="checkbox"
@@ -1157,6 +1165,8 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
                                                                     initialVersions: [pkg.version],
                                                                 });
                                                             }}
+                                                            onMouseEnter={onRowMouseEnter ? () => onRowMouseEnter(pkg.id, pkg.resolvedVersion || pkg.version) : undefined}
+                                                            onMouseLeave={onRowMouseLeave}
                                                         >
                                                             <input
                                                                 type="checkbox"

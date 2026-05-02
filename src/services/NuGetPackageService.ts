@@ -76,6 +76,14 @@ export class NuGetPackageService {
     private iconSourceMissCount: Map<string, number> = new Map();
     private static readonly ICON_SOURCE_MISS_THRESHOLD = 5;
 
+    // In-flight Promise dedup for getPackageMetadata / getPackageVersions.
+    // Concurrent callers (e.g. click + hover prefetch) for the same key share a single fetch.
+    private readonly _inFlightMetadata: Map<string, Promise<PackageMetadata | null>> = new Map();
+    private readonly _inFlightVersions: Map<string, Promise<string[]>> = new Map();
+    // Global concurrent cap for prefetch-only operations to keep hover-driven fetches off the critical path.
+    private _prefetchInFlightCount = 0;
+    private static readonly PREFETCH_CONCURRENT_CAP = 4;
+
     /**
      * Compute a relevance tier for sorting search results.
      * Tier 0: exact ID match, Tier 1: prefix, Tier 2: substring, Tier 3: all query tokens in segments, Tier 4: rest.
@@ -96,6 +104,25 @@ export class NuGetPackageService {
 
     constructor(deps: PackageServiceDeps) {
         this._deps = deps;
+    }
+
+    /**
+     * Try to acquire a slot for a prefetch-only fetch. Returns false when at cap;
+     * caller should drop the prefetch (the click path is unaffected).
+     */
+    tryAcquirePrefetchSlot(): boolean {
+        if (this._prefetchInFlightCount >= NuGetPackageService.PREFETCH_CONCURRENT_CAP) {
+            return false;
+        }
+        this._prefetchInFlightCount++;
+        return true;
+    }
+
+    /** Release a previously-acquired prefetch slot. Always call in finally. */
+    releasePrefetchSlot(): void {
+        if (this._prefetchInFlightCount > 0) {
+            this._prefetchInFlightCount--;
+        }
     }
 
     /**
@@ -1213,6 +1240,16 @@ export class NuGetPackageService {
      * Get package versions, optionally from a specific source.
      */
     async getPackageVersions(packageId: string, source?: string, includePrerelease?: boolean, take: number = 20): Promise<string[]> {
+        const dedupeKey = `${packageId.toLowerCase()}|${source ?? ''}|${includePrerelease ? 1 : 0}|${take}`;
+        const existing = this._inFlightVersions.get(dedupeKey);
+        if (existing) { return existing; }
+        const promise = this._getPackageVersionsImpl(packageId, source, includePrerelease, take);
+        this._inFlightVersions.set(dedupeKey, promise);
+        promise.finally(() => this._inFlightVersions.delete(dedupeKey));
+        return promise;
+    }
+
+    private async _getPackageVersionsImpl(packageId: string, source?: string, includePrerelease?: boolean, take: number = 20): Promise<string[]> {
         try {
             if (!source || source === 'all') {
                 const allSources = await this._deps.getSources();
@@ -1590,6 +1627,16 @@ export class NuGetPackageService {
     // ── Package metadata ────────────────────────────────────────────────
 
     async getPackageMetadata(packageId: string, version: string, source?: string): Promise<PackageMetadata | null> {
+        const dedupeKey = `${packageId.toLowerCase()}@${version.toLowerCase()}|${source ?? ''}`;
+        const existing = this._inFlightMetadata.get(dedupeKey);
+        if (existing) { return existing; }
+        const promise = this._getPackageMetadataImpl(packageId, version, source);
+        this._inFlightMetadata.set(dedupeKey, promise);
+        promise.finally(() => this._inFlightMetadata.delete(dedupeKey));
+        return promise;
+    }
+
+    private async _getPackageMetadataImpl(packageId: string, version: string, source?: string): Promise<PackageMetadata | null> {
         try {
             const cacheKey = `${packageId.toLowerCase()}@${version.toLowerCase()}`;
             const cached = this.metadataCache.get(cacheKey);

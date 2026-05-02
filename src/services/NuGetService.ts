@@ -698,6 +698,14 @@ export class NuGetService {
         return this._packageService.getPackageVersions(packageId, source, includePrerelease, take);
     }
 
+    tryAcquirePrefetchSlot(): boolean {
+        return this._packageService.tryAcquirePrefetchSlot();
+    }
+
+    releasePrefetchSlot(): void {
+        this._packageService.releasePrefetchSlot();
+    }
+
 
 
 

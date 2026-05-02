@@ -765,6 +765,89 @@ export class NuGetPanel {
                     });
                     break;
                 }
+            case 'prefetchPackageVersions':
+                {
+                    const acquired = this._nugetService.tryAcquirePrefetchSlot();
+                    if (!acquired) {
+                        this._postMessage({
+                            type: 'packageVersionsPrefetched',
+                            packageId: data.packageId,
+                            source: data.source,
+                            includePrerelease: data.includePrerelease,
+                            versions: [],
+                            dropped: true,
+                        });
+                        break;
+                    }
+                    try {
+                        const versions = await this._nugetService.getPackageVersions(
+                            data.packageId,
+                            data.source,
+                            data.includePrerelease,
+                            data.take
+                        );
+                        this._postMessage({
+                            type: 'packageVersionsPrefetched',
+                            packageId: data.packageId,
+                            source: data.source,
+                            includePrerelease: data.includePrerelease,
+                            versions,
+                        });
+                    } catch {
+                        this._postMessage({
+                            type: 'packageVersionsPrefetched',
+                            packageId: data.packageId,
+                            source: data.source,
+                            includePrerelease: data.includePrerelease,
+                            versions: [],
+                            dropped: true,
+                        });
+                    } finally {
+                        this._nugetService.releasePrefetchSlot();
+                    }
+                    break;
+                }
+            case 'prefetchPackageMetadata':
+                {
+                    const acquired = this._nugetService.tryAcquirePrefetchSlot();
+                    if (!acquired) {
+                        this._postMessage({
+                            type: 'packageMetadataPrefetched',
+                            packageId: data.packageId,
+                            version: data.version,
+                            source: data.source,
+                            metadata: null,
+                            dropped: true,
+                        });
+                        break;
+                    }
+                    try {
+                        const metadata = await this._nugetService.getPackageMetadata(
+                            data.packageId,
+                            data.version,
+                            data.source
+                        );
+                        this._postMessage({
+                            type: 'packageMetadataPrefetched',
+                            packageId: data.packageId,
+                            version: data.version,
+                            source: data.source,
+                            metadata,
+                        });
+                    } catch {
+                        this._postMessage({
+                            type: 'packageMetadataPrefetched',
+                            packageId: data.packageId,
+                            version: data.version,
+                            source: data.source,
+                            metadata: null,
+                            dropped: true,
+                        });
+                    } finally {
+                        this._nugetService.releasePrefetchSlot();
+                    }
+                    break;
+                }
             case 'checkPackageUpdates':
                 {
                     try {
