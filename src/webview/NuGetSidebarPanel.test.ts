@@ -1252,7 +1252,7 @@ describe('NuGetSidebarProvider', () => {
                 return [{ projectPath: '/a.csproj', projectName: 'A', packages: [{ id: 'Pa', version: '1.0' }] }];
             });
 
-            await messageListener!({ type: 'checkAllProjectsInstalled', streamed: true, requestId: 'r1' });
+            await messageListener!({ type: 'checkAllProjectsInstalled', requestId: 'r1' });
 
             const calls = view.webview.postMessage.mock.calls.map((c: any[]) => c[0]);
             const start = calls.find((m: any) => m.type === 'allProjectsInstalledStart');
@@ -1284,9 +1284,9 @@ describe('NuGetSidebarProvider', () => {
                     return [];
                 });
 
-            const firstP = messageListener!({ type: 'checkAllProjectsInstalled', streamed: true, requestId: 'r1' });
+            const firstP = messageListener!({ type: 'checkAllProjectsInstalled', requestId: 'r1' });
             await vi.waitFor(() => expect(captured).toHaveLength(1));
-            await messageListener!({ type: 'checkAllProjectsInstalled', streamed: true, requestId: 'r2' });
+            await messageListener!({ type: 'checkAllProjectsInstalled', requestId: 'r2' });
             expect(captured).toHaveLength(2);
             expect(captured[0].aborted).toBe(true);
             expect(captured[1].aborted).toBe(false);

@@ -24,6 +24,12 @@ export function activate(context: vscode.ExtensionContext) {
     // Create shared NuGetService singleton — reused by both main panel and sidebar
     nugetService = new NuGetService(outputChannel);
 
+    // Plan 11: hydrate persisted SDK version cache so warm starts skip the
+    // ~250ms `dotnet --version` probe per project directory. Snapshot is keyed
+    // by extension version, so an upgrade automatically discards stale entries.
+    const extensionVersion = context.extension?.packageJSON?.version ?? '0.0.0';
+    nugetService.hydrateSdkVersionCache(context.globalState, 'nuiget.sdkVersionCache', extensionVersion);
+
     // Start background source health monitor — validates all enabled sources at startup,
     // then self-schedules: 120s if any fail, 5min if all healthy. Replaces per-search blocking.
     nugetService.startSourceHealthMonitor();

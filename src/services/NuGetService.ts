@@ -287,6 +287,11 @@ export class NuGetService {
         this._cliService.clearSdkVersionCache();
     }
 
+    /** Plan 11: hydrate SDK version cache from persistent storage and attach Memento for save-on-write. */
+    hydrateSdkVersionCache(store: vscode.Memento, key: string, extensionVersion: string): void {
+        this._cliService.hydrateSdkVersionCache(store, key, extensionVersion);
+    }
+
     setupOutputChannel(skipSetup: boolean = false): void {
         this.logger.setupOutputChannel(skipSetup);
     }

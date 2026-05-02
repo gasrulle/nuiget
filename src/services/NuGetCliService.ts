@@ -10,10 +10,50 @@ import { execWithTimeout, isExecError, isValidPackageId, isValidSourceUrl, isVal
  */
 export class NuGetCliService {
     private _sdkVersionCache: Map<string, number> = new Map();
+    private _persistStore?: vscode.Memento;
+    private _persistKey?: string;
 
     constructor(private readonly logger: NuGetLogger) { }
 
     // ── SDK Detection ──────────────────────────────────────────────────
+
+    /**
+     * Plan 11: hydrate the in-memory SDK cache from a persisted snapshot and
+     * attach the Memento so subsequent writes persist automatically. The
+     * snapshot is keyed by `extensionVersion` so that an extension upgrade
+     * automatically discards any stale entries (e.g. when a new SDK ships
+     * alongside the update). Caller invokes once at activation.
+     */
+    hydrateSdkVersionCache(store: vscode.Memento, key: string, extensionVersion: string): void {
+        this._persistStore = store;
+        this._persistKey = key;
+        try {
+            const raw = store.get<{ v: string; entries: Record<string, number> }>(key);
+            if (raw && raw.v === extensionVersion && raw.entries && typeof raw.entries === 'object') {
+                for (const [dir, major] of Object.entries(raw.entries)) {
+                    if (typeof major === 'number' && Number.isFinite(major)) {
+                        this._sdkVersionCache.set(dir, major);
+                    }
+                }
+            } else if (raw) {
+                // Stale snapshot from a different extension version — drop it.
+                void store.update(key, undefined);
+            }
+        } catch {
+            // Best-effort hydration; ignore corrupt state.
+        }
+        // Stamp current version so future writes persist under the new key.
+        this._persistVersion = extensionVersion;
+    }
+
+    private _persistVersion?: string;
+
+    private persistSdkCache(): void {
+        if (!this._persistStore || !this._persistKey || !this._persistVersion) { return; }
+        const entries: Record<string, number> = {};
+        for (const [dir, major] of this._sdkVersionCache) { entries[dir] = major; }
+        void this._persistStore.update(this._persistKey, { v: this._persistVersion, entries });
+    }
 
     /**
      * Detect the .NET SDK major version for a given project path.
@@ -34,10 +74,12 @@ export class NuGetCliService {
             const major = parseInt(versionStr.split('.')[0], 10);
             const result = isNaN(major) ? 9 : major;
             this._sdkVersionCache.set(projectDir, result);
+            this.persistSdkCache();
             t?.end({ major: result });
             return result;
         } catch {
             this._sdkVersionCache.set(projectDir, 9);
+            this.persistSdkCache();
             t?.end({ major: 9, error: 1 });
             return 9;
         }
@@ -53,6 +95,9 @@ export class NuGetCliService {
     /** Clear the cached SDK version detection (e.g. after global.json changes). */
     clearSdkVersionCache(): void {
         this._sdkVersionCache.clear();
+        if (this._persistStore && this._persistKey) {
+            void this._persistStore.update(this._persistKey, undefined);
+        }
     }
 
     // ── Package Operations ─────────────────────────────────────────────

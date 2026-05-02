@@ -198,14 +198,14 @@ export const App: React.FC = () => {
     const requestStreamedAllProjectsInstalled = useCallback(() => {
         const requestId = `apinst-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
         installedStreamRequestIdRef.current = requestId;
-        vscode.postMessage({ type: 'checkAllProjectsInstalled', streamed: true, requestId });
+        vscode.postMessage({ type: 'checkAllProjectsInstalled', requestId });
     }, []);
     /** Plan 10 Stage B: separate request id for the multiInstall context (independent abort lifetime). */
     const multiInstallStreamRequestIdRef = useRef<string>('');
     const requestStreamedMultiInstall = useCallback(() => {
         const requestId = `apinst-mi-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
         multiInstallStreamRequestIdRef.current = requestId;
-        vscode.postMessage({ type: 'checkAllProjectsInstalled', streamed: true, requestId, context: 'multiInstall' });
+        vscode.postMessage({ type: 'checkAllProjectsInstalled', requestId, context: 'multiInstall' });
     }, []);
     useEffect(() => {
         includePrereleaseRef.current = includePrerelease;

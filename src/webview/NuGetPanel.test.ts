@@ -1132,7 +1132,7 @@ describe('NuGetPanel', () => {
             });
             (mockService as any).enrichInstalledPackageMetadata.mockResolvedValue(undefined);
 
-            await messageListener!({ type: 'checkAllProjectsInstalled', streamed: true, requestId: 'r1', context: 'installed' });
+            await messageListener!({ type: 'checkAllProjectsInstalled', requestId: 'r1', context: 'installed' });
 
             const calls = mockPanel.webview.postMessage.mock.calls.map((c: any[]) => c[0]);
             const start = calls.find((m: any) => m.type === 'allProjectsInstalledStart');
@@ -1167,9 +1167,9 @@ describe('NuGetPanel', () => {
             (mockService as any).enrichInstalledPackageMetadata.mockResolvedValue(undefined);
 
             // Fire r1 without awaiting (so it's mid-flight when r2 arrives)
-            const firstP = messageListener!({ type: 'checkAllProjectsInstalled', streamed: true, requestId: 'r1', context: 'installed' });
+            const firstP = messageListener!({ type: 'checkAllProjectsInstalled', requestId: 'r1', context: 'installed' });
             await vi.waitFor(() => expect(captured).toHaveLength(1));
-            await messageListener!({ type: 'checkAllProjectsInstalled', streamed: true, requestId: 'r2', context: 'installed' });
+            await messageListener!({ type: 'checkAllProjectsInstalled', requestId: 'r2', context: 'installed' });
             expect(captured).toHaveLength(2);
             expect(captured[0].aborted).toBe(true);
             expect(captured[1].aborted).toBe(false);
@@ -1197,9 +1197,9 @@ describe('NuGetPanel', () => {
                 });
             (mockService as any).enrichInstalledPackageMetadata.mockResolvedValue(undefined);
 
-            const installedP = messageListener!({ type: 'checkAllProjectsInstalled', streamed: true, requestId: 'i1', context: 'installed' });
+            const installedP = messageListener!({ type: 'checkAllProjectsInstalled', requestId: 'i1', context: 'installed' });
             await vi.waitFor(() => expect(captured).toHaveLength(1));
-            const multiP = messageListener!({ type: 'checkAllProjectsInstalled', streamed: true, requestId: 'm1', context: 'multiInstall' });
+            const multiP = messageListener!({ type: 'checkAllProjectsInstalled', requestId: 'm1', context: 'multiInstall' });
             await vi.waitFor(() => expect(captured).toHaveLength(2));
 
             // Different contexts use different abort keys — neither should abort the other.
@@ -1219,7 +1219,7 @@ describe('NuGetPanel', () => {
             });
             (mockService as any).enrichInstalledPackageMetadata.mockResolvedValue(undefined);
 
-            await messageListener!({ type: 'checkAllProjectsInstalled', streamed: true, requestId: 'm1', context: 'multiInstall' });
+            await messageListener!({ type: 'checkAllProjectsInstalled', requestId: 'm1', context: 'multiInstall' });
 
             const calls = mockPanel.webview.postMessage.mock.calls.map((c: any[]) => c[0]);
             const streamingCalls = calls.filter((m: any) => typeof m.type === 'string' && m.type.startsWith('allProjectsInstalled'));

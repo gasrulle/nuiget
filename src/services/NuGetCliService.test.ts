@@ -78,6 +78,60 @@ describe('NuGetCliService', () => {
     });
 
     // ──────────────────────────────────────────────
+    // Plan 11: hydrateSdkVersionCache
+    // ──────────────────────────────────────────────
+    describe('hydrateSdkVersionCache', () => {
+        const makeMemento = (initial?: unknown) => {
+            let value: unknown = initial;
+            return {
+                get: vi.fn((_k: string) => value),
+                update: vi.fn((_k: string, v: unknown) => { value = v; return Promise.resolve(); }),
+                keys: () => [] as readonly string[],
+                _value: () => value,
+            };
+        };
+
+        it('hydrates entries when stored version matches current', async () => {
+            const store = makeMemento({ v: '1.2.3', entries: { '/dirA': 8, '/dirB': 10 } });
+            service.hydrateSdkVersionCache(store as any, 'k', '1.2.3');
+            const v = await service.getSdkMajorVersion('/dirA/App.csproj');
+            expect(v).toBe(8);
+            expect(hoisted.mockExecWithTimeout).not.toHaveBeenCalled();
+        });
+
+        it('discards snapshot when extension version differs', async () => {
+            const store = makeMemento({ v: '1.0.0', entries: { '/dirA': 8 } });
+            service.hydrateSdkVersionCache(store as any, 'k', '2.0.0');
+            expect(store.update).toHaveBeenCalledWith('k', undefined);
+            hoisted.mockExecWithTimeout.mockResolvedValueOnce({ stdout: '10.0.100\n', stderr: '' });
+            const v = await service.getSdkMajorVersion('/dirA/App.csproj');
+            expect(v).toBe(10);
+        });
+
+        it('ignores corrupt or missing snapshot', async () => {
+            const store = makeMemento(undefined);
+            service.hydrateSdkVersionCache(store as any, 'k', '1.0.0');
+            hoisted.mockExecWithTimeout.mockResolvedValueOnce({ stdout: '9.0.0\n', stderr: '' });
+            expect(await service.getSdkMajorVersion('/x/A.csproj')).toBe(9);
+        });
+
+        it('persists newly probed entries through the Memento', async () => {
+            const store = makeMemento(undefined);
+            service.hydrateSdkVersionCache(store as any, 'k', '1.0.0');
+            hoisted.mockExecWithTimeout.mockResolvedValueOnce({ stdout: '10.0.1\n', stderr: '' });
+            await service.getSdkMajorVersion('/dirA/App.csproj');
+            expect(store.update).toHaveBeenCalledWith('k', { v: '1.0.0', entries: { '/dirA': 10 } });
+        });
+
+        it('clears persisted snapshot when cache is cleared', async () => {
+            const store = makeMemento({ v: '1.0.0', entries: { '/dirA': 8 } });
+            service.hydrateSdkVersionCache(store as any, 'k', '1.0.0');
+            service.clearSdkVersionCache();
+            expect(store.update).toHaveBeenLastCalledWith('k', undefined);
+        });
+    });
+
+    // ──────────────────────────────────────────────
     // useNounFirstSyntax
     // ──────────────────────────────────────────────
     describe('useNounFirstSyntax', () => {

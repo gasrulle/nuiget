@@ -104,7 +104,7 @@ export const SidebarApp: React.FC = () => {
     const requestStreamedAllProjectsInstalled = useCallback(() => {
         const requestId = `apinst-sb-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
         sidebarStreamRequestIdRef.current = requestId;
-        vscode.postMessage({ type: 'checkAllProjectsInstalled', streamed: true, requestId });
+        vscode.postMessage({ type: 'checkAllProjectsInstalled', requestId });
     }, []);
 
     // Keep refs in sync
