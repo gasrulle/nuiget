@@ -99,6 +99,13 @@ export const SidebarApp: React.FC = () => {
     const updatesListRef = useRef<HTMLDivElement>(null);
     const filterDropdownRef = useRef<HTMLDivElement>(null);
     const browseDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    /** Plan 10 Stage B: track latest streamed checkAllProjectsInstalled request id (sidebar). */
+    const sidebarStreamRequestIdRef = useRef<string>('');
+    const requestStreamedAllProjectsInstalled = useCallback(() => {
+        const requestId = `apinst-sb-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+        sidebarStreamRequestIdRef.current = requestId;
+        vscode.postMessage({ type: 'checkAllProjectsInstalled', streamed: true, requestId });
+    }, []);
 
     // Keep refs in sync
     useEffect(() => { selectedProjectRef.current = selectedProject; }, [selectedProject]);
@@ -176,7 +183,7 @@ export const SidebarApp: React.FC = () => {
                         // Re-fetch for all-projects mode since effects won't re-trigger
                         if (message.selectedProject === ALL_PROJECTS_SENTINEL) {
                             if (installedExpandedRef.current || searchModeRef.current === 'installed') {
-                                vscode.postMessage({ type: 'checkAllProjectsInstalled' });
+                                requestStreamedAllProjectsInstalled();
                                 setLoadingAllInstalled(true);
                             }
                             if (updatesExpandedRef.current || searchModeRef.current === 'updates') {
@@ -255,6 +262,42 @@ export const SidebarApp: React.FC = () => {
                 setAllProjectsInstalled(message.projectInstalled || []);
                 setLoadingAllInstalled(false);
                 break;
+            case 'allProjectsInstalledStart':
+                if (message.requestId !== sidebarStreamRequestIdRef.current) { break; }
+                setAllProjectsInstalled((message.projects || []).map((p: { projectPath: string; projectName: string }): ProjectInstalled => ({
+                    projectPath: p.projectPath,
+                    projectName: p.projectName,
+                    packages: [],
+                })));
+                setLoadingAllInstalled(true);
+                break;
+            case 'allProjectsInstalledProjectFound':
+                if (message.requestId !== sidebarStreamRequestIdRef.current) { break; }
+                setAllProjectsInstalled(prev => {
+                    const idx = prev.findIndex(p => p.projectPath === message.projectPath);
+                    const next: ProjectInstalled[] = idx >= 0
+                        ? [...prev]
+                        : [...prev, { projectPath: message.projectPath, projectName: message.projectName ?? message.projectPath, packages: [] }];
+                    const targetIdx = idx >= 0 ? idx : next.length - 1;
+                    next[targetIdx] = {
+                        ...next[targetIdx],
+                        packages: (message.installed as InstalledPackage[] | undefined) ?? next[targetIdx].packages,
+                    };
+                    return next;
+                });
+                break;
+            case 'allProjectsInstalledProjectMetadata':
+                // Sidebar uses liteMode — no icons rendered. Accept message for symmetry.
+                if (message.requestId !== sidebarStreamRequestIdRef.current) { break; }
+                break;
+            case 'allProjectsInstalledComplete':
+                if (message.requestId !== sidebarStreamRequestIdRef.current) { break; }
+                setAllProjectsInstalled(prev => {
+                    const seen = new Set(message.projectPaths || []);
+                    return prev.filter(p => seen.has(p.projectPath));
+                });
+                setLoadingAllInstalled(false);
+                break;
             case 'installedCountUpdate':
                 setBackgroundInstalledCount(message.count || 0);
                 break;
@@ -267,7 +310,7 @@ export const SidebarApp: React.FC = () => {
                     if (installedExpandedRef.current || searchModeRef.current === 'installed') {
                         setAllProjectsInstalled([]);
                         allProjectsInstalledRef.current = [];
-                        vscode.postMessage({ type: 'checkAllProjectsInstalled' });
+                        requestStreamedAllProjectsInstalled();
                         setLoadingAllInstalled(true);
                     }
                     if (updatesExpandedRef.current || searchModeRef.current === 'updates') {
@@ -348,7 +391,7 @@ export const SidebarApp: React.FC = () => {
                                 setInstalledPackages(prev => prev.some(p => p.id.toLowerCase() === opPkgId) ? prev : [...prev, { id: op.packageId!, version: op.version!, resolvedVersion: op.version! } as InstalledPackage]);
                             }
                         } else if (selectedProjectRef.current === ALL_PROJECTS_SENTINEL) {
-                            vscode.postMessage({ type: 'checkAllProjectsInstalled' });
+                            requestStreamedAllProjectsInstalled();
                             setLoadingAllInstalled(true);
                         } else if (selectedProjectRef.current) {
                             vscode.postMessage({ type: 'getInstalledPackages', projectPath: selectedProjectRef.current });
@@ -449,7 +492,7 @@ export const SidebarApp: React.FC = () => {
                     }
                     // Re-fetch for full accuracy
                     if (isAllProjectsRef.current) {
-                        vscode.postMessage({ type: 'checkAllProjectsInstalled' });
+                        requestStreamedAllProjectsInstalled();
                         setLoadingAllInstalled(true);
                     } else if (selectedProjectRef.current && selectedProjectRef.current !== ALL_PROJECTS_SENTINEL) {
                         // User switched to a single project during bulk install — refresh if it was a target
@@ -528,7 +571,7 @@ export const SidebarApp: React.FC = () => {
                 }
                 if (isAllProjectsRef.current) {
                     setAllProjectsInstalled([]);
-                    vscode.postMessage({ type: 'checkAllProjectsInstalled' });
+                    requestStreamedAllProjectsInstalled();
                     setLoadingAllInstalled(true);
                 }
                 break;
@@ -559,7 +602,7 @@ export const SidebarApp: React.FC = () => {
                 // Fetch appropriate data based on mode
                 if (message.projectPath === ALL_PROJECTS_SENTINEL) {
                     if (installedExpandedRef.current || searchModeRef.current === 'installed') {
-                        vscode.postMessage({ type: 'checkAllProjectsInstalled' });
+                        requestStreamedAllProjectsInstalled();
                         setLoadingAllInstalled(true);
                     }
                     if (updatesExpandedRef.current || searchModeRef.current === 'updates') {
@@ -612,7 +655,7 @@ export const SidebarApp: React.FC = () => {
                 });
                 break;
         }
-    }, []);
+    }, [requestStreamedAllProjectsInstalled]);
 
     // Single event listener using ref pattern
     const handleMessageRef = useRef(handleMessage);
@@ -670,10 +713,10 @@ export const SidebarApp: React.FC = () => {
     // ─── Load all projects installed ────────────────────────────────────────
     useEffect(() => {
         if (isAllProjects && (searchMode === 'installed' || (searchMode === 'default' && installedExpanded))) {
-            vscode.postMessage({ type: 'checkAllProjectsInstalled' });
+            requestStreamedAllProjectsInstalled();
             setLoadingAllInstalled(true);
         }
-    }, [isAllProjects, searchMode, installedExpanded]);
+    }, [isAllProjects, searchMode, installedExpanded, requestStreamedAllProjectsInstalled]);
 
     // ─── Search Handlers ─────────────────────────────────────────────────────
 

@@ -43,6 +43,8 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
     private _pendingInstalledProject = '';
     private _operationInProgress = false;
     private _disposables: vscode.Disposable[] = [];
+    /** Plan 10 Stage B: AbortControllers for in-flight streaming queries (keyed by stream kind). */
+    private _inflightAborts: Map<string, AbortController> = new Map();
     // Plan 01 perf: track time from sidebar resolve to first 'ready' from webview
     private _sidebarResolvedAt = 0;
     private _readyLogged = false;
@@ -331,10 +333,24 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
     public dispose(): void {
         this._disposed = true;
         this._cancelFileWatcherDebounce();
+        // Plan 10 Stage B: abort any in-flight streaming queries
+        for (const controller of this._inflightAborts.values()) {
+            try { controller.abort(); } catch { /* ignore */ }
+        }
+        this._inflightAborts.clear();
         for (const d of this._disposables) {
             d.dispose();
         }
         this._disposables = [];
+    }
+
+    /** Abort a previously-registered in-flight stream by key, removing it from the map. */
+    private _abortInflight(key: string): void {
+        const existing = this._inflightAborts.get(key);
+        if (existing) {
+            try { existing.abort(); } catch { /* ignore */ }
+            this._inflightAborts.delete(key);
+        }
     }
 
     // ------ Public methods called from extension.ts commands ------
@@ -683,6 +699,68 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
                 }
             case 'checkAllProjectsInstalled':
                 {
+                    if (data.streamed === true) {
+                        const requestId = String(data.requestId ?? '');
+                        const inflightKey = 'apinst:sidebar';
+                        this._abortInflight(inflightKey);
+                        const controller = new AbortController();
+                        this._inflightAborts.set(inflightKey, controller);
+                        const signal = controller.signal;
+                        try {
+                            const startProjects: { projectPath: string; projectName: string }[] = [];
+                            const projectPaths: string[] = [];
+                            const errored: { projectPath: string; error: string }[] = [];
+                            await queryAllProjectsInstalled(this._nugetService, true /* liteMode */, {
+                                signal,
+                                onStart: (projects) => {
+                                    if (signal.aborted || this._disposed) { return; }
+                                    startProjects.push(...projects);
+                                    this._postMessage({ type: 'allProjectsInstalledStart', context: data.context, requestId, projects });
+                                },
+                                onProject: (result) => {
+                                    if (signal.aborted || this._disposed) { return; }
+                                    projectPaths.push(result.projectPath);
+                                    if (result.error) {
+                                        errored.push({ projectPath: result.projectPath, error: result.error });
+                                    }
+                                    this._postMessage({
+                                        type: 'allProjectsInstalledProjectFound',
+                                        context: data.context,
+                                        requestId,
+                                        projectPath: result.projectPath,
+                                        projectName: result.projectName,
+                                        installed: result.packages,
+                                        error: result.error,
+                                    });
+                                },
+                            });
+                            if (!signal.aborted && !this._disposed) {
+                                this._postMessage({
+                                    type: 'allProjectsInstalledComplete',
+                                    context: data.context,
+                                    requestId,
+                                    projectPaths,
+                                    errored,
+                                });
+                            }
+                        } catch (error) {
+                            if (!signal.aborted && !this._disposed) {
+                                console.error('[nUIget Sidebar] checkAllProjectsInstalled streaming error:', error);
+                                this._postMessage({
+                                    type: 'allProjectsInstalledComplete',
+                                    context: data.context,
+                                    requestId,
+                                    projectPaths: [],
+                                    errored: [],
+                                });
+                            }
+                        } finally {
+                            if (this._inflightAborts.get(inflightKey) === controller) {
+                                this._inflightAborts.delete(inflightKey);
+                            }
+                        }
+                        break;
+                    }
                     try {
                         const projectInstalled = await queryAllProjectsInstalled(this._nugetService, true /* liteMode — sidebar stays lightweight */);
                         this._postMessage({ type: 'allProjectsInstalled', projectInstalled, context: data.context });

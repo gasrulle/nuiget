@@ -1161,6 +1161,57 @@ describe('NuGetPanel', () => {
             resolveFirst();
             await firstP;
         });
+
+        it('isolates multiInstall context from installed context aborts (Plan 10 Stage B)', async () => {
+            const captured: AbortSignal[] = [];
+            let resolveInstalled!: () => void;
+            const installedHang = new Promise<void>((r) => { resolveInstalled = r; });
+            let resolveMulti!: () => void;
+            const multiHang = new Promise<void>((r) => { resolveMulti = r; });
+            hoisted.mockQueryAllProjectsInstalled
+                .mockImplementationOnce(async (_svc: unknown, _lite: boolean, opts: any) => {
+                    if (opts?.signal) { captured.push(opts.signal); }
+                    await installedHang;
+                    return [];
+                })
+                .mockImplementationOnce(async (_svc: unknown, _lite: boolean, opts: any) => {
+                    if (opts?.signal) { captured.push(opts.signal); }
+                    await multiHang;
+                    return [];
+                });
+            (mockService as any).enrichInstalledPackageMetadata.mockResolvedValue(undefined);
+
+            const installedP = messageListener!({ type: 'checkAllProjectsInstalled', streamed: true, requestId: 'i1', context: 'installed' });
+            await vi.waitFor(() => expect(captured).toHaveLength(1));
+            const multiP = messageListener!({ type: 'checkAllProjectsInstalled', streamed: true, requestId: 'm1', context: 'multiInstall' });
+            await vi.waitFor(() => expect(captured).toHaveLength(2));
+
+            // Different contexts use different abort keys — neither should abort the other.
+            expect(captured[0].aborted).toBe(false);
+            expect(captured[1].aborted).toBe(false);
+
+            resolveInstalled();
+            resolveMulti();
+            await Promise.all([installedP, multiP]);
+        });
+
+        it('echoes context: multiInstall on streamed chunks (Plan 10 Stage B)', async () => {
+            hoisted.mockQueryAllProjectsInstalled.mockImplementationOnce(async (_svc: unknown, _lite: boolean, opts: any) => {
+                opts?.onStart?.([{ projectPath: '/a.csproj', projectName: 'A' }]);
+                opts?.onProject?.({ projectPath: '/a.csproj', projectName: 'A', packages: [{ id: 'Pa', version: '1.0' }] });
+                return [{ projectPath: '/a.csproj', projectName: 'A', packages: [{ id: 'Pa', version: '1.0' }] }];
+            });
+            (mockService as any).enrichInstalledPackageMetadata.mockResolvedValue(undefined);
+
+            await messageListener!({ type: 'checkAllProjectsInstalled', streamed: true, requestId: 'm1', context: 'multiInstall' });
+
+            const calls = mockPanel.webview.postMessage.mock.calls.map((c: any[]) => c[0]);
+            const streamingCalls = calls.filter((m: any) => typeof m.type === 'string' && m.type.startsWith('allProjectsInstalled'));
+            for (const call of streamingCalls) {
+                expect(call.context).toBe('multiInstall');
+                expect(call.requestId).toBe('m1');
+            }
+        });
     });
 
     describe('all-projects icon enrichment', () => {

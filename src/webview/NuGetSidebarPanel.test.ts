@@ -1226,6 +1226,61 @@ describe('NuGetSidebarProvider', () => {
                 context: undefined
             });
         });
+
+        it('streams Start, ProjectFound, Complete with echoed requestId (Plan 10 Stage B)', async () => {
+            view = resolveView(provider);
+            view.webview.postMessage.mockClear();
+            hoisted.mockQueryAllProjectsInstalled.mockImplementationOnce(async (_svc: unknown, _lite: boolean, opts: any) => {
+                opts?.onStart?.([
+                    { projectPath: '/a.csproj', projectName: 'A' },
+                    { projectPath: '/b.csproj', projectName: 'B' },
+                ]);
+                opts?.onProject?.({ projectPath: '/a.csproj', projectName: 'A', packages: [{ id: 'Pa', version: '1.0' }] });
+                opts?.onProject?.({ projectPath: '/b.csproj', projectName: 'B', error: 'boom' });
+                return [{ projectPath: '/a.csproj', projectName: 'A', packages: [{ id: 'Pa', version: '1.0' }] }];
+            });
+
+            await messageListener!({ type: 'checkAllProjectsInstalled', streamed: true, requestId: 'r1' });
+
+            const calls = view.webview.postMessage.mock.calls.map((c: any[]) => c[0]);
+            const start = calls.find((m: any) => m.type === 'allProjectsInstalledStart');
+            const founds = calls.filter((m: any) => m.type === 'allProjectsInstalledProjectFound');
+            const complete = calls.find((m: any) => m.type === 'allProjectsInstalledComplete');
+            expect(start).toMatchObject({ requestId: 'r1' });
+            expect(start.projects).toHaveLength(2);
+            expect(founds).toHaveLength(2);
+            expect(founds[0]).toMatchObject({ requestId: 'r1', projectPath: '/a.csproj' });
+            expect(founds[1]).toMatchObject({ requestId: 'r1', projectPath: '/b.csproj', error: 'boom' });
+            expect(complete).toMatchObject({ requestId: 'r1' });
+            expect(complete.projectPaths).toEqual(['/a.csproj', '/b.csproj']);
+        });
+
+        it('aborts previous streamed request when a new one arrives (Plan 10 Stage B)', async () => {
+            view = resolveView(provider);
+            view.webview.postMessage.mockClear();
+            const captured: AbortSignal[] = [];
+            let resolveFirst!: () => void;
+            const firstHang = new Promise<void>((r) => { resolveFirst = r; });
+            hoisted.mockQueryAllProjectsInstalled
+                .mockImplementationOnce(async (_svc: unknown, _lite: boolean, opts: any) => {
+                    if (opts?.signal) { captured.push(opts.signal); }
+                    await firstHang;
+                    return [];
+                })
+                .mockImplementationOnce(async (_svc: unknown, _lite: boolean, opts: any) => {
+                    if (opts?.signal) { captured.push(opts.signal); }
+                    return [];
+                });
+
+            const firstP = messageListener!({ type: 'checkAllProjectsInstalled', streamed: true, requestId: 'r1' });
+            await vi.waitFor(() => expect(captured).toHaveLength(1));
+            await messageListener!({ type: 'checkAllProjectsInstalled', streamed: true, requestId: 'r2' });
+            expect(captured).toHaveLength(2);
+            expect(captured[0].aborted).toBe(true);
+            expect(captured[1].aborted).toBe(false);
+            resolveFirst();
+            await firstP;
+        });
     });
 
     describe('bulkUpdatePackages message', () => {

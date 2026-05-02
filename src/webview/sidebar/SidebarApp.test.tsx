@@ -262,14 +262,14 @@ describe('SidebarApp', () => {
         mockVsCode.postMessage.mockClear();
         sendMessage({ type: 'projectChanged', projectPath: '__all_projects__', projectName: 'All Projects (2)' });
         // Should request all-projects installed data (Installed section is expanded by default)
-        expect(mockVsCode.postMessage).toHaveBeenCalledWith({ type: 'checkAllProjectsInstalled' });
+        expect(mockVsCode.postMessage).toHaveBeenCalledWith(expect.objectContaining({ type: 'checkAllProjectsInstalled' }));
     });
 
     it('fetches all-projects data when state message sets ALL_PROJECTS_SENTINEL', () => {
         render(<SidebarApp />);
         mockVsCode.postMessage.mockClear();
         sendMessage({ type: 'state', selectedProject: '__all_projects__' });
-        expect(mockVsCode.postMessage).toHaveBeenCalledWith({ type: 'checkAllProjectsInstalled' });
+        expect(mockVsCode.postMessage).toHaveBeenCalledWith(expect.objectContaining({ type: 'checkAllProjectsInstalled' }));
     });
 
     it('fetches all-projects data on forceRefresh when in all-projects mode', () => {
@@ -279,7 +279,7 @@ describe('SidebarApp', () => {
         sendMessage({ type: 'allProjectsUpdates', projectUpdates: [] });
         mockVsCode.postMessage.mockClear();
         sendMessage({ type: 'forceRefresh' });
-        expect(mockVsCode.postMessage).toHaveBeenCalledWith({ type: 'checkAllProjectsInstalled' });
+        expect(mockVsCode.postMessage).toHaveBeenCalledWith(expect.objectContaining({ type: 'checkAllProjectsInstalled' }));
     });
 
     it('handles bulkUpdateResult and clears updates', () => {

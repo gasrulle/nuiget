@@ -200,6 +200,13 @@ export const App: React.FC = () => {
         installedStreamRequestIdRef.current = requestId;
         vscode.postMessage({ type: 'checkAllProjectsInstalled', streamed: true, requestId });
     }, []);
+    /** Plan 10 Stage B: separate request id for the multiInstall context (independent abort lifetime). */
+    const multiInstallStreamRequestIdRef = useRef<string>('');
+    const requestStreamedMultiInstall = useCallback(() => {
+        const requestId = `apinst-mi-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+        multiInstallStreamRequestIdRef.current = requestId;
+        vscode.postMessage({ type: 'checkAllProjectsInstalled', streamed: true, requestId, context: 'multiInstall' });
+    }, []);
     useEffect(() => {
         includePrereleaseRef.current = includePrerelease;
     }, [includePrerelease]);
@@ -625,7 +632,7 @@ export const App: React.FC = () => {
                         });
                     }
                     // Also re-fetch for full accuracy
-                    vscode.postMessage({ type: 'checkAllProjectsInstalled', context: 'multiInstall' });
+                    requestStreamedMultiInstall();
                     // Refresh current project's installed packages
                     if (bulkResults?.some(r => r.success && r.projectPath === selectedProjectRef.current)) {
                         vscode.postMessage({ type: 'getInstalledPackages', projectPath: selectedProjectRef.current });
@@ -903,40 +910,52 @@ export const App: React.FC = () => {
                 break;
             case 'allProjectsInstalledStart':
                 {
-                    // Plan 10 Stage A: streaming `installed` context only (multiInstall stays legacy).
-                    if (message.context === 'multiInstall') { break; }
-                    if (message.requestId !== installedStreamRequestIdRef.current) { break; }
+                    // Plan 10 Stage A/B: streams `installed` and `multiInstall` contexts.
+                    const isMulti = message.context === 'multiInstall';
+                    const expectedReq = isMulti ? multiInstallStreamRequestIdRef.current : installedStreamRequestIdRef.current;
+                    if (message.requestId !== expectedReq) { break; }
                     const projects = (message.projects || []) as { projectPath: string; projectName: string }[];
                     const provisional: ProjectInstalled[] = projects.map(p => ({
                         projectPath: p.projectPath,
                         projectName: p.projectName,
                         packages: [],
                     }));
-                    setAllProjectsInstalled(provisional);
-                    setLoadingAllProjectsInstalled(true);
+                    if (isMulti) {
+                        setMultiInstallProjectData(provisional);
+                    } else {
+                        setAllProjectsInstalled(provisional);
+                        setLoadingAllProjectsInstalled(true);
+                    }
                 }
                 break;
             case 'allProjectsInstalledProjectFound':
                 {
-                    if (message.context === 'multiInstall') { break; }
-                    if (message.requestId !== installedStreamRequestIdRef.current) { break; }
+                    const isMulti = message.context === 'multiInstall';
+                    const expectedReq = isMulti ? multiInstallStreamRequestIdRef.current : installedStreamRequestIdRef.current;
+                    if (message.requestId !== expectedReq) { break; }
                     const projectPath = message.projectPath as string;
                     const projectName = (message.projectName as string | undefined) ?? projectPath;
                     const installed = (message.installed as InstalledPackage[] | undefined) ?? [];
-                    setAllProjectsInstalled(prev => {
+                    const upsert = (prev: ProjectInstalled[]) => {
                         const idx = prev.findIndex(p => p.projectPath === projectPath);
                         const slot: ProjectInstalled = { projectPath, projectName, packages: installed };
                         if (idx === -1) { return [...prev, slot]; }
                         const next = prev.slice();
                         next[idx] = slot;
                         return next;
-                    });
+                    };
+                    if (isMulti) {
+                        setMultiInstallProjectData(upsert);
+                    } else {
+                        setAllProjectsInstalled(upsert);
+                    }
                 }
                 break;
             case 'allProjectsInstalledProjectMetadata':
                 {
-                    if (message.context === 'multiInstall') { break; }
-                    if (message.requestId !== installedStreamRequestIdRef.current) { break; }
+                    const isMulti = message.context === 'multiInstall';
+                    const expectedReq = isMulti ? multiInstallStreamRequestIdRef.current : installedStreamRequestIdRef.current;
+                    if (message.requestId !== expectedReq) { break; }
                     const projectPath = message.projectPath as string;
                     const enriched = (message.installed as Array<Partial<InstalledPackage> & { id: string }> | undefined) ?? [];
                     if (enriched.length === 0) { break; }
@@ -961,22 +980,32 @@ export const App: React.FC = () => {
                         next[idx] = { ...proj, packages: pkgs };
                         return next;
                     };
-                    setAllProjectsInstalled(merger);
-                    setMultiInstallProjectData(merger);
+                    if (isMulti) {
+                        setMultiInstallProjectData(merger);
+                    } else {
+                        setAllProjectsInstalled(merger);
+                        // Mirror to multiInstall snapshot (legacy parity for the installed-context stream)
+                        setMultiInstallProjectData(merger);
+                    }
                 }
                 break;
             case 'allProjectsInstalledComplete':
                 {
-                    if (message.context === 'multiInstall') { break; }
-                    if (message.requestId !== installedStreamRequestIdRef.current) { break; }
+                    const isMulti = message.context === 'multiInstall';
+                    const expectedReq = isMulti ? multiInstallStreamRequestIdRef.current : installedStreamRequestIdRef.current;
+                    if (message.requestId !== expectedReq) { break; }
                     const seen = new Set<string>((message.projectPaths || []) as string[]);
-                    setAllProjectsInstalled(prev => {
-                        const pruned = prev.filter(p => seen.has(p.projectPath));
-                        // Mirror to multi-install snapshot (legacy parity)
-                        setMultiInstallProjectData(pruned);
-                        return pruned;
-                    });
-                    setLoadingAllProjectsInstalled(false);
+                    if (isMulti) {
+                        setMultiInstallProjectData(prev => prev.filter(p => seen.has(p.projectPath)));
+                    } else {
+                        setAllProjectsInstalled(prev => {
+                            const pruned = prev.filter(p => seen.has(p.projectPath));
+                            // Mirror to multi-install snapshot (legacy parity)
+                            setMultiInstallProjectData(pruned);
+                            return pruned;
+                        });
+                        setLoadingAllProjectsInstalled(false);
+                    }
                 }
                 break;
             case 'allProjectsIcons':
@@ -1870,8 +1899,8 @@ export const App: React.FC = () => {
 
     const handleMultiInstallOpen = useCallback(() => {
         // Fetch per-project installed data for the Multi Install dropdown
-        vscode.postMessage({ type: 'checkAllProjectsInstalled', context: 'multiInstall' });
-    }, []);
+        requestStreamedMultiInstall();
+    }, [requestStreamedMultiInstall]);
 
     const handleRemove = useCallback((packageId: string) => {
         const projectPath = activeProjectPathRef.current || selectedProjectRef.current;
