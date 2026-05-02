@@ -1054,54 +1054,70 @@ describe('NuGetPanel', () => {
             mockPanel.webview.postMessage.mockClear();
         });
 
-        it('collects installed packages from all projects (lite mode)', async () => {
-            hoisted.mockQueryAllProjectsInstalled.mockResolvedValueOnce([{
-                projectPath: '/projA.csproj',
-                projectName: 'ProjA',
-                packages: [{ id: 'Pkg', version: '1.0', resolvedVersion: '1.0.0', isImplicit: false }]
-            }]);
+        it('streams allProjectsInstalledStart/ProjectFound/Complete (lite mode)', async () => {
+            hoisted.mockQueryAllProjectsInstalled.mockImplementationOnce(async (_svc: unknown, _lite: boolean, opts: any) => {
+                opts?.onStart?.([{ projectPath: '/projA.csproj', projectName: 'ProjA' }]);
+                opts?.onProject?.({
+                    projectPath: '/projA.csproj',
+                    projectName: 'ProjA',
+                    packages: [{ id: 'Pkg', version: '1.0', resolvedVersion: '1.0.0', isImplicit: false }],
+                });
+                return [];
+            });
             (mockService as any).enrichInstalledPackageMetadata.mockResolvedValue(undefined);
             await messageListener!({ type: 'checkAllProjectsInstalled', context: 'multiInstall' });
 
-            expect(hoisted.mockQueryAllProjectsInstalled).toHaveBeenCalledWith(mockService, true);
-            expect(mockPanel.webview.postMessage).toHaveBeenCalledWith({
-                type: 'allProjectsInstalled',
+            expect(hoisted.mockQueryAllProjectsInstalled).toHaveBeenCalledWith(mockService, true, expect.any(Object));
+            expect(mockPanel.webview.postMessage).toHaveBeenCalledWith(expect.objectContaining({
+                type: 'allProjectsInstalledStart',
                 context: 'multiInstall',
-                projectInstalled: [{
-                    projectPath: '/projA.csproj',
-                    projectName: 'ProjA',
-                    packages: [{ id: 'Pkg', version: '1.0', resolvedVersion: '1.0.0', isImplicit: false }]
-                }]
-            });
+                projects: [{ projectPath: '/projA.csproj', projectName: 'ProjA' }],
+            }));
+            expect(mockPanel.webview.postMessage).toHaveBeenCalledWith(expect.objectContaining({
+                type: 'allProjectsInstalledProjectFound',
+                context: 'multiInstall',
+                projectPath: '/projA.csproj',
+                installed: [{ id: 'Pkg', version: '1.0', resolvedVersion: '1.0.0', isImplicit: false }],
+            }));
+            expect(mockPanel.webview.postMessage).toHaveBeenCalledWith(expect.objectContaining({
+                type: 'allProjectsInstalledComplete',
+                context: 'multiInstall',
+                projectPaths: ['/projA.csproj'],
+            }));
         });
 
-        it('sends allProjectsInstalledMetadata follow-up after enrichment', async () => {
-            hoisted.mockQueryAllProjectsInstalled.mockResolvedValueOnce([{
-                projectPath: '/projA.csproj',
-                projectName: 'ProjA',
-                packages: [{ id: 'Pkg', version: '1.0' }]
-            }]);
+        it('emits allProjectsInstalledProjectMetadata follow-up after enrichment', async () => {
+            hoisted.mockQueryAllProjectsInstalled.mockImplementationOnce(async (_svc: unknown, _lite: boolean, opts: any) => {
+                opts?.onStart?.([{ projectPath: '/projA.csproj', projectName: 'ProjA' }]);
+                opts?.onProject?.({
+                    projectPath: '/projA.csproj',
+                    projectName: 'ProjA',
+                    packages: [{ id: 'Pkg', version: '1.0' }],
+                });
+                return [];
+            });
             (mockService as any).enrichInstalledPackageMetadata.mockImplementation(async (pkgs: { iconUrl?: string }[]) => {
                 pkgs[0].iconUrl = 'https://example.com/icon.png';
             });
             await messageListener!({ type: 'checkAllProjectsInstalled' });
             await vi.waitFor(() => {
                 expect(mockPanel.webview.postMessage).toHaveBeenCalledWith(expect.objectContaining({
-                    type: 'allProjectsInstalledMetadata',
-                    context: undefined
+                    type: 'allProjectsInstalledProjectMetadata',
+                    projectPath: '/projA.csproj',
                 }));
             });
         });
 
-        it('skips projects that throw errors', async () => {
+        it('emits Complete with empty paths when no projects are found', async () => {
             hoisted.mockQueryAllProjectsInstalled.mockResolvedValueOnce([]);
             await messageListener!({ type: 'checkAllProjectsInstalled' });
 
-            expect(mockPanel.webview.postMessage).toHaveBeenCalledWith({
-                type: 'allProjectsInstalled',
+            expect(mockPanel.webview.postMessage).toHaveBeenCalledWith(expect.objectContaining({
+                type: 'allProjectsInstalledComplete',
                 context: undefined,
-                projectInstalled: []
-            });
+                projectPaths: [],
+                errored: [],
+            }));
         });
 
         it('streams Start, ProjectFound, Complete with echoed requestId (Plan 10)', async () => {
@@ -1368,7 +1384,7 @@ describe('NuGetPanel', () => {
             });
         });
 
-        it('checkAllProjectsInstalled sends empty response on error', async () => {
+        it('checkAllProjectsInstalled sends empty Complete on error', async () => {
             hoisted.mockQueryAllProjectsInstalled.mockRejectedValue(new Error('network error'));
             mockPanel.webview.postMessage.mockClear();
             await messageListener!({
@@ -1376,11 +1392,12 @@ describe('NuGetPanel', () => {
                 context: 'multiInstall'
             });
 
-            expect(mockPanel.webview.postMessage).toHaveBeenCalledWith({
-                type: 'allProjectsInstalled',
+            expect(mockPanel.webview.postMessage).toHaveBeenCalledWith(expect.objectContaining({
+                type: 'allProjectsInstalledComplete',
                 context: 'multiInstall',
-                projectInstalled: []
-            });
+                projectPaths: [],
+                errored: [],
+            }));
         });
     });
 

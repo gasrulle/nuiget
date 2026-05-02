@@ -699,75 +699,66 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
                 }
             case 'checkAllProjectsInstalled':
                 {
-                    if (data.streamed === true) {
-                        const requestId = String(data.requestId ?? '');
-                        const inflightKey = 'apinst:sidebar';
-                        this._abortInflight(inflightKey);
-                        const controller = new AbortController();
-                        this._inflightAborts.set(inflightKey, controller);
-                        const signal = controller.signal;
-                        try {
-                            const startProjects: { projectPath: string; projectName: string }[] = [];
-                            const projectPaths: string[] = [];
-                            const errored: { projectPath: string; error: string }[] = [];
-                            await queryAllProjectsInstalled(this._nugetService, true /* liteMode */, {
-                                signal,
-                                onStart: (projects) => {
-                                    if (signal.aborted || this._disposed) { return; }
-                                    startProjects.push(...projects);
-                                    this._postMessage({ type: 'allProjectsInstalledStart', context: data.context, requestId, projects });
-                                },
-                                onProject: (result) => {
-                                    if (signal.aborted || this._disposed) { return; }
-                                    projectPaths.push(result.projectPath);
-                                    if (result.error) {
-                                        errored.push({ projectPath: result.projectPath, error: result.error });
-                                    }
-                                    this._postMessage({
-                                        type: 'allProjectsInstalledProjectFound',
-                                        context: data.context,
-                                        requestId,
-                                        projectPath: result.projectPath,
-                                        projectName: result.projectName,
-                                        workspaceFolder: result.workspaceFolder,
-                                        installed: result.packages,
-                                        error: result.error,
-                                    });
-                                },
-                            });
-                            if (!signal.aborted && !this._disposed) {
-                                this._postMessage({
-                                    type: 'allProjectsInstalledComplete',
-                                    context: data.context,
-                                    requestId,
-                                    projectPaths,
-                                    errored,
-                                });
-                            }
-                        } catch (error) {
-                            if (!signal.aborted && !this._disposed) {
-                                console.error('[nUIget Sidebar] checkAllProjectsInstalled streaming error:', error);
-                                this._postMessage({
-                                    type: 'allProjectsInstalledComplete',
-                                    context: data.context,
-                                    requestId,
-                                    projectPaths: [],
-                                    errored: [],
-                                });
-                            }
-                        } finally {
-                            if (this._inflightAborts.get(inflightKey) === controller) {
-                                this._inflightAborts.delete(inflightKey);
-                            }
-                        }
-                        break;
-                    }
+                    // Plan 10 Stage C3: streaming is the only mode; legacy blob path removed.
+                    const requestId = String(data.requestId ?? '');
+                    const inflightKey = 'apinst:sidebar';
+                    this._abortInflight(inflightKey);
+                    const controller = new AbortController();
+                    this._inflightAborts.set(inflightKey, controller);
+                    const signal = controller.signal;
                     try {
-                        const projectInstalled = await queryAllProjectsInstalled(this._nugetService, true /* liteMode — sidebar stays lightweight */);
-                        this._postMessage({ type: 'allProjectsInstalled', projectInstalled, context: data.context });
+                        const startProjects: { projectPath: string; projectName: string }[] = [];
+                        const projectPaths: string[] = [];
+                        const errored: { projectPath: string; error: string }[] = [];
+                        await queryAllProjectsInstalled(this._nugetService, true /* liteMode */, {
+                            signal,
+                            onStart: (projects) => {
+                                if (signal.aborted || this._disposed) { return; }
+                                startProjects.push(...projects);
+                                this._postMessage({ type: 'allProjectsInstalledStart', context: data.context, requestId, projects });
+                            },
+                            onProject: (result) => {
+                                if (signal.aborted || this._disposed) { return; }
+                                projectPaths.push(result.projectPath);
+                                if (result.error) {
+                                    errored.push({ projectPath: result.projectPath, error: result.error });
+                                }
+                                this._postMessage({
+                                    type: 'allProjectsInstalledProjectFound',
+                                    context: data.context,
+                                    requestId,
+                                    projectPath: result.projectPath,
+                                    projectName: result.projectName,
+                                    workspaceFolder: result.workspaceFolder,
+                                    installed: result.packages,
+                                    error: result.error,
+                                });
+                            },
+                        });
+                        if (!signal.aborted && !this._disposed) {
+                            this._postMessage({
+                                type: 'allProjectsInstalledComplete',
+                                context: data.context,
+                                requestId,
+                                projectPaths,
+                                errored,
+                            });
+                        }
                     } catch (error) {
-                        console.error('[nUIget Sidebar] checkAllProjectsInstalled error:', error);
-                        this._postMessage({ type: 'allProjectsInstalled', projectInstalled: [], context: data.context });
+                        if (!signal.aborted && !this._disposed) {
+                            console.error('[nUIget Sidebar] checkAllProjectsInstalled streaming error:', error);
+                            this._postMessage({
+                                type: 'allProjectsInstalledComplete',
+                                context: data.context,
+                                requestId,
+                                projectPaths: [],
+                                errored: [],
+                            });
+                        }
+                    } finally {
+                        if (this._inflightAborts.get(inflightKey) === controller) {
+                            this._inflightAborts.delete(inflightKey);
+                        }
                     }
                     break;
                 }

@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Streaming all-projects installed (Stage B)** — Sidebar and the main panel Multi Install dropdown now consume the streaming All-Projects installed feed. Each context owns its own abort key so a refresh in one view never cancels another.
 - **Workspace folder add/remove auto-refresh** — Adding or removing a workspace folder now triggers a debounced (300ms) refresh of the main panel and sidebar so any in-flight All-Projects enumeration aborts and restarts with the new folder list.
 - **All-projects view groups by workspace folder**
+- **Removed legacy non-streamed all-projects installed path**
 
 ## [1.18.4] - 2026-04-16
 

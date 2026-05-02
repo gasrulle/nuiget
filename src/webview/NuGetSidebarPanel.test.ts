@@ -1192,39 +1192,51 @@ describe('NuGetSidebarProvider', () => {
     });
 
     describe('checkAllProjectsInstalled message', () => {
-        it('collects installed packages from all projects', async () => {
+        it('streams allProjectsInstalledStart/ProjectFound/Complete', async () => {
             view = resolveView(provider);
             view.webview.postMessage.mockClear();
-            hoisted.mockQueryAllProjectsInstalled.mockResolvedValueOnce([{
-                projectPath: '/projA.csproj',
-                projectName: 'ProjA',
-                packages: [{ id: 'Pkg', version: '1.0', resolvedVersion: '1.0.0', isImplicit: false }]
-            }]);
-            await messageListener!({ type: 'checkAllProjectsInstalled', context: 'multiInstall' });
-
-            expect(hoisted.mockQueryAllProjectsInstalled).toHaveBeenCalledWith(service, true);
-            expect(view.webview.postMessage).toHaveBeenCalledWith({
-                type: 'allProjectsInstalled',
-                projectInstalled: [{
+            hoisted.mockQueryAllProjectsInstalled.mockImplementationOnce(async (_svc: unknown, _lite: boolean, opts: any) => {
+                opts?.onStart?.([{ projectPath: '/projA.csproj', projectName: 'ProjA' }]);
+                opts?.onProject?.({
                     projectPath: '/projA.csproj',
                     projectName: 'ProjA',
-                    packages: [{ id: 'Pkg', version: '1.0', resolvedVersion: '1.0.0', isImplicit: false }]
-                }],
-                context: 'multiInstall'
+                    packages: [{ id: 'Pkg', version: '1.0', resolvedVersion: '1.0.0', isImplicit: false }],
+                });
+                return [];
             });
+            await messageListener!({ type: 'checkAllProjectsInstalled', context: 'multiInstall' });
+
+            expect(hoisted.mockQueryAllProjectsInstalled).toHaveBeenCalledWith(service, true, expect.any(Object));
+            expect(view.webview.postMessage).toHaveBeenCalledWith(expect.objectContaining({
+                type: 'allProjectsInstalledStart',
+                context: 'multiInstall',
+                projects: [{ projectPath: '/projA.csproj', projectName: 'ProjA' }],
+            }));
+            expect(view.webview.postMessage).toHaveBeenCalledWith(expect.objectContaining({
+                type: 'allProjectsInstalledProjectFound',
+                context: 'multiInstall',
+                projectPath: '/projA.csproj',
+                installed: [{ id: 'Pkg', version: '1.0', resolvedVersion: '1.0.0', isImplicit: false }],
+            }));
+            expect(view.webview.postMessage).toHaveBeenCalledWith(expect.objectContaining({
+                type: 'allProjectsInstalledComplete',
+                context: 'multiInstall',
+                projectPaths: ['/projA.csproj'],
+            }));
         });
 
-        it('skips projects that throw errors', async () => {
+        it('emits Complete with empty paths when no projects are found', async () => {
             view = resolveView(provider);
             view.webview.postMessage.mockClear();
             hoisted.mockQueryAllProjectsInstalled.mockResolvedValueOnce([]);
             await messageListener!({ type: 'checkAllProjectsInstalled' });
 
-            expect(view.webview.postMessage).toHaveBeenCalledWith({
-                type: 'allProjectsInstalled',
-                projectInstalled: [],
-                context: undefined
-            });
+            expect(view.webview.postMessage).toHaveBeenCalledWith(expect.objectContaining({
+                type: 'allProjectsInstalledComplete',
+                context: undefined,
+                projectPaths: [],
+                errored: [],
+            }));
         });
 
         it('streams Start, ProjectFound, Complete with echoed requestId (Plan 10 Stage B)', async () => {
@@ -1847,15 +1859,16 @@ describe('NuGetSidebarProvider', () => {
             });
         });
 
-        it('checkAllProjectsInstalled sends empty response when findProjects throws', async () => {
-            (service as any).findProjects.mockRejectedValue(new Error('workspace error'));
+        it('checkAllProjectsInstalled sends empty Complete when queryAllProjectsInstalled throws', async () => {
+            hoisted.mockQueryAllProjectsInstalled.mockRejectedValueOnce(new Error('workspace error'));
             await messageListener!({ type: 'checkAllProjectsInstalled', context: 'installed' });
 
-            expect(view.webview.postMessage).toHaveBeenCalledWith({
-                type: 'allProjectsInstalled',
-                projectInstalled: [],
-                context: 'installed'
-            });
+            expect(view.webview.postMessage).toHaveBeenCalledWith(expect.objectContaining({
+                type: 'allProjectsInstalledComplete',
+                context: 'installed',
+                projectPaths: [],
+                errored: [],
+            }));
         });
     });
 

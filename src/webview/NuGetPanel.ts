@@ -907,112 +907,94 @@ export class NuGetPanel {
                 }
             case 'checkAllProjectsInstalled':
                 {
-                    if (data.streamed) {
-                        // Streaming path (Plan 10 Stage A): per-project chunks instead of single blob
-                        const requestId = data.requestId ?? `apinst-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-                        const ctx = data.context;
-                        // Abort any prior in-flight stream for the same context
-                        const inflightKey = `apinst:${ctx ?? ''}`;
-                        this._abortInflight(inflightKey);
-                        const controller = new AbortController();
-                        this._inflightAborts.set(inflightKey, controller);
-                        const signal = controller.signal;
-                        try {
-                            const accumulated: ProjectInstalledResult[] = [];
-                            const erroredChunks: { projectPath: string; error: string }[] = [];
-                            const seenPaths: string[] = [];
-                            await queryAllProjectsInstalled(this._nugetService, true /* liteMode */, {
-                                onStart: (projects) => {
-                                    if (signal.aborted || this._disposed) { return; }
-                                    this._postMessage({
-                                        type: 'allProjectsInstalledStart',
-                                        context: ctx,
-                                        requestId,
-                                        projects,
-                                    });
-                                },
-                                onProject: (chunk) => {
-                                    if (signal.aborted || this._disposed) { return; }
-                                    seenPaths.push(chunk.projectPath);
-                                    if (chunk.packages) {
-                                        accumulated.push({
-                                            projectPath: chunk.projectPath,
-                                            projectName: chunk.projectName,
-                                            packages: chunk.packages,
-                                        });
-                                    } else if (chunk.error) {
-                                        erroredChunks.push({ projectPath: chunk.projectPath, error: chunk.error });
-                                    }
-                                    this._postMessage({
-                                        type: 'allProjectsInstalledProjectFound',
-                                        context: ctx,
-                                        requestId,
-                                        projectPath: chunk.projectPath,
-                                        projectName: chunk.projectName,
-                                        workspaceFolder: chunk.workspaceFolder,
-                                        installed: chunk.packages,
-                                        error: chunk.error,
-                                    });
-                                },
-                                signal,
-                            });
-                            if (signal.aborted || this._disposed) { break; }
-                            this._postMessage({
-                                type: 'allProjectsInstalledComplete',
-                                context: ctx,
-                                requestId,
-                                projectPaths: seenPaths,
-                                errored: erroredChunks,
-                            });
-                            // Phase 2: enrich metadata, then emit per-project metadata chunks
-                            const allPackages = accumulated.flatMap(pi => pi.packages);
-                            if (allPackages.length > 0) {
-                                this._nugetService.enrichInstalledPackageMetadata(allPackages).then(() => {
-                                    if (signal.aborted || this._disposed) { return; }
-                                    for (const proj of accumulated) {
-                                        if (signal.aborted || this._disposed) { return; }
-                                        this._postMessage({
-                                            type: 'allProjectsInstalledProjectMetadata',
-                                            context: ctx,
-                                            requestId,
-                                            projectPath: proj.projectPath,
-                                            installed: proj.packages,
-                                        });
-                                    }
-                                }).catch(() => { /* non-critical */ });
-                            }
-                        } catch (error) {
-                            console.error('[nUIget] checkAllProjectsInstalled (streamed) error:', error);
-                            if (!signal.aborted && !this._disposed) {
+                    // Plan 10 Stage C3: streaming is the only mode; legacy blob path removed.
+                    const requestId = data.requestId ?? `apinst-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+                    const ctx = data.context;
+                    // Abort any prior in-flight stream for the same context
+                    const inflightKey = `apinst:${ctx ?? ''}`;
+                    this._abortInflight(inflightKey);
+                    const controller = new AbortController();
+                    this._inflightAborts.set(inflightKey, controller);
+                    const signal = controller.signal;
+                    try {
+                        const accumulated: ProjectInstalledResult[] = [];
+                        const erroredChunks: { projectPath: string; error: string }[] = [];
+                        const seenPaths: string[] = [];
+                        await queryAllProjectsInstalled(this._nugetService, true /* liteMode */, {
+                            onStart: (projects) => {
+                                if (signal.aborted || this._disposed) { return; }
                                 this._postMessage({
-                                    type: 'allProjectsInstalledComplete',
+                                    type: 'allProjectsInstalledStart',
                                     context: ctx,
                                     requestId,
-                                    projectPaths: [],
-                                    errored: [],
+                                    projects,
                                 });
-                            }
-                        } finally {
-                            if (this._inflightAborts.get(inflightKey) === controller) {
-                                this._inflightAborts.delete(inflightKey);
-                            }
-                        }
-                        break;
-                    }
-                    try {
-                        // Phase 1: send lite data immediately (fast .csproj parsing only)
-                        const projectInstalled = await queryAllProjectsInstalled(this._nugetService, true /* liteMode */);
-                        this._postMessage({ type: 'allProjectsInstalled', context: data.context, projectInstalled });
-                        // Phase 2: enrich metadata in background, send follow-up with icons/authors
-                        const allPackages = projectInstalled.flatMap(pi => pi.packages);
+                            },
+                            onProject: (chunk) => {
+                                if (signal.aborted || this._disposed) { return; }
+                                seenPaths.push(chunk.projectPath);
+                                if (chunk.packages) {
+                                    accumulated.push({
+                                        projectPath: chunk.projectPath,
+                                        projectName: chunk.projectName,
+                                        packages: chunk.packages,
+                                    });
+                                } else if (chunk.error) {
+                                    erroredChunks.push({ projectPath: chunk.projectPath, error: chunk.error });
+                                }
+                                this._postMessage({
+                                    type: 'allProjectsInstalledProjectFound',
+                                    context: ctx,
+                                    requestId,
+                                    projectPath: chunk.projectPath,
+                                    projectName: chunk.projectName,
+                                    workspaceFolder: chunk.workspaceFolder,
+                                    installed: chunk.packages,
+                                    error: chunk.error,
+                                });
+                            },
+                            signal,
+                        });
+                        if (signal.aborted || this._disposed) { break; }
+                        this._postMessage({
+                            type: 'allProjectsInstalledComplete',
+                            context: ctx,
+                            requestId,
+                            projectPaths: seenPaths,
+                            errored: erroredChunks,
+                        });
+                        // Phase 2: enrich metadata, then emit per-project metadata chunks
+                        const allPackages = accumulated.flatMap(pi => pi.packages);
                         if (allPackages.length > 0) {
                             this._nugetService.enrichInstalledPackageMetadata(allPackages).then(() => {
-                                this._postMessage({ type: 'allProjectsInstalledMetadata', context: data.context, projectInstalled });
+                                if (signal.aborted || this._disposed) { return; }
+                                for (const proj of accumulated) {
+                                    if (signal.aborted || this._disposed) { return; }
+                                    this._postMessage({
+                                        type: 'allProjectsInstalledProjectMetadata',
+                                        context: ctx,
+                                        requestId,
+                                        projectPath: proj.projectPath,
+                                        installed: proj.packages,
+                                    });
+                                }
                             }).catch(() => { /* non-critical */ });
                         }
                     } catch (error) {
                         console.error('[nUIget] checkAllProjectsInstalled error:', error);
-                        this._postMessage({ type: 'allProjectsInstalled', context: data.context, projectInstalled: [] });
+                        if (!signal.aborted && !this._disposed) {
+                            this._postMessage({
+                                type: 'allProjectsInstalledComplete',
+                                context: ctx,
+                                requestId,
+                                projectPaths: [],
+                                errored: [],
+                            });
+                        }
+                    } finally {
+                        if (this._inflightAborts.get(inflightKey) === controller) {
+                            this._inflightAborts.delete(inflightKey);
+                        }
                     }
                     break;
                 }
