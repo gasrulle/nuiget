@@ -32,6 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Bulk update in all-projects mode now refreshes installed rows**
 - **Failed `dotnet --version` probes no longer survive across sessions**
 - **SDK-cache persistence writes are now serialized**
+- **Second package operation silently dropped while first was running**
 
 ## [1.18.4] - 2026-04-16
 

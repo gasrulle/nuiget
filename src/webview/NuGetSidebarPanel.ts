@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { executeBulkInstall, executeBulkUpdateAllProjects, executeBulkUpdatePackages, executeSingleOperation, OperationContext, queryAllProjectsInstalled, queryAllProjectsUpdates } from '../services/NuGetOperations';
 import { isPerfEnabled, startTimer } from '../services/NuGetPerf';
 import { NuGetService } from '../services/NuGetService';
+import { operationQueue } from '../services/OperationQueue';
 import type { PickProjectForInstallMsg, PickProjectForRemoveMsg, ShowContextMenuMsg, SidebarRequestMessage } from '../services/NuGetTypes';
 import { ALL_PROJECTS_SENTINEL } from '../services/NuGetTypes';
 import { NuGetPanel } from './NuGetPanel';
@@ -41,7 +42,6 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
     private _pendingProjectUpdates: { projectPath: string; projectName: string; updates: { id: string; installedVersion: string; latestVersion: string }[] }[] = [];
     private _pendingInstalledCount = -1;
     private _pendingInstalledProject = '';
-    private _operationInProgress = false;
     private _disposables: vscode.Disposable[] = [];
     /** Plan 10 Stage B: AbortControllers for in-flight streaming queries (keyed by stream kind). */
     private _inflightAborts: Map<string, AbortController> = new Map();
@@ -131,9 +131,9 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
         const triggerDebounced = () => {
             if (this._fileWatcherDebounce) { clearTimeout(this._fileWatcherDebounce); }
             this._fileWatcherDebounce = setTimeout(() => {
-                // Skip if an operation is in progress — the operation handler
+                // Skip if any package operation is queued or running — the operation handler
                 // manages its own post-op refresh cycle.
-                if (this._operationInProgress) { return; }
+                if (operationQueue.isBusy) { return; }
                 // Tell webview to re-fetch installed packages (csproj content changed)
                 if (!this._disposed && this._view) {
                     this._postMessage({ type: 'forceRefresh' });
@@ -764,88 +764,80 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
                 }
             case 'installPackage':
                 {
-                    if (this._operationInProgress) { break; }
                     if (data.projectPath === ALL_PROJECTS_SENTINEL) { break; }
-                    this._operationInProgress = true;
-                    let installSuccess = false;
-                    try {
-                        installSuccess = await executeSingleOperation(this._opCtx(), 'install', data.projectPath, data.packageId, data.version, data.sourceUrl);
-                    } finally {
-                        this._operationInProgress = false;
-                        this._cancelFileWatcherDebounce();
-                        if (installSuccess) { this.checkUpdatesInBackground(true, true, { packageIds: [data.packageId], projectPath: data.projectPath }); }
-                    }
+                    operationQueue.enqueue(`install ${data.packageId}`, async () => {
+                        let installSuccess = false;
+                        try {
+                            installSuccess = await executeSingleOperation(this._opCtx(), 'install', data.projectPath, data.packageId, data.version, data.sourceUrl);
+                        } finally {
+                            this._cancelFileWatcherDebounce();
+                            if (installSuccess) { this.checkUpdatesInBackground(true, true, { packageIds: [data.packageId], projectPath: data.projectPath }); }
+                        }
+                    }, () => this._disposed);
                     break;
                 }
             case 'pickProjectForInstall':
                 {
-                    if (this._operationInProgress) { break; }
                     await this._pickProjectAndInstall(data);
                     break;
                 }
             case 'pickProjectForRemove':
                 {
-                    if (this._operationInProgress) { break; }
                     await this._pickProjectAndRemove(data);
                     break;
                 }
             case 'updatePackage':
                 {
-                    if (this._operationInProgress) { break; }
                     if (data.projectPath === ALL_PROJECTS_SENTINEL) { break; }
-                    this._operationInProgress = true;
-                    let updateSuccess = false;
-                    try {
-                        updateSuccess = await executeSingleOperation(this._opCtx(), 'update', data.projectPath, data.packageId, data.version, data.sourceUrl);
-                    } finally {
-                        this._operationInProgress = false;
-                        this._cancelFileWatcherDebounce();
-                        if (updateSuccess) { this.checkUpdatesInBackground(true, true, { packageIds: [data.packageId], projectPath: data.projectPath }); }
-                    }
+                    operationQueue.enqueue(`update ${data.packageId}`, async () => {
+                        let updateSuccess = false;
+                        try {
+                            updateSuccess = await executeSingleOperation(this._opCtx(), 'update', data.projectPath, data.packageId, data.version, data.sourceUrl);
+                        } finally {
+                            this._cancelFileWatcherDebounce();
+                            if (updateSuccess) { this.checkUpdatesInBackground(true, true, { packageIds: [data.packageId], projectPath: data.projectPath }); }
+                        }
+                    }, () => this._disposed);
                     break;
                 }
             case 'removePackage':
                 {
-                    if (this._operationInProgress) { break; }
                     if (data.projectPath === ALL_PROJECTS_SENTINEL) { break; }
-                    this._operationInProgress = true;
-                    let removeSuccess = false;
-                    try {
-                        removeSuccess = await executeSingleOperation(this._opCtx(), 'remove', data.projectPath, data.packageId);
-                    } finally {
-                        this._operationInProgress = false;
-                        this._cancelFileWatcherDebounce();
-                        if (removeSuccess) { this.checkUpdatesInBackground(true, true, { packageIds: [data.packageId], projectPath: data.projectPath }); }
-                    }
+                    operationQueue.enqueue(`remove ${data.packageId}`, async () => {
+                        let removeSuccess = false;
+                        try {
+                            removeSuccess = await executeSingleOperation(this._opCtx(), 'remove', data.projectPath, data.packageId);
+                        } finally {
+                            this._cancelFileWatcherDebounce();
+                            if (removeSuccess) { this.checkUpdatesInBackground(true, true, { packageIds: [data.packageId], projectPath: data.projectPath }); }
+                        }
+                    }, () => this._disposed);
                     break;
                 }
             case 'bulkUpdatePackages':
                 {
-                    if (this._operationInProgress) { break; }
                     if (data.projectPath === ALL_PROJECTS_SENTINEL) { break; }
-                    this._operationInProgress = true;
-                    try {
-                        await executeBulkUpdatePackages(this._opCtx(), data.packages, data.projectPath);
-                    } finally {
-                        this._operationInProgress = false;
-                        this._cancelFileWatcherDebounce();
-                        this.checkUpdatesInBackground(true, true, { packageIds: data.packages.map((p: { id: string }) => p.id), projectPath: data.projectPath });
-                    }
+                    operationQueue.enqueue(`bulk update (${data.packages?.length ?? 0})`, async () => {
+                        try {
+                            await executeBulkUpdatePackages(this._opCtx(), data.packages, data.projectPath);
+                        } finally {
+                            this._cancelFileWatcherDebounce();
+                            this.checkUpdatesInBackground(true, true, { packageIds: data.packages.map((p: { id: string }) => p.id), projectPath: data.projectPath });
+                        }
+                    }, () => this._disposed);
                     break;
                 }
             case 'bulkUpdateAllProjects':
                 {
-                    if (this._operationInProgress) { break; }
-                    this._operationInProgress = true;
-                    try {
-                        await executeBulkUpdateAllProjects(this._opCtx(), data.projectUpdates);
-                    } finally {
-                        this._operationInProgress = false;
-                        this._cancelFileWatcherDebounce();
-                        // Bulk all-projects: collect all affected packageIds, no single project scope
-                        const allPkgIds = (data.projectUpdates as { packages: { id: string }[] }[]).flatMap((pu: { packages: { id: string }[] }) => pu.packages.map((p: { id: string }) => p.id));
-                        this.checkUpdatesInBackground(true, true, { packageIds: allPkgIds });
-                    }
+                    operationQueue.enqueue('bulk update all projects', async () => {
+                        try {
+                            await executeBulkUpdateAllProjects(this._opCtx(), data.projectUpdates);
+                        } finally {
+                            this._cancelFileWatcherDebounce();
+                            const allPkgIds = (data.projectUpdates as { packages: { id: string }[] }[]).flatMap((pu: { packages: { id: string }[] }) => pu.packages.map((p: { id: string }) => p.id));
+                            this.checkUpdatesInBackground(true, true, { packageIds: allPkgIds });
+                        }
+                    }, () => this._disposed);
                     break;
                 }
             case 'getPackageVersions':
@@ -933,30 +925,27 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
         const selectedPaths = await this._pickProjectsForInstall(data.packageId, data.installedProjects);
         if (!selectedPaths) { return; }
 
-        // Re-check after async picker — another operation may have started while picker was open
-        if (this._operationInProgress) { return; }
-
         if (selectedPaths.length === 1) {
             // Single project — use existing single operation path
-            this._operationInProgress = true;
-            let pickInstallSuccess = false;
-            try {
-                pickInstallSuccess = await executeSingleOperation(this._opCtx(), 'install', selectedPaths[0], data.packageId, data.version);
-            } finally {
-                this._operationInProgress = false;
-                this._cancelFileWatcherDebounce();
-                if (pickInstallSuccess) { this.checkUpdatesInBackground(true, true, { packageIds: [data.packageId], projectPath: selectedPaths[0] }); }
-            }
+            operationQueue.enqueue(`install ${data.packageId}`, async () => {
+                let pickInstallSuccess = false;
+                try {
+                    pickInstallSuccess = await executeSingleOperation(this._opCtx(), 'install', selectedPaths[0], data.packageId, data.version);
+                } finally {
+                    this._cancelFileWatcherDebounce();
+                    if (pickInstallSuccess) { this.checkUpdatesInBackground(true, true, { packageIds: [data.packageId], projectPath: selectedPaths[0] }); }
+                }
+            }, () => this._disposed);
         } else {
             // Multiple projects — use shared bulk install
-            this._operationInProgress = true;
-            try {
-                await executeBulkInstall(this._opCtx(), selectedPaths, data.packageId, data.version);
-            } finally {
-                this._operationInProgress = false;
-                this._cancelFileWatcherDebounce();
-                this.checkUpdatesInBackground(true, true, { packageIds: [data.packageId] });
-            }
+            operationQueue.enqueue(`bulk install ${data.packageId}`, async () => {
+                try {
+                    await executeBulkInstall(this._opCtx(), selectedPaths, data.packageId, data.version);
+                } finally {
+                    this._cancelFileWatcherDebounce();
+                    this.checkUpdatesInBackground(true, true, { packageIds: [data.packageId] });
+                }
+            }, () => this._disposed);
         }
     }
 
@@ -971,15 +960,15 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
 
         // Single project — remove directly without picker
         if (matching.length === 1) {
-            this._operationInProgress = true;
-            let singleRemoveSuccess = false;
-            try {
-                singleRemoveSuccess = await executeSingleOperation(this._opCtx(), 'remove', matching[0].path, data.packageId);
-            } finally {
-                this._operationInProgress = false;
-                this._cancelFileWatcherDebounce();
-                if (singleRemoveSuccess) { this.checkUpdatesInBackground(true, true, { packageIds: [data.packageId], projectPath: matching[0].path }); }
-            }
+            operationQueue.enqueue(`remove ${data.packageId}`, async () => {
+                let singleRemoveSuccess = false;
+                try {
+                    singleRemoveSuccess = await executeSingleOperation(this._opCtx(), 'remove', matching[0].path, data.packageId);
+                } finally {
+                    this._cancelFileWatcherDebounce();
+                    if (singleRemoveSuccess) { this.checkUpdatesInBackground(true, true, { packageIds: [data.packageId], projectPath: matching[0].path }); }
+                }
+            }, () => this._disposed);
             return;
         }
 
@@ -997,15 +986,15 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
             : undefined;
         if (!project) { return; }
 
-        this._operationInProgress = true;
-        let pickRemoveSuccess = false;
-        try {
-            pickRemoveSuccess = await executeSingleOperation(this._opCtx(), 'remove', project.path, data.packageId);
-        } finally {
-            this._operationInProgress = false;
-            this._cancelFileWatcherDebounce();
-            if (pickRemoveSuccess) { this.checkUpdatesInBackground(true, true, { packageIds: [data.packageId], projectPath: project.path }); }
-        }
+        operationQueue.enqueue(`remove ${data.packageId}`, async () => {
+            let pickRemoveSuccess = false;
+            try {
+                pickRemoveSuccess = await executeSingleOperation(this._opCtx(), 'remove', project.path, data.packageId);
+            } finally {
+                this._cancelFileWatcherDebounce();
+                if (pickRemoveSuccess) { this.checkUpdatesInBackground(true, true, { packageIds: [data.packageId], projectPath: project.path }); }
+            }
+        }, () => this._disposed);
     }
 
     // ------ Context menu ------
@@ -1106,26 +1095,20 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
                 const version = selectedVersion || latestVersion || '';
 
                 if (selectedPaths.length === 1) {
-                    // Single project — route through webview `doInstall` handler (which sets its own
-                    // _operationInProgress guard). This asymmetry with `_pickProjectAndInstall` (which
-                    // calls executeSingleOperation directly) is intentional: the webview handler provides
-                    // richer single-project UX (progress indicator, success notification).
-                    // Recheck _operationInProgress here to reduce the race window — another op may have
-                    // started while the picker/version picker was open, in which case the backend would
-                    // silently drop the resulting installPackage message.
-                    if (this._operationInProgress) { return; }
+                    // Single project — route through webview `doInstall` handler so the panel runs it
+                    // (richer single-project UX with progress indicator + success notification).
+                    // The OperationQueue handles serialization regardless of which side enqueues.
                     this._postMessage({ type: 'doInstall', packageId, version, projectPath: selectedPaths[0] });
                 } else {
-                    // Multiple projects — call executeBulkInstall directly
-                    if (this._operationInProgress) { return; }
-                    this._operationInProgress = true;
-                    try {
-                        await executeBulkInstall(this._opCtx(), selectedPaths, packageId, version || undefined);
-                    } finally {
-                        this._operationInProgress = false;
-                        this._cancelFileWatcherDebounce();
-                        this.checkUpdatesInBackground(true, true, { packageIds: [packageId] });
-                    }
+                    // Multiple projects — call executeBulkInstall directly via the queue
+                    operationQueue.enqueue(`bulk install ${packageId}`, async () => {
+                        try {
+                            await executeBulkInstall(this._opCtx(), selectedPaths, packageId, version || undefined);
+                        } finally {
+                            this._cancelFileWatcherDebounce();
+                            this.checkUpdatesInBackground(true, true, { packageIds: [packageId] });
+                        }
+                    }, () => this._disposed);
                 }
                 return;
             }

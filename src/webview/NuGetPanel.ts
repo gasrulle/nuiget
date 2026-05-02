@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { executeBulkInstall, executeBulkRemoveAllProjects, executeBulkRemovePackages, executeBulkUpdateAllProjects, executeBulkUpdatePackages, executeSingleOperation, OperationContext, ProjectInstalledResult, queryAllProjectsInstalled, queryAllProjectsUpdates, resolveAllProjectsIcons } from '../services/NuGetOperations';
 import { isPerfEnabled, startTimer } from '../services/NuGetPerf';
 import { NuGetService } from '../services/NuGetService';
+import { operationQueue } from '../services/OperationQueue';
 import type { PanelRequestMessage } from '../services/NuGetTypes';
 import { ALL_PROJECTS_SENTINEL } from '../services/NuGetTypes';
 
@@ -57,8 +58,6 @@ export class NuGetPanel {
     private _latestAutocompleteQuery: string = '';
     // Track the latest search query to skip stale requests
     private _latestSearchQuery: string = '';
-    // Prevent concurrent mutating operations (install/update/remove)
-    private _operationInProgress = false;
     /** AbortControllers keyed by `${kind}:${context}` for in-flight streaming queries (Plan 10). */
     private _inflightAborts: Map<string, AbortController> = new Map();
     // Perf instrumentation (Plan 01)
@@ -466,46 +465,44 @@ export class NuGetPanel {
                 }
             case 'installPackage':
                 {
-                    if (this._operationInProgress) { break; }
                     if (data.projectPath === ALL_PROJECTS_SENTINEL) { break; }
-                    this._operationInProgress = true;
-                    const t = startTimer('installPackage', data.projectPath);
-                    try {
-                        await executeSingleOperation(this._opCtx(), 'install', data.projectPath, data.packageId, data.version, data.sourceUrl);
-                    } finally { this._operationInProgress = false; t.end({ pkg: data.packageId }); }
+                    operationQueue.enqueue(`install ${data.packageId}`, async () => {
+                        const t = startTimer('installPackage', data.projectPath);
+                        try {
+                            await executeSingleOperation(this._opCtx(), 'install', data.projectPath, data.packageId, data.version, data.sourceUrl);
+                        } finally { t.end({ pkg: data.packageId }); }
+                    }, () => this._disposed);
                     break;
                 }
             case 'bulkInstall':
                 {
-                    if (this._operationInProgress) { break; }
                     const paths = (data.projectPaths as string[])?.filter(p => p !== ALL_PROJECTS_SENTINEL);
                     if (!paths?.length) { break; }
-                    this._operationInProgress = true;
-                    try {
+                    operationQueue.enqueue(`bulk install ${data.packageId}`, async () => {
                         await executeBulkInstall(this._opCtx(), paths, data.packageId, data.version);
-                    } finally { this._operationInProgress = false; }
+                    }, () => this._disposed);
                     break;
                 }
             case 'updatePackage':
                 {
-                    if (this._operationInProgress) { break; }
                     if (data.projectPath === ALL_PROJECTS_SENTINEL) { break; }
-                    this._operationInProgress = true;
-                    const t = startTimer('updatePackage', data.projectPath);
-                    try {
-                        await executeSingleOperation(this._opCtx(), 'update', data.projectPath, data.packageId, data.version, data.sourceUrl);
-                    } finally { this._operationInProgress = false; t.end({ pkg: data.packageId }); }
+                    operationQueue.enqueue(`update ${data.packageId}`, async () => {
+                        const t = startTimer('updatePackage', data.projectPath);
+                        try {
+                            await executeSingleOperation(this._opCtx(), 'update', data.projectPath, data.packageId, data.version, data.sourceUrl);
+                        } finally { t.end({ pkg: data.packageId }); }
+                    }, () => this._disposed);
                     break;
                 }
             case 'removePackage':
                 {
-                    if (this._operationInProgress) { break; }
                     if (data.projectPath === ALL_PROJECTS_SENTINEL) { break; }
-                    this._operationInProgress = true;
-                    const t = startTimer('removePackage', data.projectPath);
-                    try {
-                        await executeSingleOperation(this._opCtx(), 'remove', data.projectPath, data.packageId);
-                    } finally { this._operationInProgress = false; t.end({ pkg: data.packageId }); }
+                    operationQueue.enqueue(`remove ${data.packageId}`, async () => {
+                        const t = startTimer('removePackage', data.projectPath);
+                        try {
+                            await executeSingleOperation(this._opCtx(), 'remove', data.projectPath, data.packageId);
+                        } finally { t.end({ pkg: data.packageId }); }
+                    }, () => this._disposed);
                     break;
                 }
             case 'getSources':
@@ -1000,11 +997,9 @@ export class NuGetPanel {
                 }
             case 'bulkUpdateAllProjects':
                 {
-                    if (this._operationInProgress) { break; }
-                    this._operationInProgress = true;
-                    try {
+                    operationQueue.enqueue('bulk update all projects', async () => {
                         await executeBulkUpdateAllProjects(this._opCtx(), data.projectUpdates);
-                    } finally { this._operationInProgress = false; }
+                    }, () => this._disposed);
                     break;
                 }
             case 'getSettings':
@@ -1102,31 +1097,25 @@ export class NuGetPanel {
                 }
             case 'bulkUpdatePackages':
                 {
-                    if (this._operationInProgress) { break; }
                     if (data.projectPath === ALL_PROJECTS_SENTINEL) { break; }
-                    this._operationInProgress = true;
-                    try {
+                    operationQueue.enqueue(`bulk update (${data.packages?.length ?? 0})`, async () => {
                         await executeBulkUpdatePackages(this._opCtx(), data.packages, data.projectPath);
-                    } finally { this._operationInProgress = false; }
+                    }, () => this._disposed);
                     break;
                 }
             case 'confirmBulkRemove':
                 {
-                    if (this._operationInProgress) { break; }
                     if (data.projectPath === ALL_PROJECTS_SENTINEL) { break; }
-                    this._operationInProgress = true;
-                    try {
+                    operationQueue.enqueue(`bulk remove (${data.packages?.length ?? 0})`, async () => {
                         await executeBulkRemovePackages(this._opCtx(), data.packages, data.projectPath);
-                    } finally { this._operationInProgress = false; }
+                    }, () => this._disposed);
                     break;
                 }
             case 'confirmBulkRemoveAllProjects':
                 {
-                    if (this._operationInProgress) { break; }
-                    this._operationInProgress = true;
-                    try {
+                    operationQueue.enqueue('bulk remove all projects', async () => {
                         await executeBulkRemoveAllProjects(this._opCtx(), data.projectRemovals);
-                    } finally { this._operationInProgress = false; }
+                    }, () => this._disposed);
                     break;
                 }
             default:

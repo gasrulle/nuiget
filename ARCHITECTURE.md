@@ -323,24 +323,33 @@ public dispose(): void {
 
 **Critical:** The `_postMessage()` helper must call `this._panel.webview.postMessage()`, not itself, to avoid infinite recursion.
 
-### Concurrent Operation Guard
+### Concurrent Operation Queue
 
-Both `NuGetPanel` and `NuGetSidebarProvider` use an `_operationInProgress` boolean to prevent concurrent mutating operations (e.g., double-clicking install or clicking update while an install is running). In `NuGetPanel`, eight message cases are guarded: `installPackage`, `updatePackage`, `removePackage`, `bulkInstall`, `bulkUpdateAllProjects`, `bulkUpdatePackages`, `confirmBulkRemove`, `confirmBulkRemoveAllProjects`. In `NuGetSidebarProvider`, five message cases are guarded: `installPackage`, `updatePackage`, `removePackage`, `bulkUpdatePackages`, `bulkUpdateAllProjects`. Each uses:
+Mutating package operations (install/update/remove and their bulk variants) are serialized through a process-wide singleton `OperationQueue` in `src/services/OperationQueue.ts`. Both `NuGetPanel` and `NuGetSidebarProvider` enqueue operations to the same queue, which fixes a latent cross-panel race where the panel and sidebar could simultaneously mutate the same `.csproj`.
 
 ```typescript
 case 'installPackage': {
-    if (this._operationInProgress) { break; }
-    this._operationInProgress = true;
-    try {
-        // ... perform operation ...
-    } finally {
-        this._operationInProgress = false;
-    }
+    operationQueue.enqueue(`Install ${pkg.id}`, async () => {
+        try {
+            // ... perform operation ...
+        } finally {
+            // post-op cleanup (notifySidebar, refresh, etc.)
+        }
+    }, () => this._disposed);
     break;
 }
 ```
 
-This is safe because JavaScript is single-threaded — the guard only needs to prevent re-entrant `_handleMessage` calls from queued webview messages.
+Key properties:
+
+- **FIFO promise chain** — each `enqueue` chains onto the previous task's promise. Tasks run in registration order across both panels.
+- **Status bar feedback** — a status bar item (`$(sync~spin) nUIget: N running, M queued`) appears whenever the queue is non-empty so queueing is never silent.
+- **Capped backlog** — `MAX_WAITING = 5`. Beyond that, the call is rejected with a warning toast (returns `false`) instead of growing the queue unbounded.
+- **Disposal-safe** — `enqueue` accepts an `abortIf` predicate (e.g. `() => this._disposed`) checked inside the run wrapper's try/finally so the active counter always decrements.
+- **Error containment** — unexpected throws are caught, logged via `console.error`, and surfaced via `vscode.window.showErrorMessage`.
+- **File watcher integration** — the sidebar's debounced `.csproj` watcher checks `operationQueue.isBusy` (not a per-instance flag), so it correctly defers refresh while operations triggered from any panel are in flight.
+
+`OperationQueue` exposes `isBusy`, `pendingCount`, `activeCount`, `waitIdle()` (snapshot-and-await pattern that handles re-enqueues during await), and `resetForTests()`.
 
 ### Key Message Types
 
