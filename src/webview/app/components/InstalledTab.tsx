@@ -336,6 +336,7 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
     // ─── All-projects installed flattening ────────────────────────────────
 
     type FlattenedInstalledItem =
+        | { type: 'folderHeader'; folder: string }
         | { type: 'header'; projectPath: string; projectName: string; packageCount: number }
         | ({ type: 'package'; projectPath: string } & InstalledPackage);
 
@@ -348,7 +349,12 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
             if (b.projectPath === selectedProject) { return 1; }
             return a.projectName.localeCompare(b.projectName);
         });
-        for (const project of sortedProjects) {
+        // Multi-root grouping: when projects span 2+ workspace folders, inject folder headers.
+        const distinctFolders = new Set(
+            sortedProjects.map(p => p.workspaceFolder).filter((f): f is string => !!f)
+        );
+        const groupByFolder = distinctFolders.size > 1;
+        const renderProject = (project: ProjectInstalled) => {
             let base = project.packages;
             if (externalFilterMode === 'vulnerable') {
                 base = base.filter(p => p.vulnerabilities && p.vulnerabilities.length > 0);
@@ -368,6 +374,33 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
                     items.push({ type: 'package', projectPath: project.projectPath, ...pkg });
                 }
             }
+        };
+        if (groupByFolder) {
+            // Group projects by workspace folder; sort folder names alphabetically,
+            // but project order within each folder preserves the existing ordering
+            // (selected project pinned first, then alphabetical).
+            const byFolder = new Map<string, ProjectInstalled[]>();
+            const unfoldered: ProjectInstalled[] = [];
+            for (const p of sortedProjects) {
+                if (p.workspaceFolder) {
+                    const arr = byFolder.get(p.workspaceFolder);
+                    if (arr) { arr.push(p); }
+                    else { byFolder.set(p.workspaceFolder, [p]); }
+                } else {
+                    unfoldered.push(p);
+                }
+            }
+            const folderNames = [...byFolder.keys()].sort((a, b) => a.localeCompare(b));
+            for (const folder of folderNames) {
+                items.push({ type: 'folderHeader', folder });
+                for (const project of byFolder.get(folder)!) { renderProject(project); }
+            }
+            if (unfoldered.length > 0) {
+                items.push({ type: 'folderHeader', folder: '(other)' });
+                for (const project of unfoldered) { renderProject(project); }
+            }
+        } else {
+            for (const project of sortedProjects) { renderProject(project); }
         }
         return items;
     }, [isAllProjects, allProjectsInstalled, expandedProjects, externalFilter, externalFilterMode, selectedProject]);
@@ -393,8 +426,10 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
         count: installedVirtualizerCount,
         getScrollElement: () => installedScrollRef.current,
         estimateSize: (index) => {
-            if (isAllProjects && deferredFlattenedInstalled[index]?.type === 'header') {
-                return HEADER_HEIGHT;
+            if (isAllProjects) {
+                const t = deferredFlattenedInstalled[index]?.type;
+                if (t === 'header') { return HEADER_HEIGHT; }
+                if (t === 'folderHeader') { return HEADER_HEIGHT; }
             }
             return ESTIMATED_ITEM_HEIGHT;
         },
@@ -1030,6 +1065,26 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
                                                 {installedVirtualizer.getVirtualItems().map(virtualRow => {
                                                     const item = deferredFlattenedInstalled[virtualRow.index];
                                                     if (!item) { return null; }
+
+                                                    if (item.type === 'folderHeader') {
+                                                        return (
+                                                            <div
+                                                                key={`folder-${item.folder}`}
+                                                                data-index={virtualRow.index}
+                                                                ref={installedVirtualizer.measureElement}
+                                                                className="all-projects-folder-header"
+                                                                style={{
+                                                                    position: 'absolute',
+                                                                    top: 0,
+                                                                    left: 0,
+                                                                    width: '100%',
+                                                                    transform: `translateY(${virtualRow.start}px)`,
+                                                                }}
+                                                            >
+                                                                <span className="all-projects-folder-name">{item.folder}</span>
+                                                            </div>
+                                                        );
+                                                    }
 
                                                     if (item.type === 'header') {
                                                         const isExpanded = expandedProjects.has(item.projectPath);

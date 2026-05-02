@@ -29,6 +29,8 @@ export interface VersionSpec {
 export interface Project {
     name: string;
     path: string;
+    /** Workspace folder name this project belongs to (multi-root grouping). */
+    workspaceFolder?: string;
 }
 
 export interface InstalledPackage {

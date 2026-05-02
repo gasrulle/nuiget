@@ -535,6 +535,27 @@ body {
     margin-left: 12px;
 }
 
+/* Multi-root workspace folder header in All-Projects view */
+.all-projects-folder-header {
+    display: flex;
+    align-items: center;
+    padding: 6px 16px;
+    background: var(--vscode-sideBarSectionHeader-background, var(--vscode-editor-background));
+    border-bottom: 1px solid var(--vscode-panel-border);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    box-sizing: border-box;
+}
+
+.all-projects-folder-header .all-projects-folder-name {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--vscode-descriptionForeground);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
 .package-authors {
     font-size: 11px;
     color: var(--vscode-descriptionForeground);

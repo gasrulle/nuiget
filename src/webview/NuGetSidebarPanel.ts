@@ -729,6 +729,7 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
                                         requestId,
                                         projectPath: result.projectPath,
                                         projectName: result.projectName,
+                                        workspaceFolder: result.workspaceFolder,
                                         installed: result.packages,
                                         error: result.error,
                                     });

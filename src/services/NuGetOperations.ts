@@ -537,6 +537,7 @@ export interface ProjectUpdatesResult {
 export interface ProjectInstalledResult {
     projectPath: string;
     projectName: string;
+    workspaceFolder?: string;
     packages: InstalledPackage[];
 }
 
@@ -544,6 +545,8 @@ export interface ProjectInstalledResult {
 export interface ProjectInstalledChunk {
     projectPath: string;
     projectName: string;
+    /** Workspace folder name (for multi-root grouping). */
+    workspaceFolder?: string;
     /** Present when the per-project fetch succeeded (may be empty array). */
     packages?: InstalledPackage[];
     /** Present when the per-project fetch threw. Never both packages and error are set. */
@@ -553,7 +556,7 @@ export interface ProjectInstalledChunk {
 /** Optional streaming options for queryAllProjectsInstalled. */
 export interface QueryAllProjectsInstalledStreamOpts {
     /** Called once with the upfront project list before any per-project work begins. */
-    onStart?: (projects: { projectPath: string; projectName: string }[]) => void;
+    onStart?: (projects: { projectPath: string; projectName: string; workspaceFolder?: string }[]) => void;
     /** Called once per project, in completion order (success or failure). */
     onProject?: (chunk: ProjectInstalledChunk) => void;
     /** Aborts pending emits (in-flight fetches still finish but their chunks are dropped). */
@@ -615,7 +618,7 @@ export async function queryAllProjectsInstalled(
     const results: ProjectInstalledResult[] = [];
 
     if (opts?.onStart && !opts.signal?.aborted) {
-        opts.onStart(projects.map(p => ({ projectPath: p.path, projectName: p.name })));
+        opts.onStart(projects.map(p => ({ projectPath: p.path, projectName: p.name, workspaceFolder: p.workspaceFolder })));
     }
 
     // Parallelize per-project fetching (up to 4 concurrent) for faster loading
@@ -632,6 +635,7 @@ export async function queryAllProjectsInstalled(
             results.push({
                 projectPath: project.path,
                 projectName: project.name,
+                workspaceFolder: project.workspaceFolder,
                 packages: installedPackages,
             });
         }
@@ -639,6 +643,7 @@ export async function queryAllProjectsInstalled(
             opts.onProject({
                 projectPath: project.path,
                 projectName: project.name,
+                workspaceFolder: project.workspaceFolder,
                 packages: installedPackages,
                 error: errorMessage,
             });

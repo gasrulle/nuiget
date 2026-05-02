@@ -213,7 +213,8 @@ export class NuGetProjectService {
             for (const file of files) {
                 projects.push({
                     name: path.basename(file.fsPath),
-                    path: file.fsPath
+                    path: file.fsPath,
+                    workspaceFolder: folder.name,
                 });
             }
         }

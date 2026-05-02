@@ -264,9 +264,10 @@ export const SidebarApp: React.FC = () => {
                 break;
             case 'allProjectsInstalledStart':
                 if (message.requestId !== sidebarStreamRequestIdRef.current) { break; }
-                setAllProjectsInstalled((message.projects || []).map((p: { projectPath: string; projectName: string }): ProjectInstalled => ({
+                setAllProjectsInstalled((message.projects || []).map((p: { projectPath: string; projectName: string; workspaceFolder?: string }): ProjectInstalled => ({
                     projectPath: p.projectPath,
                     projectName: p.projectName,
+                    workspaceFolder: p.workspaceFolder,
                     packages: [],
                 })));
                 setLoadingAllInstalled(true);
@@ -275,12 +276,19 @@ export const SidebarApp: React.FC = () => {
                 if (message.requestId !== sidebarStreamRequestIdRef.current) { break; }
                 setAllProjectsInstalled(prev => {
                     const idx = prev.findIndex(p => p.projectPath === message.projectPath);
+                    const existing = idx === -1 ? undefined : prev[idx];
                     const next: ProjectInstalled[] = idx >= 0
                         ? [...prev]
-                        : [...prev, { projectPath: message.projectPath, projectName: message.projectName ?? message.projectPath, packages: [] }];
+                        : [...prev, {
+                            projectPath: message.projectPath,
+                            projectName: message.projectName ?? message.projectPath,
+                            workspaceFolder: message.workspaceFolder,
+                            packages: [],
+                        }];
                     const targetIdx = idx >= 0 ? idx : next.length - 1;
                     next[targetIdx] = {
                         ...next[targetIdx],
+                        workspaceFolder: (message.workspaceFolder as string | undefined) ?? existing?.workspaceFolder ?? next[targetIdx].workspaceFolder,
                         packages: (message.installed as InstalledPackage[] | undefined) ?? next[targetIdx].packages,
                     };
                     return next;
@@ -1333,13 +1341,18 @@ export const SidebarApp: React.FC = () => {
                     {loadingAllInstalled && allProjectsInstalled.length === 0 && (
                         <div className="sidebar-empty">Loading all projects...</div>
                     )}
-                    {[...allProjectsInstalled]
-                        .sort((a, b) => {
+                    {(() => {
+                        const sortedProjects = [...allProjectsInstalled].sort((a, b) => {
                             if (a.projectPath === selectedProject) { return -1; }
                             if (b.projectPath === selectedProject) { return 1; }
                             return a.projectName.localeCompare(b.projectName);
-                        })
-                        .map((pi) => {
+                        });
+                        const distinctFolders = new Set(
+                            sortedProjects.map(p => p.workspaceFolder).filter((f): f is string => !!f)
+                        );
+                        const groupByFolder = distinctFolders.size > 1;
+
+                        const renderProject = (pi: ProjectInstalled) => {
                             const q = filterText.toLowerCase();
                             const filtered = q
                                 ? pi.packages.filter(p => p.id.toLowerCase().includes(q))
@@ -1390,7 +1403,41 @@ export const SidebarApp: React.FC = () => {
                                     ))}
                                 </div>
                             );
-                        })}
+                        };
+
+                        if (!groupByFolder) {
+                            return sortedProjects.map(renderProject);
+                        }
+
+                        const byFolder = new Map<string, ProjectInstalled[]>();
+                        const unfoldered: ProjectInstalled[] = [];
+                        for (const p of sortedProjects) {
+                            if (p.workspaceFolder) {
+                                const arr = byFolder.get(p.workspaceFolder);
+                                if (arr) { arr.push(p); }
+                                else { byFolder.set(p.workspaceFolder, [p]); }
+                            } else {
+                                unfoldered.push(p);
+                            }
+                        }
+                        const folderNames = [...byFolder.keys()].sort((a, b) => a.localeCompare(b));
+                        const groups: React.ReactNode[] = [];
+                        for (const folder of folderNames) {
+                            groups.push(
+                                <div key={`__folder__${folder}`} className="sidebar-folder-header" title={folder}>
+                                    {folder}
+                                </div>
+                            );
+                            for (const p of byFolder.get(folder)!) { groups.push(renderProject(p)); }
+                        }
+                        if (unfoldered.length > 0) {
+                            groups.push(
+                                <div key="__folder____other__" className="sidebar-folder-header">(other)</div>
+                            );
+                            for (const p of unfoldered) { groups.push(renderProject(p)); }
+                        }
+                        return groups;
+                    })()}
                 </div>
             )}
         </div>

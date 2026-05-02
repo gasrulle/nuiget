@@ -914,10 +914,11 @@ export const App: React.FC = () => {
                     const isMulti = message.context === 'multiInstall';
                     const expectedReq = isMulti ? multiInstallStreamRequestIdRef.current : installedStreamRequestIdRef.current;
                     if (message.requestId !== expectedReq) { break; }
-                    const projects = (message.projects || []) as { projectPath: string; projectName: string }[];
+                    const projects = (message.projects || []) as { projectPath: string; projectName: string; workspaceFolder?: string }[];
                     const provisional: ProjectInstalled[] = projects.map(p => ({
                         projectPath: p.projectPath,
                         projectName: p.projectName,
+                        workspaceFolder: p.workspaceFolder,
                         packages: [],
                     }));
                     if (isMulti) {
@@ -935,10 +936,18 @@ export const App: React.FC = () => {
                     if (message.requestId !== expectedReq) { break; }
                     const projectPath = message.projectPath as string;
                     const projectName = (message.projectName as string | undefined) ?? projectPath;
+                    const workspaceFolder = message.workspaceFolder as string | undefined;
                     const installed = (message.installed as InstalledPackage[] | undefined) ?? [];
                     const upsert = (prev: ProjectInstalled[]) => {
                         const idx = prev.findIndex(p => p.projectPath === projectPath);
-                        const slot: ProjectInstalled = { projectPath, projectName, packages: installed };
+                        // Preserve workspaceFolder set in Start chunk if ProjectFound omits it.
+                        const existing = idx === -1 ? undefined : prev[idx];
+                        const slot: ProjectInstalled = {
+                            projectPath,
+                            projectName,
+                            workspaceFolder: workspaceFolder ?? existing?.workspaceFolder,
+                            packages: installed,
+                        };
                         if (idx === -1) { return [...prev, slot]; }
                         const next = prev.slice();
                         next[idx] = slot;

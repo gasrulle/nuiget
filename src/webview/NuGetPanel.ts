@@ -949,6 +949,7 @@ export class NuGetPanel {
                                         requestId,
                                         projectPath: chunk.projectPath,
                                         projectName: chunk.projectName,
+                                        workspaceFolder: chunk.workspaceFolder,
                                         installed: chunk.packages,
                                         error: chunk.error,
                                     });

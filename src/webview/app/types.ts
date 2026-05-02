@@ -149,6 +149,8 @@ export interface ProjectUpdates {
 export interface ProjectInstalled {
     projectPath: string;
     projectName: string;
+    /** Workspace folder name (multi-root grouping). */
+    workspaceFolder?: string;
     packages: InstalledPackage[];
 }
 
