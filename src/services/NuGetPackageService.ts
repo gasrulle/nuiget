@@ -50,8 +50,8 @@ export interface PackageServiceDeps {
 }
 
 export class NuGetPackageService {
-    // LRU cache for package metadata (key: packageId@version, max 200 entries)
-    private metadataCache: LRUMap<string, PackageMetadata> = new LRUMap(200);
+    // LRU cache for package metadata (key: packageId@version, max 500 entries; cleared by clearInMemoryNuGetCaches() on Refresh)
+    private metadataCache: LRUMap<string, PackageMetadata> = new LRUMap(500);
     // LRU cache for resolved icon URLs (key: packageId@version, max 500 entries)
     private iconUrlCache: LRUMap<string, string> = new LRUMap(500);
     // LRU cache for package versions (key: packageId@source@prerelease@take, max 200 entries)
@@ -62,8 +62,8 @@ export class NuGetPackageService {
     private searchResultsCache: LRUMap<string, PackageSearchResult[]> = new LRUMap(100);
     // LRU cache for quick search grouped results (key: query|sources|prerelease|take, max 100 entries)
     private quickSearchCache: LRUMap<string, { data: QuickSearchSourceResult[]; timestamp: number }> = new LRUMap(100);
-    // Quick search cache TTL: 30 seconds
-    private static readonly QUICK_SEARCH_CACHE_TTL = 30000;
+    // Quick search cache TTL: 5 minutes (cleared by clearCaches() on Refresh; key includes prerelease toggle)
+    private static readonly QUICK_SEARCH_CACHE_TTL = 5 * 60 * 1000;
     // In-memory vulnerability data: Map<lowercasePackageId, Array<{severity, url, versions}>>
     private vulnerabilityData: Map<string, { severity: number; url: string; versions: string }[]> = new Map();
     // Timestamp of last vulnerability data fetch

@@ -14,6 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - **Refresh no longer blocks on disk HTTP cache clear** — Manual refresh now clears in-memory caches (sources, service index, metadata, search, versions, package data) synchronously and runs the on-disk `dotnet nuget locals http-cache --clear` in the background. Concurrent refreshes coalesce so only one disk-clear runs at a time. The Command Palette `nUIget: Clear NuGet HTTP Cache` still awaits completion.
+- **Package metadata cache size increased** — In-memory LRU bumped from 200 → 500 entries. Cleared on Refresh (relies on Plan 05 widening) so users always get fresh data when they ask for it.
+- **Quick-search autocomplete results cached for 5 minutes** — Up from 30 seconds. Newly published packages can take up to 5 min to appear in autocomplete; click Refresh to clear immediately.
 
 ## [1.18.4] - 2026-04-16
 
