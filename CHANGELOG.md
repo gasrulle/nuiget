@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.18.5] - 2026-05-02
+
 ### Added
 
 - **Performance instrumentation** — Optional `[perf]` timing logs in the nUIget output channel, gated by the new `nuiget.enablePerformanceLogging` setting (default: off). When enabled, hot paths (panel open, installed-package load, search, install/update/remove, sidebar resolve) emit total wall time and sub-phase deltas. Multi-root workspaces tag each line with the owning workspace folder name.
