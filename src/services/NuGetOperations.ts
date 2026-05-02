@@ -540,6 +540,26 @@ export interface ProjectInstalledResult {
     packages: InstalledPackage[];
 }
 
+/** Per-project chunk emitted during streaming queryAllProjectsInstalled. */
+export interface ProjectInstalledChunk {
+    projectPath: string;
+    projectName: string;
+    /** Present when the per-project fetch succeeded (may be empty array). */
+    packages?: InstalledPackage[];
+    /** Present when the per-project fetch threw. Never both packages and error are set. */
+    error?: string;
+}
+
+/** Optional streaming options for queryAllProjectsInstalled. */
+export interface QueryAllProjectsInstalledStreamOpts {
+    /** Called once with the upfront project list before any per-project work begins. */
+    onStart?: (projects: { projectPath: string; projectName: string }[]) => void;
+    /** Called once per project, in completion order (success or failure). */
+    onProject?: (chunk: ProjectInstalledChunk) => void;
+    /** Aborts pending emits (in-flight fetches still finish but their chunks are dropped). */
+    signal?: AbortSignal;
+}
+
 /**
  * Query all projects for available package updates.
  * @param liteMode When true, uses lightweight installed-package retrieval (sidebar). Panel passes false.
@@ -582,25 +602,46 @@ export async function queryAllProjectsUpdates(
 /**
  * Query all projects for installed packages.
  * @param liteMode When true, skips metadata enrichment (sidebar). Panel passes false for full data.
+ * @param opts Optional streaming hooks. When provided, onStart fires once with the upfront project list,
+ *             onProject fires once per project (success or error), and signal can abort emits mid-flight.
+ *             The returned array still contains successful projects (preserves legacy callers).
  */
 export async function queryAllProjectsInstalled(
     nugetService: NuGetService,
-    liteMode: boolean
+    liteMode: boolean,
+    opts?: QueryAllProjectsInstalledStreamOpts
 ): Promise<ProjectInstalledResult[]> {
     const projects = await nugetService.findProjects();
     const results: ProjectInstalledResult[] = [];
 
+    if (opts?.onStart && !opts.signal?.aborted) {
+        opts.onStart(projects.map(p => ({ projectPath: p.path, projectName: p.name })));
+    }
+
     // Parallelize per-project fetching (up to 4 concurrent) for faster loading
     await batchedPromiseAll(projects, async (project) => {
+        let installedPackages: InstalledPackage[] | undefined;
+        let errorMessage: string | undefined;
         try {
-            const installedPackages = await nugetService.getInstalledPackages(project.path, liteMode);
+            installedPackages = await nugetService.getInstalledPackages(project.path, liteMode);
+        } catch (error) {
+            errorMessage = error instanceof Error ? error.message : String(error);
+            console.error(`[nUIget] Failed to get installed packages for ${project.name}:`, error);
+        }
+        if (installedPackages) {
             results.push({
                 projectPath: project.path,
                 projectName: project.name,
                 packages: installedPackages,
             });
-        } catch (error) {
-            console.error(`[nUIget] Failed to get installed packages for ${project.name}:`, error);
+        }
+        if (opts?.onProject && !opts.signal?.aborted) {
+            opts.onProject({
+                projectPath: project.path,
+                projectName: project.name,
+                packages: installedPackages,
+                error: errorMessage,
+            });
         }
     }, 4);
 

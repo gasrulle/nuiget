@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { executeBulkInstall, executeBulkRemoveAllProjects, executeBulkRemovePackages, executeBulkUpdateAllProjects, executeBulkUpdatePackages, executeSingleOperation, OperationContext, queryAllProjectsInstalled, queryAllProjectsUpdates, resolveAllProjectsIcons } from '../services/NuGetOperations';
+import { executeBulkInstall, executeBulkRemoveAllProjects, executeBulkRemovePackages, executeBulkUpdateAllProjects, executeBulkUpdatePackages, executeSingleOperation, OperationContext, ProjectInstalledResult, queryAllProjectsInstalled, queryAllProjectsUpdates, resolveAllProjectsIcons } from '../services/NuGetOperations';
 import { isPerfEnabled, startTimer } from '../services/NuGetPerf';
 import { NuGetService } from '../services/NuGetService';
 import type { PanelRequestMessage } from '../services/NuGetTypes';
@@ -59,6 +59,8 @@ export class NuGetPanel {
     private _latestSearchQuery: string = '';
     // Prevent concurrent mutating operations (install/update/remove)
     private _operationInProgress = false;
+    /** AbortControllers keyed by `${kind}:${context}` for in-flight streaming queries (Plan 10). */
+    private _inflightAborts: Map<string, AbortController> = new Map();
     // Perf instrumentation (Plan 01)
     private readonly _panelOpenedAt: number = performance.now();
     private _webviewReady = false;
@@ -905,6 +907,97 @@ export class NuGetPanel {
                 }
             case 'checkAllProjectsInstalled':
                 {
+                    if (data.streamed) {
+                        // Streaming path (Plan 10 Stage A): per-project chunks instead of single blob
+                        const requestId = data.requestId ?? `apinst-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+                        const ctx = data.context;
+                        // Abort any prior in-flight stream for the same context
+                        const inflightKey = `apinst:${ctx ?? ''}`;
+                        this._abortInflight(inflightKey);
+                        const controller = new AbortController();
+                        this._inflightAborts.set(inflightKey, controller);
+                        const signal = controller.signal;
+                        try {
+                            const accumulated: ProjectInstalledResult[] = [];
+                            const erroredChunks: { projectPath: string; error: string }[] = [];
+                            const seenPaths: string[] = [];
+                            await queryAllProjectsInstalled(this._nugetService, true /* liteMode */, {
+                                onStart: (projects) => {
+                                    if (signal.aborted || this._disposed) { return; }
+                                    this._postMessage({
+                                        type: 'allProjectsInstalledStart',
+                                        context: ctx,
+                                        requestId,
+                                        projects,
+                                    });
+                                },
+                                onProject: (chunk) => {
+                                    if (signal.aborted || this._disposed) { return; }
+                                    seenPaths.push(chunk.projectPath);
+                                    if (chunk.packages) {
+                                        accumulated.push({
+                                            projectPath: chunk.projectPath,
+                                            projectName: chunk.projectName,
+                                            packages: chunk.packages,
+                                        });
+                                    } else if (chunk.error) {
+                                        erroredChunks.push({ projectPath: chunk.projectPath, error: chunk.error });
+                                    }
+                                    this._postMessage({
+                                        type: 'allProjectsInstalledProjectFound',
+                                        context: ctx,
+                                        requestId,
+                                        projectPath: chunk.projectPath,
+                                        projectName: chunk.projectName,
+                                        installed: chunk.packages,
+                                        error: chunk.error,
+                                    });
+                                },
+                                signal,
+                            });
+                            if (signal.aborted || this._disposed) { break; }
+                            this._postMessage({
+                                type: 'allProjectsInstalledComplete',
+                                context: ctx,
+                                requestId,
+                                projectPaths: seenPaths,
+                                errored: erroredChunks,
+                            });
+                            // Phase 2: enrich metadata, then emit per-project metadata chunks
+                            const allPackages = accumulated.flatMap(pi => pi.packages);
+                            if (allPackages.length > 0) {
+                                this._nugetService.enrichInstalledPackageMetadata(allPackages).then(() => {
+                                    if (signal.aborted || this._disposed) { return; }
+                                    for (const proj of accumulated) {
+                                        if (signal.aborted || this._disposed) { return; }
+                                        this._postMessage({
+                                            type: 'allProjectsInstalledProjectMetadata',
+                                            context: ctx,
+                                            requestId,
+                                            projectPath: proj.projectPath,
+                                            installed: proj.packages,
+                                        });
+                                    }
+                                }).catch(() => { /* non-critical */ });
+                            }
+                        } catch (error) {
+                            console.error('[nUIget] checkAllProjectsInstalled (streamed) error:', error);
+                            if (!signal.aborted && !this._disposed) {
+                                this._postMessage({
+                                    type: 'allProjectsInstalledComplete',
+                                    context: ctx,
+                                    requestId,
+                                    projectPaths: [],
+                                    errored: [],
+                                });
+                            }
+                        } finally {
+                            if (this._inflightAborts.get(inflightKey) === controller) {
+                                this._inflightAborts.delete(inflightKey);
+                            }
+                        }
+                        break;
+                    }
                     try {
                         // Phase 1: send lite data immediately (fast .csproj parsing only)
                         const projectInstalled = await queryAllProjectsInstalled(this._nugetService, true /* liteMode */);
@@ -1062,6 +1155,12 @@ export class NuGetPanel {
         this._disposed = true;
         NuGetPanel.currentPanel = undefined;
 
+        // Abort any in-flight streaming queries
+        for (const controller of this._inflightAborts.values()) {
+            try { controller.abort(); } catch { /* ignore */ }
+        }
+        this._inflightAborts.clear();
+
         // Clean up our resources
         this._panel.dispose();
 
@@ -1070,6 +1169,15 @@ export class NuGetPanel {
             if (x) {
                 x.dispose();
             }
+        }
+    }
+
+    /** Abort a previously-registered in-flight stream by key, removing it from the map. */
+    private _abortInflight(key: string): void {
+        const existing = this._inflightAborts.get(key);
+        if (existing) {
+            try { existing.abort(); } catch { /* ignore */ }
+            this._inflightAborts.delete(key);
         }
     }
 

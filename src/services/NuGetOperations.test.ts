@@ -608,6 +608,86 @@ describe('queryAllProjectsInstalled', () => {
             packages: [{ id: 'A', version: '2.0', resolvedVersion: undefined, isImplicit: undefined }],
         }]);
     });
+
+    it('streams onStart with project list and onProject per project (Plan 10)', async () => {
+        const svc = createQueryService();
+        svc.findProjects.mockResolvedValue([
+            { path: '/a.csproj', name: 'A' },
+            { path: '/b.csproj', name: 'B' },
+        ]);
+        svc.getInstalledPackages
+            .mockResolvedValueOnce([{ id: 'Pa', version: '1.0' }])
+            .mockResolvedValueOnce([{ id: 'Pb', version: '2.0' }]);
+
+        const onStart = vi.fn();
+        const onProject = vi.fn();
+        const result = await queryAllProjectsInstalled(svc, true, {
+            onStart,
+            onProject,
+            signal: new AbortController().signal,
+        });
+
+        expect(onStart).toHaveBeenCalledTimes(1);
+        expect(onStart).toHaveBeenCalledWith([
+            { projectPath: '/a.csproj', projectName: 'A' },
+            { projectPath: '/b.csproj', projectName: 'B' },
+        ]);
+        expect(onProject).toHaveBeenCalledTimes(2);
+        expect(onProject.mock.calls[0][0]).toMatchObject({ projectPath: '/a.csproj', projectName: 'A' });
+        expect(onProject.mock.calls[0][0].packages?.[0]).toMatchObject({ id: 'Pa' });
+        expect(onProject.mock.calls[1][0]).toMatchObject({ projectPath: '/b.csproj', projectName: 'B' });
+        expect(result).toHaveLength(2);
+    });
+
+    it('streams error chunk for failing project but still returns successful ones (Plan 10)', async () => {
+        const svc = createQueryService();
+        svc.findProjects.mockResolvedValue([
+            { path: '/bad.csproj', name: 'Bad' },
+            { path: '/good.csproj', name: 'Good' },
+        ]);
+        svc.getInstalledPackages
+            .mockRejectedValueOnce(new Error('boom'))
+            .mockResolvedValueOnce([{ id: 'OK', version: '1.0' }]);
+
+        const onProject = vi.fn();
+        const result = await queryAllProjectsInstalled(svc, true, {
+            onProject,
+            signal: new AbortController().signal,
+        });
+
+        expect(onProject).toHaveBeenCalledTimes(2);
+        const first = onProject.mock.calls[0][0];
+        const second = onProject.mock.calls[1][0];
+        expect(first).toMatchObject({ projectPath: '/bad.csproj' });
+        expect(first.error).toMatch(/boom/);
+        expect(first.packages).toBeUndefined();
+        expect(second.packages?.[0]).toMatchObject({ id: 'OK' });
+        // Return value omits the errored project (legacy contract)
+        expect(result).toHaveLength(1);
+        expect(result[0].projectPath).toBe('/good.csproj');
+    });
+
+    it('stops emitting chunks once the abort signal fires (Plan 10)', async () => {
+        const svc = createQueryService();
+        svc.findProjects.mockResolvedValue([
+            { path: '/a.csproj', name: 'A' },
+        ]);
+        const controller = new AbortController();
+        controller.abort(); // pre-aborted
+        svc.getInstalledPackages.mockResolvedValue([{ id: 'X', version: '1.0' }]);
+
+        const onStart = vi.fn();
+        const onProject = vi.fn();
+        await queryAllProjectsInstalled(svc, true, {
+            onStart,
+            onProject,
+            signal: controller.signal,
+        });
+
+        // Pre-aborted signal suppresses both onStart and onProject emits.
+        expect(onStart).not.toHaveBeenCalled();
+        expect(onProject).not.toHaveBeenCalled();
+    });
 });
 
 describe('resolveAllProjectsIcons', () => {

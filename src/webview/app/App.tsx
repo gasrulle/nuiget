@@ -190,6 +190,16 @@ export const App: React.FC = () => {
     const refreshDebounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
     // Clean up debounce timer on unmount
     useEffect(() => () => { if (refreshDebounceRef.current) { clearTimeout(refreshDebounceRef.current); } }, []);
+    /**
+     * Plan 10 — active requestId for the streamed `installed`-context all-projects-installed query.
+     * Chunks tagged with a different (older) requestId are discarded as stale.
+     */
+    const installedStreamRequestIdRef = useRef<string>('');
+    const requestStreamedAllProjectsInstalled = useCallback(() => {
+        const requestId = `apinst-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+        installedStreamRequestIdRef.current = requestId;
+        vscode.postMessage({ type: 'checkAllProjectsInstalled', streamed: true, requestId });
+    }, []);
     useEffect(() => {
         includePrereleaseRef.current = includePrerelease;
     }, [includePrerelease]);
@@ -518,7 +528,7 @@ export const App: React.FC = () => {
                             includePrerelease: includePrereleaseRef.current
                         });
                         setLoadingAllProjectsInstalled(true);
-                        vscode.postMessage({ type: 'checkAllProjectsInstalled' });
+                        requestStreamedAllProjectsInstalled();
                     } else if (message.projectPath === selectedProjectRef.current) {
                         // Single-project mode: optimistic mutation + re-fetch
                         if (opPkgIdMain && (message.type === 'updateResult' || message.type === 'removeResult')) {
@@ -636,7 +646,7 @@ export const App: React.FC = () => {
                             includePrerelease: includePrereleaseRef.current
                         });
                         setLoadingAllProjectsInstalled(true);
-                        vscode.postMessage({ type: 'checkAllProjectsInstalled' });
+                        requestStreamedAllProjectsInstalled();
                     } else if (selectedProjectRef.current) {
                         vscode.postMessage({ type: 'getInstalledPackages', projectPath: selectedProjectRef.current });
                     }
@@ -670,7 +680,7 @@ export const App: React.FC = () => {
                         }
                         // Re-fetch installed data (cheap — just reads .csproj files)
                         setLoadingAllProjectsInstalled(true);
-                        vscode.postMessage({ type: 'checkAllProjectsInstalled' });
+                        requestStreamedAllProjectsInstalled();
                     } else if (selectedProjectRef.current) {
                         vscode.postMessage({ type: 'getInstalledPackages', projectPath: selectedProjectRef.current });
                     }
@@ -891,6 +901,84 @@ export const App: React.FC = () => {
                     }
                 }
                 break;
+            case 'allProjectsInstalledStart':
+                {
+                    // Plan 10 Stage A: streaming `installed` context only (multiInstall stays legacy).
+                    if (message.context === 'multiInstall') { break; }
+                    if (message.requestId !== installedStreamRequestIdRef.current) { break; }
+                    const projects = (message.projects || []) as { projectPath: string; projectName: string }[];
+                    const provisional: ProjectInstalled[] = projects.map(p => ({
+                        projectPath: p.projectPath,
+                        projectName: p.projectName,
+                        packages: [],
+                    }));
+                    setAllProjectsInstalled(provisional);
+                    setLoadingAllProjectsInstalled(true);
+                }
+                break;
+            case 'allProjectsInstalledProjectFound':
+                {
+                    if (message.context === 'multiInstall') { break; }
+                    if (message.requestId !== installedStreamRequestIdRef.current) { break; }
+                    const projectPath = message.projectPath as string;
+                    const projectName = (message.projectName as string | undefined) ?? projectPath;
+                    const installed = (message.installed as InstalledPackage[] | undefined) ?? [];
+                    setAllProjectsInstalled(prev => {
+                        const idx = prev.findIndex(p => p.projectPath === projectPath);
+                        const slot: ProjectInstalled = { projectPath, projectName, packages: installed };
+                        if (idx === -1) { return [...prev, slot]; }
+                        const next = prev.slice();
+                        next[idx] = slot;
+                        return next;
+                    });
+                }
+                break;
+            case 'allProjectsInstalledProjectMetadata':
+                {
+                    if (message.context === 'multiInstall') { break; }
+                    if (message.requestId !== installedStreamRequestIdRef.current) { break; }
+                    const projectPath = message.projectPath as string;
+                    const enriched = (message.installed as Array<Partial<InstalledPackage> & { id: string }> | undefined) ?? [];
+                    if (enriched.length === 0) { break; }
+                    const enrichedById = new Map(enriched.map(p => [p.id.toLowerCase(), p]));
+                    const merger = (prev: ProjectInstalled[]) => {
+                        const idx = prev.findIndex(p => p.projectPath === projectPath);
+                        if (idx === -1) { return prev; }
+                        const proj = prev[idx];
+                        let projChanged = false;
+                        const pkgs = proj.packages.map(pkg => {
+                            const meta = enrichedById.get(pkg.id.toLowerCase());
+                            if (!meta) { return pkg; }
+                            const patchEntries = Object.entries(meta).filter(([key, value]) => key !== 'id' && value !== undefined);
+                            if (patchEntries.length === 0) { return pkg; }
+                            const hasChanges = patchEntries.some(([key, value]) => pkg[key as keyof InstalledPackage] !== value);
+                            if (!hasChanges) { return pkg; }
+                            projChanged = true;
+                            return { ...pkg, ...Object.fromEntries(patchEntries) };
+                        });
+                        if (!projChanged) { return prev; }
+                        const next = prev.slice();
+                        next[idx] = { ...proj, packages: pkgs };
+                        return next;
+                    };
+                    setAllProjectsInstalled(merger);
+                    setMultiInstallProjectData(merger);
+                }
+                break;
+            case 'allProjectsInstalledComplete':
+                {
+                    if (message.context === 'multiInstall') { break; }
+                    if (message.requestId !== installedStreamRequestIdRef.current) { break; }
+                    const seen = new Set<string>((message.projectPaths || []) as string[]);
+                    setAllProjectsInstalled(prev => {
+                        const pruned = prev.filter(p => seen.has(p.projectPath));
+                        // Mirror to multi-install snapshot (legacy parity)
+                        setMultiInstallProjectData(pruned);
+                        return pruned;
+                    });
+                    setLoadingAllProjectsInstalled(false);
+                }
+                break;
             case 'allProjectsIcons':
                 // Progressive icon enrichment for all-projects updates (installed icons arrive inline)
                 {
@@ -924,7 +1012,7 @@ export const App: React.FC = () => {
                 // Still re-fetch all projects installed since transitive deps changed
                 setLoadingAllProjectsInstalled(true);
                 setAllProjectsInstalled([]);
-                vscode.postMessage({ type: 'checkAllProjectsInstalled' });
+                requestStreamedAllProjectsInstalled();
                 // Refresh current project installed for transitive accuracy
                 if (selectedProjectRef.current) {
                     skipNextUpdateCheckRef.current = true;
@@ -1117,7 +1205,7 @@ export const App: React.FC = () => {
             });
             setLoadingAllProjectsInstalled(true);
             setAllProjectsInstalled([]);
-            vscode.postMessage({ type: 'checkAllProjectsInstalled' });
+            requestStreamedAllProjectsInstalled();
         } else if (selectedProject) {
             // Single project selected — clear all-projects data and fetch single-project data
             setAllProjectsUpdates([]);
@@ -1139,7 +1227,7 @@ export const App: React.FC = () => {
             // else-if branch in checkPackageUpdates effect that clears stale updates
             skipNextUpdateCheckRef.current = false;
         }
-    }, [selectedProject]);
+    }, [selectedProject, requestStreamedAllProjectsInstalled]);
 
     // Refresh installed packages when switching to installed tab (skip first visit to use prefetched data)
     // Track first visit to installed tab (skip re-fetch; prefetched data is used).

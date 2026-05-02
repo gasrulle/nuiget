@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Refresh no longer blocks on disk HTTP cache clear** — Manual refresh now clears in-memory caches (sources, service index, metadata, search, versions, package data) synchronously and runs the on-disk `dotnet nuget locals http-cache --clear` in the background. Concurrent refreshes coalesce so only one disk-clear runs at a time. The Command Palette `nUIget: Clear NuGet HTTP Cache` still awaits completion.
 - **Package metadata cache size increased** — In-memory LRU bumped from 200 → 500 entries. Cleared on Refresh (relies on Plan 05 widening) so users always get fresh data when they ask for it.
 - **Quick-search autocomplete results cached for 5 minutes** — Up from 30 seconds. Newly published packages can take up to 5 min to appear in autocomplete; click Refresh to clear immediately.
+- **Streaming all-projects installed (Stage A)** — The main panel All-Projects installed view now renders projects as each one finishes enumeration instead of waiting for the full batch. Stale responses are discarded by request id, and a new request aborts the in-flight one for the same context. Sidebar and multi-install flows still use the legacy blob path (Stage B/C).
 
 ## [1.18.4] - 2026-04-16
 

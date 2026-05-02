@@ -315,6 +315,10 @@ export interface CheckAllProjectsUpdatesMsg {
 export interface CheckAllProjectsInstalledMsg {
     type: 'checkAllProjectsInstalled';
     context?: string;
+    /** Opt-in: receive Start/ProjectFound/ProjectMetadata/Complete sequence instead of single allProjectsInstalled blob. */
+    streamed?: boolean;
+    /** Echoed in every Start/ProjectFound/ProjectMetadata/Complete message; used for stale-response discard. */
+    requestId?: string;
 }
 
 export interface InstallPackageMsg {
