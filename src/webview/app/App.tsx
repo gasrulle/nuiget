@@ -486,8 +486,31 @@ export const App: React.FC = () => {
             case 'updateResult':
             case 'removeResult':
                 if (message.success) {
+                    const opPkgIdMain = (message.packageId as string)?.toLowerCase();
+                    const opVerMain = (message.version as string) || '';
+                    const opProjPathMain = message.projectPath as string | undefined;
                     if (selectedProjectRef.current === ALL_PROJECTS_SENTINEL) {
-                        // All-projects mode: re-fetch all-projects data
+                        // All-projects mode: optimistically mutate, then re-fetch authoritative
+                        if (opPkgIdMain && opProjPathMain && (message.type === 'installResult' || message.type === 'updateResult') && opVerMain) {
+                            setAllProjectsInstalled(prev => {
+                                const updated = prev.map(pi => {
+                                    if (pi.projectPath !== opProjPathMain) { return pi; }
+                                    if (message.type === 'updateResult') {
+                                        return { ...pi, packages: pi.packages.map(p =>
+                                            p.id.toLowerCase() === opPkgIdMain
+                                                ? { ...p, version: opVerMain, resolvedVersion: opVerMain }
+                                                : p
+                                        ) };
+                                    }
+                                    if (pi.packages.some(p => p.id.toLowerCase() === opPkgIdMain)) { return pi; }
+                                    return { ...pi, packages: [...pi.packages, { id: message.packageId as string, version: opVerMain, resolvedVersion: opVerMain } as InstalledPackage] };
+                                });
+                                return updated;
+                            });
+                            if (message.type === 'installResult') {
+                                setInstalledPackages(prev => prev.some(p => p.id.toLowerCase() === opPkgIdMain) ? prev : [...prev, { id: message.packageId as string, version: opVerMain, resolvedVersion: opVerMain } as InstalledPackage]);
+                            }
+                        }
                         skipNextUpdateCheckRef.current = true;
                         setLoadingAllProjectsUpdates(true);
                         vscode.postMessage({
@@ -497,14 +520,22 @@ export const App: React.FC = () => {
                         setLoadingAllProjectsInstalled(true);
                         vscode.postMessage({ type: 'checkAllProjectsInstalled' });
                     } else if (message.projectPath === selectedProjectRef.current) {
-                        // Single-project mode: refresh installed packages
-                        const changedId = (message.packageId as string)?.toLowerCase();
-                        if (changedId && (message.type === 'updateResult' || message.type === 'removeResult')) {
+                        // Single-project mode: optimistic mutation + re-fetch
+                        if (opPkgIdMain && (message.type === 'updateResult' || message.type === 'removeResult')) {
                             setPackagesWithUpdates(prev => {
-                                const filtered = prev.filter(p => p.id.toLowerCase() !== changedId);
+                                const filtered = prev.filter(p => p.id.toLowerCase() !== opPkgIdMain);
                                 setUpdateCount(filtered.length);
                                 return filtered;
                             });
+                        }
+                        if (opPkgIdMain && opVerMain && message.type === 'installResult') {
+                            setInstalledPackages(prev => prev.some(p => p.id.toLowerCase() === opPkgIdMain) ? prev : [...prev, { id: message.packageId as string, version: opVerMain, resolvedVersion: opVerMain } as InstalledPackage]);
+                        } else if (opPkgIdMain && opVerMain && message.type === 'updateResult') {
+                            setInstalledPackages(prev => prev.map(p =>
+                                p.id.toLowerCase() === opPkgIdMain
+                                    ? { ...p, version: opVerMain, resolvedVersion: opVerMain }
+                                    : p
+                            ));
                         }
                         skipNextUpdateCheckRef.current = true;
                         vscode.postMessage({ type: 'getInstalledPackages', projectPath: selectedProjectRef.current });

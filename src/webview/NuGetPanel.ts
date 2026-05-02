@@ -19,7 +19,7 @@ export class NuGetPanel {
     /** Callback fired when the main panel's selected project changes (wired in extension.ts) */
     public static onProjectChanged: ((value: string) => void) | undefined;
     /** Callback fired when a package is installed/updated/removed in the main panel (wired in extension.ts) */
-    public static onPackageChanged: ((operation: { type: string; packageId?: string; packageIds?: string[]; projectPath?: string }) => void) | undefined;
+    public static onPackageChanged: ((operation: { type: string; packageId?: string; packageIds?: string[]; projectPath?: string; version?: string }) => void) | undefined;
     /** Callback fired when the main panel's full refresh button is pressed (wired in extension.ts) */
     public static onRefreshAll: (() => void) | undefined;
 
@@ -103,7 +103,7 @@ export class NuGetPanel {
 
     /** Scoped refresh: re-fetch installed packages but skip full update check
      * (the sidebar already performed a scoped update check for the affected packages). */
-    public static refreshScoped(operation: { type: string; packageId?: string; packageIds?: string[]; projectPath?: string }) {
+    public static refreshScoped(operation: { type: string; packageId?: string; packageIds?: string[]; projectPath?: string; version?: string }) {
         if (NuGetPanel.currentPanel) {
             NuGetPanel.currentPanel._panel.webview.postMessage({ type: 'refreshScoped', operation });
         }

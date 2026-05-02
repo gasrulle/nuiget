@@ -10,7 +10,7 @@ import { batchedPromiseAll, topologicalSortByDependency } from './NuGetUtils';
 export interface OperationContext {
     nugetService: NuGetService;
     postMessage: (message: unknown) => void;
-    notifyOtherPanel: (operation: { type: string; packageId?: string; packageIds?: string[]; projectPath?: string }) => void;
+    notifyOtherPanel: (operation: { type: string; packageId?: string; packageIds?: string[]; projectPath?: string; version?: string }) => void;
 }
 
 type SingleOperationType = 'install' | 'update' | 'remove';
@@ -61,12 +61,13 @@ export async function executeSingleOperation(
             type: config.resultType,
             success,
             packageId,
-            projectPath
+            projectPath,
+            version
         });
     });
 
     if (success) {
-        ctx.notifyOtherPanel({ type: operationType, packageId, projectPath });
+        ctx.notifyOtherPanel({ type: operationType, packageId, projectPath, version });
     }
 
     return success;

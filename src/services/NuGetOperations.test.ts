@@ -104,6 +104,19 @@ describe('executeSingleOperation', () => {
         expect(result).toBe(false);
         expect(ctx.notifyOtherPanel).not.toHaveBeenCalled();
     });
+
+    // ---- plan 08: version in payload ----
+    it('install success: includes version in postMessage and notifyOtherPanel payload', async () => {
+        await executeSingleOperation(ctx, 'install', '/proj.csproj', 'Newtonsoft.Json', '13.0.3');
+        expect(ctx.postMessage).toHaveBeenCalledWith(expect.objectContaining({ type: 'installResult', version: '13.0.3' }));
+        expect(ctx.notifyOtherPanel).toHaveBeenCalledWith(expect.objectContaining({ type: 'install', version: '13.0.3' }));
+    });
+
+    it('update success: includes version in postMessage and notifyOtherPanel payload', async () => {
+        await executeSingleOperation(ctx, 'update', '/proj.csproj', 'Serilog', '4.0.0');
+        expect(ctx.postMessage).toHaveBeenCalledWith(expect.objectContaining({ type: 'updateResult', version: '4.0.0' }));
+        expect(ctx.notifyOtherPanel).toHaveBeenCalledWith(expect.objectContaining({ type: 'update', version: '4.0.0' }));
+    });
 });
 
 // ──────────────────────────────────────────────

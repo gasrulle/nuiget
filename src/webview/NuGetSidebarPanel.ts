@@ -511,7 +511,7 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
      * Forwards operation details to sidebar webview for optimistic state updates.
      * Does NOT cancel the file watcher debounce — let it serve as a safety net
      * for any gaps in the optimistic update logic (~5s delayed full refresh). */
-    public async notifySidebarOfChange(operation: { type: string; packageId?: string; packageIds?: string[]; projectPath?: string }): Promise<void> {
+    public async notifySidebarOfChange(operation: { type: string; packageId?: string; packageIds?: string[]; projectPath?: string; version?: string }): Promise<void> {
         // Forward operation details to sidebar webview for surgical UI updates
         this._postMessage({ type: 'packageChanged', operation });
         // Re-check updates in background for data accuracy.
@@ -1262,7 +1262,7 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
     /** Notify the main panel to refresh if it's open.
      * When operation scope is provided, sends a scoped refresh (skips expensive full update check).
      * Falls back to full refresh for file-watcher and other non-operation callers. */
-    private static _notifyMainPanel(operation?: { type: string; packageId?: string; packageIds?: string[]; projectPath?: string }): void {
+    private static _notifyMainPanel(operation?: { type: string; packageId?: string; packageIds?: string[]; projectPath?: string; version?: string }): void {
         // Import would be circular, so use command
         if (operation) {
             vscode.commands.executeCommand('nuiget.refreshPackagesScoped', operation);

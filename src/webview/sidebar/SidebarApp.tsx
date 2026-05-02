@@ -286,7 +286,7 @@ export const SidebarApp: React.FC = () => {
                 {
                     // Operation-aware notification from main panel via sidebar backend
                     // Surgically update state instead of clearing everything and re-fetching
-                    const op = message.operation as { type: string; packageId?: string; projectPath?: string } | undefined;
+                    const op = message.operation as { type: string; packageId?: string; projectPath?: string; version?: string } | undefined;
                     const opPkgId = op?.packageId?.toLowerCase();
                     if (opPkgId && (op?.type === 'update' || op?.type === 'remove')) {
                         setPackageUpdates(prev => { const f = prev.filter(p => p.id.toLowerCase() !== opPkgId); packageUpdatesRef.current = f; return f; });
@@ -295,6 +295,28 @@ export const SidebarApp: React.FC = () => {
                             allProjectsUpdatesRef.current = updated;
                             return updated;
                         });
+                    }
+                    // Optimistic install: mutate version on existing row, or append new row
+                    if (opPkgId && op?.type === 'update' && op.projectPath && op.version) {
+                        setAllProjectsInstalled(prev => {
+                            const updated = prev.map(pi => {
+                                if (pi.projectPath !== op.projectPath) { return pi; }
+                                return { ...pi, packages: pi.packages.map(p =>
+                                    p.id.toLowerCase() === opPkgId
+                                        ? { ...p, version: op.version!, resolvedVersion: op.version! }
+                                        : p
+                                ) };
+                            });
+                            allProjectsInstalledRef.current = updated;
+                            return updated;
+                        });
+                        if (selectedProjectRef.current === op.projectPath || selectedProjectRef.current === ALL_PROJECTS_SENTINEL) {
+                            setInstalledPackages(prev => prev.map(p =>
+                                p.id.toLowerCase() === opPkgId
+                                    ? { ...p, version: op.version!, resolvedVersion: op.version! }
+                                    : p
+                            ));
+                        }
                     }
                     // Optimistically update installed packages for remove operations
                     if (opPkgId && op?.type === 'remove' && op?.projectPath) {
@@ -310,9 +332,22 @@ export const SidebarApp: React.FC = () => {
                             setInstalledPackages(prev => prev.filter(p => p.id.toLowerCase() !== opPkgId));
                         }
                     }
-                    // For install operations, trigger a re-fetch since we lack version info
+                    // For install: append optimistically when version known; otherwise re-fetch
                     if (opPkgId && op?.type === 'install') {
-                        if (selectedProjectRef.current === ALL_PROJECTS_SENTINEL) {
+                        if (op.version && op.projectPath) {
+                            setAllProjectsInstalled(prev => {
+                                const updated = prev.map(pi => {
+                                    if (pi.projectPath !== op.projectPath) { return pi; }
+                                    if (pi.packages.some(p => p.id.toLowerCase() === opPkgId)) { return pi; }
+                                    return { ...pi, packages: [...pi.packages, { id: op.packageId!, version: op.version!, resolvedVersion: op.version! } as InstalledPackage] };
+                                });
+                                allProjectsInstalledRef.current = updated;
+                                return updated;
+                            });
+                            if (selectedProjectRef.current === op.projectPath || selectedProjectRef.current === ALL_PROJECTS_SENTINEL) {
+                                setInstalledPackages(prev => prev.some(p => p.id.toLowerCase() === opPkgId) ? prev : [...prev, { id: op.packageId!, version: op.version!, resolvedVersion: op.version! } as InstalledPackage]);
+                            }
+                        } else if (selectedProjectRef.current === ALL_PROJECTS_SENTINEL) {
                             vscode.postMessage({ type: 'checkAllProjectsInstalled' });
                             setLoadingAllInstalled(true);
                         } else if (selectedProjectRef.current) {

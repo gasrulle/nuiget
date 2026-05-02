@@ -16,6 +16,7 @@ vi.mock('./components/PackageRow', () => ({
         <div
             data-testid={`package-row-${props.packageId}`}
             data-context={props.context}
+            data-version={props.version || ''}
             data-installed-version={props.installedVersion || ''}
             data-action-tooltip={props.actionTooltip || ''}
             data-partially-installed={props.partiallyInstalled ? 'true' : ''}
@@ -892,6 +893,59 @@ describe('SidebarApp', () => {
         expect(mockVsCode.postMessage).toHaveBeenCalledWith(
             expect.objectContaining({ type: 'checkAllProjectsInstalled' })
         );
+    });
+
+    it('packageChanged install with version optimistically appends row without re-fetch', () => {
+        render(<SidebarApp />);
+        sendMessage({ type: 'state', selectedProject: '__all_projects__' });
+        sendMessage({
+            type: 'projects', projects: [
+                { name: 'App.csproj', path: '/App.csproj' },
+            ]
+        });
+        sendMessage({
+            type: 'allProjectsInstalled',
+            projectInstalled: [
+                { projectPath: '/App.csproj', projectName: 'App.csproj', packages: [{ id: 'PkgA', version: '1.0.0' }] }
+            ]
+        });
+        mockVsCode.postMessage.mockClear();
+
+        sendMessage({
+            type: 'packageChanged',
+            operation: { type: 'install', packageId: 'NewPkg', projectPath: '/App.csproj', version: '5.0.0' }
+        });
+
+        // Optimistic append, no re-fetch
+        expect(screen.getByTestId('package-row-NewPkg')).toBeDefined();
+        expect(mockVsCode.postMessage).not.toHaveBeenCalledWith(
+            expect.objectContaining({ type: 'checkAllProjectsInstalled' })
+        );
+    });
+
+    it('packageChanged update with version optimistically mutates row version', () => {
+        render(<SidebarApp />);
+        sendMessage({ type: 'state', selectedProject: '__all_projects__' });
+        sendMessage({
+            type: 'projects', projects: [
+                { name: 'App.csproj', path: '/App.csproj' },
+            ]
+        });
+        sendMessage({
+            type: 'allProjectsInstalled',
+            projectInstalled: [
+                { projectPath: '/App.csproj', projectName: 'App.csproj', packages: [{ id: 'PkgA', version: '1.0.0' }] }
+            ]
+        });
+
+        sendMessage({
+            type: 'packageChanged',
+            operation: { type: 'update', packageId: 'PkgA', projectPath: '/App.csproj', version: '2.0.0' }
+        });
+
+        const row = screen.getByTestId('package-row-PkgA');
+        const v = row.getAttribute('data-version') || row.getAttribute('data-installed-version') || '';
+        expect(v).toBe('2.0.0');
     });
 
     it('collapses and expands project groups in all-projects installed mode', () => {
