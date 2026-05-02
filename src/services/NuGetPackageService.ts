@@ -100,13 +100,22 @@ export class NuGetPackageService {
 
     /**
      * Clear all package-related caches.
-     * Called by NuGetService.clearSourceErrors().
+     * Called by NuGetService.clearSourceErrors() / clearInMemoryNuGetCaches().
      */
     clearCaches(): void {
         this.iconSourceMissCount.clear();
         this.vulnerabilityData.clear();
         this.vulnerabilityDataTimestamp = 0;
         this.quickSearchCache.clear();
+    }
+
+    /**
+     * Clear metadata and search-result caches.
+     * Called on manual refresh so users see fresh listings instead of waiting for TTLs to expire.
+     */
+    clearMetadataAndSearchCaches(): void {
+        this.metadataCache.clear();
+        this.searchResultsCache.clear();
     }
 
     /**

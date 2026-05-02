@@ -79,7 +79,9 @@ function createMockNuGetService() {
         getFailedSources: vi.fn().mockReturnValue(new Map()),
         testSourceConnectivity: vi.fn().mockResolvedValue(undefined),
         clearSourceErrors: vi.fn(),
+        clearInMemoryNuGetCaches: vi.fn(),
         clearNuGetHttpCache: vi.fn().mockResolvedValue(undefined),
+        clearNuGetHttpCacheBackground: vi.fn(),
         enableSource: vi.fn().mockResolvedValue(true),
         disableSource: vi.fn().mockResolvedValue(true),
         addSource: vi.fn().mockResolvedValue({ success: true }),
@@ -588,15 +590,17 @@ describe('NuGetPanel', () => {
             expect(mockContext.globalState.update).toHaveBeenCalledWith('nuget.splitPosition', 42);
         });
 
-        it('fullRefresh clears source errors, refreshes, and notifies sidebar', async () => {
+        it('fullRefresh clears in-memory caches synchronously, kicks off background HTTP cache clear, refreshes, and notifies sidebar', async () => {
             const onRefreshAll = vi.fn();
             NuGetPanel.onRefreshAll = onRefreshAll;
             (mockService as any).getSources.mockResolvedValue([]);
 
             await messageListener!({ type: 'fullRefresh' });
 
-            expect((mockService as any).clearNuGetHttpCache).toHaveBeenCalled();
-            expect((mockService as any).clearSourceErrors).toHaveBeenCalled();
+            expect((mockService as any).clearInMemoryNuGetCaches).toHaveBeenCalled();
+            expect((mockService as any).clearNuGetHttpCacheBackground).toHaveBeenCalled();
+            // The synchronous in-memory clear must be invoked even though the disk clear is fire-and-forget
+            expect((mockService as any).clearNuGetHttpCache).not.toHaveBeenCalled();
             expect(mockPanel.webview.postMessage).toHaveBeenCalledWith({ type: 'refresh' });
             expect(onRefreshAll).toHaveBeenCalled();
         });

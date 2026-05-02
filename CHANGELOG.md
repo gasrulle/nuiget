@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Performance instrumentation** — Optional `[perf]` timing logs in the nUIget output channel, gated by the new `nuiget.enablePerformanceLogging` setting (default: off). When enabled, hot paths (panel open, installed-package load, search, install/update/remove, sidebar resolve) emit total wall time and sub-phase deltas. Multi-root workspaces tag each line with the owning workspace folder name.
 
+### Changed
+
+- **Refresh no longer blocks on disk HTTP cache clear** — Manual refresh now clears in-memory caches (sources, service index, metadata, search, versions, package data) synchronously and runs the on-disk `dotnet nuget locals http-cache --clear` in the background. Concurrent refreshes coalesce so only one disk-clear runs at a time. The Command Palette `nUIget: Clear NuGet HTTP Cache` still awaits completion.
+
 ## [1.18.4] - 2026-04-16
 
 ### Added

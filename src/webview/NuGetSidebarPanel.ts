@@ -527,9 +527,17 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
         });
     }
 
-    /** Full sidebar refresh: re-send sources, tell webview to re-fetch, and re-check updates */
+    /** Full sidebar refresh: clear in-memory caches synchronously, kick off the
+     *  dotnet HTTP cache clear in the background, re-send sources, tell the webview
+     *  to re-fetch, and re-check updates.
+     *
+     *  Cancels any pending file-watcher debounce *before* the in-memory clear so a
+     *  late watcher fire can't race with the refresh and trigger redundant work. */
     public async refreshSidebar(): Promise<void> {
-        // Re-send sources (cache was just cleared by the caller)
+        this._cancelFileWatcherDebounce();
+        this._nugetService.clearInMemoryNuGetCaches();
+        this._nugetService.clearNuGetHttpCacheBackground();
+        // Re-send sources (cache was just cleared)
         const sources = await this._nugetService.getSources();
         this._postMessage({ type: 'sources', sources: sources.filter(s => s.enabled) });
         // Tell webview to re-fetch installed packages and updates

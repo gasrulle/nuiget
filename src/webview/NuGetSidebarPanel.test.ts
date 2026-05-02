@@ -54,6 +54,8 @@ function createMockNuGetService() {
         getPackageVersions: vi.fn().mockResolvedValue([]),
         clearVersionsCache: vi.fn(),
         clearVersionsCacheForPackages: vi.fn(),
+        clearInMemoryNuGetCaches: vi.fn(),
+        clearNuGetHttpCacheBackground: vi.fn(),
         resolveSourcesForBatch: vi.fn().mockResolvedValue([{ url: 'https://api.nuget.org/v3/index.json', endpoints: {}, authHeader: undefined }]),
     } as unknown;
 }

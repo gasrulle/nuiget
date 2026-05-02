@@ -571,22 +571,38 @@ export class NuGetService {
     }
 
     /**
-     * Clear tracked source errors (call on manual refresh to allow re-warning)
+     * Clear all in-memory NuGet caches synchronously.
+     * Called on manual refresh to allow re-discovery, refetch fresh metadata/search,
+     * and re-warn about previously-failed sources.
+     *
+     * Widened beyond the original `clearSourceErrors()` set to also clear
+     * `metadataCache` and `searchResultsCache` so users see fresh listings
+     * after pressing Refresh instead of waiting for TTLs to expire.
      */
-    clearSourceErrors(): void {
+    clearInMemoryNuGetCaches(): void {
         this.failedSources.clear();
         // Also clear the service index cache to force re-discovery
         this.serviceIndexCache.clear();
         // Clear failed endpoint cache so that refreshing actually retries the network
         this.failedEndpointCache.clear();
-        // Clear package service caches (icons, vulnerabilities, etc.)
+        // Clear package service caches (icons, vulnerabilities, quick search, etc.)
         this._packageService.clearCaches();
+        // Clear metadata + search-result caches so refresh picks up new listings
+        this._packageService.clearMetadataAndSearchCaches();
         // Clear sources cache so fresh sources are fetched
         this.invalidateSourcesCache();
         // Clear version caches so update checks see newly published versions
         this.clearVersionsCache();
         // Re-validate all sources immediately in background
         this.startSourceHealthMonitor();
+    }
+
+    /**
+     * Clear tracked source errors (call on manual refresh to allow re-warning).
+     * Backwards-compatible alias for `clearInMemoryNuGetCaches()`.
+     */
+    clearSourceErrors(): void {
+        this.clearInMemoryNuGetCaches();
     }
 
     /**
@@ -613,6 +629,32 @@ export class NuGetService {
      */
     async clearNuGetHttpCache(): Promise<void> {
         return this._cliService.clearNuGetHttpCache();
+    }
+
+    /**
+     * In-flight promise for the background HTTP-cache clear so rapid
+     * Refresh clicks don't spawn multiple `dotnet nuget locals` processes.
+     * Note: only the disk-clear is coalesced — every Refresh still re-runs
+     * the synchronous `clearInMemoryNuGetCaches()` so the second click
+     * doesn't see partly-repopulated caches.
+     */
+    private _httpCacheClearInFlight: Promise<void> | null = null;
+
+    /**
+     * Fire-and-forget variant of `clearNuGetHttpCache()` for the Refresh button path.
+     * Spawns the `dotnet nuget locals` process in the background and coalesces
+     * concurrent calls so multiple rapid Refreshes share one process.
+     * The UI proceeds immediately without waiting for the disk clear to finish.
+     */
+    clearNuGetHttpCacheBackground(): void {
+        if (this._httpCacheClearInFlight) { return; }
+        this._httpCacheClearInFlight = this._cliService.clearNuGetHttpCache()
+            .catch(() => {
+                // Best-effort: CLI errors are already logged inside the service
+            })
+            .finally(() => {
+                this._httpCacheClearInFlight = null;
+            });
     }
 
     /**

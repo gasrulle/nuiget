@@ -429,13 +429,82 @@ describe('NuGetService', () => {
     });
 
     // ──────────────────────────────────────────────
-    // clearSourceErrors
+    // clearSourceErrors / clearInMemoryNuGetCaches
     // ──────────────────────────────────────────────
     describe('clearSourceErrors', () => {
         it('clears all caches and restarts health monitor', () => {
             service.clearSourceErrors();
             // workspaceCache.clearByPrefix should be called for version cache
             expect(workspaceCache.clearByPrefix).toHaveBeenCalledWith('versions:');
+        });
+
+        it('is an alias for clearInMemoryNuGetCaches', () => {
+            const spy = vi.spyOn(service, 'clearInMemoryNuGetCaches');
+            service.clearSourceErrors();
+            expect(spy).toHaveBeenCalledTimes(1);
+        });
+    });
+
+    describe('clearInMemoryNuGetCaches', () => {
+        it('clears every documented in-memory cache and the package service caches', () => {
+            const pkg = (service as any)._packageService;
+            const clearCachesSpy = vi.spyOn(pkg, 'clearCaches');
+            const clearMetaSpy = vi.spyOn(pkg, 'clearMetadataAndSearchCaches');
+            const invalidateSourcesSpy = vi.spyOn(service, 'invalidateSourcesCache');
+            const clearVersionsSpy = vi.spyOn(service, 'clearVersionsCache');
+
+            // Seed the in-memory maps so we can verify they're cleared
+            (service as any).failedSources.set('https://example.com', 'boom');
+            (service as any).serviceIndexCache.set('https://example.com', {} as any);
+            (service as any).failedEndpointCache.set('https://example.com', Date.now());
+
+            service.clearInMemoryNuGetCaches();
+
+            expect((service as any).failedSources.size).toBe(0);
+            expect((service as any).serviceIndexCache.size).toBe(0);
+            expect((service as any).failedEndpointCache.size).toBe(0);
+            expect(clearCachesSpy).toHaveBeenCalledTimes(1);
+            expect(clearMetaSpy).toHaveBeenCalledTimes(1);
+            expect(invalidateSourcesSpy).toHaveBeenCalledTimes(1);
+            expect(clearVersionsSpy).toHaveBeenCalledTimes(1);
+        });
+    });
+
+    describe('clearNuGetHttpCacheBackground', () => {
+        it('coalesces concurrent calls so the CLI runs only once', async () => {
+            const cli = (service as any)._cliService;
+            let resolveCli: () => void = () => { /* noop */ };
+            const inFlight = new Promise<void>(r => { resolveCli = r; });
+            const spy = vi.spyOn(cli, 'clearNuGetHttpCache').mockReturnValue(inFlight);
+
+            service.clearNuGetHttpCacheBackground();
+            service.clearNuGetHttpCacheBackground();
+            service.clearNuGetHttpCacheBackground();
+
+            expect(spy).toHaveBeenCalledTimes(1);
+
+            // After it settles, a fresh call should spawn again
+            resolveCli();
+            await inFlight;
+            await new Promise(r => setImmediate(r));
+            spy.mockResolvedValueOnce(undefined as any);
+            service.clearNuGetHttpCacheBackground();
+            expect(spy).toHaveBeenCalledTimes(2);
+        });
+
+        it('swallows CLI errors so callers never see a rejection', async () => {
+            const cli = (service as any)._cliService;
+            const spy = vi.spyOn(cli, 'clearNuGetHttpCache')
+                .mockRejectedValueOnce(new Error('boom'))
+                .mockResolvedValueOnce(undefined as any);
+
+            // Should not throw
+            expect(() => service.clearNuGetHttpCacheBackground()).not.toThrow();
+            // Wait one microtask so the .catch + .finally run and clear the in-flight slot
+            await new Promise(r => setImmediate(r));
+            // Subsequent call must spawn again now that in-flight is cleared
+            service.clearNuGetHttpCacheBackground();
+            expect(spy).toHaveBeenCalledTimes(2);
         });
     });
 

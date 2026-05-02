@@ -177,9 +177,8 @@ export function activate(context: vscode.ExtensionContext) {
         })
     );
     context.subscriptions.push(
-        vscode.commands.registerCommand('nuiget.sidebar.refresh', async () => {
-            await nugetService.clearNuGetHttpCache();
-            nugetService.clearSourceErrors();
+        vscode.commands.registerCommand('nuiget.sidebar.refresh', () => {
+            // refreshSidebar() handles cache clearing (sync in-memory + background disk)
             sidebarProvider.refreshSidebar();
         })
     );
