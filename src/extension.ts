@@ -73,6 +73,21 @@ export function activate(context: vscode.ExtensionContext) {
     sidebarProvider.startBackgroundMonitoring();
     context.subscriptions.push({ dispose: () => sidebarProvider.dispose() });
 
+    // Workspace folder add/remove → refresh main panel + sidebar so any in-flight
+    // streamed All-Projects enumeration aborts and restarts with the new folder list.
+    // Debounce 300ms to coalesce rapid add+remove sequences.
+    let workspaceFoldersDebounce: ReturnType<typeof setTimeout> | undefined;
+    const workspaceFoldersListener = vscode.workspace.onDidChangeWorkspaceFolders(() => {
+        if (workspaceFoldersDebounce) { clearTimeout(workspaceFoldersDebounce); }
+        workspaceFoldersDebounce = setTimeout(() => {
+            workspaceFoldersDebounce = undefined;
+            NuGetPanel.refresh();
+            sidebarProvider.refreshSidebar();
+        }, 300);
+    });
+    context.subscriptions.push(workspaceFoldersListener);
+    context.subscriptions.push({ dispose: () => { if (workspaceFoldersDebounce) { clearTimeout(workspaceFoldersDebounce); workspaceFoldersDebounce = undefined; } } });
+
     // Register commands
     context.subscriptions.push(
         vscode.commands.registerCommand('nuiget.openManager', (contextArg?: unknown) => {
