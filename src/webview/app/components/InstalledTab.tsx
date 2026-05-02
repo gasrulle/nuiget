@@ -395,7 +395,7 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
             const folderNames = [...byFolder.keys()].sort((a, b) => a.localeCompare(b));
             for (const folder of folderNames) {
                 items.push({ type: 'folderHeader', folder });
-                for (const project of byFolder.get(folder)!) { renderProject(project); }
+                for (const project of byFolder.get(folder) ?? []) { renderProject(project); }
             }
             if (unfoldered.length > 0) {
                 items.push({ type: 'folderHeader', folder: '(other)' });

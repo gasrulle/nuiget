@@ -349,22 +349,24 @@ export const SidebarApp: React.FC = () => {
                     }
                     // Optimistic install: mutate version on existing row, or append new row
                     if (opPkgId && op?.type === 'update' && op.projectPath && op.version) {
+                        const updateProjectPath = op.projectPath;
+                        const updateVersion = op.version;
                         setAllProjectsInstalled(prev => {
                             const updated = prev.map(pi => {
-                                if (pi.projectPath !== op.projectPath) { return pi; }
+                                if (pi.projectPath !== updateProjectPath) { return pi; }
                                 return { ...pi, packages: pi.packages.map(p =>
                                     p.id.toLowerCase() === opPkgId
-                                        ? { ...p, version: op.version!, resolvedVersion: op.version! }
+                                        ? { ...p, version: updateVersion, resolvedVersion: updateVersion }
                                         : p
                                 ) };
                             });
                             allProjectsInstalledRef.current = updated;
                             return updated;
                         });
-                        if (selectedProjectRef.current === op.projectPath || selectedProjectRef.current === ALL_PROJECTS_SENTINEL) {
+                        if (selectedProjectRef.current === updateProjectPath || selectedProjectRef.current === ALL_PROJECTS_SENTINEL) {
                             setInstalledPackages(prev => prev.map(p =>
                                 p.id.toLowerCase() === opPkgId
-                                    ? { ...p, version: op.version!, resolvedVersion: op.version! }
+                                    ? { ...p, version: updateVersion, resolvedVersion: updateVersion }
                                     : p
                             ));
                         }
@@ -385,18 +387,21 @@ export const SidebarApp: React.FC = () => {
                     }
                     // For install: append optimistically when version known; otherwise re-fetch
                     if (opPkgId && op?.type === 'install') {
-                        if (op.version && op.projectPath) {
+                        if (op.version && op.projectPath && op.packageId) {
+                            const installProjectPath = op.projectPath;
+                            const installVersion = op.version;
+                            const installPackageId = op.packageId;
                             setAllProjectsInstalled(prev => {
                                 const updated = prev.map(pi => {
-                                    if (pi.projectPath !== op.projectPath) { return pi; }
+                                    if (pi.projectPath !== installProjectPath) { return pi; }
                                     if (pi.packages.some(p => p.id.toLowerCase() === opPkgId)) { return pi; }
-                                    return { ...pi, packages: [...pi.packages, { id: op.packageId!, version: op.version!, resolvedVersion: op.version! } as InstalledPackage] };
+                                    return { ...pi, packages: [...pi.packages, { id: installPackageId, version: installVersion, resolvedVersion: installVersion } as InstalledPackage] };
                                 });
                                 allProjectsInstalledRef.current = updated;
                                 return updated;
                             });
-                            if (selectedProjectRef.current === op.projectPath || selectedProjectRef.current === ALL_PROJECTS_SENTINEL) {
-                                setInstalledPackages(prev => prev.some(p => p.id.toLowerCase() === opPkgId) ? prev : [...prev, { id: op.packageId!, version: op.version!, resolvedVersion: op.version! } as InstalledPackage]);
+                            if (selectedProjectRef.current === installProjectPath || selectedProjectRef.current === ALL_PROJECTS_SENTINEL) {
+                                setInstalledPackages(prev => prev.some(p => p.id.toLowerCase() === opPkgId) ? prev : [...prev, { id: installPackageId, version: installVersion, resolvedVersion: installVersion } as InstalledPackage]);
                             }
                         } else if (selectedProjectRef.current === ALL_PROJECTS_SENTINEL) {
                             requestStreamedAllProjectsInstalled();
@@ -1428,7 +1433,7 @@ export const SidebarApp: React.FC = () => {
                                     {folder}
                                 </div>
                             );
-                            for (const p of byFolder.get(folder)!) { groups.push(renderProject(p)); }
+                            for (const p of byFolder.get(folder) ?? []) { groups.push(renderProject(p)); }
                         }
                         if (unfoldered.length > 0) {
                             groups.push(
