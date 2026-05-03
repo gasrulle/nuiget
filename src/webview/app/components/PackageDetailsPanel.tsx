@@ -121,6 +121,23 @@ const PackageDetailsPanel: React.FC<PackageDetailsPanelProps> = ({
         return () => document.removeEventListener('keydown', handleKeyDown);
     }, [multiInstallOpen]);
 
+    // For floating/range installed packages, snap selectedVersion from the floating spec
+    // (e.g. "10.*") to the resolved concrete version (e.g. "10.2.0") once packageVersions
+    // loads, so the controlled <select> value matches an actual <option>.
+    useEffect(() => {
+        if (!selectedPackage) { return; }
+        const pkgId = getPackageId(selectedPackage);
+        const installed = installedPackages.find(p => p.id.toLowerCase() === pkgId.toLowerCase());
+        if (!installed) { return; }
+        const isFR = installed.versionType === 'floating' || installed.versionType === 'range';
+        if (!isFR || packageVersions.length === 0) { return; }
+        if (selectedVersion !== installed.version) { return; }
+        const resolved = installed.resolvedVersion;
+        if (resolved && packageVersions.includes(resolved)) {
+            onVersionChange(resolved);
+        }
+    }, [selectedPackage, installedPackages, packageVersions, selectedVersion, onVersionChange]);
+
     if (!selectedPackage) {
         return <p className="empty-state">Select a package to view details</p>;
     }
@@ -251,8 +268,7 @@ const PackageDetailsPanel: React.FC<PackageDetailsPanelProps> = ({
                                 }}
                                 className="version-selector"
                                 data-testid="version-selector"
-                                disabled={isFloatingOrRange}
-                                title={isFloatingOrRange ? 'Version selection disabled for floating/range versions' : undefined}
+                                title={isFloatingOrRange ? 'Browse available versions (install disabled for floating/range versions)' : undefined}
                             >
                                 {packageVersions.map(v => (
                                     <option key={v} value={v}>{v}</option>

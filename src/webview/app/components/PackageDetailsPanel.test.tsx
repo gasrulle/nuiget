@@ -352,15 +352,35 @@ describe('PackageDetailsPanel', () => {
             expect(screen.getByText('10.2.0')).toBeInTheDocument();
         });
 
-        it('disables version selector for floating versions', () => {
+        it('keeps version selector enabled but disables install for floating versions', () => {
+            const onVersionChange = vi.fn();
             render(<MemoizedPackageDetailsPanel {...createProps({
                 selectedPackage: { id: 'Pkg', version: '10.*' },
-                installedPackages: [{ id: 'Pkg', version: '10.*', versionType: 'floating' as const }],
-                packageVersions: ['10.2.0'],
+                installedPackages: [{ id: 'Pkg', version: '10.*', versionType: 'floating' as const, resolvedVersion: '10.2.0' }],
+                packageVersions: ['10.2.0', '10.1.0'],
+                selectedVersion: '10.2.0',
+                onVersionChange,
             })} />);
             const selectors = screen.getAllByRole('combobox');
-            const versionSelector = selectors.find(s => s.getAttribute('title')?.includes('disabled'));
-            expect(versionSelector).toBeDisabled();
+            const versionSelector = selectors.find(s => s.getAttribute('title')?.includes('floating/range')) as HTMLSelectElement;
+            expect(versionSelector).toBeDefined();
+            expect(versionSelector).not.toBeDisabled();
+            const installBtn = screen.getByTestId('install-update-button');
+            expect(installBtn).toBeDisabled();
+            fireEvent.change(versionSelector, { target: { value: '10.1.0' } });
+            expect(onVersionChange).toHaveBeenCalledWith('10.1.0');
+        });
+
+        it('snaps selectedVersion from floating spec to resolved version when packageVersions loads', () => {
+            const onVersionChange = vi.fn();
+            render(<MemoizedPackageDetailsPanel {...createProps({
+                selectedPackage: { id: 'Pkg', version: '10.*' },
+                installedPackages: [{ id: 'Pkg', version: '10.*', versionType: 'floating' as const, resolvedVersion: '10.2.0' }],
+                packageVersions: ['10.2.0', '10.1.0'],
+                selectedVersion: '10.*',
+                onVersionChange,
+            })} />);
+            expect(onVersionChange).toHaveBeenCalledWith('10.2.0');
         });
 
         it('shows info notice for floating/range versions', () => {

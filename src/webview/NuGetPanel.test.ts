@@ -615,7 +615,10 @@ describe('NuGetPanel', () => {
         });
 
         it('restoreProject shows progress and sends result', async () => {
-            (vscode.window.withProgress as any) = vi.fn(async (_opts: unknown, task: (progress: unknown) => Promise<void>) => task({}));
+            vi.spyOn(vscode.window, 'withProgress').mockImplementationOnce(
+                async (_opts: unknown, task: (progress: unknown, token: unknown) => Promise<void>) =>
+                    task({ report: vi.fn() }, { isCancellationRequested: false, onCancellationRequested: vi.fn() })
+            );
             (mockService as any).restoreProject.mockResolvedValue(true);
 
             await messageListener!({ type: 'restoreProject', projectPath: '/proj.csproj' });
@@ -1393,6 +1396,108 @@ describe('NuGetPanel', () => {
             await p;
 
             expect(abortSignal?.aborted).toBe(true);
+        });
+    });
+
+    describe('restoreProjectsBatch message', () => {
+        beforeEach(() => {
+            operationQueue.resetForTests();
+            NuGetPanel.createOrShow(vscode.Uri.file('/ext'), mockContext, mockOutputChannel, mockService as any);
+            mockPanel.webview.postMessage.mockClear();
+            mockService.restoreProject.mockReset();
+            mockService.restoreProject.mockResolvedValue(true);
+        });
+
+        it('returns empty results immediately when projectPaths is empty', async () => {
+            await messageListener!({ type: 'restoreProjectsBatch', requestId: 'r1', projectPaths: [] });
+
+            const calls = mockPanel.webview.postMessage.mock.calls.map((c: any[]) => c[0]);
+            const result = calls.find((m: any) => m.type === 'restoreProjectsBatchResult');
+            expect(result).toMatchObject({ requestId: 'r1', results: [] });
+            expect(mockService.restoreProject).not.toHaveBeenCalled();
+        });
+
+        it('processes paths serially and echoes requestId in result', async () => {
+            const callOrder: string[] = [];
+            mockService.restoreProject.mockImplementation(async (p: string) => {
+                callOrder.push(p);
+                return true;
+            });
+
+            await messageListener!({
+                type: 'restoreProjectsBatch',
+                requestId: 'r2',
+                projectPaths: ['/a.csproj', '/b.csproj', '/c.csproj'],
+            });
+            await operationQueue.waitIdle();
+
+            expect(callOrder).toEqual(['/a.csproj', '/b.csproj', '/c.csproj']);
+            const calls = mockPanel.webview.postMessage.mock.calls.map((c: any[]) => c[0]);
+            const result = calls.find((m: any) => m.type === 'restoreProjectsBatchResult');
+            expect(result.requestId).toBe('r2');
+            expect(result.results).toHaveLength(3);
+            expect(result.results.every((r: any) => r.success === true)).toBe(true);
+        });
+
+        it('captures per-project errors without aborting the batch', async () => {
+            mockService.restoreProject.mockImplementation(async (p: string) => {
+                if (p === '/b.csproj') { throw new Error('restore failed'); }
+                return true;
+            });
+
+            await messageListener!({
+                type: 'restoreProjectsBatch',
+                requestId: 'r3',
+                projectPaths: ['/a.csproj', '/b.csproj', '/c.csproj'],
+            });
+            await operationQueue.waitIdle();
+
+            const calls = mockPanel.webview.postMessage.mock.calls.map((c: any[]) => c[0]);
+            const result = calls.find((m: any) => m.type === 'restoreProjectsBatchResult');
+            expect(result.results).toHaveLength(3);
+            expect(result.results.find((r: any) => r.projectPath === '/a.csproj')).toMatchObject({ success: true });
+            expect(result.results.find((r: any) => r.projectPath === '/b.csproj')).toMatchObject({ success: false, error: 'restore failed' });
+            expect(result.results.find((r: any) => r.projectPath === '/c.csproj')).toMatchObject({ success: true });
+        });
+
+        it('filters ALL_PROJECTS sentinel from input', async () => {
+            mockService.restoreProject.mockResolvedValue(true);
+
+            await messageListener!({
+                type: 'restoreProjectsBatch',
+                requestId: 'r4',
+                projectPaths: ['__all_projects__', '/a.csproj'],
+            });
+            await operationQueue.waitIdle();
+
+            // Only one real project survives; sentinel stripped
+            expect(mockService.restoreProject).toHaveBeenCalledTimes(1);
+            expect(mockService.restoreProject).toHaveBeenCalledWith('/a.csproj');
+        });
+
+        it('synthesizes failure results when operation queue is full', async () => {
+            // Saturate the queue (running + MAX_WAITING=5) so the batch enqueue is rejected.
+            const blockers: Array<() => void> = [];
+            for (let i = 0; i < 6; i++) {
+                operationQueue.enqueue(`blocker-${i}`, () => new Promise<void>(resolve => { blockers.push(resolve); }));
+            }
+
+            await messageListener!({
+                type: 'restoreProjectsBatch',
+                requestId: 'r5',
+                projectPaths: ['/a.csproj', '/b.csproj'],
+            });
+
+            const calls = mockPanel.webview.postMessage.mock.calls.map((c: any[]) => c[0]);
+            const result = calls.find((m: any) => m.type === 'restoreProjectsBatchResult');
+            expect(result.requestId).toBe('r5');
+            expect(result.results).toHaveLength(2);
+            expect(result.results.every((r: any) => r.success === false && /queue is full/i.test(r.error))).toBe(true);
+            // Did not actually invoke the service for any project.
+            expect(mockService.restoreProject).not.toHaveBeenCalled();
+
+            // Drain blockers so other tests start clean.
+            blockers.forEach(r => r());
         });
     });
 

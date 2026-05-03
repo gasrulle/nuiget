@@ -3443,6 +3443,30 @@ describe('NuGetService', () => {
             const result = await (service as any)._projectService.getTransitivePackagesFromAssets('/obj/project.assets.json');
             expect(result.frameworks).toEqual([]);
         });
+
+        it('falls back to base TFM in projectFileDependencyGroups for RID-specific target keys', async () => {
+            // RID-specific target keys ("net8.0/win-x64") still key projectFileDependencyGroups
+            // by base TFM ("net8.0"). Without the fallback, "DirectPkg" would be misclassified
+            // as transitive instead of direct.
+            vi.spyOn((service as any)._projectService, 'readAssetsJson').mockResolvedValue({
+                targets: {
+                    'net8.0/win-x64': {
+                        'DirectPkg/1.0.0': { dependencies: { 'TransitivePkg': '2.0.0' } },
+                        'TransitivePkg/2.0.0': {},
+                    },
+                },
+                projectFileDependencyGroups: {
+                    'net8.0': ['DirectPkg >= 1.0.0'],
+                },
+            });
+
+            const result = await (service as any)._projectService.getTransitivePackagesFromAssets('/obj/project.assets.json');
+            expect(result.frameworks).toHaveLength(1);
+            expect(result.frameworks[0].targetFramework).toBe('net8.0/win-x64');
+            const ids = result.frameworks[0].packages.map((p: { id: string }) => p.id);
+            expect(ids).toContain('TransitivePkg');
+            expect(ids).not.toContain('DirectPkg');
+        });
     });
 
     describe('getTransitivePackagesPreservingErrors', () => {

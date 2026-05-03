@@ -7,27 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
-
-- **Transitive packages in all-projects mode**— All-Projects view now shows a single aggregated **Transitive Packages** section. Each row deduplicates by `id@version` across projects and lists every framework that pulls the package in. Selecting a row opens the standard details panel with a project-grouped **Required by** breakdown so you can see exactly which projects (and which top-level packages within them) bring in each transitive dependency. Loads lazily on section expand, streams per project so partial data appears immediately, and exposes a **Restore N projects** button when `obj/project.assets.json` is missing for one or more projects.
-- **"Restore after operations" toggle** — New per-workspace UI toggle replaces the legacy `nuiget.noRestore` setting. Sidebar shows a `$(verified-filled)` (on, default) / `$(verified)` (off) icon in the title bar; main panel shows a checkbox next to "Include prerelease". Both stay in sync. When off, install/update/remove operations skip the trailing `dotnet restore` phase, mirroring the previous setting's behavior with discoverable UI. Existing `nuiget.noRestore` values are migrated automatically on first activation (multi-root workspaces: any folder with `noRestore: true` migrates to `restoreEnabled: false`).
-
-### Removed
-
-- **`nuiget.noRestore` setting** — Replaced by the **Restore after operations** UI toggle (see Added). Existing values are migrated to per-workspace state on first activation.
-
 ## [1.18.5] - 2026-05-02
 
 ### Added
 
+- **Transitive packages in all-projects mode**— All-Projects view now shows a single aggregated **Transitive Packages** section. Each row deduplicates by `id@version` across projects and lists every framework that pulls the package in. Selecting a row opens the standard details panel with a project-grouped **Required by** breakdown so you can see exactly which projects (and which top-level packages within them) bring in each transitive dependency. Loads lazily on section expand, streams per project so partial data appears immediately, and exposes a **Restore N projects** button when `obj/project.assets.json` is missing for one or more projects.
+- **"Restore after operations" toggle** — New per-workspace UI toggle replaces the legacy `nuiget.noRestore` setting. Sidebar shows a `$(verified-filled)` (on, default) / `$(verified)` (off) icon in the title bar; main panel shows a checkbox next to "Include prerelease". Both stay in sync. When off, install/update/remove operations skip the trailing `dotnet restore` phase, mirroring the previous setting's behavior with discoverable UI. Existing `nuiget.noRestore` values are migrated automatically on first activation (multi-root workspaces: any folder with `noRestore: true` migrates to `restoreEnabled: false`).
 - **Performance instrumentation** — Optional `[perf]` timing logs in the nUIget output channel, gated by the new `nuiget.enablePerformanceLogging` setting (default: off). When enabled, hot paths (panel open, installed-package load, search, install/update/remove, sidebar resolve) emit total wall time and sub-phase deltas. Multi-root workspaces tag each line with the owning workspace folder name.
 - **Hover prefetch** — Hovering a package row in the Browse, Installed, and Updates tabs prefetches its versions list and (when known) its metadata after a 150ms dwell. The details panel and version dropdown now usually appear instantly on click instead of showing a loading flash. Prefetches are deduplicated, capped to 4 concurrent backend lookups, and skipped when the data is already cached.
 - **`nUIget: Clear SDK Version Cache` command** — New Command Palette entry to manually invalidate the persisted SDK-major-version map (rare; extension-version stamping and `global.json` watcher cover most cases automatically).
 - **Workspace folder add/remove auto-refresh** — Adding or removing a workspace folder now triggers a debounced (300ms) refresh of the main panel and sidebar so any in-flight All-Projects enumeration aborts and restarts with the new folder list.
 - **Persistent SDK version cache** — The `dotnet --version` probe (~250ms per project directory) now persists across VS Code sessions. The snapshot is keyed by extension version and invalidates automatically when `global.json` changes or the extension is upgraded. The persisted map is capped at 256 entries (FIFO/insertion-order eviction) to bound `globalState` growth across long-lived installs.
 
+### Removed
+
+- **`nuiget.noRestore` setting** — Replaced by the **Restore after operations** UI toggle (see Added). Existing values are migrated to per-workspace state on first activation.
+
 ### Changed
 
+- **Version dropdown enabled for floating/range versions**
 - **Optimistic install/update write-through** — Single-package install and update now apply to the visible row immediately (new row appears, version flips). Authoritative re-fetch still runs underneath as silent reconciliation, so failures or stale data correct themselves without flicker.
 - **Refresh no longer blocks on disk HTTP cache clear** — Manual refresh now clears in-memory caches (sources, service index, metadata, search, versions, package data) synchronously and runs the on-disk `dotnet nuget locals http-cache --clear` in the background. Concurrent refreshes coalesce so only one disk-clear runs at a time. The Command Palette `nUIget: Clear NuGet HTTP Cache` still awaits completion.
 - **Package metadata cache size increased** — In-memory LRU bumped from 200 → 500 entries. Cleared on Refresh (relies on Plan 05 widening) so users always get fresh data when they ask for it.

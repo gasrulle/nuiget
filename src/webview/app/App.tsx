@@ -13,9 +13,10 @@ import { usePackageSelection } from './hooks/usePackageSelection';
 import { useHoverPrefetch } from './hooks/useHoverPrefetch';
 import { ClearAllIcon, CloudDownloadIcon, FilterIcon, LoadingIcon, SettingsGearIcon, SyncIcon, VerifiedIcon, WarningIcon } from './icons';
 import { renderMarkdownToHtml } from './markdownSetup';
-import type { AllProjectsTransitiveRow, AppState, FailedSource, InstalledPackage, NuGetSource, PackageMetadata, PackageSearchResult, PackageUpdate, Project, ProjectInstalled, ProjectUpdates, QuickSearchSourceResult, SelectedTransitivePackage, TabType, TransitiveFrameworkSection, VulnerabilitySeverity } from './types';
+import type { AllProjectsTransitiveRow, AppState, FailedSource, InstalledPackage, NuGetSource, PackageMetadata, PackageSearchResult, PackageUpdate, Project, ProjectInstalled, ProjectUpdates, QuickSearchSourceResult, SelectedTransitivePackage, TabType, VulnerabilitySeverity } from './types';
 import { ALL_PROJECTS_SENTINEL, LRUMap, getPackageId } from './types';
 import { FILTER_PREFIXES, parseSearchQuery } from './utils/parseSearchQuery';
+import { aggregateAllProjectsTransitive, selectErroredTransitiveProjects, type ProjectTransitiveSlot } from './utils/aggregateAllProjectsTransitive';
 
 // Get the default package icon URL from the root element data attribute
 const defaultPackageIcon = document.getElementById('root')?.dataset.packageIcon || '';
@@ -219,18 +220,6 @@ export const App: React.FC = () => {
      * `allProjectsTransitiveComplete`. Stale `requestId` discarded.
      * Aggregation produces `allProjectsTransitiveRows` (deduped by id@version).
      */
-    type ProjectTransitiveSlot = {
-        projectName: string;
-        workspaceFolder?: string;
-        frameworks: TransitiveFrameworkSection[];
-        dataSourceAvailable: boolean;
-        errorKind?: 'parse-failed' | 'fs-error' | 'unknown';
-        // True once the backend has emitted a ProjectFound chunk for this slot.
-        // Start placeholders set this to false; only `received` slots count toward
-        // the "missing data / restore" banner — otherwise in-flight projects look
-        // like errors during streaming.
-        received?: boolean;
-    };
     const [allProjectsTransitive, setAllProjectsTransitive] = useState<Record<string, ProjectTransitiveSlot>>({});
     const [loadingAllProjectsTransitive, setLoadingAllProjectsTransitive] = useState(false);
     const [allProjectsTransitiveLoaded, setAllProjectsTransitiveLoaded] = useState(false);
@@ -1513,76 +1502,20 @@ export const App: React.FC = () => {
      * Each row collects per-project origins, with origins keyed by `(projectPath, chainHash)`.
      * Frameworks are merged per-origin and per-row (deduped). Sorted alphabetically by id.
      */
-    const allProjectsTransitiveRows = useMemo<AllProjectsTransitiveRow[]>(() => {
-        const rowMap = new Map<string, AllProjectsTransitiveRow>();
-        for (const [projectPath, slot] of Object.entries(allProjectsTransitive)) {
-            if (!slot.dataSourceAvailable) { continue; }
-            for (const fwSection of slot.frameworks) {
-                for (const pkg of fwSection.packages) {
-                    const lowerId = pkg.id.toLowerCase();
-                    const versionNorm = (pkg.version ?? '').trim().toLowerCase();
-                    const rowKey = `${lowerId}@${versionNorm}`;
-                    let row = rowMap.get(rowKey);
-                    if (!row) {
-                        row = {
-                            id: pkg.id,
-                            version: pkg.version,
-                            versionNormalized: versionNorm,
-                            iconUrl: pkg.iconUrl,
-                            verified: pkg.verified,
-                            authors: pkg.authors,
-                            origins: [],
-                            frameworks: [],
-                        };
-                        rowMap.set(rowKey, row);
-                    } else {
-                        if (!row.iconUrl && pkg.iconUrl) { row.iconUrl = pkg.iconUrl; }
-                        if (row.verified === undefined && pkg.verified !== undefined) { row.verified = pkg.verified; }
-                        if (!row.authors && pkg.authors) { row.authors = pkg.authors; }
-                    }
-                    const chainHash = (pkg.requiredByChain || []).join('→');
-                    let origin = row.origins.find(o => o.projectPath === projectPath && o.chainHash === chainHash);
-                    if (!origin) {
-                        origin = {
-                            projectPath,
-                            projectName: slot.projectName,
-                            workspaceFolder: slot.workspaceFolder,
-                            frameworks: [],
-                            requiredByChain: pkg.requiredByChain || [],
-                            fullChain: pkg.fullChain,
-                            chainHash,
-                        };
-                        row.origins.push(origin);
-                    }
-                    if (!origin.frameworks.includes(fwSection.targetFramework)) {
-                        origin.frameworks.push(fwSection.targetFramework);
-                    }
-                    if (!row.frameworks.includes(fwSection.targetFramework)) {
-                        row.frameworks.push(fwSection.targetFramework);
-                    }
-                }
-            }
-        }
-        return Array.from(rowMap.values()).sort((a, b) => a.id.toLowerCase().localeCompare(b.id.toLowerCase()));
-    }, [allProjectsTransitive]);
+    const allProjectsTransitiveRows = useMemo<AllProjectsTransitiveRow[]>(
+        () => aggregateAllProjectsTransitive(allProjectsTransitive),
+        [allProjectsTransitive]
+    );
 
     /**
      * Errored/missing-data projects derived from slots — surfaces "Restore" banner candidates.
      * Only counts slots that have actually `received` a chunk from the backend. In-flight
      * placeholders (`received=false`) are ignored to avoid false positives during streaming.
      */
-    const allProjectsTransitiveErrored = useMemo(() => {
-        const out: Array<{ projectPath: string; projectName: string; errorKind?: string; missing?: boolean }> = [];
-        for (const [projectPath, slot] of Object.entries(allProjectsTransitive)) {
-            if (!slot.received) { continue; }
-            if (!slot.dataSourceAvailable) {
-                out.push({ projectPath, projectName: slot.projectName, missing: true });
-            } else if (slot.errorKind) {
-                out.push({ projectPath, projectName: slot.projectName, errorKind: slot.errorKind });
-            }
-        }
-        return out;
-    }, [allProjectsTransitive]);
+    const allProjectsTransitiveErrored = useMemo(
+        () => selectErroredTransitiveProjects(allProjectsTransitive),
+        [allProjectsTransitive]
+    );
 
     /**
      * Selection re-resolution: when the aggregation refreshes (mid-stream or post-restore),
