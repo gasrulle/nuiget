@@ -431,4 +431,39 @@ describe('NuGetCliService', () => {
             expect(hoisted.mockExecWithTimeout).toHaveBeenCalledTimes(2);
         });
     });
+
+    // ──────────────────────────────────────────────
+    // skipRestore option
+    // ──────────────────────────────────────────────
+    describe('skipRestore option', () => {
+        it('installPackage adds --no-restore when options.skipRestore is true', async () => {
+            hoisted.mockExecWithTimeout
+                .mockResolvedValueOnce({ stdout: '9.0.200\n', stderr: '' })
+                .mockResolvedValueOnce({ stdout: 'ok', stderr: '' });
+            await service.installPackage('/proj/App.csproj', 'Newtonsoft.Json', '13.0.3', { skipRestore: true });
+            const cmd = hoisted.mockExecWithTimeout.mock.calls[1][0] as string;
+            expect(cmd).toContain('--no-restore');
+        });
+
+        it('updatePackage adds --no-restore when options.skipRestore is true', async () => {
+            hoisted.mockExecWithTimeout
+                .mockResolvedValueOnce({ stdout: '9.0.200\n', stderr: '' })
+                .mockResolvedValueOnce({ stdout: 'ok', stderr: '' });
+            await service.updatePackage('/proj/App.csproj', 'Newtonsoft.Json', '14.0.0', { skipRestore: true });
+            const cmd = hoisted.mockExecWithTimeout.mock.calls[1][0] as string;
+            expect(cmd).toContain('--no-restore');
+        });
+
+        it('removePackage skips follow-up restore when options.skipRestore is true', async () => {
+            hoisted.mockExecWithTimeout
+                .mockResolvedValueOnce({ stdout: '9.0.200\n', stderr: '' }) // sdk
+                .mockResolvedValueOnce({ stdout: 'removed', stderr: '' }); // remove only — no restore call
+            const result = await service.removePackage('/proj/App.csproj', 'OldPkg', { skipRestore: true });
+            expect(result).toBe(true);
+            // Only sdk + remove should have run; no third call for restore.
+            expect(hoisted.mockExecWithTimeout).toHaveBeenCalledTimes(2);
+            const removeCmd = hoisted.mockExecWithTimeout.mock.calls[1][0] as string;
+            expect(removeCmd).not.toContain('restore');
+        });
+    });
 });

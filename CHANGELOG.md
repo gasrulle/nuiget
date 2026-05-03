@@ -9,7 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **Transitive packages in all-projects mode** — All-Projects view now shows a single aggregated **Transitive Packages** section. Each row deduplicates by `id@version` across projects and lists every framework that pulls the package in. Selecting a row opens the standard details panel with a project-grouped **Required by** breakdown so you can see exactly which projects (and which top-level packages within them) bring in each transitive dependency. Loads lazily on section expand, streams per project so partial data appears immediately, and exposes a **Restore N projects** button when `obj/project.assets.json` is missing for one or more projects.
+- **Transitive packages in all-projects mode**— All-Projects view now shows a single aggregated **Transitive Packages** section. Each row deduplicates by `id@version` across projects and lists every framework that pulls the package in. Selecting a row opens the standard details panel with a project-grouped **Required by** breakdown so you can see exactly which projects (and which top-level packages within them) bring in each transitive dependency. Loads lazily on section expand, streams per project so partial data appears immediately, and exposes a **Restore N projects** button when `obj/project.assets.json` is missing for one or more projects.
+- **"Restore after operations" toggle** — New per-workspace UI toggle replaces the legacy `nuiget.noRestore` setting. Sidebar shows a `$(verified-filled)` (on, default) / `$(verified)` (off) icon in the title bar; main panel shows a checkbox next to "Include prerelease". Both stay in sync. When off, install/update/remove operations skip the trailing `dotnet restore` phase, mirroring the previous setting's behavior with discoverable UI. Existing `nuiget.noRestore` values are migrated automatically on first activation (multi-root workspaces: any folder with `noRestore: true` migrates to `restoreEnabled: false`).
+
+### Removed
+
+- **`nuiget.noRestore` setting** — Replaced by the **Restore after operations** UI toggle (see Added). Existing values are migrated to per-workspace state on first activation.
 
 ## [1.18.5] - 2026-05-02
 

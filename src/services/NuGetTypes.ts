@@ -575,6 +575,7 @@ export interface GetSettingsMsg {
 export interface SaveSettingsMsg {
     type: 'saveSettings';
     includePrerelease?: boolean;
+    restoreEnabled?: boolean;
     selectedSource?: string;
     selectedProject?: string;
     recentSearches?: string[];

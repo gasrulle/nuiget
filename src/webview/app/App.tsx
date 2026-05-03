@@ -56,6 +56,7 @@ export const App: React.FC = () => {
     const [detailsTab, setDetailsTab] = useState<'details' | 'readme'>('details');
     const [expandedDeps, setExpandedDeps] = useState<Set<string>>(new Set());
     const [includePrerelease, setIncludePrerelease] = useState<boolean>(savedState?.includePrerelease || false);
+    const [restoreEnabled, setRestoreEnabled] = useState<boolean>(savedState?.restoreEnabled ?? true);
     const [recentSearches, setRecentSearches] = useState<string[]>(savedState?.recentSearches || []);
     // Search debounce settings from extension
     const [searchDebounceMode, setSearchDebounceMode] = useState<'quicksearch' | 'full' | 'off'>('quicksearch');
@@ -127,9 +128,10 @@ export const App: React.FC = () => {
             activeTab,
             searchQuery: '',
             includePrerelease,
+            restoreEnabled,
             recentSearches
         });
-    }, [selectedProject, selectedSource, activeTab, includePrerelease, recentSearches]);
+    }, [selectedProject, selectedSource, activeTab, includePrerelease, restoreEnabled, recentSearches]);
 
     // Use ref to track latest selectedProject for message handler
     const selectedProjectRef = useRef(selectedProject);
@@ -181,6 +183,8 @@ export const App: React.FC = () => {
     const includePrereleaseRef = useRef(includePrerelease);
     // Flag to skip saveSettings when prerelease was synced from backend (prevents echo loop)
     const skipSaveRef = useRef(false);
+    // Flag to skip saveSettings when restoreEnabled was synced from sidebar (prevents echo loop)
+    const skipRestoreSaveRef = useRef(false);
     // Flags to skip saveSettings when source/project were synced from backend (prevents echo loop)
     const skipSourceSaveRef = useRef(false);
     const skipProjectSaveRef = useRef(false);
@@ -1282,6 +1286,9 @@ export const App: React.FC = () => {
                 if (message.includePrerelease !== undefined) {
                     setIncludePrerelease(message.includePrerelease);
                 }
+                if (message.restoreEnabled !== undefined) {
+                    setRestoreEnabled(message.restoreEnabled);
+                }
                 if (message.selectedSource) {
                     setSelectedSource(message.selectedSource);
                 } else if (!selectedSourceRef.current) {
@@ -1312,6 +1319,13 @@ export const App: React.FC = () => {
                 if (message.includePrerelease !== undefined) {
                     skipSaveRef.current = true;
                     setIncludePrerelease(message.includePrerelease);
+                }
+                break;
+            case 'restoreChanged':
+                // Synced from sidebar (or the main panel itself) — update state but skip re-saving
+                if (message.restoreEnabled !== undefined) {
+                    skipRestoreSaveRef.current = true;
+                    setRestoreEnabled(message.restoreEnabled);
                 }
                 break;
             case 'sourceChanged':
@@ -1638,6 +1652,17 @@ export const App: React.FC = () => {
             vscode.postMessage({ type: 'saveSettings', includePrerelease });
         }
     }, [includePrerelease]);
+
+    // Save restoreEnabled setting when it changes (only after settings loaded)
+    useEffect(() => {
+        if (settingsLoadedRef.current) {
+            if (skipRestoreSaveRef.current) {
+                skipRestoreSaveRef.current = false;
+                return;
+            }
+            vscode.postMessage({ type: 'saveSettings', restoreEnabled });
+        }
+    }, [restoreEnabled]);
 
     // Reload package versions when includePrerelease changes and a package is selected
     useEffect(() => {
@@ -2432,6 +2457,14 @@ export const App: React.FC = () => {
             <div className="header">
                 <h2>Manage NuGet packages</h2>
                 <div className="header-selectors">
+                    <label className="preview-checkbox">
+                        <input
+                            type="checkbox"
+                            checked={restoreEnabled}
+                            onChange={(e) => setRestoreEnabled((e.target as HTMLInputElement).checked)}
+                        />
+                        Restore after operations
+                    </label>
                     <label className="preview-checkbox">
                         <input
                             type="checkbox"

@@ -29,6 +29,7 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
     private _selectedSource = 'all';
     private _selectedProject = '';
     private _includePrerelease = false;
+    private _restoreEnabled = true;
 
     // Track the latest search query to skip stale requests
     private _latestSearchQuery = '';
@@ -57,10 +58,12 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
     ) {
         // Restore persisted state
         this._includePrerelease = this._context.workspaceState.get<boolean>('nuget.includePrerelease', false);
+        this._restoreEnabled = this._context.workspaceState.get<boolean>('nuget.restoreEnabled', true);
         this._selectedSource = this._context.workspaceState.get<string>('nuget.selectedSource', '') || 'all';
         this._selectedProject = this._context.workspaceState.get<string>('nuget.selectedProject', '');
-        // Set initial context key for prerelease toggle icon
+        // Set initial context keys for view-title icons
         vscode.commands.executeCommand('setContext', 'nuiget.prereleaseEnabled', this._includePrerelease);
+        vscode.commands.executeCommand('setContext', 'nuiget.restoreEnabled', this._restoreEnabled);
 
         // Listen for configuration changes
         this._disposables.push(
@@ -496,6 +499,29 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
         this.checkUpdatesInBackground();
     }
 
+    /** Toggle "Restore after operations" — controls whether `dotnet restore` runs after install/update/remove ops. */
+    public async toggleRestore(): Promise<void> {
+        this._restoreEnabled = !this._restoreEnabled;
+        // Update sibling panel's synchronous cache + sync UI signals BEFORE awaiting persistence
+        // so any op enqueued in the next microtask (in either panel) sees the new value and the
+        // title-bar icon flips immediately.
+        NuGetPanel.syncRestore(this._restoreEnabled);
+        vscode.commands.executeCommand('setContext', 'nuiget.restoreEnabled', this._restoreEnabled);
+        this._postMessage({ type: 'restoreChanged', restoreEnabled: this._restoreEnabled });
+        vscode.window.setStatusBarMessage(
+            `nUIget: Restore after operations ${this._restoreEnabled ? 'enabled' : 'disabled'}`,
+            2000
+        );
+        await this._context.workspaceState.update('nuget.restoreEnabled', this._restoreEnabled);
+    }
+
+    /** Update "Restore after operations" state from an external source (main panel sync) without writing back to workspaceState */
+    public syncRestore(value: boolean): void {
+        this._restoreEnabled = value;
+        vscode.commands.executeCommand('setContext', 'nuiget.restoreEnabled', value);
+        this._postMessage({ type: 'restoreChanged', restoreEnabled: value });
+    }
+
     /** Update source selection from an external source (main panel sync) without writing back to workspaceState */
     public syncSource(value: string): void {
         this._selectedSource = value;
@@ -765,10 +791,11 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
             case 'installPackage':
                 {
                     if (data.projectPath === ALL_PROJECTS_SENTINEL) { break; }
+                    const opCtx = this._opCtx();
                     operationQueue.enqueue(`install ${data.packageId}`, async () => {
                         let installSuccess = false;
                         try {
-                            installSuccess = await executeSingleOperation(this._opCtx(), 'install', data.projectPath, data.packageId, data.version, data.sourceUrl);
+                            installSuccess = await executeSingleOperation(opCtx, 'install', data.projectPath, data.packageId, data.version, data.sourceUrl);
                         } finally {
                             this._cancelFileWatcherDebounce();
                             if (installSuccess) { this.checkUpdatesInBackground(true, true, { packageIds: [data.packageId], projectPath: data.projectPath }); }
@@ -789,10 +816,11 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
             case 'updatePackage':
                 {
                     if (data.projectPath === ALL_PROJECTS_SENTINEL) { break; }
+                    const opCtx = this._opCtx();
                     operationQueue.enqueue(`update ${data.packageId}`, async () => {
                         let updateSuccess = false;
                         try {
-                            updateSuccess = await executeSingleOperation(this._opCtx(), 'update', data.projectPath, data.packageId, data.version, data.sourceUrl);
+                            updateSuccess = await executeSingleOperation(opCtx, 'update', data.projectPath, data.packageId, data.version, data.sourceUrl);
                         } finally {
                             this._cancelFileWatcherDebounce();
                             if (updateSuccess) { this.checkUpdatesInBackground(true, true, { packageIds: [data.packageId], projectPath: data.projectPath }); }
@@ -803,10 +831,11 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
             case 'removePackage':
                 {
                     if (data.projectPath === ALL_PROJECTS_SENTINEL) { break; }
+                    const opCtx = this._opCtx();
                     operationQueue.enqueue(`remove ${data.packageId}`, async () => {
                         let removeSuccess = false;
                         try {
-                            removeSuccess = await executeSingleOperation(this._opCtx(), 'remove', data.projectPath, data.packageId);
+                            removeSuccess = await executeSingleOperation(opCtx, 'remove', data.projectPath, data.packageId);
                         } finally {
                             this._cancelFileWatcherDebounce();
                             if (removeSuccess) { this.checkUpdatesInBackground(true, true, { packageIds: [data.packageId], projectPath: data.projectPath }); }
@@ -817,9 +846,10 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
             case 'bulkUpdatePackages':
                 {
                     if (data.projectPath === ALL_PROJECTS_SENTINEL) { break; }
+                    const opCtx = this._opCtx();
                     operationQueue.enqueue(`bulk update (${data.packages?.length ?? 0})`, async () => {
                         try {
-                            await executeBulkUpdatePackages(this._opCtx(), data.packages, data.projectPath);
+                            await executeBulkUpdatePackages(opCtx, data.packages, data.projectPath);
                         } finally {
                             this._cancelFileWatcherDebounce();
                             this.checkUpdatesInBackground(true, true, { packageIds: data.packages.map((p: { id: string }) => p.id), projectPath: data.projectPath });
@@ -829,9 +859,10 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
                 }
             case 'bulkUpdateAllProjects':
                 {
+                    const opCtx = this._opCtx();
                     operationQueue.enqueue('bulk update all projects', async () => {
                         try {
-                            await executeBulkUpdateAllProjects(this._opCtx(), data.projectUpdates);
+                            await executeBulkUpdateAllProjects(opCtx, data.projectUpdates);
                         } finally {
                             this._cancelFileWatcherDebounce();
                             const allPkgIds = (data.projectUpdates as { packages: { id: string }[] }[]).flatMap((pu: { packages: { id: string }[] }) => pu.packages.map((p: { id: string }) => p.id));
@@ -927,10 +958,11 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
 
         if (selectedPaths.length === 1) {
             // Single project — use existing single operation path
+            const opCtx = this._opCtx();
             operationQueue.enqueue(`install ${data.packageId}`, async () => {
                 let pickInstallSuccess = false;
                 try {
-                    pickInstallSuccess = await executeSingleOperation(this._opCtx(), 'install', selectedPaths[0], data.packageId, data.version);
+                    pickInstallSuccess = await executeSingleOperation(opCtx, 'install', selectedPaths[0], data.packageId, data.version);
                 } finally {
                     this._cancelFileWatcherDebounce();
                     if (pickInstallSuccess) { this.checkUpdatesInBackground(true, true, { packageIds: [data.packageId], projectPath: selectedPaths[0] }); }
@@ -938,9 +970,10 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
             }, () => this._disposed);
         } else {
             // Multiple projects — use shared bulk install
+            const opCtx = this._opCtx();
             operationQueue.enqueue(`bulk install ${data.packageId}`, async () => {
                 try {
-                    await executeBulkInstall(this._opCtx(), selectedPaths, data.packageId, data.version);
+                    await executeBulkInstall(opCtx, selectedPaths, data.packageId, data.version);
                 } finally {
                     this._cancelFileWatcherDebounce();
                     this.checkUpdatesInBackground(true, true, { packageIds: [data.packageId] });
@@ -960,10 +993,11 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
 
         // Single project — remove directly without picker
         if (matching.length === 1) {
+            const opCtx = this._opCtx();
             operationQueue.enqueue(`remove ${data.packageId}`, async () => {
                 let singleRemoveSuccess = false;
                 try {
-                    singleRemoveSuccess = await executeSingleOperation(this._opCtx(), 'remove', matching[0].path, data.packageId);
+                    singleRemoveSuccess = await executeSingleOperation(opCtx, 'remove', matching[0].path, data.packageId);
                 } finally {
                     this._cancelFileWatcherDebounce();
                     if (singleRemoveSuccess) { this.checkUpdatesInBackground(true, true, { packageIds: [data.packageId], projectPath: matching[0].path }); }
@@ -986,10 +1020,11 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
             : undefined;
         if (!project) { return; }
 
+        const opCtx = this._opCtx();
         operationQueue.enqueue(`remove ${data.packageId}`, async () => {
             let pickRemoveSuccess = false;
             try {
-                pickRemoveSuccess = await executeSingleOperation(this._opCtx(), 'remove', project.path, data.packageId);
+                pickRemoveSuccess = await executeSingleOperation(opCtx, 'remove', project.path, data.packageId);
             } finally {
                 this._cancelFileWatcherDebounce();
                 if (pickRemoveSuccess) { this.checkUpdatesInBackground(true, true, { packageIds: [data.packageId], projectPath: project.path }); }
@@ -1101,9 +1136,10 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
                     this._postMessage({ type: 'doInstall', packageId, version, projectPath: selectedPaths[0] });
                 } else {
                     // Multiple projects — call executeBulkInstall directly via the queue
+                    const opCtx = this._opCtx();
                     operationQueue.enqueue(`bulk install ${packageId}`, async () => {
                         try {
-                            await executeBulkInstall(this._opCtx(), selectedPaths, packageId, version || undefined);
+                            await executeBulkInstall(opCtx, selectedPaths, packageId, version || undefined);
                         } finally {
                             this._cancelFileWatcherDebounce();
                             this.checkUpdatesInBackground(true, true, { packageIds: [packageId] });
@@ -1297,12 +1333,16 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
         return vscode.workspace.getConfiguration('workbench.tree').get<number>('indent', 8);
     }
 
-    /** Build an OperationContext for shared operation functions. */
+    /** Build an OperationContext for shared operation functions.
+     *  Snapshot of `nuget.restoreEnabled` at call time — callers should invoke
+     *  this synchronously at message receipt (before enqueueing) so a mid-queue
+     *  toggle change cannot affect operations that were already submitted. */
     private _opCtx(): OperationContext {
         return {
             nugetService: this._nugetService,
             postMessage: (msg: unknown) => this._postMessage(msg),
             notifyOtherPanel: (op) => NuGetSidebarProvider._notifyMainPanel(op),
+            skipRestore: !this._restoreEnabled,
         };
     }
 

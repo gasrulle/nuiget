@@ -233,6 +233,7 @@ export interface AppState {
     activeTab: TabType;
     searchQuery: string;
     includePrerelease: boolean;
+    restoreEnabled?: boolean;
     recentSearches: string[];
 }
 

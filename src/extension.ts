@@ -9,7 +9,7 @@ import { NuGetSidebarProvider } from './webview/NuGetSidebarPanel';
 let outputChannel: vscode.LogOutputChannel;
 let nugetService: NuGetService;
 
-export function activate(context: vscode.ExtensionContext) {
+export async function activate(context: vscode.ExtensionContext) {
     // Initialize workspace cache for persistent caching
     workspaceCache.initialize(context);
 
@@ -66,6 +66,41 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(globalJsonWatcher);
 
     // Register sidebar webview provider
+    // One-time migration: legacy `nuiget.noRestore` config setting → `nuget.restoreEnabled` workspaceState.
+    // The setting was removed in favour of a synced UI toggle (sidebar title-bar icon + main panel checkbox).
+    //
+    // Multi-root handling: `inspect()` without a resource URI does not surface workspaceFolder-scoped
+    // values in multi-root workspaces. We probe each folder's URI and apply a "most restrictive wins"
+    // collapse — if the user set `noRestore: true` for any scope (global/workspace/any folder), we
+    // migrate to `restoreEnabled: false`. This errs on the side of preserving a user's explicit opt-out.
+    const restoreMigrated = context.workspaceState.get<boolean>('nuget.restoreEnabledMigrated', false);
+    if (!restoreMigrated) {
+        const probes: (boolean | undefined)[] = [];
+        const rootInspect = vscode.workspace.getConfiguration('nuiget').inspect<boolean>('noRestore');
+        probes.push(rootInspect?.globalValue, rootInspect?.workspaceValue);
+        for (const folder of vscode.workspace.workspaceFolders ?? []) {
+            const folderInspect = vscode.workspace.getConfiguration('nuiget', folder.uri).inspect<boolean>('noRestore');
+            probes.push(folderInspect?.workspaceFolderValue);
+        }
+        const explicit = probes.filter((v): v is boolean => typeof v === 'boolean');
+        if (explicit.length > 0) {
+            // Most-restrictive wins: any `noRestore: true` → `restoreEnabled: false`.
+            const anyNoRestore = explicit.some(v => v === true);
+            await context.workspaceState.update('nuget.restoreEnabled', !anyNoRestore);
+        }
+        await context.workspaceState.update('nuget.restoreEnabledMigrated', true);
+    }
+
+    // Synchronously initialize the in-memory restore cache + context keys BEFORE registering the
+    // sidebar provider so the title-bar icon paints with the correct state on first activation.
+    const restoreEnabled = context.workspaceState.get<boolean>('nuget.restoreEnabled', true);
+    const includePrerelease = context.workspaceState.get<boolean>('nuget.includePrerelease', false);
+    NuGetPanel.initRestoreCache(restoreEnabled);
+    await Promise.all([
+        vscode.commands.executeCommand('setContext', 'nuiget.restoreEnabled', restoreEnabled),
+        vscode.commands.executeCommand('setContext', 'nuiget.prereleaseEnabled', includePrerelease),
+    ]);
+
     const sidebarProvider = new NuGetSidebarProvider(context.extensionUri, context, outputChannel, nugetService);
     context.subscriptions.push(
         vscode.window.registerWebviewViewProvider(
@@ -160,6 +195,10 @@ export function activate(context: vscode.ExtensionContext) {
     NuGetPanel.onPrereleaseChanged = (value: boolean) => {
         sidebarProvider.syncPrerelease(value);
     };
+    // Wire up cross-panel "Restore after operations" sync: main panel → sidebar
+    NuGetPanel.onRestoreChanged = (value: boolean) => {
+        sidebarProvider.syncRestore(value);
+    };
     // Wire up cross-panel source sync: main panel → sidebar
     NuGetPanel.onSourceChanged = (value: string) => {
         sidebarProvider.syncSource(value);
@@ -196,6 +235,12 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.commands.registerCommand('nuiget.sidebar.togglePrereleaseOff', () => {
             sidebarProvider.togglePrerelease();
         })
+    );
+    context.subscriptions.push(
+        vscode.commands.registerCommand('nuiget.sidebar.toggleRestore', () => sidebarProvider.toggleRestore())
+    );
+    context.subscriptions.push(
+        vscode.commands.registerCommand('nuiget.sidebar.toggleRestoreOff', () => sidebarProvider.toggleRestore())
     );
     context.subscriptions.push(
         vscode.commands.registerCommand('nuiget.sidebar.refresh', () => {

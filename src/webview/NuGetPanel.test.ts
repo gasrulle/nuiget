@@ -35,6 +35,7 @@ vi.mock('../services/NuGetService', () => ({
 }));
 
 import { NuGetPanel } from './NuGetPanel';
+import { operationQueue } from '../services/OperationQueue';
 
 // ──────────────────────────────────────────────
 // Helpers
@@ -168,6 +169,7 @@ describe('NuGetPanel', () => {
         NuGetPanel.onProjectChanged = undefined;
         NuGetPanel.onPackageChanged = undefined;
         NuGetPanel.onRefreshAll = undefined;
+        NuGetPanel.initRestoreCache(true);
 
         mockPanel = createMockWebviewPanel();
         mockService = createMockNuGetService();
@@ -255,6 +257,11 @@ describe('NuGetPanel', () => {
         it('syncPrerelease posts prereleaseChanged message', () => {
             NuGetPanel.syncPrerelease(true);
             expect(mockPanel.webview.postMessage).toHaveBeenCalledWith({ type: 'prereleaseChanged', includePrerelease: true });
+        });
+
+        it('syncRestore posts restoreChanged message', () => {
+            NuGetPanel.syncRestore(false);
+            expect(mockPanel.webview.postMessage).toHaveBeenCalledWith({ type: 'restoreChanged', restoreEnabled: false });
         });
 
         it('syncSource posts sourceChanged message', () => {
@@ -732,6 +739,7 @@ describe('NuGetPanel', () => {
     // ──────────────────────────────────────────────
     describe('operation guard', () => {
         beforeEach(() => {
+            operationQueue.resetForTests();
             NuGetPanel.createOrShow(vscode.Uri.file('/ext'), mockContext, mockOutputChannel, mockService as any);
             expect(messageListener).toBeDefined();
         });
@@ -812,6 +820,70 @@ describe('NuGetPanel', () => {
             await messageListener!({ type: 'installPackage', projectPath: '/p', packageId: 'B' });
             expect(hoisted.mockExecuteSingleOperation).toHaveBeenCalledTimes(2);
         });
+
+        it('snapshots restore flag at enqueue time (op queued behind blocking op keeps its captured ctx)', async () => {
+            // This is the real snapshot regression guard: op B is enqueued WHILE op A is blocking
+            // the queue. Toggling restore between B's enqueue and B's run must NOT affect B's ctx.
+            // A buggy variant that captures ctx inside the queue closure (lazy) would FAIL this test.
+            NuGetPanel.syncRestore(true);
+
+            let resolveA!: () => void;
+            const aStarted = new Promise<void>(aStartResolve => {
+                hoisted.mockExecuteSingleOperation
+                    .mockImplementationOnce(() => {
+                        aStartResolve();
+                        return new Promise<void>(r => { resolveA = r; });
+                    })
+                    .mockImplementationOnce(() => Promise.resolve());
+            });
+
+            // Op A: starts immediately, blocks the queue.
+            const opA = messageListener!({ type: 'installPackage', projectPath: '/p', packageId: 'A' });
+            await aStarted;
+
+            // Op B: enqueued behind A. Cache is still true → B's snapshot must be skipRestore=false.
+            const opB = messageListener!({ type: 'installPackage', projectPath: '/p', packageId: 'B' });
+
+            // Toggle AFTER B is enqueued but BEFORE B runs. B's captured ctx must be unaffected.
+            NuGetPanel.syncRestore(false);
+
+            resolveA();
+            await opA;
+            await opB;
+            await operationQueue.waitIdle();
+
+            // Op A was enqueued with cache=true → skipRestore=false.
+            expect(hoisted.mockExecuteSingleOperation).toHaveBeenNthCalledWith(
+                1,
+                expect.objectContaining({ skipRestore: false }),
+                'install', '/p', 'A', undefined, undefined,
+            );
+            // Op B was enqueued with cache=true (before toggle) → snapshot must still be skipRestore=false,
+            // even though cache was flipped to false before B actually ran.
+            expect(hoisted.mockExecuteSingleOperation).toHaveBeenNthCalledWith(
+                2,
+                expect.objectContaining({ skipRestore: false }),
+                'install', '/p', 'B', undefined, undefined,
+            );
+
+            // Restore default for subsequent tests
+            NuGetPanel.syncRestore(true);
+        });
+
+        it('passes skipRestore=true through ctx when restoreEnabled is false', async () => {
+            NuGetPanel.syncRestore(false);
+
+            await messageListener!({ type: 'installPackage', projectPath: '/p', packageId: 'A' });
+            await operationQueue.waitIdle();
+
+            expect(hoisted.mockExecuteSingleOperation).toHaveBeenCalledWith(
+                expect.objectContaining({ skipRestore: true }),
+                'install', '/p', 'A', undefined, undefined,
+            );
+
+            // Restore default for subsequent tests
+            NuGetPanel.syncRestore(true);
+        });
     });
 
     // ──────────────────────────────────────────────
@@ -859,6 +931,19 @@ describe('NuGetPanel', () => {
 
             expect((mockService as any).restoreProject).toHaveBeenCalledWith('/proj.csproj');
             expect((mockService as any).getTransitivePackages).toHaveBeenCalledWith('/proj.csproj');
+        });
+
+        it('honors forceRestore=true even when restoreEnabled is false (explicit user-initiated refresh bypass)', async () => {
+            NuGetPanel.syncRestore(false);
+            (mockService as any).restoreProject.mockResolvedValue(true);
+            (mockService as any).getTransitivePackages.mockResolvedValue({ frameworks: [], dataSourceAvailable: true });
+
+            await messageListener!({ type: 'getTransitivePackages', projectPath: '/proj.csproj', forceRestore: true });
+
+            expect((mockService as any).restoreProject).toHaveBeenCalledWith('/proj.csproj');
+
+            // Restore default
+            NuGetPanel.syncRestore(true);
         });
 
         it('sends empty result on error', async () => {

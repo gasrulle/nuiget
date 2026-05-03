@@ -94,7 +94,7 @@ describe('executeSingleOperation', () => {
     it('remove success: calls removePackage', async () => {
         const result = await executeSingleOperation(ctx, 'remove', '/proj.csproj', 'Obsolete.Pkg');
         expect(result).toBe(true);
-        expect(ctx.nugetService.removePackage).toHaveBeenCalledWith('/proj.csproj', 'Obsolete.Pkg');
+        expect(ctx.nugetService.removePackage).toHaveBeenCalledWith('/proj.csproj', 'Obsolete.Pkg', { skipRestore: undefined });
         expect(ctx.postMessage).toHaveBeenCalledWith(expect.objectContaining({ type: 'removeResult', success: true }));
         expect(ctx.notifyOtherPanel).toHaveBeenCalled();
     });
@@ -811,5 +811,60 @@ describe('queryAllProjectsTransitive', () => {
 
         expect(onStart).not.toHaveBeenCalled();
         expect(onProject).not.toHaveBeenCalled();
+    });
+});
+
+// ──────────────────────────────────────────────
+// skipRestore — bulk-op final restore is skipped when ctx.skipRestore=true
+// ──────────────────────────────────────────────
+describe('skipRestore in bulk operations', () => {
+    let ctx: OperationContext;
+
+    beforeEach(() => {
+        ctx = createMockCtx();
+        ctx.skipRestore = true;
+        mockWithProgress();
+    });
+
+    it('executeBulkInstall: skips per-project restore phase', async () => {
+        await executeBulkInstall(ctx, ['/a.csproj', '/b.csproj'], 'Pkg', '1.0.0');
+        expect(ctx.nugetService.installPackage).toHaveBeenCalledTimes(2);
+        expect(ctx.nugetService.restoreProject).not.toHaveBeenCalled();
+    });
+
+    it('executeBulkUpdatePackages: skips final restore', async () => {
+        await executeBulkUpdatePackages(
+            ctx,
+            [{ id: 'A', version: '1' }, { id: 'B', version: '2' }],
+            '/proj.csproj',
+        );
+        expect(ctx.nugetService.updatePackage).toHaveBeenCalledTimes(2);
+        expect(ctx.nugetService.restoreProject).not.toHaveBeenCalled();
+    });
+
+    it('executeBulkRemovePackages: skips final restore', async () => {
+        await executeBulkRemovePackages(ctx, ['A', 'B'], '/proj.csproj');
+        expect(ctx.nugetService.removePackage).toHaveBeenCalledTimes(2);
+        expect(ctx.nugetService.restoreProject).not.toHaveBeenCalled();
+    });
+
+    it('executeBulkUpdateAllProjects: skips phase-2 restore for every project', async () => {
+        const projects = [
+            { projectPath: '/a.csproj', projectName: 'A', packages: [{ id: 'X', version: '1' }] },
+            { projectPath: '/b.csproj', projectName: 'B', packages: [{ id: 'Y', version: '2' }] },
+        ];
+        await executeBulkUpdateAllProjects(ctx, projects);
+        expect(ctx.nugetService.updatePackage).toHaveBeenCalledTimes(2);
+        expect(ctx.nugetService.restoreProject).not.toHaveBeenCalled();
+    });
+
+    it('executeBulkRemoveAllProjects: skips phase-2 restore for every project', async () => {
+        const projects = [
+            { projectPath: '/a.csproj', projectName: 'A', packages: ['X'] },
+            { projectPath: '/b.csproj', projectName: 'B', packages: ['Y'] },
+        ];
+        await executeBulkRemoveAllProjects(ctx, projects);
+        expect(ctx.nugetService.removePackage).toHaveBeenCalledTimes(2);
+        expect(ctx.nugetService.restoreProject).not.toHaveBeenCalled();
     });
 });

@@ -12,9 +12,18 @@ export class NuGetPanel {
     private static _cachedSearchQuery: string | undefined;
     private static _context: vscode.ExtensionContext | undefined;
     private static _outputChannel: vscode.LogOutputChannel | undefined;
+    /**
+     * In-memory mirror of `nuget.restoreEnabled` workspaceState. Updated synchronously by
+     * sidebar→panel sync (`syncRestore`) and main-panel checkbox saves. `_opCtx()` reads
+     * this cache so a rapid toggle followed by an enqueue cannot race with an in-flight
+     * `workspaceState.update`. Default `true` matches workspaceState default.
+     */
+    private static _restoreEnabledCache = true;
 
     /** Callback fired when the main panel's prerelease setting changes (wired in extension.ts) */
     public static onPrereleaseChanged: ((value: boolean) => void) | undefined;
+    /** Callback fired when the main panel's "Restore after operations" toggle changes (wired in extension.ts) */
+    public static onRestoreChanged: ((value: boolean) => void) | undefined;
     /** Callback fired when the main panel's selected source changes (wired in extension.ts) */
     public static onSourceChanged: ((value: string) => void) | undefined;
     /** Callback fired when the main panel's selected project changes (wired in extension.ts) */
@@ -29,6 +38,21 @@ export class NuGetPanel {
         if (NuGetPanel.currentPanel && !NuGetPanel.currentPanel._disposed) {
             NuGetPanel.currentPanel._postMessage({ type: 'prereleaseChanged', includePrerelease: value });
         }
+    }
+
+    /** Push a "Restore after operations" toggle change into the main panel webview (called from sidebar sync) */
+    public static syncRestore(value: boolean): void {
+        // Update the in-memory cache synchronously so any operation enqueued
+        // immediately after this call snapshots the new value.
+        NuGetPanel._restoreEnabledCache = value;
+        if (NuGetPanel.currentPanel && !NuGetPanel.currentPanel._disposed) {
+            NuGetPanel.currentPanel._postMessage({ type: 'restoreChanged', restoreEnabled: value });
+        }
+    }
+
+    /** Initialize the static restore cache from workspaceState. Called once during activation. */
+    public static initRestoreCache(value: boolean): void {
+        NuGetPanel._restoreEnabledCache = value;
     }
 
     /** Push a source change into the main panel webview (called from sidebar sync) */
@@ -315,8 +339,9 @@ export class NuGetPanel {
                 {
                     if (data.projectPath === ALL_PROJECTS_SENTINEL) { break; }
                     try {
-                        // If forceRestore is true (explicit refresh by user), run restore first
-                        // This ignores the noRestore setting since user explicitly requested refresh
+                        // forceRestore = explicit user-initiated transitive refresh.
+                        // Bypasses OperationContext.skipRestore (the "Restore after operations" toggle)
+                        // because the user explicitly asked for a fresh restore.
                         if (data.forceRestore) {
                             await this._nugetService.restoreProject(data.projectPath);
                         }
@@ -636,10 +661,11 @@ export class NuGetPanel {
             case 'installPackage':
                 {
                     if (data.projectPath === ALL_PROJECTS_SENTINEL) { break; }
+                    const ctx = this._opCtx();
                     operationQueue.enqueue(`install ${data.packageId}`, async () => {
                         const t = startTimer('installPackage', data.projectPath);
                         try {
-                            await executeSingleOperation(this._opCtx(), 'install', data.projectPath, data.packageId, data.version, data.sourceUrl);
+                            await executeSingleOperation(ctx, 'install', data.projectPath, data.packageId, data.version, data.sourceUrl);
                         } finally { t.end({ pkg: data.packageId }); }
                     }, () => this._disposed);
                     break;
@@ -648,18 +674,20 @@ export class NuGetPanel {
                 {
                     const paths = (data.projectPaths as string[])?.filter(p => p !== ALL_PROJECTS_SENTINEL);
                     if (!paths?.length) { break; }
+                    const ctx = this._opCtx();
                     operationQueue.enqueue(`bulk install ${data.packageId}`, async () => {
-                        await executeBulkInstall(this._opCtx(), paths, data.packageId, data.version);
+                        await executeBulkInstall(ctx, paths, data.packageId, data.version);
                     }, () => this._disposed);
                     break;
                 }
             case 'updatePackage':
                 {
                     if (data.projectPath === ALL_PROJECTS_SENTINEL) { break; }
+                    const ctx = this._opCtx();
                     operationQueue.enqueue(`update ${data.packageId}`, async () => {
                         const t = startTimer('updatePackage', data.projectPath);
                         try {
-                            await executeSingleOperation(this._opCtx(), 'update', data.projectPath, data.packageId, data.version, data.sourceUrl);
+                            await executeSingleOperation(ctx, 'update', data.projectPath, data.packageId, data.version, data.sourceUrl);
                         } finally { t.end({ pkg: data.packageId }); }
                     }, () => this._disposed);
                     break;
@@ -667,10 +695,11 @@ export class NuGetPanel {
             case 'removePackage':
                 {
                     if (data.projectPath === ALL_PROJECTS_SENTINEL) { break; }
+                    const ctx = this._opCtx();
                     operationQueue.enqueue(`remove ${data.packageId}`, async () => {
                         const t = startTimer('removePackage', data.projectPath);
                         try {
-                            await executeSingleOperation(this._opCtx(), 'remove', data.projectPath, data.packageId);
+                            await executeSingleOperation(ctx, 'remove', data.projectPath, data.packageId);
                         } finally { t.end({ pkg: data.packageId }); }
                     }, () => this._disposed);
                     break;
@@ -1167,8 +1196,9 @@ export class NuGetPanel {
                 }
             case 'bulkUpdateAllProjects':
                 {
+                    const ctx = this._opCtx();
                     operationQueue.enqueue('bulk update all projects', async () => {
-                        await executeBulkUpdateAllProjects(this._opCtx(), data.projectUpdates);
+                        await executeBulkUpdateAllProjects(ctx, data.projectUpdates);
                     }, () => this._disposed);
                     break;
                 }
@@ -1176,6 +1206,7 @@ export class NuGetPanel {
                 {
                     // Retrieve persisted settings from workspaceState
                     const includePrerelease = NuGetPanel._context?.workspaceState.get<boolean>('nuget.includePrerelease', false);
+                    const restoreEnabled = NuGetPanel._restoreEnabledCache;
                     const selectedSource = NuGetPanel._context?.workspaceState.get<string>('nuget.selectedSource', '');
                     const recentSearches = NuGetPanel._context?.workspaceState.get<string[]>('nuget.recentSearches', []) ?? [];
                     const isWindows = process.platform === 'win32';
@@ -1186,6 +1217,7 @@ export class NuGetPanel {
                     this._postMessage({
                         type: 'settings',
                         includePrerelease: includePrerelease,
+                        restoreEnabled: restoreEnabled,
                         selectedSource: selectedSource,
                         recentSearches: recentSearches.slice(0, recentSearchesLimit),
                         isWindows: isWindows,
@@ -1202,6 +1234,15 @@ export class NuGetPanel {
                             await NuGetPanel._context.workspaceState.update('nuget.includePrerelease', data.includePrerelease);
                             // Sync to sidebar panel
                             NuGetPanel.onPrereleaseChanged?.(data.includePrerelease);
+                        }
+                        if (data.restoreEnabled !== undefined) {
+                            // Update synchronous cache + UI signals FIRST so any operation enqueued
+                            // in the same microtask uses the new value (workspaceState.update is async).
+                            NuGetPanel._restoreEnabledCache = data.restoreEnabled;
+                            vscode.commands.executeCommand('setContext', 'nuiget.restoreEnabled', data.restoreEnabled);
+                            // Sync to sidebar panel (sync — instance setContext + postMessage)
+                            NuGetPanel.onRestoreChanged?.(data.restoreEnabled);
+                            await NuGetPanel._context.workspaceState.update('nuget.restoreEnabled', data.restoreEnabled);
                         }
                         if (data.selectedSource !== undefined) {
                             await NuGetPanel._context.workspaceState.update('nuget.selectedSource', data.selectedSource);
@@ -1268,23 +1309,26 @@ export class NuGetPanel {
             case 'bulkUpdatePackages':
                 {
                     if (data.projectPath === ALL_PROJECTS_SENTINEL) { break; }
+                    const ctx = this._opCtx();
                     operationQueue.enqueue(`bulk update (${data.packages?.length ?? 0})`, async () => {
-                        await executeBulkUpdatePackages(this._opCtx(), data.packages, data.projectPath);
+                        await executeBulkUpdatePackages(ctx, data.packages, data.projectPath);
                     }, () => this._disposed);
                     break;
                 }
             case 'confirmBulkRemove':
                 {
                     if (data.projectPath === ALL_PROJECTS_SENTINEL) { break; }
+                    const ctx = this._opCtx();
                     operationQueue.enqueue(`bulk remove (${data.packages?.length ?? 0})`, async () => {
-                        await executeBulkRemovePackages(this._opCtx(), data.packages, data.projectPath);
+                        await executeBulkRemovePackages(ctx, data.packages, data.projectPath);
                     }, () => this._disposed);
                     break;
                 }
             case 'confirmBulkRemoveAllProjects':
                 {
+                    const ctx = this._opCtx();
                     operationQueue.enqueue('bulk remove all projects', async () => {
-                        await executeBulkRemoveAllProjects(this._opCtx(), data.projectRemovals);
+                        await executeBulkRemoveAllProjects(ctx, data.projectRemovals);
                     }, () => this._disposed);
                     break;
                 }
@@ -1323,12 +1367,18 @@ export class NuGetPanel {
         }
     }
 
-    /** Build an OperationContext for shared operation functions. */
+    /** Build an OperationContext for shared operation functions.
+     *  Reads `restoreEnabled` from the synchronous in-memory cache (`_restoreEnabledCache`)
+     *  rather than `workspaceState`, so a rapid toggle → enqueue sequence cannot race
+     *  with an in-flight `workspaceState.update`. Callers should still invoke this
+     *  synchronously at message receipt (before enqueueing) so a queued toggle does
+     *  not affect operations that were already submitted. */
     private _opCtx(): OperationContext {
         return {
             nugetService: this._nugetService,
             postMessage: (msg: unknown) => this._postMessage(msg),
             notifyOtherPanel: (op) => NuGetPanel.onPackageChanged?.(op),
+            skipRestore: !NuGetPanel._restoreEnabledCache,
         };
     }
 

@@ -113,6 +113,16 @@
                 }
             },
             {
+                "command": "nuiget.sidebar.toggleRestore",
+                "title": "nUIget: Restore after operations",
+                "icon": "$(verified)"
+            },
+            {
+                "command": "nuiget.sidebar.toggleRestoreOff",
+                "title": "nUIget: Skip restore after operations",
+                "icon": "$(verified-filled)"
+            },
+            {
                 "command": "nuiget.sidebar.refresh",
                 "title": "nUIget: Refresh Sidebar",
                 "icon": "$(refresh)"
@@ -151,6 +161,14 @@
                 },
                 {
                     "command": "nuiget.sidebar.togglePrereleaseOff",
+                    "when": "false"
+                },
+                {
+                    "command": "nuiget.sidebar.toggleRestore",
+                    "when": "false"
+                },
+                {
+                    "command": "nuiget.sidebar.toggleRestoreOff",
                     "when": "false"
                 },
                 {
@@ -195,6 +213,16 @@
                     "group": "navigation@1"
                 },
                 {
+                    "command": "nuiget.sidebar.toggleRestore",
+                    "when": "view == nuiget.sidebarView && !nuiget.restoreEnabled",
+                    "group": "navigation@0"
+                },
+                {
+                    "command": "nuiget.sidebar.toggleRestoreOff",
+                    "when": "view == nuiget.sidebarView && nuiget.restoreEnabled",
+                    "group": "navigation@0"
+                },
+                {
                     "command": "nuiget.sidebar.selectProject",
                     "when": "view == nuiget.sidebarView",
                     "group": "navigation@2"
@@ -219,11 +247,6 @@
         "configuration": {
             "title": "nUIget",
             "properties": {
-                "nuiget.noRestore": {
-                    "type": "boolean",
-                    "default": false,
-                    "description": "Skip restore after adding packages. Faster but skips compatibility check until next build."
-                },
                 "nuiget.quickSearchResultsPerSource": {
                     "type": "integer",
                     "default": 5,

@@ -29,6 +29,7 @@ vi.mock('../services/NuGetService', () => ({
 vi.mock('./NuGetPanel', () => ({
     NuGetPanel: {
         syncPrerelease: vi.fn(),
+        syncRestore: vi.fn(),
         syncSource: vi.fn(),
         syncProject: vi.fn(),
         openSourceSettings: vi.fn(),
@@ -168,6 +169,21 @@ describe('NuGetSidebarProvider', () => {
             expect(vscode.commands.executeCommand).toHaveBeenCalledWith('setContext', 'nuiget.prereleaseEnabled', true);
             p.dispose();
         });
+
+        it('defaults restoreEnabled to true and sets context key', () => {
+            const ctx = createMockContext();
+            const { provider: p } = createProvider(undefined, ctx);
+            expect(vscode.commands.executeCommand).toHaveBeenCalledWith('setContext', 'nuiget.restoreEnabled', true);
+            p.dispose();
+        });
+
+        it('honors persisted restoreEnabled=false', () => {
+            const ctx = createMockContext();
+            (ctx.workspaceState as any)._store.set('nuget.restoreEnabled', false);
+            const { provider: p } = createProvider(undefined, ctx);
+            expect(vscode.commands.executeCommand).toHaveBeenCalledWith('setContext', 'nuiget.restoreEnabled', false);
+            p.dispose();
+        });
     });
 
     // ──────────────────────────────────────────────
@@ -205,6 +221,39 @@ describe('NuGetSidebarProvider', () => {
     });
 
     // ──────────────────────────────────────────────
+    // toggleRestore
+    // ──────────────────────────────────────────────
+    describe('toggleRestore', () => {
+        it('toggles state (true→false), persists, sets context key, and syncs to main panel', () => {
+            view = resolveView(provider);
+            view.webview.postMessage.mockClear();
+
+            // Default is true (restore enabled). Toggle should flip to false.
+            provider.toggleRestore();
+
+            expect(context.workspaceState.update).toHaveBeenCalledWith('nuget.restoreEnabled', false);
+            expect(vscode.commands.executeCommand).toHaveBeenCalledWith('setContext', 'nuiget.restoreEnabled', false);
+            expect(view.webview.postMessage).toHaveBeenCalledWith({ type: 'restoreChanged', restoreEnabled: false });
+            expect(NuGetPanel.syncRestore).toHaveBeenCalledWith(false);
+        });
+
+        it('honors persisted false and toggles back to true', () => {
+            const ctx2 = createMockContext();
+            (ctx2.workspaceState as any)._store.set('nuget.restoreEnabled', false);
+            const { provider: p } = createProvider(undefined, ctx2);
+            const v = resolveView(p);
+            v.webview.postMessage.mockClear();
+
+            p.toggleRestore();
+
+            expect(ctx2.workspaceState.update).toHaveBeenCalledWith('nuget.restoreEnabled', true);
+            expect(vscode.commands.executeCommand).toHaveBeenCalledWith('setContext', 'nuiget.restoreEnabled', true);
+            expect(NuGetPanel.syncRestore).toHaveBeenCalledWith(true);
+            p.dispose();
+        });
+    });
+
+    // ──────────────────────────────────────────────
     // Cross-panel sync
     // ──────────────────────────────────────────────
     describe('cross-panel sync', () => {
@@ -216,6 +265,15 @@ describe('NuGetSidebarProvider', () => {
         it('syncPrerelease updates state and posts to webview', () => {
             provider.syncPrerelease(true);
             expect(view.webview.postMessage).toHaveBeenCalledWith({ type: 'prereleaseChanged', includePrerelease: true });
+        });
+
+        it('syncRestore updates state, sets context key, and posts to webview without writing workspaceState', () => {
+            (context.workspaceState.update as any).mockClear();
+            provider.syncRestore(false);
+            expect(view.webview.postMessage).toHaveBeenCalledWith({ type: 'restoreChanged', restoreEnabled: false });
+            expect(vscode.commands.executeCommand).toHaveBeenCalledWith('setContext', 'nuiget.restoreEnabled', false);
+            // syncRestore must NOT persist (avoids double-write race when main panel already wrote)
+            expect(context.workspaceState.update).not.toHaveBeenCalledWith('nuget.restoreEnabled', expect.anything());
         });
 
         it('syncSource updates state and posts to webview', () => {

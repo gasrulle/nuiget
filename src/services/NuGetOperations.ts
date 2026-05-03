@@ -11,6 +11,13 @@ export interface OperationContext {
     nugetService: NuGetService;
     postMessage: (message: unknown) => void;
     notifyOtherPanel: (operation: { type: string; packageId?: string; packageIds?: string[]; projectPath?: string; version?: string }) => void;
+    /**
+     * When true, suppress the post-operation `dotnet restore` step (and pass
+     * `--no-restore` on per-package CLI calls). Sourced from the user-facing
+     * "Restore after operations" toggle. Snapshotted at enqueue time by the
+     * panel/sidebar so mid-queue toggle changes do not affect submitted ops.
+     */
+    skipRestore?: boolean;
 }
 
 type SingleOperationType = 'install' | 'update' | 'remove';
@@ -48,14 +55,14 @@ export async function executeSingleOperation(
         cancellable: false
     }, async () => {
         if (operationType === 'install') {
-            success = await ctx.nugetService.installPackage(projectPath, packageId, version, { sourceUrl });
+            success = await ctx.nugetService.installPackage(projectPath, packageId, version, { sourceUrl, skipRestore: ctx.skipRestore });
         } else if (operationType === 'update') {
             if (!version) {
                 throw new Error(`Update operation requires a target version for ${packageId}`);
             }
-            success = await ctx.nugetService.updatePackage(projectPath, packageId, version, { sourceUrl });
+            success = await ctx.nugetService.updatePackage(projectPath, packageId, version, { sourceUrl, skipRestore: ctx.skipRestore });
         } else {
-            success = await ctx.nugetService.removePackage(projectPath, packageId);
+            success = await ctx.nugetService.removePackage(projectPath, packageId, { skipRestore: ctx.skipRestore });
         }
         ctx.postMessage({
             type: config.resultType,
@@ -129,8 +136,9 @@ export async function executeBulkInstall(
         const successCount = results.filter(r => r.success).length;
         const failCount = results.length - successCount;
 
-        // Run a single restore after all installs
-        if (successCount > 0) {
+        // Restore each project after all installs (one restore per project — `dotnet restore`
+        // operates on a single .csproj). Skipped when the user has disabled "Restore after operations".
+        if (successCount > 0 && !ctx.skipRestore) {
             progress.report({ message: 'Restoring projects...' });
             for (const r of results) {
                 if (r.success) {
@@ -204,8 +212,8 @@ export async function executeBulkUpdatePackages(
             if (success) { successCount++; } else { failCount++; failedPackageIds.push(pkg.id); }
         }
 
-        // Run a single restore after all packages are updated
-        if (successCount > 0) {
+        // Run a single restore after all packages are updated (skipped when "Restore after operations" is off)
+        if (successCount > 0 && !ctx.skipRestore) {
             progress.report({ message: 'Restoring project...' });
             await ctx.nugetService.restoreProject(projectPath);
         }
@@ -278,8 +286,8 @@ export async function executeBulkRemovePackages(
             if (success) { successCount++; } else { failCount++; failedPackageIds.push(packageId); }
         }
 
-        // Run a single restore after all packages are removed
-        if (successCount > 0) {
+        // Run a single restore after all packages are removed (skipped when "Restore after operations" is off)
+        if (successCount > 0 && !ctx.skipRestore) {
             progress.report({ message: 'Restoring project...' });
             await ctx.nugetService.restoreProject(projectPath);
         }
@@ -396,10 +404,13 @@ export async function executeBulkUpdateAllProjects(
             }
         }
 
-        // Phase 2: Restore all projects in dependency order (after all updates)
-        for (const project of projectsWithChanges) {
-            progress.report({ message: `Restoring ${project.projectName}...` });
-            await ctx.nugetService.restoreProject(project.projectPath);
+        // Phase 2: Restore all projects in dependency order (after all updates).
+        // Skipped when the user has disabled "Restore after operations".
+        if (!ctx.skipRestore) {
+            for (const project of projectsWithChanges) {
+                progress.report({ message: `Restoring ${project.projectName}...` });
+                await ctx.nugetService.restoreProject(project.projectPath);
+            }
         }
 
         if (totalFailCount === 0) {
@@ -502,10 +513,13 @@ export async function executeBulkRemoveAllProjects(
             }
         }
 
-        // Phase 2: Restore all projects — reverse order so dependencies restore before dependents
-        for (const project of [...projectsWithChanges].reverse()) {
-            progress.report({ message: `Restoring ${project.projectName}...` });
-            await ctx.nugetService.restoreProject(project.projectPath);
+        // Phase 2: Restore all projects — reverse order so dependencies restore before dependents.
+        // Skipped when the user has disabled "Restore after operations".
+        if (!ctx.skipRestore) {
+            for (const project of [...projectsWithChanges].reverse()) {
+                progress.report({ message: `Restoring ${project.projectName}...` });
+                await ctx.nugetService.restoreProject(project.projectPath);
+            }
         }
 
         if (failCount === 0) {

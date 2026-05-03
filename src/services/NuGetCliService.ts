@@ -181,11 +181,6 @@ export class NuGetCliService {
 
     // ── Package Operations ─────────────────────────────────────────────
 
-    private getNoRestoreFlag(): string {
-        const config = vscode.workspace.getConfiguration('nuiget');
-        return config.get<boolean>('noRestore', false) ? '--no-restore' : '';
-    }
-
     async installPackage(projectPath: string, packageId: string, version?: string, options?: { skipChannelSetup?: boolean; skipRestore?: boolean; sourceUrl?: string }): Promise<boolean> {
         if (!isValidPackageId(packageId)) {
             vscode.window.showErrorMessage(`Invalid package ID: ${packageId}`);
@@ -200,7 +195,7 @@ export class NuGetCliService {
 
         try {
             const versionArg = version ? `--version ${version}` : '';
-            const noRestoreArg = options?.skipRestore ? '--no-restore' : this.getNoRestoreFlag();
+            const noRestoreArg = options?.skipRestore ? '--no-restore' : '';
             const sourceArg = options?.sourceUrl && isValidSourceUrl(options.sourceUrl) ? `--source "${options.sourceUrl}"` : '';
             const projectDir = path.dirname(projectPath);
             const nounFirst = await this.useNounFirstSyntax(projectPath);
@@ -247,7 +242,7 @@ export class NuGetCliService {
         this.logger.setupOutputChannel(options?.skipChannelSetup);
 
         try {
-            const noRestoreArg = options?.skipRestore ? '--no-restore' : this.getNoRestoreFlag();
+            const noRestoreArg = options?.skipRestore ? '--no-restore' : '';
             const sourceArg = options?.sourceUrl && isValidSourceUrl(options.sourceUrl) ? `--source "${options.sourceUrl}"` : '';
             const projectDir = path.dirname(projectPath);
             const nounFirst = await this.useNounFirstSyntax(projectPath);
@@ -315,9 +310,8 @@ export class NuGetCliService {
             this.logger.logSuccess(`Successfully removed ${packageId}`);
 
             // Run silent restore to update project.assets.json (dotnet remove doesn't trigger restore)
-            // Skip for bulk operations (caller will run restore once at the end) or if noRestore setting is enabled
-            const noRestoreSetting = this.getNoRestoreFlag() !== '';
-            if (!options?.skipRestore && !noRestoreSetting) {
+            // Skip for bulk operations (caller will run restore once at the end) or when user has disabled "Restore after operations"
+            if (!options?.skipRestore) {
                 try {
                     const restoreCommand = `dotnet restore "${projectPath}"`;
                     const { stdout: restoreOut, stderr: restoreErr } = await execWithTimeout(restoreCommand, { cwd: projectDir, timeout: 60000 });
