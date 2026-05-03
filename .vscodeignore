@@ -49,3 +49,7 @@ benchmarks/**
 
 # Built packages
 *.vsix
+
+# Development screenshots/recordings
+*.gif
+*.mp4

@@ -937,18 +937,18 @@ describe('NuGetSidebarProvider', () => {
     });
 
     // ──────────────────────────────────────────────
-    // notifySidebarOfChange — file watcher kept as safety net
+    // notifySidebarOfChange — cancels watcher to prevent double-reload
     // ──────────────────────────────────────────────
     describe('notifySidebarOfChange file watcher', () => {
-        it('does not cancel file watcher debounce (safety net for missed updates)', async () => {
+        it('cancels file watcher debounce to prevent duplicate refresh', async () => {
             view = resolveView(provider);
             (provider as any)._fileWatcherDebounce = setTimeout(() => { /* noop */ }, 10000);
             expect((provider as any)._fileWatcherDebounce).toBeDefined();
 
             await provider.notifySidebarOfChange({ type: 'update', packageId: 'Pkg', projectPath: '/p.csproj' });
-            // File watcher debounce is preserved — serves as safety net for full refresh
-            expect((provider as any)._fileWatcherDebounce).toBeDefined();
-            clearTimeout((provider as any)._fileWatcherDebounce);
+            // packageChanged + scoped checkUpdatesInBackground already covers what the
+            // watcher would do — letting both fire produced a visible double-reload.
+            expect((provider as any)._fileWatcherDebounce).toBeUndefined();
         });
     });
 

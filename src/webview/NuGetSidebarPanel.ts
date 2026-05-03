@@ -36,6 +36,14 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
 
     // Background update checking
     private _fileWatcherDebounce?: ReturnType<typeof setTimeout>;
+    /**
+     * Set when the .csproj watcher fires while a package operation is in flight.
+     * The watcher skips scheduling its 5s debounce in that case (the op handler
+     * manages its own post-op refresh). After the op completes, this flag tells
+     * `_flushWatcherDirtyAfterOp` to re-arm a shorter debounce so external mid-op
+     * changes (e.g., `git pull` on the .csproj) still trigger a refresh.
+     */
+    private _watcherDirtyDuringOp = false;
     private _backgroundCheckInProgress = false;
     private _forceCheckPending = false;
     private _forceCheckSkipMainPanel = false;
@@ -132,19 +140,13 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
         // File watcher: *.csproj, *.fsproj, *.vbproj changes → debounced re-check
         const watcher = vscode.workspace.createFileSystemWatcher('**/*.{csproj,fsproj,vbproj}');
         const triggerDebounced = () => {
-            if (this._fileWatcherDebounce) { clearTimeout(this._fileWatcherDebounce); }
-            this._fileWatcherDebounce = setTimeout(() => {
-                // Skip if any package operation is queued or running — the operation handler
-                // manages its own post-op refresh cycle.
-                if (operationQueue.isBusy) { return; }
-                // Tell webview to re-fetch installed packages (csproj content changed)
-                if (!this._disposed && this._view) {
-                    this._postMessage({ type: 'forceRefresh' });
-                }
-                this.checkUpdatesInBackground(true);
-                // Notify main panel so it also refreshes on external .csproj changes
-                NuGetSidebarProvider._notifyMainPanel();
-            }, 5000);
+            if (operationQueue.isBusy) {
+                // External .csproj change mid-op — remember we saw a watcher event
+                // so the op finally hook can re-arm a shorter debounce.
+                this._watcherDirtyDuringOp = true;
+                return;
+            }
+            this._scheduleWatcherRefresh(5000);
         };
         watcher.onDidChange(triggerDebounced);
         watcher.onDidCreate(triggerDebounced);
@@ -329,6 +331,47 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
         if (this._fileWatcherDebounce) {
             clearTimeout(this._fileWatcherDebounce);
             this._fileWatcherDebounce = undefined;
+        }
+    }
+
+    /**
+     * Arm the file-watcher debounce that triggers a 'revalidate' + background update
+     * check after the given delay. Replaces any existing pending timer. Used both by
+     * the .csproj watcher (5s) and by `_flushWatcherDirtyAfterOp` (1s rearm).
+     */
+    private _scheduleWatcherRefresh(delayMs: number): void {
+        if (this._fileWatcherDebounce) { clearTimeout(this._fileWatcherDebounce); }
+        this._fileWatcherDebounce = setTimeout(() => {
+            this._fileWatcherDebounce = undefined;
+            // Skip if a new op queued/started after we scheduled — its finally hook
+            // will re-arm via _flushWatcherDirtyAfterOp.
+            if (operationQueue.isBusy) {
+                this._watcherDirtyDuringOp = true;
+                return;
+            }
+            // Tell webview to re-fetch installed packages (csproj content changed).
+            // Use 'revalidate' (non-destructive — keeps existing rows visible during fetch)
+            // instead of 'forceRefresh' which clears state and causes a visible empty flash.
+            if (!this._disposed && this._view) {
+                this._postMessage({ type: 'revalidate' });
+            }
+            this.checkUpdatesInBackground(true);
+            NuGetSidebarProvider._notifyMainPanel();
+        }, delayMs);
+    }
+
+    /**
+     * Called from each operation's finally block (and from `notifySidebarOfChange`).
+     * Cancels any pending watcher debounce (the op already refreshed). If the watcher
+     * fired during the op, re-arm with a 1s delay so external mid-op changes are not
+     * lost. Resets the dirty flag.
+     */
+    private _flushWatcherDirtyAfterOp(): void {
+        const wasDirty = this._watcherDirtyDuringOp;
+        this._watcherDirtyDuringOp = false;
+        this._cancelFileWatcherDebounce();
+        if (wasDirty && !this._disposed) {
+            this._scheduleWatcherRefresh(1000);
         }
     }
 
@@ -551,9 +594,14 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
     /** Lightweight sidebar notification after a package operation from the main panel.
      * Skips HTTP cache clearing and source re-fetch (operation just talked to registry successfully).
      * Forwards operation details to sidebar webview for optimistic state updates.
-     * Does NOT cancel the file watcher debounce — let it serve as a safety net
-     * for any gaps in the optimistic update logic (~5s delayed full refresh). */
+     *
+     * Cancels any pending file-watcher debounce: the .csproj write done by the operation
+     * would otherwise schedule a redundant full refresh ~5s later, causing a visible
+     * second reload (flicker) on top of the surgical update we just performed. */
     public async notifySidebarOfChange(operation: { type: string; packageId?: string; packageIds?: string[]; projectPath?: string; version?: string }): Promise<void> {
+        // Cancel any in-flight watcher debounce — its full refresh would duplicate the
+        // optimistic update path below and cause a second visible reload.
+        this._flushWatcherDirtyAfterOp();
         // Forward operation details to sidebar webview for surgical UI updates
         this._postMessage({ type: 'packageChanged', operation });
         // Re-check updates in background for data accuracy.
@@ -577,6 +625,8 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
      *  late watcher fire can't race with the refresh and trigger redundant work. */
     public async refreshSidebar(): Promise<void> {
         this._cancelFileWatcherDebounce();
+        // Reset dirty flag — we are about to do a full refresh anyway.
+        this._watcherDirtyDuringOp = false;
         this._nugetService.clearInMemoryNuGetCaches();
         this._nugetService.clearNuGetHttpCacheBackground();
         // Re-send sources (cache was just cleared)
@@ -797,7 +847,7 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
                         try {
                             installSuccess = await executeSingleOperation(opCtx, 'install', data.projectPath, data.packageId, data.version, data.sourceUrl);
                         } finally {
-                            this._cancelFileWatcherDebounce();
+                            this._flushWatcherDirtyAfterOp();
                             if (installSuccess) { this.checkUpdatesInBackground(true, true, { packageIds: [data.packageId], projectPath: data.projectPath }); }
                         }
                     }, () => this._disposed);
@@ -822,7 +872,7 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
                         try {
                             updateSuccess = await executeSingleOperation(opCtx, 'update', data.projectPath, data.packageId, data.version, data.sourceUrl);
                         } finally {
-                            this._cancelFileWatcherDebounce();
+                            this._flushWatcherDirtyAfterOp();
                             if (updateSuccess) { this.checkUpdatesInBackground(true, true, { packageIds: [data.packageId], projectPath: data.projectPath }); }
                         }
                     }, () => this._disposed);
@@ -837,7 +887,7 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
                         try {
                             removeSuccess = await executeSingleOperation(opCtx, 'remove', data.projectPath, data.packageId);
                         } finally {
-                            this._cancelFileWatcherDebounce();
+                            this._flushWatcherDirtyAfterOp();
                             if (removeSuccess) { this.checkUpdatesInBackground(true, true, { packageIds: [data.packageId], projectPath: data.projectPath }); }
                         }
                     }, () => this._disposed);
@@ -851,7 +901,7 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
                         try {
                             await executeBulkUpdatePackages(opCtx, data.packages, data.projectPath);
                         } finally {
-                            this._cancelFileWatcherDebounce();
+                            this._flushWatcherDirtyAfterOp();
                             this.checkUpdatesInBackground(true, true, { packageIds: data.packages.map((p: { id: string }) => p.id), projectPath: data.projectPath });
                         }
                     }, () => this._disposed);
@@ -864,7 +914,7 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
                         try {
                             await executeBulkUpdateAllProjects(opCtx, data.projectUpdates);
                         } finally {
-                            this._cancelFileWatcherDebounce();
+                            this._flushWatcherDirtyAfterOp();
                             const allPkgIds = (data.projectUpdates as { packages: { id: string }[] }[]).flatMap((pu: { packages: { id: string }[] }) => pu.packages.map((p: { id: string }) => p.id));
                             this.checkUpdatesInBackground(true, true, { packageIds: allPkgIds });
                         }
@@ -964,7 +1014,7 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
                 try {
                     pickInstallSuccess = await executeSingleOperation(opCtx, 'install', selectedPaths[0], data.packageId, data.version);
                 } finally {
-                    this._cancelFileWatcherDebounce();
+                    this._flushWatcherDirtyAfterOp();
                     if (pickInstallSuccess) { this.checkUpdatesInBackground(true, true, { packageIds: [data.packageId], projectPath: selectedPaths[0] }); }
                 }
             }, () => this._disposed);
@@ -975,7 +1025,7 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
                 try {
                     await executeBulkInstall(opCtx, selectedPaths, data.packageId, data.version);
                 } finally {
-                    this._cancelFileWatcherDebounce();
+                    this._flushWatcherDirtyAfterOp();
                     this.checkUpdatesInBackground(true, true, { packageIds: [data.packageId] });
                 }
             }, () => this._disposed);
@@ -999,7 +1049,7 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
                 try {
                     singleRemoveSuccess = await executeSingleOperation(opCtx, 'remove', matching[0].path, data.packageId);
                 } finally {
-                    this._cancelFileWatcherDebounce();
+                    this._flushWatcherDirtyAfterOp();
                     if (singleRemoveSuccess) { this.checkUpdatesInBackground(true, true, { packageIds: [data.packageId], projectPath: matching[0].path }); }
                 }
             }, () => this._disposed);
@@ -1026,7 +1076,7 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
             try {
                 pickRemoveSuccess = await executeSingleOperation(opCtx, 'remove', project.path, data.packageId);
             } finally {
-                this._cancelFileWatcherDebounce();
+                this._flushWatcherDirtyAfterOp();
                 if (pickRemoveSuccess) { this.checkUpdatesInBackground(true, true, { packageIds: [data.packageId], projectPath: project.path }); }
             }
         }, () => this._disposed);
@@ -1141,7 +1191,7 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
                         try {
                             await executeBulkInstall(opCtx, selectedPaths, packageId, version || undefined);
                         } finally {
-                            this._cancelFileWatcherDebounce();
+                            this._flushWatcherDirtyAfterOp();
                             this.checkUpdatesInBackground(true, true, { packageIds: [packageId] });
                         }
                     }, () => this._disposed);

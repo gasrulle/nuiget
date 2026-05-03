@@ -37,6 +37,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Sidebar flicker — duplicate reload after package operations**
+- **Sidebar flicker — empty-state flash on external `.csproj` changes**
+- **Sidebar — unnecessary "Checking for updates" spinner when results already shown**
+- **Sidebar — unrelated package rows re-rendering on state changes**
+- **Sidebar — install with empty version no longer inserts a blank row**
+- **Sidebar — `allProjectsInstalled` revalidate no longer blanks rows during refresh**
+- **Sidebar — `revalidate` clears stale per-project updates cache**
+- **Sidebar — package update/remove no longer cross-project filters update list**
+- **File watcher — mid-operation `.csproj` changes are now captured (debounce rearmed after op)**
+- **Sidebar tests — assertions now use `.not.toBeNull()` for proper presence check**
 - **All-projects installed list no longer hidden behind a spinner during streaming**
 - **Bulk update in all-projects mode now refreshes installed rows**
 - **Failed `dotnet --version` probes no longer survive across sessions**

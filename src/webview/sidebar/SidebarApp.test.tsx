@@ -987,4 +987,55 @@ describe('SidebarApp', () => {
         // PkgA visible again
         expect(screen.getByTestId('package-row-PkgA')).toBeDefined();
     });
+
+    // ──────────────────────────────────────────────
+    // Flicker fixes: optimistic single-project mutation + revalidate + conditional spinner
+    // ──────────────────────────────────────────────
+    describe('flicker fixes', () => {
+        it('does not re-fetch installedPackages after single-project installResult (optimistic mutation)', () => {
+            render(<SidebarApp />);
+            sendMessage({ type: 'state', selectedProject: '/App.csproj' });
+            sendMessage({
+                type: 'installedPackages',
+                projectPath: '/App.csproj',
+                packages: [{ id: 'PkgA', version: '1.0.0' }]
+            });
+
+            mockVsCode.postMessage.mockClear();
+
+            sendMessage({
+                type: 'installResult',
+                success: true,
+                packageId: 'PkgB',
+                version: '2.0.0',
+                projectPath: '/App.csproj'
+            });
+
+            // Fix #A: optimistic mutation, no re-fetch round-trip
+            const reFetches = mockVsCode.postMessage.mock.calls.filter(
+                (c: any[]) => c[0]?.type === 'getInstalledPackages'
+            );
+            expect(reFetches.length).toBe(0);
+        });
+
+        it('revalidate message does not clear installed rows before re-fetch', () => {
+            render(<SidebarApp />);
+            sendMessage({ type: 'state', selectedProject: '/App.csproj' });
+            sendMessage({
+                type: 'installedPackages',
+                projectPath: '/App.csproj',
+                packages: [{ id: 'PkgA', version: '1.0.0' }]
+            });
+
+            // Render installed section so PkgA row is in DOM
+            const installedSection = screen.getByTestId('section-installed');
+            // Already expanded by default; verify row visible
+            expect(screen.queryByTestId('package-row-PkgA')).not.toBeNull();
+
+            // Fix #3: revalidate is non-destructive — row stays visible during background re-fetch
+            sendMessage({ type: 'revalidate' });
+            expect(screen.queryByTestId('package-row-PkgA')).not.toBeNull();
+            void installedSection;
+        });
+    });
 });
