@@ -1,7 +1,7 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
 import type { NuGetService } from './NuGetService';
-import type { InstalledPackage } from './NuGetTypes';
+import type { InstalledPackage, TransitiveFrameworkSection } from './NuGetTypes';
 import { batchedPromiseAll, topologicalSortByDependency } from './NuGetUtils';
 
 // --- Shared types ---
@@ -653,8 +653,61 @@ export async function queryAllProjectsInstalled(
     return results;
 }
 
+/** Per-project chunk emitted during streaming queryAllProjectsTransitive. */
+export interface ProjectTransitiveChunk {
+    projectPath: string;
+    projectName: string;
+    workspaceFolder?: string;
+    frameworks: TransitiveFrameworkSection[];
+    /** False → project.assets.json missing (project never built/restored). */
+    dataSourceAvailable: boolean;
+    /** Bucketed error category when assets.json existed but resolution failed. */
+    errorKind?: 'parse-failed' | 'fs-error' | 'unknown';
+}
+
+export interface QueryAllProjectsTransitiveStreamOpts {
+    onStart?: (projects: { projectPath: string; projectName: string; workspaceFolder?: string }[]) => void;
+    onProject?: (chunk: ProjectTransitiveChunk) => void;
+    signal?: AbortSignal;
+}
+
 /**
- * Resolve icon URLs for unique packages across all projects.
+ * Stream transitive packages for every project in the workspace.
+ * Mirrors `queryAllProjectsInstalled` shape (concurrency 4, onStart → onProject*… flow).
+ * Errors are bucketed (`parse-failed | fs-error | unknown`) so the frontend restore banner
+ * can summarize them stably without leaking raw error strings.
+ *
+ * Aggregation, version normalization, and casing are the frontend's job — this layer
+ * delivers per-project per-framework lists exactly as `getTransitivePackagesPreservingErrors`
+ * produces them.
+ */
+export async function queryAllProjectsTransitive(
+    nugetService: NuGetService,
+    opts?: QueryAllProjectsTransitiveStreamOpts
+): Promise<void> {
+    const projects = await nugetService.findProjects();
+
+    if (opts?.onStart && !opts.signal?.aborted) {
+        opts.onStart(projects.map(p => ({ projectPath: p.path, projectName: p.name, workspaceFolder: p.workspaceFolder })));
+    }
+
+    await batchedPromiseAll(projects, async (project) => {
+        if (opts?.signal?.aborted) { return; }
+        const result = await nugetService.getTransitivePackagesPreservingErrors(project.path);
+        if (opts?.onProject && !opts.signal?.aborted) {
+            opts.onProject({
+                projectPath: project.path,
+                projectName: project.name,
+                workspaceFolder: project.workspaceFolder,
+                frameworks: result.frameworks,
+                dataSourceAvailable: result.dataSourceAvailable,
+                errorKind: result.errorKind,
+            });
+        }
+    }, 4);
+}
+
+/**
  * Returns a map of `packageId@version` → `iconUrl`.
  * Uses deduplication to avoid redundant fetches for packages shared across projects.
  */

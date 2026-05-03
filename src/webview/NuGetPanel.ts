@@ -1,9 +1,9 @@
 import * as vscode from 'vscode';
-import { executeBulkInstall, executeBulkRemoveAllProjects, executeBulkRemovePackages, executeBulkUpdateAllProjects, executeBulkUpdatePackages, executeSingleOperation, OperationContext, ProjectInstalledResult, queryAllProjectsInstalled, queryAllProjectsUpdates, resolveAllProjectsIcons } from '../services/NuGetOperations';
+import { executeBulkInstall, executeBulkRemoveAllProjects, executeBulkRemovePackages, executeBulkUpdateAllProjects, executeBulkUpdatePackages, executeSingleOperation, OperationContext, ProjectInstalledResult, queryAllProjectsInstalled, queryAllProjectsTransitive, queryAllProjectsUpdates, resolveAllProjectsIcons } from '../services/NuGetOperations';
 import { isPerfEnabled, startTimer } from '../services/NuGetPerf';
 import { NuGetService } from '../services/NuGetService';
 import { operationQueue } from '../services/OperationQueue';
-import type { PanelRequestMessage } from '../services/NuGetTypes';
+import type { PanelRequestMessage, TransitivePackage } from '../services/NuGetTypes';
 import { ALL_PROJECTS_SENTINEL } from '../services/NuGetTypes';
 
 export class NuGetPanel {
@@ -373,6 +373,176 @@ export class NuGetPanel {
                             projectPath: data.projectPath
                         });
                     });
+                    break;
+                }
+            case 'getAllProjectsTransitive':
+                {
+                    const requestId = data.requestId;
+                    const inflightKey = 'aptransitive';
+                    this._abortInflight(inflightKey);
+                    const controller = new AbortController();
+                    this._inflightAborts.set(inflightKey, controller);
+                    const signal = controller.signal;
+                    try {
+                        const seenPaths: string[] = [];
+                        const erroredChunks: { projectPath: string; errorKind: string }[] = [];
+                        await queryAllProjectsTransitive(this._nugetService, {
+                            onStart: (projects) => {
+                                if (signal.aborted || this._disposed) { return; }
+                                this._postMessage({
+                                    type: 'allProjectsTransitiveStart',
+                                    requestId,
+                                    projects,
+                                });
+                            },
+                            onProject: (chunk) => {
+                                if (signal.aborted || this._disposed) { return; }
+                                seenPaths.push(chunk.projectPath);
+                                if (chunk.errorKind) {
+                                    erroredChunks.push({ projectPath: chunk.projectPath, errorKind: chunk.errorKind });
+                                }
+                                this._postMessage({
+                                    type: 'allProjectsTransitiveProjectFound',
+                                    requestId,
+                                    projectPath: chunk.projectPath,
+                                    projectName: chunk.projectName,
+                                    workspaceFolder: chunk.workspaceFolder,
+                                    frameworks: chunk.frameworks,
+                                    dataSourceAvailable: chunk.dataSourceAvailable,
+                                    errorKind: chunk.errorKind,
+                                });
+                            },
+                            signal,
+                        });
+                        if (signal.aborted || this._disposed) { break; }
+                        this._postMessage({
+                            type: 'allProjectsTransitiveComplete',
+                            requestId,
+                            projectPaths: seenPaths,
+                            errored: erroredChunks,
+                        });
+                    } catch (error) {
+                        console.error('[nUIget] getAllProjectsTransitive error:', error);
+                        if (!signal.aborted && !this._disposed) {
+                            this._postMessage({
+                                type: 'allProjectsTransitiveComplete',
+                                requestId,
+                                projectPaths: [],
+                                errored: [],
+                            });
+                        }
+                    } finally {
+                        if (this._inflightAborts.get(inflightKey) === controller) {
+                            this._inflightAborts.delete(inflightKey);
+                        }
+                    }
+                    break;
+                }
+            case 'cancelAllProjectsTransitive':
+                {
+                    this._abortInflight('aptransitive');
+                    break;
+                }
+            case 'getAllProjectsTransitiveMetadata':
+                {
+                    const requestId = data.requestId;
+                    const requested = data.packages;
+                    if (!requested || requested.length === 0) {
+                        this._postMessage({
+                            type: 'allProjectsTransitiveMetadata',
+                            requestId,
+                            metadata: [],
+                        });
+                        break;
+                    }
+                    // Reuse the existing enrichment path, which mutates a TransitivePackage[] in place.
+                    // Build minimal records (requiredByChain not needed for icon/verified/authors lookup).
+                    const tempPkgs: TransitivePackage[] = requested.map(p => ({
+                        id: p.id,
+                        version: p.version,
+                        requiredByChain: [],
+                    }));
+                    try {
+                        await this._nugetService.fetchTransitivePackageMetadata(tempPkgs);
+                    } catch (error) {
+                        console.error('[nUIget] getAllProjectsTransitiveMetadata error:', error);
+                    }
+                    if (this._disposed) { break; }
+                    const metadata = tempPkgs
+                        .filter(p => p.iconUrl !== undefined || p.verified !== undefined || p.authors !== undefined)
+                        .map(p => ({
+                            id: p.id,
+                            version: p.version,
+                            iconUrl: p.iconUrl,
+                            verified: p.verified,
+                            authors: p.authors,
+                        }));
+                    this._postMessage({
+                        type: 'allProjectsTransitiveMetadata',
+                        requestId,
+                        metadata,
+                    });
+                    break;
+                }
+            case 'restoreProjectsBatch':
+                {
+                    const requestId = data.requestId;
+                    const projectPaths = (data.projectPaths ?? []).filter(p => p && p !== ALL_PROJECTS_SENTINEL);
+                    if (projectPaths.length === 0) {
+                        this._postMessage({
+                            type: 'restoreProjectsBatchResult',
+                            requestId,
+                            results: [],
+                        });
+                        break;
+                    }
+                    // SINGLE OperationQueue task — looping serially internally avoids the
+                    // MAX_WAITING=5 cap that N parallel `restoreProject` enqueues would hit.
+                    const accepted = operationQueue.enqueue(
+                        `restore ${projectPaths.length} project(s)`,
+                        async () => {
+                            const results: Array<{ projectPath: string; success: boolean; error?: string; cancelled?: boolean }> = [];
+                            await vscode.window.withProgress({
+                                location: vscode.ProgressLocation.Notification,
+                                title: `Restoring ${projectPaths.length} project(s)…`,
+                                cancellable: true,
+                            }, async (progress, token) => {
+                                let i = 0;
+                                for (const projectPath of projectPaths) {
+                                    i++;
+                                    if (token.isCancellationRequested || this._disposed) {
+                                        results.push({ projectPath, success: false, cancelled: true });
+                                        continue;
+                                    }
+                                    const name = projectPath.split(/[\\/]/).pop() ?? projectPath;
+                                    progress.report({ message: `Restoring ${i} of ${projectPaths.length}: ${name}` });
+                                    try {
+                                        const success = await this._nugetService.restoreProject(projectPath);
+                                        results.push({ projectPath, success });
+                                    } catch (err) {
+                                        const msg = err instanceof Error ? err.message : String(err);
+                                        results.push({ projectPath, success: false, error: msg });
+                                    }
+                                }
+                            });
+                            if (!this._disposed) {
+                                this._postMessage({
+                                    type: 'restoreProjectsBatchResult',
+                                    requestId,
+                                    results,
+                                });
+                            }
+                        },
+                        () => this._disposed,
+                    );
+                    if (!accepted) {
+                        // Queue full — synthesize a failure result so the frontend doesn't hang.
+                        this._postMessage({
+                            type: 'restoreProjectsBatchResult',
+                            requestId,
+                            results: projectPaths.map(p => ({ projectPath: p, success: false, error: 'Operation queue is full. Try again shortly.' })),
+                        });
+                    }
                     break;
                 }
             case 'searchPackages':

@@ -151,6 +151,12 @@ export interface TransitivePackagesResult {
     frameworks: TransitiveFrameworkSection[];
     /** Whether project.assets.json exists (project has been built/restored) */
     dataSourceAvailable: boolean;
+    /**
+     * Bucketed error category when assets.json existed but transitive resolution failed.
+     * Only populated by `getTransitivePackagesPreservingErrors` (all-projects transitive flow);
+     * legacy `getTransitivePackages` swallows errors and never sets this.
+     */
+    errorKind?: 'parse-failed' | 'fs-error' | 'unknown';
 }
 
 /**
@@ -409,6 +415,87 @@ export interface RestoreProjectMsg {
     projectPath: string;
 }
 
+// ─── All-Projects Transitive (Plan: transitive-all-projects) ─────────────────
+
+/**
+ * Request: aggregate transitive packages across every project in the workspace.
+ * Backend streams `allProjectsTransitiveStart` → N×`allProjectsTransitiveProjectFound` →
+ * `allProjectsTransitiveComplete`. Frontend uses `requestId` to discard stale chunks.
+ * Distinct from `getTransitivePackages` (single project) — this channel never accepts
+ * `ALL_PROJECTS_SENTINEL` via the legacy handler.
+ */
+export interface GetAllProjectsTransitiveMsg {
+    type: 'getAllProjectsTransitive';
+    requestId: string;
+}
+
+export interface CancelAllProjectsTransitiveMsg {
+    type: 'cancelAllProjectsTransitive';
+    requestId: string;
+}
+
+export interface AllProjectsTransitiveStartMsg {
+    type: 'allProjectsTransitiveStart';
+    requestId: string;
+    projects: { path: string; name: string; workspaceFolder?: string }[];
+}
+
+export interface AllProjectsTransitiveProjectFoundMsg {
+    type: 'allProjectsTransitiveProjectFound';
+    requestId: string;
+    projectPath: string;
+    projectName: string;
+    workspaceFolder?: string;
+    frameworks: TransitiveFrameworkSection[];
+    /** False → project.assets.json missing (restore needed). */
+    dataSourceAvailable: boolean;
+    /** Bucketed error category when resolution failed despite assets.json being present. */
+    errorKind?: 'parse-failed' | 'fs-error' | 'unknown';
+}
+
+export interface AllProjectsTransitiveCompleteMsg {
+    type: 'allProjectsTransitiveComplete';
+    requestId: string;
+    /** Canonical list of project paths covered by this stream — frontend prunes slots not in this set. */
+    projectPaths: string[];
+    errored: { projectPath: string; errorKind: string }[];
+}
+
+/**
+ * Request: enrich a unique (id, version) batch of transitive packages with icon/verified/authors.
+ * Distinct from single-project `getTransitiveMetadata` (which is project+framework scoped and routes
+ * through `InstalledTab`). This channel routes through App.tsx aggregation state.
+ */
+export interface GetAllProjectsTransitiveMetadataMsg {
+    type: 'getAllProjectsTransitiveMetadata';
+    requestId: string;
+    packages: { id: string; version: string }[];
+}
+
+export interface AllProjectsTransitiveMetadataMsg {
+    type: 'allProjectsTransitiveMetadata';
+    requestId: string;
+    /** Sparse list — only packages whose metadata resolved are echoed back. */
+    metadata: Array<{ id: string; version: string; iconUrl?: string; verified?: boolean; authors?: string }>;
+}
+
+/**
+ * Request: serially restore a batch of projects flagged by the all-projects transitive banner.
+ * Single OperationQueue task internally — sidesteps the 5-task `MAX_WAITING` cap that would apply
+ * if N parallel `restoreProject` messages were queued.
+ */
+export interface RestoreProjectsBatchMsg {
+    type: 'restoreProjectsBatch';
+    requestId: string;
+    projectPaths: string[];
+}
+
+export interface RestoreProjectsBatchResultMsg {
+    type: 'restoreProjectsBatchResult';
+    requestId: string;
+    results: Array<{ projectPath: string; success: boolean; error?: string; cancelled?: boolean }>;
+}
+
 export interface AutocompletePackagesMsg {
     type: 'autocompletePackages';
     query: string;
@@ -580,6 +667,8 @@ export type PanelRequestMessage =
     | GetSplitPositionMsg | SaveSplitPositionMsg
     | PrewarmSourceMsg | FetchReadmeFromPackageMsg
     | BulkUpdatePackagesMsg | ConfirmBulkRemoveMsg | ConfirmBulkRemoveAllProjectsMsg
+    | GetAllProjectsTransitiveMsg | CancelAllProjectsTransitiveMsg
+    | GetAllProjectsTransitiveMetadataMsg | RestoreProjectsBatchMsg
     | PanelWebviewReadyMsg | PanelFirstUsefulRenderMsg;
 
 /** All messages the sidebar webview can send to the extension host */

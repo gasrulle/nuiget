@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Transitive packages in all-projects mode** — All-Projects view now shows a single aggregated **Transitive Packages** section. Each row deduplicates by `id@version` across projects and lists every framework that pulls the package in. Selecting a row opens the standard details panel with a project-grouped **Required by** breakdown so you can see exactly which projects (and which top-level packages within them) bring in each transitive dependency. Loads lazily on section expand, streams per project so partial data appears immediately, and exposes a **Restore N projects** button when `obj/project.assets.json` is missing for one or more projects.
+
 ## [1.18.5] - 2026-05-02
 
 ### Added

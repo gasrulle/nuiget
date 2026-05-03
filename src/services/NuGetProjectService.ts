@@ -21,6 +21,15 @@ export class NuGetProjectService {
     private static readonly ASSETS_CACHE_TTL = 30000;
     private static readonly MAX_ASSETS_CACHE_ENTRIES = 5;
 
+    /**
+     * Derived-result cache for `getTransitivePackagesPreservingErrors` (all-projects transitive flow).
+     * Smaller-footprint than `assetsJsonCache` (just the transitive list, not the full library/dep graph),
+     * so we can hold more entries safely. mtime-keyed so file-watcher-driven invalidation still works.
+     */
+    private transitiveResultCache: Map<string, { result: TransitivePackagesResult; mtimeMs: number; timestamp: number }> = new Map();
+    private static readonly TRANSITIVE_RESULT_TTL = 30000;
+    private static readonly MAX_TRANSITIVE_RESULT_ENTRIES = 100;
+
     constructor(
         private readonly useNounFirstSyntax: (projectPath: string) => Promise<boolean>,
         private readonly onEnrichMetadata?: (packages: InstalledPackage[]) => Promise<void>
@@ -29,6 +38,7 @@ export class NuGetProjectService {
     /** Clear the assets.json cache (call after install/update/remove) */
     clearAssetsCache(): void {
         this.assetsJsonCache.clear();
+        this.transitiveResultCache.clear();
     }
 
     private async readAssetsJson<T = unknown>(assetsPath: string): Promise<T | null> {
@@ -419,6 +429,62 @@ export class NuGetProjectService {
         }
     }
 
+    /**
+     * All-projects transitive flow variant: distinguishes "missing assets.json" (restore needed)
+     * from "assets.json present but parse/read failed" (parse-failed bucket). Caches derived
+     * results in `transitiveResultCache` (mtime-keyed, 100 entries) so warm reloads are near-instant.
+     *
+     * Errors are bucketed (`parse-failed | fs-error | unknown`) — never raw strings — so the
+     * frontend can show a stable summary in the restore banner without leaking filesystem paths
+     * or stack traces.
+     */
+    async getTransitivePackagesPreservingErrors(projectPath: string): Promise<TransitivePackagesResult> {
+        const projectDir = path.dirname(projectPath);
+        const assetsPath = path.join(projectDir, 'obj', 'project.assets.json');
+
+        let mtimeMs: number;
+        try {
+            const stat = await fs.promises.stat(assetsPath);
+            mtimeMs = stat.mtimeMs;
+        } catch (err: unknown) {
+            const code = (err as NodeJS.ErrnoException | undefined)?.code;
+            if (code === 'ENOENT') {
+                return { frameworks: [], dataSourceAvailable: false };
+            }
+            console.error('[nUIget] stat assets.json failed:', err);
+            return { frameworks: [], dataSourceAvailable: true, errorKind: 'fs-error' };
+        }
+
+        const now = Date.now();
+        const cached = this.transitiveResultCache.get(projectPath);
+        if (cached && cached.mtimeMs === mtimeMs && (now - cached.timestamp) < NuGetProjectService.TRANSITIVE_RESULT_TTL) {
+            return cached.result;
+        }
+
+        let result: TransitivePackagesResult;
+        try {
+            const parsed = await this.getTransitivePackagesFromAssets(assetsPath);
+            result = { frameworks: parsed.frameworks, dataSourceAvailable: true };
+        } catch (err) {
+            console.error('[nUIget] parse assets.json failed:', err);
+            // Heuristic: SyntaxError (or anything non-FS) → parse-failed. Otherwise unknown.
+            const isParseError = err instanceof SyntaxError;
+            result = { frameworks: [], dataSourceAvailable: true, errorKind: isParseError ? 'parse-failed' : 'unknown' };
+        }
+
+        this.transitiveResultCache.set(projectPath, { result, mtimeMs, timestamp: now });
+
+        // Bound the cache. Evict the oldest entry once we exceed the cap.
+        if (this.transitiveResultCache.size > NuGetProjectService.MAX_TRANSITIVE_RESULT_ENTRIES) {
+            const firstKey = this.transitiveResultCache.keys().next().value;
+            if (firstKey !== undefined) {
+                this.transitiveResultCache.delete(firstKey);
+            }
+        }
+
+        return result;
+    }
+
     private async getTransitivePackagesFromAssets(assetsPath: string): Promise<{ frameworks: TransitiveFrameworkSection[] }> {
         const assetsData = await this.readAssetsJson<{
             version: number;
@@ -451,7 +517,13 @@ export class NuGetProjectService {
             const targetPackages = assetsData.targets[targetFramework];
 
             const directPackageIds = new Set<string>();
-            const directDeps = assetsData.projectFileDependencyGroups[targetFramework] || [];
+            // RID-specific target keys ("net8.0/win-x64") still key projectFileDependencyGroups
+            // by base TFM ("net8.0"). Try the exact key first, then fall back to the base TFM
+            // before the slash. Without this, direct packages get misclassified as transitive.
+            const baseTfm = targetFramework.split('/')[0];
+            const directDeps = assetsData.projectFileDependencyGroups[targetFramework]
+                ?? assetsData.projectFileDependencyGroups[baseTfm]
+                ?? [];
             for (const dep of directDeps) {
                 const match = dep.match(/^([^\s>=<]+)/);
                 if (match) {

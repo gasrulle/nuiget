@@ -13,6 +13,7 @@ const hoisted = vi.hoisted(() => ({
     mockExecuteBulkRemoveAllProjects: vi.fn().mockResolvedValue(undefined),
     mockQueryAllProjectsUpdates: vi.fn().mockResolvedValue([]),
     mockQueryAllProjectsInstalled: vi.fn().mockResolvedValue([]),
+    mockQueryAllProjectsTransitive: vi.fn().mockResolvedValue(undefined),
     mockResolveAllProjectsIcons: vi.fn().mockResolvedValue({}),
 }));
 
@@ -25,6 +26,7 @@ vi.mock('../services/NuGetOperations', () => ({
     executeBulkRemoveAllProjects: hoisted.mockExecuteBulkRemoveAllProjects,
     queryAllProjectsUpdates: hoisted.mockQueryAllProjectsUpdates,
     queryAllProjectsInstalled: hoisted.mockQueryAllProjectsInstalled,
+    queryAllProjectsTransitive: hoisted.mockQueryAllProjectsTransitive,
     resolveAllProjectsIcons: hoisted.mockResolveAllProjectsIcons,
 }));
 
@@ -1227,6 +1229,85 @@ describe('NuGetPanel', () => {
                 expect(call.context).toBe('multiInstall');
                 expect(call.requestId).toBe('m1');
             }
+        });
+    });
+
+    describe('getAllProjectsTransitive message', () => {
+        beforeEach(() => {
+            NuGetPanel.createOrShow(vscode.Uri.file('/ext'), mockContext, mockOutputChannel, mockService as any);
+            mockPanel.webview.postMessage.mockClear();
+        });
+
+        it('streams Start → ProjectFound → Complete', async () => {
+            hoisted.mockQueryAllProjectsTransitive.mockImplementationOnce(async (_svc: unknown, opts: any) => {
+                opts?.onStart?.([{ projectPath: '/projA.csproj', projectName: 'ProjA' }]);
+                opts?.onProject?.({
+                    projectPath: '/projA.csproj',
+                    projectName: 'ProjA',
+                    frameworks: [{ targetFramework: 'net8.0', packages: [] }],
+                    dataSourceAvailable: true,
+                });
+                return undefined;
+            });
+
+            await messageListener!({ type: 'getAllProjectsTransitive', requestId: 't1' });
+
+            const calls = mockPanel.webview.postMessage.mock.calls.map((c: any[]) => c[0]);
+            expect(calls.find((m: any) => m.type === 'allProjectsTransitiveStart')).toMatchObject({
+                requestId: 't1',
+                projects: [{ projectPath: '/projA.csproj', projectName: 'ProjA' }],
+            });
+            expect(calls.find((m: any) => m.type === 'allProjectsTransitiveProjectFound')).toMatchObject({
+                requestId: 't1',
+                projectPath: '/projA.csproj',
+                dataSourceAvailable: true,
+            });
+            expect(calls.find((m: any) => m.type === 'allProjectsTransitiveComplete')).toMatchObject({
+                requestId: 't1',
+                projectPaths: ['/projA.csproj'],
+                errored: [],
+            });
+        });
+
+        it('forwards errorKind in ProjectFound and Complete.errored', async () => {
+            hoisted.mockQueryAllProjectsTransitive.mockImplementationOnce(async (_svc: unknown, opts: any) => {
+                opts?.onStart?.([{ projectPath: '/projB.csproj', projectName: 'ProjB' }]);
+                opts?.onProject?.({
+                    projectPath: '/projB.csproj',
+                    projectName: 'ProjB',
+                    frameworks: [],
+                    dataSourceAvailable: true,
+                    errorKind: 'parse-failed',
+                });
+                return undefined;
+            });
+
+            await messageListener!({ type: 'getAllProjectsTransitive', requestId: 't2' });
+
+            const calls = mockPanel.webview.postMessage.mock.calls.map((c: any[]) => c[0]);
+            expect(calls.find((m: any) => m.type === 'allProjectsTransitiveProjectFound')).toMatchObject({
+                projectPath: '/projB.csproj',
+                errorKind: 'parse-failed',
+            });
+            expect(calls.find((m: any) => m.type === 'allProjectsTransitiveComplete')).toMatchObject({
+                errored: [{ projectPath: '/projB.csproj', errorKind: 'parse-failed' }],
+            });
+        });
+
+        it('cancelAllProjectsTransitive aborts the in-flight stream', async () => {
+            let abortSignal: AbortSignal | undefined;
+            hoisted.mockQueryAllProjectsTransitive.mockImplementationOnce(async (_svc: unknown, opts: any) => {
+                abortSignal = opts?.signal;
+                opts?.onStart?.([{ projectPath: '/projC.csproj', projectName: 'ProjC' }]);
+                // Don't emit any ProjectFound — wait for abort
+                return undefined;
+            });
+
+            const p = messageListener!({ type: 'getAllProjectsTransitive', requestId: 't3' });
+            await messageListener!({ type: 'cancelAllProjectsTransitive' });
+            await p;
+
+            expect(abortSignal?.aborted).toBe(true);
         });
     });
 

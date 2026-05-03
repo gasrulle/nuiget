@@ -409,6 +409,15 @@ Key properties:
 | `allProjectsInstalledComplete` | Ext → UI | Streaming: terminator. Payload: `{ context, requestId, projectPaths, errored: { projectPath, error }[] }`. Used by frontend to prune stale slots; dedup key is `(context, projectPath)`. |
 | `allProjectsInstalledMetadata` | Ext → UI | **Legacy** — paired with non-streamed `allProjectsInstalled`. No longer emitted by backend. |
 | `allProjectsIcons` | Ext → UI | Progressive icon enrichment for the **updates** path only (`checkAllProjectsUpdates`). Map of `packageId@version` → icon URL, merged into existing `allProjectsUpdates` state. The installed path uses per-project `allProjectsInstalledProjectMetadata` instead. |
+| `getAllProjectsTransitive` | UI → Ext | Streaming: enumerate transitive packages across all projects. Lazy-loaded on Transitive section expand. Payload: `{ requestId }`. Aborted by `cancelAllProjectsTransitive` when section collapses or project switch happens. |
+| `cancelAllProjectsTransitive` | UI → Ext | Abort the in-flight all-projects transitive stream. |
+| `allProjectsTransitiveStart` | Ext → UI | Streaming: begin all-projects transitive run. Payload: `{ requestId, projects: { projectPath, projectName }[] }`. |
+| `allProjectsTransitiveProjectFound` | Ext → UI | Streaming: per-project transitive chunk. Payload: `{ requestId, projectPath, projectName, workspaceFolder?, frameworks, dataSourceAvailable, errorKind? }`. `errorKind` ∈ `'fs-error' \| 'parse-failed' \| 'unknown'`. |
+| `allProjectsTransitiveComplete` | Ext → UI | Streaming: terminator. Payload: `{ requestId, projectPaths, errored: { projectPath, errorKind }[] }`. Frontend uses `errored` to drive the Restore-batch banner. |
+| `getAllProjectsTransitiveMetadata` | UI → Ext | Fetch icon/verified/authors metadata for a deduped set of `(id, version)` pairs aggregated across all projects. Payload: `{ requestId, packages: { id, version }[] }`. |
+| `allProjectsTransitiveMetadata` | Ext → UI | Metadata enrichment response. Payload: `{ requestId, metadata: { id, version, iconUrl?, verified?, authors? }[] }`. |
+| `restoreProjectsBatch` | UI → Ext | Run `dotnet restore` on multiple projects (Restore-batch banner). Payload: `{ requestId, projectPaths }`. |
+| `restoreProjectsBatchResult` | Ext → UI | Per-project restore outcome. Triggers `refreshScoped` to re-stream transitive data. |
 
 #### Package Operations
 | Message | Direction | Purpose |
@@ -754,6 +763,20 @@ const timer = setTimeout(() => {
 }, 2000);
 return () => clearTimeout(timer);
 ```
+
+### All-Projects Transitive Aggregation
+In all-projects mode, transitive packages are aggregated into a **single** Transitive Packages section instead of per-project per-framework sections. Loading is lazy: the stream only kicks off when the user expands the section (`onAllProjectsTransitiveExpandedChange(true)` posts `getAllProjectsTransitive`). Collapsing does **not** abort — results are kept for re-expansion. The stream is aborted on project switch (`ALL_PROJECTS` ↔ single) and on `refresh`/`refreshScoped` via `cancelAllProjectsTransitive`.
+
+**Backend** (`queryAllProjectsTransitive` in `NuGetOperations.ts`): Streams chunks via `onStart` → N × `onProject` callbacks at concurrency 4. Each chunk goes through `getTransitivePackagesPreservingErrors` which has an mtime-keyed cache (capped at 100 entries, TTL-bounded) and bucketizes failures into `fs-error` / `parse-failed` / `unknown` instead of throwing. Missing `obj/project.assets.json` (ENOENT) sets `dataSourceAvailable: false` so the UI can offer a Restore-batch banner.
+
+**Frontend** (`App.tsx`):
+- Origin rows are stored in `allProjectsTransitiveRows` keyed by `(projectPath, frameworkTfm, chainHash)`.
+- A `useMemo` aggregates them by `lowerId@versionNormalized` into the rows shown by InstalledTab. The memo merges `requiredByChain` entries from every origin so the details panel can group them by project.
+- Selection state stores only `(lowerId, versionNormalized)`; a `useEffect` re-resolves the live row from the aggregated memo whenever it changes (and clears the selection if the row disappears, e.g., after a restore).
+- Lifecycle: `refresh` and `refreshScoped` reset all transitive state. Switching project (`ALL_PROJECTS` ↔ single) cancels the stream and resets state.
+- Restore banner: shown only when the section is expanded AND `errored` chunks include at least one `fs-error`-bucket entry. `onRestoreProjectsBatch` is debounced (idempotent no-op while running). After backend `restoreProjectsBatchResult`, a `refreshScoped` re-emits per-project chunks for the affected projects.
+
+**Required-by display**: The package details panel groups the merged `requiredByChain` entries by project, then by top-level package. Single-project transitive rows still use the original ungrouped layout.
 
 ### WorkspaceCache Utility
 Location: `src/services/WorkspaceCache.ts`

@@ -3445,6 +3445,97 @@ describe('NuGetService', () => {
         });
     });
 
+    describe('getTransitivePackagesPreservingErrors', () => {
+        beforeEach(async () => {
+            const fs = await import('fs');
+            vi.mocked(fs.promises.stat).mockReset();
+            (service as any)._projectService.transitiveResultCache.clear();
+        });
+
+        it('returns dataSourceAvailable=false when assets.json is missing (ENOENT)', async () => {
+            const fs = await import('fs');
+            vi.mocked(fs.promises.stat).mockRejectedValueOnce(Object.assign(new Error('ENOENT'), { code: 'ENOENT' }));
+
+            const result = await (service as any)._projectService.getTransitivePackagesPreservingErrors('/proj/test.csproj');
+            expect(result).toEqual({ frameworks: [], dataSourceAvailable: false });
+        });
+
+        it('returns errorKind=fs-error when stat fails for non-ENOENT reason', async () => {
+            const fs = await import('fs');
+            vi.mocked(fs.promises.stat).mockRejectedValueOnce(Object.assign(new Error('EACCES'), { code: 'EACCES' }));
+
+            const result = await (service as any)._projectService.getTransitivePackagesPreservingErrors('/proj/test.csproj');
+            expect(result).toMatchObject({ frameworks: [], dataSourceAvailable: true, errorKind: 'fs-error' });
+        });
+
+        it('returns errorKind=parse-failed when assets.json fails to parse (SyntaxError)', async () => {
+            const fs = await import('fs');
+            vi.mocked(fs.promises.stat).mockResolvedValueOnce({ mtimeMs: 100 } as any);
+            vi.spyOn((service as any)._projectService, 'getTransitivePackagesFromAssets')
+                .mockRejectedValueOnce(new SyntaxError('bad json'));
+
+            const result = await (service as any)._projectService.getTransitivePackagesPreservingErrors('/proj/test.csproj');
+            expect(result).toMatchObject({ frameworks: [], dataSourceAvailable: true, errorKind: 'parse-failed' });
+        });
+
+        it('returns errorKind=unknown for other parsing errors', async () => {
+            const fs = await import('fs');
+            vi.mocked(fs.promises.stat).mockResolvedValueOnce({ mtimeMs: 100 } as any);
+            vi.spyOn((service as any)._projectService, 'getTransitivePackagesFromAssets')
+                .mockRejectedValueOnce(new Error('something else'));
+
+            const result = await (service as any)._projectService.getTransitivePackagesPreservingErrors('/proj/test.csproj');
+            expect(result).toMatchObject({ frameworks: [], dataSourceAvailable: true, errorKind: 'unknown' });
+        });
+
+        it('caches result keyed by mtimeMs and serves cache hit on second call', async () => {
+            const fs = await import('fs');
+            vi.mocked(fs.promises.stat).mockResolvedValue({ mtimeMs: 200 } as any);
+            const fromAssetsSpy = vi.spyOn((service as any)._projectService, 'getTransitivePackagesFromAssets')
+                .mockResolvedValue({ frameworks: [{ targetFramework: 'net8.0', packages: [] }] });
+
+            const r1 = await (service as any)._projectService.getTransitivePackagesPreservingErrors('/proj/test.csproj');
+            const r2 = await (service as any)._projectService.getTransitivePackagesPreservingErrors('/proj/test.csproj');
+
+            expect(r1.dataSourceAvailable).toBe(true);
+            expect(r2).toBe(r1);
+            expect(fromAssetsSpy).toHaveBeenCalledTimes(1);
+        });
+
+        it('invalidates cache when mtimeMs changes', async () => {
+            const fs = await import('fs');
+            vi.mocked(fs.promises.stat)
+                .mockResolvedValueOnce({ mtimeMs: 100 } as any)
+                .mockResolvedValueOnce({ mtimeMs: 999 } as any);
+            const fromAssetsSpy = vi.spyOn((service as any)._projectService, 'getTransitivePackagesFromAssets')
+                .mockResolvedValueOnce({ frameworks: [{ targetFramework: 'net8.0', packages: [] }] })
+                .mockResolvedValueOnce({ frameworks: [{ targetFramework: 'net9.0', packages: [] }] });
+
+            const r1 = await (service as any)._projectService.getTransitivePackagesPreservingErrors('/proj/test.csproj');
+            const r2 = await (service as any)._projectService.getTransitivePackagesPreservingErrors('/proj/test.csproj');
+
+            expect(r1.frameworks[0].targetFramework).toBe('net8.0');
+            expect(r2.frameworks[0].targetFramework).toBe('net9.0');
+            expect(fromAssetsSpy).toHaveBeenCalledTimes(2);
+        });
+
+        it('evicts oldest entry once MAX_TRANSITIVE_RESULT_ENTRIES (100) is exceeded', async () => {
+            const fs = await import('fs');
+            let counter = 0;
+            vi.mocked(fs.promises.stat).mockImplementation(() => Promise.resolve({ mtimeMs: ++counter } as any));
+            vi.spyOn((service as any)._projectService, 'getTransitivePackagesFromAssets')
+                .mockResolvedValue({ frameworks: [] });
+
+            for (let i = 0; i < 101; i++) {
+                await (service as any)._projectService.getTransitivePackagesPreservingErrors(`/proj/p${i}.csproj`);
+            }
+            const cache = (service as any)._projectService.transitiveResultCache as Map<string, unknown>;
+            expect(cache.size).toBe(100);
+            expect(cache.has('/proj/p0.csproj')).toBe(false);
+            expect(cache.has('/proj/p100.csproj')).toBe(true);
+        });
+    });
+
     describe('fetchTransitivePackageMetadata', () => {
         it('enriches packages with metadata from search API', async () => {
             vi.spyOn(service as any, 'getSources').mockResolvedValue([{ name: 'nuget', url: 'https://api.nuget.org/v3/index.json', enabled: true }]);

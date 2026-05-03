@@ -13,7 +13,7 @@ import { usePackageSelection } from './hooks/usePackageSelection';
 import { useHoverPrefetch } from './hooks/useHoverPrefetch';
 import { ClearAllIcon, CloudDownloadIcon, FilterIcon, LoadingIcon, SettingsGearIcon, SyncIcon, VerifiedIcon, WarningIcon } from './icons';
 import { renderMarkdownToHtml } from './markdownSetup';
-import type { AppState, FailedSource, InstalledPackage, NuGetSource, PackageMetadata, PackageSearchResult, PackageUpdate, Project, ProjectInstalled, ProjectUpdates, QuickSearchSourceResult, TabType, TransitivePackage, VulnerabilitySeverity } from './types';
+import type { AllProjectsTransitiveRow, AppState, FailedSource, InstalledPackage, NuGetSource, PackageMetadata, PackageSearchResult, PackageUpdate, Project, ProjectInstalled, ProjectUpdates, QuickSearchSourceResult, SelectedTransitivePackage, TabType, TransitiveFrameworkSection, VulnerabilitySeverity } from './types';
 import { ALL_PROJECTS_SENTINEL, LRUMap, getPackageId } from './types';
 import { FILTER_PREFIXES, parseSearchQuery } from './utils/parseSearchQuery';
 
@@ -90,7 +90,7 @@ export const App: React.FC = () => {
     // Split panel position state (35% default, range 20-80%)
     const [splitPosition, setSplitPosition] = useState(35);
 
-    const [selectedTransitivePackage, setSelectedTransitivePackage] = useState<TransitivePackage | null>(null);
+    const [selectedTransitivePackage, setSelectedTransitivePackage] = useState<SelectedTransitivePackage | null>(null);
 
     // --- Unified search bar state (lifted from BrowseTab) ---
     const [searchQuery, setSearchQuery] = useState('');
@@ -207,6 +207,76 @@ export const App: React.FC = () => {
         multiInstallStreamRequestIdRef.current = requestId;
         vscode.postMessage({ type: 'checkAllProjectsInstalled', requestId, context: 'multiInstall' });
     }, []);
+
+    /**
+     * All-projects transitive aggregation state.
+     * Slots are keyed by projectPath. Streamed via `getAllProjectsTransitive` →
+     * `allProjectsTransitiveStart` → N×`allProjectsTransitiveProjectFound` →
+     * `allProjectsTransitiveComplete`. Stale `requestId` discarded.
+     * Aggregation produces `allProjectsTransitiveRows` (deduped by id@version).
+     */
+    type ProjectTransitiveSlot = {
+        projectName: string;
+        workspaceFolder?: string;
+        frameworks: TransitiveFrameworkSection[];
+        dataSourceAvailable: boolean;
+        errorKind?: 'parse-failed' | 'fs-error' | 'unknown';
+        // True once the backend has emitted a ProjectFound chunk for this slot.
+        // Start placeholders set this to false; only `received` slots count toward
+        // the "missing data / restore" banner — otherwise in-flight projects look
+        // like errors during streaming.
+        received?: boolean;
+    };
+    const [allProjectsTransitive, setAllProjectsTransitive] = useState<Record<string, ProjectTransitiveSlot>>({});
+    const [loadingAllProjectsTransitive, setLoadingAllProjectsTransitive] = useState(false);
+    const [allProjectsTransitiveLoaded, setAllProjectsTransitiveLoaded] = useState(false);
+    const allProjectsTransitiveRequestIdRef = useRef<string>('');
+    /** Mirror of the InstalledTab's all-projects transitive expand state. */
+    const allProjectsTransitiveExpandedRef = useRef(false);
+    /** Idempotency guard for restoreProjectsBatch — disables button while batch is in flight. */
+    const [restoringProjectsBatch, setRestoringProjectsBatch] = useState(false);
+    const restoreProjectsBatchRequestIdRef = useRef<string>('');
+
+    const requestStreamedAllProjectsTransitive = useCallback(() => {
+        // Cancel any in-flight stream first
+        if (allProjectsTransitiveRequestIdRef.current) {
+            vscode.postMessage({ type: 'cancelAllProjectsTransitive', requestId: allProjectsTransitiveRequestIdRef.current });
+        }
+        const requestId = `aptrans-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+        allProjectsTransitiveRequestIdRef.current = requestId;
+        setLoadingAllProjectsTransitive(true);
+        setAllProjectsTransitiveLoaded(false);
+        setAllProjectsTransitive({});
+        vscode.postMessage({ type: 'getAllProjectsTransitive', requestId });
+    }, []);
+
+    const cancelAllProjectsTransitive = useCallback(() => {
+        if (allProjectsTransitiveRequestIdRef.current) {
+            vscode.postMessage({ type: 'cancelAllProjectsTransitive', requestId: allProjectsTransitiveRequestIdRef.current });
+        }
+        allProjectsTransitiveRequestIdRef.current = '';
+        setLoadingAllProjectsTransitive(false);
+    }, []);
+
+    /**
+     * Called by InstalledTab when the all-projects transitive section is expanded
+     * or collapsed. Lazy-loads on first expand. Collapse never aborts an in-flight
+     * stream (per spec — keep result for re-expansion).
+     */
+    const handleAllProjectsTransitiveExpandedChange = useCallback((expanded: boolean) => {
+        allProjectsTransitiveExpandedRef.current = expanded;
+        if (expanded && !allProjectsTransitiveLoaded && !loadingAllProjectsTransitive) {
+            requestStreamedAllProjectsTransitive();
+        }
+    }, [allProjectsTransitiveLoaded, loadingAllProjectsTransitive, requestStreamedAllProjectsTransitive]);
+
+    const handleRestoreProjectsBatch = useCallback((projectPaths: string[]) => {
+        if (projectPaths.length === 0 || restoringProjectsBatch) { return; }
+        const requestId = `aprestore-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+        restoreProjectsBatchRequestIdRef.current = requestId;
+        setRestoringProjectsBatch(true);
+        vscode.postMessage({ type: 'restoreProjectsBatch', requestId, projectPaths });
+    }, [restoringProjectsBatch]);
     useEffect(() => {
         includePrereleaseRef.current = includePrerelease;
     }, [includePrerelease]);
@@ -654,6 +724,16 @@ export const App: React.FC = () => {
                         });
                         setLoadingAllProjectsInstalled(true);
                         requestStreamedAllProjectsInstalled();
+                        // Transitive: refresh if currently expanded; else cancel any in-flight
+                        // stream and clear so next expand re-fetches. (Without cancel, late chunks
+                        // from a prior expand can repopulate the cleared map and leave it stuck.)
+                        if (allProjectsTransitiveExpandedRef.current) {
+                            requestStreamedAllProjectsTransitive();
+                        } else {
+                            cancelAllProjectsTransitive();
+                            setAllProjectsTransitiveLoaded(false);
+                            setAllProjectsTransitive({});
+                        }
                     } else if (selectedProjectRef.current) {
                         vscode.postMessage({ type: 'getInstalledPackages', projectPath: selectedProjectRef.current });
                     }
@@ -688,6 +768,15 @@ export const App: React.FC = () => {
                         // Re-fetch installed data (cheap — just reads .csproj files)
                         setLoadingAllProjectsInstalled(true);
                         requestStreamedAllProjectsInstalled();
+                        // Transitive: invalidate. Re-fetch if expanded; else cancel any in-flight
+                        // stream and clear so next expand re-fetches.
+                        if (allProjectsTransitiveExpandedRef.current) {
+                            requestStreamedAllProjectsTransitive();
+                        } else {
+                            cancelAllProjectsTransitive();
+                            setAllProjectsTransitiveLoaded(false);
+                            setAllProjectsTransitive({});
+                        }
                     } else if (selectedProjectRef.current) {
                         vscode.postMessage({ type: 'getInstalledPackages', projectPath: selectedProjectRef.current });
                     }
@@ -1029,6 +1118,120 @@ export const App: React.FC = () => {
                     }
                 }
                 break;
+            case 'allProjectsTransitiveStart':
+                if (message.requestId !== allProjectsTransitiveRequestIdRef.current) { break; }
+                {
+                    // Initialize empty slots for each project so the UI can show "loading" rows.
+                    const slots: Record<string, ProjectTransitiveSlot> = {};
+                    for (const p of (message.projects || [])) {
+                        slots[p.projectPath] = {
+                            projectName: p.projectName,
+                            workspaceFolder: p.workspaceFolder,
+                            frameworks: [],
+                            dataSourceAvailable: false,
+                            received: false,
+                        };
+                    }
+                    setAllProjectsTransitive(slots);
+                }
+                break;
+            case 'allProjectsTransitiveProjectFound':
+                if (message.requestId !== allProjectsTransitiveRequestIdRef.current) { break; }
+                setAllProjectsTransitive(prev => ({
+                    ...prev,
+                    [message.projectPath]: {
+                        projectName: message.projectName,
+                        workspaceFolder: message.workspaceFolder,
+                        frameworks: message.frameworks || [],
+                        dataSourceAvailable: !!message.dataSourceAvailable,
+                        errorKind: message.errorKind,
+                        received: true,
+                    },
+                }));
+                break;
+            case 'allProjectsTransitiveMetadata':
+                if (message.requestId !== allProjectsTransitiveRequestIdRef.current) { break; }
+                {
+                    // Build lookup keyed by lowerId@versionNorm
+                    const metaMap = new Map<string, { iconUrl?: string; verified?: boolean; authors?: string }>();
+                    for (const m of (message.metadata || [])) {
+                        const key = `${m.id.toLowerCase()}@${(m.version ?? '').trim().toLowerCase()}`;
+                        metaMap.set(key, { iconUrl: m.iconUrl, verified: m.verified, authors: m.authors });
+                    }
+                    setAllProjectsTransitive(prev => {
+                        const next: Record<string, ProjectTransitiveSlot> = {};
+                        for (const [path, slot] of Object.entries(prev)) {
+                            const newFrameworks = slot.frameworks.map(fw => ({
+                                ...fw,
+                                packages: fw.packages.map(pkg => {
+                                    const key = `${pkg.id.toLowerCase()}@${(pkg.version ?? '').trim().toLowerCase()}`;
+                                    const meta = metaMap.get(key);
+                                    if (!meta) { return pkg; }
+                                    return {
+                                        ...pkg,
+                                        iconUrl: pkg.iconUrl || meta.iconUrl,
+                                        verified: pkg.verified ?? meta.verified,
+                                        authors: pkg.authors || meta.authors,
+                                    };
+                                }),
+                            }));
+                            next[path] = { ...slot, frameworks: newFrameworks };
+                        }
+                        return next;
+                    });
+                }
+                break;
+            case 'allProjectsTransitiveComplete':
+                if (message.requestId !== allProjectsTransitiveRequestIdRef.current) { break; }
+                {
+                    const seen = new Set<string>((message.projectPaths || []) as string[]);
+                    let prunedSlots: Record<string, ProjectTransitiveSlot> = {};
+                    setAllProjectsTransitive(prev => {
+                        const next: Record<string, ProjectTransitiveSlot> = {};
+                        for (const [path, slot] of Object.entries(prev)) {
+                            if (seen.has(path)) { next[path] = slot; }
+                        }
+                        prunedSlots = next;
+                        return next;
+                    });
+                    setLoadingAllProjectsTransitive(false);
+                    setAllProjectsTransitiveLoaded(true);
+
+                    // Request enrichment metadata (icons/verified/authors) for the unique
+                    // (id, version) pairs aggregated across all projects. The backend
+                    // dispatches this lazily — single-source-of-truth for icon resolution.
+                    const uniq = new Map<string, { id: string; version: string }>();
+                    for (const slot of Object.values(prunedSlots)) {
+                        if (!slot.dataSourceAvailable) { continue; }
+                        for (const fw of slot.frameworks) {
+                            for (const pkg of fw.packages) {
+                                const key = `${pkg.id.toLowerCase()}@${(pkg.version ?? '').trim().toLowerCase()}`;
+                                if (!uniq.has(key)) {
+                                    uniq.set(key, { id: pkg.id, version: pkg.version });
+                                }
+                            }
+                        }
+                    }
+                    if (uniq.size > 0) {
+                        vscode.postMessage({
+                            type: 'getAllProjectsTransitiveMetadata',
+                            requestId: message.requestId,
+                            packages: Array.from(uniq.values()),
+                        });
+                    }
+                }
+                break;
+            case 'restoreProjectsBatchResult':
+                if (message.requestId !== restoreProjectsBatchRequestIdRef.current) { break; }
+                setRestoringProjectsBatch(false);
+                restoreProjectsBatchRequestIdRef.current = '';
+                // After a batch restore, the assets.json files are fresh — reload transitives if expanded.
+                if (allProjectsTransitiveExpandedRef.current) {
+                    requestStreamedAllProjectsTransitive();
+                }
+                // Forward result to InstalledTab in case it needs to show per-project status
+                installedTabCompRef.current?.handleMessage(message);
+                break;
             case 'allProjectsIcons':
                 // Progressive icon enrichment for all-projects updates (installed icons arrive inline)
                 {
@@ -1258,12 +1461,22 @@ export const App: React.FC = () => {
             setLoadingAllProjectsInstalled(true);
             setAllProjectsInstalled([]);
             requestStreamedAllProjectsInstalled();
+            // Reset transitive state — section is collapsed by default; data lazy-loads on expand.
+            allProjectsTransitiveExpandedRef.current = false;
+            cancelAllProjectsTransitive();
+            setAllProjectsTransitive({});
+            setAllProjectsTransitiveLoaded(false);
         } else if (selectedProject) {
             // Single project selected — clear all-projects data and fetch single-project data
             setAllProjectsUpdates([]);
             setAllProjectsInstalled([]);
             setLoadingAllProjectsUpdates(false);
             setLoadingAllProjectsInstalled(false);
+            // Cancel and clear all-projects transitive state on switch out of all-projects mode
+            allProjectsTransitiveExpandedRef.current = false;
+            cancelAllProjectsTransitive();
+            setAllProjectsTransitive({});
+            setAllProjectsTransitiveLoaded(false);
             // Reset stale single-project updates loading from a previous project
             setLoadingUpdates(false);
             setLoadingInstalled(true);
@@ -1279,7 +1492,128 @@ export const App: React.FC = () => {
             // else-if branch in checkPackageUpdates effect that clears stale updates
             skipNextUpdateCheckRef.current = false;
         }
-    }, [selectedProject, requestStreamedAllProjectsInstalled]);
+    }, [selectedProject, requestStreamedAllProjectsInstalled, cancelAllProjectsTransitive]);
+
+    /**
+     * Aggregation: dedupe transitive packages across all projects by `(lowerId, normalizedVersion)`.
+     * Each row collects per-project origins, with origins keyed by `(projectPath, chainHash)`.
+     * Frameworks are merged per-origin and per-row (deduped). Sorted alphabetically by id.
+     */
+    const allProjectsTransitiveRows = useMemo<AllProjectsTransitiveRow[]>(() => {
+        const rowMap = new Map<string, AllProjectsTransitiveRow>();
+        for (const [projectPath, slot] of Object.entries(allProjectsTransitive)) {
+            if (!slot.dataSourceAvailable) { continue; }
+            for (const fwSection of slot.frameworks) {
+                for (const pkg of fwSection.packages) {
+                    const lowerId = pkg.id.toLowerCase();
+                    const versionNorm = (pkg.version ?? '').trim().toLowerCase();
+                    const rowKey = `${lowerId}@${versionNorm}`;
+                    let row = rowMap.get(rowKey);
+                    if (!row) {
+                        row = {
+                            id: pkg.id,
+                            version: pkg.version,
+                            versionNormalized: versionNorm,
+                            iconUrl: pkg.iconUrl,
+                            verified: pkg.verified,
+                            authors: pkg.authors,
+                            origins: [],
+                            frameworks: [],
+                        };
+                        rowMap.set(rowKey, row);
+                    } else {
+                        if (!row.iconUrl && pkg.iconUrl) { row.iconUrl = pkg.iconUrl; }
+                        if (row.verified === undefined && pkg.verified !== undefined) { row.verified = pkg.verified; }
+                        if (!row.authors && pkg.authors) { row.authors = pkg.authors; }
+                    }
+                    const chainHash = (pkg.requiredByChain || []).join('→');
+                    let origin = row.origins.find(o => o.projectPath === projectPath && o.chainHash === chainHash);
+                    if (!origin) {
+                        origin = {
+                            projectPath,
+                            projectName: slot.projectName,
+                            workspaceFolder: slot.workspaceFolder,
+                            frameworks: [],
+                            requiredByChain: pkg.requiredByChain || [],
+                            fullChain: pkg.fullChain,
+                            chainHash,
+                        };
+                        row.origins.push(origin);
+                    }
+                    if (!origin.frameworks.includes(fwSection.targetFramework)) {
+                        origin.frameworks.push(fwSection.targetFramework);
+                    }
+                    if (!row.frameworks.includes(fwSection.targetFramework)) {
+                        row.frameworks.push(fwSection.targetFramework);
+                    }
+                }
+            }
+        }
+        return Array.from(rowMap.values()).sort((a, b) => a.id.toLowerCase().localeCompare(b.id.toLowerCase()));
+    }, [allProjectsTransitive]);
+
+    /**
+     * Errored/missing-data projects derived from slots — surfaces "Restore" banner candidates.
+     * Only counts slots that have actually `received` a chunk from the backend. In-flight
+     * placeholders (`received=false`) are ignored to avoid false positives during streaming.
+     */
+    const allProjectsTransitiveErrored = useMemo(() => {
+        const out: Array<{ projectPath: string; projectName: string; errorKind?: string; missing?: boolean }> = [];
+        for (const [projectPath, slot] of Object.entries(allProjectsTransitive)) {
+            if (!slot.received) { continue; }
+            if (!slot.dataSourceAvailable) {
+                out.push({ projectPath, projectName: slot.projectName, missing: true });
+            } else if (slot.errorKind) {
+                out.push({ projectPath, projectName: slot.projectName, errorKind: slot.errorKind });
+            }
+        }
+        return out;
+    }, [allProjectsTransitive]);
+
+    /**
+     * Selection re-resolution: when the aggregation refreshes (mid-stream or post-restore),
+     * re-bind the selected transitive package to fresh row data, or clear the selection if
+     * its row has disappeared. Only emits a new selection object when the relevant fields
+     * actually change — prevents details-panel re-render churn while the stream emits
+     * per-project chunks.
+     */
+    useEffect(() => {
+        setSelectedTransitivePackage(prev => {
+            if (!prev?.origins) { return prev; }
+            const lowerId = prev.id.toLowerCase();
+            const versionNorm = (prev.version ?? '').trim().toLowerCase();
+            const row = allProjectsTransitiveRows.find(r =>
+                r.id.toLowerCase() === lowerId && r.versionNormalized === versionNorm
+            );
+            if (!row) { return null; }
+            // Stable equality check — same row, same origins (by reference), same metadata.
+            // Aggregation rebuilds origins arrays per chunk; identity changes when content does.
+            const sameOrigins = prev.origins === row.origins
+                || (prev.origins.length === row.origins.length
+                    && prev.origins.every((o, i) => {
+                        const r = row.origins[i];
+                        return r && o.projectPath === r.projectPath && o.chainHash === r.chainHash;
+                    }));
+            if (sameOrigins
+                && prev.iconUrl === row.iconUrl
+                && prev.verified === row.verified
+                && prev.authors === row.authors
+                && prev.version === row.version) {
+                return prev;
+            }
+            const firstOrigin = row.origins[0];
+            return {
+                id: row.id,
+                version: row.version,
+                requiredByChain: firstOrigin?.requiredByChain ?? [],
+                fullChain: firstOrigin?.fullChain,
+                iconUrl: row.iconUrl,
+                verified: row.verified,
+                authors: row.authors,
+                origins: row.origins,
+            };
+        });
+    }, [allProjectsTransitiveRows]);
 
     // Refresh installed packages when switching to installed tab (skip first visit to use prefetched data)
     // Track first visit to installed tab (skip re-fetch; prefetched data is used).
@@ -2836,6 +3170,12 @@ export const App: React.FC = () => {
                     loadingAllProjectsInstalled={loadingAllProjectsInstalled}
                     activeProjectPath={activeProjectPath}
                     onActiveProjectPathChange={setActiveProjectPath}
+                    allProjectsTransitiveRows={allProjectsTransitiveRows}
+                    loadingAllProjectsTransitive={loadingAllProjectsTransitive}
+                    allProjectsTransitiveErrored={allProjectsTransitiveErrored}
+                    restoringProjectsBatch={restoringProjectsBatch}
+                    onAllProjectsTransitiveExpandedChange={handleAllProjectsTransitiveExpandedChange}
+                    onRestoreProjectsBatch={handleRestoreProjectsBatch}
                 />
             )}
 

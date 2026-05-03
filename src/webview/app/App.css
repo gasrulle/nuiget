@@ -3097,6 +3097,61 @@ a.details-link:hover {
     word-break: break-word;
 }
 
+/* All-projects transitive details — project-grouped Required-by */
+.required-by-project {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 6px 8px;
+    background: var(--vscode-editor-inactiveSelectionBackground);
+    border-radius: 4px;
+    border-left: 2px solid var(--vscode-textLink-foreground);
+}
+
+.required-by-project-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    font-size: 12px;
+    color: var(--vscode-descriptionForeground);
+}
+
+.required-by-project-name {
+    font-weight: 600;
+    color: var(--vscode-foreground);
+    word-break: break-all;
+}
+
+.tfm-badges {
+    display: inline-flex;
+    gap: 4px;
+    flex-wrap: wrap;
+}
+
+.tfm-badge {
+    display: inline-block;
+    font-size: 10px;
+    padding: 1px 6px;
+    border-radius: 8px;
+    background: var(--vscode-badge-background);
+    color: var(--vscode-badge-foreground);
+    line-height: 1.4;
+}
+
+.required-by-chain-list {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding-left: 4px;
+}
+
+.required-by-chain-list .required-by-item {
+    background: transparent;
+    padding: 2px 4px;
+    font-size: 12px;
+}
+
 /* Transitive package details panel - detail rows */
 .package-details .detail-row {
     display: grid;

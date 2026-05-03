@@ -8,6 +8,7 @@ import {
     executeBulkUpdatePackages,
     executeSingleOperation,
     queryAllProjectsInstalled,
+    queryAllProjectsTransitive,
     queryAllProjectsUpdates,
     resolveAllProjectsIcons,
     type OperationContext,
@@ -741,5 +742,74 @@ describe('resolveAllProjectsIcons', () => {
         const svc = createMockNuGetService();
         const result = await resolveAllProjectsIcons(svc as any, []);
         expect(result).toEqual({});
+    });
+});
+
+describe('queryAllProjectsTransitive', () => {
+    function createTransitiveSvc() {
+        return {
+            findProjects: vi.fn().mockResolvedValue([]),
+            getTransitivePackagesPreservingErrors: vi.fn().mockResolvedValue({ frameworks: [], dataSourceAvailable: true }),
+        } as any;
+    }
+
+    it('streams onStart with project list, then onProject per project (Plan APT)', async () => {
+        const svc = createTransitiveSvc();
+        svc.findProjects.mockResolvedValue([
+            { path: '/a.csproj', name: 'A', workspaceFolder: 'wsA' },
+            { path: '/b.csproj', name: 'B' },
+        ]);
+        svc.getTransitivePackagesPreservingErrors
+            .mockResolvedValueOnce({ frameworks: [{ targetFramework: 'net8.0', packages: [] }], dataSourceAvailable: true })
+            .mockResolvedValueOnce({ frameworks: [], dataSourceAvailable: false });
+
+        const onStart = vi.fn();
+        const onProject = vi.fn();
+        await queryAllProjectsTransitive(svc, { onStart, onProject, signal: new AbortController().signal });
+
+        expect(onStart).toHaveBeenCalledTimes(1);
+        expect(onStart).toHaveBeenCalledWith([
+            { projectPath: '/a.csproj', projectName: 'A', workspaceFolder: 'wsA' },
+            { projectPath: '/b.csproj', projectName: 'B', workspaceFolder: undefined },
+        ]);
+        expect(onProject).toHaveBeenCalledTimes(2);
+        // Order may vary (concurrency 4); match by projectPath.
+        const calls = onProject.mock.calls.map(c => c[0]);
+        const a = calls.find(c => c.projectPath === '/a.csproj');
+        const b = calls.find(c => c.projectPath === '/b.csproj');
+        expect(a).toMatchObject({ dataSourceAvailable: true, frameworks: [{ targetFramework: 'net8.0', packages: [] }] });
+        expect(b).toMatchObject({ dataSourceAvailable: false, frameworks: [] });
+    });
+
+    it('forwards errorKind from preservingErrors result', async () => {
+        const svc = createTransitiveSvc();
+        svc.findProjects.mockResolvedValue([{ path: '/x.csproj', name: 'X' }]);
+        svc.getTransitivePackagesPreservingErrors.mockResolvedValueOnce({
+            frameworks: [], dataSourceAvailable: true, errorKind: 'parse-failed',
+        });
+
+        const onProject = vi.fn();
+        await queryAllProjectsTransitive(svc, { onProject });
+
+        expect(onProject).toHaveBeenCalledTimes(1);
+        expect(onProject.mock.calls[0][0]).toMatchObject({
+            projectPath: '/x.csproj',
+            errorKind: 'parse-failed',
+            dataSourceAvailable: true,
+        });
+    });
+
+    it('suppresses emits when signal is pre-aborted', async () => {
+        const svc = createTransitiveSvc();
+        svc.findProjects.mockResolvedValue([{ path: '/a.csproj', name: 'A' }]);
+        const controller = new AbortController();
+        controller.abort();
+
+        const onStart = vi.fn();
+        const onProject = vi.fn();
+        await queryAllProjectsTransitive(svc, { onStart, onProject, signal: controller.signal });
+
+        expect(onStart).not.toHaveBeenCalled();
+        expect(onProject).not.toHaveBeenCalled();
     });
 });

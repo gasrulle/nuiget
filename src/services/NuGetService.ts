@@ -1252,6 +1252,11 @@ export class NuGetService {
         return this._projectService.getTransitivePackages(projectPath);
     }
 
+    /** All-projects transitive flow — preserves error categorization (parse-failed/fs-error/unknown). */
+    async getTransitivePackagesPreservingErrors(projectPath: string): Promise<TransitivePackagesResult> {
+        return this._projectService.getTransitivePackagesPreservingErrors(projectPath);
+    }
+
 
     public async fetchTransitivePackageMetadata(packages: TransitivePackage[]): Promise<void> {
         return this._packageService.fetchTransitivePackageMetadata(packages);
