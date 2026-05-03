@@ -37,6 +37,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Cross-project filtering of `packageUpdates` in sidebar single-project view**
+- **Cross-project filtering in `bulkRemoveResult`**
+- **Stale `allProjectsUpdatesRef` entry not dropped on revalidate**
+- **Loading skeleton flash on `packageChanged` install fallback and `bulkInstallResult`**
 - **Sidebar flicker — duplicate reload after package operations**
 - **Sidebar flicker — empty-state flash on external `.csproj` changes**
 - **Sidebar — unnecessary "Checking for updates" spinner when results already shown**
