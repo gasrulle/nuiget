@@ -14,8 +14,11 @@ interface SectionHeaderProps {
 /**
  * Collapsible section header styled to match VS Code tree view headers.
  * Renders a chevron, title, optional count badge, and optional action buttons.
+ *
+ * Wrapped in React.memo to skip re-render when sibling section state changes.
+ * Parent must pass stable `onToggle` (useCallback) for memo to be effective.
  */
-export const SectionHeader: React.FC<SectionHeaderProps> = ({
+const SectionHeaderImpl: React.FC<SectionHeaderProps> = ({
     title,
     expanded,
     count,
@@ -56,3 +59,5 @@ export const SectionHeader: React.FC<SectionHeaderProps> = ({
         </div>
     );
 };
+
+export const SectionHeader = React.memo(SectionHeaderImpl);

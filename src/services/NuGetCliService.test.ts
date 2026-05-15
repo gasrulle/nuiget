@@ -78,6 +78,143 @@ describe('NuGetCliService', () => {
     });
 
     // ──────────────────────────────────────────────
+    // Plan 11: hydrateSdkVersionCache
+    // ──────────────────────────────────────────────
+    describe('hydrateSdkVersionCache', () => {
+        const makeMemento = (initial?: unknown) => {
+            let value: unknown = initial;
+            return {
+                get: vi.fn((_k: string) => value),
+                update: vi.fn((_k: string, v: unknown) => { value = v; return Promise.resolve(); }),
+                keys: () => [] as readonly string[],
+                _value: () => value,
+            };
+        };
+
+        it('hydrates entries when stored version matches current', async () => {
+            const store = makeMemento({ v: '1.2.3', entries: { '/dirA': 8, '/dirB': 10 } });
+            service.hydrateSdkVersionCache(store as any, 'k', '1.2.3');
+            const v = await service.getSdkMajorVersion('/dirA/App.csproj');
+            expect(v).toBe(8);
+            expect(hoisted.mockExecWithTimeout).not.toHaveBeenCalled();
+        });
+
+        it('discards snapshot when extension version differs', async () => {
+            const store = makeMemento({ v: '1.0.0', entries: { '/dirA': 8 } });
+            service.hydrateSdkVersionCache(store as any, 'k', '2.0.0');
+            await service.flushPersistedSdkCache();
+            expect(store.update).toHaveBeenCalledWith('k', undefined);
+            hoisted.mockExecWithTimeout.mockResolvedValueOnce({ stdout: '10.0.100\n', stderr: '' });
+            const v = await service.getSdkMajorVersion('/dirA/App.csproj');
+            expect(v).toBe(10);
+        });
+
+        it('ignores corrupt or missing snapshot', async () => {
+            const store = makeMemento(undefined);
+            service.hydrateSdkVersionCache(store as any, 'k', '1.0.0');
+            hoisted.mockExecWithTimeout.mockResolvedValueOnce({ stdout: '9.0.0\n', stderr: '' });
+            expect(await service.getSdkMajorVersion('/x/A.csproj')).toBe(9);
+        });
+
+        it('persists newly probed entries through the Memento', async () => {
+            const store = makeMemento(undefined);
+            service.hydrateSdkVersionCache(store as any, 'k', '1.0.0');
+            hoisted.mockExecWithTimeout.mockResolvedValueOnce({ stdout: '10.0.1\n', stderr: '' });
+            await service.getSdkMajorVersion('/dirA/App.csproj');
+            await service.flushPersistedSdkCache();
+            expect(store.update).toHaveBeenCalledWith('k', { v: '1.0.0', entries: { '/dirA': 10 } });
+        });
+
+        it('clears persisted snapshot when cache is cleared', async () => {
+            const store = makeMemento({ v: '1.0.0', entries: { '/dirA': 8 } });
+            service.hydrateSdkVersionCache(store as any, 'k', '1.0.0');
+            service.clearSdkVersionCache();
+            await service.flushPersistedSdkCache();
+            expect(store.update).toHaveBeenLastCalledWith('k', undefined);
+        });
+
+        // Plan 11 fix (B3): failed `dotnet --version` probes must NOT persist
+        // the fallback `9` to globalState. Otherwise a transient failure (e.g.
+        // dotnet not on PATH at first activation) would survive across sessions
+        // and mask a now-working SDK until the user manually clears the cache.
+        it('does not persist the fallback when SDK probe fails', async () => {
+            const store = makeMemento(undefined);
+            service.hydrateSdkVersionCache(store as any, 'k', '1.0.0');
+            hoisted.mockExecWithTimeout.mockRejectedValueOnce(new Error('dotnet not found'));
+            const v = await service.getSdkMajorVersion('/badDir/App.csproj');
+            await service.flushPersistedSdkCache();
+            expect(v).toBe(9);
+            // No write happened: only the (no-op) `update` calls from hydrate paths
+            // would appear, and our hydrate of `undefined` doesn't trigger any.
+            expect(store.update).not.toHaveBeenCalled();
+        });
+
+        // Plan 11 fix (I2): cap the persisted cache to bound globalState growth
+        // across long-lived installs that touch many transient project paths.
+        it('caps persisted cache at 256 entries (FIFO/insertion-order eviction)', async () => {
+            const store = makeMemento(undefined);
+            service.hydrateSdkVersionCache(store as any, 'k', '1.0.0');
+            // Probe 257 distinct directories. Each persists; the last write
+            // contains entries for the most-recent 256 directories only.
+            for (let i = 0; i < 257; i++) {
+                hoisted.mockExecWithTimeout.mockResolvedValueOnce({ stdout: '10.0.0\n', stderr: '' });
+                await service.getSdkMajorVersion(`/d${i}/A.csproj`);
+            }
+            await service.flushPersistedSdkCache();
+            const lastCall = store.update.mock.calls[store.update.mock.calls.length - 1];
+            const persistedEntries = (lastCall[1] as { entries: Record<string, number> }).entries;
+            expect(Object.keys(persistedEntries).length).toBe(256);
+            // The earliest directory was evicted; the latest is retained.
+            expect(persistedEntries['/d0']).toBeUndefined();
+            expect(persistedEntries['/d256']).toBe(10);
+        });
+
+        // Plan 11 fix (B4): concurrent set/clear writes must not race. With
+        // serialization, the last operation wins; without it, an in-flight
+        // `set` write could land after `clear` and resurrect old entries.
+        it('serializes persistence writes through a single chain', async () => {
+            const store = makeMemento(undefined);
+            service.hydrateSdkVersionCache(store as any, 'k', '1.0.0');
+            // Schedule two probes back-to-back without awaiting the chain
+            hoisted.mockExecWithTimeout.mockResolvedValueOnce({ stdout: '10\n', stderr: '' });
+            await service.getSdkMajorVersion('/x/A.csproj');
+            hoisted.mockExecWithTimeout.mockResolvedValueOnce({ stdout: '9\n', stderr: '' });
+            await service.getSdkMajorVersion('/y/B.csproj');
+            service.clearSdkVersionCache();
+            await service.flushPersistedSdkCache();
+            // Last call must be the clear (undefined). Without chaining,
+            // the second `set` could race past the clear.
+            expect(store.update).toHaveBeenLastCalledWith('k', undefined);
+        });
+
+        // Post-rubber-duck fix: in-flight probes must discard their result if
+        // clearSdkVersionCache() runs while they're awaiting `dotnet --version`.
+        // Without the epoch guard, the slow probe would re-populate (and persist)
+        // stale data after the user explicitly cleared the cache.
+        it('discards in-flight probe results when clear runs mid-probe', async () => {
+            const store = makeMemento(undefined);
+            service.hydrateSdkVersionCache(store as any, 'k', '1.0.0');
+            // First probe: stalls until we resolve it manually.
+            let resolveProbe: (v: { stdout: string; stderr: string }) => void = () => { };
+            hoisted.mockExecWithTimeout.mockImplementationOnce(
+                () => new Promise(r => { resolveProbe = r; })
+            );
+            const probePromise = service.getSdkMajorVersion('/slow/A.csproj');
+            // Clear before the probe resolves.
+            service.clearSdkVersionCache();
+            // Now let the probe finish — its result must be discarded.
+            resolveProbe({ stdout: '10\n', stderr: '' });
+            await probePromise;
+            await service.flushPersistedSdkCache();
+            // Last persistence write is the clear; no resurrected snapshot.
+            expect(store.update).toHaveBeenLastCalledWith('k', undefined);
+            // A fresh probe should re-run dotnet (not return the discarded value).
+            hoisted.mockExecWithTimeout.mockResolvedValueOnce({ stdout: '11\n', stderr: '' });
+            expect(await service.getSdkMajorVersion('/slow/A.csproj')).toBe(11);
+        });
+    });
+
+    // ──────────────────────────────────────────────
     // useNounFirstSyntax
     // ──────────────────────────────────────────────
     describe('useNounFirstSyntax', () => {
@@ -292,6 +429,41 @@ describe('NuGetCliService', () => {
             service.clearSdkVersionCache();
             await service.getSdkMajorVersion('/proj/App.csproj');
             expect(hoisted.mockExecWithTimeout).toHaveBeenCalledTimes(2);
+        });
+    });
+
+    // ──────────────────────────────────────────────
+    // skipRestore option
+    // ──────────────────────────────────────────────
+    describe('skipRestore option', () => {
+        it('installPackage adds --no-restore when options.skipRestore is true', async () => {
+            hoisted.mockExecWithTimeout
+                .mockResolvedValueOnce({ stdout: '9.0.200\n', stderr: '' })
+                .mockResolvedValueOnce({ stdout: 'ok', stderr: '' });
+            await service.installPackage('/proj/App.csproj', 'Newtonsoft.Json', '13.0.3', { skipRestore: true });
+            const cmd = hoisted.mockExecWithTimeout.mock.calls[1][0] as string;
+            expect(cmd).toContain('--no-restore');
+        });
+
+        it('updatePackage adds --no-restore when options.skipRestore is true', async () => {
+            hoisted.mockExecWithTimeout
+                .mockResolvedValueOnce({ stdout: '9.0.200\n', stderr: '' })
+                .mockResolvedValueOnce({ stdout: 'ok', stderr: '' });
+            await service.updatePackage('/proj/App.csproj', 'Newtonsoft.Json', '14.0.0', { skipRestore: true });
+            const cmd = hoisted.mockExecWithTimeout.mock.calls[1][0] as string;
+            expect(cmd).toContain('--no-restore');
+        });
+
+        it('removePackage skips follow-up restore when options.skipRestore is true', async () => {
+            hoisted.mockExecWithTimeout
+                .mockResolvedValueOnce({ stdout: '9.0.200\n', stderr: '' }) // sdk
+                .mockResolvedValueOnce({ stdout: 'removed', stderr: '' }); // remove only — no restore call
+            const result = await service.removePackage('/proj/App.csproj', 'OldPkg', { skipRestore: true });
+            expect(result).toBe(true);
+            // Only sdk + remove should have run; no third call for restore.
+            expect(hoisted.mockExecWithTimeout).toHaveBeenCalledTimes(2);
+            const removeCmd = hoisted.mockExecWithTimeout.mock.calls[1][0] as string;
+            expect(removeCmd).not.toContain('restore');
         });
     });
 });

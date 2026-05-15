@@ -22,11 +22,13 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import React, { forwardRef, useCallback, useDeferredValue, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { CheckAllIcon, ChevronDownIcon, ChevronRightIcon, CollapseAllIcon, ExpandAllIcon, RulerIcon, SyncIcon, VerifiedIcon, WarningIcon } from '../icons';
 import type {
+    AllProjectsTransitiveRow,
     InstalledPackage,
     LRUMap,
     PackageMetadata,
     PackageSearchResult,
     ProjectInstalled,
+    SelectedTransitivePackage,
     TransitiveFrameworkSection,
     TransitivePackage,
     VsCodeApi,
@@ -49,7 +51,7 @@ export interface InstalledTabProps {
     installedPackages: InstalledPackage[];
     loadingInstalled: boolean;
     selectedPackage: PackageSearchResult | InstalledPackage | null;
-    selectedTransitivePackage: TransitivePackage | null;
+    selectedTransitivePackage: SelectedTransitivePackage | null;
     selectedProject: string;
     splitPosition: number;
     defaultPackageIcon: string;
@@ -73,7 +75,7 @@ export interface InstalledTabProps {
         metadataVersion: string;
         initialVersions: string[];
     }) => void;
-    onSelectTransitivePackage: (pkg: TransitivePackage) => void;
+    onSelectTransitivePackage: (pkg: TransitivePackage, origins?: import('../types').AllProjectsTransitiveOrigin[]) => void;
     clearSelection: () => void;
     onInstall: (packageId: string, version: string) => void;
     onRemove: (packageId: string) => void;
@@ -84,7 +86,7 @@ export interface InstalledTabProps {
     onMetadataChange: (metadata: PackageMetadata | null) => void;
     onLoadingMetadataChange: (loading: boolean) => void;
     onSetSelectedPackage: (pkg: PackageSearchResult | InstalledPackage | null) => void;
-    onSetSelectedTransitivePackage: (pkg: TransitivePackage | null) => void;
+    onSetSelectedTransitivePackage: (pkg: SelectedTransitivePackage | null) => void;
     onSetSelectedVersion: (version: string) => void;
     setSplitPosition: (pos: number) => void;
     handleSashReset: () => void;
@@ -114,6 +116,10 @@ export interface InstalledTabProps {
     metadataCache: React.RefObject<LRUMap<string, PackageMetadata>>;
     vscode: VsCodeApi;
 
+    // Hover prefetch
+    onRowMouseEnter?: (packageId: string, version?: string) => void;
+    onRowMouseLeave?: () => void;
+
     // External refs
     installedTabRef: React.RefObject<HTMLButtonElement | null>;
     MemoizedDraggableSash: React.MemoExoticComponent<React.FC<{
@@ -130,6 +136,14 @@ export interface InstalledTabProps {
     // Active project path (set when clicking a package in all-projects mode)
     activeProjectPath: string;
     onActiveProjectPathChange: (path: string) => void;
+
+    // All-projects transitive (aggregated from App.tsx state)
+    allProjectsTransitiveRows: AllProjectsTransitiveRow[];
+    loadingAllProjectsTransitive: boolean;
+    allProjectsTransitiveErrored: Array<{ projectPath: string; projectName: string; errorKind?: string; missing?: boolean }>;
+    restoringProjectsBatch: boolean;
+    onAllProjectsTransitiveExpandedChange: (expanded: boolean) => void;
+    onRestoreProjectsBatch: (projectPaths: string[]) => void;
 }
 
 // ─── Handle ──────────────────────────────────────────────────────────────────
@@ -255,6 +269,8 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
         createPackageListKeyHandler,
         metadataCache,
         vscode,
+        onRowMouseEnter,
+        onRowMouseLeave,
         installedTabRef,
         MemoizedDraggableSash,
         isAllProjects,
@@ -262,6 +278,12 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
         loadingAllProjectsInstalled,
         activeProjectPath,
         onActiveProjectPathChange,
+        allProjectsTransitiveRows,
+        loadingAllProjectsTransitive,
+        allProjectsTransitiveErrored,
+        restoringProjectsBatch,
+        onAllProjectsTransitiveExpandedChange,
+        onRestoreProjectsBatch,
     } = props;
 
     // ─── Internal state ──────────────────────────────────────────────────────
@@ -299,6 +321,9 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
     const [transitiveDataSourceAvailable, setTransitiveDataSourceAvailable] = useState<boolean | null>(null);
     const [restoringProject, setRestoringProject] = useState(false);
 
+    // All-projects transitive section state (collapsed by default; lazy-loaded on expand)
+    const [allProjectsTransitiveExpanded, setAllProjectsTransitiveExpanded] = useState(false);
+
     // Ref for the installed package list container
     const installedListRef = useRef<HTMLDivElement>(null);
     // Scroll container ref for the virtualizer (the package-list-panel div)
@@ -330,7 +355,8 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
     // ─── All-projects installed flattening ────────────────────────────────
 
     type FlattenedInstalledItem =
-        | { type: 'header'; projectPath: string; projectName: string; packageCount: number }
+        | { type: 'folderHeader'; folder: string }
+        | { type: 'header'; projectPath: string; projectName: string; packageCount: number; error?: string }
         | ({ type: 'package'; projectPath: string } & InstalledPackage);
 
     const flattenedAllProjectsInstalled = useMemo((): FlattenedInstalledItem[] => {
@@ -342,7 +368,12 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
             if (b.projectPath === selectedProject) { return 1; }
             return a.projectName.localeCompare(b.projectName);
         });
-        for (const project of sortedProjects) {
+        // Multi-root grouping: when projects span 2+ workspace folders, inject folder headers.
+        const distinctFolders = new Set(
+            sortedProjects.map(p => p.workspaceFolder).filter((f): f is string => !!f)
+        );
+        const groupByFolder = distinctFolders.size > 1;
+        const renderProject = (project: ProjectInstalled) => {
             let base = project.packages;
             if (externalFilterMode === 'vulnerable') {
                 base = base.filter(p => p.vulnerabilities && p.vulnerabilities.length > 0);
@@ -354,7 +385,9 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
                 type: 'header',
                 projectPath: project.projectPath,
                 projectName: project.projectName,
-                packageCount: filtered.length
+                packageCount: filtered.length,
+                // Plan 10 (I4): surface per-project enumeration errors inline.
+                error: project.error,
             });
             if (expandedProjects.has(project.projectPath)) {
                 const sorted = [...filtered].sort((a, b) => a.id.localeCompare(b.id));
@@ -362,6 +395,33 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
                     items.push({ type: 'package', projectPath: project.projectPath, ...pkg });
                 }
             }
+        };
+        if (groupByFolder) {
+            // Group projects by workspace folder; sort folder names alphabetically,
+            // but project order within each folder preserves the existing ordering
+            // (selected project pinned first, then alphabetical).
+            const byFolder = new Map<string, ProjectInstalled[]>();
+            const unfoldered: ProjectInstalled[] = [];
+            for (const p of sortedProjects) {
+                if (p.workspaceFolder) {
+                    const arr = byFolder.get(p.workspaceFolder);
+                    if (arr) { arr.push(p); }
+                    else { byFolder.set(p.workspaceFolder, [p]); }
+                } else {
+                    unfoldered.push(p);
+                }
+            }
+            const folderNames = [...byFolder.keys()].sort((a, b) => a.localeCompare(b));
+            for (const folder of folderNames) {
+                items.push({ type: 'folderHeader', folder });
+                for (const project of byFolder.get(folder) ?? []) { renderProject(project); }
+            }
+            if (unfoldered.length > 0) {
+                items.push({ type: 'folderHeader', folder: '(other)' });
+                for (const project of unfoldered) { renderProject(project); }
+            }
+        } else {
+            for (const project of sortedProjects) { renderProject(project); }
         }
         return items;
     }, [isAllProjects, allProjectsInstalled, expandedProjects, externalFilter, externalFilterMode, selectedProject]);
@@ -387,8 +447,10 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
         count: installedVirtualizerCount,
         getScrollElement: () => installedScrollRef.current,
         estimateSize: (index) => {
-            if (isAllProjects && deferredFlattenedInstalled[index]?.type === 'header') {
-                return HEADER_HEIGHT;
+            if (isAllProjects) {
+                const t = deferredFlattenedInstalled[index]?.type;
+                if (t === 'header') { return HEADER_HEIGHT; }
+                if (t === 'folderHeader') { return HEADER_HEIGHT; }
             }
             return ESTIMATED_ITEM_HEIGHT;
         },
@@ -645,7 +707,7 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
 
     // Auto-refetch transitive frameworks when state is reset (after package install/update/remove)
     useEffect(() => {
-        if (transitiveDataSourceAvailable === null && selectedProject && !loadingTransitive && transitiveFrameworks.length === 0) {
+        if (!isAllProjects && transitiveDataSourceAvailable === null && selectedProject && !loadingTransitive && transitiveFrameworks.length === 0) {
             // Only auto-fetch if we have expanded frameworks (meaning user had the section open)
             if (transitiveExpandedFrameworks.size > 0) {
                 setLoadingTransitive(true);
@@ -655,12 +717,12 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
                 });
             }
         }
-    }, [transitiveDataSourceAvailable, selectedProject, loadingTransitive, transitiveFrameworks.length, transitiveExpandedFrameworks.size, vscode]);
+    }, [isAllProjects, transitiveDataSourceAvailable, selectedProject, loadingTransitive, transitiveFrameworks.length, transitiveExpandedFrameworks.size, vscode]);
 
     // Prefetch transitive packages in background after direct packages are loaded
     const TRANSITIVE_PREFETCH_DELAY_MS = 500;
     useEffect(() => {
-        if (selectedProject && !loadingInstalled && installedPackages.length >= 0 && transitiveDataSourceAvailable === null && !loadingTransitive) {
+        if (!isAllProjects && selectedProject && !loadingInstalled && installedPackages.length >= 0 && transitiveDataSourceAvailable === null && !loadingTransitive) {
             // Direct packages finished loading - defer transitive fetch to reduce network
             // pressure during metadata/update fetching (runs concurrently with those)
             const timer = setTimeout(() => {
@@ -673,7 +735,7 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
             return () => clearTimeout(timer);
         }
         return undefined;
-    }, [selectedProject, loadingInstalled, installedPackages.length, transitiveDataSourceAvailable, loadingTransitive, vscode]);
+    }, [isAllProjects, selectedProject, loadingInstalled, installedPackages.length, transitiveDataSourceAvailable, loadingTransitive, vscode]);
 
     // Prefetch transitive metadata in background after framework list loads
     // This enables instant expansion of transitive sections without loading delay
@@ -790,15 +852,33 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
 
     // ─── Render ──────────────────────────────────────────────────────────────
 
+    /** Toggle all-projects transitive section. Notifies parent (which fetches lazily). */
+    const handleToggleAllProjectsTransitive = useCallback(() => {
+        const next = !allProjectsTransitiveExpanded;
+        setAllProjectsTransitiveExpanded(next);
+        onAllProjectsTransitiveExpandedChange(next);
+    }, [allProjectsTransitiveExpanded, onAllProjectsTransitiveExpandedChange]);
+
+    /** Filter all-projects transitive rows by external filter (id substring, case-insensitive). */
+    const filteredAllProjectsTransitiveRows = useMemo(() => {
+        if (!externalFilter) { return allProjectsTransitiveRows; }
+        const needle = externalFilter.toLowerCase();
+        return allProjectsTransitiveRows.filter(row =>
+            row.id.toLowerCase().includes(needle)
+        );
+    }, [allProjectsTransitiveRows, externalFilter]);
+
+    // Reset all-projects transitive expanded state when switching out of all-projects mode
+    useEffect(() => {
+        if (!isAllProjects && allProjectsTransitiveExpanded) {
+            setAllProjectsTransitiveExpanded(false);
+        }
+    }, [isAllProjects, allProjectsTransitiveExpanded]);
+
     // Memoize details panel content (PackageDetailsPanel or transitive details)
     const detailsPanelContent = useMemo(() => {
         if (selectedTransitivePackage) {
-            // Get unique root packages (first in chain)
-            const allChains = selectedTransitivePackage.fullChain || selectedTransitivePackage.requiredByChain;
-            const rootPackages = new Set<string>();
-            for (const chain of allChains) {
-                rootPackages.add(chain.split(' → ')[0]);
-            }
+            const hasOrigins = !!selectedTransitivePackage.origins && selectedTransitivePackage.origins.length > 0;
 
             return (
                 <div className="package-details">
@@ -825,14 +905,57 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
                         <div className="detail-row required-by-section">
                             <span className="detail-label">Required by:</span>
                             <div className="required-by-list">
-                                {selectedTransitivePackage.requiredByChain.length === 0 ? (
-                                    <span className="detail-value">Unknown</span>
+                                {hasOrigins ? (
+                                    // All-projects mode — group by project, show TFM badges + chains
+                                    (selectedTransitivePackage.origins ?? []).map((origin) => {
+                                        const allChains = origin.fullChain && origin.fullChain.length > 0
+                                            ? origin.fullChain
+                                            : origin.requiredByChain;
+                                        const rootPackages = new Set<string>();
+                                        for (const chain of allChains) {
+                                            rootPackages.add(chain.split(' → ')[0]);
+                                        }
+                                        return (
+                                            <div key={`${origin.projectPath}::${origin.chainHash}`} className="required-by-project">
+                                                <div className="required-by-project-header">
+                                                    <span className="required-by-project-name" title={origin.projectPath}>{origin.projectName}</span>
+                                                    <div className="tfm-badges">
+                                                        {origin.frameworks.map(tfm => (
+                                                            <span key={tfm} className="tfm-badge">{tfm}</span>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                                <div className="required-by-chain-list">
+                                                    {rootPackages.size === 0 ? (
+                                                        <span className="detail-value">Unknown</span>
+                                                    ) : (
+                                                        Array.from(rootPackages).map((rootPkg) => (
+                                                            <div key={rootPkg} className="required-by-item">
+                                                                {rootPkg}
+                                                            </div>
+                                                        ))
+                                                    )}
+                                                </div>
+                                            </div>
+                                        );
+                                    })
                                 ) : (
-                                    Array.from(rootPackages).map((rootPkg) => (
-                                        <div key={rootPkg} className="required-by-item">
-                                            {rootPkg}
-                                        </div>
-                                    ))
+                                    // Single-project mode — original render
+                                    (() => {
+                                        const allChains = selectedTransitivePackage.fullChain || selectedTransitivePackage.requiredByChain;
+                                        const rootPackages = new Set<string>();
+                                        for (const chain of allChains) {
+                                            rootPackages.add(chain.split(' → ')[0]);
+                                        }
+                                        if (rootPackages.size === 0) {
+                                            return <span className="detail-value">Unknown</span>;
+                                        }
+                                        return Array.from(rootPackages).map((rootPkg) => (
+                                            <div key={rootPkg} className="required-by-item">
+                                                {rootPkg}
+                                            </div>
+                                        ));
+                                    })()
                                 )}
                             </div>
                         </div>
@@ -1006,7 +1129,12 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
                             </div>
                             {isAllProjects ? (
                                 <div className="direct-packages-content">
-                                    {loadingAllProjectsInstalled ? (
+                                    {loadingAllProjectsInstalled && allProjectsInstalled.length === 0 ? (
+                                        // Plan 10 fix (B1): only show the full-screen spinner while the
+                                        // streamed response has produced zero rows. Once the first
+                                        // `allProjectsInstalledProjectFound` chunk lands we render the
+                                        // (partial) list immediately so users see progressive results
+                                        // instead of a spinner that masks the whole stream.
                                         <div className="loading-spinner-container" aria-busy="true" aria-label="Loading all projects installed packages">
                                             <div className="loading-spinner"></div>
                                             <p>Loading installed packages for all projects...</p>
@@ -1015,6 +1143,19 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
                                         <p className="empty-state">No installed packages found across projects</p>
                                     ) : (
                                         <>
+                                            {loadingAllProjectsInstalled && (
+                                                // Inline indicator visible while streaming continues
+                                                // after the first project arrives.
+                                                <div
+                                                    className="streaming-indicator"
+                                                    role="status"
+                                                    aria-live="polite"
+                                                    aria-label="Still loading remaining projects"
+                                                >
+                                                    <span className="loading-spinner loading-spinner-small" aria-hidden="true"></span>
+                                                    <span>Loading remaining projects…</span>
+                                                </div>
+                                            )}
                                             <div
                                                 ref={installedListRef}
                                                 className={`package-list${isAllProjectsInstalledStale ? ' stale' : ''}`}
@@ -1025,6 +1166,26 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
                                                     const item = deferredFlattenedInstalled[virtualRow.index];
                                                     if (!item) { return null; }
 
+                                                    if (item.type === 'folderHeader') {
+                                                        return (
+                                                            <div
+                                                                key={`folder-${item.folder}`}
+                                                                data-index={virtualRow.index}
+                                                                ref={installedVirtualizer.measureElement}
+                                                                className="all-projects-folder-header"
+                                                                style={{
+                                                                    position: 'absolute',
+                                                                    top: 0,
+                                                                    left: 0,
+                                                                    width: '100%',
+                                                                    transform: `translateY(${virtualRow.start}px)`,
+                                                                }}
+                                                            >
+                                                                <span className="all-projects-folder-name">{item.folder}</span>
+                                                            </div>
+                                                        );
+                                                    }
+
                                                     if (item.type === 'header') {
                                                         const isExpanded = expandedProjects.has(item.projectPath);
                                                         return (
@@ -1032,16 +1193,17 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
                                                                 key={`header-${item.projectPath}`}
                                                                 data-index={virtualRow.index}
                                                                 ref={installedVirtualizer.measureElement}
-                                                                className="direct-packages-header project-section-header"
+                                                                className={`direct-packages-header project-section-header${item.error ? ' project-section-header-error' : ''}`}
                                                                 onClick={() => handleToggleProject(item.projectPath)}
                                                                 aria-expanded={isExpanded}
-                                                                title={item.projectPath}
+                                                                title={item.error ? `${item.projectPath}\n\nError: ${item.error}` : item.projectPath}
                                                                 style={{ position: 'absolute', top: 0, left: 0, width: '100%', transform: `translateY(${virtualRow.start}px)` }}
                                                             >
                                                                 <span className="direct-packages-arrow">{isExpanded ? <ChevronDownIcon size={14} /> : <ChevronRightIcon size={14} />}</span>
                                                                 <span className="direct-packages-title">
                                                                     {item.projectName}
                                                                     {!isExpanded && <span className="direct-packages-count">({item.packageCount})</span>}
+                                                                    {item.error && <span className="project-section-header-error-label" role="status"> — failed to load: {item.error}</span>}
                                                                 </span>
                                                             </button>
                                                         );
@@ -1064,6 +1226,8 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
                                                                     initialVersions: [item.version],
                                                                 });
                                                             }}
+                                                            onMouseEnter={onRowMouseEnter ? () => onRowMouseEnter(item.id, item.resolvedVersion || item.version) : undefined}
+                                                            onMouseLeave={onRowMouseLeave}
                                                         >
                                                             <input
                                                                 type="checkbox"
@@ -1157,6 +1321,8 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
                                                                     initialVersions: [pkg.version],
                                                                 });
                                                             }}
+                                                            onMouseEnter={onRowMouseEnter ? () => onRowMouseEnter(pkg.id, pkg.resolvedVersion || pkg.version) : undefined}
+                                                            onMouseLeave={onRowMouseLeave}
                                                         >
                                                             <input
                                                                 type="checkbox"
@@ -1314,14 +1480,115 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
                             )}
                         </div>
                     )}
+                    {/* All-projects transitive packages section — single aggregated view */}
+                    {isAllProjects && (
+                        <div className="transitive-sections">
+                            {allProjectsTransitiveErrored.length > 0 && allProjectsTransitiveExpanded && (
+                                <div className="transitive-no-lockfile" style={{ marginBottom: 8 }}>
+                                    <div className="no-lockfile-icon"><WarningIcon size={32} /></div>
+                                    <div className="no-lockfile-message">
+                                        <strong>Some projects need restore</strong>
+                                        <p>{allProjectsTransitiveErrored.length} project(s) lack dependency data. Restore to see their transitive packages.</p>
+                                    </div>
+                                    <button
+                                        className="btn btn-primary"
+                                        onClick={() => onRestoreProjectsBatch(allProjectsTransitiveErrored.map(e => e.projectPath))}
+                                        disabled={restoringProjectsBatch}
+                                        title="dotnet restore for missing/errored projects"
+                                    >
+                                        {restoringProjectsBatch ? 'Restoring...' : `Restore ${allProjectsTransitiveErrored.length} project(s)`}
+                                    </button>
+                                </div>
+                            )}
+                            <div className="transitive-section">
+                                <button
+                                    className="transitive-header"
+                                    onClick={handleToggleAllProjectsTransitive}
+                                    aria-expanded={allProjectsTransitiveExpanded}
+                                >
+                                    <span className="transitive-arrow">
+                                        {allProjectsTransitiveExpanded ? <ChevronDownIcon size={14} /> : <ChevronRightIcon size={14} />}
+                                    </span>
+                                    <span className="transitive-title">
+                                        Transitive packages
+                                        <span className="transitive-count">({filteredAllProjectsTransitiveRows.length})</span>
+                                    </span>
+                                </button>
+                                {allProjectsTransitiveExpanded && (
+                                    <div className="transitive-content">
+                                        {loadingAllProjectsTransitive && filteredAllProjectsTransitiveRows.length === 0 ? (
+                                            <div className="transitive-loading">
+                                                <div className="loading-spinner"></div>
+                                                <span>Loading transitive packages…</span>
+                                            </div>
+                                        ) : filteredAllProjectsTransitiveRows.length === 0 ? (
+                                            <p className="transitive-empty">
+                                                {externalFilter ? 'No matching transitive packages.' : 'No transitive packages found.'}
+                                            </p>
+                                        ) : (
+                                            <div
+                                                className="transitive-list"
+                                                tabIndex={0}
+                                            >
+                                                {filteredAllProjectsTransitiveRows.map(row => {
+                                                    const rowKey = `${row.id.toLowerCase()}@${row.versionNormalized}`;
+                                                    const isSelected = !!selectedTransitivePackage
+                                                        && selectedTransitivePackage.id.toLowerCase() === row.id.toLowerCase()
+                                                        && (selectedTransitivePackage.version ?? '').trim().toLowerCase() === row.versionNormalized;
+                                                    const firstOrigin = row.origins[0];
+                                                    return (
+                                                        <div
+                                                            key={rowKey}
+                                                            className={`transitive-package-item ${isSelected ? 'selected' : ''}`}
+                                                            onClick={() => {
+                                                                onSelectTransitivePackage({
+                                                                    id: row.id,
+                                                                    version: row.version,
+                                                                    requiredByChain: firstOrigin?.requiredByChain ?? [],
+                                                                    fullChain: firstOrigin?.fullChain,
+                                                                    iconUrl: row.iconUrl,
+                                                                    verified: row.verified,
+                                                                    authors: row.authors,
+                                                                }, row.origins);
+                                                            }}
+                                                        >
+                                                            <div className="package-icon package-icon-small">
+                                                                {row.iconUrl ? (
+                                                                    <img src={row.iconUrl} alt="" onError={(e) => { (e.target as HTMLImageElement).src = defaultPackageIcon; }} />
+                                                                ) : (
+                                                                    <img src={defaultPackageIcon} alt="" />
+                                                                )}
+                                                            </div>
+                                                            <div className="package-info">
+                                                                <div className="package-name">{row.id}</div>
+                                                                <div className="package-meta">
+                                                                    <span className="package-version">v{row.version}</span>
+                                                                </div>
+                                                                {row.authors && (
+                                                                    <div className="package-authors">
+                                                                        {row.verified && (
+                                                                            <span className="verified-badge" title="The ID prefix of this package has been reserved by its owner on nuget.org"><VerifiedIcon size={14} /></span>
+                                                                        )}
+                                                                        {row.authors}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
                 </div>
-
                 <MemoizedDraggableSash
                     onDrag={setSplitPosition}
                     onReset={handleSashReset}
                     onDragEnd={handleSashDragEnd}
                 />
-
                 <div className="package-details-panel" style={{ width: `${100 - splitPosition}%` }}>
                     {detailsPanelContent}
                 </div>

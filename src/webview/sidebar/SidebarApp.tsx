@@ -99,6 +99,13 @@ export const SidebarApp: React.FC = () => {
     const updatesListRef = useRef<HTMLDivElement>(null);
     const filterDropdownRef = useRef<HTMLDivElement>(null);
     const browseDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    /** Plan 10 Stage B: track latest streamed checkAllProjectsInstalled request id (sidebar). */
+    const sidebarStreamRequestIdRef = useRef<string>('');
+    const requestStreamedAllProjectsInstalled = useCallback(() => {
+        const requestId = `apinst-sb-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+        sidebarStreamRequestIdRef.current = requestId;
+        vscode.postMessage({ type: 'checkAllProjectsInstalled', requestId });
+    }, []);
 
     // Keep refs in sync
     useEffect(() => { selectedProjectRef.current = selectedProject; }, [selectedProject]);
@@ -176,7 +183,7 @@ export const SidebarApp: React.FC = () => {
                         // Re-fetch for all-projects mode since effects won't re-trigger
                         if (message.selectedProject === ALL_PROJECTS_SENTINEL) {
                             if (installedExpandedRef.current || searchModeRef.current === 'installed') {
-                                vscode.postMessage({ type: 'checkAllProjectsInstalled' });
+                                requestStreamedAllProjectsInstalled();
                                 setLoadingAllInstalled(true);
                             }
                             if (updatesExpandedRef.current || searchModeRef.current === 'updates') {
@@ -235,7 +242,12 @@ export const SidebarApp: React.FC = () => {
                             includePrerelease: includePrereleaseRef.current,
                             projectPath: selectedProjectRef.current
                         });
-                        setLoadingUpdates(true);
+                        // Only flip to loading skeleton when we have nothing to show.
+                        // If we already display previous updates, leave them visible to
+                        // avoid a flicker while the background re-check runs.
+                        if (packageUpdatesRef.current.length === 0) {
+                            setLoadingUpdates(true);
+                        }
                     } else {
                         setPackageUpdates([]);
                     }
@@ -255,6 +267,64 @@ export const SidebarApp: React.FC = () => {
                 setAllProjectsInstalled(message.projectInstalled || []);
                 setLoadingAllInstalled(false);
                 break;
+            case 'allProjectsInstalledStart':
+                if (message.requestId !== sidebarStreamRequestIdRef.current) { break; }
+                // Non-destructive merge: keep existing project entries' packages until each
+                // project's chunk arrives via 'allProjectsInstalledProjectFound'. Without this,
+                // a watcher-driven 'revalidate' would briefly show empty rows in all-projects
+                // mode before chunks repopulate them (defeats the no-flicker contract).
+                setAllProjectsInstalled(prev => {
+                    const incoming = (message.projects || []) as { projectPath: string; projectName: string; workspaceFolder?: string }[];
+                    const prevByPath = new Map(prev.map(p => [p.projectPath, p]));
+                    return incoming.map(p => {
+                        const existing = prevByPath.get(p.projectPath);
+                        return {
+                            projectPath: p.projectPath,
+                            projectName: p.projectName,
+                            workspaceFolder: p.workspaceFolder ?? existing?.workspaceFolder,
+                            packages: existing?.packages ?? [],
+                        };
+                    });
+                });
+                // Only flip to skeleton when there is nothing to show
+                if (allProjectsInstalledRef.current.length === 0) {
+                    setLoadingAllInstalled(true);
+                }
+                break;
+            case 'allProjectsInstalledProjectFound':
+                if (message.requestId !== sidebarStreamRequestIdRef.current) { break; }
+                setAllProjectsInstalled(prev => {
+                    const idx = prev.findIndex(p => p.projectPath === message.projectPath);
+                    const existing = idx === -1 ? undefined : prev[idx];
+                    const next: ProjectInstalled[] = idx >= 0
+                        ? [...prev]
+                        : [...prev, {
+                            projectPath: message.projectPath,
+                            projectName: message.projectName ?? message.projectPath,
+                            workspaceFolder: message.workspaceFolder,
+                            packages: [],
+                        }];
+                    const targetIdx = idx >= 0 ? idx : next.length - 1;
+                    next[targetIdx] = {
+                        ...next[targetIdx],
+                        workspaceFolder: (message.workspaceFolder as string | undefined) ?? existing?.workspaceFolder ?? next[targetIdx].workspaceFolder,
+                        packages: (message.installed as InstalledPackage[] | undefined) ?? next[targetIdx].packages,
+                    };
+                    return next;
+                });
+                break;
+            case 'allProjectsInstalledProjectMetadata':
+                // Sidebar uses liteMode — no icons rendered. Accept message for symmetry.
+                if (message.requestId !== sidebarStreamRequestIdRef.current) { break; }
+                break;
+            case 'allProjectsInstalledComplete':
+                if (message.requestId !== sidebarStreamRequestIdRef.current) { break; }
+                setAllProjectsInstalled(prev => {
+                    const seen = new Set(message.projectPaths || []);
+                    return prev.filter(p => seen.has(p.projectPath));
+                });
+                setLoadingAllInstalled(false);
+                break;
             case 'installedCountUpdate':
                 setBackgroundInstalledCount(message.count || 0);
                 break;
@@ -267,7 +337,7 @@ export const SidebarApp: React.FC = () => {
                     if (installedExpandedRef.current || searchModeRef.current === 'installed') {
                         setAllProjectsInstalled([]);
                         allProjectsInstalledRef.current = [];
-                        vscode.postMessage({ type: 'checkAllProjectsInstalled' });
+                        requestStreamedAllProjectsInstalled();
                         setLoadingAllInstalled(true);
                     }
                     if (updatesExpandedRef.current || searchModeRef.current === 'updates') {
@@ -282,19 +352,95 @@ export const SidebarApp: React.FC = () => {
                     setLoadingInstalled(true);
                 }
                 break;
+            case 'revalidate':
+                // Soft refresh from file watcher: re-fetch in background WITHOUT clearing
+                // existing rows first. Prevents the empty-state flash that 'forceRefresh'
+                // produces. Loading skeletons only appear when there's nothing to show.
+                if (selectedProjectRef.current === ALL_PROJECTS_SENTINEL) {
+                    if (installedExpandedRef.current || searchModeRef.current === 'installed') {
+                        requestStreamedAllProjectsInstalled();
+                        if (allProjectsInstalledRef.current.length === 0) {
+                            setLoadingAllInstalled(true);
+                        }
+                    }
+                    if (updatesExpandedRef.current || searchModeRef.current === 'updates') {
+                        vscode.postMessage({ type: 'checkAllProjectsUpdates', includePrerelease: includePrereleaseRef.current });
+                        if (allProjectsUpdatesRef.current.length === 0) {
+                            setLoadingAllUpdates(true);
+                        }
+                    }
+                } else if (selectedProjectRef.current) {
+                    // Drop the cached per-project updates entry for the selected project so
+                    // the 'installedPackages' handler's "use cached updates" shortcut does
+                    // not serve stale rows from before the .csproj edit. Drop from the ref
+                    // FIRST (zero-update entries are intentionally kept in ref but hidden
+                    // from React state, so gating on prev.some(...) misses them).
+                    const proj = selectedProjectRef.current;
+                    if (allProjectsUpdatesRef.current.some(pu => pu.projectPath === proj)) {
+                        const updatedRef = allProjectsUpdatesRef.current.filter(pu => pu.projectPath !== proj);
+                        allProjectsUpdatesRef.current = updatedRef;
+                        setAllProjectsUpdates(prev => prev.some(pu => pu.projectPath === proj)
+                            ? prev.filter(pu => pu.projectPath !== proj)
+                            : prev);
+                    }
+                    vscode.postMessage({
+                        type: 'getInstalledPackages',
+                        projectPath: selectedProjectRef.current
+                    });
+                    if (installedPackagesRef.current.length === 0) {
+                        setLoadingInstalled(true);
+                    }
+                }
+                break;
             case 'packageChanged':
                 {
                     // Operation-aware notification from main panel via sidebar backend
                     // Surgically update state instead of clearing everything and re-fetching
-                    const op = message.operation as { type: string; packageId?: string; projectPath?: string } | undefined;
+                    const op = message.operation as { type: string; packageId?: string; projectPath?: string; version?: string } | undefined;
                     const opPkgId = op?.packageId?.toLowerCase();
+                    const opProjPath = op?.projectPath as string | undefined;
                     if (opPkgId && (op?.type === 'update' || op?.type === 'remove')) {
-                        setPackageUpdates(prev => { const f = prev.filter(p => p.id.toLowerCase() !== opPkgId); packageUpdatesRef.current = f; return f; });
+                        // Only drop from packageUpdates (single-project view) if the op
+                        // targets the currently-selected project. Otherwise PkgA's update
+                        // in project A vanishes when PkgA is updated in project B.
+                        const sp = selectedProjectRef.current;
+                        if (!opProjPath || !sp || sp === ALL_PROJECTS_SENTINEL || opProjPath === sp) {
+                            setPackageUpdates(prev => { const f = prev.filter(p => p.id.toLowerCase() !== opPkgId); packageUpdatesRef.current = f; return f; });
+                        }
                         setAllProjectsUpdates(prev => {
-                            const updated = prev.map(pu => ({ ...pu, updates: pu.updates.filter(u => u.id.toLowerCase() !== opPkgId) })).filter(pu => pu.updates.length > 0);
+                            // Only filter for the project the op targeted (if known);
+                            // otherwise PkgA in project B disappears when updated in project A.
+                            const updated = prev.map(pu => {
+                                if (opProjPath && pu.projectPath !== opProjPath) { return pu; }
+                                return { ...pu, updates: pu.updates.filter(u => u.id.toLowerCase() !== opPkgId) };
+                            }).filter(pu => pu.updates.length > 0);
                             allProjectsUpdatesRef.current = updated;
                             return updated;
                         });
+                    }
+                    // Optimistic install: mutate version on existing row, or append new row
+                    if (opPkgId && op?.type === 'update' && op.projectPath && op.version) {
+                        const updateProjectPath = op.projectPath;
+                        const updateVersion = op.version;
+                        setAllProjectsInstalled(prev => {
+                            const updated = prev.map(pi => {
+                                if (pi.projectPath !== updateProjectPath) { return pi; }
+                                return { ...pi, packages: pi.packages.map(p =>
+                                    p.id.toLowerCase() === opPkgId
+                                        ? { ...p, version: updateVersion, resolvedVersion: updateVersion }
+                                        : p
+                                ) };
+                            });
+                            allProjectsInstalledRef.current = updated;
+                            return updated;
+                        });
+                        if (selectedProjectRef.current === updateProjectPath || selectedProjectRef.current === ALL_PROJECTS_SENTINEL) {
+                            setInstalledPackages(prev => prev.map(p =>
+                                p.id.toLowerCase() === opPkgId
+                                    ? { ...p, version: updateVersion, resolvedVersion: updateVersion }
+                                    : p
+                            ));
+                        }
                     }
                     // Optimistically update installed packages for remove operations
                     if (opPkgId && op?.type === 'remove' && op?.projectPath) {
@@ -310,14 +456,36 @@ export const SidebarApp: React.FC = () => {
                             setInstalledPackages(prev => prev.filter(p => p.id.toLowerCase() !== opPkgId));
                         }
                     }
-                    // For install operations, trigger a re-fetch since we lack version info
+                    // For install: append optimistically when version known; otherwise re-fetch
                     if (opPkgId && op?.type === 'install') {
-                        if (selectedProjectRef.current === ALL_PROJECTS_SENTINEL) {
-                            vscode.postMessage({ type: 'checkAllProjectsInstalled' });
-                            setLoadingAllInstalled(true);
+                        if (op.version && op.projectPath && op.packageId) {
+                            const installProjectPath = op.projectPath;
+                            const installVersion = op.version;
+                            const installPackageId = op.packageId;
+                            setAllProjectsInstalled(prev => {
+                                const updated = prev.map(pi => {
+                                    if (pi.projectPath !== installProjectPath) { return pi; }
+                                    if (pi.packages.some(p => p.id.toLowerCase() === opPkgId)) { return pi; }
+                                    return { ...pi, packages: [...pi.packages, { id: installPackageId, version: installVersion, resolvedVersion: installVersion } as InstalledPackage] };
+                                });
+                                allProjectsInstalledRef.current = updated;
+                                return updated;
+                            });
+                            if (selectedProjectRef.current === installProjectPath || selectedProjectRef.current === ALL_PROJECTS_SENTINEL) {
+                                setInstalledPackages(prev => prev.some(p => p.id.toLowerCase() === opPkgId) ? prev : [...prev, { id: installPackageId, version: installVersion, resolvedVersion: installVersion } as InstalledPackage]);
+                            }
+                        } else if (selectedProjectRef.current === ALL_PROJECTS_SENTINEL) {
+                            requestStreamedAllProjectsInstalled();
+                            // Only show skeleton when nothing to display — otherwise users
+                            // see a flash of empty state on top of valid existing rows.
+                            if (allProjectsInstalledRef.current.length === 0) {
+                                setLoadingAllInstalled(true);
+                            }
                         } else if (selectedProjectRef.current) {
                             vscode.postMessage({ type: 'getInstalledPackages', projectPath: selectedProjectRef.current });
-                            setLoadingInstalled(true);
+                            if (installedPackagesRef.current.length === 0) {
+                                setLoadingInstalled(true);
+                            }
                         }
                     }
                 }
@@ -330,41 +498,110 @@ export const SidebarApp: React.FC = () => {
                     // Only update optimistically if the operation succeeded
                     if (message.success) {
                         const opPkgId = (message.packageId as string)?.toLowerCase();
+                        const resultProjPath = message.projectPath as string | undefined;
                         if (opPkgId && (message.type === 'updateResult' || message.type === 'removeResult')) {
-                            setPackageUpdates(prev => { const f = prev.filter(p => p.id.toLowerCase() !== opPkgId); packageUpdatesRef.current = f; return f; });
+                            // Scope packageUpdates filter to the targeted project (same
+                            // class of cross-project bug as Fix #5 but for single-project
+                            // view). All-projects mode: filter regardless.
+                            const sp = selectedProjectRef.current;
+                            if (!resultProjPath || !sp || sp === ALL_PROJECTS_SENTINEL || resultProjPath === sp) {
+                                setPackageUpdates(prev => { const f = prev.filter(p => p.id.toLowerCase() !== opPkgId); packageUpdatesRef.current = f; return f; });
+                            }
                             setAllProjectsUpdates(prev => {
-                                const updated = prev.map(pu => ({ ...pu, updates: pu.updates.filter(u => u.id.toLowerCase() !== opPkgId) })).filter(pu => pu.updates.length > 0);
+                                // Filter only the targeted project's update list to avoid
+                                // cross-project removal (PkgA update in project B vanishing
+                                // because we updated PkgA in project A).
+                                const updated = prev.map(pu => {
+                                    if (resultProjPath && pu.projectPath !== resultProjPath) { return pu; }
+                                    return { ...pu, updates: pu.updates.filter(u => u.id.toLowerCase() !== opPkgId) };
+                                }).filter(pu => pu.updates.length > 0);
                                 allProjectsUpdatesRef.current = updated;
                                 return updated;
                             });
                         }
                         if (selectedProjectRef.current && selectedProjectRef.current !== ALL_PROJECTS_SENTINEL) {
-                            vscode.postMessage({ type: 'getInstalledPackages', projectPath: selectedProjectRef.current });
-                            setLoadingInstalled(true);
+                            // Single-project mode: only mutate state if the op targeted the
+                            // currently-selected project. Mismatched ops (e.g. user switched
+                            // project mid-operation) are handled by the project-switch effect.
+                            const opProjectPath = message.projectPath as string | undefined;
+                            if (opProjectPath && opProjectPath === selectedProjectRef.current) {
+                                // message.version is OPTIONAL on install (NuGetOperations.ts:46).
+                                // Inserting a row with version='' shows a junk entry until the
+                                // next file-watcher fire. Fall back to a re-fetch instead.
+                                const opVersion = (message.version as string | undefined) ?? '';
+                                if (message.type === 'installResult') {
+                                    if (opVersion) {
+                                        setInstalledPackages(prev => {
+                                            if (prev.some(p => p.id.toLowerCase() === opPkgId)) { return prev; }
+                                            return [...prev, { id: message.packageId as string, version: opVersion, resolvedVersion: opVersion }];
+                                        });
+                                    } else {
+                                        vscode.postMessage({ type: 'getInstalledPackages', projectPath: opProjectPath });
+                                    }
+                                } else if (message.type === 'updateResult') {
+                                    setInstalledPackages(prev => prev.map(p =>
+                                        p.id.toLowerCase() === opPkgId
+                                            ? { ...p, version: opVersion || p.version, resolvedVersion: opVersion || p.resolvedVersion }
+                                            : p
+                                    ));
+                                } else if (message.type === 'removeResult') {
+                                    setInstalledPackages(prev => prev.filter(p => p.id.toLowerCase() !== opPkgId));
+                                }
+                            }
                         } else if (selectedProjectRef.current === ALL_PROJECTS_SENTINEL && opPkgId) {
                             const opProjectPath = message.projectPath as string | undefined;
                             // In all-projects mode, optimistically update installedPackages so
                             // browse rows reflect the install/remove immediately (icon change).
                             if (message.type === 'installResult') {
-                                setInstalledPackages(prev => {
-                                    if (prev.some(p => p.id.toLowerCase() === opPkgId)) { return prev; }
-                                    const searchPkg = searchResultsRef.current.find(p => p.id.toLowerCase() === opPkgId);
-                                    const ver = searchPkg?.version || '';
-                                    return [...prev, { id: message.packageId as string, version: ver, resolvedVersion: ver }];
-                                });
-                                // Also update allProjectsInstalled for the specific project
-                                if (opProjectPath) {
+                                // Prefer message.version (authoritative); fall back to searchResult
+                                // (best guess); else re-fetch to avoid blank-version rows.
+                                const msgVer = (message.version as string | undefined) ?? '';
+                                const searchPkg = searchResultsRef.current.find(p => p.id.toLowerCase() === opPkgId);
+                                const ver = msgVer || searchPkg?.version || '';
+                                if (ver) {
+                                    setInstalledPackages(prev => {
+                                        if (prev.some(p => p.id.toLowerCase() === opPkgId)) { return prev; }
+                                        return [...prev, { id: message.packageId as string, version: ver, resolvedVersion: ver }];
+                                    });
+                                    if (opProjectPath) {
+                                        setAllProjectsInstalled(prev => {
+                                            const updated = prev.map(pi => {
+                                                if (pi.projectPath !== opProjectPath) { return pi; }
+                                                if (pi.packages.some(p => p.id.toLowerCase() === opPkgId)) { return pi; }
+                                                return { ...pi, packages: [...pi.packages, { id: message.packageId as string, version: ver, resolvedVersion: ver }] };
+                                            });
+                                            allProjectsInstalledRef.current = updated;
+                                            return updated;
+                                        });
+                                    }
+                                } else if (opProjectPath) {
+                                    // No reliable version — let the post-op refresh repopulate.
+                                    requestStreamedAllProjectsInstalled();
+                                }
+                            } else if (message.type === 'updateResult') {
+                                // Fix: keep installed-version state in sync after all-projects update
+                                const msgVer = (message.version as string | undefined) ?? '';
+                                if (msgVer && opProjectPath) {
                                     setAllProjectsInstalled(prev => {
-                                        const searchPkg = searchResultsRef.current.find(p => p.id.toLowerCase() === opPkgId);
-                                        const ver = searchPkg?.version || '';
                                         const updated = prev.map(pi => {
                                             if (pi.projectPath !== opProjectPath) { return pi; }
-                                            if (pi.packages.some(p => p.id.toLowerCase() === opPkgId)) { return pi; }
-                                            return { ...pi, packages: [...pi.packages, { id: message.packageId as string, version: ver, resolvedVersion: ver }] };
+                                            return {
+                                                ...pi,
+                                                packages: pi.packages.map(p =>
+                                                    p.id.toLowerCase() === opPkgId
+                                                        ? { ...p, version: msgVer, resolvedVersion: msgVer }
+                                                        : p
+                                                ),
+                                            };
                                         });
                                         allProjectsInstalledRef.current = updated;
                                         return updated;
                                     });
+                                    setInstalledPackages(prev => prev.map(p =>
+                                        p.id.toLowerCase() === opPkgId
+                                            ? { ...p, version: msgVer, resolvedVersion: msgVer }
+                                            : p
+                                    ));
                                 }
                             } else if (message.type === 'removeResult') {
                                 // Remove from allProjectsInstalled for the specific project
@@ -414,8 +651,10 @@ export const SidebarApp: React.FC = () => {
                     }
                     // Re-fetch for full accuracy
                     if (isAllProjectsRef.current) {
-                        vscode.postMessage({ type: 'checkAllProjectsInstalled' });
-                        setLoadingAllInstalled(true);
+                        requestStreamedAllProjectsInstalled();
+                        if (allProjectsInstalledRef.current.length === 0) {
+                            setLoadingAllInstalled(true);
+                        }
                     } else if (selectedProjectRef.current && selectedProjectRef.current !== ALL_PROJECTS_SENTINEL) {
                         // User switched to a single project during bulk install — refresh if it was a target
                         if (bulkResults.some(r => r.success && r.projectPath === selectedProjectRef.current)) {
@@ -483,8 +722,37 @@ export const SidebarApp: React.FC = () => {
                 }
                 break;
             case 'bulkRemoveResult':
+                {
+                    // Single-project bulk remove. Removed packages can't have updates,
+                    // but only clear the targeted project's update state — clearing all
+                    // projects causes a cross-project flicker (PkgA updates in project B
+                    // disappearing because we removed in project A).
+                    const removeProjPath = message.projectPath as string | undefined;
+                    const sp = selectedProjectRef.current;
+                    const targetsSelected = !removeProjPath || !sp || sp === ALL_PROJECTS_SENTINEL || removeProjPath === sp;
+                    if (targetsSelected) {
+                        setPackageUpdates([]); packageUpdatesRef.current = [];
+                    }
+                    if (removeProjPath) {
+                        setAllProjectsUpdates(prev => {
+                            const updated = prev.filter(pu => pu.projectPath !== removeProjPath);
+                            allProjectsUpdatesRef.current = updated;
+                            return updated;
+                        });
+                    }
+                    if (selectedProjectRef.current && selectedProjectRef.current !== ALL_PROJECTS_SENTINEL) {
+                        vscode.postMessage({ type: 'getInstalledPackages', projectPath: selectedProjectRef.current });
+                        setLoadingInstalled(true);
+                    }
+                    if (isAllProjectsRef.current) {
+                        setAllProjectsInstalled([]);
+                        requestStreamedAllProjectsInstalled();
+                        setLoadingAllInstalled(true);
+                    }
+                }
+                break;
             case 'bulkRemoveAllProjectsResult':
-                // Removed packages can't have updates — clear update state
+                // Spans all projects — wide clear is correct.
                 setPackageUpdates([]); packageUpdatesRef.current = [];
                 setAllProjectsUpdates([]); allProjectsUpdatesRef.current = [];
                 if (selectedProjectRef.current && selectedProjectRef.current !== ALL_PROJECTS_SENTINEL) {
@@ -493,7 +761,7 @@ export const SidebarApp: React.FC = () => {
                 }
                 if (isAllProjectsRef.current) {
                     setAllProjectsInstalled([]);
-                    vscode.postMessage({ type: 'checkAllProjectsInstalled' });
+                    requestStreamedAllProjectsInstalled();
                     setLoadingAllInstalled(true);
                 }
                 break;
@@ -524,7 +792,7 @@ export const SidebarApp: React.FC = () => {
                 // Fetch appropriate data based on mode
                 if (message.projectPath === ALL_PROJECTS_SENTINEL) {
                     if (installedExpandedRef.current || searchModeRef.current === 'installed') {
-                        vscode.postMessage({ type: 'checkAllProjectsInstalled' });
+                        requestStreamedAllProjectsInstalled();
                         setLoadingAllInstalled(true);
                     }
                     if (updatesExpandedRef.current || searchModeRef.current === 'updates') {
@@ -577,7 +845,7 @@ export const SidebarApp: React.FC = () => {
                 });
                 break;
         }
-    }, []);
+    }, [requestStreamedAllProjectsInstalled]);
 
     // Single event listener using ref pattern
     const handleMessageRef = useRef(handleMessage);
@@ -635,10 +903,10 @@ export const SidebarApp: React.FC = () => {
     // ─── Load all projects installed ────────────────────────────────────────
     useEffect(() => {
         if (isAllProjects && (searchMode === 'installed' || (searchMode === 'default' && installedExpanded))) {
-            vscode.postMessage({ type: 'checkAllProjectsInstalled' });
+            requestStreamedAllProjectsInstalled();
             setLoadingAllInstalled(true);
         }
-    }, [isAllProjects, searchMode, installedExpanded]);
+    }, [isAllProjects, searchMode, installedExpanded, requestStreamedAllProjectsInstalled]);
 
     // ─── Search Handlers ─────────────────────────────────────────────────────
 
@@ -1097,6 +1365,21 @@ export const SidebarApp: React.FC = () => {
         });
     }, []);
 
+    // Stable per-context wrappers around handleContextMenu so React.memo on PackageRow
+    // can skip re-renders when unrelated state changes (e.g. updates count, search query).
+    const handleBrowseContextMenu = useCallback((packageId: string, e: React.MouseEvent) => {
+        handleContextMenu(packageId, e, 'browse');
+    }, [handleContextMenu]);
+    const handleInstalledContextMenu = useCallback((packageId: string, e: React.MouseEvent) => {
+        handleContextMenu(packageId, e, 'installed');
+    }, [handleContextMenu]);
+    const handleUpdatesContextMenu = useCallback((packageId: string, e: React.MouseEvent) => {
+        handleContextMenu(packageId, e, 'updates');
+    }, [handleContextMenu]);
+    const handleSelectPackageId = useCallback((packageId: string) => {
+        setSelectedPackageId(packageId);
+    }, []);
+
     const handleUpdateAll = useCallback(() => {
         if (!selectedProjectRef.current) { return; }
 
@@ -1193,8 +1476,8 @@ export const SidebarApp: React.FC = () => {
                         context="browse"
                         selected={selectedPackageId === pkg.id}
                         onPrimaryAction={handleBrowsePrimaryAction}
-                        onContextMenu={(id, e) => handleContextMenu(id, e, 'browse')}
-                        onClick={(id) => setSelectedPackageId(id)}
+                        onContextMenu={handleBrowseContextMenu}
+                        onClick={handleSelectPackageId}
                         actionTooltip={tooltip}
                     />
                 );
@@ -1235,8 +1518,8 @@ export const SidebarApp: React.FC = () => {
                             context="installed"
                             selected={selectedPackageId === pkg.id}
                             onPrimaryAction={handleInstalledPrimaryAction}
-                            onContextMenu={(id, e) => handleContextMenu(id, e, 'installed')}
-                            onClick={(id) => setSelectedPackageId(id)}
+                            onContextMenu={handleInstalledContextMenu}
+                            onClick={handleSelectPackageId}
                         />
                     ))}
                 </div>
@@ -1255,13 +1538,18 @@ export const SidebarApp: React.FC = () => {
                     {loadingAllInstalled && allProjectsInstalled.length === 0 && (
                         <div className="sidebar-empty">Loading all projects...</div>
                     )}
-                    {[...allProjectsInstalled]
-                        .sort((a, b) => {
+                    {(() => {
+                        const sortedProjects = [...allProjectsInstalled].sort((a, b) => {
                             if (a.projectPath === selectedProject) { return -1; }
                             if (b.projectPath === selectedProject) { return 1; }
                             return a.projectName.localeCompare(b.projectName);
-                        })
-                        .map((pi) => {
+                        });
+                        const distinctFolders = new Set(
+                            sortedProjects.map(p => p.workspaceFolder).filter((f): f is string => !!f)
+                        );
+                        const groupByFolder = distinctFolders.size > 1;
+
+                        const renderProject = (pi: ProjectInstalled) => {
                             const q = filterText.toLowerCase();
                             const filtered = q
                                 ? pi.packages.filter(p => p.id.toLowerCase().includes(q))
@@ -1312,7 +1600,41 @@ export const SidebarApp: React.FC = () => {
                                     ))}
                                 </div>
                             );
-                        })}
+                        };
+
+                        if (!groupByFolder) {
+                            return sortedProjects.map(renderProject);
+                        }
+
+                        const byFolder = new Map<string, ProjectInstalled[]>();
+                        const unfoldered: ProjectInstalled[] = [];
+                        for (const p of sortedProjects) {
+                            if (p.workspaceFolder) {
+                                const arr = byFolder.get(p.workspaceFolder);
+                                if (arr) { arr.push(p); }
+                                else { byFolder.set(p.workspaceFolder, [p]); }
+                            } else {
+                                unfoldered.push(p);
+                            }
+                        }
+                        const folderNames = [...byFolder.keys()].sort((a, b) => a.localeCompare(b));
+                        const groups: React.ReactNode[] = [];
+                        for (const folder of folderNames) {
+                            groups.push(
+                                <div key={`__folder__${folder}`} className="sidebar-folder-header" title={folder}>
+                                    {folder}
+                                </div>
+                            );
+                            for (const p of byFolder.get(folder) ?? []) { groups.push(renderProject(p)); }
+                        }
+                        if (unfoldered.length > 0) {
+                            groups.push(
+                                <div key="__folder____other__" className="sidebar-folder-header">(other)</div>
+                            );
+                            for (const p of unfoldered) { groups.push(renderProject(p)); }
+                        }
+                        return groups;
+                    })()}
                 </div>
             )}
         </div>
@@ -1353,8 +1675,8 @@ export const SidebarApp: React.FC = () => {
                             context="updates"
                             selected={selectedPackageId === pkg.id}
                             onPrimaryAction={handleUpdatesPrimaryAction}
-                            onContextMenu={(id, e) => handleContextMenu(id, e, 'updates')}
-                            onClick={(id) => setSelectedPackageId(id)}
+                            onContextMenu={handleUpdatesContextMenu}
+                            onClick={handleSelectPackageId}
                         />
                     ))}
                 </div>

@@ -1,7 +1,9 @@
 import * as vscode from 'vscode';
-import { executeBulkInstall, executeBulkRemoveAllProjects, executeBulkRemovePackages, executeBulkUpdateAllProjects, executeBulkUpdatePackages, executeSingleOperation, OperationContext, queryAllProjectsInstalled, queryAllProjectsUpdates, resolveAllProjectsIcons } from '../services/NuGetOperations';
+import { executeBulkInstall, executeBulkRemoveAllProjects, executeBulkRemovePackages, executeBulkUpdateAllProjects, executeBulkUpdatePackages, executeSingleOperation, OperationContext, ProjectInstalledResult, queryAllProjectsInstalled, queryAllProjectsTransitive, queryAllProjectsUpdates, resolveAllProjectsIcons } from '../services/NuGetOperations';
+import { isPerfEnabled, startTimer } from '../services/NuGetPerf';
 import { NuGetService } from '../services/NuGetService';
-import type { PanelRequestMessage } from '../services/NuGetTypes';
+import { operationQueue } from '../services/OperationQueue';
+import type { PanelRequestMessage, TransitivePackage } from '../services/NuGetTypes';
 import { ALL_PROJECTS_SENTINEL } from '../services/NuGetTypes';
 
 export class NuGetPanel {
@@ -10,15 +12,24 @@ export class NuGetPanel {
     private static _cachedSearchQuery: string | undefined;
     private static _context: vscode.ExtensionContext | undefined;
     private static _outputChannel: vscode.LogOutputChannel | undefined;
+    /**
+     * In-memory mirror of `nuget.restoreEnabled` workspaceState. Updated synchronously by
+     * sidebar→panel sync (`syncRestore`) and main-panel checkbox saves. `_opCtx()` reads
+     * this cache so a rapid toggle followed by an enqueue cannot race with an in-flight
+     * `workspaceState.update`. Default `true` matches workspaceState default.
+     */
+    private static _restoreEnabledCache = true;
 
     /** Callback fired when the main panel's prerelease setting changes (wired in extension.ts) */
     public static onPrereleaseChanged: ((value: boolean) => void) | undefined;
+    /** Callback fired when the main panel's "Restore after operations" toggle changes (wired in extension.ts) */
+    public static onRestoreChanged: ((value: boolean) => void) | undefined;
     /** Callback fired when the main panel's selected source changes (wired in extension.ts) */
     public static onSourceChanged: ((value: string) => void) | undefined;
     /** Callback fired when the main panel's selected project changes (wired in extension.ts) */
     public static onProjectChanged: ((value: string) => void) | undefined;
     /** Callback fired when a package is installed/updated/removed in the main panel (wired in extension.ts) */
-    public static onPackageChanged: ((operation: { type: string; packageId?: string; packageIds?: string[]; projectPath?: string }) => void) | undefined;
+    public static onPackageChanged: ((operation: { type: string; packageId?: string; packageIds?: string[]; projectPath?: string; version?: string }) => void) | undefined;
     /** Callback fired when the main panel's full refresh button is pressed (wired in extension.ts) */
     public static onRefreshAll: (() => void) | undefined;
 
@@ -27,6 +38,21 @@ export class NuGetPanel {
         if (NuGetPanel.currentPanel && !NuGetPanel.currentPanel._disposed) {
             NuGetPanel.currentPanel._postMessage({ type: 'prereleaseChanged', includePrerelease: value });
         }
+    }
+
+    /** Push a "Restore after operations" toggle change into the main panel webview (called from sidebar sync) */
+    public static syncRestore(value: boolean): void {
+        // Update the in-memory cache synchronously so any operation enqueued
+        // immediately after this call snapshots the new value.
+        NuGetPanel._restoreEnabledCache = value;
+        if (NuGetPanel.currentPanel && !NuGetPanel.currentPanel._disposed) {
+            NuGetPanel.currentPanel._postMessage({ type: 'restoreChanged', restoreEnabled: value });
+        }
+    }
+
+    /** Initialize the static restore cache from workspaceState. Called once during activation. */
+    public static initRestoreCache(value: boolean): void {
+        NuGetPanel._restoreEnabledCache = value;
     }
 
     /** Push a source change into the main panel webview (called from sidebar sync) */
@@ -56,8 +82,12 @@ export class NuGetPanel {
     private _latestAutocompleteQuery: string = '';
     // Track the latest search query to skip stale requests
     private _latestSearchQuery: string = '';
-    // Prevent concurrent mutating operations (install/update/remove)
-    private _operationInProgress = false;
+    /** AbortControllers keyed by `${kind}:${context}` for in-flight streaming queries (Plan 10). */
+    private _inflightAborts: Map<string, AbortController> = new Map();
+    // Perf instrumentation (Plan 01)
+    private readonly _panelOpenedAt: number = performance.now();
+    private _webviewReady = false;
+    private _firstRenderLogged = false;
 
     public static createOrShow(extensionUri: vscode.Uri, context: vscode.ExtensionContext, outputChannel: vscode.LogOutputChannel, nugetService: NuGetService, projectPath?: string, initialTab?: 'installed' | 'updates') {
         NuGetPanel._context = context;
@@ -98,7 +128,7 @@ export class NuGetPanel {
 
     /** Scoped refresh: re-fetch installed packages but skip full update check
      * (the sidebar already performed a scoped update check for the affected packages). */
-    public static refreshScoped(operation: { type: string; packageId?: string; packageIds?: string[]; projectPath?: string }) {
+    public static refreshScoped(operation: { type: string; packageId?: string; packageIds?: string[]; projectPath?: string; version?: string }) {
         if (NuGetPanel.currentPanel) {
             NuGetPanel.currentPanel._panel.webview.postMessage({ type: 'refreshScoped', operation });
         }
@@ -211,6 +241,28 @@ export class NuGetPanel {
 
     private async _handleMessage(data: PanelRequestMessage) {
         switch (data.type) {
+            case 'webviewReady':
+                {
+                    if (!this._webviewReady) {
+                        this._webviewReady = true;
+                        if (isPerfEnabled()) {
+                            const ms = performance.now() - this._panelOpenedAt;
+                            NuGetPanel._outputChannel?.info(`[perf] panelOpen→webviewReady ${ms.toFixed(1)}ms`);
+                        }
+                    }
+                    break;
+                }
+            case 'firstUsefulRender':
+                {
+                    if (!this._firstRenderLogged) {
+                        this._firstRenderLogged = true;
+                        if (isPerfEnabled()) {
+                            const ms = performance.now() - this._panelOpenedAt;
+                            NuGetPanel._outputChannel?.info(`[perf] panelOpen→firstUsefulRender ${ms.toFixed(1)}ms source=${data.source}`);
+                        }
+                    }
+                    break;
+                }
             case 'getProjects':
                 {
                     const projects = await this._nugetService.findProjects();
@@ -251,9 +303,11 @@ export class NuGetPanel {
             case 'getInstalledPackages':
                 {
                     if (data.projectPath === ALL_PROJECTS_SENTINEL) { break; }
+                    const t = startTimer('getInstalledPackages', data.projectPath as string);
                     try {
                         // Phase 1: send lite packages immediately (~20ms, .csproj parsing only)
                         const packages = await this._nugetService.getInstalledPackages(data.projectPath as string, true /* liteMode */);
+                        t.mark('lite');
                         this._postMessage({
                             type: 'installedPackages',
                             packages: packages,
@@ -269,6 +323,7 @@ export class NuGetPanel {
                                 });
                             }).catch(() => { /* non-critical: packages are already visible */ });
                         }
+                        t.end({ count: packages.length });
                     } catch (error) {
                         console.error('[nUIget] getInstalledPackages error:', error);
                         this._postMessage({
@@ -276,6 +331,7 @@ export class NuGetPanel {
                             packages: [],
                             projectPath: data.projectPath
                         });
+                        t.end({ error: 1 });
                     }
                     break;
                 }
@@ -283,8 +339,9 @@ export class NuGetPanel {
                 {
                     if (data.projectPath === ALL_PROJECTS_SENTINEL) { break; }
                     try {
-                        // If forceRestore is true (explicit refresh by user), run restore first
-                        // This ignores the noRestore setting since user explicitly requested refresh
+                        // forceRestore = explicit user-initiated transitive refresh.
+                        // Bypasses OperationContext.skipRestore (the "Restore after operations" toggle)
+                        // because the user explicitly asked for a fresh restore.
                         if (data.forceRestore) {
                             await this._nugetService.restoreProject(data.projectPath);
                         }
@@ -343,11 +400,182 @@ export class NuGetPanel {
                     });
                     break;
                 }
+            case 'getAllProjectsTransitive':
+                {
+                    const requestId = data.requestId;
+                    const inflightKey = 'aptransitive';
+                    this._abortInflight(inflightKey);
+                    const controller = new AbortController();
+                    this._inflightAborts.set(inflightKey, controller);
+                    const signal = controller.signal;
+                    try {
+                        const seenPaths: string[] = [];
+                        const erroredChunks: { projectPath: string; errorKind: string }[] = [];
+                        await queryAllProjectsTransitive(this._nugetService, {
+                            onStart: (projects) => {
+                                if (signal.aborted || this._disposed) { return; }
+                                this._postMessage({
+                                    type: 'allProjectsTransitiveStart',
+                                    requestId,
+                                    projects,
+                                });
+                            },
+                            onProject: (chunk) => {
+                                if (signal.aborted || this._disposed) { return; }
+                                seenPaths.push(chunk.projectPath);
+                                if (chunk.errorKind) {
+                                    erroredChunks.push({ projectPath: chunk.projectPath, errorKind: chunk.errorKind });
+                                }
+                                this._postMessage({
+                                    type: 'allProjectsTransitiveProjectFound',
+                                    requestId,
+                                    projectPath: chunk.projectPath,
+                                    projectName: chunk.projectName,
+                                    workspaceFolder: chunk.workspaceFolder,
+                                    frameworks: chunk.frameworks,
+                                    dataSourceAvailable: chunk.dataSourceAvailable,
+                                    errorKind: chunk.errorKind,
+                                });
+                            },
+                            signal,
+                        });
+                        if (signal.aborted || this._disposed) { break; }
+                        this._postMessage({
+                            type: 'allProjectsTransitiveComplete',
+                            requestId,
+                            projectPaths: seenPaths,
+                            errored: erroredChunks,
+                        });
+                    } catch (error) {
+                        console.error('[nUIget] getAllProjectsTransitive error:', error);
+                        if (!signal.aborted && !this._disposed) {
+                            this._postMessage({
+                                type: 'allProjectsTransitiveComplete',
+                                requestId,
+                                projectPaths: [],
+                                errored: [],
+                            });
+                        }
+                    } finally {
+                        if (this._inflightAborts.get(inflightKey) === controller) {
+                            this._inflightAborts.delete(inflightKey);
+                        }
+                    }
+                    break;
+                }
+            case 'cancelAllProjectsTransitive':
+                {
+                    this._abortInflight('aptransitive');
+                    break;
+                }
+            case 'getAllProjectsTransitiveMetadata':
+                {
+                    const requestId = data.requestId;
+                    const requested = data.packages;
+                    if (!requested || requested.length === 0) {
+                        this._postMessage({
+                            type: 'allProjectsTransitiveMetadata',
+                            requestId,
+                            metadata: [],
+                        });
+                        break;
+                    }
+                    // Reuse the existing enrichment path, which mutates a TransitivePackage[] in place.
+                    // Build minimal records (requiredByChain not needed for icon/verified/authors lookup).
+                    const tempPkgs: TransitivePackage[] = requested.map(p => ({
+                        id: p.id,
+                        version: p.version,
+                        requiredByChain: [],
+                    }));
+                    try {
+                        await this._nugetService.fetchTransitivePackageMetadata(tempPkgs);
+                    } catch (error) {
+                        console.error('[nUIget] getAllProjectsTransitiveMetadata error:', error);
+                    }
+                    if (this._disposed) { break; }
+                    const metadata = tempPkgs
+                        .filter(p => p.iconUrl !== undefined || p.verified !== undefined || p.authors !== undefined)
+                        .map(p => ({
+                            id: p.id,
+                            version: p.version,
+                            iconUrl: p.iconUrl,
+                            verified: p.verified,
+                            authors: p.authors,
+                        }));
+                    this._postMessage({
+                        type: 'allProjectsTransitiveMetadata',
+                        requestId,
+                        metadata,
+                    });
+                    break;
+                }
+            case 'restoreProjectsBatch':
+                {
+                    const requestId = data.requestId;
+                    const projectPaths = (data.projectPaths ?? []).filter(p => p && p !== ALL_PROJECTS_SENTINEL);
+                    if (projectPaths.length === 0) {
+                        this._postMessage({
+                            type: 'restoreProjectsBatchResult',
+                            requestId,
+                            results: [],
+                        });
+                        break;
+                    }
+                    // SINGLE OperationQueue task — looping serially internally avoids the
+                    // MAX_WAITING=5 cap that N parallel `restoreProject` enqueues would hit.
+                    const accepted = operationQueue.enqueue(
+                        `restore ${projectPaths.length} project(s)`,
+                        async () => {
+                            const results: Array<{ projectPath: string; success: boolean; error?: string; cancelled?: boolean }> = [];
+                            await vscode.window.withProgress({
+                                location: vscode.ProgressLocation.Notification,
+                                title: `Restoring ${projectPaths.length} project(s)…`,
+                                cancellable: true,
+                            }, async (progress, token) => {
+                                let i = 0;
+                                for (const projectPath of projectPaths) {
+                                    i++;
+                                    if (token.isCancellationRequested || this._disposed) {
+                                        results.push({ projectPath, success: false, cancelled: true });
+                                        continue;
+                                    }
+                                    const name = projectPath.split(/[\\/]/).pop() ?? projectPath;
+                                    progress.report({ message: `Restoring ${i} of ${projectPaths.length}: ${name}` });
+                                    try {
+                                        const success = await this._nugetService.restoreProject(projectPath);
+                                        results.push({ projectPath, success });
+                                    } catch (err) {
+                                        const msg = err instanceof Error ? err.message : String(err);
+                                        results.push({ projectPath, success: false, error: msg });
+                                    }
+                                }
+                            });
+                            if (!this._disposed) {
+                                this._postMessage({
+                                    type: 'restoreProjectsBatchResult',
+                                    requestId,
+                                    results,
+                                });
+                            }
+                        },
+                        () => this._disposed,
+                    );
+                    if (!accepted) {
+                        // Queue full — synthesize a failure result so the frontend doesn't hang.
+                        this._postMessage({
+                            type: 'restoreProjectsBatchResult',
+                            requestId,
+                            results: projectPaths.map(p => ({ projectPath: p, success: false, error: 'Operation queue is full. Try again shortly.' })),
+                        });
+                    }
+                    break;
+                }
             case 'searchPackages':
                 {
                     const query = data.query;
                     // Track latest query for race condition prevention
                     this._latestSearchQuery = query;
+                    const t = startTimer('searchPackages');
 
                     // Defense-in-depth: pre-filter known-unreachable sources before calling searchPackages
                     let sources = data.sources;
@@ -371,9 +599,11 @@ export class NuGetPanel {
                         data.take,
                         data.exactMatch
                     );
+                    t.mark('lite');
 
                     // Skip sending results if a newer query arrived while we were fetching
                     if (this._latestSearchQuery !== query) {
+                        t.end({ stale: 1 });
                         break;
                     }
 
@@ -384,6 +614,7 @@ export class NuGetPanel {
                         results: results,
                         query: query
                     });
+                    t.end({ count: results.length });
 
                     // Phase 2: enrich metadata in background if results lack it (CLI path)
                     if (results.length > 0 && results.some(r => r.iconUrl === undefined && r.verified === undefined)) {
@@ -429,43 +660,48 @@ export class NuGetPanel {
                 }
             case 'installPackage':
                 {
-                    if (this._operationInProgress) { break; }
                     if (data.projectPath === ALL_PROJECTS_SENTINEL) { break; }
-                    this._operationInProgress = true;
-                    try {
-                        await executeSingleOperation(this._opCtx(), 'install', data.projectPath, data.packageId, data.version, data.sourceUrl);
-                    } finally { this._operationInProgress = false; }
+                    const ctx = this._opCtx();
+                    operationQueue.enqueue(`install ${data.packageId}`, async () => {
+                        const t = startTimer('installPackage', data.projectPath);
+                        try {
+                            await executeSingleOperation(ctx, 'install', data.projectPath, data.packageId, data.version, data.sourceUrl);
+                        } finally { t.end({ pkg: data.packageId }); }
+                    }, () => this._disposed);
                     break;
                 }
             case 'bulkInstall':
                 {
-                    if (this._operationInProgress) { break; }
                     const paths = (data.projectPaths as string[])?.filter(p => p !== ALL_PROJECTS_SENTINEL);
                     if (!paths?.length) { break; }
-                    this._operationInProgress = true;
-                    try {
-                        await executeBulkInstall(this._opCtx(), paths, data.packageId, data.version);
-                    } finally { this._operationInProgress = false; }
+                    const ctx = this._opCtx();
+                    operationQueue.enqueue(`bulk install ${data.packageId}`, async () => {
+                        await executeBulkInstall(ctx, paths, data.packageId, data.version);
+                    }, () => this._disposed);
                     break;
                 }
             case 'updatePackage':
                 {
-                    if (this._operationInProgress) { break; }
                     if (data.projectPath === ALL_PROJECTS_SENTINEL) { break; }
-                    this._operationInProgress = true;
-                    try {
-                        await executeSingleOperation(this._opCtx(), 'update', data.projectPath, data.packageId, data.version, data.sourceUrl);
-                    } finally { this._operationInProgress = false; }
+                    const ctx = this._opCtx();
+                    operationQueue.enqueue(`update ${data.packageId}`, async () => {
+                        const t = startTimer('updatePackage', data.projectPath);
+                        try {
+                            await executeSingleOperation(ctx, 'update', data.projectPath, data.packageId, data.version, data.sourceUrl);
+                        } finally { t.end({ pkg: data.packageId }); }
+                    }, () => this._disposed);
                     break;
                 }
             case 'removePackage':
                 {
-                    if (this._operationInProgress) { break; }
                     if (data.projectPath === ALL_PROJECTS_SENTINEL) { break; }
-                    this._operationInProgress = true;
-                    try {
-                        await executeSingleOperation(this._opCtx(), 'remove', data.projectPath, data.packageId);
-                    } finally { this._operationInProgress = false; }
+                    const ctx = this._opCtx();
+                    operationQueue.enqueue(`remove ${data.packageId}`, async () => {
+                        const t = startTimer('removePackage', data.projectPath);
+                        try {
+                            await executeSingleOperation(ctx, 'remove', data.projectPath, data.packageId);
+                        } finally { t.end({ pkg: data.packageId }); }
+                    }, () => this._disposed);
                     break;
                 }
             case 'getSources':
@@ -520,9 +756,11 @@ export class NuGetPanel {
                 }
             case 'fullRefresh':
                 {
-                    // Full refresh: clear dotnet HTTP cache, clear all in-memory caches, re-fetch sources, refresh webview, and sync sidebar
-                    await this._nugetService.clearNuGetHttpCache();
-                    this._nugetService.clearSourceErrors();
+                    // Full refresh: clear all in-memory caches synchronously, kick off the
+                    // dotnet HTTP cache clear in the background (don't block UI on the spawn),
+                    // re-fetch sources, refresh webview, and sync sidebar.
+                    this._nugetService.clearInMemoryNuGetCaches();
+                    this._nugetService.clearNuGetHttpCacheBackground();
                     const freshSources = await this._nugetService.getSources();
                     this._postMessage({
                         type: 'sources',
@@ -725,6 +963,89 @@ export class NuGetPanel {
                     });
                     break;
                 }
+            case 'prefetchPackageVersions':
+                {
+                    const acquired = this._nugetService.tryAcquirePrefetchSlot();
+                    if (!acquired) {
+                        this._postMessage({
+                            type: 'packageVersionsPrefetched',
+                            packageId: data.packageId,
+                            source: data.source,
+                            includePrerelease: data.includePrerelease,
+                            versions: [],
+                            dropped: true,
+                        });
+                        break;
+                    }
+                    try {
+                        const versions = await this._nugetService.getPackageVersions(
+                            data.packageId,
+                            data.source,
+                            data.includePrerelease,
+                            data.take
+                        );
+                        this._postMessage({
+                            type: 'packageVersionsPrefetched',
+                            packageId: data.packageId,
+                            source: data.source,
+                            includePrerelease: data.includePrerelease,
+                            versions,
+                        });
+                    } catch {
+                        this._postMessage({
+                            type: 'packageVersionsPrefetched',
+                            packageId: data.packageId,
+                            source: data.source,
+                            includePrerelease: data.includePrerelease,
+                            versions: [],
+                            dropped: true,
+                        });
+                    } finally {
+                        this._nugetService.releasePrefetchSlot();
+                    }
+                    break;
+                }
+            case 'prefetchPackageMetadata':
+                {
+                    const acquired = this._nugetService.tryAcquirePrefetchSlot();
+                    if (!acquired) {
+                        this._postMessage({
+                            type: 'packageMetadataPrefetched',
+                            packageId: data.packageId,
+                            version: data.version,
+                            source: data.source,
+                            metadata: null,
+                            dropped: true,
+                        });
+                        break;
+                    }
+                    try {
+                        const metadata = await this._nugetService.getPackageMetadata(
+                            data.packageId,
+                            data.version,
+                            data.source
+                        );
+                        this._postMessage({
+                            type: 'packageMetadataPrefetched',
+                            packageId: data.packageId,
+                            version: data.version,
+                            source: data.source,
+                            metadata,
+                        });
+                    } catch {
+                        this._postMessage({
+                            type: 'packageMetadataPrefetched',
+                            packageId: data.packageId,
+                            version: data.version,
+                            source: data.source,
+                            metadata: null,
+                            dropped: true,
+                        });
+                    } finally {
+                        this._nugetService.releasePrefetchSlot();
+                    }
+                    break;
+                }
             case 'checkPackageUpdates':
                 {
                     try {
@@ -782,36 +1103,110 @@ export class NuGetPanel {
                 }
             case 'checkAllProjectsInstalled':
                 {
+                    // Plan 10 Stage C3: streaming is the only mode; legacy blob path removed.
+                    const requestId = data.requestId ?? `apinst-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+                    const ctx = data.context;
+                    // Abort any prior in-flight stream for the same context
+                    const inflightKey = `apinst:${ctx ?? ''}`;
+                    this._abortInflight(inflightKey);
+                    const controller = new AbortController();
+                    this._inflightAborts.set(inflightKey, controller);
+                    const signal = controller.signal;
                     try {
-                        // Phase 1: send lite data immediately (fast .csproj parsing only)
-                        const projectInstalled = await queryAllProjectsInstalled(this._nugetService, true /* liteMode */);
-                        this._postMessage({ type: 'allProjectsInstalled', context: data.context, projectInstalled });
-                        // Phase 2: enrich metadata in background, send follow-up with icons/authors
-                        const allPackages = projectInstalled.flatMap(pi => pi.packages);
+                        const accumulated: ProjectInstalledResult[] = [];
+                        const erroredChunks: { projectPath: string; error: string }[] = [];
+                        const seenPaths: string[] = [];
+                        await queryAllProjectsInstalled(this._nugetService, true /* liteMode */, {
+                            onStart: (projects) => {
+                                if (signal.aborted || this._disposed) { return; }
+                                this._postMessage({
+                                    type: 'allProjectsInstalledStart',
+                                    context: ctx,
+                                    requestId,
+                                    projects,
+                                });
+                            },
+                            onProject: (chunk) => {
+                                if (signal.aborted || this._disposed) { return; }
+                                seenPaths.push(chunk.projectPath);
+                                if (chunk.packages) {
+                                    accumulated.push({
+                                        projectPath: chunk.projectPath,
+                                        projectName: chunk.projectName,
+                                        packages: chunk.packages,
+                                    });
+                                } else if (chunk.error) {
+                                    erroredChunks.push({ projectPath: chunk.projectPath, error: chunk.error });
+                                }
+                                this._postMessage({
+                                    type: 'allProjectsInstalledProjectFound',
+                                    context: ctx,
+                                    requestId,
+                                    projectPath: chunk.projectPath,
+                                    projectName: chunk.projectName,
+                                    workspaceFolder: chunk.workspaceFolder,
+                                    installed: chunk.packages,
+                                    error: chunk.error,
+                                });
+                            },
+                            signal,
+                        });
+                        if (signal.aborted || this._disposed) { break; }
+                        this._postMessage({
+                            type: 'allProjectsInstalledComplete',
+                            context: ctx,
+                            requestId,
+                            projectPaths: seenPaths,
+                            errored: erroredChunks,
+                        });
+                        // Phase 2: enrich metadata, then emit per-project metadata chunks
+                        const allPackages = accumulated.flatMap(pi => pi.packages);
                         if (allPackages.length > 0) {
                             this._nugetService.enrichInstalledPackageMetadata(allPackages).then(() => {
-                                this._postMessage({ type: 'allProjectsInstalledMetadata', context: data.context, projectInstalled });
+                                if (signal.aborted || this._disposed) { return; }
+                                for (const proj of accumulated) {
+                                    if (signal.aborted || this._disposed) { return; }
+                                    this._postMessage({
+                                        type: 'allProjectsInstalledProjectMetadata',
+                                        context: ctx,
+                                        requestId,
+                                        projectPath: proj.projectPath,
+                                        installed: proj.packages,
+                                    });
+                                }
                             }).catch(() => { /* non-critical */ });
                         }
                     } catch (error) {
                         console.error('[nUIget] checkAllProjectsInstalled error:', error);
-                        this._postMessage({ type: 'allProjectsInstalled', context: data.context, projectInstalled: [] });
+                        if (!signal.aborted && !this._disposed) {
+                            this._postMessage({
+                                type: 'allProjectsInstalledComplete',
+                                context: ctx,
+                                requestId,
+                                projectPaths: [],
+                                errored: [],
+                            });
+                        }
+                    } finally {
+                        if (this._inflightAborts.get(inflightKey) === controller) {
+                            this._inflightAborts.delete(inflightKey);
+                        }
                     }
                     break;
                 }
             case 'bulkUpdateAllProjects':
                 {
-                    if (this._operationInProgress) { break; }
-                    this._operationInProgress = true;
-                    try {
-                        await executeBulkUpdateAllProjects(this._opCtx(), data.projectUpdates);
-                    } finally { this._operationInProgress = false; }
+                    const ctx = this._opCtx();
+                    operationQueue.enqueue('bulk update all projects', async () => {
+                        await executeBulkUpdateAllProjects(ctx, data.projectUpdates);
+                    }, () => this._disposed);
                     break;
                 }
             case 'getSettings':
                 {
                     // Retrieve persisted settings from workspaceState
                     const includePrerelease = NuGetPanel._context?.workspaceState.get<boolean>('nuget.includePrerelease', false);
+                    const restoreEnabled = NuGetPanel._restoreEnabledCache;
                     const selectedSource = NuGetPanel._context?.workspaceState.get<string>('nuget.selectedSource', '');
                     const recentSearches = NuGetPanel._context?.workspaceState.get<string[]>('nuget.recentSearches', []) ?? [];
                     const isWindows = process.platform === 'win32';
@@ -822,6 +1217,7 @@ export class NuGetPanel {
                     this._postMessage({
                         type: 'settings',
                         includePrerelease: includePrerelease,
+                        restoreEnabled: restoreEnabled,
                         selectedSource: selectedSource,
                         recentSearches: recentSearches.slice(0, recentSearchesLimit),
                         isWindows: isWindows,
@@ -838,6 +1234,15 @@ export class NuGetPanel {
                             await NuGetPanel._context.workspaceState.update('nuget.includePrerelease', data.includePrerelease);
                             // Sync to sidebar panel
                             NuGetPanel.onPrereleaseChanged?.(data.includePrerelease);
+                        }
+                        if (data.restoreEnabled !== undefined) {
+                            // Update synchronous cache + UI signals FIRST so any operation enqueued
+                            // in the same microtask uses the new value (workspaceState.update is async).
+                            NuGetPanel._restoreEnabledCache = data.restoreEnabled;
+                            vscode.commands.executeCommand('setContext', 'nuiget.restoreEnabled', data.restoreEnabled);
+                            // Sync to sidebar panel (sync — instance setContext + postMessage)
+                            NuGetPanel.onRestoreChanged?.(data.restoreEnabled);
+                            await NuGetPanel._context.workspaceState.update('nuget.restoreEnabled', data.restoreEnabled);
                         }
                         if (data.selectedSource !== undefined) {
                             await NuGetPanel._context.workspaceState.update('nuget.selectedSource', data.selectedSource);
@@ -903,31 +1308,28 @@ export class NuGetPanel {
                 }
             case 'bulkUpdatePackages':
                 {
-                    if (this._operationInProgress) { break; }
                     if (data.projectPath === ALL_PROJECTS_SENTINEL) { break; }
-                    this._operationInProgress = true;
-                    try {
-                        await executeBulkUpdatePackages(this._opCtx(), data.packages, data.projectPath);
-                    } finally { this._operationInProgress = false; }
+                    const ctx = this._opCtx();
+                    operationQueue.enqueue(`bulk update (${data.packages?.length ?? 0})`, async () => {
+                        await executeBulkUpdatePackages(ctx, data.packages, data.projectPath);
+                    }, () => this._disposed);
                     break;
                 }
             case 'confirmBulkRemove':
                 {
-                    if (this._operationInProgress) { break; }
                     if (data.projectPath === ALL_PROJECTS_SENTINEL) { break; }
-                    this._operationInProgress = true;
-                    try {
-                        await executeBulkRemovePackages(this._opCtx(), data.packages, data.projectPath);
-                    } finally { this._operationInProgress = false; }
+                    const ctx = this._opCtx();
+                    operationQueue.enqueue(`bulk remove (${data.packages?.length ?? 0})`, async () => {
+                        await executeBulkRemovePackages(ctx, data.packages, data.projectPath);
+                    }, () => this._disposed);
                     break;
                 }
             case 'confirmBulkRemoveAllProjects':
                 {
-                    if (this._operationInProgress) { break; }
-                    this._operationInProgress = true;
-                    try {
-                        await executeBulkRemoveAllProjects(this._opCtx(), data.projectRemovals);
-                    } finally { this._operationInProgress = false; }
+                    const ctx = this._opCtx();
+                    operationQueue.enqueue('bulk remove all projects', async () => {
+                        await executeBulkRemoveAllProjects(ctx, data.projectRemovals);
+                    }, () => this._disposed);
                     break;
                 }
             default:
@@ -938,6 +1340,12 @@ export class NuGetPanel {
     public dispose() {
         this._disposed = true;
         NuGetPanel.currentPanel = undefined;
+
+        // Abort any in-flight streaming queries
+        for (const controller of this._inflightAborts.values()) {
+            try { controller.abort(); } catch { /* ignore */ }
+        }
+        this._inflightAborts.clear();
 
         // Clean up our resources
         this._panel.dispose();
@@ -950,12 +1358,27 @@ export class NuGetPanel {
         }
     }
 
-    /** Build an OperationContext for shared operation functions. */
+    /** Abort a previously-registered in-flight stream by key, removing it from the map. */
+    private _abortInflight(key: string): void {
+        const existing = this._inflightAborts.get(key);
+        if (existing) {
+            try { existing.abort(); } catch { /* ignore */ }
+            this._inflightAborts.delete(key);
+        }
+    }
+
+    /** Build an OperationContext for shared operation functions.
+     *  Reads `restoreEnabled` from the synchronous in-memory cache (`_restoreEnabledCache`)
+     *  rather than `workspaceState`, so a rapid toggle → enqueue sequence cannot race
+     *  with an in-flight `workspaceState.update`. Callers should still invoke this
+     *  synchronously at message receipt (before enqueueing) so a queued toggle does
+     *  not affect operations that were already submitted. */
     private _opCtx(): OperationContext {
         return {
             nugetService: this._nugetService,
             postMessage: (msg: unknown) => this._postMessage(msg),
             notifyOtherPanel: (op) => NuGetPanel.onPackageChanged?.(op),
+            skipRestore: !NuGetPanel._restoreEnabledCache,
         };
     }
 

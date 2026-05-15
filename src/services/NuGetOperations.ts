@@ -1,7 +1,7 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
 import type { NuGetService } from './NuGetService';
-import type { InstalledPackage } from './NuGetTypes';
+import type { InstalledPackage, TransitiveFrameworkSection } from './NuGetTypes';
 import { batchedPromiseAll, topologicalSortByDependency } from './NuGetUtils';
 
 // --- Shared types ---
@@ -10,7 +10,14 @@ import { batchedPromiseAll, topologicalSortByDependency } from './NuGetUtils';
 export interface OperationContext {
     nugetService: NuGetService;
     postMessage: (message: unknown) => void;
-    notifyOtherPanel: (operation: { type: string; packageId?: string; packageIds?: string[]; projectPath?: string }) => void;
+    notifyOtherPanel: (operation: { type: string; packageId?: string; packageIds?: string[]; projectPath?: string; version?: string }) => void;
+    /**
+     * When true, suppress the post-operation `dotnet restore` step (and pass
+     * `--no-restore` on per-package CLI calls). Sourced from the user-facing
+     * "Restore after operations" toggle. Snapshotted at enqueue time by the
+     * panel/sidebar so mid-queue toggle changes do not affect submitted ops.
+     */
+    skipRestore?: boolean;
 }
 
 type SingleOperationType = 'install' | 'update' | 'remove';
@@ -48,25 +55,26 @@ export async function executeSingleOperation(
         cancellable: false
     }, async () => {
         if (operationType === 'install') {
-            success = await ctx.nugetService.installPackage(projectPath, packageId, version, { sourceUrl });
+            success = await ctx.nugetService.installPackage(projectPath, packageId, version, { sourceUrl, skipRestore: ctx.skipRestore });
         } else if (operationType === 'update') {
             if (!version) {
                 throw new Error(`Update operation requires a target version for ${packageId}`);
             }
-            success = await ctx.nugetService.updatePackage(projectPath, packageId, version, { sourceUrl });
+            success = await ctx.nugetService.updatePackage(projectPath, packageId, version, { sourceUrl, skipRestore: ctx.skipRestore });
         } else {
-            success = await ctx.nugetService.removePackage(projectPath, packageId);
+            success = await ctx.nugetService.removePackage(projectPath, packageId, { skipRestore: ctx.skipRestore });
         }
         ctx.postMessage({
             type: config.resultType,
             success,
             packageId,
-            projectPath
+            projectPath,
+            version
         });
     });
 
     if (success) {
-        ctx.notifyOtherPanel({ type: operationType, packageId, projectPath });
+        ctx.notifyOtherPanel({ type: operationType, packageId, projectPath, version });
     }
 
     return success;
@@ -128,8 +136,9 @@ export async function executeBulkInstall(
         const successCount = results.filter(r => r.success).length;
         const failCount = results.length - successCount;
 
-        // Run a single restore after all installs
-        if (successCount > 0) {
+        // Restore each project after all installs (one restore per project — `dotnet restore`
+        // operates on a single .csproj). Skipped when the user has disabled "Restore after operations".
+        if (successCount > 0 && !ctx.skipRestore) {
             progress.report({ message: 'Restoring projects...' });
             for (const r of results) {
                 if (r.success) {
@@ -203,8 +212,8 @@ export async function executeBulkUpdatePackages(
             if (success) { successCount++; } else { failCount++; failedPackageIds.push(pkg.id); }
         }
 
-        // Run a single restore after all packages are updated
-        if (successCount > 0) {
+        // Run a single restore after all packages are updated (skipped when "Restore after operations" is off)
+        if (successCount > 0 && !ctx.skipRestore) {
             progress.report({ message: 'Restoring project...' });
             await ctx.nugetService.restoreProject(projectPath);
         }
@@ -277,8 +286,8 @@ export async function executeBulkRemovePackages(
             if (success) { successCount++; } else { failCount++; failedPackageIds.push(packageId); }
         }
 
-        // Run a single restore after all packages are removed
-        if (successCount > 0) {
+        // Run a single restore after all packages are removed (skipped when "Restore after operations" is off)
+        if (successCount > 0 && !ctx.skipRestore) {
             progress.report({ message: 'Restoring project...' });
             await ctx.nugetService.restoreProject(projectPath);
         }
@@ -395,10 +404,13 @@ export async function executeBulkUpdateAllProjects(
             }
         }
 
-        // Phase 2: Restore all projects in dependency order (after all updates)
-        for (const project of projectsWithChanges) {
-            progress.report({ message: `Restoring ${project.projectName}...` });
-            await ctx.nugetService.restoreProject(project.projectPath);
+        // Phase 2: Restore all projects in dependency order (after all updates).
+        // Skipped when the user has disabled "Restore after operations".
+        if (!ctx.skipRestore) {
+            for (const project of projectsWithChanges) {
+                progress.report({ message: `Restoring ${project.projectName}...` });
+                await ctx.nugetService.restoreProject(project.projectPath);
+            }
         }
 
         if (totalFailCount === 0) {
@@ -501,10 +513,13 @@ export async function executeBulkRemoveAllProjects(
             }
         }
 
-        // Phase 2: Restore all projects — reverse order so dependencies restore before dependents
-        for (const project of [...projectsWithChanges].reverse()) {
-            progress.report({ message: `Restoring ${project.projectName}...` });
-            await ctx.nugetService.restoreProject(project.projectPath);
+        // Phase 2: Restore all projects — reverse order so dependencies restore before dependents.
+        // Skipped when the user has disabled "Restore after operations".
+        if (!ctx.skipRestore) {
+            for (const project of [...projectsWithChanges].reverse()) {
+                progress.report({ message: `Restoring ${project.projectName}...` });
+                await ctx.nugetService.restoreProject(project.projectPath);
+            }
         }
 
         if (failCount === 0) {
@@ -536,7 +551,30 @@ export interface ProjectUpdatesResult {
 export interface ProjectInstalledResult {
     projectPath: string;
     projectName: string;
+    workspaceFolder?: string;
     packages: InstalledPackage[];
+}
+
+/** Per-project chunk emitted during streaming queryAllProjectsInstalled. */
+export interface ProjectInstalledChunk {
+    projectPath: string;
+    projectName: string;
+    /** Workspace folder name (for multi-root grouping). */
+    workspaceFolder?: string;
+    /** Present when the per-project fetch succeeded (may be empty array). */
+    packages?: InstalledPackage[];
+    /** Present when the per-project fetch threw. Never both packages and error are set. */
+    error?: string;
+}
+
+/** Optional streaming options for queryAllProjectsInstalled. */
+export interface QueryAllProjectsInstalledStreamOpts {
+    /** Called once with the upfront project list before any per-project work begins. */
+    onStart?: (projects: { projectPath: string; projectName: string; workspaceFolder?: string }[]) => void;
+    /** Called once per project, in completion order (success or failure). */
+    onProject?: (chunk: ProjectInstalledChunk) => void;
+    /** Aborts pending emits (in-flight fetches still finish but their chunks are dropped). */
+    signal?: AbortSignal;
 }
 
 /**
@@ -581,33 +619,109 @@ export async function queryAllProjectsUpdates(
 /**
  * Query all projects for installed packages.
  * @param liteMode When true, skips metadata enrichment (sidebar). Panel passes false for full data.
+ * @param opts Optional streaming hooks. When provided, onStart fires once with the upfront project list,
+ *             onProject fires once per project (success or error), and signal can abort emits mid-flight.
+ *             The returned array still contains successful projects (preserves legacy callers).
  */
 export async function queryAllProjectsInstalled(
     nugetService: NuGetService,
-    liteMode: boolean
+    liteMode: boolean,
+    opts?: QueryAllProjectsInstalledStreamOpts
 ): Promise<ProjectInstalledResult[]> {
     const projects = await nugetService.findProjects();
     const results: ProjectInstalledResult[] = [];
 
+    if (opts?.onStart && !opts.signal?.aborted) {
+        opts.onStart(projects.map(p => ({ projectPath: p.path, projectName: p.name, workspaceFolder: p.workspaceFolder })));
+    }
+
     // Parallelize per-project fetching (up to 4 concurrent) for faster loading
     await batchedPromiseAll(projects, async (project) => {
+        let installedPackages: InstalledPackage[] | undefined;
+        let errorMessage: string | undefined;
         try {
-            const installedPackages = await nugetService.getInstalledPackages(project.path, liteMode);
+            installedPackages = await nugetService.getInstalledPackages(project.path, liteMode);
+        } catch (error) {
+            errorMessage = error instanceof Error ? error.message : String(error);
+            console.error(`[nUIget] Failed to get installed packages for ${project.name}:`, error);
+        }
+        if (installedPackages) {
             results.push({
                 projectPath: project.path,
                 projectName: project.name,
+                workspaceFolder: project.workspaceFolder,
                 packages: installedPackages,
             });
-        } catch (error) {
-            console.error(`[nUIget] Failed to get installed packages for ${project.name}:`, error);
+        }
+        if (opts?.onProject && !opts.signal?.aborted) {
+            opts.onProject({
+                projectPath: project.path,
+                projectName: project.name,
+                workspaceFolder: project.workspaceFolder,
+                packages: installedPackages,
+                error: errorMessage,
+            });
         }
     }, 4);
 
     return results;
 }
 
+/** Per-project chunk emitted during streaming queryAllProjectsTransitive. */
+export interface ProjectTransitiveChunk {
+    projectPath: string;
+    projectName: string;
+    workspaceFolder?: string;
+    frameworks: TransitiveFrameworkSection[];
+    /** False → project.assets.json missing (project never built/restored). */
+    dataSourceAvailable: boolean;
+    /** Bucketed error category when assets.json existed but resolution failed. */
+    errorKind?: 'parse-failed' | 'fs-error' | 'unknown';
+}
+
+export interface QueryAllProjectsTransitiveStreamOpts {
+    onStart?: (projects: { projectPath: string; projectName: string; workspaceFolder?: string }[]) => void;
+    onProject?: (chunk: ProjectTransitiveChunk) => void;
+    signal?: AbortSignal;
+}
+
 /**
- * Resolve icon URLs for unique packages across all projects.
+ * Stream transitive packages for every project in the workspace.
+ * Mirrors `queryAllProjectsInstalled` shape (concurrency 4, onStart → onProject*… flow).
+ * Errors are bucketed (`parse-failed | fs-error | unknown`) so the frontend restore banner
+ * can summarize them stably without leaking raw error strings.
+ *
+ * Aggregation, version normalization, and casing are the frontend's job — this layer
+ * delivers per-project per-framework lists exactly as `getTransitivePackagesPreservingErrors`
+ * produces them.
+ */
+export async function queryAllProjectsTransitive(
+    nugetService: NuGetService,
+    opts?: QueryAllProjectsTransitiveStreamOpts
+): Promise<void> {
+    const projects = await nugetService.findProjects();
+
+    if (opts?.onStart && !opts.signal?.aborted) {
+        opts.onStart(projects.map(p => ({ projectPath: p.path, projectName: p.name, workspaceFolder: p.workspaceFolder })));
+    }
+
+    await batchedPromiseAll(projects, async (project) => {
+        if (opts?.signal?.aborted) { return; }
+        const result = await nugetService.getTransitivePackagesPreservingErrors(project.path);
+        if (opts?.onProject && !opts.signal?.aborted) {
+            opts.onProject({
+                projectPath: project.path,
+                projectName: project.name,
+                workspaceFolder: project.workspaceFolder,
+                frameworks: result.frameworks,
+                dataSourceAvailable: result.dataSourceAvailable,
+                errorKind: result.errorKind,
+            });
+        }
+    }, 4);
+}
+
+/**
  * Returns a map of `packageId@version` → `iconUrl`.
  * Uses deduplication to avoid redundant fetches for packages shared across projects.
  */

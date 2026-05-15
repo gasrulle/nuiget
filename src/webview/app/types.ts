@@ -149,7 +149,16 @@ export interface ProjectUpdates {
 export interface ProjectInstalled {
     projectPath: string;
     projectName: string;
+    /** Workspace folder name (multi-root grouping). */
+    workspaceFolder?: string;
     packages: InstalledPackage[];
+    /**
+     * Plan 10 (I4): when the streamed enumeration of a single project failed
+     * (for example a `dotnet list package` error), the error message is
+     * surfaced here so the row can render a non-fatal error state instead of
+     * dropping the project silently.
+     */
+    error?: string;
 }
 
 export interface TransitivePackage {
@@ -171,6 +180,50 @@ export interface TransitiveFrameworkSection {
     metadataLoaded?: boolean;
 }
 
+/**
+ * One project's contribution to an aggregated all-projects transitive row.
+ * Each origin represents a unique (projectPath, requiredByChain) pair —
+ * if the same project transitively requires the same package via two different
+ * chains (rare but possible across multiple TFMs), we get two origins for that
+ * project. When the chains match, frameworks are merged into a single origin.
+ */
+export interface AllProjectsTransitiveOrigin {
+    projectPath: string;
+    projectName: string;
+    workspaceFolder?: string;
+    /** Distinct TFMs in this project that share this exact requiredByChain. */
+    frameworks: string[];
+    requiredByChain: string[];
+    fullChain?: string[];
+    /** Hash of `requiredByChain.join('→')` — used as origin dedup + render key. */
+    chainHash: string;
+}
+
+/**
+ * Aggregated transitive package row in all-projects mode.
+ * Dedup key: `${id.toLowerCase()}@${normalizedVersion}`.
+ */
+export interface AllProjectsTransitiveRow {
+    id: string;
+    version: string;
+    /** Lower-cased trimmed version used for dedup keying. */
+    versionNormalized: string;
+    iconUrl?: string;
+    verified?: boolean;
+    authors?: string;
+    origins: AllProjectsTransitiveOrigin[];
+    /** Distinct TFMs across all origins (row-level TFM badge — currently unused). */
+    frameworks: string[];
+}
+
+/**
+ * Extended transitive selection shape — `origins` present only in all-projects mode.
+ * Single-project mode keeps the bare `TransitivePackage` shape (origins absent).
+ */
+export type SelectedTransitivePackage = TransitivePackage & {
+    origins?: AllProjectsTransitiveOrigin[];
+};
+
 /** Tab type for the main panel (Browse tab removed — search is now unified) */
 export type TabType = 'installed' | 'updates';
 
@@ -180,6 +233,7 @@ export interface AppState {
     activeTab: TabType;
     searchQuery: string;
     includePrerelease: boolean;
+    restoreEnabled?: boolean;
     recentSearches: string[];
 }
 

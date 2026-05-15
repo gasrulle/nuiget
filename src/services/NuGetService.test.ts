@@ -429,13 +429,82 @@ describe('NuGetService', () => {
     });
 
     // ──────────────────────────────────────────────
-    // clearSourceErrors
+    // clearSourceErrors / clearInMemoryNuGetCaches
     // ──────────────────────────────────────────────
     describe('clearSourceErrors', () => {
         it('clears all caches and restarts health monitor', () => {
             service.clearSourceErrors();
             // workspaceCache.clearByPrefix should be called for version cache
             expect(workspaceCache.clearByPrefix).toHaveBeenCalledWith('versions:');
+        });
+
+        it('is an alias for clearInMemoryNuGetCaches', () => {
+            const spy = vi.spyOn(service, 'clearInMemoryNuGetCaches');
+            service.clearSourceErrors();
+            expect(spy).toHaveBeenCalledTimes(1);
+        });
+    });
+
+    describe('clearInMemoryNuGetCaches', () => {
+        it('clears every documented in-memory cache and the package service caches', () => {
+            const pkg = (service as any)._packageService;
+            const clearCachesSpy = vi.spyOn(pkg, 'clearCaches');
+            const clearMetaSpy = vi.spyOn(pkg, 'clearMetadataAndSearchCaches');
+            const invalidateSourcesSpy = vi.spyOn(service, 'invalidateSourcesCache');
+            const clearVersionsSpy = vi.spyOn(service, 'clearVersionsCache');
+
+            // Seed the in-memory maps so we can verify they're cleared
+            (service as any).failedSources.set('https://example.com', 'boom');
+            (service as any).serviceIndexCache.set('https://example.com', {} as any);
+            (service as any).failedEndpointCache.set('https://example.com', Date.now());
+
+            service.clearInMemoryNuGetCaches();
+
+            expect((service as any).failedSources.size).toBe(0);
+            expect((service as any).serviceIndexCache.size).toBe(0);
+            expect((service as any).failedEndpointCache.size).toBe(0);
+            expect(clearCachesSpy).toHaveBeenCalledTimes(1);
+            expect(clearMetaSpy).toHaveBeenCalledTimes(1);
+            expect(invalidateSourcesSpy).toHaveBeenCalledTimes(1);
+            expect(clearVersionsSpy).toHaveBeenCalledTimes(1);
+        });
+    });
+
+    describe('clearNuGetHttpCacheBackground', () => {
+        it('coalesces concurrent calls so the CLI runs only once', async () => {
+            const cli = (service as any)._cliService;
+            let resolveCli: () => void = () => { /* noop */ };
+            const inFlight = new Promise<void>(r => { resolveCli = r; });
+            const spy = vi.spyOn(cli, 'clearNuGetHttpCache').mockReturnValue(inFlight);
+
+            service.clearNuGetHttpCacheBackground();
+            service.clearNuGetHttpCacheBackground();
+            service.clearNuGetHttpCacheBackground();
+
+            expect(spy).toHaveBeenCalledTimes(1);
+
+            // After it settles, a fresh call should spawn again
+            resolveCli();
+            await inFlight;
+            await new Promise(r => setImmediate(r));
+            spy.mockResolvedValueOnce(undefined as any);
+            service.clearNuGetHttpCacheBackground();
+            expect(spy).toHaveBeenCalledTimes(2);
+        });
+
+        it('swallows CLI errors so callers never see a rejection', async () => {
+            const cli = (service as any)._cliService;
+            const spy = vi.spyOn(cli, 'clearNuGetHttpCache')
+                .mockRejectedValueOnce(new Error('boom'))
+                .mockResolvedValueOnce(undefined as any);
+
+            // Should not throw
+            expect(() => service.clearNuGetHttpCacheBackground()).not.toThrow();
+            // Wait one microtask so the .catch + .finally run and clear the in-flight slot
+            await new Promise(r => setImmediate(r));
+            // Subsequent call must spawn again now that in-flight is cleared
+            service.clearNuGetHttpCacheBackground();
+            expect(spy).toHaveBeenCalledTimes(2);
         });
     });
 
@@ -3373,6 +3442,121 @@ describe('NuGetService', () => {
 
             const result = await (service as any)._projectService.getTransitivePackagesFromAssets('/obj/project.assets.json');
             expect(result.frameworks).toEqual([]);
+        });
+
+        it('falls back to base TFM in projectFileDependencyGroups for RID-specific target keys', async () => {
+            // RID-specific target keys ("net8.0/win-x64") still key projectFileDependencyGroups
+            // by base TFM ("net8.0"). Without the fallback, "DirectPkg" would be misclassified
+            // as transitive instead of direct.
+            vi.spyOn((service as any)._projectService, 'readAssetsJson').mockResolvedValue({
+                targets: {
+                    'net8.0/win-x64': {
+                        'DirectPkg/1.0.0': { dependencies: { 'TransitivePkg': '2.0.0' } },
+                        'TransitivePkg/2.0.0': {},
+                    },
+                },
+                projectFileDependencyGroups: {
+                    'net8.0': ['DirectPkg >= 1.0.0'],
+                },
+            });
+
+            const result = await (service as any)._projectService.getTransitivePackagesFromAssets('/obj/project.assets.json');
+            expect(result.frameworks).toHaveLength(1);
+            expect(result.frameworks[0].targetFramework).toBe('net8.0/win-x64');
+            const ids = result.frameworks[0].packages.map((p: { id: string }) => p.id);
+            expect(ids).toContain('TransitivePkg');
+            expect(ids).not.toContain('DirectPkg');
+        });
+    });
+
+    describe('getTransitivePackagesPreservingErrors', () => {
+        beforeEach(async () => {
+            const fs = await import('fs');
+            vi.mocked(fs.promises.stat).mockReset();
+            (service as any)._projectService.transitiveResultCache.clear();
+        });
+
+        it('returns dataSourceAvailable=false when assets.json is missing (ENOENT)', async () => {
+            const fs = await import('fs');
+            vi.mocked(fs.promises.stat).mockRejectedValueOnce(Object.assign(new Error('ENOENT'), { code: 'ENOENT' }));
+
+            const result = await (service as any)._projectService.getTransitivePackagesPreservingErrors('/proj/test.csproj');
+            expect(result).toEqual({ frameworks: [], dataSourceAvailable: false });
+        });
+
+        it('returns errorKind=fs-error when stat fails for non-ENOENT reason', async () => {
+            const fs = await import('fs');
+            vi.mocked(fs.promises.stat).mockRejectedValueOnce(Object.assign(new Error('EACCES'), { code: 'EACCES' }));
+
+            const result = await (service as any)._projectService.getTransitivePackagesPreservingErrors('/proj/test.csproj');
+            expect(result).toMatchObject({ frameworks: [], dataSourceAvailable: true, errorKind: 'fs-error' });
+        });
+
+        it('returns errorKind=parse-failed when assets.json fails to parse (SyntaxError)', async () => {
+            const fs = await import('fs');
+            vi.mocked(fs.promises.stat).mockResolvedValueOnce({ mtimeMs: 100 } as any);
+            vi.spyOn((service as any)._projectService, 'getTransitivePackagesFromAssets')
+                .mockRejectedValueOnce(new SyntaxError('bad json'));
+
+            const result = await (service as any)._projectService.getTransitivePackagesPreservingErrors('/proj/test.csproj');
+            expect(result).toMatchObject({ frameworks: [], dataSourceAvailable: true, errorKind: 'parse-failed' });
+        });
+
+        it('returns errorKind=unknown for other parsing errors', async () => {
+            const fs = await import('fs');
+            vi.mocked(fs.promises.stat).mockResolvedValueOnce({ mtimeMs: 100 } as any);
+            vi.spyOn((service as any)._projectService, 'getTransitivePackagesFromAssets')
+                .mockRejectedValueOnce(new Error('something else'));
+
+            const result = await (service as any)._projectService.getTransitivePackagesPreservingErrors('/proj/test.csproj');
+            expect(result).toMatchObject({ frameworks: [], dataSourceAvailable: true, errorKind: 'unknown' });
+        });
+
+        it('caches result keyed by mtimeMs and serves cache hit on second call', async () => {
+            const fs = await import('fs');
+            vi.mocked(fs.promises.stat).mockResolvedValue({ mtimeMs: 200 } as any);
+            const fromAssetsSpy = vi.spyOn((service as any)._projectService, 'getTransitivePackagesFromAssets')
+                .mockResolvedValue({ frameworks: [{ targetFramework: 'net8.0', packages: [] }] });
+
+            const r1 = await (service as any)._projectService.getTransitivePackagesPreservingErrors('/proj/test.csproj');
+            const r2 = await (service as any)._projectService.getTransitivePackagesPreservingErrors('/proj/test.csproj');
+
+            expect(r1.dataSourceAvailable).toBe(true);
+            expect(r2).toBe(r1);
+            expect(fromAssetsSpy).toHaveBeenCalledTimes(1);
+        });
+
+        it('invalidates cache when mtimeMs changes', async () => {
+            const fs = await import('fs');
+            vi.mocked(fs.promises.stat)
+                .mockResolvedValueOnce({ mtimeMs: 100 } as any)
+                .mockResolvedValueOnce({ mtimeMs: 999 } as any);
+            const fromAssetsSpy = vi.spyOn((service as any)._projectService, 'getTransitivePackagesFromAssets')
+                .mockResolvedValueOnce({ frameworks: [{ targetFramework: 'net8.0', packages: [] }] })
+                .mockResolvedValueOnce({ frameworks: [{ targetFramework: 'net9.0', packages: [] }] });
+
+            const r1 = await (service as any)._projectService.getTransitivePackagesPreservingErrors('/proj/test.csproj');
+            const r2 = await (service as any)._projectService.getTransitivePackagesPreservingErrors('/proj/test.csproj');
+
+            expect(r1.frameworks[0].targetFramework).toBe('net8.0');
+            expect(r2.frameworks[0].targetFramework).toBe('net9.0');
+            expect(fromAssetsSpy).toHaveBeenCalledTimes(2);
+        });
+
+        it('evicts oldest entry once MAX_TRANSITIVE_RESULT_ENTRIES (100) is exceeded', async () => {
+            const fs = await import('fs');
+            let counter = 0;
+            vi.mocked(fs.promises.stat).mockImplementation(() => Promise.resolve({ mtimeMs: ++counter } as any));
+            vi.spyOn((service as any)._projectService, 'getTransitivePackagesFromAssets')
+                .mockResolvedValue({ frameworks: [] });
+
+            for (let i = 0; i < 101; i++) {
+                await (service as any)._projectService.getTransitivePackagesPreservingErrors(`/proj/p${i}.csproj`);
+            }
+            const cache = (service as any)._projectService.transitiveResultCache as Map<string, unknown>;
+            expect(cache.size).toBe(100);
+            expect(cache.has('/proj/p0.csproj')).toBe(false);
+            expect(cache.has('/proj/p100.csproj')).toBe(true);
         });
     });
 

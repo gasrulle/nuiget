@@ -13,6 +13,7 @@ const hoisted = vi.hoisted(() => ({
     mockExecuteBulkRemoveAllProjects: vi.fn().mockResolvedValue(undefined),
     mockQueryAllProjectsUpdates: vi.fn().mockResolvedValue([]),
     mockQueryAllProjectsInstalled: vi.fn().mockResolvedValue([]),
+    mockQueryAllProjectsTransitive: vi.fn().mockResolvedValue(undefined),
     mockResolveAllProjectsIcons: vi.fn().mockResolvedValue({}),
 }));
 
@@ -25,6 +26,7 @@ vi.mock('../services/NuGetOperations', () => ({
     executeBulkRemoveAllProjects: hoisted.mockExecuteBulkRemoveAllProjects,
     queryAllProjectsUpdates: hoisted.mockQueryAllProjectsUpdates,
     queryAllProjectsInstalled: hoisted.mockQueryAllProjectsInstalled,
+    queryAllProjectsTransitive: hoisted.mockQueryAllProjectsTransitive,
     resolveAllProjectsIcons: hoisted.mockResolveAllProjectsIcons,
 }));
 
@@ -33,6 +35,7 @@ vi.mock('../services/NuGetService', () => ({
 }));
 
 import { NuGetPanel } from './NuGetPanel';
+import { operationQueue } from '../services/OperationQueue';
 
 // ──────────────────────────────────────────────
 // Helpers
@@ -79,7 +82,9 @@ function createMockNuGetService() {
         getFailedSources: vi.fn().mockReturnValue(new Map()),
         testSourceConnectivity: vi.fn().mockResolvedValue(undefined),
         clearSourceErrors: vi.fn(),
+        clearInMemoryNuGetCaches: vi.fn(),
         clearNuGetHttpCache: vi.fn().mockResolvedValue(undefined),
+        clearNuGetHttpCacheBackground: vi.fn(),
         enableSource: vi.fn().mockResolvedValue(true),
         disableSource: vi.fn().mockResolvedValue(true),
         addSource: vi.fn().mockResolvedValue({ success: true }),
@@ -164,6 +169,7 @@ describe('NuGetPanel', () => {
         NuGetPanel.onProjectChanged = undefined;
         NuGetPanel.onPackageChanged = undefined;
         NuGetPanel.onRefreshAll = undefined;
+        NuGetPanel.initRestoreCache(true);
 
         mockPanel = createMockWebviewPanel();
         mockService = createMockNuGetService();
@@ -251,6 +257,11 @@ describe('NuGetPanel', () => {
         it('syncPrerelease posts prereleaseChanged message', () => {
             NuGetPanel.syncPrerelease(true);
             expect(mockPanel.webview.postMessage).toHaveBeenCalledWith({ type: 'prereleaseChanged', includePrerelease: true });
+        });
+
+        it('syncRestore posts restoreChanged message', () => {
+            NuGetPanel.syncRestore(false);
+            expect(mockPanel.webview.postMessage).toHaveBeenCalledWith({ type: 'restoreChanged', restoreEnabled: false });
         });
 
         it('syncSource posts sourceChanged message', () => {
@@ -588,21 +599,26 @@ describe('NuGetPanel', () => {
             expect(mockContext.globalState.update).toHaveBeenCalledWith('nuget.splitPosition', 42);
         });
 
-        it('fullRefresh clears source errors, refreshes, and notifies sidebar', async () => {
+        it('fullRefresh clears in-memory caches synchronously, kicks off background HTTP cache clear, refreshes, and notifies sidebar', async () => {
             const onRefreshAll = vi.fn();
             NuGetPanel.onRefreshAll = onRefreshAll;
             (mockService as any).getSources.mockResolvedValue([]);
 
             await messageListener!({ type: 'fullRefresh' });
 
-            expect((mockService as any).clearNuGetHttpCache).toHaveBeenCalled();
-            expect((mockService as any).clearSourceErrors).toHaveBeenCalled();
+            expect((mockService as any).clearInMemoryNuGetCaches).toHaveBeenCalled();
+            expect((mockService as any).clearNuGetHttpCacheBackground).toHaveBeenCalled();
+            // The synchronous in-memory clear must be invoked even though the disk clear is fire-and-forget
+            expect((mockService as any).clearNuGetHttpCache).not.toHaveBeenCalled();
             expect(mockPanel.webview.postMessage).toHaveBeenCalledWith({ type: 'refresh' });
             expect(onRefreshAll).toHaveBeenCalled();
         });
 
         it('restoreProject shows progress and sends result', async () => {
-            (vscode.window.withProgress as any) = vi.fn(async (_opts: unknown, task: (progress: unknown) => Promise<void>) => task({}));
+            vi.spyOn(vscode.window, 'withProgress').mockImplementationOnce(
+                async (_opts: unknown, task: (progress: unknown, token: unknown) => Promise<void>) =>
+                    task({ report: vi.fn() }, { isCancellationRequested: false, onCancellationRequested: vi.fn() })
+            );
             (mockService as any).restoreProject.mockResolvedValue(true);
 
             await messageListener!({ type: 'restoreProject', projectPath: '/proj.csproj' });
@@ -726,6 +742,7 @@ describe('NuGetPanel', () => {
     // ──────────────────────────────────────────────
     describe('operation guard', () => {
         beforeEach(() => {
+            operationQueue.resetForTests();
             NuGetPanel.createOrShow(vscode.Uri.file('/ext'), mockContext, mockOutputChannel, mockService as any);
             expect(messageListener).toBeDefined();
         });
@@ -806,6 +823,70 @@ describe('NuGetPanel', () => {
             await messageListener!({ type: 'installPackage', projectPath: '/p', packageId: 'B' });
             expect(hoisted.mockExecuteSingleOperation).toHaveBeenCalledTimes(2);
         });
+
+        it('snapshots restore flag at enqueue time (op queued behind blocking op keeps its captured ctx)', async () => {
+            // This is the real snapshot regression guard: op B is enqueued WHILE op A is blocking
+            // the queue. Toggling restore between B's enqueue and B's run must NOT affect B's ctx.
+            // A buggy variant that captures ctx inside the queue closure (lazy) would FAIL this test.
+            NuGetPanel.syncRestore(true);
+
+            let resolveA!: () => void;
+            const aStarted = new Promise<void>(aStartResolve => {
+                hoisted.mockExecuteSingleOperation
+                    .mockImplementationOnce(() => {
+                        aStartResolve();
+                        return new Promise<void>(r => { resolveA = r; });
+                    })
+                    .mockImplementationOnce(() => Promise.resolve());
+            });
+
+            // Op A: starts immediately, blocks the queue.
+            const opA = messageListener!({ type: 'installPackage', projectPath: '/p', packageId: 'A' });
+            await aStarted;
+
+            // Op B: enqueued behind A. Cache is still true → B's snapshot must be skipRestore=false.
+            const opB = messageListener!({ type: 'installPackage', projectPath: '/p', packageId: 'B' });
+
+            // Toggle AFTER B is enqueued but BEFORE B runs. B's captured ctx must be unaffected.
+            NuGetPanel.syncRestore(false);
+
+            resolveA();
+            await opA;
+            await opB;
+            await operationQueue.waitIdle();
+
+            // Op A was enqueued with cache=true → skipRestore=false.
+            expect(hoisted.mockExecuteSingleOperation).toHaveBeenNthCalledWith(
+                1,
+                expect.objectContaining({ skipRestore: false }),
+                'install', '/p', 'A', undefined, undefined,
+            );
+            // Op B was enqueued with cache=true (before toggle) → snapshot must still be skipRestore=false,
+            // even though cache was flipped to false before B actually ran.
+            expect(hoisted.mockExecuteSingleOperation).toHaveBeenNthCalledWith(
+                2,
+                expect.objectContaining({ skipRestore: false }),
+                'install', '/p', 'B', undefined, undefined,
+            );
+
+            // Restore default for subsequent tests
+            NuGetPanel.syncRestore(true);
+        });
+
+        it('passes skipRestore=true through ctx when restoreEnabled is false', async () => {
+            NuGetPanel.syncRestore(false);
+
+            await messageListener!({ type: 'installPackage', projectPath: '/p', packageId: 'A' });
+            await operationQueue.waitIdle();
+
+            expect(hoisted.mockExecuteSingleOperation).toHaveBeenCalledWith(
+                expect.objectContaining({ skipRestore: true }),
+                'install', '/p', 'A', undefined, undefined,
+            );
+
+            // Restore default for subsequent tests
+            NuGetPanel.syncRestore(true);
+        });
     });
 
     // ──────────────────────────────────────────────
@@ -853,6 +934,19 @@ describe('NuGetPanel', () => {
 
             expect((mockService as any).restoreProject).toHaveBeenCalledWith('/proj.csproj');
             expect((mockService as any).getTransitivePackages).toHaveBeenCalledWith('/proj.csproj');
+        });
+
+        it('honors forceRestore=true even when restoreEnabled is false (explicit user-initiated refresh bypass)', async () => {
+            NuGetPanel.syncRestore(false);
+            (mockService as any).restoreProject.mockResolvedValue(true);
+            (mockService as any).getTransitivePackages.mockResolvedValue({ frameworks: [], dataSourceAvailable: true });
+
+            await messageListener!({ type: 'getTransitivePackages', projectPath: '/proj.csproj', forceRestore: true });
+
+            expect((mockService as any).restoreProject).toHaveBeenCalledWith('/proj.csproj');
+
+            // Restore default
+            NuGetPanel.syncRestore(true);
         });
 
         it('sends empty result on error', async () => {
@@ -1050,54 +1144,360 @@ describe('NuGetPanel', () => {
             mockPanel.webview.postMessage.mockClear();
         });
 
-        it('collects installed packages from all projects (lite mode)', async () => {
-            hoisted.mockQueryAllProjectsInstalled.mockResolvedValueOnce([{
-                projectPath: '/projA.csproj',
-                projectName: 'ProjA',
-                packages: [{ id: 'Pkg', version: '1.0', resolvedVersion: '1.0.0', isImplicit: false }]
-            }]);
+        it('streams allProjectsInstalledStart/ProjectFound/Complete (lite mode)', async () => {
+            hoisted.mockQueryAllProjectsInstalled.mockImplementationOnce(async (_svc: unknown, _lite: boolean, opts: any) => {
+                opts?.onStart?.([{ projectPath: '/projA.csproj', projectName: 'ProjA' }]);
+                opts?.onProject?.({
+                    projectPath: '/projA.csproj',
+                    projectName: 'ProjA',
+                    packages: [{ id: 'Pkg', version: '1.0', resolvedVersion: '1.0.0', isImplicit: false }],
+                });
+                return [];
+            });
             (mockService as any).enrichInstalledPackageMetadata.mockResolvedValue(undefined);
             await messageListener!({ type: 'checkAllProjectsInstalled', context: 'multiInstall' });
 
-            expect(hoisted.mockQueryAllProjectsInstalled).toHaveBeenCalledWith(mockService, true);
-            expect(mockPanel.webview.postMessage).toHaveBeenCalledWith({
-                type: 'allProjectsInstalled',
+            expect(hoisted.mockQueryAllProjectsInstalled).toHaveBeenCalledWith(mockService, true, expect.any(Object));
+            expect(mockPanel.webview.postMessage).toHaveBeenCalledWith(expect.objectContaining({
+                type: 'allProjectsInstalledStart',
                 context: 'multiInstall',
-                projectInstalled: [{
-                    projectPath: '/projA.csproj',
-                    projectName: 'ProjA',
-                    packages: [{ id: 'Pkg', version: '1.0', resolvedVersion: '1.0.0', isImplicit: false }]
-                }]
-            });
+                projects: [{ projectPath: '/projA.csproj', projectName: 'ProjA' }],
+            }));
+            expect(mockPanel.webview.postMessage).toHaveBeenCalledWith(expect.objectContaining({
+                type: 'allProjectsInstalledProjectFound',
+                context: 'multiInstall',
+                projectPath: '/projA.csproj',
+                installed: [{ id: 'Pkg', version: '1.0', resolvedVersion: '1.0.0', isImplicit: false }],
+            }));
+            expect(mockPanel.webview.postMessage).toHaveBeenCalledWith(expect.objectContaining({
+                type: 'allProjectsInstalledComplete',
+                context: 'multiInstall',
+                projectPaths: ['/projA.csproj'],
+            }));
         });
 
-        it('sends allProjectsInstalledMetadata follow-up after enrichment', async () => {
-            hoisted.mockQueryAllProjectsInstalled.mockResolvedValueOnce([{
-                projectPath: '/projA.csproj',
-                projectName: 'ProjA',
-                packages: [{ id: 'Pkg', version: '1.0' }]
-            }]);
+        it('emits allProjectsInstalledProjectMetadata follow-up after enrichment', async () => {
+            hoisted.mockQueryAllProjectsInstalled.mockImplementationOnce(async (_svc: unknown, _lite: boolean, opts: any) => {
+                opts?.onStart?.([{ projectPath: '/projA.csproj', projectName: 'ProjA' }]);
+                opts?.onProject?.({
+                    projectPath: '/projA.csproj',
+                    projectName: 'ProjA',
+                    packages: [{ id: 'Pkg', version: '1.0' }],
+                });
+                return [];
+            });
             (mockService as any).enrichInstalledPackageMetadata.mockImplementation(async (pkgs: { iconUrl?: string }[]) => {
                 pkgs[0].iconUrl = 'https://example.com/icon.png';
             });
             await messageListener!({ type: 'checkAllProjectsInstalled' });
             await vi.waitFor(() => {
                 expect(mockPanel.webview.postMessage).toHaveBeenCalledWith(expect.objectContaining({
-                    type: 'allProjectsInstalledMetadata',
-                    context: undefined
+                    type: 'allProjectsInstalledProjectMetadata',
+                    projectPath: '/projA.csproj',
                 }));
             });
         });
 
-        it('skips projects that throw errors', async () => {
+        it('emits Complete with empty paths when no projects are found', async () => {
             hoisted.mockQueryAllProjectsInstalled.mockResolvedValueOnce([]);
             await messageListener!({ type: 'checkAllProjectsInstalled' });
 
-            expect(mockPanel.webview.postMessage).toHaveBeenCalledWith({
-                type: 'allProjectsInstalled',
+            expect(mockPanel.webview.postMessage).toHaveBeenCalledWith(expect.objectContaining({
+                type: 'allProjectsInstalledComplete',
                 context: undefined,
-                projectInstalled: []
+                projectPaths: [],
+                errored: [],
+            }));
+        });
+
+        it('streams Start, ProjectFound, Complete with echoed requestId (Plan 10)', async () => {
+            hoisted.mockQueryAllProjectsInstalled.mockImplementationOnce(async (_svc: unknown, _lite: boolean, opts: any) => {
+                opts?.onStart?.([
+                    { projectPath: '/a.csproj', projectName: 'A' },
+                    { projectPath: '/b.csproj', projectName: 'B' },
+                ]);
+                opts?.onProject?.({ projectPath: '/a.csproj', projectName: 'A', packages: [{ id: 'Pa', version: '1.0' }] });
+                opts?.onProject?.({ projectPath: '/b.csproj', projectName: 'B', error: 'boom' });
+                return [{ projectPath: '/a.csproj', projectName: 'A', packages: [{ id: 'Pa', version: '1.0' }] }];
             });
+            (mockService as any).enrichInstalledPackageMetadata.mockResolvedValue(undefined);
+
+            await messageListener!({ type: 'checkAllProjectsInstalled', requestId: 'r1', context: 'installed' });
+
+            const calls = mockPanel.webview.postMessage.mock.calls.map((c: any[]) => c[0]);
+            const start = calls.find((m: any) => m.type === 'allProjectsInstalledStart');
+            const founds = calls.filter((m: any) => m.type === 'allProjectsInstalledProjectFound');
+            const complete = calls.find((m: any) => m.type === 'allProjectsInstalledComplete');
+            expect(start).toMatchObject({ context: 'installed', requestId: 'r1' });
+            expect(start.projects).toHaveLength(2);
+            expect(founds).toHaveLength(2);
+            expect(founds[0]).toMatchObject({ requestId: 'r1', projectPath: '/a.csproj' });
+            expect(founds[0].installed).toEqual([{ id: 'Pa', version: '1.0' }]);
+            expect(founds[1]).toMatchObject({ requestId: 'r1', projectPath: '/b.csproj', error: 'boom' });
+            expect(complete).toMatchObject({ context: 'installed', requestId: 'r1' });
+            expect(complete.projectPaths).toEqual(['/a.csproj', '/b.csproj']);
+            expect(complete.errored).toEqual([{ projectPath: '/b.csproj', error: 'boom' }]);
+        });
+
+        it('aborts previous streamed request when a new one arrives for the same context (Plan 10)', async () => {
+            const captured: AbortSignal[] = [];
+            // First call: hang until we manually resolve it.
+            let resolveFirst!: () => void;
+            const firstHang = new Promise<void>((r) => { resolveFirst = r; });
+            hoisted.mockQueryAllProjectsInstalled
+                .mockImplementationOnce(async (_svc: unknown, _lite: boolean, opts: any) => {
+                    if (opts?.signal) { captured.push(opts.signal); }
+                    await firstHang;
+                    return [];
+                })
+                .mockImplementationOnce(async (_svc: unknown, _lite: boolean, opts: any) => {
+                    if (opts?.signal) { captured.push(opts.signal); }
+                    return [];
+                });
+            (mockService as any).enrichInstalledPackageMetadata.mockResolvedValue(undefined);
+
+            // Fire r1 without awaiting (so it's mid-flight when r2 arrives)
+            const firstP = messageListener!({ type: 'checkAllProjectsInstalled', requestId: 'r1', context: 'installed' });
+            await vi.waitFor(() => expect(captured).toHaveLength(1));
+            await messageListener!({ type: 'checkAllProjectsInstalled', requestId: 'r2', context: 'installed' });
+            expect(captured).toHaveLength(2);
+            expect(captured[0].aborted).toBe(true);
+            expect(captured[1].aborted).toBe(false);
+            // Unblock first to clean up
+            resolveFirst();
+            await firstP;
+        });
+
+        it('isolates multiInstall context from installed context aborts (Plan 10 Stage B)', async () => {
+            const captured: AbortSignal[] = [];
+            let resolveInstalled!: () => void;
+            const installedHang = new Promise<void>((r) => { resolveInstalled = r; });
+            let resolveMulti!: () => void;
+            const multiHang = new Promise<void>((r) => { resolveMulti = r; });
+            hoisted.mockQueryAllProjectsInstalled
+                .mockImplementationOnce(async (_svc: unknown, _lite: boolean, opts: any) => {
+                    if (opts?.signal) { captured.push(opts.signal); }
+                    await installedHang;
+                    return [];
+                })
+                .mockImplementationOnce(async (_svc: unknown, _lite: boolean, opts: any) => {
+                    if (opts?.signal) { captured.push(opts.signal); }
+                    await multiHang;
+                    return [];
+                });
+            (mockService as any).enrichInstalledPackageMetadata.mockResolvedValue(undefined);
+
+            const installedP = messageListener!({ type: 'checkAllProjectsInstalled', requestId: 'i1', context: 'installed' });
+            await vi.waitFor(() => expect(captured).toHaveLength(1));
+            const multiP = messageListener!({ type: 'checkAllProjectsInstalled', requestId: 'm1', context: 'multiInstall' });
+            await vi.waitFor(() => expect(captured).toHaveLength(2));
+
+            // Different contexts use different abort keys — neither should abort the other.
+            expect(captured[0].aborted).toBe(false);
+            expect(captured[1].aborted).toBe(false);
+
+            resolveInstalled();
+            resolveMulti();
+            await Promise.all([installedP, multiP]);
+        });
+
+        it('echoes context: multiInstall on streamed chunks (Plan 10 Stage B)', async () => {
+            hoisted.mockQueryAllProjectsInstalled.mockImplementationOnce(async (_svc: unknown, _lite: boolean, opts: any) => {
+                opts?.onStart?.([{ projectPath: '/a.csproj', projectName: 'A' }]);
+                opts?.onProject?.({ projectPath: '/a.csproj', projectName: 'A', packages: [{ id: 'Pa', version: '1.0' }] });
+                return [{ projectPath: '/a.csproj', projectName: 'A', packages: [{ id: 'Pa', version: '1.0' }] }];
+            });
+            (mockService as any).enrichInstalledPackageMetadata.mockResolvedValue(undefined);
+
+            await messageListener!({ type: 'checkAllProjectsInstalled', requestId: 'm1', context: 'multiInstall' });
+
+            const calls = mockPanel.webview.postMessage.mock.calls.map((c: any[]) => c[0]);
+            const streamingCalls = calls.filter((m: any) => typeof m.type === 'string' && m.type.startsWith('allProjectsInstalled'));
+            for (const call of streamingCalls) {
+                expect(call.context).toBe('multiInstall');
+                expect(call.requestId).toBe('m1');
+            }
+        });
+    });
+
+    describe('getAllProjectsTransitive message', () => {
+        beforeEach(() => {
+            NuGetPanel.createOrShow(vscode.Uri.file('/ext'), mockContext, mockOutputChannel, mockService as any);
+            mockPanel.webview.postMessage.mockClear();
+        });
+
+        it('streams Start → ProjectFound → Complete', async () => {
+            hoisted.mockQueryAllProjectsTransitive.mockImplementationOnce(async (_svc: unknown, opts: any) => {
+                opts?.onStart?.([{ projectPath: '/projA.csproj', projectName: 'ProjA' }]);
+                opts?.onProject?.({
+                    projectPath: '/projA.csproj',
+                    projectName: 'ProjA',
+                    frameworks: [{ targetFramework: 'net8.0', packages: [] }],
+                    dataSourceAvailable: true,
+                });
+                return undefined;
+            });
+
+            await messageListener!({ type: 'getAllProjectsTransitive', requestId: 't1' });
+
+            const calls = mockPanel.webview.postMessage.mock.calls.map((c: any[]) => c[0]);
+            expect(calls.find((m: any) => m.type === 'allProjectsTransitiveStart')).toMatchObject({
+                requestId: 't1',
+                projects: [{ projectPath: '/projA.csproj', projectName: 'ProjA' }],
+            });
+            expect(calls.find((m: any) => m.type === 'allProjectsTransitiveProjectFound')).toMatchObject({
+                requestId: 't1',
+                projectPath: '/projA.csproj',
+                dataSourceAvailable: true,
+            });
+            expect(calls.find((m: any) => m.type === 'allProjectsTransitiveComplete')).toMatchObject({
+                requestId: 't1',
+                projectPaths: ['/projA.csproj'],
+                errored: [],
+            });
+        });
+
+        it('forwards errorKind in ProjectFound and Complete.errored', async () => {
+            hoisted.mockQueryAllProjectsTransitive.mockImplementationOnce(async (_svc: unknown, opts: any) => {
+                opts?.onStart?.([{ projectPath: '/projB.csproj', projectName: 'ProjB' }]);
+                opts?.onProject?.({
+                    projectPath: '/projB.csproj',
+                    projectName: 'ProjB',
+                    frameworks: [],
+                    dataSourceAvailable: true,
+                    errorKind: 'parse-failed',
+                });
+                return undefined;
+            });
+
+            await messageListener!({ type: 'getAllProjectsTransitive', requestId: 't2' });
+
+            const calls = mockPanel.webview.postMessage.mock.calls.map((c: any[]) => c[0]);
+            expect(calls.find((m: any) => m.type === 'allProjectsTransitiveProjectFound')).toMatchObject({
+                projectPath: '/projB.csproj',
+                errorKind: 'parse-failed',
+            });
+            expect(calls.find((m: any) => m.type === 'allProjectsTransitiveComplete')).toMatchObject({
+                errored: [{ projectPath: '/projB.csproj', errorKind: 'parse-failed' }],
+            });
+        });
+
+        it('cancelAllProjectsTransitive aborts the in-flight stream', async () => {
+            let abortSignal: AbortSignal | undefined;
+            hoisted.mockQueryAllProjectsTransitive.mockImplementationOnce(async (_svc: unknown, opts: any) => {
+                abortSignal = opts?.signal;
+                opts?.onStart?.([{ projectPath: '/projC.csproj', projectName: 'ProjC' }]);
+                // Don't emit any ProjectFound — wait for abort
+                return undefined;
+            });
+
+            const p = messageListener!({ type: 'getAllProjectsTransitive', requestId: 't3' });
+            await messageListener!({ type: 'cancelAllProjectsTransitive' });
+            await p;
+
+            expect(abortSignal?.aborted).toBe(true);
+        });
+    });
+
+    describe('restoreProjectsBatch message', () => {
+        beforeEach(() => {
+            operationQueue.resetForTests();
+            NuGetPanel.createOrShow(vscode.Uri.file('/ext'), mockContext, mockOutputChannel, mockService as any);
+            mockPanel.webview.postMessage.mockClear();
+            mockService.restoreProject.mockReset();
+            mockService.restoreProject.mockResolvedValue(true);
+        });
+
+        it('returns empty results immediately when projectPaths is empty', async () => {
+            await messageListener!({ type: 'restoreProjectsBatch', requestId: 'r1', projectPaths: [] });
+
+            const calls = mockPanel.webview.postMessage.mock.calls.map((c: any[]) => c[0]);
+            const result = calls.find((m: any) => m.type === 'restoreProjectsBatchResult');
+            expect(result).toMatchObject({ requestId: 'r1', results: [] });
+            expect(mockService.restoreProject).not.toHaveBeenCalled();
+        });
+
+        it('processes paths serially and echoes requestId in result', async () => {
+            const callOrder: string[] = [];
+            mockService.restoreProject.mockImplementation(async (p: string) => {
+                callOrder.push(p);
+                return true;
+            });
+
+            await messageListener!({
+                type: 'restoreProjectsBatch',
+                requestId: 'r2',
+                projectPaths: ['/a.csproj', '/b.csproj', '/c.csproj'],
+            });
+            await operationQueue.waitIdle();
+
+            expect(callOrder).toEqual(['/a.csproj', '/b.csproj', '/c.csproj']);
+            const calls = mockPanel.webview.postMessage.mock.calls.map((c: any[]) => c[0]);
+            const result = calls.find((m: any) => m.type === 'restoreProjectsBatchResult');
+            expect(result.requestId).toBe('r2');
+            expect(result.results).toHaveLength(3);
+            expect(result.results.every((r: any) => r.success === true)).toBe(true);
+        });
+
+        it('captures per-project errors without aborting the batch', async () => {
+            mockService.restoreProject.mockImplementation(async (p: string) => {
+                if (p === '/b.csproj') { throw new Error('restore failed'); }
+                return true;
+            });
+
+            await messageListener!({
+                type: 'restoreProjectsBatch',
+                requestId: 'r3',
+                projectPaths: ['/a.csproj', '/b.csproj', '/c.csproj'],
+            });
+            await operationQueue.waitIdle();
+
+            const calls = mockPanel.webview.postMessage.mock.calls.map((c: any[]) => c[0]);
+            const result = calls.find((m: any) => m.type === 'restoreProjectsBatchResult');
+            expect(result.results).toHaveLength(3);
+            expect(result.results.find((r: any) => r.projectPath === '/a.csproj')).toMatchObject({ success: true });
+            expect(result.results.find((r: any) => r.projectPath === '/b.csproj')).toMatchObject({ success: false, error: 'restore failed' });
+            expect(result.results.find((r: any) => r.projectPath === '/c.csproj')).toMatchObject({ success: true });
+        });
+
+        it('filters ALL_PROJECTS sentinel from input', async () => {
+            mockService.restoreProject.mockResolvedValue(true);
+
+            await messageListener!({
+                type: 'restoreProjectsBatch',
+                requestId: 'r4',
+                projectPaths: ['__all_projects__', '/a.csproj'],
+            });
+            await operationQueue.waitIdle();
+
+            // Only one real project survives; sentinel stripped
+            expect(mockService.restoreProject).toHaveBeenCalledTimes(1);
+            expect(mockService.restoreProject).toHaveBeenCalledWith('/a.csproj');
+        });
+
+        it('synthesizes failure results when operation queue is full', async () => {
+            // Saturate the queue (running + MAX_WAITING=5) so the batch enqueue is rejected.
+            const blockers: Array<() => void> = [];
+            for (let i = 0; i < 6; i++) {
+                operationQueue.enqueue(`blocker-${i}`, () => new Promise<void>(resolve => { blockers.push(resolve); }));
+            }
+
+            await messageListener!({
+                type: 'restoreProjectsBatch',
+                requestId: 'r5',
+                projectPaths: ['/a.csproj', '/b.csproj'],
+            });
+
+            const calls = mockPanel.webview.postMessage.mock.calls.map((c: any[]) => c[0]);
+            const result = calls.find((m: any) => m.type === 'restoreProjectsBatchResult');
+            expect(result.requestId).toBe('r5');
+            expect(result.results).toHaveLength(2);
+            expect(result.results.every((r: any) => r.success === false && /queue is full/i.test(r.error))).toBe(true);
+            // Did not actually invoke the service for any project.
+            expect(mockService.restoreProject).not.toHaveBeenCalled();
+
+            // Drain blockers so other tests start clean.
+            blockers.forEach(r => r());
         });
     });
 
@@ -1255,7 +1655,7 @@ describe('NuGetPanel', () => {
             });
         });
 
-        it('checkAllProjectsInstalled sends empty response on error', async () => {
+        it('checkAllProjectsInstalled sends empty Complete on error', async () => {
             hoisted.mockQueryAllProjectsInstalled.mockRejectedValue(new Error('network error'));
             mockPanel.webview.postMessage.mockClear();
             await messageListener!({
@@ -1263,11 +1663,12 @@ describe('NuGetPanel', () => {
                 context: 'multiInstall'
             });
 
-            expect(mockPanel.webview.postMessage).toHaveBeenCalledWith({
-                type: 'allProjectsInstalled',
+            expect(mockPanel.webview.postMessage).toHaveBeenCalledWith(expect.objectContaining({
+                type: 'allProjectsInstalledComplete',
                 context: 'multiInstall',
-                projectInstalled: []
-            });
+                projectPaths: [],
+                errored: [],
+            }));
         });
     });
 

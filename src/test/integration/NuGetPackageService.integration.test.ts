@@ -147,4 +147,49 @@ describe('NuGetPackageService Integration', () => {
             expect(() => packageService.clearVersionsCache()).not.toThrow();
         });
     });
+
+    describe('prefetch slots', () => {
+        it('caps concurrent prefetch slots at 4', () => {
+            expect(packageService.tryAcquirePrefetchSlot()).toBe(true);
+            expect(packageService.tryAcquirePrefetchSlot()).toBe(true);
+            expect(packageService.tryAcquirePrefetchSlot()).toBe(true);
+            expect(packageService.tryAcquirePrefetchSlot()).toBe(true);
+            expect(packageService.tryAcquirePrefetchSlot()).toBe(false);
+            packageService.releasePrefetchSlot();
+            expect(packageService.tryAcquirePrefetchSlot()).toBe(true);
+            packageService.releasePrefetchSlot();
+            packageService.releasePrefetchSlot();
+            packageService.releasePrefetchSlot();
+            packageService.releasePrefetchSlot();
+        });
+
+        it('release is safe to call when no slot is held', () => {
+            expect(() => packageService.releasePrefetchSlot()).not.toThrow();
+            expect(packageService.tryAcquirePrefetchSlot()).toBe(true);
+            packageService.releasePrefetchSlot();
+        });
+    });
+
+    describe('in-flight dedup', () => {
+        it('dedupes concurrent getPackageVersions calls into one network request', async () => {
+            // Reset mock to count fetchJson calls precisely
+            const localDeps = createDeps();
+            const localService = new NuGetPackageService(localDeps);
+            // First call returns a slow promise to keep it in-flight
+            const fetchJsonMock = localDeps.fetchJson as ReturnType<typeof vi.fn>;
+            fetchJsonMock.mockClear();
+
+            const [a, b] = await Promise.all([
+                localService.getPackageVersions('Newtonsoft.Json', 'https://api.nuget.org/v3/index.json'),
+                localService.getPackageVersions('Newtonsoft.Json', 'https://api.nuget.org/v3/index.json'),
+            ]);
+            expect(a).toEqual(b);
+
+            // Both calls share the same in-flight promise — only one flat-container fetch.
+            const flatContainerCalls = fetchJsonMock.mock.calls.filter(
+                ([url]) => typeof url === 'string' && url.includes('/v3-flatcontainer/') && url.endsWith('/index.json'),
+            );
+            expect(flatContainerCalls.length).toBe(1);
+        });
+    });
 });

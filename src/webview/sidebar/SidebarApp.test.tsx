@@ -16,6 +16,7 @@ vi.mock('./components/PackageRow', () => ({
         <div
             data-testid={`package-row-${props.packageId}`}
             data-context={props.context}
+            data-version={props.version || ''}
             data-installed-version={props.installedVersion || ''}
             data-action-tooltip={props.actionTooltip || ''}
             data-partially-installed={props.partiallyInstalled ? 'true' : ''}
@@ -261,14 +262,14 @@ describe('SidebarApp', () => {
         mockVsCode.postMessage.mockClear();
         sendMessage({ type: 'projectChanged', projectPath: '__all_projects__', projectName: 'All Projects (2)' });
         // Should request all-projects installed data (Installed section is expanded by default)
-        expect(mockVsCode.postMessage).toHaveBeenCalledWith({ type: 'checkAllProjectsInstalled' });
+        expect(mockVsCode.postMessage).toHaveBeenCalledWith(expect.objectContaining({ type: 'checkAllProjectsInstalled' }));
     });
 
     it('fetches all-projects data when state message sets ALL_PROJECTS_SENTINEL', () => {
         render(<SidebarApp />);
         mockVsCode.postMessage.mockClear();
         sendMessage({ type: 'state', selectedProject: '__all_projects__' });
-        expect(mockVsCode.postMessage).toHaveBeenCalledWith({ type: 'checkAllProjectsInstalled' });
+        expect(mockVsCode.postMessage).toHaveBeenCalledWith(expect.objectContaining({ type: 'checkAllProjectsInstalled' }));
     });
 
     it('fetches all-projects data on forceRefresh when in all-projects mode', () => {
@@ -278,7 +279,7 @@ describe('SidebarApp', () => {
         sendMessage({ type: 'allProjectsUpdates', projectUpdates: [] });
         mockVsCode.postMessage.mockClear();
         sendMessage({ type: 'forceRefresh' });
-        expect(mockVsCode.postMessage).toHaveBeenCalledWith({ type: 'checkAllProjectsInstalled' });
+        expect(mockVsCode.postMessage).toHaveBeenCalledWith(expect.objectContaining({ type: 'checkAllProjectsInstalled' }));
     });
 
     it('handles bulkUpdateResult and clears updates', () => {
@@ -894,6 +895,59 @@ describe('SidebarApp', () => {
         );
     });
 
+    it('packageChanged install with version optimistically appends row without re-fetch', () => {
+        render(<SidebarApp />);
+        sendMessage({ type: 'state', selectedProject: '__all_projects__' });
+        sendMessage({
+            type: 'projects', projects: [
+                { name: 'App.csproj', path: '/App.csproj' },
+            ]
+        });
+        sendMessage({
+            type: 'allProjectsInstalled',
+            projectInstalled: [
+                { projectPath: '/App.csproj', projectName: 'App.csproj', packages: [{ id: 'PkgA', version: '1.0.0' }] }
+            ]
+        });
+        mockVsCode.postMessage.mockClear();
+
+        sendMessage({
+            type: 'packageChanged',
+            operation: { type: 'install', packageId: 'NewPkg', projectPath: '/App.csproj', version: '5.0.0' }
+        });
+
+        // Optimistic append, no re-fetch
+        expect(screen.getByTestId('package-row-NewPkg')).toBeDefined();
+        expect(mockVsCode.postMessage).not.toHaveBeenCalledWith(
+            expect.objectContaining({ type: 'checkAllProjectsInstalled' })
+        );
+    });
+
+    it('packageChanged update with version optimistically mutates row version', () => {
+        render(<SidebarApp />);
+        sendMessage({ type: 'state', selectedProject: '__all_projects__' });
+        sendMessage({
+            type: 'projects', projects: [
+                { name: 'App.csproj', path: '/App.csproj' },
+            ]
+        });
+        sendMessage({
+            type: 'allProjectsInstalled',
+            projectInstalled: [
+                { projectPath: '/App.csproj', projectName: 'App.csproj', packages: [{ id: 'PkgA', version: '1.0.0' }] }
+            ]
+        });
+
+        sendMessage({
+            type: 'packageChanged',
+            operation: { type: 'update', packageId: 'PkgA', projectPath: '/App.csproj', version: '2.0.0' }
+        });
+
+        const row = screen.getByTestId('package-row-PkgA');
+        const v = row.getAttribute('data-version') || row.getAttribute('data-installed-version') || '';
+        expect(v).toBe('2.0.0');
+    });
+
     it('collapses and expands project groups in all-projects installed mode', () => {
         render(<SidebarApp />);
         sendMessage({ type: 'state', selectedProject: '__all_projects__' });
@@ -932,5 +986,56 @@ describe('SidebarApp', () => {
 
         // PkgA visible again
         expect(screen.getByTestId('package-row-PkgA')).toBeDefined();
+    });
+
+    // ──────────────────────────────────────────────
+    // Flicker fixes: optimistic single-project mutation + revalidate + conditional spinner
+    // ──────────────────────────────────────────────
+    describe('flicker fixes', () => {
+        it('does not re-fetch installedPackages after single-project installResult (optimistic mutation)', () => {
+            render(<SidebarApp />);
+            sendMessage({ type: 'state', selectedProject: '/App.csproj' });
+            sendMessage({
+                type: 'installedPackages',
+                projectPath: '/App.csproj',
+                packages: [{ id: 'PkgA', version: '1.0.0' }]
+            });
+
+            mockVsCode.postMessage.mockClear();
+
+            sendMessage({
+                type: 'installResult',
+                success: true,
+                packageId: 'PkgB',
+                version: '2.0.0',
+                projectPath: '/App.csproj'
+            });
+
+            // Fix #A: optimistic mutation, no re-fetch round-trip
+            const reFetches = mockVsCode.postMessage.mock.calls.filter(
+                (c: any[]) => c[0]?.type === 'getInstalledPackages'
+            );
+            expect(reFetches.length).toBe(0);
+        });
+
+        it('revalidate message does not clear installed rows before re-fetch', () => {
+            render(<SidebarApp />);
+            sendMessage({ type: 'state', selectedProject: '/App.csproj' });
+            sendMessage({
+                type: 'installedPackages',
+                projectPath: '/App.csproj',
+                packages: [{ id: 'PkgA', version: '1.0.0' }]
+            });
+
+            // Render installed section so PkgA row is in DOM
+            const installedSection = screen.getByTestId('section-installed');
+            // Already expanded by default; verify row visible
+            expect(screen.queryByTestId('package-row-PkgA')).not.toBeNull();
+
+            // Fix #3: revalidate is non-destructive — row stays visible during background re-fetch
+            sendMessage({ type: 'revalidate' });
+            expect(screen.queryByTestId('package-row-PkgA')).not.toBeNull();
+            void installedSection;
+        });
     });
 });

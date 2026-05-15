@@ -110,7 +110,7 @@ src/
 Additional module splits:
 - **`NuGetTypes.ts`** — All exported types/interfaces (`VersionSpec`, `Project`, `InstalledPackage`, `PackageMetadata`, `PackageUpdate`, `NuGetSource`, `NuGetSearchResponse`, `NuGetSearchEntry`, `NuGetRegistrationEntry`, `NuGetRegistrationPage`, etc.). Also exports discriminated union message types: 48 message interfaces (e.g., `GetProjectsMsg`, `InstallPackageMsg`, `ShowContextMenuMsg`), `PanelRequestMessage` (34 variants), and `SidebarRequestMessage` (14 variants) — used by `_handleMessage` in both panels for type-safe switch/case narrowing. `NuGetService.ts` re-exports these for backward compatibility. NuGet V3 API response types use vendor-polymorphic field names (e.g., `id`/`Id`, `authors`/`Authors`) to handle differences between nuget.org, Nexus, ProGet, and other server implementations.
 - **`NuGetUtils.ts`** — Stateless utility functions (`LRUMap`, `batchedPromiseAll`, `execWithTimeout`, `fileExists`, `COMMAND_TIMEOUT`, input validators, `parseVersionSpec`, `isNewerVersion`, `topologicalSortByDependency`). No class dependency.
-- **`NuGetOperations.ts`** — Shared package operation functions used by both `NuGetPanel` and `NuGetSidebarPanel`. Exports an `OperationContext` interface (`{ nugetService, postMessage, notifyOtherPanel }`) and pure async functions: `executeSingleOperation` (install/update/remove), `executeBulkInstall`, `executeBulkUpdatePackages`, `executeBulkRemovePackages`, `executeBulkUpdateAllProjects`, `executeBulkRemoveAllProjects`. Also exports shared query functions: `queryAllProjectsUpdates(nugetService, includePrerelease, liteMode)` and `queryAllProjectsInstalled(nugetService)` with typed return interfaces (`ProjectUpdatesResult[]`, `ProjectInstalledResult[]`). Also exports `resolveAllProjectsIcons(nugetService, packages)` — deduplicates by `packageId@version`, resolves icon URLs via `batchedPromiseAll` (concurrency 10), returns `Record<string, string>` map for progressive UI enrichment. Each panel builds an `OperationContext` via `_opCtx()` and delegates from thin message-handler dispatchers.
+- **`NuGetOperations.ts`** — Shared package operation functions used by both `NuGetPanel` and `NuGetSidebarPanel`. Exports an `OperationContext` interface (`{ nugetService, postMessage, notifyOtherPanel, skipRestore? }`) and pure async functions: `executeSingleOperation` (install/update/remove), `executeBulkInstall`, `executeBulkUpdatePackages`, `executeBulkRemovePackages`, `executeBulkUpdateAllProjects`, `executeBulkRemoveAllProjects`. The `skipRestore` field (positive default — `false`/undefined = restore) is sourced from per-workspace state `nuget.restoreEnabled` (default `true`); both panels snapshot `_opCtx()` at message-handler enqueue time so a mid-operation toggle does not retroactively change in-flight ops. Bulk paths gate the trailing `dotnet restore` phase on `!ctx.skipRestore`. Also exports shared query functions: `queryAllProjectsUpdates(nugetService, includePrerelease, liteMode)` and `queryAllProjectsInstalled(nugetService)` with typed return interfaces (`ProjectUpdatesResult[]`, `ProjectInstalledResult[]`). Also exports `resolveAllProjectsIcons(nugetService, packages)` — deduplicates by `packageId@version`, resolves icon URLs via `batchedPromiseAll` (concurrency 10), returns `Record<string, string>` map for progressive UI enrichment. Each panel builds an `OperationContext` via `_opCtx()` and delegates from thin message-handler dispatchers.
 - `NuGetConfigParser.ts` imports and re-exports `NuGetSource` from `NuGetTypes.ts` — there is a single canonical definition.
 
 ### Module Split: App.tsx
@@ -141,7 +141,7 @@ The sidebar provides a compact package management UI in the VS Code Activity Bar
 - **Partially-installed package UX**: In all-projects mode, `fullyInstalledSet` (useMemo in SidebarApp.tsx) tracks packages installed in ALL projects. `packageProjectsMap` maps packageId → list of project names where installed. Browse rows check `isPartial = !!installed && isAllProjects && !fullyInstalledSet.has(id) && !!projectNames` — the `!!projectNames` guard prevents false positives from optimistic `installedMap` entries that lack cross-project data. Partial packages show `+` icon (dominant intent = install in remaining), N/M badge (e.g., "2/5"), and context menu with all 4 actions (Install Latest, Install Version, Uninstall, Change Version). Fully installed packages show trash icon only. Backend `_showContextMenu` checks `data.partiallyInstalled` to build the appropriate action list; install actions route through `_pickProjectsForInstall()` (multi-select), uninstall/change routes through `_pickProjectForAction(data.installedProjects)` (single-select).
 - **Cross-view sync**: After install/update/remove, sidebar calls `vscode.commands.executeCommand('nuiget.refreshPackagesScoped', operation)` to notify the main panel with operation scope. `refreshPackagesScoped` is internal-only (hidden from Command Palette) — it calls `NuGetPanel.refreshScoped(operation)`, which posts `{ type: 'refreshScoped', operation }` to the webview. The handler sets `skipNextUpdateCheckRef.current = true` (skipping the expensive full `checkPackageUpdates` that the sidebar already performed) and re-fetches only installed packages (cheap .csproj parse). Falls back to `nuiget.refreshPackages` (full refresh) when no operation scope is provided (e.g., file watcher triggers).
 - **Sidebar refresh button**: Title bar `$(refresh)` icon at `navigation@4` clears all source error caches (`clearSourceErrors()` — clears `failedEndpointCache`, `serviceIndexCache`, `failedSources`, `iconSourceMissCount`, and `_sourcesCache`) and re-checks updates via `checkUpdatesInBackground()`. This ensures reconnecting to a previously-unavailable source (e.g., after VPN reconnection) actually retries the network. "Open Full View" is at `navigation@5`.
-- **`.csproj` file watcher**: `NuGetSidebarPanel` registers a debounced (5000ms) `FileSystemWatcher` for `**/*.{csproj,fsproj,vbproj}` changes (content, create, delete). On trigger, it sends `forceRefresh` to the sidebar webview (clearing stale `packageUpdates` and `allProjectsUpdates`), calls `checkUpdatesInBackground(true)`, and calls `_notifyMainPanel()` to refresh the main panel. This handles external changes like `git checkout`, branch switches, or manual .csproj edits.
+- **`.csproj` file watcher**: `NuGetSidebarPanel` registers a debounced (5000ms) `FileSystemWatcher` for `**/*.{csproj,fsproj,vbproj}` changes (content, create, delete). On trigger, it sends `revalidate` to the sidebar webview (non-destructive: re-fetches in background without clearing the displayed list), calls `checkUpdatesInBackground(true)`, and calls `_notifyMainPanel()` to refresh the main panel. The manual refresh button still uses `forceRefresh` (destructive: clears `packageUpdates` and `allProjectsUpdates` immediately so loading skeletons render). `revalidate` exists to prevent flicker on background re-fetches that follow operations or external file edits.
 - **`totalUpdateCount` in sidebar UI**: The sidebar section header update count (`totalUpdateCount`) uses a priority chain: (1) sum of `allProjectsUpdates[].updates.length` when load-all is active, (2) `packageUpdates.length` when available for the selected project, (3) `allProjectsUpdates.find(selectedProject)?.updates.length` as a last resort before data is fully loaded. The `handleUpdateAll` action must read from all tiers to match the displayed count.
 
 ### Message Protocol
@@ -323,24 +323,33 @@ public dispose(): void {
 
 **Critical:** The `_postMessage()` helper must call `this._panel.webview.postMessage()`, not itself, to avoid infinite recursion.
 
-### Concurrent Operation Guard
+### Concurrent Operation Queue
 
-Both `NuGetPanel` and `NuGetSidebarProvider` use an `_operationInProgress` boolean to prevent concurrent mutating operations (e.g., double-clicking install or clicking update while an install is running). In `NuGetPanel`, eight message cases are guarded: `installPackage`, `updatePackage`, `removePackage`, `bulkInstall`, `bulkUpdateAllProjects`, `bulkUpdatePackages`, `confirmBulkRemove`, `confirmBulkRemoveAllProjects`. In `NuGetSidebarProvider`, five message cases are guarded: `installPackage`, `updatePackage`, `removePackage`, `bulkUpdatePackages`, `bulkUpdateAllProjects`. Each uses:
+Mutating package operations (install/update/remove and their bulk variants) are serialized through a process-wide singleton `OperationQueue` in `src/services/OperationQueue.ts`. Both `NuGetPanel` and `NuGetSidebarProvider` enqueue operations to the same queue, which fixes a latent cross-panel race where the panel and sidebar could simultaneously mutate the same `.csproj`.
 
 ```typescript
 case 'installPackage': {
-    if (this._operationInProgress) { break; }
-    this._operationInProgress = true;
-    try {
-        // ... perform operation ...
-    } finally {
-        this._operationInProgress = false;
-    }
+    operationQueue.enqueue(`Install ${pkg.id}`, async () => {
+        try {
+            // ... perform operation ...
+        } finally {
+            // post-op cleanup (notifySidebar, refresh, etc.)
+        }
+    }, () => this._disposed);
     break;
 }
 ```
 
-This is safe because JavaScript is single-threaded — the guard only needs to prevent re-entrant `_handleMessage` calls from queued webview messages.
+Key properties:
+
+- **FIFO promise chain** — each `enqueue` chains onto the previous task's promise. Tasks run in registration order across both panels.
+- **Status bar feedback** — a status bar item (`$(sync~spin) nUIget: N running, M queued`) appears whenever the queue is non-empty so queueing is never silent.
+- **Capped backlog** — `MAX_WAITING = 5`. Beyond that, the call is rejected with a warning toast (returns `false`) instead of growing the queue unbounded.
+- **Disposal-safe** — `enqueue` accepts an `abortIf` predicate (e.g. `() => this._disposed`) checked inside the run wrapper's try/finally so the active counter always decrements.
+- **Error containment** — unexpected throws are caught, logged via `console.error`, and surfaced via `vscode.window.showErrorMessage`.
+- **File watcher integration** — the sidebar's debounced `.csproj` watcher checks `operationQueue.isBusy` (not a per-instance flag), so it correctly defers refresh while operations triggered from any panel are in flight.
+
+`OperationQueue` exposes `isBusy`, `pendingCount`, `activeCount`, `waitIdle()` (snapshot-and-await pattern that handles re-enqueues during await), and `resetForTests()`.
 
 ### Key Message Types
 
@@ -393,9 +402,22 @@ This is safe because JavaScript is single-threaded — the guard only needs to p
 | `checkAllProjectsUpdates` | UI → Ext | Check updates for all projects (sentinel "All Projects" mode) |
 | `allProjectsUpdates` | Ext → UI | Return grouped updates per project |
 | `checkAllProjectsInstalled` | UI → Ext | Get installed packages for all projects (sentinel "All Projects" mode + Multi Install dropdown via `context` field) |
-| `allProjectsInstalled` | Ext → UI | Return grouped installed packages per project (echoes `context` field for routing) — lite mode |
-| `allProjectsInstalledMetadata` | Ext → UI | Two-phase follow-up: enriched metadata for all-projects installed, merged into existing state |
-| `allProjectsIcons` | Ext → UI | Progressive icon enrichment: map of `packageId@version` → icon URL, merged into existing all-projects state |
+| `allProjectsInstalled` | Ext → UI | **Legacy** — non-streamed path removed in Plan 10. No longer emitted by backend; frontend handler retained for backward compatibility. New code uses the `allProjectsInstalledStart`/…`Complete` streaming protocol below. |
+| `allProjectsInstalledStart` | Ext → UI | Streaming (Plan 10): begin all-projects-installed run. Payload: `{ context, requestId, projects: { path, name, workspaceFolder }[] }`. |
+| `allProjectsInstalledProjectFound` | Ext → UI | Streaming: per-project chunk. Payload: `{ context, requestId, projectPath, installed?: InstalledPackage[], error?: string }`. |
+| `allProjectsInstalledProjectMetadata` | Ext → UI | Streaming: per-project enrichment. Payload: `{ context, requestId, projectPath, installed }` with metadata-enriched entries (icon, authors, verified). |
+| `allProjectsInstalledComplete` | Ext → UI | Streaming: terminator. Payload: `{ context, requestId, projectPaths, errored: { projectPath, error }[] }`. Used by frontend to prune stale slots; dedup key is `(context, projectPath)`. |
+| `allProjectsInstalledMetadata` | Ext → UI | **Legacy** — paired with non-streamed `allProjectsInstalled`. No longer emitted by backend. |
+| `allProjectsIcons` | Ext → UI | Progressive icon enrichment for the **updates** path only (`checkAllProjectsUpdates`). Map of `packageId@version` → icon URL, merged into existing `allProjectsUpdates` state. The installed path uses per-project `allProjectsInstalledProjectMetadata` instead. |
+| `getAllProjectsTransitive` | UI → Ext | Streaming: enumerate transitive packages across all projects. Lazy-loaded on Transitive section expand. Payload: `{ requestId }`. Aborted by `cancelAllProjectsTransitive` when section collapses or project switch happens. |
+| `cancelAllProjectsTransitive` | UI → Ext | Abort the in-flight all-projects transitive stream. |
+| `allProjectsTransitiveStart` | Ext → UI | Streaming: begin all-projects transitive run. Payload: `{ requestId, projects: { projectPath, projectName }[] }`. |
+| `allProjectsTransitiveProjectFound` | Ext → UI | Streaming: per-project transitive chunk. Payload: `{ requestId, projectPath, projectName, workspaceFolder?, frameworks, dataSourceAvailable, errorKind? }`. `errorKind` ∈ `'fs-error' \| 'parse-failed' \| 'unknown'`. |
+| `allProjectsTransitiveComplete` | Ext → UI | Streaming: terminator. Payload: `{ requestId, projectPaths, errored: { projectPath, errorKind }[] }`. Frontend uses `errored` to drive the Restore-batch banner. |
+| `getAllProjectsTransitiveMetadata` | UI → Ext | Fetch icon/verified/authors metadata for a deduped set of `(id, version)` pairs aggregated across all projects. Payload: `{ requestId, packages: { id, version }[] }`. |
+| `allProjectsTransitiveMetadata` | Ext → UI | Metadata enrichment response. Payload: `{ requestId, metadata: { id, version, iconUrl?, verified?, authors? }[] }`. |
+| `restoreProjectsBatch` | UI → Ext | Run `dotnet restore` on multiple projects (Restore-batch banner). Payload: `{ requestId, projectPaths }`. |
+| `restoreProjectsBatchResult` | Ext → UI | Per-project restore outcome. Triggers `refreshScoped` to re-stream transitive data. |
 
 #### Package Operations
 | Message | Direction | Purpose |
@@ -446,7 +468,7 @@ This is safe because JavaScript is single-threaded — the guard only needs to p
 
 ### Persistent State (context.workspaceState)
 - Persists across panel closes and VS Code restarts
-- Used for: Include prerelease checkbox, selected NuGet source, recent searches
+- Used for: Include prerelease checkbox, Restore after operations toggle, selected NuGet source, recent searches
 - Accessed via `getSettings`/`saveSettings` messages
 
 ### Global State (context.globalState)
@@ -673,7 +695,9 @@ async getSources(): Promise<NuGetSource[]> {
 ```
 
 ### SDK Version Detection
-`getSdkMajorVersion(projectPath)` runs `dotnet --version` with `cwd` set to the project's directory, respecting directory-level `global.json` files that pin specific SDK versions. The result is cached per directory for the session in `_sdkVersionCache: Map<string, number>`. On SDK 10+, CLI commands use the new noun-first syntax (`dotnet package add/remove/list --project`); on SDK ≤ 9, the old verb-first syntax (`dotnet add/remove/list <project> package`). A `global.json` file watcher in `extension.ts` invalidates the cache when SDK pinning changes. Falls back to SDK 9 (old syntax) on detection failure — safe because the old syntax still works as aliases on SDK 10+. The `cwd` for all project-specific CLI commands is set to `path.dirname(projectPath)` to ensure the correct SDK processes the command.
+`getSdkMajorVersion(projectPath)` runs `dotnet --version` with `cwd` set to the project's directory, respecting directory-level `global.json` files that pin specific SDK versions. The result is cached per directory in `_sdkVersionCache: Map<string, number>` and persisted across VS Code sessions in `context.globalState` (key: `nuiget.sdkVersionCache.v1`). On SDK 10+, CLI commands use the new noun-first syntax (`dotnet package add/remove/list --project`); on SDK ≤ 9, the old verb-first syntax (`dotnet add/remove/list <project> package`). A `global.json` file watcher in `extension.ts` invalidates the cache when SDK pinning changes. Falls back to SDK 9 (old syntax) on detection failure — safe because the old syntax still works as aliases on SDK 10+. The `cwd` for all project-specific CLI commands is set to `path.dirname(projectPath)` to ensure the correct SDK processes the command.
+
+**Persistence model (Plan 11):** The persisted snapshot is stamped with the current extension version; on activation, `hydrateSdkVersionCache(memento, key, extensionVersion)` discards any snapshot whose stamped version differs (handles SDK upgrades that ride along with extension updates). Failed probes are NOT persisted — they stay in-memory only so a transient activation-time PATH glitch does not poison the cache for the next session. Persistence writes are serialized through a single chained promise (`_persistChain`) so concurrent `set()`/`clear()` calls cannot resurrect a cleared snapshot. The persisted map is capped at 256 entries; oldest insertion-order entries evict first when the cap is exceeded. Manual escape hatch: `nUIget: Clear SDK Version Cache` from the Command Palette.
 
 Invalidated by `invalidateSourcesCache()` on enable/disable/add/remove source and `clearSourceErrors()`.
 
@@ -719,9 +743,9 @@ Methods that process many packages pre-fetch `enabledSources` once to avoid repe
 
 **Two-phase CLI search results delivery**: `searchPackages` uses the same two-phase pattern when results come from the CLI path (custom/multiple sources). Phase 1: sends `searchResults` immediately with `liteMode: true` (bare id/version/owners/downloads, no icons/verified/description). Phase 2: if any result has `iconUrl === undefined && verified === undefined` (CLI-path indicator), a fire-and-forget `enrichSearchResultMetadata()` call resolves icons, verified status, authors, and descriptions, then sends `searchResultsMetadata` message. Frontend merges via `setSearchResults` updater with per-field change detection. Both phases are guarded by `_latestSearchQuery` staleness check. API-path results (single nuget.org source) already have metadata — Phase 2 is skipped.
 
-**Two-phase all-projects installed delivery**: `checkAllProjectsInstalled` follows the same pattern — sends `allProjectsInstalled` with `liteMode: true` immediately, then sends `allProjectsInstalledMetadata` after background enrichment of icons, authors, and verified status. The frontend merges those metadata fields by `projectPath + packageId` key into both `allProjectsInstalled` and `multiInstallProjectData` states, respecting the echoed `context` field.
+**Streaming all-projects installed delivery (Plan 10)**: `checkAllProjectsInstalled` (and its sidebar/multi-install variants) emits a streaming protocol — `allProjectsInstalledStart` → N × `allProjectsInstalledProjectFound` → N × `allProjectsInstalledProjectMetadata` → `allProjectsInstalledComplete` — keyed by `(context, requestId)`. Each project surfaces in the UI as soon as its `.csproj` finishes parsing; metadata enrichment (icons/authors/verified) follows per-project. The frontend dedups by `(context, projectPath)`, ignores chunks with stale `requestId`, and on `Complete` prunes any project slots not seen in this run. The legacy non-streamed `allProjectsInstalled`/`allProjectsInstalledMetadata` blob path was removed — frontend handlers remain only as defensive backward compatibility.
 
-**All-projects progressive icon enrichment**: In all-projects mode, `NuGetPanel` uses a two-phase response pattern. First, `checkAllProjectsUpdates`/`checkAllProjectsInstalled` sends the data immediately (fast render). Then, a background `resolveAllProjectsIcons()` call deduplicates packages by `packageId@version`, resolves icon URLs via `batchedPromiseAll` (concurrency 10), and sends an `allProjectsIcons` message with the icon map. The frontend merges icons into existing `allProjectsUpdates` and `allProjectsInstalled` state. This avoids blocking the initial data with N icon HEAD requests. Sidebar skips icon enrichment (compact layout doesn't display icons).
+**All-projects progressive icon enrichment (updates path)**: For the **updates** path (`checkAllProjectsUpdates`), `NuGetPanel` still uses a two-phase pattern. First, `checkAllProjectsUpdates` sends the data immediately (fast render). Then, a background `resolveAllProjectsIcons()` call deduplicates packages by `packageId@version`, resolves icon URLs via `batchedPromiseAll` (concurrency 10), and sends an `allProjectsIcons` message with the icon map. The frontend merges icons into existing `allProjectsUpdates` state. Sidebar skips icon enrichment (compact layout doesn't display icons). The installed path no longer uses `allProjectsIcons` — it relies on per-project `allProjectsInstalledProjectMetadata` chunks instead.
 
 **Incremental streaming update results**: `checkPackageUpdates` accepts an optional `onUpdateFound` callback. As each package's update is discovered (inside `batchedPromiseAll` with concurrency 16), the callback fires immediately — NuGetPanel sends a `packageUpdateFound` message per update. The final authoritative `packageUpdates` message follows when all packages finish. Frontend handles `packageUpdateFound` by appending to `packagesWithUpdates` with dedup guard (prevents same package appearing twice) and incrementing `updateCount` optimistically. The final `packageUpdates` replaces progressive state with authoritative data and sets `loadingUpdates = false`. UpdatesTab renders progressively: when `isLoading && !hasNoUpdates && !isAllProjects` (`isStreaming`), it shows the found packages list with a streaming indicator instead of just a spinner. Scope: single-project only — all-projects mode and sidebar `checkPackageUpdatesMinimal` are unaffected.
 
@@ -739,6 +763,20 @@ const timer = setTimeout(() => {
 }, 2000);
 return () => clearTimeout(timer);
 ```
+
+### All-Projects Transitive Aggregation
+In all-projects mode, transitive packages are aggregated into a **single** Transitive Packages section instead of per-project per-framework sections. Loading is lazy: the stream only kicks off when the user expands the section (`onAllProjectsTransitiveExpandedChange(true)` posts `getAllProjectsTransitive`). Collapsing does **not** abort — results are kept for re-expansion. The stream is aborted on project switch (`ALL_PROJECTS` ↔ single) and on `refresh`/`refreshScoped` via `cancelAllProjectsTransitive`.
+
+**Backend** (`queryAllProjectsTransitive` in `NuGetOperations.ts`): Streams chunks via `onStart` → N × `onProject` callbacks at concurrency 4. Each chunk goes through `getTransitivePackagesPreservingErrors` which has an mtime-keyed cache (capped at 100 entries, TTL-bounded) and bucketizes failures into `fs-error` / `parse-failed` / `unknown` instead of throwing. Missing `obj/project.assets.json` (ENOENT) sets `dataSourceAvailable: false` so the UI can offer a Restore-batch banner.
+
+**Frontend** (`App.tsx`):
+- Origin rows are stored in `allProjectsTransitiveRows` keyed by `(projectPath, frameworkTfm, chainHash)`.
+- A `useMemo` aggregates them by `lowerId@versionNormalized` into the rows shown by InstalledTab. The memo merges `requiredByChain` entries from every origin so the details panel can group them by project.
+- Selection state stores only `(lowerId, versionNormalized)`; a `useEffect` re-resolves the live row from the aggregated memo whenever it changes (and clears the selection if the row disappears, e.g., after a restore).
+- Lifecycle: `refresh` and `refreshScoped` reset all transitive state. Switching project (`ALL_PROJECTS` ↔ single) cancels the stream and resets state.
+- Restore banner: shown only when the section is expanded AND `errored` chunks include at least one `fs-error`-bucket entry. `onRestoreProjectsBatch` is debounced (idempotent no-op while running). After backend `restoreProjectsBatchResult`, a `refreshScoped` re-emits per-project chunks for the affected projects.
+
+**Required-by display**: The package details panel groups the merged `requiredByChain` entries by project, then by top-level package. Single-project transitive rows still use the original ungrouped layout.
 
 ### WorkspaceCache Utility
 Location: `src/services/WorkspaceCache.ts`
@@ -1175,6 +1213,46 @@ Stale indicators provide visual feedback with CSS opacity fade:
 .package-list.stale { opacity: 0.7; transition: opacity 0.2s ease-out; }
 .tab.pending { opacity: 0.7; }
 ```
+
+## Performance Instrumentation
+
+Location: `src/services/NuGetPerf.ts`
+
+Optional, lightweight timing instrumentation gated by the `nuiget.enablePerformanceLogging` setting (default: `false`). When disabled, every call is a no-op — no `performance.now()` calls, no log writes, no allocations beyond a shared no-op timer.
+
+### API
+
+```ts
+configurePerf(channel: vscode.LogOutputChannel): vscode.Disposable  // wire up at activation
+isPerfEnabled(): boolean                                            // hot-path guard
+startTimer(label: string, projectPath?: string): PerfTimer          // returns { mark, end }
+timed(label, projectPath, async fn): Promise<T>                     // single-phase wrapper
+```
+
+### Output format
+
+- Total: `[perf] <label> <ms>ms key=val key=val` (logged via `channel.info`)
+- Sub-phase: `[perf] <label> <phase> <ms>ms` (logged via `channel.debug`)
+- Multi-root tag: `[perf] [<workspaceFolder.name>] <label> ...` — only emitted when `vscode.workspace.workspaceFolders.length >= 2`. Single-root workspaces get untagged lines.
+
+### Where it's wired
+
+- **Webview ↔ host handshake.** The main panel posts `{ type: 'webviewReady' }` as the first message after mount; `NuGetPanel` records `panelOpen→webviewReady` and (on first non-empty installed-data state) `panelOpen→firstUsefulRender`. The sidebar's existing `{ type: 'ready' }` is timed against `resolveWebviewView` as `sidebarResolve→ready`.
+- **Hot handlers.** `getInstalledPackages`, `searchPackages`, `installPackage`, `updatePackage`, `removePackage` are wrapped with entry-level timers. Two-phase paths (`searchPackages` lite-then-enrich, `getInstalledPackages` lite-then-icons) emit a `mark('lite')` after Phase 1; Phase 2 enrichment runs un-timed in the background.
+- **Sidebar initial data.** `_sendInitialData()` is wrapped with `sidebar.sendInitialData`.
+
+### Adding new timers
+
+1. `import { startTimer } from '../services/NuGetPerf';`
+2. `const t = startTimer('myOperation', projectPath);`
+3. `t.mark('phase1')` for sub-phase boundaries (optional).
+4. `t.end({ count, hit: 1 })` to log totals plus arbitrary diagnostic key/value pairs.
+
+Always pass `projectPath` for project-scoped operations so multi-root workspaces can correlate timings to the right repo. Skip the parameter for global operations (source health, HTTP cache clear, panel chrome).
+
+### Benchmarks vs. live perf
+
+Microbenchmarks under `src/test/benchmarks/` measure isolated code paths (caching, parsing, sort) against `benchmarks/baseline.json` with a ±15 % single-machine tolerance — see `benchmarks/README.md`. The `[perf]` log channel is the complement: it captures real user-perceived latency (panel open → first paint, install → UI updated) on actual workspaces. Use both.
 
 ## HTTP/2 Client
 

@@ -10,11 +10,13 @@ import { MemoizedSourceSettingsOverlay } from './components/SourceSettingsOverla
 import type { UpdatesTabHandle } from './components/UpdatesTab';
 import { MemoizedUpdatesTab } from './components/UpdatesTab';
 import { usePackageSelection } from './hooks/usePackageSelection';
+import { useHoverPrefetch } from './hooks/useHoverPrefetch';
 import { ClearAllIcon, CloudDownloadIcon, FilterIcon, LoadingIcon, SettingsGearIcon, SyncIcon, VerifiedIcon, WarningIcon } from './icons';
 import { renderMarkdownToHtml } from './markdownSetup';
-import type { AppState, FailedSource, InstalledPackage, NuGetSource, PackageMetadata, PackageSearchResult, PackageUpdate, Project, ProjectInstalled, ProjectUpdates, QuickSearchSourceResult, TabType, TransitivePackage, VulnerabilitySeverity } from './types';
+import type { AllProjectsTransitiveRow, AppState, FailedSource, InstalledPackage, NuGetSource, PackageMetadata, PackageSearchResult, PackageUpdate, Project, ProjectInstalled, ProjectUpdates, QuickSearchSourceResult, SelectedTransitivePackage, TabType, VulnerabilitySeverity } from './types';
 import { ALL_PROJECTS_SENTINEL, LRUMap, getPackageId } from './types';
 import { FILTER_PREFIXES, parseSearchQuery } from './utils/parseSearchQuery';
+import { aggregateAllProjectsTransitive, selectErroredTransitiveProjects, type ProjectTransitiveSlot } from './utils/aggregateAllProjectsTransitive';
 
 // Get the default package icon URL from the root element data attribute
 const defaultPackageIcon = document.getElementById('root')?.dataset.packageIcon || '';
@@ -55,6 +57,7 @@ export const App: React.FC = () => {
     const [detailsTab, setDetailsTab] = useState<'details' | 'readme'>('details');
     const [expandedDeps, setExpandedDeps] = useState<Set<string>>(new Set());
     const [includePrerelease, setIncludePrerelease] = useState<boolean>(savedState?.includePrerelease || false);
+    const [restoreEnabled, setRestoreEnabled] = useState<boolean>(savedState?.restoreEnabled ?? true);
     const [recentSearches, setRecentSearches] = useState<string[]>(savedState?.recentSearches || []);
     // Search debounce settings from extension
     const [searchDebounceMode, setSearchDebounceMode] = useState<'quicksearch' | 'full' | 'off'>('quicksearch');
@@ -89,7 +92,7 @@ export const App: React.FC = () => {
     // Split panel position state (35% default, range 20-80%)
     const [splitPosition, setSplitPosition] = useState(35);
 
-    const [selectedTransitivePackage, setSelectedTransitivePackage] = useState<TransitivePackage | null>(null);
+    const [selectedTransitivePackage, setSelectedTransitivePackage] = useState<SelectedTransitivePackage | null>(null);
 
     // --- Unified search bar state (lifted from BrowseTab) ---
     const [searchQuery, setSearchQuery] = useState('');
@@ -126,9 +129,10 @@ export const App: React.FC = () => {
             activeTab,
             searchQuery: '',
             includePrerelease,
+            restoreEnabled,
             recentSearches
         });
-    }, [selectedProject, selectedSource, activeTab, includePrerelease, recentSearches]);
+    }, [selectedProject, selectedSource, activeTab, includePrerelease, restoreEnabled, recentSearches]);
 
     // Use ref to track latest selectedProject for message handler
     const selectedProjectRef = useRef(selectedProject);
@@ -180,6 +184,8 @@ export const App: React.FC = () => {
     const includePrereleaseRef = useRef(includePrerelease);
     // Flag to skip saveSettings when prerelease was synced from backend (prevents echo loop)
     const skipSaveRef = useRef(false);
+    // Flag to skip saveSettings when restoreEnabled was synced from sidebar (prevents echo loop)
+    const skipRestoreSaveRef = useRef(false);
     // Flags to skip saveSettings when source/project were synced from backend (prevents echo loop)
     const skipSourceSaveRef = useRef(false);
     const skipProjectSaveRef = useRef(false);
@@ -189,6 +195,81 @@ export const App: React.FC = () => {
     const refreshDebounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
     // Clean up debounce timer on unmount
     useEffect(() => () => { if (refreshDebounceRef.current) { clearTimeout(refreshDebounceRef.current); } }, []);
+    /**
+     * Plan 10 — active requestId for the streamed `installed`-context all-projects-installed query.
+     * Chunks tagged with a different (older) requestId are discarded as stale.
+     */
+    const installedStreamRequestIdRef = useRef<string>('');
+    const requestStreamedAllProjectsInstalled = useCallback(() => {
+        const requestId = `apinst-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+        installedStreamRequestIdRef.current = requestId;
+        vscode.postMessage({ type: 'checkAllProjectsInstalled', requestId });
+    }, []);
+    /** Plan 10 Stage B: separate request id for the multiInstall context (independent abort lifetime). */
+    const multiInstallStreamRequestIdRef = useRef<string>('');
+    const requestStreamedMultiInstall = useCallback(() => {
+        const requestId = `apinst-mi-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+        multiInstallStreamRequestIdRef.current = requestId;
+        vscode.postMessage({ type: 'checkAllProjectsInstalled', requestId, context: 'multiInstall' });
+    }, []);
+
+    /**
+     * All-projects transitive aggregation state.
+     * Slots are keyed by projectPath. Streamed via `getAllProjectsTransitive` →
+     * `allProjectsTransitiveStart` → N×`allProjectsTransitiveProjectFound` →
+     * `allProjectsTransitiveComplete`. Stale `requestId` discarded.
+     * Aggregation produces `allProjectsTransitiveRows` (deduped by id@version).
+     */
+    const [allProjectsTransitive, setAllProjectsTransitive] = useState<Record<string, ProjectTransitiveSlot>>({});
+    const [loadingAllProjectsTransitive, setLoadingAllProjectsTransitive] = useState(false);
+    const [allProjectsTransitiveLoaded, setAllProjectsTransitiveLoaded] = useState(false);
+    const allProjectsTransitiveRequestIdRef = useRef<string>('');
+    /** Mirror of the InstalledTab's all-projects transitive expand state. */
+    const allProjectsTransitiveExpandedRef = useRef(false);
+    /** Idempotency guard for restoreProjectsBatch — disables button while batch is in flight. */
+    const [restoringProjectsBatch, setRestoringProjectsBatch] = useState(false);
+    const restoreProjectsBatchRequestIdRef = useRef<string>('');
+
+    const requestStreamedAllProjectsTransitive = useCallback(() => {
+        // Cancel any in-flight stream first
+        if (allProjectsTransitiveRequestIdRef.current) {
+            vscode.postMessage({ type: 'cancelAllProjectsTransitive', requestId: allProjectsTransitiveRequestIdRef.current });
+        }
+        const requestId = `aptrans-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+        allProjectsTransitiveRequestIdRef.current = requestId;
+        setLoadingAllProjectsTransitive(true);
+        setAllProjectsTransitiveLoaded(false);
+        setAllProjectsTransitive({});
+        vscode.postMessage({ type: 'getAllProjectsTransitive', requestId });
+    }, []);
+
+    const cancelAllProjectsTransitive = useCallback(() => {
+        if (allProjectsTransitiveRequestIdRef.current) {
+            vscode.postMessage({ type: 'cancelAllProjectsTransitive', requestId: allProjectsTransitiveRequestIdRef.current });
+        }
+        allProjectsTransitiveRequestIdRef.current = '';
+        setLoadingAllProjectsTransitive(false);
+    }, []);
+
+    /**
+     * Called by InstalledTab when the all-projects transitive section is expanded
+     * or collapsed. Lazy-loads on first expand. Collapse never aborts an in-flight
+     * stream (per spec — keep result for re-expansion).
+     */
+    const handleAllProjectsTransitiveExpandedChange = useCallback((expanded: boolean) => {
+        allProjectsTransitiveExpandedRef.current = expanded;
+        if (expanded && !allProjectsTransitiveLoaded && !loadingAllProjectsTransitive) {
+            requestStreamedAllProjectsTransitive();
+        }
+    }, [allProjectsTransitiveLoaded, loadingAllProjectsTransitive, requestStreamedAllProjectsTransitive]);
+
+    const handleRestoreProjectsBatch = useCallback((projectPaths: string[]) => {
+        if (projectPaths.length === 0 || restoringProjectsBatch) { return; }
+        const requestId = `aprestore-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+        restoreProjectsBatchRequestIdRef.current = requestId;
+        setRestoringProjectsBatch(true);
+        vscode.postMessage({ type: 'restoreProjectsBatch', requestId, projectPaths });
+    }, [restoringProjectsBatch]);
     useEffect(() => {
         includePrereleaseRef.current = includePrerelease;
     }, [includePrerelease]);
@@ -257,6 +338,15 @@ export const App: React.FC = () => {
         includePrerelease,
         selectedPackage,
         vscode,
+    });
+
+    // Hover prefetch — prefetches metadata + versions on row hover (150ms debounce, 4-concurrent backend cap)
+    const hoverPrefetch = useHoverPrefetch({
+        versionsCache,
+        metadataCache,
+        selectedSourceRef,
+        includePrereleaseRef,
+        postMessage: (msg) => vscode.postMessage(msg),
     });
 
     // Auto-focus the active tab on initial mount
@@ -476,8 +566,31 @@ export const App: React.FC = () => {
             case 'updateResult':
             case 'removeResult':
                 if (message.success) {
+                    const opPkgIdMain = (message.packageId as string)?.toLowerCase();
+                    const opVerMain = (message.version as string) || '';
+                    const opProjPathMain = message.projectPath as string | undefined;
                     if (selectedProjectRef.current === ALL_PROJECTS_SENTINEL) {
-                        // All-projects mode: re-fetch all-projects data
+                        // All-projects mode: optimistically mutate, then re-fetch authoritative
+                        if (opPkgIdMain && opProjPathMain && (message.type === 'installResult' || message.type === 'updateResult') && opVerMain) {
+                            setAllProjectsInstalled(prev => {
+                                const updated = prev.map(pi => {
+                                    if (pi.projectPath !== opProjPathMain) { return pi; }
+                                    if (message.type === 'updateResult') {
+                                        return { ...pi, packages: pi.packages.map(p =>
+                                            p.id.toLowerCase() === opPkgIdMain
+                                                ? { ...p, version: opVerMain, resolvedVersion: opVerMain }
+                                                : p
+                                        ) };
+                                    }
+                                    if (pi.packages.some(p => p.id.toLowerCase() === opPkgIdMain)) { return pi; }
+                                    return { ...pi, packages: [...pi.packages, { id: message.packageId as string, version: opVerMain, resolvedVersion: opVerMain } as InstalledPackage] };
+                                });
+                                return updated;
+                            });
+                            if (message.type === 'installResult') {
+                                setInstalledPackages(prev => prev.some(p => p.id.toLowerCase() === opPkgIdMain) ? prev : [...prev, { id: message.packageId as string, version: opVerMain, resolvedVersion: opVerMain } as InstalledPackage]);
+                            }
+                        }
                         skipNextUpdateCheckRef.current = true;
                         setLoadingAllProjectsUpdates(true);
                         vscode.postMessage({
@@ -485,16 +598,24 @@ export const App: React.FC = () => {
                             includePrerelease: includePrereleaseRef.current
                         });
                         setLoadingAllProjectsInstalled(true);
-                        vscode.postMessage({ type: 'checkAllProjectsInstalled' });
+                        requestStreamedAllProjectsInstalled();
                     } else if (message.projectPath === selectedProjectRef.current) {
-                        // Single-project mode: refresh installed packages
-                        const changedId = (message.packageId as string)?.toLowerCase();
-                        if (changedId && (message.type === 'updateResult' || message.type === 'removeResult')) {
+                        // Single-project mode: optimistic mutation + re-fetch
+                        if (opPkgIdMain && (message.type === 'updateResult' || message.type === 'removeResult')) {
                             setPackagesWithUpdates(prev => {
-                                const filtered = prev.filter(p => p.id.toLowerCase() !== changedId);
+                                const filtered = prev.filter(p => p.id.toLowerCase() !== opPkgIdMain);
                                 setUpdateCount(filtered.length);
                                 return filtered;
                             });
+                        }
+                        if (opPkgIdMain && opVerMain && message.type === 'installResult') {
+                            setInstalledPackages(prev => prev.some(p => p.id.toLowerCase() === opPkgIdMain) ? prev : [...prev, { id: message.packageId as string, version: opVerMain, resolvedVersion: opVerMain } as InstalledPackage]);
+                        } else if (opPkgIdMain && opVerMain && message.type === 'updateResult') {
+                            setInstalledPackages(prev => prev.map(p =>
+                                p.id.toLowerCase() === opPkgIdMain
+                                    ? { ...p, version: opVerMain, resolvedVersion: opVerMain }
+                                    : p
+                            ));
                         }
                         skipNextUpdateCheckRef.current = true;
                         vscode.postMessage({ type: 'getInstalledPackages', projectPath: selectedProjectRef.current });
@@ -574,7 +695,7 @@ export const App: React.FC = () => {
                         });
                     }
                     // Also re-fetch for full accuracy
-                    vscode.postMessage({ type: 'checkAllProjectsInstalled', context: 'multiInstall' });
+                    requestStreamedMultiInstall();
                     // Refresh current project's installed packages
                     if (bulkResults?.some(r => r.success && r.projectPath === selectedProjectRef.current)) {
                         vscode.postMessage({ type: 'getInstalledPackages', projectPath: selectedProjectRef.current });
@@ -595,7 +716,17 @@ export const App: React.FC = () => {
                             includePrerelease: includePrereleaseRef.current
                         });
                         setLoadingAllProjectsInstalled(true);
-                        vscode.postMessage({ type: 'checkAllProjectsInstalled' });
+                        requestStreamedAllProjectsInstalled();
+                        // Transitive: refresh if currently expanded; else cancel any in-flight
+                        // stream and clear so next expand re-fetches. (Without cancel, late chunks
+                        // from a prior expand can repopulate the cleared map and leave it stuck.)
+                        if (allProjectsTransitiveExpandedRef.current) {
+                            requestStreamedAllProjectsTransitive();
+                        } else {
+                            cancelAllProjectsTransitive();
+                            setAllProjectsTransitiveLoaded(false);
+                            setAllProjectsTransitive({});
+                        }
                     } else if (selectedProjectRef.current) {
                         vscode.postMessage({ type: 'getInstalledPackages', projectPath: selectedProjectRef.current });
                     }
@@ -629,7 +760,16 @@ export const App: React.FC = () => {
                         }
                         // Re-fetch installed data (cheap — just reads .csproj files)
                         setLoadingAllProjectsInstalled(true);
-                        vscode.postMessage({ type: 'checkAllProjectsInstalled' });
+                        requestStreamedAllProjectsInstalled();
+                        // Transitive: invalidate. Re-fetch if expanded; else cancel any in-flight
+                        // stream and clear so next expand re-fetches.
+                        if (allProjectsTransitiveExpandedRef.current) {
+                            requestStreamedAllProjectsTransitive();
+                        } else {
+                            cancelAllProjectsTransitive();
+                            setAllProjectsTransitiveLoaded(false);
+                            setAllProjectsTransitive({});
+                        }
                     } else if (selectedProjectRef.current) {
                         vscode.postMessage({ type: 'getInstalledPackages', projectPath: selectedProjectRef.current });
                     }
@@ -712,6 +852,25 @@ export const App: React.FC = () => {
                     setLoadingMetadata(false);
                 }
                 break;
+            case 'packageVersionsPrefetched':
+                {
+                    const key = `${(message.packageId as string).toLowerCase()}|${(!message.source || message.source === 'all') ? '' : message.source}|${!!message.includePrerelease}`;
+                    hoverPrefetch.pendingVersions.current.delete(key);
+                    if (!message.dropped && Array.isArray(message.versions) && message.versions.length > 0) {
+                        versionsCache.current.set(key, message.versions);
+                    }
+                }
+                break;
+            case 'packageMetadataPrefetched':
+                {
+                    const echoedSource = (!message.source || message.source === 'all') ? '' : message.source;
+                    const key = `${(message.packageId as string).toLowerCase()}@${message.version}|${echoedSource}`;
+                    hoverPrefetch.pendingMetadata.current.delete(key);
+                    if (!message.dropped && message.metadata) {
+                        metadataCache.current.set(key, message.metadata);
+                    }
+                }
+                break;
             case 'packageUpdateFound':
                 // Progressive streaming: a single update was found during checkPackageUpdates.
                 // Use ref-tracked IDs to guard both state updates identically,
@@ -770,8 +929,16 @@ export const App: React.FC = () => {
                     setLoadingAllProjectsUpdates(false);
                     // Don't re-request checkAllProjectsUpdates — optimistic state is sufficient.
                     // Background check (10-min timer) or manual refresh will reconcile if needed.
-                    // Still refresh current project's installed packages for transitive accuracy.
-                    if (selectedProjectRef.current) {
+                    // Refresh installed packages so the visible row's version flips after the
+                    // bulk operation. Plan 10 fix (B2): in all-projects mode the legacy
+                    // single-project `getInstalledPackages` request was silently rejected
+                    // by the backend (sentinel is not a real path), leaving stale rows
+                    // until the next file-watcher tick. Use the streamed all-projects
+                    // path so rows refresh deterministically and with progressive paint.
+                    if (selectedProjectRef.current === ALL_PROJECTS_SENTINEL) {
+                        setLoadingAllProjectsInstalled(true);
+                        requestStreamedAllProjectsInstalled();
+                    } else if (selectedProjectRef.current) {
                         skipNextUpdateCheckRef.current = true;
                         vscode.postMessage({ type: 'getInstalledPackages', projectPath: selectedProjectRef.current });
                         installedTabCompRef.current?.resetTransitiveState(true);
@@ -831,6 +998,233 @@ export const App: React.FC = () => {
                     }
                 }
                 break;
+            case 'allProjectsInstalledStart':
+                {
+                    // Plan 10 Stage A/B: streams `installed` and `multiInstall` contexts.
+                    const isMulti = message.context === 'multiInstall';
+                    const expectedReq = isMulti ? multiInstallStreamRequestIdRef.current : installedStreamRequestIdRef.current;
+                    if (message.requestId !== expectedReq) { break; }
+                    const projects = (message.projects || []) as { projectPath: string; projectName: string; workspaceFolder?: string }[];
+                    const provisional: ProjectInstalled[] = projects.map(p => ({
+                        projectPath: p.projectPath,
+                        projectName: p.projectName,
+                        workspaceFolder: p.workspaceFolder,
+                        packages: [],
+                    }));
+                    if (isMulti) {
+                        setMultiInstallProjectData(provisional);
+                    } else {
+                        setAllProjectsInstalled(provisional);
+                        setLoadingAllProjectsInstalled(true);
+                    }
+                }
+                break;
+            case 'allProjectsInstalledProjectFound':
+                {
+                    const isMulti = message.context === 'multiInstall';
+                    const expectedReq = isMulti ? multiInstallStreamRequestIdRef.current : installedStreamRequestIdRef.current;
+                    if (message.requestId !== expectedReq) { break; }
+                    const projectPath = message.projectPath as string;
+                    const projectName = (message.projectName as string | undefined) ?? projectPath;
+                    const workspaceFolder = message.workspaceFolder as string | undefined;
+                    const installed = (message.installed as InstalledPackage[] | undefined) ?? [];
+                    // Plan 10 (I4): backend may report a per-project failure via `error`.
+                    // Thread it through so the UI can render an inline error row.
+                    const error = message.error as string | undefined;
+                    const upsert = (prev: ProjectInstalled[]) => {
+                        const idx = prev.findIndex(p => p.projectPath === projectPath);
+                        // Preserve workspaceFolder set in Start chunk if ProjectFound omits it.
+                        const existing = idx === -1 ? undefined : prev[idx];
+                        const slot: ProjectInstalled = {
+                            projectPath,
+                            projectName,
+                            workspaceFolder: workspaceFolder ?? existing?.workspaceFolder,
+                            packages: installed,
+                            error,
+                        };
+                        if (idx === -1) { return [...prev, slot]; }
+                        const next = prev.slice();
+                        next[idx] = slot;
+                        return next;
+                    };
+                    if (isMulti) {
+                        setMultiInstallProjectData(upsert);
+                    } else {
+                        setAllProjectsInstalled(upsert);
+                    }
+                }
+                break;
+            case 'allProjectsInstalledProjectMetadata':
+                {
+                    const isMulti = message.context === 'multiInstall';
+                    const expectedReq = isMulti ? multiInstallStreamRequestIdRef.current : installedStreamRequestIdRef.current;
+                    if (message.requestId !== expectedReq) { break; }
+                    const projectPath = message.projectPath as string;
+                    const enriched = (message.installed as Array<Partial<InstalledPackage> & { id: string }> | undefined) ?? [];
+                    if (enriched.length === 0) { break; }
+                    const enrichedById = new Map(enriched.map(p => [p.id.toLowerCase(), p]));
+                    const merger = (prev: ProjectInstalled[]) => {
+                        const idx = prev.findIndex(p => p.projectPath === projectPath);
+                        if (idx === -1) { return prev; }
+                        const proj = prev[idx];
+                        let projChanged = false;
+                        const pkgs = proj.packages.map(pkg => {
+                            const meta = enrichedById.get(pkg.id.toLowerCase());
+                            if (!meta) { return pkg; }
+                            const patchEntries = Object.entries(meta).filter(([key, value]) => key !== 'id' && value !== undefined);
+                            if (patchEntries.length === 0) { return pkg; }
+                            const hasChanges = patchEntries.some(([key, value]) => pkg[key as keyof InstalledPackage] !== value);
+                            if (!hasChanges) { return pkg; }
+                            projChanged = true;
+                            return { ...pkg, ...Object.fromEntries(patchEntries) };
+                        });
+                        if (!projChanged) { return prev; }
+                        const next = prev.slice();
+                        next[idx] = { ...proj, packages: pkgs };
+                        return next;
+                    };
+                    if (isMulti) {
+                        setMultiInstallProjectData(merger);
+                    } else {
+                        setAllProjectsInstalled(merger);
+                        // Mirror to multiInstall snapshot (legacy parity for the installed-context stream)
+                        setMultiInstallProjectData(merger);
+                    }
+                }
+                break;
+            case 'allProjectsInstalledComplete':
+                {
+                    const isMulti = message.context === 'multiInstall';
+                    const expectedReq = isMulti ? multiInstallStreamRequestIdRef.current : installedStreamRequestIdRef.current;
+                    if (message.requestId !== expectedReq) { break; }
+                    const seen = new Set<string>((message.projectPaths || []) as string[]);
+                    if (isMulti) {
+                        setMultiInstallProjectData(prev => prev.filter(p => seen.has(p.projectPath)));
+                    } else {
+                        setAllProjectsInstalled(prev => {
+                            const pruned = prev.filter(p => seen.has(p.projectPath));
+                            // Mirror to multi-install snapshot (legacy parity)
+                            setMultiInstallProjectData(pruned);
+                            return pruned;
+                        });
+                        setLoadingAllProjectsInstalled(false);
+                    }
+                }
+                break;
+            case 'allProjectsTransitiveStart':
+                if (message.requestId !== allProjectsTransitiveRequestIdRef.current) { break; }
+                {
+                    // Initialize empty slots for each project so the UI can show "loading" rows.
+                    const slots: Record<string, ProjectTransitiveSlot> = {};
+                    for (const p of (message.projects || [])) {
+                        slots[p.projectPath] = {
+                            projectName: p.projectName,
+                            workspaceFolder: p.workspaceFolder,
+                            frameworks: [],
+                            dataSourceAvailable: false,
+                            received: false,
+                        };
+                    }
+                    setAllProjectsTransitive(slots);
+                }
+                break;
+            case 'allProjectsTransitiveProjectFound':
+                if (message.requestId !== allProjectsTransitiveRequestIdRef.current) { break; }
+                setAllProjectsTransitive(prev => ({
+                    ...prev,
+                    [message.projectPath]: {
+                        projectName: message.projectName,
+                        workspaceFolder: message.workspaceFolder,
+                        frameworks: message.frameworks || [],
+                        dataSourceAvailable: !!message.dataSourceAvailable,
+                        errorKind: message.errorKind,
+                        received: true,
+                    },
+                }));
+                break;
+            case 'allProjectsTransitiveMetadata':
+                if (message.requestId !== allProjectsTransitiveRequestIdRef.current) { break; }
+                {
+                    // Build lookup keyed by lowerId@versionNorm
+                    const metaMap = new Map<string, { iconUrl?: string; verified?: boolean; authors?: string }>();
+                    for (const m of (message.metadata || [])) {
+                        const key = `${m.id.toLowerCase()}@${(m.version ?? '').trim().toLowerCase()}`;
+                        metaMap.set(key, { iconUrl: m.iconUrl, verified: m.verified, authors: m.authors });
+                    }
+                    setAllProjectsTransitive(prev => {
+                        const next: Record<string, ProjectTransitiveSlot> = {};
+                        for (const [path, slot] of Object.entries(prev)) {
+                            const newFrameworks = slot.frameworks.map(fw => ({
+                                ...fw,
+                                packages: fw.packages.map(pkg => {
+                                    const key = `${pkg.id.toLowerCase()}@${(pkg.version ?? '').trim().toLowerCase()}`;
+                                    const meta = metaMap.get(key);
+                                    if (!meta) { return pkg; }
+                                    return {
+                                        ...pkg,
+                                        iconUrl: pkg.iconUrl || meta.iconUrl,
+                                        verified: pkg.verified ?? meta.verified,
+                                        authors: pkg.authors || meta.authors,
+                                    };
+                                }),
+                            }));
+                            next[path] = { ...slot, frameworks: newFrameworks };
+                        }
+                        return next;
+                    });
+                }
+                break;
+            case 'allProjectsTransitiveComplete':
+                if (message.requestId !== allProjectsTransitiveRequestIdRef.current) { break; }
+                {
+                    const seen = new Set<string>((message.projectPaths || []) as string[]);
+                    let prunedSlots: Record<string, ProjectTransitiveSlot> = {};
+                    setAllProjectsTransitive(prev => {
+                        const next: Record<string, ProjectTransitiveSlot> = {};
+                        for (const [path, slot] of Object.entries(prev)) {
+                            if (seen.has(path)) { next[path] = slot; }
+                        }
+                        prunedSlots = next;
+                        return next;
+                    });
+                    setLoadingAllProjectsTransitive(false);
+                    setAllProjectsTransitiveLoaded(true);
+
+                    // Request enrichment metadata (icons/verified/authors) for the unique
+                    // (id, version) pairs aggregated across all projects. The backend
+                    // dispatches this lazily — single-source-of-truth for icon resolution.
+                    const uniq = new Map<string, { id: string; version: string }>();
+                    for (const slot of Object.values(prunedSlots)) {
+                        if (!slot.dataSourceAvailable) { continue; }
+                        for (const fw of slot.frameworks) {
+                            for (const pkg of fw.packages) {
+                                const key = `${pkg.id.toLowerCase()}@${(pkg.version ?? '').trim().toLowerCase()}`;
+                                if (!uniq.has(key)) {
+                                    uniq.set(key, { id: pkg.id, version: pkg.version });
+                                }
+                            }
+                        }
+                    }
+                    if (uniq.size > 0) {
+                        vscode.postMessage({
+                            type: 'getAllProjectsTransitiveMetadata',
+                            requestId: message.requestId,
+                            packages: Array.from(uniq.values()),
+                        });
+                    }
+                }
+                break;
+            case 'restoreProjectsBatchResult':
+                if (message.requestId !== restoreProjectsBatchRequestIdRef.current) { break; }
+                setRestoringProjectsBatch(false);
+                restoreProjectsBatchRequestIdRef.current = '';
+                // After a batch restore, the assets.json files are fresh — reload transitives if expanded.
+                if (allProjectsTransitiveExpandedRef.current) {
+                    requestStreamedAllProjectsTransitive();
+                }
+                // Forward result to InstalledTab in case it needs to show per-project status
+                installedTabCompRef.current?.handleMessage(message);
+                break;
             case 'allProjectsIcons':
                 // Progressive icon enrichment for all-projects updates (installed icons arrive inline)
                 {
@@ -864,9 +1258,11 @@ export const App: React.FC = () => {
                 // Still re-fetch all projects installed since transitive deps changed
                 setLoadingAllProjectsInstalled(true);
                 setAllProjectsInstalled([]);
-                vscode.postMessage({ type: 'checkAllProjectsInstalled' });
+                requestStreamedAllProjectsInstalled();
                 // Refresh current project installed for transitive accuracy
-                if (selectedProjectRef.current) {
+                // (skip when in all-projects mode — the streamed re-fetch above covers it
+                // and the backend rejects the sentinel)
+                if (selectedProjectRef.current && selectedProjectRef.current !== ALL_PROJECTS_SENTINEL) {
                     skipNextUpdateCheckRef.current = true;
                     vscode.postMessage({ type: 'getInstalledPackages', projectPath: selectedProjectRef.current });
                     installedTabCompRef.current?.resetTransitiveState(true);
@@ -878,6 +1274,9 @@ export const App: React.FC = () => {
                 setSettingsLoaded(true);
                 if (message.includePrerelease !== undefined) {
                     setIncludePrerelease(message.includePrerelease);
+                }
+                if (message.restoreEnabled !== undefined) {
+                    setRestoreEnabled(message.restoreEnabled);
                 }
                 if (message.selectedSource) {
                     setSelectedSource(message.selectedSource);
@@ -909,6 +1308,13 @@ export const App: React.FC = () => {
                 if (message.includePrerelease !== undefined) {
                     skipSaveRef.current = true;
                     setIncludePrerelease(message.includePrerelease);
+                }
+                break;
+            case 'restoreChanged':
+                // Synced from sidebar (or the main panel itself) — update state but skip re-saving
+                if (message.restoreEnabled !== undefined) {
+                    skipRestoreSaveRef.current = true;
+                    setRestoreEnabled(message.restoreEnabled);
                 }
                 break;
             case 'sourceChanged':
@@ -1003,6 +1409,8 @@ export const App: React.FC = () => {
     }, []);
 
     useEffect(() => {
+        // Handshake: signal panel→webview render readiness BEFORE first data requests.
+        vscode.postMessage({ type: 'webviewReady' });
         // Request initial data
         vscode.postMessage({ type: 'getProjects' });
         vscode.postMessage({ type: 'getSources' });
@@ -1013,6 +1421,19 @@ export const App: React.FC = () => {
         window.addEventListener('message', handleMessage);
         return () => window.removeEventListener('message', handleMessage);
     }, [handleMessage]);
+
+    // Plan 01 perf: ack the first useful render once installed data lands.
+    const firstRenderSentRef = useRef(false);
+    useEffect(() => {
+        if (firstRenderSentRef.current) { return; }
+        if (installedPackages.length > 0) {
+            firstRenderSentRef.current = true;
+            vscode.postMessage({ type: 'firstUsefulRender', source: 'installedPackages' });
+        } else if (allProjectsInstalled.length > 0) {
+            firstRenderSentRef.current = true;
+            vscode.postMessage({ type: 'firstUsefulRender', source: 'allProjectsInstalled' });
+        }
+    }, [installedPackages, allProjectsInstalled]);
 
     useEffect(() => {
         // Clear active project path on any project switch
@@ -1042,13 +1463,23 @@ export const App: React.FC = () => {
             });
             setLoadingAllProjectsInstalled(true);
             setAllProjectsInstalled([]);
-            vscode.postMessage({ type: 'checkAllProjectsInstalled' });
+            requestStreamedAllProjectsInstalled();
+            // Reset transitive state — section is collapsed by default; data lazy-loads on expand.
+            allProjectsTransitiveExpandedRef.current = false;
+            cancelAllProjectsTransitive();
+            setAllProjectsTransitive({});
+            setAllProjectsTransitiveLoaded(false);
         } else if (selectedProject) {
             // Single project selected — clear all-projects data and fetch single-project data
             setAllProjectsUpdates([]);
             setAllProjectsInstalled([]);
             setLoadingAllProjectsUpdates(false);
             setLoadingAllProjectsInstalled(false);
+            // Cancel and clear all-projects transitive state on switch out of all-projects mode
+            allProjectsTransitiveExpandedRef.current = false;
+            cancelAllProjectsTransitive();
+            setAllProjectsTransitive({});
+            setAllProjectsTransitiveLoaded(false);
             // Reset stale single-project updates loading from a previous project
             setLoadingUpdates(false);
             setLoadingInstalled(true);
@@ -1064,7 +1495,72 @@ export const App: React.FC = () => {
             // else-if branch in checkPackageUpdates effect that clears stale updates
             skipNextUpdateCheckRef.current = false;
         }
-    }, [selectedProject]);
+    }, [selectedProject, requestStreamedAllProjectsInstalled, cancelAllProjectsTransitive]);
+
+    /**
+     * Aggregation: dedupe transitive packages across all projects by `(lowerId, normalizedVersion)`.
+     * Each row collects per-project origins, with origins keyed by `(projectPath, chainHash)`.
+     * Frameworks are merged per-origin and per-row (deduped). Sorted alphabetically by id.
+     */
+    const allProjectsTransitiveRows = useMemo<AllProjectsTransitiveRow[]>(
+        () => aggregateAllProjectsTransitive(allProjectsTransitive),
+        [allProjectsTransitive]
+    );
+
+    /**
+     * Errored/missing-data projects derived from slots — surfaces "Restore" banner candidates.
+     * Only counts slots that have actually `received` a chunk from the backend. In-flight
+     * placeholders (`received=false`) are ignored to avoid false positives during streaming.
+     */
+    const allProjectsTransitiveErrored = useMemo(
+        () => selectErroredTransitiveProjects(allProjectsTransitive),
+        [allProjectsTransitive]
+    );
+
+    /**
+     * Selection re-resolution: when the aggregation refreshes (mid-stream or post-restore),
+     * re-bind the selected transitive package to fresh row data, or clear the selection if
+     * its row has disappeared. Only emits a new selection object when the relevant fields
+     * actually change — prevents details-panel re-render churn while the stream emits
+     * per-project chunks.
+     */
+    useEffect(() => {
+        setSelectedTransitivePackage(prev => {
+            if (!prev?.origins) { return prev; }
+            const lowerId = prev.id.toLowerCase();
+            const versionNorm = (prev.version ?? '').trim().toLowerCase();
+            const row = allProjectsTransitiveRows.find(r =>
+                r.id.toLowerCase() === lowerId && r.versionNormalized === versionNorm
+            );
+            if (!row) { return null; }
+            // Stable equality check — same row, same origins (by reference), same metadata.
+            // Aggregation rebuilds origins arrays per chunk; identity changes when content does.
+            const sameOrigins = prev.origins === row.origins
+                || (prev.origins.length === row.origins.length
+                    && prev.origins.every((o, i) => {
+                        const r = row.origins[i];
+                        return r && o.projectPath === r.projectPath && o.chainHash === r.chainHash;
+                    }));
+            if (sameOrigins
+                && prev.iconUrl === row.iconUrl
+                && prev.verified === row.verified
+                && prev.authors === row.authors
+                && prev.version === row.version) {
+                return prev;
+            }
+            const firstOrigin = row.origins[0];
+            return {
+                id: row.id,
+                version: row.version,
+                requiredByChain: firstOrigin?.requiredByChain ?? [],
+                fullChain: firstOrigin?.fullChain,
+                iconUrl: row.iconUrl,
+                verified: row.verified,
+                authors: row.authors,
+                origins: row.origins,
+            };
+        });
+    }, [allProjectsTransitiveRows]);
 
     // Refresh installed packages when switching to installed tab (skip first visit to use prefetched data)
     // Track first visit to installed tab (skip re-fetch; prefetched data is used).
@@ -1089,6 +1585,17 @@ export const App: React.FC = () => {
             vscode.postMessage({ type: 'saveSettings', includePrerelease });
         }
     }, [includePrerelease]);
+
+    // Save restoreEnabled setting when it changes (only after settings loaded)
+    useEffect(() => {
+        if (settingsLoadedRef.current) {
+            if (skipRestoreSaveRef.current) {
+                skipRestoreSaveRef.current = false;
+                return;
+            }
+            vscode.postMessage({ type: 'saveSettings', restoreEnabled });
+        }
+    }, [restoreEnabled]);
 
     // Reload package versions when includePrerelease changes and a package is selected
     useEffect(() => {
@@ -1707,8 +2214,8 @@ export const App: React.FC = () => {
 
     const handleMultiInstallOpen = useCallback(() => {
         // Fetch per-project installed data for the Multi Install dropdown
-        vscode.postMessage({ type: 'checkAllProjectsInstalled', context: 'multiInstall' });
-    }, []);
+        requestStreamedMultiInstall();
+    }, [requestStreamedMultiInstall]);
 
     const handleRemove = useCallback((packageId: string) => {
         const projectPath = activeProjectPathRef.current || selectedProjectRef.current;
@@ -1883,6 +2390,14 @@ export const App: React.FC = () => {
             <div className="header">
                 <h2>Manage NuGet packages</h2>
                 <div className="header-selectors">
+                    <label className="preview-checkbox">
+                        <input
+                            type="checkbox"
+                            checked={restoreEnabled}
+                            onChange={(e) => setRestoreEnabled((e.target as HTMLInputElement).checked)}
+                        />
+                        Restore after operations
+                    </label>
                     <label className="preview-checkbox">
                         <input
                             type="checkbox"
@@ -2521,6 +3036,8 @@ export const App: React.FC = () => {
                                                         initialVersions: [pkg.version],
                                                     });
                                                 }}
+                                                onMouseEnter={() => hoverPrefetch.onMouseEnterRow(pkg.id, pkg.version)}
+                                                onMouseLeave={hoverPrefetch.onMouseLeaveRow}
                                             >
                                                 <div className="package-icon">
                                                     {pkg.iconUrl ? (
@@ -2610,6 +3127,8 @@ export const App: React.FC = () => {
                     createPackageListKeyHandler={createPackageListKeyHandler}
                     metadataCache={metadataCache}
                     vscode={vscode}
+                    onRowMouseEnter={hoverPrefetch.onMouseEnterRow}
+                    onRowMouseLeave={hoverPrefetch.onMouseLeaveRow}
                     installedTabRef={installedTabRef}
                     MemoizedDraggableSash={MemoizedDraggableSash}
                     isAllProjects={isAllProjects}
@@ -2617,6 +3136,12 @@ export const App: React.FC = () => {
                     loadingAllProjectsInstalled={loadingAllProjectsInstalled}
                     activeProjectPath={activeProjectPath}
                     onActiveProjectPathChange={setActiveProjectPath}
+                    allProjectsTransitiveRows={allProjectsTransitiveRows}
+                    loadingAllProjectsTransitive={loadingAllProjectsTransitive}
+                    allProjectsTransitiveErrored={allProjectsTransitiveErrored}
+                    restoringProjectsBatch={restoringProjectsBatch}
+                    onAllProjectsTransitiveExpandedChange={handleAllProjectsTransitiveExpandedChange}
+                    onRestoreProjectsBatch={handleRestoreProjectsBatch}
                 />
             )}
 
@@ -2666,6 +3191,8 @@ export const App: React.FC = () => {
                     createPackageListKeyHandler={createPackageListKeyHandler}
                     metadataCache={metadataCache}
                     vscode={vscode}
+                    onRowMouseEnter={hoverPrefetch.onMouseEnterRow}
+                    onRowMouseLeave={hoverPrefetch.onMouseLeaveRow}
                     updatesTabRef={updatesTabRef}
                     MemoizedDraggableSash={MemoizedDraggableSash}
                 />

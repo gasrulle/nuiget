@@ -24,7 +24,7 @@ A Visual Studio-style NuGet package manager for VS Code with a modern split-pane
 - 📖 **README Display** - View package docs with syntax-highlighted code blocks and copy button
 - ⚠️ **Source Status Warnings** - Visual notification when NuGet sources are unreachable
 - 📌 **Sidebar Panel** - Compact Activity Bar panel with search-driven browse, Installed and Updates sections with update count badges
-- 🔁 **Cross-Panel Sync** - Source, project, and prerelease selections shared between main panel and sidebar in real time
+- 🔁 **Cross-Panel Sync** - Source, project, prerelease, and restore-after-operations selections shared between main panel and sidebar in real time
 - ♿ **Accessible** - High-contrast themes, reduced motion, and ARIA roles for screen readers
 - 🧩 **.NET 10 Support** - Automatic detection of .NET 10 noun-first CLI syntax
 - 🔧 **Output Channel** - "nUIget" channel shows all CLI commands for troubleshooting
@@ -47,11 +47,12 @@ A Visual Studio-style NuGet package manager for VS Code with a modern split-pane
 
 | Setting | Default | Description |
 |---------|---------|-------------|
-| `nuiget.noRestore` | `false` | Skip restore after adding packages. Faster but skips compatibility check until next build. |
 | `nuiget.searchDebounceMode` | `quicksearch` | `quicksearch`: Show suggestions. `full`: Full search as you type. `off`: Manual only. |
 | `nuiget.quickSearchResultsPerSource` | `5` | Suggestions per source in quick search (1-10) |
 | `nuiget.recentSearchesLimit` | `5` | Recent searches to remember (0-10, 0 to disable) |
 | `nuiget.searchResultLimit` | `20` | Maximum number of packages to return from full search (1-100) |
+
+> 💡 **Restore after operations** is no longer a setting — it's a UI toggle. Use the verified-shield icon in the sidebar title bar, or the **Restore after operations** checkbox in the main panel header. Both stay synced and persist per workspace. The legacy `nuiget.noRestore` setting is migrated automatically on first activation.
 
 ## 📋 Commands
 

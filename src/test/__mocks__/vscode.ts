@@ -200,6 +200,19 @@ export const window = {
     showWarningMessage: vi.fn().mockResolvedValue(undefined),
     showErrorMessage: vi.fn().mockResolvedValue(undefined),
     setStatusBarMessage: vi.fn(() => new Disposable(() => { })),
+    createStatusBarItem: vi.fn((_alignment?: number, _priority?: number) => ({
+        text: '',
+        tooltip: '',
+        command: undefined,
+        show: vi.fn(),
+        hide: vi.fn(),
+        dispose: vi.fn(),
+    })),
+};
+
+export const StatusBarAlignment = {
+    Left: 1,
+    Right: 2,
 };
 
 // ---------- workspace ----------

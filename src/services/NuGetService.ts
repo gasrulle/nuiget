@@ -287,6 +287,16 @@ export class NuGetService {
         this._cliService.clearSdkVersionCache();
     }
 
+    /** Plan 11: hydrate SDK version cache from persistent storage and attach Memento for save-on-write. */
+    hydrateSdkVersionCache(store: vscode.Memento, key: string, extensionVersion: string): void {
+        this._cliService.hydrateSdkVersionCache(store, key, extensionVersion);
+    }
+
+    /** Plan 11: await all pending SDK-cache persistence writes (test/diagnostic helper). */
+    async flushPersistedSdkCache(): Promise<void> {
+        await this._cliService.flushPersistedSdkCache();
+    }
+
     setupOutputChannel(skipSetup: boolean = false): void {
         this.logger.setupOutputChannel(skipSetup);
     }
@@ -571,22 +581,38 @@ export class NuGetService {
     }
 
     /**
-     * Clear tracked source errors (call on manual refresh to allow re-warning)
+     * Clear all in-memory NuGet caches synchronously.
+     * Called on manual refresh to allow re-discovery, refetch fresh metadata/search,
+     * and re-warn about previously-failed sources.
+     *
+     * Widened beyond the original `clearSourceErrors()` set to also clear
+     * `metadataCache` and `searchResultsCache` so users see fresh listings
+     * after pressing Refresh instead of waiting for TTLs to expire.
      */
-    clearSourceErrors(): void {
+    clearInMemoryNuGetCaches(): void {
         this.failedSources.clear();
         // Also clear the service index cache to force re-discovery
         this.serviceIndexCache.clear();
         // Clear failed endpoint cache so that refreshing actually retries the network
         this.failedEndpointCache.clear();
-        // Clear package service caches (icons, vulnerabilities, etc.)
+        // Clear package service caches (icons, vulnerabilities, quick search, etc.)
         this._packageService.clearCaches();
+        // Clear metadata + search-result caches so refresh picks up new listings
+        this._packageService.clearMetadataAndSearchCaches();
         // Clear sources cache so fresh sources are fetched
         this.invalidateSourcesCache();
         // Clear version caches so update checks see newly published versions
         this.clearVersionsCache();
         // Re-validate all sources immediately in background
         this.startSourceHealthMonitor();
+    }
+
+    /**
+     * Clear tracked source errors (call on manual refresh to allow re-warning).
+     * Backwards-compatible alias for `clearInMemoryNuGetCaches()`.
+     */
+    clearSourceErrors(): void {
+        this.clearInMemoryNuGetCaches();
     }
 
     /**
@@ -613,6 +639,32 @@ export class NuGetService {
      */
     async clearNuGetHttpCache(): Promise<void> {
         return this._cliService.clearNuGetHttpCache();
+    }
+
+    /**
+     * In-flight promise for the background HTTP-cache clear so rapid
+     * Refresh clicks don't spawn multiple `dotnet nuget locals` processes.
+     * Note: only the disk-clear is coalesced — every Refresh still re-runs
+     * the synchronous `clearInMemoryNuGetCaches()` so the second click
+     * doesn't see partly-repopulated caches.
+     */
+    private _httpCacheClearInFlight: Promise<void> | null = null;
+
+    /**
+     * Fire-and-forget variant of `clearNuGetHttpCache()` for the Refresh button path.
+     * Spawns the `dotnet nuget locals` process in the background and coalesces
+     * concurrent calls so multiple rapid Refreshes share one process.
+     * The UI proceeds immediately without waiting for the disk clear to finish.
+     */
+    clearNuGetHttpCacheBackground(): void {
+        if (this._httpCacheClearInFlight) { return; }
+        this._httpCacheClearInFlight = this._cliService.clearNuGetHttpCache()
+            .catch(() => {
+                // Best-effort: CLI errors are already logged inside the service
+            })
+            .finally(() => {
+                this._httpCacheClearInFlight = null;
+            });
     }
 
     /**
@@ -654,6 +706,14 @@ export class NuGetService {
 
     async getPackageVersions(packageId: string, source?: string, includePrerelease?: boolean, take: number = 20): Promise<string[]> {
         return this._packageService.getPackageVersions(packageId, source, includePrerelease, take);
+    }
+
+    tryAcquirePrefetchSlot(): boolean {
+        return this._packageService.tryAcquirePrefetchSlot();
+    }
+
+    releasePrefetchSlot(): void {
+        this._packageService.releasePrefetchSlot();
     }
 
 
@@ -1190,6 +1250,11 @@ export class NuGetService {
 
     async getTransitivePackages(projectPath: string): Promise<TransitivePackagesResult> {
         return this._projectService.getTransitivePackages(projectPath);
+    }
+
+    /** All-projects transitive flow — preserves error categorization (parse-failed/fs-error/unknown). */
+    async getTransitivePackagesPreservingErrors(projectPath: string): Promise<TransitivePackagesResult> {
+        return this._projectService.getTransitivePackagesPreservingErrors(projectPath);
     }
 
 

@@ -15,7 +15,7 @@
  */
 
 import { RefObject, useCallback } from 'react';
-import type { LRUMap, PackageMetadata, TransitivePackage, VsCodeApi } from '../types';
+import type { AllProjectsTransitiveOrigin, LRUMap, PackageMetadata, SelectedTransitivePackage, TransitivePackage, VsCodeApi } from '../types';
 
 // LRU Map type (compatible with LRUMap from types.ts)
 type LRUMapLike<K, V> = Pick<LRUMap<K, V>, 'get' | 'set'>;
@@ -55,7 +55,7 @@ export interface SelectPackageOptions {
 export interface UsePackageSelectionDeps<T extends { id: string }> {
     // State setters
     setSelectedPackage: (pkg: T | null) => void;
-    setSelectedTransitivePackage: (pkg: TransitivePackage | null) => void;
+    setSelectedTransitivePackage: (pkg: SelectedTransitivePackage | null) => void;
     setSelectedVersion: (version: string) => void;
     setDetailsTab: (tab: 'details' | 'readme') => void;
     setExpandedDeps: (deps: Set<string>) => void;
@@ -209,11 +209,18 @@ export function usePackageSelection<T extends { id: string }>(
     ]);
 
     /**
-     * Select a transitive package (from Installed tab transitive section)
+     * Select a transitive package (from Installed tab transitive section).
      * Clears direct package selection (mutually exclusive).
+     *
+     * In all-projects mode, callers pass `origins` for project-grouped
+     * "Required by" rendering. In single-project mode, callers omit it
+     * and the existing `requiredByChain`/`fullChain` shape is used.
      */
-    const selectTransitivePackage = useCallback((pkg: TransitivePackage): void => {
-        setSelectedTransitivePackage(pkg);
+    const selectTransitivePackage = useCallback((
+        pkg: TransitivePackage,
+        origins?: AllProjectsTransitiveOrigin[]
+    ): void => {
+        setSelectedTransitivePackage(origins ? { ...pkg, origins } : pkg);
         setSelectedPackage(null);
     }, [setSelectedTransitivePackage, setSelectedPackage]);
 

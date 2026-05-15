@@ -29,6 +29,7 @@ vi.mock('../services/NuGetService', () => ({
 vi.mock('./NuGetPanel', () => ({
     NuGetPanel: {
         syncPrerelease: vi.fn(),
+        syncRestore: vi.fn(),
         syncSource: vi.fn(),
         syncProject: vi.fn(),
         openSourceSettings: vi.fn(),
@@ -54,6 +55,8 @@ function createMockNuGetService() {
         getPackageVersions: vi.fn().mockResolvedValue([]),
         clearVersionsCache: vi.fn(),
         clearVersionsCacheForPackages: vi.fn(),
+        clearInMemoryNuGetCaches: vi.fn(),
+        clearNuGetHttpCacheBackground: vi.fn(),
         resolveSourcesForBatch: vi.fn().mockResolvedValue([{ url: 'https://api.nuget.org/v3/index.json', endpoints: {}, authHeader: undefined }]),
     } as unknown;
 }
@@ -166,6 +169,21 @@ describe('NuGetSidebarProvider', () => {
             expect(vscode.commands.executeCommand).toHaveBeenCalledWith('setContext', 'nuiget.prereleaseEnabled', true);
             p.dispose();
         });
+
+        it('defaults restoreEnabled to true and sets context key', () => {
+            const ctx = createMockContext();
+            const { provider: p } = createProvider(undefined, ctx);
+            expect(vscode.commands.executeCommand).toHaveBeenCalledWith('setContext', 'nuiget.restoreEnabled', true);
+            p.dispose();
+        });
+
+        it('honors persisted restoreEnabled=false', () => {
+            const ctx = createMockContext();
+            (ctx.workspaceState as any)._store.set('nuget.restoreEnabled', false);
+            const { provider: p } = createProvider(undefined, ctx);
+            expect(vscode.commands.executeCommand).toHaveBeenCalledWith('setContext', 'nuiget.restoreEnabled', false);
+            p.dispose();
+        });
     });
 
     // ──────────────────────────────────────────────
@@ -203,6 +221,39 @@ describe('NuGetSidebarProvider', () => {
     });
 
     // ──────────────────────────────────────────────
+    // toggleRestore
+    // ──────────────────────────────────────────────
+    describe('toggleRestore', () => {
+        it('toggles state (true→false), persists, sets context key, and syncs to main panel', () => {
+            view = resolveView(provider);
+            view.webview.postMessage.mockClear();
+
+            // Default is true (restore enabled). Toggle should flip to false.
+            provider.toggleRestore();
+
+            expect(context.workspaceState.update).toHaveBeenCalledWith('nuget.restoreEnabled', false);
+            expect(vscode.commands.executeCommand).toHaveBeenCalledWith('setContext', 'nuiget.restoreEnabled', false);
+            expect(view.webview.postMessage).toHaveBeenCalledWith({ type: 'restoreChanged', restoreEnabled: false });
+            expect(NuGetPanel.syncRestore).toHaveBeenCalledWith(false);
+        });
+
+        it('honors persisted false and toggles back to true', () => {
+            const ctx2 = createMockContext();
+            (ctx2.workspaceState as any)._store.set('nuget.restoreEnabled', false);
+            const { provider: p } = createProvider(undefined, ctx2);
+            const v = resolveView(p);
+            v.webview.postMessage.mockClear();
+
+            p.toggleRestore();
+
+            expect(ctx2.workspaceState.update).toHaveBeenCalledWith('nuget.restoreEnabled', true);
+            expect(vscode.commands.executeCommand).toHaveBeenCalledWith('setContext', 'nuiget.restoreEnabled', true);
+            expect(NuGetPanel.syncRestore).toHaveBeenCalledWith(true);
+            p.dispose();
+        });
+    });
+
+    // ──────────────────────────────────────────────
     // Cross-panel sync
     // ──────────────────────────────────────────────
     describe('cross-panel sync', () => {
@@ -214,6 +265,15 @@ describe('NuGetSidebarProvider', () => {
         it('syncPrerelease updates state and posts to webview', () => {
             provider.syncPrerelease(true);
             expect(view.webview.postMessage).toHaveBeenCalledWith({ type: 'prereleaseChanged', includePrerelease: true });
+        });
+
+        it('syncRestore updates state, sets context key, and posts to webview without writing workspaceState', () => {
+            (context.workspaceState.update as any).mockClear();
+            provider.syncRestore(false);
+            expect(view.webview.postMessage).toHaveBeenCalledWith({ type: 'restoreChanged', restoreEnabled: false });
+            expect(vscode.commands.executeCommand).toHaveBeenCalledWith('setContext', 'nuiget.restoreEnabled', false);
+            // syncRestore must NOT persist (avoids double-write race when main panel already wrote)
+            expect(context.workspaceState.update).not.toHaveBeenCalledWith('nuget.restoreEnabled', expect.anything());
         });
 
         it('syncSource updates state and posts to webview', () => {
@@ -877,18 +937,18 @@ describe('NuGetSidebarProvider', () => {
     });
 
     // ──────────────────────────────────────────────
-    // notifySidebarOfChange — file watcher kept as safety net
+    // notifySidebarOfChange — cancels watcher to prevent double-reload
     // ──────────────────────────────────────────────
     describe('notifySidebarOfChange file watcher', () => {
-        it('does not cancel file watcher debounce (safety net for missed updates)', async () => {
+        it('cancels file watcher debounce to prevent duplicate refresh', async () => {
             view = resolveView(provider);
             (provider as any)._fileWatcherDebounce = setTimeout(() => { /* noop */ }, 10000);
             expect((provider as any)._fileWatcherDebounce).toBeDefined();
 
             await provider.notifySidebarOfChange({ type: 'update', packageId: 'Pkg', projectPath: '/p.csproj' });
-            // File watcher debounce is preserved — serves as safety net for full refresh
-            expect((provider as any)._fileWatcherDebounce).toBeDefined();
-            clearTimeout((provider as any)._fileWatcherDebounce);
+            // packageChanged + scoped checkUpdatesInBackground already covers what the
+            // watcher would do — letting both fire produced a visible double-reload.
+            expect((provider as any)._fileWatcherDebounce).toBeUndefined();
         });
     });
 
@@ -1190,39 +1250,106 @@ describe('NuGetSidebarProvider', () => {
     });
 
     describe('checkAllProjectsInstalled message', () => {
-        it('collects installed packages from all projects', async () => {
+        it('streams allProjectsInstalledStart/ProjectFound/Complete', async () => {
             view = resolveView(provider);
             view.webview.postMessage.mockClear();
-            hoisted.mockQueryAllProjectsInstalled.mockResolvedValueOnce([{
-                projectPath: '/projA.csproj',
-                projectName: 'ProjA',
-                packages: [{ id: 'Pkg', version: '1.0', resolvedVersion: '1.0.0', isImplicit: false }]
-            }]);
-            await messageListener!({ type: 'checkAllProjectsInstalled', context: 'multiInstall' });
-
-            expect(hoisted.mockQueryAllProjectsInstalled).toHaveBeenCalledWith(service, true);
-            expect(view.webview.postMessage).toHaveBeenCalledWith({
-                type: 'allProjectsInstalled',
-                projectInstalled: [{
+            hoisted.mockQueryAllProjectsInstalled.mockImplementationOnce(async (_svc: unknown, _lite: boolean, opts: any) => {
+                opts?.onStart?.([{ projectPath: '/projA.csproj', projectName: 'ProjA' }]);
+                opts?.onProject?.({
                     projectPath: '/projA.csproj',
                     projectName: 'ProjA',
-                    packages: [{ id: 'Pkg', version: '1.0', resolvedVersion: '1.0.0', isImplicit: false }]
-                }],
-                context: 'multiInstall'
+                    packages: [{ id: 'Pkg', version: '1.0', resolvedVersion: '1.0.0', isImplicit: false }],
+                });
+                return [];
             });
+            await messageListener!({ type: 'checkAllProjectsInstalled', context: 'multiInstall' });
+
+            expect(hoisted.mockQueryAllProjectsInstalled).toHaveBeenCalledWith(service, true, expect.any(Object));
+            expect(view.webview.postMessage).toHaveBeenCalledWith(expect.objectContaining({
+                type: 'allProjectsInstalledStart',
+                context: 'multiInstall',
+                projects: [{ projectPath: '/projA.csproj', projectName: 'ProjA' }],
+            }));
+            expect(view.webview.postMessage).toHaveBeenCalledWith(expect.objectContaining({
+                type: 'allProjectsInstalledProjectFound',
+                context: 'multiInstall',
+                projectPath: '/projA.csproj',
+                installed: [{ id: 'Pkg', version: '1.0', resolvedVersion: '1.0.0', isImplicit: false }],
+            }));
+            expect(view.webview.postMessage).toHaveBeenCalledWith(expect.objectContaining({
+                type: 'allProjectsInstalledComplete',
+                context: 'multiInstall',
+                projectPaths: ['/projA.csproj'],
+            }));
         });
 
-        it('skips projects that throw errors', async () => {
+        it('emits Complete with empty paths when no projects are found', async () => {
             view = resolveView(provider);
             view.webview.postMessage.mockClear();
             hoisted.mockQueryAllProjectsInstalled.mockResolvedValueOnce([]);
             await messageListener!({ type: 'checkAllProjectsInstalled' });
 
-            expect(view.webview.postMessage).toHaveBeenCalledWith({
-                type: 'allProjectsInstalled',
-                projectInstalled: [],
-                context: undefined
+            expect(view.webview.postMessage).toHaveBeenCalledWith(expect.objectContaining({
+                type: 'allProjectsInstalledComplete',
+                context: undefined,
+                projectPaths: [],
+                errored: [],
+            }));
+        });
+
+        it('streams Start, ProjectFound, Complete with echoed requestId (Plan 10 Stage B)', async () => {
+            view = resolveView(provider);
+            view.webview.postMessage.mockClear();
+            hoisted.mockQueryAllProjectsInstalled.mockImplementationOnce(async (_svc: unknown, _lite: boolean, opts: any) => {
+                opts?.onStart?.([
+                    { projectPath: '/a.csproj', projectName: 'A' },
+                    { projectPath: '/b.csproj', projectName: 'B' },
+                ]);
+                opts?.onProject?.({ projectPath: '/a.csproj', projectName: 'A', packages: [{ id: 'Pa', version: '1.0' }] });
+                opts?.onProject?.({ projectPath: '/b.csproj', projectName: 'B', error: 'boom' });
+                return [{ projectPath: '/a.csproj', projectName: 'A', packages: [{ id: 'Pa', version: '1.0' }] }];
             });
+
+            await messageListener!({ type: 'checkAllProjectsInstalled', requestId: 'r1' });
+
+            const calls = view.webview.postMessage.mock.calls.map((c: any[]) => c[0]);
+            const start = calls.find((m: any) => m.type === 'allProjectsInstalledStart');
+            const founds = calls.filter((m: any) => m.type === 'allProjectsInstalledProjectFound');
+            const complete = calls.find((m: any) => m.type === 'allProjectsInstalledComplete');
+            expect(start).toMatchObject({ requestId: 'r1' });
+            expect(start.projects).toHaveLength(2);
+            expect(founds).toHaveLength(2);
+            expect(founds[0]).toMatchObject({ requestId: 'r1', projectPath: '/a.csproj' });
+            expect(founds[1]).toMatchObject({ requestId: 'r1', projectPath: '/b.csproj', error: 'boom' });
+            expect(complete).toMatchObject({ requestId: 'r1' });
+            expect(complete.projectPaths).toEqual(['/a.csproj', '/b.csproj']);
+        });
+
+        it('aborts previous streamed request when a new one arrives (Plan 10 Stage B)', async () => {
+            view = resolveView(provider);
+            view.webview.postMessage.mockClear();
+            const captured: AbortSignal[] = [];
+            let resolveFirst!: () => void;
+            const firstHang = new Promise<void>((r) => { resolveFirst = r; });
+            hoisted.mockQueryAllProjectsInstalled
+                .mockImplementationOnce(async (_svc: unknown, _lite: boolean, opts: any) => {
+                    if (opts?.signal) { captured.push(opts.signal); }
+                    await firstHang;
+                    return [];
+                })
+                .mockImplementationOnce(async (_svc: unknown, _lite: boolean, opts: any) => {
+                    if (opts?.signal) { captured.push(opts.signal); }
+                    return [];
+                });
+
+            const firstP = messageListener!({ type: 'checkAllProjectsInstalled', requestId: 'r1' });
+            await vi.waitFor(() => expect(captured).toHaveLength(1));
+            await messageListener!({ type: 'checkAllProjectsInstalled', requestId: 'r2' });
+            expect(captured).toHaveLength(2);
+            expect(captured[0].aborted).toBe(true);
+            expect(captured[1].aborted).toBe(false);
+            resolveFirst();
+            await firstP;
         });
     });
 
@@ -1790,15 +1917,16 @@ describe('NuGetSidebarProvider', () => {
             });
         });
 
-        it('checkAllProjectsInstalled sends empty response when findProjects throws', async () => {
-            (service as any).findProjects.mockRejectedValue(new Error('workspace error'));
+        it('checkAllProjectsInstalled sends empty Complete when queryAllProjectsInstalled throws', async () => {
+            hoisted.mockQueryAllProjectsInstalled.mockRejectedValueOnce(new Error('workspace error'));
             await messageListener!({ type: 'checkAllProjectsInstalled', context: 'installed' });
 
-            expect(view.webview.postMessage).toHaveBeenCalledWith({
-                type: 'allProjectsInstalled',
-                projectInstalled: [],
-                context: 'installed'
-            });
+            expect(view.webview.postMessage).toHaveBeenCalledWith(expect.objectContaining({
+                type: 'allProjectsInstalledComplete',
+                context: 'installed',
+                projectPaths: [],
+                errored: [],
+            }));
         });
     });
 

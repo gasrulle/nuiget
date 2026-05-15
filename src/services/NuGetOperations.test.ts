@@ -8,6 +8,7 @@ import {
     executeBulkUpdatePackages,
     executeSingleOperation,
     queryAllProjectsInstalled,
+    queryAllProjectsTransitive,
     queryAllProjectsUpdates,
     resolveAllProjectsIcons,
     type OperationContext,
@@ -93,7 +94,7 @@ describe('executeSingleOperation', () => {
     it('remove success: calls removePackage', async () => {
         const result = await executeSingleOperation(ctx, 'remove', '/proj.csproj', 'Obsolete.Pkg');
         expect(result).toBe(true);
-        expect(ctx.nugetService.removePackage).toHaveBeenCalledWith('/proj.csproj', 'Obsolete.Pkg');
+        expect(ctx.nugetService.removePackage).toHaveBeenCalledWith('/proj.csproj', 'Obsolete.Pkg', { skipRestore: undefined });
         expect(ctx.postMessage).toHaveBeenCalledWith(expect.objectContaining({ type: 'removeResult', success: true }));
         expect(ctx.notifyOtherPanel).toHaveBeenCalled();
     });
@@ -103,6 +104,19 @@ describe('executeSingleOperation', () => {
         const result = await executeSingleOperation(ctx, 'remove', '/proj.csproj', 'Locked.Pkg');
         expect(result).toBe(false);
         expect(ctx.notifyOtherPanel).not.toHaveBeenCalled();
+    });
+
+    // ---- plan 08: version in payload ----
+    it('install success: includes version in postMessage and notifyOtherPanel payload', async () => {
+        await executeSingleOperation(ctx, 'install', '/proj.csproj', 'Newtonsoft.Json', '13.0.3');
+        expect(ctx.postMessage).toHaveBeenCalledWith(expect.objectContaining({ type: 'installResult', version: '13.0.3' }));
+        expect(ctx.notifyOtherPanel).toHaveBeenCalledWith(expect.objectContaining({ type: 'install', version: '13.0.3' }));
+    });
+
+    it('update success: includes version in postMessage and notifyOtherPanel payload', async () => {
+        await executeSingleOperation(ctx, 'update', '/proj.csproj', 'Serilog', '4.0.0');
+        expect(ctx.postMessage).toHaveBeenCalledWith(expect.objectContaining({ type: 'updateResult', version: '4.0.0' }));
+        expect(ctx.notifyOtherPanel).toHaveBeenCalledWith(expect.objectContaining({ type: 'update', version: '4.0.0' }));
     });
 });
 
@@ -595,6 +609,86 @@ describe('queryAllProjectsInstalled', () => {
             packages: [{ id: 'A', version: '2.0', resolvedVersion: undefined, isImplicit: undefined }],
         }]);
     });
+
+    it('streams onStart with project list and onProject per project (Plan 10)', async () => {
+        const svc = createQueryService();
+        svc.findProjects.mockResolvedValue([
+            { path: '/a.csproj', name: 'A' },
+            { path: '/b.csproj', name: 'B' },
+        ]);
+        svc.getInstalledPackages
+            .mockResolvedValueOnce([{ id: 'Pa', version: '1.0' }])
+            .mockResolvedValueOnce([{ id: 'Pb', version: '2.0' }]);
+
+        const onStart = vi.fn();
+        const onProject = vi.fn();
+        const result = await queryAllProjectsInstalled(svc, true, {
+            onStart,
+            onProject,
+            signal: new AbortController().signal,
+        });
+
+        expect(onStart).toHaveBeenCalledTimes(1);
+        expect(onStart).toHaveBeenCalledWith([
+            { projectPath: '/a.csproj', projectName: 'A' },
+            { projectPath: '/b.csproj', projectName: 'B' },
+        ]);
+        expect(onProject).toHaveBeenCalledTimes(2);
+        expect(onProject.mock.calls[0][0]).toMatchObject({ projectPath: '/a.csproj', projectName: 'A' });
+        expect(onProject.mock.calls[0][0].packages?.[0]).toMatchObject({ id: 'Pa' });
+        expect(onProject.mock.calls[1][0]).toMatchObject({ projectPath: '/b.csproj', projectName: 'B' });
+        expect(result).toHaveLength(2);
+    });
+
+    it('streams error chunk for failing project but still returns successful ones (Plan 10)', async () => {
+        const svc = createQueryService();
+        svc.findProjects.mockResolvedValue([
+            { path: '/bad.csproj', name: 'Bad' },
+            { path: '/good.csproj', name: 'Good' },
+        ]);
+        svc.getInstalledPackages
+            .mockRejectedValueOnce(new Error('boom'))
+            .mockResolvedValueOnce([{ id: 'OK', version: '1.0' }]);
+
+        const onProject = vi.fn();
+        const result = await queryAllProjectsInstalled(svc, true, {
+            onProject,
+            signal: new AbortController().signal,
+        });
+
+        expect(onProject).toHaveBeenCalledTimes(2);
+        const first = onProject.mock.calls[0][0];
+        const second = onProject.mock.calls[1][0];
+        expect(first).toMatchObject({ projectPath: '/bad.csproj' });
+        expect(first.error).toMatch(/boom/);
+        expect(first.packages).toBeUndefined();
+        expect(second.packages?.[0]).toMatchObject({ id: 'OK' });
+        // Return value omits the errored project (legacy contract)
+        expect(result).toHaveLength(1);
+        expect(result[0].projectPath).toBe('/good.csproj');
+    });
+
+    it('stops emitting chunks once the abort signal fires (Plan 10)', async () => {
+        const svc = createQueryService();
+        svc.findProjects.mockResolvedValue([
+            { path: '/a.csproj', name: 'A' },
+        ]);
+        const controller = new AbortController();
+        controller.abort(); // pre-aborted
+        svc.getInstalledPackages.mockResolvedValue([{ id: 'X', version: '1.0' }]);
+
+        const onStart = vi.fn();
+        const onProject = vi.fn();
+        await queryAllProjectsInstalled(svc, true, {
+            onStart,
+            onProject,
+            signal: controller.signal,
+        });
+
+        // Pre-aborted signal suppresses both onStart and onProject emits.
+        expect(onStart).not.toHaveBeenCalled();
+        expect(onProject).not.toHaveBeenCalled();
+    });
 });
 
 describe('resolveAllProjectsIcons', () => {
@@ -648,5 +742,129 @@ describe('resolveAllProjectsIcons', () => {
         const svc = createMockNuGetService();
         const result = await resolveAllProjectsIcons(svc as any, []);
         expect(result).toEqual({});
+    });
+});
+
+describe('queryAllProjectsTransitive', () => {
+    function createTransitiveSvc() {
+        return {
+            findProjects: vi.fn().mockResolvedValue([]),
+            getTransitivePackagesPreservingErrors: vi.fn().mockResolvedValue({ frameworks: [], dataSourceAvailable: true }),
+        } as any;
+    }
+
+    it('streams onStart with project list, then onProject per project (Plan APT)', async () => {
+        const svc = createTransitiveSvc();
+        svc.findProjects.mockResolvedValue([
+            { path: '/a.csproj', name: 'A', workspaceFolder: 'wsA' },
+            { path: '/b.csproj', name: 'B' },
+        ]);
+        svc.getTransitivePackagesPreservingErrors
+            .mockResolvedValueOnce({ frameworks: [{ targetFramework: 'net8.0', packages: [] }], dataSourceAvailable: true })
+            .mockResolvedValueOnce({ frameworks: [], dataSourceAvailable: false });
+
+        const onStart = vi.fn();
+        const onProject = vi.fn();
+        await queryAllProjectsTransitive(svc, { onStart, onProject, signal: new AbortController().signal });
+
+        expect(onStart).toHaveBeenCalledTimes(1);
+        expect(onStart).toHaveBeenCalledWith([
+            { projectPath: '/a.csproj', projectName: 'A', workspaceFolder: 'wsA' },
+            { projectPath: '/b.csproj', projectName: 'B', workspaceFolder: undefined },
+        ]);
+        expect(onProject).toHaveBeenCalledTimes(2);
+        // Order may vary (concurrency 4); match by projectPath.
+        const calls = onProject.mock.calls.map(c => c[0]);
+        const a = calls.find(c => c.projectPath === '/a.csproj');
+        const b = calls.find(c => c.projectPath === '/b.csproj');
+        expect(a).toMatchObject({ dataSourceAvailable: true, frameworks: [{ targetFramework: 'net8.0', packages: [] }] });
+        expect(b).toMatchObject({ dataSourceAvailable: false, frameworks: [] });
+    });
+
+    it('forwards errorKind from preservingErrors result', async () => {
+        const svc = createTransitiveSvc();
+        svc.findProjects.mockResolvedValue([{ path: '/x.csproj', name: 'X' }]);
+        svc.getTransitivePackagesPreservingErrors.mockResolvedValueOnce({
+            frameworks: [], dataSourceAvailable: true, errorKind: 'parse-failed',
+        });
+
+        const onProject = vi.fn();
+        await queryAllProjectsTransitive(svc, { onProject });
+
+        expect(onProject).toHaveBeenCalledTimes(1);
+        expect(onProject.mock.calls[0][0]).toMatchObject({
+            projectPath: '/x.csproj',
+            errorKind: 'parse-failed',
+            dataSourceAvailable: true,
+        });
+    });
+
+    it('suppresses emits when signal is pre-aborted', async () => {
+        const svc = createTransitiveSvc();
+        svc.findProjects.mockResolvedValue([{ path: '/a.csproj', name: 'A' }]);
+        const controller = new AbortController();
+        controller.abort();
+
+        const onStart = vi.fn();
+        const onProject = vi.fn();
+        await queryAllProjectsTransitive(svc, { onStart, onProject, signal: controller.signal });
+
+        expect(onStart).not.toHaveBeenCalled();
+        expect(onProject).not.toHaveBeenCalled();
+    });
+});
+
+// ──────────────────────────────────────────────
+// skipRestore — bulk-op final restore is skipped when ctx.skipRestore=true
+// ──────────────────────────────────────────────
+describe('skipRestore in bulk operations', () => {
+    let ctx: OperationContext;
+
+    beforeEach(() => {
+        ctx = createMockCtx();
+        ctx.skipRestore = true;
+        mockWithProgress();
+    });
+
+    it('executeBulkInstall: skips per-project restore phase', async () => {
+        await executeBulkInstall(ctx, ['/a.csproj', '/b.csproj'], 'Pkg', '1.0.0');
+        expect(ctx.nugetService.installPackage).toHaveBeenCalledTimes(2);
+        expect(ctx.nugetService.restoreProject).not.toHaveBeenCalled();
+    });
+
+    it('executeBulkUpdatePackages: skips final restore', async () => {
+        await executeBulkUpdatePackages(
+            ctx,
+            [{ id: 'A', version: '1' }, { id: 'B', version: '2' }],
+            '/proj.csproj',
+        );
+        expect(ctx.nugetService.updatePackage).toHaveBeenCalledTimes(2);
+        expect(ctx.nugetService.restoreProject).not.toHaveBeenCalled();
+    });
+
+    it('executeBulkRemovePackages: skips final restore', async () => {
+        await executeBulkRemovePackages(ctx, ['A', 'B'], '/proj.csproj');
+        expect(ctx.nugetService.removePackage).toHaveBeenCalledTimes(2);
+        expect(ctx.nugetService.restoreProject).not.toHaveBeenCalled();
+    });
+
+    it('executeBulkUpdateAllProjects: skips phase-2 restore for every project', async () => {
+        const projects = [
+            { projectPath: '/a.csproj', projectName: 'A', packages: [{ id: 'X', version: '1' }] },
+            { projectPath: '/b.csproj', projectName: 'B', packages: [{ id: 'Y', version: '2' }] },
+        ];
+        await executeBulkUpdateAllProjects(ctx, projects);
+        expect(ctx.nugetService.updatePackage).toHaveBeenCalledTimes(2);
+        expect(ctx.nugetService.restoreProject).not.toHaveBeenCalled();
+    });
+
+    it('executeBulkRemoveAllProjects: skips phase-2 restore for every project', async () => {
+        const projects = [
+            { projectPath: '/a.csproj', projectName: 'A', packages: ['X'] },
+            { projectPath: '/b.csproj', projectName: 'B', packages: ['Y'] },
+        ];
+        await executeBulkRemoveAllProjects(ctx, projects);
+        expect(ctx.nugetService.removePackage).toHaveBeenCalledTimes(2);
+        expect(ctx.nugetService.restoreProject).not.toHaveBeenCalled();
     });
 });

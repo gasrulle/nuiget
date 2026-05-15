@@ -29,6 +29,8 @@ export interface VersionSpec {
 export interface Project {
     name: string;
     path: string;
+    /** Workspace folder name this project belongs to (multi-root grouping). */
+    workspaceFolder?: string;
 }
 
 export interface InstalledPackage {
@@ -149,6 +151,12 @@ export interface TransitivePackagesResult {
     frameworks: TransitiveFrameworkSection[];
     /** Whether project.assets.json exists (project has been built/restored) */
     dataSourceAvailable: boolean;
+    /**
+     * Bucketed error category when assets.json existed but transitive resolution failed.
+     * Only populated by `getTransitivePackagesPreservingErrors` (all-projects transitive flow);
+     * legacy `getTransitivePackages` swallows errors and never sets this.
+     */
+    errorKind?: 'parse-failed' | 'fs-error' | 'unknown';
 }
 
 /**
@@ -315,6 +323,8 @@ export interface CheckAllProjectsUpdatesMsg {
 export interface CheckAllProjectsInstalledMsg {
     type: 'checkAllProjectsInstalled';
     context?: string;
+    /** Echoed in every Start/ProjectFound/ProjectMetadata/Complete message; used for stale-response discard. */
+    requestId?: string;
 }
 
 export interface InstallPackageMsg {
@@ -373,6 +383,14 @@ export interface GetPackageVersionsMsg {
     take?: number;
 }
 
+export interface PrefetchPackageVersionsMsg {
+    type: 'prefetchPackageVersions';
+    packageId: string;
+    source?: string;
+    includePrerelease?: boolean;
+    take?: number;
+}
+
 // ─── Panel-Only Messages ─────────────────────────────────────────────────────
 
 export interface GetProjectsMsg {
@@ -395,6 +413,87 @@ export interface GetTransitiveMetadataMsg {
 export interface RestoreProjectMsg {
     type: 'restoreProject';
     projectPath: string;
+}
+
+// ─── All-Projects Transitive (Plan: transitive-all-projects) ─────────────────
+
+/**
+ * Request: aggregate transitive packages across every project in the workspace.
+ * Backend streams `allProjectsTransitiveStart` → N×`allProjectsTransitiveProjectFound` →
+ * `allProjectsTransitiveComplete`. Frontend uses `requestId` to discard stale chunks.
+ * Distinct from `getTransitivePackages` (single project) — this channel never accepts
+ * `ALL_PROJECTS_SENTINEL` via the legacy handler.
+ */
+export interface GetAllProjectsTransitiveMsg {
+    type: 'getAllProjectsTransitive';
+    requestId: string;
+}
+
+export interface CancelAllProjectsTransitiveMsg {
+    type: 'cancelAllProjectsTransitive';
+    requestId: string;
+}
+
+export interface AllProjectsTransitiveStartMsg {
+    type: 'allProjectsTransitiveStart';
+    requestId: string;
+    projects: { path: string; name: string; workspaceFolder?: string }[];
+}
+
+export interface AllProjectsTransitiveProjectFoundMsg {
+    type: 'allProjectsTransitiveProjectFound';
+    requestId: string;
+    projectPath: string;
+    projectName: string;
+    workspaceFolder?: string;
+    frameworks: TransitiveFrameworkSection[];
+    /** False → project.assets.json missing (restore needed). */
+    dataSourceAvailable: boolean;
+    /** Bucketed error category when resolution failed despite assets.json being present. */
+    errorKind?: 'parse-failed' | 'fs-error' | 'unknown';
+}
+
+export interface AllProjectsTransitiveCompleteMsg {
+    type: 'allProjectsTransitiveComplete';
+    requestId: string;
+    /** Canonical list of project paths covered by this stream — frontend prunes slots not in this set. */
+    projectPaths: string[];
+    errored: { projectPath: string; errorKind: string }[];
+}
+
+/**
+ * Request: enrich a unique (id, version) batch of transitive packages with icon/verified/authors.
+ * Distinct from single-project `getTransitiveMetadata` (which is project+framework scoped and routes
+ * through `InstalledTab`). This channel routes through App.tsx aggregation state.
+ */
+export interface GetAllProjectsTransitiveMetadataMsg {
+    type: 'getAllProjectsTransitiveMetadata';
+    requestId: string;
+    packages: { id: string; version: string }[];
+}
+
+export interface AllProjectsTransitiveMetadataMsg {
+    type: 'allProjectsTransitiveMetadata';
+    requestId: string;
+    /** Sparse list — only packages whose metadata resolved are echoed back. */
+    metadata: Array<{ id: string; version: string; iconUrl?: string; verified?: boolean; authors?: string }>;
+}
+
+/**
+ * Request: serially restore a batch of projects flagged by the all-projects transitive banner.
+ * Single OperationQueue task internally — sidesteps the 5-task `MAX_WAITING` cap that would apply
+ * if N parallel `restoreProject` messages were queued.
+ */
+export interface RestoreProjectsBatchMsg {
+    type: 'restoreProjectsBatch';
+    requestId: string;
+    projectPaths: string[];
+}
+
+export interface RestoreProjectsBatchResultMsg {
+    type: 'restoreProjectsBatchResult';
+    requestId: string;
+    results: Array<{ projectPath: string; success: boolean; error?: string; cancelled?: boolean }>;
 }
 
 export interface AutocompletePackagesMsg {
@@ -462,6 +561,13 @@ export interface GetPackageMetadataMsg {
     source?: string;
 }
 
+export interface PrefetchPackageMetadataMsg {
+    type: 'prefetchPackageMetadata';
+    packageId: string;
+    version: string;
+    source?: string;
+}
+
 export interface GetSettingsMsg {
     type: 'getSettings';
 }
@@ -469,6 +575,7 @@ export interface GetSettingsMsg {
 export interface SaveSettingsMsg {
     type: 'saveSettings';
     includePrerelease?: boolean;
+    restoreEnabled?: boolean;
     selectedSource?: string;
     selectedProject?: string;
     recentSearches?: string[];
@@ -512,6 +619,19 @@ export interface SidebarReadyMsg {
     type: 'ready';
 }
 
+/** Webview→host handshake; sent once on App.tsx mount before any data requests. */
+export interface PanelWebviewReadyMsg {
+    type: 'webviewReady';
+}
+
+/** Webview→host first useful render ack; sent once after the first state commit
+ * of installedPackages / allProjectsInstalled / allProjectsInstalledStart. */
+export interface PanelFirstUsefulRenderMsg {
+    type: 'firstUsefulRender';
+    /** Source of the first render so the host can categorize it in perf logs */
+    source: 'installedPackages' | 'allProjectsInstalled' | 'allProjectsInstalledStart';
+}
+
 export interface SaveSectionSplitMsg {
     type: 'saveSectionSplit';
     position?: number;
@@ -542,11 +662,15 @@ export type PanelRequestMessage =
     | GetSourcesMsg | RefreshSourcesMsg | FullRefreshMsg
     | EnableSourceMsg | DisableSourceMsg | AddSourceMsg | RemoveSourceMsg
     | GetConfigFilesMsg | GetPackageVersionsMsg | GetPackageMetadataMsg
+    | PrefetchPackageVersionsMsg | PrefetchPackageMetadataMsg
     | CheckPackageUpdatesMsg | CheckAllProjectsUpdatesMsg | CheckAllProjectsInstalledMsg
     | BulkUpdateAllProjectsMsg | GetSettingsMsg | SaveSettingsMsg
     | GetSplitPositionMsg | SaveSplitPositionMsg
     | PrewarmSourceMsg | FetchReadmeFromPackageMsg
-    | BulkUpdatePackagesMsg | ConfirmBulkRemoveMsg | ConfirmBulkRemoveAllProjectsMsg;
+    | BulkUpdatePackagesMsg | ConfirmBulkRemoveMsg | ConfirmBulkRemoveAllProjectsMsg
+    | GetAllProjectsTransitiveMsg | CancelAllProjectsTransitiveMsg
+    | GetAllProjectsTransitiveMetadataMsg | RestoreProjectsBatchMsg
+    | PanelWebviewReadyMsg | PanelFirstUsefulRenderMsg;
 
 /** All messages the sidebar webview can send to the extension host */
 export type SidebarRequestMessage =

@@ -66,6 +66,12 @@ function createProps(overrides: Partial<InstalledTabProps> = {}): InstalledTabPr
         loadingAllProjectsInstalled: false,
         activeProjectPath: '',
         onActiveProjectPathChange: vi.fn(),
+        allProjectsTransitiveRows: [],
+        loadingAllProjectsTransitive: false,
+        allProjectsTransitiveErrored: [],
+        restoringProjectsBatch: false,
+        onAllProjectsTransitiveExpandedChange: vi.fn(),
+        onRestoreProjectsBatch: vi.fn(),
         ...overrides,
     };
 }

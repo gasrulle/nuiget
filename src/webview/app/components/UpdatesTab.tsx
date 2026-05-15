@@ -106,6 +106,10 @@ export interface UpdatesTabProps {
     metadataCache: React.RefObject<LRUMap<string, PackageMetadata>>;
     vscode: VsCodeApi;
 
+    // Hover prefetch
+    onRowMouseEnter?: (packageId: string, version?: string) => void;
+    onRowMouseLeave?: () => void;
+
     // External refs
     updatesTabRef: React.RefObject<HTMLButtonElement | null>;
     MemoizedDraggableSash: React.MemoExoticComponent<React.FC<{
@@ -169,6 +173,8 @@ const UpdatesTab = forwardRef<UpdatesTabHandle, UpdatesTabProps>((props, ref) =>
         createPackageListKeyHandler,
         metadataCache,
         vscode,
+        onRowMouseEnter,
+        onRowMouseLeave,
         updatesTabRef,
         MemoizedDraggableSash,
     } = props;
@@ -589,6 +595,8 @@ const UpdatesTab = forwardRef<UpdatesTabHandle, UpdatesTabProps>((props, ref) =>
                                                         initialVersions: [item.latestVersion, item.installedVersion],
                                                     });
                                                 }}
+                                                onMouseEnter={onRowMouseEnter ? () => onRowMouseEnter(item.id, item.latestVersion) : undefined}
+                                                onMouseLeave={onRowMouseLeave}
                                             >
                                                 <input
                                                     type="checkbox"
@@ -667,6 +675,8 @@ const UpdatesTab = forwardRef<UpdatesTabHandle, UpdatesTabProps>((props, ref) =>
                                                         initialVersions: [pkg.latestVersion, pkg.installedVersion],
                                                     });
                                                 }}
+                                                onMouseEnter={onRowMouseEnter ? () => onRowMouseEnter(pkg.id, pkg.latestVersion) : undefined}
+                                                onMouseLeave={onRowMouseLeave}
                                             >
                                                 <input
                                                     type="checkbox"

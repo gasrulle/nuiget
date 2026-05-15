@@ -50,8 +50,8 @@ export interface PackageServiceDeps {
 }
 
 export class NuGetPackageService {
-    // LRU cache for package metadata (key: packageId@version, max 200 entries)
-    private metadataCache: LRUMap<string, PackageMetadata> = new LRUMap(200);
+    // LRU cache for package metadata (key: packageId@version, max 500 entries; cleared by clearInMemoryNuGetCaches() on Refresh)
+    private metadataCache: LRUMap<string, PackageMetadata> = new LRUMap(500);
     // LRU cache for resolved icon URLs (key: packageId@version, max 500 entries)
     private iconUrlCache: LRUMap<string, string> = new LRUMap(500);
     // LRU cache for package versions (key: packageId@source@prerelease@take, max 200 entries)
@@ -62,8 +62,8 @@ export class NuGetPackageService {
     private searchResultsCache: LRUMap<string, PackageSearchResult[]> = new LRUMap(100);
     // LRU cache for quick search grouped results (key: query|sources|prerelease|take, max 100 entries)
     private quickSearchCache: LRUMap<string, { data: QuickSearchSourceResult[]; timestamp: number }> = new LRUMap(100);
-    // Quick search cache TTL: 30 seconds
-    private static readonly QUICK_SEARCH_CACHE_TTL = 30000;
+    // Quick search cache TTL: 5 minutes (cleared by clearCaches() on Refresh; key includes prerelease toggle)
+    private static readonly QUICK_SEARCH_CACHE_TTL = 5 * 60 * 1000;
     // In-memory vulnerability data: Map<lowercasePackageId, Array<{severity, url, versions}>>
     private vulnerabilityData: Map<string, { severity: number; url: string; versions: string }[]> = new Map();
     // Timestamp of last vulnerability data fetch
@@ -75,6 +75,14 @@ export class NuGetPackageService {
     // Circuit breaker for icon resolution per source — skip sources after N consecutive misses
     private iconSourceMissCount: Map<string, number> = new Map();
     private static readonly ICON_SOURCE_MISS_THRESHOLD = 5;
+
+    // In-flight Promise dedup for getPackageMetadata / getPackageVersions.
+    // Concurrent callers (e.g. click + hover prefetch) for the same key share a single fetch.
+    private readonly _inFlightMetadata: Map<string, Promise<PackageMetadata | null>> = new Map();
+    private readonly _inFlightVersions: Map<string, Promise<string[]>> = new Map();
+    // Global concurrent cap for prefetch-only operations to keep hover-driven fetches off the critical path.
+    private _prefetchInFlightCount = 0;
+    private static readonly PREFETCH_CONCURRENT_CAP = 4;
 
     /**
      * Compute a relevance tier for sorting search results.
@@ -99,14 +107,42 @@ export class NuGetPackageService {
     }
 
     /**
+     * Try to acquire a slot for a prefetch-only fetch. Returns false when at cap;
+     * caller should drop the prefetch (the click path is unaffected).
+     */
+    tryAcquirePrefetchSlot(): boolean {
+        if (this._prefetchInFlightCount >= NuGetPackageService.PREFETCH_CONCURRENT_CAP) {
+            return false;
+        }
+        this._prefetchInFlightCount++;
+        return true;
+    }
+
+    /** Release a previously-acquired prefetch slot. Always call in finally. */
+    releasePrefetchSlot(): void {
+        if (this._prefetchInFlightCount > 0) {
+            this._prefetchInFlightCount--;
+        }
+    }
+
+    /**
      * Clear all package-related caches.
-     * Called by NuGetService.clearSourceErrors().
+     * Called by NuGetService.clearSourceErrors() / clearInMemoryNuGetCaches().
      */
     clearCaches(): void {
         this.iconSourceMissCount.clear();
         this.vulnerabilityData.clear();
         this.vulnerabilityDataTimestamp = 0;
         this.quickSearchCache.clear();
+    }
+
+    /**
+     * Clear metadata and search-result caches.
+     * Called on manual refresh so users see fresh listings instead of waiting for TTLs to expire.
+     */
+    clearMetadataAndSearchCaches(): void {
+        this.metadataCache.clear();
+        this.searchResultsCache.clear();
     }
 
     /**
@@ -1204,6 +1240,16 @@ export class NuGetPackageService {
      * Get package versions, optionally from a specific source.
      */
     async getPackageVersions(packageId: string, source?: string, includePrerelease?: boolean, take: number = 20): Promise<string[]> {
+        const dedupeKey = `${packageId.toLowerCase()}|${source ?? ''}|${includePrerelease ? 1 : 0}|${take}`;
+        const existing = this._inFlightVersions.get(dedupeKey);
+        if (existing) { return existing; }
+        const promise = this._getPackageVersionsImpl(packageId, source, includePrerelease, take);
+        this._inFlightVersions.set(dedupeKey, promise);
+        promise.finally(() => this._inFlightVersions.delete(dedupeKey));
+        return promise;
+    }
+
+    private async _getPackageVersionsImpl(packageId: string, source?: string, includePrerelease?: boolean, take: number = 20): Promise<string[]> {
         try {
             if (!source || source === 'all') {
                 const allSources = await this._deps.getSources();
@@ -1581,6 +1627,16 @@ export class NuGetPackageService {
     // ── Package metadata ────────────────────────────────────────────────
 
     async getPackageMetadata(packageId: string, version: string, source?: string): Promise<PackageMetadata | null> {
+        const dedupeKey = `${packageId.toLowerCase()}@${version.toLowerCase()}|${source ?? ''}`;
+        const existing = this._inFlightMetadata.get(dedupeKey);
+        if (existing) { return existing; }
+        const promise = this._getPackageMetadataImpl(packageId, version, source);
+        this._inFlightMetadata.set(dedupeKey, promise);
+        promise.finally(() => this._inFlightMetadata.delete(dedupeKey));
+        return promise;
+    }
+
+    private async _getPackageMetadataImpl(packageId: string, version: string, source?: string): Promise<PackageMetadata | null> {
         try {
             const cacheKey = `${packageId.toLowerCase()}@${version.toLowerCase()}`;
             const cached = this.metadataCache.get(cacheKey);

@@ -26,8 +26,12 @@ interface PackageRowProps {
  * Shows package name, version, truncated description.
  * Hover reveals primary action button (SVG codicon). Right-click opens context menu.
  * Keyboard navigation is handled at the section container level.
+ *
+ * Wrapped in React.memo so unrelated state changes in the parent (e.g. updates
+ * count, search query) don't re-render every row. Effective only when the parent
+ * passes stable callback references — see useCallback wiring in SidebarApp.tsx.
  */
-export const PackageRow: React.FC<PackageRowProps> = ({
+const PackageRowImpl: React.FC<PackageRowProps> = ({
     packageId,
     version,
     description,
@@ -132,3 +136,5 @@ export const PackageRow: React.FC<PackageRowProps> = ({
         </div>
     );
 };
+
+export const PackageRow = React.memo(PackageRowImpl);

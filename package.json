@@ -2,7 +2,7 @@
     "name": "nuiget",
     "displayName": "nUIget - A NuGet Package Manager",
     "description": "A NuGet package manager with Visual Studio-style UI. Search, install, update, and remove packages across multiple sources.",
-    "version": "1.18.4",
+    "version": "1.18.5",
     "publisher": "Gasrulle",
     "license": "MIT",
     "icon": "resources/icon.png",
@@ -113,6 +113,16 @@
                 }
             },
             {
+                "command": "nuiget.sidebar.toggleRestore",
+                "title": "nUIget: Restore after operations",
+                "icon": "$(verified)"
+            },
+            {
+                "command": "nuiget.sidebar.toggleRestoreOff",
+                "title": "nUIget: Skip restore after operations",
+                "icon": "$(verified-filled)"
+            },
+            {
                 "command": "nuiget.sidebar.refresh",
                 "title": "nUIget: Refresh Sidebar",
                 "icon": "$(refresh)"
@@ -125,6 +135,10 @@
             {
                 "command": "nuiget.clearHttpCache",
                 "title": "nUIget: Clear NuGet HTTP Cache"
+            },
+            {
+                "command": "nuiget.clearSdkVersionCache",
+                "title": "nUIget: Clear SDK Version Cache"
             }
         ],
         "menus": {
@@ -147,6 +161,14 @@
                 },
                 {
                     "command": "nuiget.sidebar.togglePrereleaseOff",
+                    "when": "false"
+                },
+                {
+                    "command": "nuiget.sidebar.toggleRestore",
+                    "when": "false"
+                },
+                {
+                    "command": "nuiget.sidebar.toggleRestoreOff",
                     "when": "false"
                 },
                 {
@@ -191,6 +213,16 @@
                     "group": "navigation@1"
                 },
                 {
+                    "command": "nuiget.sidebar.toggleRestore",
+                    "when": "view == nuiget.sidebarView && !nuiget.restoreEnabled",
+                    "group": "navigation@0"
+                },
+                {
+                    "command": "nuiget.sidebar.toggleRestoreOff",
+                    "when": "view == nuiget.sidebarView && nuiget.restoreEnabled",
+                    "group": "navigation@0"
+                },
+                {
                     "command": "nuiget.sidebar.selectProject",
                     "when": "view == nuiget.sidebarView",
                     "group": "navigation@2"
@@ -215,11 +247,6 @@
         "configuration": {
             "title": "nUIget",
             "properties": {
-                "nuiget.noRestore": {
-                    "type": "boolean",
-                    "default": false,
-                    "description": "Skip restore after adding packages. Faster but skips compatibility check until next build."
-                },
                 "nuiget.quickSearchResultsPerSource": {
                     "type": "integer",
                     "default": 5,
@@ -255,6 +282,11 @@
                     "minimum": 1,
                     "maximum": 100,
                     "description": "Maximum number of packages to return from full search (dotnet CLI)."
+                },
+                "nuiget.enablePerformanceLogging": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Emit [perf] timing lines to the nUIget output channel for hot user-perceived flows (panel open, project switch, install/update/remove, search, update check). Use to diagnose slow operations or compare branches; keep off in normal use."
                 }
             }
         }
@@ -297,7 +329,7 @@
         "@vitest/coverage-v8": "^4.1.2",
         "@vscode/test-cli": "^0.0.12",
         "@vscode/test-electron": "^2.5.2",
-        "@vscode/vsce": "^3.7.1",
+        "@vscode/vsce": "^3.9.1",
         "chai": "^6.2.2",
         "esbuild": "^0.27.2",
         "eslint": "^10.0.0",

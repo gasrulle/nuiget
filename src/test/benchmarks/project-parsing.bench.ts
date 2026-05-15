@@ -31,6 +31,20 @@ describe('getTransitivePackagesFromAssets', () => {
     });
 });
 
+describe('getTransitivePackagesPreservingErrors', () => {
+    // Fixture .csproj resolves to fixtures/obj/project.assets.json (file-system real read).
+    bench('cold (cache miss, real fs)', async () => {
+        // Use a fresh service per iteration so the per-instance cache stays cold.
+        const svc = new NuGetProjectService(vi.fn(async () => false));
+        await svc.getTransitivePackagesPreservingErrors(SAMPLE_CSPROJ);
+    });
+
+    const warmService = new NuGetProjectService(vi.fn(async () => false));
+    bench('warm (cache hit)', async () => {
+        await warmService.getTransitivePackagesPreservingErrors(SAMPLE_CSPROJ);
+    });
+});
+
 describe('getProjectReferences', () => {
     bench('extract project references', async () => {
         await projectService.getProjectReferences(MULTI_VERSION_CSPROJ);
