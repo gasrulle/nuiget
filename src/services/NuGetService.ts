@@ -324,6 +324,8 @@ export class NuGetService {
     }
 
 
+    private readonly _inFlightEndpoints: Map<string, Promise<ServiceEndpoints>> = new Map();
+
     /**
      * Discover service endpoints from a NuGet V3 service index
      */
@@ -345,6 +347,20 @@ export class NuGetService {
             return {};
         }
 
+        // Deduplicate concurrent discovery for the same source. On cold start, many
+        // metadata/search/transitive workers can miss the cache simultaneously; without
+        // this each fires its own service-index request (a stampede).
+        const inFlight = this._inFlightEndpoints.get(sourceUrl);
+        if (inFlight) {
+            return inFlight;
+        }
+        const promise = this._discoverServiceEndpointsImpl(sourceUrl)
+            .finally(() => this._inFlightEndpoints.delete(sourceUrl));
+        this._inFlightEndpoints.set(sourceUrl, promise);
+        return promise;
+    }
+
+    private async _discoverServiceEndpointsImpl(sourceUrl: string): Promise<ServiceEndpoints> {
         const endpoints: ServiceEndpoints = {};
 
         try {
@@ -593,6 +609,9 @@ export class NuGetService {
         this.failedSources.clear();
         // Also clear the service index cache to force re-discovery
         this.serviceIndexCache.clear();
+        // Drop any in-flight discovery so a manual refresh can't attach to a stale
+        // (possibly failing) discovery and repopulate the failed-endpoint cache.
+        this._inFlightEndpoints.clear();
         // Clear failed endpoint cache so that refreshing actually retries the network
         this.failedEndpointCache.clear();
         // Clear package service caches (icons, vulnerabilities, quick search, etc.)

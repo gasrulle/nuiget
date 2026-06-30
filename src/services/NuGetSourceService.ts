@@ -20,6 +20,7 @@ export class NuGetSourceService {
     // Cache for getSources() to avoid repeated CLI spawns
     private _sourcesCache: NuGetSource[] | null = null;
     private _sourcesCacheTime: number = 0;
+    private _sourcesFetchInFlight: Promise<NuGetSource[]> | null = null;
     private static readonly SOURCES_CACHE_TTL = 30000; // 30 seconds
 
     /**
@@ -42,16 +43,36 @@ export class NuGetSourceService {
         if (this._sourcesCache && (now - this._sourcesCacheTime) < NuGetSourceService.SOURCES_CACHE_TTL) {
             return this._sourcesCache;
         }
-        const sources = await this.configParser.getSources();
-        this._sourcesCache = sources;
-        this._sourcesCacheTime = now;
-        return sources;
+        // Deduplicate concurrent cold fetches. At activation the health monitor and the
+        // credential prewarm both call getSources() before the cache is populated; without
+        // this they each spawn a `dotnet nuget list source` process.
+        if (this._sourcesFetchInFlight) {
+            return this._sourcesFetchInFlight;
+        }
+        const fetchPromise = this.configParser.getSources();
+        this._sourcesFetchInFlight = fetchPromise;
+        try {
+            const sources = await fetchPromise;
+            // Only populate the cache if this fetch is still current — a source mutation
+            // (add/remove/enable/disable) may have invalidated it mid-flight.
+            if (this._sourcesFetchInFlight === fetchPromise) {
+                this._sourcesCache = sources;
+                this._sourcesCacheTime = Date.now();
+            }
+            return sources;
+        } finally {
+            if (this._sourcesFetchInFlight === fetchPromise) {
+                this._sourcesFetchInFlight = null;
+            }
+        }
     }
 
     /** Invalidate the short-lived sources cache (call after enable/disable/add/remove). */
     public invalidateSourcesCache(): void {
         this._sourcesCache = null;
         this._sourcesCacheTime = 0;
+        // Drop any in-flight fetch so its result can't repopulate the cache post-mutation.
+        this._sourcesFetchInFlight = null;
     }
 
     /**

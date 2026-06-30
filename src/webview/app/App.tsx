@@ -616,6 +616,11 @@ export const App: React.FC = () => {
                                     ? { ...p, version: opVerMain, resolvedVersion: opVerMain }
                                     : p
                             ));
+                        } else if (opPkgIdMain && message.type === 'removeResult') {
+                            // Optimistically drop the removed row so it doesn't linger until the
+                            // authoritative getInstalledPackages re-fetch below returns. (This
+                            // branch only runs on success — see the message.success guard above.)
+                            setInstalledPackages(prev => prev.filter(p => p.id.toLowerCase() !== opPkgIdMain));
                         }
                         skipNextUpdateCheckRef.current = true;
                         vscode.postMessage({ type: 'getInstalledPackages', projectPath: selectedProjectRef.current });
@@ -841,7 +846,15 @@ export const App: React.FC = () => {
             case 'packageMetadata':
                 // Update metadata for the selected package
                 if (selectedPackageRef.current && message.packageId === selectedPackageRef.current.id) {
-                    setPackageMetadata(message.metadata);
+                    // Preserve a README that arrived first from the parallel readme fetch —
+                    // metadata responses don't carry `readme`, so a naive overwrite would wipe it.
+                    // Only merge when versions match (avoid showing a stale README after a switch).
+                    setPackageMetadata(prev => {
+                        if (prev?.readme && message.metadata && prev.version === (message.metadata.version || message.version)) {
+                            return { ...message.metadata, readme: prev.readme };
+                        }
+                        return message.metadata;
+                    });
                     // Cache the metadata (use echoed source from response, not current ref,
                     // to avoid cache key mismatch if user changed source between request and response)
                     if (message.metadata) {
@@ -1255,9 +1268,10 @@ export const App: React.FC = () => {
                     }
                     return []; // All removals succeeded — clear all updates
                 });
-                // Still re-fetch all projects installed since transitive deps changed
+                // Still re-fetch all projects installed since transitive deps changed.
+                // Keep the existing rows visible while the stream arrives (the stream's
+                // `…Complete` prunes stale slots) — clearing here caused an empty-state flash.
                 setLoadingAllProjectsInstalled(true);
-                setAllProjectsInstalled([]);
                 requestStreamedAllProjectsInstalled();
                 // Refresh current project installed for transitive accuracy
                 // (skip when in all-projects mode — the streamed re-fetch above covers it
@@ -1700,12 +1714,16 @@ export const App: React.FC = () => {
         ) {
             // Already have readme loaded
             if (packageMetadata?.readme) { return; }
-            // In normal mode, wait for packageMetadata to load first
-            if (!packageMetadata) { return; }
 
+            // Don't wait for packageMetadata — id/version are available from the selected
+            // package, so the README (nupkg) fetch can start in parallel with metadata.
             const pkgId = packageMetadata?.id || getPackageId(selectedPackage);
             const version = packageMetadata?.version || selectedVersionRef.current;
-            if (!version) { return; }
+            if (!pkgId || !version) { return; }
+            // If metadata hasn't resolved yet, don't fetch the README with an unresolved
+            // floating/range spec (e.g. "10.*" or "[1.0,2.0)") — wait for metadata to resolve
+            // the concrete version. Concrete versions fetch immediately (the common case).
+            if (!packageMetadata && /[*()[\],]/.test(version)) { return; }
 
             // Mark as attempted so we don't retry
             setReadmeAttempted(true);

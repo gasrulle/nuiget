@@ -329,16 +329,18 @@ export class NuGetPackageService {
                 );
                 if (!Array.isArray(index) || index.length === 0) { continue; }
 
-                // Fetch each vulnerability page and merge into lookup
-                for (const page of index) {
-                    if (!page['@id']) { continue; }
+                // Fetch vulnerability pages in parallel (bounded) and merge into lookup.
+                // The merge below is synchronous, so it is race-free under single-threaded JS
+                // even though the fetches run concurrently.
+                const validPages = index.filter(page => page['@id']);
+                await batchedPromiseAll(validPages, async (page) => {
                     try {
                         const pageData = await this._deps.fetchJsonWithCompression<Record<string, { severity: number; url: string; versions: string }[]>>(
                             page['@id'], authHeader
                         );
                         if (!pageData || typeof pageData !== 'object') {
                             console.warn(`[NuGet] Vulnerability page returned no data: ${page['@id']}`);
-                            continue;
+                            return;
                         }
 
                         for (const [pkgId, vulns] of Object.entries(pageData)) {
@@ -357,7 +359,7 @@ export class NuGetPackageService {
                     } catch {
                         // Skip individual page failures
                     }
-                }
+                }, 8);
             } catch {
                 // Skip source failures — vulnerability data is best-effort
             }

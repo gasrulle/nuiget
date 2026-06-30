@@ -213,22 +213,21 @@ export class NuGetProjectService {
             return [];
         }
 
-        const projects: Project[] = [];
-
-        for (const folder of workspaceFolders) {
-            const pattern = new vscode.RelativePattern(folder, '**/*.{csproj,fsproj,vbproj}');
-            const excludePattern = '{**/node_modules/**,**/bin/**,**/obj/**,**/packages/**,.git/**}';
-            const files = await vscode.workspace.findFiles(pattern, excludePattern);
-
-            for (const file of files) {
-                projects.push({
+        const excludePattern = '{**/node_modules/**,**/bin/**,**/obj/**,**/packages/**,.git/**}';
+        // Search all workspace folders in parallel (matters for multi-root workspaces).
+        const perFolder = await Promise.all(
+            workspaceFolders.map(async (folder) => {
+                const pattern = new vscode.RelativePattern(folder, '**/*.{csproj,fsproj,vbproj}');
+                const files = await vscode.workspace.findFiles(pattern, excludePattern);
+                return files.map((file) => ({
                     name: path.basename(file.fsPath),
                     path: file.fsPath,
                     workspaceFolder: folder.name,
-                });
-            }
-        }
+                }));
+            })
+        );
 
+        const projects: Project[] = perFolder.flat();
         projects.sort((a, b) => a.name.localeCompare(b.name));
         return projects;
     }

@@ -64,8 +64,19 @@ describe('NuGetSourceService', () => {
             expect(hoisted.mockGetSources).toHaveBeenCalledTimes(1);
         });
 
-        it('returns cached result within TTL', async () => {
-            hoisted.mockGetSources.mockResolvedValueOnce([{ name: 'a' }]);
+        it('deduplicates concurrent cold fetches into a single configParser call', async () => {
+            let resolveFn: (v: unknown) => void = () => {};
+            hoisted.mockGetSources.mockReturnValueOnce(new Promise(res => { resolveFn = res; }));
+            const p1 = service.getSources();
+            const p2 = service.getSources();
+            resolveFn([{ name: 'x' }]);
+            const [r1, r2] = await Promise.all([p1, p2]);
+            expect(hoisted.mockGetSources).toHaveBeenCalledTimes(1);
+            expect(r1).toEqual([{ name: 'x' }]);
+            expect(r2).toEqual([{ name: 'x' }]);
+        });
+
+        it('returns cached result within TTL', async () => {            hoisted.mockGetSources.mockResolvedValueOnce([{ name: 'a' }]);
             await service.getSources();
             const result = await service.getSources();
             expect(hoisted.mockGetSources).toHaveBeenCalledTimes(1);

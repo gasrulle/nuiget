@@ -1311,6 +1311,14 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
     // ------ Helpers ------
 
     private async _sendInitialData(): Promise<void> {
+        // Kick off sources in parallel — independent of project selection, and may spawn
+        // `dotnet nuget list source`. We still post projects/state as soon as findProjects
+        // resolves (below), then await sources, so projects paint without waiting on the CLI.
+        const sourcesPromise = this._nugetService.getSources();
+        // Mark as handled so a findProjects rejection below can't surface this as an
+        // unhandled rejection; the real error still propagates where we await it.
+        sourcesPromise.catch(() => { /* surfaced at await sourcesPromise */ });
+
         // Fetch projects first to auto-select if needed
         const projects = await this._nugetService.findProjects();
 
@@ -1351,8 +1359,8 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
         // Send projects (webview already has selectedProject set)
         this._postMessage({ type: 'projects', projects });
 
-        // Send sources
-        const sources = await this._nugetService.getSources();
+        // Send sources (already in flight from the top of this method)
+        const sources = await sourcesPromise;
         this._postMessage({ type: 'sources', sources: sources.filter(s => s.enabled) });
 
         // Send cached background data if available (background check may have
