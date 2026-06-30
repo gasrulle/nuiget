@@ -36,6 +36,7 @@ import type {
     WebviewMessage
 } from '../types';
 import { getPackageId } from '../types';
+import { groupOriginsByProject } from '../utils/groupOriginsByProject';
 import { MemoizedPackageDetailsPanel } from './PackageDetailsPanel';
 
 const ESTIMATED_ITEM_HEIGHT = 66; // padding (12*2) + icon (32) + gaps
@@ -906,39 +907,31 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
                             <span className="detail-label">Required by:</span>
                             <div className="required-by-list">
                                 {hasOrigins ? (
-                                    // All-projects mode — group by project, show TFM badges + chains
-                                    (selectedTransitivePackage.origins ?? []).map((origin) => {
-                                        const allChains = origin.fullChain && origin.fullChain.length > 0
-                                            ? origin.fullChain
-                                            : origin.requiredByChain;
-                                        const rootPackages = new Set<string>();
-                                        for (const chain of allChains) {
-                                            rootPackages.add(chain.split(' → ')[0]);
-                                        }
-                                        return (
-                                            <div key={`${origin.projectPath}::${origin.chainHash}`} className="required-by-project">
-                                                <div className="required-by-project-header">
-                                                    <span className="required-by-project-name" title={origin.projectPath}>{origin.projectName}</span>
-                                                    <div className="tfm-badges">
-                                                        {origin.frameworks.map(tfm => (
-                                                            <span key={tfm} className="tfm-badge">{tfm}</span>
-                                                        ))}
-                                                    </div>
-                                                </div>
-                                                <div className="required-by-chain-list">
-                                                    {rootPackages.size === 0 ? (
-                                                        <span className="detail-value">Unknown</span>
-                                                    ) : (
-                                                        Array.from(rootPackages).map((rootPkg) => (
-                                                            <div key={rootPkg} className="required-by-item">
-                                                                {rootPkg}
-                                                            </div>
-                                                        ))
-                                                    )}
+                                    // All-projects mode — one block per project (origins of the
+                                    // same project collapsed), with merged TFM badges + roots.
+                                    groupOriginsByProject(selectedTransitivePackage.origins ?? []).map((group) => (
+                                        <div key={group.projectPath} className="required-by-project">
+                                            <div className="required-by-project-header">
+                                                <span className="required-by-project-name" title={group.projectPath}>{group.projectName}</span>
+                                                <div className="tfm-badges">
+                                                    {group.frameworks.map(tfm => (
+                                                        <span key={tfm} className="tfm-badge">{tfm}</span>
+                                                    ))}
                                                 </div>
                                             </div>
-                                        );
-                                    })
+                                            <div className="required-by-chain-list">
+                                                {group.roots.length === 0 ? (
+                                                    <span className="required-by-implicit" title="Could not trace this package back to a top-level dependency">No traceable top-level package</span>
+                                                ) : (
+                                                    group.roots.map((rootPkg) => (
+                                                        <div key={rootPkg} className="required-by-item">
+                                                            {rootPkg}
+                                                        </div>
+                                                    ))
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))
                                 ) : (
                                     // Single-project mode — original render
                                     (() => {
@@ -948,7 +941,7 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
                                             rootPackages.add(chain.split(' → ')[0]);
                                         }
                                         if (rootPackages.size === 0) {
-                                            return <span className="detail-value">Unknown</span>;
+                                            return <span className="required-by-implicit" title="Could not trace this package back to a top-level dependency">No traceable top-level package</span>;
                                         }
                                         return Array.from(rootPackages).map((rootPkg) => (
                                             <div key={rootPkg} className="required-by-item">
@@ -1536,6 +1529,7 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
                                                         && selectedTransitivePackage.id.toLowerCase() === row.id.toLowerCase()
                                                         && (selectedTransitivePackage.version ?? '').trim().toLowerCase() === row.versionNormalized;
                                                     const firstOrigin = row.origins[0];
+                                                    const projectCount = new Set(row.origins.map(o => o.projectPath)).size;
                                                     return (
                                                         <div
                                                             key={rowKey}
@@ -1563,6 +1557,9 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
                                                                 <div className="package-name">{row.id}</div>
                                                                 <div className="package-meta">
                                                                     <span className="package-version">v{row.version}</span>
+                                                                    {projectCount > 0 && (
+                                                                        <span className="package-project-count"> · {projectCount} project{projectCount === 1 ? '' : 's'}</span>
+                                                                    )}
                                                                 </div>
                                                                 {row.authors && (
                                                                     <div className="package-authors">

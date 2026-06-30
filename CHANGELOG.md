@@ -5,7 +5,21 @@ All notable changes to the nUIget extension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.18.6] - 2026-06-30
+
+### Fixed
+
+- **Transitive "Required by: unknown" resolved via reverse-BFS top-level root resolution**
+
+### Changed
+
+- **Required-by now groups by project in all-projects mode, with a per-row project count**
+- **Dependency refresh — all runtime and dev dependencies updated to latest compatible versions**
+- **Tooling and library majors — esbuild 0.28, marked 18, @types/node 26, @vscode/test-electron 3, @vscode/test-cli 0.0.15**
+
+### Security
+
+- **Resolved all npm audit advisories — 0 vulnerabilities remaining (previously 1 critical, 8 high, 5 moderate, 2 low)**
 
 ## [1.18.5] - 2026-05-02
 

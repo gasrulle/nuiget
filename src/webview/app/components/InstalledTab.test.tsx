@@ -102,6 +102,61 @@ describe('InstalledTab', () => {
         expect(content.style.display).toBe('none');
     });
 
+    it('groups all-projects "Required by" by project (one block per project, no "Unknown")', () => {
+        const selectedTransitivePackage = {
+            id: 'System.Text.Json',
+            version: '8.0.0',
+            requiredByChain: [],
+            origins: [
+                { projectPath: '/a.csproj', projectName: 'Alpha', frameworks: ['net8.0'], requiredByChain: ['Serilog.AspNetCore'], chainHash: 'Serilog.AspNetCore' },
+                { projectPath: '/a.csproj', projectName: 'Alpha', frameworks: ['net9.0'], requiredByChain: ['Other.Root'], chainHash: 'Other.Root' },
+                { projectPath: '/b.csproj', projectName: 'Beta', frameworks: ['net8.0'], requiredByChain: [], chainHash: '' },
+            ],
+        };
+        const { container } = render(
+            <InstalledTabComponent {...createProps({ isAllProjects: true, selectedTransitivePackage: selectedTransitivePackage as any })} />
+        );
+        // Alpha's two origins collapse into a single project block with both unioned roots.
+        expect(screen.getAllByText('Alpha')).toHaveLength(1);
+        expect(screen.getByText('Serilog.AspNetCore')).toBeInTheDocument();
+        expect(screen.getByText('Other.Root')).toBeInTheDocument();
+        // Beta has no traceable root → neutral label, never the old "Unknown".
+        expect(screen.getByText('Beta')).toBeInTheDocument();
+        expect(screen.getByText('No traceable top-level package')).toBeInTheDocument();
+        expect(screen.queryByText('Unknown')).not.toBeInTheDocument();
+        expect(container.querySelectorAll('.required-by-project')).toHaveLength(2);
+        // Alpha's net8.0 + net9.0 origins merged their TFM badges into one block (net9.0 is Alpha-only).
+        expect(screen.getByText('net9.0')).toBeInTheDocument();
+        expect(screen.getAllByText('net8.0').length).toBeGreaterThanOrEqual(1);
+    });
+
+    it('renders single-project "Required by" root', () => {
+        const selectedTransitivePackage = { id: 'Leaf', version: '1.0.0', requiredByChain: ['Direct'] };
+        render(<InstalledTabComponent {...createProps({ selectedTransitivePackage: selectedTransitivePackage as any })} />);
+        expect(screen.getByText('Required by:')).toBeInTheDocument();
+        expect(screen.getByText('Direct')).toBeInTheDocument();
+    });
+
+    it('shows the distinct project count on an all-projects transitive list row', () => {
+        const row = {
+            id: 'System.Text.Json', version: '8.0.0', versionNormalized: '8.0.0',
+            origins: [
+                // Two origins for /a.csproj + one for /b.csproj → 2 distinct projects (not 3).
+                { projectPath: '/a.csproj', projectName: 'A', frameworks: ['net8.0'], requiredByChain: ['Serilog'], chainHash: 'Serilog' },
+                { projectPath: '/a.csproj', projectName: 'A', frameworks: ['net9.0'], requiredByChain: ['Other'], chainHash: 'Other' },
+                { projectPath: '/b.csproj', projectName: 'B', frameworks: ['net8.0'], requiredByChain: ['Serilog'], chainHash: 'Serilog' },
+            ],
+            frameworks: ['net8.0'],
+        };
+        const { container } = render(
+            <InstalledTabComponent {...createProps({ isAllProjects: true, allProjectsTransitiveRows: [row as any] })} />
+        );
+        const header = container.querySelector('.transitive-header') as HTMLElement;
+        fireEvent.click(header);
+        expect(screen.getByText(/2 projects/)).toBeInTheDocument();
+        expect(screen.queryByText(/3 projects/)).not.toBeInTheDocument();
+    });
+
     it('handles transitivePackages message', () => {
         const ref = React.createRef<InstalledTabHandle>();
         render(<InstalledTabComponent {...createProps()} ref={ref} />);

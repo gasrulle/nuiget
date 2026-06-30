@@ -28,7 +28,8 @@ export interface ErroredTransitiveProject {
  *
  * - `versionNormalized = (pkg.version ?? '').trim().toLowerCase()` — matches backend echo behavior.
  * - Each row collects per-project origins keyed by `(projectPath, chainHash)` where
- *   `chainHash = pkg.requiredByChain.join('→')`.
+ *   `chainHash = (pkg.fullChain ?? pkg.requiredByChain).join('→')` — the FULL root set, so
+ *   origins differing only beyond the 5-item display slice don't collide.
  * - Frameworks are merged per-origin and per-row (deduped, insertion order preserved).
  * - Sorted alphabetically by `id` (case-insensitive). Stable across stream chunks since
  *   the same input slot map produces the same output.
@@ -65,7 +66,10 @@ export function aggregateAllProjectsTransitive(
                     if (row.verified === undefined && pkg.verified !== undefined) { row.verified = pkg.verified; }
                     if (!row.authors && pkg.authors) { row.authors = pkg.authors; }
                 }
-                const chainHash = (pkg.requiredByChain || []).join('→');
+                // Identity uses the FULL root set (not the 5-item display slice) so two
+                // origins that differ only beyond the first 5 roots don't collide/merge.
+                const rootsForKey = pkg.fullChain && pkg.fullChain.length > 0 ? pkg.fullChain : (pkg.requiredByChain || []);
+                const chainHash = rootsForKey.join('→');
                 let origin: AllProjectsTransitiveOrigin | undefined = row.origins.find(
                     o => o.projectPath === projectPath && o.chainHash === chainHash
                 );

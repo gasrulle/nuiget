@@ -555,38 +555,36 @@ export class NuGetProjectService {
                 }
             }
 
-            const chainCache = new Map<string, string[]>();
-            const buildChain = (packageId: string, visited: Set<string> = new Set()): string[] => {
-                const cacheKey = packageId.toLowerCase();
-                const cached = chainCache.get(cacheKey);
-                if (cached) { return [...cached]; }
+            // Resolve the distinct top-level (direct) packages that pull in a transitive
+            // package, via reverse breadth-first search over the reverse-dependency map.
+            // Each package is resolved independently with a LOCAL `visited` set, so sibling
+            // traversal paths never block one another. The previous implementation shared a
+            // single `visited` set across recursive branches and cached partial chains keyed
+            // only by package id, which poisoned the cache on cyclic graphs and produced
+            // false "Required by: unknown" results for common packages. Reverse BFS is
+            // O(V + E) per package, cycle-safe by construction, and needs no cross-package cache.
+            const resolveRoots = (packageId: string): string[] => {
+                const roots = new Set<string>();
+                const startLower = packageId.toLowerCase();
+                const visited = new Set<string>([startLower]);
+                const queue: string[] = [startLower];
 
-                const chain: string[] = [];
-                const parents = dependedOnBy.get(cacheKey);
-
-                if (!parents || parents.size === 0) {
-                    chainCache.set(cacheKey, chain);
-                    return chain;
-                }
-
-                for (const parent of parents) {
-                    if (visited.has(parent.toLowerCase())) {
-                        continue;
-                    }
-
-                    if (directPackageIds.has(parent.toLowerCase())) {
-                        chain.push(parent);
-                    } else {
-                        visited.add(parent.toLowerCase());
-                        const parentChain = buildChain(parent, visited);
-                        if (parentChain.length > 0) {
-                            chain.push(...parentChain.map(p => `${p} → ${parent}`));
+                while (queue.length > 0) {
+                    const current = queue.shift() as string;
+                    const parents = dependedOnBy.get(current);
+                    if (!parents) { continue; }
+                    for (const parent of parents) {
+                        const parentLower = parent.toLowerCase();
+                        if (directPackageIds.has(parentLower)) {
+                            roots.add(parent);
+                        } else if (!visited.has(parentLower)) {
+                            visited.add(parentLower);
+                            queue.push(parentLower);
                         }
                     }
                 }
 
-                chainCache.set(cacheKey, [...chain]);
-                return chain;
+                return Array.from(roots).sort((a, b) => a.localeCompare(b));
             };
 
             const transitivePackages: TransitivePackage[] = [];
@@ -601,15 +599,19 @@ export class NuGetProjectService {
                     continue;
                 }
 
-                const fullChain = buildChain(packageId);
-                const displayChain = fullChain.slice(0, 5);
-                const needsTruncation = fullChain.length > 5;
+                // `requiredByChain` holds the distinct top-level root package ids (not an
+                // arrow-joined chain) — the webview only ever displays the root, so this is
+                // the useful payload. `fullChain` carries the complete set when there are
+                // more than 5 roots; otherwise `requiredByChain` already holds them all.
+                const roots = resolveRoots(packageId);
+                const displayRoots = roots.slice(0, 5);
+                const needsTruncation = roots.length > 5;
 
                 transitivePackages.push({
                     id: packageId,
                     version,
-                    requiredByChain: displayChain,
-                    fullChain: needsTruncation ? fullChain : undefined
+                    requiredByChain: displayRoots,
+                    fullChain: needsTruncation ? roots : undefined
                 });
             }
 

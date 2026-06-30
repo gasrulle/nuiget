@@ -127,9 +127,9 @@ export interface NuGetSource {
 export interface TransitivePackage {
     id: string;
     version: string;
-    /** Chain of packages that require this package (up to 5 levels, full chain in tooltip) */
+    /** Distinct top-level (direct) packages that require this package (first 5; full set in `fullChain`) */
     requiredByChain: string[];
-    /** Full chain for tooltip if truncated */
+    /** Full set of top-level packages when there are more than 5 */
     fullChain?: string[];
     iconUrl?: string;
     verified?: boolean;

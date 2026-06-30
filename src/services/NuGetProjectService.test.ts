@@ -239,6 +239,81 @@ describe('NuGetProjectService', () => {
             expect(result.dataSourceAvailable).toBe(true);
             expect(result.frameworks).toEqual([]);
         });
+
+        it('resolves the top-level root through a cyclic graph (regression: no false "unknown")', async () => {
+            // D (direct) → A → X → Y, with a Y → X back-edge (cycle) and Y → T1.
+            // The previous shared-`visited` recursion + id-keyed cache poisoned the cache on
+            // this shape, leaving Y and T1 with an empty requiredByChain ("Required by: unknown").
+            hoisted.mockFileExists.mockResolvedValueOnce(true);
+            const assetsJson = {
+                version: 3,
+                targets: {
+                    'net8.0': {
+                        'D/1.0.0': { type: 'package', dependencies: { A: '1.0.0' } },
+                        'A/1.0.0': { type: 'package', dependencies: { X: '1.0.0' } },
+                        'X/1.0.0': { type: 'package', dependencies: { Y: '1.0.0', T2: '1.0.0' } },
+                        'Y/1.0.0': { type: 'package', dependencies: { X: '1.0.0', T1: '1.0.0' } },
+                        'T1/1.0.0': { type: 'package' },
+                        'T2/1.0.0': { type: 'package' },
+                    },
+                },
+                projectFileDependencyGroups: { 'net8.0': ['D >= 1.0.0'] },
+            };
+            hoisted.mockFsStat.mockResolvedValueOnce({ mtimeMs: 1000 });
+            hoisted.mockFsReadFile.mockResolvedValueOnce(JSON.stringify(assetsJson));
+            const result = await service.getTransitivePackages('/proj/App.csproj');
+            const byId = Object.fromEntries(result.frameworks[0].packages.map(p => [p.id, p.requiredByChain]));
+            // Every transitive package traces back to the single direct root D.
+            expect(byId.Y).toEqual(['D']);
+            expect(byId.T1).toEqual(['D']);
+            expect(byId.T2).toEqual(['D']);
+            expect(byId.X).toEqual(['D']);
+            expect(byId.A).toEqual(['D']);
+        });
+
+        it('collects ALL distinct direct roots for a diamond (sorted)', async () => {
+            // A and B are both direct and both depend on T → T is required by [A, B].
+            hoisted.mockFileExists.mockResolvedValueOnce(true);
+            const assetsJson = {
+                version: 3,
+                targets: {
+                    'net8.0': {
+                        'B/1.0.0': { type: 'package', dependencies: { T: '1.0.0' } },
+                        'A/1.0.0': { type: 'package', dependencies: { T: '1.0.0' } },
+                        'T/1.0.0': { type: 'package' },
+                    },
+                },
+                projectFileDependencyGroups: { 'net8.0': ['A >= 1.0.0', 'B >= 1.0.0'] },
+            };
+            hoisted.mockFsStat.mockResolvedValueOnce({ mtimeMs: 1000 });
+            hoisted.mockFsReadFile.mockResolvedValueOnce(JSON.stringify(assetsJson));
+            const result = await service.getTransitivePackages('/proj/App.csproj');
+            const t = result.frameworks[0].packages.find(p => p.id === 'T');
+            expect(t?.requiredByChain).toEqual(['A', 'B']);
+        });
+
+        it('truncates requiredByChain to 5 roots and keeps the full set in fullChain', async () => {
+            // Six direct packages (D1..D6) all depend on T → 6 distinct roots.
+            hoisted.mockFileExists.mockResolvedValueOnce(true);
+            const directIds = ['D1', 'D2', 'D3', 'D4', 'D5', 'D6'];
+            const targets: Record<string, { type: string; dependencies?: Record<string, string> }> = {
+                'T/1.0.0': { type: 'package' },
+            };
+            for (const d of directIds) {
+                targets[`${d}/1.0.0`] = { type: 'package', dependencies: { T: '1.0.0' } };
+            }
+            const assetsJson = {
+                version: 3,
+                targets: { 'net8.0': targets },
+                projectFileDependencyGroups: { 'net8.0': directIds.map(d => `${d} >= 1.0.0`) },
+            };
+            hoisted.mockFsStat.mockResolvedValueOnce({ mtimeMs: 1000 });
+            hoisted.mockFsReadFile.mockResolvedValueOnce(JSON.stringify(assetsJson));
+            const result = await service.getTransitivePackages('/proj/App.csproj');
+            const t = result.frameworks[0].packages.find(p => p.id === 'T');
+            expect(t?.requiredByChain).toEqual(['D1', 'D2', 'D3', 'D4', 'D5']);
+            expect(t?.fullChain).toEqual(['D1', 'D2', 'D3', 'D4', 'D5', 'D6']);
+        });
     });
 
     // ──────────────────────────────────────────────

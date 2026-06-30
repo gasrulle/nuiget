@@ -3152,6 +3152,17 @@ a.details-link:hover {
     font-size: 12px;
 }
 
+.required-by-implicit {
+    font-size: 12px;
+    font-style: italic;
+    color: var(--vscode-descriptionForeground);
+    padding: 2px 4px;
+}
+
+.package-project-count {
+    color: var(--vscode-descriptionForeground);
+}
+
 /* Transitive package details panel - detail rows */
 .package-details .detail-row {
     display: grid;

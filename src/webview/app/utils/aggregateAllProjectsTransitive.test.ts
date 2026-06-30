@@ -112,6 +112,22 @@ describe('aggregateAllProjectsTransitive', () => {
         expect(rows[0].origins.map(o => o.requiredByChain.join('→')).sort()).toEqual(['Bar', 'Foo']);
     });
 
+    it('keeps origins separate when truncated requiredByChain matches but fullChain differs (>5 roots)', () => {
+        const rows = aggregateAllProjectsTransitive({
+            '/a.csproj': slot({
+                projectName: 'A',
+                frameworks: [
+                    { targetFramework: 'net8.0', packages: [pkg({ id: 'X', version: '1.0', requiredByChain: ['D1', 'D2', 'D3', 'D4', 'D5'], fullChain: ['D1', 'D2', 'D3', 'D4', 'D5', 'D6'] })] },
+                    { targetFramework: 'net9.0', packages: [pkg({ id: 'X', version: '1.0', requiredByChain: ['D1', 'D2', 'D3', 'D4', 'D5'], fullChain: ['D1', 'D2', 'D3', 'D4', 'D5', 'D7'] })] },
+                ],
+            }),
+        });
+        // The two origins share the first 5 (truncated) roots but differ at root 6 — the dedup
+        // key uses the full root set, so they must NOT collapse into one origin.
+        expect(rows).toHaveLength(1);
+        expect(rows[0].origins).toHaveLength(2);
+    });
+
     it('back-fills metadata (iconUrl/verified/authors) from later occurrences', () => {
         const rows = aggregateAllProjectsTransitive({
             '/a.csproj': slot({

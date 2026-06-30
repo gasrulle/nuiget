@@ -3434,7 +3434,7 @@ describe('NuGetService', () => {
             const result = await (service as any)._projectService.getTransitivePackagesFromAssets('/obj/project.assets.json');
             const leaf = result.frameworks[0].packages.find((p: { id: string }) => p.id === 'Leaf');
             expect(leaf).toBeDefined();
-            expect(leaf.requiredByChain.length).toBeGreaterThan(0);
+            expect(leaf.requiredByChain).toEqual(['Direct']);
         });
 
         it('returns null when readAssetsJson returns null', async () => {

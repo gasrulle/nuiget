@@ -164,9 +164,9 @@ export interface ProjectInstalled {
 export interface TransitivePackage {
     id: string;
     version: string;
-    /** Chain of packages that require this package (up to 5 levels) */
+    /** Distinct top-level (direct) packages that require this package (first 5; full set in `fullChain`) */
     requiredByChain: string[];
-    /** Full chain for tooltip if truncated */
+    /** Full set of top-level packages when there are more than 5 */
     fullChain?: string[];
     iconUrl?: string;
     verified?: boolean;
@@ -195,7 +195,7 @@ export interface AllProjectsTransitiveOrigin {
     frameworks: string[];
     requiredByChain: string[];
     fullChain?: string[];
-    /** Hash of `requiredByChain.join('→')` — used as origin dedup + render key. */
+    /** Origin dedup identity: the full root set (`fullChain ?? requiredByChain`) joined with '→'. The details panel no longer keys render output by this (it groups by project). */
     chainHash: string;
 }
 
