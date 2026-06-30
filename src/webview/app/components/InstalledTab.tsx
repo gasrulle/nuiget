@@ -42,6 +42,26 @@ import { MemoizedPackageDetailsPanel } from './PackageDetailsPanel';
 const ESTIMATED_ITEM_HEIGHT = 66; // padding (12*2) + icon (32) + gaps
 const HEADER_HEIGHT = 40; // project group header height in all-projects mode
 
+/**
+ * Loading-state skeleton rows that match the installed-package row height. Replaces the
+ * centered spinner so there is no spinner→list layout shift and loading feels faster.
+ */
+function PackageListSkeleton({ rows = 8, label }: { rows?: number; label: string }) {
+    return (
+        <div className="package-list-skeleton" role="status" aria-busy="true" aria-label={label}>
+            {Array.from({ length: rows }).map((_, i) => (
+                <div key={i} className="skeleton-row">
+                    <div className="skeleton-icon" />
+                    <div className="skeleton-lines">
+                        <div className="skeleton-line skeleton-line-title" />
+                        <div className="skeleton-line skeleton-line-sub" />
+                    </div>
+                </div>
+            ))}
+        </div>
+    );
+}
+
 // ─── Props ───────────────────────────────────────────────────────────────────
 
 export interface InstalledTabProps {
@@ -1023,10 +1043,7 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
             <div className="split-panel">
                 <div ref={installedScrollRef} className="package-list-panel" style={{ width: `${splitPosition}%` }}>
                     {!isAllProjects && loadingInstalled ? (
-                        <div className="loading-spinner-container" aria-busy="true" aria-label="Loading installed packages">
-                            <div className="loading-spinner"></div>
-                            <p>Loading installed packages...</p>
-                        </div>
+                        <PackageListSkeleton label="Loading installed packages" />
                     ) : !isAllProjects && installedPackages.length === 0 ? (
                         <p className="empty-state">No packages installed</p>
                     ) : (
@@ -1128,10 +1145,7 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
                                         // `allProjectsInstalledProjectFound` chunk lands we render the
                                         // (partial) list immediately so users see progressive results
                                         // instead of a spinner that masks the whole stream.
-                                        <div className="loading-spinner-container" aria-busy="true" aria-label="Loading all projects installed packages">
-                                            <div className="loading-spinner"></div>
-                                            <p>Loading installed packages for all projects...</p>
-                                        </div>
+                                        <PackageListSkeleton label="Loading installed packages for all projects" />
                                     ) : allProjectsInstalled.length === 0 ? (
                                         <p className="empty-state">No installed packages found across projects</p>
                                     ) : (
@@ -1504,7 +1518,12 @@ const InstalledTab = forwardRef<InstalledTabHandle, InstalledTabProps>(function 
                                     </span>
                                     <span className="transitive-title">
                                         Transitive packages
-                                        <span className="transitive-count">({filteredAllProjectsTransitiveRows.length})</span>
+                                        {allProjectsTransitiveExpanded && loadingAllProjectsTransitive && filteredAllProjectsTransitiveRows.length === 0 ? (
+                                            // Lazy-loaded on first expand — show a loading hint, not a misleading "(0)".
+                                            <span className="transitive-count" aria-label="loading">…</span>
+                                        ) : (allProjectsTransitiveExpanded || filteredAllProjectsTransitiveRows.length > 0) ? (
+                                            <span className="transitive-count">({filteredAllProjectsTransitiveRows.length})</span>
+                                        ) : null}
                                     </span>
                                 </button>
                                 {allProjectsTransitiveExpanded && (

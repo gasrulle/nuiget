@@ -2632,8 +2632,7 @@ describe('NuGetService', () => {
 
         it('returns null when nuspec file does not exist', async () => {
             vi.spyOn((service as any)._packageService, 'resolveGlobalPackagesFolder').mockResolvedValue('/home/user/.nuget/packages');
-            const fs = await import('fs');
-            vi.mocked(fs.existsSync).mockReturnValue(false);
+            hoisted.mockFileExists.mockResolvedValue(false);
 
             const result = await (service as any)._packageService.getOfflineMetadata('Pkg', '1.0.0');
             expect(result).toBeNull();
@@ -2646,8 +2645,7 @@ describe('NuGetService', () => {
   <licenseUrl>https://lic.example.com</licenseUrl>
 </metadata></package>`;
             vi.spyOn((service as any)._packageService, 'resolveGlobalPackagesFolder').mockResolvedValue('/home/user/.nuget/packages');
-            const fs = await import('fs');
-            vi.mocked(fs.existsSync).mockReturnValue(true);
+            hoisted.mockFileExists.mockResolvedValue(true);
             hoisted.mockReadFileAsync.mockResolvedValue(nuspec);
 
             const result = await (service as any)._packageService.getOfflineMetadata('LocalPkg', '3.0.0');
@@ -2668,8 +2666,7 @@ describe('NuGetService', () => {
   </dependencies>
 </metadata></package>`;
             vi.spyOn((service as any)._packageService, 'resolveGlobalPackagesFolder').mockResolvedValue('/home/user/.nuget/packages');
-            const fs = await import('fs');
-            vi.mocked(fs.existsSync).mockReturnValue(true);
+            hoisted.mockFileExists.mockResolvedValue(true);
             hoisted.mockReadFileAsync.mockResolvedValue(nuspec);
 
             const result = await (service as any)._packageService.getOfflineMetadata('Pkg', '1.0.0');
@@ -2687,8 +2684,7 @@ describe('NuGetService', () => {
   </dependencies>
 </metadata></package>`;
             vi.spyOn((service as any)._packageService, 'resolveGlobalPackagesFolder').mockResolvedValue('/home/user/.nuget/packages');
-            const fs = await import('fs');
-            vi.mocked(fs.existsSync).mockReturnValue(true);
+            hoisted.mockFileExists.mockResolvedValue(true);
             hoisted.mockReadFileAsync.mockResolvedValue(nuspec);
 
             const result = await (service as any)._packageService.getOfflineMetadata('Pkg', '1.0.0');
@@ -2864,8 +2860,7 @@ describe('NuGetService', () => {
         });
 
         it('resolves from dotnet CLI output', async () => {
-            const fs = await import('fs');
-            vi.mocked(fs.existsSync).mockReturnValue(true);
+            hoisted.mockFileExists.mockResolvedValue(true);
             hoisted.mockExecWithTimeout.mockResolvedValue({
                 stdout: 'global-packages: /home/user/.nuget/packages/',
                 stderr: ''
@@ -2874,25 +2869,23 @@ describe('NuGetService', () => {
             (service as any)._packageService._globalPackagesFolder = null;
             const result = await (service as any)._packageService.resolveGlobalPackagesFolder();
             expect(result).toBe('/home/user/.nuget/packages');
-            vi.mocked(fs.existsSync).mockReturnValue(false);
+            hoisted.mockFileExists.mockResolvedValue(false);
         });
 
         it('falls back to default path when CLI fails', async () => {
-            const fs = await import('fs');
             hoisted.mockExecWithTimeout.mockRejectedValue(new Error('no dotnet'));
-            vi.mocked(fs.existsSync).mockReturnValue(true);
+            hoisted.mockFileExists.mockResolvedValue(true);
 
             (service as any)._packageService._globalPackagesFolder = null;
             const result = await (service as any)._packageService.resolveGlobalPackagesFolder();
             expect(result).toContain('.nuget');
             expect(result).toContain('packages');
-            vi.mocked(fs.existsSync).mockReturnValue(false);
+            hoisted.mockFileExists.mockResolvedValue(false);
         });
 
         it('returns null when no folder exists', async () => {
             hoisted.mockExecWithTimeout.mockRejectedValue(new Error('no dotnet'));
-            const fs = await import('fs');
-            vi.mocked(fs.existsSync).mockReturnValue(false);
+            hoisted.mockFileExists.mockResolvedValue(false);
 
             (service as any)._packageService._globalPackagesFolder = null;
             const result = await (service as any)._packageService.resolveGlobalPackagesFolder();

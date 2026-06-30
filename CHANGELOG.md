@@ -5,6 +5,20 @@ All notable changes to the nUIget extension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.18.8] - 2026-06-30
+
+### Fixed
+
+- **All-projects "Transitive packages" header no longer shows a misleading "(0)" before the list is lazily loaded**
+
+### Changed
+
+- **Skeleton loading rows replace the spinner when loading installed packages (no layout shift)**
+- **Parallelized per-project dependency-map reads for faster bulk-operation startup**
+- **Faster sidebar refresh after external `.csproj` changes (debounce 5s → 2s)**
+- **Memoized the all-projects updates keyboard handler to avoid per-render allocations**
+- **Non-blocking offline-metadata file checks (async `fileExists` instead of sync `fs.existsSync`)**
+
 ## [1.18.7] - 2026-06-30
 
 ### Changed

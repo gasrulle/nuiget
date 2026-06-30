@@ -1312,6 +1312,19 @@ export const SidebarApp: React.FC = () => {
         }
     }, []);
 
+    // Stable, memoized keyboard handler for the all-projects updates list — avoids
+    // rebuilding `flatItems` (flatMap + spread) and the handler on every render.
+    const allProjectsUpdatesKeyHandler = useMemo(() => {
+        const flatItems = allProjectsUpdates.flatMap(pu =>
+            pu.updates.map(u => ({ ...u, id: u.id, projectPath: pu.projectPath }))
+        );
+        return createSidebarKeyHandler(
+            flatItems,
+            (item) => `${item.projectPath}::${item.id}`,
+            { onAction: (item) => handleAllProjectsUpdatePrimaryAction(item.id) }
+        );
+    }, [allProjectsUpdates, createSidebarKeyHandler, handleAllProjectsUpdatePrimaryAction]);
+
     const handleContextMenu = useCallback((packageId: string, _e: React.MouseEvent, context: 'browse' | 'installed' | 'updates', projectPath?: string) => {
         setSelectedPackageId(packageId);
         const pkgLower = packageId.toLowerCase();
@@ -1688,18 +1701,7 @@ export const SidebarApp: React.FC = () => {
                     role="listbox"
                     tabIndex={0}
                     ref={updatesListRef}
-                    onKeyDown={(() => {
-                        const flatItems = allProjectsUpdates.flatMap(pu =>
-                            pu.updates.map(u => ({ ...u, id: u.id, projectPath: pu.projectPath }))
-                        );
-                        return createSidebarKeyHandler(
-                            flatItems,
-                            (item) => `${item.projectPath}::${item.id}`,
-                            {
-                                onAction: (item) => handleAllProjectsUpdatePrimaryAction(item.id)
-                            }
-                        );
-                    })()}
+                    onKeyDown={allProjectsUpdatesKeyHandler}
                 >
                     {!loadingAllUpdates && allProjectsUpdates.length === 0 && (
                         <div className="sidebar-empty">All projects are up to date.</div>

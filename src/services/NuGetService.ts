@@ -57,11 +57,6 @@ export class NuGetService {
     private static readonly MAX_VULNERABILITY_RESPONSE_SIZE = 50 * 1024 * 1024;
     // Maximum download size for nupkg files (50 MB) to prevent disk exhaustion
     private static readonly MAX_DOWNLOAD_SIZE = 50 * 1024 * 1024;
-    // Cache for getSources() to avoid repeated CLI spawns (dotnet nuget list source)
-    // Multiple parallel getPackageVersions calls share a single CLI result
-    private _sourcesCache: NuGetSource[] | null = null;
-    private _sourcesCacheTime: number = 0;
-    private static readonly SOURCES_CACHE_TTL = 30000; // 30 seconds
     private outputChannel: vscode.LogOutputChannel;
     // Cached credentials from nuget.config (source name -> credentials)
     private nugetConfigCredentials: Map<string, { username?: string; password?: string; isEncrypted: boolean }> | null = null;

@@ -93,7 +93,7 @@ describe('InstalledTab', () => {
 
     it('shows loading state', () => {
         render(<InstalledTabComponent {...createProps({ loadingInstalled: true })} />);
-        expect(screen.getByText('Loading installed packages...')).toBeInTheDocument();
+        expect(screen.getByLabelText('Loading installed packages')).toBeInTheDocument();
     });
 
     it('is hidden when activeTab is not installed', () => {
@@ -155,6 +155,29 @@ describe('InstalledTab', () => {
         fireEvent.click(header);
         expect(screen.getByText(/2 projects/)).toBeInTheDocument();
         expect(screen.queryByText(/3 projects/)).not.toBeInTheDocument();
+    });
+
+    it('does not show a transitive count until the all-projects section is loaded', () => {
+        const findTitle = (container: HTMLElement) =>
+            Array.from(container.querySelectorAll('.transitive-title'))
+                .find(el => el.textContent?.includes('Transitive packages')) as HTMLElement | undefined;
+
+        // Not loaded yet (no rows, collapsed) → header must NOT show a misleading "(0)".
+        const { container, rerender } = render(
+            <InstalledTabComponent {...createProps({ isAllProjects: true, allProjectsTransitiveRows: [], loadingAllProjectsTransitive: false })} />
+        );
+        const title = findTitle(container);
+        expect(title).toBeTruthy();
+        expect(title?.querySelector('.transitive-count')).toBeNull();
+
+        // Once rows are present (loaded), the count appears even while collapsed.
+        const row = {
+            id: 'System.Text.Json', version: '8.0.0', versionNormalized: '8.0.0',
+            origins: [{ projectPath: '/a.csproj', projectName: 'A', frameworks: ['net8.0'], requiredByChain: ['X'], chainHash: 'X' }],
+            frameworks: ['net8.0'],
+        };
+        rerender(<InstalledTabComponent {...createProps({ isAllProjects: true, allProjectsTransitiveRows: [row as any], loadingAllProjectsTransitive: false })} />);
+        expect(findTitle(container)?.querySelector('.transitive-count')?.textContent).toBe('(1)');
     });
 
     it('handles transitivePackages message', () => {
@@ -349,7 +372,7 @@ describe('InstalledTab', () => {
             isAllProjects: true,
             loadingAllProjectsInstalled: true,
         })} />);
-        expect(screen.getByText('Loading installed packages for all projects...')).toBeInTheDocument();
+        expect(screen.getByLabelText('Loading installed packages for all projects')).toBeInTheDocument();
     });
 
     it('shows all-projects empty state', () => {

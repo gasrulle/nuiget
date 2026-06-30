@@ -18,6 +18,7 @@ import {
 } from './NuGetTypes';
 import {
     batchedPromiseAll, execWithTimeout,
+    fileExists,
     isNewerVersion,
     isVersionInRange, LRUMap
 } from './NuGetUtils';
@@ -1530,7 +1531,7 @@ export class NuGetPackageService {
             const match = stdout.match(/global-packages:\s*(.+)/i);
             if (match) {
                 const folder = match[1].trim().replace(/[\\/]+$/, '');
-                if (fs.existsSync(folder)) {
+                if (await fileExists(folder)) {
                     this._globalPackagesFolder = folder;
                     return folder;
                 }
@@ -1539,7 +1540,7 @@ export class NuGetPackageService {
             // CLI not available — try default path
         }
         const defaultFolder = path.join(os.homedir(), '.nuget', 'packages');
-        if (fs.existsSync(defaultFolder)) {
+        if (await fileExists(defaultFolder)) {
             this._globalPackagesFolder = defaultFolder;
             return defaultFolder;
         }
@@ -1558,7 +1559,7 @@ export class NuGetPackageService {
             const lowerVersion = version.toLowerCase();
             const nuspecPath = path.join(globalFolder, lowerId, lowerVersion, `${lowerId}.nuspec`);
 
-            if (!fs.existsSync(nuspecPath)) { return null; }
+            if (!await fileExists(nuspecPath)) { return null; }
 
             const nuspecContent = await readFileAsync(nuspecPath, 'utf8');
 

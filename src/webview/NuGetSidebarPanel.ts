@@ -146,7 +146,9 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
                 this._watcherDirtyDuringOp = true;
                 return;
             }
-            this._scheduleWatcherRefresh(5000);
+            // External .csproj change → debounced revalidate (non-destructive, no flash).
+            // 2s balances responsiveness vs. collapsing rapid edits (git checkout, CLI add).
+            this._scheduleWatcherRefresh(2000);
         };
         watcher.onDidChange(triggerDebounced);
         watcher.onDidCreate(triggerDebounced);
@@ -337,7 +339,7 @@ export class NuGetSidebarProvider implements vscode.WebviewViewProvider {
     /**
      * Arm the file-watcher debounce that triggers a 'revalidate' + background update
      * check after the given delay. Replaces any existing pending timer. Used both by
-     * the .csproj watcher (5s) and by `_flushWatcherDirtyAfterOp` (1s rearm).
+     * the .csproj watcher (2s) and by `_flushWatcherDirtyAfterOp` (1s rearm).
      */
     private _scheduleWatcherRefresh(delayMs: number): void {
         if (this._fileWatcherDebounce) { clearTimeout(this._fileWatcherDebounce); }

@@ -5,7 +5,7 @@ import {
     InstalledPackage, Project, TransitiveFrameworkSection,
     TransitivePackage, TransitivePackagesResult
 } from './NuGetTypes';
-import { execWithTimeout, fileExists, parseVersionSpec } from './NuGetUtils';
+import { batchedPromiseAll, execWithTimeout, fileExists, parseVersionSpec } from './NuGetUtils';
 
 /**
  * Handles project discovery, .csproj parsing, installed packages,
@@ -261,12 +261,21 @@ export class NuGetProjectService {
         const knownProjects = new Set(projectPaths.map(normalizePath));
         const dependencyMap = new Map<string, string[]>();
 
-        for (const projectPath of projectPaths) {
-            const key = normalizePath(projectPath);
-            const refs = await this.getProjectReferences(projectPath);
-            const filteredRefs = refs
-                .map(normalizePath)
-                .filter(ref => knownProjects.has(ref) && ref !== key);
+        // Read all project references with bounded concurrency (avoids file-handle
+        // pressure / EMFILE in very large solutions, which would make getProjectReferences
+        // silently return [] and corrupt the dependency ordering). Order is preserved.
+        const entries = await batchedPromiseAll(
+            projectPaths,
+            async (projectPath) => {
+                const key = normalizePath(projectPath);
+                const filteredRefs = (await this.getProjectReferences(projectPath))
+                    .map(normalizePath)
+                    .filter(ref => knownProjects.has(ref) && ref !== key);
+                return [key, filteredRefs] as const;
+            },
+            24
+        );
+        for (const [key, filteredRefs] of entries) {
             dependencyMap.set(key, filteredRefs);
         }
 
