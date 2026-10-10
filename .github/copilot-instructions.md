@@ -16,6 +16,7 @@
 | `src/test/` | Test helpers, mocks (`vscode.ts`), fixtures (`.csproj`, `project.assets.json`) |
 | `resources/` | Extension icons (SVG, PNG) |
 | `.github/` | CI workflow, Copilot instructions, agents, prompts |
+| `.claude/`, `CLAUDE.md` | Claude Code pointers to the `.github/` agent resources |
 
 # Agent Guidelines
 - **Use Context7 for Documentation:** Discover the current host's tools, then use `resolve-library-id` and `query-docs` for version-specific library documentation.
@@ -32,6 +33,11 @@
 - Use the GitHub Actions efficiency/hardening skills for CI-specific work and
   the Technical Writer agent for existing documentation. Do not install tools
   or change repository/account settings merely because a resource suggests it.
+- Claude Code reads the same resources through `CLAUDE.md` (imports this file),
+  `.claude/rules/` (path-scoped pointers to `.github/instructions/`),
+  `.claude/skills/` (symlinks to `.github/skills/`) and `.claude/agents/`
+  (pointers to `.github/agents/`). When adding, renaming, or rescoping an
+  instruction, skill, prompt, or agent, update the matching `.claude/` entry.
 - The obsolete offline-support implementation prompt has been retired. Base new
   offline work on `ARCHITECTURE.md` and the current package-service implementation.
 
