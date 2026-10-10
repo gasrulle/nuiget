@@ -125,6 +125,29 @@ describe('PackageDetailsPanel', () => {
             expect(onInstall).toHaveBeenCalledWith('Newtonsoft.Json', '13.0.3');
         });
 
+        it.each([false, true])('preserves a long prerelease version when selecting and installing (installed: %s)', installed => {
+            const version = '1.0.0-mynewfeaturethatibuildlastsummer-beta1';
+            const props = createProps({
+                selectedPackage: searchPkg,
+                selectedVersion: '1.0.0',
+                packageVersions: [version, '1.0.0'],
+                installedPackages: installed ? [{ id: searchPkg.id, version: '1.0.0' }] : [],
+            });
+            const { rerender } = render(<MemoizedPackageDetailsPanel {...props} />);
+            const selector = screen.getByTestId('version-selector');
+            expect(screen.getByRole('option', { name: version })).toHaveValue(version);
+            fireEvent.change(selector, { target: { value: version } });
+            expect(props.onVersionChange).toHaveBeenCalledWith(version);
+            expect(props.vscode.postMessage).toHaveBeenCalledWith(expect.objectContaining({
+                type: 'getPackageMetadata', version,
+            }));
+
+            rerender(<MemoizedPackageDetailsPanel {...props} selectedVersion={version} />);
+            expect(selector).toHaveValue(version);
+            fireEvent.click(screen.getByTestId('install-update-button'));
+            expect(props.onInstall).toHaveBeenCalledWith(searchPkg.id, version);
+        });
+
         it('calls onRemove when Uninstall button clicked', () => {
             const onRemove = vi.fn();
             render(<MemoizedPackageDetailsPanel {...createProps({

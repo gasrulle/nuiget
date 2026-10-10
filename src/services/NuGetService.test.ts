@@ -2047,6 +2047,10 @@ describe('NuGetService', () => {
     // searchPackages (uses generalized API search with resolved sources)
     // ──────────────────────────────────────────────
     describe('searchPackages', () => {
+        function cliSearchOutput(packages: Array<{ id: string; latestVersion?: string; version?: string; owners?: string; totalDownloads?: number }>): string {
+            return JSON.stringify({ version: 2, problems: [], searchResult: [{ sourceName: 'test-feed', packages }] });
+        }
+
         it('returns cached results from in-memory cache', async () => {
             // Populate cache via API path first
             vi.spyOn((service as any)._packageService, 'searchPackagesViaApi').mockResolvedValue([
@@ -2104,21 +2108,18 @@ describe('NuGetService', () => {
             );
         });
 
-        it('falls back to CLI when API returns null', async () => {
+        it('uses CLI for a legacy source when API returns null', async () => {
             vi.spyOn((service as any)._packageService, 'resolveSourcesForSearch').mockResolvedValue([
                 { url: 'https://api.nuget.org/v3/index.json', endpoints: { searchQueryService: 'https://api.nuget.org/v3/query' } }
             ]);
             vi.spyOn((service as any)._packageService, 'searchPackagesViaApi').mockResolvedValue(null);
 
-            // CLI returns table output — the source doesn't have searchQueryService so it's a CLI-only source
-            // Actually with resolved sources all having searchQueryService, CLI won't be triggered.
-            // Let's test with a source that has NO searchQueryService
             vi.spyOn((service as any)._packageService, 'resolveSourcesForSearch').mockResolvedValue([
                 { url: 'https://legacy.com/v2/index.json', endpoints: {} }
             ]);
 
             hoisted.mockExecWithTimeout.mockResolvedValue({
-                stdout: '| Package ID | Version | Owners | Downloads |\n| --- | --- | --- | --- |\n| CliPkg | 3.0.0 | owner | 100 |',
+                stdout: cliSearchOutput([{ id: 'CliPkg', latestVersion: '3.0.0', owners: 'owner', totalDownloads: 100 }]),
                 stderr: ''
             });
 
@@ -2133,7 +2134,7 @@ describe('NuGetService', () => {
             ]);
 
             hoisted.mockExecWithTimeout.mockResolvedValue({
-                stdout: '| Package ID | Version | Owners | Downloads |\n| --- | --- | --- | --- |\n| LegacyPkg | 1.0.0 | own | 50 |',
+                stdout: cliSearchOutput([{ id: 'LegacyPkg', latestVersion: '1.0.0', owners: 'own', totalDownloads: 50 }]),
                 stderr: ''
             });
 
@@ -2147,7 +2148,7 @@ describe('NuGetService', () => {
             ]);
 
             hoisted.mockExecWithTimeout.mockResolvedValue({
-                stdout: '| Pkg | 1.0.0 | o | 1 |\n| Pkg | 2.0.0 | o | 2 |',
+                stdout: cliSearchOutput([{ id: 'Pkg', latestVersion: '1.0.0' }, { id: 'Pkg', latestVersion: '2.0.0' }]),
                 stderr: ''
             });
 
@@ -2175,7 +2176,7 @@ describe('NuGetService', () => {
             vi.spyOn(service as any, 'getAuthHeader').mockResolvedValue(undefined);
 
             hoisted.mockExecWithTimeout.mockResolvedValue({
-                stdout: '| Pkg | 1.0.0 | o | 1 |',
+                stdout: cliSearchOutput([{ id: 'Pkg', latestVersion: '1.0.0' }]),
                 stderr: ''
             });
 
@@ -2209,7 +2210,7 @@ describe('NuGetService', () => {
             ]);
 
             hoisted.mockExecWithTimeout.mockResolvedValue({
-                stdout: '| CliPkg | 2.0.0 | o | 1 |',
+                stdout: cliSearchOutput([{ id: 'CliPkg', latestVersion: '2.0.0' }]),
                 stderr: ''
             });
 
@@ -2231,7 +2232,7 @@ describe('NuGetService', () => {
             ]);
 
             hoisted.mockExecWithTimeout.mockResolvedValue({
-                stdout: '| SharedPkg | 1.0.0 | cli_owner | 100 |',
+                stdout: cliSearchOutput([{ id: 'SharedPkg', latestVersion: '1.0.0', owners: 'cli_owner', totalDownloads: 100 }]),
                 stderr: ''
             });
 
@@ -2251,7 +2252,7 @@ describe('NuGetService', () => {
             vi.spyOn((service as any)._packageService, 'resolveSourcesForSearch').mockResolvedValue([]);
 
             hoisted.mockExecWithTimeout.mockResolvedValue({
-                stdout: '| LocalPkg | 1.0.0 | owner | 10 |',
+                stdout: cliSearchOutput([{ id: 'LocalPkg', latestVersion: '1.0.0', owners: 'owner', totalDownloads: 10 }]),
                 stderr: ''
             });
 
@@ -2268,7 +2269,7 @@ describe('NuGetService', () => {
             vi.spyOn((service as any)._packageService, 'resolveSourcesForSearch').mockResolvedValue([]);
 
             hoisted.mockExecWithTimeout.mockResolvedValue({
-                stdout: '| FailedPkg | 2.0.0 | owner | 5 |',
+                stdout: cliSearchOutput([{ id: 'FailedPkg', latestVersion: '2.0.0', owners: 'owner', totalDownloads: 5 }]),
                 stderr: ''
             });
 
@@ -2288,7 +2289,7 @@ describe('NuGetService', () => {
             ]);
 
             hoisted.mockExecWithTimeout.mockResolvedValue({
-                stdout: '| LocalPkg | 1.0.0 | owner | 10 |',
+                stdout: cliSearchOutput([{ id: 'LocalPkg', latestVersion: '1.0.0', owners: 'owner', totalDownloads: 10 }]),
                 stderr: ''
             });
 
@@ -2318,7 +2319,7 @@ describe('NuGetService', () => {
             ]);
 
             hoisted.mockExecWithTimeout.mockResolvedValue({
-                stdout: '| LocalPkg | 1.0.0 | owner | 5 |',
+                stdout: cliSearchOutput([{ id: 'LocalPkg', latestVersion: '1.0.0', owners: 'owner', totalDownloads: 5 }]),
                 stderr: ''
             });
 
@@ -2328,6 +2329,136 @@ describe('NuGetService', () => {
             const command = hoisted.mockExecWithTimeout.mock.calls[0][0] as string;
             expect(command).toContain('--source "C:\\packages"');
             expect(command).not.toContain('nuget.org');
+        });
+
+        it('preserves long IDs and prerelease versions from search through the install command', async () => {
+            const id = 'MyCompany.MyProduct.MyFeature.LongPackageName';
+            const version = '1.0.0-mynewfeaturethatibuildlastsummer-beta1';
+            vi.spyOn((service as any)._packageService, 'resolveSourcesForSearch').mockResolvedValue([]);
+            hoisted.mockExecWithTimeout.mockResolvedValueOnce({
+                stdout: cliSearchOutput([{ id, latestVersion: version }]), stderr: ''
+            });
+
+            const results = await service.searchPackages('LongPackageName', ['/local-feed'], true, true);
+            expect(results).toEqual([{ id, version, versions: [], description: '', authors: '', totalDownloads: undefined }]);
+            expect(hoisted.mockExecWithTimeout).toHaveBeenCalledWith(
+                expect.stringContaining('--format json --verbosity normal'), expect.any(Object));
+            expect(vi.mocked(workspaceCache.set)).toHaveBeenCalledWith(
+                expect.stringContaining(':json'), results, expect.any(Number));
+
+            hoisted.mockExecWithTimeout
+                .mockResolvedValueOnce({ stdout: '10.0.100', stderr: '' })
+                .mockResolvedValueOnce({ stdout: 'Package added successfully', stderr: '' });
+            expect(await service.installPackage('/project/App.csproj', results[0].id, results[0].version, { skipRestore: true })).toBe(true);
+            expect(hoisted.mockExecWithTimeout).toHaveBeenLastCalledWith(
+                expect.stringContaining(`--version ${version} `), expect.objectContaining({ cwd: '/project' }));
+        });
+
+        it('reads exact-match version fields and deduplicates repeated package IDs', async () => {
+            const version = '1.0.0-mynewfeaturethatibuildlastsummer-beta1';
+            vi.spyOn((service as any)._packageService, 'resolveSourcesForSearch').mockResolvedValue([]);
+            hoisted.mockExecWithTimeout.mockResolvedValueOnce({
+                stdout: cliSearchOutput([{ id: 'ExactPkg', version }, { id: 'ExactPkg', version: '0.9.0' }]), stderr: ''
+            });
+
+            const results = await service.searchPackages('ExactPkg', ['/local-feed'], true, true, 1, true);
+            expect(results).toHaveLength(1);
+            expect(results[0].version).toBe(version);
+            expect(hoisted.mockExecWithTimeout).toHaveBeenCalledWith(
+                expect.stringContaining('--exact-match --take 1 --format json'), expect.any(Object));
+        });
+
+        it('reads multiple CLI sources without shifting missing owners or download fields', async () => {
+            vi.spyOn((service as any)._packageService, 'resolveSourcesForSearch').mockResolvedValue([]);
+            vi.spyOn((service as any)._packageService, 'enrichSearchResultMetadata').mockResolvedValue(undefined);
+            hoisted.mockExecWithTimeout.mockResolvedValueOnce({
+                stdout: JSON.stringify({
+                    version: 2, problems: [], searchResult: [
+                        { sourceName: 'first', packages: [{ id: 'Pkg.One', latestVersion: '1.0.0', totalDownloads: 4456137550 }] },
+                        { sourceName: 'second', packages: [{ id: 'Pkg.Two', latestVersion: '2.0.0', owners: 'owner' }] }
+                    ]
+                }), stderr: ''
+            });
+
+            const results = await service.searchPackages('Pkg', ['/first', '/second'], false, false);
+            expect(results).toHaveLength(2);
+            expect(results[0]).toMatchObject({ id: 'Pkg.One', authors: '', totalDownloads: 4456137550 });
+            expect(results[1]).toMatchObject({ id: 'Pkg.Two', authors: 'owner', totalDownloads: undefined });
+        });
+
+        it('does not read persisted results from the old table-parsed cache key', async () => {
+            vi.mocked(workspaceCache.get).mockImplementation(key => key === 'search:test:lite'
+                ? [{ id: 'Pkg', version: '1.0.0-mynewfeaturethatib', versions: [], authors: '', description: '' }]
+                : undefined);
+            vi.spyOn((service as any)._packageService, 'resolveSourcesForSearch').mockResolvedValue([]);
+            hoisted.mockExecWithTimeout.mockResolvedValueOnce({ stdout: cliSearchOutput([]), stderr: '' });
+            expect(await service.searchPackages('Pkg', ['/local-feed'], false, true)).toEqual([]);
+            expect(hoisted.mockExecWithTimeout).toHaveBeenCalled();
+        });
+
+        it.each([cliSearchOutput([]), JSON.stringify({ version: 2, problems: [], searchResult: [] })])(
+            'accepts valid empty CLI search output without warning', async stdout => {
+                vi.spyOn((service as any)._packageService, 'resolveSourcesForSearch').mockResolvedValue([]);
+                hoisted.mockExecWithTimeout.mockResolvedValueOnce({ stdout, stderr: '' });
+                expect(await service.searchPackages('missing', ['/local-feed'], false, true)).toEqual([]);
+                expect(vscode.window.showWarningMessage).not.toHaveBeenCalled();
+            });
+
+        it.each([
+            'not JSON',
+            '| Pkg | 1.0.0-partial |',
+            'null',
+            '{}',
+            JSON.stringify({ searchResult: [null] }),
+            JSON.stringify({ searchResult: [{ packages: null }] }),
+            cliSearchOutput([{ id: 'Pkg', latestVersion: '' }]),
+            cliSearchOutput([{ id: 'Pkg', latestVersion: '1.0.0;echo bad' }]),
+            cliSearchOutput([{ id: 'invalid/pkg', latestVersion: '1.0.0' }]),
+        ])('reports invalid CLI output without caching partial results: %s', async stdout => {
+            vi.spyOn((service as any)._packageService, 'resolveSourcesForSearch').mockResolvedValue([]);
+            hoisted.mockExecWithTimeout.mockResolvedValueOnce({ stdout, stderr: '' });
+            expect(await service.searchPackages('bad', ['/local-feed'], false, true)).toEqual([]);
+            expect(vscode.window.showWarningMessage).toHaveBeenCalledWith(expect.stringContaining('Failed to search NuGet CLI sources'));
+            expect(workspaceCache.set).not.toHaveBeenCalled();
+        });
+
+        it('preserves API results and reports per-source CLI problems', async () => {
+            vi.spyOn((service as any)._packageService, 'resolveSourcesForSearch').mockResolvedValue([
+                { url: 'https://api.nuget.org/v3/index.json', endpoints: { searchQueryService: 'https://api.nuget.org/query' } }
+            ]);
+            vi.spyOn((service as any)._packageService, 'searchPackagesViaApi').mockResolvedValue([
+                { id: 'ApiPkg', version: '1.0.0', versions: [], description: '', authors: '' }
+            ]);
+            hoisted.mockExecWithTimeout.mockResolvedValueOnce({
+                stdout: JSON.stringify({ version: 2, problems: [], searchResult: [
+                    { sourceName: 'bad-feed', packages: [], problems: [{ text: 'Unable to load source', problemType: 'Error' }] },
+                    { sourceName: 'good-feed', packages: [{ id: 'CliPkg', latestVersion: '2.0.0' }] }
+                ] }), stderr: ''
+            });
+            const results = await service.searchPackages('Pkg', ['https://api.nuget.org/v3/index.json', '/bad-feed', '/good-feed'], false, true);
+            expect(results.map(p => p.id).sort()).toEqual(['ApiPkg', 'CliPkg']);
+            expect(vscode.window.showWarningMessage).toHaveBeenCalledWith(expect.stringContaining('Unable to load source'));
+        });
+
+        it('reports structured top-level problems even when the CLI exits non-zero', async () => {
+            vi.spyOn((service as any)._packageService, 'resolveSourcesForSearch').mockResolvedValue([]);
+            hoisted.mockExecWithTimeout.mockRejectedValueOnce(Object.assign(new Error('Command failed'), {
+                stdout: JSON.stringify({ version: 2, problems: [{ text: 'No sources configured', problemType: 'Error' }], searchResult: [] }),
+                stderr: ''
+            }));
+            expect(await service.searchPackages('Pkg', ['/local-feed'], false, true)).toEqual([]);
+            expect(vscode.window.showWarningMessage).toHaveBeenCalledWith(expect.stringContaining('No sources configured'));
+        });
+
+        it('reports CLI execution failures while retaining valid API results', async () => {
+            vi.spyOn((service as any)._packageService, 'resolveSourcesForSearch').mockResolvedValue([
+                { url: 'https://api.nuget.org/v3/index.json', endpoints: { searchQueryService: 'https://api.nuget.org/query' } }
+            ]);
+            const apiResult = { id: 'ApiPkg', version: '1.0.0', versions: [], description: '', authors: '' };
+            vi.spyOn((service as any)._packageService, 'searchPackagesViaApi').mockResolvedValue([apiResult]);
+            hoisted.mockExecWithTimeout.mockRejectedValueOnce(new Error('dotnet not found'));
+            expect(await service.searchPackages('Pkg', ['https://api.nuget.org/v3/index.json', '/local-feed'], false, true)).toEqual([apiResult]);
+            expect(vscode.window.showWarningMessage).toHaveBeenCalledWith(expect.stringContaining('dotnet not found'));
         });
     });
 

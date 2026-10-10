@@ -6,6 +6,26 @@ import { beforeAll, bench, describe, vi } from 'vitest';
 import { NuGetService } from '../../services/NuGetService';
 import { disableHealthMonitor, mockServiceHttp } from './setup';
 
+vi.mock('../../services/NuGetUtils', async (importOriginal) => {
+    const actual = await importOriginal<typeof import('../../services/NuGetUtils')>();
+    return {
+        ...actual,
+        execWithTimeout: vi.fn(async () => ({
+            stdout: JSON.stringify({
+                version: 2, problems: [], searchResult: [{
+                    sourceName: '/local-feed',
+                    packages: Array.from({ length: 100 }, (_, i) => ({
+                        id: `Company.Product.Feature.Package${i}`,
+                        latestVersion: '1.0.0-mynewfeaturethatibuildlastsummer-beta1',
+                        totalDownloads: 100 - i,
+                    })),
+                }],
+            }),
+            stderr: '',
+        })),
+    };
+});
+
 vi.mock('../../services/NuGetConfigParser', () => ({
     NuGetConfigParser: class {
         async getSources() {
@@ -49,6 +69,11 @@ describe('searchPackages', () => {
             'https://api.nuget.org/v3/index.json',
             'https://custom.example.com/v3/index.json'
         ]);
+    });
+
+    bench('CLI JSON search — 100 long prerelease versions', async () => {
+        service.clearSourceErrors();
+        await service.searchPackages('Package', ['/local-feed'], true, true, 100);
     });
 });
 

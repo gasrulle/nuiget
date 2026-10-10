@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Long NuGet prerelease versions and package IDs remain intact during CLI search and installation**
+
 ## [1.18.9] - 2026-10-10
 
 ### Fixed

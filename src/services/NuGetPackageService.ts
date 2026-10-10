@@ -18,7 +18,7 @@ import {
 } from './NuGetTypes';
 import {
     batchedPromiseAll, execWithTimeout,
-    fileExists,
+    fileExists, isExecError, isValidPackageId, isValidVersion,
     isNewerVersion,
     isVersionInRange, LRUMap
 } from './NuGetUtils';
@@ -879,13 +879,67 @@ export class NuGetPackageService {
     }
 
     /**
+     * Read machine-readable search output without losing wrapped IDs or versions.
+     */
+    private parseCliSearchResults(stdout: string, liteMode: boolean): { packages: PackageSearchResult[]; problems: string[] } {
+        const output: unknown = JSON.parse(stdout);
+        if (!output || typeof output !== 'object' || !('searchResult' in output) || !Array.isArray(output.searchResult)) {
+            throw new Error('Invalid NuGet search JSON: expected searchResult array');
+        }
+
+        const problems: string[] = [];
+        const readProblems = (value: unknown): void => {
+            if (value === undefined || value === null) { return; }
+            if (!Array.isArray(value)) { throw new Error('Invalid NuGet search JSON: expected problems array'); }
+            for (const rawProblem of value) {
+                const problem: unknown = rawProblem;
+                if (!problem || typeof problem !== 'object' || !('text' in problem) || typeof problem.text !== 'string') {
+                    throw new Error('Invalid NuGet search JSON: invalid problem');
+                }
+                problems.push(problem.text);
+            }
+        };
+        readProblems('problems' in output ? output.problems : undefined);
+
+        const packages: PackageSearchResult[] = [];
+        for (const rawSource of output.searchResult) {
+            const source: unknown = rawSource;
+            if (!source || typeof source !== 'object' || !('packages' in source) || !Array.isArray(source.packages)) {
+                throw new Error('Invalid NuGet search JSON: expected packages array');
+            }
+            readProblems('problems' in source ? source.problems : undefined);
+            for (const rawPackage of source.packages) {
+                const pkg: unknown = rawPackage;
+                if (!pkg || typeof pkg !== 'object' || !('id' in pkg) || typeof pkg.id !== 'string' || !isValidPackageId(pkg.id)) {
+                    throw new Error('Invalid NuGet search JSON: invalid package ID');
+                }
+                // --exact-match emits "version"; ordinary search emits "latestVersion".
+                const version = 'latestVersion' in pkg ? pkg.latestVersion : ('version' in pkg ? pkg.version : undefined);
+                if (typeof version !== 'string' || !isValidVersion(version)) {
+                    throw new Error('Invalid NuGet search JSON: invalid package version');
+                }
+                packages.push({
+                    id: pkg.id,
+                    version,
+                    versions: [],
+                    description: '',
+                    authors: !liteMode && 'owners' in pkg && typeof pkg.owners === 'string' ? pkg.owners : '',
+                    totalDownloads: 'totalDownloads' in pkg && typeof pkg.totalDownloads === 'number' ? pkg.totalDownloads : undefined,
+                });
+            }
+        }
+        return { packages, problems };
+    }
+
+    /**
      * Search for packages using API or CLI fallback.
      * Prefers V3 Search API for any source with a SearchQueryService endpoint.
      * Falls back to CLI only for sources without V3 endpoints.
      */
     async searchPackages(query: string, sources?: string[], includePrerelease?: boolean, liteMode?: boolean, take?: number, exactMatch?: boolean): Promise<PackageSearchResult[]> {
         try {
-            const searchCacheKey = cacheKeys.searchResults(query, sources || [], includePrerelease ?? false) + (liteMode ? ':lite' : '') + (take ? `:take${take}` : '') + (exactMatch ? ':exact' : '');
+            // Ignore persisted table-parsed results that may contain incomplete versions.
+            const searchCacheKey = cacheKeys.searchResults(query, sources || [], includePrerelease ?? false) + ':json' + (liteMode ? ':lite' : '') + (take ? `:take${take}` : '') + (exactMatch ? ':exact' : '');
 
             // Check in-memory cache
             const memoryCached = this.searchResultsCache.get(searchCacheKey);
@@ -948,37 +1002,26 @@ export class NuGetPackageService {
 
                 try {
                     const workspaceFolder = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-                    const command = `dotnet package search "${query}" ${sourceArg} ${prereleaseArg} ${exactMatchArg} --take ${searchResultLimit}`;
-                    const { stdout } = await execWithTimeout(command, { cwd: workspaceFolder });
-
-                    // Parse CLI output
-                    const lines = stdout.split('\n');
-
-                    for (const line of lines) {
-                        if (line.includes('---')) { continue; }
-
-                        const parts = line.split('|').map(p => p.trim()).filter(p => p);
-                        if (parts.length >= 2) {
-                            const packageId = parts[0];
-                            const version = parts[1];
-
-                            if (packageId === 'Package ID' || !packageId || !version) { continue; }
-
-                            const owners = parts[2] || '';
-                            const downloads = parts[3] ? parseInt(parts[3].replace(/[^\d]/g, ''), 10) : undefined;
-
-                            cliResults.push({
-                                id: packageId,
-                                version: version,
-                                versions: [],
-                                description: '',
-                                authors: liteMode ? '' : owners,
-                                totalDownloads: downloads,
-                            });
-                        }
+                    const command = `dotnet package search "${query}" ${sourceArg} ${prereleaseArg} ${exactMatchArg} --take ${searchResultLimit} --format json --verbosity normal`;
+                    let stdout: string;
+                    try {
+                        ({ stdout } = await execWithTimeout(command, { cwd: workspaceFolder }));
+                    } catch (error) {
+                        // NuGet also writes structured problems on non-zero exit.
+                        if (!isExecError(error) || typeof error.stdout !== 'string' || !error.stdout.trim()) { throw error; }
+                        stdout = error.stdout;
                     }
-                } catch {
-                    // CLI search failed — continue with whatever API results we have
+                    const parsed = this.parseCliSearchResults(stdout, liteMode ?? false);
+                    cliResults.push(...parsed.packages);
+                    if (parsed.problems.length > 0) {
+                        const details = this._deps.sanitizeForLogging(parsed.problems.join('\n'));
+                        console.warn(`[NuGet] CLI package search: ${details}`);
+                        vscode.window.showWarningMessage(`NuGet package search reported source problems: ${details}`);
+                    }
+                } catch (error) {
+                    const details = this._deps.sanitizeForLogging(String(error));
+                    console.warn(`[NuGet] CLI package search failed: ${details}`);
+                    vscode.window.showWarningMessage(`Failed to search NuGet CLI sources: ${details}`);
                 }
             }
 
