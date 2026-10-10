@@ -52,7 +52,7 @@ Apply these rules per the [CommonMark spec 0.31.2](https://spec.commonmark.org/0
 - [ ] Indented code blocks are preceded by a blank line (they cannot interrupt a paragraph).
 - [ ] Emphasis uses `*` for intraword; `_` only at word boundaries.
 - [ ] Links use `[text](url)` or reference syntax with no whitespace before `(` or `[`.
-- [ ] Images include non-empty alt text.
+- [ ] Informational images have descriptive alt text; decorative images have empty alt text.
 - [ ] Autolinks use angle brackets (`<URL>`); bare URLs are not CommonMark autolinks.
 - [ ] No unbalanced parentheses in bare link destinations (use `<…>` or escape).
 - [ ] HTML block type 7 (custom/inline-level tags) is preceded by a blank line when following a paragraph.

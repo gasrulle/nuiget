@@ -18,8 +18,22 @@
 | `.github/` | CI workflow, Copilot instructions, agents, prompts |
 
 # Agent Guidelines
-- **Use Context7 for Documentation:** Use `resolve-library-id` then `get-library-docs` for React, VS Code Extension API, esbuild, ESLint, TypeScript docs.
+- **Use Context7 for Documentation:** Discover the current host's tools, then use `resolve-library-id` and `query-docs` for version-specific library documentation.
 - **Use Microsoft Docs MCP for VS Code APIs:** Use `microsoft_docs_search`, `microsoft_code_sample_search`, `microsoft_docs_fetch` for official VS Code extension documentation.
+
+## Agent Resource Maintenance
+
+- Scope React and accessibility instructions to webview code; do not apply SSR,
+  Server Actions, or browser-app data fetching patterns to this extension.
+- Treat upstream resources as templates, not authority over this repository's
+  architecture. Preserve local adaptations when updating from Awesome Copilot.
+- Use `git-commit` as the single commit skill. A version bump or publish request
+  does not authorize a commit, push, tag, or memory write.
+- Use the GitHub Actions efficiency/hardening skills for CI-specific work and
+  the Technical Writer agent for existing documentation. Do not install tools
+  or change repository/account settings merely because a resource suggests it.
+- The obsolete offline-support implementation prompt has been retired. Base new
+  offline work on `ARCHITECTURE.md` and the current package-service implementation.
 
 ## MANDATORY: Read ARCHITECTURE.md Before Making Changes
 **ARCHITECTURE.md is the single source of truth** for all technical details: component hierarchy, message protocol, state management patterns, caching strategies, auth flow, security, performance patterns, and sidebar architecture. This file (copilot-instructions.md) only contains agent rules, build commands, and gotchas/pitfalls — it does NOT duplicate architecture details.
@@ -37,8 +51,8 @@ Failing to consult ARCHITECTURE.md risks re-introducing bugs, duplicating logic,
 Tests are **NOT OPTIONAL**. Every code change must satisfy all of the following:
 
 1. **Run ALL test suites before finishing.** Run these commands and confirm **all pass** before declaring work complete:
-   - `npm test` — Unit tests (backend + frontend, ~1225 tests)
-   - `npm run bench` — Benchmarks (~57 benchmarks, ~90s)
+   - `npm test` — Unit and integration tests using the configured Vitest projects
+   - `npm run bench` — Backend benchmarks
    - `npm run test:ui` — UI tests (ExTester/Selenium, requires VS Code + VSIX build). If this command fails due to environment constraints (no display, CI-only), note it in your summary but do not block on it.
    If any test or benchmark fails, fix it before moving on. Never submit, commit, or declare work complete with failures.
 2. **Update existing tests.** When changing behavior, update every test that covers the changed code path so it reflects the new behavior. Do NOT delete or skip tests to make the suite pass.
@@ -110,10 +124,14 @@ The VS Code task "Run Tests" (`Ctrl+Shift+T` or Task menu) runs `npm test` with 
 ## Known Issues
 | Issue | Status |
 |-------|--------|
-| No known `npm audit` vulnerabilities | All previously tracked vulnerabilities resolved. `@vscode/test-cli` and `@vscode/test-electron` removed (unused, caused vuln chain). **Re-run `npm audit` periodically to check for regressions.** |
-| TypeScript 6.0 + typescript-eslint peer dep | Resolved — `typescript-eslint@8.58.2` supports `<6.1.0`. |
-| `eslint-plugin-react-hooks` peer dep | `eslint-plugin-react-hooks@7.x` declares `eslint ^9.0.0` only. Bypassed via `overrides` in `package.json`. `.npmrc` removed. Remove override when react-hooks ships `^10.0.0` support. |
-| `no-explicit-any` is warn, not error | `WebviewMessage` type uses `Record<string, any>` because webview messages are inherently untyped (50+ message types). Upgrading to `error` requires a full discriminated union refactor. ESLint turns off `no-explicit-any` and `no-non-null-assertion` in test files via override in `eslint.config.mjs`. |
+| Dependency vulnerability status is time-sensitive | `@vscode/test-cli` and `@vscode/test-electron` are installed for extension-host E2E tests. **Run `npm audit` when assessing current vulnerabilities; do not infer a clean audit from this document.** |
+| TypeScript compiler compatibility | Keep TypeScript 6 while `typescript-eslint` declares `<6.1.0`; do not force TypeScript 7 past the parser's peer range. |
+| MSW compatibility | Keep the latest MSW 2.x while `@vitest/mocker` declares an MSW 2 peer dependency. Validate `npm ls --all` after packaging, which runs another install and may reintroduce peer conflicts. |
+| `eslint-plugin-react-hooks` peer dep | Version 7.1.1 supports ESLint 10; no peer override is needed. |
+| Test CLI's nested Mocha | `@vscode/test-cli` still requests Mocha 11 with vulnerable transitive packages. The scoped override reuses the direct Mocha 12 dependency; verify E2E tests before removing it. |
+| VS Code declarations | Pin `@types/vscode` to `engines.vscode`'s minimum API version; a caret silently permits newer APIs unavailable to supported users. |
+| macOS UI-test IPC socket path | ExTester storage under a long session path exceeds the Unix socket limit. Pass a short temporary directory with `npm run test:ui -- --storage /tmp/nuiget-ui`; reuse downloads and clean only task-created paths. |
+| Typed backend message routing | `PanelRequestMessage` and `SidebarRequestMessage` in `NuGetTypes.ts` are discriminated unions used by both backend message handlers. Extend these contracts for new requests; do not reintroduce an untyped `WebviewMessage`. ESLint turns off `no-explicit-any` and `no-non-null-assertion` in test files via override in `eslint.config.mjs`. |
 | CI uses `npm install` not `npm ci` | `@emnapi/core` and `@emnapi/runtime` are transitive optional deps (via `@rolldown/binding-wasm32-wasi`) whose resolved versions differ between npm patch versions. `npm ci` fails on any drift. CI uses `npm install --no-audit --no-fund` instead — reads the lockfile when compatible, resolves fresh when not. |
 
 ## VS Code Extension
@@ -128,7 +146,7 @@ The VS Code task "Run Tests" (`Ctrl+Shift+T` or Task menu) runs `npm test` with 
 |-------|----------|
 | "process is not defined" | Add esbuild define for `process.env.NODE_ENV` |
 | StrictMode double-render | Expected behavior — verifies cleanup functions |
-| **setState updater side effects** | **Never** call `postMessage()` or side effects inside `setState(prev => {...})` — StrictMode runs updaters twice. Use flag variable inside, call side effect outside. |
+| **setState updater side effects** | **Never** call `postMessage()` or side effects inside `setState(prev => {...})` — StrictMode may run updaters twice. Derive the operation from the current synchronous ref/state snapshot, then update state and perform the side effect separately. Do not assign a flag inside the updater and read it immediately afterward. |
 | **Async setState variable assignment** | **CRITICAL:** Never assign `let x` inside `setState(prev => {...})` and read after — React 19 runs updaters async, `x` stays initial. Use `useRef` mirror pattern (see `transitiveLoadingMetadataRef`). |
 | Stale closures in `useCallback([])` | App.tsx uses `useCallback(fn, [])` with individual `useRef` mirrors (`selectedProjectRef`, `selectedSourceRef`, `activeTabRef`, etc.) synced via `useEffect`. SidebarApp.tsx uses the `handleMessageRef` pattern: regular function assigned to `ref.current` each render, one `useEffect([])` listener calls `ref.current(e)`. |
 | Inline callbacks defeat React.memo | Extract callbacks to `useCallback([])` (e.g., `handleSashReset`, `handleSashDragEnd`, `handleToggleDep`). Inline arrows create new refs every render. |
@@ -189,11 +207,11 @@ The VS Code task "Run Tests" (`Ctrl+Shift+T` or Task menu) runs `npm test` with 
 | Issue | Solution |
 |-------|----------|
 | Activity Bar badge removed | Badge feature was removed. No `setBadge`, `_clearBadge`, `_buildBadgeTooltip`, `_pendingBadgeCount`, `_pendingBadgeTooltip`, `_showActivityBarBadge`, or `nuiget.showActivityBarBadge` setting exists. Don't re-add. |
-| Search mode model | All sidebar rendering is driven by `parseSearchQuery(query)` → `{ mode: 'default' \| 'browse' \| 'installed' \| 'updates', filterText }`. Never check `installedExpanded`/`updatesExpanded` outside default mode. |
+| Search mode model | Shared `parseSearchQuery(query)` supports `default`, `browse`, `installed`, `updates`, and `vulnerable` modes. The main panel supports `@vulnerable`; the sidebar deliberately excludes that prefix from its suggestions and supports only `@installed` and `@updates`. Never check `installedExpanded`/`updatesExpanded` outside default mode. |
 | Browse section removed | No Browse `SectionHeader` exists. Browse results render directly when `searchMode === 'browse'` (plain text + Enter). |
 | Recent searches removed | No state, effects, handlers, CSS, or backend cases (`getRecentSearches`, `clearRecentSearches`, `_addRecentSearch`) exist. Don't re-add. |
 | @-prefix dropdown | Shows when text starts with `@` but isn't yet a complete valid prefix. Auto-filters as typed (`@up` → only `@updates`). Keyboard: ArrowDown/Up navigate, Enter/Tab select, Escape dismiss. |
-| Client-side filtering | `@installed`/`@updates` filter client-side (live, no Enter). Browse mode uses 300ms debounce (min 2 chars) — Enter bypasses debounce for immediate search. `browseDebounceRef` holds the timer. Stale results discarded via backend `_latestSearchQuery` guard. |
+| Client-side filtering | Sidebar `@installed`/`@updates` filter client-side (live, no Enter); `@vulnerable` is main-panel-only. Browse mode uses 300ms debounce (min 2 chars) — Enter bypasses debounce for immediate search. `browseDebounceRef` holds the timer. Stale results discarded via backend `_latestSearchQuery` guard. |
 | `searchModeRef` for handlers | `searchMode` is derived via `useMemo`, so stale in `useCallback([])`. Use `searchModeRef.current` in handlers. Same pattern as `selectedProjectRef`, `selectedSourceRef`. |
 | Codicon font not in webviews | Codicon font is NOT available in webview HTML. Use `icons.tsx` SVG components (e.g., `<ChevronRightIcon size={14} />`). Never use emoji characters — they render inconsistently cross-platform. Both main panel and sidebar import from the same `icons.tsx` module. Never define inline SVGs in sidebar components. |
 | `$(codicon)` syntax not in webviews | VS Code `$(name)` codicon syntax does NOT render in webview HTML — it displays as literal text. Use SVG icon components or plain English descriptions instead. |
@@ -279,7 +297,7 @@ The VS Code task "Run Tests" (`Ctrl+Shift+T` or Task menu) runs `npm test` with 
 | Test file ESLint rules | `no-explicit-any` and `no-non-null-assertion` are turned OFF for test files (`src/**/*.test.{ts,tsx}`, `src/test/**/*.{ts,tsx}`) in `eslint.config.mjs`. Don't add these rules back for tests. |
 | Singleton `resetInstance()` | `CredentialService.resetInstance()` and `Http2Client.resetInstance()` exist for test isolation. `instance` fields are typed `Type \| undefined` (not `Type`). |
 | Benchmarks mock HTTP at NuGetService level | Service benchmarks spy on `fetchJson`/`fetchJsonWithDetails` directly (not MSW). MSW can't intercept Http2Client's HTTP/2 or custom HTTPS agent. Use `mockServiceHttp(service)` from `setup.ts`. |
-| Benchmarks run in backend project only | npm bench scripts use `--project backend`. Don't remove — without it, benchmarks run 3x (once per vitest project). |
+| Benchmarks run in backend project only | npm bench scripts select Vitest 5's derived `backend (bench)` project. Keep the wrapper in `src/test/benchmarks/run.mjs`; removed `--compare`/`--outputJson` flags do not work in Vitest 5. |
 | WorkspaceCache spam in benchmarks | `[WorkspaceCache] Cache not initialized` warnings in stderr are expected. The cache gracefully returns early — doesn't block. |
 | `benchmarks/baseline.json` is committed | Regenerate with `npm run bench:save` after performance-affecting changes. CI compares PRs against this baseline. |
 

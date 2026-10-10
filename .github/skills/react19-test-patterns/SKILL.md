@@ -1,6 +1,6 @@
 ---
 name: react19-test-patterns
-description: 'Provides before/after patterns for migrating test files to React 19 compatibility, including act() imports, Simulate removal, and StrictMode call count changes.'
+description: 'React 19 test compatibility patterns for Vitest and React Testing Library, preserving StrictMode behavior and cleanup assertions.'
 ---
 
 # React 19 Test Migration Patterns
@@ -23,7 +23,7 @@ Fix test files in this order; each layer depends on the previous:
 ## 1. act() Import Fix
 
 ```jsx
-// Before  REMOVED in React 19:
+// Before (deprecated import):
 import { act } from 'react-dom/test-utils';
 
 // After:
@@ -79,22 +79,20 @@ fireEvent.keyDown(element, { key: 'Enter', keyCode: 13 });
 
 ## 4. StrictMode Call Count Fixes
 
-React 19 StrictMode no longer double-invokes `useEffect` in development. Spy assertions counting effect calls must be updated.
+React 19 development StrictMode still re-runs renders and performs an extra
+effect setup/cleanup cycle when enabled at the root. A subtree-only StrictMode
+boundary does not re-run initial effects in the same way. Inspect the test's
+render wrapper and cleanup before changing assertions; do not reduce expected
+counts simply because the project uses React 19.
 
-**Strategy  always measure, never guess:**
+**Strategy: verify behavior, not just the observed count.**
 ```bash
-# Run the failing test, read the actual count from the error:
-npm test -- --watchAll=false --testPathPattern="[filename]" --forceExit 2>&1 | grep -E "Expected|Received"
+npm run test:frontend -- path/to/Component.test.tsx
 ```
 
-```jsx
-// Before (React 18 StrictMode  effects ran twice):
-expect(mockFn).toHaveBeenCalledTimes(2);  // 1 call × 2 (strict double-invoke)
+Test that subscriptions are cleaned up and events are handled once after the
+setup/cleanup/setup sequence. Keep assertions for intentional StrictMode behavior.
+Use Vitest and the repository's React Testing Library helpers, not Jest CLI flags.
 
-// After (React 19 StrictMode  effects run once):
-expect(mockFn).toHaveBeenCalledTimes(1);
-```
-
-```jsx
-// Render-phase calls (component body)  still double-invoked in React 19 StrictMode:
-expect(renderSpy).toHaveBeenCalledTimes(2);  // stays at 2 for render body calls
+See [React StrictMode](https://react.dev/reference/react/StrictMode) and
+[useEffect troubleshooting](https://react.dev/reference/react/useEffect#my-effect-runs-twice-when-the-component-mounts).

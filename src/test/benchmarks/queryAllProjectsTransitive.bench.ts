@@ -10,7 +10,8 @@
  * concurrency=1, redundant allocations in the loop). For end-to-end transitive perf,
  * add a separate bench that exercises the project service.
  */
-import { beforeAll, bench, describe, vi } from 'vitest';
+import { beforeAll, test, describe, vi } from 'vitest';
+import { runBenchmark } from './benchmark';
 import { queryAllProjectsTransitive, type ProjectTransitiveChunk } from '../../services/NuGetOperations';
 import { NuGetService } from '../../services/NuGetService';
 import type { Project, TransitivePackagesResult } from '../../services/NuGetTypes';
@@ -82,7 +83,13 @@ async function run(count: number): Promise<void> {
 }
 
 describe('queryAllProjectsTransitive orchestration overhead', () => {
-    bench('5 projects', async () => { await run(5); });
-    bench('20 projects', async () => { await run(20); });
-    bench('50 projects', async () => { await run(50); });
+    test('5 projects', async (context) => {
+        await runBenchmark(context, '5 projects', async () => { await run(5); });
+    });
+    test('20 projects', async (context) => {
+        await runBenchmark(context, '20 projects', async () => { await run(20); });
+    });
+    test('50 projects', async (context) => {
+        await runBenchmark(context, '50 projects', async () => { await run(50); });
+    });
 });

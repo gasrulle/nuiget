@@ -1580,7 +1580,7 @@ body.vscode-light .readme-rendered .hljs-keyword { color: var(--vscode-symbolIco
 ## Testing
 
 ### Framework
-Vitest 4.x with three project configurations:
+Vitest 5.x with three project configurations:
 
 | Project | Environment | Includes | Setup |
 |---------|------------|----------|-------|
@@ -1588,13 +1588,20 @@ Vitest 4.x with three project configurations:
 | `frontend` | jsdom | `src/webview/**/*.test.{ts,tsx}` | `src/test/setup-frontend.ts` |
 | `integration` | Node.js | `src/test/integration/**/*.integration.test.ts` | 30s test timeout |
 
-Benchmarks: `src/test/benchmarks/**/*.bench.ts` (run via `npm run bench`, backend project only).
+Benchmarks use Vitest 5's test-context `bench` fixture in a derived `backend (bench)`
+project. `src/test/benchmarks/benchmark.ts` preserves the previous measurement
+timings and replays file/suite-scoped baselines with `bench.from()` when comparing.
+`src/test/benchmarks/run.mjs` drives `npm run bench`, `bench:save`, and `bench:compare`:
+the JSON reporter writes `benchmarks/latest.json`, and `bench:save` consolidates
+measured results into `benchmarks/baseline.json`. Comparisons report current and
+stored measurements without introducing a machine-dependent pass/fail threshold;
+missing or invalid baselines and benchmark execution failures are errors.
 
 Configuration: `vitest.config.mts` at project root.
 
 ### Test Commands
 ```bash
-npm test               # Run all tests (both projects)
+npm test               # Run all three test projects
 npm run test:watch      # Watch mode
 npm run test:backend    # Backend tests only
 npm run test:frontend   # Frontend tests only
@@ -1604,7 +1611,7 @@ npm run test:coverage   # Run with V8 coverage report
 ### Coverage
 - Provider: `@vitest/coverage-v8`
 - Reports: `text` (console), `lcov`, `html` → `coverage/` directory
-- Thresholds (enforced in CI and `package:vsix`):
+- Thresholds (enforced by `test:coverage` and CI):
 
 | Metric | Threshold |
 |--------|-----------|
@@ -1636,17 +1643,30 @@ The ExTester UI helpers in `src/test/ui/helpers/` wait for the main panel's app 
 `eslint.config.mjs` includes an override for test files (`src/**/*.test.{ts,tsx}`, `src/test/**/*.{ts,tsx}`) that turns off `@typescript-eslint/no-explicit-any` and `@typescript-eslint/no-non-null-assertion`. Test code frequently uses `any` for mock typing and `!` for known-present test data.
 
 ### CI/CD Pipeline
-GitHub Actions workflow (`.github/workflows/ci.yml`) with three jobs:
+GitHub Actions workflow (`.github/workflows/ci.yml`) with five jobs:
 
 | Job | Depends On | Steps |
 |-----|-----------|-------|
-| `lint` | — | `npm ci` → `npm run lint` |
-| `test` | — | `npm ci` → `vitest run --coverage` → upload coverage artifact (14-day retention) |
-| `build` | `lint`, `test` | `npm ci` → type check → esbuild → `vsce package` → upload VSIX artifact (30-day retention) |
+| `lint` | — | `npm install --no-audit --no-fund` → ESLint and job summary |
+| `test` | — | Install → `vitest run --coverage` → coverage summary |
+| `e2e` | — | Install → production build → compile and run extension-host tests under Xvfb |
+| `build` | `lint`, `test`, `e2e` | Install → type check → production build → VSIX packaging |
+| `benchmark` | — | Pull requests only: install → `npm run bench:compare` → JSON measurement summary |
 
-Concurrency: `ci-${{ github.ref }}` with `cancel-in-progress: true` (cancels stale PR runs). Node 22.
+Concurrency: `ci-${{ github.ref }}` with `cancel-in-progress: true` (cancels stale PR runs).
+Node is selected from `.nvmrc` (24). `npm install` is intentional because optional
+dependency lockfile resolution can vary across npm patch versions.
 
 ## Build System
+
+The development toolchain uses Node.js 24.15.0 or newer and npm 10 or newer.
+Runtime libraries are bundled into the extension and webviews; DOMPurify and
+adm-zip supply their own declarations. Node declarations track the development
+runtime, while VS Code declarations are pinned to the extension's 1.85 API minimum.
+TypeScript remains on 6.0 because the current typescript-eslint parser supports
+versions below 6.1. MSW remains on the latest 2.x release because Vitest 5's mocker
+declares an MSW 2 peer dependency. The watch task uses the maintained npm-run-all2 implementation
+of the `npm-run-all` executable.
 
 ### esbuild Configuration
 - Three separate builds: extension (Node.js/CJS), webview (browser/IIFE), and sidebar (browser/IIFE)
@@ -1668,7 +1688,7 @@ dist/
 ### VSIX Packaging Pipeline
 The `npm run package:vsix` script runs a full pipeline:
 ```
-npm install → check-types → npm test (~1227 tests) → lint + bundle → vsce package
+npm install → check-types → npm test → lint + bundle → vsce package
 ```
 Tests must pass before the VSIX is produced. The `coverage/` directory is excluded from the VSIX via `.vscodeignore`.
 
@@ -1841,3 +1861,17 @@ const renderPackageDetailsPanel = () => {
     // ... shared implementation
 };
 ```
+
+## Repository Assistance Resources
+
+Copilot resources are versioned under `.github/`: `copilot-instructions.md`
+contains repository workflow rules, `instructions/` contains path-scoped guidance,
+`agents/` contains specialist profiles, `skills/` contains on-demand workflows and
+their bundled references, and `prompts/` contains the version-bump workflow.
+React and TypeScript guidance is tailored to the client-only webviews and the
+extension's existing build formats. CI efficiency and hardening skills and a
+Technical Writer profile complement the application-focused resources.
+
+These files affect development assistance, not extension runtime behavior.
+Upstream-derived additions record their pinned Awesome Copilot source; local
+adaptations are maintained alongside repository-specific rules.

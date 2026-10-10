@@ -5,6 +5,15 @@ description: 'Preserve React 18 concurrent patterns and adopt React 19 APIs (use
 
 # React 19 Concurrent Patterns
 
+## nUIget applicability
+
+This repository already runs React 19. Preserve existing transitions, deferred
+values, Suspense boundaries, and message-driven loading state. Adoption of newer
+APIs is optional and must solve a demonstrated need. Server Actions and RSC
+examples in the references do not apply to this client-only extension webview.
+Do not remove `forwardRef`, introduce a fetching library, or migrate architecture
+just because this resource describes a migration.
+
 React 19 introduced new APIs that complement the migration work. This skill covers two concerns:
 
 1. **Preserve**  existing React 18 concurrent patterns that must not be broken during migration
@@ -14,9 +23,9 @@ React 19 introduced new APIs that complement the migration work. This skill cove
 
 These patterns exist in React 18 codebases and must not be accidentally removed or broken:
 
-### createRoot  Already Migrated by the R18 Orchestra
+### createRoot
 
-If the R18 orchestra already ran, `ReactDOM.render` → `createRoot` is done. Verify it's correct:
+Preserve the existing `createRoot` entry points:
 
 ```jsx
 // CORRECT React 19 root (same as React 18):
@@ -82,9 +91,10 @@ For full patterns on each new API, read:
 During the React 19 migration itself, these concurrent-mode patterns must be **left completely untouched**:
 
 ```bash
-# Verify nothing touched these during migration:
+# Locate existing concurrency patterns before a requested migration:
 grep -rn "useTransition\|useDeferredValue\|Suspense\|startTransition" \
-  src/ --include="*.js" --include="*.jsx" | grep -v "\.test\."
+  src/webview/ --include="*.ts" --include="*.tsx" | grep -v "\.test\."
 ```
 
-If the migrator touched any of these files, review the changes  the migration should only have modified React API surface (forwardRef, defaultProps, etc.), never concurrent mode logic.
+If a migration changes these patterns, review the behavior explicitly. Do not
+assume refactoring concurrent state is required for React 19 compatibility.

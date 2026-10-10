@@ -2,7 +2,8 @@
  * Benchmarks for HTTP fetch pipeline and service orchestration.
  * Mocks HTTP at the NuGetService level to measure orchestration overhead.
  */
-import { beforeAll, bench, describe, vi } from 'vitest';
+import { beforeAll, test, describe, vi } from 'vitest';
+import { runBenchmark } from './benchmark';
 import { NuGetService } from '../../services/NuGetService';
 import { disableHealthMonitor, mockServiceHttp } from './setup';
 
@@ -33,17 +34,21 @@ beforeAll(() => {
 });
 
 describe('HTTP fetch pipeline', () => {
-    bench('service index discovery', async () => {
-        service.clearSourceErrors();
-        // discoverServiceEndpoints is private; exercise via search
-        await service.searchPackages('bench', ['https://api.nuget.org/v3/index.json']);
+    test('service index discovery', async (context) => {
+        await runBenchmark(context, 'service index discovery', async () => {
+            service.clearSourceErrors();
+            // discoverServiceEndpoints is private; exercise via search
+            await service.searchPackages('bench', ['https://api.nuget.org/v3/index.json']);
+        });
     });
 
-    bench('sequential search + metadata + versions', async () => {
-        const results = await service.searchPackages('Newtonsoft', ['https://api.nuget.org/v3/index.json']);
-        if (results[0]) {
-            await service.getPackageMetadata(results[0].id, results[0].version, 'https://api.nuget.org/v3/index.json');
-            await service.getPackageVersions(results[0].id, 'https://api.nuget.org/v3/index.json');
-        }
+    test('sequential search + metadata + versions', async (context) => {
+        await runBenchmark(context, 'sequential search + metadata + versions', async () => {
+            const results = await service.searchPackages('Newtonsoft', ['https://api.nuget.org/v3/index.json']);
+            if (results[0]) {
+                await service.getPackageMetadata(results[0].id, results[0].version, 'https://api.nuget.org/v3/index.json');
+                await service.getPackageVersions(results[0].id, 'https://api.nuget.org/v3/index.json');
+            }
+        });
     });
 });

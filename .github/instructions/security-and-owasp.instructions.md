@@ -1,9 +1,22 @@
 ---
-applyTo: '**'
+applyTo: 'src/**/*.ts,src/**/*.tsx,*.mjs,.github/workflows/*.yml,.github/workflows/*.yaml'
 description: 'Comprehensive secure coding standards based on OWASP Top 10 2025, with 55+ anti-patterns, detection regex, framework-specific fixes for modern web and backend frameworks, and AI/LLM security guidance.'
 ---
 
 # Security Standards
+
+## Repository applicability
+
+This is a VS Code extension, not an HTTP server. Prioritize trusted-workspace
+execution, backend message validation, CLI arguments, NuGet HTTP redirects,
+credential redaction, XML/ZIP input handling, Markdown sanitization, and webview
+CSP. Follow the existing helpers and constraints in `ARCHITECTURE.md`.
+Do not apply browser-to-browser origin checks blindly to VS Code's host/webview
+messaging bridge; validate the bridge's message payloads in the backend.
+Server authentication, cookies, rate limiting, and framework-specific examples
+below apply only if such a server is explicitly introduced. They do not
+authorize dependencies, services, or infrastructure changes. The repository's
+documented `npm install` exception takes precedence over generic `npm ci` advice.
 
 Comprehensive security rules for web application development. Every anti-pattern includes a severity classification, detection method, OWASP 2025 reference, and corrective code examples.
 
@@ -279,6 +292,17 @@ app.post('/api/auth/login', loginHandler);
 import rateLimit from 'express-rate-limit';
 const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 5 });
 app.post('/api/auth/login', authLimiter, loginHandler);
+
+// Multi-instance servers need a shared counter rather than a per-process store.
+import { Ratelimit } from '@upstash/ratelimit';
+import { Redis } from '@upstash/redis';
+const loginLimiter = new Ratelimit({
+  redis: Redis.fromEnv(),
+  limiter: Ratelimit.slidingWindow(5, '15 m'),
+  prefix: 'auth:login',
+});
+const { success } = await loginLimiter.limit(trustedClientId);
+if (!success) return new Response('Too Many Requests', { status: 429 });
 ```
 
 ### AU6: Missing Session Regeneration on Login (Session Fixation)
@@ -672,6 +696,17 @@ ALWAYS validate on server too. Use zod, joi, or class-validator.
 
 - **Severity**: IMPORTANT
 - **OWASP**: A05
+
+For an explicitly introduced HTTP server, size per-route limits to operation cost.
+Multi-instance or serverless deployments need shared storage for counters. Derive
+client identity from authenticated data or a verified trusted-proxy configuration;
+do not blindly trust an arbitrary `x-forwarded-for` header.
+
+```typescript
+import rateLimit from 'express-rate-limit';
+const exportLimiter = rateLimit({ windowMs: 60 * 1000, max: 10 });
+app.post('/api/export', exportLimiter, exportHandler);
+```
 
 ### AP2: GraphQL Without Depth Limiting
 

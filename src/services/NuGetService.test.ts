@@ -150,7 +150,7 @@ vi.mock('zlib', () => ({
 import { EventEmitter } from 'events';
 import { http2Client, isSafeRedirectTarget } from './Http2Client';
 import { NuGetService } from './NuGetService';
-import { workspaceCache } from './WorkspaceCache';
+import { cacheKeys, workspaceCache } from './WorkspaceCache';
 
 // ──────────────────────────────────────────────
 // Helpers
@@ -2387,12 +2387,18 @@ describe('NuGetService', () => {
         });
 
         it('does not read persisted results from the old table-parsed cache key', async () => {
-            vi.mocked(workspaceCache.get).mockImplementation(key => key === 'search:test:lite'
-                ? [{ id: 'Pkg', version: '1.0.0-mynewfeaturethatib', versions: [], authors: '', description: '' }]
+            const { cacheKeys: actualCacheKeys } = await vi.importActual<typeof import('./WorkspaceCache')>('./WorkspaceCache');
+            const baseKey = actualCacheKeys.searchResults('Pkg', ['/local-feed'], false);
+            vi.mocked(cacheKeys.searchResults).mockReturnValueOnce(baseKey);
+            const legacyResults = [{ id: 'Pkg', version: '1.0.0-mynewfeaturethatib', versions: [], authors: '', description: '' }];
+            vi.mocked(workspaceCache.get).mockImplementation(key => key === `${baseKey}:lite`
+                ? legacyResults
                 : undefined);
+            expect(workspaceCache.get(`${baseKey}:lite`)).toEqual(legacyResults);
             vi.spyOn((service as any)._packageService, 'resolveSourcesForSearch').mockResolvedValue([]);
             hoisted.mockExecWithTimeout.mockResolvedValueOnce({ stdout: cliSearchOutput([]), stderr: '' });
             expect(await service.searchPackages('Pkg', ['/local-feed'], false, true)).toEqual([]);
+            expect(workspaceCache.get).toHaveBeenLastCalledWith(`${baseKey}:json:lite`);
             expect(hoisted.mockExecWithTimeout).toHaveBeenCalled();
         });
 

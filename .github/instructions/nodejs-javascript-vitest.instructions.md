@@ -6,7 +6,7 @@ applyTo: '**/*.js, **/*.mjs, **/*.cjs'
 # Code Generation Guidelines
 
 ## Coding standards
-- Use JavaScript with ES2022 features and Node.js (20+) ESM modules
+- Use the Node.js version declared by `.nvmrc` and `package.json`, ES2022 features, and the module format required by each existing build/config file.
 - Use Node.js built-in modules and avoid external dependencies where possible
 - Ask the user if you require any additional dependencies before adding them
 - Always use async/await for asynchronous code, and use 'node:util' promisify function to avoid callbacks

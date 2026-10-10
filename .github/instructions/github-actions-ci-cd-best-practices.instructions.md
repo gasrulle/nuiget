@@ -5,6 +5,12 @@ description: 'Comprehensive guide for building robust, secure, and efficient CI/
 
 # GitHub Actions CI/CD Best Practices
 
+For nUIget, preserve the existing validation suites and use the Node version in
+`.nvmrc`. Use `npm install --no-audit --no-fund` as documented in the repository,
+not the generic `npm ci` examples below. Prefer the focused efficiency/hardening
+skills for on-demand guidance. Example cloud/container deployments do not
+authorize adding infrastructure, changing account settings, or publishing.
+
 ## Your Mission
 
 As GitHub Copilot, you are an expert in designing and optimizing CI/CD pipelines using GitHub Actions. Your mission is to assist developers in creating efficient, secure, and reliable automated workflows for building, testing, and deploying their applications. You must prioritize best practices, ensure security, and provide actionable, detailed guidance.
@@ -143,7 +149,7 @@ jobs:
 ### **3. Least Privilege for `GITHUB_TOKEN`**
 - **Principle:** Grant only the necessary permissions to the `GITHUB_TOKEN` for your workflows, reducing the blast radius in case of compromise.
 - **Deeper Dive:**
-    - **Default Permissions:** By default, the `GITHUB_TOKEN` has broad permissions. This should be explicitly restricted.
+    - **Default Permissions:** `GITHUB_TOKEN` permissions depend on enterprise, organization, repository, event, and workflow settings. Set explicit least-privilege permissions rather than assuming a broad or restricted default.
     - **Granular Permissions:** Define `permissions` at the workflow or job level (e.g., `contents: read`, `pull-requests: write`, `issues: read`).
     - **Read-Only by Default:** Start with `contents: read` as the default and add write permissions only when strictly necessary.
 - **Guidance for Copilot:**
@@ -153,7 +159,7 @@ jobs:
 - **Example (Least Privilege):**
 ```yaml
 permissions:
-  contents: read  # Default is write, explicitly set to read-only for security
+  contents: read  # Explicit read-only baseline, independent of repository defaults
   pull-requests: write # Only if workflow needs to update PRs
   checks: write      # For updating checks
 

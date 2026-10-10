@@ -12,6 +12,9 @@ export default defineConfig({
     },
     test: {
         globals: true,
+        benchmark: {
+            include: ['src/test/benchmarks/**/*.bench.ts', 'src/test/benchmarks/benchmark.test.ts'],
+        },
         coverage: {
             provider: 'v8',
             reporter: ['text', ['json-summary', { file: 'coverage-summary.json' }], 'lcov', 'html'],
@@ -62,9 +65,5 @@ export default defineConfig({
                 },
             },
         ],
-    },
-    benchmark: {
-        include: ['src/test/benchmarks/**/*.bench.ts'],
-        outputJson: 'benchmarks/latest.json',
     },
 });

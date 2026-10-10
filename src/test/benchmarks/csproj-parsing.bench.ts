@@ -3,9 +3,9 @@
  * Tests parsing speed with varying numbers of PackageReferences.
  */
 import fs from 'fs';
-import os from 'os';
 import path from 'path';
-import { afterAll, beforeAll, bench, describe, vi } from 'vitest';
+import { afterAll, beforeAll, test, describe, vi } from 'vitest';
+import { runBenchmark } from './benchmark';
 import { NuGetProjectService } from '../../services/NuGetProjectService';
 
 let tempDir: string;
@@ -28,7 +28,7 @@ ${refs}
 }
 
 beforeAll(() => {
-    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'nuiget-bench-'));
+    tempDir = fs.mkdtempSync(path.join(__dirname, '.nuiget-bench-'));
     projectService = new NuGetProjectService(vi.fn(async () => false));
 
     for (const count of [5, 20, 50, 100]) {
@@ -44,19 +44,27 @@ afterAll(() => {
 });
 
 describe('.csproj parsing', () => {
-    bench('5 PackageReferences', async () => {
-        await projectService.getInstalledPackages(csprojPaths[5]);
+    test('5 PackageReferences', async (context) => {
+        await runBenchmark(context, '5 PackageReferences', async () => {
+            await projectService.getInstalledPackages(csprojPaths[5]);
+        });
     });
 
-    bench('20 PackageReferences', async () => {
-        await projectService.getInstalledPackages(csprojPaths[20]);
+    test('20 PackageReferences', async (context) => {
+        await runBenchmark(context, '20 PackageReferences', async () => {
+            await projectService.getInstalledPackages(csprojPaths[20]);
+        });
     });
 
-    bench('50 PackageReferences', async () => {
-        await projectService.getInstalledPackages(csprojPaths[50]);
+    test('50 PackageReferences', async (context) => {
+        await runBenchmark(context, '50 PackageReferences', async () => {
+            await projectService.getInstalledPackages(csprojPaths[50]);
+        });
     });
 
-    bench('100 PackageReferences', async () => {
-        await projectService.getInstalledPackages(csprojPaths[100]);
+    test('100 PackageReferences', async (context) => {
+        await runBenchmark(context, '100 PackageReferences', async () => {
+            await projectService.getInstalledPackages(csprojPaths[100]);
+        });
     });
 });

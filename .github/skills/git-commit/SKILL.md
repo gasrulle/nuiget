@@ -1,6 +1,6 @@
 ---
 name: git-commit
-description: 'Execute git commit with conventional commit message analysis, intelligent staging, and message generation. Use when user asks to commit changes, create a git commit, or mentions "/commit". Supports: (1) Auto-detecting type and scope from changes, (2) Generating conventional commit messages from diff, (3) Interactive commit with optional type/scope/description overrides, (4) Intelligent file staging for logical grouping'
+description: 'Draft Conventional Commits messages and, only when explicitly requested, stage and commit the intended changes.'
 license: MIT
 allowed-tools: Bash
 ---
@@ -11,9 +11,17 @@ allowed-tools: Bash
 
 Create standardized, semantic git commits using the Conventional Commits specification. Analyze the actual diff to determine appropriate type, scope, and message.
 
+## Authorization
+
+This is the repository's single commit skill. If the user asks only for a message,
+draft it without staging or committing. Stage and commit only when the user
+explicitly requests a commit. A change, release, or publishing request alone is
+not commit authorization. Never push, tag, amend, or switch branches implicitly.
+Preserve unrelated staged and unstaged changes.
+
 ## Conventional Commit Format
 
-```
+```text
 <type>[optional scope]: <description>
 
 [optional body]
@@ -39,7 +47,7 @@ Create standardized, semantic git commits using the Conventional Commits specifi
 
 ## Breaking Changes
 
-```
+```text
 # Exclamation mark after type/scope
 feat!: remove deprecated endpoint
 
@@ -72,13 +80,10 @@ If nothing is staged or you want to group changes differently:
 # Stage specific files
 git add path/to/file1 path/to/file2
 
-# Stage by pattern
-git add *.test.*
-git add src/components/*
-
-# Interactive staging
-git add -p
 ```
+
+Select explicit paths after inspecting the diff. Avoid broad globs, `git add .`,
+and interactive staging in automated execution.
 
 **Never commit secrets** (.env, credentials.json, private keys).
 
