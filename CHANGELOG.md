@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Long NuGet prerelease versions and package IDs remain intact during CLI search and installation**
+
 ### Changed
 
 - **Refreshed and scoped Copilot instructions, agents, and skills for the current extension architecture**

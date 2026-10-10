@@ -1366,6 +1366,14 @@ private isLocalSource(sourceUrl: string): boolean {
 ```
 Sources like `C:\Program Files (x86)\Microsoft SDKs\NuGetPackages\` are skipped.
 
+### CLI Search Fallback
+
+`NuGetPackageService.searchPackages()` routes sources without a V3 `SearchQueryService` (including local and legacy feeds) through `dotnet package search --format json --verbosity normal`. The JSON `searchResult[].packages[]` objects retain full package IDs and versions, unlike the human-readable table, which wraps long values across physical rows. Normal searches use `latestVersion`; `--exact-match` uses `version` for each available version. Existing ID-based deduplication retains the first CLI result per package, with API results taking priority, before relevance sorting and the result cap.
+
+The parser validates the JSON envelope, package IDs, and version strings before merging any CLI results. Optional `owners` and `totalDownloads` fields remain independent, and lite mode omits authors. Top-level and per-source `problems` are sanitized and surfaced as warnings; structured stdout is also read when the CLI exits non-zero. Malformed output never falls back to table parsing. CLI failures preserve successful API results.
+
+Search cache keys include a `:json` marker so persisted results from the former table parser cannot supply truncated versions after upgrading. Both the main panel and sidebar use this shared search path; UI display clipping does not alter the version sent to installation.
+
 ### Memory Cache
 ```typescript
 // Cache keyed by packageId@version (immutable - safe to cache)

@@ -45,6 +45,8 @@ A Visual Studio-style NuGet package manager for VS Code with a modern split-pane
 
 Update suggestions in the main panel and sidebar exclude unlisted package versions. Explicit version selection still includes downloadable unlisted versions for existing dependencies.
 
+Search and installation preserve full package IDs and versions, including long prerelease labels such as `1.0.0-mynewfeaturethatibuildlastsummer-beta1`, even when searching local or legacy feeds through the dotnet CLI.
+
 ## ⚙️ Settings
 
 | Setting | Default | Description |
