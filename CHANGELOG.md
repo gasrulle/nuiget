@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Refreshed and scoped Copilot instructions, agents, and skills for the current extension architecture**
+- **Added focused GitHub Actions skills and a repository-tailored Technical Writer agent**
+- **Updated runtime and development dependencies and removed obsolete type packages and watch-task tooling**
+- **Migrated benchmarks to Vitest 5 with refreshed baselines and CI comparison reporting**
+
 ## [1.18.9] - 2026-10-10
 
 ### Fixed

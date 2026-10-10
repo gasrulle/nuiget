@@ -1,7 +1,8 @@
 /**
  * Benchmarks for LRUMap and WorkspaceCache operations.
  */
-import { beforeEach, bench, describe, vi } from 'vitest';
+import { beforeEach, test, describe, vi } from 'vitest';
+import { runBenchmark } from './benchmark';
 import { LRUMap } from '../../services/NuGetUtils';
 import { WorkspaceCache } from '../../services/WorkspaceCache';
 
@@ -15,29 +16,41 @@ describe('LRUMap operations', () => {
         }
     });
 
-    bench('get (hit)', () => {
-        cache.get('key-100');
+    test('get (hit)', async (context) => {
+        await runBenchmark(context, 'get (hit)', () => {
+            cache.get('key-100');
+        });
     });
 
-    bench('get (miss)', () => {
-        cache.get('nonexistent-key');
+    test('get (miss)', async (context) => {
+        await runBenchmark(context, 'get (miss)', () => {
+            cache.get('nonexistent-key');
+        });
     });
 
-    bench('set (new entry, triggers eviction)', () => {
-        cache.set(`new-${Math.random()}`, 'value');
+    test('set (new entry, triggers eviction)', async (context) => {
+        await runBenchmark(context, 'set (new entry, triggers eviction)', () => {
+            cache.set(`new-${Math.random()}`, 'value');
+        });
     });
 
-    bench('set (update existing)', () => {
-        cache.set('key-100', 'updated');
+    test('set (update existing)', async (context) => {
+        await runBenchmark(context, 'set (update existing)', () => {
+            cache.set('key-100', 'updated');
+        });
     });
 
-    bench('has', () => {
-        cache.has('key-50');
+    test('has', async (context) => {
+        await runBenchmark(context, 'has', () => {
+            cache.has('key-50');
+        });
     });
 
-    bench('delete', () => {
-        cache.delete('key-150');
-        cache.set('key-150', 'restored'); // Restore for next iteration
+    test('delete', async (context) => {
+        await runBenchmark(context, 'delete', () => {
+            cache.delete('key-150');
+            cache.set('key-150', 'restored'); // Restore for next iteration
+        });
     });
 });
 
@@ -66,24 +79,34 @@ describe('WorkspaceCache operations', () => {
         }
     });
 
-    bench('get (hit)', () => {
-        wsCache.get('bench-key-50');
+    test('get (hit)', async (context) => {
+        await runBenchmark(context, 'get (hit)', () => {
+            wsCache.get('bench-key-50');
+        });
     });
 
-    bench('get (miss)', () => {
-        wsCache.get('nonexistent');
+    test('get (miss)', async (context) => {
+        await runBenchmark(context, 'get (miss)', () => {
+            wsCache.get('nonexistent');
+        });
     });
 
-    bench('set', () => {
-        wsCache.set(`bench-key-${Math.floor(Math.random() * 100)}`, { updated: true });
+    test('set', async (context) => {
+        await runBenchmark(context, 'set', () => {
+            wsCache.set(`bench-key-${Math.floor(Math.random() * 100)}`, { updated: true });
+        });
     });
 
-    bench('has', () => {
-        wsCache.has('bench-key-75');
+    test('has', async (context) => {
+        await runBenchmark(context, 'has', () => {
+            wsCache.has('bench-key-75');
+        });
     });
 
-    bench('delete', () => {
-        wsCache.delete('bench-key-99');
-        wsCache.set('bench-key-99', { data: 'restored' });
+    test('delete', async (context) => {
+        await runBenchmark(context, 'delete', () => {
+            wsCache.delete('bench-key-99');
+            wsCache.set('bench-key-99', { data: 'restored' });
+        });
     });
 });

@@ -1,7 +1,8 @@
 /**
  * Benchmarks for source health checking and filtering.
  */
-import { beforeAll, bench, describe, vi } from 'vitest';
+import { beforeAll, test, describe, vi } from 'vitest';
+import { runBenchmark } from './benchmark';
 import { NuGetService } from '../../services/NuGetService';
 import { disableHealthMonitor, mockServiceHttp } from './setup';
 
@@ -32,11 +33,15 @@ beforeAll(() => {
 });
 
 describe('source health', () => {
-    bench('clearSourceErrors', () => {
-        service.clearSourceErrors();
+    test('clearSourceErrors', async (context) => {
+        await runBenchmark(context, 'clearSourceErrors', () => {
+            service.clearSourceErrors();
+        });
     });
 
-    bench('getFailedSources', () => {
-        service.getFailedSources();
+    test('getFailedSources', async (context) => {
+        await runBenchmark(context, 'getFailedSources', () => {
+            service.getFailedSources();
+        });
     });
 });

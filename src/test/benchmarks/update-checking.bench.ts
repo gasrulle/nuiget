@@ -1,7 +1,8 @@
 /**
  * Benchmarks for update checking with varying package counts.
  */
-import { beforeAll, bench, describe, vi } from 'vitest';
+import { beforeAll, test, describe, vi } from 'vitest';
+import { runBenchmark } from './benchmark';
 import { NuGetService } from '../../services/NuGetService';
 import type { InstalledPackage } from '../../services/NuGetTypes';
 import { disableHealthMonitor, mockServiceHttp } from './setup';
@@ -53,33 +54,43 @@ beforeAll(() => {
 });
 
 describe('checkPackageUpdates', () => {
-    bench('1 package', async () => {
-        service.clearVersionsCache();
-        await service.checkPackageUpdates(createInstalledPackages(1), false);
+    test('1 package', async (context) => {
+        await runBenchmark(context, '1 package', async () => {
+            service.clearVersionsCache();
+            await service.checkPackageUpdates(createInstalledPackages(1), false);
+        });
     });
 
-    bench('10 packages', async () => {
-        service.clearVersionsCache();
-        await service.checkPackageUpdates(createInstalledPackages(10), false);
+    test('10 packages', async (context) => {
+        await runBenchmark(context, '10 packages', async () => {
+            service.clearVersionsCache();
+            await service.checkPackageUpdates(createInstalledPackages(10), false);
+        });
     });
 
-    bench('50 packages', async () => {
-        service.clearVersionsCache();
-        await service.checkPackageUpdates(createInstalledPackages(50), false);
+    test('50 packages', async (context) => {
+        await runBenchmark(context, '50 packages', async () => {
+            service.clearVersionsCache();
+            await service.checkPackageUpdates(createInstalledPackages(50), false);
+        });
     });
 });
 
 describe('checkPackageUpdatesMinimal', () => {
-    bench('10 packages (minimal)', async () => {
-        service.clearVersionsCache();
-        await service.checkPackageUpdatesMinimal(createInstalledPackages(10), false);
+    test('10 packages (minimal)', async (context) => {
+        await runBenchmark(context, '10 packages (minimal)', async () => {
+            service.clearVersionsCache();
+            await service.checkPackageUpdatesMinimal(createInstalledPackages(10), false);
+        });
     });
 
-    bench('registration fallback with unlisted versions', async () => {
-        registrationService.clearVersionsCache();
-        await registrationService.checkPackageUpdatesMinimal(createInstalledPackages(1), false, [{
-            url: 'https://api.nuget.org/v3/index.json',
-            endpoints: { registrationsBaseUrl: 'https://api.nuget.org/v3/registration5-semver1/' },
-        }]);
+    test('registration fallback with unlisted versions', async (context) => {
+        await runBenchmark(context, 'registration fallback with unlisted versions', async () => {
+            registrationService.clearVersionsCache();
+            await registrationService.checkPackageUpdatesMinimal(createInstalledPackages(1), false, [{
+                url: 'https://api.nuget.org/v3/index.json',
+                endpoints: { registrationsBaseUrl: 'https://api.nuget.org/v3/registration5-semver1/' },
+            }]);
+        });
     });
 });

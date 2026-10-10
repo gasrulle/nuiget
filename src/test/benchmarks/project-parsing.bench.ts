@@ -2,7 +2,8 @@
  * Benchmarks for project parsing — .csproj and project.assets.json processing.
  */
 import path from 'path';
-import { bench, describe, vi } from 'vitest';
+import { test, describe, vi } from 'vitest';
+import { runBenchmark } from './benchmark';
 import { NuGetProjectService } from '../../services/NuGetProjectService';
 
 const FIXTURES_DIR = path.resolve(__dirname, '..', 'fixtures');
@@ -13,21 +14,27 @@ const ASSETS_JSON = path.join(FIXTURES_DIR, 'project.assets.json');
 const projectService = new NuGetProjectService(vi.fn(async () => false));
 
 describe('getInstalledPackages', () => {
-    bench('sample.csproj (3 packages)', async () => {
-        await projectService.getInstalledPackages(SAMPLE_CSPROJ);
+    test('sample.csproj (3 packages)', async (context) => {
+        await runBenchmark(context, 'sample.csproj (3 packages)', async () => {
+            await projectService.getInstalledPackages(SAMPLE_CSPROJ);
+        });
     });
 
-    bench('multi-version.csproj (4 packages, mixed version types)', async () => {
-        await projectService.getInstalledPackages(MULTI_VERSION_CSPROJ);
+    test('multi-version.csproj (4 packages, mixed version types)', async (context) => {
+        await runBenchmark(context, 'multi-version.csproj (4 packages, mixed version types)', async () => {
+            await projectService.getInstalledPackages(MULTI_VERSION_CSPROJ);
+        });
     });
 });
 
 describe('getTransitivePackagesFromAssets', () => {
-    bench('resolve transitive deps from project.assets.json', async () => {
-        await projectService.getTransitivePackagesFromAssets(
-            ASSETS_JSON,
-            ['Newtonsoft.Json', 'Serilog'],
-        );
+    test('resolve transitive deps from project.assets.json', async (context) => {
+        await runBenchmark(context, 'resolve transitive deps from project.assets.json', async () => {
+            await projectService.getTransitivePackagesFromAssets(
+                ASSETS_JSON,
+                ['Newtonsoft.Json', 'Serilog'],
+            );
+        });
     });
 
     // Stress the reverse-BFS root resolution on a dense layered DAG (many diamonds /
@@ -57,28 +64,36 @@ describe('getTransitivePackagesFromAssets', () => {
     vi.spyOn(bigGraphService as unknown as { readAssetsJson: () => Promise<unknown> }, 'readAssetsJson')
         .mockResolvedValue(bigAssets);
 
-    bench('resolve roots — dense ~240-package layered DAG', async () => {
-        await (bigGraphService as unknown as { getTransitivePackagesFromAssets: (p: string) => Promise<unknown> })
-            .getTransitivePackagesFromAssets('/obj/project.assets.json');
+    test('resolve roots — dense ~240-package layered DAG', async (context) => {
+        await runBenchmark(context, 'resolve roots — dense ~240-package layered DAG', async () => {
+            await (bigGraphService as unknown as { getTransitivePackagesFromAssets: (p: string) => Promise<unknown> })
+                .getTransitivePackagesFromAssets('/obj/project.assets.json');
+        });
     });
 });
 
 describe('getTransitivePackagesPreservingErrors', () => {
     // Fixture .csproj resolves to fixtures/obj/project.assets.json (file-system real read).
-    bench('cold (cache miss, real fs)', async () => {
-        // Use a fresh service per iteration so the per-instance cache stays cold.
-        const svc = new NuGetProjectService(vi.fn(async () => false));
-        await svc.getTransitivePackagesPreservingErrors(SAMPLE_CSPROJ);
+    test('cold (cache miss, real fs)', async (context) => {
+        await runBenchmark(context, 'cold (cache miss, real fs)', async () => {
+            // Use a fresh service per iteration so the per-instance cache stays cold.
+            const svc = new NuGetProjectService(vi.fn(async () => false));
+            await svc.getTransitivePackagesPreservingErrors(SAMPLE_CSPROJ);
+        });
     });
 
     const warmService = new NuGetProjectService(vi.fn(async () => false));
-    bench('warm (cache hit)', async () => {
-        await warmService.getTransitivePackagesPreservingErrors(SAMPLE_CSPROJ);
+    test('warm (cache hit)', async (context) => {
+        await runBenchmark(context, 'warm (cache hit)', async () => {
+            await warmService.getTransitivePackagesPreservingErrors(SAMPLE_CSPROJ);
+        });
     });
 });
 
 describe('getProjectReferences', () => {
-    bench('extract project references', async () => {
-        await projectService.getProjectReferences(MULTI_VERSION_CSPROJ);
+    test('extract project references', async (context) => {
+        await runBenchmark(context, 'extract project references', async () => {
+            await projectService.getProjectReferences(MULTI_VERSION_CSPROJ);
+        });
     });
 });

@@ -1,7 +1,8 @@
 /**
  * Benchmarks for package metadata and version fetching.
  */
-import { beforeAll, bench, describe, vi } from 'vitest';
+import { beforeAll, test, describe, vi } from 'vitest';
+import { runBenchmark } from './benchmark';
 import { NuGetService } from '../../services/NuGetService';
 import { disableHealthMonitor, mockServiceHttp } from './setup';
 
@@ -32,25 +33,33 @@ beforeAll(() => {
 });
 
 describe('getPackageMetadata', () => {
-    bench('fetch metadata (uncached)', async () => {
-        service.clearSourceErrors();
-        await service.getPackageMetadata('Newtonsoft.Json', '13.0.3', 'https://api.nuget.org/v3/index.json');
+    test('fetch metadata (uncached)', async (context) => {
+        await runBenchmark(context, 'fetch metadata (uncached)', async () => {
+            service.clearSourceErrors();
+            await service.getPackageMetadata('Newtonsoft.Json', '13.0.3', 'https://api.nuget.org/v3/index.json');
+        });
     });
 
-    bench('fetch metadata (cached)', async () => {
-        // First call caches; bench measures second+ calls
-        await service.getPackageMetadata('Newtonsoft.Json', '13.0.3', 'https://api.nuget.org/v3/index.json');
+    test('fetch metadata (cached)', async (context) => {
+        await runBenchmark(context, 'fetch metadata (cached)', async () => {
+            // First call caches; bench measures second+ calls
+            await service.getPackageMetadata('Newtonsoft.Json', '13.0.3', 'https://api.nuget.org/v3/index.json');
+        });
     });
 });
 
 describe('getPackageVersions', () => {
-    bench('fetch versions (uncached)', async () => {
-        service.clearSourceErrors();
-        service.clearVersionsCache();
-        await service.getPackageVersions('Newtonsoft.Json', 'https://api.nuget.org/v3/index.json');
+    test('fetch versions (uncached)', async (context) => {
+        await runBenchmark(context, 'fetch versions (uncached)', async () => {
+            service.clearSourceErrors();
+            service.clearVersionsCache();
+            await service.getPackageVersions('Newtonsoft.Json', 'https://api.nuget.org/v3/index.json');
+        });
     });
 
-    bench('fetch versions (cached)', async () => {
-        await service.getPackageVersions('Newtonsoft.Json', 'https://api.nuget.org/v3/index.json');
+    test('fetch versions (cached)', async (context) => {
+        await runBenchmark(context, 'fetch versions (cached)', async () => {
+            await service.getPackageVersions('Newtonsoft.Json', 'https://api.nuget.org/v3/index.json');
+        });
     });
 });

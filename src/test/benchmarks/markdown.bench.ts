@@ -1,8 +1,10 @@
+// @vitest-environment jsdom
 /**
  * Benchmarks for markdown rendering with various README sizes.
  * Uses jsdom environment for DOMPurify.
  */
-import { beforeAll, bench, describe } from 'vitest';
+import { beforeAll, test, describe } from 'vitest';
+import { runBenchmark } from './benchmark';
 
 // Note: renderMarkdownToHtml requires DOM (DOMPurify).
 // These benchmarks only run in jsdom environment.
@@ -93,18 +95,26 @@ describe('renderMarkdownToHtml', () => {
             renderFn = mod.renderMarkdownToHtml;
         });
 
-        bench('small README (~150 chars)', () => {
-            renderFn(SMALL_README);
+        test('small README (~150 chars)', async (context) => {
+            await runBenchmark(context, 'small README (~150 chars)', () => {
+                renderFn(SMALL_README);
+            });
         });
 
-        bench('medium README (~1KB)', () => {
-            renderFn(MEDIUM_README);
+        test('medium README (~1KB)', async (context) => {
+            await runBenchmark(context, 'medium README (~1KB)', () => {
+                renderFn(MEDIUM_README);
+            });
         });
 
-        bench('large README (~5KB)', () => {
-            renderFn(LARGE_README);
+        test('large README (~5KB)', async (context) => {
+            await runBenchmark(context, 'large README (~5KB)', () => {
+                renderFn(LARGE_README);
+            });
         });
     } else {
-        bench.skip('renderMarkdownToHtml (requires jsdom)', () => { });
+        test.skip('renderMarkdownToHtml (requires jsdom)', async (context) => {
+            await runBenchmark(context, 'renderMarkdownToHtml (requires jsdom)', () => { });
+        });
     }
 });

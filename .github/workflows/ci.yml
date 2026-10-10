@@ -193,9 +193,7 @@ jobs:
       - run: npm install --no-audit --no-fund
 
       - name: Run benchmarks against baseline
-        run: |
-          npx vitest bench --run --project backend --compare benchmarks/baseline.json \
-            --outputJson benchmarks/latest.json
+        run: npm run bench:compare
 
       - name: Add benchmark summary
         if: always()
@@ -206,9 +204,12 @@ jobs:
             if [ -f benchmarks/latest.json ]; then
               node -e "
                 const d = require('./benchmarks/latest.json');
-                const files = d.files.length;
-                const groups = d.files.reduce((s, f) => s + f.groups.length, 0);
-                const benches = d.files.reduce((s, f) => s + f.groups.reduce((gs, g) => gs + g.benchmarks.length, 0), 0);
+                const files = d.testResults.filter(f => f.assertionResults.some(a => a.benchmarks.length)).length;
+                const groups = new Set(d.testResults.flatMap(f =>
+                  f.assertionResults.filter(a => a.benchmarks.length).map(a =>
+                    JSON.stringify([f.name, a.ancestorTitles])))).size;
+                const benches = d.testResults.reduce((s, f) => s + f.assertionResults.reduce((n, a) =>
+                  n + a.benchmarks.reduce((g, b) => g + b.tasks.filter(t => !t.fromStore).length, 0), 0), 0);
                 console.log('| Metric | Count |');
                 console.log('|--------|------:|');
                 console.log('| Benchmark files | ' + files + ' |');

@@ -2,35 +2,50 @@
  * Benchmarks for parseSearchQuery utility.
  * Tests all search mode detection paths.
  */
-import { bench, describe } from 'vitest';
+import { test, describe } from 'vitest';
+import { runBenchmark } from './benchmark';
 import { parseSearchQuery } from '../../webview/app/utils/parseSearchQuery';
 
 describe('parseSearchQuery', () => {
-    bench('default mode (empty)', () => {
-        parseSearchQuery('');
+    test('default mode (empty)', async (context) => {
+        await runBenchmark(context, 'default mode (empty)', () => {
+            parseSearchQuery('');
+        });
     });
 
-    bench('browse mode (plain text)', () => {
-        parseSearchQuery('Newtonsoft.Json');
+    test('browse mode (plain text)', async (context) => {
+        await runBenchmark(context, 'browse mode (plain text)', () => {
+            parseSearchQuery('Newtonsoft.Json');
+        });
     });
 
-    bench('@installed prefix', () => {
-        parseSearchQuery('@installed Newtonsoft');
+    test('@installed prefix', async (context) => {
+        await runBenchmark(context, '@installed prefix', () => {
+            parseSearchQuery('@installed Newtonsoft');
+        });
     });
 
-    bench('@updates prefix', () => {
-        parseSearchQuery('@updates');
+    test('@updates prefix', async (context) => {
+        await runBenchmark(context, '@updates prefix', () => {
+            parseSearchQuery('@updates');
+        });
     });
 
-    bench('@vulnerable prefix', () => {
-        parseSearchQuery('@vulnerable');
+    test('@vulnerable prefix', async (context) => {
+        await runBenchmark(context, '@vulnerable prefix', () => {
+            parseSearchQuery('@vulnerable');
+        });
     });
 
-    bench('partial @ prefix (dropdown trigger)', () => {
-        parseSearchQuery('@up');
+    test('partial @ prefix (dropdown trigger)', async (context) => {
+        await runBenchmark(context, 'partial @ prefix (dropdown trigger)', () => {
+            parseSearchQuery('@up');
+        });
     });
 
-    bench('long query with spaces', () => {
-        parseSearchQuery('Microsoft.Extensions.DependencyInjection.Abstractions');
+    test('long query with spaces', async (context) => {
+        await runBenchmark(context, 'long query with spaces', () => {
+            parseSearchQuery('Microsoft.Extensions.DependencyInjection.Abstractions');
+        });
     });
 });

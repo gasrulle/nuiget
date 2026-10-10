@@ -2,7 +2,8 @@
  * Benchmarks for package search and autocomplete operations.
  * Mocks HTTP at the NuGetService level — measures the service layer overhead, not network.
  */
-import { beforeAll, bench, describe, vi } from 'vitest';
+import { beforeAll, test, describe, vi } from 'vitest';
+import { runBenchmark } from './benchmark';
 import { NuGetService } from '../../services/NuGetService';
 import { disableHealthMonitor, mockServiceHttp } from './setup';
 
@@ -33,28 +34,36 @@ beforeAll(() => {
 });
 
 describe('searchPackages', () => {
-    bench('single source search (API path)', async () => {
-        service.clearSourceErrors();
-        await service.searchPackages('Newtonsoft', ['https://api.nuget.org/v3/index.json']);
+    test('single source search (API path)', async (context) => {
+        await runBenchmark(context, 'single source search (API path)', async () => {
+            service.clearSourceErrors();
+            await service.searchPackages('Newtonsoft', ['https://api.nuget.org/v3/index.json']);
+        });
     });
 
-    bench('search with prerelease', async () => {
-        service.clearSourceErrors();
-        await service.searchPackages('Newtonsoft', ['https://api.nuget.org/v3/index.json'], true);
+    test('search with prerelease', async (context) => {
+        await runBenchmark(context, 'search with prerelease', async () => {
+            service.clearSourceErrors();
+            await service.searchPackages('Newtonsoft', ['https://api.nuget.org/v3/index.json'], true);
+        });
     });
 
-    bench('multi-source search (API path)', async () => {
-        service.clearSourceErrors();
-        await service.searchPackages('Newtonsoft', [
-            'https://api.nuget.org/v3/index.json',
-            'https://custom.example.com/v3/index.json'
-        ]);
+    test('multi-source search (API path)', async (context) => {
+        await runBenchmark(context, 'multi-source search (API path)', async () => {
+            service.clearSourceErrors();
+            await service.searchPackages('Newtonsoft', [
+                'https://api.nuget.org/v3/index.json',
+                'https://custom.example.com/v3/index.json'
+            ]);
+        });
     });
 });
 
 describe('quickSearchGrouped', () => {
-    bench('quick search grouped', async () => {
-        service.clearSourceErrors();
-        await service.quickSearchGrouped('Newtonsoft', [{ name: 'nuget.org', url: 'https://api.nuget.org/v3/index.json' }]);
+    test('quick search grouped', async (context) => {
+        await runBenchmark(context, 'quick search grouped', async () => {
+            service.clearSourceErrors();
+            await service.quickSearchGrouped('Newtonsoft', [{ name: 'nuget.org', url: 'https://api.nuget.org/v3/index.json' }]);
+        });
     });
 });

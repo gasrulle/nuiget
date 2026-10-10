@@ -1,10 +1,17 @@
 ---
 description: 'Generic code review instructions that can be customized for any project using GitHub Copilot'
-applyTo: '**'
+applyTo: 'src/**/*.ts,src/**/*.tsx,src/**/*.css,*.mjs,.github/workflows/*.yml,.github/workflows/*.yaml'
 excludeAgent: ["coding-agent"]
 ---
 
 # Generic Code Review Instructions
+
+For nUIget, review actual bugs, regressions, unsafe inputs, asynchronous races,
+and missing behavioral coverage against `ARCHITECTURE.md`. Use Vitest, esbuild,
+and the existing extension/webview boundaries as the reference architecture.
+The cross-language examples below are illustrative, not mandates to add
+frameworks, databases, or arbitrary size limits. Prefer actionable,
+high-confidence findings over style comments.
 
 Comprehensive code review guidelines for GitHub Copilot that can be adapted to any project. These instructions follow best practices from prompt engineering and provide a structured approach to code quality, security, testing, and architecture review.
 

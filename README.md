@@ -181,7 +181,27 @@ See [Microsoft's security best practices](https://learn.microsoft.com/en-us/nuge
 - .NET SDK installed and on PATH
 - .NET projects (.csproj, .fsproj, or .vbproj)
 
+## Development with Copilot
+
+Development uses Node.js 24 (see `.nvmrc`; 24.15.0 or newer) and npm 10 or newer.
+Run `npm install`, `npm run compile`, and `npm run package:vsix` to install,
+build, and package the extension. Validate with `npm test`, `npm run test:coverage`,
+`npm run bench`, `npm run test:e2e`, and `npm run test:ui`. The UI tests download
+a test copy of VS Code and ChromeDriver and require a graphical desktop and
+the .NET SDK. On macOS, use a short temporary download path if the IPC socket
+path would be too long: `npm run test:ui -- --storage /tmp/nuiget-ui`.
+
+Start with [the repository instructions](.github/copilot-instructions.md) and
+[ARCHITECTURE.md](ARCHITECTURE.md). Scoped instructions in `.github/instructions/`
+describe the actual TypeScript build, React webviews, accessibility, and validation
+requirements.
+
+The repository includes focused [GitHub Actions efficiency](.github/skills/github-actions-efficiency/SKILL.md)
+and [hardening](.github/skills/github-actions-hardening/SKILL.md) skills, a
+[Technical Writer agent](.github/agents/se-technical-writer.agent.md), and the
+[git-commit skill](.github/skills/git-commit/SKILL.md) for Conventional Commits.
+Commit, push, and publish actions still require explicit authorization.
+
 ## License
 
 [MIT](LICENSE)
-

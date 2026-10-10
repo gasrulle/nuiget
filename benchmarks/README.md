@@ -7,7 +7,7 @@ Vitest-based microbenchmarks for performance-sensitive code paths (caching, HTTP
 ```bash
 npm run bench           # run all benchmarks
 npm run bench:save      # regenerate benchmarks/baseline.json
-npm run bench:compare   # compare current run vs baseline (vitest --compare)
+npm run bench:compare   # compare current measurements with the stored baseline
 ```
 
 ## Scope and tolerance
@@ -35,9 +35,17 @@ Benchmarks live in `src/test/benchmarks/*.bench.ts`:
 ## Adding a benchmark
 
 1. Add a `*.bench.ts` file under `src/test/benchmarks/`.
-2. Import `bench, describe` from `vitest`.
+2. Import `test, describe` from `vitest` and `runBenchmark` from `./benchmark`.
+   Define `test('name', async (context) => { await runBenchmark(context, 'name', callback); })`.
 3. For service benchmarks, use `mockServiceHttp(service)` from `setup.ts` — never use MSW (it cannot intercept HTTP/2).
 4. Run `npm run bench:save` and commit the updated baseline.
+
+Vitest 5 benchmarks run in the derived `backend (bench)` project. The runner
+consolidates JSON reporter measurements into one versioned baseline keyed by
+file, suite, test, and benchmark name. `bench:compare` uses `bench.from()` to
+replay those results alongside current measurements; missing baselines or failed
+callbacks fail the command. Removed Vitest 4 flags such as `--compare` and
+`--outputJson` are not used.
 
 ## End-to-end timings
 
