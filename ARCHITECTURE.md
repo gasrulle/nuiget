@@ -1020,6 +1020,10 @@ await batchedPromiseAll(packages, async (pkg) => {
 ### Pre-resolved Source Batch Optimization
 Update checking (`checkPackageUpdates`, `checkPackageUpdatesMinimal`) pre-resolves all sources before starting the batch version-check loop. This eliminates the "service index stampede" where concurrent workers all race to discover the same endpoints:
 
+Update candidates come from the [SearchQueryService](https://learn.microsoft.com/en-us/nuget/api/search-query-service-resource), which excludes unlisted versions, with `semVerLevel=2.0.0` and the requested prerelease flag. Search results are matched by exact case-insensitive package ID and sorted by version rather than relying on server ordering. If search is unavailable, the registration index (including external pages and catalog entries) supplies versions whose `listed` flag is not `false` (absent means listed per the NuGet protocol). If neither endpoint provides listing information, the service logs the failure and omits suggestions from that source instead of trusting the download index. Explicit version lists continue to use the flat-container index so existing unlisted dependencies remain selectable.
+
+Listed-only update candidates use a `:listed` suffix on the existing `versions:` cache key. This prevents explicit version lookups or persisted pre-fix download-index data from contaminating update suggestions, while retaining normal global and per-package invalidation.
+
 ```typescript
 // ResolvedSource (NuGetTypes.ts) holds pre-fetched endpoints + auth
 interface ResolvedSource {
@@ -1607,6 +1611,8 @@ npm run test:coverage   # Run with V8 coverage report
 `src/test/__mocks__/vscode.ts` provides a comprehensive mock of the `vscode` namespace, resolved via Vitest `resolve.alias`. Covers: `commands`, `window`, `workspace`, `env`, `Uri`, `EventEmitter`, `CancellationTokenSource`, `Disposable`, `RelativePattern`, `ProgressLocation`, `ViewColumn`, and factory helpers (`createMockExtensionContext`, `resetAllMocks`). Each test file gets a fresh mock instance via `vi.mock()`.
 
 ### Test Helpers
+The ExTester UI helpers in `src/test/ui/helpers/` wait for the main panel's app container before interacting with it and reset search plus the active tab to Installed on each panel open. Input replacement uses native select-all keyboard shortcuts (Command on macOS, Control elsewhere), Backspace, and a wait for the controlled input value. Escape dismisses search history before tab selection, and cleanup returns to the main frame even when panel setup failed. Command Palette searches retain the `>` prefix, and dismissal sends Escape to the focused control rather than locating a potentially hidden quick-input field. Optional-element checks treat only wait timeouts as absence; disconnected WebDriver sessions remain failures.
+
 - **`src/test/helpers/backend.ts`** — Mock service factories (`createMockNuGetService()`, `createMockCredentialService()`, etc.), `execWithTimeout` mock, output channel mock
 - **`src/test/helpers/frontend.tsx`** — `renderWithVSCode()` wrapper that provides the `vscode` acquireVsCodeApi context to React components
 - **`src/test/setup-frontend.ts`** — jsdom environment setup: imports `@testing-library/jest-dom/vitest` matchers and shims the `acquireVsCodeApi` webview global

@@ -1,5 +1,6 @@
 import { expect } from 'chai';
 import { InputBox, Workbench } from 'vscode-extension-tester';
+import { Key } from 'selenium-webdriver';
 import { closeAllEditors } from './helpers/panel-helpers';
 
 /**
@@ -15,15 +16,18 @@ describe('Context Menu', () => {
 
         // Open command palette and verify the command is listed
         const input = await workbench.openCommandPrompt() as InputBox;
-        await input.setText('nUIget: Manage NuGet Packages');
-        await new Promise(resolve => setTimeout(resolve, 1500));
-
-        const picks = await input.getQuickPicks();
-        const labels = await Promise.all(picks.map(pick => pick.getLabel()));
-        await input.cancel();
-
-        const found = labels.some(label => label.includes('nUIget'));
-        expect(found, 'nUIget command should appear in command palette').to.be.true;
+        await input.setText('>nUIget: Manage NuGet Packages');
+        try {
+            const found = await input.getDriver().wait(async () => {
+                const picks = await input.getQuickPicks();
+                const labels = await Promise.all(picks.map(pick => pick.getLabel()));
+                return labels.some(label => label.includes('nUIget'));
+            }, 10_000, 'nUIget command should appear in command palette');
+            expect(found, 'nUIget command should appear in command palette').to.be.true;
+        } finally {
+            // ExTester's cancel() may target a hidden quick-input element on recent VS Code.
+            await input.getDriver().actions().sendKeys(Key.ESCAPE).perform();
+        }
     });
 
     afterEach(async function () {

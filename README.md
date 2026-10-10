@@ -43,6 +43,8 @@ A Visual Studio-style NuGet package manager for VS Code with a modern split-pane
 
 > 💡 **Tip:** Use the nUIget icon in the Activity Bar for quick browse, installed, and updates at a glance
 
+Update suggestions in the main panel and sidebar exclude unlisted package versions. Explicit version selection still includes downloadable unlisted versions for existing dependencies.
+
 ## ⚙️ Settings
 
 | Setting | Default | Description |

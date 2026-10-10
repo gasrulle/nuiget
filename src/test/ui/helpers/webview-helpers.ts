@@ -1,4 +1,5 @@
 import { By, WebElement, WebView } from 'vscode-extension-tester';
+import { error, Key } from 'selenium-webdriver';
 
 /**
  * WebView helpers for interacting with nUIget webview panels from ExTester.
@@ -13,7 +14,19 @@ import { By, WebElement, WebView } from 'vscode-extension-tester';
  */
 export async function switchToWebviewFrame(timeout = 10_000): Promise<WebView> {
     const webview = new WebView();
-    await webview.switchToFrame(timeout);
+    const driver = webview.getDriver();
+    await driver.wait(async () => {
+        await driver.switchTo().defaultContent();
+        try {
+            await webview.switchToFrame(timeout);
+            return (await driver.findElements(By.css('[data-testid="nuiget-app"]'))).length > 0;
+        } catch (err) {
+            if (err instanceof error.NoSuchElementError || err instanceof error.StaleElementReferenceError) {
+                return false;
+            }
+            throw err;
+        }
+    }, timeout, 'NuGet panel webview did not become ready');
     return webview;
 }
 
@@ -34,8 +47,11 @@ export async function findByTestId(
                     By.css(`[data-testid="${testId}"]`),
                 );
                 return found;
-            } catch {
-                return undefined;
+            } catch (err) {
+                if (err instanceof error.NoSuchElementError || err instanceof error.StaleElementReferenceError) {
+                    return undefined;
+                }
+                throw err;
             }
         },
         timeout,
@@ -56,10 +72,17 @@ export async function typeIntoTestId(
     text: string,
 ): Promise<void> {
     const el = await findByTestId(webview, testId);
-    // Use Ctrl+A + text to replace (Selenium clear() doesn't work with React controlled inputs)
-    const { Key } = await import('selenium-webdriver');
-    await el.sendKeys(Key.chord(Key.CONTROL, 'a'));
-    await el.sendKeys(text);
+    // React controlled inputs need keyboard events, not Selenium's clear().
+    const modifier = process.platform === 'darwin' ? Key.COMMAND : Key.CONTROL;
+    await el.sendKeys(Key.chord(modifier, 'a'), Key.BACK_SPACE);
+    if (text) {
+        await el.sendKeys(text);
+    }
+    await webview.getDriver().wait(
+        async () => (await el.getAttribute('value')) === text,
+        5000,
+        `Input data-testid="${testId}" did not update to the requested text`,
+    );
 }
 
 /**
@@ -94,8 +117,11 @@ export async function hasTestId(
     try {
         await findByTestId(webview, testId, 2000);
         return true;
-    } catch {
-        return false;
+    } catch (err) {
+        if (err instanceof error.TimeoutError) {
+            return false;
+        }
+        throw err;
     }
 }
 

@@ -5,6 +5,7 @@ import {
     WebView,
     Workbench
 } from 'vscode-extension-tester';
+import { By, Key } from 'selenium-webdriver';
 import { findByTestId, switchToWebviewFrame, typeIntoTestId } from './webview-helpers';
 
 /**
@@ -29,7 +30,16 @@ export async function openNuGetPanel(): Promise<Workbench> {
  */
 export async function openNuGetPanelWebview(timeout = 10_000): Promise<WebView> {
     await openNuGetPanel();
-    return switchToWebviewFrame(timeout);
+    const webview = await switchToWebviewFrame(timeout);
+    // Panels retain their search and tab state when editor cleanup cannot close them.
+    await typeIntoTestId(webview, 'search-input', '');
+    const searchInput = await findByTestId(webview, 'search-input');
+    await searchInput.sendKeys(Key.ESCAPE);
+    const tabBar = await findByTestId(webview, 'tab-bar');
+    const installedButton = await tabBar.findElement(By.xpath('.//button[starts-with(normalize-space(.), "Installed")]'));
+    await installedButton.click();
+    await findByTestId(webview, 'installed-tab');
+    return webview;
 }
 
 /**
@@ -42,7 +52,6 @@ export async function searchForPackage(
     await typeIntoTestId(webview, 'search-input', query);
     // Press Enter to submit search
     const searchInput = await findByTestId(webview, 'search-input');
-    const Key = (await import('selenium-webdriver')).Key;
     await searchInput.sendKeys(Key.ENTER);
 
     // Wait for results
@@ -80,6 +89,7 @@ export async function openSidebar(): Promise<SideBarView> {
  * Close all editors/panels. Resilient to click interception errors.
  */
 export async function closeAllEditors(): Promise<void> {
+    await (new WebView()).getDriver().switchTo().defaultContent();
     try {
         const editorView = new EditorView();
         await editorView.closeAllEditors();

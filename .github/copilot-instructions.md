@@ -226,6 +226,7 @@ The VS Code task "Run Tests" (`Ctrl+Shift+T` or Task menu) runs `npm test` with 
 | README not showing | Extract from nupkg via adm-zip (custom sources lack ReadmeUriTemplate) |
 | Floating version metadata fails | Use `pkg.resolvedVersion` not `pkg.version` for API calls |
 | Version spec guard for lock file | Only `floating` and `range` version types use lock file `resolvedVersion`. Standard versions (e.g., `10.0.2`) read directly from .csproj. Guard: `versionSpec.type === 'floating' \|\| versionSpec.type === 'range'`. |
+| Unlisted update suggestions | Never use the flat-container version index alone for update candidates: it includes unlisted versions. Keep listed-only update cache keys separate from explicit version lists; retain the `versions:` prefix for cache invalidation. |
 | Transitive not available | `project.assets.json` needs build/restore — use `restoreProject()` if missing |
 | Transitive stale after remove | `dotnet remove` doesn't update assets.json — run `dotnet restore` after |
 | Unreachable custom source blocks loading | `failedEndpointCache` caches failures for 120s (2 min). Background source health monitor (`startSourceHealthMonitor()`) validates all sources at startup and self-schedules re-checks (120s on failures, 5min when healthy). `searchPackages` uses `filterHealthySources()` to skip unreachable sources — no blocking pre-validation in the search path. `clearSourceErrors()` clears all caches and triggers immediate re-validation. Source mutations (add/remove/enable/disable) also trigger re-validation. |
@@ -270,6 +271,7 @@ The VS Code task "Run Tests" (`Ctrl+Shift+T` or Task menu) runs `npm test` with 
 ## Testing
 | Issue | Solution |
 |-------|----------|
+| UI tests leak browse state | Use `openNuGetPanelWebview()` to reset search and select Installed before assertions. Replace controlled input text with `typeIntoTestId()` (Command+A on macOS, Control+A elsewhere); never hardcode Ctrl+A. |
 | VS Code API not available in tests | `vitest.config.mts` aliases `vscode` to `src/test/__mocks__/vscode.ts`. Don't import `vscode` directly in test files — the alias handles it. |
 | Frontend tests need jsdom setup | `src/test/setup-frontend.ts` imports `@testing-library/jest-dom/vitest` matchers and shims `acquireVsCodeApi`. Added automatically for frontend project. |
 | `coverage/` inflates VSIX | `.vscodeignore` excludes `coverage/**`. Don't remove this exclusion. |

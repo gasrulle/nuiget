@@ -185,7 +185,7 @@ export class NuGetPackageService {
             healthySources.map(async (src) => {
                 try {
                     const endpoints = await this._deps.discoverServiceEndpoints(src.url);
-                    if (!endpoints.packageBaseAddress && !endpoints.searchQueryService) { return null; }
+                    if (!endpoints.packageBaseAddress && !endpoints.searchQueryService && !endpoints.registrationsBaseUrl) { return null; }
                     const authHeader = await this._deps.getAuthHeader(src.url);
                     return { url: src.url, endpoints, authHeader } as ResolvedSource;
                 } catch {
@@ -208,7 +208,8 @@ export class NuGetPackageService {
         take: number = 20
     ): Promise<string[]> {
         try {
-            const memoryCacheKey = cacheKeys.versions(packageId, source.url, includePrerelease ?? false, take);
+            // Keep listed-only suggestions separate from explicit version lists and legacy persisted data.
+            const memoryCacheKey = `${cacheKeys.versions(packageId, source.url, includePrerelease ?? false, take)}:listed`;
 
             const memoryCached = this.versionsCache.get(memoryCacheKey);
             if (memoryCached) { return memoryCached; }
@@ -219,54 +220,68 @@ export class NuGetPackageService {
                 return workspaceCached;
             }
 
-            const baseUrl = source.endpoints.packageBaseAddress?.replace(/\/$/, '');
             const searchUrl = source.endpoints.searchQueryService;
+            let allVersions: string[] | undefined;
 
-            // Try flat container first
-            if (baseUrl) {
-                const url = `${baseUrl}/${packageId.toLowerCase()}/index.json`;
-                const versions = await this._deps.fetchJson<{ versions: string[] }>(url, source.authHeader);
-
-                if (versions?.versions) {
-                    let allVersions = versions.versions;
-                    if (!includePrerelease) {
-                        allVersions = allVersions.filter(v => !v.includes('-'));
-                    }
-                    const result = [...allVersions].reverse().slice(0, take);
-                    if (result.length > 0) {
-                        this.versionsCache.set(memoryCacheKey, result);
-                        workspaceCache.set(memoryCacheKey, result, CACHE_TTL.VERSIONS);
-                    }
-                    return result;
-                }
-            }
-
-            // Fallback to search API (better for Nexus/ProGet)
+            // Search excludes unlisted versions; the flat-container index deliberately includes them.
             if (searchUrl) {
-                const searchResult = await this._deps.fetchJson<{
-                    data: Array<{
-                        id: string;
-                        version: string;
-                        versions: Array<{ version: string; '@id': string }>;
-                    }>;
-                }>(`${searchUrl}?q=packageid:${encodeURIComponent(packageId)}&take=1&prerelease=${includePrerelease ?? false}`, source.authHeader);
-
-                if (searchResult?.data?.[0]?.versions) {
-                    const pkgVersions = searchResult.data[0].versions.map(v => v.version);
-                    let allVersions = pkgVersions;
-                    if (!includePrerelease) {
-                        allVersions = allVersions.filter(v => !v.includes('-'));
-                    }
-                    const result = [...allVersions].reverse().slice(0, take);
-                    if (result.length > 0) {
-                        this.versionsCache.set(memoryCacheKey, result);
-                        workspaceCache.set(memoryCacheKey, result, CACHE_TTL.VERSIONS);
-                    }
-                    return result;
+                const searchResult = await this._deps.fetchJson<NuGetSearchResponse>(
+                    `${searchUrl}?q=packageid:${encodeURIComponent(packageId)}&take=1&prerelease=${includePrerelease ?? false}&semVerLevel=2.0.0`,
+                    source.authHeader
+                );
+                const data = searchResult?.data ?? searchResult?.Data;
+                if (data) {
+                    const pkg = data.find(entry => (entry.id ?? entry.Id)?.toLowerCase() === packageId.toLowerCase());
+                    const version = pkg?.version ?? pkg?.Version;
+                    allVersions = (pkg?.versions ?? pkg?.Versions)?.map(entry => entry.version)
+                        ?? (version ? [version] : []);
                 }
             }
 
-            return [];
+            const registrationBaseUrl = source.endpoints.registrationsBaseUrl?.replace(/\/$/, '');
+            if (!allVersions && registrationBaseUrl) {
+                const index = await this._deps.fetchJson<NuGetRegistrationEntry>(
+                    `${registrationBaseUrl}/${packageId.toLowerCase()}/index.json`, source.authHeader
+                );
+                if (index?.items) {
+                    const pages = await batchedPromiseAll(index.items, async page => {
+                        if (page.items) { return page.items; }
+                        const fetched = page['@id']
+                            ? await this._deps.fetchJson<NuGetRegistrationPage>(page['@id'], source.authHeader)
+                            : null;
+                        if (!fetched?.items) {
+                            throw new Error(`Unable to fetch registration page for ${packageId}`);
+                        }
+                        return fetched.items;
+                    }, 4);
+                    const versions = await batchedPromiseAll(pages.flat(), async leaf => {
+                        const catalogEntry = typeof leaf.catalogEntry === 'string'
+                            ? await this._deps.fetchJson<NuGetRegistrationEntry>(leaf.catalogEntry, source.authHeader)
+                            : leaf.catalogEntry ?? leaf;
+                        if (!catalogEntry?.version) {
+                            throw new Error(`Unable to read registration version for ${packageId}`);
+                        }
+                        return leaf.listed === false || catalogEntry.listed === false ? null : catalogEntry.version;
+                    }, 4);
+                    allVersions = versions.filter((version): version is string => version !== null);
+                }
+            }
+
+            if (!allVersions) {
+                console.warn(`[NuGet] Unable to determine listed versions for ${packageId} from ${this._deps.sanitizeForLogging(source.url)}`);
+                return [];
+            }
+
+            const result = [...new Set(allVersions)]
+                .filter(version => includePrerelease || !version.includes('-'))
+                .sort((a, b) => isNewerVersion(a, b) ? -1 : isNewerVersion(b, a) ? 1 : 0)
+                .slice(0, take);
+            if (result.length > 0) {
+                this.versionsCache.set(memoryCacheKey, result);
+                workspaceCache.set(memoryCacheKey, result, CACHE_TTL.VERSIONS);
+            }
+
+            return result;
         } catch (error) {
             console.error(`[NuGet] Failed to fetch versions for ${packageId} from resolved source:`, error);
             return [];

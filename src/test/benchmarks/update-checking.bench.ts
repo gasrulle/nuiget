@@ -25,6 +25,7 @@ function createOutputChannel() {
 }
 
 let service: NuGetService;
+let registrationService: NuGetService;
 
 function createInstalledPackages(count: number): InstalledPackage[] {
     // Only the first one will match fixtures; rest return null (testing throughput)
@@ -40,6 +41,15 @@ beforeAll(() => {
     service = new NuGetService(createOutputChannel());
     disableHealthMonitor(service);
     mockServiceHttp(service);
+    registrationService = new NuGetService(createOutputChannel());
+    disableHealthMonitor(registrationService);
+    mockServiceHttp(registrationService);
+    vi.spyOn(registrationService as never, 'fetchJson' as never).mockImplementation(async () => ({
+        items: [{ items: [
+            { catalogEntry: { version: '13.0.3', listed: true } },
+            { catalogEntry: { version: '14.0.0', listed: false } },
+        ] }],
+    }));
 });
 
 describe('checkPackageUpdates', () => {
@@ -63,5 +73,13 @@ describe('checkPackageUpdatesMinimal', () => {
     bench('10 packages (minimal)', async () => {
         service.clearVersionsCache();
         await service.checkPackageUpdatesMinimal(createInstalledPackages(10), false);
+    });
+
+    bench('registration fallback with unlisted versions', async () => {
+        registrationService.clearVersionsCache();
+        await registrationService.checkPackageUpdatesMinimal(createInstalledPackages(1), false, [{
+            url: 'https://api.nuget.org/v3/index.json',
+            endpoints: { registrationsBaseUrl: 'https://api.nuget.org/v3/registration5-semver1/' },
+        }]);
     });
 });

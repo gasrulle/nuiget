@@ -1,7 +1,7 @@
 import { expect } from 'chai';
 import { WebView } from 'vscode-extension-tester';
 import { closeAllEditors, openNuGetPanelWebview, searchForPackage } from './helpers/panel-helpers';
-import { findByTestId, hasTestId } from './helpers/webview-helpers';
+import { findByTestId, hasTestId, typeIntoTestId } from './helpers/webview-helpers';
 
 /**
  * UI test: Type search → wait results → click package → verify details panel.
@@ -52,13 +52,33 @@ describe('Search Flow', () => {
         await searchInput.sendKeys('Newtonsoft');
         await new Promise(resolve => setTimeout(resolve, 2000));
 
-        // Clear input using Ctrl+A + Backspace (Selenium clear() doesn't work with React controlled inputs)
-        const Key = (await import('selenium-webdriver')).Key;
-        await searchInput.sendKeys(Key.chord(Key.CONTROL, 'a'));
-        await searchInput.sendKeys(Key.BACK_SPACE);
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await typeIntoTestId(webview, 'search-input', '');
 
         const value = await searchInput.getAttribute('value');
         expect(value).to.equal('');
+        expect(await hasTestId(webview, 'tab-bar'), 'Clearing browse search should restore tabs').to.be.true;
+    });
+
+    it('should replace existing search text rather than append', async function () {
+        this.timeout(60_000);
+        webview = await openNuGetPanelWebview();
+
+        await typeIntoTestId(webview, 'search-input', 'Newtonsoft.Json');
+        await typeIntoTestId(webview, 'search-input', 'Serilog');
+        const searchInput = await findByTestId(webview, 'search-input');
+        expect(await searchInput.getAttribute('value')).to.equal('Serilog');
+    });
+
+    it('should reset retained browse state when reopening the panel', async function () {
+        this.timeout(60_000);
+        webview = await openNuGetPanelWebview();
+        await typeIntoTestId(webview, 'search-input', 'Newtonsoft.Json');
+        expect(await hasTestId(webview, 'tab-bar')).to.be.false;
+        await webview.switchBack();
+
+        webview = await openNuGetPanelWebview();
+        const searchInput = await findByTestId(webview, 'search-input');
+        expect(await searchInput.getAttribute('value')).to.equal('');
+        expect(await hasTestId(webview, 'installed-tab')).to.be.true;
     });
 });
