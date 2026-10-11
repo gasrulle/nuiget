@@ -20,7 +20,7 @@
 
 # Agent Guidelines
 - **Use Context7 for Documentation:** Discover the current host's tools, then use `resolve-library-id` and `query-docs` for version-specific library documentation.
-- **Use Microsoft Docs MCP for VS Code APIs:** Use `microsoft_docs_search`, `microsoft_code_sample_search`, `microsoft_docs_fetch` for official VS Code extension documentation.
+- **Use Context7 for VS Code, .NET, and NuGet docs too:** Query `/websites/code_visualstudio_api` for the VS Code extension API, `/dotnet/docs` for the dotnet CLI, and `/websites/learn_microsoft_en-us_nuget` for NuGet; resolve the ID again if one is missing. No Microsoft Learn MCP server is configured, and its search does not index the VS Code extension API. Fetch a known documentation URL directly when a full page is needed.
 
 ## Agent Resource Maintenance
 
