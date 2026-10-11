@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Refreshed and scoped Copilot instructions, agents, and skills for the current extension architecture**
 - **Added focused GitHub Actions skills and a repository-tailored Technical Writer agent**
 - **Made the Copilot instructions, skills, and agents available to Claude Code**
+- **Pre-approved Claude Code build and test commands and blocked publishing and force-push**
 - **Updated runtime and development dependencies and removed obsolete type packages and watch-task tooling**
 - **Migrated benchmarks to Vitest 5 with refreshed baselines and CI comparison reporting**
 

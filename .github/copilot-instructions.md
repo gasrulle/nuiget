@@ -38,6 +38,9 @@
   `.claude/skills/` (symlinks to `.github/skills/`) and `.claude/agents/`
   (pointers to `.github/agents/`). When adding, renaming, or rescoping an
   instruction, skill, prompt, or agent, update the matching `.claude/` entry.
+  `.claude/settings.json` pre-approves the build, test and bench commands and
+  denies publishing and force-push; extend its allowlist when adding a new
+  verification script.
 - The obsolete offline-support implementation prompt has been retired. Base new
   offline work on `ARCHITECTURE.md` and the current package-service implementation.
 

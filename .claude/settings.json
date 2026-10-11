@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "Bash(npm install)",
+      "Bash(npm test)",
+      "Bash(npm run test:*)",
+      "Bash(npm run bench)",
+      "Bash(npm run bench:*)",
+      "Bash(npm run lint)",
+      "Bash(npm run check-types)",
+      "Bash(npm run compile)",
+      "Bash(npm run package)",
+      "Bash(npm run package:vsix)",
+      "Bash(npx vitest:*)",
+      "Bash(npx eslint:*)",
+      "Bash(npx tsc:*)",
+      "Bash(node esbuild.mjs:*)",
+      "Bash(xvfb-run -a npm run test:*)",
+      "Bash(dotnet --list-sdks)",
+      "Bash(dotnet --version)",
+      "Bash(dotnet restore:*)",
+      "Bash(dotnet build:*)",
+      "Bash(dotnet list:*)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git show:*)",
+      "mcp__context7__resolve-library-id",
+      "mcp__context7__query-docs"
+    ],
+    "ask": [
+      "Bash(git push:*)",
+      "Bash(npm version:*)"
+    ],
+    "deny": [
+      "Bash(npx vsce publish:*)",
+      "Bash(vsce publish:*)",
+      "Bash(npx ovsx publish:*)",
+      "Bash(git push --force:*)",
+      "Read(./.env)",
+      "Read(./.env.*)"
+    ]
+  }
+}
