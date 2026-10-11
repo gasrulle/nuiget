@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Switched the Context7 MCP configuration to the documented Authorization header**
 - **Updated runtime and development dependencies and removed obsolete type packages and watch-task tooling**
 - **Migrated benchmarks to Vitest 5 with refreshed baselines and CI comparison reporting**
+- **Added the nUIget 2.0 execution plan, architecture decision records, and UX interaction model under docs/**
 
 ## [1.18.9] - 2026-10-10
 
