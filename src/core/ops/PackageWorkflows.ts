@@ -65,9 +65,7 @@ export class PackageWorkflows {
         const edit = await this.edit(ctx, request, { noRestore: true });
         let restore: StepOutcome | undefined;
         if (edit.ok) {
-            restore = ctx.signal.aborted
-                ? { ok: false, skipped: true, error: CANCELLED }
-                : await this.restoreStep(ctx, request.projectPath, options, scope);
+            restore = await this.restoreStep(ctx, request.projectPath, options, scope);
         }
         return {
             opId: ctx.opId,
@@ -245,8 +243,12 @@ export class PackageWorkflows {
     }
 
     private async restoreStep(ctx: OperationRunContext, projectPath: string, options: WorkflowOptions, scope: ProgressScope): Promise<StepOutcome> {
+        // The option decides before the signal: a restore that was switched off cannot have been cancelled.
         if (options.skipRestore) {
             return { ok: true, skipped: true };
+        }
+        if (ctx.signal.aborted) {
+            return { ok: false, skipped: true, error: CANCELLED };
         }
         ctx.report({ status: 'restoring', ...scope, detail: path.basename(projectPath) });
         return this.runRestore(ctx, projectPath);

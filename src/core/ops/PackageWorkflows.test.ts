@@ -165,6 +165,18 @@ describe('PackageWorkflows.single', () => {
         expect(runner.calls).toEqual([['package', 'add', 'X', '--project', app, '--version', '1.0.0', '--no-restore']]);
     });
 
+    it('a cancel after the edit with the restore switched off is completed', async () => {
+        const ctx = makeContext();
+        const runner = makeRunner(() => ({}), { afterRun: () => { ctx.controller.abort(); } });
+        const workflows = new PackageWorkflows(makeDeps({ runner }));
+        const outcome = await workflows.single(ctx, { kind: 'install', projectPath: app, packageId: 'X', version: '1.0.0' }, { skipRestore: true });
+        expect(outcome.status).toBe('completed');
+        expect(outcome.edit).toEqual({ ok: true });
+        expect(outcome.restore).toEqual({ ok: true, skipped: true });
+        expect(runner.calls).toHaveLength(1);
+        expect(ctx.reports.map(r => r.status)).toEqual(['running']);
+    });
+
     it('a spawn rejection becomes a failed edit and nothing is thrown', async () => {
         const cause = Object.assign(new Error('spawn dotnet EACCES'), { code: 'EACCES' });
         const runner = makeRunner(() => { throw new DotnetSpawnError('Could not start "dotnet" (EACCES).', 'dotnet', cause); });
@@ -513,6 +525,16 @@ describe('PackageWorkflows bulk', () => {
             { projectPath: projectB, ok: false, skipped: true, error: 'cancelled' },
         ]);
         expect(outcome.status).toBe('cancelled');
+        expect(runner.calls.some(isRestore)).toBe(false);
+    });
+
+    it('bulk: a cancel after the last edit with the restore switched off is completed', async () => {
+        const ctx = makeContext();
+        const runner = makeRunner(() => ({}), { afterRun: args => { if (idOf(args) === 'Y') { ctx.controller.abort(); } } });
+        const outcome = await new PackageWorkflows(makeDeps({ runner })).bulkUpdate(ctx, projectA, [{ id: 'X', version: '2.0.0' }, { id: 'Y', version: '2.0.0' }], { skipRestore: true });
+        expect(outcome.results.map(r => r.status)).toEqual(['completed', 'completed']);
+        expect(outcome.restores).toEqual([{ projectPath: projectA, ok: true, skipped: true }]);
+        expect(outcome.status).toBe('completed');
         expect(runner.calls.some(isRestore)).toBe(false);
     });
 

@@ -1,11 +1,13 @@
-# STATUS — src/core/ops   commit d3abc12 (parent of the P1.10 commit)   2026-10-12T14:49:46Z
+# STATUS — src/core/ops   commit 08f94e3 (P1.10; parent of the P1.fix-1 commit)   2026-10-12T15:23:42Z
 
-git status --short src/core/ops: `?? src/core/ops/` (belongs to the P1.10 commit, together with
-` M CHANGELOG.md`, ` M ARCHITECTURE.md`, ` M .github/copilot-instructions.md`, ` M docs/plans/STATUS.md` and
-` M docs/plans/findings-ledger.md`)
+git status --short src/core/ops: ` M src/core/ops/PackageWorkflows.ts`, ` M src/core/ops/PackageWorkflows.test.ts`,
+` M src/core/ops/STATUS.md` (they belong to the P1.fix-1 commit, together with ` M ARCHITECTURE.md`,
+` M docs/plans/STATUS.md` and ` M docs/plans/findings-ledger.md`)
 
-Item: **P1.10 `src/core/ops/PackageWorkflows.ts` (+test) with uncommitted edits; D7/D13 admission gate**
-(⚑ on CPM semantics).
+Items: **P1.10 `src/core/ops/PackageWorkflows.ts` (+test) with uncommitted edits; D7/D13 admission gate**
+(⚑ on CPM semantics), landed as `08f94e3`, and **P1.fix-1**, the one blocking finding of the P1 phase
+review: `single()` and the bulk workflows now agree when the restore is switched off and the signal is
+aborted after the edit.
 
 The quarry has no `STATUS.md` for `src/core/ops`. Its tree holds two files: `PackageWorkflows.ts` (344 lines,
 modified and uncommitted there, which is what "with uncommitted edits" means) and `PackageWorkflows.test.ts`
@@ -13,6 +15,8 @@ modified and uncommitted there, which is what "with uncommitted edits" means) an
 `index.ts` in the quarry directory; both are P2.1 and neither was written or stubbed.
 
 ## Verified by running
+
+P1.10, on `d3abc12` (line numbers in this block are those of `08f94e3`):
 
 ```text
 The gates ran with DOTNET_ROOT set to the SDK directory and NUIGET_SDK_TESTS=1 (N48).
@@ -61,7 +65,32 @@ ls src/core/ops              → PackageWorkflows.ts, PackageWorkflows.test.ts, 
 git status --short src/core/contracts.ts src/protocol docs/adr → empty (no contract change, no sentinel)
 grep Thenable, vscode in src/core/ops → no match
 npm run test:ui              → SKIPPED: no UI change; the CI job UI runs it
-CI                           → see the tracker row of P1.10
+CI                           → run 38267328292 for 08f94e3: success on all required jobs
+```
+
+P1.fix-1, on `08f94e3`:
+
+```text
+baseline                     → the P1 gate run at 08f94e3 (docs/plans/STATUS.md, "Phase gates"): check-types 0,
+                               eslint 0, 63 files and 2130 tests green
+grep -n "ctx.signal.aborted" PackageWorkflows.ts → four hits: :90 restore(), :171 editSequence,
+                               :250 restoreStep, :291 restoreChanged; none in single()
+npx vitest run --project backend src/core/ops → Test Files 1 passed (1) · Tests 59 passed (59); the verbose
+                               output lists both new titles
+npx tsc --noEmit / npm run check-types → exit 0 / exit 0
+npx eslint src / npm run lint → exit 0, no output / exit 0
+npm test                     → Test Files 63 passed (63) · Tests 2132 passed (2132)
+npx vitest run --coverage    → exit 0 · All files 76.04 % statements, 65.78 % branches, 71.5 % functions,
+                               77.54 % lines · PackageWorkflows.ts 175 of 179 lines, 97.77 % ·
+                               src/core/** 1560 of 1587 lines, 98.30 % (floor 85 %)
+npm run bench                → Test Files 16 passed (16) · Tests 101 passed | 1 skipped (102)
+npm run package:vsix         → exit 0 · Tests 2132 passed · DONE  Packaged: nuiget-v1.18.9.vsix (17 files,
+                               528.84 KB)
+npm run check:vsix           → check:vsix: OK
+npm run docs:protocol:check  → exit 0
+git status --short src/core/contracts.ts src/protocol docs/adr → empty
+npm run test:ui              → SKIPPED: no UI change; the CI job UI runs it
+CI                           → see the tracker row of P1.fix-1
 ```
 
 ## Done (tested)
@@ -82,10 +111,12 @@ CI                           → see the tracker row of P1.10
     workflow are gated by nothing.
   - Noun-first argv only, through `addPackageArgs(options)` and `removePackageArgs(options)` of
     `src/core/cli`. A non-CPM add keeps `--no-restore` and the separate restore step.
-  - Cancel between the steps: after a successful edit `single()` checks the signal and reports `restore: {
-    ok: false, skipped: true, error: 'cancelled' }` with status `cancelled`; a bulk marks every request not
-    yet started cancelled and, when the signal is aborted before the restore phase, every project that would
-    have been restored.
+  - Cancel between the steps: after a successful edit the restore step checks the signal and reports
+    `restore: { ok: false, skipped: true, error: 'cancelled' }`, so `single()` ends `cancelled`; a bulk marks
+    every request not yet started cancelled and, when the signal is aborted before the restore phase, every
+    project that would have been restored. The option decides before the signal in both paths (P1.fix-1): with
+    the restore switched off the step is `{ ok: true, skipped: true }` and the operation is `completed`,
+    because nothing remained to cancel. `restoreStep` is the one place that decides it for `single()`.
   - `stepStatus` and `outcomeStatus`, exported, replace `editStatus` and `statusFor`. Bulk status: `cancelled`
     when any result or restore is cancelled, `completed` when every result is completed and every restore is
     ok, `failed` when no result is completed, otherwise `partial`.
@@ -95,7 +126,7 @@ CI                           → see the tracker row of P1.10
   - Redaction: `onCommand` receives `redactArgv(argv)`, `redact(stdout)` and `redact(stderr)`; every error
     string in a `StepOutcome` and every `logger.warn` text passes `redact`.
   - `RESTORE_TIMEOUT_MS` comes from `src/core/cli`; `EditRequest` is exported and uses `MutationKind`.
-- `PackageWorkflows.test.ts`, 57 tests (44 declarations: 42 `it` and two `it.each` tables of 6 and 9 rows).
+- `PackageWorkflows.test.ts`, 59 tests (46 declarations: 44 `it` and two `it.each` tables of 6 and 9 rows).
   - The 16 quarry tests, all kept and rewritten for the noun-first argv, the required `isCpmProject` (a
     `makeDeps` helper supplies `async () => false`) and `sdk10 = sdkInfoFromVersion('10.0.401')`. By title:
     `installs then restores and reports both steps`;
@@ -140,6 +171,9 @@ CI                           → see the tracker row of P1.10
     cancelled`, `a spawn rejection of the restore leaves the edit reported and the outcome partial`, `falls
     back to the given order and warns redacted when a dependency lookup fails`, `a throwing onCommand does
     not change the outcome`, `returns cancelled when the signal aborts during the restore`.
+  - P1.fix-1, two tests: `a cancel after the edit with the restore switched off is completed` and `bulk: a
+    cancel after the last edit with the restore switched off is completed`. `cancel between edit and restore
+    yields cancelled` (restore wanted) is unchanged and keeps the `cancelled` shape.
 
 ## Done (untested)
 
@@ -148,9 +182,9 @@ CI                           → see the tracker row of P1.10
 - `isCpmProject` and `runner.sdkVersion` are asked once per request, so a bulk of n updates in one project
   asks n times. The runner caches the SDK per directory; whoever implements `isCpmProject` (P2.4 or P2.9)
   should cache per project for the duration of an operation.
-- Four lines have no test: `:136` and `:154` (the `continue` for a project that `orderProjects` returned
+- Four lines have no test: `:134` and `:152` (the `continue` for a project that `orderProjects` returned
   but the request list does not contain, which cannot happen because the order is built from that list) and
-  `:356-357` (the `restore` and `default` branches of `verb`, which no edit request reaches).
+  `:358-359` (the `restore` and `default` branches of `verb`, which no edit request reaches).
 
 ## Not started
 
@@ -163,7 +197,7 @@ CI                           → see the tracker row of P1.10
 
 - Restore time limit 180 s → 120 s. The quarry declared `RESTORE_TIMEOUT_MS = 180_000` locally; the item row
   says "`RESTORE_TIMEOUT_MS` from cli", and `src/core/cli/DotnetRunner.ts:11` exports `120_000`. The local
-  constant is gone (`PackageWorkflows.ts:17`, `:257`, `:263`).
+  constant is gone (`PackageWorkflows.ts:17`, `:259`, `:265`).
 - Behaviour changes against the quarry that the ruling orders: a bulk with completed edits and a
   cancellation is `cancelled` (the quarry said `partial`); `restore()` reports a cancelled step as
   `cancelled` (the quarry said `failed`); an undetectable SDK refuses the edit (the quarry logged a warning
@@ -171,23 +205,18 @@ CI                           → see the tracker row of P1.10
 - The ruling contradicts itself on one point. Step 4 says in prose "passing the lookup result and never a
   literal for `isCpm`", its code sample passes `isCpm: false`, its VERIFY expects `isCpm: false` exactly
   once, and step 3 fixes the return type of `admitEdit` so that the lookup result cannot reach `edit()`.
-  The code sample and VERIFY were followed (`PackageWorkflows.ts:222-225`); the comment there says why
-  `false` is right. Consequence: in this path the guard of `addPackageArgs` (`noRestore` with `isCpm`,
+  The code sample and VERIFY were followed (`PackageWorkflows.ts:220-223`); the comment there says why
+  `false` is right. The phase review confirmed the code and retracted the prose. Consequence: in this path the guard of `addPackageArgs` (`noRestore` with `isCpm`,
   `src/core/cli/commands.ts:71-73`) is not what refuses a CPM add; `admitEdit` is. P6.3, which admits CPM
-  adds, has to pass the real value and `noRestore: false` for them.
-- `single()` and the bulk workflows differ when the restore is switched off and the signal is aborted after
-  a successful edit: `single()` follows the ruling's code (step 7) and reports `restore: { ok: false,
-  skipped: true, error: 'cancelled' }`, status `cancelled` (`PackageWorkflows.ts:66-70`); `restoreChanged`
-  keeps the quarry order and reports `{ ok: true, skipped: true }`, so the bulk is `completed`
-  (`:283-290`), which is the ruling's "every project that would have been restored". Put to the P1 phase
-  review as a question; no test pins the `single()` side of it.
+  adds, has to pass the real value and `noRestore: false` for them (N51, note in the tracker row of P6.3).
 - Readings of the ruling where it leaves a choice: the opening `running` report of a bulk is new (the quarry
   had per-request reports only) and carries no `current` or `total`; the explicit `restore()` workflow has no
   opening report and its reports carry `packageIds: []`; `bulkInstall` runs through the shared
   `editSequence` instead of its own copy of that loop (same order, same reports).
-- Beyond the ruling, in the item's file: `forwardCommand` (`PackageWorkflows.ts:299-306`) catches an
+- Beyond the ruling, in the item's file: `forwardCommand` (`PackageWorkflows.ts:301-308`) catches an
   exception of the `onCommand` hook and logs a warning. In the quarry the call stood inside the `try` of the
   step, so a throwing output channel turned a finished `dotnet package add` into `edit: { ok: false }` (N50).
+  Accepted by the phase review.
 - Admission runs before the arguments are validated (ruling, step 3), so for an invalid package id the SDK
   and the CPM state are looked up first and the refusal, if any, wins over the validation error.
 - No bench: the item names none. No `index.ts`: P2.1.
@@ -330,9 +359,52 @@ Files checked (absolute): /Users/mattias/github/nuiget/docs/plans/2026-10-11-nui
 The ambient advisor (L3) was consulted before the first edit; its notes on the test helpers, the argv
 indexes and the cancel test were followed. It did not rule on the `isCpm` contradiction recorded above.
 
+2026-10-12, P1 phase review (`PHASE REVIEW P1`, sent on `labs/2.0` @ `08f94e3` with the commit list, the
+gate output and three questions about this module: (a) the `single()`/bulk difference with the restore
+switched off and an abort after the edit, (b) the `isCpm: false` literal against the ruling's prose, (c)
+`forwardCommand`). Verdict PASS WITH FIXES; its one blocking finding is P1.fix-1. Answer of the
+`architecture-advisor`, verbatim (also in `docs/plans/STATUS.md`, "Phase gates"):
+
+````text
+VERDICT: PASS WITH FIXES
+
+The brief is correct about the tree. Every path:line it cites matched what I read: `/Users/mattias/github/nuiget/src/core/ops/PackageWorkflows.ts:66-70` (abort check before `restoreStep` in `single()`), `:222-225` (`isCpm: false` under the comment that `admitEdit` ran first), `:283-292` (`restoreChanged`: `skipRestore` at :285-288, then the abort at :289-292), `:299-306` (`forwardCommand`), `/Users/mattias/github/nuiget/src/core/cli/DotnetRunner.ts:11` (`RESTORE_TIMEOUT_MS = 120_000`); the four frozen-path commits (`git log labs/2.0-P0-done..HEAD -- docs/adr src/protocol src/core/contracts.ts` lists exactly ac64e72, dd1ed73, 32642aa, 91d1144; the P1.7 hunk is comment-only on `SessionStore.reconcile`, the P1.8 hunk is `InvalidationEvent.keys` plus the two JSDoc lines); `.claude/.contract-change` absent; 64 tracked files outside `__fixtures__`; 19 test files under `src/core` and `src/protocol` (cache 1, cli 5, http 1, logging 1, ops 1, queries 2, session 1, util 5, versioning 1, protocol 1); no deleted file in the range and no added `.only(`/`.skip(`/`.todo(` under `src`; `git status --short` shows only ` M docs/plans/STATUS.md`. The claim "no test pins the `single()` side" is right: `skips restore when the toggle is off and marks the step skipped` (test :91) never aborts, and `cancel between edit and restore yields cancelled` (:157) runs with `skipRestore: false`.
+
+BLOCKING:
+1. `/Users/mattias/github/nuiget/src/core/ops/PackageWorkflows.ts:66-70` and `:247-253` — `single()` reports `cancelled` with `restore: { ok: false, skipped: true, error: 'cancelled' }` when `options.skipRestore` is true and the signal aborts after a finished edit; the bulk path (`restoreChanged`, :285-292) reports `{ ok: true, skipped: true }` and `completed` in the same situation. The asymmetry is not intended; it is a slip in my P1.10 ruling, whose step-7 code sample was written for the `skipRestore: false` path and did not consider the option. Neither ADR-003:26-27 nor ADR-007:21-22 fixes a precedence between "skipped by option" and "cancelled", so this ruling does: a step the user switched off was never going to run, so a cancel cannot have skipped it, and `{ ok: false, skipped: true, error: 'cancelled' }` for that step tells the UI (and `ops/completed`, `messages.ts:190`) that the cancel prevented work it did not. The bulk order is right and `single()` aligns to it. Item `P1.fix-1`, files: `src/core/ops/PackageWorkflows.ts`, `src/core/ops/PackageWorkflows.test.ts`, `src/core/ops/STATUS.md`, `ARCHITECTURE.md` (2.0 section, ops row at :87), `docs/plans/STATUS.md`, `docs/plans/findings-ledger.md`. The exact fix, so that one place decides:
+   - `restoreStep` (:247-253): after the `if (options.skipRestore) { return { ok: true, skipped: true }; }` return, insert `if (ctx.signal.aborted) { return { ok: false, skipped: true, error: CANCELLED }; }` before the `restoring` report.
+   - `single()` (:66-71): replace the ternary with `if (edit.ok) { restore = await this.restoreStep(ctx, request.projectPath, options, scope); }`. The `ctx.signal.aborted` check then lives only in `restore()`, `editSequence`, `restoreStep` and `restoreChanged`.
+   - Tests, two new titles, nothing removed or weakened: `a cancel after the edit with the restore switched off is completed` (single: `makeRunner(() => ({}), { afterRun: () => ctx.controller.abort() })`, `{ skipRestore: true }`; expect `status 'completed'`, `edit { ok: true }`, `restore { ok: true, skipped: true }`, `runner.calls` length 1, reports `['running']`) and `bulk: a cancel after the last edit with the restore switched off is completed` (`bulkUpdate` with two packages, abort in `afterRun` of the second add, `{ skipRestore: true }`; expect both results `completed`, `restores` equal to `[{ projectPath: projectA, ok: true, skipped: true }]`, status `completed`, no restore spawned). `cancel between edit and restore yields cancelled` (`skipRestore: false`) stays as it is and keeps the `cancelled` shape.
+   - `ARCHITECTURE.md:87`: the sentence "an abort between the two yields `cancelled` with the edit reported as done and the restore as skipped" gains "when a restore was wanted; with the restore switched off the operation is `completed`, because nothing remained to cancel".
+   - `src/core/ops/STATUS.md`: rewrite per §2.5 with the fix commit, drop the asymmetry entry under Deviations, add this answer under Advisor decisions. No CHANGELOG entry (the 2.0 ops line at `CHANGELOG.md:14` stands; nothing user-facing changes before 2.0 ships). No gotcha row.
+   - VERIFY: `grep -n "ctx.signal.aborted" src/core/ops/PackageWorkflows.ts` → four hits, none inside `single()`; `npx vitest run --project backend src/core/ops` → 59 passed and the two new titles listed; `npm run check-types` → 0; `npx eslint src` → 0; `npm test`, `npm run bench` green; `npx vitest run --coverage` keeps `src/core/**` ≥ 85 %; CI green on the fix commit; then the P1 gate line is re-run and pasted (RUN.md §6 step 2) before the tag `labs/2.0-P1-done`.
+
+NON-BLOCKING:
+1. (question b) `PackageWorkflows.ts:222-225`, the `isCpm: false` literal. My P1.10 ruling contradicted itself: step 3 fixed `admitEdit` to `Promise<StepOutcome | undefined>` (mirroring `MutationDecision`, `contracts.ts:343`), which cannot carry the lookup result, while the step-4 prose and the DO NOT line asked for "never a literal"; the code sample and VERIFY are the operative text, the implementer followed them correctly, and the prose is retracted. The code stays as it is. D7 is live and tested across all eight edit workflows and `restore()` (`cpm: never emits --no-restore`); what is dead in this path is only the builder's defence in depth (`src/core/cli/commands.ts:71-73`), and the hazard date is P6.3, when the gate starts admitting CPM adds. Assigned to P6.3. In `P1.fix-1`'s commit: add a ledger row N51 ("the builder guard of `addPackageArgs` is fed a literal `isCpm: false` by the workflow; correct while `admitEdit` refuses every CPM add/update, a trap from P6.3 on") and a P6.3 tracker note: "when `admitEdit`'s body becomes `ProjectMutator.canMutate`, the literal `isCpm: false` at `PackageWorkflows.ts:225` must become the project's real value and a CPM add must run with `noRestore: false` (D7, in any phase); the test `cpm: never emits --no-restore` is rewritten in the same item and must still assert that no argv contains `--no-restore`; N51 closes there."
+2. (question c) `forwardCommand` (`:299-306`) is accepted. The change is inside the item's named source (§2.1), it restores ADR-003's rule that output is logged but never decides success, it is tested (`a throwing onCommand does not change the outcome`) and recorded (N50, closed). No action.
+3. N44 (the fixed 10 s sleep in `src/test/e2e/update-flow.e2e.test.ts:45`). The re-run rule stands for P2: two sightings in about a dozen runs, both green on re-run, nothing in the tree builds on the test, and no P2 item names either candidate file. One amendment, because the trigger "a second identical failure on the same SHA" may never fire when re-runs pass: on the third sighting on any SHA, the session adds a warm-up step to the `e2e` job of `.github/workflows/ci.yml` (after `setup-dotnet`, before the tests: `run: dotnet --version && dotnet msbuild -version`, which pays the first-use setup and the MSBuild load the first `dotnet add` otherwise pays inside the 10 s) as its own one-line commit citing N44, updates the N44 ledger row and the "A red CI run is not always a code failure" gotcha row in the same commit, re-runs, and needs no further brief. The polling rewrite of the legacy test stays with P5.12; the owner may elect it earlier (as with P0.14). This is not an `OWNER MUST DECIDE` stop.
+4. `isCpmProject` and `runner.sdkVersion` are asked once per request (n times for a bulk of n in one project). The runner caches the SDK per directory (`DotnetRunner.ts:155,307`), so only `isCpmProject` costs; P2.9, which supplies it from the host, memoizes it per project for the duration of one operation (or P2.4's inspector result is reused). No change in `src/core/ops`.
+5. The three behaviour changes against the quarry (bulk with a cancellation is `cancelled`, `restore()` reports a cancelled step as `cancelled`, an undetectable SDK refuses) are what the ruling ordered and what ADR-003's outcome set and D13's fail-closed reading require; no action. The restore limit of 120 s is what the row orders ("`RESTORE_TIMEOUT_MS` from cli"); P7.2 measures whether a cold restore of a multi-TFM project fits and, if not, changes `src/core/cli/DotnetRunner.ts:11` (cli's file), never a local constant in the workflow.
+6. The opening `running` report of a bulk without `current`/`total`, the explicit `restore()` with `packageIds: []` and no opening report, admission before argument validation, and `bulkStatus` returning `completed` for an empty batch are all acceptable readings of the ruling; P2.9's empty-`packages` guards keep an empty batch from reaching the workflow. No action.
+7. The `projectDependencies` fakes keyed by `normalizeProjectPath` are right (the dependency's comment at `PackageWorkflows.ts:27` says "normalized"), and CI on windows-latest confirms it. No action.
+8. Handoff notes: all ten have the seven §2.5 sections; eight are headed with the parent commit ("parent of the P1.x commit") and two with their own commit. Consistent enough to read; P7.5 may standardise the header. No action now; `P1.fix-1` rewrites the ops note with its own SHA.
+
+QUESTION (a): not intended. The bulk order is right (option first, then cancel); align `single()` as blocking 1 says. It is a `P1.fix`, not a P2.1 note: P2.1's row names `OperationQueue.ts`, `index.ts` and their tests only, so P2.1 editing `PackageWorkflows.ts` would be a stop-and-ask under §2.1, and P2.11's harness scenarios ("surface disposed with pending ops") would otherwise pin the asymmetric shape.
+
+QUESTION (b): confirmed as coded; the ruling's prose is retracted (non-blocking 1); P6.3 takes the real value with N51 and the tracker note.
+
+QUESTION (c): accepted (non-blocking 2).
+
+CHECKED:
+- `/Users/mattias/github/nuiget/.github/agents/architecture-advisor.agent.md`; plan §1-§3 (lines 41-159), P1 rows and gate (203-219), P2 rows (221-238), Appendix B (424-436); `docs/plans/RUN.md` §5-§9; `docs/plans/STATUS.md` whole file (tracker rows P1.1a-P1.10, P1 gate block, the P1.1b checkpoint and diff review, the P1.7 and P1.8 rulings); `docs/plans/findings-ledger.md` N38-N50 (both tables) and every C row; the ten handoff notes' headers and sections; `src/core/ops/STATUS.md` whole file including the P1.10 ruling.
+- Commits: `git log --oneline labs/2.0-P0-done..HEAD` (13), `git diff --stat` (86 files, +14056/-158), `git diff --name-only` filtered outside `src/core`, `src/protocol`, `docs/plans` (17 files: `.github/copilot-instructions.md`, `ci.yml`, `ARCHITECTURE.md`, `CHANGELOG.md`, seven ADRs, `docs/protocol.md`, `package.json`, `scripts/gen-protocol-docs.mjs`, two bench files, `vitest.config.mts`; each named by a P1 row or a docs duty), `git show` of 32642aa and 91d1144 on the frozen paths, `--diff-filter=D` (none), grep of the range for `.only(`/`.skip(`/`.todo(` (none).
+- Per item: P1.1a `satisfies Record<RequestType, true>` and `Record<EventType, true>` (`guards.ts:33,39`), `docs:protocol`/`docs:protocol:check` scripts (`package.json:305-306`), the CI step (`ci.yml:79`), `PromiseLike` in `contracts.ts:31`; P1.1b both blocking fixes of its diff review present (`docs/adr/004-project-model.md:49-51`, `003:42-47`); P1.2 `concurrency.ts:79` and the empty/diamond topo tests; P1.3 `isUpdateCandidate` `exact` branch and the named test; P1.4 `deleteByPrefix`, `clearPackages`, `invalidationToCacheScopes`, `packageKeyPrefixes`, `DEFAULT_STORE_BYTES = 8 * 1024 * 1024`; P1.5 the four named redact tests; P1.6 `capabilitiesFor` (`supported = major >= 10`, `'verified'` only with a fixture), `{ ...process.env, ...options.env, ...FIXED_ENV }` (`DotnetRunner.ts:188`), transient probes not cached (`:302-317`), `it.skipIf` at `:237` and `:806`, the `no-throw-literal` and `no-control-regex` directives, `never builds the verb-first form`, no `nounFirstSyntax` anywhere in `src/core`, the inverted validator cases (`validate.test.ts:108-121,176`), the named titles `caches a non-zero probe`, `retries after a spawn failure or timeout`, `forces the fixed CLI environment over caller variables`, `cpm: addPackageArgs rejects --no-restore`; P1.7 `scopes.ts` normalizes with `platform` (`:65-74,100`), the win32 test, the `reconcile` JSDoc; P1.8 the seven literal titles plus the two carry-over titles, `keys: Map<ResourceKey, number>` (`QueryCoordinator.ts:99`), the `entry.current !== computation` guard, 13 `carried` hits, `InvalidationEvent` as ruled; P1.9 `http/index.ts` exports ssrf only, the eight named additions by title; P1.10 the whole source and test file, `AddPackageOptions.isCpm?` and the guard (`commands.ts:12-24,68-73`), `OperationStatus`/`StepOutcome`/`OperationOutcome`/`BulkOutcome` (`domain.ts:262-318`), `OperationRunContext`/`ProjectMutator` (`contracts.ts:87-91,343-354`), ADR-003 whole, ADR-007:17-22, `messages.ts:152-160,188-190`.
+- Salvage gate (plan §3) over `src/core` and `src/protocol`: `grep -rn Thenable` → none; `vscode` value imports → none; imports from host/services/webview/extension → none; React → none; `grep -rln child_process --include='*.ts'` → `src/core/cli/*` only; stub markers (`not implemented`, `TODO: stub`, `throw new Error('stub`, `TODO`, `FIXME`) → none in sources; a heuristic grep for Node ≥ 20 globals found only the `Transport.fetch` interface method name (`contracts.ts:260`); the authoritative Node-18 check is `npx tsc --noEmit` with `@types-host/node@18` (P0.9), which the brief reports at 0. No module of a later item exists (`ls src/core`: cache, cli, contracts.ts, http, logging, ops, queries, session, util, versioning; no `src/host`).
+- `ARCHITECTURE.md` 2.0 module map rows for every P1 directory (`:79-90`); `CHANGELOG.md` `[Unreleased]` entries for every P1 item (`:12-21,40`); `vitest.config.mts` coverage floor for `src/core/**` (`:48-50`); `.github/copilot-instructions.md` 2.0 gotchas (from the system context).
+- Taken from the brief, not run by me (inspection only): every gate exit code and count (tsc, check-types, eslint, `npm test` 63/2130, bench 16/101+1, package:vsix, check:vsix, docs:protocol:check), the coverage percentages, the verbose 19-file listing, the CI conclusions (38267328292 and the three red runs with their re-runs), and the quarry excerpts cited in the P1.10 ruling. The gate conditions of the plan line are consistent with the tree I inspected.
+````
+
 ## Exact next step (one item ID)
 
-The P1 phase boundary (`RUN.md` §6): run the P1 gate line of the plan, record it under "Phase gates" in
-`docs/plans/STATUS.md`, send `PHASE REVIEW P1` to the `architecture-advisor` (with the `single()`/bulk
-question above), then tag `labs/2.0-P1-done`. After it: P2.1 (`src/core/ops/OperationQueue.ts`, `index.ts`
-and tests).
+P2.1 (`src/core/ops/OperationQueue.ts`, `index.ts` and tests), after the tag `labs/2.0-P1-done`, which is
+set once CI is green for the P1.fix-1 commit.
