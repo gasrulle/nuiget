@@ -11,9 +11,9 @@ This document describes the technical architecture of the nUIget VS Code extensi
 
 nUIget 2.0 is a re-architecture on audited contracts: a platform-agnostic core, a typed protocol between host
 and webviews, and one shared webview code base for the main panel and the sidebar. It is built next to 1.x and
-replaces it in one step. As of plan phase P0 the repository contains the foundation only: build switch,
-placeholders for the three entry points, import fences, guard hooks, CI and packaging checks. No 2.0 runtime
-behaviour exists yet.
+replaces it in one step. Plan phase P0 laid the foundation: build switch, placeholders for the three entry
+points, import fences, guard hooks, CI and packaging checks. Phase P1 adds the contracts and the leaf modules
+of the core, one plan item at a time. Nothing imports them yet, so no 2.0 runtime behaviour exists.
 
 ### Decisions and plans
 
@@ -32,16 +32,50 @@ behaviour exists yet.
 | [ADR-008](docs/adr/008-webview-architecture.md) | Webview architecture: shared slices, primitives, two entry points |
 | [UX interaction model](docs/ux/interaction-model.md) | Keyboard, focus and state behaviour of the 2.0 UI |
 
-The protocol reference `docs/protocol.md` is generated from `src/protocol/**`; both arrive with plan item P1.1a.
+### Protocol and contracts
+
+`src/protocol/**` is the single contract between the host and both webviews (ADR-007). Nothing else crosses
+`postMessage`.
+
+| File | Content |
+| --- | --- |
+| `domain.ts` | Data types both sides share: projects, packages, sources, session, resource keys, operation outcomes |
+| `messages.ts` | `RequestMap` (42 requests, each with `payload`, `result` and an optional stream `chunk`) and `EventMap` (11 events) |
+| `envelope.ts` | The shapes on the wire (`request`, `cancel`, `stream`, `response`, `event`), their factories and `ProtocolRequestError` |
+| `guards.ts` | Runtime validation in both directions: `parseInbound` for the host, `parseOutbound` for a webview |
+
+A webview sends a request with an `id`. The host answers that `id` with exactly one response, which is either
+a result or an error, and may send stream chunks before it. Events go from the host to the webviews without
+an `id`. The two parse functions return `undefined` for anything that is not a valid envelope, so neither
+side switches on an unchecked `type`.
+
+The type names exist only at compile time, so `guards.ts` lists them again for the runtime check. Each list is
+a record checked with `satisfies Record<RequestType, true>` (or `EventType`): the compiler rejects a list that
+lacks a type of the map or names one the map does not have.
+
+`src/core/contracts.ts` holds the interfaces the core modules implement or consume, grouped by decision record:
+platform adapters (`KeyValueStore`, `Logger`, `Event`), `SessionStore` (ADR-001), `QueryCoordinator` (ADR-002),
+`OperationQueue` and `DotnetRunner` (ADR-003), the project model (ADR-004), and `Transport`, credentials,
+sources and the outbound policy (ADR-005). It imports types from `src/protocol/domain.ts` only.
+`KeyValueStore.update` returns `PromiseLike` instead of `Thenable`, a global that only the VS Code declarations
+provide, so the file does not depend on them.
+
+The reference [`docs/protocol.md`](docs/protocol.md) is generated from `messages.ts` by
+`npm run docs:protocol` (`scripts/gen-protocol-docs.mjs`, which reads the two maps through the TypeScript
+compiler API). `npm run docs:protocol:check` regenerates it in memory and fails when the committed file
+differs; the Lint job of CI runs it.
+
+These files are frozen (plan decision D6): they change only in a plan item that names them.
 
 ### Module map
 
-Placeholder: each row is filled in by the item that creates the module.
+Each row is filled in by the item that creates the module.
 
 | Path | Role | State |
 | --- | --- | --- |
-| `src/protocol/**` | Message and domain types shared by host and webviews | Arrives in P1.1a |
-| `src/core/**` | Platform-agnostic logic: CLI runner, project model, queries, operations, feeds | Arrives in P1–P4; today only `src/core/cli/__fixtures__/sdk-probes/` |
+| `src/protocol/**` | Message and domain types shared by host and webviews | Present since P1.1a; contract changes in P1.1b |
+| `src/core/contracts.ts` | Interfaces of the core modules | Present since P1.1a; contract changes in P1.1b |
+| `src/core/**` | Platform-agnostic logic: CLI runner, project model, queries, operations, feeds | Arrives in P1–P4; today `contracts.ts` and `src/core/cli/__fixtures__/sdk-probes/` |
 | `src/host/**` | Adapts VS Code to the core: webview hosts, handlers, pickers | Arrives in P2.9 |
 | `src/extension.next.ts` | 2.0 composition root | Placeholder; replaced in P2.10 |
 | `src/webview/shared/**` | Tokens, primitives, message bus, store slices | Arrives in P3 |
@@ -92,7 +126,7 @@ These parts serve both versions and are the current truth for the build, test an
 
   | Job | Needs | What it does |
   | --- | --- | --- |
-  | Lint | — | `npm run lint`, then the guard hook tests |
+  | Lint | — | `npm run lint`, the guard hook tests, then `npm run docs:protocol:check` |
   | Test (ubuntu, windows) | — | Unit tests with .NET SDK 10 installed; coverage on ubuntu |
   | E2E (VS Code 1.85.0, stable) | — | Production build, then the extension-host suite under Xvfb; log artifact per version |
   | UI | Lint, Test | ExTester suite under Xvfb; log and screenshot artifact |

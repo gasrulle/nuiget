@@ -1,0 +1,314 @@
+/**
+ * Core contracts — the interfaces every `src/core` module implements or consumes.
+ *
+ * Rules for `src/core/**` (enforced by ESLint `no-restricted-imports`):
+ *   - no React, no webview `postMessage`, no `vscode.window.*` UI calls;
+ *   - may depend on `vscode` only for `workspace`/`Memento`/`FileSystemWatcher`/`Uri` types via the
+ *     adapters declared here, so the modules stay unit-testable without the extension host.
+ */
+
+import type {
+    BulkOutcome,
+    Fidelity,
+    InstalledResult,
+    InvalidationReason,
+    InvalidationScope,
+    OperationOutcome,
+    OperationProgress,
+    Project,
+    ResourceKey,
+    SessionIntent,
+    SessionSnapshot,
+    Surface,
+} from '../protocol/domain';
+
+// ─── Platform adapters (so core never imports vscode UI directly) ───────────
+
+export interface KeyValueStore {
+    get<T>(key: string, defaultValue: T): T;
+    get<T>(key: string): T | undefined;
+    update(key: string, value: unknown): PromiseLike<void>;
+}
+
+export interface Logger {
+    trace(message: string, ...args: unknown[]): void;
+    debug(message: string, ...args: unknown[]): void;
+    info(message: string, ...args: unknown[]): void;
+    warn(message: string, ...args: unknown[]): void;
+    error(message: string | Error, ...args: unknown[]): void;
+}
+
+export interface Disposable {
+    dispose(): void;
+}
+
+export type Listener<T> = (value: T) => void;
+
+export interface Event<T> {
+    (listener: Listener<T>): Disposable;
+}
+
+// ─── Session (ADR-001) ──────────────────────────────────────────────────────
+
+export interface SessionStore {
+    /** Current committed snapshot. */
+    readonly snapshot: SessionSnapshot;
+    /** Fires after every committed change, including host-originated normalization. */
+    readonly onDidChange: Event<SessionSnapshot>;
+    /**
+     * Apply an intent. Values are validated/normalized (e.g. selecting a project that no
+     * longer exists falls back to the first project; `ALL_PROJECTS` with ≤1 project downgrades).
+     * Resolves with the committed snapshot. In-memory state changes synchronously; persistence is
+     * awaited but a persistence failure is logged and does not roll back the in-memory state.
+     */
+    apply(intent: SessionIntent, origin: Surface | 'host'): Promise<SessionSnapshot>;
+    /** Re-validate the snapshot against the current project/source lists (called by the coordinator). */
+    reconcile(projects: Project[], enabledSourceUrls: string[]): Promise<SessionSnapshot>;
+}
+
+// ─── Operations (ADR-003) ───────────────────────────────────────────────────
+
+export interface OperationTicket<T> {
+    opId: string;
+    /** False when the queue refused the work (over capacity / disposed). `completion` then resolves to a `rejected` outcome. */
+    admitted: boolean;
+    /** Resolves exactly once with the terminal outcome; never rejects. */
+    completion: Promise<T>;
+    cancel(): void;
+}
+
+export interface OperationRunContext {
+    opId: string;
+    signal: AbortSignal;
+    report(progress: Omit<OperationProgress, 'opId'>): void;
+}
+
+export interface OperationQueue extends Disposable {
+    readonly isBusy: boolean;
+    readonly activeCount: number;
+    readonly pendingCount: number;
+    readonly onDidChange: Event<{ active: number; pending: number }>;
+    /**
+     * Submit a top-level workflow. Workflows run strictly one at a time (FIFO). Nested work inside a
+     * workflow must call services directly — never `submit()` again (that would deadlock).
+     */
+    submit<T extends OperationOutcome | BulkOutcome>(
+        label: string,
+        run: (ctx: OperationRunContext) => Promise<T>,
+        rejected: (reason: string) => T,
+    ): OperationTicket<T>;
+    /** Resolves when the queue is idle (used by tests and the file watcher). */
+    waitIdle(): Promise<void>;
+}
+
+// ─── Queries & invalidation (ADR-002) ───────────────────────────────────────
+
+export interface QueryContext {
+    signal: AbortSignal;
+    /** Current generation of the resource being computed; results for an older generation are discarded. */
+    generation: number;
+}
+
+export interface QueryHandle<T> {
+    key: ResourceKey;
+    generation: number;
+    /** Resolves with the authoritative value for `generation`; rejects with `StaleQueryError` if superseded. */
+    value: Promise<T>;
+    /** Unsubscribe this consumer. The computation is cancelled only when the last subscriber leaves. */
+    release(): void;
+}
+
+export class StaleQueryError extends Error {
+    constructor(public readonly key: ResourceKey, public readonly generation: number) {
+        super(`Query ${key} generation ${generation} was superseded`);
+        this.name = 'StaleQueryError';
+    }
+}
+
+export interface InvalidationEvent {
+    scope: InvalidationScope;
+    reason: InvalidationReason;
+    generation: number;
+    /** Resource keys that moved to a new generation. */
+    keys: ResourceKey[];
+}
+
+export interface QueryCoordinator extends Disposable {
+    readonly onDidInvalidate: Event<InvalidationEvent>;
+    /**
+     * Subscribe to a resource. If a computation for the current generation is running, the handle
+     * joins it; if a fresh value is cached, it resolves immediately; otherwise `compute` starts.
+     * `onChunk` receives streamed intermediate values (per-project chunks, metadata enrichment).
+     */
+    query<T, C = never>(
+        key: ResourceKey,
+        compute: (ctx: QueryContext, emit: (chunk: C) => void) => Promise<T>,
+        onChunk?: (chunk: C) => void,
+    ): QueryHandle<T>;
+    /** Bump generations for every key matching `scope` (merging with pending invalidations). */
+    invalidate(scope: InvalidationScope, reason: InvalidationReason): void;
+    /** Current generation for a key (0 when never computed). */
+    generationOf(key: ResourceKey): number;
+    /** Peek at the cached value without subscribing. */
+    peek<T>(key: ResourceKey): { value: T; generation: number } | undefined;
+}
+
+// ─── Dotnet CLI (ADR-003 / S1) ──────────────────────────────────────────────
+
+export interface DotnetResult {
+    exitCode: number;
+    stdout: string;
+    stderr: string;
+    durationMs: number;
+    /** Argv that was executed (for logging; never a shell string). */
+    argv: string[];
+    cancelled?: boolean;
+    timedOut?: boolean;
+}
+
+export interface DotnetRunOptions {
+    cwd: string;
+    timeoutMs?: number;
+    signal?: AbortSignal;
+    /** Extra environment variables (merged over the sanitized base env). */
+    env?: Record<string, string>;
+}
+
+export interface DotnetRunner {
+    /** Execute `dotnet <args>` with argv (no shell). Resolves for every exit code; rejects only when the binary cannot be started. */
+    run(args: string[], options: DotnetRunOptions): Promise<DotnetResult>;
+    /** Resolve the SDK version that applies in `cwd` (honours `global.json`). Cached per directory. */
+    sdkVersion(cwd: string): Promise<SdkInfo | undefined>;
+    clearSdkCache(): void;
+}
+
+export interface SdkInfo {
+    version: string;
+    major: number;
+    /** `dotnet package add --project` (SDK ≥ 10) vs `dotnet add <proj> package`. */
+    nounFirstSyntax: boolean;
+    /** `dotnet package add` understands CPM central versions (verified per SDK major). */
+    cpmAwareAdd: boolean;
+}
+
+// ─── HTTP transport, credentials, sources (ADR-005) ─────────────────────────
+
+export interface TransportRequest {
+    url: string;
+    method?: 'GET' | 'HEAD';
+    headers?: Record<string, string>;
+    timeoutMs?: number;
+    signal?: AbortSignal;
+    /** Hard cap on the decoded body size; exceeding it fails with `too-large`. Default 10 MiB. */
+    maxBytes?: number;
+    /** Request `Accept-Encoding: gzip, deflate` and decode (needed for the ~20 MB vulnerability index). */
+    acceptCompressed?: boolean;
+}
+
+export type TransportErrorCode =
+    | 'network'
+    | 'timeout'
+    | 'cancelled'
+    | 'too-large'
+    | 'redirect-blocked'
+    | 'too-many-redirects'
+    | 'invalid-json'
+    | 'http-error';
+
+export interface TransportFailure {
+    ok: false;
+    code: TransportErrorCode;
+    status?: number;
+    message: string;
+}
+
+export interface TransportSuccess {
+    ok: true;
+    status: number;
+    headers: Record<string, string>;
+    body: Buffer;
+    /** Final URL after redirects. */
+    url: string;
+}
+
+export type TransportResult = TransportSuccess | TransportFailure;
+
+export type JsonResult<T> = { ok: true; status: number; data: T; url: string } | TransportFailure;
+
+/**
+ * The only module allowed to open sockets. Honours VS Code proxy settings by routing HTTP/1.1
+ * through Node's `https` module (which the extension host patches for proxies); HTTP/2 is used only
+ * when no proxy is configured. One redirect/SSRF implementation; same-origin-only auth forwarding.
+ */
+export interface Transport extends Disposable {
+    fetch(request: TransportRequest): Promise<TransportResult>;
+    fetchJson<T>(request: TransportRequest): Promise<JsonResult<T>>;
+    head(request: Omit<TransportRequest, 'method'>): Promise<TransportResult>;
+}
+
+export interface CredentialProvider {
+    /** Resolve an `Authorization` header value for a source URL (nuget.config, credential provider, env). */
+    getAuthHeader(sourceUrl: string): Promise<string | undefined>;
+    /** Warm caches for the given sources without blocking. */
+    prewarm(sourceUrls: string[]): void;
+    clear(): void;
+}
+
+export interface SourceMutationResult {
+    ok: boolean;
+    error?: string;
+}
+
+export interface SourceProvider {
+    /** Enabled + disabled sources effective for `projectDir` (uses `dotnet nuget list source` with that cwd). Cached per directory. */
+    listSources(projectDir: string): Promise<import('../protocol/domain').NuGetSource[]>;
+    /** Candidate `nuget.config` paths for adding a source (user-level + workspace-level). */
+    configFiles(workspaceDir?: string): Array<{ path: string; label: string }>;
+    add(options: { url: string; name?: string; username?: string; password?: string; configFile?: string; allowInsecure?: boolean; storeEncrypted?: boolean }, cwd: string): Promise<SourceMutationResult>;
+    remove(name: string, cwd: string, configFile?: string): Promise<SourceMutationResult>;
+    enable(name: string, cwd: string): Promise<SourceMutationResult>;
+    disable(name: string, cwd: string): Promise<SourceMutationResult>;
+    invalidate(): void;
+}
+
+/** Decides which feeds may be asked about which package ids (ADR-005). */
+export interface OutboundPolicy {
+    /** Sources (from `candidates`) that may receive a query for `packageId`. */
+    allowedSourcesFor(packageId: string, candidates: import('../protocol/domain').NuGetSource[]): import('../protocol/domain').NuGetSource[];
+}
+
+// ─── Project model (ADR-004) ────────────────────────────────────────────────
+
+export interface ProjectExecutionContext {
+    projectPath: string;
+    projectDir: string;
+    workspaceFolder?: string;
+    sdk?: SdkInfo;
+    /** Effective `nuget.config` chain (nearest first) as reported by the SDK for `projectDir`. */
+    configFiles: string[];
+    /** Enabled source URLs in effect for this project (after `<clear/>`/mappings). */
+    sourceUrls: string[];
+    /** Changes whenever any input file (project, imported props/targets, global.json, nuget.config) changes. */
+    revision: string;
+}
+
+export interface ProjectInspector {
+    /** Fast static inspection (fast-xml-parser). Always `fidelity: 'provisional'`. */
+    inspect(projectPath: string): Promise<InstalledResult>;
+}
+
+export interface ProjectEvaluator {
+    /** Cached MSBuild evaluation (`dotnet msbuild -getItem/-getProperty`). `fidelity: 'authoritative'`. */
+    evaluate(context: ProjectExecutionContext, signal?: AbortSignal): Promise<InstalledResult>;
+    /** Report which fidelity is available right now without triggering evaluation. */
+    cachedFidelity(projectPath: string): Fidelity | undefined;
+}
+
+export interface CpmImpactPreview {
+    centralPropsPath: string;
+    packageId: string;
+    fromVersion?: string;
+    toVersion: string;
+    /** Every project importing that props file that references the package without an override. */
+    affectedProjects: string[];
+}

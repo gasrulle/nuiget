@@ -22,7 +22,7 @@ the next item and updates the row when the item closes. Status values: `open`, `
 | P0.12 | P0 | ARCHITECTURE.md coexistence | done | 7c75217 | 2026-10-12 | 2.0 section with ADR links, module map placeholder, coexistence table and a shared-tooling subsection that is now the truth for CI and packaging; 20 legacy H2s marked (the agent-resources H2 is not 1.x and is unmarked). All eleven ARCHITECTURE.md rows of the audit plan's Appendix A were re-verified against the code and corrected. Not corrected, not this item's file: the watcher timing in `.github/copilot-instructions.md` (1.x gotcha rows say about 5 s; the code uses 2 s and a 1 s re-arm). |
 | P0.13 | P0 | Tracker docs/plans/STATUS.md (row per item) and docs/plans/findings-ledger.md (original le | done | 2dcd3c6 | 2026-10-12 | Tracker has all 81 plan items. Ledger: 66 original findings (unchanged), 29 corrections, N1 to N24 from the plan, N25 to N36 found during P0 (the candidate findings that earlier rows mention), and 44 numbered `C-<group>-n` defects. The original findings are not mapped to work items in the plan; an item that closes one records itself in the ledger. CI run 38233521574 failed once in `E2E (1.85.0)` on a VS Code download abort (N37) and passed when the failed job was re-run; the follow-up commit records that. |
 | P0.14 | P0 | Optional (owner elects) | skipped |  | 2026-10-12 | Owner decision: skipped. P0.0 shows SDK 10 noun-first add is CPM-safe; the 1.x hazard (N1) affects only SDK 8/9 users (verb-first), both EOL 10 Nov 2026. |
-| P1.1a | P1 | Protocol salvage (sentinel required) | open |  |  |  |
+| P1.1a | P1 | Protocol salvage (sentinel required) | done |  | 2026-10-12 | Nine files copied from the quarry working tree, byte-identical; the two named edits only (`REQUEST_TYPES`/`EVENT_TYPES` from records checked with `satisfies`, `PromiseLike` in `contracts.ts`). 7 protocol tests; `docs/protocol.md` lists 42 requests and 11 events and regenerates unchanged. The drift check runs in the Lint job of CI. Sentinel approval is in the P0 phase review. Closes C-protocol-host-2 and -6; adds N38 to N42 to the ledger and widens N26. From this item on `npm run check-types` runs wherever the ritual says `npx tsc --noEmit` (N39). `SdkInfo` still has `nounFirstSyntax`: P1.1b removes it. Handoff note: `src/protocol/STATUS.md`. |
 | P1.1b | P1 | The contract-change item (sentinel required; advisor checkpoint before starting) | open |  |  |  |
 | P1.2 | P1 | src/core/util/ (events, concurrency, fs, paths, topo); fix concurrency.ts:79; port diamond | open |  |  |  |
 | P1.3 | P1 | src/core/versioning/ + isUpdateCandidate returns false for exact (test exact pin is not an | open |  |  |  |
@@ -122,6 +122,9 @@ vitest backend include → 'src/core/**/*.test.ts', 'src/protocol/**/*.test.ts',
                          the backend project of vitest.config.mts; no test file exists under src/core yet
                          (the file listing is P1.2's check)
 ```
+
+Landed as commit `7d407df`; CI run 38239107642 green on all eight jobs; tag `labs/2.0-P0-done` pushed. Both
+pushes printed the "Bypassed rule violations" notice of the repository rulesets (N41).
 
 Phase review (`architecture-advisor`, brief `PHASE REVIEW P0`, 2026-10-12), verbatim:
 

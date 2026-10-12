@@ -7,7 +7,7 @@ cite the ids. Created by plan item P0.13 on 2026-10-12 from three sources:
    that plan is not in this repository, its ledger is reproduced unchanged in section 2 below);
 2. Appendix A and B of `2026-10-11-nuiget-2.0-execution-plan.md` (corrections, new findings N1 to N24, defects
    of the paused 2.0 code);
-3. findings made while executing phase P0 (N25 onwards).
+3. findings made while executing the plan (N25 onwards).
 
 ## How to read and maintain it
 
@@ -125,7 +125,7 @@ one records itself here.
 | N23 | Low | Plan counts drift from reproducible greps. | — | Ledger states greps | open |
 | N24 | Low | Vitest backend `include` omits `src/core`; gates would pass vacuously. | — | P0.11 | closed (P0.11) |
 | N25 | Medium | SDK 10.0.401 rewrites `Directory.Packages.props` on every `dotnet package add --version`, even without a version change | — | P6.3 (dirty-file refusal, consumer invalidation) | open |
-| N26 | Low | The guard hook sees Edit, Write and simple shell forms only. | — | accepted limit; the L1 consultation and phase reviews are the backstop | accepted |
+| N26 | Low | The guard hook sees Edit, Write and simple shell forms only; other writing tools of a session are not matched. | — | accepted limit; the L1 consultation and phase reviews are the backstop | accepted |
 | N27 | Low | Builds do not clean `dist/`. | — | P7.2 or P8.1 | open |
 | N28 | Low | `npm audit` reports four findings (1 high, 1 moderate, 2 low) through the Mocha 11 that `@vscode/test-cli` needs insid… | — | Dependabot pull requests for the owner | accepted |
 | N29 | Medium | Four legacy tests call production code with a signature it does not have, so they assert less than their titles say | — | P5.12 (the 2.0 tests must cover sentinel guards for real) | open |
@@ -137,6 +137,11 @@ one records itself here.
 | N35 | Low | The id letter D is used twice: | — | convention in this ledger: write "finding D3" for the smells | accepted |
 | N36 | Low | The core import fence pattern `**/extension*` (literal from the plan) also matches a core module whose name starts wit… | — | rename such a module, or narrow the pattern in the item that needs it | accepted |
 | N37 | Low | The `E2E (1.85.0)` CI job can fail before any test runs when the VS Code download is aborted | — | P7.2 (cache or pre-download VS Code); until then re-run the failed job | open |
+| N38 | Low | The list of contract items in plan decision D6 is incomplete: P0.0 and P1.1a are missing. | — | the clause "the items that name them" governs; approval for P1.1a is in the P0 phase review | accepted |
+| N39 | Low | The ritual's `npx tsc --noEmit` does not type-check the tests of 2.0 code. | — | run `npm run check-types` in its place (from P1.1a on); P7.5 corrects the wording | open |
+| N40 | Low | Benchmarks are discovered only under `src/test/benchmarks/`; a bench file under `src/core/**` is silently not run. | — | P1.3, P1.4 (bench files in `src/test/benchmarks/`); P2.12 (move to core, D8) | open |
+| N41 | Low | Repository rulesets make every push to `labs/2.0` and every tag push print "Bypassed rule violations"; the plan does not mention it. | — | owner (document it as expected or adjust the rulesets); sessions do not change repository settings | open |
+| N42 | Low | The handoff note `src/protocol/STATUS.md` lies in a frozen path, so the guard denies its edit without the sentinel. | — | P1.1b (record the approval in `docs/plans/STATUS.md` first); P7.5 (exempt `STATUS.md` in the guard, or move the note) | open |
 
 Corrections in Appendix A that do not belong to one finding id:
 
@@ -329,7 +334,7 @@ Three-lens verification of the original findings against `main` produced these c
 | ID | Sev | Finding | Found in | Addressed by |
 |---|---|---|---|---|
 | N25 | Medium | SDK 10.0.401 rewrites `Directory.Packages.props` on every `dotnet package add --version`: blank lines and the final newline are stripped, even when the version is unchanged and under `--no-restore`. Evidence: `src/core/cli/__fixtures__/sdk-probes/10.0.401.json`, `docs/adr/004-sdk-probes.md`. | P0.0 | P6.3 (dirty-file refusal, consumer invalidation) |
-| N26 | Low | The guard hook sees Edit, Write and simple shell forms only. Shell rewrites of frozen paths (`python3 - <<EOF`, `sed -i`, redirection), directory removals such as `git rm -r src/protocol`, and `*.test.mjs` deletions pass. Evidence: `scripts/hooks/guard.mjs`. | P0.5 | accepted limit; the L1 consultation and phase reviews are the backstop |
+| N26 | Low | The guard hook sees Edit, Write and simple shell forms only. Shell rewrites of frozen paths (`python3 - <<EOF`, `sed -i`, redirection), directory removals such as `git rm -r src/protocol`, and `*.test.mjs` deletions pass. Widened in P1.1a: the hook matcher is `Edit\|Write\|Bash` and the guard returns no decision for any other tool, so a session's other writing tools are not covered. The P1.1a session also had `NotebookEdit` and a tool that runs commands in the user's terminal (`mcp__terminal__run_in_terminal`); neither was used. Evidence: `scripts/hooks/guard.mjs`, `.claude/settings.json`. | P0.5 | accepted limit; the L1 consultation and phase reviews are the backstop |
 | N27 | Low | Builds do not clean `dist/`. After switching entry sets, files of the other set (for example the 1.x CSS after `--v2`) remain, `check:vsix` passes and they would be packaged. | P0.10 | P7.2 or P8.1 |
 | N28 | Low | `npm audit` reports four findings (1 high, 1 moderate, 2 low) through the Mocha 11 that `@vscode/test-cli` needs inside a Node 18 extension host. Development-only, never in the VSIX. The override that hid them made the e2e suite unable to start on VS Code 1.85. | P0.8 | Dependabot pull requests for the owner |
 | N29 | Medium | Four legacy tests call production code with a signature it does not have, so they assert less than their titles say: `src/webview/NuGetSidebarPanel.test.ts:2000-2032` (`sentinel guards`: constructor gets 3 of 4 arguments, `resolveView` an ignored second one; the `not.toHaveBeenCalled` assertions are vacuous); `src/test/benchmarks/project-parsing.bench.ts:33-36` (private method, ignored second argument); `src/webview/app/components/InstalledTab.test.tsx:246-249` (`projects` is not a prop); `src/test/integration/NuGetPanel.integration.test.ts:43-49` (`dependencyGroups` is not on `PackageMetadata`). | P0.11 | P5.12 (the 2.0 tests must cover sentinel guards for real) |
@@ -341,6 +346,11 @@ Three-lens verification of the original findings against `main` produced these c
 | N35 | Low | The id letter D is used twice: decisions D1 to D13 in the execution plan and architecture-smell findings D1 to D9 in the original ledger. | P0.13 | convention in this ledger: write "finding D3" for the smells |
 | N36 | Low | The core import fence pattern `**/extension*` (literal from the plan) also matches a core module whose name starts with "extension". | P0.7 | rename such a module, or narrow the pattern in the item that needs it |
 | N37 | Low | The `E2E (1.85.0)` CI job can fail before any test runs: `@vscode/test-cli` aborted the download of VS Code 1.85.0 three times within one second ("Error downloading, retrying … aborted", "Failed to download and unzip VS Code 1.85.0"). Seen once, on run 38233521574 for a documentation-only commit; `gh run rerun 38233521574 --failed` passed. | P0.13 | P7.2 (cache `.vscode-test` or pre-download with back-off); until then re-run the failed job |
+| N38 | Low | Plan decision D6 lists the items that may change the frozen contracts as P0.9, P1.1b, P2.8, P4.1 and P6.2. The list is incomplete: the row of P0.0 names `docs/adr/004-sdk-probes.md`, and the row of P1.1a names `src/protocol/**` and `src/core/contracts.ts` and says "sentinel required". P0.0 also added an index entry to `docs/adr/README.md`. | P0 phase review | the clause "change only in the items that name them" governs; the phase review in `docs/plans/STATUS.md` records the approval for the P1.1a sentinel. The plan text is the owner's to correct |
+| N39 | Low | Plan §2.2 steps 3 and 5 run `npx tsc --noEmit`, which checks `tsconfig.json` only, and that program excludes `src/**/*.test.ts`. The tests of 2.0 code are checked by `tsc -p tsconfig.vitest.json`, which runs only inside `npm run check-types`. An item outside host, services and esbuild never runs that locally, so a type error in its tests shows up in CI (job Build & Package) after the push. | P0 phase review | from P1.1a on the session runs `npm run check-types` wherever the ritual says `npx tsc --noEmit`; P7.5 corrects the wording of the plan and `RUN.md` |
+| N40 | Low | `vitest.config.mts` sets `benchmark.include` to `src/test/benchmarks/**/*.bench.ts`, and `src/test/benchmarks/run.mjs` selects the derived `backend (bench)` project. A bench file under `src/core/**` is not run and nothing reports that. The gates of P1.3 and P1.4 ("`npm run bench` runs the file") need the file under `src/test/benchmarks/`. | P0 phase review | P1.3 and P1.4 place their bench files in `src/test/benchmarks/`; P2.12 moves the benches into core (D8) and names the configuration change |
+| N41 | Low | Two repository rulesets restrict the refs the plan pushes: `labs` (id 14504177, `refs/heads/labs/**/*`, rules `update`, `creation`, `required_status_checks`, `required_linear_history` and others) and `tags` (id 12525027, all tags, rules `creation`, `update`, `required_linear_history`). The repository admin role is a bypass actor with mode `always`, and sessions push with the owner's credentials. Every push therefore succeeds and prints `remote: Bypassed rule violations`: "Cannot update this protected ref" for the branch; "Cannot create ref due to creations being restricted" and "This branch must not contain merge commits" (`89f4426`, a merge on `main`) for a tag. No force or admin flag is involved. Neither the plan nor `RUN.md` mentions the rulesets, so the message reads like a violation. Evidence: `gh api repos/gasrulle/nuiget/rulesets/14504177`, the push of `7d407df` and of the tag `labs/2.0-P0-done`. | P0 phase boundary | owner: note in `RUN.md` that the message is expected, or change the rulesets. A session never changes repository settings |
+| N42 | Low | The guard treats every path under `src/protocol/**` as frozen, including the directory's handoff note `src/protocol/STATUS.md`. Without `.claude/.contract-change` an Edit of the note is denied, and the denial message asks to record the advisor's answer "in the directory's STATUS.md", the file it has just refused. Decision D6 creates the sentinel only after the recorded approval, so the approval of a contract item cannot be recorded in that note first. Evidence: `scripts/hooks/guard.mjs` (frozen paths), the denied Edit in P1.1a. | P1.1a | P1.1b records the approval in `docs/plans/STATUS.md`, creates the sentinel, then copies the answer into the note. P7.5 decides between exempting `STATUS.md` in the guard and moving the note out of the frozen path |
 
 ## 5. Defects in the paused 2.0 code (execution plan, Appendix B)
 
@@ -383,11 +393,11 @@ headline defects in the order the plan lists them, so that salvage commits can c
 | C-ops-5 | OpId literal | P1.10, P2.1 | open |
 | C-ops-6 | Unredacted stdout | P1.10, P2.1 | open |
 | C-protocol-host-1 | Composition root against imagined APIs | P1.1a, P1.1b, P2.9, P2.10 | open |
-| C-protocol-host-2 | Guards not exhaustive | P1.1a, P1.1b, P2.9, P2.10 | open |
+| C-protocol-host-2 | Guards not exhaustive | P1.1a, P1.1b, P2.9, P2.10 | closed (P1.1a) |
 | C-protocol-host-3 | `runOperation` hack | P1.1a, P1.1b, P2.9, P2.10 | open |
 | C-protocol-host-4 | `forceRestore` bypasses ticket | P1.1a, P1.1b, P2.9, P2.10 | open |
 | C-protocol-host-5 | No handler tests | P1.1a, P1.1b, P2.9, P2.10 | open |
-| C-protocol-host-6 | CI lacks drift check | P1.1a, P1.1b, P2.9, P2.10 | open |
+| C-protocol-host-6 | CI lacks drift check | P1.1a, P1.1b, P2.9, P2.10 | closed (P1.1a) |
 | C-tooling-1 | Sidebar exempt from boundary | P0.7, P0.8, P0.10 | closed (P0.7, P0.8, P0.10) |
 | C-tooling-2 | Core may import host | P0.7, P0.8, P0.10 | closed (P0.7, P0.8, P0.10) |
 | C-tooling-3 | `.vscodeignore` regression | P0.7, P0.8, P0.10 | closed (P0.7, P0.8, P0.10) |
@@ -404,7 +414,7 @@ Counts quoted in findings drift. These commands reproduce the ones that matter; 
 | `as any` in unit tests (T3; the plan counted 955) | `grep -rEo "as any" src --include='*.test.ts' --include='*.test.tsx' \| wc -l` | 959 |
 | Unit test files that call `setTimeout(` (T3; a proxy for "files with sleeps", the plan counted 19) | `grep -rlE "setTimeout\(" src --include='*.test.ts' --include='*.test.tsx' \| wc -l` | 22 |
 | Fixed `px` font sizes (U5) | `grep -cE "font-size:\s*[0-9.]+px" src/webview/app/App.css src/webview/sidebar/SidebarApp.css` | 125 and 13 |
-| Unit tests | `npx vitest run` | 44 files, 1591 tests |
+| Unit tests | `npx vitest run` | 45 files, 1598 tests |
 | End-to-end tests | `npm run test:e2e` | 30 |
 | UI tests | `npm run test:ui -- --storage /tmp/nuiget-ui` | 31 |
 | Type errors in 1.x tests, benchmarks and helpers (N30) | strict `tsc` over `src` with `types: [node, vitest/globals]`, without `src/test/e2e` and `src/test/ui` | 55 |
