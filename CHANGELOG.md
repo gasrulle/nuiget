@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **2.0 build switch** — `node esbuild.mjs --v2` and `npm run watch:v2` build the 2.0 entry points into the same three bundles, and `--production --analyze` checks them against size ceilings
 - **2.0 protocol and core contracts** — `src/protocol` and `src/core/contracts.ts` define the typed messages and interfaces of the 2.0 host and webviews; `npm run docs:protocol` generates `docs/protocol.md` from them and CI fails when that file is out of date
+- **2.0 dotnet runner** — `src/core/cli` runs `dotnet` without a shell and with a fixed English environment, builds the noun-first `dotnet package` commands of .NET SDK 10, validates every argument, and reports an older SDK as unsupported
 - **2.0 log redaction** — `src/core/logging` removes credentials from text and command lines before they are logged, including tokens in URLs, `Proxy-Authorization` and `Cookie` headers and quoted passwords
 - **2.0 core cache** — `src/core/cache` provides the two-tier cache of the 2.0 core with one table of lifetimes and key shapes; the persistent tier is limited to 8 MiB, and an invalidation that names packages drops only their version lists and metadata
 - **Core versioning module** — NuGet version parsing, comparison and version-spec classification for 2.0; exact pins are never reported as updatable.

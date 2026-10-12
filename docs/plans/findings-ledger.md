@@ -146,6 +146,7 @@ one records itself here.
 | N44 | Low | The first e2e test of the run waits a fixed 10 s for the suite's first `dotnet` command and can fail without product code running. | — | P5.12 (v2 e2e tests poll; legacy file retired); until then re-run the failed job | open |
 | N45 | Low | `TieredCache` logs an unredacted store key, which can carry a source URL with userinfo, when a store write fails. | — | P2.10 (redacting `Logger` for the core) or P4.4 | open |
 | N46 | Low | `redact` drops harmless text after a secret query parameter and rewrites some redacted headers with `=`. | — | accepted (the module prefers redacting too much) | accepted |
+| N47 | Low | The CLI validators accept a leading `-` for positional arguments (package id, source name, local feed path). | — | P1.10, P2.6 (reject a leading `-`) | open |
 
 Corrections in Appendix A that do not belong to one finding id:
 
@@ -359,6 +360,7 @@ Three-lens verification of the original findings against `main` produced these c
 | N44 | Low | The `E2E (1.85.0)` CI job can fail in `Update Flow › install old version then update to latest` (`src/test/e2e/update-flow.e2e.test.ts:36-75`) without any product code path running: 1.3 s after the extension host starts, the test sends the suite's first `dotnet` command (`dotnet add … --no-restore`) through an integrated terminal, sleeps a fixed 10 s (`:45`) and asserts the `.csproj` content (`:48-51`); the `e2e` job has no `dotnet` warm-up step (the `test` job runs `dotnet --version`, `ci.yml:102`). Seen once, run 38247897134 on b8bfb9c: failure 10.07 s after the suite started, 29 of 30 tests passing, `E2E (stable)` of the same run green (same test, 30009 ms), the five earlier 1.85.0 runs of the day green; `gh run rerun 38247897134 --failed` → green (`E2E (1.85.0)` and `Build & Package` success). On a failed first assertion the test also skips `installTerminal.dispose()` (`:52`). 28 fixed `setTimeout` sleeps exist in 8 of the 9 legacy e2e files; those 8 files are among the 22 of this ledger's count of test files that call `setTimeout(`, whose label says unit tests. | P1.3 | until the legacy e2e files are retired, re-run the failed job; a second identical failure on the same SHA is a stop-and-ask (warm-up step in the `e2e` job, or polling in the test); P3.5 and P5.12 write the v2 e2e tests with bounded polling of the project file instead of fixed sleeps; P5.12 retires the legacy file |
 | N45 | Low | `TieredCache` logs the whole store key when a write to the persistent store fails (`src/core/cache/TieredCache.ts:369-372`, quarry code). A key carries the source URL (`cacheKeys` in `CachePolicy.ts`), and a source URL can carry userinfo. `src/core/logging` offers the functions `redact` and `redactArgv`, not a logger: a 2.0 module that logs must call them itself, and this one does not. | P1.5 | P2.10 (the `Logger` the composition root hands to the core applies `redact` to every message), or P4.4 when the cache gets its first consumer; until then nothing constructs a `TieredCache` |
 | N46 | Low | `redact` redacts more than the secret in two cases, by its design ("err on the side of redacting too much"). After a secret `key=value` in a query string, the rest of the text up to the next whitespace is redacted with it, so harmless parameters such as `&take=20` are lost from the log line. A redacted header whose name contains `Api-Key` is written as `X-Api-Key=[REDACTED]` instead of `X-Api-Key: [REDACTED]`. No secret leaks. Evidence: `src/core/logging/redact.test.ts`, tests `redacts secret query-string parameters` and `redacts a header value up to the end of its line and leaves the next line alone`. | P1.5 | accepted; a later item that needs the lost context narrows the free-text pattern and extends the tests |
+| N47 | Low | The validators of `src/core/cli/validate.ts` accept a value that starts with `-` for arguments that the builders of `commands.ts` place positionally: a package id (`dotnet package add <id>`), a source name, and a local feed path for a source URL (`dotnet nuget add source <url>`). Arguments are argv entries, so nothing is executed, but the CLI would read such a value as an option. `packageSearchArgs` already rejects a query that starts with `-`. The quarry code has the gap and the item P1.6 does not name it; NuGet ids cannot start with `-`. | P1.6 | P1.10 (first caller of `addPackageArgs`) and P2.6 (source commands): reject a leading `-` in `isValidPackageId`, `isValidSourceName` and the local-path branch of `isValidSourceUrl`, with tests |
 
 ## 5. Defects in the paused 2.0 code (execution plan, Appendix B)
 
@@ -367,13 +369,13 @@ headline defects in the order the plan lists them, so that salvage commits can c
 
 | ID | Defect | Items | Status |
 |---|---|---|---|
-| C-cli-logging-1 | 2 test bugs | P1.5, P1.6 | open |
-| C-cli-logging-2 | Negative-caching of transient probes | P1.5, P1.6 | open |
-| C-cli-logging-3 | CPM `--no-restore` only documented | P1.5, P1.6 | open |
-| C-cli-logging-4 | Backslash blacklist | P1.5, P1.6 | open |
-| C-cli-logging-5 | Provenance dropped | P1.5, P1.6 | open; contract side done in P1.1b (`SdkInfo.cpmAwareAddProvenance`), closes at P1.6 |
-| C-cli-logging-6 | Caller env overrides fixed env | P1.5, P1.6 | open; contract side done in P1.1b (`DotnetRunOptions.env`, ADR-003), closes at P1.6 |
-| C-cli-logging-7 | 5 test files missing | P1.5, P1.6 | open; `redact.test.ts` written in P1.5, the four test files of `src/core/cli` follow in P1.6 |
+| C-cli-logging-1 | 2 test bugs | P1.5, P1.6 | closed (P1.6) |
+| C-cli-logging-2 | Negative-caching of transient probes | P1.5, P1.6 | closed (P1.6) |
+| C-cli-logging-3 | CPM `--no-restore` only documented | P1.5, P1.6 | partly closed (P1.6: `addPackageArgs` throws for `noRestore` with `isCpm`); P1.10 closes it with the workflow test `cpm: never emits --no-restore` |
+| C-cli-logging-4 | Backslash blacklist | P1.5, P1.6 | closed (P1.6) |
+| C-cli-logging-5 | Provenance dropped | P1.5, P1.6 | closed (P1.6; contract side in P1.1b) |
+| C-cli-logging-6 | Caller env overrides fixed env | P1.5, P1.6 | closed (P1.6; contract side in P1.1b) |
+| C-cli-logging-7 | 5 test files missing | P1.5, P1.6 | closed (P1.5: `redact.test.ts`; P1.6: `commands`, `validate`, `sdk` and `powershell` tests) |
 | C-state-core-1 | QueryCoordinator 0 tests | P1.7, P1.8 | open |
 | C-state-core-2 | `carryOver` leak | P1.7, P1.8 | open |
 | C-state-core-3 | Scope table vs ADR | P1.7, P1.8 | open; ADR side done in P1.1b (ADR-002 tables), closes at P1.7 |
@@ -422,7 +424,7 @@ Counts quoted in findings drift. These commands reproduce the ones that matter; 
 | `as any` in unit tests (T3; the plan counted 955) | `grep -rEo "as any" src --include='*.test.ts' --include='*.test.tsx' \| wc -l` | 959 |
 | Unit test files that call `setTimeout(` (T3; a proxy for "files with sleeps", the plan counted 19) | `grep -rlE "setTimeout\(" src --include='*.test.ts' --include='*.test.tsx' \| wc -l` | 22 |
 | Fixed `px` font sizes (U5) | `grep -cE "font-size:\s*[0-9.]+px" src/webview/app/App.css src/webview/sidebar/SidebarApp.css` | 125 and 13 |
-| Unit tests | `npx vitest run` | 53 files, 1785 tests |
+| Unit tests | `npx vitest run` | 58 files, 1923 tests and 1 skipped without `NUIGET_SDK_TESTS=1` |
 | End-to-end tests | `npm run test:e2e` | 30 |
 | UI tests | `npm run test:ui -- --storage /tmp/nuiget-ui` | 31 |
 | Type errors in 1.x tests, benchmarks and helpers (N30) | strict `tsc` over `src` with `types: [node, vitest/globals]`, without `src/test/e2e` and `src/test/ui` | 55 |

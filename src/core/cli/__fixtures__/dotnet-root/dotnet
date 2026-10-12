@@ -1,0 +1,3 @@
+#!/bin/sh
+# Placeholder so resolveDotnetExecutable() tests can point DOTNET_ROOT at a directory that contains a dotnet host.
+exit 0

@@ -1,90 +1,167 @@
-# STATUS — src/core/cli   commit 16831f4 (parent of the P0.0 commit)   2026-10-12T06:50:00Z
+# STATUS — src/core/cli   commit effc1e4 (parent of the P1.6 commit)   2026-10-12T13:31:53Z
 
-git status --short src/core/cli: `?? src/core/cli/` (this note and `__fixtures__/sdk-probes/10.0.401.json`, both added by the P0.0 commit)
+git status --short src/core/cli: `?? ` for `DotnetRunner.ts`, `DotnetRunner.test.ts`, `commands.ts`,
+`commands.test.ts`, `sdk.ts`, `sdk.test.ts`, `validate.ts`, `validate.test.ts`, `powershell.ts`,
+`powershell.test.ts`, `index.ts`, `__fixtures__/fake-dotnet.cjs` and `__fixtures__/dotnet-root/`; ` M` for this
+note (all belong to the P1.6 commit, together with ` M CHANGELOG.md`, ` M ARCHITECTURE.md`,
+` M .github/copilot-instructions.md`, ` M docs/plans/STATUS.md` and ` M docs/plans/findings-ledger.md`)
 
-Item: **P0.0 SDK 10 CPM probe**. Nothing else exists in this directory yet; P1.6 salvages the CLI module
-from the quarry and rewrites this note.
+Item: **P1.6 `src/core/cli/**`**. This note replaces the note of P0.0 (the SDK 10 CPM probe), which is in
+commit `1d26aeb`; the fixture of P0.0, `__fixtures__/sdk-probes/10.0.401.json`, is unchanged.
+
+The quarry's `src/core/cli/STATUS.md` was read and checked against its working tree. It is stale: it lists
+`powershell.ts`, `index.ts`, the fixture `fake-dotnet.cjs` and all tests as missing, and all of them exist
+(untracked, from the second session; `DotnetRunner.test.ts` has 44 test declarations). Its other claims about
+`validate.ts`, `sdk.ts`, `commands.ts` and `DotnetRunner.ts` hold. The quarry has no `sdk-probes` directory
+and nothing ignored by git under `src/core/cli`.
 
 ## Verified by running
 
 ```text
-baseline npx tsc --noEmit        → exit 0, no output
-baseline npx eslint src          → exit 0, no output
-baseline npx vitest run          → Test Files 40 passed (40) · Tests 1491 passed (1491)
-probe driver (scratchpad, 10 commands on SDK 10.0.401) → every command exit 0
-schema validator (node -e, keys and types of the P0.0 schema)
-                                 → VALID: sdk=10.0.401 probedOn=2026-10-12 platform=darwin-arm64 commands=10
-                                   verdict={"addUpdatesCentralVersion":true,"noRestoreWritesProjectVersion":false,
-                                   "addWithoutCentralEntryCreatesIt":true,"removeKeepsCentralEntry":true}
-                                   optionalCommandKeys=[id,continueFrom]
-redaction grep (/Users/, home, scratchpad, toolchain path) → 0 matches
-npx tsc --noEmit                 → exit 0, no output
-npx eslint src                   → exit 0, no output
-npm test                         → Test Files 40 passed (40) · Tests 1491 passed (1491)
-npm run bench                    → Test Files 14 passed (14) · Tests 80 passed | 1 skipped (81)
-npm run package:vsix             → SKIPPED: no host, service or esbuild change (plan §2.2 step 5)
-npm run test:ui                  → SKIPPED: no source change; not in the plan §2.2 gate list for this item
-targeted vitest for src/core/cli → SKIPPED: the item adds no test file; backend include gains src/core in P0.11
+baseline npm run check-types → exit 0
+baseline npx eslint src      → exit 0, no output
+baseline npx vitest run      → Test Files 53 passed (53) · Tests 1785 passed (1785)
+copy from the quarry tree    → cmp: ten files identical to the quarry working tree (seven sources and tests,
+                               three fixture files); sdk-probes/10.0.401.json not touched
+unmodified copy              → npm run check-types exit 2: commands.ts(70,23), commands.ts(89,17) and
+                               sdk.ts(96,9), all 'nounFirstSyntax' does not exist on type 'SdkInfo' ·
+                               npx eslint src/core/cli: 2 errors, DotnetRunner.test.ts 355:73
+                               no-throw-literal and commands.ts 155:13 no-control-regex ·
+                               tests: 2 failed | 51 passed | 1 skipped (54); failed:
+                               "returns undefined and warns when dotnet cannot be started" and
+                               "keeps the persisted snapshot and the in-memory cache at
+                               SDK_CACHE_MAX_ENTRIES"
+npm run check-types          → exit 0 (main, tsconfig.test.json, tsconfig.vitest.json; N39)
+npx eslint src               → exit 0, no output                                                   (item gate)
+npm run lint                 → exit 0
+npx vitest run --project backend src/core/cli → Test Files 5 passed (5) · Tests 138 passed | 1 skipped (139)
+                                                                                                  (item gate, ≥ 80)
+npx vitest run --project backend src/core/cli --coverage.enabled --coverage.include='src/core/cli/**'
+  --coverage.thresholds.lines=90 → exit 0 · All files 99.27 % statements, 94.75 % branches,
+                               100 % functions, 99.25 % lines · DotnetRunner.ts 98.78 % lines, the other
+                               five files 100 %                                                    (item gate)
+                               The command also prints a PARSE_ERROR of the coverage provider: its glob
+                               includes this Markdown note, which is not source. It does not change the exit code.
+NUIGET_SDK_TESTS=1 npx vitest run --project backend src/core/cli → Tests 139 passed (139): the test
+                               "runs dotnet --version and probes the matching SdkInfo" runs against the
+                               installed SDK (`dotnet --version` in src/core/cli prints 10.0.401; the
+                               repository has no global.json)
+npm test                     → Test Files 58 passed (58) · Tests 1923 passed | 1 skipped (1924)
+npx vitest run --coverage    → exit 0 · All files 74.68 % statements, 64.05 % branches, 69.55 % functions,
+                               76.24 % lines · src/core/** 987 of 1002 lines, 98.50 % (floor 85 %)
+npm run bench                → Test Files 16 passed (16) · Tests 101 passed | 1 skipped (102)
+npm run package:vsix         → exit 0 · DONE  Packaged: nuiget-v1.18.9.vsix (17 files, 528.49 KB)
+npm run check:vsix           → check:vsix: OK
+grep -rln child_process src/core --include='*.ts' → only files under src/core/cli (ADR-003)
+grep -rn "Thenable\|from 'vscode'\|nounFirstSyntax" src/core, code files → no match
+npm run test:ui              → SKIPPED: no UI change; the CI job UI runs it
+CI                           → see the tracker row of P1.6
 ```
 
 ## Done (tested)
 
-- `__fixtures__/sdk-probes/10.0.401.json`: tracked, redacted probe in the P0.0 schema. The four `verdict`
-  booleans are derived by the driver from the diffs, not typed by hand.
-- `docs/adr/004-sdk-probes.md`: prose, fixture XML, result table, SDK 8.0.425 control, findings, limits.
+- **SDK floor (D13).** `commands.ts`: `addPackageArgs(options)` and `removePackageArgs(options)` take no SDK and
+  always build `dotnet package add|remove <id> --project <path>`; the verb-first branches are gone. `sdk.ts`:
+  `MIN_SUPPORTED_SDK_MAJOR = 10`; `capabilitiesFor(major)` returns `supported = major >= 10` and the CPM
+  capability as `'verified'` for a major that has a probe fixture, else `cpmAwareAdd: false` and
+  `'unverified'`; `sdkInfoFromVersion` returns the new `SdkInfo`. `sdkVersion()` therefore returns an
+  `SdkInfo` with `supported: false` below 10, and `undefined` only when `dotnet` is missing or its output is
+  not a version. `nounFirstSyntax` and `NOUN_FIRST_MIN_MAJOR` no longer exist.
+- **Probe cache.** `DotnetRunner.ts:305` (`sdkVersion`) and `:422` (`probeSdk`): a version and a non-zero exit of
+  `dotnet --version` are cached; a spawn failure, a timeout, a cancellation and unreadable output are not.
+- **Fixed environment.** `DotnetRunner.ts:187-188`: `{ ...process.env, ...options.env, ...FIXED_ENV }`.
+- **CPM.** `AddPackageOptions.isCpm`; `addPackageArgs` throws `InvalidArgumentError` for `noRestore` with
+  `isCpm`.
+- **Validation.** `validate.ts:24-29` and `:54` (`isValidSourceUrl`): the forbidden characters of a source URL are quotes,
+  backtick, `|`, `<`, `>`, `;`, braces and control characters; backslash and URL punctuation are allowed; a
+  drive path or UNC path is recognised before `new URL`.
+- `DotnetRunner.ts:487`: `PromiseLike` instead of `Thenable`.
+- **Tests, 138 + 1 gated.** `DotnetRunner.test.ts` 47 declarations (54 cases), `commands.test.ts` 24,
+  `validate.test.ts` 29, `sdk.test.ts` 10 declarations (24 cases), `powershell.test.ts` 9.
+  - Named by the item and present by title: `cpm: addPackageArgs rejects --no-restore`,
+    `caches a non-zero probe`, `retries after a spawn failure or timeout`,
+    `forces the fixed CLI environment over caller variables` (asserts `TERM` is `dumb`).
+  - ADR-003 invariants: no shell (`passes every argument through as one argv entry without a shell`), fixed
+    environment (above), success is exit code 0 (`resolves with the exit code and stderr instead of rejecting on
+    failure`), cwd is the project directory (`listSourcesRaw …`, `restore runs dotnet restore from the project
+    directory and honours the signal`), only this directory names `child_process`
+    (`only src/core/cli names child_process`), PowerShell through `-EncodedCommand`
+    (`passes the script as -EncodedCommand, never as command text`).
 
 ## Done (untested)
 
-- Nothing.
+- `DotnetRunner.ts:221`, `:256` and `:465` are the three lines without a test (quarry code: two guards in the
+  kill and stdio paths, one in the cache trim).
+- The tests have run on macOS. `escalates to SIGKILL when the process ignores SIGTERM` is skipped on Windows
+  by the item's instruction; every other test runs there for the first time in CI.
+- Nothing imports the module yet. `PackageWorkflows` (P1.10) is its first user.
 
 ## Not started
 
-- Everything P1.6 owns: `DotnetRunner.ts`, `commands.ts`, `sdk.ts`, `validate.ts`, `powershell.ts`,
-  `index.ts` and their tests. `sdk.ts` is expected to read `verdict` from the fixture.
+- Leading `-` in positional arguments (N47): P1.10 and P2.6.
+- The probe fixtures for further SDK versions and a script that produces them: P6.1. `sdk.test.ts` fails when
+  a fixture is added whose major is missing from the table in `sdk.ts`, or disagrees with it.
 
 ## Deviations from contract/ADR (file:line each)
 
-- `docs/adr/README.md:19-22`: added a "Supplements" list linking `004-sdk-probes.md`. The file is under the
-  frozen `docs/adr/**` and P0.0 does not name it; it was touched so the new ADR file is indexed, which the
-  directory's own convention requires. No decision text changed.
-- `docs/adr/004-sdk-probes.md` is named by P0.0, but the name collides with the number of
-  `004-project-model.md`. It was written as an evidence supplement to ADR-004 (its tier 3 is the
-  `cpmAwareAdd` clause), not as a new ADR number; 009 stays free for P2.8.
-- D6 sentinel procedure: the guard hook arrives in P0.5 and `.claude/.contract-change` is not gitignored
-  until then, so no sentinel file was created. Authorization is P0.0 naming the ADR file.
-- Fixture JSON, `commands[]`: two keys beyond the schema, `id` (row name used by the ADR table) and
-  `continueFrom` (present only on the two `restore` rows, which run in the directory the named row left
-  behind). The five schema keys are present and typed on every row.
-- The quarry fixture `src/core/project/__fixtures__/cpm` cannot be restored (`Not.Central` has no central
-  version; `Lib.csproj` sets `Version` under CPM). The probe ran on its `Directory.Packages.props` and
-  `App/App.csproj` reduced to `Newtonsoft.Json` 13.0.3 and `Serilog` 4.0.0, with a local nuget.org-only
-  `nuget.config`. Exact XML is in the ADR supplement.
-- `stdoutTail` holds the last 10 non-empty stdout lines; stderr lines would be appended with a `[stderr] `
-  prefix (none occurred).
+Changes of quarry tests. The item names the first six; the rest follow from what it mandates. Every one is in
+`DotnetRunner.test.ts`.
+
+- Named, by line of the quarry file: `:186` renamed to `forces the fixed CLI environment over caller variables`
+  and `TERM` expected as `dumb`; `:228` `it.skipIf(process.platform === 'win32')`; `:355` ESLint directive;
+  `:444` probes in `CWD`, a directory that exists; `:474` replaced by `caches a non-zero probe` and
+  `retries after a spawn failure or timeout`; `:633-634` three spawns, and a fourth for `p2` ("the `p2`
+  assertion": the cache evicts first in, first out, so probing `p1` again evicts `p2`); `:755`
+  `it.skipIf(process.env.NUIGET_SDK_TESTS !== '1')`.
+- "delete the `SDK8` test constant" and "delete `it.each` SDK 6/7/8/9 rows": the constant is `SDK10` now
+  (`10.0.401`, the fixture's version), and the eleven uses of `SDK8` and sixteen of the text `8.0.425` in the
+  cache and persistence tests became `SDK10` and `10.0.401`. Those tests use the value as a sample, not as an
+  SDK 8 case. The `it.each` table keeps `10.0.401` and the CRLF row `10.0.100`; the banner row (SDK 7) went
+  with the others, and `sdk.test.ts` covers banner parsing.
+- `:509` of the quarry file asserted `nounFirstSyntax: true` for a persisted `10.0.100`; it asserts
+  `supported: true` now, because the field no longer exists.
+- `fakeLogger` (`DotnetRunner.test.ts:142-150`): the declared return type did not type-check in the 2.0 test
+  program (5 errors, hidden while the main program was red). The helper uses `vi.fn<Logger['warn']>()` and
+  `satisfies Logger`; no behaviour changed.
+- Three tests added to the same file beyond the two named replacements:
+  `probes again when the output was not a version`,
+  `reports an SDK below 10 as unsupported instead of undefined, and caches it`, and the CWD case inside
+  `retries after a spawn failure or timeout`.
+
+Choices the item leaves open:
+
+- "`cpmAwareAdd` + provenance from the P0.0 fixture": `sdk.ts:49-60` holds a table of probed majors (today
+  `10 → true`), and `sdk.test.ts` (`agrees with every tracked probe fixture`) reads every file in
+  `__fixtures__/sdk-probes/` and fails when the table and a fixture disagree. The module does not import the
+  JSON: that would bundle a fixture into `dist/extension.js`.
+- The probe table: the quarry had four rows (11 and newer `assumed`, 9 `documented`, 8 `verified`, below
+  `unverified`). The item says "from the P0.0 fixture (10) else `'unverified'`", so SDK 11 is `supported` with
+  `cpmAwareAdd: false` and `'unverified'` until a fixture exists for it. This is the collapse the item
+  mandates, not a further edit of the table, so its Ask trigger did not fire.
+- `CapabilityProvenance` is imported from `src/core/contracts.ts`; `sdk.ts` and `index.ts` no longer declare
+  or export a second one.
+
+Beyond the item, in its own files:
+
+- `validate.ts:111-120`: `assertCredentialValue` throws `InvalidArgumentError` with the value `[REDACTED]`.
+  The quarry put the rejected value, which can be a password, into the error message and its `value`
+  property. Test `never put a rejected credential into the error`.
+- `validate.test.ts`: the item names the 1.x lines to invert (`:190-196`, `:226`, `:246-266`). One more 1.x
+  case is inverted as a consequence of removing URL punctuation from the blacklist:
+  `https://evil.com$(cmd)` (`NuGetUtils.test.ts:202`) is accepted, as is a NuGet v2 URL with parentheses and
+  quotes. The 1.x test file is unchanged.
+- `.github/copilot-instructions.md`: the gotcha row on `child_process` gives the grep with
+  `--include='*.ts'`. Without it the literal command also lists four handoff notes that mention the word, one
+  of them inside an advisor answer that is kept verbatim.
+- Three comments in `commands.ts` that described SDK 8 behaviour were shortened.
 
 ## Advisor decisions (date, item, question, answer verbatim)
 
-The L1 `architecture-advisor` subagent does not exist until P0.3, so the two questions below went to the
-ambient session advisor (plan §2.3 L3). Its replies are not available as quotable text to this note, so they
-are recorded as the decisions taken, not verbatim.
-
-- 2026-10-12, P0.0, "The quarry CPM fixture does not restore, the ADR filename reuses number 004, and the
-  ledger file does not exist yet: how should the probe, the ADR file and the N1 update be shaped?" →
-  Reduce the fixture and isolate sources; fresh copy per command; add a differing-version add because the
-  literal `--version 4.0.0` is a no-op; write the ADR file at the literal path as an ADR-004 supplement and
-  index it in the README; update the N1 row in plan Appendix A and let P0.13 fold it into the ledger; keep
-  the driver out of `scripts/` (P6.1 owns `scripts/probe-sdk.mjs`); do not extend the schema's `verdict`.
-- 2026-10-12, P0.0, "SDK 10.0.401 does not write `<Version>` under `--no-restore`, unlike the SDK 8 prose:
-  is the verdict sound and does anything else change?" → Verdict confirmed against the four diffs; the
-  SDK 8.0.425 control goes in the ADR prose only; record the props reformatting as a finding without
-  assigning an N-id; D7, `sdk.ts` capabilities and the P0.14 rationale are not touched by this item.
-
-## Candidate findings for P0.13 (no ID assigned yet)
-
-- SDK 10 rewrites `Directory.Packages.props` (blank lines and final newline stripped) on every
-  `package add --version`, including a no-op and under `--no-restore`. Relevant to P6.3 and to the P0.2
-  `## 2.0 gotchas` seed.
+The item is not ⚑. Its Ask trigger ("any probe-table edit other than deleting SDK 8/9 rows and the verb-first
+branch") did not fire, see above, and no universal trigger fired: no frozen file changed, the changed quarry
+tests are the ones the item names or follow from the deletions it mandates, and every line reference of the
+item matched the quarry's working tree. No consultation of the `architecture-advisor` took place for it.
 
 ## Exact next step (one item ID)
 
-P0.2
+P1.7 (`src/core/session/**` and `src/core/queries/scopes.ts`).
