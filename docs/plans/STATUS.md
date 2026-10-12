@@ -88,3 +88,66 @@ the next item and updates the row when the item closes. Status values: `open`, `
 | P8.1 | P8 | Flip PR (entries only, no renames) | open |  |  |  |
 | P8.2 | P8 | Legacy deletion PR per the retirement map (src/services/ except what core re-exports, src/ | open |  |  | Widen the `tsconfig.vitest.json` include to all tests and delete its exclusion comment when the legacy tests go (P0.11). |
 | P8.3 | P8 | Release | open |  |  |  |
+
+## Phase gates
+
+One subsection per finished phase (`RUN.md` §6): the gate line of the plan with the results of running it, then
+the phase review of the `architecture-advisor` subagent, verbatim.
+
+### P0 — Trunk foundation (2026-10-12)
+
+Gate run on `labs/2.0` @ `3043428` (macOS, Node v24.21.0, npm 11.19.0, .NET SDK 10.0.401). The plan's gate line
+says "green on `main`"; decision D4 and `RUN.md` §0 put all work on `labs/2.0`, so the gate ran there.
+
+```text
+npm ci                 → exit 0 · added 647 packages, and audited 648 packages · 4 vulnerabilities (2 low,
+                         1 moderate, 1 high), development-only (N28)
+npm run check-types    → exit 0 (main, tsconfig.test.json, tsconfig.vitest.json)
+npm run lint           → exit 0
+npm test               → exit 0 · Test Files 44 passed (44) · Tests 1591 passed (1591)
+npm run bench          → exit 0 · Test Files 14 passed (14) · Tests 80 passed | 1 skipped (81)
+npm run package:vsix   → exit 0 · DONE  Packaged: nuiget-v1.18.9.vsix (17 files, 527.93 KB)
+                         (15 payload files, extension.vsixmanifest and [Content_Types].xml)
+npm run check:vsix     → exit 0 · check:vsix: OK
+npx vsce ls            → 15 files; none under src/, .claude/ or docs/
+CI green on both OSes  → run 38236993111 for 3043428: success
+node esbuild.mjs --v2  → exit 0 · [development] Build complete, three bundles (run after package:vsix;
+                         node esbuild.mjs --production afterwards puts the 1.x bundles back in dist/)
+node --test scripts/hooks → tests 26 · pass 26 · fail 0
+hook live probe        → Edit of docs/adr/README.md without .claude/.contract-change was denied:
+                         "nUIget guard: docs/adr/README.md is a frozen contract path (plan D6). …";
+                         git status --short stayed empty
+advisor answers a brief → the phase review below
+vitest backend include → 'src/core/**/*.test.ts', 'src/protocol/**/*.test.ts', 'src/host/**/*.test.ts' are in
+                         the backend project of vitest.config.mts; no test file exists under src/core yet
+                         (the file listing is P1.2's check)
+```
+
+Phase review (`architecture-advisor`, brief `PHASE REVIEW P0`, 2026-10-12), verbatim:
+
+```text
+VERDICT: PASS
+
+BLOCKING: none
+
+Correction to the brief first (agent rule: say when the brief is wrong about the tree). The frozen-path statement "changed only in P0.0 (004-sdk-probes.md), P0.1 and P0.9" is incomplete: commit 1d26aeb (P0.0) also edited `/Users/mattias/github/nuiget/docs/adr/README.md` (lines 19-22, a "Supplements" list linking `004-sdk-probes.md`). The P0.0 plan row (plan line 183) names `docs/adr/004-sdk-probes.md` only. The edit is index-only, changes no decision text, pre-dates the hook (P0.5), and is recorded as a deviation in `/Users/mattias/github/nuiget/src/core/cli/STATUS.md:47`. It is not a defect; it belongs in the record. `git log origin/main..HEAD -- docs/adr src/protocol src/core/contracts.ts` lists exactly 1d26aeb and 583ef41; `src/protocol/**` and `src/core/contracts.ts` do not exist on the branch.
+
+NON-BLOCKING:
+1. Local gate for 2.0 items does not type-check their tests. Plan §2.2 step 5 runs `npx tsc --noEmit` (main program, `tsconfig.json`, which excludes `src/**/*.test.ts`); `tsc -p tsconfig.vitest.json` runs only inside `npm run check-types`, which the step list reaches only through `npm run package:vsix` (host/service/esbuild items). CI's Build & Package job runs `npm run check-types` (`.github/workflows/ci.yml`, "Type check" step), so a core item with type errors in its tests is caught only after the push. Practice for P1.1a onward: run `npm run check-types` wherever the ritual says `npx tsc --noEmit`; P7.5 may fold that wording into RUN.md/plan §2.2 (owner's documents, not a phase-review edit).
+2. Benchmarks are discovered only under `src/test/benchmarks/`: `vitest.config.mts` `benchmark.include` is `['src/test/benchmarks/**/*.bench.ts', 'src/test/benchmarks/benchmark.test.ts']`, and `src/test/benchmarks/run.mjs` selects the derived `backend (bench)` project. P1.3's gate ("`npm run bench` runs the file" for `core-versioning.bench.ts`) therefore needs the bench at `src/test/benchmarks/core-versioning.bench.ts`; a bench under `src/core/**` is silently not run unless P1.3 names `vitest.config.mts` (a config change outside its row, so a stop-and-ask). D8's move of benches into core and their type-checking belong to P2.12, as `tsconfig.vitest.json` lines 30-33 already say.
+3. D6's parenthetical list of contract items (plan line 50: P0.9, P1.1b, P2.8, P4.1, P6.2) is not exhaustive: it omits P0.0 (row names `docs/adr/004-sdk-probes.md`) and P1.1a (row names `src/protocol/**`, `src/core/contracts.ts`, "sentinel required", plan line 207). Plan text drift; the operative clause is "the items that name them". Record as a ledger finding in P1.1a's commit; do not edit the plan in a phase review.
+4. Hook tool coverage: `scripts/hooks/guard.mjs:207-212` acts only when `tool_name` is exactly `Edit`, `Write` or `Bash` and returns `undefined` for every other tool. If the implementing session has another file-writing tool (a multi-edit or notebook-edit variant), a frozen-path write through it is not denied. N26 in `docs/plans/findings-ledger.md:128,332` covers shell forms, not this case. P1.1a confirms the session's tool inventory on first sentinel use and widens N26 if another writing tool exists.
+5. Known text drift, recorded: the P0 gate (plan line 201) says "green on `main`"; D4 and RUN.md §0 put all work on `labs/2.0`, where the gate was run. No action.
+6. `.github/STATUS.md` (handoff note for repo-level items) is headed `commit 7c75217` and its "Exact next step" still says P0.14 owner decides; the owner's 3043428 set P0.14 to `skipped` without rewriting the note. Harmless; the next repo-level item rewrites it. P1.1a's handoff note is `src/protocol/STATUS.md`.
+
+QUESTION 2 (P1.1a sentinel): your reading is right, on two independent grounds, and this review is the recorded advisor approval for the P1.1a sentinel under either reading.
+- Ground 1: D6's operative clause is "change only in the items that name them"; the P1.1a row (plan line 207) names `src/protocol/**` and `src/core/contracts.ts`, is titled "Protocol salvage (sentinel required)", and itself specifies two contract edits (`satisfies Record<…, true>` on `REQUEST_TYPES`/`EVENT_TYPES`; `PromiseLike` replaces `Thenable` in `contracts.ts`). P0.8's row defers the `docs:protocol:check` CI step to P1.1a and the P0.4 tracker row expects the `docs:protocol*` scripts from P1.1a, so the plan treats P1.1a as the item that creates the protocol. The parenthetical list in D6 is demonstrably incomplete (non-blocking 3), so its omission of P1.1a carries no weight.
+- Ground 2: D6's alternative clause "an advisor-approved contract-change item … creates the sentinel after the advisor's recorded approval" is satisfied once this answer is pasted into `docs/plans/STATUS.md`; copy the two paragraphs above into `src/protocol/STATUS.md` under "Advisor decisions" as well.
+Mechanics for P1.1a: set the tracker row `in-progress`; create `.claude/.contract-change` with content exactly `P1.1a` (the hook tests existence only, `guard.mjs:205`); it is gitignored (`.gitignore:55`), so `git status --short` stays clean. Scope is only what the row lists: the copy, the two named contract edits, `scripts/gen-protocol-docs.mjs`, `docs/protocol.md`, the two `package.json` scripts, the `ci.yml` step; "No other contract changes in this item" is literal. If the quarry's `contracts.ts` or `src/protocol/**` imports a core module that a later item creates (P1.2 util, P1.7 session, and so on), the item is blocked, never stubbed and never trimmed; paste the quarry's import lines into the brief if that happens. Delete the sentinel before committing: `guard.mjs:159-165` denies every `git commit` while it exists. Copying from the quarry with Bash `cp` is not intercepted by the guard (N26), so the copy succeeds even without the sentinel; the sentinel is still required by D6 and the commit denial enforces the end state. Expect `npm run lint` to cover the new script (`lint` script lints `scripts/`), `npx vitest run --project backend src/protocol` to pick up `src/protocol/**/*.test.ts` (`vitest.config.mts` backend include), `npm run check-types` to type-check those tests (`tsconfig.vitest.json` include) and the sources against Node 18 (`tsconfig.json` `typeRoots`/`@types-host/node`), and `npm run check:vsix` to pass (`scripts/**` and `docs/**` are in `.vscodeignore`).
+
+CHECKED:
+- Commits 1d26aeb, 7c16686, b377c1e, 583ef41, 24cf07b, a0282b2, 9ecac1f, dc6fb8a, 98bcdd1, 3a6f919, 7c75217, 2dcd3c6, 9e2ebbc, 3043428 via `git log --oneline origin/main..HEAD`, `git diff --stat origin/main..HEAD` (52 files, +3774/-368), `git diff origin/main..HEAD` for every file named below, `git show --stat 1d26aeb`, `git show 583ef41:.github/STATUS.md`, `git show 3a6f919:.github/STATUS.md`, `git show 24cf07b:.github/STATUS.md`.
+- Tests: `git diff --diff-filter=D` and `--diff-filter=R` on the range → none; grep of the range for added `.only(`/`.skip(`/`.todo(` → none; `src/test/helpers/frontend.tsx` change is type-only. Per-item: P0.0 fixture parsed with node (`sdk`, `probedOn`, `platform`, 10 `commands` each with the five schema keys plus `id`/`continueFrom`, four `verdict` booleans; redaction grep clean); P0.2 `grep -c '^## 1.x gotchas'` = 1, `^## 2.0 gotchas` = 1, `.claude/rules/core-boundaries.md` present; P0.3 `.claude/agents/architecture-advisor.md` frontmatter (`tools: Read, Grep, Glob, Bash`, `model: fable`), CLAUDE.md "2.0 execution protocol"; P0.5 `scripts/hooks/guard.mjs` (frozen paths, sentinel, focus/skip, `--no-verify`, force push, commit-while-sentinel, test rm/mv), `guard.test.mjs` titles incl. "allows the same edits while the sentinel exists" and "denies any commit while the sentinel exists", `.claude/settings.json` hooks (`onFailure: block`), `.gitignore:55`; P0.6 `esbuild.mjs` (`--v2` entries, `node18`/`chrome114`, ceilings 299921/600685/304097, metafiles to `out/esbuild`), three placeholders and their tests, `launch.json` "Run 2.0", `tasks.json` `watch:v2`, `package.json` `watch` explicit list; P0.7 `eslint.config.mjs` `LAYERS` (core denies react/react-dom/vscode values with `allowTypeImports`, `**/host/**`, `**/extension*`, `**/webview/**`, legacy; webview denies `**/core/**`, vscode, legacy + sibling patterns; host denies react, legacy), `LEGACY_IMPORT_ALLOWLIST = []`, `src/test/lint/allowlist.test.ts`, `.github/instructions/core-boundaries.instructions.md` matches the fences; P0.8 `ci.yml` (push on `labs/**`, SHA-pinned actions, `npm ci --no-audit --no-fund`, ubuntu+windows unit matrix, e2e 1.85.0+stable via `VSCODE_TEST_VERSION`, UI job with `--storage /tmp/nuiget-ui`, `check:vsix` step, VSIX/e2e/UI artifacts, bench `continue-on-error` per D8, dotnet 10.0.x only, `NUIGET_SDK_TESTS=1`), `dependabot.yml`, `.vscode-test.mjs` (`--enable-proposed-api` dropped), `overrides` removal recorded in the 1.x gotchas and N28; P0.9 ADR-000 diff (D2, D4, D9, D10, D11, D13, breaking convention), `package.json` `@types-host/node` = `npm:@types/node@18.19.130`, `tsconfig.json` `typeRoots`, ⚑ consultation recorded verbatim; P0.10 `.vscodeignore`, `scripts/check-vsix-contents.mjs` (`ALLOWED_PATTERNS`, manifest-derived `requiredFiles`), `src/test/lint/vsix-contents.test.ts` present; P0.11 `check-types` three programs, `tsconfig.vitest.json` include/exclude, `vitest.config.mts` backend include (`src/core/**`, `src/protocol/**`, `src/host/**`, `src/extension.next.test.ts`, `src/test/lint/**`), coverage excludes (`src/_wip/**`, `__fixtures__`, `src/protocol/**`, `src/core/contracts.ts`), webview ratchet 64/62/54/52 against measured 64.92/62.72/54.88/52.79, `src/_wip` excluded in tsconfig/eslint/vitest/coverage, `benchmarks/README.md` informational, ⚑ consultation (58 errors) recorded verbatim; P0.12 `grep -c '(1.x — removed at P8)' ARCHITECTURE.md` = 20 = legacy H2 count (21 H2s after the 2.0 section minus the unmarked "Repository Assistance Resources"), 2.0 section with ADR table, module map, coexistence table, shared tooling; P0.13 tracker 81 rows = 81 plan `P#.#` ids (script, none missing), ledger N1..N37 and 44 `C-` rows; P0.14 row `skipped` by owner.
+- Salvage gate (plan §3): no salvaged directory exists yet; `grep -rn "Thenable\|child_process"` over `src/extension.next.ts`, `src/webview/main`, `src/webview/sidebar-next`, `src/core` → none.
+- Not verified by me: gate command outputs, VSIX file list and CI run conclusions (38236993111, 38234744779, 38233521574) are taken from the brief; my shell was limited to inspection commands and I ran no gate, build or `gh` command. The tree was clean at 3043428 (`git status --short` empty).
+```
