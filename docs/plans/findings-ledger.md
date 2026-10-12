@@ -39,10 +39,10 @@ one records itself here.
 | S3 | L | DPAPI decryption runs PowerShell through a shell string; input is base64-validated and passed… | — | not mapped | open |
 | S4 | M | SSRF/redirect guard is host-string based (no resolved-address check, IPv4-mapped IPv6)… | C: Redirect decision already centralised; fetch loop is what is triplicated. | P1.9 (one implementation, `src/core/http/ssrf.ts`: IPv4-mapped, NAT64, 6to4, carrier-grade NAT, zone ids), P4.2 (check of the resolved address in `Transport`) | partly closed |
 | S5 | L | Credential redaction is header-pattern based; CLI stderr / URL userinfo can leak into logs | W: `--password` on argv is inherent; token-only userinfo unredacted; toasts show raw stderr. | P1.5 (`redact`, `redactArgv`: userinfo with or without a password, headers, argv), P1.6 and P1.10 (applied to CLI output and commands) | partly closed |
-| S6 | M | Main-panel CSP img-src is a fixed badge-host allow-list; icons resolved from private feeds are… | — | not mapped | open |
+| S6 | M | Main-panel CSP img-src is a fixed badge-host allow-list; icons resolved from private feeds are… | — | P2.9 (CSP), P4.4 (host-side icon fetch) | open; CSP side done in P2.9 (ADR-006 policy in `renderWebviewHtml`, `data:` only); closes at P4.4 with the host-side icon fetch |
 | Y1 | H | Handlers without try/catch never answer on failure | W: More unwrapped handlers; fixed by ADR-007 terminal-response guarantee. | not mapped | open |
-| Y2 | H | Queue admission ignored | — | P2.1 (core: a refused submission is a ticket whose `completion` resolves with a `rejected` outcome), P2.9 (the host answers every `ops/*` request from the ticket) | open; core side done in P2.1 |
-| Y3 | H | restoreProject and forced transitive restore bypass the OperationQueue | — | P2.9 (the quarry host submits restores to the queue as `PackageWorkflows.restore`; to be verified there) | open |
+| Y2 | H | Queue admission ignored | — | P2.1 (core: a refused submission is a ticket whose `completion` resolves with a `rejected` outcome), P2.9 (the host answers every `ops/*` request from the ticket) | closed (P2.9: every `ops/*` request is answered from the ticket; test `ops/*: a refused submission answers with the ticket's rejected outcome (Y2)`) |
+| Y3 | H | restoreProject and forced transitive restore bypass the OperationQueue | — | P2.9 (the quarry host submits restores to the queue as `PackageWorkflows.restore`; to be verified there) | closed (P2.9: forced and explicit restores are `PackageWorkflows.restore` on the queue; test `transitive/get: forceRestore runs through the queue as PackageWorkflows.restore (Y3)`) |
 | Y4 | H | Shared debounce timer | — | not mapped | open |
 | Y5 | H | skipNextUpdateCheckRef lingers | — | not mapped | open |
 | Y6 | H | Scoped background merge resurrects deleted projects | W: Also drops live projects (`_sendInitialData` clears merge base). | not mapped | open |
@@ -108,7 +108,7 @@ one records itself here.
 | N6 | Medium | Exact pins `[x.y.z]` always reported updatable. | — | P1.3, P2.2, P4.8 | open (versioning side done in P1.3; fixture in P2.2, gating in P4.8) |
 | N7 | Medium | README download sends no auth; temp path unvalidated; zip inflate unbounded. | — | P4.4 | open |
 | N8 | Medium | Sidebar `_sendInitialData` clears scoped-merge base. | — | P2.11 scenario | open |
-| N9 | Medium | Queued mutations discarded when the submitting surface is disposed. | — | P2.1, P2.9 | open |
+| N9 | Medium | Queued mutations discarded when the submitting surface is disposed. | — | P2.1, P2.9 | closed (P2.9: `detach` aborts with reason `'disposed'`; `awaitTicket` cancels the ticket only for a webview cancel; test `surface disposal does not cancel a queued operation (N9)`) |
 | N10 | Medium | `_forceCheckScope` merge is dead code (copilot-instructions row wrong). | — | Appendix A; closed by QueryCoordinator | replacement landed (P1.8); the legacy row is deleted with the legacy code at P8.2 |
 | N11 | Medium | All-projects update responses uncorrelated. | — | P3.3, P5.9 | open |
 | N12 | Medium | `bulkRemoveConfirmed` before fallible work. | — | ADR-007 terminal response | open |
@@ -142,7 +142,7 @@ one records itself here.
 | N40 | Low | Benchmarks are discovered only under `src/test/benchmarks/`; a bench file under `src/core/**` is silently not run. | — | P1.3, P1.4 (bench files in `src/test/benchmarks/`); P2.12 (move to core, D8) | open |
 | N41 | Low | Repository rulesets make every push to `labs/2.0` and every tag push print "Bypassed rule violations"; the plan does not mention it. | — | owner (document it as expected or adjust the rulesets); sessions do not change repository settings | open |
 | N42 | Low | The handoff note `src/protocol/STATUS.md` lies in a frozen path, so the guard denies its edit without the sentinel. | — | P1.1b (record the approval in `docs/plans/STATUS.md` first); P7.5 (exempt `STATUS.md` in the guard, or move the note) | open |
-| N43 | Low | The domain comment of `floatingDepth` names 1 to 3 only; the versioning module also emits 0 and 4. | — | the next contract-change item that touches `domain.ts` (candidate P6.5) | open |
+| N43 | Low | The domain comment of `floatingDepth` names 1 to 3 only; the versioning module also emits 0 and 4. | — | the next contract-change item that touches `domain.ts` (candidate P6.5) | closed (P2.9: comment at `domain.ts:21`) |
 | N44 | Low | The first e2e test of the run waits a fixed 10 s for the suite's first `dotnet` command and can fail without product code running. | — | P5.12 (v2 e2e tests poll; legacy file retired); after the third sighting the `e2e` job warms `dotnet` up first | open; mitigated in CI |
 | N45 | Low | `TieredCache` logs an unredacted store key, which can carry a source URL with userinfo, when a store write fails. | — | P2.10 (redacting `Logger` for the core) or P4.4 | open |
 | N46 | Low | `redact` drops harmless text after a secret query parameter and rewrites some redacted headers with `=`. | — | accepted (the module prefers redacting too much) | accepted |
@@ -156,6 +156,7 @@ one records itself here.
 | N54 | Low | 1.x decrypts DPAPI passwords without the entropy that NuGet is believed to use; unverified, 2.0 tries both. | — | P7.3 (verify on Windows) | open |
 | N55 | Low | The gate of P2.7 (`grep "exec("` → 0) also matches `RegExp.exec` and cannot hold. | — | P2.7 (replaced by three greps) | closed |
 | N56 | Low | `redact` does not mask a secret in a quoted JSON key (`"Password":"…"`). | — | P7.3 or a logging item; P2.7 never logs the plugin's output | open |
+| N57 | Low | `nuiget.searchDebounceMode` is contributed as `quicksearch`, `full`, `off`; the 2.0 `ExtensionConfig` knows `quicksearch` and `fullsearch` only. | — | P5 (the item that ports the search settings) | open |
 
 Corrections in Appendix A that do not belong to one finding id:
 
@@ -379,6 +380,7 @@ Three-lens verification of the original findings against `main` produced these c
 | N54 | Low | 1.x decrypts an encrypted `nuget.config` password with `ProtectedData.Unprotect($encrypted, $null, …)` (`src/services/CredentialService.ts:285`), that is without entropy. NuGet's own encryption (`EncryptionUtility` in NuGet.Configuration) protects the value with the entropy bytes of the text `NuGet`, so a password that `dotnet nuget add source` stored encrypted would not decrypt in 1.x. This rests on knowledge of NuGet's source, not on a probe: no Windows machine was available, and plan §2.6 wants tracked evidence. The 2.0 `decryptPassword` tries the entropy `NuGet` first and no entropy second, so it is right either way. | P2.6 | P7.3 (Windows): decrypt a password that the CLI encrypted, record the result as a tracked fixture or a gated test, and drop the branch that is not needed |
 | N55 | Low | The gate of plan item P2.7, `grep -rn "exec(" src/core` → 0, cannot hold: the pattern also matches `RegExp.prototype.exec(`, which `src/core` calls 14 times in files of other items (`cli/sdk.ts`, `cli/DotnetRunner.ts`, `project/assets.ts`, `project/discovery.ts`, `project/inspector.ts`, `sources/listSourceOutput.ts`, `versioning/VersionRange.ts`, `logging/redact.ts`). Its intent is ADR-003: no shell string, and `child_process` in `src/core/cli` only. | P2.7 | replaced in P2.7 on the ruling of the `architecture-advisor` by three greps, all required: no bare `exec(`/`execSync(` call, no `promisify(exec)`, `execAsync` or `shell: true`, and `child_process` only under `src/core/cli`; recorded in `src/core/credentials/STATUS.md`. P7.5 may correct the plan row |
 | N56 | Low | `redact` (`src/core/logging/redact.ts`) does not mask a secret that is the value of a quoted JSON key: `{"Username":"VssSessionToken","Password":"abc123SECRET"}` comes back unchanged (the key-value pattern expects `=` or `:` directly after the word, and the closing quote stands between them). The Azure Artifacts Credential Provider answers in exactly that form. Measured by the `architecture-advisor` during the P2.7 consultation. | P2.7 | 2.0: the plugin's standard output is never logged (`src/core/credentials`, test `provider: stdout never reaches the logger`), and the runner logs argv and stderr only. `redact` itself: P7.3 or the next item that names `src/core/logging`, with a test for the JSON form |
+| N57 | Low | `package.json:257-270` enumerates the setting `nuiget.searchDebounceMode` as `quicksearch`, `full` and `off`. The frozen `ExtensionConfig.searchDebounceMode` (`src/protocol/domain.ts`) is `'quicksearch' \| 'fullsearch'`, and `readExtensionConfig` (`src/host/services.ts`), kept from the quarry, maps only the value `fullsearch` to `fullsearch` and everything else to `quicksearch`. A user who has set `full` or `off` therefore gets `quicksearch` in 2.0. Found by the `architecture-advisor` during the P2.9 consultation. | P2.9 | record only in P2.9, which keeps the quarry's mapping; the fix belongs to the P5 item that ports the search settings (a `contributes` change is ⚑, and a change of the type needs the sentinel for `domain.ts`) |
 
 ## 5. Defects in the paused 2.0 code (execution plan, Appendix B)
 
@@ -422,9 +424,9 @@ headline defects in the order the plan lists them, so that salvage commits can c
 | C-ops-6 | Unredacted stdout | P1.10, P2.1 | closed for the workflows (P1.10: argv, stdout, stderr and error texts pass `redact` before `onCommand`, an outcome or the log) |
 | C-protocol-host-1 | Composition root against imagined APIs | P1.1a, P1.1b, P2.9, P2.10 | open; contract side done in P1.1b (`onProgress`, `ProjectMutator`, `resourceKeys.sources`), closes at P2.10 |
 | C-protocol-host-2 | Guards not exhaustive | P1.1a, P1.1b, P2.9, P2.10 | closed (P1.1a) |
-| C-protocol-host-3 | `runOperation` hack | P1.1a, P1.1b, P2.9, P2.10 | open |
-| C-protocol-host-4 | `forceRestore` bypasses ticket | P1.1a, P1.1b, P2.9, P2.10 | open |
-| C-protocol-host-5 | No handler tests | P1.1a, P1.1b, P2.9, P2.10 | open |
+| C-protocol-host-3 | `runOperation` hack | P1.1a, P1.1b, P2.9, P2.10 | closed (P2.9: `operations` + `settleOperation`, `runOperation` deleted) |
+| C-protocol-host-4 | `forceRestore` bypasses ticket | P1.1a, P1.1b, P2.9, P2.10 | closed (P2.9) |
+| C-protocol-host-5 | No handler tests | P1.1a, P1.1b, P2.9, P2.10 | closed (P2.9: `handlers.test.ts`, 43 request cases) |
 | C-protocol-host-6 | CI lacks drift check | P1.1a, P1.1b, P2.9, P2.10 | closed (P1.1a) |
 | C-tooling-1 | Sidebar exempt from boundary | P0.7, P0.8, P0.10 | closed (P0.7, P0.8, P0.10) |
 | C-tooling-2 | Core may import host | P0.7, P0.8, P0.10 | closed (P0.7, P0.8, P0.10) |
@@ -442,7 +444,7 @@ Counts quoted in findings drift. These commands reproduce the ones that matter; 
 | `as any` in unit tests (T3; the plan counted 955) | `grep -rEo "as any" src --include='*.test.ts' --include='*.test.tsx' \| wc -l` | 959 |
 | Unit test files that call `setTimeout(` (T3; a proxy for "files with sleeps", the plan counted 19) | `grep -rlE "setTimeout\(" src --include='*.test.ts' --include='*.test.tsx' \| wc -l` | 22 |
 | Fixed `px` font sizes (U5) | `grep -cE "font-size:\s*[0-9.]+px" src/webview/app/App.css src/webview/sidebar/SidebarApp.css` | 125 and 13 |
-| Unit tests | `npx vitest run` | 79 files, 2375 tests and 3 skipped; 2378 with `NUIGET_SDK_TESTS=1` |
+| Unit tests | `npx vitest run` | 81 files, 2445 tests and 3 skipped; 2448 with `NUIGET_SDK_TESTS=1` |
 | End-to-end tests | `npm run test:e2e` | 30 |
 | UI tests | `npm run test:ui -- --storage /tmp/nuiget-ui` | 31 |
 | Type errors in 1.x tests, benchmarks and helpers (N30) | strict `tsc` over `src` with `types: [node, vitest/globals]`, without `src/test/e2e` and `src/test/ui` | 55 |

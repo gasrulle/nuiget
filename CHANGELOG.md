@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **2.0 build switch** — `node esbuild.mjs --v2` and `npm run watch:v2` build the 2.0 entry points into the same three bundles, and `--production --analyze` checks them against size ceilings
 - **2.0 protocol and core contracts** — `src/protocol` and `src/core/contracts.ts` define the typed messages and interfaces of the 2.0 host and webviews; `npm run docs:protocol` generates `docs/protocol.md` from them and CI fails when that file is out of date
+- **2.0 webview hosts** — `src/host` answers every request of the 2.0 panel and sidebar with exactly one response, runs every package operation and forced restore through the operation queue, keeps a queued operation alive when the surface that asked for it closes, and serves both webviews under a Content Security Policy with a per-render script nonce and no remote origin
 - **2.0 catalog** — `src/core/catalog` is the one place the 2.0 panel and sidebar read from: projects, sources, installed and transitive packages are each computed once for both, and the list of installed packages appears from the project files at once and is refined when a full evaluation is available
 - **2.0 credentials** — `src/core/credentials` finds the sign-in for an authenticated source in the environment, in `nuget.config` and through the Azure Artifacts Credential Provider, without a shell and without logging anything secret
 - **2.0 package sources** — `src/core/sources` lists the sources that apply to each project through the dotnet CLI, reads credentials and package source mapping from the `nuget.config` chain, and sends a package id only to the sources that are enabled for the project and that the mapping allows
@@ -35,6 +36,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **resources/invalidated carries per-key generations**
+- **Webview CSP uses a script nonce and admits bundled fonts**
 - **Credential lookup order is environment, nuget.config, then credential provider**
 - **Azure Artifacts Credential Provider runs as the netcore plugin through dotnet (netfx plugin no longer used)**
 - **Refreshed and scoped Copilot instructions, agents, and skills for the current extension architecture**

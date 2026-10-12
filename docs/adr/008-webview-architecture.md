@@ -1,6 +1,6 @@
 # ADR-008: Webview architecture — shared slices, primitives, two entry points
 
-Status: accepted · Date: 2026-10-10 · Amended: 2026-10-12 (plan item P1.1b: generation on responses)
+Status: accepted · Date: 2026-10-10 · Amended: 2026-10-12 (plan item P1.1b: generation on responses; plan item P2.9: per-key generations on `resources/invalidated`)
 
 ## Context
 
@@ -18,9 +18,10 @@ D13 (`docs/plans/2026-10-11-nuiget-2.0-execution-plan.md`, §1).
   metafile shows a win.
 - `shared/bus/useMessageBus` wraps the protocol: `request(type, payload, { signal, onChunk })`,
   `onEvent(type, handler)`; stale responses are discarded by id, stale resources by generation:
-  `request` exposes the `generation` of the ok response, so `useResource` can discard a result
-  older than the last `resources/invalidated` generation for its key. Chunks are discarded by id
-  only.
+  `request` exposes the `generation` of the ok response, so `useResource` can discard a result whose
+  generation is below the one listed for its key in the latest `resources/invalidated` event
+  (`keys[].generation`; the event's own `generation` is a sequence number and is never compared with
+  a response). A key absent from `keys` has nothing to discard. Chunks are discarded by id only.
 - `shared/store`: reducer slices with narrow contexts — `session` (committed + pending),
   `projects`, `installed`, `updates`, `transitive`, `search`, `details`, `allProjects`, `sources`,
   `ops`. A `useResource(key, requester)` hook subscribes to `resources/invalidated` and re-requests.

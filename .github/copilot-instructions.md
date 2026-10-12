@@ -172,6 +172,7 @@ Seeded from the execution plan (decisions D1–D13, Appendix B). Item IDs name w
 | `.vscodeignore` regressions | The VSIX contains only `dist/*.js`, `dist/*.css`, `resources/`, `package.json`, `README.md`, `CHANGELOG.md` and `LICENSE`. After a build, `npm run check:vsix` fails for any other file and for a missing bundle or manifest icon. A new top-level file needs a `.vscodeignore` entry; a file that must ship needs an `ALLOWED_PATTERNS` entry in `scripts/check-vsix-contents.mjs`. |
 | `docs/protocol.md` edited by hand | The file is generated from `src/protocol/messages.ts`. After a change to `RequestMap` or `EventMap` (contract items only), run `npm run docs:protocol` and commit the result; `npm run docs:protocol:check` fails in the Lint job of CI when the file has drifted. A new request or event type also needs its key in the records of `src/protocol/guards.ts`; `tsc` fails until it is there. |
 | Stale files in `dist/` | Builds do not clean `dist/`. After switching between `node esbuild.mjs` and `node esbuild.mjs --v2`, files of the other entry set (for example the 1.x CSS) remain and would be packaged. Delete `dist/` before packaging a different entry set. |
+| `REMOVAL GATE` comments in `src/host` | `handlers.ts` carries four `// REMOVAL GATE: P4.9` lines and one `P4.4`; `SidebarHost.refresh` one `P4.9`. P4.9 and P4.4 remove them, nobody else; do not replace a gated answer with a guess in another item. |
 
 ## 1.x gotchas (removed at P8)
 

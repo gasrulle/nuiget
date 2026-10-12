@@ -65,7 +65,7 @@ without correlation. Both webviews share the same maps; surface-specific request
 | --- | --- | --- |
 | `session/changed` | `SessionSnapshot` |  |
 | `projects/changed` | `ProjectListing` |  |
-| `resources/invalidated` | `{ scope: InvalidationScope; reason: InvalidationReason; generation: number; }` |  |
+| `resources/invalidated` | `{ scope: InvalidationScope; reason: InvalidationReason; generation: number; keys: Array<{ key: ResourceKey; generation: number; }>; }` | The coordinator's `InvalidationEvent` forwarded unchanged (ADR-002). `generation` is the event's sequence number and is not comparable with a response's generation; `keys` lists every key the coordinator has seen that `scope` reached, with its generation after this invalidation, which is what an ok response for that key carries. A key absent from `keys` was never queried. |
 | `sources/health` | `{ failed: FailedSource[]; }` |  |
 | `ops/progress` | `OperationProgress` |  |
 | `ops/completed` | `OperationOutcome \| BulkOutcome` | Outcome of an operation started by *any* surface (the originating surface also gets it as its response). |

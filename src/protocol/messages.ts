@@ -27,6 +27,7 @@ import type {
     PackageUpdate,
     Project,
     QuickSearchSourceResult,
+    ResourceKey,
     SessionIntent,
     SessionSnapshot,
     TransitiveFrameworkSection,
@@ -183,7 +184,8 @@ export type RequestChunk<T extends RequestType> = RequestMap[T] extends { chunk:
 export interface EventMap {
     'session/changed': SessionSnapshot;
     'projects/changed': ProjectListing;
-    'resources/invalidated': { scope: InvalidationScope; reason: InvalidationReason; generation: number };
+    /** The coordinator's `InvalidationEvent` forwarded unchanged (ADR-002). `generation` is the event's sequence number and is not comparable with a response's generation; `keys` lists every key the coordinator has seen that `scope` reached, with its generation after this invalidation, which is what an ok response for that key carries. A key absent from `keys` was never queried. */
+    'resources/invalidated': { scope: InvalidationScope; reason: InvalidationReason; generation: number; keys: Array<{ key: ResourceKey; generation: number }> };
     'sources/health': { failed: FailedSource[] };
     'ops/progress': OperationProgress;
     /** Outcome of an operation started by *any* surface (the originating surface also gets it as its response). */

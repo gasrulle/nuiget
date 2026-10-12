@@ -18,7 +18,7 @@ export interface VersionSpec {
     original: string;
     /** For floating versions: the prefix before the wildcard (e.g. `10` for `10.*`). */
     floatingPrefix?: string;
-    /** For floating versions: the depth of the wildcard (major=1, minor=2, patch=3). */
+    /** For floating versions: the position of the wildcard counted in fixed components (`1.*` = 1 major, `1.0.*` = 2 minor, `1.0.0.*` = 3 patch; 0 for `*`; 4 for a prerelease wildcard such as `1.0.0-*`). */
     floatingDepth?: number;
     /** `*` — always the newest version. */
     isAlwaysLatest?: boolean;
@@ -328,9 +328,10 @@ export interface LayoutPreferences {
 
 export interface ExtensionConfig {
     searchDebounceMode: 'quicksearch' | 'fullsearch';
-    recentSearchesLimit: number;
     quickSearchResultsPerSource: number;
     searchResultLimit: number;
+    /** `nuiget.enablePerformanceLogging`: the webviews send `perf/mark` and the host logs `[perf]` lines at `info` only while it is on. */
+    enablePerformanceLogging: boolean;
     treeIndent: number;
     isWindows: boolean;
 }

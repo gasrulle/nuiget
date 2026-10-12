@@ -129,6 +129,9 @@ CI                           → see the tracker row of P2.8
 - `allProjectsInstalled` sends the second chunk of a project only when the evaluation delivered a result other
   than the provisional one (`Catalog.ts:218-222`); the ruling says "emit a second `project` chunk". When the
   evaluation failed, `upgrade` resolves with the same object and there is nothing new to send.
+- A stale handle receives `release()` twice: once from the retry and once from `releaseWhenDone` when its
+  value settles (or on abort). `DefaultQueryCoordinator.release` is idempotent (`QueryCoordinator.ts:367-371`),
+  so the second call does nothing. Noted after the P2.8 commit, recorded with P2.9.
 - The parameters of the eight gated methods are prefixed with `_`: they are unused until P4.9 and the lint
   rule for unused parameters would flag them. The signatures are those of the ruling.
 - The methods the quarry had and that are not declared until P4.9: `resolvedSources`, `sourceHealth`,

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { resourceKeys, type InstalledResult } from './domain';
+import { resourceKeys, type ExtensionConfig, type InstalledResult } from './domain';
 import {
     makeCancel,
     makeError,
@@ -125,5 +125,23 @@ describe('guards', () => {
         expect(parseOutbound(makeEvent('ui/focusSearch', {}))).toBeDefined();
         expect(parseOutbound(makeRequest('projects/list', {}))).toBeUndefined();
         expect(parseOutbound('string')).toBeUndefined();
+    });
+});
+
+describe('shapes changed by plan item P2.9', () => {
+    it('resources/invalidated carries per-key generations', () => {
+        const event = makeEvent('resources/invalidated', { scope: { kind: 'workspace' }, reason: 'manual-refresh', generation: 3, keys: [{ key: resourceKeys.projects(), generation: 2 }] });
+        expect(parseOutbound(event)).toBeDefined();
+        expect(isEventEnvelope(event)).toBe(true);
+        expect(event.payload.keys[0].generation).toBe(2);
+        expect(event.payload.keys[0].key).toBe('projects');
+        // The event's own generation numbers the events; it is not the generation of a key.
+        expect(event.payload.generation).toBe(3);
+    });
+
+    it('ExtensionConfig has enablePerformanceLogging and no recentSearchesLimit', () => {
+        const config = { searchDebounceMode: 'quicksearch', quickSearchResultsPerSource: 5, searchResultLimit: 20, enablePerformanceLogging: false, treeIndent: 16, isWindows: false } satisfies ExtensionConfig;
+        expect(Object.keys(config).sort()).toEqual(['enablePerformanceLogging', 'isWindows', 'quickSearchResultsPerSource', 'searchDebounceMode', 'searchResultLimit', 'treeIndent']);
+        expect('recentSearchesLimit' in config).toBe(false);
     });
 });

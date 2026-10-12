@@ -1,6 +1,6 @@
 # ADR-002: Resource queries, generations and invalidation (`QueryCoordinator`)
 
-Status: accepted · Date: 2026-10-10 · Amended: 2026-10-12 (plan item P1.1b: scope and merge tables, source keys per project directory, generation on responses)
+Status: accepted · Date: 2026-10-10 · Amended: 2026-10-12 (plan item P1.1b: scope and merge tables, source keys per project directory, generation on responses; plan item P2.9: per-key generations on `resources/invalidated`)
 
 ## Context
 
@@ -53,10 +53,13 @@ D13 (`docs/plans/2026-10-11-nuiget-2.0-execution-plan.md`, §1).
   3. an old completion cannot repopulate an invalidated entry;
   4. a subscriber releasing does not cancel work another subscriber still awaits;
   5. after inputs settle, all subscribers converge to the same `(key, generation)` value.
-- The host broadcasts `resources/invalidated { scope, reason, generation }`; each webview
-  re-requests only the resources it currently displays. Both surfaces requesting the same key
-  share one computation. The generation a webview compares against travels on the ok response
-  envelope (ADR-007, ADR-008).
+- The host broadcasts `resources/invalidated { scope, reason, generation, keys }`, the coordinator's
+  `InvalidationEvent` forwarded unchanged: `generation` is the event's sequence number, and `keys`
+  lists every key the coordinator has seen that `scope` reached, each with its generation after the
+  invalidation. Each webview re-requests only the resources it currently displays. Both surfaces
+  requesting the same key share one computation. A webview compares the `generation` of an ok
+  response envelope with the generation listed for the same key in the latest event, never with the
+  event's own `generation` (ADR-007, ADR-008).
 - Request ids correlate RPC; generations establish freshness; operation ids protect operation
   outcomes from being discarded by "newer query wins".
 - Invalidation sources: operations (package scope → project scope when restore ran), file watchers
