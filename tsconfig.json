@@ -18,6 +18,11 @@
         "forceConsistentCasingInFileNames": true,
         "resolveJsonModule": true,
         "jsx": "react-jsx",
+        // "node" resolves to @types-host/node (Node 18, the VS Code 1.85 host) because that root is listed first; see ADR-000.
+        "typeRoots": [
+            "./node_modules/@types-host",
+            "./node_modules/@types"
+        ],
         "types": [
             "node"
         ]
