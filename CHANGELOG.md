@@ -34,6 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Breaking:** nUIget 2.0 requires .NET SDK 10 or newer; projects that resolve an older SDK are read-only
 - **Type-checked the extension against Node 18 declarations, the VS Code 1.85 host baseline**
 - **Added Claude Code guard hooks that protect frozen contracts, tests, and commit and push safety during the 2.0 work**
+- **Stopped shipping development configuration files in the extension package and added a package contents check**
 
 ## [1.18.9] - 2026-10-10
 

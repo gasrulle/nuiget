@@ -112,6 +112,7 @@ npm install          # Install dependencies
 npm run watch        # Build (watch mode) — F5 to launch Extension Host
 npm run watch:v2     # Same for the 2.0 entry points (launch configuration "Run 2.0"); not together with watch
 npm run package:vsix # Runs: install → check-types → test → lint+bundle → vsce package
+npm run check:vsix   # After a build: fails if the VSIX would contain an unexpected file or lack a required one
 ```
 
 ### Testing
@@ -164,7 +165,8 @@ Seeded from the execution plan (decisions D1–D13, Appendix B). Item IDs name w
 | Sibling imports dodge folder patterns | From `src/webview/sidebar-next`, 1.x code is `../app/x`, which `**/webview/app/**` does not match. The webview fence therefore also denies `**/app/**`, `**/sidebar/**` and `../NuGet*`; do not name a 2.0 webview folder `app` or `sidebar`. |
 | Two watchers, one `dist/` | `npm run watch` (1.x) and `npm run watch:v2` (2.0) both write `dist/{extension,webview,sidebar}.js`. Never run them together, and never add a script named `watch:<x>` expecting `npm run watch` to pick it up: `watch` lists its scripts explicitly. The "Run 2.0" launch configuration runs whatever was last built into `dist/`. |
 | Analysis files in the VSIX | `--analyze` writes metafiles to `out/esbuild/`, never to `dist/`: `.vscodeignore` does not exclude JSON under `dist/`. |
-| `.vscodeignore` regressions | The VSIX contains no `src/`, `.claude/` or `docs/`. Keep `.claude/**`, `CLAUDE.md`, `.mcp.json` and `src/_wip/**` excluded; `npm run check:vsix` verifies it once P0.10 adds the script. |
+| `.vscodeignore` regressions | The VSIX contains only `dist/*.js`, `dist/*.css`, `resources/`, `package.json`, `README.md`, `CHANGELOG.md` and `LICENSE`. After a build, `npm run check:vsix` fails for any other file and for a missing bundle or manifest icon. A new top-level file needs a `.vscodeignore` entry; a file that must ship needs an `ALLOWED_PATTERNS` entry in `scripts/check-vsix-contents.mjs`. |
+| Stale files in `dist/` | Builds do not clean `dist/`. After switching between `node esbuild.mjs` and `node esbuild.mjs --v2`, files of the other entry set (for example the 1.x CSS) remain and would be packaged. Delete `dist/` before packaging a different entry set. |
 
 ## 1.x gotchas (removed at P8)
 

@@ -1,60 +1,43 @@
-# Development files
-.vscode/**
-.vscode-test/**
+# Only dist/*.js, dist/*.css, resources/, package.json, README.md, CHANGELOG.md and LICENSE ship in the VSIX.
+# `npm run check:vsix` (scripts/check-vsix-contents.mjs) fails when anything else would ship.
+
+# Sources (including src/_wip/**), tests and build output that is not the bundle
 src/**
-node_modules/**
-scripts/**
-.git/**
-debug/**
 out/**
 coverage/**
+benchmarks/**
+scripts/**
+**/*.map
+**/*.ts
+dist/**/*.meta.json
+!dist/**/*.js
 
-# Config files
+# Tooling and editor configuration
+.vscode/**
+.vscode-test/**
+.vscode-test.mjs
+.nvmrc
+.editorconfig
 .gitignore
-.yarnrc
-webpack.config.js
+.github/**
 esbuild.mjs
 eslint.config.mjs
 vitest.config.mts
 **/tsconfig.json
-**/.eslintrc.json
-nuget.config
+**/tsconfig.*.json
+node_modules/**
+package-lock.json
 
-# Source maps and TypeScript
-**/*.map
-**/*.ts
-!dist/**/*.js
-
-# Original icon file (resized version is in resources/)
-package-icon.png
-
-# Redundant files (not referenced by extension code)
-_replace_methods.cjs
-codicon.csv
-resources/icon_old.png
-resources/beaker-outline.svg
-
-# GitHub/Copilot prompts (not needed in VSIX)
-.github/**
-
-# Claude Code configuration (not needed in VSIX)
+# Claude Code configuration
 .claude/**
 CLAUDE.md
 .mcp.json
 
-# Documentation (development only)
+# Documentation that is not shown on the Marketplace page
 ARCHITECTURE.md
 docs/**
 
-# Package manager files
-package-lock.json
-
-# Benchmarks
-benchmarks/**
-
-# Built packages
+# Built packages and recordings
 *.vsix
-
-# Development screenshots/recordings
 *.gif
 *.mp4
