@@ -154,6 +154,10 @@ jobs:
         with:
           dotnet-version: 10.0.x
 
+      # The first legacy e2e test waits a fixed 10 s for the suite's first dotnet command (finding N44).
+      - name: Warm up dotnet
+        run: dotnet --version && dotnet msbuild -version
+
       - run: npm ci --no-audit --no-fund
 
       - name: Build extension
