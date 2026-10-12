@@ -18,6 +18,12 @@ export {
     type CentralPackageVersion,
 } from './central';
 export {
+    ProjectContextProvider,
+    SDK_TOO_OLD_MESSAGE,
+    type ProjectContextDeps,
+    type ProjectContextResult,
+} from './context';
+export {
     PROJECT_FILE_EXCLUDE,
     PROJECT_FILE_GLOB,
     classifyProject,
@@ -32,6 +38,7 @@ export {
     type InspectorOptions,
 } from './inspector';
 export { getProjectDependencyMap, getProjectReferences } from './references';
+export { GLOBAL_JSON_FILE, computeRevision, revisionInputs } from './revision';
 export {
     XmlParseError,
     attr,

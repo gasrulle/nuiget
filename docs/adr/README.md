@@ -15,6 +15,7 @@ implementation of its subject and updated when the decision changes. Status valu
 | [006](006-icons-and-csp.md) | Host-side icon resolution and webview CSP | accepted |
 | [007](007-protocol.md) | Typed envelope protocol for webview ↔ host | accepted |
 | [008](008-webview-architecture.md) | Webview architecture: shared slices, primitives, two entry points | accepted |
+| [009](009-catalog.md) | Catalog: the use-case layer over the query coordinator | accepted |
 
 Supplements (evidence for a record, not separate decisions):
 

@@ -284,7 +284,8 @@ CI                           → run 38274861212 for 1fa8f6e: red in E2E (1.85.0
 - `cpm/App/obj/project.assets.json` does not list `Pinned`: the item says to move the file, not to change it.
   P2.4's rule for `resolvedVersion` falls back to nothing for that reference.
 - The lines without a test are listed by the coverage run above.
-- `context.ts` and `revision.ts` are not exported from `index.ts`: the row of P2.4 limits that file to six
+- P2.8 extended the barrel with `context` and `revision` under the P2.8 ruling of 2026-10-12 (`index.ts`);
+  what follows describes the state before it. `context.ts` and `revision.ts` were not exported from `index.ts`: the row of P2.4 limits that file to six
   modules and the row of P2.5 does not name it. The first importer (P2.8 or P2.9) imports them directly or
   extends the barrel in its own item.
 - Nothing outside the directory imports the modules yet. `getProjectDependencyMap` is what the host passes to
