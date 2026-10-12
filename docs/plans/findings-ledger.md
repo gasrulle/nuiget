@@ -402,9 +402,9 @@ headline defects in the order the plan lists them, so that salvage commits can c
 | C-feeds-2 | Transient outage → 24 h miss | P4.3 to P4.9 | open |
 | C-feeds-3 | No OutboundPolicy implementation | P4.3 to P4.9 | open |
 | C-feeds-4 | Ctor shapes mismatch composition root | P4.3 to P4.9 | open |
-| C-project-catalog-1 | Inspector/evaluator/mutator/references/context missing | P2.2 to P2.8, P6 | open; references done in P2.3, inspector in P2.4; context P2.5, evaluator P6.2, mutator P6.3 |
+| C-project-catalog-1 | Inspector/evaluator/mutator/references/context missing | P2.2 to P2.8, P6 | open; references done in P2.3, inspector in P2.4, context in P2.5; evaluator P6.2, mutator P6.3 |
 | C-project-catalog-2 | Catalog blocks on evaluator | P2.2 to P2.8, P6 | open |
-| C-project-catalog-3 | Fabricated context | P2.2 to P2.8, P6 | open |
+| C-project-catalog-3 | Fabricated context | P2.2 to P2.8, P6 | open; the provider exists since P2.5 (`ProjectContextProvider`), the Catalog uses it in P2.8 |
 | C-project-catalog-4 | Conditions dropped | P2.2 to P2.8, P6 | closed for tier 1 (P2.2: a guarded `PackageVersion` is returned as `conditioned`; P2.4: framework conditions are captured and intersected, every other condition is `unresolved`) |
 | C-project-catalog-5 | Per-project resolved versions | P2.2 to P2.8, P6 | open |
 | C-project-catalog-6 | Catalog undocumented | P2.2 to P2.8, P6 | open |
@@ -436,7 +436,7 @@ Counts quoted in findings drift. These commands reproduce the ones that matter; 
 | `as any` in unit tests (T3; the plan counted 955) | `grep -rEo "as any" src --include='*.test.ts' --include='*.test.tsx' \| wc -l` | 959 |
 | Unit test files that call `setTimeout(` (T3; a proxy for "files with sleeps", the plan counted 19) | `grep -rlE "setTimeout\(" src --include='*.test.ts' --include='*.test.tsx' \| wc -l` | 22 |
 | Fixed `px` font sizes (U5) | `grep -cE "font-size:\s*[0-9.]+px" src/webview/app/App.css src/webview/sidebar/SidebarApp.css` | 125 and 13 |
-| Unit tests | `npx vitest run` | 70 files, 2261 tests and 1 skipped; 2262 with `NUIGET_SDK_TESTS=1` |
+| Unit tests | `npx vitest run` | 72 files, 2273 tests and 2 skipped; 2275 with `NUIGET_SDK_TESTS=1` |
 | End-to-end tests | `npm run test:e2e` | 30 |
 | UI tests | `npm run test:ui -- --storage /tmp/nuiget-ui` | 31 |
 | Type errors in 1.x tests, benchmarks and helpers (N30) | strict `tsc` over `src` with `types: [node, vitest/globals]`, without `src/test/e2e` and `src/test/ui` | 55 |

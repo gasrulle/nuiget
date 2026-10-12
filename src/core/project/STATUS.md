@@ -1,12 +1,14 @@
-# STATUS — src/core/project   commit ef96051 (parent of the P2.4 commit)   2026-10-12T16:53:26Z
+# STATUS — src/core/project   commit 7b84421 (parent of the P2.5 commit)   2026-10-12T17:08:57Z
 
-git status --short src/core/project: `?? src/core/project/inspector.ts`, `?? src/core/project/inspector.test.ts`,
-`?? src/core/project/index.ts`, ` M src/core/project/STATUS.md` (they belong to the P2.4 commit, together with
-` M ARCHITECTURE.md`, ` M CHANGELOG.md`, ` M docs/plans/STATUS.md` and ` M docs/plans/findings-ledger.md`)
+git status --short src/core/project: `?? src/core/project/context.ts`, `?? src/core/project/context.test.ts`,
+`?? src/core/project/revision.ts`, `?? src/core/project/revision.test.ts`, `?? src/core/project/__fixtures__/sdk8/`,
+` M src/core/project/STATUS.md` (they belong to the P2.5 commit, together with ` M ARCHITECTURE.md`,
+` M CHANGELOG.md`, ` M docs/plans/STATUS.md` and ` M docs/plans/findings-ledger.md`)
 
-Items: **P2.4 `src/core/project/inspector.ts` (`StaticProjectInspector`, ADR-004 tier 1) and `index.ts`**
-(⚑; this commit), **P2.3 `references.ts`** (`ef96051`) and **P2.2 `{xml,discovery,assets,central}.ts` through
-the salvage gate** (`1fa8f6e`). P2.4 touches none of the files of P2.2 and P2.3.
+Items: **P2.5 `src/core/project/context.ts` and `revision.ts`** (the `ProjectExecutionContext` provider; this
+commit), **P2.4 `inspector.ts` and `index.ts`** (⚑; `7b84421`), **P2.3 `references.ts`** (`ef96051`) and
+**P2.2 `{xml,discovery,assets,central}.ts` through the salvage gate** (`1fa8f6e`). P2.5 touches no file of
+the earlier items; `index.ts` is unchanged.
 
 The quarry's `src/core/project/STATUS.md` was checked against its tree. It holds for `xml.ts`, `discovery.ts`,
 `assets.ts` and the fixtures. It is stale on three points: it lists `central.ts` as not started, and the file
@@ -15,6 +17,46 @@ assets into scratch directories, and the item orders a tracked `obj/` and the ex
 "28 util tests" predate P1.2. The quarry has no test for any of the four modules; all four test files are new.
 
 ## Verified by running
+
+P2.5, on `7b84421`:
+
+```text
+The gates ran with DOTNET_ROOT set to the SDK directory and NUIGET_SDK_TESTS=1 (N48).
+baseline npm run check-types → exit 0
+baseline npx eslint src      → exit 0
+baseline npx vitest run      → Test Files 70 passed (70) · Tests 2262 passed (2262)
+quarry                       → no context.ts and no revision.ts; its Catalog.ts:153-155 fabricates the context
+                               (configFiles: [], revision: ''), which is C-project-catalog-3
+probe, SDK 10.0.401, macOS   → `dotnet nuget config paths` in a directory with a nuget.config whose parent has
+                               one too: three lines, <dir>/App/NuGet.Config, <dir>/NuGet.Config,
+                               ~/.nuget/NuGet/NuGet.Config; one path per line, nearest first, exit 0. The CLI
+                               prints its own spelling of the file name on a case-insensitive file system.
+                               The gated test `reads the config chain of the real SDK nearest first` is the
+                               tracked form of this probe and runs on both CI platforms.
+npm run check-types          → exit 0 (main, tsconfig.test.json, tsconfig.vitest.json; N39)
+npx eslint src               → exit 0, no output
+npm run lint                 → exit 0
+npx vitest run --project backend src/core/project/context.test.ts src/core/project/revision.test.ts
+                             → Test Files 2 passed (2) · Tests 13 passed (13)   (item gate; the real-SDK test ran)
+npx vitest run --project backend src/core/project → Test Files 8 passed (8) · Tests 127 passed (127)
+npm test                     → Test Files 72 passed (72) · Tests 2275 passed (2275)
+npx vitest run (no NUIGET_SDK_TESTS) → Tests 2273 passed | 2 skipped (2275)
+npx vitest run --coverage    → exit 0 · All files 77.33 % statements, 67.29 % branches, 73.04 % functions,
+                               78.8 % lines · context.ts 26 of 26 lines, revision.ts 16 of 16 ·
+                               src/core/** 2166 of 2201 lines, 98.41 % (floor 85 %)
+npm run bench                → Test Files 17 passed (17) · Tests 104 passed | 1 skipped (105)
+npm run package:vsix         → exit 0 · Tests 2275 passed · DONE  Packaged: nuiget-v1.18.9.vsix (17 files,
+                               529.24 KB)
+npm run check:vsix           → check:vsix: OK
+negative control             → five single mutations, each caught: sdk-too-old not reported (1 test fails),
+                               disabled sources kept (1), the output of a failed command used (1), the
+                               modification time left out of the revision (2), global.json not an input (2).
+                               Both files were restored and compared (cmp) afterwards.
+git status --short src/core/contracts.ts src/protocol docs/adr → empty (no contract change, no sentinel)
+git diff --stat 7b84421 -- src/core/project → STATUS.md only; the other files of the item are new
+npm run test:ui              → SKIPPED: no UI change; the CI job UI runs it
+CI                           → see the tracker row of P2.5
+```
 
 P2.4, on `ef96051`:
 
@@ -50,7 +92,7 @@ grep -rn 'Thenable\|child_process\|from .vscode.' src/core/project --include='*.
 git diff --stat ef96051 -- src/core/project → STATUS.md only; inspector.ts, inspector.test.ts and index.ts are new
 git status --short src/core/contracts.ts src/protocol docs/adr → empty; .claude/.contract-change does not exist
 npm run test:ui              → SKIPPED: no UI change; the CI job UI runs it
-CI                           → see the tracker row of P2.4
+CI                           → run 38281221752 for 7b84421: success on all required jobs
 ```
 
 P2.3, on `74178f2`:
@@ -121,6 +163,28 @@ CI                           → run 38274861212 for 1fa8f6e: red in E2E (1.85.0
 
 ## Done (tested)
 
+- `context.ts`, new (P2.5): `ProjectContextProvider({ runner, sources, stopDirs?, logger? }).get(projectPath,
+  workspaceFolder?)` answers `{ context, unsupported? }`.
+  - `sdk` from `runner.sdkVersion(projectDir)`; when it is not `supported` the answer carries `unsupported: {
+    reason: 'sdk-too-old', message: 'requires .NET SDK 10 or newer' }` and the context is still complete,
+    because the project stays readable (D13). An SDK that cannot be detected leaves `sdk` out and is not
+    `unsupported`.
+  - `configFiles` from `dotnet nuget config paths` with the project directory as working directory: one
+    path per line, nearest first. A failed, cancelled or timed-out command, or one that cannot be started,
+    gives `[]` and a redacted warning.
+  - `sourceUrls`: the URLs of the enabled sources of `SourceProvider.listSources(projectDir)`, in its
+    order. A failure of the provider rejects `get`.
+  - `revision`: `computeRevision(revisionInputs(...))`.
+- `revision.ts`, new (P2.5): `revisionInputs(projectPath, configFiles, stopDirs?)` lists the project, the
+  nearest `Directory.Build.props`, `Directory.Build.targets` and `Directory.Packages.props`, the nearest
+  `global.json` and the config files, each once; `computeRevision(files)` is 16 hex digits of a SHA-256
+  over path, modification time and size of each file, independent of the order, with a missing file
+  counted as missing. It reads no contents and never rejects.
+- `context.test.ts` (8 tests) with a fake `dotnet` that, like the real one, takes the SDK from the nearest
+  `global.json`: `pins SDK 8 through global.json and reports sdk-too-old` uses the new fixture
+  `__fixtures__/sdk8/` (`global.json` with 8.0.425, one project) and the fake, not the real SDK. One test,
+  gated by `NUIGET_SDK_TESTS`, runs the real SDK: `reads the config chain of the real SDK nearest first`.
+  `revision.test.ts` (5 tests).
 - `inspector.ts`, new (P2.4): `StaticProjectInspector({ assets, stopDirs })` implements `ProjectInspector`.
   `inspect(projectPath)` never rejects and always answers `fidelity: 'provisional'`.
   - Unsupported projects (`inspector.ts:82-103`): a missing file is `not-found`; a `packages.config` beside
@@ -220,16 +284,32 @@ CI                           → run 38274861212 for 1fa8f6e: red in E2E (1.85.0
 - `cpm/App/obj/project.assets.json` does not list `Pinned`: the item says to move the file, not to change it.
   P2.4's rule for `resolvedVersion` falls back to nothing for that reference.
 - The lines without a test are listed by the coverage run above.
+- `context.ts` and `revision.ts` are not exported from `index.ts`: the row of P2.4 limits that file to six
+  modules and the row of P2.5 does not name it. The first importer (P2.8 or P2.9) imports them directly or
+  extends the barrel in its own item.
 - Nothing outside the directory imports the modules yet. `getProjectDependencyMap` is what the host passes to
   `PackageWorkflows` as `projectDependencies` (P2.9).
 
 ## Not started
 
-- `context.ts` and `revision.ts` (P2.5),
-  `evaluator.ts` (P6.2), `mutator.ts` (P6.3).
+- `evaluator.ts` (P6.2), `mutator.ts` (P6.3).
 
 ## Deviations from contract/ADR (file:line each)
 
+- The contract has no type for the provider or its answer. `ProjectContextResult { context, unsupported? }`
+  (`context.ts:14-18`) is this item's shape for "`!supported` → project `unsupported: 'sdk-too-old'`": the
+  context itself has no such field, and `InstalledResult.unsupported` belongs to whoever combines the
+  context with an inspection (P2.8).
+- The argv of `dotnet nuget config paths` is a constant in `context.ts:22`, not a builder in
+  `src/core/cli/commands.ts`: it has no argument to validate, and the row does not name that file.
+- `get` rejects when the source provider does (`context.ts:39-43`); SDK detection and the config chain
+  degrade to an absent `sdk` and to `[]`. An empty source list would say "no sources", which is a
+  different fact from "unknown" (the rule of P4.8, applied here).
+- The revision covers the nearest props and targets files, not every file a project imports: explicit
+  `<Import>`s are not followed, as in the inspector. `global.json` is looked for up to the filesystem
+  root (the SDK does), the props and targets files up to the stop directory (`revision.ts:19-36`).
+- On a case-insensitive file system the CLI reports `NuGet.Config` for a file named `nuget.config`; the
+  paths are passed on as reported.
 - `definedIn` (`inspector.ts:282-306`). The plan row writes "`definedIn` = project" for a `VersionOverride`;
   by the ruling that names the project file, which `src/protocol/domain.ts:57` encodes as an absent field.
   Beyond the ruling's cases: a row whose item is declared in `Directory.Build.props` always names that file,
@@ -272,8 +352,8 @@ CI                           → run 38274861212 for 1fa8f6e: red in E2E (1.85.0
 
 ## Advisor decisions (date, item, question, answer verbatim)
 
-P2.2 and P2.3 are not ⚑ and no stop-and-ask trigger fired for them; no consultation of the
-`architecture-advisor` took place for either.
+P2.2, P2.3 and P2.5 are not ⚑ and no stop-and-ask trigger fired for them; no consultation of the
+`architecture-advisor` took place for them.
 
 2026-10-12, P2.4, ⚑. Brief in the form of plan §2.4, sent on `labs/2.0` @ `ef96051` before any code was
 written. It listed what P2.2 and P2.3 provide and asked eleven questions where the plan row does not decide
@@ -333,4 +413,5 @@ ruling above was followed for P2.4, with the three readings beyond it that are l
 
 ## Exact next step (one item ID)
 
-P2.5 (`src/core/project/context.ts` and `revision.ts`).
+P2.6 (⚑ `src/core/sources/**` minimal: `NuGetConfigReader`, `DotnetSourceProvider`, `DefaultOutboundPolicy`;
+consult the `architecture-advisor` on the mapping semantics before writing code).
