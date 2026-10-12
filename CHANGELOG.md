@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **2.0 build switch** — `node esbuild.mjs --v2` and `npm run watch:v2` build the 2.0 entry points into the same three bundles, and `--production --analyze` checks them against size ceilings
 - **2.0 protocol and core contracts** — `src/protocol` and `src/core/contracts.ts` define the typed messages and interfaces of the 2.0 host and webviews; `npm run docs:protocol` generates `docs/protocol.md` from them and CI fails when that file is out of date
+- **2.0 redirect guard** — `src/core/http` decides whether a redirect may be followed: no downgrade from HTTPS, no loopback, private or link-local target, also when the address is written as IPv4-mapped IPv6, NAT64 or 6to4, and a credential is forwarded to the same origin only
 - **2.0 query coordinator** — `src/core/queries` computes each resource once per generation however many surfaces ask, never caches a result that an invalidation has overtaken, and reports one invalidation event per tick with the new generation of every key
 - **2.0 dotnet runner** — `src/core/cli` runs `dotnet` without a shell and with a fixed English environment, builds the noun-first `dotnet package` commands of .NET SDK 10, validates every argument, and reports an older SDK as unsupported
 - **2.0 log redaction** — `src/core/logging` removes credentials from text and command lines before they are logged, including tokens in URLs, `Proxy-Authorization` and `Cookie` headers and quoted passwords
