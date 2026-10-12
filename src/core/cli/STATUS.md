@@ -1,4 +1,4 @@
-# STATUS — src/core/cli   commit effc1e4 (parent of the P1.6 commit)   2026-10-12T13:31:53Z
+# STATUS — src/core/cli   commit e080e1f (the P1.6 commit; this note was completed in the fix that follows it)   2026-10-12T13:39:48Z
 
 git status --short src/core/cli: `?? ` for `DotnetRunner.ts`, `DotnetRunner.test.ts`, `commands.ts`,
 `commands.test.ts`, `sdk.ts`, `sdk.test.ts`, `validate.ts`, `validate.test.ts`, `powershell.ts`,
@@ -55,7 +55,22 @@ npm run check:vsix           → check:vsix: OK
 grep -rln child_process src/core --include='*.ts' → only files under src/core/cli (ADR-003)
 grep -rn "Thenable\|from 'vscode'\|nounFirstSyntax" src/core, code files → no match
 npm run test:ui              → SKIPPED: no UI change; the CI job UI runs it
-CI                           → see the tracker row of P1.6
+CI                           → run 38256767668 for e080e1f RED: Test (ubuntu-latest) and Test (windows-latest),
+                               the same three tests of DotnetRunner.test.ts on both ("wraps other
+                               asynchronous spawn errors in DotnetSpawnError", "wraps a synchronous spawn
+                               failure, including non-Error throwables", "returns undefined and warns when
+                               dotnet cannot be started"); every other test passed on both systems.
+                               Cause: the runners set DOTNET_ROOT, the shell of the local gates did not,
+                               and those tests asserted the executable name without fixing it (N48).
+reproduced locally           → DOTNET_ROOT=<sdk dir> NUIGET_SDK_TESTS=1 npx vitest run --project backend
+                               src/core/cli → 3 failed | 136 passed (139), the same three tests
+after the fix                → the same command: Tests 139 passed (139) · with DOTNET_ROOT=/nonexistent/sdk:
+                               138 passed | 1 skipped · with DOTNET_ROOT unset: 138 passed | 1 skipped ·
+                               npm test with DOTNET_ROOT set and NUIGET_SDK_TESTS=1: Test Files 58 passed
+                               (58), Tests 1924 passed (1924) · npx vitest run --coverage in that
+                               environment: exit 0, src/core/cli 99.25 % lines · the literal coverage gate
+                               in that environment: exit 0 · npm run check-types 0 · npm run lint 0
+CI after the fix             → see the tracker row of P1.6
 ```
 
 ## Done (tested)
@@ -123,6 +138,10 @@ Changes of quarry tests. The item names the first six; the rest follow from what
 - `fakeLogger` (`DotnetRunner.test.ts:142-150`): the declared return type did not type-check in the 2.0 test
   program (5 errors, hidden while the main program was red). The helper uses `vi.fn<Logger['warn']>()` and
   `satisfies Logger`; no behaviour changed.
+- After the first CI run (red, see above): three quarry tests that assert the text `Could not start "dotnet"`
+  now pass `resolveExecutable: plainDotnet` to their runner, as the tests around them already name their
+  executable. Without it the runner resolves `DOTNET_ROOT`, so the message depended on the machine. The
+  assertions are unchanged.
 - Three tests added to the same file beyond the two named replacements:
   `probes again when the output was not a version`,
   `reports an SDK below 10 as unsupported instead of undefined, and caches it`, and the CWD case inside

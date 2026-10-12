@@ -157,6 +157,9 @@ function deferred<T>() {
     return { promise, resolve };
 }
 
+/** Keeps a test independent of `DOTNET_ROOT`: without it the runner resolves the machine's own SDK path. */
+const plainDotnet = (): string => 'dotnet';
+
 function dir(name: string): string {
     return path.resolve(path.sep, 'repo', name);
 }
@@ -344,7 +347,7 @@ describe('DefaultDotnetRunner.run spawn failures', () => {
     });
 
     it('wraps other asynchronous spawn errors in DotnetSpawnError', async () => {
-        const runner = new DefaultDotnetRunner({ spawn: scriptedSpawn(() => ({ spawnError: errno('EMFILE', 'spawn EMFILE') })) });
+        const runner = new DefaultDotnetRunner({ spawn: scriptedSpawn(() => ({ spawnError: errno('EMFILE', 'spawn EMFILE') })), resolveExecutable: plainDotnet });
 
         const error: unknown = await runner.run(['--version'], { cwd: CWD }).catch(e => e);
 
@@ -355,11 +358,11 @@ describe('DefaultDotnetRunner.run spawn failures', () => {
     });
 
     it('wraps a synchronous spawn failure, including non-Error throwables', async () => {
-        const throwing = new DefaultDotnetRunner({ spawn: () => { throw errno('EINVAL', 'spawn EINVAL'); } });
+        const throwing = new DefaultDotnetRunner({ spawn: () => { throw errno('EINVAL', 'spawn EINVAL'); }, resolveExecutable: plainDotnet });
         await expect(throwing.run(['--version'], { cwd: CWD })).rejects.toMatchObject({ name: 'DotnetSpawnError', code: 'EINVAL', message: 'Could not start "dotnet": spawn EINVAL' });
 
         // eslint-disable-next-line no-throw-literal -- exercises the non-Error path
-        const throwingString = new DefaultDotnetRunner({ spawn: () => { throw 'boom'; } });
+        const throwingString = new DefaultDotnetRunner({ spawn: () => { throw 'boom'; }, resolveExecutable: plainDotnet });
         await expect(throwingString.run(['--version'], { cwd: CWD })).rejects.toMatchObject({ name: 'DotnetSpawnError', message: 'Could not start "dotnet": boom' });
     });
 
@@ -447,7 +450,7 @@ describe('DefaultDotnetRunner.sdkVersion', () => {
 
     it('returns undefined and warns when dotnet cannot be started', async () => {
         const logger = fakeLogger();
-        const runner = new DefaultDotnetRunner({ spawn: scriptedSpawn(() => ({ spawnError: errno('ENOENT') })), logger });
+        const runner = new DefaultDotnetRunner({ spawn: scriptedSpawn(() => ({ spawnError: errno('ENOENT') })), logger, resolveExecutable: plainDotnet });
 
         await expect(runner.sdkVersion(CWD)).resolves.toBeUndefined();
 
