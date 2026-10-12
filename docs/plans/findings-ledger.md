@@ -118,7 +118,7 @@ one records itself here.
 | N16 | Medium | Locale-dependent parsers. | — | P2.6 | open |
 | N17 | Low | `restoreSearchQuery` `source` vs `sources`. | — | Moot in 2.0 | moot in 2.0 |
 | N18 | Low | No l10n policy. | — | D11 | closed by design (D11) |
-| N19 | Low | Multi-TFM resolved versions arbitrary. | — | P2.2, P2.4 | open; reader side done in P2.2 (`AssetsReader.getResolvedVersionsByFramework`), the inspector uses it in P2.4 |
+| N19 | Low | Multi-TFM resolved versions arbitrary. | — | P2.2, P2.4 | open; P2.2 reads the versions per framework and P2.4 uses them for the row's framework; left: the `targets` key of a .NET Standard framework (`.NETStandard,Version=v2.0`) is not mapped to `netstandard2.0`, so such a row takes the version of any framework |
 | N20 | Low | nuget.org identity by substring. | — | P2.6 | open |
 | N21 | Low | Nested `nuget.config` not discovered. | — | P2.6 | open |
 | N22 | Low | Stale `--enable-proposed-api` in e2e config. | — | P0.8 | closed (P0.8) |
@@ -402,10 +402,10 @@ headline defects in the order the plan lists them, so that salvage commits can c
 | C-feeds-2 | Transient outage → 24 h miss | P4.3 to P4.9 | open |
 | C-feeds-3 | No OutboundPolicy implementation | P4.3 to P4.9 | open |
 | C-feeds-4 | Ctor shapes mismatch composition root | P4.3 to P4.9 | open |
-| C-project-catalog-1 | Inspector/evaluator/mutator/references/context missing | P2.2 to P2.8, P6 | open |
+| C-project-catalog-1 | Inspector/evaluator/mutator/references/context missing | P2.2 to P2.8, P6 | open; references done in P2.3, inspector in P2.4; context P2.5, evaluator P6.2, mutator P6.3 |
 | C-project-catalog-2 | Catalog blocks on evaluator | P2.2 to P2.8, P6 | open |
 | C-project-catalog-3 | Fabricated context | P2.2 to P2.8, P6 | open |
-| C-project-catalog-4 | Conditions dropped | P2.2 to P2.8, P6 | open; central side done in P2.2 (a guarded `PackageVersion` is returned as `conditioned`), references in P2.4 |
+| C-project-catalog-4 | Conditions dropped | P2.2 to P2.8, P6 | closed for tier 1 (P2.2: a guarded `PackageVersion` is returned as `conditioned`; P2.4: framework conditions are captured and intersected, every other condition is `unresolved`) |
 | C-project-catalog-5 | Per-project resolved versions | P2.2 to P2.8, P6 | open |
 | C-project-catalog-6 | Catalog undocumented | P2.2 to P2.8, P6 | open |
 | C-ops-1 | OperationQueue v2 missing | P1.10, P2.1 | closed (P2.1: `DefaultOperationQueue`, 16 tests) |
@@ -436,7 +436,7 @@ Counts quoted in findings drift. These commands reproduce the ones that matter; 
 | `as any` in unit tests (T3; the plan counted 955) | `grep -rEo "as any" src --include='*.test.ts' --include='*.test.tsx' \| wc -l` | 959 |
 | Unit test files that call `setTimeout(` (T3; a proxy for "files with sleeps", the plan counted 19) | `grep -rlE "setTimeout\(" src --include='*.test.ts' --include='*.test.tsx' \| wc -l` | 22 |
 | Fixed `px` font sizes (U5) | `grep -cE "font-size:\s*[0-9.]+px" src/webview/app/App.css src/webview/sidebar/SidebarApp.css` | 125 and 13 |
-| Unit tests | `npx vitest run` | 69 files, 2236 tests and 1 skipped; 2237 with `NUIGET_SDK_TESTS=1` |
+| Unit tests | `npx vitest run` | 70 files, 2261 tests and 1 skipped; 2262 with `NUIGET_SDK_TESTS=1` |
 | End-to-end tests | `npm run test:e2e` | 30 |
 | UI tests | `npm run test:ui -- --storage /tmp/nuiget-ui` | 31 |
 | Type errors in 1.x tests, benchmarks and helpers (N30) | strict `tsc` over `src` with `types: [node, vitest/globals]`, without `src/test/e2e` and `src/test/ui` | 55 |
