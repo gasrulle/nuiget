@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **2.0 build switch** — `node esbuild.mjs --v2` and `npm run watch:v2` build the 2.0 entry points into the same three bundles, and `--production --analyze` checks them against size ceilings
 - **2.0 protocol and core contracts** — `src/protocol` and `src/core/contracts.ts` define the typed messages and interfaces of the 2.0 host and webviews; `npm run docs:protocol` generates `docs/protocol.md` from them and CI fails when that file is out of date
+- **2.0 credentials** — `src/core/credentials` finds the sign-in for an authenticated source in the environment, in `nuget.config` and through the Azure Artifacts Credential Provider, without a shell and without logging anything secret
 - **2.0 package sources** — `src/core/sources` lists the sources that apply to each project through the dotnet CLI, reads credentials and package source mapping from the `nuget.config` chain, and sends a package id only to the sources that are enabled for the project and that the mapping allows
 - **2.0 project context** — `src/core/project` works out for each project which .NET SDK, which `nuget.config` files and which sources apply to it, marks a project whose SDK is older than .NET 10 as read-only, and notices when one of its input files changes
 - **2.0 project inspection** — `src/core/project` lists the packages a project references without running MSBuild, says for each where its version is declared (project, props file, central, override), limits references to their target frameworks, and reports what it cannot decide as unresolved instead of guessing
@@ -33,6 +34,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Credential lookup order is environment, nuget.config, then credential provider**
+- **Azure Artifacts Credential Provider runs as the netcore plugin through dotnet (netfx plugin no longer used)**
 - **Refreshed and scoped Copilot instructions, agents, and skills for the current extension architecture**
 - **Added focused GitHub Actions skills and a repository-tailored Technical Writer agent**
 - **Made the Copilot instructions, skills, and agents available to Claude Code**
