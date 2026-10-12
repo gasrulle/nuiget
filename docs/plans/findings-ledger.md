@@ -109,7 +109,7 @@ one records itself here.
 | N7 | Medium | README download sends no auth; temp path unvalidated; zip inflate unbounded. | — | P4.4 | open |
 | N8 | Medium | Sidebar `_sendInitialData` clears scoped-merge base. | — | P2.11 scenario | open |
 | N9 | Medium | Queued mutations discarded when the submitting surface is disposed. | — | P2.1, P2.9 | open |
-| N10 | Medium | `_forceCheckScope` merge is dead code (copilot-instructions row wrong). | — | Appendix A; closed by QueryCoordinator | open until QueryCoordinator replaces the code (P1.8) |
+| N10 | Medium | `_forceCheckScope` merge is dead code (copilot-instructions row wrong). | — | Appendix A; closed by QueryCoordinator | replacement landed (P1.8); the legacy row is deleted with the legacy code at P8.2 |
 | N11 | Medium | All-projects update responses uncorrelated. | — | P3.3, P5.9 | open |
 | N12 | Medium | `bulkRemoveConfirmed` before fallible work. | — | ADR-007 terminal response | open |
 | N13 | Medium | Coverage thresholds global-only. | — | P0.11 | closed (P0.11: floor for src/webview/**; P1.2: floor of 85 % lines for src/core/**) |
@@ -378,8 +378,8 @@ headline defects in the order the plan lists them, so that salvage commits can c
 | C-cli-logging-5 | Provenance dropped | P1.5, P1.6 | closed (P1.6; contract side in P1.1b) |
 | C-cli-logging-6 | Caller env overrides fixed env | P1.5, P1.6 | closed (P1.6; contract side in P1.1b) |
 | C-cli-logging-7 | 5 test files missing | P1.5, P1.6 | closed (P1.5: `redact.test.ts`; P1.6: `commands`, `validate`, `sdk` and `powershell` tests) |
-| C-state-core-1 | QueryCoordinator 0 tests | P1.7, P1.8 | open |
-| C-state-core-2 | `carryOver` leak | P1.7, P1.8 | open |
+| C-state-core-1 | QueryCoordinator 0 tests | P1.7, P1.8 | closed (P1.8) |
+| C-state-core-2 | `carryOver` leak | P1.7, P1.8 | closed (P1.8) |
 | C-state-core-3 | Scope table vs ADR | P1.7, P1.8 | closed (P1.7) |
 | C-state-core-4 | Verbatim path compare | P1.7, P1.8 | closed (P1.7) |
 | C-state-core-5 | Source validation against previous project | P1.7, P1.8 | open; contract side done in P1.7 (`SessionStore.reconcile` JSDoc), closes at P2.10 when the composition root reconciles after a project change |
@@ -426,7 +426,7 @@ Counts quoted in findings drift. These commands reproduce the ones that matter; 
 | `as any` in unit tests (T3; the plan counted 955) | `grep -rEo "as any" src --include='*.test.ts' --include='*.test.tsx' \| wc -l` | 959 |
 | Unit test files that call `setTimeout(` (T3; a proxy for "files with sleeps", the plan counted 19) | `grep -rlE "setTimeout\(" src --include='*.test.ts' --include='*.test.tsx' \| wc -l` | 22 |
 | Fixed `px` font sizes (U5) | `grep -cE "font-size:\s*[0-9.]+px" src/webview/app/App.css src/webview/sidebar/SidebarApp.css` | 125 and 13 |
-| Unit tests | `npx vitest run` | 60 files, 1985 tests and 1 skipped; 1986 with `NUIGET_SDK_TESTS=1` |
+| Unit tests | `npx vitest run` | 61 files, 2002 tests and 1 skipped; 2003 with `NUIGET_SDK_TESTS=1` |
 | End-to-end tests | `npm run test:e2e` | 30 |
 | UI tests | `npm run test:ui -- --storage /tmp/nuiget-ui` | 31 |
 | Type errors in 1.x tests, benchmarks and helpers (N30) | strict `tsc` over `src` with `types: [node, vitest/globals]`, without `src/test/e2e` and `src/test/ui` | 55 |

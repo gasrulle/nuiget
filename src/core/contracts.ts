@@ -138,9 +138,10 @@ export class StaleQueryError extends Error {
 export interface InvalidationEvent {
     scope: InvalidationScope;
     reason: InvalidationReason;
+    /** Sequence number of this event: the coordinator's count of `invalidate()` calls folded into it. It is not a resource generation and is not comparable with `QueryHandle.generation` or the `generation` of a response envelope. */
     generation: number;
-    /** Resource keys that moved to a new generation. */
-    keys: ResourceKey[];
+    /** Every key the coordinator has seen that `scope` reached, with its generation after this invalidation (the value a `QueryHandle` and an ok response envelope carry for that key). Keys never queried are absent. */
+    keys: Array<{ key: ResourceKey; generation: number }>;
 }
 
 export interface QueryCoordinator extends Disposable {
