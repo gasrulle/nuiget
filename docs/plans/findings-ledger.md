@@ -136,6 +136,7 @@ one records itself here.
 | N34 | Low | The agent guidance that required `npm install` in CI cited `@emnapi/*` optional dependencies that had left the lockfil… | — | P0.8 (guidance rewritten, CI on `npm ci`) | closed (P0.8) |
 | N35 | Low | The id letter D is used twice: | — | convention in this ledger: write "finding D3" for the smells | accepted |
 | N36 | Low | The core import fence pattern `**/extension*` (literal from the plan) also matches a core module whose name starts wit… | — | rename such a module, or narrow the pattern in the item that needs it | accepted |
+| N37 | Low | The `E2E (1.85.0)` CI job can fail before any test runs when the VS Code download is aborted | — | P7.2 (cache or pre-download VS Code); until then re-run the failed job | open |
 
 Corrections in Appendix A that do not belong to one finding id:
 
@@ -339,6 +340,7 @@ Three-lens verification of the original findings against `main` produced these c
 | N34 | Low | The agent guidance that required `npm install` in CI cited `@emnapi/*` optional dependencies that had left the lockfile in `660b78b`. | P0.8 | P0.8 (guidance rewritten, CI on `npm ci`) |
 | N35 | Low | The id letter D is used twice: decisions D1 to D13 in the execution plan and architecture-smell findings D1 to D9 in the original ledger. | P0.13 | convention in this ledger: write "finding D3" for the smells |
 | N36 | Low | The core import fence pattern `**/extension*` (literal from the plan) also matches a core module whose name starts with "extension". | P0.7 | rename such a module, or narrow the pattern in the item that needs it |
+| N37 | Low | The `E2E (1.85.0)` CI job can fail before any test runs: `@vscode/test-cli` aborted the download of VS Code 1.85.0 three times within one second ("Error downloading, retrying … aborted", "Failed to download and unzip VS Code 1.85.0"). Seen once, on run 38233521574 for a documentation-only commit; `gh run rerun 38233521574 --failed` passed. | P0.13 | P7.2 (cache `.vscode-test` or pre-download with back-off); until then re-run the failed job |
 
 ## 5. Defects in the paused 2.0 code (execution plan, Appendix B)
 

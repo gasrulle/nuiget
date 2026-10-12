@@ -22,6 +22,8 @@ npx tsc --noEmit            → exit 0, no output
 npx eslint src              → exit 0, no output
 npm test                    → Test Files 44 passed (44) · Tests 1591 passed (1591)
 npm run bench               → Test Files 14 passed (14) · Tests 80 passed | 1 skipped (81)
+CI run 38233521574 (commit 2dcd3c6) → first attempt red: `E2E (1.85.0)` "Failed to download and unzip VS Code
+                              1.85.0" before any test (N37); `gh run rerun 38233521574 --failed` → all eight jobs green
 npm run package:vsix        → SKIPPED: documentation only (plan §2.2 step 5)
 npm run test:ui             → SKIPPED: documentation only
 ```
@@ -37,6 +39,7 @@ npm run test:ui             → SKIPPED: documentation only
 ## Done (untested)
 
 - Nothing reads the ledger mechanically yet. P7.5 plans a documentation drift script.
+- N37 and its gotcha row were added in a follow-up commit after the CI flake; that commit changes documentation only.
 
 ## Not started
 
