@@ -25,6 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Added the autonomous run protocol and item tracker for the 2.0 plan**
 - **Recorded a .NET SDK 10 probe of package add and remove on Central Package Management projects**
 - **Split agent gotchas into 1.x and 2.0 sections and added 2.0 layer-boundary instructions**
+- **Added the architecture-advisor agent and the 2.0 execution protocol summary for Claude Code**
 
 ## [1.18.9] - 2026-10-10
 
