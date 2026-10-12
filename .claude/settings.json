@@ -36,8 +36,6 @@
       "Bash(git branch:*)",
       "Bash(git merge-base:*)",
       "Bash(git ls-remote:*)",
-      "Bash(git push origin HEAD:main)",
-      "Bash(git push origin main)",
       "Bash(gh run:*)",
       "Bash(gh pr view:*)",
       "Bash(gh workflow view:*)",
@@ -57,7 +55,17 @@
       "Bash(wc:*)",
       "Bash(dotnet msbuild:*)",
       "Bash(dotnet nuget:*)",
-      "Bash(dotnet package:*)"
+      "Bash(dotnet package:*)",
+      "Bash(git switch:*)",
+      "Bash(git checkout -b:*)",
+      "Bash(git pull --ff-only)",
+      "Bash(git merge --no-edit origin/main)",
+      "Bash(git tag:*)",
+      "Bash(git push -u origin labs/*)",
+      "Bash(git push origin labs/*)",
+      "Bash(gh pr create:*)",
+      "Bash(gh pr list:*)",
+      "Bash(gh pr ready:*)"
     ],
     "ask": [
       "Bash(npm version:*)"
@@ -68,7 +76,10 @@
       "Bash(npx ovsx publish:*)",
       "Bash(git push --force:*)",
       "Read(./.env)",
-      "Read(./.env.*)"
+      "Read(./.env.*)",
+      "Bash(git push origin HEAD:main)",
+      "Bash(git push origin main)",
+      "Bash(gh pr merge:*)"
     ]
   }
 }
