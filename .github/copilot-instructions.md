@@ -21,6 +21,7 @@
 # Agent Guidelines
 - **Use Context7 for Documentation:** Discover the current host's tools, then use `resolve-library-id` and `query-docs` for version-specific library documentation.
 - **Use Context7 for VS Code, .NET, and NuGet docs too:** Query `/websites/code_visualstudio_api` for the VS Code extension API, `/dotnet/docs` for the dotnet CLI, and `/websites/learn_microsoft_en-us_nuget` for NuGet; resolve the ID again if one is missing. No Microsoft Learn MCP server is configured, and its search does not index the VS Code extension API. Fetch a known documentation URL directly when a full page is needed.
+- **2.0 plan in progress:** `docs/plans/2026-10-11-nuiget-2.0-execution-plan.md` is the execution plan for the 2.0 re-architecture, run on the `labs/2.0` branch under `docs/plans/RUN.md` with one tracker row per item in `docs/plans/STATUS.md`. Work one item at a time, cite item, finding and ADR IDs in commits, and read the plan's §1–§4 before starting. `ARCHITECTURE.md` describes 1.x until its 2.0 section lands; verify its claims against code before relying on them (known drift is in the plan's Appendix A).
 
 ## Agent Resource Maintenance
 
@@ -130,7 +131,42 @@ The VS Code task "Run Tests" (`Ctrl+Shift+T` or Task menu) runs `npm test` with 
 
 # Gotchas & Pitfalls
 
-## Known Issues
+Two sets while 1.x and 2.0 coexist on `labs/2.0`. Rows under **2.0 gotchas** apply to `src/core/**`,
+`src/protocol/**`, `src/host/**`, `src/webview/{main,sidebar-next,shared}/**` and `src/extension.next.ts`.
+Rows under **1.x gotchas** apply to the legacy code (`src/services/**`, `src/webview/{app,sidebar}/**`,
+`src/webview/NuGet*.ts`, `src/extension.ts`) and to the shared tooling until the flip; do not carry 1.x state
+patterns into 2.0 code.
+
+## 2.0 gotchas
+
+Seeded from the execution plan (decisions D1–D13, Appendix B). Item IDs name where each defect is fixed.
+
+| Issue | Solution |
+|-------|----------|
+| "Tests pass" is not "compiles" | Vitest transpiles without type-checking. `npx tsc --noEmit` → 0 is a separate gate for every item; never infer it from a green test run. |
+| Missing neighbour module | Never stub a module that a later item creates so `tsc` passes. Mark the item `blocked` in `docs/plans/STATUS.md` and stop. |
+| Frozen contracts | `src/protocol/**`, `src/core/contracts.ts` and `docs/adr/**` change only in the items that name them, behind the `.claude/.contract-change` sentinel (D6). Never widen a contract to fix a type error. |
+| Import boundaries | Follow `.github/instructions/core-boundaries.instructions.md`. Core never imports host, extension, webview, services, React or `vscode` values; `sidebar-next` is not exempt (P0.7). |
+| Extension host is Node 18.15 | VS Code 1.85 baseline (D10). No Node ≥ 20 API in 2.0 code; core uses `PromiseLike`, and `Thenable` appears only in `contracts.ts`. |
+| .NET SDK floor is 10 | Noun-first `dotnet package add/remove/list --project` only; no verb-first builders or SDK capability table. A project that resolves SDK < 10 is `unsupported` and read-only (D13). |
+| CPM and `--no-restore` | Never pass `--no-restore` to `package add` on a CPM project, and refuse CPM `add`/`update` until the mutator lands (D7, P1.10, P6.3). SDK 8 writes `<Version>` into the project (N1); SDK 10.0.401 does not, and the rule stays. Evidence: `docs/adr/004-sdk-probes.md`. |
+| SDK 10 reformats `Directory.Packages.props` | Every `dotnet package add --version` rewrites the file (blank lines and final newline stripped), even when the version is unchanged. Treat the props file as modified after any add (P6.3). |
+| Quarry is read-only and its notes are stale | Copy from the quarry working tree, never from `git show f837f34:`; never rebase or merge it; verify every quarry `STATUS.md` claim against the tree (D3). |
+| Evidence must be tracked | No decision may cite a gitignored capture such as `__fixtures__/.scratch`. Promote probe output to tracked, redacted fixtures (plan §2.6). |
+| Transient failure cached as a result | Cache successes and definitive failures only. Never cache spawn errors, timeouts or cancellations of an SDK probe (P1.6), and never turn a feed outage into a 24 h miss (P4.4). |
+| Empty is not unknown | An unreachable source yields `sourcesUnavailable`, not an empty update or search result (P4.8). |
+| Project paths compared verbatim | Normalize with `normalizeProjectPath` before matching project paths; Windows casing and separators differ (P1.7). |
+| CLI output reaches logs unredacted | Redact dotnet output and argv before logging or passing them to `onCommand` (P1.5, P1.10). |
+| Unbounded persisted cache entries | Persisted cache entries have an 8 MB byte budget (P1.4); icon data URIs go through it, not around it (P4.4). |
+| `child_process` outside the CLI module | `grep -rln child_process src/core` lists only `src/core/cli/*`; processes are spawned with argv, never through a shell (ADR-003, P1.6). |
+| `.vscodeignore` regressions | The VSIX contains no `src/`, `.claude/` or `docs/`. Keep `.claude/**`, `CLAUDE.md`, `.mcp.json` and `src/_wip/**` excluded; `npm run check:vsix` verifies it once P0.10 adds the script. |
+
+## 1.x gotchas (removed at P8)
+
+These rows describe the legacy architecture and the shared tooling. P8.2 deletes the section together with
+the legacy code; before that, P7.5 reviews which tooling rows still hold for 2.0.
+
+### Known Issues
 | Issue | Status |
 |-------|--------|
 | Dependency vulnerability status is time-sensitive | `@vscode/test-cli` and `@vscode/test-electron` are installed for extension-host E2E tests. **Run `npm audit` when assessing current vulnerabilities; do not infer a clean audit from this document.** |
@@ -143,14 +179,14 @@ The VS Code task "Run Tests" (`Ctrl+Shift+T` or Task menu) runs `npm test` with 
 | Typed backend message routing | `PanelRequestMessage` and `SidebarRequestMessage` in `NuGetTypes.ts` are discriminated unions used by both backend message handlers. Extend these contracts for new requests; do not reintroduce an untyped `WebviewMessage`. ESLint turns off `no-explicit-any` and `no-non-null-assertion` in test files via override in `eslint.config.mjs`. |
 | CI uses `npm install` not `npm ci` | `@emnapi/core` and `@emnapi/runtime` are transitive optional deps (via `@rolldown/binding-wasm32-wasi`) whose resolved versions differ between npm patch versions. `npm ci` fails on any drift. CI uses `npm install --no-audit --no-fund` instead — reads the lockfile when compatible, resolves fresh when not. |
 
-## VS Code Extension
+### VS Code Extension
 | Issue | Solution |
 |-------|----------|
 | Context menu not showing | Use regex: `resourceFilename =~ /\\.(csproj\|fsproj\|vbproj)$/` |
 | Watch task hangs preLaunchTask | Compound `watch` task uses `dependsOn` with `npm: watch:esbuild` + `npm: watch:tsc`. esbuild plugin emits `[watch] build started`/`[watch] build finished`. tsc uses `$tsc-watch` matcher. |
 | preLaunchTask fails | Use explicit task label ("watch") not "${defaultBuildTask}" |
 
-## React 19 / Webview
+### React 19 / Webview
 | Issue | Solution |
 |-------|----------|
 | "process is not defined" | Add esbuild define for `process.env.NODE_ENV` |
@@ -168,7 +204,7 @@ The VS Code task "Run Tests" (`Ctrl+Shift+T` or Task menu) runs `npm test` with 
 | InstalledTab filter bar removed | No `.installed-filter-bar` exists. Filtering is driven by `externalFilter`/`externalFilterMode` props from App.tsx unified search bar. Don't re-add internal filter state or filter UI to InstalledTab. |
 | Unified search bar state in App.tsx | All search state (`searchQuery`, `searchResults`, `quickSearchSuggestions`, `recentSearches`, `showFilterDropdown`, etc.) lives in App.tsx. `parseSearchQuery()` from `utils/parseSearchQuery.ts` drives mode detection. Tabs receive `externalFilter` and `externalFilterMode` props. |
 
-## State Management
+### State Management
 | Issue | Solution |
 |-------|----------|
 | Settings reset on panel close | Use `context.workspaceState` via messages, not just `vscode.getState/setState` |
@@ -212,7 +248,7 @@ The VS Code task "Run Tests" (`Ctrl+Shift+T` or Task menu) runs `npm test` with 
 | `refreshDebounceRef` in App.tsx | The `refresh` handler uses 300ms debounce to collapse rapid refresh messages from sidebar operations. Don't remove — without it, 3 quick sidebar ops trigger 3 full main panel reloads. |
 | SourceSettingsOverlay state ownership | Source settings form state (`addSourceUrl`, `addSourceName`, `addingSource`, `confirmRemoveSource`, etc.) lives INSIDE `SourceSettingsOverlay.tsx`, NOT in App.tsx. App.tsx forwards `addSourceResult` via `sourceSettingsRef.current?.handleAddSourceResult()`. Don't re-add these state vars to App.tsx. |
 
-## Sidebar
+### Sidebar
 | Issue | Solution |
 |-------|----------|
 | Activity Bar badge removed | Badge feature was removed. No `setBadge`, `_clearBadge`, `_buildBadgeTooltip`, `_pendingBadgeCount`, `_pendingBadgeTooltip`, `_showActivityBarBadge`, or `nuiget.showActivityBarBadge` setting exists. Don't re-add. |
@@ -244,7 +280,7 @@ The VS Code task "Run Tests" (`Ctrl+Shift+T` or Task menu) runs `npm test` with 
 | `versionsCache` has no TTL | In-memory LRU cache never expires. `clearSourceErrors()` now calls `clearVersionsCache()` which clears both `versionsCache` and `workspaceCache` version entries. Without this, refresh doesn't pick up newly published versions. `checkUpdatesInBackground(force=true)` also calls `clearVersionsCache()` — without this, post-operation re-checks return stale cached versions. |
 | dotnet NuGet HTTP cache stale | Refresh buttons (main panel + sidebar) now call `clearNuGetHttpCache()` before refreshing (adds 0–15s). Command Palette → `nUIget: Clear NuGet HTTP Cache` (`nuiget.clearHttpCache`) is also still available standalone. `clearSourceErrors()` already re-validates sources via `startSourceHealthMonitor()`. |
 
-## NuGet / dotnet CLI
+### NuGet / dotnet CLI
 | Issue | Solution |
 |-------|----------|
 | `dotnet list package` fails (NU1900) | Parse .csproj directly as primary method |
@@ -271,7 +307,7 @@ The VS Code task "Run Tests" (`Ctrl+Shift+T` or Task menu) runs `npm test` with 
 | Multi-project batch checks pre-resolve sources once | `queryAllProjectsUpdates` and `checkUpdatesInBackground` call `resolveSourcesForBatch()` ONCE before the per-project loop and pass `preResolvedSources` to each `checkPackageUpdatesMinimal` call. Don't add per-project source resolution in multi-project loops — it causes N×(filterHealthySources log) spam. |
 | `refreshScoped` in all-projects mode is optimistic | `refreshScoped` handler in App.tsx does NOT send `checkAllProjectsUpdates` in all-projects mode. Instead, it optimistically removes updated packageIds from `allProjectsUpdates` state using `message.operation` data. Only `checkAllProjectsInstalled` (cheap .csproj read) is re-fetched. The sidebar's `checkUpdatesInBackground` serves as the authoritative source for update data. Don't re-add `checkAllProjectsUpdates` to `refreshScoped`. |
 
-## Code Patterns
+### Code Patterns
 | Issue | Solution |
 |-------|----------|
 | "Maximum call stack size exceeded" | `_postMessage()` must call `this._panel.webview.postMessage()`, not itself |
@@ -296,7 +332,7 @@ The VS Code task "Run Tests" (`Ctrl+Shift+T` or Task menu) runs `npm test` with 
 | `browseDetailsPanelContent` useMemo | Browse results details panel JSX is memoized via `useMemo` in App.tsx. InstalledTab and UpdatesTab render their own `MemoizedPackageDetailsPanel` internally. |
 | `assetsJsonCache` max entries | Capped at `MAX_ASSETS_CACHE_ENTRIES = 5` with TTL sweep. Don't remove the cap — concurrent flows can grow the cache unbounded within TTL. |
 
-## Testing
+### Testing
 | Issue | Solution |
 |-------|----------|
 | UI tests leak browse state | Use `openNuGetPanelWebview()` to reset search and select Installed before assertions. Replace controlled input text with `typeIntoTestId()` (Command+A on macOS, Control+A elsewhere); never hardcode Ctrl+A. |
