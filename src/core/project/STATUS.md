@@ -1,11 +1,12 @@
-# STATUS — src/core/project   commit d7a5d8b (parent of the P2.2 commit)   2026-10-12T15:55:13Z
+# STATUS — src/core/project   commit 74178f2 (parent of the P2.3 commit)   2026-10-12T16:25:55Z
 
-git status --short src/core/project: `?? src/core/project/` (belongs to the P2.2 commit, together with
-` M .gitignore`, ` M ARCHITECTURE.md`, ` M CHANGELOG.md`, ` M .github/copilot-instructions.md`,
-` M docs/plans/STATUS.md` and ` M docs/plans/findings-ledger.md`)
+git status --short src/core/project: `?? src/core/project/references.ts`, `?? src/core/project/references.test.ts`,
+` M src/core/project/STATUS.md` (they belong to the P2.3 commit, together with ` M ARCHITECTURE.md`,
+` M CHANGELOG.md`, ` M docs/plans/STATUS.md` and ` M docs/plans/findings-ledger.md`)
 
-Item: **P2.2 `src/core/project/{xml,discovery,assets,central}.ts` through the salvage gate, with tests on
-fixtures**.
+Items: **P2.3 `src/core/project/references.ts` (`getProjectReferences`, `getProjectDependencyMap`, ported from
+1.x) with tests** (this commit) and **P2.2 `src/core/project/{xml,discovery,assets,central}.ts` through the
+salvage gate, with tests on fixtures** (`1fa8f6e`). P2.3 touches none of P2.2's files.
 
 The quarry's `src/core/project/STATUS.md` was checked against its tree. It holds for `xml.ts`, `discovery.ts`,
 `assets.ts` and the fixtures. It is stale on three points: it lists `central.ts` as not started, and the file
@@ -14,6 +15,37 @@ assets into scratch directories, and the item orders a tracked `obj/` and the ex
 "28 util tests" predate P1.2. The quarry has no test for any of the four modules; all four test files are new.
 
 ## Verified by running
+
+P2.3, on `74178f2`:
+
+```text
+The gates ran with DOTNET_ROOT set to the SDK directory and NUIGET_SDK_TESTS=1 (N48).
+baseline npm run check-types → exit 0
+baseline npx eslint src      → exit 0
+baseline npx vitest run      → Test Files 68 passed (68) · Tests 2228 passed (2228)
+source                       → src/services/NuGetProjectService.ts:235-282 (1.x); the quarry has no references.ts
+1.x on this platform         → node: path.normalize(path.resolve('/src/App', '..\\Lib\\Lib.csproj')) is
+                               '/src/App/..\\Lib\\Lib.csproj' on macOS: a backslash reference does not resolve (N53)
+npm run check-types          → exit 0 (main, tsconfig.test.json, tsconfig.vitest.json; N39)
+npx eslint src               → exit 0, no output
+npm run lint                 → exit 0
+npx vitest run --project backend src/core/project/references.test.ts → Tests 9 passed (9)   (item gate)
+npx vitest run --project backend src/core/project → Test Files 5 passed (5) · Tests 89 passed (89)
+npm test                     → Test Files 69 passed (69) · Tests 2237 passed (2237)
+npx vitest run --coverage    → exit 0 · All files 76.91 % statements, 66.67 % branches, 72.51 % functions,
+                               78.39 % lines · references.ts 28 of 28 lines ·
+                               src/core/** 1969 of 2003 lines, 98.30 % (floor 85 %)
+npm run bench                → Test Files 17 passed (17) · Tests 104 passed | 1 skipped (105)
+npm run package:vsix         → exit 0 · Tests 2237 passed · DONE  Packaged: nuiget-v1.18.9.vsix (17 files,
+                               529.06 KB)
+npm run check:vsix           → check:vsix: OK
+git status --short src/core/contracts.ts src/protocol docs/adr → empty (no contract change, no sentinel)
+git diff 74178f2 -- src/core/project (without references.* and STATUS.md) → empty
+npm run test:ui              → SKIPPED: no UI change; the CI job UI runs it
+CI                           → see the tracker row of P2.3
+```
+
+P2.2, on `d7a5d8b`:
 
 ```text
 The gates ran with DOTNET_ROOT set to the SDK directory and NUIGET_SDK_TESTS=1 (N48).
@@ -46,11 +78,26 @@ secrets and paths in fixtures → grep for Users, home, token, password: three l
                                with the placeholder `C:\Users\testuser\…` (synthetic, as in the quarry)
 git status --short src/core/contracts.ts src/protocol docs/adr → empty (no contract change, no sentinel)
 npm run test:ui              → SKIPPED: no UI change; the CI job UI runs it
-CI                           → see the tracker row of P2.2
+CI                           → run 38274861212 for 1fa8f6e: red in E2E (1.85.0) on N44 (third sighting), green
+                               after gh run rerun --failed; the warm-up step followed as 74178f2
 ```
 
 ## Done (tested)
 
+- `references.ts`, new (P2.3), two functions ported from 1.x:
+  - `getProjectReferences(projectPath)`: the absolute paths of the `<ProjectReference Include>` items, in
+    document order, without duplicates. Read with `xml.ts` instead of the 1.x regular expression, so a
+    commented-out item does not count and single-quoted attributes do; `Include` may be a `;` list; an entry
+    with a wildcard or an MSBuild expression is skipped; `Update` and `Remove` are ignored; conditions are
+    not evaluated. Backslash paths are converted with `fromMsBuildPath` before they are resolved (N53). A
+    file that cannot be read or parsed has no references, as in 1.x.
+  - `getProjectDependencyMap(projectPaths)`: project → referenced projects among the given ones, without
+    self-references, keys and values normalized with `normalizeProjectPath`, read 24 at a time.
+- `references.test.ts`, 9 tests, among them the three the item names: `maps a diamond, with normalized keys
+  and values, so that dependencies order first`, `keeps both edges of a cycle, and the sort still returns
+  every project once`, `gives a missing file an empty entry and drops references to it and to projects
+  outside the set`. The diamond and the cycle are checked through `topologicalSortByDependency`, the sort
+  the bulk workflows use.
 - `xml.ts`: `parseMsBuildXml` (validates first, strips a byte order mark, throws `XmlParseError` with file and
   line), `rootProject`, `elements`, `attr` (any case, exact spelling first), `childText`, `textOf`,
   `lastPropertyValue`, `asArray`, `isObject`. One change: `rootProject` returns `{}` for `<Project></Project>`,
@@ -98,11 +145,12 @@ CI                           → see the tracker row of P2.2
 - `cpm/App/obj/project.assets.json` does not list `Pinned`: the item says to move the file, not to change it.
   P2.4's rule for `resolvedVersion` falls back to nothing for that reference.
 - The lines without a test are listed by the coverage run above.
-- Nothing imports the modules yet; `index.ts` is P2.4's.
+- Nothing imports the modules yet; `index.ts` is P2.4's. `getProjectDependencyMap` is what the host passes to
+  `PackageWorkflows` as `projectDependencies` (P2.9).
 
 ## Not started
 
-- `references.ts` (P2.3), `inspector.ts` and `index.ts` (P2.4), `context.ts` and `revision.ts` (P2.5),
+- `inspector.ts` and `index.ts` (P2.4), `context.ts` and `revision.ts` (P2.5),
   `evaluator.ts` (P6.2), `mutator.ts` (P6.3).
 
 ## Deviations from contract/ADR (file:line each)
@@ -121,14 +169,20 @@ CI                           → see the tracker row of P2.2
   comment that contains `<Import Sdk=` would classify as `sdk-style`. Quarry behaviour, unchanged; the
   inspector (P2.4) parses the file anyway.
 - No bench: the item names none (`computeTransitiveFrameworks` gets one with P2.12 if wanted).
+- `references.ts` differs from the 1.x code it is ported from in what it reads (`references.ts:19-46`): XML
+  instead of a regular expression, `;` lists, no unresolvable entries, no duplicates, and for malformed XML
+  nothing where the 1.x expression would still have matched. The two signatures and the shape of the map
+  are those of 1.x; they are free functions, not methods of a service.
 
 ## Advisor decisions (date, item, question, answer verbatim)
 
 The item is not ⚑ and no stop-and-ask trigger fired: no frozen file, no test of another item, no fixture that
-contradicts a tracked probe. No consultation of the `architecture-advisor` took place for it. The ambient
+contradicts a tracked probe. No consultation of the `architecture-advisor` took place for it. The same
+holds for P2.3. The ambient
 advisor was consulted before the first edit (check the scratch capture before promoting it, measure the raw
 copy first); both were done.
 
 ## Exact next step (one item ID)
 
-P2.3 (`src/core/project/references.ts`: `getProjectReferences` and `getProjectDependencyMap`, ported from 1.x).
+P2.4 (⚑ `src/core/project/inspector.ts`: `StaticProjectInspector` with the decided rules of the plan row, and
+`index.ts`). Consult the `architecture-advisor` before writing code.
