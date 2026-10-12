@@ -43,7 +43,7 @@ export default defineConfig({
                 test: {
                     name: 'backend',
                     environment: 'node',
-                    include: ['src/services/**/*.test.ts', 'src/extension.test.ts'],
+                    include: ['src/services/**/*.test.ts', 'src/extension.test.ts', 'src/test/lint/**/*.test.ts'],
                 },
             },
             {

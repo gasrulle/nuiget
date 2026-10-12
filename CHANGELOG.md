@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - **2.0 build switch** — `node esbuild.mjs --v2` and `npm run watch:v2` build the 2.0 entry points into the same three bundles, and `--production --analyze` checks them against size ceilings
+- **2.0 import fences** — ESLint keeps the 2.0 layers apart from each other and from the 1.x code, with a self-pruning allow-list, and `npm run lint` now also covers `scripts/` and the root configuration files
 
 ### Fixed
 
