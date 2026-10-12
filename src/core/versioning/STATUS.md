@@ -1,4 +1,4 @@
-# STATUS — src/core/versioning   commit c485d16 (parent of the P1.3 commit)   2026-10-12T12:14:38Z
+# STATUS — src/core/versioning   commit b8bfb9c (the P1.3 commit; this note was completed in the commit after it)   2026-10-12T12:14:38Z
 
 git status --short src/core/versioning src/test/benchmarks: `?? src/core/versioning/`,
 `?? src/test/benchmarks/core-versioning.bench.ts` (both belong to the P1.3 commit, together with
@@ -45,7 +45,11 @@ advisor VERIFY greps         → "exact pin is not an update candidate": 1 · th
                                the two ruled comments: 1 each
 grep Thenable, vscode, child_process in src/core/versioning → no match
 npm run test:ui              → SKIPPED: no UI change; the CI job UI runs it
-CI                           → see the tracker row of P1.3
+CI                           → run 38247897134 for b8bfb9c: first attempt red, job E2E (1.85.0), legacy test
+                               "Update Flow › install old version then update to latest" failed its first
+                               assertion 10.07 s after the suite started (N44); gh run rerun 38247897134
+                               --failed → success: E2E (1.85.0) success, Build & Package success, all other
+                               jobs success; Benchmark (informational) failure, expected until P2.12
 ```
 
 ## Done (tested)
@@ -71,6 +75,8 @@ CI                           → see the tracker row of P1.3
   informational CI job "Benchmark (informational)" (`npm run bench:compare`, `continue-on-error: true`) fails on
   the thirteen new keys and the run stays green.
 - The comment of `VersionSpec.floatingDepth` in `src/protocol/domain.ts` (N43): a later contract item.
+- The legacy e2e test that made the first CI attempt red waits a fixed 10 s for the suite's first `dotnet`
+  command (N44). It is not this item's file; P5.12 retires it. Nothing was changed for it.
 - The `NuGetVersion` conformance table and property tests: P6.5.
 
 ## Deviations from contract/ADR (file:line each)
@@ -196,9 +202,60 @@ VERIFY:
 CHECKED: `/Users/mattias/github/nuiget/.github/agents/architecture-advisor.agent.md`; plan §1-§3 (lines 41-159) and rows P1.2, P1.3, P2.2, P2.4, P2.12, P4.8, P6.5, Appendix A N6 (line 404); `/Users/mattias/github/nuiget/docs/adr/004-project-model.md` (all); `/Users/mattias/github/nuiget/docs/plans/STATUS.md` (tracker rows P1.2, P1.3; P0 phase review non-blocking 2 on bench placement; P1.1b rulings on ledger ids in prose); `/Users/mattias/github/nuiget/src/core/util/STATUS.md` (P1.2 note; its "Exact next step" already points the bench to `src/test/benchmarks/`); `/Users/mattias/github/nuiget/src/protocol/domain.ts:1-80`; `/Users/mattias/github/nuiget/src/services/NuGetTypes.ts:10-27`, `/Users/mattias/github/nuiget/src/services/NuGetUtils.ts:238-304`, `/Users/mattias/github/nuiget/src/services/NuGetUtils.test.ts:280-340`, `/Users/mattias/github/nuiget/src/services/NuGetPackageService.ts:2055-2080,2125-2145`, `/Users/mattias/github/nuiget/src/webview/NuGetSidebarPanel.ts:1090-1105`; `/Users/mattias/github/nuiget/docs/plans/findings-ledger.md` rows F1, F3, N6, N39, N40, N41, N42 (highest id N42); `/Users/mattias/github/nuiget/vitest.config.mts:15-16`, `/Users/mattias/github/nuiget/package.json:317-319`, `/Users/mattias/github/nuiget/src/test/benchmarks/run.mjs` and `utils.bench.ts:1-25`, `/Users/mattias/github/nuiget/eslint.config.mjs:29-62,124-141`; `git status --short` clean at c485d16; `grep -rn "floatingDepth\|isUpdateCandidate\|'exact'" src` outside `src/core/versioning`. Not run by me: any gate; the brief's baseline results are taken as given. Quarry lines are taken from the brief.
 ```
 
-Acted on: steps 1 to 12 as written. Two notes on the answer: its step 9 names `compareVersions`; the module's
+Acted on (first answer): steps 1 to 12 as written. Two notes on the answer: its step 9 names `compareVersions`; the module's
 comparator is `compare`, which the bench uses. Its VERIFY line expects the Benchmark CI job to list the new
 file; that job runs `bench:compare`, which fails on the new keys until P2.12 (see "Not started").
+
+2026-10-12, P1.3, stop-and-ask after the push: CI run 38247897134 for `b8bfb9c` was red in `E2E (1.85.0)`, in
+the legacy test `Update Flow › install old version then update to latest`, a test this item did not write and
+whose code path the commit does not touch. Question: re-run, fix the test, or block; and what is recorded
+where? Answer, verbatim:
+
+```text
+DECISION: Option 1. Re-run the failed jobs of run 38247897134, and when the re-run is green record the flake as finding N44 in one docs-only commit that cites P1.3 and N44, following the N37 precedent (commit 9e2ebbc). No test and no code changes. This is not an owner decision.
+
+Corrections to the brief first: the test spans `src/test/e2e/update-flow.e2e.test.ts:36-75`, not 37-79. Every other tree claim holds. I read the log myself (`gh run view 38247897134 --log-failed` and `--log`): in `E2E (1.85.0)` Electron started at 12:16:02.5, the extension host at 12:16:10.90, `Update Flow` at 12:16:12.18, and the failure line at 12:16:22.25, 10.07 s after the suite started, the length of the sleep at `:45`; in `E2E (stable)` of the same run the same test passed in 30009 ms and the job reports 30 passing.
+
+WHY: The failure has no causal path from P1.3: `git diff --stat c485d16 b8bfb9c` touches `src/core/versioning/**`, `src/test/benchmarks/core-versioning.bench.ts` and four documents only, nothing under `src/test/e2e`, `src/services`, `src/webview`, `src/extension.ts` or `esbuild.mjs`, so the 1.x bundle the `e2e` job builds (`ci.yml:159-160`) behaves as the one that passed on c485d16 in run 38246210132. The test never calls the extension's code paths: it types `dotnet add … --no-restore` into an integrated terminal (`:40-44`) 1.3 s after the extension host started, sleeps a fixed 10 s (`:45`) and asserts (`:48-51`); the failed assertion fired exactly when the sleep ended, so the first `dotnet` command the suite runs had not finished on a cold runner (the `e2e` job, unlike the `test` job at `ci.yml:102`, has no `dotnet --version` warm-up after `setup-dotnet`, `ci.yml:143-163`; `suiteSetup` activates the 1.x extension 1.3 s earlier, which itself probes `dotnet`, so the two may share first-run initialisation). The same terminal pattern in `install-flow.e2e.test.ts:50-57` completed inside its wait later in the same job (`install package adds PackageReference to .csproj`, 15012 ms), and `E2E (stable)` of the same run passed the same test. Plan §2.1 puts `src/test/e2e/**` outside P1.3's files, RUN.md §4 forbids touching tests the item does not name, and P5.12 retires every legacy e2e file ("never preserve `dotnet add package`"), so option 2 would be throwaway work that no local gate of P1.3 can verify; option 3 is wrong because nothing here is the owner's call. The gotcha row at `.github/copilot-instructions.md:166` ties the re-run permission to N37 only; this ruling extends it to N44 by the mechanism the P0.13 session used for N37 (9e2ebbc: ledger row, widened gotcha row, tracker note, STATUS note, no code change).
+
+Rulings on the two side questions. (a) The §5.3 counter: run 38247897134 does not count toward "two red runs" for P1.3. That counter bounds fix-forward commits for a failure the item caused; a re-run of an unchanged SHA is not a fix attempt, and a green re-run leaves P1.3 with zero red runs charged. If the re-run fails identically (same test, first assertion, about 10 s after the suite starts), that is a reproducible failure in a test nobody owns and a new stop-and-ask, still not a §5.3 count; the second brief must carry the suite-start and failure timestamps of the new attempt, whether `E2E (stable)` also failed, the duration of `install package adds PackageReference to .csproj` in that attempt, and the two candidate fixes for the advisor to choose between: a `dotnet --version` warm-up step in the `e2e` job mirroring `ci.yml:102`, or bounded polling of the project file in the test. If the re-run fails elsewhere or with another error, a new brief with that log. (b) P1.4 does not start while the re-run is in progress. RUN.md §5.3 says so, and mechanically `ci.yml:10-12` groups runs by ref with `cancel-in-progress: true`, so a P1.4 push would cancel the re-run attempt. Reading the P1.4 plan row meanwhile is harmless; no edit and no tracker flip.
+
+DO:
+1. Paste this answer verbatim under `## Advisor decisions` in `src/core/versioning/STATUS.md` (not frozen, no sentinel) before anything else.
+2. `gh run rerun 38247897134 --failed` (pre-approved by `.claude/settings.json:39`, `Bash(gh run:*)`). `--failed` re-runs `E2E (1.85.0)`, its dependent `Build & Package` (currently `skipped`), and the informational `Benchmark` job. If the `--json jobs` output after the attempt still shows `Build & Package skipped`, run `gh run rerun 38247897134` without `--failed`; never a push to get it to run.
+3. `gh run watch 38247897134 --exit-status`. Push nothing and start nothing while it runs. Green → step 4. Red in the same test at the same assertion → new brief as ruled above, no fix-forward, no further re-run, no P1.4. Red elsewhere → new brief with that log.
+4. `docs/plans/findings-ledger.md`: add N44 as a summary row after line 145 and a detail row after line 355, in the form of N37 (lines 139 and 349). Detail text: The `E2E (1.85.0)` CI job can fail in `Update Flow › install old version then update to latest` (`src/test/e2e/update-flow.e2e.test.ts:36-75`) without any product code path running: 1.3 s after the extension host starts, the test sends the suite's first `dotnet` command (`dotnet add … --no-restore`) through an integrated terminal, sleeps a fixed 10 s (`:45`) and asserts the `.csproj` content (`:48-51`); the `e2e` job has no `dotnet` warm-up step (the `test` job runs `dotnet --version`, `ci.yml:102`). Seen once, run 38247897134 on b8bfb9c: failure 10.07 s after the suite started, 29 of 30 tests passing, `E2E (stable)` of the same run green (same test, 30009 ms), the five earlier 1.85.0 runs of the day green; `gh run rerun 38247897134 --failed` → <result>. On a failed first assertion the test also skips `installTerminal.dispose()` (`:52`). 28 fixed `setTimeout` sleeps exist in 8 of the 9 legacy e2e files; those 8 files are among the 22 of the ledger's `:417` count, whose label says unit tests. Severity Low. Found: P1.3. Scheduled: until the legacy e2e files are retired, re-run the failed job; a second identical failure on the same SHA is a stop-and-ask (warm-up step in the `e2e` job, or polling in the test); P3.5 and P5.12 write the v2 e2e tests with bounded polling of the project file instead of fixed sleeps; P5.12 retires the legacy file. Summary row text: `The first e2e test of the run waits a fixed 10 s for the suite's first `dotnet` command and can fail without product code running.` | — | P5.12 (v2 e2e tests poll; legacy file retired); until then re-run the failed job | open.
+5. `.github/copilot-instructions.md:166`: widen the existing row, do not add a second. Replacement text: `| A red CI run is not always a code failure | Read `gh run view <id> --log-failed` first. Two known environmental failures: `E2E (1.85.0)` or `UI` stops with "Failed to download and unzip VS Code" or a ChromeDriver download error before any test ran (finding N37); or `E2E (1.85.0)` reports `Update Flow › install old version then update to latest` failing its first assertion (".csproj should contain 3.13.3") about 10 s into the suite, with VS Code downloaded and every other test passing (finding N44: the legacy test sleeps a fixed 10 s for the suite's first `dotnet` command). For either, re-run with `gh run rerun <id> --failed`, change no code or test in the item whose run went red, and never mark a job `continue-on-error` to hide it. A second identical failure on the same SHA is a stop-and-ask. |` No `.claude/` mirror is needed: `CLAUDE.md` imports the file.
+6. `docs/plans/STATUS.md`, row P1.3: Commit `b8bfb9c`; append to Notes: `CI: run 38247897134 red in E2E (1.85.0) on the legacy e2e timing flake N44 (ruling in src/core/versioning/STATUS.md); gh run rerun --failed → green.`
+7. `src/core/versioning/STATUS.md`: header SHA `b8bfb9c`; replace line 48 (`CI → see the tracker row of P1.3`) with the run id, the failed job and the re-run result; add one line on N44 under "Not started" (it is not a contract deviation).
+8. Commit with the `git-commit` skill, docs only, four files: `docs(plans): record the e2e timing flake in CI (P1.3, N44)`; body in the form of 9e2ebbc. Push to `labs/2.0`; `gh run watch <new id> --exit-status` → green. Then P1.4.
+
+DO NOT:
+- Do not edit `src/test/e2e/update-flow.e2e.test.ts` or any other 1.x test in P1.3 or in the docs commit (plan §2.1, RUN.md §4; the file is retired by P5.12).
+- Do not add a `dotnet --version` step to `.github/workflows/ci.yml` now; that is one of the two candidate fixes for the second brief, and `ci.yml` is not an item file of P1.3.
+- Do not push or start P1.4 while the re-run attempt is in progress (`ci.yml:10-12` would cancel it).
+- Do not mark P1.3 `blocked`, and do not count run 38247897134 as a §5.3 red run.
+- Do not mark `e2e` `continue-on-error`, raise the sleep, or add `.skip`/`.only` anywhere.
+- Do not add a second "red CI run" gotcha row; widen the existing one.
+- Do not touch `.github/STATUS.md`, `CHANGELOG.md`, `ARCHITECTURE.md`, `src/protocol/**`, `src/core/contracts.ts` or `docs/adr/**`.
+- Do not write finding ids into code or test comments.
+- Do not run `npm run bench:save`; the Benchmark job failure is expected until P2.12 (D8).
+
+CONTRACT CHANGE: none.
+
+VERIFY:
+- `gh run view 38247897134 --json conclusion,jobs --jq '.conclusion, (.jobs[] | "\(.name) \(.conclusion)")'` → `success`, `E2E (1.85.0) success`, `Build & Package success`; `Benchmark (informational) failure` is acceptable (continue-on-error, no baseline until P2.12).
+- `git show --stat HEAD` of the docs commit → exactly `.github/copilot-instructions.md`, `docs/plans/STATUS.md`, `docs/plans/findings-ledger.md`, `src/core/versioning/STATUS.md`.
+- `grep -c "^| N44" docs/plans/findings-ledger.md` → 2; `grep -c "N44" .github/copilot-instructions.md` → 1; `grep -c "A red CI run is not always a code failure" .github/copilot-instructions.md` → 1.
+- `grep -n "^| P1.3" docs/plans/STATUS.md` → the row shows `b8bfb9c` and `N44`; `head -1 src/core/versioning/STATUS.md` → contains `b8bfb9c`.
+- `git diff --stat b8bfb9c HEAD -- src/test src/services src/webview src/extension.ts .github/workflows` → empty.
+- `gh run list --branch labs/2.0 --limit 1 --json conclusion --jq '.[0].conclusion'` → `success` for the docs commit before P1.4 starts.
+
+CHECKED: `/Users/mattias/github/nuiget/.github/agents/architecture-advisor.agent.md`; plan §1-§3 (`docs/plans/2026-10-11-nuiget-2.0-execution-plan.md:41-159`) and rows P0.8 (:191), P1.3 (:210), P2.12 (:236), P3.5, P5.12 (:285), P7.2 (:307); `/Users/mattias/github/nuiget/docs/plans/RUN.md` (all, §2.3, §4, §5.3 in particular); `/Users/mattias/github/nuiget/src/core/versioning/STATUS.md` (all); `/Users/mattias/github/nuiget/docs/plans/STATUS.md:1-12,23,27-29`; `/Users/mattias/github/nuiget/src/test/e2e/update-flow.e2e.test.ts:1-76`; `/Users/mattias/github/nuiget/src/test/e2e/install-flow.e2e.test.ts` (grep of terminal and sleep lines :39-76); `/Users/mattias/github/nuiget/.vscode-test.mjs`; `/Users/mattias/github/nuiget/.github/workflows/ci.yml:1-334` (concurrency :10-12, `test` job :102, `e2e` job :132-204, `build` :241-283, `benchmark` :285-333); `/Users/mattias/github/nuiget/.github/copilot-instructions.md:166`; `/Users/mattias/github/nuiget/docs/plans/findings-ledger.md:99,128-146,261,297,340-356,416-417`; `/Users/mattias/github/nuiget/.claude/settings.json:39-82`; `git status --short` (clean), `git log --oneline -3`, `git diff --stat c485d16 b8bfb9c`, `git log -- src/test/e2e/update-flow.e2e.test.ts` (last change e1755dc, before the branch point 16831f4), `git show 9e2ebbc --stat`; `gh run list --branch labs/2.0 --limit 12`; `gh run view 38247897134 --log-failed`, `--log` (E2E (stable) lines), `--json jobs`; `grep -n "setTimeout(resolve, " src/test/e2e/*.ts` (28 sleeps in 8 of 9 files). Not run by me: any local gate; the brief's local gate results are taken as given.
+```
+
+Acted on (second answer): steps 1 to 8. The re-run was green, so no second brief was needed; no test and no
+code changed.
 
 ## Exact next step (one item ID)
 
