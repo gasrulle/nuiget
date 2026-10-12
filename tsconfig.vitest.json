@@ -1,0 +1,59 @@
+{
+    // Type-checks the Vitest tests of the 2.0 code and the shared test infrastructure. Never emits.
+    // tsconfig.test.json stays the emitting configuration of the Mocha e2e and ExTester UI suites.
+    "compilerOptions": {
+        "module": "esnext",
+        "moduleResolution": "bundler",
+        "target": "ES2022",
+        "lib": [
+            "ES2022",
+            "DOM"
+        ],
+        "jsx": "react-jsx",
+        "strict": true,
+        "noImplicitReturns": true,
+        "noFallthroughCasesInSwitch": true,
+        "noImplicitOverride": true,
+        "esModuleInterop": true,
+        "skipLibCheck": true,
+        "forceConsistentCasingInFileNames": true,
+        "resolveJsonModule": true,
+        "noEmit": true,
+        // Lets tests import eslint.config.mjs and scripts/*.mjs with inferred types; the scripts are not checked.
+        "allowJs": true,
+        // No type roots on purpose: tests type-check against @types/node 24 (ADR-000, D10). The type roots of
+        // tsconfig.json would select the Node 18 declarations and break the resolution of vitest/globals.
+        "types": [
+            "node",
+            "vitest/globals"
+        ]
+    },
+    // The 1.x tests are deliberately not listed: src/services/**/*.test.ts, src/webview/app/**,
+    // src/webview/sidebar/**, src/webview/NuGet*.test.ts, src/test/integration/** and src/test/benchmarks/**.
+    // They were never type-checked and are rewritten or deleted by plan items P5.12 and P8.2. P8.2 widens this
+    // list to src/**/*.test.{ts,tsx} and src/test/**; benchmarks of the 2.0 core join in P2.12.
+    "include": [
+        "src/core/**/*.test.ts",
+        "src/protocol/**/*.test.ts",
+        "src/host/**/*.test.ts",
+        "src/extension.next.test.ts",
+        "src/webview/main/**/*.test.ts",
+        "src/webview/main/**/*.test.tsx",
+        "src/webview/sidebar-next/**/*.test.ts",
+        "src/webview/sidebar-next/**/*.test.tsx",
+        "src/webview/shared/**/*.test.ts",
+        "src/webview/shared/**/*.test.tsx",
+        "src/test/lint/**/*.ts",
+        "src/test/helpers/**/*.ts",
+        "src/test/helpers/**/*.tsx",
+        "src/test/__mocks__/**/*.ts",
+        "src/test/setup-frontend.ts",
+        "src/global.d.ts"
+    ],
+    "exclude": [
+        "node_modules",
+        "src/_wip/**",
+        "src/test/e2e/**",
+        "src/test/ui/**"
+    ]
+}

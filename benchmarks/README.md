@@ -14,7 +14,8 @@ npm run bench:compare   # compare current measurements with the stored baseline
 
 - **Single-machine signal only.** Numbers are reproducible only on the *same* machine, OS, and Node version. Do **not** treat baseline.json as a cross-machine ground truth — CI runners and developer laptops will differ by 2–10x for the same code.
 - **Tolerance: ±15 %.** Treat any regression smaller than ~15 % as noise. Genuine regressions almost always show up as >25 % slowdowns on hot paths.
-- **Regenerate after performance-affecting changes.** Run `npm run bench:save` and commit the updated `benchmarks/baseline.json`. CI compares PRs against this baseline.
+- **Regenerate after performance-affecting changes.** Run `npm run bench:save` and commit the updated `benchmarks/baseline.json`.
+- **Informational in CI.** The `Benchmark (informational)` job compares every run against the baseline and reports the result, but it never fails the pipeline: runner hardware varies too much for a hard gate.
 
 ## What's measured
 

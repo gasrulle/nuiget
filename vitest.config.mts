@@ -22,6 +22,11 @@ export default defineConfig({
             include: ['src/**/*.{ts,tsx}'],
             exclude: [
                 'src/test/**',
+                'src/_wip/**',
+                'src/**/__fixtures__/**',
+                // Type-only contract modules have nothing to execute.
+                'src/protocol/**',
+                'src/core/contracts.ts',
                 'src/global.d.ts',
                 'src/extension.ts',
                 'src/services/NuGetTypes.ts',
@@ -33,17 +38,31 @@ export default defineConfig({
                 branches: 50,
                 functions: 55,
                 lines: 65,
+                // Ratchet for the webviews at the values measured on 2026-10-12 (plan P0.11); raise, never lower.
+                'src/webview/**': {
+                    statements: 62,
+                    branches: 52,
+                    functions: 54,
+                    lines: 64,
+                },
             },
         },
         include: [],
-        exclude: ['node_modules', 'dist', 'out', '.vscode-test'],
+        exclude: ['node_modules', 'dist', 'out', '.vscode-test', 'src/_wip/**'],
         projects: [
             {
                 extends: true,
                 test: {
                     name: 'backend',
                     environment: 'node',
-                    include: ['src/services/**/*.test.ts', 'src/extension.test.ts', 'src/test/lint/**/*.test.ts'],
+                    include: [
+                        'src/services/**/*.test.ts',
+                        'src/core/**/*.test.ts',
+                        'src/protocol/**/*.test.ts',
+                        'src/host/**/*.test.ts',
+                        'src/extension.next.test.ts',
+                        'src/test/lint/**/*.test.ts',
+                    ],
                 },
             },
             {

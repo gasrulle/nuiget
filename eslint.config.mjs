@@ -145,7 +145,7 @@ export function createConfig(allowlist) {
         },
         ...boundaryConfigs(allowlist),
         {
-            ignores: ['out/**', 'dist/**', '.vscode-test/**', '**/*.d.ts'],
+            ignores: ['out/**', 'dist/**', '.vscode-test/**', 'src/_wip/**', '**/*.d.ts'],
         },
     );
 }

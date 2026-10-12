@@ -37,6 +37,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Stopped shipping development configuration files in the extension package and added a package contents check**
 - **Rebuilt the CI pipeline: clean installs, pinned actions, Windows unit tests, end-to-end tests on the minimum supported VS Code, UI tests, and a downloadable package artifact**
 - **Let the end-to-end test runner use its own Mocha 11 so the tests can run on VS Code 1.85**
+- **Type-checked the 2.0 tests and shared test helpers as part of check-types and added a coverage floor for the webviews**
 
 ## [1.18.9] - 2026-10-10
 

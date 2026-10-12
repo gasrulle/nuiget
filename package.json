@@ -300,7 +300,7 @@
         "watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
         "watch:v2": "npm-run-all -p watch:esbuild:v2 watch:tsc",
         "package": "npm run check-types && npm run lint && node esbuild.mjs --production",
-        "check-types": "tsc --noEmit",
+        "check-types": "tsc --noEmit && tsc -p tsconfig.test.json --noEmit && tsc -p tsconfig.vitest.json",
         "check:vsix": "node scripts/check-vsix-contents.mjs",
         "package:vsix": "npm ci --no-audit --no-fund && npm run check-types && npm test && npm run package && node -e \"const v=require('./package.json').version;require('child_process').execSync('npx vsce package --out nuiget-v'+v+'.vsix',{stdio:'inherit'})\"",
         "lint": "eslint src scripts esbuild.mjs eslint.config.mjs vitest.config.mts .vscode-test.mjs",

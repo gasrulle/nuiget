@@ -1,4 +1,4 @@
-import { ESLint } from 'eslint';
+import { ESLint, type Linter } from 'eslint';
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { beforeAll, describe, expect, it } from 'vitest';
@@ -118,7 +118,7 @@ describe('ESLint import fences (plan §3)', () => {
             withEntry = new ESLint({
                 cwd: REPO_ROOT,
                 overrideConfigFile: true,
-                overrideConfig: createConfig(['src/core/zz-probe.ts']),
+                overrideConfig: createConfig(['src/core/zz-probe.ts']) as Linter.Config[],
             });
         });
 
