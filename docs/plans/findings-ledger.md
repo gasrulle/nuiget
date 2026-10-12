@@ -115,12 +115,12 @@ one records itself here.
 | N13 | Medium | Coverage thresholds global-only. | — | P0.11 | closed (P0.11: floor for src/webview/**; P1.2: floor of 85 % lines for src/core/**) |
 | N14 | Medium | SSRF gaps (`127.0.0.0/8`, mapped v6, CGNAT, no resolved-address check). | — | P1.9, P4.2 | open |
 | N15 | Medium | Credential-provider shell accepts `$()` in URL. | — | P2.7 | open |
-| N16 | Medium | Locale-dependent parsers. | — | P2.6 | open |
+| N16 | Medium | Locale-dependent parsers. | — | P2.6 | closed for the source listing (P2.6: the runner fixes the CLI language and `parseListSourceOutput` reads `[Enabled]`/`[Disabled]` only; tests `listing: parses the tracked SDK 10 capture`, `provider: lists through the runner from the project directory`) |
 | N17 | Low | `restoreSearchQuery` `source` vs `sources`. | — | Moot in 2.0 | moot in 2.0 |
 | N18 | Low | No l10n policy. | — | D11 | closed by design (D11) |
 | N19 | Low | Multi-TFM resolved versions arbitrary. | — | P2.2, P2.4 | open; P2.2 reads the versions per framework and P2.4 uses them for the row's framework; left: the `targets` key of a .NET Standard framework (`.NETStandard,Version=v2.0`) is not mapped to `netstandard2.0`, so such a row takes the version of any framework |
-| N20 | Low | nuget.org identity by substring. | — | P2.6 | open |
-| N21 | Low | Nested `nuget.config` not discovered. | — | P2.6 | open |
+| N20 | Low | nuget.org identity by substring. | — | P2.6 | closed for 2.0 (P2.6: no source is recognized by its address anywhere in `src/core/sources`; test `private-only configuration never yields nuget.org` compares host names exactly; `provider: add names a source from its URL when no name is given`) |
+| N21 | Low | Nested `nuget.config` not discovered. | — | P2.6 | closed for 2.0 (P2.6: sources are listed with the project directory as working directory; gated test `real SDK: a nested nuget.config with <clear /> hides the user-level sources`) |
 | N22 | Low | Stale `--enable-proposed-api` in e2e config. | — | P0.8 | closed (P0.8) |
 | N23 | Low | Plan counts drift from reproducible greps. | — | Ledger states greps | open |
 | N24 | Low | Vitest backend `include` omits `src/core`; gates would pass vacuously. | — | P0.11 | closed (P0.11) |
@@ -146,13 +146,14 @@ one records itself here.
 | N44 | Low | The first e2e test of the run waits a fixed 10 s for the suite's first `dotnet` command and can fail without product code running. | — | P5.12 (v2 e2e tests poll; legacy file retired); after the third sighting the `e2e` job warms `dotnet` up first | open; mitigated in CI |
 | N45 | Low | `TieredCache` logs an unredacted store key, which can carry a source URL with userinfo, when a store write fails. | — | P2.10 (redacting `Logger` for the core) or P4.4 | open |
 | N46 | Low | `redact` drops harmless text after a secret query parameter and rewrites some redacted headers with `=`. | — | accepted (the module prefers redacting too much) | accepted |
-| N47 | Low | The CLI validators accept a leading `-` for positional arguments (package id, source name, local feed path). | — | P2.6 (reject a leading `-`); P1.10 did not take it (advisor ruling) | open |
+| N47 | Low | The CLI validators accept a leading `-` for positional arguments (package id, source name, local feed path). | — | P2.6 | closed (P2.6, approved by the ⚑ ruling: `isValidPackageId`, `isValidSourceName` and the local-path branch of `isValidSourceUrl` reject a leading `-`; tests `rejects a package id that starts with -`, `rejects a source name that starts with -`, `rejects a local feed path that starts with -`) |
 | N48 | Low | Local gates ran without `DOTNET_ROOT` and `NUIGET_SDK_TESTS`, which CI sets; three runner tests depended on the difference. | — | P1.6 (tests fixed, gotcha row); P7.5 (ritual wording) | partly closed |
 | N49 | Medium | `classifyAddress` treats all of 192.0.0.0/16, 198.51.0.0/16 and 203.0.0.0/16 as reserved; only one /24 in each is. | — | P4.2 (before `Transport` checks resolved addresses with it) | open |
 | N50 | Low | A throwing `onCommand` hook turned a finished CLI step into a failed one (quarry workflow code). | — | P1.10 | closed |
 | N51 | Low | The workflow passes a literal `isCpm: false` to `addPackageArgs`; correct while every CPM add/update is refused first, a trap from P6.3 on. | — | P6.3 | open |
 | N52 | Low | `rootProject` reported an empty `<Project></Project>` as no project. | — | P2.2 | closed |
 | N53 | Medium | 1.x resolves backslash `ProjectReference` paths verbatim on macOS and Linux, so multi-project operations are not ordered by dependency there. | — | P2.3 (2.0 port); 1.x unchanged until P8.2 | open in 1.x; fixed in 2.0 |
+| N54 | Low | 1.x decrypts DPAPI passwords without the entropy that NuGet is believed to use; unverified, 2.0 tries both. | — | P7.3 (verify on Windows) | open |
 
 Corrections in Appendix A that do not belong to one finding id:
 
@@ -373,6 +374,7 @@ Three-lens verification of the original findings against `main` produced these c
 | N51 | Low | The workflow feeds the guard of `addPackageArgs` a literal: `PackageWorkflows.ts:223` passes `isCpm: false`, so the builder's refusal of `noRestore` with `isCpm` (`src/core/cli/commands.ts:71-73`) is never reached from this path. That is correct while `admitEdit` refuses every CPM `add` and `update` before an argv is built (test `cpm: never emits --no-restore` over all workflows), and a trap from P6.3 on, when the gate starts to admit CPM adds. The P1.10 ruling asked in prose for "never a literal" and showed the literal in its code; the P1 phase review kept the code and retracted the prose. | P1.10, P1 phase review | P6.3: when the body of `admitEdit` becomes `ProjectMutator.canMutate`, pass the project's real value and run a CPM add with `noRestore: false`; rewrite `cpm: never emits --no-restore` in the same item so that it still asserts that no argv contains `--no-restore` |
 | N52 | Low | `rootProject` in the quarry's `src/core/project/xml.ts` returned `undefined` for a project without attributes and children (`<Project></Project>`, `<Project />`): the parser reads such an element as an empty string, and the function accepted objects only. An empty `Directory.Build.props` or `Directory.Packages.props` therefore read as "no project root". Found by the first test written for the module; no caller existed yet. | P2.2 | fixed in P2.2: `rootProject` returns `{}` for the empty string; test `reads an empty project as a project without content` |
 | N53 | Medium | 1.x `getProjectReferences` (`src/services/NuGetProjectService.ts:235-252`) resolves the `Include` of a `ProjectReference` with `path.resolve` as it is written. MSBuild writes backslashes on every platform (`..\Lib\Lib.csproj`), and on macOS and Linux a backslash is an ordinary file-name character: the result is `/src/App/..\Lib\Lib.csproj`, which matches no project. `getProjectDependencyMap` therefore has no edges there, and the multi-project operations that order projects by it (`NuGetOperations.ts:98`, `:348`, `:451`) run in input order on those platforms. The 1.x tests assert `toContain('Lib.csproj')` and `depMap.size`, which hold either way (`NuGetService.test.ts:596-634`). On Windows the code is right. | P2.3 | 2.0: fixed in P2.3 (`fromMsBuildPath` before resolving; tests run on both CI platforms). 1.x: not fixed (no hotfix by owner decision); removed with the legacy code at P8.2 |
+| N54 | Low | 1.x decrypts an encrypted `nuget.config` password with `ProtectedData.Unprotect($encrypted, $null, …)` (`src/services/CredentialService.ts:285`), that is without entropy. NuGet's own encryption (`EncryptionUtility` in NuGet.Configuration) protects the value with the entropy bytes of the text `NuGet`, so a password that `dotnet nuget add source` stored encrypted would not decrypt in 1.x. This rests on knowledge of NuGet's source, not on a probe: no Windows machine was available, and plan §2.6 wants tracked evidence. The 2.0 `decryptPassword` tries the entropy `NuGet` first and no entropy second, so it is right either way. | P2.6 | P7.3 (Windows): decrypt a password that the CLI encrypted, record the result as a tracked fixture or a gated test, and drop the branch that is not needed |
 
 ## 5. Defects in the paused 2.0 code (execution plan, Appendix B)
 
@@ -436,7 +438,7 @@ Counts quoted in findings drift. These commands reproduce the ones that matter; 
 | `as any` in unit tests (T3; the plan counted 955) | `grep -rEo "as any" src --include='*.test.ts' --include='*.test.tsx' \| wc -l` | 959 |
 | Unit test files that call `setTimeout(` (T3; a proxy for "files with sleeps", the plan counted 19) | `grep -rlE "setTimeout\(" src --include='*.test.ts' --include='*.test.tsx' \| wc -l` | 22 |
 | Fixed `px` font sizes (U5) | `grep -cE "font-size:\s*[0-9.]+px" src/webview/app/App.css src/webview/sidebar/SidebarApp.css` | 125 and 13 |
-| Unit tests | `npx vitest run` | 72 files, 2273 tests and 2 skipped; 2275 with `NUIGET_SDK_TESTS=1` |
+| Unit tests | `npx vitest run` | 77 files, 2321 tests and 3 skipped; 2324 with `NUIGET_SDK_TESTS=1` |
 | End-to-end tests | `npm run test:e2e` | 30 |
 | UI tests | `npm run test:ui -- --storage /tmp/nuiget-ui` | 31 |
 | Type errors in 1.x tests, benchmarks and helpers (N30) | strict `tsc` over `src` with `types: [node, vitest/globals]`, without `src/test/e2e` and `src/test/ui` | 55 |

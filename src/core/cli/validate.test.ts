@@ -21,6 +21,15 @@ import {
 // entries here; the cases that existed only for the shell are inverted and say so.
 
 describe('isValidPackageId', () => {
+    it('rejects a package id that starts with -', () => {
+        expect(isValidPackageId('-version')).toBe(false);
+        expect(isValidPackageId('--prerelease')).toBe(false);
+        expect(isValidPackageId('-')).toBe(false);
+        // A hyphen anywhere else is part of the id grammar.
+        expect(isValidPackageId('Some-Package')).toBe(true);
+        expect(isValidPackageId('Trailing-')).toBe(true);
+    });
+
     it('accepts valid package IDs', () => {
         for (const id of ['Newtonsoft.Json', 'Microsoft.Extensions.Logging', 'my-package_v2', 'A', '123', 'System.Text.Json']) {
             expect(isValidPackageId(id)).toBe(true);
@@ -71,6 +80,12 @@ describe('isValidVersion', () => {
 });
 
 describe('isValidSourceName', () => {
+    it('rejects a source name that starts with -', () => {
+        expect(isValidSourceName('-name')).toBe(false);
+        expect(isValidSourceName('--configfile')).toBe(false);
+        expect(isValidSourceName('my-feed')).toBe(true);
+    });
+
     it('accepts valid source names', () => {
         for (const name of ['nuget.org', 'My Custom Feed', 'my-source_v2', 'Azure DevOps Feed']) {
             expect(isValidSourceName(name)).toBe(true);
@@ -91,6 +106,15 @@ describe('isValidSourceName', () => {
 });
 
 describe('isValidSourceUrl', () => {
+    it('rejects a local feed path that starts with -', () => {
+        expect(isValidSourceUrl('-packages')).toBe(false);
+        expect(isValidSourceUrl('--source')).toBe(false);
+        // Only the plain local path is positional text of its own; these forms are unaffected.
+        expect(isValidSourceUrl('./-packages')).toBe(true);
+        expect(isValidSourceUrl('packages-local')).toBe(true);
+        expect(isValidSourceUrl('https://feed.example/-/v3/index.json')).toBe(true);
+    });
+
     it('accepts http, https and file URLs', () => {
         for (const url of [
             'https://api.nuget.org/v3/index.json',

@@ -32,11 +32,17 @@ const CREDENTIAL_MAX_LENGTH = 512;
 // eslint-disable-next-line no-control-regex
 const CONTROL_CHARS = /[\u0000-\u001f\u007f]/;
 const MSBUILD_NAME_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/;
+// A positional argument that starts with this would be read by the CLI as an option.
+const OPTION_PREFIX = '-';
 
-/** True when `packageId` is a syntactically valid NuGet package id. */
+/**
+ * True when `packageId` is a syntactically valid NuGet package id. An id never starts with `-`; the
+ * builders place it as a positional argument, where the CLI would read such a value as an option.
+ */
 export function isValidPackageId(packageId: string): boolean {
     return packageId.length > 0
         && packageId.length <= PACKAGE_ID_MAX_LENGTH
+        && !packageId.startsWith(OPTION_PREFIX)
         && PACKAGE_ID_PATTERN.test(packageId);
 }
 
@@ -45,9 +51,9 @@ export function isValidVersion(version: string): boolean {
     return VERSION_PATTERN.test(version);
 }
 
-/** True when `name` is an acceptable `nuget.config` package source name. */
+/** True when `name` is an acceptable `nuget.config` package source name. Positional, so no leading `-`. */
 export function isValidSourceName(name: string): boolean {
-    return name.length > 0 && name.length <= SOURCE_NAME_MAX_LENGTH && SOURCE_NAME_PATTERN.test(name);
+    return name.length > 0 && name.length <= SOURCE_NAME_MAX_LENGTH && !name.startsWith(OPTION_PREFIX) && SOURCE_NAME_PATTERN.test(name);
 }
 
 /** True when `url` is an http(s)/file URL, a Windows drive or UNC path, or a plain local feed path. */
@@ -62,7 +68,7 @@ export function isValidSourceUrl(url: string): boolean {
         const parsed = new URL(url);
         return ['http:', 'https:', 'file:'].includes(parsed.protocol);
     } catch {
-        return LOCAL_FEED_PATH_PATTERN.test(url);
+        return !url.startsWith(OPTION_PREFIX) && LOCAL_FEED_PATH_PATTERN.test(url);
     }
 }
 
