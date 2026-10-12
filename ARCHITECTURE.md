@@ -79,7 +79,8 @@ Each row is filled in by the item that creates the module.
 | `src/protocol/**` | Message and domain types shared by host and webviews | Present since P1.1a; contract changes of P1.1b applied |
 | `src/core/contracts.ts` | Interfaces of the core modules | Present since P1.1a; contract changes of P1.1b applied |
 | `src/core/util/**` | Leaf helpers of the core: `Emitter` and `toDisposable` (`events.ts`), `batchedPromiseAll` and `raceFirst` (`concurrency.ts`), `fileExists`, `readTextIfExists` and `findUp` (`fs.ts`), `normalizeProjectPath`, `isPathInside` and `fromMsBuildPath` (`paths.ts`), `topologicalSortByDependency` (`topo.ts`) | Present since P1.2 |
-| `src/core/**` | Platform-agnostic logic: CLI runner, project model, queries, operations, feeds | Arrives in P1–P4; today `contracts.ts`, `util/` and `src/core/cli/__fixtures__/sdk-probes/` |
+| `src/core/versioning/**` | NuGet versions and version specifications as separate types: `parseVersion`, `compare`, `normalize`, `selectLatest` (`NuGetVersion.ts`); `parseVersionSpec`, `satisfies`, `resolveFloating`, `isUpdateCandidate`, `effectiveInstalledVersion`, `toDomainSpec` (`VersionRange.ts`). Parsing never coerces: text that is not a version is `undefined`, never `0.0.0`. An exact pin such as `[1.0.0]` is not an update candidate | Present since P1.3 |
+| `src/core/**` | Platform-agnostic logic: CLI runner, project model, queries, operations, feeds | Arrives in P1–P4; today `contracts.ts`, `util/`, `versioning/` and `src/core/cli/__fixtures__/sdk-probes/` |
 | `src/host/**` | Adapts VS Code to the core: webview hosts, handlers, pickers | Arrives in P2.9 |
 | `src/extension.next.ts` | 2.0 composition root | Placeholder; replaced in P2.10 |
 | `src/webview/shared/**` | Tokens, primitives, message bus, store slices | Arrives in P3 |

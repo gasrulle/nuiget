@@ -105,7 +105,7 @@ one records itself here.
 | N3 | High | Quarry `.vscodeignore` drops `.claude/**`, `CLAUDE.md`, `.mcp.json`; `check:vsix` not in CI. | — | P0.8, P0.10 | closed (P0.8, P0.10) |
 | N4 | Medium | Test files never type-checked. | — | P0.11 | partly closed (P0.11: 2.0 tests and shared helpers; 1.x tests excluded, see N30) |
 | N5 | Medium | No release workflow, no dependabot. | — | P0.8, P8.3 | partly closed (P0.8: Dependabot; release workflow open until P8.3) |
-| N6 | Medium | Exact pins `[x.y.z]` always reported updatable. | — | P1.3, P2.2, P4.8 | open |
+| N6 | Medium | Exact pins `[x.y.z]` always reported updatable. | — | P1.3, P2.2, P4.8 | open (versioning side done in P1.3; fixture in P2.2, gating in P4.8) |
 | N7 | Medium | README download sends no auth; temp path unvalidated; zip inflate unbounded. | — | P4.4 | open |
 | N8 | Medium | Sidebar `_sendInitialData` clears scoped-merge base. | — | P2.11 scenario | open |
 | N9 | Medium | Queued mutations discarded when the submitting surface is disposed. | — | P2.1, P2.9 | open |
@@ -142,6 +142,7 @@ one records itself here.
 | N40 | Low | Benchmarks are discovered only under `src/test/benchmarks/`; a bench file under `src/core/**` is silently not run. | — | P1.3, P1.4 (bench files in `src/test/benchmarks/`); P2.12 (move to core, D8) | open |
 | N41 | Low | Repository rulesets make every push to `labs/2.0` and every tag push print "Bypassed rule violations"; the plan does not mention it. | — | owner (document it as expected or adjust the rulesets); sessions do not change repository settings | open |
 | N42 | Low | The handoff note `src/protocol/STATUS.md` lies in a frozen path, so the guard denies its edit without the sentinel. | — | P1.1b (record the approval in `docs/plans/STATUS.md` first); P7.5 (exempt `STATUS.md` in the guard, or move the note) | open |
+| N43 | Low | The domain comment of `floatingDepth` names 1 to 3 only; the versioning module also emits 0 and 4. | — | the next contract-change item that touches `domain.ts` (candidate P6.5) | open |
 
 Corrections in Appendix A that do not belong to one finding id:
 
@@ -351,6 +352,7 @@ Three-lens verification of the original findings against `main` produced these c
 | N40 | Low | `vitest.config.mts` sets `benchmark.include` to `src/test/benchmarks/**/*.bench.ts`, and `src/test/benchmarks/run.mjs` selects the derived `backend (bench)` project. A bench file under `src/core/**` is not run and nothing reports that. The gates of P1.3 and P1.4 ("`npm run bench` runs the file") need the file under `src/test/benchmarks/`. | P0 phase review | P1.3 and P1.4 place their bench files in `src/test/benchmarks/`; P2.12 moves the benches into core (D8) and names the configuration change |
 | N41 | Low | Two repository rulesets restrict the refs the plan pushes: `labs` (id 14504177, `refs/heads/labs/**/*`, rules `update`, `creation`, `required_status_checks`, `required_linear_history` and others) and `tags` (id 12525027, all tags, rules `creation`, `update`, `required_linear_history`). The repository admin role is a bypass actor with mode `always`, and sessions push with the owner's credentials. Every push therefore succeeds and prints `remote: Bypassed rule violations`: "3 of 3 required status checks are expected", "Waiting for Code Scanning results" and "Cannot update this protected ref" for the branch (push of `ac64e72`); "Cannot create ref due to creations being restricted" and "This branch must not contain merge commits" (`89f4426`, a merge on `main`) for a tag. No force or admin flag is involved. Neither the plan nor `RUN.md` mentions the rulesets, so the message reads like a violation. Evidence: `gh api repos/gasrulle/nuiget/rulesets/14504177`, the push of `7d407df` and of the tag `labs/2.0-P0-done`. | P0 phase boundary | owner: note in `RUN.md` that the message is expected, or change the rulesets. A session never changes repository settings |
 | N42 | Low | The guard treats every path under `src/protocol/**` as frozen, including the directory's handoff note `src/protocol/STATUS.md`. Without `.claude/.contract-change` an Edit of the note is denied, and the denial message asks to record the advisor's answer "in the directory's STATUS.md", the file it has just refused. Decision D6 creates the sentinel only after the recorded approval, so the approval of a contract item cannot be recorded in that note first. Evidence: `scripts/hooks/guard.mjs` (frozen paths), the denied Edit in P1.1a. | P1.1a | P1.1b recorded the approval in `docs/plans/STATUS.md` ("Advisor decisions"), created the sentinel, then copied the answer into the note; the advisor confirmed that order. P7.5 decides between exempting `STATUS.md` in the guard and moving the note out of the frozen path |
+| N43 | Low | `src/protocol/domain.ts:21` documents `floatingDepth` as "major=1, minor=2, patch=3" only. `src/core/versioning/VersionRange.ts` also emits 0 (`*`, `*-*`) and 4 (a prerelease wildcard after a full version, `1.0.0-*`), and 1.x emitted 3 for that last case (`src/services/NuGetUtils.ts:277`). Nothing consumes the field in 2.0 yet. | P1.3 | the next advisor-approved contract-change item that touches `domain.ts` (candidate P6.5, with its own sentinel); the comment then becomes ``/** For floating versions: the position of the wildcard counted in fixed components (`1.*` = 1 major, `1.0.*` = 2 minor, `1.0.0.*` = 3 patch; 0 for `*`; 4 for a prerelease wildcard such as `1.0.0-*`). */`` |
 
 ## 5. Defects in the paused 2.0 code (execution plan, Appendix B)
 
@@ -414,7 +416,7 @@ Counts quoted in findings drift. These commands reproduce the ones that matter; 
 | `as any` in unit tests (T3; the plan counted 955) | `grep -rEo "as any" src --include='*.test.ts' --include='*.test.tsx' \| wc -l` | 959 |
 | Unit test files that call `setTimeout(` (T3; a proxy for "files with sleeps", the plan counted 19) | `grep -rlE "setTimeout\(" src --include='*.test.ts' --include='*.test.tsx' \| wc -l` | 22 |
 | Fixed `px` font sizes (U5) | `grep -cE "font-size:\s*[0-9.]+px" src/webview/app/App.css src/webview/sidebar/SidebarApp.css` | 125 and 13 |
-| Unit tests | `npx vitest run` | 50 files, 1651 tests |
+| Unit tests | `npx vitest run` | 51 files, 1713 tests |
 | End-to-end tests | `npm run test:e2e` | 30 |
 | UI tests | `npm run test:ui -- --storage /tmp/nuiget-ui` | 31 |
 | Type errors in 1.x tests, benchmarks and helpers (N30) | strict `tsc` over `src` with `types: [node, vitest/globals]`, without `src/test/e2e` and `src/test/ui` | 55 |

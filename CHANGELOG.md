@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **2.0 build switch** — `node esbuild.mjs --v2` and `npm run watch:v2` build the 2.0 entry points into the same three bundles, and `--production --analyze` checks them against size ceilings
 - **2.0 protocol and core contracts** — `src/protocol` and `src/core/contracts.ts` define the typed messages and interfaces of the 2.0 host and webviews; `npm run docs:protocol` generates `docs/protocol.md` from them and CI fails when that file is out of date
+- **Core versioning module** — NuGet version parsing, comparison and version-spec classification for 2.0; exact pins are never reported as updatable.
 - **2.0 core utilities** — `src/core/util` provides the event emitter, bounded concurrency, file lookup, path normalization and dependency ordering that the 2.0 core modules build on, and coverage of `src/core` now has a floor of 85 % of the lines
 - **2.0 import fences** — ESLint keeps the 2.0 layers apart from each other and from the 1.x code, with a self-pruning allow-list, and `npm run lint` now also covers `scripts/` and the root configuration files
 
