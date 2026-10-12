@@ -1,10 +1,10 @@
-# STATUS — .github (agent resources and repo-level items)   commit 3a6f919 (parent of the P0.12 commit)   2026-10-12T11:50:00Z
+# STATUS — .github (agent resources and repo-level items)   commit 7c75217 (parent of the P0.13 commit)   2026-10-12T12:20:00Z
 
-git status --short: ` M ARCHITECTURE.md`, ` M CHANGELOG.md`, ` M docs/plans/STATUS.md`, ` M .github/STATUS.md`
-(all belong to the P0.12 commit)
+git status --short: `?? docs/plans/findings-ledger.md`, ` M docs/plans/STATUS.md`, ` M CHANGELOG.md`,
+` M .github/STATUS.md` (all belong to the P0.13 commit)
 
-Item: **P0.12 ARCHITECTURE.md coexistence**. This file is the handoff note for plan items without a `src/`
-directory of their own. The P0.11 note it replaces is in commit `3a6f919`; P0.11's CI run 38230778792 was green
+Item: **P0.13 Tracker and findings ledger**. This file is the handoff note for plan items without a `src/`
+directory of their own. The P0.12 note it replaces is in commit `7c75217`; P0.12's CI run 38232204407 was green
 on all eight jobs.
 
 ## Verified by running
@@ -13,12 +13,11 @@ on all eight jobs.
 baseline npx tsc --noEmit   → exit 0, no output
 baseline npx eslint src     → exit 0, no output
 baseline npx vitest run     → Test Files 44 passed (44) · Tests 1591 passed (1591)
-grep -c '(1.x — removed at P8)' ARCHITECTURE.md → 20                                              (item gate)
-grep -c '^## ' ARCHITECTURE.md → 22 = 20 marked legacy H2s + `## 2.0 Architecture (in progress)` +
-                              `## Repository Assistance Resources`
-relative links in the 2.0 section → every target exists
-anchors                     → #shared-tooling, #coexistence-of-1x-and-20 and #background-source-health-monitor
-                              each resolve to a heading in the file
+script: every `| P#.# |` id of plan §5 against docs/plans/STATUS.md → 81 items, none missing     (item gate)
+script: every N id of plan Appendix A against the ledger             → 24 ids, none missing
+ledger section 1            → 102 rows (66 original, 24 + 12 new); every row has six cells
+ledger section 2            → 66 ids, severities C 1, H 15, M 27, L 14, none 9 (the architecture smells)
+counts in ledger section 6  → measured with the commands shown there (959, 22, 125 and 13, 55, 15)
 npx tsc --noEmit            → exit 0, no output
 npx eslint src              → exit 0, no output
 npm test                    → Test Files 44 passed (44) · Tests 1591 passed (1591)
@@ -27,63 +26,42 @@ npm run package:vsix        → SKIPPED: documentation only (plan §2.2 step 5)
 npm run test:ui             → SKIPPED: documentation only
 ```
 
-Each drift correction was checked against the code before the document was changed:
-
-```text
-watcher debounce            → src/webview/NuGetSidebarPanel.ts:151 `_scheduleWatcherRefresh(2000)`, :376 `(1000)`
-refresh and the HTTP cache  → NuGetPanel.ts:763 and NuGetSidebarPanel.ts:633 call `clearNuGetHttpCacheBackground()`
-refreshSidebar echo         → NuGetSidebarPanel.ts:640 `checkUpdatesInBackground(true)`; :169 default
-                              `skipMainPanelNotify = false`; :313-314 then calls `_notifyMainPanel()`
-sidebar CSP                 → NuGetSidebarPanel.ts:1436 `img-src ${webview.cspSource};`
-topologicalSortByDependency → defined in src/services/NuGetUtils.ts
-Browse tab                  → no BrowseTab component; browse results render in App.tsx
-details panel               → no `renderPackageDetailsPanel`; `MemoizedPackageDetailsPanel` is used
-line counts (wc -l)         → App.tsx 3220, InstalledTab.tsx 1616, UpdatesTab.tsx 775, PackageDetailsPanel.tsx 548,
-                              NuGetService.ts 1286, NuGetPackageService.ts 2474, NuGetProjectService.ts 636
-recent searches             → App.tsx has them, SidebarApp.tsx has none; durable copy in workspaceState key
-                              `nuget.recentSearches`; limit setting default 5, maximum 10
-webview message typing      → App.tsx:362 and SidebarApp.tsx:855 read untyped `event.data`
-```
-
 ## Done (tested)
 
-- `## 2.0 Architecture (in progress)` at the top: status, decision table (plan, tracker, ADR-000 to 008, the
-  SDK probe supplement, UX model), module map placeholder, coexistence table, and a shared-tooling subsection
-  (type-checking, lint, unit tests, bundle ceilings, packaging, the eight-job CI pipeline).
-- Twenty legacy H2 headings carry the 1.x marker.
-- Eleven drift corrections from the audit plan's Appendix A, listed above.
-- Three statements that P0 items had made untrue now point at the shared-tooling subsection or are corrected:
-  the CI/CD Pipeline subsection, the Node declarations sentence and the esbuild bullets in Build System, and
-  the packaging pipeline block.
+- `docs/plans/findings-ledger.md`: status table for every finding; the original ledger of the audit of
+  2026-10-10 reproduced unchanged from the quarry's working tree; the corrections and new findings of plan
+  Appendix A; twelve findings made during P0 (N25 to N36); the headline defects of plan Appendix B numbered as
+  `C-<group>-n`; a table of counts with the commands that produce them.
+- `docs/plans/STATUS.md`: header says where commit SHAs live and names the ledger; rows up to date.
 
 ## Done (untested)
 
-- Rendered appearance on GitHub; only link targets and anchors were checked.
+- Nothing reads the ledger mechanically yet. P7.5 plans a documentation drift script.
 
 ## Not started
 
-- P0.13: `docs/plans/findings-ledger.md`.
+- P0.14 (optional 1.18.10 guard for N1): the owner decides. Until the row says `open` or `skipped`, the phase
+  P0 gate and its phase review do not run.
 
 ## Deviations from contract/ADR (file:line each)
 
-- `## Repository Assistance Resources` is not marked as 1.x: agent resources are not removed at P8. It gained
-  one paragraph about the Claude Code pointers, the `architecture-advisor` agent and the guard hook.
-- The introductory note describes the marker in words instead of quoting it, so that the gate's `grep -c`
-  counts headings only.
-- Line counts in the File Structure section were updated to today's values rather than removed. They will
-  drift again; the section is deleted at P8 and P7.5 plans a drift check that ignores line counts.
-- The legacy `Testing` and `Build System` sections were edited where P0 items had made them wrong, although
-  plan §2.2 step 6 confines ARCHITECTURE.md edits to the 2.0 section for later items. This item is the one that
-  owns the document's structure, and the P0.8 advisor answer routed those corrections here.
-- Not corrected because it is not this item's file: `.github/copilot-instructions.md` 1.x gotcha rows that give
-  the watcher debounce as about 5 s. Candidate for P0.13's ledger; the row for P0.12 in the tracker says so.
+- The original findings (S, Y, F, M, P, U, T and the architecture smells) have no work item in the plan that
+  names them, apart from F6 and the ones closed in P0. Their "Scheduled in / closed by" cell says
+  "not mapped" instead of a guessed item.
+- Short titles in section 1 are derived from the original rows (the leading bold phrase, else the first
+  words). The authoritative text is section 2.
+- `C-<group>-n` ids number the semicolon-separated headline defects of plan Appendix B in the plan's order.
+  The plan does not assign them itself; it says the work items carry the detail.
+- N35: decisions D1 to D13 and architecture-smell findings D1 to D9 share a letter. The ledger says
+  "finding D3" for a smell; the plan was not edited.
+- Statuses set to closed here rest on the P0 items that landed today: M3 (D13), T2 and N2, N3, N5 (partly),
+  N22 and P8 (P0.8), T5 (P0.10), N4 (partly), N13 and N24 (P0.11), N34 (P0.8).
 
 ## Advisor decisions (date, item, question, answer verbatim)
 
-No stop-and-ask trigger fired and the item is not ⚑, so no consultation took place for this item. The
-instruction to rewrite the CI/CD Pipeline subsection here comes from the first P0.8 answer (commit `98bcdd1`,
-`.github/STATUS.md` history).
+No stop-and-ask trigger fired and the item is not ⚑, so no consultation took place for this item.
 
 ## Exact next step (one item ID)
 
-P0.13
+P0.14 (owner decides: set the tracker row to `open` to do it, or to `skipped`); after that the P0 phase gate
+and phase review of `RUN.md` §6, then P1.1a.

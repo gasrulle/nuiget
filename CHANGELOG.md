@@ -39,6 +39,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Let the end-to-end test runner use its own Mocha 11 so the tests can run on VS Code 1.85**
 - **Type-checked the 2.0 tests and shared test helpers as part of check-types and added a coverage floor for the webviews**
 - **Added a 2.0 section to ARCHITECTURE.md, marked the 1.x sections, and corrected statements that no longer matched the code**
+- **Added the findings ledger for the 2.0 work under docs/plans**
 
 ## [1.18.9] - 2026-10-10
 
