@@ -112,7 +112,7 @@ one records itself here.
 | N10 | Medium | `_forceCheckScope` merge is dead code (copilot-instructions row wrong). | — | Appendix A; closed by QueryCoordinator | open until QueryCoordinator replaces the code (P1.8) |
 | N11 | Medium | All-projects update responses uncorrelated. | — | P3.3, P5.9 | open |
 | N12 | Medium | `bulkRemoveConfirmed` before fallible work. | — | ADR-007 terminal response | open |
-| N13 | Medium | Coverage thresholds global-only. | — | P0.11 | closed (P0.11: floor for src/webview/**; src/core/** follows in P1.2) |
+| N13 | Medium | Coverage thresholds global-only. | — | P0.11 | closed (P0.11: floor for src/webview/**; P1.2: floor of 85 % lines for src/core/**) |
 | N14 | Medium | SSRF gaps (`127.0.0.0/8`, mapped v6, CGNAT, no resolved-address check). | — | P1.9, P4.2 | open |
 | N15 | Medium | Credential-provider shell accepts `$()` in URL. | — | P2.7 | open |
 | N16 | Medium | Locale-dependent parsers. | — | P2.6 | open |
@@ -414,7 +414,7 @@ Counts quoted in findings drift. These commands reproduce the ones that matter; 
 | `as any` in unit tests (T3; the plan counted 955) | `grep -rEo "as any" src --include='*.test.ts' --include='*.test.tsx' \| wc -l` | 959 |
 | Unit test files that call `setTimeout(` (T3; a proxy for "files with sleeps", the plan counted 19) | `grep -rlE "setTimeout\(" src --include='*.test.ts' --include='*.test.tsx' \| wc -l` | 22 |
 | Fixed `px` font sizes (U5) | `grep -cE "font-size:\s*[0-9.]+px" src/webview/app/App.css src/webview/sidebar/SidebarApp.css` | 125 and 13 |
-| Unit tests | `npx vitest run` | 45 files, 1602 tests |
+| Unit tests | `npx vitest run` | 50 files, 1651 tests |
 | End-to-end tests | `npm run test:e2e` | 30 |
 | UI tests | `npm run test:ui -- --storage /tmp/nuiget-ui` | 31 |
 | Type errors in 1.x tests, benchmarks and helpers (N30) | strict `tsc` over `src` with `types: [node, vitest/globals]`, without `src/test/e2e` and `src/test/ui` | 55 |

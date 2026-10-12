@@ -45,6 +45,10 @@ export default defineConfig({
                     functions: 54,
                     lines: 64,
                 },
+                // Floor for the 2.0 core (plan P1.2 and the P1 gate). It applies to all of src/core together.
+                'src/core/**': {
+                    lines: 85,
+                },
             },
         },
         include: [],

@@ -78,7 +78,8 @@ Each row is filled in by the item that creates the module.
 | --- | --- | --- |
 | `src/protocol/**` | Message and domain types shared by host and webviews | Present since P1.1a; contract changes of P1.1b applied |
 | `src/core/contracts.ts` | Interfaces of the core modules | Present since P1.1a; contract changes of P1.1b applied |
-| `src/core/**` | Platform-agnostic logic: CLI runner, project model, queries, operations, feeds | Arrives in P1–P4; today `contracts.ts` and `src/core/cli/__fixtures__/sdk-probes/` |
+| `src/core/util/**` | Leaf helpers of the core: `Emitter` and `toDisposable` (`events.ts`), `batchedPromiseAll` and `raceFirst` (`concurrency.ts`), `fileExists`, `readTextIfExists` and `findUp` (`fs.ts`), `normalizeProjectPath`, `isPathInside` and `fromMsBuildPath` (`paths.ts`), `topologicalSortByDependency` (`topo.ts`) | Present since P1.2 |
+| `src/core/**` | Platform-agnostic logic: CLI runner, project model, queries, operations, feeds | Arrives in P1–P4; today `contracts.ts`, `util/` and `src/core/cli/__fixtures__/sdk-probes/` |
 | `src/host/**` | Adapts VS Code to the core: webview hosts, handlers, pickers | Arrives in P2.9 |
 | `src/extension.next.ts` | 2.0 composition root | Placeholder; replaced in P2.10 |
 | `src/webview/shared/**` | Tokens, primitives, message bus, store slices | Arrives in P3 |
@@ -116,8 +117,8 @@ These parts serve both versions and are the current truth for the build, test an
   shared test helpers, against Node 24 declarations). The 1.x Vitest tests are not type-checked.
 - **Linting.** `npm run lint` covers `src`, `scripts`, `esbuild.mjs` and the root configuration files.
 - **Unit tests.** Vitest projects `backend` (`src/services`, `src/core`, `src/protocol`, `src/host`,
-  `src/test/lint`), `frontend` (`src/webview`) and `integration`. Coverage has global thresholds and a separate
-  floor for `src/webview/**`. `node --test scripts/hooks` tests the guard hook.
+  `src/test/lint`), `frontend` (`src/webview`) and `integration`. Coverage has global thresholds, a separate
+  floor for `src/webview/**` and a floor of 85 % of the lines for `src/core/**`. `node --test scripts/hooks` tests the guard hook.
 - **Bundle size.** `node esbuild.mjs --production --analyze` fails when a bundle exceeds its ceiling, the 1.18.9
   size plus 10 %. Metafiles go to `out/esbuild/`.
 - **Packaging.** `npm run package:vsix` runs `npm ci` → `check-types` → tests → lint and production build →
