@@ -42,7 +42,7 @@ one records itself here.
 | S6 | M | Main-panel CSP img-src is a fixed badge-host allow-list; icons resolved from private feeds are… | — | not mapped | open |
 | Y1 | H | Handlers without try/catch never answer on failure | W: More unwrapped handlers; fixed by ADR-007 terminal-response guarantee. | not mapped | open |
 | Y2 | H | Queue admission ignored | — | P2.1 (core: a refused submission is a ticket whose `completion` resolves with a `rejected` outcome), P2.9 (the host answers every `ops/*` request from the ticket) | open; core side done in P2.1 |
-| Y3 | H | restoreProject and forced transitive restore bypass the OperationQueue | — | not mapped | open |
+| Y3 | H | restoreProject and forced transitive restore bypass the OperationQueue | — | P2.9 (the quarry host submits restores to the queue as `PackageWorkflows.restore`; to be verified there) | open |
 | Y4 | H | Shared debounce timer | — | not mapped | open |
 | Y5 | H | skipNextUpdateCheckRef lingers | — | not mapped | open |
 | Y6 | H | Scoped background merge resurrects deleted projects | W: Also drops live projects (`_sendInitialData` clears merge base). | not mapped | open |
@@ -118,7 +118,7 @@ one records itself here.
 | N16 | Medium | Locale-dependent parsers. | — | P2.6 | open |
 | N17 | Low | `restoreSearchQuery` `source` vs `sources`. | — | Moot in 2.0 | moot in 2.0 |
 | N18 | Low | No l10n policy. | — | D11 | closed by design (D11) |
-| N19 | Low | Multi-TFM resolved versions arbitrary. | — | P2.2, P2.4 | open |
+| N19 | Low | Multi-TFM resolved versions arbitrary. | — | P2.2, P2.4 | open; reader side done in P2.2 (`AssetsReader.getResolvedVersionsByFramework`), the inspector uses it in P2.4 |
 | N20 | Low | nuget.org identity by substring. | — | P2.6 | open |
 | N21 | Low | Nested `nuget.config` not discovered. | — | P2.6 | open |
 | N22 | Low | Stale `--enable-proposed-api` in e2e config. | — | P0.8 | closed (P0.8) |
@@ -151,6 +151,7 @@ one records itself here.
 | N49 | Medium | `classifyAddress` treats all of 192.0.0.0/16, 198.51.0.0/16 and 203.0.0.0/16 as reserved; only one /24 in each is. | — | P4.2 (before `Transport` checks resolved addresses with it) | open |
 | N50 | Low | A throwing `onCommand` hook turned a finished CLI step into a failed one (quarry workflow code). | — | P1.10 | closed |
 | N51 | Low | The workflow passes a literal `isCpm: false` to `addPackageArgs`; correct while every CPM add/update is refused first, a trap from P6.3 on. | — | P6.3 | open |
+| N52 | Low | `rootProject` reported an empty `<Project></Project>` as no project. | — | P2.2 | closed |
 
 Corrections in Appendix A that do not belong to one finding id:
 
@@ -369,6 +370,7 @@ Three-lens verification of the original findings against `main` produced these c
 | N49 | Medium | `classifyAddress` in `src/core/http/ssrf.ts` decides the class of an IPv4 address from its first two octets (`classifyIPv4Octets(a, b)`, quarry code). The documentation ranges are /24 blocks (192.0.2.0/24, 198.51.100.0/24, 203.0.113.0/24, and 192.0.0.0/24), but the function marks all of 192.0.0.0/16, 198.51.0.0/16 and 203.0.0.0/16 as `reserved`. Measured: `192.0.43.8`, `198.51.44.1` and `203.0.178.191` are `reserved`, and `isSafeRedirectTarget('https://192.0.43.8/', …)` is `false`; these are ordinary public addresses. Today the effect is that a redirect to an IP literal in those blocks is refused. Once `Transport` checks the resolved address of a host name with the same function (ADR-005), a feed hosted there cannot be reached after a redirect. The same two-octet rule is right for 10/8, 172.16/12, 192.168/16, 100.64/10, 169.254/16 and 198.18/15. The helper `embeddedV4` (`ssrf.ts:105`) also has a conditional whose two branches are the same expression. Not named by P1.9, file left identical to the quarry. | P1.9 | P4.2, before the resolved-address check uses the function: classify the three /24 blocks by their third octet, with tests for a public neighbour of each; simplify `embeddedV4` |
 | N50 | Low | In the quarry's `PackageWorkflows.ts` the `onCommand` hook (the host's transcript logger) was called inside the `try` block of the CLI step, between the return of `runner.run` and the evaluation of its result (`:194-195`, `:221-222` of the quarry file). An exception of the hook, for example a disposed output channel, was therefore caught as a failure of the step: a `dotnet package add` that had already changed the project file was reported as `edit: { ok: false }`, and the restore was skipped. | P1.10 | fixed in P1.10: `forwardCommand` catches the exception and logs a redacted warning; test `a throwing onCommand does not change the outcome` |
 | N51 | Low | The workflow feeds the guard of `addPackageArgs` a literal: `PackageWorkflows.ts:223` passes `isCpm: false`, so the builder's refusal of `noRestore` with `isCpm` (`src/core/cli/commands.ts:71-73`) is never reached from this path. That is correct while `admitEdit` refuses every CPM `add` and `update` before an argv is built (test `cpm: never emits --no-restore` over all workflows), and a trap from P6.3 on, when the gate starts to admit CPM adds. The P1.10 ruling asked in prose for "never a literal" and showed the literal in its code; the P1 phase review kept the code and retracted the prose. | P1.10, P1 phase review | P6.3: when the body of `admitEdit` becomes `ProjectMutator.canMutate`, pass the project's real value and run a CPM add with `noRestore: false`; rewrite `cpm: never emits --no-restore` in the same item so that it still asserts that no argv contains `--no-restore` |
+| N52 | Low | `rootProject` in the quarry's `src/core/project/xml.ts` returned `undefined` for a project without attributes and children (`<Project></Project>`, `<Project />`): the parser reads such an element as an empty string, and the function accepted objects only. An empty `Directory.Build.props` or `Directory.Packages.props` therefore read as "no project root". Found by the first test written for the module; no caller existed yet. | P2.2 | fixed in P2.2: `rootProject` returns `{}` for the empty string; test `reads an empty project as a project without content` |
 
 ## 5. Defects in the paused 2.0 code (execution plan, Appendix B)
 
@@ -401,7 +403,7 @@ headline defects in the order the plan lists them, so that salvage commits can c
 | C-project-catalog-1 | Inspector/evaluator/mutator/references/context missing | P2.2 to P2.8, P6 | open |
 | C-project-catalog-2 | Catalog blocks on evaluator | P2.2 to P2.8, P6 | open |
 | C-project-catalog-3 | Fabricated context | P2.2 to P2.8, P6 | open |
-| C-project-catalog-4 | Conditions dropped | P2.2 to P2.8, P6 | open |
+| C-project-catalog-4 | Conditions dropped | P2.2 to P2.8, P6 | open; central side done in P2.2 (a guarded `PackageVersion` is returned as `conditioned`), references in P2.4 |
 | C-project-catalog-5 | Per-project resolved versions | P2.2 to P2.8, P6 | open |
 | C-project-catalog-6 | Catalog undocumented | P2.2 to P2.8, P6 | open |
 | C-ops-1 | OperationQueue v2 missing | P1.10, P2.1 | closed (P2.1: `DefaultOperationQueue`, 16 tests) |
@@ -432,7 +434,7 @@ Counts quoted in findings drift. These commands reproduce the ones that matter; 
 | `as any` in unit tests (T3; the plan counted 955) | `grep -rEo "as any" src --include='*.test.ts' --include='*.test.tsx' \| wc -l` | 959 |
 | Unit test files that call `setTimeout(` (T3; a proxy for "files with sleeps", the plan counted 19) | `grep -rlE "setTimeout\(" src --include='*.test.ts' --include='*.test.tsx' \| wc -l` | 22 |
 | Fixed `px` font sizes (U5) | `grep -cE "font-size:\s*[0-9.]+px" src/webview/app/App.css src/webview/sidebar/SidebarApp.css` | 125 and 13 |
-| Unit tests | `npx vitest run` | 64 files, 2147 tests and 1 skipped; 2148 with `NUIGET_SDK_TESTS=1` |
+| Unit tests | `npx vitest run` | 68 files, 2227 tests and 1 skipped; 2228 with `NUIGET_SDK_TESTS=1` |
 | End-to-end tests | `npm run test:e2e` | 30 |
 | UI tests | `npm run test:ui -- --storage /tmp/nuiget-ui` | 31 |
 | Type errors in 1.x tests, benchmarks and helpers (N30) | strict `tsc` over `src` with `types: [node, vitest/globals]`, without `src/test/e2e` and `src/test/ui` | 55 |

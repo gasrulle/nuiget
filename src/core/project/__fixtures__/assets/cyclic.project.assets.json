@@ -1,0 +1,63 @@
+{
+    "version": 3,
+    "targets": {
+        "net8.0": {
+            "Root.A/1.0.0": {
+                "type": "package",
+                "dependencies": {
+                    "Mid.B": "2.0.0"
+                }
+            },
+            "Root.D/4.0.0": {
+                "type": "package",
+                "dependencies": {
+                    "Leaf.C": "3.0.0"
+                }
+            },
+            "Mid.B/2.0.0": {
+                "type": "package",
+                "dependencies": {
+                    "Leaf.C": "3.0.0"
+                }
+            },
+            "Leaf.C/3.0.0": {
+                "type": "package",
+                "dependencies": {
+                    "Mid.B": "2.0.0"
+                }
+            },
+            "Orphan.E/5.0.0": {
+                "type": "package"
+            },
+            "Shared/1.0.0": {
+                "type": "project"
+            }
+        },
+        "net8.0/win-x64": {
+            "Root.A/1.0.0": {
+                "type": "package",
+                "dependencies": {
+                    "Mid.B": "2.0.0"
+                }
+            },
+            "Mid.B/2.0.0": {
+                "type": "package"
+            }
+        }
+    },
+    "libraries": {
+        "Root.A/1.0.0": { "type": "package", "path": "root.a/1.0.0" },
+        "Root.D/4.0.0": { "type": "package", "path": "root.d/4.0.0" },
+        "Mid.B/2.0.0": { "type": "package", "path": "mid.b/2.0.0" },
+        "Leaf.C/3.0.0": { "type": "package", "path": "leaf.c/3.0.0" },
+        "Orphan.E/5.0.0": { "type": "package", "path": "orphan.e/5.0.0" },
+        "Shared/1.0.0": { "type": "project", "path": "../Shared/Shared.csproj" }
+    },
+    "projectFileDependencyGroups": {
+        "net8.0": [
+            "Root.A >= 1.0.0",
+            "Root.D >= 4.0.0",
+            "Shared >= 1.0.0"
+        ]
+    }
+}

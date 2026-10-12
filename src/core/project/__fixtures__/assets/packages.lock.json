@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "dependencies": {
+    "net8.0": {
+      "Newtonsoft.Json": {
+        "type": "Direct",
+        "requested": "[13.0.3, )",
+        "resolved": "13.0.3",
+        "contentHash": "abc123=="
+      },
+      "Serilog": {
+        "type": "Direct",
+        "requested": "[4.*, )",
+        "resolved": "4.0.2",
+        "contentHash": "def456=="
+      },
+      "FluentValidation": {
+        "type": "Direct",
+        "requested": "[11.0.0, 12.0.0)",
+        "resolved": "11.9.2",
+        "contentHash": "ghi789=="
+      },
+      "Serilog.Sinks.Console": {
+        "type": "Transitive",
+        "resolved": "5.0.0",
+        "contentHash": "jkl012=="
+      }
+    }
+  }
+}

@@ -6,6 +6,8 @@
 # Keep test fixture obj/ directory (needed by integration tests)
 !src/test/fixtures/obj/
 !src/test/fixtures/obj/**
+# Restore output that the 2.0 project fixtures track on purpose (plan item P2.2)
+!src/core/project/__fixtures__/**/obj/
 
 # Dependencies
 node_modules/
