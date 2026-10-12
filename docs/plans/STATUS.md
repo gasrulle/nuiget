@@ -10,7 +10,7 @@ the next item and updates the row when the item closes. Status values: `open`, `
 | P0.1 | P0 | Branch; this plan at docs/plans/2026-10-11-nuiget-2.0-execution-plan.md; copy ADR-000..008 | done | b8a97a8 | 2026-10-11 | Plan, ADR-000..008, UX model landed on main |
 | P0.2 | P0 | Agent resources split | open |  |  |  |
 | P0.3 | P0 | .claude/agents/architecture-advisor.md (frontmatter name, description, tools | open |  |  |  |
-| P0.4 | P0 | .claude/settings.json allow | open |  |  | Allowlist diff prepared by the planning session (see RUN.md §8); owner commits it |
+| P0.4 | P0 | .claude/settings.json allow | done | 5bf061e | 2026-10-12 | Allowlist committed by the owner; the scripts it names arrive in P0.10 and P1.1a |
 | P0.9 | P0 | ADR-000 amendments | open |  |  |  |
 | P0.5 | P0 | L2 hooks via the update-config skill | open |  |  |  |
 | P0.6 | P0 | Build switch | open |  |  |  |
