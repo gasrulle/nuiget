@@ -2,7 +2,107 @@
 
 This document describes the technical architecture of the nUIget VS Code extension.
 
-## Overview
+> **Two architectures live in this repository until the 2.0 flip (plan item P8).** The first section below
+> describes the code that is being built on the `labs/2.0` branch. Every later section whose heading carries the
+> 1.x marker describes the shipping 1.18 code and is deleted together with it. Write 2.0 documentation only in
+> the first section.
+
+## 2.0 Architecture (in progress)
+
+nUIget 2.0 is a re-architecture on audited contracts: a platform-agnostic core, a typed protocol between host
+and webviews, and one shared webview code base for the main panel and the sidebar. It is built next to 1.x and
+replaces it in one step. As of plan phase P0 the repository contains the foundation only: build switch,
+placeholders for the three entry points, import fences, guard hooks, CI and packaging checks. No 2.0 runtime
+behaviour exists yet.
+
+### Decisions and plans
+
+| Document | Subject |
+| --- | --- |
+| [Execution plan](docs/plans/2026-10-11-nuiget-2.0-execution-plan.md) | Decisions D1–D13, work items, gates |
+| [Item tracker](docs/plans/STATUS.md) | State of every work item |
+| [ADR-000](docs/adr/000-release-and-compatibility-policy.md) | Release and compatibility policy: clean break, .NET SDK 10 floor, VS Code 1.85 / Node 18 baseline |
+| [ADR-001](docs/adr/001-session-store.md) | Host-owned session state (`SessionStore`) |
+| [ADR-002](docs/adr/002-query-coordinator.md) | Resource queries, generations and invalidation (`QueryCoordinator`) |
+| [ADR-003](docs/adr/003-operation-queue-and-dotnet-runner.md) | Operation queue outcomes and shell-free CLI execution |
+| [ADR-004](docs/adr/004-project-model.md) | Three-tier project model and Central Package Management; [SDK probes](docs/adr/004-sdk-probes.md) |
+| [ADR-005](docs/adr/005-execution-context-and-outbound-policy.md) | Project execution context and outbound request policy |
+| [ADR-006](docs/adr/006-icons-and-csp.md) | Host-side icon resolution and webview CSP |
+| [ADR-007](docs/adr/007-protocol.md) | Typed envelope protocol for webview ↔ host |
+| [ADR-008](docs/adr/008-webview-architecture.md) | Webview architecture: shared slices, primitives, two entry points |
+| [UX interaction model](docs/ux/interaction-model.md) | Keyboard, focus and state behaviour of the 2.0 UI |
+
+The protocol reference `docs/protocol.md` is generated from `src/protocol/**`; both arrive with plan item P1.1a.
+
+### Module map
+
+Placeholder: each row is filled in by the item that creates the module.
+
+| Path | Role | State |
+| --- | --- | --- |
+| `src/protocol/**` | Message and domain types shared by host and webviews | Arrives in P1.1a |
+| `src/core/**` | Platform-agnostic logic: CLI runner, project model, queries, operations, feeds | Arrives in P1–P4; today only `src/core/cli/__fixtures__/sdk-probes/` |
+| `src/host/**` | Adapts VS Code to the core: webview hosts, handlers, pickers | Arrives in P2.9 |
+| `src/extension.next.ts` | 2.0 composition root | Placeholder; replaced in P2.10 |
+| `src/webview/shared/**` | Tokens, primitives, message bus, store slices | Arrives in P3 |
+| `src/webview/sidebar-next/**` | 2.0 sidebar entry | Placeholder; first slice in P3.4 |
+| `src/webview/main/**` | 2.0 main panel entry | Placeholder; shell in P5.3 |
+
+Import rules between these layers, and between 2.0 and 1.x code, are in
+[`.github/instructions/core-boundaries.instructions.md`](.github/instructions/core-boundaries.instructions.md).
+`eslint.config.mjs` enforces them with one fence per layer; `LEGACY_IMPORT_ALLOWLIST` there is the only way a
+2.0 file may import 1.x code, and `src/test/lint/allowlist.test.ts` fails for an entry that is no longer needed.
+
+### Coexistence of 1.x and 2.0
+
+Both versions build into the same three output files, selected by entry set. There is no hybrid: a build is
+either 1.x or 2.0.
+
+| | 1.x (default) | 2.0 (`--v2`) |
+| --- | --- | --- |
+| Extension entry → `dist/extension.js` | `src/extension.ts` | `src/extension.next.ts` |
+| Main panel entry → `dist/webview.js` | `src/webview/app/index.tsx` | `src/webview/main/index.tsx` |
+| Sidebar entry → `dist/sidebar.js` | `src/webview/sidebar/index.tsx` | `src/webview/sidebar-next/index.tsx` |
+| Watch script | `npm run watch` | `npm run watch:v2` |
+| Launch configuration | "Run Extension" | "Run 2.0" |
+
+The two watch scripts write the same files and must not run together. Builds do not clean `dist/`, so delete
+it before packaging a different entry set. Packaging and CI build 1.x until the flip.
+
+### Shared tooling
+
+These parts serve both versions and are the current truth for the build, test and release pipeline.
+
+- **Type-checking.** `npm run check-types` runs three programs: `tsconfig.json` (the extension and webviews,
+  against Node 18 declarations through the `@types-host/node` alias, see ADR-000), `tsconfig.test.json` (Mocha
+  end-to-end and ExTester UI suites) and `tsconfig.vitest.json` (tests of the 2.0 code, the lint tests and the
+  shared test helpers, against Node 24 declarations). The 1.x Vitest tests are not type-checked.
+- **Linting.** `npm run lint` covers `src`, `scripts`, `esbuild.mjs` and the root configuration files.
+- **Unit tests.** Vitest projects `backend` (`src/services`, `src/core`, `src/protocol`, `src/host`,
+  `src/test/lint`), `frontend` (`src/webview`) and `integration`. Coverage has global thresholds and a separate
+  floor for `src/webview/**`. `node --test scripts/hooks` tests the guard hook.
+- **Bundle size.** `node esbuild.mjs --production --analyze` fails when a bundle exceeds its ceiling, the 1.18.9
+  size plus 10 %. Metafiles go to `out/esbuild/`.
+- **Packaging.** `npm run package:vsix` runs `npm ci` → `check-types` → tests → lint and production build →
+  `vsce package`. `npm run check:vsix` fails when the VSIX would contain anything other than `dist/*.js`,
+  `dist/*.css`, `resources/`, `package.json`, `README.md`, `CHANGELOG.md` and `LICENSE`, or would lack a required
+  file.
+- **Continuous integration.** `.github/workflows/ci.yml` runs on pushes to `main` and `labs/**` and on pull
+  requests to `main`. Every job installs with `npm ci`; actions are pinned by commit SHA.
+
+  | Job | Needs | What it does |
+  | --- | --- | --- |
+  | Lint | — | `npm run lint`, then the guard hook tests |
+  | Test (ubuntu, windows) | — | Unit tests with .NET SDK 10 installed; coverage on ubuntu |
+  | E2E (VS Code 1.85.0, stable) | — | Production build, then the extension-host suite under Xvfb; log artifact per version |
+  | UI | Lint, Test | ExTester suite under Xvfb; log and screenshot artifact |
+  | Build & Package | Lint, Test, E2E | Type check, production build, `check:vsix`, VSIX uploaded as artifact `vsix` |
+  | Benchmark (informational) | — | Compares against `benchmarks/baseline.json`; never fails the run |
+
+  The end-to-end run on VS Code 1.85.0 is what proves the extension works on the minimum supported host. The
+  owner downloads the `vsix` artifact and publishes it manually.
+
+## Overview (1.x — removed at P8)
 
 ```mermaid
 graph TD
@@ -26,7 +126,7 @@ graph TD
     end
 ```
 
-## File Structure
+## File Structure (1.x — removed at P8)
 
 ```
 src/
@@ -36,7 +136,7 @@ src/
 │   ├── NuGetSidebarPanel.ts  # WebviewViewProvider for Activity Bar sidebar
 │   ├── app/
 │   │   ├── index.tsx         # React entry point with ErrorBoundary
-│   │   ├── App.tsx           # Application shell with unified search bar (~2420 lines)
+│   │   ├── App.tsx           # Application shell with unified search bar (~3220 lines)
 │   │   ├── App.css           # Styles (includes high-contrast, reduced-motion, icon utilities)
 │   │   ├── types.ts          # Shared types, LRUMap, utility functions
 │   │   ├── icons.tsx          # Inline SVG icon components (codicon-compatible, theme-aware)
@@ -44,9 +144,9 @@ src/
 │   │   ├── utils/
 │   │   │   └── parseSearchQuery.ts  # Shared search parser (SearchMode, FILTER_PREFIXES)
 │   │   ├── components/
-│   │   │   ├── InstalledTab.tsx           # Installed tab (~1250 lines)
-│   │   │   ├── UpdatesTab.tsx             # Updates tab (~710 lines)
-│   │   │   ├── PackageDetailsPanel.tsx    # Details panel (~510 lines)
+│   │   │   ├── InstalledTab.tsx           # Installed tab (~1620 lines)
+│   │   │   ├── UpdatesTab.tsx             # Updates tab (~780 lines)
+│   │   │   ├── PackageDetailsPanel.tsx    # Details panel (~550 lines)
 │   │   │   ├── DraggableSash.tsx          # Resizable split panel sash
 │   │   │   └── SourceSettingsOverlay.tsx  # Source settings modal (forwardRef, owns form state)
 │   │   └── hooks/
@@ -59,8 +159,8 @@ src/
 │           ├── SectionHeader.tsx   # Collapsible section header
 │           └── PackageRow.tsx      # Compact package row with hover actions
 ├── services/
-│   ├── NuGetService.ts       # Facade: delegates to sub-services, retains HTTP/source health/CLI (~1020 lines)
-│   ├── NuGetPackageService.ts # Package search, metadata, versions, vulnerabilities, icons, updates (~2060 lines)
+│   ├── NuGetService.ts       # Facade: delegates to sub-services, retains HTTP/source health/CLI (~1290 lines)
+│   ├── NuGetPackageService.ts # Package search, metadata, versions, vulnerabilities, icons, updates (~2470 lines)
 │   ├── NuGetCliService.ts    # dotnet CLI operations (install/update/remove/restore, SDK detection)
 │   ├── NuGetSourceService.ts # Source CRUD, config file management, source name generation
 │   ├── NuGetProjectService.ts # Project discovery, .csproj parsing, transitive deps, assets.json caching
@@ -99,16 +199,16 @@ src/
 
 ### Module Split: NuGetService
 `NuGetService.ts` is a facade that delegates to five sub-services:
-- **`NuGetPackageService.ts`** (~1920 lines) — Package search (`searchPackages`, `searchPackagesViaApi`, `quickSearchGrouped`), metadata resolution (`getPackageMetadata`, `getPackageMetadataFromSource/Search/Nuspec`), version queries (`getPackageVersions`, `getPackageVersionsFromSource`), vulnerability data (`fetchVulnerabilityData`, `getVulnerabilities`), icon URL resolution (`resolveIconUrl`, `getPackageIconUrl`), update checking (`checkPackageUpdates`, `checkPackageUpdatesMinimal` — both pre-resolve sources via `resolveSourcesForBatch()` before batch loop), README extraction, size fetching, and installed package metadata. Uses `PackageServiceDeps` interface for dependency injection — receives HTTP, source, and endpoint methods from `NuGetService` via arrow function bindings. Owns caches: `metadataCache(200)`, `iconUrlCache(500)`, `versionsCache(200)`, `verifiedStatusCache(300)`, `searchResultsCache(100)`, `quickSearchCache(100, 30s TTL)`, `vulnerabilityData(Map)`.
+- **`NuGetPackageService.ts`** (~2470 lines) — Package search (`searchPackages`, `searchPackagesViaApi`, `quickSearchGrouped`), metadata resolution (`getPackageMetadata`, `getPackageMetadataFromSource/Search/Nuspec`), version queries (`getPackageVersions`, `getPackageVersionsFromSource`), vulnerability data (`fetchVulnerabilityData`, `getVulnerabilities`), icon URL resolution (`resolveIconUrl`, `getPackageIconUrl`), update checking (`checkPackageUpdates`, `checkPackageUpdatesMinimal` — both pre-resolve sources via `resolveSourcesForBatch()` before batch loop), README extraction, size fetching, and installed package metadata. Uses `PackageServiceDeps` interface for dependency injection — receives HTTP, source, and endpoint methods from `NuGetService` via arrow function bindings. Owns caches: `metadataCache(200)`, `iconUrlCache(500)`, `versionsCache(200)`, `verifiedStatusCache(300)`, `searchResultsCache(100)`, `quickSearchCache(100, 30s TTL)`, `vulnerabilityData(Map)`.
 - **`NuGetCliService.ts`** — dotnet CLI operations (install/update/remove/restore), SDK detection (`getSdkMajorVersion`, `useNounFirstSyntax`), HTTP cache clearing, `dotnet package search`.
 - **`NuGetSourceService.ts`** — Source CRUD (`getSources`, `addSource`, `removeSource`, `enableSource`, `disableSource`), nuget.config file management, source name generation.
-- **`NuGetProjectService.ts`** (~470 lines) — Project discovery, `.csproj` parsing, installed packages, transitive dependency resolution, `project.assets.json` caching.
+- **`NuGetProjectService.ts`** (~640 lines) — Project discovery, `.csproj` parsing, installed packages, transitive dependency resolution, `project.assets.json` caching.
 - **`NuGetLogger.ts`** — Logging utilities (`setupOutputChannel`, `sanitizeForLogging`, `logOutput`, `logSuccess`, `logWarning`, `logError`, `logBulkOperationHeader`).
 
 `NuGetService.ts` retains: HTTP fetch methods (`fetchJson`, `fetchJsonHttp1`, `fetchJsonWithCompression`, `fetchJsonWithDetails`, `fetchText`, `downloadFile`), service index discovery/caching, source health monitoring, failed endpoint cache, credential management, and the public facade API. Internal types (`NuGetServiceIndex`, `ServiceEndpoints`) remain in `NuGetService.ts`. `FetchResult<T>` is defined in `Http2Client.ts`.
 
 Additional module splits:
-- **`NuGetTypes.ts`** — All exported types/interfaces (`VersionSpec`, `Project`, `InstalledPackage`, `PackageMetadata`, `PackageUpdate`, `NuGetSource`, `NuGetSearchResponse`, `NuGetSearchEntry`, `NuGetRegistrationEntry`, `NuGetRegistrationPage`, etc.). Also exports discriminated union message types: 48 message interfaces (e.g., `GetProjectsMsg`, `InstallPackageMsg`, `ShowContextMenuMsg`), `PanelRequestMessage` (34 variants), and `SidebarRequestMessage` (14 variants) — used by `_handleMessage` in both panels for type-safe switch/case narrowing. `NuGetService.ts` re-exports these for backward compatibility. NuGet V3 API response types use vendor-polymorphic field names (e.g., `id`/`Id`, `authors`/`Authors`) to handle differences between nuget.org, Nexus, ProGet, and other server implementations.
+- **`NuGetTypes.ts`** — All exported types/interfaces (`VersionSpec`, `Project`, `InstalledPackage`, `PackageMetadata`, `PackageUpdate`, `NuGetSource`, `NuGetSearchResponse`, `NuGetSearchEntry`, `NuGetRegistrationEntry`, `NuGetRegistrationPage`, etc.). Also exports discriminated union message types: 48 message interfaces (e.g., `GetProjectsMsg`, `InstallPackageMsg`, `ShowContextMenuMsg`), `PanelRequestMessage` (34 variants), and `SidebarRequestMessage` (14 variants) — used by `_handleMessage` in both panels for type-safe switch/case narrowing. Only webview → host requests are typed this way; messages from the host to the webviews arrive as untyped `event.data`. `NuGetService.ts` re-exports these for backward compatibility. NuGet V3 API response types use vendor-polymorphic field names (e.g., `id`/`Id`, `authors`/`Authors`) to handle differences between nuget.org, Nexus, ProGet, and other server implementations.
 - **`NuGetUtils.ts`** — Stateless utility functions (`LRUMap`, `batchedPromiseAll`, `execWithTimeout`, `fileExists`, `COMMAND_TIMEOUT`, input validators, `parseVersionSpec`, `isNewerVersion`, `topologicalSortByDependency`). No class dependency.
 - **`NuGetOperations.ts`** — Shared package operation functions used by both `NuGetPanel` and `NuGetSidebarPanel`. Exports an `OperationContext` interface (`{ nugetService, postMessage, notifyOtherPanel, skipRestore? }`) and pure async functions: `executeSingleOperation` (install/update/remove), `executeBulkInstall`, `executeBulkUpdatePackages`, `executeBulkRemovePackages`, `executeBulkUpdateAllProjects`, `executeBulkRemoveAllProjects`. The `skipRestore` field (positive default — `false`/undefined = restore) is sourced from per-workspace state `nuget.restoreEnabled` (default `true`); both panels snapshot `_opCtx()` at message-handler enqueue time so a mid-operation toggle does not retroactively change in-flight ops. Bulk paths gate the trailing `dotnet restore` phase on `!ctx.skipRestore`. Also exports shared query functions: `queryAllProjectsUpdates(nugetService, includePrerelease, liteMode)` and `queryAllProjectsInstalled(nugetService)` with typed return interfaces (`ProjectUpdatesResult[]`, `ProjectInstalledResult[]`). Also exports `resolveAllProjectsIcons(nugetService, packages)` — deduplicates by `packageId@version`, resolves icon URLs via `batchedPromiseAll` (concurrency 10), returns `Record<string, string>` map for progressive UI enrichment. Each panel builds an `OperationContext` via `_opCtx()` and delegates from thin message-handler dispatchers.
 - `NuGetConfigParser.ts` imports and re-exports `NuGetSource` from `NuGetTypes.ts` — there is a single canonical definition.
@@ -121,7 +221,7 @@ Additional module splits:
 - **`DraggableSash.tsx`** — Standalone resizable split panel sash component (`MemoizedDraggableSash`).
 - **`SourceSettingsOverlay.tsx`** — Self-contained source settings modal with `forwardRef`/`useImperativeHandle`. Owns internal form state (add source form, confirm remove dialog). Parent forwards `addSourceResult` messages via `sourceSettingsRef.current?.handleAddSourceResult()`.
 
-## Sidebar Panel Architecture
+## Sidebar Panel Architecture (1.x — removed at P8)
 
 The sidebar provides a compact package management UI in the VS Code Activity Bar, using an Extensions-view-inspired search UX.
 
@@ -141,7 +241,7 @@ The sidebar provides a compact package management UI in the VS Code Activity Bar
 - **Partially-installed package UX**: In all-projects mode, `fullyInstalledSet` (useMemo in SidebarApp.tsx) tracks packages installed in ALL projects. `packageProjectsMap` maps packageId → list of project names where installed. Browse rows check `isPartial = !!installed && isAllProjects && !fullyInstalledSet.has(id) && !!projectNames` — the `!!projectNames` guard prevents false positives from optimistic `installedMap` entries that lack cross-project data. Partial packages show `+` icon (dominant intent = install in remaining), N/M badge (e.g., "2/5"), and context menu with all 4 actions (Install Latest, Install Version, Uninstall, Change Version). Fully installed packages show trash icon only. Backend `_showContextMenu` checks `data.partiallyInstalled` to build the appropriate action list; install actions route through `_pickProjectsForInstall()` (multi-select), uninstall/change routes through `_pickProjectForAction(data.installedProjects)` (single-select).
 - **Cross-view sync**: After install/update/remove, sidebar calls `vscode.commands.executeCommand('nuiget.refreshPackagesScoped', operation)` to notify the main panel with operation scope. `refreshPackagesScoped` is internal-only (hidden from Command Palette) — it calls `NuGetPanel.refreshScoped(operation)`, which posts `{ type: 'refreshScoped', operation }` to the webview. The handler sets `skipNextUpdateCheckRef.current = true` (skipping the expensive full `checkPackageUpdates` that the sidebar already performed) and re-fetches only installed packages (cheap .csproj parse). Falls back to `nuiget.refreshPackages` (full refresh) when no operation scope is provided (e.g., file watcher triggers).
 - **Sidebar refresh button**: Title bar `$(refresh)` icon at `navigation@4` clears all source error caches (`clearSourceErrors()` — clears `failedEndpointCache`, `serviceIndexCache`, `failedSources`, `iconSourceMissCount`, and `_sourcesCache`) and re-checks updates via `checkUpdatesInBackground()`. This ensures reconnecting to a previously-unavailable source (e.g., after VPN reconnection) actually retries the network. "Open Full View" is at `navigation@5`.
-- **`.csproj` file watcher**: `NuGetSidebarPanel` registers a debounced (5000ms) `FileSystemWatcher` for `**/*.{csproj,fsproj,vbproj}` changes (content, create, delete). On trigger, it sends `revalidate` to the sidebar webview (non-destructive: re-fetches in background without clearing the displayed list), calls `checkUpdatesInBackground(true)`, and calls `_notifyMainPanel()` to refresh the main panel. The manual refresh button still uses `forceRefresh` (destructive: clears `packageUpdates` and `allProjectsUpdates` immediately so loading skeletons render). `revalidate` exists to prevent flicker on background re-fetches that follow operations or external file edits.
+- **`.csproj` file watcher**: `NuGetSidebarPanel` registers a debounced (2000ms, re-armed with 1000ms after an operation that touched a project file) `FileSystemWatcher` for `**/*.{csproj,fsproj,vbproj}` changes (content, create, delete). On trigger, it sends `revalidate` to the sidebar webview (non-destructive: re-fetches in background without clearing the displayed list), calls `checkUpdatesInBackground(true)`, and calls `_notifyMainPanel()` to refresh the main panel. The manual refresh button still uses `forceRefresh` (destructive: clears `packageUpdates` and `allProjectsUpdates` immediately so loading skeletons render). `revalidate` exists to prevent flicker on background re-fetches that follow operations or external file edits.
 - **`totalUpdateCount` in sidebar UI**: The sidebar section header update count (`totalUpdateCount`) uses a priority chain: (1) sum of `allProjectsUpdates[].updates.length` when load-all is active, (2) `packageUpdates.length` when available for the selected project, (3) `allProjectsUpdates.find(selectedProject)?.updates.length` as a last resort before data is fully loaded. The `handleUpdateAll` action must read from all tiers to match the displayed count.
 
 ### Message Protocol
@@ -151,7 +251,7 @@ Sidebar messages follow the same patterns as the main panel but always send `lit
 Prerelease, source, and project selections are synced bidirectionally between the main panel and sidebar:
 - **Main → Sidebar (settings)**: `NuGetPanel.saveSettings` persists to `workspaceState`, then fires static callbacks (`onPrereleaseChanged`, `onSourceChanged`, `onProjectChanged`) wired in `extension.ts` to call `NuGetSidebarPanel.syncPrerelease()`, `syncSource()`, `syncProject()`.
 - **Main → Sidebar (package changes)**: After any install/update/remove/bulk operation, `NuGetPanel` fires the static `onPackageChanged(operation)` callback with operation details (`{ type, packageId?, packageIds?, projectPath? }`), wired in `extension.ts` to call `NuGetSidebarPanel.notifySidebarOfChange(operation)`. This lightweight path posts a `{ type: 'packageChanged', operation }` message to the sidebar webview for surgical state updates, then re-runs `checkUpdatesInBackground(force: true, skipMainPanelNotify: true, scope)`. The `scope` parameter enables **selective cache invalidation** (only the affected packages' version cache entries are cleared, not the entire cache — saving 20-30 HTTP requests) and **scoped project re-checking** (only the affected project is re-checked for updates, with results merged into cached data for other projects). Bulk operations include `packageIds` (array of all affected package IDs). Unlike `refreshSidebar()`, it does **not** call `clearNuGetHttpCache()` or re-fetch sources — the operation just communicated with the registry successfully, so the cache is fresh. If a check is already in progress, `_forceCheckPending` queues a re-run in the `finally` block to prevent dropped events; scope is merged (union of packageIds, projectPath cleared if different).
-- **Main → Sidebar (full refresh)**: The main panel header's refresh button sends `{ type: 'fullRefresh' }` to `NuGetPanel`, which clears source caches (`clearSourceErrors()`), re-fetches sources, sends `{ type: 'refresh' }` to the webview, and fires the static `onRefreshAll` callback wired in `extension.ts` to call `NuGetSidebarPanel.refreshSidebar()`. Note: refresh does **not** call `clearNuGetHttpCache()` (0–15s process spawn) — use the `nUIget: Clear NuGet HTTP Cache` Command Palette command for that. No echo loop: `refreshSidebar()` → `checkUpdatesInBackground()` does not call `_notifyMainPanel()`.
+- **Main → Sidebar (full refresh)**: The main panel header's refresh button sends `{ type: 'fullRefresh' }` to `NuGetPanel`, which clears source caches (`clearSourceErrors()`), re-fetches sources, sends `{ type: 'refresh' }` to the webview, and fires the static `onRefreshAll` callback wired in `extension.ts` to call `NuGetSidebarPanel.refreshSidebar()`. Both `fullRefresh` and `refreshSidebar()` call `clearNuGetHttpCacheBackground()`, which starts the dotnet HTTP cache clear (0–15s process spawn) without waiting for it; the `nUIget: Clear NuGet HTTP Cache` command runs the same clear and waits. `refreshSidebar()` → `checkUpdatesInBackground(true)` runs with the default `skipMainPanelNotify = false`, so it calls `_notifyMainPanel()` and the main panel receives a second, redundant refresh (finding Y7).
 - **Sidebar → Main**: QuickPick pickers call `NuGetPanel.syncPrerelease()`, `syncSource()`, `syncProject()` static methods which post messages to the main panel webview.
 - **Sidebar → Main (source settings)**: "Manage NuGet Sources…" in the source picker calls `NuGetPanel.openSourceSettings()` which creates/shows the main panel and sends `{ type: 'openSourceSettings' }`. If the panel is freshly created, the message is queued via `_pendingOpenSourceSettings` and delivered after `getProjects` with a 200ms delay (same pattern as `navigateToPackage`). App.tsx handler sets `showSourceSettings(true)` and requests `getConfigFiles`.
 - **Anti-echo**: `skipSaveRef`, `skipSourceSaveRef`, `skipProjectSaveRef` in App.tsx prevent the receiving panel from re-persisting the change and creating an infinite loop.
@@ -162,7 +262,7 @@ Sidebar context menu "View Package Details" opens the main panel and navigates t
 - **App.tsx handler**: Sets `pendingNavigationRef` with the target package, fills the unified search bar with the package ID, and dispatches a `searchPackages` message. The tab bar is hidden (browse mode) and results appear in the browse results area.
 - **Auto-select on results**: When `searchResults` arrives and `pendingNavigationRef.current` is set, App.tsx finds the matching package by ID in results and calls `selectDirectPackage()` to load versions, metadata, and display the details panel. The ref is then cleared.
 
-## Component Architecture
+## Component Architecture (1.x — removed at P8)
 
 The webview UI uses a unified search bar in the App shell that drives all search modes (browse, @installed, @updates, @vulnerable). Tab-specific components manage their own local state while sharing cross-cutting state from App.
 
@@ -200,7 +300,7 @@ The search bar replaces the former Browse tab and InstalledTab filter bar, match
 - **Default mode**: Empty search shows Installed/Updates tabs normally.
 - **Browse mode**: Plain text + Enter dispatches `searchPackages`, hides tabs, shows virtualized browse results with split details panel. Quick search suggestions (150ms debounce) appear while typing (before Enter).
 - **Filter modes**: `@installed <query>` filters the InstalledTab client-side. `@updates <query>` filters the UpdatesTab. `@vulnerable` shows only vulnerable packages. Typing `@` shows an auto-completing prefix dropdown.
-- **Recent searches**: Up to 10 recent browse queries shown on focus when the search bar is empty.
+- **Recent searches** (main panel only; the sidebar has none): recent browse queries shown on focus when the search bar is empty. The limit is `nuiget.recentSearchesLimit` (default 5, maximum 10, 0 disables the history).
 - **Quick search**: 150ms debounce autocomplete. Expandable per-source results with version lists. Install directly from quick search, or click to fill search bar.
 - **Keyboard navigation**: ArrowDown/Up navigate dropdowns, Enter selects, Escape dismisses, Tab selects filter prefix.
 
@@ -287,7 +387,7 @@ Each tab features a draggable split panel (left: package list, right: details). 
 - **Accessibility:** `role="separator"`, `aria-orientation` (horizontal for vertical sash, vertical for horizontal), and `aria-label="Drag to resize panels"`
 - **Memoization:** Wrapped as `MemoizedDraggableSash` with `useCallback([])` handlers (`onReset`, `onDragEnd`) to prevent re-renders
 
-## Message Flow
+## Message Flow (1.x — removed at P8)
 
 The extension uses VS Code's webview message passing for communication:
 
@@ -460,15 +560,15 @@ Key properties:
 | `restoreSearchQuery` | Ext → UI | Restore search query from previous session |
 | `settingsChanged` | Ext → UI | VS Code settings changed (searchDebounceMode, etc.) |
 
-## State Management
+## State Management (1.x — removed at P8)
 
 ### Session State (vscode.getState/setState)
 - Persists only while panel is hidden (same session)
-- Used for: tab selection, search query, project selection, recent searches
+- Used for: tab selection, search query, project selection, and a copy of the recent searches while the panel is hidden
 
 ### Persistent State (context.workspaceState)
 - Persists across panel closes and VS Code restarts
-- Used for: Include prerelease checkbox, Restore after operations toggle, selected NuGet source, recent searches
+- Used for: Include prerelease checkbox, Restore after operations toggle, selected NuGet source, recent searches (the durable copy, key `nuget.recentSearches`, main panel only)
 - Accessed via `getSettings`/`saveSettings` messages
 
 ### Global State (context.globalState)
@@ -549,7 +649,7 @@ useEffect(() => {
 
 ### Package Selection Hook
 
-The `usePackageSelection` hook consolidates ~180 lines of duplicated selection logic across Browse, Installed, and Updates tabs:
+The `usePackageSelection` hook consolidates ~180 lines of duplicated selection logic across the browse results view and the Installed and Updates tabs:
 
 ```typescript
 // hooks/usePackageSelection.ts
@@ -588,7 +688,7 @@ selectDirectPackage(installedPkg, {
 - **Cache-first**: Checks `versionsCache` and `metadataCache` before making API calls
 - **Mutually exclusive**: Clears `selectedTransitivePackage` when selecting direct package and vice versa
 
-## Performance Caching
+## Performance Caching (1.x — removed at P8)
 
 ### Multi-Tier Cache Architecture
 The extension uses a two-tier caching system for performance:
@@ -855,7 +955,7 @@ return result;
 
 ### List Virtualization
 
-All three tabs (Browse, Installed, Updates) use `@tanstack/react-virtual` to virtualize package lists, rendering only visible items in the DOM:
+The browse results list (in `App.tsx`) and both tabs (Installed, Updates) use `@tanstack/react-virtual` to virtualize package lists, rendering only visible items in the DOM:
 
 ```typescript
 // Virtualizer instance per list
@@ -889,7 +989,7 @@ The Installed tab's direct packages list is also virtualized, with the scroll co
 ### Component Memoization
 
 - **Tab components** (`InstalledTab`, `UpdatesTab`) are wrapped in `React.memo` with `forwardRef` + `useImperativeHandle` for parent-to-child communication.
-- **PackageDetailsPanel** is wrapped in `React.memo` as `MemoizedPackageDetailsPanel`, shared by all three tabs.
+- **PackageDetailsPanel** is wrapped in `React.memo` as `MemoizedPackageDetailsPanel`, shared by the browse results view and both tabs.
 - `DraggableSash` is wrapped in `React.memo` as `MemoizedDraggableSash` with memoized `onReset`/`onDragEnd` callbacks (`useCallback` with `[]` deps) to prevent re-renders on unrelated state changes.
 - **SourceSettingsOverlay** is wrapped in `React.memo` as `MemoizedSourceSettingsOverlay` with `forwardRef`/`useImperativeHandle` for handling `addSourceResult` messages from the parent.
 - `sanitizedReadmeHtml` is memoized via `useMemo` keyed on `packageMetadata?.readme`, preventing expensive `renderMarkdownToHtml()` re-computation on every render.
@@ -931,7 +1031,7 @@ useEffect(() => {
 
 ### Details Panel Component
 
-The package details panel has been extracted into `PackageDetailsPanel.tsx` (~510 lines), wrapped in `React.memo` as `MemoizedPackageDetailsPanel`. Each tab renders its own instance, receiving shared state as props. This replaces the previous `useMemo`-based approach with proper component-level memoization via `React.memo`.
+The package details panel has been extracted into `PackageDetailsPanel.tsx` (~550 lines), wrapped in `React.memo` as `MemoizedPackageDetailsPanel`. Each tab renders its own instance, receiving shared state as props. This replaces the previous `useMemo`-based approach with proper component-level memoization via `React.memo`.
 
 ### Accessibility
 
@@ -1218,7 +1318,7 @@ Stale indicators provide visual feedback with CSS opacity fade:
 .tab.pending { opacity: 0.7; }
 ```
 
-## Performance Instrumentation
+## Performance Instrumentation (1.x — removed at P8)
 
 Location: `src/services/NuGetPerf.ts`
 
@@ -1258,7 +1358,7 @@ Always pass `projectPath` for project-scoped operations so multi-root workspaces
 
 Microbenchmarks under `src/test/benchmarks/` measure isolated code paths (caching, parsing, sort) against `benchmarks/baseline.json` with a ±15 % single-machine tolerance — see `benchmarks/README.md`. The `[perf]` log channel is the complement: it captures real user-perceived latency (panel open → first paint, install → UI updated) on actual workspaces. Use both.
 
-## HTTP/2 Client
+## HTTP/2 Client (1.x — removed at P8)
 
 Location: `src/services/Http2Client.ts`
 
@@ -1295,7 +1395,7 @@ Azure Search endpoints (`azuresearch-*.nuget.org`) use HTTP/1.1 due to TLS compa
 
 All other sources use HTTP/1.1 with keepAlive connection pooling.
 
-## Authentication for Private Feeds
+## Authentication for Private Feeds (1.x — removed at P8)
 
 ### Overview
 The extension supports authenticated API calls for private NuGet feeds (Azure DevOps, GitHub Packages, JFrog, etc.) via the `CredentialService`.
@@ -1349,7 +1449,7 @@ const result = await this.fetchJson<SearchResult>(searchUrl, authHeader);
 
 Auth headers are preserved on same-origin redirects only (security best practice).
 
-## NuGet API Integration
+## NuGet API Integration (1.x — removed at P8)
 
 ### Service Index Discovery
 Each NuGet V3 source has a service index at `{source}/index.json` providing:
@@ -1438,7 +1538,7 @@ const zip = new AdmZip(tempFile);
 // Check nuspec for <readme> path, fallback to common paths
 ```
 
-## Security
+## Security (1.x — removed at P8)
 
 ### Input Validation (Command Injection Prevention)
 All user input is validated before use in shell commands to prevent command injection:
@@ -1516,7 +1616,7 @@ Auth headers are preserved on same-origin redirects only. Max redirect depth is 
 ### ZIP Path Traversal Prevention
 nupkg README extraction validates all zip entry paths before reading, rejecting entries containing `..`, starting with `/`, or containing `\`. Nuspec-provided readme paths are also validated against the same traversal patterns.
 
-## Content Security Policy
+## Content Security Policy (1.x — removed at P8)
 
 The webview uses a hardened CSP. Inline styles have been moved to external CSS files (`App.css` / `SidebarApp.css`), allowing `'unsafe-inline'` to be removed from `style-src`:
 
@@ -1541,9 +1641,9 @@ const csp = `
 `;
 ```
 
-**Note:** The expanded `img-src` list supports README images from GitHub, badge images (shields.io, badgen.net, codecov, etc.), CI status badges (Travis CI, AppVeyor, CircleCI), and Azure DevOps resources. The sidebar WebviewView uses a broader `img-src https:` since it displays package icons from arbitrary custom sources. Both `style-src` and `script-src` are free of `'unsafe-inline'` — all styles are in external CSS files and all scripts are loaded via external `<script src>` tags (esbuild IIFE bundles).
+**Note:** The expanded `img-src` list supports README images from GitHub, badge images (shields.io, badgen.net, codecov, etc.), CI status badges (Travis CI, AppVeyor, CircleCI), and Azure DevOps resources. The sidebar WebviewView uses a narrower policy, `img-src ${webview.cspSource};` only: it renders no README content and no remote package icons. Both `style-src` and `script-src` are free of `'unsafe-inline'` — all styles are in external CSS files and all scripts are loaded via external `<script src>` tags (esbuild IIFE bundles).
 
-## Theme Compliance
+## Theme Compliance (1.x — removed at P8)
 
 The webview CSS uses VS Code CSS variables for full theme adaptation. Both the main panel (`App.css`) and sidebar (`SidebarApp.css`) follow the same patterns.
 
@@ -1577,7 +1677,7 @@ body.vscode-light .readme-rendered .hljs-comment { color: #008000; }
 body.vscode-light .readme-rendered .hljs-keyword { color: var(--vscode-symbolIcon-keywordForeground, #0000ff); }
 ```
 
-## Testing
+## Testing (1.x — removed at P8)
 
 ### Framework
 Vitest 5.x with three project configurations:
@@ -1643,33 +1743,23 @@ The ExTester UI helpers in `src/test/ui/helpers/` wait for the main panel's app 
 `eslint.config.mjs` includes an override for test files (`src/**/*.test.{ts,tsx}`, `src/test/**/*.{ts,tsx}`) that turns off `@typescript-eslint/no-explicit-any` and `@typescript-eslint/no-non-null-assertion`. Test code frequently uses `any` for mock typing and `!` for known-present test data.
 
 ### CI/CD Pipeline
-GitHub Actions workflow (`.github/workflows/ci.yml`) with five jobs:
+The pipeline is shared by 1.x and 2.0 and is described under [Shared tooling](#shared-tooling) in the 2.0 section.
 
-| Job | Depends On | Steps |
-|-----|-----------|-------|
-| `lint` | — | `npm install --no-audit --no-fund` → ESLint and job summary |
-| `test` | — | Install → `vitest run --coverage` → coverage summary |
-| `e2e` | — | Install → production build → compile and run extension-host tests under Xvfb |
-| `build` | `lint`, `test`, `e2e` | Install → type check → production build → VSIX packaging |
-| `benchmark` | — | Pull requests only: install → `npm run bench:compare` → JSON measurement summary |
-
-Concurrency: `ci-${{ github.ref }}` with `cancel-in-progress: true` (cancels stale PR runs).
-Node is selected from `.nvmrc` (24). `npm install` is intentional because optional
-dependency lockfile resolution can vary across npm patch versions.
-
-## Build System
+## Build System (1.x — removed at P8)
 
 The development toolchain uses Node.js 24.15.0 or newer and npm 10 or newer.
 Runtime libraries are bundled into the extension and webviews; DOMPurify and
-adm-zip supply their own declarations. Node declarations track the development
-runtime, while VS Code declarations are pinned to the extension's 1.85 API minimum.
+adm-zip supply their own declarations. The main program type-checks against Node 18
+declarations, the VS Code 1.85 host baseline, while tests use the development runtime's
+(see [Shared tooling](#shared-tooling)); VS Code declarations are pinned to the 1.85 API minimum.
 TypeScript remains on 6.0 because the current typescript-eslint parser supports
 versions below 6.1. MSW remains on the latest 2.x release because Vitest 5's mocker
 declares an MSW 2 peer dependency. The watch task uses the maintained npm-run-all2 implementation
 of the `npm-run-all` executable.
 
 ### esbuild Configuration
-- Three separate builds: extension (Node.js/CJS), webview (browser/IIFE), and sidebar (browser/IIFE)
+- Three separate builds: extension (Node.js/CJS, target `node18`), webview (browser/IIFE) and sidebar (browser/IIFE), both target `chrome114`
+- `node esbuild.mjs --v2` builds the 2.0 entry points into the same three files (see [Coexistence](#coexistence-of-1x-and-20))
 - esbuild `define` for `process.env.NODE_ENV` (required by React)
 - `jsx: 'automatic'` for React 17+ JSX transform
 - Source maps disabled in production builds
@@ -1688,18 +1778,18 @@ dist/
 ### VSIX Packaging Pipeline
 The `npm run package:vsix` script runs a full pipeline:
 ```
-npm install → check-types → npm test → lint + bundle → vsce package
+npm ci → check-types → npm test → lint + bundle → vsce package
 ```
-Tests must pass before the VSIX is produced. The `coverage/` directory is excluded from the VSIX via `.vscodeignore`.
+Tests must pass before the VSIX is produced. `npm run check:vsix` verifies what the VSIX would contain (see [Shared tooling](#shared-tooling)).
 
-## Testing the Extension
+## Testing the Extension (1.x — removed at P8)
 
 1. Run `npm run watch` (or press F5)
 2. Open a folder with .csproj files in the Extension Host window
 3. Open Command Palette → "nUIget: Manage NuGet Packages"
-4. Test all three tabs (Browse, Installed, Updates)
+4. Test the unified search bar (browse results) and both tabs (Installed, Updates)
 
-## Transitive Packages Architecture
+## Transitive Packages Architecture (1.x — removed at P8)
 
 ### Data Source
 Transitive packages are loaded exclusively from **`obj/project.assets.json`**:
@@ -1747,10 +1837,10 @@ useEffect(() => {
 
 When user expands a section: instant if prefetch completed, shows loading if prefetch in progress.
 
-## Bulk Operations
+## Bulk Operations (1.x — removed at P8)
 
 ### Topological Sort for Dependencies
-Both bulk update and bulk uninstall use the shared `topologicalSortByDependency<T>()` utility function (defined in `NuGetPanel.ts`) to handle dependencies correctly:
+Both bulk update and bulk uninstall use the shared `topologicalSortByDependency<T>()` utility function (defined in `NuGetUtils.ts`) to handle dependencies correctly:
 
 ```typescript
 // Sort packages so dependencies are processed before dependents (for updates)
@@ -1828,15 +1918,15 @@ After install/update/remove/bulk operations, the UI applies **optimistic state u
 - **`notifySidebarOfChange(operation)`** (NuGetSidebarPanel): Lightweight cross-panel notification that skips `clearNuGetHttpCache()` (0–15s process spawn) and source re-fetch. Posts operation details directly to sidebar webview for surgical state filtering. Passes `scope` to `checkUpdatesInBackground` for **selective cache invalidation** (only affected packages) and **scoped project re-checking** (only the affected project). Bulk operations include `packageIds[]` for multi-package selective invalidation.
 - **Per-package failure data**: Bulk results include `failedPackageIds[]` or `perProjectFailedIds[]`, enabling the frontend to keep failed packages in the updates list while clearing succeeded ones.
 - **Installed packages are still re-fetched** after every operation (via `getInstalledPackages`) because NuGet's dependency resolver can silently change transitive dependencies and unify package versions. The optimization is in NOT re-checking for updates when the outcome is already known.
-- **Manual refresh and file watcher** still use the full `refreshSidebar()` path (with HTTP cache clearing and source re-fetch) as the escape hatch for truly stale data.
+- **Manual refresh** still uses the full `refreshSidebar()` path (with HTTP cache clearing and source re-fetch) as the escape hatch for truly stale data. The **file watcher** does not: it sends `revalidate`, calls `checkUpdatesInBackground(true)` and notifies the main panel (see the sidebar section).
 - Progress notification shows current/total count
 
-## Common Patterns
+## Common Patterns (1.x — removed at P8)
 
 ### Fetching Data for Package Lists
 ```typescript
 // Unified metadata fetch: single search API call per package returns verified, authors, AND iconUrl
-// Used by all 4 tabs (Browse, Installed, Updates, Transitive)
+// Used by browse results, both tabs (Installed, Updates) and the transitive section
 await batchedPromiseAll(packages, async (pkg) => {
     const { verified, authors, iconUrl } = await this.getPackageSearchMetadata(pkg.id, pkg.version);
     if (iconUrl) { pkg.iconUrl = iconUrl; }
@@ -1855,11 +1945,9 @@ const { stdout } = await execAsync(`dotnet list "${projectPath}" package`);
 
 ### Shared UI Components
 ```typescript
-// renderPackageDetailsPanel() used by all three tabs
-// Ensures consistent package details display
-const renderPackageDetailsPanel = () => {
-    // ... shared implementation
-};
+// MemoizedPackageDetailsPanel (PackageDetailsPanel.tsx) is rendered by the browse results view in App.tsx
+// and by InstalledTab and UpdatesTab, so package details look the same everywhere
+<MemoizedPackageDetailsPanel /* selected package, metadata, versions, action callbacks */ />
 ```
 
 ## Repository Assistance Resources
@@ -1871,6 +1959,12 @@ their bundled references, and `prompts/` contains the version-bump workflow.
 React and TypeScript guidance is tailored to the client-only webviews and the
 extension's existing build formats. CI efficiency and hardening skills and a
 Technical Writer profile complement the application-focused resources.
+
+Claude Code reads the same resources through `CLAUDE.md` and `.claude/` (rule pointers, skill links,
+agent pointers). Two parts exist for the 2.0 work only: the `architecture-advisor` agent, a read-only reviewer
+that implementing sessions consult, and the guard hook `scripts/hooks/guard.mjs`, registered in
+`.claude/settings.json`, which blocks edits to frozen contract files, focused or skipped tests, unverified
+commits and forced pushes.
 
 These files affect development assistance, not extension runtime behavior.
 Upstream-derived additions record their pinned Awesome Copilot source; local
