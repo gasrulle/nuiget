@@ -12,12 +12,12 @@ the next item and updates the row when the item closes. Status values: `open`, `
 | P0.3 | P0 | .claude/agents/architecture-advisor.md (frontmatter name, description, tools | done | b377c1e | 2026-10-12 | Agent verified in a fresh session (`claude -p --agent architecture-advisor`); its first answer is in `.github/STATUS.md`. A session that predates this commit cannot call it through the Agent tool and uses the same command instead. |
 | P0.4 | P0 | .claude/settings.json allow | done | 5bf061e | 2026-10-12 | Allowlist committed by the owner; the scripts it names arrive in P0.10 and P1.1a |
 | P0.9 | P0 | ADR-000 amendments | done | 583ef41 | 2026-10-12 | Node 18 types via the exact-pinned alias `@types-host/node` (`@types/node@18.19.130`) and `typeRoots`; no legacy Node-18 violation found, no `src/` change. D4 added to the ADR-000 amendments on advisor approval (the old Consequences bullet contradicted it). Handoff note in `.github/STATUS.md`. |
-| P0.5 | P0 | L2 hooks via the update-config skill | done |  | 2026-10-12 | Guard is live and fail-closed (`onFailure: block`). `scripts/hooks/index.js` makes the literal `node --test scripts/hooks` work on Node 22+. Focus/skip rule applies to test sources only. Known holes (shell rewrites of frozen paths) are listed in `.github/STATUS.md`, the note for repo-level items. |
-| P0.6 | P0 | Build switch | open |  |  |  |
+| P0.5 | P0 | L2 hooks via the update-config skill | done | 24cf07b | 2026-10-12 | Guard is live and fail-closed (`onFailure: block`). `scripts/hooks/index.js` makes the literal `node --test scripts/hooks` work on Node 22+. Focus/skip rule applies to test sources only. Known holes (shell rewrites of frozen paths) are listed in `.github/STATUS.md`, the note for repo-level items. |
+| P0.6 | P0 | Build switch | done |  | 2026-10-12 | Ceilings 299921 / 600685 / 304097 bytes (extension / webview / sidebar), enforced by `node esbuild.mjs --production --analyze`. `.vscode/tasks.json` gained the `watch:v2` tasks on advisor approval. `src/extension.next.ts` has no test until its test file is in a vitest project. |
 | P0.7 | P0 | ESLint fences per §3 (port quarry rules; protect sidebar-next; add /host/, /extension* to  | open |  |  |  |
 | P0.10 | P0 | Packaging (runs before P0.8) | open |  |  |  |
 | P0.8 | P0 | CI rewrite (runs after P0.10) | open |  |  |  |
-| P0.11 | P0 | Test infrastructure | open |  |  |  |
+| P0.11 | P0 | Test infrastructure | open |  |  | Backend include must also gain `src/extension.next.test.ts`, which P2.10 names as a deliverable but P0.11's listed include extension does not cover. The current include names `src/extension.test.ts`, which does not exist. |
 | P0.12 | P0 | ARCHITECTURE.md coexistence | open |  |  |  |
 | P0.13 | P0 | Tracker docs/plans/STATUS.md (row per item) and docs/plans/findings-ledger.md (original le | open |  |  | Tracker created 2026-10-11 by the planning session; findings-ledger.md still to write |
 | P0.14 | P0 | Optional (owner elects) | open |  |  | Optional; owner decides. Skip unless the owner marks it open. |

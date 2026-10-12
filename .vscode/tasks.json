@@ -42,6 +42,42 @@
             }
         },
         {
+            "label": "watch:v2",
+            "dependsOn": [
+                "npm: watch:tsc",
+                "npm: watch:esbuild:v2"
+            ],
+            "presentation": {
+                "reveal": "never"
+            }
+        },
+        {
+            "type": "npm",
+            "script": "watch:esbuild:v2",
+            "group": "build",
+            "problemMatcher": {
+                "owner": "esbuild",
+                "fileLocation": "absolute",
+                "pattern": {
+                    "regexp": "^\\s+(.+):(\\d+):(\\d+):$",
+                    "file": 1,
+                    "line": 2,
+                    "column": 3
+                },
+                "background": {
+                    "activeOnStart": true,
+                    "beginsPattern": "^\\[watch\\] build started$",
+                    "endsPattern": "^\\[watch\\] build finished$"
+                }
+            },
+            "isBackground": true,
+            "label": "npm: watch:esbuild:v2",
+            "presentation": {
+                "group": "watch",
+                "reveal": "never"
+            }
+        },
+        {
             "type": "npm",
             "script": "watch:tsc",
             "group": "build",

@@ -110,6 +110,7 @@ These two files serve different purposes. **Never duplicate content between them
 ```bash
 npm install          # Install dependencies
 npm run watch        # Build (watch mode) — F5 to launch Extension Host
+npm run watch:v2     # Same for the 2.0 entry points (launch configuration "Run 2.0"); not together with watch
 npm run package:vsix # Runs: install → check-types → test → lint+bundle → vsce package
 ```
 
@@ -159,6 +160,8 @@ Seeded from the execution plan (decisions D1–D13, Appendix B). Item IDs name w
 | CLI output reaches logs unredacted | Redact dotnet output and argv before logging or passing them to `onCommand` (P1.5, P1.10). |
 | Unbounded persisted cache entries | Persisted cache entries have an 8 MB byte budget (P1.4); icon data URIs go through it, not around it (P4.4). |
 | `child_process` outside the CLI module | `grep -rln child_process src/core` lists only `src/core/cli/*`; processes are spawned with argv, never through a shell (ADR-003, P1.6). |
+| Two watchers, one `dist/` | `npm run watch` (1.x) and `npm run watch:v2` (2.0) both write `dist/{extension,webview,sidebar}.js`. Never run them together, and never add a script named `watch:<x>` expecting `npm run watch` to pick it up: `watch` lists its scripts explicitly. The "Run 2.0" launch configuration runs whatever was last built into `dist/`. |
+| Analysis files in the VSIX | `--analyze` writes metafiles to `out/esbuild/`, never to `dist/`: `.vscodeignore` does not exclude JSON under `dist/`. |
 | `.vscodeignore` regressions | The VSIX contains no `src/`, `.claude/` or `docs/`. Keep `.claude/**`, `CLAUDE.md`, `.mcp.json` and `src/_wip/**` excluded; `npm run check:vsix` verifies it once P0.10 adds the script. |
 
 ## 1.x gotchas (removed at P8)

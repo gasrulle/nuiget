@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **2.0 build switch** — `node esbuild.mjs --v2` and `npm run watch:v2` build the 2.0 entry points into the same three bundles, and `--production --analyze` checks them against size ceilings
+
 ### Fixed
 
 - **Long NuGet prerelease versions and package IDs remain intact during CLI search and installation**
