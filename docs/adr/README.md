@@ -15,3 +15,8 @@ implementation of its subject and updated when the decision changes. Status valu
 | [006](006-icons-and-csp.md) | Host-side icon resolution and webview CSP | accepted |
 | [007](007-protocol.md) | Typed envelope protocol for webview ↔ host | accepted |
 | [008](008-webview-architecture.md) | Webview architecture: shared slices, primitives, two entry points | accepted |
+
+Supplements (evidence for a record, not separate decisions):
+
+- [004-sdk-probes.md](004-sdk-probes.md): measured `dotnet package add/remove` behaviour on Central Package
+  Management projects, backing the `cpmAwareAdd` capability in ADR-004.

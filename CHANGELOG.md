@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Migrated benchmarks to Vitest 5 with refreshed baselines and CI comparison reporting**
 - **Added the nUIget 2.0 execution plan, architecture decision records, and UX interaction model under docs/**
 - **Added the autonomous run protocol and item tracker for the 2.0 plan**
+- **Recorded a .NET SDK 10 probe of package add and remove on Central Package Management projects**
 
 ## [1.18.9] - 2026-10-10
 

@@ -6,7 +6,7 @@ the next item and updates the row when the item closes. Status values: `open`, `
 
 | ID | Phase | Item | Status | Commit | Date | Notes |
 |---|---|---|---|---|---|---|
-| P0.0 | P0 | SDK 10 CPM probe (local, 10.0.401) | open |  |  |  |
+| P0.0 | P0 | SDK 10 CPM probe (local, 10.0.401) | done |  | 2026-10-12 | SDK 10.0.401: `--no-restore` add is CPM-safe (differs from SDK 8, reproduced as control); D7 unchanged. N1 row updated in plan Appendix A; P0.13 folds it into findings-ledger.md. Candidate finding for P0.13 and the P0.2 gotcha seed: SDK 10 reformats Directory.Packages.props on every `package add --version`. |
 | P0.1 | P0 | Branch; this plan at docs/plans/2026-10-11-nuiget-2.0-execution-plan.md; copy ADR-000..008 | done | b8a97a8 | 2026-10-11 | Plan, ADR-000..008, UX model landed on main |
 | P0.2 | P0 | Agent resources split | open |  |  |  |
 | P0.3 | P0 | .claude/agents/architecture-advisor.md (frontmatter name, description, tools | open |  |  |  |
