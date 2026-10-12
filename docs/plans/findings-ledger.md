@@ -41,7 +41,7 @@ one records itself here.
 | S5 | L | Credential redaction is header-pattern based; CLI stderr / URL userinfo can leak into logs | W: `--password` on argv is inherent; token-only userinfo unredacted; toasts show raw stderr. | P1.5 (`redact`, `redactArgv`: userinfo with or without a password, headers, argv), P1.6 and P1.10 (applied to CLI output and commands) | partly closed |
 | S6 | M | Main-panel CSP img-src is a fixed badge-host allow-list; icons resolved from private feeds are… | — | not mapped | open |
 | Y1 | H | Handlers without try/catch never answer on failure | W: More unwrapped handlers; fixed by ADR-007 terminal-response guarantee. | not mapped | open |
-| Y2 | H | Queue admission ignored | — | not mapped | open |
+| Y2 | H | Queue admission ignored | — | P2.1 (core: a refused submission is a ticket whose `completion` resolves with a `rejected` outcome), P2.9 (the host answers every `ops/*` request from the ticket) | open; core side done in P2.1 |
 | Y3 | H | restoreProject and forced transitive restore bypass the OperationQueue | — | not mapped | open |
 | Y4 | H | Shared debounce timer | — | not mapped | open |
 | Y5 | H | skipNextUpdateCheckRef lingers | — | not mapped | open |
@@ -404,11 +404,11 @@ headline defects in the order the plan lists them, so that salvage commits can c
 | C-project-catalog-4 | Conditions dropped | P2.2 to P2.8, P6 | open |
 | C-project-catalog-5 | Per-project resolved versions | P2.2 to P2.8, P6 | open |
 | C-project-catalog-6 | Catalog undocumented | P2.2 to P2.8, P6 | open |
-| C-ops-1 | OperationQueue v2 missing | P1.10, P2.1 | open |
+| C-ops-1 | OperationQueue v2 missing | P1.10, P2.1 | closed (P2.1: `DefaultOperationQueue`, 16 tests) |
 | C-ops-2 | N1 | P1.10, P2.1 | closed for the workflows (P1.10: `admitEdit` refuses CPM `add`/`update` until P6.3; tests `cpm: refuses add and update until the mutator`, `cpm: never emits --no-restore`) |
 | C-ops-3 | Cancel-between-steps | P1.10, P2.1 | closed for the workflows (P1.10: test `cancel between edit and restore yields cancelled`; bulk restores after an abort are marked cancelled) |
 | C-ops-4 | Progress payload incomplete | P1.10, P2.1 | closed for the workflows (P1.10: every report carries `kind`, `projectPaths`, `packageIds`); the queue stamps `opId` in P2.1 |
-| C-ops-5 | OpId literal | P1.10, P2.1 | open; contract side done in P1.1b (`rejected(reason, opId)`), closes at P2.1 |
+| C-ops-5 | OpId literal | P1.10, P2.1 | closed (P1.1b: `rejected(reason, opId)`; P2.1: the queue passes the ticket's `opId` to the builder for refused, failed and cancelled outcomes, test `admits one running and five waiting workflows and refuses the next with its opId stamped`) |
 | C-ops-6 | Unredacted stdout | P1.10, P2.1 | closed for the workflows (P1.10: argv, stdout, stderr and error texts pass `redact` before `onCommand`, an outcome or the log) |
 | C-protocol-host-1 | Composition root against imagined APIs | P1.1a, P1.1b, P2.9, P2.10 | open; contract side done in P1.1b (`onProgress`, `ProjectMutator`, `resourceKeys.sources`), closes at P2.10 |
 | C-protocol-host-2 | Guards not exhaustive | P1.1a, P1.1b, P2.9, P2.10 | closed (P1.1a) |
@@ -432,7 +432,7 @@ Counts quoted in findings drift. These commands reproduce the ones that matter; 
 | `as any` in unit tests (T3; the plan counted 955) | `grep -rEo "as any" src --include='*.test.ts' --include='*.test.tsx' \| wc -l` | 959 |
 | Unit test files that call `setTimeout(` (T3; a proxy for "files with sleeps", the plan counted 19) | `grep -rlE "setTimeout\(" src --include='*.test.ts' --include='*.test.tsx' \| wc -l` | 22 |
 | Fixed `px` font sizes (U5) | `grep -cE "font-size:\s*[0-9.]+px" src/webview/app/App.css src/webview/sidebar/SidebarApp.css` | 125 and 13 |
-| Unit tests | `npx vitest run` | 63 files, 2131 tests and 1 skipped; 2132 with `NUIGET_SDK_TESTS=1` |
+| Unit tests | `npx vitest run` | 64 files, 2147 tests and 1 skipped; 2148 with `NUIGET_SDK_TESTS=1` |
 | End-to-end tests | `npm run test:e2e` | 30 |
 | UI tests | `npm run test:ui -- --storage /tmp/nuiget-ui` | 31 |
 | Type errors in 1.x tests, benchmarks and helpers (N30) | strict `tsc` over `src` with `types: [node, vitest/globals]`, without `src/test/e2e` and `src/test/ui` | 55 |

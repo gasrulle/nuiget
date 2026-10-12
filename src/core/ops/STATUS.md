@@ -1,13 +1,14 @@
-# STATUS — src/core/ops   commit 08f94e3 (P1.10; parent of the P1.fix-1 commit)   2026-10-12T15:23:42Z
+# STATUS — src/core/ops   commit c25e922 (P1.fix-1, tag labs/2.0-P1-done; parent of the P2.1 commit)   2026-10-12T15:41:34Z
 
-git status --short src/core/ops: ` M src/core/ops/PackageWorkflows.ts`, ` M src/core/ops/PackageWorkflows.test.ts`,
-` M src/core/ops/STATUS.md` (they belong to the P1.fix-1 commit, together with ` M ARCHITECTURE.md`,
-` M docs/plans/STATUS.md` and ` M docs/plans/findings-ledger.md`)
+git status --short src/core/ops: `?? src/core/ops/OperationQueue.ts`, `?? src/core/ops/OperationQueue.test.ts`,
+`?? src/core/ops/index.ts`, ` M src/core/ops/STATUS.md` (they belong to the P2.1 commit, together with
+`?? src/test/benchmarks/core-ops.bench.ts`, ` M ARCHITECTURE.md`, ` M CHANGELOG.md`, ` M docs/plans/STATUS.md` and
+` M docs/plans/findings-ledger.md`)
 
-Items: **P1.10 `src/core/ops/PackageWorkflows.ts` (+test) with uncommitted edits; D7/D13 admission gate**
-(⚑ on CPM semantics), landed as `08f94e3`, and **P1.fix-1**, the one blocking finding of the P1 phase
-review: `single()` and the bulk workflows now agree when the restore is switched off and the signal is
-aborted after the edit.
+Items: **P2.1 `src/core/ops/OperationQueue.ts` + `index.ts` + tests** (ADR-003; this commit), **P1.10
+`src/core/ops/PackageWorkflows.ts` (+test)** (⚑ on CPM semantics; `08f94e3`) and **P1.fix-1** (the one
+blocking finding of the P1 phase review; `c25e922`). `PackageWorkflows.ts` and its test are untouched by
+P2.1.
 
 The quarry has no `STATUS.md` for `src/core/ops`. Its tree holds two files: `PackageWorkflows.ts` (344 lines,
 modified and uncommitted there, which is what "with uncommitted edits" means) and `PackageWorkflows.test.ts`
@@ -15,6 +16,47 @@ modified and uncommitted there, which is what "with uncommitted edits" means) an
 `index.ts` in the quarry directory; both are P2.1 and neither was written or stubbed.
 
 ## Verified by running
+
+P2.1, on `c25e922`:
+
+```text
+The gates ran with DOTNET_ROOT set to the SDK directory and NUIGET_SDK_TESTS=1 (N48).
+baseline npm run check-types → exit 0
+baseline npx eslint src      → exit 0, no output
+baseline npx vitest run      → Test Files 63 passed (63) · Tests 2132 passed (2132)
+quarry                       → no OperationQueue.ts, OperationQueue.test.ts or index.ts in its src/core/ops; the
+                               queue is written from ADR-003 and src/core/contracts.ts:76-112. The quarry's
+                               src/extension.next.ts:29,78 and src/host/handlers.ts:33-56 were read for the
+                               names and the call order they expect
+npm run check-types          → exit 0 (main, tsconfig.test.json, tsconfig.vitest.json; N39)
+npx eslint src               → exit 0, no output
+npm run lint                 → exit 0
+npx vitest run --project backend src/core/ops/OperationQueue.test.ts → Tests 16 passed (16)   (item gate:
+                               OperationQueue tests at least 10)
+npx vitest run --project backend src/core/ops → Test Files 2 passed (2) · Tests 75 passed (75)
+npm test                     → Test Files 64 passed (64) · Tests 2148 passed (2148)
+npx vitest run --coverage    → exit 0 · All files 76.26 % statements, 65.92 % branches, 71.85 % functions,
+                               77.75 % lines · OperationQueue.ts 96 of 97 lines, 98.97 % (:196, the guard
+                               of finish() against a job that is not the running one, has no test) ·
+                               src/core/** 1656 of 1684 lines, 98.34 % (floor 85 %)
+npm run bench                → Test Files 17 passed (17) · Tests 104 passed | 1 skipped (105);
+                               core-ops.bench.ts ran its three benchmarks (one ticket, a full queue
+                               of six drained in about 6 µs per round, a refusal in under 1 µs)
+bench type check (N40)       → tsc --ignoreConfig --noEmit --strict … core-ops.bench.ts src/global.d.ts: exit 0
+npm run package:vsix         → exit 0 · Tests 2148 passed · DONE  Packaged: nuiget-v1.18.9.vsix (17 files,
+                               528.93 KB)
+npm run check:vsix           → check:vsix: OK
+negative control             → seven single mutations of OperationQueue.ts, each caught by the 16 tests: start
+                               inside submit (2 tests fail), capacity off by one (2), slot freed one microtask
+                               after the ticket settles (2), late report not dropped (1), failure message not
+                               redacted (1), cancelled waiting job left in the queue (1), disposed queue
+                               admits (1). The file was restored and compared (cmp) afterwards.
+grep -rln child_process src/core --include='*.ts' → only files under src/core/cli
+git status --short src/core/contracts.ts src/protocol docs/adr → empty (no contract change, no sentinel)
+git diff c25e922 -- src/core/ops/PackageWorkflows.ts src/core/ops/PackageWorkflows.test.ts → empty
+npm run test:ui              → SKIPPED: no UI change; the CI job UI runs it
+CI                           → see the tracker row of P2.1
+```
 
 P1.10, on `d3abc12` (line numbers in this block are those of `08f94e3`):
 
@@ -90,11 +132,42 @@ npm run check:vsix           → check:vsix: OK
 npm run docs:protocol:check  → exit 0
 git status --short src/core/contracts.ts src/protocol docs/adr → empty
 npm run test:ui              → SKIPPED: no UI change; the CI job UI runs it
-CI                           → see the tracker row of P1.fix-1
+CI                           → run 38270450667 for c25e922: success on all required jobs; tag labs/2.0-P1-done
 ```
 
 ## Done (tested)
 
+- `OperationQueue.ts`, new: `DefaultOperationQueue` implements the `OperationQueue` contract.
+  - Admission is decided inside `submit`: refused when the queue is disposed, or when a workflow runs and
+    `maxWaiting` (default 5, `DEFAULT_MAX_WAITING`) wait. A refused ticket has `admitted: false` and a
+    `completion` already resolved with `rejected(reason, opId)`; `run` is never called (Y2, C-ops-5).
+  - One workflow at a time, in submission order. A workflow submitted to an idle queue counts as running at
+    once and starts on a microtask (`:177-192`), so a listener attached after `submit` sees the first chunk.
+  - `completion` resolves exactly once and never rejects. A throw or rejection of `run` becomes `failed` with
+    the redacted message; a ticket cancelled before its workflow started becomes `cancelled` and the workflow
+    does not run. Both outcomes are the caller's `rejected(message, opId)` with `status` and `message`
+    replaced (`:87-95`).
+  - `cancel()` on the running workflow aborts its signal and nothing else; the workflow reports its own
+    outcome. `cancel()` on a refused or finished ticket does nothing.
+  - `onProgress` fires for every `report()` with the `opId` stamped and for none after the outcome;
+    `onDidChange` fires on every change of the counts; `waitIdle()` resolves at once when idle and otherwise
+    after the last workflow, after that workflow's ticket.
+  - The ticket is settled and the slot freed in the same turn (`:119-121`), so whoever awaits `completion`
+    sees `isBusy` without that workflow.
+  - `dispose()` cancels what waits, aborts what runs, refuses what comes later; the tickets still settle.
+- `OperationQueue.test.ts`, new, 16 tests in `describe('DefaultOperationQueue')` (item gate: at least 10):
+  the ticket and its outcome, distinct ids, FIFO with one at a time, `admits one running and five waiting
+  workflows and refuses the next with its opId stamped`, `honours a smaller maxWaiting`, `stamps the opId on
+  progress, and a listener attached after submit sees the first chunk`, the dropped late report, a throwing
+  progress listener, `a throw in run resolves as failed with the redacted message, and the queue goes on`,
+  a throwing outcome builder, cancel while waiting, cancel while running, cancel before the start, the
+  count changes, `waitIdle`, `dispose`. No timers.
+- `index.ts`, new: exports `DefaultOperationQueue`, `DEFAULT_MAX_WAITING`, `OperationQueueOptions` and, from
+  the workflows, `PackageWorkflows`, `stepStatus`, `outcomeStatus`, `EditRequest`, `WorkflowDeps`,
+  `WorkflowOptions`.
+- Bench `src/test/benchmarks/core-ops.bench.ts` (3 benchmarks: one ticket, a full queue drained, a refusal);
+  it runs under `npm run bench` and has no baseline entry until P2.12 (the informational CI job Benchmark
+  fails on its keys until then).
 - `PackageWorkflows.ts`, rewritten from the quarry text along the ruling below.
   - `admitEdit(request)`: one private gate before any argv is built, in the order SDK detection, SDK floor,
     CPM. An SDK that cannot be detected (the probe answers `undefined`, or rejects) refuses with `could not
@@ -177,7 +250,11 @@ CI                           → see the tracker row of P1.fix-1
 
 ## Done (untested)
 
-- Nothing constructs `PackageWorkflows` yet. `OperationQueue` (P2.1) runs the workflows, the host (P2.9,
+- No test runs a `PackageWorkflows` workflow through the queue; the two meet in the host (P2.9) and in the
+  harness (P2.11).
+- A `submit` from inside a running workflow is not detected (ADR-003 calls it a programming error): the
+  nested ticket waits behind its own caller and never settles if the caller awaits it.
+- Nothing constructs `PackageWorkflows` or the queue yet. The host (P2.9,
   P2.10) supplies `isCpmProject`, `packageDependencies`, `projectDependencies` and `onCommand`.
 - `isCpmProject` and `runner.sdkVersion` are asked once per request, so a bulk of n updates in one project
   asks n times. The runner caches the SDK per directory; whoever implements `isCpmProject` (P2.4 or P2.9)
@@ -188,13 +265,25 @@ CI                           → see the tracker row of P1.fix-1
 
 ## Not started
 
-- `OperationQueue.ts`, `index.ts` and their tests: P2.1.
 - The project mutator (`ProjectMutator.canMutate`, `previewCpmImpact`): P6.3. Until then every CPM `add` and
   `update` is refused here.
 - N47 (a leading `-` in a positional argument): P2.6, by the ruling. No check was added in the workflow.
 
 ## Deviations from contract/ADR (file:line each)
 
+- The contract gives the queue one outcome builder, `rejected(reason, opId)`, and the item asks for `failed`
+  after a throw. The queue therefore derives `failed` and `cancelled` outcomes from the `rejected` outcome and
+  replaces `status` and `message` (`OperationQueue.ts:87-95`); no parameter was added to `submit`.
+- If that builder itself throws, the ticket settles with `{ opId, status, message }` and nothing else
+  (`OperationQueue.ts:90-94`, the one cast in the file). A ticket that never settles would be the permanent
+  spinner of Y2; the host's builders are object literals and cannot throw.
+- The queue does not emit a `queued` progress event. `onProgress` is documented as the reports of a running
+  workflow (`src/core/contracts.ts:98`); the host tells the requesting surface `queued` or `rejected` from
+  the ticket (quarry `src/host/handlers.ts:43-47`, P2.9).
+- `dispose()` disposes both emitters at once, so the last count change and any later report of the aborted
+  workflow reach no listener; tickets and `waitIdle()` still settle.
+- `OperationQueueOptions { maxWaiting?, logger? }` and `DEFAULT_MAX_WAITING` are not in the contract; the
+  quarry's composition root constructs the queue with `{ maxWaiting: 5 }`.
 - Restore time limit 180 s → 120 s. The quarry declared `RESTORE_TIMEOUT_MS = 180_000` locally; the item row
   says "`RESTORE_TIMEOUT_MS` from cli", and `src/core/cli/DotnetRunner.ts:11` exports `120_000`. The local
   constant is gone (`PackageWorkflows.ts:17`, `:259`, `:265`).
@@ -222,6 +311,11 @@ CI                           → see the tracker row of P1.fix-1
 - No bench: the item names none. No `index.ts`: P2.1.
 
 ## Advisor decisions (date, item, question, answer verbatim)
+
+P2.1 is not ⚑ and no stop-and-ask trigger fired for it: no frozen file, no test of another item, no
+contract mismatch (the derived outcomes stay inside the contract's types). No consultation of the
+`architecture-advisor` took place for P2.1; the ambient advisor was consulted before the first edit and its
+points (names expected by the quarry host, no `queued` event, no fourth `submit` parameter) were followed.
 
 2026-10-12, P1.10, ⚑ on CPM semantics. Brief in the form of plan §2.4, sent on `labs/2.0` @ `d3abc12` before
 any file was copied, with the quarry's `PackageWorkflows.ts` and its test pasted. It asked eleven questions:
@@ -406,5 +500,4 @@ CHECKED:
 
 ## Exact next step (one item ID)
 
-P2.1 (`src/core/ops/OperationQueue.ts`, `index.ts` and tests), after the tag `labs/2.0-P1-done`, which is
-set once CI is green for the P1.fix-1 commit.
+P2.2 (`src/core/project/{xml,discovery,assets,central}.ts` through the salvage gate, with tests on fixtures).
