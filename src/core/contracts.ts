@@ -63,7 +63,13 @@ export interface SessionStore {
      * awaited but a persistence failure is logged and does not roll back the in-memory state.
      */
     apply(intent: SessionIntent, origin: Surface | 'host'): Promise<SessionSnapshot>;
-    /** Re-validate the snapshot against the current project/source lists (called by the coordinator). */
+    /**
+     * Re-validate the snapshot against the current project list and enabled source URLs, with the
+     * normalization described on `apply`, and commit the result with origin `'host'` (ADR-001). The host
+     * calls it (composition root, plan item P2.10) whenever the project list or the source list changes;
+     * because sources resolve per project directory (ADR-005), a change of the selected project is a
+     * source-list change too. The `QueryCoordinator` never calls it.
+     */
     reconcile(projects: Project[], enabledSourceUrls: string[]): Promise<SessionSnapshot>;
 }
 
