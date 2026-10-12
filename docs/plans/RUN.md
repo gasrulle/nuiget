@@ -40,6 +40,11 @@ Read docs/plans/RUN.md and follow it exactly until a stop condition is reached.
 1. If `origin/labs/2.0` exists: `git switch -c labs/2.0 origin/labs/2.0` (or `git switch labs/2.0 && git pull
    --ff-only` when it already exists locally). Otherwise create it: `git switch -c labs/2.0 origin/main` and
    `git push -u origin labs/2.0`.
+   If `git switch` fails with "already checked out at <path>" (the Claude desktop app gives every session its
+   own worktree, and an older session's worktree may still hold the branch): run `git worktree prune` and retry
+   once. If it still fails, stop and report the path; the owner discards that old session's worktree (Claude
+   app: the session's menu, or Help → Troubleshooting → clean up worktrees) and starts a new session. Never
+   remove another worktree yourself.
 2. If `origin/main` has commits that are not on the branch (`git log --oneline labs/2.0..origin/main` is not
    empty): `git merge --no-edit origin/main`. If the merge conflicts, resolve, run the full gate list
    (plan §2.2 step 5), commit the merge and push before starting any item. If the merge touches
