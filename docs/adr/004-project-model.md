@@ -1,6 +1,6 @@
 # ADR-004: Three-tier project model and Central Package Management
 
-Status: accepted · Date: 2026-10-10
+Status: accepted · Date: 2026-10-10 · Amended: 2026-10-12 (plan item P1.1b: `props` declaration, `PackageVersion` items, runs per target framework, SDK floor, CPM edits refused until the mutator)
 
 ## Context
 
@@ -8,6 +8,9 @@ Regex `.csproj` parsing produced `version: 'unknown'` for CPM references (which 
 `0.0.0` → everything "updatable"), ignored `Update=`, `VersionOverride`, conditions, imports and
 property expansion. Static XML cannot evaluate MSBuild; only the nearest `Directory.Packages.props`
 is imported automatically and conditions must be evaluated, not captured.
+
+The amendment of 2026-10-12 records the contract changes of plan item P1.1b and plan decisions D7 and
+D13 (`docs/plans/2026-10-11-nuiget-2.0-execution-plan.md`, §1).
 
 ## Decision
 
@@ -18,23 +21,37 @@ Three tiers with explicit fidelity:
    `fidelity: 'provisional'`. Handles `PackageReference` `Include`/`Update`, `Version`
    attribute/element, `VersionOverride`, `Condition` captured as `targetFrameworks` when it is a
    simple `'$(TargetFramework)' == 'x'` comparison, CPM `PackageVersion`, `ManagePackageVersionsCentrally`.
+   A `PackageReference` declared in an imported props file such as `Directory.Build.props` has
+   `declaration: 'props'`; `InstalledPackage.definedIn` holds the absolute path of the declaring file
+   whenever that is not the project file.
    Unresolvable versions (`$(Prop)`, unknown conditions) are `declaration: 'unresolved'` and are
    **excluded from update checks** and shown as unresolved.
-2. **Evaluate** (`ProjectEvaluator`, authoritative): `dotnet msbuild <proj> -getItem:PackageReference
-   -getProperty:TargetFramework;TargetFrameworks;ManagePackageVersionsCentrally -nologo`
-   per target framework, cached by project revision (project + imported props/targets +
-   `global.json` + `Directory.*.props` mtimes). Produces `fidelity: 'authoritative'`. Runs off the
-   render path; the UI upgrades from provisional to authoritative when it lands.
-3. **Mutate** (`ProjectMutator`): only SDK-verified commands. Non-CPM: `dotnet package add/remove`.
-   CPM: verified per SDK major whether `dotnet package add` updates the central version
-   (`cpmAwareAdd`); when not verified the UI offers read-only with an explanation. CPM mutations
-   show an **affected-projects preview** (every project importing the props file without an
-   override), distinguish central update vs project `VersionOverride`, invalidate and restore all
-   consumers, refuse when the props file has unsaved editor changes, and never delete a central
-   entry because one project uninstalled.
+2. **Evaluate** (`ProjectEvaluator`, authoritative): a properties run (`dotnet msbuild <proj>
+   -getProperty:TargetFramework;TargetFrameworks;ManagePackageVersionsCentrally -nologo`), then one
+   run per target framework that returns the `PackageReference` and `PackageVersion` items
+   (`-getItem:PackageReference;PackageVersion`) and whether version overrides are enabled (plan item
+   P6.2). Cached by project revision (project + imported props/targets + `global.json` +
+   `Directory.*.props` mtimes). Produces `fidelity: 'authoritative'`. Runs off the render path; the
+   UI upgrades from provisional to authoritative when it lands.
+3. **Mutate** (`ProjectMutator` in `src/core/contracts.ts`: `canMutate`, `previewCpmImpact`): only
+   SDK-verified commands, on SDK 10 only (plan decision D13). Non-CPM: `dotnet package add/remove`.
+   CPM: `cpmAwareAdd` and `cpmAwareAddProvenance` say whether `dotnet package add` updates the
+   central version and how that is known; they come from the tracked probe fixture
+   ([SDK probes](004-sdk-probes.md)), and the provenance is `'verified'` only when a fixture proves
+   it. When it is not verified the UI offers read-only with an explanation. CPM mutations show an
+   **affected-projects preview** (every project importing the props file without an override),
+   distinguish central update vs project `VersionOverride`, invalidate and restore all consumers,
+   refuse when the props file has unsaved editor changes, and never delete a central entry because
+   one project uninstalled. SDK 10 rewrites the props file on every `package add --version`, even
+   without a version change (finding 2 of the SDK probes); the mutator treats the file as modified
+   after any add.
 
-Unsupported formats (`packages.config`, non-SDK-style) are detected and reported as
-`unsupported` with a reason.
+   2.0 never passes `--no-restore` to `package add` on a CPM project, in any phase (plan decision D7).
+   Until the mutator lands (plan item P6.3), it also refuses `add` and `update` on CPM projects
+   unconditionally; `remove` stays allowed, because it edits only the project's own reference.
+
+Unsupported formats (`packages.config`, non-SDK-style) and a project whose resolved SDK is below 10
+(`sdk-too-old`, read-only, D13) are detected and reported as `unsupported` with a reason.
 
 ## Consequences
 

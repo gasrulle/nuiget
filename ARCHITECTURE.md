@@ -40,14 +40,16 @@ of the core, one plan item at a time. Nothing imports them yet, so no 2.0 runtim
 | File | Content |
 | --- | --- |
 | `domain.ts` | Data types both sides share: projects, packages, sources, session, resource keys, operation outcomes |
-| `messages.ts` | `RequestMap` (42 requests, each with `payload`, `result` and an optional stream `chunk`) and `EventMap` (11 events) |
+| `messages.ts` | `RequestMap` (43 requests, each with `payload`, `result` and an optional stream `chunk`) and `EventMap` (11 events) |
 | `envelope.ts` | The shapes on the wire (`request`, `cancel`, `stream`, `response`, `event`), their factories and `ProtocolRequestError` |
 | `guards.ts` | Runtime validation in both directions: `parseInbound` for the host, `parseOutbound` for a webview |
 
 A webview sends a request with an `id`. The host answers that `id` with exactly one response, which is either
-a result or an error, and may send stream chunks before it. Events go from the host to the webviews without
-an `id`. The two parse functions return `undefined` for anything that is not a valid envelope, so neither
-side switches on an unchecked `type`.
+a result or an error, and may send stream chunks before it. A result that was read from a cached resource
+carries the `generation` of that resource on the response envelope, so a webview can discard a result that an
+invalidation has overtaken (ADR-002, ADR-008). Events go from the host to the webviews without an `id`. The
+two parse functions return `undefined` for anything that is not a valid envelope, so neither side switches on
+an unchecked `type`.
 
 The type names exist only at compile time, so `guards.ts` lists them again for the runtime check. Each list is
 a record checked with `satisfies Record<RequestType, true>` (or `EventType`): the compiler rejects a list that
@@ -55,8 +57,9 @@ lacks a type of the map or names one the map does not have.
 
 `src/core/contracts.ts` holds the interfaces the core modules implement or consume, grouped by decision record:
 platform adapters (`KeyValueStore`, `Logger`, `Event`), `SessionStore` (ADR-001), `QueryCoordinator` (ADR-002),
-`OperationQueue` and `DotnetRunner` (ADR-003), the project model (ADR-004), and `Transport`, credentials,
-sources and the outbound policy (ADR-005). It imports types from `src/protocol/domain.ts` only.
+`OperationQueue` and `DotnetRunner` (ADR-003), the project model with `ProjectMutator` (ADR-004), and
+`Transport`, credentials, sources and the outbound policy (ADR-005). It imports types from
+`src/protocol/domain.ts` only.
 `KeyValueStore.update` returns `PromiseLike` instead of `Thenable`, a global that only the VS Code declarations
 provide, so the file does not depend on them.
 
@@ -73,8 +76,8 @@ Each row is filled in by the item that creates the module.
 
 | Path | Role | State |
 | --- | --- | --- |
-| `src/protocol/**` | Message and domain types shared by host and webviews | Present since P1.1a; contract changes in P1.1b |
-| `src/core/contracts.ts` | Interfaces of the core modules | Present since P1.1a; contract changes in P1.1b |
+| `src/protocol/**` | Message and domain types shared by host and webviews | Present since P1.1a; contract changes of P1.1b applied |
+| `src/core/contracts.ts` | Interfaces of the core modules | Present since P1.1a; contract changes of P1.1b applied |
 | `src/core/**` | Platform-agnostic logic: CLI runner, project model, queries, operations, feeds | Arrives in P1–P4; today `contracts.ts` and `src/core/cli/__fixtures__/sdk-probes/` |
 | `src/host/**` | Adapts VS Code to the core: webview hosts, handlers, pickers | Arrives in P2.9 |
 | `src/extension.next.ts` | 2.0 composition root | Placeholder; replaced in P2.10 |

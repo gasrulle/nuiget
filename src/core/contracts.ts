@@ -13,6 +13,7 @@ import type {
     InstalledResult,
     InvalidationReason,
     InvalidationScope,
+    OperationKind,
     OperationOutcome,
     OperationProgress,
     Project,
@@ -88,6 +89,8 @@ export interface OperationQueue extends Disposable {
     readonly activeCount: number;
     readonly pendingCount: number;
     readonly onDidChange: Event<{ active: number; pending: number }>;
+    /** Fires for every `report()` of a running workflow with `opId` stamped; the host forwards it as the `ops/progress` event. */
+    readonly onProgress: Event<OperationProgress>;
     /**
      * Submit a top-level workflow. Workflows run strictly one at a time (FIFO). Nested work inside a
      * workflow must call services directly — never `submit()` again (that would deadlock).
@@ -95,7 +98,8 @@ export interface OperationQueue extends Disposable {
     submit<T extends OperationOutcome | BulkOutcome>(
         label: string,
         run: (ctx: OperationRunContext) => Promise<T>,
-        rejected: (reason: string) => T,
+        /** Builds the terminal outcome when the queue refuses the work. `opId` is the ticket's id, so a rejected outcome is correlated like any other (C-ops-5). */
+        rejected: (reason: string, opId: string) => T,
     ): OperationTicket<T>;
     /** Resolves when the queue is idle (used by tests and the file watcher). */
     waitIdle(): Promise<void>;
@@ -170,7 +174,7 @@ export interface DotnetRunOptions {
     cwd: string;
     timeoutMs?: number;
     signal?: AbortSignal;
-    /** Extra environment variables (merged over the sanitized base env). */
+    /** Extra environment variables, merged under the fixed CLI environment (ADR-003): a caller can add variables but cannot override `DOTNET_CLI_UI_LANGUAGE`, `DOTNET_NOLOGO`, `DOTNET_CLI_TELEMETRY_OPTOUT`, `NO_COLOR` or `TERM`. */
     env?: Record<string, string>;
 }
 
@@ -182,13 +186,18 @@ export interface DotnetRunner {
     clearSdkCache(): void;
 }
 
+/** Where a capability value comes from. `'verified'` is used only when a tracked probe fixture proves it (`src/core/cli/__fixtures__/sdk-probes/`). */
+export type CapabilityProvenance = 'verified' | 'documented' | 'assumed' | 'unverified';
+
 export interface SdkInfo {
     version: string;
     major: number;
-    /** `dotnet package add --project` (SDK ≥ 10) vs `dotnet add <proj> package`. */
-    nounFirstSyntax: boolean;
-    /** `dotnet package add` understands CPM central versions (verified per SDK major). */
+    /** `major >= 10` (D13). A project that resolves an unsupported SDK is `unsupported: 'sdk-too-old'` and read-only. */
+    supported: boolean;
+    /** `dotnet package add` writes the central version of a Central Package Management project (ADR-004 supplement). */
     cpmAwareAdd: boolean;
+    /** P1.6 produces `'verified'` for SDK 10 from the P0.0 fixture and `'unverified'` otherwise; the other two values are reserved by the plan row. */
+    cpmAwareAddProvenance: CapabilityProvenance;
 }
 
 // ─── HTTP transport, credentials, sources (ADR-005) ─────────────────────────
@@ -311,4 +320,28 @@ export interface CpmImpactPreview {
     toVersion: string;
     /** Every project importing that props file that references the package without an override. */
     affectedProjects: string[];
+}
+
+/** The three reference edits the mutator decides on; a restore is not a mutation of the project file. */
+export type MutationKind = Exclude<OperationKind, 'restore'>;
+
+export interface MutationRequest {
+    kind: MutationKind;
+    packageId: string;
+    /** Target version for `install`/`update`; absent for `remove` and for `install` of the latest version. */
+    version?: string;
+}
+
+/** `ok: false` carries the explanation the UI shows (D7 refusal, SDK below 10, dirty props file, unverified CPM capability). */
+export type MutationDecision = { ok: true } | { ok: false; error: string };
+
+/**
+ * ADR-004 tier 3. Decides whether a reference edit may run in `context` and previews its Central Package
+ * Management impact. Provenance checks (`cpmAwareAddProvenance === 'verified'`, D7) live here and nowhere else.
+ * Implemented in P6.3; `HostServices.mutator` is absent until then (P2.9). Any further member is a contract change of its own.
+ */
+export interface ProjectMutator {
+    canMutate(context: ProjectExecutionContext, request: MutationRequest): Promise<MutationDecision>;
+    /** `undefined` when the project is not CPM or the package has no central entry. */
+    previewCpmImpact(context: ProjectExecutionContext, packageId: string, toVersion: string): Promise<CpmImpactPreview | undefined>;
 }

@@ -66,7 +66,8 @@ export interface InstalledPackage {
     vulnerabilities?: PackageVulnerability[];
 }
 
-export type UnsupportedProjectReason = 'packages-config' | 'non-sdk-style' | 'parse-failed' | 'not-found';
+/** `sdk-too-old`: the SDK the project resolves is below 10 (D13); the message is "requires .NET SDK 10 or newer". */
+export type UnsupportedProjectReason = 'packages-config' | 'non-sdk-style' | 'parse-failed' | 'not-found' | 'sdk-too-old';
 
 export interface InstalledResult {
     projectPath: string;
@@ -222,17 +223,18 @@ export type ResourceKey = string & { readonly __brand?: 'ResourceKey' };
 
 export const resourceKeys = {
     projects: (): ResourceKey => 'projects',
-    sources: (): ResourceKey => 'sources',
+    /** Sources effective for one project directory (ADR-005 resolves sources per `projectDir`; the plan row's `cwd` is that directory). */
+    sources: (projectDir: string): ResourceKey => `sources:${projectDir}`,
     installed: (projectPath: string): ResourceKey => `installed:${projectPath}`,
     updates: (projectPath: string, includePrerelease: boolean): ResourceKey => `updates:${projectPath}|${includePrerelease ? 'pre' : 'stable'}`,
     transitive: (projectPath: string): ResourceKey => `transitive:${projectPath}`,
     allProjectsInstalled: (): ResourceKey => 'allProjects:installed',
     allProjectsUpdates: (includePrerelease: boolean): ResourceKey => `allProjects:updates|${includePrerelease ? 'pre' : 'stable'}`,
     allProjectsTransitive: (): ResourceKey => 'allProjects:transitive',
-    versions: (packageId: string, source: string | undefined, includePrerelease: boolean): ResourceKey =>
-        `versions:${packageId.toLowerCase()}|${source ?? 'all'}|${includePrerelease ? 'pre' : 'stable'}`,
-    metadata: (packageId: string, version: string, source: string | undefined): ResourceKey =>
-        `metadata:${packageId.toLowerCase()}@${version.toLowerCase()}|${source ?? 'all'}`,
+    versions: (packageId: string, sourceUrl: string | undefined, includePrerelease: boolean): ResourceKey =>
+        `versions:${packageId.toLowerCase()}|${sourceUrl ?? 'all'}|${includePrerelease ? 'pre' : 'stable'}`,
+    metadata: (packageId: string, version: string, sourceUrl: string | undefined): ResourceKey =>
+        `metadata:${packageId.toLowerCase()}@${version.toLowerCase()}|${sourceUrl ?? 'all'}`,
 } as const;
 
 export type InvalidationReason =

@@ -128,13 +128,15 @@ export interface RequestMap {
     'allProjects/transitive': { payload: Record<string, never>; result: { projectPaths: string[]; errored: Array<{ projectPath: string; errorKind: TransitiveErrorKind }> }; chunk: { kind: 'start'; projects: Project[] } | { kind: 'project'; chunk: ProjectTransitiveChunk } };
 
     // Search
-    'search/query': { payload: { query: string; sources?: string[]; includePrerelease: boolean; take?: number; exactMatch?: boolean }; result: { query: string; results: PackageSearchResult[] }; chunk: { kind: 'metadata'; packages: PackageMetadataLite[] } };
+    'search/query': { payload: { query: string; sourceUrls?: string[]; includePrerelease: boolean; take?: number; exactMatch?: boolean }; result: { query: string; results: PackageSearchResult[]; sourcesUnavailable?: boolean }; chunk: { kind: 'metadata'; packages: PackageMetadataLite[] } };
     'search/autocomplete': { payload: { query: string; sources: Array<{ name: string; url: string }>; includePrerelease: boolean }; result: { query: string; groups: QuickSearchSourceResult[] } };
 
     // Package details
-    'package/versions': { payload: { packageId: string; source?: string; includePrerelease: boolean; take?: number }; result: { packageId: string; versions: string[] } };
-    'package/metadata': { payload: { packageId: string; version: string; source?: string }; result: { metadata: PackageMetadata | null } };
-    'package/readme': { payload: { packageId: string; version: string; source?: string }; result: { readme: string | null } };
+    'package/versions': { payload: { packageId: string; sourceUrl?: string; includePrerelease: boolean; take?: number }; result: { packageId: string; versions: string[] } };
+    'package/metadata': { payload: { packageId: string; version: string; sourceUrl?: string }; result: { metadata: PackageMetadata | null } };
+    'package/readme': { payload: { packageId: string; version: string; sourceUrl?: string }; result: { readme: string | null } };
+    /** Lazily fetches one README image host-side with the icon fetch's auth, size cap and policy (ADR-006). `dataUri` is `null` when the fetch failed or policy blocked it; the webview then renders a link. */
+    'readme/image': { payload: { url: string; sourceUrl?: string }; result: { url: string; dataUri: string | null } }; // main
     'package/prewarm': { payload: { sourceUrl?: string }; result: Record<string, never> };
 
     // Sources

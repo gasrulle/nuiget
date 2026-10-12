@@ -349,8 +349,8 @@ Three-lens verification of the original findings against `main` produced these c
 | N38 | Low | Plan decision D6 lists the items that may change the frozen contracts as P0.9, P1.1b, P2.8, P4.1 and P6.2. The list is incomplete: the row of P0.0 names `docs/adr/004-sdk-probes.md`, and the row of P1.1a names `src/protocol/**` and `src/core/contracts.ts` and says "sentinel required". P0.0 also added an index entry to `docs/adr/README.md`. | P0 phase review | the clause "change only in the items that name them" governs; the phase review in `docs/plans/STATUS.md` records the approval for the P1.1a sentinel. The plan text is the owner's to correct |
 | N39 | Low | Plan §2.2 steps 3 and 5 run `npx tsc --noEmit`, which checks `tsconfig.json` only, and that program excludes `src/**/*.test.ts`. The tests of 2.0 code are checked by `tsc -p tsconfig.vitest.json`, which runs only inside `npm run check-types`. An item outside host, services and esbuild never runs that locally, so a type error in its tests shows up in CI (job Build & Package) after the push. | P0 phase review | from P1.1a on the session runs `npm run check-types` wherever the ritual says `npx tsc --noEmit`; P7.5 corrects the wording of the plan and `RUN.md` |
 | N40 | Low | `vitest.config.mts` sets `benchmark.include` to `src/test/benchmarks/**/*.bench.ts`, and `src/test/benchmarks/run.mjs` selects the derived `backend (bench)` project. A bench file under `src/core/**` is not run and nothing reports that. The gates of P1.3 and P1.4 ("`npm run bench` runs the file") need the file under `src/test/benchmarks/`. | P0 phase review | P1.3 and P1.4 place their bench files in `src/test/benchmarks/`; P2.12 moves the benches into core (D8) and names the configuration change |
-| N41 | Low | Two repository rulesets restrict the refs the plan pushes: `labs` (id 14504177, `refs/heads/labs/**/*`, rules `update`, `creation`, `required_status_checks`, `required_linear_history` and others) and `tags` (id 12525027, all tags, rules `creation`, `update`, `required_linear_history`). The repository admin role is a bypass actor with mode `always`, and sessions push with the owner's credentials. Every push therefore succeeds and prints `remote: Bypassed rule violations`: "Cannot update this protected ref" for the branch; "Cannot create ref due to creations being restricted" and "This branch must not contain merge commits" (`89f4426`, a merge on `main`) for a tag. No force or admin flag is involved. Neither the plan nor `RUN.md` mentions the rulesets, so the message reads like a violation. Evidence: `gh api repos/gasrulle/nuiget/rulesets/14504177`, the push of `7d407df` and of the tag `labs/2.0-P0-done`. | P0 phase boundary | owner: note in `RUN.md` that the message is expected, or change the rulesets. A session never changes repository settings |
-| N42 | Low | The guard treats every path under `src/protocol/**` as frozen, including the directory's handoff note `src/protocol/STATUS.md`. Without `.claude/.contract-change` an Edit of the note is denied, and the denial message asks to record the advisor's answer "in the directory's STATUS.md", the file it has just refused. Decision D6 creates the sentinel only after the recorded approval, so the approval of a contract item cannot be recorded in that note first. Evidence: `scripts/hooks/guard.mjs` (frozen paths), the denied Edit in P1.1a. | P1.1a | P1.1b records the approval in `docs/plans/STATUS.md`, creates the sentinel, then copies the answer into the note. P7.5 decides between exempting `STATUS.md` in the guard and moving the note out of the frozen path |
+| N41 | Low | Two repository rulesets restrict the refs the plan pushes: `labs` (id 14504177, `refs/heads/labs/**/*`, rules `update`, `creation`, `required_status_checks`, `required_linear_history` and others) and `tags` (id 12525027, all tags, rules `creation`, `update`, `required_linear_history`). The repository admin role is a bypass actor with mode `always`, and sessions push with the owner's credentials. Every push therefore succeeds and prints `remote: Bypassed rule violations`: "3 of 3 required status checks are expected", "Waiting for Code Scanning results" and "Cannot update this protected ref" for the branch (push of `ac64e72`); "Cannot create ref due to creations being restricted" and "This branch must not contain merge commits" (`89f4426`, a merge on `main`) for a tag. No force or admin flag is involved. Neither the plan nor `RUN.md` mentions the rulesets, so the message reads like a violation. Evidence: `gh api repos/gasrulle/nuiget/rulesets/14504177`, the push of `7d407df` and of the tag `labs/2.0-P0-done`. | P0 phase boundary | owner: note in `RUN.md` that the message is expected, or change the rulesets. A session never changes repository settings |
+| N42 | Low | The guard treats every path under `src/protocol/**` as frozen, including the directory's handoff note `src/protocol/STATUS.md`. Without `.claude/.contract-change` an Edit of the note is denied, and the denial message asks to record the advisor's answer "in the directory's STATUS.md", the file it has just refused. Decision D6 creates the sentinel only after the recorded approval, so the approval of a contract item cannot be recorded in that note first. Evidence: `scripts/hooks/guard.mjs` (frozen paths), the denied Edit in P1.1a. | P1.1a | P1.1b recorded the approval in `docs/plans/STATUS.md` ("Advisor decisions"), created the sentinel, then copied the answer into the note; the advisor confirmed that order. P7.5 decides between exempting `STATUS.md` in the guard and moving the note out of the frozen path |
 
 ## 5. Defects in the paused 2.0 code (execution plan, Appendix B)
 
@@ -363,19 +363,19 @@ headline defects in the order the plan lists them, so that salvage commits can c
 | C-cli-logging-2 | Negative-caching of transient probes | P1.5, P1.6 | open |
 | C-cli-logging-3 | CPM `--no-restore` only documented | P1.5, P1.6 | open |
 | C-cli-logging-4 | Backslash blacklist | P1.5, P1.6 | open |
-| C-cli-logging-5 | Provenance dropped | P1.5, P1.6 | open |
-| C-cli-logging-6 | Caller env overrides fixed env | P1.5, P1.6 | open |
+| C-cli-logging-5 | Provenance dropped | P1.5, P1.6 | open; contract side done in P1.1b (`SdkInfo.cpmAwareAddProvenance`), closes at P1.6 |
+| C-cli-logging-6 | Caller env overrides fixed env | P1.5, P1.6 | open; contract side done in P1.1b (`DotnetRunOptions.env`, ADR-003), closes at P1.6 |
 | C-cli-logging-7 | 5 test files missing | P1.5, P1.6 | open |
 | C-state-core-1 | QueryCoordinator 0 tests | P1.7, P1.8 | open |
 | C-state-core-2 | `carryOver` leak | P1.7, P1.8 | open |
-| C-state-core-3 | Scope table vs ADR | P1.7, P1.8 | open |
+| C-state-core-3 | Scope table vs ADR | P1.7, P1.8 | open; ADR side done in P1.1b (ADR-002 tables), closes at P1.7 |
 | C-state-core-4 | Verbatim path compare | P1.7, P1.8 | open |
 | C-state-core-5 | Source validation against previous project | P1.7, P1.8 | open |
 | C-cache-http-1 | Transport untested + untracked | P1.4, P1.9, P4.2 | open |
 | C-cache-http-2 | DNS outside deadline | P1.4, P1.9, P4.2 | open |
 | C-cache-http-3 | TieredCache unintegrated | P1.4, P1.9, P4.2 | open |
 | C-cache-http-4 | Icon data URIs persisted up to ~128 MB | P1.4, P1.9, P4.2 | open |
-| C-cache-http-5 | Proxy claim unimplemented | P1.4, P1.9, P4.2 | open |
+| C-cache-http-5 | Proxy claim unimplemented | P1.4, P1.9, P4.2 | open; ADR side done in P1.1b (ADR-005 without `undici`), closes at P4.1 |
 | C-feeds-1 | 9 of 17 files missing | P4.3 to P4.9 | open |
 | C-feeds-2 | Transient outage → 24 h miss | P4.3 to P4.9 | open |
 | C-feeds-3 | No OutboundPolicy implementation | P4.3 to P4.9 | open |
@@ -390,9 +390,9 @@ headline defects in the order the plan lists them, so that salvage commits can c
 | C-ops-2 | N1 | P1.10, P2.1 | open |
 | C-ops-3 | Cancel-between-steps | P1.10, P2.1 | open |
 | C-ops-4 | Progress payload incomplete | P1.10, P2.1 | open |
-| C-ops-5 | OpId literal | P1.10, P2.1 | open |
+| C-ops-5 | OpId literal | P1.10, P2.1 | open; contract side done in P1.1b (`rejected(reason, opId)`), closes at P2.1 |
 | C-ops-6 | Unredacted stdout | P1.10, P2.1 | open |
-| C-protocol-host-1 | Composition root against imagined APIs | P1.1a, P1.1b, P2.9, P2.10 | open |
+| C-protocol-host-1 | Composition root against imagined APIs | P1.1a, P1.1b, P2.9, P2.10 | open; contract side done in P1.1b (`onProgress`, `ProjectMutator`, `resourceKeys.sources`), closes at P2.10 |
 | C-protocol-host-2 | Guards not exhaustive | P1.1a, P1.1b, P2.9, P2.10 | closed (P1.1a) |
 | C-protocol-host-3 | `runOperation` hack | P1.1a, P1.1b, P2.9, P2.10 | open |
 | C-protocol-host-4 | `forceRestore` bypasses ticket | P1.1a, P1.1b, P2.9, P2.10 | open |
@@ -414,7 +414,7 @@ Counts quoted in findings drift. These commands reproduce the ones that matter; 
 | `as any` in unit tests (T3; the plan counted 955) | `grep -rEo "as any" src --include='*.test.ts' --include='*.test.tsx' \| wc -l` | 959 |
 | Unit test files that call `setTimeout(` (T3; a proxy for "files with sleeps", the plan counted 19) | `grep -rlE "setTimeout\(" src --include='*.test.ts' --include='*.test.tsx' \| wc -l` | 22 |
 | Fixed `px` font sizes (U5) | `grep -cE "font-size:\s*[0-9.]+px" src/webview/app/App.css src/webview/sidebar/SidebarApp.css` | 125 and 13 |
-| Unit tests | `npx vitest run` | 45 files, 1598 tests |
+| Unit tests | `npx vitest run` | 45 files, 1602 tests |
 | End-to-end tests | `npm run test:e2e` | 30 |
 | UI tests | `npm run test:ui -- --storage /tmp/nuiget-ui` | 31 |
 | Type errors in 1.x tests, benchmarks and helpers (N30) | strict `tsc` over `src` with `types: [node, vitest/globals]`, without `src/test/e2e` and `src/test/ui` | 55 |

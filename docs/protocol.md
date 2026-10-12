@@ -11,7 +11,7 @@ per id, optionally preceded by stream chunks of the listed chunk type. Events fl
 without correlation. Both webviews share the same maps; surface-specific requests are rejected with
 `unsupported` elsewhere.
 
-## Requests (42)
+## Requests (43)
 
 | Group | Request | Payload | Result | Chunk | Notes |
 | --- | --- | --- | --- | --- | --- |
@@ -28,11 +28,12 @@ without correlation. Both webviews share the same maps; surface-specific request
 | All-projects resources | `allProjects/installed` | `Record<string, never>` | `{ projectPaths: string[]; errored: Array<{ projectPath: string; error: string; }>; }` | `{ kind: "start"; projects: Project[]; } \| { kind: "project"; chunk: ProjectInstalledChunk; } \| { kind: "metadata"; projectPath: string; packages: PackageMetadataLite[]; }` |  |
 | All-projects resources | `allProjects/updates` | `{ includePrerelease: boolean; }` | `{ projectPaths: string[]; sourcesUnavailable?: boolean; }` | `{ kind: "start"; projects: Project[]; } \| { kind: "project"; chunk: ProjectUpdatesChunk; } \| { kind: "icons"; icons: Record<string, string>; }` |  |
 | All-projects resources | `allProjects/transitive` | `Record<string, never>` | `{ projectPaths: string[]; errored: Array<{ projectPath: string; errorKind: TransitiveErrorKind; }>; }` | `{ kind: "start"; projects: Project[]; } \| { kind: "project"; chunk: ProjectTransitiveChunk; }` |  |
-| Search | `search/query` | `{ query: string; sources?: string[]; includePrerelease: boolean; take?: number; exactMatch?: boolean; }` | `{ query: string; results: PackageSearchResult[]; }` | `{ kind: "metadata"; packages: PackageMetadataLite[]; }` |  |
+| Search | `search/query` | `{ query: string; sourceUrls?: string[]; includePrerelease: boolean; take?: number; exactMatch?: boolean; }` | `{ query: string; results: PackageSearchResult[]; sourcesUnavailable?: boolean; }` | `{ kind: "metadata"; packages: PackageMetadataLite[]; }` |  |
 | Search | `search/autocomplete` | `{ query: string; sources: Array<{ name: string; url: string; }>; includePrerelease: boolean; }` | `{ query: string; groups: QuickSearchSourceResult[]; }` | — |  |
-| Package details | `package/versions` | `{ packageId: string; source?: string; includePrerelease: boolean; take?: number; }` | `{ packageId: string; versions: string[]; }` | — |  |
-| Package details | `package/metadata` | `{ packageId: string; version: string; source?: string; }` | `{ metadata: PackageMetadata \| null; }` | — |  |
-| Package details | `package/readme` | `{ packageId: string; version: string; source?: string; }` | `{ readme: string \| null; }` | — |  |
+| Package details | `package/versions` | `{ packageId: string; sourceUrl?: string; includePrerelease: boolean; take?: number; }` | `{ packageId: string; versions: string[]; }` | — |  |
+| Package details | `package/metadata` | `{ packageId: string; version: string; sourceUrl?: string; }` | `{ metadata: PackageMetadata \| null; }` | — |  |
+| Package details | `package/readme` | `{ packageId: string; version: string; sourceUrl?: string; }` | `{ readme: string \| null; }` | — |  |
+| Package details | `readme/image` | `{ url: string; sourceUrl?: string; }` | `{ url: string; dataUri: string \| null; }` | — | Lazily fetches one README image host-side with the icon fetch's auth, size cap and policy (ADR-006). `dataUri` is `null` when the fetch failed or policy blocked it; the webview then renders a link. main |
 | Package details | `package/prewarm` | `{ sourceUrl?: string; }` | `Record<string, never>` | — |  |
 | Sources | `sources/list` | `Record<string, never>` | `{ sources: NuGetSource[]; failed: FailedSource[]; }` | `{ kind: "health"; failed: FailedSource[]; }` |  |
 | Sources | `sources/refresh` | `Record<string, never>` | `{ sources: NuGetSource[]; failed: FailedSource[]; }` | `{ kind: "health"; failed: FailedSource[]; }` |  |

@@ -46,7 +46,11 @@ export interface StreamEnvelope<T extends RequestType = RequestType> {
 }
 
 export type ResponseEnvelope<T extends RequestType = RequestType> =
-    | { kind: 'response'; id: string; type: T; ok: true; result: RequestResult<T> }
+    | {
+        kind: 'response'; id: string; type: T; ok: true; result: RequestResult<T>;
+        /** Generation of the `QueryCoordinator` resource the result was computed for (ADR-002); present only when the handler read a resource. A webview discards a result whose generation is below the last `resources/invalidated` generation it saw for that key (ADR-008). */
+        generation?: number;
+    }
     | { kind: 'response'; id: string; type: T; ok: false; error: ProtocolError };
 
 export interface EventEnvelope<T extends EventType = EventType> {
@@ -81,8 +85,10 @@ export function makeStream<T extends RequestType>(id: string, type: T, chunk: Re
     return { kind: 'stream', id, type, chunk };
 }
 
-export function makeOk<T extends RequestType>(id: string, type: T, result: RequestResult<T>): ResponseEnvelope<T> {
-    return { kind: 'response', id, type, ok: true, result };
+export function makeOk<T extends RequestType>(id: string, type: T, result: RequestResult<T>, generation?: number): ResponseEnvelope<T> {
+    return generation === undefined
+        ? { kind: 'response', id, type, ok: true, result }
+        : { kind: 'response', id, type, ok: true, result, generation };
 }
 
 export function makeError<T extends RequestType>(id: string, type: T, error: ProtocolError): ResponseEnvelope<T> {

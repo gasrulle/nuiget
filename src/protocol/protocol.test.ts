@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { resourceKeys, type InstalledResult } from './domain';
 import {
     makeCancel,
     makeError,
@@ -40,6 +41,17 @@ describe('envelope factories', () => {
         expect(makeEvent('ui/focusSearch', {})).toEqual({ kind: 'event', type: 'ui/focusSearch', payload: {} });
     });
 
+    it('makeOk carries a generation only when one is given', () => {
+        const installed: InstalledResult = { projectPath: '/w/App/App.csproj', packages: [], fidelity: 'provisional', isCpm: false };
+        const withGeneration = makeOk('a', 'installed/get', installed, 3);
+        expect(withGeneration).toStrictEqual({ kind: 'response', id: 'a', type: 'installed/get', ok: true, result: installed, generation: 3 });
+        expect(isResponseEnvelope(withGeneration)).toBe(true);
+
+        // The key is absent, not `undefined`: `postMessage` and strict equality both tell the two apart.
+        expect('generation' in makeOk('a', 'projects/list', { projects: [] })).toBe(false);
+        expect('generation' in makeOk('a', 'projects/list', { projects: [] }, 0)).toBe(true);
+    });
+
     it('ProtocolRequestError carries the code', () => {
         const error = new ProtocolRequestError('queue-full', 'busy', { waiting: 5 });
         expect(error.code).toBe('queue-full');
@@ -49,7 +61,27 @@ describe('envelope factories', () => {
     });
 });
 
+describe('resource keys', () => {
+    it('keys the sources of a project directory by that directory', () => {
+        expect(resourceKeys.sources('/w/App')).toBe('sources:/w/App');
+        expect(resourceKeys.sources('/w/Lib')).not.toBe(resourceKeys.sources('/w/App'));
+    });
+
+    it('keys versions and metadata by lower-cased id and source URL', () => {
+        expect(resourceKeys.versions('Pkg', undefined, false)).toBe('versions:pkg|all|stable');
+        expect(resourceKeys.versions('Pkg', 'https://feed.example.test/v3/index.json', true))
+            .toBe('versions:pkg|https://feed.example.test/v3/index.json|pre');
+        expect(resourceKeys.metadata('Pkg', '1.0.0-RC1', undefined)).toBe('metadata:pkg@1.0.0-rc1|all');
+    });
+});
+
 describe('guards', () => {
+    it('accepts the readme/image request', () => {
+        expect(REQUEST_TYPES).toContain('readme/image');
+        expect(isRequestEnvelope(makeRequest('readme/image', { url: 'https://example.test/a.png' }))).toBe(true);
+        expect(isResponseEnvelope(makeOk('r1', 'readme/image', { url: 'https://example.test/a.png', dataUri: null }))).toBe(true);
+    });
+
     it('recognizes every declared request and event type and nothing else', () => {
         for (const type of REQUEST_TYPES) {
             expect(isRequestType(type)).toBe(true);

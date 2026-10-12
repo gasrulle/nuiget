@@ -29,6 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Migrated benchmarks to Vitest 5 with refreshed baselines and CI comparison reporting**
 - **Added the nUIget 2.0 execution plan, architecture decision records, and UX interaction model under docs/**
 - **Added the autonomous run protocol and item tracker for the 2.0 plan**
+- **Applied the P1.1b contract changes and amended ADR-002 to ADR-008 to match**
 - **Recorded a .NET SDK 10 probe of package add and remove on Central Package Management projects**
 - **Split agent gotchas into 1.x and 2.0 sections and added 2.0 layer-boundary instructions**
 - **Added the architecture-advisor agent and the 2.0 execution protocol summary for Claude Code**

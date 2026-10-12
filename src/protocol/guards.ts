@@ -20,7 +20,7 @@ const REQUEST_TYPE_RECORD = {
     'installed/get': true, 'updates/get': true, 'transitive/get': true, 'transitive/metadata': true,
     'allProjects/installed': true, 'allProjects/updates': true, 'allProjects/transitive': true,
     'search/query': true, 'search/autocomplete': true,
-    'package/versions': true, 'package/metadata': true, 'package/readme': true, 'package/prewarm': true,
+    'package/versions': true, 'package/metadata': true, 'package/readme': true, 'readme/image': true, 'package/prewarm': true,
     'sources/list': true, 'sources/refresh': true, 'sources/configFiles': true, 'sources/add': true,
     'sources/remove': true, 'sources/enable': true, 'sources/disable': true,
     'ops/install': true, 'ops/update': true, 'ops/remove': true, 'ops/restore': true,
