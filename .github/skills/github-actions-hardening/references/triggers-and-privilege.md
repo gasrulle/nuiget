@@ -58,7 +58,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@<sha>
-      - run: npm install --no-audit --no-fund && npm test
+      - run: npm ci --no-audit --no-fund && npm test
       - uses: actions/upload-artifact@<sha>
         with: { name: pr, path: dist/ }
 ```
@@ -80,7 +80,7 @@ jobs:
 ```
 
 Adapt install commands to the repository's documented policy. nUIget uses
-`npm install --no-audit --no-fund`, not `npm ci`.
+`npm ci --no-audit --no-fund`.
 
 ## Rules
 

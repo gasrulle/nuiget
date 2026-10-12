@@ -74,7 +74,7 @@ Tests are **NOT OPTIONAL**. Every code change must satisfy all of the following:
 Test infrastructure details are in the **Testing** section of ARCHITECTURE.md.
 
 ## MANDATORY: VSIX Packaging Verification
-After making changes to TypeScript files (especially `NuGetService.ts`, `NuGetPanel.ts`, or `extension.ts`), run `npm run package:vsix` to verify the build succeeds. This runs the full pipeline: `install → check-types → test → lint+bundle → vsce package`. TypeScript errors (typos, missing properties) will break VSIX packaging even if `npm run watch` succeeds.
+After making changes to TypeScript files (especially `NuGetService.ts`, `NuGetPanel.ts`, or `extension.ts`), run `npm run package:vsix` to verify the build succeeds. This runs the full pipeline: `npm ci → check-types → test → lint+bundle → vsce package`. TypeScript errors (typos, missing properties) will break VSIX packaging even if `npm run watch` succeeds.
 
 ## MANDATORY: Documentation Updates
 After completing ANY feature, fix, or change, update these files:
@@ -111,7 +111,7 @@ These two files serve different purposes. **Never duplicate content between them
 npm install          # Install dependencies
 npm run watch        # Build (watch mode) — F5 to launch Extension Host
 npm run watch:v2     # Same for the 2.0 entry points (launch configuration "Run 2.0"); not together with watch
-npm run package:vsix # Runs: install → check-types → test → lint+bundle → vsce package
+npm run package:vsix # Runs: npm ci → check-types → test → lint+bundle → vsce package
 npm run check:vsix   # After a build: fails if the VSIX would contain an unexpected file or lack a required one
 ```
 
@@ -180,11 +180,11 @@ the legacy code; before that, P7.5 reviews which tooling rows still hold for 2.0
 | TypeScript compiler compatibility | Keep TypeScript 6 while `typescript-eslint` declares `<6.1.0`; do not force TypeScript 7 past the parser's peer range. |
 | MSW compatibility | Keep the latest MSW 2.x while `@vitest/mocker` declares an MSW 2 peer dependency. Validate `npm ls --all` after packaging, which runs another install and may reintroduce peer conflicts. |
 | `eslint-plugin-react-hooks` peer dep | Version 7.1.1 supports ESLint 10; no peer override is needed. |
-| Test CLI's nested Mocha | `@vscode/test-cli` still requests Mocha 11 with vulnerable transitive packages. The scoped override reuses the direct Mocha 12 dependency; verify E2E tests before removing it. |
+| Test CLI's Mocha runs inside the extension host | `@vscode/test-cli` loads Mocha with `require()` inside the VS Code extension host, which is Node 18 on the minimum supported VS Code 1.85. It must therefore keep its own Mocha 11; Mocha 12 is ESM-only and cannot load there. Do not add an `overrides` entry that points the test CLI at the direct `mocha` dependency (that one is for ExTester, which runs on the toolchain's Node). The `E2E (1.85.0)` CI job is the guard. `npm audit` reports four findings through Mocha 11's dependencies; they are development-only and never ship in the VSIX. |
 | VS Code declarations | Pin `@types/vscode` to `engines.vscode`'s minimum API version; a caret silently permits newer APIs unavailable to supported users. |
 | macOS UI-test IPC socket path | ExTester storage under a long session path exceeds the Unix socket limit. Pass a short temporary directory with `npm run test:ui -- --storage /tmp/nuiget-ui`; reuse downloads and clean only task-created paths. |
 | Typed backend message routing | `PanelRequestMessage` and `SidebarRequestMessage` in `NuGetTypes.ts` are discriminated unions used by both backend message handlers. Extend these contracts for new requests; do not reintroduce an untyped `WebviewMessage`. ESLint turns off `no-explicit-any` and `no-non-null-assertion` in test files via override in `eslint.config.mjs`. |
-| CI uses `npm install` not `npm ci` | `@emnapi/core` and `@emnapi/runtime` are transitive optional deps (via `@rolldown/binding-wasm32-wasi`) whose resolved versions differ between npm patch versions. `npm ci` fails on any drift. CI uses `npm install --no-audit --no-fund` instead — reads the lockfile when compatible, resolves fresh when not. |
+| CI and `package:vsix` use `npm ci` | `npm ci --no-audit --no-fund` installs exactly what `package-lock.json` records (ADR-000). The earlier `npm install` exception existed for `@emnapi/*` optional dependencies that are no longer in the lockfile. If `npm ci` reports that the lockfile is out of sync, regenerate it with `npm install --package-lock-only` and commit it; never switch CI back to `npm install`. Locally, `npm run package:vsix` therefore reinstalls `node_modules` on every run. |
 
 ### VS Code Extension
 | Issue | Solution |

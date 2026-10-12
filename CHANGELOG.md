@@ -35,6 +35,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Type-checked the extension against Node 18 declarations, the VS Code 1.85 host baseline**
 - **Added Claude Code guard hooks that protect frozen contracts, tests, and commit and push safety during the 2.0 work**
 - **Stopped shipping development configuration files in the extension package and added a package contents check**
+- **Rebuilt the CI pipeline: clean installs, pinned actions, Windows unit tests, end-to-end tests on the minimum supported VS Code, UI tests, and a downloadable package artifact**
+- **Let the end-to-end test runner use its own Mocha 11 so the tests can run on VS Code 1.85**
 
 ## [1.18.9] - 2026-10-10
 

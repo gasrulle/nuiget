@@ -6,8 +6,8 @@ description: 'Comprehensive guide for building robust, secure, and efficient CI/
 # GitHub Actions CI/CD Best Practices
 
 For nUIget, preserve the existing validation suites and use the Node version in
-`.nvmrc`. Use `npm install --no-audit --no-fund` as documented in the repository,
-not the generic `npm ci` examples below. Prefer the focused efficiency/hardening
+`.nvmrc`. Install with `npm ci --no-audit --no-fund`, as the workflow and ADR-000 do; if
+the lockfile is out of sync, regenerate and commit it. Prefer the focused efficiency/hardening
 skills for on-demand guidance. Example cloud/container deployments do not
 authorize adding infrastructure, changing account settings, or publishing.
 

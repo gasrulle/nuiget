@@ -61,10 +61,9 @@ Match matrix breadth to the decision being made:
 
 ### Dependency installation
 
-Follow repository CI policy rather than imposing a generic clean-install convention. nUIget CI
-uses `npm install --no-audit --no-fund`, not `npm ci`, because transitive optional dependency
-resolution can differ across npm patch versions and `npm ci` may fail on that drift. Preserve this
-exception when suggesting caching or job changes.
+Follow repository CI policy. nUIget CI uses `npm ci --no-audit --no-fund` (ADR-000), so every job
+installs exactly what `package-lock.json` records. Keep that when suggesting caching or job
+changes; a lockfile that is out of sync is regenerated and committed, not worked around.
 
 ### Optional maintenance jobs
 

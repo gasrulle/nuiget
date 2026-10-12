@@ -15,8 +15,9 @@ Load this reference only when concrete examples are useful during implementation
       ${{ runner.os }}-node-
 ```
 
-Adapt the cache path and invalidation file to the repository's ecosystem. For nUIget, preserve its
-`npm install --no-audit --no-fund` CI policy; a cache does not require switching to `npm ci`.
+Adapt the cache path and invalidation file to the repository's ecosystem. For nUIget, keep its
+`npm ci --no-audit --no-fund` CI policy; `actions/setup-node` caches the npm download cache, not
+`node_modules`.
 
 ## Cancel Stale Runs
 

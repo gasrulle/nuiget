@@ -37,9 +37,9 @@ on workflow files with: "**Static-only analysis** (not confirmed with live runs)
 
 ## nUIget Constraints
 
-- CI uses `npm install --no-audit --no-fund`, not `npm ci`. Preserve this exception: npm's
-  compatible lockfile resolution is intentional because transitive optional dependency resolution
-  can drift across npm patch releases and make `npm ci` fail.
+- CI uses `npm ci --no-audit --no-fund` (ADR-000). Keep it: the committed lockfile is what gets
+  built and tested. If `npm ci` reports that the lockfile is out of sync, regenerate it with
+  `npm install --package-lock-only` and commit it; do not switch CI to `npm install`.
 - Preserve the required `npm test`, `npm run bench`, and `npm run test:ui` validation. The UI suite
   may be unavailable in headless/CI-constrained environments, but do not remove or silently skip
   its required check. TypeScript changes also require the documented VSIX packaging verification.
