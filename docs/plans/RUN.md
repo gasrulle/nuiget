@@ -77,6 +77,8 @@ Rules that override anything you would otherwise do:
 - Every ⚑ item and every stop-and-ask trigger (plan §2.3) means: launch the `architecture-advisor` subagent
   with the §2.4 brief, paste its answer into the directory's `STATUS.md`, then act on it. If the answer says
   the owner must decide, mark the item `blocked` and stop.
+  The subagent cannot read outside the repository: for salvage items paste the quarry excerpts (path:line and
+  text) into the brief. Consultations may take more than ten minutes; run them in the background.
 - Tests are never deleted, skipped or weakened except where the item names them by line or title.
 - If a gate is still red after two fix attempts, mark the item `blocked` with the pasted output and stop.
 
