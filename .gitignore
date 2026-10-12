@@ -51,6 +51,9 @@ coverage/
 # Benchmark ephemeral output (baseline.json is committed)
 benchmarks/latest.json
 
+# Contract-change sentinel for the 2.0 plan (D6): exists only while an approved contract edit is in progress
+.claude/.contract-change
+
 # Environment files
 .env
 .env.local
