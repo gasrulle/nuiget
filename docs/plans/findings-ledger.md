@@ -378,7 +378,7 @@ headline defects in the order the plan lists them, so that salvage commits can c
 | C-cache-http-1 | Transport untested + untracked | P1.4, P1.9, P4.2 | open |
 | C-cache-http-2 | DNS outside deadline | P1.4, P1.9, P4.2 | open |
 | C-cache-http-3 | TieredCache unintegrated | P1.4, P1.9, P4.2 | open |
-| C-cache-http-4 | Icon data URIs persisted up to ~128 MB | P1.4, P1.9, P4.2 | open |
+| C-cache-http-4 | Icon data URIs persisted up to ~128 MB | P1.4, P1.9, P4.2 | open; cache side done in P1.4 (the persistent tier has a budget of 8 MiB), closes at P4.4 when icons go through `TieredCache` |
 | C-cache-http-5 | Proxy claim unimplemented | P1.4, P1.9, P4.2 | open; ADR side done in P1.1b (ADR-005 without `undici`), closes at P4.1 |
 | C-feeds-1 | 9 of 17 files missing | P4.3 to P4.9 | open |
 | C-feeds-2 | Transient outage → 24 h miss | P4.3 to P4.9 | open |
@@ -418,7 +418,7 @@ Counts quoted in findings drift. These commands reproduce the ones that matter; 
 | `as any` in unit tests (T3; the plan counted 955) | `grep -rEo "as any" src --include='*.test.ts' --include='*.test.tsx' \| wc -l` | 959 |
 | Unit test files that call `setTimeout(` (T3; a proxy for "files with sleeps", the plan counted 19) | `grep -rlE "setTimeout\(" src --include='*.test.ts' --include='*.test.tsx' \| wc -l` | 22 |
 | Fixed `px` font sizes (U5) | `grep -cE "font-size:\s*[0-9.]+px" src/webview/app/App.css src/webview/sidebar/SidebarApp.css` | 125 and 13 |
-| Unit tests | `npx vitest run` | 51 files, 1713 tests |
+| Unit tests | `npx vitest run` | 52 files, 1760 tests |
 | End-to-end tests | `npm run test:e2e` | 30 |
 | UI tests | `npm run test:ui -- --storage /tmp/nuiget-ui` | 31 |
 | Type errors in 1.x tests, benchmarks and helpers (N30) | strict `tsc` over `src` with `types: [node, vitest/globals]`, without `src/test/e2e` and `src/test/ui` | 55 |
