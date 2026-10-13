@@ -15,14 +15,13 @@ import { redact } from './core/logging';
 import { DefaultOperationQueue, PackageWorkflows } from './core/ops';
 import { AssetsReader, PROJECT_FILE_GLOB, ProjectContextProvider, StaticProjectInspector, findProjects } from './core/project';
 import { DefaultQueryCoordinator } from './core/queries';
-import { DefaultSessionStore } from './core/session';
+import { DefaultSessionStore, firstProject } from './core/session';
 import { DotnetSourceProvider } from './core/sources';
 import { isPathInside } from './core/util/paths';
-import { sourceDirectory } from './host/handlers';
 import { MainPanelHost } from './host/MainPanelHost';
 import { HostEvents, createWorkflowDeps, loggerFor, readExtensionConfig, type HostServices } from './host/services';
 import { SidebarHost } from './host/SidebarHost';
-import type { InvalidationReason, InvalidationScope, Project } from './protocol';
+import { ALL_PROJECTS, type InvalidationReason, type InvalidationScope, type Project } from './protocol';
 
 const SDK_CACHE_KEY = 'nuiget.sdkVersionCache.v2';
 /** Written by 1.x with another shape; removed at activation. */
@@ -115,11 +114,15 @@ export async function activateWith(context: vscode.ExtensionContext, overrides: 
     let lastReconciledProject: string | undefined;
     let lastListing: { directory: string; urls: string[] } | undefined;
 
-    /** The enabled sources of the selected project. A list that cannot be found out is not an empty one: the selection is kept. */
-    const enabledSourceUrls = async (): Promise<string[]> => {
-        let directory: string | undefined;
+    /**
+     * The enabled sources of a directory; `undefined` is a workspace without a project or folder. A list
+     * that cannot be found out is not an empty one: the selection is kept.
+     */
+    const enabledSourceUrls = async (directory: string | undefined): Promise<string[]> => {
         try {
-            directory = sourceDirectory(services);
+            if (directory === undefined) {
+                throw new Error('no project or workspace folder to resolve package sources for');
+            }
             const urls = (await catalog.sources(directory)).filter(source => source.enabled).map(source => source.url);
             lastListing = { directory, urls };
             return urls;
@@ -134,8 +137,8 @@ export async function activateWith(context: vscode.ExtensionContext, overrides: 
     };
 
     const refreshProjectsAndSession = async (): Promise<void> => {
-        // Set first, so that the change `reconcile` commits for this project does not ask for another run.
-        lastReconciledProject = session.snapshot.selectedProject;
+        const before = session.snapshot.selectedProject;
+        lastReconciledProject = before;
         let projects: Project[];
         try {
             projects = await catalog.projects();
@@ -145,7 +148,19 @@ export async function activateWith(context: vscode.ExtensionContext, overrides: 
         }
         events.projectsChanged.fire(projects);
         await vscode.commands.executeCommand('setContext', 'nuiget.hasProjectFiles', projects.length > 0);
-        await session.reconcile(projects, await enabledSourceUrls());
+        // Sources belong to a project directory: list those of the project the store is going to keep or
+        // pick, so that the selected source is judged against the right list. Set before `reconcile`, so
+        // that the change it commits for this project does not ask for another run.
+        const kept = settledProject(before, projects);
+        lastReconciledProject = kept;
+        const urls = await enabledSourceUrls(directoryOf(kept));
+        const selected = session.snapshot.selectedProject;
+        if (selected !== before && selected !== kept) {
+            // The selection moved while the sources were listed: this list is another project's. The
+            // change has already asked for one more run, and that run reconciles.
+            return;
+        }
+        await session.reconcile(projects, urls);
     };
 
     let inFlight: Promise<void> | undefined;
@@ -318,6 +333,24 @@ function redactingLogger(inner: Logger): Logger {
 
 function describe(error: unknown): string {
     return error instanceof Error ? error.message : String(error);
+}
+
+/**
+ * The project the session store keeps or picks for `selected` among `projects`: the rule of its
+ * `reconcile` (ADR-001), repeated here to know the directory before the store commits. Should the two ever
+ * differ, the store's commit names a project other than the one reconciled for, and the refresh runs again.
+ */
+function settledProject(selected: string, projects: Project[]): string {
+    const fallback = firstProject(projects)?.path ?? '';
+    if (selected === ALL_PROJECTS) {
+        return projects.length > 1 ? ALL_PROJECTS : fallback;
+    }
+    return selected !== '' && projects.some(project => project.path === selected) ? selected : fallback;
+}
+
+/** The directory whose sources apply to a selection: the project's, or the first workspace folder for all or no project. */
+function directoryOf(project: string): string | undefined {
+    return project && project !== ALL_PROJECTS ? path.dirname(project) : workspaceFolderFor();
 }
 
 function workspaceRoots(): string[] {

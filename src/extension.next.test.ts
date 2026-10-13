@@ -341,6 +341,75 @@ describe('extension.next (2.0 composition root)', () => {
         expect(dotnet.listings().some(call => sameDir(call.cwd, libDir))).toBe(true);
     });
 
+    it("a selection that moves during a refresh is not reconciled against the previous project's sources", async () => {
+        dotnet.sources = cwd => sameDir(cwd, appDir) ? [privateFeed, sharedFeed] : [sharedFeed];
+        const { services } = await start({ workspaceState: { 'nuiget.selectedProject': appPath, 'nuiget.selectedSource': privateFeed } });
+        const broadcast: string[] = [];
+        services.session.onDidChange(snapshot => broadcast.push(snapshot.selectedSource));
+        const runs = refreshRuns();
+
+        // The listing of Lib's sources is slow; the selection goes back to App before it answers.
+        const listing = deferred();
+        let held = 0;
+        dotnet.script = async (args, cwd) => {
+            if (isListing(args) && sameDir(cwd, libDir)) {
+                held++;
+                await listing.promise;
+            }
+            return undefined;
+        };
+        await services.session.apply({ selectedProject: libPath }, 'sidebar');
+        await vi.waitFor(() => expect(held).toBe(1));
+        await services.session.apply({ selectedProject: appPath }, 'main');
+        listing.resolve();
+
+        // One run for each selection; the first one must not judge App's source against Lib's list.
+        await vi.waitFor(() => expect(refreshRuns()).toBe(runs + 2));
+        await pause(20);
+        expect(services.session.snapshot).toMatchObject({ selectedProject: appPath, selectedSource: privateFeed });
+        expect(broadcast).toEqual([privateFeed, privateFeed]);
+    });
+
+    it("a replaced selection is reconciled against the replacement project's sources", async () => {
+        dotnet.sources = cwd => sameDir(cwd, appDir) ? [privateFeed, sharedFeed] : [sharedFeed];
+
+        const { services } = await start({ workspaceState: { 'nuiget.selectedProject': gonePath, 'nuiget.selectedSource': privateFeed } });
+
+        // The source is valid for the project that replaces the vanished one, and only its directory was asked.
+        expect(services.session.snapshot).toMatchObject({ selectedProject: appPath, selectedSource: privateFeed });
+        expect(dotnet.listings().some(call => sameDir(call.cwd, appDir))).toBe(true);
+        expect(dotnet.listings().some(call => sameDir(call.cwd, path.dirname(gonePath)))).toBe(false);
+        // One commit by the host for the replacement, and no second refresh because of it.
+        expect(services.session.snapshot).toMatchObject({ rev: 2, origin: 'host' });
+        expect(refreshRuns()).toBe(1);
+    });
+
+    it('a selection that moves to the replacement project during the listing is still reconciled', async () => {
+        const unknownFeed = 'https://unknown.example/v3/index.json';
+        // The persisted project is gone, so App replaces it; App's listing is slow.
+        const listing = deferred();
+        let held = 0;
+        dotnet.script = async (args, cwd) => {
+            if (isListing(args) && sameDir(cwd, appDir)) {
+                held++;
+                await listing.promise;
+            }
+            return undefined;
+        };
+        for (const [key, value] of Object.entries({ 'nuiget.selectedProject': gonePath, 'nuiget.selectedSource': unknownFeed })) {
+            await context.workspaceState.update(key, value);
+        }
+        const extension = await activateWith(context as unknown as vscode.ExtensionContext, { spawn: dotnet.spawn, resolveExecutable: () => 'dotnet' });
+        await vi.waitFor(() => expect(held).toBe(1));
+
+        // The user picks exactly that project meanwhile. No other run will follow, so this one must reconcile.
+        await extension.services.session.apply({ selectedProject: appPath }, 'sidebar');
+        listing.resolve();
+        await extension.ready;
+
+        expect(extension.services.session.snapshot).toMatchObject({ selectedProject: appPath, selectedSource: 'all' });
+    });
+
     it('a failed source listing keeps the selected source', async () => {
         dotnet.script = args => isListing(args) ? { code: 1, stderr: 'error: the feed list could not be read' } : undefined;
 

@@ -55,8 +55,9 @@ negative control             → 26 mutations of product code (the root, src/hos
                                assertion on every installed/get response delivered after the second
                                invalidation, and the mutation was widened to both places of the coordinator;
                                it fails now. Every file was restored (git status).
-measured, A→B→A ordering     → session revisions 1, 2, 3, 4 applied by both surfaces; final selectedProject
-                               A; final selectedSource `all` (was `private`): finding C-state-core-6
+measured, A→B→A ordering     → at P2.11: session revisions 1, 2, 3, 4 on both surfaces, final selectedSource
+                               `all` (was `private`): finding C-state-core-6. After P2.fix-1: revisions
+                               1, 2, 3 and the private feed still selected; the scenario pins that
 grep -c "src/test/harness" vitest.config.mts tsconfig.vitest.json → 1 and 2 (the include and the clause in
                                the comment that the ruling orders)
 git diff --name-only -- src/protocol src/core docs/adr src/host src/extension.next.ts src/extension.next.test.ts src/test/__mocks__ → empty
@@ -110,18 +111,15 @@ CI                           → see the tracker row of P2.11
 
 - The scenario `late response for an invalidated key is discarded by generation`: with the fix of
   C-protocol-host-7 (`P2.fix`).
-- Pinning the selected source in `A→B→A ordering` and `project deletion mid-request`: with `P2.fix-1`
-  (C-state-core-6).
 - The scenarios of later items: P4.9 (`updates converge across surfaces`, `sources unreachable shows banner
   not empty`), P5.4, P5.5, P5.9, P6.4.
 
 ## Deviations from contract/ADR (file:line each)
 
-- `scenarios.test.ts`, `A→B→A ordering`: the ruling asks for "at least revs 2, 3, 4". The test requires that
-  every revision from the first to the host's last was applied in order by both surfaces and that at least two
-  followed the start (the two selections). The third revision of today's run is the reset of the selected
-  source, which is the defect C-state-core-6; requiring it would pin the defect, which the ruling forbids for
-  the source's value. Measured today: 1, 2, 3, 4 and `selectedSource: 'all'`.
+- `scenarios.test.ts`, `A→B→A ordering`: since P2.fix-1 the scenario pins the selected source (the private
+  feed on the host and on both surfaces) and still requires that every revision was applied in order by both
+  surfaces and that at least two followed the start. The P2.11 ruling's "at least revs 2, 3, 4" counted the
+  commit that reset the source, which was the defect C-state-core-6 and no longer happens.
 - `scenarios.test.ts`, the six invalidation orderings: the ruling's "the main's `received` count does not
   change because of" the late surface is asserted as two facts that do not depend on timing: the main panel
   receives no further `session/changed`, and no surface is answered for a request it did not send

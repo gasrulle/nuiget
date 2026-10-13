@@ -70,15 +70,15 @@ describe('two-surface harness', () => {
         listing.release();
 
         // Convergence (ADR-001, the condition of the P1.7 ruling): both surfaces equal the host and show A.
-        await h.expectState({ selectedProject: A, projects: [A, B], installed: ['Serilog@3.0.0'] });
+        // The source that only A has is still selected: it was never judged against B's list.
+        await h.expectState({ selectedProject: A, selectedSource: PRIVATE_FEED, projects: [A, B], installed: ['Serilog@3.0.0'] });
         const last = h.services.session.snapshot.rev;
         expect(last).toBeGreaterThanOrEqual(before + 2);
         for (const webview of [sidebar, main]) {
             // Every revision reached the surface, in order, none skipped.
             const followed = webview.appliedRevs.filter(rev => rev >= before);
             expect(followed, `${webview.surface}: applied revisions`).toEqual(Array.from({ length: last - before + 1 }, (_, index) => before + index));
-            // The host's value, not `private`: C-state-core-6; P2.fix-1 pins `private`.
-            expect(webview.session?.selectedSource).toBe(h.services.session.snapshot.selectedSource);
+            expect(webview.session?.selectedSource).toBe(PRIVATE_FEED);
         }
     });
 

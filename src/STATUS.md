@@ -1,24 +1,49 @@
-# STATUS — src (the 2.0 composition root)   commit e4eea0f (parent of the P2.10 commit)   2026-10-13T17:45:00Z
+# STATUS — src (the 2.0 composition root)   commit 227dc3e (parent of the P2.fix-1 commit)   2026-10-13T20:40:00Z
 
 Scope of this note: `src/extension.next.ts` and `src/extension.next.test.ts` (and, from P8.2, the deletion of
 `src/extension.ts`). Every directory under `src/` has its own note; `.github/STATUS.md` is for items without a
 `src/` directory.
 
-git status --porcelain --untracked-files=all: ` M src/extension.next.ts`, `?? src/extension.next.test.ts`,
-`?? src/STATUS.md`, ` M src/test/__mocks__/vscode.ts`, ` M docs/plans/STATUS.md`,
-` M docs/plans/findings-ledger.md`, ` M CHANGELOG.md`, ` M ARCHITECTURE.md`,
-` M .github/copilot-instructions.md` (all belong to the P2.10 commit)
+git status --porcelain --untracked-files=all: ` M src/extension.next.ts`, ` M src/extension.next.test.ts`,
+` M src/STATUS.md`, ` M src/test/harness/scenarios.test.ts`, ` M src/test/harness/STATUS.md`,
+` M docs/plans/STATUS.md`, ` M docs/plans/findings-ledger.md`, ` M CHANGELOG.md`, ` M ARCHITECTURE.md` (all
+belong to the P2.fix-1 commit)
 
-Item: **P2.10 replace the placeholder `src/extension.next.ts` with the composition root** (stop-and-ask: the
-row names modules that later items create; no contract change, no sentinel).
-
-The quarry's root (295 lines, untracked there, no note) was copied byte-identical from its working tree before
-the consultation so that the advisor could read it. The file that is committed is written from the ruling, not
-edited from that copy.
+Last item: **P2.fix-1** (phase review P2, blocking 1, finding C-state-core-6): the refresh lists the sources
+of the project the session store keeps or picks, and skips the reconcile when the selection moved during the
+listing. Before it: **P2.10**, which wrote the root (commit `3d1da7b`); its gate block is kept below.
 
 ## Verified by running
 
 ```text
+P2.fix-1, on the tree of its commit (DOTNET_ROOT set; npm test also with NUIGET_SDK_TESTS=1):
+npx tsc --noEmit / npm run check-types → exit 0 / exit 0
+npx eslint src / npm run lint → exit 0, no output / exit 0
+npx vitest run --project backend src/extension.next.test.ts → Test Files 1 passed (1) · Tests 27 passed (27)
+npx vitest run --project integration src/test/harness → Tests 12 passed (12)
+npm test (NUIGET_SDK_TESTS=1) → Test Files 83 passed (83) · Tests 2487 passed (2487)
+npx vitest run               → Tests 2484 passed | 3 skipped (2487)
+npx vitest run --coverage    → exit 0 · src/extension.next.ts 189 of 200 lines, 94.50 % · src/core/** 98.52 %
+                               · src/host/** 72.05 %
+npm run bench                → Tests 112 passed | 1 skipped (113)
+node esbuild.mjs --v2        → exit 0 · [development] Build complete (dist/ deleted afterwards)
+npm run package:vsix         → exit 0 · DONE  Packaged: nuiget-v1.18.9.vsix (17 files, 530.04 KB)
+npm run check:vsix           → check:vsix: OK
+git diff --stat -- src/protocol src/core docs/adr src/host → empty · .claude/.contract-change absent
+npm run docs:protocol:check, npm run test:ui → SKIPPED: no protocol and no UI file changed; CI runs them
+negative control, P2.fix-1   → against the root of 227dc3e the two tests of the review and the harness
+                               scenario `A→B→A ordering` fail (2 failed | 25 passed; 1 failed | 11 passed).
+                               Six mutations of the fix, each run against the root's tests and the harness:
+                               the reconcile never skipped; a selection that became the replacement skipped;
+                               the sources of the project at the start listed; the replacement asking for a
+                               second run; `ALL_PROJECTS` kept for a single project; a missing directory
+                               taken as an empty list. 6 of 6 caught. The file was restored (cmp).
+measured, A→B→A ordering     → session revisions 1, 2, 3 on both surfaces; final selectedSource the private
+                               feed (before the fix: 1, 2, 3, 4 and `all`)
+grep -n "sourceDirectory" src/extension.next.ts → no output · grep -n "settledProject\|firstProject\|ALL_PROJECTS"
+                               → the two imports (:18, :24), the use (:154) and the helpers (:343-353)
+
+P2.10, on the tree of 3d1da7b:
 The gates ran with DOTNET_ROOT set to the SDK directory; npm test also with NUIGET_SDK_TESTS=1 (N48).
 baseline npx tsc --noEmit / npm run check-types → exit 0 / exit 0
 baseline npx eslint src      → exit 0
@@ -85,12 +110,14 @@ CI                           → see the tracker row of P2.10
   `DefaultQueryCoordinator`; `DefaultSessionStore`; `DefaultOperationQueue`; `Catalog`; `PackageWorkflows`
   over `createWorkflowDeps`; `HostServices` (`:96`, `onOperationProgress` is `queue.onProgress`); `SidebarHost`
   and its view provider. `activate` calls it and returns nothing; it does not wait for the first refresh.
-- `refreshProjectsAndSession` (`:136`) with `enabledSourceUrls` (`:119`) and `requestRefresh` (`:154`):
-  projects → `projects/changed` → `nuiget.hasProjectFiles` → the enabled sources of `sourceDirectory(services)`
-  → `session.reconcile`. It runs at activation (`ready`), after an invalidation of scope `workspace`, `project`
-  or `sources` and when the selected project differs from the one last reconciled for (C-state-core-5). Runs
-  do not overlap; requests during a run cause one more. A listing that fails yields the last list of that
-  directory, or else the selected source alone, never an empty list.
+- `refreshProjectsAndSession` with `enabledSourceUrls` and `requestRefresh` (`extension.next.ts:119-181`):
+  projects → `projects/changed` → `nuiget.hasProjectFiles` → the enabled sources of the directory of the
+  project the store is going to keep or pick (`settledProject`, `directoryOf`, `:343-354`) →
+  `session.reconcile`, unless the selection moved to yet another project while the sources were listed (then
+  the run that the change asked for reconciles). It runs at activation (`ready`), after an invalidation of scope
+  `workspace`, `project` or `sources` and when the selected project differs from the one last reconciled for
+  (C-state-core-5, C-state-core-6). Runs do not overlap; requests during a run cause one more. A listing that
+  fails yields the last list of that directory, or else the selected source alone, never an empty list.
 - Invalidation forwarding (`:175`): the coordinator's event goes unchanged to `sidebar.notifyInvalidated` and
   to `MainPanelHost.instance?.notifyInvalidated`; a disposed panel receives nothing.
 - Status bar item for the queue (`:193`), with the 1.x texts.
@@ -103,12 +130,11 @@ CI                           → see the tracker row of P2.10
 - The 12 contributed commands (`:264-292`), `nuiget.clearHttpCache` and `nuiget.clearSdkVersionCache` as the
   ruling orders. `workspaceFolderFor` (`:328`): the deepest folder that contains the path, `undefined` for a
   path that no folder contains, the first folder without an argument.
-- `extension.next.test.ts`, 24 tests: the 15 titles of the ruling and nine more (`nuiget.openManager selects
-  the project of …` ×3, `a nuiget setting change is announced to the surfaces, an unrelated one is not`,
-  `reports a workspace without projects through nuiget.hasProjectFiles`, `workspaceFolderFor names the deepest
-  workspace folder that contains the path`, `the sidebar commands act on the shared session`, `a failed source
-  listing after a good one keeps the last known sources`, `watches props, nuget.config, global.json, lock and
-  assets files with their scopes`). They run the real root with a fake `spawn`; no process is started.
+- `extension.next.test.ts`, 27 tests: the 15 titles of the P2.10 ruling, nine more of P2.10, and three of
+  P2.fix-1 (`a selection that moves during a refresh is not reconciled against the previous project's sources`,
+  `a replaced selection is reconciled against the replacement project's sources`, `a selection that moves to
+  the replacement project during the listing is still reconciled`). They run the real root with a fake
+  `spawn`; no process is started.
 - `src/test/__mocks__/vscode.ts`: `workspace.onDidChangeWorkspaceFolders` and `extension` in
   `createMockExtensionContext`, the two additive entries of the ruling. The 1.x suites that share the mock
   pass.
@@ -174,14 +200,13 @@ Others:
 - `extension.next.test.ts`, `a workspace-folder change refills stopDirs and invalidates the workspace`: beyond
   the event the ruling names, it proves the refill with a scratch project below a `Directory.Packages.props`
   that lies above the new workspace folder (`isCpm` true before the change, false after it).
-- `extension.next.ts:136-150`: the ruling says that setting `lastReconciledProject` first means the commit of
-  `reconcile` "cannot re-trigger". That holds while `reconcile` leaves the selected project as it is. When it
-  replaces the project (none persisted, or the persisted one is gone), the first run lists the sources of the
-  old directory (or of the first workspace folder), the commit names another project, and a second run lists
-  that project's directory and reconciles again. It converges in two runs. The first of them checks the
-  selected source against a list that is not the new project's: a source that only the new project has is
-  reset to `all` and the second run does not bring it back. Accepted for a project that no longer exists;
-  P2.11 pins the behaviour it wants (note on its tracker row).
+- `extension.next.ts:343-349`, `settledProject`: the root repeats the rule by which the session store keeps
+  or replaces the selected project (`src/core/session/SessionStore.ts:119-131`), to know the directory before
+  the store commits. Ordered by the phase review (P2.fix-1). If the two ever differ, the store's commit names
+  a project other than the one reconciled for and the refresh runs again.
+- `extension.next.test.ts`: one test beyond the two the review names, `a selection that moves to the
+  replacement project during the listing is still reconciled`. It is the case the review describes for the
+  second half of the skip condition, and the mutation that drops that half survives without it.
 - `HostServices.workspaceFolderFor(projectPath)` with an argument has no caller in `src/host` yet
   (`sourceDirectory` and `sources/configFiles` call it without one); it is implemented as documented and
   tested through `services`.
@@ -261,12 +286,45 @@ VERIFY:
 Files checked: `/Users/mattias/github/nuiget/.github/agents/architecture-advisor.agent.md`; `/Users/mattias/github/nuiget/docs/plans/2026-10-11-nuiget-2.0-execution-plan.md` lines 41-159 (D1-D13, §2, §3, §4), 222-238 (P2 rows and gate), 254-268 (P4 rows), 295-296, 306; `/Users/mattias/github/nuiget/docs/plans/RUN.md:64-84,128-137`; `/Users/mattias/github/nuiget/docs/plans/STATUS.md` rows P0.2, P0.11, P1.7, P1.8, P2.8, P2.9, P2.10, P2.11, P4.2, P4.3, P4.9, P6.2, P6.3, P7.1 and the P1.7 (484-543) and P2.9 (880-1005) rulings; `/Users/mattias/github/nuiget/docs/plans/findings-ledger.md:145-148,369-372,401-404,423-426`; `/Users/mattias/github/nuiget/docs/adr/001-session-store.md:14-35`, `002-query-coordinator.md:48-66`, `003-operation-queue-and-dotnet-runner.md:29`, `005-execution-context-and-outbound-policy.md:6-24`, `009-catalog.md:9-18`; `/Users/mattias/github/nuiget/src/extension.next.ts:1-295` (the raw quarry copy; `git status --short` shows it as the only modification); `/Users/mattias/github/nuiget/src/host/services.ts` (whole), `SidebarHost.ts` (whole), `MainPanelHost.ts` (whole), `handlers.ts:1-60,290-330`, `STATUS.md:1-30,342-348`; `/Users/mattias/github/nuiget/src/core/contracts.ts:24-60,86-115,136-150,186-200`; `/Users/mattias/github/nuiget/src/core/*/index.ts` (all 13); `src/core/cache/TieredCache.ts:15-120,355-375`, `CachePolicy.ts:8-32,52`; `src/core/cli/DotnetRunner.ts:30-60,140-185,330-415`, `DotnetRunner.test.ts:66-110`; `src/core/session/SessionStore.ts` (whole); `src/core/catalog/Catalog.ts:1-115,280-305`; `src/core/project/context.ts:1-70`, `inspector.ts:15-75`, `discovery.ts:1-70`; `src/core/sources/DotnetSourceProvider.ts:1-60`, `DefaultOutboundPolicy.ts:13-14`, `NuGetConfigReader.ts:25-45`; `src/core/credentials/DefaultCredentialProvider.ts:15-84`; `src/core/ops/OperationQueue.ts:15-65,140-144,223-227`; `src/core/queries/QueryCoordinator.ts:95-150`, `scopes.ts:8-79`; `src/core/util/events.ts:1-40`, `paths.ts:10-32`, `fs.ts` exports; `src/protocol/domain.ts:9,220-262`; `src/extension.ts:20-48,118-180,255-284`; `src/services/OperationQueue.ts:60-95`; `src/test/__mocks__/vscode.ts:1-120,160-270,272-385` and `git log -- src/test/__mocks__/vscode.ts` (last touched by 1.x PRs, no 2.0 item); `vitest.config.mts` (whole); `tsconfig.vitest.json:31-57`; `tsconfig.json:33-36`; `esbuild.mjs:7-18,60,80`; `eslint.config.mjs:10-84`; `.github/instructions/core-boundaries.instructions.md:3,16,46`; `package.json` `contributes`, `activationEvents`, `main`, `version`, `@types/vscode` pin; `node_modules/@types/vscode/index.d.ts:7851`; `.vscodeignore` (whole); `scripts/check-vsix-contents.mjs:10,42,104-108`; `.github/STATUS.md:1-30`; `ARCHITECTURE.md:85-120` (rows 95, 96, 99, 100); `.github/copilot-instructions.md:175`; `CHANGELOG.md:1-30`; `src/core/session/STATUS.md:68-74`, `src/core/catalog/STATUS.md:111`, `src/core/cache/STATUS.md:81-88`; `.claude/settings.json:15-18,47`.
 `````
 
+2026-10-13, P2.fix-1, phase review P2 (`architecture-advisor`, brief `PHASE REVIEW P2`). The whole review is
+in `docs/plans/STATUS.md` under "Phase gates"; its blocking item 1, which is this fix, verbatim:
+
+`````text
+1. P2.fix-1 — C-state-core-6: `refreshProjectsAndSession` (`src/extension.next.ts:136-149`) lists the sources of the directory of the project selected when the run started (`enabledSourceUrls` → `sourceDirectory(services)`, `handlers.ts:29-36`, read at `:122`) and then calls `session.reconcile(projects, urls)`. `DefaultSessionStore.reconcile` (`src/core/session/SessionStore.ts:100-104`) replaces `knownSourceUrls` and normalizes project and source in one commit, so when the selection moved during the listing (A→B→A) the source of A is judged against B's list and reset to `all` (measured: `scenarios.test.ts:51-83`, revisions 1 to 4, final `all`), and when the selected project vanished the source is judged against the gone directory's or the first workspace folder's list, after which a second run lists the replacement's directory (`src/STATUS.md`, Deviations).
+
+   Answers to question 1. Blocking: yes. Not a two-step reconcile: a first `reconcile(projects, [selectedSource])` would set `knownSourceUrls` to one URL for the whole listing (`SessionStore.ts:102,138`), and a `session/set` that picks another valid source in that window would be reset to `all`; today that narrowing happens only on the failure path, the two-step would make it the normal path of every refresh. The fix predicts the project in the root with the store's own rule and lists that project's directory, then reconciles once. It stays inside `src/extension.next.ts` and `src/extension.next.test.ts`; the harness edit is the one the ledger row names; `src/core/session/**`, `src/core/contracts.ts` and `src/host/**` are untouched.
+
+   Files: `src/extension.next.ts`, `src/extension.next.test.ts`, `src/test/harness/scenarios.test.ts` (the `A→B→A ordering` assertions only), `src/STATUS.md`, `src/test/harness/STATUS.md`, `docs/plans/findings-ledger.md`, `docs/plans/STATUS.md`, `CHANGELOG.md`, `ARCHITECTURE.md` (the `src/extension.next.ts` row). No frozen file, no sentinel.
+
+   The exact change in `src/extension.next.ts`:
+   a. Import the value `ALL_PROJECTS` from `./protocol` (the P2.10 ruling, step 6, allows it) and `firstProject` from `./core/session` (exported, `src/core/session/index.ts:5`).
+   b. A local `settledProject(selected: string, projects: Project[]): string`, the rule of `normalizeProject` (`SessionStore.ts:119-131`, ADR-001 lines 19-21): `ALL_PROJECTS` → `projects.length > 1 ? ALL_PROJECTS : firstProject(projects)?.path ?? ''`; a path among `projects` → itself; else `firstProject(projects)?.path ?? ''`. The duplication is deliberate and self-healing: if the prediction ever differs from what the store commits, the `onDidChange` trigger sees a project other than `lastReconciledProject` and runs again. One comment says so.
+   c. A local `directoryOf(project: string): string | undefined`: `project && project !== ALL_PROJECTS ? path.dirname(project) : workspaceFolderFor()`; `enabledSourceUrls(directory: string | undefined)` takes it instead of calling `sourceDirectory(services)`; `undefined` is the `not-found` case and takes the existing fallback. The failure fallback (`lastListing` of the same directory, else `[selectedSource]`/`[]`) is unchanged.
+   d. `refreshProjectsAndSession`: `const before = session.snapshot.selectedProject; lastReconciledProject = before;` → `projects = await catalog.projects()` (unchanged error path) → `events.projectsChanged.fire(projects)` and `setContext` (unchanged) → `const kept = settledProject(before, projects); lastReconciledProject = kept;` → `const urls = await enabledSourceUrls(directoryOf(kept));` → `const selected = session.snapshot.selectedProject; if (selected !== before && selected !== kept) { return; }` (the selection moved during the listing; the `onDidChange` listener has set `rerun`, because `selected !== lastReconciledProject`) → `await session.reconcile(projects, urls)`. The second half of the condition matters: with the selected project gone, `before` is the gone path and `kept` the replacement, and the snapshot still shows `before` when nothing moved (must reconcile) or `kept` when the user chose exactly the replacement meanwhile (must reconcile too, no rerun will come). Setting `lastReconciledProject = kept` before `reconcile` means the host-origin commit that replaces a project no longer asks for a second run.
+   e. `requestRefresh` and the triggers (`extension.next.ts:151-189`) are unchanged.
+
+   Tests, `src/extension.next.test.ts` (the fake's `deferred()` at `:108` and the `dotnet.sources` per `cwd` of `:332` are what both need):
+   - `a selection that moves during a refresh is not reconciled against the previous project's sources`: persisted `{ selectedProject: App, selectedSource: privateFeed }`, App's directory lists `[privateFeed, sharedFeed]`, Lib's `[sharedFeed]`; hold the listing for Lib's directory; `services.session.apply({ selectedProject: Lib }, 'sidebar')`; wait until the fake saw the listing for Lib's directory; `services.session.apply({ selectedProject: App }, 'main')`; release; settle. Assert `snapshot.selectedProject === App`, `snapshot.selectedSource === privateFeed`, and that no snapshot with `selectedSource: 'all'` was ever broadcast (collect `session.onDidChange`).
+   - `a replaced selection is reconciled against the replacement project's sources`: persisted `{ selectedProject: gonePath, selectedSource: privateFeed }`, App's directory lists `[privateFeed, sharedFeed]`, the gone directory and every other `[sharedFeed]`; after `ready`: `selectedProject === App`, `selectedSource === privateFeed`, the fake saw a listing with `cwd` App's directory and none with the gone directory, and exactly one host-origin `session/changed` for the replacement.
+   - Existing tests stay; `a failed source listing keeps the selected source` (`:344`) still holds (fallback unchanged).
+
+   Harness: `scenarios.test.ts:73` → `expectState({ selectedProject: A, selectedSource: PRIVATE_FEED, projects: [A, B], installed: ['Serilog@3.0.0'] })`; `:80-81` → `expect(webview.session?.selectedSource).toBe(PRIVATE_FEED)` and delete the "the host's value, not `private`" comment. `project deletion mid-request` already pins `SHARED_FEED` at `:221`; nothing to add. Expected measurement afterwards: revisions 1, 2, 3 (the reset commit is gone), `last >= before + 2` still holds.
+
+   Docs: `src/STATUS.md` drops the "refresh runs twice / judged against the old directory" deviation; `src/test/harness/STATUS.md` drops the "third revision is the defect" deviation and the rule-7 sentence stays for P2.fix-2; ledger C-state-core-6 → closed (P2.fix-1, the two root titles, harness `A→B→A ordering` pins `private`); tracker notes on P1.7, P2.10, P2.11 ("the selection lost in that race is C-state-core-6 (P2.fix-1)" → fixed); CHANGELOG: amend the existing Added bullet "2.0 composition root" to "a session that is reconciled with the sources of the project it keeps or picks whenever projects, sources or the selection change" (no separate Fixed line for unreleased code); ARCHITECTURE `src/extension.next.ts` row: "lists the enabled sources of the project the store will keep or pick, and skips the reconcile when the selection moved during the listing (the coalesced rerun does it)".
+
+   VERIFY:
+   - `npx vitest run --project backend src/extension.next.test.ts` → green, 26 tests; `grep -c "a selection that moves during a refresh is not reconciled against the previous project's sources\|a replaced selection is reconciled against the replacement project's sources" src/extension.next.test.ts` → 2
+   - `npx vitest run --project integration src/test/harness` → 12 passed; `grep -n "selectedSource: PRIVATE_FEED\|toBe(PRIVATE_FEED)" src/test/harness/scenarios.test.ts` → 2 lines inside the `A→B→A` scenario; `grep -c "C-state-core-6" src/test/harness/scenarios.test.ts` → 0
+   - `grep -n "settledProject\|firstProject\|ALL_PROJECTS" src/extension.next.ts` → the helper, its two uses and the imports; `grep -n "sourceDirectory" src/extension.next.ts` → 0 (the root derives the directory of the predicted project itself)
+   - `git diff --stat labs/2.0..HEAD -- src/protocol src/core/contracts.ts docs/adr src/core/session src/host` → empty; `ls .claude/.contract-change` → No such file
+   - `npm run check-types`, `npx eslint src`, `npm test` (with `DOTNET_ROOT` and `NUIGET_SDK_TESTS=1`), `npm run bench`, `npm run package:vsix`, `npm run check:vsix` → all exit 0
+`````
+
 The ambient advisor (`/advisor`) was consulted before the brief was written; it asked for this consultation
 and for the copy-then-brief order, and named the test hazards that the tests above cover.
 
 ## Exact next step (one item ID)
 
-P2.11 (two-surface harness on the new protocol, `src/test/harness/`). Its tracker row carries two notes from
-this item: do not use the shared mock's panel (N58), and `activateWith` returns `{ services, ready }` for a
-harness that wants the real root. The scenario "A→B→A ordering" is where the P1.7 ruling wants the proof that
-both surfaces converge after the intermediate broadcast between `apply` and `reconcile`.
+P2.fix-2 (phase review P2, blocking 2, C-protocol-host-7: the Catalog's cacheable reads report their
+generation and the nine resource handlers put it on the ok response). The root unwraps `.value` at its two
+Catalog reads (`catalog.projects()`, `catalog.sources(directory)`) in that item.
