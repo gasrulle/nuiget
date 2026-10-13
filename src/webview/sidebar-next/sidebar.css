@@ -1,0 +1,62 @@
+/*
+ * Layout of the 2.0 sidebar. The primitives bring their own rules (../shared/primitives/primitives.css); sizes
+ * and colours are tokens of ../shared/tokens.css. VS Code styles the body of a webview itself (font, colour,
+ * a side padding); only the padding is taken back here.
+ */
+
+body {
+    margin: 0;
+    padding: 0;
+}
+
+.nuiget-sidebar {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    color: var(--nuiget-color-fg);
+    font-family: var(--nuiget-font-family);
+    line-height: var(--nuiget-line-height);
+}
+
+.nuiget-sidebar-header {
+    display: flex;
+    flex: none;
+    flex-direction: column;
+    gap: var(--nuiget-space-1);
+    padding: var(--nuiget-space-2) var(--nuiget-space-4);
+}
+
+.nuiget-sidebar-search {
+    box-sizing: border-box;
+    width: 100%;
+    min-height: var(--nuiget-target-min);
+    padding: 0 var(--nuiget-space-3);
+    border: 1px solid var(--nuiget-color-input-border);
+    border-radius: var(--nuiget-radius-sm);
+    background: var(--nuiget-color-input-bg);
+    color: var(--nuiget-color-input-fg);
+    font: inherit;
+}
+
+.nuiget-sidebar-search::placeholder {
+    color: var(--nuiget-color-input-placeholder);
+}
+
+.nuiget-sidebar-search:focus-visible {
+    outline: 1px solid var(--nuiget-color-focus);
+    outline-offset: -1px;
+}
+
+/* The section takes the height that is left; its list scrolls inside it. */
+.nuiget-sidebar-section,
+.nuiget-sidebar-section-content {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.nuiget-sidebar-fidelity {
+    display: inline-flex;
+    padding-inline-end: var(--nuiget-space-4);
+}

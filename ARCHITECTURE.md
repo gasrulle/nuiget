@@ -102,7 +102,7 @@ Each row is filled in by the item that creates the module.
 | `src/host/**` | Adapts VS Code to the core (ADR-007); no business logic. `WebviewHost` is the base of both surfaces: it decodes an inbound envelope with the protocol guards, calls the handler registered for its type and posts exactly one terminal response per request id, an error envelope included (`unsupported` for a type nobody registered, `failed` for a thrown error, the code of a `HostRequestError`). A handler whose result is a coordinator resource sets `ctx.generation`, and the base puts it on the ok envelope (ADR-007); an error response and a chunk never carry one. A request's `AbortSignal` is aborted with a reason: `cancelled` when the webview sent a cancel envelope, `disposed` when the surface went away, and nothing is posted to a disposed surface. An error whose `code` is `not-yet-available` (a Catalog read that waits for the feeds, ADR-009) is answered as `unsupported`. `handlers.ts` registers the handlers both surfaces share (`registerSharedHandlers`): reads call one Catalog method and forward its chunks unchanged; `operations` has one typed submit function per `ops/*` request, which validates the payload (a real project, a non-empty batch), takes the restore switch as it is at submission and hands the workflow to the `OperationQueue`; `awaitTicket` ties the ticket to the request (opening chunk `queued` or `rejected` with the ticket's `opId`, progress of that operation as chunks, a webview cancel cancels the ticket, a disposed surface does not), and `settleOperation` announces the outcome to every surface and invalidates what it changed. A forced restore of `transitive/get` is such a ticket too. `sourceDirectory` decides where sources are resolved: the directory of the selected project, else the first workspace folder, else a `not-found` error. Handlers that wait for a later item answer with a fixed value under a `// REMOVAL GATE: P4.9` or `P4.4` comment. `services.ts` holds `HostServices` (what the composition root hands to both hosts), `readExtensionConfig` (the one reader of the `nuiget` settings), `renderWebviewHtml` (the Content Security Policy of ADR-006 with a script nonce of 16 random bytes per render) and `createWorkflowDeps` (the dependencies of `PackageWorkflows`, with the answer to "is this a Central Package Management project" kept per project while an operation runs). `MainPanelHost` and `SidebarHost` attach the webviews, forward session, configuration, operation and invalidation events, and the sidebar turns a context-menu choice into a typed operation; `pickers.ts` has the quick picks | Present since P2.9; composed by the root since P2.10 |
 | `src/extension.next.ts` | 2.0 composition root: it assembles and holds no business logic. `activate` calls `activateWith(context, overrides)`, whose overrides (`spawn`, `resolveExecutable`) exist for tests and which returns `{ services, ready }`. Composition order: the output channel and one `redactingLogger` over it, which is the only `Logger` the core and both surfaces get (every message, string argument and error passes `redact`); `DefaultDotnetRunner` with its SDK cache hydrated from `globalState` under `nuiget.sdkVersionCache.v2` (the 1.x key `nuiget.sdkVersionCache` is removed at activation); a `TieredCache` over `workspaceState`; `DotnetSourceProvider`; `AssetsReader`, `StaticProjectInspector` and `ProjectContextProvider` sharing one `stopDirs` array that a workspace-folder change refills in place; `DefaultQueryCoordinator`; `DefaultSessionStore`; `DefaultOperationQueue`; the `Catalog`; `PackageWorkflows` over `createWorkflowDeps`; `HostServices` (`onOperationProgress` is `queue.onProgress`; `workspaceFolderFor` answers the deepest workspace folder that contains a path); the `SidebarHost` view provider. Every coordinator invalidation is forwarded unchanged to the sidebar and to the open main panel. `refreshProjectsAndSession` discovers the projects, announces them, sets `nuiget.hasProjectFiles`, lists the enabled sources of the project the store will keep or pick, and skips the reconcile when the selection moved during the listing (the coalesced rerun does it); otherwise it calls `session.reconcile`; it runs at activation, after an invalidation of scope `workspace`, `project` or `sources`, and when the selected project differs from the one last reconciled for (ADR-001: another project is another source list). Runs never overlap: requests during a run cause one more run. A source listing that fails is not an empty list: the last list of that directory, or else only the selected source, is passed on, so the selection survives. Six file watchers, debounced, invalidate after the queue is idle: project files and `packages.lock.json` (scope `project`), `Directory.{Build,Packages}.{props,targets}` and `global.json` (scope `workspace`; `global.json` also clears the SDK cache), `nuget.config` (scope `sources`), `obj/project.assets.json` (scope `project`, reason `restore`). One status bar item shows the queue. It registers exactly the 12 contributed commands. Three `// REMOVAL GATE: P4.9` comments mark what P4.9 adds: feeds, transport, credentials, outbound policy and icon cache at the `Catalog`; the source health monitor; the transport rebuild on an `http.*` change. The evaluator (P6.2) and the mutator (P6.3) are absent. | Present since P2.10 |
 | `src/webview/shared/**` | Tokens, primitives, message bus, store slices | Tokens and icons present since P3.1 (`tokens.css`, `primitives/icons.tsx`); primitives present since P3.2 (`primitives/index.ts`); message bus and the store slices `session`, `projects`, `installed` and `ops` present since P3.3 (`bus/`, `store/`), the other slices arrive with their features; nothing of it is in a bundle until the sidebar entry imports it in P3.4 |
-| `src/webview/sidebar-next/**` | 2.0 sidebar entry | Placeholder; first slice in P3.4 |
+| `src/webview/sidebar-next/**` | 2.0 sidebar | First slice present since P3.4: the entry, the shell with a filter box and the live region, the Installed section with uninstall ("Sidebar slice" below). Updates, browse, context menu, split and all-projects mode: P5 |
 | `src/webview/main/**` | 2.0 main panel entry | Placeholder; shell in P5.3 |
 
 Import rules between these layers, and between 2.0 and 1.x code, are in
@@ -306,6 +306,46 @@ four, which is what makes a surface ask `session/get` and `projects/list` when i
 Tests use `createFakeHost()` (`bus/testSupport.ts`): the real bus over an `EventTarget`, with a record of
 what was posted and helpers to make the host answer, fail, stream, broadcast and invalidate.
 
+### Sidebar slice
+
+`src/webview/sidebar-next` is the 2.0 sidebar as far as it goes: one vertical slice from the entry to an
+uninstall. `node esbuild.mjs --v2` builds it into `dist/sidebar.js` and, because the entry imports
+stylesheets, `dist/sidebar.css` (the tokens, the primitives' rules and `sidebar.css`), which `SidebarHost`
+links.
+
+- `index.tsx` acquires the VS Code API (once, and only when its root element is on the page), creates the
+  message bus and mounts `StoreProvider` around `SidebarView`.
+- `SidebarView.tsx` is the shell (`nuiget-sidebar`): a search box (`sidebar-search-input`) that for now
+  filters the installed packages by id, a progress bar while the list is revalidated, a banner for an
+  unsupported project and one with "Retry" for an error, the Installed section and the one live region
+  (`status-live`). It announces a first load and, through `describeOutcome` (`outcomes.ts`), how every
+  operation ended, on whichever surface it started.
+- `InstalledSection.tsx` is the Installed section (`section-header-installed`, `sidebar-installed-list`):
+  `SectionHeader`, `Listbox` and one `Row` per package of the committed project.
+
+| State (interaction model §4) | What the section shows |
+|---|---|
+| Loading (first) | Three skeleton rows; "Loading installed packages" in the live region |
+| Revalidating | The rows stay; the list is `aria-busy`; an indeterminate progress bar under the search box |
+| Provisional | A "provisional" badge beside the section title, with a tooltip |
+| Unresolved | Version "unresolved", status "Unresolved", the row disabled and without action |
+| Centrally managed | A "CPM" badge read as "Centrally managed"; read-only until the impact preview exists (P6) |
+| Unsupported project | A warning banner "Unsupported project: <reason>"; the rows are listed without actions |
+| Pending operation | A spinner in place of the row's button, status "Uninstalling", from the click to the outcome |
+| Empty, error | An `EmptyState` sentence; an error banner with "Retry", over the rows if there are any |
+
+Uninstall is the row's button, Enter or Delete on the active row: `ops/remove` through
+`useOpsActions().run`. The row is busy at once (the section remembers what it asked for until the request is
+answered, because an operation that waits in the queue has no progress event yet), stays busy while the ops
+slice reports the operation, and leaves the list when the host's new list no longer has it: nothing is
+removed by guessing, so a failed or refused uninstall leaves the row as it was and is announced with its
+reason. A package that cannot be uninstalled here (implicit, declared in a props file, central, unresolved,
+or in an unsupported project) has no button, and Enter or Delete on it says why.
+
+The harness scenario `sidebar: uninstall then watcher invalidation converges` shows the host's side of the
+same story on the client model: the operation's invalidation and the file watcher's, in either order, leave
+both surfaces with the same list of the generation the last event listed.
+
 ### Two-surface harness
 
 `src/test/harness` tests what the two surfaces do together, on the 2.0 protocol
@@ -351,7 +391,8 @@ what was posted and helpers to make the host answer, fail, stream, broadcast and
 - **Scenarios** (`scenarios.test.ts`): `A→B→A ordering`, `full/scoped/watcher invalidation both orders` (six
   orderings), `queue saturation + exception after admission`, `project deletion mid-request`, `shared query
   with one subscriber cancelling`, `surface disposed with pending ops`, `central version change affecting
-  several projects`. Later items add theirs here (P4.9, P5.4 to P5.9, P6.4).
+  several projects`, `generation on responses`, and since P3.4 `sidebar: uninstall then watcher invalidation
+  converges`. Later items add theirs here (P4.9, P5.4 to P5.9, P6.4).
 
 ### Coexistence of 1.x and 2.0
 

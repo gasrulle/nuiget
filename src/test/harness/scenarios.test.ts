@@ -1,3 +1,4 @@
+import * as fs from 'fs';
 import * as path from 'path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { MainPanelHost } from '../../host/MainPanelHost';
@@ -356,6 +357,50 @@ describe('two-surface harness', () => {
             expect(events[0].keys.map(entry => entry.key)).toEqual(expect.arrayContaining([resourceKeys.installed(C1), resourceKeys.installed(C2)]));
         }
         expect(sidebar.installed?.packages[0]).toMatchObject({ declaration: 'central', definedIn: props });
+    });
+
+    it('sidebar: uninstall then watcher invalidation converges', async () => {
+        h = await createHarness({ tree: TWO_PROJECTS, selectedProject: 'A/A.csproj' });
+        const [A, B] = [h.path('A/A.csproj'), h.path('B/B.csproj')];
+        const sidebar = await h.resolve('sidebar');
+        const main = await h.resolve('main');
+        await h.expectState({ selectedProject: A, projects: [A, B], installed: ['Serilog@3.0.0'] });
+        const marks = new Map([sidebar, main].map(webview => [webview, webview.received.length]));
+
+        // The sidebar uninstalls. The reference is out of the project file; the restore after it is still running.
+        const restore = h.dotnet.hold(dotnetCalls.restore());
+        const request = h.operate('sidebar', 'ops/remove', { projectPath: A, packageId: 'Serilog' });
+        await h.settle(() => expect(restore.seen).toBe(1));
+        expect(fs.readFileSync(A, 'utf8')).not.toContain('Serilog');
+        // The row's spinner: the request was told at once that its operation is in the queue.
+        expect(sidebar.chunksFor<'ops/remove'>(request.id)[0]).toMatchObject({ status: 'queued' });
+
+        // The project-file watcher sees the edit the operation made, as it does in VS Code, and its debounce runs out.
+        h.files.writeProject(A, fs.readFileSync(A, 'utf8'));
+        await h.advance(WATCHER_DEBOUNCE_MS);
+        restore.release();
+        const outcome = resultOf(await request.response);
+        expect(outcome).toMatchObject({ kind: 'remove', status: 'completed', projectPath: A, packageId: 'Serilog' });
+        await h.advance(WATCHER_DEBOUNCE_MS);
+
+        // Two invalidations reach both surfaces, the operation's and the watcher's, in whichever order; both
+        // surfaces end with the same empty list, and it is the list of the generation the last event listed.
+        await h.expectState({ selectedProject: A, projects: [A, B], installed: [] });
+        expect(h.dotnet.count(dotnetCalls.packageRemove('Serilog'))).toBe(1);
+        for (const webview of [sidebar, main]) {
+            const since = webview.received.slice(marks.get(webview));
+            const events = since.filter(message => message.kind === 'event' && message.type === 'resources/invalidated').map(message => (message as unknown as { payload: { reason: string; keys: Array<{ key: string; generation: number }> } }).payload);
+            expect(new Set(events.map(event => event.reason)), `${webview.surface}: reasons of the invalidations`).toEqual(new Set(['operation', 'file-watcher']));
+            expect(webview.completed().map(statusOf), `${webview.surface}: outcomes announced`).toEqual(['completed']);
+            expect(webview.installed?.packages, `${webview.surface}: the list that is shown`).toEqual([]);
+            const listed = events.flatMap(event => event.keys).filter(entry => entry.key === resourceKeys.installed(A)).at(-1)?.generation;
+            const applied = webview.received[webview.installedHistory.at(-1)!.receivedAt] as ResponseEnvelope<'installed/get'> & { ok: true };
+            expect(applied.generation, `${webview.surface}: generation of the list that is shown`).toBe(listed);
+            // Whatever was answered for an earlier generation was not shown after a newer one (R4, R7).
+            expect(webview.installedHistory.map(entry => entry.result.packages.length).slice(-1)).toEqual([0]);
+            expectOneResponsePerRequest(webview);
+        }
+        expect(h.services.queue.isBusy).toBe(false);
     });
 
     it('generation on responses: every resource response carries the generation the latest invalidation lists for its key, on both surfaces', async () => {

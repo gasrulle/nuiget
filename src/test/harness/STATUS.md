@@ -219,6 +219,14 @@ Files checked: `/Users/mattias/github/nuiget/.github/agents/architecture-advisor
 The ambient advisor (`/advisor`) was consulted before the brief; it asked for the brief, named the two
 configuration files and the missing response generation, and the lever at `nuget config paths`.
 
+## Later scenarios (added by other items)
+
+- 2026-10-13, P3.4 (`5bc53c1` + the P3.4 commit): `sidebar: uninstall then watcher invalidation converges` in
+  `scenarios.test.ts`, the second gate of that item. It needs no change to `harness.ts`, `FakeWebview.ts` or
+  `fakeDotnet.ts`; the watcher's event for the operation's own edit is produced with `files.writeProject`
+  and the file's current text. `npx vitest run --project integration src/test/harness` → 15 tests; the
+  scenario alone 40 times → 40 of 40. Details: `src/webview/sidebar-next/STATUS.md`.
+
 ## Exact next step (one item ID)
 
 P2.12 (benches for the queue and the scopes, ARCHITECTURE 2.0, CHANGELOG, `npm run bench:save`). After it the
