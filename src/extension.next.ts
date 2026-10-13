@@ -123,7 +123,7 @@ export async function activateWith(context: vscode.ExtensionContext, overrides: 
             if (directory === undefined) {
                 throw new Error('no project or workspace folder to resolve package sources for');
             }
-            const urls = (await catalog.sources(directory)).filter(source => source.enabled).map(source => source.url);
+            const urls = (await catalog.sources(directory)).value.filter(source => source.enabled).map(source => source.url);
             lastListing = { directory, urls };
             return urls;
         } catch (error) {
@@ -141,7 +141,7 @@ export async function activateWith(context: vscode.ExtensionContext, overrides: 
         lastReconciledProject = before;
         let projects: Project[];
         try {
-            projects = await catalog.projects();
+            projects = (await catalog.projects()).value;
         } catch (error) {
             logger.warn(`Project discovery failed: ${describe(error)}`);
             return;

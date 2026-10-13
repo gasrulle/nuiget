@@ -15,7 +15,10 @@
  * R5 Progress, chunks, `ops/completed` and terminal responses are recorded; `pending()` lists the requests
  *    without a terminal response.
  * R6 Every envelope is kept verbatim in `sent` and `received`; other events are recorded only.
- * R7 A `generation` on a response is recorded and never compared (finding C-protocol-host-7).
+ * R7 An ok response of the `projects` or `installed` slot carries `generation`; it is applied only when that
+ *    generation is not below the one the latest `resources/invalidated` event listed for its key (`projects`,
+ *    `installed:<path>`); a lower one is recorded and not applied. Rule 4 is unchanged; chunks are never
+ *    compared.
  */
 
 import {
@@ -34,6 +37,7 @@ import {
     type RequestChunk,
     type RequestPayload,
     type RequestType,
+    type ResourceKey,
     type ResponseEnvelope,
     type SessionSnapshot,
     type StreamEnvelope,
@@ -88,7 +92,12 @@ export class FakeWebview {
     readonly allProjects = new Map<string, InstalledResult | { error: string }>();
     allProjectsMode = false;
 
+    /** Request ids whose ok response was below the generation listed for its key (R7). */
+    readonly discarded: string[] = [];
+
     private listener: Listener | undefined;
+    /** The generation the latest `resources/invalidated` event listed for a key (R7). */
+    private readonly listed = new Map<ResourceKey, number>();
     private readonly latest: Partial<Record<Slot, string>> = {};
     private readonly waiting = new Map<string, (response: ResponseEnvelope) => void>();
 
@@ -203,6 +212,9 @@ export class FakeWebview {
 
     private onInvalidated(event: EventPayload<'resources/invalidated'>): void {
         const keys = event.keys.map(entry => entry.key);
+        for (const entry of event.keys) {
+            this.listed.set(entry.key, entry.generation);
+        }
         if (this.allProjectsMode) {
             if (keys.some(key => key === resourceKeys.projects() || key.startsWith('installed:'))) {
                 this.request('allProjects/installed', {});
@@ -228,18 +240,33 @@ export class FakeWebview {
 
     private onResponse(message: ResponseEnvelope): void {
         const slot = SLOT_OF[message.type];
-        // R4: only the latest request of a slot is applied. R7: `generation` stays in `received`, unread.
+        // R4: only the latest request of a slot is applied.
         if (!message.ok || slot === undefined || this.latest[slot] !== message.id) {
             return;
         }
         if (slot === 'session') {
             this.applySession(message.result as SessionSnapshot);
         } else if (slot === 'projects') {
-            this.projects = (message.result as { projects: Project[] }).projects;
+            if (this.isCurrent(message.id, resourceKeys.projects(), message.generation)) {
+                this.projects = (message.result as { projects: Project[] }).projects;
+            }
         } else if (slot === 'installed') {
-            this.installed = message.result as InstalledResult;
-            this.installedHistory.push({ receivedAt: this.received.length - 1, result: this.installed });
+            const result = message.result as InstalledResult;
+            if (this.isCurrent(message.id, resourceKeys.installed(result.projectPath), message.generation)) {
+                this.installed = result;
+                this.installedHistory.push({ receivedAt: this.received.length - 1, result });
+            }
         }
+    }
+
+    /** R7: a result computed for a generation below the one an invalidation has listed for its key is out of date. */
+    private isCurrent(id: string, key: ResourceKey, generation: number | undefined): boolean {
+        const listed = this.listed.get(key);
+        if (generation !== undefined && listed !== undefined && generation < listed) {
+            this.discarded.push(id);
+            return false;
+        }
+        return true;
     }
 
     private applySession(snapshot: SessionSnapshot): void {

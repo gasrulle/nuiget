@@ -77,7 +77,7 @@ export class SidebarHost extends WebviewHost implements vscode.WebviewViewProvid
     // ── title-bar commands ──
 
     async showProjectPicker(): Promise<void> {
-        const projects = await this.services.catalog.projects();
+        const { value: projects } = await this.services.catalog.projects();
         const selected = await pickProject(projects, this.services.session.snapshot.selectedProject);
         if (selected !== undefined) {
             await this.services.session.apply({ selectedProject: selected }, 'sidebar');
@@ -85,7 +85,7 @@ export class SidebarHost extends WebviewHost implements vscode.WebviewViewProvid
     }
 
     async showSourcePicker(): Promise<void> {
-        const sources = await this.services.catalog.sources(sourceDirectory(this.services));
+        const { value: sources } = await this.services.catalog.sources(sourceDirectory(this.services));
         const selected = await pickSource(sources, this.services.session.snapshot.selectedSource);
         if (selected === MANAGE_SOURCES) {
             MainPanelHost.openSourceSettings(this.services);
@@ -153,7 +153,7 @@ export class SidebarHost extends WebviewHost implements vscode.WebviewViewProvid
         };
 
         if (isAllProjectsBrowse) {
-            const projects = await this.services.catalog.projects();
+            const { value: projects } = await this.services.catalog.projects();
             const installedIn = new Map((request.installedProjects ?? []).map(p => [p.projectPath, p.version]));
             if (action === 'install-latest' || action === 'install-version') {
                 const version = await versionFor(request.latestVersion);
@@ -226,7 +226,7 @@ export class SidebarHost extends WebviewHost implements vscode.WebviewViewProvid
             return;
         }
         if (snapshot.selectedProject === ALL_PROJECTS) {
-            const projects = await this.services.catalog.projects().catch(() => []);
+            const projects = await this.services.catalog.projects().then(listed => listed.value, () => []);
             this.view.title = `All Projects (${projects.length})`;
         } else if (snapshot.selectedProject) {
             this.view.title = projectDisplayName(snapshot.selectedProject);

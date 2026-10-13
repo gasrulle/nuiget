@@ -1,9 +1,9 @@
 import * as path from 'path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { MainPanelHost } from '../../host/MainPanelHost';
-import { resourceKeys, type BulkOutcome, type OperationOutcome, type RequestType, type ResponseEnvelope } from '../../protocol';
+import { makeEvent, makeOk, resourceKeys, type BulkOutcome, type InstalledResult, type OperationOutcome, type RequestType, type ResponseEnvelope } from '../../protocol';
 import { dotnetCalls } from './fakeDotnet';
-import type { FakeWebview } from './FakeWebview';
+import { FakeWebview } from './FakeWebview';
 import {
     PRIVATE_FEED,
     SHARED_FEED,
@@ -356,5 +356,71 @@ describe('two-surface harness', () => {
             expect(events[0].keys.map(entry => entry.key)).toEqual(expect.arrayContaining([resourceKeys.installed(C1), resourceKeys.installed(C2)]));
         }
         expect(sidebar.installed?.packages[0]).toMatchObject({ declaration: 'central', definedIn: props });
+    });
+
+    it('generation on responses: every resource response carries the generation the latest invalidation lists for its key, on both surfaces', async () => {
+        h = await createHarness({ tree: TWO_PROJECTS, selectedProject: 'A/A.csproj' });
+        const [A, B] = [h.path('A/A.csproj'), h.path('B/B.csproj')];
+        const surfaces = [await h.resolve('sidebar'), await h.resolve('main')];
+        await h.expectState({ selectedProject: A, projects: [A, B], installed: ['Serilog@3.0.0'] });
+        const generations = (webview: FakeWebview, type: RequestType, from = 0): Array<number | undefined> => webview.received
+            .slice(from)
+            .filter((message): message is ResponseEnvelope & { ok: true } => message.kind === 'response' && message.ok && message.type === type)
+            .map(message => message.generation);
+
+        // One computation per key for both surfaces, so one generation: both show results of the same number.
+        const installedBefore = surfaces.flatMap(webview => generations(webview, 'installed/get'));
+        const projectsBefore = surfaces.flatMap(webview => generations(webview, 'projects/list'));
+        expect(installedBefore).toEqual([1, 1]);
+        expect(projectsBefore).toEqual([1, 1]);
+
+        const marks = surfaces.map(webview => webview.received.length);
+        await h.refresh('main');
+        await h.expectState({ selectedProject: A, projects: [A, B], installed: ['Serilog@3.0.0'] });
+        for (const name of ['sidebar', 'main'] as const) {
+            await h.request(name, 'projects/list', {}).response;
+        }
+
+        surfaces.forEach((webview, index) => {
+            const event = webview.events('resources/invalidated').at(-1);
+            const listed = new Map(event?.keys.map(entry => [entry.key, entry.generation]));
+            expect(listed.get(resourceKeys.installed(A)), `${webview.surface}: generation listed for the installed packages`).toBe(2);
+            expect(listed.get(resourceKeys.projects()), `${webview.surface}: generation listed for the projects`).toBe(2);
+            // What the host answers after the event is of exactly the generation the event listed: a webview
+            // that compares the two (ADR-008) keeps every one of these and would drop anything older.
+            const installedAfter = generations(webview, 'installed/get', marks[index]);
+            expect(installedAfter.length, `${webview.surface}: installed/get responses after the refresh`).toBeGreaterThan(0);
+            expect(new Set(installedAfter)).toEqual(new Set([listed.get(resourceKeys.installed(A))]));
+            expect(new Set(generations(webview, 'projects/list', marks[index]))).toEqual(new Set([listed.get(resourceKeys.projects())]));
+            expect(webview.discarded).toEqual([]);
+            expectOneResponsePerRequest(webview);
+        });
+    });
+});
+
+describe('fake webview model', () => {
+    it('rule 7: a response below the generation an invalidation listed for its key is recorded and not applied', () => {
+        const projectPath = '/w/App/App.csproj';
+        const resultWith = (id: string): InstalledResult => ({ projectPath, fidelity: 'provisional', isCpm: false, packages: [{ id, version: '1.0.0', versionType: 'standard', declaration: 'project' }] });
+        const webview = new FakeWebview('main');
+        webview.onDidReceiveMessage(() => undefined);
+
+        const first = webview.request('installed/get', { projectPath });
+        void webview.postMessage(makeOk(first.id, 'installed/get', resultWith('Old'), 1));
+        expect(packagesOf(webview.installed)).toEqual(['Old@1.0.0']);
+
+        // An invalidation lists generation 3 for the key. No session is applied, so the model asks for nothing itself.
+        void webview.postMessage(makeEvent('resources/invalidated', { scope: { kind: 'workspace' }, reason: 'manual-refresh', generation: 9, keys: [{ key: resourceKeys.installed(projectPath), generation: 3 }] }));
+        const late = webview.request('installed/get', { projectPath });
+        void webview.postMessage(makeOk(late.id, 'installed/get', resultWith('Late'), 2));
+        expect(packagesOf(webview.installed)).toEqual(['Old@1.0.0']);
+        expect(webview.discarded).toEqual([late.id]);
+        expect(webview.responsesFor(late.id)).toHaveLength(1);
+
+        // A result of the listed generation is applied; the event's own `generation` (9) is a sequence number and plays no part.
+        const current = webview.request('installed/get', { projectPath });
+        void webview.postMessage(makeOk(current.id, 'installed/get', resultWith('New'), 3));
+        expect(packagesOf(webview.installed)).toEqual(['New@1.0.0']);
+        expect(webview.discarded).toEqual([late.id]);
     });
 });

@@ -251,9 +251,15 @@ export function registerSharedHandlers(host: Registrar, services: HostServices):
     });
 
     // ── projects & single-project resources ──
-    host.on('projects/list', async (_payload, ctx) => ({ projects: await catalog.projects(ctx.signal) }));
+    // A result that is a coordinator resource says which generation it was computed for (ADR-007, ADR-008).
+    host.on('projects/list', async (_payload, ctx) => {
+        const { value, generation } = await catalog.projects(ctx.signal);
+        ctx.generation = generation;
+        return { projects: value };
+    });
     host.on('installed/get', async ({ projectPath }, ctx) => {
-        const { result, upgrade } = await catalog.installed(requireProject(projectPath), chunk => ctx.emit(chunk), ctx.signal);
+        const { result, upgrade, generation } = await catalog.installed(requireProject(projectPath), chunk => ctx.emit(chunk), ctx.signal);
+        ctx.generation = generation;
         // The final result (ADR-009): the authoritative one when an evaluation runs, else the provisional.
         return upgrade ? await upgrade : result;
     });
@@ -270,7 +276,9 @@ export function registerSharedHandlers(host: Registrar, services: HostServices):
                 throw new HostRequestError('failed', outcome.message ?? 'Restore was not admitted');
             }
         }
-        return catalog.transitive(project, ctx.signal);
+        const { value, generation } = await catalog.transitive(project, ctx.signal);
+        ctx.generation = generation;
+        return value;
     });
     host.on('transitive/metadata', async ({ packages }, ctx) => ({ metadata: await catalog.transitiveMetadata(undefined, packages, ctx.signal) }));
 
@@ -296,51 +304,69 @@ export function registerSharedHandlers(host: Registrar, services: HostServices):
     host.on('package/prewarm', async () => ({})); // REMOVAL GATE: P4.9
 
     // ── sources ──
-    const listSources = async (signal: AbortSignal) => ({ sources: await catalog.sources(sourceDirectory(services), signal), failed: [] }); // REMOVAL GATE: P4.9
-    host.on('sources/list', async (_payload, ctx) => listSources(ctx.signal));
+    const listSources = async (signal?: AbortSignal) => {
+        const { value, generation } = await catalog.sources(sourceDirectory(services), signal);
+        return { result: { sources: value, failed: [] }, generation }; // REMOVAL GATE: P4.9
+    };
+    host.on('sources/list', async (_payload, ctx) => {
+        const listed = await listSources(ctx.signal);
+        ctx.generation = listed.generation;
+        return listed.result;
+    });
     host.on('sources/refresh', async (_payload, ctx) => {
         // REMOVAL GATE: P4.9 (the health of the sources is reset here as well)
         services.invalidate({ kind: 'sources' }, 'manual-refresh');
-        return listSources(ctx.signal);
+        const listed = await listSources(ctx.signal);
+        ctx.generation = listed.generation;
+        return listed.result;
     });
     host.on('sources/configFiles', async () => ({ configFiles: services.sources.configFiles(services.workspaceFolderFor()) }));
+    /** The sources as they are after the mutation: a fresh read, of the generation the mutation's own invalidation produced. */
     const afterSourceMutation = async () => {
         services.invalidate({ kind: 'sources' }, 'source-changed');
-        const sources = await catalog.sources(sourceDirectory(services));
-        await session.reconcile(await catalog.projects(), sources.filter(source => source.enabled).map(source => source.url));
-        return sources;
+        const { value: sources, generation } = await catalog.sources(sourceDirectory(services));
+        await session.reconcile((await catalog.projects()).value, sources.filter(source => source.enabled).map(source => source.url));
+        return { sources, generation };
     };
-    host.on('sources/add', async payload => {
+    host.on('sources/add', async (payload, ctx) => {
         const result = await services.sources.add(payload, sourceDirectory(services));
         if (!result.ok) {
             throw new HostRequestError('failed', result.error ?? 'Failed to add source');
         }
-        return { sources: await afterSourceMutation() };
+        const { sources, generation } = await afterSourceMutation();
+        ctx.generation = generation;
+        return { sources };
     });
-    host.on('sources/remove', async ({ sourceName, configFile }) => {
+    host.on('sources/remove', async ({ sourceName, configFile }, ctx) => {
         const directory = sourceDirectory(services);
-        const removedUrl = (await catalog.sources(directory)).find(source => source.name === sourceName)?.url;
+        const removedUrl = (await catalog.sources(directory)).value.find(source => source.name === sourceName)?.url;
         const result = await services.sources.remove(sourceName, directory, configFile);
         if (!result.ok) {
             throw new HostRequestError('failed', result.error ?? 'Failed to remove source');
         }
-        return { sources: await afterSourceMutation(), removedUrl };
+        const { sources, generation } = await afterSourceMutation();
+        ctx.generation = generation;
+        return { sources, removedUrl };
     });
-    host.on('sources/enable', async ({ sourceName }) => {
+    host.on('sources/enable', async ({ sourceName }, ctx) => {
         const result = await services.sources.enable(sourceName, sourceDirectory(services));
         if (!result.ok) {
             throw new HostRequestError('failed', result.error ?? 'Failed to enable source');
         }
-        return { sources: await afterSourceMutation() };
+        const { sources, generation } = await afterSourceMutation();
+        ctx.generation = generation;
+        return { sources };
     });
-    host.on('sources/disable', async ({ sourceName }) => {
+    host.on('sources/disable', async ({ sourceName }, ctx) => {
         const directory = sourceDirectory(services);
-        const disabledUrl = (await catalog.sources(directory)).find(source => source.name === sourceName)?.url;
+        const disabledUrl = (await catalog.sources(directory)).value.find(source => source.name === sourceName)?.url;
         const result = await services.sources.disable(sourceName, directory);
         if (!result.ok) {
             throw new HostRequestError('failed', result.error ?? 'Failed to disable source');
         }
-        return { sources: await afterSourceMutation(), disabledUrl };
+        const { sources, generation } = await afterSourceMutation();
+        ctx.generation = generation;
+        return { sources, disabledUrl };
     });
 
     // ── operations (one terminal response per request, from the ticket) ──

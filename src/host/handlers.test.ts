@@ -55,10 +55,11 @@ function makeServices(options: { selectedProject?: string; workspaceFolder?: str
     const snapshot: SessionSnapshot = { rev: 1, selectedProject: options.selectedProject ?? appPath, selectedSource: 'all', includePrerelease: false, restoreEnabled: true, origin: 'host' };
     const gated = (method: string) => vi.fn(async () => { throw new NotYetAvailableError(method); });
     const catalog = {
-        projects: vi.fn(async () => [{ name: 'App.csproj', path: appPath }, { name: 'Lib.csproj', path: libPath }]),
-        sources: vi.fn(async () => [feed]),
-        installed: vi.fn(async (): Promise<{ result: InstalledResult; upgrade?: Promise<InstalledResult> }> => ({ result: provisional })),
-        transitive: vi.fn(async (projectPath: string) => ({ projectPath, frameworks: [], dataSourceAvailable: true })),
+        // The four reads that are coordinator resources answer with the generation they were computed for.
+        projects: vi.fn(async () => ({ value: [{ name: 'App.csproj', path: appPath }, { name: 'Lib.csproj', path: libPath }], generation: 3 })),
+        sources: vi.fn(async () => ({ value: [feed], generation: 5 })),
+        installed: vi.fn(async (): Promise<{ result: InstalledResult; generation: number; upgrade?: Promise<InstalledResult> }> => ({ result: provisional, generation: 7 })),
+        transitive: vi.fn(async (projectPath: string) => ({ value: { projectPath, frameworks: [], dataSourceAvailable: true }, generation: 4 })),
         allProjectsInstalled: vi.fn(async () => ({ projectPaths: [appPath], errored: [] })),
         allProjectsTransitive: vi.fn(async () => ({ projectPaths: [appPath], errored: [] })),
         packageDependencies: vi.fn(async () => new Map<string, string[]>()),
@@ -163,6 +164,9 @@ const gatedReads: RequestType[] = ['updates/get', 'transitive/metadata', 'allPro
 /** Requests that only a concrete host registers, not the shared handlers. */
 const hostOnly: RequestType[] = ['ui/contextMenu', 'ui/openSourceSettings', 'ui/viewPackage'];
 
+/** The requests whose result is a resource of the query coordinator. */
+const resourceReads: RequestType[] = ['projects/list', 'installed/get', 'transitive/get', 'sources/list', 'sources/refresh', 'sources/add', 'sources/remove', 'sources/enable', 'sources/disable'];
+
 const errorOf = (host: TestHost, id: string) => {
     const [response] = host.responses(id);
     return response.kind === 'response' && !response.ok ? response.error : undefined;
@@ -196,7 +200,34 @@ describe('shared handlers: every request of the protocol', () => {
         } else {
             expect(error).toBeUndefined();
         }
+        // A response that is a coordinator resource carries its generation, and no other response does (ADR-007).
+        const [response] = host.responses('r1');
+        if (resourceReads.includes(type)) {
+            expect(typeof (response as { generation?: unknown }).generation).toBe('number');
+        } else {
+            expect('generation' in response).toBe(false);
+        }
         expect(host.inFlightCount).toBe(0);
+    });
+
+    it('the nine resource responses carry the generation the Catalog reported', async () => {
+        const { services } = makeServices();
+        const host = new TestHost(services);
+        for (const type of resourceReads) {
+            await host.receiveRaw(makeRequest(type, payloads[type], type));
+        }
+        const generations = Object.fromEntries(resourceReads.map(type => [type, (host.responses(type)[0] as { generation?: number }).generation]));
+        expect(generations).toEqual({
+            'projects/list': 3,
+            'installed/get': 7,
+            'transitive/get': 4,
+            'sources/list': 5,
+            'sources/refresh': 5,
+            'sources/add': 5,
+            'sources/remove': 5,
+            'sources/enable': 5,
+            'sources/disable': 5,
+        });
     });
 
     it('covers the 43 requests of the protocol', () => {
@@ -244,7 +275,7 @@ describe('shared handlers: reads', () => {
 
         catalog.installed.mockImplementationOnce(async (...args: unknown[]) => {
             (args[1] as (chunk: unknown) => void)({ kind: 'metadata', packages: [{ id: 'X', version: '1.0.0' }] });
-            return { result: provisional, upgrade: Promise.resolve(authoritative) };
+            return { result: provisional, generation: 7, upgrade: Promise.resolve(authoritative) };
         });
         await host.receiveRaw(makeRequest('installed/get', { projectPath: appPath }, 'upgraded'));
         expect(resultOf(host, 'upgraded')).toEqual(authoritative);
@@ -360,7 +391,7 @@ describe('shared handlers: operations', () => {
         const host = new TestHost(services);
         const order: string[] = [];
         workflows.restore.mockImplementation(async (ctx, projectPaths) => { order.push('restore'); return bulkOutcome(ctx, projectPaths); });
-        catalog.transitive.mockImplementation(async projectPath => { order.push('transitive'); return { projectPath, frameworks: [], dataSourceAvailable: true }; });
+        catalog.transitive.mockImplementation(async projectPath => { order.push('transitive'); return { value: { projectPath, frameworks: [], dataSourceAvailable: true }, generation: 4 }; });
         await host.receiveRaw(makeRequest('transitive/get', { projectPath: appPath, forceRestore: true }, 'a'));
         expect(order).toEqual(['restore', 'transitive']);
         const announced = announceOperation.mock.calls[0][0];

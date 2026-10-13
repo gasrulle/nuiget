@@ -1,4 +1,4 @@
-# STATUS — src/core/catalog   commit d8c7807 (parent of the P2.8 commit)   2026-10-12T18:25:12Z
+# STATUS — src/core/catalog   commit 05fdea9 (parent of the P2.fix-2 commit)   2026-10-13T21:30:00Z
 
 git status --short src/core/catalog: `?? src/core/catalog/` (belongs to the P2.8 commit, together with
 `?? docs/adr/009-catalog.md`, ` M docs/adr/README.md`, ` M src/core/project/index.ts`,
@@ -12,9 +12,47 @@ under the sentinel).
 The quarry has one file in this directory, `Catalog.ts` (413 lines, committed there in `f837f34`), no test and
 no note. It was copied byte-identical before the consultation so that the advisor could read it.
 
+Last item: **P2.fix-2** (phase review P2, blocking 2, finding C-protocol-host-7): the cacheable reads report
+the generation they were computed for. The note of P2.8, which wrote the Catalog, follows unchanged below the
+P2.fix-2 entries of each section.
+
 ## Verified by running
 
 ```text
+P2.fix-2, on the tree of its commit (DOTNET_ROOT set; npm test also with NUIGET_SDK_TESTS=1):
+npx tsc --noEmit / npm run check-types → exit 0 / exit 0
+npx eslint src / npm run lint → exit 0, no output / exit 0
+npx vitest run --project backend src/core/catalog src/host src/extension.next.test.ts
+                             → Test Files 4 passed (4) · Tests 123 passed (123) (Catalog 25, handlers 60,
+                               WebviewHost 11, root 27); 60 runs in a row without a failure
+npx vitest run --project integration src/test/harness → Tests 14 passed (14); 30 runs in a row
+npm test (NUIGET_SDK_TESTS=1) → Test Files 83 passed (83) · Tests 2495 passed (2495)
+npx vitest run               → Tests 2492 passed | 3 skipped (2495)
+npx vitest run --coverage    → exit 0 · src/core/** 2665 of 2705 lines, 98.52 % (catalog 98.06 %) ·
+                               src/host/** 436 of 597, 73.03 % · src/extension.next.ts 94.50 %
+npm run bench                → Tests 112 passed | 1 skipped (113)
+npm run docs:protocol:check  → exit 0 · docs/protocol.md is up to date (no protocol change)
+node esbuild.mjs --v2        → exit 0 · three bundles (dist/ deleted afterwards)
+npm run package:vsix         → exit 0 · DONE  Packaged: nuiget-v1.18.9.vsix (17 files, 530.07 KB)
+npm run check:vsix           → check:vsix: OK
+first run of these gates     → the targeted run and npm test each had 1 failed test, the plain run none:
+                               `watches props, nuget.config, global.json, lock and assets files with their
+                               scopes` of src/extension.next.test.ts, a test that asserted the order of two
+                               asynchronous effects (finding N60; 7 failures in 40 runs). Made deterministic
+                               without removing an assertion; the gates above are the run after that, except
+                               npm run bench, which is of the first run (benchmarks are discovered under
+                               src/test/benchmarks only and do not read the changed test file)
+negative control             → nine mutations (the generation not handed to makeOk; installed/get and
+                               sources/add not setting it; projects/list setting another number; the Catalog
+                               reporting 0 or another generation, with and without an upgrade; the fake
+                               webview applying a response below the listed generation, or comparing with the
+                               event's sequence number): 9 of 9 caught. Every file was restored.
+grep -c "ctx.generation = " src/host/handlers.ts → 9 · grep -n "makeOk(request.id, request.type, result, ctx.generation)"
+                               src/host/WebviewHost.ts → 1 · REMOVAL GATE comments unchanged (handlers 4 + 1)
+git diff --stat -- src/protocol src/core/contracts.ts docs/adr docs/protocol.md → empty · no sentinel
+npm run test:ui              → SKIPPED: no UI change; the CI job UI runs it
+
+Before it, as the earlier item left it:
 The gates ran with DOTNET_ROOT set to the SDK directory and NUIGET_SDK_TESTS=1 (N48).
 baseline npm run check-types → exit 0
 baseline npx eslint src      → exit 0
@@ -67,6 +105,15 @@ CI                           → see the tracker row of P2.8
 
 ## Done (tested)
 
+- P2.fix-2, `Catalog.ts`: `CatalogValue<T>` is `{ value, generation }`. `projects`, `sources` and `transitive`
+  resolve with it; the generation is that of the coordinator handle whose value resolved, so a stale retry
+  reports the generation it finally resolved for, and a cache hit and a joiner report the computation's
+  (`queryWithRetry`). `InstalledQueryResult` has `generation`, the same for a result with and without
+  `upgrade`. The fan-outs `allProjectsInstalled` and `allProjectsTransitive` unwrap the values and report no
+  generation: they are not resources (ADR-009 decision 1). `index.ts` exports `CatalogValue`.
+- P2.fix-2, `Catalog.test.ts`, 25 tests: three new ones (`a cache hit and a joiner report the computation's
+  generation`, `a stale retry reports the generation it finally resolved for`, `installed reports the handle's
+  generation with and without an upgrade`).
 - `docs/adr/009-catalog.md` (new) with the text of the ruling, and its row in `docs/adr/README.md`.
 - `Catalog.ts`, rewritten from the quarry text:
   - `CatalogDeps`: `coordinator`, `inspector`, `evaluator?`, `contexts` (the `get` of `ProjectContextProvider`),
@@ -122,6 +169,12 @@ CI                           → see the tracker row of P2.8
 
 ## Deviations from contract/ADR (file:line each)
 
+- P2.fix-2, `Catalog.test.ts`: five tests of P2.8 compare a return value that now has another shape; their
+  expectations were rewritten to the new shape and assert one fact more each (the generation), none less:
+  `answers with the provisional result alone when there is no evaluator` (`{ result, generation: 1 }`),
+  `stale retry releases handle` (`{ value: [app], generation: 2 }`, twice), `projects uses the projects key`,
+  `sources queries per directory`, `reads transitive packages through the coordinator and dependencies
+  directly` (`{ value, generation: 1 }`). No test was removed or skipped.
 - `upgrade` never rejects (`Catalog.ts:132`): it resolves with the provisional result for every rejection of
   the query, as ADR-009 decision 3 says. The ruling's code sample let a rejection other than
   `StaleQueryError` through; the ADR sentence was followed, since the only other rejections at that point are
@@ -144,6 +197,38 @@ CI                           → see the tracker row of P2.8
   (`SearchQueryResult`, `Catalog.ts:68-72`); `search` itself is gated.
 
 ## Advisor decisions (date, item, question, answer verbatim)
+
+2026-10-13, P2.fix-2, phase review P2 (`architecture-advisor`, brief `PHASE REVIEW P2`). The whole review is
+in `docs/plans/STATUS.md` under "Phase gates"; its blocking item 2, which is this fix, verbatim:
+
+`````text
+2. P2.fix-2 — C-protocol-host-7: `WebviewHost.dispatch` posts `makeOk(request.id, request.type, result)` (`src/host/WebviewHost.ts:146`); `makeOk` accepts a fourth argument `generation` (`src/protocol/envelope.ts:88-91`) and the ok envelope has `generation?: number` (`:52`), but no handler can supply it because the Catalog's cacheable reads return bare values (`Catalog.ts:94-101,110-143,181-183`) while the coordinator's handle carries the generation (`QueryCoordinator.ts:160,180`). ADR-007:29-31, ADR-008:19-24 and the P3.3 row ("stale discard by id and generation") read a field nobody writes.
+
+   Answers to question 2. Blocking: yes, before P3.3 (its row already says so). The generation travels as a field, not a wrapped return: `RequestContext<T>` (`WebviewHost.ts:35-40`) gains `generation?: number`, documented "set by a handler whose result is a coordinator resource: the generation it was computed for; `WebviewHost` puts it on the ok envelope (ADR-007)"; `dispatch` posts `makeOk(request.id, request.type, result, ctx.generation)`; an error response, a stream chunk and an aborted request never carry it. The `RequestHandler` type and the 43 one-response cases are untouched by this choice.
+
+   Catalog (`src/core/catalog/Catalog.ts`): `export interface CatalogValue<T> { value: T; generation: number }`; `projects`, `sources` and `transitive` return `Promise<CatalogValue<…>>` with `generation: handle.generation` of the handle whose `value` resolved (`queryWithRetry` returns `{ value, generation }` of the attempt that succeeded, so a stale retry reports the new generation); `InstalledQueryResult` gains `generation: number`, the handle's generation of the attempt that resolved, the same for the `{ result }` of a cache hit or joiner, for the `{ result, upgrade }` of a running evaluation, and for the provisional that `upgrade` falls back to when the evaluation is superseded (that fallback is then below the generation the event lists, which is exactly what the webview must discard; note on the P6.2 row that this fallback, `Catalog.ts:132`, becomes the first real producer of such a response). A cache hit reports `entry.generation` (equal to `valueGeneration` by the hit condition, `QueryCoordinator.ts:158-160`); a joiner reports the computation's generation; both surfaces therefore see the same number for the same `(key, generation)`. The fan-outs `allProjectsInstalled` and `allProjectsTransitive` unwrap `.value` internally (`Catalog.ts:205,214,246,253`) and report no generation: they are not resources (ADR-009 decision 1).
+
+   Handlers that set `ctx.generation` (nine): `projects/list`, `installed/get`, `transitive/get`, `sources/list`, `sources/refresh`, and `sources/add`, `sources/remove`, `sources/enable`, `sources/disable` (their `sources` is a fresh read of `sources:<dir>` after the `sources` invalidation in `afterSourceMutation`, `handlers.ts:307-312`, so it is "a result computed for a generation" in the sense of ADR-007:29-31; without it a webview that shows sources through `useResource` could not order the mutation's answer against the event the mutation itself fired). Not set: `allProjects/*`, `updates/get` (not yet available), `session/*`, `layout/*`, `ops/*`, `ui/*`, `refresh/all`, `perf/mark`. Call sites that unwrap `.value`: `extension.next.ts:123,141`, `SidebarHost.ts:80,88,156,229`, `handlers.ts:254,256,273,299,309-310,322,338`, `harness.ts:343`, and `handlers.test.ts:98` (the fake catalog returns the new shapes). No frozen file changes: `envelope.ts`, `messages.ts`, `docs/protocol.md`, `contracts.ts`, the ADRs stay; `npm run docs:protocol:check` must still exit 0.
+
+   Tests:
+   - `src/host/WebviewHost.test.ts`: `a generation set on the context reaches the ok envelope` (handler sets `ctx.generation = 3`, posted envelope `{ ok: true, generation: 3 }`), `an error response and a stream chunk carry no generation`.
+   - `src/host/handlers.test.ts`: extend `it.each(REQUEST_TYPES)('%s: one request → exactly one terminal response')` (`:186`) so that for exactly the nine types above the ok envelope has `typeof generation === 'number'` and for every other type `'generation' in envelope` is false; the fake catalog answers with the new shapes.
+   - `src/core/catalog/Catalog.test.ts`: `a cache hit and a joiner report the computation's generation` (two `projects()` calls during one computation and a third after it: all three `generation` equal `coordinator.generationOf(resourceKeys.projects())`), `a stale retry reports the generation it finally resolved for`, `installed reports the handle's generation with and without an upgrade`.
+   - `src/test/harness/scenarios.test.ts`, new scenario — the ledger's title "late response for an invalidated key is discarded by generation" cannot be satisfied by this host: ADR-002 invariants 2 and 3 make the coordinator reject a result an invalidation overtook, `queryWithRetry` turns the third stale into an error, and the host posts in order, so no ok response below the listed generation exists before P6.2; the scenario is named for what it proves: `generation on responses: every resource response carries the generation the latest invalidation lists for its key, on both surfaces`. Both surfaces resolved and showing A: every `installed/get` ok response for A on both surfaces carries the same `generation`, every `projects/list` response the same for `projects`; `refresh('main')`; the `resources/invalidated` event lists `installed:A` and `projects` with new generations; after `expectState`, every response delivered after the event carries exactly the listed generation, on both surfaces; `expectOneResponsePerRequest`. Correct the ledger row's title when closing it.
+   - `FakeWebview.ts` rule 7 (header `:18`, code `:229-243`) becomes: "An ok response of the `projects` or `installed` slot carries `generation`; it is applied only when that generation is not below the one the latest `resources/invalidated` event listed for its key (`projects`, `installed:<path>`); a lower one is recorded and not applied. Rule 4 (latest request id wins) is unchanged; chunks are never compared." The model keeps the last listed generation per key from `onInvalidated`.
+
+   Docs: ARCHITECTURE "Reading through the Catalog" (the four reads return `{ value, generation }`; the nine handlers put it on the envelope; fan-outs do not) and the harness paragraph's rule 7 (`ARCHITECTURE.md:191-192`); the `src/host/**` row; `src/core/catalog/STATUS.md`, `src/host/STATUS.md`, `src/test/harness/STATUS.md` (drop "No scenario asserts a response `generation`"); ledger C-protocol-host-7 → closed with the corrected scenario title; P3.3 row note → "fixed in P2.fix-2"; P6.2 row note as above; CHANGELOG: amend the Added bullet "2.0 webview hosts" with "and every response that is a cached resource carries the generation it was computed for".
+
+   VERIFY:
+   - `grep -n "makeOk(request.id, request.type, result, ctx.generation)" src/host/WebviewHost.ts` → 1; `grep -n "generation?: number" src/host/WebviewHost.ts` → 1
+   - `grep -c "ctx.generation = " src/host/handlers.ts` → 9
+   - `npx vitest run --project backend src/core/catalog src/host` → green, with the five new titles present (`grep` each)
+   - `npx vitest run --project integration src/test/harness` → 13 passed; `grep -c "never compared" src/test/harness/FakeWebview.ts ARCHITECTURE.md` → 0
+   - `npm run docs:protocol:check` → exit 0; `git diff --stat labs/2.0..HEAD -- src/protocol src/core/contracts.ts docs/adr` → empty; `ls .claude/.contract-change` → No such file
+   - `npm run check-types`, `npx eslint src`, `npm test`, `npm run bench`, `npm run package:vsix`, `npm run check:vsix` → all exit 0
+
+   Ownership and order (the question on fix items): `P2.fix-1` (C-state-core-6) first, as the P2.11 ruling named it, then `P2.fix-2` (C-protocol-host-7); each a tracker row after P2.12 with its own commit (`git-commit` skill, citing the fix id, the finding and ADR-001/ADR-002/ADR-007/ADR-008/ADR-009), push and green CI. Neither touches a frozen path; neither needs a sentinel. After both: re-run the P2 gate block, append it under "Phase gates", set `labs/2.0-P2-done` on the P2.fix-2 commit.
+`````
 
 2026-10-12, P2.8, ⚑ and contract item (D6). Brief in the form of plan §2.4, sent on `labs/2.0` @ `d8c7807` with the
 quarry's `Catalog.ts` copied byte-identical into the working tree so that it could be read, and nothing else

@@ -42,8 +42,17 @@ export interface CatalogDeps {
     logger?: Logger;
 }
 
+/** A read that is a resource of the query coordinator, with the generation it was computed for (ADR-002). */
+export interface CatalogValue<T> {
+    value: T;
+    /** What the host puts on the ok response; a webview compares it with the generation an invalidation lists for the key. */
+    generation: number;
+}
+
 export interface InstalledQueryResult {
     result: InstalledResult;
+    /** The generation of the computation that `result` (and `upgrade`) belongs to. */
+    generation: number;
     /**
      * Present only when an evaluation has started. Resolves with the authoritative result, or with
      * `result` again when the evaluation fails or is superseded; never rejects.
@@ -91,12 +100,12 @@ export class Catalog {
 
     // ─── projects & sources ─────────────────────────────────────────────────
 
-    projects(signal?: AbortSignal): Promise<Project[]> {
+    projects(signal?: AbortSignal): Promise<CatalogValue<Project[]>> {
         return queryWithRetry(() => this.deps.coordinator.query<Project[]>(resourceKeys.projects(), () => this.deps.discoverProjects()), signal);
     }
 
     /** Sources effective for a directory. The caller names the directory; none is guessed here. */
-    sources(projectDir: string, signal?: AbortSignal): Promise<NuGetSource[]> {
+    sources(projectDir: string, signal?: AbortSignal): Promise<CatalogValue<NuGetSource[]>> {
         return queryWithRetry(() => this.deps.coordinator.query<NuGetSource[]>(resourceKeys.sources(projectDir), () => this.deps.sources.listSources(projectDir)), signal);
     }
 
@@ -129,7 +138,9 @@ export class Catalog {
                     handle.value.then(result => ({ result, final: true })),
                 ]);
                 // A joiner and a cache hit see no provisional chunk: the value they get is the final one.
-                return first.final ? { result: first.result } : { result: first.result, upgrade: handle.value.catch(() => first.result) };
+                return first.final
+                    ? { result: first.result, generation: handle.generation }
+                    : { result: first.result, generation: handle.generation, upgrade: handle.value.catch(() => first.result) };
             } catch (error) {
                 if (!(error instanceof StaleQueryError)) {
                     throw error;
@@ -178,7 +189,7 @@ export class Catalog {
         throw new NotYetAvailableError('updates'); // REMOVAL GATE: P4.9
     }
 
-    transitive(projectPath: string, signal?: AbortSignal): Promise<TransitiveResult> {
+    transitive(projectPath: string, signal?: AbortSignal): Promise<CatalogValue<TransitiveResult>> {
         return queryWithRetry(() => this.deps.coordinator.query<TransitiveResult>(resourceKeys.transitive(projectPath), () => this.deps.assets.getTransitivePackages(projectPath)), signal);
     }
 
@@ -202,7 +213,8 @@ export class Catalog {
         emit: (chunk: RequestChunk<'allProjects/installed'>) => void,
         signal: AbortSignal,
     ): Promise<{ projectPaths: string[]; errored: Array<{ projectPath: string; error: string }> }> {
-        const projects = await this.projects(signal);
+        // A fan-out is not a resource (ADR-009): it reports no generation of its own.
+        const { value: projects } = await this.projects(signal);
         emit({ kind: 'start', projects });
         const errored: Array<{ projectPath: string; error: string }> = [];
         await batchedPromiseAll(projects, async project => {
@@ -243,14 +255,15 @@ export class Catalog {
         emit: (chunk: RequestChunk<'allProjects/transitive'>) => void,
         signal: AbortSignal,
     ): Promise<{ projectPaths: string[]; errored: Array<{ projectPath: string; errorKind: TransitiveErrorKind }> }> {
-        const projects = await this.projects(signal);
+        // A fan-out is not a resource (ADR-009): it reports no generation of its own.
+        const { value: projects } = await this.projects(signal);
         emit({ kind: 'start', projects });
         const errored: Array<{ projectPath: string; errorKind: TransitiveErrorKind }> = [];
         await batchedPromiseAll(projects, async project => {
             if (signal.aborted) {
                 return;
             }
-            const result = await this.transitive(project.path, signal);
+            const { value: result } = await this.transitive(project.path, signal);
             if (result.errorKind) {
                 errored.push({ projectPath: project.path, errorKind: result.errorKind });
             }
@@ -300,14 +313,15 @@ export class Catalog {
 
 /**
  * Ask a query and, when its generation is superseded while it runs, release the handle and ask
- * again: at most three times, the third `StaleQueryError` is thrown.
+ * again: at most three times, the third `StaleQueryError` is thrown. The generation reported is the one
+ * of the attempt that resolved.
  */
-async function queryWithRetry<T>(open: () => QueryHandle<T>, signal?: AbortSignal): Promise<T> {
+async function queryWithRetry<T>(open: () => QueryHandle<T>, signal?: AbortSignal): Promise<CatalogValue<T>> {
     for (let attempt = 1; ; attempt++) {
         const handle = open();
         releaseWhenDone(handle, signal);
         try {
-            return await handle.value;
+            return { value: await handle.value, generation: handle.generation };
         } catch (error) {
             if (!(error instanceof StaleQueryError)) {
                 throw error;

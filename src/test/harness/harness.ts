@@ -340,7 +340,7 @@ export async function createHarness(options: HarnessOptions) {
                 if (expected.selectedSource !== undefined) {
                     expect(host.selectedSource, 'host: selected source').toBe(expected.selectedSource);
                 }
-                expect((await services.catalog.projects()).map(project => project.path), 'host: projects').toEqual(expected.projects);
+                expect((await services.catalog.projects()).value.map(project => project.path), 'host: projects').toEqual(expected.projects);
                 expect(services.queue.isBusy, 'host: queue busy').toBe(false);
                 for (const webview of live()) {
                     const name = webview.surface;

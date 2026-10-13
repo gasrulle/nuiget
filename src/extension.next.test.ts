@@ -621,7 +621,10 @@ describe('extension.next (2.0 composition root)', () => {
         expect(context.globalState.get(SDK_CACHE_KEY)).toBeUndefined();
 
         // These two name a file of the project, not the project: its file is looked up in the directory.
+        // One after the other: each flush reads the directory, and two reads in flight finish in either order.
         watcherFor('**/packages.lock.json').change(vscode.Uri.file(path.join(scratch.dir, 'App', 'packages.lock.json')));
+        await vi.advanceTimersByTimeAsync(1500);
+        await vi.waitFor(() => expect(invalidations()).toHaveLength(4));
         watcherFor('**/obj/project.assets.json').change(vscode.Uri.file(path.join(scratch.dir, 'App', 'obj', 'project.assets.json')));
         await vi.advanceTimersByTimeAsync(2000);
         vi.useRealTimers();

@@ -109,8 +109,6 @@ CI                           → see the tracker row of P2.11
 
 ## Not started
 
-- The scenario `late response for an invalidated key is discarded by generation`: with the fix of
-  C-protocol-host-7 (`P2.fix`).
 - The scenarios of later items: P4.9 (`updates converge across surfaces`, `sources unreachable shows banner
   not empty`), P5.4, P5.5, P5.9, P6.4.
 
@@ -138,7 +136,14 @@ CI                           → see the tracker row of P2.11
 - `harness.ts`, `expectState`: the comparisons run inside the wait, so a state that converges late passes and
   one that never converges fails after five seconds; the ruling words it as "first settle, then assert".
 - Ledger: N59 has a row in each of the two N tables, as every N finding has; the ruling's VERIFY expects one.
-- No scenario asserts a response `generation` (rule 7), by the ruling.
+- Since P2.fix-2: the scenario `generation on responses: every resource response carries the generation the
+  latest invalidation lists for its key, on both surfaces` (the title of the phase review; the ledger's
+  earlier title, "late response … discarded by generation", names something this host cannot produce: the
+  coordinator never delivers a result that an invalidation overtook). Rule 7 of the model compares; its discard
+  branch is exercised by `fake webview model › rule 7: a response below the generation an invalidation listed
+  for its key is recorded and not applied`, which feeds the model by hand. That test is one more than the
+  review counts (14 tests instead of 13): without it nothing runs the branch, and the mutation that removes the
+  comparison survives.
 
 ## Advisor decisions (date, item, question, answer verbatim)
 

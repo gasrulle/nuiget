@@ -37,6 +37,11 @@ export interface RequestContext<T extends RequestType> {
     surface: Surface;
     signal: AbortSignal;
     emit(chunk: RequestChunk<T>): void;
+    /**
+     * Set by a handler whose result is a coordinator resource: the generation it was computed for.
+     * `WebviewHost` puts it on the ok envelope (ADR-007); an error response and a chunk never carry it.
+     */
+    generation?: number;
 }
 
 export type RequestHandler<T extends RequestType> = (payload: RequestPayload<T>, ctx: RequestContext<T>) => Promise<RequestResult<T>>;
@@ -143,7 +148,7 @@ export abstract class WebviewHost {
                 this.respondError(request.id, request.type, { code: abortCode(controller.signal), message: 'Request was cancelled' });
                 return;
             }
-            this.post(makeOk(request.id, request.type, result));
+            this.post(makeOk(request.id, request.type, result, ctx.generation));
         } catch (error) {
             if (controller.signal.aborted) {
                 this.respondError(request.id, request.type, { code: abortCode(controller.signal), message: 'Request was cancelled' });

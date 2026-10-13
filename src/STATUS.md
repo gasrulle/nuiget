@@ -161,6 +161,13 @@ CI                           → see the tracker row of P2.10
 
 ## Deviations from contract/ADR (file:line each)
 
+- P2.fix-2 touched this note's files in two ways. `extension.next.ts`: its two reads of the Catalog unwrap
+  `.value` (`catalog.projects()`, `catalog.sources(directory)`), nothing else. `extension.next.test.ts`,
+  `watches props, nuget.config, global.json, lock and assets files with their scopes`: the test fired the
+  lock-file and the assets watcher together and asserted the order of their two invalidations, although each
+  flush reads a directory and the two reads finish in either order (finding N60: 7 failures in 40 runs). It
+  now fires and awaits the first before the second. Every assertion is kept, the order included.
+
 Omissions against the words of the row (plan line 234), all by the ruling below:
 
 - "`MemoryIconCache` until P4", "`DefaultServiceIndexClient(feedDeps, { health })`": not composed; the modules

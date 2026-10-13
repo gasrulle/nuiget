@@ -145,7 +145,7 @@ describe('Catalog.installed', () => {
     it('answers with the provisional result alone when there is no evaluator', async () => {
         const deps = makeDeps();
         const answer = await new Catalog(deps).installed(appPath);
-        expect(answer).toEqual({ result: provisionalOf(appPath) });
+        expect(answer).toEqual({ result: provisionalOf(appPath), generation: 1 });
         expect(deps.coordinator.peek<InstalledResult>(resourceKeys.installed(appPath))?.value.fidelity).toBe('provisional');
     });
 
@@ -213,7 +213,8 @@ describe('Catalog.installed', () => {
 describe('Catalog stale retry', () => {
     it('stale retry releases handle', async () => {
         const { coordinator, handles, query } = scriptedCoordinator([{ error: new StaleQueryError(resourceKeys.projects(), 1) }, { value: [app] }]);
-        expect(await new Catalog(makeDeps({ coordinator })).projects()).toEqual([app]);
+        // The scripted handles count from 1: the answer is the second handle's, and so is the generation.
+        expect(await new Catalog(makeDeps({ coordinator })).projects()).toEqual({ value: [app], generation: 2 });
         expect(query).toHaveBeenCalledTimes(2);
         // The stale handle and the one that answered: a call without a signal releases when the value settles.
         expect(handles.map(handle => handle.release.mock.calls.length > 0)).toEqual([true, true]);
@@ -221,7 +222,7 @@ describe('Catalog stale retry', () => {
         // With a signal the answering handle lives until the caller aborts; the stale one is released at once.
         const controller = new AbortController();
         const withSignal = scriptedCoordinator([{ error: new StaleQueryError(resourceKeys.projects(), 1) }, { value: [app] }]);
-        expect(await new Catalog(makeDeps({ coordinator: withSignal.coordinator })).projects(controller.signal)).toEqual([app]);
+        expect(await new Catalog(makeDeps({ coordinator: withSignal.coordinator })).projects(controller.signal)).toEqual({ value: [app], generation: 2 });
         expect(withSignal.handles.map(handle => handle.release.mock.calls.length)).toEqual([1, 0]);
         const installed = scriptedCoordinator([{ error: new StaleQueryError(resourceKeys.installed(appPath), 1) }, { value: provisionalOf(appPath) }]);
         expect((await new Catalog(makeDeps({ coordinator: installed.coordinator })).installed(appPath, undefined, controller.signal)).result).toEqual(provisionalOf(appPath));
@@ -254,8 +255,8 @@ describe('Catalog reads', () => {
     it('projects uses the projects key', async () => {
         const deps = makeDeps();
         const catalog = new Catalog(deps);
-        expect(await catalog.projects()).toEqual([app, lib]);
-        expect(await catalog.projects()).toEqual([app, lib]);
+        expect(await catalog.projects()).toEqual({ value: [app, lib], generation: 1 });
+        expect(await catalog.projects()).toEqual({ value: [app, lib], generation: 1 });
         expect(deps.discoverProjects).toHaveBeenCalledTimes(1);
         expect(deps.coordinator.peek(resourceKeys.projects())?.value).toEqual([app, lib]);
     });
@@ -267,8 +268,8 @@ describe('Catalog reads', () => {
         const sources = fakeSources({ [dirA]: [feed] });
         const deps = makeDeps({ sources });
         const catalog = new Catalog(deps);
-        expect(await catalog.sources(dirA)).toEqual([feed]);
-        expect(await catalog.sources(dirB)).toEqual([]);
+        expect(await catalog.sources(dirA)).toEqual({ value: [feed], generation: 1 });
+        expect(await catalog.sources(dirB)).toEqual({ value: [], generation: 1 });
         await catalog.sources(dirA);
         expect(sources.listSources.mock.calls.map(call => call[0])).toEqual([dirA, dirB]);
         expect(deps.coordinator.peek(`sources:${dirA}`)?.value).toEqual([feed]);
@@ -278,12 +279,65 @@ describe('Catalog reads', () => {
     it('reads transitive packages through the coordinator and dependencies directly', async () => {
         const deps = makeDeps();
         const catalog = new Catalog(deps);
-        expect(await catalog.transitive(appPath)).toEqual({ projectPath: appPath, frameworks: [], dataSourceAvailable: true });
+        expect(await catalog.transitive(appPath)).toEqual({ value: { projectPath: appPath, frameworks: [], dataSourceAvailable: true }, generation: 1 });
         await catalog.transitive(appPath);
         expect(deps.assets.getTransitivePackages).toHaveBeenCalledTimes(1);
         expect(await catalog.packageDependencies(appPath)).toEqual(new Map([['a', ['b']]]));
         expect(deps.assets.getPackageDependencies).toHaveBeenCalledWith(appPath);
         expect((await catalog.projectDependencies([])).size).toBe(0);
+    });
+
+    it("a cache hit and a joiner report the computation's generation", async () => {
+        const discovery = deferred<Project[]>();
+        const deps = makeDeps({ discoverProjects: vi.fn(() => discovery.promise) });
+        const catalog = new Catalog(deps);
+        const first = catalog.projects();
+        const joiner = catalog.projects();
+        discovery.resolve([app]);
+        const answers = [await first, await joiner, await catalog.projects()];
+        expect(deps.discoverProjects).toHaveBeenCalledTimes(1);
+        expect(answers.map(answer => answer.generation)).toEqual([1, 1, 1]);
+        expect(deps.coordinator.generationOf(resourceKeys.projects())).toBe(1);
+
+        // After an invalidation the next read is of the next generation, the one the event lists for the key.
+        deps.coordinator.invalidate({ kind: 'workspace' }, 'manual-refresh');
+        deps.discoverProjects = vi.fn(async () => [app, lib]);
+        expect(await new Catalog(deps).projects()).toEqual({ value: [app, lib], generation: 2 });
+        expect(deps.coordinator.generationOf(resourceKeys.projects())).toBe(2);
+    });
+
+    it('a stale retry reports the generation it finally resolved for', async () => {
+        const runs = [deferred<Project[]>(), deferred<Project[]>()];
+        const discoverProjects = vi.fn(() => runs[discoverProjects.mock.calls.length - 1].promise);
+        const deps = makeDeps({ discoverProjects });
+        const answer = new Catalog(deps).projects();
+        await Promise.resolve();
+        // The first computation is overtaken while it runs; what it finds later is never the answer.
+        deps.coordinator.invalidate({ kind: 'workspace' }, 'manual-refresh');
+        runs[0].resolve([app]);
+        await vi.waitFor(() => expect(discoverProjects).toHaveBeenCalledTimes(2));
+        runs[1].resolve([app, lib]);
+        expect(await answer).toEqual({ value: [app, lib], generation: 2 });
+        expect(deps.coordinator.generationOf(resourceKeys.projects())).toBe(2);
+    });
+
+    it("installed reports the handle's generation with and without an upgrade", async () => {
+        const plain = makeDeps();
+        expect((await new Catalog(plain).installed(appPath)).generation).toBe(plain.coordinator.generationOf(resourceKeys.installed(appPath)));
+
+        const evaluation = deferred<InstalledResult>();
+        const deps = makeDeps({ evaluator: fakeEvaluator(() => evaluation.promise) });
+        const catalog = new Catalog(deps);
+        const running = await catalog.installed(appPath);
+        expect(running.upgrade).toBeDefined();
+        expect(running.generation).toBe(1);
+        evaluation.resolve({ ...provisionalOf(appPath), fidelity: 'authoritative' });
+        await running.upgrade;
+        // The cache hit after the evaluation is the same computation, so the same generation.
+        const hit = await catalog.installed(appPath);
+        expect(hit).toMatchObject({ generation: 1, result: { fidelity: 'authoritative' } });
+        expect(hit.upgrade).toBeUndefined();
+        expect(deps.coordinator.generationOf(resourceKeys.installed(appPath))).toBe(1);
     });
 
     it('feed methods throw not-yet-available before any query', async () => {

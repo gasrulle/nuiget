@@ -118,6 +118,34 @@ describe('WebviewHost', () => {
         expect(host.inFlightCount).toBe(0);
     });
 
+    it('a generation set on the context reaches the ok envelope', async () => {
+        const host = new TestHost();
+        host.on('projects/list', async (_payload, ctx) => {
+            ctx.generation = 3;
+            return { projects: [] };
+        });
+        await host.receiveRaw(makeRequest('projects/list', {}, 'g1'));
+        expect(responses(host)).toEqual([{ kind: 'response', id: 'g1', type: 'projects/list', ok: true, result: { projects: [] }, generation: 3 }]);
+    });
+
+    it('an error response and a stream chunk carry no generation', async () => {
+        const host = new TestHost();
+        host.on('installed/get', async ({ projectPath }, ctx) => {
+            ctx.generation = 3;
+            ctx.emit({ kind: 'metadata', packages: [] });
+            if (projectPath === 'fails') {
+                throw new Error('boom');
+            }
+            return { projectPath, packages: [], fidelity: 'provisional', isCpm: false };
+        });
+        await host.receiveRaw(makeRequest('installed/get', { projectPath: 'fails' }, 'e1'));
+        await host.receiveRaw(makeRequest('installed/get', { projectPath: 'works' }, 'e2'));
+        const posted = (id: string) => host.sent.filter(message => message.kind !== 'event' && message.id === id);
+        // The handler had set a generation before it threw; an error is not a result of any generation.
+        expect(posted('e1').map(message => [message.kind, 'generation' in message])).toEqual([['stream', false], ['response', false]]);
+        expect(posted('e2').map(message => [message.kind, 'generation' in message])).toEqual([['stream', false], ['response', true]]);
+    });
+
     it('an error whose code is not-yet-available answers unsupported', async () => {
         const host = new TestHost();
         host.on('package/versions', async () => { throw Object.assign(new Error('not-yet-available: Catalog.versions'), { code: 'not-yet-available' }); });
