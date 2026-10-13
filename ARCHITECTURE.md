@@ -101,7 +101,7 @@ Each row is filled in by the item that creates the module.
 | `src/core/**` | Platform-agnostic logic: CLI runner, project model, queries, operations, feeds | Present: `contracts.ts`, `util/`, `versioning/`, `cache/`, `logging/`, `cli/`, `session/`, `queries/`, `http/ssrf.ts`, `ops/`, `project/` (static inspection and context), `sources/`, `credentials/` and `catalog/`. Absent: `feeds/` and `http/Transport.ts` (P4), the evaluator (P6.2), the mutator (P6.3) |
 | `src/host/**` | Adapts VS Code to the core (ADR-007); no business logic. `WebviewHost` is the base of both surfaces: it decodes an inbound envelope with the protocol guards, calls the handler registered for its type and posts exactly one terminal response per request id, an error envelope included (`unsupported` for a type nobody registered, `failed` for a thrown error, the code of a `HostRequestError`). A handler whose result is a coordinator resource sets `ctx.generation`, and the base puts it on the ok envelope (ADR-007); an error response and a chunk never carry one. A request's `AbortSignal` is aborted with a reason: `cancelled` when the webview sent a cancel envelope, `disposed` when the surface went away, and nothing is posted to a disposed surface. An error whose `code` is `not-yet-available` (a Catalog read that waits for the feeds, ADR-009) is answered as `unsupported`. `handlers.ts` registers the handlers both surfaces share (`registerSharedHandlers`): reads call one Catalog method and forward its chunks unchanged; `operations` has one typed submit function per `ops/*` request, which validates the payload (a real project, a non-empty batch), takes the restore switch as it is at submission and hands the workflow to the `OperationQueue`; `awaitTicket` ties the ticket to the request (opening chunk `queued` or `rejected` with the ticket's `opId`, progress of that operation as chunks, a webview cancel cancels the ticket, a disposed surface does not), and `settleOperation` announces the outcome to every surface and invalidates what it changed. A forced restore of `transitive/get` is such a ticket too. `sourceDirectory` decides where sources are resolved: the directory of the selected project, else the first workspace folder, else a `not-found` error. Handlers that wait for a later item answer with a fixed value under a `// REMOVAL GATE: P4.9` or `P4.4` comment. `services.ts` holds `HostServices` (what the composition root hands to both hosts), `readExtensionConfig` (the one reader of the `nuiget` settings), `renderWebviewHtml` (the Content Security Policy of ADR-006 with a script nonce of 16 random bytes per render) and `createWorkflowDeps` (the dependencies of `PackageWorkflows`, with the answer to "is this a Central Package Management project" kept per project while an operation runs). `MainPanelHost` and `SidebarHost` attach the webviews, forward session, configuration, operation and invalidation events, and the sidebar turns a context-menu choice into a typed operation; `pickers.ts` has the quick picks | Present since P2.9; composed by the root since P2.10 |
 | `src/extension.next.ts` | 2.0 composition root: it assembles and holds no business logic. `activate` calls `activateWith(context, overrides)`, whose overrides (`spawn`, `resolveExecutable`) exist for tests and which returns `{ services, ready }`. Composition order: the output channel and one `redactingLogger` over it, which is the only `Logger` the core and both surfaces get (every message, string argument and error passes `redact`); `DefaultDotnetRunner` with its SDK cache hydrated from `globalState` under `nuiget.sdkVersionCache.v2` (the 1.x key `nuiget.sdkVersionCache` is removed at activation); a `TieredCache` over `workspaceState`; `DotnetSourceProvider`; `AssetsReader`, `StaticProjectInspector` and `ProjectContextProvider` sharing one `stopDirs` array that a workspace-folder change refills in place; `DefaultQueryCoordinator`; `DefaultSessionStore`; `DefaultOperationQueue`; the `Catalog`; `PackageWorkflows` over `createWorkflowDeps`; `HostServices` (`onOperationProgress` is `queue.onProgress`; `workspaceFolderFor` answers the deepest workspace folder that contains a path); the `SidebarHost` view provider. Every coordinator invalidation is forwarded unchanged to the sidebar and to the open main panel. `refreshProjectsAndSession` discovers the projects, announces them, sets `nuiget.hasProjectFiles`, lists the enabled sources of the project the store will keep or pick, and skips the reconcile when the selection moved during the listing (the coalesced rerun does it); otherwise it calls `session.reconcile`; it runs at activation, after an invalidation of scope `workspace`, `project` or `sources`, and when the selected project differs from the one last reconciled for (ADR-001: another project is another source list). Runs never overlap: requests during a run cause one more run. A source listing that fails is not an empty list: the last list of that directory, or else only the selected source, is passed on, so the selection survives. Six file watchers, debounced, invalidate after the queue is idle: project files and `packages.lock.json` (scope `project`), `Directory.{Build,Packages}.{props,targets}` and `global.json` (scope `workspace`; `global.json` also clears the SDK cache), `nuget.config` (scope `sources`), `obj/project.assets.json` (scope `project`, reason `restore`). One status bar item shows the queue. It registers exactly the 12 contributed commands. Three `// REMOVAL GATE: P4.9` comments mark what P4.9 adds: feeds, transport, credentials, outbound policy and icon cache at the `Catalog`; the source health monitor; the transport rebuild on an `http.*` change. The evaluator (P6.2) and the mutator (P6.3) are absent. | Present since P2.10 |
-| `src/webview/shared/**` | Tokens, primitives, message bus, store slices | Tokens and icons present since P3.1 (`tokens.css`, `primitives/icons.tsx`); primitives in P3.2; bus and store in P3.3; `tokens.css` is in no bundle until the sidebar entry imports it in P3.4 |
+| `src/webview/shared/**` | Tokens, primitives, message bus, store slices | Tokens and icons present since P3.1 (`tokens.css`, `primitives/icons.tsx`); primitives present since P3.2 (`primitives/index.ts`); bus and store in P3.3; nothing of it is in a bundle until the sidebar entry imports it in P3.4 |
 | `src/webview/sidebar-next/**` | 2.0 sidebar entry | Placeholder; first slice in P3.4 |
 | `src/webview/main/**` | 2.0 main panel entry | Placeholder; shell in P5.3 |
 
@@ -186,6 +186,72 @@ any other file under `src/webview/{shared,main,sidebar-next}`, tests included.
 refuse (ADR-006); without a title it is hidden from assistive technology, with one it is an image with that
 name. The frontend test setup (`src/test/setup-frontend.ts`) registers the `toHaveNoViolations` matcher of
 `jest-axe`, so a component test can end with `expect(await axe(container)).toHaveNoViolations()`.
+
+### Primitives and the listbox contract
+
+`src/webview/shared/primitives/index.ts` exports the building blocks both 2.0 webviews are made of
+([ADR-008](docs/adr/008-webview-architecture.md)): `Listbox`, `Row`, `SectionHeader`, `IconButton`, `Badge`,
+`LiveStatus`, `EmptyState`, `Skeleton`, `Spinner`, `ProgressBar`, `Banner`, `Sash`, the icons and `cssVars`.
+Each has a test with React Testing Library that ends in an axe run.
+
+**A list is a listbox, and its row buttons are not in it.** The interaction model asks for
+`role="listbox"` with `role="option"` rows and for action buttons on a row. A button inside an option is
+nested interactive content: axe refuses it (`nested-interactive`, also at `tabIndex={-1}`) and a screen
+reader cannot reach it. So a row is three elements:
+
+```text
+div.nuiget-row[role="presentation"][data-index][data-testid="package-row-<id>"]     ← measured, placed
+├─ div.nuiget-row-option[role="option"][tabIndex 0 | -1][aria-selected][aria-posinset][aria-setsize]
+│     [aria-labelledby → id and version][aria-describedby → badges, description, status]
+│     [aria-busy][aria-disabled]                                                    ← text only
+└─ div.nuiget-row-actions[aria-hidden="true"]                                       ← pointer only
+      IconButton[tabIndex -1][data-testid="row-action-<name>"] … or a Spinner while the row is busy
+```
+
+The wrapper carries nothing but classes, data attributes and the measuring ref; an `aria-*` attribute on it
+would make it an owned child of the listbox that is no option (`aria-required-children`). The actions are
+visible on `:hover` and `:focus-within` of the row and hidden with `visibility`, so the row does not move
+when the pointer arrives. A click on an action leaves focus on the option. Everything a button does, a key
+of the list does too:
+
+| Key | Effect |
+|---|---|
+| ArrowUp, ArrowDown, Home, End | Move the active row (the one tab stop, roving `tabIndex`); the selection does not change |
+| Enter | `onActivate`: the main panel selects the row and shows its details, the sidebar runs its primary action |
+| Ctrl+Enter, Cmd+Enter | `onSecondaryActivate` |
+| Delete, Cmd+Backspace | `onDelete` (uninstall where it applies) |
+| Shift+F10, ContextMenu key, right-click | `onContextMenu` with an anchor: the actions menu of the row |
+
+A list names its keys in a visually hidden sentence it is described by (`hint`). A disabled option
+(`aria-disabled`, for example an unresolved package) keeps focus and the menu and ignores Enter, Ctrl+Enter
+and Delete; Space, PageUp/PageDown and multi-selection are not handled yet (P5).
+
+`Listbox` is always virtualized (`@tanstack/react-virtual`): only the rows in view and an overscan are in the
+document, every option says its place among all (`aria-posinset`, `aria-setsize`), and the active row stays
+mounted when it is scrolled out of view, so focus never falls out of the list. The active row is remembered
+by item id. When its item disappears, the row now at its index takes over; when the list empties, the
+container around the empty state takes focus. The list never takes focus it did not have.
+
+**Numbers reach the DOM as custom properties.** The Content Security Policy allows no `style` attribute in
+markup (ADR-006), and a virtualized row, a progress bar and a split need a number per element. `cssVars()`
+is the one way: it hands React's `style` prop (which sets properties through the CSSOM) nothing but
+`--nuiget-*` custom properties, and the stylesheet owns the property that uses them
+(`transform: translateY(var(--nuiget-virtual-offset))`, `width: var(--nuiget-progress-value)`). `Sash`
+renders no style at all: it reports percentages, and its owner puts them on the layout container.
+
+**One stylesheet, one live region.** `primitives/primitives.css` holds the rules of all primitives; every
+class starts with `nuiget-`, and every size, colour and duration is a token.
+`src/test/lint/webview-stylesheets.test.ts` fails for `!important`, a `px` font size, a duration that is not
+a duration token, a reduced-motion rule and an unprefixed class in any 2.0 stylesheet other than
+`tokens.css`.
+`LiveStatus` is the one `role="status"` region of a surface with the test id `status-live`: outcomes are
+announced there, and the same message twice is announced twice. A `Banner` announces itself when it appears
+(`role="alert"` for an error) and says its severity in words; a `Skeleton` is decoration and says nothing.
+
+jsdom lays nothing out, so a test that renders a `Listbox` installs a layout first
+(`installFakeLayout()` in `primitives/testSupport.ts`); without it the real virtualizer has no row in view,
+and axe skips its `aria-hidden-focus` rule instead of failing it. `axeRuleOutcome()` lets a test assert that
+a rule ran and passed. The virtualizer itself is never mocked.
 
 ### Two-surface harness
 

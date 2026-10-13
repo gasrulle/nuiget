@@ -150,7 +150,10 @@
 
 /* An outline, not a shadow: it is still drawn in forced-colours mode, where the token is `Highlight`. */
 .nuiget-row-option:focus-visible,
-.nuiget-icon-button:focus-visible {
+.nuiget-icon-button:focus-visible,
+.nuiget-sash:focus-visible,
+.nuiget-section-toggle:focus-visible,
+.nuiget-button:focus-visible {
     outline: 1px solid var(--nuiget-color-focus);
     outline-offset: -1px;
 }
@@ -232,4 +235,240 @@
     to {
         transform: rotate(360deg);
     }
+}
+
+/* ── SectionHeader ── */
+
+.nuiget-section-header {
+    display: flex;
+    align-items: center;
+    min-height: var(--nuiget-row-height-compact);
+}
+
+/* The heading is there for the outline of the page; it looks like the button it holds. */
+.nuiget-section-heading {
+    display: flex;
+    flex: 1;
+    min-width: 0;
+    margin: 0;
+    font-size: var(--nuiget-font-size-sm);
+    font-weight: 600;
+}
+
+.nuiget-section-toggle {
+    display: flex;
+    flex: 1;
+    align-items: center;
+    gap: var(--nuiget-space-2);
+    min-width: 0;
+    min-height: var(--nuiget-target-min);
+    padding: 0 var(--nuiget-space-2);
+    border: 0;
+    background: transparent;
+    color: var(--nuiget-color-fg);
+    font: inherit;
+    text-align: start;
+    text-transform: uppercase;
+    cursor: pointer;
+}
+
+.nuiget-section-title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.nuiget-section-chevron {
+    flex: none;
+    transition: transform var(--nuiget-duration-fast) var(--nuiget-easing);
+}
+
+.nuiget-section-toggle[aria-expanded="true"] .nuiget-section-chevron {
+    transform: rotate(90deg);
+}
+
+.nuiget-section-actions {
+    display: flex;
+    flex: none;
+    align-items: center;
+}
+
+/* ── Button (the action of an empty state or a banner) ── */
+
+.nuiget-button {
+    min-height: var(--nuiget-target-min);
+    padding: 0 var(--nuiget-space-5);
+    border: 1px solid transparent;
+    border-radius: var(--nuiget-radius-sm);
+    background: var(--nuiget-color-button-bg);
+    color: var(--nuiget-color-button-fg);
+    font: inherit;
+    cursor: pointer;
+}
+
+.nuiget-button:hover {
+    background: var(--nuiget-color-button-hover-bg);
+}
+
+.nuiget-button--secondary,
+.nuiget-button--secondary:hover {
+    background: var(--nuiget-color-button-secondary-bg);
+    color: var(--nuiget-color-button-secondary-fg);
+}
+
+/* ── EmptyState ── */
+
+.nuiget-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--nuiget-space-4);
+    padding: var(--nuiget-space-6);
+    color: var(--nuiget-color-fg-muted);
+    text-align: center;
+}
+
+.nuiget-empty-text {
+    margin: 0;
+}
+
+/* ── Skeleton ── */
+
+.nuiget-skeleton {
+    display: flex;
+    flex-direction: column;
+    gap: var(--nuiget-space-1);
+    padding: var(--nuiget-space-1) var(--nuiget-space-4);
+}
+
+/* A row that is not there yet. It breathes for as long as the duration tokens allow. */
+.nuiget-skeleton-row {
+    border-radius: var(--nuiget-radius-sm);
+    background: var(--nuiget-color-list-hover-bg);
+    animation: nuiget-breathe calc(var(--nuiget-duration-normal) * 6) var(--nuiget-easing) infinite alternate;
+}
+
+.nuiget-skeleton-row--compact {
+    height: calc(var(--nuiget-row-height-compact) - var(--nuiget-space-1));
+}
+
+.nuiget-skeleton-row--comfortable {
+    height: calc(var(--nuiget-row-height-comfortable) - var(--nuiget-space-1));
+}
+
+@keyframes nuiget-breathe {
+    from {
+        opacity: 1;
+    }
+
+    to {
+        opacity: 0.5;
+    }
+}
+
+/* ── ProgressBar ── */
+
+.nuiget-progress {
+    height: var(--nuiget-space-1);
+    overflow: hidden;
+}
+
+.nuiget-progress-bar {
+    width: var(--nuiget-progress-value);
+    height: 100%;
+    background: var(--nuiget-color-progress);
+    transition: width var(--nuiget-duration-normal) var(--nuiget-easing);
+    /* The token is `Highlight` in forced-colours mode; a background would otherwise be dropped there. */
+    forced-color-adjust: none;
+}
+
+/* How much is done is not known: a stripe crosses the bar. Under reduced motion it stands at the start. */
+.nuiget-progress--indeterminate .nuiget-progress-bar {
+    width: 30%;
+    animation: nuiget-progress-cross calc(var(--nuiget-duration-normal) * 8) linear infinite;
+}
+
+@keyframes nuiget-progress-cross {
+    from {
+        transform: translateX(-100%);
+    }
+
+    to {
+        transform: translateX(334%);
+    }
+}
+
+/* ── Banner ── */
+
+.nuiget-banner {
+    display: flex;
+    align-items: center;
+    gap: var(--nuiget-space-4);
+    padding: var(--nuiget-space-2) var(--nuiget-space-4);
+    border-inline-start: var(--nuiget-space-1) solid var(--nuiget-color-info);
+    color: var(--nuiget-color-fg);
+}
+
+.nuiget-banner--warning {
+    border-inline-start-color: var(--nuiget-color-warning);
+}
+
+.nuiget-banner--error {
+    border-inline-start-color: var(--nuiget-color-error);
+}
+
+.nuiget-banner-icon {
+    flex: none;
+    color: var(--nuiget-color-info);
+}
+
+.nuiget-banner--warning .nuiget-banner-icon {
+    color: var(--nuiget-color-warning);
+}
+
+.nuiget-banner--error .nuiget-banner-icon {
+    color: var(--nuiget-color-error);
+}
+
+.nuiget-banner-text {
+    flex: 1;
+    min-width: 0;
+}
+
+/* ── Sash ── */
+
+/* A thin line to look at, a 24 px strip to grab. The owner sizes the panes from its own custom property. */
+.nuiget-sash {
+    position: relative;
+    flex: none;
+    background: var(--nuiget-color-border);
+    touch-action: none;
+}
+
+.nuiget-sash::after {
+    content: "";
+    position: absolute;
+}
+
+.nuiget-sash--vertical {
+    width: var(--nuiget-space-2);
+    cursor: col-resize;
+}
+
+.nuiget-sash--vertical::after {
+    inset: 0 calc((var(--nuiget-space-2) - var(--nuiget-target-min)) / 2);
+}
+
+.nuiget-sash--horizontal {
+    height: var(--nuiget-space-2);
+    cursor: row-resize;
+}
+
+.nuiget-sash--horizontal::after {
+    inset: calc((var(--nuiget-space-2) - var(--nuiget-target-min)) / 2) 0;
+}
+
+.nuiget-sash:hover,
+.nuiget-sash:focus-visible {
+    background: var(--nuiget-color-focus);
 }
