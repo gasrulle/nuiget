@@ -1,0 +1,235 @@
+/*
+ * The one stylesheet of the shared primitives (ADR-008). Every class starts with `nuiget-`; sizes, durations
+ * and colours are tokens of ../tokens.css. No colour literal, no important flag, no reduced-motion rule: motion
+ * is timed with the duration tokens, which tokens.css sets to zero when motion is to be reduced.
+ */
+
+/* In the document for assistive technology, not on the screen. */
+.nuiget-visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* ── Listbox ── */
+
+.nuiget-listbox-root {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+}
+
+.nuiget-listbox {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+}
+
+/* As high as all rows together; the rows in view are placed inside it. */
+.nuiget-listbox-sizer {
+    position: relative;
+    height: var(--nuiget-virtual-total);
+}
+
+.nuiget-listbox-empty {
+    outline: none;
+}
+
+/* ── Row ── */
+
+.nuiget-row {
+    position: absolute;
+    inset: 0 auto auto 0;
+    display: flex;
+    align-items: center;
+    width: 100%;
+    transform: translateY(var(--nuiget-virtual-offset));
+}
+
+.nuiget-row--compact {
+    min-height: var(--nuiget-row-height-compact);
+}
+
+.nuiget-row--comfortable {
+    min-height: var(--nuiget-row-height-comfortable);
+}
+
+.nuiget-row-option {
+    display: flex;
+    flex: 1;
+    align-items: center;
+    gap: var(--nuiget-space-3);
+    min-width: 0;
+    min-height: inherit;
+    padding: 0 var(--nuiget-space-4);
+    color: var(--nuiget-color-fg);
+    cursor: default;
+}
+
+.nuiget-row:hover .nuiget-row-option {
+    background: var(--nuiget-color-list-hover-bg);
+}
+
+.nuiget-row-option[aria-selected="true"] {
+    background: var(--nuiget-color-list-active-bg);
+    color: var(--nuiget-color-list-active-fg);
+    /* The tokens are system colours in forced-colours mode; keep them instead of the mode's own repainting. */
+    forced-color-adjust: none;
+}
+
+.nuiget-row-option[aria-disabled="true"] .nuiget-row-name {
+    color: var(--nuiget-color-fg-muted);
+}
+
+.nuiget-row-title {
+    display: flex;
+    gap: var(--nuiget-space-3);
+    min-width: 0;
+    align-items: baseline;
+}
+
+.nuiget-row-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.nuiget-row-version,
+.nuiget-row-description,
+.nuiget-row-status {
+    color: var(--nuiget-color-fg-muted);
+    font-size: var(--nuiget-font-size-sm);
+    white-space: nowrap;
+}
+
+.nuiget-row-desc {
+    display: flex;
+    gap: var(--nuiget-space-2);
+    align-items: center;
+    min-width: 0;
+    margin-inline-start: auto;
+}
+
+/* A compact row has room for the name, the version and the badges; the rest is still read out. */
+.nuiget-row--compact .nuiget-row-description,
+.nuiget-row--compact .nuiget-row-status {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+}
+
+.nuiget-row-icon {
+    display: inline-flex;
+    flex: none;
+}
+
+/* Pointer actions: there when the pointer or the focus is on the row, and while the row is busy. */
+.nuiget-row-actions {
+    display: flex;
+    flex: none;
+    align-items: center;
+    visibility: hidden;
+}
+
+.nuiget-row:hover .nuiget-row-actions,
+.nuiget-row:focus-within .nuiget-row-actions,
+.nuiget-row--busy .nuiget-row-actions {
+    visibility: visible;
+}
+
+/* ── Focus ── */
+
+/* An outline, not a shadow: it is still drawn in forced-colours mode, where the token is `Highlight`. */
+.nuiget-row-option:focus-visible,
+.nuiget-icon-button:focus-visible {
+    outline: 1px solid var(--nuiget-color-focus);
+    outline-offset: -1px;
+}
+
+/* ── IconButton ── */
+
+.nuiget-icon-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: var(--nuiget-target-min);
+    min-height: var(--nuiget-target-min);
+    padding: 0;
+    border: 0;
+    border-radius: var(--nuiget-radius-md);
+    background: transparent;
+    color: var(--nuiget-color-fg-muted);
+    cursor: pointer;
+    transition: color var(--nuiget-duration-fast) var(--nuiget-easing);
+}
+
+.nuiget-icon-button:hover,
+.nuiget-icon-button[aria-pressed="true"] {
+    color: var(--nuiget-color-fg);
+}
+
+.nuiget-icon-button:disabled {
+    color: var(--nuiget-color-fg-muted);
+    cursor: default;
+}
+
+.nuiget-icon-button-icon {
+    display: inline-flex;
+}
+
+/* ── Badge ── */
+
+.nuiget-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0 var(--nuiget-space-2);
+    border-radius: var(--nuiget-radius-md);
+    background: var(--nuiget-color-badge-bg);
+    color: var(--nuiget-color-badge-fg);
+    font-size: var(--nuiget-font-size-sm);
+    line-height: var(--nuiget-line-height);
+    white-space: nowrap;
+    forced-color-adjust: none;
+}
+
+.nuiget-badge--info {
+    color: var(--nuiget-color-info);
+}
+
+.nuiget-badge--warning {
+    color: var(--nuiget-color-warning);
+}
+
+.nuiget-badge--error {
+    color: var(--nuiget-color-error);
+}
+
+/* ── Spinner ── */
+
+.nuiget-spinner {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: var(--nuiget-target-min);
+    min-height: var(--nuiget-target-min);
+}
+
+/* One turn takes five normal durations: a second, or no time at all under reduced motion. */
+.nuiget-spinner svg {
+    animation: nuiget-spin calc(var(--nuiget-duration-normal) * 5) linear infinite;
+}
+
+@keyframes nuiget-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}

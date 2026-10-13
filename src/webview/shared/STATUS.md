@@ -1,126 +1,232 @@
-# STATUS — src/webview/shared   commit 3349d27 (parent of the P3.1 commit)   2026-10-13T21:07:00Z
+# STATUS — src/webview/shared   commit 3794311 (parent of P3.2 commit a)   2026-10-13T22:06:03Z
 
 Scope of this note: `src/webview/shared/**`, the code both 2.0 webviews share, and the test wiring it needs
 (`src/test/setup-frontend.ts`, `src/test/jest-axe.d.ts`, `src/test/lint/webview-*.test.ts`).
 
-git status --porcelain --untracked-files=all: `?? src/webview/shared/tokens.css`,
-`?? src/webview/shared/primitives/icons.tsx`, `?? src/webview/shared/primitives/icons.test.tsx`,
-`?? src/webview/shared/STATUS.md`, `?? src/test/jest-axe.d.ts`, `?? src/test/lint/webview-colours.test.ts`,
-`?? src/test/lint/webview-tokens.test.ts`, ` M src/test/setup-frontend.ts`, ` M tsconfig.vitest.json`,
-` M package.json`, ` M package-lock.json`, ` M docs/plans/STATUS.md`, ` M docs/plans/findings-ledger.md`,
-` M CHANGELOG.md`, ` M ARCHITECTURE.md`, ` M .github/copilot-instructions.md` (all belong to the P3.1 commit)
+git status --porcelain --untracked-files=all: ` M src/webview/shared/tokens.css`, ` M src/webview/shared/STATUS.md`,
+`?? src/webview/shared/primitives/` with `cssVars.ts`, `primitives.css`, `testSupport.ts`, and `Listbox`, `Row`,
+`IconButton`, `Badge`, `Spinner`, `LiveStatus` each as `.tsx` and `.test.tsx`,
+`?? src/test/lint/webview-stylesheets.test.ts`, ` M docs/ux/interaction-model.md`, ` M docs/plans/STATUS.md`,
+` M docs/plans/findings-ledger.md`, ` M CHANGELOG.md` (all belong to P3.2 commit a)
 
-Item: **P3.1 tokens, icons and the axe matcher** (stop-and-ask: the row names `jest-axe`, which was not
-installed, so `package.json` and the lockfile change; no contract change, no sentinel). The quarry has nothing
-in this directory but a note; everything here is new, the icons a port of `src/webview/app/icons.tsx`.
+Item: **P3.2 ⚑ listbox and row accessibility decision, and the primitives** — one tracker row, two commits
+by the ruling. **Commit a (this note):** the decision in the interaction model, `Listbox`, `Row`, `IconButton`,
+`Badge`, `Spinner`, `LiveStatus`, their stylesheet and the stylesheet lint. **Commit b (not started):**
+`SectionHeader`, `EmptyState`, `Skeleton`, `ProgressBar`, `Banner`, `Sash`, `primitives/index.ts`, the composed
+test, ARCHITECTURE and the gotcha rows. The row stays `in-progress` until commit b. No contract change, no
+sentinel. Nothing here comes from the quarry.
 
 ## Verified by running
 
 ```text
-baseline npx tsc --noEmit / npm run check-types → exit 0 / exit 0
-baseline npx eslint src      → exit 0
-baseline npx vitest run      → Test Files 83 passed (83) · Tests 2492 passed | 3 skipped (2495)
-baseline npx vitest run --project frontend → 20 files, 612 tests, Duration 2.50s (before the axe matcher)
-npm install (after the one line in package.json) → exit 0 · only package.json and package-lock.json changed ·
-                               24 lockfile entries added, none removed: jest-axe 11.0.0 (MIT), axe-core
-                               4.12.1 (MPL-2.0), jest-matcher-utils and jest-diff 30.4.1, lodash.merge
-                               4.6.2, @jest/* helpers, @sinclair/typebox, react-is, chalk 4 with its two
-                               helpers (all MIT) · grep -c '"node_modules/jest-axe"' package-lock.json → 1 ·
-                               ls node_modules/@types | grep -c jest → 0
-npm ci --no-audit --no-fund  → exit 0 (the lockfile installs as it is) · git status afterwards: the files of
-                               this item only · ls node_modules/@types | grep -c jest → 0
-npm audit                    → 4 vulnerabilities (2 low, 1 moderate, 1 high): the same four development-only
-                               findings as before the item (N28); the new packages add none
-npx tsc --noEmit / npm run check-types → exit 0 / exit 0 (src/test/jest-axe.d.ts through tsconfig.vitest.json)
+baseline (at 3794311) npx tsc --noEmit / npm run check-types / npx eslint src → exit 0 / exit 0 / exit 0
+baseline npx vitest run      → Test Files 86 passed (86) · Tests 2510 passed | 3 skipped (2513)
+npx tsc --noEmit / npm run check-types → exit 0 / exit 0
 npx eslint src / npm run lint → exit 0, no output / exit 0
-npx vitest run --project frontend → 21 files, 620 tests, Duration 2.47s (2.50s before: the matcher costs
-                               nothing where no test calls axe)
-npx vitest run --project frontend src/webview/shared → Test Files 1 passed (1) · Tests 8 passed (8) (the
-                               row's gate "frontend tests green")
-npx vitest run --project backend src/test/lint → Test Files 4 passed (4) · Tests 106 passed (106), among
-                               them webview-colours (3) and webview-tokens (7): the row's gate "hex colours
-                               only in tokens.css"
-node esbuild.mjs --v2        → exit 0 · [development] Build complete · dist/ after rm -rf dist: extension.js,
-                               sidebar.js, webview.js and their maps, no CSS file (expected until P3.4)
-npm test (NUIGET_SDK_TESTS=1) → Test Files 86 passed (86) · Tests 2513 passed (2513)
-npx vitest run               → Tests 2510 passed | 3 skipped (2513)
-npx vitest run --coverage    → exit 0 · all files lines 79.74 % · src/webview/** 3064 of 4691 lines, 65.32 %
-                               (ratchet 64, unchanged) · src/webview/shared/** 53 of 53 · src/core/** 98.52 %
+npx vitest run --project frontend src/webview/shared → Test Files 7 passed (7) · Tests 51 passed (51): icons 8,
+                               IconButton 3, Badge 3, Spinner 3, LiveStatus 4, Row 11, Listbox 19 (the row's
+                               gate, as far as commit a goes)
+the same, 40 times in a row  → 40 of 40 green (`LiveStatus` waits for an animation frame; N60)
+npx vitest run --project backend src/test/lint → Test Files 5 passed (5) · Tests 115 passed (115), among them
+                               webview-stylesheets (9)
+npx vitest run --project frontend → Test Files 27 passed (27) · Tests 663 passed (663)
+npm test (NUIGET_SDK_TESTS=1, DOTNET_ROOT set) → Test Files 93 passed (93) · Tests 2565 passed (2565)
+npx vitest run               → Tests 2562 passed | 3 skipped (2565)
+npx vitest run --coverage    → exit 0 · all files lines 79.97 % · src/webview/** 3201 of 4829 lines, 66.29 %
+                               (ratchet 64, unchanged) · src/webview/shared/** 190 of 191 lines · src/core/**
+                               98.52 %
 npm run bench / bench:compare → exit 0 / exit 0 · Tests 112 passed | 1 skipped (113)
-negative control             → 13 mutations: a titled icon without role; `aria-hidden="false"`; an icon with
-                               a style attribute, a fixed size, a colour literal; tokens.css with an element
-                               rule, a colour that is no alias, a var() of a foreign variable, a duration
-                               left on under reduced motion, a required token missing, a theme variable
-                               under forced colours, one high-contrast class only; a hex colour planted in a
-                               stylesheet of the sidebar. 13 of 13 caught; every file restored.
-grep -rnE '#([0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})([^[:alnum:]_-]|$)|rgba?\(|hsla?\(' src/webview/shared src/webview/main src/webview/sidebar-next → 0 lines
-grep -c 'style' src/webview/shared/primitives/icons.tsx → 0 · grep -c 'prefers-reduced-motion' tokens.css → 1
-git diff --stat -- src/protocol src/core src/host docs/adr vitest.config.mts eslint.config.mjs esbuild.mjs → empty
-ls .claude/.contract-change  → No such file or directory
-npm run package:vsix, npm run check:vsix, npm run docs:protocol:check, npm run test:ui → SKIPPED: no host,
-                               packaging, protocol or UI file changed; CI runs them (and its Build & Package
-                               job proves with check:vsix that the new development dependency does not ship)
-CI                           → see the tracker row of P3.1
+npm run docs:protocol:check  → exit 0 (no protocol file changed)
+node esbuild.mjs --v2        → exit 0 · [development] Build complete · dist/ (it did not exist before): extension.js,
+                               sidebar.js, webview.js and their maps, no CSS file · grep -c testSupport and
+                               grep -c installFakeLayout over dist/*.js → 0 and 0: the test support file is in
+                               no bundle (no entry imports a primitive yet either; P3.4)
+negative control             → 68 mutations, one at a time, against the two targeted suites: 29 in
+                               `Listbox.tsx` (each key, the bounds, the disabled guards, the menu anchor, a
+                               click on an action, the kept-mounted active row, focus taken from elsewhere,
+                               the empty container, the fallback index, `setsize`, no virtualization, layout
+                               through `style`, the tab stop), 16 in `Row.tsx` (wrapper role and aria, the
+                               actions inside the option or not hidden, focus on click, busy, disabled,
+                               posinset, naming, description, offset, icon, test id), 4 `LiveStatus`, 4
+                               `IconButton`, 3 `Badge`, 1 `Spinner`, 10 in `primitives.css` (actions hidden
+                               with `display: none`, not shown on hover or on focus-within, a literal
+                               duration, a spin without a token, an unprefixed class, the important flag, a
+                               px font size, its own reduced-motion rule, a colour literal), 1 in
+                               `testSupport.ts` (no `elementFromPoint`). First run 65 caught: one mutant was
+                               equivalent (it changed a comment) and was re-aimed; two showed that
+                               `IconButton.test.tsx` did not pin `aria-label` or the hidden icon wrapper,
+                               and the test was tightened. Final: 68 of 68 caught; every file restored
+                               (`cmp` against the copies taken before the run).
+grep -c 'role="presentation"' primitives/Row.tsx → 1 · grep -nE '<button|tabIndex' primitives/Row.tsx → no
+                               button; `tabIndex` on the option only (line 78) and in two comments
+grep -rn 'style={' primitives/*.tsx → 0 lines · grep -rn "vi.mock('@tanstack" src/webview/shared → 0 lines
+grep -c 'prefers-reduced-motion' primitives/primitives.css → 0 · grep -c '!important' primitives/primitives.css → 0
+grep -n 'row-height-compact' tokens.css → `--nuiget-row-height-compact: 24px;`
+grep -c 'row-action-<name>\|section-header-<name>\|Cmd+Backspace' docs/ux/interaction-model.md → 3
+git diff --stat -- vitest.config.mts eslint.config.mjs esbuild.mjs package.json src/protocol src/core docs/adr → empty
+test -e .claude/.contract-change → false
+npm run package:vsix, npm run check:vsix, npm run test:ui → SKIPPED: no host, packaging, protocol or UI file
+                               changed; CI runs them
+CI                           → see the tracker row of P3.2
 ```
 
 ## Done (tested)
 
-- `tokens.css`: custom properties with the prefix `--nuiget-` and nothing else. Spacing 1 to 6 (2 to 16 px),
-  two radii, two row heights (22 and 44 px), three icon sizes, the smallest pointer target (24 px), four
-  z-index steps, two durations and an easing, three font sizes in `em`, line height and two font families,
-  and 28 colour tokens, each an alias of a `--vscode-*` variable. One rule for the two high-contrast classes,
-  one `forced-colors` block in system colours, one `prefers-reduced-motion` block. No colour literal.
-- `primitives/icons.tsx`: the 26 icons of 1.x. `IconProps` is `{ size?, className?, title? }`; no `style`; an
-  icon without a title has `aria-hidden="true"` and no role, one with a title has `role="img"`, a `<title>`
-  and no `aria-hidden` attribute (1.x rendered `aria-hidden="false"` there).
-- `primitives/icons.test.tsx`, 8 tests over every export of the module: the seven titles of the ruling and
-  `the axe matcher is live: an image without a name is a violation`.
-- `src/test/setup-frontend.ts` registers `toHaveNoViolations` for every frontend test; `src/test/jest-axe.d.ts`
-  types the package; `tsconfig.vitest.json` includes the declaration file.
-- `src/test/lint/webview-colours.test.ts` (3 tests) and `src/test/lint/webview-tokens.test.ts` (7 tests): the
-  tool behind the gate "hex colours only in `tokens.css`", and the shape of the tokens file.
+- **The decision** (interaction model §5 and §8): a list is `role="listbox"`; each row is a
+  `role="presentation"` wrapper holding the focusable `role="option"` and, beside it, an `aria-hidden`
+  container with the pointer buttons (`tabIndex={-1}`). A button inside an option is nested interactive
+  content, which axe refuses and a screen reader cannot reach, so every row action is a key of the list instead.
+- `primitives/Row.tsx` (11 tests): the DOM of the ruling. The option is named by its title (`aria-labelledby`:
+  id and version) and described by badges, description and status (`aria-describedby`); `aria-busy` and
+  `aria-disabled` are on the option, never on the wrapper; a busy row shows a spinner in place of its actions,
+  a disabled row renders none; a click on an action leaves focus on the option; the one inline style is
+  `--nuiget-virtual-offset`.
+- `primitives/Listbox.tsx` (19 tests): always virtualized with `@tanstack/react-virtual`, one tab stop (roving
+  `tabIndex`), the active row remembered by item id. ArrowUp/ArrowDown/Home/End move without selecting; Enter,
+  Ctrl+Enter or Meta+Enter, Delete or Meta+Backspace, Shift+F10 or the ContextMenu key, click and right-click
+  are reported to the owner; a disabled option ignores Enter, Ctrl+Enter and Delete. The active row stays in
+  the document when it is scrolled out of view. When the active item goes, the row at its index takes over;
+  when the list empties, the empty container takes focus; the list never takes focus it did not have.
+- `primitives/IconButton.tsx`, `Badge.tsx`, `Spinner.tsx`, `LiveStatus.tsx` (3, 3, 3, 4 tests): as ruled.
+  `LiveStatus` is the one `status-live` region, there from the first render, and re-announces a message by
+  emptying itself and filling in on the next animation frame.
+- `primitives/cssVars.ts`: the one way a number reaches the DOM (ADR-006): a `--nuiget-*` custom property
+  through React's `style` prop, which is CSSOM and not a `style` attribute in markup; the stylesheet owns the
+  property that uses it.
+- `primitives/primitives.css`: the rules of these six primitives; tokens only.
+- `primitives/testSupport.ts`: `installFakeLayout` and `axeRuleOutcome` (see Deviations).
+- `tokens.css`: `--nuiget-row-height-compact` is 24 px (was 22): a row is a pointer target (WCAG 2.5.8).
+- `src/test/lint/webview-stylesheets.test.ts` (9 tests): the six ruled titles over every 2.0 stylesheet but
+  `tokens.css`, and three that keep the scanner honest (it covers the files, finds planted defects, accepts
+  what the primitives write).
+- Every axe test that concerns the row markup also asserts that `nested-interactive`,
+  `aria-required-children` and `aria-hidden-focus` are among the rules that **passed**, and three negative
+  tests show each rule failing on the markup the decision avoids.
 
 ## Done (untested)
 
-- Nothing renders with the tokens yet: `tokens.css` is imported by no entry, so it is in no bundle and
-  `node esbuild.mjs --v2` writes no CSS file. The lint tests check the file's text, not its effect in a
-  theme. P3.4 imports it from the sidebar entry; P5.11 is the theme pass.
-- `LoadingIcon` carries the class `codicon-loading`, as in 1.x, where a stylesheet binds the spin animation to
-  it. No 2.0 stylesheet has that rule yet: the `Spinner` primitive of P3.2 brings it, timed with
-  `--nuiget-duration-*`.
+- Nothing here has rendered in a browser. No entry imports the primitives or `tokens.css` yet (P3.4), so what
+  the stylesheet does is checked as text only: that the actions appear on `:hover` and `:focus-within`, the
+  focus outline, the spin, the absolute placement of rows by `transform`. P3.4 and the e2e of P3.5 are the
+  first real render; P5.11 is the theme pass.
+- Scrolling. jsdom does not scroll and lays nothing out; the tests run the real virtualizer over a faked
+  layout (list 120 px, rows 24 px), so `scrollToIndex` is called but moves nothing, and rows of measured,
+  differing heights (`comfortable` with wrapped text) are not exercised.
+- Chromium focuses a button on mouse-down even at `tabIndex={-1}`; the test proves that `Row` prevents the
+  default of that event and focuses the option, not what Chromium then does.
+- What a screen reader says (name, description, the hint, a re-announced status) is asserted through the
+  accessibility tree jsdom and axe compute, not heard: P7.4 is the manual pass.
+- `IconButton`'s `className` prop has no test (branch coverage 50 % in that file).
 
 ## Not started
 
-- The other primitives (`Row`, `Listbox`, `SectionHeader`, `IconButton`, `Badge`, …): P3.2, after its ⚑
-  decision on the listbox and row markup. `primitives/index.ts` is decided there.
+- **P3.2 commit b:** `SectionHeader`, `EmptyState`, `Skeleton`, `ProgressBar`, `Banner`, `Sash` with their
+  tests and rules (ruling steps 7 to 9), `primitives/composed.test.tsx`, `primitives/index.ts`, the
+  ARCHITECTURE subsection "Primitives and the listbox contract", the gotcha rows, the completed CHANGELOG
+  entry, the coverage figure of `src/webview/shared/**` in this note, and the tracker row set to `done`.
+- Space, PageUp/PageDown, type-ahead and multi-selection in `Listbox`: reserved for P5 (bulk toolbar);
+  `selectedId` is shaped so that a set of ids is an addition.
 - `bus/` and `store/`: P3.3. `PackageIcon` and `BookIcon`: with their first consumer.
-- Raising the coverage ratchet of `src/webview/**`: not in this item (the ruling leaves the thresholds).
 
 ## Deviations from contract/ADR (file:line each)
 
-- `src/test/setup-frontend.ts:12-19` and `src/test/jest-axe.d.ts`: the ruling puts the Vitest augmentation
-  into the declaration file, written as `interface Assertion<T = unknown>` and `AsymmetricMatchersContaining`.
-  Two things in the tree decide otherwise. `declare module 'jest-axe'` is a declaration of that module only
-  in a script file (no top-level import or export), and an augmentation of `vitest` needs a module file, so
-  the two cannot share a file; the augmentation is in `setup-frontend.ts`, which `tsconfig.vitest.json`
-  already includes. And Vitest 5 declares `Assertion<R, T>` with two type parameters, so a one-parameter
-  interface does not merge (TS2428); Vitest's extension point for custom matchers is `Matchers<R, T>`, which
-  `Assertion` and the asymmetric matchers both extend, and the matcher is declared there with Vitest's own
-  parameter list (one `eslint-disable-next-line` for the unused `T`).
-- `primitives/icons.test.tsx`: one test more than the ruling lists (the liveness check of the matcher), and
-  `className is applied` asserts that the class is among the icon's classes, because `LoadingIcon` adds its
-  own.
-- `tokens.css`: the fallbacks that are keywords are `transparent` (shadow, input border); `fg-muted` falls
-  back to `--vscode-foreground`. The ruling asks for "a `--vscode-*` or keyword fallback" without naming them.
-- `src/test/lint/webview-tokens.test.ts`: beyond the ruling's list it checks that the forced-colours block
-  uses system colour keywords only and that the high-contrast rule sets exactly border, focus and shadow.
-  It normalizes CRLF to LF when it reads `tokens.css`: the repository has no `.gitattributes`, and a checkout
-  on Windows may have CRLF, which two of its lookups would not find.
-- `.github/copilot-instructions.md`: two gotcha rows where the ruling asks for one. "Jest-typed matcher
-  packages under Vitest" is the ruled one; "Colour literal in a 2.0 webview file" tells the next author what
-  the new lint test wants, which is the kind of footgun the table exists for.
+- `primitives/Row.tsx:7-21` (`RowPlacement`): the ruling lists `index`, `setSize`, `active`, `selected`,
+  `optionId` as what the list hands to `renderRow`. Two more are needed to render what the ruling's own DOM
+  shows on the wrapper: `offset` (the value of `--nuiget-virtual-offset`) and `measureRef` (the virtualizer's
+  measuring ref). They are part of the same object, which a consumer spreads into `Row` without reading it.
+- `primitives/LiveStatus.tsx:8` (`repeat?: number`): the ruling's prop is `message` alone, and asks that an
+  identical consecutive message be announced again. A component cannot see that the same string was set
+  twice; the owner changes `repeat` to say so (P3.3's store will count announcements).
+- `primitives/Listbox.tsx:89-109`: the ruling restores focus "if the listbox had focus-within", in an effect
+  on `[activeId, items]`. By the time an effect runs, a removed row has already taken focus to `body`, so
+  "had focus" is read during render (before React changes the document) and used in a layout effect on
+  `[activeIndex, items]`; the option is found by `data-index` inside the list, not by `getElementById`.
+- `primitives/Listbox.tsx:7-8`: the row heights 24 and 44 repeat the two tokens, as the ruling expects: a
+  script cannot read a token before layout (and not at all in jsdom).
+- `primitives/Listbox.tsx:143` and interaction model §5: Cmd+Backspace uninstalls on macOS. 1.x handled
+  `Delete` only (`src/webview/sidebar/SidebarApp.tsx:1142`); this is an addition, as ruled.
+- `primitives/testSupport.ts` (a file the ruling does not name) and `Listbox.test.tsx`: the ruling says to stub
+  `getBoundingClientRect` for the virtualization test. With the installed `@tanstack/virtual-core` 3.18.0 that
+  is not enough: the virtualizer reads the size of its scroll element from `offsetHeight`
+  (`node_modules/@tanstack/virtual-core/dist/esm/index.js:14-16`), which jsdom reports as 0, and then **no**
+  row is rendered in any test. And axe cannot evaluate `aria-hidden-focus` in jsdom at all:
+  `document.elementFromPoint` does not exist, the rule throws, ends as "incomplete", and
+  `toHaveNoViolations` accepts that; the ruled negative test for that rule cannot fail without it. So
+  `installFakeLayout` defines `offsetHeight`, `offsetWidth`, `getBoundingClientRect` and
+  `document.elementFromPoint` for the length of a test and removes them again (no `vi`, so the file also
+  compiles under `tsconfig.json`), and `axeRuleOutcome` says under which heading axe filed a rule. The real
+  virtualizer runs; nothing of `@tanstack` is mocked. The helper is in `primitives/` because the tests of P3.3
+  and P3.4 that render a `Listbox` need it too; it is imported by tests only and is in no bundle.
+- Tests beyond the ruled titles: `Listbox`: `a click selects the row, a click on an action does not`, `never
+  takes focus from elsewhere when its items change`, `an empty listbox has no axe violations`; `Row`: `a row
+  with nothing to add has no description, and an inactive row is out of the tab order`, `a comfortable row
+  shows its icon as decoration, a compact row does not show one`, `the test id is the lower-cased package id`;
+  `Badge`, `Spinner`, `LiveStatus`: one or two each around the ruled one; the lint file: three scanner tests.
+- `src/test/lint/webview-stylesheets.test.ts`: the duration check also refuses a literal `animation-delay` or
+  `transition-delay`, and an `animation` or `transition` shorthand that names no duration token at all (it
+  would run with the browser's default, outside the reduced-motion answer).
+- Each primitive imports `./primitives.css` itself; the ruling puts that import in `primitives/index.ts`
+  (commit b). Until the index exists it is the only way the rules travel with a component, and it stays
+  harmless afterwards: a bundler includes a stylesheet once.
+- `primitives/primitives.css:1-5`: the header says "no important flag" in words, so that the ruling's
+  `grep -c '!important'` counts 0.
 
 ## Advisor decisions (date, item, question, answer verbatim)
+
+2026-10-13, P3.2, ⚑ brief in the plan's §2.4 form (`architecture-advisor`), on `labs/2.0` @ `3794311` with
+nothing written. Question: the interaction model's listbox with action buttons in its rows against axe's
+`nested-interactive`, `aria-required-children` and `aria-hidden-focus`; four options (listbox with a hidden
+sibling actions container, grid, plain list, actions outside the list); the exact DOM and keyboard contract
+of `Listbox` and `Row`; how virtualization reaches the DOM under ADR-006; the other ten primitives; the
+stylesheet; the tests; the wording of the interaction-model edits; whether the item is split. Answer, verbatim:
+
+`````text
+DECISION: Option 1, sharpened: `role="listbox"` → per row a `role="presentation"` wrapper (nothing on it but `className`, `data-*` and the measure `ref`) holding the focusable `role="option"` and a sibling actions container `aria-hidden="true"` whose `IconButton`s are `tabIndex={-1}` with `onMouseDown` prevented; roving `tabIndex`, one `Listbox` component that is always virtualized (no separate `VirtualList` export), single selection now, every action mirrored by a key the listbox handles and announced through the single `LiveStatus`; per-element numbers reach the DOM only as `--nuiget-*` custom properties through React's `style` prop (ADR-006's named mechanism), never as a layout property. One tracker row P3.2, two green commits in a fixed order (a: `Listbox`, `Row`, `IconButton`, `Badge`, `Spinner`, `LiveStatus`, `primitives.css`, tokens, §5/§8, the stylesheet lint test; b: `SectionHeader`, `EmptyState`, `Skeleton`, `ProgressBar`, `Banner`, `Sash`, the barrel, ARCHITECTURE and the gotcha rows). One stylesheet `src/webview/shared/primitives/primitives.css`, imported by every primitive module and by the barrel. `primitives/index.ts` is created in commit b. Not `OWNER MUST DECIDE`: the owner approved the row that recommends this DOM, no frozen path changes, and `contributes` is untouched.
+
+WHY: The brief describes the tree accurately (checked: `src/webview/shared/**` has only `tokens.css`, `primitives/icons.tsx`, `icons.test.tsx`, `STATUS.md`; `src/test/setup-frontend.ts:6-10` registers the matcher; `vitest.config.mts:36-47,70-80`; `package.json:343,353`; `docs/ux/interaction-model.md:48-63,78-82,106-125`; `src/webview/sidebar/components/PackageRow.tsx:95-137` has the button inside the option; `SectionHeader.tsx:31-44` is a `role="button"` div containing action buttons; `DraggableSash.tsx:92-105` mutates `document.body.style`; `App.tsx:3039-3049` positions rows with inline layout styles). The decision is settled by axe-core 4.12.1's own code, not by its documentation: `getOwnedRoles` (`node_modules/axe-core/axe.js:27366`) drops any child that is not visible to screen readers before it looks at roles, so an `aria-hidden="true"` actions container never reaches `aria-required-children`, and it flattens a child whose role is null or presentational only when that child has no global `aria-*` attribute and no `tabindex`, otherwise the child is pushed as an owned element with a null role and fails as "unallowed"; `getMissingContext` walks through null-role parents, so the option inside the wrapper passes `aria-required-parent`; `noFocusableContentEvaluate` (`nested-interactive`) collects every focusable widget descendant and flags `tabindex < 0` as `notHidden`, so a `tabIndex={-1}` button inside the option still fails, which is why the actions must be a sibling and not merely hidden (the quarry note in brief point 3 is right about that, and this is the negative test); `focusableNotTabbableEvaluate` (`aria-hidden-focus`) reads `tabbableElements` only, so `tabIndex={-1}` buttons pass (brief point 6 is right); `option.allowedAttrs` lists `aria-posinset`/`aria-setsize`, `separator` has `requiredAttrs: ['aria-valuenow']` with `ariaRequiredAttrEvaluate` exempting only non-focusable separators (the Sash is focusable, so it carries the attribute), `progressbar` has `accessibleNameRequired: true`, `listbox` allows `aria-multiselectable` for P5. Roving `tabIndex` over `aria-activedescendant` because §5's "visible on `:focus-within`" needs real focus inside the wrapper, and because P3.5's ExTester tests can read `document.activeElement`; the unmount hazard of a virtual list is closed by a `rangeExtractor` that keeps the active index mounted (`defaultRangeExtractor` is exported, `@tanstack/virtual-core/dist/esm/index.d.ts:36`). Options 2 to 4 contradict the owner-approved model and test ids (§5 and §8 say listbox) or lose selection semantics. ADR-006:22-23 reads "styles are set through the CSSOM (React's `style` prop), never as `<style>` or a `style` attribute in rendered HTML": the `style` prop is the permitted mechanism, the icons lost it in P3.1 because they did not need it; jsdom 30 serializes custom properties (`node_modules/jsdom/lib/jsdom/living/css/CSSStyleDeclaration-impl.js:140,324`), so the test can read them back. Virtual-core's `observeElementRect` seeds from `getBoundingClientRect` and no-ops without `ResizeObserver`, and `scrollWithAdjustments` optional-calls `scrollTo`, so the real virtualizer runs under jsdom when the test stubs the rects; the 1.x tests mock `useVirtualizer` (`InstalledTab.test.tsx:7-11`), which hides exactly what this item must prove. Two commits in one row have precedent (`2dcd3c6`/`9e2ebbc` for P0.13, `b8bfb9c`/`25e9a82` for P1.3, `e080e1f`/`2f903e7` for P1.6); plan line 208 reserves two sessions for P1.1b alone, so the second commit is not a second row and not a licence for a second session.
+
+DO:
+1. Tokens (`src/webview/shared/tokens.css`, `src/test/lint/webview-tokens.test.ts`): no new token. The spinner and the indeterminate bar time themselves with `calc(var(--nuiget-duration-normal) * 5)` (1 s; 0 under reduced motion through the one existing rule). Change `--nuiget-row-height-compact` from `22px` to `24px` so the 24 px `IconButton` target fits a compact row (WCAG 2.5.8, U11); the tokens test checks names, not values. Record it under Deviations in the STATUS note and in the U11 ledger row as "compact row 24 px for WCAG 2.5.8; P3.6 may revert by value".
+2. `src/webview/shared/primitives/cssVars.ts`: `export function cssVars(vars: Partial<Record<`--nuiget-${string}`, string>>): React.CSSProperties` (one cast inside). It is the only way a primitive produces a `style` prop; `src/test/lint/webview-stylesheets.test.ts` (step 11) and each component test assert that every `[style]` in rendered output matches `/^(--nuiget-[a-z0-9-]+: [^;]+;\s*)+$/`.
+3. `Row` (`primitives/Row.tsx`). Props: `itemId: string` (test id `package-row-${itemId.toLowerCase()}`), `name: string`, `version?: ReactNode`, `description?: string`, `icon?: ReactNode` (comfortable only), `badges?: ReactNode` (`Badge`s), `status?: string` (e.g. "Updating", "Unresolved"), `busy?: boolean`, `disabled?: boolean`, `actions?: ReactNode` (`IconButton`s with `tabIndex={-1}` and `data-testid="row-action-<name>"`), `density: 'compact' | 'comfortable'`, and the list props the `Listbox` passes through `renderRow`: `index`, `setSize`, `active`, `selected`, `optionId`. DOM, exactly:
+   `div.nuiget-row.nuiget-row--{density}[.nuiget-row--busy][role="presentation"][data-index={index}][data-testid="package-row-<id>"]` (ref = `measureElement`; `style` = `cssVars({ '--nuiget-virtual-offset': `${start}px` })` and nothing else; no `aria-*`, no `tabIndex`)
+   → `div.nuiget-row-option[role="option"][id={optionId}][tabIndex={active ? 0 : -1}][aria-selected={selected}][aria-posinset={index + 1}][aria-setsize={setSize}][aria-busy="true" when busy][aria-disabled="true" when disabled][aria-labelledby=`${optionId}-title`][aria-describedby=`${optionId}-desc` when badges, description or status exist]`
+     → `span.nuiget-row-title[id=…-title]` holding `span.nuiget-row-name` (name) and `span.nuiget-row-version` (version); the icon before it, `aria-hidden` or an `img` with `alt=""`
+     → `span.nuiget-row-desc[id=…-desc]` holding badges, `span.nuiget-row-description`, and `span.nuiget-row-status` (visually hidden when the density has no room; always in the DOM when `status` is set)
+   → `div.nuiget-row-actions[aria-hidden="true"]` with `onMouseDown={e => { e.preventDefault(); optionRef.current?.focus(); }}` (Chromium focuses a clicked button even at `tabIndex -1`, which would park focus inside an `aria-hidden` subtree); it renders `actions` or, when `busy`, one decorative `Spinner`; when `disabled` it renders nothing.
+   No `aria-label` on the option (WCAG 2.5.3): the name is the visible id and version, the description carries badges, description and status. Everything is a `span`/`div`; no `button` or other widget inside the option.
+4. `Listbox` (`primitives/Listbox.tsx`), generic over `T extends { id: string }`. Props: `items: readonly T[]`, `renderRow: (item: T, list: { index; setSize; active; selected; optionId }) => ReactNode` (returns a `Row`), `label: string` or `labelledBy: string` (one required), `hint: string` (required; the visually hidden sentence naming the keys, composed by the consumer, e.g. "Enter uninstalls. Shift+F10 opens the actions menu."), `testId: string`, `density`, `estimateSize?: number` (default 24 compact, 44 comfortable; note in STATUS that these numbers duplicate the two tokens because JS cannot read a token in jsdom), `overscan?: number` (default 5), `selectedId?: string | null`, `onSelect?(item)`, `onActivate?(item)`, `onSecondaryActivate?(item)`, `onDelete?(item)`, `onContextMenu?(item, anchor: { x: number; y: number })`, `busy?: boolean` (`aria-busy` on the listbox while revalidating), `empty?: ReactNode`. DOM:
+   `div.nuiget-listbox-root` (flex column, `min-height: 0`) → `div.nuiget-listbox[role="listbox"][aria-label | aria-labelledby][aria-describedby={hintId}][aria-busy?][data-testid={testId}]` (the scroll element: `flex: 1; min-height: 0; overflow: auto`; no `tabIndex`) → `div.nuiget-listbox-sizer` (role-less, no aria; `style` = `cssVars({ '--nuiget-virtual-total': `${getTotalSize()}px` })`) → the rows from `renderRow` for `getVirtualItems()`; after the listbox, `span.nuiget-visually-hidden[id={hintId}]` with `hint`. With zero items the `role="listbox"` element is not rendered; instead `div.nuiget-listbox-empty[tabIndex=-1]` wraps `empty`, and the component focuses it when the list had focus-within (the screen reader reads the empty text; nothing lands on `body`). Virtualizer: `useVirtualizer({ count, getScrollElement, estimateSize: () => estimateSize, overscan, getItemKey: i => items[i].id, measureElement: (el) => el.getBoundingClientRect().height || estimateSize, rangeExtractor: range => { const set = new Set(defaultRangeExtractor(range)); if (activeIndex >= 0 && activeIndex < count) set.add(activeIndex); return [...set].sort((a, b) => a - b); } })`. State: `activeId` (internal, keyed by id so it survives reorders); `selected` is controlled by `selectedId`. Event delegation on the listbox element: `onFocus` (focusin) sets `activeId` from `closest('[data-index]')`; `onClick` on an option → `onSelect(item)`; `onContextMenu` anywhere in a row → `onContextMenu(item, { x: e.clientX, y: e.clientY })` with `preventDefault`; `onKeyDown`: ArrowDown/ArrowUp move the active row by one, Home/End to first/last (each: `preventDefault`, set active, `scrollToIndex(i, { align: 'auto' })`, focus in an effect after render), Enter → `onActivate`, Ctrl+Enter or Meta+Enter → `onSecondaryActivate`, Delete or Meta+Backspace → `onDelete`, Shift+F10 or `key === 'ContextMenu'` → `onContextMenu(item, { x: rect.left, y: rect.bottom })` of the option. Enter, Ctrl+Enter and Delete are ignored when the option has `aria-disabled="true"` (read from the DOM, so Row and Listbox cannot disagree); Space, PageUp/PageDown, type-ahead, Left/Right and Escape are not handled (they bubble; Space and `aria-multiselectable` come with P5's bulk toolbar; design `selectedId` so a `selectedIds` set is additive). Focus effect: on `[activeId, items]`, if the active id vanished, active becomes the item at `min(oldIndex, items.length - 1)`; if the listbox had focus-within, `getElementById(optionId)?.focus({ preventScroll: true })` after `scrollToIndex`.
+5. `IconButton`: `button.nuiget-icon-button[type="button"][aria-label={label}][title={label}][aria-pressed?][disabled?][tabIndex?][data-testid?]` with the icon child `aria-hidden`; `label` required; `min-width`/`min-height: var(--nuiget-target-min)`. `Badge`: `span.nuiget-badge.nuiget-badge--{tone}` with `label`; when `title` is given, `span[aria-hidden="true"]{label}` + `span.nuiget-visually-hidden{title}` so the row description reads "Centrally managed", not "CPM"; no `aria-label` on a span (axe `aria-prohibited-attr`). `Spinner`: `span.nuiget-spinner` around `LoadingIcon` with `title={label}` (named → `role="img"`; unnamed → `aria-hidden`), animation `nuiget-spin calc(var(--nuiget-duration-normal) * 5) linear infinite`.
+6. `LiveStatus`: `div.nuiget-visually-hidden[role="status"][aria-live="polite"][aria-atomic="true"][data-testid="status-live"]`, prop `message: string | null`, mounted from the first render of the surface (a live region announces changes only); an identical consecutive message is re-announced by clearing the text and setting it on the next animation frame. No queue and no store (P3.3): it shows the latest message. The shell does not duplicate `Banner` text into it.
+7. `SectionHeader`: `div.nuiget-section-header` → `h2|h3` (`level` prop, default 2) → `button.nuiget-section-toggle[type="button"][aria-expanded][aria-controls={contentId}][data-testid=`section-header-${testKey}`]` holding `ChevronRightIcon` (aria-hidden, rotated by CSS when expanded), `span.nuiget-section-title[id]` and, when `count !== undefined`, a `Badge`; `busy` renders a decorative `Spinner` inside the button; `actions` render in a sibling `div.nuiget-section-actions` after the heading, never inside the button (1.x's `role="button"` div with buttons inside is the `nested-interactive` the item exists to remove). The title span's `id` is what a `Listbox` passes as `labelledBy`. `EmptyState`: `div.nuiget-empty[data-testid?]` → `p.nuiget-empty-text{message}` + optional `button.nuiget-button[type="button"]{action.label}`; no role, no `tabIndex` (the focus target is the Listbox's container around it). `Skeleton`: `div.nuiget-skeleton[aria-hidden="true"]` with `rows` (default 3) × `div.nuiget-skeleton-row.nuiget-skeleton-row--{density}`; no text, no role: the "Loading …" of §4 is the `LiveStatus` message. `ProgressBar`: `div.nuiget-progress[.nuiget-progress--indeterminate][role="progressbar"][aria-label={label}][aria-valuemin="0"][aria-valuemax="100"][aria-valuenow={value} only when determinate]` → `div.nuiget-progress-bar`; `style` = `cssVars({ '--nuiget-progress-value': `${value}%` })` when determinate; `label` required. `Banner`: `div.nuiget-banner.nuiget-banner--{severity}[role={severity === 'error' ? 'alert' : 'status'}][data-testid?]` → severity icon (aria-hidden), `span.nuiget-visually-hidden{`${Severity}: `}`, `span.nuiget-banner-text{children}`, optional `button.nuiget-button.nuiget-button--secondary[type="button"]{action.label}`; a second `role="status"` is acceptable here because the message must announce when it appears (WCAG 4.1.3); P3.4 tests scope `getByRole('status')` by test id. `Sash`: `div.nuiget-sash.nuiget-sash--{orientation}[role="separator"][tabIndex=0][aria-orientation][aria-valuenow={value}][aria-valuemin={min}][aria-valuemax={max}][aria-label={label}][aria-controls?][data-testid="sash"]`; props `value`, `min` (20), `max` (80), `defaultValue` (50), `step` (1), `orientation`, `label`, `onChange(value)`, `onChangeEnd?(value)`; keys: the two arrows along the axis ±step, Shift+arrow ±10·step, Home → min, End → max, Enter → `defaultValue` (keyboard twin of double-click, WCAG 2.5.7); pointer: Pointer Events with `setPointerCapture`, percent from `parentElement.getBoundingClientRect()`, clamped, `touch-action: none` and the cursor in CSS; the sash renders no `style`: the parent sets `--nuiget-split` on its layout container with `cssVars`. The hit area is widened to 24 px with a `::after` overlay around a 4 px visual.
+8. `primitives.css`: class prefix `nuiget-`, BEM-lite modifiers (`--compact`, `--busy`, `--error`); `.nuiget-visually-hidden` (clip pattern) once; rows: `.nuiget-listbox-sizer { position: relative; height: var(--nuiget-virtual-total) }`, `.nuiget-row { position: absolute; inset: 0 auto auto 0; width: 100%; transform: translateY(var(--nuiget-virtual-offset)) }`, `.nuiget-row-actions { visibility: hidden }`, `.nuiget-row:hover .nuiget-row-actions, .nuiget-row:focus-within .nuiget-row-actions, .nuiget-row--busy .nuiget-row-actions { visibility: visible }`; focus ring `.nuiget-row-option:focus-visible, .nuiget-icon-button:focus-visible, .nuiget-sash:focus-visible, .nuiget-section-toggle:focus-visible { outline: 1px solid var(--nuiget-color-focus); outline-offset: -1px }` (an outline, not a shadow, so it survives forced colours; the token is already `Highlight` there); `forced-color-adjust: none` only on `.nuiget-row-option[aria-selected="true"]`, `.nuiget-badge` and `.nuiget-progress-bar`, whose tokens already map to system colours; every duration is a `var(--nuiget-duration-*)` or a `calc()` of one; no `@media (prefers-reduced-motion)`, no `!important`, no `px` font size, no colour literal. Every primitive module has `import './primitives.css'`; the barrel imports it too.
+9. Tests, frontend project, one `*.test.tsx` per primitive, each ending with `has no axe violations` on its own render. Titles the gate should read: `Row`: `the option is named by id and version and described by badges and status`, `the row wrapper carries no aria attribute and no tabindex`, `the actions container is hidden from assistive technology and its buttons are not tabbable`, `clicking an action keeps focus on the option`, `a busy row is aria-busy and shows a spinner instead of its actions`, `a disabled row renders no actions`, `the only inline style is the virtual offset custom property`. `Listbox`: `renders rows as options with posinset and setsize`, `ArrowDown, ArrowUp, Home and End move the active option and the roving tabindex`, `Enter activates, Ctrl+Enter and Meta+Enter are the secondary action`, `Delete and Meta+Backspace delete the active item`, `Shift+F10 and the ContextMenu key report the active item with an anchor`, `right-click on a row reports the item`, `a disabled option ignores Enter, Ctrl+Enter and Delete but keeps focus and the context menu`, `the active row follows its id when items reorder`, `when the active item disappears focus moves to the row at its index`, `when the list empties the empty container takes focus`, `only the rows in view plus overscan are rendered, and the active row stays mounted off-screen` (stub `vi.spyOn(Element.prototype, 'getBoundingClientRect')` keyed on `this`: `[role="listbox"]` → the viewport height, `[data-index]` → the row height, installed before render; never mock `useVirtualizer`), `the only inline styles are the virtual total and offsets`, `a listbox with rows, badges and actions has no axe violations`. Negative, in `Listbox.test.tsx`, each asserting `violations.map(v => v.id)` contains the rule: `a button inside an option is a nested-interactive violation` (also with `tabindex="-1"`), `a wrapper with aria-busy between listbox and option is an aria-required-children violation`, `a tabbable button under aria-hidden is an aria-hidden-focus violation`. `IconButton`: `has the accessible name it is given`, `passes tabIndex, pressed and disabled through`. `Badge`: `reads its title to assistive technology when one is given`. `Spinner`: `is decorative without a label and an image with one`. `LiveStatus`: `is a polite atomic status region with the test id`, `re-announces an identical message`. `SectionHeader`: `is a heading with a toggle button that reports aria-expanded and aria-controls`, `actions are outside the button`, `the count renders as a badge`. `EmptyState`: `renders the sentence and the optional action`. `Skeleton`: `renders the number of rows asked and is hidden from assistive technology`. `ProgressBar`: `determinate exposes the value, indeterminate omits aria-valuenow`, `the only inline style is the progress custom property`. `Banner`: `warning and info are status, error is alert`, `the severity is spoken before the text`, `the action is a button`. `Sash`: `is a focusable separator with value, min, max and orientation`, `arrows, Shift+arrows, Home, End and Enter change the value within the clamps`, `dragging reports clamped percentages and the end value`, `renders no inline style`. Plus `primitives/composed.test.tsx`: `SectionHeader, Listbox with three rows and actions, Banner and LiveStatus together have no axe violations`.
+10. Interaction model edits (`docs/ux/interaction-model.md`). Replace the §5 keyboard paragraph (lines 78-82) with: "Keyboard: every pointer action is reachable by keyboard. A list is a `role="listbox"` whose rows are `role="option"` with roving `tabIndex` (one tab stop per list; the active row has `tabIndex=0`). ArrowUp/ArrowDown move, Home/End jump to the first and last row; moving changes the active row, not the selection. Enter activates the row (main panel: selects it and shows its details; sidebar: performs its primary action), Ctrl+Enter (Cmd+Enter on macOS) performs the secondary action, Delete (Cmd+Backspace on macOS) uninstalls where applicable, and Shift+F10 or the ContextMenu key opens the actions menu for the active row; right-click anywhere on the row opens the same menu. Row action buttons are pointer-only: they sit next to the option in a container hidden from assistive technology (`aria-hidden="true"`, `tabIndex={-1}`), become visible on `:hover` and `:focus-within` of the row, and clicking one keeps focus on the row. Each listbox describes its keys in a visually hidden sentence (`aria-describedby`); outcomes are announced through the one `role="status"` region (`status-live`). A row with a pending operation is `aria-busy="true"`, its status text is part of its description and a spinner replaces its actions. A disabled row (`aria-disabled="true"`, e.g. unresolved) keeps focus, selection and the context menu but ignores Enter, Ctrl+Enter and Delete. When the active row disappears, focus moves to the row now at its index (or the last one); when the list empties, the empty-state container takes focus." Note in the STATUS that Cmd+Backspace is an addition over 1.x (`SidebarApp.tsx:1142` handled `Delete` only) and that Space, PageUp/PageDown and multi-selection are reserved for P5. §8: change the `package-row-<id>` cell to "A row (id lower-cased): the wrapper around the option and its pointer actions; the option is the `role="option"` inside it (read `aria-selected` there)"; add `row-action-<name>` | "A pointer action button inside a row (`install`, `update`, `uninstall`, `more`); hidden from assistive technology, mirrored by the keys of §5"; add `section-header-<name>` | "The toggle button of a collapsible section (`installed`, `updates`)"; `status-live` and `sash` unchanged. §4 needs no edit: "Skeleton rows (3) + `role="status"` text" is the Skeleton plus the `LiveStatus` message.
+11. `src/test/lint/webview-stylesheets.test.ts` (backend project; the folder is included): over every `.css` under `src/webview/{shared,main,sidebar-next}` except `tokens.css`: `no reduced-motion rule outside tokens.css`, `no !important`, `no px font size`, `every animation and transition duration is a duration token`, `every class selector starts with .nuiget-`, and for `primitives.css` specifically `row actions are shown on hover and focus-within of the row` (the two selectors of step 8 are present). Add this file to the item's files under this ruling.
+12. Order and commits. Commit a: steps 1-6, 8 (the rules those primitives need), 9 (their tests), 10, 11, CHANGELOG `### Added` `**2.0 webview primitives** — …` (first version), tracker and STATUS; message `feat(webview/shared): listbox, row and the first primitives (P3.2, ADR-008, ADR-006, U1, U3, U7, U11)`. Commit b: step 7 and its tests, the composed test, `primitives/index.ts` (named re-exports of every primitive plus `export * from './icons'`, and `import './primitives.css'`), ARCHITECTURE and the gotcha rows, CHANGELOG entry completed; message `feat(webview/shared): section header, status, empty, skeleton, progress, banner and sash (P3.2, ADR-008, U1, U6, U11)`. Each commit passes `npx tsc --noEmit`, `npm run check-types`, `npx eslint src`, `npx vitest run --project frontend src/webview/shared`, `npx vitest run --project backend src/test/lint`, `npm test`, `npm run bench` before push; `package:vsix`, `check:vsix`, `docs:protocol:check`, `test:ui` SKIPPED with the literal reason (no host, packaging, protocol or UI file changed). If the session must end after commit a, the row is `in progress` with "Exact next step: P3.2 commit b" in both STATUS files; that is not a split and not a second row.
+13. Docs in commit b. ARCHITECTURE.md: the `src/webview/shared/**` row (line 104) gains "primitives present since P3.2 (`primitives/index.ts`)", and a subsection "Primitives and the listbox contract" under the 2.0 section: the Row DOM sketch, why the actions are a hidden sibling, the keyboard table, how numbers reach the DOM (`cssVars`, custom properties, stylesheet owns the property), one stylesheet, the live region. Gotcha rows (2.0 table): "Buttons inside `role="option"`" → axe `nested-interactive` fails even at `tabIndex -1`; actions live in the `aria-hidden` sibling container and every one has a key in the listbox; "Attributes on the row wrapper" → nothing but `className`, `data-*` and the ref on the `role="presentation"` wrapper, or `aria-required-children` fails; "Inline style in 2.0 webviews" → only `cssVars()` with `--nuiget-*` properties, the stylesheet owns the real property, the tests read `style.cssText`; "`useVirtualizer` mocked in tests" → never in 2.0 tests, stub `getBoundingClientRect` instead; "New primitive without its stylesheet import" → each primitive module imports `primitives.css`. Ledger: U1 progressed (closes at P3.4), U3 progressed (static focus ring; closes P5.11), U6 progressed (`IconButton` requires a name; closes P5.1), U7 progressed, U11 progressed with the 24 px note, U12 progressed by the §5 rewrite. Coverage: run `npx vitest run --coverage`, paste the `src/webview/**` figure, leave `vitest.config.mts` untouched (P3.6 decides the ratchet).
+
+DO NOT:
+- Put a `button`, `tabIndex`, or any focusable element inside the `role="option"`, at any `tabIndex`.
+- Put an `aria-*` attribute or `tabIndex` on the `role="presentation"` wrapper, or `aria-label` on the option, a `Badge` span or any role-less span.
+- Use `aria-activedescendant`, `inert` on the actions (it blocks pointer events too), `aria-keyshortcuts` per option, or `display: none` for hidden actions.
+- Handle Space, PageUp/PageDown, Left/Right, Escape or type-ahead in the `Listbox`, or add `aria-multiselectable` now.
+- Mock `useVirtualizer` or `@tanstack/react-virtual` in any 2.0 test; stub `getBoundingClientRect` and let the real virtualizer run.
+- Render a layout property (`height`, `transform`, `width`, `top`) through the `style` prop; only `--nuiget-*` custom properties through `cssVars`.
+- Add a token for the spin duration, a `prefers-reduced-motion` or `forced-colors` block, a colour literal or `!important` to `primitives.css`.
+- Give `Skeleton`, `EmptyState` or `Banner` the test id `status-live`, or make `Skeleton` a live region; keep `LiveStatus` the one `status-live`.
+- Put `tabIndex` on `EmptyState`; the Listbox's empty container is the focus target.
+- Mutate `document.body.style` or add document-level mouse listeners in `Sash`; use pointer capture.
+- Create tracker rows `P3.2a`/`P3.2b`, change `vitest.config.mts`, `eslint.config.mjs`, `esbuild.mjs`, `package.json`, CI, `src/protocol/**`, `src/core/contracts.ts` or `docs/adr/**`; import `tokens.css` from any entry (P3.4).
+- Edit interaction-model §4, or any 1.x component or test.
+
+CONTRACT CHANGE: none. `src/protocol/**`, `src/core/contracts.ts` and `docs/adr/**` stay as they are (ADR-008:29-32 lists primitives as a floor; `Listbox`, `Spinner`, `ProgressBar` and `Banner` are the plan row's additions); `.claude/.contract-change` must not exist. `docs/ux/interaction-model.md` is not frozen and the row names it. Approved as files the row does not name: `src/test/lint/webview-stylesheets.test.ts` (new), one assertion list in `src/test/lint/webview-tokens.test.ts` only if a token is added (none is), `src/webview/shared/primitives/cssVars.ts`, `primitives.css`, `primitives/index.ts`, `composed.test.tsx`.
+
+VERIFY: `npx vitest run --project frontend src/webview/shared` green with the titles of step 9, including the three negative axe tests and the composed test; `npx vitest run --project backend src/test/lint` green with the six titles of step 11; `grep -c 'role="presentation"' src/webview/shared/primitives/Row.tsx` → 1 and `grep -nE '<button|tabIndex' src/webview/shared/primitives/Row.tsx` shows no button and no tabIndex inside the option markup; `grep -rn "style={{" src/webview/shared/primitives/*.tsx` → 0 lines (every style goes through `cssVars`); `grep -rn "vi.mock('@tanstack" src/webview/shared` → 0; `grep -c 'prefers-reduced-motion' src/webview/shared/primitives/primitives.css` → 0 and `grep -c '!important' …/primitives.css` → 0; `grep -n 'row-height-compact' src/webview/shared/tokens.css` shows `24px`; `grep -n 'row-action-<name>\|section-header-<name>\|Cmd+Backspace' docs/ux/interaction-model.md` → three hits; `npx tsc --noEmit && npm run check-types && npx eslint src` → 0 each; `npm test` and `npm run bench` green; `git log --oneline -2` shows the two P3.2 commits, each with a green CI run; `test -e .claude/.contract-change` → false; `git diff --stat labs/2.0@{upstream}~2 -- vitest.config.mts eslint.config.mjs esbuild.mjs package.json src/protocol src/core docs/adr` → empty.
+
+FILES CHECKED: `docs/plans/2026-10-11-nuiget-2.0-execution-plan.md:41-175,240-251,270-286,208`; `docs/plans/STATUS.md:21-82,431,1264-1356` and its phase-review headings; `docs/plans/findings-ledger.md:76-87,245-256,307-311`; `docs/ux/interaction-model.md` (whole); `docs/adr/006-icons-and-csp.md`, `docs/adr/008-webview-architecture.md` (whole); `src/webview/shared/STATUS.md` (whole), `tokens.css` (whole), `primitives/icons.test.tsx` (whole); `src/test/setup-frontend.ts`; `src/test/lint/webview-tokens.test.ts`, `webview-colours.test.ts` (whole); `vitest.config.mts:1-80`; `eslint.config.mjs:1-80`; `package.json:310-360`; `ARCHITECTURE.md:104,160-192`; `CHANGELOG.md:1-25`; `.github/instructions/a11y.instructions.md:1-120,237-243,297-304,484-493,665,724-738`; `scripts/hooks/guard.mjs:4-16,67-81,167`; `src/webview/sidebar/components/PackageRow.tsx`, `SectionHeader.tsx`, `src/webview/app/components/DraggableSash.tsx` (whole); `src/webview/app/App.tsx:1803-1807,3025-3060`; `src/webview/app/components/InstalledTab.test.tsx:1-11`; `src/webview/sidebar/SidebarApp.tsx:1132-1146`; `src/webview/main/`, `src/webview/sidebar-next/` listings; `node_modules/axe-core/axe.js` (`getOwnedRoles` at 27366, `ariaRequiredChildrenEvaluate`, `getMissingContext`, `noFocusableContentEvaluate`, `getFocusableDescendants`, `usesUnreliableHidingStrategy`, `focusableNotTabbableEvaluate`, `ariaRequiredAttrEvaluate`, the `option`, `listbox`, `separator`, `progressbar`, `status`, `presentation` role entries; version 4.12.1); `node_modules/jsdom/lib/jsdom/living/css/CSSStyleDeclaration-impl.js:140,324,415,461` (jsdom 30.1.2); `node_modules/@tanstack/react-virtual/dist/esm/index.d.ts:2,48`, `node_modules/@tanstack/virtual-core/dist/esm/index.d.ts:36,63,72,74`, `.../index.js` (`observeElementRect`, `measureElement`, `calculateRangeImpl`, `scrollWithAdjustments`; 3.14.14 / 3.18.0); `git log --oneline -60` (clean at `3794311`; multi-commit precedents P0.13, P1.3, P1.6). Not checked (outside the repository): the quarry's `STATUS.md`, taken from the brief's excerpt; its claim about `nested-interactive` is confirmed by the axe source, its plan to set custom properties in effects is replaced by the `style` prop, which ADR-006 names. The ambient advisor was consulted twice and agreed with the decision; the four points where this ruling differs from its suggestions (one stylesheet, the test id on the wrapper, the empty container as focus target, the 24 px compact row) are recorded above with their reasons.
+`````
 
 2026-10-13, P3.1, stop-and-ask in the plan's §2.4 form (`architecture-advisor`). Question: `jest-axe` is not
 installed and `package.json` is not named by the row; which dependency, how is the matcher wired and typed
@@ -163,6 +269,6 @@ FILES CHECKED: `docs/plans/2026-10-11-nuiget-2.0-execution-plan.md:41-175,240-25
 
 ## Exact next step (one item ID)
 
-P3.2 (⚑: the listbox and row accessibility decision, then the primitives). Consult before writing code. The
-tokens the primitives rely on are listed in `src/test/lint/webview-tokens.test.ts`; a primitive that needs
-another adds the token there and in `tokens.css`.
+P3.2 commit b: the six remaining primitives of ruling step 7 with the tests of step 9, `composed.test.tsx`,
+`primitives/index.ts`, then the docs of step 13 and the tracker row set to `done`. Start from the ruling above;
+render every `Listbox` in a test inside `installFakeLayout()`.

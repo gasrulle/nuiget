@@ -21,8 +21,8 @@
     --nuiget-radius-sm: 2px;
     --nuiget-radius-md: 4px;
 
-    /* Rows: compact in the sidebar, comfortable in the main panel */
-    --nuiget-row-height-compact: 22px;
+    /* Rows: compact in the sidebar, comfortable in the main panel. A compact row is as high as the smallest pointer target. */
+    --nuiget-row-height-compact: 24px;
     --nuiget-row-height-comfortable: 44px;
 
     /* Icons and the smallest pointer target */

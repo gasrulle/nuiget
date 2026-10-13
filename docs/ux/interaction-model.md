@@ -75,11 +75,23 @@ In this mode:
 
 Terminology: UI says **Install / Update / Uninstall / Restore**. Protocol uses `remove`.
 
-Keyboard: every pointer action is reachable by keyboard. Rows are `role="option"` inside a
-`role="listbox"` with roving `tabIndex`; ArrowUp/Down move, Home/End jump, Enter opens details
-(main) or performs the primary action (sidebar, with Ctrl+Enter = secondary), Delete = uninstall
-where applicable, Shift+F10 / ContextMenu key opens the actions menu. Row action buttons are
-visible on `:hover` **and** `:focus-within`.
+Keyboard: every pointer action is reachable by keyboard. A list is a `role="listbox"` whose rows
+are `role="option"` with roving `tabIndex` (one tab stop per list; the active row has
+`tabIndex=0`). ArrowUp/ArrowDown move, Home/End jump to the first and last row; moving changes the
+active row, not the selection. Enter activates the row (main panel: selects it and shows its
+details; sidebar: performs its primary action), Ctrl+Enter (Cmd+Enter on macOS) performs the
+secondary action, Delete (Cmd+Backspace on macOS) uninstalls where applicable, and Shift+F10 or the
+ContextMenu key opens the actions menu for the active row; right-click anywhere on the row opens
+the same menu. Row action buttons are pointer-only: they sit next to the option in a container
+hidden from assistive technology (`aria-hidden="true"`, `tabIndex={-1}`), become visible on
+`:hover` and `:focus-within` of the row, and clicking one keeps focus on the row. Each listbox
+describes its keys in a visually hidden sentence (`aria-describedby`); outcomes are announced
+through the one `role="status"` region (`status-live`). A row with a pending operation is
+`aria-busy="true"`, its status text is part of its description and a spinner replaces its actions.
+A disabled row (`aria-disabled="true"`, e.g. unresolved) keeps focus, selection and the context
+menu but ignores Enter, Ctrl+Enter and Delete. When the active row disappears, focus moves to the
+row now at its index (or the last one); when the list empties, the empty-state container takes
+focus.
 
 ## 6. Cross-surface behaviour
 
@@ -113,7 +125,9 @@ per selection; a response for a different package/version is ignored.
 | `project-selector`, `source-selector` | Header selectors (main) |
 | `tab-bar`, `installed-tab`, `updates-tab` | Main tabs |
 | `installed-list`, `updates-list`, `browse-list`, `sidebar-installed-list`, `sidebar-updates-list`, `sidebar-browse-list` | Listboxes |
-| `package-row-<id>` | A row (id lower-cased) |
+| `package-row-<id>` | A row (id lower-cased): the wrapper around the option and its pointer actions; the option is the `role="option"` inside it (read `aria-selected` there) |
+| `row-action-<name>` | A pointer action button inside a row (`install`, `update`, `uninstall`, `more`); hidden from assistive technology, mirrored by the keys of §5 |
+| `section-header-<name>` | The toggle button of a collapsible section (`installed`, `updates`) |
 | `package-details-panel`, `details-tab-details`, `details-tab-readme`, `readme-content`, `readme-empty` | Details panel |
 | `version-selector`, `install-update-button`, `uninstall-button` | Details actions |
 | `select-all-button`, `update-all-button`, `uninstall-selected-button` | Bulk toolbar |

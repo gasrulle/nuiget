@@ -73,17 +73,17 @@ one records itself here.
 | P6 | L | aggregateAllProjectsTransitive linear find in nested loops | — | not mapped | open |
 | P7 | L | getSources() returns the cached array by reference | — | not mapped | open |
 | P8 | M | Benchmarks are micro-benchmarks of pure functions (parseSearchQuery ≈ 21 M ops/s) vs a… | N: Bench compare never fails; display-only. | P0.8, D8 | closed (P0.8: benchmark job is informational) |
-| U1 | H | Sidebar row primary action button is hover-revealed with tabIndex={-1}; section-level handlers… | C: Four more `tabIndex={-1}` controls. | not mapped | open |
+| U1 | H | Sidebar row primary action button is hover-revealed with tabIndex={-1}; section-level handlers… | C: Four more `tabIndex={-1}` controls. | P3.2 (primitives), P3.4 and P5 (the lists that use them) | open; progressed in P3.2: in `Listbox` and `Row` every row action is a key of the list (Enter, Ctrl/Cmd+Enter, Delete or Cmd+Backspace, Shift+F10 or ContextMenu), the keys are the list's description, and the pointer buttons are an `aria-hidden` sibling of the option. Close when the last 1.x list is replaced |
 | U2 | H | No dialog semantics anywhere | C: Third dialog: remove-source confirm. | not mapped | open |
-| U3 | H | Tab focus ring animates to transparent (tab-focus-fade) | — | not mapped | open |
+| U3 | H | Tab focus ring animates to transparent (tab-focus-fade) | — | P3.2 (primitives), P5 (tabs) | open; progressed in P3.2: the focus ring of the primitives is a static `outline` in `--nuiget-color-focus`, no animation. Close with the 2.0 tab bar |
 | U4 | M | Theme risk: 71 hex colors (syntax highlighting, error states, charts), light overrides only for… | — | P3.1 (tokens), P5.11 (theme pass) | open; progressed in P3.1 (tokens); close at P5.11 |
 | U5 | M | 125 fixed px font sizes and fixed row/header heights: window zoom scales fine, but configured… | C: 125 is App.css alone; 138 combined; no tokens exist. | P3.1 (tokens), P5.11 (theme pass) | open; progressed in P3.1 (tokens); close at P5.11 |
 | U6 | M | Details/README tabs are divs without tablist semantics; severity partly color-only; icon-only… | N: Tabs are buttons without tablist semantics; close button unnamed. | not mapped | open |
-| U7 | M | Reduced-motion override covers a subset; four different spinner/shimmer durations | W: Two incompatible reduced-motion mechanisms. | P3.1 (tokens), P5.11 (theme pass) | open; progressed in P3.1 (tokens); close at P5.11 |
+| U7 | M | Reduced-motion override covers a subset; four different spinner/shimmer durations | W: Two incompatible reduced-motion mechanisms. | P3.1 (tokens), P3.2 (primitives), P5.11 (theme pass) | open; progressed in P3.1 (tokens) and P3.2: one spinner timed with a duration token, and `src/test/lint/webview-stylesheets.test.ts` refuses a duration that is no token and a reduced-motion rule outside `tokens.css`; close at P5.11 |
 | U8 | M | Project switch clears selection/details immediately (flash). Any "keep details" fix needs a… | — | not mapped | open |
 | U9 | M | Dropdowns absolutely positioned inside overflow:hidden parents → clipping; no shared popover… | — | P3.1 (tokens), P5.11 (theme pass) | open; progressed in P3.1 (tokens); close at P5.11 |
 | U10 | L | Terminology: UI "Uninstall" (29) vs protocol/progress "Remove/Removing". Keep "Uninstall" in UI… | — | not mapped | open |
-| U11 | L | Sidebar hit targets 16–22 px; scrollbars unthemed; duplicate CSS blocks; !important in… | — | P3.1 (tokens), P5.11 (theme pass) | open; progressed in P3.1 (tokens); close at P5.11 |
+| U11 | L | Sidebar hit targets 16–22 px; scrollbars unthemed; duplicate CSS blocks; !important in… | — | P3.1 (tokens), P3.2 (primitives), P5.11 (theme pass) | open; progressed in P3.1 (tokens) and P3.2: the compact row is 24 px (`--nuiget-row-height-compact`, was 22) for WCAG 2.5.8 and P3.6 may revert it by value; icon buttons are at least `--nuiget-target-min` in both directions; the stylesheet lint refuses `!important`; close at P5.11 |
 | U12 | M | No written interaction model | — | not mapped | open |
 | D1 | — | No single owner of synced state | — | not mapped | open |
 | D2 | — | Sync bus via static mutable class fields + executeCommand indirection | — | not mapped | open |
