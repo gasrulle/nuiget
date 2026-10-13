@@ -1,0 +1,140 @@
+/*
+ * Design tokens of the nUIget 2.0 webviews (ADR-008). Custom properties only: no element rules, no reset.
+ * The entry stylesheet of a surface sets fonts and colours on `body` from these.
+ *
+ * Colours are aliases of the `--vscode-*` variables that VS Code puts on a webview's root element, so the
+ * light and the dark themes are covered without a rule of their own. High contrast, forced colours and
+ * reduced motion have one block each below. This file holds no colour literal; should one ever be needed
+ * (a theme without the variable), it goes here and nowhere else, in the theme pass (plan item P5.11).
+ */
+
+:root {
+    /* Spacing */
+    --nuiget-space-1: 2px;
+    --nuiget-space-2: 4px;
+    --nuiget-space-3: 6px;
+    --nuiget-space-4: 8px;
+    --nuiget-space-5: 12px;
+    --nuiget-space-6: 16px;
+
+    /* Radius */
+    --nuiget-radius-sm: 2px;
+    --nuiget-radius-md: 4px;
+
+    /* Rows: compact in the sidebar, comfortable in the main panel */
+    --nuiget-row-height-compact: 22px;
+    --nuiget-row-height-comfortable: 44px;
+
+    /* Icons and the smallest pointer target */
+    --nuiget-icon-size-sm: 12px;
+    --nuiget-icon-size-md: 16px;
+    --nuiget-icon-size-lg: 24px;
+    --nuiget-target-min: 24px;
+
+    /* Stacking order */
+    --nuiget-z-sticky: 1;
+    --nuiget-z-popover: 10;
+    --nuiget-z-dialog: 20;
+    --nuiget-z-toast: 30;
+
+    /* Motion */
+    --nuiget-duration-fast: 100ms;
+    --nuiget-duration-normal: 200ms;
+    --nuiget-easing: ease-out;
+
+    /* Typography, relative to the font size of the editor's UI */
+    --nuiget-font-size-sm: 0.85em;
+    --nuiget-font-size-md: 1em;
+    --nuiget-font-size-lg: 1.15em;
+    --nuiget-line-height: 1.4;
+    --nuiget-font-family: var(--vscode-font-family);
+    --nuiget-font-family-mono: var(--vscode-editor-font-family);
+
+    /* Colours: text */
+    --nuiget-color-fg: var(--vscode-foreground);
+    --nuiget-color-fg-muted: var(--vscode-descriptionForeground, var(--vscode-foreground));
+    --nuiget-color-link: var(--vscode-textLink-foreground);
+    --nuiget-color-error: var(--vscode-errorForeground);
+    --nuiget-color-warning: var(--vscode-editorWarning-foreground);
+    --nuiget-color-info: var(--vscode-editorInfo-foreground);
+
+    /* Colours: lines, focus, elevation */
+    --nuiget-color-border: var(--vscode-widget-border, var(--vscode-panel-border));
+    --nuiget-color-focus: var(--vscode-focusBorder);
+    --nuiget-color-shadow: var(--vscode-widget-shadow, transparent);
+    --nuiget-color-progress: var(--vscode-progressBar-background);
+
+    /* Colours: list rows */
+    --nuiget-color-list-hover-bg: var(--vscode-list-hoverBackground);
+    --nuiget-color-list-active-bg: var(--vscode-list-activeSelectionBackground);
+    --nuiget-color-list-active-fg: var(--vscode-list-activeSelectionForeground);
+    --nuiget-color-list-inactive-bg: var(--vscode-list-inactiveSelectionBackground);
+
+    /* Colours: badges, buttons, inputs */
+    --nuiget-color-badge-bg: var(--vscode-badge-background);
+    --nuiget-color-badge-fg: var(--vscode-badge-foreground);
+    --nuiget-color-button-bg: var(--vscode-button-background);
+    --nuiget-color-button-fg: var(--vscode-button-foreground);
+    --nuiget-color-button-hover-bg: var(--vscode-button-hoverBackground);
+    --nuiget-color-button-secondary-bg: var(--vscode-button-secondaryBackground);
+    --nuiget-color-button-secondary-fg: var(--vscode-button-secondaryForeground);
+    --nuiget-color-input-bg: var(--vscode-input-background);
+    --nuiget-color-input-fg: var(--vscode-input-foreground);
+    --nuiget-color-input-border: var(--vscode-input-border, transparent);
+    --nuiget-color-input-placeholder: var(--vscode-input-placeholderForeground);
+
+    /* Colours: scrollbars */
+    --nuiget-color-scrollbar: var(--vscode-scrollbarSlider-background);
+    --nuiget-color-scrollbar-hover: var(--vscode-scrollbarSlider-hoverBackground);
+    --nuiget-color-scrollbar-active: var(--vscode-scrollbarSlider-activeBackground);
+}
+
+/* High contrast, dark and light: lines carry what colour differences cannot; nothing casts a shadow. */
+body.vscode-high-contrast,
+body.vscode-high-contrast-light {
+    --nuiget-color-border: var(--vscode-contrastBorder);
+    --nuiget-color-focus: var(--vscode-contrastActiveBorder, var(--vscode-focusBorder));
+    --nuiget-color-shadow: transparent;
+}
+
+/* Forced colours (Windows contrast themes): the system's own palette, by keyword. */
+@media (forced-colors: active) {
+    :root {
+        --nuiget-color-fg: CanvasText;
+        --nuiget-color-fg-muted: GrayText;
+        --nuiget-color-link: LinkText;
+        --nuiget-color-error: CanvasText;
+        --nuiget-color-warning: CanvasText;
+        --nuiget-color-info: CanvasText;
+        --nuiget-color-border: CanvasText;
+        --nuiget-color-focus: Highlight;
+        --nuiget-color-shadow: transparent;
+        --nuiget-color-progress: Highlight;
+        --nuiget-color-list-hover-bg: Canvas;
+        --nuiget-color-list-active-bg: Highlight;
+        --nuiget-color-list-active-fg: HighlightText;
+        --nuiget-color-list-inactive-bg: Canvas;
+        --nuiget-color-badge-bg: Canvas;
+        --nuiget-color-badge-fg: CanvasText;
+        --nuiget-color-button-bg: ButtonFace;
+        --nuiget-color-button-fg: ButtonText;
+        --nuiget-color-button-hover-bg: Highlight;
+        --nuiget-color-button-secondary-bg: ButtonFace;
+        --nuiget-color-button-secondary-fg: ButtonText;
+        --nuiget-color-input-bg: Field;
+        --nuiget-color-input-fg: FieldText;
+        --nuiget-color-input-border: FieldText;
+        --nuiget-color-input-placeholder: GrayText;
+        --nuiget-color-scrollbar: ButtonText;
+        --nuiget-color-scrollbar-hover: Highlight;
+        --nuiget-color-scrollbar-active: Highlight;
+    }
+}
+
+/* Reduced motion: every transition and animation that uses the duration tokens stops moving. */
+@media (prefers-reduced-motion: reduce) {
+    :root {
+        --nuiget-duration-fast: 0ms;
+        --nuiget-duration-normal: 0ms;
+    }
+}

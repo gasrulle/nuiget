@@ -76,14 +76,14 @@ one records itself here.
 | U1 | H | Sidebar row primary action button is hover-revealed with tabIndex={-1}; section-level handlers… | C: Four more `tabIndex={-1}` controls. | not mapped | open |
 | U2 | H | No dialog semantics anywhere | C: Third dialog: remove-source confirm. | not mapped | open |
 | U3 | H | Tab focus ring animates to transparent (tab-focus-fade) | — | not mapped | open |
-| U4 | M | Theme risk: 71 hex colors (syntax highlighting, error states, charts), light overrides only for… | — | not mapped | open |
-| U5 | M | 125 fixed px font sizes and fixed row/header heights: window zoom scales fine, but configured… | C: 125 is App.css alone; 138 combined; no tokens exist. | not mapped | open |
+| U4 | M | Theme risk: 71 hex colors (syntax highlighting, error states, charts), light overrides only for… | — | P3.1 (tokens), P5.11 (theme pass) | open; progressed in P3.1 (tokens); close at P5.11 |
+| U5 | M | 125 fixed px font sizes and fixed row/header heights: window zoom scales fine, but configured… | C: 125 is App.css alone; 138 combined; no tokens exist. | P3.1 (tokens), P5.11 (theme pass) | open; progressed in P3.1 (tokens); close at P5.11 |
 | U6 | M | Details/README tabs are divs without tablist semantics; severity partly color-only; icon-only… | N: Tabs are buttons without tablist semantics; close button unnamed. | not mapped | open |
-| U7 | M | Reduced-motion override covers a subset; four different spinner/shimmer durations | W: Two incompatible reduced-motion mechanisms. | not mapped | open |
+| U7 | M | Reduced-motion override covers a subset; four different spinner/shimmer durations | W: Two incompatible reduced-motion mechanisms. | P3.1 (tokens), P5.11 (theme pass) | open; progressed in P3.1 (tokens); close at P5.11 |
 | U8 | M | Project switch clears selection/details immediately (flash). Any "keep details" fix needs a… | — | not mapped | open |
-| U9 | M | Dropdowns absolutely positioned inside overflow:hidden parents → clipping; no shared popover… | — | not mapped | open |
+| U9 | M | Dropdowns absolutely positioned inside overflow:hidden parents → clipping; no shared popover… | — | P3.1 (tokens), P5.11 (theme pass) | open; progressed in P3.1 (tokens); close at P5.11 |
 | U10 | L | Terminology: UI "Uninstall" (29) vs protocol/progress "Remove/Removing". Keep "Uninstall" in UI… | — | not mapped | open |
-| U11 | L | Sidebar hit targets 16–22 px; scrollbars unthemed; duplicate CSS blocks; !important in… | — | not mapped | open |
+| U11 | L | Sidebar hit targets 16–22 px; scrollbars unthemed; duplicate CSS blocks; !important in… | — | P3.1 (tokens), P5.11 (theme pass) | open; progressed in P3.1 (tokens); close at P5.11 |
 | U12 | M | No written interaction model | — | not mapped | open |
 | D1 | — | No single owner of synced state | — | not mapped | open |
 | D2 | — | Sync bus via static mutable class fields + executeCommand indirection | — | not mapped | open |

@@ -54,6 +54,7 @@
         "src/test/benchmarks/benchmark.test.ts",
         "src/test/__mocks__/**/*.ts",
         "src/test/setup-frontend.ts",
+        "src/test/jest-axe.d.ts",
         "src/global.d.ts"
     ],
     "exclude": [
