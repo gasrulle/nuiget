@@ -1,0 +1,196 @@
+/**
+ * In-process stand-in for the `dotnet` executable: a `SpawnFunction` that starts no process. It answers
+ * the commands the 2.0 core issues and makes `package add` and `package remove` real by editing the
+ * project file on disk, so that what an operation did can be read back by the project inspector.
+ */
+
+import { EventEmitter } from 'events';
+import * as fs from 'fs';
+import * as path from 'path';
+import { PassThrough } from 'stream';
+import type { SpawnFunction } from '../../core/cli';
+
+export interface DotnetCall {
+    args: string[];
+    cwd: string;
+    /** The arguments joined with spaces, for matching and for messages. */
+    line: string;
+}
+
+export interface DotnetAnswer {
+    code?: number;
+    stdout?: string;
+    stderr?: string;
+}
+
+export type CallMatcher = (call: DotnetCall) => boolean;
+
+/** Calls that match wait until `release()`; later calls pass again. */
+export interface Hold {
+    /** How many calls have reached the hold so far. */
+    readonly seen: number;
+    release(): void;
+}
+
+class FakeChild extends EventEmitter {
+    readonly stdout = new PassThrough();
+    readonly stderr = new PassThrough();
+    exitCode: number | null = null;
+    signalCode: NodeJS.Signals | null = null;
+
+    get ended(): boolean {
+        return this.exitCode !== null || this.signalCode !== null;
+    }
+
+    kill(signal: NodeJS.Signals = 'SIGTERM'): boolean {
+        if (this.ended) {
+            return false;
+        }
+        this.signalCode = signal;
+        setImmediate(() => this.finish(null, signal));
+        return true;
+    }
+
+    finish(code: number | null, signal: NodeJS.Signals | null): void {
+        this.stdout.end();
+        this.stderr.end();
+        this.emit('exit', code, signal);
+        setImmediate(() => this.emit('close', code, signal));
+    }
+}
+
+const sameDirectory = (a: string, b: string): boolean => path.resolve(a) === path.resolve(b);
+
+/** Matchers for the commands a scenario holds or counts. A directory narrows the match to that working directory. */
+export const dotnetCalls = {
+    version: (directory?: string): CallMatcher => call => call.args[0] === '--version' && (directory === undefined || sameDirectory(call.cwd, directory)),
+    listSources: (directory?: string): CallMatcher => call => call.line.startsWith('nuget list source') && (directory === undefined || sameDirectory(call.cwd, directory)),
+    configPaths: (directory?: string): CallMatcher => call => call.line === 'nuget config paths' && (directory === undefined || sameDirectory(call.cwd, directory)),
+    packageAdd: (packageId?: string): CallMatcher => call => call.line.startsWith('package add ') && (packageId === undefined || call.args[2] === packageId),
+    packageRemove: (packageId?: string): CallMatcher => call => call.line.startsWith('package remove ') && (packageId === undefined || call.args[2] === packageId),
+    restore: (): CallMatcher => call => call.args[0] === 'restore',
+};
+
+/** What `dotnet nuget list source --format detailed` prints for enabled sources. */
+function listing(urls: readonly string[]): string {
+    return ['Registered Sources:', ...urls.flatMap((url, index) => [`  ${index + 1}.  Feed ${index + 1} [Enabled]`, `      ${url}`]), ''].join('\n');
+}
+
+function escapeForPattern(text: string): string {
+    return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function referencePattern(packageId: string): RegExp {
+    return new RegExp(`[ \\t]*<PackageReference\\s+Include="${escapeForPattern(packageId)}"[^>]*/>\\r?\\n?`, 'i');
+}
+
+/** Insert the reference before the last `</ItemGroup>`, or replace the one that is there. */
+export function addPackageReference(projectPath: string, packageId: string, version: string): void {
+    const xml = fs.readFileSync(projectPath, 'utf8');
+    const element = `<PackageReference Include="${packageId}" Version="${version}" />`;
+    const existing = referencePattern(packageId);
+    let next: string;
+    if (existing.test(xml)) {
+        next = xml.replace(existing, `    ${element}\n`);
+    } else if (xml.includes('</ItemGroup>')) {
+        const at = xml.lastIndexOf('</ItemGroup>');
+        next = `${xml.slice(0, at).trimEnd()}\n    ${element}\n  ${xml.slice(at)}`;
+    } else {
+        next = xml.replace('</Project>', `  <ItemGroup>\n    ${element}\n  </ItemGroup>\n</Project>`);
+    }
+    fs.writeFileSync(projectPath, next, 'utf8');
+}
+
+export function removePackageReference(projectPath: string, packageId: string): void {
+    const xml = fs.readFileSync(projectPath, 'utf8');
+    fs.writeFileSync(projectPath, xml.replace(referencePattern(packageId), ''), 'utf8');
+}
+
+function optionValue(args: readonly string[], option: string): string | undefined {
+    const index = args.indexOf(option);
+    return index < 0 ? undefined : args[index + 1];
+}
+
+/** The version `package add` writes when the request names none. */
+export const LATEST_VERSION = '1.0.0';
+
+export function createFakeDotnet() {
+    const holds: Array<{ matches: CallMatcher; gate: Promise<void>; seen: number }> = [];
+    const failures: Array<{ matches: CallMatcher; answer: DotnetAnswer }> = [];
+
+    const answerFor = (call: DotnetCall): DotnetAnswer => {
+        const failure = failures.find(entry => entry.matches(call));
+        if (failure) {
+            return failure.answer;
+        }
+        if (call.args[0] === '--version') {
+            return { stdout: '10.0.401\n' };
+        }
+        if (call.line.startsWith('nuget list source')) {
+            return { stdout: listing(fake.sources(call.cwd)) };
+        }
+        const projectPath = optionValue(call.args, '--project');
+        if (call.line.startsWith('package add ') && projectPath !== undefined) {
+            addPackageReference(projectPath, call.args[2], optionValue(call.args, '--version') ?? LATEST_VERSION);
+        } else if (call.line.startsWith('package remove ') && projectPath !== undefined) {
+            removePackageReference(projectPath, call.args[2]);
+        }
+        // `nuget config paths`, `restore` and everything else: no output, exit 0.
+        return {};
+    };
+
+    const fake = {
+        /** Every call, in the order the core made them. */
+        calls: [] as DotnetCall[],
+        /** The enabled sources that `nuget list source` reports for a working directory. */
+        sources: (_cwd: string): string[] => [],
+        count: (matches: CallMatcher): number => fake.calls.filter(matches).length,
+        hold(matches: CallMatcher): Hold {
+            let release!: () => void;
+            const entry = { matches, gate: new Promise<void>(resolve => { release = resolve; }), seen: 0 };
+            holds.push(entry);
+            return {
+                get seen() { return entry.seen; },
+                release: () => {
+                    holds.splice(holds.indexOf(entry), 1);
+                    release();
+                },
+            };
+        },
+        /** Calls that match exit with `answer` (exit code 1 by default) until the returned function is called. */
+        fail(matches: CallMatcher, answer: DotnetAnswer = { code: 1, stderr: 'error: the command failed' }): () => void {
+            const entry = { matches, answer };
+            failures.push(entry);
+            return () => { failures.splice(failures.indexOf(entry), 1); };
+        },
+        spawn: ((_file, args, options) => {
+            const call: DotnetCall = { args: [...args], cwd: String(options.cwd), line: args.join(' ') };
+            fake.calls.push(call);
+            const child = new FakeChild();
+            void (async () => {
+                for (const hold of holds.filter(entry => entry.matches(call))) {
+                    hold.seen++;
+                    await hold.gate;
+                }
+                if (child.ended) {
+                    // Killed while it was held (a cancelled operation): the kill already reported the exit.
+                    return;
+                }
+                const answer = answerFor(call);
+                child.emit('spawn');
+                if (answer.stdout) {
+                    child.stdout.write(answer.stdout);
+                }
+                if (answer.stderr) {
+                    child.stderr.write(answer.stderr);
+                }
+                child.exitCode = answer.code ?? 0;
+                child.finish(child.exitCode, null);
+            })();
+            return child as unknown as ReturnType<SpawnFunction>;
+        }) as SpawnFunction,
+    };
+    return fake;
+}
+
+export type FakeDotnet = ReturnType<typeof createFakeDotnet>;

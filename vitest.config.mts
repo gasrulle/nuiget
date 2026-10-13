@@ -83,7 +83,7 @@ export default defineConfig({
                 test: {
                     name: 'integration',
                     environment: 'node',
-                    include: ['src/test/integration/**/*.integration.test.ts'],
+                    include: ['src/test/integration/**/*.integration.test.ts', 'src/test/harness/**/*.test.ts'],
                     testTimeout: 30_000,
                 },
             },

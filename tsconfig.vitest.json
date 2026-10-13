@@ -31,7 +31,8 @@
     // The 1.x tests are deliberately not listed: src/services/**/*.test.ts, src/webview/app/**,
     // src/webview/sidebar/**, src/webview/NuGet*.test.ts, src/test/integration/** and src/test/benchmarks/**.
     // They were never type-checked and are rewritten or deleted by plan items P5.12 and P8.2. P8.2 widens this
-    // list to src/**/*.test.{ts,tsx} and src/test/**; benchmarks of the 2.0 core join in P2.12.
+    // list to src/**/*.test.{ts,tsx} and src/test/**; benchmarks of the 2.0 core join in P2.12; the harness of
+    // P2.11 is in src/test/harness.
     "include": [
         "src/core/**/*.test.ts",
         "src/protocol/**/*.test.ts",
@@ -46,6 +47,7 @@
         "src/test/lint/**/*.ts",
         "src/test/helpers/**/*.ts",
         "src/test/helpers/**/*.tsx",
+        "src/test/harness/**/*.ts",
         "src/test/__mocks__/**/*.ts",
         "src/test/setup-frontend.ts",
         "src/global.d.ts"

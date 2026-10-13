@@ -107,6 +107,50 @@ Import rules between these layers, and between 2.0 and 1.x code, are in
 `eslint.config.mjs` enforces them with one fence per layer; `LEGACY_IMPORT_ALLOWLIST` there is the only way a
 2.0 file may import 1.x code, and `src/test/lint/allowlist.test.ts` fails for an entry that is no longer needed.
 
+### Two-surface harness
+
+`src/test/harness` tests what the two surfaces do together, on the 2.0 protocol
+(`npx vitest run --project integration src/test/harness`; part of `npm test`).
+
+- **Composition.** `createHarness` (`harness.ts`) runs the real composition root through `activateWith` over
+  the `vscode` mock, with a scratch workspace of real project files. The surfaces are the real `SidebarHost`
+  and `MainPanelHost`; nothing builds `HostServices` by hand. The main panel gets a panel that reports its
+  disposal once.
+- **Fake dotnet.** `fakeDotnet.ts` is the injected `spawn`: no process starts. It answers `--version`,
+  `nuget list source` (per working directory) and `nuget config paths`, and it makes `package add` and
+  `package remove` real by editing the project file on disk, so the inspector reads back what an operation
+  did. A scenario can hold the calls that match a predicate and release them later. A computation of
+  `installed/get` can be held at `nuget config paths` only: the SDK probe is cached per directory after its
+  first answer, and a result that the coordinator has cached is answered without any call.
+- **Fake webview.** `FakeWebview.ts` records every envelope and keeps a small client model. Its seven rules
+  are the ones the message bus and store of the webviews implement in P3.3 (ADR-001, ADR-002, ADR-008):
+  1. On start it asks `session/get` and `projects/list`. A snapshot (from a `session/get` or `session/set`
+     response or a `session/changed` event) is applied only when its `rev` is above the last applied one.
+  2. `projects/changed` and the `projects/list` response replace the project list.
+  3. When the applied snapshot selects another real project, it asks `installed/get` for it, and asks again
+     when `resources/invalidated` names that project's key in `keys`. In all-projects mode it asks
+     `allProjects/installed` instead, again when the event names `projects` or any `installed:` key, and
+     keeps the `project` chunks by project path.
+  4. The latest request wins per slot (`session`, `projects`, `installed`, `allProjects`): a response or
+     chunk of an earlier request of that slot is recorded and not applied.
+  5. Progress, chunks, `ops/completed` and terminal responses are recorded; a request without a terminal
+     response is pending.
+  6. Every envelope is kept verbatim; other events are recorded only.
+  7. A `generation` on a response is recorded and never compared: no response carries one yet (finding
+     C-protocol-host-7).
+- **Driver.** `resolve`, `dispose`, `selectProject`, `toggle`, `operate`, `refresh`, `request`, `cancel`,
+  `showAllProjects`, `command`, the `files` verbs (an edit on disk plus the file watcher's event), `advance`
+  and `settle`. `expectState` waits until every visible surface equals the host and the host equals the
+  expected literals, then checks that every request has exactly one terminal response and that no surface
+  was answered for a request it did not send (ADR-007).
+- **Timers.** `setTimeout` and `clearTimeout` are fake once the root is ready, for the watcher debounces;
+  microtasks, `setImmediate` and file I/O are real. A scenario advances the clock or waits for a condition;
+  it does not sleep.
+- **Scenarios** (`scenarios.test.ts`): `A→B→A ordering`, `full/scoped/watcher invalidation both orders` (six
+  orderings), `queue saturation + exception after admission`, `project deletion mid-request`, `shared query
+  with one subscriber cancelling`, `surface disposed with pending ops`, `central version change affecting
+  several projects`. Later items add theirs here (P4.9, P5.4 to P5.9, P6.4).
+
 ### Coexistence of 1.x and 2.0
 
 Both versions build into the same three output files, selected by entry set. There is no hybrid: a build is
@@ -133,7 +177,8 @@ These parts serve both versions and are the current truth for the build, test an
   shared test helpers, against Node 24 declarations). The 1.x Vitest tests are not type-checked.
 - **Linting.** `npm run lint` covers `src`, `scripts`, `esbuild.mjs` and the root configuration files.
 - **Unit tests.** Vitest projects `backend` (`src/services`, `src/core`, `src/protocol`, `src/host`,
-  `src/test/lint`), `frontend` (`src/webview`) and `integration`. Coverage has global thresholds, a separate
+  `src/test/lint`), `frontend` (`src/webview`) and `integration` (the 1.x integration tests and the 2.0
+  two-surface harness in `src/test/harness`, described below). Coverage has global thresholds, a separate
   floor for `src/webview/**` and a floor of 85 % of the lines for `src/core/**`. `node --test scripts/hooks` tests the guard hook.
 - **Bundle size.** `node esbuild.mjs --production --analyze` fails when a bundle exceeds its ceiling, the 1.18.9
   size plus 10 %. Metafiles go to `out/esbuild/`.
