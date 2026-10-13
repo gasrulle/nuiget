@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **2.0 composition root** — `src/extension.next.ts` assembles the 2.0 core and both webview hosts: one dotnet runner with a persisted SDK cache, one query coordinator whose invalidations reach both surfaces unchanged, a session that is reconciled with the selected project's sources whenever projects, sources or the selection change, file watchers for project, props, `nuget.config`, `global.json`, lock and assets files, a status bar item for the operation queue, and a redacting logger for everything the core logs
 - **2.0 build switch** — `node esbuild.mjs --v2` and `npm run watch:v2` build the 2.0 entry points into the same three bundles, and `--production --analyze` checks them against size ceilings
 - **2.0 protocol and core contracts** — `src/protocol` and `src/core/contracts.ts` define the typed messages and interfaces of the 2.0 host and webviews; `npm run docs:protocol` generates `docs/protocol.md` from them and CI fails when that file is out of date
 - **2.0 webview hosts** — `src/host` answers every request of the 2.0 panel and sidebar with exactly one response, runs every package operation and forced restore through the operation queue, keeps a queued operation alive when the surface that asked for it closes, and serves both webviews under a Content Security Policy with a per-render script nonce and no remote origin

@@ -239,6 +239,7 @@ export const workspace = {
         update: vi.fn(),
     })),
     onDidChangeConfiguration: vi.fn(() => new Disposable(() => { })),
+    onDidChangeWorkspaceFolders: vi.fn(() => new Disposable(() => { })),
     findFiles: vi.fn(async () => []),
     fs: {
         readFile: vi.fn(),
@@ -364,6 +365,7 @@ export function createMockExtensionContext(overrides?: Record<string, unknown>) 
             setKeysForSync: vi.fn(),
         },
         asAbsolutePath: vi.fn((relativePath: string) => `/test-extension/${relativePath}`),
+        extension: { id: 'nuiget.nuiget', packageJSON: { version: '0.0.0-test' } },
         ...overrides,
     };
 }
