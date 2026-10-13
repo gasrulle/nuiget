@@ -1,146 +1,169 @@
-# STATUS — src/webview/shared   commit 81ec41d (P3.2 commit a; parent of commit b)   2026-10-13T22:25:30Z
+# STATUS — src/webview/shared   commit c48d30b (parent of the P3.3 commit)   2026-10-13T23:01:54Z
 
 Scope of this note: `src/webview/shared/**`, the code both 2.0 webviews share, and the test wiring it needs
 (`src/test/setup-frontend.ts`, `src/test/jest-axe.d.ts`, `src/test/lint/webview-*.test.ts`).
 
-git status --porcelain --untracked-files=all: ` M src/webview/shared/primitives/primitives.css`,
-` M src/webview/shared/STATUS.md`, `?? src/webview/shared/primitives/` `SectionHeader`, `EmptyState`, `Skeleton`,
-`ProgressBar`, `Banner`, `Sash` each as `.tsx` and `.test.tsx`, `?? …/primitives/composed.test.tsx`,
-`?? …/primitives/index.ts`, ` M ARCHITECTURE.md`, ` M CHANGELOG.md`, ` M .github/copilot-instructions.md`,
-` M docs/plans/STATUS.md`, ` M docs/plans/findings-ledger.md` (all belong to P3.2 commit b)
+git status --porcelain --untracked-files=all: `?? src/webview/shared/bus/` (`MessageBus.ts`, `MessageBus.test.ts`,
+`useMessageBus.tsx`, `useMessageBus.test.tsx`, `testSupport.ts`), `?? src/webview/shared/store/` (`useResource.ts`,
+`session.tsx`, `projects.tsx`, `installed.tsx`, `ops.tsx`, `StoreProvider.tsx`, each with its `.test.tsx`),
+` M src/webview/shared/STATUS.md`, ` M ARCHITECTURE.md`, ` M CHANGELOG.md`, ` M .github/copilot-instructions.md`,
+` M docs/plans/STATUS.md`, ` M docs/plans/findings-ledger.md` (all belong to the P3.3 commit)
 
-Item: **P3.2 ⚑ listbox and row accessibility decision, and the primitives** — one tracker row, two commits
-by the ruling. **Commit a (`81ec41d`, CI run 38475927232 green):** the decision in the interaction model,
-`Listbox`, `Row`, `IconButton`, `Badge`, `Spinner`, `LiveStatus`, their stylesheet and the stylesheet lint.
-**Commit b (this note):** `SectionHeader`, `EmptyState`, `Skeleton`, `ProgressBar`, `Banner`, `Sash`,
-`primitives/index.ts`, the composed test, ARCHITECTURE and the gotcha rows; the row is `done` with it. No
-contract change, no sentinel. Nothing here comes from the quarry.
+Item: **P3.3 message bus and store slices** (`bus/`, `store/`: `session`, `projects`, `installed`, `ops`,
+`useResource`). Not a ⚑ item and no stop-and-ask trigger: no L1 consultation. No contract change, no
+sentinel, no file outside the directory but the documents the item owns. Nothing here comes from the quarry
+(its note for this directory describes a design, no code).
 
 ## Verified by running
 
-Commit b, on top of `81ec41d` (the figures of commit a are in that commit's version of this note):
-
 ```text
+baseline (at c48d30b) npx tsc --noEmit / npm run check-types / npx eslint src → exit 0 / exit 0 / exit 0
+baseline npx vitest run      → Test Files 100 passed (100) · Tests 2586 passed | 3 skipped (2589)
 npx tsc --noEmit / npm run check-types → exit 0 / exit 0
 npx eslint src / npm run lint → exit 0, no output / exit 0
-npx vitest run --project frontend src/webview/shared → Test Files 14 passed (14) · Tests 75 passed (75): the
-                               row's gate. icons 8, IconButton 3, Badge 3, Spinner 3, LiveStatus 4, Row 11,
-                               Listbox 19, SectionHeader 5, EmptyState 2, Skeleton 2, ProgressBar 3, Banner 4,
-                               Sash 6, composed 2. Every file ends with an axe run ("axe 0").
-the same, 40 times in a row  → 40 of 40 green (commit a: 40 of 40 as well)
+npx vitest run --project frontend src/webview/shared → Test Files 22 passed (22) · Tests 145 passed (145): the
+                               row's gate. New: MessageBus 14, useMessageBus 2, useResource 15, session 10,
+                               projects 6, installed 9, ops 12, StoreProvider 2 (70). The three titles of
+                               the row are there verbatim: `late response is discarded` and `invalidated key
+                               re-requests` in `store/useResource.test.tsx`, `pending toggle renders before
+                               commit` in `store/session.test.tsx`.
+the same, 40 times in a row  → 40 of 40 green (no timer in the new tests)
 npx vitest run --project backend src/test/lint → Test Files 5 passed (5) · Tests 115 passed (115)
-npx vitest run --project frontend → Test Files 34 passed (34) · Tests 687 passed (687)
-npm test (NUIGET_SDK_TESTS=1, DOTNET_ROOT set) → Test Files 100 passed (100) · Tests 2589 passed (2589)
-npx vitest run               → Tests 2586 passed | 3 skipped (2589)
-npx vitest run --coverage    → exit 0 · all files lines 80.01 % · src/webview/** 3255 of 4884 lines, 66.65 %
-                               (ratchet 64; `vitest.config.mts` untouched, P3.6 decides the ratchet; it was
-                               65.32 % before P3.2) · src/webview/shared/** 244 of 246 lines, 99.19 % ·
-                               src/core/** 98.52 %
+npx vitest run --project frontend → Test Files 42 passed (42) · Tests 757 passed (757)
+npm test (NUIGET_SDK_TESTS=1, DOTNET_ROOT set) → Test Files 108 passed (108) · Tests 2659 passed (2659)
+npx vitest run               → Tests 2656 passed | 3 skipped (2659)
+npx vitest run --coverage    → exit 0 · all files lines 80.45 % · src/webview/** 3524 of 5154 lines, 68.37 %
+                               (ratchet 64, untouched; P3.6 decides it) · src/webview/shared/** 513 of 516
+                               lines · bus and store 269 of 270 lines · src/core/** 98.52 %
 npm run bench / bench:compare → exit 0 / exit 0 · Tests 112 passed | 1 skipped (113)
 npm run docs:protocol:check  → exit 0 (no protocol file changed)
 node esbuild.mjs --v2 (after rm -rf dist) → exit 0 · dist/: extension.js, sidebar.js, webview.js and their
-                               maps, no CSS file · grep -c installFakeLayout over dist/*.js → 0 (no entry
-                               imports a primitive yet; P3.4)
-negative control, commit b   → 77 mutations, one at a time, against the two targeted suites: 12
-                               `SectionHeader.tsx` (expanded, controls, actions inside the toggle or the
-                               heading, level, a count of zero, the space before the count, test id, title
-                               id, a named spinner, button type, the click), 5 `EmptyState.tsx`, 5
-                               `Skeleton.tsx`, 7 `ProgressBar.tsx`, 11 `Banner.tsx`, 31 `Sash.tsx` (role,
-                               focus, name, clamps, each key, the axis, pointer capture and release, the
-                               container's offset, a move without a pointer down, repeated and missing
-                               reports, the end of a drag, double-click, an inline style, the cursor on the
-                               body, a cancelled drag, the step), 3 `index.ts`, 3 `primitives.css`. First run
-                               76 caught: a drag ignored `step` and no test noticed; a test was added.
-                               Final: 77 of 77 caught; every file restored (`cmp`).
-negative control, commit a   → 68 of 68 caught (see commit a)
-grep -c 'role="presentation"' primitives/Row.tsx → 1 · grep -rn 'style={{' primitives/*.tsx → 0 lines
-grep -rn "vi.mock('@tanstack" src/webview/shared --include='*.ts' --include='*.tsx' → 0 lines
-grep -c 'prefers-reduced-motion' primitives/primitives.css → 0 · grep -c '!important' primitives/primitives.css → 0
-grep -c 'document\.' primitives/Sash.tsx → 0 (no listener on the document, no `document.body.style`)
-grep -c tabIndex primitives/EmptyState.tsx → 0 · `status-live` in a component: `LiveStatus.tsx` only
-grep -n 'row-height-compact' tokens.css → `--nuiget-row-height-compact: 24px;`
-grep -c 'row-action-<name>\|section-header-<name>\|Cmd+Backspace' docs/ux/interaction-model.md → 3
-git diff --stat 3794311 -- vitest.config.mts eslint.config.mjs esbuild.mjs package.json src/protocol src/core docs/adr → empty
+                               maps, no CSS file · grep -c createFakeHost over dist/*.js → 0
+negative control             → 99 mutations, one at a time, against `src/webview/shared/{bus,store}`: 20 in
+                               `MessageBus.ts` (an answered or aborted request kept waiting, chunks, the
+                               generation, the error code, cancel, the pre-aborted signal, the listing and
+                               its order, handler removal, anything taken for an envelope, dispose), 22 in
+                               `useResource.ts` (the latest-wins rule on both paths, the generation rule with
+                               `<=`, without it, for an answer without generation, the second request and
+                               its limit, which events ask again, every part of the cleanup, the data of the
+                               previous key, what an error and a new request do to the list, the flags,
+                               Retry, the idle state), 16 `session.tsx`, 9 `projects.tsx`, 11
+                               `installed.tsx`, 20 `ops.tsx`, 1 `StoreProvider.tsx`. First run 98 caught: the
+                               survivor showed that after a key change the answer for the key that was left
+                               could replace the new key's data when a requester does not pass the signal
+                               on; the code was already right (`latest++` in the cleanup), no test said so,
+                               and one was added. Final: 99 of 99 caught; every file restored (`cmp`).
+after the last edits         → a comment in `store/ops.tsx`, one test of `store/ops.test.tsx` and the two STATUS
+                               files changed after the gate run above. Run again then: npx tsc --noEmit →
+                               exit 0 · npx eslint src/webview/shared → exit 0 · npm run check-types → exit 0 ·
+                               npx vitest run --project frontend src/webview/shared → 22 files, 145 tests ·
+                               npm test → 108 files, 2659 tests · the three mutations of `ops.tsx` that
+                               the changed test covers, re-run and caught. Not run again: bench, coverage.
+grep -rn "from '.*core/" src/webview/shared/bus src/webview/shared/store → 0 lines (protocol only)
+git diff --stat c48d30b -- vitest.config.mts eslint.config.mjs esbuild.mjs package.json tsconfig.vitest.json src/protocol src/core src/host docs/adr → empty
 test -e .claude/.contract-change → false
 npm run package:vsix, npm run check:vsix, npm run test:ui → SKIPPED: no host, packaging, protocol or UI file
                                changed; CI runs them
-CI                           → commit a: run 38475927232, all eight jobs green · commit b: see the tracker
-                               row of P3.2
+CI                           → see the tracker row of P3.3
 ```
 
 ## Done (tested)
 
-- **The decision** (interaction model §5 and §8): a list is `role="listbox"`; each row is a
-  `role="presentation"` wrapper holding the focusable `role="option"` and, beside it, an `aria-hidden`
-  container with the pointer buttons (`tabIndex={-1}`). A button inside an option is nested interactive
-  content, which axe refuses and a screen reader cannot reach, so every row action is a key of the list instead.
-- `primitives/Row.tsx` (11 tests): the DOM of the ruling. The option is named by its title (`aria-labelledby`:
-  id and version) and described by badges, description and status (`aria-describedby`); `aria-busy` and
-  `aria-disabled` are on the option, never on the wrapper; a busy row shows a spinner in place of its actions,
-  a disabled row renders none; a click on an action leaves focus on the option; the one inline style is
-  `--nuiget-virtual-offset`.
-- `primitives/Listbox.tsx` (19 tests): always virtualized with `@tanstack/react-virtual`, one tab stop (roving
-  `tabIndex`), the active row remembered by item id. ArrowUp/ArrowDown/Home/End move without selecting; Enter,
-  Ctrl+Enter or Meta+Enter, Delete or Meta+Backspace, Shift+F10 or the ContextMenu key, click and right-click
-  are reported to the owner; a disabled option ignores Enter, Ctrl+Enter and Delete. The active row stays in
-  the document when it is scrolled out of view. When the active item goes, the row at its index takes over;
-  when the list empties, the empty container takes focus; the list never takes focus it did not have.
-- `primitives/IconButton.tsx`, `Badge.tsx`, `Spinner.tsx`, `LiveStatus.tsx` (3, 3, 3, 4 tests): as ruled.
-  `LiveStatus` is the one `status-live` region, there from the first render, and re-announces a message by
-  emptying itself and filling in on the next animation frame.
-- `primitives/SectionHeader.tsx` (5 tests): a heading (level 2 or 3) holding one toggle button with
-  `aria-expanded` and `aria-controls`; the count is a badge inside the button and part of its name; a busy
-  section shows a decorative spinner; the section's own buttons are a sibling of the heading.
-- `primitives/EmptyState.tsx` (2), `Skeleton.tsx` (2): a sentence with an optional button, no role and no tab
-  stop; placeholder rows hidden from assistive technology, no words, no live region.
-- `primitives/ProgressBar.tsx` (3): `role="progressbar"` with a required name; a value (clamped to 0–100) is
-  `aria-valuenow` and `--nuiget-progress-value`, no value is neither.
-- `primitives/Banner.tsx` (4): `role="status"` for info and warning, `role="alert"` for an error; the
-  severity as a visually hidden word before the text; an optional secondary button.
-- `primitives/Sash.tsx` (6): a focusable `role="separator"` with value, limits, orientation and a name.
-  Arrows along its axis move it by a step, with Shift by ten; Home, End; Enter and a double-click put it back;
-  a drag uses pointer capture and reports clamped, stepped percentages of the parent's box, then the value to
-  keep. It renders no style and touches neither `document` nor `body`.
-- `primitives/index.ts`: the barrel (every primitive with its prop types, the icons, `cssVars`), which imports
-  the stylesheet; `composed.test.tsx` (2) renders a section of the sidebar from the barrel (banner, section
-  header, list of three rows with actions, live region) with no axe violation and `nested-interactive`,
-  `aria-required-children`, `aria-hidden-focus` and `heading-order` among the rules that passed.
-- `primitives/cssVars.ts`: the one way a number reaches the DOM (ADR-006): a `--nuiget-*` custom property
-  through React's `style` prop, which is CSSOM and not a `style` attribute in markup.
-- `primitives/primitives.css`: the rules of all twelve primitives and of `.nuiget-button`; tokens only.
-- `primitives/testSupport.ts`: `installFakeLayout` and `axeRuleOutcome` (see Deviations).
-- `tokens.css`: `--nuiget-row-height-compact` is 24 px (was 22): a row is a pointer target (WCAG 2.5.8).
-- `src/test/lint/webview-stylesheets.test.ts` (9 tests): the six ruled titles over every 2.0 stylesheet but
-  `tokens.css`, and three that keep the scanner honest.
+P3.3, the webview's side of the protocol (ADR-001, ADR-002, ADR-007, ADR-008); the seven rules of the
+harness's `FakeWebview` are implemented as follows.
+
+- `bus/MessageBus.ts`: `createMessageBus(port, source)`. `request(type, payload, { signal, onChunk })`
+  resolves with `{ result, generation }` or rejects with `ProtocolRequestError`; one outcome per request;
+  responses, chunks and anything else for an id that is not waiting are dropped (R5, and "stale by id");
+  abort posts `cancel`, rejects at once and forgets the id; `parseOutbound` on every message;
+  `onEvent(type, handler)`; `listedGeneration(key)` from `keys[]` of `resources/invalidated`, set before the
+  handlers of the event run (R7); `dispose`.
+- `bus/useMessageBus.tsx`: `MessageBusProvider` and `useMessageBus()`.
+- `store/useResource.ts`: R3 (asks again when an event names the key; what is shown stays, `revalidating`),
+  R4 (the latest request wins; a new request and a key change cancel the one before; no render pairs a key
+  with another key's data), R7 (an answer below the listed generation of the same key is not applied; equal,
+  higher, none, or a key no event named: applied). `refresh()` for "Retry". Errors end loading and leave a
+  shown list in place.
+- `store/session.tsx`: R1 (asks `session/get` on start; a snapshot applies only above the last applied
+  `rev`). Committed and pending: `set(intent)` renders at once, the intent leaves when its own `session/set`
+  is answered (ok: the committed snapshot is under it; error: taken back); intents lie oldest first.
+  `useSession()` (`session`, `committed`, `isPending`) and `useSessionActions()` (stable).
+- `store/projects.tsx`: R1 (asks `projects/list` on start), R2 (`projects/changed` replaces the list), R7 for
+  the key `projects`; no request on an invalidation.
+- `store/installed.tsx`: R3 for the committed project (not a pending one; nothing without a project or in
+  all-projects mode), through `useResource`; `metadata` chunks by lower-cased package id per project.
+- `store/ops.tsx`: R5: `active` from `ops/progress`, `last` (with a sequence number) from `ops/completed`
+  and from the response of `run`, once per `opId`; `isPackageBusy(project, id)`, `isBusy`;
+  `useOpsActions().run(type, payload)` (stable).
+- `store/StoreProvider.tsx`: the bus and the four slices; also under `StrictMode` every slice ends with the
+  answer to its latest request.
+- `bus/testSupport.ts`: `createFakeHost()`, the real bus over an `EventTarget` (see Deviations).
+
+Before P3.3 (unchanged; details in the commits `3794311`, `81ec41d`, `c48d30b` and their versions of this
+note): `tokens.css`; `primitives/` with `Listbox`, `Row`, `SectionHeader`, `IconButton`, `Badge`,
+`LiveStatus`, `EmptyState`, `Skeleton`, `Spinner`, `ProgressBar`, `Banner`, `Sash`, the icons, `cssVars`, the
+barrel `index.ts`, `primitives.css` and `testSupport.ts` (75 tests); the lint tests
+`src/test/lint/webview-{colours,tokens,stylesheets}.test.ts`.
 
 ## Done (untested)
 
-- Nothing here has rendered in a browser. No entry imports the primitives or `tokens.css` yet (P3.4), so what
-  the stylesheet does is checked as text only (prefix, tokens, durations, the two selectors that show the row
-  actions): the focus outline of the five focusable classes, the spin, the placement of rows by `transform`,
-  the 24 px grab strip of the sash, the chevron's turn, the stripe of the indeterminate bar. P3.4 and the e2e
-  of P3.5 are the first real render; P5.11 is the theme pass.
-- Scrolling. jsdom does not scroll and lays nothing out; the tests run the real virtualizer over a faked
-  layout (list 120 px, rows 24 px), so `scrollToIndex` is called but moves nothing, and rows of measured,
-  differing heights (`comfortable` with wrapped text) are not exercised.
-- Pointer capture. jsdom has pointer events but no `setPointerCapture`; the Sash tests define the two methods
-  and assert the calls, not that a browser then routes the pointer to the sash.
-- Chromium focuses a button on mouse-down even at `tabIndex={-1}`; the test proves that `Row` prevents the
-  default of that event and focuses the option, not what Chromium then does.
-- What a screen reader says (names, descriptions, the hint, a re-announced status, a banner appearing) is
-  asserted through the accessibility tree jsdom and axe compute, not heard: P7.4 is the manual pass.
-- `IconButton`'s `className` prop has no test (branch coverage 50 % in that file).
+- Against the real host. The tests drive the real bus with a fake host that says what a test makes it say.
+  That the product's bus and store agree with `SidebarHost` and the composition root (the order of
+  `resources/invalidated`, `projects/changed`, responses and their generations) is shown for the *model*
+  by the harness (`src/test/harness`), not yet for this code: P3.4 mounts it in the sidebar and P3.5 runs it
+  in VS Code. The harness could drive these slices in place of its `FakeWebview`; no item asks for that yet.
+- A request that is on its way when the surface is hidden and shown again: ADR-001 asks for a fresh
+  `session/get` on every resolve and re-show. Mounting does it; what "re-show" is for a webview that keeps
+  its context belongs to the entry (P3.4).
+- The out-of-date answer with nothing newer on its way (`useResource.ts:85-96`) needs a host that answers a
+  request sent after an invalidation with a result from before it. The real host does not do that (the
+  coordinator rejects an overtaken computation, the Catalog retries); the path exists so that loading ends.
+- Nothing here is in a bundle or has rendered in a browser (P3.4); the notes of P3.2 on layout, scrolling,
+  pointer capture and screen readers stand.
+- `projects.tsx` and `useResource.ts`: a rejection that is no `ProtocolRequestError` is wrapped as `failed`;
+  the bus never rejects with anything else, so the branch has no test (branch coverage 88 % and 91 %).
 
 ## Not started
 
-- Space, PageUp/PageDown, type-ahead and multi-selection in `Listbox`: reserved for P5 (bulk toolbar);
-  `selectedId` is shaped so that a set of ids is an addition.
-- An icon of its own for an error (`Banner` uses the warning icon for both), `PackageIcon`, `BookIcon`: with
-  their first consumer.
-- `bus/` and `store/`: P3.3. Importing `tokens.css` and the primitives from an entry: P3.4.
-- Raising the coverage ratchet of `src/webview/**`: P3.6.
+- The other slices of ADR-008 (`updates`, `transitive`, `search`, `details`, `allProjects`, `sources`) and
+  rule 3's all-projects branch (`allProjects/installed`, its `project` chunks): with their features, P3.4
+  for what the sidebar slice needs and P5 for the rest. Rule 6 (every envelope kept verbatim) is the
+  harness's recorder, not product behaviour.
+- Creating the bus from `acquireVsCodeApi()`, `getState`/`setState` for surface-local state, `perf/mark`:
+  the entry, P3.4.
+- Space, PageUp/PageDown, type-ahead and multi-selection in `Listbox`: P5. An icon of its own for an error,
+  `PackageIcon`, `BookIcon`: with their first consumer. The coverage ratchet of `src/webview/**`: P3.6.
 
 ## Deviations from contract/ADR (file:line each)
+
+P3.3:
+
+- The plan row names `bus/useMessageBus.ts`. The bus itself is `bus/MessageBus.ts` (no React, so it is tested
+  without rendering), and the hook with its provider is `bus/useMessageBus.tsx`.
+- `bus/MessageBus.ts:49-54` (`listedGeneration`): ADR-008 says `request` exposes the generation "so
+  `useResource` can discard a result whose generation is below the one listed for its key". The listing is
+  kept by the bus, not by each hook: a hook that mounts or changes its key after an event still knows what
+  the event listed, and the listing is set before any handler of the event runs.
+- `store/useResource.ts:85-96`: beyond the seven rules, which record an out-of-date answer and do not apply
+  it. A surface must also stop loading (interaction model §4: "Loading indicators always clear"). When an
+  answer is out of date and nothing newer is on its way, the hook asks once more; a second out-of-date answer
+  for the same listing ends as an error with "Retry".
+- `store/projects.tsx:44-49`: the generation rule is written out here instead of going through `useResource`,
+  because the projects slice must not ask again on an invalidation (rule 2; the `FakeWebview` does not, and
+  the request counts of P3.5's expectations rest on it).
+- `store/ops.tsx:114-121` (`run`): the slice records the outcome from the response as well as from
+  `ops/completed`, once per `opId`. The host announces every outcome, a refusal included
+  (`src/host/handlers.ts:153-158`), so the event alone would do; the response is the one terminal message the
+  protocol promises (ADR-007), and recording it too means a row of the surface that asked cannot stay busy
+  for want of an event. An empty batch is an error response (`handlers.ts:146-151`), which `run` rejects with.
+- `store/session.tsx:91-99`: a pending intent is identified by a counter of this surface, not by the
+  request id of the bus (the bus does not expose it); the effect is the same: it leaves with its own request.
+- `bus/testSupport.ts` (a test-support file next to the code, like `primitives/testSupport.ts`): tests of
+  P3.4 and later need the same fake host; it is imported by tests only and is in no bundle.
+- Tests beyond the three titles of the row: the rest of the 70, most of them named by the rule they pin
+  (`R1:` to `R7:`).
+
+P3.2 (unchanged):
 
 - `primitives/Row.tsx:7-21` (`RowPlacement`): the ruling lists `index`, `setSize`, `active`, `selected`,
   `optionId` as what the list hands to `renderRow`. Two more are needed to render what the ruling's own DOM
@@ -202,6 +225,11 @@ CI                           → commit a: run 38475927232, all eight jobs green
   `grep -c '!important'` counts 0.
 
 ## Advisor decisions (date, item, question, answer verbatim)
+
+2026-10-13, P3.3: no L1 consultation (the item is not ⚑ and no stop-and-ask trigger fired). The ambient advisor
+was consulted before writing and before the commit; its points are in the code and in "Deviations" above
+(no `projects/list` request on invalidation; pending intents leave with their own request; keys built from
+the snapshot's path verbatim; the outcome of an operation counted once per `opId`).
 
 2026-10-13, P3.2, ⚑ brief in the plan's §2.4 form (`architecture-advisor`), on `labs/2.0` @ `3794311` with
 nothing written. Question: the interaction model's listbox with action buttons in its rows against axe's
@@ -299,6 +327,7 @@ FILES CHECKED: `docs/plans/2026-10-11-nuiget-2.0-execution-plan.md:41-175,240-25
 
 ## Exact next step (one item ID)
 
-P3.3 (`bus/useMessageBus.ts` and the store slices). Read its tracker row first: it carries the rulings of
-P1.8 and P2.11 on generations. A test that renders a `Listbox` calls `installFakeLayout()` from
-`primitives/testSupport.ts` in `beforeEach`; surfaces import primitives from `primitives/index.ts`.
+P3.4 (sidebar slice). The entry creates the bus (`createMessageBus(acquireVsCodeApi())`), mounts
+`StoreProvider`, imports `tokens.css` and the primitives from `primitives/index.ts`; data requests follow
+`useSession().committed`; a test that renders a `Listbox` calls `installFakeLayout()`, one that talks to the
+host uses `createFakeHost()`.

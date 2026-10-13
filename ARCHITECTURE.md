@@ -101,7 +101,7 @@ Each row is filled in by the item that creates the module.
 | `src/core/**` | Platform-agnostic logic: CLI runner, project model, queries, operations, feeds | Present: `contracts.ts`, `util/`, `versioning/`, `cache/`, `logging/`, `cli/`, `session/`, `queries/`, `http/ssrf.ts`, `ops/`, `project/` (static inspection and context), `sources/`, `credentials/` and `catalog/`. Absent: `feeds/` and `http/Transport.ts` (P4), the evaluator (P6.2), the mutator (P6.3) |
 | `src/host/**` | Adapts VS Code to the core (ADR-007); no business logic. `WebviewHost` is the base of both surfaces: it decodes an inbound envelope with the protocol guards, calls the handler registered for its type and posts exactly one terminal response per request id, an error envelope included (`unsupported` for a type nobody registered, `failed` for a thrown error, the code of a `HostRequestError`). A handler whose result is a coordinator resource sets `ctx.generation`, and the base puts it on the ok envelope (ADR-007); an error response and a chunk never carry one. A request's `AbortSignal` is aborted with a reason: `cancelled` when the webview sent a cancel envelope, `disposed` when the surface went away, and nothing is posted to a disposed surface. An error whose `code` is `not-yet-available` (a Catalog read that waits for the feeds, ADR-009) is answered as `unsupported`. `handlers.ts` registers the handlers both surfaces share (`registerSharedHandlers`): reads call one Catalog method and forward its chunks unchanged; `operations` has one typed submit function per `ops/*` request, which validates the payload (a real project, a non-empty batch), takes the restore switch as it is at submission and hands the workflow to the `OperationQueue`; `awaitTicket` ties the ticket to the request (opening chunk `queued` or `rejected` with the ticket's `opId`, progress of that operation as chunks, a webview cancel cancels the ticket, a disposed surface does not), and `settleOperation` announces the outcome to every surface and invalidates what it changed. A forced restore of `transitive/get` is such a ticket too. `sourceDirectory` decides where sources are resolved: the directory of the selected project, else the first workspace folder, else a `not-found` error. Handlers that wait for a later item answer with a fixed value under a `// REMOVAL GATE: P4.9` or `P4.4` comment. `services.ts` holds `HostServices` (what the composition root hands to both hosts), `readExtensionConfig` (the one reader of the `nuiget` settings), `renderWebviewHtml` (the Content Security Policy of ADR-006 with a script nonce of 16 random bytes per render) and `createWorkflowDeps` (the dependencies of `PackageWorkflows`, with the answer to "is this a Central Package Management project" kept per project while an operation runs). `MainPanelHost` and `SidebarHost` attach the webviews, forward session, configuration, operation and invalidation events, and the sidebar turns a context-menu choice into a typed operation; `pickers.ts` has the quick picks | Present since P2.9; composed by the root since P2.10 |
 | `src/extension.next.ts` | 2.0 composition root: it assembles and holds no business logic. `activate` calls `activateWith(context, overrides)`, whose overrides (`spawn`, `resolveExecutable`) exist for tests and which returns `{ services, ready }`. Composition order: the output channel and one `redactingLogger` over it, which is the only `Logger` the core and both surfaces get (every message, string argument and error passes `redact`); `DefaultDotnetRunner` with its SDK cache hydrated from `globalState` under `nuiget.sdkVersionCache.v2` (the 1.x key `nuiget.sdkVersionCache` is removed at activation); a `TieredCache` over `workspaceState`; `DotnetSourceProvider`; `AssetsReader`, `StaticProjectInspector` and `ProjectContextProvider` sharing one `stopDirs` array that a workspace-folder change refills in place; `DefaultQueryCoordinator`; `DefaultSessionStore`; `DefaultOperationQueue`; the `Catalog`; `PackageWorkflows` over `createWorkflowDeps`; `HostServices` (`onOperationProgress` is `queue.onProgress`; `workspaceFolderFor` answers the deepest workspace folder that contains a path); the `SidebarHost` view provider. Every coordinator invalidation is forwarded unchanged to the sidebar and to the open main panel. `refreshProjectsAndSession` discovers the projects, announces them, sets `nuiget.hasProjectFiles`, lists the enabled sources of the project the store will keep or pick, and skips the reconcile when the selection moved during the listing (the coalesced rerun does it); otherwise it calls `session.reconcile`; it runs at activation, after an invalidation of scope `workspace`, `project` or `sources`, and when the selected project differs from the one last reconciled for (ADR-001: another project is another source list). Runs never overlap: requests during a run cause one more run. A source listing that fails is not an empty list: the last list of that directory, or else only the selected source, is passed on, so the selection survives. Six file watchers, debounced, invalidate after the queue is idle: project files and `packages.lock.json` (scope `project`), `Directory.{Build,Packages}.{props,targets}` and `global.json` (scope `workspace`; `global.json` also clears the SDK cache), `nuget.config` (scope `sources`), `obj/project.assets.json` (scope `project`, reason `restore`). One status bar item shows the queue. It registers exactly the 12 contributed commands. Three `// REMOVAL GATE: P4.9` comments mark what P4.9 adds: feeds, transport, credentials, outbound policy and icon cache at the `Catalog`; the source health monitor; the transport rebuild on an `http.*` change. The evaluator (P6.2) and the mutator (P6.3) are absent. | Present since P2.10 |
-| `src/webview/shared/**` | Tokens, primitives, message bus, store slices | Tokens and icons present since P3.1 (`tokens.css`, `primitives/icons.tsx`); primitives present since P3.2 (`primitives/index.ts`); bus and store in P3.3; nothing of it is in a bundle until the sidebar entry imports it in P3.4 |
+| `src/webview/shared/**` | Tokens, primitives, message bus, store slices | Tokens and icons present since P3.1 (`tokens.css`, `primitives/icons.tsx`); primitives present since P3.2 (`primitives/index.ts`); message bus and the store slices `session`, `projects`, `installed` and `ops` present since P3.3 (`bus/`, `store/`), the other slices arrive with their features; nothing of it is in a bundle until the sidebar entry imports it in P3.4 |
 | `src/webview/sidebar-next/**` | 2.0 sidebar entry | Placeholder; first slice in P3.4 |
 | `src/webview/main/**` | 2.0 main panel entry | Placeholder; shell in P5.3 |
 
@@ -253,6 +253,59 @@ jsdom lays nothing out, so a test that renders a `Listbox` installs a layout fir
 and axe skips its `aria-hidden-focus` rule instead of failing it. `axeRuleOutcome()` lets a test assert that
 a rule ran and passed. The virtualizer itself is never mocked.
 
+### Message bus and store slices
+
+`src/webview/shared/bus` and `src/webview/shared/store` are the webview's side of the protocol
+([ADR-007](docs/adr/007-protocol.md), [ADR-008](docs/adr/008-webview-architecture.md)). They import
+`src/protocol` and nothing of the core.
+
+**Bus.** `createMessageBus(port, source)` (`bus/MessageBus.ts`) takes the way to the host (the object
+`acquireVsCodeApi()` returns) and the place where messages arrive (`window`). `request(type, payload,
+{ signal, onChunk })` posts a request envelope and resolves with `{ result, generation }` of the ok response,
+or rejects with a `ProtocolRequestError` that carries the code of the error response. A request has one
+outcome: a response, a chunk or anything else for an id that is not waiting (answered, cancelled, never sent
+here) is dropped, as is whatever `parseOutbound` does not accept. Aborting the signal posts a `cancel`
+envelope, rejects with `cancelled` at once and forgets the id, so the terminal response the host still sends
+finds nobody. `onEvent(type, handler)` returns the function that removes the handler. The bus also remembers,
+per resource key, the generation the latest `resources/invalidated` event listed for it
+(`listedGeneration(key)`); the event's own `generation` is a sequence number and is not kept.
+`useMessageBus()` gives a component the bus of the surface; the entry point creates it.
+
+**`useResource(key, requester)`** (`store/useResource.ts`) keeps one resource of the host current and is the
+one place for three rules:
+
+| Rule | Behaviour |
+|---|---|
+| Ask again when invalidated | A `resources/invalidated` event that names the key in `keys` starts a new request. What is shown stays until the answer (`revalidating`); a list is never blanked. |
+| The latest request wins | A new request cancels the one before it, and an answer or failure of an earlier request is not applied. A key change cancels too, and no render shows the data of the previous key. |
+| No result behind an invalidation | An ok answer whose `generation` is below the one listed for the same key is not applied. Equal, higher, absent, or a key no event has named: applied. With nothing newer on its way the hook asks once more; a second out-of-date answer for the same listing ends as an error, so loading always ends. |
+
+**Slices.** Each is a reducer with a context of its own (`useSession`, `useProjects`, `useInstalled`,
+`useOps`), so a component renders for the slice it reads; the functions that change something
+(`useSessionActions`, `useOpsActions`) are in separate contexts and never change. `StoreProvider` mounts all
+four, which is what makes a surface ask `session/get` and `projects/list` when it starts.
+
+- `session` (ADR-001): `committed` is the last snapshot of the host that was applied, and a snapshot is
+  applied only when its `rev` is above that one. `set(intent)` shows the change at once as *pending* and sends
+  `session/set`; the intent leaves when its own request is answered, with the committed snapshot under it, or
+  is taken back when the request fails. Several intents lie over the committed state oldest first, so the
+  answer to an earlier one never shows through a later one.
+- `projects`: the answer to `projects/list` (subject to the generation rule for the key `projects`) and every
+  `projects/changed` event, which replaces the list as it is. The slice does not ask again on an
+  invalidation; the host follows one with the event.
+- `installed`: `useResource` for `installed:<path>` of the project the host has **committed** as selected,
+  never a pending one; nothing is asked without a project or in all-projects mode. The key is built from the
+  path exactly as the snapshot has it, which is how the host names it. `metadata` chunks are kept by
+  lower-cased package id for the project they were asked for.
+- `ops`: operations in progress from `ops/progress` (`queued`, `running`, `restoring`), by operation id, and
+  the last outcome from `ops/completed` with a sequence number for the live region. `isPackageBusy(project,
+  id)` is true on both surfaces, whoever started the operation. `run(type, payload)` starts an operation and
+  resolves with its outcome; the surface that asked receives the outcome as response and as event, and it
+  counts once (by `opId`).
+
+Tests use `createFakeHost()` (`bus/testSupport.ts`): the real bus over an `EventTarget`, with a record of
+what was posted and helpers to make the host answer, fail, stream, broadcast and invalidate.
+
 ### Two-surface harness
 
 `src/test/harness` tests what the two surfaces do together, on the 2.0 protocol
@@ -269,7 +322,8 @@ a rule ran and passed. The virtualizer itself is never mocked.
   `installed/get` can be held at `nuget config paths` only: the SDK probe is cached per directory after its
   first answer, and a result that the coordinator has cached is answered without any call.
 - **Fake webview.** `FakeWebview.ts` records every envelope and keeps a small client model. Its seven rules
-  are the ones the message bus and store of the webviews implement in P3.3 (ADR-001, ADR-002, ADR-008):
+  are the ones the message bus and store of the webviews implement (ADR-001, ADR-002, ADR-008; "Message bus
+  and store slices" above):
   1. On start it asks `session/get` and `projects/list`. A snapshot (from a `session/get` or `session/set`
      response or a `session/changed` event) is applied only when its `rev` is above the last applied one.
   2. `projects/changed` and the `projects/list` response replace the project list.
