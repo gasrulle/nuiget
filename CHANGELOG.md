@@ -38,6 +38,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Benchmarks for the 2.0 core (versioning, cache, operation queue, invalidation scopes) with a regenerated baseline**
 - **resources/invalidated carries per-key generations**
 - **Webview CSP uses a script nonce and admits bundled fonts**
 - **Credential lookup order is environment, nuget.config, then credential provider**

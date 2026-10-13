@@ -32,6 +32,13 @@ Benchmarks live in `src/test/benchmarks/*.bench.ts`:
 - `source-health.bench.ts` — failedEndpointCache and source health monitor
 - `update-checking.bench.ts` — checkPackageUpdates and checkPackageUpdatesMinimal
 - `utils.bench.ts` — validators, version-spec parsing, topological sort
+- `core-versioning.bench.ts` — 2.0 core: NuGet version parsing, comparison and version specs
+- `core-cache.bench.ts` — 2.0 core: the two-tier cache and its persistent tier
+- `core-ops.bench.ts` — 2.0 core: what the operation queue adds to a workflow
+- `core-queries.bench.ts` — 2.0 core: which resource keys an invalidation scope reaches, and merging scopes
+
+The `core-*` benchmarks are type-checked through `tsconfig.vitest.json` and move into `src/core/**` when the 1.x
+code is deleted (plan decision D8, item P8.2).
 
 ## Adding a benchmark
 

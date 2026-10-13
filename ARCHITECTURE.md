@@ -12,8 +12,11 @@ This document describes the technical architecture of the nUIget VS Code extensi
 nUIget 2.0 is a re-architecture on audited contracts: a platform-agnostic core, a typed protocol between host
 and webviews, and one shared webview code base for the main panel and the sidebar. It is built next to 1.x and
 replaces it in one step. Plan phase P0 laid the foundation: build switch, placeholders for the three entry
-points, import fences, guard hooks, CI and packaging checks. Phase P1 adds the contracts and the leaf modules
-of the core, one plan item at a time. Nothing imports them yet, so no 2.0 runtime behaviour exists.
+points, import fences, guard hooks, CI and packaging checks. Phase P1 added the contracts and the leaf modules
+of the core. Phase P2 added the project model, package sources, credentials, the Catalog, the webview hosts
+and the composition root, so `node esbuild.mjs --v2` builds an extension that runs; its two webviews are still
+placeholders (P3, P5). Absent until their phases: the package feeds and the transport (P4), the MSBuild
+evaluator (P6.2) and the project mutator (P6.3).
 
 ### Decisions and plans
 
@@ -95,7 +98,7 @@ Each row is filled in by the item that creates the module.
 | `src/core/session/**` | `DefaultSessionStore`, the only writer of the shared session state (selected project, selected source, prerelease and restore switches; ADR-001). An intent is normalized against the project and source lists of the last `reconcile`, committed in memory at once with a higher `rev`, broadcast, and then persisted in revision order; a failed write is logged and does not undo the change. The host calls `reconcile` whenever the project list or the source list changes, which includes a change of the selected project, because sources resolve per project directory | Present since P1.7; wired by the composition root, done in P2.10 |
 | `src/core/queries/QueryCoordinator.ts` | `DefaultQueryCoordinator` (ADR-002). A resource key has a generation that every invalidation raises. `query(key, compute)` joins the computation that is running for the current generation, answers from the cache when the cached value is of that generation, and otherwise starts one; streamed chunks reach every subscriber that has not released its handle. An invalidation during a computation aborts its signal and rejects its handles with `StaleQueryError`, and the late result is never cached. If a subscriber is still there, the recompute for the new generation starts at once, so a consumer that asks again joins it; the old handles keep it alive only until a consumer joins, it settles, or the next invalidation. Invalidations of one tick are merged into one `onDidInvalidate` event that lists every affected key with its new generation; the event's own `generation` only numbers the events. Values are kept for the 200 most recently used keys | Present since P1.8; the event is forwarded by the host since P2.9 and the root since P2.10 |
 | `src/core/queries/scopes.ts` | The two tables of ADR-002 as pure functions: `scopeMatchesKey` says whether an invalidation scope reaches a resource key, `mergeScopes` combines two pending scopes into one that reaches at least what both reach. Project paths are compared after `normalizeProjectPath`, so spelling differences on Windows do not hide a match; package ids compare case-insensitively | Present since P1.7 |
-| `src/core/**` | Platform-agnostic logic: CLI runner, project model, queries, operations, feeds | Arrives in P1–P4; today `contracts.ts`, `util/`, `versioning/`, `cache/`, `logging/`, `cli/`, `session/`, `queries/`, `http/ssrf.ts`, `ops/`, `project/` (static inspection and context), `sources/`, `credentials/` and `catalog/` |
+| `src/core/**` | Platform-agnostic logic: CLI runner, project model, queries, operations, feeds | Present: `contracts.ts`, `util/`, `versioning/`, `cache/`, `logging/`, `cli/`, `session/`, `queries/`, `http/ssrf.ts`, `ops/`, `project/` (static inspection and context), `sources/`, `credentials/` and `catalog/`. Absent: `feeds/` and `http/Transport.ts` (P4), the evaluator (P6.2), the mutator (P6.3) |
 | `src/host/**` | Adapts VS Code to the core (ADR-007); no business logic. `WebviewHost` is the base of both surfaces: it decodes an inbound envelope with the protocol guards, calls the handler registered for its type and posts exactly one terminal response per request id, an error envelope included (`unsupported` for a type nobody registered, `failed` for a thrown error, the code of a `HostRequestError`). A request's `AbortSignal` is aborted with a reason: `cancelled` when the webview sent a cancel envelope, `disposed` when the surface went away, and nothing is posted to a disposed surface. An error whose `code` is `not-yet-available` (a Catalog read that waits for the feeds, ADR-009) is answered as `unsupported`. `handlers.ts` registers the handlers both surfaces share (`registerSharedHandlers`): reads call one Catalog method and forward its chunks unchanged; `operations` has one typed submit function per `ops/*` request, which validates the payload (a real project, a non-empty batch), takes the restore switch as it is at submission and hands the workflow to the `OperationQueue`; `awaitTicket` ties the ticket to the request (opening chunk `queued` or `rejected` with the ticket's `opId`, progress of that operation as chunks, a webview cancel cancels the ticket, a disposed surface does not), and `settleOperation` announces the outcome to every surface and invalidates what it changed. A forced restore of `transitive/get` is such a ticket too. `sourceDirectory` decides where sources are resolved: the directory of the selected project, else the first workspace folder, else a `not-found` error. Handlers that wait for a later item answer with a fixed value under a `// REMOVAL GATE: P4.9` or `P4.4` comment. `services.ts` holds `HostServices` (what the composition root hands to both hosts), `readExtensionConfig` (the one reader of the `nuiget` settings), `renderWebviewHtml` (the Content Security Policy of ADR-006 with a script nonce of 16 random bytes per render) and `createWorkflowDeps` (the dependencies of `PackageWorkflows`, with the answer to "is this a Central Package Management project" kept per project while an operation runs). `MainPanelHost` and `SidebarHost` attach the webviews, forward session, configuration, operation and invalidation events, and the sidebar turns a context-menu choice into a typed operation; `pickers.ts` has the quick picks | Present since P2.9; composed by the root since P2.10 |
 | `src/extension.next.ts` | 2.0 composition root: it assembles and holds no business logic. `activate` calls `activateWith(context, overrides)`, whose overrides (`spawn`, `resolveExecutable`) exist for tests and which returns `{ services, ready }`. Composition order: the output channel and one `redactingLogger` over it, which is the only `Logger` the core and both surfaces get (every message, string argument and error passes `redact`); `DefaultDotnetRunner` with its SDK cache hydrated from `globalState` under `nuiget.sdkVersionCache.v2` (the 1.x key `nuiget.sdkVersionCache` is removed at activation); a `TieredCache` over `workspaceState`; `DotnetSourceProvider`; `AssetsReader`, `StaticProjectInspector` and `ProjectContextProvider` sharing one `stopDirs` array that a workspace-folder change refills in place; `DefaultQueryCoordinator`; `DefaultSessionStore`; `DefaultOperationQueue`; the `Catalog`; `PackageWorkflows` over `createWorkflowDeps`; `HostServices` (`onOperationProgress` is `queue.onProgress`; `workspaceFolderFor` answers the deepest workspace folder that contains a path); the `SidebarHost` view provider. Every coordinator invalidation is forwarded unchanged to the sidebar and to the open main panel. `refreshProjectsAndSession` discovers the projects, announces them, sets `nuiget.hasProjectFiles`, lists the enabled sources of the selected project's directory and calls `session.reconcile`; it runs at activation, after an invalidation of scope `workspace`, `project` or `sources`, and when the selected project differs from the one last reconciled for (ADR-001: another project is another source list). Runs never overlap: requests during a run cause one more run. A source listing that fails is not an empty list: the last list of that directory, or else only the selected source, is passed on, so the selection survives. Six file watchers, debounced, invalidate after the queue is idle: project files and `packages.lock.json` (scope `project`), `Directory.{Build,Packages}.{props,targets}` and `global.json` (scope `workspace`; `global.json` also clears the SDK cache), `nuget.config` (scope `sources`), `obj/project.assets.json` (scope `project`, reason `restore`). One status bar item shows the queue. It registers exactly the 12 contributed commands. Three `// REMOVAL GATE: P4.9` comments mark what P4.9 adds: feeds, transport, credentials, outbound policy and icon cache at the `Catalog`; the source health monitor; the transport rebuild on an `http.*` change. The evaluator (P6.2) and the mutator (P6.3) are absent. | Present since P2.10 |
 | `src/webview/shared/**` | Tokens, primitives, message bus, store slices | Arrives in P3 |
@@ -106,6 +109,55 @@ Import rules between these layers, and between 2.0 and 1.x code, are in
 [`.github/instructions/core-boundaries.instructions.md`](.github/instructions/core-boundaries.instructions.md).
 `eslint.config.mjs` enforces them with one fence per layer; `LEGACY_IMPORT_ALLOWLIST` there is the only way a
 2.0 file may import 1.x code, and `src/test/lint/allowlist.test.ts` fails for an entry that is no longer needed.
+
+### Operation outcomes
+
+Every operation ends in exactly one outcome ([ADR-003](docs/adr/003-operation-queue-and-dotnet-runner.md)):
+the ticket's `completion` resolves once and never rejects, and the host answers the request with it and
+announces it to both surfaces as `ops/completed`. The statuses (`OperationStatus`, `src/protocol/domain.ts`):
+
+| Status | Produced by | Meaning |
+| --- | --- | --- |
+| `queued`, `running`, `restoring` | progress only (`ops/progress`, the opening chunk) | Never the status of an outcome |
+| `completed` | `PackageWorkflows` | The edit succeeded; the restore succeeded or was switched off |
+| `partial` | `PackageWorkflows` | The edit succeeded and the restore failed; for a bulk operation, some edits or restores failed |
+| `failed` | `PackageWorkflows`, or the queue when the workflow threw | The edit failed, was refused (SDK below 10, a Central Package Management add or update) or threw; for a bulk operation, no edit completed |
+| `cancelled` | `PackageWorkflows`, or the queue for a ticket cancelled before it started | Cancelled; an edit that already ran is reported as done |
+| `rejected` | the queue | Not admitted: one operation runs and five wait, or the queue is disposed |
+
+An `OperationOutcome` reports edit and restore as separate `StepOutcome`s (`ok`, `skipped`, `error`); a
+restore the user switched off is `{ ok: true, skipped: true }`. A `BulkOutcome` has one outcome per edit in
+`results` and one restore per project in `restores`. Every outcome, a refusal included, has the ticket's `opId`.
+
+### Reading through the Catalog
+
+Hosts read through `Catalog` and nowhere else ([ADR-009](docs/adr/009-catalog.md)). Four reads are resources
+of the query coordinator, computed once per generation for both surfaces: the project list (`projects`), the
+sources of a directory (`sources:<dir>`), the installed packages of a project (`installed:<path>`) and its
+transitive packages (`transitive:<path>`). The all-projects reads are fan-outs over those resources and stream
+one chunk per project; they are not resources themselves. `installed()` resolves with `{ result, upgrade? }`:
+the result of the static inspection at once, and the evaluated result through `upgrade` once an evaluator
+exists (P6.2). `Catalog.invalidate(scope, reason)` is the single entry for invalidation: it clears the source
+listings for the scopes `sources` and `workspace` and then raises the generation of every key the scope reaches.
+
+Eight reads need a package feed: `updates`, `allProjectsUpdates`, `transitiveMetadata`, `search`,
+`quickSearch`, `versions`, `metadata` and `readme`. Until P4.9 wires the feeds in they throw
+`NotYetAvailableError` (`// REMOVAL GATE: P4.9` in `Catalog.ts`), which the host answers as the protocol error
+`unsupported`.
+
+### Project execution context
+
+Sources, SDK and configuration belong to a project, not to the workspace
+([ADR-005](docs/adr/005-execution-context-and-outbound-policy.md)). `ProjectContextProvider.get(projectPath)`
+(`src/core/project/context.ts`) assembles the `ProjectExecutionContext` of a project: the .NET SDK that
+applies in its directory (through the runner, so `global.json` is honoured), its `nuget.config` chain as
+`dotnet nuget config paths` reports it (nearest first), the URLs of the sources enabled for it, and a
+`revision` hash over the project file, the nearest props and targets files, `global.json` and the config files,
+which changes when any of them does. An SDK that cannot be detected leaves `sdk` unset and a config chain that
+cannot be listed leaves it empty; a source listing that fails rejects, because no sources and unknown sources
+are different facts. When the SDK is below 10 the provider answers with the complete context and
+`unsupported: { reason: 'sdk-too-old' }`: the project stays readable and its packages are listed, and the
+workflows refuse to edit it (plan decision D13).
 
 ### Two-surface harness
 
@@ -174,12 +226,17 @@ These parts serve both versions and are the current truth for the build, test an
 - **Type-checking.** `npm run check-types` runs three programs: `tsconfig.json` (the extension and webviews,
   against Node 18 declarations through the `@types-host/node` alias, see ADR-000), `tsconfig.test.json` (Mocha
   end-to-end and ExTester UI suites) and `tsconfig.vitest.json` (tests of the 2.0 code, the lint tests and the
-  shared test helpers, against Node 24 declarations). The 1.x Vitest tests are not type-checked.
+  shared test helpers, against Node 24 declarations). The 1.x Vitest tests are not type-checked, nor the 1.x
+  benchmarks; the 2.0 benchmarks in `src/test/benchmarks/core-*.bench.ts` are.
 - **Linting.** `npm run lint` covers `src`, `scripts`, `esbuild.mjs` and the root configuration files.
 - **Unit tests.** Vitest projects `backend` (`src/services`, `src/core`, `src/protocol`, `src/host`,
   `src/test/lint`), `frontend` (`src/webview`) and `integration` (the 1.x integration tests and the 2.0
   two-surface harness in `src/test/harness`, described below). Coverage has global thresholds, a separate
   floor for `src/webview/**` and a floor of 85 % of the lines for `src/core/**`. `node --test scripts/hooks` tests the guard hook.
+- **Benchmarks.** `src/test/benchmarks/*.bench.ts`; the benchmarks of the 2.0 core are the `core-*` files there
+  until P8.2 moves them next to their modules (plan decision D8). `npm run bench` runs them, `npm run
+  bench:save` rewrites `benchmarks/baseline.json` and `npm run bench:compare` compares a run with it. The CI
+  job `Benchmark (informational)` compares on its own hardware and never fails the pipeline.
 - **Bundle size.** `node esbuild.mjs --production --analyze` fails when a bundle exceeds its ceiling, the 1.18.9
   size plus 10 %. Metafiles go to `out/esbuild/`.
 - **Packaging.** `npm run package:vsix` runs `npm ci` → `check-types` → tests → lint and production build →
