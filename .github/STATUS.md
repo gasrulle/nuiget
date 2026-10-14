@@ -1,4 +1,4 @@
-# STATUS — .github (agent resources and repo-level items)   commit 3b6f987 (parent of the P3.6 commit)   2026-10-14T06:20:00Z
+# STATUS — .github (agent resources and repo-level items)   commit 3b6f987 (parent of the P3.6 commit)   2026-10-14T05:52:03Z
 
 git status --short: ` M .github/STATUS.md`, ` M .github/copilot-instructions.md`, ` M ARCHITECTURE.md`,
 ` M docs/plans/2026-10-11-nuiget-2.0-execution-plan.md`, ` M docs/plans/STATUS.md`,
@@ -6,7 +6,7 @@ git status --short: ` M .github/STATUS.md`, ` M .github/copilot-instructions.md`
 
 Item: **P3.6 Re-base the estimate; advisor review of the slice; adjust P4/P5 ordering** (⚑ mandatory). This file is
 the handoff note for plan items without a `src/` directory of their own. The P0.13 note it replaces is in commit
-`2dcd3c6`. P3.5's CI run 38490233910 for `3b6f987` was green on all 11 jobs.
+`9e2ebbc`. P3.5's CI run 38490233910 for `3b6f987` was green on all 11 jobs.
 
 ## Verified by running
 
@@ -54,7 +54,6 @@ test -e .claude/.contract-change → false
 
 ## Not started
 
-- RUN.md §6 for P3: the phase gate, `PHASE REVIEW P3`, any `P3.fix-n`, the tag `labs/2.0-P3-done`.
 - The product changes the ruling schedules: pure icons (P5.1), N62 (P5.3), N61 (P5.4), the CSS-baseline lint
   (P5.11), the CI ceilings (P7.2), the 1.85.0 check (P7.4, owner).
 
@@ -77,5 +76,6 @@ compact row 24 px; ratchet unchanged plus a 2.0 floor of 85 % lines.
 
 ## Exact next step (one item ID)
 
-The P3 phase boundary (RUN.md §6: gate, `PHASE REVIEW P3`, fix items, tag `labs/2.0-P3-done`), then stop
-(RUN.md §7: P3.6 completed). The next open item afterwards is P5.1.
+P5.1 (pulled before P4 by the P3.6 ruling), in a new session: this session stopped after P3.6 (RUN.md §6, §7). The
+P3 phase gate and `PHASE REVIEW P3` (PASS, no blocking item) are under "Phase gates" in `docs/plans/STATUS.md`;
+CI of `3c96c29` green after one re-run (N65); tag `labs/2.0-P3-done` on the phase-gate commit.
