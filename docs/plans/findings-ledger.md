@@ -65,7 +65,7 @@ one records itself here.
 | F5 | L | In-flight dedup exists for versions/metadata; inventory which paths bypass it (search, icons… | — | not mapped | open |
 | M3 | M | .NET 10 dotnet package list performs an implicit restore — the "read" fallback in… | X: Closed by D13: `dotnet package list --no-restore`. | D13 | closed by design (D13) |
 | M4 | M | Solution awareness: "All Projects" = every .csproj/fsproj/vbproj found by glob, not solution… | — | not mapped | open |
-| M5 | M | Bespoke Node HTTP transport does not inherit VS Code proxy settings (http.proxy… | — | not mapped | open |
+| M5 | M | Bespoke Node HTTP transport does not inherit VS Code proxy settings (http.proxy… | — | P4.1 (decision and matrix), P4.2 (Transport) | open; decision recorded in P4.1, closes at P4.2 with the named tests |
 | P1 | H | Main panel and sidebar independently compute updates for the same project (checkPackageUpdates… | N: Per-surface glob clause holds for the sidebar path only. | not mapped | open |
 | P2 | M | Two independent webview bundles (546 KB + 276 KB) — expected for two webview environments… | — | not mapped | open |
 | P4 | L | HTTP/2 LRU eviction close()s a session that may have active streams (graceful close; impact… | — | not mapped | open |
@@ -424,7 +424,7 @@ headline defects in the order the plan lists them, so that salvage commits can c
 | C-cache-http-2 | DNS outside deadline | P1.4, P1.9, P4.2 | open |
 | C-cache-http-3 | TieredCache unintegrated | P1.4, P1.9, P4.2 | open |
 | C-cache-http-4 | Icon data URIs persisted up to ~128 MB | P1.4, P1.9, P4.2 | open; cache side done in P1.4 (the persistent tier has a budget of 8 MiB), closes at P4.4 when icons go through `TieredCache` |
-| C-cache-http-5 | Proxy claim unimplemented | P1.4, P1.9, P4.2 | open; ADR side done in P1.1b (ADR-005 without `undici`), closes at P4.1 |
+| C-cache-http-5 | Proxy claim unimplemented | P1.4, P1.9, P4.2 | closed (P4.1: ADR-005 claims only what the extension host does for an extension's requests; docs/adr/005-proxy-matrix.md) |
 | C-feeds-1 | 9 of 17 files missing | P4.3 to P4.9 | open |
 | C-feeds-2 | Transient outage → 24 h miss | P4.3 to P4.9 | open |
 | C-feeds-3 | No OutboundPolicy implementation | P4.3 to P4.9 | open |

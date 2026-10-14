@@ -21,3 +21,6 @@ Supplements (evidence for a record, not separate decisions):
 
 - [004-sdk-probes.md](004-sdk-probes.md): measured `dotnet package add/remove` behaviour on Central Package
   Management projects, backing the `cpmAwareAdd` capability in ADR-004.
+- [005-proxy-matrix.md](005-proxy-matrix.md): how the VS Code extension host treats an extension's `https` and
+  `http2` requests per proxy and certificate setting, backing the `Transport` bullet of ADR-005 and the decision
+  not to vendor a proxy agent.
