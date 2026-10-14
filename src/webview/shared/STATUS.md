@@ -26,6 +26,12 @@ N63 before: rm -rf dist && node esbuild.mjs --v2 --production --analyze → exte
                                .bytesInOutput = 17758
 N63 after (26 annotations, nothing else in icons.tsx) → extension 168070 · webview 223600 ·
                                sidebar 278401 / 329122 (−15528) · icons.tsx bytesInOutput 2284; dist/ deleted after
+the item at d7a79ba (all new modules in the barrel) → sidebar 278756: layers.ts kept 188 bytes (its selector was an
+                               array joined at module level, a call the bundler keeps) and each new component
+                               module a shell of 29–40 bytes (its `import './primitives.css'`); fixed forward
+                               (P5.1, N63): the selector is one literal → extension 168070 / 299921 · webview
+                               223600 / 600685 · sidebar 278568 / 329122 · icons.tsx 2284; dist/sidebar.css
+                               12485 → 15379 bytes (primitives.css is one stylesheet, CSS is not tree-shaken)
 npx tsc --noEmit / npm run check-types → exit 0 / exit 0
 npx eslint src               → exit 0, no output
 npx vitest run --project frontend src/webview/shared → Test Files 27 passed (27) · Tests 190 passed (190)
@@ -46,7 +52,8 @@ negative control (layers)    → 40 mutations, one at a time, of Dialog, Confirm
                                `restoreFocus` without the "focus was inside" guard (React DOM puts focus back on
                                the element that had it before a commit when a commit's cleanup moved it; the
                                guard stays as stated intent). Every file restored (`git diff` clean of mutants)
-the six new or changed primitive test files, 40 times in a row → 40 of 40 green
+the six new or changed primitive test files, 40 times in a row → 40 of 40 green; again on the committed tests
+                               (d7a79ba plus the layers.ts fix) → 40 of 40 green
 npx vitest run               → Test Files 116 passed (116) · Tests 2727 passed | 3 skipped (2730)
 npm test (NUIGET_SDK_TESTS=1, DOTNET_ROOT set) → Test Files 116 passed (116) · Tests 2730 passed (2730)
 npm run bench               → exit 0 · Test Files 18 passed (18) · Tests 112 passed | 1 skipped (113)
@@ -59,7 +66,8 @@ npm run package:vsix, npm run check:vsix → SKIPPED: no host, extension, esbuil
                                precedent); CI builds and packages the 1.x entries
 npm run test:ui              → SKIPPED: no 1.x UI changed and the 2.0 suites open no dialog yet; CI runs both
 test -e .claude/.contract-change → false
-git diff --stat 587499e -- src/protocol src/core docs/adr package.json esbuild.mjs vitest.config.mts → empty
+git diff --stat 587499e -- src/protocol src/core docs/adr package.json esbuild.mjs vitest.config.mts → empty (run at d7a79ba)
+git grep -n 'console.warn\|RESTORE\|AFTER\|TEST' -- primitives/layers.ts primitives/Popover.test.tsx → no match (probe residue)
 ```
 
 ## Done (tested)
@@ -96,7 +104,8 @@ P5.1 (ADR-008 primitives `Dialog`, `Popover`, `Tabs`; interaction model §5 and 
 - `primitives/primitives.css`: rules for the layers, tabs and toolbar, a disabled `.nuiget-button` (no
   opacity), focus outlines for tabs, dialogs and popovers; `tokens.css`: `--nuiget-color-widget-bg|fg`
   (aliases of `--vscode-editorWidget-background|foreground`, `Canvas`/`CanvasText` under forced colours).
-- `primitives/icons.tsx`: `/* @__PURE__ */` before each of the 26 `React.memo` calls (N63);
+- `primitives/icons.tsx`: `/* @__PURE__ */` before each of the 26 `React.memo` calls (N63); `layers.ts` has
+  no call at module level, so a bundle that uses no layer keeps only the module shells (167 bytes in all);
   `src/test/lint/webview-icons-pure.test.ts`: `every icon is a pure call` and a scanner test.
 - `primitives/testSupport.ts`: `installFakeViewport()` (window size and boxes of chosen elements), next to
   `installFakeLayout()`, which it does not change.

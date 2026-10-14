@@ -31,15 +31,10 @@ export function isInLayerAbove(layer: Layer, node: Node): boolean {
     return stack.slice(index + 1).some(above => above.element()?.contains(node) ?? false);
 }
 
-const TABBABLE = [
-    'a[href]',
-    'button:not(:disabled)',
-    'input:not(:disabled):not([type="hidden"])',
-    'select:not(:disabled)',
-    'textarea:not(:disabled)',
-    '[tabindex]',
-    '[contenteditable="true"]',
-].join(', ');
+// One literal, not an array joined at load time: a call at module level is kept by the bundler in every bundle
+// that imports the barrel, used or not (N63).
+const TABBABLE = 'a[href], button:not(:disabled), input:not(:disabled):not([type="hidden"]), select:not(:disabled), '
+    + 'textarea:not(:disabled), [tabindex], [contenteditable="true"]';
 
 /** The elements in `root` that Tab stops on, in document order. Layout is not consulted: jsdom has none. */
 export function tabbables(root: HTMLElement): HTMLElement[] {
