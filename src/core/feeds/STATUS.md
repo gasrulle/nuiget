@@ -1,80 +1,82 @@
-# STATUS — src/core/feeds   commit 93fe7fd (parent of the P4.4 commit)   2026-10-15T23:20:00Z
+# STATUS — src/core/feeds   commit aa42f07 (parent of the P4.5 commit)   2026-10-15T23:50:00Z
 
-git status --porcelain --untracked-files=all (before the commit): `?? src/core/feeds/{icons,readme,readmeImage}.ts` and their
-three `*.test.ts`, ` M src/core/feeds/index.ts`, ` M src/core/feeds/STATUS.md`, ` M src/host/handlers.ts` (comment only),
-` M CHANGELOG.md`, ` M ARCHITECTURE.md`, ` M .github/copilot-instructions.md`, ` M docs/plans/STATUS.md`,
-` M docs/plans/findings-ledger.md` (all belong to the P4.4 commit)
+git status --porcelain --untracked-files=all (before the commit): `?? src/core/feeds/{nuspec,offline}.ts` and their two
+`*.test.ts`, `?? src/core/feeds/__fixtures__/newtonsoft.json.13.0.3.nuspec`, ` M src/core/feeds/index.ts`,
+` M src/core/feeds/STATUS.md`, ` M CHANGELOG.md`, ` M ARCHITECTURE.md`, ` M .github/copilot-instructions.md`,
+` M docs/plans/STATUS.md`, ` M docs/plans/findings-ledger.md` (all belong to the P4.5 commit)
 
-Item: **P4.4 Feeds B**: `icons`, `readme` through the gate; `TieredCacheIconCache` adapter; no 24 h miss on a transient
-outage; the `readme/image` fetch (data URI, cap, policy). A salvage item (plan §3 gate): `icons.ts`, `readme.ts` and their tests
-were copied from the quarry working tree; `icons.ts` no longer compiled against P4.3's `IconFetch` and was adapted, `readme.ts`
-is unchanged. Not ⚑; one stop-and-ask (where the `readme/image` fetch lives before P4.9 gives the root a `Transport`), answered
-below. No contract change, no sentinel.
+Item: **P4.5** `nuspec.ts` + `offline.ts` + tests. Source `—`: new code. The quarry has neither file (its feeds note B lists
+`offline.ts` as not started and says `nuspec.ts` did not exist). Not ⚑, no stop-and-ask trigger; the ambient advisor was asked
+about the entity policy and the path guard before writing. No contract change, no sentinel.
 
 ## Verified by running
 
 ```text
-baseline at 93fe7fd         → CI run 38649338595 green on all 11 jobs (after one N65 re-run); tsc 0 and eslint 0 locally
-npx tsc --noEmit → exit 0 (also right after the IconFetch adaptation) · npx eslint src → exit 0, no output
-npx vitest run --project backend src/core/feeds → Test Files 8 passed (8) · Tests 88 passed (88); the item's three files:
-                               icons 24, readme 21, readmeImage 10 = 55 (gate ≥ 41 + new)
-grep -c "^\s*it(" src/core/feeds/readmeImage.test.ts → 10, the ten titles of the ruling
-src/core/feeds, 40 times in a row → 40 of 40 green
-negative control (readmeImage.ts) → 10 mutations (scheme, localhost, IP class, same origin, found cached, null cached, abort
-                               before the cache, maxBytes, non-2xx, signal passed): 7 caught at once; three tests strengthened
-                               (a second round of non-images, a cached answer to an aborted caller, a 304 with an image body);
-                               10 of 10. icons.ts (before the ruling): 6 of 6
-coverage (feeds only)        → icons.ts 100/95.5, readme.ts 100/98.59, readmeImage.ts 94.33/94.87 (lines/branches)
-npm test (NUIGET_SDK_TESTS=1, DOTNET_ROOT set) → Test Files 130 passed (130) · Tests 2919 passed (2919)
+baseline at aa42f07         → CI run 38653195633 green on all 11 jobs · npx tsc --noEmit 0 · npx eslint src 0 · npx vitest run
+                               green (130 files, 2916 passed, 3 skipped: the real-SDK tests without NUIGET_SDK_TESTS)
+npx tsc --noEmit → exit 0 · npx eslint src → exit 0, no output
+npx vitest run --project backend src/core/feeds → Test Files 10 passed (10) · Tests 105 passed (105); the item's: nuspec 9,
+                               offline 8
+src/core/feeds, 40 times in a row → 40 of 40 green (offline.test.ts does real file I/O in a scratch directory)
+negative control             → 16 mutations: nuspec (DOCTYPE refusal, size cap, validation, license from an expression only,
+                               groups preferred over ungrouped, `*` for a missing version, `Any` for a missing framework,
+                               numeric entities, version required, BOM strip), offline (validators, path under the folder,
+                               is-a-file, byte cap, offline flag, normalized version folder): 13 caught at once; two tests
+                               strengthened (malformed XML the parser alone accepts; nothing read for a directory or an
+                               oversized file); 15 of 16. The BOM strip survives as an equivalent mutant: the validator and
+                               the parser both accept a BOM, the strip only keeps the size cap and the DOCTYPE test exact
+coverage (feeds only)        → nuspec.ts 98.27/98.55, offline.ts 97.05/84.37 (lines/branches)
+npm test (NUIGET_SDK_TESTS=1, DOTNET_ROOT set) → Test Files 132 passed (132) · Tests 2936 passed (2936)
 npm run bench               → Test Files 19 passed (19) · Tests 114 passed | 1 skipped (115) (no bench is the row's; P4.10)
-rm -rf dist && npm run package:vsix → exit 0 (handlers.ts changed, a comment only) · npm run check:vsix → OK
-npm run docs:protocol:check → up to date
-grep -rn 'REMOVAL GATE: P4.4' src --include='*.ts' → no output · grep -c 'REMOVAL GATE: P4.9' src/host/handlers.ts → 5
-grep -rn "IMAGE_SIGNATURES\|classifyAddress" src/core/feeds --include='*.ts' → IMAGE_SIGNATURES in icons.ts only,
-                               classifyAddress in readmeImage.ts only
+npm run package:vsix, check:vsix, docs:protocol:check, test:ui, test:ui:v2 → SKIPPED: no host, extension, packaging,
+                               protocol or webview file changed; nothing outside src/core/feeds imports the feeds before P4.9
 git diff --name-only -- src/protocol src/core/contracts.ts docs/adr → empty
-test:ui, test:ui:v2          → SKIPPED: no webview file changed; nothing outside src/core/feeds imports the feeds before P4.9
 ```
 
 ## Done (tested)
 
-- `icons.ts`: `DefaultIconResolver` over `IconFetch`: `found` → data URI cached for good, `missing` → `null` for 24 h and one
-  count for the per-source breaker, `failed` → nothing cached, no breaker count, next source (C-feeds-2); one resolution per
-  package version and source set with its own `AbortController`, which aborts only when the last waiting caller gives up (a
-  caller without a signal never leaves); `TieredCacheIconCache` (`iconFound`/`iconMissing` of `CachePolicy`, so icons count
-  against the persistent byte budget of P1.4); `MemoryIconCache`; `toImageDataUri` (exported, shared with README images).
-- `readme.ts` (unchanged copy): the feed's README template first, then the package archive; nuspec-declared path, then the
-  conventional names; unsafe archive paths refused.
-- `readmeImage.ts`: `ReadmeImageFetcher` per the ruling: https only, no request to `localhost` names or non-public IP literals
-  (`classifyAddress` of `src/core/http`), the source credential only to the source's own origin, the icon cap
-  (`MAX_README_IMAGE_BYTES` = `MAX_ICON_BYTES`), a 10 s timeout, the signal passed to the transport, found images only in a
-  64-entry LRU, `clear()`.
-- `index.ts` exports the three modules.
-- N7 checked against the tree and closed for the core: the README template fetch and the package download send the source
-  credential (`readme.ts:139`, `flatContainer.ts:149`); the temp file is named by `downloadPackage` under the temp directory with
-  a random suffix and created with `wx` (`flatContainer.ts:159-162`) and removed in `finally` (`readme.ts:179`); an entry is read
-  only when its declared size is within the cap (`readme.ts:191,203`), and adm-zip 0.6.1 passes the declared size as zlib's
-  `maxOutputLength` (`node_modules/adm-zip/methods/inflater.js`), so a header that lies cannot inflate past it.
+- `nuspec.ts`: `parseNuspec` refuses a document with a DOCTYPE (no entity a package declares is ever expanded; an entity bomb
+  is a test), one over `MAX_NUSPEC_CHARS` (1 MiB), and one `XMLValidator` rejects (the parser alone reads a mismatched closing
+  tag as a valid package); strips a BOM; ignores namespaces; decodes the XML entities and numeric references; requires an id and
+  a version; reads title, description, authors, the license from `<license type="expression">` only, licenseUrl, projectUrl,
+  iconUrl, readme; keeps every dependency group as declared, an empty one included, with `Any` for a group without a framework;
+  reads dependencies outside any group as one `Any` group only when there is no group; a dependency without `version` is `*`
+  and one without `id` is dropped (1.x parity, `NuGetPackageService.ts:1631-1670`). `nuspecToMetadata` maps to
+  `PackageMetadata` with only the fields present, plus `sourceUrl` or `offline` as given.
+- `offline.ts`: `offlineNuspecPath` (`<id>/<normalized version>/<id>.nuspec`, lower case, as the global-packages folder stores
+  them) validates with `isValidPackageId`/`isValidVersion`, requires a version that parses, and checks the resolved path stays
+  one level per segment under the folder (`isValidPackageId('..')` is true, so the check is load-bearing);
+  `OfflineMetadataReader.metadata` with an injected `globalPackagesFolder` (`undefined`, empty or a rejection answers
+  `undefined`), `stat` before reading, a byte cap, no read for a directory, `offline: true`, no `sourceUrl`, no cache.
+- Fixture `__fixtures__/newtonsoft.json.13.0.3.nuspec`: the public nuspec of Newtonsoft.Json 13.0.3, copied from the local
+  global-packages folder unchanged (BOM, the 2013/05 namespace, eight groups, four of them empty; public data, nothing to
+  redact). Edge cases are inline in the tests.
+- `index.ts` exports both modules.
 
 ## Done (untested)
 
-- `ReadmeImageFetcher`: the abort check after the credential lookup (`readmeImage.ts:62`), a credential provider that throws
-  (`:91`, answered as no credential), and a malformed `sourceUrl` (`:119`, answered as another origin).
+- `nuspec.ts:119`: the parser throwing after the validator accepted the document (not reached with fast-xml-parser 5.11.2).
+- `offline.ts:86`: the debug log for a read error other than `ENOENT` (permissions).
 
 ## Not started
 
-- `nuspec.ts`, `offline.ts` (P4.5), `search.ts` (P4.6), `registration.ts`, `vulnerability.ts` (P4.7), `updates.ts` (P4.8);
-  wiring into the Catalog and the composition root (P4.9), including `Catalog.readmeImage` and the `readme/image` handler.
+- `search.ts` (P4.6), `registration.ts`, `vulnerability.ts` (P4.7), `updates.ts`, `enricher.ts`, `metadataResolver.ts` (P4.8,
+  which composes `flat.nuspec()` with `parseNuspec` and falls back to `OfflineMetadataReader`); wiring into the Catalog and the
+  composition root (P4.9: the root passes `DefaultDotnetRunner.globalPackagesFolder` to the reader).
 
 ## Deviations from contract/ADR (file:line each)
 
-- `src/host/handlers.ts:303`: the gate comment now reads `REMOVAL GATE: P4.9 (readme/image answers through
-  Catalog.readmeImage)`; the handler still answers `dataUri: null` until P4.9 (the ruling, superseding the P2.9 note on timing).
-  `src/host/STATUS.md` keeps its P2.9 counts as a historical record.
-- `icons.ts`: the shared resolution's own `AbortController` is not in the quarry (it passed the first caller's signal to every
-  caller, the same defect P4.3 fixed in the service index).
+- `offline.ts:15-22`: the global-packages folder is an injected function, not `FeedsDeps.runner`: the `DotnetRunner` contract
+  (`src/core/contracts.ts:188-194`) has no `globalPackagesFolder`, and widening a frozen contract is not this item's.
+- `readme.ts:60` keeps its own `declaredReadmePath` (P4.4's file); `parseNuspec` reads the same `<readme>` element.
 
 ## Advisor decisions (date, item, question, answer verbatim)
+
+2026-10-15, P4.5: no L1 consultation (not ⚑, no stop-and-ask trigger). Ambient advisor before writing: entity policy for package
+XML and the offline path guard → refuse a DOCTYPE before parsing; inject the folder resolver instead of widening `DotnetRunner`;
+validators before the join and a resolved-path check after it; no cache for offline metadata.
+
+Earlier in this directory, kept for the P4 phase review:
 
 2026-10-15, P4.4, stop-and-ask: where the `readme/image` fetch lives while the root has no `Transport` (P2.9 put the handler in
 P4.4, P2.10 put the transport in P4.9). Answer, verbatim (its note on the brief: GATE STATUS is "tsc 0 after the IconFetch
@@ -128,4 +130,5 @@ FILES CHECKED: /Users/mattias/github/nuiget/.github/agents/architecture-advisor.
 
 ## Exact next step (one item ID)
 
-P4.5 (`nuspec.ts` + `offline.ts` + tests).
+P4.6 (`search.ts`: API multi-source, CLI JSON extraction after `warn :` lines, exact-match grouping, relevance only
+multi-origin, `searchById`, `quickSearch`, + tests).
