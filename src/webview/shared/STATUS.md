@@ -110,6 +110,10 @@ P5.1 (ADR-008 primitives `Dialog`, `Popover`, `Tabs`; interaction model §5 and 
 - `primitives/testSupport.ts`: `installFakeViewport()` (window size and boxes of chosen elements), next to
   `installFakeLayout()`, which it does not change.
 
+P5.3 (the main shell's item; its note is `src/webview/main/STATUS.md`): `search/parseSearchQuery.ts` and its 24
+tests, ported unchanged from `src/webview/app/utils/parseSearchQuery.ts`, which the import fence keeps out of the
+2.0 webviews. Nothing else in this directory changed.
+
 Before P5.1 (unchanged; details in the commits `3794311`, `81ec41d`, `c48d30b`, `5bc53c1` and their versions
 of this note): `tokens.css`; the twelve primitives of P3.2 with the icons, `cssVars`, the barrel and
 `testSupport.ts`; the bus (`bus/`) and the store slices `session`, `projects`, `installed`, `ops` with

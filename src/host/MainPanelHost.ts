@@ -88,7 +88,6 @@ export class MainPanelHost extends WebviewHost {
         );
     }
 
-    /** Forward an invalidation to the webview. */
     /** The coordinator's event, forwarded as it is (ADR-002). */
     public notifyInvalidated(event: InvalidationEvent): void {
         this.sendEvent('resources/invalidated', event);

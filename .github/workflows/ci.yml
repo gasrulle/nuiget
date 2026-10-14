@@ -321,8 +321,8 @@ jobs:
           path: e2e-v2-output.txt
           if-no-files-found: ignore
 
-  # The 2.0 sidebar through WebDriver, on a VSIX that ExTester packages from the 2.0 entries: vscode:prepublish
-  # builds them because NUIGET_V2 is set. check:vsix is not run on that VSIX (no dist/webview.css until P5.3).
+  # The 2.0 webviews through WebDriver, on a VSIX that ExTester packages from the 2.0 entries: vscode:prepublish
+  # builds them because NUIGET_V2 is set. check:vsix then checks what that build put into dist/.
   ui-v2:
     name: UI 2.0
     needs: [ lint, test ]
@@ -349,6 +349,9 @@ jobs:
       # A short storage path keeps the VS Code IPC socket under the Unix path limit.
       - name: Run UI tests (2.0)
         run: xvfb-run -a npm run test:ui:v2 -- --storage /tmp/nuiget-ui-v2 2>&1 | tee ui-v2-output.txt
+
+      - name: Check VSIX contents (2.0)
+        run: npm run check:vsix
 
       - name: Upload UI log and screenshots
         if: always()

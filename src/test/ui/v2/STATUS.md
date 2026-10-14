@@ -1,21 +1,41 @@
-# STATUS — src/test/ui/v2   commit 8c95e9e (parent of the P3.5 commit)   2026-10-14T00:23:52Z
+# STATUS — src/test/ui/v2   commit a275e8b (parent of the P5.3 commit)   2026-10-14T21:45:00Z
 
 Scope of this note: the suites that put the 2.0 entries under test in VS Code and what they need:
 `src/test/ui/v2/**` (ExTester), `src/test/e2e/v2-sidebar.e2e.test.ts` (extension host), the `NUIGET_V2`
 switch in `esbuild.mjs` and `.vscode-test.mjs`, the script `test:ui:v2`, and the CI jobs `e2e-v2` and `ui-v2`.
 
-git status --porcelain --untracked-files=all: `?? src/test/ui/v2/sidebar.ui.test.ts`,
-`?? src/test/ui/v2/sidebarWebview.ts`, `?? src/test/ui/v2/STATUS.md`, `?? src/test/e2e/v2-sidebar.e2e.test.ts`,
-` M esbuild.mjs`, ` M .vscode-test.mjs`, ` M package.json`, ` M .github/workflows/ci.yml`, ` M ARCHITECTURE.md`,
-` M .github/copilot-instructions.md`, ` M docs/plans/STATUS.md`, ` M docs/plans/findings-ledger.md` (all belong
-to the P3.5 commit)
+git status --porcelain --untracked-files=all (this directory and the job): `?? src/test/ui/v2/main-shell.ui.test.ts`,
+`?? src/test/ui/v2/mainWebview.ts`, ` M src/test/ui/v2/STATUS.md`, ` M .github/workflows/ci.yml` (all belong to the
+P5.3 commit; the product side is in `src/webview/main/STATUS.md`)
 
-Item: **P3.5 e2e and ExTester suites of the 2.0 sidebar, and their CI jobs** (stop-and-ask at the start: the
-row names the two test files and `ci.yml`; `esbuild.mjs`, `.vscode-test.mjs` and one script in `package.json`
-are in scope by the ruling below). No contract change, no sentinel; `package.json` `contributes` untouched; no
-1.x test, helper or job edited; no product code changed.
+Item: **P5.3 main shell**, for this directory: the ExTester test `main-shell.ui.test.ts` (the shell renders under
+the CSP, the tabs are reached by keyboard), its helper `mainWebview.ts`, and the `check:vsix` step of the
+`ui-v2` job that closes N62. Earlier: **P3.5** (below, unchanged).
 
 ## Verified by running
+
+P5.3:
+
+```text
+npx tsc -p tsconfig.test.json --noEmit → exit 0
+rm -rf dist && NUIGET_V2=1 npm run package && npm run check:vsix → dist/: extension.js, sidebar.css, sidebar.js,
+                               webview.css, webview.js · check:vsix: OK (N62: a 2.0 build passes it now)
+NUIGET_V2=1 npm run test:ui:v2 -- --storage /tmp/nuiget-ui-v2 (macOS, VS Code of ExTester), three runs:
+  run 1 → 5 passing, 1 failing: `reaches the tabs by keyboard`, "expected 'search-input' to equal
+          'installed-tab'": keys sent through `driver.actions()` did not reach the webview's document; the test
+          sends them to the focused element now (as the sidebar test does with `option.sendKeys`)
+  run 2 → 4 passing, 2 failing: `renders the shell under the CSP` at `Workbench.executeCommand` with
+          "ElementNotInteractableError" (the main-shell file runs first, right after VS Code starts; the palette
+          input was not ready): `openMainPanel` polls now; and P3.5's `uninstalls through the sidebar and the
+          project file follows`, 180 s without "Uninstalled Serilog" in `status-live` while the screenshot shows
+          the row gone: recorded as N66 (not changed here, the test and the sidebar are not this item's)
+  run 3 → 6 passing (6s): renders the shell under the CSP · reaches the tabs by keyboard · the four sidebar tests
+npm run check:vsix after each ExTester run (the build ExTester packaged with NUIGET_V2=1) → check:vsix: OK
+git status --porcelain src/test/e2e → clean after every run
+```
+
+P3.5:
+
 
 ```text
 baseline (at 8c95e9e) npx tsc --noEmit / npm run check-types / npx eslint src → exit 0 / exit 0 / exit 0
@@ -52,6 +72,17 @@ CI                           → see the tracker row of P3.5 (ten jobs expected)
 ```
 
 ## Done (tested)
+
+P5.3: `main-shell.ui.test.ts` opens the panel through the Command Palette (`nUIget: Manage NuGet Packages`, the
+title of `nuiget.openManager`; `package.json` unchanged), enters the webview recognized by `nuiget-app` (with the
+sidebar open there are two `iframe.webview`), finds every shell test id, waits for the fixture project in the
+project selector, and reads the layout under the CSP: the root is the flex column of `main.css`, the split
+custom property set through the CSSOM (`--nuiget-split: 50%`) sizes the list to half the split, and the colour
+token resolves. The second test reaches `installed-tab` with Tab from the search box and `updates-tab` with
+ArrowRight, which selects it. The `ui-v2` job runs `npm run check:vsix` after the suite, on the `dist/` that
+`vscode:prepublish` built with `NUIGET_V2` set.
+
+P3.5:
 
 - **`NUIGET_V2=1`**, the one switch. `esbuild.mjs` treats it like `--v2`, so that `vscode:prepublish`, which
   `vsce` and ExTester always run and which takes no flag, builds the 2.0 entries; `.vscode-test.mjs` selects
@@ -100,6 +131,15 @@ CI                           → see the tracker row of P3.5 (ten jobs expected)
   main panel: with their features in P5; the 1.x suites are rewritten or retired at P5.12 and P8.2.
 
 ## Deviations from contract/ADR (file:line each)
+
+P5.3:
+
+- The P3.5 ruling below (steps 4 and 5, DO NOT) says a v2 suite never opens the main panel, for N62. The P3.6
+  ruling replaced that rule in P5.3, which opens it; the ruling stays verbatim, the gotcha row is rewritten.
+- `mainWebview.ts` imports `driverOf` and `poll` from `sidebarWebview.ts` (P3.5's helper, unchanged) instead of
+  moving them into a shared module; P5.12b decides the final shape of the v2 helpers.
+
+P3.5:
 
 - The P3 gate says "CI e2e proves it" of "sidebar usable for installed + uninstall in the Extension Host". An
   extension-host test cannot see a webview, so the proof is the ExTester suite (`ui-v2`); the e2e suite proves
@@ -180,8 +220,5 @@ FILES CHECKED: docs/plans/2026-10-11-nuiget-2.0-execution-plan.md:41-175,240-251
 
 ## Exact next step (one item ID)
 
-P3.6 (⚑ mandatory: re-base the estimate, advisor review of the slice, adjust the ordering of P4 and P5). It is
-the last item of P3 and a hard stop for the session that completes it. Inputs it should read: the findings
-N61 (ops slice and the `queued` chunk), N62 (`dist/webview.css`), N63 (the sidebar bundle at 96.7 % of its
-ceiling), N64 (no job sees the webview in Chromium 114), the "Done (untested)" sections of
-`src/webview/shared/STATUS.md` and `src/webview/sidebar-next/STATUS.md`, and the CI run of this commit.
+P5.4 (feature installed, main). Its ExTester test `main-installed.ui.test.ts` opens the panel with `openMainPanel()`
+and enters it with `enterMainWebview()`; keys go to elements (`element.sendKeys`), not through `driver.actions()`.

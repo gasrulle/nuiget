@@ -103,7 +103,7 @@ Each row is filled in by the item that creates the module.
 | `src/extension.next.ts` | 2.0 composition root: it assembles and holds no business logic. `activate` calls `activateWith(context, overrides)`, whose overrides (`spawn`, `resolveExecutable`) exist for tests and which returns `{ services, ready }`. Composition order: the output channel and one `redactingLogger` over it, which is the only `Logger` the core and both surfaces get (every message, string argument and error passes `redact`); `DefaultDotnetRunner` with its SDK cache hydrated from `globalState` under `nuiget.sdkVersionCache.v2` (the 1.x key `nuiget.sdkVersionCache` is removed at activation); a `TieredCache` over `workspaceState`; `DotnetSourceProvider`; `AssetsReader`, `StaticProjectInspector` and `ProjectContextProvider` sharing one `stopDirs` array that a workspace-folder change refills in place; `DefaultQueryCoordinator`; `DefaultSessionStore`; `DefaultOperationQueue`; the `Catalog`; `PackageWorkflows` over `createWorkflowDeps`; `HostServices` (`onOperationProgress` is `queue.onProgress`; `workspaceFolderFor` answers the deepest workspace folder that contains a path); the `SidebarHost` view provider. Every coordinator invalidation is forwarded unchanged to the sidebar and to the open main panel. `refreshProjectsAndSession` discovers the projects, announces them, sets `nuiget.hasProjectFiles`, lists the enabled sources of the project the store will keep or pick, and skips the reconcile when the selection moved during the listing (the coalesced rerun does it); otherwise it calls `session.reconcile`; it runs at activation, after an invalidation of scope `workspace`, `project` or `sources`, and when the selected project differs from the one last reconciled for (ADR-001: another project is another source list). Runs never overlap: requests during a run cause one more run. A source listing that fails is not an empty list: the last list of that directory, or else only the selected source, is passed on, so the selection survives. Six file watchers, debounced, invalidate after the queue is idle: project files and `packages.lock.json` (scope `project`), `Directory.{Build,Packages}.{props,targets}` and `global.json` (scope `workspace`; `global.json` also clears the SDK cache), `nuget.config` (scope `sources`), `obj/project.assets.json` (scope `project`, reason `restore`). One status bar item shows the queue. It registers exactly the 12 contributed commands. Three `// REMOVAL GATE: P4.9` comments mark what P4.9 adds: feeds, transport, credentials, outbound policy and icon cache at the `Catalog`; the source health monitor; the transport rebuild on an `http.*` change. The evaluator (P6.2) and the mutator (P6.3) are absent. | Present since P2.10 |
 | `src/webview/shared/**` | Tokens, primitives, message bus, store slices | Tokens and icons present since P3.1 (`tokens.css`, `primitives/icons.tsx`); primitives present since P3.2 (`primitives/index.ts`), `Dialog`, `ConfirmDialog`, `Popover`, `Tabs` and `Toolbar` since P5.1; message bus and the store slices `session`, `projects`, `installed` and `ops` present since P3.3 (`bus/`, `store/`), the other slices arrive with their features; nothing of it is in a bundle until the sidebar entry imports it in P3.4 |
 | `src/webview/sidebar-next/**` | 2.0 sidebar | First slice present since P3.4: the entry, the shell with a filter box and the live region, the Installed section with uninstall ("Sidebar slice" below). Updates, browse, context menu, split and all-projects mode: P5 |
-| `src/webview/main/**` | 2.0 main panel entry | Placeholder; shell in P5.3 |
+| `src/webview/main/**` | 2.0 main panel entry and shell | Shell present since P5.3 (`MainShell.tsx`, `main.css`); the lists and the details arrive with their features from P5.4 |
 
 Import rules between these layers, and between 2.0 and 1.x code, are in
 [`.github/instructions/core-boundaries.instructions.md`](.github/instructions/core-boundaries.instructions.md).
@@ -375,6 +375,30 @@ or in an unsupported project) has no button, and Enter or Delete on it says why.
 The harness scenario `sidebar: uninstall then watcher invalidation converges` shows the host's side of the
 same story on the client model: the operation's invalidation and the file watcher's, in either order, leave
 both surfaces with the same list of the generation the last event listed.
+
+### Main panel shell
+
+`src/webview/main` is the frame of the 2.0 main panel (ADR-008: the shell is under 300 lines). `node esbuild.mjs
+--v2` builds it into `dist/webview.js` and, because the entry imports `../shared/tokens.css` and `main.css`,
+`dist/webview.css`, which `MainPanelHost` links; `check:vsix` therefore passes on a 2.0 build too.
+
+- `index.tsx` does what the sidebar's entry does (API acquired once, inside the root check; bus; `StoreProvider`)
+  around `MainShell`.
+- `MainShell.tsx` (`nuiget-app`, a `main` landmark): the header with the shared context (interaction model §1),
+  the unified search box (`search-input`), the tabs Installed and Updates (`tab-bar`, `installed-tab`,
+  `updates-tab`) and the split between the list and the details (`sash`, `package-details-panel`), with the one
+  live region (`status-live`). The lists and the details are props (`installed`, `updates`, `details`), so a
+  feature is added in `index.tsx` and the shell does not grow.
+
+| Part | Behaviour |
+|---|---|
+| Project selector (`project-selector`) | The projects slice; "All Projects (N)" with two or more; disabled until the session has arrived. A choice is a `session/set` intent, shown at once |
+| Source selector (`source-selector`) | The session's source, disabled: the list of sources to choose from is the sources feature's |
+| Include prerelease | A checkbox bound to the session (`session/set { includePrerelease }`) |
+| Refresh | `refresh/all` once; "Refreshed" or "Refresh failed" in the live region |
+| Search box | `parseSearchQuery` (`src/webview/shared/search`): `@installed` and `@vulnerable` select Installed, `@updates` selects Updates, and the text after the prefix is the list's filter; a plain text is a browse search, which changes nothing here until the search feature runs it. Escape clears a box with text and leaves an empty one. Choosing the other tab ends a filter mode |
+| Tabs | `Tabs`; `ui/selectProject` with `initialTab` selects it (the host applied the project already); `ui/focusSearch` focuses the box |
+| Split | `Sash` (25–75 %, start 50 %) reports a share that the shell puts on the split as `--nuiget-split`; `main.css` sizes the list with it |
 
 ### Two-surface harness
 

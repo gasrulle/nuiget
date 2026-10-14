@@ -1,0 +1,105 @@
+/*
+ * Layout of the 2.0 main panel. The primitives bring their own rules (../shared/primitives/primitives.css); sizes
+ * and colours are tokens of ../shared/tokens.css. VS Code styles the body of a webview itself (font, colour,
+ * a side padding); only the padding is taken back here.
+ */
+
+body {
+    margin: 0;
+    padding: 0;
+}
+
+.nuiget-main {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    color: var(--nuiget-color-fg);
+    font-family: var(--nuiget-font-family);
+    line-height: var(--nuiget-line-height);
+}
+
+.nuiget-main-header {
+    display: flex;
+    flex: none;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--nuiget-space-4);
+    padding: var(--nuiget-space-4) var(--nuiget-space-6) var(--nuiget-space-2);
+}
+
+.nuiget-main-select {
+    min-width: 0;
+    max-width: 20em;
+    min-height: var(--nuiget-target-min);
+    padding: 0 var(--nuiget-space-3);
+    border: 1px solid var(--nuiget-color-input-border);
+    border-radius: var(--nuiget-radius-sm);
+    background: var(--nuiget-color-input-bg);
+    color: var(--nuiget-color-input-fg);
+    font: inherit;
+}
+
+.nuiget-main-select:disabled {
+    color: var(--nuiget-color-fg-muted);
+}
+
+.nuiget-main-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--nuiget-space-2);
+    min-height: var(--nuiget-target-min);
+}
+
+/* The refresh button stands at the end of the header. */
+.nuiget-main-refresh {
+    margin-inline-start: auto;
+}
+
+.nuiget-main-search {
+    flex: none;
+    padding: var(--nuiget-space-2) var(--nuiget-space-6);
+}
+
+.nuiget-main-search-input {
+    box-sizing: border-box;
+    width: 100%;
+    min-height: var(--nuiget-target-min);
+    padding: 0 var(--nuiget-space-3);
+    border: 1px solid var(--nuiget-color-input-border);
+    border-radius: var(--nuiget-radius-sm);
+    background: var(--nuiget-color-input-bg);
+    color: var(--nuiget-color-input-fg);
+    font: inherit;
+}
+
+.nuiget-main-search-input::placeholder {
+    color: var(--nuiget-color-input-placeholder);
+}
+
+.nuiget-main-select:focus-visible,
+.nuiget-main-search-input:focus,
+.nuiget-main-toggle input:focus-visible {
+    outline: 1px solid var(--nuiget-color-focus);
+    outline-offset: -1px;
+}
+
+/* The list takes the share the sash reports; the details take the rest. */
+.nuiget-main-split {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+}
+
+.nuiget-main-list {
+    display: flex;
+    flex: none;
+    flex-direction: column;
+    width: var(--nuiget-split, 50%);
+    min-width: 0;
+}
+
+.nuiget-main-details {
+    flex: 1;
+    min-width: 0;
+    overflow: auto;
+}

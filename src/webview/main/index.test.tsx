@@ -1,17 +1,45 @@
-import { cleanup, render, screen } from '@testing-library/react';
-import { afterEach, describe, expect, it } from 'vitest';
-import { MainShell } from './index';
+import { act, cleanup, screen } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
 
-describe('main panel 2.0 placeholder', () => {
-    afterEach(cleanup);
+/** The API object the frontend test setup hands out for `acquireVsCodeApi()`. */
+const acquire = (): Mock => (globalThis as unknown as { acquireVsCodeApi: Mock }).acquireVsCodeApi;
+const api = (): { postMessage: Mock } => acquire()() as { postMessage: Mock };
 
-    it('renders the shell text', () => {
-        render(<MainShell />);
-
-        expect(screen.getByText('2.0 shell')).toBeInTheDocument();
+describe('main panel 2.0 entry', () => {
+    beforeEach(() => {
+        vi.resetModules();
+        api().postMessage.mockClear();
+        acquire().mockClear();
     });
 
-    it('does not mount itself when the page has no root element', () => {
+    afterEach(() => {
+        cleanup();
+        document.body.replaceChildren();
+    });
+
+    it('mounts the shell into its root, acquires the API once and asks the host for the session and the projects', async () => {
+        const root = document.createElement('div');
+        root.id = 'root';
+        document.body.append(root);
+
+        await act(async () => {
+            await import('./index');
+        });
+
+        expect(acquire()).toHaveBeenCalledTimes(1);
+        expect(root).toContainElement(screen.getByTestId('nuiget-app'));
+        expect(screen.getByTestId('search-input')).toBeInTheDocument();
+        expect(screen.getByTestId('tab-bar')).toBeInTheDocument();
+        expect(screen.getByTestId('status-live')).toBeInTheDocument();
+        const asked = api().postMessage.mock.calls.map(([message]) => message as { kind: string; type?: string }).filter(message => message.kind === 'request').map(message => message.type);
+        expect(new Set(asked)).toEqual(new Set(['session/get', 'projects/list']));
+    });
+
+    it('does not mount itself when the page has no root element', async () => {
+        await import('./index');
         expect(document.body).toBeEmptyDOMElement();
+        // The API can be acquired once per page; a page that is not the panel's must not use that up.
+        expect(acquire()).not.toHaveBeenCalled();
+        expect(api().postMessage).not.toHaveBeenCalled();
     });
 });
