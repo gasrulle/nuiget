@@ -4,6 +4,7 @@ import { createMessageBus } from '../shared/bus/MessageBus';
 import { StoreProvider } from '../shared/store/StoreProvider';
 import '../shared/tokens.css';
 import './main.css';
+import { InstalledTab } from './features/installed/InstalledTab';
 import { MainShell } from './MainShell';
 
 /** The API of VS Code inside a webview. It may be acquired once, so the entry does it and hands the bus down. */
@@ -16,7 +17,7 @@ if (rootElement) {
     ReactDOM.createRoot(rootElement).render(
         <StrictMode>
             <StoreProvider bus={bus}>
-                <MainShell />
+                <MainShell installed={view => <InstalledTab {...view} />} />
             </StoreProvider>
         </StrictMode>
     );

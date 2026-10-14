@@ -103,3 +103,78 @@ body {
     min-width: 0;
     overflow: auto;
 }
+
+/* ── Installed tab ── */
+
+.nuiget-installed {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.nuiget-installed > .nuiget-toolbar {
+    flex: none;
+    padding: var(--nuiget-space-2) var(--nuiget-space-4);
+}
+
+.nuiget-installed-lists,
+.nuiget-installed-project,
+.nuiget-installed-project-content {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-height: 0;
+}
+
+/*
+ * All Projects: one scroll container for every section, and every list as high as its rows. The list is not its
+ * own scroll element then, so the virtualizer renders all of its rows, as the 1.x panel did.
+ */
+.nuiget-installed--all .nuiget-installed-lists {
+    overflow: auto;
+}
+
+.nuiget-installed--all .nuiget-installed-project,
+.nuiget-installed--all .nuiget-installed-project-content,
+.nuiget-installed--all .nuiget-listbox {
+    flex: none;
+    overflow: visible;
+}
+
+/* Transitive packages: under the list, at most half of the pane, scrolled on their own. */
+.nuiget-transitive {
+    display: flex;
+    flex: none;
+    flex-direction: column;
+    max-height: 50%;
+    min-height: 0;
+    border-block-start: 1px solid var(--nuiget-color-border);
+}
+
+.nuiget-transitive-content {
+    min-height: 0;
+    overflow: auto;
+}
+
+.nuiget-transitive .nuiget-listbox {
+    flex: none;
+    overflow: visible;
+}
+
+.nuiget-transitive-heading {
+    margin: 0;
+    padding: var(--nuiget-space-2) var(--nuiget-space-4);
+    font-size: var(--nuiget-font-size-sm);
+    font-weight: 600;
+}
+
+/* The bulk uninstall dialog: one short list per project. */
+.nuiget-bulk-lead {
+    margin: 0;
+}
+
+.nuiget-bulk-list {
+    margin: var(--nuiget-space-2) 0 var(--nuiget-space-4);
+    padding-inline-start: var(--nuiget-space-6);
+}

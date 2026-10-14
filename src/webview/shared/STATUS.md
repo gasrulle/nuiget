@@ -1,4 +1,4 @@
-# STATUS — src/webview/shared   commit e4a7f4f (parent of the P5.4 commit b)   2026-10-14T23:10:00Z
+# STATUS — src/webview/shared   commit 4a083b5 (parent of the P5.4 commit c)   2026-10-14T23:10:00Z
 
 Scope of this note: `src/webview/shared/**`, the code both 2.0 webviews share, and the test wiring it needs
 (`src/test/setup-frontend.ts`, `src/test/jest-axe.d.ts`, `src/test/lint/webview-*.test.ts`).
@@ -7,7 +7,8 @@ git status --porcelain --untracked-files=all: ` M src/webview/shared/store/ops.t
 `src/webview/sidebar-next/{InstalledSection.tsx,STATUS.md}`, `ARCHITECTURE.md`, `.github/copilot-instructions.md`,
 `docs/plans/STATUS.md`, `docs/plans/findings-ledger.md` (all belong to P5.4 commit a)
 
-Item: **P5.4 feature installed (main), commit b of three** (commit a `e4a7f4f`, N61, CI run 38631553549 green on all
+Item: **P5.4 feature installed (main), commit c of three**: nothing in this directory changes in commit c (the
+feature is in `src/webview/main/STATUS.md`); commit b `4a083b5`. Earlier, commit b (commit a `e4a7f4f`, N61, CI run 38631553549 green on all
 11 jobs). Earlier in this note: commit a. Commit b, also (P5.4 stop-and-ask ruling of 2026-10-14, verbatim in
 `docs/plans/STATUS.md`, "Advisor decisions"): N61 lands; the row stays `in-progress` until commit c. The
 ruling is an L1 consultation (stop-and-ask: `Listbox.tsx` is not among the row's files); commit a touches no
@@ -452,7 +453,5 @@ FILES CHECKED: `docs/plans/2026-10-11-nuiget-2.0-execution-plan.md:41-175,240-25
 
 ## Exact next step (one item ID)
 
-P5.4 commit c (the same tracker row): the Installed feature of the main panel in `src/webview/main/features/installed/`
-(`InstalledTab`, one `InstalledProjectSection` per project in All Projects, `TransitiveSection`,
-`BulkUninstallDialog` over `ConfirmDialog`, the bulk `Toolbar`), the outcome announcement in `MainShell.tsx`,
-`src/test/ui/v2/main-installed.ui.test.ts`, CHANGELOG and the two gotcha rows, as steps 7 to 9 of the P5.4 ruling say.
+P4.1 (the first P4 row). In this directory the next change is P5.5's `updates` slice (after P4.10); P5.2 closes the
+slice sweep after P5.9.

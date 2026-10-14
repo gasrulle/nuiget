@@ -418,6 +418,31 @@ both surfaces with the same list of the generation the last event listed.
 | Tabs | `Tabs`; `ui/selectProject` with `initialTab` selects it (the host applied the project already); `ui/focusSearch` focuses the box |
 | Split | `Sash` (25–75 %, start 50 %) reports a share that the shell puts on the split as `--nuiget-split`; `main.css` sizes the list with it |
 
+### Installed feature (main)
+
+`src/webview/main/features/installed` is the Installed tab (P5.4); `index.tsx` hands it to the shell as
+`installed={view => <InstalledTab {...view} />}`, so the shell did not grow.
+
+- **Sections.** For a single project one list (`installed-list`) and, under it, the transitive section; in All
+  Projects one `SectionHeader` and one list per project from the `allProjects` slice (`installed-list-<name>`),
+  inside one scroll container where every list is as high as its rows. Folder headings, `Unsupported` sections
+  and the all-projects transitive aggregate are P5.9's.
+- **Two selections.** The current row is the tab's own state (click or Enter, `aria-current`); the details pane
+  of P5.7 will read it. The bulk set is kept by project path as the host sent it (Space, Ctrl/Cmd+click or the
+  check mark, `aria-selected`); a row that cannot be uninstalled (central, implicit, props, unresolved,
+  unsupported) is not added, and the reason is announced.
+- **Bulk flow.** The `Toolbar` holds `select-all-button` (every removable row the filter shows; pressed again it
+  clears) and `uninstall-selected-button` with the count. The `ConfirmDialog` lists exactly the packages, under
+  their project's name; Confirm sends `ops/bulkRemove` for one project or `ops/bulkRemoveAllProjects` with the
+  project names, closes the dialog and empties the sent part of the set. The rows are busy from the request on
+  (ops slice, N61), and leave only with the host's next list: nothing is removed by guessing, so a failed package
+  of a `partial` batch stays where it is. The shell announces every outcome once, from either surface.
+- **Filter modes.** `@installed <text>` filters by id; `@vulnerable` keeps the rows whose metadata lists
+  vulnerabilities, and says that the data is not there yet while no metadata has arrived (empty is not unknown).
+- **Transitive.** Closed until opened; then `transitive/get`, one list per target framework (with headings when
+  there are several), "Required by" as each row's description, a Restore banner (`transitive-restore-banner`)
+  when the assets file is missing, and the rows' metadata only when the host can answer it.
+
 ### Two-surface harness
 
 `src/test/harness` tests what the two surfaces do together, on the 2.0 protocol

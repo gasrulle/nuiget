@@ -1,4 +1,4 @@
-# STATUS — src/test/ui/v2   commit a275e8b (parent of the P5.3 commit)   2026-10-14T21:45:00Z
+# STATUS — src/test/ui/v2   commit 4a083b5 (parent of the P5.4 commit c)   2026-10-15T01:30:00Z
 
 Scope of this note: the suites that put the 2.0 entries under test in VS Code and what they need:
 `src/test/ui/v2/**` (ExTester), `src/test/e2e/v2-sidebar.e2e.test.ts` (extension host), the `NUIGET_V2`
@@ -8,11 +8,24 @@ git status --porcelain --untracked-files=all (this directory and the job): `?? s
 `?? src/test/ui/v2/mainWebview.ts`, ` M src/test/ui/v2/STATUS.md`, ` M .github/workflows/ci.yml` (all belong to the
 P5.3 commit; the product side is in `src/webview/main/STATUS.md`)
 
-Item: **P5.3 main shell**, for this directory: the ExTester test `main-shell.ui.test.ts` (the shell renders under
+Item: **P5.4 commit c** for this directory: `main-installed.ui.test.ts` (four tests, ruling step 8). Earlier:
+**P5.3 main shell**, for this directory: the ExTester test `main-shell.ui.test.ts` (the shell renders under
 the CSP, the tabs are reached by keyboard), its helper `mainWebview.ts`, and the `check:vsix` step of the
 `ui-v2` job that closes N62. Earlier: **P3.5** (below, unchanged).
 
 ## Verified by running
+
+P5.4 commit c:
+
+```text
+npx tsc -p tsconfig.test.json --noEmit → exit 0 · npx eslint src/test/ui/v2 → exit 0
+rm -rf dist && NUIGET_V2=1 npm run package && npm run check:vsix → check:vsix: OK
+NUIGET_V2=1 npm run test:ui:v2 -- --storage /tmp/nuiget-ui-v2 → 10 passing (9s) at the first run: lists the installed
+                               packages of the fixture project · selects a row and marks it for a bulk action · the
+                               bulk uninstall dialog cancels on Escape and leaves the project file as it was ·
+                               confirms the bulk uninstall and the project file follows · the two main-shell tests
+                               · the four sidebar tests; check:vsix on that build → OK; git status src/test/e2e → clean
+```
 
 P5.3:
 
@@ -79,6 +92,13 @@ CI                           → see the tracker row of P3.5 (ten jobs expected)
 ```
 
 ## Done (tested)
+
+P5.4 commit c: `main-installed.ui.test.ts` opens the panel (`openMainPanel`, `enterMainWebview`) before each test,
+finds `installed-list` as a multi-selectable listbox with the fixture's two rows, makes Serilog the current row
+(`aria-current`) and selects it with Space (`aria-selected`, `uninstall-selected-button` enabled), opens the dialog
+and cancels it with Escape (the project file unchanged), then confirms and waits until the Serilog row is gone and
+the project file no longer names it. It restores the fixture in `after`; keys go to elements; nothing waits on
+`status-live` (N66).
 
 P5.3: `main-shell.ui.test.ts` opens the panel through the Command Palette (`nUIget: Manage NuGet Packages`, the
 title of `nuiget.openManager`; `package.json` unchanged), enters the webview recognized by `nuiget-app` (with the
@@ -232,5 +252,4 @@ FILES CHECKED: docs/plans/2026-10-11-nuiget-2.0-execution-plan.md:41-175,240-251
 
 ## Exact next step (one item ID)
 
-P5.4 (feature installed, main). Its ExTester test `main-installed.ui.test.ts` opens the panel with `openMainPanel()`
-and enters it with `enterMainWebview()`; keys go to elements (`element.sendKeys`), not through `driver.actions()`.
+P4.1 is next in the tracker and adds no UI test. The next v2 UI test is P5.5's (updates).

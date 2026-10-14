@@ -4,6 +4,8 @@ import { ALL_PROJECTS } from '../../protocol';
 import { useMessageBus } from '../shared/bus/useMessageBus';
 import { Banner, cssVars, EmptyState, IconButton, LiveStatus, Sash, SyncIcon, Tabs, type TabItem } from '../shared/primitives';
 import { parseSearchQuery, type SearchMode } from '../shared/search/parseSearchQuery';
+import { useOps } from '../shared/store/ops';
+import { describeOutcome } from '../shared/store/outcomes';
 import { useProjects } from '../shared/store/projects';
 import { useSession, useSessionActions } from '../shared/store/session';
 
@@ -59,6 +61,15 @@ export function MainShell({ installed, updates, details }: MainShellProps): Reac
     const announce = useCallback((message: string): void => setSaid(previous => ({ message, count: previous.count + 1 })), []);
 
     useEffect(() => bus.onEvent('ui/focusSearch', () => searchRef.current?.focus()), [bus]);
+    // How every operation ended, on whichever surface it started: once per outcome (`sequence` goes up with each).
+    const { last } = useOps();
+    const sequence = last?.sequence;
+    useEffect(() => {
+        if (last !== undefined) {
+            announce(describeOutcome(last.outcome));
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [sequence, announce]);
     // The host has applied the project already; the event says which tab to show it on.
     useEffect(() => bus.onEvent('ui/selectProject', ({ initialTab }) => {
         if (initialTab) {

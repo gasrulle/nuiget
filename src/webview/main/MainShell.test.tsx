@@ -193,6 +193,18 @@ describe('main panel shell', () => {
         expect(screen.getByRole('alert')).toHaveTextContent('Projects could not be listed: no workspace');
     });
 
+    it('announces the outcome of an operation of either surface once', async () => {
+        const { host } = await mountReady();
+        const outcome = { opId: 'op1', kind: 'remove' as const, status: 'completed' as const, projectPath: A, packageId: 'Serilog' };
+        // Started on the sidebar: the main panel hears of it as an event and says it.
+        await hostSays(() => host.event('ops/completed', outcome));
+        await waitFor(() => expect(screen.getByTestId('status-live')).toHaveTextContent('Uninstalled Serilog'));
+        // The same outcome again (event repeated) is not a second announcement; another operation is.
+        await hostSays(() => host.event('ops/completed', outcome));
+        await hostSays(() => host.event('ops/completed', { ...outcome, opId: 'op2', packageId: 'Moq' }));
+        await waitFor(() => expect(screen.getByTestId('status-live')).toHaveTextContent('Uninstalled Moq'));
+    });
+
     it('has no axe violations', async () => {
         // React reports invalid markup (an option outside a select, a controlled input without onChange) here.
         const consoleError = vi.spyOn(console, 'error');
