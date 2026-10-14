@@ -1,17 +1,42 @@
-# STATUS — src/core/http   commit 18fe2cd (parent of the P4.1 commit)   2026-10-14T23:59:00Z
+# STATUS — src/core/http   commit 460dd31 (parent of the P4.2 commit)   2026-10-15T01:00:00Z
 
-P4.1 decision for this directory; code unchanged since P1.9.
+P4.2 for this directory: `Transport.ts` and its tests; earlier: the P4.1 decision (below) and P1.9 (`ssrf.ts`).
 
-git status --porcelain --untracked-files=all: ` M src/core/http/STATUS.md` (this note), with ` M docs/adr/005-execution-context-and-outbound-policy.md`,
-`?? docs/adr/005-proxy-matrix.md`, ` M docs/adr/README.md`, ` M docs/plans/STATUS.md`, ` M docs/plans/findings-ledger.md`,
-` M .github/copilot-instructions.md` (all belong to the P4.1 commit)
+git status --porcelain --untracked-files=all: `?? src/core/http/Transport.ts`, `?? src/core/http/Transport.test.ts`,
+` M src/core/http/{index.ts,ssrf.ts,ssrf.test.ts,STATUS.md}`, `?? src/test/benchmarks/core-transport.bench.ts`,
+` M benchmarks/baseline.json`, ` M CHANGELOG.md`, ` M ARCHITECTURE.md`, ` M docs/plans/STATUS.md`,
+` M docs/plans/findings-ledger.md` (all belong to the P4.2 commit)
 
-Item: **P4.1 ⚑ proxy and certificate investigation before Transport lands** (contract item under D6, behind the
-`.claude/.contract-change` sentinel with content `P4.1`, created after the ruling was recorded and deleted after
-the sign-off). Decision: ADR-005 as amended on 2026-10-14 and its supplement `docs/adr/005-proxy-matrix.md`. Nothing
-under `src/` but this note changes; `Transport.ts` arrives in P4.2.
+Item: **P4.2 `Transport.ts` + `Transport.test.ts`** with local `http`/`http2` servers, plus the P4.1 ruling's note on
+the row and finding N49. A salvage item: the quarry's `src/core/http/Transport.ts` (686 lines, untracked in the quarry,
+from its second session) was copied from the working tree (`cmp` identical) and compiled and linted clean against the
+real `contracts.ts` and `ssrf.ts` as copied; the quarry's note calls it "not started" and lists no tests, which is stale
+(the file exists; no test exists). Not ⚑; no contract change, no sentinel.
 
 ## Verified by running
+
+P4.2:
+
+```text
+baseline (at 460dd31) npx tsc --noEmit / npx eslint src / npx vitest run → exit 0 / exit 0 / 121 files, 2797 passed | 3 skipped
+raw copy                     → cmp identical to the quarry working tree; npx tsc --noEmit exit 0; npx eslint src/core/http exit 0
+npx tsc --noEmit / npm run check-types / npx eslint src / npm run lint → exit 0 each
+npx vitest run --project backend src/core/http → Test Files 2 passed (2) · Tests 100 passed (100); Transport.test.ts 29
+                               (gate ≥ 25), among them the five titles of the P4.1 ruling; ssrf.test.ts +1 (N49)
+Transport.test.ts, 40 times in a row → 40 of 40 green (real sockets, real timers)
+negative control             → 10 mutations of Transport.ts: 8 caught; the error-body one (stream not closed after an
+                               error status) caught after the test was made to wait for the server to see the close;
+                               the session-`error` downgrade survives because a dead session also downgrades through the
+                               stream path (covered twice; an idle session failing alone cannot be provoked locally).
+                               4 mutations of ssrf.ts for N49 (each /24 rule, the third octet in IPv6): 4 caught
+npm test (NUIGET_SDK_TESTS=1, DOTNET_ROOT set) → Test Files 122 passed (122) · Tests 2830 passed (2830)
+npm run bench               → Test Files 19 passed (19) · Tests 114 passed | 1 skipped (115); core-transport.bench.ts 2
+npm run bench:save           → "Saved 105 benchmark measurements" (103 before); npm run bench:compare → exit 0
+npx vitest run --coverage    → exit 0 · src/core/** 2979 of 3064 lines, 97.23 % (floor 85) · Transport.ts 87.46 % lines,
+                               78.69 % branches · ssrf.ts 95.83 % lines
+npm run package:vsix, check:vsix, docs:protocol:check, test:ui, test:ui:v2 → SKIPPED: no host, extension, packaging,
+                               protocol or webview file changed; nothing imports `Transport` before P4.9
+```
 
 P4.1:
 
@@ -68,6 +93,21 @@ CI                           → see the tracker row of P1.9
 
 ## Done (tested)
 
+P4.2: `NodeTransport` (`Transport.ts`), exported from `http/index.ts` with `NodeTransportOptions`, `ProxyState` and
+`RequestFunction`. GET and HEAD, `fetchJson` with `Accept: application/json` and BOM stripping, a default user agent,
+five redirects (`too-many-redirects` after), `redirect-blocked` for unsafe targets (string checks of `ssrf.ts`, then the
+resolved address while the proxy predicate is false; a name that does not resolve is refused and named), same-origin
+`Authorization` only, the size cap on declared and on decoded length, gzip/deflate on request, a deadline per request that
+also bounds the DNS lookup, cancellation by signal (also before the request and during the lookup), the error-body policy
+(redirect, error and HEAD bodies are not read; the stream is closed), HTTP/1.1 with no agent through an injectable request
+hook that defaults to the module function looked up per call, HTTP/2 for allow-listed origins while the predicate is false
+with a session pool (10, idle eviction, 60 s sweep), a stream refused on a live session going over HTTP/1.1 once, a
+connection-level failure downgrading the origin for the instance's life, `reset()`, `dispose()`.
+`ssrf.ts` (N49): the documentation /24 blocks and 192.0.0.0/24 by their third octet, also for IPv4 inside IPv6; `embeddedV4`
+reduced to one expression.
+
+P4.1:
+
 P4.1: the decision is recorded (ADR-005 `Transport` bullet as dictated by the ruling; `docs/adr/005-proxy-matrix.md`
 with what was read, how the host treats an extension's request, the matrix, the decisions A/E/G/J/K, the known
 limitations and what P4.2 and P4.9 implement; the README's Supplements entry). Tracker notes for P4.2 and P4.9,
@@ -108,14 +148,30 @@ P1.9 (unchanged):
 
 ## Not started
 
-`Transport.ts` and its tests: P4.2, as the P4.1 ruling's note on row P4.2 says (no agent; HTTP/2 behind the
-allow-list and the injected predicate; sticky downgrade; `NodeTransport.reset()`; the five named tests).
+Wiring: `proxyConfigured()` and `transport.reset()` on an `http.*` change in the composition root, and the feeds that use
+the transport: P4.3 to P4.9. The proxy behaviour in a real VS Code behind a proxy is not tested by any suite; the P4.1
+matrix records what the host does, and the transport's part (no agent) is tested here.
 
 - The check of the resolved address when the host is a name (ADR-005): it needs a resolver and lives in
   `Transport` (P4.2). This module only judges the text of a URL.
 - `Transport.ts` and its tests: P4.2. The quarry's untracked `Transport.ts` stays in the quarry.
 
 ## Deviations from contract/ADR (file:line each)
+
+P4.2:
+
+- `Transport.ts` `NodeTransportOptions.httpRequest` (a test hook, as the quarry's `http2Connect`): ES module namespaces of
+  Node built-ins cannot be spied on, and the P4.1 test `passes no agent to the request functions so the host proxy patch
+  applies` must see the options. The default calls `http.request`/`https.request` at call time, so the host's patch of
+  the module object runs in the extension host.
+- `reset()` also clears the DNS cache of redirect targets (the ruling names the sessions and the downgrades): a setting
+  change may change what resolves.
+- The quarry's `rejectUnauthorized: true` on `http2.connect` is kept: it states the default explicitly; nothing disables
+  certificate verification.
+- Error-body policy: the quarry drained the body of a redirect or error response to its end; now the stream is closed as
+  soon as the head is in (no keep-alive to preserve without an agent, and an unbounded error body no longer costs anything).
+
+P4.1:
 
 P4.1:
 
@@ -242,4 +298,4 @@ no change of the salvaged implementation. No consultation of the `architecture-a
 
 ## Exact next step (one item ID)
 
-P4.2 (`src/core/http/Transport.ts` and `Transport.test.ts`), with the P4.1 ruling's note on its tracker row.
+P4.3 (feeds A). Feeds take the `Transport` interface; the composition root holds the `NodeTransport` instance (P4.9).

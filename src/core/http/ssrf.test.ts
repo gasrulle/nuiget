@@ -269,6 +269,23 @@ describe('resolveRedirect', () => {
 });
 
 describe('classifyAddress and isPrivateAddress', () => {
+    it('the documentation ranges are /24 blocks: a public neighbour of each is public (N49)', () => {
+        // Inside each block: reserved; one /24 away: ordinary public address space a feed may live in.
+        expect(['192.0.0.8', '192.0.2.1', '198.51.100.7', '203.0.113.9', '198.19.255.1'].map(address => classifyAddress(address)))
+            .toEqual(['reserved', 'reserved', 'reserved', 'reserved', 'reserved']);
+        expect(['192.0.43.8', '198.51.44.1', '203.0.178.191', '192.0.3.1', '198.51.101.1', '203.0.112.1'].map(address => classifyAddress(address)))
+            .toEqual(['public', 'public', 'public', 'public', 'public', 'public']);
+        // The same rule for an IPv4 address carried in IPv6: mapped, NAT64 and 6to4.
+        expect(classifyAddress('::ffff:198.51.44.1')).toBe('public');
+        expect(classifyAddress('::ffff:198.51.100.7')).toBe('reserved');
+        expect(classifyAddress('64:ff9b::cb00:b201')).toBe('public');
+        expect(classifyAddress('64:ff9b::cb00:7101')).toBe('reserved');
+        expect(classifyAddress('2002:c633:2c01::')).toBe('public');
+        expect(classifyAddress('2002:c633:6407::')).toBe('reserved');
+        expect(isSafeRedirectTarget('https://192.0.43.8/', 'https://api.nuget.org/v3/index.json')).toBe(true);
+        expect(isSafeRedirectTarget('https://192.0.2.1/', 'https://api.nuget.org/v3/index.json')).toBe(false);
+    });
+
     it.each([
         ['8.8.8.8', 'public'],
         ['1.1.1.1', 'public'],

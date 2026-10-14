@@ -24,7 +24,7 @@ export interface RedirectResolution {
 
 const MAX_U16 = 0xffff;
 
-function classifyIPv4Octets(a: number, b: number): AddressClass {
+function classifyIPv4Octets(a: number, b: number, c: number): AddressClass {
     if (a === 0) {
         return 'unspecified';
     }
@@ -43,8 +43,9 @@ function classifyIPv4Octets(a: number, b: number): AddressClass {
     if (a >= 240) {
         return 'reserved';
     }
-    // 192.0.0.0/24, 192.0.2.0/24, 198.51.100.0/24, 203.0.113.0/24 and 198.18.0.0/15 are never routable.
-    if ((a === 192 && b === 0) || (a === 198 && (b === 51 || b === 18 || b === 19)) || (a === 203 && b === 0)) {
+    // 198.18.0.0/15 (benchmarking) and the /24 blocks 192.0.0.0, 192.0.2.0, 198.51.100.0 and 203.0.113.0 are never
+    // routable; the rest of 192.0/16, 198.51/16 and 203.0/16 is ordinary public address space (finding N49).
+    if ((a === 198 && (b === 18 || b === 19)) || (a === 192 && b === 0 && (c === 0 || c === 2)) || (a === 198 && b === 51 && c === 100) || (a === 203 && b === 0 && c === 113)) {
         return 'reserved';
     }
     return 'public';
@@ -54,8 +55,8 @@ function classifyIPv4(address: string): AddressClass | undefined {
     if (!net.isIPv4(address)) {
         return undefined;
     }
-    const [a, b] = address.split('.').map(Number);
-    return classifyIPv4Octets(a, b);
+    const [a, b, c] = address.split('.').map(Number);
+    return classifyIPv4Octets(a, b, c);
 }
 
 /** Parses an IPv6 literal (optionally bracketed, with zone id) into eight 16-bit groups. */
@@ -102,7 +103,8 @@ export function parseIPv6(address: string): number[] | undefined {
 }
 
 function classifyIPv6Groups(groups: number[]): AddressClass {
-    const embeddedV4 = (hi: number, lo: number): AddressClass => classifyIPv4Octets(hi >> 8, hi & 0xff) === 'public' && lo >= 0 ? classifyIPv4Octets(hi >> 8, hi & 0xff) : classifyIPv4Octets(hi >> 8, hi & 0xff);
+    // An IPv4 address carried in two groups: `hi` holds the first two octets, `lo` the last two.
+    const embeddedV4 = (hi: number, lo: number): AddressClass => classifyIPv4Octets(hi >> 8, hi & 0xff, lo >> 8);
     const leadingZero = groups.slice(0, 5).every(g => g === 0);
     if (groups.every(g => g === 0)) {
         return 'unspecified';

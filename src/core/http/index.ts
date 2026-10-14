@@ -11,3 +11,4 @@ export {
     type RedirectResolution,
     type RedirectSafetyOptions,
 } from './ssrf';
+export { NodeTransport, type NodeTransportOptions, type ProxyState, type RequestFunction } from './Transport';
