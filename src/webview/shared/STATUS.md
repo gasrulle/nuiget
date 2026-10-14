@@ -1,21 +1,35 @@
-# STATUS — src/webview/shared   commit 587499e (parent of the P5.1 commit)   2026-10-14T19:30:00Z
+# STATUS — src/webview/shared   commit 9000208 (parent of the P5.4 commit a)   2026-10-14T23:10:00Z
 
 Scope of this note: `src/webview/shared/**`, the code both 2.0 webviews share, and the test wiring it needs
 (`src/test/setup-frontend.ts`, `src/test/jest-axe.d.ts`, `src/test/lint/webview-*.test.ts`).
 
-git status --porcelain --untracked-files=all: ` M src/webview/shared/primitives/{icons.tsx,index.ts,primitives.css,
-testSupport.ts,composed.test.tsx}`, ` M src/webview/shared/tokens.css`, ` M src/test/lint/webview-tokens.test.ts`,
-`?? src/webview/shared/primitives/{Dialog,ConfirmDialog,Popover,Tabs,Toolbar}.tsx` and their `.test.tsx`,
-`?? src/webview/shared/primitives/layers.ts`, `?? src/test/lint/webview-icons-pure.test.ts`, ` M` this note,
-`ARCHITECTURE.md`, `CHANGELOG.md`, `.github/copilot-instructions.md`, `docs/plans/STATUS.md`,
-`docs/plans/findings-ledger.md` (all belong to the P5.1 commit)
+git status --porcelain --untracked-files=all: ` M src/webview/shared/store/ops.tsx`, ` M src/webview/shared/store/ops.test.tsx`, ` M` this note and
+`src/webview/sidebar-next/{InstalledSection.tsx,STATUS.md}`, `ARCHITECTURE.md`, `.github/copilot-instructions.md`,
+`docs/plans/STATUS.md`, `docs/plans/findings-ledger.md` (all belong to P5.4 commit a)
 
-Item: **P5.1 primitives round 2** (`Dialog`/`ConfirmDialog`, `Popover`, `Tabs`, `Toolbar`; RTL + axe; covers
-the three 1.x dialogs), pulled before P4 by the P3.6 ruling, with N63 (`/* @__PURE__ */` on the icons and the
-lint test `every icon is a pure call`) and the N65 docs duty from the P3 phase review. Not ⚑, no stop-and-ask
-trigger: no L1 consultation. No contract change, no sentinel, nothing frozen touched.
+Item: **P5.4 feature installed (main), commit a of three** (P5.4 stop-and-ask ruling of 2026-10-14, verbatim in
+`docs/plans/STATUS.md`, "Advisor decisions"): N61 lands; the row stays `in-progress` until commit c. The
+ruling is an L1 consultation (stop-and-ask: `Listbox.tsx` is not among the row's files); commit a touches no
+file outside those the P3.6 ruling named for P5.4.
 
 ## Verified by running
+
+P5.4 commit a:
+
+```text
+baseline (working tree at 9000208 plus the N61 change) npx tsc --noEmit / npx eslint src → exit 0 / exit 0
+npx vitest run --project frontend src/webview/shared src/webview/sidebar-next → Test Files 31 passed (31) · Tests 243
+                               passed (243), with `a row is busy from the call to run until the request settles` and
+                               `a request without an answer leaves nothing busy`
+store/ops.test.tsx and sidebar-next/SidebarView.test.tsx, 40 times in a row → 40 of 40 green
+npm test (NUIGET_SDK_TESTS=1, DOTNET_ROOT set) → Test Files 118 passed (118) · Tests 2772 passed (2772)
+npm run bench               → Test Files 18 passed (18) · Tests 112 passed | 1 skipped (113)
+npm run package:vsix, npm run check:vsix, npm run docs:protocol:check, npm run test:ui → SKIPPED: no host,
+                               packaging, protocol or UI file changed (P5.4 ruling, step 2)
+test -e .claude/.contract-change → false
+```
+
+Earlier:
 
 ```text
 baseline (at 587499e) npx tsc --noEmit / npx eslint src → exit 0 / exit 0
@@ -71,6 +85,16 @@ git grep -n 'console.warn\|RESTORE\|AFTER\|TEST' -- primitives/layers.ts primiti
 ```
 
 ## Done (tested)
+
+P5.4 commit a (N61, closed): `store/ops.tsx` `run(type, payload)` records the operation at the call under an id of
+the surface (`local:<n>`), with `kind` from the request type and `projectPaths`/`packageIds` read from the payload
+(`touchedBy`, every payload shape of the `ops/*` requests); the first chunk of the request names the host's
+`opId` and the entry moves under it, keeping what an `ops/progress` report said first; when the request settles,
+resolved or rejected, both entries go. New actions `asked`, `named`, `settled`. Tests in `store/ops.test.tsx`: `a
+row is busy from the call to run until the request settles`, `a request without an answer leaves nothing busy`
+(the two the P3.6 ruling names), `reads the projects and packages an operation touches from what was asked`,
+`naming moves the entry under the operation id and keeps what the host reported first`.
+
 
 P5.1 (ADR-008 primitives `Dialog`, `Popover`, `Tabs`; interaction model §5 and §8; findings U2, U6, U9, N63):
 
@@ -141,6 +165,14 @@ of this note): `tokens.css`; the twelve primitives of P3.2 with the icons, `cssV
 - Space, PageUp/PageDown, type-ahead and multi-selection in `Listbox`: P5 (bulk selection with P5.4).
 
 ## Deviations from contract/ADR (file:line each)
+
+P5.4 commit a:
+
+- `store/ops.tsx` (`touchedBy`): for an all-projects bulk request the entry lists every project and every package
+  of the payload, so `busyPackages` (projects × packages) marks a package busy in a project where it was not
+  asked for when its id is asked for in another. That is the shape `OperationProgress` already has for the host's
+  own reports; no finer shape exists in the protocol.
+
 
 P5.1:
 
@@ -367,7 +399,7 @@ FILES CHECKED: `docs/plans/2026-10-11-nuiget-2.0-execution-plan.md:41-175,240-25
 
 ## Exact next step (one item ID)
 
-P5.3 (main shell). `Tabs` gives the main tab bar (`tab-bar`, `installed-tab`, `updates-tab` as `data-testid` of
-the list and the tabs); a test of anything that opens a `Dialog`, `ConfirmDialog` or `Popover` runs
-`axe(document.body)`; the shell's stylesheet and `tokens.css` imported by the main entry give `dist/webview.css`
-(N62).
+P5.4 commit b (the same tracker row): `Listbox`/`Row` multi-selection (`selectedIds`, `onToggleSelected`,
+`aria-current`, the `aria-hidden` check mark), the row rules lifted into `src/webview/shared/installed/rules.ts`
+and `describeOutcome` into `src/webview/shared/store/outcomes.ts`, the `transitive` and `allProjects` slices, and
+the harness scenario `bulk remove partial failure reconciles`, exactly as steps 3 to 6 of the P5.4 ruling say.

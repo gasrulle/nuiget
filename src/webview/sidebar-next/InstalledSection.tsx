@@ -12,8 +12,6 @@ interface Item {
     entry: InstalledPackage;
 }
 
-const pendingKey = (projectPath: string, packageId: string): string => `${projectPath}|${packageId.toLowerCase()}`;
-
 /** What a busy row says is happening to its package. */
 const IN_PROGRESS: Record<OperationKind, string> = { install: 'Installing', update: 'Updating', remove: 'Uninstalling', restore: 'Restoring' };
 
@@ -68,9 +66,6 @@ export function InstalledSection({ filter, announce }: InstalledSectionProps): R
     const { session } = useSession();
     const [expanded, setExpanded] = useState(true);
     const [selectedId, setSelectedId] = useState<string | null>(null);
-    // Asked for by this surface and not answered yet. The store knows an operation from its first progress
-    // report on; while it waits in the queue only the surface that asked knows of it.
-    const [pending, setPending] = useState<ReadonlySet<string>>(new Set());
     const baseId = useId();
     const titleId = `${baseId}-title`;
     const contentId = `${baseId}-content`;
@@ -82,15 +77,12 @@ export function InstalledSection({ filter, announce }: InstalledSectionProps): R
         [result, needle],
     );
     const isBusy = useCallback(
-        (packageId: string): boolean => projectPath !== null && (pending.has(pendingKey(projectPath, packageId)) || isPackageBusy(projectPath, packageId)),
-        [projectPath, pending, isPackageBusy],
+        (packageId: string): boolean => projectPath !== null && isPackageBusy(projectPath, packageId),
+        [projectPath, isPackageBusy],
     );
 
-    /** What the row of a busy package says: the uninstall asked for here, else the operation the store reports. */
+    /** What the row of a busy package says: the operation the store reports, from the call that asked for it on. */
     const busyStatus = (packageId: string): string => {
-        if (projectPath !== null && pending.has(pendingKey(projectPath, packageId))) {
-            return IN_PROGRESS.remove;
-        }
         const id = packageId.toLowerCase();
         for (const progress of active.values()) {
             if (progress.kind !== undefined && progress.projectPaths?.includes(projectPath ?? '') && progress.packageIds?.some(other => other.toLowerCase() === id)) {
@@ -109,16 +101,9 @@ export function InstalledSection({ filter, announce }: InstalledSectionProps): R
             announce(obstacle);
             return;
         }
-        const key = pendingKey(projectPath, entry.id);
-        setPending(previous => new Set(previous).add(key));
-        const settled = (): void => setPending(previous => {
-            const next = new Set(previous);
-            next.delete(key);
-            return next;
-        });
-        // The outcome, also a refusal, is announced from the ops slice; here only a request that got no answer.
-        run('ops/remove', { projectPath, packageId: entry.id }).then(settled, (error: unknown) => {
-            settled();
+        // The row is busy from this call on (the ops slice). The outcome, also a refusal, is announced from the
+        // slice; here only a request that got no answer.
+        run('ops/remove', { projectPath, packageId: entry.id }).catch((error: unknown) => {
             announce(`Uninstall of ${entry.id} failed: ${error instanceof Error ? error.message : String(error)}`);
         });
     };

@@ -327,11 +327,14 @@ four, which is what makes a surface ask `session/get` and `projects/list` when i
   never a pending one; nothing is asked without a project or in all-projects mode. The key is built from the
   path exactly as the snapshot has it, which is how the host names it. `metadata` chunks are kept by
   lower-cased package id for the project they were asked for.
-- `ops`: operations in progress from `ops/progress` (`queued`, `running`, `restoring`), by operation id, and
-  the last outcome from `ops/completed` with a sequence number for the live region. `isPackageBusy(project,
-  id)` is true on both surfaces, whoever started the operation. `run(type, payload)` starts an operation and
-  resolves with its outcome; the surface that asked receives the outcome as response and as event, and it
-  counts once (by `opId`).
+- `ops`: operations in progress, by operation id, from `ops/progress` (`running`, `restoring`; the host sends
+  no `queued` event) and, on the surface that asked, from the call: `run(type, payload)` records the operation
+  at once under an id of the surface, with its kind and the projects and packages read from the payload
+  (`touchedBy`), moves it under the host's `opId` with the first chunk of the request (the `queued` chunk of an
+  operation that waits) and removes both when the request settles (N61). The last outcome comes from
+  `ops/completed` with a sequence number for the live region. `isPackageBusy(project, id)` is true on both
+  surfaces, whoever started the operation. `run` resolves with the outcome; the surface that asked receives it
+  as response and as event, and it counts once (by `opId`).
 
 Tests use `createFakeHost()` (`bus/testSupport.ts`): the real bus over an `EventTarget`, with a record of
 what was posted and helpers to make the host answer, fail, stream, broadcast and invalidate.
@@ -365,9 +368,9 @@ links.
 | Empty, error | An `EmptyState` sentence; an error banner with "Retry", over the rows if there are any |
 
 Uninstall is the row's button, Enter or Delete on the active row: `ops/remove` through
-`useOpsActions().run`. The row is busy at once (the section remembers what it asked for until the request is
-answered, because an operation that waits in the queue has no progress event yet), stays busy while the ops
-slice reports the operation, and leaves the list when the host's new list no longer has it: nothing is
+`useOpsActions().run`. The row is busy at once (the ops slice records the operation from the call, also while
+it waits in the queue), stays busy while the slice reports the operation, and leaves the list when the host's
+new list no longer has it: nothing is
 removed by guessing, so a failed or refused uninstall leaves the row as it was and is announced with its
 reason. A package that cannot be uninstalled here (implicit, declared in a props file, central, unresolved,
 or in an unsupported project) has no button, and Enter or Delete on it says why.

@@ -1,6 +1,6 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useReducer } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef } from 'react';
 import type React from 'react';
-import type { BulkOutcome, OperationOutcome, OperationProgress, OperationStatus, RequestPayload, RequestResult, RequestType } from '../../../protocol';
+import type { BulkOutcome, OperationKind, OperationOutcome, OperationProgress, OperationStatus, RequestChunk, RequestPayload, RequestResult, RequestType } from '../../../protocol';
 import { useMessageBus } from '../bus/useMessageBus';
 
 /** The requests that run on the operation queue: their response is an outcome. */
@@ -19,7 +19,13 @@ export interface OpsState {
 
 export type OpsAction =
     | { type: 'progress'; progress: OperationProgress }
-    | { type: 'completed'; outcome: AnyOutcome };
+    | { type: 'completed'; outcome: AnyOutcome }
+    /** This surface asked for an operation: it is in progress from the call on, under an id of this surface. */
+    | { type: 'asked'; localId: string; progress: OperationProgress }
+    /** The first chunk of the request named the host's operation id: the entry moves under it. */
+    | { type: 'named'; localId: string; opId: string }
+    /** The request settled, with an outcome or without: neither the local entry nor the operation stays in progress. */
+    | { type: 'settled'; localId: string; opId: string | undefined };
 
 export const INITIAL_OPS: OpsState = { active: new Map(), last: undefined, ended: [] };
 
@@ -32,6 +38,28 @@ export function isBulkOutcome(outcome: AnyOutcome): outcome is BulkOutcome {
 }
 
 export function opsReducer(state: OpsState, action: OpsAction): OpsState {
+    if (action.type === 'asked') {
+        return { ...state, active: new Map(state.active).set(action.localId, action.progress) };
+    }
+    if (action.type === 'named') {
+        const local = state.active.get(action.localId);
+        if (local === undefined) {
+            return state;
+        }
+        const active = new Map(state.active);
+        active.delete(action.localId);
+        if (!state.ended.includes(action.opId)) {
+            // Reports of the host may have come first: what they said stands, the call fills in the rest.
+            active.set(action.opId, { ...local, ...state.active.get(action.opId), opId: action.opId });
+        }
+        return { ...state, active };
+    }
+    if (action.type === 'settled') {
+        const active = new Map(state.active);
+        const removedLocal = active.delete(action.localId);
+        const removedOp = action.opId !== undefined && active.delete(action.opId);
+        return removedLocal || removedOp ? { ...state, active } : state;
+    }
     if (action.type === 'progress') {
         const { progress } = action;
         if (state.ended.includes(progress.opId)) {
@@ -58,6 +86,42 @@ export function opsReducer(state: OpsState, action: OpsAction): OpsState {
         last: { outcome, sequence: (state.last?.sequence ?? 0) + 1 },
         ended: [...state.ended, outcome.opId].slice(-REMEMBERED),
     };
+}
+
+const KIND_OF: Record<OperationRequestType, OperationKind> = {
+    'ops/install': 'install',
+    'ops/update': 'update',
+    'ops/remove': 'remove',
+    'ops/restore': 'restore',
+    'ops/bulkInstall': 'install',
+    'ops/bulkUpdate': 'update',
+    'ops/bulkRemove': 'remove',
+    'ops/bulkUpdateAllProjects': 'update',
+    'ops/bulkRemoveAllProjects': 'remove',
+};
+
+/** Which projects and packages an operation touches, read from what was asked (the payloads of `src/protocol/messages.ts`). */
+export function touchedBy<T extends OperationRequestType>(type: T, payload: RequestPayload<T>): Pick<OperationProgress, 'kind' | 'projectPaths' | 'packageIds'> {
+    const asked = payload as {
+        projectPath?: string;
+        projectPaths?: string[];
+        packageId?: string;
+        packages?: Array<string | { id: string }>;
+        projectUpdates?: Array<{ projectPath: string; packages: Array<{ id: string }> }>;
+        projectRemovals?: Array<{ projectPath: string; packages: string[] }>;
+    };
+    const perProject = asked.projectUpdates ?? asked.projectRemovals ?? [];
+    const projectPaths = [
+        ...(asked.projectPath === undefined ? [] : [asked.projectPath]),
+        ...(asked.projectPaths ?? []),
+        ...perProject.map(entry => entry.projectPath),
+    ];
+    const packageIds = [
+        ...(asked.packageId === undefined ? [] : [asked.packageId]),
+        ...(asked.packages ?? []).map(entry => (typeof entry === 'string' ? entry : entry.id)),
+        ...perProject.flatMap(entry => entry.packages.map(item => (typeof item === 'string' ? item : item.id))),
+    ];
+    return { kind: KIND_OF[type], projectPaths: [...new Set(projectPaths)], packageIds: [...new Set(packageIds)] };
 }
 
 /** The key under which a package of a project counts as busy. Package ids compare without case; paths are the host's. */
@@ -111,12 +175,32 @@ export function OpsProvider({ children }: { children: React.ReactNode }): React.
         return () => unsubscribes.forEach(unsubscribe => unsubscribe());
     }, [bus]);
 
+    const nextLocal = useRef(0);
+
     const run = useCallback(async <T extends OperationRequestType>(type: T, payload: RequestPayload<T>): Promise<RequestResult<T>> => {
-        const answer = await bus.request(type, payload);
-        // The response is the one terminal message the protocol promises (ADR-007). The host announces the same
-        // outcome as `ops/completed`; recorded from here as well, a row cannot stay busy for want of an event.
-        dispatch({ type: 'completed', outcome: answer.result as AnyOutcome });
-        return answer.result;
+        // In progress from the call: an operation that waits in the queue has no `ops/progress` yet, only a
+        // `queued` chunk on this request (N61).
+        const localId = `local:${++nextLocal.current}`;
+        let opId: string | undefined;
+        dispatch({ type: 'asked', localId, progress: { opId: localId, status: 'queued', ...touchedBy(type, payload) } });
+        const onChunk = (chunk: RequestChunk<T>): void => {
+            // Every operation request streams `OperationProgress` (`src/protocol/messages.ts`).
+            const progress = chunk as OperationProgress;
+            if (opId === undefined && typeof progress.opId === 'string') {
+                opId = progress.opId;
+                dispatch({ type: 'named', localId, opId });
+            }
+            dispatch({ type: 'progress', progress });
+        };
+        try {
+            const answer = await bus.request(type, payload, { onChunk });
+            // The response is the one terminal message the protocol promises (ADR-007). The host announces the
+            // same outcome as `ops/completed`; recorded from here as well, a row cannot stay busy for want of an event.
+            dispatch({ type: 'completed', outcome: answer.result as AnyOutcome });
+            return answer.result;
+        } finally {
+            dispatch({ type: 'settled', localId, opId });
+        }
     }, [bus]);
 
     const view = useMemo<OpsView>(() => {

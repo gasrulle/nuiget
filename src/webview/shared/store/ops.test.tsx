@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import type { BulkOutcome, OperationOutcome, OperationProgress } from '../../../protocol';
 import { createFakeHost, type FakeHost } from '../bus/testSupport';
 import { MessageBusProvider } from '../bus/useMessageBus';
-import { busyPackages, INITIAL_OPS, isBulkOutcome, OpsProvider, opsReducer, useOps, useOpsActions, type OpsState } from './ops';
+import { busyPackages, INITIAL_OPS, isBulkOutcome, OpsProvider, opsReducer, touchedBy, useOps, useOpsActions, type OpsState } from './ops';
 
 const A = '/w/A/A.csproj';
 const B = '/w/B/B.csproj';
@@ -140,6 +140,68 @@ describe('ops slice', () => {
         await hostSays(() => host.fail(host.requests('ops/remove')[0], 'invalid-request', 'No such project'));
         expect(await lastRun).toMatchObject({ code: 'invalid-request' });
         expect(text('last')).toBe('none');
+    });
+
+    it('a row is busy from the call to run until the request settles', async () => {
+        const host = mount();
+        await hostSays(() => screen.getByRole('button', { name: 'Uninstall' }).click());
+        // Asked, and not reported by the host at all yet: busy on this surface from the call (N61).
+        expect(text('serilog-a')).toBe('true');
+        expect(text('moq-a')).toBe('false');
+        expect(text('busy')).toBe('true');
+        // The queued chunk names the operation; the entry moves under its id and stays busy.
+        const [request] = host.requests('ops/remove');
+        await hostSays(() => host.chunk(request, progress('op7', 'queued')));
+        expect(text('serilog-a')).toBe('true');
+        await hostSays(() => host.event('ops/progress', progress('op7', 'running', { kind: 'remove', projectPaths: [A], packageIds: ['Serilog'] })));
+        expect(text('serilog-a')).toBe('true');
+        await hostSays(() => host.respond(request, removed('op7')));
+        expect(text('serilog-a')).toBe('false');
+        expect(text('busy')).toBe('false');
+        // A report that trails the response does not bring it back.
+        await hostSays(() => host.event('ops/progress', progress('op7', 'running', { kind: 'remove', projectPaths: [A], packageIds: ['Serilog'] })));
+        expect(text('serilog-a')).toBe('false');
+    });
+
+    it('a request without an answer leaves nothing busy', async () => {
+        const host = mount();
+        await hostSays(() => screen.getByRole('button', { name: 'Uninstall' }).click());
+        const [request] = host.requests('ops/remove');
+        await hostSays(() => host.chunk(request, progress('op8', 'queued')));
+        expect(text('serilog-a')).toBe('true');
+        // The request fails before any outcome: neither the call's entry nor the named operation stays.
+        await hostSays(() => host.fail(request, 'failed', 'host went away'));
+        expect(await lastRun).toMatchObject({ code: 'failed' });
+        expect(text('serilog-a')).toBe('false');
+        expect(text('busy')).toBe('false');
+        expect(text('last')).toBe('none');
+    });
+
+    it('reads the projects and packages an operation touches from what was asked', () => {
+        expect(touchedBy('ops/remove', { projectPath: A, packageId: 'Serilog' })).toEqual({ kind: 'remove', projectPaths: [A], packageIds: ['Serilog'] });
+        expect(touchedBy('ops/bulkRemove', { projectPath: A, packages: ['Serilog', 'Moq'] })).toEqual({ kind: 'remove', projectPaths: [A], packageIds: ['Serilog', 'Moq'] });
+        expect(touchedBy('ops/bulkUpdate', { projectPath: A, packages: [{ id: 'Moq', version: '4.20.0' }] })).toEqual({ kind: 'update', projectPaths: [A], packageIds: ['Moq'] });
+        expect(touchedBy('ops/bulkInstall', { projectPaths: [A, B], packageId: 'Serilog' })).toEqual({ kind: 'install', projectPaths: [A, B], packageIds: ['Serilog'] });
+        expect(touchedBy('ops/restore', { projectPaths: [A] })).toEqual({ kind: 'restore', projectPaths: [A], packageIds: [] });
+        expect(touchedBy('ops/bulkRemoveAllProjects', {
+            projectRemovals: [{ projectPath: A, projectName: 'A', packages: ['Moq'] }, { projectPath: B, projectName: 'B', packages: ['Moq', 'Serilog'] }],
+        })).toEqual({ kind: 'remove', projectPaths: [A, B], packageIds: ['Moq', 'Serilog'] });
+        expect(touchedBy('ops/bulkUpdateAllProjects', {
+            projectUpdates: [{ projectPath: B, projectName: 'B', packages: [{ id: 'Moq', version: '4.20.0' }] }],
+        })).toEqual({ kind: 'update', projectPaths: [B], packageIds: ['Moq'] });
+    });
+
+    it('naming moves the entry under the operation id and keeps what the host reported first', () => {
+        const asked = opsReducer(INITIAL_OPS, { type: 'asked', localId: 'local:1', progress: progress('local:1', 'queued', { kind: 'remove', projectPaths: [A], packageIds: ['Serilog'] }) });
+        const reported = opsReducer(asked, { type: 'progress', progress: progress('op9', 'running', { current: 1, total: 2 }) });
+        const named = opsReducer(reported, { type: 'named', localId: 'local:1', opId: 'op9' });
+        expect([...named.active.keys()]).toEqual(['op9']);
+        expect(named.active.get('op9')).toEqual({ opId: 'op9', status: 'running', kind: 'remove', projectPaths: [A], packageIds: ['Serilog'], current: 1, total: 2 });
+        // An operation that ended before its name arrived is not brought back; an unknown local id changes nothing.
+        const ended = opsReducer(asked, { type: 'completed', outcome: removed('op9') });
+        expect([...opsReducer(ended, { type: 'named', localId: 'local:1', opId: 'op9' }).active.keys()]).toEqual([]);
+        expect(opsReducer(named, { type: 'named', localId: 'local:2', opId: 'op9' })).toBe(named);
+        expect(opsReducer(named, { type: 'settled', localId: 'local:2', opId: undefined })).toBe(named);
     });
 
     it('the same outcome twice in a row is two announcements when the operations differ', async () => {

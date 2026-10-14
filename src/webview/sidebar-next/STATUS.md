@@ -1,21 +1,34 @@
-# STATUS — src/webview/sidebar-next   commit 5bc53c1 (parent of the P3.4 commit)   2026-10-13T23:38:01Z
+# STATUS — src/webview/sidebar-next   commit 9000208 (parent of the P5.4 commit a)   2026-10-14T23:10:00Z
 
 Scope of this note: `src/webview/sidebar-next/**`, the 2.0 sidebar, and the harness scenario the item's gate
 names (`src/test/harness/scenarios.test.ts`).
 
-git status --porcelain --untracked-files=all: ` M src/webview/sidebar-next/index.tsx`,
-` M src/webview/sidebar-next/index.test.tsx`, `?? src/webview/sidebar-next/` `SidebarView.tsx`, `SidebarView.test.tsx`,
-`InstalledSection.tsx`, `outcomes.ts`, `outcomes.test.ts`, `sidebar.css`, `STATUS.md`,
-` M src/test/harness/scenarios.test.ts`, ` M src/test/harness/STATUS.md`, ` M ARCHITECTURE.md`, ` M CHANGELOG.md`,
-` M .github/copilot-instructions.md`, ` M docs/plans/STATUS.md`, ` M docs/plans/findings-ledger.md` (all belong
-to the P3.4 commit)
+git status --porcelain --untracked-files=all: ` M src/webview/sidebar-next/InstalledSection.tsx`, ` M` this note (the rest of P5.4 commit a is listed in
+`src/webview/shared/STATUS.md`)
 
-Item: **P3.4 sidebar slice** (header, Installed section with its states, uninstall through `ops/remove`,
-revalidation without blanking, the test ids of interaction model §8). Not a ⚑ item and no stop-and-ask
-trigger: no L1 consultation. No contract change, no sentinel; `esbuild.mjs`, `package.json`, `src/host/**`
-and `src/webview/shared/**` are untouched. The quarry has no file in this directory.
+Item: **P5.4 feature installed (main), commit a of three** (P5.4 stop-and-ask ruling of 2026-10-14, verbatim in
+`docs/plans/STATUS.md`, "Advisor decisions"): N61 lands; the row stays `in-progress` until commit c. The
+ruling is an L1 consultation (stop-and-ask: `Listbox.tsx` is not among the row's files); commit a touches no
+file outside those the P3.6 ruling named for P5.4.
 
 ## Verified by running
+
+P5.4 commit a:
+
+```text
+baseline (working tree at 9000208 plus the N61 change) npx tsc --noEmit / npx eslint src → exit 0 / exit 0
+npx vitest run --project frontend src/webview/shared src/webview/sidebar-next → Test Files 31 passed (31) · Tests 243
+                               passed (243), with `a row is busy from the call to run until the request settles` and
+                               `a request without an answer leaves nothing busy`
+store/ops.test.tsx and sidebar-next/SidebarView.test.tsx, 40 times in a row → 40 of 40 green
+npm test (NUIGET_SDK_TESTS=1, DOTNET_ROOT set) → Test Files 118 passed (118) · Tests 2772 passed (2772)
+npm run bench               → Test Files 18 passed (18) · Tests 112 passed | 1 skipped (113)
+npm run package:vsix, npm run check:vsix, npm run docs:protocol:check, npm run test:ui → SKIPPED: no host,
+                               packaging, protocol or UI file changed (P5.4 ruling, step 2)
+test -e .claude/.contract-change → false
+```
+
+Earlier:
 
 ```text
 baseline (at 5bc53c1) npx tsc --noEmit / npm run check-types / npx eslint src → exit 0 / exit 0 / exit 0
@@ -76,6 +89,12 @@ CI                           → see the tracker row of P3.4
 ```
 
 ## Done (tested)
+
+P5.4 commit a: `InstalledSection.tsx` keeps no pending set of its own any more (the set, its key helper and
+`busyStatus`'s first branch are deleted, as the P3.6 ruling says for N61): a row is busy from `run()` through the
+ops slice, and the status text comes from the slice's entry (`kind: 'remove'` → "Uninstalling"). Every test title
+of `SidebarView.test.tsx` is kept; the file is not edited.
+
 
 - `index.tsx`: the entry. Inside `if (rootElement)` it acquires the VS Code API (once), creates the bus and
   renders `StoreProvider` and `SidebarView` under `StrictMode`; it imports `../shared/tokens.css` and
@@ -144,6 +163,13 @@ CI                           → see the tracker row of P3.4
 
 ## Deviations from contract/ADR (file:line each)
 
+P5.4 commit a:
+
+- The ruling's VERIFY `grep -c "pending" src/webview/sidebar-next/InstalledSection.tsx → 0` gives 1: the tooltip of
+  the provisional badge says "a full evaluation is pending" (`InstalledSection.tsx:177`). Product copy, not the
+  pending set; left as it is.
+
+
 - `InstalledSection.tsx:46-48` and interaction model §4/§5: a centrally managed package is **read-only**
   here. The model wants an impact preview before an update or uninstall of a `central` package; the dialog
   for it comes with P6 (P5.5 calls its own placeholder "read-only until P6"). Offering a plain
@@ -187,8 +213,7 @@ decided and written down (read-only, above); the harness scenario is written aga
 
 ## Exact next step (one item ID)
 
-P3.5 (e2e `src/test/e2e/v2-sidebar.e2e.test.ts`, ExTester `src/test/ui/v2/sidebar.ui.test.ts`, and the CI
-jobs `e2e-v2` and `ui-v2`). Read first: finding N62 (a `--v2` build has no `dist/webview.css`, so a 2.0 VSIX
-does not pass `check:vsix`) and N63 (the sidebar bundle is at 96.7 % of its ceiling). The test ids to drive
-are in interaction model §8: `nuiget-sidebar`, `sidebar-search-input`, `section-header-installed`,
-`sidebar-installed-list`, `package-row-<id>`, `row-action-uninstall`, `status-live`.
+P5.4 commit b (the same tracker row): `Listbox`/`Row` multi-selection (`selectedIds`, `onToggleSelected`,
+`aria-current`, the `aria-hidden` check mark), the row rules lifted into `src/webview/shared/installed/rules.ts`
+and `describeOutcome` into `src/webview/shared/store/outcomes.ts`, the `transitive` and `allProjects` slices, and
+the harness scenario `bulk remove partial failure reconciles`, exactly as steps 3 to 6 of the P5.4 ruling say.
