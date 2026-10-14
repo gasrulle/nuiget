@@ -27,12 +27,21 @@ const ENTRIES = isV2
 
 // Minified JavaScript size limits in bytes: the 1.18.9 bundles plus 10 %, Math.ceil(measured * 1.1).
 // Measured with `node esbuild.mjs --production --analyze` on the legacy entries at commit 24cf07b plus
-// these targets: 272655 (extension), 546077 (webview), 276451 (sidebar). Keyed by output file, so the
-// limits also hold for the 2.0 entries. CSS output is not measured.
+// these targets: 272655 (extension), 546077 (webview), 276451 (sidebar). Keyed by output file. CSS output is
+// not measured.
 const BUNDLE_CEILINGS = {
     'dist/extension.js': 299_921,
     'dist/webview.js': 600_685,
     'dist/sidebar.js': 304_097,
+};
+
+// Ceilings of the 2.0 entries (P3.6): extension and webview as 1.x; the sidebar gets the 1.x budget plus the measured
+// share of @tanstack/virtual-core (25 025 bytes at 8c95e9e), which the 1.x sidebar does not bundle. A local gate until
+// P7.2 puts --analyze into CI and resets these to measured × 1.1.
+const V2_BUNDLE_CEILINGS = {
+    'dist/extension.js': 299_921,
+    'dist/webview.js': 600_685,
+    'dist/sidebar.js': 329_122,
 };
 
 const ANALYSIS_DIR = 'out/esbuild';
@@ -121,7 +130,7 @@ function reportCeilings(results) {
     console.log('\n=== Bundle sizes (bytes / ceiling) ===');
     for (const [index, { config }] of bundles.entries()) {
         const bytes = results[index].metafile.outputs[config.outfile].bytes;
-        const ceiling = BUNDLE_CEILINGS[config.outfile];
+        const ceiling = (isV2 ? V2_BUNDLE_CEILINGS : BUNDLE_CEILINGS)[config.outfile];
         console.log(`${config.outfile} ${bytes} / ${ceiling}`);
         if (bytes > ceiling) {
             exceeded.push(config.outfile);

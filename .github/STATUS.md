@@ -1,70 +1,81 @@
-# STATUS — .github (agent resources and repo-level items)   commit 7c75217 (parent of the P0.13 commit)   2026-10-12T12:20:00Z
+# STATUS — .github (agent resources and repo-level items)   commit 3b6f987 (parent of the P3.6 commit)   2026-10-14T06:20:00Z
 
-git status --short: `?? docs/plans/findings-ledger.md`, ` M docs/plans/STATUS.md`, ` M CHANGELOG.md`,
-` M .github/STATUS.md` (all belong to the P0.13 commit)
+git status --short: ` M .github/STATUS.md`, ` M .github/copilot-instructions.md`, ` M ARCHITECTURE.md`,
+` M docs/plans/2026-10-11-nuiget-2.0-execution-plan.md`, ` M docs/plans/STATUS.md`,
+` M docs/plans/findings-ledger.md`, ` M esbuild.mjs`, ` M vitest.config.mts` (all belong to the P3.6 commit)
 
-Item: **P0.13 Tracker and findings ledger**. This file is the handoff note for plan items without a `src/`
-directory of their own. The P0.12 note it replaces is in commit `7c75217`; P0.12's CI run 38232204407 was green
-on all eight jobs.
+Item: **P3.6 Re-base the estimate; advisor review of the slice; adjust P4/P5 ordering** (⚑ mandatory). This file is
+the handoff note for plan items without a `src/` directory of their own. The P0.13 note it replaces is in commit
+`2dcd3c6`. P3.5's CI run 38490233910 for `3b6f987` was green on all 11 jobs.
 
 ## Verified by running
 
 ```text
-baseline npx tsc --noEmit   → exit 0, no output
-baseline npx eslint src     → exit 0, no output
-baseline npx vitest run     → Test Files 44 passed (44) · Tests 1591 passed (1591)
-script: every `| P#.# |` id of plan §5 against docs/plans/STATUS.md → 81 items, none missing     (item gate)
-script: every N id of plan Appendix A against the ledger             → 24 ids, none missing
-ledger section 1            → 102 rows (66 original, 24 + 12 new); every row has six cells
-ledger section 2            → 66 ids, severities C 1, H 15, M 27, L 14, none 9 (the architecture smells)
-counts in ledger section 6  → measured with the commands shown there (959, 22, 125 and 13, 55, 15)
-npx tsc --noEmit            → exit 0, no output
-npx eslint src              → exit 0, no output
-npm test                    → Test Files 44 passed (44) · Tests 1591 passed (1591)
-npm run bench               → Test Files 14 passed (14) · Tests 80 passed | 1 skipped (81)
-CI run 38233521574 (commit 2dcd3c6) → first attempt red: `E2E (1.85.0)` "Failed to download and unzip VS Code
-                              1.85.0" before any test (N37); `gh run rerun 38233521574 --failed` → all eight jobs green
-npm run package:vsix        → SKIPPED: documentation only (plan §2.2 step 5)
-npm run test:ui             → SKIPPED: documentation only
+baseline npx tsc --noEmit   → exit 0
+baseline npx eslint src     → exit 0
+baseline npx vitest run     → Test Files 110 passed (110) · Tests 2680 passed | 3 skipped (2683)
+npx tsc --noEmit            → exit 0
+npx eslint src              → exit 0
+npm run check-types         → exit 0
+npm run lint                → exit 0 (covers esbuild.mjs and vitest.config.mts)
+npm test (DOTNET_ROOT set, NUIGET_SDK_TESTS=1) → Test Files 110 passed (110) · Tests 2683 passed (2683)
+npx vitest run --coverage   → exit 0; the new key src/webview/{shared,main,sidebar-next}/** measures 99.37 % of
+                              lines; negative control with `lines: 100` → exit 1, "Coverage for lines (99.37%)
+                              does not meet "src/webview/{shared,main,sidebar-next}/**" threshold (100%)"; reverted
+npm run bench               → Test Files 18 passed (18) · Tests 112 passed | 1 skipped (113)
+node esbuild.mjs --v2 --production --analyze → exit 0 · extension 168070 / 299921 · webview 223600 / 600685 ·
+                              sidebar 293929 / 329122
+node esbuild.mjs --production --analyze      → exit 0 · extension 272655 / 299921 · webview 546077 / 600685 ·
+                              sidebar 276451 / 304097 (1.x ceilings unchanged); dist/ and out/esbuild deleted
+npm run package:vsix        → exit 0 · nuiget-v1.18.9.vsix (17 files, 530.8 KB)
+npm run check:vsix          → check:vsix: OK (1.x entries)
+npm run docs:protocol:check → docs/protocol.md is up to date
+npm run test:ui             → SKIPPED: no UI or webview source changed; the CI jobs UI and UI 2.0 run it
+grep -c '^| P5.12[ab] ' docs/plans/STATUS.md → 2; P5.1, P5.3, P5.4 stand above P4.1; every tracker row has 7 cells
+test -e .claude/.contract-change → false
 ```
 
 ## Done (tested)
 
-- `docs/plans/findings-ledger.md`: status table for every finding; the original ledger of the audit of
-  2026-10-10 reproduced unchanged from the quarry's working tree; the corrections and new findings of plan
-  Appendix A; twelve findings made during P0 (N25 to N36); the headline defects of plan Appendix B numbered as
-  `C-<group>-n`; a table of counts with the commands that produce them.
-- `docs/plans/STATUS.md`: header says where commit SHAs live and names the ledger; rows up to date.
+- `esbuild.mjs`: `V2_BUNDLE_CEILINGS` for `--v2` builds (sidebar 329 122 = the 1.x ceiling plus the measured
+  25 025 bytes of `@tanstack/virtual-core`, which the 1.x sidebar does not bundle); `reportCeilings` picks the
+  table by entry set. Both production analyze builds above.
+- `vitest.config.mts`: floor `'src/webview/{shared,main,sidebar-next}/**': { lines: 85 }`; the `src/webview/**`
+  ratchet stays 62/52/54/64. Negative control above.
 
 ## Done (untested)
 
-- Nothing reads the ledger mechanically yet. P7.5 plans a documentation drift script.
-- N37 and its gotcha row were added in a follow-up commit after the CI flake; that commit changes documentation only.
+- Plan §7: the estimate re-based in hours of agent session time (measured 20.7 h for P0–P3; ≈ 37 h remain, five
+  to six sessions). A projection, checked again after P5.6.
+- `docs/plans/STATUS.md`: execution order changed (P5.1, P5.3, P5.4 before P4.1; P5.2 after P5.9 as a sweep;
+  P5.12 → P5.12a, P5.12b) with the ruling's notes on P5.1–P5.12b, P7.2 and P7.4; P3.5's commit backfilled.
+- `docs/plans/findings-ledger.md`: N61, N62, N63, N64, U11 rescheduled as ruled.
+- ARCHITECTURE.md "Shared tooling" (bundle size bullet) and one 2.0 gotcha row on the local ceiling gate.
 
 ## Not started
 
-- P0.14 (optional 1.18.10 guard for N1): the owner decides. Until the row says `open` or `skipped`, the phase
-  P0 gate and its phase review do not run.
+- RUN.md §6 for P3: the phase gate, `PHASE REVIEW P3`, any `P3.fix-n`, the tag `labs/2.0-P3-done`.
+- The product changes the ruling schedules: pure icons (P5.1), N62 (P5.3), N61 (P5.4), the CSS-baseline lint
+  (P5.11), the CI ceilings (P7.2), the 1.85.0 check (P7.4, owner).
 
 ## Deviations from contract/ADR (file:line each)
 
-- The original findings (S, Y, F, M, P, U, T and the architecture smells) have no work item in the plan that
-  names them, apart from F6 and the ones closed in P0. Their "Scheduled in / closed by" cell says
-  "not mapped" instead of a guessed item.
-- Short titles in section 1 are derived from the original rows (the leading bold phrase, else the first
-  words). The authoritative text is section 2.
-- `C-<group>-n` ids number the semicolon-separated headline defects of plan Appendix B in the plan's order.
-  The plan does not assign them itself; it says the work items carry the detail.
-- N35: decisions D1 to D13 and architecture-smell findings D1 to D9 share a letter. The ledger says
-  "finding D3" for a smell; the plan was not edited.
-- Statuses set to closed here rest on the P0 items that landed today: M3 (D13), T2 and N2, N3, N5 (partly),
-  N22 and P8 (P0.8), T5 (P0.10), N4 (partly), N13 and N24 (P0.11), N34 (P0.8).
+- `esbuild.mjs`: `grep -c V2_BUNDLE_CEILINGS` is 2, not the 3 of the ruling's VERIFY: the comment the ruling
+  dictates does not contain the identifier.
+- `vitest.config.mts:48-49`: the dictated comment is wrapped onto two lines (120 columns).
+- `docs/plans/STATUS.md:7-8`: the ruling's line "under the table header" is in the introduction above the table,
+  because a line inside a Markdown table would end it.
+- The plan's §5 tables are unchanged (as ruled); the order lives in the tracker. P7.5 may reconcile the text.
 
 ## Advisor decisions (date, item, question, answer verbatim)
 
-No stop-and-ask trigger fired and the item is not ⚑, so no consultation took place for this item.
+2026-10-14, P3.6 (⚑): the brief and the answer, verbatim, are in `docs/plans/STATUS.md` under "Advisor decisions",
+"P3.6 — ⚑ ruling: the re-based estimate, the order of P4 and P5, and five handed decisions (2026-10-14)". Decision
+line: re-base in measured hours; P5.1, P5.3, P5.4 before P4; P5.2 a closing sweep; P5.12 split; N63 two measures
+(2.0 ceiling table now, pure icons in P5.1); N61 in P5.4; N64 no ExTester job, lint in P5.11, owner check in P7.4;
+compact row 24 px; ratchet unchanged plus a 2.0 floor of 85 % lines.
 
 ## Exact next step (one item ID)
 
-P0.14 (owner decides: set the tracker row to `open` to do it, or to `skipped`); after that the P0 phase gate
-and phase review of `RUN.md` §6, then P1.1a.
+The P3 phase boundary (RUN.md §6: gate, `PHASE REVIEW P3`, fix items, tag `labs/2.0-P3-done`), then stop
+(RUN.md §7: P3.6 completed). The next open item afterwards is P5.1.

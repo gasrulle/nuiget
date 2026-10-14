@@ -45,6 +45,9 @@ export default defineConfig({
                     functions: 54,
                     lines: 64,
                 },
+                // Floor for the 2.0 webviews (P3.6), like the core floor; the aggregate above is diluted by the 1.x
+                // code until P8.2.
+                'src/webview/{shared,main,sidebar-next}/**': { lines: 85 },
                 // Floor for the 2.0 core (plan P1.2 and the P1 gate). It applies to all of src/core together.
                 'src/core/**': {
                     lines: 85,

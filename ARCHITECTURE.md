@@ -429,7 +429,9 @@ These parts serve both versions and are the current truth for the build, test an
   bench:save` rewrites `benchmarks/baseline.json` and `npm run bench:compare` compares a run with it. The CI
   job `Benchmark (informational)` compares on its own hardware and never fails the pipeline.
 - **Bundle size.** `node esbuild.mjs --production --analyze` fails when a bundle exceeds its ceiling, the 1.18.9
-  size plus 10 %. Metafiles go to `out/esbuild/`.
+  size plus 10 %. Metafiles go to `out/esbuild/`. The ceilings are keyed by entry set (`--v2` has its own table,
+  whose sidebar ceiling adds the virtualizer the 1.x sidebar does not bundle) and are checked only under
+  `--production --analyze`, which no CI job runs until P7.2.
 - **Packaging.** `npm run package:vsix` runs `npm ci` → `check-types` → tests → lint and production build →
   `vsce package`. `npm run check:vsix` fails when the VSIX would contain anything other than `dist/*.js`,
   `dist/*.css`, `resources/`, `package.json`, `README.md`, `CHANGELOG.md` and `LICENSE`, or would lack a required
