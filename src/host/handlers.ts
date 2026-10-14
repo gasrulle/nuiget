@@ -300,7 +300,7 @@ export function registerSharedHandlers(host: Registrar, services: HostServices):
     host.on('package/versions', async (payload, ctx) => ({ packageId: payload.packageId, versions: await catalog.versions(payload.packageId, payload.sourceUrl, payload.includePrerelease, ctx.signal) }));
     host.on('package/metadata', async (payload, ctx) => ({ metadata: (await catalog.metadata(payload.packageId, payload.version, payload.sourceUrl, ctx.signal)) ?? null }));
     host.on('package/readme', async (payload, ctx) => ({ readme: (await catalog.readme(payload.packageId, payload.version, payload.sourceUrl, ctx.signal)) ?? null }));
-    host.on('readme/image', async ({ url }) => ({ url, dataUri: null })); // REMOVAL GATE: P4.4
+    host.on('readme/image', async ({ url }) => ({ url, dataUri: null })); // REMOVAL GATE: P4.9 (readme/image answers through Catalog.readmeImage)
     host.on('package/prewarm', async () => ({})); // REMOVAL GATE: P4.9
 
     // ── sources ──
