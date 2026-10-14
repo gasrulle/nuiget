@@ -101,7 +101,7 @@ Each row is filled in by the item that creates the module.
 | `src/core/**` | Platform-agnostic logic: CLI runner, project model, queries, operations, feeds | Present: `contracts.ts`, `util/`, `versioning/`, `cache/`, `logging/`, `cli/`, `session/`, `queries/`, `http/ssrf.ts`, `ops/`, `project/` (static inspection and context), `sources/`, `credentials/` and `catalog/`. Absent: `feeds/` and `http/Transport.ts` (P4), the evaluator (P6.2), the mutator (P6.3) |
 | `src/host/**` | Adapts VS Code to the core (ADR-007); no business logic. `WebviewHost` is the base of both surfaces: it decodes an inbound envelope with the protocol guards, calls the handler registered for its type and posts exactly one terminal response per request id, an error envelope included (`unsupported` for a type nobody registered, `failed` for a thrown error, the code of a `HostRequestError`). A handler whose result is a coordinator resource sets `ctx.generation`, and the base puts it on the ok envelope (ADR-007); an error response and a chunk never carry one. A request's `AbortSignal` is aborted with a reason: `cancelled` when the webview sent a cancel envelope, `disposed` when the surface went away, and nothing is posted to a disposed surface. An error whose `code` is `not-yet-available` (a Catalog read that waits for the feeds, ADR-009) is answered as `unsupported`. `handlers.ts` registers the handlers both surfaces share (`registerSharedHandlers`): reads call one Catalog method and forward its chunks unchanged; `operations` has one typed submit function per `ops/*` request, which validates the payload (a real project, a non-empty batch), takes the restore switch as it is at submission and hands the workflow to the `OperationQueue`; `awaitTicket` ties the ticket to the request (opening chunk `queued` or `rejected` with the ticket's `opId`, progress of that operation as chunks, a webview cancel cancels the ticket, a disposed surface does not), and `settleOperation` announces the outcome to every surface and invalidates what it changed. A forced restore of `transitive/get` is such a ticket too. `sourceDirectory` decides where sources are resolved: the directory of the selected project, else the first workspace folder, else a `not-found` error. Handlers that wait for a later item answer with a fixed value under a `// REMOVAL GATE: P4.9` or `P4.4` comment. `services.ts` holds `HostServices` (what the composition root hands to both hosts), `readExtensionConfig` (the one reader of the `nuiget` settings), `renderWebviewHtml` (the Content Security Policy of ADR-006 with a script nonce of 16 random bytes per render) and `createWorkflowDeps` (the dependencies of `PackageWorkflows`, with the answer to "is this a Central Package Management project" kept per project while an operation runs). `MainPanelHost` and `SidebarHost` attach the webviews, forward session, configuration, operation and invalidation events, and the sidebar turns a context-menu choice into a typed operation; `pickers.ts` has the quick picks | Present since P2.9; composed by the root since P2.10 |
 | `src/extension.next.ts` | 2.0 composition root: it assembles and holds no business logic. `activate` calls `activateWith(context, overrides)`, whose overrides (`spawn`, `resolveExecutable`) exist for tests and which returns `{ services, ready }`. Composition order: the output channel and one `redactingLogger` over it, which is the only `Logger` the core and both surfaces get (every message, string argument and error passes `redact`); `DefaultDotnetRunner` with its SDK cache hydrated from `globalState` under `nuiget.sdkVersionCache.v2` (the 1.x key `nuiget.sdkVersionCache` is removed at activation); a `TieredCache` over `workspaceState`; `DotnetSourceProvider`; `AssetsReader`, `StaticProjectInspector` and `ProjectContextProvider` sharing one `stopDirs` array that a workspace-folder change refills in place; `DefaultQueryCoordinator`; `DefaultSessionStore`; `DefaultOperationQueue`; the `Catalog`; `PackageWorkflows` over `createWorkflowDeps`; `HostServices` (`onOperationProgress` is `queue.onProgress`; `workspaceFolderFor` answers the deepest workspace folder that contains a path); the `SidebarHost` view provider. Every coordinator invalidation is forwarded unchanged to the sidebar and to the open main panel. `refreshProjectsAndSession` discovers the projects, announces them, sets `nuiget.hasProjectFiles`, lists the enabled sources of the project the store will keep or pick, and skips the reconcile when the selection moved during the listing (the coalesced rerun does it); otherwise it calls `session.reconcile`; it runs at activation, after an invalidation of scope `workspace`, `project` or `sources`, and when the selected project differs from the one last reconciled for (ADR-001: another project is another source list). Runs never overlap: requests during a run cause one more run. A source listing that fails is not an empty list: the last list of that directory, or else only the selected source, is passed on, so the selection survives. Six file watchers, debounced, invalidate after the queue is idle: project files and `packages.lock.json` (scope `project`), `Directory.{Build,Packages}.{props,targets}` and `global.json` (scope `workspace`; `global.json` also clears the SDK cache), `nuget.config` (scope `sources`), `obj/project.assets.json` (scope `project`, reason `restore`). One status bar item shows the queue. It registers exactly the 12 contributed commands. Three `// REMOVAL GATE: P4.9` comments mark what P4.9 adds: feeds, transport, credentials, outbound policy and icon cache at the `Catalog`; the source health monitor; the transport rebuild on an `http.*` change. The evaluator (P6.2) and the mutator (P6.3) are absent. | Present since P2.10 |
-| `src/webview/shared/**` | Tokens, primitives, message bus, store slices | Tokens and icons present since P3.1 (`tokens.css`, `primitives/icons.tsx`); primitives present since P3.2 (`primitives/index.ts`); message bus and the store slices `session`, `projects`, `installed` and `ops` present since P3.3 (`bus/`, `store/`), the other slices arrive with their features; nothing of it is in a bundle until the sidebar entry imports it in P3.4 |
+| `src/webview/shared/**` | Tokens, primitives, message bus, store slices | Tokens and icons present since P3.1 (`tokens.css`, `primitives/icons.tsx`); primitives present since P3.2 (`primitives/index.ts`), `Dialog`, `ConfirmDialog`, `Popover`, `Tabs` and `Toolbar` since P5.1; message bus and the store slices `session`, `projects`, `installed` and `ops` present since P3.3 (`bus/`, `store/`), the other slices arrive with their features; nothing of it is in a bundle until the sidebar entry imports it in P3.4 |
 | `src/webview/sidebar-next/**` | 2.0 sidebar | First slice present since P3.4: the entry, the shell with a filter box and the live region, the Installed section with uninstall ("Sidebar slice" below). Updates, browse, context menu, split and all-projects mode: P5 |
 | `src/webview/main/**` | 2.0 main panel entry | Placeholder; shell in P5.3 |
 
@@ -184,15 +184,18 @@ any other file under `src/webview/{shared,main,sidebar-next}`, tests included.
 `src/webview/shared/primitives/icons.tsx` is the icon set (codicon paths as inline SVG). An icon takes
 `size`, `className` and `title` and renders no `style` attribute, which the Content Security Policy would
 refuse (ADR-006); without a title it is hidden from assistive technology, with one it is an image with that
-name. The frontend test setup (`src/test/setup-frontend.ts`) registers the `toHaveNoViolations` matcher of
+name. Every icon is a `/* @__PURE__ */ React.memo(…)` call, so a bundle keeps only the icons it uses
+(`src/test/lint/webview-icons-pure.test.ts`; finding N63). The frontend test setup
+(`src/test/setup-frontend.ts`) registers the `toHaveNoViolations` matcher of
 `jest-axe`, so a component test can end with `expect(await axe(container)).toHaveNoViolations()`.
 
 ### Primitives and the listbox contract
 
 `src/webview/shared/primitives/index.ts` exports the building blocks both 2.0 webviews are made of
 ([ADR-008](docs/adr/008-webview-architecture.md)): `Listbox`, `Row`, `SectionHeader`, `IconButton`, `Badge`,
-`LiveStatus`, `EmptyState`, `Skeleton`, `Spinner`, `ProgressBar`, `Banner`, `Sash`, the icons and `cssVars`.
-Each has a test with React Testing Library that ends in an axe run.
+`LiveStatus`, `EmptyState`, `Skeleton`, `Spinner`, `ProgressBar`, `Banner`, `Sash`, `Dialog`, `ConfirmDialog`,
+`Popover`, `Tabs`, `Toolbar`, the icons and `cssVars`. Each has a test with React Testing Library that ends in
+an axe run.
 
 **A list is a listbox, and its row buttons are not in it.** The interaction model asks for
 `role="listbox"` with `role="option"` rows and for action buttons on a row. A button inside an option is
@@ -248,10 +251,37 @@ a duration token, a reduced-motion rule and an unprefixed class in any 2.0 style
 announced there, and the same message twice is announced twice. A `Banner` announces itself when it appears
 (`role="alert"` for an error) and says its severity in words; a `Skeleton` is decoration and says nothing.
 
+**Layers: dialogs and popovers.** `Dialog` is modal (`role="dialog"` or `alertdialog`, `aria-modal`, named by
+its heading): focus moves into it, Tab and Shift+Tab wrap inside it, focus that lands outside is taken back,
+Escape closes it, and focus returns to the element that had it. `ConfirmDialog` is the `alertdialog` of
+interaction model §5 (bulk update, bulk uninstall, remove source) with the test ids `confirm-dialog`,
+`confirm-dialog-confirm` and `confirm-dialog-cancel`; it opens on Cancel. `Popover` is a non-modal dialog
+next to an element or at a point (a context menu): Escape or Tab past either end closes it and returns
+focus to the anchor, a press outside closes it and leaves focus where the press put it. Both are portalled
+to the body, so no `overflow: hidden` parent clips them (finding U9), and register on one stack
+(`primitives/layers.ts`): only the topmost layer answers Escape, traps focus or closes on an outside press,
+and an Escape it handles does not reach the page. A confirmation opened from a dialog (Remove source over
+Source Settings) and a popover inside a dialog therefore close first and alone. A popover is placed by
+`placePopover()` (below its anchor, above when there is more room there, moved inside the viewport) and
+positioned with `--nuiget-popover-x` and `--nuiget-popover-y` through `cssVars()`; a popover that opens
+after a dialog is lifted to the dialog's z-index and stacks above it by document order. A dialog is not
+dimmed: no theme variable exists for a scrim; the layer takes the pointer, and the dialog's surface uses
+`--nuiget-color-widget-bg` and `-fg` (aliases of `--vscode-editorWidget-*`) with a border.
+
+**Tabs and toolbars have one tab stop.** `Tabs` renders `tablist`, `tab` and one `tabpanel` (the selected
+one, which the selected tab controls and names); ArrowLeft, ArrowRight (wrapping), Home and End select and
+focus, because a panel shows without delay; a count is part of the tab's name ("Updates 3"). `Toolbar`
+(`role="toolbar"`) keeps the tab stop on its enabled controls itself (roving `tabindex` written to the DOM
+and kept by a `MutationObserver`), so its children are ordinary buttons; a control that mounts later is no
+second stop, and a disabled tab stop hands it to the first control. In a text field Home, End and the arrows
+move the caret; an arrow leaves the field at the edge of its text.
+
 jsdom lays nothing out, so a test that renders a `Listbox` installs a layout first
 (`installFakeLayout()` in `primitives/testSupport.ts`); without it the real virtualizer has no row in view,
 and axe skips its `aria-hidden-focus` rule instead of failing it. `axeRuleOutcome()` lets a test assert that
-a rule ran and passed. The virtualizer itself is never mocked.
+a rule ran and passed. The virtualizer itself is never mocked. A dialog or popover is not inside the
+container that `render()` returns: its tests run `axe(document.body)`, and `installFakeViewport()` gives the
+window a size and chosen elements a box for placement.
 
 ### Message bus and store slices
 

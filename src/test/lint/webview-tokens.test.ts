@@ -35,6 +35,7 @@ const REQUIRED = [
     ...['fg', 'fg-muted', 'border', 'focus', 'list-hover-bg', 'list-active-bg', 'list-active-fg', 'list-inactive-bg',
         'badge-bg', 'badge-fg', 'button-bg', 'button-fg', 'button-hover-bg', 'button-secondary-bg', 'button-secondary-fg',
         'input-bg', 'input-fg', 'input-border', 'input-placeholder', 'link', 'error', 'warning', 'info', 'progress', 'shadow',
+        'widget-bg', 'widget-fg',
         'scrollbar', 'scrollbar-hover', 'scrollbar-active'].map(name => `--nuiget-color-${name}`),
 ];
 

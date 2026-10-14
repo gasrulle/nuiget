@@ -64,6 +64,10 @@
     --nuiget-color-shadow: var(--vscode-widget-shadow, transparent);
     --nuiget-color-progress: var(--vscode-progressBar-background);
 
+    /* Colours: the surface of a dialog or a popover, above the page */
+    --nuiget-color-widget-bg: var(--vscode-editorWidget-background);
+    --nuiget-color-widget-fg: var(--vscode-editorWidget-foreground, var(--vscode-foreground));
+
     /* Colours: list rows */
     --nuiget-color-list-hover-bg: var(--vscode-list-hoverBackground);
     --nuiget-color-list-active-bg: var(--vscode-list-activeSelectionBackground);
@@ -110,6 +114,8 @@ body.vscode-high-contrast-light {
         --nuiget-color-focus: Highlight;
         --nuiget-color-shadow: transparent;
         --nuiget-color-progress: Highlight;
+        --nuiget-color-widget-bg: Canvas;
+        --nuiget-color-widget-fg: CanvasText;
         --nuiget-color-list-hover-bg: Canvas;
         --nuiget-color-list-active-bg: Highlight;
         --nuiget-color-list-active-fg: HighlightText;

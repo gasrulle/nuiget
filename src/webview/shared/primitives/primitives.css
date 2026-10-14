@@ -153,7 +153,10 @@
 .nuiget-icon-button:focus-visible,
 .nuiget-sash:focus-visible,
 .nuiget-section-toggle:focus-visible,
-.nuiget-button:focus-visible {
+.nuiget-button:focus-visible,
+.nuiget-tab:focus-visible,
+.nuiget-dialog:focus-visible,
+.nuiget-popover:focus-visible {
     outline: 1px solid var(--nuiget-color-focus);
     outline-offset: -1px;
 }
@@ -316,6 +319,14 @@
     color: var(--nuiget-color-button-secondary-fg);
 }
 
+/* Not by opacity: a disabled button keeps a readable label, and forced colours draw it as GrayText. */
+.nuiget-button:disabled,
+.nuiget-button:disabled:hover {
+    background: var(--nuiget-color-button-secondary-bg);
+    color: var(--nuiget-color-fg-muted);
+    cursor: default;
+}
+
 /* ── EmptyState ── */
 
 .nuiget-empty {
@@ -471,4 +482,150 @@
 .nuiget-sash:hover,
 .nuiget-sash:focus-visible {
     background: var(--nuiget-color-focus);
+}
+
+/* ── Dialog ── */
+
+/*
+ * The layer covers the viewport and takes the pointer, so the page behind cannot be clicked. It is not dimmed:
+ * no theme colour exists for a scrim; the dialog is set off by its border and the widget shadow.
+ */
+.nuiget-dialog-layer {
+    position: fixed;
+    inset: 0;
+    z-index: var(--nuiget-z-dialog);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--nuiget-space-6);
+}
+
+.nuiget-dialog {
+    display: flex;
+    flex-direction: column;
+    gap: var(--nuiget-space-5);
+    width: min(32em, 100%);
+    max-height: 100%;
+    overflow: auto;
+    padding: var(--nuiget-space-5) var(--nuiget-space-6);
+    border: 1px solid var(--nuiget-color-border);
+    border-radius: var(--nuiget-radius-md);
+    background: var(--nuiget-color-widget-bg);
+    color: var(--nuiget-color-widget-fg);
+    box-shadow: 0 0 var(--nuiget-space-4) var(--nuiget-color-shadow);
+}
+
+.nuiget-dialog-header {
+    display: flex;
+    align-items: center;
+    gap: var(--nuiget-space-4);
+}
+
+.nuiget-dialog-title {
+    flex: 1;
+    min-width: 0;
+    margin: 0;
+    font-size: var(--nuiget-font-size-lg);
+    font-weight: 600;
+}
+
+.nuiget-dialog-description,
+.nuiget-dialog-body {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.nuiget-dialog-footer {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: var(--nuiget-space-4);
+}
+
+/* ── Popover ── */
+
+/*
+ * Fixed in the viewport at the place the script computed, so that no parent with `overflow: hidden` clips it.
+ * Hidden until placed: it is measured at the origin first.
+ */
+.nuiget-popover {
+    position: fixed;
+    left: var(--nuiget-popover-x, 0);
+    top: var(--nuiget-popover-y, 0);
+    z-index: var(--nuiget-z-popover);
+    max-width: calc(100vw - 2 * var(--nuiget-space-2));
+    max-height: calc(100vh - 2 * var(--nuiget-space-2));
+    overflow: auto;
+    padding: var(--nuiget-space-2);
+    border: 1px solid var(--nuiget-color-border);
+    border-radius: var(--nuiget-radius-md);
+    background: var(--nuiget-color-widget-bg);
+    color: var(--nuiget-color-widget-fg);
+    box-shadow: 0 var(--nuiget-space-1) var(--nuiget-space-4) var(--nuiget-color-shadow);
+}
+
+.nuiget-popover:not([data-placed]) {
+    visibility: hidden;
+}
+
+/* A popover opened from a dialog comes after it in the body; at the dialog's level, the later one is on top. */
+.nuiget-dialog-layer ~ .nuiget-popover {
+    z-index: var(--nuiget-z-dialog);
+}
+
+/* ── Tabs ── */
+
+.nuiget-tabs {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+}
+
+.nuiget-tablist {
+    display: flex;
+    flex: none;
+    gap: var(--nuiget-space-1);
+    border-block-end: 1px solid var(--nuiget-color-border);
+}
+
+.nuiget-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--nuiget-space-2);
+    min-height: var(--nuiget-target-min);
+    padding: 0 var(--nuiget-space-4);
+    border: 0;
+    border-block-end: var(--nuiget-space-1) solid transparent;
+    background: transparent;
+    color: var(--nuiget-color-fg-muted);
+    font: inherit;
+    cursor: pointer;
+    transition: color var(--nuiget-duration-fast) var(--nuiget-easing);
+}
+
+.nuiget-tab:hover {
+    color: var(--nuiget-color-fg);
+}
+
+/* Selected is said by the line and the colour together, so it is not told by colour alone. */
+.nuiget-tab[aria-selected="true"] {
+    border-block-end-color: var(--nuiget-color-focus);
+    color: var(--nuiget-color-fg);
+}
+
+.nuiget-tabpanel {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+}
+
+/* ── Toolbar ── */
+
+.nuiget-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--nuiget-space-2);
 }

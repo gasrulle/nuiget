@@ -1,140 +1,160 @@
-# STATUS — src/webview/shared   commit c48d30b (parent of the P3.3 commit)   2026-10-13T23:01:54Z
+# STATUS — src/webview/shared   commit 587499e (parent of the P5.1 commit)   2026-10-14T19:30:00Z
 
 Scope of this note: `src/webview/shared/**`, the code both 2.0 webviews share, and the test wiring it needs
 (`src/test/setup-frontend.ts`, `src/test/jest-axe.d.ts`, `src/test/lint/webview-*.test.ts`).
 
-git status --porcelain --untracked-files=all: `?? src/webview/shared/bus/` (`MessageBus.ts`, `MessageBus.test.ts`,
-`useMessageBus.tsx`, `useMessageBus.test.tsx`, `testSupport.ts`), `?? src/webview/shared/store/` (`useResource.ts`,
-`session.tsx`, `projects.tsx`, `installed.tsx`, `ops.tsx`, `StoreProvider.tsx`, each with its `.test.tsx`),
-` M src/webview/shared/STATUS.md`, ` M ARCHITECTURE.md`, ` M CHANGELOG.md`, ` M .github/copilot-instructions.md`,
-` M docs/plans/STATUS.md`, ` M docs/plans/findings-ledger.md` (all belong to the P3.3 commit)
+git status --porcelain --untracked-files=all: ` M src/webview/shared/primitives/{icons.tsx,index.ts,primitives.css,
+testSupport.ts,composed.test.tsx}`, ` M src/webview/shared/tokens.css`, ` M src/test/lint/webview-tokens.test.ts`,
+`?? src/webview/shared/primitives/{Dialog,ConfirmDialog,Popover,Tabs,Toolbar}.tsx` and their `.test.tsx`,
+`?? src/webview/shared/primitives/layers.ts`, `?? src/test/lint/webview-icons-pure.test.ts`, ` M` this note,
+`ARCHITECTURE.md`, `CHANGELOG.md`, `.github/copilot-instructions.md`, `docs/plans/STATUS.md`,
+`docs/plans/findings-ledger.md` (all belong to the P5.1 commit)
 
-Item: **P3.3 message bus and store slices** (`bus/`, `store/`: `session`, `projects`, `installed`, `ops`,
-`useResource`). Not a ⚑ item and no stop-and-ask trigger: no L1 consultation. No contract change, no
-sentinel, no file outside the directory but the documents the item owns. Nothing here comes from the quarry
-(its note for this directory describes a design, no code).
+Item: **P5.1 primitives round 2** (`Dialog`/`ConfirmDialog`, `Popover`, `Tabs`, `Toolbar`; RTL + axe; covers
+the three 1.x dialogs), pulled before P4 by the P3.6 ruling, with N63 (`/* @__PURE__ */` on the icons and the
+lint test `every icon is a pure call`) and the N65 docs duty from the P3 phase review. Not ⚑, no stop-and-ask
+trigger: no L1 consultation. No contract change, no sentinel, nothing frozen touched.
 
 ## Verified by running
 
 ```text
-baseline (at c48d30b) npx tsc --noEmit / npm run check-types / npx eslint src → exit 0 / exit 0 / exit 0
-baseline npx vitest run      → Test Files 100 passed (100) · Tests 2586 passed | 3 skipped (2589)
+baseline (at 587499e) npx tsc --noEmit / npx eslint src → exit 0 / exit 0
+baseline npx vitest run      → Test Files 110 passed (110) · Tests 2680 passed | 3 skipped (2683)
+N63 before: rm -rf dist && node esbuild.mjs --v2 --production --analyze → extension 168070 / 299921 ·
+                               webview 223600 / 600685 · sidebar 293929 / 329122; out/esbuild/sidebar.meta.json:
+                               outputs['dist/sidebar.js'].inputs['src/webview/shared/primitives/icons.tsx']
+                               .bytesInOutput = 17758
+N63 after (26 annotations, nothing else in icons.tsx) → extension 168070 · webview 223600 ·
+                               sidebar 278401 / 329122 (−15528) · icons.tsx bytesInOutput 2284; dist/ deleted after
 npx tsc --noEmit / npm run check-types → exit 0 / exit 0
-npx eslint src / npm run lint → exit 0, no output / exit 0
-npx vitest run --project frontend src/webview/shared → Test Files 22 passed (22) · Tests 145 passed (145): the
-                               row's gate. New: MessageBus 14, useMessageBus 2, useResource 15, session 10,
-                               projects 6, installed 9, ops 12, StoreProvider 2 (70). The three titles of
-                               the row are there verbatim: `late response is discarded` and `invalidated key
-                               re-requests` in `store/useResource.test.tsx`, `pending toggle renders before
-                               commit` in `store/session.test.tsx`.
-the same, 40 times in a row  → 40 of 40 green (no timer in the new tests)
-npx vitest run --project backend src/test/lint → Test Files 5 passed (5) · Tests 115 passed (115)
-npx vitest run --project frontend → Test Files 42 passed (42) · Tests 757 passed (757)
-npm test (NUIGET_SDK_TESTS=1, DOTNET_ROOT set) → Test Files 108 passed (108) · Tests 2659 passed (2659)
-npx vitest run               → Tests 2656 passed | 3 skipped (2659)
-npx vitest run --coverage    → exit 0 · all files lines 80.45 % · src/webview/** 3524 of 5154 lines, 68.37 %
-                               (ratchet 64, untouched; P3.6 decides it) · src/webview/shared/** 513 of 516
-                               lines · bus and store 269 of 270 lines · src/core/** 98.52 %
-npm run bench / bench:compare → exit 0 / exit 0 · Tests 112 passed | 1 skipped (113)
-npm run docs:protocol:check  → exit 0 (no protocol file changed)
-node esbuild.mjs --v2 (after rm -rf dist) → exit 0 · dist/: extension.js, sidebar.js, webview.js and their
-                               maps, no CSS file · grep -c createFakeHost over dist/*.js → 0
-negative control             → 99 mutations, one at a time, against `src/webview/shared/{bus,store}`: 20 in
-                               `MessageBus.ts` (an answered or aborted request kept waiting, chunks, the
-                               generation, the error code, cancel, the pre-aborted signal, the listing and
-                               its order, handler removal, anything taken for an envelope, dispose), 22 in
-                               `useResource.ts` (the latest-wins rule on both paths, the generation rule with
-                               `<=`, without it, for an answer without generation, the second request and
-                               its limit, which events ask again, every part of the cleanup, the data of the
-                               previous key, what an error and a new request do to the list, the flags,
-                               Retry, the idle state), 16 `session.tsx`, 9 `projects.tsx`, 11
-                               `installed.tsx`, 20 `ops.tsx`, 1 `StoreProvider.tsx`. First run 98 caught: the
-                               survivor showed that after a key change the answer for the key that was left
-                               could replace the new key's data when a requester does not pass the signal
-                               on; the code was already right (`latest++` in the cleanup), no test said so,
-                               and one was added. Final: 99 of 99 caught; every file restored (`cmp`).
-after the last edits         → a comment in `store/ops.tsx`, one test of `store/ops.test.tsx` and the two STATUS
-                               files changed after the gate run above. Run again then: npx tsc --noEmit →
-                               exit 0 · npx eslint src/webview/shared → exit 0 · npm run check-types → exit 0 ·
-                               npx vitest run --project frontend src/webview/shared → 22 files, 145 tests ·
-                               npm test → 108 files, 2659 tests · the three mutations of `ops.tsx` that
-                               the changed test covers, re-run and caught. Not run again: bench, coverage.
-grep -rn "from '.*core/" src/webview/shared/bus src/webview/shared/store → 0 lines (protocol only)
-git diff --stat c48d30b -- vitest.config.mts eslint.config.mjs esbuild.mjs package.json tsconfig.vitest.json src/protocol src/core src/host docs/adr → empty
+npx eslint src               → exit 0, no output
+npx vitest run --project frontend src/webview/shared → Test Files 27 passed (27) · Tests 190 passed (190)
+                               (primitives alone: 19 files, 120 tests; new: Dialog 11, ConfirmDialog 7, Popover 15,
+                               Tabs 5, Toolbar 6, composed +1). The row's gate "axe 0": every new test file ends in
+                               `has no axe violations`, the layer tests over `document.body` with
+                               `aria-dialog-name` asserted as `passes`
+npx vitest run --project backend src/test/lint → Test Files 6 passed (6) · Tests 117 passed (117)
+                               (new: webview-icons-pure 2; webview-tokens requires the two widget tokens)
+negative control (icons)     → icons.tsx stashed (unannotated): `every icon is a pure call` fails; restored
+negative control (layers)    → 40 mutations, one at a time, of Dialog, ConfirmDialog, Popover, Tabs, Toolbar and
+                               layers.ts against the six test files: first run 33 caught; tests added for the
+                               real survivors (a press on text that takes no focus; Escape does not reach the
+                               page; a popover stays open while a dialog opened from it is pressed; a
+                               pointer-only button after the last control; focus on Cancel with a link in the
+                               message). Final 38 of 40 caught; the two left are equivalent: `isInLayerAbove`
+                               over `slice(index)` (a layer contains nothing outside its own element) and
+                               `restoreFocus` without the "focus was inside" guard (React DOM puts focus back on
+                               the element that had it before a commit when a commit's cleanup moved it; the
+                               guard stays as stated intent). Every file restored (`git diff` clean of mutants)
+the six new or changed primitive test files, 40 times in a row → 40 of 40 green
+npx vitest run               → Test Files 116 passed (116) · Tests 2727 passed | 3 skipped (2730)
+npm test (NUIGET_SDK_TESTS=1, DOTNET_ROOT set) → Test Files 116 passed (116) · Tests 2730 passed (2730)
+npm run bench               → exit 0 · Test Files 18 passed (18) · Tests 112 passed | 1 skipped (113)
+npx vitest run --coverage    → no threshold error · all files lines 80.98 % · src/webview/{shared,main,sidebar-next}/**
+                               847 of 855 lines, 99.06 % (floor 85) · src/webview/** 70.23 % (ratchet 64) ·
+                               primitives 458 of 464 · new files lines/branches: Dialog 100/95, ConfirmDialog
+                               100/100, Popover 97.1/86.2, Tabs 100/100, Toolbar 97.87/88.88, layers 100/83.33
+npm run docs:protocol:check  → SKIPPED: no protocol file changed
+npm run package:vsix, npm run check:vsix → SKIPPED: no host, extension, esbuild or packaging file changed (P3.3
+                               precedent); CI builds and packages the 1.x entries
+npm run test:ui              → SKIPPED: no 1.x UI changed and the 2.0 suites open no dialog yet; CI runs both
 test -e .claude/.contract-change → false
-npm run package:vsix, npm run check:vsix, npm run test:ui → SKIPPED: no host, packaging, protocol or UI file
-                               changed; CI runs them
-CI                           → see the tracker row of P3.3
+git diff --stat 587499e -- src/protocol src/core docs/adr package.json esbuild.mjs vitest.config.mts → empty
 ```
 
 ## Done (tested)
 
-P3.3, the webview's side of the protocol (ADR-001, ADR-002, ADR-007, ADR-008); the seven rules of the
-harness's `FakeWebview` are implemented as follows.
+P5.1 (ADR-008 primitives `Dialog`, `Popover`, `Tabs`; interaction model §5 and §8; findings U2, U6, U9, N63):
 
-- `bus/MessageBus.ts`: `createMessageBus(port, source)`. `request(type, payload, { signal, onChunk })`
-  resolves with `{ result, generation }` or rejects with `ProtocolRequestError`; one outcome per request;
-  responses, chunks and anything else for an id that is not waiting are dropped (R5, and "stale by id");
-  abort posts `cancel`, rejects at once and forgets the id; `parseOutbound` on every message;
-  `onEvent(type, handler)`; `listedGeneration(key)` from `keys[]` of `resources/invalidated`, set before the
-  handlers of the event run (R7); `dispose`.
-- `bus/useMessageBus.tsx`: `MessageBusProvider` and `useMessageBus()`.
-- `store/useResource.ts`: R3 (asks again when an event names the key; what is shown stays, `revalidating`),
-  R4 (the latest request wins; a new request and a key change cancel the one before; no render pairs a key
-  with another key's data), R7 (an answer below the listed generation of the same key is not applied; equal,
-  higher, none, or a key no event named: applied). `refresh()` for "Retry". Errors end loading and leave a
-  shown list in place.
-- `store/session.tsx`: R1 (asks `session/get` on start; a snapshot applies only above the last applied
-  `rev`). Committed and pending: `set(intent)` renders at once, the intent leaves when its own `session/set`
-  is answered (ok: the committed snapshot is under it; error: taken back); intents lie oldest first.
-  `useSession()` (`session`, `committed`, `isPending`) and `useSessionActions()` (stable).
-- `store/projects.tsx`: R1 (asks `projects/list` on start), R2 (`projects/changed` replaces the list), R7 for
-  the key `projects`; no request on an invalidation.
-- `store/installed.tsx`: R3 for the committed project (not a pending one; nothing without a project or in
-  all-projects mode), through `useResource`; `metadata` chunks by lower-cased package id per project.
-- `store/ops.tsx`: R5: `active` from `ops/progress`, `last` (with a sequence number) from `ops/completed`
-  and from the response of `run`, once per `opId`; `isPackageBusy(project, id)`, `isBusy`;
-  `useOpsActions().run(type, payload)` (stable).
-- `store/StoreProvider.tsx`: the bus and the four slices; also under `StrictMode` every slice ends with the
-  answer to its latest request.
-- `bus/testSupport.ts`: `createFakeHost()`, the real bus over an `EventTarget` (see Deviations).
+- `primitives/layers.ts`: one stack of open layers per page. Only the topmost answers Escape, traps focus or
+  closes on an outside press; `tabbables`, `focusInto`, `restoreFocus` (focus goes back to the opener only
+  when it was inside the closing layer or nowhere). Not in the barrel.
+- `primitives/Dialog.tsx`: modal, portalled to the body, `role="dialog"` or `alertdialog`, `aria-modal`,
+  named by its `h2` title, optional description (a `div`, so it may hold a list) and named close button.
+  Focus moves to `initialFocus` or the first tabbable control (the dialog itself when there is none); Tab and
+  Shift+Tab wrap; focus that lands outside is taken back; Escape closes and does not reach the page; focus
+  returns to the opener. A dialog opened from a dialog stacks, and Escape closes only the top one.
+- `primitives/ConfirmDialog.tsx`: the `alertdialog` of interaction model §5 with `confirm-dialog`,
+  `confirm-dialog-confirm`, `confirm-dialog-cancel` (§8); opens on Cancel; `busy` disables Confirm.
+- `primitives/Popover.tsx`: non-modal `role="dialog"` (named by `label` or `labelledBy`), anchored to an
+  element or a point; `placePopover()` puts it below, above when there is more room there, inside the
+  viewport by 4 px; placed with `--nuiget-popover-x`/`-y` through `cssVars()` and hidden until placed.
+  Escape or Tab past either end closes it and returns focus to the anchor; a press outside (not on the
+  anchor, which toggles) closes it and leaves focus there; focus moved out by other means closes it. It
+  follows window resize and scroll.
+- `primitives/Tabs.tsx`: `tablist`/`tab`/one `tabpanel`; the selected tab is the one tab stop, controls the
+  panel and names it; ArrowLeft/ArrowRight (wrapping), Home, End select and focus; an optional count is a
+  `Badge` and part of the name ("Updates 3").
+- `primitives/Toolbar.tsx`: `role="toolbar"` with a roving tab stop over its enabled controls, written to the
+  DOM and kept by a `MutationObserver` (a control that mounts later is no second stop; a disabled stop hands
+  it to the first control); ArrowLeft/ArrowRight (wrapping), Home, End; in a text field these move the caret,
+  and an arrow leaves the field at the edge of its text.
+- `primitives/composed.test.tsx`: the three 1.x dialogs (Source Settings `SourceSettingsOverlay.tsx:85`, its
+  Remove Source confirmation `:295`, the Multi Install picker `PackageDetailsPanel.tsx:316`) rebuilt from the
+  primitives on a page with the details tabs and a bulk toolbar: no axe violation with the popover open and
+  with the confirmation over the settings dialog.
+- `primitives/primitives.css`: rules for the layers, tabs and toolbar, a disabled `.nuiget-button` (no
+  opacity), focus outlines for tabs, dialogs and popovers; `tokens.css`: `--nuiget-color-widget-bg|fg`
+  (aliases of `--vscode-editorWidget-background|foreground`, `Canvas`/`CanvasText` under forced colours).
+- `primitives/icons.tsx`: `/* @__PURE__ */` before each of the 26 `React.memo` calls (N63);
+  `src/test/lint/webview-icons-pure.test.ts`: `every icon is a pure call` and a scanner test.
+- `primitives/testSupport.ts`: `installFakeViewport()` (window size and boxes of chosen elements), next to
+  `installFakeLayout()`, which it does not change.
 
-Before P3.3 (unchanged; details in the commits `3794311`, `81ec41d`, `c48d30b` and their versions of this
-note): `tokens.css`; `primitives/` with `Listbox`, `Row`, `SectionHeader`, `IconButton`, `Badge`,
-`LiveStatus`, `EmptyState`, `Skeleton`, `Spinner`, `ProgressBar`, `Banner`, `Sash`, the icons, `cssVars`, the
-barrel `index.ts`, `primitives.css` and `testSupport.ts` (75 tests); the lint tests
-`src/test/lint/webview-{colours,tokens,stylesheets}.test.ts`.
+Before P5.1 (unchanged; details in the commits `3794311`, `81ec41d`, `c48d30b`, `5bc53c1` and their versions
+of this note): `tokens.css`; the twelve primitives of P3.2 with the icons, `cssVars`, the barrel and
+`testSupport.ts`; the bus (`bus/`) and the store slices `session`, `projects`, `installed`, `ops` with
+`useResource` (`store/`) of P3.3; the lint tests `src/test/lint/webview-{colours,tokens,stylesheets}.test.ts`.
 
 ## Done (untested)
 
-- Against the real host. The tests drive the real bus with a fake host that says what a test makes it say.
-  That the product's bus and store agree with `SidebarHost` and the composition root (the order of
-  `resources/invalidated`, `projects/changed`, responses and their generations) is shown for the *model*
-  by the harness (`src/test/harness`), not yet for this code: P3.4 mounts it in the sidebar and P3.5 runs it
-  in VS Code. The harness could drive these slices in place of its `FakeWebview`; no item asks for that yet.
-- A request that is on its way when the surface is hidden and shown again: ADR-001 asks for a fresh
-  `session/get` on every resolve and re-show. Mounting does it; what "re-show" is for a webview that keeps
-  its context belongs to the entry (P3.4).
-- The out-of-date answer with nothing newer on its way (`useResource.ts:85-96`) needs a host that answers a
-  request sent after an invalidation with a result from before it. The real host does not do that (the
-  coordinator rejects an overtaken computation, the Catalog retries); the path exists so that loading ends.
-- Nothing here is in a bundle or has rendered in a browser (P3.4); the notes of P3.2 on layout, scrolling,
-  pointer capture and screen readers stand.
-- `projects.tsx` and `useResource.ts`: a rejection that is no `ProtocolRequestError` is wrapped as `failed`;
-  the bus never rejects with anything else, so the branch has no test (branch coverage 88 % and 91 %).
+- In a browser. Nothing of P5.1 is rendered by a surface yet: the main shell (P5.3) is the first consumer of
+  `Tabs`, the bulk dialog of P5.4 the first of `ConfirmDialog` and `Toolbar`. jsdom lays nothing out, so the
+  look of the layers, the 100vw/100vh limits of a popover, scrolling inside a dialog and the tab underline are
+  unverified until the ExTester tests of those items.
+- Screen readers. The roles and names are checked by axe and Testing Library; how a reader announces an
+  `alertdialog` on open, and whether VS Code's webview passes `aria-modal` on, is P7.4's manual pass.
+- `Popover` follows `resize` and `scroll`; no test fires them (placement itself is tested through
+  `placePopover` and on open).
+- The other notes of P3.2 and P3.3 on layout, the real host and `useResource.ts:85-96` stand.
 
 ## Not started
 
-- The other slices of ADR-008 (`updates`, `transitive`, `search`, `details`, `allProjects`, `sources`) and
-  rule 3's all-projects branch (`allProjects/installed`, its `project` chunks): with their features, P3.4
-  for what the sidebar slice needs and P5 for the rest. Rule 6 (every envelope kept verbatim) is the
-  harness's recorder, not product behaviour.
-- Creating the bus from `acquireVsCodeApi()`, `getState`/`setState` for surface-local state, `perf/mark`:
-  the entry, P3.4.
-- Space, PageUp/PageDown, type-ahead and multi-selection in `Listbox`: P5. An icon of its own for an error,
-  `PackageIcon`, `BookIcon`: with their first consumer. The coverage ratchet of `src/webview/**`: P3.6.
+- A menu (`role="menu"`) for the actions menu of a row (Shift+F10, right-click): P5.10 decides between a
+  `Popover` of buttons and a menu primitive; the 1.x sidebar asks the host for a native context menu.
+- A dimmed backdrop behind a dialog: no `--vscode-*` variable exists for one (P5.11 may revisit).
+- The other slices of ADR-008 (`updates`, `transitive`, `search`, `details`, `allProjects`, `sources`): with
+  their first consumer (P3.6 ruling): P5.4 to P5.8, P5.2 closes the sweep.
+- Space, PageUp/PageDown, type-ahead and multi-selection in `Listbox`: P5 (bulk selection with P5.4).
 
 ## Deviations from contract/ADR (file:line each)
+
+P5.1:
+
+- The P3.6 ruling's test wording "every line matching `React.memo(` in that file is preceded by the
+  annotation" matches no line: each call is `React.memo<IconProps>(`. `src/test/lint/webview-icons-pure.test.ts`
+  matches `React.memo` with or without type arguments, asserts that there are 26 such calls (one per exported
+  icon, so the check cannot pass on an empty match) and that each has `/* @__PURE__ */` (or `#__PURE__`)
+  directly before it. The ruling names this lint file and `icons.tsx` as the item's files beyond the row.
+- `src/webview/shared/tokens.css` and `src/test/lint/webview-tokens.test.ts`: two colour tokens
+  (`--nuiget-color-widget-bg`, `-fg`), added as the gotcha row "Colour literal in a 2.0 webview file" prescribes
+  (an alias of a `--vscode-*` variable, its name in the token test). Not named by the row.
+- `primitives/layers.ts`: a module the row does not name; `Dialog` and `Popover` share the stack, so it is
+  neither's. `primitives/testSupport.ts` gains `installFakeViewport()` (test only, not in the barrel).
+- `Dialog` is a `div` with `role="dialog"`, not a native `<dialog>` with `showModal()`: jsdom 30.1.2 implements
+  no `showModal` (`node_modules/jsdom/lib/jsdom/living/nodes/HTMLDialogElement-impl.js` is an empty class), and
+  the stacking, Escape and focus rules are the same for both layer kinds. The page behind is not dimmed (no
+  theme colour for a scrim); the layer takes the pointer.
+- `Popover` has `role="dialog"` only; ADR-008 says "Popover (portal, collision)" and names no role. A popover
+  that opens after a dialog is lifted to `--nuiget-z-dialog` (`.nuiget-dialog-layer ~ .nuiget-popover`) and
+  stacks above it by document order; otherwise it is at `--nuiget-z-popover`.
+- `Tabs` renders the selected panel only, and only the selected tab has `aria-controls` (a reference to a panel
+  that is not in the document fails axe's `aria-valid-attr-value`). Tabs select on focus (automatic
+  activation); a panel that loads slowly is the feature's loading state, not a reason for manual activation.
+- "Covers all three legacy dialogs" is met at the level of the primitives (the composed test rebuilds them);
+  the features port them: Source Settings and Remove Source at P5.8, Multi Install at P5.9 (U2's row).
+- ADR-008 "Dialog (focus trap, restore, Escape, `role="dialog"`/`aria-modal`)": `ConfirmDialog` uses
+  `role="alertdialog"` with `aria-modal`, the role WAI-ARIA gives a confirmation that interrupts.
 
 P3.3:
 
@@ -225,6 +245,13 @@ P3.2 (unchanged):
   `grep -c '!important'` counts 0.
 
 ## Advisor decisions (date, item, question, answer verbatim)
+
+2026-10-14, P5.1: no L1 consultation (the item is not ⚑ and no stop-and-ask trigger fired). The ambient advisor
+was consulted before writing; its points are in the code and above: axe over `document.body` for portalled
+layers and a required name for every layer; the lint test asserts the count of 26 because the ruling's
+pattern matches nothing; the widget tokens under the gotcha row's permission; one stack for both layer kinds;
+U6's closing item reconciled to P5.7; the "before" bytes measured after the baseline and before touching
+`icons.tsx`; the new focus tests run 40 times.
 
 2026-10-13, P3.3: no L1 consultation (the item is not ⚑ and no stop-and-ask trigger fired). The ambient advisor
 was consulted before writing and before the commit; its points are in the code and in "Deviations" above
@@ -327,7 +354,7 @@ FILES CHECKED: `docs/plans/2026-10-11-nuiget-2.0-execution-plan.md:41-175,240-25
 
 ## Exact next step (one item ID)
 
-P3.4 (sidebar slice). The entry creates the bus (`createMessageBus(acquireVsCodeApi())`), mounts
-`StoreProvider`, imports `tokens.css` and the primitives from `primitives/index.ts`; data requests follow
-`useSession().committed`; a test that renders a `Listbox` calls `installFakeLayout()`, one that talks to the
-host uses `createFakeHost()`.
+P5.3 (main shell). `Tabs` gives the main tab bar (`tab-bar`, `installed-tab`, `updates-tab` as `data-testid` of
+the list and the tabs); a test of anything that opens a `Dialog`, `ConfirmDialog` or `Popover` runs
+`axe(document.body)`; the shell's stylesheet and `tokens.css` imported by the main entry give `dist/webview.css`
+(N62).

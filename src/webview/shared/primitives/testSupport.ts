@@ -75,3 +75,50 @@ export function axeRuleOutcome(results: object, ruleId: string): AxeRuleOutcome 
     const outcomes: AxeRuleOutcome[] = ['violations', 'passes', 'incomplete', 'inapplicable'];
     return outcomes.find(outcome => filed[outcome]?.some(rule => rule.id === ruleId));
 }
+
+/** A viewport and the boxes of chosen elements, for placing a `Popover`; every other element keeps jsdom's 0 by 0. */
+export interface FakeViewport {
+    width: number;
+    height: number;
+    /** The box of the first element that matches a selector, by selector. */
+    rects?: Record<string, { left: number; top: number; width: number; height: number }>;
+}
+
+/** Gives the window a size and the matching elements a box until the returned function is called. */
+export function installFakeViewport({ width, height, rects = {} }: FakeViewport): () => void {
+    const restore: Array<() => void> = [];
+    for (const [name, value] of [['innerWidth', width], ['innerHeight', height]] as const) {
+        const original = Object.getOwnPropertyDescriptor(window, name);
+        Object.defineProperty(window, name, { configurable: true, writable: true, value });
+        restore.push(() => {
+            if (original) {
+                Object.defineProperty(window, name, original);
+            }
+        });
+    }
+    const original = Object.getOwnPropertyDescriptor(Element.prototype, 'getBoundingClientRect');
+    const jsdomRect = Element.prototype.getBoundingClientRect;
+    Object.defineProperty(Element.prototype, 'getBoundingClientRect', {
+        configurable: true,
+        writable: true,
+        value(this: Element): DOMRect {
+            const selector = Object.keys(rects).find(candidate => this.matches(candidate));
+            if (selector === undefined) {
+                return jsdomRect.call(this);
+            }
+            const { left, top, width: w, height: h } = rects[selector];
+            return { x: left, y: top, left, top, width: w, height: h, right: left + w, bottom: top + h, toJSON: () => ({}) };
+        },
+    });
+    restore.push(() => {
+        if (original) {
+            Object.defineProperty(Element.prototype, 'getBoundingClientRect', original);
+        }
+    });
+    return () => {
+        for (const undo of restore.reverse()) {
+            undo();
+        }
+        restore.length = 0;
+    };
+}
