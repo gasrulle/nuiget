@@ -33,6 +33,8 @@ npm run docs:protocol:check  → docs/protocol.md is up to date
 npm run package:vsix (1.x entries, NUIGET_V2 unset, after rm -rf dist) → exit 0 · nuiget-v1.18.9.vsix (17 files,
                                531.13 KB) · npm run check:vsix → OK
 test -e .claude/.contract-change → false
+npx vitest run --project frontend src/webview/main, 40 times in a row (after the commit 7385eeb) → 40 of 40 green
+npm run test:ui (the 1.x ExTester suite) → SKIPPED: no 1.x UI file changed; the CI job `UI` runs it
 rm -rf dist && NUIGET_V2=1 npm run package && npm run check:vsix → dist/webview.css written · check:vsix: OK (N62)
 rm -rf dist && node esbuild.mjs --v2 --production --analyze → extension 168070 / 299921 · webview 244753 /
                                600685 (placeholder 223600 before) · sidebar 278568 / 329122 (unchanged); dist/ deleted

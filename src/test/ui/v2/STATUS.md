@@ -31,6 +31,13 @@ NUIGET_V2=1 npm run test:ui:v2 -- --storage /tmp/nuiget-ui-v2 (macOS, VS Code of
           the row gone: recorded as N66 (not changed here, the test and the sidebar are not this item's)
   run 3 → 6 passing (6s): renders the shell under the CSP · reaches the tabs by keyboard · the four sidebar tests
 npm run check:vsix after each ExTester run (the build ExTester packaged with NUIGET_V2=1) → check:vsix: OK
+CI run 38625758047 (7385eeb) → 10 of 11 jobs success; `UI 2.0`: every test passing, then the new step `Check
+                               VSIX contents (2.0)` failed: "1 file(s) are outside the allow-list … ui-v2-output.txt".
+                               The log the test step tees into the checkout was selected for the VSIX (also for the
+                               one ExTester packaged and installed). Locally the log goes to the scratchpad, so the
+                               check passed there. Fixed forward (P5.3, N62): the log is written to `$RUNNER_TEMP`
+                               and uploaded from there. The 1.x `UI` job tees `ui-output.txt` into the checkout the
+                               same way and runs no `check:vsix`; left as it is (1.x, retired at P8.2)
 git status --porcelain src/test/e2e → clean after every run
 ```
 
@@ -136,6 +143,11 @@ P5.3:
 
 - The P3.5 ruling below (steps 4 and 5, DO NOT) says a v2 suite never opens the main panel, for N62. The P3.6
   ruling replaced that rule in P5.3, which opens it; the ruling stays verbatim, the gotcha row is rewritten.
+- The P3.6 ruling names one step of `ci.yml` for P5.3. The fix-forward also changes the `tee` target of the step
+  before it and the upload path of the step after it: the check the ruling asked for refuses the log the job
+  wrote into the checkout, and the VSIX under test should not carry it either.
+- The P3.6 ruling says to delete the comment at `.github/workflows/ci.yml:325` (above the `ui-v2` job). It is
+  rewritten instead: the job still needs a sentence saying why `NUIGET_V2` is set and what `check:vsix` checks.
 - `mainWebview.ts` imports `driverOf` and `poll` from `sidebarWebview.ts` (P3.5's helper, unchanged) instead of
   moving them into a shared module; P5.12b decides the final shape of the v2 helpers.
 
