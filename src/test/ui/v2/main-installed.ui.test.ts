@@ -26,7 +26,10 @@ describe('2.0 main panel: Installed tab', () => {
         fs.writeFileSync(csprojPath, originalCsproj, 'utf-8');
     });
 
-    beforeEach(async () => {
+    beforeEach(async function () {
+        // This file runs first, right after VS Code starts: the palette and the webview may take a while. Mocha's
+        // default of 2 s is the hook's limit otherwise; the helpers' own polls are bounded within this one.
+        this.timeout(150_000);
         await openMainPanel();
         await enterMainWebview();
     });

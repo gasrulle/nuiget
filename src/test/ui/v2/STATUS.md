@@ -25,6 +25,10 @@ NUIGET_V2=1 npm run test:ui:v2 -- --storage /tmp/nuiget-ui-v2 → 10 passing (9s
                                bulk uninstall dialog cancels on Escape and leaves the project file as it was ·
                                confirms the bulk uninstall and the project file follows · the two main-shell tests
                                · the four sidebar tests; check:vsix on that build → OK; git status src/test/e2e → clean
+CI run 38634627520 (7f8dfd1) → 10 of 11 jobs success; `UI 2.0`: the six other v2 tests passing, `main-installed`'s
+                               "before each" hook failed with "Timeout of 2000ms exceeded": the hook had Mocha's
+                               default limit, and on CI this file runs right after VS Code starts. Fixed forward
+                               (P5.4): the hook sets `this.timeout(150_000)`; the helpers' polls stay bounded
 ```
 
 P5.3:
