@@ -427,8 +427,8 @@ headline defects in the order the plan lists them, so that salvage commits can c
 | C-cache-http-3 | TieredCache unintegrated | P1.4, P1.9, P4.2 | open |
 | C-cache-http-4 | Icon data URIs persisted up to ~128 MB | P1.4, P1.9, P4.2 | open; cache side done in P1.4 (the persistent tier has a budget of 8 MiB), closes at P4.4 when icons go through `TieredCache` |
 | C-cache-http-5 | Proxy claim unimplemented | P1.4, P1.9, P4.2 | closed (P4.1: ADR-005 claims only what the extension host does for an extension's requests; docs/adr/005-proxy-matrix.md) |
-| C-feeds-1 | 9 of 17 files missing | P4.3 to P4.9 | open |
-| C-feeds-2 | Transient outage → 24 h miss | P4.3 to P4.9 | open |
+| C-feeds-1 | 9 of 17 files missing | P4.3 to P4.9 | open; progressed in P4.3: `types`, `wire`, `relevance`, `health`, `serviceIndex`, `flatContainer` copied from the quarry working tree with tests; the rest with P4.4 to P4.8 |
+| C-feeds-2 | Transient outage → 24 h miss | P4.3 to P4.9 | open; progressed in P4.3: the flat container's `icon()` answers `found`, `missing` (404, 410, too large, no usable body, no flat container) or `failed` (network, timeout, 5xx, 429, cancelled); P4.4 caches `missing` only |
 | C-feeds-3 | No OutboundPolicy implementation | P4.3 to P4.9 | open |
 | C-feeds-4 | Ctor shapes mismatch composition root | P4.3 to P4.9 | open |
 | C-project-catalog-1 | Inspector/evaluator/mutator/references/context missing | P2.2 to P2.8, P6 | open; references done in P2.3, inspector in P2.4, context in P2.5; evaluator P6.2, mutator P6.3 |
