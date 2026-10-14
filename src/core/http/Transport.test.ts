@@ -290,18 +290,46 @@ describe('NodeTransport: redirects', () => {
 
     it('a redirect target that does not resolve is refused with redirect-blocked', async () => {
         const { origin } = await serve((_request, response) => {
-            response.writeHead(302, { location: 'http://nowhere.example/v3/index.json' });
+            // `.invalid` never resolves (RFC 6761): the proxied half below goes out to the real resolver.
+            response.writeHead(302, { location: 'http://nowhere.invalid/v3/index.json' });
             response.end();
         });
         const result = await transport({ resolver: async () => [] }).fetch({ url: origin });
         expect(result).toMatchObject({ ok: false, code: 'redirect-blocked' });
-        expect(!result.ok && result.message).toContain('nowhere.example does not resolve');
+        expect(!result.ok && result.message).toContain('nowhere.invalid does not resolve');
         // With a proxy in use the proxy resolves names: no local lookup, the string checks alone apply.
         const resolver = vi.fn(async () => [] as string[]);
         const proxied = transport({ resolver, proxy: { isConfigured: () => true } });
         const viaProxy = await proxied.fetch({ url: origin, timeoutMs: 300 });
         expect(resolver).not.toHaveBeenCalled();
         expect(viaProxy).not.toMatchObject({ code: 'redirect-blocked' });
+    });
+
+    it('a lookup that fails is not cached: the next redirect asks again (N67)', async () => {
+        const target = await serve((_request, response) => response.end('landed'));
+        const port = new URL(target.origin).port;
+        const { origin } = await serve((_request, response) => {
+            response.writeHead(302, { location: `http://feed.example:${port}/v3/index.json` });
+            response.end();
+        });
+        let calls = 0;
+        // A transient failure first (EAI_AGAIN), then the name resolves. The redirect target is reached through the
+        // loopback server, which the test allows; the name only has to pass the resolved-address check.
+        const resolver = vi.fn(async () => {
+            calls++;
+            if (calls === 1) {
+                throw Object.assign(new Error('getaddrinfo EAI_AGAIN feed.example'), { code: 'EAI_AGAIN' });
+            }
+            return ['127.0.0.1'];
+        });
+        const lookup: RequestFunction = (options, callback) => http.request({ ...options, hostname: '127.0.0.1' }, callback);
+        const t = transport({ resolver, httpRequest: { http: lookup, https: lookup } });
+        expect(await t.fetch({ url: origin })).toMatchObject({ ok: false, code: 'redirect-blocked' });
+        expect(text(await t.fetch({ url: origin }))).toBe('landed');
+        expect(resolver).toHaveBeenCalledTimes(2);
+        // A name that resolved is cached: the third redirect does not ask.
+        expect(text(await t.fetch({ url: origin }))).toBe('landed');
+        expect(resolver).toHaveBeenCalledTimes(2);
     });
 
     it('forwards Authorization to the same origin and drops it for another origin', async () => {

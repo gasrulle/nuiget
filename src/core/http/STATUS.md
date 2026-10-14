@@ -36,6 +36,11 @@ npx vitest run --coverage    → exit 0 · src/core/** 2979 of 3064 lines, 97.23
                                78.69 % branches · ssrf.ts 95.83 % lines
 npm run package:vsix, check:vsix, docs:protocol:check, test:ui, test:ui:v2 → SKIPPED: no host, extension, packaging,
                                protocol or webview file changed; nothing imports `Transport` before P4.9
+fix-forward (N67, after the advisor's review of bac22e5): only DNS answers with addresses are cached;
+                               new test `a lookup that fails is not cached: the next redirect asks again (N67)`, which
+                               fails with the old unconditional cache; the dead rejection branch of `withinDeadline`
+                               removed; the one test that reaches the real resolver uses `nowhere.invalid` (RFC 6761)
+npx vitest run --project backend src/core/http → Tests 101 passed (101) · Transport.test.ts 30, 40 times → 40 of 40
 ```
 
 P4.1:
@@ -164,6 +169,9 @@ P4.2:
   Node built-ins cannot be spied on, and the P4.1 test `passes no agent to the request functions so the host proxy patch
   applies` must see the options. The default calls `http.request`/`https.request` at call time, so the host's patch of
   the module object runs in the extension host.
+- `a redirect target that does not resolve is refused with redirect-blocked`, second half: with the proxy predicate true
+  the redirect goes out to the real resolver for `nowhere.invalid` (RFC 6761 guarantees no answer), and the request ends
+  by its 300 ms deadline or a network failure. It is the one test that leaves the machine.
 - `reset()` also clears the DNS cache of redirect targets (the ruling names the sessions and the downgrades): a setting
   change may change what resolves.
 - The quarry's `rejectUnauthorized: true` on `http2.connect` is kept: it states the default explicitly; nothing disables

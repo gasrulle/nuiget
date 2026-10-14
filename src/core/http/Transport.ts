@@ -728,7 +728,8 @@ export class NodeTransport implements Transport {
                 resolve(value);
             };
             ctx.signal?.addEventListener('abort', onAbort, { once: true });
-            work.then(finish, () => finish([] as unknown as T));
+            // `work` is `resolve()`, which never rejects.
+            void work.then(finish);
         });
     }
 
@@ -745,7 +746,11 @@ export class NodeTransport implements Transport {
             this.logger?.debug(`Could not resolve ${hostname}: ${errorMessage(error)}`);
             addresses = [];
         }
-        this.dnsCache.set(hostname, { addresses, expires: now + DNS_CACHE_MS });
+        // Only an answer with addresses is cached: an empty answer or a failed lookup may be transient (the resolver
+        // cannot tell a missing name from a timeout), and caching it would refuse the host for a minute (N67).
+        if (addresses.length > 0) {
+            this.dnsCache.set(hostname, { addresses, expires: now + DNS_CACHE_MS });
+        }
         return addresses;
     }
 }
