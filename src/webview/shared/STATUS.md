@@ -1,4 +1,4 @@
-# STATUS — src/webview/shared   commit 9000208 (parent of the P5.4 commit a)   2026-10-14T23:10:00Z
+# STATUS — src/webview/shared   commit e4a7f4f (parent of the P5.4 commit b)   2026-10-14T23:10:00Z
 
 Scope of this note: `src/webview/shared/**`, the code both 2.0 webviews share, and the test wiring it needs
 (`src/test/setup-frontend.ts`, `src/test/jest-axe.d.ts`, `src/test/lint/webview-*.test.ts`).
@@ -7,12 +7,39 @@ git status --porcelain --untracked-files=all: ` M src/webview/shared/store/ops.t
 `src/webview/sidebar-next/{InstalledSection.tsx,STATUS.md}`, `ARCHITECTURE.md`, `.github/copilot-instructions.md`,
 `docs/plans/STATUS.md`, `docs/plans/findings-ledger.md` (all belong to P5.4 commit a)
 
-Item: **P5.4 feature installed (main), commit a of three** (P5.4 stop-and-ask ruling of 2026-10-14, verbatim in
+Item: **P5.4 feature installed (main), commit b of three** (commit a `e4a7f4f`, N61, CI run 38631553549 green on all
+11 jobs). Earlier in this note: commit a. Commit b, also (P5.4 stop-and-ask ruling of 2026-10-14, verbatim in
 `docs/plans/STATUS.md`, "Advisor decisions"): N61 lands; the row stays `in-progress` until commit c. The
 ruling is an L1 consultation (stop-and-ask: `Listbox.tsx` is not among the row's files); commit a touches no
 file outside those the P3.6 ruling named for P5.4.
 
 ## Verified by running
+
+P5.4 commit b:
+
+```text
+npx tsc --noEmit / npm run check-types / npx eslint src → exit 0 / exit 0 / exit 0
+npx vitest run --project frontend src/webview/shared → Test Files 34 passed · Tests 235 passed (new: Listbox 4,
+                               Row 1, transitive 6, allProjects 5, StoreProvider 1)
+npx vitest run --project frontend (all webview tests) → Test Files 53 passed (53) · Tests 884 passed (884)
+npx vitest run --project backend src/test/lint → Test Files 6 passed (6) · Tests 117 passed (117)
+npx vitest run --project integration src/test/harness → Tests 16 passed (16), with `bulk remove partial failure
+                               reconciles: …` (the row's gate); that scenario alone, 40 times → 40 of 40
+Listbox, Row, transitive, allProjects and StoreProvider tests, 40 times in a row → 40 of 40
+npm test (NUIGET_SDK_TESTS=1, DOTNET_ROOT set) → Test Files 120 passed (120) · Tests 2790 passed (2790)
+npm run bench               → Test Files 18 passed (18) · Tests 112 passed | 1 skipped (113)
+npx vitest run --coverage    → exit 0 · src/webview/{shared,main,sidebar-next}/** 1034 of 1044 lines, 99.04 % (floor
+                               85) · src/webview/** 71.18 % (ratchet 64) · lines/branches: transitive.tsx 97.77/96,
+                               allProjects.tsx 96.42/86.84, Listbox.tsx 98.98/92.17, Row.tsx 100/97.14, rules.ts 100/100
+git diff --numstat e4a7f4f -- primitives/Listbox.test.tsx primitives/Row.test.tsx → 114 0 / 33 0 (additions only)
+grep -rn "from '../../sidebar-next|from '../sidebar-next" src/webview/main src/webview/shared → 0
+grep -c 'aria-multiselectable' primitives/Listbox.tsx → 2 · grep -c 'aria-current' primitives/Row.tsx → 2 (the
+                               attribute and its JSDoc; the ruling expected 1)
+git diff --stat e4a7f4f -- src/protocol src/core docs/adr src/host package.json esbuild.mjs vitest.config.mts
+                               eslint.config.mjs .github/workflows → empty · test -e .claude/.contract-change → false
+npm run package:vsix, check:vsix, docs:protocol:check, test:ui, test:ui:v2 → SKIPPED: no host, packaging, protocol
+                               or UI-test file changed in commit b, and nothing renders the new code yet (commit c)
+```
 
 P5.4 commit a:
 
@@ -85,6 +112,21 @@ git grep -n 'console.warn\|RESTORE\|AFTER\|TEST' -- primitives/layers.ts primiti
 ```
 
 ## Done (tested)
+
+P5.4 commit b (P5.4 ruling steps 3, 4 and 6):
+
+- `primitives/Listbox.tsx`, `Row.tsx`, `primitives.css`: multi-selection, additive. `selectedIds` and
+  `onToggleSelected`; with them the list is `aria-multiselectable`, `aria-selected` is the bulk set, `selectedId` is
+  the current row (`aria-current`), each option begins with an `aria-hidden` check mark, and Space, Ctrl+click,
+  Cmd+click and a click on the mark toggle (not on a disabled row). Without them nothing changes: every earlier
+  Listbox and Row test is unedited and green.
+- `installed/rules.ts`: `shownVersion`, `whyNotRemovable` and `IN_PROGRESS`, lifted unchanged from
+  `sidebar-next/InstalledSection.tsx` (which re-exports the two functions); `store/outcomes.ts`: `describeOutcome`,
+  lifted unchanged from `sidebar-next/outcomes.ts` (now a re-export). The sidebar tests are unedited and green.
+- `store/transitive.tsx` (+ 6 tests with the ruling's titles, among them `transitive/metadata answering
+  unsupported is no metadata, and the rows come from transitive/get alone`, the P3 review's non-blocking 6) and
+  `store/allProjects.tsx` (+ 5 tests with the ruling's titles); both mounted by `StoreProvider` (+1 test).
+- `src/test/harness/scenarios.test.ts`: the row's gate scenario (details in `src/test/harness/STATUS.md`).
 
 P5.4 commit a (N61, closed): `store/ops.tsx` `run(type, payload)` records the operation at the call under an id of
 the surface (`local:<n>`), with `kind` from the request type and `projectPaths`/`packageIds` read from the payload
@@ -165,6 +207,17 @@ of this note): `tokens.css`; the twelve primitives of P3.2 with the icons, `cssV
 - Space, PageUp/PageDown, type-ahead and multi-selection in `Listbox`: P5 (bulk selection with P5.4).
 
 ## Deviations from contract/ADR (file:line each)
+
+P5.4 commit b:
+
+- `installed/rules.ts` also holds `IN_PROGRESS` (the words of a busy row), which the ruling did not list: the main
+  panel's rows need it and may not import from `sidebar-next`. Lifted unchanged; `InstalledSection.tsx` imports it.
+- `store/transitive.tsx`: the metadata is kept with the result it was asked for, so a newer result shows no
+  metadata until its own `transitive/metadata` answer (no icon of a package that may have left the list).
+  `restore()` on a closed section opens it and asks with `forceRestore`.
+- `store/allProjects.tsx`: when the latest request is answered, chunks and metadata of projects the answer does not
+  list are dropped (a project that was deleted does not stay on screen); the ruling did not say what happens to them.
+- The harness scenario's two deviations from the ruling's assertions are in `src/test/harness/STATUS.md`.
 
 P5.4 commit a:
 
@@ -399,7 +452,7 @@ FILES CHECKED: `docs/plans/2026-10-11-nuiget-2.0-execution-plan.md:41-175,240-25
 
 ## Exact next step (one item ID)
 
-P5.4 commit b (the same tracker row): `Listbox`/`Row` multi-selection (`selectedIds`, `onToggleSelected`,
-`aria-current`, the `aria-hidden` check mark), the row rules lifted into `src/webview/shared/installed/rules.ts`
-and `describeOutcome` into `src/webview/shared/store/outcomes.ts`, the `transitive` and `allProjects` slices, and
-the harness scenario `bulk remove partial failure reconciles`, exactly as steps 3 to 6 of the P5.4 ruling say.
+P5.4 commit c (the same tracker row): the Installed feature of the main panel in `src/webview/main/features/installed/`
+(`InstalledTab`, one `InstalledProjectSection` per project in All Projects, `TransitiveSection`,
+`BulkUninstallDialog` over `ConfirmDialog`, the bulk `Toolbar`), the outcome announcement in `MainShell.tsx`,
+`src/test/ui/v2/main-installed.ui.test.ts`, CHANGELOG and the two gotcha rows, as steps 7 to 9 of the P5.4 ruling say.

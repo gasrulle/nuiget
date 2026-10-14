@@ -84,6 +84,32 @@
     forced-color-adjust: none;
 }
 
+/*
+ * A multi-selectable list has two selections: the rows selected for a bulk action (`aria-selected`, the quieter
+ * colour and a check mark) and the current row whose details are shown (`aria-current`, the selection colour).
+ */
+.nuiget-listbox[aria-multiselectable="true"] .nuiget-row-option[aria-selected="true"] {
+    background: var(--nuiget-color-list-inactive-bg);
+    color: inherit;
+}
+
+.nuiget-listbox[aria-multiselectable="true"] .nuiget-row-option[aria-current="true"] {
+    background: var(--nuiget-color-list-active-bg);
+    color: var(--nuiget-color-list-active-fg);
+    forced-color-adjust: none;
+}
+
+.nuiget-row-check {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    inline-size: var(--nuiget-icon-size-sm);
+    block-size: var(--nuiget-icon-size-sm);
+    border: 1px solid var(--nuiget-color-border);
+    border-radius: var(--nuiget-radius-sm);
+}
+
 .nuiget-row-option[aria-disabled="true"] .nuiget-row-name {
     color: var(--nuiget-color-fg-muted);
 }

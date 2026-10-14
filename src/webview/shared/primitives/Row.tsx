@@ -1,5 +1,6 @@
 import React, { useRef } from 'react';
 import { cssVars } from './cssVars';
+import { CheckIcon } from './icons';
 import { Spinner } from './Spinner';
 import './primitives.css';
 
@@ -12,6 +13,10 @@ export interface RowPlacement {
     /** The row that holds the list's tab stop (roving `tabIndex`). */
     active: boolean;
     selected: boolean;
+    /** In a multi-selectable list: the row whose details are shown (`aria-current`); `selected` is then the bulk set. */
+    current?: boolean;
+    /** In a multi-selectable list: the option begins with a decorative check mark that shows `selected`. */
+    checkable?: boolean;
     /** The id of the option element; its title and description ids derive from it. */
     optionId: string;
     /** Offset of the row from the top of the list, in pixels. */
@@ -48,7 +53,7 @@ export interface RowProps extends RowPlacement {
  * interactive content, which a screen reader cannot reach.
  */
 export function Row(props: RowProps): React.JSX.Element {
-    const { itemId, name, version, description, icon, badges, status, busy, disabled, actions, density, index, setSize, active, selected, optionId, offset, measureRef } = props;
+    const { itemId, name, version, description, icon, badges, status, busy, disabled, actions, density, index, setSize, active, selected, current, checkable, optionId, offset, measureRef } = props;
     const optionRef = useRef<HTMLDivElement>(null);
     const titleId = `${optionId}-title`;
     const descriptionId = `${optionId}-desc`;
@@ -77,6 +82,7 @@ export function Row(props: RowProps): React.JSX.Element {
                 ref={optionRef}
                 tabIndex={active ? 0 : -1}
                 aria-selected={selected}
+                aria-current={current ? true : undefined}
                 aria-posinset={index + 1}
                 aria-setsize={setSize}
                 aria-busy={busy ? true : undefined}
@@ -84,6 +90,8 @@ export function Row(props: RowProps): React.JSX.Element {
                 aria-labelledby={titleId}
                 aria-describedby={described ? descriptionId : undefined}
             >
+                {/* Decoration: the state is `aria-selected`; a click on it is handled by the list, nothing here takes focus. */}
+                {checkable ? <span className="nuiget-row-check" aria-hidden="true">{selected ? <CheckIcon size={12} /> : null}</span> : null}
                 {density === 'comfortable' && icon ? <span className="nuiget-row-icon" aria-hidden="true">{icon}</span> : null}
                 <span className="nuiget-row-title" id={titleId}>
                     <span className="nuiget-row-name">{name}</span>

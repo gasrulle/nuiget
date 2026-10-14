@@ -224,10 +224,15 @@ of the list does too:
 | Ctrl+Enter, Cmd+Enter | `onSecondaryActivate` |
 | Delete, Cmd+Backspace | `onDelete` (uninstall where it applies) |
 | Shift+F10, ContextMenu key, right-click | `onContextMenu` with an anchor: the actions menu of the row |
+| Space, Ctrl+click, Cmd+click, a click on the check mark | Only in a multi-selectable list (`selectedIds` given): `onToggleSelected`, the row joins or leaves the bulk set |
 
 A list names its keys in a visually hidden sentence it is described by (`hint`). A disabled option
 (`aria-disabled`, for example an unresolved package) keeps focus and the menu and ignores Enter, Ctrl+Enter
-and Delete; Space, PageUp/PageDown and multi-selection are not handled yet (P5).
+and Delete. A list that offers bulk actions passes `selectedIds` (since P5.4): it is then `aria-multiselectable`,
+the rows of the set are `aria-selected` and show a check mark (an `aria-hidden` span inside the option, so
+nothing in the option can take focus), and `selectedId` becomes the current row, `aria-current`, the one whose
+details are shown. Without `selectedIds` nothing of this exists and Space is not handled. Shift ranges, Ctrl+A,
+PageUp/PageDown and type-ahead are not handled.
 
 `Listbox` is always virtualized (`@tanstack/react-virtual`): only the rows in view and an overscan are in the
 document, every option says its place among all (`aria-posinset`, `aria-setsize`), and the active row stays
@@ -311,9 +316,10 @@ one place for three rules:
 | No result behind an invalidation | An ok answer whose `generation` is below the one listed for the same key is not applied. Equal, higher, absent, or a key no event has named: applied. With nothing newer on its way the hook asks once more; a second out-of-date answer for the same listing ends as an error, so loading always ends. |
 
 **Slices.** Each is a reducer with a context of its own (`useSession`, `useProjects`, `useInstalled`,
-`useOps`), so a component renders for the slice it reads; the functions that change something
-(`useSessionActions`, `useOpsActions`) are in separate contexts and never change. `StoreProvider` mounts all
-four, which is what makes a surface ask `session/get` and `projects/list` when it starts.
+`useTransitive`, `useAllProjects`, `useOps`), so a component renders for the slice it reads; the functions that
+change something (`useSessionActions`, `useOpsActions`) are in separate contexts and never change.
+`StoreProvider` mounts all six, which is what makes a surface ask `session/get` and `projects/list` when it
+starts; the other slices ask when they have something to ask for.
 
 - `session` (ADR-001): `committed` is the last snapshot of the host that was applied, and a snapshot is
   applied only when its `rev` is above that one. `set(intent)` shows the change at once as *pending* and sends
@@ -327,6 +333,15 @@ four, which is what makes a surface ask `session/get` and `projects/list` when i
   never a pending one; nothing is asked without a project or in all-projects mode. The key is built from the
   path exactly as the snapshot has it, which is how the host names it. `metadata` chunks are kept by
   lower-cased package id for the project they were asked for.
+- `transitive` (P5.4): `useResource` for `transitive:<path>` of the committed project, but only after the section
+  was opened (`enable()`); another project starts closed again. `restore()` asks the next `transitive/get` with
+  `forceRestore`, once. The rows' metadata comes from `transitive/metadata` by `id@version`; when the host cannot
+  answer it (`unsupported` until the feeds of P4 exist) the rows show from `transitive/get` alone.
+- `allProjects` (P5.4): the stream of `allProjects/installed` while All Projects is committed, one chunk per
+  project kept by its path. It is not a `useResource`: the fan-out has no generation and its key is never in
+  `resources/invalidated` (ADR-009). The slice asks again when an invalidation names `projects` or any
+  `installed:` key, keeps what it shows until the new answer, and applies the chunks and the answer of its
+  latest request only.
 - `ops`: operations in progress, by operation id, from `ops/progress` (`running`, `restoring`; the host sends
   no `queued` event) and, on the surface that asked, from the call: `run(type, payload)` records the operation
   at once under an id of the surface, with its kind and the projects and packages read from the payload
@@ -448,8 +463,12 @@ both surfaces with the same list of the generation the last event listed.
 - **Scenarios** (`scenarios.test.ts`): `A→B→A ordering`, `full/scoped/watcher invalidation both orders` (six
   orderings), `queue saturation + exception after admission`, `project deletion mid-request`, `shared query
   with one subscriber cancelling`, `surface disposed with pending ops`, `central version change affecting
-  several projects`, `generation on responses`, and since P3.4 `sidebar: uninstall then watcher invalidation
-  converges`. Later items add theirs here (P4.9, P5.4 to P5.9, P6.4).
+  several projects`, `generation on responses`, since P3.4 `sidebar: uninstall then watcher invalidation
+  converges`, and since P5.4 `bulk remove partial failure reconciles` (a bulk uninstall of three where one
+  removal fails: the batch is `partial`, the failed package stays in the file and on both surfaces, nothing is
+  removed by guessing, the credential in the error output does not reach the outcome, the project is restored
+  once, and the operation's invalidation names only the packages that went). Later items add theirs here (P4.9,
+  P5.5 to P5.9, P6.4).
 
 ### Coexistence of 1.x and 2.0
 

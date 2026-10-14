@@ -91,7 +91,10 @@ through the one `role="status"` region (`status-live`). A row with a pending ope
 A disabled row (`aria-disabled="true"`, e.g. unresolved) keeps focus, selection and the context
 menu but ignores Enter, Ctrl+Enter and Delete. When the active row disappears, focus moves to the
 row now at its index (or the last one); when the list empties, the empty-state container takes
-focus.
+focus. A list that offers bulk actions is `aria-multiselectable`: Space toggles whether the active row is
+selected for them (Ctrl+click, Cmd+click on macOS, or a click on the row's check mark does the same), the rows
+selected for them are `aria-selected`, and the row whose details are shown is `aria-current`. Select all selects
+every row the action applies to; the confirmation dialog lists exactly those rows.
 
 ## 6. Cross-surface behaviour
 
@@ -125,7 +128,7 @@ per selection; a response for a different package/version is ignored.
 | `project-selector`, `source-selector` | Header selectors (main) |
 | `tab-bar`, `installed-tab`, `updates-tab` | Main tabs |
 | `installed-list`, `updates-list`, `browse-list`, `sidebar-installed-list`, `sidebar-updates-list`, `sidebar-browse-list` | Listboxes |
-| `package-row-<id>` | A row (id lower-cased): the wrapper around the option and its pointer actions; the option is the `role="option"` inside it (read `aria-selected` there) |
+| `package-row-<id>` | A row (id lower-cased): the wrapper around the option and its pointer actions; the option is the `role="option"` inside it (read `aria-selected` there; in a multi-selectable list `aria-current` marks the current row) |
 | `row-action-<name>` | A pointer action button inside a row (`install`, `update`, `uninstall`, `more`); hidden from assistive technology, mirrored by the keys of §5 |
 | `section-header-<name>` | The toggle button of a collapsible section (`installed`, `updates`) |
 | `package-details-panel`, `details-tab-details`, `details-tab-readme`, `readme-content`, `readme-empty` | Details panel |

@@ -403,6 +403,89 @@ describe('two-surface harness', () => {
         expect(h.services.queue.isBusy).toBe(false);
     });
 
+    it('bulk remove partial failure reconciles: the failed package stays, the others go, both surfaces show the list on disk', async () => {
+        h = await createHarness({
+            tree: {
+                'A/A.csproj': projectXml(['Serilog', '3.0.0'], ['Moq', '4.20.0'], ['Newtonsoft.Json', '13.0.1']),
+                'B/B.csproj': projectXml(['Newtonsoft.Json', '13.0.1']),
+            },
+            selectedProject: 'A/A.csproj',
+        });
+        const [A, B] = [h.path('A/A.csproj'), h.path('B/B.csproj')];
+        const sidebar = await h.resolve('sidebar');
+        const main = await h.resolve('main');
+        const original = ['Serilog@3.0.0', 'Moq@4.20.0', 'Newtonsoft.Json@13.0.1'];
+        await h.expectState({ selectedProject: A, projects: [A, B], installed: original });
+
+        // Moq's removal fails, with a credential in its error output; the restore after the edits is held.
+        const failing = h.dotnet.fail(dotnetCalls.packageRemove('Moq'), { code: 1, stderr: 'error: Moq could not be removed (https://user:secret@feed.example/v3/index.json)' });
+        const restore = h.dotnet.hold(dotnetCalls.restore());
+        const marks = new Map([sidebar, main].map(webview => [webview, webview.received.length]));
+        const request = h.operate('main', 'ops/bulkRemove', { projectPath: A, packages: ['Serilog', 'Moq', 'Newtonsoft.Json'] });
+        await h.settle(() => expect(restore.seen).toBe(1));
+
+        const chunks = main.chunksFor<'ops/bulkRemove'>(request.id);
+        expect(chunks[0]).toMatchObject({ status: 'queued' });
+        const running = chunks.filter(chunk => chunk.status === 'running' && chunk.kind === 'remove' && chunk.packageIds?.length === 3);
+        expect(running).toHaveLength(1);
+        expect(running[0].projectPaths).toEqual([A]);
+        expect(new Set(running[0].packageIds)).toEqual(new Set(['Serilog', 'Moq', 'Newtonsoft.Json']));
+        expect(chunks.some(chunk => chunk.status === 'restoring')).toBe(true);
+        // The other two are out of the file; Moq is still in it.
+        const onDisk = fs.readFileSync(A, 'utf8');
+        expect(onDisk).not.toContain('Serilog');
+        expect(onDisk).not.toContain('Newtonsoft.Json');
+        expect(onDisk).toContain('Moq');
+        // Nothing optimistic: both surfaces still show the list they were given (interaction model §4).
+        expect(packagesOf(main.installed)).toEqual(original);
+        expect(packagesOf(sidebar.installed)).toEqual(original);
+
+        restore.release();
+        const outcome = resultOf(await request.response);
+        expect(outcome.status).toBe('partial');
+        expect(outcome.opId).toMatch(UUID);
+        const results = [...outcome.results].sort((a, b) => (a.packageId ?? '').localeCompare(b.packageId ?? ''));
+        // Sorted: without an assets file the workflow keeps no order of its own for the three removals.
+        expect(results.map(result => [result.packageId, result.kind, result.status])).toEqual([
+            ['Moq', 'remove', 'failed'],
+            ['Newtonsoft.Json', 'remove', 'completed'],
+            ['Serilog', 'remove', 'completed'],
+        ]);
+        const moq = results[0];
+        expect(moq.edit?.ok).toBe(false);
+        expect(moq.message).toContain('Moq');
+        expect(moq.message).not.toContain('secret');
+        expect(JSON.stringify(outcome)).not.toContain('secret');
+        expect(outcome.restores).toEqual([{ projectPath: A, ok: true }]);
+
+        // Reconciled from the host's list, which is what is on disk, on both surfaces.
+        await h.expectState({ selectedProject: A, projects: [A, B], installed: ['Moq@4.20.0'] });
+        for (const webview of [sidebar, main]) {
+            expect(webview.completed().filter(entry => entry.opId === outcome.opId).map(statusOf), `${webview.surface}: the outcome announced`).toEqual(['partial']);
+            const since = webview.received.slice(marks.get(webview));
+            const events = since.filter(message => message.kind === 'event' && message.type === 'resources/invalidated')
+                .map(message => (message as unknown as { payload: { reason: string; scope: unknown; keys: Array<{ key: string }> } }).payload);
+            // The host invalidates the project and the metadata of the packages whose edit succeeded
+            // (`invalidateAfter`); the coordinator folds both into one event that names A and those two, never Moq.
+            const operation = events.find(event => event.reason === 'operation' && event.keys.some(entry => entry.key === resourceKeys.installed(A)));
+            expect(operation, `${webview.surface}: the operation's invalidation in ${JSON.stringify(events.map(event => [event.reason, event.scope]))}`).toBeDefined();
+            const scope = operation?.scope as { projectPaths?: string[]; packageIds?: string[] };
+            expect(scope.projectPaths).toEqual([A]);
+            expect(new Set(scope.packageIds)).toEqual(new Set(['Serilog', 'Newtonsoft.Json']));
+            expectOneResponsePerRequest(webview);
+        }
+        expect(h.dotnet.count(dotnetCalls.packageRemove())).toBe(3);
+        // One restore for the project after all edits, not one per edit.
+        expect(h.dotnet.count(dotnetCalls.restore())).toBe(1);
+
+        // Once the cause is gone, the package that stayed can be removed, from the other surface.
+        failing();
+        const again = resultOf(await h.operate('sidebar', 'ops/bulkRemove', { projectPath: A, packages: ['Moq'] }).response);
+        expect(again.status).toBe('completed');
+        await h.expectState({ selectedProject: A, projects: [A, B], installed: [] });
+        expect(h.dotnet.count(dotnetCalls.restore())).toBe(2);
+    });
+
     it('generation on responses: every resource response carries the generation the latest invalidation lists for its key, on both surfaces', async () => {
         h = await createHarness({ tree: TWO_PROJECTS, selectedProject: 'A/A.csproj' });
         const [A, B] = [h.path('A/A.csproj'), h.path('B/B.csproj')];

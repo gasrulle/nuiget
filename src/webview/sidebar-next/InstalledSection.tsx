@@ -1,6 +1,7 @@
 import { useCallback, useId, useMemo, useState } from 'react';
 import type React from 'react';
-import { ALL_PROJECTS, type InstalledPackage, type InstalledResult, type OperationKind } from '../../protocol';
+import { ALL_PROJECTS, type InstalledPackage } from '../../protocol';
+import { IN_PROGRESS, shownVersion, whyNotRemovable } from '../shared/installed/rules';
 import { Badge, EmptyState, IconButton, Listbox, Row, SectionHeader, Skeleton, TrashIcon } from '../shared/primitives';
 import { useInstalled } from '../shared/store/installed';
 import { useOps, useOpsActions } from '../shared/store/ops';
@@ -12,40 +13,7 @@ interface Item {
     entry: InstalledPackage;
 }
 
-/** What a busy row says is happening to its package. */
-const IN_PROGRESS: Record<OperationKind, string> = { install: 'Installing', update: 'Updating', remove: 'Uninstalling', restore: 'Restoring' };
-
-/** The version a row shows: what the project resolves to where the declaration is a pattern, else what it declares. */
-export function shownVersion(entry: InstalledPackage): string {
-    if (entry.declaration === 'unresolved' || entry.versionType === 'unresolved') {
-        return 'unresolved';
-    }
-    const pattern = entry.versionType === 'floating' || entry.versionType === 'range';
-    return (pattern ? entry.resolvedVersion : undefined) ?? entry.version;
-}
-
-/**
- * Why a package cannot be uninstalled from this list, in a sentence for the user; `undefined` when it can.
- * A centrally managed package stays read-only until the preview of what a central change touches exists.
- */
-export function whyNotRemovable(entry: InstalledPackage, result: InstalledResult): string | undefined {
-    if (result.unsupported) {
-        return `${entry.id} cannot be uninstalled: ${result.unsupported.message}`;
-    }
-    if (entry.declaration === 'unresolved') {
-        return `${entry.id} cannot be uninstalled: its reference could not be resolved`;
-    }
-    if (entry.isImplicit) {
-        return `${entry.id} is added by the .NET SDK and cannot be uninstalled`;
-    }
-    if (entry.declaration === 'props') {
-        return `${entry.id} is declared in an imported props file and cannot be uninstalled from the project`;
-    }
-    if (entry.declaration === 'central' || entry.declaration === 'central-override') {
-        return `${entry.id} is managed centrally and cannot be uninstalled from this view yet`;
-    }
-    return undefined;
-}
+export { shownVersion, whyNotRemovable } from '../shared/installed/rules';
 
 export interface InstalledSectionProps {
     /** Shows the packages whose id contains this text, whatever the case. */

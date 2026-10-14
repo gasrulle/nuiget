@@ -1,10 +1,12 @@
 import type React from 'react';
 import type { MessageBus } from '../bus/MessageBus';
 import { MessageBusProvider } from '../bus/useMessageBus';
+import { AllProjectsProvider } from './allProjects';
 import { InstalledProvider } from './installed';
 import { OpsProvider } from './ops';
 import { ProjectsProvider } from './projects';
 import { SessionProvider } from './session';
+import { TransitiveProvider } from './transitive';
 
 /**
  * The store of a surface: the bus and the slices that exist so far, each with a context of its own, so that a
@@ -17,7 +19,11 @@ export function StoreProvider({ bus, children }: { bus: MessageBus; children: Re
             <SessionProvider>
                 <ProjectsProvider>
                     <InstalledProvider>
-                        <OpsProvider>{children}</OpsProvider>
+                        <TransitiveProvider>
+                            <AllProjectsProvider>
+                                <OpsProvider>{children}</OpsProvider>
+                            </AllProjectsProvider>
+                        </TransitiveProvider>
                     </InstalledProvider>
                 </ProjectsProvider>
             </SessionProvider>

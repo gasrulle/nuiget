@@ -137,3 +137,36 @@ describe('Row', () => {
         expect(axeRuleOutcome(results, 'nested-interactive')).toBe('passes');
     });
 });
+
+describe('Row in a multi-selectable list', () => {
+    let removeLayout: () => void;
+
+    beforeEach(() => {
+        removeLayout = installFakeLayout();
+    });
+
+    afterEach(() => {
+        removeLayout();
+    });
+
+    it('in a multi-selectable list the option shows a decorative check mark and is aria-current when it is the current row', () => {
+        const row = (props: Partial<RowProps>) => (
+            <Row itemId="Serilog" name="Serilog" version="3.0.0" density="comfortable" index={0} setSize={1} active selected={false} optionId="installed-0" offset={0} checkable {...props} />
+        );
+        const { rerender } = render(<div role="listbox" aria-label="Installed packages" aria-multiselectable="true">{row({ selected: true, current: true })}</div>);
+        const option = screen.getByRole('option', { name: 'Serilog 3.0.0' });
+        expect(option).toHaveAttribute('aria-selected', 'true');
+        expect(option).toHaveAttribute('aria-current', 'true');
+        const mark = option.querySelector('.nuiget-row-check');
+        expect(mark).toHaveAttribute('aria-hidden', 'true');
+        expect(mark?.querySelector('svg')).not.toBeNull();
+        // Nothing in the mark can take focus; the name stays the text.
+        expect(mark?.querySelectorAll('button, input, [tabindex]')).toHaveLength(0);
+        rerender(<div role="listbox" aria-label="Installed packages" aria-multiselectable="true">{row({ selected: false, current: false })}</div>);
+        expect(option).toHaveAttribute('aria-selected', 'false');
+        expect(option).not.toHaveAttribute('aria-current');
+        expect(option.querySelector('.nuiget-row-check svg')).toBeNull();
+        rerender(<div role="listbox" aria-label="Installed packages">{row({ checkable: false })}</div>);
+        expect(option.querySelector('.nuiget-row-check')).toBeNull();
+    });
+});

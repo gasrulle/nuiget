@@ -110,7 +110,7 @@ CI                           → see the tracker row of P2.11
 ## Not started
 
 - The scenarios of later items: P4.9 (`updates converge across surfaces`, `sources unreachable shows banner
-  not empty`), P5.4, P5.5, P5.9, P6.4.
+  not empty`), P5.5, P5.9, P6.4 (P5.4's is under "Later scenarios").
 
 ## Deviations from contract/ADR (file:line each)
 
@@ -226,6 +226,17 @@ configuration files and the missing response generation, and the lever at `nuget
   `fakeDotnet.ts`; the watcher's event for the operation's own edit is produced with `files.writeProject`
   and the file's current text. `npx vitest run --project integration src/test/harness` → 15 tests; the
   scenario alone 40 times → 40 of 40. Details: `src/webview/sidebar-next/STATUS.md`.
+- 2026-10-14, P5.4 commit b: `bulk remove partial failure reconciles: the failed package stays, the others go,
+  both surfaces show the list on disk`, the row's gate, written as step 6 of the P5.4 ruling (verbatim in
+  `docs/plans/STATUS.md`). No change to `harness.ts`, `FakeWebview.ts` or `fakeDotnet.ts`: `fail` is used for the
+  first time. `npx vitest run --project integration src/test/harness` → 16 tests; the scenario alone 40 times →
+  40 of 40. Two deviations from the ruling's assertions, both checked against the code: (1) the running report's
+  `packageIds` are compared as a set, because the order of the three removals is not pinned (the ruling says so for
+  the results); (2) the operation's invalidation is not `{ kind: 'project', projectPaths: [A] }`:
+  `invalidateAfter` (`src/host/handlers.ts:217-226`) invalidates the project and the metadata of the packages whose
+  edit succeeded, and the coordinator folds both into one event with a `package` scope. The scenario asserts what
+  matters of it: the event names `installed:<A>`, its scope names A and exactly Serilog and Newtonsoft.Json, never
+  Moq. Details: `src/webview/shared/STATUS.md`.
 
 ## Exact next step (one item ID)
 

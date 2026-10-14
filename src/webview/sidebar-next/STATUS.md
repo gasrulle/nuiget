@@ -90,6 +90,10 @@ CI                           → see the tracker row of P3.4
 
 ## Done (tested)
 
+P5.4 commit b: `shownVersion` and `whyNotRemovable` (and the `IN_PROGRESS` words) moved to
+`src/webview/shared/installed/rules.ts`, `describeOutcome` to `src/webview/shared/store/outcomes.ts`; `InstalledSection.tsx`
+and `outcomes.ts` re-export them, so nothing here changes behaviour and no test was edited.
+
 P5.4 commit a: `InstalledSection.tsx` keeps no pending set of its own any more (the set, its key helper and
 `busyStatus`'s first branch are deleted, as the P3.6 ruling says for N61): a row is busy from `run()` through the
 ops slice, and the status text comes from the slice's entry (`kind: 'remove'` → "Uninstalling"). Every test title
@@ -213,7 +217,4 @@ decided and written down (read-only, above); the harness scenario is written aga
 
 ## Exact next step (one item ID)
 
-P5.4 commit b (the same tracker row): `Listbox`/`Row` multi-selection (`selectedIds`, `onToggleSelected`,
-`aria-current`, the `aria-hidden` check mark), the row rules lifted into `src/webview/shared/installed/rules.ts`
-and `describeOutcome` into `src/webview/shared/store/outcomes.ts`, the `transitive` and `allProjects` slices, and
-the harness scenario `bulk remove partial failure reconciles`, exactly as steps 3 to 6 of the P5.4 ruling say.
+P5.4 commit c (main panel); nothing in this directory. The sidebar's next own item is P5.5 (Updates section).

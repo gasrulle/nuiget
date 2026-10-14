@@ -318,3 +318,117 @@ describe('Listbox: the markup it must not have', () => {
         expect(await violations('<main><div aria-hidden="true"><button type="button" tabindex="-1">Uninstall</button></div></main>')).not.toContain('aria-hidden-focus');
     });
 });
+
+describe('Listbox multi-selection', () => {
+    let removeLayout: () => void;
+
+    beforeEach(() => {
+        removeLayout = installFakeLayout({ viewport: 120, row: 24 });
+    });
+
+    afterEach(() => {
+        removeLayout();
+    });
+
+    /** A bulk-action list: `selectedIds` is the bulk set, `selectedId` the current row. */
+    function BulkList({ items, selectedIds, selectedId, onToggleSelected, onSelect, onKeyDown }: {
+        items: Package[];
+        selectedIds?: ReadonlySet<string>;
+        selectedId?: string | null;
+        onToggleSelected?: (item: Package) => void;
+        onSelect?: (item: Package) => void;
+        onKeyDown?: (key: string) => void;
+    }): React.JSX.Element {
+        return (
+            <div onKeyDown={event => onKeyDown?.(event.key)}>
+                <Listbox
+                    items={items}
+                    label="Installed packages"
+                    hint="Space selects the package for a bulk action."
+                    testId="installed-list"
+                    density="comfortable"
+                    selectedIds={selectedIds}
+                    selectedId={selectedId}
+                    onToggleSelected={onToggleSelected}
+                    onSelect={onSelect}
+                    renderRow={(item, placement) => (
+                        <Row
+                            {...placement}
+                            itemId={item.id}
+                            name={item.id}
+                            version={item.version}
+                            density="comfortable"
+                            disabled={item.disabled}
+                            actions={<IconButton label={`Uninstall ${item.id}`} tabIndex={-1} data-testid="row-action-uninstall"><TrashIcon /></IconButton>}
+                        />
+                    )}
+                />
+            </div>
+        );
+    }
+
+    it('a multi-selectable listbox marks the rows of the set selected and the current row aria-current', () => {
+        render(<BulkList items={three} selectedIds={new Set(['Alpha', 'Gamma'])} selectedId="Beta" />);
+        expect(screen.getByRole('listbox')).toHaveAttribute('aria-multiselectable', 'true');
+        expect(options().map(element => element.getAttribute('aria-selected'))).toEqual(['true', 'false', 'true']);
+        expect(options().map(element => element.getAttribute('aria-current'))).toEqual([null, 'true', null]);
+        // Every option begins with a decorative check mark; only the selected rows show the tick.
+        const marks = options().map(element => element.querySelector('.nuiget-row-check'));
+        expect(marks.every(mark => mark?.getAttribute('aria-hidden') === 'true')).toBe(true);
+        expect(marks.map(mark => mark?.querySelector('svg') !== null)).toEqual([true, false, true]);
+    });
+
+    it('Space toggles the active row; Ctrl+click, Cmd+click and a click on the check mark do the same; a plain click selects', async () => {
+        const user = userEvent.setup();
+        const onToggleSelected = vi.fn();
+        const onSelect = vi.fn();
+        render(<BulkList items={three} selectedIds={new Set()} onToggleSelected={onToggleSelected} onSelect={onSelect} />);
+        options()[0].focus();
+        await user.keyboard(' ');
+        expect(onToggleSelected.mock.calls.map(([item]) => item.id)).toEqual(['Alpha']);
+        await user.keyboard('{ArrowDown} ');
+        expect(onToggleSelected.mock.calls.map(([item]) => item.id)).toEqual(['Alpha', 'Beta']);
+        fireEvent.click(options()[2], { ctrlKey: true });
+        fireEvent.click(options()[2], { metaKey: true });
+        fireEvent.click(options()[0].querySelector('.nuiget-row-check') as Element);
+        expect(onToggleSelected.mock.calls.map(([item]) => item.id)).toEqual(['Alpha', 'Beta', 'Gamma', 'Gamma', 'Alpha']);
+        expect(onSelect).not.toHaveBeenCalled();
+        await user.click(options()[1]);
+        expect(onSelect.mock.calls.map(([item]) => item.id)).toEqual(['Beta']);
+        expect(onToggleSelected).toHaveBeenCalledTimes(5);
+    });
+
+    it('Space on a disabled option toggles nothing, and Space without a selection set is not handled', async () => {
+        const user = userEvent.setup();
+        const onToggleSelected = vi.fn();
+        const onKeyDown = vi.fn();
+        const items: Package[] = [{ id: 'Alpha', version: '1.0.0', disabled: true }, { id: 'Beta', version: '2.0.0' }];
+        const { unmount } = render(<BulkList items={items} selectedIds={new Set()} onToggleSelected={onToggleSelected} onKeyDown={onKeyDown} />);
+        options()[0].focus();
+        await user.keyboard(' ');
+        fireEvent.click(options()[0], { ctrlKey: true });
+        fireEvent.click(options()[0].querySelector('.nuiget-row-check') as Element);
+        expect(onToggleSelected).not.toHaveBeenCalled();
+        unmount();
+
+        // Single selection: no check mark, no aria-current, no aria-multiselectable, and Space bubbles unhandled.
+        render(<BulkList items={three} selectedId="Beta" onToggleSelected={onToggleSelected} onKeyDown={onKeyDown} />);
+        expect(screen.getByRole('listbox')).not.toHaveAttribute('aria-multiselectable');
+        expect(document.querySelector('.nuiget-row-check')).toBeNull();
+        expect(options().map(element => element.getAttribute('aria-current'))).toEqual([null, null, null]);
+        expect(options().map(element => element.getAttribute('aria-selected'))).toEqual(['false', 'true', 'false']);
+        onKeyDown.mockClear();
+        options()[0].focus();
+        const space = fireEvent.keyDown(options()[0], { key: ' ' });
+        expect(space).toBe(true);
+        expect(onKeyDown).toHaveBeenCalledWith(' ');
+        expect(onToggleSelected).not.toHaveBeenCalled();
+    });
+
+    it('a multi-selectable listbox with a current row and check marks has no axe violations', async () => {
+        const { container } = render(<BulkList items={three} selectedIds={new Set(['Alpha'])} selectedId="Gamma" />);
+        const results = await axe(container);
+        expect(results).toHaveNoViolations();
+        expect(['aria-allowed-attr', 'nested-interactive', 'aria-required-children'].map(rule => axeRuleOutcome(results, rule))).toEqual(['passes', 'passes', 'passes']);
+    });
+});

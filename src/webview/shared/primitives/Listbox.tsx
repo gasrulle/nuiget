@@ -18,6 +18,17 @@ interface ListboxBaseProps<T extends { id: string }> {
     estimateSize?: number;
     overscan?: number;
     selectedId?: string | null;
+    /**
+     * Multi-selection for bulk actions. When given, the list is `aria-multiselectable="true"`, the rows in the set
+     * are `aria-selected`, and `selectedId` marks the current row, the one whose details are shown, as
+     * `aria-current="true"`.
+     */
+    selectedIds?: ReadonlySet<string>;
+    /**
+     * Space on the active row, Ctrl+click (Cmd+click on macOS) on a row, or a click on its check mark: the row's
+     * membership in `selectedIds` is to be flipped. Not called for a disabled row.
+     */
+    onToggleSelected?: (item: T) => void;
     /** A click on a row. */
     onSelect?: (item: T) => void;
     /** Enter. */
@@ -44,7 +55,7 @@ export type ListboxProps<T extends { id: string }> = ListboxBaseProps<T> & ({ la
  * active row always is, so focus never falls out of the list.
  */
 export function Listbox<T extends { id: string }>(props: ListboxProps<T>): React.JSX.Element {
-    const { items, renderRow, hint, testId, density, overscan = 5, selectedId = null, onSelect, onActivate, onSecondaryActivate, onDelete, onContextMenu, busy, empty } = props;
+    const { items, renderRow, hint, testId, density, overscan = 5, selectedId = null, selectedIds, onToggleSelected, onSelect, onActivate, onSecondaryActivate, onDelete, onContextMenu, busy, empty } = props;
     const estimateSize = props.estimateSize ?? ROW_HEIGHT[density];
     const baseId = useId();
     const hintId = `${baseId}-hint`;
@@ -145,6 +156,12 @@ export function Listbox<T extends { id: string }>(props: ListboxProps<T>): React
             if (!disabled) {
                 onDelete?.(item);
             }
+        } else if (event.key === ' ' && selectedIds !== undefined) {
+            // Without a selection set Space is not handled here and bubbles (P3.2 ruling).
+            handled();
+            if (!disabled) {
+                onToggleSelected?.(item);
+            }
         } else if (event.key === 'ContextMenu' || (event.key === 'F10' && event.shiftKey)) {
             handled();
             const rect = optionAt(activeIndex)?.getBoundingClientRect();
@@ -171,6 +188,7 @@ export function Listbox<T extends { id: string }>(props: ListboxProps<T>): React
                 aria-labelledby={props.labelledBy}
                 aria-describedby={hintId}
                 aria-busy={busy ? true : undefined}
+                aria-multiselectable={selectedIds === undefined ? undefined : true}
                 data-testid={testId}
                 onKeyDown={handleKeyDown}
                 onFocus={event => {
@@ -180,8 +198,17 @@ export function Listbox<T extends { id: string }>(props: ListboxProps<T>): React
                     }
                 }}
                 onClick={event => {
-                    const index = (event.target as HTMLElement).closest('[role="option"]') ? indexOf(event.target) : -1;
-                    if (index >= 0 && items[index]) {
+                    const target = event.target as HTMLElement;
+                    const option = target.closest('[role="option"]');
+                    const index = option ? indexOf(event.target) : -1;
+                    if (index < 0 || !items[index]) {
+                        return;
+                    }
+                    if (selectedIds !== undefined && (event.ctrlKey || event.metaKey || target.closest('.nuiget-row-check'))) {
+                        if (option?.getAttribute('aria-disabled') !== 'true') {
+                            onToggleSelected?.(items[index]);
+                        }
+                    } else {
                         onSelect?.(items[index]);
                     }
                 }}
@@ -202,7 +229,9 @@ export function Listbox<T extends { id: string }>(props: ListboxProps<T>): React
                                     index: virtual.index,
                                     setSize,
                                     active: virtual.index === activeIndex,
-                                    selected: item.id === selectedId,
+                                    selected: selectedIds ? selectedIds.has(item.id) : item.id === selectedId,
+                                    current: selectedIds ? item.id === selectedId : undefined,
+                                    checkable: selectedIds !== undefined,
                                     optionId: `${baseId}-option-${virtual.index}`,
                                     offset: virtual.start,
                                     measureRef: virtualizer.measureElement,

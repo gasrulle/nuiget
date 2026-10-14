@@ -62,3 +62,22 @@ describe('StoreProvider', () => {
         expect(screen.getByTestId('all')).toHaveTextContent(`${A} | A | | false`);
     });
 });
+
+describe('StoreProvider slices of P5.4', () => {
+    it('mounts the transitive and allProjects slices', async () => {
+        const { useTransitive } = await import('./transitive');
+        const { useAllProjects } = await import('./allProjects');
+        function Slices() {
+            const transitive = useTransitive();
+            const all = useAllProjects();
+            return <output data-testid="slices">{`${transitive.enabled} ${transitive.status} | ${all.active} ${all.status}`}</output>;
+        }
+        const host = createFakeHost();
+        render(<StoreProvider bus={host.bus}><Slices /></StoreProvider>);
+        await hostSays(() => host.respond(host.requests('session/get')[0], snapshot(1)));
+        // Both are there and lazy: nothing asked for a single project with the transitive section closed.
+        expect(screen.getByTestId('slices')).toHaveTextContent('false idle | false idle');
+        expect(host.requests('transitive/get')).toHaveLength(0);
+        expect(host.requests('allProjects/installed')).toHaveLength(0);
+    });
+});
