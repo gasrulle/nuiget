@@ -4,7 +4,9 @@ import { mkdir, writeFile } from 'node:fs/promises';
 const isProduction = process.argv.includes('--production');
 const isWatch = process.argv.includes('--watch');
 const isAnalyze = process.argv.includes('--analyze');
-const isV2 = process.argv.includes('--v2');
+// NUIGET_V2=1 means the same as --v2. It exists for `vscode:prepublish`, which `vsce` and ExTester always run
+// and which takes no flag: with the variable set, the VSIX they package holds the 2.0 entries (CI jobs e2e-v2, ui-v2).
+const isV2 = process.argv.includes('--v2') || process.env.NUIGET_V2 === '1';
 
 // Extension code runs in the VS Code 1.85 extension host (Node 18); webviews run in its Chromium 114.
 const EXTENSION_TARGET = 'node18';

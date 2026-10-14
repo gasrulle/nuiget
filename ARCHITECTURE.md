@@ -443,11 +443,28 @@ These parts serve both versions and are the current truth for the build, test an
   | Test (ubuntu, windows) | — | Unit tests with .NET SDK 10 installed; coverage on ubuntu |
   | E2E (VS Code 1.85.0, stable) | — | Production build, then the extension-host suite under Xvfb; log artifact per version |
   | UI | Lint, Test | ExTester suite under Xvfb; log and screenshot artifact |
+  | E2E 2.0 (VS Code 1.85.0, stable) | — | `NUIGET_V2=1`: production build of the 2.0 entries, then the `v2-*` extension-host suite |
+  | UI 2.0 | Lint, Test | `NUIGET_V2=1`: ExTester packages a VSIX of the 2.0 entries and runs `src/test/ui/v2` |
   | Build & Package | Lint, Test, E2E | Type check, production build, `check:vsix`, VSIX uploaded as artifact `vsix` |
   | Benchmark (informational) | — | Compares against `benchmarks/baseline.json`; never fails the run |
 
   The end-to-end run on VS Code 1.85.0 is what proves the extension works on the minimum supported host. The
   owner downloads the `vsix` artifact and publishes it manually.
+- **The 2.0 entries under test.** One environment variable, `NUIGET_V2=1`, puts the 2.0 entries under the
+  end-to-end and UI suites while 1.x is what ships. `esbuild.mjs` reads it as `--v2`: `vsce` and ExTester
+  always run `vscode:prepublish`, which takes no flag, so the variable is the one switch that reaches the build
+  inside them, and the VSIX they package then holds the 2.0 entries. `.vscode-test.mjs` reads it to select the
+  suites: `out/test/e2e/v2-*.e2e.test.js` with it, every other e2e file without it, so `npm run test:e2e` is the
+  1.x suite unless the variable is set. `npm run test:ui:v2` runs `src/test/ui/v2` (the 1.x `test:ui` glob does
+  not reach that folder). The two suites divide the work by what each can see. The extension-host suite
+  (`src/test/e2e/v2-sidebar.e2e.test.ts`) shows that the build under test is the 2.0 one (the commands only 1.x
+  registers are absent), that it activates, that its view and commands answer, and that a noun-first `dotnet
+  package remove` on the project file under it does no harm; it runs on VS Code 1.85.0 too, the only Node 18
+  host that executes 2.0 code. The ExTester suite (`src/test/ui/v2/sidebar.ui.test.ts`) is the one that sees the
+  webview: the sidebar lists the fixture's packages, a row is as high as its token says and the second row lies
+  under the first (stylesheet, tokens and the virtual offsets work under the Content Security Policy), the row
+  action shows with focus, and Delete uninstalls a package, announced in the live region and gone from the
+  project file. Neither job runs `check:vsix`: a 2.0 build has no `dist/webview.css` until the main shell exists.
 
 ## Overview (1.x — removed at P8)
 

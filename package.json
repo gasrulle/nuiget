@@ -314,6 +314,7 @@
         "test:coverage": "vitest run --coverage",
         "test:e2e": "tsc -p tsconfig.test.json && vscode-test",
         "test:ui": "tsc -p tsconfig.test.json && npm run package:vsix && extest setup-and-run out/test/ui/*.ui.test.js --code_version max --code_settings src/test/ui/settings.json --open_resource src/test/e2e/fixtures/e2e-workspace",
+        "test:ui:v2": "tsc -p tsconfig.test.json && extest setup-and-run out/test/ui/v2/*.ui.test.js --code_version max --code_settings src/test/ui/settings.json --open_resource src/test/e2e/fixtures/e2e-workspace",
         "bench": "node src/test/benchmarks/run.mjs run",
         "bench:save": "node src/test/benchmarks/run.mjs save",
         "bench:compare": "node src/test/benchmarks/run.mjs compare"
