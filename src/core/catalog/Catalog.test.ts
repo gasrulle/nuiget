@@ -858,6 +858,64 @@ describe('Catalog feed contexts and health', () => {
         expect(rig.contexts.get).toHaveBeenCalledTimes(1);
     });
 
+    function attributionRig(options: { documents?: Record<string, NuGetConfigDocument> } = {}) {
+        const chainFile = path.resolve('/w/nuget.config');
+        const feed = remote('feed');
+        const rig = feedRig({
+            listings: { [appDir]: [feed, remote('other')] },
+            chains: { [appDir]: [chainFile] },
+            documents: options.documents ?? { [chainFile]: { path: chainFile, sources: [{ kind: 'item', key: 'feed', value: feed.url }], disabled: [], credentials: [] } },
+        });
+        const logger = { trace: vi.fn(), debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() };
+        const catalog = new Catalog(makeDeps({ sources: rig.sources, contexts: rig.contexts, feeds: rig.feeds, feedContexts: rig.feedContexts, logger }));
+        return { rig, catalog, logger, chainFile, feed };
+    }
+
+    it('sources with configFiles names the declaring file from the directory\'s chain and runs no config-paths command once the chain is registered', async () => {
+        const { rig, catalog, chainFile } = attributionRig();
+        await catalog.installed(appPath);
+
+        const listed = await catalog.sources(appDir, undefined, { configFiles: true });
+
+        expect(listed.value).toEqual([{ ...remote('feed'), configFile: chainFile }, remote('other')]);
+        expect(rig.contexts.configFilesFor).not.toHaveBeenCalled();
+        expect(rig.contexts.get).toHaveBeenCalledTimes(1);
+    });
+
+    it('sources with configFiles walks a chain no computation registered once, and forProject then shares it', async () => {
+        const { rig, catalog, chainFile } = attributionRig();
+
+        const listed = await catalog.sources(appDir, undefined, { configFiles: true });
+        await catalog.updates(appPath, false);
+
+        expect(listed.value[0].configFile).toBe(chainFile);
+        expect(rig.contexts.configFilesFor).toHaveBeenCalledTimes(1);
+        // The installed computation still walks once for its own context; the feed context is not built twice.
+        expect(rig.feeds.forPolicy).toHaveBeenCalledTimes(1);
+    });
+
+    it('sources with configFiles answers the bare listing when the chain cannot be built', async () => {
+        const { rig, catalog, logger } = attributionRig();
+        rig.contexts.configFilesFor.mockRejectedValueOnce(new Error('dotnet missing'));
+        const plain = await catalog.sources(appDir);
+
+        const listed = await catalog.sources(appDir, undefined, { configFiles: true });
+
+        expect(listed).toEqual(plain);
+        expect(listed.value.every(source => source.configFile === undefined)).toBe(true);
+        expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining('sources unattributed'));
+    });
+
+    it('sources without configFiles runs no config-paths command', async () => {
+        const { rig, catalog } = attributionRig();
+
+        const listed = await catalog.sources(appDir);
+
+        expect(listed.value.every(source => source.configFile === undefined)).toBe(true);
+        expect(rig.contexts.configFilesFor).not.toHaveBeenCalled();
+        expect(rig.contexts.get).not.toHaveBeenCalled();
+    });
+
     it('sourceHealth lists the failed sources', () => {
         const rig = feedRig();
         const catalog = new Catalog(makeDeps({ feeds: rig.feeds, feedContexts: rig.feedContexts }));

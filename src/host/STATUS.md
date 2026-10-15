@@ -1,4 +1,79 @@
-# STATUS — src/host   commit c4c3617 (parent of the P5.6 commit)   2026-10-15T12:00:00Z
+# STATUS — src/host   commit f8bfe3f (parent of the P5.8 commit)   2026-10-15T19:00:00Z
+
+git status --porcelain --untracked-files=all (before the commit): modified `.github/copilot-instructions.md`, `ARCHITECTURE.md`, `CHANGELOG.md`, `docs/plans/{STATUS,findings-ledger}.md`, `src/core/catalog/{Catalog,Catalog.test,feedContexts,feedContexts.test}.ts`, `src/host/{handlers,handlers.test}.ts`, `src/webview/main/{MainShell.tsx,main.css}`, `src/webview/shared/store/{sources.tsx,sources.test.tsx}` and the five STATUS notes; new `src/webview/main/features/sources/{SourcesControl,SourceSettingsDialog,SourcesControl.test}.tsx`, `src/test/ui/v2/main-sources.ui.test.ts` (all belong to the P5.8 commit)
+
+Item: **P5.8** (host part, ruling 1b of 2026-10-15): `listSources` (`sources/list`, `sources/refresh`) and
+`afterSourceMutation` (the four mutations) read `catalog.sources(…, { configFiles: true })`; the `removedUrl` and
+`disabledUrl` pre-reads, `extension.next.ts` and `SidebarHost.ts` read without the flag.
+
+## Verified by running
+
+P5.8 (the same gate run for every directory of the item):
+
+```text
+baseline at f8bfe3f          → CI run 38701616594 green on all 11 jobs · npx tsc --noEmit 0 · npx eslint src 0 · npx vitest run →
+                               Test Files 154 passed (154) · Tests 3162 passed | 4 skipped (3166)
+stop-and-ask (config chain for configFile attribution) → ruling 1b of 2026-10-15 (verbatim in src/core/catalog/STATUS.md
+                               and docs/plans/STATUS.md)
+first repeat of the sources tests → 0 of 20: an unhandled rejection in sources.test.tsx (a rejected promise awaited after
+                               the host answered) made every run exit 1 with all tests passed; fixed in the test, gotcha
+                               row added to copilot-instructions; the counts of earlier runs had hidden it
+first backend run with ruling 1b → 2 red: `sources/list resolves the selected project's directory` (the call now carries
+                               `{ configFiles: true }`, asserted as ruling step 5 says) and `updates asks installed before
+                               the feed context and walks the chain once` (step 3 started the walk before the inspection;
+                               fixed by starting the inspection first, no test changed)
+npx tsc --noEmit / npm run check-types / npm run lint → exit 0 each (last run after every code edit)
+npm test (NUIGET_SDK_TESTS=1, DOTNET_ROOT set) → exit 0 · Test Files 155 passed (155) · Tests 3184 passed (3184)
+npx vitest run --project backend src/core/catalog src/host src/extension.next.test.ts → exit 0 (extension.next.test.ts
+                               unchanged: :365 and :373 as they were)
+npx vitest run --project integration src/test/harness → 19 passed · "sources unreachable shows banner not empty" 40 of
+                               40 · "both orders" (6 scenarios of the matrix at :95) 40 of 40; no harness file changed
+sources feature and slice tests, 20 times → 20 of 20 (exit codes counted)
+npm run bench                → exit 0 · Test Files 20 passed (20) · Tests 119 passed | 1 skipped (120)
+npx vitest run --coverage    → exit 0 · store/sources.tsx 98.27 % lines · main/features/sources 93.45 %
+npm run docs:protocol:check  → docs/protocol.md is up to date
+rm -rf dist && node esbuild.mjs --v2 --production --analyze → extension 281249 / 299921 (280657 at P5.7) · webview
+                               501695 / 600685 (492873) · sidebar 304283 / 329122 (303486); dist/ deleted after
+rm -rf dist && NUIGET_V2=1 npm run package && npm run check:vsix → check:vsix: OK
+NUIGET_V2=1 npm run test:ui:v2 -- --storage /tmp/nuiget-ui-v2 → 16 passing (18s), with and after the core change;
+                               fixture unchanged
+grep -c "configFiles: true" src/host/handlers.ts → 2 · catalog.sources in extension.next.ts:154 and SidebarHost.ts:88
+                               without the flag · one withConfigFiles call in Catalog.ts, inside sources() after the query
+npm run package:vsix (1.x)   → SKIPPED: no 1.x file changed; CI's Package job builds it
+npm run test:ui (1.x)        → SKIPPED: no 1.x UI file changed; the CI job `UI` runs it
+test -e .claude/.contract-change → false · git diff --stat c4c3617 -- src/protocol src/core/contracts.ts docs/adr
+                               src/core/project/context.ts src/extension.next.test.ts → empty
+```
+
+## Done (tested)
+
+- `handlers.test.ts`: `sources/list resolves the selected project's directory` asserts the flag (ruling step 5); new
+  `a mutation answers with the attributed sources; the pre-reads of remove and disable ask without`.
+
+## Done (untested)
+
+- The attribution against a real SDK in VS Code: the ExTester test shows the rows, not their `configFile` (a machine's
+  user-level config file differs; the jsdom and host tests cover what is shown and sent).
+
+## Not started
+
+- The sidebar's source and restore title-bar state and "Open full view" (P5.10); the multi-install picker (P5.9).
+
+## Deviations from contract/ADR (file:line each)
+
+- None.
+
+## Advisor decisions (date, item, question, answer verbatim)
+
+The P5.8 ruling of the `architecture-advisor` (2026-10-15, option 1b) is verbatim in `docs/plans/STATUS.md` under "### P5.8 — stop-and-ask: the config chain for `configFile` attribution in `Catalog.sources()`" and in `src/core/catalog/STATUS.md`. The ambient advisor was consulted before writing (the selector disabled until the list is known keeps the P5.3 test as written, the in-dialog confirm row, `allowInsecure` for `http:`, no mutation in VS Code).
+
+## Exact next step (one item ID)
+
+P5.9 (feature all-projects), after P5.8's CI run is green.
+
+## Earlier notes of this directory
+
+The notes below are P5.6's, then P4.9b's with its own earlier notes (kept for the P4 phase review).
 
 git status --porcelain --untracked-files=all (before the commit): modified `ARCHITECTURE.md`, `CHANGELOG.md`, `docs/plans/{STATUS,findings-ledger}.md`, `src/core/feeds/{enricher,enricher.test}.ts`, `src/host/handlers.test.ts`, `src/webview/main/{MainShell.tsx,index.tsx,index.test.tsx,main.css}`, `src/webview/shared/store/StoreProvider.tsx`, `src/webview/sidebar-next/{SidebarView.tsx,SidebarView.test.tsx,UpdatesSection.tsx,sidebar.css}` and the six STATUS notes; new `src/webview/shared/search/{SearchBox.tsx,SearchBox.test.tsx,search.css}`, `src/webview/shared/store/{search,sources,config}.tsx` with their tests, `src/webview/main/features/search/{BrowseList.tsx,BrowseList.test.tsx,useSearchTyping.ts,useSearchTyping.test.tsx}`, `src/webview/sidebar-next/{BrowseResults.tsx,BrowseResults.test.tsx}`, `src/test/ui/v2/main-search.ui.test.ts` (all belong to the P5.6 commit)
 
@@ -725,4 +800,5 @@ P4.9b:
 
 FILES CHECKED: /Users/mattias/github/nuiget/.github/agents/architecture-advisor.agent.md (whole); /Users/mattias/github/nuiget/docs/plans/2026-10-11-nuiget-2.0-execution-plan.md (§0-§4 :1-172, P2 rows :221-238, P4 rows and gate :253-268, P5 :270-288, P6.2 :295, §7 :329-363); /Users/mattias/github/nuiget/docs/plans/RUN.md:55-100; /Users/mattias/github/nuiget/docs/plans/STATUS.md (row P4.9 :71 whole, rows P4.10 :72, P5.x :60-83, fix rows :39,52-53; rulings P2.8 :1010-1108, P2.9 :1110-1285, P2.10 :1287-1364, P4.1 :1797-1894, P4.4 :1896-1946, P4.6 :1948-2008, P4.8 :2010-2062); /Users/mattias/github/nuiget/docs/plans/findings-ledger.md (:42 S6, :66 F6, :109 N6, :171-173, :308-309 M1/M2, :412-414 N68-N70); /Users/mattias/github/nuiget/docs/adr/002-query-coordinator.md, 005-execution-context-and-outbound-policy.md, 006-icons-and-csp.md, 007-protocol.md:14-42, 009-catalog.md (whole); /Users/mattias/github/nuiget/src/core/catalog/Catalog.ts (whole), index.ts, STATUS.md:1-60, Catalog.test.ts (titles); /Users/mattias/github/nuiget/src/core/feeds/{types,index,serviceIndex,health,updates,enricher,metadataResolver,offline,testSupport}.ts (whole), icons.ts:1-160 and the `reset`/`Flight` lines, readmeImage.ts:1-70, readme.ts:73-100, registration.ts:109-135, search.ts:160-200, flatContainer.ts:71-80, vulnerability.ts:87-98, STATUS.md:1-80; /Users/mattias/github/nuiget/src/core/http/Transport.ts:18-60,300-360, index.ts; /Users/mattias/github/nuiget/src/core/credentials/DefaultCredentialProvider.ts:1-125, index.ts, helpers.ts:29-39, STATUS.md (the P2.8 recipe lines); /Users/mattias/github/nuiget/src/core/sources/{DefaultOutboundPolicy,index}.ts, NuGetConfigReader.ts (exports, `readChain` :56), merge.ts (exports :5-63), DotnetSourceProvider.ts:1-80, STATUS.md (grep); /Users/mattias/github/nuiget/src/core/project/{context,index}.ts, revision.ts (exports); /Users/mattias/github/nuiget/src/core/queries/QueryCoordinator.ts (whole), scopes.ts:1-80; /Users/mattias/github/nuiget/src/core/cache/CachePolicy.ts:1-150, index.ts, TieredCache.ts (method lines); /Users/mattias/github/nuiget/src/core/cli/index.ts, DotnetRunner.ts:390-415; /Users/mattias/github/nuiget/src/core/contracts.ts:100-122,150-354; /Users/mattias/github/nuiget/src/protocol/messages.ts:58-80,100-201, domain.ts:1-70,72-141,143-215,215-262, envelope.ts (`ProtocolErrorCode`); /Users/mattias/github/nuiget/src/host/{handlers,services,SidebarHost,MainPanelHost}.ts (whole or the cited ranges), WebviewHost.ts (`RequestContext`, `toProtocolError` lines), handlers.test.ts:30-110,185-310 and titles, WebviewHost.test.ts (title); /Users/mattias/github/nuiget/src/extension.next.ts (whole), extension.next.test.ts:1-235 and titles (incl. :439 `overlapping refreshes are coalesced`), src/STATUS.md:1-12; /Users/mattias/github/nuiget/src/test/harness/{harness,FakeWebview (1-130), scenarios.test (1-52, 489-554 and titles), fakeDotnet (1-60 and matchers)}.ts; /Users/mattias/github/nuiget/src/test/__mocks__/vscode.ts:232-243; /Users/mattias/github/nuiget/src/webview/shared/store/{installed,allProjects}.tsx (chunk handling) and the `iconUrl`/`metadata.get` uses under src/webview/main; /Users/mattias/github/nuiget/vitest.config.mts:87-89; /Users/mattias/github/nuiget/eslint.config.mjs:29-86; /Users/mattias/github/nuiget/.github/instructions/core-boundaries.instructions.md:1-50; /Users/mattias/github/nuiget/CHANGELOG.md:1-16; commands: `git status --short` (only `docs/plans/STATUS.md` modified), `git log --oneline -1` (631a13c), `wc -l` of the files in play, `grep -rn 'REMOVAL GATE: P4.9' src` (the 18 anchors the brief names), `grep -rn "sources/health\|notifySourceHealth" src`, `grep -rn "'session-changed'" src` (declared, unused), `grep -n globalPackagesFolder src/core/cli/DotnetRunner.ts`, `ls src/test/benchmarks`. Advisor tool consulted twice: before writing (per-source fan-out for N70, the first-paint constraint on `installed/get`, the directory → chain cache, the shared-provider deviation, gate counts per half, the tests to name) and on the draft (credential ordering at the activation probe, `generation` on `updates/get` and the carrier unwrapped in `queryWithRetry`, `excluded` in `versions`, `undefined` metadata never cached, the two harness assertions that could not hold, the monitor restricted to the selected directory, one `PolicyClients` set with two enrichers, the directory cache in `forProject`, the composition order of step 8); every point is folded in.
 `````
+
 

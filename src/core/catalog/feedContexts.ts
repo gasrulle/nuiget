@@ -60,11 +60,24 @@ export class FeedContexts {
 
     constructor(private readonly deps: FeedContextsDeps) {}
 
-    /** Seed a project directory's chain from a context walk the caller already ran (`ProjectContextProvider.get`). */
-    register(projectPath: string, configFiles: string[]): Promise<FeedContext> {
+    /**
+     * Seed a project directory's chain from a context walk the caller runs (`ProjectContextProvider.get`). A pending
+     * walk is registered before it settles, so a `forDirectory` or `forProject` meanwhile joins it instead of walking
+     * the chain a second time; a walk that fails leaves no chain behind.
+     */
+    async register(projectPath: string, chain: string[] | Promise<string[]>): Promise<FeedContext> {
         const directory = path.dirname(projectPath);
-        this.chains.set(directory, Promise.resolve(configFiles));
-        return this.forChain(directory, configFiles);
+        if (Array.isArray(chain)) {
+            this.chains.set(directory, Promise.resolve(chain));
+            return this.forChain(directory, chain);
+        }
+        this.chains.set(directory, chain);
+        chain.catch(() => {
+            if (this.chains.get(directory) === chain) {
+                this.chains.delete(directory);
+            }
+        });
+        return this.forChain(directory, await chain);
     }
 
     /** The contexts that have settled, in the order they did. */

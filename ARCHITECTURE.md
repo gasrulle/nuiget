@@ -414,7 +414,9 @@ starts; the other slices ask when they have something to ask for.
   committed project changes, on `refresh()`, and when an invalidation has the scope `sources` or names a `sources:`
   key. It is no `useResource`: the key is the project's directory, which the webview does not compute. The latest
   request wins and the shown list stays until the answer; `failed` follows the answer, its `health` chunk and
-  `sources/health`.
+  `sources/health`. `add`, `remove` (with the declaring `configFile` when known) and `setEnabled` mark the source
+  `pending`, show the list each answers with at once and reject with the host's message; the invalidation the host
+  sends after a mutation asks the list again. `loadConfigFiles` asks `sources/configFiles` once per call.
 - `search` (P5.6): one browse search per surface over the committed source (`sourceUrls` absent for `all`) and
   prerelease flag. A search is keyed by what the user typed, so it is not a coordinator resource: no generation, and
   a new text cancels the request before it. The `metadata` chunk precedes the answer and is merged onto its results
@@ -601,6 +603,27 @@ prefixed `nuiget-hljs-`, coloured by the `--nuiget-color-syntax-*` tokens), then
 form elements or `<button>`. Copy buttons are added to the sanitized DOM afterwards, and every image is fetched by the
 host (`readme/image`, `http:` URLs of known hosts upgraded first, four at a time, cancelled with the selection); an
 image the host cannot fetch is replaced by its alt text, because the CSP's `img-src` allows `data:` only.
+
+### Sources feature (main)
+
+`features/sources/SourcesControl.tsx` is the source part of the header: the selector (`source-selector`, All sources
+and every enabled source by name, the session's URL kept as an option when it is not listed, disabled until the list
+is known; a choice is `session/set { selectedSource }`) and the gear (`source-settings`) that opens
+`SourceSettingsDialog` (`source-settings-modal`), which `ui/openSourceSettings` opens too. The dialog lists every
+source (`source-row-<name>`) with an enable checkbox, its URL and the config file that declares it, and Remove with
+an in-dialog confirmation (interaction model §5). Add source switches the dialog to a form (`add-source-panel`): the
+config file (`sources/configFiles`, nearest first), URL, name, and credentials (password encryption on Windows only);
+an `http:` URL needs the insecure option, which SDK 10 requires. Focus moves to the URL field when the form opens and
+back to Add source when it closes.
+
+The host answers `sources/list`, `sources/refresh` and the four mutations with each source's `configFile`:
+`Catalog.sources(dir, signal, { configFiles: true })` attributes the cached listing at read time with `withConfigFiles`
+over the directory's `FeedContext` (`forDirectory`, which walks the config chain only when no computation has
+registered it). The cached `sources:<dir>` value stays the plain listing, so activation and the session's reconcile,
+which ask without the flag, never walk the chain. `computeInstalled` registers its own pending walk with `FeedContexts`
+before awaiting it, so a directory read meanwhile joins that walk; `sources/list` before `installed/get` for the same
+directory still walks twice (N72, P6.2). Without a chain the listing comes back unattributed and the remove
+confirmation says the source goes from the nearest config file.
 
 ### Two-surface harness
 

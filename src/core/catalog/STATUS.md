@@ -1,4 +1,133 @@
-# STATUS — src/core/catalog   commit 6e2c878 (parent of the P4.9b commit)   2026-10-16T07:30:00Z
+# STATUS — src/core/catalog   commit f8bfe3f (parent of the P5.8 commit)   2026-10-15T19:00:00Z
+
+git status --porcelain --untracked-files=all (before the commit): modified `.github/copilot-instructions.md`, `ARCHITECTURE.md`, `CHANGELOG.md`, `docs/plans/{STATUS,findings-ledger}.md`, `src/core/catalog/{Catalog,Catalog.test,feedContexts,feedContexts.test}.ts`, `src/host/{handlers,handlers.test}.ts`, `src/webview/main/{MainShell.tsx,main.css}`, `src/webview/shared/store/{sources.tsx,sources.test.tsx}` and the five STATUS notes; new `src/webview/main/features/sources/{SourcesControl,SourceSettingsDialog,SourcesControl.test}.tsx`, `src/test/ui/v2/main-sources.ui.test.ts` (all belong to the P5.8 commit)
+
+Item: **P5.8** (Catalog part, ruling 1b of 2026-10-15): `sources(projectDir, signal?, { configFiles? })` attributes
+the cached listing at read time with `withConfigFiles` over `feedContexts.forDirectory(projectDir)` when asked, and
+answers the bare listing (with a warning) when the chain cannot be built; the compute of `sources:<dir>` is unchanged.
+`FeedContexts.register` takes a pending chain and joins later `forDirectory`/`forProject` calls to it, dropping it on
+rejection; `computeInstalled` starts the inspection, then the walk, and registers the walk's chain before awaiting it.
+
+## Verified by running
+
+P5.8 (the same gate run for every directory of the item):
+
+```text
+baseline at f8bfe3f          → CI run 38701616594 green on all 11 jobs · npx tsc --noEmit 0 · npx eslint src 0 · npx vitest run →
+                               Test Files 154 passed (154) · Tests 3162 passed | 4 skipped (3166)
+stop-and-ask (config chain for configFile attribution) → ruling 1b of 2026-10-15 (verbatim in src/core/catalog/STATUS.md
+                               and docs/plans/STATUS.md)
+first repeat of the sources tests → 0 of 20: an unhandled rejection in sources.test.tsx (a rejected promise awaited after
+                               the host answered) made every run exit 1 with all tests passed; fixed in the test, gotcha
+                               row added to copilot-instructions; the counts of earlier runs had hidden it
+first backend run with ruling 1b → 2 red: `sources/list resolves the selected project's directory` (the call now carries
+                               `{ configFiles: true }`, asserted as ruling step 5 says) and `updates asks installed before
+                               the feed context and walks the chain once` (step 3 started the walk before the inspection;
+                               fixed by starting the inspection first, no test changed)
+npx tsc --noEmit / npm run check-types / npm run lint → exit 0 each (last run after every code edit)
+npm test (NUIGET_SDK_TESTS=1, DOTNET_ROOT set) → exit 0 · Test Files 155 passed (155) · Tests 3184 passed (3184)
+npx vitest run --project backend src/core/catalog src/host src/extension.next.test.ts → exit 0 (extension.next.test.ts
+                               unchanged: :365 and :373 as they were)
+npx vitest run --project integration src/test/harness → 19 passed · "sources unreachable shows banner not empty" 40 of
+                               40 · "both orders" (6 scenarios of the matrix at :95) 40 of 40; no harness file changed
+sources feature and slice tests, 20 times → 20 of 20 (exit codes counted)
+npm run bench                → exit 0 · Test Files 20 passed (20) · Tests 119 passed | 1 skipped (120)
+npx vitest run --coverage    → exit 0 · store/sources.tsx 98.27 % lines · main/features/sources 93.45 %
+npm run docs:protocol:check  → docs/protocol.md is up to date
+rm -rf dist && node esbuild.mjs --v2 --production --analyze → extension 281249 / 299921 (280657 at P5.7) · webview
+                               501695 / 600685 (492873) · sidebar 304283 / 329122 (303486); dist/ deleted after
+rm -rf dist && NUIGET_V2=1 npm run package && npm run check:vsix → check:vsix: OK
+NUIGET_V2=1 npm run test:ui:v2 -- --storage /tmp/nuiget-ui-v2 → 16 passing (18s), with and after the core change;
+                               fixture unchanged
+grep -c "configFiles: true" src/host/handlers.ts → 2 · catalog.sources in extension.next.ts:154 and SidebarHost.ts:88
+                               without the flag · one withConfigFiles call in Catalog.ts, inside sources() after the query
+npm run package:vsix (1.x)   → SKIPPED: no 1.x file changed; CI's Package job builds it
+npm run test:ui (1.x)        → SKIPPED: no 1.x UI file changed; the CI job `UI` runs it
+test -e .claude/.contract-change → false · git diff --stat c4c3617 -- src/protocol src/core/contracts.ts docs/adr
+                               src/core/project/context.ts src/extension.next.test.ts → empty
+```
+
+## Done (tested)
+
+- `Catalog.test.ts` (+4): the four titles of ruling step 5, verbatim. `sources queries per directory` unchanged.
+- `feedContexts.test.ts` (+2): `register with a pending walk is joined by forDirectory and forProject before it settles`,
+  `a rejected pending registration leaves no chain and the next forDirectory walks`. `register seeds …` unchanged.
+
+## Done (untested)
+
+- The attribution against a real SDK in VS Code: the ExTester test shows the rows, not their `configFile` (a machine's
+  user-level config file differs; the jsdom and host tests cover what is shown and sent).
+
+## Not started
+
+- The sidebar's source and restore title-bar state and "Open full view" (P5.10); the multi-install picker (P5.9).
+
+## Deviations from contract/ADR (file:line each)
+
+- `feedContexts.ts` and `feedContexts.test.ts` are outside the row's file list: approved by the ruling as a named
+  deviation.
+- N72 (open, P6.2): `sources/list` before `installed/get` for the same directory walks the chain twice.
+- The P2.8 note "Do not call `withConfigFiles` … from `sources()`" (below) is superseded by this ruling.
+
+## Advisor decisions (date, item, question, answer verbatim)
+
+2026-10-15, P5.8, ruling of the `architecture-advisor`, verbatim:
+
+Brief: the P5.8 row asks for `configFile` attribution of `sources()` with `withConfigFiles`; the merged config of a
+directory exists only on a `FeedContext`, `forDirectory` walks `dotnet nuget config paths` for an unregistered
+directory, the main panel asks `sources/list` on mount since P5.6, every source mutation clears the contexts, and the
+harness holds count `nuget config paths` walks. Options were attribution through `forDirectory` inside `sources()`, a
+settled context only, the project context's chain, or no attribution. Answer, verbatim:
+
+`````text
+DECISION: A refined option 1, call it 1b: `Catalog.sources(projectDir, signal?, options?: { configFiles?: boolean })` attributes at read time, outside the cached compute, through `feedContexts.forDirectory(dir)` and only when the caller asks for it; the `sources/list`, `sources/refresh` and the four mutation handlers ask, the root's reconcile and the sidebar picker do not; and `computeInstalled` announces its own walk to `FeedContexts` before awaiting it, so a concurrent `forDirectory`/`forProject` joins that walk instead of spawning a second `dotnet nuget config paths`. Not options 2, 3 or 4.
+
+WHY: Two corrections to the brief first. (i) The tree is further along than "only the tracker row edited": `git status --porcelain --untracked-files=all` shows `src/webview/main/MainShell.tsx`, `main.css`, `src/webview/shared/store/sources.tsx` and `sources.test.tsx` modified and `src/webview/main/features/sources/{SourceSettingsDialog,SourcesControl,SourcesControl.test}.tsx` plus `src/test/ui/v2/main-sources.ui.test.ts` untracked, all P5.8's webview side; `SourceSettingsDialog.tsx:34,46` already passes `source.configFile` to `remove` and shows it, so the attribution is load-bearing, not optional. (ii) Option 3's premise is false: `ProjectContextProvider` has no cache (`src/core/project/context.ts:37-43` runs `configFilesFor` on every `get`; the per-directory cache the gotcha mentions is the runner's SDK probe), and `sources()` has a directory, not a project path. The deciding facts: ADR-009 d.5 names exactly this path for a read without a project ("through the directory the host names"), and every other directory-scoped read already takes it (`Catalog.ts:271,415,437,504,516,532`), so attribution through `forDirectory` is the ADR's shape, not a new one; but `sources()` is also on the activation and reconcile path (`src/extension.next.ts:149-191`, `enabledSourceUrls` inside `refreshProjectsAndSession`, awaited as `extension.ready` by `src/test/harness/harness.ts:173` and re-run on every `workspace`/`sources`/`project` invalidation at `:241-245`), so a walk inside the compute would spawn at activation and during every full refresh and turn `src/extension.next.test.ts:365` (no walk before a read) and `:373` (one after), `src/test/harness/scenarios.test.ts:270` (one walk per directory) and `:119/:125/:142` (`recomputation.seen` 1 then 2 under a held walk) red: six assertions in tests the item does not name, all encoding ADR-002's one-computation invariant. Option 2 cannot attribute after a mutation: the `sources` scope reaches `sources, updates:*, allProjects:updates*, versions:*, metadata:*` and never `installed:*` (`src/core/queries/scopes.ts:17`), so after `afterSourceMutation`'s `feedContexts.clear()` (`Catalog.ts:541-546`, `handlers.ts:336-341`) nothing re-registers a chain before the mutation's own `catalog.sources` answers, which is exactly the add-then-remove window the dialog exists for. Option 4 defers the P2.8 note a second time while the dialog consumes it. Attribution outside the compute keeps the cached `sources:<dir>` value the plain listing (so the root's activation read is a cache hit without a walk and `Catalog.test.ts:347` `sources queries per directory` is untouched), and the flag confines the walk to the five handlers, whose callers in the harness and the root test never send `sources/list` on their own (`grep` of `src/test/harness/*.ts` hits only `scenarios.test.ts:625`, which asks after `walk.release()` and `expectState`, when the chain is registered and `forDirectory` spawns nothing). The attributed value stays under the listing's generation: the chain is cleared by the same invalidations that clear the listing (`sources`, `workspace`; the nuget.config watcher at `extension.next.ts:311` fires `sources`), and a `project` invalidation clears neither. The pending-chain announcement in `FeedContexts` dedupes the mount walk in the order `installed/get` then `sources/list` without touching `context.ts` (P2.5's file) and keeps each hold's per-computation meaning (`register` today runs only after `contexts.get` resolved, `Catalog.ts:184-188`, which is why `forDirectory` finds nothing while the walk is in flight). The P4.9 DO NOT at `src/core/catalog/STATUS.md:562` ("not per request or per `forProject` call; the directory → chain cache is consulted first and cleared only in `invalidate`") is satisfied by the flagged path; the P2.8 DO NOT at `src/core/catalog/STATUS.md:458` ("Do not call `withConfigFiles` or run `dotnet nuget config paths` from `sources()`") is superseded for this item, by name.
+
+DO:
+1. `src/core/catalog/Catalog.ts`: change the signature to `sources(projectDir: string, signal?: AbortSignal, options: { configFiles?: boolean } = {}): Promise<CatalogValue<NuGetSource[]>>`. Keep the compute exactly as it is (`queryWithRetry` under `resourceKeys.sources(projectDir)` over `this.deps.sources.listSources(projectDir)`). After it resolves: if `!options.configFiles` return it unchanged; otherwise `const context = await this.deps.feedContexts.forDirectory(projectDir).catch((error: unknown) => { this.deps.logger?.warn(redact(`Config chain of ${projectDir} could not be read, sources unattributed: ${describe(error)}`)); return undefined; });` and return `{ value: context ? withConfigFiles(listed.value, context.merged) : listed.value, generation: listed.generation }`. Import `withConfigFiles` from `'../sources'` (exported at `src/core/sources/index.ts:17`). Use the compute's own listing, never `context.sources`: contexts are keyed by chain (`feedContexts.ts:132-136`), and two directories whose walk failed share the key `''` and the first directory's listing (`:155-159`).
+2. `src/core/catalog/feedContexts.ts` (approved deviation, same directory, with `feedContexts.test.ts`): `register(projectPath: string, chain: string[] | Promise<string[]>): Promise<FeedContext>`. For a promise: `this.chains.set(directory, chain)`, then the same four lines as `forProject` (`:94-98`) deleting the entry on rejection when it is still the current one, then `return this.forChain(directory, await chain)`. An array keeps today's behaviour, so the existing test at `:135` (`register seeds a directory's chain …`) stays as it is.
+3. `src/core/catalog/Catalog.ts` `computeInstalled` (`:175-188`): take the raw promise first, `const raw = this.deps.contexts.get(projectPath); void this.deps.feedContexts.register(projectPath, raw.then(result => result.context.configFiles)).catch(debug as today);` before the `Promise.all`, and attach the existing `.catch(warn → undefined)` to `raw` for the `Promise.all`. The chain must be derived from the uncaught promise: deriving it from the caught one would register the empty chain `''` for a failed source listing and cache it until the next `clear()`, losing `forProject`'s recovery. Delete the post-resolution `register` block at `:184-188`.
+4. `src/host/handlers.ts`: `listSources` (`:319-322`) calls `catalog.sources(sourceDirectory(services), signal, { configFiles: true })`; `afterSourceMutation` (`:338`) calls `catalog.sources(sourceDirectory(services), undefined, { configFiles: true })`. The `removedUrl`/`disabledUrl` pre-reads (`:353,373`), `src/extension.next.ts:154` and `src/host/SidebarHost.ts:88` stay without the flag.
+5. Tests, by title. `src/core/catalog/Catalog.test.ts` (build the rig once and pass `rig.sources` into `makeDeps` next to `rig.feedContexts`: the rig's `FeedContexts` lists through its own `fakeSources(listings)` at `:138-141`, and an override provider would make `build`'s call invisible): `sources with configFiles names the declaring file from the directory's chain and runs no config-paths command once the chain is registered` (seed through `installed(appPath)` with `documents` for the chain, then `sources(dir, undefined, { configFiles: true })` → the feed carries `configFile`, `contexts.configFilesFor` not called); `sources with configFiles walks a chain no computation registered once, and forProject then shares it` (`configFilesFor` called once across `sources(dir, …, { configFiles: true })` and a following `updates(appPath, …)`); `sources with configFiles answers the bare listing when the chain cannot be built` (`configs.readChain` rejects → the listing without `configFile`, generation unchanged, a warning logged); `sources without configFiles runs no config-paths command` (the activation path: `configFilesFor` never called). Leave `sources queries per directory` (`:347`) exactly as it is: it passes no flag. `src/core/catalog/feedContexts.test.ts`: `register with a pending walk is joined by forDirectory and forProject before it settles` (one `configFilesFor` call, both resolve to the same context); `a rejected pending registration leaves no chain and the next forDirectory walks`. `src/host/handlers.test.ts`: extend the per-request test so the five sources handlers (`sources/list`, `sources/refresh`, the four mutations' `afterSourceMutation`) are asserted to pass `{ configFiles: true }` and the two pre-reads not to.
+6. Webview (already drafted): the remove confirm names `source.configFile` when present and sends `sources/remove { sourceName, configFile }` only then; a source without `configFile` is removed from the nearest file (the host's default) and the confirm says so. The ExTester test polls for the final list after a mutation: a mutation costs two walks (its own `sources` invalidation and the nuget.config watcher's about a second later), each re-ask walks once; never assert on the first refresh.
+7. `.github/copilot-instructions.md`, row "A recovered source invalidates nothing": replace "`dotnet nuget config paths` for a project directory runs inside `ProjectContextProvider.get` only, and `computeInstalled` hands that chain to `FeedContexts.register` (the harness holds on it rely on that)" with: "`dotnet nuget config paths` for a project directory runs in `ProjectContextProvider.get`, whose pending walk `computeInstalled` registers with `FeedContexts` before awaiting it, and in `FeedContexts.forDirectory` only for a directory no computation has registered (any directory read, `sources(…, { configFiles: true })` included); the harness holds count walks, so a scenario that asks `sources/list` while a walk is held counts one more". Keep the row's remaining sentences.
+8. Ledger: record N72, "mount-time double walk of `nuget config paths` when `sources/list` is dispatched before `installed/get` for the same directory (the pending-chain announcement covers the other order only)", pointed at P6.2, which rewrites `computeInstalled`'s context path. Cite P5.8, ADR-009 (d.5), N72 in the commit.
+9. STATUS notes: `src/core/catalog/STATUS.md` (this ruling verbatim, the P2.8 DO NOT at `:458` marked superseded by P5.8, the `:312` "Not started" line closed), `src/host/STATUS.md`, the webview notes, `docs/plans/STATUS.md` row P5.8.
+10. Gates in §2.2 order, including `npm run check-types`, `node esbuild.mjs --v2 --production --analyze` with the three sizes pasted (core and host changed), the harness matrix at `scenarios.test.ts:95` and the two source scenarios 40 times each. If part 2 (steps 2-3) moves any harness count, it is severable: drop steps 2-3, keep steps 1 and 4, and widen N72 to both orders; a red harness from part 2 is not a stop.
+
+DO NOT:
+Do not put `forDirectory` or `withConfigFiles` inside the compute function of `sources:<dir>`; the root's activation read would then walk, or (with a per-caller compute) cache an unattributed value that every later `sources/list` hits.
+Do not attribute from `feedContexts.registered()` or any settled-only lookup; after a `sources` invalidation nothing re-registers before the mutation's answer (`scopes.ts:17`).
+Do not pass the flag from `src/extension.next.ts:154`, `SidebarHost.ts:88` or the `removedUrl`/`disabledUrl` pre-reads.
+Do not touch `src/core/project/context.ts` or give `ProjectContextProvider` a cache: the holds and `revision` need one walk per computation.
+Do not derive the pending chain from the caught `contexts.get` promise (step 3).
+Do not use `context.sources` as the listing; use the compute's listing.
+Do not rewrite `sources queries per directory`, `extension.next.test.ts:357-374` or any harness count; if one moves, the implementation is wrong, not the test.
+Do not add a Catalog method (`configFilesOf`, `sourceUrls`): ADR-009 d.8 and the sentinel.
+Do not re-ask `sources/list` from the webview after `installed/get` as a workaround for N72, and do not `invalidate` from `onDidRegister`.
+Do not fix here that a failed walk (`configFilesFor` → `[]`) is cached as chain `''` until the next `clear()` (pre-existing in P4.9a's `forDirectory`); `sources/refresh` is the user's way out.
+
+CONTRACT CHANGE: none. `NuGetSource.configFile?` exists at `src/protocol/domain.ts:147`; `sources/remove { sourceName, configFile? }` at `src/protocol/messages.ts:148` is unchanged; no ADR amendment, no sentinel. `src/core/catalog/feedContexts.ts` and `feedContexts.test.ts` are approved as a named deviation from the row's file list (record it in both STATUS notes).
+
+VERIFY:
+- `npx tsc --noEmit` → 0 and `npm run check-types` → exit 0; `npx eslint src` → 0.
+- `npx vitest run --project backend src/core/catalog` → green, with the six new titles of step 5 present and `sources queries per directory` unchanged.
+- `npx vitest run --project backend src/host` → green, the per-request test asserting the flag on the five sources handlers.
+- `npx vitest run src/extension.next.test.ts` → green, `:365` still `[]` and `:373` still 1 (no edit to that file).
+- `npx vitest run --project integration src/test/harness` → green; `for i in $(seq 1 40); do npx vitest run --project integration src/test/harness -t "sources unreachable shows banner not empty" || break; done` and the same loop for `full/scoped/watcher invalidation both orders` → 40 of 40; `scenarios.test.ts:270` still asserts 1 without an edit.
+- `grep -c "configFiles: true" src/host/handlers.ts` → 2; `grep -n "catalog.sources" src/extension.next.ts src/host/SidebarHost.ts` → two lines, neither with `configFiles`.
+- `grep -n "REMOVAL GATE\|withConfigFiles" src/core/catalog/Catalog.ts` → one `withConfigFiles` call, inside `sources()`, after the query.
+- `npm test`, `npm run bench`, `node esbuild.mjs --v2 --production --analyze` (sizes pasted, none past a ceiling), `NUIGET_V2=1 npm run test:ui:v2 -- --storage /tmp/nuiget-ui-v2` with `main-sources.ui.test.ts` passing.
+
+FILES CHECKED: `/Users/mattias/github/nuiget/.github/agents/architecture-advisor.agent.md`; `/Users/mattias/github/nuiget/docs/plans/2026-10-11-nuiget-2.0-execution-plan.md:1-140` (§0-§2, D6, D7, D13) and rows P2.8 (`:232`), P5.8 (`:281`); `/Users/mattias/github/nuiget/docs/plans/STATUS.md` rows P2.5, P2.8, P2.9, P2.fix-2, P4.9, P5.2, P5.3, P5.7, P5.8, P6.2 and its working-tree diff; `/Users/mattias/github/nuiget/docs/adr/009-catalog.md` (d.1, d.4, d.5, d.6, d.8); `/Users/mattias/github/nuiget/docs/adr/005-execution-context-and-outbound-policy.md`; `/Users/mattias/github/nuiget/src/core/catalog/Catalog.ts:1-60,100-260,520-570`; `/Users/mattias/github/nuiget/src/core/catalog/feedContexts.ts:1-165`; `/Users/mattias/github/nuiget/src/core/catalog/Catalog.test.ts:95-175,335-372`; `/Users/mattias/github/nuiget/src/core/catalog/feedContexts.test.ts` (titles at `:53-175`); `/Users/mattias/github/nuiget/src/core/catalog/STATUS.md:308-316,428-436,452-464,489-576`; `/Users/mattias/github/nuiget/src/core/project/context.ts:1-91`; `/Users/mattias/github/nuiget/src/core/queries/scopes.ts:1-20,146-165`; `/Users/mattias/github/nuiget/src/core/sources/merge.ts:60-68`, `index.ts:16-17`, `NuGetConfigReader.ts:56-70`, `DotnetSourceProvider.ts:57-59`, `STATUS.md:70-80,105-125,155-165`; `/Users/mattias/github/nuiget/src/host/handlers.ts:300-395`; `/Users/mattias/github/nuiget/src/host/handlers.test.ts:89,141-143,168,228`; `/Users/mattias/github/nuiget/src/host/SidebarHost.ts:70-110`; `/Users/mattias/github/nuiget/src/host/services.ts:36`; `/Users/mattias/github/nuiget/src/host/STATUS.md` (sources lines); `/Users/mattias/github/nuiget/src/extension.next.ts:80-102,140-245,311,333-353`; `/Users/mattias/github/nuiget/src/extension.next.test.ts:159-166,340-384`; `/Users/mattias/github/nuiget/src/test/harness/scenarios.test.ts:95-294,600-645`; `/Users/mattias/github/nuiget/src/test/harness/harness.ts:172-187`; `/Users/mattias/github/nuiget/src/test/harness/fakeDotnet.ts:67-68,118-172`; `/Users/mattias/github/nuiget/src/protocol/messages.ts:143-150`; `/Users/mattias/github/nuiget/src/protocol/domain.ts:143-150`; `/Users/mattias/github/nuiget/src/webview/shared/store/sources.tsx:40-125`; `/Users/mattias/github/nuiget/src/webview/main/features/sources/SourceSettingsDialog.tsx` (`:34,46,62-124`); `/Users/mattias/github/nuiget/src/webview/main/features/search/useSearchTyping.ts:42`; `/Users/mattias/github/nuiget/src/webview/{main,shared}/STATUS.md` (sources lines); `/Users/mattias/github/nuiget/docs/ux/interaction-model.md:11,73,108,128-140`; `/Users/mattias/github/nuiget/docs/plans/findings-ledger.md` (last id N71); `/Users/mattias/github/nuiget/.github/copilot-instructions.md` rows "A recovered source invalidates nothing" and "Harness: a read that cannot be held"; `git status --porcelain --untracked-files=all`, `git ls-files src/webview/main/features/sources`. No file was created, edited, moved or deleted; shell use was inspection only.
+`````
+
+## Exact next step (one item ID)
+
+P5.9 (feature all-projects), after P5.8's CI run is green.
+
+## Earlier notes of this directory
 
 git status --porcelain --untracked-files=all (before the commit): new `src/test/harness/fakeFeed.ts`; modified `src/core/feeds/{health,health.test}.ts`, `src/core/catalog/{Catalog,Catalog.test,feedContexts,feedContexts.test}.ts`, `src/host/{handlers,SidebarHost}.ts`, `src/extension.next.ts`, `src/extension.next.test.ts`, `src/test/harness/{harness,FakeWebview,scenarios.test}.ts`, the five STATUS notes, `CHANGELOG.md`, `ARCHITECTURE.md`, `.github/copilot-instructions.md`, `docs/plans/STATUS.md`, `docs/plans/findings-ledger.md` (all belong to the P4.9b commit)
 
@@ -309,7 +438,7 @@ CI                           → see the tracker row of P2.8
   enrichment of `installed`, icons, `IconResolver.reset()` in `invalidate`, `versions` and `metadata` through
   the coordinator). They are not declared here when their signature needs a feed type.
 - Outbound policy and credentials per project context: built by P4.9 from the pieces of P2.6 and P2.7.
-- `configFile` attribution of `sources()` with `withConfigFiles`: P5.8.
+- `configFile` attribution of `sources()` with `withConfigFiles`: P5.8. Closed at P5.8 (ruling 1b of 2026-10-15).
 - The `installed/get` chunk kind that carries the provisional `InstalledResult`: P6.2 (a protocol change).
 
 ## Deviations from contract/ADR (file:line each)
@@ -455,7 +584,7 @@ DO NOT:
 - Do not let `installed()` reject because `ProjectContextProvider.get` rejected; log and return the provisional.
 - Do not keep `defaultCwd`, `sourceCwd` or any `process.cwd()` fallback; no directory is guessed in core.
 - Do not add `onSourcesInvalidated`, `policyFor` or `credentialsFor` seams that nothing consumes before P4.9.
-- Do not call `withConfigFiles` or run `dotnet nuget config paths` from `sources()`.
+- Do not call `withConfigFiles` or run `dotnet nuget config paths` from `sources()`. (Superseded by P5.8, ruling 1b of 2026-10-15: attribution at read time behind `{ configFiles: true }`.)
 - Do not wrap `allProjects/*` in `coordinator.query`; their payload is the chunks.
 - Do not reword the exact comment `// REMOVAL GATE: P4.9` or the test titles the row names.
 - Do not commit while `.claude/.contract-change` exists, and do not edit the barrel of any directory other than `src/core/project`.
@@ -635,3 +764,4 @@ VERIFY:
 
 FILES CHECKED: /Users/mattias/github/nuiget/.github/agents/architecture-advisor.agent.md (whole); /Users/mattias/github/nuiget/docs/plans/2026-10-11-nuiget-2.0-execution-plan.md (:1-200: §0-§4, P0 rows; P4.9 row :265 by grep); /Users/mattias/github/nuiget/docs/adr/002-query-coordinator.md (whole), /Users/mattias/github/nuiget/docs/adr/009-catalog.md (whole, d.5 and d.6 as amended at P4.9a); /Users/mattias/github/nuiget/docs/plans/STATUS.md:2060-2178 (the P4.9 ruling verbatim, steps 11-16, DO NOT, CONTRACT CHANGE, VERIFY); /Users/mattias/github/nuiget/src/STATUS.md:1-20; /Users/mattias/github/nuiget/src/extension.next.ts (whole, working tree: `probeSources` :222-237, `reconciled` :219-220, monitor :243-244, restart :250-252, `ready.finally(markReconciled)` :371); /Users/mattias/github/nuiget/src/core/catalog/feedContexts.ts (whole); /Users/mattias/github/nuiget/src/core/catalog/Catalog.ts (:127 `sources`, :160-262 `computeInstalled`/`updates`/`computeUpdates`, :520-539 `sourceHealth`/`invalidate`, the uncommitted `emitInstalledMetadata` diff); /Users/mattias/github/nuiget/src/core/catalog/Catalog.test.ts (:46-57 `fakeSources`, :143-151 `makeDeps` builds a real `FeedContexts`, :440-475 the two addendum tests); /Users/mattias/github/nuiget/src/core/catalog/feedContexts.test.ts (:1-43 rig, titles :44-111); /Users/mattias/github/nuiget/src/core/project/context.ts (whole); /Users/mattias/github/nuiget/src/core/feeds/health.ts (whole, working tree) and its diff; /Users/mattias/github/nuiget/src/core/feeds/serviceIndex.ts:170-260 (`resolve`, `probe` bypasses caches and does not reset health, `clearCaches` resets it, `fetchEndpoints` marks); /Users/mattias/github/nuiget/src/core/sources/DotnetSourceProvider.ts:45-59 (per-directory listing cache); /Users/mattias/github/nuiget/src/core/util/events.ts:1-40 (`Emitter`); /Users/mattias/github/nuiget/src/host/handlers.ts:29-36 (`sourceDirectory`), :284-301 and the working-tree diff (`failed: catalog.sourceHealth()`); /Users/mattias/github/nuiget/src/host/SidebarHost.ts diff; /Users/mattias/github/nuiget/src/test/harness/harness.ts (whole at first read, then the working-tree diff adding `FakeFeed`/`FakeTransport` :17-22,65-70,168-172); /Users/mattias/github/nuiget/src/test/harness/fakeFeed.ts (untracked; :1-80: `down` → `fail('network')`, service index answered with search, registration and flat resources, 404 for unknown ids); /Users/mattias/github/nuiget/src/test/harness/scenarios.test.ts (whole; the six failing titles :87-142,239-272,274-311; the count at :267-269); /Users/mattias/github/nuiget/src/test/harness/fakeDotnet.ts (whole; `configPaths` matcher :68, holds :148-159, `nuget config paths` answered empty :138-139); /Users/mattias/github/nuiget/src/test/harness/FakeWebview.ts (grep: only `project` chunks of `allProjects/installed` are applied, :231-237); /Users/mattias/github/nuiget/src/extension.next.test.ts:380-470 (the four reconciliation tests, :445-456 `a replaced selection …`), :310-338 (transport override tests), :508-533 (`overlapping refreshes are coalesced`), :594-598. Commands: `git status --short` and `git status --porcelain --untracked-files=all` (modified: docs/plans/STATUS.md, Catalog.ts, health.ts, health.test.ts, extension.next.ts, SidebarHost.ts, handlers.ts, harness.ts; untracked: src/test/harness/fakeFeed.ts), `git log --oneline -3` (head 6e2c878), `git diff --stat`, `git diff` of Catalog.ts, health.ts, SidebarHost.ts, handlers.ts, harness.ts, `wc -l` of the files in play, `ls src/core/feeds src/core/sources src/core/catalog src/test/harness`. Advisor tool consulted once before writing; its points (the duplicated walk as the defect, `computeUpdates` order, `onDidRegister` → restart so the first probe is not five minutes out, the withdrawn step-15 premise, the three facts to verify: real `FeedContexts` in the Catalog rig, the fake feed's 200 service index, `Catalog.sources` registering nothing) are verified and folded in.
 `````
+

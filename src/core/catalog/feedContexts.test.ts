@@ -146,6 +146,36 @@ describe('FeedContexts', () => {
         expect(registered).toMatchObject({ key: chainFile, configFiles: [chainFile], directory: app });
     });
 
+    it('register with a pending walk is joined by forDirectory and forProject before it settles', async () => {
+        const app = path.resolve('/w/App');
+        const contexts = contextsWith({ [app]: [chainFile] });
+        const registry = new FeedContexts({ contexts, sources: sourcesOf([privateFeed]), configs: { readChain: vi.fn(async () => [document()]) }, feeds: fakeFeeds() });
+        let settle!: (chain: string[]) => void;
+
+        const registered = registry.register(path.join(app, 'App.csproj'), new Promise<string[]>(resolve => { settle = resolve; }));
+        const byDirectory = registry.forDirectory(app);
+        const byProject = registry.forProject(path.join(app, 'App.csproj'));
+        settle([chainFile]);
+
+        const [first, second, third] = await Promise.all([registered, byDirectory, byProject]);
+        expect(second).toBe(first);
+        expect(third).toBe(first);
+        expect(contexts.configFilesFor).not.toHaveBeenCalled();
+        expect(contexts.get).not.toHaveBeenCalled();
+    });
+
+    it('a rejected pending registration leaves no chain and the next forDirectory walks', async () => {
+        const app = path.resolve('/w/App');
+        const contexts = contextsWith({ [app]: [chainFile] });
+        const registry = new FeedContexts({ contexts, sources: sourcesOf([privateFeed]), configs: { readChain: vi.fn(async () => [document()]) }, feeds: fakeFeeds() });
+
+        await expect(registry.register(path.join(app, 'App.csproj'), Promise.reject(new Error('walk failed')))).rejects.toThrow('walk failed');
+        const context = await registry.forDirectory(app);
+
+        expect(contexts.configFilesFor).toHaveBeenCalledTimes(1);
+        expect(context).toMatchObject({ key: chainFile, configFiles: [chainFile] });
+    });
+
     it('onDidRegister fires once per chain, for register, forProject and forDirectory alike, and again after clear', async () => {
         const a = path.resolve('/a');
         const b = path.resolve('/b');

@@ -28,6 +28,7 @@ import type {
 } from '../../protocol/domain';
 import { resourceKeys } from '../../protocol/domain';
 import { filterAllowedSources, type ResolvedSource } from '../feeds';
+import { withConfigFiles } from '../sources';
 import type { RequestChunk } from '../../protocol/messages';
 import { redact } from '../logging';
 import { getProjectDependencyMap, type AssetsReader, type ProjectContextProvider } from '../project';
@@ -123,8 +124,22 @@ export class Catalog {
     }
 
     /** Sources effective for a directory. The caller names the directory; none is guessed here. */
-    sources(projectDir: string, signal?: AbortSignal): Promise<CatalogValue<NuGetSource[]>> {
-        return queryWithRetry(() => this.deps.coordinator.query<NuGetSource[]>(resourceKeys.sources(projectDir), () => this.deps.sources.listSources(projectDir)), signal);
+    /**
+     * The sources of a directory. With `configFiles` each source names the nearest config file that declares it, from
+     * the directory's chain (`forDirectory`, which walks it only when no computation has registered it); the cached
+     * value stays the plain listing, so a reader that does not ask (activation, reconcile) never walks the chain.
+     */
+    async sources(projectDir: string, signal?: AbortSignal, options: { configFiles?: boolean } = {}): Promise<CatalogValue<NuGetSource[]>> {
+        const listed = await queryWithRetry(() => this.deps.coordinator.query<NuGetSource[]>(resourceKeys.sources(projectDir), () => this.deps.sources.listSources(projectDir)), signal);
+        if (!options.configFiles) {
+            return listed;
+        }
+        const context = await this.deps.feedContexts.forDirectory(projectDir).catch((error: unknown) => {
+            this.deps.logger?.warn(redact(`Config chain of ${projectDir} could not be read, sources unattributed: ${describe(error)}`));
+            return undefined;
+        });
+        // The compute's own listing, never `context.sources`: contexts are shared by every directory with the same chain.
+        return { value: context ? withConfigFiles(listed.value, context.merged) : listed.value, generation: listed.generation };
     }
 
     // ─── single project ─────────────────────────────────────────────────────
@@ -172,20 +187,22 @@ export class Catalog {
     }
 
     private async computeInstalled(projectPath: string, signal: AbortSignal, emit: (chunk: InstalledChunk) => void): Promise<InstalledResult> {
+        const inspection = this.deps.inspector.inspect(projectPath);
+        const walk = this.deps.contexts.get(projectPath);
+        // The computation's own walk of the config chain is registered while it runs: a directory read meanwhile joins
+        // it instead of walking a second time. The chain comes from the walk itself, never from the caught promise
+        // below, so a failed walk registers nothing.
+        void this.deps.feedContexts.register(projectPath, walk.then(result => result.context.configFiles)).catch((error: unknown) => {
+            this.deps.logger?.debug(redact(`Feed context of ${projectPath} could not be registered: ${describe(error)}`));
+        });
         const [inspected, context] = await Promise.all([
-            this.deps.inspector.inspect(projectPath),
+            inspection,
             // A source listing that fails must not hide the package list.
-            this.deps.contexts.get(projectPath).catch((error: unknown) => {
+            walk.catch((error: unknown) => {
                 this.deps.logger?.warn(redact(`Execution context of ${projectPath} could not be built: ${describe(error)}`));
                 return undefined;
             }),
         ]);
-        if (context !== undefined) {
-            // The computation's own walk of the config chain registers the directory's feed context: no second walk.
-            void this.deps.feedContexts.register(projectPath, context.context.configFiles).catch((error: unknown) => {
-                this.deps.logger?.debug(redact(`Feed context of ${projectPath} could not be registered: ${describe(error)}`));
-            });
-        }
         // What the inspector calls unsupported stays as it is; an SDK below 10 keeps the packages (D13).
         const provisional: InstalledResult = !inspected.unsupported && context?.unsupported ? { ...inspected, unsupported: context.unsupported } : inspected;
         const evaluator = this.deps.evaluator;

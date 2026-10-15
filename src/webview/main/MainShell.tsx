@@ -12,6 +12,7 @@ import { useSearch } from '../shared/store/search';
 import { useSession, useSessionActions } from '../shared/store/session';
 import { useUpdates } from '../shared/store/updates';
 import { useSearchTyping } from './features/search/useSearchTyping';
+import { SourcesControl } from './features/sources/SourcesControl';
 
 export type MainTab = 'installed' | 'updates';
 
@@ -146,10 +147,7 @@ export function MainShell({ installed, updates, browse, details }: MainShellProp
                     {supported.length > 1 ? <option value={ALL_PROJECTS}>{`All Projects (${supported.length})`}</option> : null}
                     {supported.map(project => <option key={project.path} value={project.path} title={project.path}>{project.name}</option>)}
                 </select>
-                {/* The source the session uses; the list of sources to choose from comes with the sources feature. */}
-                <select className="nuiget-main-select" data-testid="source-selector" aria-label="Package source" value={session?.selectedSource ?? 'all'} disabled>
-                    <option value={session?.selectedSource ?? 'all'}>{session === undefined || session.selectedSource === 'all' ? 'All sources' : session.selectedSource}</option>
-                </select>
+                <SourcesControl announce={announce} />
                 <label className="nuiget-main-toggle">
                     <input type="checkbox" checked={session?.includePrerelease ?? false} disabled={!hasSession} onChange={event => set({ includePrerelease: event.target.checked })} />
                     Include prerelease

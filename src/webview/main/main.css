@@ -371,3 +371,100 @@ body {
     color: var(--nuiget-color-syntax-comment);
     font-style: italic;
 }
+
+/* ── NuGet sources dialog ── */
+
+.nuiget-source-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--nuiget-space-2);
+    max-height: 50vh;
+    margin: 0;
+    padding: 0;
+    overflow-y: auto;
+    list-style: none;
+}
+
+.nuiget-source-row {
+    display: flex;
+    align-items: center;
+    gap: var(--nuiget-space-4);
+    min-height: var(--nuiget-target-min);
+    padding: var(--nuiget-space-2) 0;
+    border-bottom: 1px solid var(--nuiget-color-border);
+}
+
+.nuiget-source-text {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.nuiget-source-name--off {
+    color: var(--nuiget-color-fg-muted);
+}
+
+.nuiget-source-url,
+.nuiget-source-config {
+    color: var(--nuiget-color-fg-muted);
+    font-size: var(--nuiget-font-size-sm);
+    overflow-wrap: anywhere;
+}
+
+.nuiget-source-confirm {
+    display: flex;
+    align-items: center;
+    gap: var(--nuiget-space-3);
+}
+
+.nuiget-add-source {
+    display: flex;
+    flex-direction: column;
+    gap: var(--nuiget-space-4);
+    min-width: min(28em, 80vw);
+}
+
+.nuiget-field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--nuiget-space-1);
+}
+
+.nuiget-field--warning {
+    flex-direction: row;
+    align-items: center;
+    gap: var(--nuiget-space-2);
+    color: var(--nuiget-color-warning);
+}
+
+.nuiget-field-error {
+    margin: 0;
+    color: var(--nuiget-color-error);
+}
+
+.nuiget-input {
+    box-sizing: border-box;
+    min-height: var(--nuiget-target-min);
+    padding: 0 var(--nuiget-space-3);
+    border: 1px solid var(--nuiget-color-input-border);
+    border-radius: var(--nuiget-radius-sm);
+    background: var(--nuiget-color-input-bg);
+    color: var(--nuiget-color-input-fg);
+    font: inherit;
+}
+
+.nuiget-input::placeholder {
+    color: var(--nuiget-color-input-placeholder);
+}
+
+.nuiget-input:focus {
+    outline: 1px solid var(--nuiget-color-focus);
+    outline-offset: -1px;
+}
+
+.nuiget-add-source-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--nuiget-space-3);
+}

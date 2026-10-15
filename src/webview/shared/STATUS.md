@@ -1,4 +1,78 @@
-# STATUS — src/webview/shared   commit 4dfa2e5 (parent of the P5.7 commit)   2026-10-15T15:00:00Z
+# STATUS — src/webview/shared   commit f8bfe3f (parent of the P5.8 commit)   2026-10-15T19:00:00Z
+
+git status --porcelain --untracked-files=all (before the commit): modified `.github/copilot-instructions.md`, `ARCHITECTURE.md`, `CHANGELOG.md`, `docs/plans/{STATUS,findings-ledger}.md`, `src/core/catalog/{Catalog,Catalog.test,feedContexts,feedContexts.test}.ts`, `src/host/{handlers,handlers.test}.ts`, `src/webview/main/{MainShell.tsx,main.css}`, `src/webview/shared/store/{sources.tsx,sources.test.tsx}` and the five STATUS notes; new `src/webview/main/features/sources/{SourcesControl,SourceSettingsDialog,SourcesControl.test}.tsx`, `src/test/ui/v2/main-sources.ui.test.ts` (all belong to the P5.8 commit)
+
+Item: **P5.8 feature sources**, for this directory: the mutations of `store/sources.tsx` (`add`, `remove` with the
+declaring `configFile` when known, `setEnabled`, a `pending` set by source name, the answered list shown at once, the
+host's message on refusal; `configFiles`/`loadConfigFiles` over `sources/configFiles`).
+
+## Verified by running
+
+P5.8 (the same gate run for every directory of the item):
+
+```text
+baseline at f8bfe3f          → CI run 38701616594 green on all 11 jobs · npx tsc --noEmit 0 · npx eslint src 0 · npx vitest run →
+                               Test Files 154 passed (154) · Tests 3162 passed | 4 skipped (3166)
+stop-and-ask (config chain for configFile attribution) → ruling 1b of 2026-10-15 (verbatim in src/core/catalog/STATUS.md
+                               and docs/plans/STATUS.md)
+first repeat of the sources tests → 0 of 20: an unhandled rejection in sources.test.tsx (a rejected promise awaited after
+                               the host answered) made every run exit 1 with all tests passed; fixed in the test, gotcha
+                               row added to copilot-instructions; the counts of earlier runs had hidden it
+first backend run with ruling 1b → 2 red: `sources/list resolves the selected project's directory` (the call now carries
+                               `{ configFiles: true }`, asserted as ruling step 5 says) and `updates asks installed before
+                               the feed context and walks the chain once` (step 3 started the walk before the inspection;
+                               fixed by starting the inspection first, no test changed)
+npx tsc --noEmit / npm run check-types / npm run lint → exit 0 each (last run after every code edit)
+npm test (NUIGET_SDK_TESTS=1, DOTNET_ROOT set) → exit 0 · Test Files 155 passed (155) · Tests 3184 passed (3184)
+npx vitest run --project backend src/core/catalog src/host src/extension.next.test.ts → exit 0 (extension.next.test.ts
+                               unchanged: :365 and :373 as they were)
+npx vitest run --project integration src/test/harness → 19 passed · "sources unreachable shows banner not empty" 40 of
+                               40 · "both orders" (6 scenarios of the matrix at :95) 40 of 40; no harness file changed
+sources feature and slice tests, 20 times → 20 of 20 (exit codes counted)
+npm run bench                → exit 0 · Test Files 20 passed (20) · Tests 119 passed | 1 skipped (120)
+npx vitest run --coverage    → exit 0 · store/sources.tsx 98.27 % lines · main/features/sources 93.45 %
+npm run docs:protocol:check  → docs/protocol.md is up to date
+rm -rf dist && node esbuild.mjs --v2 --production --analyze → extension 281249 / 299921 (280657 at P5.7) · webview
+                               501695 / 600685 (492873) · sidebar 304283 / 329122 (303486); dist/ deleted after
+rm -rf dist && NUIGET_V2=1 npm run package && npm run check:vsix → check:vsix: OK
+NUIGET_V2=1 npm run test:ui:v2 -- --storage /tmp/nuiget-ui-v2 → 16 passing (18s), with and after the core change;
+                               fixture unchanged
+grep -c "configFiles: true" src/host/handlers.ts → 2 · catalog.sources in extension.next.ts:154 and SidebarHost.ts:88
+                               without the flag · one withConfigFiles call in Catalog.ts, inside sources() after the query
+npm run package:vsix (1.x)   → SKIPPED: no 1.x file changed; CI's Package job builds it
+npm run test:ui (1.x)        → SKIPPED: no 1.x UI file changed; the CI job `UI` runs it
+test -e .claude/.contract-change → false · git diff --stat c4c3617 -- src/protocol src/core/contracts.ts docs/adr
+                               src/core/project/context.ts src/extension.next.test.ts → empty
+```
+
+## Done (tested)
+
+- `sources.test.tsx` (+3, 8 in all): the four mutations with their payloads, `pending` and the answer shown; a refusal
+  rejects with the host's message and leaves the list (the rejection handled from the start); `loadConfigFiles` and its
+  failure.
+
+## Done (untested)
+
+- The attribution against a real SDK in VS Code: the ExTester test shows the rows, not their `configFile` (a machine's
+  user-level config file differs; the jsdom and host tests cover what is shown and sent).
+
+## Not started
+
+- The sidebar's source and restore title-bar state and "Open full view" (P5.10); the multi-install picker (P5.9).
+
+## Deviations from contract/ADR (file:line each)
+
+- None beyond the earlier notes.
+
+## Advisor decisions (date, item, question, answer verbatim)
+
+The P5.8 ruling of the `architecture-advisor` (2026-10-15, option 1b) is verbatim in `docs/plans/STATUS.md` under "### P5.8 — stop-and-ask: the config chain for `configFile` attribution in `Catalog.sources()`" and in `src/core/catalog/STATUS.md`. The ambient advisor was consulted before writing (the selector disabled until the list is known keeps the P5.3 test as written, the in-dialog confirm row, `allowInsecure` for `http:`, no mutation in VS Code).
+
+## Exact next step (one item ID)
+
+P5.9 (feature all-projects), after P5.8's CI run is green.
+
+## Earlier notes of this directory
 
 git status --porcelain --untracked-files=all (before the commit): modified `ARCHITECTURE.md`, `CHANGELOG.md`, `docs/plans/STATUS.md`, `src/webview/main/{MainShell.tsx,index.tsx,main.css}`, `src/webview/main/features/installed/InstalledTab.tsx`, `src/webview/main/features/updates/UpdatesTab.tsx`, `src/webview/main/features/search/BrowseList.tsx`, `src/webview/shared/store/StoreProvider.tsx`, `src/webview/shared/tokens.css` and the three STATUS notes; new `src/webview/main/features/details/{DetailsPane,DetailsInfo,ReadmeView}.tsx`, `markdown.ts`, `DetailsPane.test.tsx`, `markdown.test.ts`, `src/webview/shared/store/{details.tsx,details.test.tsx}`, `src/test/ui/v2/main-details.ui.test.ts` (all belong to the P5.7 commit)
 
@@ -640,6 +714,7 @@ FILES CHECKED: `docs/plans/2026-10-11-nuiget-2.0-execution-plan.md:41-175,240-25
 ## Exact next step (one item ID)
 
 P5.6 (feature search, main and sidebar browse), after P5.5's CI run is green; a fresh session starts it (second compaction of this one).
+
 
 
 

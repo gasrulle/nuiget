@@ -351,13 +351,14 @@ describe('shared handlers: reads', () => {
         const selected = makeServices();
         const host = new TestHost(selected.services);
         await host.receiveRaw(makeRequest('sources/list', {}, 'a'));
-        expect(selected.catalog.sources).toHaveBeenCalledWith(path.dirname(appPath), expect.any(AbortSignal));
+        // The sources a webview lists name the config file that declares them (P5.8).
+        expect(selected.catalog.sources).toHaveBeenCalledWith(path.dirname(appPath), expect.any(AbortSignal), { configFiles: true });
         expect(resultOf(host, 'a')).toEqual({ sources: [feed], failed: [] });
 
         const all = makeServices({ selectedProject: ALL_PROJECTS });
         const allHost = new TestHost(all.services);
         await allHost.receiveRaw(makeRequest('sources/refresh', {}, 'b'));
-        expect(all.catalog.sources).toHaveBeenCalledWith(workspace, expect.any(AbortSignal));
+        expect(all.catalog.sources).toHaveBeenCalledWith(workspace, expect.any(AbortSignal), { configFiles: true });
         expect(all.invalidate).toHaveBeenCalledWith({ kind: 'sources' }, 'manual-refresh');
 
         const nothing = makeServices({ selectedProject: '', workspaceFolder: null });
@@ -379,6 +380,21 @@ describe('shared handlers: reads', () => {
         sources.add.mockResolvedValueOnce({ ok: false, error: 'error: the source already exists' } as never);
         await host.receiveRaw(makeRequest('sources/add', { url: feed.url, name: feed.name }, 'b'));
         expect(errorOf(host, 'b')).toMatchObject({ code: 'failed', message: 'error: the source already exists' });
+    });
+
+    it('a mutation answers with the attributed sources; the pre-reads of remove and disable ask without', async () => {
+        const { services, catalog } = makeServices();
+        const host = new TestHost(services);
+        const directory = path.dirname(appPath);
+        for (const [type, payload] of [['sources/add', { url: feed.url }], ['sources/remove', { sourceName: feed.name }], ['sources/enable', { sourceName: feed.name }], ['sources/disable', { sourceName: feed.name }]] as const) {
+            catalog.sources.mockClear();
+            await host.receiveRaw(makeRequest(type, payload as never, type));
+            const calls = catalog.sources.mock.calls as unknown[][];
+            // The answer: one attributed read after the mutation.
+            expect(calls.filter(call => (call[2] as { configFiles?: boolean } | undefined)?.configFiles === true), type).toEqual([[directory, undefined, { configFiles: true }]]);
+            // remove and disable read the URL first, without the chain.
+            expect(calls.filter(call => call[2] === undefined), type).toHaveLength(type === 'sources/remove' || type === 'sources/disable' ? 1 : 0);
+        }
     });
 
     it('perf/mark is logged at info only while performance logging is on', async () => {

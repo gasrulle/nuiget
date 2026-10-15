@@ -115,4 +115,50 @@ describe('sources slice (read part)', () => {
         expect(text('status')).toBe('loading');
         expect(text('error')).toBe('none');
     });
+
+    it('add, remove, enable and disable send their request, mark the source pending and show the answer at once', async () => {
+        const host = mount();
+        await enabledWithSession(host);
+        await hostSays(() => host.respond(listed(host)[0], { sources: [source('nuget')], failed: [] }, 1));
+
+        let added!: Promise<void>;
+        await act(async () => { added = slice.add({ url: 'https://contoso.example/v3/index.json', name: 'contoso', configFile: '/w/nuget.config' }); });
+        expect(host.requests('sources/add')[0].payload).toEqual({ url: 'https://contoso.example/v3/index.json', name: 'contoso', configFile: '/w/nuget.config' });
+        expect([...slice.pending]).toEqual(['contoso']);
+        await hostSays(() => host.respond(host.requests('sources/add')[0], { sources: [source('nuget'), source('contoso')] }, 2));
+        await act(async () => added);
+        expect(text('sources')).toBe('nuget,contoso');
+        expect(slice.pending.size).toBe(0);
+
+        await act(async () => { void slice.setEnabled('contoso', false); });
+        await hostSays(() => host.respond(host.requests('sources/disable')[0], { sources: [source('nuget'), { ...source('contoso'), enabled: false }] }, 3));
+        await act(async () => { void slice.setEnabled('contoso', true); });
+        expect(host.requests('sources/enable')[0].payload).toEqual({ sourceName: 'contoso' });
+        await act(async () => { void slice.remove('contoso', '/w/nuget.config'); });
+        await act(async () => { void slice.remove('nuget'); });
+        expect(host.requests('sources/remove').map(request => request.payload)).toEqual([{ sourceName: 'contoso', configFile: '/w/nuget.config' }, { sourceName: 'nuget' }]);
+    });
+
+    it('a refused mutation rejects with the host\'s message and leaves the list as it was', async () => {
+        const host = mount();
+        await enabledWithSession(host);
+        await hostSays(() => host.respond(listed(host)[0], { sources: [source('nuget')], failed: [] }, 1));
+        let outcome!: Promise<string>;
+        // The rejection is handled from the start, so it is never an unhandled one.
+        await act(async () => { outcome = slice.add({ url: 'not a url' }).then(() => 'added', (error: Error) => error.message); });
+        await hostSays(() => host.fail(host.requests('sources/add')[0], 'failed', 'The source URL is not valid'));
+        expect(await outcome).toBe('The source URL is not valid');
+        expect(text('sources')).toBe('nuget');
+        expect(slice.pending.size).toBe(0);
+    });
+
+    it('loadConfigFiles asks sources/configFiles; a failure is an empty list', async () => {
+        const host = mount();
+        await act(async () => slice.loadConfigFiles());
+        await hostSays(() => host.respond(host.requests('sources/configFiles')[0], { configFiles: [{ path: '/w/nuget.config', label: 'Workspace (nuget.config)' }] }));
+        expect(slice.configFiles).toEqual([{ path: '/w/nuget.config', label: 'Workspace (nuget.config)' }]);
+        await act(async () => slice.loadConfigFiles());
+        await hostSays(() => host.fail(host.requests('sources/configFiles')[1], 'failed'));
+        expect(slice.configFiles).toEqual([]);
+    });
 });

@@ -317,7 +317,7 @@ export function registerSharedHandlers(host: Registrar, services: HostServices):
 
     // ── sources ──
     const listSources = async (signal?: AbortSignal) => {
-        const { value, generation } = await catalog.sources(sourceDirectory(services), signal);
+        const { value, generation } = await catalog.sources(sourceDirectory(services), signal, { configFiles: true });
         return { result: { sources: value, failed: catalog.sourceHealth() }, generation };
     };
     host.on('sources/list', async (_payload, ctx) => {
@@ -335,7 +335,7 @@ export function registerSharedHandlers(host: Registrar, services: HostServices):
     /** The sources as they are after the mutation: a fresh read, of the generation the mutation's own invalidation produced. */
     const afterSourceMutation = async () => {
         services.invalidate({ kind: 'sources' }, 'source-changed');
-        const { value: sources, generation } = await catalog.sources(sourceDirectory(services));
+        const { value: sources, generation } = await catalog.sources(sourceDirectory(services), undefined, { configFiles: true });
         await session.reconcile((await catalog.projects()).value, sources.filter(source => source.enabled).map(source => source.url));
         return { sources, generation };
     };
