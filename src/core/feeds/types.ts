@@ -133,7 +133,10 @@ export interface VulnerabilityClient {
 export interface UpdateChecker {
     /**
      * Find updates for installed packages. Skips `declaration: 'unresolved'` and floating/range specs
-     * whose resolved version is unknown. Streams each found update through `onFound`.
+     * whose resolved version is unknown. Streams each found update through `onFound`. Exact pins and invalid specs are
+     * never candidates (`isUpdateCandidate`); the installed version compared and reported is `effectiveInstalledVersion`;
+     * implicit references are checked like any other. `sourcesUnavailable` is true when any allowed source of any
+     * candidate answered `undefined`, or the check was cancelled.
      */
     check(
         sources: ResolvedSource[],
@@ -149,10 +152,22 @@ export interface MetadataEnricher {
     enrich(sources: ResolvedSource[], packages: Array<{ id: string; version: string }>, signal?: AbortSignal): Promise<PackageMetadataLite[]>;
 }
 
+export interface VersionsOutcome {
+    versions: string[];
+    /**
+     * True when an allowed source could not answer; the list may be incomplete. False with `[]` means no allowed source
+     * has the package, or none was allowed.
+     */
+    sourcesUnavailable: boolean;
+}
+
 export interface MetadataResolver {
-    /** Registration → flat-container nuspec → search → offline global-packages folder. */
+    /**
+     * Registration → flat-container nuspec → search → offline global-packages folder: first allowed source in order;
+     * offline when no allowed source produced metadata, for any reason.
+     */
     metadata(sources: ResolvedSource[], packageId: string, version: string, signal?: AbortSignal): Promise<PackageMetadata | undefined>;
-    versions(sources: ResolvedSource[], packageId: string, options: VersionListOptions): Promise<string[]>;
+    versions(sources: ResolvedSource[], packageId: string, options: VersionListOptions): Promise<VersionsOutcome>;
     readme(sources: ResolvedSource[], packageId: string, version: string, signal?: AbortSignal): Promise<string | undefined>;
 }
 

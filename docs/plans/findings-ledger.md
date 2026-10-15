@@ -63,6 +63,7 @@ one records itself here.
 | F2 | H | Regex .csproj parsing ignores Update=, VersionOverride, Condition (multi-TFM duplicates), XML… | W: Multi-TFM resolution arbitrary. | not mapped | open |
 | F3 | M | Version handling: comparator is reasonable (zero-pads, 4-part, build metadata ignored… | — | not mapped | open |
 | F5 | L | In-flight dedup exists for versions/metadata; inventory which paths bypass it (search, icons… | — | not mapped | open |
+| F6 | M | Metadata inner cache key omits `source` while the dedupe key includes it → cross-feed metadata bleed | — | P4.8 (resolver), P4.9 (coordinator keys, N70) | closed in core (P4.8: `DefaultMetadataResolver` keeps no cache and no in-flight map and names the winning source in `sourceUrl`; test `metadata for the same id and version from two sources never bleeds across sources (F6)`); the same hazard one layer up is N70 for P4.9 |
 | M3 | M | .NET 10 dotnet package list performs an implicit restore — the "read" fallback in… | X: Closed by D13: `dotnet package list --no-restore`. | D13 | closed by design (D13) |
 | M4 | M | Solution awareness: "All Projects" = every .csproj/fsproj/vbproj found by glob, not solution… | — | not mapped | open |
 | M5 | M | Bespoke Node HTTP transport does not inherit VS Code proxy settings (http.proxy… | — | P4.1 (decision and matrix), P4.2 (Transport) | closed (P4.2: `NodeTransport` passes no agent so the extension host's proxy patch applies, HTTP/2 only behind the allow-list and the proxy predicate with a sticky downgrade; tests `passes no agent to the request functions so the host proxy patch applies` and the four other P4.1-named titles in `src/core/http/Transport.test.ts`) |
@@ -105,7 +106,7 @@ one records itself here.
 | N3 | High | Quarry `.vscodeignore` drops `.claude/**`, `CLAUDE.md`, `.mcp.json`; `check:vsix` not in CI. | — | P0.8, P0.10 | closed (P0.8, P0.10) |
 | N4 | Medium | Test files never type-checked. | — | P0.11 | partly closed (P0.11: 2.0 tests and shared helpers; 1.x tests excluded, see N30) |
 | N5 | Medium | No release workflow, no dependabot. | — | P0.8, P8.3 | partly closed (P0.8: Dependabot; release workflow open until P8.3) |
-| N6 | Medium | Exact pins `[x.y.z]` always reported updatable. | — | P1.3, P2.2, P4.8 | open (versioning side done in P1.3; fixture in P2.2, gating in P4.8) |
+| N6 | Medium | Exact pins `[x.y.z]` always reported updatable. | — | P1.3, P2.2, P4.8 | closed (P4.8: `DefaultUpdateChecker` asks `isUpdateCandidate` and compares against `effectiveInstalledVersion`; test `skips unresolved declarations, invalid specs, exact pins and floating or range specs without a resolved version (N6)`) |
 | N7 | Medium | README download sends no auth; temp path unvalidated; zip inflate unbounded. | — | P4.4 | partly closed (P4.4): fixed in the 2.0 core: the template fetch and the package download send the source credential (`src/core/feeds/readme.ts:139`, `flatContainer.ts:149`); the temp file is named by `downloadPackage` under the temp directory with a random suffix and created exclusively (`flatContainer.ts:159-162`), and removed in `finally` (`readme.ts:179`); an entry is read only when its declared size is within the cap (`readme.ts:191,203`), and adm-zip 0.6.1 inflates at most the declared size (`maxOutputLength`), so a lying header cannot inflate past it. The 1.x copy goes at P8.2 |
 | N8 | Medium | Sidebar `_sendInitialData` clears scoped-merge base. | — | P2.11 scenario | closed for 2.0 (P2.11: scenario `full/scoped/watcher invalidation both orders`; a surface that resolves late asks for the current state and the other surface receives nothing for it); 1.x not fixed (D1), removed at P8.2 |
 | N9 | Medium | Queued mutations discarded when the submitting surface is disposed. | — | P2.1, P2.9 | closed (P2.9: `detach` aborts with reason `'disposed'`; `awaitTicket` cancels the ticket only for a webview cancel; test `surface disposal does not cancel a queued operation (N9)`) |
@@ -169,13 +170,16 @@ one records itself here.
 | N67 | Low | A failed DNS lookup of a redirect target was cached for 60 s as "does not resolve" | — | P4.2 (fix-forward) | closed (P4.2: only lookups that returned addresses are cached; test `a lookup that fails is not cached: the next redirect asks again (N67)`) |
 | N68 | Low | The quarry's `warn :` lines before the JSON of `dotnet package search` were not reproduced | — | P4.6 | closed (P4.6: `extractCliSearchOutput` reads the document after any prefix lines; seven tracked captures and one synthetic case in `src/core/feeds/__fixtures__/cli-search/10.0.401.json`) |
 | N69 | Low | The `npx tsc --noEmit` gate does not type-check test files | — | P4.6 (fix-forward) | closed (P4.6: the gotcha "Tests pass is not compiles" names `npm run check-types`; the item gates now run it) |
+| N70 | Medium | Resource keys of versions and metadata for `'all'` sources carry no project | — | P4.9 | open |
 
 Corrections in Appendix A that do not belong to one finding id:
 
 - `M1` (W): Must also move source CRUD, CLI search, `nuget locals` to the project dir.
 - `M2` (W): Must gate `resolveIconUrl` nuget.org HEAD, `getPackageSize`, quick-search default. Progress: P4.6 removed the
-  quick-search default (`src/core/feeds/search.ts` has no default source and tests no address); closes with the P4.8 test
-  `private-only configuration never contacts nuget.org`.
+  quick-search default (`src/core/feeds/search.ts` has no default source and tests no address). Closed at P4.8: the tests
+  `private-only configuration never contacts nuget.org` and `never puts a package id into a request to nuget.org when the
+  mapping sends every id to the private feed (M2, ADR-005)` in `src/core/feeds/policy.test.ts`; the package size and the nuspec
+  are asked of policy-filtered sources only (`metadataResolver.ts`).
 - `AppA-8/9/13` (W): All line counts stale in both docs; watcher timing wrong in both; README documents the migration 2.0 deletes.
 - `B:F1-NU1008` (W): Default bulk path is the failing one on SDK 8 (one probe).
 
@@ -407,6 +411,7 @@ Three-lens verification of the original findings against `main` produced these c
 | N67 | Low | P4.2 review (ambient advisor, before CI of `bac22e5`): `NodeTransport.resolve()` (quarry code) cached a failed or empty DNS lookup for 60 s. P4.2 made an empty answer mean "does not resolve" → `redirect-blocked`, so one transient `EAI_AGAIN` would refuse every redirect to that host for a minute, on both surfaces: the 2.0 gotcha "Transient failure cached as a result". | P4.2 review | fixed forward in P4.2: only answers with addresses are cached |
 | N68 | Low | The quarry's claim that `dotnet package search --format json` writes `warn :` lines to stdout before the JSON was not reproduced on macOS 10.0.401 in seven tracked captures (`src/core/feeds/__fixtures__/cli-search/10.0.401.json`); source failures are structured `problems[]` (exit 0 per source; exit 1 top-level for an HTTP source without `allowInsecureConnections`); prefix lines on stdout are real for this SDK elsewhere (`sdk-probes/10.0.401.json:37`), so `search.ts` extracts tolerantly. A seventh capture also showed that `--take` together with `--exact-match` is ignored (all 53 versions of Newtonsoft.Json come back), so no truncation finding was opened. | P4.6 stop-and-ask ruling of 2026-10-15 | closed at P4.6 |
 | N69 | Low | The plan's per-item gate `npx tsc --noEmit` reads the root `tsconfig.json`, which excludes the test files; `npm run check-types` also runs `tsconfig.test.json` and `tsconfig.vitest.json`. A typing error in a test therefore passed the item gates twice: at P4.3 (caught locally by `check-types` before the push) and at P4.6 (run 38658578316 for `494cac2`: Build & Package, UI and UI 2.0 red on `search.test.ts(349,64)`, a recording logger not assignable to the inferred type of a `silentLogger` default). | P4.6 CI | closed at P4.6 by the fix-forward: the test helper types its logger as `Logger`, and the gotcha row tells every item to run `npm run check-types` |
+| N70 | Medium | `resourceKeys.metadata(id, version, undefined)` and `resourceKeys.versions(id, undefined, pre)` key on `'all'` without a project, while the answer depends on the project's allowed sources and mapping; a Catalog that queries under `'all'` for two projects with different source lists shares one entry (F6 one layer up). P4.9 must pass an explicit `sourceUrl` or bypass the coordinator for `'all'`, or ask for a key change in its own brief. | P4.8 ⚑ ruling of 2026-10-16 | P4.9 |
 
 ## 5. Defects in the paused 2.0 code (execution plan, Appendix B)
 
