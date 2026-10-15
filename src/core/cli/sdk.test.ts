@@ -103,15 +103,44 @@ describe('capabilitiesFor', () => {
                 'removeKeepsCentralEntry',
             ]);
             expect(Object.values(fixture.verdict).every(value => typeof value === 'boolean'), file).toBe(true);
-            // P6.2's evaluator reads these: one properties run per input, then one item run per target framework.
+            // The evaluator reads these: per input the properties run, one item run per target framework, and the
+            // combined run without a global property (its first run since P7.2c).
             expect(fixture.evaluations.map(evaluation => evaluation.id), file).toEqual([
                 'cpm-properties',
                 'cpm-items-net8.0',
+                'cpm-combined',
                 'multitfm-properties',
                 'multitfm-items-net8.0',
                 'multitfm-items-netstandard2.0',
+                'multitfm-combined',
             ]);
             expect(fixture.evaluations.every(evaluation => evaluation.exitCode === 0), file).toBe(true);
+        }
+    });
+
+    it('records the combined evaluation the evaluator\'s first run relies on: cpm-combined prints the properties of cpm-properties and the items of cpm-items-net8.0, multitfm-combined the outer build (P7.2c)', () => {
+        const fixtureDir = path.join(__dirname, '__fixtures__', 'sdk-probes');
+        const files = fs.readdirSync(fixtureDir).filter(file => file.endsWith('.json'));
+        expect(files.length).toBeGreaterThan(0);
+
+        for (const file of files) {
+            const fixture = JSON.parse(fs.readFileSync(path.join(fixtureDir, file), 'utf8')) as {
+                evaluations: { id: string; argv: string[]; output: { Properties?: unknown; Items?: { PackageReference?: { Identity: string }[] } } }[];
+            };
+            const row = (id: string) => {
+                const found = fixture.evaluations.find(evaluation => evaluation.id === id);
+                expect(found, `${file}: ${id}`).toBeDefined();
+                return found!;
+            };
+            expect(row('cpm-combined').output.Properties, file).toEqual(row('cpm-properties').output.Properties);
+            expect(row('cpm-combined').output.Items, file).toEqual(row('cpm-items-net8.0').output.Items);
+            expect(row('multitfm-combined').output.Properties, file).toEqual(row('multitfm-properties').output.Properties);
+            const outer = (row('multitfm-combined').output.Items?.PackageReference ?? []).map(item => item.Identity);
+            expect(outer, file).not.toContain('NETStandard.Library');
+            expect(outer, file).not.toContain('System.Text.Json');
+            for (const id of ['cpm-combined', 'multitfm-combined']) {
+                expect(row(id).argv.filter(arg => arg.startsWith('-property:') || arg.startsWith('-p:')), `${file}: ${id}`).toEqual([]);
+            }
         }
     });
 });

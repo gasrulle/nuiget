@@ -16,7 +16,7 @@
         "App/App.csproj"
       ],
       "exitCode": 0,
-      "stdoutTail": "info : Adding PackageReference for package 'Serilog' into project 'App/App.csproj'.\ninfo : Restoring packages for <probe>/App/App.csproj...\ninfo :   CACHE https://api.nuget.org/v3/vulnerabilities/index.json\ninfo :   CACHE https://api.nuget.org/v3-vulnerabilities/2026.10.15.05.26.01/vulnerability.base.json\ninfo :   CACHE https://api.nuget.org/v3-vulnerabilities/2026.10.15.05.26.01/2026.10.15.05.26.01/vulnerability.update.json\ninfo : Package 'Serilog' is compatible with all the specified frameworks in project 'App/App.csproj'.\ninfo : Generating MSBuild file <probe>/App/obj/App.csproj.nuget.g.props.\ninfo : Generating MSBuild file <probe>/App/obj/App.csproj.nuget.g.targets.\ninfo : Writing assets file to disk. Path: <probe>/App/obj/project.assets.json\nlog  : Restored <probe>/App/App.csproj (in 54 ms).",
+      "stdoutTail": "info : Adding PackageReference for package 'Serilog' into project 'App/App.csproj'.\ninfo : Restoring packages for <probe>/App/App.csproj...\ninfo :   CACHE https://api.nuget.org/v3/vulnerabilities/index.json\ninfo :   CACHE https://api.nuget.org/v3-vulnerabilities/2026.10.15.05.26.01/vulnerability.base.json\ninfo :   CACHE https://api.nuget.org/v3-vulnerabilities/2026.10.15.05.26.01/2026.10.15.05.26.01/vulnerability.update.json\ninfo : Package 'Serilog' is compatible with all the specified frameworks in project 'App/App.csproj'.\ninfo : Generating MSBuild file <probe>/App/obj/App.csproj.nuget.g.props.\ninfo : Generating MSBuild file <probe>/App/obj/App.csproj.nuget.g.targets.\ninfo : Writing assets file to disk. Path: <probe>/App/obj/project.assets.json\nlog  : Restored <probe>/App/App.csproj (in 53 ms).",
       "projectDiff": "",
       "propsDiff": "--- a/Directory.Packages.props\n+++ b/Directory.Packages.props\n@@ -1,12 +1,9 @@\n <Project>\n-\n   <PropertyGroup>\n     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>\n   </PropertyGroup>\n-\n   <ItemGroup>\n     <PackageVersion Include=\"Newtonsoft.Json\" Version=\"13.0.3\" />\n     <PackageVersion Include=\"Serilog\" Version=\"4.0.0\" />\n   </ItemGroup>\n-\n-</Project>\n+</Project>\n\\ No newline at end of file\n"
     },
@@ -51,7 +51,7 @@
         "App/App.csproj"
       ],
       "exitCode": 0,
-      "stdoutTail": "info : Adding PackageReference for package 'Serilog' into project 'App/App.csproj'.\ninfo : Restoring packages for <probe>/App/App.csproj...\ninfo :   CACHE https://api.nuget.org/v3/vulnerabilities/index.json\ninfo :   CACHE https://api.nuget.org/v3-vulnerabilities/2026.10.15.05.26.01/vulnerability.base.json\ninfo :   CACHE https://api.nuget.org/v3-vulnerabilities/2026.10.15.05.26.01/2026.10.15.05.26.01/vulnerability.update.json\ninfo : Package 'Serilog' is compatible with all the specified frameworks in project 'App/App.csproj'.\ninfo : Generating MSBuild file <probe>/App/obj/App.csproj.nuget.g.props.\ninfo : Generating MSBuild file <probe>/App/obj/App.csproj.nuget.g.targets.\ninfo : Writing assets file to disk. Path: <probe>/App/obj/project.assets.json\nlog  : Restored <probe>/App/App.csproj (in 54 ms).",
+      "stdoutTail": "info : Adding PackageReference for package 'Serilog' into project 'App/App.csproj'.\ninfo : Restoring packages for <probe>/App/App.csproj...\ninfo :   CACHE https://api.nuget.org/v3/vulnerabilities/index.json\ninfo :   CACHE https://api.nuget.org/v3-vulnerabilities/2026.10.15.05.26.01/vulnerability.base.json\ninfo :   CACHE https://api.nuget.org/v3-vulnerabilities/2026.10.15.05.26.01/2026.10.15.05.26.01/vulnerability.update.json\ninfo : Package 'Serilog' is compatible with all the specified frameworks in project 'App/App.csproj'.\ninfo : Generating MSBuild file <probe>/App/obj/App.csproj.nuget.g.props.\ninfo : Generating MSBuild file <probe>/App/obj/App.csproj.nuget.g.targets.\ninfo : Writing assets file to disk. Path: <probe>/App/obj/project.assets.json\nlog  : Restored <probe>/App/App.csproj (in 53 ms).",
       "projectDiff": "",
       "propsDiff": "--- a/Directory.Packages.props\n+++ b/Directory.Packages.props\n@@ -1,12 +1,9 @@\n <Project>\n-\n   <PropertyGroup>\n     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>\n   </PropertyGroup>\n-\n   <ItemGroup>\n     <PackageVersion Include=\"Newtonsoft.Json\" Version=\"13.0.3\" />\n-    <PackageVersion Include=\"Serilog\" Version=\"4.0.0\" />\n+    <PackageVersion Include=\"Serilog\" Version=\"4.1.0\" />\n   </ItemGroup>\n-\n-</Project>\n+</Project>\n\\ No newline at end of file\n"
     },
@@ -82,7 +82,7 @@
         "App/App.csproj"
       ],
       "exitCode": 0,
-      "stdoutTail": "  Determining projects to restore...\n  Restored <probe>/App/App.csproj (in 70 ms).",
+      "stdoutTail": "  Determining projects to restore...\n  Restored <probe>/App/App.csproj (in 69 ms).",
       "projectDiff": "",
       "propsDiff": "--- a/Directory.Packages.props\n+++ b/Directory.Packages.props\n@@ -1,12 +1,9 @@\n <Project>\n-\n   <PropertyGroup>\n     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>\n   </PropertyGroup>\n-\n   <ItemGroup>\n     <PackageVersion Include=\"Newtonsoft.Json\" Version=\"13.0.3\" />\n-    <PackageVersion Include=\"Serilog\" Version=\"4.0.0\" />\n+    <PackageVersion Include=\"Serilog\" Version=\"4.1.0\" />\n   </ItemGroup>\n-\n-</Project>\n+</Project>\n\\ No newline at end of file\n"
     },
@@ -114,7 +114,7 @@
         "App/App.csproj"
       ],
       "exitCode": 0,
-      "stdoutTail": "info :   CACHE https://api.nuget.org/v3/vulnerabilities/index.json\ninfo :   CACHE https://api.nuget.org/v3-vulnerabilities/2026.10.15.05.26.01/vulnerability.base.json\ninfo :   CACHE https://api.nuget.org/v3-vulnerabilities/2026.10.15.05.26.01/2026.10.15.05.26.01/vulnerability.update.json\ninfo : Package 'Polly' is compatible with all the specified frameworks in project 'App/App.csproj'.\ninfo : PackageReference for package 'Polly' added to '<probe>/App/App.csproj' and PackageVersion added to central package management file '<probe>/Directory.Packages.props'.\ninfo : PackageReference for package 'Polly' version '8.4.2' added to file '<probe>/Directory.Packages.props'.\ninfo : Generating MSBuild file <probe>/App/obj/App.csproj.nuget.g.props.\ninfo : Generating MSBuild file <probe>/App/obj/App.csproj.nuget.g.targets.\ninfo : Writing assets file to disk. Path: <probe>/App/obj/project.assets.json\nlog  : Restored <probe>/App/App.csproj (in 55 ms).",
+      "stdoutTail": "info :   CACHE https://api.nuget.org/v3/vulnerabilities/index.json\ninfo :   CACHE https://api.nuget.org/v3-vulnerabilities/2026.10.15.05.26.01/vulnerability.base.json\ninfo :   CACHE https://api.nuget.org/v3-vulnerabilities/2026.10.15.05.26.01/2026.10.15.05.26.01/vulnerability.update.json\ninfo : Package 'Polly' is compatible with all the specified frameworks in project 'App/App.csproj'.\ninfo : PackageReference for package 'Polly' added to '<probe>/App/App.csproj' and PackageVersion added to central package management file '<probe>/Directory.Packages.props'.\ninfo : PackageReference for package 'Polly' version '8.4.2' added to file '<probe>/Directory.Packages.props'.\ninfo : Generating MSBuild file <probe>/App/obj/App.csproj.nuget.g.props.\ninfo : Generating MSBuild file <probe>/App/obj/App.csproj.nuget.g.targets.\ninfo : Writing assets file to disk. Path: <probe>/App/obj/project.assets.json\nlog  : Restored <probe>/App/App.csproj (in 54 ms).",
       "projectDiff": "--- a/App/App.csproj\n+++ b/App/App.csproj\n@@ -7,6 +7,7 @@\n \n   <ItemGroup>\n     <PackageReference Include=\"Newtonsoft.Json\" />\n+    <PackageReference Include=\"Polly\" />\n     <PackageReference Include=\"Serilog\" />\n   </ItemGroup>\n \n",
       "propsDiff": "--- a/Directory.Packages.props\n+++ b/Directory.Packages.props\n@@ -1,12 +1,10 @@\n <Project>\n-\n   <PropertyGroup>\n     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>\n   </PropertyGroup>\n-\n   <ItemGroup>\n     <PackageVersion Include=\"Newtonsoft.Json\" Version=\"13.0.3\" />\n+    <PackageVersion Include=\"Polly\" Version=\"8.4.2\" />\n     <PackageVersion Include=\"Serilog\" Version=\"4.0.0\" />\n   </ItemGroup>\n-\n-</Project>\n+</Project>\n\\ No newline at end of file\n"
     },
@@ -145,7 +145,7 @@
         "App/App.csproj"
       ],
       "exitCode": 0,
-      "stdoutTail": "  Determining projects to restore...\n  Restored <probe>/App/App.csproj (in 71 ms).",
+      "stdoutTail": "  Determining projects to restore...\n  Restored <probe>/App/App.csproj (in 72 ms).",
       "projectDiff": "--- a/App/App.csproj\n+++ b/App/App.csproj\n@@ -7,6 +7,7 @@\n \n   <ItemGroup>\n     <PackageReference Include=\"Newtonsoft.Json\" />\n+    <PackageReference Include=\"Polly\" />\n     <PackageReference Include=\"Serilog\" />\n   </ItemGroup>\n \n",
       "propsDiff": "--- a/Directory.Packages.props\n+++ b/Directory.Packages.props\n@@ -1,12 +1,10 @@\n <Project>\n-\n   <PropertyGroup>\n     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>\n   </PropertyGroup>\n-\n   <ItemGroup>\n     <PackageVersion Include=\"Newtonsoft.Json\" Version=\"13.0.3\" />\n+    <PackageVersion Include=\"Polly\" Version=\"8.4.2\" />\n     <PackageVersion Include=\"Serilog\" Version=\"4.0.0\" />\n   </ItemGroup>\n-\n-</Project>\n+</Project>\n\\ No newline at end of file\n"
     },
@@ -199,6 +199,51 @@
       ],
       "exitCode": 0,
       "output": {
+        "Items": {
+          "PackageReference": [
+            {
+              "Identity": "Newtonsoft.Json",
+              "DefiningProjectFullPath": "<probe>/App/App.csproj"
+            },
+            {
+              "Identity": "Serilog",
+              "DefiningProjectFullPath": "<probe>/App/App.csproj"
+            }
+          ],
+          "PackageVersion": [
+            {
+              "Identity": "Newtonsoft.Json",
+              "Version": "13.0.3",
+              "DefiningProjectFullPath": "<probe>/Directory.Packages.props"
+            },
+            {
+              "Identity": "Serilog",
+              "Version": "4.0.0",
+              "DefiningProjectFullPath": "<probe>/Directory.Packages.props"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "cpm-combined",
+      "input": "cpm",
+      "argv": [
+        "dotnet",
+        "msbuild",
+        "App/App.csproj",
+        "-getProperty:TargetFramework;TargetFrameworks;ManagePackageVersionsCentrally;CentralPackageVersionOverrideEnabled",
+        "-getItem:PackageReference;PackageVersion",
+        "-nologo"
+      ],
+      "exitCode": 0,
+      "output": {
+        "Properties": {
+          "TargetFramework": "net8.0",
+          "TargetFrameworks": "",
+          "ManagePackageVersionsCentrally": "true",
+          "CentralPackageVersionOverrideEnabled": ""
+        },
         "Items": {
           "PackageReference": [
             {
@@ -332,6 +377,58 @@
             {
               "Identity": "System.Text.Json",
               "Version": "8.0.5",
+              "DefiningProjectFullPath": "<probe>/App/App.csproj"
+            }
+          ],
+          "PackageVersion": [
+            {
+              "Identity": "Newtonsoft.Json",
+              "Version": "13.0.3",
+              "DefiningProjectFullPath": "<probe>/Directory.Packages.props"
+            },
+            {
+              "Identity": "Serilog",
+              "Version": "4.0.0",
+              "DefiningProjectFullPath": "<probe>/Directory.Packages.props"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "multitfm-combined",
+      "input": "multitfm",
+      "argv": [
+        "dotnet",
+        "msbuild",
+        "App/App.csproj",
+        "-getProperty:TargetFramework;TargetFrameworks;ManagePackageVersionsCentrally;CentralPackageVersionOverrideEnabled",
+        "-getItem:PackageReference;PackageVersion",
+        "-nologo"
+      ],
+      "exitCode": 0,
+      "output": {
+        "Properties": {
+          "TargetFramework": "",
+          "TargetFrameworks": "net8.0;netstandard2.0",
+          "ManagePackageVersionsCentrally": "true",
+          "CentralPackageVersionOverrideEnabled": ""
+        },
+        "Items": {
+          "PackageReference": [
+            {
+              "Identity": "StyleCop.Analyzers",
+              "Version": "1.2.0-beta.556",
+              "PrivateAssets": "all",
+              "DefiningProjectFullPath": "<probe>/Directory.Build.props"
+            },
+            {
+              "Identity": "Newtonsoft.Json",
+              "DefiningProjectFullPath": "<probe>/App/App.csproj"
+            },
+            {
+              "Identity": "Serilog",
+              "VersionOverride": "3.1.1",
               "DefiningProjectFullPath": "<probe>/App/App.csproj"
             }
           ],

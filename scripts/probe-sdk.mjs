@@ -5,8 +5,10 @@
 // - `commands`: `dotnet package add|remove` and `dotnet restore` on the CPM input in `sdk-probes/cpm`, each in a
 //   fresh copy, with the unified diff of the project and the props file against the pristine input.
 // - `evaluations`: the properties run and one item run per target framework (`-getItem:PackageReference;PackageVersion`)
-//   on the CPM input and on the multi-targeted input `src/core/project/__fixtures__/multitfm`. Evaluation only: the
-//   multi-targeted input is not restorable under CPM (its `Directory.Build.props` sets a `Version`).
+//   on the CPM input and on the multi-targeted input `src/core/project/__fixtures__/multitfm`, and, per input, one
+//   combined run of the properties and the items without a global property (`<input>-combined`, the evaluator's first
+//   run since P7.2c). Evaluation only: the multi-targeted input is not restorable under CPM (its
+//   `Directory.Build.props` sets a `Version`).
 //
 // Usage:
 //   node scripts/probe-sdk.mjs                    probe and write the fixture for the resolved SDK
@@ -310,6 +312,9 @@ export function runProbe({ today = new Date() } = {}) {
                     'msbuild', PROJECT, '-getItem:PackageReference;PackageVersion', `-property:TargetFramework=${tfm}`, '-nologo',
                 ]);
             }
+            evaluate(`${input}-combined`, [
+                'msbuild', PROJECT, `-getProperty:${EVALUATED_PROPERTIES.join(';')}`, '-getItem:PackageReference;PackageVersion', '-nologo',
+            ]);
         }
 
         return {

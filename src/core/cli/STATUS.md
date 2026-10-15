@@ -1,106 +1,68 @@
-# STATUS — src/core/cli   commit 9b5b2f5 (P5 tagged; parent of the P6.1 commit)   2026-10-15T16:20:00Z
+# STATUS — src/core/cli   commit 87e9d18 (P7.2b closed; parent of the P7.2c commit 1)   2026-10-15T23:35:38Z
 
-git status --porcelain --untracked-files=all (before the commit): modified `.github/copilot-instructions.md`,
-`.github/workflows/ci.yml`, `ARCHITECTURE.md`, `CHANGELOG.md`, `docs/plans/{STATUS,findings-ledger}.md`,
-`src/core/cli/STATUS.md`, `src/core/cli/__fixtures__/sdk-probes/10.0.401.json`, `src/core/cli/sdk.test.ts`; new
-`scripts/probe-sdk.mjs`, `src/core/cli/__fixtures__/sdk-probes/cpm/{Directory.Packages.props,nuget.config,App/App.csproj}`,
-`src/test/lint/probe-sdk.test.ts`
+git status --porcelain --untracked-files=all (before commit 1): modified `docs/plans/STATUS.md`, `scripts/probe-sdk.mjs`,
+`src/core/cli/__fixtures__/sdk-probes/10.0.401.json`, `src/core/cli/sdk.test.ts`, `src/core/cli/STATUS.md`,
+`src/core/project/STATUS.md`
 
-Item: **P6.1 `scripts/probe-sdk.mjs`** producing the tracked SDK 10 probe fixture (per-TFM
-`-getItem:PackageReference;PackageVersion`, `package add` CPM outcomes with and without `--no-restore`), the CI job
-that re-runs it on 10.x and compares, and `sdk.ts` provenance from the fixtures. This note replaces the P1.6 note
-(commit `e080e1f`, completed in the fix after it; read it there for the salvage of the module).
+Item: **P7.2c, commit 1** — probe rows `cpm-combined` and `multitfm-combined` (one run of the four properties and the
+two item types, no global property) and the regenerated fixture, by the ⚑ ruling of 2026-10-16 (verbatim in
+`docs/plans/STATUS.md`, "P7.2c — ⚑ ruling: …", and in `src/core/project/STATUS.md`). Commit 2 changes the evaluator
+after the `SDK probe` CI job has passed on this fixture. This note replaces the P6.1 note (in this file's history at
+`440b154`).
 
 ## Verified by running
 
 ```text
-baseline npm run check-types → exit 0 (tsc --noEmit, tsconfig.test.json, tsconfig.vitest.json)
-baseline npx eslint src      → exit 0, no output
-baseline npx vitest run      → Test Files 161 passed (161) · Tests 3244 passed | 4 skipped (3248)
-node scripts/probe-sdk.mjs --out <scratchpad>/probe-run1.json
-                             → SDK 10.0.401 on darwin-arm64 · verdict {"addUpdatesCentralVersion":true,
-                               "noRestoreWritesProjectVersion":false,"addWithoutCentralEntryCreatesIt":true,
-                               "removeKeepsCentralEntry":true} · 5.2 s
-P0.0 consistency (before the fixture was regenerated): projection of run 1 against the P0.0 file, rows only
-                             → command diffs 0 (id, continueFrom, argv, exitCode, projectDiff, propsDiff of all 10
-                               rows equal byte for byte); computed verdict = P0.0's hand-written verdict; stdoutTail
-                               differs in 6 rows (timings, GET/OK instead of CACHE, newer vulnerability feed URLs)
-second run against the first → compareProbes(run2, run1) → []
-node scripts/probe-sdk.mjs   → wrote src/core/cli/__fixtures__/sdk-probes/10.0.401.json
-node scripts/probe-sdk.mjs --check → "SDK 10.0.401 agrees with the tracked fixture 10.0.401.json", exit 0
-grep for machine paths in the fixture (/Users/, /private/, /var/folders/) → 0
-npx vitest run src/test/lint/probe-sdk.test.ts src/core/cli/sdk.test.ts → Test Files 2 passed (2) · Tests 45 passed (45)
-node -e js-yaml.load(.github/workflows/ci.yml) → yaml ok
-npm run check-types          → exit 0
-npx eslint src scripts       → exit 0, no output
-npm test                     → Test Files 162 passed (162) · Tests 3266 passed | 4 skipped (3270)
-npm run bench                → Test Files 20 passed (20) · Tests 119 passed | 1 skipped (120), exit 0
-DOTNET_ROOT="$(dirname "$(command -v dotnet)")" NUIGET_SDK_TESTS=1 npx vitest run --project backend src/core/cli
-                             → Test Files 5 passed (5) · Tests 143 passed (143)
-npm run package:vsix         → SKIPPED: no host, service or esbuild change; scripts/** and src/** are excluded
-                               from the VSIX by .vscodeignore
-npm run test:ui              → SKIPPED: no UI change
-CI                           → see the tracker row of P6.1
+baseline at 87e9d18 (CI run 38821673799 green): tsc 0 · eslint 0 · vitest 167 files, 3404 passed, 6 skipped (SDK)
+dotnet --version            → 10.0.401
+node scripts/probe-sdk.mjs --check --out <scratchpad>/before.json (clean tree) → exit 0, "SDK 10.0.401 agrees with the
+                              tracked fixture 10.0.401.json"; no permission prompt
+node scripts/probe-sdk.mjs  → wrote src/core/cli/__fixtures__/sdk-probes/10.0.401.json
+evaluation ids              → cpm-properties cpm-items-net8.0 cpm-combined multitfm-properties multitfm-items-net8.0
+                              multitfm-items-netstandard2.0 multitfm-combined, every exitCode 0
+projection(old) vs projection(new) → the ten command rows and the five old evaluation rows equal
+cpm-combined                → Properties = cpm-properties' · Items = cpm-items-net8.0's
+multitfm-combined           → Properties = multitfm-properties' (TargetFramework ""); PackageReference identities
+                              StyleCop.Analyzers, Newtonsoft.Json, Serilog (no NETStandard.Library, no System.Text.Json)
+grep -c -- '-property:TargetFramework' 10.0.401.json → 3 (the three item rows); no -property: in the combined argv
+node scripts/probe-sdk.mjs --check --out <scratchpad>/after.json → exit 0, agrees with the regenerated fixture
+npx tsc --noEmit / npm run check-types / npx eslint src / npm run lint → exit 0 each
+npx vitest run --project backend src/core/cli src/core/project src/test/lint --reporter=verbose → 25 files, 453
+                              passed, 3 skipped; "records the combined evaluation the evaluator's first run relies on: …"
+npm test (DOTNET_ROOT set, NUIGET_SDK_TESTS=1) → exit 0 · Test Files 167 passed (167) · Tests 3411 passed (3411)
+npm run bench               → exit 0 · Test Files 20 passed (20) · Tests 119 passed | 1 skipped (120)
 ```
 
 ## Done (tested)
 
-- **`scripts/probe-sdk.mjs`.** Runs the ten P0.0 rows (`COMMANDS`, same ids and order) with `dotnet` from the PATH,
-  argv without a shell and the environment of `DotnetRunner` (ADR-003), each in a fresh copy of the tracked input
-  `__fixtures__/sdk-probes/cpm` (the two files of the ADR-004 supplement plus a `nuget.config` with `<clear />` and
-  nuget.org); a `continueFrom` row runs in its predecessor's directory. `projectDiff` and `propsDiff` are
-  `diff -u --label a/<file> --label b/<file>` against the pristine copy, `stdoutTail` the last 10 lines, paths
-  redacted to `<probe>`, `<dotnet-root>` (from `dotnet --list-sdks` for the resolved version) and `<home>`.
-  Then `evaluations`: the properties run (`-getProperty:TargetFramework;TargetFrameworks;ManagePackageVersionsCentrally;CentralPackageVersionOverrideEnabled`)
-  and one `-getItem:PackageReference;PackageVersion -property:TargetFramework=<tfm>` run per target framework, on the
-  `cpm` input and on `src/core/project/__fixtures__/multitfm` (evaluation only; that input is not restorable under
-  CPM). Item metadata keeps everything except MSBuild's well-known metadata. The `verdict` is computed from the rows
-  (`computeVerdict`), not written by hand. `--out <file>` writes elsewhere; `--check` compares the probe with the
-  tracked fixture of the same version, else the newest of its major, through `projection` (rows without
-  `stdoutTail`, evaluations with the SDK patch in paths ignored, computed verdict), and exits 1 with one line per
-  difference.
-- **Fixture `10.0.401.json`** regenerated by the script: the ten rows equal P0.0's in everything but `stdoutTail`;
-  new `evaluations` (5 runs, all exit 0). Recorded on 10.0.401: under CPM a `PackageReference` item carries no
-  `Version` at evaluation (the central version is applied later); `VersionOverride` is item metadata; the conditional
-  `System.Text.Json` and the implicit `NETStandard.Library` (`IsImplicitlyDefined`) appear only in the
-  `netstandard2.0` run; `CentralPackageVersionOverrideEnabled` evaluates to `""` when unset.
-- **Provenance.** `sdk.ts` is unchanged: the major-keyed table stays, so no fixture is bundled. `sdk.test.ts`
-  gains `rests every verified provenance on a fixture with its command rows, evaluations and full verdict`;
-  `src/test/lint/probe-sdk.test.ts` checks per tracked fixture that its verdict follows from its rows, that its rows
-  are the script's, that it agrees with itself and holds no machine path, plus `computeVerdict` (the SDK 8
-  behaviour of N1, a failed restore, a missing row), `compareProbes`, `pickFixture`, `redact`, `tail`,
-  `stripWellKnownMetadata` and `targetFrameworks` (21 tests).
-- **CI job `sdk-probe`** ("SDK probe", ubuntu, `setup-dotnet` 10.0.x, pinned actions, `persist-credentials: false`,
-  workflow-level `contents: read`, 15-minute timeout): `node scripts/probe-sdk.mjs --check --out sdk-probe.json`,
-  the probe uploaded as artifact `sdk-probe` even when the check fails.
+- `scripts/probe-sdk.mjs`: per input, after the per-framework item runs, `<input>-combined` with
+  `-getProperty:<the four> -getItem:PackageReference;PackageVersion -nologo` and no `-property:`; header comment.
+- `10.0.401.json` regenerated by the script (never edited); the old rows are unchanged under `projection`.
+- `sdk.test.ts`: the seven evaluation ids; new `records the combined evaluation the evaluator's first run relies on:
+  cpm-combined prints the properties of cpm-properties and the items of cpm-items-net8.0, multitfm-combined the outer
+  build (P7.2c)`.
 
 ## Done (untested)
 
-- The `--check` path on Linux and on a newer SDK 10 patch: first run is this item's CI run.
-- `main()` of the script (argument handling, file writing) has no unit test; it ran locally in all three modes.
+- None.
 
 ## Not started
 
-- Windows: the script needs `diff`; the CI job runs on Ubuntu only.
-- Evaluation of `CentralPackageVersionOverrideEnabled=false`, nested props files and floating versions: the
-  ADR-004 supplement's limits other than multi-targeting stay open; P6.2 and P6.3 add rows if they need them.
+- Commit 2 (the evaluator's combined first run, the harness fake, the ADR-004 sentence, docs), after CI's
+  `SDK probe` job is green on this fixture with SDK 10.0.402.
 
 ## Deviations from contract/ADR (file:line each)
 
-- `docs/adr/004-sdk-probes.md` (frozen) still says "Probed: 2026-10-12" and describes the fixture as P0.0 wrote it;
-  the regenerated fixture has `probedOn` 2026-10-15 and an `evaluations` section. The rows it describes are
-  unchanged, so no ADR text is contradicted; not edited (P6.1 is not a contract item).
-- `scripts/probe-sdk.mjs` reads the P0.0 inputs from `__fixtures__/sdk-probes/cpm`, which P0.0 recorded as prose in
-  the ADR supplement only; the files are typed from that prose, with the `nuget.config` content inferred from
-  "a local `nuget.config` with `<clear />`". The identical diffs show the inputs match.
+- None in this commit. ADR-004 tier 2 still describes the separate properties run; commit 2 amends it behind the
+  sentinel as the ruling directs.
 
 ## Advisor decisions (date, item, question, answer verbatim)
 
-P6.1 is ⚑ only if a probe contradicts P0.0. It did not (see the consistency line above), and no universal trigger
-fired, so no `architecture-advisor` consultation took place. The ambient advisor was consulted before writing code;
-its points (canonical projection, computed verdict, tracked inputs, evaluation-only multitfm, `sdk.ts` unchanged,
-pure exported functions, pinned CI job with the probe as artifact) are what the item did.
+2026-10-16, P7.2c (⚑): verbatim in `docs/plans/STATUS.md` ("P7.2c — ⚑ ruling: the combined first run, its probe rows
+and its guard") and in `src/core/project/STATUS.md`. Decision line: option 1' (the combined first run's items stand
+only when `TargetFrameworks` is empty); probe rows `cpm-combined` and `multitfm-combined` without a global property;
+two commits with a green `SDK probe` job between them.
 
 ## Exact next step (one item ID)
 
-P6.2 (`src/core/project/evaluator.ts`).
+P7.2c, commit 2.
