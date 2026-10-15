@@ -10,7 +10,7 @@ import { useOps, useOpsActions } from '../../../shared/store/ops';
 import { useProjects } from '../../../shared/store/projects';
 import { useSession } from '../../../shared/store/session';
 import type { ListView } from '../../MainShell';
-import { FolderGroups } from '../all-projects/folderGroups';
+import { FolderGroups } from '../../../shared/allProjects/folderGroups';
 import { BulkUninstallDialog, type Removal } from './BulkUninstallDialog';
 import { InstalledProjectSection, visibleRows } from './InstalledProjectSection';
 import { TransitiveSection } from './TransitiveSection';

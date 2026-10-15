@@ -1,4 +1,59 @@
-# STATUS — src/webview/shared   commit a622f59 (P5.10 commit a; parent of commit b)   2026-10-16T06:00:00Z
+# STATUS — src/webview/shared   commit e779984 (P5.10 commit b; parent of commit c)   2026-10-16T07:00:00Z
+
+git status --porcelain --untracked-files=all (before commit c): modified `src/webview/sidebar-next/{InstalledSection,UpdatesSection,BrowseResults}.tsx` and their tests, `SidebarView.test.tsx`, `sidebar.css`, `src/webview/main/features/installed/InstalledTab.tsx` and `src/webview/main/features/updates/AllProjectsUpdates.tsx` (one import line each), the two STATUS notes and `docs/plans/STATUS.md`; renamed `src/webview/main/features/all-projects/folderGroups.tsx` → `src/webview/shared/allProjects/folderGroups.tsx`; new `src/webview/sidebar-next/{ProjectPackages,ProjectUpdates}.tsx` (all belong to P5.10 commit c)
+
+Item: **P5.10, commit c of four**: `allProjects/folderGroups.tsx` moved here from
+`src/webview/main/features/all-projects/` (same two exports) so that the sidebar can group by workspace folder without
+importing the main panel; the two main imports follow.
+
+## Verified by running
+
+P5.10 commit c:
+
+```text
+baseline at e779984 (commit b) → its CI run 38723994346 green before this commit was pushed
+npx tsc --noEmit / npm run check-types / npm run lint → exit 0 each (last run after every code edit)
+src/webview/sidebar-next, 20 times → 20 of 20
+npm test (NUIGET_SDK_TESTS=1, DOTNET_ROOT set) → exit 0 · Test Files 157 passed (157) · Tests 3217 passed (3217)
+npm run bench / npx vitest run --coverage → exit 0 each
+rm -rf dist && node esbuild.mjs --v2 --production --analyze → extension 281249 / 299921 · webview 518470 / 600685 ·
+                               sidebar 317603 / 329122 (312196 at commit b; N63)
+rm -rf dist && NUIGET_V2=1 npm run package && npm run check:vsix → check:vsix: OK
+NUIGET_V2=1 npm run test:ui:v2 -- --storage /tmp/nuiget-ui-v2 → 18 passing (21s); fixture unchanged
+ls src/webview/shared/allProjects/folderGroups.tsx → present; src/webview/main/features/all-projects → gone
+grep -rn "from '../main\|from '../../main" src/webview/sidebar-next → 0 · "not available in this view yet" in sidebar-next code → 0
+grep -rn "projectPath: ALL_PROJECTS" src/webview/sidebar-next (code) → BrowseResults.tsx only
+test -e .claude/.contract-change → false
+```
+
+## Done (tested)
+
+- No behaviour change in this directory; the main panel's grouping tests (`AllProjectsView.test.tsx`) pass unchanged.
+
+## Done (untested)
+
+- The sidebar's All Projects in VS Code: the fixture has one project, which the host normalizes; jsdom is the proof.
+
+## Not started
+
+- The host picker, `pickers.ts` tests, the host ratchet, the ExTester file and the docs (commit d).
+
+## Deviations from contract/ADR (file:line each)
+
+- Commit c landed in two commits: `bdd67ae` was pushed with the folder rename alone (a failed `git add` in the same
+  command line skipped the rest, and the commit ran after it), which left `labs/2.0` red for one push; the next commit
+  adds the left-out files unchanged from the gate run above. No force-push.
+- None.
+
+## Advisor decisions (date, item, question, answer verbatim)
+
+The P5.10 ruling (2026-10-16) is verbatim in `docs/plans/STATUS.md`.
+
+## Exact next step (one item ID)
+
+P5.10 commit d, after commit c's CI run is green.
+
+## Earlier notes of this directory
 
 git status --porcelain --untracked-files=all (before commit b): modified `ARCHITECTURE.md`, `docs/plans/STATUS.md`, `src/webview/shared/store/{installed,installed.test}.tsx`, `src/webview/shared/STATUS.md` (all belong to P5.10 commit b)
 
@@ -1066,6 +1121,7 @@ FILES CHECKED: `docs/plans/2026-10-11-nuiget-2.0-execution-plan.md:41-175,240-25
 ## Exact next step (one item ID)
 
 P5.6 (feature search, main and sidebar browse), after P5.5's CI run is green; a fresh session starts it (second compaction of this one).
+
 
 
 

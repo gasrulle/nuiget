@@ -115,7 +115,7 @@ describe('sidebar: search modes and browse', () => {
         expect(host.requests('ops/install').map(request => request.payload.packageId)).toEqual(['Polly', 'Polly.Core']);
     });
 
-    it('an installed package says so and installs nothing; without a single project nothing is installed', async () => {
+    it('an installed package says so and installs nothing; under All Projects Enter, the button and the menu ask ui/contextMenu with where it is installed', async () => {
         const user = userEvent.setup();
         const host = await mountReady();
         await searchFor(host, 'serilog', [result('Serilog', '4.0.0')]);
@@ -125,11 +125,23 @@ describe('sidebar: search modes and browse', () => {
         await user.keyboard('{Enter}');
         await waitFor(() => expect(said()).toBe('Serilog is already installed (3.0.0).'));
 
+        const B = '/w/Lib/Lib.csproj';
         await hostSays(() => host.event('session/changed', snapshot(2, ALL_PROJECTS)));
+        const stream = host.requests('allProjects/installed')[0];
+        await hostSays(() => host.chunk(stream, { kind: 'project', chunk: { projectPath: A, projectName: 'App', result: { projectPath: A, fidelity: 'authoritative', isCpm: false, packages: [pkg('Serilog', '3.0.0')] } } }));
+        await hostSays(() => host.chunk(stream, { kind: 'project', chunk: { projectPath: B, projectName: 'Lib', result: { projectPath: B, fidelity: 'authoritative', isCpm: false, packages: [] } } }));
+        await hostSays(() => host.respond(stream, { projectPaths: [A, B], errored: [] }));
+        expect(within(row('Serilog')).getByRole('option')).toHaveAccessibleDescription(/Installed in 1 of 2/);
+
+        const expected = { packageId: 'Serilog', context: 'browse', projectPath: ALL_PROJECTS, latestVersion: '4.0.0', sourceUrl: FEED, installedProjects: [{ projectPath: A, projectName: 'App', version: '3.0.0' }], installedVersion: '3.0.0', partiallyInstalled: true };
         await user.click(within(row('Serilog')).getByRole('option'));
         await user.keyboard('{Enter}');
-        await waitFor(() => expect(said()).toBe('Select a single project to install packages from this view.'));
+        await user.click(within(row('Serilog')).getByTestId('row-action-install'));
+        await user.click(within(row('Serilog')).getByRole('option'));
+        await user.keyboard('{Shift>}{F10}{/Shift}');
+        expect(host.requests('ui/contextMenu').map(request => request.payload)).toEqual([expected, expected, expected]);
         expect(host.requests('ops/install')).toHaveLength(0);
+        expect(host.requests('ops/bulkInstall')).toHaveLength(0);
     });
 
     it('an unreachable source is a banner with Retry; clearing the box brings the sections back', async () => {

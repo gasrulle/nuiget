@@ -2,7 +2,7 @@ import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { axe } from 'jest-axe';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { type InstalledPackage, type PackageUpdate, type SessionSnapshot } from '../../protocol';
+import { ALL_PROJECTS, type InstalledPackage, type PackageUpdate, type SessionSnapshot } from '../../protocol';
 import { createFakeHost, type FakeHost } from '../shared/bus/testSupport';
 import { axeRuleOutcome, installFakeLayout } from '../shared/primitives/testSupport';
 import { StoreProvider } from '../shared/store/StoreProvider';
@@ -103,6 +103,28 @@ describe('sidebar: Updates section', () => {
         expect(header()).toHaveAccessibleName('Updates');
         await user.click(within(screen.getByTestId('sidebar-updates-unavailable')).getByRole('button', { name: 'Retry' }));
         expect(host.requests('updates/get')).toHaveLength(2);
+    });
+
+    it('All Projects: sections over allProjects/updates; Enter sends ops/update with the row\'s project', async () => {
+        const user = userEvent.setup();
+        const host = await mountWith();
+        const B = '/w/Lib/Lib.csproj';
+        await hostSays(() => host.event('session/changed', { ...snapshot(2), selectedProject: ALL_PROJECTS }));
+        const installedStream = host.requests('allProjects/installed')[0];
+        await hostSays(() => host.chunk(installedStream, { kind: 'project', chunk: { projectPath: B, projectName: 'Lib', result: { projectPath: B, fidelity: 'authoritative', isCpm: false, packages: [pkg('Moq', '4.20.0')] } } }));
+        const stream = host.requests('allProjects/updates')[0];
+        await hostSays(() => host.chunk(stream, { kind: 'start', projects: [{ name: 'App', path: A }, { name: 'Lib', path: B }] }));
+        await hostSays(() => host.chunk(stream, { kind: 'project', chunk: { projectPath: A, projectName: 'App', updates: [update('Serilog', '3.0.0', '3.1.0')] } }));
+        await hostSays(() => host.chunk(stream, { kind: 'project', chunk: { projectPath: B, projectName: 'Lib', updates: [update('Moq', '4.20.0', '4.20.72')] } }));
+        await hostSays(() => host.respond(stream, { projectPaths: [A, B] }));
+
+        expect(header()).toHaveAccessibleName('Updates 2');
+        const lib = screen.getByTestId('sidebar-updates-list-lib');
+        expect(lib).toHaveAccessibleName('Lib');
+        await user.click(within(within(lib).getByTestId('package-row-moq')).getByRole('option'));
+        await user.keyboard('{Enter}');
+        expect(host.requests('ops/update').map(request => request.payload)).toEqual([{ projectPath: B, packageId: 'Moq', version: '4.20.72', sourceUrl: FEED }]);
+        expect(await axe(document.body)).toHaveNoViolations();
     });
 
     it('the actions menu and Ctrl+Enter carry the update\'s versions and source', async () => {

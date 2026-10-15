@@ -73,3 +73,16 @@ body {
 .nuiget-sidebar-section--shared {
     flex: var(--nuiget-sidebar-share, 1) 1 0;
 }
+
+/* All Projects: a caption per workspace folder (with several), a heading and a list per project. */
+.nuiget-sidebar-folder-caption {
+    margin: var(--nuiget-space-3) var(--nuiget-space-4) var(--nuiget-space-1);
+    color: var(--nuiget-color-fg-muted);
+    font-size: var(--nuiget-font-size-sm);
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.nuiget-sidebar-section-content:has(.nuiget-sidebar-project) {
+    overflow-y: auto;
+}

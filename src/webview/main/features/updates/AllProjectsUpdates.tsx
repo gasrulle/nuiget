@@ -7,7 +7,7 @@ import { useAllProjects } from '../../../shared/store/allProjects';
 import { useDetailsActions } from '../../../shared/store/details';
 import { useOps, useOpsActions } from '../../../shared/store/ops';
 import type { ListView } from '../../MainShell';
-import { FolderGroups } from '../all-projects/folderGroups';
+import { FolderGroups } from '../../../shared/allProjects/folderGroups';
 import { CentralUpdateDialog } from './CentralUpdateDialog';
 import { UpdateAllDialog } from './UpdateAllDialog';
 

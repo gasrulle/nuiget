@@ -338,9 +338,36 @@ describe('sidebar: Installed section', () => {
 
         await hostSays(() => host.event('session/changed', snapshot(2, '')));
         expect(screen.getByTestId('sidebar-installed-empty')).toHaveTextContent('No .NET projects found in this workspace.');
+        // All Projects: the grouped sections over allProjects/installed (P5.10), skeleton rows until the first chunk.
         await hostSays(() => host.event('session/changed', snapshot(3, ALL_PROJECTS)));
-        expect(screen.getByTestId('sidebar-installed-empty')).toHaveTextContent('All Projects is not available in this view yet. Select a single project.');
+        expect(host.requests('allProjects/installed')).toHaveLength(1);
+        expect(screen.queryByTestId('sidebar-installed-empty')).toBeNull();
         expect(host.requests('installed/get')).toHaveLength(1);
+    });
+
+    it('All Projects: one section per project over allProjects/installed, in folder order, and uninstall sends the row\'s project', async () => {
+        const user = userEvent.setup();
+        const host = await mountWith([pkg('Serilog')]);
+        const B = '/w2/Lib/Lib.csproj';
+        await hostSays(() => host.event('session/changed', snapshot(2, ALL_PROJECTS)));
+        const stream = host.requests('allProjects/installed')[0];
+        const projects = [{ name: 'App', path: A, workspaceFolder: 'w1' }, { name: 'Lib', path: B, workspaceFolder: 'w2' }];
+        await hostSays(() => host.chunk(stream, { kind: 'start', projects }));
+        await hostSays(() => host.chunk(stream, { kind: 'project', chunk: { projectPath: A, projectName: 'App', workspaceFolder: 'w1', result: { projectPath: A, fidelity: 'authoritative', isCpm: false, packages: [pkg('Serilog')] } } }));
+        await hostSays(() => host.chunk(stream, { kind: 'project', chunk: { projectPath: B, projectName: 'Lib', workspaceFolder: 'w2', result: { projectPath: B, fidelity: 'authoritative', isCpm: false, packages: [pkg('Moq'), pkg('xunit')] } } }));
+        await hostSays(() => host.respond(stream, { projectPaths: [A, B], errored: [] }));
+
+        expect(screen.getByTestId('section-header-installed')).toHaveAccessibleName('Installed 3');
+        expect(screen.getAllByText(/^w[12]$/).map(element => element.textContent)).toEqual(['w1', 'w2']);
+        expect(screen.getByTestId('section-header-project-app').closest('h3')).not.toBeNull();
+        const lib = screen.getByTestId('sidebar-installed-list-lib');
+        expect(lib).toHaveAccessibleName('Lib');
+        await user.click(within(within(lib).getByTestId('package-row-moq')).getByRole('option'));
+        await user.keyboard('{Delete}');
+        expect(host.requests('ops/remove').map(request => request.payload)).toEqual([{ projectPath: B, packageId: 'Moq' }]);
+        await user.keyboard('{Shift>}{F10}{/Shift}');
+        expect(host.requests('ui/contextMenu')[0].payload).toMatchObject({ packageId: 'Moq', context: 'installed', projectPath: B });
+        expect(await axe(document.body)).toHaveNoViolations();
     });
 
     it('the search box filters the installed packages by id, and the host can ask for the focus to be there', async () => {

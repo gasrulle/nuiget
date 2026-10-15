@@ -1,18 +1,12 @@
-import { useCallback, useId, useMemo, useState } from 'react';
+import { useId, useState } from 'react';
 import type React from 'react';
-import { ALL_PROJECTS, type InstalledPackage } from '../../protocol';
-import { IN_PROGRESS, shownVersion, whyNotRemovable } from '../shared/installed/rules';
-import { Badge, cssVars, EmptyState, IconButton, Listbox, Row, SectionHeader, Skeleton, TrashIcon } from '../shared/primitives';
+import type { ProjectInstalledChunk } from '../../protocol';
+import { groupByFolder } from '../shared/allProjects/folderGroups';
+import { Badge, Banner, cssVars, EmptyState, SectionHeader, Skeleton } from '../shared/primitives';
+import { useAllProjects } from '../shared/store/allProjects';
 import { useInstalled } from '../shared/store/installed';
-import { useOps, useOpsActions } from '../shared/store/ops';
 import { useSession } from '../shared/store/session';
-import { useRowRequests } from './rowRequests';
-
-/** A package as the list holds it; the list identifies its items by `id`. */
-interface Item {
-    id: string;
-    entry: InstalledPackage;
-}
+import { ProjectPackages } from './ProjectPackages';
 
 export { shownVersion, whyNotRemovable } from '../shared/installed/rules';
 
@@ -28,15 +22,62 @@ export interface InstalledSectionProps {
     share?: string;
 }
 
+interface ProjectSectionProps {
+    chunk: ProjectInstalledChunk;
+    filter: string;
+    announce: (message: string) => void;
+    revalidating: boolean;
+    onRetry: () => void;
+}
+
+/** One project of All Projects: its heading, then its list, an unsupported banner (read-only rows) or its error. */
+function ProjectSection({ chunk, filter, announce, revalidating, onRetry }: ProjectSectionProps): React.JSX.Element {
+    const [expanded, setExpanded] = useState(true);
+    const [selectedId, setSelectedId] = useState<string | null>(null);
+    const baseId = useId();
+    const titleId = `${baseId}-title`;
+    const contentId = `${baseId}-content`;
+    const name = chunk.projectName.toLowerCase();
+    const { result } = chunk;
+    let content: React.ReactNode;
+    if (result === undefined) {
+        content = <Banner severity="error" action={{ label: 'Retry', onClick: onRetry }}>{`Installed packages of ${chunk.projectName} could not be loaded: ${chunk.error ?? 'unknown error'}`}</Banner>;
+    } else {
+        content = (
+            <>
+                {result.unsupported ? <Banner severity="warning">{`Unsupported project: ${result.unsupported.message}`}</Banner> : null}
+                {result.unsupported === undefined || result.packages.length > 0
+                    ? <ProjectPackages projectPath={chunk.projectPath} result={result} filter={filter} announce={announce} labelledBy={titleId} testId={`sidebar-installed-list-${name}`} busy={revalidating} selectedId={selectedId} onSelectedChange={setSelectedId} />
+                    : null}
+            </>
+        );
+    }
+    return (
+        <div className="nuiget-sidebar-project">
+            <SectionHeader
+                title={chunk.projectName}
+                titleId={titleId}
+                contentId={contentId}
+                testKey={`project-${name}`}
+                level={3}
+                expanded={expanded}
+                onToggle={() => setExpanded(previous => !previous)}
+                count={result === undefined || (result.unsupported !== undefined && result.packages.length === 0) ? undefined : result.packages.length}
+            />
+            {expanded ? <div id={contentId}>{content}</div> : null}
+        </div>
+    );
+}
+
 /**
- * The Installed section of the sidebar: the packages of the selected project, one row each. Enter, Delete or
- * the row's button uninstalls; the row shows a spinner from the click until the operation has ended, and the
- * list is asked for again by the store when the host says it changed, with the rows left in place meanwhile.
+ * The Installed section of the sidebar: the packages of the selected project, one row each (`ProjectPackages`), or in
+ * All Projects one heading and list per project over the `allProjects` slice, under a caption per workspace folder when
+ * there are several. A row acts on its own project. The list is asked for again by the store when the host says it
+ * changed, with the rows left in place meanwhile.
  */
 export function InstalledSection({ filter, announce, expanded: controlled, onToggle, share }: InstalledSectionProps): React.JSX.Element {
     const installed = useInstalled();
-    const { isPackageBusy, active } = useOps();
-    const { run } = useOpsActions();
+    const all = useAllProjects();
     const { session } = useSession();
     const [own, setOwn] = useState(true);
     const expanded = controlled ?? own;
@@ -44,106 +85,39 @@ export function InstalledSection({ filter, announce, expanded: controlled, onTog
     const baseId = useId();
     const titleId = `${baseId}-title`;
     const contentId = `${baseId}-content`;
-
     const { projectPath, result } = installed;
-    const { menu, viewDetails } = useRowRequests(announce);
-    const needle = filter.trim().toLowerCase();
-    const items = useMemo<Item[]>(
-        () => (result?.packages ?? []).filter(entry => entry.id.toLowerCase().includes(needle)).map(entry => ({ id: entry.id, entry })),
-        [result, needle],
-    );
-    const isBusy = useCallback(
-        (packageId: string): boolean => projectPath !== null && isPackageBusy(projectPath, packageId),
-        [projectPath, isPackageBusy],
-    );
 
-    /** What the row of a busy package says: the operation the store reports, from the call that asked for it on. */
-    const busyStatus = (packageId: string): string => {
-        const id = packageId.toLowerCase();
-        for (const progress of active.values()) {
-            if (progress.kind !== undefined && progress.projectPaths?.includes(projectPath ?? '') && progress.packageIds?.some(other => other.toLowerCase() === id)) {
-                return IN_PROGRESS[progress.kind];
-            }
-        }
-        return 'In progress';
-    };
-
-    const uninstall = ({ entry }: Item): void => {
-        if (projectPath === null || result === undefined || isBusy(entry.id)) {
-            return;
-        }
-        const obstacle = whyNotRemovable(entry, result);
-        if (obstacle !== undefined) {
-            announce(obstacle);
-            return;
-        }
-        // The row is busy from this call on (the ops slice). The outcome, also a refusal, is announced from the
-        // slice; here only a request that got no answer.
-        run('ops/remove', { projectPath, packageId: entry.id }).catch((error: unknown) => {
-            announce(`Uninstall of ${entry.id} failed: ${error instanceof Error ? error.message : String(error)}`);
-        });
-    };
-
-    const all = result?.packages.length;
-    const readOnly = result?.unsupported !== undefined;
-
+    let count: number | undefined;
     let content: React.ReactNode;
-    if (projectPath === null) {
+    if (all.active) {
+        const chunks = (all.projects ?? []).map(project => all.chunks.get(project.path)).filter((chunk): chunk is ProjectInstalledChunk => chunk !== undefined);
+        count = chunks.reduce((sum, chunk) => sum + (chunk.result?.packages.length ?? 0), 0);
+        if (chunks.length === 0) {
+            content = all.status === 'error'
+                ? <Banner severity="error" action={{ label: 'Retry', onClick: all.refresh }}>{`The projects could not be listed: ${all.error?.message ?? 'unknown error'}`}</Banner>
+                : <Skeleton density="compact" />;
+        } else {
+            const folders = groupByFolder(chunks);
+            const render = (chunk: ProjectInstalledChunk) => <ProjectSection key={chunk.projectPath} chunk={chunk} filter={filter} announce={announce} revalidating={all.revalidating} onRetry={all.refresh} />;
+            content = folders.length > 1
+                ? folders.map(([folder, members]) => (
+                    <div key={folder} className="nuiget-sidebar-folder">
+                        <p className="nuiget-sidebar-folder-caption">{folder}</p>
+                        {members.map(render)}
+                    </div>
+                ))
+                : chunks.map(render);
+        }
+    } else if (projectPath === null) {
         content = session === undefined
             ? <Skeleton density="compact" />
-            : <EmptyState data-testid="sidebar-installed-empty" message={session.selectedProject === ALL_PROJECTS ? 'All Projects is not available in this view yet. Select a single project.' : 'No .NET projects found in this workspace.'} />;
+            : <EmptyState data-testid="sidebar-installed-empty" message="No .NET projects found in this workspace." />;
     } else if (result === undefined) {
         // An error is shown by the banner above the section; there is nothing to list.
         content = installed.status === 'error' ? null : <Skeleton density="compact" />;
     } else {
-        const nothing = all === 0
-            ? (readOnly ? 'No packages to show.' : 'No packages installed.')
-            : `No installed packages match "${filter.trim()}".`;
-        content = (
-            <Listbox
-                items={items}
-                labelledBy={titleId}
-                hint={readOnly
-                    ? 'Read-only. Ctrl+Enter (Cmd+Enter) opens the full view; Shift+F10 opens the actions menu.'
-                    : 'Enter or Delete uninstalls; Ctrl+Enter (Cmd+Enter) opens the full view; Shift+F10 opens the actions menu.'}
-                testId="sidebar-installed-list"
-                density="compact"
-                selectedId={selectedId}
-                busy={installed.revalidating}
-                onSelect={item => setSelectedId(item.id)}
-                onActivate={uninstall}
-                onDelete={uninstall}
-                onSecondaryActivate={({ entry }) => viewDetails(entry.id, entry.resolvedVersion ?? entry.version)}
-                onContextMenu={({ entry }) => {
-                    if (projectPath !== null) {
-                        menu({ packageId: entry.id, installedVersion: entry.resolvedVersion ?? entry.version, context: 'installed', projectPath, versionType: entry.versionType });
-                    }
-                }}
-                empty={<EmptyState data-testid="sidebar-installed-empty" message={nothing} />}
-                renderRow={(item, placement) => {
-                    const { entry } = item;
-                    const busy = isBusy(entry.id);
-                    const unresolved = entry.declaration === 'unresolved';
-                    const central = entry.declaration === 'central' || entry.declaration === 'central-override';
-                    return (
-                        <Row
-                            {...placement}
-                            itemId={entry.id}
-                            name={entry.id}
-                            version={shownVersion(entry)}
-                            density="compact"
-                            busy={busy}
-                            disabled={unresolved}
-                            status={busy ? busyStatus(entry.id) : unresolved ? 'Unresolved' : undefined}
-                            badges={central ? <Badge label="CPM" title="Centrally managed" /> : undefined}
-                            actions={whyNotRemovable(entry, result) === undefined
-                                ? <IconButton label={`Uninstall ${entry.id}`} tabIndex={-1} data-testid="row-action-uninstall" onClick={() => uninstall(item)}><TrashIcon /></IconButton>
-                                : undefined}
-                        />
-                    );
-                }}
-            />
-        );
+        count = result.packages.length;
+        content = <ProjectPackages projectPath={projectPath} result={result} filter={filter} announce={announce} labelledBy={titleId} testId="sidebar-installed-list" busy={installed.revalidating} selectedId={selectedId} onSelectedChange={setSelectedId} />;
     }
 
     return (
@@ -155,9 +129,9 @@ export function InstalledSection({ filter, announce, expanded: controlled, onTog
                 testKey="installed"
                 expanded={expanded}
                 onToggle={onToggle ?? (() => setOwn(previous => !previous))}
-                count={all}
-                busy={installed.status === 'loading' || installed.revalidating}
-                actions={result?.fidelity === 'provisional'
+                count={count}
+                busy={all.active ? all.status === 'loading' || all.revalidating : installed.status === 'loading' || installed.revalidating}
+                actions={!all.active && result?.fidelity === 'provisional'
                     ? <span className="nuiget-sidebar-fidelity" title="Versions come from the project files; a full evaluation is pending." data-testid="sidebar-installed-provisional"><Badge label="provisional" tone="info" /></span>
                     : undefined}
             />

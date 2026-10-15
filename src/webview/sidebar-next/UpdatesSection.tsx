@@ -1,18 +1,13 @@
-import { useId, useMemo, useState } from 'react';
+import { useId, useState } from 'react';
 import type React from 'react';
-import { ALL_PROJECTS, type PackageUpdate } from '../../protocol';
-import { IN_PROGRESS } from '../shared/installed/rules';
-import { ArrowUpIcon, Badge, Banner, cssVars, EmptyState, IconButton, Listbox, Row, SectionHeader, Skeleton } from '../shared/primitives';
+import type { InstalledResult, ProjectUpdatesChunk } from '../../protocol';
+import { groupByFolder } from '../shared/allProjects/folderGroups';
+import { Banner, cssVars, EmptyState, SectionHeader, Skeleton } from '../shared/primitives';
+import { useAllProjects } from '../shared/store/allProjects';
 import { useInstalled } from '../shared/store/installed';
-import { useOps, useOpsActions } from '../shared/store/ops';
 import { useSession } from '../shared/store/session';
 import { useUpdates } from '../shared/store/updates';
-import { useRowRequests } from './rowRequests';
-
-interface Item {
-    id: string;
-    update: PackageUpdate;
-}
+import { ProjectUpdates } from './ProjectUpdates';
 
 export interface UpdatesSectionProps {
     /** Something to say to a screen reader that no outcome of an operation says. */
@@ -33,16 +28,68 @@ function emptyMessage(sourcesUnavailable: boolean, total: number, filter: string
     return total > 0 && filter.length > 0 ? `No updates match "${filter}".` : 'No updates available.';
 }
 
+interface ProjectSectionProps {
+    chunk: ProjectUpdatesChunk;
+    installed: InstalledResult | undefined;
+    filter: string;
+    sourcesUnavailable: boolean;
+    announce: (message: string) => void;
+    revalidating: boolean;
+    onRetry: () => void;
+}
+
+/** One project of All Projects: its heading and its updates, or its error with Retry. */
+function ProjectSection({ chunk, installed, filter, sourcesUnavailable, announce, revalidating, onRetry }: ProjectSectionProps): React.JSX.Element {
+    const [expanded, setExpanded] = useState(true);
+    const [selectedId, setSelectedId] = useState<string | null>(null);
+    const baseId = useId();
+    const titleId = `${baseId}-title`;
+    const contentId = `${baseId}-content`;
+    const name = chunk.projectName.toLowerCase();
+    const content = chunk.error !== undefined
+        ? <Banner severity="error" action={{ label: 'Retry', onClick: onRetry }}>{`Updates of ${chunk.projectName} could not be checked: ${chunk.error}`}</Banner>
+        : (
+            <ProjectUpdates
+                projectPath={chunk.projectPath}
+                rows={chunk.updates}
+                installed={installed}
+                filter={filter}
+                announce={announce}
+                labelledBy={titleId}
+                testId={`sidebar-updates-list-${name}`}
+                busy={revalidating}
+                empty={emptyMessage(sourcesUnavailable, chunk.updates.length, filter.trim())}
+                selectedId={selectedId}
+                onSelectedChange={setSelectedId}
+            />
+        );
+    return (
+        <div className="nuiget-sidebar-project">
+            <SectionHeader
+                title={chunk.projectName}
+                titleId={titleId}
+                contentId={contentId}
+                testKey={`updates-${name}`}
+                level={3}
+                expanded={expanded}
+                onToggle={() => setExpanded(previous => !previous)}
+                count={chunk.error === undefined && !sourcesUnavailable ? chunk.updates.length : undefined}
+            />
+            {expanded ? <div id={contentId}>{content}</div> : null}
+        </div>
+    );
+}
+
 /**
- * The Updates section of the sidebar: one compact row per update of the selected project. Enter or the row's button
- * updates the package to its latest version; a centrally managed package is not updated from here until the central
- * editor exists (P6.3). A source that could not be checked is a banner, never "no updates".
+ * The Updates section of the sidebar: one compact row per update of the selected project (`ProjectUpdates`), or in All
+ * Projects one heading and list per project over the `allProjects` slice's updates stream, under a caption per workspace
+ * folder when there are several. A row updates its own project. A source that could not be checked is a banner, never
+ * "no updates".
  */
 export function UpdatesSection({ announce, filter = '', expanded: controlled, onToggle, share }: UpdatesSectionProps): React.JSX.Element {
     const updates = useUpdates();
     const installed = useInstalled();
-    const { isPackageBusy, active } = useOps();
-    const { run } = useOpsActions();
+    const all = useAllProjects();
     const { session } = useSession();
     const [own, setOwn] = useState(true);
     const expanded = controlled ?? own;
@@ -50,48 +97,49 @@ export function UpdatesSection({ announce, filter = '', expanded: controlled, on
     const baseId = useId();
     const titleId = `${baseId}-title`;
     const contentId = `${baseId}-content`;
-
     const { projectPath, rows } = updates;
-    const { menu, viewDetails } = useRowRequests(announce);
-    const needle = filter.trim().toLowerCase();
-    const items = useMemo<Item[]>(() => rows.filter(update => update.id.toLowerCase().includes(needle)).map(update => ({ id: update.id, update })), [rows, needle]);
-    const centralIds = useMemo(() => new Set((installed.result?.packages ?? [])
-        .filter(entry => entry.declaration === 'central' || entry.declaration === 'central-override')
-        .map(entry => entry.id.toLowerCase())), [installed.result]);
-    const isBusy = (id: string): boolean => projectPath !== null && isPackageBusy(projectPath, id);
 
-    const busyStatus = (packageId: string): string => {
-        const id = packageId.toLowerCase();
-        for (const progress of active.values()) {
-            if (progress.kind !== undefined && progress.projectPaths?.includes(projectPath ?? '') && progress.packageIds?.some(other => other.toLowerCase() === id)) {
-                return IN_PROGRESS[progress.kind];
-            }
-        }
-        return 'In progress';
-    };
-
-    const updateOne = ({ update }: Item): void => {
-        if (projectPath === null || isBusy(update.id)) {
-            return;
-        }
-        if (centralIds.has(update.id.toLowerCase())) {
-            announce(`${update.id} is centrally managed; change its version in Directory.Packages.props.`);
-            return;
-        }
-        run('ops/update', { projectPath, packageId: update.id, version: update.latestVersion, sourceUrl: update.sourceUrl }).catch((error: unknown) => {
-            announce(`Update of ${update.id} failed: ${error instanceof Error ? error.message : String(error)}`);
-        });
-    };
-
-    const known = updates.status === 'ready' && !updates.sourcesUnavailable;
+    let count: number | undefined;
+    let busy = updates.status === 'loading' || updates.revalidating;
     let content: React.ReactNode;
-    if (projectPath === null) {
+    if (all.active) {
+        const stream = all.updates;
+        busy = stream.status === 'loading' || stream.revalidating;
+        const chunks = (stream.projects ?? []).map(project => stream.chunks.get(project.path)).filter((chunk): chunk is ProjectUpdatesChunk => chunk !== undefined);
+        if (stream.status === 'ready' && !stream.sourcesUnavailable && chunks.every(chunk => chunk.error === undefined)) {
+            count = chunks.reduce((sum, chunk) => sum + chunk.updates.length, 0);
+        }
+        const render = (chunk: ProjectUpdatesChunk) => (
+            <ProjectSection key={chunk.projectPath} chunk={chunk} installed={all.chunks.get(chunk.projectPath)?.result} filter={filter} sourcesUnavailable={stream.sourcesUnavailable} announce={announce} revalidating={stream.revalidating} onRetry={stream.refreshUpdates} />
+        );
+        const folders = groupByFolder(chunks);
+        content = (
+            <>
+                {stream.sourcesUnavailable
+                    ? <Banner severity="warning" data-testid="sidebar-updates-unavailable" action={{ label: 'Retry', onClick: stream.refreshUpdates }}>Some package sources could not be checked.</Banner>
+                    : null}
+                {stream.error ? <Banner severity="error" action={{ label: 'Retry', onClick: stream.refreshUpdates }}>{`Updates could not be checked: ${stream.error.message}`}</Banner> : null}
+                {chunks.length === 0 && stream.status !== 'error' ? <Skeleton density="compact" /> : null}
+                {folders.length > 1
+                    ? folders.map(([folder, members]) => (
+                        <div key={folder} className="nuiget-sidebar-folder">
+                            <p className="nuiget-sidebar-folder-caption">{folder}</p>
+                            {members.map(render)}
+                        </div>
+                    ))
+                    : chunks.map(render)}
+            </>
+        );
+    } else if (projectPath === null) {
         content = session === undefined
             ? <Skeleton density="compact" />
-            : <EmptyState data-testid="sidebar-updates-empty" message={session.selectedProject === ALL_PROJECTS ? 'All Projects is not available in this view yet. Select a single project.' : 'No .NET projects found in this workspace.'} />;
+            : <EmptyState data-testid="sidebar-updates-empty" message="No .NET projects found in this workspace." />;
     } else if (rows.length === 0 && updates.status === 'loading') {
         content = <Skeleton density="compact" />;
     } else {
+        if (updates.status === 'ready' && !updates.sourcesUnavailable) {
+            count = rows.length;
+        }
         content = (
             <>
                 {updates.sourcesUnavailable
@@ -100,44 +148,18 @@ export function UpdatesSection({ announce, filter = '', expanded: controlled, on
                 {updates.error
                     ? <Banner severity="error" action={{ label: 'Retry', onClick: updates.refresh }}>{`Updates could not be checked: ${updates.error.message}`}</Banner>
                     : null}
-                <Listbox
-                    items={items}
+                <ProjectUpdates
+                    projectPath={projectPath}
+                    rows={rows}
+                    installed={installed.result}
+                    filter={filter}
+                    announce={announce}
                     labelledBy={titleId}
-                    hint="Enter updates to the latest version; Ctrl+Enter (Cmd+Enter) opens the full view; Shift+F10 opens the actions menu."
                     testId="sidebar-updates-list"
-                    density="compact"
-                    selectedId={selectedId}
                     busy={updates.revalidating}
-                    onSelect={item => setSelectedId(item.id)}
-                    onActivate={updateOne}
-                    onSecondaryActivate={({ update }) => viewDetails(update.id, update.latestVersion)}
-                    onContextMenu={({ update }) => {
-                        if (projectPath !== null) {
-                            const versionType = installed.result?.packages.find(entry => entry.id.toLowerCase() === update.id.toLowerCase())?.versionType;
-                            menu({ packageId: update.id, installedVersion: update.installedVersion, latestVersion: update.latestVersion, context: 'updates', projectPath, versionType, sourceUrl: update.sourceUrl });
-                        }
-                    }}
-                    empty={<EmptyState data-testid="sidebar-updates-empty" message={emptyMessage(updates.sourcesUnavailable, rows.length, filter.trim())} />}
-                    renderRow={(item, placement) => {
-                        const { update } = item;
-                        const busy = isBusy(update.id);
-                        const central = centralIds.has(update.id.toLowerCase());
-                        return (
-                            <Row
-                                {...placement}
-                                itemId={update.id}
-                                name={update.id}
-                                version={`${update.installedVersion} → ${update.latestVersion}`}
-                                density="compact"
-                                busy={busy}
-                                status={busy ? busyStatus(update.id) : undefined}
-                                badges={central ? <Badge label="CPM" title="Centrally managed" /> : undefined}
-                                actions={central ? undefined : (
-                                    <IconButton label={`Update ${update.id} to ${update.latestVersion}`} tabIndex={-1} data-testid="row-action-update" onClick={() => updateOne(item)}><ArrowUpIcon /></IconButton>
-                                )}
-                            />
-                        );
-                    }}
+                    empty={emptyMessage(updates.sourcesUnavailable, rows.length, filter.trim())}
+                    selectedId={selectedId}
+                    onSelectedChange={setSelectedId}
                 />
             </>
         );
@@ -152,8 +174,8 @@ export function UpdatesSection({ announce, filter = '', expanded: controlled, on
                 testKey="updates"
                 expanded={expanded}
                 onToggle={onToggle ?? (() => setOwn(previous => !previous))}
-                count={known ? rows.length : undefined}
-                busy={updates.status === 'loading' || updates.revalidating}
+                count={count}
+                busy={busy}
             />
             {expanded ? <div className="nuiget-sidebar-section-content" id={contentId}>{content}</div> : null}
         </section>

@@ -1,4 +1,76 @@
-# STATUS — src/webview/sidebar-next   commit a6c2b52 (parent of P5.10 commit a)   2026-10-16T05:00:00Z
+# STATUS — src/webview/sidebar-next   commit e779984 (P5.10 commit b; parent of commit c)   2026-10-16T07:00:00Z
+
+git status --porcelain --untracked-files=all (before commit c): modified `src/webview/sidebar-next/{InstalledSection,UpdatesSection,BrowseResults}.tsx` and their tests, `SidebarView.test.tsx`, `sidebar.css`, `src/webview/main/features/installed/InstalledTab.tsx` and `src/webview/main/features/updates/AllProjectsUpdates.tsx` (one import line each), the two STATUS notes and `docs/plans/STATUS.md`; renamed `src/webview/main/features/all-projects/folderGroups.tsx` → `src/webview/shared/allProjects/folderGroups.tsx`; new `src/webview/sidebar-next/{ProjectPackages,ProjectUpdates}.tsx` (all belong to P5.10 commit c)
+
+Item: **P5.10, commit c of four**: All Projects in the sidebar. `ProjectPackages.tsx` and `ProjectUpdates.tsx` are one
+project's compact lists (the rows, keys, menu and Ctrl+Enter of commit a), used by the single-project view and by each
+All Projects section; `InstalledSection` and `UpdatesSection` show, in All Projects, one `SectionHeader level={3}` and
+list per project over the `allProjects` slice (`sidebar-installed-list-<name>`, `sidebar-updates-list-<name>`), under a
+plain caption per workspace folder with two or more folders; an unsupported project is a banner (its packages read-only
+when it has some), an errored project its error with Retry; each row acts on its own project. `BrowseResults` under All
+Projects: Enter, the `+` button and the menu send `ui/contextMenu` with `projectPath: ALL_PROJECTS`, `installedProjects`,
+`installedVersion` and `partiallyInstalled` (the host's QuickPick picks the projects); badges "Installed" and
+"Installed in n of m". The selected row of a list is kept by its section, so it outlives a collapse.
+
+## Verified by running
+
+P5.10 commit c:
+
+```text
+baseline at e779984 (commit b) → its CI run 38723994346 green before this commit was pushed
+npx tsc --noEmit / npm run check-types / npm run lint → exit 0 each (last run after every code edit)
+src/webview/sidebar-next, 20 times → 20 of 20
+npm test (NUIGET_SDK_TESTS=1, DOTNET_ROOT set) → exit 0 · Test Files 157 passed (157) · Tests 3217 passed (3217)
+npm run bench / npx vitest run --coverage → exit 0 each
+rm -rf dist && node esbuild.mjs --v2 --production --analyze → extension 281249 / 299921 · webview 518470 / 600685 ·
+                               sidebar 317603 / 329122 (312196 at commit b; N63)
+rm -rf dist && NUIGET_V2=1 npm run package && npm run check:vsix → check:vsix: OK
+NUIGET_V2=1 npm run test:ui:v2 -- --storage /tmp/nuiget-ui-v2 → 18 passing (21s); fixture unchanged
+ls src/webview/shared/allProjects/folderGroups.tsx → present; src/webview/main/features/all-projects → gone
+grep -rn "from '../main\|from '../../main" src/webview/sidebar-next → 0 · "not available in this view yet" in sidebar-next code → 0
+grep -rn "projectPath: ALL_PROJECTS" src/webview/sidebar-next (code) → BrowseResults.tsx only
+test -e .claude/.contract-change → false
+```
+
+## Done (tested)
+
+- `SidebarView.test.tsx`: `empty states: no packages, no project, all projects, and a filter that matches nothing`
+  rewritten by title (its All Projects assertion now: the grouped sections are asked, no empty state); new `All Projects:
+  one section per project over allProjects/installed, in folder order, and uninstall sends the row's project` (with axe).
+- `UpdatesSection.test.tsx`: new `All Projects: sections over allProjects/updates; Enter sends ops/update with the row's
+  project` (with axe).
+- `BrowseResults.test.tsx`: `an installed package says so and installs nothing; without a single project nothing is
+  installed` rewritten by title to `an installed package says so and installs nothing; under All Projects Enter, the
+  button and the menu ask ui/contextMenu with where it is installed`.
+
+## Done (untested)
+
+- The sidebar's All Projects in VS Code: the fixture has one project, which the host normalizes; jsdom is the proof.
+
+## Not started
+
+- The host picker, `pickers.ts` tests, the host ratchet, the ExTester file and the docs (commit d).
+
+## Deviations from contract/ADR (file:line each)
+
+- Commit c landed in two commits: `bdd67ae` was pushed with the folder rename alone (a failed `git add` in the same
+  command line skipped the rest, and the commit ran after it), which left `labs/2.0` red for one push; the next commit
+  adds the left-out files unchanged from the gate run above. No force-push.
+- One more QuickPick than 1.x under All Projects (the actions menu before the project picker): ruling reading (2).
+- The single-project Updates rows of an unsupported project now have no action and say why (the shared `ProjectUpdates`
+  carries P5.9's rule to the sidebar).
+- Test ids outside interaction model §8 for P5.12b: `sidebar-installed-list-<name>`, `sidebar-updates-list-<name>`,
+  `section-header-project-<name>`, `section-header-updates-<name>`.
+
+## Advisor decisions (date, item, question, answer verbatim)
+
+The P5.10 ruling (2026-10-16) is verbatim in `docs/plans/STATUS.md`.
+
+## Exact next step (one item ID)
+
+P5.10 commit d, after commit c's CI run is green.
+
+## Earlier notes of this directory
 
 git status --porcelain --untracked-files=all (before commit a): modified `docs/plans/STATUS.md`, `src/webview/shared/store/{session,session.test}.tsx`, `src/webview/sidebar-next/{SidebarView,InstalledSection,UpdatesSection,BrowseResults,index}.tsx`, their tests `SidebarView.test.tsx`, `UpdatesSection.test.tsx`, `BrowseResults.test.tsx`, `sidebar.css` and the two STATUS notes; new `src/webview/sidebar-next/{rowRequests.ts,SidebarLayout.test.tsx}` (all belong to P5.10 commit a)
 
@@ -426,6 +498,7 @@ decided and written down (read-only, above); the harness scenario is written aga
 ## Exact next step (one item ID)
 
 P5.6 (feature search, main and sidebar browse), after P5.5's CI run is green; a fresh session starts it (second compaction of this one).
+
 
 
 
