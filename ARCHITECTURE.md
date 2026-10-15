@@ -815,10 +815,12 @@ These parts serve both versions and are the current truth for the build, test an
   suites: `out/test/e2e/v2-*.e2e.test.js` with it, every other e2e file without it, so `npm run test:e2e` is the
   1.x suite unless the variable is set. `npm run test:ui:v2` runs `src/test/ui/v2` (the 1.x `test:ui` glob does
   not reach that folder). The two suites divide the work by what each can see. The extension-host suite
-  (`src/test/e2e/v2-sidebar.e2e.test.ts`) shows that the build under test is the 2.0 one (the commands only 1.x
-  registers are absent), that it activates, that its view and commands answer, and that a noun-first `dotnet
-  package remove` on the project file under it does no harm; it runs on VS Code 1.85.0 too, the only Node 18
-  host that executes 2.0 code. The ExTester suite (`src/test/ui/v2/sidebar.ui.test.ts`) is the one that sees the
+  (`src/test/e2e/v2-*.e2e.test.ts`, one file per legacy e2e file since P5.12a, shared steps in `v2Support.ts`)
+  shows that the build under test is the 2.0 one (the commands only 1.x registers are absent), that it activates,
+  that every contributed command answers, that the main panel is one tab that closes and opens again, and that
+  noun-first `dotnet package add` and `remove` on the project file under both surfaces (an install, an update from
+  3.13.3 to 3.14.0 by name, an edit and its write-back) do no harm; every wait is a bounded poll on the workbench or
+  the file, and it runs on VS Code 1.85.0 too, the only Node 18 host that executes 2.0 code. The ExTester suite (`src/test/ui/v2/sidebar.ui.test.ts`) is the one that sees the
   webview: the sidebar lists the fixture's packages, a row is as high as its token says and the second row lies
   under the first (stylesheet, tokens and the virtual offsets work under the Content Security Policy), the row
   action shows with focus, and Delete uninstalls a package, announced in the live region and gone from the

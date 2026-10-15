@@ -1,7 +1,7 @@
 import * as assert from 'assert';
-import { execFile } from 'child_process';
 import * as fs from 'fs';
 import * as vscode from 'vscode';
+import { closeAllEditors, CONTRIBUTED_COMMANDS, dotnet, LEGACY_ONLY_COMMANDS, mainPanelTabs, until, waitForMainPanel } from './v2Support';
 
 /**
  * The 2.0 entries in the extension host (plan item P3.5). Run with `NUIGET_V2=1 npm run test:e2e` after a
@@ -10,42 +10,12 @@ import * as vscode from 'vscode';
  * An extension-host test sees commands, views and files, not the DOM of a webview: that the sidebar lists and
  * uninstalls packages is shown by `src/test/ui/v2/sidebar.ui.test.ts`. Here: the build under test is the 2.0
  * one, it activates, its view and commands answer, and it lives with a project file that changes under it.
- * The only `dotnet` command is noun-first (`dotnet package remove --project`), which needs .NET SDK 10.
+ * The only `dotnet` command is noun-first (`dotnet package remove --project`), which needs .NET SDK 10. Since P5.12a
+ * the file also carries the legacy `sidebar.e2e.test.ts` (Open Full View), and its helpers are in `v2Support.ts`.
  */
 suite('2.0 sidebar', () => {
-    /** Every command the manifest contributes; both entries register these. */
-    const CONTRIBUTED = [
-        'nuiget.openManager', 'nuiget.refreshPackages', 'nuiget.sidebar.selectSource', 'nuiget.sidebar.selectProject',
-        'nuiget.sidebar.togglePrerelease', 'nuiget.sidebar.togglePrereleaseOff', 'nuiget.sidebar.toggleRestore',
-        'nuiget.sidebar.toggleRestoreOff', 'nuiget.sidebar.refresh', 'nuiget.sidebar.openFullView', 'nuiget.clearHttpCache',
-        'nuiget.clearSdkVersionCache',
-    ];
-    /** Commands only the 1.x entry registers (`src/extension.ts`). */
-    const LEGACY_ONLY = ['nuiget.refreshPackagesScoped', 'nuiget.viewPackageDetails'];
-
     let csprojPath: string;
     let originalCsproj: string | undefined;
-
-    /** Waits until `condition` holds, looking every 250 ms; fails with `what` after `timeoutMs`. */
-    async function until(condition: () => boolean, what: string, timeoutMs: number): Promise<void> {
-        const deadline = Date.now() + timeoutMs;
-        while (!condition()) {
-            if (Date.now() > deadline) {
-                assert.fail(`Timed out after ${timeoutMs} ms waiting until ${what}`);
-            }
-            await new Promise(resolve => setTimeout(resolve, 250));
-        }
-    }
-
-    /** Runs `dotnet` with an argument vector, never through a shell. */
-    function dotnet(args: string[], cwd: string): Promise<{ code: number; output: string }> {
-        return new Promise(resolve => {
-            execFile('dotnet', args, { cwd, env: { ...process.env, DOTNET_CLI_UI_LANGUAGE: 'en', DOTNET_NOLOGO: '1' } }, (error, stdout, stderr) => {
-                const code = error === null ? 0 : typeof error.code === 'number' ? error.code : 1;
-                resolve({ code, output: `${stdout}${stderr}${error && typeof error.code !== 'number' ? error.message : ''}` });
-            });
-        });
-    }
 
     suiteSetup(async () => {
         const extension = vscode.extensions.getExtension('Gasrulle.nuiget');
@@ -59,18 +29,19 @@ suite('2.0 sidebar', () => {
         originalCsproj = fs.readFileSync(csprojPath, 'utf-8');
     });
 
-    suiteTeardown(() => {
+    suiteTeardown(async () => {
         // The fixture project is shared with the other suites: leave it as it was found.
         if (csprojPath && originalCsproj !== undefined) {
             fs.writeFileSync(csprojPath, originalCsproj, 'utf-8');
         }
+        await closeAllEditors();
     });
 
     test('the 2.0 entry is the one under test', async () => {
         const commands = new Set(await vscode.commands.getCommands(true));
-        assert.deepStrictEqual(CONTRIBUTED.filter(command => !commands.has(command)), [], 'contributed commands that are not registered');
+        assert.deepStrictEqual(CONTRIBUTED_COMMANDS.filter(command => !commands.has(command)), [], 'contributed commands that are not registered');
         // A dist/ built from the 1.x entries would pass everything above; this is what tells the two apart.
-        assert.deepStrictEqual(LEGACY_ONLY.filter(command => commands.has(command)), [], 'commands of the 1.x entry: dist/ was not built with --v2');
+        assert.deepStrictEqual(LEGACY_ONLY_COMMANDS.filter(command => commands.has(command)), [], 'commands of the 1.x entry: dist/ was not built with --v2');
     });
 
     test('the sidebar view resolves and its commands answer', async () => {
@@ -79,6 +50,13 @@ suite('2.0 sidebar', () => {
         // Twice: the prerelease switch is back where it was.
         await vscode.commands.executeCommand('nuiget.sidebar.togglePrerelease');
         await vscode.commands.executeCommand('nuiget.sidebar.togglePrereleaseOff');
+    });
+
+    test('Open Full View from the sidebar opens the main panel (P5.12a, port of sidebar.e2e.test.ts)', async () => {
+        await vscode.commands.executeCommand('workbench.view.extension.nuiget-sidebar');
+        await vscode.commands.executeCommand('nuiget.sidebar.openFullView');
+        await waitForMainPanel();
+        assert.strictEqual(mainPanelTabs().length, 1);
     });
 
     test('a noun-first package remove outside the extension is seen without an error', async function () {

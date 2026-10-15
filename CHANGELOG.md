@@ -91,6 +91,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Added a 2.0 section to ARCHITECTURE.md, marked the 1.x sections, and corrected statements that no longer matched the code**
 - **Added the findings ledger for the 2.0 work under docs/plans**
 - **2.0 theme pass**
+- **Ported the extension-host end-to-end suites to the 2.0 entry with noun-first dotnet commands and bounded waits**
 
 ## [1.18.9] - 2026-10-10
 
