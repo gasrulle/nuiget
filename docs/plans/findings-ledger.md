@@ -449,7 +449,7 @@ headline defects in the order the plan lists them, so that salvage commits can c
 | C-feeds-2 | Transient outage → 24 h miss | P4.3 to P4.9 | closed (P4.4: a `failed` icon answer caches nothing and does not count for the breaker, `icons.ts`) |
 | C-feeds-3 | No OutboundPolicy implementation | P4.3 to P4.9 | closed (P2.6 `DefaultOutboundPolicy`; P4.8 `policy.test.ts`) |
 | C-feeds-4 | Ctor shapes mismatch composition root | P4.3 to P4.9 | closed (P4.9a: the root composes `createFeedClients`, `FeedContexts`, `NodeTransport`) |
-| C-project-catalog-1 | Inspector/evaluator/mutator/references/context missing | P2.2 to P2.8, P6 | open; references done in P2.3, inspector in P2.4, context in P2.5; evaluator P6.2, mutator P6.3 |
+| C-project-catalog-1 | Inspector/evaluator/mutator/references/context missing | P2.2 to P2.8, P6 | open; references done in P2.3, inspector in P2.4, context in P2.5; evaluator done in P6.2a, wired in P6.2b; mutator P6.3 |
 | C-project-catalog-2 | Catalog blocks on evaluator | P2.2 to P2.8, P6 | closed (P2.8: `installed()` resolves with the provisional and carries the evaluation as `upgrade`; tested with a fake evaluator, the evaluator itself arrives in P6.2) |
 | C-project-catalog-3 | Fabricated context | P2.2 to P2.8, P6 | closed (P2.8: context from `ProjectContextProvider`) |
 | C-project-catalog-4 | Conditions dropped | P2.2 to P2.8, P6 | closed for tier 1 (P2.2: a guarded `PackageVersion` is returned as `conditioned`; P2.4: framework conditions are captured and intersected, every other condition is `unresolved`) |

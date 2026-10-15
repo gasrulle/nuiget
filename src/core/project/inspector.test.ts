@@ -237,6 +237,16 @@ describe('StaticProjectInspector: Central Package Management', () => {
         expect(only(result, 'Analyzers')).toEqual({ id: 'Analyzers', version: '1.0.0', versionType: 'standard', declaration: 'central', definedIn: buildProps });
         expect(only(result, 'Unknown')).toEqual({ id: 'Unknown', version: '', versionType: 'unresolved', declaration: 'unresolved', definedIn: buildProps });
     });
+
+    it('cpm: an override declared in Directory.Build.props names that file', async () => {
+        const result = await inspectTree({
+            'Directory.Build.props': '<Project><ItemGroup><PackageReference Include="Serilog" VersionOverride="3.1.1" /></ItemGroup></Project>',
+            'Directory.Packages.props': centralProps('<ItemGroup><PackageVersion Include="Serilog" Version="4.0.0" /></ItemGroup>'),
+            [appFile]: sdkProject(''),
+        });
+        const buildProps = path.join(path.dirname(path.dirname(result.projectPath)), 'Directory.Build.props');
+        expect(only(result, 'Serilog')).toEqual({ id: 'Serilog', version: '3.1.1', versionType: 'standard', declaration: 'central-override', definedIn: buildProps });
+    });
 });
 
 describe('StaticProjectInspector: items, updates and frameworks', () => {

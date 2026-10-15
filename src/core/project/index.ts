@@ -18,6 +18,11 @@ export {
     type CentralPackageVersion,
 } from './central';
 export {
+    EvaluationError,
+    MsBuildProjectEvaluator,
+    type EvaluatorDeps,
+} from './evaluator';
+export {
     ProjectContextProvider,
     SDK_TOO_OLD_MESSAGE,
     type ProjectContextDeps,

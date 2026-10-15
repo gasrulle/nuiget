@@ -1,418 +1,155 @@
-# STATUS — src/core/project   commit 7b84421 (parent of the P2.5 commit)   2026-10-12T17:08:57Z
+# STATUS — src/core/project   commit 440b154 (P6.1 closed; parent of the P6.2a commit)   2026-10-15T17:05:00Z
 
-git status --short src/core/project: `?? src/core/project/context.ts`, `?? src/core/project/context.test.ts`,
-`?? src/core/project/revision.ts`, `?? src/core/project/revision.test.ts`, `?? src/core/project/__fixtures__/sdk8/`,
-` M src/core/project/STATUS.md` (they belong to the P2.5 commit, together with ` M ARCHITECTURE.md`,
-` M CHANGELOG.md`, ` M docs/plans/STATUS.md` and ` M docs/plans/findings-ledger.md`)
+git status --porcelain --untracked-files=all (before the commit): modified `ARCHITECTURE.md`, `CHANGELOG.md`,
+`docs/plans/{STATUS,findings-ledger}.md`, `src/core/project/{index,inspector,inspector.test}.ts`, this note; new
+`src/core/project/{evaluator,evaluator.test,rows}.ts`
 
-Items: **P2.5 `src/core/project/context.ts` and `revision.ts`** (the `ProjectExecutionContext` provider; this
-commit), **P2.4 `inspector.ts` and `index.ts`** (⚑; `7b84421`), **P2.3 `references.ts`** (`ef96051`) and
-**P2.2 `{xml,discovery,assets,central}.ts` through the salvage gate** (`1fa8f6e`). P2.5 touches no file of
-the earlier items; `index.ts` is unchanged.
-
-The quarry's `src/core/project/STATUS.md` was checked against its tree. It holds for `xml.ts`, `discovery.ts`,
-`assets.ts` and the fixtures. It is stale on three points: it lists `central.ts` as not started, and the file
-exists in the working tree (untracked, 126 lines); it says "no `.gitignore` change needed" because tests copy
-assets into scratch directories, and the item orders a tracked `obj/` and the exception for it; and its
-"28 util tests" predate P1.2. The quarry has no test for any of the four modules; all four test files are new.
+Item: **P6.2a `MsBuildProjectEvaluator`**, the first half of P6.2 as the ruling below splits it (no frozen file, no
+wiring; P6.2b adds the provisional chunk, the Catalog merge, the webview slice and the composition). This note
+replaces the P2.5 note (in the history of this file at the P2.5 commit); the modules of P2.2 to P2.5 are unchanged
+except `inspector.ts` (below).
 
 ## Verified by running
 
-P2.5, on `7b84421`:
-
 ```text
-The gates ran with DOTNET_ROOT set to the SDK directory and NUIGET_SDK_TESTS=1 (N48).
 baseline npm run check-types → exit 0
 baseline npx eslint src      → exit 0
-baseline npx vitest run      → Test Files 70 passed (70) · Tests 2262 passed (2262)
-quarry                       → no context.ts and no revision.ts; its Catalog.ts:153-155 fabricates the context
-                               (configFiles: [], revision: ''), which is C-project-catalog-3
-probe, SDK 10.0.401, macOS   → `dotnet nuget config paths` in a directory with a nuget.config whose parent has
-                               one too: three lines, <dir>/App/NuGet.Config, <dir>/NuGet.Config,
-                               ~/.nuget/NuGet/NuGet.Config; one path per line, nearest first, exit 0. The CLI
-                               prints its own spelling of the file name on a case-insensitive file system.
-                               The gated test `reads the config chain of the real SDK nearest first` is the
-                               tracked form of this probe and runs on both CI platforms.
-npm run check-types          → exit 0 (main, tsconfig.test.json, tsconfig.vitest.json; N39)
-npx eslint src               → exit 0, no output
-npm run lint                 → exit 0
-npx vitest run --project backend src/core/project/context.test.ts src/core/project/revision.test.ts
-                             → Test Files 2 passed (2) · Tests 13 passed (13)   (item gate; the real-SDK test ran)
-npx vitest run --project backend src/core/project → Test Files 8 passed (8) · Tests 127 passed (127)
-npm test                     → Test Files 72 passed (72) · Tests 2275 passed (2275)
-npx vitest run (no NUIGET_SDK_TESTS) → Tests 2273 passed | 2 skipped (2275)
-npx vitest run --coverage    → exit 0 · All files 77.33 % statements, 67.29 % branches, 73.04 % functions,
-                               78.8 % lines · context.ts 26 of 26 lines, revision.ts 16 of 16 ·
-                               src/core/** 2166 of 2201 lines, 98.41 % (floor 85 %)
-npm run bench                → Test Files 17 passed (17) · Tests 104 passed | 1 skipped (105)
-npm run package:vsix         → exit 0 · Tests 2275 passed · DONE  Packaged: nuiget-v1.18.9.vsix (17 files,
-                               529.24 KB)
-npm run check:vsix           → check:vsix: OK
-negative control             → five single mutations, each caught: sdk-too-old not reported (1 test fails),
-                               disabled sources kept (1), the output of a failed command used (1), the
-                               modification time left out of the revision (2), global.json not an input (2).
-                               Both files were restored and compared (cmp) afterwards.
-git status --short src/core/contracts.ts src/protocol docs/adr → empty (no contract change, no sentinel)
-git diff --stat 7b84421 -- src/core/project → STATUS.md only; the other files of the item are new
-npm run test:ui              → SKIPPED: no UI change; the CI job UI runs it
-CI                           → see the tracker row of P2.5
-```
-
-P2.4, on `ef96051`:
-
-```text
-The gates ran with DOTNET_ROOT set to the SDK directory and NUIGET_SDK_TESTS=1 (N48).
-baseline npm run check-types → exit 0
-baseline npx eslint src      → exit 0
-baseline npx vitest run      → Test Files 69 passed (69) · Tests 2237 passed (2237)
-quarry                       → no inspector.ts and no index.ts in its src/core/project; written from the plan row
-                               and the ruling below
-npm run check-types          → exit 0 (main, tsconfig.test.json, tsconfig.vitest.json; N39)
-npx eslint src               → exit 0, no output
-npm run lint                 → exit 0
-npx vitest run --project backend src/core/project → Test Files 6 passed (6) · Tests 114 passed (114)
-one run per title (-t)       → the eight titles of the plan row and `unsupported: malformed central props is
-                               parse-failed, not isCpm false`: each "1 passed | 24 skipped (25)"
-npm test                     → Test Files 70 passed (70) · Tests 2262 passed (2262)
-npx vitest run --coverage    → exit 0 · All files 77.24 % statements, 67.21 % branches, 72.88 % functions,
-                               78.71 % lines · inspector.ts 155 of 156 lines (:353) ·
-                               src/core/** 2124 of 2159 lines, 98.38 % (floor 85 %)
-npm run bench                → Test Files 17 passed (17) · Tests 104 passed | 1 skipped (105)
-npm run package:vsix         → exit 0 · Tests 2262 passed · DONE  Packaged: nuiget-v1.18.9.vsix (17 files,
-                               529.16 KB)
-npm run check:vsix           → check:vsix: OK
-negative control             → nine single mutations of inspector.ts, each caught by the 25 tests: a malformed
-                               central props file swallowed (1 test fails), a conditioned central entry taken
-                               as central (1), every Update applied (2), excluding conditions not dropped (1),
-                               no dedupe (1), a path in definedIn of a project row (5), VersionOverride
-                               honoured outside CPM (1), no per-framework lookup (1), unknown conditions
-                               accepted (3). The file was restored and compared (cmp) afterwards.
-grep -n 'export \*\|__fixtures__' src/core/project/index.ts → no output
-grep -rn 'Thenable\|child_process\|from .vscode.' src/core/project --include='*.ts' → no output
-git diff --stat ef96051 -- src/core/project → STATUS.md only; inspector.ts, inspector.test.ts and index.ts are new
-git status --short src/core/contracts.ts src/protocol docs/adr → empty; .claude/.contract-change does not exist
-npm run test:ui              → SKIPPED: no UI change; the CI job UI runs it
-CI                           → run 38281221752 for 7b84421: success on all required jobs
-```
-
-P2.3, on `74178f2`:
-
-```text
-The gates ran with DOTNET_ROOT set to the SDK directory and NUIGET_SDK_TESTS=1 (N48).
-baseline npm run check-types → exit 0
-baseline npx eslint src      → exit 0
-baseline npx vitest run      → Test Files 68 passed (68) · Tests 2228 passed (2228)
-source                       → src/services/NuGetProjectService.ts:235-282 (1.x); the quarry has no references.ts
-1.x on this platform         → node: path.normalize(path.resolve('/src/App', '..\\Lib\\Lib.csproj')) is
-                               '/src/App/..\\Lib\\Lib.csproj' on macOS: a backslash reference does not resolve (N53)
-npm run check-types          → exit 0 (main, tsconfig.test.json, tsconfig.vitest.json; N39)
-npx eslint src               → exit 0, no output
-npm run lint                 → exit 0
-npx vitest run --project backend src/core/project/references.test.ts → Tests 9 passed (9)   (item gate)
-npx vitest run --project backend src/core/project → Test Files 5 passed (5) · Tests 89 passed (89)
-npm test                     → Test Files 69 passed (69) · Tests 2237 passed (2237)
-npx vitest run --coverage    → exit 0 · All files 76.91 % statements, 66.67 % branches, 72.51 % functions,
-                               78.39 % lines · references.ts 28 of 28 lines ·
-                               src/core/** 1969 of 2003 lines, 98.30 % (floor 85 %)
-npm run bench                → Test Files 17 passed (17) · Tests 104 passed | 1 skipped (105)
-npm run package:vsix         → exit 0 · Tests 2237 passed · DONE  Packaged: nuiget-v1.18.9.vsix (17 files,
-                               529.06 KB)
-npm run check:vsix           → check:vsix: OK
-git status --short src/core/contracts.ts src/protocol docs/adr → empty (no contract change, no sentinel)
-git diff 74178f2 -- src/core/project (without references.* and STATUS.md) → empty
-npm run test:ui              → SKIPPED: no UI change; the CI job UI runs it
-CI                           → run 38277865396 for ef96051: success on all required jobs
-```
-
-P2.2, on `d7a5d8b`:
-
-```text
-The gates ran with DOTNET_ROOT set to the SDK directory and NUIGET_SDK_TESTS=1 (N48).
-baseline npm run check-types → exit 0
-baseline npx eslint src      → exit 0, no output
-baseline npx vitest run      → Test Files 64 passed (64) · Tests 2148 passed (2148)
-copy from the quarry tree    → cmp: xml.ts, discovery.ts, assets.ts, central.ts and __fixtures__/scratch.ts
-                               identical; diff -r of the fixture directories (assets, cpm, legacy, pkgconfig,
-                               props, sdk): identical
-unmodified copy              → npm run check-types exit 0 · npx eslint src/core/project exit 0 · no tests exist
-                               · grep Thenable, vscode, child_process in src/core/project: no match
-npm run check-types          → exit 0 (main, tsconfig.test.json, tsconfig.vitest.json; N39)
-npx eslint src               → exit 0, no output
-npm run lint                 → exit 0
-npx vitest run --project backend src/core/project → Test Files 4 passed (4) · Tests 80 passed (80)   (item gate)
-npm test                     → Test Files 68 passed (68) · Tests 2228 passed (2228)
-npx vitest run --coverage    → exit 0 · All files 76.85 % statements, 66.63 % branches, 72.42 % functions,
-                               78.33 % lines · project: xml.ts 54 of 55 lines (:58), assets.ts 138 of 143
-                               (:83, :94, :179, :258, :307), central.ts and discovery.ts 100 % ·
-                               src/core/** 1941 of 1975 lines, 98.28 % (floor 85 %)
-npm run bench                → Test Files 17 passed (17) · Tests 104 passed | 1 skipped (105)
-npm run package:vsix         → exit 0 · Tests 2228 passed · DONE  Packaged: nuiget-v1.18.9.vsix (17 files, 529 KB)
-npm run check:vsix           → check:vsix: OK
-diff against the quarry      → discovery.ts unchanged; xml.ts 6 changed lines (rootProject); central.ts 18
-                               (conditioned); assets.ts 29 added lines (getResolvedVersionsByFramework)
-git check-ignore src/core/project/__fixtures__/cpm/App/obj/project.assets.json → exit 1: not ignored
-git status --short src/core/project/__fixtures__/.scratch → empty after the test run (the directory holds
-                               only its own `.gitignore` with `*`)
-secrets and paths in fixtures → grep for Users, home, token, password: three lines of project.assets.json
-                               with the placeholder `C:\Users\testuser\…` (synthetic, as in the quarry)
-git status --short src/core/contracts.ts src/protocol docs/adr → empty (no contract change, no sentinel)
-npm run test:ui              → SKIPPED: no UI change; the CI job UI runs it
-CI                           → run 38274861212 for 1fa8f6e: red in E2E (1.85.0) on N44 (third sighting), green
-                               after gh run rerun --failed; the warm-up step followed as 74178f2
+baseline npx vitest run      → Test Files 162 passed (162) · Tests 3266 passed | 4 skipped (3270)
+pre-item bundles (--v2 --production --analyze) → extension 281379 / 299921, webview 518516 / 600685,
+                               sidebar 317628 / 329122
+npx tsc --noEmit             → exit 0
+npm run check-types          → first run exit 2: evaluator.test.ts(232,69) TS2741 'trace' missing in the fake
+                               Logger; fixed in the test; second run exit 0
+npx eslint src               → exit 0
+npx vitest run --project backend src/core/project → Tests 139 passed | 2 skipped (141)
+DOTNET_ROOT="$(dirname "$(command -v dotnet)")" NUIGET_SDK_TESTS=1 npx vitest run --project backend src/core/project src/core/cli
+                             → Test Files 14 passed (14) · Tests 284 passed (284); `evaluates the multitfm fixture
+                               with the real SDK` passed (480 ms, SDK 10.0.401)
+npm test                     → Test Files 163 passed (163) · Tests 3278 passed | 5 skipped (3283)
+npm run bench                → Test Files 20 passed (20) · Tests 119 passed | 1 skipped (120)
+rm -rf dist && node esbuild.mjs --v2 --production --analyze
+                             → extension 281485 / 299921 (+106 bytes: the module is exported, not yet composed),
+                               webview 518516 / 600685, sidebar 317628 / 329122
+grep -rn "child_process\|Thenable\|process.cwd" src/core/project/evaluator.ts → no output
+grep -n "MsBuildProjectEvaluator\|EvaluationError" src/core/project/index.ts → 2 lines
+grep -c "function resolved\|function unresolved\|function withOrigin" src/core/project/inspector.ts → 0
+git diff --name-only -- src/protocol src/core/contracts.ts docs/adr → empty; no sentinel
+npm run package:vsix         → SKIPPED: nothing composes the evaluator yet (P6.2b runs it)
+npm run test:ui              → SKIPPED: no UI change
+CI                           → see the tracker row of P6.2a
 ```
 
 ## Done (tested)
 
-- `context.ts`, new (P2.5): `ProjectContextProvider({ runner, sources, stopDirs?, logger? }).get(projectPath,
-  workspaceFolder?)` answers `{ context, unsupported? }`.
-  - `sdk` from `runner.sdkVersion(projectDir)`; when it is not `supported` the answer carries `unsupported: {
-    reason: 'sdk-too-old', message: 'requires .NET SDK 10 or newer' }` and the context is still complete,
-    because the project stays readable (D13). An SDK that cannot be detected leaves `sdk` out and is not
-    `unsupported`.
-  - `configFiles` from `dotnet nuget config paths` with the project directory as working directory: one
-    path per line, nearest first. A failed, cancelled or timed-out command, or one that cannot be started,
-    gives `[]` and a redacted warning.
-  - `sourceUrls`: the URLs of the enabled sources of `SourceProvider.listSources(projectDir)`, in its
-    order. A failure of the provider rejects `get`.
-  - `revision`: `computeRevision(revisionInputs(...))`.
-- `revision.ts`, new (P2.5): `revisionInputs(projectPath, configFiles, stopDirs?)` lists the project, the
-  nearest `Directory.Build.props`, `Directory.Build.targets` and `Directory.Packages.props`, the nearest
-  `global.json` and the config files, each once; `computeRevision(files)` is 16 hex digits of a SHA-256
-  over path, modification time and size of each file, independent of the order, with a missing file
-  counted as missing. It reads no contents and never rejects.
-- `context.test.ts` (8 tests) with a fake `dotnet` that, like the real one, takes the SDK from the nearest
-  `global.json`: `pins SDK 8 through global.json and reports sdk-too-old` uses the new fixture
-  `__fixtures__/sdk8/` (`global.json` with 8.0.425, one project) and the fake, not the real SDK. One test,
-  gated by `NUIGET_SDK_TESTS`, runs the real SDK: `reads the config chain of the real SDK nearest first`.
-  `revision.test.ts` (5 tests).
-- `inspector.ts`, new (P2.4): `StaticProjectInspector({ assets, stopDirs })` implements `ProjectInspector`.
-  `inspect(projectPath)` never rejects and always answers `fidelity: 'provisional'`.
-  - Unsupported projects (`inspector.ts:82-103`): a missing file is `not-found`; a `packages.config` beside
-    the project is `packages-config`; a project that `classifyProject` does not call `sdk-style` is
-    `non-sdk-style`; a read or parse failure of the project file, of the nearest `Directory.Build.props` or
-    of the nearest `Directory.Packages.props` is `parse-failed`. The result is `{ projectPath, packages: [],
-    fidelity, isCpm: false, unsupported }`; the four messages are `UNSUPPORTED_MESSAGES`.
-  - CPM (`:107-121`): `ManagePackageVersionsCentrally` read from Build.props, then Packages.props, then the
-    project, the last definition winning; `isCpm` needs the props file and the value `true`, otherwise
-    `centralPropsPath` is absent. Only the nearest props file counts.
-  - References (`collect`, `:193-226`): the nearest `Directory.Build.props` first, then the project, in
-    document order. `Include` may be a `;` list; globs and MSBuild expressions are skipped. `Update` changes
-    earlier rows of that id and is dropped without one. `Version` and `VersionOverride` as attribute or
-    child element; `IsImplicitlyDefined`.
-  - Conditions (`conditionOf`, `:255-271`; `updateApplies`, `:233-253`): `'$(TargetFramework)' == 'x'` on
-    the item or its group limits the row to that framework; two that exclude each other drop the row; any
-    other condition makes the row `unresolved`. A guarded `Update` applies when it covers the frameworks of
-    the row, is ignored when it shares none, and otherwise makes the row `unresolved`.
-  - Declaration (`describe`, `:282-306`): `unresolved` rows have `version: ''` and `versionType:
-    'unresolved'`; `central-override` for a `VersionOverride` in a CPM project; `project` or `props` after
-    the file of the last version write; `central` from the nearest props file; a conditioned central entry,
-    a missing one and a `$(Property)` anywhere are `unresolved`. `definedIn` names the file that declares
-    the item when that is `Directory.Build.props`, and the central props file for a central version.
-  - Rows are merged on `lowerId|version|declaration|isImplicit`; a row that covers every declared framework
-    has no `targetFrameworks`. `resolvedVersion` is the version restored for the row's first framework, else
-    for any framework, else from the lock file.
-- `inspector.test.ts`, 25 tests. The eight titles of the plan row: `cpm: versionless reference resolves
-  central version`, `cpm: exact central pin surfaces as versionType exact`, `cpm: override wins and is marked
-  central-override`, `cpm: missing central entry is unresolved`, `props: Directory.Build.props reference is
-  declared props`, `tfm: condition captured and intersected`, `unsupported: packages.config`, `unsupported:
-  non-sdk-style`; and from the ruling `unsupported: malformed central props is parse-failed, not isCpm
-  false`, the conditioned central entry, the nearest props file only, the `multitfm` fixture, the four
-  messages, `not-found`. Further: CPM switched off and on through the three files, overrides switched off,
-  `Include` lists, the four cases of a guarded `Update`, unknown declared frameworks, the three sources of
-  `resolvedVersion`.
-- `index.ts`, new: named exports of the six modules (`assets`, `central`, `discovery`, `inspector`,
-  `references`, `xml`); the parser's helpers `isObject`, `asArray` and `textOf` and everything under
-  `__fixtures__` are not exported.
-- `references.ts`, new (P2.3), two functions ported from 1.x:
-  - `getProjectReferences(projectPath)`: the absolute paths of the `<ProjectReference Include>` items, in
-    document order, without duplicates. Read with `xml.ts` instead of the 1.x regular expression, so a
-    commented-out item does not count and single-quoted attributes do; `Include` may be a `;` list; an entry
-    with a wildcard or an MSBuild expression is skipped; `Update` and `Remove` are ignored; conditions are
-    not evaluated. Backslash paths are converted with `fromMsBuildPath` before they are resolved (N53). A
-    file that cannot be read or parsed has no references, as in 1.x.
-  - `getProjectDependencyMap(projectPaths)`: project → referenced projects among the given ones, without
-    self-references, keys and values normalized with `normalizeProjectPath`, read 24 at a time.
-- `references.test.ts`, 9 tests, among them the three the item names: `maps a diamond, with normalized keys
-  and values, so that dependencies order first`, `keeps both edges of a cycle, and the sort still returns
-  every project once`, `gives a missing file an empty entry and drops references to it and to projects
-  outside the set`. The diamond and the cycle are checked through `topologicalSortByDependency`, the sort
-  the bulk workflows use.
-- `xml.ts`: `parseMsBuildXml` (validates first, strips a byte order mark, throws `XmlParseError` with file and
-  line), `rootProject`, `elements`, `attr` (any case, exact spelling first), `childText`, `textOf`,
-  `lastPropertyValue`, `asArray`, `isObject`. One change: `rootProject` returns `{}` for `<Project></Project>`,
-  which the parser reads as an empty string (N52).
-- `discovery.ts`, unchanged: `findProjects` (one search, duplicates dropped by normalized path, order by name
-  then path, deepest containing workspace folder) and `classifyProject` (`sdk-style`, `legacy`,
-  `packages-config`, `unknown`).
-- `assets.ts`: `AssetsReader` (`read` with a cache keyed by path, valid while the mtime is unchanged and for
-  30 s, five documents at most; `getResolvedVersions`; `getPackageDependencies`; `getTransitivePackages` with
-  error buckets), `computeTransitiveFrameworks`, `assetsPathFor`, `lockFilePathFor`. Added, as the item orders:
-  `getResolvedVersionsByFramework(projectPath)` → framework → lower-cased id → version, from `targets`;
-  a runtime-specific target counts for its framework, project-type entries are skipped, and the result is
-  empty without restore output (`assets.ts:140-168`).
-- `central.ts`: `findCentralPropsPath`, `findNearestFile`, `findFilesUpwards`, `nearestStopDir`,
-  `parseBooleanProperty`, `parseCentralPackageVersions`. Changed, as the item orders: an entry carries
-  `conditioned`, true when the item or its `ItemGroup` has a `Condition`, or when it updates an entry that
-  has; an unguarded `Include` after a guarded one is not conditioned, because it applies last
-  (`central.ts:11-21`, `:116-134`).
-- Tests, 80 in four files (item gate: tests green, and no test reads an untracked capture):
-  - `xml.test.ts` (18): the named cases `reads a document that starts with a byte order mark`, `throws
-    XmlParseError for malformed XML, with the file and the line`, `reads a version from the attribute and from
-    the child element`, `returns the last definition across property groups` (`lastPropertyValue`); and the
-    rest of the module.
-  - `discovery.test.ts` (21): the `classifyProject` table of 16 rows, the fixtures, `findProjects`.
-  - `central.test.ts` (20): `returns a Condition-guarded entry as conditioned, with the last value written`,
-    the fixtures (`Pinned` is `[1.0.0]`), the walk upwards with stop directories, `parseBooleanProperty`.
-  - `assets.test.ts` (21): the named cases `finds the roots of packages in a cyclic graph` and `takes the
-    union of assets file and lock file, and the assets file wins`; `getResolvedVersionsByFramework`; the
-    cache; the error buckets.
-- Fixtures, as the item orders: `.gitignore` gained `!src/core/project/__fixtures__/**/obj/`;
-  `assets/project.assets.json` moved, unchanged, to `cpm/App/obj/project.assets.json`, so the reader finds it
-  beside the project; `cpm/Directory.Packages.props` gained `<PackageVersion Include="Pinned"
-  Version="[1.0.0]" />` and `cpm/App/App.csproj` a versionless `Pinned` reference; the quarry's untracked
-  `.scratch/probe` project (two target frameworks, CPM, a `VersionOverride`, a conditioned group, a
-  `Directory.Build.props` reference) is tracked as `multitfm/`, identical.
-- `__fixtures__/scratch.ts`, unchanged: `fixture()`, and `createScratchDir`/`writeTree`/`copyFixture` for the
-  tests that need a writable project directory. Scratch directories are created by the test, under
-  `__fixtures__/.scratch`, whose own `.gitignore` hides them; no test reads a file that another run or a
-  person left there.
+- `evaluator.ts`: `MsBuildProjectEvaluator` and `EvaluationError` as ruled (DO 3). `parseJsonAfterPrefix` is exported
+  from the module for its test and not from `index.ts`.
+- `evaluator.test.ts`: the ten titles of the ruling plus `a property in a version or an override, and a reference
+  without any version, is unresolved`; the fake runner replays the `evaluations` of
+  `src/core/cli/__fixtures__/sdk-probes/10.0.401.json`, mapping `<probe>` and `<dotnet-root>` to native paths.
+  The gated test evaluates `__fixtures__/multitfm` in place with the real SDK and checks that a second call runs
+  nothing.
+- `rows.ts`: `resolvedRow` and `unresolvedRow`, the former `resolved`, `unresolved` and `withOrigin` of the inspector;
+  `inspector.ts` calls them through a local `from(definedIn)`; every inspector test is unchanged and passes.
+- `inspector.test.ts`: `cpm: an override declared in Directory.Build.props names that file` (from the P2 review).
 
 ## Done (untested)
 
-- `multitfm/` has no restore output and no test of its own beyond classification, the central entries and the
-  props lookup: it is the fixture for the inspector's rules (P2.4) and the evaluator (P6.2).
-- `cpm/App/obj/project.assets.json` does not list `Pinned`: the item says to move the file, not to change it.
-  P2.4's rule for `resolvedVersion` falls back to nothing for that reference.
-- The lines without a test are listed by the coverage run above.
-- P2.8 extended the barrel with `context` and `revision` under the P2.8 ruling of 2026-10-12 (`index.ts`);
-  what follows describes the state before it. `context.ts` and `revision.ts` were not exported from `index.ts`: the row of P2.4 limits that file to six
-  modules and the row of P2.5 does not name it. The first importer (P2.8 or P2.9) imports them directly or
-  extends the barrel in its own item.
-- Nothing outside the directory imports the modules yet. `getProjectDependencyMap` is what the host passes to
-  `PackageWorkflows` as `projectDependencies` (P2.9).
+- `cachedFidelity` has no consumer (by the ruling).
+- On Windows the replay and the gated test run for the first time in CI.
 
 ## Not started
 
-- `evaluator.ts` (P6.2), `mutator.ts` (P6.3).
+- P6.2b: the `installed/get` provisional chunk (sentinel `P6.2b`), the Catalog merge, the webview slice, the
+  evaluator in `extension.next.ts`.
 
 ## Deviations from contract/ADR (file:line each)
 
-- The contract has no type for the provider or its answer. `ProjectContextResult { context, unsupported? }`
-  (`context.ts:14-18`) is this item's shape for "`!supported` → project `unsupported: 'sdk-too-old'`": the
-  context itself has no such field, and `InstalledResult.unsupported` belongs to whoever combines the
-  context with an inspection (P2.8).
-- The argv of `dotnet nuget config paths` is a constant in `context.ts:22`, not a builder in
-  `src/core/cli/commands.ts`: it has no argument to validate, and the row does not name that file.
-- `get` rejects when the source provider does (`context.ts:39-43`); SDK detection and the config chain
-  degrade to an absent `sdk` and to `[]`. An empty source list would say "no sources", which is a
-  different fact from "unknown" (the rule of P4.8, applied here).
-- The revision covers the nearest props and targets files, not every file a project imports: explicit
-  `<Import>`s are not followed, as in the inspector. `global.json` is looked for up to the filesystem
-  root (the SDK does), the props and targets files up to the stop directory (`revision.ts:19-36`).
-- On a case-insensitive file system the CLI reports `NuGet.Config` for a file named `nuget.config`; the
-  paths are passed on as reported.
-- `definedIn` (`inspector.ts:282-306`). The plan row writes "`definedIn` = project" for a `VersionOverride`;
-  by the ruling that names the project file, which `src/protocol/domain.ts:57` encodes as an absent field.
-  Beyond the ruling's cases: a row whose item is declared in `Directory.Build.props` always names that file,
-  also when it is `central-override` or `unresolved`, because the domain comment defines the field as the
-  file that declares the item; the ruling's step 8 says "undefined" for `central-override` with the
-  fixtures in mind, where the item is in the project.
-- `VersionOverride` counts only in a CPM project (`inspector.ts:289`); outside one it is ignored and the
-  `Version` decides. The ruling does not state the case; the domain comment defines `central-override` as
-  "CPM project with a `VersionOverride`". A central version that contains `$(` is `unresolved` as well.
-- Two fixtures show what a restore would refuse with NU1008 (a `Version` on a reference in a CPM project):
-  `xunit` in `cpm/Lib/Lib.csproj` and `StyleCop.Analyzers` in `multitfm/Directory.Build.props`. The
-  inspector reports them as written (`project`, `props`), as the plan row decides.
-- `ImportDirectoryBuildProps=false` and `ImportDirectoryPackagesProps=false` are not honoured at tier 1,
-  and neither `Directory.Build.targets` nor an explicit `<Import>` is read.
-- `resolvedVersion` falls back to `AssetsReader.getResolvedVersions`, which also reads the lock file; the
-  plan row says "else from `libraries`". The `targets` of an assets file key `netstandard2.0` as
-  `.NETStandard,Version=v2.0`, so a row for such a framework always reaches the fallback; mapping the
-  monikers belongs to `assets.ts` (N19).
-- A malformed or unreadable props file makes the whole project `parse-failed` (ruling, J): reporting it
-  without the file could show a CPM project as an ordinary one, and the workflows refuse CPM edits on
-  that flag (D7).
-- `conditioned` is a required member of `CentralPackageVersion` (`central.ts:20`), and what it means for an
-  `Update` and for a later unguarded `Include` is this item's reading of "returns `Condition`-guarded
-  `PackageVersion` as `conditioned`"; the test with that title pins the six cases.
-- `getResolvedVersionsByFramework` does not consult the lock file (`assets.ts:140-168`); the item says "from
-  `targets`". `getResolvedVersions` still does.
-- `rootProject` (`xml.ts:63-70`): the empty-project case is beyond the item. Without it a props file that
-  consists of `<Project></Project>` read as "no project root" (N52).
-- Read as the module behaves, and pinned by tests: an empty document is malformed (`XmlParseError`); a
-  valueless attribute is malformed, because the validator runs without `allowBooleanAttributes` although the
-  parser has it (`xml.ts:32-43`, `:51-54`); an empty child element has the text `''`, not `undefined`.
-- `classifyProject` is a text test with regular expressions, not a parse (`discovery.ts:58-88`): an XML
-  comment that contains `<Import Sdk=` would classify as `sdk-style`. Quarry behaviour, unchanged; the
-  inspector (P2.4) parses the file anyway.
-- No bench: the item names none (`computeTransitiveFrameworks` gets one with P2.12 if wanted).
-- `references.ts` differs from the 1.x code it is ported from in what it reads (`references.ts:19-46`): XML
-  instead of a regular expression, `;` lists, no unresolvable entries, no duplicates, and for malformed XML
-  nothing where the 1.x expression would still have matched. The two signatures and the shape of the map
-  are those of 1.x; they are free functions, not methods of a service.
+- Approved by the ruling, not in the row's file list: `src/core/project/rows.ts` (new) and
+  `src/core/project/inspector.ts` (imports the builders; no behaviour change).
 
 ## Advisor decisions (date, item, question, answer verbatim)
 
-P2.2, P2.3 and P2.5 are not ⚑ and no stop-and-ask trigger fired for them; no consultation of the
-`architecture-advisor` took place for them.
+2026-10-15, P6.2 (stop-and-ask: the evaluator, the provisional chunk, enrichment and the split). The same text is in
+`docs/plans/STATUS.md` under `## Advisor decisions`.
 
-2026-10-12, P2.4, ⚑. Brief in the form of plan §2.4, sent on `labs/2.0` @ `ef96051` before any code was
-written. It listed what P2.2 and P2.3 provide and asked eleven questions where the plan row does not decide
-or a fixture meets two rules: A a conditioned central entry; B `$(Prop)` in a version and what is not a
-package id; C a `Directory.Build.props` reference with a `Version` in a CPM project; D which props files are
-read; E the declared target frameworks; F `resolvedVersion` for a row without a framework; G the dedupe and
-`BenchmarkDotNet`; H `Update`, plain and guarded; I the order of the result and the messages; J failures
-beside the project file; K `export *`. Answer of the `architecture-advisor`, verbatim:
+`````text
+DECISION: Approve P6.2 as a contract item, split into two tracker rows under the P4.9a/P4.9b precedent: P6.2a (the evaluator module, no frozen file, no wiring) and P6.2b (the contract behind the sentinel `P6.2b`, the Catalog, the webview slice, the root, the docs). The rulings, one option each: A1 with one correction: the `installed/get` chunk becomes `{ kind: 'provisional'; result: InstalledResult }` and REPLACES the `metadata` kind on that request (no product code emits it there; the other `metadata` chunks stay); ADR-009 d.1 and d.3 and one ADR-004 tier-2 paragraph amended; no A2 (ADR-007 needs no note: a chunk carries no generation already). B1: an evaluation runs for every supported project that has a context, cached by revision, which is the rule `Catalog.ts:209` already implements. C1, mirroring the inspector's `describe` (`inspector.ts:281-305`), implicit references kept and marked. D4, overriding the expectation recorded by the P4.9 ruling and the P5.10 ruling: the two-phase `transitive/metadata` ask of `installed.tsx` STAYS and enrichment does not move into `installed/get`; the chunk P6.2 adds is the provisional list alone. E1: the superseded evaluation stays as it is; rule 7 discards and re-asks. F1 restricted to data: the slice shows the provisional of the latest unanswered request as `result`, no new UI. G2. H1: no change to the `dotnet nuget config paths` cadence; N72 reassigned to P7.2. The Catalog's merge is corrected so that the evaluator's row wins. Nothing here is the owner's.
 
-````text
-DECISION: Implement the brief's readings with these corrections: C keeps `'props'` (confirmed) but `definedIn` follows the contract's wording, so `'project'` and `'central-override'` rows have `definedIn: undefined` (the row's "`definedIn` = project" names the file, which `domain.ts:57` encodes as omission); H uses a four-way rule for a conditioned `Update` (covers → apply, disjoint → ignore, partial or non-TFM condition → `'unresolved'`); J is stricter than the brief: a read error or `XmlParseError` on the project file, the nearest `Directory.Build.props` or the nearest `Directory.Packages.props` all give `unsupported: 'parse-failed'`; K uses named export lists, not `export *`. Nothing is the owner's; no `OWNER MUST DECIDE`. No fixture contradicts the row.
-
-WHY: The brief describes the tree accurately (`xml.ts`, `central.ts:107-136`, `assets.ts:104-168`, `references.ts:12,31-35`, `discovery.ts:72-88`, the thirteen fixture files, `contracts.ts:311-314`, `domain.ts:13-81`); its only two inaccuracies are the assumption that `export *` is the convention (all eight sibling barrels in `src/core/*/index.ts` are named lists) and the reading of "`definedIn` = project" as a path. `domain.ts:49` fixes `version` to `''` for every unresolved row and `domain.ts:57` fixes `definedIn` to non-project files only, which decides A, B, G and the override case without a contract change. ADR-004 line 27 routes `$(Prop)` and unknown conditions to `'unresolved'` and lines 24-26 give an imported-props reference `'props'`, which decides C and H (silently ignoring a conditioned `Update` would report a version the ADR says must be unresolved). J follows D7: P2.9's tracker rows (`docs/plans/STATUS.md:45,221`) let the host feed `isCpm` from this inspector into the CPM add/update refusal of P1.10, so a malformed `Directory.Packages.props` whose only `ManagePackageVersionsCentrally` is in that file must not flip the project to `isCpm: false`; the row's "`XmlParseError` → `parse-failed`" is not restricted to the project file, and MSBuild fails evaluation on any malformed automatic import, so `parse-failed` is also the accurate description. The rule "reference with `Version` in a CPM project → `'project'`" is decided by the row and reported as written; the fixtures `cpm/Lib/Lib.csproj` (xunit 2.8.0) and `multitfm/Directory.Build.props` (StyleCop) would fail a real restore with NU1008, which is a note for STATUS, not a contradiction of a tier-1 rule.
+WHY: The brief describes the tree accurately (`Catalog.ts:110,152-227`, `handlers.ts:260-265`, `messages.ts:121`, `contracts.ts:316-321`, `commands.ts:136-159`, `installed.tsx:40-85`, `fakeDotnet.ts:167`, the five `evaluations` of `src/core/cli/__fixtures__/sdk-probes/10.0.401.json`), with one addition that decides D: nothing in product code emits the `metadata` chunk of `installed/get` (`grep` of `kind: 'metadata'` under `src/core/catalog`, `src/host` hits `allProjectsInstalled` and `search` only); three tests do (`handlers.test.ts:312-328`, `installed.test.tsx:135-158`, `InstalledTab.test.tsx:208`). D is settled by three recorded rules that cannot all hold for chunk-carried metadata: ADR-009 d.2 and ADR-002:18-19 (a cache hit and a late joiner receive the cached value and no chunk, and every second surface and every re-read of an unchanged project is a cache hit), ADR-007:19-21 (chunks precede the one terminal response, so metadata that lands after the authoritative result is undeliverable on that request), and the P4.9 ruling's own DO NOT (`docs/plans/STATUS.md:2316`: never delay the `installed/get` response on the network). The P4.9 ruling's WHY (3) chose the two-phase ask for exactly the first-paint reason; what it deferred to P6.2 was the provisional chunk, and ADR-009 d.1 as amended (`009-catalog.md:11`) says "until P6.2 adds the provisional chunk", so the sentence is rewritten under the sentinel rather than left stale. B is settled by ADR-004 tier 2 (`004-project-model.md:29-35`: runs off the render path, cached by revision, the UI upgrades when it lands) and by the fact that the inspector cannot tell what it does not see (imports beyond the nearest props file, `Directory.Build.targets`, the SDK's own items: `NETStandard.Library` appears only in the evaluation, fixture `multitfm-items-netstandard2.0`), so B2 would leave the "provisional" badge both surfaces already render (`InstalledSection.tsx:134`, `InstalledProjectSection.tsx:161`) on forever for a project it misjudged, and B3 contradicts `domain.ts:44`; the cost is one properties run plus one run per framework per project and revision (about 0.5 s each, P6.1), bounded by the coordinator, which caches the result (authoritative or provisional on failure) until the next invalidation of the key. The merge at `Catalog.ts:221` (`{ ...prior, ...pkg, … }`) keeps the inspector's `targetFrameworks`, `definedIn` and `isImplicit` when the evaluator's row has none, so an evaluation that proves a conditioned row is in every framework would still show the condition: the evaluator's row is complete and wins, and only `resolvedVersion` (the assets file, which the evaluator does not read) is kept from the inspection; `installed resolves before evaluator` (`Catalog.test.ts:181-204`) still holds under that expression (newtonsoft keeps `13.0.3` from the inspection, `Implicit.Sdk` comes from the evaluator with its own `isImplicit`). E1 is already enforced end to end: `useResource.ts:79-96` asks once more for an answer below the listed generation and ends as an error after a second one, `installed.test.tsx:124` (`R7`) and the harness's `rule 7: …` pin it, and E2 would rewrite ADR-009 d.3 ("never rejects") and a Catalog test the row does not name for one saved round trip in a race. The harness needs nothing: `fakeDotnet.ts:167` answers `msbuild` with no output and exit 0, which the evaluator treats as a failure that is not cached, so every scenario's terminal response stays the provisional with the same packages, plus one `provisional` stream envelope that `FakeWebview.ts:217,260` records and does not apply; the holds match `nuget config paths` (`fakeDotnet.ts:97`) and msbuild spawns only after that walk resolved, so none of `recomputation.seen` (`scenarios.test.ts:119,125,142`), `count(configPaths)` (`:270`) and `walk.seen` (`:455,692`) moves. H1 follows from the same: "cache by revision" in the plan row is the evaluator's cache (ADR-004 tier 2), keyed by the revision that `ProjectContextProvider.get` computes (`context.ts:37-60`), so the walk stays per computation and the six scenarios the brief names stay untouched; N72 is a `FeedContexts`/root matter that P6.2 does not touch. G2 follows plan §2.1 (P6.2 spans `src/core/project`, `src/core/catalog`, `src/host` tests, `src/webview/shared/store`, `src/protocol`, two ADRs and the root) and the P4.9 precedent; the seam leaves P6.2a's tree green with `tsc` 0 (the module is exported and unused, which is not a stub: `CatalogDeps.evaluator?` has been optional and unfilled since P2.8 by that ruling's design).
 
 DO:
-1. `StaticProjectInspector` constructor `{ assets: AssetsReader; stopDirs?: readonly string[] }`; `inspect(projectPath)` never rejects (wrap the whole body; any unexpected error becomes `parse-failed`).
-2. Order of checks: (a) `fs.promises.readFile(projectPath, 'utf-8')`; `ENOENT` or `ENOTDIR` → `not-found`, any other error → `parse-failed`. (b) `classifyProject(projectPath, text, await fileExists(path.join(projectDir, 'packages.config')))` on the raw text: `packages-config` → `packages-config`; `legacy` or `unknown` → `non-sdk-style`. (c) parse the project file, then `findNearestFile(projectDir, BUILD_PROPS_FILE, stopDirs)` and `findCentralPropsPath(projectDir, stopDirs)`, reading and parsing each file that exists. An `XmlParseError` or read error on any of the three → `parse-failed`. Unsupported result is exactly `{ projectPath, packages: [], fidelity: 'provisional', isCpm: false, unsupported: { reason, message } }` with no `centralPropsPath`.
-3. Export `UNSUPPORTED_MESSAGES` with these exact values and assert them in the tests: `packages-config` → `packages.config projects are not supported`; `non-sdk-style` → `only SDK-style projects are supported`; `parse-failed` → `the project file or an imported props file could not be read or parsed`; `not-found` → `the project file was not found`. No path and no parser detail in the message (`projectPath` already names the file).
-4. CPM: `isCpm` = central props file found AND `parseBooleanProperty(lastPropertyValue(...ManagePackageVersionsCentrally))` is `true`, read Build.props → Packages.props → project, last defined wins; otherwise `isCpm: false` and `centralPropsPath` undefined even when the file exists. `CentralPackageVersionOverrideEnabled` is read through the same chain, default `true`. Central entries only through `parseCentralPackageVersions` of the nearest file (`cpm/Nested/Inner`: Serilog has no entry in `cpm/Nested/Directory.Packages.props` → `'unresolved'`, `version: ''`).
-5. Collect `PackageReference` items in document order: nearest `Directory.Build.props` first (if found), then the project; nothing from `Directory.Build.targets` or explicit `<Import>`s (D). Each row records its declaring file. `Include` is split on `;`, trimmed, empty parts dropped, and any part matching `/[*?]|\$\(|@\(|%\(/` is skipped (the `references.ts:12` precedent; include `?`); every surviving part gets its own row with the same metadata. `Version` is the attribute or the child element (`attr(item,'Version') ?? childText(item,'Version')`), likewise `VersionOverride`; `isImplicit` is `true` only when `IsImplicitlyDefined` (attribute or child) parses to `true`, else omitted.
-6. Conditions (item AND its `ItemGroup`): a condition matching `^\s*'\$\(TargetFramework\)'\s*==\s*'([^']+)'\s*$` yields a TFM set `[x]` (trimmed, compared case-insensitively, written text kept); nested TFM sets intersect; empty intersection → row dropped (`Microsoft.Bcl.AsyncInterfaces`); any other condition text, including reversed operands, `!=`, `Or`, `$(Configuration)` → the row is `'unresolved'` while any captured TFM set is still kept.
-7. `Update` (same `Include` splitting, same conditions): applies to every earlier row of that id, document order across Build.props then project; changes only `Version`, `VersionOverride` and `IsImplicitlyDefined`, never the TFM set. No earlier row → dropped (`Ghost.Package`; an `Update` that precedes the `Include` of the same id is also dropped). An unconditioned `Update` sets the row's version-declaring file to the `Update`'s file. A conditioned `Update`: TFM set covers the row's effective set → apply; no overlap → ignore; partial overlap, or any non-TFM condition, or a row whose effective set is unknown (E) → row `'unresolved'`. Result for the fixtures: `Newtonsoft.Json` 13.0.1 `'project'` in `sdk/`; `Microsoft.SourceLink.GitHub` 8.0.1 `'project'`, `definedIn` = `props/Directory.Build.props` in `props/`.
-8. Declaration and version per row, after Updates (invariant: `declaration === 'unresolved'` implies `version === ''` and `versionType === 'unresolved'`; `resolvedVersion` is still filled): `Version` or `VersionOverride` containing `$(` → `'unresolved'` (`Serilog` in `sdk/`); `VersionOverride` present and overrides enabled → `'central-override'`, `version` = override, `definedIn` undefined (`cpm/Lib` Serilog 3.1.1, `multitfm` Serilog); `VersionOverride` with overrides disabled → `'unresolved'`; `Version` present → `'project'` when the last version write is in the project file, `'props'` when it is in Build.props (`definedIn` = Build.props path; `multitfm` StyleCop is `'props'` 1.2.0-beta.556, `cpm/Lib` xunit is `'project'` 2.8.0); no version and `isCpm` with a central entry: `conditioned: false` → `'central'`, `version` = central text, `definedIn` = the PackageReference's file when that is Build.props, else the central props path; `conditioned: true` → `'unresolved'`, `definedIn` = central props path (A); no version otherwise (non-CPM, or no central entry) → `'unresolved'`, `version: ''`, `definedIn` = Build.props when declared there, else undefined. `versionType`, `floatingPrefix`, `isAlwaysLatest` come from `toDomainSpec(parseVersionSpec(version))` (`Pinned` `[1.0.0]` → `'exact'`, `Humanizer` `2.*` → `'floating'`; invalid text such as `Version="abc"` keeps the text, `'project'`, `versionType: 'unresolved'`); for an unresolved declaration set `versionType: 'unresolved'` directly.
-9. Declared TFM set (E): project `TargetFrameworks` (split `;`, trim, drop empty) if non-empty, else project `TargetFramework`, else the same two from Build.props; a value containing `$(` or no value at all → unknown. With a known set, a row whose captured TFMs cover every declared TFM (case-insensitive) → `targetFrameworks: undefined`; unknown set → captured TFMs kept as written; a TFM not in the declared set is kept as written.
-10. Dedupe after Updates and declaration assignment, before the coverage collapse: key `lowerId|version|declaration|isImplicit`, merging `targetFrameworks` (union, case-insensitive, first spelling kept; a row with undefined TFMs absorbs the other). `sdk/`: Polly one row with `targetFrameworks: undefined`; `System.Text.Json` two rows (8.0.5 `['net6.0']`, 9.0.0 `['net8.0']`); `BenchmarkDotNet` `'unresolved'`, `version: ''`, no `targetFrameworks`. Output order = first occurrence in document order (props rows first); do not sort.
-11. `resolvedVersion` (F): `getResolvedVersionsByFramework(projectPath)` looked up for the row's first TFM (undefined TFMs → the first declared TFM); when the TFM set is unknown or the framework has no entry for the id → `getResolvedVersions(projectPath)` (libraries, then lock file). Record in STATUS that the fallback is wider than the row's "from `libraries`" (same note as P2.2) and that assets `targets` key `netstandard2.0` as `.NETStandard,Version=v2.0`, so `multitfm`-style rows reach the fallback; do not add moniker mapping here (`assets.ts` is P2.2's file; N19 follow-up).
-12. `index.ts`: named export lists in the sibling style for the six modules only (`xml`, `discovery`, `assets`, `central`, `references`, `inspector`); omit the parser's internal helpers (`isObject`, `asArray`, `textOf`) and nothing from `__fixtures__`.
-13. Tests (`inspector.test.ts`) with the eight titles on these fixtures: `cpm: versionless reference resolves central version`, `cpm: exact central pin surfaces as versionType exact`, `cpm: missing central entry is unresolved` → `cpm/App` (Newtonsoft 13.0.3 `'central'`, `Pinned` exact, `Not.Central` unresolved, `isCpm: true`, `centralPropsPath` = `cpm/Directory.Packages.props`, `resolvedVersion` 13.0.3 for Newtonsoft from `obj/`); `cpm: override wins and is marked central-override` → `cpm/Lib`; `props: Directory.Build.props reference is declared props` → `props/Proj` (StyleCop `'props'` with `definedIn`; SourceLink per step 7); `tfm: condition captured and intersected` → `sdk/Sdk.csproj` (step 10); `unsupported: packages.config` → `pkgconfig/Old.csproj`; `unsupported: non-sdk-style` → `legacy/Legacy.csproj`. Add, via `writeTree` scratch directories: `unsupported: malformed central props is parse-failed, not isCpm false` (CPM project whose `Directory.Packages.props` is malformed → `reason: 'parse-failed'`, `isCpm: false`); a conditioned central entry (A); `cpm/Nested/Inner` nearest-props-only; `multitfm/App` (override, STJ `'project'` `['netstandard2.0']`, StyleCop `'props'`, no `obj/` → `resolvedVersion` undefined); `Ghost.Package` dropped; `$(SerilogVersion)`; `not-found` on a missing path; `unsupported.message` equality for all four reasons.
-14. STATUS deviations to record: the `definedIn` reading of the row's "= project"; the NU1008 note on `cpm/Lib` xunit and `multitfm` Build.props StyleCop (reported as written per the row); `ImportDirectoryBuildProps`/`ImportDirectoryPackagesProps=false` not honoured at tier 1; the resolvedVersion fallback width; the netstandard target key.
+
+P6.2a — `MsBuildProjectEvaluator`, fixture tests, gated test. Files: `src/core/project/evaluator.ts` (new), `evaluator.test.ts` (new), `rows.ts` (new, approved deviation), `inspector.ts` (imports from `rows.ts`, approved deviation), `inspector.test.ts` (one test added), `index.ts`, `__fixtures__/**` only if a new tree is needed, `STATUS.md`, `CHANGELOG.md`, `ARCHITECTURE.md`, `docs/plans/STATUS.md`, `docs/plans/findings-ledger.md`.
+
+1. Tracker first (N42 order): paste this answer verbatim under `## Advisor decisions` of `docs/plans/STATUS.md` as `### P6.2 — stop-and-ask: the evaluator, the provisional chunk, enrichment and the split (2026-10-15)` and into `src/core/project/STATUS.md` (and in P6.2b into `src/core/catalog/STATUS.md`, `src/webview/shared/STATUS.md`, `src/protocol/STATUS.md`, `src/STATUS.md`). Turn row P6.2 into an umbrella (`in-progress`, note "split into P6.2a and P6.2b by the ruling of 2026-10-15; the row's duties are carried as the ruling assigns them") and insert `P6.2a` (`in-progress`) and `P6.2b` (`open`) below it. No sentinel in P6.2a.
+
+2. `src/core/project/rows.ts` (new): move `resolved`, `unresolved` and `withOrigin` of `inspector.ts:307-330` there as `resolvedRow(id, declaration, version, origin)`, `unresolvedRow(id, origin)` with `origin: { definedIn?: string; isImplicit?: boolean }`, same bodies (`toDomainSpec(parseVersionSpec(version))`, `floatingPrefix`, `isAlwaysLatest`, `definedIn` only when defined, `isImplicit` only when true); `inspector.ts` calls them and changes nothing else; every inspector test stays byte-identical. Not exported from `index.ts`.
+
+3. `src/core/project/evaluator.ts`: `export interface EvaluatorDeps { runner: DotnetRunner; stopDirs?: readonly string[]; logger?: Logger }` and `export class MsBuildProjectEvaluator implements ProjectEvaluator`. Imports: `../contracts` (types), `../cli` (`msbuildGetArgs`, `DEFAULT_TIMEOUT_MS`; `feeds/search.ts` sets the precedent for `project → cli`), `../logging` (`redact`), `../util/paths` (`normalizeProjectPath`), `./central` (`findCentralPropsPath`, `parseBooleanProperty`), `./rows`. No `child_process`, no `Thenable`, no Node ≥ 20 API.
+   - `evaluate(context, signal?)`: key `normalizeProjectPath(context.projectPath)`; cache `Map<string, { revision: string; result: Promise<InstalledResult> }>` with one entry per project: a hit with `entry.revision === context.revision` returns `entry.result` (the promise, so two callers of one revision share one evaluation); otherwise store the new promise and delete the entry when that promise rejects (successes only; a failure is never cached, the coordinator's cached provisional bounds the retries).
+   - Properties run: `runner.run(msbuildGetArgs(projectPath, [], ['TargetFramework', 'TargetFrameworks', 'ManagePackageVersionsCentrally', 'CentralPackageVersionOverrideEnabled']), { cwd: context.projectDir, timeoutMs: DEFAULT_TIMEOUT_MS, signal })`, exactly the four properties of the P6.1 probe (never one property alone: `-getProperty` with a single name prints the bare value, not JSON). Frameworks: `TargetFrameworks` split on `;`, trimmed, non-empty; else `[TargetFramework]` when non-empty; else `[]`.
+   - Item runs, in order, one per framework: `msbuildGetArgs(projectPath, ['PackageReference', 'PackageVersion'], [], { TargetFramework: tfm })` (comma-joined items as the builder writes them, `-p:TargetFramework=<tfm>` as `commands.ts:157` writes it); with no framework, one run without the global property, rows without `targetFrameworks`.
+   - Output: a run with `exitCode !== 0`, `cancelled` or `timedOut`, or whose stdout has no JSON object, rejects with `EvaluationError(message)` (exported); parse from the first line that starts with `{` to the end (the `extractCliSearchOutput` precedent: prefix lines are real on this SDK); log the redacted stderr tail at `warn`. Missing `Items.PackageReference` or `Items.PackageVersion` is an empty list.
+   - Mapping per framework, reading `Identity`, `Version`, `VersionOverride`, `IsImplicitlyDefined`, `DefiningProjectFullPath` only: `isCpm = parseBooleanProperty(ManagePackageVersionsCentrally) === true`; `overridesEnabled = parseBooleanProperty(CentralPackageVersionOverrideEnabled) !== false` (`""` is enabled, as `inspector.ts:117`); `definedIn` = `DefiningProjectFullPath` as printed when `normalizeProjectPath` of it differs from the project's, else absent; `fromProps = definedIn !== undefined`; `isImplicit` from `IsImplicitlyDefined`. Then, in this order: a `Version` or `VersionOverride` containing `$(` → `unresolvedRow`; `isCpm && VersionOverride` → `overridesEnabled ? resolvedRow('central-override', VersionOverride)` : `unresolvedRow`; `Version` present → `resolvedRow(fromProps ? 'props' : 'project', Version)`; `isCpm` and a `PackageVersion` item with the same lower-cased identity → `resolvedRow('central', item.Version)` with `definedIn` = that item's `DefiningProjectFullPath` when the reference has none; else `unresolvedRow`. An implicit SDK reference therefore comes out `declaration: 'props'`, `isImplicit: true`, `definedIn` = the SDK's `.props` file (fixture `multitfm-items-netstandard2.0`, `NETStandard.Library`).
+   - Merge across frameworks with the inspector's key (`inspector.ts:132`: `lowerId|version|declaration|isImplicit`): a row present in every framework has no `targetFrameworks`; a row missing from at least one carries the frameworks it is in, in run order; the same id with two versions is two rows. `centralPropsPath`: when `isCpm`, the `DefiningProjectFullPath` of the first `PackageVersion` item, else `findCentralPropsPath(projectDir, stopDirs)`; absent when not CPM. Result: `{ projectPath, packages, fidelity: 'authoritative', isCpm, centralPropsPath? }`, never `unsupported`, no `resolvedVersion` (the Catalog keeps the inspection's).
+   - `cachedFidelity(projectPath)`: `'authoritative'` when an entry exists for the normalized path at any revision, else `undefined` (nothing consumes it yet; JSDoc says currency is the Catalog's).
+   - `index.ts`: export `MsBuildProjectEvaluator`, `EvaluationError`, `type EvaluatorDeps` in the sibling style.
+
+4. `evaluator.test.ts`, over a fake `DotnetRunner` whose `run` answers from the fixture's `evaluations` by matching `-getProperty:` and `-p:TargetFramework=<tfm>` for the input, with `<probe>` replaced by the input's root (`src/core/cli/__fixtures__/sdk-probes/cpm` and `src/core/project/__fixtures__/multitfm`, as `scripts/probe-sdk.mjs:28-29`) and `<dotnet-root>/sdk/<version>/` by a stand-in, titles: `runs the properties run, then one item run per target framework, in the project directory with the signal` (argv asserted through `msbuildGetArgs`'s output, not the fixture's `;` form); `cpm: a versionless reference takes the central version and names Directory.Packages.props`; `multitfm: StyleCop from Directory.Build.props is props in every framework, NETStandard.Library is implicit and netstandard2.0 only, System.Text.Json is project and netstandard2.0 only, Serilog is central-override 3.1.1, Newtonsoft.Json is central 13.0.3`; `an override is unresolved when overrides are switched off`; `one framework runs once, none runs once without a framework property`; `the same reference with different versions per framework is two rows`; `caches by revision: one evaluation for concurrent and later calls of one revision, a new revision evaluates again, cachedFidelity reports authoritative once an entry exists`; `a nonzero exit, a timeout, a cancellation and output without JSON reject and are not cached`; `parses the JSON after prefix lines`; `isCpm and centralPropsPath come from the properties and the PackageVersion items, else from the nearest props file`. Gated, as `context.test.ts:192`: `it.skipIf(process.env.NUIGET_SDK_TESTS !== '1')('evaluates the multitfm fixture with the real SDK')` with `new DefaultDotnetRunner({ resolveExecutable })` (N48), on `__fixtures__/multitfm/App/App.csproj` in place (no restore needed: P6.1 evaluated it unrestored), a 60 s test timeout, asserting the rows of the multitfm title, `isCpm: true`, `centralPropsPath` and the StyleCop `definedIn` compared through `normalizeProjectPath`, `definedIn` of `NETStandard.Library` ending in `Microsoft.NET.Sdk.DefaultItems.props`, and a second `evaluate` of the same context making no further `run` call. `inspector.test.ts`: add `cpm: an override declared in Directory.Build.props names that file` (scratch tree via `createScratchDir`/`writeTree`: CPM on, the override in `Directory.Build.props`, expect `central-override` with `definedIn` = that file).
+
+5. Gates (§2.2 order): `npx tsc --noEmit`, `npm run check-types`, `npx eslint src`, `npx vitest run --project backend src/core/project`, then the same with `DOTNET_ROOT="$(dirname "$(command -v dotnet)")" NUIGET_SDK_TESTS=1`, `npm test`, `npm run bench` (no new bench: the row names none, P2.4 precedent), `node esbuild.mjs --v2 --production --analyze` with the three sizes pasted (core changed; the extension is at 281 379 of 299 921). Docs: CHANGELOG `### Added` one line `**2.0 project evaluation** — …`; ARCHITECTURE 2.0 module-map rows for `src/core/project/evaluator.ts` and `rows.ts`, and the "Absent: … the evaluator (P6.2)" mentions of the `src/core/**` and inspector rows updated; ledger C-project-catalog-1 note "evaluator done in P6.2a, wired in P6.2b"; `src/core/project/STATUS.md` rewritten (list `rows.ts`/`inspector.ts` as the approved deviation). Commit `feat(core/project): MsBuildProjectEvaluator over the SDK 10 probe evaluations (P6.2a, ADR-004, C-project-catalog-1)`; push; green CI before P6.2b.
+
+P6.2b — contract, Catalog, webview, root. Files: `src/protocol/messages.ts`, `docs/protocol.md` (regenerated), `docs/adr/009-catalog.md`, `docs/adr/004-project-model.md`, `src/core/catalog/Catalog.ts` + `Catalog.test.ts`, `src/host/handlers.test.ts`, `src/webview/shared/store/installed.tsx` + `installed.test.tsx`, `src/webview/main/features/installed/InstalledTab.test.tsx` (one title), `src/extension.next.ts` + `extension.next.test.ts`, `src/test/harness/fakeDotnet.ts` (one matcher, approved deviation), docs, the STATUS notes.
+
+6. Sentinel and frozen edits: with the tracker rows in place, create `.claude/.contract-change` with content exactly `P6.2b`; edit the three frozen files below and nothing else frozen (`src/core/contracts.ts`, `guards.ts`, the other ADRs, `docs/adr/README.md` stay byte-identical); delete the sentinel before `git commit`.
+   - `src/protocol/messages.ts:121`: `'installed/get': { payload: { projectPath: string }; result: InstalledResult; chunk: { kind: 'provisional'; result: InstalledResult } };` with a JSDoc line: "The provisional list, streamed before the evaluated one when an evaluation runs; a cached list is answered without a chunk (ADR-009 d.2, d.3)." Then `npm run docs:protocol`.
+   - `docs/adr/009-catalog.md`: line 3 appends `· Amended: 2026-10-15 (plan item P6.2b: the provisional chunk of installed/get; the evaluation rule; lite metadata stays a two-phase ask)`. d.1: replace "until P6.2 adds the provisional chunk to `installed/get`, the installed views ask it after `installed/get`, because a chunk precedes the response (ADR-007) and enrichment must not delay the list." with "the installed views ask it for the list they show, after the provisional chunk of `installed/get` and again after its response when the rows differ, because a cached list is answered without a chunk (d.2), a chunk cannot follow the response (ADR-007), and enrichment must not delay the list." d.3: replace "the chunk kind that carries it is added to `installed/get` by the item that adds the evaluator (P6.2), which also decides when an evaluation is needed. An evaluation never runs for an `unsupported` project." with "the chunk is `{ kind: 'provisional', result }` (plan item P6.2b), the only chunk of `installed/get`. An evaluation runs for every supported project whose context could be built, and never for an `unsupported` project; the evaluator caches successes by project revision (ADR-004) and the coordinator caches the outcome per generation, so a failed evaluation is retried at the next invalidation of the key, not before. The evaluated row is complete and wins; the Catalog keeps only `resolvedVersion` from the inspection."
+   - `docs/adr/004-project-model.md`: line 3 appends `· Amended: 2026-10-15 (plan item P6.2b: the evaluator's properties, mapping and cache)`; tier 2 gains, after "(plan item P6.2).": "The properties run reads `TargetFramework`, `TargetFrameworks`, `ManagePackageVersionsCentrally` and `CentralPackageVersionOverrideEnabled` (the probe of `004-sdk-probes.md`, SDK 10.0.401 `evaluations`); the item runs read `Identity`, `Version`, `VersionOverride`, `IsImplicitlyDefined` and `DefiningProjectFullPath`. A reference whose defining file is not the project is `props` with `definedIn` set, an SDK-injected one also `isImplicit`; under CPM `VersionOverride` wins while overrides are enabled, else the `PackageVersion` item, else `unresolved`; rows are merged across frameworks by id, version, declaration and implicitness, and `targetFrameworks` is set only where a row is absent from some framework. Successes are cached per project and revision; a failure is not."
+
+7. `src/core/catalog/Catalog.ts`: delete the `InstalledChunk` alias (`:110`); the query's chunk type is `RequestChunk<'installed/get'>`; `:159-165` becomes: `chunk => { if (chunk.kind === 'provisional') { provisionalArrived(chunk.result); } emit?.(chunk); }` (the provisional reaches the caller as well). `:212` emits `{ kind: 'provisional', result: provisional }` unchanged. Merge `:216-223`: `packages: evaluated.packages.map(pkg => { const prior = byId.get(pkg.id.toLowerCase()); const resolvedVersion = pkg.resolvedVersion ?? prior?.resolvedVersion; return resolvedVersion === undefined ? pkg : { ...pkg, resolvedVersion }; })` with the comment "The evaluated row is complete; the inspection contributes the restore's resolved version only." `CatalogDeps.evaluator?` stays optional (the Catalog tests without one). Tests: keep `installed resolves before evaluator` as it is (it holds); add `installed forwards the provisional chunk to the caller before the authoritative result` and `the evaluated row wins: an inspected condition, origin or implicitness is gone when the evaluation has none`.
+
+8. `src/host/handlers.ts`: no change (`:260-265` forwards every chunk). `handlers.test.ts`: rewrite `installed/get answers with the final result` by title, the mocked chunk becoming `{ kind: 'provisional', result: provisional }` and the assertion that it precedes the response kept.
+
+9. `src/webview/shared/store/installed.tsx`: keep `useResource` unchanged. The slice adds `const [provisional, setProvisional] = useState<{ projectPath: string; result: InstalledResult }>()`; the requester resets it (`setProvisional(undefined)`) when called, and its `onChunk` sets it from `chunk.result` when `signal.aborted` is false; `InstalledState.result` is `provisional.result` while `provisional.projectPath === projectPath` and the request is unanswered (`resource.status === 'loading' || resource.revalidating`), else `resource.data`; `status`, `error`, `revalidating`, `refresh` stay `useResource`'s (both surfaces already render the list whenever `result` is defined and show the provisional badge on `fidelity`: `InstalledSection.tsx:115-120`, `InstalledProjectSection.tsx:85,161`). The two-phase effect (`:58-85`) keys on the shown `result` instead of `resource.data`, asks for the provisional rows as soon as they show and again on the terminal result only when the joined `id@version` key set differs (a ref holds the last asked set per project). A provisional whose response rule 7 later discards is replaced within the re-ask's round trip; accepted. Tests: rewrite `R5: metadata chunks are kept by package id for the project they were asked for` by title to `R5: the provisional chunk of the latest request is shown until its response replaces it, and a chunk of an earlier request or another project is not`; keep `asks transitive/metadata …` and `a newer list or another project cancels the ask …` and add `asks for the provisional rows at once and again on the response only when the rows differ`. `InstalledTab.test.tsx`: rewrite `@vulnerable shows the vulnerable rows, or says that the data is not there yet` by title, answering the slice's `transitive/metadata` ask instead of a chunk (the P5.10 ruling already allowed it).
+
+10. `src/extension.next.ts`: after `contexts` (`:85`): `const evaluator = new MsBuildProjectEvaluator({ runner, stopDirs, logger });` and `evaluator` in the `Catalog` deps (`:101-103`); update the root's comment that says the evaluator is absent. `src/test/harness/fakeDotnet.ts`: add `msbuild: (projectPath?: string): CallMatcher => call => call.args[0] === 'msbuild' && (projectPath === undefined || sameDirectory(path.dirname(call.args[1]), path.dirname(projectPath)))` to `dotnetCalls` (test support only; the fake's answer stays `{}`, so the harness evaluates nothing and every scenario is unchanged). `extension.next.test.ts`: add `composes the evaluator: installed/get streams the provisional list and answers the evaluated one` scripting the properties and item answers through `dotnet.fail(dotnetCalls.msbuild(), { code: 0, stdout: … })` (one JSON per call order, or a matcher per argv), asserting one `provisional` stream envelope with `fidelity: 'provisional'` before an ok response with `fidelity: 'authoritative'`; and `an evaluation that fails answers the provisional list once, as the response` (the default `{}` answer: one stream envelope, response `fidelity: 'provisional'`, no error).
+
+11. Gates: `npx tsc --noEmit`, `npm run check-types`, `npx eslint src`, `npm run docs:protocol:check`, `npx vitest run --project backend src/core/catalog src/core/project src/host src/extension.next.test.ts`, `npx vitest run --project frontend src/webview/shared/store src/webview/main/features/installed src/webview/sidebar-next`, `npx vitest run --project integration src/test/harness` (unchanged titles and counts), the backend set once more with `DOTNET_ROOT=… NUIGET_SDK_TESTS=1`, `npm test`, `npm run bench`, `rm -rf dist && npm run package:vsix && npm run check:vsix`, `node esbuild.mjs --v2 --production --analyze` with the three sizes pasted (crossing 299 921 or 329 122 is a stop-and-ask with the metafile's top inputs); `npm run test:ui` may be `SKIPPED: CI runs UI 2.0 and E2E 2.0` (both now run the real evaluator on `TestProject.csproj`; a v2 e2e or UI failure on this item is a stop-and-ask, not a timeout raise). Docs: amend the P6.2a CHANGELOG line with "and both 2.0 surfaces show a project's packages from the project files at once and the evaluated list when MSBuild has answered"; ARCHITECTURE 2.0: the Catalog row (chunk, merge rule, two-phase ask kept), the root row (evaluator composed; drop "The evaluator (P6.2) … absent"), "Reading through the Catalog" (`:145`), the store paragraph (provisional shown while unanswered; the ask after the list it shows); `.github/copilot-instructions.md` 2.0 gotchas, two rows: `installed/get streams the provisional list, not metadata` ("the chunk is `{ kind: 'provisional', result }`; a cache hit and a joiner get none (ADR-002), so lite metadata is the slice's own `transitive/metadata` ask after the list it shows; never enrich inside `computeInstalled` or hold the response for it") and `-getProperty with one name prints a bare value` ("always request the four properties; an evaluation failure is never cached by the evaluator, the coordinator's cached provisional bounds the retries; an implicit SDK reference is `props` + `isImplicit` with the SDK file as `definedIn`"). Ledger: C-project-catalog-1 "evaluator closed (P6.2a/b), mutator P6.3"; C-project-catalog-5 closed "(P6.2b: `resolvedVersion` is the inspection's per-project value from its own assets file, kept by the merge for every row the evaluation lists; a row only the evaluation knows has none until the next restore)"; N72 → owner P7.2, note "P6.2 left `computeInstalled`'s context path and the walk cadence unchanged (the evaluator caches by the revision the walk produces); the scenarios that pin the counts are `A→B→A ordering: …` (`recomputation.seen`), `shared query with one subscriber cancelling: …` (`count(configPaths) === 1`), `N73: …` and `sources unreachable shows banner not empty` (`walk.seen`), and the holds in `project deletion mid-request…`, `surface disposed with pending ops…`, `late allProjects chunk after switching is discarded`". Tracker: P6.2a and P6.2b `done`, the umbrella `done`; P6.4 row gains "the fake dotnet must answer `msbuild` from the files (properties, `PackageReference` and `PackageVersion` items) before `central version change…` can see the authoritative path; `dotnetCalls.msbuild` exists since P6.2b"; P7.2 row gains "measure the evaluation cost per project (1 + N runs at about 0.5 s); a combined `-getProperty`/`-getItem` first run would save one run per single-framework project but is unprobed: add a row to `scripts/probe-sdk.mjs` first". Commit `feat(core/catalog): the provisional chunk of installed/get, the evaluator wired, the evaluated row wins (P6.2b, D6, ADR-004, ADR-007, ADR-009, C-project-catalog-5)`; push; green CI.
 
 DO NOT:
-Do not keep `$(SerilogVersion)` or `0.13.12` as `version` on an unresolved row; `domain.ts:49` says `''`.
-Do not set `definedIn` on `'project'` or `'central-override'` rows.
-Do not ignore a conditioned `Update` or apply it unconditionally.
-Do not let a malformed or unreadable `Directory.Packages.props` produce `isCpm: false` with packages; that bypasses D7.
-Do not read `Directory.Build.targets`, explicit `<Import>`s, or expand any `$(`.
-Do not touch `assets.ts`, `central.ts`, `xml.ts`, `discovery.ts` or `references.ts`; the inspector composes them.
-Do not use `export *` or export anything from `__fixtures__`.
-Do not add `obj/` or a lock file to `multitfm/`; its missing `resolvedVersion` is the test.
-Do not put the parser's error text or a path into `unsupported.message`.
+- Do not move enrichment into `computeInstalled` or `Catalog.installed()`, and do not hold the `installed/get` response for a feed answer; the P4.9/P5.10 expectation is overruled here, by name.
+- Do not keep the `metadata` chunk kind on `installed/get` as a dead member, and do not touch the `metadata` chunks of `allProjects/installed` and `search/query`.
+- Do not evaluate only when the inspection "looks uncertain", and do not relabel a provisional result `authoritative`.
+- Do not request a single property with `-getProperty`, parse stdout with a bare `JSON.parse`, or build argv by hand; `msbuildGetArgs` only, through `DotnetRunner.run` (ADR-003).
+- Do not cache a rejected evaluation, a timeout or a cancellation, and do not add an LRU keyed by a composite string; one entry per project, keyed by its revision.
+- Do not give the evaluator an `AssetsReader`; `resolvedVersion` stays the inspection's.
+- Do not keep `{ ...prior, ...pkg }` in the merge; the evaluated row is complete.
+- Do not make `upgrade` reject on a stale generation or retry inside the handler; rule 7 handles the race.
+- Do not change `useResource`, `ProjectContextProvider`, `FeedContexts.register` or the config-paths cadence; the harness counts stay.
+- Do not teach `fakeDotnet` to answer `msbuild` in this item (P6.4), and do not add a harness scenario that depends on it.
+- Do not add `cachedFidelity` consumers, a `generation` on the chunk, or per-project pairs to `OperationProgress` (P5 review 1: only if P6.4 needs them).
+- Do not create the sentinel in P6.2a, before the tracker rows exist in P6.2b, or with content other than `P6.2b`; do not commit while it exists; do not start P6.2b before P6.2a's CI run is green.
+- Do not raise a bundle ceiling, an e2e timeout or the host ratchet to get a gate green.
 
-CONTRACT CHANGE: none. `src/core/contracts.ts`, `src/protocol/**` and `docs/adr/**` stay as they are; every ruling above is a reading of `domain.ts:13-81`, `contracts.ts:311-314` and ADR-004 lines 19-28 and 53-54.
+CONTRACT CHANGE: P6.2b only, behind `.claude/.contract-change` with content `P6.2b`: `src/protocol/messages.ts` (the `installed/get` chunk, line 121 and its JSDoc), `docs/adr/009-catalog.md` (line 3, d.1, d.3 as dictated in step 6), `docs/adr/004-project-model.md` (line 3 and the tier-2 paragraph of step 6); `docs/protocol.md` regenerated (not frozen). `src/core/contracts.ts`, `src/protocol/guards.ts`, every other ADR and `docs/adr/README.md`: none. P6.2a: no frozen file. Approved non-frozen deviations from the rows' file lists, each recorded in the STATUS notes: `src/core/project/rows.ts` (new) and `src/core/project/inspector.ts` (imports the builders; no behaviour change) in P6.2a; `src/test/harness/fakeDotnet.ts` (`dotnetCalls.msbuild`) in P6.2b. Tests the item may rewrite by title: `installed/get answers with the final result` (`src/host/handlers.test.ts`); `R5: metadata chunks are kept by package id for the project they were asked for` (`src/webview/shared/store/installed.test.tsx`); `@vulnerable shows the vulnerable rows, or says that the data is not there yet` (`src/webview/main/features/installed/InstalledTab.test.tsx`). Every other existing test stays as it is; the harness scenarios named in the brief are not touched.
 
 VERIFY:
-`npx vitest run --project backend src/core/project` → all files green, including `inspector.test.ts`; then one run per title, `npx vitest run --project backend src/core/project/inspector.test.ts -t "<title>"` for the eight row titles and `unsupported: malformed central props is parse-failed, not isCpm false` → each `1 passed`.
-`npm run check-types` → exit 0; `npx eslint src` → exit 0, no output.
-`git status --short src/core/contracts.ts src/protocol docs/adr` → empty; `ls .claude/.contract-change` → no such file.
-`git diff --stat ef96051 -- src/core/project` → only `inspector.ts`, `inspector.test.ts`, `index.ts`, `STATUS.md` (plus `__fixtures__/scratch.ts` only if a helper is needed).
-`grep -n 'export \*\|__fixtures__' src/core/project/index.ts` → no output; `grep -rn 'Thenable\|child_process\|from .vscode.' src/core/project --include='*.ts'` → no output.
-`npm test` and `npm run bench` green; `npm run test:ui` may be marked `SKIPPED: no UI change`.
+P6.2a:
+- `npx tsc --noEmit` → 0; `npm run check-types` → 0; `npx eslint src` → 0 errors, 0 warnings.
+- `npx vitest run --project backend src/core/project --reporter=verbose` → green, listing `caches by revision: …`, `a nonzero exit, a timeout, a cancellation and output without JSON reject and are not cached`, `cpm: an override declared in Directory.Build.props names that file`, and `evaluates the multitfm fixture with the real SDK` as skipped; `DOTNET_ROOT="$(dirname "$(command -v dotnet)")" NUIGET_SDK_TESTS=1 npx vitest run --project backend src/core/project/evaluator.test.ts` → green with that title passed.
+- `grep -rn "child_process\|Thenable\|process.cwd" src/core/project/evaluator.ts` → no output; `grep -n "MsBuildProjectEvaluator\|EvaluationError" src/core/project/index.ts` → 2 lines; `grep -c "function resolved\|function unresolved\|function withOrigin" src/core/project/inspector.ts` → 0.
+- `git diff --name-only -- src/protocol src/core/contracts.ts docs/adr` → empty; `ls .claude/.contract-change` → No such file.
+- `npm test`, `npm run bench` → green; CI green.
+P6.2b:
+- `grep -n "kind: 'provisional'" src/protocol/messages.ts` → 1 line at the `installed/get` entry; `grep -c "kind: 'metadata'" src/protocol/messages.ts` → 2 (`allProjects/installed`, `search/query`); `npm run docs:protocol:check` → 0.
+- `git diff --name-only -- docs/adr src/protocol src/core/contracts.ts` → exactly `docs/adr/004-project-model.md`, `docs/adr/009-catalog.md`, `src/protocol/messages.ts`; `grep -c "P6.2b" docs/adr/009-catalog.md docs/adr/004-project-model.md` → 1 each; `ls .claude/.contract-change` → No such file at commit time.
+- `grep -n "InstalledChunk" src/core/catalog/Catalog.ts` → no output; `grep -n "\.\.\.prior, \.\.\.pkg" src/core/catalog/Catalog.ts` → no output; `grep -n "MsBuildProjectEvaluator" src/extension.next.ts` → the import and the construction.
+- `npx vitest run --project backend src/core/catalog src/host src/extension.next.test.ts --reporter=verbose` → green, listing `installed resolves before evaluator` (unchanged), `installed forwards the provisional chunk to the caller before the authoritative result`, `the evaluated row wins: …`, `installed/get answers with the final result`, `composes the evaluator: …`, `an evaluation that fails answers the provisional list once, as the response`; `npx vitest run --project frontend src/webview/shared/store src/webview/main/features/installed src/webview/sidebar-next` → green with `R5: the provisional chunk of the latest request …` and `asks for the provisional rows at once …`; `npx vitest run --project integration src/test/harness` → green, same titles and counts as at 440b154.
+- `npm test`, `npm run bench`, `rm -rf dist && npm run package:vsix && npm run check:vsix` → green; the three `--v2 --production --analyze` sizes pasted, each under its ceiling; `grep -n "^| N72 " docs/plans/findings-ledger.md` → owner P7.2; `grep -n "^| C-project-catalog-5 " docs/plans/findings-ledger.md` → closed (P6.2b …); CI green on all jobs including `E2E 2.0` and `UI 2.0`.
 
-Files checked: /Users/mattias/github/nuiget/.github/agents/architecture-advisor.agent.md; /Users/mattias/github/nuiget/docs/plans/2026-10-11-nuiget-2.0-execution-plan.md (lines 41-175, 221-238, 290-301); /Users/mattias/github/nuiget/docs/adr/004-project-model.md; /Users/mattias/github/nuiget/src/core/project/STATUS.md; /Users/mattias/github/nuiget/docs/plans/STATUS.md (rows P2.2-P2.5, P2.9, line 221); /Users/mattias/github/nuiget/docs/plans/findings-ledger.md (N19, C-project-catalog-1..6); /Users/mattias/github/nuiget/src/protocol/domain.ts (1-100); /Users/mattias/github/nuiget/src/core/contracts.ts (295-324); /Users/mattias/github/nuiget/src/core/project/xml.ts, central.ts, references.ts in full, assets.ts (95-168), discovery.ts (55-90); /Users/mattias/github/nuiget/src/core/versioning/VersionRange.ts (38-188); all thirteen files under /Users/mattias/github/nuiget/src/core/project/__fixtures__/{sdk,cpm,props,multitfm,legacy,pkgconfig} plus cpm/App/obj/project.assets.json (libraries and net8.0 target keys); the eight src/core/*/index.ts barrels; src/core/util/fs.ts and paths.ts exports; git status (clean) and git log -1 (ef96051).
-````
-
-The ambient advisor (L3) was consulted before the first edit of P2.2 and before the push of P2.2; the
-ruling above was followed for P2.4, with the three readings beyond it that are listed under Deviations.
+Files checked: `/Users/mattias/github/nuiget/.github/agents/architecture-advisor.agent.md` (whole); `/Users/mattias/github/nuiget/docs/plans/2026-10-11-nuiget-2.0-execution-plan.md:41-175` (§1-§4), `:286-320` (P5 gate, P6 rows, P7, P8); `/Users/mattias/github/nuiget/docs/plans/STATUS.md:53,56,86-96` (rows P2.fix-2, P3.3, P6.x, P7.x), `:685-716` (P5 review notes 1-9), `:1186-1283` (P2.8 ruling), `:2240-2353` (P4.9 ruling), `:2522-2571` (P5.8 ruling, grep lines), `:2656-2700` (P5.10 ruling, grep lines), `:719,738,953` (advisor-decisions anchors); `/Users/mattias/github/nuiget/docs/plans/findings-ledger.md:104,128,154,176,386,399,420,452-456,459,470`; `/Users/mattias/github/nuiget/docs/adr/002-query-coordinator.md`, `004-project-model.md`, `007-protocol.md`, `009-catalog.md` (whole), `008-webview-architecture.md:3,17-23`, `README.md:13,18,22-23`; `/Users/mattias/github/nuiget/src/core/catalog/Catalog.ts:1-420`, `Catalog.test.ts:18-60,100-115,180-250` and the titles at `:181-844`, `feedClients.ts` and `feedContexts.ts` (export and method lines), `STATUS.md:51-53,180-182`; `/Users/mattias/github/nuiget/src/core/contracts.ts:160-215,290-330`; `/Users/mattias/github/nuiget/src/core/cli/commands.ts:120-170`, `index.ts:1-50`, `DotnetRunner.ts` (export lines, `run` at `:181`, `globalPackagesFolder`), `STATUS.md:54-106` (grep), `__fixtures__/sdk-probes/10.0.401.json` (`evaluations`, all five entries), `sdk.test.ts` titles; `/Users/mattias/github/nuiget/scripts/probe-sdk.mjs:7-8,28-29,95-104,152,165,289-320,353`; `/Users/mattias/github/nuiget/src/core/project/{context,revision,index}.ts` (whole), `inspector.ts:1-130,190-335`, `inspector.test.ts` titles, `context.test.ts` titles and `:192`, `revision.test.ts` titles, `__fixtures__/scratch.ts` exports, `__fixtures__/multitfm/App/App.csproj`, the fixture directory listings, `STATUS.md:1-60,278-300,348`; `/Users/mattias/github/nuiget/src/protocol/messages.ts:100-145`, `domain.ts:36-85`, `guards.ts:1-40,70-85`; `/Users/mattias/github/nuiget/src/host/handlers.ts:230-290`, `handlers.test.ts:300-345` and the installed/generation titles, `WebviewHost.ts:11,35-47,135-139`; `/Users/mattias/github/nuiget/src/extension.next.ts:74-109,312,348-355`, `extension.next.test.ts:172-173,245`; `/Users/mattias/github/nuiget/src/webview/shared/store/installed.tsx` (whole), `installed.test.tsx` titles and `:135-158`, `useResource.ts:1-150`, `allProjects.tsx` (chunk lines), `src/webview/shared/bus/MessageBus.ts:28-131` (grep); `/Users/mattias/github/nuiget/src/webview/sidebar-next/InstalledSection.tsx:29-134`, `SidebarView.tsx:112-147`, `src/webview/main/features/installed/InstalledTab.tsx:26-169`, `InstalledProjectSection.tsx:18-161`, `InstalledTab.test.tsx:208`; `/Users/mattias/github/nuiget/src/test/harness/scenarios.test.ts` (all titles; `:100-145,240-275,440-460,680-700`; the count assertions at `:269-270,301-302,419,551-560`), `FakeWebview.ts` (grep: `:9-23,54-64,98-100,178-181,217,244-251,260-265,288-292,318-329`), `fakeDotnet.ts:94-97,140-200`, `harness.ts:2,17,150`; `/Users/mattias/github/nuiget/src/test/ui/v2/STATUS.md` (the only test-tree mention of "provisional"); `/Users/mattias/github/nuiget/.github/instructions/core-boundaries.instructions.md:2-3,16,26-27,38-39`; `/Users/mattias/github/nuiget/scripts/hooks/guard.mjs:9,36,55`; `/Users/mattias/github/nuiget/scripts/gen-protocol-docs.mjs:1-30`; `/Users/mattias/github/nuiget/docs/protocol.md:24`; `/Users/mattias/github/nuiget/vitest.config.mts:55-56,71`; `/Users/mattias/github/nuiget/ARCHITECTURE.md:19,95-105,145,509` (grep); `/Users/mattias/github/nuiget/CHANGELOG.md:1-30`; `ls src/test/benchmarks`; `grep -rn cachedFidelity src` (no consumer outside `contracts.ts` and the Catalog test fake); `grep -rn "from '../cli" src/core` (feeds/search.ts and others set the intra-core precedent); `git log --oneline -3` (head `440b154`), `git status --short` (clean). No file was created, edited, moved or deleted; shell use was inspection only. The advisor tool was consulted once before writing; its points (the three tests to name, the sentinel content `P6.2b`, the d.1 rewrite, the merge expression and `installed resolves before evaluator` holding under it, the bare-value trap of a single `-getProperty`, the promise-valued cache, the harness's empty `msbuild` answer, the F1 mechanics without a `useResource` change, the gated test's `resolveExecutable`, N72's new owner) are folded in.
+`````
 
 ## Exact next step (one item ID)
 
-P2.6 (⚑ `src/core/sources/**` minimal: `NuGetConfigReader`, `DotnetSourceProvider`, `DefaultOutboundPolicy`;
-consult the `architecture-advisor` on the mapping semantics before writing code).
+P6.2b.

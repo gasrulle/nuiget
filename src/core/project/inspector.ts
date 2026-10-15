@@ -8,12 +8,12 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import type { ProjectInspector } from '../contracts';
-import type { InstalledPackage, InstalledResult, UnsupportedProjectReason, VersionDeclaration } from '../../protocol/domain';
+import type { InstalledPackage, InstalledResult, UnsupportedProjectReason } from '../../protocol/domain';
 import { fileExists } from '../util/fs';
-import { parseVersionSpec, toDomainSpec } from '../versioning';
 import type { AssetsReader } from './assets';
 import { BUILD_PROPS_FILE, findCentralPropsPath, findNearestFile, parseBooleanProperty, parseCentralPackageVersions, type CentralPackageVersion } from './central';
 import { classifyProject } from './discovery';
+import { resolvedRow, unresolvedRow } from './rows';
 import { attr, childText, elements, lastPropertyValue, parseMsBuildXml, rootProject, type XmlObject } from './xml';
 
 export interface InspectorOptions {
@@ -282,52 +282,27 @@ interface ProjectFacts {
 function describe(reference: Reference, facts: ProjectFacts): InstalledPackage {
     // `definedIn` names the file that declares the item when that is not the project file.
     const itemFile = reference.file === 'props' ? facts.buildPropsPath : undefined;
+    const from = (definedIn: string | undefined) => ({ definedIn, isImplicit: reference.isImplicit });
     const usesProperty = [reference.version, reference.versionOverride].some(value => value?.includes(PROPERTY_REFERENCE));
     if (reference.uncertain || usesProperty) {
-        return unresolved(reference, itemFile);
+        return unresolvedRow(reference.id, from(itemFile));
     }
     if (facts.isCpm && reference.versionOverride !== undefined) {
-        return facts.overridesEnabled ? resolved(reference, 'central-override', reference.versionOverride, itemFile) : unresolved(reference, itemFile);
+        return facts.overridesEnabled ? resolvedRow(reference.id, 'central-override', reference.versionOverride, from(itemFile)) : unresolvedRow(reference.id, from(itemFile));
     }
     if (reference.version !== undefined) {
         return reference.versionFile === 'props'
-            ? resolved(reference, 'props', reference.version, facts.buildPropsPath)
-            : resolved(reference, 'project', reference.version, itemFile);
+            ? resolvedRow(reference.id, 'props', reference.version, from(facts.buildPropsPath))
+            : resolvedRow(reference.id, 'project', reference.version, from(itemFile));
     }
     const entry = facts.isCpm ? facts.central.get(reference.id.toLowerCase()) : undefined;
     if (entry === undefined) {
-        return unresolved(reference, itemFile);
+        return unresolvedRow(reference.id, from(itemFile));
     }
     if (entry.conditioned || entry.version.includes(PROPERTY_REFERENCE)) {
-        return unresolved(reference, facts.centralPropsPath);
+        return unresolvedRow(reference.id, from(facts.centralPropsPath));
     }
-    return resolved(reference, 'central', entry.version, itemFile ?? facts.centralPropsPath);
-}
-
-function resolved(reference: Reference, declaration: Exclude<VersionDeclaration, 'unresolved'>, version: string, definedIn: string | undefined): InstalledPackage {
-    const spec = toDomainSpec(parseVersionSpec(version));
-    const pkg: InstalledPackage = { id: reference.id, version, versionType: spec.type, declaration };
-    if (spec.floatingPrefix !== undefined) {
-        pkg.floatingPrefix = spec.floatingPrefix;
-    }
-    if (spec.isAlwaysLatest !== undefined) {
-        pkg.isAlwaysLatest = spec.isAlwaysLatest;
-    }
-    return withOrigin(pkg, reference, definedIn);
-}
-
-function unresolved(reference: Reference, definedIn: string | undefined): InstalledPackage {
-    return withOrigin({ id: reference.id, version: '', versionType: 'unresolved', declaration: 'unresolved' }, reference, definedIn);
-}
-
-function withOrigin(pkg: InstalledPackage, reference: Reference, definedIn: string | undefined): InstalledPackage {
-    if (definedIn !== undefined) {
-        pkg.definedIn = definedIn;
-    }
-    if (reference.isImplicit) {
-        pkg.isImplicit = true;
-    }
-    return pkg;
+    return resolvedRow(reference.id, 'central', entry.version, from(itemFile ?? facts.centralPropsPath));
 }
 
 function packageIds(include: string): string[] {
