@@ -78,6 +78,42 @@ describe('capabilitiesFor', () => {
             });
         }
     });
+
+    it('rests every verified provenance on a fixture with its command rows, evaluations and full verdict', () => {
+        const fixtureDir = path.join(__dirname, '__fixtures__', 'sdk-probes');
+        const files = fs.readdirSync(fixtureDir).filter(file => file.endsWith('.json'));
+
+        for (const file of files) {
+            const fixture = JSON.parse(fs.readFileSync(path.join(fixtureDir, file), 'utf8')) as {
+                sdk: string;
+                probedOn: string;
+                platform: string;
+                commands: { id: string; exitCode: number; projectDiff: string; propsDiff: string }[];
+                evaluations: { id: string; input: string; exitCode: number; output: unknown }[];
+                verdict: Record<string, unknown>;
+            };
+            expect(file).toBe(`${fixture.sdk}.json`);
+            expect(fixture.probedOn).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+            expect(fixture.platform).not.toBe('');
+            expect(fixture.commands.length, file).toBeGreaterThan(0);
+            expect(Object.keys(fixture.verdict).sort(), file).toEqual([
+                'addUpdatesCentralVersion',
+                'addWithoutCentralEntryCreatesIt',
+                'noRestoreWritesProjectVersion',
+                'removeKeepsCentralEntry',
+            ]);
+            expect(Object.values(fixture.verdict).every(value => typeof value === 'boolean'), file).toBe(true);
+            // P6.2's evaluator reads these: one properties run per input, then one item run per target framework.
+            expect(fixture.evaluations.map(evaluation => evaluation.id), file).toEqual([
+                'cpm-properties',
+                'cpm-items-net8.0',
+                'multitfm-properties',
+                'multitfm-items-net8.0',
+                'multitfm-items-netstandard2.0',
+            ]);
+            expect(fixture.evaluations.every(evaluation => evaluation.exitCode === 0), file).toBe(true);
+        }
+    });
 });
 
 describe('sdkInfoFromVersion', () => {

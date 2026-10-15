@@ -80,6 +80,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Added the 2.0 session store and the matching of invalidation scopes to the core**
 - **InvalidationEvent.keys carries per-key generations**
 - **Recorded a .NET SDK 10 probe of package add and remove on Central Package Management projects**
+- **The SDK probe is a script that also records per-framework evaluations, and CI re-runs it on the newest SDK 10**
 - **Split agent gotchas into 1.x and 2.0 sections and added 2.0 layer-boundary instructions**
 - **Added the architecture-advisor agent and the 2.0 execution protocol summary for Claude Code**
 - **Breaking:** nUIget 2.0 requires .NET SDK 10 or newer; projects that resolve an older SDK are read-only

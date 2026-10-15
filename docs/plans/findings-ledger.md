@@ -101,7 +101,7 @@ one records itself here.
 | T4 | M | CI/package:vsix use npm install with a committed lockfile (optional-dep drift) — fix root… | — | not mapped | open |
 | T5 | M | VSIX ships .nvmrc, .vscode-test.mjs, tsconfig.test.json (verified) | W: `.editorconfig` ships; dead entries. | P0.10 | closed (P0.10) |
 | T6 | L | engines.vscode ^1.85.0 / @types/vscode 1.85.0: fine as policy; decide the floor via actual… | — | not mapped | open |
-| N1 | High | `--no-restore` on CPM projects writes `<Version>` into `.csproj`, NU1008 next restore (1.x `NuGetOperations.ts:132,209… | — | P0.0, P1.10, P6.1; 1.x optional P0.14 | open (P0.0 probe done: SDK 8 only; guard in P1.10, mutator in P6.3) |
+| N1 | High | `--no-restore` on CPM projects writes `<Version>` into `.csproj`, NU1008 next restore (1.x `NuGetOperations.ts:132,209… | — | P0.0, P1.10, P6.1; 1.x optional P0.14 | open (P0.0 probe done: SDK 8 only; guard in P1.10; P6.1: `scripts/probe-sdk.mjs` reproduces the P0.0 rows on 10.0.401 and the CI job `SDK probe` re-checks the newest SDK 10; mutator in P6.3) |
 | N2 | High | ExTester UI suite never runs in CI. | — | P0.8 | closed (P0.8, run 38227914633) |
 | N3 | High | Quarry `.vscodeignore` drops `.claude/**`, `CLAUDE.md`, `.mcp.json`; `check:vsix` not in CI. | — | P0.8, P0.10 | closed (P0.8, P0.10) |
 | N4 | Medium | Test files never type-checked. | — | P0.11 | partly closed (P0.11: 2.0 tests and shared helpers; 1.x tests excluded, see N30) |
