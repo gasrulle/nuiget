@@ -1,4 +1,77 @@
-# STATUS — src/test/ui/v2   commit 1df7087 (P5.10 commit c, fix-forward; parent of commit d)   2026-10-16T10:00:00Z
+# STATUS — src/test/ui/v2   commit fa811aa (P5.10 commit d; parent of the P5.11 commit)   2026-10-16T16:00:00Z
+
+git status --porcelain --untracked-files=all (before the commit): modified `.github/copilot-instructions.md`, `ARCHITECTURE.md`, `CHANGELOG.md`, `docs/plans/{STATUS,findings-ledger}.md`, `src/test/lint/{webview-stylesheets,webview-tokens}.test.ts`, `src/webview/shared/{tokens.css,primitives/primitives.css}`, `src/webview/main/main.css`, `src/webview/sidebar-next/sidebar.css` and the four STATUS notes; new `src/test/lint/{cssRules.ts,webview-css-baseline.test.ts}`, `src/test/ui/v2/theme.ui.test.ts` (all belong to P5.11)
+
+Item: **P5.11** (theme pass), by the ruling of 2026-10-16: `theme.ui.test.ts` (sorts last) opens both surfaces,
+selects the first row in each, and for six built-in themes switches with the Color Theme picker (exact label; the
+newest VS Code labels them "Dark Modern", "Light Modern", "Dark High Contrast", "Light High Contrast", older ones
+"Default …"), waits for the webview's body class and for running CSS transitions to end, injects axe-core from
+`node_modules` and runs `color-contrast` and `target-size` (enabled). Violations must be empty and `color-contrast`
+must have passed ≥ 10 nodes; `incomplete` is logged with `console.warn`. `after` puts Dark Modern back.
+
+## Verified by running
+
+P5.11:
+
+```text
+baseline at fa811aa (P5.10 commit d, CI run 38728270479 green on all 11 jobs): tsc 0 · eslint 0 · vitest 158 files, 3226 passed, 4 skipped (SDK)
+npx tsc --noEmit / npm run check-types / npx eslint src / npm run lint → exit 0 each
+npx vitest run --project backend src/test/lint → Test Files 7 passed (7) · Tests 126 passed (126)
+npm test (NUIGET_SDK_TESTS=1, DOTNET_ROOT set) → exit 0 · Test Files 159 passed (159) · Tests 3239 passed (3239)
+npm run bench → exit 0 · npx vitest run --coverage → exit 0
+rm -rf dist && node esbuild.mjs --v2 --production --analyze → extension 281381 / 299921 · webview 518470 / 600685 ·
+                               sidebar 317603 / 329122 (unchanged; CSS only: dist/webview.css 26776, dist/sidebar.css 19778)
+rm -rf dist && NUIGET_V2=1 npm run package && npm run check:vsix → check:vsix: OK
+NUIGET_V2=1 npm run test:ui:v2 -- --storage /tmp/nuiget-ui-v2, five times (rm -rf dist before each) →
+                               27 passing ×5; git status --porcelain src/test/e2e empty after each
+step 2 of the ruling, first run of theme.ui.test.ts before the CSS edits → body rgba(0, 0, 0, 0), html rgba(0, 0, 0, 0)
+                               in both webviews under every theme; dark themes measured against #ffffff (#cccccc, 1.6:1)
+grep -c "nuiget-color-bg" src/webview/shared/tokens.css → 4 · grep -c "::-webkit-scrollbar" primitives.css → 6
+grep scrollbar-color|scrollbar-width in the 2.0 stylesheets → 0 · test -e .claude/.contract-change → false
+npm run package:vsix: SKIPPED: no host, service or esbuild change (stylesheets, tokens and tests only)
+```
+
+## Done (tested)
+
+`theme.ui.test.ts`, fifth full run, per theme (Dark Modern, Light Modern, Dark High Contrast, Light High Contrast,
+Dark 2026, Light 2026): violations 0 in both webviews; `color-contrast` passes 47 (Dark Modern) or 50 (main panel)
+and 10 to 14 (sidebar); `target-size` passes 18 to 19 (main) and 5 to 7 (sidebar); incomplete 8 in the main panel,
+0 in the sidebar.
+- What the first runs found and the item fixed: the transparent roots (white fallback, false violations in every
+  dark theme); the `info` badge (info colour on the badge background, 2.38:1 in Dark Modern); the version of a
+  selected row (muted colour on the selection colour, 4.41:1 in Dark Modern, 3.82:1 in Dark 2026), seen only in the
+  full suite until the test selected a row itself. The inactive tab labels measured mid-transition (`#707070` and
+  `#555555` for one token in Dark 2026); the wait for transitions settled them without a CSS change.
+
+## Done (untested)
+
+- Forced colours: not emulated (ruling); the tokens lint holds the block and P7.4 checks it in VS Code 1.85.
+- Chromium 114 itself: the baseline lint stands in; no job renders the webviews there (N64 open).
+- Semantic colours used as text that the fixture does not render (`main.css` error and warning texts): unmeasured.
+
+## Not started
+
+- None for P5.11. Next: P5.12a.
+
+## Deviations from contract/ADR (file:line each)
+
+- Six themes instead of the ruling's four: the four under their current labels plus Dark 2026 and Light 2026, which
+  the newest VS Code offers new users (`product.json`); the older labels are kept as fallbacks.
+- `selectFirstRow` in `before` (not in the ruling): without it the selected state was measured only when an earlier
+  file left a row selected.
+- `incomplete` (main panel, every theme): `.nuiget-details-group:nth-child(7) > ul > li:nth-child(3..6)`,
+  `.nuiget-details-group:nth-child(8|9) > h4|p`, "partially obscured by another element": dependency groups below
+  the visible part of the details pane's scroll area; recorded, not fixed (ruling step 8).
+
+## Advisor decisions (date, item, question, answer verbatim)
+
+The P5.11 ruling (2026-10-16) is verbatim in `docs/plans/STATUS.md`.
+
+## Exact next step (one item ID)
+
+P5.12a, after the P5.11 CI run is green.
+
+## Earlier notes of this directory
 
 git status --porcelain --untracked-files=all (before commit d): modified `.github/copilot-instructions.md`, `ARCHITECTURE.md`, `CHANGELOG.md`, `docs/plans/{STATUS,findings-ledger}.md`, `src/host/{SidebarHost,handlers.test}.ts`, `vitest.config.mts` and the four STATUS notes; new `src/host/pickers.test.ts`, `src/test/ui/v2/sidebar-parity.ui.test.ts` (all belong to P5.10 commit d)
 
@@ -612,6 +685,7 @@ FILES CHECKED: docs/plans/2026-10-11-nuiget-2.0-execution-plan.md:41-175,240-251
 ## Exact next step (one item ID)
 
 P5.6 (feature search, main and sidebar browse), after P5.5's CI run is green; a fresh session starts it (second compaction of this one).
+
 
 
 

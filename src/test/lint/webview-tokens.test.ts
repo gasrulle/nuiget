@@ -27,12 +27,12 @@ const REQUIRED = [
     ...[1, 2, 3, 4, 5, 6].map(step => `--nuiget-space-${step}`),
     '--nuiget-radius-sm', '--nuiget-radius-md',
     '--nuiget-row-height-compact', '--nuiget-row-height-comfortable',
-    '--nuiget-icon-size-sm', '--nuiget-icon-size-md', '--nuiget-icon-size-lg', '--nuiget-target-min',
+    '--nuiget-icon-size-sm', '--nuiget-icon-size-md', '--nuiget-icon-size-lg', '--nuiget-target-min', '--nuiget-scrollbar-size',
     '--nuiget-z-sticky', '--nuiget-z-popover', '--nuiget-z-dialog', '--nuiget-z-toast',
     '--nuiget-duration-fast', '--nuiget-duration-normal', '--nuiget-easing',
     '--nuiget-font-size-sm', '--nuiget-font-size-md', '--nuiget-font-size-lg', '--nuiget-line-height',
     '--nuiget-font-family', '--nuiget-font-family-mono',
-    ...['fg', 'fg-muted', 'border', 'focus', 'list-hover-bg', 'list-active-bg', 'list-active-fg', 'list-inactive-bg',
+    ...['bg', 'bg-sidebar', 'fg', 'fg-muted', 'border', 'focus', 'list-hover-bg', 'list-active-bg', 'list-active-fg', 'list-inactive-bg',
         'badge-bg', 'badge-fg', 'button-bg', 'button-fg', 'button-hover-bg', 'button-secondary-bg', 'button-secondary-fg',
         'input-bg', 'input-fg', 'input-border', 'input-placeholder', 'link', 'error', 'warning', 'info', 'progress', 'shadow',
         'widget-bg', 'widget-fg',
@@ -64,6 +64,16 @@ describe('2.0 webview tokens', () => {
     it('declares in :root every token the primitives rely on', () => {
         const declared = blockAfter(':root');
         expect(REQUIRED.filter(name => !declared.has(name))).toEqual([]);
+    });
+
+    it('the row heights that Listbox estimates with are the row-height tokens', () => {
+        // The virtualizer needs numbers before layout, so Listbox.tsx repeats the tokens; this keeps the two equal.
+        const listbox = readFileSync('src/webview/shared/primitives/Listbox.tsx', 'utf8');
+        const repeated = listbox.match(/const ROW_HEIGHT = \{ compact: (\d+), comfortable: (\d+) \}/);
+        expect(repeated, 'ROW_HEIGHT in Listbox.tsx').not.toBeNull();
+        const declared = blockAfter(':root');
+        expect(`${repeated![1]}px`).toBe(declared.get('--nuiget-row-height-compact'));
+        expect(`${repeated![2]}px`).toBe(declared.get('--nuiget-row-height-comfortable'));
     });
 
     it('has one reduced-motion rule, and it stops both durations', () => {

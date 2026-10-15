@@ -17,6 +17,32 @@
     border: 0;
 }
 
+/*
+ * Scrollbars of every scrolling element of a surface. VS Code's webview defaults (`webview/browser/pre/index.html`)
+ * draw them 10 px thick in its slider colours; these rules put the tokens in their place, so that forced colours
+ * reach the scrollbars as well. Chromium 114 has no standard property for scrollbar colours (N64), hence these rules.
+ */
+::-webkit-scrollbar {
+    width: var(--nuiget-scrollbar-size);
+    height: var(--nuiget-scrollbar-size);
+}
+
+::-webkit-scrollbar-corner {
+    background-color: var(--nuiget-color-bg);
+}
+
+::-webkit-scrollbar-thumb {
+    background-color: var(--nuiget-color-scrollbar);
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background-color: var(--nuiget-color-scrollbar-hover);
+}
+
+::-webkit-scrollbar-thumb:active {
+    background-color: var(--nuiget-color-scrollbar-active);
+}
+
 /* ── Listbox ── */
 
 .nuiget-listbox-root {
@@ -135,6 +161,19 @@
     white-space: nowrap;
 }
 
+/*
+ * On a selected or current row the secondary text takes the row's foreground, as VS Code's lists do: the muted
+ * colour is made for the list's background and falls below 4.5:1 on the selection colour (theme.ui.test.ts).
+ */
+.nuiget-row-option[aria-selected="true"] .nuiget-row-version,
+.nuiget-row-option[aria-selected="true"] .nuiget-row-description,
+.nuiget-row-option[aria-selected="true"] .nuiget-row-status,
+.nuiget-row-option[aria-current="true"] .nuiget-row-version,
+.nuiget-row-option[aria-current="true"] .nuiget-row-description,
+.nuiget-row-option[aria-current="true"] .nuiget-row-status {
+    color: inherit;
+}
+
 .nuiget-row-desc {
     display: flex;
     gap: var(--nuiget-space-2);
@@ -224,6 +263,7 @@
     display: inline-flex;
     align-items: center;
     padding: 0 var(--nuiget-space-2);
+    border: 1px solid transparent;
     border-radius: var(--nuiget-radius-md);
     background: var(--nuiget-color-badge-bg);
     color: var(--nuiget-color-badge-fg);
@@ -233,16 +273,20 @@
     forced-color-adjust: none;
 }
 
+/*
+ * A tone colours the border, as a banner does; the text keeps the badge's foreground. The info, warning and error
+ * colours are made for an editor's background, not for the badge's, where they fall below 4.5:1 (theme.ui.test.ts).
+ */
 .nuiget-badge--info {
-    color: var(--nuiget-color-info);
+    border-color: var(--nuiget-color-info);
 }
 
 .nuiget-badge--warning {
-    color: var(--nuiget-color-warning);
+    border-color: var(--nuiget-color-warning);
 }
 
 .nuiget-badge--error {
-    color: var(--nuiget-color-error);
+    border-color: var(--nuiget-color-error);
 }
 
 /* ── Spinner ── */

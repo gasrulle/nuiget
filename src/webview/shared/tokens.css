@@ -31,6 +31,9 @@
     --nuiget-icon-size-lg: 24px;
     --nuiget-target-min: 24px;
 
+    /* Scrollbars: as thick as VS Code's webview defaults draw them */
+    --nuiget-scrollbar-size: 10px;
+
     /* Stacking order */
     --nuiget-z-sticky: 1;
     --nuiget-z-popover: 10;
@@ -49,6 +52,11 @@
     --nuiget-line-height: 1.4;
     --nuiget-font-family: var(--vscode-font-family);
     --nuiget-font-family-mono: var(--vscode-editor-font-family);
+
+    /* Colours: surfaces. What VS Code paints behind each webview, painted by the root as well: without an opaque
+       background in the document, axe measures text against white (theme.ui.test.ts). */
+    --nuiget-color-bg: var(--vscode-editor-background);
+    --nuiget-color-bg-sidebar: var(--vscode-sideBar-background);
 
     /* Colours: text */
     --nuiget-color-fg: var(--vscode-foreground);
@@ -115,6 +123,8 @@ body.vscode-high-contrast-light {
 /* Forced colours (Windows contrast themes): the system's own palette, by keyword. */
 @media (forced-colors: active) {
     :root {
+        --nuiget-color-bg: Canvas;
+        --nuiget-color-bg-sidebar: Canvas;
         --nuiget-color-fg: CanvasText;
         --nuiget-color-fg-muted: GrayText;
         --nuiget-color-link: LinkText;

@@ -1,4 +1,76 @@
-# STATUS — src/webview/shared   commit 1df7087 (P5.10 commit c, fix-forward; parent of commit d)   2026-10-16T10:00:00Z
+# STATUS — src/webview/shared   commit fa811aa (P5.10 commit d; parent of the P5.11 commit)   2026-10-16T16:00:00Z
+
+git status --porcelain --untracked-files=all (before the commit): modified `.github/copilot-instructions.md`, `ARCHITECTURE.md`, `CHANGELOG.md`, `docs/plans/{STATUS,findings-ledger}.md`, `src/test/lint/{webview-stylesheets,webview-tokens}.test.ts`, `src/webview/shared/{tokens.css,primitives/primitives.css}`, `src/webview/main/main.css`, `src/webview/sidebar-next/sidebar.css` and the four STATUS notes; new `src/test/lint/{cssRules.ts,webview-css-baseline.test.ts}`, `src/test/ui/v2/theme.ui.test.ts` (all belong to P5.11)
+
+Item: **P5.11** (theme pass): `tokens.css` gains `--nuiget-color-bg` (`--vscode-editor-background`),
+`--nuiget-color-bg-sidebar` (`--vscode-sideBar-background`), both `Canvas` under forced colours, and
+`--nuiget-scrollbar-size: 10px` (VS Code's webview default, read from `webview/browser/pre/index.html`).
+`primitives.css`: `::-webkit-scrollbar`, `-corner`, `-thumb`, `:hover`, `:active` on the tokens; a badge's tone colours
+its border (`border: 1px solid transparent` on every badge) and its text stays the badge foreground; the version,
+description and status of a selected or current row take the row's foreground.
+
+## Verified by running
+
+P5.11:
+
+```text
+baseline at fa811aa (P5.10 commit d, CI run 38728270479 green on all 11 jobs): tsc 0 · eslint 0 · vitest 158 files, 3226 passed, 4 skipped (SDK)
+npx tsc --noEmit / npm run check-types / npx eslint src / npm run lint → exit 0 each
+npx vitest run --project backend src/test/lint → Test Files 7 passed (7) · Tests 126 passed (126)
+npm test (NUIGET_SDK_TESTS=1, DOTNET_ROOT set) → exit 0 · Test Files 159 passed (159) · Tests 3239 passed (3239)
+npm run bench → exit 0 · npx vitest run --coverage → exit 0
+rm -rf dist && node esbuild.mjs --v2 --production --analyze → extension 281381 / 299921 · webview 518470 / 600685 ·
+                               sidebar 317603 / 329122 (unchanged; CSS only: dist/webview.css 26776, dist/sidebar.css 19778)
+rm -rf dist && NUIGET_V2=1 npm run package && npm run check:vsix → check:vsix: OK
+NUIGET_V2=1 npm run test:ui:v2 -- --storage /tmp/nuiget-ui-v2, five times (rm -rf dist before each) →
+                               27 passing ×5; git status --porcelain src/test/e2e empty after each
+step 2 of the ruling, first run of theme.ui.test.ts before the CSS edits → body rgba(0, 0, 0, 0), html rgba(0, 0, 0, 0)
+                               in both webviews under every theme; dark themes measured against #ffffff (#cccccc, 1.6:1)
+grep -c "nuiget-color-bg" src/webview/shared/tokens.css → 4 · grep -c "::-webkit-scrollbar" primitives.css → 6
+grep scrollbar-color|scrollbar-width in the 2.0 stylesheets → 0 · test -e .claude/.contract-change → false
+npm run package:vsix: SKIPPED: no host, service or esbuild change (stylesheets, tokens and tests only)
+```
+
+## Done (tested)
+
+- `src/test/lint/webview-css-baseline.test.ts` (new): 26 features newer than Chromium 114, each with its MDN
+  browser-compat-data key and Chromium version read from the BCD data files on 2026-10-15/16; scanned with
+  `parseRules`; samples, a comment/string case and a coverage check.
+- `src/test/lint/cssRules.ts` (new): `parseRules` moved out of `webview-stylesheets.test.ts` (which re-exports it), so
+  that importing it does not register that suite twice.
+- `webview-stylesheets.test.ts`: new `every pointer target is at least --nuiget-target-min high, and the sash takes
+  the pointer over that width`, `the target scan finds a pointer rule without the target height`, `the scrollbars are
+  drawn with the scrollbar tokens`, `the roots of both surfaces paint the surface background (axe measures against
+  white without one)`.
+- `webview-tokens.test.ts`: new `the row heights that Listbox estimates with are the row-height tokens`;
+  `--nuiget-scrollbar-size`, `--nuiget-color-bg`, `--nuiget-color-bg-sidebar` added to `REQUIRED`.
+- Contrast and target size measured in VS Code: see `src/test/ui/v2/STATUS.md`.
+
+## Done (untested)
+
+- Forced colours: not emulated (ruling); the tokens lint holds the block and P7.4 checks it in VS Code 1.85.
+- Chromium 114 itself: the baseline lint stands in; no job renders the webviews there (N64 open).
+- Semantic colours used as text that the fixture does not render (`main.css` error and warning texts): unmeasured.
+
+## Not started
+
+- None for P5.11. Next: P5.12a.
+
+## Deviations from contract/ADR (file:line each)
+
+- A view moved to the panel is painted `--vscode-sideBar-background` over `--vscode-panel-background` (identical
+  in the default themes; ruling step 3).
+- `src/test/lint/cssRules.ts` is a file the ruling does not list (a helper of its baseline test).
+
+## Advisor decisions (date, item, question, answer verbatim)
+
+The P5.11 ruling (2026-10-16) is verbatim in `docs/plans/STATUS.md`.
+
+## Exact next step (one item ID)
+
+P5.12a, after the P5.11 CI run is green.
+
+## Earlier notes of this directory
 
 git status --porcelain --untracked-files=all (before commit d): modified `.github/copilot-instructions.md`, `ARCHITECTURE.md`, `CHANGELOG.md`, `docs/plans/{STATUS,findings-ledger}.md`, `src/host/{SidebarHost,handlers.test}.ts`, `vitest.config.mts` and the four STATUS notes; new `src/host/pickers.test.ts`, `src/test/ui/v2/sidebar-parity.ui.test.ts` (all belong to P5.10 commit d)
 
@@ -1170,6 +1242,7 @@ FILES CHECKED: `docs/plans/2026-10-11-nuiget-2.0-execution-plan.md:41-175,240-25
 ## Exact next step (one item ID)
 
 P5.6 (feature search, main and sidebar browse), after P5.5's CI run is green; a fresh session starts it (second compaction of this one).
+
 
 
 

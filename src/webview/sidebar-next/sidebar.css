@@ -13,6 +13,7 @@ body {
     display: flex;
     flex-direction: column;
     height: 100vh;
+    background: var(--nuiget-color-bg-sidebar);
     color: var(--nuiget-color-fg);
     font-family: var(--nuiget-font-family);
     line-height: var(--nuiget-line-height);

@@ -237,6 +237,26 @@ Two lint tests in `src/test/lint` keep that true: `webview-tokens.test.ts` check
 names the primitives rely on), and `webview-colours.test.ts` fails for a hex colour or a colour function in
 any other file under `src/webview/{shared,main,sidebar-next}`, tests included.
 
+The theme pass (P5.11) adds what the tokens alone did not settle. VS Code leaves a webview's `body` transparent and
+paints the surface behind the iframe; the two roots now paint it themselves, `.nuiget-main` with
+`--nuiget-color-bg` (`--vscode-editor-background`) and `.nuiget-sidebar` with `--nuiget-color-bg-sidebar`
+(`--vscode-sideBar-background`), both `Canvas` under forced colours, so the document says what its text stands
+on. The scrollbars of every scrolling element are `::-webkit-scrollbar` rules in `primitives.css`, 10 px thick like
+VS Code's webview defaults and coloured with the `--nuiget-color-scrollbar*` tokens, so that forced colours reach
+them; `scrollbar-color` is not available in Chromium 114. A badge's tone colours its border and leaves its text in
+the badge foreground, since the info, warning and error colours fall below 4.5:1 on the badge background; for the
+same reason the secondary text of a selected or current row (version, description, status) takes the row's
+foreground instead of the muted colour. Every
+rule that gives the pointer cursor sets `min-height: var(--nuiget-target-min)` (24 px, WCAG 2.5.8), and the sash,
+drawn 4 px thin, takes the pointer over a 24 px wide `::after` (`webview-stylesheets.test.ts`).
+`webview-css-baseline.test.ts` fails for a CSS feature that Chromium 114, the browser of VS Code 1.85, lacks: a
+denylist of 26 features, each with its key in MDN browser-compat-data and the Chromium version that key gives
+(finding N64); JavaScript APIs are held by the ES2022 `lib` of `tsconfig.json`. Contrast and target size are
+measured where the colours exist: `src/test/ui/v2/theme.ui.test.ts` injects axe-core into the main panel and the
+sidebar in VS Code under six built-in themes (Dark and Light Modern, both high-contrast themes, Dark and Light 2026),
+with a row selected in each, and requires no `color-contrast` or `target-size` violation, with the contrast rule
+having checked text.
+
 `src/webview/shared/primitives/icons.tsx` is the icon set (codicon paths as inline SVG). An icon takes
 `size`, `className` and `title` and renders no `style` attribute, which the Content Security Policy would
 refuse (ADR-006); without a title it is hidden from assistive technology, with one it is an image with that

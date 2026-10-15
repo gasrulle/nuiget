@@ -1,6 +1,7 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import * as path from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { parseRules } from './cssRules';
 
 /**
  * ADR-008: what a 2.0 webview stylesheet may not do on its own. Reduced motion, forced colours and the type
@@ -11,48 +12,7 @@ const ROOTS = ['src/webview/shared', 'src/webview/main', 'src/webview/sidebar-ne
 const TOKENS = 'src/webview/shared/tokens.css';
 const PRIMITIVES = 'src/webview/shared/primitives/primitives.css';
 
-export interface CssRule {
-    /** The selector list, or the at-rule with its condition. */
-    prelude: string;
-    /** The declarations directly in the block, as `property: value`. */
-    declarations: string[];
-}
-
-/** The rules of a stylesheet, those inside at-rules included. Comments and line endings do not matter. */
-export function parseRules(css: string): CssRule[] {
-    const text = css.replace(/\r\n/g, '\n').replace(/\/\*[\s\S]*?\*\//g, '');
-    const rules: CssRule[] = [];
-    let position = 0;
-
-    const block = (owner: CssRule | undefined): void => {
-        let pending = '';
-        const declare = (): void => {
-            const declaration = pending.replace(/\s+/g, ' ').trim();
-            if (declaration.length > 0) {
-                owner?.declarations.push(declaration);
-            }
-            pending = '';
-        };
-        while (position < text.length) {
-            const char = text[position++];
-            if (char === '{') {
-                const rule: CssRule = { prelude: pending.replace(/\s+/g, ' ').trim(), declarations: [] };
-                pending = '';
-                rules.push(rule);
-                block(rule);
-            } else if (char === '}') {
-                declare();
-                return;
-            } else if (char === ';') {
-                declare();
-            } else {
-                pending += char;
-            }
-        }
-    };
-    block(undefined);
-    return rules;
-}
+export { parseRules, type CssRule } from './cssRules';
 
 const TIME = /(?<![\w-])\d*\.?\d+m?s\b/;
 const TIMED = /^(?:animation|transition)(?:-duration)?$/;
@@ -92,6 +52,18 @@ export function findStylesheetDefects(css: string): Record<'reducedMotion' | 'im
     };
 }
 
+/**
+ * Pointer targets under 24 px (WCAG 2.5.8, `--nuiget-target-min`): a rule that gives the pointer cursor and does not
+ * set `min-height: var(--nuiget-target-min)`. A row option keeps the default cursor; its height is the row's, and the
+ * compact row is as high as the target.
+ */
+export function findSmallTargets(css: string): string[] {
+    return parseRules(css)
+        .filter(rule => rule.declarations.some(declaration => /^cursor:\s*pointer$/.test(declaration)))
+        .filter(rule => !rule.declarations.some(declaration => /^min-height:\s*var\(--nuiget-target-min\)$/.test(declaration)))
+        .map(rule => rule.prelude);
+}
+
 function stylesheets(): string[] {
     return ROOTS.flatMap(root => (readdirSync(root, { recursive: true }) as string[])
         .map(entry => path.posix.join(root, entry.split(path.sep).join('/')))
@@ -124,6 +96,43 @@ describe('2.0 webview stylesheets', () => {
 
     it('every class selector starts with .nuiget-', () => {
         expect(defectsOf('classPrefix')).toEqual([]);
+    });
+
+    it('every pointer target is at least --nuiget-target-min high, and the sash takes the pointer over that width', () => {
+        expect(stylesheets().flatMap(file => findSmallTargets(readFileSync(file, 'utf8')).map(prelude => `${file}: ${prelude}`))).toEqual([]);
+        // The sash is drawn thin; its ::after is the target, widened to the target size on both sides of the line.
+        const rules = parseRules(readFileSync(PRIMITIVES, 'utf8'));
+        const hitArea = (prelude: string): string[] => rules.find(rule => rule.prelude === prelude)?.declarations ?? [];
+        expect(hitArea('.nuiget-sash--vertical::after')).toContain('inset: 0 calc((var(--nuiget-space-2) - var(--nuiget-target-min)) / 2)');
+        expect(hitArea('.nuiget-sash--horizontal::after')).toContain('inset: calc((var(--nuiget-space-2) - var(--nuiget-target-min)) / 2) 0');
+        // The check has something to look at.
+        expect(rules.filter(rule => rule.declarations.includes('cursor: pointer')).length).toBeGreaterThanOrEqual(3);
+    });
+
+    it('the target scan finds a pointer rule without the target height', () => {
+        const css = [
+            '.nuiget-tag { cursor: pointer; min-height: 16px; }',
+            '.nuiget-chip { cursor: pointer; }',
+            '.nuiget-button { cursor: pointer; min-height: var(--nuiget-target-min); }',
+            '.nuiget-button:disabled { cursor: default; }',
+        ].join('\n');
+        expect(findSmallTargets(css)).toEqual(['.nuiget-tag', '.nuiget-chip']);
+    });
+
+    it('the scrollbars are drawn with the scrollbar tokens', () => {
+        const rules = parseRules(readFileSync(PRIMITIVES, 'utf8'));
+        const declarationsOf = (prelude: string): string[] => rules.find(rule => rule.prelude === prelude)?.declarations ?? [];
+        expect(declarationsOf('::-webkit-scrollbar')).toEqual(['width: var(--nuiget-scrollbar-size)', 'height: var(--nuiget-scrollbar-size)']);
+        expect(declarationsOf('::-webkit-scrollbar-corner')).toEqual(['background-color: var(--nuiget-color-bg)']);
+        expect(declarationsOf('::-webkit-scrollbar-thumb')).toEqual(['background-color: var(--nuiget-color-scrollbar)']);
+        expect(declarationsOf('::-webkit-scrollbar-thumb:hover')).toEqual(['background-color: var(--nuiget-color-scrollbar-hover)']);
+        expect(declarationsOf('::-webkit-scrollbar-thumb:active')).toEqual(['background-color: var(--nuiget-color-scrollbar-active)']);
+    });
+
+    it('the roots of both surfaces paint the surface background (axe measures against white without one)', () => {
+        const background = (file: string, prelude: string): string[] => parseRules(readFileSync(file, 'utf8')).find(rule => rule.prelude === prelude)?.declarations.filter(declaration => declaration.startsWith('background')) ?? [];
+        expect(background('src/webview/main/main.css', '.nuiget-main')).toEqual(['background: var(--nuiget-color-bg)']);
+        expect(background('src/webview/sidebar-next/sidebar.css', '.nuiget-sidebar')).toEqual(['background: var(--nuiget-color-bg-sidebar)']);
     });
 
     it('row actions are shown on hover and focus-within of the row', () => {

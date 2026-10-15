@@ -1,4 +1,60 @@
-# STATUS — src/webview/main   commit c15000f (P5.9 commit b; parent of commit c)   2026-10-16T02:00:00Z
+# STATUS — src/webview/main   commit fa811aa (P5.10 commit d; parent of the P5.11 commit)   2026-10-16T16:00:00Z
+
+git status --porcelain --untracked-files=all (before the commit): modified `.github/copilot-instructions.md`, `ARCHITECTURE.md`, `CHANGELOG.md`, `docs/plans/{STATUS,findings-ledger}.md`, `src/test/lint/{webview-stylesheets,webview-tokens}.test.ts`, `src/webview/shared/{tokens.css,primitives/primitives.css}`, `src/webview/main/main.css`, `src/webview/sidebar-next/sidebar.css` and the four STATUS notes; new `src/test/lint/{cssRules.ts,webview-css-baseline.test.ts}`, `src/test/ui/v2/theme.ui.test.ts` (all belong to P5.11)
+
+Item: **P5.11** (theme pass): `main.css` `.nuiget-main` paints `background: var(--nuiget-color-bg)`, so the
+document says what its text stands on (axe fell back to white without it). No other change in this directory.
+
+## Verified by running
+
+P5.11:
+
+```text
+baseline at fa811aa (P5.10 commit d, CI run 38728270479 green on all 11 jobs): tsc 0 · eslint 0 · vitest 158 files, 3226 passed, 4 skipped (SDK)
+npx tsc --noEmit / npm run check-types / npx eslint src / npm run lint → exit 0 each
+npx vitest run --project backend src/test/lint → Test Files 7 passed (7) · Tests 126 passed (126)
+npm test (NUIGET_SDK_TESTS=1, DOTNET_ROOT set) → exit 0 · Test Files 159 passed (159) · Tests 3239 passed (3239)
+npm run bench → exit 0 · npx vitest run --coverage → exit 0
+rm -rf dist && node esbuild.mjs --v2 --production --analyze → extension 281381 / 299921 · webview 518470 / 600685 ·
+                               sidebar 317603 / 329122 (unchanged; CSS only: dist/webview.css 26776, dist/sidebar.css 19778)
+rm -rf dist && NUIGET_V2=1 npm run package && npm run check:vsix → check:vsix: OK
+NUIGET_V2=1 npm run test:ui:v2 -- --storage /tmp/nuiget-ui-v2, five times (rm -rf dist before each) →
+                               27 passing ×5; git status --porcelain src/test/e2e empty after each
+step 2 of the ruling, first run of theme.ui.test.ts before the CSS edits → body rgba(0, 0, 0, 0), html rgba(0, 0, 0, 0)
+                               in both webviews under every theme; dark themes measured against #ffffff (#cccccc, 1.6:1)
+grep -c "nuiget-color-bg" src/webview/shared/tokens.css → 4 · grep -c "::-webkit-scrollbar" primitives.css → 6
+grep scrollbar-color|scrollbar-width in the 2.0 stylesheets → 0 · test -e .claude/.contract-change → false
+npm run package:vsix: SKIPPED: no host, service or esbuild change (stylesheets, tokens and tests only)
+```
+
+## Done (tested)
+
+- `webview-stylesheets.test.ts` checks the declaration; `theme.ui.test.ts` measures the panel (47 to 50 nodes pass
+  `color-contrast` per theme).
+
+## Done (untested)
+
+- Forced colours: not emulated (ruling); the tokens lint holds the block and P7.4 checks it in VS Code 1.85.
+- Chromium 114 itself: the baseline lint stands in; no job renders the webviews there (N64 open).
+- Semantic colours used as text that the fixture does not render (`main.css` error and warning texts): unmeasured.
+
+## Not started
+
+- None for P5.11. Next: P5.12a.
+
+## Deviations from contract/ADR (file:line each)
+
+- None.
+
+## Advisor decisions (date, item, question, answer verbatim)
+
+The P5.11 ruling (2026-10-16) is verbatim in `docs/plans/STATUS.md`.
+
+## Exact next step (one item ID)
+
+P5.12a, after the P5.11 CI run is green.
+
+## Earlier notes of this directory
 
 git status --porcelain --untracked-files=all (before commit c): modified `.github/copilot-instructions.md`, `ARCHITECTURE.md`, `CHANGELOG.md`, `docs/plans/STATUS.md`, `docs/ux/interaction-model.md`, `src/test/ui/v2/main-sources.ui.test.ts` (comment only) and the four STATUS notes; new `src/test/ui/v2/main-all-projects.ui.test.ts` (all belong to P5.9 commit c)
 
@@ -663,6 +719,7 @@ the `NUIGET_V2` build checked locally and `package:vsix` on the 1.x entries.
 ## Exact next step (one item ID)
 
 P5.6 (feature search, main and sidebar browse), after P5.5's CI run is green; a fresh session starts it (second compaction of this one).
+
 
 
 
