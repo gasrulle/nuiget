@@ -128,17 +128,41 @@ per selection; a response for a different package/version is ignored.
 | `search-input` / `sidebar-search-input` | Search boxes |
 | `project-selector`, `source-selector` | Header selectors (main) |
 | `tab-bar`, `installed-tab`, `updates-tab` | Main tabs |
-| `installed-list`, `updates-list`, `browse-list`, `sidebar-installed-list`, `sidebar-updates-list`, `sidebar-browse-list` | Listboxes |
+| `installed-list`, `updates-list`, `browse-list`, `sidebar-installed-list`, `sidebar-updates-list`, `sidebar-browse-list`, `transitive-list` | Listboxes |
 | `package-row-<id>` | A row (id lower-cased): the wrapper around the option and its pointer actions; the option is the `role="option"` inside it (read `aria-selected` there; in a multi-selectable list `aria-current` marks the current row) |
-| `row-action-<name>` | A pointer action button inside a row (`install`, `update`, `uninstall`, `more`); hidden from assistive technology, mirrored by the keys of §5 |
-| `section-header-<name>` | The toggle button of a collapsible section (`installed`, `updates`) |
+| `row-action-<name>` | A pointer action button inside a row (`install`, `update`, `uninstall`); hidden from assistive technology, mirrored by the keys of §5 |
+| `section-header-<name>` | The toggle button of a collapsible section (`installed`, `updates`, `transitive`) |
 | `package-details-panel`, `details-tab-details`, `details-tab-readme`, `readme-content`, `readme-empty` | Details panel |
 | `version-selector`, `install-update-button`, `uninstall-button` | Details actions |
 | `select-all-button`, `update-all-button`, `uninstall-selected-button` | Bulk toolbar |
 | `transitive-section`, `transitive-restore-banner` | Transitive |
-| `source-settings`, `source-settings-modal`, `add-source-panel`, `source-row-<name>` | Sources |
+| `source-settings`, `source-settings-modal`, `add-source-panel`, `source-row-<name>` | Sources (`<name>` = source name lower-cased) |
 | `confirm-dialog`, `confirm-dialog-confirm`, `confirm-dialog-cancel` | Dialog primitive |
 | `status-live` | `role="status"` live region |
 | `sash` | Split sash |
 
+State markers (§4) and layer roots:
+
+| Test id | Element |
+|---|---|
+| `sidebar-installed-empty`, `sidebar-updates-empty` | Empty state of a sidebar list |
+| `sidebar-installed-error` | Error state of the sidebar's installed list |
+| `updates-unavailable-banner`, `sidebar-updates-unavailable`, `browse-unavailable-banner`, `sidebar-browse-unavailable` | A source could not be read (updates, search) |
+| `sidebar-unsupported` | Banner of a project the 2.0 surfaces cannot change |
+| `sidebar-installed-provisional` | The "provisional" badge of the sidebar's installed section |
+| `cpm-preview-dialog`, `multi-install-dialog` | Dialog roots (central package management preview, install into several projects) |
+
+All Projects (§3; `<name>` = project name lower-cased):
+
+| Test id | Element |
+|---|---|
+| `installed-list-<name>`, `updates-list-<name>` | A project's list in the main panel |
+| `sidebar-installed-list-<name>`, `sidebar-updates-list-<name>` | A project's list in the sidebar |
+| `section-header-project-<name>`, `section-header-updates-<name>` | The toggle of a project's section (Installed, Updates) |
+
 Removing or renaming a hook requires updating this table and the ExTester tests in the same change.
+
+A hook enters a table when a test outside its component reads it (ExTester, e2e, harness), or when it marks a
+documented state (§4) or the root of a layer; adding one needs no consultation. Names listed in parentheses after a
+pattern hook are the ones the product renders. `src/test/lint/interaction-model-testids.test.ts` fails for a hook in
+these tables that no 2.0 webview file renders, and for a listed name that is not rendered with its pattern's prefix.

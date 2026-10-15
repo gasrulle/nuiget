@@ -824,7 +824,11 @@ These parts serve both versions and are the current truth for the build, test an
   webview: the sidebar lists the fixture's packages, a row is as high as its token says and the second row lies
   under the first (stylesheet, tokens and the virtual offsets work under the Content Security Policy), the row
   action shows with focus, and Delete uninstalls a package, announced in the live region and gone from the
-  project file. Neither job runs `check:vsix`: a 2.0 build has no `dist/webview.css` until the main shell exists.
+  project file. `UI 2.0` runs `check:vsix` on the build ExTester packaged (N62, closed at P5.3); `E2E 2.0` builds
+  with `node esbuild.mjs --v2 --production`, packages nothing and runs no `check:vsix`. Which 2.0 test replaces each
+  legacy test file, and what P8.1 and P8.2 do with the legacy set, is `docs/plans/test-retirement-map.md` (P5.12b).
+  `src/test/lint/interaction-model-testids.test.ts` holds the `data-testid` tables of `docs/ux/interaction-model.md`
+  §8 to the ids the 2.0 webviews render.
 
 ## Overview (1.x — removed at P8)
 

@@ -33,6 +33,38 @@ node esbuild.mjs --v2 --production --analyze: SKIPPED: no webview, core, host or
 test -e .claude/.contract-change → false
 ```
 
+Evidence for the `Version="*"` row (plan §2.6), rerun at P5.12b on a scratch copy of
+`src/test/e2e/fixtures/e2e-workspace` (deleted afterwards; `git status --porcelain src/test/e2e/fixtures` empty),
+SDK 10.0.401, paths redacted:
+
+```text
+$ dotnet package add NUnit --no-restore --project TestProject.csproj
+info : X.509 certificate chain validation will use the fallback certificate bundle at '<dotnet>/sdk/10.0.401/trustedroots/codesignctl.pem'.
+info : X.509 certificate chain validation will use the fallback certificate bundle at '<dotnet>/sdk/10.0.401/trustedroots/timestampctl.pem'.
+info : Adding PackageReference for package 'NUnit' into project 'TestProject.csproj'.
+warn : --no-restore|-n flag was used. No compatibility check will be done and the added package reference will be unconditional.
+info : PackageReference for package 'NUnit' version '*' added to file '<scratch>/e2e-workspace/TestProject.csproj'.
+exit 0
+$ diff before.csproj TestProject.csproj
+8a9
+>     <PackageReference Include="NUnit" Version="*" />
+$ dotnet package add NUnit --version 3.13.3 --no-restore --project TestProject.csproj
+info : X.509 certificate chain validation will use the fallback certificate bundle at '<dotnet>/sdk/10.0.401/trustedroots/codesignctl.pem'.
+info : X.509 certificate chain validation will use the fallback certificate bundle at '<dotnet>/sdk/10.0.401/trustedroots/timestampctl.pem'.
+info : Adding PackageReference for package 'NUnit' into project 'TestProject.csproj'.
+warn : --no-restore|-n flag was used. No compatibility check will be done and the added package reference will be unconditional.
+info : PackageReference for package 'NUnit' version '3.13.3' updated in file '<scratch>/e2e-workspace/TestProject.csproj'.
+exit 0
+$ diff before.csproj TestProject.csproj
+8a9
+>     <PackageReference Include="NUnit" Version="3.13.3" />
+$ dotnet package remove NUnit --project TestProject.csproj
+info : Removing PackageReference for package 'NUnit' from project 'TestProject.csproj'.
+exit 0
+$ diff before.csproj TestProject.csproj
+(no difference)
+```
+
 ## Done (tested)
 
 - `v2-extension.e2e.test.ts` (from `extension`): installed, activates, every contributed command registered and none
