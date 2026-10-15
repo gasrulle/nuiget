@@ -1,4 +1,4 @@
-# STATUS — src/test/ui/v2   commit 4a083b5 (parent of the P5.4 commit c)   2026-10-15T01:30:00Z
+# STATUS — src/test/ui/v2   commit 04ac55f (parent of the P5.5 commit)   2026-10-16T08:30:00Z
 
 Scope of this note: the suites that put the 2.0 entries under test in VS Code and what they need:
 `src/test/ui/v2/**` (ExTester), `src/test/e2e/v2-sidebar.e2e.test.ts` (extension host), the `NUIGET_V2`
@@ -13,7 +13,39 @@ Item: **P5.4 commit c** for this directory: `main-installed.ui.test.ts` (four te
 the CSP, the tabs are reached by keyboard), its helper `mainWebview.ts`, and the `check:vsix` step of the
 `ui-v2` job that closes N62. Earlier: **P3.5** (below, unchanged).
 
+git status --porcelain --untracked-files=all (P5.5, before the commit): `?? src/webview/shared/store/{updates.tsx,updates.test.tsx}`,
+`?? src/webview/main/features/updates/{UpdatesTab.tsx,UpdatesTab.test.tsx,UpdateAllDialog.tsx,CentralUpdateDialog.tsx}`,
+`?? src/webview/sidebar-next/{UpdatesSection.tsx,UpdatesSection.test.tsx}`, `?? src/test/ui/v2/main-updates.ui.test.ts`,
+` M src/webview/shared/store/StoreProvider.tsx`, ` M src/webview/main/{MainShell.tsx,index.tsx}`,
+` M src/webview/sidebar-next/{SidebarView.tsx,SidebarView.test.tsx}`, ` M src/test/harness/{FakeWebview.ts,scenarios.test.ts}`,
+` M ARCHITECTURE.md`, ` M CHANGELOG.md`, ` M docs/plans/STATUS.md` and the five STATUS notes of the item's directories
+
+Item: **P5.5** for this directory: `main-updates.ui.test.ts` (three tests over §8 ids only: the updates of the fixture project with `13.0.2 →` and a count on the tab; the Update all dialog lists `Newtonsoft.Json: 13.0.2 →` and cancels on Escape with the project file unchanged; Enter updates Newtonsoft.Json and the project file follows; the fixture is restored in `after`). Earlier: P5.4 commit c.
+
 ## Verified by running
+
+P5.5:
+
+```text
+baseline at 04ac55f          → CI run 38677913029 green · npx tsc --noEmit 0 · npx eslint src 0 · npx vitest run green
+first full run with the Updates section mounted → 4 of 25 `SidebarView.test.tsx` tests red at document-wide
+                               `.nuiget-skeleton-row` counts → stop-and-ask (ruling of 2026-10-16, option 1: six query
+                               sites re-scoped to the Installed section, the four tests named by title)
+npx tsc --noEmit / npm run check-types / npx eslint src → exit 0 each
+npx vitest run --project frontend src/webview/sidebar-next, 20 times in a row → 20 of 20 (4 files, 30 tests)
+npx vitest run --project integration src/test/harness → 19 passed · -t "prerelease toggle re-checks updates" 40 of 40
+npm test (NUIGET_SDK_TESTS=1, DOTNET_ROOT set) → Test Files 144 passed (144) · Tests 3065 passed (3065)
+npm run bench                → Test Files 20 passed (20) · Tests 119 passed | 1 skipped (120)
+npx vitest run --coverage     → exit 0 (thresholds hold) · store/updates.tsx 97.61 % lines · main/features/updates 89.58 %
+npm run docs:protocol:check  → docs/protocol.md is up to date
+rm -rf dist && node esbuild.mjs --v2 --production --analyze → extension 280611 / 299921 · webview 309114 / 600685
+                               (301845 at P5.4) · sidebar 288948 / 329122 (293929 noted at P5.4)
+rm -rf dist && NUIGET_V2=1 npm run package && npm run check:vsix → check:vsix: OK
+NUIGET_V2=1 npm run test:ui:v2 -- --storage /tmp/nuiget-ui-v2 → 13 passing at the first run (Updates tab: 3)
+npm run package:vsix (1.x)   → SKIPPED: no host, root, extension or 1.x file changed; CI's Package job builds it
+npm run test:ui (1.x)        → SKIPPED: no 1.x UI file changed; the CI job `UI` runs it
+test -e .claude/.contract-change → false · git diff --stat 04ac55f -- src/protocol src/core docs/adr src/host → empty
+```
 
 P5.4 commit c:
 
@@ -97,6 +129,7 @@ CI                           → see the tracker row of P3.5 (ten jobs expected)
 
 ## Done (tested)
 
+- P5.5 `main-updates.ui.test.ts`: 3 passing at the first local run (13 in the v2 suite).
 P5.4 commit c: `main-installed.ui.test.ts` opens the panel (`openMainPanel`, `enterMainWebview`) before each test,
 finds `installed-list` as a multi-selectable listbox with the fixture's two rows, makes Serilog the current row
 (`aria-current`) and selects it with Space (`aria-selected`, `uninstall-selected-button` enabled), opens the dialog
@@ -256,4 +289,5 @@ FILES CHECKED: docs/plans/2026-10-11-nuiget-2.0-execution-plan.md:41-175,240-251
 
 ## Exact next step (one item ID)
 
-P4.1 is next in the tracker and adds no UI test. The next v2 UI test is P5.5's (updates).
+P5.6 (feature search, main and sidebar browse), after P5.5's CI run is green; a fresh session starts it (second compaction of this one).
+

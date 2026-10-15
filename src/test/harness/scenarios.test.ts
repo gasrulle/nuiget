@@ -567,6 +567,46 @@ describe('two-surface harness', () => {
         [main, sidebar].forEach(expectOneResponsePerRequest);
     });
 
+    it('prerelease toggle re-checks updates', async () => {
+        const feed = createFakeFeed();
+        feed.publish('Serilog', ['3.0.0', '3.1.0', '4.0.0-beta.1']);
+        h = await createHarness({ tree: TWO_PROJECTS, selectedProject: 'A/A.csproj', feed });
+        const [A, B] = [h.path('A/A.csproj'), h.path('B/B.csproj')];
+        const main = await h.resolve('main');
+        const sidebar = await h.resolve('sidebar');
+        await h.expectState({ selectedProject: A, projects: [A, B], installed: ['Serilog@3.0.0'] });
+        const latestOf = (webview: FakeWebview) => webview.updates?.updates.map(update => `${update.id}@${update.latestVersion}`);
+        const asked = (webview: FakeWebview) => webview.sent
+            .filter(message => message.kind === 'request' && message.type === 'updates/get')
+            .map(message => (message as { payload: { includePrerelease: boolean } }).payload.includePrerelease);
+
+        for (const webview of [main, sidebar]) {
+            await h.checkUpdates(webview.surface).response;
+            expect(latestOf(webview), webview.surface).toEqual(['Serilog@3.1.0']);
+        }
+
+        // The sidebar turns prerelease on; both surfaces apply the snapshot and ask again under the new flag.
+        const on = await h.toggle('sidebar', 'includePrerelease');
+        expect(on.includePrerelease).toBe(true);
+        await h.settle(() => {
+            for (const webview of [main, sidebar]) {
+                expect(latestOf(webview), webview.surface).toEqual(['Serilog@4.0.0-beta.1']);
+                expect(asked(webview), webview.surface).toEqual([false, true]);
+            }
+        });
+
+        // Back off: the stable answer is current again, with no third request per surface beyond the toggle.
+        await h.toggle('main', 'includePrerelease');
+        await h.settle(() => {
+            for (const webview of [main, sidebar]) {
+                expect(latestOf(webview), webview.surface).toEqual(['Serilog@3.1.0']);
+                expect(asked(webview), webview.surface).toEqual([false, true, false]);
+            }
+        });
+        await h.settle();
+        [main, sidebar].forEach(expectOneResponsePerRequest);
+    });
+
     it('sources unreachable shows banner not empty', async () => {
         const feed = createFakeFeed();
         feed.down = true;

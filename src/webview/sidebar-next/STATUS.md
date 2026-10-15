@@ -1,4 +1,4 @@
-# STATUS — src/webview/sidebar-next   commit 9000208 (parent of the P5.4 commit a)   2026-10-14T23:10:00Z
+# STATUS — src/webview/sidebar-next   commit 04ac55f (parent of the P5.5 commit)   2026-10-16T08:30:00Z
 
 Scope of this note: `src/webview/sidebar-next/**`, the 2.0 sidebar, and the harness scenario the item's gate
 names (`src/test/harness/scenarios.test.ts`).
@@ -11,7 +11,39 @@ Item: **P5.4 feature installed (main), commit a of three** (P5.4 stop-and-ask ru
 ruling is an L1 consultation (stop-and-ask: `Listbox.tsx` is not among the row's files); commit a touches no
 file outside those the P3.6 ruling named for P5.4.
 
+git status --porcelain --untracked-files=all (P5.5, before the commit): `?? src/webview/shared/store/{updates.tsx,updates.test.tsx}`,
+`?? src/webview/main/features/updates/{UpdatesTab.tsx,UpdatesTab.test.tsx,UpdateAllDialog.tsx,CentralUpdateDialog.tsx}`,
+`?? src/webview/sidebar-next/{UpdatesSection.tsx,UpdatesSection.test.tsx}`, `?? src/test/ui/v2/main-updates.ui.test.ts`,
+` M src/webview/shared/store/StoreProvider.tsx`, ` M src/webview/main/{MainShell.tsx,index.tsx}`,
+` M src/webview/sidebar-next/{SidebarView.tsx,SidebarView.test.tsx}`, ` M src/test/harness/{FakeWebview.ts,scenarios.test.ts}`,
+` M ARCHITECTURE.md`, ` M CHANGELOG.md`, ` M docs/plans/STATUS.md` and the five STATUS notes of the item's directories
+
+Item: **P5.5 feature updates**, for this directory: `UpdatesSection.tsx` under the Installed section (compact rows, `sidebar-updates-list`, `section-header-updates`, the count only when known, Enter and the row button update, central packages announced and without a button, banner `sidebar-updates-unavailable`, empty state `sidebar-updates-empty`, §4 skeleton while loading), `UpdatesSection.test.tsx` (5), and the stop-and-ask ruling of 2026-10-16 (below, verbatim): the six skeleton queries of `SidebarView.test.tsx` re-scoped to the Installed section in the four tests it names by title, nothing else changed. The sidebar's search modes and the box's label are P5.6's (P3.4), the draggable split P5.10's; the Updates section is unfiltered. Earlier in this note: P5.4.
+
 ## Verified by running
+
+P5.5:
+
+```text
+baseline at 04ac55f          → CI run 38677913029 green · npx tsc --noEmit 0 · npx eslint src 0 · npx vitest run green
+first full run with the Updates section mounted → 4 of 25 `SidebarView.test.tsx` tests red at document-wide
+                               `.nuiget-skeleton-row` counts → stop-and-ask (ruling of 2026-10-16, option 1: six query
+                               sites re-scoped to the Installed section, the four tests named by title)
+npx tsc --noEmit / npm run check-types / npx eslint src → exit 0 each
+npx vitest run --project frontend src/webview/sidebar-next, 20 times in a row → 20 of 20 (4 files, 30 tests)
+npx vitest run --project integration src/test/harness → 19 passed · -t "prerelease toggle re-checks updates" 40 of 40
+npm test (NUIGET_SDK_TESTS=1, DOTNET_ROOT set) → Test Files 144 passed (144) · Tests 3065 passed (3065)
+npm run bench                → Test Files 20 passed (20) · Tests 119 passed | 1 skipped (120)
+npx vitest run --coverage     → exit 0 (thresholds hold) · store/updates.tsx 97.61 % lines · main/features/updates 89.58 %
+npm run docs:protocol:check  → docs/protocol.md is up to date
+rm -rf dist && node esbuild.mjs --v2 --production --analyze → extension 280611 / 299921 · webview 309114 / 600685
+                               (301845 at P5.4) · sidebar 288948 / 329122 (293929 noted at P5.4)
+rm -rf dist && NUIGET_V2=1 npm run package && npm run check:vsix → check:vsix: OK
+NUIGET_V2=1 npm run test:ui:v2 -- --storage /tmp/nuiget-ui-v2 → 13 passing at the first run (Updates tab: 3)
+npm run package:vsix (1.x)   → SKIPPED: no host, root, extension or 1.x file changed; CI's Package job builds it
+npm run test:ui (1.x)        → SKIPPED: no 1.x UI file changed; the CI job `UI` runs it
+test -e .claude/.contract-change → false · git diff --stat 04ac55f -- src/protocol src/core docs/adr src/host → empty
+```
 
 P5.4 commit a:
 
@@ -90,6 +122,7 @@ CI                           → see the tracker row of P3.4
 
 ## Done (tested)
 
+- P5.5 `UpdatesSection.test.tsx` (5): its own 3 skeleton rows before the session and while `updates/get` is pending, none once answered; list, versions, header count and axe; Enter and the row button update, a central package is announced and has no button; an unreachable source is a banner with Retry, never "No updates available", no count; a complete empty answer counts 0 and the header collapses the section.
 P5.4 commit b: `shownVersion` and `whyNotRemovable` (and the `IN_PROGRESS` words) moved to
 `src/webview/shared/installed/rules.ts`, `describeOutcome` to `src/webview/shared/store/outcomes.ts`; `InstalledSection.tsx`
 and `outcomes.ts` re-export them, so nothing here changes behaviour and no test was edited.
@@ -167,6 +200,8 @@ of `SidebarView.test.tsx` is kept; the file is not edited.
 
 ## Deviations from contract/ADR (file:line each)
 
+- P5.5 (ruling of 2026-10-16, DO 4): the Updates section shows §4's skeleton but says no "Loading updates" through the one `LiveStatus` (the sidebar announces "Loading installed packages" for the view's first load, `SidebarView.tsx:40-44`); one live region, two simultaneous first loads; left for the P5 phase review.
+- P5.5: the test ids `sidebar-updates-unavailable` and `sidebar-updates-empty` are not in interaction model §8; P5.12b decides with the `sidebar-installed-*` ones (row note).
 P5.4 commit a:
 
 - The ruling's VERIFY `grep -c "pending" src/webview/sidebar-next/InstalledSection.tsx → 0` gives 1: the tooltip of
@@ -207,6 +242,35 @@ P5.4 commit a:
 
 ## Advisor decisions (date, item, question, answer verbatim)
 
+2026-10-16, P5.5, stop-and-ask: the sidebar's document-wide skeleton-count tests with the Updates section mounted. Answer, verbatim:
+
+`````text
+DECISION: Option 1. Re-scope the six skeleton-row queries of `src/webview/sidebar-next/SidebarView.test.tsx` (lines 62, 65, 71, 260, 277, 290) to the Installed section's content; every other assertion of the four tests stays byte-for-byte. The four tests that may change, by title: `shows skeleton rows while the first list is loading, then the packages of the selected project`; `revalidate without blanking: the rows stay, the list is busy and a progress bar shows until the new list is there`; `another project: its packages replace the list after skeleton rows, never mixed`; `an error is a banner with Retry; a list that is shown stays under it`. No other test of that file changes. The Updates section keeps its `<Skeleton density="compact" />`, starts expanded, and gets its own test file.
+
+WHY: The brief is right about the tree: `UpdatesSection.tsx:70-75` renders a `Skeleton` while `session === undefined` and while the first `updates/get` is pending, and `Skeleton.tsx:17` emits 3 `.nuiget-skeleton-row` divs, so at `SidebarView.test.tsx:62` (before `session/get` is answered) the document holds 6 rows, and at :65/:260/:290 it holds 3 where 0 or 3 was asserted. Option 4 cannot fix line 62 at all (no `updates/get` exists yet to answer), option 2 breaks `docs/ux/interaction-model.md` §4 ("Loading (first): Skeleton rows (3)", "every list/detail area uses exactly these"), and option 3 changes a product default (§2 lists both sections open; 1.x `src/webview/sidebar/SidebarApp.tsx:48` defaults `updatesExpanded` to `true`) to dodge a test, and the skeleton returns on the first expand anyway. Option 1 is a re-scoping, not a weakening (RUN.md:82): each of the six assertions says "the Installed section shows 3 placeholder rows / none", and `document.querySelectorAll` was only a correct way to say that while one section existed; the count and meaning survive. `SidebarView.test.tsx` is an item file under plan §2.1 (the test of `SidebarView.tsx`, which the item must edit to mount the section), and the P5.4 ruling set the precedent of naming that file's tests by title; the four titles above are the named ones. On the second question the in-tree decision stands (label "Filter installed packages" unchanged, Updates section unfiltered, test at :320 untouched), but the attribution is wrong: the P3.4 row in `docs/plans/STATUS.md:57` says "the search box filters the installed list until P5.6" and P5.6's row says "sidebar browse is this row's"; the sidebar's search modes are P5.6's, not P5.10's (P5.10 owns sash, context menu, title-bar toggles, Open full view).
+
+DO:
+1. In `SidebarView.test.tsx` add two helpers next to `list()` (:40): `installedContent()` resolving the Installed section's content div through the toggle's `aria-controls` (`SectionHeader.tsx:41-42`: `document.getElementById(screen.getByTestId('section-header-installed').getAttribute('aria-controls')!)`), and `skeletonRows()` = `installedContent().querySelectorAll('.nuiget-skeleton-row')`. Replace the six `document.querySelectorAll('.nuiget-skeleton-row')` sites with `skeletonRows()`; change nothing else in those tests. Do not add a `data-testid` to the `<section>`: that would need a §8 table row in `docs/ux/interaction-model.md`, which is outside the item's files.
+2. Add `src/webview/sidebar-next/UpdatesSection.test.tsx` (an item file: the section's own test) covering at least: 3 skeleton rows inside the Updates content before the session and while `updates/get` is pending, none once answered; the `sourcesUnavailable` banner over a list (never an empty state); `No updates available.` empty state; Enter/button → one `ops/update` with `version: latestVersion` and `sourceUrl`; a CPM row with the badge, no action, and the announced sentence; the header count only when `status === 'ready' && !sourcesUnavailable`. Query rows with `within(screen.getByTestId('sidebar-updates-list'))`, never the document-wide `names()`/`queryAllByRole('option')` helpers of `SidebarView.test.tsx`, which pass today only because those tests never answer `updates/get`.
+3. Correct the JSDoc of `SidebarView.tsx:12-13` from "the search modes are P5.10's" to "the search modes are P5.6's (P3.4), the draggable split P5.10's", and say the same in the P5.5 STATUS note and in the P5.6 row's Notes (one clause: "sidebar `@installed`/`@updates` modes and the box's label are this row's; P5.5 left the Updates section unfiltered").
+4. In `src/webview/sidebar-next/STATUS.md` "Deviations" record: the Updates section shows §4's skeleton but says no "Loading updates" through the one `LiveStatus` (the sidebar announces "Loading installed packages" for the view's first load, `SidebarView.tsx:40-44`); one live region, two simultaneous first loads; left for the P5 phase review.
+5. Run the item's gates in §2.2 order, including `npx vitest run --project frontend src/webview/sidebar-next` 20 times in a row (the file mixes `waitFor` with animation frames), the harness gate `npx vitest run --project integration src/test/harness -t "prerelease toggle re-checks updates"`, and `rm -rf dist && node esbuild.mjs --v2 --production --analyze`; paste the sidebar bytes against its ceiling in the STATUS note (N63; the sidebar was at 293 929 of 329 122 after P5.4). Over the ceiling is a new stop-and-ask, not something to trim here.
+
+DO NOT:
+- Do not remove the Updates section's skeleton or make it start collapsed to keep the old document-wide counts.
+- Do not answer `updates/get` in the four Installed tests, and do not change any assertion other than the six query sites.
+- Do not add a "Loading updates" announcement in this item: `SidebarView.test.tsx:66` waits for `said()` to be exactly "Loading installed packages", and a second first-load sentence would race it.
+- Do not add a `data-testid` for the section wrapper, and do not edit `docs/ux/interaction-model.md`.
+- Do not wire `@updates` or any mode parsing into the sidebar box, and do not rename its label.
+- Do not touch `src/protocol/**`, `src/core/contracts.ts` or `docs/adr/**`.
+
+CONTRACT CHANGE: none.
+
+VERIFY: `npx tsc --noEmit` → 0; `npx eslint src` → 0; `npx vitest run --project frontend src/webview/sidebar-next` → all green with the four titles above present and `UpdatesSection.test.tsx` added; `grep -c "document.querySelectorAll" src/webview/sidebar-next/SidebarView.test.tsx` → 0; `git diff --stat -- src/webview/sidebar-next/SidebarView.test.tsx` shows changes confined to the helper block near line 40 and the six query lines; `grep -n "P5.10" src/webview/sidebar-next/SidebarView.tsx` names only the split; `npx vitest run --project integration src/test/harness -t "prerelease toggle re-checks updates"` → 1 passed; `test -e .claude/.contract-change` → false.
+
+FILES CHECKED: `/Users/mattias/github/nuiget/.github/agents/architecture-advisor.agent.md` (whole); `/Users/mattias/github/nuiget/docs/plans/2026-10-11-nuiget-2.0-execution-plan.md:60-175` (§2.1-§2.6, §3, §4) and `:278,283` (rows P5.5, P5.10); `/Users/mattias/github/nuiget/docs/plans/STATUS.md:57,61,62,76,81,82` (rows P3.4, P5.3, P5.4, P5.5, P5.2, P5.6, P5.10) and the working-tree diff of row P5.5; `/Users/mattias/github/nuiget/docs/plans/RUN.md:82`; `/Users/mattias/github/nuiget/docs/ux/interaction-model.md` §2, §4, §8; `/Users/mattias/github/nuiget/docs/adr/008-webview-architecture.md:32`; `/Users/mattias/github/nuiget/src/webview/sidebar-next/SidebarView.test.tsx:1-120,240-340`; `/Users/mattias/github/nuiget/src/webview/sidebar-next/SidebarView.tsx` (whole, plus `git diff`); `/Users/mattias/github/nuiget/src/webview/sidebar-next/UpdatesSection.tsx` (whole); `/Users/mattias/github/nuiget/src/webview/sidebar-next/InstalledSection.tsx:1-80`; `/Users/mattias/github/nuiget/src/webview/sidebar-next/STATUS.md` (head); `/Users/mattias/github/nuiget/src/webview/shared/primitives/Skeleton.tsx` (whole); `/Users/mattias/github/nuiget/src/webview/shared/primitives/SectionHeader.tsx:15-42`; `/Users/mattias/github/nuiget/src/webview/shared/store/updates.tsx` (whole); `git diff` of `src/webview/shared/store/StoreProvider.tsx`, `src/webview/main/MainShell.tsx`, `src/webview/main/index.tsx`; `/Users/mattias/github/nuiget/src/webview/sidebar/SidebarApp.tsx:47-48` (1.x defaults); `/Users/mattias/github/nuiget/src/test/harness/scenarios.test.ts:570`; `git status --porcelain --untracked-files=all` (matches the brief's file list).
+`````
+
 2026-10-13, P3.4: no L1 consultation (the item is not ⚑ and no stop-and-ask trigger fired). The ambient
 advisor was consulted twice before writing and once before the commit (where it found that every busy row
 said "Uninstalling", and that U1 was closed too early). What it settled: prove that the build
@@ -217,4 +281,5 @@ decided and written down (read-only, above); the harness scenario is written aga
 
 ## Exact next step (one item ID)
 
-P5.4 commit c (main panel); nothing in this directory. The sidebar's next own item is P5.5 (Updates section).
+P5.6 (feature search, main and sidebar browse), after P5.5's CI run is green; a fresh session starts it (second compaction of this one).
+

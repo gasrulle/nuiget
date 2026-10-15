@@ -8,6 +8,7 @@ import { useOps } from '../shared/store/ops';
 import { describeOutcome } from '../shared/store/outcomes';
 import { useProjects } from '../shared/store/projects';
 import { useSession, useSessionActions } from '../shared/store/session';
+import { useUpdates } from '../shared/store/updates';
 
 export type MainTab = 'installed' | 'updates';
 
@@ -51,6 +52,7 @@ export function MainShell({ installed, updates, details }: MainShellProps): Reac
     const { session } = useSession();
     const { set } = useSessionActions();
     const { projects, error: projectsError } = useProjects();
+    const updatesSlice = useUpdates();
     const [query, setQuery] = useState('');
     const [chosenTab, setChosenTab] = useState<MainTab>('installed');
     const [split, setSplit] = useState(SPLIT.initial);
@@ -81,6 +83,9 @@ export function MainShell({ installed, updates, details }: MainShellProps): Reac
     const parsed = parseSearchQuery(query);
     const modeTab = TAB_OF_MODE[parsed.mode];
     const tab = modeTab ?? chosenTab;
+    // The badge counts the updates the host answered; while it checks or cannot say, there is no number.
+    const updateCount = updatesSlice.status === 'ready' && !updatesSlice.sourcesUnavailable ? updatesSlice.rows.length : undefined;
+    const tabs = TABS.map(item => (item.id === 'updates' && updateCount !== undefined ? { ...item, count: updateCount } : item));
     const view: ListView = { filter: modeTab ? parsed.filterText : '', vulnerableOnly: parsed.mode === 'vulnerable', announce };
 
     const selectTab = (next: MainTab): void => {
@@ -150,7 +155,7 @@ export function MainShell({ installed, updates, details }: MainShellProps): Reac
             {projectsError ? <Banner severity="error">{`Projects could not be listed: ${projectsError.message}`}</Banner> : null}
             <div className="nuiget-main-split" style={cssVars({ '--nuiget-split': `${split}%` })}>
                 <div className="nuiget-main-list" id={listPaneId}>
-                    <Tabs tabs={TABS} selected={tab} onSelect={selectTab} label="Package lists" data-testid="tab-bar">
+                    <Tabs tabs={tabs} selected={tab} onSelect={selectTab} label="Package lists" data-testid="tab-bar">
                         {tab === 'installed' ? installed?.(view) : updates?.(view)}
                     </Tabs>
                 </div>

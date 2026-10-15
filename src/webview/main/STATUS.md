@@ -1,4 +1,4 @@
-# STATUS — src/webview/main   commit 4a083b5 (parent of the P5.4 commit c)   2026-10-15T01:30:00Z
+# STATUS — src/webview/main   commit 04ac55f (parent of the P5.5 commit)   2026-10-16T08:30:00Z
 
 Scope of this note: `src/webview/main/**`, the 2.0 main panel webview. The ExTester side is in
 `src/test/ui/v2/STATUS.md`; the slices and primitives this item changed are in `src/webview/shared/STATUS.md`.
@@ -13,7 +13,39 @@ InstalledTab.test.tsx,InstalledProjectSection.tsx,TransitiveSection.tsx,BulkUnin
 Item: **P5.4 feature installed (main), commit c of three** (a `e4a7f4f`, b `4a083b5`), as steps 7 to 9 of the
 P5.4 stop-and-ask ruling of 2026-10-14 (verbatim in `docs/plans/STATUS.md`). Earlier in this note: P5.3.
 
+git status --porcelain --untracked-files=all (P5.5, before the commit): `?? src/webview/shared/store/{updates.tsx,updates.test.tsx}`,
+`?? src/webview/main/features/updates/{UpdatesTab.tsx,UpdatesTab.test.tsx,UpdateAllDialog.tsx,CentralUpdateDialog.tsx}`,
+`?? src/webview/sidebar-next/{UpdatesSection.tsx,UpdatesSection.test.tsx}`, `?? src/test/ui/v2/main-updates.ui.test.ts`,
+` M src/webview/shared/store/StoreProvider.tsx`, ` M src/webview/main/{MainShell.tsx,index.tsx}`,
+` M src/webview/sidebar-next/{SidebarView.tsx,SidebarView.test.tsx}`, ` M src/test/harness/{FakeWebview.ts,scenarios.test.ts}`,
+` M ARCHITECTURE.md`, ` M CHANGELOG.md`, ` M docs/plans/STATUS.md` and the five STATUS notes of the item's directories
+
+Item: **P5.5 feature updates**, for this directory: `features/updates/` (`UpdatesTab.tsx`, `UpdateAllDialog.tsx`, `CentralUpdateDialog.tsx`, 9 tests), the count on the Updates tab only for a complete answer, `index.tsx` hands the tab to the shell (`updates={view => <UpdatesTab {...view} />}`; `wc -l MainShell.tsx index.tsx` → 170 + 25 = 195 < 300). Earlier in this note: P5.4.
+
 ## Verified by running
+
+P5.5:
+
+```text
+baseline at 04ac55f          → CI run 38677913029 green · npx tsc --noEmit 0 · npx eslint src 0 · npx vitest run green
+first full run with the Updates section mounted → 4 of 25 `SidebarView.test.tsx` tests red at document-wide
+                               `.nuiget-skeleton-row` counts → stop-and-ask (ruling of 2026-10-16, option 1: six query
+                               sites re-scoped to the Installed section, the four tests named by title)
+npx tsc --noEmit / npm run check-types / npx eslint src → exit 0 each
+npx vitest run --project frontend src/webview/sidebar-next, 20 times in a row → 20 of 20 (4 files, 30 tests)
+npx vitest run --project integration src/test/harness → 19 passed · -t "prerelease toggle re-checks updates" 40 of 40
+npm test (NUIGET_SDK_TESTS=1, DOTNET_ROOT set) → Test Files 144 passed (144) · Tests 3065 passed (3065)
+npm run bench                → Test Files 20 passed (20) · Tests 119 passed | 1 skipped (120)
+npx vitest run --coverage     → exit 0 (thresholds hold) · store/updates.tsx 97.61 % lines · main/features/updates 89.58 %
+npm run docs:protocol:check  → docs/protocol.md is up to date
+rm -rf dist && node esbuild.mjs --v2 --production --analyze → extension 280611 / 299921 · webview 309114 / 600685
+                               (301845 at P5.4) · sidebar 288948 / 329122 (293929 noted at P5.4)
+rm -rf dist && NUIGET_V2=1 npm run package && npm run check:vsix → check:vsix: OK
+NUIGET_V2=1 npm run test:ui:v2 -- --storage /tmp/nuiget-ui-v2 → 13 passing at the first run (Updates tab: 3)
+npm run package:vsix (1.x)   → SKIPPED: no host, root, extension or 1.x file changed; CI's Package job builds it
+npm run test:ui (1.x)        → SKIPPED: no 1.x UI file changed; the CI job `UI` runs it
+test -e .claude/.contract-change → false · git diff --stat 04ac55f -- src/protocol src/core docs/adr src/host → empty
+```
 
 P5.4 commit c:
 
@@ -73,6 +105,7 @@ NUIGET_V2=1 npm run test:ui:v2 -- --storage /tmp/nuiget-ui-v2 → third run 6 pa
 
 ## Done (tested)
 
+- P5.5 `UpdatesTab.test.tsx` (9): list, versions, badges, tab count and axe; found rows stream and the prerelease flag the host commits is asked; Enter and the row button update with `sourceUrl`, the row busy; Update all leaves central packages out; Space selection and the central refusal announced; the read-only central preview sends nothing; an unreachable source is a banner with Retry and no count; "No updates available." only for a complete answer; All Projects empty state.
 P5.4 commit c (`features/installed/`, the ruling's step 7):
 
 - `InstalledTab.tsx`: the sections (one for the committed project from the installed slice, one per project from
@@ -161,5 +194,5 @@ the `NUIGET_V2` build checked locally and `package:vsix` on the 1.x entries.
 
 ## Exact next step (one item ID)
 
-P4.1 (proxy and certificate investigation before Transport lands): the first P4 row; P5.1, P5.3 and P5.4 ran before
-P4 by the P3.6 ruling. The next main-panel row is P5.5 (updates), after P4.10.
+P5.6 (feature search, main and sidebar browse), after P5.5's CI run is green; a fresh session starts it (second compaction of this one).
+

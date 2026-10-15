@@ -20,7 +20,8 @@
  *    `installed:<path>`, `updates:<path>|…`); a lower one is recorded and not applied. Rule 4 is unchanged; chunks are
  *    never compared.
  * R8 `checkUpdates` asks `updates/get` for the selected project; once asked, the model asks again when
- *    `resources/invalidated` names that `updates:` key. Every `sources/health` payload is kept in `health`.
+ *    `resources/invalidated` names that `updates:` key, and when an applied snapshot of the same project carries
+ *    another `includePrerelease` (another flag is another resource). Every `sources/health` payload is kept in `health`.
  */
 
 import {
@@ -307,6 +308,11 @@ export class FakeWebview {
         this.appliedRevs.push(snapshot.rev);
         if (!this.allProjectsMode && snapshot.selectedProject !== previous && isRealProject(snapshot.selectedProject)) {
             this.request('installed/get', { projectPath: snapshot.selectedProject });
+        }
+        // R8: the updates follow the committed prerelease flag.
+        const asked = this.updatesAsked;
+        if (asked && asked.projectPath === snapshot.selectedProject && asked.includePrerelease !== snapshot.includePrerelease) {
+            this.checkUpdates(snapshot.includePrerelease);
         }
     }
 }

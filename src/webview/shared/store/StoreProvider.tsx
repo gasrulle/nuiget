@@ -7,6 +7,7 @@ import { OpsProvider } from './ops';
 import { ProjectsProvider } from './projects';
 import { SessionProvider } from './session';
 import { TransitiveProvider } from './transitive';
+import { UpdatesProvider } from './updates';
 
 /**
  * The store of a surface: the bus and the slices that exist so far, each with a context of its own, so that a
@@ -19,11 +20,13 @@ export function StoreProvider({ bus, children }: { bus: MessageBus; children: Re
             <SessionProvider>
                 <ProjectsProvider>
                     <InstalledProvider>
-                        <TransitiveProvider>
-                            <AllProjectsProvider>
-                                <OpsProvider>{children}</OpsProvider>
-                            </AllProjectsProvider>
-                        </TransitiveProvider>
+                        <UpdatesProvider>
+                            <TransitiveProvider>
+                                <AllProjectsProvider>
+                                    <OpsProvider>{children}</OpsProvider>
+                                </AllProjectsProvider>
+                            </TransitiveProvider>
+                        </UpdatesProvider>
                     </InstalledProvider>
                 </ProjectsProvider>
             </SessionProvider>

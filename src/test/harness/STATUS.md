@@ -1,4 +1,4 @@
-# STATUS — src/test/harness   commit 6e2c878 (parent of the P4.9b commit)   2026-10-16T07:30:00Z
+# STATUS — src/test/harness   commit 04ac55f (parent of the P5.5 commit)   2026-10-16T08:30:00Z
 
 git status --porcelain --untracked-files=all (before the commit): new `src/test/harness/fakeFeed.ts`; modified `src/core/feeds/{health,health.test}.ts`, `src/core/catalog/{Catalog,Catalog.test,feedContexts,feedContexts.test}.ts`, `src/host/{handlers,SidebarHost}.ts`, `src/extension.next.ts`, `src/extension.next.test.ts`, `src/test/harness/{harness,FakeWebview,scenarios.test}.ts`, the five STATUS notes, `CHANGELOG.md`, `ARCHITECTURE.md`, `.github/copilot-instructions.md`, `docs/plans/STATUS.md`, `docs/plans/findings-ledger.md` (all belong to the P4.9b commit)
 
@@ -7,7 +7,39 @@ Item: **P4.9b** (harness part): `fakeFeed.ts` (`createFakeFeed`: service index, 
 `h.checkUpdates`, `h.feed`; `FakeWebview` rule R8 (`updates` slot re-asked on its key's invalidation, `health` records every
 `sources/health`); the scenarios `updates converge across surfaces` and `sources unreachable shows banner not empty`.
 
+git status --porcelain --untracked-files=all (P5.5, before the commit): `?? src/webview/shared/store/{updates.tsx,updates.test.tsx}`,
+`?? src/webview/main/features/updates/{UpdatesTab.tsx,UpdatesTab.test.tsx,UpdateAllDialog.tsx,CentralUpdateDialog.tsx}`,
+`?? src/webview/sidebar-next/{UpdatesSection.tsx,UpdatesSection.test.tsx}`, `?? src/test/ui/v2/main-updates.ui.test.ts`,
+` M src/webview/shared/store/StoreProvider.tsx`, ` M src/webview/main/{MainShell.tsx,index.tsx}`,
+` M src/webview/sidebar-next/{SidebarView.tsx,SidebarView.test.tsx}`, ` M src/test/harness/{FakeWebview.ts,scenarios.test.ts}`,
+` M ARCHITECTURE.md`, ` M CHANGELOG.md`, ` M docs/plans/STATUS.md` and the five STATUS notes of the item's directories
+
+Item: **P5.5** (harness part): `FakeWebview` R8 also follows the committed prerelease flag (an applied snapshot of the same project with another `includePrerelease` asks `updates/get` again under it), and the scenario `prerelease toggle re-checks updates` (a toggle on the sidebar makes both surfaces ask under the new flag and show the prerelease latest; a toggle back on the main panel returns both to the stable latest; one response per request). ARCHITECTURE "Two-surface harness" now lists eight rules (R7 with the `updates` slot, R8) and the P4.9b and P5.5 scenarios. Earlier in this note: P4.9b.
+
 ## Verified by running
+
+P5.5:
+
+```text
+baseline at 04ac55f          → CI run 38677913029 green · npx tsc --noEmit 0 · npx eslint src 0 · npx vitest run green
+first full run with the Updates section mounted → 4 of 25 `SidebarView.test.tsx` tests red at document-wide
+                               `.nuiget-skeleton-row` counts → stop-and-ask (ruling of 2026-10-16, option 1: six query
+                               sites re-scoped to the Installed section, the four tests named by title)
+npx tsc --noEmit / npm run check-types / npx eslint src → exit 0 each
+npx vitest run --project frontend src/webview/sidebar-next, 20 times in a row → 20 of 20 (4 files, 30 tests)
+npx vitest run --project integration src/test/harness → 19 passed · -t "prerelease toggle re-checks updates" 40 of 40
+npm test (NUIGET_SDK_TESTS=1, DOTNET_ROOT set) → Test Files 144 passed (144) · Tests 3065 passed (3065)
+npm run bench                → Test Files 20 passed (20) · Tests 119 passed | 1 skipped (120)
+npx vitest run --coverage     → exit 0 (thresholds hold) · store/updates.tsx 97.61 % lines · main/features/updates 89.58 %
+npm run docs:protocol:check  → docs/protocol.md is up to date
+rm -rf dist && node esbuild.mjs --v2 --production --analyze → extension 280611 / 299921 · webview 309114 / 600685
+                               (301845 at P5.4) · sidebar 288948 / 329122 (293929 noted at P5.4)
+rm -rf dist && NUIGET_V2=1 npm run package && npm run check:vsix → check:vsix: OK
+NUIGET_V2=1 npm run test:ui:v2 -- --storage /tmp/nuiget-ui-v2 → 13 passing at the first run (Updates tab: 3)
+npm run package:vsix (1.x)   → SKIPPED: no host, root, extension or 1.x file changed; CI's Package job builds it
+npm run test:ui (1.x)        → SKIPPED: no 1.x UI file changed; the CI job `UI` runs it
+test -e .claude/.contract-change → false · git diff --stat 04ac55f -- src/protocol src/core docs/adr src/host → empty
+```
 
 ```text
 baseline at 6e2c878         → CI run 38669483033 green on all 11 jobs · npm run check-types 0 · npx eslint src 0 · npx vitest run
@@ -26,6 +58,7 @@ git diff --name-only -- docs/adr src/protocol src/core/contracts.ts → empty
 
 ## Done (tested)
 
+- P5.5 `prerelease toggle re-checks updates`: 40 of 40 runs.
 - The two named scenarios; the six scenarios that failed at the first attempt pass unchanged; 40 runs of the whole harness.
 - `fakeDotnet.ts`: `nuget config paths` answers exit 0 and no output, which is the empty chain (no mapping, no config credentials).
 
@@ -49,7 +82,7 @@ names this directory, and in `docs/plans/STATUS.md`; the P4.9 ruling (steps 11-1
 
 ## Exact next step (one item ID)
 
-P4.10 (benches and the ARCHITECTURE 2.0 pass for feeds, transport, policy and caching), then the P4 phase gate and review.
+P5.6 (feature search, main and sidebar browse), after P5.5's CI run is green; a fresh session starts it (second compaction of this one).
 
 ## Earlier notes of this directory (kept for the P4 phase review)
 

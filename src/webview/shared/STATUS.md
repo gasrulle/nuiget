@@ -1,4 +1,4 @@
-# STATUS — src/webview/shared   commit 4a083b5 (parent of the P5.4 commit c)   2026-10-14T23:10:00Z
+# STATUS — src/webview/shared   commit 04ac55f (parent of the P5.5 commit)   2026-10-16T08:30:00Z
 
 Scope of this note: `src/webview/shared/**`, the code both 2.0 webviews share, and the test wiring it needs
 (`src/test/setup-frontend.ts`, `src/test/jest-axe.d.ts`, `src/test/lint/webview-*.test.ts`).
@@ -14,7 +14,39 @@ feature is in `src/webview/main/STATUS.md`); commit b `4a083b5`. Earlier, commit
 ruling is an L1 consultation (stop-and-ask: `Listbox.tsx` is not among the row's files); commit a touches no
 file outside those the P3.6 ruling named for P5.4.
 
+git status --porcelain --untracked-files=all (P5.5, before the commit): `?? src/webview/shared/store/{updates.tsx,updates.test.tsx}`,
+`?? src/webview/main/features/updates/{UpdatesTab.tsx,UpdatesTab.test.tsx,UpdateAllDialog.tsx,CentralUpdateDialog.tsx}`,
+`?? src/webview/sidebar-next/{UpdatesSection.tsx,UpdatesSection.test.tsx}`, `?? src/test/ui/v2/main-updates.ui.test.ts`,
+` M src/webview/shared/store/StoreProvider.tsx`, ` M src/webview/main/{MainShell.tsx,index.tsx}`,
+` M src/webview/sidebar-next/{SidebarView.tsx,SidebarView.test.tsx}`, ` M src/test/harness/{FakeWebview.ts,scenarios.test.ts}`,
+` M ARCHITECTURE.md`, ` M CHANGELOG.md`, ` M docs/plans/STATUS.md` and the five STATUS notes of the item's directories
+
+Item: **P5.5 feature updates**, for this directory: the `updates` slice (`store/updates.tsx`: `useResource` for `updates:<path>|<prerelease>` of the committed project under the committed flag, the `found` chunks before the answer, `sourcesUnavailable` as a flag, one re-request after a source recovers unless a request went out meanwhile, `RECOVERY_DELAY_MS` 300) and its mount in `StoreProvider` (inside `InstalledProvider`). Earlier in this note: P5.4.
+
 ## Verified by running
+
+P5.5:
+
+```text
+baseline at 04ac55f          → CI run 38677913029 green · npx tsc --noEmit 0 · npx eslint src 0 · npx vitest run green
+first full run with the Updates section mounted → 4 of 25 `SidebarView.test.tsx` tests red at document-wide
+                               `.nuiget-skeleton-row` counts → stop-and-ask (ruling of 2026-10-16, option 1: six query
+                               sites re-scoped to the Installed section, the four tests named by title)
+npx tsc --noEmit / npm run check-types / npx eslint src → exit 0 each
+npx vitest run --project frontend src/webview/sidebar-next, 20 times in a row → 20 of 20 (4 files, 30 tests)
+npx vitest run --project integration src/test/harness → 19 passed · -t "prerelease toggle re-checks updates" 40 of 40
+npm test (NUIGET_SDK_TESTS=1, DOTNET_ROOT set) → Test Files 144 passed (144) · Tests 3065 passed (3065)
+npm run bench                → Test Files 20 passed (20) · Tests 119 passed | 1 skipped (120)
+npx vitest run --coverage     → exit 0 (thresholds hold) · store/updates.tsx 97.61 % lines · main/features/updates 89.58 %
+npm run docs:protocol:check  → docs/protocol.md is up to date
+rm -rf dist && node esbuild.mjs --v2 --production --analyze → extension 280611 / 299921 · webview 309114 / 600685
+                               (301845 at P5.4) · sidebar 288948 / 329122 (293929 noted at P5.4)
+rm -rf dist && NUIGET_V2=1 npm run package && npm run check:vsix → check:vsix: OK
+NUIGET_V2=1 npm run test:ui:v2 -- --storage /tmp/nuiget-ui-v2 → 13 passing at the first run (Updates tab: 3)
+npm run package:vsix (1.x)   → SKIPPED: no host, root, extension or 1.x file changed; CI's Package job builds it
+npm run test:ui (1.x)        → SKIPPED: no 1.x UI file changed; the CI job `UI` runs it
+test -e .claude/.contract-change → false · git diff --stat 04ac55f -- src/protocol src/core docs/adr src/host → empty
+```
 
 P5.4 commit b:
 
@@ -114,6 +146,7 @@ git grep -n 'console.warn\|RESTORE\|AFTER\|TEST' -- primitives/layers.ts primiti
 
 ## Done (tested)
 
+- P5.5 `store/updates.test.tsx` (6): asks under the committed project and flag and nothing without a single project; found rows stream, the enriched answer replaces them; rows kept while revalidating, an unavailable answer is a flag, not empty; a recovery asks again once; a recovery followed by a manual refresh's invalidation asks exactly once (P4 review note); a health event while the answer was available asks nothing.
 P5.4 commit b (P5.4 ruling steps 3, 4 and 6):
 
 - `primitives/Listbox.tsx`, `Row.tsx`, `primitives.css`: multi-selection, additive. `selectedIds` and
@@ -453,5 +486,5 @@ FILES CHECKED: `docs/plans/2026-10-11-nuiget-2.0-execution-plan.md:41-175,240-25
 
 ## Exact next step (one item ID)
 
-P4.1 (the first P4 row). In this directory the next change is P5.5's `updates` slice (after P4.10); P5.2 closes the
-slice sweep after P5.9.
+P5.6 (feature search, main and sidebar browse), after P5.5's CI run is green; a fresh session starts it (second compaction of this one).
+

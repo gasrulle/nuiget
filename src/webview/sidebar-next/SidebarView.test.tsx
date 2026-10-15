@@ -38,6 +38,9 @@ async function mountWith(packages: InstalledPackage[], changes: Partial<Installe
 }
 
 const list = (): HTMLElement => screen.getByTestId('sidebar-installed-list');
+/** The content of the Installed section, found through its toggle; the Updates section has skeleton rows of its own. */
+const installedContent = (): HTMLElement => document.getElementById(screen.getByTestId('section-header-installed').getAttribute('aria-controls')!)!;
+const skeletonRows = (): NodeListOf<Element> => installedContent().querySelectorAll('.nuiget-skeleton-row');
 const row = (id: string): HTMLElement => screen.getByTestId(`package-row-${id.toLowerCase()}`);
 const option = (id: string): HTMLElement => within(row(id)).getByRole('option');
 const names = (): string[] => screen.queryAllByRole('option').map(element => element.querySelector('.nuiget-row-name')?.textContent ?? '');
@@ -59,16 +62,16 @@ describe('sidebar: Installed section', () => {
     it('shows skeleton rows while the first list is loading, then the packages of the selected project', async () => {
         const host = mount();
         expect(screen.getByRole('main')).toBe(screen.getByTestId('nuiget-sidebar'));
-        expect(document.querySelectorAll('.nuiget-skeleton-row')).toHaveLength(3);
+        expect(skeletonRows()).toHaveLength(3);
         await hostSays(() => host.respond(host.requests('session/get')[0], snapshot(1, A)));
         expect(host.requests('installed/get').map(request => request.payload)).toEqual([{ projectPath: A }]);
-        expect(document.querySelectorAll('.nuiget-skeleton-row')).toHaveLength(3);
+        expect(skeletonRows()).toHaveLength(3);
         await waitFor(() => expect(said()).toBe('Loading installed packages'));
         // The section says that it is busy, to the eye; the words are the live region's.
         expect(sectionSpinner()).not.toBeNull();
 
         await hostSays(() => host.respond(host.requests('installed/get')[0], installed(A, [pkg('Serilog', { version: '3.0.0' }), pkg('Moq', { version: '4.20.0' })]), 1));
-        expect(document.querySelectorAll('.nuiget-skeleton-row')).toHaveLength(0);
+        expect(skeletonRows()).toHaveLength(0);
         expect(screen.getByRole('listbox', { name: 'Installed' })).toBe(list());
         expect(names()).toEqual(['Serilog', 'Moq']);
         expect(option('Serilog')).toHaveAccessibleName('Serilog 3.0.0');
@@ -257,7 +260,7 @@ describe('sidebar: Installed section', () => {
         expect(list()).toHaveAttribute('aria-busy', 'true');
         expect(screen.getByRole('progressbar', { name: 'Refreshing installed packages' })).not.toHaveAttribute('aria-valuenow');
         expect(sectionSpinner()).not.toBeNull();
-        expect(document.querySelectorAll('.nuiget-skeleton-row')).toHaveLength(0);
+        expect(skeletonRows()).toHaveLength(0);
         // Not a first load: nothing new is said, also two frames later, when an announcement would be there.
         await act(async () => {
             await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
@@ -274,7 +277,7 @@ describe('sidebar: Installed section', () => {
         const host = await mountWith([pkg('Serilog')]);
         await hostSays(() => host.event('session/changed', snapshot(2, B)));
         expect(screen.queryByTestId('sidebar-installed-list')).toBeNull();
-        expect(document.querySelectorAll('.nuiget-skeleton-row')).toHaveLength(3);
+        expect(skeletonRows()).toHaveLength(3);
         await hostSays(() => host.respond(host.requests('installed/get').at(-1)!, installed(B, [pkg('xunit')]), 1));
         expect(names()).toEqual(['xunit']);
     });
@@ -287,7 +290,7 @@ describe('sidebar: Installed section', () => {
         expect(banner).toHaveAttribute('role', 'alert');
         expect(banner).toHaveTextContent('Error: Installed packages could not be loaded: dotnet is not installed');
         // Loading has ended.
-        expect(document.querySelectorAll('.nuiget-skeleton-row')).toHaveLength(0);
+        expect(skeletonRows()).toHaveLength(0);
 
         await userEvent.click(within(banner).getByRole('button', { name: 'Retry' }));
         expect(host.requests('installed/get')).toHaveLength(2);

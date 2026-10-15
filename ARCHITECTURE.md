@@ -103,7 +103,7 @@ Each row is filled in by the item that creates the module.
 | `src/core/**` | Platform-agnostic logic: CLI runner, project model, queries, operations, feeds | Present: `contracts.ts`, `util/`, `versioning/`, `cache/`, `logging/`, `cli/`, `session/`, `queries/`, `http/ssrf.ts`, `ops/`, `project/` (static inspection and context), `sources/`, `credentials/` and `catalog/`. Absent: `feeds/` and `http/Transport.ts` (P4), the evaluator (P6.2), the mutator (P6.3) |
 | `src/host/**` | Adapts VS Code to the core (ADR-007); no business logic. `WebviewHost` is the base of both surfaces: it decodes an inbound envelope with the protocol guards, calls the handler registered for its type and posts exactly one terminal response per request id, an error envelope included (`unsupported` for a type nobody registered, `failed` for a thrown error, the code of a `HostRequestError`). A handler whose result is a coordinator resource sets `ctx.generation`, and the base puts it on the ok envelope (ADR-007); an error response and a chunk never carry one. A request's `AbortSignal` is aborted with a reason: `cancelled` when the webview sent a cancel envelope, `disposed` when the surface went away, and nothing is posted to a disposed surface. An error whose `code` is `not-yet-available` (a Catalog read that waits for the feeds, ADR-009) is answered as `unsupported`. `handlers.ts` registers the handlers both surfaces share (`registerSharedHandlers`): reads call one Catalog method and forward its chunks unchanged; `operations` has one typed submit function per `ops/*` request, which validates the payload (a real project, a non-empty batch), takes the restore switch as it is at submission and hands the workflow to the `OperationQueue`; `awaitTicket` ties the ticket to the request (opening chunk `queued` or `rejected` with the ticket's `opId`, progress of that operation as chunks, a webview cancel cancels the ticket, a disposed surface does not), and `settleOperation` announces the outcome to every surface and invalidates what it changed. A forced restore of `transitive/get` is such a ticket too. `sourceDirectory` decides where sources are resolved: the directory of the selected project, else the first workspace folder, else a `not-found` error. Handlers that wait for a later item answer with a fixed value under a `// REMOVAL GATE: P4.9` or `P4.4` comment. `services.ts` holds `HostServices` (what the composition root hands to both hosts), `readExtensionConfig` (the one reader of the `nuiget` settings), `renderWebviewHtml` (the Content Security Policy of ADR-006 with a script nonce of 16 random bytes per render) and `createWorkflowDeps` (the dependencies of `PackageWorkflows`, with the answer to "is this a Central Package Management project" kept per project while an operation runs). `MainPanelHost` and `SidebarHost` attach the webviews, forward session, configuration, operation and invalidation events, and the sidebar turns a context-menu choice into a typed operation; `pickers.ts` has the quick picks | Present since P2.9; composed by the root since P2.10 |
 | `src/extension.next.ts` | 2.0 composition root: it assembles and holds no business logic. `activate` calls `activateWith(context, overrides)`, whose overrides (`spawn`, `resolveExecutable`, `transport`) exist for tests and which returns `{ services, ready }`. Composition order: the output channel and one `redactingLogger` over it, which is the only `Logger` the core and both surfaces get (every message, string argument and error passes `redact`); `DefaultDotnetRunner` with its SDK cache hydrated from `globalState` under `nuiget.sdkVersionCache.v2` (the 1.x key `nuiget.sdkVersionCache` is removed at activation); a `TieredCache` over `workspaceState`; `DotnetSourceProvider`; `AssetsReader`, `StaticProjectInspector` and `ProjectContextProvider` sharing one `stopDirs` array that a workspace-folder change refills in place; `DefaultQueryCoordinator`; `DefaultSessionStore`; `DefaultOperationQueue`; the feeds: a `NodeTransport` (unless overridden) whose proxy predicate is `proxyConfigured()` (`http.proxySupport` not `off` and `http.proxy` or a proxy environment variable set, read on every call; an `http` setting change calls `transport.reset()`), a `NuGetConfigReader`, one shared `DefaultCredentialProvider` whose `nuget.config` credentials come from the registered feed contexts, one shared `DefaultServiceIndexClient`, `createFeedClients` and `FeedContexts`; one `SourceHealthTracker` shared by the service index and a health monitor (`startHealthMonitor`) that runs no `dotnet`: it probes the sources of the chains reads registered (`FeedContexts.registered()`), is restarted by `onDidRegister` and by a sources or workspace invalidation, and its changes reach both surfaces as `sources/health` without invalidating anything; the `Catalog`; `PackageWorkflows` over `createWorkflowDeps`; `HostServices` (`onOperationProgress` is `queue.onProgress`; `workspaceFolderFor` answers the deepest workspace folder that contains a path); the `SidebarHost` view provider. Every coordinator invalidation is forwarded unchanged to the sidebar and to the open main panel. `refreshProjectsAndSession` discovers the projects, announces them, sets `nuiget.hasProjectFiles`, lists the enabled sources of the project the store will keep or pick, and skips the reconcile when the selection moved during the listing (the coalesced rerun does it); otherwise it calls `session.reconcile`; it runs at activation, after an invalidation of scope `workspace`, `project` or `sources`, and when the selected project differs from the one last reconciled for (ADR-001: another project is another source list). Runs never overlap: requests during a run cause one more run. A source listing that fails is not an empty list: the last list of that directory, or else only the selected source, is passed on, so the selection survives. Six file watchers, debounced, invalidate after the queue is idle: project files and `packages.lock.json` (scope `project`), `Directory.{Build,Packages}.{props,targets}` and `global.json` (scope `workspace`; `global.json` also clears the SDK cache), `nuget.config` (scope `sources`), `obj/project.assets.json` (scope `project`, reason `restore`). One status bar item shows the queue. It registers exactly the 12 contributed commands. Three `// REMOVAL GATE: P4.9` comments mark what P4.9 adds: feeds, transport, credentials, outbound policy and icon cache at the `Catalog`; the source health monitor; the transport rebuild on an `http.*` change. The evaluator (P6.2) and the mutator (P6.3) are absent. | Present since P2.10 |
-| `src/webview/shared/**` | Tokens, primitives, message bus, store slices | Tokens and icons present since P3.1 (`tokens.css`, `primitives/icons.tsx`); primitives present since P3.2 (`primitives/index.ts`), `Dialog`, `ConfirmDialog`, `Popover`, `Tabs` and `Toolbar` since P5.1; message bus and the store slices `session`, `projects`, `installed` and `ops` present since P3.3 (`bus/`, `store/`), the other slices arrive with their features; nothing of it is in a bundle until the sidebar entry imports it in P3.4 |
+| `src/webview/shared/**` | Tokens, primitives, message bus, store slices | Tokens and icons present since P3.1 (`tokens.css`, `primitives/icons.tsx`); primitives present since P3.2 (`primitives/index.ts`), `Dialog`, `ConfirmDialog`, `Popover`, `Tabs` and `Toolbar` since P5.1; message bus and the store slices `session`, `projects`, `installed` and `ops` present since P3.3 (`bus/`, `store/`), `transitive` and `allProjects` since P5.4, `updates` since P5.5, the other slices arrive with their features; nothing of it is in a bundle until the sidebar entry imports it in P3.4 |
 | `src/webview/sidebar-next/**` | 2.0 sidebar | First slice present since P3.4: the entry, the shell with a filter box and the live region, the Installed section with uninstall ("Sidebar slice" below). Updates, browse, context menu, split and all-projects mode: P5 |
 | `src/webview/main/**` | 2.0 main panel entry and shell | Shell present since P5.3 (`MainShell.tsx`, `main.css`); the lists and the details arrive with their features from P5.4 |
 
@@ -372,9 +372,9 @@ one place for three rules:
 | No result behind an invalidation | An ok answer whose `generation` is below the one listed for the same key is not applied. Equal, higher, absent, or a key no event has named: applied. With nothing newer on its way the hook asks once more; a second out-of-date answer for the same listing ends as an error, so loading always ends. |
 
 **Slices.** Each is a reducer with a context of its own (`useSession`, `useProjects`, `useInstalled`,
-`useTransitive`, `useAllProjects`, `useOps`), so a component renders for the slice it reads; the functions that
+`useTransitive`, `useAllProjects`, `useUpdates`, `useOps`), so a component renders for the slice it reads; the functions that
 change something (`useSessionActions`, `useOpsActions`) are in separate contexts and never change.
-`StoreProvider` mounts all six, which is what makes a surface ask `session/get` and `projects/list` when it
+`StoreProvider` mounts all seven, which is what makes a surface ask `session/get` and `projects/list` when it
 starts; the other slices ask when they have something to ask for.
 
 - `session` (ADR-001): `committed` is the last snapshot of the host that was applied, and a snapshot is
@@ -398,6 +398,13 @@ starts; the other slices ask when they have something to ask for.
   `resources/invalidated` (ADR-009). The slice asks again when an invalidation names `projects` or any
   `installed:` key, keeps what it shows until the new answer, and applies the chunks and the answer of its
   latest request only.
+- `updates` (P5.5): `useResource` for `updates:<path>|<prerelease>` of the committed project under the committed
+  prerelease flag; another flag is another resource, so a toggle asks again. Nothing is asked without a single
+  project. Before the answer the rows are the bare `found` chunks of the latest request; the answer replaces them
+  with the enriched rows (icon, authors, verification). `sourcesUnavailable` is kept as a flag, never as an empty
+  list. When a `sources/health` event no longer lists a source that the previous one listed and the shown answer
+  was unavailable, the slice asks again once after `RECOVERY_DELAY_MS` (300 ms), unless a request went out in the
+  meantime: a manual refresh announces `failed: []` and then invalidates, and that invalidation is the one request.
 - `ops`: operations in progress, by operation id, from `ops/progress` (`running`, `restoring`; the host sends
   no `queued` event) and, on the surface that asked, from the call: `run(type, payload)` records the operation
   at once under an id of the surface, with its kind and the projects and packages read from the payload
@@ -499,6 +506,31 @@ both surfaces with the same list of the generation the last event listed.
   there are several), "Required by" as each row's description, a Restore banner (`transitive-restore-banner`)
   when the assets file is missing, and the rows' metadata only when the host can answer it.
 
+### Updates feature (main and sidebar)
+
+`src/webview/main/features/updates` is the Updates tab (P5.5), handed to the shell as
+`updates={view => <UpdatesTab {...view} />}`; the shell shows the count on the tab only when the answer is
+complete (not while loading, not with `sourcesUnavailable`).
+
+- **List.** One multi-selectable list (`updates-list`) of the `updates` slice's rows, `installed → latest` as
+  each row's version, the `CPM` and `Verified` badges, and `row-action-update` per row. Enter or the button sends
+  `ops/update` with the row's `sourceUrl`; the row is busy from the request on and leaves with the host's next
+  list. `@updates <text>` filters by id.
+- **Bulk flow.** `select-all-button` and `update-all-button` ("Update all (n)" or "Update selected (n)", centrally
+  managed and busy rows left out); the `ConfirmDialog` lists `id: from → to` and Confirm sends `ops/bulkUpdate`.
+- **Centrally managed packages.** Until the central editor of P6.3 exists, a package declared in
+  `Directory.Packages.props` is never updated from a project: Enter opens a read-only dialog
+  (`cpm-preview-dialog`) that names the central change, and Space announces that it cannot join a bulk update.
+- **Unknown is not empty.** `sourcesUnavailable` is a warning banner with Retry over the list
+  (`updates-unavailable-banner`), and the empty list then says that updates could not be checked; "No updates
+  available." only follows a complete answer. All Projects shows an empty state until P5.9.
+
+The sidebar's `UpdatesSection` (`src/webview/sidebar-next`) reads the same slice: compact rows in
+`sidebar-updates-list` under `section-header-updates`, the count only when known, Enter and the row button
+update, a centrally managed package is announced and has no row button, the banner is
+`sidebar-updates-unavailable` and the empty state `sidebar-updates-empty`. The sidebar's search box filters the
+Installed section only; its search modes are P5.6's.
+
 ### Two-surface harness
 
 `src/test/harness` tests what the two surfaces do together, on the 2.0 protocol
@@ -517,7 +549,7 @@ both surfaces with the same list of the generation the last event listed.
 - **Fake feed.** `fakeFeed.ts` is the injected `transport` (a `FakeTransport` over a scripted handler): the service
   index, search, registration and flat container of `SHARED_FEED` and `PRIVATE_FEED`, answered from what a scenario
   `publish`es; `down` fails every request. No request reaches the network, and the real health monitor runs over it.
-- **Fake webview.** `FakeWebview.ts` records every envelope and keeps a small client model. Its seven rules
+- **Fake webview.** `FakeWebview.ts` records every envelope and keeps a small client model. Its eight rules
   are the ones the message bus and store of the webviews implement (ADR-001, ADR-002, ADR-008; "Message bus
   and store slices" above):
   1. On start it asks `session/get` and `projects/list`. A snapshot (from a `session/get` or `session/set`
@@ -532,10 +564,13 @@ both surfaces with the same list of the generation the last event listed.
   5. Progress, chunks, `ops/completed` and terminal responses are recorded; a request without a terminal
      response is pending.
   6. Every envelope is kept verbatim; other events are recorded only.
-  7. An ok response of the `projects` or `installed` slot carries `generation`; it is applied only when that
-     generation is not below the one the latest `resources/invalidated` event listed for its key (`projects`,
-     `installed:<path>`); a lower one is recorded and not applied. Rule 4 is unchanged; chunks are never
-     compared with a generation.
+  7. An ok response of the `projects`, `installed` or `updates` slot carries `generation`; it is applied only when
+     that generation is not below the one the latest `resources/invalidated` event listed for its key (`projects`,
+     `installed:<path>`, `updates:<path>|…`); a lower one is recorded and not applied. Rule 4 is unchanged; chunks
+     are never compared with a generation.
+  8. `checkUpdates` asks `updates/get` for the selected project; once asked, the model asks again when
+     `resources/invalidated` names that `updates:` key and when an applied snapshot of the same project carries
+     another `includePrerelease`. Every `sources/health` payload is kept.
 - **Driver.** `resolve`, `dispose`, `selectProject`, `toggle`, `operate`, `refresh`, `request`, `cancel`,
   `showAllProjects`, `command`, the `files` verbs (an edit on disk plus the file watcher's event), `advance`
   and `settle`. `expectState` waits until every visible surface equals the host and the host equals the
@@ -551,8 +586,10 @@ both surfaces with the same list of the generation the last event listed.
   converges`, and since P5.4 `bulk remove partial failure reconciles` (a bulk uninstall of three where one
   removal fails: the batch is `partial`, the failed package stays in the file and on both surfaces, nothing is
   removed by guessing, the credential in the error output does not reach the outcome, the project is restored
-  once, and the operation's invalidation names only the packages that went). Later items add theirs here (P4.9,
-  P5.5 to P5.9, P6.4).
+  once, and the operation's invalidation names only the packages that went), since P4.9b `updates converge across
+  surfaces` (one computation for both surfaces, both ask again after an update) and `sources unreachable shows
+  banner not empty`, and since P5.5 `prerelease toggle re-checks updates` (a toggle on either surface makes both
+  ask under the new flag, and back). Later items add theirs here (P5.6 to P5.9, P6.4).
 
 ### Coexistence of 1.x and 2.0
 

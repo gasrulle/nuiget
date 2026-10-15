@@ -5,12 +5,14 @@ import { Banner, LiveStatus, ProgressBar } from '../shared/primitives';
 import { useInstalled } from '../shared/store/installed';
 import { useOps } from '../shared/store/ops';
 import { InstalledSection } from './InstalledSection';
+import { UpdatesSection } from './UpdatesSection';
 import { describeOutcome } from './outcomes';
 
 /**
- * The 2.0 sidebar, first slice: a box that filters the installed packages, and the Installed section. What is
- * said to a screen reader goes through the one live region here: that a list is loading, and how every
- * operation ended, on whichever surface it started.
+ * The 2.0 sidebar: a box that filters the installed packages, the Installed section and the Updates section (the
+ * search modes are P5.6's (P3.4), the draggable split between the sections P5.10's). What is said to a screen reader
+ * goes through the one live region here: that a list is loading, and how every operation ended, on whichever surface
+ * it started.
  */
 export function SidebarView(): React.JSX.Element {
     const bus = useMessageBus();
@@ -62,6 +64,7 @@ export function SidebarView(): React.JSX.Element {
                 ? <Banner severity="error" data-testid="sidebar-installed-error" action={{ label: 'Retry', onClick: installed.refresh }}>{`Installed packages could not be loaded: ${installed.error.message}`}</Banner>
                 : null}
             <InstalledSection filter={filter} announce={announce} />
+            <UpdatesSection announce={announce} />
             <LiveStatus message={said.message} repeat={said.count} />
         </main>
     );

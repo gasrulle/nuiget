@@ -1,0 +1,187 @@
+import { useEffect, useMemo, useState } from 'react';
+import type React from 'react';
+import { ALL_PROJECTS, type PackageUpdate } from '../../../../protocol';
+import { IN_PROGRESS } from '../../../shared/installed/rules';
+import { ArrowUpIcon, Badge, Banner, EmptyState, IconButton, Listbox, Row, Skeleton, Toolbar } from '../../../shared/primitives';
+import { useInstalled } from '../../../shared/store/installed';
+import { useOps, useOpsActions } from '../../../shared/store/ops';
+import { useSession } from '../../../shared/store/session';
+import { useUpdates } from '../../../shared/store/updates';
+import type { ListView } from '../../MainShell';
+import { CentralUpdateDialog } from './CentralUpdateDialog';
+import { UpdateAllDialog } from './UpdateAllDialog';
+
+/** An update as the list holds it; the list identifies its items by `id`. */
+interface Item {
+    id: string;
+    update: PackageUpdate;
+}
+
+const HINT = 'Space selects the package for a bulk update. Enter updates it.';
+
+/**
+ * The Updates tab of the main panel: the updates of the selected project, newest version per package, with the bulk
+ * toolbar over them. A source that could not be checked is a banner over the list, never an empty "no updates". A
+ * centrally managed package opens a read-only preview of the central change instead of updating (until P6.3).
+ * Nothing is removed here: a row is busy from the request on and leaves when the host's next list no longer has it.
+ */
+export function UpdatesTab({ filter, announce }: ListView): React.JSX.Element {
+    const { committed } = useSession();
+    const updates = useUpdates();
+    const installed = useInstalled();
+    const { isPackageBusy, active } = useOps();
+    const { run } = useOpsActions();
+    const [currentId, setCurrentId] = useState<string | null>(null);
+    const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
+    const [confirming, setConfirming] = useState(false);
+    const [central, setCentral] = useState<PackageUpdate | null>(null);
+
+    const selection = committed?.selectedProject;
+    useEffect(() => {
+        setCurrentId(null);
+        setSelected(new Set());
+        setConfirming(false);
+        setCentral(null);
+    }, [selection]);
+
+    const { projectPath, rows } = updates;
+    const centralIds = useMemo(() => new Set((installed.result?.packages ?? [])
+        .filter(entry => entry.declaration === 'central' || entry.declaration === 'central-override')
+        .map(entry => entry.id.toLowerCase())), [installed.result]);
+    const isCentral = (id: string): boolean => centralIds.has(id.toLowerCase());
+    const isBusy = (id: string): boolean => projectPath !== null && isPackageBusy(projectPath, id);
+
+    const needle = filter.trim().toLowerCase();
+    const items = useMemo<Item[]>(() => rows.filter(row => row.id.toLowerCase().includes(needle)).map(update => ({ id: update.id, update })), [rows, needle]);
+    // A bulk update takes the rows shown that are neither centrally managed nor busy.
+    const candidates = items.filter(item => !isCentral(item.id) && !isBusy(item.id)).map(item => item.update);
+    const chosen = candidates.filter(update => selected.has(update.id));
+    const toUpdate = chosen.length > 0 ? chosen : candidates;
+    const allSelected = candidates.length > 0 && chosen.length === candidates.length;
+
+    const busyStatus = (packageId: string): string => {
+        const id = packageId.toLowerCase();
+        for (const progress of active.values()) {
+            if (progress.kind !== undefined && progress.projectPaths?.includes(projectPath ?? '') && progress.packageIds?.some(other => other.toLowerCase() === id)) {
+                return IN_PROGRESS[progress.kind];
+            }
+        }
+        return 'In progress';
+    };
+
+    const updateOne = (update: PackageUpdate): void => {
+        if (projectPath === null || isBusy(update.id)) {
+            return;
+        }
+        if (isCentral(update.id)) {
+            setCentral(update);
+            return;
+        }
+        // The row is busy from this call on (ops slice); the outcome is announced from the slice.
+        run('ops/update', { projectPath, packageId: update.id, version: update.latestVersion, sourceUrl: update.sourceUrl }).catch((error: unknown) => {
+            announce(`Update of ${update.id} failed: ${error instanceof Error ? error.message : String(error)}`);
+        });
+    };
+
+    const toggle = (update: PackageUpdate): void => {
+        if (isCentral(update.id)) {
+            announce(`${update.id} is centrally managed and cannot be part of a bulk update yet.`);
+            return;
+        }
+        setSelected(previous => {
+            const next = new Set(previous);
+            if (!next.delete(update.id)) {
+                next.add(update.id);
+            }
+            return next;
+        });
+    };
+
+    const confirm = (): void => {
+        setConfirming(false);
+        setSelected(new Set());
+        if (projectPath === null || toUpdate.length === 0) {
+            return;
+        }
+        run('ops/bulkUpdate', { projectPath, packages: toUpdate.map(update => ({ id: update.id, version: update.latestVersion, sourceUrl: update.sourceUrl })) }).catch((error: unknown) => {
+            announce(`Update failed: ${error instanceof Error ? error.message : String(error)}`);
+        });
+    };
+
+    let body: React.ReactNode;
+    if (committed === undefined) {
+        body = <Skeleton density="comfortable" />;
+    } else if (projectPath === null) {
+        body = <EmptyState message={selection === ALL_PROJECTS ? 'Updates for All Projects are not available in this view yet. Select a single project.' : 'No .NET projects found in this workspace.'} />;
+    } else if (updates.status === 'error' && rows.length === 0) {
+        body = null;
+    } else if (updates.status === 'loading' && rows.length === 0) {
+        body = <Skeleton density="comfortable" />;
+    } else {
+        // Empty is not unknown: with a source that could not be checked, no row does not mean no update.
+        const empty = updates.sourcesUnavailable
+            ? 'Updates could not be checked: no package source answered.'
+            : rows.length === 0 ? 'No updates available.' : `No update matches "${filter.trim()}".`;
+        body = (
+            <Listbox
+                items={items}
+                label="Updates"
+                hint={HINT}
+                testId="updates-list"
+                density="comfortable"
+                busy={updates.revalidating || updates.status === 'loading'}
+                selectedId={currentId}
+                selectedIds={selected}
+                onToggleSelected={item => toggle(item.update)}
+                onSelect={item => setCurrentId(item.id)}
+                onActivate={item => updateOne(item.update)}
+                empty={<EmptyState message={empty} />}
+                renderRow={(item, placement) => {
+                    const { update } = item;
+                    const busy = isBusy(update.id);
+                    const centrallyManaged = isCentral(update.id);
+                    return (
+                        <Row
+                            {...placement}
+                            itemId={update.id}
+                            name={update.id}
+                            version={`${update.installedVersion} → ${update.latestVersion}`}
+                            density="comfortable"
+                            busy={busy}
+                            status={busy ? busyStatus(update.id) : undefined}
+                            badges={<>
+                                {centrallyManaged ? <Badge label="CPM" title="Centrally managed" /> : null}
+                                {update.verified ? <Badge label="Verified" tone="info" title="The package id prefix is reserved by its owner" /> : null}
+                            </>}
+                            actions={(
+                                <IconButton label={`Update ${update.id} to ${update.latestVersion}`} tabIndex={-1} data-testid="row-action-update" onClick={() => updateOne(update)}><ArrowUpIcon /></IconButton>
+                            )}
+                        />
+                    );
+                }}
+            />
+        );
+    }
+
+    return (
+        <div className="nuiget-installed nuiget-updates">
+            <Toolbar label="Bulk actions">
+                <button type="button" className="nuiget-button nuiget-button--secondary" data-testid="select-all-button" aria-pressed={allSelected} disabled={candidates.length === 0} onClick={() => setSelected(allSelected ? new Set() : new Set(candidates.map(update => update.id)))}>
+                    Select all
+                </button>
+                <button type="button" className="nuiget-button" data-testid="update-all-button" disabled={toUpdate.length === 0} onClick={() => setConfirming(true)}>
+                    {chosen.length > 0 ? `Update selected (${chosen.length})` : `Update all (${candidates.length})`}
+                </button>
+            </Toolbar>
+            {updates.sourcesUnavailable
+                ? <Banner severity="warning" data-testid="updates-unavailable-banner" action={{ label: 'Retry', onClick: updates.refresh }}>Some package sources could not be checked; the list may be incomplete.</Banner>
+                : null}
+            {updates.error
+                ? <Banner severity="error" action={{ label: 'Retry', onClick: updates.refresh }}>{`Updates could not be checked: ${updates.error.message}`}</Banner>
+                : null}
+            <div className="nuiget-installed-lists">{body}</div>
+            <UpdateAllDialog open={confirming && toUpdate.length > 0} updates={toUpdate} onConfirm={confirm} onCancel={() => setConfirming(false)} />
+            <CentralUpdateDialog update={central} onClose={() => setCentral(null)} />
+        </div>
+    );
+}
