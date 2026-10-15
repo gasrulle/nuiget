@@ -12,11 +12,12 @@ declare function acquireVsCodeApi(): { postMessage(message: unknown): void; getS
 const rootElement = document.getElementById('sidebar-root');
 
 if (rootElement) {
-    const bus = createMessageBus(acquireVsCodeApi());
+    const api = acquireVsCodeApi();
+    const bus = createMessageBus(api);
     ReactDOM.createRoot(rootElement).render(
         <StrictMode>
             <StoreProvider bus={bus}>
-                <SidebarView />
+                <SidebarView viewState={api} />
             </StoreProvider>
         </StrictMode>
     );

@@ -1,4 +1,70 @@
-# STATUS — src/webview/sidebar-next   commit c4c3617 (parent of the P5.6 commit)   2026-10-15T12:00:00Z
+# STATUS — src/webview/sidebar-next   commit a6c2b52 (parent of P5.10 commit a)   2026-10-16T05:00:00Z
+
+git status --porcelain --untracked-files=all (before commit a): modified `docs/plans/STATUS.md`, `src/webview/shared/store/{session,session.test}.tsx`, `src/webview/sidebar-next/{SidebarView,InstalledSection,UpdatesSection,BrowseResults,index}.tsx`, their tests `SidebarView.test.tsx`, `UpdatesSection.test.tsx`, `BrowseResults.test.tsx`, `sidebar.css` and the two STATUS notes; new `src/webview/sidebar-next/{rowRequests.ts,SidebarLayout.test.tsx}` (all belong to P5.10 commit a)
+
+Item: **P5.10 sidebar parity, commit a of four**: the split sash between the open Installed and Updates sections
+(`SidebarView`: `SidebarLayout` read from the webview's `getState` by `readLayout`, written with `setState` on a toggle
+and on `Sash.onChangeEnd`, never per pointer step; the sections' `expanded` and `share` are controlled, the share a
+flex-grow ratio through `--nuiget-sidebar-share`); the entry hands `acquireVsCodeApi()` to `SidebarView` as
+`viewState`; the three lists send `ui/contextMenu` on Shift+F10, the ContextMenu key and a right-click, and
+`ui/viewPackage` on Ctrl+Enter (Cmd+Enter), through `rowRequests.ts`; Enter keeps its primary action (uninstall,
+update, install).
+
+## Verified by running
+
+P5.10 commit a:
+
+```text
+baseline at a6c2b52          → CI run 38718679885 green on all 11 jobs; tsc 0 · eslint 0 · vitest exit 0
+stop-and-ask (commit split, Enter, browse under All Projects, the two-phase metadata) → ruling of 2026-10-16
+                               (verbatim in docs/plans/STATUS.md): four green commits a–d
+step 1 on the tree           → npx tsc --noEmit 0 · npx eslint src 0 · frontend sidebar-next + shared/store exit 0
+npx tsc --noEmit / npm run check-types / npm run lint → exit 0 each (last run after every code edit)
+src/webview/sidebar-next and src/webview/shared/store, 20 times → 20 of 20
+npm test (NUIGET_SDK_TESTS=1, DOTNET_ROOT set) → exit 0 · Test Files 157 passed (157) · Tests 3213 passed (3213)
+npm run bench / npx vitest run --coverage → exit 0 each
+rm -rf dist && node esbuild.mjs --v2 --production --analyze → extension 281249 / 299921 · webview 517871 / 600685 ·
+                               sidebar 311597 / 329122 (307187 before; N63)
+rm -rf dist && NUIGET_V2=1 npm run package && npm run check:vsix → check:vsix: OK
+NUIGET_V2=1 npm run test:ui:v2 -- --storage /tmp/nuiget-ui-v2 → 18 passing (22s); fixture unchanged
+grep of 'ui/contextMenu' and 'ui/viewPackage' senders in sidebar-next → one shared helper, rowRequests.ts
+npm run package:vsix / test:ui (1.x) → SKIPPED: no 1.x or host file changed; CI runs them
+test -e .claude/.contract-change → false
+```
+
+## Done (tested)
+
+- `SidebarLayout.test.tsx` (4): the sash and its share, the keyboard; a collapsed section and the restored layout; a
+  filter mode without the sash; `readLayout` fallbacks.
+- `SidebarView.test.tsx` (+2): `Shift+F10, the ContextMenu key and a right-click ask ui/contextMenu with the row's
+  project and versions`, `Ctrl+Enter asks ui/viewPackage with the installed version; Enter still uninstalls`. Two
+  assertions of existing tests follow the new hint sentences the ruling's step 3 asks for (`list()`'s description in
+  `shows skeleton rows while the first list is loading, then the packages of the selected project` and `unsupported SDK:
+  a banner says why, the packages are listed, and nothing can be uninstalled`); no title changed.
+- `UpdatesSection.test.tsx` (+1), `BrowseResults.test.tsx` (+1): the ruling's titles.
+
+## Done (untested)
+
+- The sash and the actions menu in VS Code: commit d's ExTester file.
+
+## Not started
+
+- The installed slice's two-phase `transitive/metadata` (commit b), the sidebar's All Projects (commit c), the host
+  picker and the docs (commit d).
+
+## Deviations from contract/ADR (file:line each)
+
+- N66 not touched in this commit (commit d checks it under the main panel beside the sidebar).
+
+## Advisor decisions (date, item, question, answer verbatim)
+
+The P5.10 ruling of the `architecture-advisor` (2026-10-16) is verbatim in `docs/plans/STATUS.md` under "### P5.10 — stop-and-ask: commit split, Enter on a sidebar row, browse under All Projects, the two-phase transitive metadata".
+
+## Exact next step (one item ID)
+
+P5.10 commit b, after commit a's CI run is green.
+
+## Earlier notes of this directory
 
 git status --porcelain --untracked-files=all (before the commit): modified `ARCHITECTURE.md`, `CHANGELOG.md`, `docs/plans/{STATUS,findings-ledger}.md`, `src/core/feeds/{enricher,enricher.test}.ts`, `src/host/handlers.test.ts`, `src/webview/main/{MainShell.tsx,index.tsx,index.test.tsx,main.css}`, `src/webview/shared/store/StoreProvider.tsx`, `src/webview/sidebar-next/{SidebarView.tsx,SidebarView.test.tsx,UpdatesSection.tsx,sidebar.css}` and the six STATUS notes; new `src/webview/shared/search/{SearchBox.tsx,SearchBox.test.tsx,search.css}`, `src/webview/shared/store/{search,sources,config}.tsx` with their tests, `src/webview/main/features/search/{BrowseList.tsx,BrowseList.test.tsx,useSearchTyping.ts,useSearchTyping.test.tsx}`, `src/webview/sidebar-next/{BrowseResults.tsx,BrowseResults.test.tsx}`, `src/test/ui/v2/main-search.ui.test.ts` (all belong to the P5.6 commit)
 
@@ -360,5 +426,6 @@ decided and written down (read-only, above); the harness scenario is written aga
 ## Exact next step (one item ID)
 
 P5.6 (feature search, main and sidebar browse), after P5.5's CI run is green; a fresh session starts it (second compaction of this one).
+
 
 

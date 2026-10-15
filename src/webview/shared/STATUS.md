@@ -1,4 +1,60 @@
-# STATUS — src/webview/shared   commit 2073c87 (parent of the P5.2 commit)   2026-10-16T03:00:00Z
+# STATUS — src/webview/shared   commit a6c2b52 (parent of P5.10 commit a)   2026-10-16T05:00:00Z
+
+git status --porcelain --untracked-files=all (before commit a): modified `docs/plans/STATUS.md`, `src/webview/shared/store/{session,session.test}.tsx`, `src/webview/sidebar-next/{SidebarView,InstalledSection,UpdatesSection,BrowseResults,index}.tsx`, their tests `SidebarView.test.tsx`, `UpdatesSection.test.tsx`, `BrowseResults.test.tsx`, `sidebar.css` and the two STATUS notes; new `src/webview/sidebar-next/{rowRequests.ts,SidebarLayout.test.tsx}` (all belong to P5.10 commit a)
+
+Item: **P5.10, commit a of four**: `store/session.tsx` asks `session/get` again when the document becomes visible (a
+view kept alive while hidden cannot miss a change; the snapshot `rev` makes an older answer a no-op). The main panel's
+slice does the same; `ui/focusSearch` stays the focus request alone.
+
+## Verified by running
+
+P5.10 commit a:
+
+```text
+baseline at a6c2b52          → CI run 38718679885 green on all 11 jobs; tsc 0 · eslint 0 · vitest exit 0
+stop-and-ask (commit split, Enter, browse under All Projects, the two-phase metadata) → ruling of 2026-10-16
+                               (verbatim in docs/plans/STATUS.md): four green commits a–d
+step 1 on the tree           → npx tsc --noEmit 0 · npx eslint src 0 · frontend sidebar-next + shared/store exit 0
+npx tsc --noEmit / npm run check-types / npm run lint → exit 0 each (last run after every code edit)
+src/webview/sidebar-next and src/webview/shared/store, 20 times → 20 of 20
+npm test (NUIGET_SDK_TESTS=1, DOTNET_ROOT set) → exit 0 · Test Files 157 passed (157) · Tests 3213 passed (3213)
+npm run bench / npx vitest run --coverage → exit 0 each
+rm -rf dist && node esbuild.mjs --v2 --production --analyze → extension 281249 / 299921 · webview 517871 / 600685 ·
+                               sidebar 311597 / 329122 (307187 before; N63)
+rm -rf dist && NUIGET_V2=1 npm run package && npm run check:vsix → check:vsix: OK
+NUIGET_V2=1 npm run test:ui:v2 -- --storage /tmp/nuiget-ui-v2 → 18 passing (22s); fixture unchanged
+grep of 'ui/contextMenu' and 'ui/viewPackage' senders in sidebar-next → one shared helper, rowRequests.ts
+npm run package:vsix / test:ui (1.x) → SKIPPED: no 1.x or host file changed; CI runs them
+test -e .claude/.contract-change → false
+```
+
+## Done (tested)
+
+- `session.test.tsx` (+1): `asks session/get again when the document becomes visible, and a stale answer changes
+  nothing`.
+
+## Done (untested)
+
+- The sash and the actions menu in VS Code: commit d's ExTester file.
+
+## Not started
+
+- The installed slice's two-phase `transitive/metadata` (commit b), the sidebar's All Projects (commit c), the host
+  picker and the docs (commit d).
+
+## Deviations from contract/ADR (file:line each)
+
+- None.
+
+## Advisor decisions (date, item, question, answer verbatim)
+
+The P5.10 ruling of the `architecture-advisor` (2026-10-16) is verbatim in `docs/plans/STATUS.md` under "### P5.10 — stop-and-ask: commit split, Enter on a sidebar row, browse under All Projects, the two-phase transitive metadata".
+
+## Exact next step (one item ID)
+
+P5.10 commit b, after commit a's CI run is green.
+
+## Earlier notes of this directory
 
 git status --porcelain --untracked-files=all (before the commit): modified `ARCHITECTURE.md`, `docs/plans/STATUS.md`, `src/webview/shared/store/StoreProvider.test.tsx`, `src/webview/shared/STATUS.md` (all belong to the P5.2 commit)
 
@@ -956,6 +1012,7 @@ FILES CHECKED: `docs/plans/2026-10-11-nuiget-2.0-execution-plan.md:41-175,240-25
 ## Exact next step (one item ID)
 
 P5.6 (feature search, main and sidebar browse), after P5.5's CI run is green; a fresh session starts it (second compaction of this one).
+
 
 
 

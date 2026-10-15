@@ -2,11 +2,12 @@ import { useId, useMemo, useState } from 'react';
 import type React from 'react';
 import { ALL_PROJECTS, type PackageUpdate } from '../../protocol';
 import { IN_PROGRESS } from '../shared/installed/rules';
-import { ArrowUpIcon, Badge, Banner, EmptyState, IconButton, Listbox, Row, SectionHeader, Skeleton } from '../shared/primitives';
+import { ArrowUpIcon, Badge, Banner, cssVars, EmptyState, IconButton, Listbox, Row, SectionHeader, Skeleton } from '../shared/primitives';
 import { useInstalled } from '../shared/store/installed';
 import { useOps, useOpsActions } from '../shared/store/ops';
 import { useSession } from '../shared/store/session';
 import { useUpdates } from '../shared/store/updates';
+import { useRowRequests } from './rowRequests';
 
 interface Item {
     id: string;
@@ -18,6 +19,11 @@ export interface UpdatesSectionProps {
     announce: (message: string) => void;
     /** The text after `@updates`: only updates whose id contains it are listed. */
     filter?: string;
+    /** Whether the section is open; the sidebar keeps it with the view's state. When absent, the section keeps its own. */
+    expanded?: boolean;
+    onToggle?: () => void;
+    /** The section's share of the height while both sections are open, a number of parts, for example `"60"` against `"40"`. */
+    share?: string;
 }
 
 function emptyMessage(sourcesUnavailable: boolean, total: number, filter: string): string {
@@ -32,19 +38,21 @@ function emptyMessage(sourcesUnavailable: boolean, total: number, filter: string
  * updates the package to its latest version; a centrally managed package is not updated from here until the central
  * editor exists (P6.3). A source that could not be checked is a banner, never "no updates".
  */
-export function UpdatesSection({ announce, filter = '' }: UpdatesSectionProps): React.JSX.Element {
+export function UpdatesSection({ announce, filter = '', expanded: controlled, onToggle, share }: UpdatesSectionProps): React.JSX.Element {
     const updates = useUpdates();
     const installed = useInstalled();
     const { isPackageBusy, active } = useOps();
     const { run } = useOpsActions();
     const { session } = useSession();
-    const [expanded, setExpanded] = useState(true);
+    const [own, setOwn] = useState(true);
+    const expanded = controlled ?? own;
     const [selectedId, setSelectedId] = useState<string | null>(null);
     const baseId = useId();
     const titleId = `${baseId}-title`;
     const contentId = `${baseId}-content`;
 
     const { projectPath, rows } = updates;
+    const { menu, viewDetails } = useRowRequests(announce);
     const needle = filter.trim().toLowerCase();
     const items = useMemo<Item[]>(() => rows.filter(update => update.id.toLowerCase().includes(needle)).map(update => ({ id: update.id, update })), [rows, needle]);
     const centralIds = useMemo(() => new Set((installed.result?.packages ?? [])
@@ -95,13 +103,20 @@ export function UpdatesSection({ announce, filter = '' }: UpdatesSectionProps): 
                 <Listbox
                     items={items}
                     labelledBy={titleId}
-                    hint="Enter updates the package to its latest version."
+                    hint="Enter updates to the latest version; Ctrl+Enter (Cmd+Enter) opens the full view; Shift+F10 opens the actions menu."
                     testId="sidebar-updates-list"
                     density="compact"
                     selectedId={selectedId}
                     busy={updates.revalidating}
                     onSelect={item => setSelectedId(item.id)}
                     onActivate={updateOne}
+                    onSecondaryActivate={({ update }) => viewDetails(update.id, update.latestVersion)}
+                    onContextMenu={({ update }) => {
+                        if (projectPath !== null) {
+                            const versionType = installed.result?.packages.find(entry => entry.id.toLowerCase() === update.id.toLowerCase())?.versionType;
+                            menu({ packageId: update.id, installedVersion: update.installedVersion, latestVersion: update.latestVersion, context: 'updates', projectPath, versionType, sourceUrl: update.sourceUrl });
+                        }
+                    }}
                     empty={<EmptyState data-testid="sidebar-updates-empty" message={emptyMessage(updates.sourcesUnavailable, rows.length, filter.trim())} />}
                     renderRow={(item, placement) => {
                         const { update } = item;
@@ -129,14 +144,14 @@ export function UpdatesSection({ announce, filter = '' }: UpdatesSectionProps): 
     }
 
     return (
-        <section className="nuiget-sidebar-section">
+        <section className={share ? 'nuiget-sidebar-section nuiget-sidebar-section--shared' : 'nuiget-sidebar-section'} style={share ? cssVars({ '--nuiget-sidebar-share': share }) : undefined}>
             <SectionHeader
                 title="Updates"
                 titleId={titleId}
                 contentId={contentId}
                 testKey="updates"
                 expanded={expanded}
-                onToggle={() => setExpanded(previous => !previous)}
+                onToggle={onToggle ?? (() => setOwn(previous => !previous))}
                 count={known ? rows.length : undefined}
                 busy={updates.status === 'loading' || updates.revalidating}
             />

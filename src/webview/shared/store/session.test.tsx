@@ -80,6 +80,28 @@ describe('session slice', () => {
         expect(text('committed')).toBe(`6 ${A} false`);
     });
 
+    it('asks session/get again when the document becomes visible, and a stale answer changes nothing', async () => {
+        const host = mount();
+        await hostSays(() => host.respond(host.requests('session/get')[0], snapshot(3, { selectedProject: B })));
+        const setVisibility = (state: DocumentVisibilityState): void => {
+            Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => state });
+            document.dispatchEvent(new Event('visibilitychange'));
+        };
+        try {
+            await act(async () => setVisibility('hidden'));
+            expect(host.requests('session/get')).toHaveLength(1);
+            await act(async () => setVisibility('visible'));
+            expect(host.requests('session/get')).toHaveLength(2);
+            await hostSays(() => host.respond(host.requests('session/get')[1], snapshot(2, { selectedProject: A })));
+            expect(text('committed')).toBe(`3 ${B} false`);
+            await act(async () => setVisibility('visible'));
+            await hostSays(() => host.respond(host.requests('session/get')[2], snapshot(4, { selectedProject: A })));
+            expect(text('committed')).toBe(`4 ${A} false`);
+        } finally {
+            Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'visible' });
+        }
+    });
+
     it('pending toggle renders before commit', async () => {
         const host = mount();
         await hostSays(() => host.respond(host.requests('session/get')[0], snapshot(1)));

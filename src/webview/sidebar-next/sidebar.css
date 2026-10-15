@@ -68,3 +68,8 @@ body {
     flex-direction: column;
     min-height: 0;
 }
+
+/* Both sections open: the height left under the header is shared in the ratio the sash sets. */
+.nuiget-sidebar-section--shared {
+    flex: var(--nuiget-sidebar-share, 1) 1 0;
+}

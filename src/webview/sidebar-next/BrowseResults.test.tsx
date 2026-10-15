@@ -149,6 +149,20 @@ describe('sidebar: search modes and browse', () => {
         expect(screen.getByTestId('section-header-updates')).toBeInTheDocument();
     });
 
+    it('the actions menu and Ctrl+Enter carry the version found', async () => {
+        const user = userEvent.setup();
+        const host = await mountReady();
+        await searchFor(host, 'serilog', [result('Serilog', '4.0.0'), result('Polly', '8.4.2')]);
+        await user.click(within(row('Polly')).getByRole('option'));
+        await user.keyboard('{Shift>}{F10}{/Shift}');
+        await user.click(within(row('Serilog')).getByRole('option'));
+        await user.keyboard('{Control>}{Enter}{/Control}');
+
+        expect(host.requests('ui/contextMenu').map(request => request.payload)).toEqual([{ packageId: 'Polly', installedVersion: undefined, latestVersion: '8.4.2', context: 'browse', projectPath: A, sourceUrl: FEED }]);
+        expect(host.requests('ui/viewPackage').map(request => request.payload)).toEqual([{ packageId: 'Serilog', version: '4.0.0' }]);
+        expect(host.requests('ops/install')).toHaveLength(0);
+    });
+
     it('has no axe violations with results', async () => {
         const host = await mountReady();
         await searchFor(host, 'polly', [result('Polly', '8.4.2'), result('Serilog', '4.0.0')]);

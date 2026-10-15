@@ -66,8 +66,8 @@ const SessionActionsContext = createContext<SessionActions | null>(null);
 
 /**
  * The session slice: the one selection of project, source, prerelease and restore that both surfaces share.
- * The host owns it; this surface asks for the current snapshot when it starts, follows `session/changed`, and
- * sends intents.
+ * The host owns it; this surface asks for the current snapshot when it starts and whenever its document becomes
+ * visible again, follows `session/changed`, and sends intents.
  */
 export function SessionProvider({ children }: { children: React.ReactNode }): React.JSX.Element {
     const bus = useMessageBus();
@@ -77,14 +77,26 @@ export function SessionProvider({ children }: { children: React.ReactNode }): Re
     useEffect(() => {
         let current = true;
         const unsubscribe = bus.onEvent('session/changed', snapshot => dispatch({ type: 'snapshot', snapshot }));
-        bus.request('session/get', {}).then(answer => {
-            if (current) {
-                dispatch({ type: 'snapshot', snapshot: answer.result });
+        const ask = (): void => {
+            bus.request('session/get', {}).then(answer => {
+                if (current) {
+                    dispatch({ type: 'snapshot', snapshot: answer.result });
+                }
+            }, () => undefined);
+        };
+        ask();
+        // A view kept alive while hidden (`retainContextWhenHidden`) asks again when it is shown: an event it missed
+        // cannot leave it behind; a snapshot no newer than the applied one changes nothing (its `rev`).
+        const onVisibility = (): void => {
+            if (document.visibilityState === 'visible') {
+                ask();
             }
-        }, () => undefined);
+        };
+        document.addEventListener('visibilitychange', onVisibility);
         return () => {
             current = false;
             unsubscribe();
+            document.removeEventListener('visibilitychange', onVisibility);
         };
     }, [bus]);
 

@@ -105,6 +105,18 @@ describe('sidebar: Updates section', () => {
         expect(host.requests('updates/get')).toHaveLength(2);
     });
 
+    it('the actions menu and Ctrl+Enter carry the update\'s versions and source', async () => {
+        const user = userEvent.setup();
+        const host = await mountWith({ updates: UPDATES });
+        await user.click(updateOption('Serilog'));
+        await user.keyboard('{Shift>}{F10}{/Shift}');
+        await user.keyboard('{Control>}{Enter}{/Control}');
+
+        expect(host.requests('ui/contextMenu').map(request => request.payload)).toEqual([{ packageId: 'Serilog', installedVersion: '3.0.0', latestVersion: '3.1.0', context: 'updates', projectPath: A, versionType: 'standard', sourceUrl: FEED }]);
+        expect(host.requests('ui/viewPackage').map(request => request.payload)).toEqual([{ packageId: 'Serilog', version: '3.1.0' }]);
+        expect(host.requests('ops/update')).toHaveLength(0);
+    });
+
     it('a complete empty answer says "No updates available" and counts 0; the header collapses the section', async () => {
         const user = userEvent.setup();
         await mountWith({ updates: [] });

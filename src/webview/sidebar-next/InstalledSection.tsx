@@ -2,10 +2,11 @@ import { useCallback, useId, useMemo, useState } from 'react';
 import type React from 'react';
 import { ALL_PROJECTS, type InstalledPackage } from '../../protocol';
 import { IN_PROGRESS, shownVersion, whyNotRemovable } from '../shared/installed/rules';
-import { Badge, EmptyState, IconButton, Listbox, Row, SectionHeader, Skeleton, TrashIcon } from '../shared/primitives';
+import { Badge, cssVars, EmptyState, IconButton, Listbox, Row, SectionHeader, Skeleton, TrashIcon } from '../shared/primitives';
 import { useInstalled } from '../shared/store/installed';
 import { useOps, useOpsActions } from '../shared/store/ops';
 import { useSession } from '../shared/store/session';
+import { useRowRequests } from './rowRequests';
 
 /** A package as the list holds it; the list identifies its items by `id`. */
 interface Item {
@@ -20,6 +21,11 @@ export interface InstalledSectionProps {
     filter: string;
     /** Something to say to a screen reader that no outcome of an operation says. */
     announce: (message: string) => void;
+    /** Whether the section is open; the sidebar keeps it with the view's state. When absent, the section keeps its own. */
+    expanded?: boolean;
+    onToggle?: () => void;
+    /** The section's share of the height while both sections are open, a number of parts, for example `"40"` against `"60"`. */
+    share?: string;
 }
 
 /**
@@ -27,18 +33,20 @@ export interface InstalledSectionProps {
  * the row's button uninstalls; the row shows a spinner from the click until the operation has ended, and the
  * list is asked for again by the store when the host says it changed, with the rows left in place meanwhile.
  */
-export function InstalledSection({ filter, announce }: InstalledSectionProps): React.JSX.Element {
+export function InstalledSection({ filter, announce, expanded: controlled, onToggle, share }: InstalledSectionProps): React.JSX.Element {
     const installed = useInstalled();
     const { isPackageBusy, active } = useOps();
     const { run } = useOpsActions();
     const { session } = useSession();
-    const [expanded, setExpanded] = useState(true);
+    const [own, setOwn] = useState(true);
+    const expanded = controlled ?? own;
     const [selectedId, setSelectedId] = useState<string | null>(null);
     const baseId = useId();
     const titleId = `${baseId}-title`;
     const contentId = `${baseId}-content`;
 
     const { projectPath, result } = installed;
+    const { menu, viewDetails } = useRowRequests(announce);
     const needle = filter.trim().toLowerCase();
     const items = useMemo<Item[]>(
         () => (result?.packages ?? []).filter(entry => entry.id.toLowerCase().includes(needle)).map(entry => ({ id: entry.id, entry })),
@@ -95,7 +103,9 @@ export function InstalledSection({ filter, announce }: InstalledSectionProps): R
             <Listbox
                 items={items}
                 labelledBy={titleId}
-                hint={readOnly ? 'This project is read-only.' : 'Enter or Delete uninstalls the package.'}
+                hint={readOnly
+                    ? 'Read-only. Ctrl+Enter (Cmd+Enter) opens the full view; Shift+F10 opens the actions menu.'
+                    : 'Enter or Delete uninstalls; Ctrl+Enter (Cmd+Enter) opens the full view; Shift+F10 opens the actions menu.'}
                 testId="sidebar-installed-list"
                 density="compact"
                 selectedId={selectedId}
@@ -103,6 +113,12 @@ export function InstalledSection({ filter, announce }: InstalledSectionProps): R
                 onSelect={item => setSelectedId(item.id)}
                 onActivate={uninstall}
                 onDelete={uninstall}
+                onSecondaryActivate={({ entry }) => viewDetails(entry.id, entry.resolvedVersion ?? entry.version)}
+                onContextMenu={({ entry }) => {
+                    if (projectPath !== null) {
+                        menu({ packageId: entry.id, installedVersion: entry.resolvedVersion ?? entry.version, context: 'installed', projectPath, versionType: entry.versionType });
+                    }
+                }}
                 empty={<EmptyState data-testid="sidebar-installed-empty" message={nothing} />}
                 renderRow={(item, placement) => {
                     const { entry } = item;
@@ -131,14 +147,14 @@ export function InstalledSection({ filter, announce }: InstalledSectionProps): R
     }
 
     return (
-        <section className="nuiget-sidebar-section">
+        <section className={share ? 'nuiget-sidebar-section nuiget-sidebar-section--shared' : 'nuiget-sidebar-section'} style={share ? cssVars({ '--nuiget-sidebar-share': share }) : undefined}>
             <SectionHeader
                 title="Installed"
                 titleId={titleId}
                 contentId={contentId}
                 testKey="installed"
                 expanded={expanded}
-                onToggle={() => setExpanded(previous => !previous)}
+                onToggle={onToggle ?? (() => setOwn(previous => !previous))}
                 count={all}
                 busy={installed.status === 'loading' || installed.revalidating}
                 actions={result?.fidelity === 'provisional'

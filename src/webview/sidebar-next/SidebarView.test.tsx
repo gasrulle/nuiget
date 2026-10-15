@@ -77,7 +77,7 @@ describe('sidebar: Installed section', () => {
         expect(option('Serilog')).toHaveAccessibleName('Serilog 3.0.0');
         // The section says how many, and the list says which keys act on a row.
         expect(screen.getByTestId('section-header-installed')).toHaveAccessibleName('Installed 2');
-        expect(list()).toHaveAccessibleDescription('Enter or Delete uninstalls the package.');
+        expect(list()).toHaveAccessibleDescription('Enter or Delete uninstalls; Ctrl+Enter (Cmd+Enter) opens the full view; Shift+F10 opens the actions menu.');
         expect(screen.queryByTestId('sidebar-installed-provisional')).toBeNull();
         expect(sectionSpinner()).toBeNull();
     });
@@ -131,7 +131,7 @@ describe('sidebar: Installed section', () => {
         expect(banner).toHaveTextContent('Warning: Unsupported project: requires .NET SDK 10 or newer');
         expect(names()).toEqual(['Serilog', 'Moq']);
         expect(screen.queryAllByTestId('row-action-uninstall')).toHaveLength(0);
-        expect(list()).toHaveAccessibleDescription('This project is read-only.');
+        expect(list()).toHaveAccessibleDescription('Read-only. Ctrl+Enter (Cmd+Enter) opens the full view; Shift+F10 opens the actions menu.');
         await userEvent.click(option('Serilog'));
         await userEvent.keyboard('{Enter}');
         expect(removals(host)).toHaveLength(0);
@@ -180,6 +180,32 @@ describe('sidebar: Installed section', () => {
         await hostSays(() => host.respond(host.requests('installed/get').at(-1)!, installed(A, [pkg('Moq')]), 2));
         expect(names()).toEqual(['Moq']);
         expect(screen.getByTestId('section-header-installed')).toHaveAccessibleName('Installed 1');
+    });
+
+    it('Shift+F10, the ContextMenu key and a right-click ask ui/contextMenu with the row\'s project and versions', async () => {
+        const user = userEvent.setup();
+        const host = await mountWith([pkg('Serilog', { version: '3.*', resolvedVersion: '3.1.1', versionType: 'floating' }), pkg('Moq')]);
+        const expected = { packageId: 'Serilog', installedVersion: '3.1.1', context: 'installed', projectPath: A, versionType: 'floating' };
+
+        await user.click(option('Serilog'));
+        await user.keyboard('{Shift>}{F10}{/Shift}');
+        await user.keyboard('{ContextMenu}');
+        await user.pointer({ keys: '[MouseRight]', target: option('Serilog') });
+
+        expect(host.requests('ui/contextMenu').map(request => request.payload)).toEqual([expected, expected, expected]);
+        expect(host.requests('ops/remove')).toHaveLength(0);
+    });
+
+    it('Ctrl+Enter asks ui/viewPackage with the installed version; Enter still uninstalls', async () => {
+        const user = userEvent.setup();
+        const host = await mountWith([pkg('Serilog', { version: '3.1.1' })]);
+        await user.click(option('Serilog'));
+        await user.keyboard('{Control>}{Enter}{/Control}');
+        expect(host.requests('ui/viewPackage').map(request => request.payload)).toEqual([{ packageId: 'Serilog', version: '3.1.1' }]);
+        expect(host.requests('ops/remove')).toHaveLength(0);
+
+        await user.keyboard('{Enter}');
+        expect(host.requests('ops/remove').map(request => request.payload)).toEqual([{ projectPath: A, packageId: 'Serilog' }]);
     });
 
     it('uninstall: Enter and Delete on the active row do the same as the button, and focus stays in the list when the row goes', async () => {

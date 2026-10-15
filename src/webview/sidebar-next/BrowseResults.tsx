@@ -5,6 +5,7 @@ import { Badge, Banner, EmptyState, IconButton, Listbox, PlusIcon, ProgressBar, 
 import { useInstalled } from '../shared/store/installed';
 import { useOps, useOpsActions } from '../shared/store/ops';
 import { useSearch } from '../shared/store/search';
+import { useRowRequests } from './rowRequests';
 
 interface Item {
     id: string;
@@ -29,6 +30,7 @@ export function BrowseResults({ announce }: BrowseResultsProps): React.JSX.Eleme
     const [selectedId, setSelectedId] = useState<string | null>(null);
 
     const projectPath = installed.projectPath;
+    const { menu, viewDetails } = useRowRequests(announce);
     const items = useMemo<Item[]>(() => search.results.map(result => ({ id: result.id, result })), [search.results]);
     const installedVersions = useMemo(
         () => new Map((installed.result?.packages ?? []).map(entry => [entry.id.toLowerCase(), entry.resolvedVersion ?? entry.version])),
@@ -82,13 +84,19 @@ export function BrowseResults({ announce }: BrowseResultsProps): React.JSX.Eleme
             <Listbox
                 items={items}
                 label={`Search results for ${query}`}
-                hint="Enter installs the package into the selected project."
+                hint="Enter installs into the selected project; Ctrl+Enter (Cmd+Enter) opens the full view; Shift+F10 opens the actions menu."
                 testId="sidebar-browse-list"
                 density="compact"
                 busy={search.revalidating}
                 selectedId={selectedId}
                 onSelect={item => setSelectedId(item.id)}
                 onActivate={install}
+                onSecondaryActivate={({ result }) => viewDetails(result.id, result.version)}
+                onContextMenu={({ result }) => {
+                    if (projectPath !== null) {
+                        menu({ packageId: result.id, installedVersion: installedVersions.get(result.id.toLowerCase()), latestVersion: result.version, context: 'browse', projectPath, sourceUrl: result.sourceUrl });
+                    }
+                }}
                 empty={<EmptyState message={search.sourcesUnavailable ? `No package source could be searched for "${query}".` : `No results for "${query}".`} />}
                 renderRow={(item, placement) => {
                     const { result } = item;
