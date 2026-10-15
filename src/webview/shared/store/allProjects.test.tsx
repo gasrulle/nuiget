@@ -1,14 +1,15 @@
 import { act, render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ALL_PROJECTS, resourceKeys, type InstalledResult, type ProjectInstalledChunk, type SessionSnapshot } from '../../../protocol';
 import { createFakeHost, type FakeHost } from '../bus/testSupport';
 import { MessageBusProvider } from '../bus/useMessageBus';
 import { AllProjectsProvider, useAllProjects, type AllProjectsState } from './allProjects';
+import { RECOVERY_DELAY_MS } from './updates';
 import { SessionProvider } from './session';
 
 const A = '/w/A/A.csproj';
 const B = '/w/B/B.csproj';
-const snapshot = (rev: number, selectedProject: string): SessionSnapshot => ({ rev, selectedProject, selectedSource: 'all', includePrerelease: false, restoreEnabled: true, origin: 'host' });
+const snapshot = (rev: number, selectedProject: string, includePrerelease = false): SessionSnapshot => ({ rev, selectedProject, selectedSource: 'all', includePrerelease, restoreEnabled: true, origin: 'host' });
 const installed = (projectPath: string, ids: string[]): InstalledResult => ({
     projectPath, fidelity: 'authoritative', isCpm: false, packages: ids.map(id => ({ id, version: '1.0.0', versionType: 'standard', declaration: 'project' })),
 });
@@ -155,5 +156,84 @@ describe('allProjects slice', () => {
         expect(host.requests('allProjects/transitive')).toHaveLength(1);
         await act(async () => current.transitive.refresh());
         expect(host.requests('allProjects/transitive')).toHaveLength(1);
+    });
+
+    describe('updates stream', () => {
+        const FEED = 'https://feed.example/v3/index.json';
+        const upd = (id: string, latestVersion: string) => ({ id, installedVersion: '1.0.0', latestVersion, sourceUrl: FEED });
+        const updatesOf = (): string => [...current.updates.chunks.values()].map(chunk => `${chunk.projectName}:${chunk.error ?? chunk.updates.map(entry => entry.id).join(',')}`).join(' ');
+
+        afterEach(() => {
+            vi.useRealTimers();
+        });
+
+        it('asks allProjects/updates with the committed prerelease flag in all-projects mode only and collects the project chunks and icons', async () => {
+            const host = await mount(A);
+            expect(host.requests('allProjects/updates')).toHaveLength(0);
+            await hostSays(() => host.event('session/changed', snapshot(2, ALL_PROJECTS, true)));
+            const [request] = host.requests('allProjects/updates');
+            expect(request.payload).toEqual({ includePrerelease: true });
+            expect(current.updates.status).toBe('loading');
+
+            await hostSays(() => host.chunk(request, { kind: 'start', projects: [{ name: 'A', path: A }, { name: 'B', path: B }] }));
+            await hostSays(() => host.chunk(request, { kind: 'project', chunk: { projectPath: A, projectName: 'A', updates: [upd('Serilog', '3.1.0')] } }));
+            await hostSays(() => host.chunk(request, { kind: 'project', chunk: { projectPath: B, projectName: 'B', updates: [], error: 'timed out' } }));
+            await hostSays(() => host.chunk(request, { kind: 'icons', icons: { Serilog: 'data:image/png;base64,AAAA' } }));
+            await hostSays(() => host.respond(request, { projectPaths: [A, B] }));
+
+            expect(current.updates.status).toBe('ready');
+            expect(current.updates.projects?.map(project => project.name)).toEqual(['A', 'B']);
+            expect(updatesOf()).toBe('A:Serilog B:timed out');
+            expect(current.updates.icons.get('serilog')).toBe('data:image/png;base64,AAAA');
+            expect(current.updates.sourcesUnavailable).toBe(false);
+        });
+
+        it('asks again when an invalidation names projects or any updates key, or the flag changes, and keeps the chunks meanwhile', async () => {
+            const host = await mount(ALL_PROJECTS);
+            const [first] = host.requests('allProjects/updates');
+            await hostSays(() => host.chunk(first, { kind: 'project', chunk: { projectPath: A, projectName: 'A', updates: [upd('Serilog', '3.1.0')] } }));
+            await hostSays(() => host.respond(first, { projectPaths: [A] }));
+
+            await hostSays(() => host.invalidate([[resourceKeys.installed(A), 2]]));
+            expect(host.requests('allProjects/updates')).toHaveLength(1);
+            await hostSays(() => host.invalidate([[resourceKeys.updates(A, false), 2]]));
+            expect(host.requests('allProjects/updates')).toHaveLength(2);
+            expect(current.updates.revalidating).toBe(true);
+            expect(updatesOf()).toBe('A:Serilog');
+            await hostSays(() => host.invalidate([[resourceKeys.projects(), 3]]));
+            await hostSays(() => host.event('session/changed', snapshot(2, ALL_PROJECTS, true)));
+            expect(host.requests('allProjects/updates').map(request => request.payload.includePrerelease)).toEqual([false, false, false, true]);
+        });
+
+        it('chunks and the response of an earlier updates request are recorded and not applied', async () => {
+            const host = await mount(ALL_PROJECTS);
+            const [first] = host.requests('allProjects/updates');
+            await hostSays(() => host.invalidate([[resourceKeys.updates(A, false), 2]]));
+            const second = host.requests('allProjects/updates')[1];
+
+            await hostSays(() => host.chunk(first, { kind: 'project', chunk: { projectPath: A, projectName: 'A', updates: [upd('Stale', '9.0.0')] } }));
+            await hostSays(() => host.respond(first, { projectPaths: [A], sourcesUnavailable: true }));
+            expect(updatesOf()).toBe('');
+            expect(current.updates.sourcesUnavailable).toBe(false);
+            await hostSays(() => host.chunk(second, { kind: 'project', chunk: { projectPath: A, projectName: 'A', updates: [upd('Serilog', '3.1.0')] } }));
+            await hostSays(() => host.respond(second, { projectPaths: [A] }));
+            expect(updatesOf()).toBe('A:Serilog');
+        });
+
+        it('a recovered source asks the all-projects updates once when they were unavailable', async () => {
+            vi.useFakeTimers();
+            const host = await mount(ALL_PROJECTS);
+            await hostSays(() => host.event('sources/health', { failed: [{ url: FEED, error: 'down' }] }));
+            await hostSays(() => host.respond(host.requests('allProjects/updates')[0], { projectPaths: [A], sourcesUnavailable: true }));
+            expect(current.updates.sourcesUnavailable).toBe(true);
+
+            await hostSays(() => host.event('sources/health', { failed: [] }));
+            await act(async () => { vi.advanceTimersByTime(RECOVERY_DELAY_MS); });
+            expect(host.requests('allProjects/updates')).toHaveLength(2);
+            // Once: another health event without a recovery asks nothing.
+            await hostSays(() => host.event('sources/health', { failed: [] }));
+            await act(async () => { vi.advanceTimersByTime(RECOVERY_DELAY_MS); });
+            expect(host.requests('allProjects/updates')).toHaveLength(2);
+        });
     });
 });

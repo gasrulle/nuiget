@@ -1,4 +1,68 @@
-# STATUS — src/webview/main   commit 69205e2 (parent of P5.9 commit a)   2026-10-15T23:00:00Z
+# STATUS — src/webview/main   commit 359a2a4 (P5.9 commit a; parent of commit b)   2026-10-16T01:00:00Z
+
+git status --porcelain --untracked-files=all (before commit b): modified `ARCHITECTURE.md`, `docs/plans/{STATUS,findings-ledger}.md`, `src/webview/main/MainShell.tsx`, `src/webview/main/features/updates/{UpdatesTab,UpdatesTab.test,UpdateAllDialog}.tsx`, `src/webview/shared/store/{allProjects,allProjects.test}.tsx` and the two STATUS notes; new `src/webview/main/features/updates/AllProjectsUpdates.tsx` (all belong to P5.9 commit b)
+
+Item: **P5.9 feature all-projects, commit b of three**: `features/updates/AllProjectsUpdates.tsx` (one section per
+project under `FolderGroups` over the `allProjects/updates` stream; multi-selectable `updates-list-<name>` labelled by
+the header; rows of an unsupported project read-only with the badge and banner; central packages from the installed
+chunk open the read-only preview; a project chunk with `error` is a banner with Retry; `sourcesUnavailable` one banner
+over all sections; Update all across projects as one `ops/bulkUpdateAllProjects`); `UpdatesTab.tsx` delegates to it in
+All Projects (the P5.5 placeholder is gone); `UpdateAllDialog.tsx` lists the packages under their project;
+`MainShell.tsx` counts the All Projects updates once every listed project has answered (`wc -l` 194 + 27 < 300).
+
+## Verified by running
+
+P5.9 commit b:
+
+```text
+baseline at 359a2a4 (commit a) → CI run 38712032135 green on all 11 jobs
+stop-and-ask (the P5.5 test `All Projects: an empty state instead of a list`) → ruling of 2026-10-15 (verbatim in
+                               docs/plans/STATUS.md): rewrite by title, second assertion kept
+npx tsc --noEmit / npm run check-types / npx eslint src / npm run lint → exit 0 each (last run after every code edit)
+git diff --numstat 359a2a4 -- src/webview/main/features/updates/UpdatesTab.test.tsx → 76 2 (the one test body; the
+                               three new titles are additions)
+src/webview/main/features/updates, 20 times → 20 of 20 · main features and store/allProjects.test.tsx, 20 times → 20 of 20
+npx vitest run --project integration src/test/harness → exit 0 · the gate scenario 40 of 40
+npm test (NUIGET_SDK_TESTS=1, DOTNET_ROOT set) → exit 0 · Test Files 156 passed (156) · Tests 3203 passed (3203)
+npm run bench                → exit 0 · Tests 119 passed | 1 skipped (120)
+npx vitest run --coverage    → exit 0 (thresholds hold) · store/allProjects.tsx 96.69 % · main/features/updates 86.89 %
+npm run docs:protocol:check  → docs/protocol.md is up to date
+rm -rf dist && node esbuild.mjs --v2 --production --analyze → extension 281249 / 299921 · webview 517706 / 600685
+                               (508743 at commit a) · sidebar 307187 / 329122 (305381 at commit a)
+rm -rf dist && NUIGET_V2=1 npm run package && npm run check:vsix → check:vsix: OK
+NUIGET_V2=1 npm run test:ui:v2 -- --storage /tmp/nuiget-ui-v2 → 16 passing (18s); fixture unchanged
+grep -rc "not available in this view yet" src/webview/main → 0 · N11 closed in the ledger
+npm run package:vsix (1.x) / npm run test:ui (1.x) → SKIPPED: no 1.x file changed; CI builds and runs them
+test -e .claude/.contract-change → false · no frozen path changed
+```
+
+## Done (tested)
+
+- `UpdatesTab.test.tsx` (+3): the ruling's three All Projects titles. Rewritten by title (follow-up ruling):
+  `All Projects: an empty state instead of a list` → `All Projects: the updates come from allProjects/updates, never
+  updates/get` (P5.9 commit b; the P5.5 placeholder sentence is gone).
+
+## Done (untested)
+
+- All Projects in VS Code: commit c.
+
+## Not started
+
+- The ExTester test and the remaining docs (commit c); the sidebar's All Projects (P5.10).
+
+## Deviations from contract/ADR (file:line each)
+
+- `touchedBy` stays flat for `ops/bulkUpdateAllProjects` (ruling; P5 phase review).
+
+## Advisor decisions (date, item, question, answer verbatim)
+
+The P5.9 ruling and the commit-b follow-up (both 2026-10-15) are verbatim in `docs/plans/STATUS.md`.
+
+## Exact next step (one item ID)
+
+P5.9 commit c (ExTester `main-all-projects.ui.test.ts`, docs), after commit b's CI run is green.
+
+## Earlier notes of this directory
 
 git status --porcelain --untracked-files=all (before commit a): modified `ARCHITECTURE.md`, `CHANGELOG.md`, `docs/plans/STATUS.md`, `src/test/harness/{FakeWebview,scenarios.test}.ts`, `src/webview/main/main.css`, `src/webview/main/features/details/{DetailsPane,DetailsPane.test}.tsx`, `src/webview/main/features/installed/{InstalledTab,InstalledTab.test,InstalledProjectSection}.tsx`, `src/webview/main/features/updates/{UpdatesTab,UpdatesTab.test}.tsx`, `src/webview/shared/store/{allProjects,allProjects.test}.tsx` and the three STATUS notes; new `src/webview/main/features/all-projects/folderGroups.tsx`, `src/webview/main/features/details/MultiInstallDialog.tsx`, `src/webview/main/features/installed/{AllProjectsTransitiveSection,AllProjectsView.test}.tsx` (all belong to P5.9 commit a)
 
@@ -542,6 +606,7 @@ the `NUIGET_V2` build checked locally and `package:vsix` on the 1.x entries.
 ## Exact next step (one item ID)
 
 P5.6 (feature search, main and sidebar browse), after P5.5's CI run is green; a fresh session starts it (second compaction of this one).
+
 
 
 

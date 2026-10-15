@@ -554,7 +554,10 @@ complete (not while loading, not with `sourcesUnavailable`).
   (`cpm-preview-dialog`) that names the central change, and Space announces that it cannot join a bulk update.
 - **Unknown is not empty.** `sourcesUnavailable` is a warning banner with Retry over the list
   (`updates-unavailable-banner`), and the empty list then says that updates could not be checked; "No updates
-  available." only follows a complete answer. All Projects shows an empty state until P5.9.
+  available." only follows a complete answer. In All Projects the tab is `AllProjectsUpdates` (P5.9): one section per
+  project under its workspace folder over the `allProjects/updates` stream, rows of an unsupported project read-only,
+  one banner over every section when a source could not be checked, and Update all as one `ops/bulkUpdateAllProjects`
+  listing the packages under their project; the tab count is the sum once every listed project has answered.
 
 The sidebar's `UpdatesSection` (`src/webview/sidebar-next`) reads the same slice: compact rows in
 `sidebar-updates-list` under `section-header-updates`, the count only when known, Enter and the row button

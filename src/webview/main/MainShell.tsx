@@ -5,6 +5,7 @@ import { useMessageBus } from '../shared/bus/useMessageBus';
 import { Banner, cssVars, EmptyState, IconButton, LiveStatus, Sash, SyncIcon, Tabs, type TabItem } from '../shared/primitives';
 import { FILTER_PREFIXES, parseSearchQuery, type SearchMode } from '../shared/search/parseSearchQuery';
 import { SearchBox } from '../shared/search/SearchBox';
+import { useAllProjects } from '../shared/store/allProjects';
 import { useOps } from '../shared/store/ops';
 import { describeOutcome } from '../shared/store/outcomes';
 import { useProjects } from '../shared/store/projects';
@@ -108,7 +109,10 @@ export function MainShell({ installed, updates, browse, details }: MainShellProp
     const modeTab = TAB_OF_MODE[parsed.mode];
     const tab = modeTab ?? chosenTab;
     // The badge counts the updates the host answered; while it checks or cannot say, there is no number.
-    const updateCount = updatesSlice.status === 'ready' && !updatesSlice.sourcesUnavailable ? updatesSlice.rows.length : undefined;
+    const all = useAllProjects().updates;
+    // All Projects: the sum of the rows once every listed project has answered and every source was checked.
+    const allCount = all.status === 'ready' && !all.sourcesUnavailable && (all.projects ?? []).every(project => all.chunks.get(project.path)?.error === undefined && all.chunks.has(project.path)) ? [...all.chunks.values()].reduce((count, chunk) => count + chunk.updates.length, 0) : undefined;
+    const updateCount = session?.selectedProject === ALL_PROJECTS ? allCount : updatesSlice.status === 'ready' && !updatesSlice.sourcesUnavailable ? updatesSlice.rows.length : undefined;
     const tabs = TABS.map(item => (item.id === 'updates' && updateCount !== undefined ? { ...item, count: updateCount } : item));
     const view: ListView = { filter: modeTab ? parsed.filterText : '', vulnerableOnly: parsed.mode === 'vulnerable', announce };
 

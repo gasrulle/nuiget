@@ -1,8 +1,9 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import type React from 'react';
-import { ALL_PROJECTS, ProtocolRequestError, resourceKeys, type PackageMetadataLite, type Project, type ProjectInstalledChunk, type ProjectTransitiveChunk, type RequestChunk, type RequestResult } from '../../../protocol';
+import { ALL_PROJECTS, ProtocolRequestError, resourceKeys, type PackageMetadataLite, type Project, type ProjectInstalledChunk, type ProjectTransitiveChunk, type ProjectUpdatesChunk, type RequestChunk, type RequestResult } from '../../../protocol';
 import { useMessageBus } from '../bus/useMessageBus';
 import { useSession } from './session';
+import { RECOVERY_DELAY_MS } from './updates';
 
 export interface AllProjectsState {
     /** Whether the committed selection is All Projects; nothing is asked otherwise. */
@@ -25,7 +26,36 @@ export interface AllProjectsState {
     transitive: AllProjectsTransitive;
     /** The aggregated transitive section was opened: its stream is asked for, and asked again when it may have changed. */
     enableTransitive: () => void;
+    /** The updates of every project under the committed prerelease flag, streamed while All Projects is committed. */
+    updates: AllProjectsUpdates;
 }
+
+export interface AllProjectsUpdates {
+    status: 'idle' | 'loading' | 'ready' | 'error';
+    projects: readonly Project[] | undefined;
+    /** The latest chunk of each project, by path: its updates, or its error. */
+    chunks: ReadonlyMap<string, ProjectUpdatesChunk>;
+    /** Icons by lower-cased package id, from the stream's `icons` chunk. */
+    icons: ReadonlyMap<string, string>;
+    /** A source could not be checked: no row does not mean no update. */
+    sourcesUnavailable: boolean;
+    error: ProtocolRequestError | undefined;
+    revalidating: boolean;
+    refreshUpdates: () => void;
+}
+
+interface UpdatesStored {
+    seq: number;
+    status: AllProjectsUpdates['status'];
+    projects: readonly Project[] | undefined;
+    chunks: ReadonlyMap<string, ProjectUpdatesChunk>;
+    icons: ReadonlyMap<string, string>;
+    sourcesUnavailable: boolean;
+    error: ProtocolRequestError | undefined;
+    requesting: boolean;
+}
+
+const NO_UPDATES: UpdatesStored = { seq: 0, status: 'idle', projects: undefined, chunks: new Map(), icons: new Map(), sourcesUnavailable: false, error: undefined, requesting: false };
 
 export interface AllProjectsTransitive {
     enabled: boolean;
@@ -123,12 +153,19 @@ export function AllProjectsProvider({ children }: { children: React.ReactNode })
     const [transitiveEnabled, setTransitiveEnabled] = useState(false);
     const [transitiveAsks, setTransitiveAsks] = useState(0);
     const [transitive, setTransitive] = useState<TransitiveStored>(NO_TRANSITIVE);
+    const includePrerelease = useSession().committed?.includePrerelease ?? false;
+    const [updatesAsks, setUpdatesAsks] = useState(0);
+    const [updates, setUpdates] = useState<UpdatesStored>(NO_UPDATES);
+    const updatesSeq = useRef(0);
+    const latestUpdates = useRef({ unavailable: false, failed: new Set<string>() });
+    latestUpdates.current.unavailable = updates.sourcesUnavailable;
 
     useEffect(() => {
         if (!active) {
             dispatch({ type: 'reset' });
             setTransitiveEnabled(false);
             setTransitive(NO_TRANSITIVE);
+            setUpdates(previous => ({ ...NO_UPDATES, seq: previous.seq }));
             return undefined;
         }
         return bus.onEvent('resources/invalidated', event => {
@@ -136,12 +173,66 @@ export function AllProjectsProvider({ children }: { children: React.ReactNode })
             if (keys.some(key => key === resourceKeys.projects() || key.startsWith('installed:'))) {
                 setAsks(count => count + 1);
             }
+            // The updates follow their own keys (the fan-out's key is never listed, ADR-009), never `installed:`.
+            if (keys.some(key => key === resourceKeys.projects() || key.startsWith('updates:'))) {
+                setUpdatesAsks(count => count + 1);
+            }
             // A restore or a changed project changes what the assets files say.
             if (keys.some(key => key === resourceKeys.projects() || key.startsWith('installed:') || key.startsWith('transitive:'))) {
                 setTransitiveAsks(count => count + 1);
             }
         });
     }, [bus, active]);
+
+    // The updates stream: the chunks and the answer of the latest request only (N11); earlier rows stay until it answers.
+    useEffect(() => {
+        if (!active) {
+            return undefined;
+        }
+        const mine = ++updatesSeq.current;
+        const controller = new AbortController();
+        const own = (apply: (previous: UpdatesStored) => UpdatesStored) => setUpdates(previous => (previous.seq === mine ? apply(previous) : previous));
+        setUpdates(previous => ({ ...previous, seq: mine, status: previous.status === 'ready' ? 'ready' : 'loading', error: undefined, requesting: true }));
+        bus.request('allProjects/updates', { includePrerelease }, {
+            signal: controller.signal,
+            onChunk: chunk => own(previous => {
+                if (chunk.kind === 'start') {
+                    return { ...previous, projects: chunk.projects };
+                }
+                if (chunk.kind === 'project') {
+                    return { ...previous, chunks: new Map(previous.chunks).set(chunk.chunk.projectPath, chunk.chunk) };
+                }
+                return { ...previous, icons: new Map([...previous.icons, ...Object.entries(chunk.icons).map(([id, url]): [string, string] => [id.toLowerCase(), url])]) };
+            }),
+        }).then(
+            ({ result }) => own(previous => {
+                const listed = new Set(result.projectPaths);
+                return { ...previous, status: 'ready', chunks: new Map([...previous.chunks].filter(([path]) => listed.has(path))), sourcesUnavailable: result.sourcesUnavailable === true, requesting: false };
+            }),
+            (error: unknown) => {
+                if (!controller.signal.aborted) {
+                    own(previous => ({ ...previous, status: previous.status === 'ready' ? 'ready' : 'error', error: asRequestError(error), requesting: false }));
+                }
+            },
+        );
+        return () => controller.abort();
+    }, [bus, active, includePrerelease, updatesAsks]);
+
+    // A source that comes back while the answer said a source could not be checked: ask once more (as the updates slice).
+    useEffect(() => bus.onEvent('sources/health', ({ failed }) => {
+        const now = new Set(failed.map(source => source.url));
+        const recovered = [...latestUpdates.current.failed].some(url => !now.has(url));
+        latestUpdates.current.failed = now;
+        if (!recovered || !latestUpdates.current.unavailable) {
+            return;
+        }
+        const asked = updatesSeq.current;
+        setTimeout(() => {
+            if (updatesSeq.current === asked && latestUpdates.current.unavailable) {
+                setUpdatesAsks(count => count + 1);
+            }
+        }, RECOVERY_DELAY_MS);
+    }), [bus]);
 
     // The transitive stream: the latest request only, and the earlier lists stay until it has answered.
     useEffect(() => {
@@ -192,6 +283,7 @@ export function AllProjectsProvider({ children }: { children: React.ReactNode })
     const refresh = useCallback((): void => setAsks(count => count + 1), []);
     const refreshTransitive = useCallback((): void => setTransitiveAsks(count => count + 1), []);
     const enableTransitive = useCallback((): void => setTransitiveEnabled(true), []);
+    const refreshUpdates = useCallback((): void => setUpdatesAsks(count => count + 1), []);
 
     const state = useMemo<AllProjectsState>(() => ({
         active,
@@ -205,7 +297,17 @@ export function AllProjectsProvider({ children }: { children: React.ReactNode })
         refresh,
         transitive: { enabled: active && transitiveEnabled, status: active && transitiveEnabled ? transitive.status : 'idle', chunks: transitive.chunks, errored: transitive.errored, error: transitive.error, refresh: refreshTransitive },
         enableTransitive,
-    }), [active, stored, refresh, transitiveEnabled, transitive, refreshTransitive, enableTransitive]);
+        updates: {
+            status: active ? updates.status : 'idle',
+            projects: updates.projects,
+            chunks: updates.chunks,
+            icons: updates.icons,
+            sourcesUnavailable: updates.sourcesUnavailable,
+            error: updates.error,
+            revalidating: updates.requesting && updates.status === 'ready',
+            refreshUpdates,
+        },
+    }), [active, stored, refresh, transitiveEnabled, transitive, refreshTransitive, enableTransitive, updates, refreshUpdates]);
 
     return <AllProjectsContext.Provider value={state}>{children}</AllProjectsContext.Provider>;
 }

@@ -9,6 +9,7 @@ import { useOps, useOpsActions } from '../../../shared/store/ops';
 import { useSession } from '../../../shared/store/session';
 import { useUpdates } from '../../../shared/store/updates';
 import type { ListView } from '../../MainShell';
+import { AllProjectsUpdates } from './AllProjectsUpdates';
 import { CentralUpdateDialog } from './CentralUpdateDialog';
 import { UpdateAllDialog } from './UpdateAllDialog';
 
@@ -25,8 +26,14 @@ const HINT = 'Space selects the package for a bulk update. Enter updates it.';
  * toolbar over them. A source that could not be checked is a banner over the list, never an empty "no updates". A
  * centrally managed package opens a read-only preview of the central change instead of updating (until P6.3).
  * Nothing is removed here: a row is busy from the request on and leaves when the host's next list no longer has it.
+ * In All Projects the tab is `AllProjectsUpdates`, one section per project.
  */
-export function UpdatesTab({ filter, announce }: ListView): React.JSX.Element {
+export function UpdatesTab(view: ListView): React.JSX.Element {
+    const allMode = useSession().committed?.selectedProject === ALL_PROJECTS;
+    return allMode ? <AllProjectsUpdates {...view} /> : <ProjectUpdates {...view} />;
+}
+
+function ProjectUpdates({ filter, announce }: ListView): React.JSX.Element {
     const { committed } = useSession();
     const updates = useUpdates();
     const installed = useInstalled();
@@ -120,7 +127,7 @@ export function UpdatesTab({ filter, announce }: ListView): React.JSX.Element {
     if (committed === undefined) {
         body = <Skeleton density="comfortable" />;
     } else if (projectPath === null) {
-        body = <EmptyState message={selection === ALL_PROJECTS ? 'Updates for All Projects are not available in this view yet. Select a single project.' : 'No .NET projects found in this workspace.'} />;
+        body = <EmptyState message="No .NET projects found in this workspace." />;
     } else if (updates.status === 'error' && rows.length === 0) {
         body = null;
     } else if (updates.status === 'loading' && rows.length === 0) {

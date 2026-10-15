@@ -172,9 +172,83 @@ describe('main panel: Updates tab', () => {
         expect(screen.getByTestId('update-all-button')).toBeDisabled();
     });
 
-    it('All Projects: an empty state instead of a list', async () => {
+    it('All Projects: the updates come from allProjects/updates, never updates/get', async () => {
         const host = await mountWith(null, ALL_PROJECTS);
-        expect(screen.getByText('Updates for All Projects are not available in this view yet. Select a single project.')).toBeInTheDocument();
+        const stream = host.requests('allProjects/updates');
+        expect(stream).toHaveLength(1);
+        expect(stream[0].payload).toEqual({ includePrerelease: false });
+        const panel = document.getElementById(screen.getByTestId('updates-tab').getAttribute('aria-controls')!)!;
+        expect(panel.querySelectorAll('.nuiget-skeleton-row')).toHaveLength(3);
         expect(host.requests('updates/get')).toHaveLength(0);
+    });
+
+    describe('All Projects', () => {
+        const B = '/w/Lib/Lib.csproj';
+
+        async function mountAll(answer: { sourcesUnavailable?: boolean } = {}): Promise<FakeHost> {
+            const host = createFakeHost();
+            render(<StoreProvider bus={host.bus}><MainShell installed={view => <InstalledTab {...view} />} updates={view => <UpdatesTab {...view} />} /></StoreProvider>);
+            await hostSays(() => host.respond(host.requests('session/get')[0], snapshot(1, ALL_PROJECTS)));
+            await hostSays(() => host.respond(host.requests('projects/list')[0], { projects: [{ name: 'App', path: A }, { name: 'Lib', path: B }] }, 1));
+            const installedStream = host.requests('allProjects/installed')[0];
+            await hostSays(() => host.chunk(installedStream, { kind: 'project', chunk: { projectPath: A, projectName: 'App', result: installed([pkg('Serilog', { version: '3.0.0' }), pkg('Newtonsoft.Json', { version: '13.0.1', declaration: 'central' })]) } }));
+            await hostSays(() => host.chunk(installedStream, { kind: 'project', chunk: { projectPath: B, projectName: 'Lib', result: { projectPath: B, fidelity: 'authoritative', isCpm: false, packages: [pkg('Moq', { version: '4.20.0' })] } } }));
+            await hostSays(() => host.respond(installedStream, { projectPaths: [A, B], errored: [] }));
+            const stream = host.requests('allProjects/updates')[0];
+            await hostSays(() => host.chunk(stream, { kind: 'start', projects: [{ name: 'App', path: A }, { name: 'Lib', path: B }] }));
+            await hostSays(() => host.chunk(stream, { kind: 'project', chunk: { projectPath: A, projectName: 'App', updates: [update('Serilog', '3.0.0', '3.1.0'), update('Newtonsoft.Json', '13.0.1', '13.0.3')] } }));
+            await hostSays(() => host.chunk(stream, { kind: 'project', chunk: { projectPath: B, projectName: 'Lib', updates: answer.sourcesUnavailable ? [] : [update('Moq', '4.20.0', '4.20.72')] } }));
+            await hostSays(() => host.respond(stream, { projectPaths: [A, B], ...answer }));
+            await userEvent.setup().click(screen.getByTestId('updates-tab'));
+            return host;
+        }
+
+        const listOf = (name: string): HTMLElement => screen.getByTestId(`updates-list-${name}`);
+        const rowIn = (name: string, id: string): HTMLElement => within(within(listOf(name)).getByTestId(`package-row-${id.toLowerCase()}`)).getByRole('option');
+
+        it('All Projects: one section per project, selections across them become ops/bulkUpdateAllProjects with the project names', async () => {
+            const user = userEvent.setup();
+            const host = await mountAll();
+            expect(listOf('app')).toHaveAccessibleName('App');
+            expect(listOf('lib')).toHaveAccessibleName('Lib');
+            expect(screen.getByTestId('updates-tab')).toHaveAccessibleName(/Updates\s+3/);
+            expect(host.requests('updates/get')).toHaveLength(0);
+
+            await user.click(rowIn('app', 'Serilog').querySelector('.nuiget-row-check') as Element);
+            await user.click(rowIn('lib', 'Moq').querySelector('.nuiget-row-check') as Element);
+            expect(screen.getByTestId('update-all-button')).toHaveTextContent('Update selected (2)');
+            await user.click(screen.getByTestId('update-all-button'));
+            expect(screen.getByRole('alertdialog')).toHaveTextContent('In App:Serilog: 3.0.0 → 3.1.0In Lib:Moq: 4.20.0 → 4.20.72');
+            await user.click(screen.getByTestId('confirm-dialog-confirm'));
+            expect(host.requests('ops/bulkUpdateAllProjects').map(request => request.payload)).toEqual([{
+                projectUpdates: [
+                    { projectPath: A, projectName: 'App', packages: [{ id: 'Serilog', version: '3.1.0', sourceUrl: FEED }] },
+                    { projectPath: B, projectName: 'Lib', packages: [{ id: 'Moq', version: '4.20.72', sourceUrl: FEED }] },
+                ],
+            }]);
+
+            // A centrally managed row opens the read-only preview; Enter on another updates its own project.
+            await user.click(rowIn('app', 'Newtonsoft.Json'));
+            await user.keyboard('{Enter}');
+            expect(screen.getByTestId('cpm-preview-dialog')).toBeInTheDocument();
+        });
+
+        it('All Projects: a source that could not be checked is one banner over the sections, not an empty state', async () => {
+            await mountAll({ sourcesUnavailable: true });
+            expect(screen.getAllByTestId('updates-unavailable-banner')).toHaveLength(1);
+            // Lib's section: its empty list says the updates are unknown.
+            expect(screen.getByText('Updates could not be checked.')).toBeInTheDocument();
+            expect(screen.queryByText('No updates available.')).toBeNull();
+            expect(screen.getByTestId('updates-tab')).not.toHaveAccessibleName(/\d/);
+        });
+
+        it('has no axe violations with All Projects sections and the Update all dialog open', async () => {
+            const user = userEvent.setup();
+            await mountAll();
+            await user.click(screen.getByTestId('update-all-button'));
+            const results = await axe(document.body);
+            expect(results).toHaveNoViolations();
+            expect(axeRuleOutcome(results, 'aria-dialog-name')).toBe('passes');
+        });
     });
 });
