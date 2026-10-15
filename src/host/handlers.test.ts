@@ -316,14 +316,14 @@ describe('shared handlers: reads', () => {
         expect(resultOf(host, 'plain')).toEqual(provisional);
 
         catalog.installed.mockImplementationOnce(async (...args: unknown[]) => {
-            (args[1] as (chunk: unknown) => void)({ kind: 'metadata', packages: [{ id: 'X', version: '1.0.0' }] });
+            (args[1] as (chunk: unknown) => void)({ kind: 'provisional', result: provisional });
             return { result: provisional, generation: 7, upgrade: Promise.resolve(authoritative) };
         });
         await host.receiveRaw(makeRequest('installed/get', { projectPath: appPath }, 'upgraded'));
         expect(resultOf(host, 'upgraded')).toEqual(authoritative);
-        // Metadata chunks pass through as the Catalog emits them, before the response.
+        // The provisional chunk passes through as the Catalog emits it, before the evaluated response.
         const stream = host.sent.filter(message => message.kind === 'stream');
-        expect(stream).toEqual([{ kind: 'stream', id: 'upgraded', type: 'installed/get', chunk: { kind: 'metadata', packages: [{ id: 'X', version: '1.0.0' }] } }]);
+        expect(stream).toEqual([{ kind: 'stream', id: 'upgraded', type: 'installed/get', chunk: { kind: 'provisional', result: provisional } }]);
         expect(host.sent.indexOf(stream[0])).toBeLessThan(host.sent.indexOf(host.responses('upgraded')[0]));
     });
 

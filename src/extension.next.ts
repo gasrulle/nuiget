@@ -16,7 +16,7 @@ import { DefaultServiceIndexClient, SourceHealthTracker, startHealthMonitor } fr
 import { NodeTransport } from './core/http';
 import { redact } from './core/logging';
 import { DefaultOperationQueue, PackageWorkflows } from './core/ops';
-import { AssetsReader, PROJECT_FILE_GLOB, ProjectContextProvider, StaticProjectInspector, findProjects } from './core/project';
+import { AssetsReader, MsBuildProjectEvaluator, PROJECT_FILE_GLOB, ProjectContextProvider, StaticProjectInspector, findProjects } from './core/project';
 import { DefaultQueryCoordinator } from './core/queries';
 import { DefaultSessionStore, firstProject } from './core/session';
 import { DotnetSourceProvider, NuGetConfigReader } from './core/sources';
@@ -83,6 +83,8 @@ export async function activateWith(context: vscode.ExtensionContext, overrides: 
     const stopDirs: string[] = workspaceRoots();
     const inspector = new StaticProjectInspector({ assets, stopDirs });
     const contexts = new ProjectContextProvider({ runner, sources, stopDirs, logger });
+    // ADR-004 tier 2: the Catalog streams the inspection first and answers with this evaluation (ADR-009 d.3).
+    const evaluator = new MsBuildProjectEvaluator({ runner, stopDirs, logger });
     const coordinator = new DefaultQueryCoordinator({ logger });
     const session = new DefaultSessionStore(context.workspaceState, logger);
     const queue = new DefaultOperationQueue({ maxWaiting: 5, logger });
@@ -99,7 +101,7 @@ export async function activateWith(context: vscode.ExtensionContext, overrides: 
     const feeds = createFeedClients({ transport, runner, serviceIndex, credentials, cache, globalPackagesFolder: () => runner.globalPackagesFolder(), logger });
     const feedContexts = new FeedContexts({ contexts, sources, configs, feeds, logger });
     const catalog = new Catalog({
-        coordinator, inspector, contexts, sources, assets, feeds, feedContexts, logger,
+        coordinator, inspector, evaluator, contexts, sources, assets, feeds, feedContexts, logger,
         discoverProjects: () => findProjects(
             async (include, exclude, max) => (await vscode.workspace.findFiles(include, exclude, max)).map(uri => uri.fsPath),
             (vscode.workspace.workspaceFolders ?? []).map(folder => ({ name: folder.name, fsPath: folder.uri.fsPath })),

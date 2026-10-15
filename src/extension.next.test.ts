@@ -9,7 +9,7 @@ import { NodeTransport } from './core/http';
 import { activateWith, proxyConfigured, type ActivatedExtension, type ActivationOverrides } from './extension.next';
 import { MainPanelHost } from './host/MainPanelHost';
 import { readExtensionConfig } from './host/services';
-import { makeRequest, type BulkOutcome, type EventPayload, type EventType, type OutboundEnvelope, type RequestPayload, type RequestType } from './protocol';
+import { makeRequest, type BulkOutcome, type EventPayload, type EventType, type InstalledResult, type OutboundEnvelope, type RequestPayload, type RequestType } from './protocol';
 import {
     commands as mockCommands,
     createMockExtensionContext,
@@ -278,6 +278,57 @@ describe('extension.next (2.0 composition root)', () => {
         feedUp = false;
         await vscode.commands.executeCommand('nuiget.refreshPackages');
         await expect(ask('search/query', { query: 'contoso', includePrerelease: false }, 's1')).resolves.toMatchObject({ ok: true, result: { query: 'contoso', results: [], sourcesUnavailable: true } });
+    });
+
+    /** A scratch project selected in the session, and a function that sends `installed/get` from the sidebar. */
+    async function installedFromSidebar() {
+        scratch = await createScratchDir('root-evaluator');
+        const project = path.join(scratch.dir, 'App', 'App.csproj');
+        await writeTree(scratch.dir, {
+            'App/App.csproj': '<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><TargetFramework>net10.0</TargetFramework></PropertyGroup><ItemGroup><PackageReference Include="Serilog" Version="3.0.0" /></ItemGroup></Project>',
+        });
+        projectFiles = [project];
+        await start({ workspaceState: { 'nuiget.selectedProject': project } });
+        const sidebar = resolveSidebar();
+        const [receive] = vi.mocked(sidebar.onDidReceiveMessage).mock.calls.at(-1) as unknown as [(message: unknown) => void];
+        const sent = () => (sidebar.postMessage as Mock).mock.calls.map(call => call[0] as OutboundEnvelope);
+        const ask = async (id: string) => {
+            receive(makeRequest('installed/get', { projectPath: project }, id));
+            await vi.waitFor(() => expect(sent().some(message => message.kind === 'response' && message.id === id)).toBe(true));
+            return sent().filter(message => 'id' in message && message.id === id);
+        };
+        return { project, ask };
+    }
+
+    it('composes the evaluator: installed/get streams the provisional list and answers the evaluated one', async () => {
+        const isProperties = (call: { args: string[] }) => call.args.some(arg => arg.startsWith('-getProperty:'));
+        dotnet.fail(call => dotnetCalls.msbuild()(call) && isProperties(call), {
+            code: 0,
+            stdout: JSON.stringify({ Properties: { TargetFramework: 'net10.0', TargetFrameworks: '', ManagePackageVersionsCentrally: '', CentralPackageVersionOverrideEnabled: '' } }),
+        });
+        dotnet.fail(call => dotnetCalls.msbuild()(call) && !isProperties(call), {
+            code: 0,
+            stdout: JSON.stringify({ Items: { PackageReference: [{ Identity: 'Serilog', Version: '3.0.0' }, { Identity: 'Implicit.Sdk', Version: '1.0.0', IsImplicitlyDefined: 'true', DefiningProjectFullPath: '/sdk/Sdk.props' }] } }),
+        });
+        const { project, ask } = await installedFromSidebar();
+
+        const messages = await ask('i1');
+        expect(messages.map(message => message.kind)).toEqual(['stream', 'response']);
+        expect(messages[0]).toMatchObject({ kind: 'stream', type: 'installed/get', chunk: { kind: 'provisional', result: { projectPath: project, fidelity: 'provisional', packages: [{ id: 'Serilog', version: '3.0.0' }] } } });
+        expect(messages[1]).toMatchObject({ kind: 'response', ok: true, result: { projectPath: project, fidelity: 'authoritative' } });
+        const result = (messages[1] as { result: InstalledResult }).result;
+        expect(result.packages.map(pkg => pkg.id)).toEqual(['Serilog', 'Implicit.Sdk']);
+        expect(dotnet.count(dotnetCalls.msbuild(project))).toBe(2);
+    });
+
+    it('an evaluation that fails answers the provisional list once, as the response', async () => {
+        // The fake prints nothing for msbuild: no JSON, an evaluation failure.
+        const { project, ask } = await installedFromSidebar();
+
+        const messages = await ask('i1');
+        expect(messages.map(message => message.kind)).toEqual(['stream', 'response']);
+        expect(messages[1]).toMatchObject({ kind: 'response', ok: true, result: { projectPath: project, fidelity: 'provisional', packages: [{ id: 'Serilog', version: '3.0.0' }] } });
+        expect(dotnet.count(dotnetCalls.msbuild(project))).toBe(1);
     });
 
     it('the health monitor probes nothing before a read registers a chain, probes the registered chain\'s sources after it, and reports sources/health to both surfaces', async () => {

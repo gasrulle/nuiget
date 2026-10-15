@@ -21,7 +21,7 @@ without correlation. Both webviews share the same maps; surface-specific request
 | Config & layout | `layout/get` | `Record<string, never>` | `LayoutPreferences` | — |  |
 | Config & layout | `layout/set` | `LayoutPreferences` | `LayoutPreferences` | — |  |
 | Projects | `projects/list` | `Record<string, never>` | `ProjectListing` | — |  |
-| Single-project resources | `installed/get` | `{ projectPath: string; }` | `InstalledResult` | `{ kind: "metadata"; packages: PackageMetadataLite[]; }` |  |
+| Single-project resources | `installed/get` | `{ projectPath: string; }` | `InstalledResult` | `{ kind: "provisional"; result: InstalledResult; }` | The provisional list, streamed before the evaluated one when an evaluation runs; a cached list is answered without a chunk (ADR-009 d.2, d.3). |
 | Single-project resources | `updates/get` | `{ projectPath: string; includePrerelease: boolean; }` | `{ projectPath: string; updates: PackageUpdate[]; sourcesUnavailable?: boolean; }` | `{ kind: "found"; update: PackageUpdate; }` |  |
 | Single-project resources | `transitive/get` | `{ projectPath: string; forceRestore?: boolean; }` | `TransitiveResult` | — |  |
 | Single-project resources | `transitive/metadata` | `{ packages: Array<{ id: string; version: string; }>; }` | `{ metadata: PackageMetadataLite[]; }` | — |  |

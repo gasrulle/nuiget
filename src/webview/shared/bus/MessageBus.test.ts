@@ -38,12 +38,12 @@ describe('message bus', () => {
         const request = host.bus.request('installed/get', { projectPath: '/w/A/A.csproj' }, { onChunk: chunk => chunks.push(chunk) });
         void host.bus.request('installed/get', { projectPath: '/w/B/B.csproj' }, { onChunk: chunk => other.push(chunk) });
         const [forA] = host.requests('installed/get');
-        host.chunk(forA, { kind: 'metadata', packages: [{ id: 'Serilog', version: '3.0.0' }] });
+        host.chunk(forA, { kind: 'provisional', result: { projectPath: '/w/A/A.csproj', fidelity: 'provisional', isCpm: false, packages: [{ id: 'Serilog', version: '3.0.0', versionType: 'standard', declaration: 'project' }] } });
         host.respond(forA, { projectPath: '/w/A/A.csproj', fidelity: 'provisional', isCpm: false, packages: [] }, 1);
         // After the terminal response nothing of this request is delivered any more.
-        host.chunk(forA, { kind: 'metadata', packages: [{ id: 'Late', version: '1.0.0' }] });
+        host.chunk(forA, { kind: 'provisional', result: { projectPath: '/w/A/A.csproj', fidelity: 'provisional', isCpm: false, packages: [{ id: 'Late', version: '1.0.0', versionType: 'standard', declaration: 'project' }] } });
         await request;
-        expect(chunks).toEqual([{ kind: 'metadata', packages: [{ id: 'Serilog', version: '3.0.0' }] }]);
+        expect(chunks).toEqual([{ kind: 'provisional', result: { projectPath: '/w/A/A.csproj', fidelity: 'provisional', isCpm: false, packages: [{ id: 'Serilog', version: '3.0.0', versionType: 'standard', declaration: 'project' }] } }]);
         expect(other).toEqual([]);
     });
 
@@ -71,7 +71,7 @@ describe('message bus', () => {
         expect(await outcome(request)).toEqual({ rejected: expect.objectContaining({ code: 'cancelled' }) });
 
         // The host answers every request, a cancelled one with `cancelled` (ADR-007), or with the result it had ready.
-        host.chunk(sent, { kind: 'metadata', packages: [] });
+        host.chunk(sent, { kind: 'provisional', result: { projectPath: '/w/A/A.csproj', fidelity: 'provisional', isCpm: false, packages: [] } });
         host.fail(sent, 'cancelled');
         host.respond(sent, { projectPath: '/w/A/A.csproj', fidelity: 'provisional', isCpm: false, packages: [] }, 1);
         await Promise.resolve();

@@ -98,6 +98,7 @@ export const dotnetCalls = {
     packageAdd: (packageId?: string): CallMatcher => call => call.line.startsWith('package add ') && (packageId === undefined || call.args[2] === packageId),
     packageRemove: (packageId?: string): CallMatcher => call => call.line.startsWith('package remove ') && (packageId === undefined || call.args[2] === packageId),
     restore: (): CallMatcher => call => call.args[0] === 'restore',
+    msbuild: (projectPath?: string): CallMatcher => call => call.args[0] === 'msbuild' && (projectPath === undefined || sameDirectory(path.dirname(call.args[1]), path.dirname(projectPath))),
 };
 
 /** What `dotnet nuget list source --format detailed` prints for enabled sources. */

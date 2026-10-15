@@ -203,6 +203,49 @@ describe('Catalog.installed', () => {
         expect(deps.coordinator.peek<InstalledResult>(resourceKeys.installed(appPath))?.value.fidelity).toBe('authoritative');
     });
 
+    it('installed forwards the provisional chunk to the caller before the authoritative result', async () => {
+        const evaluation = deferred<InstalledResult>();
+        const catalog = new Catalog(makeDeps({ evaluator: fakeEvaluator(() => evaluation.promise) }));
+        const order: string[] = [];
+        const chunks: unknown[] = [];
+        const { upgrade } = await catalog.installed(appPath, chunk => {
+            order.push('chunk');
+            chunks.push(chunk);
+        });
+        expect(chunks).toEqual([{ kind: 'provisional', result: provisionalOf(appPath) }]);
+        evaluation.resolve(authoritativeOf(appPath));
+        const authoritative = await upgrade;
+        order.push(`final:${authoritative?.fidelity}`);
+        expect(order).toEqual(['chunk', 'final:authoritative']);
+
+        // A cache hit receives the authoritative value and no chunk.
+        const later: unknown[] = [];
+        const hit = await catalog.installed(appPath, chunk => later.push(chunk));
+        expect(hit.result.fidelity).toBe('authoritative');
+        expect(hit.upgrade).toBeUndefined();
+        expect(later).toEqual([]);
+    });
+
+    it('the evaluated row wins: an inspected condition, origin or implicitness is gone when the evaluation has none', async () => {
+        const inspected: InstalledResult = {
+            projectPath: appPath, fidelity: 'provisional', isCpm: false,
+            packages: [{ id: 'A', version: '1.0.0', versionType: 'standard', declaration: 'props', definedIn: 'Directory.Build.props', isImplicit: true, targetFrameworks: ['net8.0'], resolvedVersion: '1.0.0' }],
+        };
+        const evaluated: InstalledResult = {
+            projectPath: appPath, fidelity: 'authoritative', isCpm: false,
+            packages: [{ id: 'a', version: '1.0.0', versionType: 'standard', declaration: 'project' }, { id: 'B', version: '2.0.0', versionType: 'standard', declaration: 'project' }],
+        };
+        const catalog = new Catalog(makeDeps({
+            inspector: { inspect: vi.fn(async () => inspected) },
+            evaluator: fakeEvaluator(async () => evaluated),
+        }));
+        const { upgrade } = await catalog.installed(appPath);
+        expect((await upgrade)?.packages).toEqual([
+            { id: 'a', version: '1.0.0', versionType: 'standard', declaration: 'project', resolvedVersion: '1.0.0' },
+            { id: 'B', version: '2.0.0', versionType: 'standard', declaration: 'project' },
+        ]);
+    });
+
     it('installed: cache hit returns the authoritative without upgrade', async () => {
         const evaluator = fakeEvaluator(async context => authoritativeOf(context.projectPath));
         const deps = makeDeps({ evaluator });

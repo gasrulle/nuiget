@@ -107,8 +107,6 @@ export class IncompleteResultError<T> extends Error {
     }
 }
 
-type InstalledChunk = { kind: 'provisional'; result: InstalledResult } | RequestChunk<'installed/get'>;
-
 const ALL_PROJECTS_CONCURRENCY = 4;
 /** Results of a search that names no `take`; the host always passes one (`nuiget.searchResultLimit`, `handlers.ts:295`). */
 const DEFAULT_SEARCH_TAKE = 50;
@@ -153,15 +151,14 @@ export class Catalog {
         for (let attempt = 1; ; attempt++) {
             let provisionalArrived!: (result: InstalledResult) => void;
             const provisional = new Promise<InstalledResult>(resolve => { provisionalArrived = resolve; });
-            const handle = this.deps.coordinator.query<InstalledResult, InstalledChunk>(
+            const handle = this.deps.coordinator.query<InstalledResult, RequestChunk<'installed/get'>>(
                 resourceKeys.installed(projectPath),
                 (ctx, emitChunk) => this.computeInstalled(projectPath, ctx.signal, emitChunk),
                 chunk => {
                     if (chunk.kind === 'provisional') {
                         provisionalArrived(chunk.result);
-                    } else {
-                        emit?.(chunk);
                     }
+                    emit?.(chunk);
                 },
             );
             releaseWhenDone(handle, signal);
@@ -186,7 +183,7 @@ export class Catalog {
         }
     }
 
-    private async computeInstalled(projectPath: string, signal: AbortSignal, emit: (chunk: InstalledChunk) => void): Promise<InstalledResult> {
+    private async computeInstalled(projectPath: string, signal: AbortSignal, emit: (chunk: RequestChunk<'installed/get'>) => void): Promise<InstalledResult> {
         const inspection = this.deps.inspector.inspect(projectPath);
         const walk = this.deps.contexts.get(projectPath);
         // The computation's own walk of the config chain is registered while it runs: a directory read meanwhile joins
@@ -212,13 +209,14 @@ export class Catalog {
         emit({ kind: 'provisional', result: provisional });
         try {
             const evaluated = await evaluator.evaluate(context.context, signal);
-            // Keep what only the static inspection knows (props declarations, resolved versions).
+            // The evaluated row is complete; the inspection contributes the restore's resolved version only.
             const byId = new Map(provisional.packages.map(pkg => [pkg.id.toLowerCase(), pkg]));
             return {
                 ...evaluated,
                 packages: evaluated.packages.map(pkg => {
                     const prior = byId.get(pkg.id.toLowerCase());
-                    return prior ? { ...prior, ...pkg, resolvedVersion: pkg.resolvedVersion ?? prior.resolvedVersion } : pkg;
+                    const resolvedVersion = pkg.resolvedVersion ?? prior?.resolvedVersion;
+                    return resolvedVersion === undefined ? pkg : { ...pkg, resolvedVersion };
                 }),
             };
         } catch {

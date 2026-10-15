@@ -35,7 +35,7 @@ describe('envelope factories', () => {
         const request = makeRequest('installed/get', { projectPath: '/p/a.csproj' }, 'r1');
         expect(request).toEqual({ kind: 'request', id: 'r1', type: 'installed/get', payload: { projectPath: '/p/a.csproj' } });
         expect(makeCancel('r1')).toEqual({ kind: 'cancel', id: 'r1' });
-        expect(makeStream('r1', 'installed/get', { kind: 'metadata', packages: [] })).toMatchObject({ kind: 'stream', id: 'r1' });
+        expect(makeStream('r1', 'installed/get', { kind: 'provisional', result: { projectPath: '/p/a.csproj', packages: [], fidelity: 'provisional', isCpm: false } })).toMatchObject({ kind: 'stream', id: 'r1' });
         expect(makeOk('r1', 'package/readme', { readme: null })).toMatchObject({ kind: 'response', ok: true, result: { readme: null } });
         expect(makeError('r1', 'package/readme', { code: 'failed', message: 'x' })).toMatchObject({ kind: 'response', ok: false, error: { code: 'failed' } });
         expect(makeEvent('ui/focusSearch', {})).toEqual({ kind: 'event', type: 'ui/focusSearch', payload: {} });

@@ -118,7 +118,8 @@ export interface RequestMap {
     'projects/list': { payload: Record<string, never>; result: ProjectListing };
 
     // Single-project resources
-    'installed/get': { payload: { projectPath: string }; result: InstalledResult; chunk: { kind: 'metadata'; packages: PackageMetadataLite[] } };
+    /** The provisional list, streamed before the evaluated one when an evaluation runs; a cached list is answered without a chunk (ADR-009 d.2, d.3). */
+    'installed/get': { payload: { projectPath: string }; result: InstalledResult; chunk: { kind: 'provisional'; result: InstalledResult } };
     'updates/get': { payload: { projectPath: string; includePrerelease: boolean }; result: { projectPath: string; updates: PackageUpdate[]; sourcesUnavailable?: boolean }; chunk: { kind: 'found'; update: PackageUpdate } };
     'transitive/get': { payload: { projectPath: string; forceRestore?: boolean }; result: TransitiveResult };
     'transitive/metadata': { payload: { packages: Array<{ id: string; version: string }> }; result: { metadata: PackageMetadataLite[] } };

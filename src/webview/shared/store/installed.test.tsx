@@ -132,29 +132,37 @@ describe('installed slice', () => {
         expect(text('packages')).toBe('Serilog');
     });
 
-    it('R5: metadata chunks are kept by package id for the project they were asked for', async () => {
+    it('R5: the provisional chunk of the latest request is shown until its response replaces it, and a chunk of an earlier request or another project is not', async () => {
         const host = mount();
         await hostSays(() => host.respond(host.requests('session/get')[0], snapshot(1, A)));
-        const [forA] = asked(host);
-        await hostSays(() => host.respond(forA, installed(A, 'Serilog', 'Moq'), 1));
-        expect(text('described')).toBe('none');
-        // Chunks may come in several parts, before the terminal response of their request.
-        await hostSays(() => host.invalidate([[resourceKeys.installed(A), 2]]));
-        const again = asked(host)[1];
-        await hostSays(() => host.chunk(again, { kind: 'metadata', packages: [{ id: 'Serilog', version: '1.0.0', description: 'Logging' }] }));
-        await hostSays(() => host.chunk(again, { kind: 'metadata', packages: [{ id: 'MOQ', version: '1.0.0', description: 'Mocks' }] }));
-        expect(text('described')).toBe('serilog=Logging;moq=Mocks');
-        // A later chunk for the same package replaces the earlier one.
-        await hostSays(() => host.chunk(again, { kind: 'metadata', packages: [{ id: 'serilog', version: '1.0.0', description: 'Structured logging' }] }));
-        expect(text('described')).toBe('serilog=Structured logging;moq=Mocks');
+        const [first] = asked(host);
+        await hostSays(() => host.chunk(first, { kind: 'provisional', result: installed(A, 'Serilog') }));
+        expect(text('packages')).toBe('Serilog');
+        expect(text('status')).toBe('loading');
+        await hostSays(() => host.respond(first, { ...installed(A, 'Serilog', 'Moq'), fidelity: 'authoritative' }, 1));
+        expect(text('packages')).toBe('Serilog,Moq');
+        expect(text('status')).toBe('ready');
 
-        // Another project starts with none, and a chunk of the request that was left is not its metadata.
+        // A revalidation streams its own provisional list, shown while the request is unanswered.
+        await hostSays(() => host.invalidate([[resourceKeys.installed(A), 2]]));
+        const second = asked(host)[1];
+        expect(text('packages')).toBe('Serilog,Moq');
+        await hostSays(() => host.chunk(second, { kind: 'provisional', result: installed(A, 'Moq') }));
+        expect(text('packages')).toBe('Moq');
+        expect(text('status')).toBe('ready revalidating');
+
+        // Another project: the request that was left is cancelled and its chunk is never shown.
         await hostSays(() => host.event('session/changed', snapshot(2, B)));
-        expect(text('described')).toBe('none');
-        await hostSays(() => host.chunk(again, { kind: 'metadata', packages: [{ id: 'Late', version: '1.0.0', description: 'Late' }] }));
-        expect(text('described')).toBe('none');
-        await hostSays(() => host.chunk(asked(host)[2], { kind: 'metadata', packages: [{ id: 'xunit', version: '2.9.0', description: 'Tests' }] }));
-        expect(text('described')).toBe('xunit=Tests');
+        expect(host.cancelled()).toContain(second.id);
+        expect(text('packages')).toBe('none');
+        await hostSays(() => host.chunk(second, { kind: 'provisional', result: installed(A, 'Late') }));
+        expect(text('packages')).toBe('none');
+        const forB = asked(host)[2];
+        expect(forB.payload).toEqual({ projectPath: B });
+        await hostSays(() => host.chunk(forB, { kind: 'provisional', result: installed(B, 'xunit') }));
+        expect(text('packages')).toBe('xunit');
+        await hostSays(() => host.respond(forB, installed(B, 'xunit', 'Moq'), 1));
+        expect(text('packages')).toBe('xunit,Moq');
     });
 
     it('an error ends loading, and Retry asks again', async () => {
@@ -214,5 +222,26 @@ describe('installed slice', () => {
         expect(host.cancelled()).toContain(pending.id);
         await hostSays(() => host.respond(pending, { metadata: [{ id: 'Serilog', version: '1.0.0', description: 'late' }] }));
         expect(text('described')).toBe('none');
+    });
+
+    it('asks for the provisional rows at once and again on the response only when the rows differ', async () => {
+        const host = mount();
+        await hostSays(() => host.respond(host.requests('session/get')[0], snapshot(1, A)));
+        const [first] = asked(host);
+        await hostSays(() => host.chunk(first, { kind: 'provisional', result: installed(A, 'Serilog', 'Moq') }));
+        expect(host.requests('transitive/metadata').map(request => request.payload)).toEqual([{ packages: [{ id: 'Serilog', version: '1.0.0' }, { id: 'Moq', version: '1.0.0' }] }]);
+        await hostSays(() => host.respond(host.requests('transitive/metadata')[0], { metadata: [{ id: 'Serilog', version: '1.0.0', description: 'Logging' }] }));
+        expect(text('described')).toBe('serilog=Logging');
+
+        // The evaluated answer lists the same rows: nothing is asked again and the metadata stays.
+        await hostSays(() => host.respond(first, { ...installed(A, 'Serilog', 'Moq'), fidelity: 'authoritative' }, 1));
+        expect(host.requests('transitive/metadata')).toHaveLength(1);
+        expect(text('described')).toBe('serilog=Logging');
+
+        // The next answer has another row: its rows are asked for.
+        await hostSays(() => host.invalidate([[resourceKeys.installed(A), 2]]));
+        await hostSays(() => host.respond(asked(host)[1], { ...installed(A, 'Serilog', 'Moq', 'xunit'), fidelity: 'authoritative' }, 2));
+        expect(host.requests('transitive/metadata')).toHaveLength(2);
+        expect(host.requests('transitive/metadata')[1].payload).toEqual({ packages: [{ id: 'Serilog', version: '1.0.0' }, { id: 'Moq', version: '1.0.0' }, { id: 'xunit', version: '1.0.0' }] });
     });
 });

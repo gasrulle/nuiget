@@ -9,9 +9,12 @@ export interface InstalledState {
     /** The project the rest belongs to; `null` when no single project is selected (none, or all projects). */
     projectPath: string | null;
     status: ResourceState<InstalledResult>['status'];
-    /** The installed packages of `projectPath`. They stay on screen while a newer result is on its way. */
+    /**
+     * The installed packages of `projectPath`. They stay on screen while a newer result is on its way; while a request
+     * is unanswered, the provisional list it streamed is shown instead.
+     */
     result: InstalledResult | undefined;
-    /** What the host sent after the list about its packages (icon, description, …), by lower-cased package id. */
+    /** What the host answered about the packages on screen (icon, description, …), by lower-cased package id. */
     metadata: ReadonlyMap<string, PackageMetadataLite>;
     error: ProtocolRequestError | undefined;
     revalidating: boolean;
@@ -34,40 +37,39 @@ const singleProject = (selected: string | undefined): string | null =>
 export function InstalledProvider({ children }: { children: React.ReactNode }): React.JSX.Element {
     const bus = useMessageBus();
     const projectPath = singleProject(useSession().committed?.selectedProject);
-    // Metadata arrives in chunks, each for the request it belongs to; kept per project.
+    // Metadata arrives with the answers of the asks below; kept per project.
     const [metadata, setMetadata] = useState<{ projectPath: string; byId: ReadonlyMap<string, PackageMetadataLite> }>();
+    // The provisional list of the latest request, shown until that request is answered (ADR-009 d.3).
+    const [provisional, setProvisional] = useState<{ projectPath: string; result: InstalledResult }>();
 
     const requester = useCallback((signal: AbortSignal) => {
         const requested = projectPath as string;
+        setProvisional(undefined);
         return bus.request('installed/get', { projectPath: requested }, {
             signal,
             onChunk: chunk => {
-                setMetadata(previous => {
-                    const byId = new Map(previous?.projectPath === requested ? previous.byId : []);
-                    for (const entry of chunk.packages) {
-                        byId.set(entry.id.toLowerCase(), entry);
-                    }
-                    return { projectPath: requested, byId };
-                });
+                if (!signal.aborted) {
+                    setProvisional({ projectPath: requested, result: chunk.result });
+                }
             },
         });
     }, [bus, projectPath]);
 
     const resource = useResource<InstalledResult>(projectPath === null ? null : resourceKeys.installed(projectPath), requester);
+    const unanswered = resource.status === 'loading' || resource.revalidating;
+    const shown = provisional !== undefined && provisional.projectPath === projectPath && unanswered ? provisional.result : resource.data;
 
-    // Two-phase (ADR-009 d.1, until P6.2 adds the chunk to `installed/get`): once a list is there, its rows' lite
-    // metadata is asked with the concrete versions; the answer lands in the same map as the chunks (later writer wins).
-    // Another project or a newer list cancels the ask; an error, `unsupported` included, is no metadata.
-    const listed = resource.data;
+    // Two-phase (ADR-009 d.1): the lite metadata of the rows on screen is asked with their concrete versions, for the
+    // provisional list as soon as it shows and again for the answer only when its rows differ; a cached list comes
+    // without a chunk, so the ask cannot ride on `installed/get`. Another project or other rows cancel the ask; an
+    // error, `unsupported` included, is no metadata.
+    const asked = useMemo(() => JSON.stringify(shown === undefined ? [] : shown.packages
+        .filter(entry => entry.declaration !== 'unresolved' && (entry.resolvedVersion !== undefined || (entry.versionType !== 'floating' && entry.versionType !== 'range')))
+        .map(entry => ({ id: entry.id, version: entry.resolvedVersion ?? entry.version }))
+        .filter(entry => entry.version !== '')), [shown]);
     useEffect(() => {
-        if (projectPath === null || listed === undefined) {
-            return undefined;
-        }
-        const packages = listed.packages
-            .filter(entry => entry.declaration !== 'unresolved' && (entry.resolvedVersion !== undefined || (entry.versionType !== 'floating' && entry.versionType !== 'range')))
-            .map(entry => ({ id: entry.id, version: entry.resolvedVersion ?? entry.version }))
-            .filter(entry => entry.version !== '');
-        if (packages.length === 0) {
+        const packages = JSON.parse(asked) as Array<{ id: string; version: string }>;
+        if (projectPath === null || packages.length === 0) {
             return undefined;
         }
         const requested = projectPath;
@@ -82,17 +84,17 @@ export function InstalledProvider({ children }: { children: React.ReactNode }): 
             });
         }, () => undefined);
         return () => controller.abort();
-    }, [bus, projectPath, listed]);
+    }, [bus, projectPath, asked]);
 
     const state = useMemo<InstalledState>(() => ({
         projectPath,
         status: resource.status,
-        result: resource.data,
+        result: shown,
         metadata: metadata !== undefined && metadata.projectPath === projectPath ? metadata.byId : NO_METADATA,
         error: resource.error,
         revalidating: resource.revalidating,
         refresh: resource.refresh,
-    }), [projectPath, resource.status, resource.data, resource.error, resource.revalidating, resource.refresh, metadata]);
+    }), [projectPath, resource.status, shown, resource.error, resource.revalidating, resource.refresh, metadata]);
 
     return <InstalledContext.Provider value={state}>{children}</InstalledContext.Provider>;
 }

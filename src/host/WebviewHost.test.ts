@@ -132,7 +132,7 @@ describe('WebviewHost', () => {
         const host = new TestHost();
         host.on('installed/get', async ({ projectPath }, ctx) => {
             ctx.generation = 3;
-            ctx.emit({ kind: 'metadata', packages: [] });
+            ctx.emit({ kind: 'provisional', result: { projectPath, packages: [], fidelity: 'provisional', isCpm: false } });
             if (projectPath === 'fails') {
                 throw new Error('boom');
             }

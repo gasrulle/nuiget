@@ -202,11 +202,9 @@ describe('main panel: Installed tab', () => {
         const host = await mountWith();
         await user.type(screen.getByTestId('search-input'), '@vulnerable');
         expect(screen.getByText('Vulnerability data is not available for this project yet.')).toBeInTheDocument();
-        // Metadata streams after the list and before the answer of a request: the next listing brings it.
-        await hostSays(() => host.invalidate([[resourceKeys.installed(A), 2]]));
-        const next = host.requests('installed/get')[1];
-        await hostSays(() => host.chunk(next, { kind: 'metadata', packages: [{ id: 'Moq', version: '4.20.0', vulnerabilities: [{ severity: 'High', advisoryUrl: 'https://github.com/advisories/x' }] }, { id: 'Serilog', version: '3.0.0' }] }));
-        await hostSays(() => host.respond(next, installed(A, THREE), 2));
+        // The slice asks the metadata of the rows on screen; its answer brings the vulnerabilities.
+        const ask = host.requests('transitive/metadata')[0];
+        await hostSays(() => host.respond(ask, { metadata: [{ id: 'Moq', version: '4.20.0', vulnerabilities: [{ severity: 'High', advisoryUrl: 'https://github.com/advisories/x' }] }, { id: 'Serilog', version: '3.0.0' }] }));
         expect(names()).toEqual(['Moq']);
         expect(optionOf('Moq')).toHaveAccessibleDescription(/Has known vulnerabilities/);
     });
