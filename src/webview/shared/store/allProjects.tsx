@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import type React from 'react';
-import { ALL_PROJECTS, ProtocolRequestError, resourceKeys, type PackageMetadataLite, type Project, type ProjectInstalledChunk, type RequestChunk, type RequestResult } from '../../../protocol';
+import { ALL_PROJECTS, ProtocolRequestError, resourceKeys, type PackageMetadataLite, type Project, type ProjectInstalledChunk, type ProjectTransitiveChunk, type RequestChunk, type RequestResult } from '../../../protocol';
 import { useMessageBus } from '../bus/useMessageBus';
 import { useSession } from './session';
 
@@ -21,7 +21,30 @@ export interface AllProjectsState {
     /** A request is on its way while earlier lists are shown. */
     revalidating: boolean;
     refresh: () => void;
+    /** The transitive packages of every project, streamed once `enableTransitive()` was called in this All Projects. */
+    transitive: AllProjectsTransitive;
+    /** The aggregated transitive section was opened: its stream is asked for, and asked again when it may have changed. */
+    enableTransitive: () => void;
 }
+
+export interface AllProjectsTransitive {
+    enabled: boolean;
+    status: 'idle' | 'loading' | 'ready' | 'error';
+    /** The latest chunk of each project, by path. */
+    chunks: ReadonlyMap<string, ProjectTransitiveChunk>;
+    errored: RequestResult<'allProjects/transitive'>['errored'];
+    error: ProtocolRequestError | undefined;
+    refresh: () => void;
+}
+
+interface TransitiveStored {
+    status: AllProjectsTransitive['status'];
+    chunks: ReadonlyMap<string, ProjectTransitiveChunk>;
+    errored: AllProjectsTransitive['errored'];
+    error: ProtocolRequestError | undefined;
+}
+
+const NO_TRANSITIVE: TransitiveStored = { status: 'idle', chunks: new Map(), errored: [], error: undefined };
 
 interface Stored {
     /** The number of the latest request; chunks and answers of any other are recorded by nobody and not applied. */
@@ -97,18 +120,56 @@ export function AllProjectsProvider({ children }: { children: React.ReactNode })
     const [stored, dispatch] = useReducer(allProjectsReducer, EMPTY);
     const [asks, setAsks] = useState(0);
     const seq = useRef(0);
+    const [transitiveEnabled, setTransitiveEnabled] = useState(false);
+    const [transitiveAsks, setTransitiveAsks] = useState(0);
+    const [transitive, setTransitive] = useState<TransitiveStored>(NO_TRANSITIVE);
 
     useEffect(() => {
         if (!active) {
             dispatch({ type: 'reset' });
+            setTransitiveEnabled(false);
+            setTransitive(NO_TRANSITIVE);
             return undefined;
         }
         return bus.onEvent('resources/invalidated', event => {
-            if (event.keys.some(({ key }) => key === resourceKeys.projects() || key.startsWith('installed:'))) {
+            const keys = event.keys.map(entry => entry.key);
+            if (keys.some(key => key === resourceKeys.projects() || key.startsWith('installed:'))) {
                 setAsks(count => count + 1);
+            }
+            // A restore or a changed project changes what the assets files say.
+            if (keys.some(key => key === resourceKeys.projects() || key.startsWith('installed:') || key.startsWith('transitive:'))) {
+                setTransitiveAsks(count => count + 1);
             }
         });
     }, [bus, active]);
+
+    // The transitive stream: the latest request only, and the earlier lists stay until it has answered.
+    useEffect(() => {
+        if (!active || !transitiveEnabled) {
+            return undefined;
+        }
+        const controller = new AbortController();
+        setTransitive(previous => ({ ...previous, status: previous.status === 'ready' ? 'ready' : 'loading', error: undefined }));
+        bus.request('allProjects/transitive', {}, {
+            signal: controller.signal,
+            onChunk: chunk => {
+                if (chunk.kind === 'project') {
+                    setTransitive(previous => ({ ...previous, chunks: new Map(previous.chunks).set(chunk.chunk.projectPath, chunk.chunk) }));
+                }
+            },
+        }).then(
+            ({ result }) => {
+                const listed = new Set([...result.projectPaths, ...result.errored.map(entry => entry.projectPath)]);
+                setTransitive(previous => ({ status: 'ready', chunks: new Map([...previous.chunks].filter(([path]) => listed.has(path))), errored: result.errored, error: undefined }));
+            },
+            (error: unknown) => {
+                if (!controller.signal.aborted) {
+                    setTransitive(previous => ({ ...previous, status: previous.status === 'ready' ? 'ready' : 'error', error: asRequestError(error) }));
+                }
+            },
+        );
+        return () => controller.abort();
+    }, [bus, active, transitiveEnabled, transitiveAsks]);
 
     useEffect(() => {
         if (!active) {
@@ -129,6 +190,8 @@ export function AllProjectsProvider({ children }: { children: React.ReactNode })
     }, [bus, active, asks]);
 
     const refresh = useCallback((): void => setAsks(count => count + 1), []);
+    const refreshTransitive = useCallback((): void => setTransitiveAsks(count => count + 1), []);
+    const enableTransitive = useCallback((): void => setTransitiveEnabled(true), []);
 
     const state = useMemo<AllProjectsState>(() => ({
         active,
@@ -140,7 +203,9 @@ export function AllProjectsProvider({ children }: { children: React.ReactNode })
         error: stored.error,
         revalidating: stored.requesting && stored.status === 'ready',
         refresh,
-    }), [active, stored, refresh]);
+        transitive: { enabled: active && transitiveEnabled, status: active && transitiveEnabled ? transitive.status : 'idle', chunks: transitive.chunks, errored: transitive.errored, error: transitive.error, refresh: refreshTransitive },
+        enableTransitive,
+    }), [active, stored, refresh, transitiveEnabled, transitive, refreshTransitive, enableTransitive]);
 
     return <AllProjectsContext.Provider value={state}>{children}</AllProjectsContext.Provider>;
 }

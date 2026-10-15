@@ -1,4 +1,85 @@
-# STATUS — src/webview/main   commit f8bfe3f (parent of the P5.8 commit)   2026-10-15T19:00:00Z
+# STATUS — src/webview/main   commit 69205e2 (parent of P5.9 commit a)   2026-10-15T23:00:00Z
+
+git status --porcelain --untracked-files=all (before commit a): modified `ARCHITECTURE.md`, `CHANGELOG.md`, `docs/plans/STATUS.md`, `src/test/harness/{FakeWebview,scenarios.test}.ts`, `src/webview/main/main.css`, `src/webview/main/features/details/{DetailsPane,DetailsPane.test}.tsx`, `src/webview/main/features/installed/{InstalledTab,InstalledTab.test,InstalledProjectSection}.tsx`, `src/webview/main/features/updates/{UpdatesTab,UpdatesTab.test}.tsx`, `src/webview/shared/store/{allProjects,allProjects.test}.tsx` and the three STATUS notes; new `src/webview/main/features/all-projects/folderGroups.tsx`, `src/webview/main/features/details/MultiInstallDialog.tsx`, `src/webview/main/features/installed/{AllProjectsTransitiveSection,AllProjectsView.test}.tsx` (all belong to P5.9 commit a)
+
+Item: **P5.9 feature all-projects, commit a of three** (ruling of 2026-10-15): `features/all-projects/folderGroups.tsx`
+(`groupByFolder`, `FolderGroups`: a heading per workspace folder with two or more folders, sections one level down);
+`InstalledTab.tsx` uses it in All Projects and mounts `AllProjectsTransitiveSection`; `InstalledProjectSection.tsx`:
+an `Unsupported` badge in the header, the banner first, the list only for `sdk-too-old` (read-only) or a supported
+project, no count without a list; `installed/AllProjectsTransitiveSection.tsx` (aggregate by `lowerId@version`, origins
+by project and full root set, "no traceable top-level package", Restore for the unrestored projects);
+`details/MultiInstallDialog.tsx` and `DetailsPane.tsx` (an installed or update row in All Projects changes its own
+project; a browse row offers Install… and the picker sends `ops/bulkInstall`); `UpdatesTab.tsx`: an unsupported
+project's rows have no action and take no bulk selection; `main.css` the folder, picker rules.
+
+## Verified by running
+
+P5.9 commit a (the same gate run for every directory of the commit):
+
+```text
+baseline at 69205e2          → CI run 38706897616 green on all 11 jobs · npx tsc --noEmit 0 · npx eslint src 0 ·
+                               npx vitest run exit 0
+stop-and-ask (sdk-too-old, All Projects updates, the ExTester path, then the P5.4 test's line 166) → ruling of
+                               2026-10-15 (verbatim in docs/plans/STATUS.md): three green commits a, b, c
+npx tsc --noEmit / npm run check-types / npx eslint src / npm run lint → exit 0 each (last run after every code edit)
+git diff --numstat 69205e2 -- src/webview/main/features/installed/InstalledTab.test.tsx → 1 1 (line 166 only)
+main features and store/allProjects.test.tsx, 20 times → 20 of 20 (exit codes counted)
+npx vitest run --project integration src/test/harness -t 'late allProjects chunk after switching is discarded', 40
+                               times → 40 of 40 · the whole harness exit 0 · "both orders" untouched
+npm test (NUIGET_SDK_TESTS=1, DOTNET_ROOT set) → exit 0 · Test Files 156 passed (156) · Tests 3196 passed (3196)
+npm run bench                → exit 0 · Test Files 20 passed (20) · Tests 119 passed | 1 skipped (120)
+npx vitest run --coverage    → exit 0 (thresholds hold, the 2.0 webview key included) · store/allProjects.tsx 96.25 %
+npm run docs:protocol:check  → docs/protocol.md is up to date
+rm -rf dist && node esbuild.mjs --v2 --production --analyze → extension 281249 / 299921 · webview 508743 / 600685
+                               (501695 at P5.8) · sidebar 305381 / 329122 (304283 at P5.8)
+rm -rf dist && NUIGET_V2=1 npm run package && npm run check:vsix → check:vsix: OK
+NUIGET_V2=1 npm run test:ui:v2 -- --storage /tmp/nuiget-ui-v2 → 16 passing (18s); fixture unchanged
+npm run package:vsix (1.x)   → SKIPPED: no 1.x file changed; CI's Package job builds it
+npm run test:ui (1.x)        → SKIPPED: no 1.x UI file changed; the CI job `UI` runs it
+test -e .claude/.contract-change → false · git diff --stat 69205e2 -- src/protocol src/core src/host docs/adr package.json
+                               .vscode-test.mjs esbuild.mjs vitest.config.mts eslint.config.mjs .github/workflows → empty
+```
+
+## Done (tested)
+
+- `AllProjectsView.test.tsx` (7): folder headings and levels, one folder without headings, the transitive aggregate with
+  Restore and its invalidation, the two unsupported titles of the ruling, axe; `aggregateTransitive`/`describeOrigins`.
+- `DetailsPane.test.tsx`: `a browse selection under All Projects changes nothing and says why` (P5.7, mine) rewritten by
+  title to `a browse selection under All Projects opens the project picker and installs into the projects picked` (with
+  axe and `aria-dialog-name` passing), as P5.7's deviation handed it to P5.9; new `an installed row under All Projects
+  changes its own project`.
+- `UpdatesTab.test.tsx`: new `rows of an unsupported project have no action and cannot join a bulk update`.
+- `InstalledTab.test.tsx` `All Projects: one section per project, selections across them become ops/bulkRemoveAllProjects
+  with the project names`: line 166 re-scoped as the ruling's step 2 says (named by title).
+
+## Done (untested)
+
+- All Projects in VS Code: commit c adds the ExTester test over a second project created at runtime; folder headings and
+  `sdk-too-old` cannot be shown on the runners (one workspace folder, SDK 10 only) and are proved in jsdom.
+
+## Not started
+
+- All Projects updates (commit b), the ExTester test and the remaining docs (commit c); the sidebar's All Projects
+  (P5.10).
+
+## Deviations from contract/ADR (file:line each)
+
+- `MultiInstallDialog.tsx` stays under `details` and `AllProjectsTransitiveSection.tsx` under `installed` (P5.4 put
+  `TransitiveSection` there); only the folder groups are in `features/all-projects` (ruling step 2).
+- `touchedBy` keeps the flat cross product for all-projects bulk requests; `ops/bulkInstall` is exact; the shape question
+  goes to the P5 phase review (ruling).
+- "All Projects (N)" counts every discovered project, unsupported ones included (`Project` has no support flag).
+- The fixture workspace has a `nuget.config` (the P5.8 note below says it has none; corrected in commit c's notes).
+
+## Advisor decisions (date, item, question, answer verbatim)
+
+The P5.9 ruling of the `architecture-advisor` (2026-10-15) is verbatim in `docs/plans/STATUS.md` under "### P5.9 — stop-and-ask: sdk-too-old placement, All Projects updates, the ExTester path, and the P5.4 test's line 166". The ambient advisor was consulted before writing (the gate scenario first, the `seq` rule as the generation rule, the aggregation in the feature, `touchedBy` checked).
+
+## Exact next step (one item ID)
+
+P5.9 commit b (All Projects updates), after commit a's CI run is green.
+
+## Earlier notes of this directory
 
 git status --porcelain --untracked-files=all (before the commit): modified `.github/copilot-instructions.md`, `ARCHITECTURE.md`, `CHANGELOG.md`, `docs/plans/{STATUS,findings-ledger}.md`, `src/core/catalog/{Catalog,Catalog.test,feedContexts,feedContexts.test}.ts`, `src/host/{handlers,handlers.test}.ts`, `src/webview/main/{MainShell.tsx,main.css}`, `src/webview/shared/store/{sources.tsx,sources.test.tsx}` and the five STATUS notes; new `src/webview/main/features/sources/{SourcesControl,SourceSettingsDialog,SourcesControl.test}.tsx`, `src/test/ui/v2/main-sources.ui.test.ts` (all belong to the P5.8 commit)
 
@@ -461,6 +542,7 @@ the `NUIGET_V2` build checked locally and `package:vsix` on the 1.x entries.
 ## Exact next step (one item ID)
 
 P5.6 (feature search, main and sidebar browse), after P5.5's CI run is green; a fresh session starts it (second compaction of this one).
+
 
 
 

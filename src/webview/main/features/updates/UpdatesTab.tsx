@@ -52,11 +52,13 @@ export function UpdatesTab({ filter, announce }: ListView): React.JSX.Element {
         .map(entry => entry.id.toLowerCase())), [installed.result]);
     const isCentral = (id: string): boolean => centralIds.has(id.toLowerCase());
     const isBusy = (id: string): boolean => projectPath !== null && isPackageBusy(projectPath, id);
+    // An unsupported project (an SDK below 10 included) is read-only: its updates are shown, never applied (D13).
+    const unsupported = installed.result?.unsupported;
 
     const needle = filter.trim().toLowerCase();
     const items = useMemo<Item[]>(() => rows.filter(row => row.id.toLowerCase().includes(needle)).map(update => ({ id: update.id, update })), [rows, needle]);
     // A bulk update takes the rows shown that are neither centrally managed nor busy.
-    const candidates = items.filter(item => !isCentral(item.id) && !isBusy(item.id)).map(item => item.update);
+    const candidates = unsupported ? [] : items.filter(item => !isCentral(item.id) && !isBusy(item.id)).map(item => item.update);
     const chosen = candidates.filter(update => selected.has(update.id));
     const toUpdate = chosen.length > 0 ? chosen : candidates;
     const allSelected = candidates.length > 0 && chosen.length === candidates.length;
@@ -72,7 +74,7 @@ export function UpdatesTab({ filter, announce }: ListView): React.JSX.Element {
     };
 
     const updateOne = (update: PackageUpdate): void => {
-        if (projectPath === null || isBusy(update.id)) {
+        if (projectPath === null || isBusy(update.id) || unsupported) {
             return;
         }
         if (isCentral(update.id)) {
@@ -86,6 +88,10 @@ export function UpdatesTab({ filter, announce }: ListView): React.JSX.Element {
     };
 
     const toggle = (update: PackageUpdate): void => {
+        if (unsupported) {
+            announce(`${update.id} cannot be updated: ${unsupported.message}`);
+            return;
+        }
         if (isCentral(update.id)) {
             announce(`${update.id} is centrally managed and cannot be part of a bulk update yet.`);
             return;
@@ -158,7 +164,7 @@ export function UpdatesTab({ filter, announce }: ListView): React.JSX.Element {
                                 {centrallyManaged ? <Badge label="CPM" title="Centrally managed" /> : null}
                                 {update.verified ? <Badge label="Verified" tone="info" title="The package id prefix is reserved by its owner" /> : null}
                             </>}
-                            actions={(
+                            actions={unsupported ? undefined : (
                                 <IconButton label={`Update ${update.id} to ${update.latestVersion}`} tabIndex={-1} data-testid="row-action-update" onClick={() => updateOne(update)}><ArrowUpIcon /></IconButton>
                             )}
                         />

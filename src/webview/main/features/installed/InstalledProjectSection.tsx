@@ -31,6 +31,8 @@ export interface InstalledProjectSectionProps {
     onUninstall: (entry: InstalledPackage) => void;
     /** All Projects: a heading with the project's name over the list, and a list id of its own. */
     grouped: boolean;
+    /** The heading level of a grouped section: 3 under a workspace folder's heading. */
+    level?: 2 | 3;
     revalidating: boolean;
 }
 
@@ -62,7 +64,7 @@ export function visibleRows(result: InstalledResult, metadata: ReadonlyMap<strin
  * under a heading with the project's name and can be collapsed.
  */
 export function InstalledProjectSection(props: InstalledProjectSectionProps): React.JSX.Element {
-    const { projectPath, projectName, result, status, error, onRetry, metadata, filter, vulnerableOnly, selected, currentId, onToggle, onCurrent, onUninstall, grouped, revalidating } = props;
+    const { projectPath, projectName, result, status, error, onRetry, metadata, filter, vulnerableOnly, selected, currentId, onToggle, onCurrent, onUninstall, grouped, revalidating, level = 2 } = props;
     const { isPackageBusy, active } = useOps();
     const [expanded, setExpanded] = useState(true);
     const baseId = useId();
@@ -86,11 +88,13 @@ export function InstalledProjectSection(props: InstalledProjectSectionProps): Re
             : <Skeleton density="comfortable" />;
     } else {
         const { items, empty } = visibleRows(result, metadata, filter, vulnerableOnly);
+        // An unsupported project has no packages, except one whose SDK is too old (D13): it keeps its list, read-only.
+        const listed = result.unsupported === undefined || result.packages.length > 0;
         content = (
             <>
                 {result.unsupported ? <Banner severity="warning">{`Unsupported project: ${result.unsupported.message}`}</Banner> : null}
                 {error !== undefined ? <Banner severity="error" action={{ label: 'Retry', onClick: onRetry }}>{`Installed packages of ${projectName} could not be loaded: ${error}`}</Banner> : null}
-                <Listbox
+                {listed ? <Listbox
                     items={items}
                     {...(grouped ? { labelledBy: titleId } : { label: 'Installed packages' })}
                     hint={HINT}
@@ -131,7 +135,7 @@ export function InstalledProjectSection(props: InstalledProjectSectionProps): Re
                             />
                         );
                     }}
-                />
+                /> : null}
             </>
         );
     }
@@ -148,9 +152,15 @@ export function InstalledProjectSection(props: InstalledProjectSectionProps): Re
                 onToggle={() => setExpanded(value => !value)}
                 contentId={contentId}
                 testKey={`project-${projectName.toLowerCase()}`}
-                count={result?.packages.length}
+                level={level}
+                count={result === undefined || (result.unsupported !== undefined && result.packages.length === 0) ? undefined : result.packages.length}
                 busy={revalidating}
-                actions={result?.fidelity === 'provisional' ? <Badge label="provisional" tone="info" title="Versions come from the project files; a full evaluation is pending." /> : undefined}
+                actions={(
+                    <>
+                        {result?.unsupported ? <Badge label="Unsupported" tone="warning" title={result.unsupported.message} /> : null}
+                        {result?.fidelity === 'provisional' ? <Badge label="provisional" tone="info" title="Versions come from the project files; a full evaluation is pending." /> : null}
+                    </>
+                )}
             />
             <div id={contentId} hidden={!expanded} className="nuiget-installed-project-content">{content}</div>
         </section>

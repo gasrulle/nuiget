@@ -10,14 +10,18 @@ import { useOps, useOpsActions } from '../../../shared/store/ops';
 import { useProjects } from '../../../shared/store/projects';
 import { useSession } from '../../../shared/store/session';
 import type { ListView } from '../../MainShell';
+import { FolderGroups } from '../all-projects/folderGroups';
 import { BulkUninstallDialog, type Removal } from './BulkUninstallDialog';
 import { InstalledProjectSection, visibleRows } from './InstalledProjectSection';
 import { TransitiveSection } from './TransitiveSection';
+import { AllProjectsTransitiveSection } from './AllProjectsTransitiveSection';
 
 /** What a section of the tab shows: one project's list, from the installed slice or from an All Projects chunk. */
 interface Section {
     projectPath: string;
     projectName: string;
+    /** The workspace folder of the project, in All Projects. */
+    workspaceFolder?: string;
     result: InstalledResult | undefined;
     status: 'idle' | 'loading' | 'ready' | 'error';
     error: string | undefined;
@@ -61,12 +65,13 @@ export function InstalledTab({ filter, vulnerableOnly, announce }: ListView): Re
 
     let sections: Section[] = [];
     if (allMode) {
-        const listed = all.projects ?? [...all.chunks.values()].map(chunk => ({ name: chunk.projectName, path: chunk.projectPath }));
+        const listed: ReadonlyArray<{ name: string; path: string; workspaceFolder?: string }> = all.projects ?? [...all.chunks.values()].map(chunk => ({ name: chunk.projectName, path: chunk.projectPath, workspaceFolder: chunk.workspaceFolder }));
         sections = listed.map(project => {
             const chunk = all.chunks.get(project.path);
             return {
                 projectPath: project.path,
                 projectName: chunk?.projectName ?? project.name,
+                workspaceFolder: chunk?.workspaceFolder ?? project.workspaceFolder,
                 result: chunk?.result,
                 status: chunk ? 'ready' : all.status,
                 error: chunk?.error ?? (chunk === undefined && all.error ? all.error.message : undefined),
@@ -165,8 +170,9 @@ export function InstalledTab({ filter, vulnerableOnly, announce }: ListView): Re
             ? <Skeleton density="comfortable" />
             : <EmptyState message={allMode ? 'No projects to list.' : 'No .NET projects found in this workspace.'} />;
     } else {
-        body = sections.map(section => (
+        const renderSection = (section: Section, level: 2 | 3) => (
             <InstalledProjectSection
+                level={level}
                 key={section.projectPath}
                 {...section}
                 filter={filter}
@@ -185,7 +191,8 @@ export function InstalledTab({ filter, vulnerableOnly, announce }: ListView): Re
                 onUninstall={entry => uninstall(section, entry)}
                 grouped={allMode}
             />
-        ));
+        );
+        body = allMode ? <FolderGroups items={sections} render={renderSection} /> : sections.map(section => renderSection(section, 2));
     }
 
     return (
@@ -199,7 +206,7 @@ export function InstalledTab({ filter, vulnerableOnly, announce }: ListView): Re
                 </button>
             </Toolbar>
             <div className="nuiget-installed-lists">{body}</div>
-            {allMode ? null : <TransitiveSection />}
+            {allMode ? <AllProjectsTransitiveSection /> : <TransitiveSection />}
             <BulkUninstallDialog open={confirming && count > 0} removals={removals} onConfirm={confirm} onCancel={() => setConfirming(false)} />
         </div>
     );

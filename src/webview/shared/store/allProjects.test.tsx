@@ -121,4 +121,39 @@ describe('allProjects slice', () => {
         await hostSays(() => host.fail(host.requests('allProjects/installed')[1], 'failed', 'no workspace'));
         expect(text()).toBe('true error false []');
     });
+
+    it('the transitive stream is asked only after enableTransitive, collects chunks by project and applies its latest request only', async () => {
+        const host = await mount(ALL_PROJECTS);
+        await list(host, 0, ['Serilog'], ['Moq']);
+        expect(host.requests('allProjects/transitive')).toHaveLength(0);
+        expect(current.transitive).toMatchObject({ enabled: false, status: 'idle' });
+
+        await act(async () => current.enableTransitive());
+        const [first] = host.requests('allProjects/transitive');
+        expect(current.transitive.status).toBe('loading');
+        await hostSays(() => host.chunk(first, { kind: 'project', chunk: { projectPath: A, projectName: 'A', frameworks: [{ targetFramework: 'net8.0', packages: [{ id: 'Serilog.Core', version: '1.0.0', requiredByChain: ['Serilog'] }] }], dataSourceAvailable: true } }));
+        // A restore of a project asks again; the earlier request is cancelled and its late chunk not applied.
+        await hostSays(() => host.invalidate([[resourceKeys.transitive(B), 2]]));
+        const second = host.requests('allProjects/transitive')[1];
+        expect(host.cancelled()).toContain(first.id);
+        await hostSays(() => host.chunk(first, { kind: 'project', chunk: { projectPath: B, projectName: 'B', frameworks: [], dataSourceAvailable: false } }));
+        expect([...current.transitive.chunks.keys()]).toEqual([A]);
+        await hostSays(() => host.chunk(second, { kind: 'project', chunk: { projectPath: B, projectName: 'B', frameworks: [], dataSourceAvailable: true } }));
+        await hostSays(() => host.respond(second, { projectPaths: [B], errored: [{ projectPath: A, errorKind: 'parse-failed' }] }));
+        expect(current.transitive.status).toBe('ready');
+        expect([...current.transitive.chunks.keys()].sort()).toEqual([A, B]);
+        expect(current.transitive.errored).toEqual([{ projectPath: A, errorKind: 'parse-failed' }]);
+    });
+
+    it('leaving All Projects closes the transitive stream; coming back starts closed', async () => {
+        const host = await mount(ALL_PROJECTS);
+        await act(async () => current.enableTransitive());
+        await hostSays(() => host.event('session/changed', snapshot(2, A)));
+        expect(host.cancelled()).toContain(host.requests('allProjects/transitive')[0].id);
+        await hostSays(() => host.event('session/changed', snapshot(3, ALL_PROJECTS)));
+        expect(current.transitive.enabled).toBe(false);
+        expect(host.requests('allProjects/transitive')).toHaveLength(1);
+        await act(async () => current.transitive.refresh());
+        expect(host.requests('allProjects/transitive')).toHaveLength(1);
+    });
 });

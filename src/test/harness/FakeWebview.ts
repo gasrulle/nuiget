@@ -9,7 +9,10 @@
  * R3 When the applied snapshot selects another real project, it asks `installed/get` for it, and asks again
  *    when `resources/invalidated` names that project's key. In all-projects mode it asks
  *    `allProjects/installed` instead, again when the event names `projects` or any `installed:` key, and
- *    keeps the `project` chunks by project path.
+ *    keeps the `project` chunks by project path. All-projects mode is entered by `showAllProjects()` or by an applied
+ *    snapshot that selects All Projects; a mode entered by a snapshot is left by a snapshot that selects anything else:
+ *    the stream is cancelled, its chunks are dropped, and a real project's `installed/get` is asked (the real slice's
+ *    reset, P5.9).
  * R4 The latest request wins per slot (`session`, `projects`, `installed`, `allProjects`): a response or
  *    chunk of an earlier request of that slot is recorded and not applied.
  * R5 Progress, chunks, `ops/completed` and terminal responses are recorded; `pending()` lists the requests
@@ -97,6 +100,8 @@ export class FakeWebview {
     /** All-projects mode: the last `project` chunk per project path. */
     readonly allProjects = new Map<string, InstalledResult | { error: string }>();
     allProjectsMode = false;
+    /** The mode was entered by a snapshot that selects All Projects, and follows the session. */
+    private allProjectsBySession = false;
 
     updates: { projectPath: string; updates: PackageUpdate[]; sourcesUnavailable?: boolean } | undefined;
     /** Every `sources/health` payload, in order (R8). */
@@ -306,6 +311,20 @@ export class FakeWebview {
         const previous = this.session?.selectedProject;
         this.session = snapshot;
         this.appliedRevs.push(snapshot.rev);
+        if (snapshot.selectedProject === ALL_PROJECTS && previous !== ALL_PROJECTS && !this.allProjectsMode) {
+            this.allProjectsBySession = true;
+            this.showAllProjects();
+        } else if (this.allProjectsBySession && snapshot.selectedProject !== ALL_PROJECTS) {
+            // Left: the stream is cancelled and nothing of it stays; a late chunk is recorded only (R4).
+            const streaming = this.latest.allProjects;
+            if (streaming !== undefined && this.waiting.has(streaming)) {
+                this.cancel(streaming);
+            }
+            delete this.latest.allProjects;
+            this.allProjects.clear();
+            this.allProjectsMode = false;
+            this.allProjectsBySession = false;
+        }
         if (!this.allProjectsMode && snapshot.selectedProject !== previous && isRealProject(snapshot.selectedProject)) {
             this.request('installed/get', { projectPath: snapshot.selectedProject });
         }

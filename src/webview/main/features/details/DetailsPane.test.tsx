@@ -230,15 +230,50 @@ describe('main panel: details', () => {
         expect([...selector().options].map(element => element.textContent)).toContain('2.12.0 (installed)');
     });
 
-    it('a browse selection under All Projects changes nothing and says why', async () => {
+    it('a browse selection under All Projects opens the project picker and installs into the projects picked', async () => {
         const user = userEvent.setup();
         const host = await mountReady();
         await hostSays(() => host.event('session/changed', snapshot(2, ALL_PROJECTS)));
+        const stream = host.requests('allProjects/installed')[0];
+        await hostSays(() => host.chunk(stream, { kind: 'start', projects: [{ name: 'App', path: A }, { name: 'Lib', path: B }] }));
+        await hostSays(() => host.chunk(stream, { kind: 'project', chunk: { projectPath: A, projectName: 'App', result: { projectPath: A, fidelity: 'authoritative', isCpm: false, packages: [pkg('Polly', '8.4.2')] } } }));
+        await hostSays(() => host.chunk(stream, { kind: 'project', chunk: { projectPath: B, projectName: 'Lib', result: { projectPath: B, fidelity: 'authoritative', isCpm: false, packages: [pkg('Polly', '7.2.4')] } } }));
         await user.type(screen.getByTestId('search-input'), 'polly{Enter}');
         await hostSays(() => host.respond(host.requests('search/query')[0], { query: 'polly', results: [{ id: 'Polly', version: '8.4.2', description: '', authors: '', versions: ['8.4.2'], sourceUrl: FEED }] }));
         await user.click(option('browse-list', 'Polly'));
-        expect(primary()).toBeDisabled();
-        expect(pane()).toHaveTextContent('Select a single project to install or change this package.');
+
+        expect(primary()).toHaveTextContent('Install…');
+        await user.click(primary());
+        const dialog = screen.getByTestId('multi-install-dialog');
+        expect(within(dialog).getByRole('checkbox', { name: 'App' })).toBeDisabled();
+        expect(dialog).toHaveTextContent('8.4.2 installed');
+        expect(dialog).toHaveTextContent('installed: 7.2.4');
+        expect(within(dialog).getByRole('button', { name: 'Install in 0 projects' })).toBeDisabled();
+        const results = await axe(document.body);
+        expect(results).toHaveNoViolations();
+        expect(axeRuleOutcome(results, 'aria-dialog-name')).toBe('passes');
+        await user.click(within(dialog).getByRole('checkbox', { name: 'Lib' }));
+        await user.click(within(dialog).getByRole('button', { name: 'Install in 1 project' }));
+
+        expect(host.requests('ops/bulkInstall').map(request => request.payload)).toEqual([{ projectPaths: [B], packageId: 'Polly', version: '8.4.2' }]);
+        expect(screen.queryByTestId('multi-install-dialog')).toBeNull();
+    });
+
+    it('an installed row under All Projects changes its own project', async () => {
+        const user = userEvent.setup();
+        const host = await mountReady();
+        await hostSays(() => host.event('session/changed', snapshot(2, ALL_PROJECTS)));
+        const stream = host.requests('allProjects/installed')[0];
+        await hostSays(() => host.chunk(stream, { kind: 'start', projects: [{ name: 'App', path: A }, { name: 'Lib', path: B }] }));
+        await hostSays(() => host.chunk(stream, { kind: 'project', chunk: { projectPath: B, projectName: 'Lib', result: { projectPath: B, fidelity: 'authoritative', isCpm: false, packages: [pkg('Moq', '4.18.0')] } } }));
+        await hostSays(() => host.respond(stream, { projectPaths: [A, B], errored: [] }));
+        await user.click(option('installed-list-lib', 'Moq'));
+        await hostSays(() => host.respond(versionsOf(host)[0], { packageId: 'Moq', versions: ['4.20.0', '4.18.0'] }));
+
+        expect([...selector().options].map(element => element.textContent)).toContain('4.18.0 (installed)');
+        await user.selectOptions(selector(), '4.20.0');
+        await user.click(primary());
+        expect(host.requests('ops/update').map(request => request.payload)).toEqual([{ projectPath: B, packageId: 'Moq', version: '4.20.0', sourceUrl: undefined }]);
     });
 
     it('no version of a local source can be listed, and it says so', async () => {

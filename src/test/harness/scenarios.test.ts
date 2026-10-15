@@ -2,7 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { MainPanelHost } from '../../host/MainPanelHost';
-import { makeEvent, makeOk, resourceKeys, type BulkOutcome, type InstalledResult, type OperationOutcome, type RequestType, type ResponseEnvelope } from '../../protocol';
+import { ALL_PROJECTS, makeEvent, makeOk, resourceKeys, type BulkOutcome, type InstalledResult, type OperationOutcome, type RequestType, type ResponseEnvelope } from '../../protocol';
 import { dotnetCalls } from './fakeDotnet';
 import { createFakeFeed } from './fakeFeed';
 import { FakeWebview } from './FakeWebview';
@@ -309,6 +309,35 @@ describe('two-surface harness', () => {
         expect(reopened).not.toBe(closed);
         await h.expectState({ selectedProject: A, projects: [A, B], installed: ['Foo@1.0.0'] });
         expect(reopened.session).toEqual(h.services.session.snapshot);
+    });
+
+    it('late allProjects chunk after switching is discarded', async () => {
+        h = await createHarness({ tree: TWO_PROJECTS, selectedProject: 'A/A.csproj' });
+        const [A, B] = [h.path('A/A.csproj'), h.path('B/B.csproj')];
+        const main = await h.resolve('main');
+        await h.expectState({ selectedProject: A, projects: [A, B], installed: ['Serilog@3.0.0'] });
+        // B's list in the fan-out waits on its config walk: its chunk comes late.
+        const lateWalk = h.dotnet.hold(dotnetCalls.configPaths(path.dirname(B)));
+
+        await h.selectProject('main', ALL_PROJECTS);
+        await h.settle(() => expect(main.allProjects.has(A)).toBe(true));
+        await h.settle(() => expect(lateWalk.seen).toBeGreaterThanOrEqual(1));
+        const stream = main.latestId('allProjects')!;
+        expect(main.allProjectsMode).toBe(true);
+        expect(main.allProjects.has(B)).toBe(false);
+
+        // Switching to a project leaves All Projects before B's chunk exists: the stream is cancelled.
+        await h.selectProject('main', A);
+        expect(main.allProjectsMode).toBe(false);
+        expect(main.allProjects.size).toBe(0);
+        lateWalk.release();
+
+        await h.expectState({ selectedProject: A, projects: [A, B], installed: ['Serilog@3.0.0'] });
+        // Whatever the host still sent for the old stream was recorded and never shown.
+        const lateChunks = main.chunksFor<'allProjects/installed'>(stream).filter(chunk => chunk.kind === 'project' && chunk.chunk.projectPath === B);
+        expect(main.allProjects.size, `late chunks recorded: ${lateChunks.length}`).toBe(0);
+        expect(main.responsesFor(stream)).toEqual([expect.objectContaining({ kind: 'response', ok: false })]);
+        expect(main.latestId('allProjects')).toBeUndefined();
     });
 
     it('central version change affecting several projects: one props edit reaches both projects on both surfaces', async () => {

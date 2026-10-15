@@ -1,15 +1,18 @@
 import { useEffect, useState } from 'react';
 import type React from 'react';
-import type { InstalledPackage, PackageUpdate } from '../../../../protocol';
+import { ALL_PROJECTS, type InstalledPackage, type PackageUpdate } from '../../../../protocol';
 import { whyNotRemovable } from '../../../shared/installed/rules';
 import { Banner, EmptyState, Tabs, type TabItem } from '../../../shared/primitives';
+import { useAllProjects } from '../../../shared/store/allProjects';
 import { useDetails, useDetailsActions } from '../../../shared/store/details';
 import { useInstalled } from '../../../shared/store/installed';
 import { useOps, useOpsActions } from '../../../shared/store/ops';
 import { useProjects } from '../../../shared/store/projects';
+import { useSession } from '../../../shared/store/session';
 import { useSources } from '../../../shared/store/sources';
 import { CentralUpdateDialog } from '../updates/CentralUpdateDialog';
 import { DetailsInfo } from './DetailsInfo';
+import { MultiInstallDialog } from './MultiInstallDialog';
 import { ReadmeView } from './ReadmeView';
 
 type DetailsTab = 'details' | 'readme';
@@ -49,6 +52,9 @@ export function DetailsPane({ announce }: DetailsPaneProps): React.JSX.Element {
     const details = useDetails();
     const { chooseVersion, showReadme, retryVersions } = useDetailsActions();
     const installed = useInstalled();
+    const all = useAllProjects();
+    const allMode = useSession().committed?.selectedProject === ALL_PROJECTS;
+    const [picking, setPicking] = useState(false);
     const { projects } = useProjects();
     const { sources } = useSources();
     const { isPackageBusy } = useOps();
@@ -78,21 +84,26 @@ export function DetailsPane({ announce }: DetailsPaneProps): React.JSX.Element {
     }
 
     const committedProject = installed.projectPath;
-    // A row found by a search goes to the committed project; an installed or update row to its own.
+    // A row found by a search goes to the committed project (in All Projects, to the projects picked for it); an
+    // installed or update row to its own project, also in All Projects (interaction model §3).
     const target = selection.origin === 'browse' ? committedProject : selection.projectPath;
-    const canChange = !stale && target !== null && target === committedProject;
-    const entry = canChange ? installed.result?.packages.find(candidate => candidate.id.toLowerCase() === selection.packageId.toLowerCase()) : undefined;
+    const pickProjects = allMode && selection.origin === 'browse' && !stale;
+    const canChange = !stale && target !== null && (target === committedProject || allMode);
+    const ownResult = target !== null && target !== committedProject ? all.chunks.get(target)?.result : installed.result;
+    const entry = canChange ? ownResult?.packages.find(candidate => candidate.id.toLowerCase() === selection.packageId.toLowerCase()) : undefined;
     const installedVersion = entry === undefined ? undefined : (entry.resolvedVersion ?? entry.version);
     const list = versions.value ?? [];
     const chosen = version ?? selection.version;
     const action = primaryAction(installedVersion, chosen, list);
     const busy = target !== null && isPackageBusy(target, selection.packageId);
     const fixedVersion = entry !== undefined && (entry.versionType === 'floating' || entry.versionType === 'range');
-    const removalBlocked = entry !== undefined && installed.result !== undefined ? whyNotRemovable(entry, installed.result) : undefined;
+    const removalBlocked = entry !== undefined && ownResult !== undefined ? whyNotRemovable(entry, ownResult) : undefined;
     const ownerName = projects?.find(project => project.path === selection.projectPath)?.name ?? selection.projectPath ?? '';
 
     let primaryWhy: string | undefined;
-    if (!canChange) {
+    if (pickProjects) {
+        primaryWhy = undefined;
+    } else if (!canChange) {
         primaryWhy = stale ? 'Checking the selected project' : 'Select a single project to install or change this package';
     } else if (fixedVersion) {
         primaryWhy = 'A floating or ranged version is changed in the project file';
@@ -104,6 +115,10 @@ export function DetailsPane({ announce }: DetailsPaneProps): React.JSX.Element {
 
     const fail = (what: string) => (error: unknown): void => announce(`${what} of ${selection.packageId} failed: ${error instanceof Error ? error.message : String(error)}`);
     const changeVersion = (): void => {
+        if (pickProjects) {
+            setPicking(true);
+            return;
+        }
         if (target === null || busy || primaryWhy !== undefined) {
             return;
         }
@@ -171,7 +186,7 @@ export function DetailsPane({ announce }: DetailsPaneProps): React.JSX.Element {
                         title={primaryWhy}
                         onClick={changeVersion}
                     >
-                        {busy ? 'Working…' : action}
+                        {busy ? 'Working…' : pickProjects ? 'Install…' : action}
                     </button>
                 </div>
                 {primaryWhy !== undefined && primaryWhy !== 'This version is installed' ? <p className="nuiget-details-note">{`${primaryWhy}.`}</p> : null}
@@ -188,6 +203,16 @@ export function DetailsPane({ announce }: DetailsPaneProps): React.JSX.Element {
                 {tab === 'details' ? <DetailsInfo /> : <ReadmeView />}
             </Tabs>
             <CentralUpdateDialog update={centralPreview} onClose={() => setCentralPreview(null)} />
+            <MultiInstallDialog
+                open={picking}
+                packageId={selection.packageId}
+                version={chosen}
+                onClose={() => setPicking(false)}
+                onInstall={projectPaths => {
+                    setPicking(false);
+                    run('ops/bulkInstall', { projectPaths, packageId: selection.packageId, version: chosen }).catch(fail('Install'));
+                }}
+            />
         </div>
     );
 }

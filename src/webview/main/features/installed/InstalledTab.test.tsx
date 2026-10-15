@@ -163,7 +163,7 @@ describe('main panel: Installed tab', () => {
         await hostSays(() => host.respond(request, { projectPaths: [A, B], errored: [] }));
         expect(screen.getByRole('listbox', { name: 'App' })).toHaveAttribute('data-testid', 'installed-list-app');
         expect(screen.getByRole('listbox', { name: 'Lib' })).toHaveAttribute('data-testid', 'installed-list-lib');
-        expect(screen.queryByTestId('transitive-section')).toBeNull();
+        expect(screen.getByTestId('section-header-transitive')).toHaveAttribute('aria-expanded', 'false'); expect(host.requests('transitive/get')).toHaveLength(0); expect(host.requests('allProjects/transitive')).toHaveLength(0);
         await user.click(within(screen.getByRole('listbox', { name: 'App' })).getByRole('option').querySelector('.nuiget-row-check') as Element);
         await user.click(within(screen.getByRole('listbox', { name: 'Lib' })).getAllByRole('option')[1].querySelector('.nuiget-row-check') as Element);
         expect(uninstallSelected()).toHaveTextContent('Uninstall selected (2)');

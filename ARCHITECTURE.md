@@ -397,7 +397,11 @@ starts; the other slices ask when they have something to ask for.
   project kept by its path. It is not a `useResource`: the fan-out has no generation and its key is never in
   `resources/invalidated` (ADR-009). The slice asks again when an invalidation names `projects` or any
   `installed:` key, keeps what it shows until the new answer, and applies the chunks and the answer of its
-  latest request only.
+  latest request only. Leaving All Projects resets it and cancels the stream, so a chunk that arrives late for it is
+  never shown (harness gate `late allProjects chunk after switching is discarded`, P5.9). Since P5.9 it also streams
+  `allProjects/transitive` once `enableTransitive()` was called, sticky while All Projects stays committed (unlike
+  `transitive.enable()`, which resets per project); it asks again on an invalidation that names `projects`, an
+  `installed:` or a `transitive:` key, with the same latest-request rule.
 - `updates` (P5.5): `useResource` for `updates:<path>|<prerelease>` of the committed project under the committed
   prerelease flag; another flag is another resource, so a toggle asks again. Nothing is asked without a single
   project. Before the answer the rows are the bare `found` chunks of the latest request; the answer replaces them
@@ -652,7 +656,9 @@ confirmation says the source goes from the nearest config file.
   3. When the applied snapshot selects another real project, it asks `installed/get` for it, and asks again
      when `resources/invalidated` names that project's key in `keys`. In all-projects mode it asks
      `allProjects/installed` instead, again when the event names `projects` or any `installed:` key, and
-     keeps the `project` chunks by project path.
+     keeps the `project` chunks by project path. The mode is entered by `showAllProjects()` or by an applied
+     snapshot that selects All Projects; a mode a snapshot entered is left by a snapshot that selects anything else,
+     which cancels the stream and drops its chunks, as the slice's reset does (P5.9).
   4. The latest request wins per slot (`session`, `projects`, `installed`, `allProjects`): a response or
      chunk of an earlier request of that slot is recorded and not applied.
   5. Progress, chunks, `ops/completed` and terminal responses are recorded; a request without a terminal

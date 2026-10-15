@@ -153,6 +153,25 @@ describe('main panel: Updates tab', () => {
         expect(screen.getByTestId('updates-tab')).toHaveAccessibleName(/Updates\s+0/);
     });
 
+    it('rows of an unsupported project have no action and cannot join a bulk update', async () => {
+        const user = userEvent.setup();
+        const host = createFakeHost();
+        render(<StoreProvider bus={host.bus}><MainShell installed={view => <InstalledTab {...view} />} updates={view => <UpdatesTab {...view} />} /></StoreProvider>);
+        await hostSays(() => host.respond(host.requests('session/get')[0], snapshot(1)));
+        await hostSays(() => host.respond(host.requests('projects/list')[0], { projects: [{ name: 'App', path: A }] }, 1));
+        await hostSays(() => host.respond(host.requests('installed/get')[0], { ...installed([pkg('Serilog', { version: '3.0.0' })]), unsupported: { reason: 'sdk-too-old', message: 'requires .NET SDK 10 or newer' } }, 1));
+        await hostSays(() => host.respond(host.requests('updates/get')[0], { projectPath: A, updates: [update('Serilog', '3.0.0', '3.1.0')] }, 1));
+        await user.click(screen.getByTestId('updates-tab'));
+
+        expect(within(screen.getByTestId('updates-list')).queryAllByTestId('row-action-update')).toHaveLength(0);
+        await user.click(optionOf('Serilog'));
+        await user.keyboard('{Enter}');
+        await user.keyboard(' ');
+        expect(host.requests('ops/update')).toHaveLength(0);
+        await waitFor(() => expect(screen.getByTestId('status-live')).toHaveTextContent('Serilog cannot be updated: requires .NET SDK 10 or newer'));
+        expect(screen.getByTestId('update-all-button')).toBeDisabled();
+    });
+
     it('All Projects: an empty state instead of a list', async () => {
         const host = await mountWith(null, ALL_PROJECTS);
         expect(screen.getByText('Updates for All Projects are not available in this view yet. Select a single project.')).toBeInTheDocument();

@@ -468,3 +468,39 @@ body {
     justify-content: flex-end;
     gap: var(--nuiget-space-3);
 }
+
+/* ── All Projects: one heading per workspace folder ── */
+
+.nuiget-installed-folder-title {
+    margin: var(--nuiget-space-4) var(--nuiget-space-4) var(--nuiget-space-1);
+    color: var(--nuiget-color-fg-muted);
+    font-size: var(--nuiget-font-size-sm);
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+/* ── Install in several projects ── */
+
+.nuiget-multi-install {
+    display: flex;
+    flex-direction: column;
+    gap: var(--nuiget-space-2);
+    max-height: 50vh;
+    margin: 0;
+    padding: 0;
+    overflow-y: auto;
+    list-style: none;
+}
+
+.nuiget-multi-install-row {
+    display: flex;
+    align-items: center;
+    gap: var(--nuiget-space-3);
+    min-height: var(--nuiget-target-min);
+}
+
+.nuiget-multi-install-note {
+    margin-inline-start: auto;
+    color: var(--nuiget-color-fg-muted);
+    font-size: var(--nuiget-font-size-sm);
+}
