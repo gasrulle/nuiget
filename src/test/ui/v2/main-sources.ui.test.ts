@@ -6,8 +6,9 @@ import { driverOf, findByTestId, leaveWebview, poll, waitForTestIdGone } from '.
 /**
  * The NuGet sources of the 2.0 main panel in VS Code (plan item P5.8), on a VSIX packaged with `NUIGET_V2=1`: the
  * header's source selector lists the enabled sources, the gear opens the dialog with the source rows, the add form
- * opens and goes back, and Escape closes the dialog. Nothing is added, removed, enabled or disabled: the fixture
- * workspace has no `nuget.config`, so a change would write the user-level `NuGet.Config` of the machine running it.
+ * opens and goes back, and Escape closes the dialog. Nothing is added, removed, enabled or disabled: the fixture's
+ * `nuget.config` is shared by every suite, and a source declared in the user-level `NuGet.Config` (nuget.org) would be
+ * changed on the machine running the test.
  */
 describe('2.0 main panel: sources', () => {
     beforeEach(async function () {

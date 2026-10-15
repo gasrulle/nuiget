@@ -1,4 +1,59 @@
-# STATUS — src/test/harness   commit 69205e2 (parent of P5.9 commit a)   2026-10-15T23:00:00Z
+# STATUS — src/test/harness   commit c15000f (P5.9 commit b; parent of commit c)   2026-10-16T02:00:00Z
+
+git status --porcelain --untracked-files=all (before commit c): modified `.github/copilot-instructions.md`, `ARCHITECTURE.md`, `CHANGELOG.md`, `docs/plans/STATUS.md`, `docs/ux/interaction-model.md`, `src/test/ui/v2/main-sources.ui.test.ts` (comment only) and the four STATUS notes; new `src/test/ui/v2/main-all-projects.ui.test.ts` (all belong to P5.9 commit c)
+
+Item: **P5.9, commit c of three**: no change in this directory; R3's by-session All Projects mode is described in
+ARCHITECTURE "Two-surface harness".
+
+## Verified by running
+
+P5.9 commit c:
+
+```text
+baseline at c15000f (commit b) → CI run 38714494277 green on all 11 jobs
+npm run check-types          → first run red: `id` possibly null in the new test (getAttribute); fixed, exit 0
+npx tsc --noEmit / npm run check-types / npm run lint → exit 0 each (after the last edit)
+NUIGET_V2=1 npm run test:ui:v2 -- --storage /tmp/nuiget-ui-v2 → 18 passing (33s) at the first run, the two new tests
+                               (`the host offers All Projects once a second project appears`, `All Projects lists one
+                               section per project and the collapsed transitive aggregate`) among them
+git status --porcelain --untracked-files=all src/test/e2e → empty afterwards · test -e .../e2e-workspace/Utility → false
+rm -rf dist && NUIGET_V2=1 npm run package && npm run check:vsix → check:vsix: OK
+rm -rf dist && node esbuild.mjs --v2 --production --analyze → extension 281249 / 299921 · webview 517706 / 600685 ·
+                               sidebar 307187 / 329122 (no source change since commit b)
+grep -c "has no `nuget.config`" src/test/ui/v2/STATUS.md src/test/ui/v2/main-sources.ui.test.ts → 0 and 0
+npm test / npm run bench     → exit 0 (npm test 0: Tests 3203 passed (3203) · bench 0: Tests 119 passed | 1 skipped (120))
+test -e .claude/.contract-change → false · git diff --stat 69205e2 -- src/protocol src/core src/host docs/adr package.json
+                               .vscode-test.mjs esbuild.mjs vitest.config.mts eslint.config.mjs .github/workflows → empty
+```
+
+## Done (tested)
+
+- `main-all-projects.ui.test.ts`: creates `Utility/Utility.csproj` in the opened fixture workspace, waits for "All
+  Projects (2)", commits All Projects (value set and `change` dispatched on the selector), reads two `installed-list-*`
+  ids from the DOM and checks the closed `section-header-transitive`; `after` removes the project, writes
+  `TestProject.csproj` back and waits until the host is back on it with `installed-list`.
+
+## Done (untested)
+
+- None for this commit.
+
+## Not started
+
+- The sidebar's All Projects (P5.10).
+
+## Deviations from contract/ADR (file:line each)
+
+- None.
+
+## Advisor decisions (date, item, question, answer verbatim)
+
+The P5.9 ruling and the commit-b follow-up (both 2026-10-15) are verbatim in `docs/plans/STATUS.md`.
+
+## Exact next step (one item ID)
+
+P5.2 (store slices sweep), after P5.9 commit c's CI run is green.
+
+## Earlier notes of this directory
 
 git status --porcelain --untracked-files=all (before commit a): modified `ARCHITECTURE.md`, `CHANGELOG.md`, `docs/plans/STATUS.md`, `src/test/harness/{FakeWebview,scenarios.test}.ts`, `src/webview/main/main.css`, `src/webview/main/features/details/{DetailsPane,DetailsPane.test}.tsx`, `src/webview/main/features/installed/{InstalledTab,InstalledTab.test,InstalledProjectSection}.tsx`, `src/webview/main/features/updates/{UpdatesTab,UpdatesTab.test}.tsx`, `src/webview/shared/store/{allProjects,allProjects.test}.tsx` and the three STATUS notes; new `src/webview/main/features/all-projects/folderGroups.tsx`, `src/webview/main/features/details/MultiInstallDialog.tsx`, `src/webview/main/features/installed/{AllProjectsTransitiveSection,AllProjectsView.test}.tsx` (all belong to P5.9 commit a)
 
@@ -438,4 +493,5 @@ VERIFY:
 
 FILES CHECKED: /Users/mattias/github/nuiget/.github/agents/architecture-advisor.agent.md (whole); /Users/mattias/github/nuiget/docs/plans/2026-10-11-nuiget-2.0-execution-plan.md (:1-200: §0-§4, P0 rows; P4.9 row :265 by grep); /Users/mattias/github/nuiget/docs/adr/002-query-coordinator.md (whole), /Users/mattias/github/nuiget/docs/adr/009-catalog.md (whole, d.5 and d.6 as amended at P4.9a); /Users/mattias/github/nuiget/docs/plans/STATUS.md:2060-2178 (the P4.9 ruling verbatim, steps 11-16, DO NOT, CONTRACT CHANGE, VERIFY); /Users/mattias/github/nuiget/src/STATUS.md:1-20; /Users/mattias/github/nuiget/src/extension.next.ts (whole, working tree: `probeSources` :222-237, `reconciled` :219-220, monitor :243-244, restart :250-252, `ready.finally(markReconciled)` :371); /Users/mattias/github/nuiget/src/core/catalog/feedContexts.ts (whole); /Users/mattias/github/nuiget/src/core/catalog/Catalog.ts (:127 `sources`, :160-262 `computeInstalled`/`updates`/`computeUpdates`, :520-539 `sourceHealth`/`invalidate`, the uncommitted `emitInstalledMetadata` diff); /Users/mattias/github/nuiget/src/core/catalog/Catalog.test.ts (:46-57 `fakeSources`, :143-151 `makeDeps` builds a real `FeedContexts`, :440-475 the two addendum tests); /Users/mattias/github/nuiget/src/core/catalog/feedContexts.test.ts (:1-43 rig, titles :44-111); /Users/mattias/github/nuiget/src/core/project/context.ts (whole); /Users/mattias/github/nuiget/src/core/feeds/health.ts (whole, working tree) and its diff; /Users/mattias/github/nuiget/src/core/feeds/serviceIndex.ts:170-260 (`resolve`, `probe` bypasses caches and does not reset health, `clearCaches` resets it, `fetchEndpoints` marks); /Users/mattias/github/nuiget/src/core/sources/DotnetSourceProvider.ts:45-59 (per-directory listing cache); /Users/mattias/github/nuiget/src/core/util/events.ts:1-40 (`Emitter`); /Users/mattias/github/nuiget/src/host/handlers.ts:29-36 (`sourceDirectory`), :284-301 and the working-tree diff (`failed: catalog.sourceHealth()`); /Users/mattias/github/nuiget/src/host/SidebarHost.ts diff; /Users/mattias/github/nuiget/src/test/harness/harness.ts (whole at first read, then the working-tree diff adding `FakeFeed`/`FakeTransport` :17-22,65-70,168-172); /Users/mattias/github/nuiget/src/test/harness/fakeFeed.ts (untracked; :1-80: `down` → `fail('network')`, service index answered with search, registration and flat resources, 404 for unknown ids); /Users/mattias/github/nuiget/src/test/harness/scenarios.test.ts (whole; the six failing titles :87-142,239-272,274-311; the count at :267-269); /Users/mattias/github/nuiget/src/test/harness/fakeDotnet.ts (whole; `configPaths` matcher :68, holds :148-159, `nuget config paths` answered empty :138-139); /Users/mattias/github/nuiget/src/test/harness/FakeWebview.ts (grep: only `project` chunks of `allProjects/installed` are applied, :231-237); /Users/mattias/github/nuiget/src/extension.next.test.ts:380-470 (the four reconciliation tests, :445-456 `a replaced selection …`), :310-338 (transport override tests), :508-533 (`overlapping refreshes are coalesced`), :594-598. Commands: `git status --short` and `git status --porcelain --untracked-files=all` (modified: docs/plans/STATUS.md, Catalog.ts, health.ts, health.test.ts, extension.next.ts, SidebarHost.ts, handlers.ts, harness.ts; untracked: src/test/harness/fakeFeed.ts), `git log --oneline -3` (head 6e2c878), `git diff --stat`, `git diff` of Catalog.ts, health.ts, SidebarHost.ts, handlers.ts, harness.ts, `wc -l` of the files in play, `ls src/core/feeds src/core/sources src/core/catalog src/test/harness`. Advisor tool consulted once before writing; its points (the duplicated walk as the defect, `computeUpdates` order, `onDidRegister` → restart so the first probe is not five minutes out, the withdrawn step-15 premise, the three facts to verify: real `FeedContexts` in the Catalog rig, the fake feed's 200 service index, `Catalog.sources` registering nothing) are verified and folded in.
 `````
+
 

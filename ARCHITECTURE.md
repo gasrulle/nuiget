@@ -401,7 +401,10 @@ starts; the other slices ask when they have something to ask for.
   never shown (harness gate `late allProjects chunk after switching is discarded`, P5.9). Since P5.9 it also streams
   `allProjects/transitive` once `enableTransitive()` was called, sticky while All Projects stays committed (unlike
   `transitive.enable()`, which resets per project); it asks again on an invalidation that names `projects`, an
-  `installed:` or a `transitive:` key, with the same latest-request rule.
+  `installed:` or a `transitive:` key, with the same latest-request rule. A third stream, `allProjects/updates`, runs
+  while All Projects is committed, under the committed prerelease flag; it asks again on a flag change and on an
+  invalidation naming `projects` or an `updates:` key (never `installed:`), applies the chunks, icons and answer of its
+  latest request only (N11), and asks once more when a source recovers while the answer said `sourcesUnavailable`.
 - `updates` (P5.5): `useResource` for `updates:<path>|<prerelease>` of the committed project under the committed
   prerelease flag; another flag is another resource, so a toggle asks again. Nothing is asked without a single
   project. Before the answer the rows are the bare `found` chunks of the latest request; the answer replaces them
@@ -631,6 +634,20 @@ which ask without the flag, never walk the chain. `computeInstalled` registers i
 before awaiting it, so a directory read meanwhile joins that walk; `sources/list` before `installed/get` for the same
 directory still walks twice (N72, P6.2). Without a chain the listing comes back unattributed and the remove
 confirmation says the source goes from the nearest config file.
+
+### All Projects (main)
+
+With All Projects committed, the Installed and Updates tabs show one section per project, grouped by
+`features/all-projects/folderGroups.tsx` under a heading per workspace folder when there are two or more (sections one
+heading level down). An unsupported project keeps its section in its folder with an `Unsupported` badge and the banner
+"Unsupported project: <message>"; a project whose SDK is below 10 lists its packages read-only (D13), the other reasons
+have no packages and show no list. The Installed tab's transitive section aggregates `allProjects/transitive` on
+expand: one row per lower-cased id and version, with each project's top-level roots ("no traceable top-level package"
+for none) and Restore for the projects not restored. In the details pane an installed or update row changes its own
+project; a search result offers Install…, whose dialog (`MultiInstallDialog`) shows where the package is installed and
+sends `ops/bulkInstall` for the projects picked. The Updates tab is `AllProjectsUpdates` (see "Updates feature").
+`touchedBy` keeps the flat cross product of projects and packages for the all-projects bulk requests, as the host's
+`ops/progress` does.
 
 ### Two-surface harness
 

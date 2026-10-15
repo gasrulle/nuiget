@@ -1,4 +1,59 @@
-# STATUS — src/webview/shared   commit 359a2a4 (P5.9 commit a; parent of commit b)   2026-10-16T01:00:00Z
+# STATUS — src/webview/shared   commit c15000f (P5.9 commit b; parent of commit c)   2026-10-16T02:00:00Z
+
+git status --porcelain --untracked-files=all (before commit c): modified `.github/copilot-instructions.md`, `ARCHITECTURE.md`, `CHANGELOG.md`, `docs/plans/STATUS.md`, `docs/ux/interaction-model.md`, `src/test/ui/v2/main-sources.ui.test.ts` (comment only) and the four STATUS notes; new `src/test/ui/v2/main-all-projects.ui.test.ts` (all belong to P5.9 commit c)
+
+Item: **P5.9, commit c of three**: no source change in this directory; the slice's three streams are described in
+ARCHITECTURE "Message bus and store slices".
+
+## Verified by running
+
+P5.9 commit c:
+
+```text
+baseline at c15000f (commit b) → CI run 38714494277 green on all 11 jobs
+npm run check-types          → first run red: `id` possibly null in the new test (getAttribute); fixed, exit 0
+npx tsc --noEmit / npm run check-types / npm run lint → exit 0 each (after the last edit)
+NUIGET_V2=1 npm run test:ui:v2 -- --storage /tmp/nuiget-ui-v2 → 18 passing (33s) at the first run, the two new tests
+                               (`the host offers All Projects once a second project appears`, `All Projects lists one
+                               section per project and the collapsed transitive aggregate`) among them
+git status --porcelain --untracked-files=all src/test/e2e → empty afterwards · test -e .../e2e-workspace/Utility → false
+rm -rf dist && NUIGET_V2=1 npm run package && npm run check:vsix → check:vsix: OK
+rm -rf dist && node esbuild.mjs --v2 --production --analyze → extension 281249 / 299921 · webview 517706 / 600685 ·
+                               sidebar 307187 / 329122 (no source change since commit b)
+grep -c "has no `nuget.config`" src/test/ui/v2/STATUS.md src/test/ui/v2/main-sources.ui.test.ts → 0 and 0
+npm test / npm run bench     → exit 0 (npm test 0: Tests 3203 passed (3203) · bench 0: Tests 119 passed | 1 skipped (120))
+test -e .claude/.contract-change → false · git diff --stat 69205e2 -- src/protocol src/core src/host docs/adr package.json
+                               .vscode-test.mjs esbuild.mjs vitest.config.mts eslint.config.mjs .github/workflows → empty
+```
+
+## Done (tested)
+
+- `main-all-projects.ui.test.ts`: creates `Utility/Utility.csproj` in the opened fixture workspace, waits for "All
+  Projects (2)", commits All Projects (value set and `change` dispatched on the selector), reads two `installed-list-*`
+  ids from the DOM and checks the closed `section-header-transitive`; `after` removes the project, writes
+  `TestProject.csproj` back and waits until the host is back on it with `installed-list`.
+
+## Done (untested)
+
+- None for this commit.
+
+## Not started
+
+- The sidebar's All Projects (P5.10).
+
+## Deviations from contract/ADR (file:line each)
+
+- None.
+
+## Advisor decisions (date, item, question, answer verbatim)
+
+The P5.9 ruling and the commit-b follow-up (both 2026-10-15) are verbatim in `docs/plans/STATUS.md`.
+
+## Exact next step (one item ID)
+
+P5.2 (store slices sweep), after P5.9 commit c's CI run is green.
+
+## Earlier notes of this directory
 
 git status --porcelain --untracked-files=all (before commit b): modified `ARCHITECTURE.md`, `docs/plans/{STATUS,findings-ledger}.md`, `src/webview/main/MainShell.tsx`, `src/webview/main/features/updates/{UpdatesTab,UpdatesTab.test,UpdateAllDialog}.tsx`, `src/webview/shared/store/{allProjects,allProjects.test}.tsx` and the two STATUS notes; new `src/webview/main/features/updates/AllProjectsUpdates.tsx` (all belong to P5.9 commit b)
 
@@ -837,6 +892,7 @@ FILES CHECKED: `docs/plans/2026-10-11-nuiget-2.0-execution-plan.md:41-175,240-25
 ## Exact next step (one item ID)
 
 P5.6 (feature search, main and sidebar browse), after P5.5's CI run is green; a fresh session starts it (second compaction of this one).
+
 
 
 

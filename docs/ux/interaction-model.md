@@ -36,7 +36,8 @@ non-empty box clears it (returns to `default`); Escape in an empty box blurs.
 Selecting **All Projects (N)** sets `selectedProject = ALL_PROJECTS`. It means *every supported
 project discovered in the workspace* (all workspace folders), grouped by workspace folder when
 there are several. Solution membership is not consulted in 2.0 (see ADR-000). Unsupported
-projects appear with an "Unsupported" row explaining why (`packages.config`, non-SDK-style).
+projects appear with an Unsupported section (badge and banner) explaining why (`packages.config`, non-SDK-style); a
+project whose SDK is below 10 lists its packages read-only.
 
 In this mode:
 - Installed and Updates group rows per project; row actions apply to that project.
