@@ -15,3 +15,4 @@ export * from './readme';
 export * from './readmeImage';
 export * from './nuspec';
 export * from './offline';
+export * from './search';

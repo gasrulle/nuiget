@@ -62,11 +62,24 @@ export interface SearchOptions {
     signal?: AbortSignal;
 }
 
+export interface SearchOutcome {
+    results: PackageSearchResult[];
+    /**
+     * True when a source the client was handed did not answer: an API request failed (transport failure, non-2xx,
+     * invalid JSON) or the CLI run failed, exited non-zero without a document, or reported any `problems[]` entry. False
+     * means every source answered; an empty `results` is then a real empty result.
+     */
+    sourcesUnavailable: boolean;
+}
+
 export interface SearchClient extends SearchByIdClient {
     /** Multi-source search: V3 API for sources with a search service, CLI fallback (`dotnet package search --format json`) for the rest. */
-    search(sources: ResolvedSource[], cliFallbackSources: NuGetSource[], options: SearchOptions, cwd: string): Promise<PackageSearchResult[]>;
+    search(sources: ResolvedSource[], cliFallbackSources: NuGetSource[], options: SearchOptions, cwd: string): Promise<SearchOutcome>;
     quickSearch(sources: ResolvedSource[], query: string, includePrerelease: boolean, perSource: number, signal?: AbortSignal): Promise<QuickSearchSourceResult[]>;
-    /** `packageid:` lookup used for lite metadata (verified, authors, iconUrl, description). */
+    /**
+     * `packageid:` lookup used for lite metadata (verified, authors, description). Best effort: undefined for missing,
+     * failed and not allowed; use `searchById` when the distinction matters.
+     */
     lookup(source: ResolvedSource, packageId: string, signal?: AbortSignal): Promise<PackageMetadataLite | undefined>;
 }
 
@@ -155,5 +168,14 @@ export function filterAllowedSources(policy: OutboundPolicy, packageId: string, 
 
 /** Search result for one exact package id, including its version list and download count. */
 export interface SearchByIdClient {
-    searchById(source: ResolvedSource, packageId: string, includePrerelease: boolean, signal?: AbortSignal): Promise<PackageSearchResult | undefined>;
+    searchById(source: ResolvedSource, packageId: string, includePrerelease: boolean, signal?: AbortSignal): Promise<SearchByIdFetch>;
 }
+
+/**
+ * `missing`: the source answered with no entry for the id, or the policy does not allow this source for the id and no
+ * request was made. `failed`: a transport, HTTP or JSON failure; it says nothing about the package and is never cached.
+ */
+export type SearchByIdFetch =
+    | { kind: 'found'; result: PackageSearchResult }
+    | { kind: 'missing' }
+    | { kind: 'failed'; reason: string };
