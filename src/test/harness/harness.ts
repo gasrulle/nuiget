@@ -68,6 +68,8 @@ export interface HarnessOptions {
     sources?: Record<string, string[]>;
     /** The feed behind every source; default: an empty, healthy feed. */
     feed?: FakeFeed;
+    /** The fake dotnet answers `msbuild` from the files, so installed lists end authoritative (default: they stay provisional). */
+    evaluate?: boolean;
 }
 
 export interface ExpectedState {
@@ -136,6 +138,8 @@ export async function createHarness(options: HarnessOptions) {
     mockWorkspace.findFiles.mockImplementation((async () => projectFiles.map(file => vscode.Uri.file(file))) as unknown as () => Promise<never[]>);
 
     const dotnet: FakeDotnet = createFakeDotnet();
+    dotnet.root = root;
+    dotnet.msbuild = options.evaluate === true ? 'files' : 'none';
     const sourcesByDirectory = Object.entries(options.sources ?? {}).map(([directory, urls]) => ({ directory: path.resolve(at(directory)), urls }));
     dotnet.sources = cwd => sourcesByDirectory.find(entry => entry.directory === path.resolve(cwd))?.urls ?? [SHARED_FEED];
 
@@ -345,7 +349,7 @@ export async function createHarness(options: HarnessOptions) {
                         }
                     } else if (expected.installed !== undefined) {
                         expect(webview.installed?.projectPath, `${name}: project of the installed list`).toBe(expected.selectedProject);
-                        expect(webview.installed?.fidelity, `${name}: fidelity`).toBe('provisional');
+                        expect(webview.installed?.fidelity, `${name}: fidelity`).toBe(options.evaluate === true ? 'authoritative' : 'provisional');
                         expect(packagesOf(webview.installed), `${name}: installed`).toEqual(expected.installed);
                     }
                 }

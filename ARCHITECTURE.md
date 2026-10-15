@@ -700,7 +700,12 @@ sends `ops/bulkInstall` for the projects picked. The Updates tab is `AllProjects
 - **Fake dotnet.** `fakeDotnet.ts` is the injected `spawn`: no process starts. It answers `--version`,
   `nuget list source` (per working directory) and `nuget config paths`, and it makes `package add` and
   `package remove` real by editing the project file on disk, so the inspector reads back what an operation
-  did. A scenario can hold the calls that match a predicate and release them later. A computation of
+  did; on a Central Package Management project `package add --version` writes the central version into the governing
+  `Directory.Packages.props` and leaves a versionless reference in the project, and `package add` without a version
+  changes nothing (the probe rows of `src/core/cli/__fixtures__/sdk-probes/10.0.401.json`). `msbuild` answers from the
+  project files (properties and `PackageReference`/`PackageVersion` items in the probe's JSON shapes) only under
+  `createHarness({ evaluate: true })`; otherwise it prints nothing, every evaluation fails and the lists stay
+  provisional (P6.4b). A scenario can hold the calls that match a predicate and release them later. A computation of
   `installed/get` can be held at `nuget config paths` only: the SDK probe is cached per directory after its
   first answer, and a result that the coordinator has cached is answered without any call.
 - **Fake feed.** `fakeFeed.ts` is the injected `transport` (a `FakeTransport` over a scripted handler): the service

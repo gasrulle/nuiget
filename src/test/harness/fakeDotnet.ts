@@ -1,7 +1,11 @@
 /**
  * In-process stand-in for the `dotnet` executable: a `SpawnFunction` that starts no process. It answers
  * the commands the 2.0 core issues and makes `package add` and `package remove` real by editing the
- * project file on disk, so that what an operation did can be read back by the project inspector.
+ * project file on disk, so that what an operation did can be read back by the project inspector. On a
+ * Central Package Management project `package add --version` writes the central version instead, as the
+ * SDK 10 probe recorded (`src/core/cli/__fixtures__/sdk-probes/10.0.401.json`). `msbuild` answers from the
+ * project files only when a scenario asks for it (`msbuild = 'files'`); otherwise it prints nothing and every
+ * evaluation fails, which leaves the installed lists provisional.
  */
 
 import { EventEmitter } from 'events';
@@ -141,6 +145,74 @@ function optionValue(args: readonly string[], option: string): string | undefine
     return index < 0 ? undefined : args[index + 1];
 }
 
+const CENTRAL_PROPS = 'Directory.Packages.props';
+
+/** The nearest file `name` from `directory` upwards, stopping after `stop` when one is given. */
+function nearestFile(directory: string, name: string, stop?: string): string | undefined {
+    let current = path.resolve(directory);
+    for (;;) {
+        const candidate = path.join(current, name);
+        if (fs.existsSync(candidate)) {
+            return candidate;
+        }
+        const parent = path.dirname(current);
+        if (parent === current || (stop !== undefined && current === path.resolve(stop))) {
+            return undefined;
+        }
+        current = parent;
+    }
+}
+
+/** The `Directory.Packages.props` that governs a project when it switches Central Package Management on. */
+function centralPropsOf(projectPath: string, stop?: string): string | undefined {
+    const props = nearestFile(path.dirname(projectPath), CENTRAL_PROPS, stop);
+    return props !== undefined && /<ManagePackageVersionsCentrally>\s*true\s*<\/ManagePackageVersionsCentrally>/i.test(fs.readFileSync(props, 'utf8')) ? props : undefined;
+}
+
+const attributeOf = (element: string, name: string): string | undefined => new RegExp(`\\b${name}="([^"]*)"`, 'i').exec(element)?.[1];
+const itemsOf = (xml: string, type: string): string[] => xml.match(new RegExp(`<${type}\\b[^>]*/>`, 'gi')) ?? [];
+
+/** Set the central version of a package in a props file: the entry is replaced, or added before the last `</ItemGroup>`. */
+export function setCentralVersion(propsPath: string, packageId: string, version: string): void {
+    const xml = fs.readFileSync(propsPath, 'utf8');
+    const element = `<PackageVersion Include="${packageId}" Version="${version}" />`;
+    const existing = new RegExp(`<PackageVersion\\s+Include="${escapeForPattern(packageId)}"[^>]*/>`, 'i');
+    const next = existing.test(xml)
+        ? xml.replace(existing, element)
+        : `${xml.slice(0, xml.lastIndexOf('</ItemGroup>')).trimEnd()}\n    ${element}\n  ${xml.slice(xml.lastIndexOf('</ItemGroup>'))}`;
+    fs.writeFileSync(propsPath, next, 'utf8');
+}
+
+/** A versionless reference in the project, unless the project references the package already (probe row `add-absent`). */
+function ensureCentralReference(projectPath: string, packageId: string): void {
+    const xml = fs.readFileSync(projectPath, 'utf8');
+    if (referencePattern(packageId).test(xml)) {
+        return;
+    }
+    const at = xml.lastIndexOf('</ItemGroup>');
+    fs.writeFileSync(projectPath, `${xml.slice(0, at).trimEnd()}\n    <PackageReference Include="${packageId}" />\n  ${xml.slice(at)}`, 'utf8');
+}
+
+/** What `dotnet msbuild <project> -getProperty:… | -getItem:…` prints for the project files, in the shapes of the SDK probe. */
+function evaluateFromFiles(args: readonly string[], stop?: string): DotnetAnswer {
+    const projectPath = args[1];
+    const xml = fs.readFileSync(projectPath, 'utf8');
+    const props = centralPropsOf(projectPath, stop);
+    if (args.some(arg => arg.startsWith('-getProperty:'))) {
+        const frameworks = /<TargetFrameworks>([^<]*)<\/TargetFrameworks>/i.exec(xml)?.[1] ?? '';
+        const framework = frameworks === '' ? /<TargetFramework>([^<]*)<\/TargetFramework>/i.exec(xml)?.[1] ?? '' : '';
+        return { stdout: JSON.stringify({ Properties: { TargetFramework: framework, TargetFrameworks: frameworks, ManagePackageVersionsCentrally: props === undefined ? '' : 'true', CentralPackageVersionOverrideEnabled: '' } }, null, 2) };
+    }
+    const item = (element: string, definedIn: string, names: string[]) => Object.fromEntries([
+        ['Identity', attributeOf(element, 'Include')],
+        ...names.map(name => [name, attributeOf(element, name)]),
+        ['DefiningProjectFullPath', definedIn],
+    ].filter(([, value]) => value !== undefined));
+    const references = itemsOf(xml, 'PackageReference').map(element => item(element, projectPath, ['Version', 'VersionOverride']));
+    const versions = props === undefined ? [] : itemsOf(fs.readFileSync(props, 'utf8'), 'PackageVersion').map(element => item(element, props, ['Version']));
+    return { stdout: JSON.stringify({ Items: { PackageReference: references, PackageVersion: versions } }, null, 2) };
+}
+
 /** The version `package add` writes when the request names none. */
 export const LATEST_VERSION = '1.0.0';
 
@@ -159,9 +231,20 @@ export function createFakeDotnet() {
         if (call.line.startsWith('nuget list source')) {
             return { stdout: listing(fake.sources(call.cwd)) };
         }
+        if (call.args[0] === 'msbuild' && fake.msbuild === 'files') {
+            return evaluateFromFiles(call.args, fake.root);
+        }
         const projectPath = optionValue(call.args, '--project');
         if (call.line.startsWith('package add ') && projectPath !== undefined) {
-            addPackageReference(projectPath, call.args[2], optionValue(call.args, '--version') ?? LATEST_VERSION);
+            const version = optionValue(call.args, '--version');
+            const props = centralPropsOf(projectPath, fake.root);
+            if (props === undefined) {
+                addPackageReference(projectPath, call.args[2], version ?? LATEST_VERSION);
+            } else if (version !== undefined) {
+                // SDK 10 on a CPM project: the central version changes, the project keeps a versionless reference.
+                setCentralVersion(props, call.args[2], version);
+                ensureCentralReference(projectPath, call.args[2]);
+            }
         } else if (call.line.startsWith('package remove ') && projectPath !== undefined) {
             removePackageReference(projectPath, call.args[2]);
         }
@@ -172,6 +255,10 @@ export function createFakeDotnet() {
     const fake = {
         /** Every call, in the order the core made them. */
         calls: [] as DotnetCall[],
+        /** `'files'`: `msbuild` answers from the project files; `'none'`: it prints nothing and the evaluation fails. */
+        msbuild: 'none' as 'none' | 'files',
+        /** The workspace root: the walk up to `Directory.Packages.props` stops there. */
+        root: undefined as string | undefined,
         /** The enabled sources that `nuget list source` reports for a working directory. */
         sources: (_cwd: string): string[] => [],
         count: (matches: CallMatcher): number => fake.calls.filter(matches).length,

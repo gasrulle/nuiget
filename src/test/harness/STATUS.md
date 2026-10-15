@@ -1,559 +1,177 @@
-# STATUS — src/test/harness   commit ca8b6e8 (P5.12b block d; parent of the closing commit)   2026-10-17T02:00:00Z
+# STATUS — src/test/harness   commit 0e814af (P6.4a closed; parent of the P6.4b commit)   2026-10-16T00:30:00Z
 
-git status --porcelain --untracked-files=all (before the closing commit): modified `docs/plans/{STATUS,findings-ledger}.md` and the three STATUS notes of `src/test/{ui/v2,harness,e2e}` (all belong to P5.12b's closing commit; the code of blocks a to d is in a3324c4, 5084c2c, 258612d, ca8b6e8)
+git status --porcelain --untracked-files=all (before the commit): modified `.github/copilot-instructions.md`,
+`ARCHITECTURE.md`, `docs/plans/{STATUS,findings-ledger}.md`, `src/test/harness/{fakeDotnet,harness,scenarios.test}.ts`, this note
 
-Item: **P5.12b, blocks (b) and (c)**. (b) N59: `fakeDotnet.ts` exports `FakeChild`, whose `answer()` plays a
-`DotnetAnswer` (now with `spawnError` and `lateError`); `src/core/cli/DotnetRunner.test.ts` and
-`src/extension.next.test.ts` use it instead of their own copies. N58: `fakePanel.ts` exports `createFakePanel`, the
-panel that reports its disposal once, for `harness.ts` and `src/extension.next.test.ts`; `src/test/__mocks__/vscode.ts`
-is untouched until P8.2. (c) N73: step 13 measured `nuget config paths` for the project directory 1 → 2 after
-`refresh/all` → 3 after a watcher flush, so the scenario `N73: an installed computation that read the project file
-before a write-back is not shown as current` holds the operation's recomputation at the walk after it read the file
-without Serilog, writes the file back with Serilog, lets the watcher fire and releases the walk; both surfaces show
-Serilog with the generation the last invalidation listed.
+Item: **P6.4b** — the fake `msbuild` from the files (opt-in), the CPM-aware fake `package add`, and the gate scenario
+`central version change affects several projects` (the second of three sub-items of P6.4 by the ruling below). This
+note replaces the previous note of this directory (in its history).
 
 ## Verified by running
 
-P5.12b:
-
 ```text
-baseline at c388eea (P5.12a, CI run 38738178339 green on all 11 jobs): tsc 0 · eslint 0 · vitest 159 files, 3235 passed, 4 skipped (SDK)
-block (a) a3324c4 → CI run 38742547111 green; block (b) 5084c2c → CI run 38744845857 green;
-block (c) 258612d → CI run 38747113531 green; block (d) ca8b6e8 → CI run 38748766418 (see the tracker row)
-npx tsc --noEmit / npm run check-types / npx eslint src → exit 0 each (after every block)
-npm test (NUIGET_SDK_TESTS=1, DOTNET_ROOT set) → exit 0 · Test Files 160 passed (160) · Tests 3243 passed (3243)
-npm run bench → exit 0 (after every block)
-npx vitest run --project backend src/test/lint → Test Files 8 passed (8) · Tests 129 passed (129)
-src/extension.next.test.ts + src/test/harness + src/core/cli/DotnetRunner.test.ts, 15 times → 15 of 15
-DOTNET_ROOT=… NUIGET_SDK_TESTS=1 npx vitest run --project backend src/core/cli → 142 passed (142)
-npx vitest run src/test/harness/scenarios.test.ts -t N73, 40 times → 40 of 40
-NUIGET_V2=1 npm run test:ui:v2 -- --storage /tmp/nuiget-ui-v2, five times (rm -rf dist before each) →
-                               32 passing ×5, the N66 test announced in each; git status --porcelain src/test/e2e/fixtures empty after each
-git diff --diff-filter=DR --stat c388eea..HEAD -- 'src/**/*.test.ts' 'src/**/*.test.tsx' src/test/e2e/index.ts → empty
-git diff --stat c388eea..HEAD -- .github/workflows/ci.yml .vscode-test.mjs src/protocol src/core/contracts.ts docs/adr src/core/catalog src/test/__mocks__/vscode.ts → empty
-npm run package:vsix: SKIPPED: no host, service or esbuild change (tests and docs only)
-test -e .claude/.contract-change → false
-```
-
-## Done (tested)
-
-- N73 scenario 40 of 40; the moved tests 15 of 15; N59 closed, N73 closed as not reproduced.
-
-## Done (untested)
-
-- Deleting the legacy tests: P8.2, per the map and its ⚑ consultation (the L2 hook refuses any deletion of a test file).
-
-## Not started
-
-- None for P5.12b. Next: P5.13.
-
-## Deviations from contract/ADR (file:line each)
-
-- None.
-
-## Advisor decisions (date, item, question, answer verbatim)
-
-The P5.12b ruling (2026-10-16) is verbatim in `docs/plans/STATUS.md`.
-
-## Exact next step (one item ID)
-
-P5.13 (⚑ mandatory consultation), after the closing commit's CI run is green.
-
-## Earlier notes of this directory
-
-git status --porcelain --untracked-files=all (before commit c): modified `.github/copilot-instructions.md`, `ARCHITECTURE.md`, `CHANGELOG.md`, `docs/plans/STATUS.md`, `docs/ux/interaction-model.md`, `src/test/ui/v2/main-sources.ui.test.ts` (comment only) and the four STATUS notes; new `src/test/ui/v2/main-all-projects.ui.test.ts` (all belong to P5.9 commit c)
-
-Item: **P5.9, commit c of three**: no change in this directory; R3's by-session All Projects mode is described in
-ARCHITECTURE "Two-surface harness".
-
-## Verified by running
-
-P5.9 commit c:
-
-```text
-baseline at c15000f (commit b) → CI run 38714494277 green on all 11 jobs
-npm run check-types          → first run red: `id` possibly null in the new test (getAttribute); fixed, exit 0
-npx tsc --noEmit / npm run check-types / npm run lint → exit 0 each (after the last edit)
-NUIGET_V2=1 npm run test:ui:v2 -- --storage /tmp/nuiget-ui-v2 → 18 passing (33s) at the first run, the two new tests
-                               (`the host offers All Projects once a second project appears`, `All Projects lists one
-                               section per project and the collapsed transitive aggregate`) among them
-git status --porcelain --untracked-files=all src/test/e2e → empty afterwards · test -e .../e2e-workspace/Utility → false
-rm -rf dist && NUIGET_V2=1 npm run package && npm run check:vsix → check:vsix: OK
-rm -rf dist && node esbuild.mjs --v2 --production --analyze → extension 281249 / 299921 · webview 517706 / 600685 ·
-                               sidebar 307187 / 329122 (no source change since commit b)
-grep -c "has no `nuget.config`" src/test/ui/v2/STATUS.md src/test/ui/v2/main-sources.ui.test.ts → 0 and 0
-npm test / npm run bench     → exit 0 (npm test 0: Tests 3203 passed (3203) · bench 0: Tests 119 passed | 1 skipped (120))
-test -e .claude/.contract-change → false · git diff --stat 69205e2 -- src/protocol src/core src/host docs/adr package.json
-                               .vscode-test.mjs esbuild.mjs vitest.config.mts eslint.config.mjs .github/workflows → empty
-```
-
-## Done (tested)
-
-- `main-all-projects.ui.test.ts`: creates `Utility/Utility.csproj` in the opened fixture workspace, waits for "All
-  Projects (2)", commits All Projects (value set and `change` dispatched on the selector), reads two `installed-list-*`
-  ids from the DOM and checks the closed `section-header-transitive`; `after` removes the project, writes
-  `TestProject.csproj` back and waits until the host is back on it with `installed-list`.
-
-## Done (untested)
-
-- None for this commit.
-
-## Not started
-
-- The sidebar's All Projects (P5.10).
-
-## Deviations from contract/ADR (file:line each)
-
-- None.
-
-## Advisor decisions (date, item, question, answer verbatim)
-
-The P5.9 ruling and the commit-b follow-up (both 2026-10-15) are verbatim in `docs/plans/STATUS.md`.
-
-## Exact next step (one item ID)
-
-P5.2 (store slices sweep), after P5.9 commit c's CI run is green.
-
-## Earlier notes of this directory
-
-git status --porcelain --untracked-files=all (before commit a): modified `ARCHITECTURE.md`, `CHANGELOG.md`, `docs/plans/STATUS.md`, `src/test/harness/{FakeWebview,scenarios.test}.ts`, `src/webview/main/main.css`, `src/webview/main/features/details/{DetailsPane,DetailsPane.test}.tsx`, `src/webview/main/features/installed/{InstalledTab,InstalledTab.test,InstalledProjectSection}.tsx`, `src/webview/main/features/updates/{UpdatesTab,UpdatesTab.test}.tsx`, `src/webview/shared/store/{allProjects,allProjects.test}.tsx` and the three STATUS notes; new `src/webview/main/features/all-projects/folderGroups.tsx`, `src/webview/main/features/details/MultiInstallDialog.tsx`, `src/webview/main/features/installed/{AllProjectsTransitiveSection,AllProjectsView.test}.tsx` (all belong to P5.9 commit a)
-
-Item: **P5.9, commit a of three**: the gate scenario `late allProjects chunk after switching is discarded` (B's
-config walk held so its chunk is late; All Projects committed, then project A; the stream is cancelled and nothing of
-it is applied), and R3 of `FakeWebview` follows a snapshot that selects All Projects: such a mode is left by a snapshot
-that selects anything else, cancelling the stream and dropping its chunks, as the slice's reset does.
-`showAllProjects()` keeps its local mode for the CPM scenario.
-
-## Verified by running
-
-P5.9 commit a (the same gate run for every directory of the commit):
-
-```text
-baseline at 69205e2          → CI run 38706897616 green on all 11 jobs · npx tsc --noEmit 0 · npx eslint src 0 ·
-                               npx vitest run exit 0
-stop-and-ask (sdk-too-old, All Projects updates, the ExTester path, then the P5.4 test's line 166) → ruling of
-                               2026-10-15 (verbatim in docs/plans/STATUS.md): three green commits a, b, c
-npx tsc --noEmit / npm run check-types / npx eslint src / npm run lint → exit 0 each (last run after every code edit)
-git diff --numstat 69205e2 -- src/webview/main/features/installed/InstalledTab.test.tsx → 1 1 (line 166 only)
-main features and store/allProjects.test.tsx, 20 times → 20 of 20 (exit codes counted)
-npx vitest run --project integration src/test/harness -t 'late allProjects chunk after switching is discarded', 40
-                               times → 40 of 40 · the whole harness exit 0 · "both orders" untouched
-npm test (NUIGET_SDK_TESTS=1, DOTNET_ROOT set) → exit 0 · Test Files 156 passed (156) · Tests 3196 passed (3196)
-npm run bench                → exit 0 · Test Files 20 passed (20) · Tests 119 passed | 1 skipped (120)
-npx vitest run --coverage    → exit 0 (thresholds hold, the 2.0 webview key included) · store/allProjects.tsx 96.25 %
-npm run docs:protocol:check  → docs/protocol.md is up to date
-rm -rf dist && node esbuild.mjs --v2 --production --analyze → extension 281249 / 299921 · webview 508743 / 600685
-                               (501695 at P5.8) · sidebar 305381 / 329122 (304283 at P5.8)
-rm -rf dist && NUIGET_V2=1 npm run package && npm run check:vsix → check:vsix: OK
-NUIGET_V2=1 npm run test:ui:v2 -- --storage /tmp/nuiget-ui-v2 → 16 passing (18s); fixture unchanged
-npm run package:vsix (1.x)   → SKIPPED: no 1.x file changed; CI's Package job builds it
-npm run test:ui (1.x)        → SKIPPED: no 1.x UI file changed; the CI job `UI` runs it
-test -e .claude/.contract-change → false · git diff --stat 69205e2 -- src/protocol src/core src/host docs/adr package.json
-                               .vscode-test.mjs esbuild.mjs vitest.config.mts eslint.config.mjs .github/workflows → empty
-```
-
-## Done (tested)
-
-- The scenario 40 of 40; the whole harness green; no count in another scenario moved.
-
-## Done (untested)
-
-- All Projects in VS Code: commit c adds the ExTester test over a second project created at runtime; folder headings and
-  `sdk-too-old` cannot be shown on the runners (one workspace folder, SDK 10 only) and are proved in jsdom.
-
-## Not started
-
-- All Projects updates (commit b), the ExTester test and the remaining docs (commit c); the sidebar's All Projects
-  (P5.10).
-
-## Deviations from contract/ADR (file:line each)
-
-- None.
-
-## Advisor decisions (date, item, question, answer verbatim)
-
-The P5.9 ruling of the `architecture-advisor` (2026-10-15) is verbatim in `docs/plans/STATUS.md` under "### P5.9 — stop-and-ask: sdk-too-old placement, All Projects updates, the ExTester path, and the P5.4 test's line 166". The ambient advisor was consulted before writing (the gate scenario first, the `seq` rule as the generation rule, the aggregation in the feature, `touchedBy` checked).
-
-## Exact next step (one item ID)
-
-P5.9 commit b (All Projects updates), after commit a's CI run is green.
-
-## Earlier notes of this directory
-
-git status --porcelain --untracked-files=all (before the commit): new `src/test/harness/fakeFeed.ts`; modified `src/core/feeds/{health,health.test}.ts`, `src/core/catalog/{Catalog,Catalog.test,feedContexts,feedContexts.test}.ts`, `src/host/{handlers,SidebarHost}.ts`, `src/extension.next.ts`, `src/extension.next.test.ts`, `src/test/harness/{harness,FakeWebview,scenarios.test}.ts`, the five STATUS notes, `CHANGELOG.md`, `ARCHITECTURE.md`, `.github/copilot-instructions.md`, `docs/plans/STATUS.md`, `docs/plans/findings-ledger.md` (all belong to the P4.9b commit)
-
-Item: **P4.9b** (harness part): `fakeFeed.ts` (`createFakeFeed`: service index, search, registration and flat container of
-`SHARED_FEED` and `PRIVATE_FEED`, `publish`, `down`, `requests`), `HarnessOptions.feed` passed as the `transport` override,
-`h.checkUpdates`, `h.feed`; `FakeWebview` rule R8 (`updates` slot re-asked on its key's invalidation, `health` records every
-`sources/health`); the scenarios `updates converge across surfaces` and `sources unreachable shows banner not empty`.
-
-git status --porcelain --untracked-files=all (P5.5, before the commit): `?? src/webview/shared/store/{updates.tsx,updates.test.tsx}`,
-`?? src/webview/main/features/updates/{UpdatesTab.tsx,UpdatesTab.test.tsx,UpdateAllDialog.tsx,CentralUpdateDialog.tsx}`,
-`?? src/webview/sidebar-next/{UpdatesSection.tsx,UpdatesSection.test.tsx}`, `?? src/test/ui/v2/main-updates.ui.test.ts`,
-` M src/webview/shared/store/StoreProvider.tsx`, ` M src/webview/main/{MainShell.tsx,index.tsx}`,
-` M src/webview/sidebar-next/{SidebarView.tsx,SidebarView.test.tsx}`, ` M src/test/harness/{FakeWebview.ts,scenarios.test.ts}`,
-` M ARCHITECTURE.md`, ` M CHANGELOG.md`, ` M docs/plans/STATUS.md` and the five STATUS notes of the item's directories
-
-Item: **P5.5** (harness part): `FakeWebview` R8 also follows the committed prerelease flag (an applied snapshot of the same project with another `includePrerelease` asks `updates/get` again under it), and the scenario `prerelease toggle re-checks updates` (a toggle on the sidebar makes both surfaces ask under the new flag and show the prerelease latest; a toggle back on the main panel returns both to the stable latest; one response per request). ARCHITECTURE "Two-surface harness" now lists eight rules (R7 with the `updates` slot, R8) and the P4.9b and P5.5 scenarios. Earlier in this note: P4.9b.
-
-## Verified by running
-
-P5.5:
-
-```text
-baseline at 04ac55f          → CI run 38677913029 green · npx tsc --noEmit 0 · npx eslint src 0 · npx vitest run green
-first full run with the Updates section mounted → 4 of 25 `SidebarView.test.tsx` tests red at document-wide
-                               `.nuiget-skeleton-row` counts → stop-and-ask (ruling of 2026-10-16, option 1: six query
-                               sites re-scoped to the Installed section, the four tests named by title)
-npx tsc --noEmit / npm run check-types / npx eslint src → exit 0 each
-npx vitest run --project frontend src/webview/sidebar-next, 20 times in a row → 20 of 20 (4 files, 30 tests)
-npx vitest run --project integration src/test/harness → 19 passed · -t "prerelease toggle re-checks updates" 40 of 40
-npm test (NUIGET_SDK_TESTS=1, DOTNET_ROOT set) → Test Files 144 passed (144) · Tests 3065 passed (3065)
-npm run bench                → Test Files 20 passed (20) · Tests 119 passed | 1 skipped (120)
-npx vitest run --coverage     → exit 0 (thresholds hold) · store/updates.tsx 97.61 % lines · main/features/updates 89.58 %
-npm run docs:protocol:check  → docs/protocol.md is up to date
-rm -rf dist && node esbuild.mjs --v2 --production --analyze → extension 280611 / 299921 · webview 309114 / 600685
-                               (301845 at P5.4) · sidebar 288948 / 329122 (293929 noted at P5.4)
-rm -rf dist && NUIGET_V2=1 npm run package && npm run check:vsix → check:vsix: OK
-NUIGET_V2=1 npm run test:ui:v2 -- --storage /tmp/nuiget-ui-v2 → 13 passing at the first run (Updates tab: 3)
-npm run package:vsix (1.x)   → SKIPPED: no host, root, extension or 1.x file changed; CI's Package job builds it
-npm run test:ui (1.x)        → SKIPPED: no 1.x UI file changed; the CI job `UI` runs it
-test -e .claude/.contract-change → false · git diff --stat 04ac55f -- src/protocol src/core docs/adr src/host → empty
-```
-
-```text
-baseline at 6e2c878         → CI run 38669483033 green on all 11 jobs · npm run check-types 0 · npx eslint src 0 · npx vitest run
-                               green (141 files, 3026 passed, 4 skipped)
-first attempt (P4.9 ruling's step 12) → src/extension.next.test.ts: `a replaced selection is reconciled …` red (the probe
-                               listed a vanished project's directory); harness: 6 of 16 red (the probe walked `nuget config
-                               paths` a second time); with the probe disabled 16 of 16 green → stop-and-ask, ruling below
-after the ruling             → npx tsc --noEmit 0 · npm run check-types 0 · npx eslint src 0
-grep -rn 'REMOVAL GATE: P4.9' src → none · grep -c "REMOVAL GATE" .github/copilot-instructions.md → 0
-npx vitest run --project integration src/test/harness → 18 passed (the six scenarios unchanged, `updates converge across
-                               surfaces`, `sources unreachable shows banner not empty`); 40 runs → 40 of 40 green
-npx vitest run --project backend src/extension.next.test.ts src/core/catalog src/core/feeds/health.test.ts → green; see the
-                               loop and full gates in the tracker row and the commit
-git diff --name-only -- docs/adr src/protocol src/core/contracts.ts → empty
-```
-
-## Done (tested)
-
-- P5.5 `prerelease toggle re-checks updates`: 40 of 40 runs.
-- The two named scenarios; the six scenarios that failed at the first attempt pass unchanged; 40 runs of the whole harness.
-- `fakeDotnet.ts`: `nuget config paths` answers exit 0 and no output, which is the empty chain (no mapping, no config credentials).
-
-## Done (untested)
-
-- `fakeFeed.ts`'s `PRIVATE_FEED` routes: no scenario configures the private feed yet.
-
-## Not started
-
-- Nothing for P4.
-
-## Deviations from contract/ADR (file:line each)
-
-- `sources unreachable shows banner not empty` holds A's first `nuget config paths` until both surfaces are resolved, so the first
-  `sources/health` event reaches both (the ruling's order without the hold would race the sidebar's resolution).
-
-## Advisor decisions (date, item, question, answer verbatim)
-
-2026-10-16, P4.9b, stop-and-ask: how the health monitor obtains its chains. Verbatim at the end of this file where the ruling
-names this directory, and in `docs/plans/STATUS.md`; the P4.9 ruling (steps 11-16) is there too.
-
-## Exact next step (one item ID)
-
-P5.6 (feature search, main and sidebar browse), after P5.5's CI run is green; a fresh session starts it (second compaction of this one).
-
-## Earlier notes of this directory (kept for the P4 phase review)
-
-# STATUS — src/test/harness   commit 3d1da7b (parent of the P2.11 commit)   2026-10-13T19:00:00Z
-
-Scope of this note: `src/test/harness/**`, the two-surface harness of the 2.0 protocol.
-
-git status --porcelain --untracked-files=all: `?? src/test/harness/FakeWebview.ts`,
-`?? src/test/harness/fakeDotnet.ts`, `?? src/test/harness/harness.ts`, `?? src/test/harness/scenarios.test.ts`,
-`?? src/test/harness/STATUS.md`, ` M vitest.config.mts`, ` M tsconfig.vitest.json`, ` M docs/plans/STATUS.md`,
-` M docs/plans/findings-ledger.md`, ` M CHANGELOG.md`, ` M ARCHITECTURE.md`,
-` M .github/copilot-instructions.md` (all belong to the P2.11 commit)
-
-Item: **P2.11 two-surface harness on the new protocol** (stop-and-ask: `tsconfig.vitest.json` is not named by
-the row; no contract change, no sentinel). The quarry has no harness; everything here is new.
-
-## Verified by running
-
-```text
-The gates ran with DOTNET_ROOT set to the SDK directory; npm test also with NUIGET_SDK_TESTS=1 (N48).
-baseline npx tsc --noEmit / npm run check-types → exit 0 / exit 0
-baseline npx eslint src      → exit 0
-baseline npx vitest run      → Test Files 82 passed (82) · Tests 2469 passed | 3 skipped (2472)
+baseline (on 0e814af; P6.4a green at attempt 3 of CI run 38792875987): npm run check-types → exit 0 · npx eslint src →
+                               exit 0 · npx vitest run → Test Files 164 passed (164) · Tests 3314 passed | 6 skipped (3320)
 npx tsc --noEmit             → exit 0
-npm run check-types          → exit 0 (tsconfig.vitest.json now includes src/test/harness/**/*.ts, so the
-                               harness is type-checked; N39)
-npx eslint src / npm run lint → exit 0, no output / exit 0
-npx vitest run --project integration src/test/harness --reporter=verbose
-                             → Test Files 1 passed (1) · Tests 12 passed (12) (the row's gate). The output
-                               has each scenario name of the row: `A→B→A ordering`, `full/scoped/watcher
-                               invalidation both orders` (six orderings), `queue saturation + exception
-                               after admission`, `project deletion mid-request`, `shared query with one
-                               subscriber cancelling`, `surface disposed with pending ops`, `central version
-                               change affecting several projects`. Eight runs in a row: 12 passed each.
-npm test (NUIGET_SDK_TESTS=1) → Test Files 83 passed (83) · Tests 2484 passed (2484); the harness file runs
-                               in the `integration` project
-npx vitest run               → Tests 2481 passed | 3 skipped (2484)
-npx vitest run --coverage    → exit 0 · from coverage/lcov.info: all files 9251 of 11620 lines, 79.61 % ·
-                               src/host/** 415 of 576, 72.05 % (69.79 % at P2.10): MainPanelHost.ts 46/52,
-                               handlers.ts 189/208, WebviewHost.ts 65/71, SidebarHost.ts 57/126,
-                               pickers.ts 11/71 · src/extension.next.ts 178 of 187, 95.19 % ·
-                               src/core/** 2664 of 2704, 98.52 % (floor 85 %)
-npm run bench                → Test Files 17 passed (17) · Tests 104 passed | 1 skipped (105)
-negative control             → 26 mutations of product code (the root, src/host, the queue, the
-                               coordinator, the session store, the Catalog), each run against the harness.
-                               25 failed a scenario at once: a surface not told about invalidations; the
-                               session never reconciled; the project list not refreshed; no debounce; a
-                               watcher that invalidates nothing; the status bar ignoring waiting operations;
-                               a disposed surface cancelling what it queued; outcomes not announced; an
-                               operation or refresh/all invalidating nothing; a host not forwarding session,
-                               projects or outcomes; a closed panel left attached; a cancelled request
-                               answered as ok; six operations allowed to wait; a refusal without its ticket
-                               id; a thrown error not redacted; a release aborting the other subscriber's
-                               computation; a host-made commit not broadcast; installed not shared under
-                               one key. One survived: the coordinator not rejecting an overtaken computation
-                               at invalidation time, because its `settle` rejects it later and because the
-                               client model drops responses of earlier requests. The scenario then got an
-                               assertion on every installed/get response delivered after the second
-                               invalidation, and the mutation was widened to both places of the coordinator;
-                               it fails now. Every file was restored (git status).
-measured, A→B→A ordering     → at P2.11: session revisions 1, 2, 3, 4 on both surfaces, final selectedSource
-                               `all` (was `private`): finding C-state-core-6. After P2.fix-1: revisions
-                               1, 2, 3 and the private feed still selected; the scenario pins that
-grep -c "src/test/harness" vitest.config.mts tsconfig.vitest.json → 1 and 2 (the include and the clause in
-                               the comment that the ruling orders)
-git diff --name-only -- src/protocol src/core docs/adr src/host src/extension.next.ts src/extension.next.test.ts src/test/__mocks__ → empty
-ls .claude/.contract-change  → No such file or directory
-npm run package:vsix, npm run check:vsix, npm run docs:protocol:check → SKIPPED: no extension, host, esbuild,
-                               packaging or protocol file changed (ruling, step 12); CI runs them
-npm run test:ui              → SKIPPED: no UI change; the CI job UI runs it
-CI                           → see the tracker row of P2.11
+npm run check-types          → exit 0
+npx eslint src               → exit 0
+npx vitest run --project integration src/test/harness (before the new scenario) → Tests 21 passed (21)
+npx vitest run src/test/harness/scenarios.test.ts -t "central version change affects", 40 times → passed 40 of 40
+npx vitest run --project integration src/test/harness → Test Files 1 passed (1) · Tests 22 passed (22)
+npm test                     → Test Files 164 passed (164) · Tests 3315 passed | 6 skipped (3321)
+npm run bench                → Test Files 20 passed (20) · Tests 119 passed | 1 skipped (120)
+grep "from '../../core/project" src/test/harness/fakeDotnet.ts → no match
+git diff --name-only -- src/protocol src/core/contracts.ts docs/adr → empty
+bundles                      → SKIPPED: test code only; no bundle input changed
+npm run test:ui              → SKIPPED: no UI change
+CI                           → see the tracker row of P6.4b
 ```
 
 ## Done (tested)
 
-- `harness.ts`: `createHarness({ tree, selectedProject?, selectedSource?, sources? })` writes a scratch
-  workspace, points the `vscode` mock at it, runs the real root (`activateWith` with the fake `spawn`), waits
-  for `ready` and then fakes `setTimeout`/`clearTimeout`. Verbs: `resolve`, `dispose`, `selectProject`,
-  `toggle`, `operate`, `refresh`, `request`, `cancel`, `showAllProjects`, `command`, `files.writeProject`,
-  `files.addReference`, `files.deleteProject`, `files.writeProps`, `advance`, `settle`, `expectState`,
-  `teardown`. `expectOneResponsePerRequest` is the envelope rule of ADR-007.
-- `FakeWebview.ts`: the recorder and the seven-rule client model (the rules are in the file header and in
-  ARCHITECTURE.md, "Two-surface harness", for P3.3).
-- `fakeDotnet.ts`: `createFakeDotnet()` with `calls`, `count`, `hold`, `fail`, `sources`, and `dotnetCalls`
-  matchers; `package add` and `package remove` edit the project file on disk.
-- `scenarios.test.ts`, 12 tests in `describe('two-surface harness')`:
-  - `A→B→A ordering`: both surfaces apply every session revision in order and end on A with A's packages; the
-    surfaces equal the host (the convergence the P1.7 ruling asked the harness to show).
-  - `full/scoped/watcher invalidation both orders` ×6: a second invalidation while the first recomputation is
-    held; every `installed/get` response delivered afterwards is the state on disk after both; one
-    recomputation per generation for both surfaces; a surface that arrives in between asks for itself (N8).
-  - `queue saturation + exception after admission`: seven installs from both surfaces, the seventh refused at
-    once with its ticket's id on the response, the opening chunk and both surfaces' `ops/completed`; six edits
-    in order, noun-first; a workflow that throws answers `failed` without the credential of its message, and
-    the queue goes on.
-  - `project deletion mid-request`: every request for the deleted project gets one ok response with
-    `unsupported: not-found`; both surfaces move to the remaining project and never show the late answers.
-  - `shared query with one subscriber cancelling`: one SDK probe and one config-chain call for two surfaces;
-    the cancelling surface gets `cancelled` when the computation ends, the other its result.
-  - `surface disposed with pending ops`: a running and a waiting operation of a closed panel both finish, the
-    sidebar hears of both and shows the result, nothing reaches the closed webview, a reopened panel is new.
-  - `central version change affecting several projects`: a `Directory.Packages.props` edit is one
-    `resources/invalidated` per surface after the debounce, names both projects' keys, and both projects show
-    the new version on a single-project surface and on an all-projects surface.
+- `fakeDotnet.ts`: `msbuild: 'none' | 'files'` (default `'none'`) and `root` (the walk to `Directory.Packages.props`
+  stops there); under `'files'` a `-getProperty:` call prints the four properties and a `-getItem:` call the
+  `PackageReference` items of the project and the `PackageVersion` items of the governing props file, in the probe's
+  JSON shapes, read with regular expressions over the files (no core import: the oracle shares no code with what it
+  checks). CPM-aware edits: `package add --version` on a CPM project writes the central version
+  (`setCentralVersion`, exported) and leaves a versionless reference; without a version it changes nothing; `remove`
+  edits the project only.
+- `harness.ts`: `HarnessOptions.evaluate`; `expectState` expects `authoritative` under it, `provisional` otherwise.
+- `scenarios.test.ts`: new `central version change affects several projects: one central update from a surface reaches
+  both projects on both surfaces, authoritative` (acts (a)-(e) of the ruling); the props-edit scenario of P2.11 and
+  every other scenario unchanged.
 
 ## Done (untested)
 
-- `toggle`, `command` and `files.writeProject` of the driver and `fail` of the fake dotnet: written as the
-  ruling lists them, used by no scenario yet.
-- `SidebarHost.ts` context-menu branches and `pickers.ts` (57 of 126 and 11 of 71 lines): no scenario opens a
-  quick pick. P3.5 and P5.10 reach them.
+- The fake's `TargetFrameworks` answer for a multi-targeted project is untested in a scenario (no scenario has one).
 
 ## Not started
 
-- The scenarios of later items: P4.9 (`updates converge across surfaces`, `sources unreachable shows banner
-  not empty`), P5.5, P5.9, P6.4 (P5.4's is under "Later scenarios").
+- P6.4c: the webviews and the interaction model.
 
 ## Deviations from contract/ADR (file:line each)
 
-- `scenarios.test.ts`, `A→B→A ordering`: since P2.fix-1 the scenario pins the selected source (the private
-  feed on the host and on both surfaces) and still requires that every revision was applied in order by both
-  surfaces and that at least two followed the start. The P2.11 ruling's "at least revs 2, 3, 4" counted the
-  commit that reset the source, which was the defect C-state-core-6 and no longer happens.
-- `scenarios.test.ts`, the six invalidation orderings: the ruling's "the main's `received` count does not
-  change because of" the late surface is asserted as two facts that do not depend on timing: the main panel
-  receives no further `session/changed`, and no surface is answered for a request it did not send
-  (`expectOneResponsePerRequest`). A plain count would also see the `projects/changed` of the refresh that the
-  first trigger started. The ruling's "at most two `nuget config paths` calls" is asserted as exactly two holds
-  seen.
-- `scenarios.test.ts`, `project deletion mid-request`, `shared query with one subscriber cancelling` and
-  `surface disposed with pending ops`: the ruling has the scenario send an explicit `installed/get` and hold
-  it. A result that the coordinator has cached is answered without a `dotnet` call, so it cannot be held. The
-  first two scenarios therefore set the hold before the surfaces are resolved (the held requests are the ones
-  the model sends by rule 3), and the third invalidates with `refresh/all` first.
-- `harness.ts`: `files.addReference` is one verb more than the ruling lists (an outside edit that adds to
-  whatever the file holds now, needed when the watcher trigger comes second); `HarnessOptions` takes the
-  persisted selection and the sources per directory as relative paths, because absolute paths exist only once
-  the scratch workspace does.
-- `harness.ts`, `expectState`: the comparisons run inside the wait, so a state that converges late passes and
-  one that never converges fails after five seconds; the ruling words it as "first settle, then assert".
-- Ledger: N59 has a row in each of the two N tables, as every N finding has; the ruling's VERIFY expects one.
-- Since P2.fix-2: the scenario `generation on responses: every resource response carries the generation the
-  latest invalidation lists for its key, on both surfaces` (the title of the phase review; the ledger's
-  earlier title, "late response … discarded by generation", names something this host cannot produce: the
-  coordinator never delivers a result that an invalidation overtook). Rule 7 of the model compares; its discard
-  branch is exercised by `fake webview model › rule 7: a response below the generation an invalidation listed
-  for its key is recorded and not applied`, which feeds the model by hand. That test is one more than the
-  review counts (14 tests instead of 13): without it nothing runs the branch, and the mutation that removes the
-  comparison survives.
+- None.
+- Act (c) checks that at least one `resources/invalidated` of reason `operation` reached each surface with both keys,
+  not exactly one (the operation may be followed by the watcher's in act (d)).
 
 ## Advisor decisions (date, item, question, answer verbatim)
 
-2026-10-13, P2.11, stop-and-ask in the plan's §2.4 form (`architecture-advisor`). Question: how is the harness
-composed and what exactly does each of the seven scenarios assert, given that `tsconfig.vitest.json` is not
-named by the row and that no ok response carries a `generation`? The brief is summarized in
-`docs/plans/STATUS.md` under "Advisor decisions", where the answer is recorded as well. Answer, verbatim:
+2026-10-15, P6.4 (stop-and-ask):
 
 `````text
-DECISION: Composition A1 (the real root through `activateWith`, the real `SidebarHost` and `MainPanelHost` over the harness's own fake webviews; no hand-built `HostServices`, no `TestHost` subclass; the only injected seam is `vi.spyOn(services.workflows, 'single')` for the thrown exception), fake webview B2 (a recorder plus a seven-rule client model that `expectState` reads and that P3.3 later implements for real), timers D1 (fake `setTimeout`/`clearTimeout` for the whole file, explicit `advanceTimersByTimeAsync` after a watcher fires, `vi.waitFor` everywhere else), and C1 sharpened for the missing response generation (finding C-protocol-host-7, fixed by a `P2.fix` item at the P2 phase review before P3.3; no P2.11 scenario depends on it). Config: `vitest.config.mts` integration include gains `src/test/harness/**/*.test.ts`; `tsconfig.vitest.json` include gains `src/test/harness/**/*.ts`, approved here as a file the row does not name; nothing in `eslint.config.mjs`, CI or `package.json`. Scenario `A→B→A ordering` proves the P1.7 condition (both surfaces converge) and drives the race deterministically; the selection it loses in that race is a root defect (C-state-core-6) that P2.11 records and does not fix: the fix is `P2.fix-1` at the phase review, with the harness as its oracle. Not `OWNER MUST DECIDE`.
+DECISION: A1 + B1 + C1 + D2 + E-host (a better E the brief did not list: the sidebar's central update goes through the host's actions menu, and the host confirms with a VS Code modal before submitting; no `Dialog` enters the sidebar bundle) + F-tooltip (a `versionTitle` on `Row`, nothing else is missing) + G1-opt-in (the fake answers `msbuild` from the files only when the scenario asks; the existing scenario keeps its title, a new scenario carries the gate's title) + H2 as three sub-rows: P6.4a (contract + host, sentinel `P6.4a`), P6.4b (harness fake + gate scenario), P6.4c (webviews + interaction model). CONTRACT CHANGE: one request, `cpm/preview`, and the move of `CpmImpactPreview` from `src/core/contracts.ts` to `src/protocol/domain.ts` (exact text under CONTRACT CHANGE). Nothing here is the owner's.
 
-WHY: The brief is right about the tree: `vitest.config.mts:86` includes only `src/test/integration/**/*.integration.test.ts`, so the row's gate would run nothing; `tsconfig.json:30-40` excludes `src/test` and `tsconfig.vitest.json:35-52` does not list a harness directory, so nothing would type-check it (N39, gotcha "Tests pass is not compiles"); `src/host/WebviewHost.ts:146` posts `makeOk(request.id, request.type, result)` and `src/protocol/envelope.ts:88-91` takes the optional fourth argument nobody passes, while ADR-007:29-31, ADR-008:19-24, `src/protocol/messages.ts:187` and the P3.3 tracker note all describe a response generation; `Catalog.ts:94-183` returns values, not handles, so no handler can know one. The row says "+ vitest project", which names the vitest configuration; the P1.7 and P2.10 rulings (`docs/plans/STATUS.md:492,199`) are the precedent that an answered stop-and-ask is the mechanism for the one more file (`tsconfig.vitest.json`) the row omits, and P0.11 made type-checking the tests a gate. The real root is the only composition that can show what the P1.7 ruling asked for: `refreshProjectsAndSession`, the coalesced reruns and the `session.onDidChange` trigger live in `src/extension.next.ts:136-189`, not in `src/host`, and the P2.10 handoff (`src/STATUS.md:177-184,269-272`) hands exactly that proof to P2.11. Tracing the race with B's listing held: `apply(B)` commits rev 2 and starts run 1 with `lastReconciledProject = B` (`:138`); `apply(A)` commits rev 3 and sets `rerun` (`:184-188`); run 1 then calls `session.reconcile(projects, [shared])` with B's directory list (`:148`), and `normalizeSource` (`SessionStore.ts:133-142`) turns `private` into `all` because the known set is B's; run 2 lists A's directory but `all` stays. Both surfaces receive rev 2, 3, 4 and end equal to the host, so convergence holds and the P1.7 condition is met; the selection loss is a defect of the kind C-state-core-5 named (source validated against another project's list), it is in a P2.10 file, and fixing it in P2.11 would put a root redesign inside the harness item against plan §2.1; the fix item has the harness to verify both this race and the replacement case the P2.10 note describes (`src/STATUS.md:177-184`). ADR-002:48-62 and ADR-003:17-29 give the properties the other scenarios pin; ADR-009 decisions 2 and 7 (`docs/adr/009-catalog.md:12,17`) explain why a cancelling subscriber sees `cancelled` only when the shared computation ends (`Catalog.ts:125-132,323-331`; `QueryCoordinator.ts:339-341` resolves released handles too). The installed Vitest 5.0.3 advances fake timers inside `vi.waitFor` (`node_modules/vitest/dist/chunks/index.C4tKZ0yW.js:7160`: `if (vi.isFakeTimers()) vi.advanceTimersByTime(interval)`), so D1 needs no sleeping.
-
-DO (lettered to the brief):
-
-1. Tracker first: paste this answer verbatim under `## Advisor decisions` in `docs/plans/STATUS.md` as `### P2.11 — stop-and-ask: composition and scenarios of the two-surface harness (2026-10-13)`, set P2.11 to `in-progress`, and add to its row: "real root over `activateWith`, both real hosts over fake webviews (recorder + seven-rule model), fake `dotnet` that edits the scratch project files; fake `setTimeout`/`clearTimeout` for the file; `vitest.config.mts` and `tsconfig.vitest.json` extended additively under the ruling of 2026-10-13; the harness records C-state-core-6 (selection lost when the selected project changes during a refresh run) and C-protocol-host-7 (no ok response carries `generation`) and fixes neither".
-
-2. (a) `vitest.config.mts:86`: `include: ['src/test/integration/**/*.integration.test.ts', 'src/test/harness/**/*.test.ts']`, nothing else in the file (no setup file, no threshold). `tsconfig.vitest.json`: add `"src/test/harness/**/*.ts"` to `include` after the `src/test/helpers` lines and amend the comment at `:31-34` by one clause ("…; the harness of P2.11 is in `src/test/harness`"). `eslint.config.mjs`: no change; the `src/test/**/*.ts` override (`:120-127`) already applies, no fence covers `src/test`, and a second `no-restricted-imports` block is the gotcha. CI and `package.json`: no change; `npm test` is `vitest run` over all projects, `test:integration` already exists, and both CI `Test` runners (ubuntu, windows) therefore run the harness; it needs no `dotnet` and no `NUIGET_SDK_TESTS`.
-
-3. (b) Composition, one fidelity for all seven scenarios: `createHarness()` builds a scratch tree with `createScratchDir('harness')` + `writeTree`, sets `mockWorkspace.workspaceFolders` to the scratch root, makes `mockWorkspace.findFiles` return the harness's live project list, calls `activateWith(context, { spawn: dotnet.spawn, resolveExecutable: () => 'dotnet' })`, awaits `ready`, then installs the fake timers. `resolve('sidebar')` takes the provider from `registerWebviewViewProvider.mock.calls.at(-1)[1]` and passes a fake view `{ webview, visible: true, title: undefined, onDidChangeVisibility, onDidDispose(listener) }` that keeps the dispose listener; `open('main', options?)` hands `createWebviewPanel.mockImplementationOnce` a panel whose `dispose` fires its listeners once (N58; model it on `createFakePanel` in `src/extension.next.test.ts:131-149`, written anew in the harness) and runs `nuiget.openManager`. The fake webview object has `html`, `options`, `cspSource`, `asWebviewUri`, `onDidReceiveMessage(listener)` (kept, so the fake can send) and `postMessage` (records and feeds the model). Exception after admission: in the scenario, `vi.spyOn(services.workflows, 'single').mockRejectedValueOnce(new Error('boom at https://user:secret@feed.example'))`, then an `ops/remove` request; restore the spy in the same scenario. This keeps the whole path real (`handlers.ts:347` → `operations.remove` → `queue.submit` → `run` throws → `OperationQueue.ts:113-118` derives `failed` → `awaitTicket` → `settleOperation` → response and `ops/completed`), which a throwing `run` handed to `services.queue.submit` would bypass. Queue saturation: seven `ops/install` requests, four from the sidebar and three from the main panel, interleaved, with the fake holding the first `package add`; the seventh is answered at once with `status: 'rejected'`, the ticket's `opId` (a UUID, equal to the opening chunk's and to the `ops/completed` payload's on both surfaces) and the message `the operation queue is full (1 running, 5 waiting)`; the status bar item reads `$(sync~spin) nUIget: 1 running, 5 queued`.
-
-4. (c) Files, all new: `src/test/harness/harness.ts` (builder, driver verbs, `expectState`, `settle`), `src/test/harness/FakeWebview.ts` (recorder + model), `src/test/harness/fakeDotnet.ts` (`FakeChild`, `createFakeDotnet` with `hold`, `fail`, per-cwd `sources`, and the on-disk edits for `package add`/`package remove`), `src/test/harness/scenarios.test.ts` (one `describe('two-surface harness')`, seven `it`), `src/test/harness/STATUS.md`. Write the fake spawn a third time; do not edit `src/extension.next.test.ts` (P2.10) or `src/core/cli/DotnetRunner.test.ts` (P1.6) and do not import from either; record N59 (three unexported fake-spawn copies; consolidated when P5.12 rewrites the tests). Fake `dotnet` answers: `--version` → `10.0.401`; `nuget list source --format detailed` → the listing of `sources(cwd)`; `nuget config paths` → empty stdout, exit 0 (this is the step every `installed/get` computation runs and the one a scenario holds; the SDK probe is cached after its first answer per directory, `DotnetRunner.ts:305-309`); `package add <id> --project <p> …` → insert or replace `<PackageReference Include="<id>" Version="<v>" />` in the project file on disk, exit 0; `package remove <id> --project <p>` → delete that element, exit 0; `restore <p>` → exit 0; anything else → exit 0, empty.
-
-5. (d) The model, seven rules, stated in `ARCHITECTURE.md` so P3.3 implements the same text (ADR-001, ADR-002, ADR-008): R1 on resolve send `session/get` and `projects/list`; apply a snapshot from a `session/get`/`session/set` response or a `session/changed` event only when its `rev` is above the last applied. R2 `projects/changed` and the `projects/list` response replace the project list. R3 when the applied snapshot's `selectedProject` becomes a real project (not `''`, not `ALL_PROJECTS`) send `installed/get` for it; on `resources/invalidated` whose `keys` contains `resourceKeys.installed(selectedProject)` send it again; a surface put in all-projects mode by the scenario (`showAllProjects(surface)`) sends `allProjects/installed` instead and re-sends it when `keys` names `projects` or any key starting `installed:`; it collects the `project` chunks by `projectPath`. R4 latest request wins per slot (`session`, `projects`, `installed`, `allProjects`): a response or chunk whose id is not the latest id issued for that slot is recorded and not applied. R5 `ops/progress` events, stream chunks by id, `ops/completed` events and terminal responses are recorded; `pending()` lists request ids without a terminal response. R6 every inbound and outbound envelope is kept verbatim (`sent`, `received`); other events (`ui/*`, `config/changed`) are recorded only. R7 `generation` on a response is recorded if present and never compared (C-protocol-host-7). `expectState({ selectedProject, selectedSource?, projects, installed, allProjects? })` first `settle()`s, then asserts for every resolved surface: its session equals `services.session.snapshot` in `rev` and values and the surfaces equal each other; its project paths equal `projects` and `(await services.catalog.projects()).map(p => p.path)`; its installed result for the selected project has `fidelity: 'provisional'` and `packages.map(p => `${p.id}@${p.version}`)` equal to the literal `installed` list; `pending()` is empty; and every request id in `sent` has exactly one response envelope in `received` (ADR-007). Literal expected lists, not a second inspector: the oracle must not share code with the subject.
-
-6. (e) Driver, `surface: 'sidebar' | 'main'`: `resolve(surface)`, `open('main', options?)`, `dispose(surface)` (panel `dispose()` or the view's dispose listener); `selectProject(surface, projectPath): Promise<SessionSnapshot>` (`session/set`); `toggle(surface, 'includePrerelease' | 'restoreEnabled'): Promise<SessionSnapshot>` (flips the surface's applied value); `operate(surface, type, payload): { id; response: Promise<ResponseEnvelope> }` for the nine `ops/*` types, not awaited by itself; `refresh(surface): Promise<void>` (`refresh/all`); `request(surface, type, payload): { id; response }` for `installed/get` and `allProjects/installed`; `cancel(surface, id)`; `command(id, ...args)` runs a contributed command through the mock (`nuiget.sidebar.*`, `nuiget.refreshPackages`); `files.writeProject(path, xml)`, `files.deleteProject(path)`, `files.writeProps(path, xml)` write or delete on disk, update the `findFiles` list, and fire the matching mock watcher listener (`createFileSystemWatcher.mock.results[i].value.onDidChange|onDidCreate|onDidDelete.mock.calls[0][0]`, located by glob as `watcherFor` in `src/extension.next.test.ts:184-192` does) without advancing time; `settle(predicate?)` is `vi.waitFor`. Watcher events, title-bar commands and disposal are harness verbs because the scenarios need them; they are not protocol verbs and the model does not react to them.
-
-7. (f) `vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })` installed by `createHarness` after `ready`, `vi.useRealTimers()` in `afterEach` before disposing `context.subscriptions`. Microtasks, `setImmediate` (the `FakeChild`) and file I/O stay real. Waiting: `settle()` (`vi.waitFor`, which advances the fake clock by its interval on every check); after `files.*` fires a watcher, advance explicitly with `await vi.advanceTimersByTimeAsync(ms)` when the scenario asserts that nothing happened before the debounce (1500 ms for project and props files, `extension.next.ts:244-245`), otherwise `settle()` alone. The other fake-time consumers are `MainPanelHost.flushPending` (150 ms, `MainPanelHost.ts:112`) and the runner's timeouts (`DotnetRunner.ts:224,231,267`), which never fire in the fake unless advanced; no scenario depends on either.
-
-8. (g) Scenarios. One `describe`, seven `it` whose titles begin with the row's phrase verbatim, optionally followed by `: ` and a clause; the gate greps the phrases. Common tree: `A/A.csproj` (`<PackageReference Include="Serilog" Version="3.0.0" />`), `B/B.csproj` (`Newtonsoft.Json 13.0.1`), both SDK-style with `net10.0`; `Cpm/Directory.Packages.props` (`ManagePackageVersionsCentrally` true, `<PackageVersion Include="Newtonsoft.Json" Version="13.0.1" />`), `Cpm/C1/C1.csproj` and `Cpm/C2/C2.csproj` each with a versionless `Newtonsoft.Json` reference. Sources: `dotnet.sources = cwd => dir A → [private, shared]; dir B → [shared]; else [shared]`.
-   - `A→B→A ordering`: persisted `{ selectedProject: A, selectedSource: private }`; both surfaces resolved and showing A. `dotnet.hold(listing for dir B)`; `selectProject('sidebar', B)`; `settle` until the fake saw `nuget list source` with cwd B; `selectProject('main', A)`; release. Assert: both surfaces applied snapshots with strictly increasing `rev` (at least revs 2, 3, 4 in that order, no snapshot skipped on either), final session on both equals the host with `selectedProject: A`; both show A's installed list (`['Serilog@3.0.0']`); `selectedSource` on both equals `services.session.snapshot.selectedSource`. Do not pin the source's value: the run yields `all` (traced above); state the measured value under "Deviations" of the handoff note and in C-state-core-6 with the one-line why-comment in the test ("the host's value, not `private`: C-state-core-6; P2.fix-1 pins `private`"). Fails if a surface misses or reorders a broadcast, if the surfaces disagree, or if the installed shown is B's. The P1.7 condition (convergence) is thereby shown; write that on the P1.7 and P2.10 rows.
-   - `full/scoped/watcher invalidation both orders`: full = `refresh/all` (scope `workspace`, reason `manual-refresh`), scoped = the invalidation `settleOperation` issues after an `ops/*` edit (scope `project`), watcher = `files.writeProject(A, …)` plus the project-file watcher (scope `project`, reason `file-watcher`, 1500 ms). Run the six orderings of the three pairs in one `it` with a fresh tree per ordering (or `it.each` over the six, every title still starting with the phrase). For each ordering: main resolved and showing A; `dotnet.hold('nuget config paths' for dir A)` so the first re-computation stalls; trigger X (an `ops/remove Serilog` for scoped, so the fake edits the file; `files.writeProject` adding `Foo 1.0.0` for watcher; `refresh('main')` for full); `settle` until the held call was seen; resolve the sidebar now (N8: a surface that arrives late asks `session/get`, `projects/list`, `installed/get` and the main's `received` count does not change because of it); trigger Y; advance 1500 ms when a watcher is involved; release. Assert: both surfaces' installed equals the disk state after both edits (`['Foo@1.0.0']` for scoped+watcher, `['Serilog@3.0.0', 'Foo@1.0.0']` for full+watcher, `[]` for full+scoped), exactly one terminal response per request id on both surfaces, no `installed/get` response applied whose result predates the last edit, and the number of `nuget config paths` calls for dir A after the hold is at most two (the stale computation was abandoned once, ADR-002 invariants 2 and 3). Ledger: N8 closed by this scenario.
-   - `queue saturation + exception after admission`: as in step 3; after release assert six `package add` argv in `dotnet.calls` (noun-first, `--project`), six `completed` outcomes announced to both surfaces and the seventh `rejected`, the status bar `hide` called at the end, and `expectState` with the six packages. Then the spy: `ops/remove Serilog` → terminal response `status: 'failed'`, `kind: 'remove'`, `packageId: 'Serilog'`, `message` containing `boom` and not `secret`, the same `opId` on the `ops/completed` event of both surfaces; a following `ops/install` completes (the queue did not stall). Fails if the seventh is admitted, if a refusal lacks the ticket's `opId`, if the thrown error escapes the ticket, or if the message leaks the credential.
-   - `project deletion mid-request`: A selected, both surfaces showing A. `dotnet.hold('nuget config paths' for dir A)`; `request('main', 'installed/get', { projectPath: A })` (held); `files.deleteProject(A)` (disk, `findFiles`, watcher `delete`); `advanceTimersByTimeAsync(1500)`; release; `settle`. Assert: the held id has exactly one terminal response, ok, with `unsupported: { reason: 'not-found' }` (the inspector never rejects, `inspector.ts:74-80`); both surfaces received `projects/changed` with `[B]` and a `session/changed` whose `selectedProject` is B (reconcile replaced the vanished project, `SessionStore.ts:127-130`); `expectState({ selectedProject: B, projects: [B], installed: ['Newtonsoft.Json@13.0.1'] })`; the late A response was not applied (R4). Do not count refresh runs. The selected source: use `shared` (in both lists) so it survives; the "source only the replacement has" case is the activation-time case of C-state-core-6 and is a root test of P2.fix-1, not a harness scenario.
-   - `shared query with one subscriber cancelling`: A selected; both resolved; `dotnet.hold('nuget config paths' for dir A)` before the first `installed/get`; `request('main', 'installed/get', A)` and `request('sidebar', 'installed/get', A)` back to back; `settle` until the hold was seen; `cancel('main', id)`; release. Assert: exactly one `--version` probe and exactly one `nuget config paths` call for dir A in `dotnet.calls` (the runner dedupes the probe, the coordinator the computation, ADR-002 invariant 1); the sidebar's response is ok with `['Serilog@3.0.0']`; the main's id has exactly one terminal response, an error with `code: 'cancelled'`, and it arrives after release (ADR-002 invariant 4: the release of one subscriber does not abort the other's computation; `Catalog.ts:323-331`). Fails if the cancel aborts the shared computation (a second `config paths` call) or if the sidebar gets an error.
-   - `surface disposed with pending ops`: both resolved; `dotnet.hold('package add')`; from the main panel `operate('ops/install', Foo)` (running) and `operate('ops/remove', Serilog)` (waiting), plus `request('main', 'installed/get', A)` held at `config paths`; `settle` until the hold is seen; `dispose('main')`; note the main webview's `received.length`; release both holds; `settle`. Assert: `MainPanelHost.instance` undefined and the main's `received.length` unchanged (nothing posted after disposal); both operations ran (`package add` and `package remove` argv present) and the sidebar received two `ops/completed` with `status: 'completed'` (N9 beyond `handlers.test.ts:407`: real queue, real workflows, real edits, the other surface told); the sidebar's installed converges to `['Foo@1.0.0']`; `services.queue.isBusy` false; `open('main')` again yields a fresh host whose `session/get` is answered. Fails if disposal cancels the queued ticket or if a post reaches the disposed webview.
-   - `central version change affecting several projects`: tree with the CPM projects; sidebar resolved, `selectProject('sidebar', C1)`; main opened in all-projects mode (`showAllProjects('main')`); `settle` until the sidebar shows `['Newtonsoft.Json@13.0.1']` with `declaration: 'central'` and the main holds chunks for C1 and C2. `files.writeProps(Cpm/Directory.Packages.props, version 13.0.3)` (props watcher, scope `workspace`); `advanceTimersByTimeAsync(1499)` → no `resources/invalidated` yet on either surface; `advanceTimersByTimeAsync(1)`; `settle`. Assert: exactly one `resources/invalidated` per surface for the edit, `scope.kind: 'workspace'`, `reason: 'file-watcher'`, and its `keys` names both `resourceKeys.installed(C1)` and `resourceKeys.installed(C2)` (both were computed by the fan-out, ADR-002:56-59); the sidebar's installed for C1 is `['Newtonsoft.Json@13.0.3']` with `declaration: 'central'` and `definedIn` the props path; the main's chunks for C1 and C2 both show 13.0.3. Keep the row's wording `affecting`; note on P6.4's row that its gate says `affects` and that P6.4 extends or renames this scenario.
-
-9. (h) Record `C-protocol-host-7` in the ledger: "No ok response carries `generation`: `WebviewHost.ts:146` calls `makeOk` with three arguments and `Catalog` returns values without the handle's generation, so the discard by generation of ADR-007:29-31 and ADR-008:19-24 (P3.3, `useResource`) has nothing to read. Fix: the Catalog's cacheable reads return `{ value, generation }` (or the handle's generation alongside) and the handler hands it to `makeOk`; `src/core/catalog/**`, `src/host/**`, their tests; no protocol change. Scheduled: the P2 phase review as a blocking defect (`P2.fix`), before P3.3; the fix adds the harness scenario `late response for an invalidated key is discarded by generation`." No P2.11 scenario depends on it, and no scenario asserts the field's absence. Add to the P3.3 row: "depends on C-protocol-host-7 being fixed first".
-
-10. (i) No coverage threshold now: `src/test/**` is excluded as a source, the host floor arrives with the per-directory floors of P5, and a threshold is a ratchet decision for a later item. Paste the measured `src/host/**` line percentage (69.79 % at P2.10; `SidebarHost.ts`, `MainPanelHost.ts` and `pickers.ts` should rise) into the handoff note.
-
-11. (j) Handoff note `src/test/harness/STATUS.md` from the §2.5 template, first line stating its scope (`src/test/harness/**`). CHANGELOG `## [Unreleased]` `### Added`: `**Two-surface harness** — src/test/harness drives the real 2.0 composition root with both webview hosts over fake webviews and an in-process fake dotnet that edits the scratch project files, and proves across the sidebar and the main panel: ordering of session changes, invalidation in every order, queue saturation and a throwing operation, project deletion during a request, one shared computation when a subscriber cancels, disposal with pending operations, and a central version change reaching several projects`. ARCHITECTURE.md 2.0 section: in "Shared tooling → Unit tests" add `src/test/harness` to the `integration` project; add a paragraph "Two-surface harness" with the composition (step 3), the seven model rules (step 5, the text P3.3 implements), the fake dotnet (step 4) and the timer regime (step 7). copilot-instructions: extend the existing row "Mock panel disposes without end" with "and the harness's panel in `src/test/harness/harness.ts`"; no new row unless a footgun was met while writing (one candidate: a computation of `installed/get` can be held only at `nuget config paths`, because the SDK probe is cached after its first answer). Ledger: N8 → `closed (P2.11: scenario full/scoped/watcher invalidation both orders; a surface that resolves late asks for the current state and the other surface receives nothing for it)`; N58 note extended with the harness; new `C-state-core-6` (open): "`refreshProjectsAndSession` (`src/extension.next.ts:136-149`) reconciles the snapshot against the source list of the directory it started listing, which is no longer the selected project's when the selection changes during the run (A→B→A with a slow listing of B resets a source valid for A to `all`, measured by the harness) and is the vanished project's or the first workspace folder's when `reconcile` replaces the project (`src/STATUS.md`, Deviations). Fix in `P2.fix-1`: list the sources of the project the store keeps or picks and skip the reconcile when the selection moved during the listing (the rerun does it); root tests `a selection that moves during a refresh is not reconciled against the previous project's sources` and `a replaced selection is reconciled against the replacement project's sources`; the harness scenarios `A→B→A ordering` and `project deletion mid-request` then pin the source values"; new `C-protocol-host-7` (step 9); new `N59` (three fake spawn copies, P5.12). Tracker notes: P1.7 and P2.10 rows "convergence shown by the P2.11 scenario `A→B→A ordering`; the selection lost in that race is C-state-core-6 (P2.fix-1)"; P3.3 (step 9); P6.4 (step 8, last scenario); P5.12 (N59). If the phase review does not raise C-state-core-6 and C-protocol-host-7 as blocking on its own, put them in the review brief.
-
-12. (k) No frozen path, no sentinel. Gates in §2.2 order with `npm run check-types` where the ritual says `npx tsc --noEmit` (N39), then the row's gate `npx vitest run --project integration src/test/harness`, `npm test`, `npm run bench`, `npx vitest run --coverage`; no `package:vsix` (no extension, host or esbuild change) and no `docs:protocol:check` need (nothing under `src/protocol`), but run `npm run check:vsix` only if `.vscodeignore` needed a change (it does not: `src/**` is excluded, `.vscodeignore:5`). Commit with the `git-commit` skill citing P2.11, ADR-001, ADR-002, ADR-003, ADR-007, ADR-008, ADR-009, N8, N9, N58, N59, C-state-core-6, C-protocol-host-7; push; wait for green CI.
-
-DO NOT:
-- Do not hand-build `HostServices` or subclass `WebviewHost` in the harness; `src/host/handlers.test.ts` already tests that level.
-- Do not use the shared mock's `createMockWebviewPanel` for the main panel (N58), and do not edit `src/test/__mocks__/vscode.ts`.
-- Do not edit `src/extension.next.ts`, `src/extension.next.test.ts`, `src/host/**`, `src/core/**`, `src/protocol/**`, `src/core/contracts.ts` or `docs/adr/**` in this item; the root defect and the response generation are fix items with the harness as their oracle.
-- Do not pin `selectedSource: 'all'` after A→B→A, and do not pin `'private'` either until P2.fix-1; compare with the host and record the measured value.
-- Do not assert that a response lacks `generation`, and do not make a scenario depend on its presence.
-- Do not sleep; no `setTimeout`-based pauses in scenarios; advance the fake clock or `vi.waitFor`.
-- Do not fake `setImmediate`, `queueMicrotask` or `Date` (the `FakeChild`, the coordinator and `AssetsReader` need them real).
-- Do not read anything from `__fixtures__/.scratch` that the scenario did not write in the same run (plan §2.6).
-- Do not add a fence, a threshold, a setup file or a CI step for the harness.
-- Do not name the file `*.integration.test.ts` unless you also keep the harness glob; the include must list `src/test/harness/**/*.test.ts`.
-- Do not count refresh runs or `session/changed` events as the property; pin end states and one-terminal-response-per-id.
-
-CONTRACT CHANGE: none. No file under `src/protocol/**`, `src/core/contracts.ts` or `docs/adr/**` changes; no sentinel. Non-frozen files of the item: `src/test/harness/{harness.ts,FakeWebview.ts,fakeDotnet.ts,scenarios.test.ts,STATUS.md}` (new), `vitest.config.mts` (integration include, additive), `tsconfig.vitest.json` (include, additive, under this ruling), `docs/plans/STATUS.md`, `docs/plans/findings-ledger.md`, `CHANGELOG.md`, `ARCHITECTURE.md` (2.0 section), `.github/copilot-instructions.md` (one existing gotcha row extended).
-
-VERIFY:
-- `npx vitest run --project integration src/test/harness --reporter=verbose` → 7 passed (or 12 with `it.each` for the six orderings), 0 failed, and the output contains each of: `A→B→A ordering`, `full/scoped/watcher invalidation both orders`, `queue saturation + exception after admission`, `project deletion mid-request`, `shared query with one subscriber cancelling`, `surface disposed with pending ops`, `central version change affecting several projects`.
-- `grep -c "src/test/harness" vitest.config.mts tsconfig.vitest.json` → 1 and 1; `npm run check-types` → exit 0 (so the harness is type-checked); `npx eslint src` → exit 0, no output.
-- `npm test` → green with the harness file listed under the `integration` project; `npm run bench` → green; `npx vitest run --coverage` → exit 0 with `src/host/**` lines ≥ 69.79 %.
-- `git diff --name-only -- src/protocol src/core docs/adr src/host src/extension.next.ts src/extension.next.test.ts src/test/__mocks__` → empty; `ls .claude/.contract-change` → No such file or directory; `git status --porcelain --untracked-files=all` before the commit lists the five harness files.
-- `grep -n "C-state-core-6\|C-protocol-host-7\|N59" docs/plans/findings-ledger.md` → one row each, `open`; `grep -n "^| N8 " docs/plans/findings-ledger.md` → `closed (P2.11 …)`; the P1.7, P2.10, P3.3, P5.12 and P6.4 rows carry the notes of step 11.
-- `grep -c "Two-surface harness" ARCHITECTURE.md CHANGELOG.md` → ≥ 1 each; CI green on all required jobs (both `Test` runners run the harness) before P2.12.
-
-Files checked: `/Users/mattias/github/nuiget/.github/agents/architecture-advisor.agent.md`; `/Users/mattias/github/nuiget/docs/plans/2026-10-11-nuiget-2.0-execution-plan.md` lines 41-159 (D1-D13, §2, §3, §4), 221-238 (P2 rows and gate), 244-249 (P3.3, P3.4), 277-282, 297 (P6.4), 395-423 (N findings); `/Users/mattias/github/nuiget/docs/plans/RUN.md:64-151`; `/Users/mattias/github/nuiget/docs/plans/STATUS.md` rows P0.11, P2.9, P2.10, P2.11, P2.12, P3.3, P3.4, P1.fix-1 and the P1.7 ruling (484-544), P2.10 ruling (1007 ff.); `/Users/mattias/github/nuiget/docs/plans/findings-ledger.md:48,108-112,141,150-152,160,328-332,366-385` and the full list of N and C ids; `/Users/mattias/github/nuiget/src/STATUS.md` (whole); `/Users/mattias/github/nuiget/src/host/STATUS.md:119`, `src/core/ops/STATUS.md:254,486`; `/Users/mattias/github/nuiget/docs/adr/001-session-store.md`, `002-query-coordinator.md`, `003-operation-queue-and-dotnet-runner.md`, `007-protocol.md`, `008-webview-architecture.md`, `009-catalog.md` (whole); `/Users/mattias/github/nuiget/src/extension.next.ts` (whole) and `src/extension.next.test.ts` (whole); `/Users/mattias/github/nuiget/src/host/WebviewHost.ts`, `handlers.ts`, `SidebarHost.ts`, `MainPanelHost.ts`, `services.ts` (whole), `handlers.test.ts:1-140,280-480`; `/Users/mattias/github/nuiget/src/core/session/SessionStore.ts`, `session/index.ts`, `catalog/Catalog.ts`, `queries/QueryCoordinator.ts`, `ops/OperationQueue.ts` (whole), `ops/PackageWorkflows.ts:150-245`, `cli/DotnetRunner.ts:300-335`, `cli/commands.ts:68-104`, `project/context.ts` (whole), `project/inspector.ts:60-115`, `project/central.ts` exports, `project/discovery.ts:15-27`, `project/__fixtures__/scratch.ts` (whole), `sources/DotnetSourceProvider.ts:36-147` (grep); `/Users/mattias/github/nuiget/src/protocol/messages.ts:100-200`, `envelope.ts` exports and `:51-52,88-91`, `domain.ts:9,201,224,281-313`; `/Users/mattias/github/nuiget/src/test/__mocks__/vscode.ts:150-243,334,374`; `/Users/mattias/github/nuiget/vitest.config.mts` (whole); `tsconfig.vitest.json` (whole); `tsconfig.json:25-40`; `eslint.config.mjs:1-140`; `package.json` scripts; `.github/workflows/ci.yml:19,108,112,167,233`; `.vscodeignore:4-25`; `.gitignore:4-10`; `ARCHITECTURE.md:60-150,248,1734-1743`; `.github/copilot-instructions.md:176`; `node_modules/vitest/package.json` (5.0.3) and `node_modules/vitest/dist/chunks/index.C4tKZ0yW.js:7160` (`vi.waitFor` advances fake timers); `ls docs/adr src/test src/host src/core/{catalog,ops,queries,session} src/core/project/__fixtures__`; `git status --short` (clean), `git log --oneline -3` (head 3d1da7b). Not run: any gate (inspection only). The ambient advisor timed out; this answer rests on the files above.
-`````
-
-The ambient advisor (`/advisor`) was consulted before the brief; it asked for the brief, named the two
-configuration files and the missing response generation, and the lever at `nuget config paths`.
-
-## Later scenarios (added by other items)
-
-- 2026-10-13, P3.4 (`5bc53c1` + the P3.4 commit): `sidebar: uninstall then watcher invalidation converges` in
-  `scenarios.test.ts`, the second gate of that item. It needs no change to `harness.ts`, `FakeWebview.ts` or
-  `fakeDotnet.ts`; the watcher's event for the operation's own edit is produced with `files.writeProject`
-  and the file's current text. `npx vitest run --project integration src/test/harness` → 15 tests; the
-  scenario alone 40 times → 40 of 40. Details: `src/webview/sidebar-next/STATUS.md`.
-- 2026-10-14, P5.4 commit b: `bulk remove partial failure reconciles: the failed package stays, the others go,
-  both surfaces show the list on disk`, the row's gate, written as step 6 of the P5.4 ruling (verbatim in
-  `docs/plans/STATUS.md`). No change to `harness.ts`, `FakeWebview.ts` or `fakeDotnet.ts`: `fail` is used for the
-  first time. `npx vitest run --project integration src/test/harness` → 16 tests; the scenario alone 40 times →
-  40 of 40. Two deviations from the ruling's assertions, both checked against the code: (1) the running report's
-  `packageIds` are compared as a set, because the order of the three removals is not pinned (the ruling says so for
-  the results); (2) the operation's invalidation is not `{ kind: 'project', projectPaths: [A] }`:
-  `invalidateAfter` (`src/host/handlers.ts:217-226`) invalidates the project and the metadata of the packages whose
-  edit succeeded, and the coordinator folds both into one event with a `package` scope. The scenario asserts what
-  matters of it: the event names `installed:<A>`, its scope names A and exactly Serilog and Newtonsoft.Json, never
-  Moq. Details: `src/webview/shared/STATUS.md`.
-
-## Exact next step (one item ID)
-
-P2.12 (benches for the queue and the scopes, ARCHITECTURE 2.0, CHANGELOG, `npm run bench:save`). After it the
-P2 phase gate and review: the review brief names C-state-core-6 (`P2.fix-1`) and C-protocol-host-7 as blocking
-if the reviewer does not raise them.
-
-## Advisor decision: P4.9b — stop-and-ask: how the health monitor obtains its chains (2026-10-16), verbatim
-
-`````text
-DECISION: Option 2, sharpened, with option 1's probe mechanism folded in. The chain of a project directory is registered by the `installed` computation's own walk (`Catalog.computeInstalled` hands the `configFiles` of the `ProjectContextProvider.get` it already runs to a new `FeedContexts.register`); `computeUpdates` asks `installed` before `forProject`; the health monitor walks no directory and reads no session: it probes the enabled sources of the chains already registered (`FeedContexts.registered()`) and is restarted by a new `FeedContexts.onDidRegister` event. The `reconciled`/`markReconciled` gate added for observation (1) is removed. No existing harness scenario changes; of my P4.9 ruling, step 12's probe recipe is replaced (not patched), step 15's "recorded during activation, before either surface exists" premise is withdrawn and the two P4.9b scenarios/root tests are reworded below. Addendum: the two Catalog tests `allProjectsInstalled streams protocol chunks` and `allProjectsInstalled sends a second chunk when an evaluation delivers the authoritative result` are rewritten by title to expect the `metadata` chunk; the rig default stays. Nothing here is `OWNER MUST DECIDE`.
-
-WHY: The brief is accurate about the tree, with two additions it did not list: `src/core/catalog/Catalog.ts` already carries step 14 (`emitInstalledMetadata`, uncommitted diff), and `src/test/harness/harness.ts` plus an untracked `src/test/harness/fakeFeed.ts` already pass `transport: new FakeTransport(feed.handler)` (step 15's seam; `git status --porcelain --untracked-files=all` shows both). The defect is not in the monitor but in a duplicated walk: `Catalog.computeInstalled` runs `this.deps.contexts.get(projectPath)` (`src/core/catalog/Catalog.ts:178`), which is the one `dotnet nuget config paths` of a directory (`src/core/project/context.ts:39-43,73-85`), and discards the chain; `FeedContexts.forDirectory` (`src/core/catalog/feedContexts.ts:58-65`) and `forProject` (`:68-82`) then walk the same directory again, which is what the probe (`src/extension.next.ts:222-237`), `computeUpdates` (`Catalog.ts:220` before `installed` at `:229`: two walks for a fresh `updates/get`) and step 14 (`Catalog.ts` diff, `forProject` in `emitInstalledMetadata`) each do. The harness pins the single walk on purpose (`src/test/harness/scenarios.test.ts:116,207,244,269,282`, gotcha "Harness: a read that cannot be held"), so any design that adds a `nuget config paths` for a project directory outside its `installed` computation breaks it, and options 4 and 5 would only hide that from the suite that counts it. My step 12 sentence "the probe reuses the cached listing of the same directory and must add none" was true of `nuget list source` (`DotnetSourceProvider.listings`, `src/core/sources/DotnetSourceProvider.ts:45-59`) and wrong about the chain; the recipe built on it is withdrawn. Registering from the computation keeps ADR-002 invariant 1 and ADR-009 d.5 ("a source is probed or warmed only after the chain of its directory is registered") literally true, costs no new process (`register` reuses the cached listing and reads a chain already known), and leaves every frozen file untouched. Probing the union of registered chains also serves `ALL_PROJECTS` (every project's chain is registered by the fan-out) and project-less reads (a `search` registers the host's directory via `forDirectory`), which the selected-directory recipe did not. One accepted residual: a `sources` invalidation clears the chains (`Catalog.ts:533-539`) without bumping `installed:` keys (ADR-002 scope table), so the next feed read of a cached project walks once through `forProject`'s miss; no scenario holds at that moment, and after a `nuget.config` change a fresh walk is right.
+WHY: The brief is right about the tree on every path it names, and misses one live defect that decides E: since P6.3b the sidebar's QuickPick path runs a central edit with no preview at all (`src/host/SidebarHost.ts:204,214` submit `operations.update`, `:191,198,216` submit `operations.install` with a version; `DefaultProjectMutator.canMutate` admits a CPM install/update on SDK 10 with a version, `src/core/project/mutator.ts:59-71`), which violates interaction model §5 row 73 and ADR-004 tier 3 ("CPM mutations show an affected-projects preview", `docs/adr/004-project-model.md:41-43`); the preview therefore has to exist host-side anyway, and §1 and §3 of the interaction model already put choices in QuickPicks/modals on the sidebar and dialogs in the main panel, so routing the sidebar's central update through `ui/contextMenu` costs no bytes against the 11 427 of headroom (N63, P5 review 5). A2 fails because the sidebar never holds the fan-out and the main panel only in All Projects; A3 would tell the user after the fact what ADR-004 says must be shown before; so the preview reaches the main panel through a request, which is a contract change under D6 (`scripts/hooks/guard.mjs:36` freezes `src/core/contracts.ts`, `src/protocol/**`, `docs/adr/**`; `docs/ux/**` is not frozen). B3 is out: no SDK command writes a `VersionOverride`, the extension edits no project file (ADR-003; `mutator.ts:4` "never writes a file: the edit itself is the CLI's") and the mutator refuses override rows until a probe row exists (N74, `mutator.ts:53-55`), so the dialog offers one action and §5 row 73 is amended, not silently deviated from. C1 because a single uninstall on a CPM project removes the project's own reference only and never the central entry (ADR-004 tier 3 `:44`, plan gate `never deletes central entry on single uninstall`, probe row `remove` in `src/core/cli/__fixtures__/sdk-probes/10.0.401.json`: project diff only); there is nothing to preview, and the mutator admits every remove (`mutator.ts:44-47`), so `whyNotRemovable`'s central branch (`src/webview/shared/installed/rules.ts:38-40`) goes and §4 row 57 / §5 row 73 say so. D2 because a bulk of central rows would need one preview per row inside `UpdateAllDialog`; it is a separate finding, not this item. The gate scenario's second act is feasible without a core change: the execution context is rebuilt per computation and its revision covers `Directory.Packages.props` (`src/core/project/revision.ts:11-12,46`), so the evaluator cache (`src/core/project/evaluator.ts:56`) misses after the fake's props edit. Two `affectedProjects` lists exist and the tests must not confuse them: the mutator's preview includes the asking project (`mutator.ts:102-105`), the workflow strips it from the outcome (`src/core/ops/PackageWorkflows.ts:234-242`).
 
 DO:
-1. Paste this answer verbatim under `## Advisor decisions` in `docs/plans/STATUS.md` as `### P4.9b — stop-and-ask: how the health monitor obtains its chains (2026-10-16)` and into `src/STATUS.md`, `src/core/catalog/STATUS.md`, `src/test/harness/STATUS.md`. In the P4.9 ruling's steps 12 and 15 nothing is edited; this ruling supersedes them where they differ.
-2. `src/core/catalog/feedContexts.ts`: add `register(projectPath: string, configFiles: string[]): Promise<FeedContext>`: `directory = path.dirname(projectPath)`; `this.chains.set(directory, Promise.resolve(configFiles))` synchronously (the computation's walk is the newest, it overwrites), then `return this.forChain(directory, configFiles)`. Add `registered(): readonly FeedContext[]` (`[...this.settled.values()]`) and `readonly onDidRegister: Event<FeedContext>` (an `Emitter` from `../util/events`), fired in `forChain`'s success branch right after `this.settled.set(key, built)`, so a context reached by `register`, `forProject` or `forDirectory` fires once per chain, again after `clear()` rebuilds it. Update the header comment: the chain of a project directory comes from the `installed` computation's own walk; `forProject` walks only for a directory no computation has registered. `src/core/catalog/index.ts`: nothing new to export (the root imports `FeedContexts` already).
-3. `src/core/catalog/Catalog.ts`: in `computeInstalled`, after `Promise.all` resolves and when `context !== undefined`: `void this.deps.feedContexts.register(projectPath, context.context.configFiles).catch((error: unknown) => this.deps.logger?.debug(redact(\`Feed context of ${projectPath} could not be registered: ${describe(error)}\`)));` — never awaited, the installed answer does not wait on it. In `computeUpdates`, move `const { result, upgrade } = await this.installed(...)` and `final` above the `forProject` call, so the chain is registered before `forProject` looks it up. `emitInstalledMetadata` stays as in the diff (its `forProject` is now a cache hit after `this.installed`).
-4. `src/extension.next.ts`: delete `markReconciled`, `reconciled` and `void ready.finally(markReconciled)`. `probeSources` becomes: `async () => { const byUrl = new Map<string, NuGetSource>(); for (const feedContext of feedContexts.registered()) { for (const source of feedContext.sources) { byUrl.set(source.url, source); } } return [...byUrl.values()]; }` — no `session.snapshot`, no `workspaceFolderFor`, no `forDirectory`, no try/catch needed. After `const monitor = startHealthMonitor(...)`: `context.subscriptions.push(monitor, feedContexts.onDidRegister(() => monitor.restart()));`. Keep `monitor.restart()` on `sources`/`workspace` invalidation (after `clear()` the pass probes nothing; the recomputation's registration restarts it) and the `health.onDidChange` forwarding. Comment on the block: the monitor runs no `dotnet`; it probes chains that reads registered, and the activation pass finds none.
-5. Tests. `src/core/catalog/feedContexts.test.ts`: `register seeds a directory's chain from a context walk, so forProject and forDirectory of that directory run no config-paths command` (`contexts.get` and `configFilesFor` never called), `onDidRegister fires once per chain, for register, forProject and forDirectory alike, and again after clear`, `registered lists the settled contexts and is empty after clear`. `src/core/catalog/Catalog.test.ts`: rewrite by title `allProjectsInstalled streams protocol chunks` (build `byPath` from `project` chunks only; exactly one `metadata` chunk, `projectPath: appPath`, at an index after App's project chunk; `toHaveLength(4)`; `result` unchanged) and `allProjectsInstalled sends a second chunk when an evaluation delivers the authoritative result` (`['start', 'provisional', 'authoritative', 'metadata']`); add `installed registers the project's chain from its own context walk, so a feed read of the same directory walks nothing` (after `catalog.installed(appPath)`, `rig.contexts.get` was called once and `configFilesFor` never; then `catalog.updates(appPath, false)` adds no `get` call), `updates asks installed before the feed context and walks the chain once`, plus the two step-14 tests already named (`allProjectsInstalled: emits a metadata chunk per project after its project chunk and finishes without one when enrichment fails`, `sourceHealth lists the failed sources`). `src/extension.next.test.ts`: replace the step-15 title with `the health monitor probes nothing before a read registers a chain, probes the registered chain's sources after it, and reports sources/health to both surfaces` (FakeTransport failing; after `start`, `transport` saw no request and `dotnet.calls` has no `nuget config paths` from the probe; `await services.catalog.installed(appPath)`; `vi.waitFor` the service-index request to the app directory's feed and `sidebar.notifySourceHealth` with the failure); keep `a sources invalidation restarts the monitor and a recovery invalidates nothing`. `a replaced selection is reconciled against the replacement project's sources` stays as it is and passes without the `reconciled` gate.
-6. `src/test/harness/scenarios.test.ts`, the two new titles, reworded: `sources unreachable shows banner not empty`: `feed.down = true` before activation; resolve both surfaces; `expectState` (the first `installed/get` registers the chain, the probe runs, both surfaces exist); `settle(() => expect(webview.health.at(-1)).toEqual([expect.objectContaining({ url: SHARED_FEED })]))` on both; `sources/list` on each answers `failed` containing `SHARED_FEED`; `checkUpdates` on both → ok response, `updates: []`, `sourcesUnavailable: true`; then recovery as in step 15 (`down = false`, `publish`, `h.refresh('main')`, last `sources/health` is `[]`, `checkUpdates` answers the update). `updates converge across surfaces` unchanged from step 15. Keep `FakeWebview` ignoring `metadata` chunks of `allProjects/installed` (record them if convenient; do not apply them).
-7. Docs: step 16's gotcha text becomes "A recovered source invalidates nothing; the monitor runs no `dotnet`: it probes the sources of chains that reads registered (`FeedContexts.registered()`), restarted by `onDidRegister`; `dotnet nuget config paths` for a project directory runs inside `ProjectContextProvider.get` only, and `computeInstalled` hands that chain to `FeedContexts.register` (the harness holds on it rely on that)". ARCHITECTURE 2.0 row for the Catalog mentions `register`. Everything else of step 16 (CHANGELOG, ledger S6, tracker, STATUS rewrites, commit title) unchanged.
-8. Gates as step 16, and run the six titles of the brief plus the two new ones 40 times each before pushing.
+
+P6.4a — contract and host (sentinel `.claude/.contract-change` with content exactly `P6.4a`, created before the first frozen edit, deleted before the commit)
+
+1. Tracker first: split row P6.4 into P6.4a/P6.4b/P6.4c with this ruling verbatim under `## Advisor decisions` of `docs/plans/STATUS.md`; mark P6.4a `in-progress`.
+2. `src/protocol/domain.ts`, after `OperationOutcome` (`:281-296`): move the interface in, verbatim:
+   ```ts
+   /** What a central version change reaches (ADR-004 tier 3): the mutator's preview, shown before `ops/update` or `ops/install` of a centrally managed package. */
+   export interface CpmImpactPreview {
+       centralPropsPath: string;
+       packageId: string;
+       /** The central version before the change. */
+       fromVersion?: string;
+       toVersion: string;
+       /** Every project importing that props file that references the package without an override, the asking project included. */
+       affectedProjects: string[];
+   }
+   ```
+3. `src/core/contracts.ts`: delete lines 323-330 (the local `CpmImpactPreview`), add `CpmImpactPreview` to the `import type { … } from '../protocol/domain'` list (`:10-22`) and add `export type { CpmImpactPreview };` next to it, so `src/core/project/mutator.ts:9` and `PackageWorkflows.ts` keep importing it from `../contracts` unchanged. One definition, not two (D6).
+4. `src/protocol/messages.ts`: add `CpmImpactPreview` to the import from `./domain` and, after `'ops/bulkRemoveAllProjects'` (`:162`), a new group:
+   ```ts
+       // Central Package Management
+       /** The projects a central version change would reach, asked before `ops/update` or `ops/install` of a centrally managed package (ADR-004 tier 3, interaction model §5). `preview` is `null` when the project does not use Central Package Management or the package has no central entry; the edit itself goes through `ops/*`, whose gate decides. */
+       'cpm/preview': { payload: { projectPath: string; packageId: string; version: string }; result: { preview: CpmImpactPreview | null } };
+   ```
+   `version` is the version the edit writes (the ops payload name, ADR-007 naming); `null`, not `undefined`, after the `package/metadata` precedent (`:138`).
+5. `src/protocol/guards.ts:28`: append `'cpm/preview': true,` to the ops lines of `REQUEST_TYPE_RECORD` (tsc fails until it is there).
+6. ADRs, inline in ADR-000's form: `docs/adr/007-protocol.md:3` header gains `· Amended: 2026-10-15 (plan item P6.4a: the cpm/preview request)` and a bullet after the `readme/image` one (`:28`): "`cpm/preview` is the 44th request: the mutator's affected-projects preview (`ProjectMutator.previewCpmImpact`) for the dialog of interaction model §5. The preview carries every project the central entry applies to, the asking one included; an outcome's `affectedProjects` lists the other projects. The edit itself still goes through `ops/update` or `ops/install`, whose gate decides." `docs/adr/004-project-model.md:3` header gains `· Amended: 2026-10-15 (plan item P6.4a: the preview reaches the webviews; the override choice waits for N74)` and tier 3 (`:41-43`) gains after "distinguish central update vs project `VersionOverride`": "(the UI offers the central update alone until finding N74 is probed; a `central-override` row is read-only for updates and the `cpm/preview` request carries the preview to the webviews)".
+7. `npm run docs:protocol` → `docs/protocol.md` says `## Requests (44)`; `ARCHITECTURE.md:46` "43 requests" → "44 requests".
+8. `src/host/services.ts`: `HostServices` gains `/** The execution context of a project without the config chain (no dotnet nuget config paths), for a preview the mutator computes outside an operation. */ contextFor(projectPath: string): Promise<ProjectExecutionContext>;`. `src/extension.next.ts` implements it next to `mutator` (`:136`): `contextFor: projectPath => contexts.get(projectPath, workspaceFolderFor(projectPath), { configChain: false }).then(result => result.context)`. No memo: the SDK probe is cached per directory already (P6.3 ruling, `createWorkflowDeps`).
+9. `src/host/handlers.ts`, in `registerSharedHandlers` after the ops handlers: `host.on('cpm/preview', async ({ projectPath, packageId, version }) => ({ preview: await services.mutator.previewCpmImpact(await services.contextFor(requireProject(projectPath)), packageId, version) ?? null }));`. Shared, both surfaces (the harness asks from either).
+10. `src/host/SidebarHost.ts`: a private `confirmCentralChange(projectPath, packageId, version): Promise<boolean>`: `version === undefined` → `true`; else `const preview = await this.services.mutator.previewCpmImpact(await this.services.contextFor(projectPath), packageId, version)`; `preview === undefined` → `true` (not CPM, or a new entry: the mutator decides); else the project names from `catalog.projects()` for `preview.affectedProjects` (fall back to `path.basename`) and `const choice = await vscode.window.showWarningMessage(\`Update the central version of ${packageId}?\`, { modal: true, detail: \`${preview.fromVersion ?? '(none)'} → ${version} in ${path.basename(preview.centralPropsPath)} applies to: ${names.join(', ')}\` }, 'Update central version'); return choice === 'Update central version';`. Call it before every single-project `operations.install` or `operations.update` that names a version (`:172` single target of the browse picker, `:191`, `:198`, `:204`, `:214`, `:216`); `false` → `return false`. Not before `bulkInstall` (`:174`; D2). An error from the preview is caught, logged through `redact`, and the action proceeds to the gate (the mutator refuses on its own grounds).
+11. Tests. `src/host/handlers.test.ts`: rewritten by title `covers the 43 requests of the protocol` → `covers the 44 requests of the protocol` (`:236-239`, `payloads` gains `'cpm/preview': { projectPath, packageId: 'Serilog', version: '4.1.0' }`); new `cpm/preview answers the mutator's preview over the chain-less context, null without a central entry, and rejects ALL_PROJECTS` (fake `mutator.previewCpmImpact` resolves a preview once and `undefined` once; assert `services.contextFor` was called with the project path and the response is `{ preview }` then `{ preview: null }`; `requireProject` error for the sentinel); `SidebarHost: an update of a centrally managed package shows the projects it changes first and submits only when confirmed` (`vi.mocked(vscode.window.showWarningMessage).mockResolvedValueOnce('Update central version')`; assert the message, `{ modal: true, detail }` naming both project names, then one `operations.update` submission); `SidebarHost: the central change cancelled in the modal submits nothing` (the mock's default `undefined`, `src/test/__mocks__/vscode.ts:200`; no ticket, `handled: false`); `SidebarHost: a package without a central entry is submitted without a modal` (preview `undefined`; `showWarningMessage` not called). The fake services of the test file (`:89-105`) gain `contextFor: vi.fn(async projectPath => contextOf(projectPath))`.
+12. Gates: `npx tsc --noEmit`, `npm run check-types`, `npx eslint src`, `npm run docs:protocol:check`, `npx vitest run --project backend src/protocol src/host src/core/project src/core/ops src/extension.next.test.ts`, `npm test`, `npm run bench`, `npx vitest run --coverage` → `src/host/**` lines ≥ 87; `git diff --name-only -- src/protocol docs/adr src/core/contracts.ts` → exactly `src/protocol/domain.ts`, `src/protocol/messages.ts`, `src/protocol/guards.ts`, `src/core/contracts.ts`, `docs/adr/004-project-model.md`, `docs/adr/007-protocol.md`; delete the sentinel; `node esbuild.mjs --v2 --production --analyze` (expect extension ≈ +0.8 KB, webview/sidebar unchanged; paste); docs: ARCHITECTURE 2.0 section only (the `messages.ts` row, the handlers row with `cpm/preview`, the `SidebarHost` row with the modal, the `HostServices` row with `contextFor`), CHANGELOG `## [Unreleased]` `### Added`: `**2.0 Central Package Management preview** — the host previews which projects a central version change reaches (cpm/preview) and the sidebar's actions menu confirms it before the edit`; ledger: new `N75` (next free id after N74; Medium; "From P6.3b to P6.4a the sidebar's QuickPick path submitted a central update or install-with-version with no preview" → closed in P6.4a) and new `N76` (Low; "Bulk update and bulk uninstall leave central rows out of the update batch (D2): a per-row preview inside the bulk dialog is unbuilt" → open, P7.5 decides); P5 review note 1 on the P6.2 row closes as "not needed by P6.4". Handoff notes: `src/protocol/STATUS.md`, `src/host/STATUS.md`, `src/STATUS.md`. Commit `feat(protocol,host): cpm/preview request, host-side central-change confirmation (P6.4a, D6, D7, ADR-004, ADR-007, N75)`; push; wait for green CI.
+
+P6.4b — harness fake and the gate scenario (no frozen file)
+
+13. `src/test/harness/fakeDotnet.ts`: `createFakeDotnet()` gains `msbuild: 'none' | 'files'` (default `'none'`: today's empty answer, so every existing scenario still sees the evaluation fail and stays provisional). With `'files'`, `answerFor` answers `call.args[0] === 'msbuild'` from the project file `call.args[1]` with the probe fixture's JSON shapes (`src/core/cli/__fixtures__/sdk-probes/10.0.401.json`, `evaluations`): a `-getProperty:` call prints `{"Properties":{"TargetFramework":…,"TargetFrameworks":…,"ManagePackageVersionsCentrally":"true"|"","CentralPackageVersionOverrideEnabled":""}}`; a `-getItem:` call prints `{"Items":{"PackageReference":[{Identity, Version?, VersionOverride?, DefiningProjectFullPath: <project>}…],"PackageVersion":[{Identity, Version, DefiningProjectFullPath: <props>}…]}}`. Read the XML with `fast-xml-parser` directly in the fake (or the regexes the fake already uses over the harness's own `projectXml`/`centralPropsXml` shapes); import nothing from `src/core/project`: the oracle shares no code with what it checks (`harness.ts:325`). The props file is the nearest `Directory.Packages.props` walking up to the scratch root.
+14. Same file, CPM-aware edits, each pinned to a probe row: `package add X --version V --project P` where P's nearest props has `ManagePackageVersionsCentrally` true → `setCentralVersion(props, X, V)` (replace the `<PackageVersion Include="X" …/>` or insert one before the last `</ItemGroup>`) and ensure `<PackageReference Include="X" />` without `Version` in P (rows `add-newer-version`: project diff empty, props version replaced; `add-absent`: both files gain a line); `package add` without `--version` on a CPM project → no file changes (row `add-no-version`); `package remove` → project only, props untouched (row `remove`). Non-CPM behaviour unchanged. Export `setCentralVersion` for the harness's `files` (optional).
+15. `src/test/harness/harness.ts`: `HarnessOptions.evaluate?: boolean` ("the fake dotnet answers msbuild from the files, so installed lists end authoritative"); when true, `dotnet.msbuild = 'files'`; `expectState` (`:348`) expects `options.evaluate ? 'authoritative' : 'provisional'`. The 16 existing scenarios are untouched.
+16. `src/test/harness/scenarios.test.ts`: keep `central version change affecting several projects: one props edit reaches both projects on both surfaces` (`:343-390`) as it is. Add, right after it, `central version change affects several projects: one central update from a surface reaches both projects on both surfaces, authoritative` with `evaluate: true` and the same tree. Acts: (a) resolve both surfaces, main in All Projects, `expectState` 13.0.1 on both, `sidebar.installed?.fidelity === 'authoritative'`, and the sidebar's latest `installed/get` has exactly one chunk `{ kind: 'provisional' }` before its response (the provisional→authoritative upgrade end to end); `h.dotnet.count(dotnetCalls.msbuild(C1)) >= 2`. (b) `h.request('main', 'cpm/preview', { projectPath: C1, packageId: 'Newtonsoft.Json', version: '13.0.3' })` → `{ preview: { centralPropsPath: props, packageId: 'Newtonsoft.Json', fromVersion: '13.0.1', toVersion: '13.0.3', affectedProjects: [C1, C2] } }` (order as discovered; compare as a set if discovery order is not pinned). (c) `h.operate('sidebar', 'ops/update', { projectPath: C1, packageId: 'Newtonsoft.Json', version: '13.0.3' })`; the response outcome has `edit.ok`, `affectedProjects: [C2]` (the asking project stripped), `restore.ok`; `h.dotnet.count(dotnetCalls.packageAdd('Newtonsoft.Json')) === 1` with no `--no-restore` in that call's `args` (D7) and `count(dotnetCalls.restore()) === 2` (C1 and the consumer); on disk the props file has 13.0.3 and neither project file has a `Version` attribute; both surfaces got one `resources/invalidated` with `reason: 'operation'` whose keys contain `installed(C1)` and `installed(C2)`; `expectState` 13.0.3 on both surfaces (`installed` and `allProjects`). (d) The watcher sees the operation's own props edit, as in VS Code: `h.files.writeProps(props, fs.readFileSync(props, 'utf8'))`, advance past `WATCHER_DEBOUNCE_MS`, `expectState` unchanged and no surface answered for a request it did not send (the `sidebar: uninstall then watcher invalidation converges` pattern, `:392-409`). (e) `expectOneResponsePerRequest` on both.
+17. Run `npx vitest run --project integration src/test/harness` and the new scenario 40 times (`for i in $(seq 1 40); do npx vitest run src/test/harness/scenarios.test.ts -t "central version change affects" || break; done`) → 40 of 40. Gates as in step 12 minus the protocol ones; `npm test`, `npm run bench`. Docs: ARCHITECTURE harness row (fake msbuild from files behind `evaluate`, CPM-aware add); copilot-instructions gotcha row "Fake dotnet evaluates only when asked": `createHarness({ evaluate: true })` makes the fake answer `msbuild` from the files and `expectState` then expects `authoritative`; without it the evaluation fails and every list stays provisional; a scenario that asserts the authoritative path or a CPM edit needs the option. Handoff note `src/test/harness/STATUS.md` ("Later scenarios"). Commit `test(harness): fake msbuild from the files, CPM-aware package add, gate scenario central version change affects several projects (P6.4b, ADR-004, D7)`; push; green CI.
+
+P6.4c — webviews and the interaction model (no frozen file; `docs/ux/interaction-model.md` is not frozen but changes in the same commit as the behaviour)
+
+18. `src/webview/shared/installed/rules.ts`: `whyNotRemovable` loses the central branch (`:38-40`) and its JSDoc sentence; new `export function whyNotUpdatable(entry: InstalledPackage, result: InstalledResult): string | undefined`: unsupported → `${id} cannot be updated: ${message}`; `declaration === 'unresolved'` → `${id} cannot be updated: its reference could not be resolved`; `declaration === 'central-override'` → `${id} has a VersionOverride in the project and is not updated from here until that edit is probed` (N74); else `undefined`. New `export const isCentral = (entry) => entry.declaration === 'central'` (override rows are not central for the preview). New `export const UNRESOLVED_HINT = 'Its version could not be resolved from the project files; edit the project file by hand.'`.
+19. `src/webview/shared/primitives/Row.tsx`: new prop `versionTitle?: string` rendered as `title` on `.nuiget-row-version` (`:98`); nothing else on the option. `Row.test.tsx`: `the version cell carries its title`. `ProjectPackages.tsx:104` and `InstalledProjectSection.tsx:122` pass `versionTitle={unresolved ? UNRESOLVED_HINT : undefined}` (§4 row 56: tooltip on the version cell). The provisional badge and its tooltip exist (`InstalledSection.tsx:134-135`, `InstalledProjectSection.tsx:161`); add no announcement for the upgrade (none in §4; one live region, P5 review 2).
+20. `src/webview/main/features/updates/CentralUpdateDialog.tsx` becomes the real dialog: props `{ request: { projectPath: string; packageId: string; fromVersion: string; toVersion: string; sourceUrl?: string } | null; onClose: () => void; onConfirm: () => void }`. While open it asks `useMessageBus().request('cpm/preview', { projectPath, packageId, version: toVersion }, { signal })`, aborting on close/unmount; states per §4: loading text, then the list of project names (`useProjects()` maps `affectedProjects` paths to names, `path.basename`-like fallback on the last segment, since the webview cannot import core) under "Changes the central version `from` → `to` in Directory.Packages.props for:", `preview: null` → "The central entry was not found; the update changes this project only." with the action still offered (the host gate decides), an error → inline error with Retry. Footer: Cancel (initial focus, closes) and `<button data-testid="cpm-preview-confirm">Update central version</button>`, disabled until the preview answered. Keep `data-testid="cpm-preview-dialog"`, `role="alertdialog"` (ConfirmDialog's semantics) and the accessible name `${packageId} is centrally managed`. The owner of the dialog runs `run('ops/update', …)` (or `ops/install` from the details pane when the package is not installed there) on `onConfirm`, through the ops slice, never `bus.request('ops/…')`.
+21. Owners: `UpdatesTab.tsx` (`:57-60,83-95,97-104,157-177,202`): `isCentral` → open the dialog with `{ projectPath, packageId, fromVersion: installedVersion, toVersion: latestVersion, sourceUrl }`; `whyNotUpdatable` → announce and stop (override rows); bulk candidates still exclude central and override rows (D2) with the announcement `${id} is centrally managed; update it on its own to see the projects it changes`. Same in `AllProjectsUpdates.tsx` (`:173,191,205-206,298`). `DetailsPane.tsx` (`:100,110-114,127-128,133-138,205`): the primary button on a central row opens the dialog with the chosen version; `whyNotUpdatable` feeds `primaryWhy` for override rows; `uninstall` of a central row runs `ops/remove` directly (`removalBlocked` no longer set for central); a `nuiget-details-note` for a central entry: "Its version is set centrally in Directory.Packages.props: updating changes it for every project that uses it; uninstalling removes it from this project only." `InstalledTab.tsx` / `InstalledProjectSection.tsx`: central rows become selectable for the bulk uninstall and get the row action (removable now).
+22. Sidebar, no dialog: `ProjectUpdates.tsx:59-74,106-109`: a central row's Enter and row button call `menu({ packageId, installedVersion, latestVersion, context: 'updates', projectPath, versionType, sourceUrl })` (the host's QuickPick, then the modal of P6.4a); the row keeps its `row-action-update` button for central rows; an override row announces `whyNotUpdatable`; hint text: "Enter updates to the latest version (a centrally managed package: opens the actions menu); Ctrl+Enter (Cmd+Enter) opens the full view; Shift+F10 opens the actions menu." `ProjectPackages.tsx`: unchanged except that central rows now have the uninstall action (rule change).
+23. `src/webview/shared/store/outcomes.ts` `describeOutcome`: when `affectedProjects` is non-empty, append `; also restored ${n} other project(s)` (the outcome's list is the other projects). Test `describeOutcome names the other projects a central change restored`.
+24. `docs/ux/interaction-model.md`: §4 row 57 → "Centrally managed | "CPM" badge on the row; version cell shows central version | `declaration: 'central' \| 'central-override'`. An update shows an impact preview first (main panel: dialog; sidebar: the actions menu and a VS Code modal); an uninstall removes the project's reference only and keeps the central entry (ADR-004), without a dialog; a `central-override` row is not updated from the UI until finding N74 is probed." §5 row 73 → "CPM central change | Any update of a `central` package | Main panel: **Dialog** (`cpm-preview-dialog`) listing the projects the central version applies to; choice: *Update central version* / Cancel. Sidebar: the row's primary action opens the actions menu and the host confirms with a modal listing the same projects. *Override in this project only* waits for N74. An uninstall of a central row needs no confirmation (the central entry stays)." §5 keyboard paragraph, after "sidebar: performs its primary action": "(on a centrally managed update row: opens the actions menu)". §8 layer-roots row: `cpm-preview-dialog`, `cpm-preview-confirm`. §8 is read by `src/test/lint/interaction-model-testids.test.ts`.
+25. Tests rewritten by title (each listed in the STATUS note): `src/webview/sidebar-next/SidebarView.test.tsx:106` `CPM: a centrally managed package has the badge, its central version, and is read-only for now` → `CPM: a centrally managed package has the badge, its central version, and uninstalls from this project`; `:441` `whyNotRemovable` (central and override → `undefined`; add a `whyNotUpdatable` test); `:94` `unresolved: the row says so, is disabled and has no action` gains the version title assertion; `src/webview/sidebar-next/UpdatesSection.test.tsx:82` → `Enter or the row button updates the package to its latest version; a centrally managed one opens the actions menu` (asserts one `ui/contextMenu` request with `context: 'updates'` and no `ops/update`); `src/webview/main/features/updates/UpdatesTab.test.tsx:125` → `a centrally managed package asks for the preview, lists the projects it changes and updates only when confirmed` (fake host answers `cpm/preview` with `[A, B]`; Cancel sends nothing; Confirm sends one `ops/update`; `axeRuleOutcome(await axe(document.body), 'aria-dialog-name') === 'passes'`); `:95` and `:111` keep their titles (still true; the announcement still starts with "is centrally managed"); `src/webview/main/features/updates/UpdatesTab.test.tsx:230` region and `AllProjectsUpdates` tests likewise; `src/webview/main/features/details/DetailsPane.test.tsx:121` → `an update row shows its latest version first; a centrally managed package previews the central change and updates on confirm`, plus a new `a centrally managed package uninstalls from its project without a dialog`; `src/webview/main/features/installed/InstalledTab.test.tsx:85-100` the Space-on-central-row expectation inverts (selectable) under the same title. New: `CentralUpdateDialog.test.tsx` (loading, list, null preview, error with Retry, cancel aborts the request); `an override row is not updated and says why` on both surfaces; `provisional: the badge leaves when the authoritative list replaces the chunk` where no test asserts it yet (`InstalledTab.test.tsx`, `SidebarView.test.tsx:85`).
+26. Gates: `npx tsc --noEmit`, `npm run check-types`, `npx eslint src`, `npx vitest run --project frontend src/webview`, `npm test`, `npm run bench`, `rm -rf dist && NUIGET_V2=1 npm run package && npm run check:vsix`, `node esbuild.mjs --v2 --production --analyze` (expect sidebar ≈ +0.3 KB, ≤ 329 122; webview ≈ +3 KB, ≤ 600 685; paste all three), `NUIGET_V2=1 npm run test:ui:v2 -- --storage /tmp/nuiget-ui-v2` if the environment allows (note it otherwise). Docs: ARCHITECTURE 2.0 section rows for `rules.ts`, `CentralUpdateDialog`, the sidebar updates row, `Row.versionTitle`; CHANGELOG `### Added`: `**2.0 Central Package Management in the UI** — a centrally managed package updates through a preview of the projects its central version applies to, and uninstalls from its project while the central entry stays`; copilot-instructions gotcha "Central row without the preview": never `run('ops/update')` on a `central` row outside `CentralUpdateDialog`'s confirm (main) or the actions menu (sidebar); an override row is read-only for updates (N74); `whyNotRemovable` no longer blocks central rows. Handoff notes `src/webview/shared`, `src/webview/main`, `src/webview/sidebar-next` STATUS. Close P6.4 in the tracker; commit `feat(webview): CPM impact dialog, central uninstall, unresolved tooltips (P6.4c, ADR-004, ADR-008, N74, N76)`; push; green CI; then P6.5.
 
 DO NOT:
-- Do not change, count-tolerate or re-hold any of the six failing scenarios, nor the assertion at `scenarios.test.ts:269`; they are green once the probe and `forProject` stop walking.
-- Do not keep the `reconciled` gate or any read of `session.snapshot`/`workspaceFolderFor()` in `probeSources`; the monitor is subordinate to reads.
-- Do not let `probeSources` call `forDirectory`, `forProject`, `configFilesFor` or `contexts.get`; it runs no process.
-- Do not add an `ActivationOverrides` member that disables or replaces the monitor; the harness runs the real one over the fake feed.
-- Do not await `register` in `computeInstalled` or put it on the installed answer's path; a failed registration is logged at `debug`.
-- Do not have `computeUpdates` or `emitInstalledMetadata` call `contexts.get` themselves; the miss path of `forProject` is the only one, and only for a directory no computation has registered.
-- Do not make the Catalog test rig list no sources or inject a failing enricher to keep the two addendum tests unchanged; rewrite them by title and keep every existing assertion.
-- Do not fire `onDidRegister` from `register` directly; it fires where a context settles, once per chain.
-- Do not call `invalidate` from a health pass or on `onDidRegister`; a registration restarts the monitor only.
-- Do not touch `src/protocol/**`, `src/core/contracts.ts` or any ADR; d.5 as amended at P4.9a already states this rule.
+- Do not compute the preview in a webview from the `allProjects` fan-out, and do not announce it after the edit instead of before (ADR-004 tier 3).
+- Do not put `Dialog` into the sidebar bundle for this; the sidebar's choice goes through `ui/contextMenu` and the host's modal.
+- Do not offer "Override in this project only" (no SDK command, mutator refuses, N74) and do not have the extension edit a project or props file itself (ADR-003).
+- Do not make `fakeDotnet` answer `msbuild` by default, and do not import the inspector or `parseCentralPackageVersions` into the fake.
+- Do not rename or weaken the existing `central version change affecting several projects` scenario; add the gate-titled one next to it.
+- Do not change the other 16 scenarios' `fidelity: 'provisional'` expectations; the option decides.
+- Do not add a second `CpmImpactPreview` definition, a bare `CpmImpactPreview | undefined` result, or any other key to `RequestMap`/`EventMap`; do not add per-project pairs to `OperationProgress` (P5 review 1: not needed).
+- Do not widen `ContextMenuRequest` with a `declaration` field to tell the host a row is central; the host asks the mutator.
+- Do not put central rows into `ops/bulkUpdate`/`ops/bulkUpdateAllProjects` (N76 decides later), and do not catch `cpm/preview` errors by proceeding silently in the dialog; show Retry.
+- Do not gate the modal on `request.context`; gate on "the preview is defined".
+- Do not commit while `.claude/.contract-change` exists, and do not touch any frozen path in P6.4b or P6.4c.
 
-CONTRACT CHANGE: none. `docs/adr/009-catalog.md` d.5 ("a source is probed or warmed only after the chain of its directory is registered") is satisfied as written. Approved non-frozen deviations beyond the P4.9 ruling, recorded in the STATUS notes: `src/core/catalog/feedContexts.ts` + `feedContexts.test.ts` (`register`, `registered`, `onDidRegister`); `src/core/catalog/Catalog.ts` (`computeInstalled` registers, `computeUpdates` reordered). Tests rewritten by title: `allProjectsInstalled streams protocol chunks`, `allProjectsInstalled sends a second chunk when an evaluation delivers the authoritative result` (Catalog.test.ts); the step-15 root test title replaced as in DO 5. Superseded parts of the P4.9 ruling: step 12's `probeSources` recipe and its "must add none" sentence; step 15's "recorded during activation, before either surface exists" premise and the scenario order; the DO NOT "Do not probe every project directory from the monitor" now reads "the monitor walks no directory; it probes registered chains only".
+CONTRACT CHANGE: item P6.4a only, sentinel `.claude/.contract-change` with content exactly `P6.4a`, created after this ruling is pasted into `docs/plans/STATUS.md` and deleted before the commit. Frozen files: `src/protocol/domain.ts` (the `CpmImpactPreview` interface of DO 2), `src/protocol/messages.ts` (the `cpm/preview` entry and the import of DO 4), `src/protocol/guards.ts` (the one key of DO 5), `src/core/contracts.ts` (the deletion and re-export of DO 3), `docs/adr/007-protocol.md` and `docs/adr/004-project-model.md` (header dates and the sentences of DO 6). `docs/protocol.md` regenerated in the same commit. `docs/ux/interaction-model.md` is not frozen (`scripts/hooks/guard.mjs:36`) and changes in P6.4c with the behaviour. P6.4b and P6.4c touch no frozen file.
 
 VERIFY:
-- `grep -n "session.snapshot\|workspaceFolderFor\|reconciled\|forDirectory\|configFilesFor\|contexts.get" src/extension.next.ts` → no hit between `// ── source health ──` and `startHealthMonitor`; `grep -c "onDidRegister" src/extension.next.ts` → 1; `grep -n "notifySourceHealth" src/extension.next.ts` → 2.
-- `grep -n "feedContexts.register(" src/core/catalog/Catalog.ts` → one line, inside `computeInstalled`; in `computeUpdates` the `this.installed(` line precedes the `forProject(` line.
-- `npx tsc --noEmit` → 0; `npm run check-types` → 0; `npx eslint src` → 0.
-- `npx vitest run --project integration src/test/harness --reporter=verbose` → 18 green, including the six titles of the brief unchanged and `updates converge across surfaces`, `sources unreachable shows banner not empty`; `for i in $(seq 1 40); do npx vitest run --project integration src/test/harness || break; done` → 40 green.
-- `npx vitest run --project backend src/core/catalog src/core/feeds/health.test.ts src/extension.next.test.ts --reporter=verbose` → green, listing `register seeds a directory's chain from a context walk, so forProject and forDirectory of that directory run no config-paths command`, `installed registers the project's chain from its own context walk, so a feed read of the same directory walks nothing`, `allProjectsInstalled: emits a metadata chunk per project after its project chunk and finishes without one when enrichment fails`, `the health monitor probes nothing before a read registers a chain, probes the registered chain's sources after it, and reports sources/health to both surfaces`, `a replaced selection is reconciled against the replacement project's sources`, `overlapping refreshes are coalesced`.
-- `grep -rn 'REMOVAL GATE: P4.9' src` → no output; `grep -c "REMOVAL GATE" .github/copilot-instructions.md` → 0; `git diff --name-only -- docs/adr src/protocol src/core/contracts.ts` → empty.
-- `npm test`, `npm run bench`, `rm -rf dist && npm run package:vsix && npm run check:vsix` → green; CI green.
+- P6.4a: `grep -n "cpm/preview" src/protocol/messages.ts src/protocol/guards.ts src/host/handlers.ts docs/protocol.md` → one hit each (plus the JSDoc); `grep -n "interface CpmImpactPreview" src/protocol/domain.ts src/core/contracts.ts` → `domain.ts` only; `grep -n "CpmImpactPreview" src/core/contracts.ts` → the import and the re-export; `grep -c "^## Requests (44)" docs/protocol.md` → 1; `npm run docs:protocol:check` → 0; `npx vitest run --project backend src/host` → green with the four new titles and `covers the 44 requests of the protocol`; `ls .claude/.contract-change` → no such file at the commit; `node esbuild.mjs --v2 --production --analyze` → extension ≤ 299 921; CI green.
+- P6.4b: `npx vitest run --project integration src/test/harness` → 17 tests green, the scenario `central version change affects several projects: …` present and 40 of 40 alone; `grep -n "evaluate" src/test/harness/harness.ts` → the option and the `expectState` branch; `grep -n "from '../../core/project" src/test/harness/fakeDotnet.ts` → nothing; `git diff --name-only -- src/protocol src/core/contracts.ts docs/adr` → empty.
+- P6.4c: `grep -n "cannot be uninstalled from this view yet\|Central updates are not available" src/webview` → nothing; `npx vitest run --project frontend src/webview` → green with the rewritten titles of DO 25; `npx vitest run src/test/lint/interaction-model-testids.test.ts` → green with `cpm-preview-confirm` in §8; `grep -n "Override in this project only" docs/ux/interaction-model.md` → only the "waits for N74" sentence; `node esbuild.mjs --v2 --production --analyze` → sidebar ≤ 329 122, webview ≤ 600 685; `npm run check:vsix` → 0; CI green on all jobs.
 
-FILES CHECKED: /Users/mattias/github/nuiget/.github/agents/architecture-advisor.agent.md (whole); /Users/mattias/github/nuiget/docs/plans/2026-10-11-nuiget-2.0-execution-plan.md (:1-200: §0-§4, P0 rows; P4.9 row :265 by grep); /Users/mattias/github/nuiget/docs/adr/002-query-coordinator.md (whole), /Users/mattias/github/nuiget/docs/adr/009-catalog.md (whole, d.5 and d.6 as amended at P4.9a); /Users/mattias/github/nuiget/docs/plans/STATUS.md:2060-2178 (the P4.9 ruling verbatim, steps 11-16, DO NOT, CONTRACT CHANGE, VERIFY); /Users/mattias/github/nuiget/src/STATUS.md:1-20; /Users/mattias/github/nuiget/src/extension.next.ts (whole, working tree: `probeSources` :222-237, `reconciled` :219-220, monitor :243-244, restart :250-252, `ready.finally(markReconciled)` :371); /Users/mattias/github/nuiget/src/core/catalog/feedContexts.ts (whole); /Users/mattias/github/nuiget/src/core/catalog/Catalog.ts (:127 `sources`, :160-262 `computeInstalled`/`updates`/`computeUpdates`, :520-539 `sourceHealth`/`invalidate`, the uncommitted `emitInstalledMetadata` diff); /Users/mattias/github/nuiget/src/core/catalog/Catalog.test.ts (:46-57 `fakeSources`, :143-151 `makeDeps` builds a real `FeedContexts`, :440-475 the two addendum tests); /Users/mattias/github/nuiget/src/core/catalog/feedContexts.test.ts (:1-43 rig, titles :44-111); /Users/mattias/github/nuiget/src/core/project/context.ts (whole); /Users/mattias/github/nuiget/src/core/feeds/health.ts (whole, working tree) and its diff; /Users/mattias/github/nuiget/src/core/feeds/serviceIndex.ts:170-260 (`resolve`, `probe` bypasses caches and does not reset health, `clearCaches` resets it, `fetchEndpoints` marks); /Users/mattias/github/nuiget/src/core/sources/DotnetSourceProvider.ts:45-59 (per-directory listing cache); /Users/mattias/github/nuiget/src/core/util/events.ts:1-40 (`Emitter`); /Users/mattias/github/nuiget/src/host/handlers.ts:29-36 (`sourceDirectory`), :284-301 and the working-tree diff (`failed: catalog.sourceHealth()`); /Users/mattias/github/nuiget/src/host/SidebarHost.ts diff; /Users/mattias/github/nuiget/src/test/harness/harness.ts (whole at first read, then the working-tree diff adding `FakeFeed`/`FakeTransport` :17-22,65-70,168-172); /Users/mattias/github/nuiget/src/test/harness/fakeFeed.ts (untracked; :1-80: `down` → `fail('network')`, service index answered with search, registration and flat resources, 404 for unknown ids); /Users/mattias/github/nuiget/src/test/harness/scenarios.test.ts (whole; the six failing titles :87-142,239-272,274-311; the count at :267-269); /Users/mattias/github/nuiget/src/test/harness/fakeDotnet.ts (whole; `configPaths` matcher :68, holds :148-159, `nuget config paths` answered empty :138-139); /Users/mattias/github/nuiget/src/test/harness/FakeWebview.ts (grep: only `project` chunks of `allProjects/installed` are applied, :231-237); /Users/mattias/github/nuiget/src/extension.next.test.ts:380-470 (the four reconciliation tests, :445-456 `a replaced selection …`), :310-338 (transport override tests), :508-533 (`overlapping refreshes are coalesced`), :594-598. Commands: `git status --short` and `git status --porcelain --untracked-files=all` (modified: docs/plans/STATUS.md, Catalog.ts, health.ts, health.test.ts, extension.next.ts, SidebarHost.ts, handlers.ts, harness.ts; untracked: src/test/harness/fakeFeed.ts), `git log --oneline -3` (head 6e2c878), `git diff --stat`, `git diff` of Catalog.ts, health.ts, SidebarHost.ts, handlers.ts, harness.ts, `wc -l` of the files in play, `ls src/core/feeds src/core/sources src/core/catalog src/test/harness`. Advisor tool consulted once before writing; its points (the duplicated walk as the defect, `computeUpdates` order, `onDidRegister` → restart so the first probe is not five minutes out, the withdrawn step-15 premise, the three facts to verify: real `FeedContexts` in the Catalog rig, the fake feed's 200 service index, `Catalog.sources` registering nothing) are verified and folded in.
+Files checked (absolute): /Users/mattias/github/nuiget/.github/agents/architecture-advisor.agent.md; /Users/mattias/github/nuiget/docs/plans/2026-10-11-nuiget-2.0-execution-plan.md (41-175, 288-320); /Users/mattias/github/nuiget/docs/plans/STATUS.md (rows 88-101, the P6.2 ruling 2888-2949, the P6.3 ruling 2972-3024, P5 review notes 695-700); /Users/mattias/github/nuiget/docs/plans/findings-ledger.md (N51, N63, N74 rows 154, 166, 171, 400-423); /Users/mattias/github/nuiget/docs/adr/004-project-model.md; /Users/mattias/github/nuiget/docs/adr/007-protocol.md; /Users/mattias/github/nuiget/docs/adr/008-webview-architecture.md (1-80); /Users/mattias/github/nuiget/docs/ux/interaction-model.md (whole); /Users/mattias/github/nuiget/docs/protocol.md (14, 62); /Users/mattias/github/nuiget/ARCHITECTURE.md (10, 46, 595, 643); /Users/mattias/github/nuiget/scripts/hooks/guard.mjs (9, 36); /Users/mattias/github/nuiget/src/core/contracts.ts (10-22, 300-359); /Users/mattias/github/nuiget/src/protocol/domain.ts (1-80, 255-315); /Users/mattias/github/nuiget/src/protocol/messages.ts; /Users/mattias/github/nuiget/src/protocol/guards.ts; /Users/mattias/github/nuiget/src/core/project/mutator.ts; /Users/mattias/github/nuiget/src/core/project/evaluator.ts (1-145); /Users/mattias/github/nuiget/src/core/project/context.ts (4, 27-53); /Users/mattias/github/nuiget/src/core/project/revision.ts (7-46); /Users/mattias/github/nuiget/src/core/project/central.ts (87, 107); /Users/mattias/github/nuiget/src/core/catalog/Catalog.ts (43-72, 146-173, 195-226, 242, 317-322); /Users/mattias/github/nuiget/src/core/ops/PackageWorkflows.ts (60-120, 200-260); /Users/mattias/github/nuiget/src/core/cli/commands.ts (136-156); /Users/mattias/github/nuiget/src/core/cli/__fixtures__/sdk-probes/10.0.401.json (commands and evaluations) and /Users/mattias/github/nuiget/src/core/cli/__fixtures__/sdk-probes/cpm/{App/App.csproj,Directory.Packages.props}; /Users/mattias/github/nuiget/src/host/handlers.ts (1-270); /Users/mattias/github/nuiget/src/host/services.ts (1-80); /Users/mattias/github/nuiget/src/host/SidebarHost.ts (25, 37-38, 100-230); /Users/mattias/github/nuiget/src/host/pickers.ts (93-117); /Users/mattias/github/nuiget/src/host/handlers.test.ts (89-105, 236-239, 575-597, 631-729 titles); /Users/mattias/github/nuiget/src/host/STATUS.md (50-55, 136); /Users/mattias/github/nuiget/src/extension.next.ts (19, 87, 104, 111-136); /Users/mattias/github/nuiget/src/test/__mocks__/vscode.ts (199-200); /Users/mattias/github/nuiget/src/test/harness/fakeDotnet.ts; /Users/mattias/github/nuiget/src/test/harness/harness.ts (35-80, 130-150, 180-373); /Users/mattias/github/nuiget/src/test/harness/FakeWebview.ts (1-30, 54-64, 98-106, 158-181, 199-203, 243-275); /Users/mattias/github/nuiget/src/test/harness/scenarios.test.ts (13-30, 330-409, 723, scenario titles); /Users/mattias/github/nuiget/src/test/harness/STATUS.md (370-400, 451, 490-502); /Users/mattias/github/nuiget/src/test/lint/interaction-model-testids.test.ts (12); /Users/mattias/github/nuiget/src/webview/shared/installed/rules.ts; /Users/mattias/github/nuiget/src/webview/shared/primitives/Row.tsx (20-60, 80-112); /Users/mattias/github/nuiget/src/webview/shared/primitives/Dialog.tsx (8-52); /Users/mattias/github/nuiget/src/webview/shared/primitives/ConfirmDialog.tsx (1-40); /Users/mattias/github/nuiget/src/webview/shared/store/ops.tsx (6-22, 79-87, 173-199, 228); /Users/mattias/github/nuiget/src/webview/shared/store/outcomes.ts (5, 27); /Users/mattias/github/nuiget/src/webview/shared/store/projects.tsx (64); /Users/mattias/github/nuiget/src/webview/shared/bus/useMessageBus.tsx (13); /Users/mattias/github/nuiget/src/webview/main/features/updates/UpdatesTab.tsx; /Users/mattias/github/nuiget/src/webview/main/features/updates/CentralUpdateDialog.tsx; /Users/mattias/github/nuiget/src/webview/main/features/updates/UpdateAllDialog.tsx; /Users/mattias/github/nuiget/src/webview/main/features/updates/AllProjectsUpdates.tsx (11, 29-30, 99-109, 142-143, 155, 173, 191, 205-206, 298); /Users/mattias/github/nuiget/src/webview/main/features/updates/UpdatesTab.test.tsx (95-140, 225-236); /Users/mattias/github/nuiget/src/webview/main/features/details/DetailsPane.tsx (60-218); /Users/mattias/github/nuiget/src/webview/main/features/details/DetailsPane.test.tsx (118-136); /Users/mattias/github/nuiget/src/webview/main/features/installed/InstalledProjectSection.tsx (60-168); /Users/mattias/github/nuiget/src/webview/main/features/installed/InstalledTab.test.tsx (85-100); /Users/mattias/github/nuiget/src/webview/sidebar-next/ProjectUpdates.tsx; /Users/mattias/github/nuiget/src/webview/sidebar-next/ProjectPackages.tsx; /Users/mattias/github/nuiget/src/webview/sidebar-next/InstalledSection.tsx (120-141); /Users/mattias/github/nuiget/src/webview/sidebar-next/rowRequests.ts (2-28); /Users/mattias/github/nuiget/src/webview/sidebar-next/SidebarView.test.tsx (85-126, 431-452); /Users/mattias/github/nuiget/src/webview/sidebar-next/UpdatesSection.test.tsx (80-96). Commands: `git status --short` (clean), `git log --oneline -3` (232d54c at HEAD), `grep`/`sed`/`ls`/`wc` and a read-only `python3 -I` over the probe fixture.
 `````
 
+2026-10-15, P6.4a (stop-and-ask, N65 on E2E 2.0 (stable)):
 
+`````text
+DECISION: Option 1, bounded: one more `gh run rerun 38792875987 --failed` (a third attempt of `E2E 2.0 (stable)` alone), no code, test or CI-configuration change, and no commit before the outcome. Green → P6.4a is landed; the run is recorded as the third sighting of N65 in P6.4b's commit. Red a third time → mark P6.4a `blocked`, commit the tracker and STATUS edits as a docs-only commit, push, and stop with the RUN.md §8 report. Not `OWNER MUST DECIDE`: nothing here is scope, release or publishing.
 
+WHY: The brief is accurate, and the protocol requires none of the four options by itself. RUN.md §5 step 3 ("after two red runs mark the item `blocked`") counts fix-forward cycles of a code failure (push → red → fix in a new commit → push → red); here there is one run, two attempts and nothing to fix forward. The gotcha row "A red CI run is not always a code failure" (`.github/copilot-instructions.md:173`) is the environmental exception to that counter and routes a second identical failure on one SHA to this stop-and-ask, which ledger N65 (`docs/plans/findings-ledger.md:416`) and the P3 phase review (`docs/plans/STATUS.md:531`) anticipated; the ruling, not §5.3, decides. The verified evidence says no line of `0e814af` ran: the step output of both attempts is complete in 37 lines each (my `grep` matched every line of the step) and goes from `update#ctor` plus one dbus line straight to `CodeWindow: detected unresponsive` 16.0 s after the main process's first line (19:19:31.47 → 19:19:47.52 on runner 1000001479; 19:33:34.22 → 19:33:50.27 on runner 1000001486), with no `workbench#open()` and no `Started local extension host`, which the green `E2E 2.0 (stable)` of `232d54c` (run 38783325548, job 116588874395) logged at +3.6 s and +4.4 s after `update#ctor` before `Loading development extension` at +5.1 s. The renderer hung before an extension host existed, and `0e814af` changes neither `package.json` nor `src/test/e2e/**` nor fixtures (`git show 0e814af --stat`). Same VS Code build `07b4ff1883f9` (1.142.0) and same runner image `ubuntu-24.04 20261012.334.1` passed that job on the previous SHA 70 minutes earlier and passed this SHA's 1.x `E2E (stable)` concurrently (job 116621662078); `UI 2.0` on this SHA passed 32 tests of the 2.0 build on the same image, on VS Code 1.140.0 (ExTester's pin, not 1.142.0). Option 2 blocks an item with nothing to fix; option 3 re-runs eleven green jobs to get the one that matters and leaves an empty commit in the history; option 4 is done above and found nothing that a rerun would not settle more cheaply.
+
+DO:
+1. Paste this ruling verbatim under `## Advisor decisions` of `docs/plans/STATUS.md` (where the P6.4 ruling of 2026-10-15 lives), headed with the date, `P6.4a — stop-and-ask, N65 on E2E 2.0 (stable)`. Do not commit yet; the paste rides into the next commit of either branch below.
+2. `gh run rerun 38792875987 --failed`, then `gh run watch 38792875987 --exit-status`.
+3. If the third attempt is green (`gh run view 38792875987 --json jobs --jq '.jobs[]|select(.name=="E2E 2.0 (stable)")|.conclusion'` → `success`, and its log has `25 passing`): P6.4a is landed and P6.4b starts. In P6.4b's commit, as RUN.md §5 step 1 provides for the previous item: (a) tracker row P6.4a gets Commit `0e814af` and the note "CI: run 38792875987; `E2E 2.0 (stable)` red at attempts 1 and 2 before `workbench#open()`, no extension host started (N65, third sighting, first on the 2.0 job, first pair on one SHA); green at attempt 3 by the ruling of 2026-10-15"; (b) ledger N65, summary row (`findings-ledger.md:168`) and detail row (`:416`): third sighting with run id, both attempt timings, the discriminator (no `workbench#open()` / `Started local extension host` line after `update#ctor`, `detected unresponsive` ≈ +16 s), the ruling's bound (a second identical N65 failure on one SHA was ruled re-runnable once; a third blocks the item), and "a diagnostic (verbose VS Code logging in `launchArgs` or a job-level retry) is P7.2's to decide, next to N37"; no new N id; (c) the gotcha row `.github/copilot-instructions.md:173`, one row only: replace "(seen on the 1.x `stable` job)" with "(seen on `E2E (stable)` and `E2E 2.0 (stable)`)" and add "and the log has no `workbench#open()` or `Started local extension host` line after `update#ctor`" to the N65 signature, plus "for N65 a second identical failure on one SHA was ruled re-runnable once (2026-10-15, P6.4a); a third is `blocked`"; (d) no change to `src/host/STATUS.md`, `src/protocol/STATUS.md` or `src/STATUS.md` for this ruling.
+4. If the third attempt is red with the same discriminator: set the tracker row P6.4a to `blocked`, reason "`E2E 2.0 (stable)` red three times on 0e814af before `workbench#open()`, no extension host started (N65); nothing of the item ran; owner decides on a CI diagnostic"; add the third sighting to ledger N65 as in step 3(b) with "three attempts"; commit `docs(plans): P6.4a blocked on a third N65 failure of E2E 2.0 (stable) (P6.4a, N65)`; push; end with the RUN.md §8 report, "Owner action needed: decide the N65 diagnostic (P7.2 or a new item)". That push starts a fresh run; a green `E2E 2.0 (stable)` there does not unblock P6.4a by the session (RUN.md §7: blocked → stop; the owner unblocks after reading the report).
+5. If the third attempt is red with a different signature (a Mocha failure, a `failing` line, an extension host that started), that is not N65: stop, and send a new brief with the log excerpt.
+
+DO NOT:
+Do not change any file under `src/`, `.github/workflows/ci.yml` or `.vscode-test.mjs` in response to this run (the gotcha row: "change no code or test in the item whose run went red").
+Do not add `continue-on-error`, a retry step, `--disable-gpu`, `--disable-dev-shm-usage` or any launch argument as a guess; a mitigation is an item of its own with evidence, by P7.2.
+Do not push an empty or docs-only commit to obtain a fresh run while one rerun can still settle the item.
+Do not rerun a fourth time; the bound is one more attempt.
+Do not start P6.4b before `E2E 2.0 (stable)` is green on `0e814af` (RUN.md §5 step 3, "Never start the next item on a red branch").
+Do not open a new N id, close N65, or write the sighting as a defect of P6.4a.
+Do not edit `src/host/STATUS.md` or the other directory notes for this ruling; the tracker is the directory in question.
+
+CONTRACT CHANGE: none.
+
+VERIFY: `gh run view 38792875987 --json jobs --jq '.jobs[]|select(.name=="E2E 2.0 (stable)")|.conclusion'` → `success`; `gh run view --job <attempt-3 job id of E2E 2.0 (stable)> --log | sed 's/\x1b\[[0-9;]*[a-zA-Z]//g' | grep -E "[0-9]+ passing"` → `25 passing`; `git diff --name-only 0e814af..HEAD -- src .github/workflows .vscode-test.mjs` → nothing from this ruling (P6.4b's own harness files only, once it lands); after P6.4b's commit: `grep -n "38792875987" docs/plans/STATUS.md docs/plans/findings-ledger.md` → at least one hit in each, and `grep -c "workbench#open()" .github/copilot-instructions.md` → 1. In the blocked branch: `grep -n "^| P6.4a" docs/plans/STATUS.md` → the row says `blocked` with the N65 reason, and the §8 report is the session's last message.
+
+Files checked: `/Users/mattias/github/nuiget/.github/agents/architecture-advisor.agent.md`; `/Users/mattias/github/nuiget/docs/plans/2026-10-11-nuiget-2.0-execution-plan.md` §2.1 to §2.4 (lines 61-116); `/Users/mattias/github/nuiget/docs/plans/RUN.md` §5 to §8 (lines 85-140); `/Users/mattias/github/nuiget/docs/plans/STATUS.md` rows P6.4, P6.4a, P6.4b, P6.4c (lines 94-97), P3.6 (59), P5.1 (60), P4.3 (65), the P3 gate and review notes on N65 (480-495, 531), the P6.4 ruling (3036-3113); `/Users/mattias/github/nuiget/docs/plans/findings-ledger.md` N37, N44, N65 (summary 140, 147, 168; detail 388, 395, 416), N75, N76 (172-173, 426-427); `/Users/mattias/github/nuiget/.github/copilot-instructions.md:173`; `/Users/mattias/github/nuiget/.github/workflows/ci.yml` jobs `e2e-v2` (279-355) and `ui-v2` (360-395); `/Users/mattias/github/nuiget/.vscode-test.mjs`; `/Users/mattias/github/nuiget/src/test/e2e/index.ts`, `v2Support.ts`, `v2-extension.e2e.test.ts`; `/Users/mattias/github/nuiget/package.json` (`activationEvents`, `main`); `/Users/mattias/github/nuiget/src/host/STATUS.md` section outline. Commands: `git show 0e814af --stat`, `git status --short` (clean), `gh run view 38792875987` (jobs, both attempts via the attempts API, `--attempt 1/2 --log-failed`), `gh run view 38783325548` and `--job 116588874395 --log` (green comparison: image, VS Code build, startup sequence), `gh run view --job 116621662107 / 116628022021 / 116621662078 / 116624058769 --log` (runner images, the UI 2.0 VS Code version 1.140.0 and `32 passing`), `gh run list --branch labs/2.0 --limit 20` (every earlier run of the day green, except the cancelled `bdd67ae`).
+`````
+
+## Exact next step (one item ID)
+
+P6.4c.

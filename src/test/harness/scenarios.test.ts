@@ -389,6 +389,82 @@ describe('two-surface harness', () => {
         expect(sidebar.installed?.packages[0]).toMatchObject({ declaration: 'central', definedIn: props });
     });
 
+    it('central version change affects several projects: one central update from a surface reaches both projects on both surfaces, authoritative', async () => {
+        h = await createHarness({
+            tree: {
+                'Cpm/Directory.Packages.props': centralPropsXml(['Newtonsoft.Json', '13.0.1']),
+                'Cpm/C1/C1.csproj': projectXml(['Newtonsoft.Json']),
+                'Cpm/C2/C2.csproj': projectXml(['Newtonsoft.Json']),
+            },
+            selectedProject: 'Cpm/C1/C1.csproj',
+            evaluate: true,
+        });
+        const [C1, C2, props] = [h.path('Cpm/C1/C1.csproj'), h.path('Cpm/C2/C2.csproj'), h.path('Cpm/Directory.Packages.props')];
+        const sidebar = await h.resolve('sidebar');
+        const main = await h.resolve('main');
+        h.showAllProjects('main');
+
+        // (a) The provisional list streams first, the evaluated one answers: both surfaces end authoritative.
+        await h.expectState({
+            selectedProject: C1,
+            projects: [C1, C2],
+            installed: ['Newtonsoft.Json@13.0.1'],
+            allProjects: { [C1]: ['Newtonsoft.Json@13.0.1'], [C2]: ['Newtonsoft.Json@13.0.1'] },
+        });
+        expect(sidebar.installed?.fidelity).toBe('authoritative');
+        expect(sidebar.installed?.packages[0]).toMatchObject({ declaration: 'central', definedIn: props });
+        const latest = sidebar.latestId('installed');
+        expect(latest).toBeDefined();
+        expect(sidebar.chunksFor<'installed/get'>(latest as string)).toEqual([{ kind: 'provisional', result: expect.objectContaining({ projectPath: C1, fidelity: 'provisional' }) }]);
+        expect(h.dotnet.count(dotnetCalls.msbuild(C1))).toBeGreaterThanOrEqual(2);
+        const marks = new Map([sidebar, main].map(webview => [webview, webview.received.length]));
+
+        // (b) The preview names every project the central entry applies to, the asking one included.
+        const preview = resultOf(await h.request('main', 'cpm/preview', { projectPath: C1, packageId: 'Newtonsoft.Json', version: '13.0.3' }).response);
+        expect(preview.preview).toMatchObject({ centralPropsPath: props, packageId: 'Newtonsoft.Json', fromVersion: '13.0.1', toVersion: '13.0.3' });
+        expect(new Set(preview.preview?.affectedProjects)).toEqual(new Set([C1, C2]));
+
+        // (c) One central update from the sidebar: the central version changes, both projects are restored and refreshed.
+        const outcome = resultOf(await h.operate('sidebar', 'ops/update', { projectPath: C1, packageId: 'Newtonsoft.Json', version: '13.0.3' }).response);
+        expect(outcome).toMatchObject({ kind: 'update', status: 'completed', edit: { ok: true }, restore: { ok: true }, affectedProjects: [C2] });
+        const adds = h.dotnet.calls.filter(dotnetCalls.packageAdd('Newtonsoft.Json'));
+        expect(adds).toHaveLength(1);
+        expect(adds[0].args).not.toContain('--no-restore');
+        expect(h.dotnet.count(dotnetCalls.restore())).toBe(2);
+        expect(fs.readFileSync(props, 'utf8')).toContain('<PackageVersion Include="Newtonsoft.Json" Version="13.0.3" />');
+        for (const project of [C1, C2]) {
+            expect(fs.readFileSync(project, 'utf8')).not.toMatch(/Include="Newtonsoft\.Json"[^>]*Version=/);
+        }
+        await h.expectState({
+            selectedProject: C1,
+            projects: [C1, C2],
+            installed: ['Newtonsoft.Json@13.0.3'],
+            allProjects: { [C1]: ['Newtonsoft.Json@13.0.3'], [C2]: ['Newtonsoft.Json@13.0.3'] },
+        });
+        for (const webview of [sidebar, main]) {
+            const events = webview.received.slice(marks.get(webview))
+                .filter(message => message.kind === 'event' && message.type === 'resources/invalidated')
+                .map(message => (message as unknown as { payload: { reason: string; keys: Array<{ key: string }> } }).payload)
+                .filter(event => event.reason === 'operation');
+            expect(events.length, `${webview.surface}: invalidations of the operation`).toBeGreaterThanOrEqual(1);
+            expect(events.flatMap(event => event.keys.map(entry => entry.key))).toEqual(expect.arrayContaining([resourceKeys.installed(C1), resourceKeys.installed(C2)]));
+        }
+
+        // (d) The props watcher sees the operation's own edit, as in VS Code: nothing changes for either surface.
+        h.files.writeProps(props, fs.readFileSync(props, 'utf8'));
+        await h.advance(WATCHER_DEBOUNCE_MS);
+        await h.expectState({
+            selectedProject: C1,
+            projects: [C1, C2],
+            installed: ['Newtonsoft.Json@13.0.3'],
+            allProjects: { [C1]: ['Newtonsoft.Json@13.0.3'], [C2]: ['Newtonsoft.Json@13.0.3'] },
+        });
+
+        // (e) ADR-007 on both surfaces.
+        expectOneResponsePerRequest(sidebar);
+        expectOneResponsePerRequest(main);
+    });
+
     it('sidebar: uninstall then watcher invalidation converges', async () => {
         h = await createHarness({ tree: TWO_PROJECTS, selectedProject: 'A/A.csproj' });
         const [A, B] = [h.path('A/A.csproj'), h.path('B/B.csproj')];
