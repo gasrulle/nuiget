@@ -1,136 +1,91 @@
-# STATUS — src/core/cache   commit 25e9a82 (parent of the P1.4 commit)   2026-10-12T12:54:23Z
+# STATUS — src/core/cache   commit 93bfd17 (P6 tagged; parent of the P7.1 commit)   2026-10-16T05:30:00Z
 
-git status --short src/core/cache src/test/benchmarks: `?? src/core/cache/`,
-`?? src/test/benchmarks/core-cache.bench.ts` (both belong to the P1.4 commit, together with ` M CHANGELOG.md`,
-` M ARCHITECTURE.md`, ` M docs/plans/STATUS.md` and ` M docs/plans/findings-ledger.md`)
+git status --porcelain --untracked-files=all (before the commit): modified `ARCHITECTURE.md`, `CHANGELOG.md`,
+`docs/plans/{STATUS,findings-ledger}.md`, `src/core/cache/{TieredCache,cache.test,index}.ts`, `src/extension.next{,.test}.ts`,
+the STATUS notes of `src/host` and `src/core/cache`; new `src/host/{legacyState,legacyState.test}.ts`
 
-Item: **P1.4 `src/core/cache/**`** with `deleteByPrefix`, `clearPackages`, `invalidationToCacheScopes`, the
-byte budget for persisted entries, and a bench. The quarry has no `STATUS.md` for this directory; its tree was
-read instead: `CachePolicy.ts`, `LruMap.ts`, `TieredCache.ts`, `index.ts` and `cache.test.ts`, committed in
-`f837f34` and unchanged since. They import `../contracts` (types) and each other only.
+Item: **P7.1** — the orphan-state sweep and the `**Breaking:**` wording. This note replaces this directory's previous note
+(in its history).
 
 ## Verified by running
 
 ```text
-baseline npm run check-types → exit 0
-baseline npx eslint src      → exit 0, no output
-baseline npx vitest run      → Test Files 51 passed (51) · Tests 1713 passed (1713)
-copy from the quarry tree    → cmp: all five files identical to the quarry working tree
-unmodified copy              → npm run check-types exit 0 · npx eslint src/core/cache exit 0 ·
-                               Test Files 1 passed (1) · Tests 32 passed (32) ·
-                               grep Thenable: cache.test.ts:18 (the test helper)
-npm run check-types          → exit 0 (main, tsconfig.test.json, tsconfig.vitest.json; N39)
-npx eslint src               → exit 0, no output
-npm run lint                 → exit 0
-npx vitest run --project backend src/core/cache → Test Files 1 passed (1) · Tests 47 passed (47)   (item gate)
-npm test                     → Test Files 52 passed (52) · Tests 1760 passed (1760)
-npx vitest run --coverage    → exit 0 · All files 73.51 % statements, 62.72 % branches, 67.96 % functions,
-                               75.09 % lines · src/core/cache 98.63 / 93.28 / 100 / 98.63 ·
-                               src/core/util 99.28 / 92 / 100 / 99.27 · src/core/versioning 96.38 / 92.97 /
-                               100 / 96.15 (floor for src/core/**: 85 % lines)
-npm run bench                → Test Files 16 passed (16) · Tests 101 passed | 1 skipped (102); the output lists
-                               "✓ |backend (bench)| src/test/benchmarks/core-cache.bench.ts (8 tests)"
-bench type check             → npx tsc --ignoreConfig --noEmit --strict --noImplicitReturns --module esnext
-                               --moduleResolution bundler --target ES2022 --lib ES2022,DOM --jsx react-jsx
-                               --esModuleInterop --skipLibCheck --resolveJsonModule
-                               --types node,vitest/globals src/test/benchmarks/core-cache.bench.ts
-                               src/global.d.ts → exit 0
-git status --short benchmarks/baseline.json → empty
-npm run package:vsix         → exit 0 · DONE  Packaged: nuiget-v1.18.9.vsix (17 files, 528.32 KB)
-npm run check:vsix           → check:vsix: OK
-grep Thenable, vscode, child_process in src/core/cache → no match
-npm run test:ui              → SKIPPED: no UI change; the CI job UI runs it
-CI                           → see the tracker row of P1.4
+baseline (on 93bfd17, tag labs/2.0-P6-done, CI run 38810252486): npm run check-types → exit 0 · npx eslint src → exit 0 ·
+                               npx vitest run → Test Files 166 passed (166) · Tests 3396 passed | 6 skipped (3402)
+npx tsc --noEmit             → exit 0
+npm run check-types          → exit 0
+npx eslint src               → exit 0
+npx vitest run --project backend src/host/legacyState.test.ts src/core/cache src/extension.next.test.ts → Tests 89 passed (89)
+npm test                     → Tests 3402 passed | 6 skipped (3408)
+npm run bench                → Tests 119 passed | 1 skipped (120)
+rm -rf dist && NUIGET_V2=1 npm run package:vsix → exit 0 · npm run check:vsix → check:vsix: OK
+node esbuild.mjs --v2 --production --analyze → extension 292128 / 299921 (+974), webview 523296, sidebar 318803
+grep "__index__|'nuiget.cache.'" src (tests excluded) → TieredCache.ts:46-47, and the 1.x `src/services/WorkspaceCache.ts:18`
+                               (legacy code, deleted at P8.2); the host holds neither constant
+git grep of 1.x `nuget.*` memento keys (tests excluded, nuget.config/nuget.org aside) → 8 (N78)
+npm run test:ui              → SKIPPED: no UI change
+CI                           → see the tracker row of P7.1
 ```
 
 ## Done (tested)
 
-- Salvaged unchanged: `LruMap.ts`; the lifetimes, key builders and scopes of `CachePolicy.ts`; the two-tier
-  behaviour of `TieredCache.ts`. The quarry's 32 tests pass as written.
-- `TieredCache.deleteByPrefix(prefix)`: removes the matching keys from both tiers and returns how many keys
-  that were; an empty prefix removes nothing. `clear(scope)` uses it.
-- `TieredCache.clearPackages(packageIds)`: removes the `versions:`, `lite:` and `metadata:` entries of the given
-  ids for every source, case-insensitively; blank ids are skipped. The prefixes come from
-  `packageKeyPrefixes(packageId)` in `CachePolicy.ts`.
-- `invalidationToCacheScopes(scope)` in `CachePolicy.ts`: returns `{ scopes, packageIds }` for an
-  `InvalidationScope` of the protocol.
-- Byte budget: `TieredCacheOptions.maxStoreBytes`, default 8 MiB, over the whole persistent tier. The size of an
-  entry is the UTF-8 length of its JSON text. Writes and the load of an existing store enforce it with the
-  eviction order the module already had. `TieredCache.persistedBytes` reports the total.
-- 15 new tests in `cache.test.ts`:
-  - `packageKeyPrefixes covers versions, lite and metadata of one id and stops at its delimiter`
-  - `invalidationToCacheScopes maps every invalidation scope`
-  - `invalidationToCacheScopes never selects icons or readmes`
-  - `deleteByPrefix removes matching keys from both tiers and reports the count`
-  - `deleteByPrefix counts a key once, finds entries that are only persisted, and ignores an empty prefix`
-  - `clearPackages drops versions, lite and metadata of the given ids for every source`
-  - `clearPackages keeps icons and readmes of the package and ignores blank ids`
-  - `accounts for the persistent tier in UTF-8 bytes of the stored JSON`
-  - `keeps the persistent tier within the byte budget, evicting the soonest-expiring entries first`
-  - `evicts the oldest permanent entry when permanent entries exceed the byte budget`
-  - `does not persist an entry that is larger than the whole budget and evicts nothing for it`
-  - `removes the stored copy when a persisted key is overwritten by an entry over the budget`
-  - `keeps a value without a JSON form in memory only`
-  - `counts the entries it finds in the store on load and trims a store that exceeds the budget`
-  - `defaults to a budget of 8 MiB, so 256 KB icons cannot fill the store entry by entry`
-- `src/test/benchmarks/core-cache.bench.ts`: 8 benchmarks (memory tier, written-through writes, invalidation).
+- `TieredCache.ts`: `orphanedStoreKeys(store, storePrefix?)` (structural store type with `keys()`; the prefix and the index key stay private to this file), exported from `index.ts`. `cache.test.ts`: `orphanedStoreKeys lists the prefixed keys the index does not name, never the index itself, and nothing under another prefix` (with the no-index case).
+- CHANGELOG `## [Unreleased]` `### Changed`: two `**Breaking:**` lines (storage reset; `nuiget.noRestore` no longer
+  migrated and the recent-searches list gone) beside the SDK-floor line, three in all.
 
 ## Done (untested)
 
-- Nothing imports the module yet. Its first consumers are the feeds (P4.3, P4.4) and the composition root
-  (P2.10, `new TieredCache({ store, logger })`).
-- Three lines of the quarry's own code have no test (`TieredCache.ts:275-276` and `:365`, the guard for an entry
-  that changed in the store after load and the guard for a missing store).
+- README.md:60 still says the legacy `nuiget.noRestore` setting is migrated; README 2.0 is P7.5's (named there).
 
 ## Not started
 
-- Nothing calls `invalidationToCacheScopes` or `clearPackages` yet. The host that applies an invalidation to the
-  cache arrives with P2.9 and P2.10; the function only says what to drop.
-- `benchmarks/baseline.json` has no entries for the new bench file (P2.12). The informational CI job fails on
-  its keys until then, as for P1.3.
-- Icons do not go through this cache yet: `MemoryIconCache` until P4.4 (`TieredCacheIconCache`).
+- P7.2 onwards.
 
 ## Deviations from contract/ADR (file:line each)
 
-The four additions are new code: the quarry has none of them and no call site names them
-(`grep -rn 'deleteByPrefix\|clearPackages\|invalidationToCacheScopes'` over the quarry's `src` finds nothing).
-The choices and what each rests on:
-
-- "8 MB byte budget for persisted entries" is read as a limit on the total of the persistent tier, not per
-  entry. Plan Appendix B names the defect as "icon data URIs persisted up to ~128 MB", which is the quarry's
-  limit of 500 entries times the 256 KB cap for an icon (ADR-006); only a total bounds that. The number is
-  8 × 1024 × 1024 bytes, binary like the "10 MiB" in `src/core/contracts.ts` (`TransportRequest.maxBytes`).
-- The size is measured on the JSON text of the stored entry (`TieredCache.ts:56-66`), because the store behind
-  `KeyValueStore` is VS Code's `Memento`, which keeps JSON. A value without a JSON form is kept in memory only.
-- An entry larger than the whole budget is not persisted, and nothing is evicted for it
-  (`TieredCache.ts:286-295`): evicting everything else would still not make room.
-- `invalidationToCacheScopes` (`CachePolicy.ts:158-180`): `workspace` and `sources` map to the cache scopes
-  `network` and `sources`, `package` and `metadata` to the named packages, `project` to nothing. ADR-002's
-  table lists resource keys; this is the corresponding statement for feed data. `sources` drops all feed
-  data, not only versions and metadata, because a changed feed list or credential can change search results
-  and vulnerability data as well. No mapping drops icons or READMEs: their keys carry an exact version, and
-  dropping them on every refresh would refetch every icon. The cache scope `all` is therefore never returned.
-  A consequence for later items: a manual refresh leaves a cached `iconMissing` entry in place for its 24
-  hours. The host that wires the refresh (P4.9) either calls `clear('icons')` itself, or relies on P4.4 never
-  caching a transient miss.
-- `clearPackages` does not drop `search:` entries. A search key carries the query, not a package id; search
-  entries live 2 minutes.
-- `TieredCache.stats()` is unchanged, because a quarry test asserts its exact shape; the byte total has its
-  own property.
-- `src/core/cache/cache.test.ts:26`: the test helper returns `PromiseLike<void>` instead of `Thenable<void>`
-  (plan §3, salvage gate 5). It is the only line of the quarry's tests that changed.
-- `TieredCache.ts:293`: the debug line for an entry that is not persisted names the kind of the key only. A
-  key carries a source URL, and redaction arrives with P1.5. The quarry's existing warning for a failed store
-  write (`:369-372`) logs the whole key; P1.5 decides about it.
-- The bench file is under `src/test/benchmarks/` (N40) and binds the functions once, as in P1.3; it prints no
-  module-getter warning.
+- None. The plan's "9 legacy `nuget.*` keys" is 8 in the tree (N78); the sweep removes 8 + `nuiget.sdkVersionCache` +
+  the unindexed `nuiget.cache.*` entries.
 
 ## Advisor decisions (date, item, question, answer verbatim)
 
-The item is not ⚑ and no stop-and-ask trigger fired: no frozen file is involved, no test of the quarry had to
-change beyond the gate-mandated `PromiseLike`, and no call site contradicts the shapes chosen above. No
-consultation of the `architecture-advisor` took place for it.
+2026-10-16, P7.1 (stop-and-ask: the key list, the shared prefix, migration, the wording):
+
+`````text
+DECISION: A2 + B1 + C1 + no migration (D) + two new `**Breaking:**` lines (E). Sweep nine literal keys (seven workspaceState `nuget.*`, two globalState: `nuget.splitPosition`, `nuiget.sdkVersionCache`) plus every workspaceState key under `nuiget.cache.` that `nuiget.cache.__index__` does not list, from a new `src/host/legacyState.ts` called once per activation before `TieredCache` and `DefaultSessionStore` are constructed; the orphan discriminator is a pure helper exported from `src/core/cache` so the index key and prefix stay private to `TieredCache.ts`. The brief is wrong on two points, corrected below. Plan count: 8 literal `nuget.*` keys, not 9.
+
+WHY: The brief's reading of the tree is wrong in two places. (1) 2.0 does persist layout in mementos: `src/host/handlers.ts:241-255` reads and writes `nuiget.layout.splitPosition` (globalState) and `nuiget.layout.sidebarSectionSplit` (workspaceState) for `layout/get`/`layout/set` (ADR-001:29 "the host only persists layout preferences (`layout/*`)"); `vscode.setState` holds only the webview-side state. These two keys are live 2.0 state and never swept. (2) The count: `git grep -ohE "['\"]nuget\.[A-Za-z]+['\"]" main -- src ':!src/**/*.test.*'` and the same on `labs/2.0` both list exactly eight memento keys (`includePrerelease`, `recentSearches`, `restoreEnabled`, `restoreEnabledMigrated`, `selectedProject`, `selectedSource`, `sidebarSectionSplit`, `splitPosition`); the plan's "9" is supported by neither tree (`nuiget.noRestore` is a configuration setting, `nuiget.layout.*` is 2.0's own); read "9 legacy keys + sdkVersionCache" as 8 + 1 and record it as a finding. Seven of the eight live in workspaceState; `nuget.splitPosition` is globalState (`src/webview/NuGetPanel.ts:1266,1277`), as is `nuiget.sdkVersionCache` (`src/extension.ts:31`). A3's premise is false: `TieredCache.clear()` (`src/core/cache/TieredCache.ts:146-153`) iterates `this.persisted.keys()`, `loadPersistedIndex` (`:239-268`) reads only the keys named in `nuiget.cache.__index__`, and `evictPersistedIfNeeded` budgets only tracked entries; nothing in `TieredCache` ever calls the store's `keys()`, so a 1.x `WorkspaceCache` entry (`src/services/WorkspaceCache.ts:18`, up to 500 entries including search results, version lists and READMEs, `src/services/NuGetPackageService.ts:1069,2272,2426`) is never read, evicted or cleared by 2.0 for the life of the workspace. That is the orphan state the item is named for; the index is the safe discriminator (a 2.0 entry whose index flush never landed is equally unreadable, so deleting it loses nothing). ADR-000:21-22 ("replaced without migration shims … Users re-select project/source once") and the item's own "removed migration" settle D: migrate nothing. A marker key (C2) is itself a shim and breaks a developer who alternates `watch` and `watch:v2` on one workspace; the every-activation sweep is nine `get`s and one `keys()` walk, and writes only for keys that exist. `KeyValueStore` (`src/core/contracts.ts:31-35`) has no `keys()` and is frozen (D6), so the sweep takes the VS Code mementos in host code (`src/host/**` may import `vscode`, §3 fences); `Memento.keys()` is in the pinned `@types/vscode` and already used at `src/services/WorkspaceCache.ts:220`, and `createMockExtensionContext` implements it (`src/test/__mocks__/vscode.ts:356,366`). Tracker row P7.1 (from P2.10) asks that `LEGACY_SDK_CACHE_KEY` (`src/extension.next.ts:31,76-78`) be folded in so the key is swept in one place.
+
+DO:
+1. `src/core/cache/TieredCache.ts`: add and export a pure function `orphanedStoreKeys(store: { get<T>(key: string): T | undefined; keys(): readonly string[] }, storePrefix = DEFAULT_STORE_PREFIX): string[]` returning every key of `store.keys()` that starts with `storePrefix`, is not `storePrefix + INDEX_KEY`, and is not `storePrefix + k` for a string `k` in the index array (no index, or a non-array index → every prefixed key). Re-export it from `src/core/cache/index.ts`. No `vscode` import, no change to `KeyValueStore`.
+2. `src/core/cache/cache.test.ts`, under `TieredCache (with persistent tier)`: new test `orphanedStoreKeys lists the prefixed keys the index does not name, never the index itself, and nothing under another prefix`: write survivors through a real `TieredCache` over the mock memento (as `:256` does, let the index microtask flush), add two hand-written prefixed entries (one 1.x-shaped `{ value, expiresAt, storedAt }`, one arbitrary) and one `other.` key; assert exactly the two orphans are returned. A second case with no index at all returns every prefixed key.
+3. New `src/host/legacyState.ts`: `export const LEGACY_WORKSPACE_KEYS = ['nuget.includePrerelease', 'nuget.recentSearches', 'nuget.restoreEnabled', 'nuget.restoreEnabledMigrated', 'nuget.selectedProject', 'nuget.selectedSource', 'nuget.sidebarSectionSplit'] as const`, `export const LEGACY_GLOBAL_KEYS = ['nuget.splitPosition', 'nuiget.sdkVersionCache'] as const`, and `export async function sweepLegacyState(context: Pick<vscode.ExtensionContext, 'workspaceState' | 'globalState'>, logger: Logger): Promise<{ removed: string[] }>` that collects the literal keys whose `get` is not `undefined` plus `orphanedStoreKeys(context.workspaceState)`, issues `update(key, undefined)` for each, awaits `Promise.allSettled`, logs one `warn` per rejection with the key and one `info` line with the count when anything was removed, and never throws. The one-line doc comment states that the list is the 1.x storage removed per ADR-000 and that `nuiget.layout.*`, `nuiget.selectedProject`-family and `nuiget.sdkVersionCache.v2` are 2.0's own.
+4. `src/extension.next.ts`: delete `LEGACY_SDK_CACHE_KEY` (`:31`) and the `if` block at `:76-78`; insert `await sweepLegacyState(context, logger);` directly after `const logger = redactingLogger(loggerFor(output));` and before `new DefaultDotnetRunner`/`runner.hydrate`, `new TieredCache(...)` and `new DefaultSessionStore(...)`, so the index the sweep reads is the previous session's final one by structure, not by timing.
+5. New `src/host/legacyState.test.ts` (backend project, mock context from `src/test/__mocks__/vscode.ts`, a logger spy), titles: `removes the seven workspaceState and two globalState keys of 1.x and reports them`; `removes nuiget.cache.* entries the TieredCache index does not list and keeps the index and what it lists` (survivors written through a real `TieredCache`, not a hand-built index array); `keeps nuiget.selectedProject, nuiget.layout.splitPosition, nuiget.layout.sidebarSectionSplit and nuiget.sdkVersionCache.v2, and migrates nothing` (seed legacy `nuget.selectedProject` next to them; assert `update` was never called with a `nuiget.` key); `writes nothing when there is nothing to sweep` (`update` not called); `a rejected update is logged and the other keys are still removed`.
+6. `src/extension.next.test.ts:618`: rewrite the test named `sweeps the legacy nuiget.sdkVersionCache key and hydrates nuiget.sdkVersionCache.v2` by title to `sweeps the 1.x state before the cache and the session hydrate, migrates nothing, and hydrates nuiget.sdkVersionCache.v2`: seed workspaceState `nuget.selectedProject: libPath` (not `appPath`: `firstProject` picks App, so seeding App proves nothing), `nuget.includePrerelease: true`, an orphan `nuiget.cache.versions:x` entry and no index; globalState `nuget.splitPosition: 40`, the legacy SDK key and the `.v2` key as today; after `start`, assert every seeded legacy and orphan key is `undefined`, `services.session.snapshot.selectedProject` is `appPath` and `includePrerelease` is `false`, and keep the existing probe assertions. Import the key constants from `./host/legacyState` and drop the test file's local `LEGACY_SDK_CACHE_KEY`.
+7. CHANGELOG `## [Unreleased]` `### Changed`, two new lines in the shape of the existing SDK line (one sentence after the bold, no sub-bullets, and do not duplicate the SDK-floor line): `- **Breaking:** 2.0 resets the persisted 1.x state: the selected project and source, the prerelease and restore toggles and the split positions are chosen once more, the cached feed data and the SDK cache are rebuilt, and the 1.x entries are removed from workspace and global storage at the first activation` and `- **Breaking:** the `nuiget.noRestore` setting is no longer migrated to the restore toggle (set the toggle once if it was `true`), and the recent-searches list is gone`. Say the list is gone, not the setting: `nuiget.recentSearchesLimit` is deprecated at P5.13 and removed at P8.2 (tracker:86).
+8. ARCHITECTURE.md, `## 2.0 Architecture (in progress)` only: in the `src/extension.next.ts` row (`:107`) replace "(the 1.x key `nuiget.sdkVersionCache` is removed at activation)" with one sentence that `sweepLegacyState` (`src/host/legacyState.ts`) runs first and removes the eight 1.x `nuget.*` keys, `nuiget.sdkVersionCache` and the `nuiget.cache.*` entries the `TieredCache` index does not list, migrating nothing (ADR-000); add one clause to the `src/core/cache/**` row (`:86`) for `orphanedStoreKeys`; mention the module in the `src/host/**` row.
+9. `docs/plans/findings-ledger.md`: add N78: the plan's "9 legacy `nuget.*` keys" is 8 on `main` and `labs/2.0` (the `git grep` above), and `TieredCache` never reads the store's `keys()`, so pre-2.0 `nuiget.cache.*` entries were unreachable until this sweep. Cite P7.1, ADR-000, N78 in the commit.
+10. Handoffs in the STATUS notes: README.md:60 ("The legacy `nuiget.noRestore` setting is migrated automatically on first activation") becomes false with this item; README 2.0 is P7.5's, leave it and name it there. Rewrite `src/host/STATUS.md` and `src/core/cache/STATUS.md` (§2.5), paste this ruling under Advisor decisions in `src/host/STATUS.md`, list the rewritten test of step 6 by old and new title, and close the P7.1 row with the 8-vs-9 note.
+
+DO NOT:
+Do not add `keys()` to `KeyValueStore` in `src/core/contracts.ts` or any other contract file (D6); type the store structurally in the helper.
+Do not write `'nuiget.cache.'` or `'__index__'` anywhere outside `src/core/cache/TieredCache.ts`; a copy in the host is the "deletes live 2.0 state" failure the moment either constant changes.
+Do not delete by the prefix `nuiget.cache.` alone, and do not run the orphan step after `new TieredCache(...)`.
+Do not sweep `nuiget.layout.splitPosition`, `nuiget.layout.sidebarSectionSplit`, `nuiget.selectedProject`, `nuiget.selectedSource`, `nuiget.includePrerelease`, `nuiget.restoreEnabled` or `nuiget.sdkVersionCache.v2`.
+Do not migrate `nuget.selectedProject`, `nuget.selectedSource`, `nuget.includePrerelease` or `nuget.restoreEnabled` into their `nuiget.*` successors (ADR-000:21).
+Do not add a `nuiget.legacySwept` marker key or any once-only guard.
+Do not invent a ninth `nuget.*` key to match the plan, and do not count `nuiget.noRestore` (a setting) or `nuiget.layout.*` (2.0's) as one.
+Do not add a second SDK-floor `**Breaking:**` line, and do not say `nuiget.recentSearchesLimit` is removed.
+Do not touch README.md, `package.json` `contributes`, `src/extension.ts` or anything under `src/services/**`.
+Do not let `sweepLegacyState` throw or leave activation hanging on a rejected `update`: `allSettled` and a warn log.
+
+CONTRACT CHANGE: none. `src/core/contracts.ts`, `src/protocol/**` and `docs/adr/**` stay as they are; the helper's store type is a local structural type in `src/core/cache/TieredCache.ts`.
+
+VERIFY: `grep -rn "LEGACY_SDK_CACHE_KEY\|'nuiget.sdkVersionCache'" src/extension.next.ts` → nothing; `grep -rn "__index__\|'nuiget.cache.'" src --include='*.ts' | grep -v "\.test\."` → lines in `src/core/cache/TieredCache.ts` only; `grep -n "keys()" src/core/contracts.ts` → nothing; `grep -c "nuget\." src/host/legacyState.ts` lists the eight `nuget.*` keys and `nuiget.sdkVersionCache` once each; `npx vitest run --project backend src/host/legacyState.test.ts src/core/cache src/extension.next.test.ts` → green with the five new host tests, the new cache test and the rewritten root test present by title, exit code 0; then `npx tsc --noEmit` → 0, `npm run check-types` → 0, `npx eslint src` → 0/0, `npm test` → green (≥ 3396 + 6 new), `npm run bench` → green, `NUIGET_V2=1 npm run package:vsix` and `npm run check:vsix` → green, `node esbuild.mjs --v2 --production --analyze` → extension bundle ≤ 299921 bytes (expected within about 1 KB of 291154; a crossing is a stop-and-ask with the delta); `grep -c "^- \*\*Breaking:\*\*" CHANGELOG.md` under `## [Unreleased]` → 3 (SDK floor, storage reset, removed migration); `git grep -ohE "['\"]nuget\.[A-Za-z]+['\"]" HEAD -- src ':!src/**/*.test.*' | sort -u | grep -v "nuget.config\|nuget.org" | wc -l` → 8, matching N78.
+
+Files checked: docs/plans/2026-10-11-nuiget-2.0-execution-plan.md:41-160,300-325 (D6, D12, D13, §2.1-2.6, §3, P7.1 row); docs/plans/STATUS.md rows P7.1:100, P5.13:86, P6.5:98, P2.10:49; docs/adr/000-release-and-compatibility-policy.md (whole file, :19-22 and the Consequences on `**Breaking:**`); docs/adr/001-session-store.md:7-29; src/extension.next.ts:1-120; src/extension.next.test.ts:1-148,618-634 and the title list; src/core/session/SessionStore.ts:1-70; src/core/cache/TieredCache.ts:30-70,140-160,232-300,340-370; src/core/cache/CachePolicy.ts:50-95; src/core/cache/index.ts; src/core/cache/cache.test.ts titles 242-391; src/core/contracts.ts:31-35; src/host/handlers.ts:235-256; src/host/services.ts imports; src/host/STATUS.md:145-147; src/services/WorkspaceCache.ts:1-60,160-245; src/services/NuGetCliService.ts:60-180; src/services/NuGetPackageService.ts (workspaceCache.set sites); src/extension.ts:31,70-100; src/webview/NuGetPanel.ts and NuGetSidebarPanel.ts key sites (grep); src/test/__mocks__/vscode.ts:335-375; src/test/harness/harness.ts:140-156; CHANGELOG.md `## [Unreleased]`; README.md:56,60; ARCHITECTURE.md:10,86,107,195; package.json:272; docs/plans/findings-ledger.md (last id N77); `git grep` of `nuget.*` keys on `main` and `labs/2.0`.
+`````
 
 ## Exact next step (one item ID)
 
-P1.5 (`src/core/logging/**` with `redact.test.ts`).
+P7.2.

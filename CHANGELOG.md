@@ -90,6 +90,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Split agent gotchas into 1.x and 2.0 sections and added 2.0 layer-boundary instructions**
 - **Added the architecture-advisor agent and the 2.0 execution protocol summary for Claude Code**
 - **Breaking:** nUIget 2.0 requires .NET SDK 10 or newer; projects that resolve an older SDK are read-only
+- **Breaking:** 2.0 resets the persisted 1.x state: the selected project and source, the prerelease and restore toggles and the split positions are chosen once more, the cached feed data and the SDK cache are rebuilt, and the 1.x entries are removed from workspace and global storage at the first activation
+- **Breaking:** the `nuiget.noRestore` setting is no longer migrated to the restore toggle (set the toggle once if it was `true`), and the recent-searches list is gone
 - **Type-checked the extension against Node 18 declarations, the VS Code 1.85 host baseline**
 - **Added Claude Code guard hooks that protect frozen contracts, tests, and commit and push safety during the 2.0 work**
 - **Stopped shipping development configuration files in the extension package and added a package contents check**

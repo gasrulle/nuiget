@@ -13,4 +13,4 @@ export {
     type CacheKindPolicy,
     type CacheScope,
 } from './CachePolicy';
-export { TieredCache, type CustomCachePolicy, type TieredCacheOptions } from './TieredCache';
+export { TieredCache, orphanedStoreKeys, type CustomCachePolicy, type TieredCacheOptions } from './TieredCache';

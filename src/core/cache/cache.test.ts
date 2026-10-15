@@ -10,7 +10,7 @@ import {
     ttlFor,
 } from './CachePolicy';
 import { LruMap } from './LruMap';
-import { TieredCache } from './TieredCache';
+import { TieredCache, orphanedStoreKeys } from './TieredCache';
 
 class FakeStore implements KeyValueStore {
     readonly data = new Map<string, unknown>();
@@ -251,6 +251,23 @@ describe('TieredCache (with persistent tier)', () => {
 
     afterEach(() => {
         vi.restoreAllMocks();
+    });
+
+    it('orphanedStoreKeys lists the prefixed keys the index does not name, never the index itself, and nothing under another prefix', async () => {
+        const cache = new TieredCache({ store, now: clock });
+        cache.set('icon:p@1|s', 'data:', 'iconFound');
+        cache.set('readme:p@1|s', '# Readme', 'readme');
+        await flushMicrotasks();
+        // A 1.x WorkspaceCache entry under the same prefix, an arbitrary one, and a key of someone else.
+        store.data.set('nuiget.cache.versions:legacy', { value: ['1.0.0'], expiresAt: now + 1000, storedAt: now });
+        store.data.set('nuiget.cache.something', 42);
+        store.data.set('other.key', 'kept');
+        const view = { get: <T>(key: string) => store.get<T>(key), keys: () => [...store.data.keys()] };
+        expect(orphanedStoreKeys(view).sort()).toEqual(['nuiget.cache.something', 'nuiget.cache.versions:legacy']);
+
+        // Without an index every prefixed key is unreachable.
+        store.data.delete('nuiget.cache.__index__');
+        expect(orphanedStoreKeys(view).sort()).toEqual(['nuiget.cache.icon:p@1|s', 'nuiget.cache.readme:p@1|s', 'nuiget.cache.something', 'nuiget.cache.versions:legacy']);
     });
 
     it('writes persistable kinds through and keeps the index current', async () => {

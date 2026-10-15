@@ -23,12 +23,11 @@ import { DotnetSourceProvider, NuGetConfigReader } from './core/sources';
 import { isPathInside, normalizeProjectPath } from './core/util/paths';
 import { MainPanelHost } from './host/MainPanelHost';
 import { HostEvents, createWorkflowDeps, loggerFor, readExtensionConfig, type HostServices } from './host/services';
+import { sweepLegacyState } from './host/legacyState';
 import { SidebarHost } from './host/SidebarHost';
 import { ALL_PROJECTS, type InvalidationReason, type InvalidationScope, type NuGetSource, type Project } from './protocol';
 
 const SDK_CACHE_KEY = 'nuiget.sdkVersionCache.v2';
-/** Written by 1.x with another shape; removed at activation. */
-const LEGACY_SDK_CACHE_KEY = 'nuiget.sdkVersionCache';
 
 const PROJECT_FILE_NAME = /\.(csproj|fsproj|vbproj)$/i;
 
@@ -68,14 +67,13 @@ export async function activateWith(context: vscode.ExtensionContext, overrides: 
     output.info('nUIget is activating');
     // The only logger the core and the surfaces get: nothing reaches the channel unredacted.
     const logger = redactingLogger(loggerFor(output));
+    // 1.x storage goes first, before the SDK cache, the feed cache and the session read theirs (ADR-000, P7.1).
+    await sweepLegacyState(context, logger);
 
     // ── core ──
     const { transport: transportOverride, ...runnerOverrides } = overrides;
     const runner = new DefaultDotnetRunner({ logger, ...runnerOverrides });
     runner.hydrate(context.globalState, SDK_CACHE_KEY, String(context.extension.packageJSON.version ?? '0.0.0'));
-    if (context.globalState.get(LEGACY_SDK_CACHE_KEY) !== undefined) {
-        void context.globalState.update(LEGACY_SDK_CACHE_KEY, undefined);
-    }
     const cache = new TieredCache({ store: context.workspaceState, logger });
     const sources = new DotnetSourceProvider({ runner, logger });
     const assets = new AssetsReader();

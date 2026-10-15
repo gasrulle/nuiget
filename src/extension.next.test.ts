@@ -8,6 +8,7 @@ import { FakeTransport, fail, json } from './core/feeds/testSupport';
 import { NodeTransport } from './core/http';
 import { DefaultProjectMutator } from './core/project';
 import { activateWith, proxyConfigured, type ActivatedExtension, type ActivationOverrides } from './extension.next';
+import { LEGACY_GLOBAL_KEYS, LEGACY_WORKSPACE_KEYS } from './host/legacyState';
 import { MainPanelHost } from './host/MainPanelHost';
 import { readExtensionConfig } from './host/services';
 import { makeRequest, type BulkOutcome, type EventPayload, type EventType, type InstalledResult, type OperationOutcome, type OutboundEnvelope, type RequestPayload, type RequestType } from './protocol';
@@ -23,7 +24,6 @@ import { createFakeDotnet, dotnetCalls, type FakeDotnet } from './test/harness/f
 import { createFakePanel } from './test/harness/fakePanel';
 
 const SDK_CACHE_KEY = 'nuiget.sdkVersionCache.v2';
-const LEGACY_SDK_CACHE_KEY = 'nuiget.sdkVersionCache';
 
 const defaultFolders = mockWorkspace.workspaceFolders;
 const originalExecuteCommand = mockCommands.executeCommand.getMockImplementation()!;
@@ -615,15 +615,33 @@ describe('extension.next (2.0 composition root)', () => {
         await vi.waitFor(() => expect(item.hide).toHaveBeenCalled());
     });
 
-    it('sweeps the legacy nuiget.sdkVersionCache key and hydrates nuiget.sdkVersionCache.v2', async () => {
+    it('sweeps the 1.x state before the cache and the session hydrate, migrates nothing, and hydrates nuiget.sdkVersionCache.v2', async () => {
+        const [legacySelected, legacyPrerelease] = LEGACY_WORKSPACE_KEYS.filter(key => key === 'nuget.selectedProject' || key === 'nuget.includePrerelease');
+        const [legacySplit, legacySdkCache] = LEGACY_GLOBAL_KEYS;
+        const orphan = 'nuiget.cache.versions:x';
         const { services } = await start({
+            workspaceState: {
+                // Lib, not App: the session would pick App on its own, so App would prove nothing.
+                [legacySelected]: libPath,
+                [legacyPrerelease]: true,
+                [orphan]: { value: ['1.0.0'], expiresAt: 1, storedAt: 0 },
+            },
             globalState: {
-                [LEGACY_SDK_CACHE_KEY]: { v: '1.18.9', entries: { [appDir]: 9 } },
+                [legacySplit]: 40,
+                [legacySdkCache]: { v: '1.18.9', entries: { [appDir]: 9 } },
                 [SDK_CACHE_KEY]: { v: '0.0.0-test', entries: { [path.resolve(appDir)]: '10.0.401' } },
             },
         });
 
-        expect(context.globalState.get(LEGACY_SDK_CACHE_KEY)).toBeUndefined();
+        for (const key of [legacySelected, legacyPrerelease, orphan]) {
+            expect(context.workspaceState.get(key), key).toBeUndefined();
+        }
+        for (const key of [legacySplit, legacySdkCache]) {
+            expect(context.globalState.get(key), key).toBeUndefined();
+        }
+        // Nothing was migrated: the session chose for itself.
+        expect(services.session.snapshot.selectedProject).toBe(appPath);
+        expect(services.session.snapshot.includePrerelease).toBe(false);
 
         // The SDK of the hydrated directory is known without a probe; the other directory is probed.
         await services.catalog.installed(appPath);

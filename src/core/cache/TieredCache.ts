@@ -46,6 +46,19 @@ const DEFAULT_STORE_BYTES = 8 * 1024 * 1024;
 const DEFAULT_STORE_PREFIX = 'nuiget.cache.';
 const INDEX_KEY = '__index__';
 
+/**
+ * The keys under the cache's prefix that no `TieredCache` over `store` can reach: every prefixed key that is neither the
+ * index nor an entry the index lists (no index, or one that is not an array, lists nothing). A 1.x `WorkspaceCache`
+ * entry used the same prefix and is never read, evicted or cleared by 2.0; the host removes these before the cache
+ * is constructed (P7.1, ADR-000). The store is typed structurally: `KeyValueStore` has no `keys()`.
+ */
+export function orphanedStoreKeys(store: { get<T>(key: string): T | undefined; keys(): readonly string[] }, storePrefix = DEFAULT_STORE_PREFIX): string[] {
+    const indexKey = storePrefix + INDEX_KEY;
+    const index = store.get<unknown>(indexKey);
+    const listed = new Set(Array.isArray(index) ? index.filter((key): key is string => typeof key === 'string').map(key => storePrefix + key) : []);
+    return store.keys().filter(key => key.startsWith(storePrefix) && key !== indexKey && !listed.has(key));
+}
+
 function isCacheEntry(value: unknown): value is CacheEntry {
     return typeof value === 'object' && value !== null
         && 'value' in value
