@@ -1,4 +1,59 @@
-# STATUS — src/test/e2e   commit 3a1969c (P5.11; parent of the P5.12a commit)   2026-10-16T19:00:00Z
+# STATUS — src/test/e2e   commit ca8b6e8 (P5.12b block d; parent of the closing commit)   2026-10-17T02:00:00Z
+
+git status --porcelain --untracked-files=all (before the closing commit): modified `docs/plans/{STATUS,findings-ledger}.md` and the three STATUS notes of `src/test/{ui/v2,harness,e2e}` (all belong to P5.12b's closing commit; the code of blocks a to d is in a3324c4, 5084c2c, 258612d, ca8b6e8)
+
+Item: **P5.12b, block (a)**: the carry-overs of P5.12a: the verbatim probe of `dotnet package add` without
+`--version` (writes `Version="*"`) is the evidence below; `docs/plans/test-retirement-map.md` maps each legacy e2e
+file to its `v2-*` port and retires `src/test/e2e/index.ts` with the legacy set at P8.2. No e2e file changed.
+
+## Verified by running
+
+P5.12b:
+
+```text
+baseline at c388eea (P5.12a, CI run 38738178339 green on all 11 jobs): tsc 0 · eslint 0 · vitest 159 files, 3235 passed, 4 skipped (SDK)
+block (a) a3324c4 → CI run 38742547111 green; block (b) 5084c2c → CI run 38744845857 green;
+block (c) 258612d → CI run 38747113531 green; block (d) ca8b6e8 → CI run 38748766418 (see the tracker row)
+npx tsc --noEmit / npm run check-types / npx eslint src → exit 0 each (after every block)
+npm test (NUIGET_SDK_TESTS=1, DOTNET_ROOT set) → exit 0 · Test Files 160 passed (160) · Tests 3243 passed (3243)
+npm run bench → exit 0 (after every block)
+npx vitest run --project backend src/test/lint → Test Files 8 passed (8) · Tests 129 passed (129)
+src/extension.next.test.ts + src/test/harness + src/core/cli/DotnetRunner.test.ts, 15 times → 15 of 15
+DOTNET_ROOT=… NUIGET_SDK_TESTS=1 npx vitest run --project backend src/core/cli → 142 passed (142)
+npx vitest run src/test/harness/scenarios.test.ts -t N73, 40 times → 40 of 40
+NUIGET_V2=1 npm run test:ui:v2 -- --storage /tmp/nuiget-ui-v2, five times (rm -rf dist before each) →
+                               32 passing ×5, the N66 test announced in each; git status --porcelain src/test/e2e/fixtures empty after each
+git diff --diff-filter=DR --stat c388eea..HEAD -- 'src/**/*.test.ts' 'src/**/*.test.tsx' src/test/e2e/index.ts → empty
+git diff --stat c388eea..HEAD -- .github/workflows/ci.yml .vscode-test.mjs src/protocol src/core/contracts.ts docs/adr src/core/catalog src/test/__mocks__/vscode.ts → empty
+npm run package:vsix: SKIPPED: no host, service or esbuild change (tests and docs only)
+test -e .claude/.contract-change → false
+```
+
+## Done (tested)
+
+- The map rows of the nine legacy e2e files and `index.ts`.
+
+## Done (untested)
+
+- Deleting the legacy tests: P8.2, per the map and its ⚑ consultation (the L2 hook refuses any deletion of a test file).
+
+## Not started
+
+- None for P5.12b. Next: P5.13.
+
+## Deviations from contract/ADR (file:line each)
+
+- None.
+
+## Advisor decisions (date, item, question, answer verbatim)
+
+The P5.12b ruling (2026-10-16) is verbatim in `docs/plans/STATUS.md`.
+
+## Exact next step (one item ID)
+
+P5.13 (⚑ mandatory consultation), after the closing commit's CI run is green.
+
+## Earlier notes of this directory
 
 git status --porcelain --untracked-files=all (before the commit): modified `.github/copilot-instructions.md`,
 `ARCHITECTURE.md`, `CHANGELOG.md`, `docs/plans/{STATUS,findings-ledger}.md`, `src/test/e2e/v2-sidebar.e2e.test.ts`;
@@ -101,3 +156,4 @@ $ diff before.csproj TestProject.csproj
 ## Exact next step (one item ID)
 
 P5.12b, after the P5.12a CI run is green.
+

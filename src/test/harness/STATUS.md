@@ -1,4 +1,65 @@
-# STATUS — src/test/harness   commit c15000f (P5.9 commit b; parent of commit c)   2026-10-16T02:00:00Z
+# STATUS — src/test/harness   commit ca8b6e8 (P5.12b block d; parent of the closing commit)   2026-10-17T02:00:00Z
+
+git status --porcelain --untracked-files=all (before the closing commit): modified `docs/plans/{STATUS,findings-ledger}.md` and the three STATUS notes of `src/test/{ui/v2,harness,e2e}` (all belong to P5.12b's closing commit; the code of blocks a to d is in a3324c4, 5084c2c, 258612d, ca8b6e8)
+
+Item: **P5.12b, blocks (b) and (c)**. (b) N59: `fakeDotnet.ts` exports `FakeChild`, whose `answer()` plays a
+`DotnetAnswer` (now with `spawnError` and `lateError`); `src/core/cli/DotnetRunner.test.ts` and
+`src/extension.next.test.ts` use it instead of their own copies. N58: `fakePanel.ts` exports `createFakePanel`, the
+panel that reports its disposal once, for `harness.ts` and `src/extension.next.test.ts`; `src/test/__mocks__/vscode.ts`
+is untouched until P8.2. (c) N73: step 13 measured `nuget config paths` for the project directory 1 → 2 after
+`refresh/all` → 3 after a watcher flush, so the scenario `N73: an installed computation that read the project file
+before a write-back is not shown as current` holds the operation's recomputation at the walk after it read the file
+without Serilog, writes the file back with Serilog, lets the watcher fire and releases the walk; both surfaces show
+Serilog with the generation the last invalidation listed.
+
+## Verified by running
+
+P5.12b:
+
+```text
+baseline at c388eea (P5.12a, CI run 38738178339 green on all 11 jobs): tsc 0 · eslint 0 · vitest 159 files, 3235 passed, 4 skipped (SDK)
+block (a) a3324c4 → CI run 38742547111 green; block (b) 5084c2c → CI run 38744845857 green;
+block (c) 258612d → CI run 38747113531 green; block (d) ca8b6e8 → CI run 38748766418 (see the tracker row)
+npx tsc --noEmit / npm run check-types / npx eslint src → exit 0 each (after every block)
+npm test (NUIGET_SDK_TESTS=1, DOTNET_ROOT set) → exit 0 · Test Files 160 passed (160) · Tests 3243 passed (3243)
+npm run bench → exit 0 (after every block)
+npx vitest run --project backend src/test/lint → Test Files 8 passed (8) · Tests 129 passed (129)
+src/extension.next.test.ts + src/test/harness + src/core/cli/DotnetRunner.test.ts, 15 times → 15 of 15
+DOTNET_ROOT=… NUIGET_SDK_TESTS=1 npx vitest run --project backend src/core/cli → 142 passed (142)
+npx vitest run src/test/harness/scenarios.test.ts -t N73, 40 times → 40 of 40
+NUIGET_V2=1 npm run test:ui:v2 -- --storage /tmp/nuiget-ui-v2, five times (rm -rf dist before each) →
+                               32 passing ×5, the N66 test announced in each; git status --porcelain src/test/e2e/fixtures empty after each
+git diff --diff-filter=DR --stat c388eea..HEAD -- 'src/**/*.test.ts' 'src/**/*.test.tsx' src/test/e2e/index.ts → empty
+git diff --stat c388eea..HEAD -- .github/workflows/ci.yml .vscode-test.mjs src/protocol src/core/contracts.ts docs/adr src/core/catalog src/test/__mocks__/vscode.ts → empty
+npm run package:vsix: SKIPPED: no host, service or esbuild change (tests and docs only)
+test -e .claude/.contract-change → false
+```
+
+## Done (tested)
+
+- N73 scenario 40 of 40; the moved tests 15 of 15; N59 closed, N73 closed as not reproduced.
+
+## Done (untested)
+
+- Deleting the legacy tests: P8.2, per the map and its ⚑ consultation (the L2 hook refuses any deletion of a test file).
+
+## Not started
+
+- None for P5.12b. Next: P5.13.
+
+## Deviations from contract/ADR (file:line each)
+
+- None.
+
+## Advisor decisions (date, item, question, answer verbatim)
+
+The P5.12b ruling (2026-10-16) is verbatim in `docs/plans/STATUS.md`.
+
+## Exact next step (one item ID)
+
+P5.13 (⚑ mandatory consultation), after the closing commit's CI run is green.
+
+## Earlier notes of this directory
 
 git status --porcelain --untracked-files=all (before commit c): modified `.github/copilot-instructions.md`, `ARCHITECTURE.md`, `CHANGELOG.md`, `docs/plans/STATUS.md`, `docs/ux/interaction-model.md`, `src/test/ui/v2/main-sources.ui.test.ts` (comment only) and the four STATUS notes; new `src/test/ui/v2/main-all-projects.ui.test.ts` (all belong to P5.9 commit c)
 
@@ -493,5 +554,6 @@ VERIFY:
 
 FILES CHECKED: /Users/mattias/github/nuiget/.github/agents/architecture-advisor.agent.md (whole); /Users/mattias/github/nuiget/docs/plans/2026-10-11-nuiget-2.0-execution-plan.md (:1-200: §0-§4, P0 rows; P4.9 row :265 by grep); /Users/mattias/github/nuiget/docs/adr/002-query-coordinator.md (whole), /Users/mattias/github/nuiget/docs/adr/009-catalog.md (whole, d.5 and d.6 as amended at P4.9a); /Users/mattias/github/nuiget/docs/plans/STATUS.md:2060-2178 (the P4.9 ruling verbatim, steps 11-16, DO NOT, CONTRACT CHANGE, VERIFY); /Users/mattias/github/nuiget/src/STATUS.md:1-20; /Users/mattias/github/nuiget/src/extension.next.ts (whole, working tree: `probeSources` :222-237, `reconciled` :219-220, monitor :243-244, restart :250-252, `ready.finally(markReconciled)` :371); /Users/mattias/github/nuiget/src/core/catalog/feedContexts.ts (whole); /Users/mattias/github/nuiget/src/core/catalog/Catalog.ts (:127 `sources`, :160-262 `computeInstalled`/`updates`/`computeUpdates`, :520-539 `sourceHealth`/`invalidate`, the uncommitted `emitInstalledMetadata` diff); /Users/mattias/github/nuiget/src/core/catalog/Catalog.test.ts (:46-57 `fakeSources`, :143-151 `makeDeps` builds a real `FeedContexts`, :440-475 the two addendum tests); /Users/mattias/github/nuiget/src/core/catalog/feedContexts.test.ts (:1-43 rig, titles :44-111); /Users/mattias/github/nuiget/src/core/project/context.ts (whole); /Users/mattias/github/nuiget/src/core/feeds/health.ts (whole, working tree) and its diff; /Users/mattias/github/nuiget/src/core/feeds/serviceIndex.ts:170-260 (`resolve`, `probe` bypasses caches and does not reset health, `clearCaches` resets it, `fetchEndpoints` marks); /Users/mattias/github/nuiget/src/core/sources/DotnetSourceProvider.ts:45-59 (per-directory listing cache); /Users/mattias/github/nuiget/src/core/util/events.ts:1-40 (`Emitter`); /Users/mattias/github/nuiget/src/host/handlers.ts:29-36 (`sourceDirectory`), :284-301 and the working-tree diff (`failed: catalog.sourceHealth()`); /Users/mattias/github/nuiget/src/host/SidebarHost.ts diff; /Users/mattias/github/nuiget/src/test/harness/harness.ts (whole at first read, then the working-tree diff adding `FakeFeed`/`FakeTransport` :17-22,65-70,168-172); /Users/mattias/github/nuiget/src/test/harness/fakeFeed.ts (untracked; :1-80: `down` → `fail('network')`, service index answered with search, registration and flat resources, 404 for unknown ids); /Users/mattias/github/nuiget/src/test/harness/scenarios.test.ts (whole; the six failing titles :87-142,239-272,274-311; the count at :267-269); /Users/mattias/github/nuiget/src/test/harness/fakeDotnet.ts (whole; `configPaths` matcher :68, holds :148-159, `nuget config paths` answered empty :138-139); /Users/mattias/github/nuiget/src/test/harness/FakeWebview.ts (grep: only `project` chunks of `allProjects/installed` are applied, :231-237); /Users/mattias/github/nuiget/src/extension.next.test.ts:380-470 (the four reconciliation tests, :445-456 `a replaced selection …`), :310-338 (transport override tests), :508-533 (`overlapping refreshes are coalesced`), :594-598. Commands: `git status --short` and `git status --porcelain --untracked-files=all` (modified: docs/plans/STATUS.md, Catalog.ts, health.ts, health.test.ts, extension.next.ts, SidebarHost.ts, handlers.ts, harness.ts; untracked: src/test/harness/fakeFeed.ts), `git log --oneline -3` (head 6e2c878), `git diff --stat`, `git diff` of Catalog.ts, health.ts, SidebarHost.ts, handlers.ts, harness.ts, `wc -l` of the files in play, `ls src/core/feeds src/core/sources src/core/catalog src/test/harness`. Advisor tool consulted once before writing; its points (the duplicated walk as the defect, `computeUpdates` order, `onDidRegister` → restart so the first probe is not five minutes out, the withdrawn step-15 premise, the three facts to verify: real `FeedContexts` in the Catalog rig, the fake feed's 200 service index, `Catalog.sources` registering nothing) are verified and folded in.
 `````
+
 
 
