@@ -22,8 +22,8 @@ npm run bench → exit 0 · npx vitest run --coverage → exit 0
 rm -rf dist && node esbuild.mjs --v2 --production --analyze → extension 281381 / 299921 · webview 518470 / 600685 ·
                                sidebar 317603 / 329122 (unchanged; CSS only: dist/webview.css 26776, dist/sidebar.css 19778)
 rm -rf dist && NUIGET_V2=1 npm run package && npm run check:vsix → check:vsix: OK
-NUIGET_V2=1 npm run test:ui:v2 -- --storage /tmp/nuiget-ui-v2, five times (rm -rf dist before each) →
-                               27 passing ×5; git status --porcelain src/test/e2e empty after each
+NUIGET_V2=1 npm run test:ui:v2 -- --storage /tmp/nuiget-ui-v2, five times (rm -rf dist before each), after the
+                               settle waits → 27 passing ×5; git status --porcelain src/test/e2e empty after each
 step 2 of the ruling, first run of theme.ui.test.ts before the CSS edits → body rgba(0, 0, 0, 0), html rgba(0, 0, 0, 0)
                                in both webviews under every theme; dark themes measured against #ffffff (#cccccc, 1.6:1)
 grep -c "nuiget-color-bg" src/webview/shared/tokens.css → 4 · grep -c "::-webkit-scrollbar" primitives.css → 6
@@ -34,9 +34,9 @@ npm run package:vsix: SKIPPED: no host, service or esbuild change (stylesheets, 
 ## Done (tested)
 
 `theme.ui.test.ts`, fifth full run, per theme (Dark Modern, Light Modern, Dark High Contrast, Light High Contrast,
-Dark 2026, Light 2026): violations 0 in both webviews; `color-contrast` passes 47 (Dark Modern) or 50 (main panel)
-and 10 to 14 (sidebar); `target-size` passes 18 to 19 (main) and 5 to 7 (sidebar); incomplete 8 in the main panel,
-0 in the sidebar.
+Dark 2026, Light 2026): violations 0 in both webviews; `color-contrast` passes 50 (main panel) and 14 (sidebar) under every theme in all
+five runs after the settle waits (before them: 47 and 10 to 12 under the first theme); incomplete 8 in the main
+panel, 0 in the sidebar.
 - What the first runs found and the item fixed: the transparent roots (white fallback, false violations in every
   dark theme); the `info` badge (info colour on the badge background, 2.38:1 in Dark Modern); the version of a
   selected row (muted colour on the selection colour, 4.41:1 in Dark Modern, 3.82:1 in Dark 2026), seen only in the
@@ -58,7 +58,11 @@ and 10 to 14 (sidebar); `target-size` passes 18 to 19 (main) and 5 to 7 (sidebar
 - Six themes instead of the ruling's four: the four under their current labels plus Dark 2026 and Light 2026, which
   the newest VS Code offers new users (`product.json`); the older labels are kept as fallbacks.
 - `selectFirstRow` in `before` (not in the ruling): without it the selected state was measured only when an earlier
-  file left a row selected.
+  file left a row selected. `before` also waits for the fixture's two installed rows and its update row in the
+  sidebar, and `runAxe` waits until the document holds still (same text length and element count in three checks):
+  the first theme's sidebar passed 10 nodes in four runs and 12 in one before that wait.
+- The theme is chosen by an exact label among the quick picks, not with `selectQuickPick(name)` (ruling step 7):
+  "Default High Contrast" is a prefix of "Default High Contrast Light", and a filter shows both.
 - `incomplete` (main panel, every theme): `.nuiget-details-group:nth-child(7) > ul > li:nth-child(3..6)`,
   `.nuiget-details-group:nth-child(8|9) > h4|p`, "partially obscured by another element": dependency groups below
   the visible part of the details pane's scroll area; recorded, not fixed (ruling step 8).

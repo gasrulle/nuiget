@@ -122,9 +122,25 @@ async function selectFirstRow(selector: string, what: string): Promise<void> {
     await poll(async () => ((await row.getAttribute('aria-selected')) === 'true' || (await row.getAttribute('aria-current')) === 'true' ? true : undefined), `${what}: the first selected`, 10_000);
 }
 
-/** Runs axe in the webview the driver is in, once its transitions have ended. */
+/**
+ * Waits until the content of the webview the driver is in holds still: the same text and the same number of elements
+ * in three checks in a row. A section or a details pane that is still filling would otherwise be measured in part.
+ */
+async function waitForSettledContent(): Promise<void> {
+    let last = '';
+    let steady = 0;
+    await poll(async () => {
+        const now = await driverOf().executeScript<string>('return `${document.body.innerText.length}:${document.body.getElementsByTagName("*").length}`;');
+        steady = now === last ? steady + 1 : 0;
+        last = now;
+        return steady >= 2 ? true : undefined;
+    }, 'the content to hold still', 60_000);
+}
+
+/** Runs axe in the webview the driver is in, once its content holds still and its transitions have ended. */
 async function runAxe(): Promise<AxeSummary> {
     const driver = driverOf();
+    await waitForSettledContent();
     await waitForTransitions();
     if (!(await driver.executeScript<boolean>('return typeof window.axe !== "undefined";'))) {
         await driver.executeScript(AXE_SOURCE);
@@ -154,6 +170,9 @@ describe('2.0 theme pass', () => {
         try {
             await openSidebarView();
             await enterSidebarWebview();
+            // The fixture project has two packages and one update; both sections are filled before anything is measured.
+            await poll(async () => ((await driverOf().findElements(By.css('[data-testid="sidebar-installed-list"] [role="option"]'))).length >= 2 ? true : undefined), 'both installed rows in the sidebar', 120_000);
+            await poll(async () => ((await driverOf().findElements(By.css('[data-testid="sidebar-updates-list"] [role="option"]'))).length >= 1 ? true : undefined), 'the update row in the sidebar', 120_000);
             await selectFirstRow('[data-testid="sidebar-installed-list"] [role="option"]', 'rows in the sidebar');
             await leaveWebview();
             await openMainPanel();

@@ -19,8 +19,8 @@ npm run bench → exit 0 · npx vitest run --coverage → exit 0
 rm -rf dist && node esbuild.mjs --v2 --production --analyze → extension 281381 / 299921 · webview 518470 / 600685 ·
                                sidebar 317603 / 329122 (unchanged; CSS only: dist/webview.css 26776, dist/sidebar.css 19778)
 rm -rf dist && NUIGET_V2=1 npm run package && npm run check:vsix → check:vsix: OK
-NUIGET_V2=1 npm run test:ui:v2 -- --storage /tmp/nuiget-ui-v2, five times (rm -rf dist before each) →
-                               27 passing ×5; git status --porcelain src/test/e2e empty after each
+NUIGET_V2=1 npm run test:ui:v2 -- --storage /tmp/nuiget-ui-v2, five times (rm -rf dist before each), after the
+                               settle waits → 27 passing ×5; git status --porcelain src/test/e2e empty after each
 step 2 of the ruling, first run of theme.ui.test.ts before the CSS edits → body rgba(0, 0, 0, 0), html rgba(0, 0, 0, 0)
                                in both webviews under every theme; dark themes measured against #ffffff (#cccccc, 1.6:1)
 grep -c "nuiget-color-bg" src/webview/shared/tokens.css → 4 · grep -c "::-webkit-scrollbar" primitives.css → 6
@@ -30,8 +30,8 @@ npm run package:vsix: SKIPPED: no host, service or esbuild change (stylesheets, 
 
 ## Done (tested)
 
-- `webview-stylesheets.test.ts` checks the declaration; `theme.ui.test.ts` measures the sidebar (10 to 14 nodes
-  pass `color-contrast` per theme).
+- `webview-stylesheets.test.ts` checks the declaration; `theme.ui.test.ts` measures the sidebar (14 nodes pass
+  `color-contrast` under every theme).
 
 ## Done (untested)
 
