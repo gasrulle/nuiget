@@ -81,3 +81,24 @@ describe('StoreProvider slices of P5.4', () => {
         expect(host.requests('allProjects/installed')).toHaveLength(0);
     });
 });
+
+describe('StoreProvider: every slice (P5.2)', () => {
+    it('mounts every slice of ADR-008 and the config slice; reading all of them still asks only session/get and projects/list (R1)', async () => {
+        const [{ useAllProjects }, { useConfig }, { useDetails, useDetailsActions }, { useSearch }, { useSessionActions }, { useSources }, { useTransitive }, { useUpdates }, { useOpsActions }] = await Promise.all([
+            import('./allProjects'), import('./config'), import('./details'), import('./search'), import('./session'), import('./sources'), import('./transitive'), import('./updates'), import('./ops'),
+        ]);
+        function AllSlices() {
+            const slices = {
+                session: useSession(), sessionActions: useSessionActions(), projects: useProjects(), installed: useInstalled(), updates: useUpdates(),
+                transitive: useTransitive(), search: useSearch(), details: useDetails(), detailsActions: useDetailsActions(), allProjects: useAllProjects(),
+                sources: useSources(), config: useConfig(), ops: useOps(), opsActions: useOpsActions(),
+            };
+            return <output data-testid="every">{Object.entries(slices).filter(([, value]) => value !== undefined && value !== null).map(([name]) => name).join(',')}</output>;
+        }
+        const host = createFakeHost();
+        render(<StoreProvider bus={host.bus}><AllSlices /></StoreProvider>);
+
+        expect(screen.getByTestId('every')).toHaveTextContent('session,sessionActions,projects,installed,updates,transitive,search,details,detailsActions,allProjects,sources,config,ops,opsActions');
+        expect(host.sent.map(message => message.kind === 'request' ? message.type : message.kind).sort()).toEqual(['projects/list', 'session/get']);
+    });
+});

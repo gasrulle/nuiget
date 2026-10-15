@@ -1,4 +1,68 @@
-# STATUS — src/webview/shared   commit c15000f (P5.9 commit b; parent of commit c)   2026-10-16T02:00:00Z
+# STATUS — src/webview/shared   commit 2073c87 (parent of the P5.2 commit)   2026-10-16T03:00:00Z
+
+git status --porcelain --untracked-files=all (before the commit): modified `ARCHITECTURE.md`, `docs/plans/STATUS.md`, `src/webview/shared/store/StoreProvider.test.tsx`, `src/webview/shared/STATUS.md` (all belong to the P5.2 commit)
+
+Item: **P5.2 store slices** (re-scoped by P3.6: each slice landed with its first consumer; this row closes the sweep).
+ADR-008's slice list ⊆ `src/webview/shared/store`: `session`, `projects`, `installed`, `updates`, `transitive`,
+`search`, `details`, `allProjects`, `sources`, `ops` are there, plus `config` (P5.6, recorded as a deviation); every
+slice has its test file; `StoreProvider` mounts all eleven; the ARCHITECTURE 2.0 store paragraph lists all eleven. From
+the P3 phase review (non-blocking 4): ARCHITECTURE "Two-surface harness" now states where the slices go beyond the
+model (`useResource`'s second request after an out-of-date answer, then an error; the unmodelled slices and streams).
+
+## Verified by running
+
+```text
+baseline at 2073c87          → CI run 38716832622 green on all 11 jobs · npx tsc --noEmit 0 · npx eslint src 0 · npx vitest run exit 0
+for each store module, its test file exists → 12 of 12 (StoreProvider and the eleven slices)
+npx tsc --noEmit / npm run check-types / npm run lint → exit 0 each
+npx vitest run --project frontend src/webview/shared/store → exit 0
+npm test (NUIGET_SDK_TESTS=1, DOTNET_ROOT set) → exit 0 · Test Files 156 passed (156) · Tests 3204 passed (3204)
+npm run bench                → exit 0 · Tests 119 passed | 1 skipped (120)
+rm -rf dist && node esbuild.mjs --v2 --production --analyze → SKIPPED: no source file changed (a test and docs only);
+                               the sizes of P5.9 commit b stand (webview 517706, sidebar 307187)
+npm run test:ui:v2 / package:vsix / test:ui (1.x) → SKIPPED: no source file changed; CI runs the suites
+test -e .claude/.contract-change → false · no frozen path changed
+```
+
+## Done (tested)
+
+- `StoreProvider.test.tsx`: new `mounts every slice of ADR-008 and the config slice; reading all of them still asks only
+  session/get and projects/list (R1)`.
+- Where the rules of the harness model (ARCHITECTURE "Two-surface harness", R1–R8) are tested per slice:
+
+  | Slice | Rules | Tests |
+  |---|---|---|
+  | `session` | R1 (start), snapshot `rev` | `StoreProvider.test.tsx`, `session.test.tsx` |
+  | `projects` | R2, R7 | `projects.test.tsx` |
+  | `installed` | R3, R4, R7 (through `useResource`) | `installed.test.tsx`, `useResource.test.tsx` |
+  | `updates` | R4, R7, R8, recovery re-ask | `updates.test.tsx` |
+  | `transitive` | R4, R7 (through `useResource`), lazy per project | `transitive.test.tsx` |
+  | `allProjects` | R3 (all-projects mode), R4 (`seq`) for its three streams, N11 | `allProjects.test.tsx`, harness gate scenario |
+  | `ops` | R5, busy from the call (N61) | `ops.test.tsx` |
+  | `search`, `details`, `sources`, `config` | R4 (latest wins); not modelled | their own test files |
+
+## Done (untested)
+
+- None.
+
+## Not started
+
+- Nothing of this row.
+
+## Deviations from contract/ADR (file:line each)
+
+- `config` is a slice ADR-008's enumeration does not list (added by the P5.6 ruling; recorded there).
+
+## Advisor decisions (date, item, question, answer verbatim)
+
+2026-10-16, P5.2: no L1 consultation (the item is not ⚑, no stop-and-ask trigger fired; the sweep's shape is the P3.6
+ruling's). The ambient advisor named the row's checks at the end of P5.9.
+
+## Exact next step (one item ID)
+
+P5.10 (sidebar parity), after P5.2's CI run is green.
+
+## Earlier notes of this directory
 
 git status --porcelain --untracked-files=all (before commit c): modified `.github/copilot-instructions.md`, `ARCHITECTURE.md`, `CHANGELOG.md`, `docs/plans/STATUS.md`, `docs/ux/interaction-model.md`, `src/test/ui/v2/main-sources.ui.test.ts` (comment only) and the four STATUS notes; new `src/test/ui/v2/main-all-projects.ui.test.ts` (all belong to P5.9 commit c)
 

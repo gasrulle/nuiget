@@ -691,6 +691,12 @@ sends `ops/bulkInstall` for the projects picked. The Updates tab is `AllProjects
   8. `checkUpdates` asks `updates/get` for the selected project; once asked, the model asks again when
      `resources/invalidated` names that `updates:` key and when an applied snapshot of the same project carries
      another `includePrerelease`. Every `sources/health` payload is kept.
+
+  The webview slices go beyond this model in named places (P5.2, from the P3 phase review): `useResource` asks once
+  more after an ok answer that rule 7 would discard, and a second out-of-date answer for the same listing ends as an
+  error (`store/useResource.ts`), where the model only records it; the `search`, `details`, `sources` and `config`
+  slices and the `transitive` and `updates` streams of `allProjects` are not modelled at all. Those rules are tested in
+  the slices' own tests under `src/webview/shared/store`; the harness proves the host side and the rules above.
 - **Driver.** `resolve`, `dispose`, `selectProject`, `toggle`, `operate`, `refresh`, `request`, `cancel`,
   `showAllProjects`, `command`, the `files` verbs (an edit on disk plus the file watcher's event), `advance`
   and `settle`. `expectState` waits until every visible surface equals the host and the host equals the
