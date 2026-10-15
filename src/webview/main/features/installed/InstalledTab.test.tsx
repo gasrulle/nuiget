@@ -77,6 +77,19 @@ describe('main panel: Installed tab', () => {
         expect(optionOf('Moq')).toHaveAttribute('aria-selected', 'false');
     });
 
+    it('provisional: the badge leaves when the authoritative list replaces the chunk', async () => {
+        // The main panel shows a project header, and with it the badge, in All Projects; the evaluated list arrives
+        // as a second `project` chunk for the same project.
+        const host = await mountWith();
+        await hostSays(() => host.event('session/changed', snapshot(2, ALL_PROJECTS)));
+        const request = host.requests('allProjects/installed')[0];
+        await hostSays(() => host.chunk(request, { kind: 'project', chunk: { projectPath: A, projectName: 'App', result: { ...installed(A, THREE), fidelity: 'provisional' } } }));
+        const header = (): HTMLElement => screen.getByTestId('section-header-project-app').closest('.nuiget-section-header') as HTMLElement;
+        expect(within(header()).getByText('provisional')).toBeInTheDocument();
+        await hostSays(() => host.chunk(request, { kind: 'project', chunk: { projectPath: A, projectName: 'App', result: installed(A, THREE) } }));
+        expect(within(header()).queryByText('provisional')).toBeNull();
+    });
+
     it('select all selects the removable rows only and the toolbar counts them', async () => {
         const user = userEvent.setup();
         await mountWith();
@@ -84,19 +97,19 @@ describe('main panel: Installed tab', () => {
         expect(uninstallSelected()).toHaveTextContent('Uninstall selected (0)');
         await user.click(screen.getByTestId('select-all-button'));
         expect(screen.getByTestId('select-all-button')).toHaveAttribute('aria-pressed', 'true');
-        expect(['Serilog', 'Moq', 'Newtonsoft.Json'].map(id => optionOf(id).getAttribute('aria-selected'))).toEqual(['true', 'true', 'false']);
-        expect(uninstallSelected()).toHaveTextContent('Uninstall selected (2)');
+        // A centrally managed row is removable: an uninstall keeps its central entry (ADR-004).
+        expect(['Serilog', 'Moq', 'Newtonsoft.Json'].map(id => optionOf(id).getAttribute('aria-selected'))).toEqual(['true', 'true', 'true']);
+        expect(uninstallSelected()).toHaveTextContent('Uninstall selected (3)');
         // A second press clears.
         await user.click(screen.getByTestId('select-all-button'));
         expect(uninstallSelected()).toHaveTextContent('Uninstall selected (0)');
-        // Space on the central row selects nothing and says why.
+        // Space on the central row selects it.
         optionOf('Newtonsoft.Json').focus();
         await user.keyboard(' ');
-        expect(optionOf('Newtonsoft.Json')).toHaveAttribute('aria-selected', 'false');
-        await waitFor(() => expect(said()).toBe('Newtonsoft.Json is managed centrally and cannot be uninstalled from this view yet'));
+        expect(optionOf('Newtonsoft.Json')).toHaveAttribute('aria-selected', 'true');
         optionOf('Moq').focus();
         await user.keyboard(' ');
-        expect(uninstallSelected()).toHaveTextContent('Uninstall selected (1)');
+        expect(uninstallSelected()).toHaveTextContent('Uninstall selected (2)');
     });
 
     it('the dialog lists the selected packages; Escape and Cancel send nothing', async () => {
@@ -104,8 +117,8 @@ describe('main panel: Installed tab', () => {
         const host = await mountWith();
         await user.click(screen.getByTestId('select-all-button'));
         await user.click(uninstallSelected());
-        const dialog = screen.getByRole('alertdialog', { name: 'Uninstall 2 packages?' });
-        expect(within(dialog).getAllByRole('listitem').map(item => item.textContent)).toEqual(['Serilog', 'Moq']);
+        const dialog = screen.getByRole('alertdialog', { name: 'Uninstall 3 packages?' });
+        expect(within(dialog).getAllByRole('listitem').map(item => item.textContent)).toEqual(['Serilog', 'Moq', 'Newtonsoft.Json']);
         expect(dialog).toHaveTextContent('From App:');
         await user.keyboard('{Escape}');
         expect(screen.queryByRole('alertdialog')).toBeNull();
@@ -113,7 +126,7 @@ describe('main panel: Installed tab', () => {
         await user.click(screen.getByTestId('confirm-dialog-cancel'));
         expect(screen.queryByRole('alertdialog')).toBeNull();
         expect(host.requests('ops/bulkRemove')).toHaveLength(0);
-        expect(uninstallSelected()).toHaveTextContent('Uninstall selected (2)');
+        expect(uninstallSelected()).toHaveTextContent('Uninstall selected (3)');
     });
 
     it('Confirm asks ops/bulkRemove with exactly the listed ids, closes the dialog, and the rows are busy until the request settles', async () => {
@@ -123,15 +136,17 @@ describe('main panel: Installed tab', () => {
         await user.click(uninstallSelected());
         await user.click(screen.getByTestId('confirm-dialog-confirm'));
         expect(screen.queryByRole('alertdialog')).toBeNull();
-        expect(host.requests('ops/bulkRemove').map(request => request.payload)).toEqual([{ projectPath: A, packages: ['Serilog', 'Moq'] }]);
+        expect(host.requests('ops/bulkRemove').map(request => request.payload)).toEqual([{ projectPath: A, packages: ['Serilog', 'Moq', 'Newtonsoft.Json'] }]);
         // Busy from the request on, before the host reports anything (N61), and nothing left the list.
         expect(optionOf('Serilog')).toHaveAttribute('aria-busy', 'true');
         expect(optionOf('Moq')).toHaveAttribute('aria-busy', 'true');
-        expect(optionOf('Newtonsoft.Json')).not.toHaveAttribute('aria-busy');
+        expect(optionOf('Newtonsoft.Json')).toHaveAttribute('aria-busy', 'true');
         expect(uninstallSelected()).toHaveTextContent('Uninstall selected (0)');
         const done: BulkOutcome = { opId: 'op1', status: 'completed', results: [], restores: [] };
         await hostSays(() => host.respond(host.requests('ops/bulkRemove')[0], done));
-        expect(optionOf('Serilog')).not.toHaveAttribute('aria-busy');
+        for (const id of ['Serilog', 'Moq', 'Newtonsoft.Json']) {
+            expect(optionOf(id)).not.toHaveAttribute('aria-busy');
+        }
         expect(names()).toEqual(['Serilog', 'Moq', 'Newtonsoft.Json']);
     });
 

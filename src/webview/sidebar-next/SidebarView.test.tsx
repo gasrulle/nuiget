@@ -6,6 +6,7 @@ import { ALL_PROJECTS, resourceKeys, type InstalledPackage, type InstalledResult
 import { createFakeHost, type FakeHost } from '../shared/bus/testSupport';
 import { axeRuleOutcome, installFakeLayout } from '../shared/primitives/testSupport';
 import { StoreProvider } from '../shared/store/StoreProvider';
+import { UNRESOLVED_HINT, whyNotUpdatable } from '../shared/installed/rules';
 import { shownVersion, whyNotRemovable } from './InstalledSection';
 import { SidebarView } from './SidebarView';
 
@@ -91,19 +92,35 @@ describe('sidebar: Installed section', () => {
         expect(within(row('Serilog')).getByTestId('row-action-uninstall')).toBeInTheDocument();
     });
 
+    it('provisional: the badge leaves when the authoritative list replaces the chunk', async () => {
+        const host = mount();
+        await hostSays(() => host.respond(host.requests('session/get')[0], snapshot(1, A)));
+        await hostSays(() => host.respond(host.requests('projects/list')[0], { projects: [{ name: 'App', path: A }] }, 1));
+        const request = host.requests('installed/get')[0];
+        await hostSays(() => host.chunk(request, { kind: 'provisional', result: installed(A, [pkg('Serilog')], { fidelity: 'provisional' }) }));
+        expect(screen.getByTestId('sidebar-installed-provisional')).toBeInTheDocument();
+        expect(names()).toEqual(['Serilog']);
+        await hostSays(() => host.respond(request, installed(A, [pkg('Serilog'), pkg('Moq')]), 1));
+        expect(screen.queryByTestId('sidebar-installed-provisional')).toBeNull();
+        expect(names()).toEqual(['Serilog', 'Moq']);
+    });
+
     it('unresolved: the row says so, is disabled and has no action', async () => {
         const host = await mountWith([pkg('Broken', { version: '', versionType: 'unresolved', declaration: 'unresolved' }), pkg('Serilog')]);
         expect(option('Broken')).toHaveAccessibleName('Broken unresolved');
         expect(option('Broken')).toHaveAccessibleDescription('Unresolved');
         expect(option('Broken')).toHaveAttribute('aria-disabled', 'true');
         expect(within(row('Broken')).queryByTestId('row-action-uninstall')).toBeNull();
+        // The version cell's tooltip says why (interaction model §4).
+        expect(within(row('Broken')).getByText('unresolved')).toHaveAttribute('title', UNRESOLVED_HINT);
+        expect(within(row('Serilog')).getByText('1.0.0')).not.toHaveAttribute('title');
         // The keys that act on a row do nothing on it.
         await userEvent.click(option('Broken'));
         await userEvent.keyboard('{Enter}{Delete}');
         expect(removals(host)).toHaveLength(0);
     });
 
-    it('CPM: a centrally managed package has the badge, its central version, and is read-only for now', async () => {
+    it('CPM: a centrally managed package has the badge, its central version, and uninstalls from this project', async () => {
         const host = await mountWith([
             pkg('Serilog', { declaration: 'central', version: '3.1.0', definedIn: '/w/Directory.Packages.props' }),
             pkg('Moq', { declaration: 'central-override', version: '4.18.0' }),
@@ -114,13 +131,12 @@ describe('sidebar: Installed section', () => {
         expect(within(row('Serilog')).getByText('CPM')).toBeInTheDocument();
         expect(option('Moq')).toHaveAccessibleDescription('Centrally managed');
         expect(option('xunit')).not.toHaveAccessibleDescription();
-        // No uninstall until the preview of a central change exists; a key press says why instead of doing nothing.
-        expect(within(row('Serilog')).queryByTestId('row-action-uninstall')).toBeNull();
+        // An uninstall removes the project's reference only; the central entry stays (ADR-004), so no preview is needed.
+        expect(within(row('Serilog')).getByTestId('row-action-uninstall')).toBeInTheDocument();
         expect(within(row('xunit')).getByTestId('row-action-uninstall')).toBeInTheDocument();
         await userEvent.click(option('Serilog'));
         await userEvent.keyboard('{Delete}');
-        expect(removals(host)).toHaveLength(0);
-        await waitFor(() => expect(said()).toBe('Serilog is managed centrally and cannot be uninstalled from this view yet'));
+        expect(removals(host).map(request => request.payload)).toEqual([{ projectPath: A, packageId: 'Serilog' }]);
         expect(option('Serilog')).not.toHaveAttribute('aria-disabled');
     });
 
@@ -438,6 +454,15 @@ describe('sidebar: what a row shows and allows', () => {
         expect(shownVersion(pkg('A', { version: '$(V)', declaration: 'unresolved' }))).toBe('unresolved');
     });
 
+    it('whyNotUpdatable', () => {
+        const result = installed(A, []);
+        expect(whyNotUpdatable(pkg('A'), result)).toBeUndefined();
+        expect(whyNotUpdatable(pkg('A', { declaration: 'central' }), result)).toBeUndefined();
+        expect(whyNotUpdatable(pkg('A', { declaration: 'central-override' }), result)).toBe('A has a VersionOverride in the project and is not updated from here until that edit is probed');
+        expect(whyNotUpdatable(pkg('A', { declaration: 'unresolved' }), result)).toBe('A cannot be updated: its reference could not be resolved');
+        expect(whyNotUpdatable(pkg('A', { declaration: 'central' }), { ...result, unsupported: { reason: 'packages-config', message: 'uses packages.config' } })).toBe('A cannot be updated: uses packages.config');
+    });
+
     it('whyNotRemovable', () => {
         const result = installed(A, []);
         expect(whyNotRemovable(pkg('A'), result)).toBeUndefined();
@@ -445,7 +470,9 @@ describe('sidebar: what a row shows and allows', () => {
         expect(whyNotRemovable(pkg('A', { declaration: 'unresolved' }), result)).toBe('A cannot be uninstalled: its reference could not be resolved');
         expect(whyNotRemovable(pkg('A', { isImplicit: true }), result)).toBe('A is added by the .NET SDK and cannot be uninstalled');
         expect(whyNotRemovable(pkg('A', { declaration: 'props' }), result)).toBe('A is declared in an imported props file and cannot be uninstalled from the project');
-        expect(whyNotRemovable(pkg('A', { declaration: 'central-override' }), result)).toBe('A is managed centrally and cannot be uninstalled from this view yet');
+        // A centrally managed package uninstalls from its project; its central entry stays (ADR-004).
+        expect(whyNotRemovable(pkg('A', { declaration: 'central' }), result)).toBeUndefined();
+        expect(whyNotRemovable(pkg('A', { declaration: 'central-override' }), result)).toBeUndefined();
         // An unsupported project comes first: nothing in it can be changed.
         expect(whyNotRemovable(pkg('A', { declaration: 'central' }), { ...result, unsupported: { reason: 'packages-config', message: 'uses packages.config' } })).toBe('A cannot be uninstalled: uses packages.config');
     });

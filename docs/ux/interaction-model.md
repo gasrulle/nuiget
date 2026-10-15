@@ -54,7 +54,7 @@ In this mode:
 | **Revalidating** | Existing rows stay; subtle progress bar under the search box; rows `aria-busy` | When a displayed resource was invalidated and is being recomputed. Never blank the list. |
 | **Provisional** | Small "provisional" badge on the project header; tooltip explains evaluation is pending | `fidelity: 'provisional'`. Actions remain enabled except for `unresolved` packages. |
 | **Unresolved** | Version cell shows "unresolved" with tooltip; row actions disabled | `declaration: 'unresolved'`; excluded from update checks. |
-| **Centrally managed** | "CPM" badge on the row; version cell shows central version | `declaration: 'central' \| 'central-override'`. Update/uninstall show an impact preview first. |
+| **Centrally managed** | "CPM" badge on the row; version cell shows central version | `declaration: 'central' \| 'central-override'`. An update shows an impact preview first (main panel: dialog; sidebar: the actions menu and a VS Code modal); an uninstall removes the project's reference only and keeps the central entry (ADR-004), without a dialog; a `central-override` row is not updated from the UI until finding N74 is probed. |
 | **Pending op** | Row gets a spinner replacing its action button; details action buttons disabled | From `ops/*` `queued`/`running` chunks until the terminal outcome. |
 | **Partial / failed op** | Toast (VS Code notification) + row returns to its real state after invalidation | Never leave optimistic state on failure. |
 | **Stale selection** | Details header shows the project the selection belongs to; actions disabled until re-validated | When the active project changes while a package is selected, the details panel keeps its content but becomes read-only until the new installed data confirms the package (then it re-enables) or clears it (package not in new project). |
@@ -70,7 +70,7 @@ In this mode:
 | Install / Update to version | Details panel button, sidebar row hover/focus action, context menu | None (progress toast). |
 | Uninstall (single) | Details button, row action, context menu | None; outcome toast. |
 | Bulk update / bulk uninstall | Updates/Installed toolbar | In-panel **Dialog** listing the packages (and projects in All Projects) with Confirm/Cancel. |
-| CPM central change | Any update/uninstall on a `central` package | **Dialog** with affected-projects preview; choice: *Update central version* / *Override in this project only* / Cancel. |
+| CPM central change | Any update of a `central` package | Main panel: **Dialog** (`cpm-preview-dialog`) listing the projects the central version applies to; choice: *Update central version* / Cancel. Sidebar: the row's primary action opens the actions menu and the host confirms with a modal listing the same projects. *Override in this project only* waits for N74. An uninstall of a central row needs no confirmation (the central entry stays). |
 | Remove source | Source settings | In-dialog confirm row (existing pattern). |
 | Restore project(s) | Transitive banner, header | None. |
 
@@ -80,7 +80,7 @@ Keyboard: every pointer action is reachable by keyboard. A list is a `role="list
 are `role="option"` with roving `tabIndex` (one tab stop per list; the active row has
 `tabIndex=0`). ArrowUp/ArrowDown move, Home/End jump to the first and last row; moving changes the
 active row, not the selection. Enter activates the row (main panel: selects it and shows its
-details; sidebar: performs its primary action), Ctrl+Enter (Cmd+Enter on macOS) performs the
+details; sidebar: performs its primary action (on a centrally managed update row: opens the actions menu)), Ctrl+Enter (Cmd+Enter on macOS) performs the
 secondary action, Delete (Cmd+Backspace on macOS) uninstalls where applicable, and Shift+F10 or the
 ContextMenu key opens the actions menu for the active row; right-click anywhere on the row opens
 the same menu. Row action buttons are pointer-only: they sit next to the option in a container
@@ -150,7 +150,7 @@ State markers (§4) and layer roots:
 | `updates-unavailable-banner`, `sidebar-updates-unavailable`, `browse-unavailable-banner`, `sidebar-browse-unavailable` | A source could not be read (updates, search) |
 | `sidebar-unsupported` | Banner of a project the 2.0 surfaces cannot change |
 | `sidebar-installed-provisional` | The "provisional" badge of the sidebar's installed section |
-| `cpm-preview-dialog`, `multi-install-dialog` | Dialog roots (central package management preview, install into several projects) |
+| `cpm-preview-dialog`, `cpm-preview-confirm`, `multi-install-dialog` | Dialog roots (central package management preview, install into several projects) and the preview's *Update central version* button |
 
 All Projects (§3; `<name>` = project name lower-cased):
 

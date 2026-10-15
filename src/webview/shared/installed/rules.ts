@@ -19,8 +19,8 @@ export function shownVersion(entry: InstalledPackage): string {
 }
 
 /**
- * Why a package cannot be uninstalled from this list, in a sentence for the user; `undefined` when it can.
- * A centrally managed package stays read-only until the preview of what a central change touches exists.
+ * Why a package cannot be uninstalled from this list, in a sentence for the user; `undefined` when it can. A centrally
+ * managed package can: an uninstall removes the project's reference only and keeps the central entry (ADR-004).
  */
 export function whyNotRemovable(entry: InstalledPackage, result: InstalledResult): string | undefined {
     if (result.unsupported) {
@@ -35,8 +35,28 @@ export function whyNotRemovable(entry: InstalledPackage, result: InstalledResult
     if (entry.declaration === 'props') {
         return `${entry.id} is declared in an imported props file and cannot be uninstalled from the project`;
     }
-    if (entry.declaration === 'central' || entry.declaration === 'central-override') {
-        return `${entry.id} is managed centrally and cannot be uninstalled from this view yet`;
+    return undefined;
+}
+
+/**
+ * Why a package cannot be updated from this list, in a sentence for the user; `undefined` when it can. A row with a
+ * `VersionOverride` is not updated until what `dotnet package add` edits there is probed (finding N74).
+ */
+export function whyNotUpdatable(entry: InstalledPackage, result: InstalledResult): string | undefined {
+    if (result.unsupported) {
+        return `${entry.id} cannot be updated: ${result.unsupported.message}`;
+    }
+    if (entry.declaration === 'unresolved') {
+        return `${entry.id} cannot be updated: its reference could not be resolved`;
+    }
+    if (entry.declaration === 'central-override') {
+        return `${entry.id} has a VersionOverride in the project and is not updated from here until that edit is probed`;
     }
     return undefined;
 }
+
+/** A row whose version comes from the central entry: its update changes every project that uses the entry. */
+export const isCentral = (entry: InstalledPackage): boolean => entry.declaration === 'central';
+
+/** The tooltip of an unresolved version cell (interaction model §4). */
+export const UNRESOLVED_HINT = 'Its version could not be resolved from the project files; edit the project file by hand.';

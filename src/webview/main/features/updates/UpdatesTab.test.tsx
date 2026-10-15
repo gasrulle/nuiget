@@ -24,13 +24,13 @@ const hostSays = (say: () => void): Promise<void> => act(async () => {
 });
 
 /** The panel on project A, its packages listed, the Updates tab shown. */
-async function mountWith(answer: { updates: PackageUpdate[]; sourcesUnavailable?: boolean } | null = { updates: UPDATES }, selectedProject = A): Promise<FakeHost> {
+async function mountWith(answer: { updates: PackageUpdate[]; sourcesUnavailable?: boolean } | null = { updates: UPDATES }, selectedProject = A, packages: InstalledPackage[] = [pkg('Serilog', { version: '3.0.0' }), pkg('Moq', { version: '4.20.0' }), pkg('Newtonsoft.Json', { version: '13.0.1', declaration: 'central' })]): Promise<FakeHost> {
     const host = createFakeHost();
     render(<StoreProvider bus={host.bus}><MainShell installed={view => <InstalledTab {...view} />} updates={view => <UpdatesTab {...view} />} /></StoreProvider>);
     await hostSays(() => host.respond(host.requests('session/get')[0], snapshot(1, selectedProject)));
     await hostSays(() => host.respond(host.requests('projects/list')[0], { projects: [{ name: 'App', path: A }] }, 1));
     if (selectedProject === A) {
-        await hostSays(() => host.respond(host.requests('installed/get')[0], installed([pkg('Serilog', { version: '3.0.0' }), pkg('Moq', { version: '4.20.0' }), pkg('Newtonsoft.Json', { version: '13.0.1', declaration: 'central' })]), 1));
+        await hostSays(() => host.respond(host.requests('installed/get')[0], installed(packages), 1));
         if (answer !== null) {
             await hostSays(() => host.respond(host.requests('updates/get')[0], { projectPath: A, ...answer }, 1));
         }
@@ -122,18 +122,38 @@ describe('main panel: Updates tab', () => {
         expect(host.requests('ops/bulkUpdate')[0].payload.packages.map(entry => entry.id)).toEqual(['Moq']);
     });
 
-    it('a centrally managed package opens the read-only preview of the central change and sends nothing', async () => {
+    it('a centrally managed package asks for the preview, lists the projects it changes and updates only when confirmed', async () => {
         const user = userEvent.setup();
         const host = await mountWith();
         await user.click(optionOf('Newtonsoft.Json'));
         await user.keyboard('{Enter}');
         const dialog = screen.getByTestId('cpm-preview-dialog');
         expect(dialog).toHaveAccessibleName('Newtonsoft.Json is centrally managed');
-        expect(dialog).toHaveTextContent('from 13.0.1');
+        expect(host.requests('cpm/preview').map(request => request.payload)).toEqual([{ projectPath: A, packageId: 'Newtonsoft.Json', version: '13.0.3' }]);
+        await hostSays(() => host.respond(host.requests('cpm/preview')[0], { preview: { centralPropsPath: '/w/Directory.Packages.props', packageId: 'Newtonsoft.Json', fromVersion: '13.0.1', toVersion: '13.0.3', affectedProjects: [A, '/w/Lib/Lib.csproj'] } }));
+        expect(within(dialog).getAllByRole('listitem').map(item => item.textContent)).toEqual(['App', 'Lib.csproj']);
         expect(axeRuleOutcome(await axe(document.body), 'aria-dialog-name')).toBe('passes');
-        await user.click(within(dialog).getByRole('button', { name: 'Close' }));
+        // Cancel sends nothing.
+        await user.click(within(dialog).getByRole('button', { name: 'Cancel' }));
         expect(screen.queryByTestId('cpm-preview-dialog')).toBeNull();
         expect(host.requests('ops/update')).toHaveLength(0);
+        // Confirm sends the one update.
+        await user.click(optionOf('Newtonsoft.Json'));
+        await user.keyboard('{Enter}');
+        await hostSays(() => host.respond(host.requests('cpm/preview')[1], { preview: { centralPropsPath: '/w/Directory.Packages.props', packageId: 'Newtonsoft.Json', fromVersion: '13.0.1', toVersion: '13.0.3', affectedProjects: [A] } }));
+        await user.click(screen.getByTestId('cpm-preview-confirm'));
+        expect(host.requests('ops/update').map(request => request.payload)).toEqual([{ projectPath: A, packageId: 'Newtonsoft.Json', version: '13.0.3', sourceUrl: FEED }]);
+    });
+
+    it('an override row is not updated and says why', async () => {
+        const user = userEvent.setup();
+        const host = await mountWith({ updates: [update('Moq', '4.18.0', '4.20.72')] }, A, [pkg('Moq', { version: '4.18.0', declaration: 'central-override' })]);
+        await user.click(optionOf('Moq'));
+        await user.keyboard('{Enter}');
+        await waitFor(() => expect(screen.getByTestId('status-live')).toHaveTextContent('Moq has a VersionOverride in the project and is not updated from here until that edit is probed'));
+        expect(screen.queryByTestId('cpm-preview-dialog')).toBeNull();
+        expect(host.requests('ops/update')).toHaveLength(0);
+        expect(host.requests('cpm/preview')).toHaveLength(0);
     });
 
     it('an unreachable source is a banner with Retry over the list, never "No updates available", and the tab shows no count', async () => {

@@ -27,6 +27,12 @@ describe('describeOutcome', () => {
         expect(describeOutcome(single({ kind: 'restore', packageId: undefined, status: 'cancelled' }))).toBe('Restore of App was cancelled');
     });
 
+    it('describeOutcome names the other projects a central change restored', () => {
+        expect(describeOutcome(single({ kind: 'update', version: '4.1.0', affectedProjects: ['/w/Lib/Lib.csproj'] }))).toBe('Updated Serilog 4.1.0; also restored 1 other project');
+        expect(describeOutcome(single({ kind: 'update', version: '4.1.0', affectedProjects: ['/w/Lib/Lib.csproj', '/w/Web/Web.csproj'] }))).toBe('Updated Serilog 4.1.0; also restored 2 other projects');
+        expect(describeOutcome(single({ kind: 'update', version: '4.1.0', affectedProjects: [] }))).toBe('Updated Serilog 4.1.0');
+    });
+
     it('a partial outcome says that the edit was made and the restore failed', () => {
         expect(describeOutcome(single({ status: 'partial', restore: { ok: false, error: 'NU1301' }, message: 'ignored' }))).toBe('Uninstalled Serilog, but the restore failed: NU1301');
         expect(describeOutcome(single({ status: 'partial', message: 'restore timed out' }))).toBe('Uninstalled Serilog, but the restore failed: restore timed out');

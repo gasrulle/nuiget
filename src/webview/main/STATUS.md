@@ -1,785 +1,172 @@
-# STATUS — src/webview/main   commit bc4533a (P5.12b closed; parent of the P5.13 commit)   2026-10-17T05:00:00Z
+# STATUS — src/webview/main   commit 58ad2dd (P6.4b closed; parent of the P6.4c commit)   2026-10-16T02:00:00Z
 
-git status --porcelain --untracked-files=all (before the commit): modified `ARCHITECTURE.md`, `CHANGELOG.md`, `README.md`, `docs/plans/{STATUS,findings-ledger}.md`, `package.json` (`contributes.configuration` only), `src/protocol/domain.ts` (one type line and its JSDoc), `src/host/services.ts`, `src/core/catalog/Catalog.ts` (a comment), `src/extension.next.test.ts`, `src/webview/main/features/search/useSearchTyping{,.test}.ts(x)`, `src/webview/shared/store/{search,search.test,config.test}.tsx` and the STATUS notes; new `src/test/lint/extension-config-settings.test.ts` (all belong to P5.13)
+git status --porcelain --untracked-files=all (before the commit): modified `.github/copilot-instructions.md`,
+`ARCHITECTURE.md`, `CHANGELOG.md`, `docs/plans/STATUS.md`, `docs/ux/interaction-model.md`, the webview files and tests
+named below, and the STATUS notes of `src/webview/{shared,main,sidebar-next}`; new
+`src/webview/main/features/updates/CentralUpdateDialog.test.tsx`
 
-Item: **P5.13**: `useSearchTyping` follows `nuiget.searchDebounceMode` as contributed: `full` searches 300 ms after the
-last key, `off` runs nothing while typing (Enter still searches), `quicksearch` unchanged (N57).
-
-## Verified by running
-
-P5.13:
-
-```text
-baseline at bc4533a (P5.12b closed, CI run 38750307144 green): tsc 0 · eslint 0 · vitest 160 files, 3239 passed, 4 skipped (SDK)
-.claude/.contract-change created with `P5.13` after the ruling was in STATUS, domain.ts:330 edited, sentinel deleted → ls: no such file
-grep -rn "'fullsearch'" src --include='*.ts' --include='*.tsx' → 0
-npx tsc --noEmit / npm run check-types / npx eslint src / npm run lint → exit 0 each
-npx vitest run src/extension.next.test.ts src/webview/shared/store src/webview/main/features/search → exit 0 · 168 passed
-npx vitest run --project backend src/test/lint/extension-config-settings.test.ts → 3 passed
-npm test (NUIGET_SDK_TESTS=1, DOTNET_ROOT set) → exit 0 · Test Files 161 passed (161) · Tests 3248 passed (3248)
-npm run bench → exit 0 · npm run docs:protocol:check → exit 0
-node -e '…contributes…' → 12 21 5 true (commands, when-clauses, settings, deprecationMessage)
-rm -rf dist && node esbuild.mjs --v2 --production --analyze → extension 281379 / 299921 · webview 518516 / 600685 ·
-                               sidebar 317628 / 329122
-rm -rf dist && NUIGET_V2=1 npm run package && npm run check:vsix → check:vsix: OK
-rm -rf dist && npm run package:vsix (NUIGET_V2 unset) → exit 0, nuiget-v1.18.9.vsix (17 files)
-git diff bc4533a --stat -- src/test/e2e/v2Support.ts src/test/e2e/v2-*.e2e.test.ts docs/adr src/protocol/messages.ts src/core/contracts.ts → empty
-git diff bc4533a --stat -- src/protocol/domain.ts → 1 file changed, 2 insertions(+), 1 deletion(-)
-NUIGET_V2=1 npm run test:ui:v2 -- --storage /tmp/nuiget-ui-v2 → see the tracker row (one run after the search change)
-```
-
-## Done (tested)
-
-- `features/search/useSearchTyping.test.tsx`: `full: the search runs 300 ms after the last key …` (was `fullsearch: …`),
-  new `off: nothing runs while typing; Enter still searches`.
-
-## Done (untested)
-
-- The `off` mode in VS Code: jsdom (`useSearchTyping.test.tsx`) is the proof; no ExTester test sets the setting.
-
-## Not started
-
-- None for P5.13. Next: the P5 phase gate and review (RUN §6).
-
-## Deviations from contract/ADR (file:line each)
-
-- None.
-
-## Advisor decisions (date, item, question, answer verbatim)
-
-The P5.13 ruling (2026-10-17) is verbatim in `docs/plans/STATUS.md` and `src/host/STATUS.md`.
-
-## Exact next step (one item ID)
-
-P5 phase review (RUN §6), after the P5.13 CI run is green.
-
-## Earlier notes of this directory
-
-git status --porcelain --untracked-files=all (before the commit): modified `.github/copilot-instructions.md`, `ARCHITECTURE.md`, `CHANGELOG.md`, `docs/plans/{STATUS,findings-ledger}.md`, `src/test/lint/{webview-stylesheets,webview-tokens}.test.ts`, `src/webview/shared/{tokens.css,primitives/primitives.css}`, `src/webview/main/main.css`, `src/webview/sidebar-next/sidebar.css` and the four STATUS notes; new `src/test/lint/{cssRules.ts,webview-css-baseline.test.ts}`, `src/test/ui/v2/theme.ui.test.ts` (all belong to P5.11)
-
-Item: **P5.11** (theme pass): `main.css` `.nuiget-main` paints `background: var(--nuiget-color-bg)`, so the
-document says what its text stands on (axe fell back to white without it). No other change in this directory.
+Item: **P6.4c** — the CPM impact dialog, central uninstall, override rows read-only for updates, unresolved tooltips
+and the interaction model (the last of three sub-items of P6.4 by the ruling below). This note replaces this
+directory's previous note (in its history).
 
 ## Verified by running
 
-P5.11:
-
 ```text
-baseline at fa811aa (P5.10 commit d, CI run 38728270479 green on all 11 jobs): tsc 0 · eslint 0 · vitest 158 files, 3226 passed, 4 skipped (SDK)
-npx tsc --noEmit / npm run check-types / npx eslint src / npm run lint → exit 0 each
-npx vitest run --project backend src/test/lint → Test Files 7 passed (7) · Tests 126 passed (126)
-npm test (NUIGET_SDK_TESTS=1, DOTNET_ROOT set) → exit 0 · Test Files 159 passed (159) · Tests 3239 passed (3239)
-npm run bench → exit 0 · npx vitest run --coverage → exit 0
-rm -rf dist && node esbuild.mjs --v2 --production --analyze → extension 281381 / 299921 · webview 518470 / 600685 ·
-                               sidebar 317603 / 329122 (unchanged; CSS only: dist/webview.css 26776, dist/sidebar.css 19778)
-rm -rf dist && NUIGET_V2=1 npm run package && npm run check:vsix → check:vsix: OK
-NUIGET_V2=1 npm run test:ui:v2 -- --storage /tmp/nuiget-ui-v2, five times (rm -rf dist before each), after the
-                               settle waits → 27 passing ×5; git status --porcelain src/test/e2e empty after each
-step 2 of the ruling, first run of theme.ui.test.ts before the CSS edits → body rgba(0, 0, 0, 0), html rgba(0, 0, 0, 0)
-                               in both webviews under every theme; dark themes measured against #ffffff (#cccccc, 1.6:1)
-grep -c "nuiget-color-bg" src/webview/shared/tokens.css → 4 · grep -c "::-webkit-scrollbar" primitives.css → 6
-grep scrollbar-color|scrollbar-width in the 2.0 stylesheets → 0 · test -e .claude/.contract-change → false
-npm run package:vsix: SKIPPED: no host, service or esbuild change (stylesheets, tokens and tests only)
-```
-
-## Done (tested)
-
-- `webview-stylesheets.test.ts` checks the declaration; `theme.ui.test.ts` measures the panel (50 nodes pass
-  `color-contrast` under every theme).
-
-## Done (untested)
-
-- Forced colours: not emulated (ruling); the tokens lint holds the block and P7.4 checks it in VS Code 1.85.
-- Chromium 114 itself: the baseline lint stands in; no job renders the webviews there (N64 open).
-- Semantic colours used as text that the fixture does not render (`main.css` error and warning texts): unmeasured.
-
-## Not started
-
-- None for P5.11. Next: P5.12a.
-
-## Deviations from contract/ADR (file:line each)
-
-- None.
-
-## Advisor decisions (date, item, question, answer verbatim)
-
-The P5.11 ruling (2026-10-16) is verbatim in `docs/plans/STATUS.md`.
-
-## Exact next step (one item ID)
-
-P5.12a, after the P5.11 CI run is green.
-
-## Earlier notes of this directory
-
-git status --porcelain --untracked-files=all (before commit c): modified `.github/copilot-instructions.md`, `ARCHITECTURE.md`, `CHANGELOG.md`, `docs/plans/STATUS.md`, `docs/ux/interaction-model.md`, `src/test/ui/v2/main-sources.ui.test.ts` (comment only) and the four STATUS notes; new `src/test/ui/v2/main-all-projects.ui.test.ts` (all belong to P5.9 commit c)
-
-Item: **P5.9, commit c of three**: no source change in this directory; the docs of the feature (ARCHITECTURE "All
-Projects (main)", interaction model §3, CHANGELOG) and the ExTester test of `src/test/ui/v2`.
-
-## Verified by running
-
-P5.9 commit c:
-
-```text
-baseline at c15000f (commit b) → CI run 38714494277 green on all 11 jobs
-npm run check-types          → first run red: `id` possibly null in the new test (getAttribute); fixed, exit 0
-npx tsc --noEmit / npm run check-types / npm run lint → exit 0 each (after the last edit)
-NUIGET_V2=1 npm run test:ui:v2 -- --storage /tmp/nuiget-ui-v2 → 18 passing (33s) at the first run, the two new tests
-                               (`the host offers All Projects once a second project appears`, `All Projects lists one
-                               section per project and the collapsed transitive aggregate`) among them
-git status --porcelain --untracked-files=all src/test/e2e → empty afterwards · test -e .../e2e-workspace/Utility → false
-rm -rf dist && NUIGET_V2=1 npm run package && npm run check:vsix → check:vsix: OK
-rm -rf dist && node esbuild.mjs --v2 --production --analyze → extension 281249 / 299921 · webview 517706 / 600685 ·
-                               sidebar 307187 / 329122 (no source change since commit b)
-grep -c "has no `nuget.config`" src/test/ui/v2/STATUS.md src/test/ui/v2/main-sources.ui.test.ts → 0 and 0
-npm test / npm run bench     → exit 0 (npm test 0: Tests 3203 passed (3203) · bench 0: Tests 119 passed | 1 skipped (120))
-test -e .claude/.contract-change → false · git diff --stat 69205e2 -- src/protocol src/core src/host docs/adr package.json
-                               .vscode-test.mjs esbuild.mjs vitest.config.mts eslint.config.mjs .github/workflows → empty
-```
-
-## Done (tested)
-
-- `main-all-projects.ui.test.ts`: creates `Utility/Utility.csproj` in the opened fixture workspace, waits for "All
-  Projects (2)", commits All Projects (value set and `change` dispatched on the selector), reads two `installed-list-*`
-  ids from the DOM and checks the closed `section-header-transitive`; `after` removes the project, writes
-  `TestProject.csproj` back and waits until the host is back on it with `installed-list`.
-
-## Done (untested)
-
-- The multi-install picker in VS Code: it needs a real nuget.org search, so per the ruling it is left to jsdom
-  (`DetailsPane.test.tsx` `a browse selection under All Projects opens the project picker and installs into the projects
-  picked`).
-
-## Not started
-
-- The sidebar's All Projects (P5.10).
-
-## Deviations from contract/ADR (file:line each)
-
-- Test ids outside §8 recorded for P5.12b (see `src/test/ui/v2/STATUS.md`).
-
-## Advisor decisions (date, item, question, answer verbatim)
-
-The P5.9 ruling and the commit-b follow-up (both 2026-10-15) are verbatim in `docs/plans/STATUS.md`.
-
-## Exact next step (one item ID)
-
-P5.2 (store slices sweep), after P5.9 commit c's CI run is green.
-
-## Earlier notes of this directory
-
-git status --porcelain --untracked-files=all (before commit b): modified `ARCHITECTURE.md`, `docs/plans/{STATUS,findings-ledger}.md`, `src/webview/main/MainShell.tsx`, `src/webview/main/features/updates/{UpdatesTab,UpdatesTab.test,UpdateAllDialog}.tsx`, `src/webview/shared/store/{allProjects,allProjects.test}.tsx` and the two STATUS notes; new `src/webview/main/features/updates/AllProjectsUpdates.tsx` (all belong to P5.9 commit b)
-
-Item: **P5.9 feature all-projects, commit b of three**: `features/updates/AllProjectsUpdates.tsx` (one section per
-project under `FolderGroups` over the `allProjects/updates` stream; multi-selectable `updates-list-<name>` labelled by
-the header; rows of an unsupported project read-only with the badge and banner; central packages from the installed
-chunk open the read-only preview; a project chunk with `error` is a banner with Retry; `sourcesUnavailable` one banner
-over all sections; Update all across projects as one `ops/bulkUpdateAllProjects`); `UpdatesTab.tsx` delegates to it in
-All Projects (the P5.5 placeholder is gone); `UpdateAllDialog.tsx` lists the packages under their project;
-`MainShell.tsx` counts the All Projects updates once every listed project has answered (`wc -l` 194 + 27 < 300).
-
-## Verified by running
-
-P5.9 commit b:
-
-```text
-baseline at 359a2a4 (commit a) → CI run 38712032135 green on all 11 jobs
-stop-and-ask (the P5.5 test `All Projects: an empty state instead of a list`) → ruling of 2026-10-15 (verbatim in
-                               docs/plans/STATUS.md): rewrite by title, second assertion kept
-npx tsc --noEmit / npm run check-types / npx eslint src / npm run lint → exit 0 each (last run after every code edit)
-git diff --numstat 359a2a4 -- src/webview/main/features/updates/UpdatesTab.test.tsx → 76 2 (the one test body; the
-                               three new titles are additions)
-src/webview/main/features/updates, 20 times → 20 of 20 · main features and store/allProjects.test.tsx, 20 times → 20 of 20
-npx vitest run --project integration src/test/harness → exit 0 · the gate scenario 40 of 40
-npm test (NUIGET_SDK_TESTS=1, DOTNET_ROOT set) → exit 0 · Test Files 156 passed (156) · Tests 3203 passed (3203)
-npm run bench                → exit 0 · Tests 119 passed | 1 skipped (120)
-npx vitest run --coverage    → exit 0 (thresholds hold) · store/allProjects.tsx 96.69 % · main/features/updates 86.89 %
-npm run docs:protocol:check  → docs/protocol.md is up to date
-rm -rf dist && node esbuild.mjs --v2 --production --analyze → extension 281249 / 299921 · webview 517706 / 600685
-                               (508743 at commit a) · sidebar 307187 / 329122 (305381 at commit a)
-rm -rf dist && NUIGET_V2=1 npm run package && npm run check:vsix → check:vsix: OK
-NUIGET_V2=1 npm run test:ui:v2 -- --storage /tmp/nuiget-ui-v2 → 16 passing (18s); fixture unchanged
-grep -rc "not available in this view yet" src/webview/main → 0 · N11 closed in the ledger
-npm run package:vsix (1.x) / npm run test:ui (1.x) → SKIPPED: no 1.x file changed; CI builds and runs them
-test -e .claude/.contract-change → false · no frozen path changed
-```
-
-## Done (tested)
-
-- `UpdatesTab.test.tsx` (+3): the ruling's three All Projects titles. Rewritten by title (follow-up ruling):
-  `All Projects: an empty state instead of a list` → `All Projects: the updates come from allProjects/updates, never
-  updates/get` (P5.9 commit b; the P5.5 placeholder sentence is gone).
-
-## Done (untested)
-
-- All Projects in VS Code: commit c.
-
-## Not started
-
-- The ExTester test and the remaining docs (commit c); the sidebar's All Projects (P5.10).
-
-## Deviations from contract/ADR (file:line each)
-
-- `touchedBy` stays flat for `ops/bulkUpdateAllProjects` (ruling; P5 phase review).
-
-## Advisor decisions (date, item, question, answer verbatim)
-
-The P5.9 ruling and the commit-b follow-up (both 2026-10-15) are verbatim in `docs/plans/STATUS.md`.
-
-## Exact next step (one item ID)
-
-P5.9 commit c (ExTester `main-all-projects.ui.test.ts`, docs), after commit b's CI run is green.
-
-## Earlier notes of this directory
-
-git status --porcelain --untracked-files=all (before commit a): modified `ARCHITECTURE.md`, `CHANGELOG.md`, `docs/plans/STATUS.md`, `src/test/harness/{FakeWebview,scenarios.test}.ts`, `src/webview/main/main.css`, `src/webview/main/features/details/{DetailsPane,DetailsPane.test}.tsx`, `src/webview/main/features/installed/{InstalledTab,InstalledTab.test,InstalledProjectSection}.tsx`, `src/webview/main/features/updates/{UpdatesTab,UpdatesTab.test}.tsx`, `src/webview/shared/store/{allProjects,allProjects.test}.tsx` and the three STATUS notes; new `src/webview/main/features/all-projects/folderGroups.tsx`, `src/webview/main/features/details/MultiInstallDialog.tsx`, `src/webview/main/features/installed/{AllProjectsTransitiveSection,AllProjectsView.test}.tsx` (all belong to P5.9 commit a)
-
-Item: **P5.9 feature all-projects, commit a of three** (ruling of 2026-10-15): `features/all-projects/folderGroups.tsx`
-(`groupByFolder`, `FolderGroups`: a heading per workspace folder with two or more folders, sections one level down);
-`InstalledTab.tsx` uses it in All Projects and mounts `AllProjectsTransitiveSection`; `InstalledProjectSection.tsx`:
-an `Unsupported` badge in the header, the banner first, the list only for `sdk-too-old` (read-only) or a supported
-project, no count without a list; `installed/AllProjectsTransitiveSection.tsx` (aggregate by `lowerId@version`, origins
-by project and full root set, "no traceable top-level package", Restore for the unrestored projects);
-`details/MultiInstallDialog.tsx` and `DetailsPane.tsx` (an installed or update row in All Projects changes its own
-project; a browse row offers Install… and the picker sends `ops/bulkInstall`); `UpdatesTab.tsx`: an unsupported
-project's rows have no action and take no bulk selection; `main.css` the folder, picker rules.
-
-## Verified by running
-
-P5.9 commit a (the same gate run for every directory of the commit):
-
-```text
-baseline at 69205e2          → CI run 38706897616 green on all 11 jobs · npx tsc --noEmit 0 · npx eslint src 0 ·
-                               npx vitest run exit 0
-stop-and-ask (sdk-too-old, All Projects updates, the ExTester path, then the P5.4 test's line 166) → ruling of
-                               2026-10-15 (verbatim in docs/plans/STATUS.md): three green commits a, b, c
-npx tsc --noEmit / npm run check-types / npx eslint src / npm run lint → exit 0 each (last run after every code edit)
-git diff --numstat 69205e2 -- src/webview/main/features/installed/InstalledTab.test.tsx → 1 1 (line 166 only)
-main features and store/allProjects.test.tsx, 20 times → 20 of 20 (exit codes counted)
-npx vitest run --project integration src/test/harness -t 'late allProjects chunk after switching is discarded', 40
-                               times → 40 of 40 · the whole harness exit 0 · "both orders" untouched
-npm test (NUIGET_SDK_TESTS=1, DOTNET_ROOT set) → exit 0 · Test Files 156 passed (156) · Tests 3196 passed (3196)
-npm run bench                → exit 0 · Test Files 20 passed (20) · Tests 119 passed | 1 skipped (120)
-npx vitest run --coverage    → exit 0 (thresholds hold, the 2.0 webview key included) · store/allProjects.tsx 96.25 %
-npm run docs:protocol:check  → docs/protocol.md is up to date
-rm -rf dist && node esbuild.mjs --v2 --production --analyze → extension 281249 / 299921 · webview 508743 / 600685
-                               (501695 at P5.8) · sidebar 305381 / 329122 (304283 at P5.8)
-rm -rf dist && NUIGET_V2=1 npm run package && npm run check:vsix → check:vsix: OK
-NUIGET_V2=1 npm run test:ui:v2 -- --storage /tmp/nuiget-ui-v2 → 16 passing (18s); fixture unchanged
-npm run package:vsix (1.x)   → SKIPPED: no 1.x file changed; CI's Package job builds it
-npm run test:ui (1.x)        → SKIPPED: no 1.x UI file changed; the CI job `UI` runs it
-test -e .claude/.contract-change → false · git diff --stat 69205e2 -- src/protocol src/core src/host docs/adr package.json
-                               .vscode-test.mjs esbuild.mjs vitest.config.mts eslint.config.mjs .github/workflows → empty
-```
-
-## Done (tested)
-
-- `AllProjectsView.test.tsx` (7): folder headings and levels, one folder without headings, the transitive aggregate with
-  Restore and its invalidation, the two unsupported titles of the ruling, axe; `aggregateTransitive`/`describeOrigins`.
-- `DetailsPane.test.tsx`: `a browse selection under All Projects changes nothing and says why` (P5.7, mine) rewritten by
-  title to `a browse selection under All Projects opens the project picker and installs into the projects picked` (with
-  axe and `aria-dialog-name` passing), as P5.7's deviation handed it to P5.9; new `an installed row under All Projects
-  changes its own project`.
-- `UpdatesTab.test.tsx`: new `rows of an unsupported project have no action and cannot join a bulk update`.
-- `InstalledTab.test.tsx` `All Projects: one section per project, selections across them become ops/bulkRemoveAllProjects
-  with the project names`: line 166 re-scoped as the ruling's step 2 says (named by title).
-
-## Done (untested)
-
-- All Projects in VS Code: commit c adds the ExTester test over a second project created at runtime; folder headings and
-  `sdk-too-old` cannot be shown on the runners (one workspace folder, SDK 10 only) and are proved in jsdom.
-
-## Not started
-
-- All Projects updates (commit b), the ExTester test and the remaining docs (commit c); the sidebar's All Projects
-  (P5.10).
-
-## Deviations from contract/ADR (file:line each)
-
-- `MultiInstallDialog.tsx` stays under `details` and `AllProjectsTransitiveSection.tsx` under `installed` (P5.4 put
-  `TransitiveSection` there); only the folder groups are in `features/all-projects` (ruling step 2).
-- `touchedBy` keeps the flat cross product for all-projects bulk requests; `ops/bulkInstall` is exact; the shape question
-  goes to the P5 phase review (ruling).
-- "All Projects (N)" counts every discovered project, unsupported ones included (`Project` has no support flag).
-- The fixture workspace has a `nuget.config`; the P5.8 claim that it has none is corrected in `src/test/ui/v2/STATUS.md` and `main-sources.ui.test.ts` (P5.9 commit c).
-
-## Advisor decisions (date, item, question, answer verbatim)
-
-The P5.9 ruling of the `architecture-advisor` (2026-10-15) is verbatim in `docs/plans/STATUS.md` under "### P5.9 — stop-and-ask: sdk-too-old placement, All Projects updates, the ExTester path, and the P5.4 test's line 166". The ambient advisor was consulted before writing (the gate scenario first, the `seq` rule as the generation rule, the aggregation in the feature, `touchedBy` checked).
-
-## Exact next step (one item ID)
-
-P5.9 commit b (All Projects updates), after commit a's CI run is green.
-
-## Earlier notes of this directory
-
-git status --porcelain --untracked-files=all (before the commit): modified `.github/copilot-instructions.md`, `ARCHITECTURE.md`, `CHANGELOG.md`, `docs/plans/{STATUS,findings-ledger}.md`, `src/core/catalog/{Catalog,Catalog.test,feedContexts,feedContexts.test}.ts`, `src/host/{handlers,handlers.test}.ts`, `src/webview/main/{MainShell.tsx,main.css}`, `src/webview/shared/store/{sources.tsx,sources.test.tsx}` and the five STATUS notes; new `src/webview/main/features/sources/{SourcesControl,SourceSettingsDialog,SourcesControl.test}.tsx`, `src/test/ui/v2/main-sources.ui.test.ts` (all belong to the P5.8 commit)
-
-Item: **P5.8 feature sources**, for this directory: `features/sources/SourcesControl.tsx` (`source-selector` over All
-sources and the enabled sources, disabled until the list is known; the gear `source-settings`; `ui/openSourceSettings`)
-and `SourceSettingsDialog.tsx` (`source-settings-modal`; `source-row-<name>` with the enable checkbox, URL, declaring
-config file and Remove with an in-dialog confirm row naming that file; `add-source-panel` with config file, URL, the
-insecure option for `http:`, name and credentials; focus to the URL field and back to Add source). `MainShell.tsx`
-mounts `SourcesControl` in place of the disabled selector; `main.css` the dialog's rules. `wc -l MainShell.tsx
-index.tsx` → 190 + 27 = 217 (< 300).
-
-## Verified by running
-
-P5.8 (the same gate run for every directory of the item):
-
-```text
-baseline at f8bfe3f          → CI run 38701616594 green on all 11 jobs · npx tsc --noEmit 0 · npx eslint src 0 · npx vitest run →
-                               Test Files 154 passed (154) · Tests 3162 passed | 4 skipped (3166)
-stop-and-ask (config chain for configFile attribution) → ruling 1b of 2026-10-15 (verbatim in src/core/catalog/STATUS.md
-                               and docs/plans/STATUS.md)
-first repeat of the sources tests → 0 of 20: an unhandled rejection in sources.test.tsx (a rejected promise awaited after
-                               the host answered) made every run exit 1 with all tests passed; fixed in the test, gotcha
-                               row added to copilot-instructions; the counts of earlier runs had hidden it
-first backend run with ruling 1b → 2 red: `sources/list resolves the selected project's directory` (the call now carries
-                               `{ configFiles: true }`, asserted as ruling step 5 says) and `updates asks installed before
-                               the feed context and walks the chain once` (step 3 started the walk before the inspection;
-                               fixed by starting the inspection first, no test changed)
-npx tsc --noEmit / npm run check-types / npm run lint → exit 0 each (last run after every code edit)
-npm test (NUIGET_SDK_TESTS=1, DOTNET_ROOT set) → exit 0 · Test Files 155 passed (155) · Tests 3184 passed (3184)
-npx vitest run --project backend src/core/catalog src/host src/extension.next.test.ts → exit 0 (extension.next.test.ts
-                               unchanged: :365 and :373 as they were)
-npx vitest run --project integration src/test/harness → 19 passed · "sources unreachable shows banner not empty" 40 of
-                               40 · "both orders" (6 scenarios of the matrix at :95) 40 of 40; no harness file changed
-sources feature and slice tests, 20 times → 20 of 20 (exit codes counted)
-npm run bench                → exit 0 · Test Files 20 passed (20) · Tests 119 passed | 1 skipped (120)
-npx vitest run --coverage    → exit 0 · store/sources.tsx 98.27 % lines · main/features/sources 93.45 %
-npm run docs:protocol:check  → docs/protocol.md is up to date
-rm -rf dist && node esbuild.mjs --v2 --production --analyze → extension 281249 / 299921 (280657 at P5.7) · webview
-                               501695 / 600685 (492873) · sidebar 304283 / 329122 (303486); dist/ deleted after
-rm -rf dist && NUIGET_V2=1 npm run package && npm run check:vsix → check:vsix: OK
-NUIGET_V2=1 npm run test:ui:v2 -- --storage /tmp/nuiget-ui-v2 → 16 passing (18s), with and after the core change;
-                               fixture unchanged
-grep -c "configFiles: true" src/host/handlers.ts → 2 · catalog.sources in extension.next.ts:154 and SidebarHost.ts:88
-                               without the flag · one withConfigFiles call in Catalog.ts, inside sources() after the query
-npm run package:vsix (1.x)   → SKIPPED: no 1.x file changed; CI's Package job builds it
-npm run test:ui (1.x)        → SKIPPED: no 1.x UI file changed; the CI job `UI` runs it
-test -e .claude/.contract-change → false · git diff --stat c4c3617 -- src/protocol src/core/contracts.ts docs/adr
-                               src/core/project/context.ts src/extension.next.test.ts → empty
-```
-
-## Done (tested)
-
-- `SourcesControl.test.tsx` (8): the selector waits for the list and asks `session/set`; a selected source missing from
-  the list; rows with the declaring file and the enable checkbox; Remove confirmed in the dialog with the file named, and
-  without `configFile` for a source whose file is unknown; Add source with config file and credentials; the insecure
-  option, a refusal kept in the form, Back with focus on Add source; the host opens the dialog and Escape closes it; axe
-  with `aria-dialog-name` passing.
-- `MainShell.test.tsx` unchanged: `the source selector shows the session source and offers no other yet` still holds,
-  and now describes the state before the list is known (no `sources/list` answer in that test).
-
-## Done (untested)
-
-- The attribution against a real SDK in VS Code: the ExTester test shows the rows, not their `configFile` (a machine's
-  user-level config file differs; the jsdom and host tests cover what is shown and sent).
-
-## Not started
-
-- The sidebar's source and restore title-bar state and "Open full view" (P5.10); the multi-install picker (P5.9).
-
-## Deviations from contract/ADR (file:line each)
-
-- The selector stays disabled while `sources/list` fails, as it is without a project.
-- Interaction model §1 also shows the source in the sidebar's title bar: P5.10's.
-
-## Advisor decisions (date, item, question, answer verbatim)
-
-The P5.8 ruling of the `architecture-advisor` (2026-10-15, option 1b) is verbatim in `docs/plans/STATUS.md` under "### P5.8 — stop-and-ask: the config chain for `configFile` attribution in `Catalog.sources()`" and in `src/core/catalog/STATUS.md`. The ambient advisor was consulted before writing (the selector disabled until the list is known keeps the P5.3 test as written, the in-dialog confirm row, `allowInsecure` for `http:`, no mutation in VS Code).
-
-## Exact next step (one item ID)
-
-P5.9 (feature all-projects), after P5.8's CI run is green.
-
-## Earlier notes of this directory
-
-git status --porcelain --untracked-files=all (before the commit): modified `ARCHITECTURE.md`, `CHANGELOG.md`, `docs/plans/STATUS.md`, `src/webview/main/{MainShell.tsx,index.tsx,main.css}`, `src/webview/main/features/installed/InstalledTab.tsx`, `src/webview/main/features/updates/UpdatesTab.tsx`, `src/webview/main/features/search/BrowseList.tsx`, `src/webview/shared/store/StoreProvider.tsx`, `src/webview/shared/tokens.css` and the three STATUS notes; new `src/webview/main/features/details/{DetailsPane,DetailsInfo,ReadmeView}.tsx`, `markdown.ts`, `DetailsPane.test.tsx`, `markdown.test.ts`, `src/webview/shared/store/{details.tsx,details.test.tsx}`, `src/test/ui/v2/main-details.ui.test.ts` (all belong to the P5.7 commit)
-
-Item: **P5.7 feature details**, for this directory: `features/details/DetailsPane.tsx` (header with the installed
-version and `uninstall-button`, `version-selector` newest first with `(installed)`, `install-update-button` reading
-Install, Update or Downgrade by the order of the host's list, the stale banner, the reasons a change is not possible,
-the local-source sentence, `CentralUpdateDialog` for a central package, `Tabs` `details-tab-details` and
-`details-tab-readme`), `DetailsInfo.tsx` (description, facts, vulnerabilities, dependencies, offline wording),
-`ReadmeView.tsx` (`readme-content`, `readme-empty`, Retry; sanitized HTML set after sanitizing, copy buttons, images
-through `readme/image`), `markdown.ts` (the port). `InstalledTab.tsx`, `UpdatesTab.tsx` and `BrowseList.tsx` call
-`select()` when the user makes a row current; `MainShell.tsx`'s `details` is a render prop with `announce`;
-`index.tsx` passes `details={view => <DetailsPane {...view} />}`; `main.css` the pane, README and `nuiget-hljs-*`
-rules. `wc -l MainShell.tsx index.tsx` → 192 + 27 = 219 (< 300).
-
-## Verified by running
-
-P5.7 (the same gate run for every directory of the item):
-
-```text
-baseline at 4dfa2e5          → CI run 38697862878 green on all 11 jobs · npx tsc --noEmit 0 · npx eslint src 0 ·
-                               npx vitest run → Test Files 151 passed (151) · Tests 3115 passed | 4 skipped (3119)
-markdown port alone (esbuild --bundle --minify) → 159750 bytes, before any UI work (no ceiling at risk)
-first stylesheet lint        → `every class selector starts with .nuiget-` red for `.hljs-*`; fixed by highlight.js's
-                               own `classPrefix: 'nuiget-hljs-'` (no test changed)
-npx tsc --noEmit / npm run check-types / npm run lint → exit 0 each (last run after every code edit)
-npm test (NUIGET_SDK_TESTS=1, DOTNET_ROOT set) → Test Files 154 passed (154) · Tests 3166 passed (3166)
+baseline: P6.4b's tree (58ad2dd) green locally (npm test 3315 passed | 6 skipped) and in CI run 38797338490. The
+                               baseline run started for this item raced with the first edit of `rules.ts` (vitest read
+                               the edited file) and reported 6 failures of that edit; it is not a baseline.
+npx tsc --noEmit             → exit 0
+npm run check-types          → exit 0
+npx eslint src               → exit 0
+npx vitest run --project frontend src/webview → Test Files 71 passed (71) · Tests 1070 passed (1070)
+npx vitest run src/test/lint → Tests 153 passed (153) (interaction-model test ids with `cpm-preview-confirm`)
+npm test                     → Test Files 165 passed (165) · Tests 3328 passed | 6 skipped (3334)
 npm run bench                → Test Files 20 passed (20) · Tests 119 passed | 1 skipped (120)
-npx vitest run --coverage    → exit 0 (thresholds hold) · store/details.tsx 96.77 % lines · main/features/details 94.68 %
-npm run docs:protocol:check  → docs/protocol.md is up to date
-rm -rf dist && NUIGET_V2=1 npm run package && npm run check:vsix → check:vsix: OK
-rm -rf dist && node esbuild.mjs --v2 --production --analyze → extension 280657 / 299921 · webview 492873 / 600685
-                               (320845 at P5.6; + marked, highlight.js core with 15 languages, DOMPurify) · sidebar
-                               303486 / 329122 (300411 at P5.6; + the details slice); dist/ deleted after
-NUIGET_V2=1 npm run test:ui:v2 -- --storage /tmp/nuiget-ui-v2 → 15 passing (17s) at the first run; fixture unchanged
-main/features and store/details.test.tsx, 20 times in a row → 20 of 20
-npm run package:vsix (1.x)   → SKIPPED: no 1.x file changed; CI's Package job builds it
-npm run test:ui (1.x)        → SKIPPED: no 1.x UI file changed; the CI job `UI` runs it
-test -e .claude/.contract-change → false · git diff --stat 4dfa2e5 -- src/protocol src/core docs/adr src/host package.json → empty
+rm -rf dist && node esbuild.mjs --v2 --production --analyze → extension 291154 / 299921, webview 522304 / 600685
+                               (+3704), sidebar 318305 / 329122 (+593)
+rm -rf dist && NUIGET_V2=1 npm run package → exit 0 · npm run check:vsix → 15 files, check:vsix: OK
+NUIGET_V2=1 npm run test:ui:v2 -- --storage /tmp/nuiget-ui-v2, first run → 20 passing, 11 failing (7 min): the root
+                               was `installs a package from the details of its browse row, …`, "Timed out after 240000 ms
+                               waiting for NUnit in TestProject.csproj"; its `after all` could not clear the search, and
+                               the shell, Updates and the six theme-pass tests failed on the panel it left (20 browse rows)
+the same suite on the stashed tree (58ad2dd) → 32 passing (50s) · again with P6.4c applied → 32 passing (50s)
+CI                           → see the tracker row of P6.4c
 ```
 
 ## Done (tested)
 
-- `DetailsPane.test.tsx` (14): empty state, versions with the installed mark, Update/Downgrade/ops/update and busy,
-  Install from browse with the source, an update row's latest version and the CPM preview, the Details tab, the two
-  offline sentences, the README with its image through the host, a stripped script and the copy button, README empty
-  and Retry, the README tab kept for the same row, stale selection, All Projects, the local-source sentence, axe; `primaryAction`.
-- `markdown.test.ts` (25): the 20 titles of 1.x `markdownSetup.test.ts` (the copy-button title now over
-  `addCopyButtons`), event handlers and `javascript:` stripped, `srcset` stripped, and `rewriteImages` (upgrade, alt text, four at a
-  time, abort).
+- `features/updates/CentralUpdateDialog.tsx` is the real dialog (asks `cpm/preview`, lists the projects by name, `null` preview, error with Retry, Cancel aborts; `cpm-preview-confirm`); `CentralUpdateDialog.test.tsx` (5 tests). `UpdatesTab`, `AllProjectsUpdates` and `DetailsPane` open it for a `central` row and run `ops/update` on confirm; override rows announce `whyNotUpdatable`; central rows stay out of Update all (N76); `DetailsPane` notes the central entry and uninstalls a central row directly. `InstalledProjectSection` passes `versionTitle` for unresolved rows; central rows are selectable and removable. Tests rewritten by title: `UpdatesTab.test.tsx` `a centrally managed package opens the read-only preview of the central change and sends nothing` → `a centrally managed package asks for the preview, lists the projects it changes and updates only when confirmed`; `DetailsPane.test.tsx` `an update row shows its latest version first; a centrally managed package opens the read-only preview` → `… previews the central change and updates on confirm`; `InstalledTab.test.tsx` `select all selects the removable rows only and the toolbar counts them` (inverted), and by the follow-up ruling `the dialog lists the selected packages; Escape and Cancel send nothing` and `Confirm asks ops/bulkRemove with exactly the listed ids, closes the dialog, and the rows are busy until the request settles`. New: `a centrally managed package uninstalls from its project without a dialog`, `an override row is not updated and says why`, `provisional: the badge leaves when the authoritative list replaces the chunk` (All Projects: the single-project main panel has no project header and no badge).
+- `docs/ux/interaction-model.md`: §4 "Centrally managed", §5 "CPM central change" and the keyboard paragraph amended;
+  §8 lists `cpm-preview-confirm`.
 
 ## Done (untested)
 
-- Copying a code block in VS Code (the clipboard is covered in jsdom only), and README images in VS Code (the ExTester
-  test does not depend on the README having images).
+- The sidebar's central path ends in the host's modal, which only the host tests cover (P6.4a).
 
 ## Not started
 
-- The sources settings and selector (P5.8), the multi-install picker (P5.9), the sidebar's "View package details" and
-  "Open full view" (P5.10), central version changes (P6.3).
+- N76 (central rows in Update all), N74 (override rows): P7.5.
 
 ## Deviations from contract/ADR (file:line each)
 
-- `primaryAction`: 1.x compared versions numerically when one was missing from the list; the webview has no comparator
-  (P6.5 owns version conformance), so a version it cannot place says Update.
-- The `version` of `ui/navigateToPackage` is still not used: the exact search selects the version found (the latest);
-  the sidebar's senders are P5.10's, which decides whether the version is kept.
-- All Projects: a browse selection cannot be installed from the pane (the multi-install picker is P5.9's); an installed
-  or update selection is cleared when All Projects is committed.
-- The Installed and Updates lists call `select()` on a click (and Installed also on Enter); in the Updates list Enter
-  still updates (P5.5).
-- An installed row selected while All Projects is committed shows a disabled Install and no Installed row: the pane
-  reads the installed entry of the committed single project only. All-projects display and actions are P5.9's.
-- Interaction model §7 lets one primary button read Install / Update / Downgrade / Uninstall; the pane follows 1.x with
-  Install / Update / Downgrade on `install-update-button` and a separate `uninstall-button` (both ids are in §8). A
-  reading of §7, recorded because `docs/ux/interaction-model.md` is not an item file.
-- A stale selection whose new installed list fails stays stale (banner, actions disabled) until that list's Retry
-  succeeds.
-- The Details tab is shown again for another package or version; the same row made current again, or confirmed for
-  another project, keeps the tab (the README is asked again on the README tab).
+- None (no frozen file). The main panel's provisional badge is only in All Projects, where a project header exists;
+  in the single-project view there is no header to carry it (interaction model §4 places it on the project header).
 
 ## Advisor decisions (date, item, question, answer verbatim)
 
-2026-10-15, P5.7: no L1 consultation (the item is not ⚑ and no stop-and-ask trigger fired: the bundle stayed under its ceiling, `Catalog.versions` returns a defined order so no comparator was needed, the lists' `select()` calls are what the row's note "P5.7 reads it" names). The ambient advisor was consulted before writing; its points are in the code: the slice owns the selection for the stale rule, the markdown port in `main/features/details` (N63), no `highlight.js/styles` import (colour gate), every image through `readme/image`, the echo check as the gate, `CentralUpdateDialog` reused, the bundle measured before the UI.
+2026-10-15, P6.4 (stop-and-ask):
+
+`````text
+DECISION: A1 + B1 + C1 + D2 + E-host (a better E the brief did not list: the sidebar's central update goes through the host's actions menu, and the host confirms with a VS Code modal before submitting; no `Dialog` enters the sidebar bundle) + F-tooltip (a `versionTitle` on `Row`, nothing else is missing) + G1-opt-in (the fake answers `msbuild` from the files only when the scenario asks; the existing scenario keeps its title, a new scenario carries the gate's title) + H2 as three sub-rows: P6.4a (contract + host, sentinel `P6.4a`), P6.4b (harness fake + gate scenario), P6.4c (webviews + interaction model). CONTRACT CHANGE: one request, `cpm/preview`, and the move of `CpmImpactPreview` from `src/core/contracts.ts` to `src/protocol/domain.ts` (exact text under CONTRACT CHANGE). Nothing here is the owner's.
+
+WHY: The brief is right about the tree on every path it names, and misses one live defect that decides E: since P6.3b the sidebar's QuickPick path runs a central edit with no preview at all (`src/host/SidebarHost.ts:204,214` submit `operations.update`, `:191,198,216` submit `operations.install` with a version; `DefaultProjectMutator.canMutate` admits a CPM install/update on SDK 10 with a version, `src/core/project/mutator.ts:59-71`), which violates interaction model §5 row 73 and ADR-004 tier 3 ("CPM mutations show an affected-projects preview", `docs/adr/004-project-model.md:41-43`); the preview therefore has to exist host-side anyway, and §1 and §3 of the interaction model already put choices in QuickPicks/modals on the sidebar and dialogs in the main panel, so routing the sidebar's central update through `ui/contextMenu` costs no bytes against the 11 427 of headroom (N63, P5 review 5). A2 fails because the sidebar never holds the fan-out and the main panel only in All Projects; A3 would tell the user after the fact what ADR-004 says must be shown before; so the preview reaches the main panel through a request, which is a contract change under D6 (`scripts/hooks/guard.mjs:36` freezes `src/core/contracts.ts`, `src/protocol/**`, `docs/adr/**`; `docs/ux/**` is not frozen). B3 is out: no SDK command writes a `VersionOverride`, the extension edits no project file (ADR-003; `mutator.ts:4` "never writes a file: the edit itself is the CLI's") and the mutator refuses override rows until a probe row exists (N74, `mutator.ts:53-55`), so the dialog offers one action and §5 row 73 is amended, not silently deviated from. C1 because a single uninstall on a CPM project removes the project's own reference only and never the central entry (ADR-004 tier 3 `:44`, plan gate `never deletes central entry on single uninstall`, probe row `remove` in `src/core/cli/__fixtures__/sdk-probes/10.0.401.json`: project diff only); there is nothing to preview, and the mutator admits every remove (`mutator.ts:44-47`), so `whyNotRemovable`'s central branch (`src/webview/shared/installed/rules.ts:38-40`) goes and §4 row 57 / §5 row 73 say so. D2 because a bulk of central rows would need one preview per row inside `UpdateAllDialog`; it is a separate finding, not this item. The gate scenario's second act is feasible without a core change: the execution context is rebuilt per computation and its revision covers `Directory.Packages.props` (`src/core/project/revision.ts:11-12,46`), so the evaluator cache (`src/core/project/evaluator.ts:56`) misses after the fake's props edit. Two `affectedProjects` lists exist and the tests must not confuse them: the mutator's preview includes the asking project (`mutator.ts:102-105`), the workflow strips it from the outcome (`src/core/ops/PackageWorkflows.ts:234-242`).
+
+DO:
+
+P6.4a — contract and host (sentinel `.claude/.contract-change` with content exactly `P6.4a`, created before the first frozen edit, deleted before the commit)
+
+1. Tracker first: split row P6.4 into P6.4a/P6.4b/P6.4c with this ruling verbatim under `## Advisor decisions` of `docs/plans/STATUS.md`; mark P6.4a `in-progress`.
+2. `src/protocol/domain.ts`, after `OperationOutcome` (`:281-296`): move the interface in, verbatim:
+   ```ts
+   /** What a central version change reaches (ADR-004 tier 3): the mutator's preview, shown before `ops/update` or `ops/install` of a centrally managed package. */
+   export interface CpmImpactPreview {
+       centralPropsPath: string;
+       packageId: string;
+       /** The central version before the change. */
+       fromVersion?: string;
+       toVersion: string;
+       /** Every project importing that props file that references the package without an override, the asking project included. */
+       affectedProjects: string[];
+   }
+   ```
+3. `src/core/contracts.ts`: delete lines 323-330 (the local `CpmImpactPreview`), add `CpmImpactPreview` to the `import type { … } from '../protocol/domain'` list (`:10-22`) and add `export type { CpmImpactPreview };` next to it, so `src/core/project/mutator.ts:9` and `PackageWorkflows.ts` keep importing it from `../contracts` unchanged. One definition, not two (D6).
+4. `src/protocol/messages.ts`: add `CpmImpactPreview` to the import from `./domain` and, after `'ops/bulkRemoveAllProjects'` (`:162`), a new group:
+   ```ts
+       // Central Package Management
+       /** The projects a central version change would reach, asked before `ops/update` or `ops/install` of a centrally managed package (ADR-004 tier 3, interaction model §5). `preview` is `null` when the project does not use Central Package Management or the package has no central entry; the edit itself goes through `ops/*`, whose gate decides. */
+       'cpm/preview': { payload: { projectPath: string; packageId: string; version: string }; result: { preview: CpmImpactPreview | null } };
+   ```
+   `version` is the version the edit writes (the ops payload name, ADR-007 naming); `null`, not `undefined`, after the `package/metadata` precedent (`:138`).
+5. `src/protocol/guards.ts:28`: append `'cpm/preview': true,` to the ops lines of `REQUEST_TYPE_RECORD` (tsc fails until it is there).
+6. ADRs, inline in ADR-000's form: `docs/adr/007-protocol.md:3` header gains `· Amended: 2026-10-15 (plan item P6.4a: the cpm/preview request)` and a bullet after the `readme/image` one (`:28`): "`cpm/preview` is the 44th request: the mutator's affected-projects preview (`ProjectMutator.previewCpmImpact`) for the dialog of interaction model §5. The preview carries every project the central entry applies to, the asking one included; an outcome's `affectedProjects` lists the other projects. The edit itself still goes through `ops/update` or `ops/install`, whose gate decides." `docs/adr/004-project-model.md:3` header gains `· Amended: 2026-10-15 (plan item P6.4a: the preview reaches the webviews; the override choice waits for N74)` and tier 3 (`:41-43`) gains after "distinguish central update vs project `VersionOverride`": "(the UI offers the central update alone until finding N74 is probed; a `central-override` row is read-only for updates and the `cpm/preview` request carries the preview to the webviews)".
+7. `npm run docs:protocol` → `docs/protocol.md` says `## Requests (44)`; `ARCHITECTURE.md:46` "43 requests" → "44 requests".
+8. `src/host/services.ts`: `HostServices` gains `/** The execution context of a project without the config chain (no dotnet nuget config paths), for a preview the mutator computes outside an operation. */ contextFor(projectPath: string): Promise<ProjectExecutionContext>;`. `src/extension.next.ts` implements it next to `mutator` (`:136`): `contextFor: projectPath => contexts.get(projectPath, workspaceFolderFor(projectPath), { configChain: false }).then(result => result.context)`. No memo: the SDK probe is cached per directory already (P6.3 ruling, `createWorkflowDeps`).
+9. `src/host/handlers.ts`, in `registerSharedHandlers` after the ops handlers: `host.on('cpm/preview', async ({ projectPath, packageId, version }) => ({ preview: await services.mutator.previewCpmImpact(await services.contextFor(requireProject(projectPath)), packageId, version) ?? null }));`. Shared, both surfaces (the harness asks from either).
+10. `src/host/SidebarHost.ts`: a private `confirmCentralChange(projectPath, packageId, version): Promise<boolean>`: `version === undefined` → `true`; else `const preview = await this.services.mutator.previewCpmImpact(await this.services.contextFor(projectPath), packageId, version)`; `preview === undefined` → `true` (not CPM, or a new entry: the mutator decides); else the project names from `catalog.projects()` for `preview.affectedProjects` (fall back to `path.basename`) and `const choice = await vscode.window.showWarningMessage(\`Update the central version of ${packageId}?\`, { modal: true, detail: \`${preview.fromVersion ?? '(none)'} → ${version} in ${path.basename(preview.centralPropsPath)} applies to: ${names.join(', ')}\` }, 'Update central version'); return choice === 'Update central version';`. Call it before every single-project `operations.install` or `operations.update` that names a version (`:172` single target of the browse picker, `:191`, `:198`, `:204`, `:214`, `:216`); `false` → `return false`. Not before `bulkInstall` (`:174`; D2). An error from the preview is caught, logged through `redact`, and the action proceeds to the gate (the mutator refuses on its own grounds).
+11. Tests. `src/host/handlers.test.ts`: rewritten by title `covers the 43 requests of the protocol` → `covers the 44 requests of the protocol` (`:236-239`, `payloads` gains `'cpm/preview': { projectPath, packageId: 'Serilog', version: '4.1.0' }`); new `cpm/preview answers the mutator's preview over the chain-less context, null without a central entry, and rejects ALL_PROJECTS` (fake `mutator.previewCpmImpact` resolves a preview once and `undefined` once; assert `services.contextFor` was called with the project path and the response is `{ preview }` then `{ preview: null }`; `requireProject` error for the sentinel); `SidebarHost: an update of a centrally managed package shows the projects it changes first and submits only when confirmed` (`vi.mocked(vscode.window.showWarningMessage).mockResolvedValueOnce('Update central version')`; assert the message, `{ modal: true, detail }` naming both project names, then one `operations.update` submission); `SidebarHost: the central change cancelled in the modal submits nothing` (the mock's default `undefined`, `src/test/__mocks__/vscode.ts:200`; no ticket, `handled: false`); `SidebarHost: a package without a central entry is submitted without a modal` (preview `undefined`; `showWarningMessage` not called). The fake services of the test file (`:89-105`) gain `contextFor: vi.fn(async projectPath => contextOf(projectPath))`.
+12. Gates: `npx tsc --noEmit`, `npm run check-types`, `npx eslint src`, `npm run docs:protocol:check`, `npx vitest run --project backend src/protocol src/host src/core/project src/core/ops src/extension.next.test.ts`, `npm test`, `npm run bench`, `npx vitest run --coverage` → `src/host/**` lines ≥ 87; `git diff --name-only -- src/protocol docs/adr src/core/contracts.ts` → exactly `src/protocol/domain.ts`, `src/protocol/messages.ts`, `src/protocol/guards.ts`, `src/core/contracts.ts`, `docs/adr/004-project-model.md`, `docs/adr/007-protocol.md`; delete the sentinel; `node esbuild.mjs --v2 --production --analyze` (expect extension ≈ +0.8 KB, webview/sidebar unchanged; paste); docs: ARCHITECTURE 2.0 section only (the `messages.ts` row, the handlers row with `cpm/preview`, the `SidebarHost` row with the modal, the `HostServices` row with `contextFor`), CHANGELOG `## [Unreleased]` `### Added`: `**2.0 Central Package Management preview** — the host previews which projects a central version change reaches (cpm/preview) and the sidebar's actions menu confirms it before the edit`; ledger: new `N75` (next free id after N74; Medium; "From P6.3b to P6.4a the sidebar's QuickPick path submitted a central update or install-with-version with no preview" → closed in P6.4a) and new `N76` (Low; "Bulk update and bulk uninstall leave central rows out of the update batch (D2): a per-row preview inside the bulk dialog is unbuilt" → open, P7.5 decides); P5 review note 1 on the P6.2 row closes as "not needed by P6.4". Handoff notes: `src/protocol/STATUS.md`, `src/host/STATUS.md`, `src/STATUS.md`. Commit `feat(protocol,host): cpm/preview request, host-side central-change confirmation (P6.4a, D6, D7, ADR-004, ADR-007, N75)`; push; wait for green CI.
+
+P6.4b — harness fake and the gate scenario (no frozen file)
+
+13. `src/test/harness/fakeDotnet.ts`: `createFakeDotnet()` gains `msbuild: 'none' | 'files'` (default `'none'`: today's empty answer, so every existing scenario still sees the evaluation fail and stays provisional). With `'files'`, `answerFor` answers `call.args[0] === 'msbuild'` from the project file `call.args[1]` with the probe fixture's JSON shapes (`src/core/cli/__fixtures__/sdk-probes/10.0.401.json`, `evaluations`): a `-getProperty:` call prints `{"Properties":{"TargetFramework":…,"TargetFrameworks":…,"ManagePackageVersionsCentrally":"true"|"","CentralPackageVersionOverrideEnabled":""}}`; a `-getItem:` call prints `{"Items":{"PackageReference":[{Identity, Version?, VersionOverride?, DefiningProjectFullPath: <project>}…],"PackageVersion":[{Identity, Version, DefiningProjectFullPath: <props>}…]}}`. Read the XML with `fast-xml-parser` directly in the fake (or the regexes the fake already uses over the harness's own `projectXml`/`centralPropsXml` shapes); import nothing from `src/core/project`: the oracle shares no code with what it checks (`harness.ts:325`). The props file is the nearest `Directory.Packages.props` walking up to the scratch root.
+14. Same file, CPM-aware edits, each pinned to a probe row: `package add X --version V --project P` where P's nearest props has `ManagePackageVersionsCentrally` true → `setCentralVersion(props, X, V)` (replace the `<PackageVersion Include="X" …/>` or insert one before the last `</ItemGroup>`) and ensure `<PackageReference Include="X" />` without `Version` in P (rows `add-newer-version`: project diff empty, props version replaced; `add-absent`: both files gain a line); `package add` without `--version` on a CPM project → no file changes (row `add-no-version`); `package remove` → project only, props untouched (row `remove`). Non-CPM behaviour unchanged. Export `setCentralVersion` for the harness's `files` (optional).
+15. `src/test/harness/harness.ts`: `HarnessOptions.evaluate?: boolean` ("the fake dotnet answers msbuild from the files, so installed lists end authoritative"); when true, `dotnet.msbuild = 'files'`; `expectState` (`:348`) expects `options.evaluate ? 'authoritative' : 'provisional'`. The 16 existing scenarios are untouched.
+16. `src/test/harness/scenarios.test.ts`: keep `central version change affecting several projects: one props edit reaches both projects on both surfaces` (`:343-390`) as it is. Add, right after it, `central version change affects several projects: one central update from a surface reaches both projects on both surfaces, authoritative` with `evaluate: true` and the same tree. Acts: (a) resolve both surfaces, main in All Projects, `expectState` 13.0.1 on both, `sidebar.installed?.fidelity === 'authoritative'`, and the sidebar's latest `installed/get` has exactly one chunk `{ kind: 'provisional' }` before its response (the provisional→authoritative upgrade end to end); `h.dotnet.count(dotnetCalls.msbuild(C1)) >= 2`. (b) `h.request('main', 'cpm/preview', { projectPath: C1, packageId: 'Newtonsoft.Json', version: '13.0.3' })` → `{ preview: { centralPropsPath: props, packageId: 'Newtonsoft.Json', fromVersion: '13.0.1', toVersion: '13.0.3', affectedProjects: [C1, C2] } }` (order as discovered; compare as a set if discovery order is not pinned). (c) `h.operate('sidebar', 'ops/update', { projectPath: C1, packageId: 'Newtonsoft.Json', version: '13.0.3' })`; the response outcome has `edit.ok`, `affectedProjects: [C2]` (the asking project stripped), `restore.ok`; `h.dotnet.count(dotnetCalls.packageAdd('Newtonsoft.Json')) === 1` with no `--no-restore` in that call's `args` (D7) and `count(dotnetCalls.restore()) === 2` (C1 and the consumer); on disk the props file has 13.0.3 and neither project file has a `Version` attribute; both surfaces got one `resources/invalidated` with `reason: 'operation'` whose keys contain `installed(C1)` and `installed(C2)`; `expectState` 13.0.3 on both surfaces (`installed` and `allProjects`). (d) The watcher sees the operation's own props edit, as in VS Code: `h.files.writeProps(props, fs.readFileSync(props, 'utf8'))`, advance past `WATCHER_DEBOUNCE_MS`, `expectState` unchanged and no surface answered for a request it did not send (the `sidebar: uninstall then watcher invalidation converges` pattern, `:392-409`). (e) `expectOneResponsePerRequest` on both.
+17. Run `npx vitest run --project integration src/test/harness` and the new scenario 40 times (`for i in $(seq 1 40); do npx vitest run src/test/harness/scenarios.test.ts -t "central version change affects" || break; done`) → 40 of 40. Gates as in step 12 minus the protocol ones; `npm test`, `npm run bench`. Docs: ARCHITECTURE harness row (fake msbuild from files behind `evaluate`, CPM-aware add); copilot-instructions gotcha row "Fake dotnet evaluates only when asked": `createHarness({ evaluate: true })` makes the fake answer `msbuild` from the files and `expectState` then expects `authoritative`; without it the evaluation fails and every list stays provisional; a scenario that asserts the authoritative path or a CPM edit needs the option. Handoff note `src/test/harness/STATUS.md` ("Later scenarios"). Commit `test(harness): fake msbuild from the files, CPM-aware package add, gate scenario central version change affects several projects (P6.4b, ADR-004, D7)`; push; green CI.
+
+P6.4c — webviews and the interaction model (no frozen file; `docs/ux/interaction-model.md` is not frozen but changes in the same commit as the behaviour)
+
+18. `src/webview/shared/installed/rules.ts`: `whyNotRemovable` loses the central branch (`:38-40`) and its JSDoc sentence; new `export function whyNotUpdatable(entry: InstalledPackage, result: InstalledResult): string | undefined`: unsupported → `${id} cannot be updated: ${message}`; `declaration === 'unresolved'` → `${id} cannot be updated: its reference could not be resolved`; `declaration === 'central-override'` → `${id} has a VersionOverride in the project and is not updated from here until that edit is probed` (N74); else `undefined`. New `export const isCentral = (entry) => entry.declaration === 'central'` (override rows are not central for the preview). New `export const UNRESOLVED_HINT = 'Its version could not be resolved from the project files; edit the project file by hand.'`.
+19. `src/webview/shared/primitives/Row.tsx`: new prop `versionTitle?: string` rendered as `title` on `.nuiget-row-version` (`:98`); nothing else on the option. `Row.test.tsx`: `the version cell carries its title`. `ProjectPackages.tsx:104` and `InstalledProjectSection.tsx:122` pass `versionTitle={unresolved ? UNRESOLVED_HINT : undefined}` (§4 row 56: tooltip on the version cell). The provisional badge and its tooltip exist (`InstalledSection.tsx:134-135`, `InstalledProjectSection.tsx:161`); add no announcement for the upgrade (none in §4; one live region, P5 review 2).
+20. `src/webview/main/features/updates/CentralUpdateDialog.tsx` becomes the real dialog: props `{ request: { projectPath: string; packageId: string; fromVersion: string; toVersion: string; sourceUrl?: string } | null; onClose: () => void; onConfirm: () => void }`. While open it asks `useMessageBus().request('cpm/preview', { projectPath, packageId, version: toVersion }, { signal })`, aborting on close/unmount; states per §4: loading text, then the list of project names (`useProjects()` maps `affectedProjects` paths to names, `path.basename`-like fallback on the last segment, since the webview cannot import core) under "Changes the central version `from` → `to` in Directory.Packages.props for:", `preview: null` → "The central entry was not found; the update changes this project only." with the action still offered (the host gate decides), an error → inline error with Retry. Footer: Cancel (initial focus, closes) and `<button data-testid="cpm-preview-confirm">Update central version</button>`, disabled until the preview answered. Keep `data-testid="cpm-preview-dialog"`, `role="alertdialog"` (ConfirmDialog's semantics) and the accessible name `${packageId} is centrally managed`. The owner of the dialog runs `run('ops/update', …)` (or `ops/install` from the details pane when the package is not installed there) on `onConfirm`, through the ops slice, never `bus.request('ops/…')`.
+21. Owners: `UpdatesTab.tsx` (`:57-60,83-95,97-104,157-177,202`): `isCentral` → open the dialog with `{ projectPath, packageId, fromVersion: installedVersion, toVersion: latestVersion, sourceUrl }`; `whyNotUpdatable` → announce and stop (override rows); bulk candidates still exclude central and override rows (D2) with the announcement `${id} is centrally managed; update it on its own to see the projects it changes`. Same in `AllProjectsUpdates.tsx` (`:173,191,205-206,298`). `DetailsPane.tsx` (`:100,110-114,127-128,133-138,205`): the primary button on a central row opens the dialog with the chosen version; `whyNotUpdatable` feeds `primaryWhy` for override rows; `uninstall` of a central row runs `ops/remove` directly (`removalBlocked` no longer set for central); a `nuiget-details-note` for a central entry: "Its version is set centrally in Directory.Packages.props: updating changes it for every project that uses it; uninstalling removes it from this project only." `InstalledTab.tsx` / `InstalledProjectSection.tsx`: central rows become selectable for the bulk uninstall and get the row action (removable now).
+22. Sidebar, no dialog: `ProjectUpdates.tsx:59-74,106-109`: a central row's Enter and row button call `menu({ packageId, installedVersion, latestVersion, context: 'updates', projectPath, versionType, sourceUrl })` (the host's QuickPick, then the modal of P6.4a); the row keeps its `row-action-update` button for central rows; an override row announces `whyNotUpdatable`; hint text: "Enter updates to the latest version (a centrally managed package: opens the actions menu); Ctrl+Enter (Cmd+Enter) opens the full view; Shift+F10 opens the actions menu." `ProjectPackages.tsx`: unchanged except that central rows now have the uninstall action (rule change).
+23. `src/webview/shared/store/outcomes.ts` `describeOutcome`: when `affectedProjects` is non-empty, append `; also restored ${n} other project(s)` (the outcome's list is the other projects). Test `describeOutcome names the other projects a central change restored`.
+24. `docs/ux/interaction-model.md`: §4 row 57 → "Centrally managed | "CPM" badge on the row; version cell shows central version | `declaration: 'central' \| 'central-override'`. An update shows an impact preview first (main panel: dialog; sidebar: the actions menu and a VS Code modal); an uninstall removes the project's reference only and keeps the central entry (ADR-004), without a dialog; a `central-override` row is not updated from the UI until finding N74 is probed." §5 row 73 → "CPM central change | Any update of a `central` package | Main panel: **Dialog** (`cpm-preview-dialog`) listing the projects the central version applies to; choice: *Update central version* / Cancel. Sidebar: the row's primary action opens the actions menu and the host confirms with a modal listing the same projects. *Override in this project only* waits for N74. An uninstall of a central row needs no confirmation (the central entry stays)." §5 keyboard paragraph, after "sidebar: performs its primary action": "(on a centrally managed update row: opens the actions menu)". §8 layer-roots row: `cpm-preview-dialog`, `cpm-preview-confirm`. §8 is read by `src/test/lint/interaction-model-testids.test.ts`.
+25. Tests rewritten by title (each listed in the STATUS note): `src/webview/sidebar-next/SidebarView.test.tsx:106` `CPM: a centrally managed package has the badge, its central version, and is read-only for now` → `CPM: a centrally managed package has the badge, its central version, and uninstalls from this project`; `:441` `whyNotRemovable` (central and override → `undefined`; add a `whyNotUpdatable` test); `:94` `unresolved: the row says so, is disabled and has no action` gains the version title assertion; `src/webview/sidebar-next/UpdatesSection.test.tsx:82` → `Enter or the row button updates the package to its latest version; a centrally managed one opens the actions menu` (asserts one `ui/contextMenu` request with `context: 'updates'` and no `ops/update`); `src/webview/main/features/updates/UpdatesTab.test.tsx:125` → `a centrally managed package asks for the preview, lists the projects it changes and updates only when confirmed` (fake host answers `cpm/preview` with `[A, B]`; Cancel sends nothing; Confirm sends one `ops/update`; `axeRuleOutcome(await axe(document.body), 'aria-dialog-name') === 'passes'`); `:95` and `:111` keep their titles (still true; the announcement still starts with "is centrally managed"); `src/webview/main/features/updates/UpdatesTab.test.tsx:230` region and `AllProjectsUpdates` tests likewise; `src/webview/main/features/details/DetailsPane.test.tsx:121` → `an update row shows its latest version first; a centrally managed package previews the central change and updates on confirm`, plus a new `a centrally managed package uninstalls from its project without a dialog`; `src/webview/main/features/installed/InstalledTab.test.tsx:85-100` the Space-on-central-row expectation inverts (selectable) under the same title. New: `CentralUpdateDialog.test.tsx` (loading, list, null preview, error with Retry, cancel aborts the request); `an override row is not updated and says why` on both surfaces; `provisional: the badge leaves when the authoritative list replaces the chunk` where no test asserts it yet (`InstalledTab.test.tsx`, `SidebarView.test.tsx:85`).
+26. Gates: `npx tsc --noEmit`, `npm run check-types`, `npx eslint src`, `npx vitest run --project frontend src/webview`, `npm test`, `npm run bench`, `rm -rf dist && NUIGET_V2=1 npm run package && npm run check:vsix`, `node esbuild.mjs --v2 --production --analyze` (expect sidebar ≈ +0.3 KB, ≤ 329 122; webview ≈ +3 KB, ≤ 600 685; paste all three), `NUIGET_V2=1 npm run test:ui:v2 -- --storage /tmp/nuiget-ui-v2` if the environment allows (note it otherwise). Docs: ARCHITECTURE 2.0 section rows for `rules.ts`, `CentralUpdateDialog`, the sidebar updates row, `Row.versionTitle`; CHANGELOG `### Added`: `**2.0 Central Package Management in the UI** — a centrally managed package updates through a preview of the projects its central version applies to, and uninstalls from its project while the central entry stays`; copilot-instructions gotcha "Central row without the preview": never `run('ops/update')` on a `central` row outside `CentralUpdateDialog`'s confirm (main) or the actions menu (sidebar); an override row is read-only for updates (N74); `whyNotRemovable` no longer blocks central rows. Handoff notes `src/webview/shared`, `src/webview/main`, `src/webview/sidebar-next` STATUS. Close P6.4 in the tracker; commit `feat(webview): CPM impact dialog, central uninstall, unresolved tooltips (P6.4c, ADR-004, ADR-008, N74, N76)`; push; green CI; then P6.5.
+
+DO NOT:
+- Do not compute the preview in a webview from the `allProjects` fan-out, and do not announce it after the edit instead of before (ADR-004 tier 3).
+- Do not put `Dialog` into the sidebar bundle for this; the sidebar's choice goes through `ui/contextMenu` and the host's modal.
+- Do not offer "Override in this project only" (no SDK command, mutator refuses, N74) and do not have the extension edit a project or props file itself (ADR-003).
+- Do not make `fakeDotnet` answer `msbuild` by default, and do not import the inspector or `parseCentralPackageVersions` into the fake.
+- Do not rename or weaken the existing `central version change affecting several projects` scenario; add the gate-titled one next to it.
+- Do not change the other 16 scenarios' `fidelity: 'provisional'` expectations; the option decides.
+- Do not add a second `CpmImpactPreview` definition, a bare `CpmImpactPreview | undefined` result, or any other key to `RequestMap`/`EventMap`; do not add per-project pairs to `OperationProgress` (P5 review 1: not needed).
+- Do not widen `ContextMenuRequest` with a `declaration` field to tell the host a row is central; the host asks the mutator.
+- Do not put central rows into `ops/bulkUpdate`/`ops/bulkUpdateAllProjects` (N76 decides later), and do not catch `cpm/preview` errors by proceeding silently in the dialog; show Retry.
+- Do not gate the modal on `request.context`; gate on "the preview is defined".
+- Do not commit while `.claude/.contract-change` exists, and do not touch any frozen path in P6.4b or P6.4c.
+
+CONTRACT CHANGE: item P6.4a only, sentinel `.claude/.contract-change` with content exactly `P6.4a`, created after this ruling is pasted into `docs/plans/STATUS.md` and deleted before the commit. Frozen files: `src/protocol/domain.ts` (the `CpmImpactPreview` interface of DO 2), `src/protocol/messages.ts` (the `cpm/preview` entry and the import of DO 4), `src/protocol/guards.ts` (the one key of DO 5), `src/core/contracts.ts` (the deletion and re-export of DO 3), `docs/adr/007-protocol.md` and `docs/adr/004-project-model.md` (header dates and the sentences of DO 6). `docs/protocol.md` regenerated in the same commit. `docs/ux/interaction-model.md` is not frozen (`scripts/hooks/guard.mjs:36`) and changes in P6.4c with the behaviour. P6.4b and P6.4c touch no frozen file.
+
+VERIFY:
+- P6.4a: `grep -n "cpm/preview" src/protocol/messages.ts src/protocol/guards.ts src/host/handlers.ts docs/protocol.md` → one hit each (plus the JSDoc); `grep -n "interface CpmImpactPreview" src/protocol/domain.ts src/core/contracts.ts` → `domain.ts` only; `grep -n "CpmImpactPreview" src/core/contracts.ts` → the import and the re-export; `grep -c "^## Requests (44)" docs/protocol.md` → 1; `npm run docs:protocol:check` → 0; `npx vitest run --project backend src/host` → green with the four new titles and `covers the 44 requests of the protocol`; `ls .claude/.contract-change` → no such file at the commit; `node esbuild.mjs --v2 --production --analyze` → extension ≤ 299 921; CI green.
+- P6.4b: `npx vitest run --project integration src/test/harness` → 17 tests green, the scenario `central version change affects several projects: …` present and 40 of 40 alone; `grep -n "evaluate" src/test/harness/harness.ts` → the option and the `expectState` branch; `grep -n "from '../../core/project" src/test/harness/fakeDotnet.ts` → nothing; `git diff --name-only -- src/protocol src/core/contracts.ts docs/adr` → empty.
+- P6.4c: `grep -n "cannot be uninstalled from this view yet\|Central updates are not available" src/webview` → nothing; `npx vitest run --project frontend src/webview` → green with the rewritten titles of DO 25; `npx vitest run src/test/lint/interaction-model-testids.test.ts` → green with `cpm-preview-confirm` in §8; `grep -n "Override in this project only" docs/ux/interaction-model.md` → only the "waits for N74" sentence; `node esbuild.mjs --v2 --production --analyze` → sidebar ≤ 329 122, webview ≤ 600 685; `npm run check:vsix` → 0; CI green on all jobs.
+
+Files checked (absolute): /Users/mattias/github/nuiget/.github/agents/architecture-advisor.agent.md; /Users/mattias/github/nuiget/docs/plans/2026-10-11-nuiget-2.0-execution-plan.md (41-175, 288-320); /Users/mattias/github/nuiget/docs/plans/STATUS.md (rows 88-101, the P6.2 ruling 2888-2949, the P6.3 ruling 2972-3024, P5 review notes 695-700); /Users/mattias/github/nuiget/docs/plans/findings-ledger.md (N51, N63, N74 rows 154, 166, 171, 400-423); /Users/mattias/github/nuiget/docs/adr/004-project-model.md; /Users/mattias/github/nuiget/docs/adr/007-protocol.md; /Users/mattias/github/nuiget/docs/adr/008-webview-architecture.md (1-80); /Users/mattias/github/nuiget/docs/ux/interaction-model.md (whole); /Users/mattias/github/nuiget/docs/protocol.md (14, 62); /Users/mattias/github/nuiget/ARCHITECTURE.md (10, 46, 595, 643); /Users/mattias/github/nuiget/scripts/hooks/guard.mjs (9, 36); /Users/mattias/github/nuiget/src/core/contracts.ts (10-22, 300-359); /Users/mattias/github/nuiget/src/protocol/domain.ts (1-80, 255-315); /Users/mattias/github/nuiget/src/protocol/messages.ts; /Users/mattias/github/nuiget/src/protocol/guards.ts; /Users/mattias/github/nuiget/src/core/project/mutator.ts; /Users/mattias/github/nuiget/src/core/project/evaluator.ts (1-145); /Users/mattias/github/nuiget/src/core/project/context.ts (4, 27-53); /Users/mattias/github/nuiget/src/core/project/revision.ts (7-46); /Users/mattias/github/nuiget/src/core/project/central.ts (87, 107); /Users/mattias/github/nuiget/src/core/catalog/Catalog.ts (43-72, 146-173, 195-226, 242, 317-322); /Users/mattias/github/nuiget/src/core/ops/PackageWorkflows.ts (60-120, 200-260); /Users/mattias/github/nuiget/src/core/cli/commands.ts (136-156); /Users/mattias/github/nuiget/src/core/cli/__fixtures__/sdk-probes/10.0.401.json (commands and evaluations) and /Users/mattias/github/nuiget/src/core/cli/__fixtures__/sdk-probes/cpm/{App/App.csproj,Directory.Packages.props}; /Users/mattias/github/nuiget/src/host/handlers.ts (1-270); /Users/mattias/github/nuiget/src/host/services.ts (1-80); /Users/mattias/github/nuiget/src/host/SidebarHost.ts (25, 37-38, 100-230); /Users/mattias/github/nuiget/src/host/pickers.ts (93-117); /Users/mattias/github/nuiget/src/host/handlers.test.ts (89-105, 236-239, 575-597, 631-729 titles); /Users/mattias/github/nuiget/src/host/STATUS.md (50-55, 136); /Users/mattias/github/nuiget/src/extension.next.ts (19, 87, 104, 111-136); /Users/mattias/github/nuiget/src/test/__mocks__/vscode.ts (199-200); /Users/mattias/github/nuiget/src/test/harness/fakeDotnet.ts; /Users/mattias/github/nuiget/src/test/harness/harness.ts (35-80, 130-150, 180-373); /Users/mattias/github/nuiget/src/test/harness/FakeWebview.ts (1-30, 54-64, 98-106, 158-181, 199-203, 243-275); /Users/mattias/github/nuiget/src/test/harness/scenarios.test.ts (13-30, 330-409, 723, scenario titles); /Users/mattias/github/nuiget/src/test/harness/STATUS.md (370-400, 451, 490-502); /Users/mattias/github/nuiget/src/test/lint/interaction-model-testids.test.ts (12); /Users/mattias/github/nuiget/src/webview/shared/installed/rules.ts; /Users/mattias/github/nuiget/src/webview/shared/primitives/Row.tsx (20-60, 80-112); /Users/mattias/github/nuiget/src/webview/shared/primitives/Dialog.tsx (8-52); /Users/mattias/github/nuiget/src/webview/shared/primitives/ConfirmDialog.tsx (1-40); /Users/mattias/github/nuiget/src/webview/shared/store/ops.tsx (6-22, 79-87, 173-199, 228); /Users/mattias/github/nuiget/src/webview/shared/store/outcomes.ts (5, 27); /Users/mattias/github/nuiget/src/webview/shared/store/projects.tsx (64); /Users/mattias/github/nuiget/src/webview/shared/bus/useMessageBus.tsx (13); /Users/mattias/github/nuiget/src/webview/main/features/updates/UpdatesTab.tsx; /Users/mattias/github/nuiget/src/webview/main/features/updates/CentralUpdateDialog.tsx; /Users/mattias/github/nuiget/src/webview/main/features/updates/UpdateAllDialog.tsx; /Users/mattias/github/nuiget/src/webview/main/features/updates/AllProjectsUpdates.tsx (11, 29-30, 99-109, 142-143, 155, 173, 191, 205-206, 298); /Users/mattias/github/nuiget/src/webview/main/features/updates/UpdatesTab.test.tsx (95-140, 225-236); /Users/mattias/github/nuiget/src/webview/main/features/details/DetailsPane.tsx (60-218); /Users/mattias/github/nuiget/src/webview/main/features/details/DetailsPane.test.tsx (118-136); /Users/mattias/github/nuiget/src/webview/main/features/installed/InstalledProjectSection.tsx (60-168); /Users/mattias/github/nuiget/src/webview/main/features/installed/InstalledTab.test.tsx (85-100); /Users/mattias/github/nuiget/src/webview/sidebar-next/ProjectUpdates.tsx; /Users/mattias/github/nuiget/src/webview/sidebar-next/ProjectPackages.tsx; /Users/mattias/github/nuiget/src/webview/sidebar-next/InstalledSection.tsx (120-141); /Users/mattias/github/nuiget/src/webview/sidebar-next/rowRequests.ts (2-28); /Users/mattias/github/nuiget/src/webview/sidebar-next/SidebarView.test.tsx (85-126, 431-452); /Users/mattias/github/nuiget/src/webview/sidebar-next/UpdatesSection.test.tsx (80-96). Commands: `git status --short` (clean), `git log --oneline -3` (232d54c at HEAD), `grep`/`sed`/`ls`/`wc` and a read-only `python3 -I` over the probe fixture.
+`````
+
+2026-10-15, P6.4c (stop-and-ask: two InstalledTab tests the ruling did not name):
+
+`````text
+P6.4c stop-and-ask ruling (two InstalledTab tests not named by DO 25), verified against `src/webview/main/features/installed/InstalledTab.test.tsx:12,102-136` on `labs/2.0` @ 58ad2dd:
+
+DECISION: Approve the proposal for (a) and (b), with one refinement to (b): do not drop the "not busy" line, invert it.
+
+WHY: Both tests are consequences of DO 18, not independent behaviour: with the central branch gone from `whyNotRemovable`, Select all selects three rows, so the counts, the dialog list and the batch payload follow (fixture `THREE` at `:12`). The alternative (Space on the central row after Select all) would test a deselection the titles do not describe. The `:131` line `expect(optionOf('Newtonsoft.Json')).not.toHaveAttribute('aria-busy')` carried the old rule ("the central row is outside the batch"); its inverted form carries the new one and keeps the N61 meaning (busy from the request on) for every row of the batch.
+
+DO:
+1. (a) `:102` `the dialog lists the selected packages; Escape and Cancel send nothing`: `Uninstall 3 packages?`, list `['Serilog', 'Moq', 'Newtonsoft.Json']`, `From App:` unchanged, final `Uninstall selected (3)`.
+2. (b) `:119` `Confirm asks ops/bulkRemove with exactly the listed ids, closes the dialog, and the rows are busy until the request settles`: payload `[{ projectPath: A, packages: ['Serilog', 'Moq', 'Newtonsoft.Json'] }]`; replace `:131` with `expect(optionOf('Newtonsoft.Json')).toHaveAttribute('aria-busy', 'true')`; after the outcome assert all three rows are not busy (extend `:135` to Moq and Newtonsoft.Json); keep `names()` unchanged.
+3. Keep both titles and the `THREE` fixture; list both titles under "tests rewritten by title" in the P6.4c STATUS notes with this ruling as the record, next to the six already named (SidebarView `:106`, `:441`, UpdatesSection `:82`, InstalledTab `:85-100`, DetailsPane `:121`, UpdatesTab `:125`).
+
+DO NOT:
+- Do not deselect the central row inside either test, add a fourth fixture row, or change `THREE` for other tests.
+- Do not delete the busy assertion on the central row; invert it.
+- Do not touch the titles or `:85-100` beyond what DO 25 already says.
+
+CONTRACT CHANGE: none (P6.4c touches no frozen file).
+
+VERIFY: `npx vitest run --project frontend src/webview/main/features/installed/InstalledTab.test.tsx` → green with both titles unchanged; `grep -n "Uninstall 3 packages?\|Uninstall selected (3)" src/webview/main/features/installed/InstalledTab.test.tsx` → one hit each in the two tests; `grep -c "not.toHaveAttribute('aria-busy')" src/webview/main/features/installed/InstalledTab.test.tsx` → the count after the outcome only, none before it in test (b).
+
+Files checked: /Users/mattias/github/nuiget/src/webview/main/features/installed/InstalledTab.test.tsx (12, 100-140); `git log --oneline -3` (58ad2dd, 0e814af, 232d54c).
+
+The full P6.4 ruling (A1 + B1 + C1 + D2 + E-host + F-tooltip + G1-opt-in + H2 split into P6.4a/b/c, with the `cpm/preview` contract change under sentinel `P6.4a`) was delivered in the earlier report and stands unchanged.
+`````
 
 ## Exact next step (one item ID)
 
-P5.8 (feature sources), after P5.7's CI run is green.
-
-## Earlier notes of this directory
-
-git status --porcelain --untracked-files=all (before the commit): modified `ARCHITECTURE.md`, `CHANGELOG.md`, `docs/plans/{STATUS,findings-ledger}.md`, `src/core/feeds/{enricher,enricher.test}.ts`, `src/host/handlers.test.ts`, `src/webview/main/{MainShell.tsx,index.tsx,index.test.tsx,main.css}`, `src/webview/shared/store/StoreProvider.tsx`, `src/webview/sidebar-next/{SidebarView.tsx,SidebarView.test.tsx,UpdatesSection.tsx,sidebar.css}` and the six STATUS notes; new `src/webview/shared/search/{SearchBox.tsx,SearchBox.test.tsx,search.css}`, `src/webview/shared/store/{search,sources,config}.tsx` with their tests, `src/webview/main/features/search/{BrowseList.tsx,BrowseList.test.tsx,useSearchTyping.ts,useSearchTyping.test.tsx}`, `src/webview/sidebar-next/{BrowseResults.tsx,BrowseResults.test.tsx}`, `src/test/ui/v2/main-search.ui.test.ts` (all belong to the P5.6 commit)
-
-Item: **P5.6 feature search**, for this directory: `features/search/BrowseList.tsx` (`browse-list`, comfortable rows
-with `data:` icons, authors, downloads, Verified and Installed badges, a current row by click or Enter, the package of
-an exact search current at once, the count announced, `browse-unavailable-banner` with Retry, error banner, empty
-states), `features/search/useSearchTyping.ts` (timers by `searchDebounceMode`: suggestions 150 ms after the last key
-from two characters on while the box has focus, or a full search after 300 ms; Enter at once; picking a suggestion
-and `ui/navigateToPackage` fill the box and search for the id exactly; enables `config` and `sources` on mount),
-`MainShell.tsx` (the `SearchBox` combobox, the `browse` pane in place of the tab bar while the box holds a browse
-search, leaving browse clears the search), `index.tsx` (`browse={view => <BrowseList {...view} />}`). `wc -l
-MainShell.tsx index.tsx` → 192 + 26 = 218 (< 300).
-
-## Verified by running
-
-P5.6 (the same gate run for every directory of the item):
-
-```text
-baseline at c4c3617          → CI run 38680684265 green · npx tsc --noEmit 0 · npx eslint src 0 · npx vitest run →
-                               Test Files 144 passed (144) · Tests 3061 passed | 4 skipped (3065)
-stop-and-ask 1 (source list of quick-search, searchDebounceMode) → ruling of 2026-10-15, option 2 narrowed
-first test:ui:v2 run         → stopped in vscode:prepublish at check-types: four type errors in the item's new tests
-                               (shared mock typed by its default, `act` returning Promise<unknown>, an invalid
-                               InvalidationReason); fixed, lint warning (console.log) → console.warn
-stop-and-ask 2 (src/webview/main/index.test.tsx, `config/get` at start) → ruling of 2026-10-15, option 1
-npx tsc --noEmit / npm run check-types / npx eslint src / npm run lint → exit 0 each (last run after every edit)
-npm test (NUIGET_SDK_TESTS=1, DOTNET_ROOT set) → Test Files 151 passed (151) · Tests 3119 passed (3119)
-npm run bench                → Test Files 20 passed (20) · Tests 119 passed | 1 skipped (120)
-npx vitest run --coverage    → exit 0 (thresholds hold) · store/search.tsx 97.95 % lines · store/sources.tsx 97.56 %
-                               · store/config.tsx 94.73 % · shared/search 100 % · main/features/search 97.36 %
-npm run docs:protocol:check  → docs/protocol.md is up to date
-rm -rf dist && NUIGET_V2=1 npm run package && npm run check:vsix → check:vsix: OK
-rm -rf dist && node esbuild.mjs --v2 --production --analyze → extension 280657 / 299921 · webview 320845 / 600685
-                               (309114 at P5.5) · sidebar 300411 / 329122 (288948 at P5.5); dist/ deleted after
-NUIGET_V2=1 npm run test:ui:v2 -- --storage /tmp/nuiget-ui-v2 → 14 passing (16s) at the second run (the first
-                               stopped at check-types, above) · `[P5.6] cold search: 2323 ms from Enter to the first row`
-timer-based frontend tests (sidebar-next, main/features/search, shared/search, store/search), 20 times → 20 of 20
-npm run package:vsix (1.x)   → SKIPPED: no 1.x file changed; CI's Package job builds it
-npm run test:ui (1.x)        → SKIPPED: no 1.x UI file changed; the CI job `UI` runs it
-test -e .claude/.contract-change → false · git diff --stat c4c3617 -- src/protocol src/core/contracts.ts docs/adr
-                               package.json src/host/services.ts → empty
-```
-
-## Done (tested)
-
-- `BrowseList.test.tsx` (10): Enter searches and the tab bar goes; metadata merged (icon only for `data:`, Verified,
-  Installed, description line); current row and its reset on a new text, kept on a revalidation of the same text
-  while the package is found; `ui/navigateToPackage`; the unavailable
-  banner instead of "no results" and its Retry; empty and failure; clearing the box cancels and brings the tabs back;
-  the three filters offered by `@`; axe over `document.body`.
-- `useSearchTyping.test.tsx` (6): the two slices enabled on mount; quicksearch timing, the pick and no suggestion for
-  the picked id; Enter cancels the debounce; a prefix asks nothing; fullsearch and a `config/changed` switch; nothing
-  while the settings are unknown.
-- Rewritten by title (plan §2.1, ruling 2 of 2026-10-15): `index.test.tsx` `mounts the shell into its root, acquires
-  the API once and asks the host for the session and the projects` → `... asks the host for the session, the projects
-  and the settings`, exact set `session/get`, `projects/list`, `config/get`.
-
-## Done (untested)
-
-- The quick-search suggestions in VS Code: the ExTester test submits with Enter; suggestions, timers and both modes are
-  covered in jsdom (`useSearchTyping.test.tsx`).
-
-## Not started
-
-- Details of a browse row (P5.7), the sources settings and selector (P5.8), the multi-install picker (P5.9), the
-  sidebar's context menu, "View package details" and "Open full view" (P5.10), the search settings' `full`/`off`
-  values (N57, P5.13; done at P5.13).
-
-## Deviations from contract/ADR (file:line each)
-
-- The details pane stays the empty state when a browse row is current: details are P5.7's (`selectedId` is local to
-  `BrowseList`, as P5.4's Installed tab keeps its own). The `version` of `ui/navigateToPackage` is not used until the
-  details' version selector exists (P5.7).
-- No install action on main browse rows (interaction model §5: install is the details button, P5.7; the multi-install
-  picker P5.9).
-- The source selector stays bound to the session and disabled: the read part of `sources` landed in P5.6 (ruling 1 of
-  2026-10-15), `sources/list` is asked by the search feature's hook once the first snapshot is committed, and P5.8
-  populates and enables the selector. This replaces the P5.4 deviation about the source selector below.
-- `browse-unavailable-banner` and the suggestions list `search-suggestions` are test ids outside interaction model §8,
-  recorded for P5.12b.
-- Cold search: 2323 ms from Enter to the first row in VS Code (`[P5.6] cold search`, nuget.org, `Newtonsoft.Json`):
-  the host answers after the metadata chunk of every row, as the P4.9 ruling decided; 1.x showed lite rows first.
-  Judged acceptable for this item (a cold search: service-index discovery and the first feed reads of a fresh VS
-  Code included); no ruling asked. The P5 phase review sees the number.
-
-## Advisor decisions (date, item, question, answer verbatim)
-
-Both P5.6 rulings of the `architecture-advisor` (2026-10-15) are verbatim in `docs/plans/STATUS.md` under "### P5.6 — stop-and-ask: the source list of quick-search and `searchDebounceMode`" and "### P5.6 — stop-and-ask: the main entry's start requests". The ambient advisor was consulted before writing (scope: no install action on main browse rows, the details pane stays P5.7's, `ui/viewPackage` senders stay P5.10's, the combobox instead of `Popover`, the latency measured at the first ExTester run).
-
-## Exact next step (one item ID)
-
-P5.7 (feature details), after P5.6's CI run is green.
-
-## Earlier notes of this directory
-
-Scope of this note: `src/webview/main/**`, the 2.0 main panel webview. The ExTester side is in
-`src/test/ui/v2/STATUS.md`; the slices and primitives this item changed are in `src/webview/shared/STATUS.md`.
-
-git status --porcelain --untracked-files=all: `?? src/webview/main/features/installed/{InstalledTab.tsx,
-InstalledTab.test.tsx,InstalledProjectSection.tsx,TransitiveSection.tsx,BulkUninstallDialog.tsx}`,
-` M src/webview/main/{index.tsx,MainShell.tsx,MainShell.test.tsx,main.css,STATUS.md}`,
-`?? src/test/ui/v2/main-installed.ui.test.ts`, ` M src/test/ui/v2/STATUS.md`, ` M src/webview/shared/STATUS.md`,
-` M ARCHITECTURE.md`, ` M CHANGELOG.md`, ` M .github/copilot-instructions.md`, ` M docs/plans/STATUS.md`,
-` M docs/plans/findings-ledger.md` (all belong to P5.4 commit c)
-
-Item: **P5.4 feature installed (main), commit c of three** (a `e4a7f4f`, b `4a083b5`), as steps 7 to 9 of the
-P5.4 stop-and-ask ruling of 2026-10-14 (verbatim in `docs/plans/STATUS.md`). Earlier in this note: P5.3.
-
-git status --porcelain --untracked-files=all (P5.5, before the commit): `?? src/webview/shared/store/{updates.tsx,updates.test.tsx}`,
-`?? src/webview/main/features/updates/{UpdatesTab.tsx,UpdatesTab.test.tsx,UpdateAllDialog.tsx,CentralUpdateDialog.tsx}`,
-`?? src/webview/sidebar-next/{UpdatesSection.tsx,UpdatesSection.test.tsx}`, `?? src/test/ui/v2/main-updates.ui.test.ts`,
-` M src/webview/shared/store/StoreProvider.tsx`, ` M src/webview/main/{MainShell.tsx,index.tsx}`,
-` M src/webview/sidebar-next/{SidebarView.tsx,SidebarView.test.tsx}`, ` M src/test/harness/{FakeWebview.ts,scenarios.test.ts}`,
-` M ARCHITECTURE.md`, ` M CHANGELOG.md`, ` M docs/plans/STATUS.md` and the five STATUS notes of the item's directories
-
-Item: **P5.5 feature updates**, for this directory: `features/updates/` (`UpdatesTab.tsx`, `UpdateAllDialog.tsx`, `CentralUpdateDialog.tsx`, 9 tests), the count on the Updates tab only for a complete answer, `index.tsx` hands the tab to the shell (`updates={view => <UpdatesTab {...view} />}`; `wc -l MainShell.tsx index.tsx` → 170 + 25 = 195 < 300). Earlier in this note: P5.4.
-
-## Verified by running
-
-P5.5:
-
-```text
-baseline at 04ac55f          → CI run 38677913029 green · npx tsc --noEmit 0 · npx eslint src 0 · npx vitest run green
-first full run with the Updates section mounted → 4 of 25 `SidebarView.test.tsx` tests red at document-wide
-                               `.nuiget-skeleton-row` counts → stop-and-ask (ruling of 2026-10-16, option 1: six query
-                               sites re-scoped to the Installed section, the four tests named by title)
-npx tsc --noEmit / npm run check-types / npx eslint src → exit 0 each
-npx vitest run --project frontend src/webview/sidebar-next, 20 times in a row → 20 of 20 (4 files, 30 tests)
-npx vitest run --project integration src/test/harness → 19 passed · -t "prerelease toggle re-checks updates" 40 of 40
-npm test (NUIGET_SDK_TESTS=1, DOTNET_ROOT set) → Test Files 144 passed (144) · Tests 3065 passed (3065)
-npm run bench                → Test Files 20 passed (20) · Tests 119 passed | 1 skipped (120)
-npx vitest run --coverage     → exit 0 (thresholds hold) · store/updates.tsx 97.61 % lines · main/features/updates 89.58 %
-npm run docs:protocol:check  → docs/protocol.md is up to date
-rm -rf dist && node esbuild.mjs --v2 --production --analyze → extension 280611 / 299921 · webview 309114 / 600685
-                               (301845 at P5.4) · sidebar 288948 / 329122 (293929 noted at P5.4)
-rm -rf dist && NUIGET_V2=1 npm run package && npm run check:vsix → check:vsix: OK
-NUIGET_V2=1 npm run test:ui:v2 -- --storage /tmp/nuiget-ui-v2 → 13 passing at the first run (Updates tab: 3)
-npm run package:vsix (1.x)   → SKIPPED: no host, root, extension or 1.x file changed; CI's Package job builds it
-npm run test:ui (1.x)        → SKIPPED: no 1.x UI file changed; the CI job `UI` runs it
-test -e .claude/.contract-change → false · git diff --stat 04ac55f -- src/protocol src/core docs/adr src/host → empty
-```
-
-P5.4 commit c:
-
-```text
-npx tsc --noEmit / npm run check-types / npx eslint src / npm run lint → exit 0 each
-npx vitest run --project frontend src/webview/main src/webview/shared src/webview/sidebar-next → Test Files 36 passed
-                               (36) · Tests 286 passed (286); InstalledTab.test.tsx has the ruling's nine titles,
-                               MainShell.test.tsx `announces the outcome of an operation of either surface once`
-src/webview/main/features and MainShell.test.tsx, 40 times in a row → 40 of 40
-npx vitest run --project backend src/test/lint → Test Files 6 passed (6) · Tests 117 passed (117)
-npm test (NUIGET_SDK_TESTS=1, DOTNET_ROOT set) → Test Files 121 passed (121) · Tests 2800 passed (2800)
-npm run bench               → Test Files 18 passed (18) · Tests 112 passed | 1 skipped (113)
-npx vitest run --coverage    → exit 0 · src/webview/{shared,main,sidebar-next}/** 1184 of 1210 lines, 97.85 % (floor
-                               85) · src/webview/main 197 of 213 · src/webview/** 71.73 % (ratchet 64)
-wc -l src/webview/main/MainShell.tsx src/webview/main/index.tsx → 165 + 24 = 189 (< 300) · grep -c 'installed={'
-                               src/webview/main/index.tsx → 1
-rm -rf dist && NUIGET_V2=1 npm run package && npm run check:vsix → check:vsix: OK
-rm -rf dist && node esbuild.mjs --v2 --production --analyze → extension 168070 / 299921 · webview 301845 / 600685
-                               (244753 at P5.3) · sidebar 284204 / 329122 (278568 at P5.1; + the shared Listbox
-                               multi-selection, rules, outcomes and slices); dist/ deleted after
-NUIGET_V2=1 npm run test:ui:v2 -- --storage /tmp/nuiget-ui-v2 → 10 passing at the first run (src/test/ui/v2/STATUS.md)
-npm run docs:protocol:check  → docs/protocol.md is up to date
-npm run package:vsix (1.x entries, NUIGET_V2 unset, after rm -rf dist) → exit 0 · nuiget-v1.18.9.vsix (17 files,
-                               531.25 KB) · npm run check:vsix → OK
-npm run test:ui (1.x)       → SKIPPED: no 1.x UI file changed; the CI job `UI` runs it
-test -e .claude/.contract-change → false · git diff --stat 9000208 -- src/protocol src/core docs/adr src/host
-                               package.json esbuild.mjs vitest.config.mts eslint.config.mjs .github/workflows → empty
-```
-
-P5.3:
-
-```text
-baseline (at a275e8b) npx tsc --noEmit / npx eslint src → exit 0 / exit 0 · npx vitest run → Test Files 116
-                               passed (116) · Tests 2727 passed | 3 skipped (2730)
-line count (the gate)        → wc -l src/webview/main/MainShell.tsx src/webview/main/index.tsx → 154 + 23 = 177
-                               (< 300). The shell is these two files; `main.css` (105) and the shared parser are not
-npx tsc --noEmit / npm run check-types / npx eslint src / npm run lint → exit 0 each
-npx vitest run --project frontend src/webview/main src/webview/shared → Test Files 30 passed (30) · Tests 230 passed
-npx vitest run --project backend src/host src/test/lint → Test Files 8 passed (8) · Tests 188 passed (188)
-npm test (NUIGET_SDK_TESTS=1, DOTNET_ROOT set) → Test Files 118 passed (118) · Tests 2768 passed (2768)
-npm run bench               → Test Files 18 passed (18) · Tests 112 passed | 1 skipped (113)
-npx vitest run --coverage    → exit 0 · src/webview/main 47 of 47 lines · MainShell.tsx and parseSearchQuery.ts
-                               100 % lines and branches · src/webview/{shared,main,sidebar-next}/** 99.23 % (floor
-                               85) · src/webview/** 70.53 % (ratchet 64)
-npm run docs:protocol:check  → docs/protocol.md is up to date
-npm run package:vsix (1.x entries, NUIGET_V2 unset, after rm -rf dist) → exit 0 · nuiget-v1.18.9.vsix (17 files,
-                               531.13 KB) · npm run check:vsix → OK
-test -e .claude/.contract-change → false
-npx vitest run --project frontend src/webview/main, 40 times in a row (after the commit 7385eeb) → 40 of 40 green
-npm run test:ui (the 1.x ExTester suite) → SKIPPED: no 1.x UI file changed; the CI job `UI` runs it
-rm -rf dist && NUIGET_V2=1 npm run package && npm run check:vsix → dist/webview.css written · check:vsix: OK (N62)
-rm -rf dist && node esbuild.mjs --v2 --production --analyze → extension 168070 / 299921 · webview 244753 /
-                               600685 (placeholder 223600 before) · sidebar 278568 / 329122 (unchanged); dist/ deleted
-NUIGET_V2=1 npm run test:ui:v2 -- --storage /tmp/nuiget-ui-v2 → third run 6 passing (details and the two failed
-                               runs in src/test/ui/v2/STATUS.md; N66)
-```
-
-## Done (tested)
-
-- P5.5 `UpdatesTab.test.tsx` (9): list, versions, badges, tab count and axe; found rows stream and the prerelease flag the host commits is asked; Enter and the row button update with `sourceUrl`, the row busy; Update all leaves central packages out; Space selection and the central refusal announced; the read-only central preview sends nothing; an unreachable source is a banner with Retry and no count; "No updates available." only for a complete answer; All Projects empty state.
-P5.4 commit c (`features/installed/`, the ruling's step 7):
-
-- `InstalledTab.tsx`: the sections (one for the committed project from the installed slice, one per project from
-  the allProjects slice in All Projects), the current row (`{ projectPath, id }`, click and Enter), the bulk set by
-  project path, the `Toolbar` with `select-all-button` and `uninstall-selected-button`, the `BulkUninstallDialog`,
-  single uninstall by Delete or the row's button (`ops/remove`, no confirmation), the `TransitiveSection` for a
-  single project. Selection and dialog reset when the committed selection changes.
-- `InstalledProjectSection.tsx`: one project's multi-selectable `Listbox` (comfortable rows, CPM and Vulnerable
-  badges, busy status words from `IN_PROGRESS`, the uninstall row action only where `whyNotRemovable` allows it),
-  loading, error with Retry, unsupported banner, empty states; in All Projects under a collapsible `SectionHeader`
-  with the project's name, count and the provisional badge. `visibleRows` holds the filter rules.
-- `TransitiveSection.tsx` (`transitive-section`): closed until opened, then lists by target framework with
-  "Required by" descriptions, `transitive-restore-banner` with Restore, error banners with Retry, empty state.
-- `BulkUninstallDialog.tsx`: `ConfirmDialog` "Uninstall N packages?" listing the packages under "From <project>:".
-- `MainShell.tsx`: announces `describeOutcome` of every outcome once (`announces the outcome of an operation of
-  either surface once`); `index.tsx` passes `installed={view => <InstalledTab {...view} />}`; `main.css`: the tab's
-  layout. Tests: `InstalledTab.test.tsx`, the ruling's nine titles.
-
-- `index.tsx`: as the sidebar's entry: `acquireVsCodeApi()` once, inside `if (rootElement)` (`#root`, which
-  `MainPanelHost` renders), `createMessageBus`, `StoreProvider` around `MainShell`; imports `../shared/tokens.css`
-  and `main.css`, so a `--v2` build writes `dist/webview.css`. `index.test.tsx` (two tests, rewritten in place;
-  the title `does not mount itself when the page has no root element` kept).
-- `MainShell.tsx`: `main` landmark `nuiget-app`; header with `project-selector` (projects slice, "All Projects
-  (N)" with two or more, "Loading projects…" / "No projects", disabled until the session), `source-selector`
-  (the session's source, disabled), "Include prerelease" (`session/set { includePrerelease }`), Refresh
-  (`refresh/all`, outcome in the live region); `search-input` in a `search` landmark; `Tabs` (`tab-bar`,
-  `installed-tab`, `updates-tab`); the split (`Sash` 25–75 %, `--nuiget-split` through `cssVars`), the details
-  pane `package-details-panel` with the empty state; one `status-live`. `@installed`/`@vulnerable` select
-  Installed, `@updates` Updates, and the text after the prefix is handed to the list (`ListView.filter`,
-  `vulnerableOnly`); browse text changes nothing; Escape clears or blurs; another tab ends a filter mode;
-  `ui/selectProject` with `initialTab` and `ui/focusSearch`. 14 tests in `MainShell.test.tsx`, the last over
-  `document.body` with axe and no React console error.
-- `main.css`: the column, header, search box, split and details pane; tokens only, `nuiget-` classes.
-- `src/webview/shared/search/parseSearchQuery.ts` with its 24 tests, ported unchanged from 1.x.
-- `src/host/MainPanelHost.ts`: the first of the two JSDoc comments on `notifyInvalidated` deleted.
-
-## Done (untested)
-
-- All Projects in VS Code: the ExTester tests drive the single-project list only (the fixture workspace has one
-  project). The per-project sections, their scroll container and the all-projects bulk request are shown by
-  `InstalledTab.test.tsx` in jsdom, not in a real webview.
-- The transitive section in VS Code: no ExTester test opens it (the fixture has no restored assets file in CI).
-- The Updates tab and the details pane stay empty until P5.5 and P5.7.
-- The split is not kept across reloads (`getState`/`setState`): with the surface-local state of P5.10.
-- The Updates tab has no count badge: with the updates slice (P5.5).
-
-## Not started
-
-- Browse: the results list, quick-search, the `@` prefix dropdown and hiding the tab bar in browse mode (interaction
-  model §2): P5.6.
-- The list of sources in the source selector and the source settings dialog: P5.8. `ui/openSourceSettings` and
-  `ui/navigateToPackage` are not handled by the shell yet (P5.8, P5.6).
-
-## Deviations from contract/ADR (file:line each)
-
-P5.4 commit c:
-
-- `index.test.tsx` is not edited: both of its tests still hold with the Installed tab mounted (the tab asks nothing
-  before the session has arrived), so there was nothing to rewrite.
-- `InstalledProjectSection.tsx`: the rows show no package icon. 1.x showed icons fetched from the feeds; the 2.0
-  host has no icon source until P4 and P5.7's details; the comfortable row reserves no space for one.
-- `InstalledTab.tsx`: Select all takes the removable rows the filter shows and leaves out rows that are busy; a
-  package selected earlier that has left the list is dropped from what the dialog lists.
-- `TransitiveSection.tsx`: the rows' metadata is used for a Vulnerable badge only; descriptions come with P5.7.
-- `installed-list-<name>` (All Projects) and `transitive-list` are test ids outside interaction model §8, recorded for
-  P5.12b, which decides whether they enter the table (as the P3 review asked for the sidebar's).
-
-- `MainShell.tsx` (source selector): interaction model §1 shows the source in a header selector. It is there, bound
-  to the session alone and disabled. The read part of `sources` landed in P5.6 (ruling of 2026-10-15): `sources/list`
-  is asked by the search feature's hook once the first snapshot is committed; populated and enabled at P5.8.
-- `MainShell.tsx` (search): §2 says browse hides the tab bar; until the results list exists (P5.6) browse text
-  changes nothing on screen. §2's `@` prefix dropdown is P5.6's.
-- `MainShell.tsx` (layout): the tab bar sits over the list pane, the details pane beside both, so the details stay
-  when the tab changes and browse (P5.6) can replace the list pane alone.
-- Interaction model §1 lists the restore toggle among the shared context; the main header does not show it. The
-  sidebar's title-bar toggles are P5.10's; whether the main header gets one too is decided there.
-
-## Advisor decisions (date, item, question, answer verbatim)
-
-2026-10-14, P5.3: no L1 consultation (the item is not ⚑ and no stop-and-ask trigger fired). The ambient advisor was
-consulted before writing; its points are in the code and above: the source selector bound to the session and
-disabled (P5.8 owns the slice); the prerelease toggle in scope; the panes as props and the details empty state
-with its product sentence; the `@` dropdown in P5.6; `main/STATUS.md` new; `index.test.tsx` rewritten in place; a
-`mainWebview.ts` helper instead of editing P3.5's; the `check:vsix` step after the ExTester run; the gate order with
-the `NUIGET_V2` build checked locally and `package:vsix` on the 1.x entries.
-
-## Exact next step (one item ID)
-
-P5.6 (feature search, main and sidebar browse), after P5.5's CI run is green; a fresh session starts it (second compaction of this one).
-
-
-
-
-
-
-
-
-
+P6.5.

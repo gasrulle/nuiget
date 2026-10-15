@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **2.0 Central Package Management in the UI** — a centrally managed package updates through a preview of the projects its central version applies to, and uninstalls from its project while the central entry stays; an unresolved version says why in its tooltip
 - **2.0 Central Package Management preview** — the host previews which projects a central version change reaches (cpm/preview) and the sidebar's actions menu confirms it before the edit
 - **2.0 Central Package Management edits** — on a verified .NET SDK 10 the 2.0 host installs and updates centrally managed packages through dotnet package add without --no-restore, previews which projects share the central entry, restores and refreshes them after the edit, refuses an edit while the project or props file has unsaved changes, and keeps the central entry when one project uninstalls
 - **2.0 project evaluation** — `src/core/project` reads what MSBuild evaluates for a project (its target frameworks, each framework's package references and central versions, version overrides and SDK-injected references) into the same rows as the static inspection, once per project and revision, and evaluates again after a failure instead of keeping it, and both 2.0 surfaces show a project's packages from the project files at once and the evaluated list when MSBuild has answered

@@ -1,14 +1,14 @@
 import { useEffect, useId, useState } from 'react';
 import type React from 'react';
 import type { InstalledResult, PackageUpdate, ProjectUpdatesChunk } from '../../../../protocol';
-import { IN_PROGRESS } from '../../../shared/installed/rules';
+import { IN_PROGRESS, isCentral as isCentralRow, whyNotUpdatable } from '../../../shared/installed/rules';
 import { ArrowUpIcon, Badge, Banner, EmptyState, IconButton, Listbox, Row, SectionHeader, Skeleton, Toolbar } from '../../../shared/primitives';
 import { useAllProjects } from '../../../shared/store/allProjects';
 import { useDetailsActions } from '../../../shared/store/details';
 import { useOps, useOpsActions } from '../../../shared/store/ops';
 import type { ListView } from '../../MainShell';
 import { FolderGroups } from '../../../shared/allProjects/folderGroups';
-import { CentralUpdateDialog } from './CentralUpdateDialog';
+import { CentralUpdateDialog, type CentralUpdateRequest } from './CentralUpdateDialog';
 import { UpdateAllDialog } from './UpdateAllDialog';
 
 const HINT = 'Enter updates the package. Space selects it for Update all.';
@@ -139,8 +139,8 @@ function ProjectUpdatesSection(props: ProjectUpdatesSectionProps): React.JSX.Ele
 
 /**
  * The Updates tab in All Projects (interaction model §3): one section per project under its workspace folder, over the
- * `allProjects/updates` stream. Rows of an unsupported project are read-only, a centrally managed package opens the
- * read-only central preview, and Update all takes the selected rows across projects (or every candidate) as one
+ * `allProjects/updates` stream. Rows of an unsupported project are read-only, a centrally managed package is updated
+ * through the central preview (`CentralUpdateDialog`), a row with a `VersionOverride` is not updated (N74), and Update all takes the selected rows across projects (or every candidate) as one
  * `ops/bulkUpdateAllProjects`. A source that could not be checked is one banner over every section.
  */
 export function AllProjectsUpdates({ filter, announce }: ListView): React.JSX.Element {
@@ -152,7 +152,7 @@ export function AllProjectsUpdates({ filter, announce }: ListView): React.JSX.El
     const [selected, setSelected] = useState<ReadonlyMap<string, ReadonlySet<string>>>(new Map());
     const [current, setCurrent] = useState<{ projectPath: string; id: string } | null>(null);
     const [confirming, setConfirming] = useState(false);
-    const [central, setCentral] = useState<PackageUpdate | null>(null);
+    const [central, setCentral] = useState<CentralUpdateRequest | null>(null);
 
     // A new listing starts with nothing selected.
     const listedProjects = updates.projects;
@@ -188,8 +188,14 @@ export function AllProjectsUpdates({ filter, announce }: ListView): React.JSX.El
         if (section.installed?.unsupported || isPackageBusy(section.projectPath, update.id)) {
             return;
         }
-        if (isCentralIn(section.installed, update.id)) {
-            setCentral(update);
+        const entry = section.installed?.packages.find(other => other.id.toLowerCase() === update.id.toLowerCase());
+        const obstacle = entry === undefined || section.installed === undefined ? undefined : whyNotUpdatable(entry, section.installed);
+        if (obstacle !== undefined) {
+            announce(obstacle);
+            return;
+        }
+        if (entry !== undefined && isCentralRow(entry)) {
+            setCentral({ projectPath: section.projectPath, packageId: update.id, fromVersion: update.installedVersion, toVersion: update.latestVersion, sourceUrl: update.sourceUrl });
             return;
         }
         run('ops/update', { projectPath: section.projectPath, packageId: update.id, version: update.latestVersion, sourceUrl: update.sourceUrl }).catch((error: unknown) => {
@@ -203,7 +209,7 @@ export function AllProjectsUpdates({ filter, announce }: ListView): React.JSX.El
             return;
         }
         if (isCentralIn(section.installed, update.id)) {
-            announce(`${update.id} is centrally managed and cannot be part of a bulk update yet.`);
+            announce(`${update.id} is centrally managed; update it on its own to see the projects it changes`);
             return;
         }
         setSelected(previous => {
@@ -295,7 +301,20 @@ export function AllProjectsUpdates({ filter, announce }: ListView): React.JSX.El
                 onConfirm={confirm}
                 onCancel={() => setConfirming(false)}
             />
-            <CentralUpdateDialog update={central} onClose={() => setCentral(null)} />
+            <CentralUpdateDialog
+                request={central}
+                onClose={() => setCentral(null)}
+                onConfirm={() => {
+                    const change = central;
+                    setCentral(null);
+                    if (change === null) {
+                        return;
+                    }
+                    run('ops/update', { projectPath: change.projectPath, packageId: change.packageId, version: change.toVersion, sourceUrl: change.sourceUrl }).catch((error: unknown) => {
+                        announce(`Update of ${change.packageId} failed: ${error instanceof Error ? error.message : String(error)}`);
+                    });
+                }}
+            />
         </div>
     );
 }

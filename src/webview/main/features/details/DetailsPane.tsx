@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type React from 'react';
-import { ALL_PROJECTS, type InstalledPackage, type PackageUpdate } from '../../../../protocol';
-import { whyNotRemovable } from '../../../shared/installed/rules';
+import { ALL_PROJECTS } from '../../../../protocol';
+import { isCentral, whyNotRemovable, whyNotUpdatable } from '../../../shared/installed/rules';
 import { Banner, EmptyState, Tabs, type TabItem } from '../../../shared/primitives';
 import { useAllProjects } from '../../../shared/store/allProjects';
 import { useDetails, useDetailsActions } from '../../../shared/store/details';
@@ -10,7 +10,7 @@ import { useOps, useOpsActions } from '../../../shared/store/ops';
 import { useProjects } from '../../../shared/store/projects';
 import { useSession } from '../../../shared/store/session';
 import { useSources } from '../../../shared/store/sources';
-import { CentralUpdateDialog } from '../updates/CentralUpdateDialog';
+import { CentralUpdateDialog, type CentralUpdateRequest } from '../updates/CentralUpdateDialog';
 import { DetailsInfo } from './DetailsInfo';
 import { MultiInstallDialog } from './MultiInstallDialog';
 import { ReadmeView } from './ReadmeView';
@@ -41,8 +41,6 @@ export function primaryAction(installedVersion: string | undefined, chosen: stri
     return chosenIndex >= 0 && installedIndex >= 0 && chosenIndex > installedIndex ? 'Downgrade' : 'Update';
 }
 
-const isCentral = (entry: InstalledPackage): boolean => entry.declaration === 'central' || entry.declaration === 'central-override';
-
 /**
  * The details pane of the main panel (interaction model §7): the selected package with its installed version and
  * Uninstall, the version selector with Install, Update or Downgrade, and the Details and README tabs. Without a single
@@ -60,7 +58,7 @@ export function DetailsPane({ announce }: DetailsPaneProps): React.JSX.Element {
     const { isPackageBusy } = useOps();
     const { run } = useOpsActions();
     const [tab, setTab] = useState<DetailsTab>('details');
-    const [centralPreview, setCentralPreview] = useState<PackageUpdate | null>(null);
+    const [centralPreview, setCentralPreview] = useState<CentralUpdateRequest | null>(null);
 
     // Another package or version starts on the Details tab; the same one made current again, or confirmed for another
     // project, keeps the tab.
@@ -109,6 +107,8 @@ export function DetailsPane({ announce }: DetailsPaneProps): React.JSX.Element {
         primaryWhy = 'A floating or ranged version is changed in the project file';
     } else if (entry?.declaration === 'unresolved') {
         primaryWhy = 'Its reference could not be resolved';
+    } else if (entry?.declaration === 'central-override' && ownResult !== undefined) {
+        primaryWhy = whyNotUpdatable(entry, ownResult);
     } else if (installedVersion === chosen) {
         primaryWhy = 'This version is installed';
     }
@@ -125,7 +125,7 @@ export function DetailsPane({ announce }: DetailsPaneProps): React.JSX.Element {
         if (entry === undefined) {
             run('ops/install', { projectPath: target, packageId: selection.packageId, version: chosen, sourceUrl: selection.sourceUrl }).catch(fail('Install'));
         } else if (isCentral(entry)) {
-            setCentralPreview({ id: entry.id, installedVersion: installedVersion ?? entry.version, latestVersion: chosen, sourceUrl: selection.sourceUrl });
+            setCentralPreview({ projectPath: target, packageId: selection.packageId, fromVersion: installedVersion ?? entry.version, toVersion: chosen, sourceUrl: selection.sourceUrl });
         } else {
             run('ops/update', { projectPath: target, packageId: selection.packageId, version: chosen, sourceUrl: selection.sourceUrl }).catch(fail(action === 'Downgrade' ? 'Downgrade' : 'Update'));
         }
@@ -190,6 +190,9 @@ export function DetailsPane({ announce }: DetailsPaneProps): React.JSX.Element {
                     </button>
                 </div>
                 {primaryWhy !== undefined && primaryWhy !== 'This version is installed' ? <p className="nuiget-details-note">{`${primaryWhy}.`}</p> : null}
+                {entry !== undefined && isCentral(entry) ? (
+                    <p className="nuiget-details-note">Its version is set centrally in Directory.Packages.props: updating changes it for every project that uses it; uninstalling removes it from this project only.</p>
+                ) : null}
                 {versions.status === 'ready' && list.length === 0 ? (
                     <p className="nuiget-details-note">
                         {sources?.find(source => source.url === selection.sourceUrl)?.isLocal === true
@@ -202,7 +205,17 @@ export function DetailsPane({ announce }: DetailsPaneProps): React.JSX.Element {
             <Tabs tabs={TABS} selected={tab} onSelect={selectTab} label="Details sections">
                 {tab === 'details' ? <DetailsInfo /> : <ReadmeView />}
             </Tabs>
-            <CentralUpdateDialog update={centralPreview} onClose={() => setCentralPreview(null)} />
+            <CentralUpdateDialog
+                request={centralPreview}
+                onClose={() => setCentralPreview(null)}
+                onConfirm={() => {
+                    const change = centralPreview;
+                    setCentralPreview(null);
+                    if (change !== null) {
+                        run('ops/update', { projectPath: change.projectPath, packageId: change.packageId, version: change.toVersion, sourceUrl: change.sourceUrl }).catch(fail('Update'));
+                    }
+                }}
+            />
             <MultiInstallDialog
                 open={picking}
                 packageId={selection.packageId}

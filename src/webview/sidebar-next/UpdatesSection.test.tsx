@@ -22,12 +22,12 @@ const hostSays = (say: () => void): Promise<void> => act(async () => {
 });
 
 /** A sidebar on project A with its packages listed; the updates are answered when `answer` is given. */
-async function mountWith(answer?: { updates: PackageUpdate[]; sourcesUnavailable?: boolean }): Promise<FakeHost> {
+async function mountWith(answer?: { updates: PackageUpdate[]; sourcesUnavailable?: boolean }, packages: InstalledPackage[] = PACKAGES): Promise<FakeHost> {
     const host = createFakeHost();
     render(<StoreProvider bus={host.bus}><SidebarView /></StoreProvider>);
     await hostSays(() => host.respond(host.requests('session/get')[0], snapshot(1)));
     await hostSays(() => host.respond(host.requests('projects/list')[0], { projects: [{ name: 'App', path: A }] }, 1));
-    await hostSays(() => host.respond(host.requests('installed/get')[0], { projectPath: A, fidelity: 'authoritative', isCpm: true, packages: PACKAGES }, 1));
+    await hostSays(() => host.respond(host.requests('installed/get')[0], { projectPath: A, fidelity: 'authoritative', isCpm: true, packages }, 1));
     if (answer !== undefined) {
         await hostSays(() => host.respond(host.requests('updates/get')[0], { projectPath: A, ...answer }, 1));
     }
@@ -79,7 +79,7 @@ describe('sidebar: Updates section', () => {
         expect(axeRuleOutcome(results, 'aria-required-children')).toBe('passes');
     });
 
-    it('Enter or the row button updates the package to its latest version; a centrally managed one is announced, not updated', async () => {
+    it('Enter or the row button updates the package to its latest version; a centrally managed one opens the actions menu', async () => {
         const user = userEvent.setup();
         const host = await mountWith({ updates: UPDATES });
         await user.click(updateOption('Serilog'));
@@ -87,11 +87,23 @@ describe('sidebar: Updates section', () => {
         expect(host.requests('ops/update').map(request => request.payload)).toEqual([{ projectPath: A, packageId: 'Serilog', version: '3.1.0', sourceUrl: FEED }]);
         expect(updateOption('Serilog')).toHaveAttribute('aria-busy', 'true');
 
+        // A central change goes through the host's actions menu, where the host previews and confirms it (P6.4a).
         await user.click(updateOption('Newtonsoft.Json'));
         await user.keyboard('{Enter}');
-        await waitFor(() => expect(screen.getByTestId('status-live')).toHaveTextContent('Newtonsoft.Json is centrally managed'));
-        expect(within(within(updatesList()).getByTestId('package-row-newtonsoft.json')).queryByTestId('row-action-update')).toBeNull();
+        expect(host.requests('ui/contextMenu').map(request => request.payload)).toEqual([expect.objectContaining({ packageId: 'Newtonsoft.Json', context: 'updates', projectPath: A })]);
+        await user.click(within(within(updatesList()).getByTestId('package-row-newtonsoft.json')).getByTestId('row-action-update'));
+        expect(host.requests('ui/contextMenu')).toHaveLength(2);
         expect(host.requests('ops/update')).toHaveLength(1);
+    });
+
+    it('an override row is not updated and says why', async () => {
+        const user = userEvent.setup();
+        const host = await mountWith({ updates: [update('Moq', '4.18.0', '4.20.72')] }, [pkg('Moq', '4.18.0', { declaration: 'central-override' })]);
+        await user.click(updateOption('Moq'));
+        await user.keyboard('{Enter}');
+        await waitFor(() => expect(screen.getByTestId('status-live')).toHaveTextContent('Moq has a VersionOverride in the project and is not updated from here until that edit is probed'));
+        expect(host.requests('ops/update')).toHaveLength(0);
+        expect(host.requests('ui/contextMenu')).toHaveLength(0);
     });
 
     it('an unreachable source is a banner with Retry, never "No updates available", and the header shows no count', async () => {

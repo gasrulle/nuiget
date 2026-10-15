@@ -484,7 +484,7 @@ Sidebar parity (P5.10): a `Sash` between the open Installed and Updates sections
 the webview's own state (`getState`/`setState`, written when a change ends, never per pointer step); the session slice
 asks `session/get` again when the hidden view is shown (`visibilitychange`). On every sidebar list Shift+F10, the
 ContextMenu key and a right-click send `ui/contextMenu` (the host shows the row's actions as a QuickPick, as 1.x did)
-and Ctrl+Enter (Cmd+Enter) sends `ui/viewPackage`; Enter keeps the row's primary action. In All Projects both sections
+and Ctrl+Enter (Cmd+Enter) sends `ui/viewPackage`; Enter keeps the row's primary action, except on a centrally managed update row, where Enter and the row button send `ui/contextMenu` so the host previews and confirms the central change (P6.4). In All Projects both sections
 show one heading and list per project over the `allProjects` slice (`ProjectPackages`, `ProjectUpdates`), under a
 caption per workspace folder when there are several; each row acts on its own project. A search result under All
 Projects goes through `ui/contextMenu` with `projectPath: ALL_PROJECTS` and `installedProjects`, so the host's
@@ -511,8 +511,8 @@ links.
 | Loading (first) | Three skeleton rows; "Loading installed packages" in the live region |
 | Revalidating | The rows stay; the list is `aria-busy`; an indeterminate progress bar under the search box |
 | Provisional | A "provisional" badge beside the section title, with a tooltip |
-| Unresolved | Version "unresolved", status "Unresolved", the row disabled and without action |
-| Centrally managed | A "CPM" badge read as "Centrally managed"; read-only until the impact preview exists (P6) |
+| Unresolved | Version "unresolved" with a tooltip (`Row.versionTitle`, `UNRESOLVED_HINT`), status "Unresolved", the row disabled and without action |
+| Centrally managed | A "CPM" badge read as "Centrally managed"; uninstalls from this project (the central entry stays); an update goes through the host's actions menu and its modal preview (P6.4) |
 | Unsupported project | A warning banner "Unsupported project: <reason>"; the rows are listed without actions |
 | Pending operation | A spinner in place of the row's button, status "Uninstalling", from the click to the outcome |
 | Empty, error | An `EmptyState` sentence; an error banner with "Retry", over the rows if there are any |
@@ -640,7 +640,7 @@ marked) with one primary button (`install-update-button`): Install when the pack
 project, otherwise Update or Downgrade by the order of the host's list (no comparator in the webview; a version missing
 from the list says Update). The target is the committed project for a browse row and the row's own project otherwise;
 without a single project, while stale, for a floating or ranged reference or an unresolved one, the button is
-disabled with the reason. A centrally managed package opens `CentralUpdateDialog` (read-only until P6.3). Busy follows
+disabled with the reason. A centrally managed package opens `CentralUpdateDialog`, which asks `cpm/preview`, lists the projects the central version applies to and runs `ops/update` on *Update central version*; a row with a `VersionOverride` is not updated (`whyNotUpdatable`, N74); a central row uninstalls directly and the pane says that the central entry stays. Busy follows
 `isPackageBusy`.
 
 The Details tab shows description, authors, downloads, publication date, license, project URL, size, vulnerabilities

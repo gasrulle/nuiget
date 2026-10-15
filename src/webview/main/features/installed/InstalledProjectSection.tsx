@@ -1,7 +1,7 @@
 import { useId, useState } from 'react';
 import type React from 'react';
 import type { InstalledPackage, InstalledResult, PackageMetadataLite } from '../../../../protocol';
-import { IN_PROGRESS, shownVersion, whyNotRemovable } from '../../../shared/installed/rules';
+import { IN_PROGRESS, UNRESOLVED_HINT, shownVersion, whyNotRemovable } from '../../../shared/installed/rules';
 import { Badge, Banner, EmptyState, IconButton, Listbox, Row, SectionHeader, Skeleton, TrashIcon } from '../../../shared/primitives';
 import { useOps } from '../../../shared/store/ops';
 
@@ -120,6 +120,7 @@ export function InstalledProjectSection(props: InstalledProjectSectionProps): Re
                                 itemId={entry.id}
                                 name={entry.id}
                                 version={shownVersion(entry)}
+                                versionTitle={unresolved ? UNRESOLVED_HINT : undefined}
                                 description={metadata.get(entry.id.toLowerCase())?.description}
                                 density="comfortable"
                                 busy={busy}

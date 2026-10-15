@@ -34,9 +34,12 @@ export function describeOutcome(outcome: AnyOutcome): string {
         return outcome.status === 'completed' ? `${total} of ${total} operations completed` : `${done} of ${total} operations completed${because(outcome.message)}`;
     }
     const what = subject(outcome);
+    // A central change also restored the other projects that use the central entry (ADR-004 tier 3).
+    const others = outcome.affectedProjects?.length ?? 0;
+    const also = others === 0 ? '' : `; also restored ${others} other ${others === 1 ? 'project' : 'projects'}`;
     switch (outcome.status) {
         case 'completed':
-            return `${DONE[outcome.kind]} ${what}`;
+            return `${DONE[outcome.kind]} ${what}${also}`;
         case 'partial':
             // The edit was made; what failed is the restore after it.
             return `${DONE[outcome.kind]} ${what}, but the restore failed${because(outcome.restore?.error ?? outcome.message)}`;

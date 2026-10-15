@@ -118,7 +118,7 @@ describe('main panel: details', () => {
         expect(host.requests('ops/install').map(request => request.payload)).toEqual([{ projectPath: A, packageId: 'Polly', version: '8.4.2', sourceUrl: FEED }]);
     });
 
-    it('an update row shows its latest version first; a centrally managed package opens the read-only preview', async () => {
+    it('an update row shows its latest version first; a centrally managed package previews the central change and updates on confirm', async () => {
         const user = userEvent.setup();
         const host = await mountReady([pkg('Newtonsoft.Json', '13.0.1', { declaration: 'central' })], true);
         await user.click(screen.getByTestId('updates-tab'));
@@ -127,10 +127,30 @@ describe('main panel: details', () => {
         await hostSays(() => host.respond(versionsOf(host)[0], { packageId: 'Newtonsoft.Json', versions: ['13.0.3', '13.0.1'] }));
 
         expect(selector()).toHaveValue('13.0.3');
-        expect(screen.getByTestId('uninstall-button')).toBeDisabled();
+        expect(screen.getByText(/Its version is set centrally in Directory.Packages.props/)).toBeInTheDocument();
         await user.click(primary());
-        expect(screen.getByTestId('cpm-preview-dialog')).toHaveTextContent('Updating it to 13.0.3 changes the central version from 13.0.1');
+        const dialog = screen.getByTestId('cpm-preview-dialog');
+        expect(host.requests('cpm/preview').map(request => request.payload)).toEqual([{ projectPath: A, packageId: 'Newtonsoft.Json', version: '13.0.3' }]);
+        expect(within(dialog).getByTestId('cpm-preview-confirm')).toBeDisabled();
+        await hostSays(() => host.respond(host.requests('cpm/preview')[0], { preview: { centralPropsPath: '/w/Directory.Packages.props', packageId: 'Newtonsoft.Json', fromVersion: '13.0.1', toVersion: '13.0.3', affectedProjects: [A, B] } }));
+        expect(dialog).toHaveTextContent('Changes the central version 13.0.1 → 13.0.3 in Directory.Packages.props for:');
+        expect(within(dialog).getAllByRole('listitem').map(item => item.textContent)).toEqual(['App', 'Lib']);
         expect(host.requests('ops/update')).toHaveLength(0);
+        await user.click(within(dialog).getByTestId('cpm-preview-confirm'));
+        expect(screen.queryByTestId('cpm-preview-dialog')).toBeNull();
+        expect(host.requests('ops/update').map(request => request.payload)).toEqual([{ projectPath: A, packageId: 'Newtonsoft.Json', version: '13.0.3', sourceUrl: FEED }]);
+    });
+
+    it('a centrally managed package uninstalls from its project without a dialog', async () => {
+        const user = userEvent.setup();
+        const host = await mountReady([pkg('Newtonsoft.Json', '13.0.1', { declaration: 'central' })], true);
+        await user.click(option('installed-list', 'Newtonsoft.Json'));
+        await hostSays(() => host.respond(versionsOf(host)[0], { packageId: 'Newtonsoft.Json', versions: ['13.0.3', '13.0.1'] }));
+        expect(screen.getByTestId('uninstall-button')).toBeEnabled();
+        await user.click(screen.getByTestId('uninstall-button'));
+        expect(screen.queryByTestId('cpm-preview-dialog')).toBeNull();
+        expect(host.requests('cpm/preview')).toHaveLength(0);
+        expect(host.requests('ops/remove').map(request => request.payload)).toEqual([{ projectPath: A, packageId: 'Newtonsoft.Json' }]);
     });
 
     it('the Details tab: description, facts, vulnerabilities in words and dependencies by framework', async () => {

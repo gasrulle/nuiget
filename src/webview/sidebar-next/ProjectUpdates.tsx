@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import type React from 'react';
 import type { InstalledResult, PackageUpdate } from '../../protocol';
-import { IN_PROGRESS } from '../shared/installed/rules';
+import { IN_PROGRESS, isCentral, whyNotUpdatable } from '../shared/installed/rules';
 import { ArrowUpIcon, Badge, EmptyState, IconButton, Listbox, Row } from '../shared/primitives';
 import { useOps, useOpsActions } from '../shared/store/ops';
 import { useRowRequests } from './rowRequests';
@@ -31,7 +31,9 @@ export interface ProjectUpdatesProps {
 /**
  * The updates of one project as compact rows: Enter or the row's button updates the package in this project to its
  * latest version with the row's source; Ctrl+Enter opens the full view, Shift+F10 the host's actions menu. A centrally
- * managed package is not updated from here until the central editor exists (P6.3); an unsupported project is read-only.
+ * managed package opens the actions menu instead, where the host confirms the central change in a modal listing the
+ * projects it reaches; a row with a `VersionOverride` says why it is not updated (N74); an unsupported project is
+ * read-only.
  */
 export function ProjectUpdates(props: ProjectUpdatesProps): React.JSX.Element {
     const { projectPath, rows, installed, filter, announce, labelledBy, testId, busy: revalidating, empty, selectedId, onSelectedChange } = props;
@@ -56,6 +58,11 @@ export function ProjectUpdates(props: ProjectUpdatesProps): React.JSX.Element {
         return 'In progress';
     };
 
+    const openMenu = (update: PackageUpdate): void => {
+        const versionType = installed?.packages.find(entry => entry.id.toLowerCase() === update.id.toLowerCase())?.versionType;
+        menu({ packageId: update.id, installedVersion: update.installedVersion, latestVersion: update.latestVersion, context: 'updates', projectPath, versionType, sourceUrl: update.sourceUrl });
+    };
+
     const updateOne = ({ update }: Item): void => {
         if (isBusy(update.id)) {
             return;
@@ -64,8 +71,14 @@ export function ProjectUpdates(props: ProjectUpdatesProps): React.JSX.Element {
             announce(`${update.id} cannot be updated: ${unsupported.message}`);
             return;
         }
-        if (centralIds.has(update.id.toLowerCase())) {
-            announce(`${update.id} is centrally managed; change its version in Directory.Packages.props.`);
+        const entry = installed?.packages.find(other => other.id.toLowerCase() === update.id.toLowerCase());
+        const obstacle = entry === undefined || installed === undefined ? undefined : whyNotUpdatable(entry, installed);
+        if (obstacle !== undefined) {
+            announce(obstacle);
+            return;
+        }
+        if (entry !== undefined && isCentral(entry)) {
+            openMenu(update);
             return;
         }
         run('ops/update', { projectPath, packageId: update.id, version: update.latestVersion, sourceUrl: update.sourceUrl }).catch((error: unknown) => {
@@ -77,7 +90,7 @@ export function ProjectUpdates(props: ProjectUpdatesProps): React.JSX.Element {
         <Listbox
             items={items}
             labelledBy={labelledBy}
-            hint="Enter updates to the latest version; Ctrl+Enter (Cmd+Enter) opens the full view; Shift+F10 opens the actions menu."
+            hint="Enter updates to the latest version (a centrally managed package: opens the actions menu); Ctrl+Enter (Cmd+Enter) opens the full view; Shift+F10 opens the actions menu."
             testId={testId}
             density="compact"
             selectedId={selectedId}
@@ -85,10 +98,7 @@ export function ProjectUpdates(props: ProjectUpdatesProps): React.JSX.Element {
             onSelect={item => onSelectedChange(item.id)}
             onActivate={updateOne}
             onSecondaryActivate={({ update }) => viewDetails(update.id, update.latestVersion)}
-            onContextMenu={({ update }) => {
-                const versionType = installed?.packages.find(entry => entry.id.toLowerCase() === update.id.toLowerCase())?.versionType;
-                menu({ packageId: update.id, installedVersion: update.installedVersion, latestVersion: update.latestVersion, context: 'updates', projectPath, versionType, sourceUrl: update.sourceUrl });
-            }}
+            onContextMenu={({ update }) => openMenu(update)}
             empty={<EmptyState data-testid="sidebar-updates-empty" message={empty} />}
             renderRow={(item, placement) => {
                 const { update } = item;
@@ -104,7 +114,7 @@ export function ProjectUpdates(props: ProjectUpdatesProps): React.JSX.Element {
                         busy={busy}
                         status={busy ? busyStatus(update.id) : undefined}
                         badges={central ? <Badge label="CPM" title="Centrally managed" /> : undefined}
-                        actions={central || unsupported ? undefined : (
+                        actions={unsupported ? undefined : (
                             <IconButton label={`Update ${update.id} to ${update.latestVersion}`} tabIndex={-1} data-testid="row-action-update" onClick={() => updateOne(item)}><ArrowUpIcon /></IconButton>
                         )}
                     />

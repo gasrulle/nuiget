@@ -30,6 +30,8 @@ export interface RowProps extends RowPlacement {
     itemId: string;
     name: string;
     version?: React.ReactNode;
+    /** The tooltip of the version cell (for example why a version is unresolved). */
+    versionTitle?: string;
     description?: string;
     /** Shown in comfortable rows only. Decoration: the name is the text. */
     icon?: React.ReactNode;
@@ -53,7 +55,7 @@ export interface RowProps extends RowPlacement {
  * interactive content, which a screen reader cannot reach.
  */
 export function Row(props: RowProps): React.JSX.Element {
-    const { itemId, name, version, description, icon, badges, status, busy, disabled, actions, density, index, setSize, active, selected, current, checkable, optionId, offset, measureRef } = props;
+    const { itemId, name, version, versionTitle, description, icon, badges, status, busy, disabled, actions, density, index, setSize, active, selected, current, checkable, optionId, offset, measureRef } = props;
     const optionRef = useRef<HTMLDivElement>(null);
     const titleId = `${optionId}-title`;
     const descriptionId = `${optionId}-desc`;
@@ -95,7 +97,7 @@ export function Row(props: RowProps): React.JSX.Element {
                 {density === 'comfortable' && icon ? <span className="nuiget-row-icon" aria-hidden="true">{icon}</span> : null}
                 <span className="nuiget-row-title" id={titleId}>
                     <span className="nuiget-row-name">{name}</span>
-                    {version === undefined ? null : <>{' '}<span className="nuiget-row-version">{version}</span></>}
+                    {version === undefined ? null : <>{' '}<span className="nuiget-row-version" title={versionTitle}>{version}</span></>}
                 </span>
                 {described ? (
                     <span className="nuiget-row-desc" id={descriptionId}>

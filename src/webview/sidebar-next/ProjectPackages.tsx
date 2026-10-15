@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import type React from 'react';
 import type { InstalledPackage, InstalledResult } from '../../protocol';
-import { IN_PROGRESS, shownVersion, whyNotRemovable } from '../shared/installed/rules';
+import { IN_PROGRESS, UNRESOLVED_HINT, shownVersion, whyNotRemovable } from '../shared/installed/rules';
 import { Badge, EmptyState, IconButton, Listbox, Row, TrashIcon } from '../shared/primitives';
 import { useOps, useOpsActions } from '../shared/store/ops';
 import { useRowRequests } from './rowRequests';
@@ -29,7 +29,8 @@ export interface ProjectPackagesProps {
 /**
  * The installed packages of one project as compact rows: Enter, Delete or the row's button uninstalls from this project,
  * Ctrl+Enter opens the package in the full view, Shift+F10 asks the host for the actions menu. A package that cannot be
- * uninstalled (an unsupported project, an SDK-injected or centrally managed one) has no button and Enter says why.
+ * uninstalled (an unsupported project, an SDK-injected one, one declared in a props file) has no button and Enter says why;
+ * a centrally managed one uninstalls from this project and keeps its central entry.
  */
 export function ProjectPackages({ projectPath, result, filter, announce, labelledBy, testId, busy: revalidating, selectedId, onSelectedChange }: ProjectPackagesProps): React.JSX.Element {
     const { isPackageBusy, active } = useOps();
@@ -102,6 +103,7 @@ export function ProjectPackages({ projectPath, result, filter, announce, labelle
                         itemId={entry.id}
                         name={entry.id}
                         version={shownVersion(entry)}
+                        versionTitle={unresolved ? UNRESOLVED_HINT : undefined}
                         density="compact"
                         busy={busy}
                         disabled={unresolved}

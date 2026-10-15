@@ -47,6 +47,11 @@ describe('Row', () => {
         expect(option).toHaveAttribute('tabindex', '0');
     });
 
+    it('the version cell carries its title', () => {
+        renderRow({ versionTitle: 'Why the version is what it is' });
+        expect(screen.getByText('3.0.0')).toHaveAttribute('title', 'Why the version is what it is');
+    });
+
     it('a row with nothing to add has no description, and an inactive row is out of the tab order', () => {
         renderRow({ active: false, selected: true });
         const option = screen.getByRole('option', { name: 'Serilog 3.0.0' });
