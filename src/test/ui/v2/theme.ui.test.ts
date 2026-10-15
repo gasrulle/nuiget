@@ -29,7 +29,7 @@ const THEMES = [
 
 type Theme = (typeof THEMES)[number];
 
-interface AxeNode { target: string[]; summary: string }
+interface AxeNode { target: string[]; summary: string; insideDetails: boolean }
 interface AxeSummary {
     violations: Record<string, AxeNode[]>;
     passes: Record<string, number>;
@@ -42,9 +42,11 @@ const AXE_SOURCE = fs.readFileSync(path.resolve('node_modules/axe-core/axe.min.j
 /** Runs in the webview: axe on the two rules, answered as a summary small enough for the WebDriver channel. */
 const RUN_AXE = `
     const done = arguments[arguments.length - 1];
+    const details = document.querySelector('[data-testid="package-details-panel"]');
     const nodes = list => list.map(node => ({
         target: node.target.map(String),
         summary: node.failureSummary || node.any.map(check => check.message).join('; '),
+        insideDetails: details !== null && node.target.length === 1 && details.contains(document.querySelector(String(node.target[0]))),
     }));
     const byRule = (results, map) => Object.fromEntries(results.map(result => [result.id, map(result)]));
     axe.run(document, {
@@ -157,6 +159,14 @@ function expectNoViolations(surface: string, theme: Theme, summary: AxeSummary):
     const incomplete = Object.entries(summary.incomplete).flatMap(([rule, list]) => list.map(node => `${rule} ${node.target.join(' ')}: ${node.summary}`));
     console.warn(`[theme] ${where}: backgrounds body ${summary.backgrounds.body}, html ${summary.backgrounds.html}; ` +
         `passes ${JSON.stringify(summary.passes)}; incomplete ${incomplete.length}${incomplete.length > 0 ? `\n  ${incomplete.join('\n  ')}` : ''}`);
+    // What axe could not decide is the details pane's content below its visible part (ruling (9) of P5.12b): only the
+    // contrast rule, and only inside `package-details-panel`; anything else is a finding, whatever the count.
+    for (const [rule, list] of Object.entries(summary.incomplete)) {
+        expect(rule, `incomplete rule in the ${where}`).to.equal('color-contrast');
+        for (const node of list) {
+            expect(node.insideDetails, `incomplete node outside the details pane in the ${where}: ${node.target.join(' ')}`).to.equal(true);
+        }
+    }
     expect(summary.violations['color-contrast'] ?? [], `color-contrast violations in the ${where}`).to.deep.equal([]);
     expect(summary.violations['target-size'] ?? [], `target-size violations in the ${where}`).to.deep.equal([]);
     // "No violations" also holds for a rule that did not run: the contrast rule has to have checked text.

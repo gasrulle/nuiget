@@ -30,6 +30,8 @@ describe('2.0 main panel: details', () => {
         // The versions come from nuget.org; the installed version is marked in the list.
         await poll(async () => ((await selector.getAttribute('textContent')) ?? '').includes('13.0.2 (installed)') ? true : undefined, 'the versions with the installed one marked', 60_000);
         expect(await (await findByTestId('install-update-button')).getText()).to.match(/Update|Downgrade/);
+        // An installed package can be uninstalled from its details (P5.12b, port of remove-flow.ui.test.ts).
+        expect(await (await findByTestId('uninstall-button')).isDisplayed()).to.equal(true);
         await waitForText('package-details-panel', 'Dependencies', 60_000);
 
         await (await findByTestId('details-tab-readme')).click();

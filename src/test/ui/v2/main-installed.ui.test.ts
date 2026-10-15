@@ -61,6 +61,23 @@ describe('2.0 main panel: Installed tab', () => {
         await poll(async () => ((await option.getAttribute('aria-selected')) === 'false' ? true : undefined), 'Serilog deselected', 10_000);
     });
 
+    it('Select all marks every row for a bulk action, and a second press clears it (P5.12b)', async function () {
+        this.timeout(120_000);
+        const list = await findByTestId('installed-list', 120_000);
+        await findByTestId('package-row-serilog', 120_000);
+        const selection = async (): Promise<string[]> => Promise.all((await list.findElements(By.css('[role="option"]'))).map(option => option.getAttribute('aria-selected').then(value => value ?? '')));
+        const button = await findByTestId('select-all-button');
+
+        await button.click();
+        await poll(async () => ((await selection()).every(value => value === 'true') ? true : undefined), 'every row selected', 10_000);
+        expect(await button.getAttribute('aria-pressed')).to.equal('true');
+        expect(await (await findByTestId('uninstall-selected-button')).getText()).to.contain('(2)');
+
+        await button.click();
+        await poll(async () => ((await selection()).every(value => value === 'false') ? true : undefined), 'no row selected', 10_000);
+        expect(await button.getAttribute('aria-pressed')).to.equal('false');
+    });
+
     it('the bulk uninstall dialog cancels on Escape and leaves the project file as it was', async function () {
         this.timeout(120_000);
         const option = await serilogOption();
