@@ -388,7 +388,9 @@ starts; the other slices ask when they have something to ask for.
 - `installed`: `useResource` for `installed:<path>` of the project the host has **committed** as selected,
   never a pending one; nothing is asked without a project or in all-projects mode. The key is built from the
   path exactly as the snapshot has it, which is how the host names it. `metadata` chunks are kept by
-  lower-cased package id for the project they were asked for.
+  lower-cased package id for the project they were asked for. Until P6.2 adds that chunk to `installed/get`, the slice asks
+  `transitive/metadata` with the concrete versions of an answered list (two-phase, ADR-009 d.1) and writes the answer
+  into the same map; another project or a newer list cancels the ask, and an error is no metadata (P5.10).
 - `transitive` (P5.4): `useResource` for `transitive:<path>` of the committed project, but only after the section
   was opened (`enable()`); another project starts closed again. `restore()` asks the next `transitive/get` with
   `forceRestore`, once. The rows' metadata comes from `transitive/metadata` by `id@version`; when the host cannot

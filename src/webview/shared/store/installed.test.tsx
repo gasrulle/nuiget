@@ -174,4 +174,45 @@ describe('installed slice', () => {
         const host = createFakeHost();
         expect(() => render(<MessageBusProvider bus={host.bus}><SessionProvider><Packages /></SessionProvider></MessageBusProvider>)).toThrow('useInstalled needs an InstalledProvider above it');
     });
+
+    it('asks transitive/metadata for the concrete versions of the answered list and keeps the answer by id for that project', async () => {
+        const host = mount();
+        await hostSays(() => host.respond(host.requests('session/get')[0], snapshot(1, A)));
+        expect(host.requests('transitive/metadata')).toHaveLength(0);
+        const list: InstalledResult = {
+            projectPath: A, fidelity: 'provisional', isCpm: false,
+            packages: [
+                { id: 'Serilog', version: '3.*', resolvedVersion: '3.1.1', versionType: 'floating', declaration: 'project' },
+                { id: 'Range', version: '[1.0,2.0)', versionType: 'range', declaration: 'project' },
+                { id: 'Broken', version: '', versionType: 'standard', declaration: 'unresolved' },
+                { id: 'Moq', version: '4.20.0', versionType: 'standard', declaration: 'project' },
+            ],
+        };
+        await hostSays(() => host.respond(host.requests('installed/get')[0], list, 1));
+
+        expect(host.requests('transitive/metadata').map(request => request.payload)).toEqual([{ packages: [{ id: 'Serilog', version: '3.1.1' }, { id: 'Moq', version: '4.20.0' }] }]);
+        await hostSays(() => host.respond(host.requests('transitive/metadata')[0], { metadata: [{ id: 'serilog', version: '3.1.1', description: 'Logging' }, { id: 'Moq', version: '4.20.0', description: 'Mocks' }] }));
+        expect(text('described')).toBe('serilog=Logging;moq=Mocks');
+    });
+
+    it('a newer list or another project cancels the ask; an error answer is no metadata', async () => {
+        const host = mount();
+        await hostSays(() => host.respond(host.requests('session/get')[0], snapshot(1, A)));
+        await hostSays(() => host.respond(host.requests('installed/get')[0], installed(A, 'Serilog'), 1));
+        const first = host.requests('transitive/metadata')[0];
+        await hostSays(() => host.invalidate([[resourceKeys.installed(A), 2]]));
+        await hostSays(() => host.respond(host.requests('installed/get')[1], installed(A, 'Serilog', 'Moq'), 2));
+        expect(host.cancelled()).toContain(first.id);
+        await hostSays(() => host.fail(host.requests('transitive/metadata')[1], 'unsupported'));
+        expect(text('described')).toBe('none');
+
+        // Another project while an ask is on its way: that ask is cancelled and its answer never lands.
+        await hostSays(() => host.invalidate([[resourceKeys.installed(A), 3]]));
+        await hostSays(() => host.respond(host.requests('installed/get')[2], installed(A, 'Serilog'), 3));
+        const pending = host.requests('transitive/metadata')[2];
+        await hostSays(() => host.event('session/changed', snapshot(2, B)));
+        expect(host.cancelled()).toContain(pending.id);
+        await hostSays(() => host.respond(pending, { metadata: [{ id: 'Serilog', version: '1.0.0', description: 'late' }] }));
+        expect(text('described')).toBe('none');
+    });
 });

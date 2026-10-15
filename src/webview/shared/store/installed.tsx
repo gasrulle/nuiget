@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import type React from 'react';
 import { ALL_PROJECTS, resourceKeys, type InstalledResult, type PackageMetadataLite, type ProtocolRequestError } from '../../../protocol';
 import { useMessageBus } from '../bus/useMessageBus';
@@ -54,6 +54,35 @@ export function InstalledProvider({ children }: { children: React.ReactNode }): 
     }, [bus, projectPath]);
 
     const resource = useResource<InstalledResult>(projectPath === null ? null : resourceKeys.installed(projectPath), requester);
+
+    // Two-phase (ADR-009 d.1, until P6.2 adds the chunk to `installed/get`): once a list is there, its rows' lite
+    // metadata is asked with the concrete versions; the answer lands in the same map as the chunks (later writer wins).
+    // Another project or a newer list cancels the ask; an error, `unsupported` included, is no metadata.
+    const listed = resource.data;
+    useEffect(() => {
+        if (projectPath === null || listed === undefined) {
+            return undefined;
+        }
+        const packages = listed.packages
+            .filter(entry => entry.declaration !== 'unresolved' && (entry.resolvedVersion !== undefined || (entry.versionType !== 'floating' && entry.versionType !== 'range')))
+            .map(entry => ({ id: entry.id, version: entry.resolvedVersion ?? entry.version }))
+            .filter(entry => entry.version !== '');
+        if (packages.length === 0) {
+            return undefined;
+        }
+        const requested = projectPath;
+        const controller = new AbortController();
+        bus.request('transitive/metadata', { packages }, { signal: controller.signal }).then(({ result }) => {
+            setMetadata(previous => {
+                const byId = new Map(previous?.projectPath === requested ? previous.byId : []);
+                for (const entry of result.metadata) {
+                    byId.set(entry.id.toLowerCase(), entry);
+                }
+                return { projectPath: requested, byId };
+            });
+        }, () => undefined);
+        return () => controller.abort();
+    }, [bus, projectPath, listed]);
 
     const state = useMemo<InstalledState>(() => ({
         projectPath,

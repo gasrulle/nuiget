@@ -1,4 +1,58 @@
-# STATUS — src/webview/shared   commit a6c2b52 (parent of P5.10 commit a)   2026-10-16T05:00:00Z
+# STATUS — src/webview/shared   commit a622f59 (P5.10 commit a; parent of commit b)   2026-10-16T06:00:00Z
+
+git status --porcelain --untracked-files=all (before commit b): modified `ARCHITECTURE.md`, `docs/plans/STATUS.md`, `src/webview/shared/store/{installed,installed.test}.tsx`, `src/webview/shared/STATUS.md` (all belong to P5.10 commit b)
+
+Item: **P5.10, commit b of four** (ruling of 2026-10-16, step 6): `store/installed.tsx` asks `transitive/metadata`
+with the concrete versions of an answered `installed/get` (resolved version, else the declared one unless floating,
+ranged or unresolved) and writes the answer by lower-cased id into the project's metadata map, beside the chunk path;
+another project or a newer list cancels the ask; an error, `unsupported` included, is no metadata. `InstalledState`
+keeps its shape. This is ADR-009 d.1's interim until P6.2 adds the chunk.
+
+## Verified by running
+
+```text
+baseline at a622f59 (commit a) → pushed; its CI run 38722717605 green before this commit was pushed
+npx tsc --noEmit / npm run check-types / npm run lint → exit 0 each
+npx vitest run --project frontend src/webview/shared/store src/webview/main/features/installed src/webview/sidebar-next → exit 0
+store/installed.test.tsx and main/features/installed, 20 times → 20 of 20
+npx vitest run --project integration src/test/harness → Tests 20 passed (20), unchanged
+npm test (NUIGET_SDK_TESTS=1, DOTNET_ROOT set) → exit 0 · Test Files 157 passed (157) · Tests 3215 passed (3215)
+npm run bench / npx vitest run --coverage → exit 0 each
+rm -rf dist && node esbuild.mjs --v2 --production --analyze → extension 281249 / 299921 · webview 518470 / 600685 ·
+                               sidebar 312196 / 329122 (311597 at commit a)
+grep -c "transitive/metadata" src/webview/shared/store/installed.tsx → 1 (one request)
+npm run test:ui:v2 / package:vsix / test:ui (1.x) → SKIPPED: a slice-only change; the v2 suite runs at commit d, CI runs all
+test -e .claude/.contract-change → false
+```
+
+## Done (tested)
+
+- `installed.test.tsx` (+2): `asks transitive/metadata for the concrete versions of the answered list and keeps the
+  answer by id for that project`, `a newer list or another project cancels the ask; an error answer is no metadata`.
+- The two `InstalledTab.test.tsx` tests the ruling allowed to be rewritten needed no change and are unchanged.
+
+## Done (untested)
+
+- None.
+
+## Not started
+
+- The sidebar's All Projects (commit c), the host picker and the docs (commit d).
+
+## Deviations from contract/ADR (file:line each)
+
+- Both surfaces ask (the slice is shared); the sidebar shows nothing of the metadata (compact rows), and the host's lite
+  lookups are cached per source. The P6.2 row carries "the two-phase ask of `installed.tsx` goes when the chunk lands".
+
+## Advisor decisions (date, item, question, answer verbatim)
+
+The P5.10 ruling (2026-10-16) is verbatim in `docs/plans/STATUS.md`.
+
+## Exact next step (one item ID)
+
+P5.10 commit c, after commit b's CI run is green.
+
+## Earlier notes of this directory
 
 git status --porcelain --untracked-files=all (before commit a): modified `docs/plans/STATUS.md`, `src/webview/shared/store/{session,session.test}.tsx`, `src/webview/sidebar-next/{SidebarView,InstalledSection,UpdatesSection,BrowseResults,index}.tsx`, their tests `SidebarView.test.tsx`, `UpdatesSection.test.tsx`, `BrowseResults.test.tsx`, `sidebar.css` and the two STATUS notes; new `src/webview/sidebar-next/{rowRequests.ts,SidebarLayout.test.tsx}` (all belong to P5.10 commit a)
 
