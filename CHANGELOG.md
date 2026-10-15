@@ -59,6 +59,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - **2.0 CPM install preview**
+- **2.0 evaluation survives a refresh**
 
 - **Long NuGet prerelease versions and package IDs remain intact during CLI search and installation**
 - **2.0 honours the `full` and `off` search modes and the search result limit default**

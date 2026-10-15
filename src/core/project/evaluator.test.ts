@@ -94,7 +94,7 @@ function items(references: Array<Record<string, string>>, versions: Array<Record
 }
 
 describe('MsBuildProjectEvaluator', () => {
-    it('runs the properties run, then one item run per target framework, in the project directory with the signal', async () => {
+    it('runs the properties run, then one item run per target framework, in the project directory, bound to no caller signal', async () => {
         const runner = fakeRunner(probeAnswer('multitfm'));
         const signal = new AbortController().signal;
         await new MsBuildProjectEvaluator({ runner }).evaluate(context(multitfmProject), signal);
@@ -104,9 +104,49 @@ describe('MsBuildProjectEvaluator', () => {
             msbuildGetArgs(multitfmProject, ['PackageReference', 'PackageVersion'], [], { TargetFramework: 'netstandard2.0' }),
         ]);
         for (const call of runner.calls) {
-            expect(call.options).toMatchObject({ cwd: path.dirname(multitfmProject), signal });
+            expect(call.options).toMatchObject({ cwd: path.dirname(multitfmProject) });
+            expect(call.options.signal).toBeUndefined();
             expect(call.options.timeoutMs).toBeGreaterThan(0);
         }
+    });
+
+    it('a cancellation by one caller does not cancel a later caller of the same revision: the runs continue and the second caller gets the result without a new run', async () => {
+        let release!: () => void;
+        const held = new Promise<void>(resolve => {
+            release = resolve;
+        });
+        const answer = probeAnswer('multitfm');
+        // Like DefaultDotnetRunner, a run whose signal is aborted ends as cancelled.
+        const runner = fakeRunner(async (args, options) => {
+            if (runner.calls.length === 1) {
+                await held;
+            }
+            return options.signal?.aborted ? result('', { cancelled: true }) : answer(args, options);
+        });
+        const evaluator = new MsBuildProjectEvaluator({ runner });
+        const first = new AbortController();
+        const firstResult = evaluator.evaluate(context(multitfmProject), first.signal);
+        first.abort();
+        const secondResult = evaluator.evaluate(context(multitfmProject), new AbortController().signal);
+        release();
+
+        const [one, two] = await Promise.all([firstResult, secondResult]);
+        expect(two).toBe(one);
+        expect(two.fidelity).toBe('authoritative');
+        expect(runner.calls).toHaveLength(3);
+        expect(runner.calls.every(call => call.options.signal === undefined)).toBe(true);
+    });
+
+    it('a caller whose signal is already aborted starts no run and is not cached', async () => {
+        const runner = fakeRunner(probeAnswer('cpm'));
+        const evaluator = new MsBuildProjectEvaluator({ runner });
+        const controller = new AbortController();
+        controller.abort();
+        await expect(evaluator.evaluate(context(cpmProject), controller.signal)).rejects.toBeInstanceOf(EvaluationError);
+        expect(runner.calls).toHaveLength(0);
+        expect(evaluator.cachedFidelity(cpmProject)).toBeUndefined();
+        await expect(evaluator.evaluate(context(cpmProject))).resolves.toMatchObject({ fidelity: 'authoritative' });
+        expect(runner.calls.length).toBeGreaterThan(0);
     });
 
     it('cpm: a versionless reference takes the central version and names Directory.Packages.props', async () => {

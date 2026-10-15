@@ -50,14 +50,22 @@ export class MsBuildProjectEvaluator implements ProjectEvaluator {
 
     constructor(private readonly deps: EvaluatorDeps) {}
 
+    /**
+     * The runs are bound to no caller's signal: the coordinator aborts a stale computation, and the next computation of
+     * the same revision joins the promise in flight instead of restarting 1+N runs (ADR-002, N79); each run is bounded
+     * by its timeout. A caller already cancelled starts nothing.
+     */
     evaluate(context: ProjectExecutionContext, signal?: AbortSignal): Promise<InstalledResult> {
+        if (signal?.aborted) {
+            return Promise.reject(new EvaluationError(`MSBuild evaluation of ${path.basename(context.projectPath)} was cancelled before it started`));
+        }
         const key = normalizeProjectPath(context.projectPath);
         const cached = this.cache.get(key);
         if (cached !== undefined && cached.revision === context.revision) {
             return cached.result;
         }
         // Two callers of one revision share one evaluation; a rejection leaves the cache so the next call evaluates again.
-        const result = this.run(context, signal);
+        const result = this.run(context);
         const entry = { revision: context.revision, result };
         this.cache.set(key, entry);
         result.catch(() => {
@@ -76,14 +84,14 @@ export class MsBuildProjectEvaluator implements ProjectEvaluator {
         return this.cache.has(normalizeProjectPath(projectPath)) ? 'authoritative' : undefined;
     }
 
-    private async run(context: ProjectExecutionContext, signal: AbortSignal | undefined): Promise<InstalledResult> {
+    private async run(context: ProjectExecutionContext): Promise<InstalledResult> {
         const { projectPath } = context;
-        const properties = asStrings(record(await this.json(context, msbuildGetArgs(projectPath, [], PROPERTIES), signal), 'Properties'));
+        const properties = asStrings(record(await this.json(context, msbuildGetArgs(projectPath, [], PROPERTIES)), 'Properties'));
         const frameworks = targetFrameworks(properties);
         const runs: ItemRun[] = [];
         for (const framework of frameworks.length > 0 ? frameworks : [undefined]) {
             const args = msbuildGetArgs(projectPath, ITEMS, [], framework === undefined ? undefined : { TargetFramework: framework });
-            const items = record(await this.json(context, args, signal), 'Items');
+            const items = record(await this.json(context, args), 'Items');
             runs.push({ framework, references: itemList(items.PackageReference), versions: itemList(items.PackageVersion) });
         }
 
@@ -106,8 +114,8 @@ export class MsBuildProjectEvaluator implements ProjectEvaluator {
     }
 
     /** One `dotnet msbuild` run in the project directory, read as the JSON object it prints after any prefix lines. */
-    private async json(context: ProjectExecutionContext, args: string[], signal: AbortSignal | undefined): Promise<unknown> {
-        const result = await this.deps.runner.run(args, { cwd: context.projectDir, timeoutMs: DEFAULT_TIMEOUT_MS, signal });
+    private async json(context: ProjectExecutionContext, args: string[]): Promise<unknown> {
+        const result = await this.deps.runner.run(args, { cwd: context.projectDir, timeoutMs: DEFAULT_TIMEOUT_MS });
         if (result.exitCode !== 0 || result.cancelled === true || result.timedOut === true) {
             throw this.failure(context, result, result.cancelled === true ? 'was cancelled' : result.timedOut === true ? 'timed out' : `exited with ${result.exitCode}`);
         }
