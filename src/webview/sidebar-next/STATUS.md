@@ -1,4 +1,55 @@
-# STATUS — src/webview/sidebar-next   commit e779984 (P5.10 commit b; parent of commit c)   2026-10-16T07:00:00Z
+# STATUS — src/webview/sidebar-next   commit 1df7087 (P5.10 commit c, fix-forward; parent of commit d)   2026-10-16T10:00:00Z
+
+git status --porcelain --untracked-files=all (before commit d): modified `.github/copilot-instructions.md`, `ARCHITECTURE.md`, `CHANGELOG.md`, `docs/plans/{STATUS,findings-ledger}.md`, `src/host/{SidebarHost,handlers.test}.ts`, `vitest.config.mts` and the four STATUS notes; new `src/host/pickers.test.ts`, `src/test/ui/v2/sidebar-parity.ui.test.ts` (all belong to P5.10 commit d)
+
+Item: **P5.10, commit d of four**: no code change in this directory. The sidebar's parity is proved in VS Code by
+`src/test/ui/v2/sidebar-parity.ui.test.ts` (sash by keyboard, Open Full Manager beside the sidebar, the uninstall
+announced with the main panel open), and the ARCHITECTURE sidebar section and table row describe commits a to c.
+
+## Verified by running
+
+P5.10 commit d:
+
+```text
+baseline at 1df7087 (commit c, fix-forward) → its CI run 38725348661 green on all 11 jobs before this commit
+npx tsc --noEmit / npm run check-types / npm run lint → exit 0 each
+npm test (NUIGET_SDK_TESTS=1, DOTNET_ROOT set) → exit 0 · Test Files 158 passed (158) · Tests 3230 passed (3230)
+npm run bench → exit 0 · npx vitest run --coverage → exit 0 (src/host lines 87.76 against the new ratchet 87)
+npm run docs:protocol:check → exit 0
+rm -rf dist && node esbuild.mjs --v2 --production --analyze → extension 281381 / 299921 · webview 518470 / 600685 ·
+                               sidebar 317603 / 329122 (N63)
+rm -rf dist && NUIGET_V2=1 npm run package && npm run check:vsix → check:vsix: OK
+NUIGET_V2=1 npm run test:ui:v2 -- --storage /tmp/nuiget-ui-v2, five times (rm -rf dist before each) →
+                               21 passing, 21 passing, 21 passing, 21 passing, 21 passing; fixture unchanged after each
+rm -rf dist && npm run package:vsix (NUIGET_V2 unset) → exit 0, nuiget-v1.18.9.vsix (17 files)
+test -e .claude/.contract-change → false
+```
+
+## Done (tested)
+
+- Covered by the ExTester file above; the jsdom tests of commits a to c are unchanged.
+
+## Done (untested)
+
+- The sidebar's All Projects in VS Code: the fixture has one project, which the host normalizes; jsdom is the proof.
+
+## Not started
+
+- None for P5.10. Next: P5.11.
+
+## Deviations from contract/ADR (file:line each)
+
+- None in this commit; commit c's list stands.
+
+## Advisor decisions (date, item, question, answer verbatim)
+
+The P5.10 ruling (2026-10-16) is verbatim in `docs/plans/STATUS.md`.
+
+## Exact next step (one item ID)
+
+P5.11, after commit d's CI run is green.
+
+## Earlier notes of this directory
 
 git status --porcelain --untracked-files=all (before commit c): modified `src/webview/sidebar-next/{InstalledSection,UpdatesSection,BrowseResults}.tsx` and their tests, `SidebarView.test.tsx`, `sidebar.css`, `src/webview/main/features/installed/InstalledTab.tsx` and `src/webview/main/features/updates/AllProjectsUpdates.tsx` (one import line each), the two STATUS notes and `docs/plans/STATUS.md`; renamed `src/webview/main/features/all-projects/folderGroups.tsx` → `src/webview/shared/allProjects/folderGroups.tsx`; new `src/webview/sidebar-next/{ProjectPackages,ProjectUpdates}.tsx` (all belong to P5.10 commit c)
 
@@ -498,6 +549,7 @@ decided and written down (read-only, above); the harness scenario is written aga
 ## Exact next step (one item ID)
 
 P5.6 (feature search, main and sidebar browse), after P5.5's CI run is green; a fresh session starts it (second compaction of this one).
+
 
 
 

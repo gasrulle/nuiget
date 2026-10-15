@@ -644,4 +644,65 @@ describe('SidebarHost', () => {
         expect(posted.filter(message => message.kind === 'response')).toEqual([{ kind: 'response', id: 'menu', type: 'ui/contextMenu', ok: true, result: { handled: true } }]);
         sidebar.dispose();
     });
+
+    /** A resolved sidebar whose webview records what it is sent; `send` delivers a request and waits for its response. */
+    function resolvedSidebar(services: ReturnType<typeof makeServices>['services']) {
+        const posted: OutboundEnvelope[] = [];
+        let deliver!: (message: unknown) => void;
+        const view = {
+            webview: {
+                options: {}, html: '', cspSource: 'https://mock-csp-source', asWebviewUri: (uri: vscode.Uri) => uri,
+                postMessage: (message: unknown) => { posted.push(message as OutboundEnvelope); return true; },
+                onDidReceiveMessage: (listener: (message: unknown) => void) => { deliver = listener; return { dispose: () => undefined }; },
+            },
+            visible: true, title: undefined as string | undefined,
+            onDidChangeVisibility: () => ({ dispose: () => undefined }), onDidDispose: () => ({ dispose: () => undefined }),
+        };
+        const sidebar = new SidebarHost(services);
+        sidebar.resolveWebviewView(view as unknown as vscode.WebviewView);
+        const send = async (payload: Record<string, unknown>, id: string): Promise<unknown> => {
+            deliver(makeRequest('ui/contextMenu', payload as never, id));
+            await vi.waitFor(() => expect(posted.some(message => message.kind === 'response' && message.id === id)).toBe(true));
+            const response = posted.find(message => message.kind === 'response' && message.id === id) as { result?: unknown };
+            return response.result;
+        };
+        return { sidebar, send };
+    }
+
+    it('SidebarHost: no versions and every source unreachable says so and submits nothing', async () => {
+        const { services, catalog, queue } = makeServices();
+        const submit = vi.spyOn(queue, 'submit');
+        catalog.versions.mockResolvedValueOnce({ versions: [], sourcesUnavailable: true });
+        vi.mocked(vscode.window.showQuickPick).mockResolvedValueOnce({ label: 'Update to version…', action: 'update-version' } as never);
+        const warning = vi.mocked(vscode.window.showWarningMessage);
+        warning.mockClear();
+        const { sidebar, send } = resolvedSidebar(services);
+
+        expect(await send({ packageId: 'X', context: 'updates', projectPath: appPath, installedVersion: '1.0.0', latestVersion: '2.0.0' }, 'menu')).toEqual({ handled: false });
+        expect(warning).toHaveBeenCalledWith('No package source could be reached for this package');
+        // No version list was shown and nothing was submitted.
+        expect(vscode.window.showQuickPick).toHaveBeenCalledTimes(1);
+        expect(submit).not.toHaveBeenCalled();
+        sidebar.dispose();
+    });
+
+    it('SidebarHost: install from browse under All Projects picks the projects; one project is ops/install, several are ops/bulkInstall', async () => {
+        const { services, workflows } = makeServices();
+        const pick = vi.mocked(vscode.window.showQuickPick);
+        const { sidebar, send } = resolvedSidebar(services);
+        const request = { packageId: 'X', context: 'browse', projectPath: ALL_PROJECTS, latestVersion: '2.0.0', installedProjects: [{ projectPath: libPath, projectName: 'Lib.csproj', version: '1.0.0' }] };
+
+        pick.mockResolvedValueOnce({ label: 'Install latest', action: 'install-latest' } as never);
+        pick.mockImplementationOnce(async items => (items as unknown as Array<{ detail: string; picked: boolean }>).filter(item => item.picked) as never);
+        expect(await send(request, 'one')).toEqual({ handled: true });
+        expect(workflows.single).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ kind: 'install', projectPath: appPath, packageId: 'X', version: '2.0.0' }), expect.anything());
+
+        pick.mockResolvedValueOnce({ label: 'Install latest', action: 'install-latest' } as never);
+        pick.mockImplementationOnce(async items => items as never);
+        expect(await send(request, 'two')).toEqual({ handled: true });
+        const [, projects, packageId, version] = workflows.bulkInstall.mock.calls.at(-1) as unknown as [unknown, Array<{ path: string } | string>, string, string];
+        expect(projects.map(project => (typeof project === 'string' ? project : project.path))).toEqual([appPath, libPath]);
+        expect([packageId, version]).toEqual(['X', '2.0.0']);
+        sidebar.dispose();
+    });
 });

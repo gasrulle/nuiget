@@ -1,4 +1,61 @@
-# STATUS — src/host   commit f8bfe3f (parent of the P5.8 commit)   2026-10-15T19:00:00Z
+# STATUS — src/host   commit 1df7087 (P5.10 commit c, fix-forward; parent of commit d)   2026-10-16T10:00:00Z
+
+git status --porcelain --untracked-files=all (before commit d): modified `.github/copilot-instructions.md`, `ARCHITECTURE.md`, `CHANGELOG.md`, `docs/plans/{STATUS,findings-ledger}.md`, `src/host/{SidebarHost,handlers.test}.ts`, `vitest.config.mts` and the four STATUS notes; new `src/host/pickers.test.ts`, `src/test/ui/v2/sidebar-parity.ui.test.ts` (all belong to P5.10 commit d)
+
+Item: **P5.10, commit d of four**: the sidebar's version picker (`SidebarHost`, actions `install-version`,
+`change-version`, `update-version`) shows a warning and submits nothing when the package has no versions and no source
+could be reached (`sourcesUnavailable`), instead of "No versions found". `pickers.ts` gets its own tests, and the
+host's measured line coverage is a ratchet in `vitest.config.mts` (`src/host/**`: lines 87).
+
+## Verified by running
+
+P5.10 commit d:
+
+```text
+baseline at 1df7087 (commit c, fix-forward) → its CI run 38725348661 green on all 11 jobs before this commit
+npx tsc --noEmit / npm run check-types / npm run lint → exit 0 each
+npm test (NUIGET_SDK_TESTS=1, DOTNET_ROOT set) → exit 0 · Test Files 158 passed (158) · Tests 3230 passed (3230)
+npm run bench → exit 0 · npx vitest run --coverage → exit 0 (src/host lines 87.76 against the new ratchet 87)
+npm run docs:protocol:check → exit 0
+rm -rf dist && node esbuild.mjs --v2 --production --analyze → extension 281381 / 299921 · webview 518470 / 600685 ·
+                               sidebar 317603 / 329122 (N63)
+rm -rf dist && NUIGET_V2=1 npm run package && npm run check:vsix → check:vsix: OK
+NUIGET_V2=1 npm run test:ui:v2 -- --storage /tmp/nuiget-ui-v2, five times (rm -rf dist before each) →
+                               21 passing, 21 passing, 21 passing, 21 passing, 21 passing; fixture unchanged after each
+rm -rf dist && npm run package:vsix (NUIGET_V2 unset) → exit 0, nuiget-v1.18.9.vsix (17 files)
+test -e .claude/.contract-change → false
+```
+
+## Done (tested)
+
+- `pickers.test.ts` (new, 11 tests): `pickProject` (none, several with All Projects first and the current one active,
+  one without All Projects), `pickSource`, `pickVersion` (none, installed marked), `pickProjectsForInstall` (pre-picked,
+  empty), `pickSingleProject`, `pickContextMenuAction` (the item sets of the three contexts; the answer).
+- `handlers.test.ts`: new `SidebarHost: no versions and every source unreachable says so and submits nothing`; new
+  `SidebarHost: install from browse under All Projects picks the projects; one project is ops/install, several are
+  ops/bulkInstall`.
+
+## Done (untested)
+
+- The sidebar's All Projects in VS Code: the fixture has one project, which the host normalizes; jsdom is the proof.
+
+## Not started
+
+- None for P5.10. Next: P5.11.
+
+## Deviations from contract/ADR (file:line each)
+
+- None.
+
+## Advisor decisions (date, item, question, answer verbatim)
+
+The P5.10 ruling (2026-10-16) is verbatim in `docs/plans/STATUS.md`.
+
+## Exact next step (one item ID)
+
+P5.11, after commit d's CI run is green.
+
+## Earlier notes of this directory
 
 git status --porcelain --untracked-files=all (before the commit): modified `.github/copilot-instructions.md`, `ARCHITECTURE.md`, `CHANGELOG.md`, `docs/plans/{STATUS,findings-ledger}.md`, `src/core/catalog/{Catalog,Catalog.test,feedContexts,feedContexts.test}.ts`, `src/host/{handlers,handlers.test}.ts`, `src/webview/main/{MainShell.tsx,main.css}`, `src/webview/shared/store/{sources.tsx,sources.test.tsx}` and the five STATUS notes; new `src/webview/main/features/sources/{SourcesControl,SourceSettingsDialog,SourcesControl.test}.tsx`, `src/test/ui/v2/main-sources.ui.test.ts` (all belong to the P5.8 commit)
 
@@ -800,5 +857,6 @@ P4.9b:
 
 FILES CHECKED: /Users/mattias/github/nuiget/.github/agents/architecture-advisor.agent.md (whole); /Users/mattias/github/nuiget/docs/plans/2026-10-11-nuiget-2.0-execution-plan.md (§0-§4 :1-172, P2 rows :221-238, P4 rows and gate :253-268, P5 :270-288, P6.2 :295, §7 :329-363); /Users/mattias/github/nuiget/docs/plans/RUN.md:55-100; /Users/mattias/github/nuiget/docs/plans/STATUS.md (row P4.9 :71 whole, rows P4.10 :72, P5.x :60-83, fix rows :39,52-53; rulings P2.8 :1010-1108, P2.9 :1110-1285, P2.10 :1287-1364, P4.1 :1797-1894, P4.4 :1896-1946, P4.6 :1948-2008, P4.8 :2010-2062); /Users/mattias/github/nuiget/docs/plans/findings-ledger.md (:42 S6, :66 F6, :109 N6, :171-173, :308-309 M1/M2, :412-414 N68-N70); /Users/mattias/github/nuiget/docs/adr/002-query-coordinator.md, 005-execution-context-and-outbound-policy.md, 006-icons-and-csp.md, 007-protocol.md:14-42, 009-catalog.md (whole); /Users/mattias/github/nuiget/src/core/catalog/Catalog.ts (whole), index.ts, STATUS.md:1-60, Catalog.test.ts (titles); /Users/mattias/github/nuiget/src/core/feeds/{types,index,serviceIndex,health,updates,enricher,metadataResolver,offline,testSupport}.ts (whole), icons.ts:1-160 and the `reset`/`Flight` lines, readmeImage.ts:1-70, readme.ts:73-100, registration.ts:109-135, search.ts:160-200, flatContainer.ts:71-80, vulnerability.ts:87-98, STATUS.md:1-80; /Users/mattias/github/nuiget/src/core/http/Transport.ts:18-60,300-360, index.ts; /Users/mattias/github/nuiget/src/core/credentials/DefaultCredentialProvider.ts:1-125, index.ts, helpers.ts:29-39, STATUS.md (the P2.8 recipe lines); /Users/mattias/github/nuiget/src/core/sources/{DefaultOutboundPolicy,index}.ts, NuGetConfigReader.ts (exports, `readChain` :56), merge.ts (exports :5-63), DotnetSourceProvider.ts:1-80, STATUS.md (grep); /Users/mattias/github/nuiget/src/core/project/{context,index}.ts, revision.ts (exports); /Users/mattias/github/nuiget/src/core/queries/QueryCoordinator.ts (whole), scopes.ts:1-80; /Users/mattias/github/nuiget/src/core/cache/CachePolicy.ts:1-150, index.ts, TieredCache.ts (method lines); /Users/mattias/github/nuiget/src/core/cli/index.ts, DotnetRunner.ts:390-415; /Users/mattias/github/nuiget/src/core/contracts.ts:100-122,150-354; /Users/mattias/github/nuiget/src/protocol/messages.ts:58-80,100-201, domain.ts:1-70,72-141,143-215,215-262, envelope.ts (`ProtocolErrorCode`); /Users/mattias/github/nuiget/src/host/{handlers,services,SidebarHost,MainPanelHost}.ts (whole or the cited ranges), WebviewHost.ts (`RequestContext`, `toProtocolError` lines), handlers.test.ts:30-110,185-310 and titles, WebviewHost.test.ts (title); /Users/mattias/github/nuiget/src/extension.next.ts (whole), extension.next.test.ts:1-235 and titles (incl. :439 `overlapping refreshes are coalesced`), src/STATUS.md:1-12; /Users/mattias/github/nuiget/src/test/harness/{harness,FakeWebview (1-130), scenarios.test (1-52, 489-554 and titles), fakeDotnet (1-60 and matchers)}.ts; /Users/mattias/github/nuiget/src/test/__mocks__/vscode.ts:232-243; /Users/mattias/github/nuiget/src/webview/shared/store/{installed,allProjects}.tsx (chunk handling) and the `iconUrl`/`metadata.get` uses under src/webview/main; /Users/mattias/github/nuiget/vitest.config.mts:87-89; /Users/mattias/github/nuiget/eslint.config.mjs:29-86; /Users/mattias/github/nuiget/.github/instructions/core-boundaries.instructions.md:1-50; /Users/mattias/github/nuiget/CHANGELOG.md:1-16; commands: `git status --short` (only `docs/plans/STATUS.md` modified), `git log --oneline -1` (631a13c), `wc -l` of the files in play, `grep -rn 'REMOVAL GATE: P4.9' src` (the 18 anchors the brief names), `grep -rn "sources/health\|notifySourceHealth" src`, `grep -rn "'session-changed'" src` (declared, unused), `grep -n globalPackagesFolder src/core/cli/DotnetRunner.ts`, `ls src/test/benchmarks`. Advisor tool consulted twice: before writing (per-source fan-out for N70, the first-paint constraint on `installed/get`, the directory → chain cache, the shared-provider deviation, gate counts per half, the tests to name) and on the draft (credential ordering at the activation probe, `generation` on `updates/get` and the carrier unwrapped in `queryWithRetry`, `excluded` in `versions`, `undefined` metadata never cached, the two harness assertions that could not hold, the monitor restricted to the selected directory, one `PolicyClients` set with two enrichers, the directory cache in `forProject`, the composition order of step 8); every point is folded in.
 `````
+
 
 

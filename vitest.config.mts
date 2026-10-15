@@ -52,6 +52,8 @@ export default defineConfig({
                 'src/core/**': {
                     lines: 85,
                 },
+                // Ratchet for the 2.0 host (P5.10, from the P4 review): the measured lines of src/host, floored.
+                'src/host/**': { lines: 87 },
             },
         },
         include: [],

@@ -145,7 +145,12 @@ export class SidebarHost extends WebviewHost implements vscode.WebviewViewProvid
         const sourceUrl = request.sourceUrl ?? (snapshot.selectedSource === 'all' ? undefined : snapshot.selectedSource);
         const versionFor = async (fallback?: string) => {
             if (action === 'install-version' || action === 'change-version' || action === 'update-version') {
-                const { versions } = await this.services.catalog.versions(sourceDirectory(this.services), request.packageId, sourceUrl, snapshot.includePrerelease, new AbortController().signal);
+                const { versions, sourcesUnavailable } = await this.services.catalog.versions(sourceDirectory(this.services), request.packageId, sourceUrl, snapshot.includePrerelease, new AbortController().signal);
+                // Empty is not unknown: with no source reached, there is nothing to pick and nothing is submitted.
+                if (versions.length === 0 && sourcesUnavailable) {
+                    void vscode.window.showWarningMessage('No package source could be reached for this package');
+                    return undefined;
+                }
                 return pickVersion(request.packageId, versions.slice(0, 50), request.installedVersion);
             }
             return fallback;
