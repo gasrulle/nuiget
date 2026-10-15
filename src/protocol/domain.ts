@@ -127,7 +127,7 @@ export interface PackageMetadata {
     readme?: string;
     packageSize?: number;
     vulnerabilities?: PackageVulnerability[];
-    /** Loaded from the local global-packages folder because every source was unreachable. */
+    /** Loaded from the local global-packages folder: no allowed source produced metadata for this version (unreachable, unknown to every source, or none allowed; the response does not say which). Never cached. */
     offline?: boolean;
     /** Source URL the metadata came from. */
     sourceUrl?: string;

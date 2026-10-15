@@ -1,3 +1,40 @@
+# STATUS — src (the 2.0 composition root)   commit 9461725 (parent of the P4.fix-1 commit)   2026-10-16T09:30:00Z
+
+The P4 phase review (verbatim in `docs/plans/STATUS.md` under "### P4 — Feeds, transport and the Catalog's feed reads") rules this row.
+
+Item: **P4.fix-1** (root part): the 2.0 bundle measurement the P4 phase review asks for (non-blocking 2). No root code changed.
+
+## Verified by running
+
+```text
+rm -rf dist out/esbuild && node esbuild.mjs --v2 --production --analyze
+  dist/extension.js 280611 / 299921 (93.6 %) · dist/webview.js 301845 / 600685 · dist/sidebar.js 284204 / 329122
+  the fifteen largest inputs of dist/extension.js (out/esbuild/extension.meta.json, bytesInOutput, grouped):
+  total bytesInOutput 279857
+  node_modules/adm-zip                            37341
+  src/core/feeds                                  36818
+  node_modules/fast-xml-parser                    27673
+  src/host                                        27531
+  node_modules/is-unsafe                          17123
+  src/core/project                                15248
+  src/core/http                                   13788
+  src/core/cli                                    12855
+  src/core/catalog                                12057
+  src/core/ops                                    10276
+  node_modules/path-expression-matcher             8562
+  src/extension.next.ts                            8334
+  src/core/sources                                 8215
+  src/core/cache                                   7352
+  src/core/queries                                 6554
+  dist/ and out/esbuild/ deleted afterwards; esbuild.mjs unchanged
+```
+
+Two third-party packages (adm-zip for README extraction from a package archive, fast-xml-parser for project, config and nuspec
+XML) and `is-unsafe` (a fast-xml-parser dependency) are a third of the bundle; P6.2 and P6.3 paste their sizes and stop and ask
+before crossing the ceiling (gotcha row "Bundle ceilings are a local gate").
+
+## Earlier notes of this directory
+
 # STATUS — src (the 2.0 composition root)   commit 6e2c878 (parent of the P4.9b commit)   2026-10-16T07:30:00Z
 
 git status --porcelain --untracked-files=all (before the commit): new `src/test/harness/fakeFeed.ts`; modified `src/core/feeds/{health,health.test}.ts`, `src/core/catalog/{Catalog,Catalog.test,feedContexts,feedContexts.test}.ts`, `src/host/{handlers,SidebarHost}.ts`, `src/extension.next.ts`, `src/extension.next.test.ts`, `src/test/harness/{harness,FakeWebview,scenarios.test}.ts`, the five STATUS notes, `CHANGELOG.md`, `ARCHITECTURE.md`, `.github/copilot-instructions.md`, `docs/plans/STATUS.md`, `docs/plans/findings-ledger.md` (all belong to the P4.9b commit)

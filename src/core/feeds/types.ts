@@ -34,7 +34,7 @@ export interface ResolvedSource {
 }
 
 export interface SourceHealth {
-    /** Sources currently considered unreachable (within the failure TTL). */
+    /** Sources whose last check failed; a retry is due once the failure TTL has passed (`isHealthy`), and the entry leaves when a check succeeds or the tracker is reset. */
     failed(): FailedSource[];
     isHealthy(sourceUrl: string): boolean;
     markFailed(sourceUrl: string, error: string): void;

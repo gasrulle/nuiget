@@ -22,6 +22,7 @@ describe('source health tracker', () => {
         tracker.markFailed('https://a.example', 'HTTP 503');
         tracker.markFailed('https://b.example', 'timeout');
         now = 1500;
+        // Past the TTL with the same error: still down, nothing changed (N71).
         tracker.markFailed('https://b.example', 'timeout');
         tracker.markHealthy('https://a.example');
         tracker.markHealthy('https://a.example');
@@ -36,6 +37,38 @@ describe('source health tracker', () => {
         ]);
     });
 
+    it('an expired failure that a read found healthy still fires onDidChange when the probe marks it healthy', () => {
+        let now = 0;
+        const tracker = new SourceHealthTracker({ failureTtlMs: 120_000, now: () => now });
+        const seen: Array<Array<{ url: string; error: string }>> = [];
+        tracker.onDidChange(failed => seen.push(failed));
+        tracker.markFailed('https://a.example', 'timeout');
+
+        now += 120_000;
+        expect(tracker.isHealthy('https://a.example')).toBe(true);
+        expect(tracker.failed()).toEqual([{ url: 'https://a.example', error: 'timeout' }]);
+        tracker.markHealthy('https://a.example');
+
+        expect(seen.at(-1)).toEqual([]);
+        expect(seen).toHaveLength(2);
+    });
+
+    it('a source still down after the TTL does not re-fire for the same error', () => {
+        let now = 0;
+        const tracker = new SourceHealthTracker({ failureTtlMs: 120_000, now: () => now });
+        const seen: Array<Array<{ url: string; error: string }>> = [];
+        tracker.onDidChange(failed => seen.push(failed));
+
+        tracker.markFailed('https://a.example', 'timeout');
+        now += 120_000;
+        tracker.markFailed('https://a.example', 'timeout');
+        expect(seen).toHaveLength(1);
+        expect(tracker.isHealthy('https://a.example')).toBe(false);
+
+        tracker.markFailed('https://a.example', 'HTTP 503');
+        expect(seen).toEqual([[{ url: 'https://a.example', error: 'timeout' }], [{ url: 'https://a.example', error: 'HTTP 503' }]]);
+    });
+
     it('a failed source is unhealthy for the failure TTL, then healthy again on access', () => {
         let now = 1_000;
         const health = new SourceHealthTracker({ failureTtlMs: 120_000, now: () => now });
@@ -47,10 +80,11 @@ describe('source health tracker', () => {
         expect(health.isHealthy('https://a/')).toBe(false);
         now += 1;
         expect(health.isHealthy('https://a/')).toBe(true);
-        expect(health.failed()).toEqual([]);
+        // Expiry allows the retry; the failure stays listed until a check settles it (N71).
+        expect(health.failed()).toEqual([{ url: 'https://a/', error: 'timeout' }]);
     });
 
-    it('markHealthy and reset forget failures; failed() drops expired ones', () => {
+    it('markHealthy and reset forget failures; expiry alone does not', () => {
         let now = 0;
         const health = new SourceHealthTracker({ failureTtlMs: 10, now: () => now });
         health.markFailed('https://a/', 'x');
@@ -58,7 +92,8 @@ describe('source health tracker', () => {
         health.markHealthy('https://a/');
         expect(health.failed().map(entry => entry.url)).toEqual(['https://b/']);
         now = 10;
-        expect(health.failed()).toEqual([]);
+        expect(health.failed()).toEqual([{ url: 'https://b/', error: 'y' }]);
+        expect(health.isHealthy('https://b/')).toBe(true);
         health.markFailed('https://c/', 'z');
         health.reset();
         expect(health.isHealthy('https://c/')).toBe(true);

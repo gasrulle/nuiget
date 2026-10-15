@@ -1,3 +1,26 @@
+# STATUS — src/core/feeds   commit 9461725 (parent of the P4.fix-1 commit)   2026-10-16T09:30:00Z
+
+The P4 phase review (verbatim in `docs/plans/STATUS.md` under "### P4 — Feeds, transport and the Catalog's feed reads") rules this row.
+
+Item: **P4.fix-1** (feeds part, from the P4 phase review, blocking 1): `SourceHealthTracker` keeps a failure until
+`markHealthy` or `reset`; `isHealthy` allows the retry after the TTL without forgetting it; a re-mark with the same error fires
+nothing (N71). The `offline` JSDoc of `src/protocol/domain.ts:130` changed behind the sentinel `P4.fix-1`.
+
+## Verified by running
+
+```text
+npx vitest run --project backend src/core/feeds/health.test.ts → green, with `an expired failure that a read found healthy still
+  fires onDidChange when the probe marks it healthy` and `a source still down after the TTL does not re-fire for the same error`;
+  rewritten by title: `onDidChange fires when the failed set changes and not otherwise` (five payloads: the ruling's "six" counts a
+  re-mark the same ruling makes silent), `a failed source is unhealthy for the failure TTL, then healthy again on access`,
+  `markHealthy and reset forget failures; expiry alone does not`
+grep -n "sweep\|isExpired" src/core/feeds/health.ts → isExpired in isHealthy only · grep -c "changed.fire" → 3
+grep -c "every source was unreachable" src/core/feeds/STATUS.md → 2: both inside the verbatim P4.8 ruling, which is not edited;
+  the deviation entry is closed
+```
+
+## Earlier notes of this directory
+
 # STATUS — src/core/feeds   commit 6e2c878 (parent of the P4.9b commit)   2026-10-16T07:30:00Z
 
 git status --porcelain --untracked-files=all (before the commit): new `src/test/harness/fakeFeed.ts`; modified `src/core/feeds/{health,health.test}.ts`, `src/core/catalog/{Catalog,Catalog.test,feedContexts,feedContexts.test}.ts`, `src/host/{handlers,SidebarHost}.ts`, `src/extension.next.ts`, `src/extension.next.test.ts`, `src/test/harness/{harness,FakeWebview,scenarios.test}.ts`, the five STATUS notes, `CHANGELOG.md`, `ARCHITECTURE.md`, `.github/copilot-instructions.md`, `docs/plans/STATUS.md`, `docs/plans/findings-ledger.md` (all belong to the P4.9b commit)
@@ -118,9 +141,8 @@ npm run package:vsix, check:vsix, docs:protocol:check, test:ui, test:ui:v2 → S
 
 ## Deviations from contract/ADR (file:line each)
 
-- `src/protocol/domain.ts:130-131` says `offline` means "every source was unreachable"; the resolver sets it whenever no allowed
-  source produced metadata, because the clients do not tell a failed source from one that does not know the package. A JSDoc
-  tightening is a contract item for the P4 phase review (the ruling).
+- Closed at P4.fix-1: the `offline` JSDoc of `src/protocol/domain.ts:130` now reads as the resolver behaves (no allowed source produced
+  metadata, for any reason).
 - `types.ts`: `MetadataResolver.versions` answers `VersionsOutcome` instead of `string[]` (the ruling; no consumer existed).
 
 ## Advisor decisions (date, item, question, answer verbatim)

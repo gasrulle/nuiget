@@ -137,8 +137,8 @@ Hosts read through `Catalog` and nowhere else ([ADR-009](docs/adr/009-catalog.md
 of the query coordinator, computed once per generation for both surfaces: the project list (`projects`), the
 sources of a directory (`sources:<dir>`), the installed packages of a project (`installed:<path>`) and its
 transitive packages (`transitive:<path>`). Each of the four resolves with the generation it was computed for
-(`{ value, generation }`; `installed()` has `generation` beside `result`), and the nine handlers whose result
-is such a resource put it on the ok response (`projects/list`, `installed/get`, `transitive/get`,
+(`{ value, generation }`; `installed()` has `generation` beside `result`), and the ten handlers whose result
+is such a resource put it on the ok response (`projects/list`, `installed/get`, `updates/get`, `transitive/get`,
 `sources/list`, `sources/refresh` and the four source mutations), so a webview can compare it with the
 generation an invalidation lists for the key. The all-projects reads are fan-outs over those resources and
 stream one chunk per project; they are not resources themselves and report no generation. `installed()` resolves with `{ result, upgrade? }`:
@@ -199,7 +199,8 @@ images), credentials (30 min, failures 5 min).
 client; the metadata resolver, the update checker and search keep no cache of their own.
 
 **Health.** One `SourceHealthTracker` records the failures of every read and of the monitor, and its changes reach
-both surfaces as `sources/health`; `sources/list` carries the current failures. The monitor runs no `dotnet`: it
+both surfaces as `sources/health`; `sources/list` carries the current failures. A failed source stays listed until a
+probe or a read answers from it; the failure TTL only allows the retry (N71). The monitor runs no `dotnet`: it
 probes the sources of the chains that reads have registered, re-probes every 120 s while something is down and every
 300 s otherwise, and restarts when a chain is registered or the sources are invalidated. A recovered source
 invalidates nothing; the webviews ask again for what they showed as unavailable.

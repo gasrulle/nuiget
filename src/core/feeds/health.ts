@@ -17,7 +17,10 @@ export interface SourceHealthTrackerOptions {
     now?: () => number;
 }
 
-/** In-memory `SourceHealth` with a failure TTL; expired failures are forgotten on access. */
+/**
+ * In-memory `SourceHealth` with a failure TTL. A failure stays listed until a check settles it (`markHealthy`) or the
+ * tracker is reset; once the TTL has passed, `isHealthy` allows the retry without forgetting it (N71).
+ */
 export class SourceHealthTracker implements SourceHealth {
     private readonly failures = new Map<string, { error: string; failedAt: number }>();
     private readonly changed = new Emitter<FailedSource[]>();
@@ -34,26 +37,19 @@ export class SourceHealthTracker implements SourceHealth {
         this.now = options.now ?? Date.now;
     }
 
+    /** Sources whose last check failed; a retry is due once the failure TTL has passed (`isHealthy`), and the entry leaves when a check succeeds or the tracker is reset. */
     failed(): FailedSource[] {
-        this.sweep();
         return [...this.failures.entries()].map(([url, entry]) => ({ url, error: entry.error }));
     }
 
     isHealthy(sourceUrl: string): boolean {
         const entry = this.failures.get(sourceUrl);
-        if (!entry) {
-            return true;
-        }
-        if (this.isExpired(entry.failedAt)) {
-            this.failures.delete(sourceUrl);
-            return true;
-        }
-        return false;
+        return entry === undefined || this.isExpired(entry.failedAt);
     }
 
     markFailed(sourceUrl: string, error: string): void {
         const known = this.failures.get(sourceUrl);
-        const isNew = known === undefined || this.isExpired(known.failedAt) || known.error !== error;
+        const isNew = known === undefined || known.error !== error;
         this.failures.set(sourceUrl, { error, failedAt: this.now() });
         if (isNew) {
             this.changed.fire(this.failed());
@@ -75,14 +71,6 @@ export class SourceHealthTracker implements SourceHealth {
 
     private isExpired(failedAt: number): boolean {
         return this.now() - failedAt >= this.failureTtlMs;
-    }
-
-    private sweep(): void {
-        for (const [url, entry] of [...this.failures.entries()]) {
-            if (this.isExpired(entry.failedAt)) {
-                this.failures.delete(url);
-            }
-        }
     }
 }
 
