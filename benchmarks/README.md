@@ -36,6 +36,9 @@ Benchmarks live in `src/test/benchmarks/*.bench.ts`:
 - `core-cache.bench.ts` — 2.0 core: the two-tier cache and its persistent tier
 - `core-ops.bench.ts` — 2.0 core: what the operation queue adds to a workflow
 - `core-queries.bench.ts` — 2.0 core: which resource keys an invalidation scope reaches, and merging scopes
+- `core-transport.bench.ts` — 2.0 core: `NodeTransport` over HTTP/1.1 from a local server, plain and gzip
+- `core-feeds.bench.ts` — 2.0 core: `Catalog.updates`, `versions` and `search` through the real feed clients over a
+  fake transport, nuspec parsing and relevance ranking
 
 The `core-*` benchmarks are type-checked through `tsconfig.vitest.json` and move into `src/core/**` when the 1.x
 code is deleted (plan decision D8, item P8.2).

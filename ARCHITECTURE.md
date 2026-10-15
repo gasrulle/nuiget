@@ -146,10 +146,63 @@ the result of the static inspection at once, and the evaluated result through `u
 exists (P6.2). `Catalog.invalidate(scope, reason)` is the single entry for invalidation: it clears the source
 listings for the scopes `sources` and `workspace` and then raises the generation of every key the scope reaches.
 
-Eight reads need a package feed: `updates`, `allProjectsUpdates`, `transitiveMetadata`, `search`,
-`quickSearch`, `versions`, `metadata` and `readme`. Until P4.9 wires the feeds in they throw
-`NotYetAvailableError` (`// REMOVAL GATE: P4.9` in `Catalog.ts`), which the host answers as the protocol error
-`unsupported`.
+The feed reads are `updates`, `allProjectsUpdates`, `transitiveMetadata`, `search`, `quickSearch`, `versions`,
+`metadata`, `readme`, `readmeImage`, `prewarm` and `sourceHealth` ("Package feeds" below). `updates:<path>|…` is
+a resource like the four above and its response carries a generation; `versions` and `metadata` are fan-outs over
+one resource per allowed source and carry none; the others run directly.
+
+### Package feeds: transport, policy, caching and health
+
+Everything the 2.0 core asks of a package feed goes through four layers ([ADR-005](docs/adr/005-execution-context-and-outbound-policy.md),
+[ADR-006](docs/adr/006-icons-and-csp.md), [ADR-009](docs/adr/009-catalog.md)).
+
+- **Transport** (`src/core/http`). `NodeTransport` is the only HTTP client. It passes no `agent` to
+  `http(s).request`, so the extension host's proxy patch applies in every `http.proxySupport` mode
+  (`docs/adr/005-proxy-matrix.md`); HTTP/2 is used only for allow-listed origins while the injected proxy predicate
+  (`proxyConfigured()` in the root: `http.proxySupport` not `off` and `http.proxy` or a proxy environment variable
+  set) is false, and a connection-level HTTP/2 failure downgrades the origin for the instance's lifetime (`reset()`
+  on an `http` setting change). Redirects are capped at five and re-validated against private and unresolvable
+  targets; bodies have a size cap, gzip is decoded on request, and the credential follows a redirect only to the same
+  origin.
+- **Feed contexts** (`src/core/catalog/feedContexts.ts`). One context per effective `nuget.config` chain: the sources
+  listed for its directory, the merged configuration, a `DefaultOutboundPolicy` built from its package source mapping,
+  and the policy-bound clients (`createFeedClients().forPolicy`). A project reaches its chain through the `installed`
+  computation's own walk (`FeedContexts.register`); a read without a project names a directory (the host's
+  `sourceDirectory`). The service index (with the source health), the credential provider, the flat container, the
+  vulnerability data, README extraction, README images and the icon cache are shared by every context.
+- **Policy.** A request that carries a package id (`exactMatch` search, `searchById`, `lookup`, versions, metadata,
+  nuspec, icons, readme) goes only to the sources the context's policy allows for that id; a free-text query goes to
+  every source handed in, and every source's vulnerability data applies to every id (no id is sent). No source is
+  special by its address and nothing defaults to nuget.org (`src/core/feeds/policy.test.ts`).
+- **Feed clients** (`src/core/feeds`). The service index (endpoints per source, one discovery per source shared by
+  concurrent callers, failures into the health tracker for 120 s), the flat container, search (the V3 search service,
+  or `dotnet package search --format json` in the read's directory for local feeds and feeds without one; the JSON is
+  read after any `info :`/`warn :` lines), registration, vulnerabilities, icons, README and README images, nuspec and
+  offline metadata, the update checker (every allowed source awaited, the newest version wins), the enricher and the
+  metadata resolver (registration → nuspec → search per allowed source, then the global-packages folder).
+
+**Empty is not unknown.** A source that could not answer is reported, never read as "no result": `search` and
+`updates` carry `sourcesUnavailable` (also when a selected source is excluded as unhealthy), `searchById` answers
+`failed` apart from `missing`, vulnerability data read in part is unknown (`vulnerabilities` stays absent), and
+`package/versions` with no versions from an unreachable source is a `failed` response.
+
+**Caching.** Results the coordinator caches are only complete ones: a compute that ends with `sourcesUnavailable`,
+offline metadata or no metadata throws `IncompleteResultError(value)`, and `queryWithRetry` hands the value back with
+the handle's generation while the coordinator stores nothing. Versions and metadata are cached per source
+(`versions:<id>|<sourceUrl>|…`, `metadata:<id>@<version>|<sourceUrl>`); the `'all'` keys are never written. In the
+`TieredCache` (lifetimes in `CachePolicy.ts`, persisted within the 8 MB byte budget): found icons (kept),
+known icon misses (24 h, only when a feed answered) and lite lookups (5 min, including "this source does not know
+the id"). In memory only: service-index endpoints (10 min), source failures (120 s), vulnerability data (1 h, only
+when every page loaded), READMEs (an LRU per package version and source), README images (an LRU of 64 found
+images), credentials (30 min, failures 5 min).
+`Catalog.invalidate` of a `sources` or `workspace` scope clears the feed contexts and resets every shared feed
+client; the metadata resolver, the update checker and search keep no cache of their own.
+
+**Health.** One `SourceHealthTracker` records the failures of every read and of the monitor, and its changes reach
+both surfaces as `sources/health`; `sources/list` carries the current failures. The monitor runs no `dotnet`: it
+probes the sources of the chains that reads have registered, re-probes every 120 s while something is down and every
+300 s otherwise, and restarts when a chain is registered or the sources are invalidated. A recovered source
+invalidates nothing; the webviews ask again for what they showed as unavailable.
 
 ### Project execution context
 

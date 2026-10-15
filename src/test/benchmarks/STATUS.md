@@ -1,3 +1,57 @@
+# STATUS — src/test/benchmarks   commit 0591864 (parent of the P4.10 commit)   2026-10-16T08:30:00Z
+
+git status --porcelain --untracked-files=all (before the commit): `?? src/test/benchmarks/core-feeds.bench.ts`,
+` M src/test/benchmarks/STATUS.md`, ` M benchmarks/baseline.json`, ` M benchmarks/README.md`, ` M ARCHITECTURE.md`,
+` M CHANGELOG.md`, ` M docs/plans/STATUS.md` (all belong to the P4.10 commit)
+
+Item: **P4.10** benches + ARCHITECTURE 2.0 (feeds, transport, policy, caching) + CHANGELOG. Not ⚑, no stop-and-ask trigger,
+no contract change.
+
+## Verified by running
+
+```text
+baseline at 0591864         → CI run 38672354156 green on all 11 jobs
+npm run check-types → exit 0 · npx eslint src → exit 0
+npm run bench               → Test Files 20 passed (20) · Tests 119 passed | 1 skipped (120); core-feeds.bench.ts 5 tests:
+                               Catalog.updates (50 packages, 3 sources, enriched) about 957 hz (1.05 ms mean),
+                               Catalog.versions (3 sources, one resource each) about 3806 hz, Catalog.search (3 sources, 60
+                               rows merged and enriched) about 256 hz (3.9 ms), parseNuspec about 13855 hz, sortByRelevance
+                               (200 rows) about 32437 hz
+npm run bench:save          → Saved 110 benchmark measurements to benchmarks/baseline.json (105 before)
+npm test (NUIGET_SDK_TESTS=1, DOTNET_ROOT set) → Test Files 141 passed (141) · Tests 3042 passed (3042)
+npm run package:vsix, check:vsix, docs:protocol:check, test:ui, test:ui:v2 → SKIPPED: no host, extension, packaging, protocol
+                               or webview file changed (a bench, documentation and the baseline only)
+```
+
+## Done (tested)
+
+- `core-feeds.bench.ts`: the three Catalog reads the P4.9 ruling names, each recomputed per iteration (the resource is
+  invalidated first), through the real `createFeedClients`, `FeedContexts` and `DefaultServiceIndexClient` over a
+  `FakeTransport` that answers at once; two pure paths every read takes per row.
+- `benchmarks/README.md` lists `core-transport.bench.ts` (P4.2's, missing until now) and `core-feeds.bench.ts`.
+
+## Done (untested)
+
+- Nothing.
+
+## Not started
+
+- The move of the `core-*` benches into `src/core/**` (P8.2, D8).
+
+## Deviations from contract/ADR (file:line each)
+
+- None.
+
+## Advisor decisions (date, item, question, answer verbatim)
+
+2026-10-16, P4.10: no L1 consultation (not ⚑, no stop-and-ask trigger).
+
+## Exact next step (one item ID)
+
+The P4 phase gate and review (RUN.md §6), then tag `labs/2.0-P4-done`; then P5.5.
+
+## Earlier notes of this directory
+
 # STATUS — src/test/benchmarks   commit 3b2e3e3 (parent of the P2.12 commit)   2026-10-13T19:30:00Z
 
 Scope of this note: the benchmarks of the 2.0 core (`src/test/benchmarks/core-*.bench.ts`), the runner helper
