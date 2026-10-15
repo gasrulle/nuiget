@@ -11,7 +11,7 @@ import { CentralUpdateDialog, type CentralUpdateRequest } from './CentralUpdateD
 
 const A = '/w/App/App.csproj';
 const B = '/w/Lib/Lib.csproj';
-const REQUEST: CentralUpdateRequest = { projectPath: A, packageId: 'Serilog', fromVersion: '3.0.0', toVersion: '3.1.0' };
+const REQUEST: CentralUpdateRequest = { kind: 'update', projectPath: A, packageId: 'Serilog', fromVersion: '3.0.0', toVersion: '3.1.0' };
 const PREVIEW = { centralPropsPath: '/w/Directory.Packages.props', packageId: 'Serilog', fromVersion: '3.0.0', toVersion: '3.1.0', affectedProjects: [A, B] };
 
 const hostSays = (say: () => void): Promise<void> => act(async () => {
@@ -71,7 +71,7 @@ describe('CentralUpdateDialog', () => {
     it('a package without a central entry says the update changes this project only and still offers it', async () => {
         const { host } = await mount();
         await hostSays(() => host.respond(host.requests('cpm/preview')[0], { preview: null }));
-        expect(dialog()).toHaveTextContent('The central entry was not found; the update changes this project only.');
+        expect(dialog()).toHaveTextContent('The central entry was not found; the change reaches this project only.');
         expect(confirmButton()).toBeEnabled();
     });
 
@@ -85,6 +85,15 @@ describe('CentralUpdateDialog', () => {
         expect(host.requests('cpm/preview')).toHaveLength(2);
         await hostSays(() => host.respond(host.requests('cpm/preview')[1], { preview: PREVIEW }));
         expect(confirmButton()).toBeEnabled();
+    });
+
+    it('an install request says what the install sets', async () => {
+        const host = createFakeHost();
+        render(<MessageBusProvider bus={host.bus}><ProjectsProvider><CentralUpdateDialog request={{ kind: 'install', projectPath: A, packageId: 'Polly', toVersion: '8.4.2' }} onClose={() => undefined} onConfirm={() => undefined} /></ProjectsProvider></MessageBusProvider>);
+        expect(dialog()).toHaveAccessibleDescription('Installing it sets the central version in Directory.Packages.props for every project that uses it: 8.4.2.');
+        await hostSays(() => host.respond(host.requests('cpm/preview')[0], { preview: null }));
+        expect(dialog()).toHaveTextContent('The central entry was not found; the change reaches this project only.');
+        expect(confirmButton()).toHaveTextContent('Update central version');
     });
 
     it('Cancel closes the dialog and cancels the request', async () => {

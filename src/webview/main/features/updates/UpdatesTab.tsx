@@ -98,7 +98,7 @@ function ProjectUpdates({ filter, announce }: ListView): React.JSX.Element {
         }
         const entry = entryOf(update.id);
         if (entry !== undefined && isCentralRow(entry)) {
-            setCentral({ projectPath, packageId: update.id, fromVersion: update.installedVersion, toVersion: update.latestVersion, sourceUrl: update.sourceUrl });
+            setCentral({ kind: 'update', projectPath, packageId: update.id, fromVersion: update.installedVersion, toVersion: update.latestVersion, sourceUrl: update.sourceUrl });
             return;
         }
         // The row is busy from this call on (ops slice); the outcome is announced from the slice.

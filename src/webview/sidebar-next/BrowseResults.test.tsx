@@ -21,12 +21,12 @@ const hostSays = (say: () => void): Promise<void> => act(async () => {
 });
 const pause = (ms: number): Promise<void> => act(() => new Promise<void>(resolve => setTimeout(resolve, ms)));
 
-async function mountReady(): Promise<FakeHost> {
+async function mountReady(isCpm = false): Promise<FakeHost> {
     const host = createFakeHost();
     render(<StoreProvider bus={host.bus}><SidebarView /></StoreProvider>);
     await hostSays(() => host.respond(host.requests('session/get')[0], snapshot(1)));
     await hostSays(() => host.respond(host.requests('projects/list')[0], { projects: [{ name: 'App', path: A }] }, 1));
-    await hostSays(() => host.respond(host.requests('installed/get')[0], { projectPath: A, fidelity: 'authoritative', isCpm: false, packages: [pkg('Serilog', '3.0.0'), pkg('Moq', '4.20.0')] }, 1));
+    await hostSays(() => host.respond(host.requests('installed/get')[0], { projectPath: A, fidelity: 'authoritative', isCpm, packages: [pkg('Serilog', '3.0.0'), pkg('Moq', '4.20.0')] }, 1));
     await hostSays(() => host.respond(host.requests('updates/get')[0], { projectPath: A, updates: [update('Serilog', '3.1.0'), update('Moq', '4.20.72')] }, 1));
     return host;
 }
@@ -53,6 +53,28 @@ describe('sidebar: search modes and browse', () => {
 
     afterEach(() => {
         removeLayout();
+    });
+
+    it('Enter on a row of a CPM project asks for the preview; a central entry opens the actions menu, none installs, and a second Enter while asking sends nothing', async () => {
+        const user = userEvent.setup();
+        const host = await mountReady(true);
+        await searchFor(host, 'polly', [result('Polly', '8.4.2'), result('Xunit', '2.9.0')]);
+
+        // A package with a central entry: the host's actions menu (QuickPick and modal) takes over.
+        await user.click(within(row('Polly')).getByRole('option'));
+        await user.keyboard('{Enter}');
+        await user.keyboard('{Enter}');
+        expect(host.requests('cpm/preview').map(request => request.payload)).toEqual([{ projectPath: A, packageId: 'Polly', version: '8.4.2' }]);
+        await hostSays(() => host.respond(host.requests('cpm/preview')[0], { preview: { centralPropsPath: '/w/Directory.Packages.props', packageId: 'Polly', fromVersion: '8.0.0', toVersion: '8.4.2', affectedProjects: [A] } }));
+        expect(host.requests('ui/contextMenu').map(request => request.payload)).toEqual([{ packageId: 'Polly', latestVersion: '8.4.2', context: 'browse', projectPath: A, sourceUrl: FEED }]);
+        expect(host.requests('ops/install')).toHaveLength(0);
+
+        // Without a central entry the install changes this project only and runs at once.
+        await user.click(within(row('Xunit')).getByRole('option'));
+        await user.keyboard('{Enter}');
+        await hostSays(() => host.respond(host.requests('cpm/preview')[1], { preview: null }));
+        expect(host.requests('ops/install').map(request => request.payload)).toEqual([{ projectPath: A, packageId: 'Xunit', version: '2.9.0', sourceUrl: FEED }]);
+        expect(host.requests('ui/contextMenu')).toHaveLength(1);
     });
 
     it('@installed and @updates show that section alone, filtered; the box offers those two filters only', async () => {

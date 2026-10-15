@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type React from 'react';
 import { ALL_PROJECTS, type PackageSearchResult } from '../../protocol';
+import { useMessageBus } from '../shared/bus/useMessageBus';
 import { Badge, Banner, EmptyState, IconButton, Listbox, PlusIcon, ProgressBar, Row, Skeleton } from '../shared/primitives';
 import { useAllProjects } from '../shared/store/allProjects';
 import { useInstalled } from '../shared/store/installed';
@@ -22,14 +23,20 @@ export interface BrowseResultsProps {
  * The flat browse results of the sidebar (interaction model §2): compact rows, Enter or the row's button installs the
  * version found into the selected project; a package installed already says so and offers nothing. Under All Projects,
  * Enter, the button and the menu ask the host for the row's actions (`ui/contextMenu`, browse path), whose QuickPick
- * picks the projects to install into, with where the package is installed already (interaction model §3).
+ * picks the projects to install into, with where the package is installed already (interaction model §3). Into a
+ * Central Package Management project the row first asks `cpm/preview`: a package that has a central entry already goes
+ * through the actions menu, whose host modal lists the projects the central version reaches (ADR-004 tier 3, N77).
  */
 export function BrowseResults({ announce }: BrowseResultsProps): React.JSX.Element {
     const search = useSearch();
     const installed = useInstalled();
     const { isPackageBusy } = useOps();
     const { run } = useOpsActions();
+    const bus = useMessageBus();
     const [selectedId, setSelectedId] = useState<string | null>(null);
+    // Packages whose preview is being asked: a second Enter must not become a second install (it would rewrite the
+    // props file and restore every consumer again). This ends when the ask settles; busy from `run()` on is the slice's.
+    const asking = useRef(new Set<string>());
 
     const projectPath = installed.projectPath;
     const all = useAllProjects();
@@ -90,9 +97,26 @@ export function BrowseResults({ announce }: BrowseResultsProps): React.JSX.Eleme
             return;
         }
         // The row keeps the source it was found on; which source restore takes the package from is restore's business.
-        run('ops/install', { projectPath, packageId: result.id, version: result.version, sourceUrl: result.sourceUrl }).catch((error: unknown) => {
-            announce(`Install of ${result.id} failed: ${error instanceof Error ? error.message : String(error)}`);
-        });
+        const submit = (): void => {
+            run('ops/install', { projectPath, packageId: result.id, version: result.version, sourceUrl: result.sourceUrl }).catch((error: unknown) => {
+                announce(`Install of ${result.id} failed: ${error instanceof Error ? error.message : String(error)}`);
+            });
+        };
+        if (installed.result?.isCpm !== true) {
+            submit();
+            return;
+        }
+        const key = result.id.toLowerCase();
+        if (asking.current.has(key)) {
+            return;
+        }
+        asking.current.add(key);
+        const openMenu = (): void => menu({ packageId: result.id, latestVersion: result.version, context: 'browse', projectPath, sourceUrl: result.sourceUrl });
+        bus.request('cpm/preview', { projectPath, packageId: result.id, version: result.version }).then(
+            ({ result: answer }) => (answer.preview === null ? submit() : openMenu()),
+            // Never install on an error: the actions menu asks the host, whose gate and modal decide.
+            () => openMenu(),
+        ).finally(() => asking.current.delete(key));
     };
 
     if (status === 'idle') {
@@ -116,7 +140,7 @@ export function BrowseResults({ announce }: BrowseResultsProps): React.JSX.Eleme
                 label={`Search results for ${query}`}
                 hint={all.active
                     ? 'Enter chooses what to do and the projects to install into.'
-                    : 'Enter installs into the selected project; Ctrl+Enter (Cmd+Enter) opens the full view; Shift+F10 opens the actions menu.'}
+                    : 'Enter installs into the selected project (a package with a central entry in a CPM project: opens the actions menu); Ctrl+Enter (Cmd+Enter) opens the full view; Shift+F10 opens the actions menu.'}
                 testId="sidebar-browse-list"
                 density="compact"
                 busy={search.revalidating}

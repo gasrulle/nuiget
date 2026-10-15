@@ -23,7 +23,7 @@ selectors; sidebar view title (project) and title-bar icons (source/prerelease/r
 | Mode | Trigger | Main panel shows | Sidebar shows |
 |---|---|---|---|
 | `default` | empty box | Tabs **Installed** / **Updates** (with badge) | Sections **Installed** / **Updates** (collapsible, draggable split) |
-| `browse` | plain text + Enter (quick-search suggestions while typing) | Browse results list + details; tab bar hidden | Flat browse results (Enter or 300 ms debounce, min 2 chars) |
+| `browse` | plain text + Enter (quick-search suggestions while typing) | Browse results list + details; tab bar hidden | Flat browse results (Enter or 300 ms debounce, min 2 chars); Enter on a row installs it, or, for a package that has a central entry in a CPM project, opens the actions menu (§5) |
 | `installed` | `@installed <filter>` | Installed tab filtered client-side | Installed section filtered |
 | `updates` | `@updates <filter>` | Updates tab filtered | Updates section filtered |
 | `vulnerable` | `@vulnerable` | Installed tab, vulnerable packages only | *(not offered)* |
@@ -70,7 +70,7 @@ In this mode:
 | Install / Update to version | Details panel button, sidebar row hover/focus action, context menu | None (progress toast). |
 | Uninstall (single) | Details button, row action, context menu | None; outcome toast. |
 | Bulk update / bulk uninstall | Updates/Installed toolbar | In-panel **Dialog** listing the packages (and projects in All Projects) with Confirm/Cancel. |
-| CPM central change | Any update of a `central` package | Main panel: **Dialog** (`cpm-preview-dialog`) listing the projects the central version applies to; choice: *Update central version* / Cancel. Sidebar: the row's primary action opens the actions menu and the host confirms with a modal listing the same projects. *Override in this project only* waits for N74. An uninstall of a central row needs no confirmation (the central entry stays). |
+| CPM central change | Any update of a `central` package, or an install of a package that already has a central entry in a CPM project (main panel: the pane asks `cpm/preview` first and opens the dialog only when an entry exists; sidebar: the actions menu and the host's modal) | Main panel: **Dialog** (`cpm-preview-dialog`) listing the projects the central version applies to; choice: *Update central version* / Cancel. Sidebar: the row's primary action opens the actions menu and the host confirms with a modal listing the same projects. *Override in this project only* waits for N74. An uninstall of a central row needs no confirmation (the central entry stays). |
 | Remove source | Source settings | In-dialog confirm row (existing pattern). |
 | Restore project(s) | Transitive banner, header | None. |
 

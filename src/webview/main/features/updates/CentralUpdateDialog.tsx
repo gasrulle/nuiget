@@ -7,9 +7,12 @@ import { useProjects } from '../../../shared/store/projects';
 
 /** The central change the user asked for; the owner of the dialog runs it on confirm. */
 export interface CentralUpdateRequest {
+    /** An install of a package that has a central entry sets the central version as an update does (N77). */
+    kind: 'install' | 'update';
     projectPath: string;
     packageId: string;
-    fromVersion: string;
+    /** The central version before the change, when known. */
+    fromVersion?: string;
     toVersion: string;
     sourceUrl?: string;
 }
@@ -27,6 +30,13 @@ type PreviewState =
     | { status: 'error'; message: string };
 
 const lastSegment = (projectPath: string): string => projectPath.split(/[\\/]/).pop() ?? projectPath;
+
+function describeChange(request: CentralUpdateRequest): string {
+    const versions = request.fromVersion === undefined ? request.toVersion : `${request.fromVersion} → ${request.toVersion}`;
+    return request.kind === 'install'
+        ? `Installing it sets the central version in Directory.Packages.props for every project that uses it: ${versions}.`
+        : `Its version is set in Directory.Packages.props for every project that uses it: ${versions}.`;
+}
 
 /**
  * What updating a centrally managed package changes (interaction model §5, "CPM central change"): the host's preview
@@ -74,7 +84,7 @@ export function CentralUpdateDialog({ request, onClose, onConfirm }: CentralUpda
             </div>
         );
     } else if (state.preview === null) {
-        body = <p className="nuiget-bulk-lead">The central entry was not found; the update changes this project only.</p>;
+        body = <p className="nuiget-bulk-lead">The central entry was not found; the change reaches this project only.</p>;
     } else {
         body = (
             <>
@@ -91,7 +101,7 @@ export function CentralUpdateDialog({ request, onClose, onConfirm }: CentralUpda
             open={request !== null}
             onClose={onClose}
             title={request ? `${request.packageId} is centrally managed` : ''}
-            description={request ? `Its version is set in Directory.Packages.props for every project that uses it: ${request.fromVersion} → ${request.toVersion}.` : undefined}
+            description={request ? describeChange(request) : undefined}
             role="alertdialog"
             initialFocus={cancelRef}
             data-testid="cpm-preview-dialog"

@@ -58,6 +58,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **2.0 import fences** — ESLint keeps the 2.0 layers apart from each other and from the 1.x code, with a self-pruning allow-list, and `npm run lint` now also covers `scripts/` and the root configuration files
 
 ### Fixed
+- **2.0 CPM install preview**
 
 - **Long NuGet prerelease versions and package IDs remain intact during CLI search and installation**
 - **2.0 honours the `full` and `off` search modes and the search result limit default**

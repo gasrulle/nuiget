@@ -103,6 +103,52 @@ describe('main panel: details', () => {
         expect(host.requests('ops/remove')).toHaveLength(0);
     });
 
+    it('an install into a Central Package Management project asks for the preview first: with a central entry it opens the dialog and installs on confirm, without one it installs at once', async () => {
+        const user = userEvent.setup();
+        const host = await mountReady([pkg('Serilog', '3.0.0', { declaration: 'central' })], true);
+        await user.type(screen.getByTestId('search-input'), 'polly{Enter}');
+        await hostSays(() => host.respond(host.requests('search/query')[0], { query: 'polly', results: [
+            { id: 'Polly', version: '8.4.2', description: '', authors: '', versions: ['8.4.2'], sourceUrl: FEED },
+            { id: 'Xunit', version: '2.9.0', description: '', authors: '', versions: ['2.9.0'], sourceUrl: FEED },
+        ] }));
+        await user.click(option('browse-list', 'Polly'));
+        await hostSays(() => host.respond(versionsOf(host)[0], { packageId: 'Polly', versions: ['8.4.2'] }));
+        await user.click(primary());
+        expect(primary()).toBeDisabled();
+        await hostSays(() => host.respond(host.requests('cpm/preview')[0], { preview: { centralPropsPath: '/w/Directory.Packages.props', packageId: 'Polly', fromVersion: '8.0.0', toVersion: '8.4.2', affectedProjects: [A, B] } }));
+        const dialog = screen.getByTestId('cpm-preview-dialog');
+        expect(dialog).toHaveAccessibleDescription(/Installing it sets the central version in Directory.Packages.props for every project that uses it: 8.0.0 → 8.4.2/);
+        expect(host.requests('ops/install')).toHaveLength(0);
+        // The dialog asks for its own preview.
+        await hostSays(() => host.respond(host.requests('cpm/preview')[1], { preview: { centralPropsPath: '/w/Directory.Packages.props', packageId: 'Polly', fromVersion: '8.0.0', toVersion: '8.4.2', affectedProjects: [A, B] } }));
+        await user.click(within(dialog).getByTestId('cpm-preview-confirm'));
+        expect(host.requests('ops/install').map(request => request.payload)).toEqual([{ projectPath: A, packageId: 'Polly', version: '8.4.2', sourceUrl: FEED }]);
+
+        // Without a central entry: no dialog, the install runs at once.
+        await user.click(option('browse-list', 'Xunit'));
+        await hostSays(() => host.respond(versionsOf(host).at(-1)!, { packageId: 'Xunit', versions: ['2.9.0'] }));
+        await user.click(primary());
+        await hostSays(() => host.respond(host.requests('cpm/preview').at(-1)!, { preview: null }));
+        expect(screen.queryByTestId('cpm-preview-dialog')).toBeNull();
+        expect(host.requests('ops/install').map(request => request.payload.packageId)).toEqual(['Polly', 'Xunit']);
+    });
+
+    it('a failed preview opens the dialog with Retry and installs nothing', async () => {
+        const user = userEvent.setup();
+        const host = await mountReady([pkg('Serilog', '3.0.0', { declaration: 'central' })], true);
+        await user.type(screen.getByTestId('search-input'), 'polly{Enter}');
+        await hostSays(() => host.respond(host.requests('search/query')[0], { query: 'polly', results: [{ id: 'Polly', version: '8.4.2', description: '', authors: '', versions: ['8.4.2'], sourceUrl: FEED }] }));
+        await user.click(option('browse-list', 'Polly'));
+        await hostSays(() => host.respond(versionsOf(host)[0], { packageId: 'Polly', versions: ['8.4.2'] }));
+        await user.click(primary());
+        await hostSays(() => host.fail(host.requests('cpm/preview')[0], 'failed', 'no context'));
+        const dialog = screen.getByTestId('cpm-preview-dialog');
+        await hostSays(() => host.fail(host.requests('cpm/preview')[1], 'failed', 'no context'));
+        expect(within(dialog).getByRole('button', { name: 'Retry' })).toBeInTheDocument();
+        expect(within(dialog).getByTestId('cpm-preview-confirm')).toBeDisabled();
+        expect(host.requests('ops/install')).toHaveLength(0);
+    });
+
     it('a browse result that is not installed is installed into the selected project from its source', async () => {
         const user = userEvent.setup();
         const host = await mountReady();

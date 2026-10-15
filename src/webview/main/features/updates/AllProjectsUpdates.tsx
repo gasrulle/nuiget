@@ -195,7 +195,7 @@ export function AllProjectsUpdates({ filter, announce }: ListView): React.JSX.El
             return;
         }
         if (entry !== undefined && isCentralRow(entry)) {
-            setCentral({ projectPath: section.projectPath, packageId: update.id, fromVersion: update.installedVersion, toVersion: update.latestVersion, sourceUrl: update.sourceUrl });
+            setCentral({ kind: 'update', projectPath: section.projectPath, packageId: update.id, fromVersion: update.installedVersion, toVersion: update.latestVersion, sourceUrl: update.sourceUrl });
             return;
         }
         run('ops/update', { projectPath: section.projectPath, packageId: update.id, version: update.latestVersion, sourceUrl: update.sourceUrl }).catch((error: unknown) => {
