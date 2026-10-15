@@ -194,10 +194,6 @@ function toProtocolError(error: unknown): ProtocolError {
     if (error instanceof ProtocolRequestError) {
         return { code: error.code, message: error.message, details: error.details };
     }
-    // A read that the Catalog cannot serve yet (ADR-009); told by its code, so that no host file needs the class.
-    if (error instanceof Error && (error as { code?: unknown }).code === 'not-yet-available') {
-        return { code: 'unsupported', message: error.message };
-    }
     if (error instanceof Error) {
         return { code: 'failed', message: error.message };
     }

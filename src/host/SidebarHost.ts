@@ -146,7 +146,7 @@ export class SidebarHost extends WebviewHost implements vscode.WebviewViewProvid
         const sourceUrl = request.sourceUrl ?? (snapshot.selectedSource === 'all' ? undefined : snapshot.selectedSource);
         const versionFor = async (fallback?: string) => {
             if (action === 'install-version' || action === 'change-version' || action === 'update-version') {
-                const versions = await this.services.catalog.versions(request.packageId, sourceUrl, snapshot.includePrerelease, new AbortController().signal);
+                const { versions } = await this.services.catalog.versions(sourceDirectory(this.services), request.packageId, sourceUrl, snapshot.includePrerelease, new AbortController().signal);
                 return pickVersion(request.packageId, versions.slice(0, 50), request.installedVersion);
             }
             return fallback;

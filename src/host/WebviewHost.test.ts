@@ -146,15 +146,4 @@ describe('WebviewHost', () => {
         expect(posted('e2').map(message => [message.kind, 'generation' in message])).toEqual([['stream', false], ['response', true]]);
     });
 
-    it('an error whose code is not-yet-available answers unsupported', async () => {
-        const host = new TestHost();
-        host.on('package/versions', async () => { throw Object.assign(new Error('not-yet-available: Catalog.versions'), { code: 'not-yet-available' }); });
-        host.on('package/metadata', async () => { throw Object.assign(new Error('some other failure'), { code: 'ENOENT' }); });
-        await host.receiveRaw(makeRequest('package/versions', { packageId: 'x', includePrerelease: false }, 'u1'));
-        await host.receiveRaw(makeRequest('package/metadata', { packageId: 'x', version: '1' }, 'u2'));
-        expect(responses(host)).toEqual([
-            { kind: 'response', id: 'u1', type: 'package/versions', ok: false, error: { code: 'unsupported', message: 'not-yet-available: Catalog.versions' } },
-            { kind: 'response', id: 'u2', type: 'package/metadata', ok: false, error: { code: 'failed', message: 'some other failure' } },
-        ]);
-    });
 });

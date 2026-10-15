@@ -107,6 +107,15 @@ describe('ProjectContextProvider', () => {
         expect(sources.listSources).toHaveBeenCalledWith(projectDir);
     });
 
+    it('configFilesFor lists the chain of a directory without a project', async () => {
+        const runner = fakeDotnet(`${nearest}\r\n\r\n  ${user}  \n`);
+        const directory = path.resolve('/work/no-project-here');
+
+        await expect(new ProjectContextProvider({ runner, sources: fakeSources() }).configFilesFor(directory)).resolves.toEqual([nearest, user]);
+        expect(runner.calls).toEqual([{ args: ['nuget', 'config', 'paths'], options: expect.objectContaining({ cwd: directory }) }]);
+        await expect(new ProjectContextProvider({ runner: fakeDotnet('', async () => { throw new Error('gone'); }), sources: fakeSources() }).configFilesFor(directory)).resolves.toEqual([]);
+    });
+
     it('leaves out the workspace folder when none is given', async () => {
         const { context } = await new ProjectContextProvider({ runner: fakeDotnet(), sources: fakeSources() }).get(project);
         expect('workspaceFolder' in context).toBe(false);

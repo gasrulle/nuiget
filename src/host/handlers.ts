@@ -265,6 +265,7 @@ export function registerSharedHandlers(host: Registrar, services: HostServices):
     });
     host.on('updates/get', async ({ projectPath, includePrerelease }, ctx) => {
         const result = await catalog.updates(requireProject(projectPath), includePrerelease, update => ctx.emit({ kind: 'found', update }), ctx.signal);
+        ctx.generation = result.generation;
         return { projectPath: result.projectPath, updates: result.updates, sourcesUnavailable: result.sourcesUnavailable || undefined };
     });
     host.on('transitive/get', async ({ projectPath, forceRestore }, ctx) => {
@@ -280,7 +281,7 @@ export function registerSharedHandlers(host: Registrar, services: HostServices):
         ctx.generation = generation;
         return value;
     });
-    host.on('transitive/metadata', async ({ packages }, ctx) => ({ metadata: await catalog.transitiveMetadata(undefined, packages, ctx.signal) }));
+    host.on('transitive/metadata', async ({ packages }, ctx) => ({ metadata: await catalog.transitiveMetadata(sourceDirectory(services), packages, ctx.signal) }));
 
     // ── all projects (streamed; the Catalog emits the protocol's chunk types) ──
     host.on('allProjects/installed', async (_payload, ctx) => catalog.allProjectsInstalled(chunk => ctx.emit(chunk), ctx.signal));
@@ -290,18 +291,29 @@ export function registerSharedHandlers(host: Registrar, services: HostServices):
     // ── search & package details ──
     host.on('search/query', async (payload, ctx) => {
         const found = await catalog.search(
+            sourceDirectory(services),
             { query: payload.query, sourceUrls: payload.sourceUrls, includePrerelease: payload.includePrerelease, take: payload.take ?? services.config().searchResultLimit, exactMatch: payload.exactMatch },
             packages => ctx.emit({ kind: 'metadata', packages }),
             ctx.signal,
         );
         return { query: payload.query, results: found.results, sourcesUnavailable: found.sourcesUnavailable };
     });
-    host.on('search/autocomplete', async (payload, ctx) => ({ query: payload.query, groups: await catalog.quickSearch(payload.query, payload.sources.map(source => source.url), payload.includePrerelease, services.config().quickSearchResultsPerSource, ctx.signal) }));
-    host.on('package/versions', async (payload, ctx) => ({ packageId: payload.packageId, versions: await catalog.versions(payload.packageId, payload.sourceUrl, payload.includePrerelease, ctx.signal) }));
-    host.on('package/metadata', async (payload, ctx) => ({ metadata: (await catalog.metadata(payload.packageId, payload.version, payload.sourceUrl, ctx.signal)) ?? null }));
-    host.on('package/readme', async (payload, ctx) => ({ readme: (await catalog.readme(payload.packageId, payload.version, payload.sourceUrl, ctx.signal)) ?? null }));
-    host.on('readme/image', async ({ url }) => ({ url, dataUri: null })); // REMOVAL GATE: P4.9 (readme/image answers through Catalog.readmeImage)
-    host.on('package/prewarm', async () => ({})); // REMOVAL GATE: P4.9
+    host.on('search/autocomplete', async (payload, ctx) => ({ query: payload.query, groups: await catalog.quickSearch(sourceDirectory(services), payload.sources.map(source => source.url), payload.query, payload.includePrerelease, services.config().quickSearchResultsPerSource, ctx.signal) }));
+    // `package/versions` and `package/metadata` are fan-outs over per-source resources and carry no generation (N70).
+    host.on('package/versions', async (payload, ctx) => {
+        const { versions, sourcesUnavailable } = await catalog.versions(sourceDirectory(services), payload.packageId, payload.sourceUrl, payload.includePrerelease, ctx.signal);
+        if (versions.length === 0 && sourcesUnavailable) {
+            throw new HostRequestError('failed', 'No package source could be reached for this package');
+        }
+        return { packageId: payload.packageId, versions };
+    });
+    host.on('package/metadata', async (payload, ctx) => ({ metadata: (await catalog.metadata(sourceDirectory(services), payload.packageId, payload.version, payload.sourceUrl, ctx.signal)) ?? null }));
+    host.on('package/readme', async (payload, ctx) => ({ readme: (await catalog.readme(sourceDirectory(services), payload.packageId, payload.version, payload.sourceUrl, ctx.signal)) ?? null }));
+    host.on('readme/image', async ({ url, sourceUrl }, ctx) => ({ url, dataUri: await catalog.readmeImage(url, sourceUrl, ctx.signal) }));
+    host.on('package/prewarm', async ({ sourceUrl }) => {
+        await catalog.prewarm(sourceDirectory(services), sourceUrl);
+        return {};
+    });
 
     // ── sources ──
     const listSources = async (signal?: AbortSignal) => {

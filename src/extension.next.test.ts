@@ -7,9 +7,11 @@ import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from 'vite
 import { TieredCache } from './core/cache';
 import type { SpawnFunction } from './core/cli';
 import { createScratchDir, writeTree, type ScratchDir } from './core/project/__fixtures__/scratch';
-import { activateWith, type ActivatedExtension } from './extension.next';
+import { FakeTransport, fail, json } from './core/feeds/testSupport';
+import { NodeTransport } from './core/http';
+import { activateWith, proxyConfigured, type ActivatedExtension, type ActivationOverrides } from './extension.next';
 import { MainPanelHost } from './host/MainPanelHost';
-import type { BulkOutcome, EventPayload, EventType, OutboundEnvelope } from './protocol';
+import { makeRequest, type BulkOutcome, type EventPayload, type EventType, type OutboundEnvelope, type RequestPayload, type RequestType } from './protocol';
 import {
     commands as mockCommands,
     createMockExtensionContext,
@@ -154,14 +156,14 @@ describe('extension.next (2.0 composition root)', () => {
     let projectFiles: string[];
     let scratch: ScratchDir | undefined;
 
-    async function start(seed: { workspaceState?: Record<string, unknown>; globalState?: Record<string, unknown> } = {}): Promise<ActivatedExtension> {
+    async function start(seed: { workspaceState?: Record<string, unknown>; globalState?: Record<string, unknown>; overrides?: Partial<ActivationOverrides> } = {}): Promise<ActivatedExtension> {
         for (const [key, value] of Object.entries(seed.workspaceState ?? {})) {
             await context.workspaceState.update(key, value);
         }
         for (const [key, value] of Object.entries(seed.globalState ?? {})) {
             await context.globalState.update(key, value);
         }
-        const extension = await activateWith(context as unknown as vscode.ExtensionContext, { spawn: dotnet.spawn, resolveExecutable: () => 'dotnet' });
+        const extension = await activateWith(context as unknown as vscode.ExtensionContext, { spawn: dotnet.spawn, resolveExecutable: () => 'dotnet', ...seed.overrides });
         await extension.ready;
         return extension;
     }
@@ -283,6 +285,73 @@ describe('extension.next (2.0 composition root)', () => {
         configListener({ affectsConfiguration: section => section === 'nuiget' });
 
         expect(eventsOf(sidebar, 'config/changed')).toEqual([expect.objectContaining({ searchResultLimit: 50, enablePerformanceLogging: false })]);
+    });
+
+    it('proxyConfigured follows http.proxySupport, http.proxy and the proxy environment', () => {
+        let settings: Record<string, string> = {};
+        vi.mocked(vscode.workspace.getConfiguration).mockImplementation(((section?: string) => ({
+            get: <T>(key: string, fallback?: T) => (settings[`${section}.${key}`] ?? fallback) as T,
+            has: () => false,
+            inspect: () => undefined,
+            update: async () => undefined,
+        })) as unknown as typeof vscode.workspace.getConfiguration);
+
+        expect(proxyConfigured({})).toBe(false);
+        expect(proxyConfigured({ HTTPS_PROXY: 'http://proxy.example:3128' })).toBe(true);
+        expect(proxyConfigured({ http_proxy: '  ' })).toBe(false);
+        settings = { 'http.proxy': 'http://proxy.example:3128' };
+        expect(proxyConfigured({})).toBe(true);
+        settings = { 'http.proxy': 'http://proxy.example:3128', 'http.proxySupport': 'off' };
+        expect(proxyConfigured({ HTTPS_PROXY: 'http://proxy.example:3128' })).toBe(false);
+        settings = { 'http.proxySupport': 'on' };
+        expect(proxyConfigured({ HTTP_PROXY: 'http://proxy.example:3128' })).toBe(true);
+    });
+
+    it('an http setting change resets the transport and a nuiget change does not', async () => {
+        const transport = new NodeTransport({ proxy: { isConfigured: () => false } });
+        const reset = vi.spyOn(transport, 'reset');
+        await start({ overrides: { transport } });
+        const configListener = vi.mocked(vscode.workspace.onDidChangeConfiguration).mock.calls.at(-1)![0];
+
+        configListener({ affectsConfiguration: section => section === 'nuiget' });
+        expect(reset).not.toHaveBeenCalled();
+        configListener({ affectsConfiguration: section => section === 'http' });
+        expect(reset).toHaveBeenCalledTimes(1);
+        transport.dispose();
+    });
+
+    it('composes the feeds: package/versions and search/query answer through the transport override', async () => {
+        const base = sharedFeed.replace('/v3/index.json', '');
+        let feedUp = true;
+        const transport = new FakeTransport(request => {
+            if (!feedUp) {
+                return fail('network');
+            }
+            if (request.url === sharedFeed) {
+                return json({ version: '3.0.0', resources: [{ '@id': `${base}/flat/`, '@type': 'PackageBaseAddress/3.0.0' }, { '@id': `${base}/query`, '@type': 'SearchQueryService' }] });
+            }
+            if (request.url === `${base}/flat/contoso.lib/index.json`) {
+                return json({ versions: ['1.0.0', '2.0.0'] });
+            }
+            return json({ data: [] });
+        });
+        await start({ workspaceState: { 'nuiget.selectedProject': appPath }, overrides: { transport } });
+        const sidebar = resolveSidebar();
+        const [receive] = vi.mocked(sidebar.onDidReceiveMessage).mock.calls.at(-1) as unknown as [(message: unknown) => void];
+        const ask = async <T extends RequestType>(type: T, payload: RequestPayload<T>, id: string) => {
+            receive(makeRequest(type, payload, id));
+            return vi.waitFor(() => {
+                const response = (sidebar.postMessage as Mock).mock.calls.map(call => call[0] as OutboundEnvelope).find(message => message.kind === 'response' && message.id === id);
+                expect(response).toBeDefined();
+                return response;
+            });
+        };
+
+        await expect(ask('package/versions', { packageId: 'Contoso.Lib', includePrerelease: false }, 'v1')).resolves.toMatchObject({ ok: true, result: { packageId: 'Contoso.Lib', versions: ['2.0.0', '1.0.0'] } });
+
+        feedUp = false;
+        await vscode.commands.executeCommand('nuiget.refreshPackages');
+        await expect(ask('search/query', { query: 'contoso', includePrerelease: false }, 's1')).resolves.toMatchObject({ ok: true, result: { query: 'contoso', results: [], sourcesUnavailable: true } });
     });
 
     it('sets nuiget.hasProjectFiles, nuiget.prereleaseEnabled and nuiget.restoreEnabled at activation', async () => {

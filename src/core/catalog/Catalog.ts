@@ -3,13 +3,16 @@
  * project model, so main panel and sidebar share one computation per resource and generation.
  *
  * Streams are `emit` callbacks, so that a host can forward chunks as protocol `stream` envelopes
- * while the coordinator caches the final value. The methods that need a package feed are declared
- * and throw until the feeds are wired in (plan item P4.9).
+ * while the coordinator caches the final value. A feed-dependent read resolves its sources, outbound policy and
+ * credentials from one feed context per `nuget.config` chain (ADR-009 d.5): through `ProjectContextProvider.get` for a
+ * project-scoped read, through the directory the host names for a read without a project. An incomplete feed answer is
+ * delivered but never cached (`IncompleteResultError`, ADR-009 d.8).
  */
 
 import type { Logger, ProjectEvaluator, ProjectInspector, QueryCoordinator, QueryHandle, SourceProvider } from '../contracts';
 import { StaleQueryError } from '../contracts';
 import type {
+    FailedSource,
     InstalledResult,
     InvalidationReason,
     InvalidationScope,
@@ -24,10 +27,14 @@ import type {
     TransitiveResult,
 } from '../../protocol/domain';
 import { resourceKeys } from '../../protocol/domain';
+import { filterAllowedSources, type ResolvedSource } from '../feeds';
 import type { RequestChunk } from '../../protocol/messages';
 import { redact } from '../logging';
 import { getProjectDependencyMap, type AssetsReader, type ProjectContextProvider } from '../project';
 import { batchedPromiseAll } from '../util/concurrency';
+import { normalize, sortDescending } from '../versioning';
+import type { FeedClients } from './feedClients';
+import type { FeedContext, FeedContexts } from './feedContexts';
 
 export interface CatalogDeps {
     coordinator: QueryCoordinator;
@@ -39,6 +46,10 @@ export interface CatalogDeps {
     assets: Pick<AssetsReader, 'getPackageDependencies' | 'getTransitivePackages'>;
     /** Project discovery for the whole workspace (host adapter over `workspace.findFiles`). */
     discoverProjects: () => Promise<Project[]>;
+    /** The shared feed clients (transport, service index and health, credentials, caches). */
+    feeds: FeedClients;
+    /** One feed context per `nuget.config` chain: sources, mapping, policy and the policy-bound clients. */
+    feedContexts: FeedContexts;
     logger?: Logger;
 }
 
@@ -64,6 +75,7 @@ export interface UpdatesQueryResult {
     projectPath: string;
     updates: PackageUpdate[];
     sourcesUnavailable: boolean;
+    generation: number;
 }
 
 export interface SearchQueryOptions {
@@ -80,19 +92,25 @@ export interface SearchQueryResult {
     sourcesUnavailable?: boolean;
 }
 
-/** Thrown by the Catalog methods that need a package feed, until plan item P4.9 wires the feeds in. */
-export class NotYetAvailableError extends Error {
-    readonly code = 'not-yet-available';
+/**
+ * A feed-dependent computation that ends with an incomplete answer (`sourcesUnavailable`, offline or no metadata) throws
+ * this carrier, so the coordinator stores nothing (it caches successes only); `queryWithRetry` is the one place that
+ * catches it and answers its value with the handle's generation (ADR-009 d.8).
+ */
+export class IncompleteResultError<T> extends Error {
+    readonly code = 'incomplete-result';
 
-    constructor(readonly method: string, readonly item = 'P4.9') {
-        super(`not-yet-available: Catalog.${method} arrives with plan item ${item}`);
-        this.name = 'NotYetAvailableError';
+    constructor(readonly value: T) {
+        super('incomplete feed answer');
+        this.name = 'IncompleteResultError';
     }
 }
 
 type InstalledChunk = { kind: 'provisional'; result: InstalledResult } | RequestChunk<'installed/get'>;
 
 const ALL_PROJECTS_CONCURRENCY = 4;
+/** Results asked of a search that names no `take` (the default of the `nuiget.searchResultLimit` setting). */
+const DEFAULT_SEARCH_TAKE = 50;
 const STALE_ATTEMPTS = 3;
 
 export class Catalog {
@@ -185,16 +203,67 @@ export class Catalog {
         }
     }
 
-    async updates(_projectPath: string, _includePrerelease: boolean, _emitFound?: (update: PackageUpdate) => void, _signal?: AbortSignal): Promise<UpdatesQueryResult> {
-        throw new NotYetAvailableError('updates'); // REMOVAL GATE: P4.9
+    /**
+     * Updates of a project's installed packages. Found rows stream bare through `emitFound`; the answer carries their
+     * icon, verification and authors. An answer with `sourcesUnavailable` is delivered and not cached.
+     */
+    async updates(projectPath: string, includePrerelease: boolean, emitFound?: (update: PackageUpdate) => void, signal?: AbortSignal): Promise<UpdatesQueryResult> {
+        const { value, generation } = await queryWithRetry(() => this.deps.coordinator.query<Omit<UpdatesQueryResult, 'generation'>, PackageUpdate>(
+            resourceKeys.updates(projectPath, includePrerelease),
+            (ctx, emit) => this.computeUpdates(projectPath, includePrerelease, emit, ctx.signal),
+            emitFound,
+        ), signal);
+        return { ...value, generation };
+    }
+
+    private async computeUpdates(projectPath: string, includePrerelease: boolean, emit: (update: PackageUpdate) => void, signal: AbortSignal): Promise<Omit<UpdatesQueryResult, 'generation'>> {
+        const context = await this.deps.feedContexts.forProject(projectPath).catch((error: unknown) => {
+            this.deps.logger?.warn(redact(`Feed context of ${projectPath} could not be built: ${describe(error)}`));
+            return undefined;
+        });
+        if (context === undefined) {
+            // A context that cannot be built says nothing about the updates: unknown, not empty.
+            throw new IncompleteResultError({ projectPath, updates: [], sourcesUnavailable: true });
+        }
+        const { result, upgrade } = await this.installed(projectPath, undefined, signal);
+        const final = upgrade ? await upgrade : result;
+        const { resolved, excluded } = await this.deps.feedContexts.resolve(context, undefined, signal);
+        const checked = await context.clients.updates.check(resolved, final.packages, includePrerelease, emit, signal);
+        const lite = await context.clients.searchEnricher.enrich(resolved, checked.updates.map(update => ({ id: update.id, version: update.latestVersion })), signal);
+        const byId = new Map(lite.map(entry => [entry.id.toLowerCase(), entry]));
+        const updates = checked.updates.map(update => {
+            const entry = byId.get(update.id.toLowerCase());
+            const enriched: PackageUpdate = { ...update };
+            if (entry?.iconUrl !== undefined) {
+                enriched.iconUrl = entry.iconUrl;
+            }
+            if (entry?.verified !== undefined) {
+                enriched.verified = entry.verified;
+            }
+            if (entry?.authors !== undefined) {
+                enriched.authors = entry.authors;
+            }
+            return enriched;
+        });
+        const value = { projectPath, updates, sourcesUnavailable: checked.sourcesUnavailable || excluded.length > 0 };
+        if (value.sourcesUnavailable) {
+            throw new IncompleteResultError(value);
+        }
+        return value;
     }
 
     transitive(projectPath: string, signal?: AbortSignal): Promise<CatalogValue<TransitiveResult>> {
         return queryWithRetry(() => this.deps.coordinator.query<TransitiveResult>(resourceKeys.transitive(projectPath), () => this.deps.assets.getTransitivePackages(projectPath)), signal);
     }
 
-    async transitiveMetadata(_projectPath: string | undefined, _packages: Array<{ id: string; version: string }>, _signal?: AbortSignal): Promise<PackageMetadataLite[]> {
-        throw new NotYetAvailableError('transitiveMetadata'); // REMOVAL GATE: P4.9
+    /**
+     * Lite metadata, with live vulnerabilities, for any list of package versions, under the chain of `directory`. Not a
+     * resource. Under `ALL_PROJECTS` the host names the first workspace folder, so that folder's chain applies.
+     */
+    async transitiveMetadata(directory: string, packages: Array<{ id: string; version: string }>, signal?: AbortSignal): Promise<PackageMetadataLite[]> {
+        const context = await this.deps.feedContexts.forDirectory(directory);
+        const { resolved } = await this.deps.feedContexts.resolve(context, undefined, signal);
+        return context.clients.enricher.enrich(resolved, packages, signal);
     }
 
     /** Package → dependency ids of a project, for the order of bulk edits (`PackageWorkflows`). */
@@ -244,11 +313,42 @@ export class Catalog {
     }
 
     async allProjectsUpdates(
-        _includePrerelease: boolean,
-        _emit: (chunk: RequestChunk<'allProjects/updates'>) => void,
-        _signal: AbortSignal,
+        includePrerelease: boolean,
+        emit: (chunk: RequestChunk<'allProjects/updates'>) => void,
+        signal: AbortSignal,
     ): Promise<{ projectPaths: string[]; sourcesUnavailable?: boolean }> {
-        throw new NotYetAvailableError('allProjectsUpdates'); // REMOVAL GATE: P4.9
+        // A fan-out is not a resource (ADR-009): it reports no generation of its own.
+        const { value: projects } = await this.projects(signal);
+        emit({ kind: 'start', projects });
+        let sourcesUnavailable = false;
+        await batchedPromiseAll(projects, async project => {
+            if (signal.aborted) {
+                return;
+            }
+            const origin = { projectPath: project.path, projectName: project.name, workspaceFolder: project.workspaceFolder };
+            try {
+                const result = await this.updates(project.path, includePrerelease, undefined, signal);
+                sourcesUnavailable ||= result.sourcesUnavailable;
+                if (signal.aborted) {
+                    return;
+                }
+                emit({ kind: 'project', chunk: { ...origin, updates: result.updates } });
+                const icons: Record<string, string> = {};
+                for (const update of result.updates) {
+                    if (update.iconUrl !== undefined) {
+                        icons[update.id.toLowerCase()] = update.iconUrl;
+                    }
+                }
+                if (Object.keys(icons).length > 0) {
+                    emit({ kind: 'icons', icons });
+                }
+            } catch (error) {
+                if (!signal.aborted) {
+                    emit({ kind: 'project', chunk: { ...origin, updates: [], error: redact(describe(error)) } });
+                }
+            }
+        }, ALL_PROJECTS_CONCURRENCY);
+        return sourcesUnavailable ? { projectPaths: projects.map(project => project.path), sourcesUnavailable } : { projectPaths: projects.map(project => project.path) };
     }
 
     async allProjectsTransitive(
@@ -279,24 +379,128 @@ export class Catalog {
 
     // ─── search & package details (not coordinator resources: keyed by user input) ───
 
-    async search(_options: SearchQueryOptions, _emitMetadata: (packages: PackageMetadataLite[]) => void, _signal: AbortSignal): Promise<SearchQueryResult> {
-        throw new NotYetAvailableError('search'); // REMOVAL GATE: P4.9
+    /** Search the directory's sources: API sources through their search service, the rest (local included) through the CLI. */
+    async search(directory: string, options: SearchQueryOptions, emitMetadata: (packages: PackageMetadataLite[]) => void, signal: AbortSignal): Promise<SearchQueryResult> {
+        const context = await this.deps.feedContexts.forDirectory(directory);
+        const { selected, resolved, excluded } = await this.deps.feedContexts.resolve(context, options.sourceUrls, signal);
+        const apiSources = resolved.filter(source => source.endpoints.searchQueryService);
+        const apiUrls = new Set(apiSources.map(source => source.source.url));
+        const excludedUrls = new Set(excluded.map(source => source.url));
+        const cliFallback = selected.filter(source => !apiUrls.has(source.url) && !excludedUrls.has(source.url));
+        const outcome = await context.clients.search.search(apiSources, cliFallback, {
+            query: options.query,
+            includePrerelease: options.includePrerelease,
+            take: options.take ?? DEFAULT_SEARCH_TAKE,
+            exactMatch: options.exactMatch,
+            signal,
+        }, directory);
+        const lite = await context.clients.searchEnricher.enrich(resolved, outcome.results.map(result => ({ id: result.id, version: result.version })), signal);
+        if (lite.length > 0) {
+            emitMetadata(lite);
+        }
+        const sourcesUnavailable = outcome.sourcesUnavailable || excluded.length > 0;
+        return sourcesUnavailable ? { results: outcome.results, sourcesUnavailable } : { results: outcome.results };
     }
 
-    async quickSearch(_query: string, _sourceUrls: string[], _includePrerelease: boolean, _perSource: number, _signal: AbortSignal): Promise<QuickSearchSourceResult[]> {
-        throw new NotYetAvailableError('quickSearch'); // REMOVAL GATE: P4.9
+    async quickSearch(directory: string, sourceUrls: string[], query: string, includePrerelease: boolean, perSource: number, signal: AbortSignal): Promise<QuickSearchSourceResult[]> {
+        const context = await this.deps.feedContexts.forDirectory(directory);
+        const { resolved } = await this.deps.feedContexts.resolve(context, sourceUrls, signal);
+        return resolved.length === 0 ? [] : context.clients.search.quickSearch(resolved, query, includePrerelease, perSource, signal);
     }
 
-    async versions(_packageId: string, _sourceUrl: string | undefined, _includePrerelease: boolean, _signal: AbortSignal): Promise<string[]> {
-        throw new NotYetAvailableError('versions'); // REMOVAL GATE: P4.9
+    /**
+     * Every version of a package (unlisted included) on the allowed sources of the directory, or on the one named. One
+     * resource per source (`resourceKeys.versions(id, source.url, …)`); the `'all'` key is never written (N70).
+     */
+    async versions(directory: string, packageId: string, sourceUrl: string | undefined, includePrerelease: boolean, signal: AbortSignal): Promise<{ versions: string[]; sourcesUnavailable: boolean }> {
+        const { context, allowed, excluded } = await this.allowedSources(directory, packageId, sourceUrl, signal);
+        const answers = await Promise.all(allowed.map(source => queryWithRetry(() => this.deps.coordinator.query<{ versions: string[]; sourcesUnavailable: boolean }>(
+            resourceKeys.versions(packageId, source.source.url, includePrerelease),
+            async ctx => {
+                const outcome = await context.clients.resolver.versions([source], packageId, { includePrerelease, listedOnly: false, signal: ctx.signal });
+                if (outcome.sourcesUnavailable) {
+                    throw new IncompleteResultError(outcome);
+                }
+                return outcome;
+            },
+        ), signal)));
+        const seen = new Set<string>();
+        const versions: string[] = [];
+        for (const version of answers.flatMap(answer => answer.value.versions)) {
+            const key = (normalize(version) ?? version).toLowerCase();
+            if (!seen.has(key)) {
+                seen.add(key);
+                versions.push(version);
+            }
+        }
+        return { versions: sortDescending(versions), sourcesUnavailable: answers.some(answer => answer.value.sourcesUnavailable) || excluded.length > 0 };
     }
 
-    async metadata(_packageId: string, _version: string, _sourceUrl: string | undefined, _signal: AbortSignal): Promise<PackageMetadata | undefined> {
-        throw new NotYetAvailableError('metadata'); // REMOVAL GATE: P4.9
+    /**
+     * Details of one package version: the first allowed source in order whose answer is not offline, each source one
+     * resource (`resourceKeys.metadata(id, version, source.url)`); when none answered, the offline copy, outside the
+     * coordinator. Vulnerabilities are present when known and absent when unknown.
+     */
+    async metadata(directory: string, packageId: string, version: string, sourceUrl: string | undefined, signal: AbortSignal): Promise<PackageMetadata | undefined> {
+        const { context, resolved, allowed } = await this.allowedSources(directory, packageId, sourceUrl, signal);
+        let found: PackageMetadata | undefined;
+        for (const source of allowed) {
+            const { value } = await queryWithRetry(() => this.deps.coordinator.query<PackageMetadata | undefined>(
+                resourceKeys.metadata(packageId, version, source.source.url),
+                async ctx => {
+                    const answer = await context.clients.resolver.metadata([source], packageId, version, ctx.signal);
+                    // Only metadata this source gave may be cached: the coordinator has no lifetime for an offline copy.
+                    if (answer === undefined || answer.offline === true) {
+                        throw new IncompleteResultError<PackageMetadata | undefined>(undefined);
+                    }
+                    return answer;
+                },
+            ), signal);
+            if (value !== undefined) {
+                found = value;
+                break;
+            }
+        }
+        found ??= await context.clients.resolver.metadata([], packageId, version);
+        if (found === undefined) {
+            return undefined;
+        }
+        const known = await this.deps.feeds.vulnerabilities.forPackage(resolved, packageId, version, signal);
+        return known.sourcesUnavailable ? found : { ...found, vulnerabilities: known.vulnerabilities };
     }
 
-    async readme(_packageId: string, _version: string, _sourceUrl: string | undefined, _signal: AbortSignal): Promise<string | undefined> {
-        throw new NotYetAvailableError('readme'); // REMOVAL GATE: P4.9
+    async readme(directory: string, packageId: string, version: string, sourceUrl: string | undefined, signal: AbortSignal): Promise<string | undefined> {
+        const context = await this.deps.feedContexts.forDirectory(directory);
+        const { resolved } = await this.deps.feedContexts.resolve(context, sourceUrl ? [sourceUrl] : undefined, signal);
+        return context.clients.resolver.readme(resolved, packageId, version, signal);
+    }
+
+    /** A README image as a `data:` URI, or `null` when it is refused, unreachable or not an image (ADR-006). */
+    readmeImage(url: string, sourceUrl: string | undefined, signal?: AbortSignal): Promise<string | null> {
+        return this.deps.feeds.readmeImages.fetch(url, sourceUrl, signal);
+    }
+
+    /** Warm the credentials and service indexes of the directory's sources; resolves once the chain is registered. */
+    async prewarm(directory: string, sourceUrl?: string): Promise<void> {
+        const context = await this.deps.feedContexts.forDirectory(directory);
+        const urls = context.sources
+            .filter(source => source.enabled && !source.isLocal && (sourceUrl === undefined || source.url === sourceUrl))
+            .map(source => source.url);
+        this.deps.feeds.credentials.prewarm(urls);
+        for (const url of urls) {
+            void this.deps.feeds.serviceIndex.endpoints(url).catch(() => undefined);
+        }
+    }
+
+    /** Sources currently considered unreachable. */
+    sourceHealth(): FailedSource[] {
+        return this.deps.feeds.serviceIndex.health.failed();
+    }
+
+    private async allowedSources(directory: string, packageId: string, sourceUrl: string | undefined, signal: AbortSignal): Promise<{ context: FeedContext; resolved: ResolvedSource[]; allowed: ResolvedSource[]; excluded: NuGetSource[] }> {
+        const context = await this.deps.feedContexts.forDirectory(directory);
+        const { resolved, excluded } = await this.deps.feedContexts.resolve(context, sourceUrl ? [sourceUrl] : undefined, signal);
+        return { context, resolved, allowed: filterAllowedSources(context.policy, packageId, resolved), excluded };
     }
 
     // ─── invalidation ───────────────────────────────────────────────────────
@@ -305,7 +509,8 @@ export class Catalog {
     invalidate(scope: InvalidationScope, reason: InvalidationReason): void {
         if (scope.kind === 'sources' || scope.kind === 'workspace') {
             this.deps.sources.invalidate();
-            // REMOVAL GATE: P4.9 (the service-index caches and the icon resolver are reset here as well)
+            this.deps.feedContexts.clear();
+            this.deps.feeds.reset();
         }
         this.deps.coordinator.invalidate(scope, reason);
     }
@@ -323,6 +528,9 @@ async function queryWithRetry<T>(open: () => QueryHandle<T>, signal?: AbortSigna
         try {
             return { value: await handle.value, generation: handle.generation };
         } catch (error) {
+            if (error instanceof IncompleteResultError) {
+                return { value: error.value as T, generation: handle.generation };
+            }
             if (!(error instanceof StaleQueryError)) {
                 throw error;
             }

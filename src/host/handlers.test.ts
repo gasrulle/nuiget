@@ -1,7 +1,7 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { NotYetAvailableError, type Catalog } from '../core/catalog';
+import type { Catalog } from '../core/catalog';
 import type { InvalidationEvent, Logger, OperationRunContext, SessionStore, SourceProvider } from '../core/contracts';
 import { DefaultOperationQueue, type PackageWorkflows } from '../core/ops';
 import {
@@ -53,7 +53,6 @@ const bulkOutcome = (ctx: OperationRunContext, projectPaths: string[] = []): Bul
 
 function makeServices(options: { selectedProject?: string; workspaceFolder?: string | null } = {}) {
     const snapshot: SessionSnapshot = { rev: 1, selectedProject: options.selectedProject ?? appPath, selectedSource: 'all', includePrerelease: false, restoreEnabled: true, origin: 'host' };
-    const gated = (method: string) => vi.fn(async () => { throw new NotYetAvailableError(method); });
     const catalog = {
         // The four reads that are coordinator resources answer with the generation they were computed for.
         projects: vi.fn(async () => ({ value: [{ name: 'App.csproj', path: appPath }, { name: 'Lib.csproj', path: libPath }], generation: 3 })),
@@ -65,14 +64,17 @@ function makeServices(options: { selectedProject?: string; workspaceFolder?: str
         packageDependencies: vi.fn(async () => new Map<string, string[]>()),
         projectDependencies: vi.fn(async () => new Map<string, string[]>()),
         invalidate: vi.fn(),
-        updates: gated('updates'),
-        allProjectsUpdates: gated('allProjectsUpdates'),
-        transitiveMetadata: gated('transitiveMetadata'),
-        search: gated('search'),
-        quickSearch: gated('quickSearch'),
-        versions: gated('versions'),
-        metadata: gated('metadata'),
-        readme: gated('readme'),
+        updates: vi.fn(async (projectPath: string) => ({ projectPath, updates: [], sourcesUnavailable: false, generation: 6 })),
+        allProjectsUpdates: vi.fn(async () => ({ projectPaths: [appPath] })),
+        transitiveMetadata: vi.fn(async () => []),
+        search: vi.fn(async () => ({ results: [] })),
+        quickSearch: vi.fn(async () => []),
+        versions: vi.fn(async (): Promise<{ versions: string[]; sourcesUnavailable: boolean }> => ({ versions: ['1.0.0'], sourcesUnavailable: false })),
+        metadata: vi.fn(async () => undefined),
+        readme: vi.fn(async () => undefined),
+        readmeImage: vi.fn(async (): Promise<string | null> => 'data:image/png;base64,AAAA'),
+        prewarm: vi.fn(async () => undefined),
+        sourceHealth: vi.fn(() => []),
     };
     const workflows = {
         single: vi.fn(async (ctx: OperationRunContext, request: { kind: 'install' | 'update' | 'remove'; projectPath: string; packageId: string }) => singleOutcome(ctx, request.kind, request.projectPath, request.packageId)),
@@ -159,13 +161,11 @@ const payloads: { [T in RequestType]: RequestPayload<T> } = {
     'perf/mark': { name: 'webviewReady' },
 };
 
-/** Reads that need a package feed: the Catalog is gated until P4.9 (ADR-009). */
-const gatedReads: RequestType[] = ['updates/get', 'transitive/metadata', 'allProjects/updates', 'search/query', 'search/autocomplete', 'package/versions', 'package/metadata', 'package/readme'];
 /** Requests that only a concrete host registers, not the shared handlers. */
 const hostOnly: RequestType[] = ['ui/contextMenu', 'ui/openSourceSettings', 'ui/viewPackage'];
 
 /** The requests whose result is a resource of the query coordinator. */
-const resourceReads: RequestType[] = ['projects/list', 'installed/get', 'transitive/get', 'sources/list', 'sources/refresh', 'sources/add', 'sources/remove', 'sources/enable', 'sources/disable'];
+const resourceReads: RequestType[] = ['projects/list', 'installed/get', 'updates/get', 'transitive/get', 'sources/list', 'sources/refresh', 'sources/add', 'sources/remove', 'sources/enable', 'sources/disable'];
 
 const errorOf = (host: TestHost, id: string) => {
     const [response] = host.responses(id);
@@ -195,7 +195,7 @@ describe('shared handlers: every request of the protocol', () => {
         expect(host.responses('r1')).toHaveLength(1);
         expect(host.responses()).toHaveLength(1);
         const error = errorOf(host, 'r1');
-        if (gatedReads.includes(type) || hostOnly.includes(type)) {
+        if (hostOnly.includes(type)) {
             expect(error?.code).toBe('unsupported');
         } else {
             expect(error).toBeUndefined();
@@ -210,7 +210,7 @@ describe('shared handlers: every request of the protocol', () => {
         expect(host.inFlightCount).toBe(0);
     });
 
-    it('the nine resource responses carry the generation the Catalog reported', async () => {
+    it('the ten resource responses carry the generation the Catalog reported', async () => {
         const { services } = makeServices();
         const host = new TestHost(services);
         for (const type of resourceReads) {
@@ -220,6 +220,7 @@ describe('shared handlers: every request of the protocol', () => {
         expect(generations).toEqual({
             'projects/list': 3,
             'installed/get': 7,
+            'updates/get': 6,
             'transitive/get': 4,
             'sources/list': 5,
             'sources/refresh': 5,
@@ -235,18 +236,59 @@ describe('shared handlers: every request of the protocol', () => {
         expect(Object.keys(payloads).sort()).toEqual([...REQUEST_TYPES].sort());
     });
 
-    it('feed reads answer unsupported while the Catalog is gated', async () => {
-        const { services } = makeServices();
+    it('feed reads pass the selected project\'s directory and the payload to the Catalog', async () => {
+        const { services, catalog } = makeServices();
         const host = new TestHost(services);
-        for (const type of gatedReads) {
-            await host.receiveRaw(makeRequest(type, payloads[type], type));
-            expect(errorOf(host, type)).toMatchObject({ code: 'unsupported', message: expect.stringMatching(/^not-yet-available: Catalog\./) as string });
+        const directory = path.dirname(appPath);
+        const packages = [{ id: 'A', version: '1.0.0' }];
+        await host.receiveRaw(makeRequest('search/query', { query: 'json', sourceUrls: [feed.url], includePrerelease: true, exactMatch: true }, 's'));
+        await host.receiveRaw(makeRequest('search/autocomplete', { query: 'js', sources: [{ name: feed.name, url: feed.url }], includePrerelease: false }, 'q'));
+        await host.receiveRaw(makeRequest('package/versions', { packageId: 'A', sourceUrl: feed.url, includePrerelease: true }, 'v'));
+        await host.receiveRaw(makeRequest('package/metadata', { packageId: 'A', version: '1.0.0' }, 'm'));
+        await host.receiveRaw(makeRequest('package/readme', { packageId: 'A', version: '1.0.0', sourceUrl: feed.url }, 'r'));
+        await host.receiveRaw(makeRequest('transitive/metadata', { packages }, 't'));
+
+        expect(catalog.search).toHaveBeenCalledWith(directory, { query: 'json', sourceUrls: [feed.url], includePrerelease: true, take: 20, exactMatch: true }, expect.any(Function), expect.any(AbortSignal));
+        expect(catalog.quickSearch).toHaveBeenCalledWith(directory, [feed.url], 'js', false, 5, expect.any(AbortSignal));
+        expect(catalog.versions).toHaveBeenCalledWith(directory, 'A', feed.url, true, expect.any(AbortSignal));
+        expect(catalog.metadata).toHaveBeenCalledWith(directory, 'A', '1.0.0', undefined, expect.any(AbortSignal));
+        expect(catalog.readme).toHaveBeenCalledWith(directory, 'A', '1.0.0', feed.url, expect.any(AbortSignal));
+        expect(catalog.transitiveMetadata).toHaveBeenCalledWith(directory, packages, expect.any(AbortSignal));
+        expect(resultOf(host, 'v')).toEqual({ packageId: 'A', versions: ['1.0.0'] });
+        expect('generation' in host.responses('v')[0]).toBe(false);
+    });
+
+    it('package/versions: no versions and sourcesUnavailable is a failed response, otherwise the list', async () => {
+        const { services, catalog } = makeServices();
+        const host = new TestHost(services);
+        catalog.versions
+            .mockResolvedValueOnce({ versions: [], sourcesUnavailable: true })
+            .mockResolvedValueOnce({ versions: [], sourcesUnavailable: false })
+            .mockResolvedValueOnce({ versions: ['2.0.0'], sourcesUnavailable: true });
+        for (const id of ['down', 'unknown', 'partial']) {
+            await host.receiveRaw(makeRequest('package/versions', { packageId: 'A', includePrerelease: false }, id));
         }
-        // The two placeholders answer ok until their items arrive.
-        await host.receiveRaw(makeRequest('readme/image', { url: 'https://example.test/a.png' }, 'image'));
-        expect(resultOf(host, 'image')).toEqual({ url: 'https://example.test/a.png', dataUri: null });
-        await host.receiveRaw(makeRequest('package/prewarm', {}, 'prewarm'));
+        expect(errorOf(host, 'down')).toEqual({ code: 'failed', message: 'No package source could be reached for this package' });
+        expect(resultOf(host, 'unknown')).toEqual({ packageId: 'A', versions: [] });
+        expect(resultOf(host, 'partial')).toEqual({ packageId: 'A', versions: ['2.0.0'] });
+    });
+
+    it('readme/image answers through Catalog.readmeImage and package/prewarm awaits Catalog.prewarm', async () => {
+        const { services, catalog } = makeServices();
+        const host = new TestHost(services);
+        await host.receiveRaw(makeRequest('readme/image', { url: 'https://example.test/a.png', sourceUrl: feed.url }, 'image'));
+        expect(resultOf(host, 'image')).toEqual({ url: 'https://example.test/a.png', dataUri: 'data:image/png;base64,AAAA' });
+        expect(catalog.readmeImage).toHaveBeenCalledWith('https://example.test/a.png', feed.url, expect.any(AbortSignal));
+
+        let release: () => void = () => undefined;
+        catalog.prewarm.mockImplementationOnce(() => new Promise<undefined>(resolve => { release = () => resolve(undefined); }));
+        const pending = host.receiveRaw(makeRequest('package/prewarm', { sourceUrl: feed.url }, 'prewarm'));
+        await Promise.resolve();
+        expect(host.responses('prewarm')).toHaveLength(0);
+        release();
+        await pending;
         expect(resultOf(host, 'prewarm')).toEqual({});
+        expect(catalog.prewarm).toHaveBeenCalledWith(path.dirname(appPath), feed.url);
     });
 
     it('requireProject rejects ALL_PROJECTS', async () => {

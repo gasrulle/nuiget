@@ -8,15 +8,18 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { TieredCache } from './core/cache';
-import { Catalog } from './core/catalog';
+import { Catalog, FeedContexts, createFeedClients } from './core/catalog';
 import { DefaultDotnetRunner, type DotnetRunnerOptions } from './core/cli';
-import type { Logger } from './core/contracts';
+import type { Logger, Transport } from './core/contracts';
+import { DefaultCredentialProvider } from './core/credentials';
+import { DefaultServiceIndexClient } from './core/feeds';
+import { NodeTransport } from './core/http';
 import { redact } from './core/logging';
 import { DefaultOperationQueue, PackageWorkflows } from './core/ops';
 import { AssetsReader, PROJECT_FILE_GLOB, ProjectContextProvider, StaticProjectInspector, findProjects } from './core/project';
 import { DefaultQueryCoordinator } from './core/queries';
 import { DefaultSessionStore, firstProject } from './core/session';
-import { DotnetSourceProvider } from './core/sources';
+import { DotnetSourceProvider, NuGetConfigReader } from './core/sources';
 import { isPathInside } from './core/util/paths';
 import { MainPanelHost } from './host/MainPanelHost';
 import { HostEvents, createWorkflowDeps, loggerFor, readExtensionConfig, type HostServices } from './host/services';
@@ -29,8 +32,21 @@ const LEGACY_SDK_CACHE_KEY = 'nuiget.sdkVersionCache';
 
 const PROJECT_FILE_NAME = /\.(csproj|fsproj|vbproj)$/i;
 
-/** What a test replaces: the process launcher and the lookup of the `dotnet` executable. */
-export type ActivationOverrides = Pick<DotnetRunnerOptions, 'spawn' | 'resolveExecutable'>;
+/** What a test replaces: the process launcher, the lookup of the `dotnet` executable and the feed transport. */
+export type ActivationOverrides = Pick<DotnetRunnerOptions, 'spawn' | 'resolveExecutable'> & { transport?: Transport };
+
+const PROXY_ENV_VARS = ['HTTPS_PROXY', 'https_proxy', 'HTTP_PROXY', 'http_proxy'];
+
+/**
+ * True when a proxy is in use for the extension host's requests (ADR-005, `docs/adr/005-proxy-matrix.md`): `http.proxySupport`
+ * is not `off` and `http.proxy` or a proxy environment variable is set. Read on every call.
+ */
+export function proxyConfigured(env: NodeJS.ProcessEnv = process.env): boolean {
+    const http = vscode.workspace.getConfiguration('http');
+    const support = http.get<string>('proxySupport', 'override');
+    const proxy = http.get<string>('proxy', '');
+    return support !== 'off' && (proxy.trim() !== '' || PROXY_ENV_VARS.some(name => (env[name] ?? '').trim() !== ''));
+}
 
 export interface ActivatedExtension {
     services: HostServices;
@@ -54,7 +70,8 @@ export async function activateWith(context: vscode.ExtensionContext, overrides: 
     const logger = redactingLogger(loggerFor(output));
 
     // ── core ──
-    const runner = new DefaultDotnetRunner({ logger, ...overrides });
+    const { transport: transportOverride, ...runnerOverrides } = overrides;
+    const runner = new DefaultDotnetRunner({ logger, ...runnerOverrides });
     runner.hydrate(context.globalState, SDK_CACHE_KEY, String(context.extension.packageJSON.version ?? '0.0.0'));
     if (context.globalState.get(LEGACY_SDK_CACHE_KEY) !== undefined) {
         void context.globalState.update(LEGACY_SDK_CACHE_KEY, undefined);
@@ -69,9 +86,18 @@ export async function activateWith(context: vscode.ExtensionContext, overrides: 
     const coordinator = new DefaultQueryCoordinator({ logger });
     const session = new DefaultSessionStore(context.workspaceState, logger);
     const queue = new DefaultOperationQueue({ maxWaiting: 5, logger });
-    // REMOVAL GATE: P4.9 (feeds, the transport and its proxy predicate, credentials and outbound policy per project context, icons through the cache)
+    const transport = transportOverride ?? new NodeTransport({ proxy: { isConfigured: () => proxyConfigured() }, logger });
+    if (transport instanceof NodeTransport && transportOverride === undefined) {
+        context.subscriptions.push(transport);
+    }
+    const configs = new NuGetConfigReader();
+    // `feedContexts` is declared below; the credential lookup that reads it runs only after activation.
+    const credentials = new DefaultCredentialProvider({ runner, lookupConfigCredential: url => feedContexts.lookupConfigCredential(url), logger });
+    const serviceIndex = new DefaultServiceIndexClient({ transport, getAuthHeader: url => credentials.getAuthHeader(url), logger });
+    const feeds = createFeedClients({ transport, runner, serviceIndex, credentials, cache, globalPackagesFolder: () => runner.globalPackagesFolder(), logger });
+    const feedContexts = new FeedContexts({ contexts, sources, configs, feeds, logger });
     const catalog = new Catalog({
-        coordinator, inspector, contexts, sources, assets, logger,
+        coordinator, inspector, contexts, sources, assets, feeds, feedContexts, logger,
         discoverProjects: () => findProjects(
             async (include, exclude, max) => (await vscode.workspace.findFiles(include, exclude, max)).map(uri => uri.fsPath),
             (vscode.workspace.workspaceFolders ?? []).map(folder => ({ name: folder.name, fsPath: folder.uri.fsPath })),
@@ -271,7 +297,9 @@ export async function activateWith(context: vscode.ExtensionContext, overrides: 
             if (e.affectsConfiguration('nuiget') || e.affectsConfiguration('workbench.tree.indent')) {
                 events.configChanged.fire(readExtensionConfig());
             }
-            // REMOVAL GATE: P4.9 (a change under `http` rebuilds the transport here)
+            if (e.affectsConfiguration('http') && transport instanceof NodeTransport) {
+                transport.reset();
+            }
         }),
     );
 

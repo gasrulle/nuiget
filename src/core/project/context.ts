@@ -38,7 +38,7 @@ export class ProjectContextProvider {
         const projectDir = path.dirname(projectPath);
         const [sdk, configFiles, sources] = await Promise.all([
             this.sdk(projectDir),
-            this.configFiles(projectDir),
+            this.configFilesFor(projectDir),
             this.deps.sources.listSources(projectDir),
         ]);
         const context: ProjectExecutionContext = {
@@ -69,7 +69,8 @@ export class ProjectContextProvider {
     }
 
     /** `dotnet nuget config paths` prints the effective config files, one per line, nearest first. */
-    private async configFiles(projectDir: string): Promise<string[]> {
+    /** The effective `nuget.config` chain of a directory (`dotnet nuget config paths`), nearest first; `[]` when it cannot be read. */
+    async configFilesFor(projectDir: string): Promise<string[]> {
         try {
             const result = await this.deps.runner.run([...CONFIG_PATHS_ARGS], { cwd: projectDir, timeoutMs: CONFIG_PATHS_TIMEOUT_MS });
             if (result.exitCode !== 0 || result.cancelled || result.timedOut) {

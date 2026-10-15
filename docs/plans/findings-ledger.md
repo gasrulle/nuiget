@@ -170,11 +170,12 @@ one records itself here.
 | N67 | Low | A failed DNS lookup of a redirect target was cached for 60 s as "does not resolve" | — | P4.2 (fix-forward) | closed (P4.2: only lookups that returned addresses are cached; test `a lookup that fails is not cached: the next redirect asks again (N67)`) |
 | N68 | Low | The quarry's `warn :` lines before the JSON of `dotnet package search` were not reproduced | — | P4.6 | closed (P4.6: `extractCliSearchOutput` reads the document after any prefix lines; seven tracked captures and one synthetic case in `src/core/feeds/__fixtures__/cli-search/10.0.401.json`) |
 | N69 | Low | The `npx tsc --noEmit` gate does not type-check test files | — | P4.6 (fix-forward) | closed (P4.6: the gotcha "Tests pass is not compiles" names `npm run check-types`; the item gates now run it) |
-| N70 | Medium | Resource keys of versions and metadata for `'all'` sources carry no project | — | P4.9 | open |
+| N70 | Medium | Resource keys of versions and metadata for `'all'` sources carry no project | — | P4.9a | closed (P4.9a: `Catalog.versions` and `Catalog.metadata` query one resource per allowed source and never write the `'all'` keys; test `versions: for 'all' sources queries one resource per allowed source and merges them newest first (N70)`; ADR-009 d.1 amended) |
 
 Corrections in Appendix A that do not belong to one finding id:
 
-- `M1` (W): Must also move source CRUD, CLI search, `nuget locals` to the project dir.
+- `M1` (W): Must also move source CRUD, CLI search, `nuget locals` to the project dir. Progress: P4.9a runs the CLI
+  search in the directory of the read (`Catalog.search` passes it as `cwd`).
 - `M2` (W): Must gate `resolveIconUrl` nuget.org HEAD, `getPackageSize`, quick-search default. Progress: P4.6 removed the
   quick-search default (`src/core/feeds/search.ts` has no default source and tests no address). Closed at P4.8: the tests
   `private-only configuration never contacts nuget.org` and `never puts a package id into a request to nuget.org when the
