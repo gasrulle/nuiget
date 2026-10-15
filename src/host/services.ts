@@ -23,6 +23,8 @@ export interface HostServices {
     readonly workflows: PackageWorkflows;
     /** Decides every reference edit (ADR-004 tier 3); the workflows ask it, a surface may preview with it. */
     readonly mutator: ProjectMutator;
+    /** The execution context of a project without the config chain (no dotnet nuget config paths), for a preview the mutator computes outside an operation. */
+    contextFor(projectPath: string): Promise<ProjectExecutionContext>;
     readonly sources: SourceProvider;
     /** Fired after any operation completes (either surface); hosts forward it as `ops/completed`. */
     readonly onOperationCompleted: Event<OperationOutcome | BulkOutcome>;

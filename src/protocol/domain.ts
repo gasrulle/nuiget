@@ -295,6 +295,17 @@ export interface OperationOutcome {
     message?: string;
 }
 
+/** What a central version change reaches (ADR-004 tier 3): the mutator's preview, shown before `ops/update` or `ops/install` of a centrally managed package. */
+export interface CpmImpactPreview {
+    centralPropsPath: string;
+    packageId: string;
+    /** The central version before the change. */
+    fromVersion?: string;
+    toVersion: string;
+    /** Every project importing that props file that references the package without an override, the asking project included. */
+    affectedProjects: string[];
+}
+
 export interface OperationProgress {
     opId: string;
     status: OperationStatus;

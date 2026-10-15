@@ -1,6 +1,6 @@
 # ADR-004: Three-tier project model and Central Package Management
 
-Status: accepted · Date: 2026-10-10 · Amended: 2026-10-12 (plan item P1.1b: `props` declaration, `PackageVersion` items, runs per target framework, SDK floor, CPM edits refused until the mutator) · Amended: 2026-10-15 (plan item P6.3: the decision carries isCpm, the dirty check covers the project file, override and unresolved rows refused until probed) · Amended: 2026-10-15 (plan item P6.2b: the evaluator's properties, mapping and cache)
+Status: accepted · Date: 2026-10-10 · Amended: 2026-10-12 (plan item P1.1b: `props` declaration, `PackageVersion` items, runs per target framework, SDK floor, CPM edits refused until the mutator) · Amended: 2026-10-15 (plan item P6.3: the decision carries isCpm, the dirty check covers the project file, override and unresolved rows refused until probed) · Amended: 2026-10-15 (plan item P6.2b: the evaluator's properties, mapping and cache) · Amended: 2026-10-15 (plan item P6.4a: the preview reaches the webviews; the override choice waits for N74)
 
 ## Context
 
@@ -40,7 +40,7 @@ Three tiers with explicit fidelity:
    ([SDK probes](004-sdk-probes.md)), and the provenance is `'verified'` only when a fixture proves
    it. When it is not verified the UI offers read-only with an explanation. CPM mutations show an
    **affected-projects preview** (every project importing the props file without an override),
-   distinguish central update vs project `VersionOverride`, invalidate and restore all consumers,
+   distinguish central update vs project `VersionOverride` (the UI offers the central update alone until finding N74 is probed; a `central-override` row is read-only for updates and the `cpm/preview` request carries the preview to the webviews), invalidate and restore all consumers,
    refuse when the props file has unsaved editor changes, or the project file, and never delete a central entry because
    one project uninstalled. SDK 10 rewrites the props file on every `package add --version`, even
    without a version change (finding 2 of the SDK probes); the mutator treats the file as modified

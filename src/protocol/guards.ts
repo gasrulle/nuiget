@@ -26,6 +26,7 @@ const REQUEST_TYPE_RECORD = {
     'ops/install': true, 'ops/update': true, 'ops/remove': true, 'ops/restore': true,
     'ops/bulkInstall': true, 'ops/bulkUpdate': true, 'ops/bulkRemove': true,
     'ops/bulkUpdateAllProjects': true, 'ops/bulkRemoveAllProjects': true,
+    'cpm/preview': true,
     'refresh/all': true,
     'ui/contextMenu': true, 'ui/openSourceSettings': true, 'ui/viewPackage': true, 'ui/copyToClipboard': true,
     'ui/openExternal': true,

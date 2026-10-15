@@ -396,6 +396,11 @@ export function registerSharedHandlers(host: Registrar, services: HostServices):
     host.on('ops/bulkUpdateAllProjects', (payload, ctx) => awaitTicket(operations.bulkUpdateAllProjects(services, payload), services, ctx));
     host.on('ops/bulkRemoveAllProjects', (payload, ctx) => awaitTicket(operations.bulkRemoveAllProjects(services, payload), services, ctx));
 
+    // ── Central Package Management: the projects a central change reaches, before the edit (ADR-004 tier 3) ──
+    host.on('cpm/preview', async ({ projectPath, packageId, version }) => ({
+        preview: await services.mutator.previewCpmImpact(await services.contextFor(requireProject(projectPath)), packageId, version) ?? null,
+    }));
+
     // ── refresh & chrome ──
     host.on('refresh/all', async () => {
         services.invalidate({ kind: 'workspace' }, 'manual-refresh');

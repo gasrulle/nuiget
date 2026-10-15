@@ -9,6 +9,7 @@
 
 import type {
     BulkOutcome,
+    CpmImpactPreview,
     Fidelity,
     InstalledResult,
     InvalidationReason,
@@ -22,6 +23,8 @@ import type {
     SessionSnapshot,
     Surface,
 } from '../protocol/domain';
+
+export type { CpmImpactPreview };
 
 // ─── Platform adapters (so core never imports vscode UI directly) ───────────
 
@@ -318,15 +321,6 @@ export interface ProjectEvaluator {
     evaluate(context: ProjectExecutionContext, signal?: AbortSignal): Promise<InstalledResult>;
     /** Report which fidelity is available right now without triggering evaluation. */
     cachedFidelity(projectPath: string): Fidelity | undefined;
-}
-
-export interface CpmImpactPreview {
-    centralPropsPath: string;
-    packageId: string;
-    fromVersion?: string;
-    toVersion: string;
-    /** Every project importing that props file that references the package without an override. */
-    affectedProjects: string[];
 }
 
 /** The three reference edits the mutator decides on; a restore is not a mutation of the project file. */

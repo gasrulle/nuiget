@@ -86,7 +86,7 @@ function makeServices(options: { selectedProject?: string; workspaceFolder?: str
         bulkRemoveAllProjects: vi.fn(async (ctx: OperationRunContext) => bulkOutcome(ctx)),
     };
     const mutation = vi.fn(async () => ({ ok: true }));
-    const mutator = { canMutate: vi.fn(async () => ({ ok: true as const, isCpm: false })), previewCpmImpact: vi.fn(async () => undefined) } satisfies ProjectMutator;
+    const mutator = { canMutate: vi.fn(async () => ({ ok: true as const, isCpm: false })), previewCpmImpact: vi.fn<ProjectMutator['previewCpmImpact']>(async () => undefined) } satisfies ProjectMutator;
     const sources = { listSources: vi.fn(async () => [feed]), configFiles: vi.fn(() => []), add: mutation, remove: mutation, enable: mutation, disable: mutation, invalidate: vi.fn() } satisfies SourceProvider;
     const session = { snapshot, apply: vi.fn(async () => snapshot), reconcile: vi.fn(async () => snapshot), onDidChange: () => ({ dispose: () => undefined }) };
     const logger = { trace: vi.fn(), debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() } satisfies Logger;
@@ -103,6 +103,7 @@ function makeServices(options: { selectedProject?: string; workspaceFolder?: str
         queue,
         workflows: workflows as unknown as PackageWorkflows,
         mutator,
+        contextFor: vi.fn(async (projectPath: string): Promise<ProjectExecutionContext> => ({ projectPath, projectDir: path.dirname(projectPath), configFiles: [], sourceUrls: [], revision: 'r' })),
         sources,
         onOperationCompleted: events.operationCompleted.event,
         onOperationProgress: queue.onProgress,
@@ -154,6 +155,7 @@ const payloads: { [T in RequestType]: RequestPayload<T> } = {
     'ops/bulkRemove': { projectPath: appPath, packages: ['X'] },
     'ops/bulkUpdateAllProjects': { projectUpdates: [{ projectPath: appPath, projectName: 'App', packages: [{ id: 'X', version: '2.0.0' }] }] },
     'ops/bulkRemoveAllProjects': { projectRemovals: [{ projectPath: appPath, projectName: 'App', packages: ['X'] }] },
+    'cpm/preview': { projectPath: appPath, packageId: 'Serilog', version: '4.1.0' },
     'refresh/all': {},
     'ui/contextMenu': { packageId: 'X', context: 'installed', projectPath: appPath },
     'ui/openSourceSettings': {},
@@ -233,8 +235,26 @@ describe('shared handlers: every request of the protocol', () => {
         });
     });
 
-    it('covers the 43 requests of the protocol', () => {
-        expect(REQUEST_TYPES).toHaveLength(43);
+    it('cpm/preview answers the mutator\'s preview over the chain-less context, null without a central entry, and rejects ALL_PROJECTS', async () => {
+        const { services } = makeServices();
+        const host = new TestHost(services);
+        const preview = { centralPropsPath: path.join(workspace, 'Directory.Packages.props'), packageId: 'Serilog', fromVersion: '4.0.0', toVersion: '4.1.0', affectedProjects: [appPath, libPath] };
+        vi.mocked(services.mutator.previewCpmImpact).mockResolvedValueOnce(preview);
+        await host.receiveRaw(makeRequest('cpm/preview', { projectPath: appPath, packageId: 'Serilog', version: '4.1.0' }, 'p1'));
+        expect(resultOf(host, 'p1')).toEqual({ preview });
+        expect(services.contextFor).toHaveBeenCalledWith(appPath);
+        expect(services.mutator.previewCpmImpact).toHaveBeenCalledWith(expect.objectContaining({ projectPath: appPath }), 'Serilog', '4.1.0');
+
+        await host.receiveRaw(makeRequest('cpm/preview', { projectPath: appPath, packageId: 'Absent', version: '1.0.0' }, 'p2'));
+        expect(resultOf(host, 'p2')).toEqual({ preview: null });
+
+        await host.receiveRaw(makeRequest('cpm/preview', { projectPath: ALL_PROJECTS, packageId: 'Serilog', version: '4.1.0' }, 'p3'));
+        expect(errorOf(host, 'p3')).toMatchObject({ code: 'invalid-request' });
+        expect(services.contextFor).toHaveBeenCalledTimes(2);
+    });
+
+    it('covers the 44 requests of the protocol', () => {
+        expect(REQUEST_TYPES).toHaveLength(44);
         expect(Object.keys(payloads).sort()).toEqual([...REQUEST_TYPES].sort());
     });
 
@@ -708,6 +728,48 @@ describe('SidebarHost', () => {
         };
         return { sidebar, send };
     }
+
+    const centralPreview = (affectedProjects: string[]) => ({ centralPropsPath: path.join(workspace, 'Directory.Packages.props'), packageId: 'X', fromVersion: '1.0.0', toVersion: '2.0.0', affectedProjects });
+
+    it('SidebarHost: an update of a centrally managed package shows the projects it changes first and submits only when confirmed', async () => {
+        const { services, workflows } = makeServices();
+        vi.mocked(services.mutator.previewCpmImpact).mockResolvedValueOnce(centralPreview([appPath, libPath]));
+        vi.mocked(vscode.window.showQuickPick).mockResolvedValueOnce({ label: 'Update to 2.0.0', action: 'update-latest' } as never);
+        const warning = vi.mocked(vscode.window.showWarningMessage);
+        warning.mockResolvedValueOnce('Update central version' as never);
+        const { sidebar, send } = resolvedSidebar(services);
+        expect(await send({ packageId: 'X', context: 'updates', projectPath: appPath, installedVersion: '1.0.0', latestVersion: '2.0.0' }, 'menu')).toEqual({ handled: true });
+        expect(services.contextFor).toHaveBeenCalledWith(appPath);
+        expect(services.mutator.previewCpmImpact).toHaveBeenCalledWith(expect.objectContaining({ projectPath: appPath }), 'X', '2.0.0');
+        expect(warning).toHaveBeenCalledWith('Update the central version of X?', { modal: true, detail: '1.0.0 → 2.0.0 in Directory.Packages.props applies to: App.csproj, Lib.csproj' }, 'Update central version');
+        expect(workflows.single).toHaveBeenCalledTimes(1);
+        expect(workflows.single).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ kind: 'update', projectPath: appPath, packageId: 'X', version: '2.0.0' }), { skipRestore: false });
+        sidebar.dispose();
+    });
+
+    it('SidebarHost: the central change cancelled in the modal submits nothing', async () => {
+        const { services, workflows, queue } = makeServices();
+        const submit = vi.spyOn(queue, 'submit');
+        vi.mocked(services.mutator.previewCpmImpact).mockResolvedValueOnce(centralPreview([appPath, libPath]));
+        vi.mocked(vscode.window.showQuickPick).mockResolvedValueOnce({ label: 'Update to 2.0.0', action: 'update-latest' } as never);
+        const { sidebar, send } = resolvedSidebar(services);
+        expect(await send({ packageId: 'X', context: 'updates', projectPath: appPath, installedVersion: '1.0.0', latestVersion: '2.0.0' }, 'menu')).toEqual({ handled: false });
+        expect(vscode.window.showWarningMessage).toHaveBeenCalledTimes(1);
+        expect(submit).not.toHaveBeenCalled();
+        expect(workflows.single).not.toHaveBeenCalled();
+        sidebar.dispose();
+    });
+
+    it('SidebarHost: a package without a central entry is submitted without a modal', async () => {
+        const { services, workflows } = makeServices();
+        vi.mocked(vscode.window.showQuickPick).mockResolvedValueOnce({ label: 'Update to 2.0.0', action: 'update-latest' } as never);
+        const { sidebar, send } = resolvedSidebar(services);
+        expect(await send({ packageId: 'X', context: 'updates', projectPath: appPath, installedVersion: '1.0.0', latestVersion: '2.0.0' }, 'menu')).toEqual({ handled: true });
+        expect(services.mutator.previewCpmImpact).toHaveBeenCalledTimes(1);
+        expect(vscode.window.showWarningMessage).not.toHaveBeenCalled();
+        expect(workflows.single).toHaveBeenCalledTimes(1);
+        sidebar.dispose();
+    });
 
     it('SidebarHost: no versions and every source unreachable says so and submits nothing', async () => {
         const { services, catalog, queue } = makeServices();

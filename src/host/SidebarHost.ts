@@ -4,8 +4,10 @@
  * active project, and exposes the title-bar command implementations (pickers/toggles).
  */
 
+import * as path from 'path';
 import * as vscode from 'vscode';
 import type { InvalidationEvent } from '../core/contracts';
+import { redact } from '../core/logging';
 import { ALL_PROJECTS, type ContextMenuRequest, type EventPayload, type SessionSnapshot } from '../protocol';
 import { operations, registerSharedHandlers, settleOperation, sourceDirectory } from './handlers';
 import { MainPanelHost } from './MainPanelHost';
@@ -169,6 +171,9 @@ export class SidebarHost extends WebviewHost implements vscode.WebviewViewProvid
                     return false;
                 }
                 if (targets.length === 1) {
+                    if (!await this.confirmCentralChange(targets[0], request.packageId, version)) {
+                        return false;
+                    }
                     await settleOperation(this.services, operations.install(this.services, { projectPath: targets[0], packageId: request.packageId, version, sourceUrl }));
                 } else {
                     await settleOperation(this.services, operations.bulkInstall(this.services, { projectPaths: targets, packageId: request.packageId, version }));
@@ -185,7 +190,7 @@ export class SidebarHost extends WebviewHost implements vscode.WebviewViewProvid
                 return true;
             }
             const version = await versionFor();
-            if (!version) {
+            if (!version || !await this.confirmCentralChange(target, request.packageId, version)) {
                 return false;
             }
             await settleOperation(this.services, operations.install(this.services, { projectPath: target, packageId: request.packageId, version, sourceUrl }));
@@ -195,10 +200,13 @@ export class SidebarHost extends WebviewHost implements vscode.WebviewViewProvid
         const projectPath = request.projectPath;
         switch (action) {
             case 'install-latest':
+                if (!await this.confirmCentralChange(projectPath, request.packageId, request.latestVersion)) {
+                    return false;
+                }
                 await settleOperation(this.services, operations.install(this.services, { projectPath, packageId: request.packageId, version: request.latestVersion, sourceUrl }));
                 return true;
             case 'update-latest':
-                if (!request.latestVersion) {
+                if (!request.latestVersion || !await this.confirmCentralChange(projectPath, request.packageId, request.latestVersion)) {
                     return false;
                 }
                 await settleOperation(this.services, operations.update(this.services, { projectPath, packageId: request.packageId, version: request.latestVersion, sourceUrl }));
@@ -207,7 +215,7 @@ export class SidebarHost extends WebviewHost implements vscode.WebviewViewProvid
             case 'change-version':
             case 'update-version': {
                 const version = await versionFor();
-                if (!version) {
+                if (!version || !await this.confirmCentralChange(projectPath, request.packageId, version)) {
                     return false;
                 }
                 if (action === 'update-version') {
@@ -223,6 +231,35 @@ export class SidebarHost extends WebviewHost implements vscode.WebviewViewProvid
             default:
                 return false;
         }
+    }
+
+    /**
+     * A change of a centrally managed version reaches every project that uses the central entry (ADR-004 tier 3): the
+     * user confirms it in a modal that lists them before anything is submitted. No preview (not CPM, no central entry
+     * yet) needs no confirmation; the gate of the operation decides. A preview that fails lets the gate decide too.
+     */
+    private async confirmCentralChange(projectPath: string, packageId: string, version: string | undefined): Promise<boolean> {
+        if (version === undefined) {
+            return true;
+        }
+        let preview;
+        try {
+            preview = await this.services.mutator.previewCpmImpact(await this.services.contextFor(projectPath), packageId, version);
+        } catch (error) {
+            this.services.logger.warn(redact(`Central Package Management preview of ${packageId} failed: ${error instanceof Error ? error.message : String(error)}`));
+            return true;
+        }
+        if (preview === undefined) {
+            return true;
+        }
+        const projects = await this.services.catalog.projects().then(listed => listed.value, () => []);
+        const names = preview.affectedProjects.map(affected => projects.find(project => project.path === affected)?.name ?? path.basename(affected));
+        const choice = await vscode.window.showWarningMessage(
+            `Update the central version of ${packageId}?`,
+            { modal: true, detail: `${preview.fromVersion ?? '(none)'} → ${version} in ${path.basename(preview.centralPropsPath)} applies to: ${names.join(', ')}` },
+            'Update central version',
+        );
+        return choice === 'Update central version';
     }
 
     private async updateTitle(snapshot: SessionSnapshot): Promise<void> {

@@ -11,7 +11,7 @@ per id, optionally preceded by stream chunks of the listed chunk type. Events fl
 without correlation. Both webviews share the same maps; surface-specific requests are rejected with
 `unsupported` elsewhere.
 
-## Requests (43)
+## Requests (44)
 
 | Group | Request | Payload | Result | Chunk | Notes |
 | --- | --- | --- | --- | --- | --- |
@@ -51,6 +51,7 @@ without correlation. Both webviews share the same maps; surface-specific request
 | Operations | `ops/bulkRemove` | `{ projectPath: string; packages: string[]; }` | `BulkOutcome` | `OperationProgress` |  |
 | Operations | `ops/bulkUpdateAllProjects` | `{ projectUpdates: ProjectBulkUpdate[]; }` | `BulkOutcome` | `OperationProgress` |  |
 | Operations | `ops/bulkRemoveAllProjects` | `{ projectRemovals: ProjectBulkRemoval[]; }` | `BulkOutcome` | `OperationProgress` |  |
+| Central Package Management | `cpm/preview` | `{ projectPath: string; packageId: string; version: string; }` | `{ preview: CpmImpactPreview \| null; }` | — | The projects a central version change would reach, asked before `ops/update` or `ops/install` of a centrally managed package (ADR-004 tier 3, interaction model §5). `preview` is `null` when the project does not use Central Package Management or the package has no central entry; the edit itself goes through `ops/*`, whose gate decides. |
 | Invalidation | `refresh/all` | `Record<string, never>` | `Record<string, never>` | — |  |
 | UI delegation to VS Code chrome | `ui/contextMenu` | `ContextMenuRequest` | `{ handled: boolean; }` | — | sidebar |
 | UI delegation to VS Code chrome | `ui/openSourceSettings` | `Record<string, never>` | `Record<string, never>` | — | sidebar → main |

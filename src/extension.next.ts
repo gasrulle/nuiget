@@ -134,6 +134,7 @@ export async function activateWith(context: vscode.ExtensionContext, overrides: 
     const events = new HostEvents();
     const services: HostServices = {
         context, logger, session, catalog, queue, workflows, mutator, sources,
+        contextFor: projectPath => contexts.get(projectPath, workspaceFolderFor(projectPath), { configChain: false }).then(result => result.context),
         onOperationCompleted: events.operationCompleted.event,
         onOperationProgress: queue.onProgress,
         onConfigChanged: events.configChanged.event,
