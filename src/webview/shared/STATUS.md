@@ -1,4 +1,90 @@
-# STATUS — src/webview/shared   commit 04ac55f (parent of the P5.5 commit)   2026-10-16T08:30:00Z
+# STATUS — src/webview/shared   commit c4c3617 (parent of the P5.6 commit)   2026-10-15T12:00:00Z
+
+git status --porcelain --untracked-files=all (before the commit): modified `ARCHITECTURE.md`, `CHANGELOG.md`, `docs/plans/{STATUS,findings-ledger}.md`, `src/core/feeds/{enricher,enricher.test}.ts`, `src/host/handlers.test.ts`, `src/webview/main/{MainShell.tsx,index.tsx,index.test.tsx,main.css}`, `src/webview/shared/store/StoreProvider.tsx`, `src/webview/sidebar-next/{SidebarView.tsx,SidebarView.test.tsx,UpdatesSection.tsx,sidebar.css}` and the six STATUS notes; new `src/webview/shared/search/{SearchBox.tsx,SearchBox.test.tsx,search.css}`, `src/webview/shared/store/{search,sources,config}.tsx` with their tests, `src/webview/main/features/search/{BrowseList.tsx,BrowseList.test.tsx,useSearchTyping.ts,useSearchTyping.test.tsx}`, `src/webview/sidebar-next/{BrowseResults.tsx,BrowseResults.test.tsx}`, `src/test/ui/v2/main-search.ui.test.ts` (all belong to the P5.6 commit)
+
+Item: **P5.6 feature search**, for this directory: `store/search.tsx` (one browse search per surface over the
+committed source and prerelease flag, latest text wins, the `metadata` chunk merged onto the answer by `id@version`,
+`sourcesUnavailable` as a flag, a committed change asks the shown text again without blanking, `exactMatch` for
+navigation; quick-search `suggest`/`suggestions`/`clearSuggestions` over the enabled sources), `store/sources.tsx`
+(read part, lazy and sticky `enable()`), `store/config.tsx` (lazy `config/get`, `config/changed` always applied),
+`StoreProvider.tsx` (mounts the three), `search/SearchBox.tsx` + `search/search.css` (the combobox of both surfaces).
+
+## Verified by running
+
+P5.6 (the same gate run for every directory of the item):
+
+```text
+baseline at c4c3617          → CI run 38680684265 green · npx tsc --noEmit 0 · npx eslint src 0 · npx vitest run →
+                               Test Files 144 passed (144) · Tests 3061 passed | 4 skipped (3065)
+stop-and-ask 1 (source list of quick-search, searchDebounceMode) → ruling of 2026-10-15, option 2 narrowed
+first test:ui:v2 run         → stopped in vscode:prepublish at check-types: four type errors in the item's new tests
+                               (shared mock typed by its default, `act` returning Promise<unknown>, an invalid
+                               InvalidationReason); fixed, lint warning (console.log) → console.warn
+stop-and-ask 2 (src/webview/main/index.test.tsx, `config/get` at start) → ruling of 2026-10-15, option 1
+npx tsc --noEmit / npm run check-types / npx eslint src / npm run lint → exit 0 each (last run after every edit)
+npm test (NUIGET_SDK_TESTS=1, DOTNET_ROOT set) → Test Files 151 passed (151) · Tests 3119 passed (3119)
+npm run bench                → Test Files 20 passed (20) · Tests 119 passed | 1 skipped (120)
+npx vitest run --coverage    → exit 0 (thresholds hold) · store/search.tsx 97.95 % lines · store/sources.tsx 97.56 %
+                               · store/config.tsx 94.73 % · shared/search 100 % · main/features/search 97.36 %
+npm run docs:protocol:check  → docs/protocol.md is up to date
+rm -rf dist && NUIGET_V2=1 npm run package && npm run check:vsix → check:vsix: OK
+rm -rf dist && node esbuild.mjs --v2 --production --analyze → extension 280657 / 299921 · webview 320845 / 600685
+                               (309114 at P5.5) · sidebar 300411 / 329122 (288948 at P5.5); dist/ deleted after
+NUIGET_V2=1 npm run test:ui:v2 -- --storage /tmp/nuiget-ui-v2 → 14 passing (16s) at the second run (the first
+                               stopped at check-types, above) · `[P5.6] cold search: 2323 ms from Enter to the first row`
+timer-based frontend tests (sidebar-next, main/features/search, shared/search, store/search), 20 times → 20 of 20
+npm run package:vsix (1.x)   → SKIPPED: no 1.x file changed; CI's Package job builds it
+npm run test:ui (1.x)        → SKIPPED: no 1.x UI file changed; the CI job `UI` runs it
+test -e .claude/.contract-change → false · git diff --stat c4c3617 -- src/protocol src/core/contracts.ts docs/adr
+                               package.json src/host/services.ts → empty
+```
+
+## Done (tested)
+
+- `search.test.tsx` (14): nothing before a search, the committed source and flag, waiting for the session, the merge,
+  latest wins, revalidation on a prerelease change, the unavailable flag, error and retry, exact match and clear; the
+  ruling's three quick-search titles, `fullsearch` sends nothing, `quickSearchSources`; `withMetadata`.
+- `sources.test.tsx` (5) and `config.test.tsx` (2): the titles of ruling 1, verbatim.
+- `SearchBox.test.tsx` (7): prefixes as the text grows, ArrowUp/Down with `aria-activedescendant` and wrap, Enter and
+  Tab take the option, Enter submits, Escape closes then clears then leaves, suggestions with their source when
+  several answer and a click that keeps focus, blur closes, axe with the list open.
+- `StoreProvider.test.tsx` unchanged and green: R1 still "session/get and projects/list, and nothing else".
+
+## Done (untested)
+
+- The quick-search suggestions in VS Code: the ExTester test submits with Enter; suggestions, timers and both modes are
+  covered in jsdom (`useSearchTyping.test.tsx`).
+
+## Not started
+
+- Details of a browse row (P5.7), the sources settings and selector (P5.8), the multi-install picker (P5.9), the
+  sidebar's context menu, "View package details" and "Open full view" (P5.10), the search settings' `full`/`off`
+  values (N57, P5.13).
+
+## Deviations from contract/ADR (file:line each)
+
+- `store/config.tsx`: ADR-008's enumeration of slices (`docs/adr/008-webview-architecture.md:25-27`) has no `config`;
+  added with its first consumer by ruling 1 (recorded, not an ADR edit, D6). The host sends `full` and `off` of
+  `nuiget.searchDebounceMode` as `quicksearch` (N57, now owned by P5.13).
+- `search/SearchBox.tsx`: the suggestions list is not a `Popover` and not a layer of `primitives/layers.ts`: focus stays
+  in the box (`aria-activedescendant`), so there is no focus trap, no outside-press handling and no listener on the
+  document; Escape is the input's own key. It is positioned under the box by `search.css` with `--nuiget-z-popover`.
+- `ARCHITECTURE.md` ("Message bus and store slices", the paragraph ruling 2 cites as :377-378): the claim it protects
+  stays (the store asks `session/get` and `projects/list` at start; the other slices ask when they have something to
+  ask for), but the count "mounts all seven" became "mounts all ten" and the hook list names `useConfig`,
+  `useSources` and `useSearch`: "seven" would be false with the three new slices mounted.
+- The `search` slice gives up a quick-search answer silently on error (no suggestions shown); the search itself
+  reports errors.
+
+## Advisor decisions (date, item, question, answer verbatim)
+
+Both P5.6 rulings of the `architecture-advisor` (2026-10-15) are verbatim in `docs/plans/STATUS.md` under "### P5.6 — stop-and-ask: the source list of quick-search and `searchDebounceMode`" and "### P5.6 — stop-and-ask: the main entry's start requests". The ambient advisor was consulted before writing (scope: no install action on main browse rows, the details pane stays P5.7's, `ui/viewPackage` senders stay P5.10's, the combobox instead of `Popover`, the latency measured at the first ExTester run).
+
+## Exact next step (one item ID)
+
+P5.7 (feature details), after P5.6's CI run is green.
+
+## Earlier notes of this directory
 
 Scope of this note: `src/webview/shared/**`, the code both 2.0 webviews share, and the test wiring it needs
 (`src/test/setup-frontend.ts`, `src/test/jest-axe.d.ts`, `src/test/lint/webview-*.test.ts`).
@@ -487,4 +573,5 @@ FILES CHECKED: `docs/plans/2026-10-11-nuiget-2.0-execution-plan.md:41-175,240-25
 ## Exact next step (one item ID)
 
 P5.6 (feature search, main and sidebar browse), after P5.5's CI run is green; a fresh session starts it (second compaction of this one).
+
 

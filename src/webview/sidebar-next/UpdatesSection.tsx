@@ -16,6 +16,15 @@ interface Item {
 export interface UpdatesSectionProps {
     /** Something to say to a screen reader that no outcome of an operation says. */
     announce: (message: string) => void;
+    /** The text after `@updates`: only updates whose id contains it are listed. */
+    filter?: string;
+}
+
+function emptyMessage(sourcesUnavailable: boolean, total: number, filter: string): string {
+    if (sourcesUnavailable && total === 0) {
+        return 'Updates could not be checked.';
+    }
+    return total > 0 && filter.length > 0 ? `No updates match "${filter}".` : 'No updates available.';
 }
 
 /**
@@ -23,7 +32,7 @@ export interface UpdatesSectionProps {
  * updates the package to its latest version; a centrally managed package is not updated from here until the central
  * editor exists (P6.3). A source that could not be checked is a banner, never "no updates".
  */
-export function UpdatesSection({ announce }: UpdatesSectionProps): React.JSX.Element {
+export function UpdatesSection({ announce, filter = '' }: UpdatesSectionProps): React.JSX.Element {
     const updates = useUpdates();
     const installed = useInstalled();
     const { isPackageBusy, active } = useOps();
@@ -36,7 +45,8 @@ export function UpdatesSection({ announce }: UpdatesSectionProps): React.JSX.Ele
     const contentId = `${baseId}-content`;
 
     const { projectPath, rows } = updates;
-    const items = useMemo<Item[]>(() => rows.map(update => ({ id: update.id, update })), [rows]);
+    const needle = filter.trim().toLowerCase();
+    const items = useMemo<Item[]>(() => rows.filter(update => update.id.toLowerCase().includes(needle)).map(update => ({ id: update.id, update })), [rows, needle]);
     const centralIds = useMemo(() => new Set((installed.result?.packages ?? [])
         .filter(entry => entry.declaration === 'central' || entry.declaration === 'central-override')
         .map(entry => entry.id.toLowerCase())), [installed.result]);
@@ -92,7 +102,7 @@ export function UpdatesSection({ announce }: UpdatesSectionProps): React.JSX.Ele
                     busy={updates.revalidating}
                     onSelect={item => setSelectedId(item.id)}
                     onActivate={updateOne}
-                    empty={<EmptyState data-testid="sidebar-updates-empty" message={updates.sourcesUnavailable ? 'Updates could not be checked.' : 'No updates available.'} />}
+                    empty={<EmptyState data-testid="sidebar-updates-empty" message={emptyMessage(updates.sourcesUnavailable, rows.length, filter.trim())} />}
                     renderRow={(item, placement) => {
                         const { update } = item;
                         const busy = isBusy(update.id);

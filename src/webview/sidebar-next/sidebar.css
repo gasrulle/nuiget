@@ -60,3 +60,11 @@ body {
     display: inline-flex;
     padding-inline-end: var(--nuiget-space-4);
 }
+
+/* Browse results take the place of the sections; their list scrolls inside. */
+.nuiget-sidebar-browse {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-height: 0;
+}

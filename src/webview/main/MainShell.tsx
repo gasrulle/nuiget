@@ -3,12 +3,15 @@ import type React from 'react';
 import { ALL_PROJECTS } from '../../protocol';
 import { useMessageBus } from '../shared/bus/useMessageBus';
 import { Banner, cssVars, EmptyState, IconButton, LiveStatus, Sash, SyncIcon, Tabs, type TabItem } from '../shared/primitives';
-import { parseSearchQuery, type SearchMode } from '../shared/search/parseSearchQuery';
+import { FILTER_PREFIXES, parseSearchQuery, type SearchMode } from '../shared/search/parseSearchQuery';
+import { SearchBox } from '../shared/search/SearchBox';
 import { useOps } from '../shared/store/ops';
 import { describeOutcome } from '../shared/store/outcomes';
 import { useProjects } from '../shared/store/projects';
+import { useSearch } from '../shared/store/search';
 import { useSession, useSessionActions } from '../shared/store/session';
 import { useUpdates } from '../shared/store/updates';
+import { useSearchTyping } from './features/search/useSearchTyping';
 
 export type MainTab = 'installed' | 'updates';
 
@@ -22,11 +25,20 @@ export interface ListView {
     announce: (message: string) => void;
 }
 
+/** What the browse results are given by the shell. */
+export interface BrowseView {
+    /** The text in the box, which Enter searches for. */
+    text: string;
+    announce: (message: string) => void;
+}
+
 export interface MainShellProps {
     /** The list of the Installed tab. */
     installed?: (view: ListView) => React.ReactNode;
     /** The list of the Updates tab. */
     updates?: (view: ListView) => React.ReactNode;
+    /** The browse results; they take the place of the tabs while the box holds a browse search. */
+    browse?: (view: BrowseView) => React.ReactNode;
     /** The details of the selected package; without one, the details pane says how to get one. */
     details?: React.ReactNode;
 }
@@ -45,9 +57,10 @@ const SPLIT = { min: 25, max: 75, initial: 50 };
  * The 2.0 main panel around its features (interaction model §1 and §2): the header with the shared context
  * (project, source, prerelease) and refresh, the unified search box, the Installed and Updates tabs and the split
  * between the list and the details. The search box selects the tab of a filter mode (`@installed`, `@updates`,
- * `@vulnerable`) and hands its text to the list; plain text is a browse search, which the search feature runs.
+ * `@vulnerable`) and hands its text to the list; plain text is a browse search: Enter runs it in the search slice and
+ * the browse results take the place of the tabs; typing, suggestions and `ui/navigateToPackage` are the search feature's.
  */
-export function MainShell({ installed, updates, details }: MainShellProps): React.JSX.Element {
+export function MainShell({ installed, updates, browse, details }: MainShellProps): React.JSX.Element {
     const bus = useMessageBus();
     const { session } = useSession();
     const { set } = useSessionActions();
@@ -81,6 +94,16 @@ export function MainShell({ installed, updates, details }: MainShellProps): Reac
     }), [bus]);
 
     const parsed = parseSearchQuery(query);
+    const browsing = parsed.mode === 'browse';
+    const [focused, setFocused] = useState(false);
+    const typing = useSearchTyping({ text: query, setText: setQuery, browsing, focused });
+    // Leaving browse (an empty box, a filter) ends the search and cancels what it still asks.
+    const { clear: clearSearch } = useSearch();
+    useEffect(() => {
+        if (!browsing) {
+            clearSearch();
+        }
+    }, [browsing, clearSearch]);
     const modeTab = TAB_OF_MODE[parsed.mode];
     const tab = modeTab ?? chosenTab;
     // The badge counts the updates the host answered; while it checks or cannot say, there is no number.
@@ -96,15 +119,9 @@ export function MainShell({ installed, updates, details }: MainShellProps): Reac
         }
     };
 
-    const onSearchKeyDown = (event: React.KeyboardEvent<HTMLInputElement>): void => {
-        if (event.key !== 'Escape') {
-            return;
-        }
-        event.preventDefault();
-        if (query.length > 0) {
-            setQuery('');
-        } else {
-            event.currentTarget.blur();
+    const submit = (text: string): void => {
+        if (parseSearchQuery(text).mode === 'browse') {
+            typing.submit(text);
         }
     };
 
@@ -140,24 +157,29 @@ export function MainShell({ installed, updates, details }: MainShellProps): Reac
                 <IconButton label="Refresh" onClick={refresh} className="nuiget-main-refresh"><SyncIcon /></IconButton>
             </header>
             <div className="nuiget-main-search" role="search">
-                <input
-                    ref={searchRef}
+                <SearchBox
+                    inputRef={searchRef}
                     className="nuiget-main-search-input"
-                    type="search"
-                    data-testid="search-input"
-                    aria-label="Search packages, or filter with @installed, @updates or @vulnerable"
+                    testId="search-input"
+                    label="Search packages, or filter with @installed, @updates or @vulnerable"
                     placeholder="Search packages, or filter: @installed, @updates, @vulnerable"
+                    prefixes={FILTER_PREFIXES}
                     value={query}
-                    onChange={event => setQuery(event.target.value)}
-                    onKeyDown={onSearchKeyDown}
+                    onChange={setQuery}
+                    onSubmit={submit}
+                    suggestions={typing.suggestions}
+                    onPickSuggestion={typing.pick}
+                    onFocusChange={setFocused}
                 />
             </div>
             {projectsError ? <Banner severity="error">{`Projects could not be listed: ${projectsError.message}`}</Banner> : null}
             <div className="nuiget-main-split" style={cssVars({ '--nuiget-split': `${split}%` })}>
                 <div className="nuiget-main-list" id={listPaneId}>
-                    <Tabs tabs={tabs} selected={tab} onSelect={selectTab} label="Package lists" data-testid="tab-bar">
-                        {tab === 'installed' ? installed?.(view) : updates?.(view)}
-                    </Tabs>
+                    {browsing ? browse?.({ text: query, announce }) : (
+                        <Tabs tabs={tabs} selected={tab} onSelect={selectTab} label="Package lists" data-testid="tab-bar">
+                            {tab === 'installed' ? installed?.(view) : updates?.(view)}
+                        </Tabs>
+                    )}
                 </div>
                 <Sash orientation="vertical" label="Resize the package list" value={split} min={SPLIT.min} max={SPLIT.max} defaultValue={SPLIT.initial} controls={listPaneId} onChange={setSplit} />
                 <section className="nuiget-main-details" data-testid="package-details-panel" aria-label="Package details">

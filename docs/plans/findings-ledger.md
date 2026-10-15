@@ -157,7 +157,7 @@ one records itself here.
 | N54 | Low | 1.x decrypts DPAPI passwords without the entropy that NuGet is believed to use; unverified, 2.0 tries both. | — | P7.3 (verify on Windows) | open |
 | N55 | Low | The gate of P2.7 (`grep "exec("` → 0) also matches `RegExp.exec` and cannot hold. | — | P2.7 (replaced by three greps) | closed |
 | N56 | Low | `redact` does not mask a secret in a quoted JSON key (`"Password":"…"`). | — | P7.3 or a logging item; P2.7 never logs the plugin's output | open |
-| N57 | Low | `nuiget.searchDebounceMode` is contributed as `quicksearch`, `full`, `off`; the 2.0 `ExtensionConfig` knows `quicksearch` and `fullsearch` only. | — | P5 (the item that ports the search settings) | open |
+| N57 | Low | `nuiget.searchDebounceMode` is contributed as `quicksearch`, `full`, `off`; the 2.0 `ExtensionConfig` knows `quicksearch` and `fullsearch` only. | — | P5.13 (by the P5.6 ruling of 2026-10-15) | open |
 | N58 | Low | The shared `vscode` mock's panel fires `onDidDispose` on every `dispose()`, so disposing the 2.0 `MainPanelHost` in a test recurses until the stack overflows. | — | tests of the 2.0 panel use a panel that reports disposal once (P2.10, P2.11); the mock is rewritten or deleted with the 1.x tests (P5.12, P8.2) | open |
 | N59 | Low | Three tests carry their own unexported copy of a fake `spawn` for `dotnet`. | — | P5.12 (the test rewrite consolidates them on the harness's `fakeDotnet.ts`) | open |
 | N60 | Low | A test of the composition root asserted the order of two invalidations whose flushes each read a directory; it failed in about one run of six. | — | P2.fix-2 | closed (P2.fix-2: the two watchers are fired one after the other; 60 runs without a failure) |

@@ -2,10 +2,13 @@ import type React from 'react';
 import type { MessageBus } from '../bus/MessageBus';
 import { MessageBusProvider } from '../bus/useMessageBus';
 import { AllProjectsProvider } from './allProjects';
+import { ConfigProvider } from './config';
 import { InstalledProvider } from './installed';
 import { OpsProvider } from './ops';
 import { ProjectsProvider } from './projects';
+import { SearchProvider } from './search';
 import { SessionProvider } from './session';
+import { SourcesProvider } from './sources';
 import { TransitiveProvider } from './transitive';
 import { UpdatesProvider } from './updates';
 
@@ -23,7 +26,13 @@ export function StoreProvider({ bus, children }: { bus: MessageBus; children: Re
                         <UpdatesProvider>
                             <TransitiveProvider>
                                 <AllProjectsProvider>
-                                    <OpsProvider>{children}</OpsProvider>
+                                    <ConfigProvider>
+                                        <SourcesProvider>
+                                            <SearchProvider>
+                                                <OpsProvider>{children}</OpsProvider>
+                                            </SearchProvider>
+                                        </SourcesProvider>
+                                    </ConfigProvider>
                                 </AllProjectsProvider>
                             </TransitiveProvider>
                         </UpdatesProvider>

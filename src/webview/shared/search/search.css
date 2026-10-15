@@ -1,0 +1,55 @@
+/*
+ * The search box of both surfaces (SearchBox.tsx): the box keeps the class its surface gives it; the list of
+ * prefixes and suggestions hangs under it, over the content, as wide as the box.
+ */
+
+.nuiget-search-box {
+    position: relative;
+}
+
+.nuiget-search-options {
+    position: absolute;
+    z-index: var(--nuiget-z-popover);
+    top: 100%;
+    right: 0;
+    left: 0;
+    max-height: 16em;
+    margin: var(--nuiget-space-1) 0 0;
+    padding: var(--nuiget-space-1) 0;
+    overflow-y: auto;
+    border: 1px solid var(--nuiget-color-border);
+    border-radius: var(--nuiget-radius-sm);
+    background: var(--nuiget-color-widget-bg);
+    box-shadow: 0 2px 8px var(--nuiget-color-shadow);
+    color: var(--nuiget-color-widget-fg);
+    list-style: none;
+}
+
+.nuiget-search-option {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--nuiget-space-4);
+    min-height: var(--nuiget-target-min);
+    padding: 0 var(--nuiget-space-3);
+    cursor: pointer;
+}
+
+.nuiget-search-option:hover {
+    background: var(--nuiget-color-list-hover-bg);
+}
+
+.nuiget-search-option--active,
+.nuiget-search-option--active:hover {
+    background: var(--nuiget-color-list-active-bg);
+    color: var(--nuiget-color-list-active-fg);
+}
+
+.nuiget-search-option-source {
+    color: var(--nuiget-color-fg-muted);
+    font-size: var(--nuiget-font-size-sm);
+}
+
+.nuiget-search-option--active .nuiget-search-option-source {
+    color: inherit;
+}

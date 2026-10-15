@@ -1,4 +1,69 @@
-# STATUS — src/host   commit 6e2c878 (parent of the P4.9b commit)   2026-10-16T07:30:00Z
+# STATUS — src/host   commit c4c3617 (parent of the P5.6 commit)   2026-10-15T12:00:00Z
+
+git status --porcelain --untracked-files=all (before the commit): modified `ARCHITECTURE.md`, `CHANGELOG.md`, `docs/plans/{STATUS,findings-ledger}.md`, `src/core/feeds/{enricher,enricher.test}.ts`, `src/host/handlers.test.ts`, `src/webview/main/{MainShell.tsx,index.tsx,index.test.tsx,main.css}`, `src/webview/shared/store/StoreProvider.tsx`, `src/webview/sidebar-next/{SidebarView.tsx,SidebarView.test.tsx,UpdatesSection.tsx,sidebar.css}` and the six STATUS notes; new `src/webview/shared/search/{SearchBox.tsx,SearchBox.test.tsx,search.css}`, `src/webview/shared/store/{search,sources,config}.tsx` with their tests, `src/webview/main/features/search/{BrowseList.tsx,BrowseList.test.tsx,useSearchTyping.ts,useSearchTyping.test.tsx}`, `src/webview/sidebar-next/{BrowseResults.tsx,BrowseResults.test.tsx}`, `src/test/ui/v2/main-search.ui.test.ts` (all belong to the P5.6 commit)
+
+Item: **P5.6** (host part, from the P4 review): `handlers.test.ts` gains `search/query emits the metadata chunk before
+its response` (`handlers.ts:296` covered): the chunk is streamed before the response, the response carries
+`sourcesUnavailable` and no generation. No host source changed.
+
+## Verified by running
+
+P5.6 (the same gate run for every directory of the item):
+
+```text
+baseline at c4c3617          → CI run 38680684265 green · npx tsc --noEmit 0 · npx eslint src 0 · npx vitest run →
+                               Test Files 144 passed (144) · Tests 3061 passed | 4 skipped (3065)
+stop-and-ask 1 (source list of quick-search, searchDebounceMode) → ruling of 2026-10-15, option 2 narrowed
+first test:ui:v2 run         → stopped in vscode:prepublish at check-types: four type errors in the item's new tests
+                               (shared mock typed by its default, `act` returning Promise<unknown>, an invalid
+                               InvalidationReason); fixed, lint warning (console.log) → console.warn
+stop-and-ask 2 (src/webview/main/index.test.tsx, `config/get` at start) → ruling of 2026-10-15, option 1
+npx tsc --noEmit / npm run check-types / npx eslint src / npm run lint → exit 0 each (last run after every edit)
+npm test (NUIGET_SDK_TESTS=1, DOTNET_ROOT set) → Test Files 151 passed (151) · Tests 3119 passed (3119)
+npm run bench                → Test Files 20 passed (20) · Tests 119 passed | 1 skipped (120)
+npx vitest run --coverage    → exit 0 (thresholds hold) · store/search.tsx 97.95 % lines · store/sources.tsx 97.56 %
+                               · store/config.tsx 94.73 % · shared/search 100 % · main/features/search 97.36 %
+npm run docs:protocol:check  → docs/protocol.md is up to date
+rm -rf dist && NUIGET_V2=1 npm run package && npm run check:vsix → check:vsix: OK
+rm -rf dist && node esbuild.mjs --v2 --production --analyze → extension 280657 / 299921 · webview 320845 / 600685
+                               (309114 at P5.5) · sidebar 300411 / 329122 (288948 at P5.5); dist/ deleted after
+NUIGET_V2=1 npm run test:ui:v2 -- --storage /tmp/nuiget-ui-v2 → 14 passing (16s) at the second run (the first
+                               stopped at check-types, above) · `[P5.6] cold search: 2323 ms from Enter to the first row`
+timer-based frontend tests (sidebar-next, main/features/search, shared/search, store/search), 20 times → 20 of 20
+npm run package:vsix (1.x)   → SKIPPED: no 1.x file changed; CI's Package job builds it
+npm run test:ui (1.x)        → SKIPPED: no 1.x UI file changed; the CI job `UI` runs it
+test -e .claude/.contract-change → false · git diff --stat c4c3617 -- src/protocol src/core/contracts.ts docs/adr
+                               package.json src/host/services.ts → empty
+```
+
+## Done (tested)
+
+- The test above; the rest of `handlers.test.ts` unchanged.
+
+## Done (untested)
+
+- The quick-search suggestions in VS Code: the ExTester test submits with Enter; suggestions, timers and both modes are
+  covered in jsdom (`useSearchTyping.test.tsx`).
+
+## Not started
+
+- Details of a browse row (P5.7), the sources settings and selector (P5.8), the multi-install picker (P5.9), the
+  sidebar's context menu, "View package details" and "Open full view" (P5.10), the search settings' `full`/`off`
+  values (N57, P5.13).
+
+## Deviations from contract/ADR (file:line each)
+
+- None.
+
+## Advisor decisions (date, item, question, answer verbatim)
+
+Both P5.6 rulings of the `architecture-advisor` (2026-10-15) are verbatim in `docs/plans/STATUS.md` under "### P5.6 — stop-and-ask: the source list of quick-search and `searchDebounceMode`" and "### P5.6 — stop-and-ask: the main entry's start requests". The ambient advisor was consulted before writing (scope: no install action on main browse rows, the details pane stays P5.7's, `ui/viewPackage` senders stay P5.10's, the combobox instead of `Popover`, the latency measured at the first ExTester run).
+
+## Exact next step (one item ID)
+
+P5.7 (feature details), after P5.6's CI run is green.
+
+## Earlier notes of this directory
 
 git status --porcelain --untracked-files=all (before the commit): new `src/test/harness/fakeFeed.ts`; modified `src/core/feeds/{health,health.test}.ts`, `src/core/catalog/{Catalog,Catalog.test,feedContexts,feedContexts.test}.ts`, `src/host/{handlers,SidebarHost}.ts`, `src/extension.next.ts`, `src/extension.next.test.ts`, `src/test/harness/{harness,FakeWebview,scenarios.test}.ts`, the five STATUS notes, `CHANGELOG.md`, `ARCHITECTURE.md`, `.github/copilot-instructions.md`, `docs/plans/STATUS.md`, `docs/plans/findings-ledger.md` (all belong to the P4.9b commit)
 
@@ -660,3 +725,4 @@ P4.9b:
 
 FILES CHECKED: /Users/mattias/github/nuiget/.github/agents/architecture-advisor.agent.md (whole); /Users/mattias/github/nuiget/docs/plans/2026-10-11-nuiget-2.0-execution-plan.md (§0-§4 :1-172, P2 rows :221-238, P4 rows and gate :253-268, P5 :270-288, P6.2 :295, §7 :329-363); /Users/mattias/github/nuiget/docs/plans/RUN.md:55-100; /Users/mattias/github/nuiget/docs/plans/STATUS.md (row P4.9 :71 whole, rows P4.10 :72, P5.x :60-83, fix rows :39,52-53; rulings P2.8 :1010-1108, P2.9 :1110-1285, P2.10 :1287-1364, P4.1 :1797-1894, P4.4 :1896-1946, P4.6 :1948-2008, P4.8 :2010-2062); /Users/mattias/github/nuiget/docs/plans/findings-ledger.md (:42 S6, :66 F6, :109 N6, :171-173, :308-309 M1/M2, :412-414 N68-N70); /Users/mattias/github/nuiget/docs/adr/002-query-coordinator.md, 005-execution-context-and-outbound-policy.md, 006-icons-and-csp.md, 007-protocol.md:14-42, 009-catalog.md (whole); /Users/mattias/github/nuiget/src/core/catalog/Catalog.ts (whole), index.ts, STATUS.md:1-60, Catalog.test.ts (titles); /Users/mattias/github/nuiget/src/core/feeds/{types,index,serviceIndex,health,updates,enricher,metadataResolver,offline,testSupport}.ts (whole), icons.ts:1-160 and the `reset`/`Flight` lines, readmeImage.ts:1-70, readme.ts:73-100, registration.ts:109-135, search.ts:160-200, flatContainer.ts:71-80, vulnerability.ts:87-98, STATUS.md:1-80; /Users/mattias/github/nuiget/src/core/http/Transport.ts:18-60,300-360, index.ts; /Users/mattias/github/nuiget/src/core/credentials/DefaultCredentialProvider.ts:1-125, index.ts, helpers.ts:29-39, STATUS.md (the P2.8 recipe lines); /Users/mattias/github/nuiget/src/core/sources/{DefaultOutboundPolicy,index}.ts, NuGetConfigReader.ts (exports, `readChain` :56), merge.ts (exports :5-63), DotnetSourceProvider.ts:1-80, STATUS.md (grep); /Users/mattias/github/nuiget/src/core/project/{context,index}.ts, revision.ts (exports); /Users/mattias/github/nuiget/src/core/queries/QueryCoordinator.ts (whole), scopes.ts:1-80; /Users/mattias/github/nuiget/src/core/cache/CachePolicy.ts:1-150, index.ts, TieredCache.ts (method lines); /Users/mattias/github/nuiget/src/core/cli/index.ts, DotnetRunner.ts:390-415; /Users/mattias/github/nuiget/src/core/contracts.ts:100-122,150-354; /Users/mattias/github/nuiget/src/protocol/messages.ts:58-80,100-201, domain.ts:1-70,72-141,143-215,215-262, envelope.ts (`ProtocolErrorCode`); /Users/mattias/github/nuiget/src/host/{handlers,services,SidebarHost,MainPanelHost}.ts (whole or the cited ranges), WebviewHost.ts (`RequestContext`, `toProtocolError` lines), handlers.test.ts:30-110,185-310 and titles, WebviewHost.test.ts (title); /Users/mattias/github/nuiget/src/extension.next.ts (whole), extension.next.test.ts:1-235 and titles (incl. :439 `overlapping refreshes are coalesced`), src/STATUS.md:1-12; /Users/mattias/github/nuiget/src/test/harness/{harness,FakeWebview (1-130), scenarios.test (1-52, 489-554 and titles), fakeDotnet (1-60 and matchers)}.ts; /Users/mattias/github/nuiget/src/test/__mocks__/vscode.ts:232-243; /Users/mattias/github/nuiget/src/webview/shared/store/{installed,allProjects}.tsx (chunk handling) and the `iconUrl`/`metadata.get` uses under src/webview/main; /Users/mattias/github/nuiget/vitest.config.mts:87-89; /Users/mattias/github/nuiget/eslint.config.mjs:29-86; /Users/mattias/github/nuiget/.github/instructions/core-boundaries.instructions.md:1-50; /Users/mattias/github/nuiget/CHANGELOG.md:1-16; commands: `git status --short` (only `docs/plans/STATUS.md` modified), `git log --oneline -1` (631a13c), `wc -l` of the files in play, `grep -rn 'REMOVAL GATE: P4.9' src` (the 18 anchors the brief names), `grep -rn "sources/health\|notifySourceHealth" src`, `grep -rn "'session-changed'" src` (declared, unused), `grep -n globalPackagesFolder src/core/cli/DotnetRunner.ts`, `ls src/test/benchmarks`. Advisor tool consulted twice: before writing (per-source fan-out for N70, the first-paint constraint on `installed/get`, the directory → chain cache, the shared-provider deviation, gate counts per half, the tests to name) and on the draft (credential ordering at the activation probe, `generation` on `updates/get` and the carrier unwrapped in `queryWithRetry`, `excluded` in `versions`, `undefined` metadata never cached, the two harness assertions that could not hold, the monitor restricted to the selected directory, one `PolicyClients` set with two enrichers, the directory cache in `forProject`, the composition order of step 8); every point is folded in.
 `````
+

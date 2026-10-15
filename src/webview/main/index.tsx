@@ -5,6 +5,7 @@ import { StoreProvider } from '../shared/store/StoreProvider';
 import '../shared/tokens.css';
 import './main.css';
 import { InstalledTab } from './features/installed/InstalledTab';
+import { BrowseList } from './features/search/BrowseList';
 import { UpdatesTab } from './features/updates/UpdatesTab';
 import { MainShell } from './MainShell';
 
@@ -18,7 +19,7 @@ if (rootElement) {
     ReactDOM.createRoot(rootElement).render(
         <StrictMode>
             <StoreProvider bus={bus}>
-                <MainShell installed={view => <InstalledTab {...view} />} updates={view => <UpdatesTab {...view} />} />
+                <MainShell installed={view => <InstalledTab {...view} />} updates={view => <UpdatesTab {...view} />} browse={view => <BrowseList {...view} />} />
             </StoreProvider>
         </StrictMode>
     );

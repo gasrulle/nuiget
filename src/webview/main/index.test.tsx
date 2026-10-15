@@ -17,7 +17,7 @@ describe('main panel 2.0 entry', () => {
         document.body.replaceChildren();
     });
 
-    it('mounts the shell into its root, acquires the API once and asks the host for the session and the projects', async () => {
+    it('mounts the shell into its root, acquires the API once and asks the host for the session, the projects and the settings', async () => {
         const root = document.createElement('div');
         root.id = 'root';
         document.body.append(root);
@@ -32,7 +32,8 @@ describe('main panel 2.0 entry', () => {
         expect(screen.getByTestId('tab-bar')).toBeInTheDocument();
         expect(screen.getByTestId('status-live')).toBeInTheDocument();
         const asked = api().postMessage.mock.calls.map(([message]) => message as { kind: string; type?: string }).filter(message => message.kind === 'request').map(message => message.type);
-        expect(new Set(asked)).toEqual(new Set(['session/get', 'projects/list']));
+        // The search feature enables the config and sources slices on mount: config needs no session; sources/list follows the first snapshot (useSearchTyping.test.tsx, sources.test.tsx).
+        expect(new Set(asked)).toEqual(new Set(['session/get', 'projects/list', 'config/get']));
     });
 
     it('does not mount itself when the page has no root element', async () => {

@@ -46,6 +46,10 @@ export class DefaultMetadataEnricher implements MetadataEnricher {
     enrich(sources: ResolvedSource[], packages: Array<{ id: string; version: string }>, signal?: AbortSignal): Promise<PackageMetadataLite[]> {
         return mapWithConcurrency(packages, this.concurrency, async ({ id, version }): Promise<PackageMetadataLite> => {
             const lite: PackageMetadataLite = { id, version };
+            // A cancelled request asks no feed for the packages it has not reached; they stay bare.
+            if (signal?.aborted) {
+                return lite;
+            }
             try {
                 const [found, iconUrl, known] = await Promise.all([
                     this.lookup(sources, id, signal),
@@ -68,6 +72,9 @@ export class DefaultMetadataEnricher implements MetadataEnricher {
                     lite.vulnerabilities = known.vulnerabilities;
                 }
             } catch (error) {
+                if (signal?.aborted) {
+                    return lite;
+                }
                 this.logger.warn(`[Enrich] ${id}@${version} failed: ${redact(error instanceof Error ? error.message : String(error))}`);
             }
             return lite;

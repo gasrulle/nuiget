@@ -320,9 +320,9 @@ describe('sidebar: Installed section', () => {
     it('the search box filters the installed packages by id, and the host can ask for the focus to be there', async () => {
         const host = await mountWith([pkg('Serilog'), pkg('Serilog.Sinks.Console'), pkg('Moq')]);
         const search = screen.getByTestId('sidebar-search-input');
-        expect(search).toHaveAccessibleName('Filter installed packages');
+        expect(search).toHaveAccessibleName('Search packages, or filter with @installed or @updates');
         expect(screen.getByRole('search')).toContainElement(search);
-        await userEvent.type(search, 'SERI');
+        await userEvent.type(search, '@installed SERI');
         expect(names()).toEqual(['Serilog', 'Serilog.Sinks.Console']);
         // The count is of the project, not of the filter.
         expect(screen.getByTestId('section-header-installed')).toHaveAccessibleName('Installed 3');

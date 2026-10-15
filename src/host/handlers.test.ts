@@ -327,6 +327,26 @@ describe('shared handlers: reads', () => {
         expect(host.sent.indexOf(stream[0])).toBeLessThan(host.sent.indexOf(host.responses('upgraded')[0]));
     });
 
+    it('search/query emits the metadata chunk before its response', async () => {
+        const { services, catalog } = makeServices();
+        const host = new TestHost(services);
+        const results = [{ id: 'Contoso.Json', version: '2.0.0', description: '', authors: '', versions: ['2.0.0'], sourceUrl: feed.url }];
+        catalog.search.mockImplementationOnce(async (...args: unknown[]) => {
+            (args[2] as (packages: unknown) => void)([{ id: 'Contoso.Json', version: '2.0.0', verified: true }]);
+            // The shared mock is typed by its default answer, which has no results.
+            return { results: results as never[], sourcesUnavailable: true };
+        });
+
+        await host.receiveRaw(makeRequest('search/query', { query: 'json', includePrerelease: false }, 's'));
+
+        const stream = host.sent.filter(message => message.kind === 'stream');
+        expect(stream).toEqual([{ kind: 'stream', id: 's', type: 'search/query', chunk: { kind: 'metadata', packages: [{ id: 'Contoso.Json', version: '2.0.0', verified: true }] } }]);
+        expect(host.sent.indexOf(stream[0])).toBeLessThan(host.sent.indexOf(host.responses('s')[0]));
+        expect(resultOf(host, 's')).toEqual({ query: 'json', results, sourcesUnavailable: true });
+        // Search results are keyed by what the user typed, not a coordinator resource: no generation.
+        expect('generation' in host.responses('s')[0]).toBe(false);
+    });
+
     it('sources/list resolves the selected project\'s directory', async () => {
         const selected = makeServices();
         const host = new TestHost(selected.services);

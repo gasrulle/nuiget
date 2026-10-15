@@ -1,4 +1,72 @@
-# STATUS — src/test/ui/v2   commit 04ac55f (parent of the P5.5 commit)   2026-10-16T08:30:00Z
+# STATUS — src/test/ui/v2   commit c4c3617 (parent of the P5.6 commit)   2026-10-15T12:00:00Z
+
+git status --porcelain --untracked-files=all (before the commit): modified `ARCHITECTURE.md`, `CHANGELOG.md`, `docs/plans/{STATUS,findings-ledger}.md`, `src/core/feeds/{enricher,enricher.test}.ts`, `src/host/handlers.test.ts`, `src/webview/main/{MainShell.tsx,index.tsx,index.test.tsx,main.css}`, `src/webview/shared/store/StoreProvider.tsx`, `src/webview/sidebar-next/{SidebarView.tsx,SidebarView.test.tsx,UpdatesSection.tsx,sidebar.css}` and the six STATUS notes; new `src/webview/shared/search/{SearchBox.tsx,SearchBox.test.tsx,search.css}`, `src/webview/shared/store/{search,sources,config}.tsx` with their tests, `src/webview/main/features/search/{BrowseList.tsx,BrowseList.test.tsx,useSearchTyping.ts,useSearchTyping.test.tsx}`, `src/webview/sidebar-next/{BrowseResults.tsx,BrowseResults.test.tsx}`, `src/test/ui/v2/main-search.ui.test.ts` (all belong to the P5.6 commit)
+
+Item: **P5.6 feature search**, for this directory: `main-search.ui.test.ts`: in VS Code on a `NUIGET_V2=1` VSIX,
+plain text replaces the tab bar, Enter searches the real feeds, the row `package-row-newtonsoft.json` of
+`browse-list` appears, and Escape brings the tab bar back with an empty box. It prints the time from Enter to the
+first row (`console.warn`, the lint rule allows `warn` and `error` only).
+
+## Verified by running
+
+P5.6 (the same gate run for every directory of the item):
+
+```text
+baseline at c4c3617          → CI run 38680684265 green · npx tsc --noEmit 0 · npx eslint src 0 · npx vitest run →
+                               Test Files 144 passed (144) · Tests 3061 passed | 4 skipped (3065)
+stop-and-ask 1 (source list of quick-search, searchDebounceMode) → ruling of 2026-10-15, option 2 narrowed
+first test:ui:v2 run         → stopped in vscode:prepublish at check-types: four type errors in the item's new tests
+                               (shared mock typed by its default, `act` returning Promise<unknown>, an invalid
+                               InvalidationReason); fixed, lint warning (console.log) → console.warn
+stop-and-ask 2 (src/webview/main/index.test.tsx, `config/get` at start) → ruling of 2026-10-15, option 1
+npx tsc --noEmit / npm run check-types / npx eslint src / npm run lint → exit 0 each (last run after every edit)
+npm test (NUIGET_SDK_TESTS=1, DOTNET_ROOT set) → Test Files 151 passed (151) · Tests 3119 passed (3119)
+npm run bench                → Test Files 20 passed (20) · Tests 119 passed | 1 skipped (120)
+npx vitest run --coverage    → exit 0 (thresholds hold) · store/search.tsx 97.95 % lines · store/sources.tsx 97.56 %
+                               · store/config.tsx 94.73 % · shared/search 100 % · main/features/search 97.36 %
+npm run docs:protocol:check  → docs/protocol.md is up to date
+rm -rf dist && NUIGET_V2=1 npm run package && npm run check:vsix → check:vsix: OK
+rm -rf dist && node esbuild.mjs --v2 --production --analyze → extension 280657 / 299921 · webview 320845 / 600685
+                               (309114 at P5.5) · sidebar 300411 / 329122 (288948 at P5.5); dist/ deleted after
+NUIGET_V2=1 npm run test:ui:v2 -- --storage /tmp/nuiget-ui-v2 → 14 passing (16s) at the second run (the first
+                               stopped at check-types, above) · `[P5.6] cold search: 2323 ms from Enter to the first row`
+timer-based frontend tests (sidebar-next, main/features/search, shared/search, store/search), 20 times → 20 of 20
+npm run package:vsix (1.x)   → SKIPPED: no 1.x file changed; CI's Package job builds it
+npm run test:ui (1.x)        → SKIPPED: no 1.x UI file changed; the CI job `UI` runs it
+test -e .claude/.contract-change → false · git diff --stat c4c3617 -- src/protocol src/core/contracts.ts docs/adr
+                               package.json src/host/services.ts → empty
+```
+
+## Done (tested)
+
+- 14 passing locally, the new test among them; the fixture project left as found (`git status src/test/e2e` clean).
+
+## Done (untested)
+
+- The quick-search suggestions in VS Code: the ExTester test submits with Enter; suggestions, timers and both modes are
+  covered in jsdom (`useSearchTyping.test.tsx`).
+
+## Not started
+
+- Details of a browse row (P5.7), the sources settings and selector (P5.8), the multi-install picker (P5.9), the
+  sidebar's context menu, "View package details" and "Open full view" (P5.10), the search settings' `full`/`off`
+  values (N57, P5.13).
+
+## Deviations from contract/ADR (file:line each)
+
+- Sidebar browse is covered in jsdom (`src/webview/sidebar-next/BrowseResults.test.tsx`), not in VS Code: installing
+  from it would change the shared fixture project; the uninstall test of `sidebar.ui.test.ts` already proves the
+  operation path.
+
+## Advisor decisions (date, item, question, answer verbatim)
+
+Both P5.6 rulings of the `architecture-advisor` (2026-10-15) are verbatim in `docs/plans/STATUS.md` under "### P5.6 — stop-and-ask: the source list of quick-search and `searchDebounceMode`" and "### P5.6 — stop-and-ask: the main entry's start requests". The ambient advisor was consulted before writing (scope: no install action on main browse rows, the details pane stays P5.7's, `ui/viewPackage` senders stay P5.10's, the combobox instead of `Popover`, the latency measured at the first ExTester run).
+
+## Exact next step (one item ID)
+
+P5.7 (feature details), after P5.6's CI run is green.
+
+## Earlier notes of this directory
 
 Scope of this note: the suites that put the 2.0 entries under test in VS Code and what they need:
 `src/test/ui/v2/**` (ExTester), `src/test/e2e/v2-sidebar.e2e.test.ts` (extension host), the `NUIGET_V2`
@@ -290,4 +358,5 @@ FILES CHECKED: docs/plans/2026-10-11-nuiget-2.0-execution-plan.md:41-175,240-251
 ## Exact next step (one item ID)
 
 P5.6 (feature search, main and sidebar browse), after P5.5's CI run is green; a fresh session starts it (second compaction of this one).
+
 

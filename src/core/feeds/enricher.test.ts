@@ -100,4 +100,39 @@ describe('DefaultMetadataEnricher', () => {
             { id: 'Fine', version: '2.0.0', authors: 'Ada', iconUrl: 'data:image/png;base64,BBBB', vulnerabilities: [] },
         ]);
     });
+
+    it('an abort mid-batch starts no further lookup and the rest of the entries stay bare', async () => {
+        const controller = new AbortController();
+        const lookup = search({ 'a/First': { id: 'First', version: '1.0.0', authors: 'Ada' } });
+        lookup.lookup.mockImplementationOnce(async () => {
+            controller.abort();
+            return { id: 'First', version: '1.0.0', authors: 'Ada' };
+        });
+        const iconResolver = icons();
+        const logger = { ...silentLogger, warn: vi.fn() };
+        const subject = new DefaultMetadataEnricher({ policy: allowAll, logger }, lookup, iconResolver, vulnerabilities(), { concurrency: 1 });
+
+        const entries = await subject.enrich([source('a')], [{ id: 'First', version: '1.0.0' }, { id: 'Second', version: '2.0.0' }, { id: 'Third', version: '3.0.0' }], controller.signal);
+
+        expect(lookup.lookup).toHaveBeenCalledTimes(1);
+        expect(iconResolver.icon).toHaveBeenCalledTimes(1);
+        expect(entries.slice(1)).toEqual([{ id: 'Second', version: '2.0.0' }, { id: 'Third', version: '3.0.0' }]);
+        expect(logger.warn).not.toHaveBeenCalled();
+    });
+
+    it('a lookup that fails because the request was cancelled is not logged as a failure', async () => {
+        const controller = new AbortController();
+        const lookup = search({});
+        lookup.lookup.mockImplementation(async () => {
+            controller.abort();
+            throw new Error('The operation was aborted');
+        });
+        const logger = { ...silentLogger, warn: vi.fn() };
+        const subject = new DefaultMetadataEnricher({ policy: allowAll, logger }, lookup, icons(), vulnerabilities());
+
+        const entries = await subject.enrich([source('a')], [{ id: 'Gone', version: '1.0.0' }], controller.signal);
+
+        expect(entries).toEqual([{ id: 'Gone', version: '1.0.0' }]);
+        expect(logger.warn).not.toHaveBeenCalled();
+    });
 });

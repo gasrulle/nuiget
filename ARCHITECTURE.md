@@ -372,9 +372,9 @@ one place for three rules:
 | No result behind an invalidation | An ok answer whose `generation` is below the one listed for the same key is not applied. Equal, higher, absent, or a key no event has named: applied. With nothing newer on its way the hook asks once more; a second out-of-date answer for the same listing ends as an error, so loading always ends. |
 
 **Slices.** Each is a reducer with a context of its own (`useSession`, `useProjects`, `useInstalled`,
-`useTransitive`, `useAllProjects`, `useUpdates`, `useOps`), so a component renders for the slice it reads; the functions that
-change something (`useSessionActions`, `useOpsActions`) are in separate contexts and never change.
-`StoreProvider` mounts all seven, which is what makes a surface ask `session/get` and `projects/list` when it
+`useTransitive`, `useAllProjects`, `useUpdates`, `useConfig`, `useSources`, `useSearch`, `useOps`), so a component renders for
+the slice it reads; the functions that change something (`useSessionActions`, `useOpsActions`) are in separate contexts and
+never change. `StoreProvider` mounts all ten, which is what makes a surface ask `session/get` and `projects/list` when it
 starts; the other slices ask when they have something to ask for.
 
 - `session` (ADR-001): `committed` is the last snapshot of the host that was applied, and a snapshot is
@@ -405,6 +405,23 @@ starts; the other slices ask when they have something to ask for.
   list. When a `sources/health` event no longer lists a source that the previous one listed and the shown answer
   was unavailable, the slice asks again once after `RECOVERY_DELAY_MS` (300 ms), unless a request went out in the
   meantime: a manual refresh announces `failed: []` and then invalidates, and that invalidation is the one request.
+- `config` (P5.6): the extension's settings from every `config/changed` event and, once a consumer calls
+  `enable()`, one `config/get` unless an event said them already. Not in ADR-008's enumeration of slices; added with
+  its first consumer, the main panel's quick-search. The host sends the contributed `full` and `off` modes of
+  `searchDebounceMode` as `quicksearch` (N57, P5.13).
+- `sources` (read part P5.6, mutations P5.8): lazy like `transitive`, but `enable()` is sticky for the surface. Once
+  enabled and with a committed session it asks `sources/list` for the committed project's directory; again when the
+  committed project changes, on `refresh()`, and when an invalidation has the scope `sources` or names a `sources:`
+  key. It is no `useResource`: the key is the project's directory, which the webview does not compute. The latest
+  request wins and the shown list stays until the answer; `failed` follows the answer, its `health` chunk and
+  `sources/health`.
+- `search` (P5.6): one browse search per surface over the committed source (`sourceUrls` absent for `all`) and
+  prerelease flag. A search is keyed by what the user typed, so it is not a coordinator resource: no generation, and
+  a new text cancels the request before it. The `metadata` chunk precedes the answer and is merged onto its results
+  by `id@version` (`withMetadata`). A committed source or prerelease change asks the shown text again without
+  blanking the list; `sourcesUnavailable` is a flag over the results. The slice also owns quick-search:
+  `suggest(text)` sends `search/autocomplete` with the enabled sources (every one under `all`, else the selected
+  one) and sends nothing while the list is unknown or names none; the latest suggestion wins.
 - `ops`: operations in progress, by operation id, from `ops/progress` (`running`, `restoring`; the host sends
   no `queued` event) and, on the surface that asked, from the call: `run(type, payload)` records the operation
   at once under an id of the surface, with its kind and the projects and packages read from the payload
@@ -530,6 +547,29 @@ The sidebar's `UpdatesSection` (`src/webview/sidebar-next`) reads the same slice
 update, a centrally managed package is announced and has no row button, the banner is
 `sidebar-updates-unavailable` and the empty state `sidebar-updates-empty`. The sidebar's search box filters the
 Installed section only; its search modes are P5.6's.
+
+### Search feature (main and sidebar)
+
+Both surfaces use one combobox, `shared/search/SearchBox.tsx`: typing `@` lists the filter prefixes the surface
+offers, and quick-search suggestions use the same list. ArrowUp/ArrowDown move through the options with focus kept in
+the box (`aria-activedescendant`), Enter or Tab takes the active option, Escape closes the list, then clears the box,
+then leaves it. The list belongs to the box and is no layer of `primitives/layers.ts`: focus never moves into it, which
+is why it is not a `Popover`.
+
+- **Main panel.** Plain text is a browse search: `BrowseList` (`browse-list`) takes the place of the tab bar and
+  lists the results with icons (`data:` URIs only, the CSP's `img-src`), authors, downloads and the Verified and
+  Installed badges. `useSearchTyping` owns the timers by `searchDebounceMode`: `quicksearch` asks for suggestions
+  150 ms after the last key from two characters on while the box has focus, `fullsearch` searches 300 ms after the
+  last key; Enter always searches at once. The main panel's search feature enables `config` and `sources` on mount,
+  so the main panel's start requests are `session/get`, `projects/list` and `config/get`, with `sources/list` after
+  the first snapshot; the sidebar's set is unchanged.
+  Picking a suggestion and `ui/navigateToPackage` fill the box with the id and search for it exactly; the package
+  found becomes the current row. Leaving browse clears the search and cancels its request.
+- **Sidebar.** `@installed <text>` and `@updates <text>` show that section alone, filtered; any other text (also
+  `@vulnerable`) is a browse search, 300 ms after the last key from two characters on, or at once on Enter.
+  `BrowseResults` (`sidebar-browse-list`) lists compact rows; Enter or the row's button installs the version found
+  into the committed project with the row's `sourceUrl`. An installed package and a surface without a single project
+  install nothing and say why. The sidebar never asks for suggestions, the source list or the settings.
 
 ### Two-surface harness
 
