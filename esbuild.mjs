@@ -35,14 +35,11 @@ const BUNDLE_CEILINGS = {
     'dist/sidebar.js': 304_097,
 };
 
-// Ceilings of the 2.0 entries (P3.6): extension and webview as 1.x; the sidebar gets the 1.x budget plus the measured
-// share of @tanstack/virtual-core (25 025 bytes at 8c95e9e), which the 1.x sidebar does not bundle. A local gate until
-// P7.2 puts --analyze into CI and resets these to measured × 1.1.
-const V2_BUNDLE_CEILINGS = {
-    'dist/extension.js': 299_921,
-    'dist/webview.js': 600_685,
-    'dist/sidebar.js': 329_122,
-};
+// Ceilings of the 2.0 entries: Math.ceil(measured * 1.1), the ratchet of the P3.6 ruling, reset at P7.2a. Measured with
+// `node esbuild.mjs --v2 --production --analyze` at 54885d4: 292128 (extension), 523296 (webview),
+// 318803 (sidebar). Checked in CI by the e2e-v2 build step; a crossing is a stop-and-ask with the metafile's top inputs,
+// never a raise without a new measurement. P8.1 collapses the two tables into one; P8.2 re-measures and resets.
+const V2_BUNDLE_CEILINGS = { 'dist/extension.js': 321_341, 'dist/webview.js': 575_626, 'dist/sidebar.js': 350_684 };
 
 const ANALYSIS_DIR = 'out/esbuild';
 

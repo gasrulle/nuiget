@@ -1,81 +1,93 @@
-# STATUS — .github (agent resources and repo-level items)   commit 3b6f987 (parent of the P3.6 commit)   2026-10-14T05:52:03Z
+# STATUS — .github (agent resources and repo-level items)   commit 54885d4 (P7.1; parent of the P7.2a commit)   2026-10-15T22:37:15Z
 
-git status --short: ` M .github/STATUS.md`, ` M .github/copilot-instructions.md`, ` M ARCHITECTURE.md`,
-` M docs/plans/2026-10-11-nuiget-2.0-execution-plan.md`, ` M docs/plans/STATUS.md`,
-` M docs/plans/findings-ledger.md`, ` M esbuild.mjs`, ` M vitest.config.mts` (all belong to the P3.6 commit)
+git status --porcelain --untracked-files=all (before the commit): modified `.github/{STATUS.md,copilot-instructions.md,workflows/ci.yml}`,
+`ARCHITECTURE.md`, `docs/plans/{STATUS,findings-ledger}.md`, `esbuild.mjs`, `package.json`,
+`src/test/ui/v2/{main-search.ui.test.ts,STATUS.md}`; new `scripts/perf-baseline.mjs`,
+`src/test/e2e/fixtures/perf-multitfm/{MultiTfm.csproj,nuget.config}`
 
-Item: **P3.6 Re-base the estimate; advisor review of the slice; adjust P4/P5 ordering** (⚑ mandatory). This file is
-the handoff note for plan items without a `src/` directory of their own. The P0.13 note it replaces is in commit
-`9e2ebbc`. P3.5's CI run 38490233910 for `3b6f987` was green on all 11 jobs.
+Item: **P7.2a** — CI ceilings, one e2e retry for N37/N65, the informational perf job and script (first of its two
+commits; the second writes `docs/perf-baseline.md` from this commit's CI run). By the P7.2 ruling of 2026-10-16. This
+note replaces this directory's previous note (in its history).
 
 ## Verified by running
 
 ```text
-baseline npx tsc --noEmit   → exit 0
-baseline npx eslint src     → exit 0
-baseline npx vitest run     → Test Files 110 passed (110) · Tests 2680 passed | 3 skipped (2683)
+baseline at 54885d4 (P7.1, CI run 38813536684 green): tsc 0 · eslint 0 · vitest 167 files, 3402 passed, 6 skipped (SDK)
 npx tsc --noEmit            → exit 0
-npx eslint src              → exit 0
 npm run check-types         → exit 0
-npm run lint                → exit 0 (covers esbuild.mjs and vitest.config.mts)
-npm test (DOTNET_ROOT set, NUIGET_SDK_TESTS=1) → Test Files 110 passed (110) · Tests 2683 passed (2683)
-npx vitest run --coverage   → exit 0; the new key src/webview/{shared,main,sidebar-next}/** measures 99.37 % of
-                              lines; negative control with `lines: 100` → exit 1, "Coverage for lines (99.37%)
-                              does not meet "src/webview/{shared,main,sidebar-next}/**" threshold (100%)"; reverted
-npm run bench               → Test Files 18 passed (18) · Tests 112 passed | 1 skipped (113)
-node esbuild.mjs --v2 --production --analyze → exit 0 · extension 168070 / 299921 · webview 223600 / 600685 ·
-                              sidebar 293929 / 329122
-node esbuild.mjs --production --analyze      → exit 0 · extension 272655 / 299921 · webview 546077 / 600685 ·
-                              sidebar 276451 / 304097 (1.x ceilings unchanged); dist/ and out/esbuild deleted
-npm run package:vsix        → exit 0 · nuiget-v1.18.9.vsix (17 files, 530.8 KB)
-npm run check:vsix          → check:vsix: OK (1.x entries)
-npm run docs:protocol:check → docs/protocol.md is up to date
-npm run test:ui             → SKIPPED: no UI or webview source changed; the CI jobs UI and UI 2.0 run it
-grep -c '^| P5.12[ab] ' docs/plans/STATUS.md → 2; P5.1, P5.3, P5.4 stand above P4.1; every tracker row has 7 cells
+npx eslint src              → exit 0
+npm run lint                → exit 0 (covers scripts/perf-baseline.mjs and esbuild.mjs)
+npm test (DOTNET_ROOT set, NUIGET_SDK_TESTS=1) → exit 0 · Test Files 167 passed (167) · Tests 3408 passed (3408)
+npm run bench               → exit 0 · Test Files 20 passed (20) · Tests 119 passed | 1 skipped (120)
+rm -rf dist && node esbuild.mjs --v2 --production --analyze → exit 0 · dist/extension.js 292128 / 321341 ·
+                              dist/webview.js 523296 / 575626 · dist/sidebar.js 318803 / 350684
+negative control: sidebar ceiling set to 318_000 → exit 1, "Bundle ceiling exceeded: dist/sidebar.js"; reverted
+rm -rf dist out/esbuild && node esbuild.mjs --production --analyze && npm run check:vsix → exit 0 ·
+                              272655 / 299921 · 546077 / 600685 · 276451 / 304097 (1.x table unchanged) · check:vsix: OK
+node scripts/perf-baseline.mjs --out <scratchpad>/perf/perf-baseline.json --summary <scratchpad>/perf/summary.md →
+                              exit 0, eleven rows (macOS arm64, SDK 10.0.401, local, not the baseline): sdk-probe 114 ·
+                              config-paths 127 · restore-cold-single 628 · restore-cold-multi 819 · restore-warm-multi
+                              387 · evaluate-properties-multi 136 · evaluate-items-multi-net8.0 173 ·
+                              evaluate-items-multi-netstandard2.0 173 · evaluate-properties-single 174 ·
+                              evaluate-items-single 174 · evaluate-combined-single 175 (ms)
+rm -rf dist && NUIGET_V2=1 npm run package && NUIGET_V2=1 npm run test:ui:v2 -- --storage /tmp/nuiget-ui-v2 →
+                              exit 0 · 32 passing (53s) · "[P5.6] cold search: 2315 ms from Enter to the first row" ·
+                              "[P7.2] warm search: 780 ms from Enter to the first row (feeds connected, metadata cached)" ·
+                              git status src/test/e2e/fixtures/e2e-workspace → clean
+npm run package:vsix        → exit 0 · nuiget-v1.18.9.vsix (17 files, 534.32 KB)
+npm run check:vsix          → check:vsix: OK
+grep -n -- '--analyze' .github/workflows/ci.yml → the e2e-v2 build step (325) and the build job (448) only
+grep -c 'retry (N37/N65)' .github/workflows/ci.yml → 2 · the Perf baseline job has continue-on-error: true
+grep -cE '[0-9]+ (passing|failing)' on the e2e-v2-log-stable and e2e-log-1.85.0 artifacts of run 38813536684 → 1
+                              each (a run with counts is never retried); no artifact of an N37/N65 attempt survives
+                              (re-runs replace it), so the zero case was not replayed
 test -e .claude/.contract-change → false
 ```
 
 ## Done (tested)
 
-- `esbuild.mjs`: `V2_BUNDLE_CEILINGS` for `--v2` builds (sidebar 329 122 = the 1.x ceiling plus the measured
-  25 025 bytes of `@tanstack/virtual-core`, which the 1.x sidebar does not bundle); `reportCeilings` picks the
-  table by entry set. Both production analyze builds above.
-- `vitest.config.mts`: floor `'src/webview/{shared,main,sidebar-next}/**': { lines: 85 }`; the `src/webview/**`
-  ratchet stays 62/52/54/64. Negative control above.
+- `esbuild.mjs`: `V2_BUNDLE_CEILINGS` reset to Math.ceil(measured × 1.1) at `54885d4` (321 341 / 575 626 / 350 684)
+  with the dictated comment; the 1.x table unchanged. Builds and negative control above.
+- `.github/workflows/ci.yml`: `--analyze` on the `E2E 2.0` build step (size lines to the job summary) and on the
+  `Build & Package` build step; both `Run E2E tests` steps retry once in the step when the log has no
+  `passing`/`failing` count (`::warning::` annotation, `=== retry (N37/N65) ===` in the log, first attempt kept);
+  new job `Perf baseline (informational)` (`continue-on-error: true`, no `npm ci`, no warm-up) uploading
+  `perf-baseline`. YAML parses; the grep counts above.
+- `scripts/perf-baseline.mjs`, `npm run perf:baseline`, `src/test/e2e/fixtures/perf-multitfm/` (the e2e project with
+  `<TargetFrameworks>net8.0;netstandard2.0</TargetFrameworks>`, no `ImplicitUsings`/`Nullable`, same references; the
+  e2e `nuget.config`). Local run above.
 
 ## Done (untested)
 
-- Plan §7: the estimate re-based in hours of agent session time (measured 20.7 h for P0–P3; ≈ 37 h remain, five
-  to six sessions). A projection, checked again after P5.6.
-- `docs/plans/STATUS.md`: execution order changed (P5.1, P5.3, P5.4 before P4.1; P5.2 after P5.9 as a sweep;
-  P5.12 → P5.12a, P5.12b) with the ruling's notes on P5.1–P5.12b, P7.2 and P7.4; P3.5's commit backfilled.
-- `docs/plans/findings-ledger.md`: N61, N62, N63, N64, U11 rescheduled as ruled.
-- ARCHITECTURE.md "Shared tooling" (bundle size bullet) and one 2.0 gotcha row on the local ceiling gate.
+- The retry branch itself runs only in CI after an N37/N65 failure; the guard was checked against two real logs.
+- Docs: gotcha rows "Bundle ceilings are checked in CI" and "A red CI run is not always a code failure" (retry
+  wording), the Testing command list, ARCHITECTURE "Shared tooling" (bundle size, dotnet timings), ledger N37/N65
+  mitigated, N63 closed.
 
 ## Not started
 
-- The product changes the ruling schedules: pure icons (P5.1), N62 (P5.3), N61 (P5.4), the CSS-baseline lint
-  (P5.11), the CI ceilings (P7.2), the 1.85.0 check (P7.4, owner).
+- `docs/perf-baseline.md`, N72 accepted with the CI `config-paths` time, the decisions of the ruling's steps 11
+  (P7.2c) and 12 (`RESTORE_TIMEOUT_MS`): the second P7.2a commit, from this commit's CI run.
+- The ruling's step 5 allowlist entries in `.claude/settings.json` (`Bash(node scripts/perf-baseline.mjs:*)`,
+  `Bash(npm run perf:baseline:*)`): not made. A change to the session's own permission settings is the owner's;
+  the commands ran without a prompt in this session.
+- N27 (builds do not clean `dist/`) and N32 (the 1.x UI job writes its log into the checkout) also name P7.2 in the
+  ledger; the ruling did not assign them to P7.2a or P7.2b, so they stay open for P8.1/P8.2.
 
 ## Deviations from contract/ADR (file:line each)
 
-- `esbuild.mjs`: `grep -c V2_BUNDLE_CEILINGS` is 2, not the 3 of the ruling's VERIFY: the comment the ruling
-  dictates does not contain the identifier.
-- `vitest.config.mts:48-49`: the dictated comment is wrapped onto two lines (120 columns).
-- `docs/plans/STATUS.md:7-8`: the ruling's line "under the table header" is in the introduction above the table,
-  because a line inside a Markdown table would end it.
-- The plan's §5 tables are unchanged (as ruled); the order lives in the tracker. P7.5 may reconcile the text.
+- None against contracts or ADRs. `.claude/settings.json` not edited (above).
+- `.github/workflows/ci.yml:322,446`: the comments above the two analyze steps say "The analysis" rather than the
+  flag, so `grep -- '--analyze'` lists the two build steps alone as the ruling's VERIFY expects.
 
 ## Advisor decisions (date, item, question, answer verbatim)
 
-2026-10-14, P3.6 (⚑): the brief and the answer, verbatim, are in `docs/plans/STATUS.md` under "Advisor decisions",
-"P3.6 — ⚑ ruling: the re-based estimate, the order of P4 and P5, and five handed decisions (2026-10-14)". Decision
-line: re-base in measured hours; P5.1, P5.3, P5.4 before P4; P5.2 a closing sweep; P5.12 split; N63 two measures
-(2.0 ceiling table now, pure icons in P5.1); N61 in P5.4; N64 no ExTester job, lint in P5.11, owner check in P7.4;
-compact row 24 px; ratchet unchanged plus a 2.0 floor of 85 % lines.
+2026-10-16, P7.2 (stop-and-ask: scope, ceiling reset, perf numbers, evaluator cancellation, N72, the N65
+diagnostic): the brief and the answer, verbatim, are in `docs/plans/STATUS.md` under "Advisor decisions", "P7.2 —
+stop-and-ask: …". Decision line: A1 (umbrella P7.2, P7.2a CI/ceilings/perf, P7.2b evaluator cancellation), B1, C1+C3,
+D2, E (N37/N65 one in-step retry; N72 accepted), F (mechanical `RESTORE_TIMEOUT_MS` rule).
 
 ## Exact next step (one item ID)
 
-P5.1 (pulled before P4 by the P3.6 ruling), in a new session: this session stopped after P3.6 (RUN.md §6, §7). The
-P3 phase gate and `PHASE REVIEW P3` (PASS, no blocking item) are under "Phase gates" in `docs/plans/STATUS.md`;
-CI of `3c96c29` green after one re-run (N65); tag `labs/2.0-P3-done` on the phase-gate commit.
+P7.2a, second commit: read the `perf`, `ui-v2` and `e2e-v2` output of this commit's CI run and write
+`docs/perf-baseline.md` (ruling steps 9 to 13).

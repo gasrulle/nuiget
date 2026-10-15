@@ -795,10 +795,14 @@ These parts serve both versions and are the current truth for the build, test an
   until P8.2 moves them next to their modules (plan decision D8). `npm run bench` runs them, `npm run
   bench:save` rewrites `benchmarks/baseline.json` and `npm run bench:compare` compares a run with it. The CI
   job `Benchmark (informational)` compares on its own hardware and never fails the pipeline.
-- **Bundle size.** `node esbuild.mjs --production --analyze` fails when a bundle exceeds its ceiling, the 1.18.9
-  size plus 10 %. Metafiles go to `out/esbuild/`. The ceilings are keyed by entry set (`--v2` has its own table,
-  whose sidebar ceiling adds the virtualizer the 1.x sidebar does not bundle) and are checked only under
-  `--production --analyze`, which no CI job runs until P7.2.
+- **Bundle size.** `node esbuild.mjs --production --analyze` fails when a bundle exceeds its ceiling. Metafiles go
+  to `out/esbuild/`. The ceilings are keyed by entry set: the 1.x table is the 1.18.9 size plus 10 %, the `--v2`
+  table the 2.0 size measured at P7.2a plus 10 %. They are checked only under `--production --analyze`, which CI
+  runs in the `E2E 2.0` build step (2.0 table, sizes in the job summary) and the `Build & Package` job (1.x table).
+- **Dotnet timings.** `npm run perf:baseline` (`scripts/perf-baseline.mjs`) times the `dotnet` commands the 2.0
+  extension runs: SDK probe, `nuget config paths`, cold and warm restores, and the evaluator's msbuild runs on the
+  e2e project and a multi-targeted copy of it. The CI job `Perf baseline (informational)` runs it on every push;
+  `docs/perf-baseline.md` holds the baseline and the tolerances P7.6 checks.
 - **Packaging.** `npm run package:vsix` runs `npm ci` → `check-types` → tests → lint and production build →
   `vsce package`. `npm run check:vsix` fails when the VSIX would contain anything other than `dist/*.js`,
   `dist/*.css`, `resources/`, `package.json`, `README.md`, `CHANGELOG.md` and `LICENSE`, or would lack a required

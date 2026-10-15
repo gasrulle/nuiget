@@ -196,8 +196,20 @@ jobs:
       - name: Build extension
         run: node esbuild.mjs --production
 
+      # One retry when no test ran (findings N37, N65: VS Code or ChromeDriver failed to download, or the window hung
+      # before Mocha started). A log with a passing or failing count is never retried; the first attempt stays in it.
       - name: Run E2E tests
-        run: xvfb-run -a npm run test:e2e 2>&1 | tee e2e-output.txt
+        run: |
+          set +e
+          xvfb-run -a npm run test:e2e 2>&1 | tee e2e-output.txt
+          STATUS=${PIPESTATUS[0]}
+          if [ "$STATUS" -ne 0 ] && ! grep -qE '[0-9]+ (passing|failing)' e2e-output.txt; then
+            echo "::warning::No test ran (N37/N65); one retry"
+            echo "=== retry (N37/N65) ===" >> e2e-output.txt
+            xvfb-run -a npm run test:e2e 2>&1 | tee -a e2e-output.txt
+            STATUS=${PIPESTATUS[0]}
+          fi
+          exit $STATUS
 
       - name: Add E2E summary
         if: always()
@@ -307,11 +319,26 @@ jobs:
 
       - run: npm ci --no-audit --no-fund
 
+      # The analysis checks the 2.0 bundle ceilings of esbuild.mjs; the three size lines go to the job summary.
       - name: Build extension (2.0)
-        run: node esbuild.mjs --v2 --production
+        run: |
+          node esbuild.mjs --v2 --production --analyze 2>&1 | tee "$RUNNER_TEMP/esbuild-v2.txt"
+          grep -E '^dist/.*\.js [0-9]+ / [0-9]+' "$RUNNER_TEMP/esbuild-v2.txt" >> "$GITHUB_STEP_SUMMARY"
 
+      # One retry when no test ran (findings N37, N65: VS Code or ChromeDriver failed to download, or the window hung
+      # before Mocha started). A log with a passing or failing count is never retried; the first attempt stays in it.
       - name: Run E2E tests (2.0)
-        run: xvfb-run -a npm run test:e2e 2>&1 | tee e2e-v2-output.txt
+        run: |
+          set +e
+          xvfb-run -a npm run test:e2e 2>&1 | tee e2e-v2-output.txt
+          STATUS=${PIPESTATUS[0]}
+          if [ "$STATUS" -ne 0 ] && ! grep -qE '[0-9]+ (passing|failing)' e2e-v2-output.txt; then
+            echo "::warning::No test ran (N37/N65); one retry"
+            echo "=== retry (N37/N65) ===" >> e2e-v2-output.txt
+            xvfb-run -a npm run test:e2e 2>&1 | tee -a e2e-v2-output.txt
+            STATUS=${PIPESTATUS[0]}
+          fi
+          exit $STATUS
 
       - name: Add E2E summary
         if: always()
@@ -416,8 +443,9 @@ jobs:
       - name: Type check
         run: npm run check-types
 
+      # The analysis checks the 1.x bundle ceilings of esbuild.mjs; its metafiles go to out/, which the VSIX excludes.
       - name: Build extension
-        run: node esbuild.mjs --production
+        run: node esbuild.mjs --production --analyze
 
       - name: Check VSIX contents
         run: npm run check:vsix
@@ -490,3 +518,34 @@ jobs:
             fi
             echo ""
           } >> "$GITHUB_STEP_SUMMARY"
+
+  # Informational (plan P7.2a): times the dotnet commands the extension runs; docs/perf-baseline.md cites one run.
+  # No npm ci (the script uses Node built-ins only) and no warm-up: the SDK probe row is the job's first dotnet call.
+  perf:
+    name: Perf baseline (informational)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version-file: .nvmrc
+
+      - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5.4.0
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Measure
+        run: node scripts/perf-baseline.mjs --out "$RUNNER_TEMP/perf-baseline.json" --summary "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload the measurement
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: perf-baseline
+          path: ${{ runner.temp }}/perf-baseline.json
+          if-no-files-found: ignore
