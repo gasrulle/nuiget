@@ -52,7 +52,7 @@ test -e .claude/.contract-change → false · git diff --stat c4c3617 -- src/pro
 
 - Details of a browse row (P5.7), the sources settings and selector (P5.8), the multi-install picker (P5.9), the
   sidebar's context menu, "View package details" and "Open full view" (P5.10), the search settings' `full`/`off`
-  values (N57, P5.13).
+  values (N57, P5.13; done at P5.13).
 
 ## Deviations from contract/ADR (file:line each)
 

@@ -33,14 +33,14 @@ describe('config slice', () => {
         await act(async () => slice.enable());
         await act(async () => slice.enable());
         expect(host.requests('config/get')).toHaveLength(1);
-        await hostSays(() => host.respond(host.requests('config/get')[0], config({ searchDebounceMode: 'fullsearch' })));
-        expect(mode()).toBe('fullsearch');
+        await hostSays(() => host.respond(host.requests('config/get')[0], config({ searchDebounceMode: 'full' })));
+        expect(mode()).toBe('full');
     });
 
     it('config/changed replaces the value, also before enable', async () => {
         const host = mount();
-        await hostSays(() => host.event('config/changed', config({ searchDebounceMode: 'fullsearch' })));
-        expect(mode()).toBe('fullsearch');
+        await hostSays(() => host.event('config/changed', config({ searchDebounceMode: 'full' })));
+        expect(mode()).toBe('full');
         // Known already: enabling asks nothing.
         await act(async () => slice.enable());
         expect(host.requests('config/get')).toHaveLength(0);

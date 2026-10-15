@@ -101,9 +101,9 @@ describe('main panel: typing in the search box', () => {
         expect(queries(host)).toHaveLength(0);
     });
 
-    it('fullsearch: the search runs 300 ms after the last key and no suggestion is asked; config/changed switches back', async () => {
+    it('full: the search runs 300 ms after the last key and no suggestion is asked; config/changed switches back', async () => {
         const user = userEvent.setup();
-        const host = await mountReady('fullsearch');
+        const host = await mountReady('full');
         await user.type(box(), 'moq');
         expect(queries(host)).toHaveLength(0);
         await waitFor(() => expect(queries(host)).toHaveLength(1), { timeout: FULL_SEARCH_DELAY_MS * 4 });
@@ -115,6 +115,20 @@ describe('main panel: typing in the search box', () => {
         await waitFor(() => expect(autocompletes(host)).toHaveLength(1));
         await pause(FULL_SEARCH_DELAY_MS);
         expect(queries(host)).toHaveLength(1);
+    });
+
+    it('off: nothing runs while typing; Enter still searches', async () => {
+        const user = userEvent.setup();
+        const host = await mountReady('off');
+        await user.type(box(), 'serilog');
+        await pause(FULL_SEARCH_DELAY_MS + 50);
+        expect(autocompletes(host)).toHaveLength(0);
+        expect(queries(host)).toHaveLength(0);
+
+        await user.type(box(), '{Enter}');
+        await waitFor(() => expect(queries(host)).toHaveLength(1));
+        expect(queries(host)[0].payload.query).toBe('serilog');
+        expect(autocompletes(host)).toHaveLength(0);
     });
 
     it('while the settings are unknown typing asks nothing', async () => {

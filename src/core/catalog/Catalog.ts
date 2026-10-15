@@ -110,7 +110,7 @@ export class IncompleteResultError<T> extends Error {
 type InstalledChunk = { kind: 'provisional'; result: InstalledResult } | RequestChunk<'installed/get'>;
 
 const ALL_PROJECTS_CONCURRENCY = 4;
-/** Results asked of a search that names no `take` (the default of the `nuiget.searchResultLimit` setting). */
+/** Results of a search that names no `take`; the host always passes one (`nuiget.searchResultLimit`, `handlers.ts:295`). */
 const DEFAULT_SEARCH_TAKE = 50;
 const STALE_ATTEMPTS = 3;
 

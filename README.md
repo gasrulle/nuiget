@@ -51,10 +51,11 @@ Search and installation preserve full package IDs and versions, including long p
 
 | Setting | Default | Description |
 |---------|---------|-------------|
-| `nuiget.searchDebounceMode` | `quicksearch` | `quicksearch`: Show suggestions. `full`: Full search as you type. `off`: Manual only. |
+| `nuiget.searchDebounceMode` | `quicksearch` | What typing in the main panel's search box does: `quicksearch` shows suggestions, `full` runs the full search as you type, `off` searches only on Enter. The sidebar searches as you type in every mode. |
 | `nuiget.quickSearchResultsPerSource` | `5` | Suggestions per source in quick search (1-10) |
-| `nuiget.recentSearchesLimit` | `5` | Recent searches to remember (0-10, 0 to disable) |
+| `nuiget.recentSearchesLimit` | `5` | Deprecated: no effect in 2.0, removed at the next major version. Recent searches to remember (0-10, 0 to disable) |
 | `nuiget.searchResultLimit` | `20` | Maximum number of packages to return from full search (1-100) |
+| `nuiget.enablePerformanceLogging` | `false` | Write `[perf]` timing lines to the nUIget output channel for panel open, project switch, operations, search and update checks; keep off in normal use |
 
 > 💡 **Restore after operations** is no longer a setting — it's a UI toggle. Use the verified-shield icon in the sidebar title bar, or the **Restore after operations** checkbox in the main panel header. Both stay synced and persist per workspace. The legacy `nuiget.noRestore` setting is migrated automatically on first activation.
 

@@ -8,6 +8,7 @@ import { FakeTransport, fail, json } from './core/feeds/testSupport';
 import { NodeTransport } from './core/http';
 import { activateWith, proxyConfigured, type ActivatedExtension, type ActivationOverrides } from './extension.next';
 import { MainPanelHost } from './host/MainPanelHost';
+import { readExtensionConfig } from './host/services';
 import { makeRequest, type BulkOutcome, type EventPayload, type EventType, type OutboundEnvelope, type RequestPayload, type RequestType } from './protocol';
 import {
     commands as mockCommands,
@@ -194,7 +195,22 @@ describe('extension.next (2.0 composition root)', () => {
         expect(eventsOf(sidebar, 'config/changed')).toHaveLength(0);
         configListener({ affectsConfiguration: section => section === 'nuiget' });
 
-        expect(eventsOf(sidebar, 'config/changed')).toEqual([expect.objectContaining({ searchResultLimit: 50, enablePerformanceLogging: false })]);
+        expect(eventsOf(sidebar, 'config/changed')).toEqual([expect.objectContaining({ searchResultLimit: 20, enablePerformanceLogging: false })]);
+    });
+
+    it('readExtensionConfig takes searchDebounceMode as contributed, and anything else as quicksearch (N57)', () => {
+        const withMode = (mode: unknown) => {
+            vi.mocked(vscode.workspace.getConfiguration).mockImplementationOnce((() => ({
+                get: <T>(key: string, fallback?: T) => (key === 'searchDebounceMode' ? mode : fallback) as T,
+            })) as unknown as typeof vscode.workspace.getConfiguration);
+            return readExtensionConfig();
+        };
+        expect(withMode('full').searchDebounceMode).toBe('full');
+        expect(withMode('off').searchDebounceMode).toBe('off');
+        expect(withMode('quicksearch').searchDebounceMode).toBe('quicksearch');
+        expect(withMode('instant').searchDebounceMode).toBe('quicksearch');
+        // Unset: the contributed defaults (`package.json`), the result limit included.
+        expect(readExtensionConfig()).toMatchObject({ searchDebounceMode: 'quicksearch', quickSearchResultsPerSource: 5, searchResultLimit: 20, enablePerformanceLogging: false });
     });
 
     it('proxyConfigured follows http.proxySupport, http.proxy and the proxy environment', () => {

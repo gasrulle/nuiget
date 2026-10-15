@@ -327,7 +327,8 @@ export interface LayoutPreferences {
 }
 
 export interface ExtensionConfig {
-    searchDebounceMode: 'quicksearch' | 'fullsearch';
+    /** The values of `nuiget.searchDebounceMode` as contributed; `off` is main-panel-only. */
+    searchDebounceMode: 'quicksearch' | 'full' | 'off';
     quickSearchResultsPerSource: number;
     searchResultLimit: number;
     /** `nuiget.enablePerformanceLogging`: the webviews send `perf/mark` and the host logs `[perf]` lines at `info` only while it is on. */

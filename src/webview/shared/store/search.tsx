@@ -173,7 +173,7 @@ export function SearchProvider({ children }: { children: React.ReactNode }): Rea
         clearSuggestions();
         const text = query.trim();
         const named = committed === undefined || sources === undefined ? [] : quickSearchSources(sources, committed.selectedSource);
-        if (text.length === 0 || named.length === 0 || config?.searchDebounceMode === 'fullsearch') {
+        if (text.length === 0 || named.length === 0 || config?.searchDebounceMode === 'full' || config?.searchDebounceMode === 'off') {
             return;
         }
         const controller = new AbortController();

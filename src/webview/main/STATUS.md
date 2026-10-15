@@ -1,4 +1,59 @@
-# STATUS — src/webview/main   commit fa811aa (P5.10 commit d; parent of the P5.11 commit)   2026-10-16T16:00:00Z
+# STATUS — src/webview/main   commit bc4533a (P5.12b closed; parent of the P5.13 commit)   2026-10-17T05:00:00Z
+
+git status --porcelain --untracked-files=all (before the commit): modified `ARCHITECTURE.md`, `CHANGELOG.md`, `README.md`, `docs/plans/{STATUS,findings-ledger}.md`, `package.json` (`contributes.configuration` only), `src/protocol/domain.ts` (one type line and its JSDoc), `src/host/services.ts`, `src/core/catalog/Catalog.ts` (a comment), `src/extension.next.test.ts`, `src/webview/main/features/search/useSearchTyping{,.test}.ts(x)`, `src/webview/shared/store/{search,search.test,config.test}.tsx` and the STATUS notes; new `src/test/lint/extension-config-settings.test.ts` (all belong to P5.13)
+
+Item: **P5.13**: `useSearchTyping` follows `nuiget.searchDebounceMode` as contributed: `full` searches 300 ms after the
+last key, `off` runs nothing while typing (Enter still searches), `quicksearch` unchanged (N57).
+
+## Verified by running
+
+P5.13:
+
+```text
+baseline at bc4533a (P5.12b closed, CI run 38750307144 green): tsc 0 · eslint 0 · vitest 160 files, 3239 passed, 4 skipped (SDK)
+.claude/.contract-change created with `P5.13` after the ruling was in STATUS, domain.ts:330 edited, sentinel deleted → ls: no such file
+grep -rn "'fullsearch'" src --include='*.ts' --include='*.tsx' → 0
+npx tsc --noEmit / npm run check-types / npx eslint src / npm run lint → exit 0 each
+npx vitest run src/extension.next.test.ts src/webview/shared/store src/webview/main/features/search → exit 0 · 168 passed
+npx vitest run --project backend src/test/lint/extension-config-settings.test.ts → 3 passed
+npm test (NUIGET_SDK_TESTS=1, DOTNET_ROOT set) → exit 0 · Test Files 161 passed (161) · Tests 3248 passed (3248)
+npm run bench → exit 0 · npm run docs:protocol:check → exit 0
+node -e '…contributes…' → 12 21 5 true (commands, when-clauses, settings, deprecationMessage)
+rm -rf dist && node esbuild.mjs --v2 --production --analyze → extension 281379 / 299921 · webview 518516 / 600685 ·
+                               sidebar 317628 / 329122
+rm -rf dist && NUIGET_V2=1 npm run package && npm run check:vsix → check:vsix: OK
+rm -rf dist && npm run package:vsix (NUIGET_V2 unset) → exit 0, nuiget-v1.18.9.vsix (17 files)
+git diff bc4533a --stat -- src/test/e2e/v2Support.ts src/test/e2e/v2-*.e2e.test.ts docs/adr src/protocol/messages.ts src/core/contracts.ts → empty
+git diff bc4533a --stat -- src/protocol/domain.ts → 1 file changed, 2 insertions(+), 1 deletion(-)
+NUIGET_V2=1 npm run test:ui:v2 -- --storage /tmp/nuiget-ui-v2 → see the tracker row (one run after the search change)
+```
+
+## Done (tested)
+
+- `features/search/useSearchTyping.test.tsx`: `full: the search runs 300 ms after the last key …` (was `fullsearch: …`),
+  new `off: nothing runs while typing; Enter still searches`.
+
+## Done (untested)
+
+- The `off` mode in VS Code: jsdom (`useSearchTyping.test.tsx`) is the proof; no ExTester test sets the setting.
+
+## Not started
+
+- None for P5.13. Next: the P5 phase gate and review (RUN §6).
+
+## Deviations from contract/ADR (file:line each)
+
+- None.
+
+## Advisor decisions (date, item, question, answer verbatim)
+
+The P5.13 ruling (2026-10-17) is verbatim in `docs/plans/STATUS.md` and `src/host/STATUS.md`.
+
+## Exact next step (one item ID)
+
+P5 phase review (RUN §6), after the P5.13 CI run is green.
+
+## Earlier notes of this directory
 
 git status --porcelain --untracked-files=all (before the commit): modified `.github/copilot-instructions.md`, `ARCHITECTURE.md`, `CHANGELOG.md`, `docs/plans/{STATUS,findings-ledger}.md`, `src/test/lint/{webview-stylesheets,webview-tokens}.test.ts`, `src/webview/shared/{tokens.css,primitives/primitives.css}`, `src/webview/main/main.css`, `src/webview/sidebar-next/sidebar.css` and the four STATUS notes; new `src/test/lint/{cssRules.ts,webview-css-baseline.test.ts}`, `src/test/ui/v2/theme.ui.test.ts` (all belong to P5.11)
 
@@ -495,7 +550,7 @@ test -e .claude/.contract-change → false · git diff --stat c4c3617 -- src/pro
 
 - Details of a browse row (P5.7), the sources settings and selector (P5.8), the multi-install picker (P5.9), the
   sidebar's context menu, "View package details" and "Open full view" (P5.10), the search settings' `full`/`off`
-  values (N57, P5.13).
+  values (N57, P5.13; done at P5.13).
 
 ## Deviations from contract/ADR (file:line each)
 
@@ -719,6 +774,7 @@ the `NUIGET_V2` build checked locally and `package:vsix` on the 1.x entries.
 ## Exact next step (one item ID)
 
 P5.6 (feature search, main and sidebar browse), after P5.5's CI run is green; a fresh session starts it (second compaction of this one).
+
 
 
 

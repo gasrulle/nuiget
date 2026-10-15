@@ -31,9 +31,10 @@ export interface SearchTyping {
 /**
  * What typing in the main panel's search box does (interaction model §2), by the setting `searchDebounceMode`:
  * `quicksearch` asks the search slice for suggestions 150 ms after the last key from two characters on, while the box
- * has focus; `fullsearch` runs the search itself 300 ms after the last key. Enter always searches at once. The
- * timers are the feature's; the requests are the slice's. `ui/navigateToPackage` fills the box with the id and
- * searches for it exactly. On mount it enables the config and sources slices, whose answers the first keystroke needs.
+ * has focus; `full` runs the search itself 300 ms after the last key; `off` runs nothing while typing. Enter always
+ * searches at once. The timers are the feature's; the requests are the slice's. `ui/navigateToPackage` fills the box
+ * with the id and searches for it exactly. On mount it enables the config and sources slices, whose answers the first
+ * keystroke needs.
  */
 export function useSearchTyping({ text, setText, browsing, focused }: SearchTypingInput): SearchTyping {
     const bus = useMessageBus();
@@ -61,7 +62,11 @@ export function useSearchTyping({ text, setText, browsing, focused }: SearchTypi
             return undefined;
         }
         handled.current = null;
-        if (mode === 'fullsearch') {
+        if (mode === 'off') {
+            clearSuggestions();
+            return undefined;
+        }
+        if (mode === 'full') {
             timer.current = setTimeout(() => search(trimmed), FULL_SEARCH_DELAY_MS);
         } else if (focused) {
             timer.current = setTimeout(() => suggest(trimmed), QUICK_SEARCH_DELAY_MS);

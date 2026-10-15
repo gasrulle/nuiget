@@ -1,4 +1,61 @@
-# STATUS — src/protocol (and src/core/contracts.ts)   commit ac64e72 (parent of the P1.1b commit)   2026-10-12T11:45:20Z
+# STATUS — src/protocol   commit bc4533a (P5.12b closed; parent of the P5.13 commit)   2026-10-17T05:00:00Z
+
+git status --porcelain --untracked-files=all (before the commit): modified `ARCHITECTURE.md`, `CHANGELOG.md`, `README.md`, `docs/plans/{STATUS,findings-ledger}.md`, `package.json` (`contributes.configuration` only), `src/protocol/domain.ts` (one type line and its JSDoc), `src/host/services.ts`, `src/core/catalog/Catalog.ts` (a comment), `src/extension.next.test.ts`, `src/webview/main/features/search/useSearchTyping{,.test}.ts(x)`, `src/webview/shared/store/{search,search.test,config.test}.tsx` and the STATUS notes; new `src/test/lint/extension-config-settings.test.ts` (all belong to P5.13)
+
+Item: **P5.13**, contract change by D6: `ExtensionConfig.searchDebounceMode` in `domain.ts` is
+`'quicksearch' | 'full' | 'off'` (the contributed values; was `'quicksearch' | 'fullsearch'`, finding N57), with a
+one-line JSDoc; done under `.claude/.contract-change` (`P5.13`), deleted before the commit. Nothing else in this
+directory changed; `docs/protocol.md` is unaffected (`npm run docs:protocol:check` → 0).
+
+## Verified by running
+
+P5.13:
+
+```text
+baseline at bc4533a (P5.12b closed, CI run 38750307144 green): tsc 0 · eslint 0 · vitest 160 files, 3239 passed, 4 skipped (SDK)
+.claude/.contract-change created with `P5.13` after the ruling was in STATUS, domain.ts:330 edited, sentinel deleted → ls: no such file
+grep -rn "'fullsearch'" src --include='*.ts' --include='*.tsx' → 0
+npx tsc --noEmit / npm run check-types / npx eslint src / npm run lint → exit 0 each
+npx vitest run src/extension.next.test.ts src/webview/shared/store src/webview/main/features/search → exit 0 · 168 passed
+npx vitest run --project backend src/test/lint/extension-config-settings.test.ts → 3 passed
+npm test (NUIGET_SDK_TESTS=1, DOTNET_ROOT set) → exit 0 · Test Files 161 passed (161) · Tests 3248 passed (3248)
+npm run bench → exit 0 · npm run docs:protocol:check → exit 0
+node -e '…contributes…' → 12 21 5 true (commands, when-clauses, settings, deprecationMessage)
+rm -rf dist && node esbuild.mjs --v2 --production --analyze → extension 281379 / 299921 · webview 518516 / 600685 ·
+                               sidebar 317628 / 329122
+rm -rf dist && NUIGET_V2=1 npm run package && npm run check:vsix → check:vsix: OK
+rm -rf dist && npm run package:vsix (NUIGET_V2 unset) → exit 0, nuiget-v1.18.9.vsix (17 files)
+git diff bc4533a --stat -- src/test/e2e/v2Support.ts src/test/e2e/v2-*.e2e.test.ts docs/adr src/protocol/messages.ts src/core/contracts.ts → empty
+git diff bc4533a --stat -- src/protocol/domain.ts → 1 file changed, 2 insertions(+), 1 deletion(-)
+NUIGET_V2=1 npm run test:ui:v2 -- --storage /tmp/nuiget-ui-v2 → see the tracker row (one run after the search change)
+```
+
+## Done (tested)
+
+- `src/test/lint/extension-config-settings.test.ts › searchDebounceMode values equal the contributed enum` pins the
+  type to the manifest; `src/protocol/protocol.test.ts` unchanged (no `recentSearchesLimit`, still green).
+
+## Done (untested)
+
+- The `off` mode in VS Code: jsdom (`useSearchTyping.test.tsx`) is the proof; no ExTester test sets the setting.
+
+## Not started
+
+- None for P5.13. Next: the P5 phase gate and review (RUN §6).
+
+## Deviations from contract/ADR (file:line each)
+
+- None beyond the ruled change.
+
+## Advisor decisions (date, item, question, answer verbatim)
+
+The P5.13 ruling (2026-10-17) is verbatim in `docs/plans/STATUS.md` and `src/host/STATUS.md`.
+
+## Exact next step (one item ID)
+
+P5 phase review (RUN §6), after the P5.13 CI run is green.
+
+## Earlier notes of this directory
 
 git status --short src/protocol src/core/contracts.ts docs/adr docs/protocol.md: ` M` for
 `src/core/contracts.ts`, `src/protocol/{STATUS.md,domain.ts,envelope.ts,guards.ts,messages.ts,protocol.test.ts}`,
@@ -322,3 +379,4 @@ names (P6.3, P6.2, P7.5, P4.1, P2.9); the tracker row of P1.1b lists them.
 ## Exact next step (one item ID)
 
 P1.2 (`src/core/util/**`).
+

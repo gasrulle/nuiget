@@ -1,4 +1,106 @@
-# STATUS — src/host   commit 1df7087 (P5.10 commit c, fix-forward; parent of commit d)   2026-10-16T10:00:00Z
+# STATUS — src/host   commit bc4533a (P5.12b closed; parent of the P5.13 commit)   2026-10-17T05:00:00Z
+
+git status --porcelain --untracked-files=all (before the commit): modified `ARCHITECTURE.md`, `CHANGELOG.md`, `README.md`, `docs/plans/{STATUS,findings-ledger}.md`, `package.json` (`contributes.configuration` only), `src/protocol/domain.ts` (one type line and its JSDoc), `src/host/services.ts`, `src/core/catalog/Catalog.ts` (a comment), `src/extension.next.test.ts`, `src/webview/main/features/search/useSearchTyping{,.test}.ts(x)`, `src/webview/shared/store/{search,search.test,config.test}.tsx` and the STATUS notes; new `src/test/lint/extension-config-settings.test.ts` (all belong to P5.13)
+
+Item: **P5.13** (⚑, ruling of 2026-10-17): `readExtensionConfig` passes `nuiget.searchDebounceMode` as contributed
+(`full` and `off` as they are, anything else `quicksearch`) and falls back to the contributed `searchResultLimit`
+default 20 (was 50; finding N57). The `contributes` table stays: 12 commands, 21 when-clauses, 3 context keys,
+unchanged; `nuiget.recentSearchesLimit` deprecated (removed at P8.2).
+
+## Verified by running
+
+P5.13:
+
+```text
+baseline at bc4533a (P5.12b closed, CI run 38750307144 green): tsc 0 · eslint 0 · vitest 160 files, 3239 passed, 4 skipped (SDK)
+.claude/.contract-change created with `P5.13` after the ruling was in STATUS, domain.ts:330 edited, sentinel deleted → ls: no such file
+grep -rn "'fullsearch'" src --include='*.ts' --include='*.tsx' → 0
+npx tsc --noEmit / npm run check-types / npx eslint src / npm run lint → exit 0 each
+npx vitest run src/extension.next.test.ts src/webview/shared/store src/webview/main/features/search → exit 0 · 168 passed
+npx vitest run --project backend src/test/lint/extension-config-settings.test.ts → 3 passed
+npm test (NUIGET_SDK_TESTS=1, DOTNET_ROOT set) → exit 0 · Test Files 161 passed (161) · Tests 3248 passed (3248)
+npm run bench → exit 0 · npm run docs:protocol:check → exit 0
+node -e '…contributes…' → 12 21 5 true (commands, when-clauses, settings, deprecationMessage)
+rm -rf dist && node esbuild.mjs --v2 --production --analyze → extension 281379 / 299921 · webview 518516 / 600685 ·
+                               sidebar 317628 / 329122
+rm -rf dist && NUIGET_V2=1 npm run package && npm run check:vsix → check:vsix: OK
+rm -rf dist && npm run package:vsix (NUIGET_V2 unset) → exit 0, nuiget-v1.18.9.vsix (17 files)
+git diff bc4533a --stat -- src/test/e2e/v2Support.ts src/test/e2e/v2-*.e2e.test.ts docs/adr src/protocol/messages.ts src/core/contracts.ts → empty
+git diff bc4533a --stat -- src/protocol/domain.ts → 1 file changed, 2 insertions(+), 1 deletion(-)
+NUIGET_V2=1 npm run test:ui:v2 -- --storage /tmp/nuiget-ui-v2 → see the tracker row (one run after the search change)
+```
+
+## Done (tested)
+
+- `src/extension.next.test.ts`: new `readExtensionConfig takes searchDebounceMode as contributed, and anything else as
+  quicksearch (N57)`; `a nuiget setting change is announced to the surfaces, an unrelated one is not` rewritten by the
+  ruling (`searchResultLimit: 50` → `20`).
+- `src/test/lint/extension-config-settings.test.ts` (new): `ExtensionConfig keys ⊆ contributed settings`,
+  `searchDebounceMode values equal the contributed enum`, `a deprecated setting is one 2.0 does not read`.
+
+## Done (untested)
+
+- The `off` mode in VS Code: jsdom (`useSearchTyping.test.tsx`) is the proof; no ExTester test sets the setting.
+
+## Not started
+
+- None for P5.13. Next: the P5 phase gate and review (RUN §6).
+
+## Deviations from contract/ADR (file:line each)
+
+- Ruling step 4 asked for `config?.searchDebounceMode !== 'quicksearch'` in `src/webview/shared/store/search.tsx`; that
+  also blocks while the config is still unknown and failed two slice tests the item does not name (`suggest asks
+  search/autocomplete with every enabled source …`, `a newer suggest cancels …`). Written as `=== 'full' || === 'off'`:
+  `off` blocks a stray `suggest()` as the ruling intends, unknown config behaves as before.
+
+## Advisor decisions (date, item, question, answer verbatim)
+
+### P5.13 — ⚑ mandatory consultation (2026-10-17), verbatim (also in `docs/plans/STATUS.md`)
+
+`````text
+DECISION: Option 1, sharpened: keep all 12 commands, all 21 when-clauses and all 3 context keys unchanged; keep `quickSearchResultsPerSource`, `searchResultLimit` (host fallback 50 → 20) and `enablePerformanceLogging`; keep `searchDebounceMode` with the manifest's values and widen the frozen type to mirror the manifest literally (`'quicksearch' | 'full' | 'off'`, no mapping layer) under the sentinel; deprecate `recentSearchesLimit` with a `deprecationMessage` and leave its removal to P8.2. The gate test lives in `src/test/lint/`, not in `src/protocol/`.
+
+WHY: The brief is correct about the tree: `package.json:257-270` enumerates `quicksearch | full | off`, `src/protocol/domain.ts:330` is `'quicksearch' | 'fullsearch'`, `src/host/services.ts:93` maps only `'fullsearch'` (a value the manifest never produces) and `:95` falls back to 50 while the manifest default (`package.json:279-283`) and 1.x (`src/services/NuGetPackageService.ts:957`) say 20; this is finding N57 (`docs/plans/findings-ledger.md:160,405`), whose owner is P5.13 by the P5.6 ruling, which already sanctioned "`domain.ts:330` under a sentinel" for this item (`docs/plans/STATUS.md:2394`), so the widening is a contract change D6 permits, not a relaxation. Option 2 (rename `full` → `fullsearch` in the manifest) silently turns every user's stored `full` into `quicksearch` and changes 1.x behaviour before the flip, since `src/webview/app/App.tsx:1912` compares `=== 'full'` and `src/extension.ts` still ships the same manifest until P8.1; option 3 removes a key `src/webview/NuGetPanel.ts:229,1216` still reads. The 2.0 entry registers every contributed command (`src/extension.next.ts:333-344`) and sets all three context keys (`src/extension.next.ts:178`, `src/host/SidebarHost.ts:33-42`), `src/test/e2e/v2Support.ts:14-22` pins exactly that set, and nothing in the tree shows a command or key 2.0 does not serve, so the command table is "keep" throughout and the P5.12a e2e lists need no edit. The absence of recent searches in 2.0 was settled by the P1.1b contract (`src/protocol/protocol.test.ts:142-146` asserts `ExtensionConfig` has no `recentSearchesLimit`); reinstating the feature would be a new owner item, which nobody has asked for, so this is not OWNER MUST DECIDE.
+
+DO:
+1. Paste this ruling under "Advisor decisions" in `src/host/STATUS.md` (the item's primary directory) and in `docs/plans/STATUS.md` row P5.13 before any edit.
+2. Create `.claude/.contract-change` with content `P5.13`, change `src/protocol/domain.ts:330` to `searchDebounceMode: 'quicksearch' | 'full' | 'off';` with a one-line JSDoc ("the values of `nuiget.searchDebounceMode` as contributed; `off` is main-panel-only"), then delete the sentinel (`scripts/hooks/guard.mjs:65-68` denies the edit without it and denies a commit while it exists). Run `npm run docs:protocol:check` → 0 (expected no-op: `docs/protocol.md` has 0 hits for the enum values, the protocol-item gate still requires the run). No other frozen file changes.
+3. `src/host/services.ts:89-100`: `searchDebounceMode: mode === 'full' || mode === 'off' ? mode : 'quicksearch'` (read with `config.get<string>`, unknown values fall to `quicksearch`); `searchResultLimit` fallback 20. Rewrite `src/extension.next.test.ts:197` (`searchResultLimit: 50` → `20`) and add one `readExtensionConfig` case per value (`full`, `off`, an unknown string → `quicksearch`) in the host test file that already covers config (`src/extension.next.test.ts` or `src/host/services.test.ts`, whichever exists).
+4. Webview: `src/webview/shared/store/search.tsx:176` becomes `config?.searchDebounceMode !== 'quicksearch'` (so `off` also blocks a stray `suggest()`); `src/webview/main/features/search/useSearchTyping.ts:52-70`: `'full'` → timer to `search`, `'quicksearch'` → timer to `suggest` while focused, `'off'` → `clearSuggestions()` and return, `mode === undefined` gate unchanged; update its JSDoc (`:31-37`). Rewrite the pinned literals: `src/webview/shared/store/config.test.tsx:36,42`, `src/webview/shared/store/search.test.tsx:220`, `src/webview/main/features/search/useSearchTyping.test.tsx:104-113` (`'fullsearch'` → `'full'`), and add `off: nothing runs while typing; Enter still searches` to `useSearchTyping.test.tsx`. `src/webview/sidebar-next/SidebarView.tsx` is not touched: its fixed 300 ms browse debounce reads no config (`:113`), as 1.x did and as the P5.6 ruling step 6 requires.
+5. `package.json` `contributes.configuration`: `nuiget.recentSearchesLimit` gains `"deprecationMessage": "Recent searches are removed in nUIget 2.0; this setting has no effect there and will be removed."`; `nuiget.searchDebounceMode`'s `enumDescriptions` and `description` are reworded so that `off` and `full` are described as main-panel behaviour and "button click" is dropped (the 2.0 main panel has no search button); values, defaults, ranges, every command, menu entry and when-clause stay byte-identical. This is the only `contributes` change and this ruling is its stop-and-ask record.
+6. Gate test: new `src/test/lint/extension-config-settings.test.ts` (runs in the backend project with the other `src/test/lint/**` files, `vitest.config.mts:73`), pattern of `vsix-contents.test.ts:6`. Title `ExtensionConfig keys ⊆ contributed settings`: an object literal `satisfies ExtensionConfig` (as `src/protocol/protocol.test.ts:143`, so tsc fails when the interface gains or loses a key), minus the declared non-setting keys `treeIndent` and `isWindows`, every remaining key prefixed `nuiget.` is a key of `contributes.configuration.properties`. Second title `searchDebounceMode values equal the contributed enum`: `['quicksearch', 'full', 'off'] as const satisfies readonly ExtensionConfig['searchDebounceMode'][]` sorted equals the manifest `enum` sorted (the N57 pin). Third title `a deprecated setting is one 2.0 does not read`: every property with `deprecationMessage` is not an `ExtensionConfig` key (today: `recentSearchesLimit`).
+7. `src/core/catalog/Catalog.ts:113`: fix the comment only ("results of a search that names no `take`; the host always passes one, `handlers.ts:295`"); the value 50 stays, `src/core/catalog/Catalog.test.ts:724` pins it.
+8. README.md:50-58: add the missing `nuiget.enablePerformanceLogging` row, mark `nuiget.recentSearchesLimit` "deprecated (no effect in 2.0, removed at the next major)", reword `searchDebounceMode` to match the manifest text; leave the README 2.0 rewrite to P7.5. CHANGELOG `[Unreleased]`: `### Fixed` `- **2.0 honours the `full` and `off` search modes and the search result limit default**`; `### Changed` `- **`nuiget.recentSearchesLimit` deprecated**`.
+9. Stale N57 prose that would contradict the tree after the fix: `ARCHITECTURE.md:438-440` and `:614-615` (`fullsearch` → `full`, add the `off` sentence, drop "sends `full` and `off` as `quicksearch`"), `src/webview/shared/STATUS.md:730-738`, `src/host/STATUS.md:184,498`, `src/core/feeds/STATUS.md:55`, `src/test/ui/v2/STATUS.md:447`, `src/webview/sidebar-next/STATUS.md:308`, `src/webview/main/STATUS.md:498`; ledger row N57 → closed (P5.13). Tracker notes: P8.2 "remove `nuiget.recentSearchesLimit` from `package.json` and README when `NuGetPanel.ts` goes"; P7.1 "the `**Breaking:**` wording covers recent searches removed with their setting"; P7.5 "the drift script compares `ExtensionConfig` keys and the contributed enum against the manifest as `src/test/lint/extension-config-settings.test.ts` does".
+10. Gates in the plan's order plus, for this item: `npm run check-types` (tests change, N69), `npm run docs:protocol:check`, `npm run package:vsix` (host touched), `node esbuild.mjs --v2 --production --analyze` with the sizes pasted in the STATUS note (webview and host touched). Commit citing P5.13, N57, D6, ADR-008 (config slice deviation unchanged).
+
+DO NOT:
+Rename the manifest value `full` to `fullsearch`, or map `full` → `fullsearch` in the host or the webview to keep the type as it is.
+Remove `nuiget.recentSearchesLimit`, any command, menu entry, when-clause or context key: 1.x reads the setting until P8.2, and the e2e lists in `src/test/e2e/v2Support.ts` pin the command set.
+Put the manifest-reading gate test in `src/protocol/protocol.test.ts` or anywhere under `src/protocol/**`.
+Give the sidebar an `off` mode or a `useConfig()` call (P5.6 ruling step 6).
+Change `DEFAULT_SEARCH_TAKE` in `src/core/catalog/Catalog.ts:114` (pinned by `Catalog.test.ts:724`, dead on the host path).
+Unhide the palette-hidden commands (`commandPalette` `when: false`); P5.12b's observation about the restore switch is not this item's.
+Edit `docs/adr/**` or `src/protocol/messages.ts`; touch `src/webview/app/**`, `src/webview/NuGet*.ts` or `src/services/**`.
+Commit while `.claude/.contract-change` exists, or create it before this ruling is recorded in STATUS.
+
+CONTRACT CHANGE: `src/protocol/domain.ts:330` only (`ExtensionConfig.searchDebounceMode` → `'quicksearch' | 'full' | 'off'`), by P5.13 under the sentinel `.claude/.contract-change` containing `P5.13`, created after this ruling is pasted into STATUS and deleted before the commit. No ADR, no `messages.ts`, no `contracts.ts`.
+
+VERIFY:
+`grep -rn "'fullsearch'" src --include='*.ts' --include='*.tsx'` → 0 lines.
+`npx vitest run --project backend src/test/lint/extension-config-settings.test.ts` → 3 tests green, and `npx vitest run src/extension.next.test.ts src/webview/shared/store src/webview/main/features/search` → green (exit code 0, not only the counts).
+`node -e 'const p=require("./package.json").contributes;console.log(p.commands.length, Object.values(p.menus).flat().length + p.views["nuiget-sidebar"].length, Object.keys(p.configuration.properties).length, p.configuration.properties["nuiget.recentSearchesLimit"].deprecationMessage !== undefined)'` → `12 21 5 true`.
+`git diff bc4533a --stat -- src/test/e2e/v2Support.ts src/test/e2e/v2-*.e2e.test.ts docs/adr src/protocol/messages.ts src/core/contracts.ts` → empty; `git diff bc4533a -- src/protocol/domain.ts` → the one line of the type.
+`ls .claude/.contract-change` → no such file at commit time; `npm run docs:protocol:check` → 0; `npm run check-types` → 0.
+
+FILES CHECKED: `/Users/mattias/github/nuiget/.github/agents/architecture-advisor.agent.md`; `/Users/mattias/github/nuiget/docs/plans/2026-10-11-nuiget-2.0-execution-plan.md:41-160` (§1-§3) and `:270-320` (P5, P7, P8 rows); `/Users/mattias/github/nuiget/docs/plans/STATUS.md` rows P0.9, P2.8, P5.6, P5.12b, P5.13, P7.1, P7.5, P8.1, P8.2 and `:2369-2404` (P5.6 ruling); `/Users/mattias/github/nuiget/docs/plans/findings-ledger.md:160,405` (N57); `/Users/mattias/github/nuiget/package.json` `contributes` (whole, via `node -e`) and `:257-283`; `/Users/mattias/github/nuiget/src/protocol/domain.ts:320-337`; `/Users/mattias/github/nuiget/src/protocol/protocol.test.ts:142-146`; `/Users/mattias/github/nuiget/src/protocol/messages.ts:113,193`; `/Users/mattias/github/nuiget/src/host/services.ts:89-100`; `/Users/mattias/github/nuiget/src/host/handlers.ts:295,301,414`; `/Users/mattias/github/nuiget/src/host/SidebarHost.ts:20-111`; `/Users/mattias/github/nuiget/src/extension.next.ts:168-182,255-344`; `/Users/mattias/github/nuiget/src/extension.next.test.ts:194-197`; `/Users/mattias/github/nuiget/src/core/catalog/Catalog.ts:110-118,441,453-456` and `Catalog.test.ts:724`; `/Users/mattias/github/nuiget/src/webview/main/features/search/useSearchTyping.ts` (whole) and `.test.tsx:4-36,58,104-113`; `/Users/mattias/github/nuiget/src/webview/shared/store/search.tsx:160-199` and `search.test.tsx:220`; `/Users/mattias/github/nuiget/src/webview/shared/store/config.tsx` (whole) and `config.test.tsx:8-47`; `/Users/mattias/github/nuiget/src/webview/sidebar-next/SidebarView.tsx:70,113-114,141`; `/Users/mattias/github/nuiget/src/webview/app/App.tsx:63-65,1307-1316,1350-1359,1864,1912,1957`; `/Users/mattias/github/nuiget/src/webview/NuGetPanel.ts:225-235,640,1215-1225`; `/Users/mattias/github/nuiget/src/services/NuGetPackageService.ts:950-962`; `/Users/mattias/github/nuiget/src/services/NuGetPerf.ts:37-41`; `/Users/mattias/github/nuiget/src/test/e2e/v2Support.ts` (whole) and the command ids in `src/test/e2e/v2-*.e2e.test.ts`; `/Users/mattias/github/nuiget/src/test/lint/` listing and `vsix-contents.test.ts:6-9`; `/Users/mattias/github/nuiget/vitest.config.mts:16-91`; `/Users/mattias/github/nuiget/scripts/hooks/guard.mjs:2-68`; `/Users/mattias/github/nuiget/.claude/settings.json` (permissions and hooks); `/Users/mattias/github/nuiget/README.md:40-67`; `/Users/mattias/github/nuiget/ARCHITECTURE.md:10,432-444,610-620`; `/Users/mattias/github/nuiget/CHANGELOG.md:1-30`; `/Users/mattias/github/nuiget/docs/ux/interaction-model.md:19-31`; `/Users/mattias/github/nuiget/docs/protocol.md` (0 hits for the enum values); STATUS notes citing N57 in `src/host`, `src/webview/shared`, `src/webview/main`, `src/webview/sidebar-next`, `src/core/feeds`, `src/test/ui/v2`. Commands: `git status` (clean at bc4533a), `grep` only; no file was changed.
+`````
+
+## Exact next step (one item ID)
+
+P5 phase review (RUN §6), after the P5.13 CI run is green.
+
+## Earlier notes of this directory
 
 git status --porcelain --untracked-files=all (before commit d): modified `.github/copilot-instructions.md`, `ARCHITECTURE.md`, `CHANGELOG.md`, `docs/plans/{STATUS,findings-ledger}.md`, `src/host/{SidebarHost,handlers.test}.ts`, `vitest.config.mts` and the four STATUS notes; new `src/host/pickers.test.ts`, `src/test/ui/v2/sidebar-parity.ui.test.ts` (all belong to P5.10 commit d)
 
@@ -48,6 +150,8 @@ test -e .claude/.contract-change → false
 - None.
 
 ## Advisor decisions (date, item, question, answer verbatim)
+
+
 
 The P5.10 ruling (2026-10-16) is verbatim in `docs/plans/STATUS.md`.
 
@@ -181,7 +285,7 @@ test -e .claude/.contract-change → false · git diff --stat c4c3617 -- src/pro
 
 - Details of a browse row (P5.7), the sources settings and selector (P5.8), the multi-install picker (P5.9), the
   sidebar's context menu, "View package details" and "Open full view" (P5.10), the search settings' `full`/`off`
-  values (N57, P5.13).
+  values (N57, P5.13; done at P5.13).
 
 ## Deviations from contract/ADR (file:line each)
 
@@ -495,7 +599,7 @@ CI                           → see the tracker row of P2.9
   the pre-warm and every feed read: P4.9 (the `REMOVAL GATE: P4.9` lines).
 - `readme/image`: P4.4.
 - The provisional chunk of `installed/get`: P6.2. `HostServices.mutator`: P6.3.
-- `nuiget.searchDebounceMode` values `full` and `off` (N57): P5.
+- `nuiget.searchDebounceMode` values `full` and `off` (N57): P5.13 (done).
 
 ## Deviations from contract/ADR (file:line each)
 
@@ -857,6 +961,7 @@ P4.9b:
 
 FILES CHECKED: /Users/mattias/github/nuiget/.github/agents/architecture-advisor.agent.md (whole); /Users/mattias/github/nuiget/docs/plans/2026-10-11-nuiget-2.0-execution-plan.md (§0-§4 :1-172, P2 rows :221-238, P4 rows and gate :253-268, P5 :270-288, P6.2 :295, §7 :329-363); /Users/mattias/github/nuiget/docs/plans/RUN.md:55-100; /Users/mattias/github/nuiget/docs/plans/STATUS.md (row P4.9 :71 whole, rows P4.10 :72, P5.x :60-83, fix rows :39,52-53; rulings P2.8 :1010-1108, P2.9 :1110-1285, P2.10 :1287-1364, P4.1 :1797-1894, P4.4 :1896-1946, P4.6 :1948-2008, P4.8 :2010-2062); /Users/mattias/github/nuiget/docs/plans/findings-ledger.md (:42 S6, :66 F6, :109 N6, :171-173, :308-309 M1/M2, :412-414 N68-N70); /Users/mattias/github/nuiget/docs/adr/002-query-coordinator.md, 005-execution-context-and-outbound-policy.md, 006-icons-and-csp.md, 007-protocol.md:14-42, 009-catalog.md (whole); /Users/mattias/github/nuiget/src/core/catalog/Catalog.ts (whole), index.ts, STATUS.md:1-60, Catalog.test.ts (titles); /Users/mattias/github/nuiget/src/core/feeds/{types,index,serviceIndex,health,updates,enricher,metadataResolver,offline,testSupport}.ts (whole), icons.ts:1-160 and the `reset`/`Flight` lines, readmeImage.ts:1-70, readme.ts:73-100, registration.ts:109-135, search.ts:160-200, flatContainer.ts:71-80, vulnerability.ts:87-98, STATUS.md:1-80; /Users/mattias/github/nuiget/src/core/http/Transport.ts:18-60,300-360, index.ts; /Users/mattias/github/nuiget/src/core/credentials/DefaultCredentialProvider.ts:1-125, index.ts, helpers.ts:29-39, STATUS.md (the P2.8 recipe lines); /Users/mattias/github/nuiget/src/core/sources/{DefaultOutboundPolicy,index}.ts, NuGetConfigReader.ts (exports, `readChain` :56), merge.ts (exports :5-63), DotnetSourceProvider.ts:1-80, STATUS.md (grep); /Users/mattias/github/nuiget/src/core/project/{context,index}.ts, revision.ts (exports); /Users/mattias/github/nuiget/src/core/queries/QueryCoordinator.ts (whole), scopes.ts:1-80; /Users/mattias/github/nuiget/src/core/cache/CachePolicy.ts:1-150, index.ts, TieredCache.ts (method lines); /Users/mattias/github/nuiget/src/core/cli/index.ts, DotnetRunner.ts:390-415; /Users/mattias/github/nuiget/src/core/contracts.ts:100-122,150-354; /Users/mattias/github/nuiget/src/protocol/messages.ts:58-80,100-201, domain.ts:1-70,72-141,143-215,215-262, envelope.ts (`ProtocolErrorCode`); /Users/mattias/github/nuiget/src/host/{handlers,services,SidebarHost,MainPanelHost}.ts (whole or the cited ranges), WebviewHost.ts (`RequestContext`, `toProtocolError` lines), handlers.test.ts:30-110,185-310 and titles, WebviewHost.test.ts (title); /Users/mattias/github/nuiget/src/extension.next.ts (whole), extension.next.test.ts:1-235 and titles (incl. :439 `overlapping refreshes are coalesced`), src/STATUS.md:1-12; /Users/mattias/github/nuiget/src/test/harness/{harness,FakeWebview (1-130), scenarios.test (1-52, 489-554 and titles), fakeDotnet (1-60 and matchers)}.ts; /Users/mattias/github/nuiget/src/test/__mocks__/vscode.ts:232-243; /Users/mattias/github/nuiget/src/webview/shared/store/{installed,allProjects}.tsx (chunk handling) and the `iconUrl`/`metadata.get` uses under src/webview/main; /Users/mattias/github/nuiget/vitest.config.mts:87-89; /Users/mattias/github/nuiget/eslint.config.mjs:29-86; /Users/mattias/github/nuiget/.github/instructions/core-boundaries.instructions.md:1-50; /Users/mattias/github/nuiget/CHANGELOG.md:1-16; commands: `git status --short` (only `docs/plans/STATUS.md` modified), `git log --oneline -1` (631a13c), `wc -l` of the files in play, `grep -rn 'REMOVAL GATE: P4.9' src` (the 18 anchors the brief names), `grep -rn "sources/health\|notifySourceHealth" src`, `grep -rn "'session-changed'" src` (declared, unused), `grep -n globalPackagesFolder src/core/cli/DotnetRunner.ts`, `ls src/test/benchmarks`. Advisor tool consulted twice: before writing (per-source fan-out for N70, the first-paint constraint on `installed/get`, the directory → chain cache, the shared-provider deviation, gate counts per half, the tests to name) and on the draft (credential ordering at the activation probe, `generation` on `updates/get` and the carrier unwrapped in `queryWithRetry`, `excluded` in `versions`, `undefined` metadata never cached, the two harness assertions that could not hold, the monitor restricted to the selected directory, one `PolicyClients` set with two enrichers, the directory cache in `forProject`, the composition order of step 8); every point is folded in.
 `````
+
 
 
 

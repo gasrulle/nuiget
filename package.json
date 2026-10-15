@@ -264,17 +264,18 @@
                     "default": "quicksearch",
                     "enumDescriptions": [
                         "Show quick search suggestions as you type (fast, lightweight)",
-                        "Perform full search as you type (slower, shows full results)",
-                        "No automatic search while typing (only on Enter or button click)"
+                        "Main panel: perform the full search as you type (slower, shows full results)",
+                        "Main panel: no automatic search while typing; Enter searches"
                     ],
-                    "description": "Controls what happens when typing in the search box after a short delay."
+                    "description": "Controls what typing in the main panel's search box does after a short delay. The sidebar searches as you type in every mode."
                 },
                 "nuiget.recentSearchesLimit": {
                     "type": "integer",
                     "default": 5,
                     "minimum": 0,
                     "maximum": 10,
-                    "description": "Maximum number of recent searches to remember. Set to 0 to disable search history."
+                    "description": "Maximum number of recent searches to remember. Set to 0 to disable search history.",
+                    "deprecationMessage": "Recent searches are removed in nUIget 2.0; this setting has no effect there and will be removed."
                 },
                 "nuiget.searchResultLimit": {
                     "type": "integer",

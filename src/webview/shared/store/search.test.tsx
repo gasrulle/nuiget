@@ -213,11 +213,14 @@ describe('search slice: quick-search', () => {
         expect(text('suggestions')).toBe('nuget.org:Serilog');
     });
 
-    it('sends nothing when the setting asks for full searches', async () => {
+    it('sends nothing when the setting asks for full searches or none while typing', async () => {
         const host = mount();
         await withSession(host);
         await withSources(host);
-        await hostSays(() => host.event('config/changed', { searchDebounceMode: 'fullsearch', quickSearchResultsPerSource: 5, searchResultLimit: 50, enablePerformanceLogging: false, treeIndent: 16, isWindows: false }));
+        await hostSays(() => host.event('config/changed', { searchDebounceMode: 'full', quickSearchResultsPerSource: 5, searchResultLimit: 50, enablePerformanceLogging: false, treeIndent: 16, isWindows: false }));
+        await act(async () => slice.suggest('ser'));
+        expect(host.requests('search/autocomplete')).toHaveLength(0);
+        await hostSays(() => host.event('config/changed', { searchDebounceMode: 'off', quickSearchResultsPerSource: 5, searchResultLimit: 50, enablePerformanceLogging: false, treeIndent: 16, isWindows: false }));
         await act(async () => slice.suggest('ser'));
         expect(host.requests('search/autocomplete')).toHaveLength(0);
     });

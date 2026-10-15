@@ -90,9 +90,10 @@ export function readExtensionConfig(): ExtensionConfig {
     const config = vscode.workspace.getConfiguration('nuiget');
     const mode = config.get<string>('searchDebounceMode', 'quicksearch');
     return {
-        searchDebounceMode: mode === 'fullsearch' ? 'fullsearch' : 'quicksearch',
+        // The contributed values as they are (N57); anything else is the default.
+        searchDebounceMode: mode === 'full' || mode === 'off' ? mode : 'quicksearch',
         quickSearchResultsPerSource: config.get<number>('quickSearchResultsPerSource', 5),
-        searchResultLimit: config.get<number>('searchResultLimit', 50),
+        searchResultLimit: config.get<number>('searchResultLimit', 20),
         enablePerformanceLogging: config.get<boolean>('enablePerformanceLogging', false),
         treeIndent: vscode.workspace.getConfiguration('workbench.tree').get<number>('indent', 8),
         isWindows: process.platform === 'win32',

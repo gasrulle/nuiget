@@ -436,8 +436,9 @@ starts; the other slices ask when they have something to ask for.
   meantime: a manual refresh announces `failed: []` and then invalidates, and that invalidation is the one request.
 - `config` (P5.6): the extension's settings from every `config/changed` event and, once a consumer calls
   `enable()`, one `config/get` unless an event said them already. Not in ADR-008's enumeration of slices; added with
-  its first consumer, the main panel's quick-search. The host sends the contributed `full` and `off` modes of
-  `searchDebounceMode` as `quicksearch` (N57, P5.13).
+  its first consumer, the main panel's quick-search. `searchDebounceMode` carries the contributed values
+  `quicksearch`, `full` and `off` as they are (N57, closed at P5.13); `src/test/lint/extension-config-settings.test.ts`
+  holds `ExtensionConfig` to the contributed settings and that enum.
 - `sources` (read part P5.6, mutations P5.8): lazy like `transitive`, but `enable()` is sticky for the surface. Once
   enabled and with a committed session it asks `sources/list` for the committed project's directory; again when the
   committed project changes, on `refresh()`, and when an invalidation has the scope `sources` or names a `sources:`
@@ -612,8 +613,9 @@ is why it is not a `Popover`.
 - **Main panel.** Plain text is a browse search: `BrowseList` (`browse-list`) takes the place of the tab bar and
   lists the results with icons (`data:` URIs only, the CSP's `img-src`), authors, downloads and the Verified and
   Installed badges. `useSearchTyping` owns the timers by `searchDebounceMode`: `quicksearch` asks for suggestions
-  150 ms after the last key from two characters on while the box has focus, `fullsearch` searches 300 ms after the
-  last key; Enter always searches at once. The main panel's search feature enables `config` and `sources` on mount,
+  150 ms after the last key from two characters on while the box has focus, `full` searches 300 ms after the last
+  key, and `off` runs nothing while typing; Enter always searches at once. The sidebar ignores the setting: it
+  searches 300 ms after the last key in every mode, as 1.x did. The main panel's search feature enables `config` and `sources` on mount,
   so the main panel's start requests are `session/get`, `projects/list` and `config/get`, with `sources/list` after
   the first snapshot; the sidebar's set is unchanged.
   Picking a suggestion and `ui/navigateToPackage` fill the box with the id and search for it exactly; the package
