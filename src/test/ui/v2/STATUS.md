@@ -54,8 +54,8 @@ test -e .claude/.contract-change → false
 
 ## Not started
 
-- `docs/perf-baseline.md` takes both search numbers from the `UI 2.0` log of this commit's CI run (P7.2a, second
-  commit).
+- None. `docs/perf-baseline.md` (P7.2a commit 2) took both search numbers from the `UI 2.0` log of CI run
+  38818381022: cold 1086 ms, warm 541 ms, 32 passing.
 
 ## Deviations from contract/ADR (file:line each)
 
@@ -67,4 +67,4 @@ test -e .claude/.contract-change → false
 
 ## Exact next step (one item ID)
 
-P7.2a, second commit (`docs/perf-baseline.md`).
+P7.2b.

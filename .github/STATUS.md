@@ -1,12 +1,13 @@
-# STATUS — .github (agent resources and repo-level items)   commit 54885d4 (P7.1; parent of the P7.2a commit)   2026-10-15T22:37:15Z
+# STATUS — .github (agent resources and repo-level items)   commit 758241c (P7.2a commit 1; parent of commit 2)   2026-10-15T22:52:30Z
 
-git status --porcelain --untracked-files=all (before the commit): modified `.github/{STATUS.md,copilot-instructions.md,workflows/ci.yml}`,
+git status --porcelain --untracked-files=all (before commit 2): modified `.github/STATUS.md`,
+`docs/plans/{STATUS,findings-ledger}.md`; new `docs/perf-baseline.md`. Before commit 1: modified `.github/{STATUS.md,copilot-instructions.md,workflows/ci.yml}`,
 `ARCHITECTURE.md`, `docs/plans/{STATUS,findings-ledger}.md`, `esbuild.mjs`, `package.json`,
 `src/test/ui/v2/{main-search.ui.test.ts,STATUS.md}`; new `scripts/perf-baseline.mjs`,
 `src/test/e2e/fixtures/perf-multitfm/{MultiTfm.csproj,nuget.config}`
 
-Item: **P7.2a** — CI ceilings, one e2e retry for N37/N65, the informational perf job and script (first of its two
-commits; the second writes `docs/perf-baseline.md` from this commit's CI run). By the P7.2 ruling of 2026-10-16. This
+Item: **P7.2a** — CI ceilings, one e2e retry for N37/N65, the informational perf job and script (commit 1,
+`758241c`), and `docs/perf-baseline.md` from commit 1's CI run 38818381022 (commit 2). By the P7.2 ruling of 2026-10-16. This
 note replaces this directory's previous note (in its history).
 
 ## Verified by running
@@ -44,6 +45,22 @@ grep -cE '[0-9]+ (passing|failing)' on the e2e-v2-log-stable and e2e-log-1.85.0 
 test -e .claude/.contract-change → false
 ```
 
+Commit 2:
+
+```text
+CI run 38818381022 for 758241c → 13 of 13 jobs success (Perf baseline and Benchmark informational); the e2e-v2-log
+                              artifacts of both E2E 2.0 jobs have no "=== retry" line (no retry fired)
+Perf baseline artifact        → SDK 10.0.402 linux-x64, eleven rows, all exit 0 (numbers in docs/perf-baseline.md)
+UI 2.0 log                    → "[P5.6] cold search: 1086 ms …" · "[P7.2] warm search: 541 ms …" · 32 passing (2m)
+E2E 2.0 build step summary    → dist/extension.js 292128 / 321341 · dist/webview.js 523296 / 575626 ·
+                              dist/sidebar.js 318803 / 350684 (both jobs)
+npm run lint / npx tsc --noEmit → exit 0
+npm test (DOTNET_ROOT set, NUIGET_SDK_TESTS=1) → exit 0 · Test Files 167 passed (167) · Tests 3408 passed (3408)
+npm run bench                 → exit 0 · Test Files 20 passed (20) · Tests 119 passed | 1 skipped (120)
+grep -c tolerance docs/perf-baseline.md → 2 · each dotnet tolerance is floor(1.5 × baseline), checked by script
+grep -n 'RESTORE_TIMEOUT_MS = ' src/core/cli/DotnetRunner.ts → 11: 120_000 (step 12 did not fire)
+```
+
 ## Done (tested)
 
 - `esbuild.mjs`: `V2_BUNDLE_CEILINGS` reset to Math.ceil(measured × 1.1) at `54885d4` (321 341 / 575 626 / 350 684)
@@ -64,10 +81,13 @@ test -e .claude/.contract-change → false
   wording), the Testing command list, ARCHITECTURE "Shared tooling" (bundle size, dotnet timings), ledger N37/N65
   mitigated, N63 closed.
 
+- Commit 2: `docs/perf-baseline.md` (run, image, SDK, VS Code; sixteen metrics with tolerances; definitions; the
+  `perf-multitfm` derivation; how to measure again). Ledger N72 accepted (411 ms). Step 11: `evaluate-properties-single`
+  450 ms ≥ 400 ms, so tracker row P7.2c is open after P7.2b. Step 12: `restore-cold-multi` 1848 ms of 120 000,
+  `RESTORE_TIMEOUT_MS` unchanged.
+
 ## Not started
 
-- `docs/perf-baseline.md`, N72 accepted with the CI `config-paths` time, the decisions of the ruling's steps 11
-  (P7.2c) and 12 (`RESTORE_TIMEOUT_MS`): the second P7.2a commit, from this commit's CI run.
 - The ruling's step 5 allowlist entries in `.claude/settings.json` (`Bash(node scripts/perf-baseline.mjs:*)`,
   `Bash(npm run perf:baseline:*)`): not made. A change to the session's own permission settings is the owner's;
   the commands ran without a prompt in this session.
@@ -89,5 +109,4 @@ D2, E (N37/N65 one in-step retry; N72 accepted), F (mechanical `RESTORE_TIMEOUT_
 
 ## Exact next step (one item ID)
 
-P7.2a, second commit: read the `perf`, `ui-v2` and `e2e-v2` output of this commit's CI run and write
-`docs/perf-baseline.md` (ruling steps 9 to 13).
+P7.2b (evaluator runs bound to no caller signal; ruling steps 14 to 18), then P7.2c.
