@@ -1,9 +1,7 @@
 import { spawn as nodeSpawn, type ChildProcess, type SpawnOptions } from 'child_process';
-import { EventEmitter } from 'events';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import { PassThrough } from 'stream';
 import { describe, expect, it, vi } from 'vitest';
 import type { DotnetResult, KeyValueStore, Logger, SdkInfo } from '../contracts';
 import {
@@ -16,6 +14,7 @@ import {
     SDK_CACHE_MAX_ENTRIES,
     type SpawnFunction,
 } from './DotnetRunner';
+import { FakeChild, type DotnetAnswer } from '../../test/harness/fakeDotnet';
 import { sdkInfoFromVersion } from './sdk';
 
 const FAKE_DOTNET = path.join(__dirname, '__fixtures__', 'fake-dotnet.cjs');
@@ -53,37 +52,8 @@ function fixtureSpawn(extraEnv: Record<string, string> = {}): RecordingSpawn {
     return Object.assign(spawn, { calls, children });
 }
 
-interface ScriptedResponse {
-    stdout?: string;
-    stderr?: string;
-    code?: number;
-    /** Emitted instead of `spawn`: the process could not be started. */
-    spawnError?: NodeJS.ErrnoException;
-    /** Emitted after `spawn`, before the normal exit. */
-    lateError?: Error;
-}
-
-class FakeChild extends EventEmitter {
-    readonly stdout = new PassThrough();
-    readonly stderr = new PassThrough();
-    exitCode: number | null = null;
-    signalCode: NodeJS.Signals | null = null;
-    readonly kill = vi.fn((signal: NodeJS.Signals = 'SIGTERM') => {
-        if (this.exitCode !== null || this.signalCode !== null) {
-            return false;
-        }
-        this.signalCode = signal;
-        setImmediate(() => this.finish(null, signal));
-        return true;
-    });
-
-    finish(code: number | null, signal: NodeJS.Signals | null): void {
-        this.stdout.end();
-        this.stderr.end();
-        this.emit('exit', code, signal);
-        setImmediate(() => this.emit('close', code, signal));
-    }
-}
+/** The harness's answer of a fake `dotnet` call (`spawnError`, `lateError`, output, exit code). */
+type ScriptedResponse = DotnetAnswer;
 
 /** In-process stand-in for `spawn` that replays scripted output without starting a process. */
 function scriptedSpawn(script: (args: string[]) => ScriptedResponse | Promise<ScriptedResponse>): RecordingSpawn {
@@ -93,25 +63,7 @@ function scriptedSpawn(script: (args: string[]) => ScriptedResponse | Promise<Sc
         calls.push({ file, args: [...args], options });
         const child = new FakeChild();
         children.push(child as unknown as ChildProcess);
-        void (async () => {
-            const response = await script([...args]);
-            if (response.spawnError) {
-                child.emit('error', response.spawnError);
-                return;
-            }
-            child.emit('spawn');
-            if (response.lateError) {
-                child.emit('error', response.lateError);
-            }
-            if (response.stdout) {
-                child.stdout.write(response.stdout);
-            }
-            if (response.stderr) {
-                child.stderr.write(response.stderr);
-            }
-            child.exitCode = response.code ?? 0;
-            child.finish(child.exitCode, null);
-        })();
+        void (async () => child.answer(await script([...args])))();
         return child as unknown as ChildProcess;
     };
     return Object.assign(spawn, { calls, children });

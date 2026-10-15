@@ -20,6 +20,7 @@ import { commands as mockCommands, createMockExtensionContext, resetAllMocks, wi
 import { FakeTransport } from '../../core/feeds/testSupport';
 import { addPackageReference, createFakeDotnet, type FakeDotnet } from './fakeDotnet';
 import { createFakeFeed, type FakeFeed } from './fakeFeed';
+import { createFakePanel } from './fakePanel';
 import { FakeWebview, type SentRequest } from './FakeWebview';
 
 export type SurfaceName = 'sidebar' | 'main';
@@ -103,29 +104,6 @@ function createFakeView(webview: FakeWebview) {
                 listeners.push(listener);
                 return registration(disposables);
             },
-        },
-        dispose: () => {
-            if (!disposed) {
-                disposed = true;
-                listeners.forEach(listener => listener());
-            }
-        },
-    };
-}
-
-/** A panel that reports its disposal once, as VS Code does; the shared mock's panel does not (finding N58). */
-function createFakePanel(webview: FakeWebview) {
-    const listeners: Array<() => void> = [];
-    let disposed = false;
-    return {
-        webview,
-        iconPath: undefined as unknown,
-        reveal: vi.fn(),
-        onDidDispose: (listener: () => void, _thisArg?: unknown, disposables?: DisposableLike[]) => {
-            listeners.push(listener);
-            const entry = { dispose: () => undefined };
-            disposables?.push(entry);
-            return entry;
         },
         dispose: () => {
             if (!disposed) {

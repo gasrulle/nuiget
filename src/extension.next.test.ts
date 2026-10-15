@@ -1,11 +1,8 @@
-import { EventEmitter } from 'events';
 import * as fs from 'fs';
 import * as path from 'path';
-import { PassThrough } from 'stream';
 import * as vscode from 'vscode';
 import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
 import { TieredCache } from './core/cache';
-import type { SpawnFunction } from './core/cli';
 import { createScratchDir, writeTree, type ScratchDir } from './core/project/__fixtures__/scratch';
 import { FakeTransport, fail, json } from './core/feeds/testSupport';
 import { NodeTransport } from './core/http';
@@ -20,6 +17,8 @@ import {
     window as mockWindow,
     workspace as mockWorkspace,
 } from './test/__mocks__/vscode';
+import { createFakeDotnet, dotnetCalls, type FakeDotnet } from './test/harness/fakeDotnet';
+import { createFakePanel } from './test/harness/fakePanel';
 
 const SDK_CACHE_KEY = 'nuiget.sdkVersionCache.v2';
 const LEGACY_SDK_CACHE_KEY = 'nuiget.sdkVersionCache';
@@ -35,77 +34,7 @@ const libDir = path.dirname(libPath);
 const privateFeed = 'https://private.example/v3/index.json';
 const sharedFeed = 'https://shared.example/v3/index.json';
 
-interface Answer { code?: number; stdout?: string; stderr?: string }
-interface DotnetCall { args: string[]; cwd: string }
-
-class FakeChild extends EventEmitter {
-    readonly stdout = new PassThrough();
-    readonly stderr = new PassThrough();
-    exitCode: number | null = null;
-    signalCode: NodeJS.Signals | null = null;
-
-    kill(signal: NodeJS.Signals = 'SIGTERM'): boolean {
-        if (this.exitCode !== null || this.signalCode !== null) {
-            return false;
-        }
-        this.signalCode = signal;
-        setImmediate(() => this.finish(null, signal));
-        return true;
-    }
-
-    finish(code: number | null, signal: NodeJS.Signals | null): void {
-        this.stdout.end();
-        this.stderr.end();
-        this.emit('exit', code, signal);
-        setImmediate(() => this.emit('close', code, signal));
-    }
-}
-
-/** What `dotnet nuget list source --format detailed` prints for enabled sources. */
-function listing(urls: string[]): string {
-    return ['Registered Sources:', ...urls.flatMap((url, index) => [`  ${index + 1}.  Feed ${index + 1} [Enabled]`, `      ${url}`]), ''].join('\n');
-}
-
-const isListing = (args: string[]) => args.join(' ').startsWith('nuget list source');
 const sameDir = (a: string, b: string) => path.resolve(a) === path.resolve(b);
-
-/** In-process stand-in for `dotnet`: no process is started. `script` answers first, then the defaults. */
-function createFakeDotnet() {
-    const fake = {
-        calls: [] as DotnetCall[],
-        sources: (_cwd: string): string[] => [sharedFeed],
-        script: undefined as ((args: string[], cwd: string) => Answer | undefined | Promise<Answer | undefined>) | undefined,
-        spawn: ((_file, args, options) => {
-            const call = { args: [...args], cwd: String(options.cwd) };
-            fake.calls.push(call);
-            const child = new FakeChild();
-            void (async () => {
-                const answer = await fake.script?.(call.args, call.cwd) ?? defaultAnswer(call);
-                child.emit('spawn');
-                if (answer.stdout) {
-                    child.stdout.write(answer.stdout);
-                }
-                if (answer.stderr) {
-                    child.stderr.write(answer.stderr);
-                }
-                child.exitCode = answer.code ?? 0;
-                child.finish(child.exitCode, null);
-            })();
-            return child as unknown as ReturnType<SpawnFunction>;
-        }) as SpawnFunction,
-        listings: () => fake.calls.filter(call => isListing(call.args)),
-    };
-    const defaultAnswer = (call: DotnetCall): Answer => {
-        if (call.args[0] === '--version') {
-            return { stdout: '10.0.401\n' };
-        }
-        if (isListing(call.args)) {
-            return { stdout: listing(fake.sources(call.cwd)) };
-        }
-        return {};
-    };
-    return fake;
-}
 
 function deferred<T = void>() {
     let resolve!: (value: T) => void;
@@ -129,29 +58,8 @@ function eventsOf<T extends EventType>(webview: MockWebview, type: T): Array<Eve
     return posted.filter(message => message.kind === 'event' && message.type === type).map(message => (message as unknown as { payload: EventPayload<T> }).payload);
 }
 
-/** A panel whose `dispose` reports the disposal once, as VS Code does. */
-function createFakePanel() {
-    const listeners: Array<() => void> = [];
-    let disposed = false;
-    return {
-        webview: createMockWebview(),
-        iconPath: undefined as unknown,
-        reveal: vi.fn(),
-        onDidDispose: (listener: () => void) => {
-            listeners.push(listener);
-            return { dispose: () => undefined };
-        },
-        dispose: () => {
-            if (!disposed) {
-                disposed = true;
-                listeners.forEach(listener => listener());
-            }
-        },
-    };
-}
-
 describe('extension.next (2.0 composition root)', () => {
-    let dotnet: ReturnType<typeof createFakeDotnet>;
+    let dotnet: FakeDotnet;
     let context: ReturnType<typeof createMockExtensionContext>;
     let projectFiles: string[];
     let scratch: ScratchDir | undefined;
@@ -177,7 +85,7 @@ describe('extension.next (2.0 composition root)', () => {
     }
 
     async function openPanel() {
-        const panel = createFakePanel();
+        const panel = createFakePanel(createMockWebview());
         vi.mocked(vscode.window.createWebviewPanel).mockImplementationOnce(() => panel as unknown as vscode.WebviewPanel);
         await mockCommands.executeCommand('nuiget.openManager');
         return panel;
@@ -209,10 +117,12 @@ describe('extension.next (2.0 composition root)', () => {
     const channel = () => mockWindow.createOutputChannel.mock.results.at(-1)!.value;
     const contextKeys = () => mockCommands.executeCommand.mock.calls.filter(call => call[0] === 'setContext').map(call => [call[1], call[2]]);
     const refreshRuns = () => contextKeys().filter(([key]) => key === 'nuiget.hasProjectFiles').length;
+    const listings = () => dotnet.calls.filter(dotnetCalls.listSources());
 
     beforeEach(() => {
         vi.clearAllMocks();
         dotnet = createFakeDotnet();
+        dotnet.sources = () => [sharedFeed];
         context = createMockExtensionContext();
         projectFiles = [appPath, libPath];
         mockWorkspace.findFiles.mockImplementation((async () => projectFiles.map(file => vscode.Uri.file(file))) as unknown as () => Promise<never[]>);
@@ -249,7 +159,7 @@ describe('extension.next (2.0 composition root)', () => {
 
         expect(vscode.window.registerWebviewViewProvider).toHaveBeenCalledWith('nuiget.sidebarView', expect.anything(), { webviewOptions: { retainContextWhenHidden: true } });
 
-        const panel = createFakePanel();
+        const panel = createFakePanel(createMockWebview());
         vi.mocked(vscode.window.createWebviewPanel).mockImplementationOnce(() => panel as unknown as vscode.WebviewPanel);
         await mockCommands.executeCommand('nuiget.openManager', vscode.Uri.file(libPath));
         expect(vi.mocked(vscode.window.createWebviewPanel).mock.calls[0].slice(0, 2)).toEqual(['nugetManager', 'nUIget']);
@@ -268,7 +178,7 @@ describe('extension.next (2.0 composition root)', () => {
         ['an object with an fsPath', () => ({ fsPath: libPath })],
     ])('nuiget.openManager selects the project of %s', async (_name, argument) => {
         const { services } = await start({ workspaceState: { 'nuiget.selectedProject': appPath } });
-        vi.mocked(vscode.window.createWebviewPanel).mockImplementationOnce(() => createFakePanel() as unknown as vscode.WebviewPanel);
+        vi.mocked(vscode.window.createWebviewPanel).mockImplementationOnce(() => createFakePanel(createMockWebview()) as unknown as vscode.WebviewPanel);
 
         await mockCommands.executeCommand('nuiget.openManager', argument());
 
@@ -445,13 +355,13 @@ describe('extension.next (2.0 composition root)', () => {
         dotnet.sources = cwd => sameDir(cwd, appDir) ? [privateFeed, sharedFeed] : [sharedFeed];
         const { services } = await start({ workspaceState: { 'nuiget.selectedProject': appPath, 'nuiget.selectedSource': privateFeed } });
         expect(services.session.snapshot).toMatchObject({ selectedProject: appPath, selectedSource: privateFeed });
-        expect(dotnet.listings().some(call => sameDir(call.cwd, libDir))).toBe(false);
+        expect(listings().some(call => sameDir(call.cwd, libDir))).toBe(false);
 
         await services.session.apply({ selectedProject: libPath }, 'sidebar');
 
         await vi.waitFor(() => expect(services.session.snapshot.selectedSource).toBe('all'));
         expect(services.session.snapshot.selectedProject).toBe(libPath);
-        expect(dotnet.listings().some(call => sameDir(call.cwd, libDir))).toBe(true);
+        expect(listings().some(call => sameDir(call.cwd, libDir))).toBe(true);
     });
 
     it("a selection that moves during a refresh is not reconciled against the previous project's sources", async () => {
@@ -462,19 +372,11 @@ describe('extension.next (2.0 composition root)', () => {
         const runs = refreshRuns();
 
         // The listing of Lib's sources is slow; the selection goes back to App before it answers.
-        const listing = deferred();
-        let held = 0;
-        dotnet.script = async (args, cwd) => {
-            if (isListing(args) && sameDir(cwd, libDir)) {
-                held++;
-                await listing.promise;
-            }
-            return undefined;
-        };
+        const listing = dotnet.hold(dotnetCalls.listSources(libDir));
         await services.session.apply({ selectedProject: libPath }, 'sidebar');
-        await vi.waitFor(() => expect(held).toBe(1));
+        await vi.waitFor(() => expect(listing.seen).toBe(1));
         await services.session.apply({ selectedProject: appPath }, 'main');
-        listing.resolve();
+        listing.release();
 
         // One run for each selection; the first one must not judge App's source against Lib's list.
         await vi.waitFor(() => expect(refreshRuns()).toBe(runs + 2));
@@ -490,8 +392,8 @@ describe('extension.next (2.0 composition root)', () => {
 
         // The source is valid for the project that replaces the vanished one, and only its directory was asked.
         expect(services.session.snapshot).toMatchObject({ selectedProject: appPath, selectedSource: privateFeed });
-        expect(dotnet.listings().some(call => sameDir(call.cwd, appDir))).toBe(true);
-        expect(dotnet.listings().some(call => sameDir(call.cwd, path.dirname(gonePath)))).toBe(false);
+        expect(listings().some(call => sameDir(call.cwd, appDir))).toBe(true);
+        expect(listings().some(call => sameDir(call.cwd, path.dirname(gonePath)))).toBe(false);
         // One commit by the host for the replacement, and no second refresh because of it.
         expect(services.session.snapshot).toMatchObject({ rev: 2, origin: 'host' });
         expect(refreshRuns()).toBe(1);
@@ -500,31 +402,23 @@ describe('extension.next (2.0 composition root)', () => {
     it('a selection that moves to the replacement project during the listing is still reconciled', async () => {
         const unknownFeed = 'https://unknown.example/v3/index.json';
         // The persisted project is gone, so App replaces it; App's listing is slow.
-        const listing = deferred();
-        let held = 0;
-        dotnet.script = async (args, cwd) => {
-            if (isListing(args) && sameDir(cwd, appDir)) {
-                held++;
-                await listing.promise;
-            }
-            return undefined;
-        };
+        const listing = dotnet.hold(dotnetCalls.listSources(appDir));
         for (const [key, value] of Object.entries({ 'nuiget.selectedProject': gonePath, 'nuiget.selectedSource': unknownFeed })) {
             await context.workspaceState.update(key, value);
         }
         const extension = await activateWith(context as unknown as vscode.ExtensionContext, { spawn: dotnet.spawn, resolveExecutable: () => 'dotnet' });
-        await vi.waitFor(() => expect(held).toBe(1));
+        await vi.waitFor(() => expect(listing.seen).toBe(1));
 
         // The user picks exactly that project meanwhile. No other run will follow, so this one must reconcile.
         await extension.services.session.apply({ selectedProject: appPath }, 'sidebar');
-        listing.resolve();
+        listing.release();
         await extension.ready;
 
         expect(extension.services.session.snapshot).toMatchObject({ selectedProject: appPath, selectedSource: 'all' });
     });
 
     it('a failed source listing keeps the selected source', async () => {
-        dotnet.script = args => isListing(args) ? { code: 1, stderr: 'error: the feed list could not be read' } : undefined;
+        dotnet.fail(dotnetCalls.listSources(), { code: 1, stderr: 'error: the feed list could not be read' });
 
         const { services } = await start({ workspaceState: { 'nuiget.selectedProject': gonePath, 'nuiget.selectedSource': privateFeed } });
 
@@ -539,7 +433,7 @@ describe('extension.next (2.0 composition root)', () => {
         const { services } = await start({ workspaceState: { 'nuiget.selectedProject': appPath } });
         expect(services.session.snapshot.selectedSource).toBe('all');
 
-        dotnet.script = args => isListing(args) ? { code: 1 } : undefined;
+        dotnet.fail(dotnetCalls.listSources(), { code: 1 });
         services.invalidate({ kind: 'sources' }, 'manual-refresh');
         await vi.waitFor(() => expect(channel().warn).toHaveBeenCalledWith(expect.stringContaining('Package sources could not be listed')));
         await tick();

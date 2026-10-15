@@ -21,6 +21,10 @@ export interface DotnetAnswer {
     code?: number;
     stdout?: string;
     stderr?: string;
+    /** Emitted instead of `spawn`: the process could not be started (`ENOENT`, `EMFILE`, …). */
+    spawnError?: NodeJS.ErrnoException;
+    /** Emitted after `spawn`, before the normal exit. */
+    lateError?: Error;
 }
 
 export type CallMatcher = (call: DotnetCall) => boolean;
@@ -32,7 +36,12 @@ export interface Hold {
     release(): void;
 }
 
-class FakeChild extends EventEmitter {
+/**
+ * A child process that starts nothing: its streams and events are what `DefaultDotnetRunner` reads. Shared by the
+ * harness, the runner's own test (`src/core/cli/DotnetRunner.test.ts`) and the composition root's test
+ * (`src/extension.next.test.ts`; finding N59).
+ */
+export class FakeChild extends EventEmitter {
     readonly stdout = new PassThrough();
     readonly stderr = new PassThrough();
     exitCode: number | null = null;
@@ -56,6 +65,26 @@ class FakeChild extends EventEmitter {
         this.stderr.end();
         this.emit('exit', code, signal);
         setImmediate(() => this.emit('close', code, signal));
+    }
+
+    /** Plays `answer`: the spawn error alone, or `spawn`, a late error, the output and the exit. */
+    answer(answer: DotnetAnswer): void {
+        if (answer.spawnError) {
+            this.emit('error', answer.spawnError);
+            return;
+        }
+        this.emit('spawn');
+        if (answer.lateError) {
+            this.emit('error', answer.lateError);
+        }
+        if (answer.stdout) {
+            this.stdout.write(answer.stdout);
+        }
+        if (answer.stderr) {
+            this.stderr.write(answer.stderr);
+        }
+        this.exitCode = answer.code ?? 0;
+        this.finish(this.exitCode, null);
     }
 }
 
@@ -176,16 +205,7 @@ export function createFakeDotnet() {
                     // Killed while it was held (a cancelled operation): the kill already reported the exit.
                     return;
                 }
-                const answer = answerFor(call);
-                child.emit('spawn');
-                if (answer.stdout) {
-                    child.stdout.write(answer.stdout);
-                }
-                if (answer.stderr) {
-                    child.stderr.write(answer.stderr);
-                }
-                child.exitCode = answer.code ?? 0;
-                child.finish(child.exitCode, null);
+                child.answer(answerFor(call));
             })();
             return child as unknown as ReturnType<SpawnFunction>;
         }) as SpawnFunction,
