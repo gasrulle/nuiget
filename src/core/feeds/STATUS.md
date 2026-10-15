@@ -1,147 +1,79 @@
-# STATUS — src/core/feeds   commit e92a7ae (parent of the P4.6 commit)   2026-10-16T00:40:00Z
+# STATUS — src/core/feeds   commit b0b0046 (parent of the P4.7 commit)   2026-10-16T01:40:00Z
 
-git status --porcelain --untracked-files=all (before the commit): `?? src/core/feeds/search.ts`, `?? src/core/feeds/search.test.ts`,
-`?? src/core/feeds/__fixtures__/cli-search/10.0.401.json`, `?? src/core/feeds/__fixtures__/cli-search/README.md`,
-` M src/core/feeds/types.ts`, ` M src/core/feeds/index.ts`, ` M src/core/feeds/STATUS.md`, ` M CHANGELOG.md`, ` M ARCHITECTURE.md`,
-` M .github/copilot-instructions.md`, ` M docs/plans/STATUS.md`, ` M docs/plans/findings-ledger.md` (all belong to the P4.6 commit)
+git status --porcelain --untracked-files=all (before the commit): `?? src/core/feeds/{registration,vulnerability}.ts` and their two
+`*.test.ts`, ` M src/core/feeds/types.ts`, ` M src/core/feeds/index.ts`, ` M src/core/feeds/STATUS.md`, ` M CHANGELOG.md`,
+` M ARCHITECTURE.md`, ` M .github/copilot-instructions.md`, ` M docs/plans/STATUS.md` (all belong to the P4.7 commit)
 
-Item: **P4.6** `search.ts` (API multi-source, CLI JSON extraction after `warn :` lines, exact-match grouping, relevance only
-multi-origin, `searchById`, `quickSearch`) + tests. Source "legacy → core/feeds": new code after the 1.x search
-(`src/services/NuGetPackageService.ts:529-1077`); the quarry has no `search.ts`. Two universal stop-and-ask triggers fired (the
-quarry's verified-CLI-fact was not reproduced; a STATUS claim contradicted by the SDK), answered below. No contract change, no
-sentinel (`types.ts` is the module's own surface).
+Item: **P4.7** `registration.ts` (listed-only) + `vulnerability.ts` + tests. Source "legacy → core/feeds": new code after the
+1.x paths (`src/services/NuGetPackageService.ts:203-284` versions, `:322-410` vulnerabilities, `:1749-1860` registration
+metadata); the quarry has neither file. Not ⚑, no stop-and-ask trigger. No contract change, no sentinel (`types.ts` is the
+module's own surface).
 
 ## Verified by running
 
 ```text
-baseline at e92a7ae         → CI run 38654806411 green on all 11 jobs · npx tsc --noEmit 0 · npx eslint src 0 · npx vitest run
-                               green (132 files, 2933 passed, 3 skipped: the real-SDK tests without NUIGET_SDK_TESTS)
-probes (SDK 10.0.401, macOS) → seven captures, tracked in __fixtures__/cli-search/10.0.401.json; the seventh (exact match with
-                               --take 2) returned all 53 versions: --take is ignored with --exact-match, so no N69
-npx tsc --noEmit → exit 0 · npx eslint src → exit 0, no output
-fix-forward (run 38658578316 red: check-types on search.test.ts:349-350, N69) → npm run check-types exit 0 (root, test and
-                               vitest configs) after typing the test helper's logger as `Logger`
-rm -rf dist && npm run package:vsix → exit 0 (npm ci, check-types, 133 files / 2957 passed, 4 skipped, bundle, vsce)
-                               · npm run check:vsix → OK
-npx vitest run --project backend src/core/feeds → Test Files 11 passed (11) · Tests 129 passed | 1 skipped (130); search.test.ts
-                               25 tests by the ruling's titles, the real-SDK one skipped without the variable
-DOTNET_ROOT=… NUIGET_SDK_TESTS=1 npx vitest run --project backend src/core/feeds → Tests 130 passed (130): the real-SDK test ran
-DOTNET_ROOT=… NUIGET_SDK_TESTS=1 npx vitest run --project backend src/core/cli → Test Files 5 passed (5) · Tests 142 passed (142)
-npx vitest run src/core/feeds/search.test.ts, 40 times in a row → 40 of 40 green
-negative control (search.ts) → 25 mutations (prefix extraction, searchResult required, no --take with --exact-match, invalid-id
-                               guard, API and CLI policy, origins threshold, empty answer is no origin, cap, API failure flag,
-                               problems flag, timed out, top-level problems, autocomplete, perSource cap, empty quick query,
-                               searchById policy, exact id, non-2xx, API dedup, URL match, versions sorted, lite verified,
-                               prerelease parameter, redaction): 23 caught at once; two tests strengthened (an API source that
-                               fails next to one that answers; two local feeds that differ only by case); 25 of 25
-coverage (feeds only)        → search.ts 100 lines / 92.05 branches
-npm test (NUIGET_SDK_TESTS=1, DOTNET_ROOT set) → Test Files 133 passed (133) · Tests 2961 passed (2961)
+baseline at b0b0046         → CI run 38659077468 green on all 11 jobs · npm run check-types 0 · npx eslint src 0 · npx vitest run
+                               green (133 files, 2957 passed, 4 skipped: the real-SDK tests without NUIGET_SDK_TESTS)
+npx tsc --noEmit → exit 0 · npm run check-types → exit 0 (root, test and vitest configs; N69) · npx eslint src → exit 0
+npx vitest run --project backend src/core/feeds → Tests 145 passed | 1 skipped (146); the item's: registration 9, vulnerability 7
+registration and vulnerability tests, 40 times in a row → 40 of 40 green
+negative control             → 26 mutations (registration: prerelease filter, dedupe, sort, policy in versions and in metadata,
+                               failed is undefined, version fallback, listed filter, leaf listed flag, index failure, page
+                               failure, catalog-entry failure, summary fallback, dependency version, leaf first, normalized
+                               version match; vulnerability: clamp, dedupe, TTL, shared download, partial page, page without
+                               URL, compressed, unavailable flag, record validation, no cache on failure): 25 caught; the last
+                               is equivalent (a failed load stored as `undefined` is read as absent: `cached && …`)
+coverage (feeds only)        → registration.ts 98.09/89.74, vulnerability.ts 100/93.1 (lines/branches)
+npm test (NUIGET_SDK_TESTS=1, DOTNET_ROOT set) → Test Files 135 passed (135) · Tests 2977 passed (2977)
 npm run bench               → Test Files 19 passed (19) · Tests 114 passed | 1 skipped (115) (no bench is the row's; P4.10)
-grep -n "JSON.parse(stdout)\|nuget.org\|iconUrl:\|markFailed\|markHealthy" src/core/feeds/search.ts → no output
-grep -c '"synthetic": true' src/core/feeds/__fixtures__/cli-search/10.0.401.json → 1
-grep -n "sourcesUnavailable: boolean" src/core/feeds/types.ts → two lines (SearchOutcome, UpdateChecker)
-grep -n "N68" docs/plans/findings-ledger.md → two rows, the status table and §4, as for every N finding (N67 likewise)
-grep -rln child_process src/core --include='*.ts' → src/core/cli only
 git diff --name-only -- src/protocol src/core/contracts.ts docs/adr → empty
 npm run package:vsix, check:vsix, docs:protocol:check, test:ui, test:ui:v2 → SKIPPED: no host, extension, packaging, protocol
-                               or webview file changed; nothing outside src/core/feeds imports the search client before P4.9
+                               or webview file changed; nothing outside src/core/feeds imports these clients before P4.9
 ```
 
 ## Done (tested)
 
-- `search.ts`: `extractCliSearchOutput` (BOM, prefix lines, a document from the first `{` line to the last `}`, `searchResult`
-  required), `cliSourceFor` (name without regard to case, exact URL, URL without trailing slash or case), `groupExactMatchEntries`;
-  `DefaultSearchClient.search`: API sources in parallel and the CLI for the fallback sources, `packageid:` and the policy only for
-  `exactMatch` (an invalid id answers empty and available without a request), merge by id with the first-listed source winning and
-  CLI rows only for new ids, relevance only with two or more origins, cap after the merge, `sourcesUnavailable` for a failed API
-  source, a CLI that cannot start, times out, is cancelled, writes no document or reports any problem, and a query the CLI argv
-  cannot carry; `quickSearch` (autocomplete where present, search service otherwise, per-source cap, failed or empty sources
-  omitted, no request for an empty query, no default source); `searchById` (`found`/`missing`/`failed`, policy before any
-  request), `lookup` (lite metadata, no icon). Redacted logs. No cache, no health calls, no `iconUrl`.
-- `types.ts`: `SearchOutcome`, `SearchByIdFetch`, the new return types of `search` and `searchById`, `lookup` documented as best
-  effort.
-- Fixture `__fixtures__/cli-search/10.0.401.json` (seven captures, one synthetic case built from
-  `src/core/cli/__fixtures__/sdk-probes/10.0.401.json:37`) and its README.
+- `registration.ts`: `DefaultRegistrationClient.versions` — listed-only from `searchById` (`failed` → `undefined`, `missing` → `[]`,
+  `found` → its versions or its one version), or, without a search service, from the registration index without leaves marked
+  `listed: false` on the leaf or the catalog entry (inline pages, pages behind a URL, catalog entries behind a URL; any part that
+  fails makes the answer `undefined`, an unknown package `[]`); every version (unlisted included) from the flat-container index
+  when `listedOnly` is false; distinct by normalized version, prereleases only when asked, newest first; the policy asked before
+  any request (`[]` when refused). `metadata` — the registration leaf (`<id>/<normalized version>.json`) and its catalog entry,
+  else the index matched by normalized version; `registrationToMetadata` (summary as description fallback, authors joined,
+  license expression, dependency ranges with `version` and `*` fallbacks, `Any` framework, `published`, `sourceUrl`).
+- `vulnerability.ts`: `DefaultVulnerabilityClient.forPackage` answers `{ vulnerabilities, sourcesUnavailable }`; one download per
+  source shared by concurrent callers and run without any caller's signal (a caller that gives up gets an unavailable answer at
+  once, the others the data); data kept for `ttlFor('vulnerability')` only when the index and every page loaded; `clear()`;
+  `acceptCompressed`, `MAX_VULNERABILITY_BYTES` (64 MiB) and a 60 s timeout; advisories matched with `satisfiesText`, deduplicated
+  by URL across sources; invalid records dropped; `vulnerabilitySeverity` clamps numbers outside 0-3 (decision: an advisory with a
+  severity this client does not know is shown, never ranked below what it says; 1.x mapped every unknown number to Low).
+- `types.ts`: `VulnerabilityOutcome`, the new return type of `forPackage`.
 
 ## Done (untested)
 
-- Nothing in `search.ts` by line; a few branches (a CLI problem without `text`, an entry with `id` but no `version` in exact match
-  besides the tested ones) are covered only by line.
+- `registration.ts:172-174` (a defensive guard; both callers check the registration endpoint first) and `:211` (a leaf without a
+  catalog entry that carries its own version).
 
 ## Not started
 
-- `registration.ts`, `vulnerability.ts` (P4.7), `updates.ts`, `enricher.ts`, `metadataResolver.ts` (P4.8: also the ⚑ question
-  whether free-text rows pass the policy); the Catalog's source partition, `sourcesUnavailable` for excluded sources and the
-  `cwd` (P4.9).
+- `updates.ts`, `enricher.ts`, `metadataResolver.ts` (P4.8: also the ⚑ questions whether free-text search rows and the local
+  vulnerability lookup honour the package source mapping); wiring through the coordinator and the composition root (P4.9).
 
 ## Deviations from contract/ADR (file:line each)
 
-- `types.ts:65-86,170-181`: `SearchClient.search` and `SearchByIdClient.searchById` return new shapes (the ruling; no implementer
-  or consumer existed).
-- `search.ts`: the CLI's `--take` is not passed with `--exact-match`, although `packageSearchArgs` would accept both.
+- `types.ts:118-132`: `VulnerabilityClient.forPackage` answers `VulnerabilityOutcome` instead of `PackageVulnerability[]`, the same
+  "empty is not unknown" step the P4.6 ruling took for search (no implementer or consumer existed).
 
 ## Advisor decisions (date, item, question, answer verbatim)
 
-2026-10-15, P4.6, stop-and-ask: CLI output handling, return shape, search and lookup policy, icons. Answer, verbatim (the P4.4
-and P4.5 decisions of this directory are in `docs/plans/STATUS.md` under "Advisor decisions" and in the git history of this
-file):
-
-`````text
-DECISION: One ruling, composed from options 1, 3, 4 and 5 and sharpened: `search.ts` extracts the JSON document tolerantly from `dotnet package search` stdout (never `JSON.parse(stdout)`), the seven captures are promoted to a tracked, redacted fixture under `src/core/feeds/__fixtures__/cli-search/` with one labelled-synthetic prefix-line case and one `NUIGET_SDK_TESTS`-gated real-CLI test; `SearchClient.search` returns `{ results, sourcesUnavailable: boolean }` and `searchById` answers `found | missing | failed` (the `IconFetch` shape); a free-text query goes to every source the client is handed, unfiltered, while anything that sends a package id (`exactMatch`, `searchById`, `lookup`) passes the outbound policy first; nothing defaults to nuget.org or recognises it by address; results carry no `iconUrl`. Not OWNER MUST DECIDE.
-
-WHY: The brief holds against the tree with one sharpening: the quarry claim is at `git show f837f34:src/core/feeds/STATUS.md:31`, the quarry has no `search.ts` at that commit (only `STATUS.md`, `icons.ts`, `wire.ts` under feeds), and nothing in `src/core`, `src/host` or `src/extension.next.ts` implements or consumes `SearchClient`/`SearchByIdClient` yet, so the declarations at `src/core/feeds/types.ts:65-71,157-159` are this item's own unfrozen surface and changing them loses no work. (a) The `warn :` claim is unreproduced on macOS 10.0.401 and rests only on a gitignored capture (plan §2.6 forbids citing it), but the tracked probe `src/core/cli/__fixtures__/sdk-probes/10.0.401.json:37,72,135` proves this SDK does write `info :`/`warn :` lines to stdout in some environments, and your captures 3-6 prove failures arrive as structured `problems[]` (exit 0 per source, exit 1 top-level for an HTTP source) which 1.x's `JSON.parse(stdout)` at `src/services/NuGetPackageService.ts:885` would read correctly only while no prefix line appears; tolerant extraction covers both worlds at no cost, so option 2 is wrong and option 1 is right once the synthetic case is built from the tracked probe's text rather than the quarry's wording. (b) `PackageSearchResult[]` cannot carry "a source did not answer"; the gotcha "Empty is not unknown", ADR-009 (`docs/adr/009-catalog.md:24`), `Catalog.ts:77-81` and the sibling `UpdateChecker.check` at `types.ts:122` (`{ updates; sourcesUnavailable: boolean }`) all want the flag at the client, and the same hole exists for `searchById`, whose `undefined` the quarry note (`:33`) and P4.7/P4.8 would read as "no such id" after a transport failure; `IconFetch` at `types.ts:100-103` is the house answer. `quickSearch` keeps `QuickSearchSourceResult[]`: the frozen `search/autocomplete` result (`src/protocol/messages.ts:133`) has no `sourcesUnavailable` and a group is simply absent. (c) ADR-005 (`005-execution-context-and-outbound-policy.md:29-31,54`) keys the policy on a package id; a free-text query is not one, but `packageid:<query>` (`NuGetPackageService.ts:709`), `searchById` and `lookup` are, so they go through `filterAllowedSources`/`allowedSourcesFor` inside the client as `icons.ts:144` does. The nuget.org default of 1.x (`:550-552`, `:2215`) and its address test (`:564`) are ledger M2 ("quick-search default") and contradict `DefaultOutboundPolicy`'s "No source is treated specially by its address"; the P4 gate requires the M2 test present. The row-level filter of free-text results (your 4-ii) is a policy edge case the plan marks ⚑ at P4.8; it is deferred there explicitly, not decided silently. (d) ADR-006 (`006-icons-and-csp.md:16-19`) puts icons host-side as `data:` URIs; a remote URL in `iconUrl` would never render and would leak the flat-container pattern of 1.x `:794-802`; the `search/query` `metadata` chunk (`messages.ts:132`) is where data URIs arrive (P4.8 enricher, P4.9 wiring). One more frozen sentence shapes the merge: `src/protocol/domain.ts:92` says `sourceUrl` is the "first source when merged", so the merge keeps the first-listed source's entry (deterministic in config order) and drops 1.x's "higher download count wins" heuristic; no deviation to record.
-
-DO:
-1. Fixture first, before code. Write `src/core/feeds/__fixtures__/cli-search/10.0.401.json` in the shape of the tracked probe (`{ "sdk": "10.0.401", "probedOn": "2026-10-15", "platform": "darwin-arm64", "commands": [ { "id", "argv", "exitCode", "stdout", "stderr", "note", "synthetic"? } ] }`, full `stdout`, not a tail) with your six captures as ids `nuget-org-take-2`, `nuget-org-exact-match`, `nuget-org-plus-missing-path`, `https-unresolvable-source`, `http-source-refused-exit-1`, `config-named-http-source`, plus a seventh capture you run now: the argv of capture 2 with `--take 2` (`dotnet package search Newtonsoft.Json --format json --verbosity normal --source https://api.nuget.org/v3/index.json --exact-match --take 2`), id `exact-match-take-2`, note recording whether the two entries are the oldest (`3.5.8`, `4.0.1`) or the newest. Redact `$HOME` → `<home>` and the dotnet root → `<dotnet-root>`; nuget.org data is public. Add one entry `prefix-lines-synthetic` with `"synthetic": true`, whose `stdout` is the three prefix lines of `src/core/cli/__fixtures__/sdk-probes/10.0.401.json:37` verbatim (the two `info : X.509 certificate chain validation …` lines and the `warn : --no-restore|-n flag was used …` line) followed by capture 3's JSON, and a `note` saying it was constructed, not captured, and why. Add `cli-search/README.md` (SDK, OS, date, argv base, redaction rules, the synthetic entry, and the sentence "the quarry's `warn :` on stdout was not reproduced in any of these captures").
-2. `src/core/feeds/types.ts`, the item's own declarations only: `SearchClient.search(...)` → `Promise<SearchOutcome>` with `export interface SearchOutcome { results: PackageSearchResult[]; /** True when a source the client was handed did not answer: an API request failed (transport failure, non-2xx, invalid JSON) or the CLI run failed, exited non-zero without a document, or reported any `problems[]` entry. False means every source answered; an empty `results` is then a real empty result. */ sourcesUnavailable: boolean }`; `SearchByIdClient.searchById(...)` → `Promise<SearchByIdFetch>` with `export type SearchByIdFetch = { kind: 'found'; result: PackageSearchResult } | { kind: 'missing' } | { kind: 'failed'; reason: string }` (`missing` = the source answered with no entry for that id, or the policy does not allow this source for the id and no request was made; `failed` = transport/HTTP/JSON failure, never cached); `lookup` keeps `PackageMetadataLite | undefined` with the doc "best effort: undefined for missing, failed and not allowed; use `searchById` when the distinction matters". `quickSearch` unchanged.
-3. New `src/core/feeds/search.ts`, `export class DefaultSearchClient implements SearchClient` with `constructor(deps: Pick<FeedsDeps, 'transport' | 'runner' | 'policy' | 'logger'>, options?: { timeoutMs?: number; cliTimeoutMs?: number })` (defaults: HTTP 15 s, CLI 60 s). Exported pure helpers, each unit-tested: `extractCliSearchOutput(stdout: string): CliSearchOutput | undefined` (strip a BOM with a local two-line helper, `src/core/http` exports none; take the slice from the first line whose trimmed text starts with `{` to the last `}` inclusive; `JSON.parse`; return it only when `isRecord` and `searchResult` is an array, else `undefined`); `cliSourceFor(sourceName: string, sources: NuGetSource[]): NuGetSource | undefined` (match `name` case-insensitively, then `url`, then a trailing-slash-insensitive `url`; captures 3-5 show the `--source` value echoed as `sourceName`, capture 6 the configured name); `groupExactMatchEntries(packages: CliSearchPackage[]): PackageSearchResult[]` (group by `normalizeId`, `versions = sortDescending(all)`, `version = versions[0]`, `authors: ''`, `description: ''`, `totalDownloads` only when present). Rules of `search(sources, cliFallbackSources, options, cwd)`: (i) `exactMatch` → if `!isValidPackageId(query)` answer `{ results: [], sourcesUnavailable: false }` without any request; otherwise `sources = filterAllowedSources(policy, query, sources)` and `cliFallbackSources = policy.allowedSourcesFor(query, cliFallbackSources)`; free text → no policy filtering; (ii) API path per source in parallel: query parameters `q = exactMatch ? 'packageid:' + query : query`, `take`, `semVerLevel=2.0.0`, `prerelease=true` when asked (without it nuget.org's `versions[]` silently drops prerelease versions), `authHeaders(source)`, `timeoutMs`, `signal`; entries through `readSearchEntries` and the `entry*` readers; rows: `id`, `version`, `description`, `authors`, `totalDownloads`, `versions = sortDescending(entryVersions(entry))`, `verified`, `sourceUrl = source.source.url`, no `iconUrl`; an entry without id or version is skipped with a debug log, never a thrown error (1.x `:913-920` lost the whole result on one bad entry); (iii) CLI path only when `cliFallbackSources.length > 0`: `runner.run(packageSearchArgs({ query, sources: urls, prerelease, exactMatch, take: exactMatch ? undefined : take }), { cwd, timeoutMs, signal })` — never `--take` with `--exact-match`, because the CLI counts versions as entries and `take` caps ids; a spawn rejection, `timedOut`, `cancelled`, or a stdout without a document → CLI contributes nothing and `sourcesUnavailable = true`; a non-zero exit with a document (capture 5) is parsed like exit 0; every `problems[]` entry (top-level or per source) sets the flag and is logged once at `warn` through `redact(...)` with `redactArgv(argv)`; `sourceUrl` of a CLI row = `cliSourceFor(sourceName, cliFallbackSources)?.url`; exact-match CLI entries go through `groupExactMatchEntries`, ordinary ones map `latestVersion`→`version`, `owners`→`authors`, `totalDownloads`; (iv) merge: API sources in the order handed, rows deduplicated by `normalizeId` keeping the first-listed source's entry and its `sourceUrl` (`domain.ts:92`), then a CLI row only for an id not yet seen; (v) relevance: an origin is an API source that contributed ≥ 1 row or a CLI `searchResult[]` source that contributed ≥ 1 row; `sortByRelevance(merged, query)` only when origins ≥ 2 (a single source keeps the feed's own ranking); then `slice(0, take)`; (vi) the client never calls `health.markFailed`/`markHealthy`, never caches, never logs an unredacted argv, URL or CLI line, and the string `nuget.org` appears nowhere in `search.ts`, comments included (the VERIFY grep is literal). `quickSearch(sources, query, includePrerelease, perSource, signal)`: trimmed query empty → `[]` without requests; per source, in parallel, `searchAutocompleteService` when the endpoints have one (`readAutocompleteIds`), otherwise `searchQueryService` (ids via `entryId`), otherwise skipped; both with `q`, `take=perSource`, `semVerLevel=2.0.0`, `prerelease=true` when asked; a group only when it has ≥ 1 id, `sourceName = source.source.name`, `sourceUrl = source.source.url`; a failed source is omitted with a debug log; no default source, no address test. `searchById(source, id, includePrerelease, signal)`: `filterAllowedSources(policy, id, [source])` empty → `{ kind: 'missing' }` without a request; `q=packageid:<id>`, `take=1`, `semVerLevel=2.0.0`, `prerelease=true` when asked; an entry whose `normalizeId` equals the asked id → `found` with `versions = sortDescending(entryVersions)` and `totalDownloads`; no entry → `missing`; transport failure, non-2xx, invalid JSON → `failed` with the transport code as reason. `lookup` is `searchById` mapped to `PackageMetadataLite` (`id`, `version`, `verified`, `authors`, `description`, no `iconUrl`) or `undefined`.
-4. `src/core/feeds/index.ts`: `export * from './search';` (`testSupport.ts` stays unexported).
-5. `src/core/feeds/search.test.ts` with `FakeTransport` and a fake `DotnetRunner` (`run` answers a `DotnetResult` built from a fixture entry; `sdkVersion`/`clearSdkCache` unused), loading the fixture with the `serviceIndex.test.ts:8` pattern, `describe('DefaultSearchClient')`, these titles:
-   - `it('extracts the JSON document after info and warn prefix lines (synthetic fixture built from the tracked SDK probe)')`
-   - `it('parses the pure-JSON stdout of SDK 10.0.401 on macOS, where no prefix line appears')`
-   - `it('answers undefined for stdout without a document and for a document without searchResult')`
-   - `it('groups --exact-match entries by id with versions descending and the highest as version')`
-   - `it('never passes --take together with --exact-match')`
-   - `it('reports sourcesUnavailable for a per-source problem with exit code 0 and keeps the other source's rows')`
-   - `it('reports sourcesUnavailable for the top-level HTTP refusal with exit code 1 and no rows')`
-   - `it('reports sourcesUnavailable when the CLI cannot be started, times out or is cancelled, and caches nothing')`
-   - `it('maps sourceName to the fallback source by name or by url to fill sourceUrl')`
-   - `it('merges API sources by id keeping the first-listed source's entry and CLI rows only for new ids')`
-   - `it('sorts by relevance only when two or more origins contributed rows')`
-   - `it('caps merged results to take after the merge')`
-   - `it('sends a free-text query to every source and filters nothing by policy')`
-   - `it('sends packageid: queries for exactMatch only to sources the policy allows, on the API and CLI paths')`
-   - `it('answers empty and available without a request for an exactMatch query that is not a valid package id')`
-   - `it('skips an entry without id or version instead of failing the search')`
-   - `it('puts no iconUrl on any result')`
-   - `it('redacts the argv and the problem text in the log')`
-   - `describe('quickSearch')`: `it('uses the autocomplete service when present and the search service otherwise, for any source')`, `it('omits a source that fails or has no ids and answers [] for an empty query without a request')`, `it('never contacts a source it was not handed and has no nuget.org default')`
-   - `describe('searchById')`: `it('answers found with versions and downloads for the exact id')`, `it('answers missing for no entry and for a source the policy refuses, without a request in the second case')`, `it('answers failed, not missing, for a transport failure or non-2xx status')`
-   - `it.skipIf(process.env.NUIGET_SDK_TESTS !== '1')('real SDK: extracts the JSON document of dotnet package search on this runner')`: `createScratchDir('search')` from `../project/__fixtures__/scratch` with a `nuget.config` holding `<clear/>`, `new DefaultDotnetRunner()` from `../cli`, `cliFallbackSources = [{ name: 'missing', url: path.join(scratch.dir, 'missing-feed'), enabled: true, isLocal: true }]`, no API sources; assert `results` is empty and `sourcesUnavailable === true`, and that `extractCliSearchOutput(result.stdout)` of a direct `runner.run(packageSearchArgs(...))` yields a document with `searchResult.length >= 1` and at least one `problems[]` entry somewhere (the exact wording and grouping of the problem are one macOS capture's, not a spec; a Linux runner that phrases it differently is green evidence); `cleanup()` in `afterEach`. No network.
-6. Gates in §2.2 order, including `DOTNET_ROOT="$(dirname "$(command -v dotnet)")" NUIGET_SDK_TESTS=1 npx vitest run --project backend src/core/feeds` (the gotcha for code that runs `dotnet`), and the fixture test 40 times in a row.
-7. Docs duties: ledger `docs/plans/findings-ledger.md` new row N68: "The quarry's claim that `dotnet package search --format json` writes `warn :` lines to stdout before the JSON was not reproduced on macOS 10.0.401 in seven tracked captures (`src/core/feeds/__fixtures__/cli-search/10.0.401.json`); source failures are structured `problems[]` (exit 0 per source; exit 1 top-level for an HTTP source without `allowInsecureConnections`); prefix lines on stdout are real for this SDK elsewhere (`sdk-probes/10.0.401.json:37`), so `search.ts` extracts tolerantly" — closed at P4.6; a row N69 only if the `--take 2` probe shows truncation to the oldest versions ("`--take` with `--exact-match` caps versions, not ids; `search.ts` never passes it"). `.github/copilot-instructions.md` 2.0 gotcha row: "`dotnet package search` output — Never `JSON.parse(stdout)`; use `extractCliSearchOutput` (prefix lines are real on this SDK). A bad source is `problems[]` with exit 0, an HTTP source without `allowInsecureConnections` exit 1 with JSON; `sourceName` is the configured name or the `--source` value as given; never `--take` with `--exact-match`." CHANGELOG `[Unreleased]` `### Added` one line ("**2.0 package search** — …"). ARCHITECTURE.md 2.0 section row for `src/core/feeds` updated. Tracker `docs/plans/STATUS.md`: P4.6 row; P4.7 note gains "listed-only `versions` reads `searchById`: `failed` → `undefined`, `missing` → `[]`"; P4.8 note gains "⚑ decide whether free-text search rows are filtered by `allowedSourcesFor(row.id, [rowSource])` (deferred from P4.6, which filters only queries that carry an id); `enrich` reads `lookup`/`searchById`"; P4.9 note gains "the Catalog partitions the project's enabled sources into API sources (resolved with `searchQueryService`), CLI fallback sources (the rest, local included, minus unhealthy ones) and excluded sources; it ORs `sourcesUnavailable` with 'a selected source was excluded as unhealthy or did not resolve', never caches a result whose flag is set, passes `projectDir` as `cwd` (ADR-005, M1), and constructs `DefaultSearchClient` with the project context's policy; `quickSearch` with no source answers `[]`".
-8. Rewrite `src/core/feeds/STATUS.md` from the §2.5 template with this answer verbatim; commit citing P4.6, ADR-005, ADR-006, ADR-009, M2 (progressed: quick-search default removed; closes with the P4.8 test), N68 (and N69 if created).
-
-DO NOT:
-- Do not `JSON.parse(stdout)` and do not reword the plan row; the row text is a plan file, not the item's.
-- Do not add the search captures to `src/core/cli/__fixtures__/sdk-probes/` or edit `commands.ts`, `validate.ts` or anything under `src/core/cli`; omit `take` at the call site instead.
-- Do not build the synthetic prefix case from the quarry's wording, and do not copy anything from `git show f837f34:`.
-- Do not default to nuget.org when no source is given, and do not test a URL for `api.nuget.org` or `nuget.org/v3` anywhere in `search.ts`.
-- Do not filter free-text queries or their rows through the outbound policy in this item; record the row-level question for P4.8.
-- Do not keep 1.x's "higher download count wins" merge; `domain.ts:92` says first source.
-- Do not put a remote URL in `iconUrl` on `PackageSearchResult` or `PackageMetadataLite`, and do not call the `IconResolver` from the search client.
-- Do not add `sourcesUnavailable` to `quickSearch`, to `src/protocol/**` or to `src/core/contracts.ts`.
-- Do not call `health.markFailed` or `markHealthy` from the search client, and do not cache search, quick-search or lookup answers in it.
-- Do not throw on one malformed entry, and do not treat a cancelled or timed-out CLI run as an empty result.
-- Do not keep a 1.x `liteMode` flag; 2.0 has one result shape.
-
-CONTRACT CHANGE: none. `src/core/feeds/types.ts` is not frozen and its `SearchClient`/`SearchByIdClient` declarations have no implementer or consumer yet; `src/protocol/**` (`search/query` already carries `sourcesUnavailable?`, `messages.ts:132`), `src/core/contracts.ts` and `docs/adr/**` stay untouched; `git diff --name-only -- src/protocol src/core/contracts.ts docs/adr` must be empty.
-
-VERIFY: `npx tsc --noEmit` → exit 0; `npx eslint src` → 0; `npx vitest run --project backend src/core/feeds` → green with ≥ 25 new tests in `search.test.ts` by the titles above; `DOTNET_ROOT="$(dirname "$(command -v dotnet)")" NUIGET_SDK_TESTS=1 npx vitest run --project backend src/core/feeds/search.test.ts` → the real-SDK test runs and passes (not skipped); `for i in $(seq 1 40); do npx vitest run src/core/feeds/search.test.ts || break; done` → 40 green; `grep -n "JSON.parse(stdout)\|nuget.org\|iconUrl:" src/core/feeds/search.ts` → no output; `grep -n "markFailed\|markHealthy" src/core/feeds/search.ts` → no output; `grep -c '"synthetic": true' src/core/feeds/__fixtures__/cli-search/10.0.401.json` → 1; `git ls-files src/core/feeds/__fixtures__/cli-search` → the JSON and the README; `grep -n "sourcesUnavailable: boolean" src/core/feeds/types.ts` → two lines (`UpdateChecker` and `SearchOutcome`); `grep -n "N68" docs/plans/findings-ledger.md` → one row; `git diff --name-only -- src/protocol src/core/contracts.ts docs/adr` → empty; `git status --porcelain --untracked-files=all` after the commit → clean.
-
-FILES CHECKED: /Users/mattias/github/nuiget/.github/agents/architecture-advisor.agent.md; /Users/mattias/github/nuiget/docs/plans/2026-10-11-nuiget-2.0-execution-plan.md (§1 D1-D13 :41-58, §2.1-2.6 :61-134, §3 :137-159, rows P4.1-P4.10 :255-268, P2.8 :232, M2 :377, N6/N7 :411-412); /Users/mattias/github/nuiget/docs/plans/STATUS.md (rows P4.3-P4.8 :65-70, P1.1b ruling :559-757, P2.8 ruling :1056-1066, P2.9 ruling :1222); /Users/mattias/github/nuiget/docs/plans/findings-ledger.md (:37, :174, :196, :301, N66-N67 last ids); /Users/mattias/github/nuiget/docs/adr/005-execution-context-and-outbound-policy.md (whole); /Users/mattias/github/nuiget/docs/adr/006-icons-and-csp.md (whole); /Users/mattias/github/nuiget/docs/adr/009-catalog.md (:11, :15, :18, :24); /Users/mattias/github/nuiget/src/core/feeds/STATUS.md (whole); /Users/mattias/github/nuiget/src/core/feeds/types.ts (whole); /Users/mattias/github/nuiget/src/core/feeds/wire.ts (:1-60, :130-260, export list); /Users/mattias/github/nuiget/src/core/feeds/relevance.ts (whole); /Users/mattias/github/nuiget/src/core/feeds/icons.ts (:1-60, :136-144); /Users/mattias/github/nuiget/src/core/feeds/serviceIndex.ts (:176-209); /Users/mattias/github/nuiget/src/core/feeds/flatContainer.ts (exports), health.ts (API), index.ts, testSupport.ts (:1-57), offline.test.ts (:4, :34-42), serviceIndex.test.ts (:1-8), nuspec.test.ts (:6); /Users/mattias/github/nuiget/src/core/feeds/__fixtures__ (listing); /Users/mattias/github/nuiget/src/core/catalog/Catalog.ts (:28-50, :55-99, :280-299); /Users/mattias/github/nuiget/src/core/cli/commands.ts (:30-40, :95-131), validate.ts (:27-72), DotnetRunner.ts (:26-31, :36-39, :54-77, :147-150, :188, :264, :514), index.ts (exports), sdk.ts (:50), __fixtures__/sdk-probes/10.0.401.json (:1-40 and the `info :`/`warn :` lines at :19, :37, :54, :72, :100, :117, :135, :163), DotnetRunner.test.ts (:172, :806); /Users/mattias/github/nuiget/src/core/contracts.ts (:34-40, :160-199, :205-250, :280-294); /Users/mattias/github/nuiget/src/core/sources/DefaultOutboundPolicy.ts (whole), listSourceOutput.ts (whole), DotnetSourceProvider.test.ts (:234); /Users/mattias/github/nuiget/src/core/logging/index.ts, redact.ts (:35, :59); /Users/mattias/github/nuiget/src/core/http/index.ts and Transport.ts (:162, :444: `stripBom` is module-local, not exported); /Users/mattias/github/nuiget/src/core/versioning/NuGetVersion.ts (exports :35-204); /Users/mattias/github/nuiget/src/core/cache/CachePolicy.ts (:16, :39, :60, :124-126); /Users/mattias/github/nuiget/src/core/project/__fixtures__/scratch.ts (:11-24), context.test.ts (:183); /Users/mattias/github/nuiget/src/protocol/domain.ts (:83-94 incl. the `sourceUrl` prose at :92, :143-155, :183-197), messages.ts (:131-133); /Users/mattias/github/nuiget/src/host/handlers.ts (:288-300), services.ts (:94); /Users/mattias/github/nuiget/src/services/NuGetPackageService.ts (:529-700, :704-1077, :2184-2243); /Users/mattias/github/nuiget/.github/instructions/core-boundaries.instructions.md (:1-40); /Users/mattias/github/nuiget/CHANGELOG.md (:8-14); commands: `git status --short` (clean), `git log --oneline -1` (e92a7ae), `git cat-file -t f837f34` (commit), `git show f837f34 --stat -- src/core/feeds` (STATUS.md, icons.ts, wire.ts only), `git show f837f34:src/core/feeds/STATUS.md` (search claims at :31, :33), `grep -rn "SearchClient\|SearchByIdClient\|quickSearch\|searchById" src/core src/host src/extension.next.ts` (no implementer or consumer outside types.ts, Catalog's gated stub and the handler), `grep -rn "JSON.parse" src/core`, `grep -rn "NUIGET_SDK_TESTS" src`, `grep -rn "stripBom" src/core/http` (not exported), `ls src/test/benchmarks`.
-`````
+2026-10-16, P4.7: no L1 consultation (not ⚑, no stop-and-ask trigger). Ambient advisor before writing: the vulnerability return
+shape → `{ vulnerabilities, sourcesUnavailable }` (the protocol's `vulnerabilities?` is optional, so the enricher must tell unknown
+from none); listed-only versions branch on the search endpoint before calling `searchById`; cache a source's vulnerability data
+only when the index and every page loaded; an explicit size cap above the transport's 10 MiB default; no policy filter on the
+download (no id is sent), the lookup question recorded for P4.8. The P4.4 and P4.6 rulings of this directory are in
+`docs/plans/STATUS.md` under "Advisor decisions".
 
 ## Exact next step (one item ID)
 
-P4.7 (`registration.ts` listed-only + `vulnerability.ts` + tests).
+P4.8 (⚑ on policy edge cases: `updates.ts`, `enricher.ts`, `metadataResolver.ts`, `index.ts`; test `private-only configuration
+never contacts nuget.org`).

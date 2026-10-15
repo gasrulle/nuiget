@@ -156,7 +156,7 @@ Seeded from the execution plan (decisions D1–D13, Appendix B). Item IDs name w
 | Quarry is read-only and its notes are stale | Copy from the quarry working tree, never from `git show f837f34:`; never rebase or merge it; verify every quarry `STATUS.md` claim against the tree (D3). |
 | Evidence must be tracked | No decision may cite a gitignored capture such as `__fixtures__/.scratch`. Promote probe output to tracked, redacted fixtures (plan §2.6). |
 | Transient failure cached as a result | Cache successes and definitive failures only. Never cache spawn errors, timeouts or cancellations of an SDK probe (P1.6), and never turn a feed outage into a 24 h miss (P4.4). |
-| Empty is not unknown | An unreachable source yields `sourcesUnavailable`, not an empty update or search result (P4.8). |
+| Empty is not unknown | An unreachable source yields `sourcesUnavailable`, not an empty update, search or vulnerability result (P4.6, P4.7, P4.8). A vulnerability list from a source read in part is unknown: leave `vulnerabilities` absent, never `[]`. |
 | Project paths compared verbatim | Normalize with `normalizeProjectPath` before matching project paths; Windows casing and separators differ (P1.7). |
 | CLI output reaches logs unredacted | Redact dotnet output and argv before logging or passing them to `onCommand` (P1.5, P1.10). |
 | Unbounded persisted cache entries | Persisted cache entries have an 8 MB byte budget (P1.4); icon data URIs go through it, not around it (P4.4). |

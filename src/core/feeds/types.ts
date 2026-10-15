@@ -115,9 +115,18 @@ export type IconFetch =
     | { kind: 'missing' }
     | { kind: 'failed'; reason: string };
 
+export interface VulnerabilityOutcome {
+    vulnerabilities: PackageVulnerability[];
+    /**
+     * True when a source with vulnerability data could not be read completely (its index or any page failed). The
+     * vulnerabilities are then unknown rather than none: a caller leaves `vulnerabilities` absent instead of `[]`.
+     */
+    sourcesUnavailable: boolean;
+}
+
 export interface VulnerabilityClient {
-    /** Known vulnerabilities for a package version across resolved sources (1 h TTL). */
-    forPackage(sources: ResolvedSource[], packageId: string, version: string, signal?: AbortSignal): Promise<PackageVulnerability[]>;
+    /** Known vulnerabilities for a package version across resolved sources (data kept per source for the policy's TTL). */
+    forPackage(sources: ResolvedSource[], packageId: string, version: string, signal?: AbortSignal): Promise<VulnerabilityOutcome>;
     clear(): void;
 }
 
