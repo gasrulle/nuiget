@@ -433,6 +433,50 @@ describe('two-surface harness', () => {
         expect(h.services.queue.isBusy).toBe(false);
     });
 
+    it('N73: an installed computation that read the project file before a write-back is not shown as current', async () => {
+        h = await createHarness({ tree: TWO_PROJECTS, selectedProject: 'A/A.csproj' });
+        const [A, B] = [h.path('A/A.csproj'), h.path('B/B.csproj')];
+        const sidebar = await h.resolve('sidebar');
+        const main = await h.resolve('main');
+        await h.expectState({ selectedProject: A, projects: [A, B], installed: ['Serilog@3.0.0'] });
+        const marks = new Map([sidebar, main].map(webview => [webview, webview.received.length]));
+
+        // The sidebar uninstalls; the restore after the edit is held, the reference is already out of the file.
+        const restore = h.dotnet.hold(dotnetCalls.restore());
+        const request = h.operate('sidebar', 'ops/remove', { projectPath: A, packageId: 'Serilog' });
+        await h.settle(() => expect(restore.seen).toBe(1));
+        expect(fs.readFileSync(A, 'utf8')).not.toContain('Serilog');
+
+        // The operation's invalidation starts a computation that reads the file without Serilog and then waits at
+        // the walk of the config chain (every recomputation walks it again; measured before this test was written).
+        const walk = h.dotnet.hold(dotnetCalls.configPaths(path.dirname(A)));
+        restore.release();
+        expect(resultOf(await request.response)).toMatchObject({ kind: 'remove', status: 'completed' });
+        await h.settle(() => expect(walk.seen).toBe(1));
+        // Real reads finish within a few turns; a read that came later would see the write-back and only weaken
+        // the race, never fail the scenario.
+        await turns(50);
+
+        // The project file is written back with Serilog, and the watcher's invalidation follows; then the walk goes on.
+        h.files.writeProject(A, projectXml(['Serilog', '3.0.0']));
+        await h.advance(WATCHER_DEBOUNCE_MS);
+        walk.release();
+        await h.advance(WATCHER_DEBOUNCE_MS);
+
+        // Both surfaces show the list on disk, of the generation the last invalidation listed for it.
+        await h.expectState({ selectedProject: A, projects: [A, B], installed: ['Serilog@3.0.0'] });
+        for (const webview of [sidebar, main]) {
+            const since = webview.received.slice(marks.get(webview));
+            const events = since.filter(message => message.kind === 'event' && message.type === 'resources/invalidated').map(message => (message as unknown as { payload: { keys: Array<{ key: string; generation: number }> } }).payload);
+            const listed = events.flatMap(event => event.keys).filter(entry => entry.key === resourceKeys.installed(A)).at(-1)?.generation;
+            const applied = webview.received[webview.installedHistory.at(-1)!.receivedAt] as ResponseEnvelope<'installed/get'> & { ok: true };
+            expect(applied.generation, `${webview.surface}: generation of the list that is shown`).toBe(listed);
+            expect(webview.installed?.packages.map(row => row.id), `${webview.surface}: the list that is shown`).toEqual(['Serilog']);
+            expectOneResponsePerRequest(webview);
+        }
+        expect(h.services.queue.isBusy).toBe(false);
+    });
+
     it('bulk remove partial failure reconciles: the failed package stays, the others go, both surfaces show the list on disk', async () => {
         h = await createHarness({
             tree: {
