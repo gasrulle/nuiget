@@ -339,8 +339,13 @@ export interface MutationRequest {
     version?: string;
 }
 
-/** `ok: false` carries the explanation the UI shows (D7 refusal, SDK below 10, dirty props file, unverified CPM capability). */
-export type MutationDecision = { ok: true } | { ok: false; error: string };
+/**
+ * `ok: true` carries whether the project uses Central Package Management as the decision saw it, so the command runs as
+ * admitted (`isCpm` into `addPackageArgs`, never `--no-restore` with it; D7, N51). `ok: false` carries the explanation the
+ * UI shows (SDK missing or below 10, unsaved project or props file, unverified CPM capability, an override or unresolved
+ * row, a Central Package Management edit without a version).
+ */
+export type MutationDecision = { ok: true; isCpm: boolean } | { ok: false; error: string };
 
 /**
  * ADR-004 tier 3. Decides whether a reference edit may run in `context` and previews its Central Package

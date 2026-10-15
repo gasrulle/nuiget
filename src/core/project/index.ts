@@ -42,6 +42,7 @@ export {
     UNSUPPORTED_MESSAGES,
     type InspectorOptions,
 } from './inspector';
+export { DefaultProjectMutator, type MutatorDeps } from './mutator';
 export { getProjectDependencyMap, getProjectReferences } from './references';
 export { GLOBAL_JSON_FILE, computeRevision, revisionInputs } from './revision';
 export {

@@ -33,12 +33,16 @@ export class ProjectContextProvider {
      * An SDK that cannot be detected and a config chain that cannot be listed leave `sdk` and
      * `configFiles` empty; neither makes the project unsupported. A failure of the source provider
      * rejects: an empty source list would read as "no sources", which is a different fact.
+     *
+     * `configChain: false` builds the context of a mutation decision (P6.3): no `dotnet nuget config paths`,
+     * `configFiles` empty, a revision over the project's own files. Never hand such a context to
+     * `FeedContexts.register` or to the evaluator.
      */
-    async get(projectPath: string, workspaceFolder?: string): Promise<ProjectContextResult> {
+    async get(projectPath: string, workspaceFolder?: string, options: { configChain?: boolean } = {}): Promise<ProjectContextResult> {
         const projectDir = path.dirname(projectPath);
         const [sdk, configFiles, sources] = await Promise.all([
             this.sdk(projectDir),
-            this.configFilesFor(projectDir),
+            options.configChain === false ? Promise.resolve([]) : this.configFilesFor(projectDir),
             this.deps.sources.listSources(projectDir),
         ]);
         const context: ProjectExecutionContext = {

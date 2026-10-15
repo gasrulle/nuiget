@@ -7,6 +7,7 @@ import { DefaultDotnetRunner, sdkInfoFromVersion } from '../cli';
 import { findUp } from '../util/fs';
 import { createScratchDir, fixture, writeTree, type ScratchDir } from './__fixtures__/scratch';
 import { ProjectContextProvider, SDK_TOO_OLD_MESSAGE } from './context';
+import { computeRevision, revisionInputs } from './revision';
 
 const sdk10 = sdkInfoFromVersion('10.0.401')!;
 
@@ -105,6 +106,23 @@ describe('ProjectContextProvider', () => {
         });
         expect(runner.calls).toEqual([{ args: ['nuget', 'config', 'paths'], options: { cwd: projectDir, timeoutMs: 15_000 } }]);
         expect(sources.listSources).toHaveBeenCalledWith(projectDir);
+    });
+
+    it('builds a context without the config chain when asked: no config paths run, configFiles empty, sources listed, revision over the project\'s own inputs', async () => {
+        const { dir, project: scratchApp } = await scratchProject({ 'nuget.config': '<configuration />' });
+        const runner = fakeDotnet(path.join(dir, 'nuget.config'));
+        const sources = fakeSources([{ name: 'private', url: 'https://feed.example/v3/index.json', enabled: true }]);
+        const provider = new ProjectContextProvider({ runner, sources, stopDirs: [dir] });
+        const { context, unsupported } = await provider.get(scratchApp, 'workspace', { configChain: false });
+        expect(unsupported).toBeUndefined();
+        expect(runner.calls).toEqual([]);
+        expect(context).toMatchObject({ projectPath: scratchApp, workspaceFolder: 'workspace', sdk: sdk10, configFiles: [], sourceUrls: ['https://feed.example/v3/index.json'] });
+        expect(sources.listSources).toHaveBeenCalledWith(path.dirname(scratchApp));
+        expect(context.revision).toBe(await computeRevision(await revisionInputs(scratchApp, [], [dir])));
+        // With the chain, the config file is an input of the revision.
+        const chained = await provider.get(scratchApp, 'workspace');
+        expect(chained.context.configFiles).toEqual([path.join(dir, 'nuget.config')]);
+        expect(chained.context.revision).not.toBe(context.revision);
     });
 
     it('configFilesFor lists the chain of a directory without a project', async () => {

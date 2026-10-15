@@ -1,6 +1,6 @@
 # ADR-004: Three-tier project model and Central Package Management
 
-Status: accepted · Date: 2026-10-10 · Amended: 2026-10-12 (plan item P1.1b: `props` declaration, `PackageVersion` items, runs per target framework, SDK floor, CPM edits refused until the mutator) · Amended: 2026-10-15 (plan item P6.2b: the evaluator's properties, mapping and cache)
+Status: accepted · Date: 2026-10-10 · Amended: 2026-10-12 (plan item P1.1b: `props` declaration, `PackageVersion` items, runs per target framework, SDK floor, CPM edits refused until the mutator) · Amended: 2026-10-15 (plan item P6.3: the decision carries isCpm, the dirty check covers the project file, override and unresolved rows refused until probed) · Amended: 2026-10-15 (plan item P6.2b: the evaluator's properties, mapping and cache)
 
 ## Context
 
@@ -41,10 +41,10 @@ Three tiers with explicit fidelity:
    it. When it is not verified the UI offers read-only with an explanation. CPM mutations show an
    **affected-projects preview** (every project importing the props file without an override),
    distinguish central update vs project `VersionOverride`, invalidate and restore all consumers,
-   refuse when the props file has unsaved editor changes, and never delete a central entry because
+   refuse when the props file has unsaved editor changes, or the project file, and never delete a central entry because
    one project uninstalled. SDK 10 rewrites the props file on every `package add --version`, even
    without a version change (finding 2 of the SDK probes); the mutator treats the file as modified
-   after any add.
+   after any add. An `install` or `update` of a reference that carries `VersionOverride`, or whose version the inspection cannot resolve, is refused until a probe row shows what `dotnet package add --version` edits there (finding N74); the admitting decision carries `isCpm`, and the workflow builds the command from that value alone.
 
    2.0 never passes `--no-restore` to `package add` on a CPM project, in any phase (plan decision D7).
    Until the mutator lands (plan item P6.3), it also refuses `add` and `update` on CPM projects
