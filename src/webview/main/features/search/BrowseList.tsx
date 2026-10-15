@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type React from 'react';
 import type { PackageSearchResult } from '../../../../protocol';
 import { Badge, Banner, EmptyState, Listbox, ProgressBar, Row, Skeleton } from '../../../shared/primitives';
+import { useDetailsActions } from '../../../shared/store/details';
 import { useInstalled } from '../../../shared/store/installed';
 import { useSearch } from '../../../shared/store/search';
 import type { BrowseView } from '../../MainShell';
@@ -25,14 +26,20 @@ const formatDownloads = (count: number | undefined): string | undefined => {
 
 /**
  * The browse results of the main panel (interaction model §2): what the search slice found for the text the user
- * submitted, with icons, descriptions and badges. A click or Enter makes a row current (its details follow with the
- * details feature); after a navigation to a package (an exact search) the package found is current at once. A
+ * submitted, with icons, descriptions and badges. A click or Enter makes a row current and selects it for the details
+ * pane; after a navigation to a package (an exact search) the package found is current at once. A
  * source that could not be searched is a banner over the list, never "no results".
  */
 export function BrowseList({ text, announce }: BrowseView): React.JSX.Element {
     const search = useSearch();
     const installed = useInstalled();
     const [currentId, setCurrentId] = useState<string | null>(null);
+    const { select } = useDetailsActions();
+    // The details pane follows the row made current by the user or by a navigation.
+    const makeCurrent = (result: PackageSearchResult): void => {
+        setCurrentId(result.id);
+        select({ packageId: result.id, version: result.version, sourceUrl: result.sourceUrl, origin: 'browse', projectPath: null });
+    };
 
     const items = useMemo<Item[]>(() => search.results.map(result => ({ id: result.id, result })), [search.results]);
     const installedVersions = useMemo(
@@ -51,12 +58,11 @@ export function BrowseList({ text, announce }: BrowseView): React.JSX.Element {
         const sameText = answeredQuery.current === query;
         answeredQuery.current = query;
         const wanted = exactMatch ? results.find(result => result.id.toLowerCase() === query.toLowerCase()) : undefined;
-        setCurrentId(previous => {
-            if (wanted !== undefined) {
-                return wanted.id;
-            }
-            return sameText && results.some(result => result.id === previous) ? previous : null;
-        });
+        if (wanted !== undefined) {
+            makeCurrent(wanted);
+        } else {
+            setCurrentId(previous => (sameText && results.some(result => result.id === previous) ? previous : null));
+        }
         announce(results.length === 0 ? `No results for "${query}"` : `${results.length} ${results.length === 1 ? 'package' : 'packages'} found for "${query}"`);
         // One announcement per answer: `results` changes with each, the rest belongs to it.
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -86,8 +92,8 @@ export function BrowseList({ text, announce }: BrowseView): React.JSX.Element {
                 density="comfortable"
                 busy={search.revalidating}
                 selectedId={currentId}
-                onSelect={item => setCurrentId(item.id)}
-                onActivate={item => setCurrentId(item.id)}
+                onSelect={item => makeCurrent(item.result)}
+                onActivate={item => makeCurrent(item.result)}
                 empty={<EmptyState message={sourcesUnavailable ? `No package source could be searched for "${query}".` : `No results for "${query}".`} />}
                 renderRow={(item, placement) => {
                     const { result } = item;

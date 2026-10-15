@@ -39,8 +39,8 @@ export interface MainShellProps {
     updates?: (view: ListView) => React.ReactNode;
     /** The browse results; they take the place of the tabs while the box holds a browse search. */
     browse?: (view: BrowseView) => React.ReactNode;
-    /** The details of the selected package; without one, the details pane says how to get one. */
-    details?: React.ReactNode;
+    /** The details of the selected package; without it, the details pane says how to get one. */
+    details?: (view: { announce: (message: string) => void }) => React.ReactNode;
 }
 
 const TABS: ReadonlyArray<TabItem<MainTab>> = [
@@ -183,7 +183,7 @@ export function MainShell({ installed, updates, browse, details }: MainShellProp
                 </div>
                 <Sash orientation="vertical" label="Resize the package list" value={split} min={SPLIT.min} max={SPLIT.max} defaultValue={SPLIT.initial} controls={listPaneId} onChange={setSplit} />
                 <section className="nuiget-main-details" data-testid="package-details-panel" aria-label="Package details">
-                    {details ?? <EmptyState message="Select a package to see its details." />}
+                    {details?.({ announce }) ?? <EmptyState message="Select a package to see its details." />}
                 </section>
             </div>
             <LiveStatus message={said.message} repeat={said.count} />

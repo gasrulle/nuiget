@@ -193,3 +193,181 @@ body {
     height: var(--nuiget-icon-size-lg);
     object-fit: contain;
 }
+
+/* ── Details pane ── */
+
+.nuiget-details {
+    display: flex;
+    flex-direction: column;
+    min-height: 100%;
+}
+
+.nuiget-details-header {
+    display: flex;
+    flex-direction: column;
+    gap: var(--nuiget-space-3);
+    padding: var(--nuiget-space-4) var(--nuiget-space-6);
+}
+
+.nuiget-details-title {
+    margin: 0;
+    font-size: var(--nuiget-font-size-lg);
+    overflow-wrap: anywhere;
+}
+
+.nuiget-details-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--nuiget-space-4);
+}
+
+.nuiget-details-label {
+    min-width: 5em;
+    color: var(--nuiget-color-fg-muted);
+}
+
+.nuiget-details-note {
+    margin: 0;
+    color: var(--nuiget-color-fg-muted);
+}
+
+.nuiget-details-info,
+.nuiget-readme {
+    padding: var(--nuiget-space-4) var(--nuiget-space-6);
+    overflow-wrap: anywhere;
+}
+
+.nuiget-details-description {
+    margin-top: 0;
+}
+
+.nuiget-details-facts {
+    display: grid;
+    gap: var(--nuiget-space-2);
+    margin: 0;
+}
+
+.nuiget-details-fact {
+    display: flex;
+    gap: var(--nuiget-space-4);
+}
+
+.nuiget-details-fact dt {
+    min-width: 7em;
+    color: var(--nuiget-color-fg-muted);
+}
+
+.nuiget-details-fact dd {
+    margin: 0;
+}
+
+.nuiget-details-section h3 {
+    margin: var(--nuiget-space-6) 0 var(--nuiget-space-2);
+    font-size: var(--nuiget-font-size-md);
+}
+
+.nuiget-details-group h4 {
+    margin: var(--nuiget-space-4) 0 var(--nuiget-space-1);
+    font-size: var(--nuiget-font-size-md);
+    font-weight: normal;
+    color: var(--nuiget-color-fg-muted);
+}
+
+.nuiget-details-list {
+    margin: 0;
+    padding-inline-start: var(--nuiget-space-6);
+}
+
+.nuiget-details-vulnerability {
+    display: flex;
+    align-items: center;
+    gap: var(--nuiget-space-2);
+    color: var(--nuiget-color-warning);
+}
+
+.nuiget-details a,
+.nuiget-readme a {
+    color: var(--nuiget-color-link);
+}
+
+/* ── README ── */
+
+.nuiget-readme img {
+    max-width: 100%;
+}
+
+.nuiget-readme-code {
+    position: relative;
+}
+
+.nuiget-readme pre {
+    padding: var(--nuiget-space-4);
+    overflow-x: auto;
+    border-radius: var(--nuiget-radius-sm);
+    background: var(--nuiget-color-code-bg);
+    color: var(--nuiget-color-code-fg);
+    font-family: var(--nuiget-font-family-mono);
+}
+
+.nuiget-readme-copy {
+    position: absolute;
+    top: var(--nuiget-space-2);
+    right: var(--nuiget-space-2);
+    min-height: var(--nuiget-target-min);
+    padding: 0 var(--nuiget-space-3);
+    border: 1px solid var(--nuiget-color-border);
+    border-radius: var(--nuiget-radius-sm);
+    background: var(--nuiget-color-widget-bg);
+    color: var(--nuiget-color-widget-fg);
+    font: inherit;
+    font-size: var(--nuiget-font-size-sm);
+    cursor: pointer;
+}
+
+.nuiget-readme-copy:focus-visible {
+    outline: 1px solid var(--nuiget-color-focus);
+}
+
+.nuiget-readme .nuiget-hljs-keyword,
+.nuiget-readme .nuiget-hljs-selector-tag,
+.nuiget-readme .nuiget-hljs-literal,
+.nuiget-readme .nuiget-hljs-section,
+.nuiget-readme .nuiget-hljs-link {
+    color: var(--nuiget-color-syntax-keyword);
+}
+
+.nuiget-readme .nuiget-hljs-type,
+.nuiget-readme .nuiget-hljs-built_in,
+.nuiget-readme .nuiget-hljs-meta,
+.nuiget-readme .nuiget-hljs-attribute {
+    color: var(--nuiget-color-syntax-type);
+}
+
+.nuiget-readme .nuiget-hljs-title {
+    color: var(--nuiget-color-syntax-function);
+}
+
+.nuiget-readme .nuiget-hljs-variable,
+.nuiget-readme .nuiget-hljs-params,
+.nuiget-readme .nuiget-hljs-property,
+.nuiget-readme .nuiget-hljs-attr {
+    color: var(--nuiget-color-syntax-variable);
+}
+
+.nuiget-readme .nuiget-hljs-string,
+.nuiget-readme .nuiget-hljs-template-variable,
+.nuiget-readme .nuiget-hljs-template-tag {
+    color: var(--nuiget-color-syntax-string);
+}
+
+.nuiget-readme .nuiget-hljs-number {
+    color: var(--nuiget-color-syntax-number);
+}
+
+.nuiget-readme .nuiget-hljs-comment,
+.nuiget-readme .nuiget-hljs-quote,
+.nuiget-readme .nuiget-hljs-doctag {
+    color: var(--nuiget-color-syntax-comment);
+    font-style: italic;
+}

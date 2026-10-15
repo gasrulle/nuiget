@@ -4,6 +4,7 @@ import { ALL_PROJECTS, type InstalledPackage, type InstalledResult, type Package
 import { whyNotRemovable } from '../../../shared/installed/rules';
 import { EmptyState, Skeleton, Toolbar } from '../../../shared/primitives';
 import { useAllProjects } from '../../../shared/store/allProjects';
+import { useDetailsActions } from '../../../shared/store/details';
 import { useInstalled } from '../../../shared/store/installed';
 import { useOps, useOpsActions } from '../../../shared/store/ops';
 import { useProjects } from '../../../shared/store/projects';
@@ -43,6 +44,7 @@ export function InstalledTab({ filter, vulnerableOnly, announce }: ListView): Re
     const { projects } = useProjects();
     const { isPackageBusy } = useOps();
     const { run } = useOpsActions();
+    const { select } = useDetailsActions();
     const [current, setCurrent] = useState<{ projectPath: string; id: string } | null>(null);
     // Selected for a bulk action, by project path exactly as the host sent it.
     const [bulk, setBulk] = useState<ReadonlyMap<string, ReadonlySet<string>>>(new Map());
@@ -172,7 +174,14 @@ export function InstalledTab({ filter, vulnerableOnly, announce }: ListView): Re
                 selected={bulk.get(section.projectPath) ?? NOTHING}
                 currentId={current?.projectPath === section.projectPath ? current.id : null}
                 onToggle={entry => toggle(section, entry)}
-                onCurrent={id => setCurrent({ projectPath: section.projectPath, id })}
+                onCurrent={id => {
+                    setCurrent({ projectPath: section.projectPath, id });
+                    // The details pane follows the row the user made current.
+                    const entry = section.result?.packages.find(candidate => candidate.id === id);
+                    if (entry !== undefined) {
+                        select({ packageId: entry.id, version: entry.resolvedVersion ?? entry.version, origin: 'installed', projectPath: section.projectPath });
+                    }
+                }}
                 onUninstall={entry => uninstall(section, entry)}
                 grouped={allMode}
             />

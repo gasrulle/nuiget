@@ -1,4 +1,93 @@
-# STATUS — src/webview/main   commit c4c3617 (parent of the P5.6 commit)   2026-10-15T12:00:00Z
+# STATUS — src/webview/main   commit 4dfa2e5 (parent of the P5.7 commit)   2026-10-15T15:00:00Z
+
+git status --porcelain --untracked-files=all (before the commit): modified `ARCHITECTURE.md`, `CHANGELOG.md`, `docs/plans/STATUS.md`, `src/webview/main/{MainShell.tsx,index.tsx,main.css}`, `src/webview/main/features/installed/InstalledTab.tsx`, `src/webview/main/features/updates/UpdatesTab.tsx`, `src/webview/main/features/search/BrowseList.tsx`, `src/webview/shared/store/StoreProvider.tsx`, `src/webview/shared/tokens.css` and the three STATUS notes; new `src/webview/main/features/details/{DetailsPane,DetailsInfo,ReadmeView}.tsx`, `markdown.ts`, `DetailsPane.test.tsx`, `markdown.test.ts`, `src/webview/shared/store/{details.tsx,details.test.tsx}`, `src/test/ui/v2/main-details.ui.test.ts` (all belong to the P5.7 commit)
+
+Item: **P5.7 feature details**, for this directory: `features/details/DetailsPane.tsx` (header with the installed
+version and `uninstall-button`, `version-selector` newest first with `(installed)`, `install-update-button` reading
+Install, Update or Downgrade by the order of the host's list, the stale banner, the reasons a change is not possible,
+the local-source sentence, `CentralUpdateDialog` for a central package, `Tabs` `details-tab-details` and
+`details-tab-readme`), `DetailsInfo.tsx` (description, facts, vulnerabilities, dependencies, offline wording),
+`ReadmeView.tsx` (`readme-content`, `readme-empty`, Retry; sanitized HTML set after sanitizing, copy buttons, images
+through `readme/image`), `markdown.ts` (the port). `InstalledTab.tsx`, `UpdatesTab.tsx` and `BrowseList.tsx` call
+`select()` when the user makes a row current; `MainShell.tsx`'s `details` is a render prop with `announce`;
+`index.tsx` passes `details={view => <DetailsPane {...view} />}`; `main.css` the pane, README and `nuiget-hljs-*`
+rules. `wc -l MainShell.tsx index.tsx` → 192 + 27 = 219 (< 300).
+
+## Verified by running
+
+P5.7 (the same gate run for every directory of the item):
+
+```text
+baseline at 4dfa2e5          → CI run 38697862878 green on all 11 jobs · npx tsc --noEmit 0 · npx eslint src 0 ·
+                               npx vitest run → Test Files 151 passed (151) · Tests 3115 passed | 4 skipped (3119)
+markdown port alone (esbuild --bundle --minify) → 159750 bytes, before any UI work (no ceiling at risk)
+first stylesheet lint        → `every class selector starts with .nuiget-` red for `.hljs-*`; fixed by highlight.js's
+                               own `classPrefix: 'nuiget-hljs-'` (no test changed)
+npx tsc --noEmit / npm run check-types / npm run lint → exit 0 each (last run after every code edit)
+npm test (NUIGET_SDK_TESTS=1, DOTNET_ROOT set) → Test Files 154 passed (154) · Tests 3166 passed (3166)
+npm run bench                → Test Files 20 passed (20) · Tests 119 passed | 1 skipped (120)
+npx vitest run --coverage    → exit 0 (thresholds hold) · store/details.tsx 96.77 % lines · main/features/details 94.68 %
+npm run docs:protocol:check  → docs/protocol.md is up to date
+rm -rf dist && NUIGET_V2=1 npm run package && npm run check:vsix → check:vsix: OK
+rm -rf dist && node esbuild.mjs --v2 --production --analyze → extension 280657 / 299921 · webview 492873 / 600685
+                               (320845 at P5.6; + marked, highlight.js core with 15 languages, DOMPurify) · sidebar
+                               303486 / 329122 (300411 at P5.6; + the details slice); dist/ deleted after
+NUIGET_V2=1 npm run test:ui:v2 -- --storage /tmp/nuiget-ui-v2 → 15 passing (17s) at the first run; fixture unchanged
+main/features and store/details.test.tsx, 20 times in a row → 20 of 20
+npm run package:vsix (1.x)   → SKIPPED: no 1.x file changed; CI's Package job builds it
+npm run test:ui (1.x)        → SKIPPED: no 1.x UI file changed; the CI job `UI` runs it
+test -e .claude/.contract-change → false · git diff --stat 4dfa2e5 -- src/protocol src/core docs/adr src/host package.json → empty
+```
+
+## Done (tested)
+
+- `DetailsPane.test.tsx` (14): empty state, versions with the installed mark, Update/Downgrade/ops/update and busy,
+  Install from browse with the source, an update row's latest version and the CPM preview, the Details tab, the two
+  offline sentences, the README with its image through the host, a stripped script and the copy button, README empty
+  and Retry, the README tab kept for the same row, stale selection, All Projects, the local-source sentence, axe; `primaryAction`.
+- `markdown.test.ts` (25): the 20 titles of 1.x `markdownSetup.test.ts` (the copy-button title now over
+  `addCopyButtons`), event handlers and `javascript:` stripped, `srcset` stripped, and `rewriteImages` (upgrade, alt text, four at a
+  time, abort).
+
+## Done (untested)
+
+- Copying a code block in VS Code (the clipboard is covered in jsdom only), and README images in VS Code (the ExTester
+  test does not depend on the README having images).
+
+## Not started
+
+- The sources settings and selector (P5.8), the multi-install picker (P5.9), the sidebar's "View package details" and
+  "Open full view" (P5.10), central version changes (P6.3).
+
+## Deviations from contract/ADR (file:line each)
+
+- `primaryAction`: 1.x compared versions numerically when one was missing from the list; the webview has no comparator
+  (P6.5 owns version conformance), so a version it cannot place says Update.
+- The `version` of `ui/navigateToPackage` is still not used: the exact search selects the version found (the latest);
+  the sidebar's senders are P5.10's, which decides whether the version is kept.
+- All Projects: a browse selection cannot be installed from the pane (the multi-install picker is P5.9's); an installed
+  or update selection is cleared when All Projects is committed.
+- The Installed and Updates lists call `select()` on a click (and Installed also on Enter); in the Updates list Enter
+  still updates (P5.5).
+- An installed row selected while All Projects is committed shows a disabled Install and no Installed row: the pane
+  reads the installed entry of the committed single project only. All-projects display and actions are P5.9's.
+- Interaction model §7 lets one primary button read Install / Update / Downgrade / Uninstall; the pane follows 1.x with
+  Install / Update / Downgrade on `install-update-button` and a separate `uninstall-button` (both ids are in §8). A
+  reading of §7, recorded because `docs/ux/interaction-model.md` is not an item file.
+- A stale selection whose new installed list fails stays stale (banner, actions disabled) until that list's Retry
+  succeeds.
+- The Details tab is shown again for another package or version; the same row made current again, or confirmed for
+  another project, keeps the tab (the README is asked again on the README tab).
+
+## Advisor decisions (date, item, question, answer verbatim)
+
+2026-10-15, P5.7: no L1 consultation (the item is not ⚑ and no stop-and-ask trigger fired: the bundle stayed under its ceiling, `Catalog.versions` returns a defined order so no comparator was needed, the lists' `select()` calls are what the row's note "P5.7 reads it" names). The ambient advisor was consulted before writing; its points are in the code: the slice owns the selection for the stale rule, the markdown port in `main/features/details` (N63), no `highlight.js/styles` import (colour gate), every image through `readme/image`, the echo check as the gate, `CentralUpdateDialog` reused, the bundle measured before the UI.
+
+## Exact next step (one item ID)
+
+P5.8 (feature sources), after P5.7's CI run is green.
+
+## Earlier notes of this directory
 
 git status --porcelain --untracked-files=all (before the commit): modified `ARCHITECTURE.md`, `CHANGELOG.md`, `docs/plans/{STATUS,findings-ledger}.md`, `src/core/feeds/{enricher,enricher.test}.ts`, `src/host/handlers.test.ts`, `src/webview/main/{MainShell.tsx,index.tsx,index.test.tsx,main.css}`, `src/webview/shared/store/StoreProvider.tsx`, `src/webview/sidebar-next/{SidebarView.tsx,SidebarView.test.tsx,UpdatesSection.tsx,sidebar.css}` and the six STATUS notes; new `src/webview/shared/search/{SearchBox.tsx,SearchBox.test.tsx,search.css}`, `src/webview/shared/store/{search,sources,config}.tsx` with their tests, `src/webview/main/features/search/{BrowseList.tsx,BrowseList.test.tsx,useSearchTyping.ts,useSearchTyping.test.tsx}`, `src/webview/sidebar-next/{BrowseResults.tsx,BrowseResults.test.tsx}`, `src/test/ui/v2/main-search.ui.test.ts` (all belong to the P5.6 commit)
 
@@ -289,5 +378,6 @@ the `NUIGET_V2` build checked locally and `package:vsix` on the 1.x entries.
 ## Exact next step (one item ID)
 
 P5.6 (feature search, main and sidebar browse), after P5.5's CI run is green; a fresh session starts it (second compaction of this one).
+
 
 

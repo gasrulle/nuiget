@@ -3,6 +3,7 @@ import type { MessageBus } from '../bus/MessageBus';
 import { MessageBusProvider } from '../bus/useMessageBus';
 import { AllProjectsProvider } from './allProjects';
 import { ConfigProvider } from './config';
+import { DetailsProvider } from './details';
 import { InstalledProvider } from './installed';
 import { OpsProvider } from './ops';
 import { ProjectsProvider } from './projects';
@@ -29,7 +30,9 @@ export function StoreProvider({ bus, children }: { bus: MessageBus; children: Re
                                     <ConfigProvider>
                                         <SourcesProvider>
                                             <SearchProvider>
-                                                <OpsProvider>{children}</OpsProvider>
+                                                <DetailsProvider>
+                                                    <OpsProvider>{children}</OpsProvider>
+                                                </DetailsProvider>
                                             </SearchProvider>
                                         </SourcesProvider>
                                     </ConfigProvider>

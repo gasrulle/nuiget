@@ -1,4 +1,66 @@
-# STATUS — src/test/ui/v2   commit c4c3617 (parent of the P5.6 commit)   2026-10-15T12:00:00Z
+# STATUS — src/test/ui/v2   commit 4dfa2e5 (parent of the P5.7 commit)   2026-10-15T15:00:00Z
+
+git status --porcelain --untracked-files=all (before the commit): modified `ARCHITECTURE.md`, `CHANGELOG.md`, `docs/plans/STATUS.md`, `src/webview/main/{MainShell.tsx,index.tsx,main.css}`, `src/webview/main/features/installed/InstalledTab.tsx`, `src/webview/main/features/updates/UpdatesTab.tsx`, `src/webview/main/features/search/BrowseList.tsx`, `src/webview/shared/store/StoreProvider.tsx`, `src/webview/shared/tokens.css` and the three STATUS notes; new `src/webview/main/features/details/{DetailsPane,DetailsInfo,ReadmeView}.tsx`, `markdown.ts`, `DetailsPane.test.tsx`, `markdown.test.ts`, `src/webview/shared/store/{details.tsx,details.test.tsx}`, `src/test/ui/v2/main-details.ui.test.ts` (all belong to the P5.7 commit)
+
+Item: **P5.7 feature details**, for this directory: `main-details.ui.test.ts`: in VS Code on a `NUIGET_V2=1` VSIX, the
+Newtonsoft.Json row of the Installed tab made current shows the package, its versions from nuget.org with
+`13.0.2 (installed)`, an Update or Downgrade button, the Dependencies of the Details tab, and the README tab's content
+(no `script` element) or its empty state. Nothing is installed or uninstalled.
+
+## Verified by running
+
+P5.7 (the same gate run for every directory of the item):
+
+```text
+baseline at 4dfa2e5          → CI run 38697862878 green on all 11 jobs · npx tsc --noEmit 0 · npx eslint src 0 ·
+                               npx vitest run → Test Files 151 passed (151) · Tests 3115 passed | 4 skipped (3119)
+markdown port alone (esbuild --bundle --minify) → 159750 bytes, before any UI work (no ceiling at risk)
+first stylesheet lint        → `every class selector starts with .nuiget-` red for `.hljs-*`; fixed by highlight.js's
+                               own `classPrefix: 'nuiget-hljs-'` (no test changed)
+npx tsc --noEmit / npm run check-types / npm run lint → exit 0 each (last run after every code edit)
+npm test (NUIGET_SDK_TESTS=1, DOTNET_ROOT set) → Test Files 154 passed (154) · Tests 3166 passed (3166)
+npm run bench                → Test Files 20 passed (20) · Tests 119 passed | 1 skipped (120)
+npx vitest run --coverage    → exit 0 (thresholds hold) · store/details.tsx 96.77 % lines · main/features/details 94.68 %
+npm run docs:protocol:check  → docs/protocol.md is up to date
+rm -rf dist && NUIGET_V2=1 npm run package && npm run check:vsix → check:vsix: OK
+rm -rf dist && node esbuild.mjs --v2 --production --analyze → extension 280657 / 299921 · webview 492873 / 600685
+                               (320845 at P5.6; + marked, highlight.js core with 15 languages, DOMPurify) · sidebar
+                               303486 / 329122 (300411 at P5.6; + the details slice); dist/ deleted after
+NUIGET_V2=1 npm run test:ui:v2 -- --storage /tmp/nuiget-ui-v2 → 15 passing (17s) at the first run; fixture unchanged
+main/features and store/details.test.tsx, 20 times in a row → 20 of 20
+npm run package:vsix (1.x)   → SKIPPED: no 1.x file changed; CI's Package job builds it
+npm run test:ui (1.x)        → SKIPPED: no 1.x UI file changed; the CI job `UI` runs it
+test -e .claude/.contract-change → false · git diff --stat 4dfa2e5 -- src/protocol src/core docs/adr src/host package.json → empty
+```
+
+## Done (tested)
+
+- 15 passing locally, the new test among them; the fixture project left as found.
+
+## Done (untested)
+
+- Copying a code block in VS Code (the clipboard is covered in jsdom only), and README images in VS Code (the ExTester
+  test does not depend on the README having images).
+
+## Not started
+
+- The sources settings and selector (P5.8), the multi-install picker (P5.9), the sidebar's "View package details" and
+  "Open full view" (P5.10), central version changes (P6.3).
+
+## Deviations from contract/ADR (file:line each)
+
+- The README test accepts `readme-empty` as well as `readme-content`: whether the package version carries a README is
+  the feed's fact, not the panel's; with content it checks that text was rendered and no script survived.
+
+## Advisor decisions (date, item, question, answer verbatim)
+
+2026-10-15, P5.7: no L1 consultation (the item is not ⚑ and no stop-and-ask trigger fired: the bundle stayed under its ceiling, `Catalog.versions` returns a defined order so no comparator was needed, the lists' `select()` calls are what the row's note "P5.7 reads it" names). The ambient advisor was consulted before writing; its points are in the code: the slice owns the selection for the stale rule, the markdown port in `main/features/details` (N63), no `highlight.js/styles` import (colour gate), every image through `readme/image`, the echo check as the gate, `CentralUpdateDialog` reused, the bundle measured before the UI.
+
+## Exact next step (one item ID)
+
+P5.8 (feature sources), after P5.7's CI run is green.
+
+## Earlier notes of this directory
 
 git status --porcelain --untracked-files=all (before the commit): modified `ARCHITECTURE.md`, `CHANGELOG.md`, `docs/plans/{STATUS,findings-ledger}.md`, `src/core/feeds/{enricher,enricher.test}.ts`, `src/host/handlers.test.ts`, `src/webview/main/{MainShell.tsx,index.tsx,index.test.tsx,main.css}`, `src/webview/shared/store/StoreProvider.tsx`, `src/webview/sidebar-next/{SidebarView.tsx,SidebarView.test.tsx,UpdatesSection.tsx,sidebar.css}` and the six STATUS notes; new `src/webview/shared/search/{SearchBox.tsx,SearchBox.test.tsx,search.css}`, `src/webview/shared/store/{search,sources,config}.tsx` with their tests, `src/webview/main/features/search/{BrowseList.tsx,BrowseList.test.tsx,useSearchTyping.ts,useSearchTyping.test.tsx}`, `src/webview/sidebar-next/{BrowseResults.tsx,BrowseResults.test.tsx}`, `src/test/ui/v2/main-search.ui.test.ts` (all belong to the P5.6 commit)
 
@@ -358,5 +420,6 @@ FILES CHECKED: docs/plans/2026-10-11-nuiget-2.0-execution-plan.md:41-175,240-251
 ## Exact next step (one item ID)
 
 P5.6 (feature search, main and sidebar browse), after P5.5's CI run is green; a fresh session starts it (second compaction of this one).
+
 
 

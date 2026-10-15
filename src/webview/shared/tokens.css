@@ -68,6 +68,17 @@
     --nuiget-color-widget-bg: var(--vscode-editorWidget-background);
     --nuiget-color-widget-fg: var(--vscode-editorWidget-foreground, var(--vscode-foreground));
 
+    /* Colours: code blocks of a README and their syntax, as the editor's symbol and debug token colours */
+    --nuiget-color-code-bg: var(--vscode-textCodeBlock-background);
+    --nuiget-color-code-fg: var(--vscode-editor-foreground, var(--vscode-foreground));
+    --nuiget-color-syntax-keyword: var(--vscode-symbolIcon-keywordForeground, var(--vscode-editor-foreground));
+    --nuiget-color-syntax-type: var(--vscode-symbolIcon-classForeground, var(--vscode-editor-foreground));
+    --nuiget-color-syntax-function: var(--vscode-symbolIcon-functionForeground, var(--vscode-editor-foreground));
+    --nuiget-color-syntax-variable: var(--vscode-symbolIcon-variableForeground, var(--vscode-editor-foreground));
+    --nuiget-color-syntax-string: var(--vscode-debugTokenExpression-string, var(--vscode-editor-foreground));
+    --nuiget-color-syntax-number: var(--vscode-debugTokenExpression-number, var(--vscode-editor-foreground));
+    --nuiget-color-syntax-comment: var(--vscode-editorLineNumber-activeForeground, var(--vscode-descriptionForeground));
+
     /* Colours: list rows */
     --nuiget-color-list-hover-bg: var(--vscode-list-hoverBackground);
     --nuiget-color-list-active-bg: var(--vscode-list-activeSelectionBackground);
@@ -116,6 +127,15 @@ body.vscode-high-contrast-light {
         --nuiget-color-progress: Highlight;
         --nuiget-color-widget-bg: Canvas;
         --nuiget-color-widget-fg: CanvasText;
+        --nuiget-color-code-bg: Canvas;
+        --nuiget-color-code-fg: CanvasText;
+        --nuiget-color-syntax-keyword: CanvasText;
+        --nuiget-color-syntax-type: CanvasText;
+        --nuiget-color-syntax-function: CanvasText;
+        --nuiget-color-syntax-variable: CanvasText;
+        --nuiget-color-syntax-string: CanvasText;
+        --nuiget-color-syntax-number: CanvasText;
+        --nuiget-color-syntax-comment: CanvasText;
         --nuiget-color-list-hover-bg: Canvas;
         --nuiget-color-list-active-bg: Highlight;
         --nuiget-color-list-active-fg: HighlightText;

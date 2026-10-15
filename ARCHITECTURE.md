@@ -372,9 +372,9 @@ one place for three rules:
 | No result behind an invalidation | An ok answer whose `generation` is below the one listed for the same key is not applied. Equal, higher, absent, or a key no event has named: applied. With nothing newer on its way the hook asks once more; a second out-of-date answer for the same listing ends as an error, so loading always ends. |
 
 **Slices.** Each is a reducer with a context of its own (`useSession`, `useProjects`, `useInstalled`,
-`useTransitive`, `useAllProjects`, `useUpdates`, `useConfig`, `useSources`, `useSearch`, `useOps`), so a component renders for
-the slice it reads; the functions that change something (`useSessionActions`, `useOpsActions`) are in separate contexts and
-never change. `StoreProvider` mounts all ten, which is what makes a surface ask `session/get` and `projects/list` when it
+`useTransitive`, `useAllProjects`, `useUpdates`, `useConfig`, `useSources`, `useSearch`, `useDetails`, `useOps`), so a component
+renders for the slice it reads; the functions that change something (`useSessionActions`, `useDetailsActions`,
+`useOpsActions`) are in separate contexts and never change. `StoreProvider` mounts all eleven, which is what makes a surface ask `session/get` and `projects/list` when it
 starts; the other slices ask when they have something to ask for.
 
 - `session` (ADR-001): `committed` is the last snapshot of the host that was applied, and a snapshot is
@@ -422,6 +422,14 @@ starts; the other slices ask when they have something to ask for.
   blanking the list; `sourcesUnavailable` is a flag over the results. The slice also owns quick-search:
   `suggest(text)` sends `search/autocomplete` with the enabled sources (every one under `all`, else the selected
   one) and sends nothing while the list is unknown or names none; the latest suggestion wins.
+- `details` (P5.7): the package selected in a main-panel list (`select()`: id, version to show first, source, origin
+  `installed`/`updates`/`browse`, owning project), the chosen version, and its `package/versions`,
+  `package/metadata` and, once the README tab was shown, `package/readme`. Each request follows the selection: the one
+  before is cancelled, and an answer whose package or version differs from what was asked is not shown. These answers
+  carry no generation (N70); the slice asks again when an invalidation names a `versions:<id>|` or `metadata:<id>@`
+  key of the package. Stale selection (interaction model §4): when the committed project changes under an installed or
+  update selection, it stays read-only until the new installed list answers, then stays (with the new project) or goes;
+  All Projects or no project clears it. A browse selection is never stale.
 - `ops`: operations in progress, by operation id, from `ops/progress` (`running`, `restoring`; the host sends
   no `queued` event) and, on the surface that asked, from the call: `run(type, payload)` records the operation
   at once under an id of the surface, with its kind and the projects and packages read from the payload
@@ -570,6 +578,29 @@ is why it is not a `Popover`.
   `BrowseResults` (`sidebar-browse-list`) lists compact rows; Enter or the row's button installs the version found
   into the committed project with the row's `sourceUrl`. An installed package and a surface without a single project
   install nothing and say why. The sidebar never asks for suggestions, the source list or the settings.
+
+### Details feature (main)
+
+`features/details/DetailsPane.tsx` renders the selection of the `details` slice; the Installed, Updates and browse
+lists call `select()` when the user makes a row current (and the browse list after a navigation), never when a list
+resets its own row, so the stale-selection rule can keep the pane. The header shows the installed version with
+Uninstall (`whyNotRemovable` decides) and the version selector (`version-selector`, newest first, `(installed)`
+marked) with one primary button (`install-update-button`): Install when the package is not installed in the target
+project, otherwise Update or Downgrade by the order of the host's list (no comparator in the webview; a version missing
+from the list says Update). The target is the committed project for a browse row and the row's own project otherwise;
+without a single project, while stale, for a floating or ranged reference or an unresolved one, the button is
+disabled with the reason. A centrally managed package opens `CentralUpdateDialog` (read-only until P6.3). Busy follows
+`isPackageBusy`.
+
+The Details tab shows description, authors, downloads, publication date, license, project URL, size, vulnerabilities
+(severity in words with an icon) and dependencies by framework; details from the local package cache are marked
+offline, saying whether a source is down (`sources/health`) or no source knows the version. An empty version list of a
+local source says that it cannot be listed. The README tab renders with `features/details/markdown.ts` (main panel
+only: its module-level imports would otherwise reach the sidebar bundle): marked with highlight.js (token classes
+prefixed `nuiget-hljs-`, coloured by the `--nuiget-color-syntax-*` tokens), then DOMPurify without `<style>`, `style`,
+form elements or `<button>`. Copy buttons are added to the sanitized DOM afterwards, and every image is fetched by the
+host (`readme/image`, `http:` URLs of known hosts upgraded first, four at a time, cancelled with the selection); an
+image the host cannot fetch is replaced by its alt text, because the CSP's `img-src` allows `data:` only.
 
 ### Two-surface harness
 

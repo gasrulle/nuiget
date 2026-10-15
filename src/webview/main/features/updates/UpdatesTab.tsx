@@ -3,6 +3,7 @@ import type React from 'react';
 import { ALL_PROJECTS, type PackageUpdate } from '../../../../protocol';
 import { IN_PROGRESS } from '../../../shared/installed/rules';
 import { ArrowUpIcon, Badge, Banner, EmptyState, IconButton, Listbox, Row, Skeleton, Toolbar } from '../../../shared/primitives';
+import { useDetailsActions } from '../../../shared/store/details';
 import { useInstalled } from '../../../shared/store/installed';
 import { useOps, useOpsActions } from '../../../shared/store/ops';
 import { useSession } from '../../../shared/store/session';
@@ -45,6 +46,7 @@ export function UpdatesTab({ filter, announce }: ListView): React.JSX.Element {
     }, [selection]);
 
     const { projectPath, rows } = updates;
+    const { select } = useDetailsActions();
     const centralIds = useMemo(() => new Set((installed.result?.packages ?? [])
         .filter(entry => entry.declaration === 'central' || entry.declaration === 'central-override')
         .map(entry => entry.id.toLowerCase())), [installed.result]);
@@ -133,7 +135,10 @@ export function UpdatesTab({ filter, announce }: ListView): React.JSX.Element {
                 selectedId={currentId}
                 selectedIds={selected}
                 onToggleSelected={item => toggle(item.update)}
-                onSelect={item => setCurrentId(item.id)}
+                onSelect={item => {
+                    setCurrentId(item.id);
+                    select({ packageId: item.update.id, version: item.update.latestVersion, sourceUrl: item.update.sourceUrl, origin: 'updates', projectPath });
+                }}
                 onActivate={item => updateOne(item.update)}
                 empty={<EmptyState message={empty} />}
                 renderRow={(item, placement) => {
