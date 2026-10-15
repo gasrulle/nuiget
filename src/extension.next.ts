@@ -12,7 +12,7 @@ import { Catalog, FeedContexts, createFeedClients } from './core/catalog';
 import { DefaultDotnetRunner, type DotnetRunnerOptions } from './core/cli';
 import type { Logger, Transport } from './core/contracts';
 import { DefaultCredentialProvider } from './core/credentials';
-import { DefaultServiceIndexClient } from './core/feeds';
+import { DefaultServiceIndexClient, SourceHealthTracker, startHealthMonitor } from './core/feeds';
 import { NodeTransport } from './core/http';
 import { redact } from './core/logging';
 import { DefaultOperationQueue, PackageWorkflows } from './core/ops';
@@ -24,7 +24,7 @@ import { isPathInside } from './core/util/paths';
 import { MainPanelHost } from './host/MainPanelHost';
 import { HostEvents, createWorkflowDeps, loggerFor, readExtensionConfig, type HostServices } from './host/services';
 import { SidebarHost } from './host/SidebarHost';
-import { ALL_PROJECTS, type InvalidationReason, type InvalidationScope, type Project } from './protocol';
+import { ALL_PROJECTS, type InvalidationReason, type InvalidationScope, type NuGetSource, type Project } from './protocol';
 
 const SDK_CACHE_KEY = 'nuiget.sdkVersionCache.v2';
 /** Written by 1.x with another shape; removed at activation. */
@@ -93,7 +93,9 @@ export async function activateWith(context: vscode.ExtensionContext, overrides: 
     const configs = new NuGetConfigReader();
     // `feedContexts` is declared below; the credential lookup that reads it runs only after activation.
     const credentials = new DefaultCredentialProvider({ runner, lookupConfigCredential: url => feedContexts.lookupConfigCredential(url), logger });
-    const serviceIndex = new DefaultServiceIndexClient({ transport, getAuthHeader: url => credentials.getAuthHeader(url), logger });
+    // One health tracker for every read and the monitor: its changes travel as `sources/health` to both surfaces.
+    const health = new SourceHealthTracker();
+    const serviceIndex = new DefaultServiceIndexClient({ transport, getAuthHeader: url => credentials.getAuthHeader(url), logger }, { health });
     const feeds = createFeedClients({ transport, runner, serviceIndex, credentials, cache, globalPackagesFolder: () => runner.globalPackagesFolder(), logger });
     const feedContexts = new FeedContexts({ contexts, sources, configs, feeds, logger });
     const catalog = new Catalog({
@@ -212,10 +214,33 @@ export async function activateWith(context: vscode.ExtensionContext, overrides: 
         return inFlight;
     };
 
+    // ── source health ──
+    // The monitor runs no `dotnet`: it probes the sources of the chains that reads registered (the activation pass finds
+    // none), and a new registration restarts it.
+    const probeSources = async (): Promise<NuGetSource[]> => {
+        const byUrl = new Map<string, NuGetSource>();
+        for (const feedContext of feedContexts.registered()) {
+            for (const source of feedContext.sources) {
+                byUrl.set(source.url, source);
+            }
+        }
+        return [...byUrl.values()];
+    };
+    context.subscriptions.push(health.onDidChange(failed => {
+        sidebar.notifySourceHealth({ failed });
+        MainPanelHost.instance?.notifySourceHealth({ failed });
+    }));
+    // A pass that finds a source healthy again invalidates nothing: the recovery travels as `sources/health`.
+    const monitor = startHealthMonitor(serviceIndex, probeSources, { failedIntervalMs: 120_000, healthyIntervalMs: 300_000, logger });
+    context.subscriptions.push(monitor, feedContexts.onDidRegister(() => monitor.restart()));
+
     context.subscriptions.push(
         coordinator.onDidInvalidate(event => {
             sidebar.notifyInvalidated(event);
             MainPanelHost.instance?.notifyInvalidated(event);
+            if (event.scope.kind === 'sources' || event.scope.kind === 'workspace') {
+                monitor.restart();
+            }
             // `package` and `metadata` scopes reach neither the project list nor a source list.
             if (event.scope.kind === 'workspace' || event.scope.kind === 'project' || event.scope.kind === 'sources') {
                 void requestRefresh();
@@ -228,7 +253,6 @@ export async function activateWith(context: vscode.ExtensionContext, overrides: 
             }
         }),
     );
-    // REMOVAL GATE: P4.9 (the source health monitor starts here and reports to notifySourceHealth of both surfaces)
 
     // ── queue status ──
     const statusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);

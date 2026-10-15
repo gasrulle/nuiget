@@ -457,10 +457,14 @@ describe('Catalog all-projects fan-outs', () => {
         });
         const result = await new Catalog(deps).allProjectsInstalled(chunk => { chunks.push(chunk); }, new AbortController().signal);
         expect(chunks[0]).toEqual({ kind: 'start', projects: [app, lib] });
-        const byPath = Object.fromEntries(chunks.slice(1).map(chunk => chunk.kind === 'project' ? [chunk.chunk.projectPath, chunk.chunk] : ['', undefined]));
+        const byPath = Object.fromEntries(chunks.slice(1).flatMap(chunk => chunk.kind === 'project' ? [[chunk.chunk.projectPath, chunk.chunk]] : []));
         expect(byPath[appPath]).toEqual({ projectPath: appPath, projectName: 'App.csproj', workspaceFolder: 'w', result: provisionalOf(appPath) });
         expect(byPath[libPath]).toEqual({ projectPath: libPath, projectName: 'Lib.csproj', workspaceFolder: undefined, error: 'EACCES, token=[REDACTED]' });
-        expect(chunks).toHaveLength(3);
+        const metadata = chunks.filter(chunk => chunk.kind === 'metadata');
+        expect(metadata).toEqual([expect.objectContaining({ kind: 'metadata', projectPath: appPath })]);
+        const appIndex = chunks.findIndex(chunk => chunk.kind === 'project' && chunk.chunk.projectPath === appPath);
+        expect(chunks.indexOf(metadata[0])).toBeGreaterThan(appIndex);
+        expect(chunks).toHaveLength(4);
         expect(result).toEqual({ projectPaths: [appPath, libPath], errored: [{ projectPath: libPath, error: 'EACCES, token=[REDACTED]' }] });
     });
 
@@ -468,7 +472,7 @@ describe('Catalog all-projects fan-outs', () => {
         const chunks: Array<RequestChunk<'allProjects/installed'>> = [];
         const deps = makeDeps({ discoverProjects: async () => [app], evaluator: fakeEvaluator(async context => authoritativeOf(context.projectPath)) });
         await new Catalog(deps).allProjectsInstalled(chunk => { chunks.push(chunk); }, new AbortController().signal);
-        expect(chunks.map(chunk => chunk.kind === 'project' ? chunk.chunk.result?.fidelity : chunk.kind)).toEqual(['start', 'provisional', 'authoritative']);
+        expect(chunks.map(chunk => chunk.kind === 'project' ? chunk.chunk.result?.fidelity : chunk.kind)).toEqual(['start', 'provisional', 'authoritative', 'metadata']);
     });
 
     it('allProjectsTransitive streams protocol chunks and lists the projects that failed', async () => {
@@ -793,5 +797,72 @@ describe('Catalog feed reads', () => {
 
         catalog.invalidate({ kind: 'workspace' }, 'manual-refresh');
         expect(rig.feeds.reset).toHaveBeenCalledTimes(2);
+    });
+
+    it('allProjectsInstalled: emits a metadata chunk per project after its project chunk and finishes without one when enrichment fails', async () => {
+        const libDir = path.dirname(libPath);
+        const rig = feedRig({ listings: { [appDir]: [remote('feed')], [libDir]: [remote('feed')] } });
+        rig.clients.enricher.enrich.mockImplementation(async (_sources, packages) => {
+            if (packages.some(pkg => pkg.id === 'Broken.Package')) {
+                throw new Error('enrichment failed');
+            }
+            return packages.map(({ id, version }) => ({ id, version, authors: 'Ada' }));
+        });
+        const inspector = { inspect: vi.fn(async (projectPath: string) => (projectPath === libPath
+            ? { ...provisionalOf(projectPath), packages: [{ id: 'Broken.Package', version: '1.0.0', versionType: 'standard' as const, declaration: 'project' as const }] }
+            : provisionalOf(projectPath))) };
+        const logger = fakeLogger();
+        const deps = makeDeps({ sources: rig.sources, contexts: rig.contexts, feeds: rig.feeds, feedContexts: rig.feedContexts, inspector, logger });
+        const chunks: Array<RequestChunk<'allProjects/installed'>> = [];
+
+        const result = await new Catalog(deps).allProjectsInstalled(chunk => { chunks.push(chunk); }, new AbortController().signal);
+
+        expect(result).toEqual({ projectPaths: [appPath, libPath], errored: [] });
+        const kinds = chunks.map(chunk => (chunk.kind === 'start' ? 'start' : `${chunk.kind}:${chunk.kind === 'project' ? chunk.chunk.projectPath : chunk.projectPath}`));
+        expect(kinds.indexOf(`metadata:${appPath}`)).toBeGreaterThan(kinds.indexOf(`project:${appPath}`));
+        expect(kinds).not.toContain(`metadata:${libPath}`);
+        expect(chunks.find(chunk => chunk.kind === 'metadata')).toEqual({ kind: 'metadata', projectPath: appPath, packages: [{ id: 'Newtonsoft.Json', version: '13.0.3', authors: 'Ada' }, { id: 'StyleCop.Analyzers', version: '1.2.0', authors: 'Ada' }] });
+        expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining('could not be read'));
+    });
+});
+
+describe('Catalog feed contexts and health', () => {
+    it('installed registers the project\'s chain from its own context walk, so a feed read of the same directory walks nothing', async () => {
+        const rig = feedRig();
+        const catalog = new Catalog(makeDeps({ sources: rig.sources, contexts: rig.contexts, feeds: rig.feeds, feedContexts: rig.feedContexts }));
+
+        await catalog.installed(appPath);
+        await vi.waitFor(() => expect(rig.feedContexts.registered()).toHaveLength(1));
+        expect(rig.contexts.get).toHaveBeenCalledTimes(1);
+        expect(rig.contexts.configFilesFor).not.toHaveBeenCalled();
+
+        await catalog.updates(appPath, false);
+        expect(rig.contexts.get).toHaveBeenCalledTimes(1);
+        expect(rig.contexts.configFilesFor).not.toHaveBeenCalled();
+    });
+
+    it('updates asks installed before the feed context and walks the chain once', async () => {
+        const rig = feedRig();
+        const order: string[] = [];
+        rig.contexts.get.mockImplementation(async (projectPath: string) => {
+            order.push('walk');
+            return { context: contextOf(projectPath) };
+        });
+        const inspector = { inspect: vi.fn(async (projectPath: string) => { order.push('installed'); return provisionalOf(projectPath); }) };
+        rig.clients.updates.check.mockImplementation(async () => { order.push('check'); return { updates: [], sourcesUnavailable: false }; });
+        const catalog = new Catalog(makeDeps({ sources: rig.sources, contexts: rig.contexts, feeds: rig.feeds, feedContexts: rig.feedContexts, inspector }));
+
+        await catalog.updates(appPath, false);
+
+        expect(order).toEqual(['installed', 'walk', 'check']);
+        expect(rig.contexts.get).toHaveBeenCalledTimes(1);
+    });
+
+    it('sourceHealth lists the failed sources', () => {
+        const rig = feedRig();
+        const catalog = new Catalog(makeDeps({ feeds: rig.feeds, feedContexts: rig.feedContexts }));
+
+        expect(catalog.sourceHealth()).toEqual([{ url: 'https://down.example/v3/index.json', error: 'timeout' }]);
+        expect(rig.serviceIndex.health.failed).toHaveBeenCalledTimes(1);
     });
 });

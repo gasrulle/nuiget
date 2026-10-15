@@ -32,7 +32,7 @@ import type { RequestChunk } from '../../protocol/messages';
 import { redact } from '../logging';
 import { getProjectDependencyMap, type AssetsReader, type ProjectContextProvider } from '../project';
 import { batchedPromiseAll } from '../util/concurrency';
-import { normalize, sortDescending } from '../versioning';
+import { normalize, parseVersion, sortDescending } from '../versioning';
 import type { FeedClients } from './feedClients';
 import type { FeedContext, FeedContexts } from './feedContexts';
 
@@ -180,6 +180,12 @@ export class Catalog {
                 return undefined;
             }),
         ]);
+        if (context !== undefined) {
+            // The computation's own walk of the config chain registers the directory's feed context: no second walk.
+            void this.deps.feedContexts.register(projectPath, context.context.configFiles).catch((error: unknown) => {
+                this.deps.logger?.debug(redact(`Feed context of ${projectPath} could not be registered: ${describe(error)}`));
+            });
+        }
         // What the inspector calls unsupported stays as it is; an SDK below 10 keeps the packages (D13).
         const provisional: InstalledResult = !inspected.unsupported && context?.unsupported ? { ...inspected, unsupported: context.unsupported } : inspected;
         const evaluator = this.deps.evaluator;
@@ -217,6 +223,9 @@ export class Catalog {
     }
 
     private async computeUpdates(projectPath: string, includePrerelease: boolean, emit: (update: PackageUpdate) => void, signal: AbortSignal): Promise<Omit<UpdatesQueryResult, 'generation'>> {
+        // `installed` first: its computation registers the chain, so the feed context below walks nothing.
+        const { result, upgrade } = await this.installed(projectPath, undefined, signal);
+        const final = upgrade ? await upgrade : result;
         const context = await this.deps.feedContexts.forProject(projectPath).catch((error: unknown) => {
             this.deps.logger?.warn(redact(`Feed context of ${projectPath} could not be built: ${describe(error)}`));
             return undefined;
@@ -225,8 +234,6 @@ export class Catalog {
             // A context that cannot be built says nothing about the updates: unknown, not empty.
             throw new IncompleteResultError({ projectPath, updates: [], sourcesUnavailable: true });
         }
-        const { result, upgrade } = await this.installed(projectPath, undefined, signal);
-        const final = upgrade ? await upgrade : result;
         const { resolved, excluded } = await this.deps.feedContexts.resolve(context, undefined, signal);
         const checked = await context.clients.updates.check(resolved, final.packages, includePrerelease, emit, signal);
         const lite = await context.clients.searchEnricher.enrich(resolved, checked.updates.map(update => ({ id: update.id, version: update.latestVersion })), signal);
@@ -301,6 +308,9 @@ export class Catalog {
                 if (authoritative !== undefined && authoritative !== result && !signal.aborted) {
                     emit({ kind: 'project', chunk: { ...origin, result: authoritative } });
                 }
+                if (!signal.aborted) {
+                    await this.emitInstalledMetadata(project.path, authoritative ?? result, emit, signal);
+                }
             } catch (error) {
                 const message = redact(describe(error));
                 errored.push({ projectPath: project.path, error: message });
@@ -310,6 +320,27 @@ export class Catalog {
             }
         }, ALL_PROJECTS_CONCURRENCY);
         return { projectPaths: projects.map(project => project.path), errored };
+    }
+
+    /** Lite metadata of a project's rows as a `metadata` chunk; a failed enrichment is logged, the list is already shown. */
+    private async emitInstalledMetadata(projectPath: string, result: InstalledResult, emit: (chunk: RequestChunk<'allProjects/installed'>) => void, signal: AbortSignal): Promise<void> {
+        const rows = result.packages.flatMap(pkg => {
+            const version = pkg.resolvedVersion ?? pkg.version;
+            return parseVersion(version) ? [{ id: pkg.id, version }] : [];
+        });
+        if (rows.length === 0) {
+            return;
+        }
+        try {
+            const context = await this.deps.feedContexts.forProject(projectPath);
+            const { resolved } = await this.deps.feedContexts.resolve(context, undefined, signal);
+            const packages = await context.clients.enricher.enrich(resolved, rows, signal);
+            if (!signal.aborted) {
+                emit({ kind: 'metadata', projectPath, packages });
+            }
+        } catch (error) {
+            this.deps.logger?.warn(redact(`Lite metadata of ${projectPath} could not be read: ${describe(error)}`));
+        }
     }
 
     async allProjectsUpdates(

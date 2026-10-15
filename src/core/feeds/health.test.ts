@@ -7,6 +7,35 @@ const source = (url: string, changes: Partial<NuGetSource> = {}): NuGetSource =>
 const logger = { trace: vi.fn(), debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() };
 
 describe('source health tracker', () => {
+    it('onDidChange fires when the failed set changes and not otherwise', () => {
+        let now = 0;
+        const tracker = new SourceHealthTracker({ failureTtlMs: 1000, now: () => now });
+        const seen: Array<Array<{ url: string; error: string }>> = [];
+        tracker.onDidChange(failed => seen.push(failed));
+
+        tracker.markHealthy('https://a.example');
+        tracker.reset();
+        expect(seen).toEqual([]);
+
+        tracker.markFailed('https://a.example', 'timeout');
+        tracker.markFailed('https://a.example', 'timeout');
+        tracker.markFailed('https://a.example', 'HTTP 503');
+        tracker.markFailed('https://b.example', 'timeout');
+        now = 1500;
+        tracker.markFailed('https://b.example', 'timeout');
+        tracker.markHealthy('https://a.example');
+        tracker.markHealthy('https://a.example');
+        tracker.reset();
+
+        expect(seen).toEqual([
+            [{ url: 'https://a.example', error: 'timeout' }],
+            [{ url: 'https://a.example', error: 'HTTP 503' }],
+            [{ url: 'https://a.example', error: 'HTTP 503' }, { url: 'https://b.example', error: 'timeout' }],
+            [{ url: 'https://b.example', error: 'timeout' }],
+            [],
+        ]);
+    });
+
     it('a failed source is unhealthy for the failure TTL, then healthy again on access', () => {
         let now = 1_000;
         const health = new SourceHealthTracker({ failureTtlMs: 120_000, now: () => now });

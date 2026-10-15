@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { MainPanelHost } from '../../host/MainPanelHost';
 import { makeEvent, makeOk, resourceKeys, type BulkOutcome, type InstalledResult, type OperationOutcome, type RequestType, type ResponseEnvelope } from '../../protocol';
 import { dotnetCalls } from './fakeDotnet';
+import { createFakeFeed } from './fakeFeed';
 import { FakeWebview } from './FakeWebview';
 import {
     PRIVATE_FEED,
@@ -523,6 +524,83 @@ describe('two-surface harness', () => {
             expect(webview.discarded).toEqual([]);
             expectOneResponsePerRequest(webview);
         });
+    });
+
+    it('updates converge across surfaces', async () => {
+        const feed = createFakeFeed();
+        feed.publish('Serilog', ['3.0.0', '3.1.0']);
+        h = await createHarness({ tree: TWO_PROJECTS, selectedProject: 'A/A.csproj', feed });
+        const [A, B] = [h.path('A/A.csproj'), h.path('B/B.csproj')];
+        const main = await h.resolve('main');
+        const sidebar = await h.resolve('sidebar');
+        await h.expectState({ selectedProject: A, projects: [A, B], installed: ['Serilog@3.0.0'] });
+        const expected = { id: 'Serilog', installedVersion: '3.0.0', latestVersion: '3.1.0', sourceUrl: SHARED_FEED };
+
+        const fromMain = resultOf(await h.checkUpdates('main').response);
+        // The service-index probes of the health monitor are not reads of this resource; everything else is.
+        const reads = () => feed.requests.filter(url => !url.endsWith('/v3/index.json')).length;
+        const readsAfterMain = reads();
+        const sidebarRequest = h.checkUpdates('sidebar');
+        const fromSidebar = resultOf(await sidebarRequest.response);
+
+        // One computation for two surfaces: the sidebar's identical request reached no feed.
+        expect(reads()).toBe(readsAfterMain);
+        for (const result of [fromMain, fromSidebar]) {
+            expect(result.projectPath).toBe(A);
+            expect(result.updates).toEqual([expect.objectContaining(expected)]);
+            expect(result.sourcesUnavailable).toBeUndefined();
+        }
+        const generations = [main, sidebar].map(webview => (webview.received.filter(message => message.kind === 'response' && message.type === 'updates/get').at(-1) as { generation?: number }).generation);
+        expect(generations[0]).toBeDefined();
+        expect(generations[1]).toBe(generations[0]);
+
+        // The sidebar updates; both surfaces ask again on the invalidation and show the new state.
+        const outcome = resultOf(await h.operate('sidebar', 'ops/update', { projectPath: A, packageId: 'Serilog', version: '3.1.0' }).response);
+        expect(outcome).toMatchObject({ kind: 'update', status: 'completed', projectPath: A, packageId: 'Serilog' });
+        await h.expectState({ selectedProject: A, projects: [A, B], installed: ['Serilog@3.1.0'] });
+        await h.settle(() => {
+            for (const webview of [main, sidebar]) {
+                expect(webview.updates, webview.surface).toMatchObject({ projectPath: A, updates: [] });
+            }
+        });
+        await h.settle();
+        [main, sidebar].forEach(expectOneResponsePerRequest);
+    });
+
+    it('sources unreachable shows banner not empty', async () => {
+        const feed = createFakeFeed();
+        feed.down = true;
+        h = await createHarness({ tree: TWO_PROJECTS, selectedProject: 'A/A.csproj', feed });
+        const [A, B] = [h.path('A/A.csproj'), h.path('B/B.csproj')];
+        // The first walk of A's config chain registers the feed context and starts the probe: both surfaces exist first.
+        const walk = h.dotnet.hold(dotnetCalls.configPaths(path.dirname(A)));
+        const main = await h.resolve('main');
+        const sidebar = await h.resolve('sidebar');
+        await h.settle(() => expect(walk.seen).toBeGreaterThanOrEqual(1));
+        walk.release();
+        await h.expectState({ selectedProject: A, projects: [A, B], installed: ['Serilog@3.0.0'] });
+
+        for (const webview of [main, sidebar]) {
+            await h.settle(() => expect(webview.health.at(-1), webview.surface).toEqual([expect.objectContaining({ url: SHARED_FEED })]));
+            const listed = resultOf(await h.request(webview.surface, 'sources/list', {}).response);
+            expect(listed.failed, webview.surface).toEqual([expect.objectContaining({ url: SHARED_FEED })]);
+            // An unreachable source is a banner over the list, never an empty list: an ok response with the flag.
+            const updates = resultOf(await h.checkUpdates(webview.surface).response);
+            expect(updates).toEqual({ projectPath: A, updates: [], sourcesUnavailable: true });
+        }
+
+        // The feed comes back with a newer Serilog; a refresh resets the health and both surfaces hear of it.
+        feed.down = false;
+        feed.publish('Serilog', ['3.0.0', '3.1.0']);
+        await h.refresh('main');
+        for (const webview of [main, sidebar]) {
+            await h.settle(() => expect(webview.health.at(-1), webview.surface).toEqual([]));
+            const updates = resultOf(await h.checkUpdates(webview.surface).response);
+            expect(updates.updates).toEqual([expect.objectContaining({ id: 'Serilog', latestVersion: '3.1.0', sourceUrl: SHARED_FEED })]);
+            expect(updates.sourcesUnavailable).toBeUndefined();
+        }
+        await h.settle();
+        [main, sidebar].forEach(expectOneResponsePerRequest);
     });
 });
 

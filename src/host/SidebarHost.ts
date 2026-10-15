@@ -107,7 +107,6 @@ export class SidebarHost extends WebviewHost implements vscode.WebviewViewProvid
     }
 
     refresh(): void {
-        // REMOVAL GATE: P4.9 (the health of the sources is reset here as well)
         this.services.invalidate({ kind: 'workspace' }, 'manual-refresh');
     }
 

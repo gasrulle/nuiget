@@ -354,6 +354,50 @@ describe('extension.next (2.0 composition root)', () => {
         await expect(ask('search/query', { query: 'contoso', includePrerelease: false }, 's1')).resolves.toMatchObject({ ok: true, result: { query: 'contoso', results: [], sourcesUnavailable: true } });
     });
 
+    it('the health monitor probes nothing before a read registers a chain, probes the registered chain\'s sources after it, and reports sources/health to both surfaces', async () => {
+        const transport = new FakeTransport(() => fail('network'));
+        const { services } = await start({ workspaceState: { 'nuiget.selectedProject': appPath }, overrides: { transport } });
+        const sidebar = resolveSidebar();
+        const panel = await openPanel();
+        await flushMicrotasks();
+
+        expect(transport.urls()).toEqual([]);
+        expect(dotnet.calls.filter(call => call.args.join(' ') === 'nuget config paths')).toEqual([]);
+
+        await services.catalog.installed(appPath);
+
+        await vi.waitFor(() => expect(transport.urls()).toContain(sharedFeed));
+        for (const webview of [sidebar, panel.webview]) {
+            await vi.waitFor(() => expect(eventsOf(webview, 'sources/health').at(-1)).toEqual({ failed: [expect.objectContaining({ url: sharedFeed })] }));
+        }
+        expect(dotnet.calls.filter(call => call.args.join(' ') === 'nuget config paths')).toHaveLength(1);
+    });
+
+    it('a sources invalidation restarts the monitor and a recovery invalidates nothing', async () => {
+        let feedUp = false;
+        const transport = new FakeTransport(() => (feedUp ? json({ version: '3.0.0', resources: [{ '@id': 'https://shared.example/query', '@type': 'SearchQueryService' }] }) : fail('network')));
+        const { services } = await start({ workspaceState: { 'nuiget.selectedProject': appPath }, overrides: { transport } });
+        const sidebar = resolveSidebar();
+        vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+        await services.catalog.installed(appPath);
+        await vi.waitFor(() => expect(eventsOf(sidebar, 'sources/health').at(-1)?.failed).toHaveLength(1));
+
+        feedUp = true;
+        const invalidations = eventsOf(sidebar, 'resources/invalidated').length;
+        await vi.advanceTimersByTimeAsync(120_001);
+        await vi.waitFor(() => expect(eventsOf(sidebar, 'sources/health').at(-1)).toEqual({ failed: [] }));
+        expect(eventsOf(sidebar, 'resources/invalidated')).toHaveLength(invalidations);
+
+        // After a sources invalidation the chains are gone; the next read registers its chain again and the monitor,
+        // restarted, probes it at once instead of at its next interval.
+        feedUp = false;
+        services.invalidate({ kind: 'sources' }, 'manual-refresh');
+        const probesBefore = transport.urls().filter(url => url === sharedFeed).length;
+        await services.catalog.updates(appPath, false);
+        await vi.waitFor(() => expect(transport.urls().filter(url => url === sharedFeed).length).toBeGreaterThan(probesBefore));
+        await vi.waitFor(() => expect(eventsOf(sidebar, 'sources/health').at(-1)?.failed).toHaveLength(1));
+    });
+
     it('sets nuiget.hasProjectFiles, nuiget.prereleaseEnabled and nuiget.restoreEnabled at activation', async () => {
         await start({ workspaceState: { 'nuiget.includePrerelease': true } });
 

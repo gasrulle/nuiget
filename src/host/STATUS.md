@@ -1,3 +1,54 @@
+# STATUS — src/host   commit 6e2c878 (parent of the P4.9b commit)   2026-10-16T07:30:00Z
+
+git status --porcelain --untracked-files=all (before the commit): new `src/test/harness/fakeFeed.ts`; modified `src/core/feeds/{health,health.test}.ts`, `src/core/catalog/{Catalog,Catalog.test,feedContexts,feedContexts.test}.ts`, `src/host/{handlers,SidebarHost}.ts`, `src/extension.next.ts`, `src/extension.next.test.ts`, `src/test/harness/{harness,FakeWebview,scenarios.test}.ts`, the five STATUS notes, `CHANGELOG.md`, `ARCHITECTURE.md`, `.github/copilot-instructions.md`, `docs/plans/STATUS.md`, `docs/plans/findings-ledger.md` (all belong to the P4.9b commit)
+
+Item: **P4.9b** (host part): `sources/list` and `sources/refresh` answer `failed: catalog.sourceHealth()`; the health-reset
+comments of `sources/refresh`, `refresh/all` and `SidebarHost.refresh` removed (the reset is inside `invalidate`, ADR-009 d.6).
+
+## Verified by running
+
+```text
+baseline at 6e2c878         → CI run 38669483033 green on all 11 jobs · npm run check-types 0 · npx eslint src 0 · npx vitest run
+                               green (141 files, 3026 passed, 4 skipped)
+first attempt (P4.9 ruling's step 12) → src/extension.next.test.ts: `a replaced selection is reconciled …` red (the probe
+                               listed a vanished project's directory); harness: 6 of 16 red (the probe walked `nuget config
+                               paths` a second time); with the probe disabled 16 of 16 green → stop-and-ask, ruling below
+after the ruling             → npx tsc --noEmit 0 · npm run check-types 0 · npx eslint src 0
+grep -rn 'REMOVAL GATE: P4.9' src → none · grep -c "REMOVAL GATE" .github/copilot-instructions.md → 0
+npx vitest run --project integration src/test/harness → 18 passed (the six scenarios unchanged, `updates converge across
+                               surfaces`, `sources unreachable shows banner not empty`); 40 runs → 40 of 40 green
+npx vitest run --project backend src/extension.next.test.ts src/core/catalog src/core/feeds/health.test.ts → green; see the
+                               loop and full gates in the tracker row and the commit
+git diff --name-only -- docs/adr src/protocol src/core/contracts.ts → empty
+```
+
+## Done (tested)
+
+- `handlers.test.ts` green unchanged (the `sources/list` assertion of `failed` reads the fake Catalog's `sourceHealth()`).
+
+## Done (untested)
+
+- Nothing new.
+
+## Not started
+
+- Nothing for P4.
+
+## Deviations from contract/ADR (file:line each)
+
+- None.
+
+## Advisor decisions (date, item, question, answer verbatim)
+
+2026-10-16, P4.9b, stop-and-ask: how the health monitor obtains its chains. Verbatim at the end of this file where the ruling
+names this directory, and in `docs/plans/STATUS.md`; the P4.9 ruling (steps 11-16) is there too.
+
+## Exact next step (one item ID)
+
+P4.10 (benches and the ARCHITECTURE 2.0 pass for feeds, transport, policy and caching), then the P4 phase gate and review.
+
+## Earlier notes of this directory (kept for the P4 phase review)
+
 # STATUS — src/host   commit 631a13c (parent of the P4.9a commit)   2026-10-16T05:30:00Z
 
 git status --porcelain --untracked-files=all (before the commit): new `src/core/catalog/{feedClients,feedContexts}.ts` and their tests; modified `src/core/catalog/{Catalog,Catalog.test,index}.ts`, `src/host/{handlers,handlers.test,SidebarHost,WebviewHost,WebviewHost.test}.ts`, `src/extension.next.ts`, `src/extension.next.test.ts`, `src/core/project/{context,context.test}.ts`, `docs/adr/009-catalog.md`, the three STATUS notes, `CHANGELOG.md`, `ARCHITECTURE.md`, `.github/copilot-instructions.md`, `docs/plans/STATUS.md`, `docs/plans/findings-ledger.md` (all belong to the P4.9a commit)

@@ -318,7 +318,7 @@ export function registerSharedHandlers(host: Registrar, services: HostServices):
     // ── sources ──
     const listSources = async (signal?: AbortSignal) => {
         const { value, generation } = await catalog.sources(sourceDirectory(services), signal);
-        return { result: { sources: value, failed: [] }, generation }; // REMOVAL GATE: P4.9
+        return { result: { sources: value, failed: catalog.sourceHealth() }, generation };
     };
     host.on('sources/list', async (_payload, ctx) => {
         const listed = await listSources(ctx.signal);
@@ -326,7 +326,6 @@ export function registerSharedHandlers(host: Registrar, services: HostServices):
         return listed.result;
     });
     host.on('sources/refresh', async (_payload, ctx) => {
-        // REMOVAL GATE: P4.9 (the health of the sources is reset here as well)
         services.invalidate({ kind: 'sources' }, 'manual-refresh');
         const listed = await listSources(ctx.signal);
         ctx.generation = listed.generation;
@@ -394,7 +393,6 @@ export function registerSharedHandlers(host: Registrar, services: HostServices):
 
     // ── refresh & chrome ──
     host.on('refresh/all', async () => {
-        // REMOVAL GATE: P4.9 (the health of the sources is reset here as well)
         services.invalidate({ kind: 'workspace' }, 'manual-refresh');
         return {};
     });

@@ -2,7 +2,9 @@
  * One feed context per effective `nuget.config` chain (ADR-009 d.5): the sources listed for the chain's directory, the
  * merged configuration (package source mapping, credentials), the outbound policy and the policy-bound feed clients. A
  * project-scoped read reaches its chain through `ProjectContextProvider.get`, a read without a project through the
- * directory the host names. A directory's chain is read once (`dotnet nuget config paths`) and kept until `clear()`.
+ * directory the host names. The chain of a project directory comes from the `installed` computation's own walk
+ * (`register`); `forProject` walks only for a directory no computation has registered, `forDirectory` for a directory
+ * without a project. A directory's chain is kept until `clear()`.
  *
  * Invariant: a credential for a source of directory D is asked only after `forDirectory(D)` or `forProject` has
  * settled, because `lookupConfigCredential` finds it among the registered chains and the credential provider remembers
@@ -10,12 +12,13 @@
  */
 
 import * as path from 'path';
-import type { Logger, OutboundPolicy, SourceProvider } from '../contracts';
+import type { Event, Logger, OutboundPolicy, SourceProvider } from '../contracts';
 import type { NuGetSource } from '../../protocol/domain';
 import { credentialForUrl } from '../credentials';
 import { isRemoteSourceUrl, type ResolvedSource } from '../feeds';
 import type { ProjectContextProvider } from '../project';
 import { DefaultOutboundPolicy, mergeConfigChain, type ConfigCredential, type MergedNuGetConfig, type NuGetConfigReader } from '../sources';
+import { Emitter } from '../util/events';
 import type { FeedClients, PolicyClients } from './feedClients';
 
 export interface FeedContext {
@@ -51,8 +54,23 @@ export class FeedContexts {
     private readonly chains = new Map<string, Promise<string[]>>();
     private readonly contexts = new Map<string, Promise<FeedContext>>();
     private readonly settled = new Map<string, FeedContext>();
+    private readonly registeredEmitter = new Emitter<FeedContext>();
+    /** Fires once per chain when its context settles, whichever read reached it; again after `clear()` rebuilds it. */
+    readonly onDidRegister: Event<FeedContext> = this.registeredEmitter.event;
 
     constructor(private readonly deps: FeedContextsDeps) {}
+
+    /** Seed a project directory's chain from a context walk the caller already ran (`ProjectContextProvider.get`). */
+    register(projectPath: string, configFiles: string[]): Promise<FeedContext> {
+        const directory = path.dirname(projectPath);
+        this.chains.set(directory, Promise.resolve(configFiles));
+        return this.forChain(directory, configFiles);
+    }
+
+    /** The contexts that have settled, in the order they did. */
+    registered(): readonly FeedContext[] {
+        return [...this.settled.values()];
+    }
 
     /** The context of a directory without a project. */
     async forDirectory(directory: string): Promise<FeedContext> {
@@ -121,6 +139,7 @@ export class FeedContexts {
                 built => {
                     if (this.contexts.get(key) === context) {
                         this.settled.set(key, built);
+                        this.registeredEmitter.fire(built);
                     }
                 },
                 () => {

@@ -17,7 +17,9 @@ import { createScratchDir, writeTree } from '../../core/project/__fixtures__/scr
 import { activateWith, type ActivatedExtension } from '../../extension.next';
 import type { InstalledResult, RequestPayload, RequestType, SessionSnapshot } from '../../protocol';
 import { commands as mockCommands, createMockExtensionContext, resetAllMocks, window as mockWindow, workspace as mockWorkspace } from '../__mocks__/vscode';
+import { FakeTransport } from '../../core/feeds/testSupport';
 import { addPackageReference, createFakeDotnet, type FakeDotnet } from './fakeDotnet';
+import { createFakeFeed, type FakeFeed } from './fakeFeed';
 import { FakeWebview, type SentRequest } from './FakeWebview';
 
 export type SurfaceName = 'sidebar' | 'main';
@@ -63,6 +65,8 @@ export interface HarnessOptions {
     selectedSource?: string;
     /** Enabled sources per directory (relative to the workspace root); every other directory has the shared feed. */
     sources?: Record<string, string[]>;
+    /** The feed behind every source; default: an empty, healthy feed. */
+    feed?: FakeFeed;
 }
 
 export interface ExpectedState {
@@ -164,7 +168,8 @@ export async function createHarness(options: HarnessOptions) {
     if (options.selectedSource !== undefined) {
         await context.workspaceState.update('nuiget.selectedSource', options.selectedSource);
     }
-    const extension: ActivatedExtension = await activateWith(context as unknown as vscode.ExtensionContext, { spawn: dotnet.spawn, resolveExecutable: () => 'dotnet' });
+    const feed = options.feed ?? createFakeFeed();
+    const extension: ActivatedExtension = await activateWith(context as unknown as vscode.ExtensionContext, { spawn: dotnet.spawn, resolveExecutable: () => 'dotnet', transport: new FakeTransport(feed.handler) });
     await extension.ready;
     const { services } = extension;
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
@@ -282,6 +287,14 @@ export async function createHarness(options: HarnessOptions) {
         showAllProjects(name: SurfaceName): SentRequest<'allProjects/installed'> {
             return surface(name).showAllProjects();
         },
+
+        /** Ask the updates of the selected project on one surface (R8 of the webview model). */
+        checkUpdates(name: SurfaceName, includePrerelease = false): SentRequest<'updates/get'> {
+            return surface(name).checkUpdates(includePrerelease);
+        },
+
+        /** The scripted feed behind every source. */
+        feed,
 
         /** Run a contributed command (title bar, palette). */
         command(id: string, ...args: unknown[]): Promise<unknown> {

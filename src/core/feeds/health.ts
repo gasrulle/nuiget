@@ -3,7 +3,8 @@
  * re-probes them so a feed that comes back is picked up without a manual refresh.
  */
 
-import type { Disposable, Logger } from '../contracts';
+import type { Disposable, Event, Logger } from '../contracts';
+import { Emitter } from '../util/events';
 import type { FailedSource, NuGetSource } from '../../protocol/domain';
 import type { ServiceIndexClient, SourceHealth } from './types';
 import { consoleFallbackLogger, isRemoteSourceUrl, redactUrl } from './wire';
@@ -19,6 +20,12 @@ export interface SourceHealthTrackerOptions {
 /** In-memory `SourceHealth` with a failure TTL; expired failures are forgotten on access. */
 export class SourceHealthTracker implements SourceHealth {
     private readonly failures = new Map<string, { error: string; failedAt: number }>();
+    private readonly changed = new Emitter<FailedSource[]>();
+    /**
+     * Fires with `failed()` when the set of failed sources changes: a source fails or its error changes, a failed source
+     * recovers, or a non-empty set is reset. A failure recorded by an ordinary read is reported as well as a monitor's.
+     */
+    readonly onDidChange: Event<FailedSource[]> = this.changed.event;
     private readonly failureTtlMs: number;
     private readonly now: () => number;
 
@@ -45,15 +52,25 @@ export class SourceHealthTracker implements SourceHealth {
     }
 
     markFailed(sourceUrl: string, error: string): void {
+        const known = this.failures.get(sourceUrl);
+        const isNew = known === undefined || this.isExpired(known.failedAt) || known.error !== error;
         this.failures.set(sourceUrl, { error, failedAt: this.now() });
+        if (isNew) {
+            this.changed.fire(this.failed());
+        }
     }
 
     markHealthy(sourceUrl: string): void {
-        this.failures.delete(sourceUrl);
+        if (this.failures.delete(sourceUrl)) {
+            this.changed.fire(this.failed());
+        }
     }
 
     reset(): void {
-        this.failures.clear();
+        if (this.failures.size > 0) {
+            this.failures.clear();
+            this.changed.fire([]);
+        }
     }
 
     private isExpired(failedAt: number): boolean {

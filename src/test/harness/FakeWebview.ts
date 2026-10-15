@@ -15,10 +15,12 @@
  * R5 Progress, chunks, `ops/completed` and terminal responses are recorded; `pending()` lists the requests
  *    without a terminal response.
  * R6 Every envelope is kept verbatim in `sent` and `received`; other events are recorded only.
- * R7 An ok response of the `projects` or `installed` slot carries `generation`; it is applied only when that
+ * R7 An ok response of the `projects`, `installed` or `updates` slot carries `generation`; it is applied only when that
  *    generation is not below the one the latest `resources/invalidated` event listed for its key (`projects`,
- *    `installed:<path>`); a lower one is recorded and not applied. Rule 4 is unchanged; chunks are never
- *    compared.
+ *    `installed:<path>`, `updates:<path>|…`); a lower one is recorded and not applied. Rule 4 is unchanged; chunks are
+ *    never compared.
+ * R8 `checkUpdates` asks `updates/get` for the selected project; once asked, the model asks again when
+ *    `resources/invalidated` names that `updates:` key. Every `sources/health` payload is kept in `health`.
  */
 
 import {
@@ -29,9 +31,11 @@ import {
     type BulkOutcome,
     type EventPayload,
     type EventType,
+    type FailedSource,
     type InboundEnvelope,
     type InstalledResult,
     type OperationOutcome,
+    type PackageUpdate,
     type OutboundEnvelope,
     type Project,
     type RequestChunk,
@@ -43,7 +47,7 @@ import {
     type StreamEnvelope,
 } from '../../protocol';
 
-type Slot = 'session' | 'projects' | 'installed' | 'allProjects';
+type Slot = 'session' | 'projects' | 'installed' | 'allProjects' | 'updates';
 type Listener = (message: unknown) => void;
 interface DisposableLike { dispose(): void }
 
@@ -52,6 +56,7 @@ const SLOT_OF: Partial<Record<RequestType, Slot>> = {
     'session/set': 'session',
     'projects/list': 'projects',
     'installed/get': 'installed',
+    'updates/get': 'updates',
     'allProjects/installed': 'allProjects',
 };
 
@@ -91,6 +96,11 @@ export class FakeWebview {
     /** All-projects mode: the last `project` chunk per project path. */
     readonly allProjects = new Map<string, InstalledResult | { error: string }>();
     allProjectsMode = false;
+
+    updates: { projectPath: string; updates: PackageUpdate[]; sourcesUnavailable?: boolean } | undefined;
+    /** Every `sources/health` payload, in order (R8). */
+    readonly health: FailedSource[][] = [];
+    private updatesAsked: { projectPath: string; includePrerelease: boolean } | undefined;
 
     /** Request ids whose ok response was below the generation listed for its key (R7). */
     readonly discarded: string[] = [];
@@ -180,6 +190,13 @@ export class FakeWebview {
         return this.sent.filter(message => message.kind === 'request').map(message => message.id);
     }
 
+    /** R8: ask the updates of the selected project; the model asks again when an invalidation names that key. */
+    checkUpdates(includePrerelease = false): SentRequest<'updates/get'> {
+        const projectPath = this.session?.selectedProject ?? '';
+        this.updatesAsked = { projectPath, includePrerelease };
+        return this.request('updates/get', { projectPath, includePrerelease });
+    }
+
     // ── the model ──
 
     private send(envelope: InboundEnvelope): void {
@@ -207,6 +224,8 @@ export class FakeWebview {
             this.projects = (payload as EventPayload<'projects/changed'>).projects;
         } else if (type === 'resources/invalidated') {
             this.onInvalidated(payload as EventPayload<'resources/invalidated'>);
+        } else if (type === 'sources/health') {
+            this.health.push((payload as EventPayload<'sources/health'>).failed);
         }
     }
 
@@ -224,6 +243,10 @@ export class FakeWebview {
         const selected = this.session?.selectedProject ?? '';
         if (isRealProject(selected) && keys.includes(resourceKeys.installed(selected))) {
             this.request('installed/get', { projectPath: selected });
+        }
+        const asked = this.updatesAsked;
+        if (asked && keys.includes(resourceKeys.updates(asked.projectPath, asked.includePrerelease))) {
+            this.request('updates/get', { projectPath: asked.projectPath, includePrerelease: asked.includePrerelease });
         }
     }
 
@@ -249,6 +272,12 @@ export class FakeWebview {
         } else if (slot === 'projects') {
             if (this.isCurrent(message.id, resourceKeys.projects(), message.generation)) {
                 this.projects = (message.result as { projects: Project[] }).projects;
+            }
+        } else if (slot === 'updates') {
+            const result = message.result as { projectPath: string; updates: PackageUpdate[]; sourcesUnavailable?: boolean };
+            const asked = this.updatesAsked;
+            if (this.isCurrent(message.id, resourceKeys.updates(result.projectPath, asked?.includePrerelease ?? false), message.generation)) {
+                this.updates = result;
             }
         } else if (slot === 'installed') {
             const result = message.result as InstalledResult;

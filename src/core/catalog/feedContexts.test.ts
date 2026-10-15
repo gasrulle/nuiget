@@ -131,4 +131,51 @@ describe('FeedContexts', () => {
         expect(transport.urls().filter(url => url.includes('/vulnerability/'))).toEqual(['https://feed.example/vulnerability/index.json']);
         expect(entry.vulnerabilities).toEqual([]);
     });
+
+    it('register seeds a directory\'s chain from a context walk, so forProject and forDirectory of that directory run no config-paths command', async () => {
+        const app = path.resolve('/w/App');
+        const contexts = contextsWith({ [app]: [chainFile] });
+        const registry = new FeedContexts({ contexts, sources: sourcesOf([privateFeed]), configs: { readChain: vi.fn(async () => []) }, feeds: fakeFeeds() });
+
+        const registered = await registry.register(path.join(app, 'App.csproj'), [chainFile]);
+
+        await expect(registry.forProject(path.join(app, 'App.csproj'))).resolves.toBe(registered);
+        await expect(registry.forDirectory(app)).resolves.toBe(registered);
+        expect(contexts.get).not.toHaveBeenCalled();
+        expect(contexts.configFilesFor).not.toHaveBeenCalled();
+        expect(registered).toMatchObject({ key: chainFile, configFiles: [chainFile], directory: app });
+    });
+
+    it('onDidRegister fires once per chain, for register, forProject and forDirectory alike, and again after clear', async () => {
+        const a = path.resolve('/a');
+        const b = path.resolve('/b');
+        const c = path.resolve('/c');
+        const contexts = contextsWith({ [b]: ['/b/nuget.config'], [c]: ['/c/nuget.config'] });
+        const registry = new FeedContexts({ contexts, sources: sourcesOf([privateFeed]), configs: { readChain: vi.fn(async () => []) }, feeds: fakeFeeds() });
+        const fired: string[] = [];
+        registry.onDidRegister(context => fired.push(context.key));
+
+        await registry.register(path.join(a, 'A.csproj'), ['/a/nuget.config']);
+        await registry.register(path.join(a, 'A.csproj'), ['/a/nuget.config']);
+        await registry.forProject(path.join(b, 'B.csproj'));
+        await registry.forDirectory(c);
+        await registry.forDirectory(c);
+        expect(fired).toEqual(['/a/nuget.config', '/b/nuget.config', '/c/nuget.config']);
+
+        registry.clear();
+        await registry.forDirectory(c);
+        expect(fired).toEqual(['/a/nuget.config', '/b/nuget.config', '/c/nuget.config', '/c/nuget.config']);
+    });
+
+    it('registered lists the settled contexts and is empty after clear', async () => {
+        const registry = new FeedContexts({ contexts: contextsWith({}), sources: sourcesOf([privateFeed]), configs: { readChain: vi.fn(async () => []) }, feeds: fakeFeeds() });
+        expect(registry.registered()).toEqual([]);
+
+        const first = await registry.register(path.resolve('/a/A.csproj'), ['/a/nuget.config']);
+        const second = await registry.forDirectory(path.resolve('/b'));
+
+        expect(registry.registered()).toEqual([first, second]);
+        registry.clear();
+        expect(registry.registered()).toEqual([]);
+    });
 });
