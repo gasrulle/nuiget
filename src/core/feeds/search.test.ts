@@ -2,7 +2,7 @@ import { readFileSync } from 'fs';
 import * as fs from 'fs';
 import * as path from 'path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { DotnetResult, DotnetRunner, OutboundPolicy } from '../contracts';
+import type { DotnetResult, DotnetRunner, Logger, OutboundPolicy } from '../contracts';
 import type { NuGetSource } from '../../protocol/domain';
 import { DefaultDotnetRunner, packageSearchArgs } from '../cli';
 import { createScratchDir, type ScratchDir } from '../project/__fixtures__/scratch';
@@ -55,7 +55,7 @@ function answer(id: string): (argv: string[]) => DotnetResult {
     return argv => ({ exitCode: recorded.exitCode, stdout: recorded.stdout, stderr: recorded.stderr, durationMs: 1, argv });
 }
 
-function client(transport: FakeTransport, cli = runner(answer('nuget-org-take-2')), policy: OutboundPolicy = allowAll, logger = silentLogger): DefaultSearchClient {
+function client(transport: FakeTransport, cli = runner(answer('nuget-org-take-2')), policy: OutboundPolicy = allowAll, logger: Logger = silentLogger): DefaultSearchClient {
     return new DefaultSearchClient({ transport, runner: cli, policy, logger });
 }
 

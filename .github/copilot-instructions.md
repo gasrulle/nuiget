@@ -145,7 +145,7 @@ Seeded from the execution plan (decisions D1–D13, Appendix B). Item IDs name w
 
 | Issue | Solution |
 |-------|----------|
-| "Tests pass" is not "compiles" | Vitest transpiles without type-checking. `npx tsc --noEmit` → 0 is a separate gate for every item; never infer it from a green test run. |
+| "Tests pass" is not "compiles" | Vitest transpiles without type-checking. `npx tsc --noEmit` → 0 is a separate gate for every item; never infer it from a green test run. That command reads the root `tsconfig.json` only, which leaves the test files out: also run `npm run check-types` (adds `tsconfig.test.json` and `tsconfig.vitest.json`), which CI's Build & Package and UI jobs run first (N69). |
 | Missing neighbour module | Never stub a module that a later item creates so `tsc` passes. Mark the item `blocked` in `docs/plans/STATUS.md` and stop. |
 | Frozen contracts | `src/protocol/**`, `src/core/contracts.ts` and `docs/adr/**` change only in the items that name them, behind the `.claude/.contract-change` sentinel (D6). Never widen a contract to fix a type error. |
 | Import boundaries | Follow `.github/instructions/core-boundaries.instructions.md`. Core never imports host, extension, webview, services, React or `vscode` values; `sidebar-next` is not exempt (P0.7). |

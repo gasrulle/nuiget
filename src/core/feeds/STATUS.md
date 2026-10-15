@@ -19,6 +19,10 @@ baseline at e92a7ae         → CI run 38654806411 green on all 11 jobs · npx t
 probes (SDK 10.0.401, macOS) → seven captures, tracked in __fixtures__/cli-search/10.0.401.json; the seventh (exact match with
                                --take 2) returned all 53 versions: --take is ignored with --exact-match, so no N69
 npx tsc --noEmit → exit 0 · npx eslint src → exit 0, no output
+fix-forward (run 38658578316 red: check-types on search.test.ts:349-350, N69) → npm run check-types exit 0 (root, test and
+                               vitest configs) after typing the test helper's logger as `Logger`
+rm -rf dist && npm run package:vsix → exit 0 (npm ci, check-types, 133 files / 2957 passed, 4 skipped, bundle, vsce)
+                               · npm run check:vsix → OK
 npx vitest run --project backend src/core/feeds → Test Files 11 passed (11) · Tests 129 passed | 1 skipped (130); search.test.ts
                                25 tests by the ruling's titles, the real-SDK one skipped without the variable
 DOTNET_ROOT=… NUIGET_SDK_TESTS=1 npx vitest run --project backend src/core/feeds → Tests 130 passed (130): the real-SDK test ran
