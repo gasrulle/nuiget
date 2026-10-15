@@ -6,9 +6,10 @@
 import { randomBytes } from 'crypto';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import type { DotnetRunner, Event, Logger, OperationQueue, ProjectInspector, SessionStore, SourceProvider } from '../core/contracts';
+import type { DotnetRunner, Event, Logger, OperationQueue, ProjectExecutionContext, ProjectMutator, SessionStore, SourceProvider } from '../core/contracts';
 import type { Catalog } from '../core/catalog';
 import type { PackageWorkflows, WorkflowDeps } from '../core/ops';
+import type { ProjectContextProvider } from '../core/project';
 import type { BulkOutcome, ExtensionConfig, InvalidationReason, InvalidationScope, OperationOutcome, OperationProgress, Project } from '../protocol';
 import { Emitter } from '../core/util/events';
 import { normalizeProjectPath } from '../core/util/paths';
@@ -20,6 +21,8 @@ export interface HostServices {
     readonly catalog: Catalog;
     readonly queue: OperationQueue;
     readonly workflows: PackageWorkflows;
+    /** Decides every reference edit (ADR-004 tier 3); the workflows ask it, a surface may preview with it. */
+    readonly mutator: ProjectMutator;
     readonly sources: SourceProvider;
     /** Fired after any operation completes (either surface); hosts forward it as `ops/completed`. */
     readonly onOperationCompleted: Event<OperationOutcome | BulkOutcome>;
@@ -39,47 +42,41 @@ export interface HostServices {
 export interface WorkflowDepsOptions {
     runner: DotnetRunner;
     catalog: Catalog;
-    inspector: ProjectInspector;
+    mutator: ProjectMutator;
+    contexts: Pick<ProjectContextProvider, 'get'>;
+    workspaceFolderFor?: (projectPath: string) => string | undefined;
     queue: Pick<OperationQueue, 'onDidChange'>;
     logger?: Logger;
     onCommand?: WorkflowDeps['onCommand'];
 }
 
 /**
- * The dependencies of `PackageWorkflows` as the host supplies them. Whether a project uses Central
- * Package Management is asked once per project while an operation runs: the answer is kept until the
- * queue has nothing running. A project that the inspector cannot support rejects, which makes the
- * workflow refuse the edit; a read that fails is not kept.
+ * The dependencies of `PackageWorkflows` as the host supplies them. The execution context of a mutation decision is
+ * built without the config chain (no `dotnet nuget config paths`) and asked once per project while an operation
+ * runs: the memo is cleared on every change of the queue, so the next operation asks again. A context that cannot
+ * be built is not kept.
  */
 export function createWorkflowDeps(deps: WorkflowDepsOptions): WorkflowDeps {
-    const cpm = new Map<string, Promise<boolean>>();
-    deps.queue.onDidChange(({ active }) => {
-        if (active === 0) {
-            cpm.clear();
-        }
-    });
+    const contexts = new Map<string, Promise<ProjectExecutionContext>>();
+    deps.queue.onDidChange(() => contexts.clear());
     return {
         runner: deps.runner,
         packageDependencies: projectPath => deps.catalog.packageDependencies(projectPath),
         projectDependencies: projectPaths => deps.catalog.projectDependencies(projectPaths),
-        isCpmProject: projectPath => {
+        mutator: deps.mutator,
+        contextFor: projectPath => {
             const key = normalizeProjectPath(projectPath);
-            let answer = cpm.get(key);
-            if (answer === undefined) {
-                answer = deps.inspector.inspect(projectPath).then(result => {
-                    if (result.unsupported) {
-                        throw new Error(result.unsupported.message);
-                    }
-                    return result.isCpm;
-                });
-                cpm.set(key, answer);
-                answer.catch(() => {
-                    if (cpm.get(key) === answer) {
-                        cpm.delete(key);
+            let context = contexts.get(key);
+            if (context === undefined) {
+                context = deps.contexts.get(projectPath, deps.workspaceFolderFor?.(projectPath), { configChain: false }).then(result => result.context);
+                contexts.set(key, context);
+                context.catch(() => {
+                    if (contexts.get(key) === context) {
+                        contexts.delete(key);
                     }
                 });
             }
-            return answer;
+            return context;
         },
         logger: deps.logger,
         onCommand: deps.onCommand,

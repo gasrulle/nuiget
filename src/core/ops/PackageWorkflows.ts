@@ -6,13 +6,15 @@
  * signal between steps. Bulk workflows order work by project/package dependencies and run one
  * restore per changed project after all edits.
  *
- * Every reference edit passes one admission gate first (`admitEdit`): the project's SDK must be
- * detectable and at least 10 (D13), and until the project mutator lands (P6.3) an `install` or
- * `update` on a Central Package Management project is refused (D7). Restores are never gated.
+ * Every reference edit passes one admission gate first: the project mutator decides it from the edit's execution
+ * context (ADR-004 tier 3, D7, D13), and the command is built from that decision alone (`isCpm`, N51). A Central
+ * Package Management add runs without `--no-restore`, so its implicit restore runs whatever the restore toggle says;
+ * its preview is taken before the edit, and the projects that share the central entry are restored after the edited
+ * ones and reported as `affectedProjects`. Restores are never gated.
  */
 
 import * as path from 'path';
-import type { DotnetResult, DotnetRunner, Logger, MutationKind, OperationRunContext, SdkInfo } from '../contracts';
+import type { DotnetResult, DotnetRunner, Logger, MutationKind, OperationRunContext, ProjectExecutionContext, ProjectMutator } from '../contracts';
 import type { BulkOutcome, OperationKind, OperationOutcome, OperationProgress, OperationStatus, StepOutcome } from '../../protocol/domain';
 import { addPackageArgs, removePackageArgs, restoreArgs, RESTORE_TIMEOUT_MS } from '../cli';
 import { redact, redactArgv } from '../logging';
@@ -26,8 +28,10 @@ export interface WorkflowDeps {
     packageDependencies: (projectPath: string) => Promise<Map<string, string[]>>;
     /** Project → referenced project paths (normalized) for the given set, used to order multi-project work. */
     projectDependencies: (projectPaths: string[]) => Promise<Map<string, string[]>>;
-    /** Whether `projectPath` uses Central Package Management (D7 gate until the mutator, P6.3). Consulted only for `install` and `update`. A rejection refuses the edit (fail closed). */
-    isCpmProject: (projectPath: string) => Promise<boolean>;
+    /** Decides every reference edit and previews the projects a Central Package Management edit reaches (ADR-004 tier 3). */
+    mutator: ProjectMutator;
+    /** The context of the mutation decision, built by the host without the config chain and memoized per project for one operation. */
+    contextFor: (projectPath: string) => Promise<ProjectExecutionContext>;
     logger?: Logger;
     /** Hook for the host to log the CLI transcript to the output channel. Argv and output arrive redacted. */
     onCommand?: (argv: string[], exitCode: number, stdout: string, stderr: string, durationMs: number) => void;
@@ -49,6 +53,14 @@ export interface EditRequest {
 
 type ProjectRestore = BulkOutcome['restores'][number];
 
+/** The step of one edit, and the other projects whose central entry it changed (a CPM install or update). */
+interface EditStep {
+    step: StepOutcome;
+    affected: string[];
+}
+
+type Admission = { ok: true; context: ProjectExecutionContext; isCpm: boolean } | { ok: false; refusal: StepOutcome };
+
 /** The fields every progress report carries, so a surface that did not start the operation can mark rows busy. */
 type ProgressScope = Required<Pick<OperationProgress, 'kind' | 'projectPaths' | 'packageIds'>>;
 
@@ -62,12 +74,16 @@ export class PackageWorkflows {
     async single(ctx: OperationRunContext, request: EditRequest, options: WorkflowOptions): Promise<OperationOutcome> {
         const scope: ProgressScope = { kind: request.kind, projectPaths: [request.projectPath], packageIds: [request.packageId] };
         ctx.report({ status: 'running', ...scope, detail: `${verb(request.kind)} ${request.packageId}` });
-        const edit = await this.edit(ctx, request, { noRestore: true });
+        const { step: edit, affected } = await this.edit(ctx, request);
         let restore: StepOutcome | undefined;
         if (edit.ok) {
-            restore = await this.restoreStep(ctx, request.projectPath, options, scope);
+            const steps = [{ projectPath: request.projectPath, step: await this.restoreStep(ctx, request.projectPath, options, scope) }];
+            for (const consumer of affected) {
+                steps.push({ projectPath: consumer, step: await this.restoreStep(ctx, consumer, options, { ...scope, projectPaths: [consumer] }) });
+            }
+            restore = steps.length === 1 ? steps[0].step : combineRestores(steps);
         }
-        return {
+        const outcome: OperationOutcome = {
             opId: ctx.opId,
             kind: request.kind,
             status: outcomeStatus(edit, restore),
@@ -78,6 +94,10 @@ export class PackageWorkflows {
             restore,
             message: edit.ok ? restore?.error : edit.error,
         };
+        if (affected.length > 0) {
+            outcome.affectedProjects = affected;
+        }
+        return outcome;
     }
 
     /** Restore one or more projects (used by the explicit Restore actions). */
@@ -173,54 +193,69 @@ export class PackageWorkflows {
                 continue;
             }
             ctx.report({ status: 'running', kind, projectPaths: [request.projectPath], packageIds: [request.packageId], current: index, total: requests.length, detail: `${path.basename(request.projectPath)}: ${request.packageId}` });
-            const edit = await this.edit(ctx, request, { noRestore: true });
-            results.push({ opId: ctx.opId, kind: request.kind, status: stepStatus(edit), projectPath: request.projectPath, packageId: request.packageId, version: request.version, edit, message: edit.error });
+            const { step: edit, affected } = await this.edit(ctx, request);
+            const result: OperationOutcome = { opId: ctx.opId, kind: request.kind, status: stepStatus(edit), projectPath: request.projectPath, packageId: request.packageId, version: request.version, edit, message: edit.error };
+            if (affected.length > 0) {
+                result.affectedProjects = affected;
+            }
+            results.push(result);
         }
         return results;
     }
 
-    /**
-     * D13 and D7 admission for one reference edit. `undefined` admits; a `StepOutcome` refuses and nothing is spawned.
-     * P6.3 replaces the body with `ProjectMutator.canMutate`; the shape stays.
-     */
-    private async admitEdit(request: EditRequest): Promise<StepOutcome | undefined> {
-        const projectDir = path.dirname(request.projectPath);
-        let sdk: SdkInfo | undefined;
+    /** The mutator's decision on one reference edit, with the context it judged. A refusal spawns nothing. */
+    private async admit(request: EditRequest): Promise<Admission> {
+        let context: ProjectExecutionContext;
         try {
-            sdk = await this.deps.runner.sdkVersion(projectDir);
+            context = await this.deps.contextFor(request.projectPath);
         } catch (error) {
-            return { ok: false, error: `could not detect the .NET SDK for this project: ${redact(describe(error))}` };
+            return { ok: false, refusal: { ok: false, error: `could not build the execution context for this project: ${redact(describe(error))}` } };
         }
-        if (sdk === undefined) {
-            return { ok: false, error: 'could not detect the .NET SDK for this project' };
-        }
-        if (!sdk.supported) {
-            return { ok: false, error: 'requires .NET SDK 10 or newer' };
-        }
-        if (request.kind === 'remove') {
-            return undefined;
-        }
-        let isCpm: boolean;
         try {
-            isCpm = await this.deps.isCpmProject(request.projectPath);
+            const decision = await this.deps.mutator.canMutate(context, { kind: request.kind, packageId: request.packageId, version: request.version });
+            return decision.ok ? { ok: true, context, isCpm: decision.isCpm } : { ok: false, refusal: { ok: false, error: decision.error } };
         } catch (error) {
-            return { ok: false, error: `could not determine whether the project uses Central Package Management: ${redact(describe(error))}` };
+            return { ok: false, refusal: { ok: false, error: `could not decide whether the edit may run: ${redact(describe(error))}` } };
         }
-        return isCpm ? { ok: false, error: 'Central Package Management edits arrive with the project mutator' } : undefined;
     }
 
-    private async edit(ctx: OperationRunContext, request: EditRequest, flags: { noRestore: boolean }): Promise<StepOutcome> {
-        const refusal = await this.admitEdit(request);
-        if (refusal) {
-            return refusal;
+    private async edit(ctx: OperationRunContext, request: EditRequest): Promise<EditStep> {
+        const admission = await this.admit(request);
+        if (!admission.ok) {
+            return { step: admission.refusal, affected: [] };
         }
+        const { context, isCpm } = admission;
+        let affected: string[] = [];
+        if (isCpm && request.kind !== 'remove') {
+            // Taken before the edit: afterwards the central entry already has the new version.
+            try {
+                const preview = await this.deps.mutator.previewCpmImpact(context, request.packageId, request.version ?? '');
+                // Every other project once, whatever spelling the preview used.
+                const seen = new Set([normalizeProjectPath(request.projectPath)]);
+                affected = (preview?.affectedProjects ?? []).filter(projectPath => {
+                    const key = normalizeProjectPath(projectPath);
+                    if (seen.has(key)) {
+                        return false;
+                    }
+                    seen.add(key);
+                    return true;
+                });
+            } catch (error) {
+                return { step: { ok: false, error: `could not preview the Central Package Management impact: ${redact(describe(error))}` }, affected: [] };
+            }
+        }
+        const step = await this.runEdit(ctx, request, isCpm);
+        return { step, affected: step.ok ? affected : [] };
+    }
+
+    private async runEdit(ctx: OperationRunContext, request: EditRequest, isCpm: boolean): Promise<StepOutcome> {
         const projectDir = path.dirname(request.projectPath);
         let argv: string[];
         try {
-            // Passing `false` for `isCpm` is correct here only because `admitEdit` has already refused every CPM `add`/`update`.
+            // A CPM add never runs with --no-restore (D7); the builder refuses the pair as well.
             argv = request.kind === 'remove'
                 ? removePackageArgs({ projectPath: request.projectPath, packageId: request.packageId })
-                : addPackageArgs({ projectPath: request.projectPath, packageId: request.packageId, version: request.version, sourceUrl: request.sourceUrl, noRestore: flags.noRestore, isCpm: false });
+                : addPackageArgs({ projectPath: request.projectPath, packageId: request.packageId, version: request.version, sourceUrl: request.sourceUrl, noRestore: !isCpm, isCpm });
         } catch (error) {
             return { ok: false, error: redact(describe(error)) };
         }
@@ -279,8 +314,29 @@ export class PackageWorkflows {
                 editedIds.set(key, [...(editedIds.get(key) ?? []), result.packageId]);
             }
         }
+        // The projects that share a central entry an edit changed, after the edited projects, each once.
+        const consumers = new Map<string, { projectPath: string; ids: string[] }>();
+        for (const result of results) {
+            if (!result.edit?.ok || result.packageId === undefined) {
+                continue;
+            }
+            for (const projectPath of result.affectedProjects ?? []) {
+                const key = normalizeProjectPath(projectPath);
+                if (editedIds.has(key)) {
+                    continue;
+                }
+                const entry = consumers.get(key) ?? { projectPath, ids: [] };
+                if (!entry.ids.includes(result.packageId)) {
+                    entry.ids.push(result.packageId);
+                }
+                consumers.set(key, entry);
+            }
+        }
+        for (const [key, { ids }] of consumers) {
+            editedIds.set(key, ids);
+        }
         const restores: ProjectRestore[] = [];
-        const ordered = order.filter(p => editedIds.has(normalizeProjectPath(p)));
+        const ordered = [...order.filter(p => editedIds.has(normalizeProjectPath(p)) && !consumers.has(normalizeProjectPath(p))), ...[...consumers.values()].map(entry => entry.projectPath)];
         let index = 0;
         for (const projectPath of ordered) {
             index++;
@@ -358,6 +414,20 @@ function verb(kind: OperationKind): string {
         case 'restore': return 'Restoring';
         default: return 'Running';
     }
+}
+
+/**
+ * The restore of an edit and of the projects that share its central entry, as one step: the edited project's failure
+ * first, each failure named by its project; a cancellation without a failure is the cancellation.
+ */
+function combineRestores(steps: Array<{ projectPath: string; step: StepOutcome }>): StepOutcome {
+    if (steps.every(({ step }) => step.ok)) {
+        return steps.every(({ step }) => step.skipped) ? { ok: true, skipped: true } : { ok: true };
+    }
+    const failed = steps.find(({ step }) => !step.ok && step.error !== CANCELLED);
+    return failed === undefined
+        ? { ok: false, skipped: true, error: CANCELLED }
+        : { ok: false, error: `${path.basename(failed.projectPath)}: ${failed.step.error ?? 'failed'}` };
 }
 
 /** A cancellation anywhere wins; otherwise the bulk is `completed`, `failed` (nothing completed) or `partial`. */

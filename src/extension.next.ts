@@ -16,11 +16,11 @@ import { DefaultServiceIndexClient, SourceHealthTracker, startHealthMonitor } fr
 import { NodeTransport } from './core/http';
 import { redact } from './core/logging';
 import { DefaultOperationQueue, PackageWorkflows } from './core/ops';
-import { AssetsReader, MsBuildProjectEvaluator, PROJECT_FILE_GLOB, ProjectContextProvider, StaticProjectInspector, findProjects } from './core/project';
+import { AssetsReader, DefaultProjectMutator, MsBuildProjectEvaluator, PROJECT_FILE_GLOB, ProjectContextProvider, StaticProjectInspector, findProjects } from './core/project';
 import { DefaultQueryCoordinator } from './core/queries';
 import { DefaultSessionStore, firstProject } from './core/session';
 import { DotnetSourceProvider, NuGetConfigReader } from './core/sources';
-import { isPathInside } from './core/util/paths';
+import { isPathInside, normalizeProjectPath } from './core/util/paths';
 import { MainPanelHost } from './host/MainPanelHost';
 import { HostEvents, createWorkflowDeps, loggerFor, readExtensionConfig, type HostServices } from './host/services';
 import { SidebarHost } from './host/SidebarHost';
@@ -107,8 +107,18 @@ export async function activateWith(context: vscode.ExtensionContext, overrides: 
             (vscode.workspace.workspaceFolders ?? []).map(folder => ({ name: folder.name, fsPath: folder.uri.fsPath })),
         ),
     });
+    // ADR-004 tier 3: the edit's gate. An open document with unsaved changes of the project or its props file refuses it.
+    const mutator = new DefaultProjectMutator({
+        inspector,
+        isDirty: file => {
+            const wanted = normalizeProjectPath(file);
+            return vscode.workspace.textDocuments.some(document => document.uri.scheme === 'file' && document.isDirty && normalizeProjectPath(document.uri.fsPath) === wanted);
+        },
+        discoverProjects: () => catalog.projects().then(listed => listed.value),
+        logger,
+    });
     const workflows = new PackageWorkflows(createWorkflowDeps({
-        runner, catalog, inspector, queue, logger,
+        runner, catalog, mutator, contexts, workspaceFolderFor, queue, logger,
         onCommand: (argv, exitCode, stdout, stderr, durationMs) => {
             logger.info(`$ ${argv.join(' ')}  (exit ${exitCode}, ${durationMs} ms)`);
             if (stdout.trim()) {
@@ -123,7 +133,7 @@ export async function activateWith(context: vscode.ExtensionContext, overrides: 
     // ── services both surfaces share ──
     const events = new HostEvents();
     const services: HostServices = {
-        context, logger, session, catalog, queue, workflows, sources,
+        context, logger, session, catalog, queue, workflows, mutator, sources,
         onOperationCompleted: events.operationCompleted.event,
         onOperationProgress: queue.onProgress,
         onConfigChanged: events.configChanged.event,

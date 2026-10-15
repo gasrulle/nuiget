@@ -204,6 +204,9 @@ function affectedScope(outcome: OperationOutcome | BulkOutcome): { projectPaths:
             if (r.packageId && r.edit?.ok) {
                 packageIds.add(r.packageId);
             }
+            for (const consumer of r.edit?.ok ? r.affectedProjects ?? [] : []) {
+                projectPaths.add(consumer);
+            }
         }
         for (const r of outcome.restores) {
             projectPaths.add(r.projectPath);
@@ -211,7 +214,9 @@ function affectedScope(outcome: OperationOutcome | BulkOutcome): { projectPaths:
         return { projectPaths: [...projectPaths], packageIds: [...packageIds] };
     }
     const changed = outcome.edit?.ok || outcome.restore?.ok;
-    return { projectPaths: changed ? [outcome.projectPath] : [], packageIds: outcome.packageId && outcome.edit?.ok ? [outcome.packageId] : [] };
+    // A central version change reaches the projects that share the entry (ADR-004 tier 3).
+    const consumers = outcome.edit?.ok ? outcome.affectedProjects ?? [] : [];
+    return { projectPaths: changed ? [outcome.projectPath, ...consumers] : [], packageIds: outcome.packageId && outcome.edit?.ok ? [outcome.packageId] : [] };
 }
 
 /** Invalidate what an operation changed; restores widen to the project, edits to the package. */

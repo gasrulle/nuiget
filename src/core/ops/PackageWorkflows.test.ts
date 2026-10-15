@@ -1,7 +1,12 @@
+import * as fs from 'fs';
+import * as path from 'path';
 import { describe, expect, it, vi } from 'vitest';
-import type { DotnetResult, DotnetRunOptions, DotnetRunner, Logger, OperationRunContext } from '../contracts';
-import type { OperationProgress, StepOutcome } from '../../protocol/domain';
-import { DotnetSpawnError, sdkInfoFromVersion } from '../cli';
+import type { DotnetResult, DotnetRunOptions, DotnetRunner, Logger, MutationDecision, OperationRunContext, ProjectExecutionContext, ProjectInspector, ProjectMutator, SdkInfo } from '../contracts';
+import type { InstalledResult, OperationProgress, StepOutcome } from '../../protocol/domain';
+import { DefaultDotnetRunner, DotnetSpawnError, resolveDotnetExecutable, sdkInfoFromVersion } from '../cli';
+import { AssetsReader, DefaultProjectMutator, ProjectContextProvider, SDK_TOO_OLD_MESSAGE, StaticProjectInspector } from '../project';
+import { createScratchDir } from '../project/__fixtures__/scratch';
+import { DotnetSourceProvider } from '../sources';
 import { normalizeProjectPath } from '../util/paths';
 import { outcomeStatus, PackageWorkflows, stepStatus, type WorkflowDeps } from './PackageWorkflows';
 
@@ -41,9 +46,35 @@ function makeDeps(overrides: Partial<WorkflowDeps> & Pick<WorkflowDeps, 'runner'
     return {
         packageDependencies: async () => new Map(),
         projectDependencies: async () => new Map(),
-        isCpmProject: async () => false,
+        mutator: admitting({ ok: true, isCpm: false }),
+        contextFor: async projectPath => contextOf(projectPath),
         ...overrides,
     };
+}
+
+/** The context a decision sees: `'none'` is a context whose SDK could not be detected. */
+function contextOf(projectPath: string, sdk: SdkInfo | 'none' = sdk10): ProjectExecutionContext {
+    const context: ProjectExecutionContext = { projectPath, projectDir: path.dirname(projectPath), configFiles: [], sourceUrls: [], revision: 'r' };
+    if (sdk !== 'none') {
+        context.sdk = sdk;
+    }
+    return context;
+}
+
+/** A mutator that admits every edit with `decision`, and previews nothing. */
+function admitting(decision: Extract<MutationDecision, { ok: true }>, preview: ProjectMutator['previewCpmImpact'] = async () => undefined) {
+    return { canMutate: vi.fn<ProjectMutator['canMutate']>(async () => decision), previewCpmImpact: vi.fn<ProjectMutator['previewCpmImpact']>(preview) } satisfies ProjectMutator;
+}
+
+/** A mutator that refuses every edit with `error`. */
+function refusing(error: string) {
+    return { canMutate: vi.fn<ProjectMutator['canMutate']>(async () => ({ ok: false, error })), previewCpmImpact: vi.fn<ProjectMutator['previewCpmImpact']>(async () => undefined) } satisfies ProjectMutator;
+}
+
+/** The real mutator over a scripted inspection. */
+function realMutator(result: (projectPath: string) => InstalledResult = projectPath => ({ projectPath, packages: [], fidelity: 'provisional', isCpm: false })) {
+    const inspector = { inspect: vi.fn<ProjectInspector['inspect']>(async projectPath => result(projectPath)) };
+    return { inspector, mutator: new DefaultProjectMutator({ inspector, isDirty: () => false, discoverProjects: async () => [] }) };
 }
 
 function makeContext(controller = new AbortController()): OperationRunContext & { reports: Array<Omit<OperationProgress, 'opId'>>; controller: AbortController } {
@@ -73,7 +104,6 @@ const projectA = '/w/A/A.csproj';
 const projectB = '/w/B/B.csproj';
 /** `projectDependencies` answers with normalized paths, which differ from the given ones on Windows. */
 const dependsOn = (dependent: string, dependency: string) => new Map([[normalizeProjectPath(dependent), [normalizeProjectPath(dependency)]]]);
-const mutatorRefusal = 'Central Package Management edits arrive with the project mutator';
 const sdkRefusal = 'requires .NET SDK 10 or newer';
 
 describe('PackageWorkflows.single', () => {
@@ -253,26 +283,26 @@ describe('PackageWorkflows.single', () => {
 });
 
 describe('PackageWorkflows admission (D7, D13)', () => {
-    it('cpm: refuses add and update until the mutator', async () => {
+    it('a refusal of the mutator is the edit\'s outcome and nothing is spawned', async () => {
         const runner = makeRunner(() => ({}));
-        const isCpmProject = vi.fn(async () => true);
-        const workflows = new PackageWorkflows(makeDeps({ runner, isCpmProject }));
+        const mutator = refusing('refused for the test');
+        const workflows = new PackageWorkflows(makeDeps({ runner, mutator }));
         for (const kind of ['install', 'update'] as const) {
             const outcome = await workflows.single(makeContext(), { kind, projectPath: app, packageId: 'X', version: '2.0.0' }, { skipRestore: false });
             expect(outcome.status).toBe('failed');
-            expect(outcome.edit).toEqual({ ok: false, error: mutatorRefusal });
-            expect(outcome.edit?.error).toBe(mutatorRefusal);
+            expect(outcome.edit).toEqual({ ok: false, error: 'refused for the test' });
             expect(outcome.restore).toBeUndefined();
-            expect(outcome.message).toBe(mutatorRefusal);
+            expect(outcome.message).toBe('refused for the test');
         }
-        expect(isCpmProject).toHaveBeenCalledTimes(2);
-        expect(isCpmProject).toHaveBeenCalledWith(app);
+        expect(mutator.canMutate).toHaveBeenCalledTimes(2);
+        expect(mutator.canMutate).toHaveBeenCalledWith(contextOf(app), { kind: 'install', packageId: 'X', version: '2.0.0' });
+        expect(mutator.previewCpmImpact).not.toHaveBeenCalled();
         expect(runner.calls).toEqual([]);
     });
 
     it('cpm: never emits --no-restore', async () => {
         const runner = makeRunner(() => ({}));
-        const workflows = new PackageWorkflows(makeDeps({ runner, isCpmProject: async () => true }));
+        const workflows = new PackageWorkflows(makeDeps({ runner, mutator: admitting({ ok: true, isCpm: true }) }));
         const options = { skipRestore: false };
         await workflows.single(makeContext(), { kind: 'install', projectPath: projectA, packageId: 'X', version: '1.0.0' }, options);
         await workflows.single(makeContext(), { kind: 'update', projectPath: projectA, packageId: 'X', version: '2.0.0' }, options);
@@ -285,35 +315,38 @@ describe('PackageWorkflows admission (D7, D13)', () => {
         await workflows.restore(makeContext(), [projectA, projectB]);
 
         expect(runner.calls.flat()).not.toContain('--no-restore');
-        const packageCommands = runner.calls.filter(args => args[0] === 'package');
-        expect(packageCommands.every(isRemove)).toBe(true);
-        // Not vacuous: the removes and restores of a CPM project did run.
-        expect(packageCommands).toHaveLength(5);
-        expect(runner.calls.filter(isRestore)).toHaveLength(6);
+        // Not vacuous: every CPM add and remove did run, and so did the restores.
+        const adds = runner.calls.filter(isAdd);
+        expect(adds).toHaveLength(8);
+        for (const args of adds) {
+            expect(args.slice(-2)[0]).toBe('--version');
+        }
+        expect(runner.calls.filter(isRemove)).toHaveLength(5);
+        expect(runner.calls.filter(isRestore)).toHaveLength(13);
     });
 
     it('cpm: remove is allowed and followed by the restore', async () => {
         const runner = makeRunner(() => ({}));
-        const workflows = new PackageWorkflows(makeDeps({ runner, isCpmProject: async () => true }));
+        const workflows = new PackageWorkflows(makeDeps({ runner, mutator: admitting({ ok: true, isCpm: true }) }));
         const outcome = await workflows.single(makeContext(), { kind: 'remove', projectPath: app, packageId: 'X' }, { skipRestore: false });
         expect(outcome).toMatchObject({ status: 'completed', edit: { ok: true }, restore: { ok: true } });
         expect(runner.calls).toEqual([['package', 'remove', 'X', '--project', app], ['restore', app]]);
     });
 
-    it('remove skips the CPM lookup', async () => {
+    it('remove asks for no preview', async () => {
         const runner = makeRunner(() => ({}));
-        const isCpmProject = vi.fn(async () => true);
-        const workflows = new PackageWorkflows(makeDeps({ runner, isCpmProject }));
+        const mutator = admitting({ ok: true, isCpm: true });
+        const workflows = new PackageWorkflows(makeDeps({ runner, mutator }));
         await workflows.single(makeContext(), { kind: 'remove', projectPath: app, packageId: 'X' }, { skipRestore: true });
         await workflows.bulkRemove(makeContext(), app, ['X', 'Y'], { skipRestore: true });
-        expect(isCpmProject).not.toHaveBeenCalled();
+        expect(mutator.previewCpmImpact).not.toHaveBeenCalled();
         expect(runner.calls.filter(isRemove)).toHaveLength(3);
     });
 
     it('requires .NET SDK 10 or newer', async () => {
-        const runner = makeRunner(() => ({}), { sdkVersion: async () => sdk8 });
-        const isCpmProject = vi.fn(async () => false);
-        const workflows = new PackageWorkflows(makeDeps({ runner, isCpmProject }));
+        const runner = makeRunner(() => ({}));
+        const { inspector, mutator } = realMutator();
+        const workflows = new PackageWorkflows(makeDeps({ runner, mutator, contextFor: async projectPath => contextOf(projectPath, sdk8) }));
         for (const kind of ['install', 'update', 'remove'] as const) {
             const outcome = await workflows.single(makeContext(), { kind, projectPath: app, packageId: 'X', version: kind === 'remove' ? undefined : '2.0.0' }, { skipRestore: false });
             expect(outcome.status).toBe('failed');
@@ -322,52 +355,163 @@ describe('PackageWorkflows admission (D7, D13)', () => {
             expect(outcome.restore).toBeUndefined();
         }
         expect(runner.calls).toEqual([]);
-        // The SDK floor is decided before the project is inspected for CPM.
-        expect(isCpmProject).not.toHaveBeenCalled();
+        // The SDK floor is decided before the project is inspected.
+        expect(inspector.inspect).not.toHaveBeenCalled();
     });
 
     it('refuses when the SDK cannot be detected', async () => {
-        const undetected = makeRunner(() => ({}), { sdkVersion: async () => undefined });
-        const first = await new PackageWorkflows(makeDeps({ runner: undetected })).single(makeContext(), { kind: 'install', projectPath: app, packageId: 'X' }, { skipRestore: false });
+        const undetected = makeRunner(() => ({}));
+        const first = await new PackageWorkflows(makeDeps({ runner: undetected, mutator: realMutator().mutator, contextFor: async projectPath => contextOf(projectPath, 'none') }))
+            .single(makeContext(), { kind: 'install', projectPath: app, packageId: 'X' }, { skipRestore: false });
         expect(first.status).toBe('failed');
         expect(first.edit).toEqual({ ok: false, error: 'could not detect the .NET SDK for this project' });
         expect(undetected.calls).toEqual([]);
 
-        const rejecting = makeRunner(() => ({}), { sdkVersion: async () => { throw new Error('probe crashed, apikey=abc123'); } });
-        const second = await new PackageWorkflows(makeDeps({ runner: rejecting })).single(makeContext(), { kind: 'remove', projectPath: app, packageId: 'X' }, { skipRestore: false });
+        const rejecting = makeRunner(() => ({}));
+        const second = await new PackageWorkflows(makeDeps({ runner: rejecting, contextFor: async () => { throw new Error('probe crashed, apikey=abc123'); } }))
+            .single(makeContext(), { kind: 'remove', projectPath: app, packageId: 'X' }, { skipRestore: false });
         expect(second.status).toBe('failed');
-        expect(second.edit?.error).toBe('could not detect the .NET SDK for this project: probe crashed, apikey=[REDACTED]');
+        expect(second.edit?.error).toBe('could not build the execution context for this project: probe crashed, apikey=[REDACTED]');
         expect(rejecting.calls).toEqual([]);
     });
 
-    it('asks for the SDK of the project directory', async () => {
-        const sdkVersion = vi.fn(async () => sdk10);
-        const runner = makeRunner(() => ({}), { sdkVersion });
-        await new PackageWorkflows(makeDeps({ runner })).single(makeContext(), { kind: 'remove', projectPath: app, packageId: 'X' }, { skipRestore: true });
-        expect(sdkVersion).toHaveBeenCalledWith('/w/App');
+    it('asks for the context of the edited project', async () => {
+        const contextFor = vi.fn(async (projectPath: string) => contextOf(projectPath, sdk10));
+        const mutator = admitting({ ok: true, isCpm: false });
+        const runner = makeRunner(() => ({}));
+        await new PackageWorkflows(makeDeps({ runner, contextFor, mutator })).single(makeContext(), { kind: 'remove', projectPath: app, packageId: 'X' }, { skipRestore: true });
+        expect(contextFor).toHaveBeenCalledWith(app);
+        expect(mutator.canMutate.mock.calls[0][0]).toMatchObject({ projectPath: app, projectDir: path.dirname(app) });
     });
 
-    it('refuses add when the project cannot be inspected for CPM', async () => {
+    it('refuses the edit when the project cannot be inspected', async () => {
         const runner = makeRunner(() => ({}));
-        const isCpmProject = vi.fn(async () => { throw new Error('Directory.Packages.props is unreadable'); });
-        const workflows = new PackageWorkflows(makeDeps({ runner, isCpmProject }));
+        const { mutator } = realMutator(projectPath => ({ projectPath, packages: [], fidelity: 'provisional', isCpm: false, unsupported: { reason: 'parse-failed', message: 'the project file or an imported props file could not be read or parsed' } }));
+        const workflows = new PackageWorkflows(makeDeps({ runner, mutator }));
         const outcome = await workflows.single(makeContext(), { kind: 'install', projectPath: app, packageId: 'X' }, { skipRestore: false });
         expect(outcome.status).toBe('failed');
-        expect(outcome.edit?.error).toBe('could not determine whether the project uses Central Package Management: Directory.Packages.props is unreadable');
-        expect(outcome.edit?.error).not.toBe(mutatorRefusal);
+        expect(outcome.edit?.error).toBe('the project could not be inspected: the project file or an imported props file could not be read or parsed');
         expect(runner.calls).toEqual([]);
     });
 
     it('restore is gated neither by the SDK floor nor by CPM', async () => {
-        const sdkVersion = vi.fn(async () => sdk8);
-        const isCpmProject = vi.fn(async () => true);
-        const runner = makeRunner(() => ({}), { sdkVersion });
-        const outcome = await new PackageWorkflows(makeDeps({ runner, isCpmProject })).restore(makeContext(), [projectA, projectB]);
+        const contextFor = vi.fn(async (projectPath: string) => contextOf(projectPath, sdk8));
+        const mutator = admitting({ ok: true, isCpm: true });
+        const runner = makeRunner(() => ({}));
+        const outcome = await new PackageWorkflows(makeDeps({ runner, contextFor, mutator })).restore(makeContext(), [projectA, projectB]);
         expect(outcome.status).toBe('completed');
         expect(runner.calls).toEqual([['restore', projectA], ['restore', projectB]]);
-        expect(sdkVersion).not.toHaveBeenCalled();
-        expect(isCpmProject).not.toHaveBeenCalled();
+        expect(contextFor).not.toHaveBeenCalled();
+        expect(mutator.canMutate).not.toHaveBeenCalled();
+        expect(mutator.previewCpmImpact).not.toHaveBeenCalled();
     });
+
+    it('never deletes central entry on single uninstall', async () => {
+        const scratch = await createScratchDir('workflows-cpm');
+        try {
+            const input = path.join(__dirname, '..', 'cli', '__fixtures__', 'sdk-probes', 'cpm');
+            fs.cpSync(input, scratch.dir, { recursive: true });
+            const project = path.join(scratch.dir, 'App', 'App.csproj');
+            const props = path.join(scratch.dir, 'Directory.Packages.props');
+            const before = fs.readFileSync(props);
+            const mutator = new DefaultProjectMutator({ inspector: new StaticProjectInspector({ assets: new AssetsReader(), stopDirs: [scratch.dir] }), isDirty: () => false, discoverProjects: async () => [{ name: 'App.csproj', path: project }] });
+            const preview = vi.spyOn(mutator, 'previewCpmImpact');
+            const runner = makeRunner(() => ({}));
+            const outcome = await new PackageWorkflows(makeDeps({ runner, mutator })).single(makeContext(), { kind: 'remove', projectPath: project, packageId: 'Serilog' }, { skipRestore: false });
+            expect(outcome).toMatchObject({ status: 'completed', edit: { ok: true }, restore: { ok: true } });
+            expect(outcome.affectedProjects).toBeUndefined();
+            expect(runner.calls).toEqual([['package', 'remove', 'Serilog', '--project', project], ['restore', project]]);
+            expect(preview).not.toHaveBeenCalled();
+            expect(fs.readFileSync(props).equals(before)).toBe(true);
+        } finally {
+            await scratch.cleanup();
+        }
+    });
+
+    it('cpm: a verified SDK 10 add runs without --no-restore, its preview is taken before the edit, and the consumers are restored once and listed as affectedProjects', async () => {
+        const order: string[] = [];
+        const runner = makeRunner(args => { order.push(args.join(' ')); return {}; });
+        const mutator = admitting({ ok: true, isCpm: true }, async (_context, packageId, toVersion) => {
+            order.push('preview');
+            return { centralPropsPath: '/w/Directory.Packages.props', packageId, fromVersion: '1.0.0', toVersion, affectedProjects: [projectA, projectB, app, projectB] };
+        });
+        const ctx = makeContext();
+        const outcome = await new PackageWorkflows(makeDeps({ runner, mutator })).single(ctx, { kind: 'update', projectPath: projectA, packageId: 'X', version: '2.0.0' }, { skipRestore: false });
+        expect(order).toEqual(['preview', `package add X --project ${projectA} --version 2.0.0`, `restore ${projectA}`, `restore ${projectB}`, `restore ${app}`]);
+        expect(outcome).toMatchObject({ status: 'completed', edit: { ok: true }, restore: { ok: true }, affectedProjects: [projectB, app] });
+        expect(mutator.previewCpmImpact).toHaveBeenCalledWith(contextOf(projectA), 'X', '2.0.0');
+        expect(ctx.reports.filter(r => r.status === 'restoring').map(r => r.projectPaths)).toEqual([[projectA], [projectB], [app]]);
+    });
+
+    it('cpm: a failed consumer restore ends partial and names the project', async () => {
+        const runner = makeRunner(args => isRestore(args) && args[1] === projectB ? { exitCode: 1, stderr: 'error NU1101: unable to find package' } : {});
+        const mutator = admitting({ ok: true, isCpm: true }, async (_context, packageId, toVersion) => ({ centralPropsPath: '/w/Directory.Packages.props', packageId, toVersion, affectedProjects: [projectA, projectB] }));
+        const outcome = await new PackageWorkflows(makeDeps({ runner, mutator })).single(makeContext(), { kind: 'update', projectPath: projectA, packageId: 'X', version: '2.0.0' }, { skipRestore: false });
+        expect(outcome.status).toBe('partial');
+        expect(outcome.restore).toEqual({ ok: false, error: 'B.csproj: error NU1101: unable to find package' });
+        expect(outcome.affectedProjects).toEqual([projectB]);
+    });
+
+    it('cpm: consumer restores follow the restore option', async () => {
+        const runner = makeRunner(() => ({}));
+        const mutator = admitting({ ok: true, isCpm: true }, async (_context, packageId, toVersion) => ({ centralPropsPath: '/w/Directory.Packages.props', packageId, toVersion, affectedProjects: [projectB] }));
+        const outcome = await new PackageWorkflows(makeDeps({ runner, mutator })).single(makeContext(), { kind: 'update', projectPath: projectA, packageId: 'X', version: '2.0.0' }, { skipRestore: true });
+        expect(outcome).toMatchObject({ status: 'completed', restore: { ok: true, skipped: true }, affectedProjects: [projectB] });
+        expect(runner.calls).toEqual([['package', 'add', 'X', '--project', projectA, '--version', '2.0.0']]);
+    });
+
+    it('cpm: a preview that fails refuses the edit', async () => {
+        const runner = makeRunner(() => ({}));
+        const mutator = admitting({ ok: true, isCpm: true }, async () => { throw new Error('props unreadable, password=hunter2'); });
+        const outcome = await new PackageWorkflows(makeDeps({ runner, mutator })).single(makeContext(), { kind: 'update', projectPath: projectA, packageId: 'X', version: '2.0.0' }, { skipRestore: false });
+        expect(outcome.status).toBe('failed');
+        expect(outcome.edit).toEqual({ ok: false, error: 'could not preview the Central Package Management impact: props unreadable, password=[REDACTED]' });
+        expect(runner.calls).toEqual([]);
+    });
+
+    it('cpm: a cancel after the edited project\'s restore marks the consumer restores skipped', async () => {
+        const ctx = makeContext();
+        const runner = makeRunner(() => ({}), { afterRun: args => { if (isRestore(args)) { ctx.controller.abort(); } } });
+        const mutator = admitting({ ok: true, isCpm: true }, async (_context, packageId, toVersion) => ({ centralPropsPath: '/w/Directory.Packages.props', packageId, toVersion, affectedProjects: [projectB] }));
+        const outcome = await new PackageWorkflows(makeDeps({ runner, mutator })).single(ctx, { kind: 'update', projectPath: projectA, packageId: 'X', version: '2.0.0' }, { skipRestore: false });
+        expect(outcome.status).toBe('cancelled');
+        expect(outcome.restore).toEqual({ ok: false, skipped: true, error: 'cancelled' });
+        expect(runner.calls.filter(isRestore)).toEqual([['restore', projectA]]);
+    });
+
+    it.skipIf(process.env.NUIGET_SDK_TESTS !== '1')('cpm (SDK 10): an update writes the central version to Directory.Packages.props without --no-restore and a remove keeps the entry', async () => {
+        const scratch = await createScratchDir('workflows-sdk');
+        try {
+            fs.cpSync(path.join(__dirname, '..', 'cli', '__fixtures__', 'sdk-probes', 'cpm'), scratch.dir, { recursive: true });
+            const project = path.join(scratch.dir, 'App', 'App.csproj');
+            const props = path.join(scratch.dir, 'Directory.Packages.props');
+            const runner = new DefaultDotnetRunner({ resolveExecutable: () => resolveDotnetExecutable() });
+            const contexts = new ProjectContextProvider({ runner, sources: new DotnetSourceProvider({ runner }), stopDirs: [scratch.dir] });
+            const mutator = new DefaultProjectMutator({ inspector: new StaticProjectInspector({ assets: new AssetsReader(), stopDirs: [scratch.dir] }), isDirty: () => false, discoverProjects: async () => [{ name: 'App.csproj', path: project }] });
+            const argv: string[][] = [];
+            const workflows = new PackageWorkflows({
+                runner,
+                mutator,
+                contextFor: async projectPath => (await contexts.get(projectPath, undefined, { configChain: false })).context,
+                packageDependencies: async () => new Map(),
+                projectDependencies: async () => new Map(),
+                onCommand: args => { argv.push(args); },
+            });
+
+            const updated = await workflows.single(makeContext(), { kind: 'update', projectPath: project, packageId: 'Serilog', version: '4.1.0' }, { skipRestore: true });
+            expect(updated.edit, updated.message).toEqual({ ok: true });
+            expect(fs.readFileSync(props, 'utf8')).toContain('Include="Serilog" Version="4.1.0"');
+            expect(fs.readFileSync(project, 'utf8')).not.toMatch(/Include="Serilog"[^>]*Version/);
+            expect(argv.flat()).not.toContain('--no-restore');
+
+            const removed = await workflows.single(makeContext(), { kind: 'remove', projectPath: project, packageId: 'Serilog' }, { skipRestore: true });
+            expect(removed.edit, removed.message).toEqual({ ok: true });
+            expect(fs.readFileSync(project, 'utf8')).not.toContain('Include="Serilog"');
+            expect(fs.readFileSync(props, 'utf8')).toContain('Include="Serilog"');
+        } finally {
+            await scratch.cleanup();
+        }
+    }, 300_000);
 });
 
 describe('PackageWorkflows bulk', () => {
@@ -480,23 +624,44 @@ describe('PackageWorkflows bulk', () => {
         expect(runner.calls).toEqual([['restore', projectA]]);
     });
 
-    it('bulk: mixed CPM and non-CPM projects end partial', async () => {
+    it('bulk: a project the mutator refuses ends partial beside one it admits', async () => {
         const runner = makeRunner(() => ({}));
-        const isCpmProject = vi.fn(async (projectPath: string) => projectPath === projectB);
-        const workflows = new PackageWorkflows(makeDeps({ runner, isCpmProject }));
+        const { mutator } = realMutator();
+        const workflows = new PackageWorkflows(makeDeps({ runner, mutator, contextFor: async projectPath => contextOf(projectPath, projectPath === projectB ? sdk8 : sdk10) }));
         const outcome = await workflows.bulkInstall(makeContext(), [projectA, projectB], 'X', '1.0.0', { skipRestore: false });
         expect(outcome.status).toBe('partial');
         expect(outcome.results.map(r => [r.projectPath, r.status])).toEqual([[projectA, 'completed'], [projectB, 'failed']]);
-        expect(outcome.results[1].edit).toEqual({ ok: false, error: mutatorRefusal });
-        expect(outcome.results[1].message).toBe(mutatorRefusal);
+        expect(outcome.results[1].edit).toEqual({ ok: false, error: SDK_TOO_OLD_MESSAGE });
+        expect(outcome.results[1].message).toBe(SDK_TOO_OLD_MESSAGE);
         // The refused project is neither edited nor restored; the other one runs to the end.
         expect(runner.calls).toEqual([['package', 'add', 'X', '--project', projectA, '--version', '1.0.0', '--no-restore'], ['restore', projectA]]);
         expect(outcome.restores).toEqual([{ projectPath: projectA, ok: true }]);
     });
 
+    it('bulk: consumers are restored once after the edited projects', async () => {
+        const shared = (affectedProjects: string[]) => admitting({ ok: true, isCpm: true }, async (_context, packageId, toVersion) => ({ centralPropsPath: '/w/Directory.Packages.props', packageId, toVersion, affectedProjects }));
+        const runner = makeRunner(() => ({}));
+        const ctx = makeContext();
+        const one = await new PackageWorkflows(makeDeps({ runner, mutator: shared([projectA, projectB]) })).bulkUpdate(ctx, projectA, [{ id: 'X', version: '2.0.0' }, { id: 'Y', version: '2.0.0' }], { skipRestore: false });
+        expect(one.status).toBe('completed');
+        expect(runner.calls.filter(isRestore)).toEqual([['restore', projectA], ['restore', projectB]]);
+        expect(one.restores).toEqual([{ projectPath: projectA, ok: true }, { projectPath: projectB, ok: true }]);
+        expect(one.results.map(r => r.affectedProjects)).toEqual([[projectB], [projectB]]);
+        expect(ctx.reports.filter(r => r.status === 'restoring').map(r => [r.projectPaths, r.packageIds])).toEqual([[[projectA], ['X', 'Y']], [[projectB], ['X', 'Y']]]);
+
+        const again = makeRunner(() => ({}));
+        const all = await new PackageWorkflows(makeDeps({ runner: again, mutator: shared([projectA, projectB]) })).bulkUpdateAllProjects(makeContext(), [
+            { projectPath: projectA, packages: [{ id: 'X', version: '2.0.0' }] },
+            { projectPath: projectB, packages: [{ id: 'X', version: '2.0.0' }] },
+        ], { skipRestore: false });
+        expect(all.status).toBe('completed');
+        // B is an edited project of the bulk: it is restored once, as such.
+        expect(again.calls.filter(isRestore)).toEqual([['restore', projectA], ['restore', projectB]]);
+    });
+
     it('bulk: every request refused is failed and restores nothing', async () => {
         const runner = makeRunner(() => ({}));
-        const workflows = new PackageWorkflows(makeDeps({ runner, isCpmProject: async () => true }));
+        const workflows = new PackageWorkflows(makeDeps({ runner, mutator: refusing('refused for the test') }));
         const outcome = await workflows.bulkUpdateAllProjects(makeContext(), [
             { projectPath: projectA, packages: [{ id: 'X', version: '2.0.0' }] },
             { projectPath: projectB, packages: [{ id: 'X', version: '2.0.0' }] },

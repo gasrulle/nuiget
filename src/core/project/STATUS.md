@@ -45,7 +45,8 @@ CI                           → see the tracker row of P6.3a
 
 ## Done (untested)
 
-- Nothing composes `DefaultProjectMutator`; P6.3b wires it.
+- Since P6.3b the workflows ask `DefaultProjectMutator` for every edit and `createWorkflowDeps` builds chain-less
+  contexts; see `src/core/ops/STATUS.md`.
 
 ## Not started
 
@@ -113,4 +114,4 @@ Files checked (absolute): /Users/mattias/github/nuiget/.github/agents/architectu
 
 ## Exact next step (one item ID)
 
-P6.3b.
+P6.4 (P6.3b composed the mutator; its handoff notes are `src/core/ops`, `src/host` and `src` STATUS).

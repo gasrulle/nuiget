@@ -6,10 +6,11 @@ import { TieredCache } from './core/cache';
 import { createScratchDir, writeTree, type ScratchDir } from './core/project/__fixtures__/scratch';
 import { FakeTransport, fail, json } from './core/feeds/testSupport';
 import { NodeTransport } from './core/http';
+import { DefaultProjectMutator } from './core/project';
 import { activateWith, proxyConfigured, type ActivatedExtension, type ActivationOverrides } from './extension.next';
 import { MainPanelHost } from './host/MainPanelHost';
 import { readExtensionConfig } from './host/services';
-import { makeRequest, type BulkOutcome, type EventPayload, type EventType, type InstalledResult, type OutboundEnvelope, type RequestPayload, type RequestType } from './protocol';
+import { makeRequest, type BulkOutcome, type EventPayload, type EventType, type InstalledResult, type OperationOutcome, type OutboundEnvelope, type RequestPayload, type RequestType } from './protocol';
 import {
     commands as mockCommands,
     createMockExtensionContext,
@@ -138,6 +139,7 @@ describe('extension.next (2.0 composition root)', () => {
         await tick();
         mockWorkspace.workspaceFolders = defaultFolders;
         mockWorkspace.findFiles.mockImplementation(async () => []);
+        mockWorkspace.textDocuments.splice(0);
         mockCommands.executeCommand.mockImplementation(originalExecuteCommand);
         resetAllMocks();
         await scratch?.cleanup();
@@ -319,6 +321,33 @@ describe('extension.next (2.0 composition root)', () => {
         const result = (messages[1] as { result: InstalledResult }).result;
         expect(result.packages.map(pkg => pkg.id)).toEqual(['Serilog', 'Implicit.Sdk']);
         expect(dotnet.count(dotnetCalls.msbuild(project))).toBe(2);
+    });
+
+    it('composes the mutator: an edit is refused while the project file is open with unsaved changes, and admitted once it is saved', async () => {
+        scratch = await createScratchDir('root-mutator');
+        const project = path.join(scratch.dir, 'App', 'App.csproj');
+        await writeTree(scratch.dir, {
+            'App/App.csproj': '<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><TargetFramework>net10.0</TargetFramework></PropertyGroup><ItemGroup><PackageReference Include="Serilog" Version="3.0.0" /></ItemGroup></Project>',
+        });
+        projectFiles = [project];
+        const { services } = await start();
+        expect(services.mutator).toBeInstanceOf(DefaultProjectMutator);
+        const remove = () => services.queue.submit<OperationOutcome>(
+            'remove Serilog',
+            ctx => services.workflows.single(ctx, { kind: 'remove', projectPath: project, packageId: 'Serilog' }, { skipRestore: true }),
+            (reason, opId) => ({ opId, kind: 'remove', status: 'rejected', projectPath: project, message: reason }),
+        ).completion;
+
+        const document = { uri: vscode.Uri.file(project), isDirty: true };
+        mockWorkspace.textDocuments.push(document);
+        const refused = await remove();
+        expect(refused).toMatchObject({ status: 'failed', edit: { ok: false, error: 'App.csproj has unsaved changes in the editor; save or close it first' } });
+        expect(dotnet.count(dotnetCalls.packageRemove('Serilog'))).toBe(0);
+
+        document.isDirty = false;
+        const admitted = await remove();
+        expect(admitted).toMatchObject({ status: 'completed', edit: { ok: true } });
+        expect(dotnet.count(dotnetCalls.packageRemove('Serilog'))).toBe(1);
     });
 
     it('an evaluation that fails answers the provisional list once, as the response', async () => {

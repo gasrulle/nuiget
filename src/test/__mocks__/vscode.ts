@@ -241,6 +241,8 @@ export const workspace = {
     onDidChangeConfiguration: vi.fn(() => new Disposable(() => { })),
     onDidChangeWorkspaceFolders: vi.fn(() => new Disposable(() => { })),
     findFiles: vi.fn(async () => []),
+    /** Open documents; a test pushes `{ uri, isDirty }` and empties the list afterwards. */
+    textDocuments: [] as Array<{ uri: Uri; isDirty: boolean }>,
     fs: {
         readFile: vi.fn(),
         writeFile: vi.fn(),

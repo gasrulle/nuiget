@@ -2,7 +2,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Catalog } from '../core/catalog';
-import type { InvalidationEvent, Logger, OperationRunContext, SessionStore, SourceProvider } from '../core/contracts';
+import type { InvalidationEvent, Logger, OperationRunContext, ProjectExecutionContext, ProjectMutator, SessionStore, SourceProvider } from '../core/contracts';
 import { DefaultOperationQueue, type PackageWorkflows } from '../core/ops';
 import {
     ALL_PROJECTS,
@@ -19,7 +19,7 @@ import {
     type SessionSnapshot,
 } from '../protocol';
 import { createMockExtensionContext } from '../test/__mocks__/vscode';
-import { registerSharedHandlers } from './handlers';
+import { invalidateAfter, registerSharedHandlers } from './handlers';
 import { createWorkflowDeps, HostEvents, renderWebviewHtml, type HostServices } from './services';
 import { SidebarHost } from './SidebarHost';
 import { WebviewHost, type WebviewLike } from './WebviewHost';
@@ -86,6 +86,7 @@ function makeServices(options: { selectedProject?: string; workspaceFolder?: str
         bulkRemoveAllProjects: vi.fn(async (ctx: OperationRunContext) => bulkOutcome(ctx)),
     };
     const mutation = vi.fn(async () => ({ ok: true }));
+    const mutator = { canMutate: vi.fn(async () => ({ ok: true as const, isCpm: false })), previewCpmImpact: vi.fn(async () => undefined) } satisfies ProjectMutator;
     const sources = { listSources: vi.fn(async () => [feed]), configFiles: vi.fn(() => []), add: mutation, remove: mutation, enable: mutation, disable: mutation, invalidate: vi.fn() } satisfies SourceProvider;
     const session = { snapshot, apply: vi.fn(async () => snapshot), reconcile: vi.fn(async () => snapshot), onDidChange: () => ({ dispose: () => undefined }) };
     const logger = { trace: vi.fn(), debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() } satisfies Logger;
@@ -101,6 +102,7 @@ function makeServices(options: { selectedProject?: string; workspaceFolder?: str
         catalog: catalog as unknown as Catalog,
         queue,
         workflows: workflows as unknown as PackageWorkflows,
+        mutator,
         sources,
         onOperationCompleted: events.operationCompleted.event,
         onOperationProgress: queue.onProgress,
@@ -570,41 +572,79 @@ describe('services', () => {
         expect(/<script nonce="([^"]+)"/.exec(render())?.[1]).not.toBe(nonce);
     });
 
-    it('createWorkflowDeps: isCpmProject is asked once per project per operation', async () => {
+    it('createWorkflowDeps: the execution context is asked once per project per operation, without the config chain', async () => {
         const { services, catalog, queue } = makeServices();
-        let idle!: (counts: { active: number; pending: number }) => void;
-        const inspect = vi.fn(async (projectPath: string): Promise<InstalledResult> => ({ projectPath, packages: [], fidelity: 'provisional', isCpm: projectPath === appPath }));
+        const contextOf = (projectPath: string): ProjectExecutionContext => ({ projectPath, projectDir: path.dirname(projectPath), configFiles: [], sourceUrls: [], revision: 'r' });
+        const get = vi.fn(async (projectPath: string) => ({ context: contextOf(projectPath) }));
         const deps = createWorkflowDeps({
             runner: { run: vi.fn(), sdkVersion: vi.fn(), clearSdkCache: vi.fn() },
             catalog: services.catalog,
-            inspector: { inspect },
-            queue: { onDidChange: listener => { idle = listener; return { dispose: () => undefined }; } },
+            mutator: services.mutator,
+            contexts: { get },
+            workspaceFolderFor: () => workspace,
+            queue: { onDidChange: () => ({ dispose: () => undefined }) },
         });
-        expect(await deps.isCpmProject(appPath)).toBe(true);
+        expect(deps.mutator).toBe(services.mutator);
+        expect(await deps.contextFor(appPath)).toEqual(contextOf(appPath));
         // The same project spelled differently is the same question (`path.join` would hide the difference).
-        expect(await deps.isCpmProject(`${path.dirname(appPath)}${path.sep}.${path.sep}App.csproj`)).toBe(true);
-        expect(await deps.isCpmProject(libPath)).toBe(false);
-        expect(inspect).toHaveBeenCalledTimes(2);
+        await deps.contextFor(`${path.dirname(appPath)}${path.sep}.${path.sep}App.csproj`);
+        await deps.contextFor(libPath);
+        expect(get.mock.calls).toEqual([[appPath, workspace, { configChain: false }], [libPath, workspace, { configChain: false }]]);
 
-        // Something still runs: the answers stay. Nothing runs any more: they are asked again.
-        idle({ active: 1, pending: 0 });
-        await deps.isCpmProject(appPath);
-        expect(inspect).toHaveBeenCalledTimes(2);
-        idle({ active: 0, pending: 0 });
-        await deps.isCpmProject(appPath);
-        expect(inspect).toHaveBeenCalledTimes(3);
-
-        // A project the inspector cannot support refuses the edit; a failed read is not remembered.
-        inspect.mockResolvedValueOnce({ projectPath: libPath, packages: [], fidelity: 'provisional', isCpm: false, unsupported: { reason: 'packages-config', message: 'packages.config projects are not supported' } });
-        idle({ active: 0, pending: 0 });
-        await expect(deps.isCpmProject(libPath)).rejects.toThrow('packages.config projects are not supported');
-        expect(await deps.isCpmProject(libPath)).toBe(false);
+        // A context that cannot be built is not remembered.
+        get.mockRejectedValueOnce(new Error('sources unavailable'));
+        const other = path.join(workspace, 'Other', 'Other.csproj');
+        await expect(deps.contextFor(other)).rejects.toThrow('sources unavailable');
+        await deps.contextFor(other);
+        expect(get).toHaveBeenCalledTimes(4);
 
         await deps.packageDependencies(appPath);
         await deps.projectDependencies([appPath, libPath]);
         expect(catalog.packageDependencies).toHaveBeenCalledWith(appPath);
         expect(catalog.projectDependencies).toHaveBeenCalledWith([appPath, libPath]);
         expect(queue.isBusy).toBe(false);
+    });
+
+    it('the execution context is asked again for the next operation', async () => {
+        const { services } = makeServices();
+        let changed!: (counts: { active: number; pending: number }) => void;
+        const get = vi.fn(async (projectPath: string) => ({ context: { projectPath, projectDir: path.dirname(projectPath), configFiles: [], sourceUrls: [], revision: 'r' } }));
+        const deps = createWorkflowDeps({
+            runner: { run: vi.fn(), sdkVersion: vi.fn(), clearSdkCache: vi.fn() },
+            catalog: services.catalog,
+            mutator: services.mutator,
+            contexts: { get },
+            queue: { onDidChange: listener => { changed = listener; return { dispose: () => undefined }; } },
+        });
+        await deps.contextFor(appPath);
+        await deps.contextFor(appPath);
+        expect(get).toHaveBeenCalledTimes(1);
+        // Every change of the queue ends the memo, also while something still runs: the next operation asks again.
+        changed({ active: 1, pending: 0 });
+        await deps.contextFor(appPath);
+        expect(get).toHaveBeenCalledTimes(2);
+        changed({ active: 0, pending: 0 });
+        await deps.contextFor(appPath);
+        expect(get).toHaveBeenCalledTimes(3);
+    });
+
+    it('invalidation after a CPM edit covers the affected projects', () => {
+        const { services, invalidate } = makeServices();
+        invalidateAfter(services, { opId: 'o1', kind: 'update', status: 'completed', projectPath: appPath, packageId: 'X', version: '2.0.0', edit: { ok: true }, restore: { ok: true }, affectedProjects: [libPath] });
+        expect(invalidate.mock.calls).toEqual([[{ kind: 'project', projectPaths: [appPath, libPath] }, 'operation'], [{ kind: 'metadata', packageIds: ['X'] }, 'operation']]);
+
+        invalidate.mockClear();
+        const other = path.join(workspace, 'Other', 'Other.csproj');
+        invalidateAfter(services, {
+            opId: 'o2',
+            status: 'completed',
+            results: [
+                { opId: 'o2', kind: 'update', status: 'completed', projectPath: appPath, packageId: 'X', edit: { ok: true }, affectedProjects: [libPath, other] },
+                { opId: 'o2', kind: 'update', status: 'failed', projectPath: appPath, packageId: 'Y', edit: { ok: false, error: 'no' }, affectedProjects: [path.join(workspace, 'Never', 'Never.csproj')] },
+            ],
+            restores: [{ projectPath: appPath, ok: true }, { projectPath: libPath, ok: true }, { projectPath: other, ok: true }],
+        });
+        expect(invalidate.mock.calls[0]).toEqual([{ kind: 'project', projectPaths: [appPath, libPath, other] }, 'operation']);
     });
 });
 
