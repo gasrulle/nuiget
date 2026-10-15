@@ -19,3 +19,5 @@ Rules:
   ignored; a non-zero fourth component (`1.0.0.1`) sorts above `1.0.0`.
 - Normalization (`normalize`) implements the documented NuGet rules (three components minimum, zero
   fourth component dropped, leading zeros removed, metadata dropped).
+- `CONFORMANCE.md` lists the cases row by row against NuGet's package-versioning page; `conformance.test.ts`
+  runs every row and checks the laws of precedence on generated versions.
