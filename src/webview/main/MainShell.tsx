@@ -6,6 +6,7 @@ import { Banner, cssVars, EmptyState, IconButton, LiveStatus, Sash, SyncIcon, Ta
 import { FILTER_PREFIXES, parseSearchQuery, type SearchMode } from '../shared/search/parseSearchQuery';
 import { SearchBox } from '../shared/search/SearchBox';
 import { useAllProjects } from '../shared/store/allProjects';
+import { useDetailsActions } from '../shared/store/details';
 import { useInstalled } from '../shared/store/installed';
 import { useOps } from '../shared/store/ops';
 import { describeOutcome } from '../shared/store/outcomes';
@@ -127,6 +128,9 @@ export function MainShell({ installed, updates, browse, details }: MainShellProp
     }, [browsing, clearSearch]);
     const modeTab = TAB_OF_MODE[parsed.mode];
     const tab = modeTab ?? chosenTab;
+    // The details pane shows the active view's own selection; Browse starts without one.
+    const { showView } = useDetailsActions();
+    useEffect(() => showView(browsing ? 'browse' : tab), [browsing, tab, showView]);
     // The badge counts the updates the host answered; while it checks or cannot say, there is no number.
     const allProjects = useAllProjects();
     const all = allProjects.updates;

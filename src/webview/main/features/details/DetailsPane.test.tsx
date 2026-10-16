@@ -373,6 +373,33 @@ describe('main panel: details', () => {
         expect(results).toHaveNoViolations();
         expect(axeRuleOutcome(results, 'label')).toBe('passes');
     });
+    it('details pane does not show stale installed package in browse mode', async () => {
+        const user = userEvent.setup();
+        const host = await mountReady();
+        await selectInstalled(host);
+        expect(pane()).toHaveTextContent('Serilog');
+        await user.type(screen.getByTestId('search-input'), 'polly{Enter}');
+        expect(pane()).toHaveTextContent('Select a package to see its details.');
+        expect(screen.queryByTestId('install-update-button')).toBeNull();
+        await hostSays(() => host.respond(host.requests('search/query')[0], { query: 'polly', results: [{ id: 'Polly', version: '8.4.2', description: '', authors: '', versions: ['8.4.2'], sourceUrl: FEED }] }));
+        await user.click(option('browse-list', 'Polly'));
+        expect(pane()).toHaveTextContent('Polly');
+        // Clearing the box ends Browse: the Installed tab's own selection comes back.
+        await user.clear(screen.getByTestId('search-input'));
+        expect(screen.getByTestId('tab-bar')).toBeInTheDocument();
+        expect(pane()).toHaveTextContent('Serilog');
+    });
+
+    it('switching tabs and back restores each tab\'s selection and its row', async () => {
+        const user = userEvent.setup();
+        const host = await mountReady();
+        await selectInstalled(host);
+        await user.click(screen.getByTestId('updates-tab'));
+        expect(pane()).toHaveTextContent('Select a package to see its details.');
+        await user.click(screen.getByTestId('installed-tab'));
+        expect(pane()).toHaveTextContent('Serilog');
+        expect(option('installed-list', 'Serilog')).toHaveAttribute('aria-current', 'true');
+    });
 });
 
 describe('primaryAction', () => {
@@ -382,4 +409,5 @@ describe('primaryAction', () => {
         expect(primaryAction('2.0.0', '1.0.0', ['3.0.0', '2.0.0', '1.0.0'])).toBe('Downgrade');
         expect(primaryAction('2.0.0-beta', '1.0.0', ['3.0.0', '1.0.0'])).toBe('Update');
     });
+
 });

@@ -34,6 +34,8 @@ export interface RowProps extends RowPlacement {
     nextVersion?: string;
     /** The tooltip of the version cell (for example why a version is unresolved). */
     versionTitle?: string;
+    /** A fact shown after the version in comfortable rows (Browse: downloads), read out in compact ones; part of the description. */
+    meta?: string;
     /** Shown after the version in comfortable rows, read out in compact ones. */
     authors?: string;
     /** The package id prefix is reserved by its owner: a check mark before the authors. */
@@ -72,19 +74,20 @@ export interface RowProps extends RowPlacement {
  * sits on the text column: on the option a `title` would become its description.
  */
 export function Row(props: RowProps): React.JSX.Element {
-    const { itemId, name, version, nextVersion, versionTitle, authors, verified, description, icon, badges, status, busy, disabled, selectable, actions, density, index, setSize, active, selected, current, checkable, optionId, offset, measureRef } = props;
+    const { itemId, name, version, nextVersion, versionTitle, meta, authors, verified, description, icon, badges, status, busy, disabled, selectable, actions, density, index, setSize, active, selected, current, checkable, optionId, offset, measureRef } = props;
     const optionRef = useRef<HTMLDivElement>(null);
     const ids = {
         name: `${optionId}-name`,
         version: `${optionId}-version`,
         badges: `${optionId}-badges`,
+        meta: `${optionId}-meta`,
         authors: `${optionId}-authors`,
         description: `${optionId}-description`,
         status: `${optionId}-status`,
     };
     const hasAuthors = Boolean(authors) || Boolean(verified);
     const labelledBy = version === undefined ? ids.name : `${ids.name} ${ids.version}`;
-    const describedBy = [badges ? ids.badges : '', hasAuthors ? ids.authors : '', description ? ids.description : '', status ? ids.status : '']
+    const describedBy = [badges ? ids.badges : '', meta ? ids.meta : '', hasAuthors ? ids.authors : '', description ? ids.description : '', status ? ids.status : '']
         .filter(Boolean)
         .join(' ');
     const tooltip = [name, version, nextVersion === undefined ? undefined : `→ ${nextVersion}`].filter(Boolean).join(' ');
@@ -136,6 +139,7 @@ export function Row(props: RowProps): React.JSX.Element {
                                 {nextVersion === undefined ? null : <>{' → '}<span className="nuiget-row-version-new">{nextVersion}</span></>}
                             </span>
                         )}
+                        {meta ? <span className="nuiget-row-meta" id={ids.meta}>{meta}</span> : null}
                         {hasAuthors ? (
                             <span className="nuiget-row-authors" id={ids.authors}>
                                 {/* A space, not a margin: the icon's title and the authors are two words when read out. */}

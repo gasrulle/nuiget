@@ -183,6 +183,23 @@ describe('details slice', () => {
         expect(text('selection')).toBe('none');
     });
 
+    it('showView keeps one selection per view, starts browse without one and restores a tab\'s', async () => {
+        const host = mount();
+        await ready(host);
+        await act(async () => actions.select(installedRow('Serilog', '3.0.0')));
+        await act(async () => actions.showView('browse'));
+        expect(text('selection')).toBe('none');
+        await act(async () => actions.select(browseRow('Polly', '8.4.2')));
+        expect(text('selection')).toBe('Polly@8.4.2');
+        await act(async () => actions.showView('installed'));
+        expect(text('selection')).toBe('Serilog@3.0.0');
+        await act(async () => actions.showView('updates'));
+        expect(text('selection')).toBe('none');
+        await act(async () => actions.showView('browse'));
+        expect(text('selection')).toBe('none');
+        expect(versionsAsked(host).length).toBeGreaterThan(0);
+    });
+
     it('a browse selection is never stale; All Projects clears an installed one', async () => {
         const host = mount();
         await ready(host);

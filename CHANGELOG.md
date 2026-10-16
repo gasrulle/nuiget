@@ -7,12 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Quick install from the Browse list and the search box** — Ctrl+Enter (Cmd+Enter) installs a Browse row's version, the highlighted quick-search suggestion's newest version or the version chosen after ArrowRight into the selected project, through the Central Package Management preview where one is needed
+
 ### Changed
 
 - **Two-line package cards in the main panel, name-first rows in the sidebar**
 - **Installed rows show icon, authors and Verified mark, SDK and floating badges, under a Direct packages header with the count**
 - **Updates rows show icon, authors and Verified mark with the new version marked, sorted by id; no 0 on the tab; every row of an Update all stays busy until it ends**
 - **Transitive packages: per-framework headers with counts, rows with icon, authors and Verified mark, and a details view with Required by (All Projects too)**
+- **Browse rows show icon, downloads, authors and Verified mark with the description; quick-search suggestions grouped per source with a loading row; the details pane follows the active tab and each tab keeps its own selection**
 
 ## [2.0.0] - 2026-10-16
 

@@ -117,7 +117,7 @@ A Visual Studio-style NuGet package manager for VS Code with a modern split-pane
 | `↑` / `↓` | Move to the previous or next row |
 | `Home` / `End` | Jump to the first or last row |
 | `Enter` | Main panel: show the details (Installed, search results) or update the package (Updates). Sidebar: the row's action (Uninstall in Installed, Update in Updates, Install in search results); on a centrally managed update, or a search result with a central entry, it opens the actions menu |
-| `Ctrl+Enter` (`Cmd+Enter` on macOS) | Sidebar: open the package in the main panel |
+| `Ctrl+Enter` (`Cmd+Enter` on macOS) | Main panel: install the search result into the selected project. Sidebar: open the package in the main panel |
 | `Delete` (`Cmd+Backspace` on macOS) | Uninstall (Installed lists) |
 | `Space` | Main panel: select the row for a bulk action, or clear it |
 | `Shift+F10` / Menu key | Sidebar: open the actions menu |

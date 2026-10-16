@@ -5,7 +5,7 @@ import { IN_PROGRESS, isCentral as isCentralRow, whyNotUpdatable } from '../../.
 import { ArrowUpIcon, Badge, Banner, EmptyState, IconButton, Listbox, Row, SectionHeader, Skeleton, Toolbar } from '../../../shared/primitives';
 import { packageIconSrc } from '../../../shared/packageIcon';
 import { useAllProjects } from '../../../shared/store/allProjects';
-import { useDetailsActions } from '../../../shared/store/details';
+import { useDetails, useDetailsActions } from '../../../shared/store/details';
 import { useOps, useOpsActions } from '../../../shared/store/ops';
 import type { ListView } from '../../MainShell';
 import { FolderGroups } from '../../../shared/allProjects/folderGroups';
@@ -168,6 +168,14 @@ export function AllProjectsUpdates({ filter, announce }: ListView): React.JSX.El
     const { select } = useDetailsActions();
     const [selected, setSelected] = useState<ReadonlyMap<string, ReadonlySet<string>>>(new Map());
     const [current, setCurrent] = useState<{ projectPath: string; id: string } | null>(null);
+    // A selection of this tab that comes back (the tab shown again) makes its row current again.
+    const detailsSelection = useDetails().selection;
+    useEffect(() => {
+        if (detailsSelection?.origin === 'updates' && detailsSelection.projectPath !== null) {
+            const { projectPath, packageId } = detailsSelection;
+            setCurrent(previous => (previous?.projectPath === projectPath && previous.id === packageId ? previous : { projectPath, id: packageId }));
+        }
+    }, [detailsSelection]);
     const [confirming, setConfirming] = useState(false);
     const [central, setCentral] = useState<CentralUpdateRequest | null>(null);
 

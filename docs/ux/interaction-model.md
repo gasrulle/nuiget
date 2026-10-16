@@ -102,6 +102,18 @@ selected for them (Ctrl+click, Cmd+click on macOS, or a click on the row's check
 selected for them are `aria-selected`, and the row whose details are shown is `aria-current`. Select all selects
 every row the action applies to; the confirmation dialog lists exactly those rows.
 
+Main panel secondary action (D16). In the Browse list Ctrl+Enter (Cmd+Enter on macOS) installs the row's version, the
+newest the search found under the prerelease setting, into the selected project with the row's source, and makes the
+row current; Enter only shows the details. In the search box, with a suggestion highlighted, Ctrl+Enter installs its
+newest version, asked of the suggestion's source under the prerelease setting; ArrowRight lists its five newest
+versions, ArrowUp and ArrowDown move through them, Enter shows the details at the highlighted version, Ctrl+Enter
+installs it, ArrowLeft returns to the suggestions. Both take the Install button's route: an install into a Central
+Package Management project asks `cpm/preview` first and opens the preview dialog when the package has a central entry
+(N77); the package is busy from the key press. Ctrl+Enter installs nothing, and the live region says why, under All
+Projects or without a project, while the selected project's packages are not listed yet, when the package is installed
+already, or while an operation on it runs; under All Projects a Browse row's Ctrl+Enter makes it current so the pane
+offers Install… with the project picker. The Installed and Updates lists of the main panel have no secondary action.
+
 ## 6. Cross-surface behaviour
 
 - An operation started in either surface shows progress in both (`ops/progress`) and both
@@ -123,6 +135,10 @@ state; failure shows an inline retry). Version dropdown (`version-selector`) lis
 "(installed)" marker; the primary button reads **Install** / **Update** / **Downgrade** /
 **Uninstall** depending on the selection vs installed version. Loading of versions/metadata/README is
 per selection; a response for a different package/version is ignored.
+
+The pane shows the selection of the active view: Installed (direct and transitive rows), Updates or Browse. Each tab
+keeps its own selection and gets it back when it is shown again; Browse starts without one and shows the empty state
+until a row is current, and a new search whose results lack that row clears it.
 
 A transitive row (single project or the All Projects aggregate) opens a read-only view: the id with a Transitive badge,
 Version, Authors with the Verified mark, and Required by, the top-level ids, one block per target framework when the

@@ -1,7 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import type React from 'react';
 import { ALL_PROJECTS } from '../../../../protocol';
-import { useMessageBus } from '../../../shared/bus/useMessageBus';
 import { isCentral, whyNotRemovable } from '../../../shared/installed/rules';
 import { Banner, EmptyState, Tabs, type TabItem } from '../../../shared/primitives';
 import { useAllProjects } from '../../../shared/store/allProjects';
@@ -16,6 +15,7 @@ import { DetailsInfo } from './DetailsInfo';
 import { MultiInstallDialog } from './MultiInstallDialog';
 import { ReadmeView } from './ReadmeView';
 import { TransitiveDetails } from './TransitiveDetails';
+import { useInstallAction } from './useInstallAction';
 
 type DetailsTab = 'details' | 'readme';
 
@@ -60,11 +60,10 @@ export function DetailsPane({ announce }: DetailsPaneProps): React.JSX.Element {
     const { isPackageBusy } = useOps();
     const { run } = useOpsActions();
     const [tab, setTab] = useState<DetailsTab>('details');
+    // The preview of an update that changes a central version; an install's preview is the install action's (N77).
     const [centralPreview, setCentralPreview] = useState<CentralUpdateRequest | null>(null);
-    const bus = useMessageBus();
-    // The preview asked before an install into a CPM project (N77); while it is asked, the primary button waits.
-    const [asking, setAsking] = useState(false);
-    const askController = useRef<AbortController | null>(null);
+    const installAction = useInstallAction(announce);
+    const { asking, cancel: cancelInstall } = installAction;
 
     // Another package or version starts on the Details tab; the same one made current again, or confirmed for another
     // project, keeps the tab.
@@ -75,11 +74,7 @@ export function DetailsPane({ announce }: DetailsPaneProps): React.JSX.Element {
         setTab('details');
     }
     // Another package, or the pane going away, cancels a preview that is still being asked.
-    useEffect(() => () => {
-        askController.current?.abort();
-        askController.current = null;
-        setAsking(false);
-    }, [shownKey]);
+    useEffect(() => () => cancelInstall(), [shownKey, cancelInstall]);
     // A new selection asks no README until it is shown: on the README tab it is shown already.
     const readmeIdle = details.readme.status === 'idle';
     useEffect(() => {
@@ -135,38 +130,9 @@ export function DetailsPane({ announce }: DetailsPaneProps): React.JSX.Element {
         if (target === null || busy || asking || primaryWhy !== undefined) {
             return;
         }
-        const install = (): void => {
-            run('ops/install', { projectPath: target, packageId: selection.packageId, version: chosen, sourceUrl: selection.sourceUrl }).catch(fail('Install'));
-        };
-        if (entry === undefined && ownResult?.isCpm !== true) {
-            install();
-        } else if (entry === undefined) {
-            // An install into a CPM project sets the central version when the package has a central entry already:
-            // the projects it reaches are shown first (ADR-004 tier 3). Without an entry it changes this project only.
-            const controller = new AbortController();
-            askController.current = controller;
-            setAsking(true);
-            const request: CentralUpdateRequest = { kind: 'install', projectPath: target, packageId: selection.packageId, toVersion: chosen, sourceUrl: selection.sourceUrl };
-            bus.request('cpm/preview', { projectPath: target, packageId: selection.packageId, version: chosen }, { signal: controller.signal }).then(
-                ({ result }) => {
-                    if (result.preview === null) {
-                        install();
-                    } else {
-                        setCentralPreview(result.preview.fromVersion === undefined ? request : { ...request, fromVersion: result.preview.fromVersion });
-                    }
-                },
-                // Never install on an error: the dialog asks again and shows its own error with Retry.
-                () => {
-                    if (!controller.signal.aborted) {
-                        setCentralPreview(request);
-                    }
-                },
-            ).finally(() => {
-                if (askController.current === controller) {
-                    askController.current = null;
-                    setAsking(false);
-                }
-            });
+        if (entry === undefined) {
+            // The one install path of the main panel: the CPM preview, the listed-list and busy rules (N77).
+            installAction.install({ packageId: selection.packageId, version: chosen, sourceUrl: selection.sourceUrl });
         } else if (isCentral(entry)) {
             setCentralPreview({ kind: 'update', projectPath: target, packageId: selection.packageId, fromVersion: installedVersion ?? entry.version, toVersion: chosen, sourceUrl: selection.sourceUrl });
         } else {
@@ -255,11 +221,11 @@ export function DetailsPane({ announce }: DetailsPaneProps): React.JSX.Element {
                     const change = centralPreview;
                     setCentralPreview(null);
                     if (change !== null) {
-                        const verb = change.kind === 'install' ? 'ops/install' : 'ops/update';
-                        run(verb, { projectPath: change.projectPath, packageId: change.packageId, version: change.toVersion, sourceUrl: change.sourceUrl }).catch(fail(change.kind === 'install' ? 'Install' : 'Update'));
+                        run('ops/update', { projectPath: change.projectPath, packageId: change.packageId, version: change.toVersion, sourceUrl: change.sourceUrl }).catch(fail('Update'));
                     }
                 }}
             />
+            <CentralUpdateDialog request={installAction.preview} onClose={installAction.closePreview} onConfirm={installAction.confirmPreview} />
             <MultiInstallDialog
                 open={picking}
                 packageId={selection.packageId}

@@ -82,6 +82,9 @@ rm -rf /tmp/nuiget-ui/screenshots dist && npm run test:ui -- --storage /tmp/nuig
   `store/details.tsx` origin `'transitive'` asks no feed request; `store/allProjects.tsx` asks `transitive/metadata`
   once per answer of the aggregate stream (`transitive.metadata`). Tests: the prefetch, the transitive selection and
   the aggregate metadata ask.
+- P9.6 (a) (ruling in `src/webview/main/STATUS.md`): `Row.meta` (Browse downloads after the version, in the
+  description); `store/details.tsx` one selection per view (`installed`, `updates`, `browse`) with a stable
+  `showView`.
 
 ## Done (untested)
 

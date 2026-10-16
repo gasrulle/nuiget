@@ -4,7 +4,7 @@ import { ALL_PROJECTS, type InstalledPackage, type InstalledResult, type Package
 import { whyNotRemovable } from '../../../shared/installed/rules';
 import { EmptyState, Skeleton, Toolbar } from '../../../shared/primitives';
 import { useAllProjects } from '../../../shared/store/allProjects';
-import { useDetailsActions, type DetailsSelection } from '../../../shared/store/details';
+import { useDetails, useDetailsActions, type DetailsSelection } from '../../../shared/store/details';
 import { useInstalled } from '../../../shared/store/installed';
 import { useOps, useOpsActions } from '../../../shared/store/ops';
 import { useProjects } from '../../../shared/store/projects';
@@ -62,6 +62,14 @@ export function InstalledTab({ filter, vulnerableOnly, announce }: ListView): Re
         setBulk(new Map());
         setConfirming(false);
     }, [selection]);
+    // A selection of this tab that comes back (the tab shown again) makes its row current again.
+    const detailsSelection = useDetails().selection;
+    useEffect(() => {
+        if (detailsSelection?.origin === 'installed' && detailsSelection.projectPath !== null) {
+            const { projectPath, packageId } = detailsSelection;
+            setCurrent(previous => (previous?.projectPath === projectPath && previous.id === packageId ? previous : { projectPath, id: packageId }));
+        }
+    }, [detailsSelection]);
 
     let sections: Section[] = [];
     if (allMode) {

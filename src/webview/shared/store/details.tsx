@@ -45,8 +45,14 @@ export interface DetailsState {
     stale: boolean;
 }
 
+/** The views of the main panel that keep a selection of their own: the Installed tab (transitive rows too), Updates, Browse. */
+export type DetailsView = 'installed' | 'updates' | 'browse';
+
 export interface DetailsActions {
+    /** Selects in the view of the selection's origin and shows that view; `null` clears the shown view's selection. */
     select: (selection: DetailsSelection | null) => void;
+    /** The shell shows another view: its own selection comes back; Browse always starts without one. Never changes identity. */
+    showView: (view: DetailsView) => void;
     chooseVersion: (version: string) => void;
     /** The README tab is shown: from now on the README of the chosen version is asked for. */
     showReadme: () => void;
@@ -67,6 +73,19 @@ const singleProject = (selected: string | undefined): string | null =>
     selected === undefined || selected === '' || selected === ALL_PROJECTS ? null : selected;
 
 const sameId = (a: string, b: string): boolean => a.toLowerCase() === b.toLowerCase();
+
+const viewOf = (origin: DetailsSelection['origin']): DetailsView => (origin === 'browse' ? 'browse' : origin === 'updates' ? 'updates' : 'installed');
+
+/** A view's selection and the committed project selection when it was made (a path, ALL_PROJECTS or empty). */
+interface Remembered {
+    selection: DetailsSelection;
+    selectedUnder: string | undefined;
+}
+
+interface Views {
+    view: DetailsView;
+    remembered: ReadonlyMap<DetailsView, Remembered>;
+}
 
 /**
  * Asks `request` whenever `key` changes or `attempt` goes up, and keeps the answer only while it is still the one
@@ -110,15 +129,21 @@ function useLoadable<T>(key: string | null, attempt: number, request: (signal: A
  * version is never shown. `package/versions` and `package/metadata` carry no generation (N70): they are asked again
  * when an invalidation names a `versions:<id>|` or `metadata:<id>@` key of the package. When the committed project
  * changes under an installed or update selection, the selection becomes stale until the new project's installed
- * list answers: it stays when the package is there and goes when it is not.
+ * list answers: it stays when the package is there and goes when it is not. Each view of the main panel (Installed,
+ * Updates, Browse) keeps its own selection; `showView` shows the one of the active view, and its versions and details
+ * are asked again (the host answers them from its cache). Browse starts without a selection each time.
  */
 export function DetailsProvider({ children }: { children: React.ReactNode }): React.JSX.Element {
     const bus = useMessageBus();
     const committed = useSession().committed;
     const installed = useInstalled();
-    const [selection, setSelection] = useState<DetailsSelection | null>(null);
-    // The committed project selection when the package was selected (a path, ALL_PROJECTS or empty).
-    const [selectedUnder, setSelectedUnder] = useState<string | undefined>(undefined);
+    const [views, setViews] = useState<Views>({ view: 'installed', remembered: new Map() });
+    const shown = views.remembered.get(views.view);
+    const selection = shown?.selection ?? null;
+    const selectedUnder = shown?.selectedUnder;
+    // Read through a ref, so that `showView` never changes.
+    const latestViews = useRef(views);
+    latestViews.current = views;
     const [version, setVersion] = useState<string | null>(null);
     const [readmeWanted, setReadmeWanted] = useState(false);
     const [attempts, setAttempts] = useState({ versions: 0, metadata: 0, readme: 0 });
@@ -131,9 +156,31 @@ export function DetailsProvider({ children }: { children: React.ReactNode }): Re
     const latestCommitted = useRef(committedSelection);
     latestCommitted.current = committedSelection;
     const select = useCallback((next: DetailsSelection | null): void => {
-        setSelection(next);
-        setSelectedUnder(latestCommitted.current);
+        setViews(previous => {
+            const remembered = new Map(previous.remembered);
+            if (next === null) {
+                remembered.delete(previous.view);
+                return { ...previous, remembered };
+            }
+            const view = viewOf(next.origin);
+            remembered.set(view, { selection: next, selectedUnder: latestCommitted.current });
+            return { view, remembered };
+        });
         setVersion(next?.version ?? null);
+        setReadmeWanted(false);
+    }, []);
+    const showView = useCallback((next: DetailsView): void => {
+        const current = latestViews.current;
+        if (current.view === next) {
+            return;
+        }
+        const remembered = new Map(current.remembered);
+        if (next === 'browse') {
+            // The shell clears the search when Browse ends: there is nothing to come back to.
+            remembered.delete('browse');
+        }
+        setViews({ view: next, remembered });
+        setVersion(remembered.get(next)?.selection.version ?? null);
         setReadmeWanted(false);
     }, []);
 
@@ -155,8 +202,7 @@ export function DetailsProvider({ children }: { children: React.ReactNode }): Re
         if (entry === undefined) {
             select(null);
         } else {
-            setSelection({ ...selection, projectPath: committedProject });
-            setSelectedUnder(committedSelection);
+            setViews(previous => ({ ...previous, remembered: new Map(previous.remembered).set(previous.view, { selection: { ...selection, projectPath: committedProject }, selectedUnder: committedSelection }) }));
         }
     }, [stale, selection, committedProject, committedSelection, installed.status, installed.projectPath, installed.result, select]);
 
@@ -205,12 +251,13 @@ export function DetailsProvider({ children }: { children: React.ReactNode }): Re
 
     const actions = useMemo<DetailsActions>(() => ({
         select,
+        showView,
         chooseVersion: next => setVersion(next),
         showReadme: () => setReadmeWanted(true),
         retryVersions: () => setAttempts(previous => ({ ...previous, versions: previous.versions + 1 })),
         retryMetadata: () => setAttempts(previous => ({ ...previous, metadata: previous.metadata + 1 })),
         retryReadme: () => setAttempts(previous => ({ ...previous, readme: previous.readme + 1 })),
-    }), [select]);
+    }), [select, showView]);
 
     const state = useMemo<DetailsState>(
         () => ({ selection, version, versions, metadata, readme, stale }),

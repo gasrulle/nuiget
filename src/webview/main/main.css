@@ -182,12 +182,6 @@ body {
     min-height: 0;
 }
 
-.nuiget-browse-icon {
-    width: var(--nuiget-icon-size-lg);
-    height: var(--nuiget-icon-size-lg);
-    object-fit: contain;
-}
-
 /* ── Details pane ── */
 
 .nuiget-details {

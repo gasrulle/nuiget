@@ -177,8 +177,10 @@
 .nuiget-row-option[aria-current="true"] .nuiget-row-status,
 .nuiget-row-option[aria-selected="true"] .nuiget-row-version-new,
 .nuiget-row-option[aria-selected="true"] .nuiget-row-authors,
+.nuiget-row-option[aria-selected="true"] .nuiget-row-meta,
 .nuiget-row-option[aria-current="true"] .nuiget-row-version-new,
-.nuiget-row-option[aria-current="true"] .nuiget-row-authors {
+.nuiget-row-option[aria-current="true"] .nuiget-row-authors,
+.nuiget-row-option[aria-current="true"] .nuiget-row-meta {
     color: inherit;
 }
 
@@ -208,6 +210,12 @@
 .nuiget-row-version-new {
     color: var(--nuiget-color-version-new);
     font-weight: 600;
+}
+
+.nuiget-row-meta {
+    color: var(--nuiget-color-fg-muted);
+    font-size: var(--nuiget-font-size-sm);
+    white-space: nowrap;
 }
 
 /* No opacity: at 0.7 the muted colour falls below 4.5:1 on Light Modern (theme.ui.test.ts). */
@@ -313,6 +321,7 @@
 
 /* A compact row has room for the name, the version and the badges; the rest is still read out (D14). */
 .nuiget-row--compact .nuiget-row-authors,
+.nuiget-row--compact .nuiget-row-meta,
 .nuiget-row--compact .nuiget-row-description,
 .nuiget-row--compact .nuiget-row-status {
     position: absolute;

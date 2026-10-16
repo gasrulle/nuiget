@@ -259,6 +259,20 @@ describe('Row layout (P9.2, D15)', () => {
         }
     });
 
+    it('a comfortable row shows its meta after the version and reads it in the description', () => {
+        const comfortable = renderRow({
+            density: 'comfortable', meta: '2.5M downloads', authors: 'Serilog Contributors', verified: true,
+            badges: <Badge label="CPM" title="Centrally managed" />, description: 'Structured logging',
+        });
+        const option = screen.getByRole('option', { name: 'Serilog 3.0.0' });
+        const [version, meta, authors] = ['.nuiget-row-version', '.nuiget-row-meta', '.nuiget-row-authors'].map(selector => option.querySelector(selector) as Element);
+        expect(follows(version, meta) && follows(meta, authors)).toBe(true);
+        expect(option).toHaveAccessibleDescription('Centrally managed 2.5M downloads Verified: the package id prefix is reserved by its owner Serilog Contributors Structured logging');
+        comfortable.unmount();
+        renderRow({ density: 'compact', meta: '2.5M downloads' });
+        expect(getComputedStyle(screen.getByRole('option').querySelector('.nuiget-row-meta') as Element).position).toBe('absolute');
+    });
+
     it('an update row reads old → new as text and marks the new version', () => {
         renderRow({ density: 'comfortable', nextVersion: '3.1.0' });
         const option = screen.getByRole('option', { name: 'Serilog 3.0.0 → 3.1.0' });

@@ -4,7 +4,7 @@ import { ALL_PROJECTS, type PackageUpdate } from '../../../../protocol';
 import { IN_PROGRESS, isCentral as isCentralRow, whyNotUpdatable } from '../../../shared/installed/rules';
 import { ArrowUpIcon, Badge, Banner, EmptyState, IconButton, Listbox, Row, Skeleton, Toolbar } from '../../../shared/primitives';
 import { packageIconSrc } from '../../../shared/packageIcon';
-import { useDetailsActions } from '../../../shared/store/details';
+import { useDetails, useDetailsActions } from '../../../shared/store/details';
 import { useInstalled } from '../../../shared/store/installed';
 import { useOps, useOpsActions } from '../../../shared/store/ops';
 import { useSession } from '../../../shared/store/session';
@@ -55,6 +55,13 @@ function ProjectUpdates({ filter, announce }: ListView): React.JSX.Element {
     }, [selection]);
 
     const { projectPath, rows } = updates;
+    // A selection of this tab that comes back (the tab shown again) makes its row current again.
+    const detailsSelection = useDetails().selection;
+    useEffect(() => {
+        if (detailsSelection?.origin === 'updates' && detailsSelection.projectPath === projectPath) {
+            setCurrentId(detailsSelection.packageId);
+        }
+    }, [detailsSelection, projectPath]);
     const { select } = useDetailsActions();
     const centralIds = useMemo(() => new Set((installed.result?.packages ?? [])
         .filter(entry => entry.declaration === 'central' || entry.declaration === 'central-override')

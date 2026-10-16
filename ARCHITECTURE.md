@@ -276,13 +276,13 @@ reader cannot reach it. So a row is three elements:
 ```text
 div.nuiget-row[role="presentation"][data-index][data-testid="package-row-<id>"]     ← measured, placed
 ├─ div.nuiget-row-option[role="option"][tabIndex 0 | -1][aria-selected][aria-posinset][aria-setsize]
-│  │  [aria-labelledby → name, version][aria-describedby → badges, authors, description, status]
+│  │  [aria-labelledby → name, version][aria-describedby → badges, meta, authors, description, status]
 │  │  [aria-busy][aria-disabled]                                                    ← text only
 │  ├─ span.nuiget-row-check[aria-hidden]      (multi-selectable lists)
 │  ├─ span.nuiget-row-icon[aria-hidden]       (comfortable rows, with or without an icon)
 │  └─ span.nuiget-row-body[title="<id> <version>"]                                  ← the tooltip
 │     ├─ span.nuiget-row-line   name, badges
-│     ├─ span.nuiget-row-line   version (`old → new` for an update), authors with the Verified mark, status
+│     ├─ span.nuiget-row-line   version (`old → new` for an update), meta (Browse: downloads), authors with the Verified mark, status
 │     └─ span.nuiget-row-description   (Browse)
 └─ div.nuiget-row-actions[aria-hidden="true"]                                       ← pointer only
       IconButton[tabIndex -1][data-testid="row-action-<name>"] … or a Spinner while the row is busy
@@ -475,7 +475,10 @@ starts; the other slices ask when they have something to ask for.
   carry no generation (N70); the slice asks again when an invalidation names a `versions:<id>|` or `metadata:<id>@`
   key of the package. Stale selection (interaction model §4): when the committed project changes under an installed or
   update selection, it stays read-only until the new installed list answers, then stays (with the new project) or goes;
-  All Projects or no project clears it. A browse selection is never stale.
+  All Projects or no project clears it. A browse selection is never stale. Each view of the main panel (`installed`
+  with its transitive rows, `updates`, `browse`) keeps its own selection: `select()` stores it under the view of its
+  origin and shows that view, `showView(view)` (called by `MainShell` when the tab or Browse changes; a stable
+  callback) shows the view's own selection, asking its versions and details again, and Browse always starts empty.
 - `ops`: operations in progress, by operation id, from `ops/progress` (`running`, `restoring`; the host sends
   no `queued` event) and, on the surface that asked, from the call: `run(type, payload)` records the operation
   at once under an id of the surface, with its kind and the projects and packages read from the payload
@@ -640,8 +643,10 @@ then leaves it. The list belongs to the box and is no layer of `primitives/layer
 is why it is not a `Popover`.
 
 - **Main panel.** Plain text is a browse search: `BrowseList` (`browse-list`) takes the place of the tab bar and
-  lists the results with icons (`data:` URIs only, the CSP's `img-src`), authors, downloads and the Verified and
-  Installed badges. `useSearchTyping` owns the timers by `searchDebounceMode`: `quicksearch` asks for suggestions
+  lists the results as the 1.x card (P9.6): the icon (`packageIconSrc`, the bundled default when no `data:` URI),
+  the version with the downloads (`Row.meta`), authors with the Verified mark, the description line and the
+  Installed badge. Ctrl+Enter on a row installs its version through `useInstallAction`; a new text whose results lack
+  the current row clears the pane. `useSearchTyping` owns the timers by `searchDebounceMode`: `quicksearch` asks for suggestions
   150 ms after the last key from two characters on while the box has focus, `full` searches 300 ms after the last
   key, and `off` runs nothing while typing; Enter always searches at once. The sidebar ignores the setting: it
   searches 300 ms after the last key in every mode, as 1.x did. The main panel's search feature enables `config` and `sources` on mount,
@@ -663,13 +668,14 @@ is why it is not a `Popover`.
 read-only `TransitiveDetails`: the id with a Transitive badge, Version, Authors with the Verified mark, Required by per
 framework or per project, nothing asked of the feeds); the Installed, Updates and browse
 lists call `select()` when the user makes a row current (and the browse list after a navigation), never when a list
-resets its own row, so the stale-selection rule can keep the pane. The header shows the installed version with
+resets its own row, so the stale-selection rule can keep the pane; the one exception is Browse, whose selection is never
+stale: a new text whose results lack the current row clears it. The header shows the installed version with
 Uninstall (`whyNotRemovable` decides) and the version selector (`version-selector`, newest first, `(installed)`
 marked) with one primary button (`install-update-button`): Install when the package is not installed in the target
 project, otherwise Update or Downgrade by the order of the host's list (no comparator in the webview; a version missing
 from the list says Update). The target is the committed project for a browse row and the row's own project otherwise;
 without a single project, while stale, for a floating or ranged reference or an unresolved one, the button is
-disabled with the reason. An install into a CPM project asks `cpm/preview` first (the primary button waits; a selection change cancels the ask): `null` installs at once, a preview or an error opens `CentralUpdateDialog` with `kind: 'install'` and its confirm runs `ops/install` (N77). A centrally managed package opens `CentralUpdateDialog`, which asks `cpm/preview`, lists the projects the central version applies to and runs `ops/update` on *Update central version*; a row with a `VersionOverride` updates in its project alone (no preview, N74); a central row uninstalls directly and the pane says that the central entry stays. Busy follows
+disabled with the reason. Every install of the main panel goes through `useInstallAction` (P9.6), the one sender of `ops/install`: it refuses without a single project, while the project's list has not answered (CPM unknown), for an installed package or a busy one, and names the version always; into a CPM project it asks `cpm/preview` first (the caller's control waits; a selection change cancels the ask): `null` installs at once, a preview or an error opens the caller's `CentralUpdateDialog` with `kind: 'install'` and its confirm runs `ops/install` (N77). A centrally managed package opens `CentralUpdateDialog`, which asks `cpm/preview`, lists the projects the central version applies to and runs `ops/update` on *Update central version*; a row with a `VersionOverride` updates in its project alone (no preview, N74); a central row uninstalls directly and the pane says that the central entry stays. Busy follows
 `isPackageBusy`.
 
 The Details tab shows description, authors, downloads, publication date, license, project URL, size, vulnerabilities
