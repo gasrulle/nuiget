@@ -65,7 +65,10 @@
       "Bash(git push origin labs/*)",
       "Bash(gh pr create:*)",
       "Bash(gh pr list:*)",
-      "Bash(gh pr ready:*)"
+      "Bash(gh pr ready:*)",
+      "Bash(node scripts/perf-baseline.mjs:*)",
+      "Bash(npm run perf:baseline:*)",
+      "Bash(node scripts/probe-sdk.mjs:*)"
     ],
     "ask": [
       "Bash(npm version:*)"
