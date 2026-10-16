@@ -32,9 +32,10 @@ describe('main panel 2.0 entry', () => {
         expect(screen.getByTestId('tab-bar')).toBeInTheDocument();
         expect(screen.getByTestId('status-live')).toBeInTheDocument();
         const asked = api().postMessage.mock.calls.map(([message]) => message as { kind: string; type?: string }).filter(message => message.kind === 'request').map(message => message.type);
-        // The search feature enables the config and sources slices on mount: config needs no session; sources/list follows the first snapshot (useSearchTyping.test.tsx, sources.test.tsx). perf/mark webviewReady is sent once from MainShell (N81).
-        expect(new Set(asked)).toEqual(new Set(['session/get', 'projects/list', 'config/get', 'perf/mark']));
+        // The search feature enables the config and sources slices on mount: config needs no session; sources/list follows the first snapshot (useSearchTyping.test.tsx, sources.test.tsx). perf/mark webviewReady is sent once from MainShell (N81); layout/get reads the kept split once from MainShell (P9.7).
+        expect(new Set(asked)).toEqual(new Set(['session/get', 'projects/list', 'config/get', 'layout/get', 'perf/mark']));
         expect(asked.filter(type => type === 'perf/mark')).toHaveLength(1);
+        expect(asked.filter(type => type === 'layout/get')).toHaveLength(1);
         const mark = api().postMessage.mock.calls.map(([message]) => message as { kind: string; type?: string; payload?: { name?: string } }).find(message => message.kind === 'request' && message.type === 'perf/mark');
         expect(mark?.payload?.name).toBe('webviewReady');
     });

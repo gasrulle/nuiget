@@ -11,6 +11,7 @@ import { BrowseResults } from './BrowseResults';
 import { InstalledSection } from './InstalledSection';
 import { UpdatesSection } from './UpdatesSection';
 import { describeOutcome } from './outcomes';
+import type { ViewStateStore } from '../shared/viewState';
 
 /** What the view keeps across reloads in the webview's own state (`getState`/`setState`). */
 export interface SidebarLayout {
@@ -20,11 +21,7 @@ export interface SidebarLayout {
     updatesExpanded: boolean;
 }
 
-/** The webview's state store; the entry hands down the one `acquireVsCodeApi()` gave it. */
-export interface ViewStateStore {
-    getState(): unknown;
-    setState(state: unknown): void;
-}
+export type { ViewStateStore };
 
 const SPLIT = { min: 20, max: 80, initial: 50 };
 const DEFAULT_LAYOUT: SidebarLayout = { split: SPLIT.initial, installedExpanded: true, updatesExpanded: true };

@@ -41,8 +41,8 @@ describe('2.0 main panel shell', () => {
         expect(layout.display).to.equal('flex');
         expect(layout.rootHeight).to.be.greaterThan(200);
         // The split React sets as a custom property (CSSOM) is allowed by the policy and sizes the list.
-        expect(layout.split).to.equal('50%');
-        expect(Math.abs(layout.listWidth / layout.splitWidth - 0.5)).to.be.lessThan(0.05);
+        expect(layout.split).to.equal('35%');
+        expect(Math.abs(layout.listWidth / layout.splitWidth - 0.35)).to.be.lessThan(0.05);
         expect(layout.color).to.match(/^rgba?\(/).and.not.to.equal('rgba(0, 0, 0, 0)');
     });
 

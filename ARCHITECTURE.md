@@ -566,8 +566,8 @@ builds it into `dist/webview.js` and, because the entry imports `../shared/token
 | Include prerelease | A checkbox bound to the session (`session/set { includePrerelease }`) |
 | Refresh | `refresh/all` once, disabled with a loading icon until it is answered; "Refreshed" or "Refresh failed" in the live region. A `ProgressBar` lies over the bottom of the search area while the refresh runs or the shown tab's list revalidates (Browse draws its own) |
 | Search box | `parseSearchQuery` (`src/webview/shared/search`): `@installed` and `@vulnerable` select Installed, `@updates` selects Updates, and the text after the prefix is the list's filter; a plain text is a browse search, which changes nothing here until the search feature runs it. Escape clears a box with text and leaves an empty one. Clear (with text) and Filters (`@`, or back to empty) are buttons inside the box with `tabIndex={-1}` that keep the focus in it, on both surfaces. Choosing the other tab ends a filter mode |
-| Tabs | `Tabs`; `ui/selectProject` with `initialTab` selects it (the host applied the project already); `ui/focusSearch` focuses the box |
-| Split | `Sash` (25–75 %, start 50 %) reports a share that the shell puts on the split as `--nuiget-split`; `main.css` sizes the list with it |
+| Tabs | `Tabs`; `ui/selectProject` with `initialTab` selects it (the host applied the project already); `ui/focusSearch` focuses the box. The chosen tab is kept in the webview state (`viewState`, `src/webview/shared/viewState.ts`) and restored when the panel reopens. Installed carries the count and, once the lite metadata is known, a vulnerability badge (`TabItem.badge`, tone `error`) |
+| Split | `Sash` (25–75 %, start 35 %) reports a share that the shell puts on the split as `--nuiget-split`; `main.css` sizes the list with it. The position is read from `layout/get` at mount (once, ignored after the user moved the sash) and written with `layout/set` when a drag or key ends (`onChangeEnd`) |
 
 ### Installed feature (main)
 
@@ -653,7 +653,7 @@ is why it is not a `Popover`.
   150 ms after the last key from two characters on while the box has focus, `full` searches 300 ms after the last
   key, and `off` runs nothing while typing; Enter always searches at once. The sidebar ignores the setting: it
   searches 300 ms after the last key in every mode, as 1.x did. The main panel's search feature enables `config` and `sources` on mount,
-  so the main panel's start requests are `session/get`, `projects/list`, `config/get` and one `perf/mark`
+  so the main panel's start requests are `session/get`, `projects/list`, `config/get`, `layout/get` (the kept split, P9.7) and one `perf/mark`
   (`webviewReady`, N81), with `sources/list` after the first snapshot; the sidebar's set is `session/get`,
   `projects/list` and the same mark.
   Picking a suggestion and `ui/navigateToPackage` fill the box with the id and search for it exactly; the package

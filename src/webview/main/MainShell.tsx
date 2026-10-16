@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import type React from 'react';
-import { ALL_PROJECTS } from '../../protocol';
+import { ALL_PROJECTS, type PackageMetadataLite } from '../../protocol';
 import { useMessageBus } from '../shared/bus/useMessageBus';
 import { Banner, cssVars, EmptyState, IconButton, LiveStatus, LoadingIcon, ProgressBar, Sash, SyncIcon, Tabs, type TabItem } from '../shared/primitives';
 import { FILTER_PREFIXES, parseSearchQuery, type SearchMode } from '../shared/search/parseSearchQuery';
@@ -14,6 +14,7 @@ import { useProjects } from '../shared/store/projects';
 import { useSearch } from '../shared/store/search';
 import { useSession, useSessionActions } from '../shared/store/session';
 import { useUpdates } from '../shared/store/updates';
+import type { ViewStateStore } from '../shared/viewState';
 import { useSearchTyping } from './features/search/useSearchTyping';
 import { CentralUpdateDialog } from './features/updates/CentralUpdateDialog';
 import { SourcesControl } from './features/sources/SourcesControl';
@@ -46,6 +47,8 @@ export interface MainShellProps {
     browse?: (view: BrowseView) => React.ReactNode;
     /** The details of the selected package; without it, the details pane says how to get one. */
     details?: (view: { announce: (message: string) => void }) => React.ReactNode;
+    /** The webview's state store: the chosen tab is kept there across a reload of the panel. */
+    viewState?: ViewStateStore;
 }
 
 const TABS: ReadonlyArray<TabItem<MainTab>> = [
@@ -56,7 +59,20 @@ const TABS: ReadonlyArray<TabItem<MainTab>> = [
 /** The tab a filter mode belongs to; the other modes leave the choice to the user. */
 const TAB_OF_MODE: Partial<Record<SearchMode, MainTab>> = { installed: 'installed', vulnerable: 'installed', updates: 'updates' };
 
-const SPLIT = { min: 25, max: 75, initial: 50 };
+const SPLIT = { min: 25, max: 75, initial: 35 };
+
+/** The tab kept in the webview state; anything else, or a store that cannot be read, is Installed. */
+function readMainTab(store: ViewStateStore | undefined): MainTab {
+    try {
+        const tab = (store?.getState() as { tab?: unknown } | undefined)?.tab;
+        return tab === 'updates' ? 'updates' : 'installed';
+    } catch {
+        return 'installed';
+    }
+}
+
+const isVulnerable = (metadata: ReadonlyMap<string, PackageMetadataLite> | undefined, id: string): boolean =>
+    (metadata?.get(id.toLowerCase())?.vulnerabilities?.length ?? 0) > 0;
 
 /**
  * The 2.0 main panel around its features (interaction model §1 and §2): the header with the shared context
@@ -65,7 +81,7 @@ const SPLIT = { min: 25, max: 75, initial: 50 };
  * `@vulnerable`) and hands its text to the list; plain text is a browse search: Enter runs it in the search slice and
  * the browse results take the place of the tabs; typing, suggestions and `ui/navigateToPackage` are the search feature's.
  */
-export function MainShell({ installed, updates, browse, details }: MainShellProps): React.JSX.Element {
+export function MainShell({ installed, updates, browse, details, viewState }: MainShellProps): React.JSX.Element {
     const bus = useMessageBus();
     const { session } = useSession();
     const { set } = useSessionActions();
@@ -73,8 +89,10 @@ export function MainShell({ installed, updates, browse, details }: MainShellProp
     const updatesSlice = useUpdates();
     const installedSlice = useInstalled();
     const [query, setQuery] = useState('');
-    const [chosenTab, setChosenTab] = useState<MainTab>('installed');
+    const [chosenTab, setChosenTab] = useState<MainTab>(() => readMainTab(viewState));
     const [split, setSplit] = useState(SPLIT.initial);
+    // The user moved the sash before the kept position arrived: the kept one no longer applies.
+    const moved = useRef(false);
     const [said, setSaid] = useState<{ message: string | null; count: number }>({ message: null, count: 0 });
     const searchRef = useRef<HTMLInputElement>(null);
     const listPaneId = `${useId()}-list`;
@@ -87,8 +105,27 @@ export function MainShell({ installed, updates, browse, details }: MainShellProp
         if (!markedReady.current) {
             markedReady.current = true;
             bus.request('perf/mark', { name: 'webviewReady', detail: `${Math.round(performance.now())} ms after load` }).catch(() => undefined);
+            // The split is a layout preference the host keeps (ADR-001); once per page, under StrictMode too.
+            bus.request('layout/get', {}).then(({ result }) => {
+                const kept = result.splitPosition;
+                if (typeof kept === 'number' && Number.isFinite(kept) && !moved.current) {
+                    setSplit(Math.min(SPLIT.max, Math.max(SPLIT.min, kept)));
+                }
+            }, () => undefined);
         }
     }, [bus]);
+
+    const keepTab = useCallback((next: MainTab): void => {
+        if (viewState === undefined) {
+            return;
+        }
+        try {
+            const kept = viewState.getState();
+            viewState.setState({ ...(typeof kept === 'object' && kept !== null ? kept : {}), tab: next });
+        } catch {
+            // A store that cannot be written keeps nothing; the tab still changes.
+        }
+    }, [viewState]);
     const markedRender = useRef(false);
     const firstListShown = installedSlice.status === 'ready' && installedSlice.result !== undefined;
     useEffect(() => {
@@ -113,8 +150,9 @@ export function MainShell({ installed, updates, browse, details }: MainShellProp
         if (initialTab) {
             setQuery('');
             setChosenTab(initialTab);
+            keepTab(initialTab);
         }
-    }), [bus]);
+    }), [bus, keepTab]);
 
     const parsed = parseSearchQuery(query);
     const browsing = parsed.mode === 'browse';
@@ -146,11 +184,21 @@ export function MainShell({ installed, updates, browse, details }: MainShellProp
     const singleInstalled = installedSlice.status === 'ready' ? installedSlice.result?.packages.length ?? 0 : 0;
     const installedCount = (session?.selectedProject === ALL_PROJECTS ? allInstalled : singleInstalled) || undefined;
     const counts: Partial<Record<string, number>> = { installed: installedCount, updates: updateCount };
-    const tabs = TABS.map(item => (counts[item.id] !== undefined ? { ...item, count: counts[item.id] } : item));
+    // The vulnerable packages, once the lite metadata is known: no number while it is not (empty is not unknown).
+    const singleVulnerable = installedSlice.metadata.size === 0 ? undefined : (installedSlice.result?.packages.filter(entry => isVulnerable(installedSlice.metadata, entry.id)).length || undefined);
+    const allVulnerable = allProjects.metadata.size === 0 ? undefined : [...allProjects.chunks.values()].reduce((count, chunk) => count + (chunk.result?.packages.filter(entry => isVulnerable(allProjects.metadata.get(chunk.projectPath), entry.id)).length ?? 0), 0) || undefined;
+    const vulnerableCount = session?.selectedProject === ALL_PROJECTS ? allVulnerable : singleVulnerable;
+    const tabs = TABS.map(item => {
+        const counted = counts[item.id] !== undefined ? { ...item, count: counts[item.id] } : item;
+        return item.id === 'installed' && vulnerableCount !== undefined
+            ? { ...counted, badge: { label: String(vulnerableCount), title: `${vulnerableCount} package${vulnerableCount === 1 ? '' : 's'} with known vulnerabilities`, tone: 'error' as const } }
+            : counted;
+    });
     const view: ListView = { filter: modeTab ? parsed.filterText : '', vulnerableOnly: parsed.mode === 'vulnerable', announce };
 
     const selectTab = (next: MainTab): void => {
         setChosenTab(next);
+        keepTab(next);
         // A filter belongs to the list it names: another tab starts unfiltered.
         if (modeTab !== undefined && modeTab !== next) {
             setQuery('');
@@ -239,7 +287,16 @@ export function MainShell({ installed, updates, browse, details }: MainShellProp
                         </Tabs>
                     )}
                 </div>
-                <Sash orientation="vertical" label="Resize the package list" value={split} min={SPLIT.min} max={SPLIT.max} defaultValue={SPLIT.initial} controls={listPaneId} onChange={setSplit} />
+                <Sash orientation="vertical" label="Resize the package list" value={split} min={SPLIT.min} max={SPLIT.max} defaultValue={SPLIT.initial}
+                    controls={listPaneId}
+                    onChange={value => {
+                        moved.current = true;
+                        setSplit(value);
+                    }}
+                    onChangeEnd={value => {
+                        bus.request('layout/set', { splitPosition: value }).catch(() => undefined);
+                    }}
+                />
                 <section className="nuiget-main-details" data-testid="package-details-panel" aria-label="Package details">
                     {details?.({ announce }) ?? <EmptyState message="Select a package to see its details." />}
                 </section>

@@ -16,11 +16,12 @@ declare function acquireVsCodeApi(): { postMessage(message: unknown): void; getS
 const rootElement = document.getElementById('root');
 
 if (rootElement) {
-    const bus = createMessageBus(acquireVsCodeApi());
+    const api = acquireVsCodeApi();
+    const bus = createMessageBus(api);
     ReactDOM.createRoot(rootElement).render(
         <StrictMode>
             <StoreProvider bus={bus}>
-                <MainShell installed={view => <InstalledTab {...view} />} updates={view => <UpdatesTab {...view} />} browse={view => <BrowseList {...view} />} details={view => <DetailsPane {...view} />} />
+                <MainShell viewState={api} installed={view => <InstalledTab {...view} />} updates={view => <UpdatesTab {...view} />} browse={view => <BrowseList {...view} />} details={view => <DetailsPane {...view} />} />
             </StoreProvider>
         </StrictMode>
     );

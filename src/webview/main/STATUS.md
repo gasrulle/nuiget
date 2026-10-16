@@ -1,10 +1,16 @@
-# STATUS — src/webview/main   commit 54603be (P9.6 closed; parent of the P9.7 commits)   2026-10-17T02:40:00Z
+# STATUS — src/webview/main   commit 3bfc748 (P9.7 commit (a); parent of commit (b) and its docs commit)   2026-10-17T03:30:00Z
 
 git status --porcelain --untracked-files=all (before commit (a)): modified `ARCHITECTURE.md`, `CHANGELOG.md`, `README.md`,
 `docs/plans/STATUS.md`, `docs/ux/interaction-model.md`, `src/test/harness/{scenarios.test.ts,STATUS.md}`,
 `src/webview/main/{MainShell.tsx,MainShell.test.tsx,main.css,STATUS.md}`,
 `src/webview/main/features/sources/{SourcesControl.tsx,SourcesControl.test.tsx}`, `src/webview/shared/STATUS.md`,
 `src/webview/shared/primitives/IconButton.tsx`, `src/webview/shared/search/{SearchBox.tsx,SearchBox.test.tsx,search.css}`
+
+git status --porcelain --untracked-files=all (before commit (b)): modified `ARCHITECTURE.md`, `CHANGELOG.md`,
+`docs/plans/STATUS.md`, `docs/ux/interaction-model.md`, `src/test/ui/v2/main-shell.ui.test.ts`,
+`src/webview/main/{MainShell.tsx,MainShell.test.tsx,index.tsx,index.test.tsx,STATUS.md}`, `src/webview/shared/STATUS.md`,
+`src/webview/shared/primitives/{Tabs.tsx,Tabs.test.tsx}`, `src/webview/shared/search/{SearchBox.tsx,search.css}`,
+`src/webview/sidebar/SidebarView.tsx`; new `src/webview/shared/viewState.ts`
 
 Item: **P9.7** — Header parity (parity audit MH1, MH2, MH3, MH4, MH7, MH8, MH13; SB6 through the shared search box),
 by the stop-and-ask ruling below, in two commits: (a) header chrome; (b) split and tab memory, the vulnerability
@@ -28,6 +34,18 @@ rm -rf dist && npm run package && npm run check:vsix → check:vsix: OK
 rm -rf /tmp/nuiget-ui/screenshots dist && npm run test:ui -- --storage /tmp/nuiget-ui → exit 0 · 38 passing (1m) · 14 PNGs
                               (local main-installed-single: title left, both checkboxes and the selectors right, one line;
                               sidebar-narrow-200px: the sidebar box keeps its placeholder with the Filters button)
+CI runs 38982375640 (success, UI job `14 named states; PNGs in the artifact: 14`) and 38982372423 on 3bfc748
+commit (b):
+npx tsc --noEmit 0 · npm run check-types 0 · npx eslint src 0 · npm run lint 0 · npm run docs:check 0
+npx vitest run --project backend src/test/lint → Tests 131 passed (131)
+npx vitest run --project frontend src/webview → Tests 537 passed (537)
+npm test                    → exit 0 · Tests 1973 passed | 9 skipped (1982) · npm run bench → exit 0
+rm -rf dist out/esbuild && node esbuild.mjs --production --analyze → dist/extension.js 293359 / 322502 ·
+                              dist/webview.js 543634 / 577766 · dist/sidebar.js 327034 / 351245 (after the padding fix; npm test
+                              again → exit 0, 1973 passed | 9 skipped)
+grep -rn "from '../sidebar\|from '../../sidebar" src/webview/main (code) → none
+rm -rf /tmp/nuiget-ui/screenshots dist && npm run test:ui -- --storage /tmp/nuiget-ui → exit 0 · 38 passing (1m) · 14 PNGs
+                              (local: list pane about 35 %; sidebar-narrow-200px placeholder "…, or filter: @install")
 ```
 
 ## Done (tested)
@@ -48,13 +66,30 @@ rm -rf /tmp/nuiget-ui/screenshots dist && npm run test:ui -- --storage /tmp/nuig
   health and restore; ARCHITECTURE main shell table (Title, Restore, Source selector, Refresh, Search box); CHANGELOG
   `[Unreleased]` Changed.
 
+- Commit (b): `SPLIT.initial` 35; `layout/get` once at mount (ignored once the user moved the sash), `layout/set` from
+  `Sash.onChangeEnd` only; the chosen tab kept in the webview state (`viewState` from `index.tsx`, the type in
+  `src/webview/shared/viewState.ts`, re-exported by `SidebarView.tsx`), written on a tab choice and on
+  `ui/selectProject` with `initialTab`; the Installed tab's vulnerability badge from the lite metadata maps (`Tabs`
+  `badge`, tone `error`), none while the metadata is empty. The search box pads only for the buttons it shows (fix of
+  (a)'s visual check, below).
+- Tests (b): `split position persists`, `a kept split of {} leaves the default 35 %` and of `{"splitPosition":"x"}`,
+  `last tab is remembered in the view state`, `an unknown tab starts on Installed`, `a store that throws starts on
+  Installed`, `the Installed tab shows a vulnerability badge once the metadata lists one, and none while the metadata
+  is unknown` (MainShell.test.tsx); `a tab with a count and a badge names both` (Tabs.test.tsx).
+- Named rewrites (b): `MainShell.test.tsx` 'the sash resizes the list through one custom property' `50%` → `35%` (the
+  ruling's `:204`) and `52%` → `37%` (follow-up ruling, the 35 % default); `src/test/ui/v2/main-shell.ui.test.ts:44-45`
+  `'50%'` → `'35%'`, `0.5` → `0.35`; `src/webview/main/index.test.tsx:36` the start set gains `layout/get`, plus a count
+  of one (follow-up ruling, consequence of DO 10).
+- Docs (b): ARCHITECTURE Tabs and Split rows, the start-requests sentence; interaction model §2 `default` row;
+  CHANGELOG `[Unreleased]` Changed (split, tab memory, vulnerability badge).
+
 ## Done (untested)
 
 - None.
 
 ## Not started
 
-- Commit (b): split 35 % kept through `layout/*`, the last tab in the view state, the Installed vulnerability badge.
+- None of P9.7.
 
 ## Deviations from contract/ADR (file:line each)
 
@@ -64,7 +99,30 @@ rm -rf /tmp/nuiget-ui/screenshots dist && npm run test:ui -- --storage /tmp/nuig
   `onChange` was given. It also asserts that Tab from the box skips both buttons.
 - `restore toggle in header syncs with sidebar` imports `commands` from `../__mocks__/vscode` as `mockCommands`, the
   name `harness.ts:19` uses.
+- (b) `search.css`: the ruling's `padding-inline-end: calc(2 * var(--nuiget-target-min))` applies only while Clear shows
+  (`.nuiget-search-box--clearable`); an empty box reserves one target for Filters. Reason: (a)'s `sidebar-narrow-200px`
+  capture cut the sidebar placeholder to "Search, or filter: @" (P9.6's capture read "…@instal"), a red gate under DO 16.
+  The sidebar placeholder was already cut at 200 px before P9.7; that is P9.10's narrow-width overflow.
+- (b) The vulnerability test answers the slice's own `transitive/metadata` ask after `waitFor`, and the split test
+  checks the once-guard under StrictMode in the same title.
 
+## Visual check (RUN.md §4)
+
+CI run 38982375640 on 3bfc748 (commit (a)), artifact `ui-screenshots`, 14 PNGs:
+
+- viewed: main-installed-single.png: one header line: "Manage NuGet packages" left; Restore after operations (checked),
+  Include prerelease, TestProject.csproj, All sources, gear, refresh right; the search box ends in the Filters icon.
+- viewed: main-installed-single-light.png: the same header in Light Modern, readable; no wrap.
+- viewed: main-installed-single-hc.png: the same header in High Contrast, checkbox borders visible; no wrap.
+- viewed: main-installed-all.png: "All Projects (2)" in the selector, header on one line.
+- viewed: main-updates.png: header on one line; Updates rows unchanged; the pane empty.
+- viewed: main-browse-results.png: Clear (×) and Filters at the end of the box with text; no native cancel button.
+- viewed: main-quicksearch-open.png: Clear and Filters in the box, the suggestions below unchanged.
+- viewed: sidebar-sections.png: the sidebar box "Search, or filter: @installed, @upd" with the Filters icon.
+- viewed: sidebar-narrow-200px.png: RED: the placeholder is cut to "Search, or filter: @" (P9.6: "…@instal"); fixed
+  forward in (b) by reserving room only for the buttons shown (deviation above).
+
+## Advisor decisions (date, item, question, answer verbatim)
 ## Advisor decisions (date, item, question, answer verbatim)
 
 2026-10-17, P9.7 (stop-and-ask: files beyond the row's list, the split default against the audit's verifier, the
@@ -135,6 +193,35 @@ VERIFY:
 Files checked: `/Users/mattias/github/nuiget/.github/agents/architecture-advisor.agent.md`; `/Users/mattias/github/nuiget/docs/plans/2026-10-11-nuiget-2.0-execution-plan.md` (§0–§4, :325-354); `/Users/mattias/github/nuiget/docs/plans/parity-audit-2026-10-16.md` (:655-850, :1410-1445); `/Users/mattias/github/nuiget/docs/plans/STATUS.md` (:122-135); `/Users/mattias/github/nuiget/docs/plans/RUN.md` (:78-92); `/Users/mattias/github/nuiget/docs/ux/interaction-model.md` (§1–§8); `/Users/mattias/github/nuiget/docs/ux/reference-1.18.9/installed-filter-count.jpg` (viewed); `/Users/mattias/github/nuiget/docs/adr/001-*.md` (:20-40), `006-*.md` (head), `008-*.md` (:1-40); `/Users/mattias/github/nuiget/README.md` (:40-65); `/Users/mattias/github/nuiget/ARCHITECTURE.md` (:525-600); `/Users/mattias/github/nuiget/CHANGELOG.md` (headings, :8-60); `/Users/mattias/github/nuiget/src/webview/main/MainShell.tsx` (whole), `MainShell.test.tsx` (titles, :204), `main.css` (:1-80), `index.tsx`, `STATUS.md` (:1-40, :141, :195-197); `/Users/mattias/github/nuiget/src/webview/main/features/sources/SourcesControl.tsx`, `SourcesControl.test.tsx` (titles), `SourceSettingsDialog.tsx` (:189, :213); `/Users/mattias/github/nuiget/src/webview/main/features/installed/InstalledProjectSection.tsx` (:36-56); `/Users/mattias/github/nuiget/src/webview/main/features/updates/UpdatesTab.tsx` (:229-232); `/Users/mattias/github/nuiget/src/webview/main/features/details/{DetailsPane,TransitiveDetails,DetailsInfo}.tsx` (heading levels); `/Users/mattias/github/nuiget/src/webview/shared/search/SearchBox.tsx`, `search.css`, `SearchBox.test.tsx` (titles); `/Users/mattias/github/nuiget/src/webview/shared/primitives/{Tabs,Tabs.test,Badge,IconButton,ProgressBar,Spinner,Sash,Dialog,index}.tsx|ts`, `icons.tsx` (export list), `primitives.css` (:586-603); `/Users/mattias/github/nuiget/src/webview/shared/store/{sources,installed,updates,allProjects,session,useResource}.tsx|ts`; `/Users/mattias/github/nuiget/src/webview/shared/tokens.css` (:51-68, :138-139); `/Users/mattias/github/nuiget/src/webview/shared/bus/MessageBus.ts` (no `getState`/`setState` use); `/Users/mattias/github/nuiget/src/webview/sidebar/index.tsx`, `SidebarView.tsx` (:1-60, :147-164), `sidebar.css` (:30-46), `SidebarView.test.tsx` (:405-414); `/Users/mattias/github/nuiget/src/host/handlers.ts` (:193, :230-260, :318-345), `MainPanelHost.ts` (:20-80, :96), `SidebarHost.ts` (:28-50, :100-112), `handlers.test.ts` (:125-126), `legacyState.test.ts` (:60-74); `/Users/mattias/github/nuiget/src/extension.ts` (:230-250); `/Users/mattias/github/nuiget/src/protocol/messages.ts` (:115-116, :146-152, :195), `domain.ts` (:66, :129, :196, :209-214, :333-335); `/Users/mattias/github/nuiget/src/core/catalog/Catalog.ts` (:542-560), `feedClients.ts` (:145-150); `/Users/mattias/github/nuiget/src/core/feeds/serviceIndex.ts` (:189-193), `health.ts` (:40-70, :130-150); `/Users/mattias/github/nuiget/src/test/harness/harness.ts` (:19-60, :225-285), `scenarios.test.ts` (:1-20, :718-760), `FakeWebview.ts` (:82), `STATUS.md` (exists, 67 lines); `/Users/mattias/github/nuiget/src/test/__mocks__/vscode.ts` (:255-270); `/Users/mattias/github/nuiget/src/test/ui/v2/main-shell.ui.test.ts` (:20-60), `sidebar.ui.test.ts` (:47, :60-110, :153), `sidebarWebview.ts` (:16-36), screenshot call sites in all `*.ui.test.ts`; `/Users/mattias/github/nuiget/src/test/lint/{webview-css-baseline,webview-stylesheets,interaction-model-testids}.test.ts`; `/Users/mattias/github/nuiget/eslint.config.mjs` (:24-40); `/Users/mattias/github/nuiget/scripts/check-docs-drift.mjs` (:211-278); `/Users/mattias/github/nuiget/package.json` (:116-122, :167-171, :216-222); `git show 0457c75:src/webview/app/App.tsx` (:2400-2500) and `0457c75:src/webview/app/App.css` (:20-45); `git log --oneline -3`, `git status --short` (clean at 54603be).
 `````
 
+2026-10-17, P9.7 commit (b) follow-up (stop-and-ask: `index.test.tsx:36` and the sash test's `52%` went red with
+DO 10). Answer of the `architecture-advisor` subagent, verbatim:
+
+`````text
+P9.7 follow-up ruling (commit (b), "a failing test you did not write"). Both claims verified: `src/webview/main/index.test.tsx:36` asserts the exact start set, `ARCHITECTURE.md:656` states the same set, `MainShell.test.tsx:239-245` reads 50%/52%/75%.
+
+DECISION: Option 1. The ruling's DO 10 puts `layout/get` at mount, so `index.test.tsx:36` and `MainShell.test.tsx:243` (`52%`) are consequences of the named change, not an unnamed test going red on its own; rewrite them as named rewrites of P9.7 (b) and keep the ARCHITECTURE sentence true. Option 2 (deferring the request) adds an ordering rule to the shell for no benefit and still changes the set.
+
+DO:
+1. `src/webview/main/index.test.tsx:36`: `new Set(['session/get', 'projects/list', 'config/get', 'layout/get', 'perf/mark'])`; extend the comment at :35 with "layout/get reads the kept split once from MainShell (P9.7)". Add `expect(asked.filter(type => type === 'layout/get')).toHaveLength(1);` next to the `perf/mark` count at :37 so the StrictMode once-guard is asserted at the entry too.
+2. `src/webview/main/MainShell.test.tsx` 'the sash resizes the list through one custom property': `50%` → `35%` (already named) and `52%` → `37%` at :243; `75%` at :245 stays (max unchanged).
+3. `ARCHITECTURE.md:656`: "start requests are `session/get`, `projects/list`, `config/get`, `layout/get` (the kept split, P9.7) and one `perf/mark`".
+4. List all three in the STATUS note under named rewrites with the reason (consequence of DO 10 / the 35 % default), and in the commit body.
+5. Re-run `npx vitest run --project frontend src/webview` → 0 failed before committing (b).
+
+DO NOT:
+- Do not defer or conditionally send `layout/get` to keep the old set; the mount request is the ruled design.
+- Do not widen the assertion to a superset check (`toContain`); keep the exact set so a future extra start request is seen.
+- Do not touch any other test; a third red test is a new stop-and-ask.
+
+CONTRACT CHANGE: none.
+
+VERIFY: `grep -n "'layout/get'" src/webview/main/index.test.tsx` → two lines (set and count); `grep -n "37%" src/webview/main/MainShell.test.tsx` → one line; `grep -n "layout/get" ARCHITECTURE.md` → includes line 656; `npx vitest run --project frontend src/webview` → 0 failed.
+
+Files checked: `/Users/mattias/github/nuiget/src/webview/main/index.test.tsx` (:18-42); `/Users/mattias/github/nuiget/src/webview/main/MainShell.test.tsx` (:236-247); `/Users/mattias/github/nuiget/ARCHITECTURE.md` (:654-658); `git log --oneline -2` (3bfc748 on top of 54603be).
+
+The main P9.7 ruling delivered earlier stands unchanged.
+`````
+
 ## Exact next step (one item ID)
 
-P9.7 commit (b), after commit (a)'s CI is green and its screenshots are viewed.
+P9.8.

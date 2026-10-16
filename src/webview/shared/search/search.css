@@ -7,8 +7,12 @@
     position: relative;
 }
 
-/* Clear and Filters sit inside the box at its end; the text stops before them. */
+/* Clear and Filters sit inside the box at its end; the text stops before the buttons shown (Filters alone while empty). */
 .nuiget-search-box > input {
+    padding-inline-end: var(--nuiget-target-min);
+}
+
+.nuiget-search-box--clearable > input {
     padding-inline-end: calc(2 * var(--nuiget-target-min));
 }
 

@@ -98,4 +98,14 @@ describe('Tabs', () => {
         const { container } = render(<MainTabs />);
         expect(await axe(container)).toHaveNoViolations();
     });
+
+    it('a tab with a count and a badge names both', async () => {
+        const { container } = render(
+            <Tabs tabs={[{ id: 'installed', label: 'Installed', count: 3, badge: { label: '1', title: '1 package with known vulnerabilities', tone: 'error' } }]} selected="installed" onSelect={vi.fn()} label="Package lists">
+                <p>content</p>
+            </Tabs>,
+        );
+        expect(screen.getByRole('tab')).toHaveAccessibleName('Installed 3 1 package with known vulnerabilities');
+        expect(await axe(container)).toHaveNoViolations();
+    });
 });

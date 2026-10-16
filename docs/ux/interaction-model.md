@@ -26,7 +26,7 @@ that is disabled while it runs.
 
 | Mode | Trigger | Main panel shows | Sidebar shows |
 |---|---|---|---|
-| `default` | empty box | Tabs **Installed** / **Updates** (with badge) | Sections **Installed** / **Updates** (collapsible, draggable split) |
+| `default` | empty box | Tabs **Installed** / **Updates** (with count badges; the Installed tab also shows how many packages have known vulnerabilities once the metadata is known) | Sections **Installed** / **Updates** (collapsible, draggable split) |
 | `browse` | plain text + Enter (quick-search suggestions while typing, grouped per source, with a loading row; ArrowRight lists versions and Ctrl+Enter installs, §5) | Browse results list + details; tab bar hidden | Flat browse results (Enter or 300 ms debounce, min 2 chars); Enter on a row installs it, or, for a package that has a central entry in a CPM project, opens the actions menu (§5) |
 | `installed` | `@installed <filter>` | Installed tab filtered client-side | Installed section filtered |
 | `updates` | `@updates <filter>` | Updates tab filtered | Updates section filtered |

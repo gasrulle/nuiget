@@ -304,7 +304,7 @@ export function SearchBox(props: SearchBoxProps): React.JSX.Element {
     }
 
     return (
-        <div className="nuiget-search-box">
+        <div className={value === '' ? 'nuiget-search-box' : 'nuiget-search-box nuiget-search-box--clearable'}>
             <input
                 ref={inputRef}
                 className={className}

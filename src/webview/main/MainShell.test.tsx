@@ -6,6 +6,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { ALL_PROJECTS, resourceKeys, type SessionSnapshot } from '../../protocol';
 import { createFakeHost, type FakeHost } from '../shared/bus/testSupport';
 import { StoreProvider } from '../shared/store/StoreProvider';
+import type { ViewStateStore } from '../shared/viewState';
 import { MainShell, type ListView } from './MainShell';
 
 const A = '/w/App/App.csproj';
@@ -18,12 +19,13 @@ const hostSays = (say: () => void): Promise<void> => act(async () => {
 });
 
 /** The lists record what the shell hands them, so a test can read the filter of the shown tab. */
-function mount(): { host: FakeHost; shown: () => { tab: string; view: ListView } | undefined } {
+function mount(viewState?: ViewStateStore): { host: FakeHost; shown: () => { tab: string; view: ListView } | undefined } {
     const host = createFakeHost();
     let last: { tab: string; view: ListView } | undefined;
     render(
         <StoreProvider bus={host.bus}>
             <MainShell
+                viewState={viewState}
                 installed={view => { last = { tab: 'installed', view }; return <p>Installed list</p>; }}
                 updates={view => { last = { tab: 'updates', view }; return <p>Updates list</p>; }}
             />
@@ -32,8 +34,8 @@ function mount(): { host: FakeHost; shown: () => { tab: string; view: ListView }
     return { host, shown: () => last };
 }
 
-async function mountReady(changes: Partial<SessionSnapshot> = {}) {
-    const mounted = mount();
+async function mountReady(changes: Partial<SessionSnapshot> = {}, viewState?: ViewStateStore) {
+    const mounted = mount(viewState);
     await hostSays(() => mounted.host.respond(mounted.host.requests('session/get')[0], snapshot(1, changes)));
     await hostSays(() => mounted.host.respond(mounted.host.requests('projects/list')[0], { projects: [{ name: 'App', path: A }, { name: 'Lib', path: B }] }, 1));
     return mounted;
@@ -236,13 +238,67 @@ describe('main panel shell', () => {
         const user = userEvent.setup();
         await mountReady();
         const split = screen.getByTestId('sash').parentElement as HTMLElement;
-        expect(split.getAttribute('style')).toBe('--nuiget-split: 50%;');
+        expect(split.getAttribute('style')).toBe('--nuiget-split: 35%;');
         expect(screen.getByTestId('sash')).toHaveAttribute('aria-controls', screen.getByRole('tablist').parentElement?.parentElement?.id);
         screen.getByTestId('sash').focus();
         await user.keyboard('{ArrowRight}{ArrowRight}');
-        expect(split.getAttribute('style')).toBe('--nuiget-split: 52%;');
+        expect(split.getAttribute('style')).toBe('--nuiget-split: 37%;');
         await user.keyboard('{End}');
         expect(split.getAttribute('style')).toBe('--nuiget-split: 75%;');
+    });
+
+    it('split position persists', async () => {
+        const user = userEvent.setup();
+        const host = createFakeHost();
+        render(<StrictMode><StoreProvider bus={host.bus}><MainShell /></StoreProvider></StrictMode>);
+        expect(host.requests('layout/get')).toHaveLength(1);
+        const split = screen.getByTestId('sash').parentElement as HTMLElement;
+        expect(split.getAttribute('style')).toBe('--nuiget-split: 35%;');
+        await hostSays(() => host.respond(host.requests('layout/get')[0], { splitPosition: 40 }));
+        expect(split.getAttribute('style')).toBe('--nuiget-split: 40%;');
+        // Written when a drag or a key ends, never per step.
+        screen.getByTestId('sash').focus();
+        await user.keyboard('{End}');
+        expect(split.getAttribute('style')).toBe('--nuiget-split: 75%;');
+        expect(host.requests('layout/set').map(request => request.payload)).toEqual([{ splitPosition: 75 }]);
+    });
+
+    it.each([[{}], [{ splitPosition: 'x' }]])('a kept split of %j leaves the default 35 %', async kept => {
+        const host = createFakeHost();
+        render(<StoreProvider bus={host.bus}><MainShell /></StoreProvider>);
+        await hostSays(() => host.respond(host.requests('layout/get')[0], kept as never));
+        expect((screen.getByTestId('sash').parentElement as HTMLElement).getAttribute('style')).toBe('--nuiget-split: 35%;');
+    });
+
+    it('last tab is remembered in the view state', async () => {
+        const user = userEvent.setup();
+        let kept: unknown = { tab: 'updates', other: 1 };
+        const store: ViewStateStore = { getState: () => kept, setState: vi.fn((state: unknown) => { kept = state; }) };
+        await mountReady({}, store);
+        expect(screen.getByTestId('updates-tab')).toHaveAttribute('aria-selected', 'true');
+        await user.click(screen.getByTestId('installed-tab'));
+        expect(store.setState).toHaveBeenLastCalledWith({ tab: 'installed', other: 1 });
+    });
+
+    it.each([
+        ['an unknown tab', { getState: () => ({ tab: 'x' }), setState: () => undefined }],
+        ['a store that throws', { getState: () => { throw new Error('no state'); }, setState: () => undefined }],
+    ])('%s starts on Installed', async (_name, store) => {
+        await mountReady({}, store as ViewStateStore);
+        expect(screen.getByTestId('installed-tab')).toHaveAttribute('aria-selected', 'true');
+    });
+
+    it('the Installed tab shows a vulnerability badge once the metadata lists one, and none while the metadata is unknown', async () => {
+        const { host } = await mountReady();
+        const pkg = (id: string) => ({ id, version: '1.0.0', versionType: 'standard' as const, declaration: 'project' as const });
+        await hostSays(() => host.respond(host.requests('installed/get')[0], { projectPath: A, fidelity: 'authoritative', isCpm: false, packages: [pkg('Serilog'), pkg('Moq'), pkg('Polly')] }, 1));
+        expect(screen.getByRole('tab', { name: 'Installed 3' })).toBeInTheDocument();
+        await waitFor(() => expect(host.requests('transitive/metadata')).toHaveLength(1));
+        await hostSays(() => host.respond(host.requests('transitive/metadata')[0], { metadata: [
+            { id: 'Moq', version: '1.0.0', vulnerabilities: [{ severity: 'High', advisoryUrl: 'https://github.com/advisories/x' }] },
+            { id: 'Serilog', version: '1.0.0' },
+        ] }));
+        expect(screen.getByRole('tab', { name: 'Installed 3 1 package with known vulnerabilities' })).toBeInTheDocument();
     });
 
     it('the tabs are reached by keyboard', async () => {

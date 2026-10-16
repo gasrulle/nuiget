@@ -19,6 +19,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Transitive packages: per-framework headers with counts, rows with icon, authors and Verified mark, and a details view with Required by (All Projects too)**
 - **Browse rows show icon, downloads, authors and Verified mark with the description; quick-search suggestions grouped per source with a loading row; the details pane follows the active tab and each tab keeps its own selection**
 - **The main panel header shows the title, the Restore after operations checkbox, an unreachable-source marker with Retry, a busy refresh button and a revalidation bar; the search box has Clear and Filters buttons**
+- **The main panel's list starts at 35 % of the width and keeps the position you drag it to**
+- **The main panel reopens on the tab you chose last**
+- **The Installed tab shows how many packages have known vulnerabilities**
 
 ## [2.0.0] - 2026-10-16
 

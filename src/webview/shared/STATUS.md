@@ -94,6 +94,8 @@ rm -rf /tmp/nuiget-ui/screenshots dist && npm run test:ui -- --storage /tmp/nuig
   buttons inside the box, `tabIndex={-1}`, focus kept in the input; the native search cancel button is hidden
   (`search.css`); `IconButton` passes `onMouseDown` through. Test: `Clear empties the box and keeps focus; Filters
   opens the prefix list`. Closes SB6 for the sidebar too (shared component).
+- P9.7 (b): `viewState.ts` (`ViewStateStore`, re-exported by `SidebarView.tsx`); `Tabs` `badge` (test `a tab with a
+  count and a badge names both`); `SearchBox` pads for the buttons it shows (`nuiget-search-box--clearable`).
 
 ## Done (untested)
 

@@ -1,5 +1,5 @@
 import React, { useId } from 'react';
-import { Badge } from './Badge';
+import { Badge, type BadgeTone } from './Badge';
 import './primitives.css';
 
 export interface TabItem<K extends string> {
@@ -7,6 +7,8 @@ export interface TabItem<K extends string> {
     label: string;
     /** A count next to the label, for example the number of updates. It is part of the tab's name. */
     count?: number;
+    /** A second badge after the count, named by its `title` (for example the vulnerable packages of the list). */
+    badge?: { label: string; title: string; tone?: BadgeTone };
     'data-testid'?: string;
 }
 
@@ -66,6 +68,7 @@ export function Tabs<K extends string>({ tabs, selected, onSelect, label, childr
                             <span className="nuiget-tab-label">{tab.label}</span>
                             {/* The space keeps the name "Updates 3", not "Updates3"; a flex item of white space is not drawn. */}
                             {tab.count === undefined ? null : <>{' '}<Badge label={String(tab.count)} /></>}
+                            {tab.badge === undefined ? null : <>{' '}<Badge label={tab.badge.label} title={tab.badge.title} tone={tab.badge.tone} /></>}
                         </button>
                     );
                 })}
