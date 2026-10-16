@@ -1,6 +1,6 @@
 # ADR-004: Three-tier project model and Central Package Management
 
-Status: accepted · Date: 2026-10-10 · Amended: 2026-10-12 (plan item P1.1b: `props` declaration, `PackageVersion` items, runs per target framework, SDK floor, CPM edits refused until the mutator) · Amended: 2026-10-15 (plan item P6.3: the decision carries isCpm, the dirty check covers the project file, override and unresolved rows refused until probed) · Amended: 2026-10-15 (plan item P6.2b: the evaluator's properties, mapping and cache) · Amended: 2026-10-15 (plan item P6.4a: the preview reaches the webviews; the override choice waits for N74)
+Status: accepted · Date: 2026-10-10 · Amended: 2026-10-12 (plan item P1.1b: `props` declaration, `PackageVersion` items, runs per target framework, SDK floor, CPM edits refused until the mutator) · Amended: 2026-10-15 (plan item P6.3: the decision carries isCpm, the dirty check covers the project file, override and unresolved rows refused until probed) · Amended: 2026-10-15 (plan item P6.2b: the evaluator's properties, mapping and cache) · Amended: 2026-10-15 (plan item P6.4a: the preview reaches the webviews; the override choice waits for N74) · Amended: 2026-10-16 (plan item P7.2c: the combined first run)
 
 ## Context
 
@@ -26,11 +26,15 @@ Three tiers with explicit fidelity:
    whenever that is not the project file.
    Unresolvable versions (`$(Prop)`, unknown conditions) are `declaration: 'unresolved'` and are
    **excluded from update checks** and shown as unresolved.
-2. **Evaluate** (`ProjectEvaluator`, authoritative): a properties run (`dotnet msbuild <proj>
-   -getProperty:TargetFramework;TargetFrameworks;ManagePackageVersionsCentrally -nologo`), then one
-   run per target framework that returns the `PackageReference` and `PackageVersion` items
-   (`-getItem:PackageReference;PackageVersion`) and whether version overrides are enabled (plan item
-   P6.2). The properties run reads `TargetFramework`, `TargetFrameworks`, `ManagePackageVersionsCentrally` and `CentralPackageVersionOverrideEnabled` (the probe of `004-sdk-probes.md`, SDK 10.0.401 `evaluations`); the item runs read `Identity`, `Version`, `VersionOverride`, `IsImplicitlyDefined` and `DefiningProjectFullPath`. A reference whose defining file is not the project is `props` with `definedIn` set, an SDK-injected one also `isImplicit`; under CPM `VersionOverride` wins while overrides are enabled, else the `PackageVersion` item, else `unresolved`; rows are merged across frameworks by id, version, declaration and implicitness, and `targetFrameworks` is set only where a row is absent from some framework. Successes are cached per project and revision; a failure is not. Cached by project revision (project + imported props/targets + `global.json` +
+2. **Evaluate** (`ProjectEvaluator`, authoritative): one run that returns the four properties and the
+   `PackageReference` and `PackageVersion` items with no global property (`dotnet msbuild <proj> -nologo
+   -getItem:PackageReference,PackageVersion
+   -getProperty:TargetFramework;TargetFrameworks;ManagePackageVersionsCentrally;CentralPackageVersionOverrideEnabled`);
+   when `TargetFrameworks` is empty that run is the whole evaluation (probe row `cpm-combined`: the
+   properties of `cpm-properties` and the items of `cpm-items-net8.0`), and when it is set the run is
+   the outer build, whose items lack the conditional and SDK-implicit references (probe row
+   `multitfm-combined`) and are discarded for one item run per target framework with
+   `-p:TargetFramework=<tfm>` (plan items P6.2 and P7.2c). The properties run reads `TargetFramework`, `TargetFrameworks`, `ManagePackageVersionsCentrally` and `CentralPackageVersionOverrideEnabled` (the probe of `004-sdk-probes.md`, SDK 10.0.401 `evaluations`); the item runs read `Identity`, `Version`, `VersionOverride`, `IsImplicitlyDefined` and `DefiningProjectFullPath`. A reference whose defining file is not the project is `props` with `definedIn` set, an SDK-injected one also `isImplicit`; under CPM `VersionOverride` wins while overrides are enabled, else the `PackageVersion` item, else `unresolved`; rows are merged across frameworks by id, version, declaration and implicitness, and `targetFrameworks` is set only where a row is absent from some framework. Successes are cached per project and revision; a failure is not. Cached by project revision (project + imported props/targets + `global.json` +
    `Directory.*.props` mtimes). Produces `fidelity: 'authoritative'`. Runs off the render path; the
    UI upgrades from provisional to authoritative when it lands.
 3. **Mutate** (`ProjectMutator` in `src/core/contracts.ts`: `canMutate`, `previewCpmImpact`): only

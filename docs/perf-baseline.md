@@ -54,7 +54,8 @@ Rules for the tolerances:
   global packages folder, so only the restore graph is computed again.
 - **Evaluation**: the `dotnet msbuild -getProperty` and `-getItem` runs of `MsBuildProjectEvaluator`, with the argv
   that `scripts/probe-sdk.mjs` writes. They run on a restored project, as in the extension. The combined run asks
-  for both in one process. The evaluator does not use it, so its timing is no evidence about its output.
+  for both in one process. Since P7.2c it is the evaluator's first run (without the global property the script
+  passes; same cost). Its output in the script is still no evidence; the probe rows are.
 - **Cold search**: the first search of a session. The host connects to the feeds and enriches the rows before it
   answers.
 - **Warm search**: the same text searched again in the same session. The feeds are connected and the metadata is

@@ -303,14 +303,13 @@ describe('extension.next (2.0 composition root)', () => {
     }
 
     it('composes the evaluator: installed/get streams the provisional list and answers the evaluated one', async () => {
-        const isProperties = (call: { args: string[] }) => call.args.some(arg => arg.startsWith('-getProperty:'));
-        dotnet.fail(call => dotnetCalls.msbuild()(call) && isProperties(call), {
+        // The combined first run of a single-framework project: properties and items in one document (probe row `cpm-combined`, P7.2c).
+        dotnet.fail(dotnetCalls.msbuild(), {
             code: 0,
-            stdout: JSON.stringify({ Properties: { TargetFramework: 'net10.0', TargetFrameworks: '', ManagePackageVersionsCentrally: '', CentralPackageVersionOverrideEnabled: '' } }),
-        });
-        dotnet.fail(call => dotnetCalls.msbuild()(call) && !isProperties(call), {
-            code: 0,
-            stdout: JSON.stringify({ Items: { PackageReference: [{ Identity: 'Serilog', Version: '3.0.0' }, { Identity: 'Implicit.Sdk', Version: '1.0.0', IsImplicitlyDefined: 'true', DefiningProjectFullPath: '/sdk/Sdk.props' }] } }),
+            stdout: JSON.stringify({
+                Properties: { TargetFramework: 'net10.0', TargetFrameworks: '', ManagePackageVersionsCentrally: '', CentralPackageVersionOverrideEnabled: '' },
+                Items: { PackageReference: [{ Identity: 'Serilog', Version: '3.0.0' }, { Identity: 'Implicit.Sdk', Version: '1.0.0', IsImplicitlyDefined: 'true', DefiningProjectFullPath: '/sdk/Sdk.props' }] },
+            }),
         });
         const { project, ask } = await installedFromSidebar();
 
@@ -320,7 +319,8 @@ describe('extension.next (2.0 composition root)', () => {
         expect(messages[1]).toMatchObject({ kind: 'response', ok: true, result: { projectPath: project, fidelity: 'authoritative' } });
         const result = (messages[1] as { result: InstalledResult }).result;
         expect(result.packages.map(pkg => pkg.id)).toEqual(['Serilog', 'Implicit.Sdk']);
-        expect(dotnet.count(dotnetCalls.msbuild(project))).toBe(2);
+        // One combined run for a single-framework project (P7.2c).
+        expect(dotnet.count(dotnetCalls.msbuild(project))).toBe(1);
     });
 
     it('composes the mutator: an edit is refused while the project file is open with unsaved changes, and admitted once it is saved', async () => {

@@ -65,6 +65,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **2.0 honours the `full` and `off` search modes and the search result limit default**
 
 ### Changed
+- **2.0 evaluation of a single-framework project is one msbuild run**
 
 - **Benchmarks for the 2.0 core (versioning, cache, operation queue, invalidation scopes) with a regenerated baseline**
 - **Benchmarks for the 2.0 transport and feed reads (updates, versions, search, nuspec parsing, relevance) with a regenerated baseline**

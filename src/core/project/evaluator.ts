@@ -1,7 +1,10 @@
 /**
- * MSBuild evaluation of a project (ADR-004 tier 2): a properties run, then one item run per target
- * framework, read into the same rows the static inspection produces, with `fidelity: 'authoritative'`.
- * Successes are cached per project and revision; a failure is never cached.
+ * MSBuild evaluation of a project (ADR-004 tier 2): one combined run of the four properties and the two item types
+ * with no global property, whose items stand when `TargetFrameworks` is empty; a cross-targeting project's first run
+ * is the outer build, whose items lack the conditional and SDK-implicit references (probe row `multitfm-combined`), so
+ * they are discarded for one item run per target framework. The items are read into the same rows the static
+ * inspection produces, with `fidelity: 'authoritative'`. Successes are cached per project and revision; a failure is
+ * never cached.
  */
 
 import * as path from 'path';
@@ -29,8 +32,9 @@ export class EvaluationError extends Error {
 }
 
 /**
- * Always the four properties of the SDK probe: `-getProperty` with a single name prints the bare value, not JSON.
- * `CentralPackageVersionOverrideEnabled` is `""` when unset, which means enabled.
+ * Always the four properties of the SDK probe, asked together with the items in the first run: `-getProperty` with a
+ * single name prints the bare value, not JSON. `CentralPackageVersionOverrideEnabled` is `""` when unset, which means
+ * enabled.
  */
 const PROPERTIES = ['TargetFramework', 'TargetFrameworks', 'ManagePackageVersionsCentrally', 'CentralPackageVersionOverrideEnabled'];
 const ITEMS = ['PackageReference', 'PackageVersion'];
@@ -86,13 +90,18 @@ export class MsBuildProjectEvaluator implements ProjectEvaluator {
 
     private async run(context: ProjectExecutionContext): Promise<InstalledResult> {
         const { projectPath } = context;
-        const properties = asStrings(record(await this.json(context, msbuildGetArgs(projectPath, [], PROPERTIES)), 'Properties'));
+        const first = await this.json(context, msbuildGetArgs(projectPath, ITEMS, PROPERTIES));
+        const properties = asStrings(record(first, 'Properties'));
         const frameworks = targetFrameworks(properties);
         const runs: ItemRun[] = [];
-        for (const framework of frameworks.length > 0 ? frameworks : [undefined]) {
-            const args = msbuildGetArgs(projectPath, ITEMS, [], framework === undefined ? undefined : { TargetFramework: framework });
-            const items = record(await this.json(context, args), 'Items');
-            runs.push({ framework, references: itemList(items.PackageReference), versions: itemList(items.PackageVersion) });
+        if ((properties.TargetFrameworks ?? '').trim() === '') {
+            const items = record(first, 'Items');
+            runs.push({ framework: frameworks[0], references: itemList(items.PackageReference), versions: itemList(items.PackageVersion) });
+        } else {
+            for (const framework of frameworks) {
+                const items = record(await this.json(context, msbuildGetArgs(projectPath, ITEMS, [], { TargetFramework: framework })), 'Items');
+                runs.push({ framework, references: itemList(items.PackageReference), versions: itemList(items.PackageVersion) });
+            }
         }
 
         const isCpm = parseBooleanProperty(properties.ManagePackageVersionsCentrally) === true;

@@ -1,74 +1,75 @@
-# STATUS — src/core/project   commit 61b9828 (P7.2a closed; parent of the P7.2b commit)   2026-10-15T23:07:39Z
+# STATUS — src/core/project   commit e898b91 (P7.2c commit 1; parent of commit 2)   2026-10-16T00:01:38Z
 
-git status --porcelain --untracked-files=all (before the commit): modified `.github/copilot-instructions.md`,
-`ARCHITECTURE.md`, `CHANGELOG.md`, `docs/plans/{STATUS,findings-ledger}.md`, `src/core/project/{evaluator,evaluator.test}.ts`,
-this note
+git status --porcelain --untracked-files=all (before commit 2): modified `.github/copilot-instructions.md`, `ARCHITECTURE.md`,
+`CHANGELOG.md`, `docs/adr/004-project-model.md`, `docs/perf-baseline.md`, `docs/plans/STATUS.md`,
+`src/core/project/{evaluator,evaluator.test}.ts`, `src/extension.next.test.ts`, `src/test/harness/{fakeDotnet,scenarios.test}.ts`,
+and the STATUS notes of `src`, `src/core/project`, `src/test/harness`
 
-Item: **P7.2b** — the evaluator's runs are bound to no caller's signal (finding N79, P6 phase review item 2), by the
-P7.2 ruling of 2026-10-16, steps 14 to 18. This note replaces the P6.3a note (in this file's history at `5e26252`).
+Item: **P7.2c** — the evaluator's first run is one combined run of the four properties and the two item types with no
+global property; its items stand when `TargetFrameworks` is empty, else one item run per framework follows. By the ⚑
+ruling and its follow-up of 2026-10-16 (both verbatim below). Commit 1 (`e898b91`) added the probe rows and the
+fixture; this is commit 2. This note replaces the P7.2b note (in this file's history at `87e9d18`).
 
 ## Verified by running
 
 ```text
-baseline: the tree of 61b9828 (P7.2a commit 2) → npm run lint, npx tsc --noEmit 0; npm test 167 files, 3408 passed;
-                              CI run 38820044669 green on 13 of 13 jobs. The first edit of evaluator.ts came before
-                              a separate baseline run on that tree; the runs above are its baseline.
-negative control: the new and retitled tests against evaluator.ts of 61b9828 → 3 failed (the retitled one sees the
-                              signal; the joined caller rejects as cancelled; the aborted caller starts runs), 10 passed
-npx tsc --noEmit            → exit 0
-npm run check-types         → exit 0
-npx eslint src              → exit 0
-DOTNET_ROOT=… NUIGET_SDK_TESTS=1 npx vitest run --project backend src/core/project --reporter=verbose → exit 0 ·
-                              Tests 159 passed (159) · "bound to no caller signal", "a cancellation by one caller does
-                              not cancel a later caller of the same revision: …", "a caller whose signal is already
-                              aborted starts no run and is not cached" and "evaluates the multitfm fixture with the
-                              real SDK" (612 ms) listed as passed
-npx vitest run --project backend src/core/catalog src/extension.next.test.ts → Test Files 4 passed · Tests 100 passed
-npx vitest run --project integration src/test/harness → Test Files 1 passed · Tests 22 passed (22, unchanged)
-npm test (DOTNET_ROOT set, NUIGET_SDK_TESTS=1) → exit 0 · Test Files 167 passed (167) · Tests 3410 passed (3410)
+baseline at 87e9d18 (before commit 1): tsc 0 · eslint 0 · vitest 167 files, 3404 passed, 6 skipped (SDK)
+commit 1 e898b91 → CI run 38824530026, 13 of 13 jobs success; SDK probe green on 10.0.402 against the regenerated
+                              10.0.401.json
+npx tsc --noEmit / npm run check-types / npx eslint src / npm run lint → exit 0 each
+DOTNET_ROOT=… NUIGET_SDK_TESTS=1 npx vitest run --project backend src/core/project/evaluator.test.ts --reporter=verbose →
+                              16 passed: "runs one combined properties-and-items run, then, for a cross-targeting
+                              project, one item run per target framework, …", "one framework and no framework take
+                              the combined run alone, and its items are the result", "cross-targeting: the combined
+                              run's items are the outer build's and are discarded; …", "evaluates the multitfm fixture
+                              with the real SDK" (3 runs, the first msbuildGetArgs(…, ITEMS, PROPERTIES)), "evaluates
+                              the cpm probe input with the real SDK in one run"
+first npm test → exit 1: src/extension.next.test.ts "composes the evaluator: …" ("expected [] to deeply equal
+                              [ 'Serilog', 'Implicit.Sdk' ]"; its fake answered -getProperty: with properties only) →
+                              stop-and-ask, follow-up ruling below, fake collapsed to one combined document, count 1
+npx vitest run --project backend src/extension.next.test.ts --reporter=verbose → 36 passed ("composes the evaluator:
+                              …", "an evaluation that fails answers the provisional list once, as the response")
+DOTNET_ROOT=… NUIGET_SDK_TESTS=1 npx vitest run --project backend src/core/project src/core/cli src/core/catalog
+                              src/extension.next.test.ts → Test Files 19 passed · Tests 405 passed
+npx vitest run --project integration src/test/harness → 22 passed (and 5 of 5 runs before the root test change)
+npm test (DOTNET_ROOT set, NUIGET_SDK_TESTS=1) → exit 0 · Test Files 167 passed (167) · Tests 3413 passed (3413)
 npm run bench               → exit 0 · Test Files 20 passed (20) · Tests 119 passed | 1 skipped (120)
-rm -rf dist && node esbuild.mjs --v2 --production --analyze → exit 0 · dist/extension.js 292240 / 321341 (+112, the
-                              new message) · dist/webview.js 523296 / 575626 · dist/sidebar.js 318803 / 350684
-npm run package:vsix        → exit 0 · nuiget-v1.18.9.vsix (17 files, 534.34 KB)
-grep -n signal src/core/project/evaluator.ts → the JSDoc (54), the evaluate signature (58), the pre-check (59) only
-test -e .claude/.contract-change → false
+rm -rf dist && node esbuild.mjs --v2 --production --analyze → dist/extension.js 292357 / 321341 ·
+                              dist/webview.js 523296 / 575626 · dist/sidebar.js 318803 / 350684
+npm run package:vsix        → exit 0 · nuiget-v1.18.9.vsix (17 files, 534.36 KB) · npm run check:vsix → OK
+test -e .claude/.contract-change → false (created with "P7.2c" for the ADR-004 edit, deleted before the commit)
 ```
 
 ## Done (tested)
 
-- `evaluator.ts`: `evaluate(context, signal?)` rejects with `EvaluationError` ("… was cancelled before it started")
-  when `signal` is already aborted, with no run and no cache entry; otherwise `run(context)` and `json(context, args)`
-  take no signal, and the runner is called with `{ cwd, timeoutMs }` only. JSDoc on `evaluate` gives the reason.
-  The contract signature in `src/core/contracts.ts` is unchanged.
-- `evaluator.test.ts`: the first test retitled `… in the project directory, bound to no caller signal` (asserts
-  `options.signal` undefined and `timeoutMs > 0`); new `a cancellation by one caller does not cancel a later caller
-  of the same revision: …` (the fake runner holds the first run and answers `cancelled` for an aborted signal, as
-  `DefaultDotnetRunner` does) and `a caller whose signal is already aborted starts no run and is not cached`. `a
-  nonzero exit, a timeout, a cancellation and output without JSON reject and are not cached` unchanged.
+- `evaluator.ts` `run`: `msbuildGetArgs(projectPath, ITEMS, PROPERTIES)` first; `TargetFrameworks` empty → its
+  items are the one run (framework = the single `TargetFramework` or none); otherwise today's item run per framework
+  with `{ TargetFramework }`. Header and `PROPERTIES` comments. `evaluate`, `cachedFidelity`, `json`, the no-caller-
+  signal rule (N79) unchanged.
+- `evaluator.test.ts`: rewritten by the titles the ruling names (first test, `one framework and no framework take the
+  combined run alone, …`, cache counts 1 and 2, the fakes on one `document()` builder); new `cross-targeting: …` and
+  the gated `evaluates the cpm probe input with the real SDK in one run`; `probeAnswer` answers the first run with the
+  `<input>-combined` row.
 
 ## Done (untested)
 
-- Docs: CHANGELOG Fixed "**2.0 evaluation survives a refresh**"; ARCHITECTURE evaluator row (one clause); gotcha row
-  "A cached promise bound to one caller's signal"; ledger N79 (index and detail rows).
+- ADR-004 tier 2 sentence and `Amended:` line (behind the sentinel); CHANGELOG Changed; ARCHITECTURE evaluator row;
+  gotcha rows; `docs/perf-baseline.md` evaluation definition.
 
 ## Not started
 
-- P7.2c (combined `-getProperty`/`-getItem` first run; ⚑ before changing this evaluator), opened by P7.2a step 11.
+- None for P7.2c. The next open row is P7.3.
 
 ## Deviations from contract/ADR (file:line each)
 
-- None. ADR-004 tier 2 ("off the render path, cached by revision") and `ProjectEvaluator.evaluate(context, signal?)`
-  are unchanged; the cost the ruling accepts is that an evaluation of a revision nobody waits for runs to its end
-  (bounded by `DEFAULT_TIMEOUT_MS` per run) and is dropped by the next revision's `cache.set`.
+- None beyond the ruled ADR amendment. A `TargetFrameworks` value with no entries (e.g. `;`) now yields no item run
+  (before: one run without the property); the ruling's guard is literal ("never for a project that sets it").
 
 ## Advisor decisions (date, item, question, answer verbatim)
 
-2026-10-16, P7.2 (stop-and-ask): the brief and the answer, verbatim, are in `docs/plans/STATUS.md` under "Advisor
-decisions", "P7.2 — stop-and-ask: …". For this directory: D2 (the runs are bound to no caller's signal; a caller
-whose signal is already aborted starts nothing; the per-run timeout bounds the work), not D1 (no per-entry
-`AbortController`, caller counting, `AbortSignal.any` or timer).
+2026-10-16, P7.2c (⚑), verbatim (also in `docs/plans/STATUS.md`):
 
-2026-10-16, P7.2c (⚑), verbatim:
+### P7.2c — ⚑ ruling: the combined first run, its probe rows and its guard (2026-10-16)
 
 `````text
 DECISION: Option 1 with its guard corrected (call it 1'): the first run is one combined `msbuildGetArgs(projectPath, ITEMS, PROPERTIES)` run with no global property; its items are the result only when the properties' `TargetFrameworks` is empty (a project with `TargetFramework` alone, or neither); when `TargetFrameworks` is set, at all, the items of that run are discarded and one item run per framework with `-p:TargetFramework=<tfm>` follows, as today. Probe rows `cpm-combined` and `multitfm-combined`, both without a global property; the `multitfm-combined-<tfm>` rows named in the tracker row (my own wording in step 11 of the P7.2 ruling) are dropped: they would probe a run the product never makes, because the first run cannot carry a framework it does not know yet. Two commits with a green `SDK probe` job between them: the rows and the regenerated fixture first, the evaluator second. Not option 2 (its `TargetFramework ==` guard is a tautology once `TargetFrameworks` is empty and a weaker test of the cross-targeting case than reading `TargetFrameworks` itself; the single-entry `TargetFrameworks` case needs no new input, because 1' treats it as cross-targeting and runs exactly today's argv for it). Not option 3: the 400 ms rule of the P7.2 ruling already decided that the change pays. Nothing here is the owner's; no `OWNER MUST DECIDE`.
@@ -114,6 +115,37 @@ VERIFY:
 FILES CHECKED: `.github/agents/architecture-advisor.agent.md`; `docs/plans/2026-10-11-nuiget-2.0-execution-plan.md:41-175` (§1-§4: D6, D7, D13, §2.1-§2.6, §3), `:294` (P6.1 row); `docs/plans/STATUS.md:87,100-110` (P6.1, P7.1-P8.2 rows), `:3282-3420` (the P7.2 ruling verbatim: steps 5, 11, 14-18, the DO NOT on the run shape), `:2977-3060` (P6.2 ruling: the evaluator's argv rule and test titles); `docs/adr/004-project-model.md` (whole), `docs/adr/004-sdk-probes.md` (whole); `src/core/project/STATUS.md` (whole), `src/core/cli/STATUS.md:50-70`, `src/test/harness/STATUS.md:6,32,39`; `src/core/project/evaluator.ts` (whole), `src/core/project/evaluator.test.ts` (whole); `scripts/probe-sdk.mjs` (whole); `scripts/perf-baseline.mjs` (whole); `docs/perf-baseline.md` (whole); `src/core/cli/commands.ts:120-179`; `src/core/cli/sdk.test.ts:80-125`; `src/test/lint/probe-sdk.test.ts:1-60,89-119`; `src/core/cli/__fixtures__/sdk-probes/10.0.401.json` (the five evaluation rows in full, the keys and verdict) and `sdk-probes/cpm/{App/App.csproj,Directory.Packages.props}`; `src/core/project/__fixtures__/multitfm/{App/App.csproj,Directory.Build.props,Directory.Packages.props}`; `src/test/harness/fakeDotnet.ts:190-262`, `harness.ts:71-72,142,352`, `scenarios.test.ts:380-425`; `src/test/e2e/fixtures/e2e-workspace/TestProject.csproj`; `.github/workflows/ci.yml` (the `SDK probe` and `Perf baseline` jobs by grep); `ARCHITECTURE.md:95-105,796-810`; `.github/copilot-instructions.md:222,229` (by grep); `CHANGELOG.md:1-30`; `docs/plans/findings-ledger.md` (N79 is the last id; no new finding is needed); `.claude/settings.json` and `package.json` (no `probe-sdk` allowlist entry or script). `grep -rln "msbuildGetArgs\|getProperty" src --include='*.ts'` → `contracts.ts`, `cli/commands.ts`, `cli/index.ts`, `project/evaluator.ts` only, so the evaluator is the one product caller. Not run (would write to the tree, prompt, or take minutes): `node scripts/probe-sdk.mjs`, `npm test`, `node esbuild.mjs --analyze`; the brief's gate line and sizes are taken as given. The advisor tool was consulted once before writing; its additions (the equality as a tracked test in commit 1, the baseline `--check` before any edit, the full list of `evaluator.test.ts` titles, `sdk.test.ts:107`, the harness fake and `scenarios.test.ts:419`, the gated real-SDK test on the `cpm` input, the perf script out of scope with one doc sentence, the sentinel mechanics) are folded in. No file was created, edited, moved or deleted; shell use was inspection only.
 `````
 
+### P7.2c — follow-up ruling: the root composition test's msbuild fake (2026-10-16)
+
+`````text
+DECISION: Option 1, sharpened (call it 1'), as an amendment to step 10 of the P7.2c ruling: `src/extension.next.test.ts` `composes the evaluator: installed/get streams the provisional list and answers the evaluated one` keeps its title and its id, kind and fidelity assertions; its fake becomes one `dotnet.fail(dotnetCalls.msbuild(), { code: 0, stdout: <one document with both `Properties` and `Items`> })` (the `isProperties` helper and the second `fail` are removed, not left unused), and `:323` becomes `toBe(1)` with the comment "one combined run for a single-framework project (P7.2c)". Not option 2 (a `TargetFrameworks` project composes a different path and the harness already covers nothing of the kind here). Not option 3 (the 400 ms rule of the P7.2 ruling decided the change; the evaluator is right and this test's fake is a two-run script). Nothing here is the owner's; no `OWNER MUST DECIDE`.
+
+WHY: The brief matches the tree, and the failure reproduces: `npx vitest run --project backend src/extension.next.test.ts -t "composes the evaluator"` → `AssertionError: expected [] to deeply equal [ 'Serilog', 'Implicit.Sdk' ]` at `:322`. The cause is the fake, not the product: `fakeDotnet.ts:231` answers with the first matching `fail` entry, the combined first run (`evaluator.ts:93`, `msbuildGetArgs(projectPath, ITEMS, PROPERTIES)`) carries `-getProperty:`, so `:307-310` answers it with `Properties` alone, `record(first, 'Items')` is `{}` (`:98`, `:160-163`) and the single-framework guard (`:97`, `TargetFrameworks: ''`) makes that empty list the authoritative result; the items-only branch at `:311-314` is never reached. This is the P7.2c ruling's own gap: that ruling diagnosed the same properties-only shape in `fakeDotnet.ts:197-214` and fixed it in step 10, listed `src/extension.next.test.ts` in step 13's targeted gate, but left it out of commit 2's file list and its FILES CHECKED, so its DO NOT ("other than the ones named in steps 6, 9 and 10") was written without knowing this fake branches the same way; the §2.3 trigger "a failing test you did not write" fired correctly. The P6.2 ruling that specified the test (`docs/plans/STATUS.md:3026`: "one JSON per call order, or a matcher per argv") described a script for the two-run shape; under ADR-004 tier 2 as amended by commit 2 (`docs/adr/004-project-model.md`, probe row `cpm-combined`: the properties of `cpm-properties` and the items of `cpm-items-net8.0` in one document) the faithful script is one document, which is what the harness fake now prints (`fakeDotnet.ts:200-221`). The change is a tightening, not a weakening: `:318-322` stay, and the count goes from the old exact shape (2) to the new exact shape (1), the same edit step 10 made at `scenarios.test.ts:419`; `grep -rn -- "-getProperty:" src scripts` shows no other test fake with the properties-only branch (`evaluator.test.ts` and `fakeDotnet.ts` are rewritten; `commands.test.ts:119`, `redact.test.ts:156` and the fixture assert argv or redaction, not answers). The ids assertion holds under the combined answer by `evaluator.ts:184-205` (`Serilog` has no `DefiningProjectFullPath` → `project`; `Implicit.Sdk` defines in `/sdk/Sdk.props` ≠ project → `props`, `isImplicit`) and `:212-228` (one run, insertion order, no `targetFrameworks`), so `['Serilog', 'Implicit.Sdk']` is still the expected order. The neighbouring `an evaluation that fails answers the provisional list once, as the response` (`:353-361`) already asserts `toBe(1)` and stays right: its first run prints no JSON, nothing follows. Plan §2.1 lets a test the item names be rewritten with the STATUS note listing it; this ruling names it. No product file, contract or ADR changes beyond the sentence commit 2 already made; the sentinel is absent (`test -e .claude/.contract-change` → false, checked).
+
+DO:
+1. Paste this ruling verbatim under `## Advisor decisions` of `docs/plans/STATUS.md` (heading `### P7.2c — follow-up ruling: the root composition test's msbuild fake (2026-10-16)`), of `src/core/project/STATUS.md`, and of `src/STATUS.md`.
+2. `src/extension.next.test.ts:306-314`: delete `isProperties` and both `dotnet.fail` calls; in their place one call: `dotnet.fail(dotnetCalls.msbuild(), { code: 0, stdout: JSON.stringify({ Properties: { TargetFramework: 'net10.0', TargetFrameworks: '', ManagePackageVersionsCentrally: '', CentralPackageVersionOverrideEnabled: '' }, Items: { PackageReference: [{ Identity: 'Serilog', Version: '3.0.0' }, { Identity: 'Implicit.Sdk', Version: '1.0.0', IsImplicitlyDefined: 'true', DefiningProjectFullPath: '/sdk/Sdk.props' }] } }) });` with a one-line comment above it: "The combined first run of a single-framework project: properties and items in one document (probe row `cpm-combined`, P7.2c)." Lines `:315-322` unchanged.
+3. `src/extension.next.test.ts:323`: `toBe(2)` → `toBe(1)`, preceded by the comment `// One combined run for a single-framework project (P7.2c).` (the wording of `scenarios.test.ts:419`). If the count is not 1 after step 2, paste `dotnet.calls.filter(dotnetCalls.msbuild(project))` in a brief; do not write `>= 1`.
+4. `.github/copilot-instructions.md`, the already-amended row `` `-getProperty` with one name prints a bare value ``: append one sentence: "A test that scripts msbuild answers the first call with one document carrying both `Properties` and `Items` (the harness fake's `evaluateFromFiles`, `extension.next.test.ts`); a properties-only answer to a call with `-getProperty:` makes a single-framework project authoritative with no packages." No third row.
+5. `src/STATUS.md` rewritten per §2.5 (commit 2 now touches a file of the root directory): the rewritten test by title with the change (one combined fake answer; count 2 → 1), the targeted run output, this ruling verbatim. `src/core/project/STATUS.md` and `src/test/harness/STATUS.md` as step 10/12 already require; the tracker row's note for commit 2 names `src/extension.next.test.ts` and this amendment.
+6. Step 13's gates again in full, now with `npm test` read for exit 0, then `npm run package:vsix` and `npm run check:vsix` (both missing from the brief's GATE STATUS because `npm test` was red). `git status --porcelain --untracked-files=all` lists commit 2's files plus `src/extension.next.test.ts` and `src/STATUS.md`, nothing else. Commit message unchanged (`perf(core/project): one combined msbuild run evaluates a single-framework project (P7.2c, ADR-004)`); its body names the root test as rewritten by this ruling; push; green CI on 13 jobs; then P7.2c `done` with both SHAs; next open row P7.3.
+
+DO NOT:
+- Do not keep the `isProperties` discriminator or an items-only second `fail` that no call reaches.
+- Do not loosen `:323` to `toBeGreaterThanOrEqual(1)` or drop it; do not touch `:318-322` or the title.
+- Do not change `an evaluation that fails answers the provisional list once, as the response` (`:353-361`): its `toBe(1)` is right before and after.
+- Do not give the test's project `TargetFrameworks` (option 2) or add a second project to it.
+- Do not touch `src/core/project/evaluator.ts`, `src/test/harness/fakeDotnet.ts`, `docs/adr/**`, `src/core/contracts.ts`, `src/protocol/**` or `scripts/perf-baseline.mjs` for this; do not recreate the sentinel.
+- Do not open a ledger finding: this is an omission in the P7.2c ruling's file list, not a product defect.
+- Do not add a third gotcha row; one sentence on the amended row.
+
+CONTRACT CHANGE: none beyond what commit 2 already carries (`docs/adr/004-project-model.md`, the `Amended:` line and the one tier-2 sentence of step 11 of the P7.2c ruling, made behind the sentinel that is now deleted). `src/protocol/**`, `src/core/contracts.ts`, `docs/adr/004-sdk-probes.md` untouched.
+
+VERIFY: `grep -c "isProperties" src/extension.next.test.ts` → 0; `grep -c "dotnetCalls.msbuild()" src/extension.next.test.ts` → 1; `grep -n "One combined run for a single-framework project (P7.2c)" src/extension.next.test.ts src/test/harness/scenarios.test.ts` → one line in each; `npx vitest run --project backend src/extension.next.test.ts --reporter=verbose` → green, listing `composes the evaluator: installed/get streams the provisional list and answers the evaluated one` and `an evaluation that fails answers the provisional list once, as the response`; `npx vitest run --project backend src/core/project src/core/cli src/core/catalog src/extension.next.test.ts` → green; `npx vitest run --project integration src/test/harness` → 22 passed; `npm test` → exit 0 (Test Files 167 passed, Tests 3413 passed); `npm run bench`, `npm run package:vsix`, `npm run check:vsix` → exit 0 / OK; `test -e .claude/.contract-change` → false; `grep -c "extension.next.test.ts" src/STATUS.md` ≥ 1 and `grep -n "follow-up ruling: the root composition test" docs/plans/STATUS.md src/core/project/STATUS.md src/STATUS.md` → one heading in each; CI green on 13 jobs with `SDK probe` passing.
+
+FILES CHECKED: `/Users/mattias/github/nuiget/.github/agents/architecture-advisor.agent.md`; `/Users/mattias/github/nuiget/docs/plans/2026-10-11-nuiget-2.0-execution-plan.md:41-135` (§1 D6, D7, D13; §2.1-§2.6); `/Users/mattias/github/nuiget/docs/plans/STATUS.md:102-104` (P7.2a, P7.2c rows), `:3026` (P6.2 ruling step 10: the test's specification), `:3345-3391` (the P7.2c ruling verbatim); `/Users/mattias/github/nuiget/src/extension.next.test.ts:1-24,122-126,255-361`; `/Users/mattias/github/nuiget/src/core/project/evaluator.ts` (whole, working tree); `/Users/mattias/github/nuiget/src/core/project/evaluator.test.ts:20,158-161,238-251,263,278,325,377`; `/Users/mattias/github/nuiget/src/test/harness/fakeDotnet.ts:186-295` (`evaluateFromFiles`, `answerFor` first-match at `:231`, `count` at `:271`, `fail` at `:285-289`), `harness.ts:71,142`; `git diff` of the nine modified files (`scenarios.test.ts:419` → `toBe(1)` with its comment; the two gotcha rows; `ARCHITECTURE.md:97`; `docs/perf-baseline.md:55-57`; `CHANGELOG.md`); `/Users/mattias/github/nuiget/src/STATUS.md:1-12,27,100`, `src/core/project/STATUS.md:26,76-104,117`, `src/test/harness/STATUS.md:33,104`; `git log -S"composes the evaluator" -- src/extension.next.test.ts` → `5e26252` (P6.2b); `grep -rn -- "-getProperty:" src scripts` (no other properties-only fake); `git diff --quiet -- scripts/perf-baseline.mjs` (unchanged); `test -e .claude/.contract-change` (absent); `git status --porcelain --untracked-files=all` (the nine files of the brief, no untracked file). Run for reproduction only: `npx vitest run --project backend src/extension.next.test.ts -t "composes the evaluator"` → 1 failed at `:322`, `expected [] to deeply equal [ 'Serilog', 'Implicit.Sdk' ]`. Not run: `npm test`, `npm run bench`, esbuild, `package:vsix` (the brief's gate line and sizes taken as given). The advisor tool was consulted once before writing; its additions (collapse the fake to one matcher, state the `:353-361` test as untouched, require `package:vsix` and `check:vsix` in VERIFY, the `src/STATUS.md` rewrite, the one-sentence gotcha instead of a row, no ledger finding) are folded in. No file was created, edited, moved or deleted; shell use was inspection and one vitest run that writes nothing to the tree.
+`````
+
 ## Exact next step (one item ID)
 
-P7.2c (⚑: consult the `architecture-advisor` before changing the evaluator's first run).
+P7.3.

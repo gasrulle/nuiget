@@ -193,24 +193,31 @@ function ensureCentralReference(projectPath: string, packageId: string): void {
     fs.writeFileSync(projectPath, `${xml.slice(0, at).trimEnd()}\n    <PackageReference Include="${packageId}" />\n  ${xml.slice(at)}`, 'utf8');
 }
 
-/** What `dotnet msbuild <project> -getProperty:… | -getItem:…` prints for the project files, in the shapes of the SDK probe. */
+/**
+ * What `dotnet msbuild <project> -getProperty:… -getItem:…` prints for the project files, in the shapes of the SDK
+ * probe: `Properties` when properties are asked, `Items` when items are, both for the combined first run (P7.2c).
+ */
 function evaluateFromFiles(args: readonly string[], stop?: string): DotnetAnswer {
     const projectPath = args[1];
     const xml = fs.readFileSync(projectPath, 'utf8');
     const props = centralPropsOf(projectPath, stop);
+    const output: { Properties?: Record<string, string>; Items?: Record<string, unknown[]> } = {};
     if (args.some(arg => arg.startsWith('-getProperty:'))) {
         const frameworks = /<TargetFrameworks>([^<]*)<\/TargetFrameworks>/i.exec(xml)?.[1] ?? '';
         const framework = frameworks === '' ? /<TargetFramework>([^<]*)<\/TargetFramework>/i.exec(xml)?.[1] ?? '' : '';
-        return { stdout: JSON.stringify({ Properties: { TargetFramework: framework, TargetFrameworks: frameworks, ManagePackageVersionsCentrally: props === undefined ? '' : 'true', CentralPackageVersionOverrideEnabled: '' } }, null, 2) };
+        output.Properties = { TargetFramework: framework, TargetFrameworks: frameworks, ManagePackageVersionsCentrally: props === undefined ? '' : 'true', CentralPackageVersionOverrideEnabled: '' };
     }
-    const item = (element: string, definedIn: string, names: string[]) => Object.fromEntries([
-        ['Identity', attributeOf(element, 'Include')],
-        ...names.map(name => [name, attributeOf(element, name)]),
-        ['DefiningProjectFullPath', definedIn],
-    ].filter(([, value]) => value !== undefined));
-    const references = itemsOf(xml, 'PackageReference').map(element => item(element, projectPath, ['Version', 'VersionOverride']));
-    const versions = props === undefined ? [] : itemsOf(fs.readFileSync(props, 'utf8'), 'PackageVersion').map(element => item(element, props, ['Version']));
-    return { stdout: JSON.stringify({ Items: { PackageReference: references, PackageVersion: versions } }, null, 2) };
+    if (args.some(arg => arg.startsWith('-getItem:'))) {
+        const item = (element: string, definedIn: string, names: string[]) => Object.fromEntries([
+            ['Identity', attributeOf(element, 'Include')],
+            ...names.map(name => [name, attributeOf(element, name)]),
+            ['DefiningProjectFullPath', definedIn],
+        ].filter(([, value]) => value !== undefined));
+        const references = itemsOf(xml, 'PackageReference').map(element => item(element, projectPath, ['Version', 'VersionOverride']));
+        const versions = props === undefined ? [] : itemsOf(fs.readFileSync(props, 'utf8'), 'PackageVersion').map(element => item(element, props, ['Version']));
+        output.Items = { PackageReference: references, PackageVersion: versions };
+    }
+    return { stdout: JSON.stringify(output, null, 2) };
 }
 
 /** The version `package add` writes when the request names none. */

@@ -416,7 +416,8 @@ describe('two-surface harness', () => {
         const latest = sidebar.latestId('installed');
         expect(latest).toBeDefined();
         expect(sidebar.chunksFor<'installed/get'>(latest as string)).toEqual([{ kind: 'provisional', result: expect.objectContaining({ projectPath: C1, fidelity: 'provisional' }) }]);
-        expect(h.dotnet.count(dotnetCalls.msbuild(C1))).toBeGreaterThanOrEqual(2);
+        // One combined run for a single-framework project (P7.2c).
+        expect(h.dotnet.count(dotnetCalls.msbuild(C1))).toBe(1);
         const marks = new Map([sidebar, main].map(webview => [webview, webview.received.length]));
 
         // (b) The preview names every project the central entry applies to, the asking one included.
