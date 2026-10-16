@@ -1,4 +1,4 @@
-# STATUS — src/webview/main   commit fc8b150 (P9.6 commit (a); parent of commit (b))   2026-10-17T01:20:00Z
+# STATUS — src/webview/main   commit eeef52d (P9.6 closed; parent of this docs commit)   2026-10-17T01:45:00Z
 
 git status --porcelain --untracked-files=all (before commit (a)): modified `.github/copilot-instructions.md`,
 `ARCHITECTURE.md`, `CHANGELOG.md`, `README.md`, `docs/plans/STATUS.md`, `docs/ux/interaction-model.md`,
@@ -124,6 +124,20 @@ CI run 38978529457 on fc8b150 (commit (a)), artifact `ui-screenshots`, 13 PNGs:
 - viewed: main-installed-single.png: the Installed tab's own selection (Newtonsoft.Json, README).
 - viewed: main-updates.png: the pane reads "Select a package to see its details."; no NUnit.
 
+CI runs 38979769175 and 38979774627 on eeef52d (commit (b)) → success; "Check the named screenshots": `14 named
+states; PNGs in the artifact: 14`. Artifact `ui-screenshots` of 38979769175:
+
+- viewed: main-quicksearch-versions.png: `‹ Serilog` header over five rows 4.4.0, 4.3.1, 4.3.0, 4.2.0, 4.1.0; 4.4.0
+  highlighted.
+- viewed: main-quicksearch-open.png: five Serilog suggestions with a muted `›` at the right; no group header (one
+  source); no `Searching…` row.
+- viewed: main-updates.png: Newtonsoft.Json and Serilog update rows; the pane reads "Select a package to see its
+  details."; no NUnit.
+- viewed: main-browse-results.png: as on fc8b150 (icon, version and downloads, Verified mark and authors, description,
+  Installed badge, no Verified badge).
+- viewed: main-browse-details.png: Newtonsoft.Json current; its details (Installed 13.0.2, Update to 13.0.4).
+- viewed: main-installed-single.png: the Installed tab's own selection (Newtonsoft.Json, README).
+
 ## Advisor decisions (date, item, question, answer verbatim)
 
 2026-10-17, P9.6 ⚑, questions (a)-(g) on the Ctrl+Enter semantics, the versions level, grouping and the loading row,
@@ -180,4 +194,4 @@ Files checked (absolute, under /Users/mattias/github/nuiget): .github/agents/arc
 
 ## Exact next step (one item ID)
 
-P9.7, after commit (b)'s CI is green and its screenshots are viewed.
+P9.7.
