@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type React from 'react';
 import { ALL_PROJECTS } from '../../../../protocol';
 import { useMessageBus } from '../../../shared/bus/useMessageBus';
-import { isCentral, whyNotRemovable, whyNotUpdatable } from '../../../shared/installed/rules';
+import { isCentral, whyNotRemovable } from '../../../shared/installed/rules';
 import { Banner, EmptyState, Tabs, type TabItem } from '../../../shared/primitives';
 import { useAllProjects } from '../../../shared/store/allProjects';
 import { useDetails, useDetailsActions } from '../../../shared/store/details';
@@ -118,8 +118,6 @@ export function DetailsPane({ announce }: DetailsPaneProps): React.JSX.Element {
         primaryWhy = 'A floating or ranged version is changed in the project file';
     } else if (entry?.declaration === 'unresolved') {
         primaryWhy = 'Its reference could not be resolved';
-    } else if (entry?.declaration === 'central-override' && ownResult !== undefined) {
-        primaryWhy = whyNotUpdatable(entry, ownResult);
     } else if (installedVersion === chosen) {
         primaryWhy = 'This version is installed';
     }

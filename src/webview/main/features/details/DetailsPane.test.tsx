@@ -84,6 +84,18 @@ describe('main panel: details', () => {
         expect(screen.getByTestId('uninstall-button')).toBeEnabled();
     });
 
+    it('an override row changes its version in its project alone: ops/update without a preview', async () => {
+        const user = userEvent.setup();
+        const host = await mountReady([pkg('Serilog', '3.0.0', { declaration: 'central-override' })], true);
+        await selectInstalled(host);
+        await user.selectOptions(selector(), '3.1.0');
+        expect(primary()).toBeEnabled();
+        await user.click(primary());
+        expect(host.requests('ops/update').map(request => request.payload)).toEqual([{ projectPath: A, packageId: 'Serilog', version: '3.1.0', sourceUrl: undefined }]);
+        expect(host.requests('cpm/preview')).toHaveLength(0);
+        expect(screen.queryByTestId('cpm-preview-dialog')).toBeNull();
+    });
+
     it('Update for a newer version, Downgrade for an older one, each asking ops/update with the chosen version', async () => {
         const user = userEvent.setup();
         const host = await mountReady();

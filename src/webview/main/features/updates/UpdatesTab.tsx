@@ -24,8 +24,8 @@ const HINT = 'Space selects the package for a bulk update. Enter updates it.';
 /**
  * The Updates tab of the main panel: the updates of the selected project, newest version per package, with the bulk
  * toolbar over them. A source that could not be checked is a banner over the list, never an empty "no updates". A
- * centrally managed package is updated through the preview of the central change (`CentralUpdateDialog`); a row with a
- * `VersionOverride` is not updated from here (N74), and neither joins a bulk update (N76).
+ * centrally managed package is updated through the preview of the central change (`CentralUpdateDialog`) and joins no
+ * bulk update (N76); a row with a `VersionOverride` updates in its project alone, without a preview, and joins one (N74).
  * Nothing is removed here: a row is busy from the request on and leaves when the host's next list no longer has it.
  * In All Projects the tab is `AllProjectsUpdates`, one section per project.
  */
@@ -58,9 +58,15 @@ function ProjectUpdates({ filter, announce }: ListView): React.JSX.Element {
     const centralIds = useMemo(() => new Set((installed.result?.packages ?? [])
         .filter(entry => entry.declaration === 'central' || entry.declaration === 'central-override')
         .map(entry => entry.id.toLowerCase())), [installed.result]);
+    /** The CPM badge: a central or an override row. */
     const isCentral = (id: string): boolean => centralIds.has(id.toLowerCase());
     const entryOf = (id: string) => installed.result?.packages.find(entry => entry.id.toLowerCase() === id.toLowerCase());
-    /** Why a row is not updated from here (an override row, N74); `undefined` when it can be. */
+    /** A row whose update changes the central version: it needs the preview and stays out of a bulk update. */
+    const changesCentral = (id: string): boolean => {
+        const entry = entryOf(id);
+        return entry !== undefined && isCentralRow(entry);
+    };
+    /** Why a row is not updated from here (an unresolved row); `undefined` when it can be. */
     const obstacleOf = (id: string): string | undefined => {
         const entry = entryOf(id);
         return entry === undefined || installed.result === undefined ? undefined : whyNotUpdatable(entry, installed.result);
@@ -72,7 +78,7 @@ function ProjectUpdates({ filter, announce }: ListView): React.JSX.Element {
     const needle = filter.trim().toLowerCase();
     const items = useMemo<Item[]>(() => rows.filter(row => row.id.toLowerCase().includes(needle)).map(update => ({ id: update.id, update })), [rows, needle]);
     // A bulk update takes the rows shown that are neither centrally managed nor busy.
-    const candidates = unsupported ? [] : items.filter(item => !isCentral(item.id) && !isBusy(item.id)).map(item => item.update);
+    const candidates = unsupported ? [] : items.filter(item => !changesCentral(item.id) && !isBusy(item.id)).map(item => item.update);
     const chosen = candidates.filter(update => selected.has(update.id));
     const toUpdate = chosen.length > 0 ? chosen : candidates;
     const allSelected = candidates.length > 0 && chosen.length === candidates.length;
@@ -112,7 +118,7 @@ function ProjectUpdates({ filter, announce }: ListView): React.JSX.Element {
             announce(`${update.id} cannot be updated: ${unsupported.message}`);
             return;
         }
-        if (isCentral(update.id)) {
+        if (changesCentral(update.id)) {
             announce(`${update.id} is centrally managed; update it on its own to see the projects it changes`);
             return;
         }
@@ -181,7 +187,7 @@ function ProjectUpdates({ filter, announce }: ListView): React.JSX.Element {
                             busy={busy}
                             status={busy ? busyStatus(update.id) : undefined}
                             badges={<>
-                                {centrallyManaged ? <Badge label="CPM" title="Centrally managed" /> : null}
+                                {centrallyManaged ? <Badge label="CPM" title={entryOf(update.id)?.declaration === 'central-override' ? 'Centrally managed; this project overrides the version' : 'Centrally managed'} /> : null}
                                 {update.verified ? <Badge label="Verified" tone="info" title="The package id prefix is reserved by its owner" /> : null}
                             </>}
                             actions={unsupported ? undefined : (

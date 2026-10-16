@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor, within } from '@testing-library/react';
+import { act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { axe } from 'jest-axe';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -96,14 +96,15 @@ describe('sidebar: Updates section', () => {
         expect(host.requests('ops/update')).toHaveLength(1);
     });
 
-    it('an override row is not updated and says why', async () => {
+    it('an override row updates in its project alone: one ops/update, no actions menu', async () => {
         const user = userEvent.setup();
         const host = await mountWith({ updates: [update('Moq', '4.18.0', '4.20.72')] }, [pkg('Moq', '4.18.0', { declaration: 'central-override' })]);
         await user.click(updateOption('Moq'));
         await user.keyboard('{Enter}');
-        await waitFor(() => expect(screen.getByTestId('status-live')).toHaveTextContent('Moq has a VersionOverride in the project and is not updated from here until that edit is probed'));
-        expect(host.requests('ops/update')).toHaveLength(0);
+        expect(host.requests('ops/update').map(request => request.payload)).toEqual([{ projectPath: A, packageId: 'Moq', version: '4.20.72', sourceUrl: FEED }]);
         expect(host.requests('ui/contextMenu')).toHaveLength(0);
+        expect(updateOption('Moq')).toHaveAttribute('aria-busy', 'true');
+        expect(updateOption('Moq')).toHaveAccessibleDescription(/Centrally managed/);
     });
 
     it('an unreachable source is a banner with Retry, never "No updates available", and the header shows no count', async () => {

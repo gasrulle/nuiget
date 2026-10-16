@@ -1,6 +1,6 @@
 # ADR-004 supplement: SDK probes for Central Package Management mutation
 
-Status: evidence for [ADR-004](004-project-model.md) tier 3 (`ProjectMutator`) · Probed: 2026-10-12
+Status: evidence for [ADR-004](004-project-model.md) tier 3 (`ProjectMutator`) · Probed: 2026-10-12 · Extended: 2026-10-16 (plan item P7.5a: input cpm-override, rows add-existing-entry and add-override)
 
 This file is not a separate decision. It records what `dotnet package add` and `dotnet package remove`
 were **measured** to do on a Central Package Management (CPM) project, so that the `cpmAwareAdd`
@@ -54,6 +54,12 @@ CPM. The probe therefore used its two relevant files reduced to what restores:
 </Project>
 ```
 
+## Input cpm-override
+
+Since plan item P7.5a two rows run on a second input, `src/core/cli/__fixtures__/sdk-probes/cpm-override` (`input`
+in the JSON): the `cpm` input above with `VersionOverride="3.1.1"` on the `Serilog` reference and a central entry
+`<PackageVersion Include="Polly" Version="8.4.1" />` that no project references.
+
 ## Results on SDK 10.0.401
 
 All commands are `dotnet package … --project App/App.csproj` and all exited 0. "Reformatted" means the
@@ -71,6 +77,8 @@ file was rewritten with no semantic change (see [Findings](#findings)).
 | `add-absent-no-restore` | `add Polly --version 8.4.2 --no-restore` | same as above | same as above |
 | `restore-after-no-restore-add-absent` | `dotnet restore App/App.csproj` afterwards | unchanged | unchanged; restore succeeds |
 | `remove` | `remove Serilog` | reference removed | unchanged (central entry kept) |
+| `add-existing-entry` (cpm-override) | `add Polly --version 8.4.2` | bare `<PackageReference Include="Polly" />` added | `Polly` 8.4.1 → 8.4.2, reformatted |
+| `add-override` (cpm-override) | `add Serilog --version 4.1.0` | `VersionOverride` 3.1.1 → 4.1.0 | unchanged (not even reformatted) |
 
 Verdict recorded in the fixture:
 
@@ -110,11 +118,16 @@ are below the 2.0 floor (plan D13) and get no tracked probe.
    lines between elements and the final newline are stripped even when the requested version already equals
    the central one, and also under `--no-restore`. The `propsDiff` of the two `add-same-version` rows is
    therefore non-empty although nothing changed semantically. Only `add` without `--version` left the file
-   alone. The SDK 8 notes had recorded just the lost final newline.
+   alone. The SDK 8 notes had recorded just the lost final newline. The exception is a reference that carries
+   `VersionOverride`: then only the project file changes (row `add-override`).
 3. **A package absent from the central file is added to both files**, as a bare reference in the project and a
    `PackageVersion` in the props file. In both files `Polly` landed between `Newtonsoft.Json` and `Serilog`.
 4. **`remove` edits only the project.** The central entry stays, which is what ADR-004 requires ("never
    delete a central entry because one project uninstalled").
+5. **An add on an overriding reference edits the override in place.** `add Serilog --version 4.1.0` on a
+   reference with `VersionOverride="3.1.1"` rewrote the attribute to `4.1.0`; the central entry was neither read
+   nor rewritten (row `add-override`, finding N74). An add of a package that has a central entry but no reference
+   in the project adds a bare reference and moves the central version (row `add-existing-entry`).
 
 ## Consequences
 
@@ -131,6 +144,7 @@ are below the 2.0 floor (plan D13) and get no tracked probe.
 ## Limits of this evidence
 
 One SDK patch (10.0.401), one platform (macOS arm64), one single-target project, exact versions only. Not
-covered: multi-targeted projects and conditional references, `VersionOverride`, CPM enabled outside
+covered: multi-targeted projects and conditional references, creating a `VersionOverride` on a central reference
+(no command does), an override conditional on the target framework, CPM enabled outside
 `Directory.Packages.props`, nested props files, floating versions, Windows. P6.1 (`scripts/probe-sdk.mjs`)
 extends the probe; a result there that contradicts this file is a stop-and-ask.

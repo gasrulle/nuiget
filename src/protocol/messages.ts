@@ -163,7 +163,7 @@ export interface RequestMap {
     'ops/bulkRemoveAllProjects': { payload: { projectRemovals: ProjectBulkRemoval[] }; result: BulkOutcome; chunk: OperationProgress };
 
     // Central Package Management
-    /** The projects a central version change would reach, asked before `ops/update` or `ops/install` of a centrally managed package (ADR-004 tier 3, interaction model §5). `preview` is `null` when the project does not use Central Package Management or the package has no central entry; the edit itself goes through `ops/*`, whose gate decides. */
+    /** The projects a central version change would reach, asked before `ops/update` or `ops/install` of a centrally managed package (ADR-004 tier 3, interaction model §5). `preview` is `null` when the project does not use Central Package Management or the package has no central entry, or when the project overrides the central version with `VersionOverride` (the edit reaches that project alone, N74); the edit itself goes through `ops/*`, whose gate decides. */
     'cpm/preview': { payload: { projectPath: string; packageId: string; version: string }; result: { preview: CpmImpactPreview | null } };
 
     // Invalidation (manual refresh from either surface)

@@ -1,6 +1,6 @@
 # ADR-005: Project execution context and outbound request policy
 
-Status: accepted · Date: 2026-10-10 · Amended: 2026-10-12 (plan item P1.1b: context contract, proxy strategy without `undici`) · Amended: 2026-10-14 (plan item P4.1: proxy and certificate matrix, no vendored agent)
+Status: accepted · Date: 2026-10-10 · Amended: 2026-10-12 (plan item P1.1b: context contract, proxy strategy without `undici`) · Amended: 2026-10-14 (plan item P4.1: proxy and certificate matrix, no vendored agent) · Amended: 2026-10-16 (plan item P7.5b: remote, multi-root, virtual and untrusted workspace scope)
 
 ## Context
 
@@ -48,6 +48,27 @@ the configuration matrix in `005-proxy-matrix.md`.
   re-validated by resolved address while the predicate is false and refused with `redirect-blocked` when it does
   not resolve; while the predicate is true the proxy resolves names and the string checks alone apply. The
   supported configuration matrix is `005-proxy-matrix.md` (supplement, plan item P4.1).
+
+## Scope
+
+The amendment of 2026-10-16 (plan item P7.5b) records where the decision above applies.
+
+- **Remote.** The manifest declares `extensionKind: ["workspace"]`, so under Remote-SSH, WSL, Dev Containers and
+  Codespaces the extension host runs on the remote, and with it `dotnet`, the project files, the `nuget.config`
+  chain, the credentials (DPAPI only where that host is Windows), the `http.*` settings as the remote extension host
+  resolves them, and every feed connection. The webviews render locally and receive protocol messages and `data:`
+  URIs only (ADR-006); every path in the protocol is the remote's `fsPath`. No CI job runs a remote: the remote
+  case is not verified, and a remote-specific defect is a 2.0.1 finding.
+- **Multi-root.** Projects are discovered per workspace folder, and the deepest folder that contains a project owns
+  it (`containingFolder` in `src/core/project/discovery.ts`). The folder roots are the `stopDirs` of the static
+  inspection; a change of the folders refills them and invalidates the `workspace` scope (`src/extension.next.ts`,
+  `onDidChangeWorkspaceFolders`). Sources resolve per project directory; with no project selected they resolve in
+  the first workspace folder (`sourceDirectory` in `src/host/handlers.ts`). All Projects groups the projects by
+  folder (plan decision D2, ADR-000). A project outside every workspace folder is not discovered.
+- **Virtual and untrusted workspaces** are unsupported by the manifest (`capabilities.virtualWorkspaces: false`,
+  `untrustedWorkspaces.supported: false`), and the code assumes the `file` scheme (the mutator's dirty check in
+  `src/extension.next.ts` compares `file` documents only).
+- **Windows paths** are compared through `normalizeProjectPath` (casing and separators; plan item P7.3).
 
 ## Consequences
 

@@ -458,7 +458,7 @@ describe('sidebar: what a row shows and allows', () => {
         const result = installed(A, []);
         expect(whyNotUpdatable(pkg('A'), result)).toBeUndefined();
         expect(whyNotUpdatable(pkg('A', { declaration: 'central' }), result)).toBeUndefined();
-        expect(whyNotUpdatable(pkg('A', { declaration: 'central-override' }), result)).toBe('A has a VersionOverride in the project and is not updated from here until that edit is probed');
+        expect(whyNotUpdatable(pkg('A', { declaration: 'central-override' }), result)).toBeUndefined();
         expect(whyNotUpdatable(pkg('A', { declaration: 'unresolved' }), result)).toBe('A cannot be updated: its reference could not be resolved');
         expect(whyNotUpdatable(pkg('A', { declaration: 'central' }), { ...result, unsupported: { reason: 'packages-config', message: 'uses packages.config' } })).toBe('A cannot be updated: uses packages.config');
     });

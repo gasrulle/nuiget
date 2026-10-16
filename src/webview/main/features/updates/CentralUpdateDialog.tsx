@@ -41,8 +41,8 @@ function describeChange(request: CentralUpdateRequest): string {
 /**
  * What updating a centrally managed package changes (interaction model §5, "CPM central change"): the host's preview
  * (`cpm/preview`) lists every project the central version applies to before anything is submitted, and the one action
- * is *Update central version* (overriding the version in one project waits for finding N74). The request is cancelled
- * when the dialog closes.
+ * is *Update central version* (overriding the version in one project is not offered: no `dotnet` command writes a
+ * `VersionOverride`; an existing one updates in place, N74). The request is cancelled when the dialog closes.
  */
 export function CentralUpdateDialog({ request, onClose, onConfirm }: CentralUpdateDialogProps): React.JSX.Element | null {
     const bus = useMessageBus();

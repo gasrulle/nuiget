@@ -40,7 +40,8 @@ export function whyNotRemovable(entry: InstalledPackage, result: InstalledResult
 
 /**
  * Why a package cannot be updated from this list, in a sentence for the user; `undefined` when it can. A row with a
- * `VersionOverride` is not updated until what `dotnet package add` edits there is probed (finding N74).
+ * `VersionOverride` updates in its project alone (`dotnet package add --version` rewrites the override and leaves the
+ * central entry; probe row `add-override`, N74).
  */
 export function whyNotUpdatable(entry: InstalledPackage, result: InstalledResult): string | undefined {
     if (result.unsupported) {
@@ -48,9 +49,6 @@ export function whyNotUpdatable(entry: InstalledPackage, result: InstalledResult
     }
     if (entry.declaration === 'unresolved') {
         return `${entry.id} cannot be updated: its reference could not be resolved`;
-    }
-    if (entry.declaration === 'central-override') {
-        return `${entry.id} has a VersionOverride in the project and is not updated from here until that edit is probed`;
     }
     return undefined;
 }

@@ -146,21 +146,54 @@ describe('DefaultProjectMutator.canMutate', () => {
         }
     });
 
-    it('refuses install and update of a row with a VersionOverride or an unresolved version', async () => {
+    it('refuses install and update of an unresolved row and of a VersionOverride that holds in some target frameworks only', async () => {
         const dir = await tree({
             'Directory.Packages.props': central('<PackageVersion Include="Serilog" Version="4.0.0" /><PackageVersion Include="Polly" Version="8.0.0" Condition="\'$(Configuration)\' == \'Debug\'" />'),
-            'App/App.csproj': project('<PackageReference Include="Serilog" VersionOverride="3.1.1" /><PackageReference Include="Polly" />'),
+            'App/App.csproj': project('<PackageReference Include="Polly" />'),
             'Plain/Plain.csproj': project('<PackageReference Include="Moq" Version="$(MoqVersion)" />'),
             'Plain/Directory.Packages.props': '<Project />',
         });
         const app = path.join(dir, 'App', 'App.csproj');
         const plain = path.join(dir, 'Plain', 'Plain.csproj');
         const { mutator: subject } = mutator(dir);
-        await expect(subject.canMutate(context(app), update)).resolves.toEqual({ ok: false, error: 'Serilog has a VersionOverride in the project; what dotnet package add changes there has not been probed' });
+        // An override in one target framework only: the static inspection marks a conditional reference unresolved, so
+        // the two rows an evaluation yields (`central-override` and `central` for one id) come from an inspector fake.
+        const mixed = new DefaultProjectMutator({
+            inspector: {
+                inspect: async projectPath => ({
+                    projectPath, fidelity: 'provisional', isCpm: true, centralPropsPath: path.join(dir, 'Directory.Packages.props'),
+                    packages: [
+                        { id: 'Serilog', version: '3.1.1', versionType: 'standard', declaration: 'central-override' },
+                        { id: 'Serilog', version: '4.0.0', versionType: 'standard', declaration: 'central' },
+                    ],
+                }),
+            },
+            isDirty: () => false,
+            discoverProjects: async () => [],
+        });
+        await expect(mixed.canMutate(context(app), update)).resolves.toEqual({ ok: false, error: 'Serilog overrides the central version in some target frameworks only; edit it by hand' });
         await expect(subject.canMutate(context(app), { kind: 'update', packageId: 'polly', version: '8.4.2' })).resolves.toEqual({ ok: false, error: 'polly could not be resolved in the project file; edit it by hand' });
         await expect(subject.canMutate(context(plain), { kind: 'install', packageId: 'Moq', version: '4.20.0' })).resolves.toEqual({ ok: false, error: 'Moq could not be resolved in the project file; edit it by hand' });
         // A remove of the same rows is admitted.
-        await expect(subject.canMutate(context(app), remove)).resolves.toEqual({ ok: true, isCpm: true });
+        await expect(mixed.canMutate(context(app), remove)).resolves.toEqual({ ok: true, isCpm: true });
+        await expect(subject.canMutate(context(app), { kind: 'remove', packageId: 'Polly' })).resolves.toEqual({ ok: true, isCpm: true });
+    });
+
+    it('cpm: an install or update of a VersionOverride row is admitted with isCpm and previews nothing (probe row add-override)', async () => {
+        const dir = await tree({
+            'Directory.Packages.props': central('<PackageVersion Include="Serilog" Version="4.0.0" />'),
+            'App/App.csproj': project('<PackageReference Include="Serilog" VersionOverride="3.1.1" />'),
+            'Lib/Lib.csproj': project('<PackageReference Include="Serilog" />'),
+        });
+        const app = path.join(dir, 'App', 'App.csproj');
+        const lib = path.join(dir, 'Lib', 'Lib.csproj');
+        const { mutator: subject } = mutator(dir, { projects: [app, lib] });
+        for (const request of [update, install]) {
+            await expect(subject.canMutate(context(app), request)).resolves.toEqual({ ok: true, isCpm: true });
+        }
+        await expect(subject.previewCpmImpact(context(app), 'Serilog', '4.1.0')).resolves.toBeUndefined();
+        const preview = await subject.previewCpmImpact(context(lib), 'Serilog', '4.1.0');
+        expect(preview?.affectedProjects).toEqual([lib]);
     });
 
     it('refuses every edit of a project the inspector reports unsupported', async () => {
@@ -213,6 +246,8 @@ describe('DefaultProjectMutator.previewCpmImpact', () => {
         const { mutator: subject, discoverProjects } = mutator(dir, { projects });
         await expect(subject.previewCpmImpact(context(file('A', 'A.csproj')), 'Absent', '1.0.0')).resolves.toBeUndefined();
         await expect(mutator(plain).mutator.previewCpmImpact(context(path.join(plain, 'P', 'P.csproj')), 'X', '1.1.0')).resolves.toBeUndefined();
+        // B overrides X: the edit reaches B alone.
+        await expect(subject.previewCpmImpact(context(file('B', 'B.csproj')), 'X', '1.1.0')).resolves.toBeUndefined();
         expect(discoverProjects).not.toHaveBeenCalled();
     });
 

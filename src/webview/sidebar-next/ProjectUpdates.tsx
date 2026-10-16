@@ -32,8 +32,8 @@ export interface ProjectUpdatesProps {
  * The updates of one project as compact rows: Enter or the row's button updates the package in this project to its
  * latest version with the row's source; Ctrl+Enter opens the full view, Shift+F10 the host's actions menu. A centrally
  * managed package opens the actions menu instead, where the host confirms the central change in a modal listing the
- * projects it reaches; a row with a `VersionOverride` says why it is not updated (N74); an unsupported project is
- * read-only.
+ * projects it reaches; a row with a `VersionOverride` updates in this project alone, without a preview (N74); an
+ * unsupported project is read-only.
  */
 export function ProjectUpdates(props: ProjectUpdatesProps): React.JSX.Element {
     const { projectPath, rows, installed, filter, announce, labelledBy, testId, busy: revalidating, empty, selectedId, onSelectedChange } = props;
@@ -113,7 +113,7 @@ export function ProjectUpdates(props: ProjectUpdatesProps): React.JSX.Element {
                         density="compact"
                         busy={busy}
                         status={busy ? busyStatus(update.id) : undefined}
-                        badges={central ? <Badge label="CPM" title="Centrally managed" /> : undefined}
+                        badges={central ? <Badge label="CPM" title={installed?.packages.find(entry => entry.id.toLowerCase() === update.id.toLowerCase())?.declaration === 'central-override' ? 'Centrally managed; this project overrides the version' : 'Centrally managed'} /> : undefined}
                         actions={unsupported ? undefined : (
                             <IconButton label={`Update ${update.id} to ${update.latestVersion}`} tabIndex={-1} data-testid="row-action-update" onClick={() => updateOne(item)}><ArrowUpIcon /></IconButton>
                         )}

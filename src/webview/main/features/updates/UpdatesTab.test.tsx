@@ -145,15 +145,17 @@ describe('main panel: Updates tab', () => {
         expect(host.requests('ops/update').map(request => request.payload)).toEqual([{ projectPath: A, packageId: 'Newtonsoft.Json', version: '13.0.3', sourceUrl: FEED }]);
     });
 
-    it('an override row is not updated and says why', async () => {
+    it('an override row updates in its project alone: Space selects it for the bulk update, Enter sends one ops/update without a preview', async () => {
         const user = userEvent.setup();
         const host = await mountWith({ updates: [update('Moq', '4.18.0', '4.20.72')] }, A, [pkg('Moq', { version: '4.18.0', declaration: 'central-override' })]);
         await user.click(optionOf('Moq'));
+        await user.keyboard(' ');
+        expect(screen.getByTestId('update-all-button')).toHaveTextContent('Update selected (1)');
+        expect(screen.getByTestId('status-live')).not.toHaveTextContent('centrally managed');
         await user.keyboard('{Enter}');
-        await waitFor(() => expect(screen.getByTestId('status-live')).toHaveTextContent('Moq has a VersionOverride in the project and is not updated from here until that edit is probed'));
-        expect(screen.queryByTestId('cpm-preview-dialog')).toBeNull();
-        expect(host.requests('ops/update')).toHaveLength(0);
+        expect(host.requests('ops/update').map(request => request.payload)).toEqual([{ projectPath: A, packageId: 'Moq', version: '4.20.72', sourceUrl: FEED }]);
         expect(host.requests('cpm/preview')).toHaveLength(0);
+        expect(screen.queryByTestId('cpm-preview-dialog')).toBeNull();
     });
 
     it('an unreachable source is a banner with Retry over the list, never "No updates available", and the tab shows no count', async () => {
@@ -205,14 +207,14 @@ describe('main panel: Updates tab', () => {
     describe('All Projects', () => {
         const B = '/w/Lib/Lib.csproj';
 
-        async function mountAll(answer: { sourcesUnavailable?: boolean } = {}): Promise<FakeHost> {
+        async function mountAll(answer: { sourcesUnavailable?: boolean } = {}, lib: InstalledResult = { projectPath: B, fidelity: 'authoritative', isCpm: false, packages: [pkg('Moq', { version: '4.20.0' })] }): Promise<FakeHost> {
             const host = createFakeHost();
             render(<StoreProvider bus={host.bus}><MainShell installed={view => <InstalledTab {...view} />} updates={view => <UpdatesTab {...view} />} /></StoreProvider>);
             await hostSays(() => host.respond(host.requests('session/get')[0], snapshot(1, ALL_PROJECTS)));
             await hostSays(() => host.respond(host.requests('projects/list')[0], { projects: [{ name: 'App', path: A }, { name: 'Lib', path: B }] }, 1));
             const installedStream = host.requests('allProjects/installed')[0];
             await hostSays(() => host.chunk(installedStream, { kind: 'project', chunk: { projectPath: A, projectName: 'App', result: installed([pkg('Serilog', { version: '3.0.0' }), pkg('Newtonsoft.Json', { version: '13.0.1', declaration: 'central' })]) } }));
-            await hostSays(() => host.chunk(installedStream, { kind: 'project', chunk: { projectPath: B, projectName: 'Lib', result: { projectPath: B, fidelity: 'authoritative', isCpm: false, packages: [pkg('Moq', { version: '4.20.0' })] } } }));
+            await hostSays(() => host.chunk(installedStream, { kind: 'project', chunk: { projectPath: B, projectName: 'Lib', result: lib } }));
             await hostSays(() => host.respond(installedStream, { projectPaths: [A, B], errored: [] }));
             const stream = host.requests('allProjects/updates')[0];
             await hostSays(() => host.chunk(stream, { kind: 'start', projects: [{ name: 'App', path: A }, { name: 'Lib', path: B }] }));
@@ -251,6 +253,18 @@ describe('main panel: Updates tab', () => {
             await user.click(rowIn('app', 'Newtonsoft.Json'));
             await user.keyboard('{Enter}');
             expect(screen.getByTestId('cpm-preview-dialog')).toBeInTheDocument();
+        });
+
+        it('All Projects: an override row updates in its own project alone and is a bulk candidate', async () => {
+            const user = userEvent.setup();
+            const host = await mountAll({}, { projectPath: B, fidelity: 'authoritative', isCpm: true, packages: [pkg('Moq', { version: '4.20.0', declaration: 'central-override' })] });
+            await user.click(rowIn('lib', 'Moq'));
+            await user.keyboard(' ');
+            expect(screen.getByTestId('update-all-button')).toHaveTextContent('Update selected (1)');
+            await user.keyboard('{Enter}');
+            expect(host.requests('ops/update').map(request => request.payload)).toEqual([{ projectPath: B, packageId: 'Moq', version: '4.20.72', sourceUrl: FEED }]);
+            expect(host.requests('cpm/preview')).toHaveLength(0);
+            expect(screen.queryByTestId('cpm-preview-dialog')).toBeNull();
         });
 
         it('All Projects: a source that could not be checked is one banner over the sections, not an empty state', async () => {

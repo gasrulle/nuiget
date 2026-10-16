@@ -1,7 +1,8 @@
 /**
  * ADR-004 tier 3: whether a reference edit may run, and which projects a Central Package Management edit reaches.
  * The SDK checks (D13) and the provenance check of a CPM add (D7) are decided here and nowhere else. The mutator
- * reads the project files through the static inspection and never writes a file: the edit itself is the CLI's.
+ * reads the project files through the static inspection and never writes a file: the edit itself is the CLI's. An
+ * override row is edited in place (probe row `add-override`, N74).
  */
 
 import * as fs from 'fs';
@@ -50,8 +51,11 @@ export class DefaultProjectMutator implements ProjectMutator {
         if (rows.some(row => row.declaration === 'unresolved')) {
             return refuse(`${request.packageId} could not be resolved in the project file; edit it by hand`);
         }
-        if (rows.some(row => row.declaration === 'central-override')) {
-            return refuse(`${request.packageId} has a VersionOverride in the project; what dotnet package add changes there has not been probed`);
+        // An add on a reference whose every row overrides rewrites the override and leaves the props file (probe row
+        // `add-override`); an override in some target frameworks only is unprobed.
+        const overrides = rows.filter(row => row.declaration === 'central-override');
+        if (overrides.length > 0 && overrides.length < rows.length) {
+            return refuse(`${request.packageId} overrides the central version in some target frameworks only; edit it by hand`);
         }
         if (!isCpm) {
             return { ok: true, isCpm: false };
@@ -75,6 +79,10 @@ export class DefaultProjectMutator implements ProjectMutator {
         const inspected = await this.deps.inspector.inspect(context.projectPath);
         const centralPropsPath = inspected.centralPropsPath;
         if (inspected.unsupported || !inspected.isCpm || centralPropsPath === undefined) {
+            return undefined;
+        }
+        // The asking project overrides the central version: the edit reaches that project alone (N74).
+        if (inspected.packages.some(pkg => pkg.id.toLowerCase() === packageId.toLowerCase() && pkg.declaration === 'central-override')) {
             return undefined;
         }
         const entry = parseCentralPackageVersions(await fs.promises.readFile(centralPropsPath, 'utf-8'), centralPropsPath).get(packageId.toLowerCase());

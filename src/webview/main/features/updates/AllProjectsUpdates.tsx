@@ -26,8 +26,17 @@ interface Item {
     update: PackageUpdate;
 }
 
-const isCentralIn = (installed: InstalledResult | undefined, id: string): boolean => installed?.packages.some(entry => entry.id.toLowerCase() === id.toLowerCase()
-    && (entry.declaration === 'central' || entry.declaration === 'central-override')) === true;
+const entryIn = (installed: InstalledResult | undefined, id: string) => installed?.packages.find(entry => entry.id.toLowerCase() === id.toLowerCase());
+/** The CPM badge: a central or an override row. */
+const isCentralIn = (installed: InstalledResult | undefined, id: string): boolean => {
+    const declaration = entryIn(installed, id)?.declaration;
+    return declaration === 'central' || declaration === 'central-override';
+};
+/** A row whose update changes the central version: it needs the preview and stays out of a bulk update (N76). */
+const changesCentralIn = (installed: InstalledResult | undefined, id: string): boolean => {
+    const entry = entryIn(installed, id);
+    return entry !== undefined && isCentralRow(entry);
+};
 
 interface ProjectUpdatesSectionProps {
     section: Section;
@@ -106,7 +115,7 @@ function ProjectUpdatesSection(props: ProjectUpdatesSectionProps): React.JSX.Ele
                                 density="comfortable"
                                 busy={busy}
                                 status={busy ? busyStatus(update.id) : undefined}
-                                badges={central ? <Badge label="CPM" title="Centrally managed" /> : undefined}
+                                badges={central ? <Badge label="CPM" title={entryIn(section.installed, update.id)?.declaration === 'central-override' ? 'Centrally managed; this project overrides the version' : 'Centrally managed'} /> : undefined}
                                 actions={unsupported ? undefined : (
                                     <IconButton label={`Update ${update.id} to ${update.latestVersion}`} tabIndex={-1} data-testid="row-action-update" onClick={() => onUpdate(update)}><ArrowUpIcon /></IconButton>
                                 )}
@@ -140,7 +149,7 @@ function ProjectUpdatesSection(props: ProjectUpdatesSectionProps): React.JSX.Ele
 /**
  * The Updates tab in All Projects (interaction model §3): one section per project under its workspace folder, over the
  * `allProjects/updates` stream. Rows of an unsupported project are read-only, a centrally managed package is updated
- * through the central preview (`CentralUpdateDialog`), a row with a `VersionOverride` is not updated (N74), and Update all takes the selected rows across projects (or every candidate) as one
+ * through the central preview (`CentralUpdateDialog`) and joins no bulk update (N76), a row with a `VersionOverride` updates in its project alone without a preview (N74), and Update all takes the selected rows across projects (or every candidate) as one
  * `ops/bulkUpdateAllProjects`. A source that could not be checked is one banner over every section.
  */
 export function AllProjectsUpdates({ filter, announce }: ListView): React.JSX.Element {
@@ -170,7 +179,7 @@ export function AllProjectsUpdates({ filter, announce }: ListView): React.JSX.El
     const rowsOf = (section: Section): PackageUpdate[] => (section.chunk?.updates ?? []).filter(update => update.id.toLowerCase().includes(needle));
     const candidatesOf = (section: Section): PackageUpdate[] => (section.installed?.unsupported
         ? []
-        : rowsOf(section).filter(update => !isCentralIn(section.installed, update.id) && !isPackageBusy(section.projectPath, update.id)));
+        : rowsOf(section).filter(update => !changesCentralIn(section.installed, update.id) && !isPackageBusy(section.projectPath, update.id)));
 
     const chosenCount = sections.reduce((count, section) => count + candidatesOf(section).filter(update => selected.get(section.projectPath)?.has(update.id)).length, 0);
     const groups = sections
@@ -208,7 +217,7 @@ export function AllProjectsUpdates({ filter, announce }: ListView): React.JSX.El
             announce(`${update.id} cannot be updated: ${section.installed.unsupported.message}`);
             return;
         }
-        if (isCentralIn(section.installed, update.id)) {
+        if (changesCentralIn(section.installed, update.id)) {
             announce(`${update.id} is centrally managed; update it on its own to see the projects it changes`);
             return;
         }

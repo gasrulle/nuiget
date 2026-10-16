@@ -336,8 +336,8 @@ export interface MutationRequest {
 /**
  * `ok: true` carries whether the project uses Central Package Management as the decision saw it, so the command runs as
  * admitted (`isCpm` into `addPackageArgs`, never `--no-restore` with it; D7, N51). `ok: false` carries the explanation the
- * UI shows (SDK missing or below 10, unsaved project or props file, unverified CPM capability, an override or unresolved
- * row, a Central Package Management edit without a version).
+ * UI shows (SDK missing or below 10, unsaved project or props file, unverified CPM capability, an unresolved row or an
+ * override that holds in some target frameworks only, a Central Package Management edit without a version).
  */
 export type MutationDecision = { ok: true; isCpm: boolean } | { ok: false; error: string };
 
@@ -348,6 +348,6 @@ export type MutationDecision = { ok: true; isCpm: boolean } | { ok: false; error
  */
 export interface ProjectMutator {
     canMutate(context: ProjectExecutionContext, request: MutationRequest): Promise<MutationDecision>;
-    /** `undefined` when the project is not CPM or the package has no central entry. */
+    /** `undefined` when the project is not CPM, the package has no central entry, or the asking project overrides the central version (then the edit reaches that project alone). */
     previewCpmImpact(context: ProjectExecutionContext, packageId: string, toVersion: string): Promise<CpmImpactPreview | undefined>;
 }
