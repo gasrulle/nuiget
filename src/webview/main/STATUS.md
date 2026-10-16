@@ -1,4 +1,4 @@
-# STATUS — src/webview/main   commit 3bfc748 (P9.7 commit (a); parent of commit (b) and its docs commit)   2026-10-17T03:30:00Z
+# STATUS — src/webview/main   commit 3e6a622 (P9.7 closed; parent of this docs commit)   2026-10-17T04:10:00Z
 
 git status --porcelain --untracked-files=all (before commit (a)): modified `ARCHITECTURE.md`, `CHANGELOG.md`, `README.md`,
 `docs/plans/STATUS.md`, `docs/ux/interaction-model.md`, `src/test/harness/{scenarios.test.ts,STATUS.md}`,
@@ -121,6 +121,18 @@ CI run 38982375640 on 3bfc748 (commit (a)), artifact `ui-screenshots`, 14 PNGs:
 - viewed: sidebar-sections.png: the sidebar box "Search, or filter: @installed, @upd" with the Filters icon.
 - viewed: sidebar-narrow-200px.png: RED: the placeholder is cut to "Search, or filter: @" (P9.6: "…@instal"); fixed
   forward in (b) by reserving room only for the buttons shown (deviation above).
+
+CI runs 38983158395 and 38983155758 on 3e6a622 (commit (b)) → success; "Check the named screenshots": `14 named states;
+PNGs in the artifact: 14`. Artifact `ui-screenshots` of 38983158395:
+
+- viewed: main-installed-single.png: list pane about 35 % of the split (sash near x 677 of 348-1280); header unchanged.
+- viewed: main-updates.png: list pane about 35 %; the update rows' authors end in an ellipsis at that width.
+- viewed: main-browse-results.png: list pane about 35 %; Clear (×) and Filters in the box with text.
+- viewed: sidebar-narrow-200px.png: the sidebar placeholder reads "Search, or filter: @inst" with the Filters icon
+  (P9.6: "…@instal"; (a): "…@"); the main split about 35 %.
+
+Seen at P9.7, for P9.11: in `main-installed-single-hc.png` the dark Newtonsoft.Json icon is invisible on the High
+Contrast black.
 
 ## Advisor decisions (date, item, question, answer verbatim)
 ## Advisor decisions (date, item, question, answer verbatim)
