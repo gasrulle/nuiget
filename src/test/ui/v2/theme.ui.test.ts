@@ -3,7 +3,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { By, InputBox, Workbench } from 'vscode-extension-tester';
 import { enterMainWebview, openMainPanel } from './mainWebview';
-import { driverOf, enterSidebarWebview, leaveWebview, openSidebarView, poll } from './sidebarWebview';
+import { driverOf, enterSidebarWebview, findByTestId, leaveWebview, openSidebarView, poll, screenshot } from './sidebarWebview';
 
 /**
  * The theme pass of the 2.0 webviews (plan item P5.11, ruling of 2026-10-16), on the VSIX that `npm run test:ui` packages:
@@ -224,6 +224,23 @@ describe('2.0 theme pass', () => {
             await leaveWebview();
             expectNoViolations('main panel', theme, main);
             expectNoViolations('sidebar', theme, sidebar);
+        });
+    }
+
+    // After the axe pass, which measures whichever tab an earlier file left: the Installed tab under a light and a
+    // high-contrast theme, for the screenshots of plan item P9.0. The `after` hook puts the first theme back.
+    for (const [theme, state] of [[THEMES[1], 'main-installed-single-light'], [THEMES[2], 'main-installed-single-hc']] as const) {
+        it(`${nameOf(theme)}: the Installed tab is screenshot (P9.0)`, async function () {
+            this.timeout(180_000);
+            await selectTheme(theme);
+            await openMainPanel();
+            await enterMainWebview();
+            await waitForBodyClass(theme);
+            await (await findByTestId('installed-tab', 30_000)).click();
+            await findByTestId('package-row-serilog', 120_000);
+            await waitForSettledContent();
+            await waitForTransitions();
+            await screenshot(state);
         });
     }
 });

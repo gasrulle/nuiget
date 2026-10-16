@@ -3,7 +3,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { By, Key } from 'vscode-extension-tester';
 import { enterMainWebview, openMainPanel } from './mainWebview';
-import { findByTestId, leaveWebview, poll, waitForTestIdGone, waitForText } from './sidebarWebview';
+import { findByTestId, leaveWebview, poll, screenshot, waitForTestIdGone, waitForText } from './sidebarWebview';
 
 /**
  * Browse in the 2.0 main panel in VS Code (plan item P5.6), on the VSIX that `npm run test:ui` packages: a search submitted
@@ -38,6 +38,11 @@ describe('2.0 main panel: browse', () => {
         try {
             await openMainPanel();
             await enterMainWebview();
+            // Out of browse mode first: a failed test above must not leave the files after this one without tabs (N85).
+            const search = await findByTestId('search-input', 30_000);
+            await search.click();
+            await search.sendKeys(Key.ESCAPE);
+            await findByTestId('tab-bar', 10_000);
             await (await findByTestId('installed-tab', 30_000)).click();
             await findByTestId('installed-list', 60_000);
             await waitForTestIdGone('package-row-nunit', 240_000);
@@ -70,6 +75,7 @@ describe('2.0 main panel: browse', () => {
         const list = await findByTestId('browse-list');
         expect(await list.getAttribute('role')).to.equal('listbox');
         expect(await row.getAttribute('textContent')).to.contain('Newtonsoft.Json');
+        await screenshot('main-browse-results');
 
         await search.click();
         await search.sendKeys(Key.ESCAPE);
@@ -89,11 +95,28 @@ describe('2.0 main panel: browse', () => {
         await findByTestId('tab-bar', 10_000);
     });
 
+    it('typing opens the quick-search suggestions, and Escape closes them (P9.0)', async function () {
+        this.timeout(180_000);
+        const search = await findByTestId('search-input', 60_000);
+        await search.click();
+        await search.sendKeys(Key.chord(selectAllKey, 'a'), Key.BACK_SPACE, 'Serilog');
+        // Asked 150 ms after the last key while the box has focus; the list closes when the box loses it.
+        const suggestions = await findByTestId('search-suggestions', 60_000);
+        await poll(async () => ((await suggestions.findElements(By.css('[role="option"]'))).length > 0 ? true : undefined), 'a suggestion', 60_000);
+        await screenshot('main-quicksearch-open');
+
+        await search.sendKeys(Key.chord(selectAllKey, 'a'), Key.BACK_SPACE);
+        await waitForTestIdGone('search-suggestions', 10_000);
+        await findByTestId('tab-bar', 10_000);
+    });
+
     it('a browse row opens its details, and clearing the box brings the tabs back (P5.12b)', async function () {
         this.timeout(180_000);
         const { search, row } = await browse('Newtonsoft.Json', 'package-row-newtonsoft.json');
         await (await row.findElement(By.css('[role="option"]'))).click();
         await waitForText('package-details-panel', 'Newtonsoft.Json', 30_000);
+        await waitForText('package-details-panel', 'Dependencies', 60_000);
+        await screenshot('main-browse-details');
 
         await search.click();
         await search.sendKeys(Key.chord(selectAllKey, 'a'), Key.BACK_SPACE);
@@ -107,9 +130,16 @@ describe('2.0 main panel: browse', () => {
         const { search, row } = await browse('NUnit', 'package-row-nunit');
         await (await row.findElement(By.css('[role="option"]'))).click();
         await waitForText('package-details-panel', 'NUnit', 30_000);
+        // The version selector is as wide as its one option until the versions arrive, and the Install button beside it
+        // moves when it narrows: a click aimed before that lands next to the button (N85).
+        const selector = await findByTestId('version-selector', 60_000);
+        await poll(async () => (((await selector.getAttribute('textContent')) ?? '').includes('loading versions') ? undefined : true), 'the versions of NUnit', 60_000);
         const install = await findByTestId('install-update-button', 60_000);
         await poll(async () => (/Install/.test(await install.getText()) && (await install.isEnabled()) ? true : undefined), 'the Install button', 60_000);
         await install.click();
+        // The operation is busy from the click on; the first check runs long before `dotnet package add` and the restore
+        // after it could end and enable the button again.
+        await poll(async () => (!(await install.isEnabled()) || /Working/.test(await install.getText()) ? true : undefined), 'the Install click to start an operation (N85)', 10_000);
 
         // `dotnet package add` writes the reference; the outcome is announced after the restore that follows it.
         await poll(async () => (fs.readFileSync(csprojPath, 'utf-8').includes('Include="NUnit"') ? true : undefined), 'NUnit in TestProject.csproj', 240_000);

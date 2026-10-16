@@ -1,8 +1,8 @@
 import { expect } from 'chai';
 import * as fs from 'fs';
 import * as path from 'path';
-import { By, Key } from 'vscode-extension-tester';
-import { driverOf, enterSidebarWebview, findByTestId, leaveWebview, openSidebarView, poll, waitForTestIdGone, waitForText } from './sidebarWebview';
+import { By, Key, Origin, type WebElement } from 'vscode-extension-tester';
+import { driverOf, enterSidebarWebview, findByTestId, leaveWebview, openSidebarView, poll, screenshot, waitForTestIdGone, waitForText } from './sidebarWebview';
 
 /**
  * The 2.0 sidebar in VS Code (plan item P3.5), on the VSIX that `npm run test:ui` packages: the first time the 2.0
@@ -53,6 +53,53 @@ describe('2.0 sidebar', () => {
         await findByTestId('package-row-newtonsoft.json');
         const serilog = await serilogOption();
         expect(await serilog.getText()).to.contain('Serilog').and.to.contain('3.1.1');
+        // Both sections filled before the screenshot: the fixture project has one update.
+        await poll(async () => ((await driverOf().findElements(By.css('[data-testid="sidebar-updates-list"] [role="option"]'))).length > 0 ? true : undefined), 'the update row', 120_000);
+        await screenshot('sidebar-sections');
+    });
+
+    /** The side bar part of the workbench, outside the webview. */
+    const sideBarWidth = async (): Promise<number> => {
+        await leaveWebview();
+        return Math.round((await driverOf().findElement(By.id('workbench.parts.sidebar')).getRect()).width);
+    };
+
+    /** Drags the sash at the right edge of the side bar until the side bar is `width` px wide. */
+    const dragSideBarTo = async (width: number): Promise<void> => {
+        const part = await driverOf().findElement(By.id('workbench.parts.sidebar'));
+        const edge = await part.getRect();
+        const right = edge.x + edge.width;
+        let sash: WebElement | undefined;
+        for (const candidate of await driverOf().findElements(By.css('.monaco-sash.vertical'))) {
+            const rect = await candidate.getRect();
+            if (rect.height > edge.height / 2 && Math.abs(rect.x + rect.width / 2 - right) <= 4) {
+                sash = candidate;
+            }
+        }
+        if (sash === undefined) {
+            throw new Error(`no vertical sash at x=${right}`);
+        }
+        await driverOf().actions().move({ origin: sash }).press().move({ origin: Origin.POINTER, x: Math.round(width - edge.width), y: 0 }).release().perform();
+        await poll(async () => (Math.abs((await sideBarWidth()) - width) <= 2 ? true : undefined), `the side bar at ${width} px`, 10_000);
+    };
+
+    it('at 200 px the side bar keeps both sections (P9.0)', async function () {
+        this.timeout(180_000);
+        await openSidebarView();
+        const original = await sideBarWidth();
+        try {
+            await dragSideBarTo(200);
+            await enterSidebarWebview();
+            // The webview follows the part: wait for its layout at the new width before the screenshot.
+            await poll(async () => ((await driverOf().executeScript<number>('return document.querySelector(\'[data-testid="nuiget-sidebar"]\').getBoundingClientRect().width;')) <= 200 ? true : undefined), 'the sidebar laid out at 200 px', 10_000);
+            await findByTestId('package-row-serilog', 60_000);
+            await findByTestId('sidebar-updates-list', 60_000);
+            await screenshot('sidebar-narrow-200px');
+        } finally {
+            // The theme pass measures target sizes in the sidebar at its usual width.
+            await leaveWebview();
+            await dragSideBarTo(original);
+        }
     });
 
     it('lays the rows out from the stylesheet under the CSP', async function () {

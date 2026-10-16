@@ -9,6 +9,32 @@ const POLL_MS = 250;
 
 export const driverOf = (): WebDriver => VSBrowser.instance.driver;
 
+/**
+ * The named states the UI job screenshots (plan item P9.0, decision D18). CI uploads them as the `ui-screenshots`
+ * artifact, and an item that changes a webview is done only once its states were looked at.
+ */
+export type ScreenshotState =
+    | 'main-installed-single'
+    | 'main-installed-single-light'
+    | 'main-installed-single-hc'
+    | 'main-installed-all'
+    | 'main-transitive-expanded'
+    | 'main-updates'
+    | 'main-browse-results'
+    | 'main-browse-details'
+    | 'main-quicksearch-open'
+    | 'main-details-readme'
+    | 'sidebar-sections'
+    | 'sidebar-narrow-200px';
+
+/**
+ * Screenshots the whole VS Code window into `<storage>/screenshots/<run timestamp>/<state>.png`. WebDriver captures
+ * the top-level window whatever frame the driver is in, so a test may call this from inside a webview.
+ */
+export async function screenshot(state: ScreenshotState): Promise<void> {
+    await VSBrowser.instance.takeScreenshot(state);
+}
+
 /** Calls `probe` every 250 ms until it returns something other than `undefined`; fails with `what` after `timeoutMs`. */
 export async function poll<T>(probe: () => Promise<T | undefined>, what: string, timeoutMs: number): Promise<T> {
     const deadline = Date.now() + timeoutMs;

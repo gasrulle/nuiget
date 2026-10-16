@@ -3,7 +3,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { By, Key } from 'vscode-extension-tester';
 import { enterMainWebview, openMainPanel } from './mainWebview';
-import { findByTestId, leaveWebview, poll, waitForTestIdGone } from './sidebarWebview';
+import { findByTestId, leaveWebview, poll, screenshot, waitForTestIdGone } from './sidebarWebview';
 
 /**
  * The Updates tab of the 2.0 main panel in VS Code (plan item P5.5), on the VSIX that `npm run test:ui` packages: the
@@ -46,6 +46,7 @@ describe('2.0 main panel: Updates tab', () => {
         expect(await row.getAttribute('textContent')).to.contain('13.0.2 →');
         const tab = await findByTestId('updates-tab');
         await poll(async () => (/\d/.test((await tab.getAttribute('textContent')) ?? '') ? true : undefined), 'a count on the Updates tab', 30_000);
+        await screenshot('main-updates');
     });
 
     it('the Update all dialog lists the packages and cancels on Escape, leaving the project file as it was', async function () {

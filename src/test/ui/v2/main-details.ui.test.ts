@@ -1,7 +1,7 @@
 import { expect } from 'chai';
 import { By } from 'vscode-extension-tester';
 import { enterMainWebview, openMainPanel } from './mainWebview';
-import { driverOf, findByTestId, leaveWebview, poll, waitForText } from './sidebarWebview';
+import { driverOf, findByTestId, leaveWebview, poll, screenshot, waitForText } from './sidebarWebview';
 
 /**
  * The details pane of the 2.0 main panel in VS Code (plan item P5.7), on the VSIX that `npm run test:ui` packages: a row of
@@ -43,5 +43,6 @@ describe('2.0 main panel: details', () => {
             expect(((await shown.getAttribute('textContent')) ?? '').length).to.be.greaterThan(0);
             expect(await driverOf().findElements(By.css('[data-testid="readme-content"] script'))).to.have.length(0);
         }
+        await screenshot('main-details-readme');
     });
 });

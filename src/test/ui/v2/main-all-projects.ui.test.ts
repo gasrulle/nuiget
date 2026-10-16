@@ -3,7 +3,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { By } from 'vscode-extension-tester';
 import { enterMainWebview, openMainPanel } from './mainWebview';
-import { driverOf, findByTestId, leaveWebview, poll } from './sidebarWebview';
+import { driverOf, findByTestId, leaveWebview, poll, screenshot } from './sidebarWebview';
 
 /** `ALL_PROJECTS` of `src/protocol/domain.ts`; the test reads the DOM, it imports nothing of the webview. */
 const ALL_PROJECTS = '__all_projects__';
@@ -101,5 +101,6 @@ describe('2.0 main panel: All Projects', () => {
         expect(ids.some(id => id.toLowerCase().includes('utility'))).to.equal(true);
         expect(ids.some(id => id.toLowerCase().includes('testproject'))).to.equal(true);
         expect(await (await findByTestId('section-header-transitive')).getAttribute('aria-expanded')).to.equal('false');
+        await screenshot('main-installed-all');
     });
 });

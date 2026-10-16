@@ -3,7 +3,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { By, Key } from 'vscode-extension-tester';
 import { enterMainWebview, openMainPanel } from './mainWebview';
-import { findByTestId, leaveWebview, poll, waitForTestIdGone } from './sidebarWebview';
+import { findByTestId, leaveWebview, poll, screenshot, waitForTestIdGone } from './sidebarWebview';
 
 /**
  * The Installed tab of the 2.0 main panel in VS Code (plan item P5.4), on the VSIX that `npm run test:ui` packages: the
@@ -46,6 +46,37 @@ describe('2.0 main panel: Installed tab', () => {
         expect(await list.getAttribute('aria-multiselectable')).to.equal('true');
         await findByTestId('package-row-serilog', 120_000);
         await findByTestId('package-row-newtonsoft.json');
+        await screenshot('main-installed-single');
+    });
+
+    it('the transitive section opens with what the project gets through its references (P9.0)', async function () {
+        this.timeout(300_000);
+        await findByTestId('package-row-serilog', 120_000);
+        const header = await findByTestId('section-header-transitive');
+        await header.click();
+        await poll(async () => ((await header.getAttribute('aria-expanded')) === 'true' ? true : undefined), 'the transitive section open', 10_000);
+        const section = await findByTestId('transitive-section');
+        // The list, the empty state or, on a runner that has not restored the fixture, the banner that offers Restore.
+        const shown = async (): Promise<'list' | 'empty' | 'banner' | undefined> => {
+            if ((await section.findElements(By.css('[data-testid^="transitive-list"]'))).length > 0) {
+                return 'list';
+            }
+            if (((await section.getAttribute('textContent')) ?? '').includes('No transitive dependencies')) {
+                return 'empty';
+            }
+            return (await section.findElements(By.css('[data-testid="transitive-restore-banner"]'))).length > 0 ? 'banner' : undefined;
+        };
+        if ((await poll(shown, 'the transitive packages, their empty state or the restore banner', 120_000)) === 'banner') {
+            await (await (await findByTestId('transitive-restore-banner')).findElement(By.css('button'))).click();
+            await poll(async () => {
+                const now = await shown();
+                return now === 'banner' ? undefined : now;
+            }, 'the transitive packages after the restore', 240_000);
+        }
+        await screenshot('main-transitive-expanded');
+        // The files after this one measure the Installed tab with the section closed.
+        await header.click();
+        await poll(async () => ((await header.getAttribute('aria-expanded')) === 'false' ? true : undefined), 'the transitive section closed', 10_000);
     });
 
     it('selects a row and marks it for a bulk action', async function () {
