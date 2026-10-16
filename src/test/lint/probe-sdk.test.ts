@@ -3,6 +3,7 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
     COMMANDS,
+    COMMAND_INPUTS,
     EVALUATED_PROPERTIES,
     FIXTURE_DIR,
     TAIL_LINES,
@@ -22,8 +23,11 @@ const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value));
 describe('SDK probe script', () => {
     it('tracks the probe inputs it reads', () => {
         expect(fixtureFiles).toContain('10.0.401.json');
-        for (const input of ['Directory.Packages.props', 'nuget.config', path.join('App', 'App.csproj')]) {
-            expect(readFileSync(path.join(FIXTURE_DIR, 'cpm', input), 'utf8')).not.toBe('');
+        expect(COMMAND_INPUTS).toEqual(['cpm', 'cpm-override']);
+        for (const input of COMMAND_INPUTS) {
+            for (const file of ['Directory.Packages.props', 'nuget.config', path.join('App', 'App.csproj')]) {
+                expect(readFileSync(path.join(FIXTURE_DIR, input, file), 'utf8')).not.toBe('');
+            }
         }
     });
 
@@ -32,6 +36,11 @@ describe('SDK probe script', () => {
 
         it('has the rows of the script in its order', () => {
             expect(fixture.commands.map((row: { id: string }) => row.id)).toEqual(COMMANDS.map(command => command.id));
+        });
+
+        it('records the input of a row only when it is not cpm', () => {
+            expect(fixture.commands.map((row: { input?: string }) => row.input))
+                .toEqual(COMMANDS.map(command => ('input' in command ? command.input : undefined)));
         });
 
         it('has a verdict that follows from its command rows', () => {

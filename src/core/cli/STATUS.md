@@ -1,46 +1,59 @@
-# STATUS — src/core/cli   commit 87e9d18 (P7.2b closed; parent of the P7.2c commit 1)   2026-10-15T23:35:38Z
+# STATUS — src/core/cli   commit 9f218ea (P7.4 skipped by the owner; parent of the P7.5a commit 1)   2026-10-16T08:50:00Z
 
-git status --porcelain --untracked-files=all (before commit 1): modified `docs/plans/STATUS.md`, `scripts/probe-sdk.mjs`,
-`src/core/cli/__fixtures__/sdk-probes/10.0.401.json`, `src/core/cli/sdk.test.ts`, `src/core/cli/STATUS.md`,
-`src/core/project/STATUS.md`
+git status --porcelain --untracked-files=all (before commit 1): modified `docs/plans/STATUS.md`,
+`docs/plans/findings-ledger.md`, `scripts/probe-sdk.mjs`, `src/core/cli/__fixtures__/sdk-probes/10.0.401.json`,
+`src/core/cli/STATUS.md`, `src/test/lint/probe-sdk.test.ts`; new `src/core/cli/__fixtures__/sdk-probes/cpm-override/`
+(`App/App.csproj`, `Directory.Packages.props`, `nuget.config`)
 
-Item: **P7.2c, commit 1** — probe rows `cpm-combined` and `multitfm-combined` (one run of the four properties and the
-two item types, no global property) and the regenerated fixture, by the ⚑ ruling of 2026-10-16 (verbatim in
-`docs/plans/STATUS.md`, "P7.2c — ⚑ ruling: …", and in `src/core/project/STATUS.md`). Commit 2 changes the evaluator
-after the `SDK probe` CI job has passed on this fixture. This note replaces the P6.1 note (in this file's history at
-`440b154`).
+Item: **P7.5a, commit 1** — probe rows `add-existing-entry` and `add-override` on a `VersionOverride` input (N74), by
+the ruling of 2026-10-16 (verbatim in `docs/plans/STATUS.md`, "P7.5 — stop-and-ask: the split, the drift script and
+the inherited duties"). Evidence only: P7.5b applies the ruling's pre-registered rule (DO 13) to these rows after CI's
+`SDK probe` job has passed on them. This note replaces the P7.2c note (in this file's history at `e898b91`).
 
 ## Verified by running
 
 ```text
-baseline at 87e9d18 (CI run 38821673799 green): tsc 0 · eslint 0 · vitest 167 files, 3404 passed, 6 skipped (SDK)
+baseline at 9f218ea (CI run 38860198819 green, 13 of 13): tsc 0 · check-types 0 · eslint 0 · vitest 167 files,
+                              3407 passed, 9 skipped (SDK, no NUIGET_SDK_TESTS)
 dotnet --version            → 10.0.401
-node scripts/probe-sdk.mjs --check --out <scratchpad>/before.json (clean tree) → exit 0, "SDK 10.0.401 agrees with the
-                              tracked fixture 10.0.401.json"; no permission prompt
-node scripts/probe-sdk.mjs  → wrote src/core/cli/__fixtures__/sdk-probes/10.0.401.json
-evaluation ids              → cpm-properties cpm-items-net8.0 cpm-combined multitfm-properties multitfm-items-net8.0
-                              multitfm-items-netstandard2.0 multitfm-combined, every exitCode 0
-projection(old) vs projection(new) → the ten command rows and the five old evaluation rows equal
-cpm-combined                → Properties = cpm-properties' · Items = cpm-items-net8.0's
-multitfm-combined           → Properties = multitfm-properties' (TargetFramework ""); PackageReference identities
-                              StyleCop.Analyzers, Newtonsoft.Json, Serilog (no NETStandard.Library, no System.Text.Json)
-grep -c -- '-property:TargetFramework' 10.0.401.json → 3 (the three item rows); no -property: in the combined argv
-node scripts/probe-sdk.mjs --check --out <scratchpad>/after.json → exit 0, agrees with the regenerated fixture
+node scripts/probe-sdk.mjs  → wrote src/core/cli/__fixtures__/sdk-probes/10.0.401.json; verdict unchanged
+                              {"addUpdatesCentralVersion":true,"noRestoreWritesProjectVersion":false,
+                              "addWithoutCentralEntryCreatesIt":true,"removeKeepsCentralEntry":true}
+node scripts/probe-sdk.mjs --check → exit 0, "SDK 10.0.401 agrees with the tracked fixture 10.0.401.json"
+projection(before) vs projection(after) → the ten old command rows, the seven evaluations and the verdict equal
+add-existing-entry (cpm-override) → exitCode 0
+  project: +    <PackageReference Include="Polly" />
+  props:   -    <PackageVersion Include="Polly" Version="8.4.1" />
+           +    <PackageVersion Include="Polly" Version="8.4.2" />   (plus the SDK 10 reformat: blank lines and the
+                                                                       final newline stripped)
+add-override (cpm-override)  → exitCode 0
+  project: -    <PackageReference Include="Serilog" VersionOverride="3.1.1" />
+           +    <PackageReference Include="Serilog" VersionOverride="4.1.0" />
+  props:   (empty diff: the file is not rewritten at all, not even reformatted)
+npx vitest run --project backend src/test/lint/probe-sdk.test.ts → 22 passed (22)
+DOTNET_ROOT=… NUIGET_SDK_TESTS=1 npx vitest run --project backend src/core/cli src/core/project src/core/ops
+                              src/test/lint → 27 files, 542 passed (542)
+npx vitest run --project integration src/test/harness → 22 passed (22)
 npx tsc --noEmit / npm run check-types / npx eslint src / npm run lint → exit 0 each
-npx vitest run --project backend src/core/cli src/core/project src/test/lint --reporter=verbose → 25 files, 453
-                              passed, 3 skipped; "records the combined evaluation the evaluator's first run relies on: …"
-npm test (DOTNET_ROOT set, NUIGET_SDK_TESTS=1) → exit 0 · Test Files 167 passed (167) · Tests 3411 passed (3411)
+npm test (DOTNET_ROOT set, NUIGET_SDK_TESTS=1) → exit 0 · Test Files 167 passed (167) · Tests 3415 passed | 2 skipped
+                              (3417) (the two skips are Windows-only)
 npm run bench               → exit 0 · Test Files 20 passed (20) · Tests 119 passed | 1 skipped (120)
 ```
 
 ## Done (tested)
 
-- `scripts/probe-sdk.mjs`: per input, after the per-framework item runs, `<input>-combined` with
-  `-getProperty:<the four> -getItem:PackageReference;PackageVersion -nologo` and no `-property:`; header comment.
-- `10.0.401.json` regenerated by the script (never edited); the old rows are unchanged under `projection`.
-- `sdk.test.ts`: the seven evaluation ids; new `records the combined evaluation the evaluator's first run relies on:
-  cpm-combined prints the properties of cpm-properties and the items of cpm-items-net8.0, multitfm-combined the outer
-  build (P7.2c)`.
+- `scripts/probe-sdk.mjs`: a command row may name an `input` (default `cpm`); the pristine copy and both diffs are
+  taken per input; a fixture row records `input` only when it is not `cpm`; `projection` compares `input`;
+  `COMMAND_INPUTS` exported; two rows `add-existing-entry` (Polly 8.4.2 into a project without it, central entry
+  8.4.1 present) and `add-override` (Serilog 4.1.0 on a `VersionOverride="3.1.1"` reference); header comment.
+- New input `__fixtures__/sdk-probes/cpm-override`: the `cpm` input with `VersionOverride="3.1.1"` on Serilog and a
+  `PackageVersion` for Polly 8.4.1 that no project references.
+- `10.0.401.json` regenerated by the script (never edited).
+- `src/test/lint/probe-sdk.test.ts`: rewritten by title `tracks the probe inputs it reads` (now every input of
+  `COMMAND_INPUTS`, `cpm` and `cpm-override`; nothing it asserted before is dropped); new per fixture
+  `records the input of a row only when it is not cpm`. The ruling names "the test that checks each command's keys";
+  no such test exists (`has the rows of the script in its order` checks ids only and passes unchanged), so the input
+  test above is the one that admits the key.
 
 ## Done (untested)
 
@@ -48,21 +61,23 @@ npm run bench               → exit 0 · Test Files 20 passed (20) · Tests 119
 
 ## Not started
 
-- Commit 2 (the evaluator's combined first run, the harness fake, the ADR-004 sentence, docs), after CI's
-  `SDK probe` job is green on this fixture with SDK 10.0.402.
+- P7.5b: the N74 decision from these rows (the ruling's DO 13) after the `SDK probe` job is green on 10.0.402.
 
 ## Deviations from contract/ADR (file:line each)
 
-- None in this commit. ADR-004 tier 2 still describes the separate properties run; commit 2 amends it behind the
-  sentinel as the ruling directs.
+- None. ADR-004's SDK probe supplement (`docs/adr/004-sdk-probes.md`) does not list the two rows yet; P7.5b adds them
+  behind the sentinel.
+- Observation for P7.5b and the gotcha row "SDK 10 reformats `Directory.Packages.props`": an add that edits only a
+  `VersionOverride` leaves the props file untouched (row `add-override`); the row's "every add" holds for adds that
+  write the central entry.
 
 ## Advisor decisions (date, item, question, answer verbatim)
 
-2026-10-16, P7.2c (⚑): verbatim in `docs/plans/STATUS.md` ("P7.2c — ⚑ ruling: the combined first run, its probe rows
-and its guard") and in `src/core/project/STATUS.md`. Decision line: option 1' (the combined first run's items stand
-only when `TargetFrameworks` is empty); probe rows `cpm-combined` and `multitfm-combined` without a global property;
-two commits with a green `SDK probe` job between them.
+2026-10-16, P7.5 (stop-and-ask): verbatim in `docs/plans/STATUS.md` ("P7.5 — stop-and-ask: the split, the drift script
+and the inherited duties"). Decision line: P7.5 splits into P7.5a (CPM evidence, then the product follow-ups), P7.5b
+(contract wording and the N74 outcome, sentinel `P7.5b`) and P7.5c (docs, drift script, CI); this commit is P7.5a's
+evidence commit, with a green `SDK probe` job before P7.5b uses it.
 
 ## Exact next step (one item ID)
 
-P7.2c, commit 2.
+P7.5a, commit 2.

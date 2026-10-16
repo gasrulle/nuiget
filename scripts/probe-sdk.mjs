@@ -3,7 +3,9 @@
 // supplement). Two parts:
 //
 // - `commands`: `dotnet package add|remove` and `dotnet restore` on the CPM input in `sdk-probes/cpm`, each in a
-//   fresh copy, with the unified diff of the project and the props file against the pristine input.
+//   fresh copy, with the unified diff of the project and the props file against the pristine input. Rows with an
+//   `input` run on another input in `sdk-probes/<input>` (since P7.5a: `cpm-override`, a `VersionOverride` and a
+//   central entry no project references) and are diffed against that input.
 // - `evaluations`: the properties run and one item run per target framework (`-getItem:PackageReference;PackageVersion`)
 //   on the CPM input and on the multi-targeted input `src/core/project/__fixtures__/multitfm`, and, per input, one
 //   combined run of the properties and the items without a global property (`<input>-combined`, the evaluator's first
@@ -27,14 +29,18 @@ import { fileURLToPath } from 'node:url';
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 export const FIXTURE_DIR = path.join(repoRoot, 'src', 'core', 'cli', '__fixtures__', 'sdk-probes');
-const CPM_INPUT = path.join(FIXTURE_DIR, 'cpm');
+const DEFAULT_INPUT = 'cpm';
+const CPM_INPUT = path.join(FIXTURE_DIR, DEFAULT_INPUT);
 const MULTITFM_INPUT = path.join(repoRoot, 'src', 'core', 'project', '__fixtures__', 'multitfm');
 
 const PROJECT = 'App/App.csproj';
 const PROPS = 'Directory.Packages.props';
 export const TAIL_LINES = 10;
 
-/** The rows of the P0.0 probe, in its order. A `continueFrom` row runs in the directory its predecessor left. */
+/**
+ * The rows of the P0.0 probe, in its order, then the P7.5a rows (N74). A `continueFrom` row runs in the directory its
+ * predecessor left; an `input` row runs on `sdk-probes/<input>` instead of `cpm`.
+ */
 export const COMMANDS = [
     { id: 'add-same-version', args: ['package', 'add', 'Serilog', '--version', '4.0.0', '--project', PROJECT] },
     { id: 'add-same-version-no-restore', args: ['package', 'add', 'Serilog', '--version', '4.0.0', '--project', PROJECT, '--no-restore'] },
@@ -46,7 +52,12 @@ export const COMMANDS = [
     { id: 'add-absent-no-restore', args: ['package', 'add', 'Polly', '--version', '8.4.2', '--project', PROJECT, '--no-restore'] },
     { id: 'restore-after-no-restore-add-absent', continueFrom: 'add-absent-no-restore', args: ['restore', PROJECT] },
     { id: 'remove', args: ['package', 'remove', 'Serilog', '--project', PROJECT] },
+    { id: 'add-existing-entry', input: 'cpm-override', args: ['package', 'add', 'Polly', '--version', '8.4.2', '--project', PROJECT] },
+    { id: 'add-override', input: 'cpm-override', args: ['package', 'add', 'Serilog', '--version', '4.1.0', '--project', PROJECT] },
 ];
+
+/** The inputs the command rows run on, by name. */
+export const COMMAND_INPUTS = [...new Set(COMMANDS.map(command => command.input ?? DEFAULT_INPUT))];
 
 /** The properties run of ADR-004 tier 2, plus the switch that allows `VersionOverride`. */
 export const EVALUATED_PROPERTIES = [
@@ -161,8 +172,8 @@ function withoutSdkPatch(value) {
  */
 export function projection(probe) {
     return {
-        commands: probe.commands.map(({ id, continueFrom, argv, exitCode, projectDiff, propsDiff }) => ({
-            id, continueFrom, argv, exitCode, projectDiff, propsDiff,
+        commands: probe.commands.map(({ id, continueFrom, input, argv, exitCode, projectDiff, propsDiff }) => ({
+            id, continueFrom, input, argv, exitCode, projectDiff, propsDiff,
         })),
         evaluations: (probe.evaluations ?? []).map(({ id, argv, exitCode, output }) => ({
             id, argv, exitCode, output: withoutSdkPatch(output),
@@ -257,9 +268,11 @@ function copyInput(from, to) {
 export function runProbe({ today = new Date() } = {}) {
     const work = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'nuiget-sdk-probe-')));
     try {
-        const pristine = path.join(work, 'pristine');
-        copyInput(CPM_INPUT, pristine);
-        const { version, dotnetRoot } = resolveSdk(pristine);
+        const pristine = new Map(COMMAND_INPUTS.map(input => [input, path.join(work, 'pristine', input)]));
+        for (const [input, dir] of pristine) {
+            copyInput(path.join(FIXTURE_DIR, input), dir);
+        }
+        const { version, dotnetRoot } = resolveSdk(pristine.get(DEFAULT_INPUT));
         const roots = [[dotnetRoot, '<dotnet-root>'], [os.homedir(), '<home>']];
         try {
             roots.push([fs.realpathSync(dotnetRoot), '<dotnet-root>']);
@@ -268,23 +281,25 @@ export function runProbe({ today = new Date() } = {}) {
         }
 
         const directories = new Map();
-        const commands = COMMANDS.map(({ id, continueFrom, args }) => {
+        const commands = COMMANDS.map(({ id, continueFrom, input = DEFAULT_INPUT, args }) => {
             let dir = continueFrom ? directories.get(continueFrom) : undefined;
             if (!dir) {
                 dir = path.join(work, id);
-                copyInput(CPM_INPUT, dir);
+                copyInput(path.join(FIXTURE_DIR, input), dir);
             }
+            const before = pristine.get(input);
             directories.set(id, dir);
             const result = run('dotnet', args, dir);
             const clean = text => redact(text, [[dir, '<probe>'], ...roots]);
             return {
                 id,
                 ...(continueFrom ? { continueFrom } : {}),
+                ...(input === DEFAULT_INPUT ? {} : { input }),
                 argv: ['dotnet', ...args],
                 exitCode: result.exitCode,
                 stdoutTail: clean(tail(result.stdout)),
-                projectDiff: clean(unifiedDiff(path.join(pristine, PROJECT), path.join(dir, PROJECT), PROJECT)),
-                propsDiff: clean(unifiedDiff(path.join(pristine, PROPS), path.join(dir, PROPS), PROPS)),
+                projectDiff: clean(unifiedDiff(path.join(before, PROJECT), path.join(dir, PROJECT), PROJECT)),
+                propsDiff: clean(unifiedDiff(path.join(before, PROPS), path.join(dir, PROPS), PROPS)),
             };
         });
 
