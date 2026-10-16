@@ -25,7 +25,7 @@ const hostSays = (say: () => void): Promise<void> => act(async () => {
 });
 
 /** The main panel under All Projects with App (not CPM), Lib and Web (both CPM), the Polly browse row made current. */
-async function openPicker(): Promise<FakeHost> {
+async function openPicker(web: 'listed' | 'withheld' | 'errored' = 'listed'): Promise<FakeHost> {
     const user = userEvent.setup();
     const host = createFakeHost();
     render(
@@ -48,8 +48,13 @@ async function openPicker(): Promise<FakeHost> {
     await hostSays(() => host.chunk(stream, { kind: 'start', projects }));
     await hostSays(() => host.chunk(stream, { kind: 'project', chunk: { projectPath: A, projectName: 'App', result: { projectPath: A, fidelity: 'authoritative', isCpm: false, packages: [] } } }));
     await hostSays(() => host.chunk(stream, { kind: 'project', chunk: { projectPath: B, projectName: 'Lib', result: { projectPath: B, fidelity: 'authoritative', isCpm: true, packages: [pkg('Serilog', '4.0.0')] } } }));
-    await hostSays(() => host.chunk(stream, { kind: 'project', chunk: { projectPath: C, projectName: 'Web', result: { projectPath: C, fidelity: 'authoritative', isCpm: true, packages: [] } } }));
-    await hostSays(() => host.respond(stream, { projectPaths: [A, B, C], errored: [] }));
+    if (web === 'listed') {
+        await hostSays(() => host.chunk(stream, { kind: 'project', chunk: { projectPath: C, projectName: 'Web', result: { projectPath: C, fidelity: 'authoritative', isCpm: true, packages: [] } } }));
+        await hostSays(() => host.respond(stream, { projectPaths: [A, B, C], errored: [] }));
+    } else if (web === 'errored') {
+        await hostSays(() => host.chunk(stream, { kind: 'project', chunk: { projectPath: C, projectName: 'Web', error: 'boom' } }));
+        await hostSays(() => host.respond(stream, { projectPaths: [A, B, C], errored: [{ projectPath: C, error: 'boom' }] }));
+    }
     await user.type(screen.getByTestId('search-input'), 'polly{Enter}');
     await hostSays(() => host.respond(host.requests('search/query')[0], { query: 'polly', results: [{ id: 'Polly', version: '8.4.2', description: '', authors: '', versions: ['8.4.2'], sourceUrl: FEED }] }));
     await user.click(within(within(screen.getByTestId('browse-list')).getByTestId('package-row-polly')).getByRole('option'));
@@ -107,5 +112,46 @@ describe('main panel: Install in All Projects', () => {
 
         expect(host.requests('ops/bulkInstall')).toHaveLength(1);
         expect(host.requests('ops/bulkInstall')[0].payload).toEqual({ projectPaths: [A], packageId: 'Polly', version: '8.4.2' });
+    });
+
+    it('a project whose installed list has not arrived cannot be picked; its late chunk is previewed before Install goes on', async () => {
+        const user = userEvent.setup();
+        const host = await openPicker('withheld');
+        const dialog = screen.getByTestId('multi-install-dialog');
+        expect(within(dialog).getByRole('checkbox', { name: 'Web' })).toBeDisabled();
+        expect(dialog).toHaveTextContent('not listed yet');
+        await hostSays(() => host.respond(host.requests('cpm/preview')[0], { preview }));
+        await user.click(within(dialog).getByRole('checkbox', { name: 'App' }));
+        // A listed project that is not CPM waits for nobody.
+        await waitFor(() => expect(within(dialog).getByRole('button', { name: 'Install in 1 project' })).toBeEnabled());
+        expect(host.requests('cpm/preview').map(request => request.payload.projectPath)).toEqual([B]);
+
+        const stream = host.requests('allProjects/installed')[0];
+        await hostSays(() => host.chunk(stream, { kind: 'project', chunk: { projectPath: C, projectName: 'Web', result: { projectPath: C, fidelity: 'authoritative', isCpm: true, packages: [] } } }));
+        await hostSays(() => host.respond(stream, { projectPaths: [A, B, C], errored: [] }));
+        // The late chunk changes the set of CPM targets: the previews are asked again, one after the other, and Install
+        // waits for them.
+        await waitFor(() => expect(host.requests('cpm/preview').filter(request => request.payload.projectPath === B)).toHaveLength(2));
+        expect(within(dialog).getByRole('button', { name: 'Install in 1 project' })).toBeDisabled();
+        await hostSays(() => host.respond(host.requests('cpm/preview').filter(request => request.payload.projectPath === B)[1], { preview: null }));
+        await waitFor(() => expect(host.requests('cpm/preview').some(request => request.payload.projectPath === C)).toBe(true));
+        await hostSays(() => host.respond(host.requests('cpm/preview').filter(request => request.payload.projectPath === C)[0], { preview: null }));
+        await waitFor(() => expect(within(dialog).getByRole('checkbox', { name: 'Web' })).toBeEnabled());
+        await user.click(within(dialog).getByRole('checkbox', { name: 'Web' }));
+        await user.click(within(dialog).getByRole('button', { name: 'Install in 2 projects' }));
+        expect(host.requests('ops/bulkInstall').map(request => request.payload.projectPaths)).toEqual([[A, C]]);
+    });
+
+    it('a project whose installed list could not be read cannot be picked', async () => {
+        const user = userEvent.setup();
+        const host = await openPicker('errored');
+        const dialog = screen.getByTestId('multi-install-dialog');
+        await hostSays(() => host.respond(host.requests('cpm/preview')[0], { preview }));
+        expect(within(dialog).getByRole('checkbox', { name: 'Web' })).toBeDisabled();
+        expect(dialog).toHaveTextContent('could not be read');
+        expect(host.requests('cpm/preview').filter(request => request.payload.projectPath === C)).toHaveLength(0);
+        await user.click(within(dialog).getByRole('checkbox', { name: 'App' }));
+        await user.click(within(dialog).getByRole('button', { name: 'Install in 1 project' }));
+        expect(host.requests('ops/bulkInstall').map(request => request.payload.projectPaths)).toEqual([[A]]);
     });
 });

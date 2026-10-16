@@ -22,6 +22,7 @@ type CentralBlock = 'central' | 'failed';
  * an option may hold no control (`nested-interactive`). A bulk install shows no preview, so a Central Package
  * Management project where the package has a central entry (or whose preview fails) cannot be picked either (N76):
  * installing there changes the central version for every project that uses it, which the single install shows first.
+ * A project whose installed list has not arrived, or carries an error, cannot be picked either (P7 phase review).
  */
 export function MultiInstallDialog({ open, packageId, version, onClose, onInstall }: MultiInstallDialogProps): React.JSX.Element | null {
     const all = useAllProjects();
@@ -37,6 +38,8 @@ export function MultiInstallDialog({ open, packageId, version, onClose, onInstal
         return entry === undefined ? undefined : (entry.resolvedVersion ?? entry.version);
     };
     const unsupported = (projectPath: string): boolean => all.chunks.get(projectPath)?.result?.unsupported !== undefined;
+    /** The project's installed list has arrived; without it nothing says whether the package has a central entry there. */
+    const listed = (projectPath: string): boolean => all.chunks.get(projectPath)?.result !== undefined;
     const cpmTargets = open
         ? projects.filter(project => all.chunks.get(project.path)?.result?.isCpm === true && !unsupported(project.path) && installedIn(project.path) !== version).map(project => project.path)
         : [];
@@ -106,11 +109,13 @@ export function MultiInstallDialog({ open, packageId, version, onClose, onInstal
                 {projects.map(project => {
                     const current = installedIn(project.path);
                     const centralBlock = central.get(project.path);
-                    const blocked = current === version || unsupported(project.path) || centralBlock !== undefined;
+                    const blocked = current === version || unsupported(project.path) || centralBlock !== undefined || !listed(project.path);
                     const id = `${baseId}-${project.path}`;
                     let note = '';
                     if (unsupported(project.path)) {
                         note = 'unsupported';
+                    } else if (!listed(project.path)) {
+                        note = all.chunks.get(project.path)?.error !== undefined ? 'could not be read' : 'not listed yet';
                     } else if (centralBlock === 'central') {
                         note = 'centrally managed: install it from the project to see the preview';
                     } else if (centralBlock === 'failed') {

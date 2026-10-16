@@ -46,7 +46,8 @@ In this mode:
   leaves out every Central Package Management project where the package already has a central entry (N76): the main
   panel's picker asks `cpm/preview` per CPM project when it opens and lists such a project as "centrally managed"
   (or "preview failed") without a checkbox to tick; the sidebar asks the same after the QuickPick and names the
-  projects it left out. Installing there is a single install from that project, which shows the preview.
+  projects it left out. Installing there is a single install from that project, which shows the preview. A project not
+  yet listed, or whose list could not be read, cannot be picked.
 - Transitive dependencies aggregate into one section, loaded lazily on expand.
 - With ≤ 1 project the mode is automatically downgraded to that project (host normalization).
 
