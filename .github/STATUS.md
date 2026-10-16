@@ -1,4 +1,4 @@
-# STATUS — .github (agent resources and repo-level items)   commit 12219e7 (P7.fix-2; parent of the P7.6 part 1 commit)   2026-10-16T15:00:00Z
+# STATUS — .github (agent resources and repo-level items)   commit c367e82 (P7.fix-3; parent of the P7.6 part 2 commit)   2026-10-16T15:00:00Z
 
 git status --porcelain --untracked-files=all (before the commit): modified `.github/STATUS.md`, `docs/perf-baseline.md`,
 `docs/plans/{2026-10-11-nuiget-2.0-execution-plan,STATUS,findings-ledger}.md`
@@ -12,9 +12,9 @@ this note. This note replaces the P7.5c note (in this file's history at `756dcd1
 
 ```text
 tracker check               → grep -nE '^\| P[0-7]\.[^|]*\| P[0-7] \|[^|]*\| (open|in-progress|blocked) \|' docs/plans/STATUS.md
-                              → exactly the P7.fix-3 and P7.6 rows (part 1)
+                              → no output, exit 1 (every P1–P7 row done or skipped)
 CI                          → run 38870091917 (68d034d): 13/13; run 38873696417 (12219e7): red on `Test (windows-latest)` only
-                              (test A, N84), P7.fix-3 pending
+                              (test A, N84); run 38876762482 (c367e82, P7.fix-3 with P7.6 part 1): 13/13
 perf (docs/perf-baseline.md, "Acceptance measurement (P7.6)") → six perf runs, image ubuntu-24.04 20261012.334.1 for all
                               (`gh run view <id> --job <perf job> --log`, "Runner Image" group); medians of the last five:
                               sdk-probe 109, config-paths 413, restore-cold-single 1939, restore-cold-multi 1480,
@@ -32,7 +32,7 @@ npm run lint                → exit 0
 
 ## Done (tested)
 
-- Tracker: P7.6 `in-progress` (part 1; part 2 after P7.fix-3), row P7.fix-3 `open`; Commit cells of P7.fix-1 (`68d034d`), P7.fix-2 (`12219e7`) and the P7.5 umbrella (`f1c9c8d,
+- Tracker: P7.6 `done` (part 1 `02ddbe8`, part 2 this commit), P7.fix-3 `done` (`c367e82`); Commit cells of P7.fix-1 (`68d034d`), P7.fix-2 (`12219e7`) and the P7.5 umbrella (`f1c9c8d,
   a2fd5d2, 71cf359, 756dcd1`); the P8.1 and P8.2 notes carry the findings handed to them.
 - Ledger reconciled by the ruling's rule, each changed row citing the item or grep that justifies it.
 - `docs/perf-baseline.md`: the acceptance table with the median per row and the refined tolerance rule (median of the
@@ -62,4 +62,4 @@ reconciled; the P7 phase boundary follows in this session, then the RUN.md §7 s
 
 ## Exact next step (one item ID)
 
-P7.fix-3, then P7.6 part 2.
+The P7 phase boundary (RUN.md §6), then stop; P8.1 in a new session.
