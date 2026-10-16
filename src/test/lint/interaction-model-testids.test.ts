@@ -9,7 +9,7 @@ import { describe, expect, it } from 'vitest';
  * instead of in a UI run.
  */
 const DOC = 'docs/ux/interaction-model.md';
-const ROOTS = ['src/webview/main', 'src/webview/sidebar-next', 'src/webview/shared'];
+const ROOTS = ['src/webview/main', 'src/webview/sidebar', 'src/webview/shared'];
 
 export interface Hook {
     /** The hook as the table writes it, `<…>` included. */

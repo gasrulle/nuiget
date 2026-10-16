@@ -275,7 +275,7 @@ export function requiredModules(root) {
     const directories = ts.sys.getDirectories(core).filter(directory => !directory.startsWith('_') && !directory.startsWith('.'));
     return [
         'src/protocol', 'src/core/contracts.ts', ...directories.map(directory => `src/core/${directory}`),
-        'src/host', 'src/extension.next.ts', 'src/webview/shared', 'src/webview/main', 'src/webview/sidebar-next',
+        'src/host', 'src/extension.ts', 'src/webview/shared', 'src/webview/main', 'src/webview/sidebar',
     ];
 }
 

@@ -14,7 +14,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { expect, vi, type Mock } from 'vitest';
 import { createScratchDir, writeTree } from '../../core/project/__fixtures__/scratch';
-import { activateWith, type ActivatedExtension } from '../../extension.next';
+import { activateWith, type ActivatedExtension } from '../../extension';
 import type { InstalledResult, RequestPayload, RequestType, SessionSnapshot } from '../../protocol';
 import { commands as mockCommands, createMockExtensionContext, resetAllMocks, window as mockWindow, workspace as mockWorkspace } from '../__mocks__/vscode';
 import { FakeTransport } from '../../core/feeds/testSupport';

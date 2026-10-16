@@ -43,7 +43,7 @@ export interface Hold {
 /**
  * A child process that starts nothing: its streams and events are what `DefaultDotnetRunner` reads. Shared by the
  * harness, the runner's own test (`src/core/cli/DotnetRunner.test.ts`) and the composition root's test
- * (`src/extension.next.test.ts`; finding N59).
+ * (`src/extension.test.ts`; finding N59).
  */
 export class FakeChild extends EventEmitter {
     readonly stdout = new PassThrough();

@@ -28,34 +28,12 @@
             "vitest/globals"
         ]
     },
-    // The 1.x tests are deliberately not listed: src/services/**/*.test.ts, src/webview/app/**,
-    // src/webview/sidebar/**, src/webview/NuGet*.test.ts, src/test/integration/** and the 1.x benchmarks
-    // (src/test/benchmarks/*.bench.ts and setup.ts). They were never type-checked and are
-    // rewritten or deleted by plan items P5.12 and P8.2. P8.2 widens this list to src/**/*.test.{ts,tsx} and
-    // src/test/**. The harness of P2.11 is in src/test/harness. The 2.0 benchmarks sit next to the modules they
-    // measure (src/core/**, src/webview/**; P8.2a, D8, N40); the runner helper stays in src/test/benchmarks.
     "include": [
-        "src/core/**/*.test.ts",
-        "src/protocol/**/*.test.ts",
-        "src/host/**/*.test.ts",
-        "src/extension.next.test.ts",
-        "src/webview/main/**/*.test.ts",
-        "src/webview/main/**/*.test.tsx",
-        "src/webview/sidebar-next/**/*.test.ts",
-        "src/webview/sidebar-next/**/*.test.tsx",
-        "src/webview/shared/**/*.test.ts",
-        "src/webview/shared/**/*.test.tsx",
-        "src/test/lint/**/*.ts",
-        "src/test/helpers/**/*.ts",
-        "src/test/helpers/**/*.tsx",
-        "src/test/harness/**/*.ts",
-        "src/core/**/*.bench.ts",
-        "src/webview/**/*.bench.ts",
-        "src/test/benchmarks/benchmark.ts",
-        "src/test/benchmarks/benchmark.test.ts",
-        "src/test/__mocks__/**/*.ts",
-        "src/test/setup-frontend.ts",
-        "src/test/jest-axe.d.ts",
+        "src/**/*.test.ts",
+        "src/**/*.test.tsx",
+        "src/**/*.bench.ts",
+        "src/test/**/*.ts",
+        "src/test/**/*.tsx",
         "src/global.d.ts"
     ],
     "exclude": [

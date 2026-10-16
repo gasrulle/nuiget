@@ -9,19 +9,19 @@ const isAnalyze = process.argv.includes('--analyze');
 const EXTENSION_TARGET = 'node18';
 const WEBVIEW_TARGET = ['chrome114'];
 
-// The 2.0 entry points; the 1.x sources stay in the tree until P8.2 and are not built.
+// The entry points of the extension and its two webviews.
 const ENTRIES = {
-    extension: 'src/extension.next.ts',
+    extension: 'src/extension.ts',
     webview: 'src/webview/main/index.tsx',
-    sidebar: 'src/webview/sidebar-next/index.tsx',
+    sidebar: 'src/webview/sidebar/index.tsx',
 };
 
 // Minified JavaScript size limits in bytes, keyed by output file: Math.ceil(measured * 1.1), the ratchet of the P3.6
-// ruling, reset at P7.2a. Measured with `node esbuild.mjs --production --analyze` on the 2.0 entries (then built under
-// a flag, the default since P8.1) at 54885d4: 292128 (extension), 523296 (webview), 318803 (sidebar). Checked in CI by
-// the build steps of the E2E and Build & Package jobs; a crossing is a stop-and-ask with the metafile's top inputs,
-// never a raise without a new measurement. CSS output is not measured. P8.2 re-measures and resets.
-const BUNDLE_CEILINGS = { 'dist/extension.js': 321_341, 'dist/webview.js': 575_626, 'dist/sidebar.js': 350_684 };
+// ruling. Measured with `node esbuild.mjs --production --analyze` at 999948e with the P8.2 deletions and renames
+// applied (P8.2b): 293183 (extension), 525241 (webview), 319313 (sidebar). Checked in CI by the build steps of the E2E
+// and Build & Package jobs; a crossing is a stop-and-ask with the metafile's top inputs, never a raise without a new
+// measurement. CSS output is not measured.
+const BUNDLE_CEILINGS = { 'dist/extension.js': 322_502, 'dist/webview.js': 577_766, 'dist/sidebar.js': 351_245 };
 
 const ANALYSIS_DIR = 'out/esbuild';
 

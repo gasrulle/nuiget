@@ -86,7 +86,6 @@ A Visual Studio-style NuGet package manager for VS Code with a modern split-pane
 |---------|---------|-------------|
 | `nuiget.searchDebounceMode` | `quicksearch` | What typing in the main panel's search box does: `quicksearch` shows suggestions, `full` runs the full search as you type, `off` searches only on Enter. The sidebar searches as you type in every mode. |
 | `nuiget.quickSearchResultsPerSource` | `5` | Suggestions per source in the main panel's quick search (1-10). |
-| `nuiget.recentSearchesLimit` | `5` | Deprecated: has no effect in 2.0 and will be removed. |
 | `nuiget.searchResultLimit` | `20` | Maximum number of packages a full search returns (1-100). |
 | `nuiget.enablePerformanceLogging` | `false` | Writes the 2.0 webviews' `[perf]` marks (webview ready, first useful render) to the nUIget output channel at Info level instead of Debug. The duration of every dotnet command is always logged. Keep it off in normal use. |
 

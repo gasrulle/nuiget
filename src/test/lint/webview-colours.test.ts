@@ -8,7 +8,7 @@ import { describe, expect, it } from 'vitest';
  * are answered in one place. Test files are scanned too: a literal in a test is a literal in a snapshot
  * of what the product may render.
  */
-const ROOTS = ['src/webview/shared', 'src/webview/main', 'src/webview/sidebar-next'];
+const ROOTS = ['src/webview/shared', 'src/webview/main', 'src/webview/sidebar'];
 const TOKENS = 'src/webview/shared/tokens.css';
 
 const HEX = /#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{3,4})(?![\w-])/;
@@ -42,7 +42,7 @@ describe('2.0 webview colours', () => {
         expect(files).toContain(TOKENS);
         expect(files).toContain('src/webview/shared/primitives/icons.tsx');
         expect(files).toContain('src/webview/main/index.tsx');
-        expect(files).toContain('src/webview/sidebar-next/index.tsx');
+        expect(files).toContain('src/webview/sidebar/index.tsx');
     });
 
     it('the scanner finds planted literals', () => {

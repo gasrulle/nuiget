@@ -1,74 +1,77 @@
-# STATUS — src/test/lint   commit 71cf359 (P7.5b closed; parent of the P7.5c commit)   2026-10-16T11:30:00Z
+# STATUS — src/test/lint   commit 999948e (parent of the P8.2b commit)   2026-10-16T12:20:22Z
 
-git status --porcelain --untracked-files=all (before the commit): modified `.github/STATUS.md`,
-`.github/copilot-instructions.md`, `.github/workflows/ci.yml`, `ARCHITECTURE.md`, `README.md`,
-`docs/plans/{2026-10-11-nuiget-2.0-execution-plan,STATUS,findings-ledger}.md`, `docs/protocol.md` (generated),
-`package.json` (one script), `scripts/gen-protocol-docs.mjs`, `src/STATUS.md`, `src/core/feeds/STATUS.md`,
-`src/test/benchmarks/STATUS.md`, `src/test/e2e/STATUS.md`; new `scripts/check-docs-drift.mjs`,
-`src/test/lint/docs-drift.test.ts`, `src/test/lint/STATUS.md`
+git status --short src/test/lint (before the commit): `allowlist.test.ts` → `import-boundaries.test.ts` (owner's rename, rewritten by the session); modified `extension-config-settings`, `interaction-model-testids`, `webview-colours`, `webview-css-baseline`, `webview-stylesheets` tests.
 
-Item: **P7.5c** — docs pass, drift script, CI, handoff-note hygiene, by the P7.5 ruling (DO 15-23). This is the first
-note of this directory (P5 review note 7); until now `src/STATUS.md` carried its notes, and that note now covers
-`src/extension.next.ts` alone.
-
-The directory holds the repository's lint tests: `allowlist.test.ts` (the import allow-list prunes itself),
-`docs-drift.test.ts` (P7.5c), `extension-config-settings.test.ts` (the code half of the settings drift: `ExtensionConfig`
-keys and the contributed enum against the manifest), `interaction-model-testids.test.ts` (interaction model §8 ids are
-rendered), `probe-sdk.test.ts` (the SDK probe script and its fixtures), `vsix-contents.test.ts`, the webview CSS and
-colour tests (`webview-colours`, `webview-css-baseline`, `webview-icons-pure`, `webview-stylesheets`,
-`webview-tokens`) and `cssRules.ts`, their shared parser.
+Item: **P8.2b**. The lint tests follow the renamed roots and the fences without 1.x patterns. This note replaces the earlier one (git history).
 
 ## Verified by running
 
 ```text
-baseline at 71cf359 (P7.5b, CI run 38866154469 green on all 13 jobs): tsc 0 · check-types 0 · eslint 0 · npm test
-                              3424 passed | 2 skipped (Windows-only)
-npx tsc --noEmit / npm run check-types / npx eslint src / npm run lint → exit 0 each
-node scripts/check-docs-drift.mjs → exit 0, "docs:check — the documents agree with the tree."
-negative control            → `ops/nothing` appended to ARCHITECTURE.md:12 → exit 1, "ARCHITECTURE.md (2.0): `ops/nothing`
-                              is no request or event of src/protocol/messages.ts"; file restored, grep -c ops/nothing → 0
-npm run docs:protocol:check → "docs/protocol.md is up to date." (after `npm run docs:protocol` with the Surface column)
-npm run docs:check          → exit 0 (no permission prompt; the two halves above also pass on their own)
-npx vitest run --project backend src/test/lint → 11 files, 163 passed (163)
-node --test scripts/hooks   → tests 26, pass 26, fail 0
-npm test (DOTNET_ROOT set, NUIGET_SDK_TESTS=1) → exit 0 · Test Files 169 passed (169) · Tests 3433 passed | 2 skipped (3435)
-npm run bench               → exit 0 · Test Files 20 passed (20) · Tests 119 passed | 1 skipped (120)
-rm -rf dist && NUIGET_V2=1 npm run package && npm run check:vsix → exit 0, "check:vsix: OK" (README ships); dist removed
+DO 10 (before any edit, 999948e + the owner's staged block)
+  git diff --cached --diff-filter=D --name-only | grep -cE '\.test\.tsx?$'   → 60
+  git diff --cached --diff-filter=D --name-only | wc -l                     → 130
+  git diff --cached --diff-filter=R --name-status | grep -c '^R100'         → 18 (with -B -M: 20)
+  git ls-files src/services src/webview/app src/webview/sidebar-next src/test/integration src/test/fixtures
+    src/extension.next.ts src/extension.next.test.ts                        → empty
+  git status --porcelain | grep -v '^[DR]  '                                → M src/extension.ts, M src/webview/sidebar/index.tsx
+  index blobs of both rename targets = their HEAD sources; text simulation of the block on HEAD = index (566/566, 0 diff)
+  → ruled satisfied ("P8.2b — follow-up to the P8.2 ruling: DO 10 rendering", docs/plans/STATUS.md)
+DO 11 baseline (before any edit): npx tsc --noEmit 0 · npx eslint src 0 · npm run check-types exit 2 (harness.ts:17
+  '../../extension.next', :338 TS7006) · npx vitest run 13 failed in the six expected files · node esbuild.mjs cannot
+  resolve src/extension.next.ts, src/webview/sidebar-next/index.tsx → exactly the pre-authorized red set
+npx tsc --noEmit            → exit 0
+npm run check-types         → exit 0 (tsconfig.vitest.json now src/**/*.test.{ts,tsx}, src/**/*.bench.ts, src/test/**)
+npx eslint src              → exit 0
+npm run lint                → exit 0
+npx vitest run --project backend src/test/lint/import-boundaries.test.ts --reporter=verbose
+                            → 26 passed; 14 "may not import", 10 "may import"
+npm test                    → exit 0; Test Files 129 passed (129); Tests 1910 passed | 9 skipped (1919)
+npx vitest run --coverage   → exit 0; total lines 96.14 statements 95.7 functions 94.46 branches 90.01;
+                              src/webview/** lines 95.84 statements 95.29 functions 92.71 branches 88.75;
+                              src/core/** lines 97.49; src/host/** lines 87.73
+npm run bench               → exit 0; Test Files 14 passed (14); Tests 75 passed (75)
+npm run bench:save          → "Saved 66 benchmark measurements to benchmarks/baseline.json."
+npm run bench:compare       → exit 0; no "Missing or invalid benchmark baseline" line
+npm run docs:check          → exit 0; "docs:check — the documents agree with the tree." · "docs:protocol:check —
+                              docs/protocol.md is up to date."
+rm -rf dist && node esbuild.mjs --production --analyze
+                            → dist/extension.js 293183 / 322502 · dist/webview.js 525241 / 577766 ·
+                              dist/sidebar.js 319313 / 351245 · exit 0 (sizes equal P8.1's)
+npm run package:vsix        → exit 0; Tests 1910 passed | 9 skipped; "DONE Packaged: nuiget-v1.18.9.vsix (17 files, 565.04 KB)"
+npm run check:vsix          → check:vsix: OK
+node esbuild.mjs --production && npm run test:e2e        → 25 passing (stable)
+VSCODE_TEST_VERSION=1.85.0 npm run test:e2e              → 25 passing
+rm -rf dist && npm run test:ui -- --storage /tmp/nuiget-ui → 32 passing (53s), exit 0
+DOTNET_ROOT=… NUIGET_SDK_TESTS=1 npx vitest run --project backend src/core/cli → SKIPPED: no file under src/core/cli
+                              or code that runs dotnet changed
+grep -c LEGACY eslint.config.mjs → 0 · grep -c 'scheduled: P8.2' docs/plans/findings-ledger.md → 0 ·
+grep -cE '^\| (N29|N30|N31|N44|N53|N58|N40) \|.*\| (closed|mitigated)' docs/plans/findings-ledger.md → 7
 ```
 
 ## Done (tested)
 
-- `scripts/check-docs-drift.mjs` (new): pure checkers M1 (message names of a protocol group), M2 (request and event
-  counts), S1 (README settings table), S2 (`nuiget.*` names), C1 (README commands table), P1 and P2 (module map paths
-  and one row per 2.0 module), P3 (paths under `src/`, `scripts/`, `docs/`, `.github/`), `checkRepository()` over the
-  four documents, a `main` guarded by `import.meta.url`; message names read with the TypeScript compiler API as the
-  protocol generator does. No sizes, no line counts, no `ExtensionConfig` keys, no "(in progress)".
-- `src/test/lint/docs-drift.test.ts` (new, 9 titles): `the repository documents agree with the tree`, and a negative
-  control per check (M1, M2, S1, S2, C1, P1 and P2, P3) plus the section, brace and suffix helpers.
-- `scripts/gen-protocol-docs.mjs`: a trailing `// main`, `// sidebar` or `// sidebar → main` becomes the Surface column
-  (`both` when absent) and leaves Notes (P1.1b review 3); `docs/protocol.md` regenerated.
-- `package.json` `docs:check`; CI Lint step "Check the docs" runs it.
+- `import-boundaries.test.ts`: the self-pruning allow-list `describe`s, `names the allow-list in the 1.x denial`, the `legacy` cases, the 14 denied rows only the 1.x patterns denied, `../extension.next` and the three root-layer allowed rows deleted (second follow-up ruling); 14 denied, 10 allowed, two type cases remain.
+- ROOTS and `toContain` lines of the four webview lint tests name `src/webview/sidebar`.
+- `extension-config-settings.test.ts`: "contributes no deprecated setting" replaces "a deprecated setting is one 2.0 does not read" (`nuiget.recentSearchesLimit` removed).
+- `docs-drift.test.ts` unchanged; `scripts/check-docs-drift.mjs` `requiredModules` names `src/extension.ts` and `src/webview/sidebar`.
 
 ## Done (untested)
 
-- None.
+None.
 
 ## Not started
 
-- P7.6 (acceptance cut, ⚑).
+- None for this directory.
 
 ## Deviations from contract/ADR (file:line each)
 
-- S2 admits contributed view and view-container ids as well (`nuiget.sidebar` is one); the ruling lists settings,
-  commands, `when` context keys and storage keys.
-- S1/C1 read the cell text inside a code span or bold markup only; a table cell written another way is compared as is.
+None. The item-wide deviation (two path names in the ARCHITECTURE intro) is in `src/STATUS.md`.
 
 ## Advisor decisions (date, item, question, answer verbatim)
 
-2026-10-16, P7.5 (stop-and-ask): verbatim in `docs/plans/STATUS.md` ("P7.5 — stop-and-ask: the split, the drift script
-and the inherited duties"); DO 15-23 are this commit. 2026-10-16, P7.5b: verbatim there too ("P7.5b — stop-and-ask:
-the N74 outcome, its tests and its UI").
+The P8.2 ruling and both P8.2b follow-ups (2026-10-16) are verbatim under `## Advisor decisions` in
+`docs/plans/STATUS.md`.
 
 ## Exact next step (one item ID)
 
-P7.6.
+P8.2c

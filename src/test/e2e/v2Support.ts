@@ -18,9 +18,6 @@ export const CONTRIBUTED_COMMANDS = [
     'nuiget.clearSdkVersionCache',
 ];
 
-/** Commands only the 1.x entry registers (`src/extension.ts`); a 2.0 build has none of them. */
-export const LEGACY_ONLY_COMMANDS = ['nuiget.refreshPackagesScoped', 'nuiget.viewPackageDetails'];
-
 /** The view type of the 2.0 main panel (`MainPanelHost.viewType`). */
 const MAIN_PANEL_VIEW_TYPE = 'nugetManager';
 

@@ -29,26 +29,19 @@ export default defineConfig({
                 'src/protocol/**',
                 'src/core/contracts.ts',
                 'src/global.d.ts',
-                'src/extension.ts',
-                'src/services/NuGetTypes.ts',
-                'src/webview/app/index.tsx',
-                'src/webview/sidebar/index.tsx',
             ],
             thresholds: {
                 statements: 65,
                 branches: 50,
                 functions: 55,
                 lines: 65,
-                // Ratchet for the webviews at the values measured on 2026-10-12 (plan P0.11); raise, never lower.
+                // Ratchet for the webviews at the values measured at P8.2b (2.0 only since then), floored; raise, never lower.
                 'src/webview/**': {
-                    statements: 62,
-                    branches: 52,
-                    functions: 54,
-                    lines: 64,
+                    statements: 95,
+                    branches: 88,
+                    functions: 92,
+                    lines: 95,
                 },
-                // Floor for the 2.0 webviews (P3.6), like the core floor; the aggregate above is diluted by the 1.x
-                // code until P8.2.
-                'src/webview/{shared,main,sidebar-next}/**': { lines: 85 },
                 // Floor for the 2.0 core (plan P1.2 and the P1 gate). It applies to all of src/core together.
                 'src/core/**': {
                     lines: 85,
@@ -66,11 +59,10 @@ export default defineConfig({
                     name: 'backend',
                     environment: 'node',
                     include: [
-                        'src/services/**/*.test.ts',
                         'src/core/**/*.test.ts',
                         'src/protocol/**/*.test.ts',
                         'src/host/**/*.test.ts',
-                        'src/extension.next.test.ts',
+                        'src/extension.test.ts',
                         'src/test/lint/**/*.test.ts',
                     ],
                 },
@@ -89,7 +81,7 @@ export default defineConfig({
                 test: {
                     name: 'integration',
                     environment: 'node',
-                    include: ['src/test/integration/**/*.integration.test.ts', 'src/test/harness/**/*.test.ts'],
+                    include: ['src/test/harness/**/*.test.ts'],
                     testTimeout: 30_000,
                 },
             },

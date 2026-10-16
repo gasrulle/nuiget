@@ -16,7 +16,7 @@ import { parseRules } from './cssRules';
  * in part counts from the version that completed it (CSS nesting: 112 without nested rules that start with a type
  * selector, complete in 120). Add an entry from the data, never from memory.
  */
-const ROOTS = ['src/webview/shared', 'src/webview/main', 'src/webview/sidebar-next'];
+const ROOTS = ['src/webview/shared', 'src/webview/main', 'src/webview/sidebar'];
 const BASELINE = 114;
 
 interface Feature {
@@ -94,7 +94,7 @@ describe('2.0 webview stylesheets and Chromium 114 (N64)', () => {
         expect(files).toContain('src/webview/shared/tokens.css');
         expect(files).toContain('src/webview/shared/primitives/primitives.css');
         expect(files).toContain('src/webview/main/main.css');
-        expect(files).toContain('src/webview/sidebar-next/sidebar.css');
+        expect(files).toContain('src/webview/sidebar/sidebar.css');
     });
 
     it('every entry is newer than the baseline, named once, and finds its own sample', () => {

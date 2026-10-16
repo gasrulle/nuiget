@@ -1,284 +1,469 @@
+/**
+ * Composition root of nUIget 2.0: builds the core services once, wires file watchers, commands and the
+ * queue's status bar item, and registers both webview surfaces. Business logic lives in `src/core`;
+ * this file only assembles.
+ */
+
+import * as fs from 'fs';
+import * as path from 'path';
 import * as vscode from 'vscode';
-import { http2Client } from './services/Http2Client';
-import { configurePerf } from './services/NuGetPerf';
-import { NuGetService } from './services/NuGetService';
-import { workspaceCache } from './services/WorkspaceCache';
-import { NuGetPanel } from './webview/NuGetPanel';
-import { NuGetSidebarProvider } from './webview/NuGetSidebarPanel';
+import { TieredCache } from './core/cache';
+import { Catalog, FeedContexts, createFeedClients } from './core/catalog';
+import { DefaultDotnetRunner, type DotnetRunnerOptions } from './core/cli';
+import type { Logger, Transport } from './core/contracts';
+import { DefaultCredentialProvider } from './core/credentials';
+import { DefaultServiceIndexClient, SourceHealthTracker, startHealthMonitor } from './core/feeds';
+import { NodeTransport } from './core/http';
+import { redact } from './core/logging';
+import { DefaultOperationQueue, PackageWorkflows } from './core/ops';
+import { AssetsReader, DefaultProjectMutator, MsBuildProjectEvaluator, PROJECT_FILE_GLOB, ProjectContextProvider, StaticProjectInspector, findProjects } from './core/project';
+import { DefaultQueryCoordinator } from './core/queries';
+import { DefaultSessionStore, firstProject } from './core/session';
+import { DotnetSourceProvider, NuGetConfigReader } from './core/sources';
+import { isPathInside, normalizeProjectPath } from './core/util/paths';
+import { MainPanelHost } from './host/MainPanelHost';
+import { HostEvents, createWorkflowDeps, loggerFor, readExtensionConfig, type HostServices } from './host/services';
+import { sweepLegacyState } from './host/legacyState';
+import { SidebarHost } from './host/SidebarHost';
+import { ALL_PROJECTS, type InvalidationReason, type InvalidationScope, type NuGetSource, type Project } from './protocol';
 
-let outputChannel: vscode.LogOutputChannel;
-let nugetService: NuGetService;
+const SDK_CACHE_KEY = 'nuiget.sdkVersionCache.v2';
 
-export async function activate(context: vscode.ExtensionContext) {
-    // Initialize workspace cache for persistent caching
-    workspaceCache.initialize(context);
+const PROJECT_FILE_NAME = /\.(csproj|fsproj|vbproj)$/i;
 
-    // Create log output channel for package operations (supports color-coded log levels)
-    outputChannel = vscode.window.createOutputChannel('nUIget', { log: true });
-    context.subscriptions.push(outputChannel);
-    outputChannel.info('nUIget extension is now active');
+/** What a test replaces: the process launcher, the lookup of the `dotnet` executable and the feed transport. */
+export type ActivationOverrides = Pick<DotnetRunnerOptions, 'spawn' | 'resolveExecutable'> & { transport?: Transport };
 
-    // Initialize performance instrumentation (no-op unless nuiget.enablePerformanceLogging)
-    context.subscriptions.push(configurePerf(outputChannel));
+const PROXY_ENV_VARS = ['HTTPS_PROXY', 'https_proxy', 'HTTP_PROXY', 'http_proxy'];
 
-    // Create shared NuGetService singleton — reused by both main panel and sidebar
-    nugetService = new NuGetService(outputChannel);
-
-    // Plan 11: hydrate persisted SDK version cache so warm starts skip the
-    // ~250ms `dotnet --version` probe per project directory. Snapshot is keyed
-    // by extension version, so an upgrade automatically discards stale entries.
-    const extensionVersion = context.extension?.packageJSON?.version ?? '0.0.0';
-    nugetService.hydrateSdkVersionCache(context.globalState, 'nuiget.sdkVersionCache', extensionVersion);
-
-    // Start background source health monitor — validates all enabled sources at startup,
-    // then self-schedules: 120s if any fail, 5min if all healthy. Replaces per-search blocking.
-    nugetService.startSourceHealthMonitor();
-    context.subscriptions.push({ dispose: () => nugetService.stopSourceHealthMonitor() });
-
-    // Pre-warm credentials for authenticated feeds (fire-and-forget)
-    nugetService.initializeCredentials().catch(() => { /* ignore */ });
-
-    // Set context key for conditional sidebar visibility
-    let projectFileDebounce: ReturnType<typeof setTimeout> | undefined;
-    const updateProjectFilesContext = async () => {
-        const projects = await nugetService.findProjects();
-        vscode.commands.executeCommand('setContext', 'nuiget.hasProjectFiles', projects.length > 0);
-    };
-    updateProjectFilesContext().catch(error => {
-        console.error('[nUIget] Failed to update project files context:', error);
-    });
-    const projectFileWatcher = vscode.workspace.createFileSystemWatcher('**/*.{csproj,fsproj,vbproj}');
-    const debouncedUpdate = () => {
-        if (projectFileDebounce) { clearTimeout(projectFileDebounce); }
-        projectFileDebounce = setTimeout(updateProjectFilesContext, 1500);
-    };
-    projectFileWatcher.onDidCreate(debouncedUpdate);
-    projectFileWatcher.onDidDelete(debouncedUpdate);
-    context.subscriptions.push({ dispose: () => { if (projectFileDebounce) { clearTimeout(projectFileDebounce); } } });
-    context.subscriptions.push(projectFileWatcher);
-
-    // Watch global.json for SDK version changes → invalidate SDK version cache
-    const globalJsonWatcher = vscode.workspace.createFileSystemWatcher('**/global.json');
-    const invalidateSdkCache = () => nugetService.clearSdkVersionCache();
-    globalJsonWatcher.onDidChange(invalidateSdkCache);
-    globalJsonWatcher.onDidCreate(invalidateSdkCache);
-    globalJsonWatcher.onDidDelete(invalidateSdkCache);
-    context.subscriptions.push(globalJsonWatcher);
-
-    // Register sidebar webview provider
-    // One-time migration: legacy `nuiget.noRestore` config setting → `nuget.restoreEnabled` workspaceState.
-    // The setting was removed in favour of a synced UI toggle (sidebar title-bar icon + main panel checkbox).
-    //
-    // Multi-root handling: `inspect()` without a resource URI does not surface workspaceFolder-scoped
-    // values in multi-root workspaces. We probe each folder's URI and apply a "most restrictive wins"
-    // collapse — if the user set `noRestore: true` for any scope (global/workspace/any folder), we
-    // migrate to `restoreEnabled: false`. This errs on the side of preserving a user's explicit opt-out.
-    const restoreMigrated = context.workspaceState.get<boolean>('nuget.restoreEnabledMigrated', false);
-    if (!restoreMigrated) {
-        const probes: (boolean | undefined)[] = [];
-        const rootInspect = vscode.workspace.getConfiguration('nuiget').inspect<boolean>('noRestore');
-        probes.push(rootInspect?.globalValue, rootInspect?.workspaceValue);
-        for (const folder of vscode.workspace.workspaceFolders ?? []) {
-            const folderInspect = vscode.workspace.getConfiguration('nuiget', folder.uri).inspect<boolean>('noRestore');
-            probes.push(folderInspect?.workspaceFolderValue);
-        }
-        const explicit = probes.filter((v): v is boolean => typeof v === 'boolean');
-        if (explicit.length > 0) {
-            // Most-restrictive wins: any `noRestore: true` → `restoreEnabled: false`.
-            const anyNoRestore = explicit.some(v => v === true);
-            await context.workspaceState.update('nuget.restoreEnabled', !anyNoRestore);
-        }
-        await context.workspaceState.update('nuget.restoreEnabledMigrated', true);
-    }
-
-    // Synchronously initialize the in-memory restore cache + context keys BEFORE registering the
-    // sidebar provider so the title-bar icon paints with the correct state on first activation.
-    const restoreEnabled = context.workspaceState.get<boolean>('nuget.restoreEnabled', true);
-    const includePrerelease = context.workspaceState.get<boolean>('nuget.includePrerelease', false);
-    NuGetPanel.initRestoreCache(restoreEnabled);
-    await Promise.all([
-        vscode.commands.executeCommand('setContext', 'nuiget.restoreEnabled', restoreEnabled),
-        vscode.commands.executeCommand('setContext', 'nuiget.prereleaseEnabled', includePrerelease),
-    ]);
-
-    const sidebarProvider = new NuGetSidebarProvider(context.extensionUri, context, outputChannel, nugetService);
-    context.subscriptions.push(
-        vscode.window.registerWebviewViewProvider(
-            NuGetSidebarProvider.viewType,
-            sidebarProvider,
-            { webviewOptions: { retainContextWhenHidden: true } }
-        )
-    );
-
-    // Start background update monitoring (file watcher + 10-min timer)
-    sidebarProvider.startBackgroundMonitoring();
-    context.subscriptions.push({ dispose: () => sidebarProvider.dispose() });
-
-    // Workspace folder add/remove → refresh main panel + sidebar so any in-flight
-    // streamed All-Projects enumeration aborts and restarts with the new folder list.
-    // Debounce 300ms to coalesce rapid add+remove sequences.
-    let workspaceFoldersDebounce: ReturnType<typeof setTimeout> | undefined;
-    const workspaceFoldersListener = vscode.workspace.onDidChangeWorkspaceFolders(() => {
-        if (workspaceFoldersDebounce) { clearTimeout(workspaceFoldersDebounce); }
-        workspaceFoldersDebounce = setTimeout(() => {
-            workspaceFoldersDebounce = undefined;
-            NuGetPanel.refresh();
-            sidebarProvider.refreshSidebar();
-        }, 300);
-    });
-    context.subscriptions.push(workspaceFoldersListener);
-    context.subscriptions.push({ dispose: () => { if (workspaceFoldersDebounce) { clearTimeout(workspaceFoldersDebounce); workspaceFoldersDebounce = undefined; } } });
-
-    // Register commands
-    context.subscriptions.push(
-        vscode.commands.registerCommand('nuiget.openManager', (contextArg?: unknown) => {
-            // Extract project path from context menu argument
-            let projectPath: string | undefined;
-
-            if (contextArg) {
-                // Explorer context menu: contextArg is a Uri
-                if (contextArg instanceof vscode.Uri) {
-                    projectPath = contextArg.fsPath;
-                }
-                // Solution Explorer context menu: contextArg may be a tree item with various structures
-                else if (typeof contextArg === 'object') {
-                    const arg = contextArg as Record<string, unknown>;
-                    // Try resourceUri (common pattern)
-                    if (arg.resourceUri instanceof vscode.Uri) {
-                        projectPath = arg.resourceUri.fsPath;
-                    }
-                    // Try fsPath directly
-                    else if (typeof arg.fsPath === 'string') {
-                        projectPath = arg.fsPath;
-                    }
-                    // Try path property
-                    else if (typeof arg.path === 'string') {
-                        projectPath = arg.path;
-                    }
-                    // C# Dev Kit may use projectPath or filePath
-                    else if (typeof arg.projectPath === 'string') {
-                        projectPath = arg.projectPath;
-                    }
-                    else if (typeof arg.filePath === 'string') {
-                        projectPath = arg.filePath;
-                    }
-                }
-            }
-
-            // Always start on 'installed' tab — browse is now an inline search mode, not a separate tab
-            const initialTab: 'installed' | 'updates' = 'installed';
-            NuGetPanel.createOrShow(context.extensionUri, context, outputChannel, nugetService, projectPath, initialTab);
-        })
-    );
-
-    context.subscriptions.push(
-        vscode.commands.registerCommand('nuiget.refreshPackages', () => {
-            // Internal command: sidebar calls this after install/update/remove to sync main panel
-            NuGetPanel.refresh();
-        })
-    );
-
-    context.subscriptions.push(
-        vscode.commands.registerCommand('nuiget.refreshPackagesScoped', (operation?: { type: string; packageId?: string; packageIds?: string[]; projectPath?: string }) => {
-            // Internal command: sidebar calls this with operation scope after install/update/remove
-            // to sync main panel without triggering a full update check (sidebar already checked)
-            if (operation) {
-                NuGetPanel.refreshScoped(operation);
-            } else {
-                NuGetPanel.refresh();
-            }
-        })
-    );
-
-    // Sidebar title bar commands
-    // Wire up cross-panel prerelease sync: main panel → sidebar
-    NuGetPanel.onPrereleaseChanged = (value: boolean) => {
-        sidebarProvider.syncPrerelease(value);
-    };
-    // Wire up cross-panel "Restore after operations" sync: main panel → sidebar
-    NuGetPanel.onRestoreChanged = (value: boolean) => {
-        sidebarProvider.syncRestore(value);
-    };
-    // Wire up cross-panel source sync: main panel → sidebar
-    NuGetPanel.onSourceChanged = (value: string) => {
-        sidebarProvider.syncSource(value);
-    };
-    // Wire up cross-panel project sync: main panel → sidebar
-    NuGetPanel.onProjectChanged = (value: string) => {
-        sidebarProvider.syncProject(value);
-    };
-    // Wire up cross-panel package change sync: main panel → sidebar
-    // Uses lightweight notification path that skips HTTP cache clearing and source re-fetch
-    NuGetPanel.onPackageChanged = (operation) => {
-        sidebarProvider.notifySidebarOfChange(operation);
-    };
-    // Wire up cross-panel full refresh sync: main panel → sidebar
-    NuGetPanel.onRefreshAll = () => {
-        sidebarProvider.refreshSidebar();
-    };
-    context.subscriptions.push(
-        vscode.commands.registerCommand('nuiget.sidebar.selectSource', () => {
-            sidebarProvider.showSourcePicker();
-        })
-    );
-    context.subscriptions.push(
-        vscode.commands.registerCommand('nuiget.sidebar.selectProject', () => {
-            sidebarProvider.showProjectPicker();
-        })
-    );
-    context.subscriptions.push(
-        vscode.commands.registerCommand('nuiget.sidebar.togglePrerelease', () => {
-            sidebarProvider.togglePrerelease();
-        })
-    );
-    context.subscriptions.push(
-        vscode.commands.registerCommand('nuiget.sidebar.togglePrereleaseOff', () => {
-            sidebarProvider.togglePrerelease();
-        })
-    );
-    context.subscriptions.push(
-        vscode.commands.registerCommand('nuiget.sidebar.toggleRestore', () => sidebarProvider.toggleRestore())
-    );
-    context.subscriptions.push(
-        vscode.commands.registerCommand('nuiget.sidebar.toggleRestoreOff', () => sidebarProvider.toggleRestore())
-    );
-    context.subscriptions.push(
-        vscode.commands.registerCommand('nuiget.sidebar.refresh', () => {
-            // refreshSidebar() handles cache clearing (sync in-memory + background disk)
-            sidebarProvider.refreshSidebar();
-        })
-    );
-    context.subscriptions.push(
-        vscode.commands.registerCommand('nuiget.sidebar.openFullView', () => {
-            NuGetPanel.createOrShow(context.extensionUri, context, outputChannel, nugetService);
-        })
-    );
-    context.subscriptions.push(
-        vscode.commands.registerCommand('nuiget.clearHttpCache', async () => {
-            await nugetService.clearNuGetHttpCache();
-            vscode.window.showInformationMessage('nUIget: NuGet HTTP cache cleared.');
-        })
-    );
-    context.subscriptions.push(
-        vscode.commands.registerCommand('nuiget.clearSdkVersionCache', async () => {
-            // Plan 11 fix (I3): expose a manual escape hatch in case the persisted
-            // SDK-major map gets stale (rare; extension-version stamping handles
-            // most cases automatically).
-            nugetService.clearSdkVersionCache();
-            await nugetService.flushPersistedSdkCache();
-            vscode.window.showInformationMessage('nUIget: SDK version cache cleared.');
-        })
-    );
-    context.subscriptions.push(
-        vscode.commands.registerCommand('nuiget.viewPackageDetails', (args: { packageId: string; version?: string }) => {
-            if (args?.packageId) {
-                NuGetPanel.navigateToPackage(context.extensionUri, context, outputChannel, nugetService, args.packageId, args.version);
-            }
-        })
-    );
+/**
+ * True when a proxy is in use for the extension host's requests (ADR-005, `docs/adr/005-proxy-matrix.md`): `http.proxySupport`
+ * is not `off` and `http.proxy` or a proxy environment variable is set. Read on every call.
+ */
+export function proxyConfigured(env: NodeJS.ProcessEnv = process.env): boolean {
+    const http = vscode.workspace.getConfiguration('http');
+    const support = http.get<string>('proxySupport', 'override');
+    const proxy = http.get<string>('proxy', '');
+    return support !== 'off' && (proxy.trim() !== '' || PROXY_ENV_VARS.some(name => (env[name] ?? '').trim() !== ''));
 }
 
-export function deactivate() {
-    // Close HTTP/2 sessions to clean up resources
-    http2Client.closeAll();
+export interface ActivatedExtension {
+    services: HostServices;
+    /** Settles when the first project discovery and session reconciliation are done. */
+    ready: Promise<void>;
+}
+
+export async function activate(context: vscode.ExtensionContext): Promise<void> {
+    await activateWith(context);
+}
+
+export function deactivate(): void {
+    // Disposables registered on the extension context handle shutdown.
+}
+
+export async function activateWith(context: vscode.ExtensionContext, overrides: ActivationOverrides = {}): Promise<ActivatedExtension> {
+    const output = vscode.window.createOutputChannel('nUIget', { log: true });
+    context.subscriptions.push(output);
+    output.info('nUIget is activating');
+    // The only logger the core and the surfaces get: nothing reaches the channel unredacted.
+    const logger = redactingLogger(loggerFor(output));
+    // 1.x storage goes first, before the SDK cache, the feed cache and the session read theirs (ADR-000, P7.1).
+    await sweepLegacyState(context, logger);
+
+    // ── core ──
+    const { transport: transportOverride, ...runnerOverrides } = overrides;
+    const runner = new DefaultDotnetRunner({ logger, ...runnerOverrides });
+    runner.hydrate(context.globalState, SDK_CACHE_KEY, String(context.extension.packageJSON.version ?? '0.0.0'));
+    const cache = new TieredCache({ store: context.workspaceState, logger });
+    const sources = new DotnetSourceProvider({ runner, logger });
+    const assets = new AssetsReader();
+    // The inspector and the context provider keep this array: a workspace-folder change refills it in place.
+    const stopDirs: string[] = workspaceRoots();
+    const inspector = new StaticProjectInspector({ assets, stopDirs });
+    const contexts = new ProjectContextProvider({ runner, sources, stopDirs, logger });
+    // ADR-004 tier 2: the Catalog streams the inspection first and answers with this evaluation (ADR-009 d.3).
+    const evaluator = new MsBuildProjectEvaluator({ runner, stopDirs, logger });
+    const coordinator = new DefaultQueryCoordinator({ logger });
+    const session = new DefaultSessionStore(context.workspaceState, logger);
+    const queue = new DefaultOperationQueue({ maxWaiting: 5, logger });
+    const transport = transportOverride ?? new NodeTransport({ proxy: { isConfigured: () => proxyConfigured() }, logger });
+    if (transport instanceof NodeTransport && transportOverride === undefined) {
+        context.subscriptions.push(transport);
+    }
+    const configs = new NuGetConfigReader();
+    // `feedContexts` is declared below; the credential lookup that reads it runs only after activation.
+    const credentials = new DefaultCredentialProvider({ runner, lookupConfigCredential: url => feedContexts.lookupConfigCredential(url), logger });
+    // One health tracker for every read and the monitor: its changes travel as `sources/health` to both surfaces.
+    const health = new SourceHealthTracker();
+    const serviceIndex = new DefaultServiceIndexClient({ transport, getAuthHeader: url => credentials.getAuthHeader(url), logger }, { health });
+    const feeds = createFeedClients({ transport, runner, serviceIndex, credentials, cache, globalPackagesFolder: () => runner.globalPackagesFolder(), logger });
+    const feedContexts = new FeedContexts({ contexts, sources, configs, feeds, logger });
+    const catalog = new Catalog({
+        coordinator, inspector, evaluator, contexts, sources, assets, feeds, feedContexts, logger,
+        discoverProjects: () => findProjects(
+            async (include, exclude, max) => (await vscode.workspace.findFiles(include, exclude, max)).map(uri => uri.fsPath),
+            (vscode.workspace.workspaceFolders ?? []).map(folder => ({ name: folder.name, fsPath: folder.uri.fsPath })),
+        ),
+    });
+    // ADR-004 tier 3: the edit's gate. An open document with unsaved changes of the project or its props file refuses it.
+    const mutator = new DefaultProjectMutator({
+        inspector,
+        isDirty: file => {
+            const wanted = normalizeProjectPath(file);
+            return vscode.workspace.textDocuments.some(document => document.uri.scheme === 'file' && document.isDirty && normalizeProjectPath(document.uri.fsPath) === wanted);
+        },
+        discoverProjects: () => catalog.projects().then(listed => listed.value),
+        logger,
+    });
+    const workflows = new PackageWorkflows(createWorkflowDeps({
+        runner, catalog, mutator, contexts, workspaceFolderFor, queue, logger,
+        onCommand: (argv, exitCode, stdout, stderr, durationMs) => {
+            logger.info(`$ ${argv.join(' ')}  (exit ${exitCode}, ${durationMs} ms)`);
+            if (stdout.trim()) {
+                logger.debug(stdout.trimEnd());
+            }
+            if (stderr.trim()) {
+                logger[exitCode === 0 ? 'debug' : 'warn'](stderr.trimEnd());
+            }
+        },
+    }));
+
+    // ── services both surfaces share ──
+    const events = new HostEvents();
+    const services: HostServices = {
+        context, logger, session, catalog, queue, workflows, mutator, sources,
+        contextFor: projectPath => contexts.get(projectPath, workspaceFolderFor(projectPath), { configChain: false }).then(result => result.context),
+        onOperationCompleted: events.operationCompleted.event,
+        onOperationProgress: queue.onProgress,
+        onConfigChanged: events.configChanged.event,
+        onProjectsChanged: events.projectsChanged.event,
+        invalidate: (scope, reason) => catalog.invalidate(scope, reason),
+        announceOperation: outcome => events.operationCompleted.fire(outcome),
+        config: readExtensionConfig,
+        workspaceFolderFor,
+    };
+    const sidebar = new SidebarHost(services);
+    context.subscriptions.push(
+        events, queue, coordinator, session, sidebar,
+        vscode.window.registerWebviewViewProvider(SidebarHost.viewType, sidebar, { webviewOptions: { retainContextWhenHidden: true } }),
+        { dispose: () => MainPanelHost.instance?.dispose() },
+    );
+
+    // ── projects and session: the selection is checked against the real project and source lists ──
+    let lastReconciledProject: string | undefined;
+    let lastListing: { directory: string; urls: string[] } | undefined;
+
+    /**
+     * The enabled sources of a directory; `undefined` is a workspace without a project or folder. A list
+     * that cannot be found out is not an empty one: the selection is kept.
+     */
+    const enabledSourceUrls = async (directory: string | undefined): Promise<string[]> => {
+        try {
+            if (directory === undefined) {
+                throw new Error('no project or workspace folder to resolve package sources for');
+            }
+            const urls = (await catalog.sources(directory)).value.filter(source => source.enabled).map(source => source.url);
+            lastListing = { directory, urls };
+            return urls;
+        } catch (error) {
+            logger.warn(`Package sources could not be listed, the selected source is kept: ${describe(error)}`);
+            if (directory !== undefined && lastListing?.directory === directory) {
+                return lastListing.urls;
+            }
+            const selected = session.snapshot.selectedSource;
+            return selected === 'all' ? [] : [selected];
+        }
+    };
+
+    const refreshProjectsAndSession = async (): Promise<void> => {
+        const before = session.snapshot.selectedProject;
+        lastReconciledProject = before;
+        let projects: Project[];
+        try {
+            projects = (await catalog.projects()).value;
+        } catch (error) {
+            logger.warn(`Project discovery failed: ${describe(error)}`);
+            return;
+        }
+        events.projectsChanged.fire(projects);
+        await vscode.commands.executeCommand('setContext', 'nuiget.hasProjectFiles', projects.length > 0);
+        // Sources belong to a project directory: list those of the project the store is going to keep or
+        // pick, so that the selected source is judged against the right list. Set before `reconcile`, so
+        // that the change it commits for this project does not ask for another run.
+        const kept = settledProject(before, projects);
+        lastReconciledProject = kept;
+        const urls = await enabledSourceUrls(directoryOf(kept));
+        const selected = session.snapshot.selectedProject;
+        if (selected !== before && selected !== kept) {
+            // The selection moved while the sources were listed: this list is another project's. The
+            // change has already asked for one more run, and that run reconciles.
+            return;
+        }
+        await session.reconcile(projects, urls);
+    };
+
+    let inFlight: Promise<void> | undefined;
+    let rerun = false;
+    /** One refresh at a time; requests that arrive while it runs are answered by one more run. */
+    const requestRefresh = (): Promise<void> => {
+        if (inFlight) {
+            rerun = true;
+            return inFlight;
+        }
+        inFlight = (async () => {
+            try {
+                do {
+                    rerun = false;
+                    await refreshProjectsAndSession();
+                } while (rerun);
+            } catch (error) {
+                logger.warn(`Refreshing projects and session failed: ${describe(error)}`);
+            } finally {
+                inFlight = undefined;
+            }
+        })();
+        return inFlight;
+    };
+
+    // ── source health ──
+    // The monitor runs no `dotnet`: it probes the sources of the chains that reads registered (the activation pass finds
+    // none), and a new registration restarts it.
+    const probeSources = async (): Promise<NuGetSource[]> => {
+        const byUrl = new Map<string, NuGetSource>();
+        for (const feedContext of feedContexts.registered()) {
+            for (const source of feedContext.sources) {
+                byUrl.set(source.url, source);
+            }
+        }
+        return [...byUrl.values()];
+    };
+    context.subscriptions.push(health.onDidChange(failed => {
+        sidebar.notifySourceHealth({ failed });
+        MainPanelHost.instance?.notifySourceHealth({ failed });
+    }));
+    // A pass that finds a source healthy again invalidates nothing: the recovery travels as `sources/health`.
+    const monitor = startHealthMonitor(serviceIndex, probeSources, { failedIntervalMs: 120_000, healthyIntervalMs: 300_000, logger });
+    context.subscriptions.push(monitor, feedContexts.onDidRegister(() => monitor.restart()));
+
+    context.subscriptions.push(
+        coordinator.onDidInvalidate(event => {
+            sidebar.notifyInvalidated(event);
+            MainPanelHost.instance?.notifyInvalidated(event);
+            if (event.scope.kind === 'sources' || event.scope.kind === 'workspace') {
+                monitor.restart();
+            }
+            // `package` and `metadata` scopes reach neither the project list nor a source list.
+            if (event.scope.kind === 'workspace' || event.scope.kind === 'project' || event.scope.kind === 'sources') {
+                void requestRefresh();
+            }
+        }),
+        // Sources are per project directory, so another selected project is another source list (ADR-001, ADR-005).
+        session.onDidChange(snapshot => {
+            if (snapshot.selectedProject !== lastReconciledProject) {
+                void requestRefresh();
+            }
+        }),
+    );
+
+    // ── queue status ──
+    const statusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
+    context.subscriptions.push(statusBar, queue.onDidChange(({ active, pending }) => {
+        if (active + pending === 0) {
+            statusBar.hide();
+            return;
+        }
+        statusBar.text = pending > 0
+            ? `$(sync~spin) nUIget: ${active} running, ${pending} queued`
+            : '$(sync~spin) nUIget: operation running';
+        statusBar.show();
+    }));
+
+    // ── watchers → invalidation ──
+    type ScopeFor = (fsPath: string) => InvalidationScope | undefined | Promise<InvalidationScope | undefined>;
+    const watch = (glob: string, scopeFor: ScopeFor, reason: InvalidationReason, debounceMs: number) => {
+        const watcher = vscode.workspace.createFileSystemWatcher(glob);
+        let timer: ReturnType<typeof setTimeout> | undefined;
+        const pending = new Set<string>();
+        const flush = async (): Promise<void> => {
+            const paths = [...pending];
+            pending.clear();
+            if (queue.isBusy) {
+                // The running operation invalidates what it changed; waiting keeps an edit from outside from being lost.
+                await queue.waitIdle();
+            }
+            // All scopes first, so that the coordinator folds the invalidations into one event.
+            const scopes = await Promise.all(paths.map(fsPath => scopeFor(fsPath)));
+            for (const scope of scopes) {
+                if (scope) {
+                    catalog.invalidate(scope, reason);
+                }
+            }
+        };
+        const fire = (uri: vscode.Uri) => {
+            pending.add(uri.fsPath);
+            if (timer) {
+                clearTimeout(timer);
+            }
+            timer = setTimeout(() => {
+                timer = undefined;
+                flush().catch(error => logger.warn(`File watcher for ${glob} failed: ${describe(error)}`));
+            }, debounceMs);
+        };
+        watcher.onDidChange(fire);
+        watcher.onDidCreate(fire);
+        watcher.onDidDelete(fire);
+        context.subscriptions.push(watcher, { dispose: () => { if (timer) { clearTimeout(timer); } } });
+    };
+    const projectScope = (projectPath: string | undefined): InvalidationScope | undefined =>
+        projectPath === undefined ? undefined : { kind: 'project', projectPaths: [projectPath] };
+    const workspaceScope = (): InvalidationScope => ({ kind: 'workspace' });
+    watch(PROJECT_FILE_GLOB, projectScope, 'file-watcher', 1500);
+    watch('**/Directory.{Build,Packages}.{props,targets}', workspaceScope, 'file-watcher', 1500);
+    watch('**/{nuget.config,NuGet.Config,NuGet.config}', () => ({ kind: 'sources' }), 'file-watcher', 1000);
+    watch('**/global.json', () => { runner.clearSdkCache(); return workspaceScope(); }, 'file-watcher', 1000);
+    watch('**/packages.lock.json', async lockPath => projectScope(await projectFileIn(path.dirname(lockPath))), 'file-watcher', 1500);
+    watch('**/obj/project.assets.json', async assetsPath => projectScope(await projectFileIn(path.dirname(path.dirname(assetsPath)))), 'restore', 2000);
+    context.subscriptions.push(
+        vscode.workspace.onDidChangeWorkspaceFolders(() => {
+            stopDirs.splice(0, stopDirs.length, ...workspaceRoots());
+            catalog.invalidate({ kind: 'workspace' }, 'workspace-folders');
+        }),
+        vscode.workspace.onDidChangeConfiguration(e => {
+            if (e.affectsConfiguration('nuiget') || e.affectsConfiguration('workbench.tree.indent')) {
+                events.configChanged.fire(readExtensionConfig());
+            }
+            if (e.affectsConfiguration('http') && transport instanceof NodeTransport) {
+                transport.reset();
+            }
+        }),
+    );
+
+    // ── commands ──
+    const register = (command: string, handler: (...args: unknown[]) => unknown) =>
+        context.subscriptions.push(vscode.commands.registerCommand(command, handler));
+    register('nuiget.openManager', (arg?: unknown) => {
+        MainPanelHost.createOrShow(services, { projectPath: projectPathFromCommandArg(arg), initialTab: 'installed' });
+    });
+    register('nuiget.refreshPackages', () => catalog.invalidate({ kind: 'workspace' }, 'manual-refresh'));
+    register('nuiget.sidebar.selectSource', () => sidebar.showSourcePicker());
+    register('nuiget.sidebar.selectProject', () => sidebar.showProjectPicker());
+    register('nuiget.sidebar.togglePrerelease', () => sidebar.togglePrerelease());
+    register('nuiget.sidebar.togglePrereleaseOff', () => sidebar.togglePrerelease());
+    register('nuiget.sidebar.toggleRestore', () => sidebar.toggleRestore());
+    register('nuiget.sidebar.toggleRestoreOff', () => sidebar.toggleRestore());
+    register('nuiget.sidebar.refresh', () => sidebar.refresh());
+    register('nuiget.sidebar.openFullView', () => {
+        MainPanelHost.createOrShow(services);
+    });
+    register('nuiget.clearHttpCache', async () => {
+        await runner.clearHttpCache();
+        cache.clear('network');
+        catalog.invalidate({ kind: 'workspace' }, 'manual-refresh');
+        void vscode.window.showInformationMessage('nUIget: NuGet HTTP cache cleared.');
+    });
+    register('nuiget.clearSdkVersionCache', async () => {
+        runner.clearSdkCache();
+        await runner.flush();
+        // Cached package lists carry `unsupported` from the SDK that was detected before.
+        catalog.invalidate({ kind: 'workspace' }, 'manual-refresh');
+        void vscode.window.showInformationMessage('nUIget: SDK version cache cleared.');
+    });
+
+    const ready = requestRefresh();
+    output.info('nUIget is active');
+    return { services, ready };
+}
+
+/** Every message, string argument and error passes `redact` before it reaches `inner`. */
+function redactingLogger(inner: Logger): Logger {
+    const clean = (value: unknown): unknown => {
+        if (typeof value === 'string') {
+            return redact(value);
+        }
+        if (value instanceof Error) {
+            return redact(value.stack ?? value.message);
+        }
+        return value;
+    };
+    return {
+        trace: (message, ...args) => inner.trace(redact(message), ...args.map(clean)),
+        debug: (message, ...args) => inner.debug(redact(message), ...args.map(clean)),
+        info: (message, ...args) => inner.info(redact(message), ...args.map(clean)),
+        warn: (message, ...args) => inner.warn(redact(message), ...args.map(clean)),
+        error: (message, ...args) => inner.error(message instanceof Error ? redact(message.stack ?? message.message) : redact(message), ...args.map(clean)),
+    };
+}
+
+function describe(error: unknown): string {
+    return error instanceof Error ? error.message : String(error);
+}
+
+/**
+ * The project the session store keeps or picks for `selected` among `projects`: the rule of its
+ * `reconcile` (ADR-001), repeated here to know the directory before the store commits. Should the two ever
+ * differ, the store's commit names a project other than the one reconciled for, and the refresh runs again.
+ */
+function settledProject(selected: string, projects: Project[]): string {
+    const fallback = firstProject(projects)?.path ?? '';
+    if (selected === ALL_PROJECTS) {
+        return projects.length > 1 ? ALL_PROJECTS : fallback;
+    }
+    return selected !== '' && projects.some(project => project.path === selected) ? selected : fallback;
+}
+
+/** The directory whose sources apply to a selection: the project's, or the first workspace folder for all or no project. */
+function directoryOf(project: string): string | undefined {
+    return project && project !== ALL_PROJECTS ? path.dirname(project) : workspaceFolderFor();
+}
+
+function workspaceRoots(): string[] {
+    return (vscode.workspace.workspaceFolders ?? []).map(folder => folder.uri.fsPath);
+}
+
+/** The workspace folder that contains `projectPath` (the deepest one when folders nest); the first folder when no path is given. */
+function workspaceFolderFor(projectPath?: string): string | undefined {
+    const roots = workspaceRoots();
+    if (!projectPath) {
+        return roots[0];
+    }
+    let deepest: string | undefined;
+    for (const root of roots) {
+        if (isPathInside(projectPath, root) && (deepest === undefined || root.length > deepest.length)) {
+            deepest = root;
+        }
+    }
+    return deepest;
+}
+
+/** The project file of a directory, for watcher events on files that belong to a project without naming it. */
+async function projectFileIn(directory: string): Promise<string | undefined> {
+    try {
+        const project = (await fs.promises.readdir(directory)).find(entry => PROJECT_FILE_NAME.test(entry));
+        return project === undefined ? undefined : path.join(directory, project);
+    } catch {
+        return undefined;
+    }
+}
+
+/** The project path in what an explorer, editor-title or Solution Explorer menu passes to a command. */
+function projectPathFromCommandArg(arg: unknown): string | undefined {
+    if (!arg) {
+        return undefined;
+    }
+    if (arg instanceof vscode.Uri) {
+        return arg.fsPath;
+    }
+    if (typeof arg === 'object') {
+        const record = arg as Record<string, unknown>;
+        if (record.resourceUri instanceof vscode.Uri) {
+            return record.resourceUri.fsPath;
+        }
+        for (const key of ['fsPath', 'path', 'projectPath', 'filePath']) {
+            const value = record[key];
+            if (typeof value === 'string') {
+                return value;
+            }
+        }
+    }
+    return undefined;
 }

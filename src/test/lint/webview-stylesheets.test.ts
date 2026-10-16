@@ -8,7 +8,7 @@ import { parseRules } from './cssRules';
  * scale are answered once, in `src/webview/shared/tokens.css`; a stylesheet that sets its own duration, its own
  * pixel font size or an `!important` steps out of that answer without a failing test anywhere else.
  */
-const ROOTS = ['src/webview/shared', 'src/webview/main', 'src/webview/sidebar-next'];
+const ROOTS = ['src/webview/shared', 'src/webview/main', 'src/webview/sidebar'];
 const TOKENS = 'src/webview/shared/tokens.css';
 const PRIMITIVES = 'src/webview/shared/primitives/primitives.css';
 
@@ -132,7 +132,7 @@ describe('2.0 webview stylesheets', () => {
     it('the roots of both surfaces paint the surface background (axe measures against white without one)', () => {
         const background = (file: string, prelude: string): string[] => parseRules(readFileSync(file, 'utf8')).find(rule => rule.prelude === prelude)?.declarations.filter(declaration => declaration.startsWith('background')) ?? [];
         expect(background('src/webview/main/main.css', '.nuiget-main')).toEqual(['background: var(--nuiget-color-bg)']);
-        expect(background('src/webview/sidebar-next/sidebar.css', '.nuiget-sidebar')).toEqual(['background: var(--nuiget-color-bg-sidebar)']);
+        expect(background('src/webview/sidebar/sidebar.css', '.nuiget-sidebar')).toEqual(['background: var(--nuiget-color-bg-sidebar)']);
     });
 
     it('row actions are shown on hover and focus-within of the row', () => {

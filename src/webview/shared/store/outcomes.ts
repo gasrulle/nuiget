@@ -18,7 +18,7 @@ function subject(outcome: OperationOutcome): string {
 const because = (message: string | undefined): string => (message ? `: ${message}` : '');
 
 /**
- * Lifted unchanged from `src/webview/sidebar-next/outcomes.ts` (P5.4), which re-exports it: both surfaces announce
+ * Lifted unchanged from `src/webview/sidebar/outcomes.ts` (P5.4), which re-exports it: both surfaces announce
  * outcomes in the same words.
  *
  * One sentence for the live region about how an operation ended, on whichever surface it started. The words

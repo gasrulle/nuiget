@@ -10,57 +10,30 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const CORE_BOUNDARY_MESSAGE = 'core and protocol stay platform-agnostic: no host, extension, webview, React or vscode values; inject adapters (see src/core/contracts.ts)';
 const WEBVIEW_BOUNDARY_MESSAGE = '2.0 webview code depends only on src/protocol and other 2.0 webview modules; talk to the host through the message bus';
 const HOST_BOUNDARY_MESSAGE = 'host code adapts VS Code to src/core; it renders no UI';
-const LEGACY_BOUNDARY_MESSAGE = '2.0 code does not import 1.x code; port what is needed, or add the file to LEGACY_IMPORT_ALLOWLIST in eslint.config.mjs';
 
-/**
- * 2.0 files that may import 1.x code. Repository-relative POSIX file paths, no globs.
- * src/test/lint/allowlist.test.ts fails for an entry that is missing, is not 2.0 code or no longer
- * imports 1.x code, so the list empties itself as the legacy code is replaced.
- */
-export const LEGACY_IMPORT_ALLOWLIST = [];
-
-const LEGACY_PATTERNS = ['**/services/**', '**/webview/app/**', '**/webview/sidebar/**', '**/webview/NuGet*'];
-
-// A 2.0 webview file reaches its 1.x siblings without naming the webview folder ('../app/x'), which the
-// patterns above do not match. The NuGet*.ts hosts sit one to three levels up from any 2.0 webview file.
-const LEGACY_WEBVIEW_SIBLING_PATTERNS = ['**/app', '**/app/**', '**/sidebar', '**/sidebar/**', '../NuGet*', '../../NuGet*', '../../../NuGet*'];
-
-// One entry per 2.0 layer (plan §3). `owns` decides which layer an allow-listed file belongs to.
+// One entry per 2.0 layer (plan §3).
 const LAYERS = [
     {
         files: ['src/core/**/*.ts', 'src/protocol/**/*.ts'],
-        owns: (file) => file.startsWith('src/core/') || file.startsWith('src/protocol/'),
         paths: [
             { name: 'react', message: CORE_BOUNDARY_MESSAGE },
             { name: 'react-dom', message: CORE_BOUNDARY_MESSAGE },
             { name: 'vscode', message: CORE_BOUNDARY_MESSAGE, allowTypeImports: true },
         ],
         patterns: [{ group: ['**/host/**', '**/extension*', '**/webview/**'], message: CORE_BOUNDARY_MESSAGE }],
-        legacyPatterns: LEGACY_PATTERNS,
     },
     {
-        files: ['src/webview/main/**/*.{ts,tsx}', 'src/webview/sidebar-next/**/*.{ts,tsx}', 'src/webview/shared/**/*.{ts,tsx}'],
-        owns: (file) => ['src/webview/main/', 'src/webview/sidebar-next/', 'src/webview/shared/'].some((prefix) => file.startsWith(prefix)),
+        files: ['src/webview/**/*.{ts,tsx}'],
         paths: [{ name: 'vscode', message: WEBVIEW_BOUNDARY_MESSAGE }],
         patterns: [{ group: ['**/core/**'], message: WEBVIEW_BOUNDARY_MESSAGE }],
-        legacyPatterns: [...LEGACY_PATTERNS, ...LEGACY_WEBVIEW_SIBLING_PATTERNS],
     },
     {
         files: ['src/host/**/*.ts'],
-        owns: (file) => file.startsWith('src/host/'),
         paths: [
             { name: 'react', message: HOST_BOUNDARY_MESSAGE },
             { name: 'react-dom', message: HOST_BOUNDARY_MESSAGE },
         ],
         patterns: [],
-        legacyPatterns: LEGACY_PATTERNS,
-    },
-    {
-        files: ['src/extension.next.ts'],
-        owns: (file) => file === 'src/extension.next.ts',
-        paths: [],
-        patterns: [],
-        legacyPatterns: LEGACY_PATTERNS,
     },
 ];
 
@@ -74,19 +47,13 @@ function fence(files, paths, patterns) {
     };
 }
 
-/** The fences, followed by the variants for allow-listed files, which drop only the 1.x denial. */
-function boundaryConfigs(allowlist) {
-    const fences = LAYERS.map(({ files, paths, patterns, legacyPatterns }) =>
-        fence(files, paths, [...patterns, { group: legacyPatterns, message: LEGACY_BOUNDARY_MESSAGE }]),
-    );
-    const variants = LAYERS.map((layer) => ({ layer, files: allowlist.filter((file) => layer.owns(file)) }))
-        .filter(({ files }) => files.length > 0)
-        .map(({ layer, files }) => fence(files, layer.paths, layer.patterns));
-    return [...fences, ...variants];
+/** One fence per layer. */
+function boundaryConfigs() {
+    return LAYERS.map(({ files, paths, patterns }) => fence(files, paths, patterns));
 }
 
-/** Builds the configuration for a given allow-list; the lint test uses it to check the mechanism. */
-export function createConfig(allowlist) {
+/** Builds the ESLint configuration. */
+function createConfig() {
     return tseslint.config(
         eslint.configs.recommended,
         ...tseslint.configs.recommended,
@@ -143,11 +110,11 @@ export function createConfig(allowlist) {
                 'no-console': 'off',
             },
         },
-        ...boundaryConfigs(allowlist),
+        ...boundaryConfigs(),
         {
             ignores: ['out/**', 'dist/**', '.vscode-test/**', 'src/_wip/**', '**/*.d.ts'],
         },
     );
 }
 
-export default createConfig(LEGACY_IMPORT_ALLOWLIST);
+export default createConfig();

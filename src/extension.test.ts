@@ -7,7 +7,7 @@ import { createScratchDir, writeTree, type ScratchDir } from './core/project/__f
 import { FakeTransport, fail, json } from './core/feeds/testSupport';
 import { NodeTransport } from './core/http';
 import { DefaultProjectMutator } from './core/project';
-import { activateWith, proxyConfigured, type ActivatedExtension, type ActivationOverrides } from './extension.next';
+import { activateWith, proxyConfigured, type ActivatedExtension, type ActivationOverrides } from './extension';
 import { LEGACY_GLOBAL_KEYS, LEGACY_WORKSPACE_KEYS } from './host/legacyState';
 import { MainPanelHost } from './host/MainPanelHost';
 import { readExtensionConfig } from './host/services';
@@ -60,7 +60,7 @@ function eventsOf<T extends EventType>(webview: MockWebview, type: T): Array<Eve
     return posted.filter(message => message.kind === 'event' && message.type === type).map(message => (message as unknown as { payload: EventPayload<T> }).payload);
 }
 
-describe('extension.next (2.0 composition root)', () => {
+describe('extension (2.0 composition root)', () => {
     let dotnet: FakeDotnet;
     let context: ReturnType<typeof createMockExtensionContext>;
     let projectFiles: string[];

@@ -1,102 +1,107 @@
-# STATUS — src   commit e898b91 (P7.2c commit 1; parent of commit 2)   2026-10-16T00:01:38Z
+# STATUS — src   commit 999948e (parent of the P8.2b commit)   2026-10-16T12:20:22Z
 
-git status --porcelain --untracked-files=all (before commit 2): modified `.github/copilot-instructions.md`, `ARCHITECTURE.md`,
-`CHANGELOG.md`, `docs/adr/004-project-model.md`, `docs/perf-baseline.md`, `docs/plans/STATUS.md`,
-`src/core/project/{evaluator,evaluator.test}.ts`, `src/extension.next.test.ts`, `src/test/harness/{fakeDotnet,scenarios.test}.ts`,
-and the STATUS notes of `src`, `src/core/project`, `src/test/harness`
+git status --short src (before the commit): the owner's staged P8.2 block (130 paths deleted, 60 of them tests; 20
+renames by `-B -M`, 18 under default rendering plus `M src/extension.ts` and `M src/webview/sidebar/index.tsx`) and
+the session's edits: `src/extension.test.ts`, `src/test/__mocks__/vscode.ts`, `src/test/e2e/{v2-extension.e2e.test,v2-sidebar.e2e.test,v2Support}.ts`,
+`src/test/harness/{harness,fakeDotnet}.ts`, `src/test/lint/*.test.ts` (six files), `src/webview/shared/{installed/rules,store/outcomes}.ts`
 
-Scope: this note covers `src/extension.next.ts` and its test only; `src/test/lint` has its own note since P7.5c
-(P5 review note 7).
-
-Item: **P7.2c, commit 2** — the root composition test follows the combined first run, by the follow-up ruling of
-2026-10-16 (verbatim below). This note replaces the P6.4a note (in this file's history at `0e814af`).
+Item: **P8.2b** — the tree green again after the owner's deletion block, by the P8.2 ⚑ ruling (DO 10-16) and its two
+follow-ups of 2026-10-16 (docs/plans/STATUS.md, "P8.2b — follow-up …: DO 10 rendering" and "P8.2b — DO 12: the 1.x-only
+fence rows and three comment stragglers"). The 1.x extension is gone from `src`; `src/extension.ts` is the 2.0
+composition root and `src/webview/sidebar` the 2.0 sidebar. This note replaces the P7.2c note (history at `e898b91`).
 
 ## Verified by running
 
 ```text
-baseline at 87e9d18 (before commit 1): tsc 0 · eslint 0 · vitest 167 files, 3404 passed, 6 skipped (SDK)
-commit 1 e898b91 → CI run 38824530026, 13 of 13 jobs success; SDK probe green on 10.0.402 against the regenerated
-                              10.0.401.json
-npx tsc --noEmit / npm run check-types / npx eslint src / npm run lint → exit 0 each
-DOTNET_ROOT=… NUIGET_SDK_TESTS=1 npx vitest run --project backend src/core/project/evaluator.test.ts --reporter=verbose →
-                              16 passed: "runs one combined properties-and-items run, then, for a cross-targeting
-                              project, one item run per target framework, …", "one framework and no framework take
-                              the combined run alone, and its items are the result", "cross-targeting: the combined
-                              run's items are the outer build's and are discarded; …", "evaluates the multitfm fixture
-                              with the real SDK" (3 runs, the first msbuildGetArgs(…, ITEMS, PROPERTIES)), "evaluates
-                              the cpm probe input with the real SDK in one run"
-first npm test → exit 1: src/extension.next.test.ts "composes the evaluator: …" ("expected [] to deeply equal
-                              [ 'Serilog', 'Implicit.Sdk' ]"; its fake answered -getProperty: with properties only) →
-                              stop-and-ask, follow-up ruling below, fake collapsed to one combined document, count 1
-npx vitest run --project backend src/extension.next.test.ts --reporter=verbose → 36 passed ("composes the evaluator:
-                              …", "an evaluation that fails answers the provisional list once, as the response")
-DOTNET_ROOT=… NUIGET_SDK_TESTS=1 npx vitest run --project backend src/core/project src/core/cli src/core/catalog
-                              src/extension.next.test.ts → Test Files 19 passed · Tests 405 passed
-npx vitest run --project integration src/test/harness → 22 passed (and 5 of 5 runs before the root test change)
-npm test (DOTNET_ROOT set, NUIGET_SDK_TESTS=1) → exit 0 · Test Files 167 passed (167) · Tests 3413 passed (3413)
-npm run bench               → exit 0 · Test Files 20 passed (20) · Tests 119 passed | 1 skipped (120)
-rm -rf dist && node esbuild.mjs --v2 --production --analyze → dist/extension.js 292357 / 321341 ·
-                              dist/webview.js 523296 / 575626 · dist/sidebar.js 318803 / 350684
-npm run package:vsix        → exit 0 · nuiget-v1.18.9.vsix (17 files, 534.36 KB) · npm run check:vsix → OK
-test -e .claude/.contract-change → false (created with "P7.2c" for the ADR-004 edit, deleted before the commit)
+DO 10 (before any edit, 999948e + the owner's staged block)
+  git diff --cached --diff-filter=D --name-only | grep -cE '\.test\.tsx?$'   → 60
+  git diff --cached --diff-filter=D --name-only | wc -l                     → 130
+  git diff --cached --diff-filter=R --name-status | grep -c '^R100'         → 18 (with -B -M: 20)
+  git ls-files src/services src/webview/app src/webview/sidebar-next src/test/integration src/test/fixtures
+    src/extension.next.ts src/extension.next.test.ts                        → empty
+  git status --porcelain | grep -v '^[DR]  '                                → M src/extension.ts, M src/webview/sidebar/index.tsx
+  index blobs of both rename targets = their HEAD sources; text simulation of the block on HEAD = index (566/566, 0 diff)
+  → ruled satisfied ("P8.2b — follow-up to the P8.2 ruling: DO 10 rendering", docs/plans/STATUS.md)
+DO 11 baseline (before any edit): npx tsc --noEmit 0 · npx eslint src 0 · npm run check-types exit 2 (harness.ts:17
+  '../../extension.next', :338 TS7006) · npx vitest run 13 failed in the six expected files · node esbuild.mjs cannot
+  resolve src/extension.next.ts, src/webview/sidebar-next/index.tsx → exactly the pre-authorized red set
+npx tsc --noEmit            → exit 0
+npm run check-types         → exit 0 (tsconfig.vitest.json now src/**/*.test.{ts,tsx}, src/**/*.bench.ts, src/test/**)
+npx eslint src              → exit 0
+npm run lint                → exit 0
+npx vitest run --project backend src/test/lint/import-boundaries.test.ts --reporter=verbose
+                            → 26 passed; 14 "may not import", 10 "may import"
+npm test                    → exit 0; Test Files 129 passed (129); Tests 1910 passed | 9 skipped (1919)
+npx vitest run --coverage   → exit 0; total lines 96.14 statements 95.7 functions 94.46 branches 90.01;
+                              src/webview/** lines 95.84 statements 95.29 functions 92.71 branches 88.75;
+                              src/core/** lines 97.49; src/host/** lines 87.73
+npm run bench               → exit 0; Test Files 14 passed (14); Tests 75 passed (75)
+npm run bench:save          → "Saved 66 benchmark measurements to benchmarks/baseline.json."
+npm run bench:compare       → exit 0; no "Missing or invalid benchmark baseline" line
+npm run docs:check          → exit 0; "docs:check — the documents agree with the tree." · "docs:protocol:check —
+                              docs/protocol.md is up to date."
+rm -rf dist && node esbuild.mjs --production --analyze
+                            → dist/extension.js 293183 / 322502 · dist/webview.js 525241 / 577766 ·
+                              dist/sidebar.js 319313 / 351245 · exit 0 (sizes equal P8.1's)
+npm run package:vsix        → exit 0; Tests 1910 passed | 9 skipped; "DONE Packaged: nuiget-v1.18.9.vsix (17 files, 565.04 KB)"
+npm run check:vsix          → check:vsix: OK
+node esbuild.mjs --production && npm run test:e2e        → 25 passing (stable)
+VSCODE_TEST_VERSION=1.85.0 npm run test:e2e              → 25 passing
+rm -rf dist && npm run test:ui -- --storage /tmp/nuiget-ui → 32 passing (53s), exit 0
+DOTNET_ROOT=… NUIGET_SDK_TESTS=1 npx vitest run --project backend src/core/cli → SKIPPED: no file under src/core/cli
+                              or code that runs dotnet changed
+grep -c LEGACY eslint.config.mjs → 0 · grep -c 'scheduled: P8.2' docs/plans/findings-ledger.md → 0 ·
+grep -cE '^\| (N29|N30|N31|N44|N53|N58|N40) \|.*\| (closed|mitigated)' docs/plans/findings-ledger.md → 7
 ```
 
 ## Done (tested)
 
-- `src/extension.next.test.ts` `composes the evaluator: installed/get streams the provisional list and answers the
-  evaluated one`: the two `dotnet.fail` answers (properties-only for `-getProperty:`, items-only otherwise) and the
-  `isProperties` helper became one `dotnet.fail(dotnetCalls.msbuild(), …)` with one document carrying `Properties` and
-  `Items`; the msbuild count 2 → 1 ("One combined run for a single-framework project (P7.2c)"). Title and the id,
-  kind and fidelity assertions unchanged.
+- Entries: `esbuild.mjs` builds `src/extension.ts`, `src/webview/main/index.tsx`, `src/webview/sidebar/index.tsx`;
+  ceilings reset to `Math.ceil(measured * 1.1)`: 322502 / 577766 / 351245.
+- Imports and titles: `src/test/harness/harness.ts:17`, `src/extension.test.ts:10` and its `describe` title.
+- Configuration: `vitest.config.mts` (backend include without `src/services`, with `src/extension.test.ts`;
+  `integration` = the harness; coverage `exclude` without the four 1.x lines; `src/webview/**` ratchet 95 / 88 / 92 / 95
+  replacing 62 / 52 / 54 / 64 and the `{shared,main,sidebar-next}` 85 floor); `tsconfig.vitest.json` include widened to
+  every Vitest test and bench and `src/test/**`, the exclusion comment deleted.
+- Fences: `eslint.config.mjs` has three fences (core+protocol, webview `src/webview/**`, host); the 1.x patterns, the
+  allow-list, `owns` and the root layer are gone; `src/test/lint/import-boundaries.test.ts` keeps 14 denied and 10
+  allowed rows plus the two vscode type cases.
+- N58: `createMockWebviewPanel()` fires `onDidDispose` once.
+- Manifest: `nuiget.recentSearchesLimit` removed from `package.json` and README; `extension-config-settings.test.ts`
+  "contributes no deprecated setting"; CHANGELOG line reworded to "removed" (the P7.1 **Breaking:** line names the
+  recent-searches list, not the setting).
+- e2e: `LEGACY_ONLY_COMMANDS` and its two assertions deleted; the activation test is titled "it registers every
+  contributed command".
+- Ledger: N29, N30, N31, N44, N53, N58, T3 and the 22 "moot in 2.0" rows (S1, S2, Y4-Y11, Y13, Y14, Y16-Y19, F5, P4, P6,
+  P7, D5, D8) closed (P8.2b).
 
 ## Done (untested)
 
-- One sentence on the gotcha row "`-getProperty` with one name prints a bare value".
+- Comment-only rewrites: `src/webview/shared/installed/rules.ts:5`, `src/webview/shared/store/outcomes.ts:21`,
+  `src/test/harness/fakeDotnet.ts:46`.
 
 ## Not started
 
-- None for P7.2c. The next open row is P7.3.
+- P8.2c: the 1.x sections of ARCHITECTURE.md and the 1.x gotchas, the ARCHITECTURE intro prose (`:12-19`), the perf
+  note, plan Appendix D, the plan gate; then the P8 phase review.
 
 ## Deviations from contract/ADR (file:line each)
 
-- None.
+- None from a contract or ADR. From the second follow-up ruling: its DO NOT "Do not edit `ARCHITECTURE.md:16-17`
+  (intro) in b … `docs:check` does not read it" rests on a wrong premise: `npm test` (`docs-drift.test.ts`) named
+  ``src/extension.next.ts`` and ``src/webview/{shared,main,sidebar-next}`` at `ARCHITECTURE.md:16-17` as missing paths.
+  Under the P8.2 ruling's DO 12 straggler clause only those two path names were changed; the intro prose ("the 1.x
+  sources stay in the tree, unbuilt, until P8.2 deletes them") is left for P8.2c DO 17.
+- `git show --stat HEAD` renders `src/extension.ts` and `src/webview/sidebar/index.tsx` as M + D; read the commit with
+  `-B -M` (first follow-up ruling, DO 5).
+- With `-B -M` the commit shows 18 renames, not 20: `allowlist.test.ts` → `import-boundaries.test.ts` (rewritten by the
+  second follow-up; R031 at `-M30%`) and `sidebar-next/STATUS.md` → `sidebar/STATUS.md` (this template) render as D + A.
 
 ## Advisor decisions (date, item, question, answer verbatim)
 
-2026-10-16, P7.2c follow-up (stop-and-ask: a failing test the item did not name), verbatim (also in
-`docs/plans/STATUS.md` and `src/core/project/STATUS.md`):
-
-### P7.2c — follow-up ruling: the root composition test's msbuild fake (2026-10-16)
-
-`````text
-DECISION: Option 1, sharpened (call it 1'), as an amendment to step 10 of the P7.2c ruling: `src/extension.next.test.ts` `composes the evaluator: installed/get streams the provisional list and answers the evaluated one` keeps its title and its id, kind and fidelity assertions; its fake becomes one `dotnet.fail(dotnetCalls.msbuild(), { code: 0, stdout: <one document with both `Properties` and `Items`> })` (the `isProperties` helper and the second `fail` are removed, not left unused), and `:323` becomes `toBe(1)` with the comment "one combined run for a single-framework project (P7.2c)". Not option 2 (a `TargetFrameworks` project composes a different path and the harness already covers nothing of the kind here). Not option 3 (the 400 ms rule of the P7.2 ruling decided the change; the evaluator is right and this test's fake is a two-run script). Nothing here is the owner's; no `OWNER MUST DECIDE`.
-
-WHY: The brief matches the tree, and the failure reproduces: `npx vitest run --project backend src/extension.next.test.ts -t "composes the evaluator"` → `AssertionError: expected [] to deeply equal [ 'Serilog', 'Implicit.Sdk' ]` at `:322`. The cause is the fake, not the product: `fakeDotnet.ts:231` answers with the first matching `fail` entry, the combined first run (`evaluator.ts:93`, `msbuildGetArgs(projectPath, ITEMS, PROPERTIES)`) carries `-getProperty:`, so `:307-310` answers it with `Properties` alone, `record(first, 'Items')` is `{}` (`:98`, `:160-163`) and the single-framework guard (`:97`, `TargetFrameworks: ''`) makes that empty list the authoritative result; the items-only branch at `:311-314` is never reached. This is the P7.2c ruling's own gap: that ruling diagnosed the same properties-only shape in `fakeDotnet.ts:197-214` and fixed it in step 10, listed `src/extension.next.test.ts` in step 13's targeted gate, but left it out of commit 2's file list and its FILES CHECKED, so its DO NOT ("other than the ones named in steps 6, 9 and 10") was written without knowing this fake branches the same way; the §2.3 trigger "a failing test you did not write" fired correctly. The P6.2 ruling that specified the test (`docs/plans/STATUS.md:3026`: "one JSON per call order, or a matcher per argv") described a script for the two-run shape; under ADR-004 tier 2 as amended by commit 2 (`docs/adr/004-project-model.md`, probe row `cpm-combined`: the properties of `cpm-properties` and the items of `cpm-items-net8.0` in one document) the faithful script is one document, which is what the harness fake now prints (`fakeDotnet.ts:200-221`). The change is a tightening, not a weakening: `:318-322` stay, and the count goes from the old exact shape (2) to the new exact shape (1), the same edit step 10 made at `scenarios.test.ts:419`; `grep -rn -- "-getProperty:" src scripts` shows no other test fake with the properties-only branch (`evaluator.test.ts` and `fakeDotnet.ts` are rewritten; `commands.test.ts:119`, `redact.test.ts:156` and the fixture assert argv or redaction, not answers). The ids assertion holds under the combined answer by `evaluator.ts:184-205` (`Serilog` has no `DefiningProjectFullPath` → `project`; `Implicit.Sdk` defines in `/sdk/Sdk.props` ≠ project → `props`, `isImplicit`) and `:212-228` (one run, insertion order, no `targetFrameworks`), so `['Serilog', 'Implicit.Sdk']` is still the expected order. The neighbouring `an evaluation that fails answers the provisional list once, as the response` (`:353-361`) already asserts `toBe(1)` and stays right: its first run prints no JSON, nothing follows. Plan §2.1 lets a test the item names be rewritten with the STATUS note listing it; this ruling names it. No product file, contract or ADR changes beyond the sentence commit 2 already made; the sentinel is absent (`test -e .claude/.contract-change` → false, checked).
-
-DO:
-1. Paste this ruling verbatim under `## Advisor decisions` of `docs/plans/STATUS.md` (heading `### P7.2c — follow-up ruling: the root composition test's msbuild fake (2026-10-16)`), of `src/core/project/STATUS.md`, and of `src/STATUS.md`.
-2. `src/extension.next.test.ts:306-314`: delete `isProperties` and both `dotnet.fail` calls; in their place one call: `dotnet.fail(dotnetCalls.msbuild(), { code: 0, stdout: JSON.stringify({ Properties: { TargetFramework: 'net10.0', TargetFrameworks: '', ManagePackageVersionsCentrally: '', CentralPackageVersionOverrideEnabled: '' }, Items: { PackageReference: [{ Identity: 'Serilog', Version: '3.0.0' }, { Identity: 'Implicit.Sdk', Version: '1.0.0', IsImplicitlyDefined: 'true', DefiningProjectFullPath: '/sdk/Sdk.props' }] } }) });` with a one-line comment above it: "The combined first run of a single-framework project: properties and items in one document (probe row `cpm-combined`, P7.2c)." Lines `:315-322` unchanged.
-3. `src/extension.next.test.ts:323`: `toBe(2)` → `toBe(1)`, preceded by the comment `// One combined run for a single-framework project (P7.2c).` (the wording of `scenarios.test.ts:419`). If the count is not 1 after step 2, paste `dotnet.calls.filter(dotnetCalls.msbuild(project))` in a brief; do not write `>= 1`.
-4. `.github/copilot-instructions.md`, the already-amended row `` `-getProperty` with one name prints a bare value ``: append one sentence: "A test that scripts msbuild answers the first call with one document carrying both `Properties` and `Items` (the harness fake's `evaluateFromFiles`, `extension.next.test.ts`); a properties-only answer to a call with `-getProperty:` makes a single-framework project authoritative with no packages." No third row.
-5. `src/STATUS.md` rewritten per §2.5 (commit 2 now touches a file of the root directory): the rewritten test by title with the change (one combined fake answer; count 2 → 1), the targeted run output, this ruling verbatim. `src/core/project/STATUS.md` and `src/test/harness/STATUS.md` as step 10/12 already require; the tracker row's note for commit 2 names `src/extension.next.test.ts` and this amendment.
-6. Step 13's gates again in full, now with `npm test` read for exit 0, then `npm run package:vsix` and `npm run check:vsix` (both missing from the brief's GATE STATUS because `npm test` was red). `git status --porcelain --untracked-files=all` lists commit 2's files plus `src/extension.next.test.ts` and `src/STATUS.md`, nothing else. Commit message unchanged (`perf(core/project): one combined msbuild run evaluates a single-framework project (P7.2c, ADR-004)`); its body names the root test as rewritten by this ruling; push; green CI on 13 jobs; then P7.2c `done` with both SHAs; next open row P7.3.
-
-DO NOT:
-- Do not keep the `isProperties` discriminator or an items-only second `fail` that no call reaches.
-- Do not loosen `:323` to `toBeGreaterThanOrEqual(1)` or drop it; do not touch `:318-322` or the title.
-- Do not change `an evaluation that fails answers the provisional list once, as the response` (`:353-361`): its `toBe(1)` is right before and after.
-- Do not give the test's project `TargetFrameworks` (option 2) or add a second project to it.
-- Do not touch `src/core/project/evaluator.ts`, `src/test/harness/fakeDotnet.ts`, `docs/adr/**`, `src/core/contracts.ts`, `src/protocol/**` or `scripts/perf-baseline.mjs` for this; do not recreate the sentinel.
-- Do not open a ledger finding: this is an omission in the P7.2c ruling's file list, not a product defect.
-- Do not add a third gotcha row; one sentence on the amended row.
-
-CONTRACT CHANGE: none beyond what commit 2 already carries (`docs/adr/004-project-model.md`, the `Amended:` line and the one tier-2 sentence of step 11 of the P7.2c ruling, made behind the sentinel that is now deleted). `src/protocol/**`, `src/core/contracts.ts`, `docs/adr/004-sdk-probes.md` untouched.
-
-VERIFY: `grep -c "isProperties" src/extension.next.test.ts` → 0; `grep -c "dotnetCalls.msbuild()" src/extension.next.test.ts` → 1; `grep -n "One combined run for a single-framework project (P7.2c)" src/extension.next.test.ts src/test/harness/scenarios.test.ts` → one line in each; `npx vitest run --project backend src/extension.next.test.ts --reporter=verbose` → green, listing `composes the evaluator: installed/get streams the provisional list and answers the evaluated one` and `an evaluation that fails answers the provisional list once, as the response`; `npx vitest run --project backend src/core/project src/core/cli src/core/catalog src/extension.next.test.ts` → green; `npx vitest run --project integration src/test/harness` → 22 passed; `npm test` → exit 0 (Test Files 167 passed, Tests 3413 passed); `npm run bench`, `npm run package:vsix`, `npm run check:vsix` → exit 0 / OK; `test -e .claude/.contract-change` → false; `grep -c "extension.next.test.ts" src/STATUS.md` ≥ 1 and `grep -n "follow-up ruling: the root composition test" docs/plans/STATUS.md src/core/project/STATUS.md src/STATUS.md` → one heading in each; CI green on 13 jobs with `SDK probe` passing.
-
-FILES CHECKED: `/Users/mattias/github/nuiget/.github/agents/architecture-advisor.agent.md`; `/Users/mattias/github/nuiget/docs/plans/2026-10-11-nuiget-2.0-execution-plan.md:41-135` (§1 D6, D7, D13; §2.1-§2.6); `/Users/mattias/github/nuiget/docs/plans/STATUS.md:102-104` (P7.2a, P7.2c rows), `:3026` (P6.2 ruling step 10: the test's specification), `:3345-3391` (the P7.2c ruling verbatim); `/Users/mattias/github/nuiget/src/extension.next.test.ts:1-24,122-126,255-361`; `/Users/mattias/github/nuiget/src/core/project/evaluator.ts` (whole, working tree); `/Users/mattias/github/nuiget/src/core/project/evaluator.test.ts:20,158-161,238-251,263,278,325,377`; `/Users/mattias/github/nuiget/src/test/harness/fakeDotnet.ts:186-295` (`evaluateFromFiles`, `answerFor` first-match at `:231`, `count` at `:271`, `fail` at `:285-289`), `harness.ts:71,142`; `git diff` of the nine modified files (`scenarios.test.ts:419` → `toBe(1)` with its comment; the two gotcha rows; `ARCHITECTURE.md:97`; `docs/perf-baseline.md:55-57`; `CHANGELOG.md`); `/Users/mattias/github/nuiget/src/STATUS.md:1-12,27,100`, `src/core/project/STATUS.md:26,76-104,117`, `src/test/harness/STATUS.md:33,104`; `git log -S"composes the evaluator" -- src/extension.next.test.ts` → `5e26252` (P6.2b); `grep -rn -- "-getProperty:" src scripts` (no other properties-only fake); `git diff --quiet -- scripts/perf-baseline.mjs` (unchanged); `test -e .claude/.contract-change` (absent); `git status --porcelain --untracked-files=all` (the nine files of the brief, no untracked file). Run for reproduction only: `npx vitest run --project backend src/extension.next.test.ts -t "composes the evaluator"` → 1 failed at `:322`, `expected [] to deeply equal [ 'Serilog', 'Implicit.Sdk' ]`. Not run: `npm test`, `npm run bench`, esbuild, `package:vsix` (the brief's gate line and sizes taken as given). The advisor tool was consulted once before writing; its additions (collapse the fake to one matcher, state the `:353-361` test as untouched, require `package:vsix` and `check:vsix` in VERIFY, the `src/STATUS.md` rewrite, the one-sentence gotcha instead of a row, no ledger finding) are folded in. No file was created, edited, moved or deleted; shell use was inspection and one vitest run that writes nothing to the tree.
-`````
+The P8.2 ruling and both P8.2b follow-ups (2026-10-16) are verbatim under `## Advisor decisions` in
+`docs/plans/STATUS.md`. Not repeated here.
 
 ## Exact next step (one item ID)
 
-P7.3.
+P8.2c

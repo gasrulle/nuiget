@@ -35,9 +35,8 @@ describe('ExtensionConfig and the contributed settings', () => {
         expect([...values].sort()).toEqual([...(settings['nuiget.searchDebounceMode'].enum ?? [])].sort());
     });
 
-    it('a deprecated setting is one 2.0 does not read', () => {
+    it('contributes no deprecated setting', () => {
         const deprecated = Object.keys(settings).filter(name => settings[name].deprecationMessage !== undefined);
-        expect(deprecated).toContain('nuiget.recentSearchesLimit');
-        expect(deprecated.filter(name => (settingKeys as string[]).includes(name.replace(/^nuiget\./, '')))).toEqual([]);
+        expect(deprecated).toEqual([]);
     });
 });

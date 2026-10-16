@@ -295,6 +295,7 @@ function createMockWebview() {
 function createMockWebviewPanel() {
     const disposeEmitter = new EventEmitter<void>();
     const webview = createMockWebview();
+    let disposed = false;
     return {
         webview,
         viewType: 'nuiget',
@@ -304,7 +305,14 @@ function createMockWebviewPanel() {
         active: true,
         visible: true,
         reveal: vi.fn(),
-        dispose: vi.fn(() => disposeEmitter.fire()),
+        // VS Code reports a disposal once; a listener that disposes the panel again must not recurse (N58).
+        dispose: vi.fn(() => {
+            if (disposed) {
+                return;
+            }
+            disposed = true;
+            disposeEmitter.fire();
+        }),
         onDidDispose: disposeEmitter.event,
         onDidChangeViewState: vi.fn(() => new Disposable(() => { })),
     };

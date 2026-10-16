@@ -1,7 +1,7 @@
 import * as assert from 'assert';
 import * as fs from 'fs';
 import * as vscode from 'vscode';
-import { closeAllEditors, CONTRIBUTED_COMMANDS, dotnet, LEGACY_ONLY_COMMANDS, mainPanelTabs, until, waitForMainPanel } from './v2Support';
+import { closeAllEditors, CONTRIBUTED_COMMANDS, dotnet, mainPanelTabs, until, waitForMainPanel } from './v2Support';
 
 /**
  * The 2.0 entries in the extension host (plan item P3.5). Run with `npm run test:e2e` after a
@@ -40,8 +40,6 @@ suite('2.0 sidebar', () => {
     test('the 2.0 entry is the one under test', async () => {
         const commands = new Set(await vscode.commands.getCommands(true));
         assert.deepStrictEqual(CONTRIBUTED_COMMANDS.filter(command => !commands.has(command)), [], 'contributed commands that are not registered');
-        // A dist/ built from the 1.x entries would pass everything above; this is what tells the two apart.
-        assert.deepStrictEqual(LEGACY_ONLY_COMMANDS.filter(command => commands.has(command)), [], 'commands of the 1.x entry: dist/ was not built with --v2');
     });
 
     test('the sidebar view resolves and its commands answer', async () => {

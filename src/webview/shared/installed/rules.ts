@@ -2,7 +2,7 @@ import type { InstalledPackage, InstalledResult, OperationKind } from '../../../
 
 /**
  * The rules an installed row follows on both surfaces: which version it shows, whether it can be uninstalled and
- * what it says while an operation runs on it. Lifted unchanged from `src/webview/sidebar-next/InstalledSection.tsx`
+ * what it says while an operation runs on it. Lifted unchanged from `src/webview/sidebar/InstalledSection.tsx`
  * (P5.4), which re-exports them; the main panel may not import from the sidebar.
  */
 
