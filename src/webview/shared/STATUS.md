@@ -76,6 +76,8 @@ rm -rf /tmp/nuiget-ui/screenshots dist && npm run test:ui -- --storage /tmp/nuig
   `installed/rules.ts` `versionCell` (additive) with `installed/rules.test.ts`.
 - P9.4 (ruling in `src/webview/main/STATUS.md`): `store/ops.tsx` `merge` keeps the union of an operation's projects
   and packages across its reports (MU3), test `a per-step report keeps every package of the operation busy`.
+- P9.4 fix-forward: the update arrow is a text node of `.nuiget-row-version`; `.nuiget-row-version-arrow` removed
+  (axe left the symbol-only span incomplete in the theme pass of CI run 38965520035).
 
 ## Done (untested)
 

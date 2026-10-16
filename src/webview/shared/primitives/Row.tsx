@@ -132,8 +132,8 @@ export function Row(props: RowProps): React.JSX.Element {
                         {version === undefined ? null : (
                             <span className="nuiget-row-version" id={ids.version} title={versionTitle}>
                                 {version}
-                                {/* The arrow stays text: the name reads "3.0.0 → 3.1.0". */}
-                                {nextVersion === undefined ? null : <>{' '}<span className="nuiget-row-version-arrow">→</span>{' '}<span className="nuiget-row-version-new">{nextVersion}</span></>}
+                                {/* The arrow stays text: the name reads "3.0.0 → 3.1.0". A text node of the version, never an element of its own: axe cannot measure a symbol-only element (theme.ui.test.ts). */}
+                                {nextVersion === undefined ? null : <>{' → '}<span className="nuiget-row-version-new">{nextVersion}</span></>}
                             </span>
                         )}
                         {hasAuthors ? (

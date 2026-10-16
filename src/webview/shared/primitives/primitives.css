@@ -175,10 +175,8 @@
 .nuiget-row-option[aria-current="true"] .nuiget-row-version,
 .nuiget-row-option[aria-current="true"] .nuiget-row-description,
 .nuiget-row-option[aria-current="true"] .nuiget-row-status,
-.nuiget-row-option[aria-selected="true"] .nuiget-row-version-arrow,
 .nuiget-row-option[aria-selected="true"] .nuiget-row-version-new,
 .nuiget-row-option[aria-selected="true"] .nuiget-row-authors,
-.nuiget-row-option[aria-current="true"] .nuiget-row-version-arrow,
 .nuiget-row-option[aria-current="true"] .nuiget-row-version-new,
 .nuiget-row-option[aria-current="true"] .nuiget-row-authors {
     color: inherit;
@@ -207,7 +205,6 @@
     gap: var(--nuiget-space-2);
 }
 
-.nuiget-row-version-arrow,
 .nuiget-row-version-new {
     color: var(--nuiget-color-version-new);
     font-weight: 600;
