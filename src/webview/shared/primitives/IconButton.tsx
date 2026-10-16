@@ -7,6 +7,8 @@ export interface IconButtonProps {
     /** The icon. It is decoration here: the button carries the name. */
     children: React.ReactNode;
     onClick?: React.MouseEventHandler<HTMLButtonElement>;
+    /** For a button beside a field that keeps the focus: `preventDefault` here leaves it in the field. */
+    onMouseDown?: React.MouseEventHandler<HTMLButtonElement>;
     /** For a toggle: whether it is on. */
     pressed?: boolean;
     disabled?: boolean;
@@ -17,7 +19,7 @@ export interface IconButtonProps {
 }
 
 /** A button that shows an icon and is named by `label`. Its target is at least 24 px in both directions. */
-export function IconButton({ label, children, onClick, pressed, disabled, tabIndex, className, 'data-testid': testId }: IconButtonProps): React.JSX.Element {
+export function IconButton({ label, children, onClick, onMouseDown, pressed, disabled, tabIndex, className, 'data-testid': testId }: IconButtonProps): React.JSX.Element {
     return (
         <button
             type="button"
@@ -29,6 +31,7 @@ export function IconButton({ label, children, onClick, pressed, disabled, tabInd
             tabIndex={tabIndex}
             data-testid={testId}
             onClick={onClick}
+            onMouseDown={onMouseDown}
         >
             <span className="nuiget-icon-button-icon" aria-hidden="true">{children}</span>
         </button>

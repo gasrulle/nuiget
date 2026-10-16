@@ -90,6 +90,11 @@ rm -rf /tmp/nuiget-ui/screenshots dist && npm run test:ui -- --storage /tmp/nuig
   versions level (ArrowRight, ArrowLeft, `‹ <id>` header, five versions, loading and error rows) and Ctrl/Cmd+Enter
   (`onQuickInstall`); the popup wrapper and its rules in `search.css`.
 
+- P9.7 (a) (2026-10-17, ruling in `src/webview/main/STATUS.md`): `SearchBox` has Clear (with text) and Filters
+  buttons inside the box, `tabIndex={-1}`, focus kept in the input; the native search cancel button is hidden
+  (`search.css`); `IconButton` passes `onMouseDown` through. Test: `Clear empties the box and keeps focus; Filters
+  opens the prefix list`. Closes SB6 for the sidebar too (shared component).
+
 ## Done (untested)
 
 - None in jsdom. The rendering is checked in the UI job's screenshots after the push.

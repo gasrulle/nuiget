@@ -1,5 +1,6 @@
 import { useEffect, useId, useState } from 'react';
 import type React from 'react';
+import { CloseIcon, FilterIcon, IconButton } from '../primitives';
 import './search.css';
 
 /** A package id the quick-search offers while the user types, with the source that knows it. */
@@ -328,6 +329,11 @@ export function SearchBox(props: SearchBoxProps): React.JSX.Element {
                     onFocusChange?.(false);
                 }}
             />
+            {/* Pointer helpers only: Escape clears and `@` lists the filters from the keyboard (§2). */}
+            <span className="nuiget-search-actions">
+                {value !== '' ? <IconButton label="Clear search" tabIndex={-1} onMouseDown={keepFocus} onClick={() => change('')}><CloseIcon /></IconButton> : null}
+                <IconButton label="Filters" tabIndex={-1} onMouseDown={keepFocus} onClick={() => change(prefixMode ? '' : '@')}><FilterIcon /></IconButton>
+            </span>
             {open ? (
                 <div className="nuiget-search-popup">
                     {versionLevel ? (

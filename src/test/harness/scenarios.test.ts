@@ -2,6 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { MainPanelHost } from '../../host/MainPanelHost';
+import { commands as mockCommands } from '../__mocks__/vscode';
 import { ALL_PROJECTS, makeEvent, makeOk, resourceKeys, type BulkOutcome, type InstalledResult, type OperationOutcome, type RequestType, type ResponseEnvelope } from '../../protocol';
 import { dotnetCalls } from './fakeDotnet';
 import { createFakeFeed } from './fakeFeed';
@@ -753,6 +754,35 @@ describe('two-surface harness', () => {
                 expect(asked(webview), webview.surface).toEqual([false, true, false]);
             }
         });
+        await h.settle();
+        [main, sidebar].forEach(expectOneResponsePerRequest);
+    });
+
+    it('restore toggle in header syncs with sidebar', async () => {
+        h = await createHarness({ tree: TWO_PROJECTS, selectedProject: 'A/A.csproj' });
+        const [A, B] = [h.path('A/A.csproj'), h.path('B/B.csproj')];
+        const main = await h.resolve('main');
+        const sidebar = await h.resolve('sidebar');
+        await h.expectState({ selectedProject: A, projects: [A, B], installed: ['Serilog@3.0.0'] });
+
+        // The header's checkbox: the host applies it, both surfaces show it, and the sidebar's shield follows.
+        const off = await h.toggle('main', 'restoreEnabled');
+        expect(off.restoreEnabled).toBe(false);
+        await h.settle(() => {
+            for (const webview of [main, sidebar]) {
+                expect(webview.session?.restoreEnabled, webview.surface).toBe(false);
+            }
+        });
+        expect(vi.mocked(mockCommands.executeCommand).mock.calls).toContainEqual(['setContext', 'nuiget.restoreEnabled', false]);
+
+        // It governs an operation started from the sidebar: no restore runs after the edit.
+        const outcome = resultOf(await h.operate('sidebar', 'ops/remove', { projectPath: A, packageId: 'Serilog' }).response);
+        expect(outcome.status).toBe('completed');
+        expect(h.dotnet.count(dotnetCalls.restore())).toBe(0);
+
+        // The sidebar turns it back on; the header shows it.
+        await h.toggle('sidebar', 'restoreEnabled');
+        await h.settle(() => expect(main.session?.restoreEnabled).toBe(true));
         await h.settle();
         [main, sidebar].forEach(expectOneResponsePerRequest);
     });

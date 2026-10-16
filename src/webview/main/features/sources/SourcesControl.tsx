@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type React from 'react';
 import { useMessageBus } from '../../../shared/bus/useMessageBus';
-import { IconButton, SettingsGearIcon } from '../../../shared/primitives';
+import { IconButton, SettingsGearIcon, WarningIcon } from '../../../shared/primitives';
 import { useSession, useSessionActions } from '../../../shared/store/session';
 import { useSources } from '../../../shared/store/sources';
 import { SourceSettingsDialog } from './SourceSettingsDialog';
@@ -13,13 +13,15 @@ export interface SourcesControlProps {
 /**
  * The source of the shared context in the main panel's header (interaction model §1): a selector over All sources
  * and every enabled source, disabled until the list is known, and the button that opens the NuGet sources dialog,
- * which the host can also open (`ui/openSourceSettings`, from the sidebar or a command).
+ * which the host can also open (`ui/openSourceSettings`, from the sidebar or a command). A source the host could not
+ * reach is marked "(unreachable)" with its error as the tooltip, and a warning button retries through `sources/refresh`,
+ * which resets the health tracker; the list follows through `sources/health`.
  */
 export function SourcesControl({ announce }: SourcesControlProps): React.JSX.Element {
     const bus = useMessageBus();
     const { session } = useSession();
     const { set } = useSessionActions();
-    const { sources, status, enable } = useSources();
+    const { sources, failed, status, enable } = useSources();
     const [open, setOpen] = useState(false);
 
     // The selector needs the list whatever else is mounted.
@@ -29,6 +31,7 @@ export function SourcesControl({ announce }: SourcesControlProps): React.JSX.Ele
     const selected = session?.selectedSource ?? 'all';
     const enabled = (sources ?? []).filter(source => source.enabled);
     const known = enabled.some(source => source.url === selected);
+    const failedByUrl = new Map(failed.map(source => [source.url, source.error]));
     return (
         <>
             <select
@@ -41,9 +44,25 @@ export function SourcesControl({ announce }: SourcesControlProps): React.JSX.Ele
             >
                 <option value="all">All sources</option>
                 {selected !== 'all' && !known ? <option value={selected}>{selected}</option> : null}
-                {enabled.map(source => <option key={source.url} value={source.url} title={source.url}>{source.name}</option>)}
+                {enabled.map(source => (
+                    <option key={source.url} value={source.url} title={failedByUrl.get(source.url) ?? source.url}>
+                        {failedByUrl.has(source.url) ? `${source.name} (unreachable)` : source.name}
+                    </option>
+                ))}
             </select>
             <IconButton label="NuGet sources" data-testid="source-settings" onClick={() => setOpen(true)}><SettingsGearIcon /></IconButton>
+            {failed.length > 0 ? (
+                <IconButton
+                    label={`${failed.length} source${failed.length === 1 ? '' : 's'} unreachable. Retry`}
+                    data-testid="source-health-indicator"
+                    className="nuiget-source-health"
+                    onClick={() => {
+                        bus.request('sources/refresh', {}).catch(() => undefined);
+                    }}
+                >
+                    <WarningIcon />
+                </IconButton>
+            ) : null}
             <SourceSettingsDialog open={open} onClose={() => setOpen(false)} announce={announce} />
         </>
     );

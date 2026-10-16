@@ -7,6 +7,25 @@
     position: relative;
 }
 
+/* Clear and Filters sit inside the box at its end; the text stops before them. */
+.nuiget-search-box > input {
+    padding-inline-end: calc(2 * var(--nuiget-target-min));
+}
+
+.nuiget-search-box > input[type="search"]::-webkit-search-cancel-button {
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+.nuiget-search-actions {
+    position: absolute;
+    inset-inline-end: var(--nuiget-space-1);
+    top: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+}
+
 .nuiget-search-popup {
     position: absolute;
     z-index: var(--nuiget-z-popover);

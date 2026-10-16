@@ -45,8 +45,9 @@ A Visual Studio-style NuGet package manager for VS Code with a modern split-pane
   dotnet CLI reports for the selected project's directory, and package source mapping decides which sources are asked
   about a package.
 - **Source health.** A source that cannot be reached is a warning banner with Retry, never an empty "no updates" or
-  "no results". nUIget re-checks unreachable sources in the background, and the Updates lists check again when a
-  source recovers.
+  "no results". The header's source selector marks it "(unreachable)", and the warning button beside the gear
+  checks the sources again. nUIget re-checks unreachable sources in the background, and the Updates lists check again
+  when a source recovers.
 - **Proxy through VS Code.** Feed requests use VS Code's own proxy support, so `http.proxy`, `http.proxySupport` and
   the proxy environment variables apply. nUIget has no proxy setting of its own. The dotnet commands it runs are
   not affected by VS Code's settings and use the dotnet CLI's own proxy configuration.
@@ -54,8 +55,8 @@ A Visual Studio-style NuGet package manager for VS Code with a modern split-pane
   choices. An operation started in either view shows its progress in both.
 - **Operation queue.** One operation runs at a time and up to five wait behind it; the status bar shows how many are
   running and queued.
-- **Restore after operations.** On by default, per workspace. Turn it off with the shield button in the sidebar's
-  title bar (filled when on); it applies to operations from both views. In a Central Package Management project an
+- **Restore after operations.** On by default, per workspace. Turn it off with the checkbox in the main panel header
+  or the shield button in the sidebar's title bar (filled when on); it applies to operations from both views. In a Central Package Management project an
   install or update always restores.
 - **Automatic refresh.** Changes to project files, `Directory.Build.props`, `Directory.Packages.props`,
   `nuget.config`, `global.json`, `packages.lock.json` and the restore output refresh the lists.

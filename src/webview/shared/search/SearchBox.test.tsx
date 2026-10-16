@@ -118,6 +118,29 @@ describe('SearchBox', () => {
         expect(screen.queryByRole('listbox')).toBeNull();
     });
 
+    it('Clear empties the box and keeps focus; Filters opens the prefix list', async () => {
+        const user = userEvent.setup();
+        const { container } = render(<Harness />);
+        expect(screen.queryByRole('button', { name: 'Clear search' })).toBeNull();
+        await user.type(box(), 'serilog');
+        await user.click(screen.getByRole('button', { name: 'Clear search' }));
+        expect(box()).toHaveValue('');
+        expect(box()).toHaveFocus();
+        expect(screen.queryByRole('button', { name: 'Clear search' })).toBeNull();
+
+        await user.click(screen.getByRole('button', { name: 'Filters' }));
+        expect(box()).toHaveValue('@');
+        expect(box()).toHaveFocus();
+        expect(optionTexts()).toEqual([...PREFIXES]);
+        expect(await axe(container)).toHaveNoViolations();
+        await user.click(screen.getByRole('button', { name: 'Filters' }));
+        expect(box()).toHaveValue('');
+        expect(screen.queryByRole('listbox')).toBeNull();
+        // Neither button is a stop of the Tab order: the box leads to what follows it.
+        await user.tab();
+        expect(screen.getByRole('button', { name: 'elsewhere' })).toHaveFocus();
+    });
+
     it('has no axe violations with the list open', async () => {
         const user = userEvent.setup();
         const { container } = render(<Harness />);

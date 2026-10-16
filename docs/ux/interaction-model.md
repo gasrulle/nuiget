@@ -15,6 +15,10 @@ Both surfaces show the **same active context** — project, source, prerelease, 
 owned by the host (`SessionStore`). Changing it in one surface changes it in the other within one
 broadcast. The active project name and source name are always visible: main panel header
 selectors; sidebar view title (project) and title-bar icons (source/prerelease/restore state).
+The main panel header shows the title "Manage NuGet packages", the Restore after operations and
+Include prerelease checkboxes, the project and source selectors (a source the host could not reach
+is marked "(unreachable)", and a warning button beside the gear retries it) and a refresh button
+that is disabled while it runs.
 
 ## 2. Modes (driven by the search box)
 
@@ -29,7 +33,8 @@ selectors; sidebar view title (project) and title-bar icons (source/prerelease/r
 | `vulnerable` | `@vulnerable` | Installed tab, vulnerable packages only | *(not offered)* |
 
 Typing `@` opens a prefix dropdown (ArrowUp/Down, Enter/Tab select, Escape dismiss). Escape in a
-non-empty box clears it (returns to `default`); Escape in an empty box blurs.
+non-empty box clears it (returns to `default`); Escape in an empty box blurs. The box has a Clear
+button and a Filters button that puts `@` in it (pointer helpers, not stops of the Tab order).
 
 ## 3. "All Projects"
 
@@ -162,7 +167,7 @@ project has several and one block per project in All Projects; no version select
 | `version-selector`, `install-update-button`, `uninstall-button` | Details actions |
 | `select-all-button`, `update-all-button`, `uninstall-selected-button` | Bulk toolbar |
 | `transitive-section`, `transitive-restore-banner` | Transitive |
-| `source-settings`, `source-settings-modal`, `add-source-panel`, `source-row-<name>` | Sources (`<name>` = source name lower-cased) |
+| `source-settings`, `source-settings-modal`, `add-source-panel`, `source-row-<name>`, `source-health-indicator` | Sources (`<name>` = source name lower-cased; the indicator shows while a source is unreachable) |
 | `confirm-dialog`, `confirm-dialog-confirm`, `confirm-dialog-cancel` | Dialog primitive |
 | `status-live` | `role="status"` live region |
 | `sash` | Split sash |

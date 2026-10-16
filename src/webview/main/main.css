@@ -52,13 +52,29 @@ body {
 }
 
 /* The refresh button stands at the end of the header. */
-.nuiget-main-refresh {
-    margin-inline-start: auto;
+/* The heading takes the free space, so the controls sit at the end of the header (1.x). */
+.nuiget-main-title {
+    margin: 0;
+    margin-inline-end: auto;
+    font-size: var(--nuiget-font-size-md);
+    font-weight: 600;
 }
 
+.nuiget-source-health {
+    color: var(--nuiget-color-warning);
+}
+
+/* The revalidation bar lies over the bottom edge, so the list does not move when it comes and goes. */
 .nuiget-main-search {
+    position: relative;
     flex: none;
     padding: var(--nuiget-space-2) var(--nuiget-space-6);
+}
+
+.nuiget-main-search .nuiget-progress {
+    position: absolute;
+    inset-inline: var(--nuiget-space-6);
+    bottom: 0;
 }
 
 .nuiget-main-search-input {

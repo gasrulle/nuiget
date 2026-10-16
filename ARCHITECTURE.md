@@ -559,11 +559,13 @@ builds it into `dist/webview.js` and, because the entry imports `../shared/token
 
 | Part | Behaviour |
 |---|---|
+| Title | `h1` "Manage NuGet packages"; it takes the free space, so the controls sit at the end of the header |
+| Restore after operations | A checkbox bound to the session (`session/set { restoreEnabled }`); the sidebar's shield shows the same value |
 | Project selector (`project-selector`) | The projects slice; "All Projects (N)" with two or more; disabled until the session has arrived. A choice is a `session/set` intent, shown at once |
-| Source selector (`source-selector`) | The session's source, disabled: the list of sources to choose from is the sources feature's |
+| Source selector (`source-selector`) | The session's source; `SourcesControl` lists the enabled sources and marks one in `useSources().failed` "(unreachable)" with its error as the tooltip; while any is failed, `source-health-indicator` beside the gear sends `sources/refresh`, which resets the health tracker, and the slice follows through `sources/health` |
 | Include prerelease | A checkbox bound to the session (`session/set { includePrerelease }`) |
-| Refresh | `refresh/all` once; "Refreshed" or "Refresh failed" in the live region |
-| Search box | `parseSearchQuery` (`src/webview/shared/search`): `@installed` and `@vulnerable` select Installed, `@updates` selects Updates, and the text after the prefix is the list's filter; a plain text is a browse search, which changes nothing here until the search feature runs it. Escape clears a box with text and leaves an empty one. Choosing the other tab ends a filter mode |
+| Refresh | `refresh/all` once, disabled with a loading icon until it is answered; "Refreshed" or "Refresh failed" in the live region. A `ProgressBar` lies over the bottom of the search area while the refresh runs or the shown tab's list revalidates (Browse draws its own) |
+| Search box | `parseSearchQuery` (`src/webview/shared/search`): `@installed` and `@vulnerable` select Installed, `@updates` selects Updates, and the text after the prefix is the list's filter; a plain text is a browse search, which changes nothing here until the search feature runs it. Escape clears a box with text and leaves an empty one. Clear (with text) and Filters (`@`, or back to empty) are buttons inside the box with `tabIndex={-1}` that keep the focus in it, on both surfaces. Choosing the other tab ends a filter mode |
 | Tabs | `Tabs`; `ui/selectProject` with `initialTab` selects it (the host applied the project already); `ui/focusSearch` focuses the box |
 | Split | `Sash` (25–75 %, start 50 %) reports a share that the shell puts on the split as `--nuiget-split`; `main.css` sizes the list with it |
 

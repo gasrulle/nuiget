@@ -57,6 +57,13 @@ test -e .claude/.contract-change → false (created with "P7.2c" for the ADR-004
 
 - None.
 
+## P9.7 addition (2026-10-17)
+
+- `restore toggle in header syncs with sidebar` (P9.7 commit (a), ruling in `src/webview/main/STATUS.md`): the main
+  surface turns restore off, both surfaces show it, `setContext nuiget.restoreEnabled false` runs, a sidebar
+  `ops/remove` completes with no `dotnet restore`, and the sidebar turns it back on. The Vitest project is
+  `integration` (`npx vitest run --project integration` → 23 passed).
+
 ## Advisor decisions (date, item, question, answer verbatim)
 
 2026-10-16, P7.2c: the ⚑ ruling and its follow-up are verbatim in `docs/plans/STATUS.md` ("P7.2c — ⚑ ruling: …",

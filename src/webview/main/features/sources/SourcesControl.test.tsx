@@ -188,4 +188,26 @@ describe('main panel: sources', () => {
         expect(results).toHaveNoViolations();
         expect(axeRuleOutcome(results, 'aria-dialog-name')).toBe('passes');
     });
+
+    it('a failed source is marked in the selector and the indicator retries with sources/refresh', async () => {
+        const host = createFakeHost();
+        const { container } = render(<StoreProvider bus={host.bus}><MainShell /></StoreProvider>);
+        await hostSays(() => host.respond(host.requests('session/get')[0], snapshot(1)));
+        await hostSays(() => host.respond(host.requests('projects/list')[0], { projects: [{ name: 'App', path: A }] }, 1));
+        await hostSays(() => host.respond(host.requests('sources/list')[0], { sources: SOURCES, failed: [{ url: NUGET, error: 'ECONNREFUSED' }] }, 1));
+
+        expect([...selector().options].map(option => option.textContent)).toEqual(['All sources', 'nuget.org (unreachable)', 'Contoso']);
+        expect(selector().options[1]).toHaveAttribute('title', 'ECONNREFUSED');
+        const indicator = screen.getByTestId('source-health-indicator');
+        expect(indicator).toHaveAccessibleName('1 source unreachable. Retry');
+        expect(await axe(container)).toHaveNoViolations();
+
+        await userEvent.setup().click(indicator);
+        expect(host.requests('sources/refresh')).toHaveLength(1);
+        expect(host.requests('sources/list')).toHaveLength(1);
+        // The reset health tracker reports no failed source.
+        await hostSays(() => host.event('sources/health', { failed: [] }));
+        expect([...selector().options].map(option => option.textContent)).toEqual(['All sources', 'nuget.org', 'Contoso']);
+        expect(screen.queryByTestId('source-health-indicator')).toBeNull();
+    });
 });

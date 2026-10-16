@@ -2,7 +2,7 @@ import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import type React from 'react';
 import { ALL_PROJECTS } from '../../protocol';
 import { useMessageBus } from '../shared/bus/useMessageBus';
-import { Banner, cssVars, EmptyState, IconButton, LiveStatus, Sash, SyncIcon, Tabs, type TabItem } from '../shared/primitives';
+import { Banner, cssVars, EmptyState, IconButton, LiveStatus, LoadingIcon, ProgressBar, Sash, SyncIcon, Tabs, type TabItem } from '../shared/primitives';
 import { FILTER_PREFIXES, parseSearchQuery, type SearchMode } from '../shared/search/parseSearchQuery';
 import { SearchBox } from '../shared/search/SearchBox';
 import { useAllProjects } from '../shared/store/allProjects';
@@ -163,15 +163,35 @@ export function MainShell({ installed, updates, browse, details }: MainShellProp
         }
     };
 
+    const [refreshing, setRefreshing] = useState(false);
     const refresh = (): void => {
-        bus.request('refresh/all', {}).then(() => announce('Refreshed'), () => announce('Refresh failed'));
+        setRefreshing(true);
+        bus.request('refresh/all', {}).then(() => {
+            announce('Refreshed');
+            setRefreshing(false);
+        }, () => {
+            announce('Refresh failed');
+            setRefreshing(false);
+        });
     };
+    // The bar under the search box while the shown list asks again; Browse draws its own.
+    const revalidating = tab === 'installed' ? installedSlice.revalidating || allProjects.revalidating : updatesSlice.revalidating || allProjects.updates.revalidating;
+    const showBar = refreshing || (!browsing && revalidating);
 
     const supported = projects ?? [];
     const hasSession = session !== undefined;
     return (
         <main className="nuiget-main" data-testid="nuiget-app">
             <header className="nuiget-main-header">
+                <h1 className="nuiget-main-title">Manage NuGet packages</h1>
+                <label className="nuiget-main-toggle">
+                    <input type="checkbox" checked={session?.restoreEnabled ?? true} disabled={!hasSession} onChange={event => set({ restoreEnabled: event.target.checked })} />
+                    Restore after operations
+                </label>
+                <label className="nuiget-main-toggle">
+                    <input type="checkbox" checked={session?.includePrerelease ?? false} disabled={!hasSession} onChange={event => set({ includePrerelease: event.target.checked })} />
+                    Include prerelease
+                </label>
                 <select
                     className="nuiget-main-select"
                     data-testid="project-selector"
@@ -185,11 +205,7 @@ export function MainShell({ installed, updates, browse, details }: MainShellProp
                     {supported.map(project => <option key={project.path} value={project.path} title={project.path}>{project.name}</option>)}
                 </select>
                 <SourcesControl announce={announce} />
-                <label className="nuiget-main-toggle">
-                    <input type="checkbox" checked={session?.includePrerelease ?? false} disabled={!hasSession} onChange={event => set({ includePrerelease: event.target.checked })} />
-                    Include prerelease
-                </label>
-                <IconButton label="Refresh" onClick={refresh} className="nuiget-main-refresh"><SyncIcon /></IconButton>
+                <IconButton label="Refresh" disabled={refreshing} onClick={refresh} className="nuiget-main-refresh">{refreshing ? <LoadingIcon /> : <SyncIcon />}</IconButton>
             </header>
             <div className="nuiget-main-search" role="search">
                 <SearchBox
@@ -212,6 +228,7 @@ export function MainShell({ installed, updates, browse, details }: MainShellProp
                     onQuickInstall={typing.quickInstall}
                     onFocusChange={setFocused}
                 />
+                {showBar ? <ProgressBar label="Refreshing" /> : null}
             </div>
             {projectsError ? <Banner severity="error">{`Projects could not be listed: ${projectsError.message}`}</Banner> : null}
             <div className="nuiget-main-split" style={cssVars({ '--nuiget-split': `${split}%` })}>

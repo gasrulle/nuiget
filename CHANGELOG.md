@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Updates rows show icon, authors and Verified mark with the new version marked, sorted by id; no 0 on the tab; every row of an Update all stays busy until it ends**
 - **Transitive packages: per-framework headers with counts, rows with icon, authors and Verified mark, and a details view with Required by (All Projects too)**
 - **Browse rows show icon, downloads, authors and Verified mark with the description; quick-search suggestions grouped per source with a loading row; the details pane follows the active tab and each tab keeps its own selection**
+- **The main panel header shows the title, the Restore after operations checkbox, an unreachable-source marker with Retry, a busy refresh button and a revalidation bar; the search box has Clear and Filters buttons**
 
 ## [2.0.0] - 2026-10-16
 

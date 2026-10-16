@@ -80,6 +80,8 @@ describe('main panel shell', () => {
         await mountReady();
         expect(screen.getByRole('main')).toHaveAttribute('data-testid', 'nuiget-app');
         expect(screen.getByRole('search')).toContainElement(search());
+        expect(screen.getByRole('checkbox', { name: 'Restore after operations' })).toBeChecked();
+        expect(screen.getByRole('checkbox', { name: 'Include prerelease' })).not.toBeChecked();
         expect(screen.getByRole('tablist', { name: 'Package lists' })).toHaveAttribute('data-testid', 'tab-bar');
         expect(screen.getByTestId('installed-tab')).toHaveAttribute('aria-selected', 'true');
         expect(screen.getByRole('tabpanel', { name: 'Installed' })).toHaveTextContent('Installed list');
@@ -87,6 +89,25 @@ describe('main panel shell', () => {
         expect(screen.getByRole('region', { name: 'Package details' })).toHaveAttribute('data-testid', 'package-details-panel');
         expect(screen.getByTestId('package-details-panel')).toHaveTextContent('Select a package to see its details.');
         expect(screen.getAllByTestId('status-live')).toHaveLength(1);
+    });
+
+    it('renders the title as the heading of the panel', async () => {
+        await mountReady();
+        expect(screen.getByRole('heading', { level: 1, name: 'Manage NuGet packages' })).toBeInTheDocument();
+    });
+
+    it('unchecking Restore after operations asks the host once and shows the choice at once', async () => {
+        const user = userEvent.setup();
+        const { host } = await mountReady();
+        const restore = screen.getByRole('checkbox', { name: 'Restore after operations' });
+        await user.click(restore);
+        expect(host.requests('session/set').map(request => request.payload)).toEqual([{ restoreEnabled: false }]);
+        expect(restore).not.toBeChecked();
+        await hostSays(() => host.respond(host.requests('session/set')[0], snapshot(2, { restoreEnabled: false })));
+        expect(restore).not.toBeChecked();
+        // The sidebar's shield turned it back on.
+        await hostSays(() => host.event('session/changed', snapshot(3, { restoreEnabled: true, origin: 'sidebar' })));
+        expect(restore).toBeChecked();
     });
 
     it('the selectors wait for the session; the project selector lists the projects and All Projects', async () => {
@@ -129,6 +150,20 @@ describe('main panel shell', () => {
         await hostSays(() => host.event('projects/changed', { projects: [] }));
         expect(screen.getByTestId('project-selector')).toHaveDisplayValue('No projects');
         expect(screen.getByTestId('project-selector')).toBeDisabled();
+    });
+
+    it('refresh is disabled and a progress bar shows while refresh/all is unanswered', async () => {
+        const user = userEvent.setup();
+        const { host } = await mountReady();
+        expect(screen.queryByRole('progressbar')).toBeNull();
+        await user.click(screen.getByRole('button', { name: 'Refresh' }));
+        expect(screen.getByRole('button', { name: 'Refresh' })).toBeDisabled();
+        expect(screen.getByRole('progressbar', { name: 'Refreshing' })).toBeInTheDocument();
+        await hostSays(() => host.respond(host.requests('refresh/all')[0], {}));
+        expect(screen.getByRole('button', { name: 'Refresh' })).toBeEnabled();
+        expect(screen.queryByRole('progressbar')).toBeNull();
+        await waitFor(() => expect(screen.getByTestId('status-live')).toHaveTextContent('Refreshed'));
+        expect(host.requests('refresh/all')).toHaveLength(1);
     });
 
     it('refresh asks the host once and says how it ended', async () => {
