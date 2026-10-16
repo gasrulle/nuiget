@@ -216,6 +216,15 @@ describe('Row layout (P9.2, D15)', () => {
         expect(axeRuleOutcome(results, 'nested-interactive')).toBe('passes');
     });
 
+    it('a comfortable row keeps its padding inside the 66 px minimum', () => {
+        renderRow({ density: 'comfortable', description: 'Structured logging' });
+        const option = screen.getByRole('option');
+        // The option inherits the row's minimum height; with the padding outside it a two-line row grew to 90 px.
+        expect(getComputedStyle(option).minHeight).toBe('var(--nuiget-row-height-comfortable)');
+        expect(getComputedStyle(option).boxSizing).toBe('border-box');
+        expect(getComputedStyle(screen.getByTestId('package-row-serilog')).boxSizing).toBe('border-box');
+    });
+
     it('long version never hides the name in compact density', () => {
         const version = '10.0.0-preview.7.25380.108.with.a.very.long.build.metadata.tail';
         renderRow({ density: 'compact', version, authors: 'Ada', description: 'A library' });

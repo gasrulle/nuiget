@@ -228,7 +228,9 @@
     border-bottom: 1px solid var(--nuiget-color-border);
 }
 
+/* `border-box`: the option inherits the row's minimum height, and the padding is inside it, as in 1.x. */
 .nuiget-row--comfortable .nuiget-row-option {
+    box-sizing: border-box;
     align-items: flex-start;
     gap: var(--nuiget-space-5);
     padding: var(--nuiget-space-5) var(--nuiget-space-6);

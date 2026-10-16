@@ -36,6 +36,16 @@ CI run 38958055306 (83afc1b) → 9 jobs green, UI red: the six theme tests, "col
 rm -rf /tmp/nuiget-ui/screenshots dist && npm run test:ui -- --storage /tmp/nuiget-ui → exit 0 · 37 passing (1m) ·
                               "[theme] sidebar under <each of six themes>: passes {"color-contrast":13,"target-size":7};
                               incomplete 0"
+CI run 38958869599 (57b8273) → 10 jobs green. Visual gate red (RUN.md §4): `main-updates.png` and
+                              `main-installed-single.png` show comfortable rows about 90 px high, a two-line update
+                              row included. Cause: the option inherits the 66 px minimum (`min-height: inherit`) and the
+                              12 px padding was added outside it (`content-box`). Fix (attempt 2): `box-sizing:
+                              border-box` on the comfortable option, as 1.x had; test `a comfortable row keeps its
+                              padding inside the 66 px minimum` (fails without the fix: negative control run)
+npx vitest run --project frontend src/webview/shared/primitives/Row.test.tsx → Tests 18 passed (18)
+rm -rf /tmp/nuiget-ui/screenshots dist && npm run test:ui -- --storage /tmp/nuiget-ui → exit 0 · 37 passing (1m);
+                              local `main-installed-single.png`: the three-line Installed rows (description still on
+                              line 3 until P9.3) about 78 px
 ```
 
 ## Done (tested)
