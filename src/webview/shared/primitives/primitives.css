@@ -140,13 +140,6 @@
     color: var(--nuiget-color-fg-muted);
 }
 
-.nuiget-row-title {
-    display: flex;
-    gap: var(--nuiget-space-3);
-    min-width: 0;
-    align-items: baseline;
-}
-
 .nuiget-row-name {
     overflow: hidden;
     text-overflow: ellipsis;
@@ -161,6 +154,11 @@
     white-space: nowrap;
 }
 
+.nuiget-row-description {
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
 /*
  * On a selected or current row the secondary text takes the row's foreground, as VS Code's lists do: the muted
  * colour is made for the list's background and falls below 4.5:1 on the selection colour (theme.ui.test.ts).
@@ -170,19 +168,144 @@
 .nuiget-row-option[aria-selected="true"] .nuiget-row-status,
 .nuiget-row-option[aria-current="true"] .nuiget-row-version,
 .nuiget-row-option[aria-current="true"] .nuiget-row-description,
-.nuiget-row-option[aria-current="true"] .nuiget-row-status {
+.nuiget-row-option[aria-current="true"] .nuiget-row-status,
+.nuiget-row-option[aria-selected="true"] .nuiget-row-version-arrow,
+.nuiget-row-option[aria-selected="true"] .nuiget-row-version-new,
+.nuiget-row-option[aria-selected="true"] .nuiget-row-authors,
+.nuiget-row-option[aria-current="true"] .nuiget-row-version-arrow,
+.nuiget-row-option[aria-current="true"] .nuiget-row-version-new,
+.nuiget-row-option[aria-current="true"] .nuiget-row-authors {
     color: inherit;
 }
 
-.nuiget-row-desc {
+/* The text column: one flex line per row of the card, or one line for a compact row (below). */
+.nuiget-row-body {
     display: flex;
-    gap: var(--nuiget-space-2);
-    align-items: center;
+    flex-direction: column;
+    flex: 1;
     min-width: 0;
+    gap: var(--nuiget-space-1);
+}
+
+.nuiget-row-line {
+    display: flex;
+    align-items: baseline;
+    gap: var(--nuiget-space-3);
+    min-width: 0;
+    overflow: hidden;
+}
+
+.nuiget-row-badges {
+    display: inline-flex;
+    flex: none;
+    gap: var(--nuiget-space-2);
+}
+
+.nuiget-row-version-arrow,
+.nuiget-row-version-new {
+    color: var(--nuiget-color-version-new);
+    font-weight: 600;
+}
+
+/* No opacity: at 0.7 the muted colour falls below 4.5:1 on Light Modern (theme.ui.test.ts). */
+.nuiget-row-authors {
+    min-width: 0;
+    overflow: hidden;
+    color: var(--nuiget-color-fg-muted);
+    font-size: var(--nuiget-font-size-sm);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.nuiget-row-authors svg {
+    color: var(--nuiget-color-link);
+    vertical-align: text-bottom;
+}
+
+/* Comfortable: the 1.x card (D15), 12 px around a 32 px icon column and a line between rows. */
+.nuiget-row--comfortable {
+    box-sizing: border-box;
+    border-bottom: 1px solid var(--nuiget-color-border);
+}
+
+.nuiget-row--comfortable .nuiget-row-option {
+    align-items: flex-start;
+    gap: var(--nuiget-space-5);
+    padding: var(--nuiget-space-5) var(--nuiget-space-6);
+}
+
+.nuiget-row-icon {
+    display: inline-flex;
+    flex: none;
+    inline-size: var(--nuiget-icon-size-xl);
+    block-size: var(--nuiget-icon-size-xl);
+    margin-block-start: var(--nuiget-space-1);
+}
+
+.nuiget-row-icon img,
+.nuiget-row-icon svg {
+    inline-size: 100%;
+    block-size: 100%;
+    border-radius: var(--nuiget-radius-md);
+    object-fit: contain;
+}
+
+.nuiget-row--comfortable .nuiget-row-name {
+    flex: 0 1 auto;
+    min-width: 40%;
+    font-weight: 600;
+}
+
+/* The selected row's 3 px accent, as 1.x drew it; a shadow, so nothing moves. */
+.nuiget-row--comfortable .nuiget-row-option[aria-selected="true"] {
+    box-shadow: inset 3px 0 0 var(--nuiget-color-focus);
+}
+
+.nuiget-listbox[aria-multiselectable="true"] .nuiget-row--comfortable .nuiget-row-option[aria-selected="true"] {
+    box-shadow: none;
+}
+
+.nuiget-listbox[aria-multiselectable="true"] .nuiget-row--comfortable .nuiget-row-option[aria-current="true"] {
+    box-shadow: inset 3px 0 0 var(--nuiget-color-focus);
+}
+
+/*
+ * Compact: one line, name first. The version gives way before the name does, so a long prerelease version never
+ * hides the package; a long name stops at 70 % of the line. Height, padding and border stay those of a compact row.
+ */
+.nuiget-row--compact .nuiget-row-body {
+    flex-direction: row;
+    align-items: baseline;
+    gap: var(--nuiget-space-3);
+}
+
+.nuiget-row--compact .nuiget-row-line {
+    display: contents;
+}
+
+.nuiget-row--compact .nuiget-row-name {
+    flex-grow: 0;
+    flex-shrink: 0;
+    flex-basis: auto;
+    max-width: 70%;
+}
+
+.nuiget-row--compact .nuiget-row-version {
+    flex-grow: 0;
+    flex-shrink: 1;
+    flex-basis: auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.nuiget-row--compact .nuiget-row-badges {
+    order: 1;
     margin-inline-start: auto;
 }
 
-/* A compact row has room for the name, the version and the badges; the rest is still read out. */
+/* A compact row has room for the name, the version and the badges; the rest is still read out (D14). */
+.nuiget-row--compact .nuiget-row-authors,
 .nuiget-row--compact .nuiget-row-description,
 .nuiget-row--compact .nuiget-row-status {
     position: absolute;
@@ -190,11 +313,6 @@
     height: 1px;
     overflow: hidden;
     clip-path: inset(50%);
-}
-
-.nuiget-row-icon {
-    display: inline-flex;
-    flex: none;
 }
 
 /* Pointer actions: there when the pointer or the focus is on the row, and while the row is busy. */

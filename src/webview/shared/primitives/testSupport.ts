@@ -7,6 +7,9 @@
  * as "incomplete", and `toHaveNoViolations` accepts that.
  */
 
+import { readFileSync } from 'fs';
+import { resolve } from 'path';
+
 /** The layout a browser would compute: lists `viewport` pixels high, rows `row` pixels high, one under the other. */
 export interface FakeLayout {
     /** Height of every `role="listbox"` element. */
@@ -121,4 +124,18 @@ export function installFakeViewport({ width, height, rects = {} }: FakeViewport)
         }
         restore.length = 0;
     };
+}
+
+/**
+ * Puts `tokens.css` and `primitives.css` into the document until the returned function is called. Vitest injects no
+ * CSS for an `import './primitives.css'`, so without this `getComputedStyle` sees no rule of the primitives. jsdom
+ * cascades the rules but resolves no `var()` and lays nothing out: a test may read declared values only.
+ */
+export function installStylesheet(): () => void {
+    const style = document.createElement('style');
+    style.textContent = ['src/webview/shared/tokens.css', 'src/webview/shared/primitives/primitives.css']
+        .map(file => readFileSync(resolve(file), 'utf-8'))
+        .join('\n');
+    document.head.appendChild(style);
+    return () => style.remove();
 }

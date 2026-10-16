@@ -23,12 +23,14 @@
 
     /* Rows: compact in the sidebar, comfortable in the main panel. A compact row is as high as the smallest pointer target. */
     --nuiget-row-height-compact: 24px;
-    --nuiget-row-height-comfortable: 44px;
+    /* D15: the 1.x `.package-item` card (12 px padding above and below a 32 px icon); a minimum, the list measures rows. */
+    --nuiget-row-height-comfortable: 66px;
 
     /* Icons and the smallest pointer target */
     --nuiget-icon-size-sm: 12px;
     --nuiget-icon-size-md: 16px;
     --nuiget-icon-size-lg: 24px;
+    --nuiget-icon-size-xl: 32px;
     --nuiget-target-min: 24px;
 
     /* Scrollbars: as thick as VS Code's webview defaults draw them */
@@ -92,6 +94,10 @@
     --nuiget-color-list-active-bg: var(--vscode-list-activeSelectionBackground);
     --nuiget-color-list-active-fg: var(--vscode-list-activeSelectionForeground);
     --nuiget-color-list-inactive-bg: var(--vscode-list-inactiveSelectionBackground);
+    /* The new version of an update row. The git "added" colour first: `charts.green` measures 4.33:1 on Light Modern's
+       white (below 4.5:1), the git colour 4.88 (light), 4.60 (dark), 7.19 (high contrast) and 9.31 (light high
+       contrast); `charts.green` only where the git extension is absent. */
+    --nuiget-color-version-new: var(--vscode-gitDecoration-addedResourceForeground, var(--vscode-charts-green));
 
     /* Colours: badges, buttons, inputs */
     --nuiget-color-badge-bg: var(--vscode-badge-background);
@@ -128,6 +134,7 @@ body.vscode-high-contrast-light {
         --nuiget-color-fg: CanvasText;
         --nuiget-color-fg-muted: GrayText;
         --nuiget-color-link: LinkText;
+        --nuiget-color-version-new: CanvasText;
         --nuiget-color-error: CanvasText;
         --nuiget-color-warning: CanvasText;
         --nuiget-color-info: CanvasText;

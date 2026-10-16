@@ -276,11 +276,24 @@ reader cannot reach it. So a row is three elements:
 ```text
 div.nuiget-row[role="presentation"][data-index][data-testid="package-row-<id>"]     ← measured, placed
 ├─ div.nuiget-row-option[role="option"][tabIndex 0 | -1][aria-selected][aria-posinset][aria-setsize]
-│     [aria-labelledby → id and version][aria-describedby → badges, description, status]
-│     [aria-busy][aria-disabled]                                                    ← text only
+│  │  [aria-labelledby → name, version][aria-describedby → badges, authors, description, status]
+│  │  [aria-busy][aria-disabled]                                                    ← text only
+│  ├─ span.nuiget-row-check[aria-hidden]      (multi-selectable lists)
+│  ├─ span.nuiget-row-icon[aria-hidden]       (comfortable rows, with or without an icon)
+│  └─ span.nuiget-row-body[title="<id> <version>"]                                  ← the tooltip
+│     ├─ span.nuiget-row-line   name, badges
+│     ├─ span.nuiget-row-line   version (`old → new` for an update), authors with the Verified mark, status
+│     └─ span.nuiget-row-description   (Browse)
 └─ div.nuiget-row-actions[aria-hidden="true"]                                       ← pointer only
       IconButton[tabIndex -1][data-testid="row-action-<name>"] … or a Spinner while the row is busy
 ```
+
+A comfortable row is the 1.x card (D15): a 32 px icon column and two lines, a third for a Browse description,
+at least `--nuiget-row-height-comfortable` (66 px) with a line under it and a 3 px accent on the selected row. A
+compact row shows the same spans on one line (`display: contents` on the lines), name first: the version shrinks
+with an ellipsis before the name does, and authors, description and status are read out, not shown. The arrow of
+an update stays the text `→`, so the name reads `3.0.0 → 3.1.0`. The tooltip sits on the body: on the option a
+`title` would become its description whenever no `aria-describedby` exists.
 
 The wrapper carries nothing but classes, data attributes and the measuring ref; an `aria-*` attribute on it
 would make it an owned child of the listbox that is no option (`aria-required-children`). The actions are

@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
 import { cssVars } from './cssVars';
-import { CheckIcon } from './icons';
+import { CheckIcon, VerifiedIcon } from './icons';
 import { Spinner } from './Spinner';
 import './primitives.css';
 
@@ -29,11 +29,18 @@ export interface RowProps extends RowPlacement {
     /** The package id. Lower-cased it is the row's test id, `package-row-<id>`. */
     itemId: string;
     name: string;
-    version?: React.ReactNode;
+    version?: string;
+    /** An update's target: the version cell reads `version → nextVersion`, the new version marked. */
+    nextVersion?: string;
     /** The tooltip of the version cell (for example why a version is unresolved). */
     versionTitle?: string;
+    /** Shown after the version in comfortable rows, read out in compact ones. */
+    authors?: string;
+    /** The package id prefix is reserved by its owner: a check mark before the authors. */
+    verified?: boolean;
+    /** The third line of a comfortable row, for Browse rows only (D14); read out, not shown, in compact rows. */
     description?: string;
-    /** Shown in comfortable rows only. Decoration: the name is the text. */
+    /** Shown in comfortable rows only, in a column that is there with or without it. Decoration: the name is the text. */
     icon?: React.ReactNode;
     /** `Badge`s. They are part of the row's description. */
     badges?: React.ReactNode;
@@ -53,13 +60,29 @@ export interface RowProps extends RowPlacement {
  * the measuring ref. The option is the one focusable element and contains only text. The action buttons sit
  * beside it, hidden from assistive technology and out of the tab order: a button inside an option is nested
  * interactive content, which a screen reader cannot reach.
+ *
+ * A comfortable row is the 1.x card (D15): an icon column, then name and badges over version, authors and status,
+ * and for Browse a description below. A compact row shows the same spans on one line, name first. The name is the
+ * name and the version; the badges, authors, description and status describe the option. The tooltip `id version`
+ * sits on the text column: on the option a `title` would become its description.
  */
 export function Row(props: RowProps): React.JSX.Element {
-    const { itemId, name, version, versionTitle, description, icon, badges, status, busy, disabled, actions, density, index, setSize, active, selected, current, checkable, optionId, offset, measureRef } = props;
+    const { itemId, name, version, nextVersion, versionTitle, authors, verified, description, icon, badges, status, busy, disabled, actions, density, index, setSize, active, selected, current, checkable, optionId, offset, measureRef } = props;
     const optionRef = useRef<HTMLDivElement>(null);
-    const titleId = `${optionId}-title`;
-    const descriptionId = `${optionId}-desc`;
-    const described = Boolean(badges) || Boolean(description) || Boolean(status);
+    const ids = {
+        name: `${optionId}-name`,
+        version: `${optionId}-version`,
+        badges: `${optionId}-badges`,
+        authors: `${optionId}-authors`,
+        description: `${optionId}-description`,
+        status: `${optionId}-status`,
+    };
+    const hasAuthors = Boolean(authors) || Boolean(verified);
+    const labelledBy = version === undefined ? ids.name : `${ids.name} ${ids.version}`;
+    const describedBy = [badges ? ids.badges : '', hasAuthors ? ids.authors : '', description ? ids.description : '', status ? ids.status : '']
+        .filter(Boolean)
+        .join(' ');
+    const tooltip = [name, version, nextVersion === undefined ? undefined : `→ ${nextVersion}`].filter(Boolean).join(' ');
     const className = `nuiget-row nuiget-row--${density}${busy ? ' nuiget-row--busy' : ''}`;
 
     // A click on a button would move focus to it, and so into a subtree that assistive technology cannot see.
@@ -89,23 +112,36 @@ export function Row(props: RowProps): React.JSX.Element {
                 aria-setsize={setSize}
                 aria-busy={busy ? true : undefined}
                 aria-disabled={disabled ? true : undefined}
-                aria-labelledby={titleId}
-                aria-describedby={described ? descriptionId : undefined}
+                aria-labelledby={labelledBy}
+                aria-describedby={describedBy === '' ? undefined : describedBy}
             >
                 {/* Decoration: the state is `aria-selected`; a click on it is handled by the list, nothing here takes focus. */}
                 {checkable ? <span className="nuiget-row-check" aria-hidden="true">{selected ? <CheckIcon size={12} /> : null}</span> : null}
-                {density === 'comfortable' && icon ? <span className="nuiget-row-icon" aria-hidden="true">{icon}</span> : null}
-                <span className="nuiget-row-title" id={titleId}>
-                    <span className="nuiget-row-name">{name}</span>
-                    {version === undefined ? null : <>{' '}<span className="nuiget-row-version" title={versionTitle}>{version}</span></>}
-                </span>
-                {described ? (
-                    <span className="nuiget-row-desc" id={descriptionId}>
-                        {badges}
-                        {description ? <>{' '}<span className="nuiget-row-description">{description}</span></> : null}
-                        {status ? <>{' '}<span className="nuiget-row-status">{status}</span></> : null}
+                {density === 'comfortable' ? <span className="nuiget-row-icon" aria-hidden="true">{icon}</span> : null}
+                <span className="nuiget-row-body" title={tooltip}>
+                    <span className="nuiget-row-line">
+                        <span className="nuiget-row-name" id={ids.name}>{name}</span>
+                        {badges ? <span className="nuiget-row-badges" id={ids.badges}>{badges}</span> : null}
                     </span>
-                ) : null}
+                    <span className="nuiget-row-line">
+                        {version === undefined ? null : (
+                            <span className="nuiget-row-version" id={ids.version} title={versionTitle}>
+                                {version}
+                                {/* The arrow stays text: the name reads "3.0.0 → 3.1.0". */}
+                                {nextVersion === undefined ? null : <>{' '}<span className="nuiget-row-version-arrow">→</span>{' '}<span className="nuiget-row-version-new">{nextVersion}</span></>}
+                            </span>
+                        )}
+                        {hasAuthors ? (
+                            <span className="nuiget-row-authors" id={ids.authors}>
+                                {/* A space, not a margin: the icon's title and the authors are two words when read out. */}
+                                {verified ? <><VerifiedIcon title="Verified: the package id prefix is reserved by its owner" />{' '}</> : null}
+                                {authors}
+                            </span>
+                        ) : null}
+                        {status ? <span className="nuiget-row-status" id={ids.status}>{status}</span> : null}
+                    </span>
+                    {description ? <span className="nuiget-row-description" id={ids.description}>{description}</span> : null}
+                </span>
             </div>
             {disabled ? null : (
                 <div className="nuiget-row-actions" aria-hidden="true" onMouseDown={keepFocusOnOption}>
