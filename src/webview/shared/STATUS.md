@@ -81,6 +81,18 @@ rm -rf /tmp/nuiget-ui/screenshots dist && npm run test:ui -- --storage /tmp/nuig
 - Consumers pass `authors`, `verified`, `nextVersion` and the icon in P9.3 (Installed), P9.4 (Updates), P9.5
   (transitive), P9.6 (Browse), P9.10 (sidebar).
 
+## Visual check of P9.2 (CI run 38959927494 on a9b30ef, 10 jobs green, 12 PNGs)
+
+- viewed: main-updates.png: two-line cards, 67 px apart (name bold + Verified; `13.0.2 → 13.0.4` muted, no
+  `nextVersion` yet), empty 32 px icon column, a line under each row. Details pane still NUnit (stale, P9.6).
+- viewed: main-installed-single.png: three-line cards (name, version, description until P9.3 drops it), 78 px;
+  the current row has the selection colour and the 3 px accent on the left.
+- viewed: main-browse-results.png (run 38958869599, unchanged since): cards with the 24 px data-URI icons in the
+  32 px column, "by … · downloads · description" on line 3 (BrowseList's own text until P9.6).
+- viewed: sidebar-sections.png (run 38958869599): compact rows 24 px, name first.
+- viewed: sidebar-narrow-200px.png: at 200 px the Updates row reads "Newtonsoft.Json 13.0.2…": the name stays whole,
+  the version gives way (before P9.2: "Newton… 13.0.2 → 13.0.4").
+
 ## Visual check of P9.1 (RUN.md §4; P9.1 changed `src/webview/shared` without rendering anything)
 
 - viewed: main-browse-results.png (CI run 38953375673, P9.1): same as at P9.0; Browse rows with and without icons as
