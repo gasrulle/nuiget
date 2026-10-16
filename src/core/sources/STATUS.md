@@ -1,52 +1,63 @@
-# STATUS — src/core/sources   commit bf2c68b (P7.2c closed; parent of the P7.3 commit 1)   2026-10-16T00:30:10Z
+# STATUS — src/core/sources   commit 8c3ca04 (P7.3 commit 1; parent of commit 2)   2026-10-16T00:44:25Z
 
-git status --porcelain --untracked-files=all (before commit 1): modified `CHANGELOG.md`, `docs/plans/{STATUS,findings-ledger}.md`,
-`src/core/logging/{redact,redact.test}.ts`, `src/core/sources/NuGetConfigReader.test.ts`, the STATUS notes of `src/core/sources`
-and `src/core/logging`
+git status --porcelain --untracked-files=all (before commit 2): modified `.github/copilot-instructions.md`, `ARCHITECTURE.md`,
+`CHANGELOG.md`, `docs/plans/{STATUS,findings-ledger}.md`, `src/core/sources/{NuGetConfigReader,NuGetConfigReader.test}.ts`,
+this note
 
-Item: **P7.3, commit 1** — two Windows-gated DPAPI tests against the real CLI and PowerShell (N54), by the ruling of
-2026-10-16 (verbatim below). Commit 2 drops the `$null` fallback of `decryptPassword` once the Windows job of this
-commit is green. This note replaces the P2.6 note (in this file's history at `402acbd`).
+Item: **P7.3, commit 2** — `decryptPassword` is one statement with the entropy `NuGet` (N54 verified, N80 fixed), the
+fix-forward of CI run 38829853849, by the ruling of 2026-10-16 "P7.3 — stop-and-ask: the red Windows job of commit 1"
+(verbatim below, after the scope ruling). This note replaces the commit-1 note (in this file's history at `8c3ca04`).
 
 ## Verified by running
 
 ```text
-baseline at bf2c68b (CI run 38827088243 green on 13 of 13): tsc 0 · check-types 0 · eslint 0 · npm test 167 files,
-                              3413 passed (macOS, NUIGET_SDK_TESTS=1) · bench 0
+commit 1 8c3ca04 → CI run 38829853849: 12 jobs green or skipped by need; Test (windows-latest) job 116745869544 red:
+                              "× dpapi (Windows, SDK 10): …" AssertionError: expected undefined to be 'p73-6295f76e3fba81969ce06490'
+                              (NuGetConfigReader.test.ts:186); "✓ dpapi (Windows): the stored value is protected with the
+                              entropy "NuGet" and not without it (N54)" 2344ms; Test (ubuntu-latest) 116745869536 green,
+                              (13 tests | 2 skipped), Tests 3414 passed | 2 skipped (3416)
+diagnosis (not run: no PowerShell here, stderr discarded) → `try { … }` and `catch { … }` were two elements joined
+                              with "; ", a parse error; a timeout is ruled out by 4152 ms for the whole test < 5 000 ms
 npx tsc --noEmit / npm run check-types / npx eslint src → exit 0 each
 npx vitest run --project backend src/core/sources src/core/logging src/core/cli --reporter=verbose → 11 files, 214
-                              passed, 4 skipped; "redacts a secret that is the value of a quoted JSON key (N56)" passed;
-                              "dpapi (Windows, SDK 10): …" and "dpapi (Windows): … (N54)" SKIPPED: not win32
+                              passed, 4 skipped; "dpapi: decrypts through runPowerShellEncoded with an injected execFile
+                              on win32" passed (now also: no `$null`, no `catch`); the two gated tests SKIPPED: not win32
 DOTNET_ROOT=… NUIGET_SDK_TESTS=1 npx vitest run --project backend src/core/cli src/core/sources → 190 passed, 2 skipped
-                              (the two DPAPI tests, SKIPPED: not win32)
 npm test (DOTNET_ROOT set, NUIGET_SDK_TESTS=1) → exit 0 · Test Files 167 passed (167) · Tests 3414 passed | 2 skipped (3416)
 npm run bench               → exit 0 · Test Files 20 passed (20) · Tests 119 passed | 1 skipped (120)
 grep -rln child_process src/core --include='*.ts' → src/core/cli/* only
-rm -rf dist && node esbuild.mjs --v2 --production --analyze → dist/extension.js 292374 / 321341 (+17, redact.ts) ·
+grep -c '$null' NuGetConfigReader.ts → 0 · grep -c "'try \|'catch \|}; catch" → 0 · grep -c "GetBytes('NuGet')" → 1
+rm -rf dist && node esbuild.mjs --v2 --production --analyze → dist/extension.js 292266 / 321341 (−108) ·
                               dist/webview.js 523296 / 575626 · dist/sidebar.js 318803 / 350684
+npm run package:vsix        → exit 0 · nuiget-v1.18.9.vsix (17 files, 534.39 KB) · npm run check:vsix → OK
+test -e .claude/.contract-change → false
 ```
 
 ## Done (tested)
 
-- None that ran here: the two new tests run only on win32 with `NUIGET_SDK_TESTS=1`.
+- `NuGetConfigReader.ts` `decryptPassword`: one `Unprotect($bytes, UTF8('NuGet'), CurrentUser)` element in place of
+  the try/catch pair; a failed `Unprotect` still answers `undefined` (empty stdout). Signature, `DecryptOptions`,
+  `BASE64` and `DECRYPT_TIMEOUT_MS` unchanged.
+- `NuGetConfigReader.test.ts`: `dpapi: decrypts through runPowerShellEncoded with an injected execFile on win32`
+  also asserts the script has no `$null` and no `catch`.
 
 ## Done (untested)
 
-- `NuGetConfigReader.test.ts`, `describe('decryptPassword')`: `storeEncrypted(name)` adds a source with a random
-  password to a scratch `nuget.config` through `DotnetSourceProvider.add` (`platform: 'win32'`, `storeEncrypted: true`,
-  so no `--store-password-in-clear-text`) and `DefaultDotnetRunner`, then reads the `encrypted` credential back.
-  `dpapi (Windows, SDK 10): a password that dotnet nuget add source encrypted decrypts to the value that was stored`
-  (real `decryptPassword`); `dpapi (Windows): the stored value is protected with the entropy "NuGet" and not without
-  it (N54)` (two `runPowerShellEncoded` scripts with a `catch` marker). First run: the `Test (windows-latest)` job.
+- The two gated Windows tests (commit 1) run on the Windows job of this commit's CI run; test A is the product path.
+- Docs: CHANGELOG Fixed "**2.0 DPAPI password decryption on Windows**"; ARCHITECTURE `src/core/sources` row (entropy);
+  two gotcha rows (DPAPI entropy, PowerShell script joined from an array); ledger N54 closed, N80 opened and closed.
 
 ## Not started
 
-- Commit 2: `decryptPassword` with the entropy `NuGet` only; the unit test asserts no `$null` and no `catch`; ledger
-  N54 closed; ARCHITECTURE row and one gotcha row.
+- None for P7.3. The next open row is P7.4, owner-only (RUN.md §7).
 
 ## Deviations from contract/ADR (file:line each)
 
-- None. The tracker row is `in-progress` (RUN.md §3) where the ruling's step 5 says "stays `open`"; RUN.md wins.
+- `NuGetConfigReader.ts:167`: the entropy element is a double-quoted string so `GetBytes('NuGet')` reads literally
+  (the ruling's VERIFY greps it); the PowerShell text is unchanged by that.
+- Ledger N54/N80 and the tracker cite "the Windows job of the CI run of this commit" without its id: the id exists
+  only after the push; it is added by the next session-run commit, as RUN.md §5 step 1 does for SHAs.
+- The tracker row is `done` with commit 1's SHA, per the ruling's step 7.
 
 ## Advisor decisions (date, item, question, answer verbatim)
 
@@ -90,6 +101,44 @@ VERIFY: after commit 1 the Windows job log has `src/core/sources/NuGetConfigRead
 FILES CHECKED: `docs/plans/2026-10-11-nuiget-2.0-execution-plan.md:41-175, 300-320` (D1-D13, §2.1-§2.6, §3, the P7 and P8 tables); `docs/plans/RUN.md:98-139` (§6-§8); `docs/plans/STATUS.md:95-135, 775-809` (rows P6.4a-P8.3, the P6 review's non-blocking 7 and its "acted on" line); `docs/plans/findings-ledger.md:150-165, 400-415` (N54, N56 rows and details); `docs/adr/003-operation-queue-and-dotnet-runner.md:36-44`; grep of `docs/adr/005-execution-context-and-outbound-policy.md` for credential, password, DPAPI, entropy, decrypt (none but `:37`); `src/core/sources/NuGetConfigReader.ts:1-18, 100-172`; `src/core/sources/NuGetConfigReader.test.ts:1-20, 95-167`; `src/core/sources/DotnetSourceProvider.ts:18-60, 90-112, 186-195`; `src/core/sources/DotnetSourceProvider.test.ts` titles; `src/core/sources/STATUS.md:1-60`; `src/core/logging/redact.ts` (full); `src/core/logging/redact.test.ts` titles and `:35-41, 160-165`; `src/core/logging/STATUS.md:1-30`; `src/core/cli/powershell.ts` (full); `src/core/cli/powershell.test.ts` titles; `src/core/cli/commands.ts:145-190`; `src/core/cli/commands.test.ts:184-194`; `src/core/cli/validate.ts:60-66, 110-126`; `src/core/cli/index.ts` exports; `src/core/cli/DotnetRunner.ts:26-29, 83-88, 147-188`; `src/core/cli/DotnetRunner.test.ts:112-124, 189`; `src/core/cli/STATUS.md:1-15`; `src/core/contracts.ts:183-195, 276-291`; `src/core/credentials/DefaultCredentialProvider.ts:60-120`; `src/core/project/__fixtures__/scratch.ts:1-40`; `src/core/project/evaluator.test.ts` (win32 and `normalizeProjectPath` lines, `:348, :373`); `src/core/ops/PackageWorkflows.test.ts:482-488`; `src/core/queries/scopes.test.ts:120-155`; `src/core/util/paths.test.ts` titles; `src/test/harness/scenarios.test.ts:392`; `src/services/CredentialService.ts:285`; `.github/workflows/ci.yml:19, 81-136`; `ARCHITECTURE.md:99-100`; `git tag --list`; `gh run view 38827088243 --json jobs` and the log of job 116736942934 (the per-file lines quoted above). No file was created, edited, moved or deleted; shell use was inspection only. The advisor tool was consulted once before drafting; its points (HEADER_SECRET has the same gap, no tracked ciphertext fixture, the provider path with `ensureConfigFile`, bundle size after commit 2, the two STATUS notes) are folded in; its suggestion to assert the `$null` probe by exit code is replaced by the `catch` marker, because `powershell.exe`'s exit code after a method exception is not something this repository has probed.
 `````
 
+2026-10-16, P7.3 (stop-and-ask: the red Windows job of commit 1), verbatim (also in `docs/plans/STATUS.md`):
+
+### P7.3 — stop-and-ask: the red Windows job of commit 1 (N54, N80) (2026-10-16)
+
+`````text
+DECISION: Option 1. One commit (commit 2 of the P7.3 ruling, brought forward, cited as the fix-forward of RUN.md §5 step 3 for run 38829853849): the `try { … }`/`catch { … }` pair in `decryptPassword` becomes the single entropy statement, the unit test gains the two `not.toContain` assertions of step 8, a new ledger finding (next free id; N80 at this tree) records the parse defect and is closed in the same commit, N54 is closed citing test B of the red run and test A of the new run, CHANGELOG gets one `### Fixed` headline, and the tracker row becomes `done`. Not Option 2 (an intermediate commit of a form the next commit deletes, which spends CI on nothing test B has not already shown and risks the second red run), not Option 3 (a defect in a file the ruling put on the item's list, `NuGetConfigReader.ts`, is fix-forward under RUN.md §5 step 3, not the owner's).
+
+WHY: The brief is right about the tree: `src/core/sources/NuGetConfigReader.ts:161-169` builds the script as seven array elements joined with `'; '`, and `:165` (`try { … }`) and `:166` (`catch { … }`) are separate elements, so the script `powershell.exe` receives reads `… ; try { … }; catch { … }; …`; test B (`NuGetConfigReader.test.ts:191-196`) keeps its `try { … } catch { … }` inside one element, which is the only material difference between the two scripts, and test B passed in the same job. PowerShell's grammar admits only new-lines between a `try` block and its `catch` clause (`catch-clause: new-lines_opt catch …`); a `;` ends the `try` statement, which then has no `catch` or `finally`, a parse error that fails the whole script before `Add-Type` runs (not run here: this machine has no `powershell.exe`, and `decryptPassword` discards stderr, so the log cannot show the message). The one other way to the observed `undefined` is a timeout kill (`powershell.ts:87`, `exitCode -1`), and the log rules it out by arithmetic: test A took 4152 ms in total including `dotnet nuget add source`, below `DECRYPT_TIMEOUT_MS` = 5 000 (`:147`) on its own. The `$null` branch was therefore never a fallback but the cause of the failure, and the entropy fact the ruling's commit 2 waited for is now evidence (job 116745869544: `Unprotect($bytes, UTF8('NuGet'), CurrentUser)` printed the password with exit 0, the `$null` form hit the `catch` marker), so step 8's precondition is met in substance and dropping the branch is also the smallest change that removes the parse error. Without a `try`, a failed `Unprotect` leaves `$plain` unset, `GetString($plain)` throws, nothing is written, and `:171` answers `undefined` on the empty stdout whatever the exit code, so the contract of `decryptPassword` ("never rejects, `undefined` when it cannot decrypt") and the test `answers undefined when PowerShell fails or prints nothing` (`:206`) are untouched. The defect dates from `402acbd` (P2.6; `git log -S"catch { \$plain"`), the unit test `dpapi: decrypts through runPowerShellEncoded …` (`:135`) checks script text only, and `DefaultCredentialProvider.ts:79` is the one product caller, so 2.0 has never decrypted an encrypted `nuget.config` password on Windows while `DotnetSourceProvider.ts:105` writes them; that is a product defect worth its own ledger id, and this red run is the first of RUN.md §5 step 3's two. The ubuntu job of the same run (116745869536) is green with `NuGetConfigReader.test.ts (13 tests | 2 skipped)` and `Tests 3414 passed | 2 skipped (3416)`, which fixes the expected counts below; the first ruling's `3414 | 1 | (3415)` was off by one.
+
+DO:
+1. `src/core/sources/NuGetConfigReader.ts:160-166`: replace the comment and the two elements `:165-166` by one element `$plain = [System.Security.Cryptography.ProtectedData]::Unprotect($bytes, [System.Text.Encoding]::UTF8.GetBytes('NuGet'), $scope)`; comment: "NuGet protects the password with the entropy `NuGet` (verified on windows-latest, CI run 38829853849, job 116745869544). One statement per element: the elements are joined with `; `, and a try/catch split over two elements is a parse error (N80)." Keep `Add-Type`, `$bytes`, `$scope`, the `OutputEncoding` line and the `Out.Write` line as they are; `DecryptOptions`, the signature, `BASE64` and `DECRYPT_TIMEOUT_MS` unchanged. (The TypeScript `try`/`catch` at `:44-46` is unrelated and stays.)
+2. `src/core/sources/NuGetConfigReader.test.ts:135-145`: append `expect(script).not.toContain('$null');` and `expect(script).not.toContain('catch');` (the second subsumes any `}; catch` check; add no further assertion and no new test, so the counts in VERIFY hold). Test A, test B, `storeEncrypted` and `notWindowsWithSdk` stay byte for byte.
+3. `docs/plans/findings-ledger.md`: confirm the id is free (`grep -c "| N80 " docs/plans/findings-ledger.md` → 0), then add N80, Sev Medium, section 1 row and section 4 entry: "`decryptPassword` (`src/core/sources/NuGetConfigReader.ts:161-169`) joined its script elements with `; ` and had `try { … }` and `catch { … }` as two elements, so PowerShell never parsed the script; every call answered `undefined` and 2.0 never decrypted an encrypted `nuget.config` password on Windows (`DefaultCredentialProvider.ts:79`), the form `DotnetSourceProvider.ts:105` writes there. Since `402acbd` (P2.6); the unit test checked the script text only; found by test A on the first Windows run (CI run 38829853849, job 116745869544: `expected undefined to be 'p73-…'`), diagnosed by elimination (test B's one-element `try`/`catch` passed in the same job; 4152 ms for the whole test is under the 5 000 ms decrypt timeout). Status: closed (P7.3 commit 2: one statement with the entropy `NuGet`, test A green in CI run <new run id> job <id>; stderr of the decrypt stays unlogged, accepted)". N54 row (`:157`) and detail (`:408`) → `closed (P7.3: entropy verified by `dpapi (Windows): … (N54)` in CI run 38829853849 job 116745869544; the product path by `dpapi (Windows, SDK 10): …` in CI run <new run id> job <id>; the `$null` branch is deleted, N80; 1.x unchanged until P8.2)`. Never cite test A of the red run as evidence for anything but N80.
+4. `CHANGELOG.md` `## [Unreleased]` `### Fixed` (`:53-55`): add `- **2.0 DPAPI password decryption on Windows**`, headline only, after the N56 line.
+5. `ARCHITECTURE.md:99` (`src/core/sources` row): "credentials with `%VAR%` and DPAPI on Windows" → "credentials with `%VAR%` and DPAPI on Windows, with the entropy `NuGet` that NuGet uses". No other line of the file.
+6. `.github/copilot-instructions.md`, two rows under **2.0 gotchas** (deliberately two where the first ruling said one: N80 is a second trap), nothing else in the file: (a) the N54 row exactly as the first ruling's step 8 words it; (b) `PowerShell script joined from an array | `decryptPassword` builds its script as elements joined with `'; '`; a `try`/`catch`/`finally` must stay inside one element, since a `;` between the `try` block and its `catch` is a parse error and `runPowerShellEncoded` then answers a non-zero exit with empty stdout, which a unit test with an injected `execFile` cannot see (N80). A new script runs on the Windows job before anything relies on it`.
+7. `docs/plans/STATUS.md`: row P7.3 → `done`, Commit column `8c3ca04` now (commit 2's SHA is entered by the next session-run commit, P7.5 or later, as RUN.md §5 step 1 directs; P7.4 is the owner's), note: both run ids, "run 38829853849 red on `Test (windows-latest)` only (job 116745869544: test A, N80; test B green = N54 evidence), fixed forward as the first red run of RUN.md §5 step 3", the four review-note-7 lines kept. Paste this answer verbatim under `## Advisor decisions` as "P7.3 — stop-and-ask: the red Windows job of commit 1 (N54, N80) (2026-10-16)". Rewrite `src/core/sources/STATUS.md` from the §2.5 template at the new commit (this answer verbatim under its `## Advisor decisions`, after the first ruling; "Exact next step: P7.4, owner-only"); `src/core/logging/STATUS.md` only if its header needs the new SHA.
+8. Gates, in order, each read for its exit code: `npx tsc --noEmit` → 0; `npm run check-types` → 0; `npx eslint src` → 0; `npx vitest run --project backend src/core/sources src/core/logging src/core/cli --reporter=verbose` green with the two gated titles `skipped` and `dpapi: decrypts through runPowerShellEncoded …` passed; `DOTNET_ROOT="$(dirname "$(command -v dotnet)")" NUIGET_SDK_TESTS=1 npx vitest run --project backend src/core/cli src/core/sources` green; `npm test` → exit 0, `3414 passed | 2 skipped (3416)`; `npm run bench` → exit 0; `grep -rln child_process src/core --include='*.ts'` → `src/core/cli/*` only; `rm -rf dist && node esbuild.mjs --v2 --production --analyze` → paste `dist/extension.js` bytes (was 292 374; must be ≤ 321 341 and not larger than before); `npm run package:vsix` and `npm run check:vsix` → 0; `test -e .claude/.contract-change` → false; `git status --porcelain --untracked-files=all` lists exactly the files of steps 1-7.
+9. Commit with the `git-commit` skill: `fix(core/sources): decryptPassword's script parses and uses the NuGet entropy only; N54 verified on the Windows job (P7.3, ADR-003, ADR-005, N54, N80)`, body naming the parse defect, run 38829853849 / job 116745869544 as the evidence and the first red run, and the trailer; `git push origin labs/2.0`; `gh run watch <id> --exit-status`.
+10. Green → P7.3 `done`; stop, since the next open row P7.4 is the owner's (RUN.md §7), with the §8 report. Red on `Test (windows-latest)` again → mark P7.3 `blocked` (second red run) and brief: once the script is one statement, the only differences from test B's passing probe are the wrapper's 5 000 ms timeout (test B used 60 000) and the discarded stderr, so that brief states test A's measured duration and the job's `Tests` line, and proposes nothing before the ruling.
+
+DO NOT:
+- Push a syntax-only commit that keeps the `$null` branch (Option 2): it spends a run on code the ruling already deletes and risks the second red.
+- Re-run job 116745869544 with `--failed`: N37/N44/N65 name the e2e and UI jobs only, and the failure is deterministic.
+- Raise `DECRYPT_TIMEOUT_MS`, add a logger or stderr to `DecryptOptions`, or widen the signature to "see" the error: the diagnosis is settled by elimination; the stderr point is accepted in N80.
+- Touch `src/core/cli/powershell.ts` (a script builder, a `try`/`catch` check): `src/core/cli/**` is outside the item's files by the first ruling's DO NOT.
+- Weaken test A, test B or `answers undefined when PowerShell fails or prints nothing`; add a `try`/`catch` back in any form.
+- Write the Windows job's expected counts from the first ruling (`3414 | 1 | (3415)`): they were off by one; use the ones in VERIFY.
+- Cite test A of run 38829853849 as N54 evidence, or close N54 before the new run's Windows job is green.
+- Run the P7 phase gate or tag `labs/2.0-P7-done`: P7.4 to P7.6 are open.
+
+CONTRACT CHANGE: none. `src/protocol/**`, `src/core/contracts.ts` and `docs/adr/**` are not touched; `decryptPassword`'s signature and `DecryptOptions` stay as they are; no sentinel.
+
+VERIFY: `grep -c '\$null' src/core/sources/NuGetConfigReader.ts` → 0; `grep -c "'try \|'catch \|}; catch" src/core/sources/NuGetConfigReader.ts` → 0 (the script text; the TypeScript `catch` at `:46` remains, so do not grep the bare word); `grep -c "GetBytes('NuGet')" src/core/sources/NuGetConfigReader.ts` → 1; `grep -c "not.toContain('catch')" src/core/sources/NuGetConfigReader.test.ts` → 1; `grep -n "^| N54 \|^| N80 " docs/plans/findings-ledger.md` → both `closed (P7.3 …)` and N54 cites two run ids; `grep -n "^| P7.3 " docs/plans/STATUS.md` → `done`; `grep -c "2.0 DPAPI password decryption on Windows" CHANGELOG.md` → 1; `npm test` exit 0 with `3414 passed | 2 skipped (3416)` on macOS; the new run's `Test (windows-latest)` job log: `src/core/sources/NuGetConfigReader.test.ts (13 tests)` with neither `failed` nor `skipped` on that line and `Tests 3415 passed | 1 skipped (3416)` (the skip is `DotnetRunner.test.ts:189`); the ubuntu job unchanged from run 38829853849: `(13 tests | 2 skipped)` and `Tests 3414 passed | 2 skipped (3416)`; `gh run view <id> --json jobs` → all 13 jobs green, including UI, UI 2.0 and Build & Package, which the red `test` job had skipped.
+
+FILES CHECKED: `.github/agents/architecture-advisor.agent.md`; `docs/plans/2026-10-11-nuiget-2.0-execution-plan.md:83-99, 308` (§2.3 triggers, the P7.3 row); `docs/plans/RUN.md:80-110` (§4 end, §5 step 3 red-run rule, §6); `docs/plans/STATUS.md:105-106, 3426-3464` (rows P7.3/P7.4, the P7.3 ruling in full); `docs/plans/findings-ledger.md:1-35, 157, 159, 176, 344, 408, 410, 433` (header rules for new ids, N54/N56/N79 rows and details; severity values High/Medium/Low counted; `N80` absent from the ledger, the tracker and the CHANGELOG); `src/core/sources/NuGetConfigReader.ts:120-172` plus a grep of the whole file for `try`/`catch` (`:44-46` TypeScript, `:165-166` the script); `src/core/sources/NuGetConfigReader.test.ts:100-211`; `src/core/cli/powershell.ts` (full); `src/core/credentials/DefaultCredentialProvider.ts:60-99`; `src/core/sources/STATUS.md:1-50` and its headings; `CHANGELOG.md:1-25` and the `### Fixed` block of Unreleased (`:53-55`); `ARCHITECTURE.md:99-100`; `git show --stat 8c3ca04` and its `redact.ts` diff; `git log -S"catch { \$plain"` (→ `402acbd`); `grep -rn runPowerShellEncoded|decryptPassword src` (one product caller); `gh run view 38829853849 --json jobs` (13 jobs: `Test (windows-latest)` 116745869544 failure, `Test (ubuntu-latest)` 116745869536 success, UI/UI 2.0/Build & Package skipped, the rest success) and the ubuntu job's log lines quoted above. The PowerShell parse behaviour was not executed (no `powershell.exe` here); it rests on the grammar and on the log's elimination of the timeout. No file was created, edited, moved or deleted; shell use was inspection only. The advisor tool was consulted twice: before drafting (timeout ruled out by the 4152 ms figure, the single statement's behaviour without `try`, the off-by-one in the first ruling's counts, two-run citation for N54, a gotcha row for the join hazard, what a second red would mean) and on the draft (the bare `catch` grep would have failed on `:46`, the ubuntu counts had to come from the job log, the Commit-column hedge removed, gotcha 6(b) trimmed to the hazard); all folded in.
+`````
+
 ## Exact next step (one item ID)
 
-P7.3, commit 2 (after the Windows job of commit 1 is green).
+P7.4 (owner-only: the manual accessibility pass); a session stops there (RUN.md §7).

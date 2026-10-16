@@ -157,13 +157,14 @@ export async function decryptPassword(encrypted: string, options: DecryptOptions
     if (platform !== 'win32' || !BASE64.test(value)) {
         return undefined;
     }
-    // NuGet protects the password with the entropy "NuGet"; a value protected without entropy is tried second.
+    // NuGet protects the password with the entropy `NuGet` (verified on windows-latest, CI run 38829853849, job
+    // 116745869544). One statement per element: the elements are joined with `; `, and a try/catch split over two
+    // elements is a parse error (N80).
     const script = [
         'Add-Type -AssemblyName System.Security',
         `$bytes = [Convert]::FromBase64String('${value}')`,
         '$scope = [System.Security.Cryptography.DataProtectionScope]::CurrentUser',
-        'try { $plain = [System.Security.Cryptography.ProtectedData]::Unprotect($bytes, [System.Text.Encoding]::UTF8.GetBytes(\'NuGet\'), $scope) }',
-        'catch { $plain = [System.Security.Cryptography.ProtectedData]::Unprotect($bytes, $null, $scope) }',
+        "$plain = [System.Security.Cryptography.ProtectedData]::Unprotect($bytes, [System.Text.Encoding]::UTF8.GetBytes('NuGet'), $scope)",
         '[Console]::OutputEncoding = [System.Text.Encoding]::UTF8',
         '[Console]::Out.Write([System.Text.Encoding]::UTF8.GetString($plain))',
     ].join('; ');

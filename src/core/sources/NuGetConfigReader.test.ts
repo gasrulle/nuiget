@@ -142,6 +142,8 @@ describe('decryptPassword', () => {
         expect(script).toContain('ProtectedData]::Unprotect');
         // The value NuGet writes is protected with the entropy "NuGet".
         expect(script).toContain("GetBytes('NuGet')");
+        expect(script).not.toContain('$null');
+        expect(script).not.toContain('catch');
     });
 
     it('dpapi: returns undefined off Windows without spawning', async () => {

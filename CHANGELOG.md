@@ -60,6 +60,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - **2.0 CPM install preview**
 - **2.0 log redaction of quoted JSON credentials**
+- **2.0 DPAPI password decryption on Windows**
 - **2.0 evaluation survives a refresh**
 
 - **Long NuGet prerelease versions and package IDs remain intact during CLI search and installation**
