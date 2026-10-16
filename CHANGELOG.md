@@ -108,6 +108,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Deleted the 1.x extension code; the 2.0 entry and sidebar moved to `src/extension.ts` and `src/webview/sidebar`**
 - **Removed the 1.x sections of ARCHITECTURE.md and the 1.x agent gotchas**
 
+### Fixed
+
+- **Long NuGet prerelease versions and package IDs remain intact during CLI search and installation**
+
+
 ## [1.18.9] - 2026-10-10
 
 ### Fixed
