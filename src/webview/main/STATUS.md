@@ -46,7 +46,23 @@ CI run 38972999319 (9ea8a40) → 9 jobs green, UI red: "Error: Timed out after 1
                               presses the header Refresh (`refresh/all`, a workspace rescan that ends in
                               `refreshProjectsAndSession`) between polls, for the created and for the deleted project;
                               single-file run → exit 0, 1 passing
+CI run 38974041895 (44c2980) → 10 jobs green; "13 named states; PNGs in the artifact: 13". Visual check:
+                              `main-transitive-expanded` was captured before the row's metadata arrived (default icon,
+                              no authors): the test now waits for the authors before the screenshot (attempt 2 of the
+                              visual gate, test only)
 ```
+
+## Visual check (CI run 38974041895 on 44c2980)
+
+- viewed: main-transitive-details.png: Transitive.csproj; `TRANSITIVE PACKAGES (1)` with the `net8.0` badge at the
+  foot of the list, the Serilog row selected (accent) with its icon, `4.0.0 ✓ Serilog Contributors`; the details read
+  `Serilog [Transitive]`, Version 4.0.0, Authors ✓ Serilog Contributors, Required by: Serilog.Sinks.Console; no
+  version selector, buttons or tabs.
+- viewed: main-transitive-expanded.png: same header and row, captured before the row's metadata (default icon, no
+  authors line) → the test waits for the authors since (see Verified by running).
+- viewed: main-installed-single.png: `DIRECT PACKAGES (2)`; the collapsed transitive header reads `TRANSITIVE
+  PACKAGES` without its count: the capture comes right after the rows, before the 500 ms prefetch answered. Not a
+  wrong rendering (the header's state before the result); `main-installed.ui.test.ts` is not changed for it.
 
 ## Done (tested)
 

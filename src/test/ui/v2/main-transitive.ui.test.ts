@@ -115,9 +115,11 @@ describe('2.0 main panel: transitive packages', () => {
         await poll(async () => (((await header.getAttribute('textContent')) ?? '').includes('Transitive packages (1)') ? true : undefined), 'the counted header', 30_000);
         const headerRow = await driverOf().executeScript<string>('return document.querySelector(\'[data-testid="section-header-transitive"]\').closest(".nuiget-section-header").textContent;');
         expect(headerRow).to.contain('net8.0');
+        // The row's lite metadata (icon, authors, Verified) follows the list: the screenshot waits for it.
+        const row = await findByTestId('package-row-serilog', 10_000, section);
+        await poll(async () => (((await row.getAttribute('textContent')) ?? '').includes('Serilog Contributors') ? true : undefined), 'the authors of the transitive row', 60_000);
         await screenshot('main-transitive-expanded');
 
-        const row = await findByTestId('package-row-serilog', 10_000, section);
         await (await row.findElement(By.css('[role="option"]'))).click();
         await waitForText('transitive-details', 'Required by', 30_000);
         await waitForText('transitive-details', 'Serilog.Sinks.Console', 30_000);
