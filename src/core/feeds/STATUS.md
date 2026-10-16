@@ -1,273 +1,85 @@
-# STATUS — src/core/feeds   commit c4c3617 (parent of the P5.6 commit)   2026-10-15T12:00:00Z
+# STATUS — src/core/feeds   commit 1d76a1a (P9.0; parent of the P9.1 commit)   2026-10-16T19:20:00Z
 
-git status --porcelain --untracked-files=all (before the commit): modified `ARCHITECTURE.md`, `CHANGELOG.md`, `docs/plans/{STATUS,findings-ledger}.md`, `src/core/feeds/{enricher,enricher.test}.ts`, `src/host/handlers.test.ts`, `src/webview/main/{MainShell.tsx,index.tsx,index.test.tsx,main.css}`, `src/webview/shared/store/StoreProvider.tsx`, `src/webview/sidebar-next/{SidebarView.tsx,SidebarView.test.tsx,UpdatesSection.tsx,sidebar.css}` and the six STATUS notes; new `src/webview/shared/search/{SearchBox.tsx,SearchBox.test.tsx,search.css}`, `src/webview/shared/store/{search,sources,config}.tsx` with their tests, `src/webview/main/features/search/{BrowseList.tsx,BrowseList.test.tsx,useSearchTyping.ts,useSearchTyping.test.tsx}`, `src/webview/sidebar-next/{BrowseResults.tsx,BrowseResults.test.tsx}`, `src/test/ui/v2/main-search.ui.test.ts` (all belong to the P5.6 commit)
+git status --porcelain --untracked-files=all (before the commit): modified `ARCHITECTURE.md`, `docs/plans/STATUS.md`,
+`src/core/catalog/{feedClients,feedClients.test}.ts`, `src/core/feeds/{flatContainer,flatContainer.test,icons,icons.test,search,types}.ts`,
+`src/core/feeds/STATUS.md`, `src/test/ui/v2/STATUS.md` (P9.0's `viewed:` lines); new
+`src/webview/shared/{packageIcon,packageIcon.test}.ts`
 
-Item: **P5.6** (feeds part, from the P4 review note "bind the enrichment to the request signal"):
-`DefaultMetadataEnricher.enrich` starts no feed read for a package once the signal is aborted (the entry stays bare),
-and a failure that comes from the cancellation is not logged as a failed enrichment. The signal was already passed to
-every read; `mapWithConcurrency` kept starting the remaining packages after an abort.
-
-This note folds the earlier notes of this directory into one section per heading, newest first (P7.5c, P4 review
-note 7). Their headers and items:
-
-- **P4.fix-1**
-  The P4 phase review (verbatim in `docs/plans/STATUS.md` under "### P4 — Feeds, transport and the Catalog's feed reads") rules this row.
-  Item: **P4.fix-1** (feeds part, from the P4 phase review, blocking 1): `SourceHealthTracker` keeps a failure until
-  `markHealthy` or `reset`; `isHealthy` allows the retry after the TTL without forgetting it; a re-mark with the same error fires
-  nothing (N71). The `offline` JSDoc of `src/protocol/domain.ts:130` changed behind the sentinel `P4.fix-1`.
-- **commit 6e2c878 (parent of the P4.9b commit)** — # STATUS — src/core/feeds   commit 6e2c878 (parent of the P4.9b commit)   2026-10-16T07:30:00Z
-  git status --porcelain --untracked-files=all (before the commit): new `src/test/harness/fakeFeed.ts`; modified `src/core/feeds/{health,health.test}.ts`, `src/core/catalog/{Catalog,Catalog.test,feedContexts,feedContexts.test}.ts`, `src/host/{handlers,SidebarHost}.ts`, `src/extension.next.ts`, `src/extension.next.test.ts`, `src/test/harness/{harness,FakeWebview,scenarios.test}.ts`, the five STATUS notes, `CHANGELOG.md`, `ARCHITECTURE.md`, `.github/copilot-instructions.md`, `docs/plans/STATUS.md`, `docs/plans/findings-ledger.md` (all belong to the P4.9b commit)
-  Item: **P4.9b** (feeds part): `SourceHealthTracker.onDidChange` (approved deviation of the P4.9 ruling, step 11).
-- **commit 1a761dd (parent of the P4.8 commit)** — # STATUS — src/core/feeds   commit 1a761dd (parent of the P4.8 commit)   2026-10-16T03:00:00Z
-  git status --porcelain --untracked-files=all (before the commit): `?? src/core/feeds/{updates,enricher,metadataResolver}.ts`, their
-  three `*.test.ts`, `?? src/core/feeds/policy.test.ts`, ` M src/core/feeds/types.ts`, ` M src/core/feeds/index.ts`,
-  ` M src/core/feeds/STATUS.md`, ` M CHANGELOG.md`, ` M ARCHITECTURE.md`, ` M .github/copilot-instructions.md`,
-  ` M docs/plans/STATUS.md`, ` M docs/plans/findings-ledger.md` (all belong to the P4.8 commit)
-  Item: **P4.8** `updates.ts` (`isUpdateCandidate` gating; policy racing; empty ≠ unknown; `sourcesUnavailable`) + `enricher.ts` +
-  `metadataResolver.ts` (F6 cross-source test) + `index.ts`; test `private-only configuration never contacts nuget.org`. Source
-  "legacy → core/feeds": new code after `src/services/NuGetPackageService.ts:1437-1475,1749-1860,2051-2240`. ⚑ on policy edge cases:
-  L1 consultation below. No contract change, no sentinel (`types.ts` is the module's own surface).
+Item: **P9.1** — icon pipeline (parity audit DP3 in part, DP4, DP5 and MB2 for the helper). This note replaces the
+folded notes of this directory (history at `756dcd1`).
 
 ## Verified by running
 
-*From the note at commit c4c3617 (parent of the P5.6 commit):*
-
-P5.6 (the same gate run for every directory of the item):
-
 ```text
-baseline at c4c3617          → CI run 38680684265 green · npx tsc --noEmit 0 · npx eslint src 0 · npx vitest run →
-                               Test Files 144 passed (144) · Tests 3061 passed | 4 skipped (3065)
-stop-and-ask 1 (source list of quick-search, searchDebounceMode) → ruling of 2026-10-15, option 2 narrowed
-first test:ui:v2 run         → stopped in vscode:prepublish at check-types: four type errors in the item's new tests
-                               (shared mock typed by its default, `act` returning Promise<unknown>, an invalid
-                               InvalidationReason); fixed, lint warning (console.log) → console.warn
-stop-and-ask 2 (src/webview/main/index.test.tsx, `config/get` at start) → ruling of 2026-10-15, option 1
-npx tsc --noEmit / npm run check-types / npx eslint src / npm run lint → exit 0 each (last run after every edit)
-npm test (NUIGET_SDK_TESTS=1, DOTNET_ROOT set) → Test Files 151 passed (151) · Tests 3119 passed (3119)
-npm run bench                → Test Files 20 passed (20) · Tests 119 passed | 1 skipped (120)
-npx vitest run --coverage    → exit 0 (thresholds hold) · store/search.tsx 97.95 % lines · store/sources.tsx 97.56 %
-                               · store/config.tsx 94.73 % · shared/search 100 % · main/features/search 97.36 %
-npm run docs:protocol:check  → docs/protocol.md is up to date
-rm -rf dist && NUIGET_V2=1 npm run package && npm run check:vsix → check:vsix: OK
-rm -rf dist && node esbuild.mjs --v2 --production --analyze → extension 280657 / 299921 · webview 320845 / 600685
-                               (309114 at P5.5) · sidebar 300411 / 329122 (288948 at P5.5); dist/ deleted after
-NUIGET_V2=1 npm run test:ui:v2 -- --storage /tmp/nuiget-ui-v2 → 14 passing (16s) at the second run (the first
-                               stopped at check-types, above) · `[P5.6] cold search: 2323 ms from Enter to the first row`
-timer-based frontend tests (sidebar-next, main/features/search, shared/search, store/search), 20 times → 20 of 20
-npm run package:vsix (1.x)   → SKIPPED: no 1.x file changed; CI's Package job builds it
-npm run test:ui (1.x)        → SKIPPED: no 1.x UI file changed; the CI job `UI` runs it
-test -e .claude/.contract-change → false · git diff --stat c4c3617 -- src/protocol src/core/contracts.ts docs/adr
-                               package.json src/host/services.ts → empty
-```
-
-*From the note at P4.fix-1:*
-
-```text
-npx vitest run --project backend src/core/feeds/health.test.ts → green, with `an expired failure that a read found healthy still
-  fires onDidChange when the probe marks it healthy` and `a source still down after the TTL does not re-fire for the same error`;
-  rewritten by title: `onDidChange fires when the failed set changes and not otherwise` (five payloads: the ruling's "six" counts a
-  re-mark the same ruling makes silent), `a failed source is unhealthy for the failure TTL, then healthy again on access`,
-  `markHealthy and reset forget failures; expiry alone does not`
-grep -n "sweep\|isExpired" src/core/feeds/health.ts → isExpired in isHealthy only · grep -c "changed.fire" → 3
-grep -c "every source was unreachable" src/core/feeds/STATUS.md → 2: both inside the verbatim P4.8 ruling, which is not edited;
-  the deviation entry is closed
-```
-
-*From the note at commit 6e2c878 (parent of the P4.9b commit):*
-
-```text
-baseline at 6e2c878         → CI run 38669483033 green on all 11 jobs · npm run check-types 0 · npx eslint src 0 · npx vitest run
-                               green (141 files, 3026 passed, 4 skipped)
-first attempt (P4.9 ruling's step 12) → src/extension.next.test.ts: `a replaced selection is reconciled …` red (the probe
-                               listed a vanished project's directory); harness: 6 of 16 red (the probe walked `nuget config
-                               paths` a second time); with the probe disabled 16 of 16 green → stop-and-ask, ruling below
-after the ruling             → npx tsc --noEmit 0 · npm run check-types 0 · npx eslint src 0
-grep -rn 'REMOVAL GATE: P4.9' src → none · grep -c "REMOVAL GATE" .github/copilot-instructions.md → 0
-npx vitest run --project integration src/test/harness → 18 passed (the six scenarios unchanged, `updates converge across
-                               surfaces`, `sources unreachable shows banner not empty`); 40 runs → 40 of 40 green
-npx vitest run --project backend src/extension.next.test.ts src/core/catalog src/core/feeds/health.test.ts → green; see the
-                               loop and full gates in the tracker row and the commit
-git diff --name-only -- docs/adr src/protocol src/core/contracts.ts → empty
-```
-
-*From the note at commit 1a761dd (parent of the P4.8 commit):*
-
-```text
-baseline at 1a761dd         → CI run 38661032827 green on all 11 jobs · npm run check-types 0 · npx eslint src 0 · npx vitest run
-                               green (135 files, 2973 passed, 4 skipped)
-npx tsc --noEmit → exit 0 · npm run check-types → exit 0 (after typing three test helpers whose defaults narrowed their
-                               parameter types, the N69 pattern) · npx eslint src → exit 0
-npx vitest run --project backend src/core/feeds → Tests 169 passed | 1 skipped (170); the item's: updates 10, enricher 5,
-                               metadataResolver 7, policy 2
--t "private-only configuration never contacts nuget.org" → 1 passed · -t "never bleeds across sources" → 1 passed ·
--t "never puts a package id into a request to nuget.org" → 1 passed
-policy, metadataResolver and updates tests, 40 times in a row → 40 of 40 green
-negative control             → 23 mutations (updates: unresolved skip, candidate gate, policy, newest across sources, unavailable,
-                               aborted flag, onFound, a throwing package's flag, isNewer; enricher: policy, vulnerabilities
-                               absent, first found, icon; resolver: metadata, readme and versions policy, versions sort,
-                               dedupe and flag, nuspec step, search step, offline, asked version): 23 of 23 caught. Run against
-                               policy.test.ts alone: the resolver's and the exact-match search's policy removed → caught; the
-                               enricher's removed → not caught there, because `lookup` asks the policy again inside
-                               `searchById` (the enricher's own test catches it)
-coverage (feeds only)        → updates.ts 100/93.33, enricher.ts 100/89.47, metadataResolver.ts 100/87.5 (lines/branches)
-npm test (NUIGET_SDK_TESTS=1, DOTNET_ROOT set) → Test Files 139 passed (139) · Tests 3001 passed (3001)
-npm run bench               → Test Files 19 passed (19) · Tests 114 passed | 1 skipped (115) (no bench is the row's; P4.10)
-grep -n "nuget.org" src/core/feeds/{updates,enricher,metadataResolver}.ts → no output · grep -n "versionType" updates.ts → none ·
-grep -n "icon(\|lookup(\|forPackage(" updates.ts → none · grep -rn "REMOVAL GATE: P4.9" src | wc -l → 47 (baseline 47)
-git diff --name-only -- src/protocol src/core/contracts.ts docs/adr → empty
-npm run package:vsix, check:vsix, docs:protocol:check, test:ui, test:ui:v2 → SKIPPED: no host, extension, packaging, protocol
-                               or webview file changed; nothing outside src/core/feeds imports these clients before P4.9
+baseline (1d76a1a)          → npx tsc --noEmit 0 · npm run check-types 0 · npx eslint src 0 · npx vitest run exit 0
+npx tsc --noEmit            → exit 0
+npm run check-types         → exit 0
+npx eslint src              → exit 0
+npm run lint                → exit 0
+npx vitest run --project backend src/core/feeds → Tests 176 passed | 1 skipped (177)
+npx vitest run --project backend src/core/catalog/feedClients.test.ts → Tests 2 passed (2)
+npx vitest run --project frontend src/webview/shared/packageIcon.test.ts → Tests 1 passed (1)
+npm test                    → exit 0 · Test Files 130 passed (130) · Tests 1914 passed | 9 skipped (1923)
+npm run bench               → exit 0
+rm -rf dist out/esbuild && node esbuild.mjs --production --analyze → exit 0 · dist/extension.js 293359 / 322502 ·
+                              dist/webview.js 525241 / 577766 · dist/sidebar.js 319313 / 351245 (webview and sidebar
+                              unchanged: the helper is imported by no entry yet)
+npm run package:vsix        → exit 0 · Packaged: nuiget-v2.0.0.vsix (17 files, 564.88 KB)
+npm run check:vsix          → check:vsix: OK
+npm run docs:check          → exit 0 · docs:protocol:check — docs/protocol.md is up to date.
+NUIGET_SDK_TESTS=1 run of src/core/cli → SKIPPED: nothing under src/core/cli changed and no code that runs dotnet
 ```
 
 ## Done (tested)
 
-*From the note at commit c4c3617 (parent of the P5.6 commit):*
-
-- `enricher.test.ts` (+2): `an abort mid-batch starts no further lookup and the rest of the entries stay bare`, `a
-  lookup that fails because the request was cancelled is not logged as a failure`. Without the change the first
-  fails (three lookups instead of one).
-
-
-- The quick-search suggestions in VS Code: the ExTester test submits with Enter; suggestions, timers and both modes are
-  covered in jsdom (`useSearchTyping.test.tsx`).
-
-*From the note at commit 6e2c878 (parent of the P4.9b commit):*
-
-- `health.test.ts`: `onDidChange fires when the failed set changes and not otherwise`.
-
-
-- Nothing new.
-
-*From the note at commit 1a761dd (parent of the P4.8 commit):*
-
-- `updates.ts`: `DefaultUpdateChecker.check` — unresolved declarations skipped; `parseVersionSpec` + `isUpdateCandidate` (exact pins,
-  invalid specs, floating or range without a resolved version never candidates; N6 closed); `effectiveInstalledVersion` compared and
-  reported; the policy's allowed sources per id, all awaited, newest version across them, ties to the first-listed source; any
-  `undefined` answer or a cancellation sets `sourcesUnavailable`, an empty allowed set or an unknown package does not; bare rows in
-  installed order, `onFound` as each is found; one throwing package logged (redacted) and counted as unavailable.
-- `enricher.ts`: `DefaultMetadataEnricher.enrich` — one entry per asked package echoing its id and version; `lookup` on the allowed
-  sources in order (first answer wins); icon through the `IconResolver`; vulnerabilities over every handed-in source, absent when
-  unknown, `[]` when none apply; a failing package yields a bare entry.
-- `metadataResolver.ts`: `DefaultMetadataResolver` — `metadata` (registration → flat nuspec → search per allowed source, first
-  answer wins with its `sourceUrl`; offline when no allowed source produced metadata, also when none is allowed); `versions` (union
-  over the allowed sources, normalized dedupe, newest first, `VersionsOutcome`); `readme` over the allowed sources;
-  `searchResultToMetadata`. No cache, no in-flight map (F6 closed in core).
-- `policy.test.ts`: the private-only test and its mapping sibling over every client (M2 closed).
-- `types.ts`: `VersionsOutcome`; JSDoc of `UpdateChecker.check` and `MetadataResolver.metadata`.
-
-
-- Nothing by line; a few branches (an empty entry list from `lookup` before a later source, a vulnerability answer that is both
-  empty and unavailable) are covered only by line.
+- `types.ts`: `IconFetch` `missing` may carry `unusable: true`. Bare `missing` still means "404/410, or no flat
+  container"; the shape keeps every existing fake and assertion meaning what it meant.
+- `flatContainer.ts`: `too-large`, an empty body, an oversized body and a body that is not an image answer
+  `{ kind: 'missing', unusable: true }`; 404 and 410 answer bare `missing`; everything else stays `failed`.
+- `icons.ts`: the breaker counts only bare `missing`. `failed`, a thrown error and an unusable answer never count; a
+  found icon and an unusable answer clear the count (the feed answered); `reset()` (the `sources`/`workspace`
+  invalidation through `FeedContexts.clear()`) is unchanged. Caching is unchanged: a found icon kept, any answered miss
+  24 h, a failure nothing.
+- `search.ts`: `toLiteMetadata(row)` (the lite fields of a search row), used by `lookup` and by `liteLookup`.
+- `src/core/catalog/feedClients.ts` `liteLookup` (the function the plan row names): asks `searchById`; `found` and
+  `missing` are cached under `lite` as before, `failed` returns `undefined` and stores nothing, so no failure is
+  persisted.
+- `src/webview/shared/packageIcon.ts`: `defaultPackageIcon()` reads `data-package-icon` from the element that carries
+  it (`root` or `sidebar-root`) once it is found; `packageIconSrc(iconUrl)` is `iconUrl` when it is a `data:` URI and
+  the default otherwise. The row says `iconUrl ?? default`; the `data:` check is the reading under the CSP
+  (`img-src ${cspSource} data:`, ADR-006) and matches `BrowseList.tsx`. Nothing imports it yet: P9.3 and P9.4 wire it.
+- Tests: `icons.test.ts` "breaker ignores transport failures and answers that are no usable icon: only "not found"
+  counts (P9.1)" and "breaker resets on success: an icon or any answer other than "not found" clears the count
+  (P9.1)"; `flatContainer.test.ts` asserts `unusable` for huge, empty and HTML and its absence for 404 and 410;
+  `feedClients.test.ts` "transient lookup failure is not cached: a source that could not answer is asked again, and
+  nothing is persisted (P9.1)"; `packageIcon.test.ts` "default icon used when no iconUrl: the root's
+  data-package-icon, read once".
+- Test fake adapted, assertions unchanged: `feedClients.test.ts` "liteLookup caches a lookup answer and a miss per
+  source under the lite kind and asks again after the lifetime" now fakes `searchById` (`found`/`missing`) instead of
+  `lookup`.
 
 ## Done (untested)
 
+- None.
+
 ## Not started
 
-*From the note at commit c4c3617 (parent of the P5.6 commit):*
-
-- Details of a browse row (P5.7), the sources settings and selector (P5.8), the multi-install picker (P5.9), the
-  sidebar's context menu, "View package details" and "Open full view" (P5.10), the search settings' `full`/`off`
-  values (N57, P5.13; done at P5.13).
-
-*From the note at commit 6e2c878 (parent of the P4.9b commit):*
-
-- P4.10 benches of the feed clients.
-
-*From the note at commit 1a761dd (parent of the P4.8 commit):*
-
-- Benches and the 2.0 ARCHITECTURE pass for the feeds (P4.10); wiring through the Catalog, the coordinator and the composition
-  root (P4.9, including N70).
+- Rows that use the helper: P9.3 (Installed), P9.4 (Updates), P9.6 (Browse).
 
 ## Deviations from contract/ADR (file:line each)
 
-*From the note at commit c4c3617 (parent of the P5.6 commit):*
-
-- None.
-
-*From the note at commit 6e2c878 (parent of the P4.9b commit):*
-
-- `health.ts`: `onDidChange` is additive; `failed()`, `markFailed`, `markHealthy` and `reset` keep their behaviour.
-
-*From the note at commit 1a761dd (parent of the P4.8 commit):*
-
-- Closed at P4.fix-1: the `offline` JSDoc of `src/protocol/domain.ts:130` now reads as the resolver behaves (no allowed source produced
-  metadata, for any reason).
-- `types.ts`: `MetadataResolver.versions` answers `VersionsOutcome` instead of `string[]` (the ruling; no consumer existed).
+- None against a contract (`types.ts` is the module's own surface; nothing under `src/protocol`, `contracts.ts` or
+  `docs/adr`). The row's inputs say `core/feeds`; `liteLookup` lives in `src/core/catalog/feedClients.ts` and is
+  edited because the row names it.
+- Residue of DP3: five consecutive real 404s from one source (private package ids asked of nuget.org in a workspace
+  without package source mapping) still skip that source until a Refresh or a source change. The row specifies this
+  breaker; the audit's time window or "never suppress a source that has found an icon" is not in it.
 
 ## Advisor decisions (date, item, question, answer verbatim)
 
-*From the note at commit c4c3617 (parent of the P5.6 commit):*
-
-Both P5.6 rulings of the `architecture-advisor` (2026-10-15) are verbatim in `docs/plans/STATUS.md` under "### P5.6 — stop-and-ask: the source list of quick-search and `searchDebounceMode`" and "### P5.6 — stop-and-ask: the main entry's start requests". The ambient advisor was consulted before writing (scope: no install action on main browse rows, the details pane stays P5.7's, `ui/viewPackage` senders stay P5.10's, the combobox instead of `Popover`, the latency measured at the first ExTester run).
-
-*From the note at commit 6e2c878 (parent of the P4.9b commit):*
-
-2026-10-16, P4.9b, stop-and-ask: how the health monitor obtains its chains. Verbatim at the end of this file where the ruling
-names this directory, and in `docs/plans/STATUS.md`; the P4.9 ruling (steps 11-16) is there too.
-
-*From the note at commit 1a761dd (parent of the P4.8 commit):*
-
-2026-10-16, P4.8, ⚑ policy edge cases (Q1-Q9). Answer, verbatim (earlier rulings of this directory: `docs/plans/STATUS.md`,
-"Advisor decisions"):
-
-`````text
-DECISION: One ruling for Q1-Q9, none of them the owner's. Q1 (a): every free-text search row is kept; nothing filters rows by `allowedSourcesFor(row.id, [rowSource])`, at the client or in the Catalog. Q2 (a): advisories from every handed-in source's vulnerability data apply to every id. Q3 (b): `check` waits for every allowed source of a package and takes the newest version across them; `sourceUrl` is the source that has it, ties go to the first-listed source. Q4 (a): `sourcesUnavailable` is true when any allowed source of any candidate package answered `undefined`, whether or not another source produced an update; a package whose allowed set is empty is skipped and leaves the flag alone; comparison is against `effectiveInstalledVersion(parseVersionSpec(pkg.version), pkg.resolvedVersion)`, gated by `isUpdateCandidate`, `declaration: 'unresolved'` skipped, `isImplicit` not skipped (parity with 1.x; the surface decides what it offers). Q5 (a): `check` returns bare rows (`id`, `installedVersion` = the effective installed version, `latestVersion`, `sourceUrl`); the enricher adds `iconUrl`/`verified`/`authors` separately and the Catalog composes the two at P4.9. Q6 (a): `lookup` on the allowed sources in source order, first answer wins; icons through the injected `IconResolver` (filters inside); vulnerabilities through `VulnerabilityClient.forPackage` over every handed-in source, `vulnerabilities` absent when it answers `sourcesUnavailable`, `[]` when it answered with none; per-package isolation and a named concurrency bound; no lite cache inside the enricher in P4.8 (the `lite` cache kind of `CachePolicy` is wired at P4.9 together with the coordinator's treatment of the metadata chunk). Q7 (b): per allowed source in order, registration → flat-container nuspec → `searchById` lite fields, first source with an answer wins and carries its `sourceUrl`; the offline reader runs whenever no allowed source produced metadata, for any reason, including an empty allowed set; no cache and no in-flight dedupe inside the resolver. Q8: `MetadataResolver.versions` returns `{ versions: string[]; sourcesUnavailable: boolean }` (a `VersionsOutcome` in `types.ts`, the module's own surface): union over the allowed sources, deduplicated by normalized version, `sortDescending`, the flag set when any allowed source answered `undefined`; `readme` is `ReadmeExtractor.extract` over `filterAllowedSources(policy, id, sources)`. Q9: one new feeds-level test file with two configurations, the literally titled `private-only configuration never contacts nuget.org` (nuget.org never handed in, no mapping) asserting zero nuget.org hosts across every entry point, and a second test (nuget.org handed in as an enabled source, a mapping that sends every id to the private feed) asserting that no request to a nuget.org host carries the package id in its path or query; the pair closes M2. The F6 test lives in `metadataResolver.test.ts`. Not OWNER MUST DECIDE.
-
-WHY: The brief holds against the tree with one correction and two hazards. Correction: 1.x updates do race (`src/services/NuGetPackageService.ts:295-316` with `raceForFirstResultWithIndex` at `:1437-1475`, first non-empty list wins, `.catch(() => [])` turns a dead feed into "no update") and compare `versions[0]` with `pkg.version`, the spec text (`:2072-2077`), and `getPackageSearchMetadata` is hard-wired to `https://api.nuget.org/v3/index.json` (`:2215`, ledger M2 at `docs/plans/findings-ledger.md:200`); but the 2.0 `FlatContainerClient` applies no policy at all (`grep -n policy src/core/feeds/flatContainer.ts` → nothing; `icons.ts:144` and `registration.ts:127,152` filter before calling it, `readme.ts:90` says "already policy-filtered"), so the resolver's direct `flat.nuspec` and any `flat.packageSize` call must run on a filtered list or P4.8 reintroduces the leak the M2 row names for `getPackageSize`. ADR-005 (`docs/adr/005-execution-context-and-outbound-policy.md:29-31,54`) keys the policy on a package id being sent to a source and on nuget.org being an enabled source: a free-text row's id was never sent anywhere, so dropping it protects nothing and hides a result a feed the user configured returned (NuGet's own tooling does not filter search results by mapping; mapping decides where restore fetches a package), while the follow-up enrichment of those rows is id-bearing and goes through the policy in the enricher and the icon resolver (Q1); the vulnerability download sends no id (`vulnerability.ts:4,108-124`) and goes only to the sources handed in, so applying every source's data to every id keeps both ADR sentences, matches NuGet audit's behaviour and keeps advisories for the common mirror set-up (`*` mapped to a proxy without a `VulnerabilityInfo` resource), at the residual cost of an id collision between a private and a public package that the version-range match limits (Q2). Q4(a) forces Q3(b): the flag cannot be computed without waiting for every allowed source, and `RegistrationClient.versions` already answers `undefined` (failed) versus `[]` (unknown or refused) (`registration.ts:122-129`), so the gotcha "Empty is not unknown", ADR-009 (`docs/adr/009-catalog.md:24`) and `UpdatesQueryResult.sourcesUnavailable` (`src/core/catalog/Catalog.ts:63-67`) are served; `isUpdateCandidate`/`effectiveInstalledVersion` (`src/core/versioning/VersionRange.ts:279-302`) exist for exactly this gating and close N6 (exact pins never candidates); `isNewer` is false for an unparsable installed version (`NuGetVersion.ts:164-166`). The protocol already separates rows from decoration: `updates/get` streams `{ kind: 'found'; update }` and `allProjects/updates` has a separate `icons` chunk (`src/protocol/messages.ts:122,128`), and `installed/get` and `search/query` deliver lite metadata as a `metadata` chunk (`:121,132`), so bare rows plus a separate enricher is the shape the frozen contract expects (Q5, Q6). Q7(b) is the only implementable choice: `RegistrationClient.metadata` and `FlatContainerClient.nuspec` return `undefined` for unknown, refused and failed alike (`registration.ts:149-170`, `types.ts:96,101`), so the resolver cannot tell "every source unreachable" from "no source knows it"; `OfflineMetadataReader.metadata` already marks `offline: true` and is never cached (`offline.ts:58-96`). That contradicts the frozen JSDoc at `src/protocol/domain.ts:130-131` ("because every source was unreachable"); it is recorded as a deviation, not hidden and not edited. F6 (`findings-ledger.md:234`) was an inner cache keyed `${id}@${version}` without the source (`NuGetPackageService.ts:1700`); a resolver without any cache, answering with the winning source's `sourceUrl`, cannot bleed, and `cacheKeys.metadata`/`versions` already carry the source (`src/core/cache/CachePolicy.ts:109-116`). The hazard moves one layer up: `resourceKeys.metadata(id, version, undefined)` and `resourceKeys.versions(id, undefined, pre)` key on `'all'` (`domain.ts:234-237`) with no project, while the answer depends on the project's source list and mapping; that is P4.9's problem (frozen key shape), recorded below as a new finding. Q8: the house shape since the P4.6 ruling (`docs/plans/STATUS.md:1955`) is an outcome object with the flag; `package/versions` carries none (`messages.ts:136`), so the Catalog maps it at P4.9, the resolver does not decide. `DefaultOutboundPolicy` treats no address specially (`src/core/sources/DefaultOutboundPolicy.ts:5-9`) and its own test `private-only configuration never yields nuget.org` (`DefaultOutboundPolicy.test.ts:89`) proves the policy; the plan row (`docs/plans/2026-10-11-nuiget-2.0-execution-plan.md:264`) and the P4 gate (`:268`) want the feeds-level proof that the clients obey it, which is the named test.
-
-DO:
-1. `src/core/feeds/types.ts` (unfrozen, no sentinel): add `export interface VersionsOutcome { versions: string[]; /** True when an allowed source could not answer; the list may be incomplete. False with `[]` means no allowed source has the package, or none was allowed. */ sourcesUnavailable: boolean }` and change `MetadataResolver.versions(...)` to `Promise<VersionsOutcome>`. Extend the `UpdateChecker.check` JSDoc with: exact pins and invalid specs are never candidates (`isUpdateCandidate`), the installed version compared and reported is `effectiveInstalledVersion`, implicit references are checked like any other, and `sourcesUnavailable` is true when any allowed source of any candidate answered `undefined` or the check was cancelled. Extend `MetadataResolver.metadata`'s JSDoc: "first allowed source in order; offline when no allowed source produced metadata, for any reason". No other declaration changes.
-2. `src/core/feeds/updates.ts`: `export class DefaultUpdateChecker implements UpdateChecker` with `constructor(deps: Pick<FeedsDeps, 'policy' | 'logger'>, registration: RegistrationClient, options?: { concurrency?: number })`, `export const UPDATE_CHECK_CONCURRENCY = 16`. Per installed package, in input order with bounded concurrency and a per-package try/catch (a rejection is logged redacted and counts as `undefined` from that package's sources; `batchedPromiseAll` of `src/core/util/concurrency.ts:14-45` rethrows the first rejection after the batch, so either wrap each worker or use `mapWithConcurrency` from `wire.ts`): skip when `declaration === 'unresolved'`; `spec = parseVersionSpec(pkg.version)`; skip when `!isUpdateCandidate(spec, pkg.resolvedVersion)`; `installed = effectiveInstalledVersion(spec, pkg.resolvedVersion)`, skip when undefined; `allowed = filterAllowedSources(policy, pkg.id, sources)`, skip when empty (flag unchanged); ask every allowed source `registration.versions(source, pkg.id, { includePrerelease, listedOnly: true, signal })` concurrently and wait for all; any `undefined` → `unavailable = true`; from the answers take each source's first element (they are sorted descending), pick the greatest by `compareText`, ties to the first-listed source; when `isNewer(candidate, installed)` build `{ id: pkg.id, installedVersion: installed, latestVersion: candidate, sourceUrl: winner.source.url }`, call `onFound`, collect. Return `{ updates }` in installed order (not completion order) and `sourcesUnavailable: unavailable || signal?.aborted === true`. No icon, lookup or vulnerability call in this file; no `versionType` switch (parse the spec text); the string `nuget.org` appears nowhere in the file.
-3. `src/core/feeds/enricher.ts`: `export class DefaultMetadataEnricher implements MetadataEnricher` with `constructor(deps: Pick<FeedsDeps, 'policy' | 'logger'>, search: Pick<SearchClient, 'lookup'>, icons: IconResolver, vulnerabilities: VulnerabilityClient, options?: { concurrency?: number })`, `export const ENRICH_CONCURRENCY = 8`. One `PackageMetadataLite` per asked package, in input order, always echoing the asked `id` and `version` (never the version `lookup` returns). Per package, isolated by try/catch: `allowed = filterAllowedSources(policy, id, sources)`; `lookup(source, id, signal)` over `allowed` in order, first defined answer supplies `verified`, `authors`, `description`; `iconUrl = await icons.icon(sources, id, version, signal)` (the resolver filters by policy itself); `const v = await vulnerabilities.forPackage(sources, id, version, signal)` over every handed-in source, `lite.vulnerabilities = v.vulnerabilities` unless `v.sourcesUnavailable`, in which case the field stays absent. Run `lookup`, icon and vulnerabilities of one package concurrently. No cache in this file, no `searchById` unless the found/missing/failed distinction is needed (it is not for best-effort lite data), no `nuget.org`.
-4. `src/core/feeds/metadataResolver.ts`: `export class DefaultMetadataResolver implements MetadataResolver` with `constructor(deps: Pick<FeedsDeps, 'policy' | 'logger'>, clients: { registration: RegistrationClient; flat: FlatContainerClient; search: SearchByIdClient; readme: ReadmeExtractor; offline: OfflineMetadataReader })`. `metadata(sources, id, version, signal)`: `allowed = filterAllowedSources(policy, id, sources)`; for each allowed source in order and stop at the first answer: `registration.metadata(source, id, version, signal)`; else when `source.endpoints.packageBaseAddress`, `flat.nuspec(source, id, version, signal)` → `parseNuspec` → `nuspecToMetadata(nuspec, { sourceUrl: source.source.url })`; else when `source.endpoints.searchQueryService`, `search.searchById(source, id, true, signal)` and on `found` a `PackageMetadata` from the row (`id`, `version` = the asked version, `description`, `authors`, `totalDownloads`, `dependencies: []`, `sourceUrl`); `packageSize`, if filled at all, from the winning source's flat container only, best effort. When no allowed source produced metadata (including `allowed.length === 0`): `return offline.metadata(id, version)` (already `offline: true`). No cache, no in-flight map: the coordinator dedupes and caches at P4.9. `versions(sources, id, options)`: `allowed` as above; empty → `{ versions: [], sourcesUnavailable: false }`; else `registration.versions(source, id, options)` on every allowed source concurrently; `versions` = the union deduplicated by `normalize(text)` keeping the first text seen in source order, then `sortDescending`; `sourcesUnavailable` = any answer `undefined`. `readme(sources, id, version, signal)`: `readme.extract(filterAllowedSources(policy, id, sources), id, version, signal)`. Export a pure `searchResultToMetadata(row: PackageSearchResult, version: string): PackageMetadata` for its own test.
-5. `src/core/feeds/index.ts`: `export * from './updates'; export * from './enricher'; export * from './metadataResolver';` (`testSupport.ts` stays unexported).
-6. Tests, all with `FakeTransport` from `testSupport.ts` and real clients (`DefaultRegistrationClient` over `DefaultSearchClient` and `DefaultFlatContainerClient`) where the interaction matters, fakes implementing the `types.ts` interfaces where it does not. `updates.test.ts`: `skips unresolved declarations, invalid specs, exact pins and floating or range specs without a resolved version (N6)`; `compares against the resolved version of a floating spec and reports it as installedVersion`; `takes the newest version across every allowed source and names the source that has it, ties to the first-listed source`; `waits for every allowed source instead of the first non-empty answer`; `reports sourcesUnavailable when an allowed source failed even though another source produced an update`; `does not report sourcesUnavailable for an unknown package or a package no source is allowed for`; `asks only the sources the policy allows for each id`; `streams each update through onFound and returns them in installed order`; `one failing package does not fail the check`; `a cancelled check resolves with what it found and sourcesUnavailable`. `enricher.test.ts`: `echoes the asked id and version on every entry`; `takes verified, authors and description from the first allowed source that knows the id, in source order`; `asks lookup only of sources the policy allows and still resolves the icon and vulnerabilities`; `leaves vulnerabilities absent when the data was unavailable and [] when none apply`; `one failing package yields a bare entry and the others are enriched`. `metadataResolver.test.ts`: `tries registration, then the flat-container nuspec, then the search service of one source before the next source`; `metadata for the same id and version from two sources never bleeds across sources (F6)` — two resolved sources A and B whose registration leaves describe id@version differently: `metadata([A, B], …)` answers A's description with `sourceUrl` A, then `metadata([B], …)` and, with a `DefaultOutboundPolicy` mapping that sends the id to B, `metadata([A, B], …)` both answer B's with `sourceUrl` B and A received no request in the mapped call; `never sends the nuspec or size request to a source the policy refuses` (flat container has no policy of its own); `falls back to the offline nuspec when no allowed source produced metadata, also when none is allowed, and marks it offline`; `versions unions the allowed sources, deduplicates by normalized version, sorts descending and flags an allowed source that failed`; `readme reads only the allowed sources`. New `src/core/feeds/policy.test.ts`, `describe('outbound policy across the feed clients')`, building `ResolvedSource`s by hand (nuget.org endpoints under `https://api.nuget.org/...`, a private feed under `https://feed.example/...`), a `FakeTransport` whose handler answers every URL plausibly (a 200 JSON body for search, registration, flat index, vulnerability index as `[]`) so that a leaked request would succeed and be recorded, a fake `DotnetRunner` recording argv, and all of: `DefaultUpdateChecker.check`, `DefaultMetadataEnricher.enrich`, `DefaultMetadataResolver.metadata`/`versions`/`readme`, `DefaultIconResolver.icon`, `DefaultSearchClient.search` (free text and `exactMatch`), `quickSearch`, `searchById`, `lookup`, `DefaultRegistrationClient.versions`/`metadata`, `DefaultVulnerabilityClient.forPackage`. (a) `it('private-only configuration never contacts nuget.org')`: `new DefaultOutboundPolicy()` without mapping, only the private source handed in; assert `transport.requests.length > 0`, every request went to `feed.example`, no request URL has a hostname that is `nuget.org` or ends in `.nuget.org`, and no argv element contains `nuget.org`. (b) `it('never puts a package id into a request to nuget.org when the mapping sends every id to the private feed (M2, ADR-005)')`: nuget.org and the private feed both handed in, `new DefaultOutboundPolicy(new Map([['private feed', ['*']]]))`; assert that no request to a nuget.org host contains the package id (case-insensitive) in its path or query, that the private feed received the id-bearing requests, and do not assert on hosts: free-text search, quick search and the vulnerability download legitimately reach an enabled nuget.org under Q1 and Q2.
-7. Gates in §2.2 order; the two policy tests and the F6 test 40 times in a row (they have no timers, but the resolver and checker are concurrent).
-8. Docs duties. Ledger: M2 → closed at P4.8 (the named test and its sibling; the quick-search default went at P4.6, `getPackageSize` is policy-filtered by construction in the resolver); F6 → closed in core at P4.8 (no inner cache; `sourceUrl` on every answer) with a new row N70: "`resourceKeys.metadata(id, version, undefined)` and `resourceKeys.versions(id, undefined, pre)` key on `'all'` without a project, while the answer depends on the project's allowed sources and mapping; a Catalog that queries under `'all'` for two projects with different source lists shares one entry (F6 one layer up). P4.9 must pass an explicit `sourceUrl` or bypass the coordinator for `'all'`, or ask for a key change in its own brief" → P4.9; N6 → closed at P4.8. Tracker P4.9 note gains: `Catalog.updates` = `resolve` the context's sources, `check` with `onFound` forwarded as `found` chunks (bare rows), then `enrich` the found rows and put `iconUrl`/`verified`/`authors` on the terminal `updates`; never cache an `updates`, `versions` or `metadata` result whose flag is set; `package/versions` with `versions.length === 0 && sourcesUnavailable` is answered as an error envelope (`failed`) rather than `[]`, otherwise the list; `VulnerabilityClient.forPackage` is handed every resolved source of the project; the `lite` cache kind (`CachePolicy.ts:35,112-113`, keyed by source) gets its user when the Catalog decides how late joiners of `installed/get` receive lite metadata (ADR-009 d.2: a cache hit delivers no chunk); N70. Tracker P5 browse note (P5.7/P5.8 row, whichever renders search results): a free-text row keeps its `sourceUrl` and is shown whatever the mapping says; the id's install source is restore's business. `src/core/feeds/STATUS.md` "Deviations": `src/protocol/domain.ts:130-131` says `offline` means every source was unreachable; the resolver sets it whenever no allowed source produced metadata, because the clients do not distinguish failed from unknown; a JSDoc tightening is a contract item for the P4 phase review. Gotcha rows: "Flat container has no policy — `FlatContainerClient` filters nothing; filter with `filterAllowedSources` before `nuspec`, `packageSize`, `versionIndex` or `icon`, as `registration.ts`, `icons.ts` and `metadataResolver.ts` do"; "`batchedPromiseAll` rethrows — one rejected worker fails the whole batch after it completes; feed code isolates each package with its own try/catch". CHANGELOG `### Added` one headline. ARCHITECTURE 2.0 feeds row: the three modules in one clause each.
-9. Commit citing P4.8, ADR-005, ADR-006, ADR-009, M2 (closed), F6 (closed in core; N70 opened), N6 (closed); push; wait for green CI.
-
-DO NOT:
-- Do not filter free-text search rows by the policy anywhere, and do not record the row's source as a reason to drop it.
-- Do not restrict advisories to the sources the mapping allows for an id; do not hand `forPackage` a policy-filtered list.
-- Do not take the first source whose list is non-empty (1.x racing), and do not read `versions[0]` of one source without comparing across the allowed sources.
-- Do not compare against `pkg.version` (the spec text) or branch on `pkg.versionType`; parse the spec and use `effectiveInstalledVersion`.
-- Do not treat an empty allowed set, an unknown package or a refused source as `sourcesUnavailable`; only `undefined` answers and cancellation set it.
-- Do not call `flat.nuspec`, `flat.packageSize` or `flat.versionIndex` on an unfiltered source list.
-- Do not add a cache, an in-flight map or a `${id}@${version}` key of any kind to `updates.ts`, `enricher.ts` or `metadataResolver.ts`.
-- Do not enrich inside `check`, and do not call the icon resolver, `lookup` or the vulnerability client from `updates.ts`.
-- Do not change the asked `version` on a lite entry to the version a search answered.
-- Do not test a hostname for `nuget.org` anywhere under `src/core/feeds/*.ts` except in tests; the string appears in no production file of this item.
-- Do not edit `src/protocol/domain.ts:130-131`, `resourceKeys`, `src/core/contracts.ts` or any ADR; record the deviation and N70 instead.
-- Do not assert on hosts in the mapping test (configuration b): free-text search, quick search and the vulnerability download may reach an enabled nuget.org.
-- Do not use `batchedPromiseAll` without a per-package try/catch, and do not let one package's rejection fail a check or an enrichment.
-- Do not touch `src/core/catalog/**`, `src/host/**` or `src/extension.next.ts`; the `REMOVAL GATE: P4.9` lines stay for P4.9.
-
-CONTRACT CHANGE: none. `src/core/feeds/types.ts` is the module's own unfrozen surface (`VersionsOutcome`, the `MetadataResolver.versions` return type, JSDoc on `UpdateChecker.check` and `MetadataResolver.metadata`). `src/protocol/**`, `src/core/contracts.ts` and `docs/adr/**` are not edited; the `offline` JSDoc mismatch at `src/protocol/domain.ts:130-131` is a recorded deviation for the P4 phase review, and the `'all'` resource-key hazard is finding N70 for P4.9's own brief.
-
-VERIFY:
-- `npx tsc --noEmit` → exit 0; `npm run check-types` → exit 0; `npx eslint src` → 0 errors, 0 warnings.
-- `npx vitest run --project backend src/core/feeds -t "private-only configuration never contacts nuget.org"` → 1 passed; `npx vitest run --project backend src/core/feeds -t "never bleeds across sources"` → 1 passed; `npx vitest run --project backend src/core/feeds -t "never puts a package id into a request to nuget.org"` → 1 passed.
-- `for i in $(seq 1 40); do npx vitest run --project backend src/core/feeds/policy.test.ts src/core/feeds/metadataResolver.test.ts || break; done` → 40 green.
-- `grep -n "nuget.org" src/core/feeds/updates.ts src/core/feeds/enricher.ts src/core/feeds/metadataResolver.ts` → no output.
-- `grep -n "filterAllowedSources" src/core/feeds/metadataResolver.ts` → at least one line before each `flat.` call; `grep -n "flat\.\(nuspec\|packageSize\|versionIndex\)" src/core/feeds/metadataResolver.ts` lists only calls inside the loop over the filtered list.
-- `grep -n "versionType" src/core/feeds/updates.ts` → no output; `grep -n "isUpdateCandidate\|effectiveInstalledVersion" src/core/feeds/updates.ts` → both present.
-- `grep -rn "icon(\|lookup(\|forPackage(" src/core/feeds/updates.ts` → no output.
-- `git diff --name-only -- src/protocol src/core/contracts.ts docs/adr` → empty; `grep -rn "REMOVAL GATE: P4.9" src | wc -l` unchanged from the baseline.
-- `npm test` and `npm run bench` green; `grep -n "N70" docs/plans/findings-ledger.md` → one row assigned to P4.9; `grep -n "^| P4.9 " docs/plans/STATUS.md` contains "N70" and "bare rows".
-
-FILES CHECKED: /Users/mattias/github/nuiget/.github/agents/architecture-advisor.agent.md (whole); /Users/mattias/github/nuiget/docs/plans/2026-10-11-nuiget-2.0-execution-plan.md (§1 D1-D13 at :41-58, §2.1-2.4 at :61-115, §3 at :137-158, P4 rows :253-268, N6 at :411); /Users/mattias/github/nuiget/docs/plans/STATUS.md (rows P2.8 :47, P4.6 :68, P4.7 :69, P4.8 :70, P4.9 :71; the P4.6 ruling verbatim at :1945-1995; the DECISION lines of the earlier rulings); /Users/mattias/github/nuiget/docs/plans/findings-ledger.md (:108 N6, :172-176 M-corrections, :200 M2, :232-236 F3/F5/F6/M1/M3, :305, :341-342); /Users/mattias/github/nuiget/docs/plans/RUN.md:77; /Users/mattias/github/nuiget/docs/adr/005-execution-context-and-outbound-policy.md (whole), /Users/mattias/github/nuiget/docs/adr/006-icons-and-csp.md (whole), /Users/mattias/github/nuiget/docs/adr/009-catalog.md (whole); /Users/mattias/github/nuiget/src/core/feeds/STATUS.md (whole); /Users/mattias/github/nuiget/src/core/feeds/types.ts (whole), index.ts (whole), testSupport.ts (whole), search.ts (:167-420), registration.ts (:100-235), vulnerability.ts (:85-160), icons.ts (:125-200), readme.ts (:73-135), offline.ts (:40-110), flatContainer.ts (grep for policy: none), wire.ts:303 (`mapWithConcurrency`), the `it(` titles of search.test.ts, registration.test.ts, icons.test.ts (:202-222), vulnerability.test.ts, serviceIndex.test.ts, readme.test.ts, readmeImage.test.ts, wire.test.ts; /Users/mattias/github/nuiget/src/core/feeds/serviceIndex.ts (:176-215); /Users/mattias/github/nuiget/src/core/feeds/__fixtures__ (listing); /Users/mattias/github/nuiget/src/core/sources/DefaultOutboundPolicy.ts (whole), mapping.ts (:1-45), DefaultOutboundPolicy.test.ts (titles, :83-105); /Users/mattias/github/nuiget/src/core/versioning/VersionRange.ts (:36-60, :265-304), NuGetVersion.ts (:150-205), index.ts exports; /Users/mattias/github/nuiget/src/core/cache/CachePolicy.ts (:1-61, :109-122, :139-148), LruMap.ts (API), TieredCache.ts (API); /Users/mattias/github/nuiget/src/core/util/concurrency.ts (:14-60); /Users/mattias/github/nuiget/src/core/catalog/Catalog.ts (:1-99, :178-202, :278-312); /Users/mattias/github/nuiget/src/core/contracts.ts (:280-304); /Users/mattias/github/nuiget/src/protocol/domain.ts (:13-21, :40-70, :72-94, :94-136, :143-150, :186-200, :220-237), messages.ts (:70, :121-140), guards.ts (:20-23), envelope.ts (:13-24); /Users/mattias/github/nuiget/src/services/NuGetPackageService.ts (:295-330, :1437-1475, :1480-1560, :1688-1705, :1749-1800, :2051-2160, :2180-2245; `isImplicit` grep across src/services and src/webview: no use in the update check); /Users/mattias/github/nuiget/src/webview/shared/store (grep for `sourceUrl`, `latestVersion`, `kind: 'metadata'`); /Users/mattias/github/nuiget/src/test/harness (grep for `updates/get`: none); /Users/mattias/github/nuiget/ARCHITECTURE.md (:86, :91, :99, :103-105); commands: `git status --short` (only `docs/plans/STATUS.md` modified), `git log --oneline -3` (head 1a761dd), `ls src/core/feeds src/core/feeds/__fixtures__`, `grep -rn "nuget.org" src/core/feeds/*.ts` (production mentions are comments in readme.ts, wire.ts, relevance.ts, serviceIndex.ts, vulnerability.ts only). Advisor tool consulted once before writing; its sharpening points (frozen `offline` JSDoc, `'all'` key hazard, flat container without policy, split assertions for the two configurations, `batchedPromiseAll` rejection, the unused `lite` cache kind, `package/versions` cannot carry the flag) are folded into this ruling.
-`````
+- 2026-10-16, P9.1: the ambient advisor before the edits (shape of the marker on `missing`, `liteLookup` as a named
+  source, the `data:` reading, the memoized read). Not ⚑, no stop-and-ask trigger.
 
 ## Exact next step (one item ID)
 
-*From the note at commit c4c3617 (parent of the P5.6 commit):*
-
-P5.7 (feature details), after P5.6's CI run is green.
-
-*From the note at commit 6e2c878 (parent of the P4.9b commit):*
-
-P4.10 (benches and the ARCHITECTURE 2.0 pass for feeds, transport, policy and caching), then the P4 phase gate and review.
-
-*From the note at commit 1a761dd (parent of the P4.8 commit):*
-
-P4.9 (wire the feeds into the Catalog and `extension.next.ts`; remove the `REMOVAL GATE: P4.9` comments; N70).
+P9.2 (⚑: consult the `architecture-advisor` before coding).

@@ -22,6 +22,7 @@ import {
     ReadmeExtractor,
     ReadmeImageFetcher,
     TieredCacheIconCache,
+    toLiteMetadata,
     type FlatContainerClient,
     type IconCache,
     type IconResolver,
@@ -82,10 +83,11 @@ export const NO_VULNERABILITY_DATA: VulnerabilityClient = {
 };
 
 /**
- * `lookup` through the `lite` cache: an answer, or `null` when the source does not know the id, is kept for the kind's
- * lifetime and answered without a request; nothing else is stored (icons and vulnerabilities have their own caches).
+ * The lite lookup through the `lite` cache: an answer, or `null` when the source does not know the id, is kept for the
+ * kind's lifetime and answered without a request. A source that could not answer (network, timeout, rate limit,
+ * cancellation) is asked again next time: nothing is stored for it, so no failure is ever persisted (P9.1).
  */
-export function liteLookup(search: Pick<SearchClient, 'lookup'>, cache: Pick<TieredCache, 'get' | 'set'>): Pick<SearchClient, 'lookup'> {
+export function liteLookup(search: Pick<SearchClient, 'searchById'>, cache: Pick<TieredCache, 'get' | 'set'>): Pick<SearchClient, 'lookup'> {
     return {
         async lookup(source: ResolvedSource, packageId: string, signal?: AbortSignal): Promise<PackageMetadataLite | undefined> {
             const key = cacheKeys.lite(packageId, source.source.url);
@@ -93,7 +95,11 @@ export function liteLookup(search: Pick<SearchClient, 'lookup'>, cache: Pick<Tie
             if (cached !== undefined) {
                 return cached ?? undefined;
             }
-            const found = await search.lookup(source, packageId, signal);
+            const fetched = await search.searchById(source, packageId, true, signal);
+            if (fetched.kind === 'failed') {
+                return undefined;
+            }
+            const found = fetched.kind === 'found' ? toLiteMetadata(fetched.result) : undefined;
             if (signal?.aborted) {
                 return found;
             }

@@ -88,6 +88,29 @@ npm run docs:check, npm run package:vsix, npm run test:e2e → SKIPPED: no produ
 - viewed: sidebar-narrow-200px.png: side bar at 200 px; Installed rows readable, Updates row name cut to
   "Newtonso…" by the version (the overflow P9.10 fixes); main panel on Updates beside it.
 
+## Visual check (CI run 38951346180 on 1d76a1a, artifact `ui-screenshots`, 12 PNGs at 1280×900, all viewed)
+
+UI job: 37 passing (2m); "Check the named screenshots": "12 named states; PNGs in the artifact: 12". None contradicts
+the intended rendering of P9.0, which changes no webview; they are the baseline P9.1-P9.11 change.
+
+- viewed: main-installed-single.png: one-line rows, "Newtons…" cut while its description keeps the width (MI3), no
+  icon; details on the README of Newtonsoft.Json.
+- viewed: main-installed-all.png: TESTPROJECT.CSPROJ (2) and UTILITY.CSPROJ (1, "provisional"); no icons; transitive
+  aggregate closed.
+- viewed: main-transitive-expanded.png: section open at the bottom, "No transitive dependencies." (the fixture has
+  none on net8.0; P9.5 needs one that has).
+- viewed: main-updates.png: two rows `13.0.2 → 13.0.4`, `3.1.1 → 4.4.0` with Verified, Update all (2); the details
+  pane still shows NUnit from the Browse test before (stale details, P9.6).
+- viewed: main-browse-results.png: icons on most rows, names cut to "N…", "Newt…" (MB1); details show Serilog from
+  before (stale, P9.6).
+- viewed: main-browse-details.png: Newtonsoft.Json, Installed 13.0.2, version 13.0.4, Update; Details tab fields.
+- viewed: main-quicksearch-open.png: five suggestions under the box, no source grouping (MB6, MB7); list pane empty.
+- viewed: main-details-readme.png: README rendered; two badge images show their alt text (not loaded on the runner).
+- viewed: sidebar-sections.png: INSTALLED (2) and UPDATES (2) filled; main panel on Updates beside it.
+- viewed: sidebar-narrow-200px.png: side bar at 200 px; the Updates row reads "Newton… 13.0.2 → 13.0.4" (P9.10).
+- viewed: main-installed-single-light.png: Light Modern, Installed tab, grey buttons, sidebar beside it.
+- viewed: main-installed-single-hc.png: Dark High Contrast, bordered panes and tab, row check boxes visible.
+
 ## Not started
 
 - Parity audit TF6 closes with this item; `docs/plans/parity-audit-2026-10-16.md` is P9.13's file (plan row

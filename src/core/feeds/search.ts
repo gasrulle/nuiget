@@ -268,15 +268,7 @@ export class DefaultSearchClient implements SearchClient {
 
     async lookup(source: ResolvedSource, packageId: string, signal?: AbortSignal): Promise<PackageMetadataLite | undefined> {
         const fetched = await this.searchById(source, packageId, true, signal);
-        if (fetched.kind !== 'found') {
-            return undefined;
-        }
-        const { id, version, verified, authors, description } = fetched.result;
-        const lite: PackageMetadataLite = { id, version, authors, description };
-        if (verified !== undefined) {
-            lite.verified = verified;
-        }
-        return lite;
+        return fetched.kind === 'found' ? toLiteMetadata(fetched.result) : undefined;
     }
 
     private async searchSource(source: ResolvedSource, q: string, options: SearchOptions): Promise<SourceAnswer> {
@@ -379,4 +371,13 @@ export class DefaultSearchClient implements SearchClient {
         }
         return { rows, origins, unavailable: problems.length > 0 };
     }
+}
+
+/** The lite metadata of a search row: what rows show next to the id (verified, authors, description). */
+export function toLiteMetadata({ id, version, verified, authors, description }: PackageSearchResult): PackageMetadataLite {
+    const lite: PackageMetadataLite = { id, version, authors, description };
+    if (verified !== undefined) {
+        lite.verified = verified;
+    }
+    return lite;
 }

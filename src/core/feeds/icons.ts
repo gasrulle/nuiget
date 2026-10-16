@@ -20,7 +20,10 @@ export interface IconCache {
 export const ICON_FOUND_TTL_MS = Number.POSITIVE_INFINITY;
 /** A miss is retried after a day — a feed may start serving icons later. */
 export const ICON_MISS_TTL_MS = 24 * 60 * 60 * 1000;
-/** Consecutive misses per source before that source is skipped until `reset()`. */
+/**
+ * Consecutive "not found" answers (404, 410) per source before that source is skipped until `reset()`. Failures and
+ * unusable answers never count; any other answer of the source clears its count (P9.1).
+ */
 export const ICON_SOURCE_MISS_THRESHOLD = 5;
 /** Largest icon body accepted (a details-panel icon is a few KB; this guards against HTML/login pages). */
 export const MAX_ICON_BYTES = 256 * 1024;
@@ -210,12 +213,17 @@ export class DefaultIconResolver implements IconResolver {
 
             const dataUri = response.kind === 'found' ? toDataUri(response) : undefined;
             const key = iconCacheKey(packageId, version, sourceUrl);
-            if (dataUri !== undefined) {
+            // Only "the feed has no icon for this version" counts towards skipping the source; an answer that is no
+            // usable icon (a body that is not an image, a login page) shows the feed is there and clears the count.
+            if (response.kind === 'missing' && response.unusable !== true) {
+                this.consecutiveMisses.set(sourceUrl, (this.consecutiveMisses.get(sourceUrl) ?? 0) + 1);
+            } else {
                 this.consecutiveMisses.delete(sourceUrl);
+            }
+            if (dataUri !== undefined) {
                 this.cache.set(key, dataUri, ICON_FOUND_TTL_MS);
                 return dataUri;
             }
-            this.consecutiveMisses.set(sourceUrl, (this.consecutiveMisses.get(sourceUrl) ?? 0) + 1);
             this.cache.set(key, null, ICON_MISS_TTL_MS);
         }
         return undefined;

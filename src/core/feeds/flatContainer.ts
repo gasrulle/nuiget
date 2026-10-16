@@ -176,12 +176,15 @@ export class DefaultFlatContainerClient implements FlatContainerClient {
         if (!result.ok) {
             // The feed said there is none (404, 410) or that it is too big to use: definitive. Anything else (network,
             // timeout, cancellation, a server or rate-limit error) says nothing about the icon.
-            const definitive = result.code === 'too-large' || (result.code === 'http-error' && (result.status === 404 || result.status === 410));
-            return definitive ? { kind: 'missing' } : { kind: 'failed', reason: `${result.code}${result.status === undefined ? '' : ` ${result.status}`}: ${result.message}` };
+            if (result.code === 'too-large') {
+                return { kind: 'missing', unusable: true };
+            }
+            const notFound = result.code === 'http-error' && (result.status === 404 || result.status === 410);
+            return notFound ? { kind: 'missing' } : { kind: 'failed', reason: `${result.code}${result.status === undefined ? '' : ` ${result.status}`}: ${result.message}` };
         }
         const contentType = headerValue(result.headers, 'content-type') ?? '';
         if (result.body.length === 0 || result.body.length > this.maxIconBytes || !isAcceptableIconType(contentType)) {
-            return { kind: 'missing' };
+            return { kind: 'missing', unusable: true };
         }
         return { kind: 'found', contentType, body: result.body };
     }

@@ -315,6 +315,68 @@ describe('DefaultIconResolver', () => {
         expect(flat.icon).toHaveBeenCalledTimes(2 + ICON_SOURCE_MISS_THRESHOLD);
     });
 
+    it('breaker ignores transport failures and answers that are no usable icon: only "not found" counts (P9.1)', async () => {
+        const cache = new MemoryIconCache();
+        const answers: IconFetch[] = [
+            { kind: 'failed', reason: 'timeout' },
+            { kind: 'failed', reason: 'http-error 429: http-error' },
+            { kind: 'missing', unusable: true },
+        ];
+        let next = 0;
+        const flat = fakeFlat(async () => answers[next++ % answers.length]);
+        const resolver = new DefaultIconResolver(flat, cache, allowAll);
+        for (let i = 0; i < ICON_SOURCE_MISS_THRESHOLD * answers.length; i++) {
+            await resolver.icon([A], `Pkg${i}`, '1.0.0');
+        }
+        expect(flat.icon).toHaveBeenCalledTimes(ICON_SOURCE_MISS_THRESHOLD * answers.length);
+        expect(resolver.isSourceSuppressed(A.source.url)).toBe(false);
+        // A thrown transport error does not count either.
+        flat.icon.mockImplementation(async () => {
+            throw new Error('ECONNRESET');
+        });
+        for (let i = 0; i < ICON_SOURCE_MISS_THRESHOLD; i++) {
+            await resolver.icon([A], `Thrown${i}`, '1.0.0');
+        }
+        expect(resolver.isSourceSuppressed(A.source.url)).toBe(false);
+        // A body that is no image (a login page served with 200) is no icon and is not asked again for a day, but it
+        // proves nothing about the feed's icons.
+        expect(cache.get(iconCacheKey('Pkg2', '1.0.0', A.source.url))).toBeNull();
+        expect(cache.get(iconCacheKey('Pkg0', '1.0.0', A.source.url))).toBeUndefined();
+    });
+
+    it('breaker resets on success: an icon or any answer other than "not found" clears the count (P9.1)', async () => {
+        const flat = flatAnswering({ [A.source.url]: { kind: 'missing' } });
+        const resolver = new DefaultIconResolver(flat, new MemoryIconCache(), allowAll);
+        const misses = async (prefix: string, count: number): Promise<void> => {
+            flat.icon.mockImplementation(async () => ({ kind: 'missing' }));
+            for (let i = 0; i < count; i++) {
+                await resolver.icon([A], `${prefix}${i}`, '1.0.0');
+            }
+        };
+
+        await misses('a', ICON_SOURCE_MISS_THRESHOLD - 1);
+        flat.icon.mockImplementation(async () => asFetch({ contentType: 'image/png', body: PNG }));
+        await expect(resolver.icon([A], 'Found', '1.0.0')).resolves.toContain('data:image/png;base64,');
+        await misses('b', ICON_SOURCE_MISS_THRESHOLD - 1);
+        expect(resolver.isSourceSuppressed(A.source.url)).toBe(false);
+
+        flat.icon.mockImplementation(async () => ({ kind: 'missing', unusable: true }));
+        await resolver.icon([A], 'Unusable', '1.0.0');
+        await misses('c', ICON_SOURCE_MISS_THRESHOLD - 1);
+        expect(resolver.isSourceSuppressed(A.source.url)).toBe(false);
+
+        flat.icon.mockImplementation(async () => asFetch({ contentType: 'application/octet-stream', body: Buffer.from('<html></html>') }));
+        await resolver.icon([A], 'NotAnImage', '1.0.0');
+        await misses('d', ICON_SOURCE_MISS_THRESHOLD - 1);
+        expect(resolver.isSourceSuppressed(A.source.url)).toBe(false);
+
+        // Without an answer in between, the threshold still skips the source until reset().
+        await misses('e', 1);
+        expect(resolver.isSourceSuppressed(A.source.url)).toBe(true);
+        resolver.reset();
+        expect(resolver.isSourceSuppressed(A.source.url)).toBe(false);
+    });
+
     it('a caller that gives up does not leave a caller of the same resolution without the icon', async () => {
         let release: (value: IconFetch) => void = () => undefined;
         const flat = fakeFlat(() => new Promise<IconFetch>(resolve => { release = resolve; }));

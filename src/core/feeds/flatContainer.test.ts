@@ -112,5 +112,9 @@ describe('flat container client', () => {
         expect(await c.icon(feed(), 'busy', '1.0.0')).toEqual({ kind: 'failed', reason: 'http-error 503: http-error' });
         // A source without a flat container has no icon there: definitive.
         expect(await c.icon(feed({ endpoints: {} }), 'png', '1.0.0')).toEqual({ kind: 'missing' });
+        // Only 404 and 410 say "this version has no icon"; the other misses answered with something that is no icon (P9.1).
+        const unusable = async (ids: string[]) => Promise.all(ids.map(async id => (await c.icon(feed(), id, '1.0.0')) as { unusable?: true }));
+        expect((await unusable(['gone', 'removed'])).map(answer => answer.unusable)).toEqual([undefined, undefined]);
+        expect((await unusable(['huge', 'empty', 'html'])).map(answer => answer.unusable)).toEqual([true, true, true]);
     });
 });

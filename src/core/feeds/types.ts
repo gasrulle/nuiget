@@ -110,9 +110,14 @@ export interface FlatContainerClient {
     icon(source: ResolvedSource, packageId: string, version: string, signal?: AbortSignal): Promise<IconFetch>;
 }
 
+/**
+ * `missing` alone: the feed has no icon for the version (404, 410) or no flat container at all. `missing` with `unusable`:
+ * the feed answered with something that is no icon (too large, empty, not an image such as a login page); that is no
+ * sign the feed lacks icons, so the resolver's breaker does not count it.
+ */
 export type IconFetch =
     | { kind: 'found'; contentType: string; body: Buffer }
-    | { kind: 'missing' }
+    | { kind: 'missing'; unusable?: true }
     | { kind: 'failed'; reason: string };
 
 export interface VulnerabilityOutcome {
