@@ -279,8 +279,10 @@
     gap: var(--nuiget-space-3);
 }
 
+/* `overflow: visible`: a 0 by 0 box that clips is what axe takes for hidden text, and it would measure no name. */
 .nuiget-row--compact .nuiget-row-line {
     display: contents;
+    overflow: visible;
 }
 
 .nuiget-row--compact .nuiget-row-name {

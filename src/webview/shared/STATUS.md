@@ -26,7 +26,16 @@ npm run bench               → exit 0
 npm run docs:check          → exit 0
 rm -rf dist out/esbuild && node esbuild.mjs --production --analyze → exit 0 · dist/extension.js 293359 / 322502 ·
                               dist/webview.js 526452 / 577766 (+1211) · dist/sidebar.js 320531 / 351245 (+1218)
-npm run package:vsix, npm run test:ui → SKIPPED locally: no host or packaging change; CI runs the UI job on the push
+npm run package:vsix        → SKIPPED locally: no host or packaging change
+CI run 38958055306 (83afc1b) → 9 jobs green, UI red: the six theme tests, "color-contrast nodes that passed in the
+                              sidebar under <theme>: expected 5 to be at least 10" (P9.1's run: 13). Cause: the
+                              compact `.nuiget-row-line` is `display: contents` (a 0 by 0 box) and kept the base rule's
+                              `overflow: hidden`; axe takes text under a clipping ancestor with an empty box for hidden
+                              and measured neither name nor version of the four sidebar rows (8 nodes). Fix (attempt 1):
+                              `overflow: visible` on the compact line
+rm -rf /tmp/nuiget-ui/screenshots dist && npm run test:ui -- --storage /tmp/nuiget-ui → exit 0 · 37 passing (1m) ·
+                              "[theme] sidebar under <each of six themes>: passes {"color-contrast":13,"target-size":7};
+                              incomplete 0"
 ```
 
 ## Done (tested)
@@ -50,7 +59,8 @@ npm run package:vsix, npm run test:ui → SKIPPED locally: no host or packaging 
 - Tests (`Row.test.tsx`, "Row layout (P9.2, D15)"): `comfortable row stacks name over version and authors`, `long
   version never hides the name in compact density`, `an update row reads old → new as text and marks the new
   version`, `the tooltip is on the body, not on the option`. The thirteen existing titles and bodies are unchanged.
-- Docs: ARCHITECTURE row block; CHANGELOG `[Unreleased]` `### Changed`; gotcha "A `title` on a row".
+- Docs: ARCHITECTURE row block; CHANGELOG `[Unreleased]` `### Changed`; gotchas "A `title` on a row" and
+  "`display: contents` and axe" (the fix-forward).
 
 ## Done (untested)
 
