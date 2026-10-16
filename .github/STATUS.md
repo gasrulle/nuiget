@@ -40,9 +40,20 @@ npm run test:e2e, npm run test:ui → SKIPPED: no product code changed; CI runs 
 - `docs/release-checklist.md`: the session's filled table and the owner's steps (merge, VSIX, two publishing routes,
   tag and GitHub release). No gate reads it.
 
+## Release pull request (follow-up commit, ruling E)
+
+- Push run 38910717999 on `91c6804`: success on all 10 jobs (Lint, Test ubuntu + windows, SDK probe, E2E 1.85.0,
+  E2E stable, UI, Build & Package, Benchmark, Perf); artifacts `vsix` (577598 bytes), `e2e-log-1.85.0`,
+  `e2e-log-stable`, `ui-log`, `sdk-probe`, `perf-baseline`.
+- `gh pr create` → https://github.com/gasrulle/nuiget/pull/18 (`main` ← `labs/2.0`, not a draft); merge state
+  `BLOCKED` right after creation with every check green and no review decision (a ruleset rule the session cannot
+  see; the owner merges with the bypass, ruling DO 6).
+- This commit fills the tracker's Commit cell (`91c6804`), the PR number and the checklist; `labs/2.0-P8-done` goes on
+  it after its green run.
+
 ## Not started
 
-- The release pull request, the CI evidence and the `labs/2.0-P8-done` tag: the follow-up commit (ruling E).
+- Nothing in P8.3 for a session; merging and publishing are the owner's (`docs/release-checklist.md`).
 
 ## Deviations from contract/ADR (file:line each)
 
@@ -116,5 +127,4 @@ Files checked (all absolute under /Users/mattias/github/nuiget): .github/agents/
 
 ## Exact next step (one item ID)
 
-P8.3 follow-up (ruling DO 9-11): push, green CI, `gh pr create`, the follow-up commit, `labs/2.0-P8-done`; then the
-owner merges and publishes.
+None for a session: the owner merges PR #18 (squash) and follows `docs/release-checklist.md`.

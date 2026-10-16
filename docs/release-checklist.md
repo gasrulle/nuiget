@@ -10,7 +10,7 @@ publish, tag a release or merge the release pull request.
 |---|---|
 | Version | `2.0.0` in `package.json`, `package-lock.json` (`version` and `packages[""].version`) |
 | CHANGELOG | `## [2.0.0] - 2026-10-16` with `### Breaking changes`, `### Added`, `### Changed`; empty `## [Unreleased]` above it |
-| Release commit | pending, filled by the follow-up commit |
+| Release commit | `91c6804` on `labs/2.0`; this table filled by the follow-up commit |
 | `npx tsc --noEmit` | exit 0 |
 | `npm run check-types` | exit 0 |
 | `npx eslint src` | exit 0 |
@@ -22,8 +22,8 @@ publish, tag a release or merge the release pull request.
 | `npm run package:vsix` | exit 0; `nuiget-v2.0.0.vsix`, 17 files, 564.82 KB |
 | `npm run check:vsix` | OK |
 | `npm run test:e2e`, `npm run test:ui` | SKIPPED locally: no product code changed; CI runs both on the push |
-| `labs/2.0` CI run and `vsix` artifact | pending, filled by the follow-up commit |
-| Release pull request | pending, filled by the follow-up commit |
+| `labs/2.0` CI run and `vsix` artifact | push run 38910717999 on `91c6804`: all 10 jobs green; artifact `vsix` (577598 bytes); the follow-up commit re-runs CI |
+| Release pull request | [#18](https://github.com/gasrulle/nuiget/pull/18), `labs/2.0` → `main`, not a draft |
 
 ## Owner
 
