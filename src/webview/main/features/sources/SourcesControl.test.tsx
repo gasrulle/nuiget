@@ -127,6 +127,29 @@ describe('main panel: sources', () => {
         expect(row('Example')).toBeInTheDocument();
     });
 
+    it('a %VAR% password is stored in clear text on Windows: the encrypt box is off and disabled and sources/add carries storeEncrypted false', async () => {
+        const user = userEvent.setup();
+        const host = await mountReady();
+        await openDialog();
+        await waitFor(() => expect(host.requests('config/get').length).toBeGreaterThan(0));
+        await hostSays(() => host.respond(host.requests('config/get')[0], { searchDebounceMode: 'quicksearch', quickSearchResultsPerSource: 5, searchResultLimit: 20, enablePerformanceLogging: false, treeIndent: 16, isWindows: true }));
+        await user.click(within(dialog()).getByRole('button', { name: 'Add source' }));
+        const panel = screen.getByTestId('add-source-panel');
+        await user.type(within(panel).getByLabelText('URL'), 'https://pkgs.example/v3/index.json');
+        await user.click(within(panel).getByRole('button', { name: 'Credentials' }));
+        await user.type(within(panel).getByLabelText('Password'), 'plain');
+        // An ordinary password on Windows is encrypted by default.
+        expect(within(panel).getByRole('checkbox', { name: 'Store the password encrypted' })).toBeChecked();
+        await user.clear(within(panel).getByLabelText('Password'));
+        await user.type(within(panel).getByLabelText('Password'), '%TOKEN%');
+        const box = within(panel).getByRole('checkbox', { name: /Stored in clear text/ });
+        expect(box).not.toBeChecked();
+        expect(box).toBeDisabled();
+        await user.click(within(panel).getByRole('button', { name: 'Add source' }));
+        expect(host.requests('sources/add')[0].payload.storeEncrypted).toBe(false);
+        expect(host.requests('sources/add')[0].payload.password).toBe('%TOKEN%');
+    });
+
     it('an HTTP source needs the insecure option; a refusal is shown in the form, which stays', async () => {
         const user = userEvent.setup();
         const host = await mountReady();

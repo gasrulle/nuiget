@@ -1,4 +1,5 @@
 import { act, render, screen, waitFor } from '@testing-library/react';
+import { StrictMode } from 'react';
 import userEvent from '@testing-library/user-event';
 import { axe } from 'jest-axe';
 import { describe, expect, it, vi } from 'vitest';
@@ -41,6 +42,19 @@ async function mountReady(changes: Partial<SessionSnapshot> = {}) {
 const search = (): HTMLInputElement => screen.getByTestId('search-input');
 
 describe('main panel shell', () => {
+    it('sends perf/mark webviewReady once at mount and firstUsefulRender once when the first installed list is shown', async () => {
+        const host = createFakeHost();
+        const { rerender } = render(<StrictMode><StoreProvider bus={host.bus}><MainShell installed={() => <p>Installed list</p>} /></StoreProvider></StrictMode>);
+        expect(host.requests('perf/mark').map(request => request.payload.name)).toEqual(['webviewReady']);
+        await hostSays(() => host.respond(host.requests('session/get').at(-1)!, snapshot(1)));
+        await hostSays(() => host.respond(host.requests('projects/list').at(-1)!, { projects: [{ name: 'App', path: A }] }, 1));
+        await waitFor(() => expect(host.requests('installed/get').length).toBeGreaterThan(0));
+        await hostSays(() => host.respond(host.requests('installed/get').at(-1)!, { projectPath: A, fidelity: 'authoritative', isCpm: false, packages: [] }, 1));
+        expect(host.requests('perf/mark').map(request => request.payload.name)).toEqual(['webviewReady', 'firstUsefulRender']);
+        rerender(<StrictMode><StoreProvider bus={host.bus}><MainShell installed={() => <p>Installed list again</p>} /></StoreProvider></StrictMode>);
+        expect(host.requests('perf/mark').map(request => request.payload.name)).toEqual(['webviewReady', 'firstUsefulRender']);
+    });
+
     it('renders the header, the search box, the tabs, the split and one live region', async () => {
         await mountReady();
         expect(screen.getByRole('main')).toHaveAttribute('data-testid', 'nuiget-app');

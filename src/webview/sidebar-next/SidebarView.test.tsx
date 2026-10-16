@@ -1,4 +1,5 @@
 import { act, render, screen, waitFor, within } from '@testing-library/react';
+import { StrictMode } from 'react';
 import userEvent from '@testing-library/user-event';
 import { axe } from 'jest-axe';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -50,6 +51,19 @@ const removals = (host: FakeHost) => host.requests('ops/remove');
 const sectionSpinner = (): Element | null => screen.getByTestId('section-header-installed').querySelector('.nuiget-spinner');
 
 describe('sidebar: Installed section', () => {
+    it('sends perf/mark webviewReady once at mount and firstUsefulRender once when the first installed list is shown', async () => {
+        const host = createFakeHost();
+        const { rerender } = render(<StrictMode><StoreProvider bus={host.bus}><SidebarView /></StoreProvider></StrictMode>);
+        expect(host.requests('perf/mark').map(request => request.payload.name)).toEqual(['webviewReady']);
+        await hostSays(() => host.respond(host.requests('session/get').at(-1)!, snapshot(1, A)));
+        await hostSays(() => host.respond(host.requests('projects/list').at(-1)!, { projects: [{ name: 'App', path: A }] }, 1));
+        await waitFor(() => expect(host.requests('installed/get').length).toBeGreaterThan(0));
+        await hostSays(() => host.respond(host.requests('installed/get').at(-1)!, installed(A, [pkg('Serilog')]), 1));
+        expect(host.requests('perf/mark').map(request => request.payload.name)).toEqual(['webviewReady', 'firstUsefulRender']);
+        rerender(<StrictMode><StoreProvider bus={host.bus}><SidebarView /></StoreProvider></StrictMode>);
+        expect(host.requests('perf/mark').map(request => request.payload.name)).toEqual(['webviewReady', 'firstUsefulRender']);
+    });
+
     let removeLayout: () => void;
 
     beforeEach(() => {

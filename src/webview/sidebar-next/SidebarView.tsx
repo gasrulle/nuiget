@@ -69,6 +69,23 @@ export function SidebarView({ viewState }: { viewState?: ViewStateStore } = {}):
     const searchRef = useRef<HTMLInputElement>(null);
     const debounce = useRef<ReturnType<typeof setTimeout>>(undefined);
     const [layout, setLayout] = useState<SidebarLayout>(() => readLayout(viewState));
+
+    // The two marks the host logs when `nuiget.enablePerformanceLogging` is on (N81): once each, under StrictMode too.
+    const markedReady = useRef(false);
+    useEffect(() => {
+        if (!markedReady.current) {
+            markedReady.current = true;
+            bus.request('perf/mark', { name: 'webviewReady', detail: `${Math.round(performance.now())} ms after load` }).catch(() => undefined);
+        }
+    }, [bus]);
+    const markedRender = useRef(false);
+    const firstListShown = installed.status === 'ready' && installed.result !== undefined;
+    useEffect(() => {
+        if (firstListShown && !markedRender.current) {
+            markedRender.current = true;
+            bus.request('perf/mark', { name: 'firstUsefulRender', detail: `${Math.round(performance.now())} ms after load` }).catch(() => undefined);
+        }
+    }, [bus, firstListShown]);
     // Kept when a change ends (a toggle, a key on the sash, the end of a drag): `setState` posts to VS Code, and a drag
     // would otherwise post once per pointer step.
     const keepLayout = (next: SidebarLayout): void => {

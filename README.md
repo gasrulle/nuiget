@@ -88,7 +88,7 @@ A Visual Studio-style NuGet package manager for VS Code with a modern split-pane
 | `nuiget.quickSearchResultsPerSource` | `5` | Suggestions per source in the main panel's quick search (1-10). |
 | `nuiget.recentSearchesLimit` | `5` | Deprecated: has no effect in 2.0 and will be removed. |
 | `nuiget.searchResultLimit` | `20` | Maximum number of packages a full search returns (1-100). |
-| `nuiget.enablePerformanceLogging` | `false` | Writes `[perf]` timing lines to the nUIget output channel at Info level instead of Debug. Keep it off in normal use. |
+| `nuiget.enablePerformanceLogging` | `false` | Writes the 2.0 webviews' `[perf]` marks (webview ready, first useful render) to the nUIget output channel at Info level instead of Debug. The duration of every dotnet command is always logged. Keep it off in normal use. |
 
 ## 📋 Commands
 
@@ -199,7 +199,7 @@ When you add a source with credentials in the sources dialog:
 | Method | Notes |
 |--------|-------|
 | **Encrypted (DPAPI)** | Windows only, and the default there. Encrypted for the current user. |
-| **Environment variable** | Type `%MY_PASSWORD%` as the password and store it in clear text: the file holds the placeholder, and nUIget reads the variable. |
+| **Environment variable** | Type `%MY_PASSWORD%` as the password and store it in clear text: the file holds the placeholder, and nUIget reads the variable (the dialog switches encryption off for such a value). |
 | **Clear text** | The only choice outside Windows. Stored unencrypted in `nuget.config`. |
 
 Example with credentials:

@@ -1,54 +1,50 @@
-# STATUS — src/webview/main   commit a2fd5d2 (P7.5a closed; parent of the P7.5b commit)   2026-10-16T10:00:00Z
+# STATUS — src/webview/main   commit 68d034d (P7.fix-1; parent of the P7.fix-2 commit)   2026-10-16T14:00:00Z
 
-git status --porcelain --untracked-files=all (before the commit): modified `.github/copilot-instructions.md`,
-`ARCHITECTURE.md`, `CHANGELOG.md`, `docs/adr/{004-project-model,004-sdk-probes,005-execution-context-and-outbound-policy,007-protocol}.md`,
-`docs/plans/{STATUS,findings-ledger}.md`, `docs/protocol.md` (generated), `docs/ux/interaction-model.md`,
-`src/core/contracts.ts` (JSDoc), `src/protocol/messages.ts` (JSDoc), `src/core/project/{mutator,mutator.test}.ts`,
-`src/webview/shared/installed/rules.ts`, `src/webview/main/features/details/{DetailsPane,DetailsPane.test}.tsx`,
-`src/webview/main/features/updates/{UpdatesTab,UpdatesTab.test,AllProjectsUpdates,CentralUpdateDialog}.tsx`,
-`src/webview/sidebar-next/{ProjectUpdates,UpdatesSection.test,SidebarView.test}.tsx` and the STATUS notes of
-`src/protocol`, `src/core/project`, `src/webview/shared`, `src/webview/main`, `src/webview/sidebar-next`
+git status --porcelain --untracked-files=all (before the commit): modified `ARCHITECTURE.md`, `CHANGELOG.md`, `README.md`,
+`package.json` (the description of `nuiget.enablePerformanceLogging`), `docs/plans/{STATUS,findings-ledger}.md`,
+`src/webview/main/{MainShell,MainShell.test,index.test}.tsx`, `src/webview/main/features/sources/{SourceSettingsDialog,SourcesControl.test}.tsx`,
+`src/webview/sidebar-next/{SidebarView,SidebarView.test,index.test}.tsx` and the STATUS notes of `src/webview/main`,
+`src/webview/sidebar-next`
 
-Item: **P7.5b** — contract wording and the N74 outcome, by the P7.5 ruling (DO 11-14) and the P7.5b ruling of
-2026-10-16 (LIFT by the pre-registered rule, in the core and the UI; sentinel `P7.5b`). This note replaces the P7.5a note of this directory (in its history at `a2fd5d2`).
+Item: **P7.fix-2** — perf marks from the 2.0 webviews and the setting's text (N81); a `%VAR%` password is stored in clear
+text (N82); from the P7.6 acceptance ruling (DO 1-5) and its follow-up. This note replaces the P7.5b note of this
+directory (in its history at `71cf359`).
 
 ## Verified by running
 
 ```text
-baseline at a2fd5d2 (CI run 38864168236 green, 13 of 13): tsc 0 · check-types 0 · eslint 0 · npm test 3421 passed
-                              | 2 skipped (Windows-only)
-npx tsc --noEmit / npm run check-types → exit 0 each
-npx eslint src / npm run lint → exit 1 at the first run (`waitFor` left unused in UpdatesSection.test.tsx by the
-                              rewrite), import removed; then exit 0 each
-npm run docs:protocol       → regenerated docs/protocol.md (the cpm/preview row); docs:protocol:check → "up to date"
-npx vitest run --project backend src/core/project src/core/ops src/host src/test/lint → 26 files, 495 passed | 4
-                              skipped (SDK-gated, no NUIGET_SDK_TESTS in that run)
-npx vitest run --project frontend src/webview → 72 files, 1081 passed (1081)
-npm test (DOTNET_ROOT set, NUIGET_SDK_TESTS=1) → exit 0 · Test Files 168 passed (168) · Tests 3424 passed | 2 skipped (3426)
+baseline at 68d034d (P7.fix-1, CI run 38870091917 green on all 13 jobs): tsc 0 · check-types 0 · eslint 0 · npm test
+                              3435 passed | 2 skipped
+npx tsc --noEmit / npm run check-types / npx eslint src / npm run lint → exit 0 each
+npx vitest run --project frontend src/webview → 72 files, 1084 passed (1084); first run: the two entry tests red on the
+                              new start request (follow-up ruling), and the two mark tests red until they answered the
+                              live StrictMode requests (`.at(-1)`)
+npx vitest run --project backend src/host src/test/lint → 15 files, 263 passed (263)
+npx vitest run --project integration src/test/harness → 22 passed (22)
+npm test (DOTNET_ROOT set, NUIGET_SDK_TESTS=1) → exit 0 · Test Files 169 passed (169) · Tests 3438 passed | 2 skipped (3440)
 npm run bench               → exit 0 · Test Files 20 passed (20) · Tests 119 passed | 1 skipped (120)
-rm -rf dist && node esbuild.mjs --v2 --production --analyze → extension 293071 / 321341 · webview 524462 / 575626 ·
-                              sidebar 318876 / 350684 (dist/ and out/esbuild removed afterwards)
-npm run package:vsix        → exit 1 at the first run (the lint error above), then exit 0: its npm test 3417 passed |
-                              9 skipped; "Packaged: nuiget-v1.18.9.vsix (17 files, 534.48 KB)"
-npm run check:vsix          → "check:vsix: OK"
-git diff --name-only -- docs/adr src/protocol src/core/contracts.ts → the seven files of the CONTRACT CHANGE
+npm run docs:check          → exit 0
+rm -rf dist && node esbuild.mjs --v2 --production --analyze → extension 293183 / 321341 · webview 525105 / 575626
+                              (+643) · sidebar 319313 / 350684 (+437)
+rm -rf dist && NUIGET_V2=1 npm run package && npm run check:vsix → exit 0, "check:vsix: OK"; no sentinel
 ```
 
 ## Done (tested)
 
-- `features/updates/UpdatesTab.tsx`: `isCentral` (badge) keeps `central | central-override`; new `changesCentral` (the
-  entry is `central`) decides the bulk candidates and the Space refusal; the badge title says "Centrally managed; this
-  project overrides the version" for an override row. Comments rewritten.
-- `features/updates/AllProjectsUpdates.tsx`: `entryIn`, `isCentralIn` (badge), `changesCentralIn` (bulk candidates and
-  Space); the badge title split; comment rewritten.
-- `features/updates/CentralUpdateDialog.tsx`: JSDoc only (the override choice is not offered).
-- `features/details/DetailsPane.tsx`: the `central-override` branch of `primaryWhy` and the `whyNotUpdatable` import
-  are gone; an override row reaches the plain `ops/update`.
-- Tests: `UpdatesTab.test.tsx` rewritten by title `an override row is not updated and says why` → `an override row
-  updates in its project alone: Space selects it for the bulk update, Enter sends one ops/update without a preview`;
-  new `All Projects: an override row updates in its own project alone and is a bulk candidate` (the `mountAll`
-  helper takes Lib's installed result as a parameter); `DetailsPane.test.tsx` new `an override row changes its
-  version in its project alone: ops/update without a preview`.
+- `MainShell.tsx`: two effects with ref guards (StrictMode) send `perf/mark` `webviewReady` once at mount and
+  `firstUsefulRender` once when `useInstalled()` is first `ready` with a result; each request has its handler attached
+  at creation (`.catch(() => undefined)`). Not from `index.tsx`. New test `MainShell.test.tsx` `sends perf/mark
+  webviewReady once at mount and firstUsefulRender once when the first installed list is shown` (under `StrictMode`,
+  a re-render sends nothing more).
+- `features/sources/SourceSettingsDialog.tsx`: `ENVIRONMENT_PLACEHOLDER = /^%[^%\s]+%$/`; a whole-value placeholder
+  turns the encrypt box off and disables it, its label says the value is stored in clear text and read from the
+  environment, and `sources/add` carries `storeEncrypted: false`; the password placeholder text says so. New test
+  `SourcesControl.test.tsx` `a %VAR% password is stored in clear text on Windows: the encrypt box is off and disabled and
+  sources/add carries storeEncrypted false`; the `Add source` test keeps its title and payload.
+- Rewritten by title (follow-up ruling): `index.test.tsx` `mounts the shell into its root, acquires the API once and asks
+  the host for the session, the projects and the settings` → `mounts the shell into its root, acquires the API once,
+  asks the host for the session, the projects and the settings, and marks webviewReady` (exact start set gains
+  `perf/mark`, one mark named `webviewReady`).
 
 ## Done (untested)
 
@@ -56,25 +52,21 @@ git diff --name-only -- docs/adr src/protocol src/core/contracts.ts → the seve
 
 ## Not started
 
-- P7.5c (docs pass, drift script, CI, STATUS-note hygiene).
+- P7.6 (the acceptance bookkeeping), then the P7 phase boundary.
 
 ## Deviations from contract/ADR (file:line each)
 
-- None (no frozen file).
-- Verbatim rulings in earlier notes (`src/core/ops/STATUS.md:76`) and in `docs/plans/STATUS.md` still quote the old
-  N74 refusal text; they are records and stay as written.
+- None (no frozen file). The manifest description of `nuiget.enablePerformanceLogging` changed by the ruling's
+  authorization (a `contributes` text, not a key or default).
 
 ## Advisor decisions (date, item, question, answer verbatim)
 
-2026-10-16, P7.5b (stop-and-ask): verbatim in `docs/plans/STATUS.md` ("P7.5b — stop-and-ask: the N74 outcome, its
-tests and its UI") and in `src/protocol/STATUS.md`. Decision line: LIFT in the core and the UI in one commit:
-`canMutate` admits an install or update of an id whose every row overrides, a mixed override/central shape stays
-refused; `previewCpmImpact` answers `undefined` for an overriding asker; `whyNotUpdatable` stops naming override
-rows; the three tests that asserted the refusal are rewritten by title; JSDoc of `contracts.ts` and `messages.ts`
-amended under the sentinel.
-2026-10-16, P7.5 (stop-and-ask): verbatim in `docs/plans/STATUS.md` ("P7.5 — stop-and-ask: the split, the drift script
-and the inherited duties").
+2026-10-16, P7.6 (⚑ acceptance ruling) and its follow-up on the two entry tests: verbatim in `docs/plans/STATUS.md`
+("P7.6 — ⚑ acceptance ruling" and "P7.fix-2 — follow-up ruling: the two entry tests that pin the start requests").
+Decision lines: PASS WITH FIXES, P7.fix-2 before P7.6 (N81 marks from both shells and the setting's text, N82 clear text
+for a `%VAR%` password); the entry tests are rewritten by title with `perf/mark` in the exact start set; the slice's
+status is `'ready'`, not `'ok'`.
 
 ## Exact next step (one item ID)
 
-P7.5c.
+P7.6.

@@ -6,6 +6,7 @@ import { Banner, cssVars, EmptyState, IconButton, LiveStatus, Sash, SyncIcon, Ta
 import { FILTER_PREFIXES, parseSearchQuery, type SearchMode } from '../shared/search/parseSearchQuery';
 import { SearchBox } from '../shared/search/SearchBox';
 import { useAllProjects } from '../shared/store/allProjects';
+import { useInstalled } from '../shared/store/installed';
 import { useOps } from '../shared/store/ops';
 import { describeOutcome } from '../shared/store/outcomes';
 import { useProjects } from '../shared/store/projects';
@@ -68,6 +69,7 @@ export function MainShell({ installed, updates, browse, details }: MainShellProp
     const { set } = useSessionActions();
     const { projects, error: projectsError } = useProjects();
     const updatesSlice = useUpdates();
+    const installedSlice = useInstalled();
     const [query, setQuery] = useState('');
     const [chosenTab, setChosenTab] = useState<MainTab>('installed');
     const [split, setSplit] = useState(SPLIT.initial);
@@ -76,6 +78,23 @@ export function MainShell({ installed, updates, browse, details }: MainShellProp
     const listPaneId = `${useId()}-list`;
 
     const announce = useCallback((message: string): void => setSaid(previous => ({ message, count: previous.count + 1 })), []);
+
+    // The two marks the host logs when `nuiget.enablePerformanceLogging` is on (N81): once each, under StrictMode too.
+    const markedReady = useRef(false);
+    useEffect(() => {
+        if (!markedReady.current) {
+            markedReady.current = true;
+            bus.request('perf/mark', { name: 'webviewReady', detail: `${Math.round(performance.now())} ms after load` }).catch(() => undefined);
+        }
+    }, [bus]);
+    const markedRender = useRef(false);
+    const firstListShown = installedSlice.status === 'ready' && installedSlice.result !== undefined;
+    useEffect(() => {
+        if (firstListShown && !markedRender.current) {
+            markedRender.current = true;
+            bus.request('perf/mark', { name: 'firstUsefulRender', detail: `${Math.round(performance.now())} ms after load` }).catch(() => undefined);
+        }
+    }, [bus, firstListShown]);
 
     useEffect(() => bus.onEvent('ui/focusSearch', () => searchRef.current?.focus()), [bus]);
     // How every operation ended, on whichever surface it started: once per outcome (`sequence` goes up with each).

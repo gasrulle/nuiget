@@ -58,6 +58,12 @@ function SourceRow({ source, announce }: { source: NuGetSource; announce: (messa
     );
 }
 
+/**
+ * A password that is one `%VAR%` placeholder: the reader expands it from the environment in clear text only, so such a
+ * value is never encrypted (N82).
+ */
+const ENVIRONMENT_PLACEHOLDER = /^%[^%\s]+%$/;
+
 function AddSourcePanel({ onDone, announce }: { onDone: () => void; announce: (message: string) => void }): React.JSX.Element {
     const { add, configFiles, loadConfigFiles, pending } = useSources();
     const { config } = useConfig();
@@ -80,6 +86,7 @@ function AddSourcePanel({ onDone, announce }: { onDone: () => void; announce: (m
     const chosenFile = configFile || configFiles?.[0]?.path || '';
     const insecure = /^http:\/\//i.test(url.trim());
     const adding = pending.has(name.trim() || url.trim());
+    const placeholder = ENVIRONMENT_PLACEHOLDER.test(password.trim());
 
     const submit = (event: React.FormEvent): void => {
         event.preventDefault();
@@ -100,7 +107,7 @@ function AddSourcePanel({ onDone, announce }: { onDone: () => void; announce: (m
         }
         if (password) {
             payload.password = password;
-            payload.storeEncrypted = isWindows && storeEncrypted;
+            payload.storeEncrypted = isWindows && storeEncrypted && !placeholder;
         }
         if (insecure && allowInsecure) {
             payload.allowInsecure = true;
@@ -152,12 +159,14 @@ function AddSourcePanel({ onDone, announce }: { onDone: () => void; announce: (m
                     </div>
                     <div className="nuiget-field">
                         <label htmlFor={`${ids}-password`}>Password</label>
-                        <input id={`${ids}-password`} className="nuiget-input" type="password" autoComplete="off" value={password} placeholder="%ENV_VAR% is read from the environment" onChange={event => setPassword(event.target.value)} />
+                        <input id={`${ids}-password`} className="nuiget-input" type="password" autoComplete="off" value={password} placeholder="Password, or %ENV_VAR% (stored in clear text and read from the environment)" onChange={event => setPassword(event.target.value)} />
                     </div>
                     {password ? (
                         <label className="nuiget-field">
-                            <input type="checkbox" checked={isWindows && storeEncrypted} disabled={!isWindows} onChange={event => setStoreEncrypted(event.target.checked)} />
-                            {isWindows ? 'Store the password encrypted' : 'Store the password encrypted (Windows only); it is stored in clear text'}
+                            <input type="checkbox" checked={isWindows && storeEncrypted && !placeholder} disabled={!isWindows || placeholder} onChange={event => setStoreEncrypted(event.target.checked)} />
+                            {placeholder
+                                ? 'Stored in clear text: %VAR% is read from the environment when the source is used'
+                                : isWindows ? 'Store the password encrypted' : 'Store the password encrypted (Windows only); it is stored in clear text'}
                         </label>
                     ) : null}
                 </>

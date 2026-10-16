@@ -287,7 +287,7 @@
                 "nuiget.enablePerformanceLogging": {
                     "type": "boolean",
                     "default": false,
-                    "description": "Emit [perf] timing lines to the nUIget output channel for hot user-perceived flows (panel open, project switch, install/update/remove, search, update check). Use to diagnose slow operations or compare branches; keep off in normal use."
+                    "description": "Writes the 2.0 webviews' [perf] marks (webview ready, first useful render) to the nUIget output channel at Info level instead of Debug. The duration of every dotnet command is always logged. Keep it off in normal use."
                 }
             }
         }
