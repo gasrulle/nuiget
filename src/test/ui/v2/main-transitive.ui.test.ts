@@ -19,11 +19,28 @@ describe('2.0 main panel: transitive packages', () => {
     const projectPath = path.join(projectDir, 'Transitive.csproj');
 
     const selectorValue = async (): Promise<string> => (await (await findByTestId('project-selector')).getAttribute('value')) ?? '';
+    const optionValues = async (): Promise<string[]> => (await Promise.all((await (await findByTestId('project-selector', 60_000)).findElements(By.css('option'))).map(element => element.getAttribute('value')))).filter((value): value is string => value !== null);
+
+    /**
+     * Waits for the host's project list to satisfy `probe`, pressing Refresh (a workspace rescan) every 15 s: a file
+     * watcher may never report a project file created or deleted by the test (parity audit TF8).
+     */
+    async function untilProjects<T>(probe: (values: string[]) => T | undefined, what: string): Promise<T> {
+        const deadline = Date.now() + 180_000;
+        for (;;) {
+            try {
+                return await poll(async () => probe(await optionValues()), what, 15_000);
+            } catch (error) {
+                if (Date.now() > deadline) {
+                    throw error;
+                }
+                await (await findByTestId('nuiget-app')).findElement(By.css('.nuiget-main-refresh')).click();
+            }
+        }
+    }
+
     /** The value of the selector's option whose path ends with `file`, once the host lists it. */
-    const optionFor = (file: string): Promise<string> => poll(async () => {
-        const values = await Promise.all((await (await findByTestId('project-selector', 60_000)).findElements(By.css('option'))).map(element => element.getAttribute('value')));
-        return values.find((value): value is string => value !== null && value.endsWith(file));
-    }, `${file} in the project selector`, 120_000);
+    const optionFor = (file: string): Promise<string> => untilProjects(values => values.find(value => value.endsWith(file)), `${file} in the project selector`);
 
     before(function () {
         this.timeout(30_000);
@@ -40,7 +57,7 @@ describe('2.0 main panel: transitive packages', () => {
     });
 
     after(async function () {
-        this.timeout(300_000);
+        this.timeout(360_000);
         // The host keeps a selected project whose folder goes away: select TestProject first, then delete the project file
         // (the file watcher's event; a folder removed at once may not report it) and wait until the host no longer lists
         // it, so the next file starts as before.
@@ -51,10 +68,7 @@ describe('2.0 main panel: transitive packages', () => {
             await chooseProject(testProject);
             await poll(async () => ((await selectorValue()) === testProject ? true : undefined), 'the selection back on TestProject.csproj', 30_000);
             fs.rmSync(projectPath, { force: true });
-            await poll(async () => {
-                const values = await Promise.all((await (await findByTestId('project-selector')).findElements(By.css('option'))).map(element => element.getAttribute('value')));
-                return values.some(value => value?.endsWith('Transitive.csproj')) ? undefined : true;
-            }, 'Transitive.csproj gone from the selector', 120_000);
+            await untilProjects(values => (values.some(value => value.endsWith('Transitive.csproj')) ? undefined : true), 'Transitive.csproj gone from the selector');
             await (await findByTestId('installed-tab', 30_000)).click();
             await findByTestId('installed-list', 120_000);
         } finally {
@@ -74,7 +88,7 @@ describe('2.0 main panel: transitive packages', () => {
     });
 
     it('a restored project lists its transitive packages under a counted header, and a row opens its read-only details', async function () {
-        this.timeout(480_000);
+        this.timeout(600_000);
         // The host discovers the new project; its option carries the path as the host sent it.
         const option = await optionFor('Transitive.csproj');
         await chooseProject(option);

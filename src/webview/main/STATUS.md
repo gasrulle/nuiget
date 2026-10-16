@@ -39,6 +39,13 @@ rm -rf dist out/esbuild && node esbuild.mjs --production --analyze → dist/exte
                               dist/webview.js 533060 / 577766 · dist/sidebar.js 321793 / 351245
 git diff --name-only HEAD -- src/protocol src/core src/host src/webview/sidebar src/webview/shared/primitives
                               src/test/e2e/fixtures .github/workflows → empty
+CI run 38972999319 (9ea8a40) → 9 jobs green, UI red: "Error: Timed out after 120000 ms waiting for Transitive.csproj in
+                              the project selector" (main-transitive.ui.test.js:108). On the Linux runner the file watcher
+                              never reported the created project (parity audit TF8; P9.12 owns the host's rescan). Fix
+                              attempt 1 (RUN.md §4), test only: `untilProjects` polls the selector 15 s at a time and
+                              presses the header Refresh (`refresh/all`, a workspace rescan that ends in
+                              `refreshProjectsAndSession`) between polls, for the created and for the deleted project;
+                              single-file run → exit 0, 1 passing
 ```
 
 ## Done (tested)
