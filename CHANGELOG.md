@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.0] - 2026-10-16
+
+### Breaking changes
+
+- **nUIget 2.0 replaces the 1.x extension: the 2.0 main panel, sidebar and host are what the package ships**
+- **nUIget 2.0 requires .NET SDK 10 or newer; projects that resolve an older SDK are read-only**
+- **2.0 resets the persisted 1.x state: the selected project and source, the prerelease and restore toggles and the split positions are chosen once more, the cached feed data and the SDK cache are rebuilt, and the 1.x entries are removed from workspace and global storage at the first activation**
+- **The `nuiget.noRestore` setting is no longer migrated to the restore toggle (set the toggle once if it was `true`), and the recent-searches list is gone**
+
 ### Added
 - **2.0 updates of overridden central versions** — a package whose project overrides the central version updates in that project alone
 - **2.0 Central Package Management in the UI** — a centrally managed package updates through a preview of the projects its central version applies to, and uninstalls from its project while the central entry stays; an unresolved version says why in its tooltip
@@ -58,25 +67,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **2.0 core utilities** — `src/core/util` provides the event emitter, bounded concurrency, file lookup, path normalization and dependency ordering that the 2.0 core modules build on, and coverage of `src/core` now has a floor of 85 % of the lines
 - **2.0 import fences** — ESLint keeps the 2.0 layers apart from each other and from the 1.x code, with a self-pruning allow-list, and `npm run lint` now also covers `scripts/` and the root configuration files
 
-### Fixed
-- **2.0 CPM install preview**
-- **2.0 bulk install leaves centrally managed targets to their own project's preview**
-- **2.0 View details from the sidebar opens the row's version**
-- **2.0 provisional badge in the single-project Installed tab**
-- **2.0 log redaction of quoted JSON credentials**
-- **2.0 DPAPI password decryption on Windows**
-- **2.0 DPAPI decryption budget and a timed-out decryption is asked again**
-- **2.0 performance-logging marks from the webviews**
-- **2.0 environment-variable passwords are stored in clear text**
-- **2.0 evaluation survives a refresh**
-
-- **Long NuGet prerelease versions and package IDs remain intact during CLI search and installation**
-- **2.0 honours the `full` and `off` search modes and the search result limit default**
-
 ### Changed
 - **Benchmarks live next to the 2.0 modules they measure**
 - **2.0 evaluation of a single-framework project is one msbuild run**
-
 - **Benchmarks for the 2.0 core (versioning, cache, operation queue, invalidation scopes) with a regenerated baseline**
 - **Benchmarks for the 2.0 transport and feed reads (updates, versions, search, nuspec parsing, relevance) with a regenerated baseline**
 - **resources/invalidated carries per-key generations**
@@ -101,10 +94,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Recorded the NuGet version conformance table and checked it with property tests**
 - **Split agent gotchas into 1.x and 2.0 sections and added 2.0 layer-boundary instructions**
 - **Added the architecture-advisor agent and the 2.0 execution protocol summary for Claude Code**
-- **Breaking:** nUIget 2.0 requires .NET SDK 10 or newer; projects that resolve an older SDK are read-only
-- **Breaking:** 2.0 resets the persisted 1.x state: the selected project and source, the prerelease and restore toggles and the split positions are chosen once more, the cached feed data and the SDK cache are rebuilt, and the 1.x entries are removed from workspace and global storage at the first activation
-- **Breaking:** nUIget 2.0 replaces the 1.x extension: the 2.0 main panel, sidebar and host are what the package ships
-- **Breaking:** the `nuiget.noRestore` setting is no longer migrated to the restore toggle (set the toggle once if it was `true`), and the recent-searches list is gone
 - **Type-checked the extension against Node 18 declarations, the VS Code 1.85 host baseline**
 - **Added Claude Code guard hooks that protect frozen contracts, tests, and commit and push safety during the 2.0 work**
 - **Stopped shipping development configuration files in the extension package and added a package contents check**
