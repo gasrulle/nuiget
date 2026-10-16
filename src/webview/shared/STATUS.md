@@ -78,6 +78,10 @@ rm -rf /tmp/nuiget-ui/screenshots dist && npm run test:ui -- --storage /tmp/nuig
   and packages across its reports (MU3), test `a per-step report keeps every package of the operation busy`.
 - P9.4 fix-forward: the update arrow is a text node of `.nuiget-row-version`; `.nuiget-row-version-arrow` removed
   (axe left the symbol-only span incomplete in the theme pass of CI run 38965520035).
+- P9.5 (ruling in `src/webview/main/STATUS.md`): `store/transitive.tsx` prefetches 500 ms after the installed list;
+  `store/details.tsx` origin `'transitive'` asks no feed request; `store/allProjects.tsx` asks `transitive/metadata`
+  once per answer of the aggregate stream (`transitive.metadata`). Tests: the prefetch, the transitive selection and
+  the aggregate metadata ask.
 
 ## Done (untested)
 

@@ -4,7 +4,7 @@ import { ALL_PROJECTS, type InstalledPackage, type InstalledResult, type Package
 import { whyNotRemovable } from '../../../shared/installed/rules';
 import { EmptyState, Skeleton, Toolbar } from '../../../shared/primitives';
 import { useAllProjects } from '../../../shared/store/allProjects';
-import { useDetailsActions } from '../../../shared/store/details';
+import { useDetailsActions, type DetailsSelection } from '../../../shared/store/details';
 import { useInstalled } from '../../../shared/store/installed';
 import { useOps, useOpsActions } from '../../../shared/store/ops';
 import { useProjects } from '../../../shared/store/projects';
@@ -164,6 +164,12 @@ export function InstalledTab({ filter, vulnerableOnly, announce }: ListView): Re
         }
     };
 
+    // A transitive row made current: no direct row stays current, and the details show the transitive view.
+    const showTransitive = (transitiveSelection: DetailsSelection): void => {
+        setCurrent(null);
+        select(transitiveSelection);
+    };
+
     let body: React.ReactNode;
     if (sections.length === 0) {
         body = committed === undefined || (allMode && all.status === 'loading')
@@ -206,7 +212,7 @@ export function InstalledTab({ filter, vulnerableOnly, announce }: ListView): Re
                 </button>
             </Toolbar>
             <div className="nuiget-installed-lists">{body}</div>
-            {allMode ? <AllProjectsTransitiveSection /> : <TransitiveSection />}
+            {allMode ? <AllProjectsTransitiveSection onCurrent={showTransitive} /> : <TransitiveSection onCurrent={showTransitive} />}
             <BulkUninstallDialog open={confirming && count > 0} removals={removals} onConfirm={confirm} onCancel={() => setConfirming(false)} />
         </div>
     );

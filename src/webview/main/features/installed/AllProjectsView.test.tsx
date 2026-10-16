@@ -7,6 +7,7 @@ import { createFakeHost, type FakeHost } from '../../../shared/bus/testSupport';
 import { installFakeLayout } from '../../../shared/primitives/testSupport';
 import { StoreProvider } from '../../../shared/store/StoreProvider';
 import { MainShell } from '../../MainShell';
+import { DetailsPane } from '../details/DetailsPane';
 import { aggregateTransitive, describeOrigins } from './AllProjectsTransitiveSection';
 import { InstalledTab } from './InstalledTab';
 
@@ -27,9 +28,9 @@ const hostSays = (say: () => void): Promise<void> => act(async () => {
     await Promise.resolve();
 });
 
-async function mountAll(projects = PROJECTS): Promise<FakeHost> {
+async function mountAll(projects = PROJECTS, withDetails = false): Promise<FakeHost> {
     const host = createFakeHost();
-    render(<StoreProvider bus={host.bus}><MainShell installed={view => <InstalledTab {...view} />} /></StoreProvider>);
+    render(<StoreProvider bus={host.bus}><MainShell installed={view => <InstalledTab {...view} />} {...(withDetails ? { details: view => <DetailsPane {...view} /> } : {})} /></StoreProvider>);
     await hostSays(() => host.respond(host.requests('session/get')[0], snapshot(1)));
     await hostSays(() => host.respond(host.requests('projects/list')[0], { projects }, 1));
     const stream = host.requests('allProjects/installed')[0];
@@ -86,6 +87,36 @@ describe('main panel: All Projects', () => {
         expect(within(row('lib')).getByRole('option')).not.toHaveAccessibleDescription(/Verified/);
     });
 
+    it('all-projects transitive details lists one block per project', async () => {
+        const user = userEvent.setup();
+        const host = await mountAll([...PROJECTS.slice(0, 2), PROJECTS[2]], true);
+        await user.click(screen.getByTestId('section-header-transitive'));
+        const stream = host.requests('allProjects/transitive')[0];
+        const core = (roots: string[]) => [{ targetFramework: 'net8.0', packages: [{ id: 'Serilog.Core', version: '1.0.0', requiredByChain: roots }] }];
+        await hostSays(() => host.chunk(stream, { kind: 'project', chunk: transitiveChunk(A, 'App', core(['Serilog'])) }));
+        await hostSays(() => host.chunk(stream, { kind: 'project', chunk: transitiveChunk(B, 'Lib', core(['Serilog.Sinks.File'])) }));
+        await hostSays(() => host.chunk(stream, { kind: 'project', chunk: transitiveChunk(C, 'Tool', core([])) }));
+        await hostSays(() => host.respond(stream, { projectPaths: [A, B, C], errored: [] }));
+
+        const row = within(screen.getByTestId('transitive-list')).getByTestId('package-row-serilog.core');
+        expect(row.querySelector('.nuiget-row-badges')).toHaveTextContent('3 projects');
+        const asks = host.requests('transitive/metadata').filter(request => request.payload.packages.some(entry => entry.id === 'Serilog.Core'));
+        expect(asks.map(request => request.payload)).toEqual([{ packages: [{ id: 'Serilog.Core', version: '1.0.0' }] }]);
+        await hostSays(() => host.respond(asks[0], { metadata: [{ id: 'Serilog.Core', version: '1.0.0', iconUrl: 'data:image/png;base64,AAAA', authors: 'Serilog Contributors', verified: true }] }));
+        expect(row.querySelector('.nuiget-row-icon img')).toHaveAttribute('src', 'data:image/png;base64,AAAA');
+        const option = within(row).getByRole('option');
+        expect(option).toHaveAccessibleDescription(/Verified/);
+
+        await user.click(option);
+        const details = screen.getByTestId('transitive-details');
+        const blocks = within(details).getAllByRole('heading', { level: 4 }).map(heading => heading.textContent);
+        expect(blocks).toEqual(['App', 'Lib', 'Tool']);
+        expect(details).toHaveTextContent('AppSerilog');
+        expect(details).toHaveTextContent('LibSerilog.Sinks.File');
+        expect(details).toHaveTextContent('ToolNo traceable top-level package');
+        expect(host.requests('package/metadata')).toHaveLength(0);
+    });
+
     it('one workspace folder: no folder heading, the project headers stay at level 2', async () => {
         await mountAll(PROJECTS.slice(0, 2));
         expect(screen.queryByRole('region', { name: /Workspace folder/ })).toBeNull();
@@ -105,7 +136,7 @@ describe('main panel: All Projects', () => {
 
         const list = screen.getByTestId('transitive-list');
         expect(within(list).getAllByRole('option')).toHaveLength(1);
-        expect(within(list).getByRole('option')).toHaveAccessibleDescription('App: required by Serilog');
+        expect(within(list).getByRole('option')).toHaveAccessibleDescription(/App: required by Serilog/);
         expect(screen.getByTestId('transitive-restore-banner')).toHaveTextContent('Not restored, so their transitive packages are not known: Lib.');
         await user.click(within(screen.getByTestId('transitive-restore-banner')).getByRole('button', { name: 'Restore' }));
         expect(host.requests('ops/restore').map(request => request.payload)).toEqual([{ projectPaths: [B] }]);

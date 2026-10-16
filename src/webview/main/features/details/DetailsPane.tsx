@@ -15,6 +15,7 @@ import { CentralUpdateDialog, type CentralUpdateRequest } from '../updates/Centr
 import { DetailsInfo } from './DetailsInfo';
 import { MultiInstallDialog } from './MultiInstallDialog';
 import { ReadmeView } from './ReadmeView';
+import { TransitiveDetails } from './TransitiveDetails';
 
 type DetailsTab = 'details' | 'readme';
 
@@ -90,6 +91,9 @@ export function DetailsPane({ announce }: DetailsPaneProps): React.JSX.Element {
     const { selection, version, versions, stale } = details;
     if (selection === null) {
         return <EmptyState message="Select a package to see its details." />;
+    }
+    if (selection.origin === 'transitive') {
+        return <TransitiveDetails selection={selection} />;
     }
 
     const committedProject = installed.projectPath;

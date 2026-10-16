@@ -163,6 +163,12 @@ VERIFY: `grep -n "N85" docs/plans/STATUS.md` shows the ledger row and `grep -n "
 
   Acted on: DO 1-6 as written, with the ledger deviation above.
 
+## P9.5 addition
+
+- `main-transitive.ui.test.ts` (P9.5, ruling in `src/webview/main/STATUS.md`): a run-time `Transitive/Transitive.csproj`
+  with Serilog.Sinks.Console 6.1.1, restored through the banner; captures `main-transitive-expanded` (moved here from
+  `main-installed.ui.test.ts`) and the 13th state `main-transitive-details`. `chooseProject` lives in `mainWebview.ts`.
+
 ## Exact next step (one item ID)
 
 P9.1.

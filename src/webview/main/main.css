@@ -163,13 +163,6 @@ body {
     overflow: visible;
 }
 
-.nuiget-transitive-heading {
-    margin: 0;
-    padding: var(--nuiget-space-2) var(--nuiget-space-4);
-    font-size: var(--nuiget-font-size-sm);
-    font-weight: 600;
-}
-
 /* The bulk uninstall dialog: one short list per project. */
 .nuiget-bulk-lead {
     margin: 0;

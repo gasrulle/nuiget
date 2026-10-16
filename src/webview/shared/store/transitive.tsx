@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import type React from 'react';
 import { ALL_PROJECTS, resourceKeys, type PackageMetadataLite, type ProtocolRequestError, type TransitiveResult } from '../../../protocol';
 import { useMessageBus } from '../bus/useMessageBus';
+import { useInstalled } from './installed';
 import { useSession } from './session';
 import { useResource, type ResourceState } from './useResource';
 
@@ -33,21 +34,34 @@ const singleProject = (selected: string | undefined): string | null =>
 
 export const metadataKey = (id: string, version: string): string => `${id.toLowerCase()}@${version}`;
 
+/** How long after the installed list of the project answered its transitive packages are asked for (MI9). */
+export const TRANSITIVE_PREFETCH_MS = 500;
+
 /**
- * The transitive slice: the packages the committed project gets through its references, by target framework. It
- * is lazy (the section is collapsed until the user opens it) and starts collapsed again for another project. The
- * metadata of the rows is asked for separately; when the host cannot answer it (`unsupported` until the feeds
- * exist), the rows are shown from `transitive/get` alone.
+ * The transitive slice: the packages the committed project gets through its references, by target framework. It is
+ * asked for 500 ms after the project's installed list answered, so the collapsed header can show the count (1.x did
+ * the same), or at once when the user opens the section first; another project starts again. The metadata of the
+ * rows is asked for separately; when the host cannot answer it, the rows are shown from `transitive/get` alone.
  */
 export function TransitiveProvider({ children }: { children: React.ReactNode }): React.JSX.Element {
     const bus = useMessageBus();
     const projectPath = singleProject(useSession().committed?.selectedProject);
+    const installed = useInstalled();
     const [enabledFor, setEnabledFor] = useState<string | null>(null);
     const enabled = projectPath !== null && enabledFor === projectPath;
-    // Another project starts collapsed, and so does this one when the user comes back to it.
+    // Another project starts without its list, and so does this one when the user comes back to it.
     useEffect(() => {
         setEnabledFor(previous => (previous === projectPath ? previous : null));
     }, [projectPath]);
+    // The prefetch: once the project's installed list is ready, never for All Projects and never with a restore.
+    const installedReady = installed.status === 'ready' && installed.projectPath === projectPath;
+    useEffect(() => {
+        if (projectPath === null || enabled || !installedReady) {
+            return undefined;
+        }
+        const timer = setTimeout(() => setEnabledFor(projectPath), TRANSITIVE_PREFETCH_MS);
+        return () => clearTimeout(timer);
+    }, [projectPath, enabled, installedReady]);
     // Set by `restore` for exactly the next request.
     const forceRestore = useRef(false);
     const [metadata, setMetadata] = useState<{ result: TransitiveResult; byKey: ReadonlyMap<string, PackageMetadataLite> }>();

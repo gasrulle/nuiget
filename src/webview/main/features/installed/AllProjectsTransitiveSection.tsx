@@ -1,9 +1,12 @@
 import { useId, useMemo, useState } from 'react';
 import type React from 'react';
 import type { ProjectTransitiveChunk } from '../../../../protocol';
-import { Banner, EmptyState, Listbox, Row, SectionHeader, Skeleton } from '../../../shared/primitives';
+import { Badge, Banner, EmptyState, Listbox, SectionHeader, Skeleton } from '../../../shared/primitives';
 import { useAllProjects } from '../../../shared/store/allProjects';
+import { useDetails, type DetailsSelection } from '../../../shared/store/details';
 import { useOpsActions } from '../../../shared/store/ops';
+import { metadataKey } from '../../../shared/store/transitive';
+import { transitiveRow } from './TransitiveSection';
 
 /** Where an aggregated transitive package comes from: one project and one set of top-level roots. */
 export interface TransitiveOrigin {
@@ -47,16 +50,20 @@ export function aggregateTransitive(chunks: Iterable<ProjectTransitiveChunk>): A
     return [...rows.values()].sort((a, b) => a.id.localeCompare(b.id, 'en') || a.version.localeCompare(b.version, 'en'));
 }
 
-/** One sentence per project: which top-level packages bring it in. */
-export function describeOrigins(origins: readonly TransitiveOrigin[]): string {
+/** The top-level packages that bring a package in, per project in the order of its origins (roots unioned). */
+export function rootsByProject(origins: readonly TransitiveOrigin[]): Array<{ projectName: string; roots: string[] }> {
     const byProject = new Map<string, string[]>();
     for (const origin of origins) {
         byProject.set(origin.projectName, [...(byProject.get(origin.projectName) ?? []), ...origin.roots]);
     }
-    return [...byProject].map(([project, roots]) => {
-        const unique = [...new Set(roots)];
-        return unique.length === 0 ? `${project}: no traceable top-level package` : `${project}: required by ${unique.join(', ')}`;
-    }).join('; ');
+    return [...byProject].map(([projectName, roots]) => ({ projectName, roots: [...new Set(roots)] }));
+}
+
+/** One sentence per project: which top-level packages bring it in. */
+export function describeOrigins(origins: readonly TransitiveOrigin[]): string {
+    return rootsByProject(origins).map(({ projectName, roots }) => (roots.length === 0
+        ? `${projectName}: no traceable top-level package`
+        : `${projectName}: required by ${roots.join(', ')}`)).join('; ');
 }
 
 interface Item {
@@ -67,10 +74,13 @@ interface Item {
 /**
  * The transitive packages of every project in All Projects, aggregated into one section (interaction model §3). It is
  * closed until opened; opening it asks the stream, which then stays asked while All Projects is committed (closing
- * keeps what was listed). Projects without a restored assets file are named in a banner with Restore.
+ * keeps what was listed). Projects without a restored assets file are named in a banner with Restore. A row shows
+ * the icon, authors and Verified mark of the lite metadata and how many projects have it (the origins are its
+ * description through that badge); it opens a read-only details view with one block per project.
  */
-export function AllProjectsTransitiveSection(): React.JSX.Element {
+export function AllProjectsTransitiveSection({ onCurrent }: { onCurrent: (selection: DetailsSelection) => void }): React.JSX.Element {
     const all = useAllProjects();
+    const { selection } = useDetails();
     const { run } = useOpsActions();
     const [open, setOpen] = useState(false);
     const baseId = useId();
@@ -84,6 +94,7 @@ export function AllProjectsTransitiveSection(): React.JSX.Element {
         [transitive.chunks],
     );
     const unrestored = chunks.filter(chunk => !chunk.dataSourceAvailable);
+    const selectedId = selection?.origin === 'transitive' && selection.projectPath === null ? `${selection.packageId}@${selection.version}` : null;
 
     const toggle = (): void => {
         if (!expanded) {
@@ -95,7 +106,7 @@ export function AllProjectsTransitiveSection(): React.JSX.Element {
     let content: React.ReactNode = null;
     if (expanded) {
         if (transitive.status === 'loading' && chunks.length === 0) {
-            content = <Skeleton density="compact" />;
+            content = <Skeleton density="comfortable" />;
         } else if (transitive.status === 'error' && chunks.length === 0) {
             content = <Banner severity="error" action={{ label: 'Retry', onClick: transitive.refresh }}>{`The transitive packages could not be listed: ${transitive.error?.message ?? 'unknown error'}`}</Banner>;
         } else {
@@ -114,21 +125,19 @@ export function AllProjectsTransitiveSection(): React.JSX.Element {
                     <Listbox<Item>
                         items={items}
                         label="Transitive packages of all projects"
-                        hint="Arrow keys move between the packages."
+                        hint="Arrow keys move between the packages. Enter shows the details of one."
                         testId="transitive-list"
-                        density="compact"
+                        density="comfortable"
                         busy={transitive.status === 'loading'}
+                        selectedId={selectedId}
+                        onSelect={item => onCurrent({ packageId: item.row.id, version: item.row.version, origin: 'transitive', projectPath: null })}
+                        onActivate={item => onCurrent({ packageId: item.row.id, version: item.row.version, origin: 'transitive', projectPath: null })}
                         empty={<EmptyState message="No transitive dependencies." />}
-                        renderRow={(item, placement) => (
-                            <Row
-                                {...placement}
-                                itemId={item.row.id}
-                                name={item.row.id}
-                                version={item.row.version}
-                                density="compact"
-                                description={describeOrigins(item.row.origins)}
-                            />
-                        )}
+                        renderRow={(item, placement) => {
+                            const projects = new Set(item.row.origins.map(origin => origin.projectPath)).size;
+                            return transitiveRow(item.row, transitive.metadata.get(metadataKey(item.row.id, item.row.version)), placement,
+                                <Badge label={`${projects} ${projects === 1 ? 'project' : 'projects'}`} title={describeOrigins(item.row.origins)} />);
+                        }}
                     />
                 </>
             );

@@ -19,6 +19,7 @@ export type ScreenshotState =
     | 'main-installed-single-hc'
     | 'main-installed-all'
     | 'main-transitive-expanded'
+    | 'main-transitive-details'
     | 'main-updates'
     | 'main-browse-results'
     | 'main-browse-details'

@@ -421,15 +421,18 @@ starts; the other slices ask when they have something to ask for.
   replaces it. The slice asks `transitive/metadata` with the concrete versions of the rows it shows (two-phase,
   ADR-009 d.1): for the provisional list at once and for the response only when its rows differ, and writes the
   answer into the map; another project or other rows cancel the ask, and an error is no metadata (P5.10, P6.2b).
-- `transitive` (P5.4): `useResource` for `transitive:<path>` of the committed project, but only after the section
-  was opened (`enable()`); another project starts closed again. `restore()` asks the next `transitive/get` with
+- `transitive` (P5.4, P9.5): `useResource` for `transitive:<path>` of the committed project, asked 500 ms after
+  the project's installed list is ready (`TRANSITIVE_PREFETCH_MS`, never in All Projects) or at once when the section
+  is opened first (`enable()`); another project starts again. `restore()` asks the next `transitive/get` with
   `forceRestore`, once. The rows' metadata comes from `transitive/metadata` by `id@version`; when the host cannot
   answer it (`unsupported` until the feeds of P4 exist) the rows show from `transitive/get` alone.
 - `allProjects` (P5.4): the stream of `allProjects/installed` while All Projects is committed, one chunk per
   project kept by its path. It is not a `useResource`: the fan-out has no generation and its key is never in
   `resources/invalidated` (ADR-009). The slice asks again when an invalidation names `projects` or any
   `installed:` key, keeps what it shows until the new answer, and applies the chunks and the answer of its
-  latest request only. Leaving All Projects resets it and cancels the stream, so a chunk that arrives late for it is
+  latest request only. Its `transitive` part asks `transitive/metadata` once for the unique packages of the aggregate
+  after each answer of `allProjects/transitive` (P9.5) and exposes it while it belongs to that answer.
+  Leaving All Projects resets it and cancels the stream, so a chunk that arrives late for it is
   never shown (harness gate `late allProjects chunk after switching is discarded`, P5.9). Since P5.9 it also streams
   `allProjects/transitive` once `enableTransitive()` was called, sticky while All Projects stays committed (unlike
   `transitive.enable()`, which resets per project); it asks again on an invalidation that names `projects`, an
@@ -465,7 +468,8 @@ starts; the other slices ask when they have something to ask for.
   `suggest(text)` sends `search/autocomplete` with the enabled sources (every one under `all`, else the selected
   one) and sends nothing while the list is unknown or names none; the latest suggestion wins.
 - `details` (P5.7): the package selected in a main-panel list (`select()`: id, version to show first, source, origin
-  `installed`/`updates`/`browse`, owning project), the chosen version, and its `package/versions`,
+  `installed`/`updates`/`browse`/`transitive`, owning project; a `transitive` selection asks none of the three
+  requests below), the chosen version, and its `package/versions`,
   `package/metadata` and, once the README tab was shown, `package/readme`. Each request follows the selection: the one
   before is cancelled, and an answer whose package or version differs from what was asked is not shown. These answers
   carry no generation (N70); the slice asks again when an invalidation names a `versions:<id>|` or `metadata:<id>@`
@@ -588,9 +592,12 @@ builds it into `dist/webview.js` and, because the entry imports `../shared/token
   of a `partial` batch stays where it is. The shell announces every outcome once, from either surface.
 - **Filter modes.** `@installed <text>` filters by id; `@vulnerable` keeps the rows whose metadata lists
   vulnerabilities, and says that the data is not there yet while no metadata has arrived (empty is not unknown).
-- **Transitive.** Closed until opened; then `transitive/get`, one list per target framework (with headings when
-  there are several), "Required by" as each row's description, a Restore banner (`transitive-restore-banner`)
-  when the assets file is missing, and the rows' metadata only when the host can answer it.
+- **Transitive.** Collapsed; the list is prefetched after the installed list, so the header reads
+  `Transitive packages (N)` with the target framework as a badge, or, for several frameworks, one collapsible
+  level-3 header per framework (`section-header-transitive-<tfm>`, `transitive-list-<tfm>`). Comfortable rows with
+  the icon, authors and Verified mark of the lite metadata and no description; a row opens `TransitiveDetails`. A
+  Restore banner (`transitive-restore-banner`) when the assets file is missing. In All Projects the aggregate is
+  asked on expand, its rows carry an `N projects` badge whose title names each project's roots.
 
 ### Updates feature (main and sidebar)
 
@@ -652,7 +659,9 @@ is why it is not a `Popover`.
 
 ### Details feature (main)
 
-`features/details/DetailsPane.tsx` renders the selection of the `details` slice; the Installed, Updates and browse
+`features/details/DetailsPane.tsx` renders the selection of the `details` slice (a `transitive` selection as the
+read-only `TransitiveDetails`: the id with a Transitive badge, Version, Authors with the Verified mark, Required by per
+framework or per project, nothing asked of the feeds); the Installed, Updates and browse
 lists call `select()` when the user makes a row current (and the browse list after a navigation), never when a list
 resets its own row, so the stale-selection rule can keep the pane. The header shows the installed version with
 Uninstall (`whyNotRemovable` decides) and the version selector (`version-selector`, newest first, `(installed)`

@@ -166,6 +166,23 @@ describe('details slice', () => {
         expect(text('selection')).toBe('none');
     });
 
+    it('a transitive selection asks no versions or details and goes when the committed project changes', async () => {
+        const host = mount();
+        await ready(host);
+        await act(async () => actions.select({ packageId: 'Microsoft.Extensions.Logging', version: '9.0.0', origin: 'transitive', projectPath: A }));
+        expect(text('selection')).toBe('Microsoft.Extensions.Logging@9.0.0');
+        await act(async () => actions.showReadme());
+        expect(versionsAsked(host)).toHaveLength(0);
+        expect(metadataAsked(host)).toHaveLength(0);
+        expect(host.requests('package/readme')).toHaveLength(0);
+        expect(text('versions')).toBe('idle:-');
+
+        // Another project: its list does not have the package as a direct reference, so the selection goes.
+        await hostSays(() => host.event('session/changed', snapshot(2, B)));
+        await hostSays(() => host.respond(host.requests('installed/get').find(request => request.payload.projectPath === B)!, { projectPath: B, fidelity: 'authoritative', isCpm: false, packages: [pkg('Serilog', '3.0.0')] }, 2));
+        expect(text('selection')).toBe('none');
+    });
+
     it('a browse selection is never stale; All Projects clears an installed one', async () => {
         const host = mount();
         await ready(host);

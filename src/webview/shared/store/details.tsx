@@ -12,8 +12,12 @@ export interface DetailsSelection {
     version: string;
     /** The source the row came from; absent for an installed package (every allowed source is asked). */
     sourceUrl?: string;
-    /** Where it came from: an installed or update row belongs to its project and leaves when that project no longer has it. */
-    origin: 'installed' | 'updates' | 'browse';
+    /**
+     * Where it came from: an installed or update row belongs to its project and leaves when that project no longer has
+     * it. A transitive row (`projectPath` `null` for the All Projects aggregate) asks nothing of the feeds: its view reads
+     * the transitive slices.
+     */
+    origin: 'installed' | 'updates' | 'browse' | 'transitive';
     /** The project the row belongs to (its section's in All Projects); `null` for a row found by a search. */
     projectPath: string | null;
 }
@@ -158,6 +162,8 @@ export function DetailsProvider({ children }: { children: React.ReactNode }): Re
 
     const packageId = selection?.packageId;
     const sourceUrl = selection?.sourceUrl;
+    // A transitive selection shows what the transitive slices know: no versions, details or README are asked.
+    const asksFeeds = selection !== null && selection.origin !== 'transitive';
     useEffect(() => {
         if (packageId === undefined) {
             return undefined;
@@ -173,7 +179,7 @@ export function DetailsProvider({ children }: { children: React.ReactNode }): Re
         });
     }, [bus, packageId]);
 
-    const versionsKey = packageId === undefined ? null : `${packageId.toLowerCase()}|${sourceUrl ?? 'all'}|${includePrerelease}`;
+    const versionsKey = packageId === undefined || !asksFeeds ? null : `${packageId.toLowerCase()}|${sourceUrl ?? 'all'}|${includePrerelease}`;
     const listed = useLoadable<RequestResult<'package/versions'>>(
         versionsKey,
         attempts.versions,
@@ -182,7 +188,7 @@ export function DetailsProvider({ children }: { children: React.ReactNode }): Re
     );
     const versions = useMemo<Loadable<readonly string[]>>(() => ({ ...listed, value: listed.value?.versions }), [listed]);
 
-    const metadataKey = packageId === undefined || version === null ? null : `${packageId.toLowerCase()}@${version.toLowerCase()}|${sourceUrl ?? 'all'}`;
+    const metadataKey = packageId === undefined || version === null || !asksFeeds ? null : `${packageId.toLowerCase()}@${version.toLowerCase()}|${sourceUrl ?? 'all'}`;
     const metadata = useLoadable<PackageMetadata | null>(
         metadataKey,
         attempts.metadata,

@@ -146,6 +146,32 @@ describe('allProjects slice', () => {
         expect(current.transitive.errored).toEqual([{ projectPath: A, errorKind: 'parse-failed' }]);
     });
 
+    it('the aggregated transitive stream asks transitive/metadata once for the unique pairs after its answer, and a newer stream asks again', async () => {
+        const host = await mount(ALL_PROJECTS);
+        await list(host, 0, ['Serilog'], ['Moq']);
+        await act(async () => current.enableTransitive());
+        const frameworks = (ids: string[]) => [{ targetFramework: 'net8.0', packages: ids.map(id => ({ id, version: '1.0.0', requiredByChain: ['Serilog'] })) }];
+        const [first] = host.requests('allProjects/transitive');
+        await hostSays(() => host.chunk(first, { kind: 'project', chunk: { projectPath: A, projectName: 'A', frameworks: frameworks(['Serilog.Core', 'Shared']), dataSourceAvailable: true } }));
+        await hostSays(() => host.chunk(first, { kind: 'project', chunk: { projectPath: B, projectName: 'B', frameworks: frameworks(['shared']), dataSourceAvailable: true } }));
+        // Nothing is asked while the stream runs.
+        expect(host.requests('transitive/metadata')).toHaveLength(0);
+        await hostSays(() => host.respond(first, { projectPaths: [A, B], errored: [] }));
+        const asks = host.requests('transitive/metadata');
+        expect(asks.map(request => request.payload)).toEqual([{ packages: [{ id: 'Serilog.Core', version: '1.0.0' }, { id: 'Shared', version: '1.0.0' }] }]);
+        await hostSays(() => host.respond(asks[0], { metadata: [{ id: 'Serilog.Core', version: '1.0.0', authors: 'Serilog Contributors', verified: true }] }));
+        expect(current.transitive.metadata.get('serilog.core@1.0.0')?.authors).toBe('Serilog Contributors');
+
+        // A newer stream keeps the metadata while it runs and asks again after its answer.
+        await hostSays(() => host.invalidate([[resourceKeys.transitive(B), 2]]));
+        const second = host.requests('allProjects/transitive')[1];
+        await hostSays(() => host.chunk(second, { kind: 'project', chunk: { projectPath: B, projectName: 'B', frameworks: frameworks(['Other']), dataSourceAvailable: true } }));
+        expect(current.transitive.metadata.size).toBe(1);
+        await hostSays(() => host.respond(second, { projectPaths: [A, B], errored: [] }));
+        expect(host.requests('transitive/metadata')).toHaveLength(2);
+        expect(host.requests('transitive/metadata')[1].payload.packages.map(entry => entry.id)).toEqual(['Serilog.Core', 'Shared', 'Other']);
+    });
+
     it('leaving All Projects closes the transitive stream; coming back starts closed', async () => {
         const host = await mount(ALL_PROJECTS);
         await act(async () => current.enableTransitive());

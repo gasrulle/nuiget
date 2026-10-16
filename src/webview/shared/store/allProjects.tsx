@@ -3,6 +3,7 @@ import type React from 'react';
 import { ALL_PROJECTS, ProtocolRequestError, resourceKeys, type PackageMetadataLite, type Project, type ProjectInstalledChunk, type ProjectTransitiveChunk, type ProjectUpdatesChunk, type RequestChunk, type RequestResult } from '../../../protocol';
 import { useMessageBus } from '../bus/useMessageBus';
 import { useSession } from './session';
+import { metadataKey } from './transitive';
 import { RECOVERY_DELAY_MS } from './updates';
 
 export interface AllProjectsState {
@@ -64,17 +65,22 @@ export interface AllProjectsTransitive {
     chunks: ReadonlyMap<string, ProjectTransitiveChunk>;
     errored: RequestResult<'allProjects/transitive'>['errored'];
     error: ProtocolRequestError | undefined;
+    /** What `transitive/metadata` said about the aggregate's packages, by `metadataKey`; empty while it said nothing. */
+    metadata: ReadonlyMap<string, PackageMetadataLite>;
     refresh: () => void;
 }
 
 interface TransitiveStored {
     status: AllProjectsTransitive['status'];
     chunks: ReadonlyMap<string, ProjectTransitiveChunk>;
+    /** The chunks as the latest answer of the stream left them; the metadata belongs to these. */
+    answered: ReadonlyMap<string, ProjectTransitiveChunk> | undefined;
     errored: AllProjectsTransitive['errored'];
     error: ProtocolRequestError | undefined;
 }
 
-const NO_TRANSITIVE: TransitiveStored = { status: 'idle', chunks: new Map(), errored: [], error: undefined };
+const NO_TRANSITIVE: TransitiveStored = { status: 'idle', chunks: new Map(), answered: undefined, errored: [], error: undefined };
+const NO_METADATA: ReadonlyMap<string, PackageMetadataLite> = new Map();
 
 interface Stored {
     /** The number of the latest request; chunks and answers of any other are recorded by nobody and not applied. */
@@ -251,7 +257,10 @@ export function AllProjectsProvider({ children }: { children: React.ReactNode })
         }).then(
             ({ result }) => {
                 const listed = new Set([...result.projectPaths, ...result.errored.map(entry => entry.projectPath)]);
-                setTransitive(previous => ({ status: 'ready', chunks: new Map([...previous.chunks].filter(([path]) => listed.has(path))), errored: result.errored, error: undefined }));
+                setTransitive(previous => {
+                    const chunks = new Map([...previous.chunks].filter(([path]) => listed.has(path)));
+                    return { status: 'ready', chunks, answered: chunks, errored: result.errored, error: undefined };
+                });
             },
             (error: unknown) => {
                 if (!controller.signal.aborted) {
@@ -261,6 +270,37 @@ export function AllProjectsProvider({ children }: { children: React.ReactNode })
         );
         return () => controller.abort();
     }, [bus, active, transitiveEnabled, transitiveAsks]);
+
+    // The lite metadata of the aggregate (icon, authors, Verified, vulnerabilities): one ask for the unique packages once
+    // the stream has answered, again after each newer answer; an error is no metadata.
+    const [transitiveMetadata, setTransitiveMetadata] = useState<{ chunks: ReadonlyMap<string, ProjectTransitiveChunk>; byKey: ReadonlyMap<string, PackageMetadataLite> }>();
+    const answered = transitive.answered;
+    useEffect(() => {
+        if (!active || answered === undefined) {
+            return undefined;
+        }
+        const pairs = new Map<string, { id: string; version: string }>();
+        for (const chunk of answered.values()) {
+            for (const framework of chunk.frameworks) {
+                for (const entry of framework.packages) {
+                    const key = metadataKey(entry.id, entry.version);
+                    if (!pairs.has(key)) {
+                        pairs.set(key, { id: entry.id, version: entry.version });
+                    }
+                }
+            }
+        }
+        if (pairs.size === 0) {
+            return undefined;
+        }
+        const controller = new AbortController();
+        bus.request('transitive/metadata', { packages: [...pairs.values()] }, { signal: controller.signal }).then(answer => {
+            setTransitiveMetadata({ chunks: answered, byKey: new Map(answer.result.metadata.map(entry => [metadataKey(entry.id, entry.version), entry])) });
+        }, () => {
+            // No metadata is no error of the list.
+        });
+        return () => controller.abort();
+    }, [bus, active, answered]);
 
     useEffect(() => {
         if (!active) {
@@ -295,7 +335,15 @@ export function AllProjectsProvider({ children }: { children: React.ReactNode })
         error: stored.error,
         revalidating: stored.requesting && stored.status === 'ready',
         refresh,
-        transitive: { enabled: active && transitiveEnabled, status: active && transitiveEnabled ? transitive.status : 'idle', chunks: transitive.chunks, errored: transitive.errored, error: transitive.error, refresh: refreshTransitive },
+        transitive: {
+            enabled: active && transitiveEnabled,
+            status: active && transitiveEnabled ? transitive.status : 'idle',
+            chunks: transitive.chunks,
+            errored: transitive.errored,
+            error: transitive.error,
+            metadata: transitiveMetadata !== undefined && transitiveMetadata.chunks === transitive.answered ? transitiveMetadata.byKey : NO_METADATA,
+            refresh: refreshTransitive,
+        },
         enableTransitive,
         updates: {
             status: active ? updates.status : 'idle',
@@ -307,7 +355,7 @@ export function AllProjectsProvider({ children }: { children: React.ReactNode })
             revalidating: updates.requesting && updates.status === 'ready',
             refreshUpdates,
         },
-    }), [active, stored, refresh, transitiveEnabled, transitive, refreshTransitive, enableTransitive, updates, refreshUpdates]);
+    }), [active, stored, refresh, transitiveEnabled, transitive, transitiveMetadata, refreshTransitive, enableTransitive, updates, refreshUpdates]);
 
     return <AllProjectsContext.Provider value={state}>{children}</AllProjectsContext.Provider>;
 }

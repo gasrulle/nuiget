@@ -7,6 +7,7 @@ import { createFakeHost, type FakeHost } from '../../../shared/bus/testSupport';
 import { axeRuleOutcome, installFakeLayout } from '../../../shared/primitives/testSupport';
 import { StoreProvider } from '../../../shared/store/StoreProvider';
 import { MainShell } from '../../MainShell';
+import { DetailsPane } from '../details/DetailsPane';
 import { InstalledTab } from './InstalledTab';
 
 const A = '/w/App/App.csproj';
@@ -25,15 +26,15 @@ const hostSays = (say: () => void): Promise<void> => act(async () => {
     await Promise.resolve();
 });
 
-function mount(): FakeHost {
+function mount(withDetails = false): FakeHost {
     const host = createFakeHost();
-    render(<StoreProvider bus={host.bus}><MainShell installed={view => <InstalledTab {...view} />} /></StoreProvider>);
+    render(<StoreProvider bus={host.bus}><MainShell installed={view => <InstalledTab {...view} />} {...(withDetails ? { details: view => <DetailsPane {...view} /> } : {})} /></StoreProvider>);
     return host;
 }
 
-/** The panel on project A with the three packages listed. */
-async function mountWith(packages: InstalledPackage[] = THREE): Promise<FakeHost> {
-    const host = mount();
+/** The panel on project A with the three packages listed; with the details pane when asked. */
+async function mountWith(packages: InstalledPackage[] = THREE, withDetails = false): Promise<FakeHost> {
+    const host = mount(withDetails);
     await hostSays(() => host.respond(host.requests('session/get')[0], snapshot(1)));
     await hostSays(() => host.respond(host.requests('projects/list')[0], { projects: [{ name: 'App', path: A }, { name: 'Lib', path: B }] }, 1));
     await hostSays(() => host.respond(host.requests('installed/get')[0], installed(A, packages), 1));
@@ -196,7 +197,7 @@ describe('main panel: Installed tab', () => {
         await hostSays(() => host.respond(request, { projectPaths: [A, B], errored: [] }));
         expect(screen.getByRole('listbox', { name: 'App' })).toHaveAttribute('data-testid', 'installed-list-app');
         expect(screen.getByRole('listbox', { name: 'Lib' })).toHaveAttribute('data-testid', 'installed-list-lib');
-        expect(screen.getByTestId('section-header-transitive')).toHaveAttribute('aria-expanded', 'false'); expect(host.requests('transitive/get')).toHaveLength(0); expect(host.requests('allProjects/transitive')).toHaveLength(0);
+        expect(screen.getByTestId('section-header-transitive')).toHaveAttribute('aria-expanded', 'false'); expect(host.requests('allProjects/transitive')).toHaveLength(0);
         await user.click(within(screen.getByRole('listbox', { name: 'App' })).getByRole('option').querySelector('.nuiget-row-check') as Element);
         await user.click(within(screen.getByRole('listbox', { name: 'Lib' })).getAllByRole('option')[1].querySelector('.nuiget-row-check') as Element);
         expect(uninstallSelected()).toHaveTextContent('Uninstall selected (2)');
@@ -224,7 +225,7 @@ describe('main panel: Installed tab', () => {
         await hostSays(() => host.respond(host.requests('transitive/get')[1], restored, 2));
         expect(screen.queryByTestId('transitive-restore-banner')).toBeNull();
         expect(screen.getByRole('listbox', { name: 'Transitive packages' })).toBeInTheDocument();
-        expect(within(screen.getByRole('listbox', { name: 'Transitive packages' })).getByRole('option')).toHaveAccessibleDescription('Required by: Serilog');
+        expect(within(screen.getByRole('listbox', { name: 'Transitive packages' })).getByRole('option')).not.toHaveAccessibleDescription(/Required by/);
         // The metadata request of the rows is answered `unsupported` until the feeds exist: still the rows.
         await hostSays(() => host.fail(host.requests('transitive/metadata')[0], 'unsupported', 'not yet available'));
         expect(within(screen.getByRole('listbox', { name: 'Transitive packages' })).getAllByRole('option')).toHaveLength(1);
@@ -317,5 +318,60 @@ describe('main panel: Installed tab', () => {
         await mountWith([pkg('Pattern', { version: '10.*', versionType: 'floating', resolvedVersion: '10.2.0' }), pkg('Ranged', { version: '[1,2)', versionType: 'range' })]);
         expect(screen.getByRole('option', { name: 'Pattern 10.* (10.2.0)' })).toHaveAccessibleDescription(/Floating version pattern/);
         expect(screen.getByRole('option', { name: 'Ranged [1,2) (run restore)' })).toHaveAccessibleDescription(/Version range/);
+    });
+
+    it('transitive row opens details with required-by', async () => {
+        const user = userEvent.setup();
+        const host = await mountWith(THREE, true);
+        await user.click(screen.getByTestId('section-header-transitive'));
+        const result: TransitiveResult = { projectPath: A, dataSourceAvailable: true, frameworks: [{ targetFramework: 'net8.0', packages: [{ id: 'Microsoft.Extensions.Logging', version: '9.0.0', requiredByChain: ['Serilog'] }] }] };
+        await hostSays(() => host.respond(host.requests('transitive/get')[0], result, 1));
+        const header = screen.getByTestId('section-header-transitive');
+        expect(header).toHaveTextContent('Transitive packages (1)');
+        expect(header.closest('.nuiget-section-header')).toHaveTextContent('net8.0');
+        // The installed rows ask their own metadata too: answer the ask of the transitive rows.
+        const ask = host.requests('transitive/metadata').find(request => request.payload.packages.some(entry => entry.id === 'Microsoft.Extensions.Logging'))!;
+        await hostSays(() => host.respond(ask, { metadata: [{ id: 'Microsoft.Extensions.Logging', version: '9.0.0', iconUrl: 'data:image/png;base64,AAAA', authors: 'Microsoft', verified: true }] }));
+        const row = within(screen.getByTestId('transitive-list')).getByTestId('package-row-microsoft.extensions.logging');
+        const option = within(row).getByRole('option');
+        expect(row.querySelector('.nuiget-row-icon img')).toHaveAttribute('src', 'data:image/png;base64,AAAA');
+        expect(option).toHaveTextContent('Microsoft');
+        expect(option).toHaveAccessibleDescription(/Verified: the package id prefix/);
+        expect(option).not.toHaveAccessibleDescription(/Required by/);
+
+        await user.click(option);
+        expect(option).toHaveAttribute('aria-selected', 'true');
+        expect(optionOf('Serilog')).not.toHaveAttribute('aria-current');
+        const details = screen.getByTestId('transitive-details');
+        for (const text of ['Transitive', '9.0.0', 'Microsoft', 'Required by', 'Serilog']) {
+            expect(details).toHaveTextContent(text);
+        }
+        expect(host.requests('package/versions')).toHaveLength(0);
+        expect(host.requests('package/metadata')).toHaveLength(0);
+
+        // A direct row made current takes the details back.
+        await user.click(optionOf('Serilog'));
+        expect(option).toHaveAttribute('aria-selected', 'false');
+        expect(screen.getByTestId('install-update-button')).toBeInTheDocument();
+    });
+
+    it('several frameworks: one collapsible header per framework with its count and badge', async () => {
+        const user = userEvent.setup();
+        const host = await mountWith();
+        await user.click(screen.getByTestId('section-header-transitive'));
+        const entry = (id: string) => ({ id, version: '1.0.0', requiredByChain: ['Serilog'] });
+        await hostSays(() => host.respond(host.requests('transitive/get')[0], { projectPath: A, dataSourceAvailable: true, frameworks: [
+            { targetFramework: 'net8.0', packages: [entry('A.Core')] },
+            { targetFramework: 'net6.0', packages: [entry('B.Core')] },
+        ] }, 1));
+        expect(screen.getByTestId('section-header-transitive')).toHaveTextContent(/^Transitive packages$/);
+        for (const tfm of ['net8.0', 'net6.0']) {
+            const header = screen.getByTestId(`section-header-transitive-${tfm}`);
+            expect(header).toHaveTextContent('Transitive packages (1)');
+            expect(header.closest('.nuiget-section-header')).toHaveTextContent(tfm);
+        }
+        await user.click(screen.getByTestId('section-header-transitive-net8.0'));
+        expect(screen.getByTestId('transitive-list-net8.0')).not.toBeVisible();
+        expect(screen.getByTestId('transitive-list-net6.0')).toBeVisible();
     });
 });

@@ -73,7 +73,6 @@ describe('2.0 main panel: Installed tab', () => {
                 return now === 'banner' ? undefined : now;
             }, 'the transitive packages after the restore', 240_000);
         }
-        await screenshot('main-transitive-expanded');
         // The files after this one measure the Installed tab with the section closed.
         await header.click();
         await poll(async () => ((await header.getAttribute('aria-expanded')) === 'false' ? true : undefined), 'the transitive section closed', 10_000);

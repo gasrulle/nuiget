@@ -2,7 +2,7 @@ import { expect } from 'chai';
 import * as fs from 'fs';
 import * as path from 'path';
 import { By } from 'vscode-extension-tester';
-import { enterMainWebview, openMainPanel } from './mainWebview';
+import { chooseProject, enterMainWebview, openMainPanel } from './mainWebview';
 import { driverOf, findByTestId, leaveWebview, poll, screenshot } from './sidebarWebview';
 
 /** `ALL_PROJECTS` of `src/protocol/domain.ts`; the test reads the DOM, it imports nothing of the webview. */
@@ -33,13 +33,6 @@ describe('2.0 main panel: All Projects', () => {
     const utilityDir = path.join(workspace, 'Utility');
     let originalCsproj = '';
 
-    /** Selects an option of the project selector the way a user's choice reaches React: value set, `change` dispatched. */
-    const chooseProject = async (value: string): Promise<void> => {
-        await driverOf().executeScript(
-            'const select = document.querySelector(\'[data-testid="project-selector"]\'); select.value = arguments[0]; select.dispatchEvent(new Event("change", { bubbles: true }));',
-            value,
-        );
-    };
     const selectorValue = async (): Promise<string> => (await (await findByTestId('project-selector')).getAttribute('value')) ?? '';
 
     before(function () {

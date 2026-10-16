@@ -1,10 +1,11 @@
 import { act, render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
-import { resourceKeys, type SessionSnapshot, type TransitiveResult } from '../../../protocol';
+import { describe, expect, it, vi } from 'vitest';
+import { resourceKeys, type InstalledResult, type SessionSnapshot, type TransitiveResult } from '../../../protocol';
 import { createFakeHost, type FakeHost } from '../bus/testSupport';
 import { MessageBusProvider } from '../bus/useMessageBus';
+import { InstalledProvider } from './installed';
 import { SessionProvider, useSession } from './session';
-import { TransitiveProvider, useTransitive, type TransitiveState } from './transitive';
+import { TRANSITIVE_PREFETCH_MS, TransitiveProvider, useTransitive, type TransitiveState } from './transitive';
 
 const A = '/w/A/A.csproj';
 const B = '/w/B/B.csproj';
@@ -33,7 +34,8 @@ const text = (): string => screen.getByTestId('transitive').textContent ?? '';
 
 async function mount(): Promise<FakeHost> {
     const host = createFakeHost();
-    render(<MessageBusProvider bus={host.bus}><SessionProvider><TransitiveProvider><Probe /></TransitiveProvider></SessionProvider></MessageBusProvider>);
+    // The installed slice is above the transitive one, as in `StoreProvider`; its list stays unanswered unless a test answers it.
+    render(<MessageBusProvider bus={host.bus}><SessionProvider><InstalledProvider><TransitiveProvider><Probe /></TransitiveProvider></InstalledProvider></SessionProvider></MessageBusProvider>);
     await hostSays(() => host.respond(host.requests('session/get')[0], snapshot(1)));
     return host;
 }
@@ -117,5 +119,35 @@ describe('transitive slice', () => {
         // Back to A: closed again until it is opened.
         await hostSays(() => host.event('session/changed', snapshot(3, A)));
         expect(text()).toBe('false idle - false meta:0');
+    });
+
+    it('the installed list ready prefetches transitive/get after the delay; another project or an earlier enable leaves one request', async () => {
+        vi.useFakeTimers();
+        try {
+            const installed = (projectPath: string): InstalledResult => ({ projectPath, fidelity: 'authoritative', isCpm: false, packages: [] });
+            const wait = (ms: number): Promise<void> => act(async () => {
+                await vi.advanceTimersByTimeAsync(ms);
+            });
+            const host = await mount();
+            await hostSays(() => host.respond(host.requests('installed/get')[0], installed(A), 1));
+            await wait(TRANSITIVE_PREFETCH_MS - 1);
+            expect(host.requests('transitive/get')).toHaveLength(0);
+            await wait(1);
+            expect(host.requests('transitive/get').map(request => request.payload)).toEqual([{ projectPath: A }]);
+
+            // B's list answers, but the user goes back to A before the delay: nothing is asked for B.
+            await hostSays(() => host.event('session/changed', snapshot(2, B)));
+            await hostSays(() => host.respond(host.requests('installed/get').find(request => request.payload.projectPath === B)!, installed(B), 2));
+            await hostSays(() => host.event('session/changed', snapshot(3, A)));
+            await wait(TRANSITIVE_PREFETCH_MS);
+            expect(host.requests('transitive/get').filter(request => request.payload.projectPath === B)).toHaveLength(0);
+
+            // An earlier enable and the timer together ask once.
+            await hostSays(() => current.enable());
+            await wait(TRANSITIVE_PREFETCH_MS);
+            expect(host.requests('transitive/get').filter(request => request.payload.projectPath === A)).toHaveLength(2);
+        } finally {
+            vi.useRealTimers();
+        }
     });
 });

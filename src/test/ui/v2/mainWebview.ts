@@ -39,3 +39,11 @@ export async function enterMainWebview(timeoutMs = 60_000): Promise<void> {
         return undefined;
     }, 'the 2.0 main panel webview (data-testid="nuiget-app")', timeoutMs);
 }
+
+/** Selects an option of the project selector the way a user's choice reaches React: value set, `change` dispatched. */
+export async function chooseProject(value: string): Promise<void> {
+    await driverOf().executeScript(
+        'const select = document.querySelector(\'[data-testid="project-selector"]\'); select.value = arguments[0]; select.dispatchEvent(new Event("change", { bubbles: true }));',
+        value,
+    );
+}
