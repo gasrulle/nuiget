@@ -117,6 +117,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Ported the extension-host end-to-end suites to the 2.0 entry with noun-first dotnet commands and bounded waits**
 - **`nuiget.recentSearchesLimit` removed**
 - **Deleted the 1.x extension code; the 2.0 entry and sidebar moved to `src/extension.ts` and `src/webview/sidebar`**
+- **Removed the 1.x sections of ARCHITECTURE.md and the 1.x agent gotchas**
 
 ## [1.18.9] - 2026-10-10
 

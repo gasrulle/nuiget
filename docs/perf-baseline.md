@@ -78,6 +78,34 @@ The metrics the extension controls, judged on the head runs: cold search 819 ms 
 38870091917) against the 1700 ms target; warm search 286 ms and 282 ms against 900 ms; the 2.0 bundles 293 183, 525 105
 and 319 313 bytes (P7.fix-2) under 321 341, 575 626 and 350 684. Verdict: perf ≥ baseline (P7.6 acceptance ruling).
 
+## After the legacy deletion (P8.2)
+
+Plan item P8.2 re-read the perf job by the median rule above on the last five runs on `labs/2.0` up to the P8.2b
+commit: P7.fix-4, the `e29549f` chore, P8.1, P8.2a and P8.2b. Every perf job of these runs ran on GitHub-hosted
+`ubuntu-24.04`, image version `20261012.601`, with .NET SDK 10.0.402. That image is newer than the baseline's
+`20261012.334.1`, so the numbers are compared, not re-based: every median is within tolerance and the baseline above is
+unchanged. The P8.2c run comes after its own commit and is not in the table. Times in ms.
+
+| Metric | 38880770134 | 38886469731 | 38889586187 | 38894936903 | 38900038138 | Median | Tolerance | Verdict |
+|---|---:|---:|---:|---:|---:|---:|---:|---|
+| `sdk-probe` | 88 | 88 | 93 | 96 | 96 | 93 | ≤ 133 | pass |
+| `config-paths` | 1576 | 540 | 564 | 457 | 383 | 540 | ≤ 616 | pass |
+| `restore-cold-single` | 1698 | 1764 | 1665 | 1516 | 1609 | 1665 | ≤ 2442 | pass |
+| `restore-cold-multi` | 1931 | 1978 | 1914 | 3885 | 2000 | 1978 | ≤ 2772 | pass |
+| `restore-warm-multi` | 1153 | 1148 | 1166 | 880 | 1158 | 1153 | ≤ 1731 | pass |
+| `evaluate-properties-multi` | 340 | 338 | 350 | 259 | 346 | 340 | ≤ 508 | pass |
+| `evaluate-items-multi-net8.0` | 448 | 449 | 458 | 325 | 458 | 449 | ≤ 681 | pass |
+| `evaluate-items-multi-netstandard2.0` | 451 | 451 | 457 | 328 | 463 | 451 | ≤ 679 | pass |
+| `evaluate-properties-single` | 446 | 451 | 453 | 333 | 459 | 451 | ≤ 675 | pass |
+| `evaluate-items-single` | 446 | 453 | 453 | 333 | 451 | 451 | ≤ 670 | pass |
+| `evaluate-combined-single` | 446 | 467 | 461 | 332 | 457 | 457 | ≤ 672 | pass |
+
+Single runs over tolerance, recorded and not judged: `config-paths` 1576 ms in run 38880770134 and `restore-cold-multi`
+3885 ms in run 38894936903. Search, `UI` job of the runs since P8.1: cold 535, 806 and 812 ms against the 1700 ms target,
+warm 282, 295 and 287 ms against 900 ms. Bundles at P8.2b: 293 183, 525 241 and 319 313 bytes, the sizes of P8.1; the
+ceilings in `esbuild.mjs` were reset to `Math.ceil(measured × 1.1)`: 322 502, 577 766 and 351 245 bytes. Verdict: no row
+beyond tolerance.
+
 ## Definitions
 
 - **Cold restore**: the first `dotnet restore` into empty folders for `NUGET_PACKAGES` and `NUGET_HTTP_CACHE_PATH`.
