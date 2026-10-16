@@ -1,9 +1,10 @@
+import * as crypto from 'crypto';
 import * as path from 'path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { ExecFileFunction } from '../cli';
+import { DefaultDotnetRunner, resolveDotnetExecutable, runPowerShellEncoded, type ExecFileFunction } from '../cli';
 import { XmlParseError } from '../project/xml';
 import { createScratchDir, writeTree, type ScratchDir } from '../project/__fixtures__/scratch';
-import { decryptPassword, NuGetConfigReader, type NuGetConfigDocument } from './index';
+import { decryptPassword, DotnetSourceProvider, NuGetConfigReader, type NuGetConfigDocument } from './index';
 
 const file = path.join('repo', 'nuget.config');
 const items = <T>(section: Array<{ kind: 'clear' } | ({ kind: 'item' } & T)>) => section.filter((entry): entry is { kind: 'item' } & T => entry.kind === 'item');
@@ -158,6 +159,49 @@ describe('decryptPassword', () => {
             expect(execFile).not.toHaveBeenCalled();
         }
     });
+
+    const notWindowsWithSdk = process.platform !== 'win32' || process.env.NUIGET_SDK_TESTS !== '1';
+
+    /** Adds a source with an encrypted password to a scratch `nuget.config` through the CLI and reads back what it stored. */
+    async function storeEncrypted(name: string): Promise<{ password: string; stored: string }> {
+        const scratch = await createScratchDir('sources');
+        scratches.push(scratch);
+        const runner = new DefaultDotnetRunner({ resolveExecutable: () => resolveDotnetExecutable() });
+        const password = `p73-${crypto.randomBytes(12).toString('hex')}`;
+        const configFile = path.join(scratch.dir, 'nuget.config');
+        const added = await new DotnetSourceProvider({ runner, platform: 'win32', env: {} })
+            .add({ url: 'https://example.invalid/v3/index.json', name, username: 'u', password, configFile, storeEncrypted: true }, scratch.dir);
+        expect(added).toEqual({ ok: true });
+        const document = await new NuGetConfigReader({ env: {} }).read(configFile);
+        const credential = credentialsOf(document as NuGetConfigDocument)[name];
+        expect(credential).toMatchObject({ username: 'u', passwordKind: 'encrypted' });
+        const stored = credential.password as string;
+        expect(stored).toMatch(/^[A-Za-z0-9+/]+={0,2}$/);
+        expect(stored).not.toBe(password);
+        return { password, stored };
+    }
+
+    it.skipIf(notWindowsWithSdk)('dpapi (Windows, SDK 10): a password that dotnet nuget add source encrypted decrypts to the value that was stored', async () => {
+        const { password, stored } = await storeEncrypted('p73');
+        expect(await decryptPassword(stored)).toBe(password);
+    }, 120_000);
+
+    it.skipIf(notWindowsWithSdk)('dpapi (Windows): the stored value is protected with the entropy "NuGet" and not without it (N54)', async () => {
+        const { password, stored } = await storeEncrypted('p73-entropy');
+        const unprotect = (entropy: string) => runPowerShellEncoded([
+            'Add-Type -AssemblyName System.Security',
+            `$bytes = [Convert]::FromBase64String('${stored}')`,
+            '$scope = [System.Security.Cryptography.DataProtectionScope]::CurrentUser',
+            `try { $plain = [System.Security.Cryptography.ProtectedData]::Unprotect($bytes, ${entropy}, $scope); [Console]::OutputEncoding = [System.Text.Encoding]::UTF8; [Console]::Out.Write([System.Text.Encoding]::UTF8.GetString($plain)) } catch { [Console]::Out.Write('unprotect failed') }`,
+        ].join('; '), { timeoutMs: 60_000 });
+
+        const withEntropy = await unprotect("[System.Text.Encoding]::UTF8.GetBytes('NuGet')");
+        expect(withEntropy.exitCode).toBe(0);
+        expect(withEntropy.stdout).toBe(password);
+        const withoutEntropy = await unprotect('$null');
+        expect(withoutEntropy.stdout).toBe('unprotect failed');
+        expect(withoutEntropy.stdout).not.toBe(password);
+    }, 120_000);
 
     it('answers undefined when PowerShell fails or prints nothing', async () => {
         const failed = recorder({ error: Object.assign(new Error('Command failed'), { code: 1 }), stderr: 'The data is invalid.' });

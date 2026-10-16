@@ -160,6 +160,22 @@ describe('redact', () => {
     it('is stable when applied twice', () => {
         const once = redact('https://user:pw@host/x --password "a b" apikey=k Authorization: Basic Zm9v');
         expect(redact(once)).toBe(once);
+        const json = redact('{"Username":"VssSessionToken","Password":"abc123SECRET"}');
+        expect(redact(json)).toBe(json);
+    });
+
+    it('redacts a secret that is the value of a quoted JSON key (N56)', () => {
+        for (const [input, secret] of [
+            ['{"Username":"VssSessionToken","Password":"abc123SECRET"}', 'abc123SECRET'],
+            ['{"token":"tok456"}', 'tok456'],
+            ['{"Authorization":"Basic Zm9v"}', 'Zm9v'],
+        ]) {
+            const output = redact(input);
+            expect(output, input).toContain(REDACTED);
+            expect(output, input).not.toContain(secret);
+            expect(redact(output), input).toBe(output);
+        }
+        expect(redact('{"Username":"VssSessionToken","Password":"abc123SECRET"}')).toContain('VssSessionToken');
     });
 });
 

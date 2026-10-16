@@ -15,14 +15,16 @@ const QUERY_SECRET = /([?&](?:password|passwd|pwd|api[-_]?key|apikey|token|acces
 // whole. `-p:` (MSBuild property) is excluded because the colon form never matches `(\s+|=)`.
 const CLI_SECRET_ARG = /(?<![\w-])(--password|--api-key|--apikey|-p|-k)(\s+|=)(?:"[^"]*"|'[^']*'|[^\s"']+)/gi;
 
-// Header values; `[:=]` also covers `Authorization=Basic ...` style dumps.
-const HEADER_SECRET = /\b(Authorization|Proxy-Authorization|X-Api-Key|X-NuGet-ApiKey|X-NuGet-Session|Cookie|Set-Cookie)\s*[:=]\s*([^\r\n]+)/gi;
+// Header values; `[:=]` also covers `Authorization=Basic ...` style dumps, and a closing quote after the name of a
+// quoted JSON key (`"Authorization":"…"`, N56).
+const HEADER_SECRET = /\b(Authorization|Proxy-Authorization|X-Api-Key|X-NuGet-ApiKey|X-NuGet-Session|Cookie|Set-Cookie)['"]?\s*[:=]\s*([^\r\n]+)/gi;
 
-// `apikey=...`, `password: ...`, `secret = ...` anywhere in free text (JSON, XML, logs).
-const KEY_VALUE_SECRET = /\b(api[-_]?key|apikey|access[-_]?token|auth[-_]?token|refresh[-_]?token|bearer|password|passwd|pwd|secret|credential|token)\b\s*[=:]\s*['"]?([^\s'"<>,;]+)['"]?/gi;
+// `apikey=...`, `password: ...`, `secret = ...` anywhere in free text (JSON, XML, logs), also as a quoted JSON key
+// (`"Password":"…"`, N56). A value stops before `}`, so a second pass leaves the closing brace of a JSON object.
+const KEY_VALUE_SECRET = /\b(api[-_]?key|apikey|access[-_]?token|auth[-_]?token|refresh[-_]?token|bearer|password|passwd|pwd|secret|credential|token)\b['"]?\s*[=:]\s*['"]?([^\s'"<>,;}]+)['"]?/gi;
 
 // nuget.config credential elements that show up in verbose CLI output, as `key=value` text or XML.
-const NUGET_CONFIG_SECRET = /\b(ClearTextPassword|Password|EncryptedPassword)\b\s*[=:]\s*['"]?([^\s'"<>]+)['"]?/gi;
+const NUGET_CONFIG_SECRET = /\b(ClearTextPassword|Password|EncryptedPassword)\b['"]?\s*[=:]\s*['"]?([^\s'"<>}]+)['"]?/gi;
 const NUGET_CONFIG_XML_SECRET = /(<add\s+key\s*=\s*"(?:ClearTextPassword|Password|EncryptedPassword|ApiKey)"\s+value\s*=\s*")([^"]*)(")/gi;
 
 // Three base64url segments starting with `eyJ` (`{"`) — a JWT header.
