@@ -159,6 +159,12 @@ Files checked (absolute, under /Users/mattias/github/nuiget): src/webview/shared
 Note: the VERIFY grep for `nuiget-row-version-arrow` matches only the STATUS notes that quote this history (this file
 and `src/webview/shared/STATUS.md`), no code or reference document.
 
+## Visual check (CI run 38966830897 on 803b93f, 10 jobs green, "incomplete node outside" 0 times)
+
+- viewed: main-updates.png: `Updates 2`; Newtonsoft.Json before Serilog; icons in the 32 px column; `13.0.2 →
+  13.0.4` with the arrow muted and `13.0.4` bold in the git "added" green; `✓ James Newton-King`; no Verified badge;
+  the details pane still shows NUnit from the Browse test (stale details, P9.6).
+
 ## Exact next step (one item ID)
 
 P9.5.
