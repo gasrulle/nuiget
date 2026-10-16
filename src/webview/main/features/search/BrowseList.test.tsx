@@ -177,7 +177,7 @@ describe('main panel: browse', () => {
         expect(box()).toHaveValue('');
         expect(host.cancelled()).toEqual([queries(host)[0].id]);
         expect(screen.getByTestId('tab-bar')).toBeInTheDocument();
-        expect(screen.getByRole('tabpanel', { name: 'Installed' })).toHaveTextContent('Installed list');
+        expect(screen.getByRole('tabpanel', { name: 'Installed 1' })).toHaveTextContent('Installed list'); // The Installed tab counts the one listed package (P9.3, MH3) and names its panel.
     });
 
     it('typing @ offers the main panel\'s three filters', async () => {

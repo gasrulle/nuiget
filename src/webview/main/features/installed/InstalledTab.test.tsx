@@ -16,6 +16,10 @@ const pkg = (id: string, changes: Partial<InstalledPackage> = {}): InstalledPack
 const installed = (projectPath: string, packages: InstalledPackage[]): InstalledResult => ({ projectPath, fidelity: 'authoritative', isCpm: false, packages });
 const THREE = [pkg('Serilog', { version: '3.0.0' }), pkg('Moq', { version: '4.20.0' }), pkg('Newtonsoft.Json', { version: '13.0.1', declaration: 'central' })];
 
+// The bundled default icon the host puts on the root; `defaultPackageIcon()` keeps the first value it finds.
+const DEFAULT_ICON = 'https://file+.vscode-resource.vscode-cdn.net/ext/resources/package-icon.png';
+document.body.setAttribute('data-package-icon', DEFAULT_ICON);
+
 const hostSays = (say: () => void): Promise<void> => act(async () => {
     say();
     await Promise.resolve();
@@ -90,7 +94,7 @@ describe('main panel: Installed tab', () => {
         expect(within(header()).queryByText('provisional')).toBeNull();
     });
 
-    it('provisional: the single-project list carries the badge above it until the authoritative list replaces it', async () => {
+    it('provisional: the single-project header carries the badge until the authoritative list replaces it', async () => {
         const host = mount();
         await hostSays(() => host.respond(host.requests('session/get')[0], snapshot(1)));
         await hostSays(() => host.respond(host.requests('projects/list')[0], { projects: [{ name: 'App', path: A }, { name: 'Lib', path: B }] }, 1));
@@ -254,5 +258,64 @@ describe('main panel: Installed tab', () => {
         results = await axe(document.body);
         expect(results).toHaveNoViolations();
         expect(screen.getByRole('alert')).toHaveTextContent('Installed packages of Lib could not be loaded: assets file unreadable');
+    });
+
+    it('installed row shows icon, authors and verified', async () => {
+        const host = await mountWith();
+        await hostSays(() => host.respond(host.requests('transitive/metadata')[0], { metadata: [
+            { id: 'Serilog', version: '3.0.0', iconUrl: 'data:image/png;base64,AAAA', authors: 'Serilog Contributors', verified: true, description: 'Logging' },
+            { id: 'Moq', version: '4.20.0' },
+        ] }));
+        const icon = (id: string): string | null | undefined => screen.getByTestId(`package-row-${id.toLowerCase()}`).querySelector('.nuiget-row-icon img')?.getAttribute('src');
+        expect(icon('Serilog')).toBe('data:image/png;base64,AAAA');
+        expect(icon('Moq')).toBe(DEFAULT_ICON);
+        expect(optionOf('Serilog')).toHaveAccessibleDescription(/Verified: the package id prefix is reserved by its owner/);
+        expect(optionOf('Serilog')).toHaveTextContent('Serilog Contributors');
+        expect(optionOf('Moq')).not.toHaveAccessibleDescription(/Verified/);
+        // No description on an Installed row (D14).
+        expect(screen.queryByText('Logging')).toBeNull();
+    });
+
+    it('filter header shows k of N', async () => {
+        const user = userEvent.setup();
+        const host = await mountWith();
+        const header = (): HTMLElement => screen.getByTestId('section-header-direct');
+        expect(header()).toHaveTextContent('Direct packages (3)');
+        await user.type(screen.getByTestId('search-input'), '@installed ser');
+        expect(header()).toHaveTextContent('Direct packages (1 of 3)');
+        await user.clear(screen.getByTestId('search-input'));
+        expect(header()).toHaveTextContent('Direct packages (3)');
+        // Without vulnerability data `@vulnerable` counts nothing.
+        await user.type(screen.getByTestId('search-input'), '@vulnerable');
+        expect(header()).toHaveTextContent('Direct packages (3)');
+        expect(screen.getByText('Vulnerability data is not available for this project yet.')).toBeInTheDocument();
+        await hostSays(() => host.respond(host.requests('transitive/metadata')[0], { metadata: [{ id: 'Moq', version: '4.20.0', vulnerabilities: [{ severity: 'High', advisoryUrl: 'https://github.com/advisories/x' }] }] }));
+        expect(header()).toHaveTextContent('Direct packages (1 of 3)');
+    });
+
+    it('SDK and props rows carry their badge and a muted check mark, and Space says why', async () => {
+        const user = userEvent.setup();
+        await mountWith([pkg('Microsoft.NET.ILLink.Tasks', { isImplicit: true }), pkg('Shared', { declaration: 'props' }), pkg('Serilog', { version: '3.0.0' })]);
+        expect(optionOf('Microsoft.NET.ILLink.Tasks')).toHaveAccessibleDescription(/Added by the .NET SDK/);
+        expect(optionOf('Shared')).toHaveAccessibleDescription(/imported props file/);
+        for (const id of ['Microsoft.NET.ILLink.Tasks', 'Shared']) {
+            expect(optionOf(id).querySelector('.nuiget-row-check')).toHaveClass('nuiget-row-check--off');
+            expect(within(screen.getByTestId(`package-row-${id.toLowerCase()}`)).queryByTestId('row-action-uninstall')).toBeNull();
+        }
+        expect(optionOf('Serilog').querySelector('.nuiget-row-check')).not.toHaveClass('nuiget-row-check--off');
+
+        optionOf('Microsoft.NET.ILLink.Tasks').focus();
+        await user.keyboard(' ');
+        expect(optionOf('Microsoft.NET.ILLink.Tasks')).toHaveAttribute('aria-selected', 'false');
+        await waitFor(() => expect(said()).toBe('Microsoft.NET.ILLink.Tasks is added by the .NET SDK and cannot be uninstalled'));
+        // Enter still shows its details.
+        await user.keyboard('{Enter}');
+        expect(optionOf('Microsoft.NET.ILLink.Tasks')).toHaveAttribute('aria-current', 'true');
+    });
+
+    it('floating and range rows show the declared pattern with the resolved version and a badge', async () => {
+        await mountWith([pkg('Pattern', { version: '10.*', versionType: 'floating', resolvedVersion: '10.2.0' }), pkg('Ranged', { version: '[1,2)', versionType: 'range' })]);
+        expect(screen.getByRole('option', { name: 'Pattern 10.* (10.2.0)' })).toHaveAccessibleDescription(/Floating version pattern/);
+        expect(screen.getByRole('option', { name: 'Ranged [1,2) (run restore)' })).toHaveAccessibleDescription(/Version range/);
     });
 });

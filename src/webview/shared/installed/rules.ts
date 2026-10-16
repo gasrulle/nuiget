@@ -19,6 +19,24 @@ export function shownVersion(entry: InstalledPackage): string {
 }
 
 /**
+ * The version cell of a main-panel row: a floating or ranged declaration shows its pattern with the version it
+ * resolves to (`10.* (10.2.0)`, or `(run restore)` before a restore), a wildcard says it is always the latest. The
+ * sidebar keeps `shownVersion`.
+ */
+export function versionCell(entry: InstalledPackage): { text: string; title?: string } {
+    if (entry.declaration === 'unresolved' || entry.versionType === 'unresolved') {
+        return { text: 'unresolved', title: UNRESOLVED_HINT };
+    }
+    if (entry.isAlwaysLatest) {
+        return { text: `* (always latest${entry.resolvedVersion ? `: ${entry.resolvedVersion}` : ''})`, title: 'Always the latest version' };
+    }
+    if (entry.versionType === 'floating' || entry.versionType === 'range') {
+        return { text: `${entry.version} (${entry.resolvedVersion ?? 'run restore'})`, title: entry.versionType === 'floating' ? 'Floating version pattern' : 'Version range' };
+    }
+    return { text: entry.version };
+}
+
+/**
  * Why a package cannot be uninstalled from this list, in a sentence for the user; `undefined` when it can. A centrally
  * managed package can: an uninstall removes the project's reference only and keeps the central entry (ADR-004).
  */

@@ -174,6 +174,23 @@ describe('Row in a multi-selectable list', () => {
         rerender(<div role="listbox" aria-label="Installed packages">{row({ checkable: false })}</div>);
         expect(option.querySelector('.nuiget-row-check')).toBeNull();
     });
+
+    it('a row that cannot join a bulk action shows a muted check mark', async () => {
+        const { container } = render(
+            <div role="listbox" aria-label="Installed packages" aria-multiselectable="true">
+                <Row itemId="Microsoft.NETCore.App" name="Microsoft.NETCore.App" version="8.0.0" density="comfortable" index={0} setSize={1} active selected optionId="installed-0" offset={0} checkable selectable={false} />
+            </div>,
+        );
+        const mark = screen.getByRole('option').querySelector('.nuiget-row-check');
+        expect(mark).toHaveClass('nuiget-row-check--off');
+        expect(mark).toHaveAttribute('aria-hidden', 'true');
+        // Never a mark, even when the list calls the row selected; nothing in it can take focus.
+        expect(mark?.querySelector('svg')).toBeNull();
+        expect(mark?.querySelectorAll('button, input, [tabindex]')).toHaveLength(0);
+        const results = await axe(container);
+        expect(results).toHaveNoViolations();
+        expect(axeRuleOutcome(results, 'aria-hidden-focus')).toBe('passes');
+    });
 });
 
 describe('Row layout (P9.2, D15)', () => {

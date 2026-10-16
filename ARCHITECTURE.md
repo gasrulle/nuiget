@@ -564,12 +564,18 @@ builds it into `dist/webview.js` and, because the entry imports `../shared/token
 `src/webview/main/features/installed` is the Installed tab (P5.4); `index.tsx` hands it to the shell as
 `installed={view => <InstalledTab {...view} />}`, so the shell did not grow.
 
-- **Sections.** For a single project one list (`installed-list`) and, under it, the transitive section; the
-  single list has no header, so its `provisional` and `Unsupported` badges stand above it
-  (`.nuiget-installed-status`, P7.5a), as they stand on a project header in All Projects; in All
-  Projects one `SectionHeader` and one list per project from the `allProjects` slice (`installed-list-<name>`),
-  inside one scroll container where every list is as high as its rows. Folder headings, `Unsupported` sections
-  and the all-projects transitive aggregate are P5.9's.
+- **Sections.** For a single project one list (`installed-list`) under a collapsible `Direct packages (N)`
+  header (`section-header-direct`; `(k of N)` while a filter is on, `(N)` while the vulnerability data of
+  `@vulnerable` is unknown) and, under it, the transitive section; in All Projects one `SectionHeader` and one
+  list per project from the `allProjects` slice (`installed-list-<name>`), inside one scroll container where every
+  list is as high as its rows. Each header carries the `provisional` and `Unsupported` badges. Folder headings,
+  `Unsupported` sections and the all-projects transitive aggregate are P5.9's.
+- **Rows (P9.3).** A comfortable `Row` per package: the icon from the lite map (`packageIconSrc`: the `data:` URI
+  or the bundled default), authors and the Verified mark from the same map, no description (D14); the version
+  cell of `versionCell` (`10.* (10.2.0)`, `(run restore)`, `* (always latest: …)`); badges `SDK`, `props`, `CPM`,
+  `floating` or `range`, `Vulnerable`. A row `whyNotRemovable` refuses keeps a muted, empty check mark
+  (`selectable={false}`) and no uninstall action; Enter still shows its details. The Installed tab counts the
+  listed packages (no number while loading or at zero; All Projects once every project answered).
 - **Two selections.** The current row is the tab's own state (click or Enter, `aria-current`); the details pane
   of P5.7 will read it. The bulk set is kept by project path as the host sent it (Space, Ctrl/Cmd+click or the
   check mark, `aria-selected`); a row that cannot be uninstalled (central, implicit, props, unresolved,

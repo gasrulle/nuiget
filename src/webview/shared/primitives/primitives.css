@@ -136,6 +136,12 @@
     border-radius: var(--nuiget-radius-sm);
 }
 
+/* A row that cannot join a bulk action (an SDK or a props package): the mark is there, muted and empty. */
+.nuiget-row-check--off {
+    border-style: dashed;
+    border-color: var(--nuiget-color-fg-muted);
+}
+
 .nuiget-row-option[aria-disabled="true"] .nuiget-row-name {
     color: var(--nuiget-color-fg-muted);
 }

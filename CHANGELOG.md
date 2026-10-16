@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - **Two-line package cards in the main panel, name-first rows in the sidebar**
+- **Installed rows show icon, authors and Verified mark, SDK and floating badges, under a Direct packages header with the count**
 
 ## [2.0.0] - 2026-10-16
 

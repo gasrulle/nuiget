@@ -50,6 +50,11 @@ export interface RowProps extends RowPlacement {
     busy?: boolean;
     /** The row can be focused and selected, but its actions do not apply (an unresolved package). */
     disabled?: boolean;
+    /**
+     * In a multi-selectable list: `false` means the row cannot join a bulk action; its check mark is drawn muted and
+     * empty. The list still calls `onToggleSelected`, and the feature says why.
+     */
+    selectable?: boolean;
     /** `IconButton`s with `tabIndex={-1}` and `data-testid="row-action-<name>"`. Pointer only: the list has a key for each. */
     actions?: React.ReactNode;
     density: 'compact' | 'comfortable';
@@ -67,7 +72,7 @@ export interface RowProps extends RowPlacement {
  * sits on the text column: on the option a `title` would become its description.
  */
 export function Row(props: RowProps): React.JSX.Element {
-    const { itemId, name, version, nextVersion, versionTitle, authors, verified, description, icon, badges, status, busy, disabled, actions, density, index, setSize, active, selected, current, checkable, optionId, offset, measureRef } = props;
+    const { itemId, name, version, nextVersion, versionTitle, authors, verified, description, icon, badges, status, busy, disabled, selectable, actions, density, index, setSize, active, selected, current, checkable, optionId, offset, measureRef } = props;
     const optionRef = useRef<HTMLDivElement>(null);
     const ids = {
         name: `${optionId}-name`,
@@ -116,7 +121,7 @@ export function Row(props: RowProps): React.JSX.Element {
                 aria-describedby={describedBy === '' ? undefined : describedBy}
             >
                 {/* Decoration: the state is `aria-selected`; a click on it is handled by the list, nothing here takes focus. */}
-                {checkable ? <span className="nuiget-row-check" aria-hidden="true">{selected ? <CheckIcon size={12} /> : null}</span> : null}
+                {checkable ? <span className={`nuiget-row-check${selectable === false ? ' nuiget-row-check--off' : ''}`} aria-hidden="true">{selected && selectable !== false ? <CheckIcon size={12} /> : null}</span> : null}
                 {density === 'comfortable' ? <span className="nuiget-row-icon" aria-hidden="true">{icon}</span> : null}
                 <span className="nuiget-row-body" title={tooltip}>
                     <span className="nuiget-row-line">

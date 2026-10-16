@@ -3,7 +3,7 @@ import { StrictMode } from 'react';
 import userEvent from '@testing-library/user-event';
 import { axe } from 'jest-axe';
 import { describe, expect, it, vi } from 'vitest';
-import { ALL_PROJECTS, type SessionSnapshot } from '../../protocol';
+import { ALL_PROJECTS, resourceKeys, type SessionSnapshot } from '../../protocol';
 import { createFakeHost, type FakeHost } from '../shared/bus/testSupport';
 import { StoreProvider } from '../shared/store/StoreProvider';
 import { MainShell, type ListView } from './MainShell';
@@ -53,6 +53,17 @@ describe('main panel shell', () => {
         expect(host.requests('perf/mark').map(request => request.payload.name)).toEqual(['webviewReady', 'firstUsefulRender']);
         rerender(<StrictMode><StoreProvider bus={host.bus}><MainShell installed={() => <p>Installed list again</p>} /></StoreProvider></StrictMode>);
         expect(host.requests('perf/mark').map(request => request.payload.name)).toEqual(['webviewReady', 'firstUsefulRender']);
+    });
+
+    it('the Installed tab counts the listed packages once the list is ready, and shows no 0', async () => {
+        const { host } = await mountReady();
+        const listed = (packages: string[]) => ({ projectPath: A, fidelity: 'authoritative' as const, isCpm: false, packages: packages.map(id => ({ id, version: '1.0.0', versionType: 'standard' as const, declaration: 'project' as const })) });
+        expect(screen.getByRole('tab', { name: 'Installed' })).toBeInTheDocument();
+        await hostSays(() => host.respond(host.requests('installed/get')[0], listed(['Serilog', 'Moq']), 1));
+        expect(screen.getByRole('tab', { name: 'Installed 2' })).toBeInTheDocument();
+        await hostSays(() => host.event('resources/invalidated', { scope: { kind: 'project', projectPaths: [A] }, reason: 'file-watcher', generation: 2, keys: [{ key: resourceKeys.installed(A), generation: 2 }] }));
+        await hostSays(() => host.respond(host.requests('installed/get')[1], listed([]), 2));
+        expect(screen.getByRole('tab', { name: 'Installed' })).toBeInTheDocument();
     });
 
     it('renders the header, the search box, the tabs, the split and one live region', async () => {

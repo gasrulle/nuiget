@@ -71,6 +71,9 @@ rm -rf /tmp/nuiget-ui/screenshots dist && npm run test:ui -- --storage /tmp/nuig
   version`, `the tooltip is on the body, not on the option`. The thirteen existing titles and bodies are unchanged.
 - Docs: ARCHITECTURE row block; CHANGELOG `[Unreleased]` `### Changed`; gotchas "A `title` on a row" and
   "`display: contents` and axe" (the fix-forward).
+- P9.3 (ruling in `src/webview/main/STATUS.md`): `Row` `selectable` (`false` draws `.nuiget-row-check--off`, a dashed
+  muted empty mark) with the test `a row that cannot join a bulk action shows a muted check mark`;
+  `installed/rules.ts` `versionCell` (additive) with `installed/rules.test.ts`.
 
 ## Done (untested)
 

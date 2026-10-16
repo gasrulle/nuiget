@@ -18,6 +18,10 @@ const pkg = (id: string, version = '1.0.0'): InstalledPackage => ({ id, version,
 const installed = (projectPath: string, packages: InstalledPackage[]): InstalledResult => ({ projectPath, fidelity: 'authoritative', isCpm: false, packages });
 const PROJECTS = [{ name: 'App', path: A, workspaceFolder: 'w1' }, { name: 'Lib', path: B, workspaceFolder: 'w1' }, { name: 'Tool', path: C, workspaceFolder: 'w2' }];
 
+// The bundled default icon the host puts on the root; `defaultPackageIcon()` keeps the first value it finds.
+const DEFAULT_ICON = 'https://file+.vscode-resource.vscode-cdn.net/ext/resources/package-icon.png';
+document.body.setAttribute('data-package-icon', DEFAULT_ICON);
+
 const hostSays = (say: () => void): Promise<void> => act(async () => {
     say();
     await Promise.resolve();
@@ -57,6 +61,29 @@ describe('main panel: All Projects', () => {
         expect(within(w1).getByRole('heading', { level: 2, name: 'w1' })).toBeInTheDocument();
         expect(within(w1).getAllByRole('heading', { level: 3 }).map(heading => heading.textContent)).toEqual([expect.stringContaining('App'), expect.stringContaining('Lib')]);
         expect(within(w2).getAllByRole('heading', { level: 3 }).map(heading => heading.textContent)).toEqual([expect.stringContaining('Tool')]);
+    });
+
+    it('all-projects installed row shows icon from metadata chunk', async () => {
+        const projects = PROJECTS.slice(0, 2);
+        const host = createFakeHost();
+        render(<StoreProvider bus={host.bus}><MainShell installed={view => <InstalledTab {...view} />} /></StoreProvider>);
+        await hostSays(() => host.respond(host.requests('session/get')[0], snapshot(1)));
+        await hostSays(() => host.respond(host.requests('projects/list')[0], { projects }, 1));
+        const stream = host.requests('allProjects/installed')[0];
+        await hostSays(() => host.chunk(stream, { kind: 'start', projects }));
+        for (const project of projects) {
+            await hostSays(() => host.chunk(stream, { kind: 'project', chunk: { projectPath: project.path, projectName: project.name, workspaceFolder: project.workspaceFolder, result: installed(project.path, [pkg('Serilog')]) } }));
+        }
+        // A metadata chunk counts only before the answer of its request.
+        const DATA = 'data:image/png;base64,AAAA';
+        await hostSays(() => host.chunk(stream, { kind: 'metadata', projectPath: A, packages: [{ id: 'Serilog', version: '1.0.0', iconUrl: DATA, authors: 'Serilog Contributors', verified: true }] }));
+        await hostSays(() => host.respond(stream, { projectPaths: projects.map(project => project.path), errored: [] }));
+
+        const row = (list: string): HTMLElement => within(screen.getByTestId(`installed-list-${list}`)).getByTestId('package-row-serilog');
+        expect(row('app').querySelector('.nuiget-row-icon img')).toHaveAttribute('src', DATA);
+        expect(within(row('app')).getByRole('option')).toHaveAccessibleDescription(/Verified/);
+        expect(row('lib').querySelector('.nuiget-row-icon img')).toHaveAttribute('src', DEFAULT_ICON);
+        expect(within(row('lib')).getByRole('option')).not.toHaveAccessibleDescription(/Verified/);
     });
 
     it('one workspace folder: no folder heading, the project headers stay at level 2', async () => {

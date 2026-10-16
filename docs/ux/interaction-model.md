@@ -57,7 +57,7 @@ In this mode:
 |---|---|---|
 | **Loading (first)** | Skeleton rows (3) + `role="status"` text "Loading …" | Only when there is no previous data for the key. |
 | **Revalidating** | Existing rows stay; subtle progress bar under the search box; rows `aria-busy` | When a displayed resource was invalidated and is being recomputed. Never blank the list. |
-| **Provisional** | Small "provisional" badge on the project header (All Projects sections, sidebar Installed section) or above the single-project list (main panel); tooltip explains evaluation is pending | `fidelity: 'provisional'`. Actions remain enabled except for `unresolved` packages. |
+| **Provisional** | Small "provisional" badge on the section header (All Projects sections, the main panel's `Direct packages` header, sidebar Installed section); tooltip explains evaluation is pending | `fidelity: 'provisional'`. Actions remain enabled except for `unresolved` packages. |
 | **Unresolved** | Version cell shows "unresolved" with tooltip; row actions disabled | `declaration: 'unresolved'`; excluded from update checks. |
 | **Centrally managed** | "CPM" badge on the row; version cell shows central version | `declaration: 'central' \| 'central-override'`. An update of a `central` row shows an impact preview first (main panel: dialog; sidebar: the actions menu and a VS Code modal); a `central-override` row updates in its project alone without a preview (its badge says so) and joins Update all; an uninstall removes the project's reference only and keeps the central entry (ADR-004), without a dialog. |
 | **Pending op** | Row gets a spinner replacing its action button; details action buttons disabled | From `ops/*` `queued`/`running` chunks until the terminal outcome. |
@@ -136,7 +136,7 @@ per selection; a response for a different package/version is ignored.
 | `installed-list`, `updates-list`, `browse-list`, `sidebar-installed-list`, `sidebar-updates-list`, `sidebar-browse-list`, `transitive-list` | Listboxes |
 | `package-row-<id>` | A row (id lower-cased): the wrapper around the option and its pointer actions; the option is the `role="option"` inside it (read `aria-selected` there; in a multi-selectable list `aria-current` marks the current row) |
 | `row-action-<name>` | A pointer action button inside a row (`install`, `update`, `uninstall`); hidden from assistive technology, mirrored by the keys of §5 |
-| `section-header-<name>` | The toggle button of a collapsible section (`installed`, `updates`, `transitive`) |
+| `section-header-<name>` | The toggle button of a collapsible section (`installed`, `updates`, `transitive`, `direct`) |
 | `package-details-panel`, `details-tab-details`, `details-tab-readme`, `readme-content`, `readme-empty` | Details panel |
 | `version-selector`, `install-update-button`, `uninstall-button` | Details actions |
 | `select-all-button`, `update-all-button`, `uninstall-selected-button` | Bulk toolbar |
