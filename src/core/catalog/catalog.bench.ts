@@ -7,16 +7,16 @@
 import { readFileSync } from 'fs';
 import * as path from 'path';
 import { describe, test, vi } from 'vitest';
-import * as cacheModule from '../../core/cache';
-import * as catalogModule from '../../core/catalog';
-import type { DotnetRunner, SourceProvider } from '../../core/contracts';
-import * as feedsModule from '../../core/feeds';
-import { FakeTransport, json } from '../../core/feeds/testSupport';
-import * as queriesModule from '../../core/queries';
+import * as cacheModule from '../cache';
+import * as catalogModule from '../catalog';
+import type { DotnetRunner, SourceProvider } from '../contracts';
+import * as feedsModule from '../feeds';
+import { FakeTransport, json, ok } from '../feeds/testSupport';
+import * as queriesModule from '../queries';
 import type { InstalledResult, NuGetSource, Project } from '../../protocol/domain';
-import { runBenchmark } from './benchmark';
+import { runBenchmark } from '../../test/benchmarks/benchmark';
 
-// Bound once on purpose (see core-cache.bench.ts): an imported binding is a getter under Vitest's module runner.
+// Bound once on purpose (see src/core/cache/cache.bench.ts): an imported binding is a getter under Vitest's module runner.
 const { TieredCache } = cacheModule;
 const { Catalog, FeedContexts, createFeedClients } = catalogModule;
 const { DefaultServiceIndexClient, parseNuspec, sortByRelevance } = feedsModule;
@@ -24,9 +24,14 @@ const { DefaultQueryCoordinator } = queriesModule;
 
 const PACKAGES = 50;
 const projectPath = path.resolve('/bench/App/App.csproj');
-const project: Project = { name: 'App.csproj', path: projectPath };
+/** The workspace of the all-projects fan-out: the bench project and nine more. */
+const projects: Project[] = Array.from({ length: 10 }, (_, index) => {
+    const name = index === 0 ? 'App' : `Lib${index}`;
+    return { name: `${name}.csproj`, path: path.resolve(`/bench/${name}/${name}.csproj`) };
+});
 const feeds: NuGetSource[] = ['one', 'two', 'three'].map(name => ({ name, url: `https://${name}.example/v3/index.json`, enabled: true }));
 const ids = Array.from({ length: PACKAGES }, (_, index) => `Bench.Package${index}`);
+const nuspec = readFileSync(path.join(__dirname, '../feeds/__fixtures__/newtonsoft.json.13.0.3.nuspec'), 'utf8');
 const installed: InstalledResult = {
     projectPath,
     fidelity: 'provisional',
@@ -34,7 +39,7 @@ const installed: InstalledResult = {
     packages: ids.map(id => ({ id, version: '1.0.0', versionType: 'standard', declaration: 'project' })),
 };
 
-/** One answer per URL shape: a service index, a `packageid:` lookup, free-text search and a flat version index. */
+/** One answer per URL shape: a service index, a `packageid:` lookup, free-text search, a flat version index and a nuspec. */
 function handler(request: { url: string }) {
     const url = new URL(request.url);
     if (url.pathname === '/v3/index.json') {
@@ -50,6 +55,9 @@ function handler(request: { url: string }) {
             ? [{ id, version: '2.0.0', versions: ['1.0.0', '1.5.0', '2.0.0'].map(version => ({ version })), authors: ['Bench'] }]
             : ids.slice(0, 20).map((rowId, index) => ({ id: `${url.hostname}.${rowId}`, version: '1.0.0', totalDownloads: index * 100, authors: ['Bench'] }));
         return json({ data: rows });
+    }
+    if (url.pathname.endsWith('.nuspec')) {
+        return ok(nuspec);
     }
     if (url.pathname.endsWith('/index.json')) {
         return json({ versions: Array.from({ length: 40 }, (_, index) => `1.${index}.0`) });
@@ -75,8 +83,8 @@ function benchCatalog() {
         inspector: { inspect: async () => installed },
         contexts,
         sources,
-        assets: { getPackageDependencies: async () => new Map(), getTransitivePackages: async () => ({ projectPath, frameworks: [], dataSourceAvailable: true }) },
-        discoverProjects: async () => [project],
+        assets: { getPackageDependencies: async () => new Map(), getTransitivePackages: async (forProject: string) => ({ projectPath: forProject, frameworks: [], dataSourceAvailable: true }) },
+        discoverProjects: async () => projects,
         feeds: feedClients,
         feedContexts,
     });
@@ -107,10 +115,29 @@ describe('core feeds — Catalog reads over a fake transport', () => {
             await catalog.search(directory, { query: 'bench', includePrerelease: false, take: 50 }, () => undefined, signal);
         });
     });
+
+    test('Catalog.metadata (registration absent, nuspec from the flat container)', async (context) => {
+        await runBenchmark(context, 'Catalog.metadata (registration absent, nuspec from the flat container)', async () => {
+            catalog.invalidate({ kind: 'metadata', packageIds: ['Newtonsoft.Json'] }, 'manual-refresh');
+            await catalog.metadata(directory, 'Newtonsoft.Json', '13.0.3', undefined, signal);
+        });
+    });
+
+    test('Catalog.quickSearch (3 sources, 5 ids each)', async (context) => {
+        await runBenchmark(context, 'Catalog.quickSearch (3 sources, 5 ids each)', async () => {
+            await catalog.quickSearch(directory, feeds.map(feed => feed.url), 'bench', false, 5, signal);
+        });
+    });
+
+    test(`Catalog.allProjectsTransitive (${projects.length} projects)`, async (context) => {
+        await runBenchmark(context, `Catalog.allProjectsTransitive (${projects.length} projects)`, async () => {
+            catalog.invalidate({ kind: 'project', projectPaths: projects.map(item => item.path) }, 'manual-refresh');
+            await catalog.allProjectsTransitive(() => undefined, signal);
+        });
+    });
 });
 
 describe('core feeds — pure paths', () => {
-    const nuspec = readFileSync(path.join(__dirname, '../../core/feeds/__fixtures__/newtonsoft.json.13.0.3.nuspec'), 'utf8');
     const rows = Array.from({ length: 200 }, (_, index) => ({ id: index % 3 === 0 ? `Contoso.Logging.Part${index}` : `Other.Package${index}`, totalDownloads: index * 37 }));
 
     test('parseNuspec (Newtonsoft.Json 13.0.3)', async (context) => {

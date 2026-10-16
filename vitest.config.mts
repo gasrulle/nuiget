@@ -13,7 +13,7 @@ export default defineConfig({
     test: {
         globals: true,
         benchmark: {
-            include: ['src/test/benchmarks/**/*.bench.ts', 'src/test/benchmarks/benchmark.test.ts'],
+            include: ['src/**/*.bench.ts', 'src/test/benchmarks/benchmark.test.ts'],
         },
         coverage: {
             provider: 'v8',
@@ -24,6 +24,7 @@ export default defineConfig({
                 'src/test/**',
                 'src/_wip/**',
                 'src/**/__fixtures__/**',
+                'src/**/*.bench.ts',
                 // Type-only contract modules have nothing to execute.
                 'src/protocol/**',
                 'src/core/contracts.ts',

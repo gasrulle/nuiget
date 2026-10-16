@@ -3,9 +3,9 @@
  * persistent store with the byte budget, and the invalidation helpers.
  */
 import { test, describe } from 'vitest';
-import { runBenchmark } from './benchmark';
-import * as cacheModule from '../../core/cache';
-import type { KeyValueStore } from '../../core/contracts';
+import { runBenchmark } from '../../test/benchmarks/benchmark';
+import * as cacheModule from '../cache';
+import type { KeyValueStore } from '../contracts';
 
 // Bound once on purpose. Under Vitest's module runner an imported binding is a getter on the module object;
 // calling it inside a benchmark would add that overhead to every sample (Vitest warns about it).

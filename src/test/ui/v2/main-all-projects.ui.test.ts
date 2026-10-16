@@ -19,7 +19,7 @@ const UTILITY_CSPROJ = `<Project Sdk="Microsoft.NET.Sdk">
 `;
 
 /**
- * All Projects in the 2.0 main panel in VS Code (plan item P5.9), on a VSIX packaged with `NUIGET_V2=1`. The fixture
+ * All Projects in the 2.0 main panel in VS Code (plan item P5.9), on the VSIX that `npm run test:ui` packages. The fixture
  * workspace has one project, so the test creates a second SDK-style project in it (`Utility/Utility.csproj`, which sorts
  * after `TestProject` so suites that take the first project keep theirs), waits for the host to discover it and offer
  * All Projects, selects it and checks one section per project and the closed transitive aggregate; it removes the

@@ -4,7 +4,7 @@ import { enterMainWebview, openMainPanel } from './mainWebview';
 import { driverOf, findByTestId, leaveWebview, poll, waitForText } from './sidebarWebview';
 
 /**
- * The details pane of the 2.0 main panel in VS Code (plan item P5.7), on a VSIX packaged with `NUIGET_V2=1`: a row of
+ * The details pane of the 2.0 main panel in VS Code (plan item P5.7), on the VSIX that `npm run test:ui` packages: a row of
  * the Installed tab made current shows the package, its versions from the real feeds with the installed one marked,
  * the Details tab from the registration, and the README tab rendered under the webview's CSP. Nothing is installed
  * or uninstalled: the fixture project stays as it was found.

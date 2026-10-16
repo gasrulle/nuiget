@@ -3,9 +3,9 @@
  * to a workflow, for one ticket and for a full queue of one running and five waiting.
  */
 import { test, describe } from 'vitest';
-import { runBenchmark } from './benchmark';
-import * as opsModule from '../../core/ops';
-import type { OperationRunContext } from '../../core/contracts';
+import { runBenchmark } from '../../test/benchmarks/benchmark';
+import * as opsModule from '../ops';
+import type { OperationRunContext } from '../contracts';
 import type { BulkOutcome } from '../../protocol/domain';
 
 // Bound once on purpose. Under Vitest's module runner an imported binding is a getter on the module object;

@@ -4,7 +4,7 @@ import { activateExtension, CONTRIBUTED_COMMANDS, LEGACY_ONLY_COMMANDS } from '.
 
 /**
  * Activation of the 2.0 entry in the extension host (P5.12a, port of `extension.e2e.test.ts`). Run with
- * `NUIGET_V2=1 npm run test:e2e` after a `--v2` build.
+ * `npm run test:e2e` after `node esbuild.mjs --production`.
  */
 suite('2.0 extension activation', () => {
     test('the extension is installed in the test host', () => {

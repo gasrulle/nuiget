@@ -129,7 +129,7 @@ export function createConfig(allowlist) {
         },
         {
             // E2E (Mocha), UI (ExTester/Chai), and benchmark tests use assertion styles and scaffolded imports
-            files: ['src/test/e2e/**/*.ts', 'src/test/ui/**/*.ts', 'src/test/benchmarks/**/*.ts'],
+            files: ['src/test/e2e/**/*.ts', 'src/test/ui/**/*.ts', 'src/test/benchmarks/**/*.ts', 'src/**/*.bench.ts'],
             rules: {
                 '@typescript-eslint/no-unused-expressions': 'off',
                 '@typescript-eslint/no-require-imports': 'off',

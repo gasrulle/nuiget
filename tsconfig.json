@@ -34,6 +34,7 @@
         "src/test",
         "src/**/*.test.ts",
         "src/**/*.test.tsx",
+        "src/**/*.bench.ts",
         "vitest.config.mts"
     ]
 }

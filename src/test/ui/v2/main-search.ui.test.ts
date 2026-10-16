@@ -6,7 +6,7 @@ import { enterMainWebview, openMainPanel } from './mainWebview';
 import { findByTestId, leaveWebview, poll, waitForTestIdGone, waitForText } from './sidebarWebview';
 
 /**
- * Browse in the 2.0 main panel in VS Code (plan item P5.6), on a VSIX packaged with `NUIGET_V2=1`: a search submitted
+ * Browse in the 2.0 main panel in VS Code (plan item P5.6), on the VSIX that `npm run test:ui` packages: a search submitted
  * with Enter replaces the tabs with its results from the real feeds, and Escape brings the tabs back. The time from
  * Enter to the first row is printed (`[P5.6] cold search`): the host answers after it has enriched the rows, so this
  * is the latency of a cold search as the user sees it; a second search of the same text is printed as `[P7.2] warm

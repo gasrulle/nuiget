@@ -6,7 +6,7 @@ import { enterMainWebview, openMainPanel } from './mainWebview';
 import { findByTestId, leaveWebview, poll, waitForTestIdGone } from './sidebarWebview';
 
 /**
- * The Updates tab of the 2.0 main panel in VS Code (plan item P5.5), on a VSIX packaged with `NUIGET_V2=1`: the
+ * The Updates tab of the 2.0 main panel in VS Code (plan item P5.5), on the VSIX that `npm run test:ui` packages: the
  * updates of the fixture project with their versions and the count on the tab, the Update all dialog cancelled with
  * Escape, and one package updated with Enter, with the project file following. Nothing waits on the live region (N66).
  */

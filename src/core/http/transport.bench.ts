@@ -8,10 +8,10 @@ import * as http from 'http';
 import type { AddressInfo } from 'net';
 import * as zlib from 'zlib';
 import { afterAll, beforeAll, describe, test } from 'vitest';
-import * as httpModule from '../../core/http';
-import { runBenchmark } from './benchmark';
+import * as httpModule from '../http';
+import { runBenchmark } from '../../test/benchmarks/benchmark';
 
-// Bound once on purpose (see core-cache.bench.ts): an imported binding is a getter under Vitest's module runner.
+// Bound once on purpose (see src/core/cache/cache.bench.ts): an imported binding is a getter under Vitest's module runner.
 const { NodeTransport } = httpModule;
 
 const SMALL = JSON.stringify({ version: '3.0.0', resources: Array.from({ length: 12 }, (_, index) => ({ '@id': `https://api.nuget.org/v3/r${index}/`, '@type': 'SearchQueryService' })) });

@@ -5,7 +5,7 @@ import { By, Key } from 'vscode-extension-tester';
 import { driverOf, enterSidebarWebview, findByTestId, leaveWebview, openSidebarView, poll, waitForTestIdGone, waitForText } from './sidebarWebview';
 
 /**
- * The 2.0 sidebar in VS Code (plan item P3.5), on a VSIX packaged with `NUIGET_V2=1`: the first time the 2.0
+ * The 2.0 sidebar in VS Code (plan item P3.5), on the VSIX that `npm run test:ui` packages: the first time the 2.0
  * webview is loaded by a real host under its Content Security Policy. It shows the P3 gate: the sidebar lists
  * the installed packages and uninstalls one. The main panel is never opened; its 2.0 entry is a placeholder.
  */

@@ -6,7 +6,7 @@ import { enterMainWebview } from './mainWebview';
 import { driverOf, enterSidebarWebview, findByTestId, leaveWebview, openSidebarView, poll, waitForText } from './sidebarWebview';
 
 /**
- * Sidebar parity of the 2.0 sidebar in VS Code (plan item P5.10), on a VSIX packaged with `NUIGET_V2=1`: the sash
+ * Sidebar parity of the 2.0 sidebar in VS Code (plan item P5.10), on the VSIX that `npm run test:ui` packages: the sash
  * between the Installed and Updates sections moves with the keyboard; "Open Full Manager" opens the main panel beside
  * the sidebar; with the panel open, an uninstall from the sidebar is still announced in its live region (the condition
  * of finding N66). The fixture project is written back afterwards and the sidebar waits until it lists it again. All

@@ -94,7 +94,7 @@ export function renderedHooks(sources: string[]): { literals: Set<string>; prefi
 function productSources(): string[] {
     return ROOTS.flatMap(root => (readdirSync(root, { recursive: true }) as string[])
         .map(entry => path.join(root, entry))
-        .filter(file => /\.tsx?$/.test(file) && !/\.test\.tsx?$/.test(file) && path.basename(file) !== 'testSupport.ts'))
+        .filter(file => /\.tsx?$/.test(file) && !/\.(test|bench)\.tsx?$/.test(file) && path.basename(file) !== 'testSupport.ts'))
         .map(file => readFileSync(file, 'utf8'));
 }
 

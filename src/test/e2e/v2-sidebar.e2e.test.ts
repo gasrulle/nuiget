@@ -4,8 +4,8 @@ import * as vscode from 'vscode';
 import { closeAllEditors, CONTRIBUTED_COMMANDS, dotnet, LEGACY_ONLY_COMMANDS, mainPanelTabs, until, waitForMainPanel } from './v2Support';
 
 /**
- * The 2.0 entries in the extension host (plan item P3.5). Run with `NUIGET_V2=1 npm run test:e2e` after a
- * `--v2` build; without the variable this file is not selected (`.vscode-test.mjs`).
+ * The 2.0 entries in the extension host (plan item P3.5). Run with `npm run test:e2e` after a
+ * `node esbuild.mjs --production` build; `.vscode-test.mjs` selects this file.
  *
  * An extension-host test sees commands, views and files, not the DOM of a webview: that the sidebar lists and
  * uninstalls packages is shown by `src/test/ui/v2/sidebar.ui.test.ts`. Here: the build under test is the 2.0

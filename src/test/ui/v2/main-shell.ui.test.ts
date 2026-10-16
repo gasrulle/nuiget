@@ -4,7 +4,7 @@ import { enterMainWebview, openMainPanel } from './mainWebview';
 import { driverOf, findByTestId, leaveWebview, poll } from './sidebarWebview';
 
 /**
- * The 2.0 main panel shell in VS Code (plan item P5.3), on a VSIX packaged with `NUIGET_V2=1`: the panel loads
+ * The 2.0 main panel shell in VS Code (plan item P5.3), on the VSIX that `npm run test:ui` packages: the panel loads
  * its script and its stylesheet under the Content Security Policy, the shared context reaches its header, and its
  * tabs are reached by keyboard. Nothing here changes the fixture project.
  */

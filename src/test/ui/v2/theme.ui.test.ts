@@ -6,7 +6,7 @@ import { enterMainWebview, openMainPanel } from './mainWebview';
 import { driverOf, enterSidebarWebview, leaveWebview, openSidebarView, poll } from './sidebarWebview';
 
 /**
- * The theme pass of the 2.0 webviews (plan item P5.11, ruling of 2026-10-16), on a VSIX packaged with `NUIGET_V2=1`:
+ * The theme pass of the 2.0 webviews (plan item P5.11, ruling of 2026-10-16), on the VSIX that `npm run test:ui` packages:
  * under six of VS Code's built-in themes (dark, light, both high-contrast themes and the 2026 pair), axe-core runs inside the main panel and the sidebar, and neither has a
  * `color-contrast` or a `target-size` (24 px) violation. jsdom cannot measure contrast: the colours exist only in VS
  * Code, which sets the `--vscode-*` variables and the body class of the theme. That the rule ran is part of the

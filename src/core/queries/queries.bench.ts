@@ -4,8 +4,8 @@
  * a burst of scopes into one. The coordinator does both on every invalidation.
  */
 import { test, describe } from 'vitest';
-import { runBenchmark } from './benchmark';
-import * as queriesModule from '../../core/queries';
+import { runBenchmark } from '../../test/benchmarks/benchmark';
+import * as queriesModule from '../queries';
 import { resourceKeys, type InvalidationScope, type ResourceKey } from '../../protocol/domain';
 
 // Bound once on purpose. Under Vitest's module runner an imported binding is a getter on the module object;

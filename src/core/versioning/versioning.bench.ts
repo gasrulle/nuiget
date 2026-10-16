@@ -3,8 +3,8 @@
  * specification parsing, range checks and floating resolution.
  */
 import { test, describe } from 'vitest';
-import { runBenchmark } from './benchmark';
-import * as versioning from '../../core/versioning';
+import { runBenchmark } from '../../test/benchmarks/benchmark';
+import * as versioning from '../versioning';
 
 // Bound once on purpose. Under Vitest's module runner an imported binding is a getter on the module object;
 // calling it inside a benchmark would add that overhead to every sample (Vitest warns about it).

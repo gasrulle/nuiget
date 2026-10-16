@@ -19,36 +19,35 @@ npm run bench:compare   # compare current measurements with the stored baseline
 
 ## What's measured
 
-Benchmarks live in `src/test/benchmarks/*.bench.ts`:
+The benchmarks of 2.0 sit next to the module they measure, as `<module>.bench.ts` (plan decision D8, item P8.2a):
 
-- `cache.bench.ts` — LRUMap and WorkspaceCache hit/miss/eviction
-- `csproj-parsing.bench.ts` — .csproj XML parsing
-- `http.bench.ts` — fetchJson / HTTP/2 client overhead (mocked)
-- `markdown.bench.ts` — README rendering pipeline (DOMPurify + marked)
-- `metadata.bench.ts` — package metadata fetch (mocked)
-- `project-parsing.bench.ts` — project.assets.json / lock-file parsing
-- `react-rendering.bench.ts` — App / sidebar render passes (jsdom)
-- `search.bench.ts` — search merging + relevance sorting
-- `source-health.bench.ts` — failedEndpointCache and source health monitor
-- `update-checking.bench.ts` — checkPackageUpdates and checkPackageUpdatesMinimal
-- `utils.bench.ts` — validators, version-spec parsing, topological sort
-- `core-versioning.bench.ts` — 2.0 core: NuGet version parsing, comparison and version specs
-- `core-cache.bench.ts` — 2.0 core: the two-tier cache and its persistent tier
-- `core-ops.bench.ts` — 2.0 core: what the operation queue adds to a workflow
-- `core-queries.bench.ts` — 2.0 core: which resource keys an invalidation scope reaches, and merging scopes
-- `core-transport.bench.ts` — 2.0 core: `NodeTransport` over HTTP/1.1 from a local server, plain and gzip
-- `core-feeds.bench.ts` — 2.0 core: `Catalog.updates`, `versions` and `search` through the real feed clients over a
-  fake transport, nuspec parsing and relevance ranking
+- `src/core/versioning/versioning.bench.ts` — NuGet version parsing, comparison and version specs
+- `src/core/cache/cache.bench.ts` — the two-tier cache and its persistent tier
+- `src/core/ops/ops.bench.ts` — what the operation queue adds to a workflow
+- `src/core/queries/queries.bench.ts` — which resource keys an invalidation scope reaches, and merging scopes
+- `src/core/http/transport.bench.ts` — `NodeTransport` over HTTP/1.1 from a local server, plain and gzip
+- `src/core/catalog/catalog.bench.ts` — `Catalog.updates`, `versions`, `search`, `metadata`, `quickSearch` and
+  `allProjectsTransitive` through the real feed clients over a fake transport, nuspec parsing and relevance ranking
+- `src/core/project/project.bench.ts` — static inspection of the fixture projects, the assets file, project references
+- `src/core/feeds/health.bench.ts` — the source health tracker
+- `src/core/cli/validate.bench.ts` — the argument validators of the dotnet runner
+- `src/core/util/topo.bench.ts` — dependency ordering of multi-project operations
+- `src/webview/shared/primitives/Listbox.bench.ts` — mounting a virtualized list of 1 000 rows (jsdom)
+- `src/webview/shared/search/parseSearchQuery.bench.ts` — the parser of the unified search box
+- `src/webview/main/features/details/markdown.bench.ts` — README rendering (jsdom)
 
-The `core-*` benchmarks are type-checked through `tsconfig.vitest.json` and move into `src/core/**` when the 1.x
-code is deleted (plan decision D8, item P8.2).
+The 1.x benchmarks in `src/test/benchmarks/*.bench.ts` (other than the runner's `benchmark.ts`) are deleted with the
+1.x code at P8.2b. Every `src/**/*.bench.ts` is run; `tsconfig.json` leaves the benches out of the extension build and
+`tsconfig.vitest.json` type-checks the 2.0 ones.
 
 ## Adding a benchmark
 
-1. Add a `*.bench.ts` file under `src/test/benchmarks/`.
-2. Import `test, describe` from `vitest` and `runBenchmark` from `./benchmark`.
+1. Add `<module>.bench.ts` next to the module it measures. Put `// @vitest-environment jsdom` on its first line when it
+   needs a DOM.
+2. Import `test, describe` from `vitest` and `runBenchmark` from `src/test/benchmarks/benchmark.ts` (relative path).
    Define `test('name', async (context) => { await runBenchmark(context, 'name', callback); })`.
-3. For service benchmarks, use `mockServiceHttp(service)` from `setup.ts` — never use MSW (it cannot intercept HTTP/2).
+3. Never reach the network: feed reads use `FakeTransport` from `src/core/feeds/testSupport.ts`, project reads the
+   tracked `__fixtures__`.
 4. Run `npm run bench:save` and commit the updated baseline.
 
 Vitest 5 benchmarks run in the derived `backend (bench)` project. The runner

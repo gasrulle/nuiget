@@ -4,7 +4,7 @@ import { enterMainWebview, openMainPanel } from './mainWebview';
 import { driverOf, findByTestId, leaveWebview, poll, waitForTestIdGone } from './sidebarWebview';
 
 /**
- * The NuGet sources of the 2.0 main panel in VS Code (plan item P5.8), on a VSIX packaged with `NUIGET_V2=1`: the
+ * The NuGet sources of the 2.0 main panel in VS Code (plan item P5.8), on the VSIX that `npm run test:ui` packages: the
  * header's source selector lists the enabled sources, the gear opens the dialog with the source rows, the add form
  * opens and goes back, and Escape closes the dialog. Nothing is added, removed, enabled or disabled: the fixture's
  * `nuget.config` is shared by every suite, and a source declared in the user-level `NuGet.Config` (nuget.org) would be

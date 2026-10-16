@@ -785,14 +785,15 @@ These parts serve both versions and are the current truth for the build, test an
   against Node 18 declarations through the `@types-host/node` alias, see ADR-000), `tsconfig.test.json` (Mocha
   end-to-end and ExTester UI suites) and `tsconfig.vitest.json` (tests of the 2.0 code, the lint tests and the
   shared test helpers, against Node 24 declarations). The 1.x Vitest tests are not type-checked, nor the 1.x
-  benchmarks; the 2.0 benchmarks in `src/test/benchmarks/core-*.bench.ts` are.
+  benchmarks; the 2.0 benchmarks (`src/core/**/*.bench.ts`, `src/webview/**/*.bench.ts`) are.
 - **Linting.** `npm run lint` covers `src`, `scripts`, `esbuild.mjs` and the root configuration files.
 - **Unit tests.** Vitest projects `backend` (`src/services`, `src/core`, `src/protocol`, `src/host`,
   `src/test/lint`), `frontend` (`src/webview`) and `integration` (the 1.x integration tests and the 2.0
   two-surface harness in `src/test/harness`, described below). Coverage has global thresholds, a separate
   floor for `src/webview/**` and a floor of 85 % of the lines for `src/core/**`. `node --test scripts/hooks` tests the guard hook.
-- **Benchmarks.** `src/test/benchmarks/*.bench.ts`; the benchmarks of the 2.0 core are the `core-*` files there
-  until P8.2 moves them next to their modules (plan decision D8). `npm run bench` runs them, `npm run
+- **Benchmarks.** Every `src/**/*.bench.ts`: the 2.0 benchmarks sit next to the modules they measure (plan decision
+  D8, P8.2a; the list is in `benchmarks/README.md`), the 1.x ones in `src/test/benchmarks` until P8.2b deletes them,
+  with the runner helper `src/test/benchmarks/benchmark.ts`. `npm run bench` runs them, `npm run
   bench:save` rewrites `benchmarks/baseline.json` and `npm run bench:compare` compares a run with it. The CI
   job `Benchmark (informational)` compares on its own hardware and never fails the pipeline.
 - **Bundle size.** `node esbuild.mjs --production --analyze` fails when a bundle exceeds its ceiling. Metafiles go
