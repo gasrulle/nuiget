@@ -74,9 +74,10 @@ jobs:
       - name: Test the Claude Code guard hook
         run: node --test scripts/hooks
 
-      # docs/protocol.md is generated from src/protocol/messages.ts (ADR-007); this fails when it has drifted.
-      - name: Check the protocol reference
-        run: npm run docs:protocol:check
+      # The 2.0 documents name only messages, settings, commands and paths that exist (scripts/check-docs-drift.mjs),
+      # and docs/protocol.md, generated from src/protocol/messages.ts (ADR-007), has not drifted.
+      - name: Check the docs
+        run: npm run docs:check
 
   test:
     name: Test (${{ matrix.os }})

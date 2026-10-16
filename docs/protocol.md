@@ -9,56 +9,56 @@ Generated from [`src/protocol/messages.ts`](../src/protocol/messages.ts) (`Reque
 Every request carries an `id`; the host answers with exactly one terminal response (ok or error)
 per id, optionally preceded by stream chunks of the listed chunk type. Events flow host → webview
 without correlation. Both webviews share the same maps; surface-specific requests are rejected with
-`unsupported` elsewhere.
+`unsupported` elsewhere. The Surface column names the webview a request belongs to (`both` for the shared ones).
 
 ## Requests (44)
 
-| Group | Request | Payload | Result | Chunk | Notes |
-| --- | --- | --- | --- | --- | --- |
-| Session | `session/get` | `Record<string, never>` | `SessionSnapshot` | — |  |
-| Session | `session/set` | `{ selectedProject?: string \| undefined; selectedSource?: string \| undefined; includePrerelease?: boolean \| undefined; restoreEnabled?: boolean \| undefined; }` | `SessionSnapshot` | — |  |
-| Config & layout | `config/get` | `Record<string, never>` | `ExtensionConfig` | — |  |
-| Config & layout | `layout/get` | `Record<string, never>` | `LayoutPreferences` | — |  |
-| Config & layout | `layout/set` | `LayoutPreferences` | `LayoutPreferences` | — |  |
-| Projects | `projects/list` | `Record<string, never>` | `ProjectListing` | — |  |
-| Single-project resources | `installed/get` | `{ projectPath: string; }` | `InstalledResult` | `{ kind: "provisional"; result: InstalledResult; }` | The provisional list, streamed before the evaluated one when an evaluation runs; a cached list is answered without a chunk (ADR-009 d.2, d.3). |
-| Single-project resources | `updates/get` | `{ projectPath: string; includePrerelease: boolean; }` | `{ projectPath: string; updates: PackageUpdate[]; sourcesUnavailable?: boolean; }` | `{ kind: "found"; update: PackageUpdate; }` |  |
-| Single-project resources | `transitive/get` | `{ projectPath: string; forceRestore?: boolean; }` | `TransitiveResult` | — |  |
-| Single-project resources | `transitive/metadata` | `{ packages: Array<{ id: string; version: string; }>; }` | `{ metadata: PackageMetadataLite[]; }` | — |  |
-| All-projects resources | `allProjects/installed` | `Record<string, never>` | `{ projectPaths: string[]; errored: Array<{ projectPath: string; error: string; }>; }` | `{ kind: "start"; projects: Project[]; } \| { kind: "project"; chunk: ProjectInstalledChunk; } \| { kind: "metadata"; projectPath: string; packages: PackageMetadataLite[]; }` |  |
-| All-projects resources | `allProjects/updates` | `{ includePrerelease: boolean; }` | `{ projectPaths: string[]; sourcesUnavailable?: boolean; }` | `{ kind: "start"; projects: Project[]; } \| { kind: "project"; chunk: ProjectUpdatesChunk; } \| { kind: "icons"; icons: Record<string, string>; }` |  |
-| All-projects resources | `allProjects/transitive` | `Record<string, never>` | `{ projectPaths: string[]; errored: Array<{ projectPath: string; errorKind: TransitiveErrorKind; }>; }` | `{ kind: "start"; projects: Project[]; } \| { kind: "project"; chunk: ProjectTransitiveChunk; }` |  |
-| Search | `search/query` | `{ query: string; sourceUrls?: string[]; includePrerelease: boolean; take?: number; exactMatch?: boolean; }` | `{ query: string; results: PackageSearchResult[]; sourcesUnavailable?: boolean; }` | `{ kind: "metadata"; packages: PackageMetadataLite[]; }` |  |
-| Search | `search/autocomplete` | `{ query: string; sources: Array<{ name: string; url: string; }>; includePrerelease: boolean; }` | `{ query: string; groups: QuickSearchSourceResult[]; }` | — |  |
-| Package details | `package/versions` | `{ packageId: string; sourceUrl?: string; includePrerelease: boolean; take?: number; }` | `{ packageId: string; versions: string[]; }` | — |  |
-| Package details | `package/metadata` | `{ packageId: string; version: string; sourceUrl?: string; }` | `{ metadata: PackageMetadata \| null; }` | — |  |
-| Package details | `package/readme` | `{ packageId: string; version: string; sourceUrl?: string; }` | `{ readme: string \| null; }` | — |  |
-| Package details | `readme/image` | `{ url: string; sourceUrl?: string; }` | `{ url: string; dataUri: string \| null; }` | — | Lazily fetches one README image host-side with the icon fetch's auth, size cap and policy (ADR-006). `dataUri` is `null` when the fetch failed or policy blocked it; the webview then renders a link. main |
-| Package details | `package/prewarm` | `{ sourceUrl?: string; }` | `Record<string, never>` | — |  |
-| Sources | `sources/list` | `Record<string, never>` | `{ sources: NuGetSource[]; failed: FailedSource[]; }` | `{ kind: "health"; failed: FailedSource[]; }` |  |
-| Sources | `sources/refresh` | `Record<string, never>` | `{ sources: NuGetSource[]; failed: FailedSource[]; }` | `{ kind: "health"; failed: FailedSource[]; }` |  |
-| Sources | `sources/configFiles` | `Record<string, never>` | `{ configFiles: Array<{ path: string; label: string; }>; }` | — |  |
-| Sources | `sources/add` | `{ url: string; name?: string; username?: string; password?: string; configFile?: string; allowInsecure?: boolean; storeEncrypted?: boolean; }` | `{ sources: NuGetSource[]; }` | — |  |
-| Sources | `sources/remove` | `{ sourceName: string; configFile?: string; }` | `{ sources: NuGetSource[]; removedUrl?: string; }` | — |  |
-| Sources | `sources/enable` | `{ sourceName: string; }` | `{ sources: NuGetSource[]; }` | — |  |
-| Sources | `sources/disable` | `{ sourceName: string; }` | `{ sources: NuGetSource[]; disabledUrl?: string; }` | — |  |
-| Operations | `ops/install` | `{ projectPath: string; packageId: string; version?: string; sourceUrl?: string; }` | `OperationOutcome` | `OperationProgress` |  |
-| Operations | `ops/update` | `{ projectPath: string; packageId: string; version: string; sourceUrl?: string; }` | `OperationOutcome` | `OperationProgress` |  |
-| Operations | `ops/remove` | `{ projectPath: string; packageId: string; }` | `OperationOutcome` | `OperationProgress` |  |
-| Operations | `ops/restore` | `{ projectPaths: string[]; }` | `BulkOutcome` | `OperationProgress` |  |
-| Operations | `ops/bulkInstall` | `{ projectPaths: string[]; packageId: string; version?: string; }` | `BulkOutcome` | `OperationProgress` |  |
-| Operations | `ops/bulkUpdate` | `{ projectPath: string; packages: BulkPackageRef[]; }` | `BulkOutcome` | `OperationProgress` |  |
-| Operations | `ops/bulkRemove` | `{ projectPath: string; packages: string[]; }` | `BulkOutcome` | `OperationProgress` |  |
-| Operations | `ops/bulkUpdateAllProjects` | `{ projectUpdates: ProjectBulkUpdate[]; }` | `BulkOutcome` | `OperationProgress` |  |
-| Operations | `ops/bulkRemoveAllProjects` | `{ projectRemovals: ProjectBulkRemoval[]; }` | `BulkOutcome` | `OperationProgress` |  |
-| Central Package Management | `cpm/preview` | `{ projectPath: string; packageId: string; version: string; }` | `{ preview: CpmImpactPreview \| null; }` | — | The projects a central version change would reach, asked before `ops/update` or `ops/install` of a centrally managed package (ADR-004 tier 3, interaction model §5). `preview` is `null` when the project does not use Central Package Management or the package has no central entry, or when the project overrides the central version with `VersionOverride` (the edit reaches that project alone, N74); the edit itself goes through `ops/*`, whose gate decides. |
-| Invalidation | `refresh/all` | `Record<string, never>` | `Record<string, never>` | — |  |
-| UI delegation to VS Code chrome | `ui/contextMenu` | `ContextMenuRequest` | `{ handled: boolean; }` | — | sidebar |
-| UI delegation to VS Code chrome | `ui/openSourceSettings` | `Record<string, never>` | `Record<string, never>` | — | sidebar → main |
-| UI delegation to VS Code chrome | `ui/viewPackage` | `{ packageId: string; version?: string; }` | `Record<string, never>` | — | sidebar → main |
-| UI delegation to VS Code chrome | `ui/copyToClipboard` | `{ text: string; }` | `Record<string, never>` | — |  |
-| UI delegation to VS Code chrome | `ui/openExternal` | `{ url: string; }` | `Record<string, never>` | — |  |
-| Diagnostics | `perf/mark` | `{ name: "webviewReady" \| "firstUsefulRender"; detail?: string; }` | `Record<string, never>` | — |  |
+| Group | Request | Surface | Payload | Result | Chunk | Notes |
+| --- | --- | --- | --- | --- | --- | --- |
+| Session | `session/get` | both | `Record<string, never>` | `SessionSnapshot` | — |  |
+| Session | `session/set` | both | `{ selectedProject?: string \| undefined; selectedSource?: string \| undefined; includePrerelease?: boolean \| undefined; restoreEnabled?: boolean \| undefined; }` | `SessionSnapshot` | — |  |
+| Config & layout | `config/get` | both | `Record<string, never>` | `ExtensionConfig` | — |  |
+| Config & layout | `layout/get` | both | `Record<string, never>` | `LayoutPreferences` | — |  |
+| Config & layout | `layout/set` | both | `LayoutPreferences` | `LayoutPreferences` | — |  |
+| Projects | `projects/list` | both | `Record<string, never>` | `ProjectListing` | — |  |
+| Single-project resources | `installed/get` | both | `{ projectPath: string; }` | `InstalledResult` | `{ kind: "provisional"; result: InstalledResult; }` | The provisional list, streamed before the evaluated one when an evaluation runs; a cached list is answered without a chunk (ADR-009 d.2, d.3). |
+| Single-project resources | `updates/get` | both | `{ projectPath: string; includePrerelease: boolean; }` | `{ projectPath: string; updates: PackageUpdate[]; sourcesUnavailable?: boolean; }` | `{ kind: "found"; update: PackageUpdate; }` |  |
+| Single-project resources | `transitive/get` | both | `{ projectPath: string; forceRestore?: boolean; }` | `TransitiveResult` | — |  |
+| Single-project resources | `transitive/metadata` | both | `{ packages: Array<{ id: string; version: string; }>; }` | `{ metadata: PackageMetadataLite[]; }` | — |  |
+| All-projects resources | `allProjects/installed` | both | `Record<string, never>` | `{ projectPaths: string[]; errored: Array<{ projectPath: string; error: string; }>; }` | `{ kind: "start"; projects: Project[]; } \| { kind: "project"; chunk: ProjectInstalledChunk; } \| { kind: "metadata"; projectPath: string; packages: PackageMetadataLite[]; }` |  |
+| All-projects resources | `allProjects/updates` | both | `{ includePrerelease: boolean; }` | `{ projectPaths: string[]; sourcesUnavailable?: boolean; }` | `{ kind: "start"; projects: Project[]; } \| { kind: "project"; chunk: ProjectUpdatesChunk; } \| { kind: "icons"; icons: Record<string, string>; }` |  |
+| All-projects resources | `allProjects/transitive` | both | `Record<string, never>` | `{ projectPaths: string[]; errored: Array<{ projectPath: string; errorKind: TransitiveErrorKind; }>; }` | `{ kind: "start"; projects: Project[]; } \| { kind: "project"; chunk: ProjectTransitiveChunk; }` |  |
+| Search | `search/query` | both | `{ query: string; sourceUrls?: string[]; includePrerelease: boolean; take?: number; exactMatch?: boolean; }` | `{ query: string; results: PackageSearchResult[]; sourcesUnavailable?: boolean; }` | `{ kind: "metadata"; packages: PackageMetadataLite[]; }` |  |
+| Search | `search/autocomplete` | both | `{ query: string; sources: Array<{ name: string; url: string; }>; includePrerelease: boolean; }` | `{ query: string; groups: QuickSearchSourceResult[]; }` | — |  |
+| Package details | `package/versions` | both | `{ packageId: string; sourceUrl?: string; includePrerelease: boolean; take?: number; }` | `{ packageId: string; versions: string[]; }` | — |  |
+| Package details | `package/metadata` | both | `{ packageId: string; version: string; sourceUrl?: string; }` | `{ metadata: PackageMetadata \| null; }` | — |  |
+| Package details | `package/readme` | both | `{ packageId: string; version: string; sourceUrl?: string; }` | `{ readme: string \| null; }` | — |  |
+| Package details | `readme/image` | main | `{ url: string; sourceUrl?: string; }` | `{ url: string; dataUri: string \| null; }` | — | Lazily fetches one README image host-side with the icon fetch's auth, size cap and policy (ADR-006). `dataUri` is `null` when the fetch failed or policy blocked it; the webview then renders a link. |
+| Package details | `package/prewarm` | both | `{ sourceUrl?: string; }` | `Record<string, never>` | — |  |
+| Sources | `sources/list` | both | `Record<string, never>` | `{ sources: NuGetSource[]; failed: FailedSource[]; }` | `{ kind: "health"; failed: FailedSource[]; }` |  |
+| Sources | `sources/refresh` | both | `Record<string, never>` | `{ sources: NuGetSource[]; failed: FailedSource[]; }` | `{ kind: "health"; failed: FailedSource[]; }` |  |
+| Sources | `sources/configFiles` | both | `Record<string, never>` | `{ configFiles: Array<{ path: string; label: string; }>; }` | — |  |
+| Sources | `sources/add` | both | `{ url: string; name?: string; username?: string; password?: string; configFile?: string; allowInsecure?: boolean; storeEncrypted?: boolean; }` | `{ sources: NuGetSource[]; }` | — |  |
+| Sources | `sources/remove` | both | `{ sourceName: string; configFile?: string; }` | `{ sources: NuGetSource[]; removedUrl?: string; }` | — |  |
+| Sources | `sources/enable` | both | `{ sourceName: string; }` | `{ sources: NuGetSource[]; }` | — |  |
+| Sources | `sources/disable` | both | `{ sourceName: string; }` | `{ sources: NuGetSource[]; disabledUrl?: string; }` | — |  |
+| Operations | `ops/install` | both | `{ projectPath: string; packageId: string; version?: string; sourceUrl?: string; }` | `OperationOutcome` | `OperationProgress` |  |
+| Operations | `ops/update` | both | `{ projectPath: string; packageId: string; version: string; sourceUrl?: string; }` | `OperationOutcome` | `OperationProgress` |  |
+| Operations | `ops/remove` | both | `{ projectPath: string; packageId: string; }` | `OperationOutcome` | `OperationProgress` |  |
+| Operations | `ops/restore` | both | `{ projectPaths: string[]; }` | `BulkOutcome` | `OperationProgress` |  |
+| Operations | `ops/bulkInstall` | both | `{ projectPaths: string[]; packageId: string; version?: string; }` | `BulkOutcome` | `OperationProgress` |  |
+| Operations | `ops/bulkUpdate` | both | `{ projectPath: string; packages: BulkPackageRef[]; }` | `BulkOutcome` | `OperationProgress` |  |
+| Operations | `ops/bulkRemove` | both | `{ projectPath: string; packages: string[]; }` | `BulkOutcome` | `OperationProgress` |  |
+| Operations | `ops/bulkUpdateAllProjects` | both | `{ projectUpdates: ProjectBulkUpdate[]; }` | `BulkOutcome` | `OperationProgress` |  |
+| Operations | `ops/bulkRemoveAllProjects` | both | `{ projectRemovals: ProjectBulkRemoval[]; }` | `BulkOutcome` | `OperationProgress` |  |
+| Central Package Management | `cpm/preview` | both | `{ projectPath: string; packageId: string; version: string; }` | `{ preview: CpmImpactPreview \| null; }` | — | The projects a central version change would reach, asked before `ops/update` or `ops/install` of a centrally managed package (ADR-004 tier 3, interaction model §5). `preview` is `null` when the project does not use Central Package Management or the package has no central entry, or when the project overrides the central version with `VersionOverride` (the edit reaches that project alone, N74); the edit itself goes through `ops/*`, whose gate decides. |
+| Invalidation | `refresh/all` | both | `Record<string, never>` | `Record<string, never>` | — |  |
+| UI delegation to VS Code chrome | `ui/contextMenu` | sidebar | `ContextMenuRequest` | `{ handled: boolean; }` | — |  |
+| UI delegation to VS Code chrome | `ui/openSourceSettings` | sidebar → main | `Record<string, never>` | `Record<string, never>` | — |  |
+| UI delegation to VS Code chrome | `ui/viewPackage` | sidebar → main | `{ packageId: string; version?: string; }` | `Record<string, never>` | — |  |
+| UI delegation to VS Code chrome | `ui/copyToClipboard` | both | `{ text: string; }` | `Record<string, never>` | — |  |
+| UI delegation to VS Code chrome | `ui/openExternal` | both | `{ url: string; }` | `Record<string, never>` | — |  |
+| Diagnostics | `perf/mark` | both | `{ name: "webviewReady" \| "firstUsefulRender"; detail?: string; }` | `Record<string, never>` | — |  |
 
 ## Events (11)
 

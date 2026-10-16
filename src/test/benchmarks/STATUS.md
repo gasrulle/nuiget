@@ -7,7 +7,25 @@ git status --porcelain --untracked-files=all (before the commit): `?? src/test/b
 Item: **P4.10** benches + ARCHITECTURE 2.0 (feeds, transport, policy, caching) + CHANGELOG. Not ⚑, no stop-and-ask trigger,
 no contract change.
 
+This note folds the earlier notes of this directory into one section per heading, newest first (P7.5c, P4 review
+note 7). Their headers and items:
+
+- **commit 3b2e3e3 (parent of the P2.12 commit)** — # STATUS — src/test/benchmarks   commit 3b2e3e3 (parent of the P2.12 commit)   2026-10-13T19:30:00Z
+  Scope of this note: the benchmarks of the 2.0 core (`src/test/benchmarks/core-*.bench.ts`), the runner helper
+  (`benchmark.ts`, `benchmark.test.ts`, `run.mjs`) and `benchmarks/baseline.json`. The 1.x benchmarks in this
+  directory (`cache`, `csproj-parsing`, `http`, `markdown`, `metadata`, `project-parsing`,
+  `queryAllProjectsTransitive`, `react-rendering`, `search-query`, `search`, `source-health`, `update-checking`,
+  `utils`, and `setup.ts`) are listed by name only: they are P8.2's.
+  git status --porcelain --untracked-files=all: `?? src/test/benchmarks/core-queries.bench.ts`,
+  `?? src/test/benchmarks/STATUS.md`, ` M tsconfig.vitest.json`, ` M benchmarks/baseline.json`,
+  ` M benchmarks/README.md`, ` M ARCHITECTURE.md`, ` M CHANGELOG.md`, ` M .github/copilot-instructions.md`,
+  ` M docs/plans/STATUS.md`, ` M docs/plans/findings-ledger.md` (all belong to the P2.12 commit)
+  Item: **P2.12 benches (queue, scopes), ARCHITECTURE 2.0, CHANGELOG** (stop-and-ask: where the benches live
+  and which configuration file the item may touch; no contract change, no sentinel).
+
 ## Verified by running
+
+*From the note at commit 0591864 (parent of the P4.10 commit):*
 
 ```text
 baseline at 0591864         → CI run 38672354156 green on all 11 jobs
@@ -23,52 +41,7 @@ npm run package:vsix, check:vsix, docs:protocol:check, test:ui, test:ui:v2 → S
                                or webview file changed (a bench, documentation and the baseline only)
 ```
 
-## Done (tested)
-
-- `core-feeds.bench.ts`: the three Catalog reads the P4.9 ruling names, each recomputed per iteration (the resource is
-  invalidated first), through the real `createFeedClients`, `FeedContexts` and `DefaultServiceIndexClient` over a
-  `FakeTransport` that answers at once; two pure paths every read takes per row.
-- `benchmarks/README.md` lists `core-transport.bench.ts` (P4.2's, missing until now) and `core-feeds.bench.ts`.
-
-## Done (untested)
-
-- Nothing.
-
-## Not started
-
-- The move of the `core-*` benches into `src/core/**` (P8.2, D8).
-
-## Deviations from contract/ADR (file:line each)
-
-- None.
-
-## Advisor decisions (date, item, question, answer verbatim)
-
-2026-10-16, P4.10: no L1 consultation (not ⚑, no stop-and-ask trigger).
-
-## Exact next step (one item ID)
-
-The P4 phase gate and review (RUN.md §6), then tag `labs/2.0-P4-done`; then P5.5.
-
-## Earlier notes of this directory
-
-# STATUS — src/test/benchmarks   commit 3b2e3e3 (parent of the P2.12 commit)   2026-10-13T19:30:00Z
-
-Scope of this note: the benchmarks of the 2.0 core (`src/test/benchmarks/core-*.bench.ts`), the runner helper
-(`benchmark.ts`, `benchmark.test.ts`, `run.mjs`) and `benchmarks/baseline.json`. The 1.x benchmarks in this
-directory (`cache`, `csproj-parsing`, `http`, `markdown`, `metadata`, `project-parsing`,
-`queryAllProjectsTransitive`, `react-rendering`, `search-query`, `search`, `source-health`, `update-checking`,
-`utils`, and `setup.ts`) are listed by name only: they are P8.2's.
-
-git status --porcelain --untracked-files=all: `?? src/test/benchmarks/core-queries.bench.ts`,
-`?? src/test/benchmarks/STATUS.md`, ` M tsconfig.vitest.json`, ` M benchmarks/baseline.json`,
-` M benchmarks/README.md`, ` M ARCHITECTURE.md`, ` M CHANGELOG.md`, ` M .github/copilot-instructions.md`,
-` M docs/plans/STATUS.md`, ` M docs/plans/findings-ledger.md` (all belong to the P2.12 commit)
-
-Item: **P2.12 benches (queue, scopes), ARCHITECTURE 2.0, CHANGELOG** (stop-and-ask: where the benches live
-and which configuration file the item may touch; no contract change, no sentinel).
-
-## Verified by running
+*From the note at commit 3b2e3e3 (parent of the P2.12 commit):*
 
 ```text
 baseline npx tsc --noEmit / npm run check-types → exit 0 / exit 0
@@ -99,6 +72,18 @@ CI                           → see the tracker row of P2.12
 
 ## Done (tested)
 
+*From the note at commit 0591864 (parent of the P4.10 commit):*
+
+- `core-feeds.bench.ts`: the three Catalog reads the P4.9 ruling names, each recomputed per iteration (the resource is
+  invalidated first), through the real `createFeedClients`, `FeedContexts` and `DefaultServiceIndexClient` over a
+  `FakeTransport` that answers at once; two pure paths every read takes per row.
+- `benchmarks/README.md` lists `core-transport.bench.ts` (P4.2's, missing until now) and `core-feeds.bench.ts`.
+
+
+- Nothing.
+
+*From the note at commit 3b2e3e3 (parent of the P2.12 commit):*
+
 - `core-queries.bench.ts`: eight benchmarks in `describe('core queries — scopes')` over a key set of 198
   resource keys (40 projects, 10 packages): `scopeMatchesKey` for the scopes `workspace`, `project` (posix, and
   win32 with a path spelled differently), `package`, `sources` and `metadata`, and `mergeScopes` over a burst of
@@ -114,12 +99,19 @@ CI                           → see the tracker row of P2.12
   lists what is present and absent; new subsections "Operation outcomes", "Reading through the Catalog" and
   "Project execution context"; the tooling section names the benchmarks.
 
-## Done (untested)
 
 - Nothing: a benchmark has no assertion beyond the load-time check; the numbers are a single-machine signal
   (`benchmarks/README.md`).
 
+## Done (untested)
+
 ## Not started
+
+*From the note at commit 0591864 (parent of the P4.10 commit):*
+
+- The move of the `core-*` benches into `src/core/**` (P8.2, D8).
+
+*From the note at commit 3b2e3e3 (parent of the P2.12 commit):*
 
 - Moving the 2.0 benches next to their modules: P8.2, with the legacy deletion (plan decision D8). The list of
   what that move touches is on the P8.2 tracker row. N40 stays open until then.
@@ -127,6 +119,12 @@ CI                           → see the tracker row of P2.12
   work beyond microbenchmarks is P7.2.
 
 ## Deviations from contract/ADR (file:line each)
+
+*From the note at commit 0591864 (parent of the P4.10 commit):*
+
+- None.
+
+*From the note at commit 3b2e3e3 (parent of the P2.12 commit):*
 
 - `core-queries.bench.ts:77-93`: the load-time check of what each scope reaches is not in the ruling. It is
   there because a benchmark cannot fail on a wrong result.
@@ -143,6 +141,12 @@ CI                           → see the tracker row of P2.12
   a "Missing or invalid benchmark baseline" line in that job would be a defect.
 
 ## Advisor decisions (date, item, question, answer verbatim)
+
+*From the note at commit 0591864 (parent of the P4.10 commit):*
+
+2026-10-16, P4.10: no L1 consultation (not ⚑, no stop-and-ask trigger).
+
+*From the note at commit 3b2e3e3 (parent of the P2.12 commit):*
 
 2026-10-13, P2.12, stop-and-ask in the plan's §2.4 form (`architecture-advisor`). Question: what does P2.12
 do about the location and type-checking of the 2.0 benches, and what are its files (N40 and the P0 phase
@@ -195,6 +199,12 @@ Files checked: `/Users/mattias/github/nuiget/.github/agents/architecture-advisor
 `````
 
 ## Exact next step (one item ID)
+
+*From the note at commit 0591864 (parent of the P4.10 commit):*
+
+The P4 phase gate and review (RUN.md §6), then tag `labs/2.0-P4-done`; then P5.5.
+
+*From the note at commit 3b2e3e3 (parent of the P2.12 commit):*
 
 The P2 phase boundary (`RUN.md` §6): the P2 gate line, then the brief `PHASE REVIEW P2` with the commit list
 `git log --oneline labs/2.0-P1-done..HEAD`; it names C-state-core-6 (`P2.fix-1`) and C-protocol-host-7 as

@@ -7,7 +7,30 @@ Item: **P5.6** (feeds part, from the P4 review note "bind the enrichment to the 
 and a failure that comes from the cancellation is not logged as a failed enrichment. The signal was already passed to
 every read; `mapWithConcurrency` kept starting the remaining packages after an abort.
 
+This note folds the earlier notes of this directory into one section per heading, newest first (P7.5c, P4 review
+note 7). Their headers and items:
+
+- **P4.fix-1**
+  The P4 phase review (verbatim in `docs/plans/STATUS.md` under "### P4 — Feeds, transport and the Catalog's feed reads") rules this row.
+  Item: **P4.fix-1** (feeds part, from the P4 phase review, blocking 1): `SourceHealthTracker` keeps a failure until
+  `markHealthy` or `reset`; `isHealthy` allows the retry after the TTL without forgetting it; a re-mark with the same error fires
+  nothing (N71). The `offline` JSDoc of `src/protocol/domain.ts:130` changed behind the sentinel `P4.fix-1`.
+- **commit 6e2c878 (parent of the P4.9b commit)** — # STATUS — src/core/feeds   commit 6e2c878 (parent of the P4.9b commit)   2026-10-16T07:30:00Z
+  git status --porcelain --untracked-files=all (before the commit): new `src/test/harness/fakeFeed.ts`; modified `src/core/feeds/{health,health.test}.ts`, `src/core/catalog/{Catalog,Catalog.test,feedContexts,feedContexts.test}.ts`, `src/host/{handlers,SidebarHost}.ts`, `src/extension.next.ts`, `src/extension.next.test.ts`, `src/test/harness/{harness,FakeWebview,scenarios.test}.ts`, the five STATUS notes, `CHANGELOG.md`, `ARCHITECTURE.md`, `.github/copilot-instructions.md`, `docs/plans/STATUS.md`, `docs/plans/findings-ledger.md` (all belong to the P4.9b commit)
+  Item: **P4.9b** (feeds part): `SourceHealthTracker.onDidChange` (approved deviation of the P4.9 ruling, step 11).
+- **commit 1a761dd (parent of the P4.8 commit)** — # STATUS — src/core/feeds   commit 1a761dd (parent of the P4.8 commit)   2026-10-16T03:00:00Z
+  git status --porcelain --untracked-files=all (before the commit): `?? src/core/feeds/{updates,enricher,metadataResolver}.ts`, their
+  three `*.test.ts`, `?? src/core/feeds/policy.test.ts`, ` M src/core/feeds/types.ts`, ` M src/core/feeds/index.ts`,
+  ` M src/core/feeds/STATUS.md`, ` M CHANGELOG.md`, ` M ARCHITECTURE.md`, ` M .github/copilot-instructions.md`,
+  ` M docs/plans/STATUS.md`, ` M docs/plans/findings-ledger.md` (all belong to the P4.8 commit)
+  Item: **P4.8** `updates.ts` (`isUpdateCandidate` gating; policy racing; empty ≠ unknown; `sourcesUnavailable`) + `enricher.ts` +
+  `metadataResolver.ts` (F6 cross-source test) + `index.ts`; test `private-only configuration never contacts nuget.org`. Source
+  "legacy → core/feeds": new code after `src/services/NuGetPackageService.ts:1437-1475,1749-1860,2051-2240`. ⚑ on policy edge cases:
+  L1 consultation below. No contract change, no sentinel (`types.ts` is the module's own surface).
+
 ## Verified by running
+
+*From the note at commit c4c3617 (parent of the P5.6 commit):*
 
 P5.6 (the same gate run for every directory of the item):
 
@@ -37,44 +60,7 @@ test -e .claude/.contract-change → false · git diff --stat c4c3617 -- src/pro
                                package.json src/host/services.ts → empty
 ```
 
-## Done (tested)
-
-- `enricher.test.ts` (+2): `an abort mid-batch starts no further lookup and the rest of the entries stay bare`, `a
-  lookup that fails because the request was cancelled is not logged as a failure`. Without the change the first
-  fails (three lookups instead of one).
-
-## Done (untested)
-
-- The quick-search suggestions in VS Code: the ExTester test submits with Enter; suggestions, timers and both modes are
-  covered in jsdom (`useSearchTyping.test.tsx`).
-
-## Not started
-
-- Details of a browse row (P5.7), the sources settings and selector (P5.8), the multi-install picker (P5.9), the
-  sidebar's context menu, "View package details" and "Open full view" (P5.10), the search settings' `full`/`off`
-  values (N57, P5.13; done at P5.13).
-
-## Deviations from contract/ADR (file:line each)
-
-- None.
-
-## Advisor decisions (date, item, question, answer verbatim)
-
-Both P5.6 rulings of the `architecture-advisor` (2026-10-15) are verbatim in `docs/plans/STATUS.md` under "### P5.6 — stop-and-ask: the source list of quick-search and `searchDebounceMode`" and "### P5.6 — stop-and-ask: the main entry's start requests". The ambient advisor was consulted before writing (scope: no install action on main browse rows, the details pane stays P5.7's, `ui/viewPackage` senders stay P5.10's, the combobox instead of `Popover`, the latency measured at the first ExTester run).
-
-## Exact next step (one item ID)
-
-P5.7 (feature details), after P5.6's CI run is green.
-
-## Earlier notes of this directory
-
-The P4 phase review (verbatim in `docs/plans/STATUS.md` under "### P4 — Feeds, transport and the Catalog's feed reads") rules this row.
-
-Item: **P4.fix-1** (feeds part, from the P4 phase review, blocking 1): `SourceHealthTracker` keeps a failure until
-`markHealthy` or `reset`; `isHealthy` allows the retry after the TTL without forgetting it; a re-mark with the same error fires
-nothing (N71). The `offline` JSDoc of `src/protocol/domain.ts:130` changed behind the sentinel `P4.fix-1`.
-
-## Verified by running
+*From the note at P4.fix-1:*
 
 ```text
 npx vitest run --project backend src/core/feeds/health.test.ts → green, with `an expired failure that a read found healthy still
@@ -87,15 +73,7 @@ grep -c "every source was unreachable" src/core/feeds/STATUS.md → 2: both insi
   the deviation entry is closed
 ```
 
-## Earlier notes of this directory
-
-# STATUS — src/core/feeds   commit 6e2c878 (parent of the P4.9b commit)   2026-10-16T07:30:00Z
-
-git status --porcelain --untracked-files=all (before the commit): new `src/test/harness/fakeFeed.ts`; modified `src/core/feeds/{health,health.test}.ts`, `src/core/catalog/{Catalog,Catalog.test,feedContexts,feedContexts.test}.ts`, `src/host/{handlers,SidebarHost}.ts`, `src/extension.next.ts`, `src/extension.next.test.ts`, `src/test/harness/{harness,FakeWebview,scenarios.test}.ts`, the five STATUS notes, `CHANGELOG.md`, `ARCHITECTURE.md`, `.github/copilot-instructions.md`, `docs/plans/STATUS.md`, `docs/plans/findings-ledger.md` (all belong to the P4.9b commit)
-
-Item: **P4.9b** (feeds part): `SourceHealthTracker.onDidChange` (approved deviation of the P4.9 ruling, step 11).
-
-## Verified by running
+*From the note at commit 6e2c878 (parent of the P4.9b commit):*
 
 ```text
 baseline at 6e2c878         → CI run 38669483033 green on all 11 jobs · npm run check-types 0 · npx eslint src 0 · npx vitest run
@@ -112,46 +90,7 @@ npx vitest run --project backend src/extension.next.test.ts src/core/catalog src
 git diff --name-only -- docs/adr src/protocol src/core/contracts.ts → empty
 ```
 
-## Done (tested)
-
-- `health.test.ts`: `onDidChange fires when the failed set changes and not otherwise`.
-
-## Done (untested)
-
-- Nothing new.
-
-## Not started
-
-- P4.10 benches of the feed clients.
-
-## Deviations from contract/ADR (file:line each)
-
-- `health.ts`: `onDidChange` is additive; `failed()`, `markFailed`, `markHealthy` and `reset` keep their behaviour.
-
-## Advisor decisions (date, item, question, answer verbatim)
-
-2026-10-16, P4.9b, stop-and-ask: how the health monitor obtains its chains. Verbatim at the end of this file where the ruling
-names this directory, and in `docs/plans/STATUS.md`; the P4.9 ruling (steps 11-16) is there too.
-
-## Exact next step (one item ID)
-
-P4.10 (benches and the ARCHITECTURE 2.0 pass for feeds, transport, policy and caching), then the P4 phase gate and review.
-
-## Earlier notes of this directory (kept for the P4 phase review)
-
-# STATUS — src/core/feeds   commit 1a761dd (parent of the P4.8 commit)   2026-10-16T03:00:00Z
-
-git status --porcelain --untracked-files=all (before the commit): `?? src/core/feeds/{updates,enricher,metadataResolver}.ts`, their
-three `*.test.ts`, `?? src/core/feeds/policy.test.ts`, ` M src/core/feeds/types.ts`, ` M src/core/feeds/index.ts`,
-` M src/core/feeds/STATUS.md`, ` M CHANGELOG.md`, ` M ARCHITECTURE.md`, ` M .github/copilot-instructions.md`,
-` M docs/plans/STATUS.md`, ` M docs/plans/findings-ledger.md` (all belong to the P4.8 commit)
-
-Item: **P4.8** `updates.ts` (`isUpdateCandidate` gating; policy racing; empty ≠ unknown; `sourcesUnavailable`) + `enricher.ts` +
-`metadataResolver.ts` (F6 cross-source test) + `index.ts`; test `private-only configuration never contacts nuget.org`. Source
-"legacy → core/feeds": new code after `src/services/NuGetPackageService.ts:1437-1475,1749-1860,2051-2240`. ⚑ on policy edge cases:
-L1 consultation below. No contract change, no sentinel (`types.ts` is the module's own surface).
-
-## Verified by running
+*From the note at commit 1a761dd (parent of the P4.8 commit):*
 
 ```text
 baseline at 1a761dd         → CI run 38661032827 green on all 11 jobs · npm run check-types 0 · npx eslint src 0 · npx vitest run
@@ -182,6 +121,25 @@ npm run package:vsix, check:vsix, docs:protocol:check, test:ui, test:ui:v2 → S
 
 ## Done (tested)
 
+*From the note at commit c4c3617 (parent of the P5.6 commit):*
+
+- `enricher.test.ts` (+2): `an abort mid-batch starts no further lookup and the rest of the entries stay bare`, `a
+  lookup that fails because the request was cancelled is not logged as a failure`. Without the change the first
+  fails (three lookups instead of one).
+
+
+- The quick-search suggestions in VS Code: the ExTester test submits with Enter; suggestions, timers and both modes are
+  covered in jsdom (`useSearchTyping.test.tsx`).
+
+*From the note at commit 6e2c878 (parent of the P4.9b commit):*
+
+- `health.test.ts`: `onDidChange fires when the failed set changes and not otherwise`.
+
+
+- Nothing new.
+
+*From the note at commit 1a761dd (parent of the P4.8 commit):*
+
 - `updates.ts`: `DefaultUpdateChecker.check` — unresolved declarations skipped; `parseVersionSpec` + `isUpdateCandidate` (exact pins,
   invalid specs, floating or range without a resolved version never candidates; N6 closed); `effectiveInstalledVersion` compared and
   reported; the policy's allowed sources per id, all awaited, newest version across them, ties to the first-listed source; any
@@ -197,23 +155,57 @@ npm run package:vsix, check:vsix, docs:protocol:check, test:ui, test:ui:v2 → S
 - `policy.test.ts`: the private-only test and its mapping sibling over every client (M2 closed).
 - `types.ts`: `VersionsOutcome`; JSDoc of `UpdateChecker.check` and `MetadataResolver.metadata`.
 
-## Done (untested)
 
 - Nothing by line; a few branches (an empty entry list from `lookup` before a later source, a vulnerability answer that is both
   empty and unavailable) are covered only by line.
 
+## Done (untested)
+
 ## Not started
+
+*From the note at commit c4c3617 (parent of the P5.6 commit):*
+
+- Details of a browse row (P5.7), the sources settings and selector (P5.8), the multi-install picker (P5.9), the
+  sidebar's context menu, "View package details" and "Open full view" (P5.10), the search settings' `full`/`off`
+  values (N57, P5.13; done at P5.13).
+
+*From the note at commit 6e2c878 (parent of the P4.9b commit):*
+
+- P4.10 benches of the feed clients.
+
+*From the note at commit 1a761dd (parent of the P4.8 commit):*
 
 - Benches and the 2.0 ARCHITECTURE pass for the feeds (P4.10); wiring through the Catalog, the coordinator and the composition
   root (P4.9, including N70).
 
 ## Deviations from contract/ADR (file:line each)
 
+*From the note at commit c4c3617 (parent of the P5.6 commit):*
+
+- None.
+
+*From the note at commit 6e2c878 (parent of the P4.9b commit):*
+
+- `health.ts`: `onDidChange` is additive; `failed()`, `markFailed`, `markHealthy` and `reset` keep their behaviour.
+
+*From the note at commit 1a761dd (parent of the P4.8 commit):*
+
 - Closed at P4.fix-1: the `offline` JSDoc of `src/protocol/domain.ts:130` now reads as the resolver behaves (no allowed source produced
   metadata, for any reason).
 - `types.ts`: `MetadataResolver.versions` answers `VersionsOutcome` instead of `string[]` (the ruling; no consumer existed).
 
 ## Advisor decisions (date, item, question, answer verbatim)
+
+*From the note at commit c4c3617 (parent of the P5.6 commit):*
+
+Both P5.6 rulings of the `architecture-advisor` (2026-10-15) are verbatim in `docs/plans/STATUS.md` under "### P5.6 — stop-and-ask: the source list of quick-search and `searchDebounceMode`" and "### P5.6 — stop-and-ask: the main entry's start requests". The ambient advisor was consulted before writing (scope: no install action on main browse rows, the details pane stays P5.7's, `ui/viewPackage` senders stay P5.10's, the combobox instead of `Popover`, the latency measured at the first ExTester run).
+
+*From the note at commit 6e2c878 (parent of the P4.9b commit):*
+
+2026-10-16, P4.9b, stop-and-ask: how the health monitor obtains its chains. Verbatim at the end of this file where the ruling
+names this directory, and in `docs/plans/STATUS.md`; the P4.9 ruling (steps 11-16) is there too.
+
+*From the note at commit 1a761dd (parent of the P4.8 commit):*
 
 2026-10-16, P4.8, ⚑ policy edge cases (Q1-Q9). Answer, verbatim (earlier rulings of this directory: `docs/plans/STATUS.md`,
 "Advisor decisions"):
@@ -268,5 +260,14 @@ FILES CHECKED: /Users/mattias/github/nuiget/.github/agents/architecture-advisor.
 
 ## Exact next step (one item ID)
 
-P4.9 (wire the feeds into the Catalog and `extension.next.ts`; remove the `REMOVAL GATE: P4.9` comments; N70).
+*From the note at commit c4c3617 (parent of the P5.6 commit):*
 
+P5.7 (feature details), after P5.6's CI run is green.
+
+*From the note at commit 6e2c878 (parent of the P4.9b commit):*
+
+P4.10 (benches and the ARCHITECTURE 2.0 pass for feeds, transport, policy and caching), then the P4 phase gate and review.
+
+*From the note at commit 1a761dd (parent of the P4.8 commit):*
+
+P4.9 (wire the feeds into the Catalog and `extension.next.ts`; remove the `REMOVAL GATE: P4.9` comments; N70).

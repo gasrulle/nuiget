@@ -9,93 +9,119 @@ A Visual Studio-style NuGet package manager for VS Code with a modern split-pane
 
 ## ✨ Features
 
-- 🎨 **Visual Studio-Style GUI** - Familiar split-panel layout with Browse, Installed, and Updates tabs
-- 📦 **Full Package Management** - Install, update, and remove NuGet packages via dotnet CLI
-- 🔍 **Quick Search** - Real-time suggestions as you type
-- ⌨️ **Keyboard Navigation** - Arrow keys to navigate, `Ctrl+Enter` to quick install
-- 🚀 **Multi-Project Support** - Manage packages across .csproj, .fsproj, and .vbproj files
-- 🔗 **Transitive Dependencies** - View the full dependency graph with "Required by" chains
-- 📊 **Bulk Operations** - Update All, Bulk Update selected, Bulk Uninstall, or Multi Install to multiple projects at once
-- 🔄 **Cross-Project Updates** - Load updates from all projects at once with grouped results and one-click Update All
-- 🔎 **Installed Tab Filter** - Client-side filter to quickly find packages by name with live count display
-- ⚙️ **Source Management** - Enable, disable, add, or remove NuGet sources via settings cog (⚙️)
-- ✅ **Verified Badges** - Shows ✓ for packages with reserved prefix on nuget.org
-- 🔐 **Authenticated Private Feeds** - Browse and search packages from private feeds
-- 📖 **README Display** - View package docs with syntax-highlighted code blocks and copy button
-- ⚠️ **Source Status Warnings** - Visual notification when NuGet sources are unreachable
-- 📌 **Sidebar Panel** - Compact Activity Bar panel with search-driven browse, Installed and Updates sections with update count badges
-- 🔁 **Cross-Panel Sync** - Source, project, prerelease, and restore-after-operations selections shared between main panel and sidebar in real time
-- ♿ **Accessible** - High-contrast themes, reduced motion, and ARIA roles for screen readers
-- 🧩 **.NET 10 Support** - Automatic detection of .NET 10 noun-first CLI syntax
-- 🔧 **Output Channel** - "nUIget" channel shows all CLI commands for troubleshooting
+- **Visual Studio-style main panel.** Installed and Updates tabs, with the update count on the Updates tab. The
+  package list sits beside a details pane with a Details tab (description, authors, downloads, license, size,
+  dependencies by framework, vulnerabilities) and a README tab (rendered Markdown, code blocks highlighted, with a copy
+  button). A version selector marks the installed version; its button reads Install, Update or Downgrade, and
+  Uninstall is a button of its own.
+- **Search and filters.** Type a package name and press Enter to search your sources; in the main panel, quick-search
+  suggestions appear while you type (see `nuiget.searchDebounceMode`). The results replace the tabs until you clear the box. Prefixes
+  filter instead of searching: `@installed`, `@updates` and `@vulnerable` in the main panel, `@installed` and
+  `@updates` in the sidebar.
+- **Activity Bar sidebar.** Compact Installed and Updates sections that collapse independently, with a draggable
+  split between them. Every row has an actions menu (right-click or Shift+F10): install the latest or a chosen
+  version, update, uninstall, copy the package ID, or view the package in the main panel. The title bar holds the
+  project and source pickers, the prerelease and restore switches, Refresh and Open Full Manager.
+- **All Projects.** With two or more projects, choose **All Projects (N)** in the project selector. Installed and
+  Updates show one section per project, grouped by workspace folder when the workspace has several. Each row acts on
+  its own project, Update all covers every project, and a search result can be installed into several projects at
+  once.
+- **Transitive packages.** The Installed tab lists the transitive packages per target framework, each with the
+  top-level packages that require it. A project that has not been restored shows a Restore banner instead.
+- **Bulk operations.** Select rows with Space, Ctrl+click (Cmd+click on macOS) or the check mark, then Update all,
+  Update selected or Uninstall selected. A confirmation dialog lists exactly the packages that will change.
+- **Central Package Management.** Centrally managed packages carry a CPM badge. Before the central version of a
+  package changes, nUIget lists every project that the change reaches and asks you to confirm (main panel: a dialog;
+  sidebar: the actions menu and a confirmation). Installing a package that already has a central entry is previewed
+  the same way. A package whose project overrides the central version with `VersionOverride` updates in that project
+  alone. Uninstall removes the project's reference and keeps the central entry. An install into several projects
+  leaves out the projects where the package has a central entry and says so.
+- **Provisional, then evaluated.** The installed list appears at once, read from the project files, and is marked
+  "provisional". MSBuild evaluation then replaces it with the authoritative list (conditions, imported props files,
+  references the SDK adds). A version nUIget cannot determine shows as "unresolved", and nUIget does not change that
+  package.
+- **Package sources.** The gear next to the source selector opens the NuGet sources dialog: enable or disable a
+  source, add one (config file, URL, name, credentials), or remove one with a confirmation. Sources are those the
+  dotnet CLI reports for the selected project's directory, and package source mapping decides which sources are asked
+  about a package.
+- **Source health.** A source that cannot be reached is a warning banner with Retry, never an empty "no updates" or
+  "no results". nUIget re-checks unreachable sources in the background, and the Updates lists check again when a
+  source recovers.
+- **Proxy through VS Code.** Feed requests use VS Code's own proxy support, so `http.proxy`, `http.proxySupport` and
+  the proxy environment variables apply. nUIget has no proxy setting of its own. The dotnet commands it runs are
+  not affected by VS Code's settings and use the dotnet CLI's own proxy configuration.
+- **One shared context.** The main panel and the sidebar show the same project, source, prerelease and restore
+  choices. An operation started in either view shows its progress in both.
+- **Operation queue.** One operation runs at a time and up to five wait behind it; the status bar shows how many are
+  running and queued.
+- **Restore after operations.** On by default, per workspace. Turn it off with the shield button in the sidebar's
+  title bar (filled when on); it applies to operations from both views. In a Central Package Management project an
+  install or update always restores.
+- **Automatic refresh.** Changes to project files, `Directory.Build.props`, `Directory.Packages.props`,
+  `nuget.config`, `global.json`, `packages.lock.json` and the restore output refresh the lists.
+- **Update suggestions skip unlisted versions.**
+- **Verified badges** where the feed marks a package as verified.
+- **Accessible.** Every action has a key, lists and dialogs carry the roles screen readers expect, colours come from
+  the VS Code theme (high-contrast themes included), and motion is reduced when the system asks for it.
+- **Output channel.** The "nUIget" channel logs every dotnet command with its exit code and duration. Credentials
+  are removed from everything it logs.
 
 ## 🚀 Quick Start
 
-1. **Open** a folder containing .NET project files
-2. **Press** `Ctrl+Shift+P` → type "nUIget: Manage NuGet Packages"
-3. **Search** for a package, select a version, click Install!
+1. **Open** a folder that contains `.csproj`, `.fsproj` or `.vbproj` files.
+2. **Run** `nUIget: Manage NuGet Packages` from the Command Palette (`Ctrl+Shift+P`, `Cmd+Shift+P` on macOS).
+3. **Search** for a package and press Enter, select it, choose a version in the details pane and click Install.
 
-> 💡 **Tip:** Right-click any .csproj file in Explorer → "nUIget: Manage Packages"
+> 💡 **Tip:** Right-click a project file in the Explorer and choose the nUIget command to open the panel with that project selected.
 
-> 💡 **Tip:** Right-click any project in Solution Explorer → "nUIget: Manage Packages"
+> 💡 **Tip:** Right-click a project in Solution Explorer for the same command.
 
-> 💡 **Tip:** Click the nUIget icon in the editor title bar when a .csproj file is open
+> 💡 **Tip:** Click the nUIget icon in the editor title bar when a project file is open.
 
-> 💡 **Tip:** Use the nUIget icon in the Activity Bar for quick browse, installed, and updates at a glance
-
-Update suggestions in the main panel and sidebar exclude unlisted package versions. Explicit version selection still includes downloadable unlisted versions for existing dependencies.
-
-Search and installation preserve full package IDs and versions, including long prerelease labels such as `1.0.0-mynewfeaturethatibuildlastsummer-beta1`, even when searching local or legacy feeds through the dotnet CLI.
+> 💡 **Tip:** Use the nUIget icon in the Activity Bar for installed packages and updates at a glance.
 
 ## ⚙️ Settings
 
 | Setting | Default | Description |
 |---------|---------|-------------|
 | `nuiget.searchDebounceMode` | `quicksearch` | What typing in the main panel's search box does: `quicksearch` shows suggestions, `full` runs the full search as you type, `off` searches only on Enter. The sidebar searches as you type in every mode. |
-| `nuiget.quickSearchResultsPerSource` | `5` | Suggestions per source in quick search (1-10) |
-| `nuiget.recentSearchesLimit` | `5` | Deprecated: no effect in 2.0, removed at the next major version. Recent searches to remember (0-10, 0 to disable) |
-| `nuiget.searchResultLimit` | `20` | Maximum number of packages to return from full search (1-100) |
-| `nuiget.enablePerformanceLogging` | `false` | Write `[perf]` timing lines to the nUIget output channel for panel open, project switch, operations, search and update checks; keep off in normal use |
-
-> 💡 **Restore after operations** is no longer a setting — it's a UI toggle. Use the verified-shield icon in the sidebar title bar, or the **Restore after operations** checkbox in the main panel header. Both stay synced and persist per workspace. The legacy `nuiget.noRestore` setting is migrated automatically on first activation.
+| `nuiget.quickSearchResultsPerSource` | `5` | Suggestions per source in the main panel's quick search (1-10). |
+| `nuiget.recentSearchesLimit` | `5` | Deprecated: has no effect in 2.0 and will be removed. |
+| `nuiget.searchResultLimit` | `20` | Maximum number of packages a full search returns (1-100). |
+| `nuiget.enablePerformanceLogging` | `false` | Writes `[perf]` timing lines to the nUIget output channel at Info level instead of Debug. Keep it off in normal use. |
 
 ## 📋 Commands
 
 | Command | Description |
 |---------|-------------|
-| `nUIget: Manage NuGet Packages` | Open the package manager panel |
-| `nUIget: Clear NuGet HTTP Cache` | Clear the dotnet NuGet HTTP cache (use when packages/versions seem stale) |
+| `nUIget: Manage NuGet Packages` | Open the main panel. From a project file's menu, the panel opens with that project selected. |
+| `nUIget: Clear NuGet HTTP Cache` | Run `dotnet nuget locals http-cache --clear`, drop the feed data nUIget cached and reload the lists. Use it when packages or versions look stale. |
+| `nUIget: Clear SDK Version Cache` | Forget the .NET SDK versions detected per directory and detect them again, for example after installing a new SDK. |
 
 <details>
 <summary><b>⌨️ Keyboard Shortcuts</b></summary>
 
-### Quick Search Navigation
+### Search box
 
 | Key | Action |
 |-----|--------|
-| `↑` / `↓` | Navigate through suggestions |
-| `→` | Open version picker for highlighted package |
-| `Enter` | Select package (show details) |
-| `Ctrl+Enter` | **Quick Install** latest version |
-| `Escape` | Close dropdown |
+| `@` | Open the list of filter prefixes |
+| `↑` / `↓` | Move through the prefixes or the quick-search suggestions |
+| `Enter` | Take the highlighted prefix or suggestion; with none highlighted, search for the text in the box |
+| `Tab` | Take the highlighted prefix or suggestion |
+| `Escape` | Close the list; with the list closed, clear the box; in an empty box, leave it |
 
-### Version Picker (after pressing `→`)
-
-| Key | Action |
-|-----|--------|
-| `↑` / `↓` | Navigate versions |
-| `←` | Back to package list |
-| `Enter` | Install selected version |
-
-### Package List Navigation
+### Package lists
 
 | Key | Action |
 |-----|--------|
-| `↑` / `↓` | Navigate packages |
-| `Home` / `End` | Jump to first/last |
-| `Enter` | Install (Browse) / Update (Updates) |
-| `Delete` | Uninstall (Installed tab) |
-| `Space` | Toggle checkbox selection |
+| `↑` / `↓` | Move to the previous or next row |
+| `Home` / `End` | Jump to the first or last row |
+| `Enter` | Main panel: show the details (Installed, search results) or update the package (Updates). Sidebar: the row's action (Uninstall in Installed, Update in Updates, Install in search results); on a centrally managed update, or a search result with a central entry, it opens the actions menu |
+| `Ctrl+Enter` (`Cmd+Enter` on macOS) | Sidebar: open the package in the main panel |
+| `Delete` (`Cmd+Backspace` on macOS) | Uninstall (Installed lists) |
+| `Space` | Main panel: select the row for a bulk action, or clear it |
+| `Shift+F10` / Menu key | Sidebar: open the actions menu |
 
 </details>
 
@@ -104,11 +130,23 @@ Search and installation preserve full package IDs and versions, including long p
 
 ### NuGet Sources
 
-The extension reads sources from:
-- **User-level:** `%USERPROFILE%\.nuget\NuGet\NuGet.Config` (Windows) or `~/.nuget/NuGet/NuGet.Config` (Mac/Linux)
-- **Workspace-level:** `nuget.config` in workspace root
+nUIget asks the dotnet CLI for the sources (`dotnet nuget list source`) in the selected project's directory, or in
+the first workspace folder when All Projects or no project is selected. The CLI applies the same `nuget.config` files
+it uses for that directory, including `<clear />` and disabled sources, so each project sees its own sources.
+
+When the configuration has a `<packageSourceMapping>`, a request that names a package goes only to the enabled
+sources whose winning pattern matches that package. If those sources are disabled or missing, nUIget asks no source
+about the package.
+
+**Add source** in the sources dialog writes to the file you choose:
+
+- **User:** `~/.nuget/NuGet/NuGet.Config` (macOS and Linux) or `%APPDATA%\NuGet\NuGet.Config` (Windows)
+- **Workspace:** the `nuget.config` of the first workspace folder, created when it does not exist
+
+An `http:` source needs the **Allow an insecure (HTTP) connection** option, which .NET SDK 10 requires.
 
 Example `nuget.config`:
+
 ```xml
 <?xml version="1.0" encoding="utf-8"?>
 <configuration>
@@ -124,34 +162,48 @@ Example `nuget.config`:
 <details>
 <summary><b>🔐 Private Feeds & Credentials</b></summary>
 
-### Supported Private Feeds
-
-nUIget provides **browse and search** capabilities for authenticated NuGet feeds:
-
-- **Azure DevOps Artifacts** - Uses Azure Artifacts Credential Provider or nuget.config credentials
-- **GitHub Packages** - Personal access token in nuget.config
-- **JFrog Artifactory** - Username/password or API key
-- **MyGet, ProGet** - Any NuGet v3-compatible feed
-
 ### How Credentials Are Resolved
 
-Credentials are resolved in priority order:
+For an `http:` or `https:` source, nUIget looks for credentials in three places, in this order, and uses the first
+it finds:
 
-1. **nuget.config** - `<packageSourceCredentials>` section (recommended)
-2. **Azure Artifacts Credential Provider** - For Azure DevOps feeds (if installed)
-3. **Environment variable tokens** - `VSS_NUGET_ACCESSTOKEN` or `ARTIFACTS_CREDENTIALPROVIDER_ACCESSTOKEN`
+1. **Environment variables.**
+   - `ARTIFACTS_CREDENTIALPROVIDER_EXTERNAL_FEED_ENDPOINTS` (or `VSS_NUGET_EXTERNAL_FEED_ENDPOINTS`): JSON with an
+     `endpointCredentials` list. The first entry with a password whose `endpoint` is the source URL, or a path above
+     or below it, is used.
+   - `ARTIFACTS_CREDENTIALPROVIDER_ACCESSTOKEN` (or `VSS_NUGET_ACCESSTOKEN`): a token, used for Azure Artifacts sources
+     only.
+2. **`nuget.config`.** The `<packageSourceCredentials>` entry of the source's name:
+   - `ClearTextPassword`: `%VARIABLE%` placeholders in it and in `Username` are replaced from the environment. When a
+     variable is not set, the entry is skipped.
+   - `Password`: the encrypted form. On Windows nUIget decrypts it with DPAPI for the current user, with the entropy
+     `NuGet` that NuGet itself uses. Elsewhere, or when decryption fails, nUIget goes on to the next step.
+3. **Azure Artifacts Credential Provider.** Only for Azure Artifacts sources and for hosts listed in
+   `ARTIFACTS_CREDENTIALPROVIDER_HOSTS` (or `NUGET_CREDENTIALPROVIDER_VSTS_HOSTS`, separated by semicolons). nUIget
+   uses the cross-platform plugin `CredentialProvider.Microsoft.dll`: the first one found in
+   `NUGET_NETCORE_PLUGIN_PATHS` (or `NUGET_PLUGIN_PATHS`), else
+   `~/.nuget/plugins/netcore/CredentialProvider.Microsoft/CredentialProvider.Microsoft.dll`. It runs through
+   `dotnet`, non-interactively, for at most 10 seconds.
+
+Azure Artifacts sources are recognized by address: `pkgs.dev.azure.com`, `*.pkgs.visualstudio.com`, or a path that
+contains `/_packaging/`. Any other feed works with a user name and password (or token) in `nuget.config` or in the
+external feed endpoints variable.
+
+Credentials found are kept for 30 minutes, and "no credentials" for 5 minutes. nUIget never writes a password, token
+or the credential provider's output to the log.
 
 ### Credential Security
 
-When adding a source with credentials:
+When you add a source with credentials in the sources dialog:
 
-| Method | Security | Notes |
-|--------|----------|-------|
-| **Encrypted (DPAPI)** | ✅ Best | Windows only. Encrypted per-user, per-machine. |
-| **Environment Variable** | ✅ Good | Use `%MY_PASSWORD%` syntax. Resolved at runtime. |
-| **Clear Text** | ⚠️ Avoid | Stored unencrypted in nuget.config. |
+| Method | Notes |
+|--------|-------|
+| **Encrypted (DPAPI)** | Windows only, and the default there. Encrypted for the current user. |
+| **Environment variable** | Type `%MY_PASSWORD%` as the password and store it in clear text: the file holds the placeholder, and nUIget reads the variable. |
+| **Clear text** | The only choice outside Windows. Stored unencrypted in `nuget.config`. |
 
 Example with credentials:
+
 ```xml
 <packageSourceCredentials>
   <MyPrivateFeed>
@@ -169,20 +221,29 @@ See [Microsoft's security best practices](https://learn.microsoft.com/en-us/nuge
 
 | Issue | Solution |
 |-------|----------|
-| Private feed shows empty results | Run `dotnet restore --interactive` once to cache credentials, then refresh. |
-| "401 Unauthorized" in output | Add credentials to nuget.config `<packageSourceCredentials>` section. |
-| Private feed not loading | Check VPN connection. Click ⚙️ to verify source status. |
-| "dotnet not found" error | Ensure .NET SDK is installed and `dotnet` is on your PATH. |
-| Source shows ⚠️ warning | Source is unreachable. Check network or disable in settings. |
-| Transitive packages empty | Click the refresh button in the header. Project needs to be restored first. |
-| Packages not updating | Check Output panel (View → Output → "nUIget") for CLI errors. |
-| Sidebar not showing | Only appears when workspace contains .csproj, .fsproj, or .vbproj files. |
+| Something failed and the message is not enough | Open View → Output → **nUIget**. The channel lists every dotnet command nUIget ran, with its exit code, duration and output. |
+| A banner says "Some package sources could not be checked" (or searched) | A source did not answer. Check the network or VPN, and the source's URL and credentials in the sources dialog, then click **Retry**. nUIget also re-checks unreachable sources in the background. |
+| Packages or versions look stale | Run `nUIget: Clear NuGet HTTP Cache`. |
+| A private feed returns nothing | Add credentials for it (see Private Feeds & Credentials). |
+| "Could not start dotnet" | Install the .NET SDK and make `dotnet` available on PATH, or point `DOTNET_ROOT` at the installation directory. |
+| A project shows "requires .NET SDK 10 or newer" and is read-only | The SDK its directory resolves (for example through `global.json`) is older than 10. Install SDK 10 or change `global.json`; after installing an SDK, run `nUIget: Clear SDK Version Cache`. |
+| "Unsupported project" | nUIget manages SDK-style projects with `PackageReference`. `packages.config` and non-SDK-style projects are listed as unsupported. |
+| An install or update is refused because of unsaved changes | Save or close the project file or `Directory.Packages.props` in the editor. |
+| A version shows "unresolved" | nUIget could not determine the version from the project files. Edit that reference by hand. |
+| Transitive packages are missing | Click **Restore** in the banner of the transitive section; the project has not been restored. |
+| Sidebar not showing | It appears only when the workspace contains a `.csproj`, `.fsproj` or `.vbproj` file. |
+| Nothing happens at all | nUIget does not run in Restricted Mode or in a virtual workspace. Trust the workspace and open it from disk. |
 
 ## Requirements
 
-- Visual Studio Code 1.85.0+
-- .NET SDK installed and on PATH
-- .NET projects (.csproj, .fsproj, or .vbproj)
+- Visual Studio Code 1.85.0 or newer.
+- .NET SDK 10 or newer, with `dotnet` on PATH or in `DOTNET_ROOT`. A project whose directory resolves an older SDK
+  is shown read-only.
+- SDK-style .NET projects (`.csproj`, `.fsproj` or `.vbproj`).
+- A trusted workspace on disk. Restricted Mode and virtual workspaces are not supported.
+- Remote development (Remote-SSH, WSL, Dev Containers, Codespaces): nUIget runs where the workspace is, so `dotnet`,
+  the project files, the `nuget.config` files, the credentials (DPAPI only when the remote is Windows) and the feed
+  connections are all on the remote. The remote case is not verified by the test suite.
 
 ## Development with Copilot
 

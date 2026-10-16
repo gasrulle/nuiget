@@ -5,6 +5,9 @@ git status --porcelain --untracked-files=all (before commit 2): modified `.githu
 `src/core/project/{evaluator,evaluator.test}.ts`, `src/extension.next.test.ts`, `src/test/harness/{fakeDotnet,scenarios.test}.ts`,
 and the STATUS notes of `src`, `src/core/project`, `src/test/harness`
 
+Scope: this note covers `src/extension.next.ts` and its test only; `src/test/lint` has its own note since P7.5c
+(P5 review note 7).
+
 Item: **P7.2c, commit 2** — the root composition test follows the combined first run, by the follow-up ruling of
 2026-10-16 (verbatim below). This note replaces the P6.4a note (in this file's history at `0e814af`).
 

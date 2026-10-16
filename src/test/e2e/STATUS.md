@@ -6,7 +6,26 @@ Item: **P5.12b, block (a)**: the carry-overs of P5.12a: the verbatim probe of `d
 `--version` (writes `Version="*"`) is the evidence below; `docs/plans/test-retirement-map.md` maps each legacy e2e
 file to its `v2-*` port and retires `src/test/e2e/index.ts` with the legacy set at P8.2. No e2e file changed.
 
+This note folds the earlier notes of this directory into one section per heading, newest first (P7.5c, P4 review
+note 7). Their headers and items:
+
+- **P5.12a**
+  git status --porcelain --untracked-files=all (before the commit): modified `.github/copilot-instructions.md`,
+  `ARCHITECTURE.md`, `CHANGELOG.md`, `docs/plans/{STATUS,findings-ledger}.md`, `src/test/e2e/v2-sidebar.e2e.test.ts`;
+  new `src/test/e2e/{v2Support.ts,STATUS.md}` and `src/test/e2e/v2-{extension,commands,panel,settings-persistence,install-flow,update-flow,file-watcher,source-management}.e2e.test.ts`
+  (all belong to P5.12a)
+  Item: **P5.12a**: the nine legacy extension-host e2e files ported to the 2.0 entry. Eight new `v2-*` files, one per
+  legacy file; the legacy `sidebar.e2e.test.ts` is folded into the existing `v2-sidebar.e2e.test.ts` (its missing
+  test: Open Full View opens the main panel). `v2Support.ts` holds the shared steps: activation, a bounded `until`,
+  `dotnet` through `execFile` with an argument vector, the main panel's tabs by view type (`nugetManager`), closing
+  every editor, and the fixture project with its write-back. The ports assert what the legacy files left to fixed
+  sleeps or `assert.ok(true)`: the panel is one tab titled nUIget, opening it again reveals it, closed it opens again;
+  the noun-first add, update and remove reach the project file (polled); `nuget.config` is unchanged after the sources
+  suite and the SDK lists nuget.org from it.
+
 ## Verified by running
+
+*From the note at commit ca8b6e8 (P5.12b block d; parent of the closing commit):*
 
 P5.12b:
 
@@ -29,47 +48,7 @@ npm run package:vsix: SKIPPED: no host, service or esbuild change (tests and doc
 test -e .claude/.contract-change → false
 ```
 
-## Done (tested)
-
-- The map rows of the nine legacy e2e files and `index.ts`.
-
-## Done (untested)
-
-- Deleting the legacy tests: P8.2, per the map and its ⚑ consultation (the L2 hook refuses any deletion of a test file).
-
-## Not started
-
-- None for P5.12b. Next: P5.13.
-
-## Deviations from contract/ADR (file:line each)
-
-- None.
-
-## Advisor decisions (date, item, question, answer verbatim)
-
-The P5.12b ruling (2026-10-16) is verbatim in `docs/plans/STATUS.md`.
-
-## Exact next step (one item ID)
-
-P5.13 (⚑ mandatory consultation), after the closing commit's CI run is green.
-
-## Earlier notes of this directory
-
-git status --porcelain --untracked-files=all (before the commit): modified `.github/copilot-instructions.md`,
-`ARCHITECTURE.md`, `CHANGELOG.md`, `docs/plans/{STATUS,findings-ledger}.md`, `src/test/e2e/v2-sidebar.e2e.test.ts`;
-new `src/test/e2e/{v2Support.ts,STATUS.md}` and `src/test/e2e/v2-{extension,commands,panel,settings-persistence,install-flow,update-flow,file-watcher,source-management}.e2e.test.ts`
-(all belong to P5.12a)
-
-Item: **P5.12a**: the nine legacy extension-host e2e files ported to the 2.0 entry. Eight new `v2-*` files, one per
-legacy file; the legacy `sidebar.e2e.test.ts` is folded into the existing `v2-sidebar.e2e.test.ts` (its missing
-test: Open Full View opens the main panel). `v2Support.ts` holds the shared steps: activation, a bounded `until`,
-`dotnet` through `execFile` with an argument vector, the main panel's tabs by view type (`nugetManager`), closing
-every editor, and the fixture project with its write-back. The ports assert what the legacy files left to fixed
-sleeps or `assert.ok(true)`: the panel is one tab titled nUIget, opening it again reveals it, closed it opens again;
-the noun-first add, update and remove reach the project file (polled); `nuget.config` is unchanged after the sources
-suite and the SDK lists nuget.org from it.
-
-## Verified by running
+*From the note at P5.12a:*
 
 ```text
 baseline at 3a1969c (P5.11, CI run 38735710769 green on all 11 jobs): tsc 0 · eslint 0 · vitest 159 files, 3235 passed, 4 skipped (SDK)
@@ -122,6 +101,15 @@ $ diff before.csproj TestProject.csproj
 
 ## Done (tested)
 
+*From the note at commit ca8b6e8 (P5.12b block d; parent of the closing commit):*
+
+- The map rows of the nine legacy e2e files and `index.ts`.
+
+
+- Deleting the legacy tests: P8.2, per the map and its ⚑ consultation (the L2 hook refuses any deletion of a test file).
+
+*From the note at P5.12a:*
+
 - `v2-extension.e2e.test.ts` (from `extension`): installed, activates, every contributed command registered and none
   of the 1.x entry.
 - `v2-commands.e2e.test.ts` (from `commands`): openManager and sidebar.openFullView open one main panel tab;
@@ -135,15 +123,28 @@ $ diff before.csproj TestProject.csproj
 - `v2-sidebar.e2e.test.ts`: new `Open Full View from the sidebar opens the main panel (P5.12a, port of
   sidebar.e2e.test.ts)`; its helpers moved to `v2Support.ts`; its teardown also closes the editors.
 
-## Done (untested)
 
 - What the lists show after a CLI change: an extension-host test does not see the webviews (harness and UI suite).
 
+## Done (untested)
+
 ## Not started
+
+*From the note at commit ca8b6e8 (P5.12b block d; parent of the closing commit):*
+
+- None for P5.12b. Next: P5.13.
+
+*From the note at P5.12a:*
 
 - Retiring the legacy e2e files and `src/test/e2e/index.ts` (unused: `.vscode-test.mjs` selects the files): P5.12b.
 
 ## Deviations from contract/ADR (file:line each)
+
+*From the note at commit ca8b6e8 (P5.12b block d; parent of the closing commit):*
+
+- None.
+
+*From the note at P5.12a:*
 
 - The update flow names its new version instead of updating to the latest: `dotnet package add` without
   `--version` and with `--no-restore` writes `Version="*"` (probe above; new 2.0 gotcha row).
@@ -151,9 +152,20 @@ $ diff before.csproj TestProject.csproj
 
 ## Advisor decisions (date, item, question, answer verbatim)
 
+*From the note at commit ca8b6e8 (P5.12b block d; parent of the closing commit):*
+
+The P5.12b ruling (2026-10-16) is verbatim in `docs/plans/STATUS.md`.
+
+*From the note at P5.12a:*
+
 - None for P5.12a (no stop-and-ask trigger; the ⚑ of P5.12 is for deleting a legacy test, which this row does not do).
 
 ## Exact next step (one item ID)
 
-P5.12b, after the P5.12a CI run is green.
+*From the note at commit ca8b6e8 (P5.12b block d; parent of the closing commit):*
 
+P5.13 (⚑ mandatory consultation), after the closing commit's CI run is green.
+
+*From the note at P5.12a:*
+
+P5.12b, after the P5.12a CI run is green.

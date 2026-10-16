@@ -113,6 +113,7 @@ npm run watch        # Build (watch mode) — F5 to launch Extension Host
 npm run watch:v2     # Same for the 2.0 entry points (launch configuration "Run 2.0"); not together with watch
 npm run package:vsix # Runs: npm ci → check-types → test → lint+bundle → vsce package
 npm run check:vsix   # After a build: fails if the VSIX would contain an unexpected file or lack a required one
+npm run docs:check   # The 2.0 documents against the tree, then docs:protocol:check (CI's Lint job)
 ```
 
 ### Testing
@@ -230,24 +231,40 @@ Seeded from the execution plan (decisions D1–D13, Appendix B). Item IDs name w
 | A rejected promise awaited after the host answers | Vitest reports an unhandled rejection as an error and exits non-zero while every test passes; a `grep` of the `Tests` line hides it. Attach the handler when the promise is created (`const outcome = slice.add(…).then(() => 'ok', error => error.message)`), and read a gate's exit code, not only its counts. |
 | Harness: a read that cannot be held | In `src/test/harness` a computation of `installed/get` can be held at `nuget config paths` only (`dotnetCalls.configPaths(dir)`): the SDK probe is cached per directory after its first answer. A resource that the coordinator has cached is answered without any `dotnet` call, so set the hold before the first surface is resolved, or invalidate first (`refresh`). A scenario waits with `settle`/`expectState` and moves the clock with `advance`; `vi.waitFor` advances the fake clock by its interval on every check, so advance explicitly past a watcher debounce before asserting that nothing happened earlier. |
 | A cached promise bound to one caller's signal | `evaluator.ts` shares one in-flight promise per revision; never pass a caller's signal into a shared computation that later callers join, the coordinator aborts stale ones (N79). Reject an already-aborted caller before starting. |
+| A document names something that does not exist | `npm run docs:check` (the Lint job) runs `scripts/check-docs-drift.mjs`, then `docs:protocol:check`: the 2.0 section of ARCHITECTURE.md, the interaction model, this 2.0 gotcha table and README.md may name only messages of `src/protocol/messages.ts`, settings, commands, views and context keys of `package.json`, and paths that exist; the README tables of settings and commands follow the manifest, and the module map has a row per 2.0 module. Fix the document or the tree, never the script. |
 
-## 1.x gotchas (removed at P8)
+### Tooling (kept after P8.2)
 
-These rows describe the legacy architecture and the shared tooling. P8.2 deletes the section together with
-the legacy code; before that, P7.5 reviews which tooling rows still hold for 2.0.
+Rows of the shared tooling that hold for 2.0 as well, moved here from the 1.x section at P7.5c (each checked against
+`package.json`, `vitest.config.mts`, `.vscodeignore` and `eslint.config.mjs`). The 2.0 UI suite takes its own short
+storage path (`npm run test:ui:v2 -- --storage /tmp/nuiget-ui-v2`).
 
-### Known Issues
-| Issue | Status |
-|-------|--------|
+| Issue | Solution |
+|-------|----------|
 | Dependency vulnerability status is time-sensitive | `@vscode/test-cli` and `@vscode/test-electron` are installed for extension-host E2E tests. **Run `npm audit` when assessing current vulnerabilities; do not infer a clean audit from this document.** |
 | TypeScript compiler compatibility | Keep TypeScript 6 while `typescript-eslint` declares `<6.1.0`; do not force TypeScript 7 past the parser's peer range. |
-| MSW compatibility | Keep the latest MSW 2.x while `@vitest/mocker` declares an MSW 2 peer dependency. Validate `npm ls --all` after packaging, which runs another install and may reintroduce peer conflicts. |
 | `eslint-plugin-react-hooks` peer dep | Version 7.1.1 supports ESLint 10; no peer override is needed. |
 | Test CLI's Mocha runs inside the extension host | `@vscode/test-cli` loads Mocha with `require()` inside the VS Code extension host, which is Node 18 on the minimum supported VS Code 1.85. It must therefore keep its own Mocha 11; Mocha 12 is ESM-only and cannot load there. Do not add an `overrides` entry that points the test CLI at the direct `mocha` dependency (that one is for ExTester, which runs on the toolchain's Node). The `E2E (1.85.0)` CI job is the guard. `npm audit` reports four findings through Mocha 11's dependencies; they are development-only and never ship in the VSIX. |
 | VS Code declarations | Pin `@types/vscode` to `engines.vscode`'s minimum API version; a caret silently permits newer APIs unavailable to supported users. |
 | macOS UI-test IPC socket path | ExTester storage under a long session path exceeds the Unix socket limit. Pass a short temporary directory with `npm run test:ui -- --storage /tmp/nuiget-ui`; reuse downloads and clean only task-created paths. |
-| Typed backend message routing | `PanelRequestMessage` and `SidebarRequestMessage` in `NuGetTypes.ts` are discriminated unions used by both backend message handlers. Extend these contracts for new requests; do not reintroduce an untyped `WebviewMessage`. ESLint turns off `no-explicit-any` and `no-non-null-assertion` in test files via override in `eslint.config.mjs`. |
 | CI and `package:vsix` use `npm ci` | `npm ci --no-audit --no-fund` installs exactly what `package-lock.json` records (ADR-000). The earlier `npm install` exception existed for `@emnapi/*` optional dependencies that are no longer in the lockfile. If `npm ci` reports that the lockfile is out of sync, regenerate it with `npm install --package-lock-only` and commit it; never switch CI back to `npm install`. Locally, `npm run package:vsix` therefore reinstalls `node_modules` on every run. |
+| VS Code API not available in tests | `vitest.config.mts` aliases `vscode` to `src/test/__mocks__/vscode.ts`. Don't import `vscode` directly in test files — the alias handles it. |
+| Frontend tests need jsdom setup | `src/test/setup-frontend.ts` imports `@testing-library/jest-dom/vitest` matchers and shims `acquireVsCodeApi`. Added automatically for frontend project. |
+| `coverage/` inflates VSIX | `.vscodeignore` excludes `coverage/**`. Don't remove this exclusion. |
+| Test file ESLint rules | `no-explicit-any` and `no-non-null-assertion` are turned OFF for test files (`src/**/*.test.{ts,tsx}`, `src/test/**/*.{ts,tsx}`) in `eslint.config.mjs`. Don't add these rules back for tests. |
+| Benchmarks run in backend project only | npm bench scripts select Vitest 5's derived `backend (bench)` project. Keep the wrapper in `src/test/benchmarks/run.mjs`; removed `--compare`/`--outputJson` flags do not work in Vitest 5. |
+| `benchmarks/baseline.json` is committed | Regenerate with `npm run bench:save` after performance-affecting changes. CI compares PRs against this baseline. |
+
+## 1.x gotchas (removed at P8)
+
+These rows describe the legacy architecture. P7.5c moved the tooling rows that still hold for 2.0 to "Tooling
+(kept after P8.2)" above; P8.2 deletes this section together with the legacy code.
+
+### Known Issues
+| Issue | Status |
+|-------|--------|
+| MSW compatibility | Keep the latest MSW 2.x while `@vitest/mocker` declares an MSW 2 peer dependency. Validate `npm ls --all` after packaging, which runs another install and may reintroduce peer conflicts. |
+| Typed backend message routing | `PanelRequestMessage` and `SidebarRequestMessage` in `NuGetTypes.ts` are discriminated unions used by both backend message handlers. Extend these contracts for new requests; do not reintroduce an untyped `WebviewMessage`. ESLint turns off `no-explicit-any` and `no-non-null-assertion` in test files via override in `eslint.config.mjs`. |
 
 ### VS Code Extension
 | Issue | Solution |
@@ -406,15 +423,9 @@ the legacy code; before that, P7.5 reviews which tooling rows still hold for 2.0
 | Issue | Solution |
 |-------|----------|
 | UI tests leak browse state | Use `openNuGetPanelWebview()` to reset search and select Installed before assertions. Replace controlled input text with `typeIntoTestId()` (Command+A on macOS, Control+A elsewhere); never hardcode Ctrl+A. |
-| VS Code API not available in tests | `vitest.config.mts` aliases `vscode` to `src/test/__mocks__/vscode.ts`. Don't import `vscode` directly in test files — the alias handles it. |
-| Frontend tests need jsdom setup | `src/test/setup-frontend.ts` imports `@testing-library/jest-dom/vitest` matchers and shims `acquireVsCodeApi`. Added automatically for frontend project. |
-| `coverage/` inflates VSIX | `.vscodeignore` excludes `coverage/**`. Don't remove this exclusion. |
-| Test file ESLint rules | `no-explicit-any` and `no-non-null-assertion` are turned OFF for test files (`src/**/*.test.{ts,tsx}`, `src/test/**/*.{ts,tsx}`) in `eslint.config.mjs`. Don't add these rules back for tests. |
 | Singleton `resetInstance()` | `CredentialService.resetInstance()` and `Http2Client.resetInstance()` exist for test isolation. `instance` fields are typed `Type \| undefined` (not `Type`). |
 | Benchmarks mock HTTP at NuGetService level | Service benchmarks spy on `fetchJson`/`fetchJsonWithDetails` directly (not MSW). MSW can't intercept Http2Client's HTTP/2 or custom HTTPS agent. Use `mockServiceHttp(service)` from `setup.ts`. |
-| Benchmarks run in backend project only | npm bench scripts select Vitest 5's derived `backend (bench)` project. Keep the wrapper in `src/test/benchmarks/run.mjs`; removed `--compare`/`--outputJson` flags do not work in Vitest 5. |
 | WorkspaceCache spam in benchmarks | `[WorkspaceCache] Cache not initialized` warnings in stderr are expected. The cache gracefully returns early — doesn't block. |
-| `benchmarks/baseline.json` is committed | Regenerate with `npm run bench:save` after performance-affecting changes. CI compares PRs against this baseline. |
 
 # Debugging Workflow
 1. Add temporary `console.log()` with distinctive prefix (e.g., `[DEBUG-XYZ]`)

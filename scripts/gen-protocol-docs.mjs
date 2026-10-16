@@ -44,9 +44,16 @@ function stripCommentMarkers(comment) {
     return comment.replace(/^\/\/\s*|^\/\*+\s*|\s*\*\/$/g, '').replace(/\s+/g, ' ').trim();
 }
 
-/** JSDoc text plus trailing `// …` comments on the member line. */
+/** A trailing `// main`, `// sidebar` or `// sidebar → main` names the surface a request belongs to. */
+const SURFACE_MARKER = /^(main|sidebar|sidebar → main)$/;
+
+/**
+ * JSDoc text plus trailing `// …` comments on the member line, and the surface marker among those comments
+ * (`both` when the member has none).
+ */
 function collectNotes(member, sourceFile) {
     const notes = [];
+    let surface = 'both';
     for (const doc of ts.getJSDocCommentsAndTags(member)) {
         if (ts.isJSDoc(doc) && doc.comment) {
             notes.push(ts.getTextOfJSDocComment(doc.comment) ?? '');
@@ -54,9 +61,14 @@ function collectNotes(member, sourceFile) {
     }
     const text = sourceFile.getFullText();
     for (const range of ts.getTrailingCommentRanges(text, member.end) ?? []) {
-        notes.push(stripCommentMarkers(text.slice(range.pos, range.end)));
+        const comment = stripCommentMarkers(text.slice(range.pos, range.end));
+        if (SURFACE_MARKER.test(comment)) {
+            surface = comment;
+        } else {
+            notes.push(comment);
+        }
     }
-    return notes.map((note) => note.replace(/\s+/g, ' ').trim()).filter(Boolean).join(' ');
+    return { notes: notes.map((note) => note.replace(/\s+/g, ' ').trim()).filter(Boolean).join(' '), surface };
 }
 
 /** The last `// Group` line comment directly above the member, without any parenthetical explanation. */
@@ -94,13 +106,15 @@ function requestRows(checker, sourceFile) {
         if (!parts.payload || !parts.result) {
             throw new Error(`RequestMap member ${memberName(member)} must declare payload and result`);
         }
+        const { notes, surface } = collectNotes(member, sourceFile);
         return {
             group,
             name: memberName(member),
+            surface,
             payload: parts.payload,
             result: parts.result,
             chunk: parts.chunk ?? '',
-            notes: collectNotes(member, sourceFile),
+            notes,
         };
     });
 }
@@ -113,7 +127,7 @@ function eventRows(checker, sourceFile) {
         return {
             name: memberName(member),
             payload: typeText(checker, member.type, member),
-            notes: collectNotes(member, sourceFile),
+            notes: collectNotes(member, sourceFile).notes,
         };
     });
 }
@@ -149,13 +163,13 @@ function render(requests, events) {
         'Every request carries an `id`; the host answers with exactly one terminal response (ok or error)',
         'per id, optionally preceded by stream chunks of the listed chunk type. Events flow host → webview',
         'without correlation. Both webviews share the same maps; surface-specific requests are rejected with',
-        '`unsupported` elsewhere.',
+        '`unsupported` elsewhere. The Surface column names the webview a request belongs to (`both` for the shared ones).',
         '',
         `## Requests (${requests.length})`,
         '',
         table(
-            ['Group', 'Request', 'Payload', 'Result', 'Chunk', 'Notes'],
-            requests.map((row) => [cell(row.group), code(row.name), code(row.payload), code(row.result), code(row.chunk), cell(row.notes)]),
+            ['Group', 'Request', 'Surface', 'Payload', 'Result', 'Chunk', 'Notes'],
+            requests.map((row) => [cell(row.group), code(row.name), cell(row.surface), code(row.payload), code(row.result), code(row.chunk), cell(row.notes)]),
         ),
         '',
         `## Events (${events.length})`,
