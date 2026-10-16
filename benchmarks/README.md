@@ -36,9 +36,9 @@ The benchmarks of 2.0 sit next to the module they measure, as `<module>.bench.ts
 - `src/webview/shared/search/parseSearchQuery.bench.ts` — the parser of the unified search box
 - `src/webview/main/features/details/markdown.bench.ts` — README rendering (jsdom)
 
-The 1.x benchmarks in `src/test/benchmarks/*.bench.ts` (other than the runner's `benchmark.ts`) are deleted with the
-1.x code at P8.2b. Every `src/**/*.bench.ts` is run; `tsconfig.json` leaves the benches out of the extension build and
-`tsconfig.vitest.json` type-checks the 2.0 ones.
+The 1.x benchmarks were deleted with the 1.x code at P8.2; `src/test/benchmarks` keeps only the runner helper
+`benchmark.ts`, its test and `run.mjs`. Every `src/**/*.bench.ts` is run; `tsconfig.json` leaves the benches out of the
+extension build and `tsconfig.vitest.json` type-checks all of them.
 
 ## Adding a benchmark
 
