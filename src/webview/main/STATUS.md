@@ -1,4 +1,4 @@
-# STATUS — src/webview/main   commit 42c917b (P9.2 closed; parent of the P9.3 commit)   2026-10-16T21:00:00Z
+# STATUS — src/webview/main   commit df2dedb (P9.3; its parent 42c917b closed P9.2)   2026-10-16T21:00:00Z
 
 git status --porcelain --untracked-files=all (before the commit): modified `.github/copilot-instructions.md`,
 `ARCHITECTURE.md`, `CHANGELOG.md`, `docs/plans/STATUS.md`, `docs/ux/interaction-model.md`,
@@ -61,6 +61,17 @@ npm run package:vsix, npm run test:ui → SKIPPED locally: no host or packaging 
 ## Done (untested)
 
 - None in jsdom; the rendering is checked in the UI job's screenshots after the push.
+
+## Visual check (CI run 38963229794 on df2dedb, 10 jobs green, 12 PNGs)
+
+- viewed: main-installed-single.png: `Installed 2` tab; `DIRECT PACKAGES (2)` header with its chevron; two-line
+  rows 67 px apart with the Newtonsoft rocket and the Serilog icon in the 32 px column, `13.0.2 ✓ James
+  Newton-King`, no description line; current row with the 3 px accent.
+- viewed: main-installed-all.png: `TESTPROJECT.CSPROJ (2)` rows with icons and authors; `UTILITY.CSPROJ (1)` with
+  `provisional` and the bundled default icon (no lite metadata for that project yet).
+- viewed: main-installed-single-light.png: same under Light Modern; Verified marks in the link colour.
+- viewed: main-installed-single-hc.png: Dark High Contrast; check boxes bordered; the Newtonsoft icon is a black
+  rocket on the black background (the package's own image; 1.x drew it the same way).
 
 ## Not started
 
