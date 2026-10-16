@@ -1,13 +1,13 @@
 /*
- * The search box of both surfaces (SearchBox.tsx): the box keeps the class its surface gives it; the list of
- * prefixes and suggestions hangs under it, over the content, as wide as the box.
+ * The search box of both surfaces (SearchBox.tsx): the box keeps the class its surface gives it; the popup with the
+ * prefixes, the suggestions or the versions hangs under it, over the content, as wide as the box.
  */
 
 .nuiget-search-box {
     position: relative;
 }
 
-.nuiget-search-options {
+.nuiget-search-popup {
     position: absolute;
     z-index: var(--nuiget-z-popover);
     top: 100%;
@@ -22,7 +22,26 @@
     background: var(--nuiget-color-widget-bg);
     box-shadow: 0 2px 8px var(--nuiget-color-shadow);
     color: var(--nuiget-color-widget-fg);
-    list-style: none;
+}
+
+/* The versions level: the suggestion it belongs to; a click goes back to the suggestions. */
+.nuiget-search-popup-header {
+    display: flex;
+    align-items: center;
+    min-height: var(--nuiget-target-min);
+    padding: 0 var(--nuiget-space-3);
+    color: var(--nuiget-color-fg-muted);
+    font-weight: 600;
+    cursor: pointer;
+}
+
+/* The name of the source over its suggestions, when they come from two or more sources (1.x). */
+.nuiget-search-group-header {
+    padding: var(--nuiget-space-2) var(--nuiget-space-3) var(--nuiget-space-1);
+    color: var(--nuiget-color-fg-muted);
+    font-size: var(--nuiget-font-size-sm);
+    font-weight: 600;
+    text-transform: uppercase;
 }
 
 .nuiget-search-option {
@@ -45,11 +64,22 @@
     color: var(--nuiget-color-list-active-fg);
 }
 
-.nuiget-search-option-source {
+/* A row that is no choice: searching, loading the versions, an error. */
+.nuiget-search-option--disabled,
+.nuiget-search-option--disabled:hover {
+    background: none;
     color: var(--nuiget-color-fg-muted);
-    font-size: var(--nuiget-font-size-sm);
+    cursor: default;
 }
 
-.nuiget-search-option--active .nuiget-search-option-source {
+.nuiget-search-option--version {
+    padding-inline-start: var(--nuiget-space-5);
+}
+
+.nuiget-search-option-expand {
+    color: var(--nuiget-color-fg-muted);
+}
+
+.nuiget-search-option--active .nuiget-search-option-expand {
     color: inherit;
 }

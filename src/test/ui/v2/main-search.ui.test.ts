@@ -102,8 +102,15 @@ describe('2.0 main panel: browse', () => {
         await search.sendKeys(Key.chord(selectAllKey, 'a'), Key.BACK_SPACE, 'Serilog');
         // Asked 150 ms after the last key while the box has focus; the list closes when the box loses it.
         const suggestions = await findByTestId('search-suggestions', 60_000);
-        await poll(async () => ((await suggestions.findElements(By.css('[role="option"]'))).length > 0 ? true : undefined), 'a suggestion', 60_000);
+        // The loading row is an option too, a disabled one.
+        await poll(async () => ((await suggestions.findElements(By.css('[role="option"]:not([aria-disabled="true"])'))).length > 0 ? true : undefined), 'a suggestion', 60_000);
         await screenshot('main-quicksearch-open');
+
+        // The versions level of the first suggestion, asked of its source.
+        await search.sendKeys(Key.ARROW_DOWN, Key.ARROW_RIGHT);
+        await poll(async () => ((await (await findByTestId('search-suggestions', 10_000)).findElements(By.css('.nuiget-search-option--version'))).length > 0 ? true : undefined), 'a version', 60_000);
+        await screenshot('main-quicksearch-versions');
+        await search.sendKeys(Key.ARROW_LEFT);
 
         await search.sendKeys(Key.chord(selectAllKey, 'a'), Key.BACK_SPACE);
         await waitForTestIdGone('search-suggestions', 10_000);

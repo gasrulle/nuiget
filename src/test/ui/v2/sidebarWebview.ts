@@ -24,6 +24,7 @@ export type ScreenshotState =
     | 'main-browse-results'
     | 'main-browse-details'
     | 'main-quicksearch-open'
+    | 'main-quicksearch-versions'
     | 'main-details-readme'
     | 'sidebar-sections'
     | 'sidebar-narrow-200px';

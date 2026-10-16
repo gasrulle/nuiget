@@ -466,7 +466,8 @@ starts; the other slices ask when they have something to ask for.
   by `id@version` (`withMetadata`). A committed source or prerelease change asks the shown text again without
   blanking the list; `sourcesUnavailable` is a flag over the results. The slice also owns quick-search:
   `suggest(text)` sends `search/autocomplete` with the enabled sources (every one under `all`, else the selected
-  one) and sends nothing while the list is unknown or names none; the latest suggestion wins.
+  one) and sends nothing while the list is unknown or names none; the latest suggestion wins. A new `suggest` keeps
+  the groups it shows while it asks (`suggesting`), so the list does not blink between keys (P9.6).
 - `details` (P5.7): the package selected in a main-panel list (`select()`: id, version to show first, source, origin
   `installed`/`updates`/`browse`/`transitive`, owning project; a `transitive` selection asks none of the three
   requests below), the chosen version, and its `package/versions`,
@@ -656,6 +657,13 @@ is why it is not a `Popover`.
   Picking a suggestion and `ui/navigateToPackage` fill the box with the id and search for it exactly; the package
   found becomes the current row. A navigation that names a version (View details of a sidebar row) carries it in
   the search slice (`version`), and the details select that version rather than the latest found (P7.5a). Leaving browse clears the search and cancels its request.
+  The suggestions are grouped per source in the order the answer names them, under a header when two or more
+  sources answered (`role="group"`); while the first answer is on its way a disabled `Searching…` row shows, and later
+  answers replace the list in place (P9.6). ArrowRight on a suggestion asks `package/versions` of the suggestion's
+  source under the committed prerelease flag and shows its five newest versions under a `‹ <id>` header; ArrowLeft
+  goes back, Enter on a version shows the details at that version. Ctrl+Enter installs the highlighted suggestion's
+  newest version (one `package/versions` ask) or the highlighted version through `useInstallAction`, which refuses
+  first, and says why, without a single listed project or for an installed package.
 - **Sidebar.** `@installed <text>` and `@updates <text>` show that section alone, filtered; any other text (also
   `@vulnerable`) is a browse search, 300 ms after the last key from two characters on, or at once on Enter.
   `BrowseResults` (`sidebar-browse-list`) lists compact rows; Enter or the row's button installs the version found

@@ -169,6 +169,12 @@ VERIFY: `grep -n "N85" docs/plans/STATUS.md` shows the ledger row and `grep -n "
   with Serilog.Sinks.Console 6.1.1, restored through the banner; captures `main-transitive-expanded` (moved here from
   `main-installed.ui.test.ts`) and the 13th state `main-transitive-details`. `chooseProject` lives in `mainWebview.ts`.
 
+## P9.6 addition
+
+- `main-search.ui.test.ts` (P9.6, ruling in `src/webview/main/STATUS.md`): the suggestion poll skips disabled options
+  (the `Searching…` row), and the quick-search test presses ArrowDown, ArrowRight and captures the 14th state
+  `main-quicksearch-versions` before ArrowLeft.
+
 ## Exact next step (one item ID)
 
 P9.1.

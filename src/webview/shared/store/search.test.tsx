@@ -179,8 +179,8 @@ describe('search slice: quick-search', () => {
         await hostSays(() => host.event('session/changed', snapshot(2, { selectedSource: OTHER, includePrerelease: true })));
         await act(async () => slice.suggest('ser'));
         expect(host.requests('search/autocomplete')[1].payload).toEqual({ query: 'ser', sources: [{ name: 'Contoso', url: OTHER }], includePrerelease: true });
-        // A new suggest starts empty; clearSuggestions empties it too.
-        expect(text('suggestions')).toBe('none');
+        // A new suggest keeps what it showed while it asks; clearSuggestions empties it.
+        expect(text('suggestions')).toBe('nuget.org:Serilog+Serilog.Sinks.File');
         expect(slice.suggesting).toBe(true);
         await act(async () => slice.clearSuggestions());
         expect(slice.suggesting).toBe(false);

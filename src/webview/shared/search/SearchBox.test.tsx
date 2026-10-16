@@ -3,11 +3,12 @@ import userEvent from '@testing-library/user-event';
 import { axe } from 'jest-axe';
 import { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
-import { SearchBox, type Suggestion } from './SearchBox';
+import { axeRuleOutcome } from '../primitives/testSupport';
+import { SearchBox, type SearchBoxProps, type Suggestion } from './SearchBox';
 
 const PREFIXES = ['@installed', '@updates', '@vulnerable'] as const;
 
-function Harness({ suggestions, onSubmit = vi.fn(), onPick = vi.fn() }: { suggestions?: Suggestion[]; onSubmit?: (value: string) => void; onPick?: (suggestion: Suggestion) => void }) {
+function Harness({ suggestions, onSubmit = vi.fn(), onPick = vi.fn(), extra = {} }: { suggestions?: Suggestion[]; onSubmit?: (value: string) => void; onPick?: (suggestion: Suggestion) => void; extra?: Partial<SearchBoxProps> }) {
     const [value, setValue] = useState('');
     return (
         <>
@@ -22,6 +23,7 @@ function Harness({ suggestions, onSubmit = vi.fn(), onPick = vi.fn() }: { sugges
                 placeholder="Search"
                 testId="box"
                 className="box"
+                {...extra}
             />
             <button type="button">elsewhere</button>
         </>
@@ -92,7 +94,7 @@ describe('SearchBox', () => {
         expect(box()).not.toHaveFocus();
     });
 
-    it('lists suggestions for plain text with their source when several sources answer, and a click picks one', async () => {
+    it('lists suggestions for plain text grouped per source when several sources answer, and a click picks one', async () => {
         const user = userEvent.setup();
         const onPick = vi.fn();
         const suggestions = [{ id: 'Serilog', sourceName: 'nuget.org' }, { id: 'Serilog.Sinks.Console', sourceName: 'nuget.org' }, { id: 'Serilog', sourceName: 'Contoso' }];
@@ -100,7 +102,7 @@ describe('SearchBox', () => {
         await user.type(box(), 'seri');
 
         expect(screen.getByRole('listbox', { name: 'Suggestions' })).toBeInTheDocument();
-        expect(optionTexts()).toEqual(['Serilognuget.org', 'Serilog.Sinks.Consolenuget.org', 'SerilogContoso']);
+        expect(optionTexts()).toEqual(['Serilog', 'Serilog.Sinks.Console', 'Serilog']);
         await user.click(screen.getAllByRole('option')[1]);
         expect(onPick).toHaveBeenCalledWith({ id: 'Serilog.Sinks.Console', sourceName: 'nuget.org' });
         expect(box()).toHaveFocus();
@@ -122,5 +124,91 @@ describe('SearchBox', () => {
         await user.type(box(), '@');
         await user.keyboard('{ArrowDown}');
         expect(await axe(container)).toHaveNoViolations();
+    });
+
+    it('quick search groups by source', async () => {
+        const user = userEvent.setup();
+        const suggestions = [{ id: 'Serilog', sourceName: 'nuget.org' }, { id: 'Serilog.Sinks.Console', sourceName: 'nuget.org' }, { id: 'Serilog', sourceName: 'Contoso' }];
+        const { container } = render(<Harness suggestions={suggestions} />);
+        await user.type(box(), 'seri');
+        const groups = screen.getAllByRole('group');
+        expect(groups.map(group => group.getAttribute('aria-labelledby') && document.getElementById(group.getAttribute('aria-labelledby') as string)?.textContent)).toEqual(['nuget.org', 'Contoso']);
+        expect(screen.getAllByRole('option')).toHaveLength(3);
+        for (const index of [0, 1, 2]) {
+            await user.keyboard('{ArrowDown}');
+            expect(box()).toHaveAttribute('aria-activedescendant', screen.getAllByRole('option')[index].id);
+        }
+        const results = await axe(container);
+        expect(results).toHaveNoViolations();
+        expect(axeRuleOutcome(results, 'aria-required-children')).toBe('passes');
+    });
+
+    it('a loading row while nothing is shown, and the old suggestions stay while the next fetch runs', async () => {
+        const user = userEvent.setup();
+        const onSubmit = vi.fn();
+        const { rerender } = render(<Harness onSubmit={onSubmit} extra={{ pending: true }} />);
+        await user.type(box(), 'seri');
+        const [loading] = screen.getAllByRole('option');
+        expect(loading).toHaveTextContent('Searching…');
+        expect(loading).toHaveAttribute('aria-disabled', 'true');
+        await user.keyboard('{ArrowDown}');
+        expect(box()).not.toHaveAttribute('aria-activedescendant');
+        await user.keyboard('{Enter}');
+        expect(onSubmit).toHaveBeenCalledWith('seri');
+
+        rerender(<Harness onSubmit={onSubmit} suggestions={[{ id: 'Serilog', sourceName: 'nuget.org' }]} extra={{ pending: true }} />);
+        await user.type(box(), 'l');
+        expect(optionTexts()).toEqual(['Serilog']);
+        expect(screen.getByRole('listbox')).toHaveAttribute('aria-busy', 'true');
+    });
+
+    it('ArrowRight asks for the versions and the versions level is a combobox level of its own', async () => {
+        const user = userEvent.setup();
+        const serilog: Suggestion = { id: 'Serilog', sourceName: 'nuget.org' };
+        const onExpand = vi.fn();
+        const onCollapse = vi.fn();
+        const onPickVersion = vi.fn();
+        const onQuickInstall = vi.fn();
+        const handlers = { onExpandSuggestion: onExpand, onCollapseVersions: onCollapse, onPickVersion, onQuickInstall };
+        const { rerender } = render(<Harness suggestions={[serilog]} extra={handlers} />);
+        await user.type(box(), 'seri');
+        await user.keyboard('{ArrowDown}{ArrowRight}');
+        expect(onExpand).toHaveBeenCalledWith(serilog);
+
+        rerender(<Harness suggestions={[serilog]} extra={{ ...handlers, versions: { suggestion: serilog, status: 'loading', versions: [] } }} />);
+        expect(screen.getByRole('option')).toHaveAttribute('aria-disabled', 'true');
+        rerender(<Harness suggestions={[serilog]} extra={{ ...handlers, versions: { suggestion: serilog, status: 'error', versions: [], message: 'timeout' } }} />);
+        expect(screen.getByRole('option')).toHaveTextContent('timeout. Press → to retry.');
+        expect(screen.getByRole('option')).toHaveAttribute('aria-disabled', 'true');
+
+        const versions = ['4.1.0', '4.0.0', '3.1.1', '3.1.0', '3.0.0', '2.12.0'];
+        rerender(<Harness suggestions={[serilog]} extra={{ ...handlers, versions: { suggestion: serilog, status: 'ready', versions } }} />);
+        const list = screen.getByRole('listbox', { name: 'Versions of Serilog' });
+        const options = screen.getAllByRole('option');
+        expect(options.map(option => option.textContent)).toEqual(versions.slice(0, 5));
+        expect(options[0]).toHaveAttribute('aria-selected', 'true');
+        expect(box()).toHaveAttribute('aria-activedescendant', options[0].id);
+        expect(list).toBeInTheDocument();
+        await user.keyboard('{Control>}{Enter}{/Control}');
+        expect(onQuickInstall).toHaveBeenCalledWith(serilog, '4.1.0');
+        await user.keyboard('{ArrowDown}{Enter}');
+        expect(onPickVersion).toHaveBeenCalledWith(serilog, '4.0.0');
+        rerender(<Harness suggestions={[serilog]} extra={{ ...handlers, versions: { suggestion: serilog, status: 'ready', versions } }} />);
+        await user.keyboard('{ArrowLeft}');
+        expect(onCollapse).toHaveBeenCalled();
+    });
+
+    it('Ctrl+Enter on an active suggestion calls onQuickInstall and neither onSubmit nor onPickSuggestion', async () => {
+        const user = userEvent.setup();
+        const serilog: Suggestion = { id: 'Serilog', sourceName: 'nuget.org' };
+        const onSubmit = vi.fn();
+        const onPick = vi.fn();
+        const onQuickInstall = vi.fn();
+        render(<Harness suggestions={[serilog]} onSubmit={onSubmit} onPick={onPick} extra={{ onQuickInstall }} />);
+        await user.type(box(), 'seri');
+        await user.keyboard('{ArrowDown}{Control>}{Enter}{/Control}');
+        expect(onQuickInstall).toHaveBeenCalledWith(serilog, undefined);
+        expect(onSubmit).not.toHaveBeenCalled();
+        expect(onPick).not.toHaveBeenCalled();
     });
 });

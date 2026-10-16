@@ -85,6 +85,10 @@ rm -rf /tmp/nuiget-ui/screenshots dist && npm run test:ui -- --storage /tmp/nuig
 - P9.6 (a) (ruling in `src/webview/main/STATUS.md`): `Row.meta` (Browse downloads after the version, in the
   description); `store/details.tsx` one selection per view (`installed`, `updates`, `browse`) with a stable
   `showView`.
+- P9.6 (b): `store/search.tsx` `suggest()` keeps the groups it shows while it asks (`suggesting`); `search/SearchBox.tsx`
+  groups suggestions per source (`role="group"` with a header from two sources on), a disabled `Searching…` row, the
+  versions level (ArrowRight, ArrowLeft, `‹ <id>` header, five versions, loading and error rows) and Ctrl/Cmd+Enter
+  (`onQuickInstall`); the popup wrapper and its rules in `search.css`.
 
 ## Done (untested)
 

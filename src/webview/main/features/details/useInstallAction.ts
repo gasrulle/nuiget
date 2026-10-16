@@ -14,6 +14,8 @@ export interface InstallRequest {
 
 export interface InstallAction {
     install: (request: InstallRequest) => void;
+    /** False, and the live region says why, when an install of the package cannot start now (before asking its version). */
+    check: (packageId: string) => boolean;
     /** The `cpm/preview` of an install is being asked: the caller's install control waits. */
     asking: boolean;
     /** Stops a preview that is still being asked (another package selected). */
@@ -55,22 +57,26 @@ export function useInstallAction(announce: (message: string) => void): InstallAc
 
     const target = installed.projectPath;
     const result = installed.result;
-    const install = (request: InstallRequest): void => {
-        const { packageId, version, sourceUrl } = request;
+    const check = (packageId: string): boolean => {
         if (target === null) {
             announce('Select a single project to install into.');
-            return;
+            return false;
         }
         if (result === undefined) {
             announce('The packages of the selected project are not listed yet.');
-            return;
+            return false;
         }
         const entry = result.packages.find(candidate => sameId(candidate.id, packageId));
         if (entry !== undefined) {
             announce(`${packageId} is already installed (${entry.resolvedVersion ?? entry.version}).`);
-            return;
+            return false;
         }
-        if (isPackageBusy(target, packageId) || asking) {
+        return !isPackageBusy(target, packageId) && !asking;
+    };
+
+    const install = (request: InstallRequest): void => {
+        const { packageId, version, sourceUrl } = request;
+        if (!check(packageId) || target === null || result === undefined) {
             return;
         }
         if (result.isCpm !== true) {
@@ -114,5 +120,5 @@ export function useInstallAction(announce: (message: string) => void): InstallAc
         }
     };
 
-    return { install, asking, cancel, preview, closePreview, confirmPreview };
+    return { install, check, asking, cancel, preview, closePreview, confirmPreview };
 }

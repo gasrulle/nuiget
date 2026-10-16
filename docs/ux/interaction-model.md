@@ -23,7 +23,7 @@ selectors; sidebar view title (project) and title-bar icons (source/prerelease/r
 | Mode | Trigger | Main panel shows | Sidebar shows |
 |---|---|---|---|
 | `default` | empty box | Tabs **Installed** / **Updates** (with badge) | Sections **Installed** / **Updates** (collapsible, draggable split) |
-| `browse` | plain text + Enter (quick-search suggestions while typing) | Browse results list + details; tab bar hidden | Flat browse results (Enter or 300 ms debounce, min 2 chars); Enter on a row installs it, or, for a package that has a central entry in a CPM project, opens the actions menu (§5) |
+| `browse` | plain text + Enter (quick-search suggestions while typing, grouped per source, with a loading row; ArrowRight lists versions and Ctrl+Enter installs, §5) | Browse results list + details; tab bar hidden | Flat browse results (Enter or 300 ms debounce, min 2 chars); Enter on a row installs it, or, for a package that has a central entry in a CPM project, opens the actions menu (§5) |
 | `installed` | `@installed <filter>` | Installed tab filtered client-side | Installed section filtered |
 | `updates` | `@updates <filter>` | Updates tab filtered | Updates section filtered |
 | `vulnerable` | `@vulnerable` | Installed tab, vulnerable packages only | *(not offered)* |
@@ -150,7 +150,7 @@ project has several and one block per project in All Projects; no version select
 |---|---|
 | `nuiget-app` | Main panel root |
 | `nuiget-sidebar` | Sidebar root |
-| `search-input` / `sidebar-search-input` | Search boxes |
+| `search-input` / `sidebar-search-input`, `search-suggestions` | Search boxes and the list of their prefixes, suggestions or versions |
 | `project-selector`, `source-selector` | Header selectors (main) |
 | `tab-bar`, `installed-tab`, `updates-tab` | Main tabs |
 | `installed-list`, `updates-list`, `browse-list`, `sidebar-installed-list`, `sidebar-updates-list`, `sidebar-browse-list`, `transitive-list`, `transitive-list-<tfm>` | Listboxes |

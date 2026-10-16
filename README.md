@@ -105,8 +105,11 @@ A Visual Studio-style NuGet package manager for VS Code with a modern split-pane
 | Key | Action |
 |-----|--------|
 | `@` | Open the list of filter prefixes |
-| `↑` / `↓` | Move through the prefixes or the quick-search suggestions |
-| `Enter` | Take the highlighted prefix or suggestion; with none highlighted, search for the text in the box |
+| `↑` / `↓` | Move through the prefixes, the quick-search suggestions or, after `→`, the versions |
+| `→` | Main panel: list the five newest versions of the highlighted suggestion |
+| `←` | Back to the suggestions |
+| `Enter` | Take the highlighted prefix, suggestion or version (a suggestion or version shows the package's details); with none highlighted, search for the text in the box |
+| `Ctrl+Enter` (`Cmd+Enter` on macOS) | Main panel: install the highlighted suggestion's newest version, or the highlighted version, into the selected project |
 | `Tab` | Take the highlighted prefix or suggestion |
 | `Escape` | Close the list; with the list closed, clear the box; in an empty box, leave it |
 

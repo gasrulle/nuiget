@@ -15,6 +15,7 @@ import { useSearch } from '../shared/store/search';
 import { useSession, useSessionActions } from '../shared/store/session';
 import { useUpdates } from '../shared/store/updates';
 import { useSearchTyping } from './features/search/useSearchTyping';
+import { CentralUpdateDialog } from './features/updates/CentralUpdateDialog';
 import { SourcesControl } from './features/sources/SourcesControl';
 
 export type MainTab = 'installed' | 'updates';
@@ -118,7 +119,7 @@ export function MainShell({ installed, updates, browse, details }: MainShellProp
     const parsed = parseSearchQuery(query);
     const browsing = parsed.mode === 'browse';
     const [focused, setFocused] = useState(false);
-    const typing = useSearchTyping({ text: query, setText: setQuery, browsing, focused });
+    const typing = useSearchTyping({ text: query, setText: setQuery, browsing, focused, announce });
     // Leaving browse (an empty box, a filter) ends the search and cancels what it still asks.
     const { clear: clearSearch } = useSearch();
     useEffect(() => {
@@ -203,6 +204,12 @@ export function MainShell({ installed, updates, browse, details }: MainShellProp
                     onSubmit={submit}
                     suggestions={typing.suggestions}
                     onPickSuggestion={typing.pick}
+                    pending={typing.suggesting}
+                    versions={typing.expanded}
+                    onExpandSuggestion={typing.expand}
+                    onCollapseVersions={typing.collapse}
+                    onPickVersion={typing.pickVersion}
+                    onQuickInstall={typing.quickInstall}
                     onFocusChange={setFocused}
                 />
             </div>
@@ -220,6 +227,7 @@ export function MainShell({ installed, updates, browse, details }: MainShellProp
                     {details?.({ announce }) ?? <EmptyState message="Select a package to see its details." />}
                 </section>
             </div>
+            <CentralUpdateDialog request={typing.install.preview} onClose={typing.install.closePreview} onConfirm={typing.install.confirmPreview} />
             <LiveStatus message={said.message} repeat={said.count} />
         </main>
     );

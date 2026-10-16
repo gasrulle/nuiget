@@ -1,4 +1,4 @@
-# STATUS — src/webview/main   commit d3ea420 (P9.5 closed; parent of the P9.6 commits)   2026-10-17T00:30:00Z
+# STATUS — src/webview/main   commit fc8b150 (P9.6 commit (a); parent of commit (b))   2026-10-17T01:20:00Z
 
 git status --porcelain --untracked-files=all (before commit (a)): modified `.github/copilot-instructions.md`,
 `ARCHITECTURE.md`, `CHANGELOG.md`, `README.md`, `docs/plans/STATUS.md`, `docs/ux/interaction-model.md`,
@@ -7,6 +7,12 @@ git status --porcelain --untracked-files=all (before commit (a)): modified `.git
 `src/webview/main/features/updates/{UpdatesTab.tsx,AllProjectsUpdates.tsx}`, `src/webview/shared/STATUS.md`,
 `src/webview/shared/primitives/{Row.tsx,Row.test.tsx,primitives.css}`, `src/webview/shared/store/{details.tsx,details.test.tsx}`;
 new `src/webview/main/features/details/useInstallAction.ts`
+
+git status --porcelain --untracked-files=all (before commit (b)): modified `ARCHITECTURE.md`, `README.md`,
+`docs/plans/STATUS.md`, `docs/ux/interaction-model.md`, `src/test/ui/v2/{main-search.ui.test.ts,sidebarWebview.ts,STATUS.md}`,
+`src/webview/main/{MainShell.tsx,STATUS.md}`, `src/webview/main/features/details/useInstallAction.ts`,
+`src/webview/main/features/search/{useSearchTyping.ts,useSearchTyping.test.tsx}`, `src/webview/shared/STATUS.md`,
+`src/webview/shared/search/{SearchBox.tsx,SearchBox.test.tsx,search.css}`, `src/webview/shared/store/{search.tsx,search.test.tsx}`
 
 Item: **P9.6** ⚑ — Browse and quick search (parity audit MB1, MB2, MB5, MB6, MB7, MH10 and the stale details pane; D14-D16),
 by the ⚑ ruling below, in two commits: (a) Browse rows, the one install path, details per view; (b) the quick-search
@@ -27,6 +33,21 @@ rm -rf dist out/esbuild && node esbuild.mjs --production --analyze → dist/exte
 rm -rf /tmp/nuiget-ui/screenshots dist && npm run test:ui -- --storage /tmp/nuiget-ui → exit 0 · 38 passing (1m) · 13 PNGs
 grep -rn "'ops/install'" src/webview/main (no tests) → features/details/useInstallAction.ts only (3 lines)
 grep -rc "nuiget-browse-icon" src → 0 in code (one STATUS note quotes it)
+CI run 38978529457 on fc8b150 → success (UI job green, 13 named states)
+commit (b):
+npx tsc --noEmit 0 · npm run check-types 0 · npx eslint src 0 · npm run lint 0
+npx vitest run --project backend src/test/lint → Tests 131 passed (131) · npm run docs:check → exit 0
+npx vitest run --project frontend src/webview/main/features/search/useSearchTyping.test.tsx, 20 runs in a loop → 20 × 13 passed
+npx vitest run              → exit 0 · Test Files 131 passed (131) · Tests 1959 passed | 9 skipped (1968)
+npm test                    → exit 0 · Tests 1959 passed | 9 skipped (1968) · npm run bench → exit 0
+rm -rf dist out/esbuild && node esbuild.mjs --production --analyze → dist/extension.js 293359 / 322502 ·
+                              dist/webview.js 540338 / 577766 · dist/sidebar.js 325425 / 351245
+rm -rf /tmp/nuiget-ui/screenshots dist && npm run test:ui -- --storage /tmp/nuiget-ui → exit 0 · 38 passing (1m) · 14 PNGs
+                              (local main-quicksearch-versions.png: `‹ Serilog` over 4.4.0…4.1.0, 4.4.0 highlighted)
+grep -rn "'ops/install'" src/webview/main (no tests) → features/details/useInstallAction.ts only
+grep -c "cpm/preview" BrowseList.tsx useSearchTyping.ts → 0, 0 · grep -c 'role="group"' SearchBox.tsx → 1
+grep -c "take:" useSearchTyping.ts → 0 · grep -c main-quicksearch-versions sidebarWebview.ts main-search.ui.test.ts → 1, 1
+git diff --name-only HEAD~1 -- src/webview/sidebar src/protocol src/core src/host src/test/e2e/fixtures .github/workflows → empty
 ```
 
 ## Done (tested)
@@ -50,6 +71,22 @@ grep -rc "nuiget-browse-icon" src → 0 in code (one STATUS note quotes it)
   (the description with downloads, the Verified mark's words, the default icon of a non-`data:` row).
 - Docs (a): interaction model §5 and §7 paragraphs; ARCHITECTURE (Row block, `details` slice, Browse rows, the details
   pane's install path); README Ctrl+Enter row; CHANGELOG Added and Changed; gotcha "A webview install without a version".
+- Commit (b): `SearchBox` groups per source, the `Searching…` row, the versions level and Ctrl/Cmd+Enter; the search
+  slice keeps its groups while it asks; `useSearchTyping` expands (one `package/versions` of the suggestion's source
+  under the committed prerelease flag, five shown), collapses on typing, Enter, a pick or unmount, picks a version
+  into the details and quick-installs through `useInstallAction`; `MainShell` passes the props and renders the hook's
+  `CentralUpdateDialog`.
+- Tests (b): `quick search groups by source`, `a loading row while nothing is shown, and the old suggestions stay while
+  the next fetch runs`, `ArrowRight asks for the versions and the versions level is a combobox level of its own`,
+  `Ctrl+Enter on an active suggestion calls onQuickInstall and neither onSubmit nor onPickSuggestion`
+  (SearchBox.test.tsx); `arrow right expands versions`, `ctrl+enter installs highlighted`, `ctrl+enter into a CPM
+  project with a central entry opens the preview and installs on confirm`, `ctrl+enter under All Projects asks nothing
+  and says why`, `the loading row shows during the first fetch and the suggestions stay while the next one runs`
+  (useSearchTyping.test.tsx).
+- Named rewrites (b): SearchBox.test.tsx `:103` (`['Serilog', 'Serilog.Sinks.Console', 'Serilog']`) and its title
+  ("grouped per source"); search.test.tsx `:184-185` (`nuget.org:Serilog+Serilog.Sinks.File`, keep-while-pending).
+- Docs (b): interaction model `:26` and the test-id row; README search-box keys (`→`, `←`, `Enter`, `Ctrl+Enter`);
+  ARCHITECTURE search slice and the main panel's quick search.
 
 ## Done (untested)
 
@@ -57,8 +94,7 @@ grep -rc "nuiget-browse-icon" src → 0 in code (one STATUS note quotes it)
 
 ## Not started
 
-- Commit (b): the quick-search dropdown (groups, loading row, ArrowRight versions, Ctrl+Enter install), the 14th
-  screenshot state.
+- None of P9.6.
 
 ## Deviations from contract/ADR (file:line each)
 
@@ -70,6 +106,23 @@ grep -rc "nuiget-browse-icon" src → 0 in code (one STATUS note quotes it)
   Ctrl+Enter row is not asserted: making the row current selects it, and the details slice asks its versions.
 - `details pane does not show stale installed package in browse mode` leaves Browse by clearing the box, not Escape:
   focus is on the Browse row, where Escape does nothing.
+- `useInstallAction` gains `check(packageId)` (`useInstallAction.ts:16`): the refusals `install` makes, run by the
+  search box's Ctrl+Enter before it asks `package/versions`, so that under All Projects nothing is asked (DO 13). The
+  ruling's one test `ctrl+enter installs highlighted` is three: the CPM preview and All Projects cases have tests of
+  their own (titles above); the installed-package refusal is in the first.
+
+## Visual check (RUN.md §4)
+
+CI run 38978529457 on fc8b150 (commit (a)), artifact `ui-screenshots`, 13 PNGs:
+
+- viewed: main-browse-results.png: comfortable cards for Newtonsoft.Json; icon in every row (the bundled default
+  where none); line 2 `13.0.4 9325.4M downloads` then the Verified mark and `James Newton-King`; description on
+  line 3; the Installed badge on Newtonsoft.Json; no Verified badge.
+- viewed: main-browse-details.png: Newtonsoft.Json current with the accent bar; the pane shows its details (Installed
+  13.0.2, Update to 13.0.4, Dependencies per framework).
+- viewed: main-quicksearch-open.png: five Serilog suggestions, no source text per row, no group header (one source).
+- viewed: main-installed-single.png: the Installed tab's own selection (Newtonsoft.Json, README).
+- viewed: main-updates.png: the pane reads "Select a package to see its details."; no NUnit.
 
 ## Advisor decisions (date, item, question, answer verbatim)
 
@@ -127,4 +180,4 @@ Files checked (absolute, under /Users/mattias/github/nuiget): .github/agents/arc
 
 ## Exact next step (one item ID)
 
-P9.6 commit (b), after commit (a)'s CI is green.
+P9.7, after commit (b)'s CI is green and its screenshots are viewed.

@@ -176,15 +176,18 @@ export function SearchProvider({ children }: { children: React.ReactNode }): Rea
         setSuggested({ groups: NO_SUGGESTIONS, pending: false });
     }, []);
     const suggest = useCallback((query: string): void => {
-        clearSuggestions();
         const text = query.trim();
         const named = committed === undefined || sources === undefined ? [] : quickSearchSources(sources, committed.selectedSource);
         if (text.length === 0 || named.length === 0 || config?.searchDebounceMode === 'full' || config?.searchDebounceMode === 'off') {
+            clearSuggestions();
             return;
         }
+        // The previous ask goes, its suggestions stay on screen until the new answer (the list does not close between
+        // keystrokes, MB6).
+        suggestion.current?.abort();
         const controller = new AbortController();
         suggestion.current = controller;
-        setSuggested({ groups: NO_SUGGESTIONS, pending: true });
+        setSuggested(previous => ({ groups: previous.groups, pending: true }));
         bus.request('search/autocomplete', { query: text, sources: named, includePrerelease: committed?.includePrerelease ?? false }, { signal: controller.signal }).then(
             ({ result }) => setSuggested({ groups: result.groups, pending: false }),
             () => {
