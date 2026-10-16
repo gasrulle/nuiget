@@ -1,4 +1,4 @@
-# STATUS — src/core/credentials   commit 402acbd (parent of the P2.7 commit)   2026-10-12T17:56:37Z
+# STATUS — src/core/credentials   commit 756dcd1 (P7.5c; parent of the P7.fix-1 commit; earlier sections below as they were)   2026-10-16T12:30:00Z
 
 git status --short src/core/credentials: `?? src/core/credentials/` (belongs to the P2.7 commit, together with
 ` M ARCHITECTURE.md`, ` M CHANGELOG.md`, ` M docs/plans/STATUS.md` and ` M docs/plans/findings-ledger.md`)
@@ -11,6 +11,8 @@ The item is not ⚑; a stop-and-ask went out because its gate cannot hold as wri
 answer below also settles the design points the row leaves open.
 
 ## Verified by running
+
+P7.fix-1 (N83): new test `config: a decryption that times out is not remembered and is asked again` (no code change: the catch in `acquire` logs the redacted warning and returns the transient answer). Gates: see `src/core/sources/STATUS.md`.
 
 ```text
 The gates ran with DOTNET_ROOT set to the SDK directory and NUIGET_SDK_TESTS=1 (N48).
@@ -99,6 +101,8 @@ CI                           → see the tracker row of P2.7
   1.x returned a hint text for it (`CredentialService.ts:372-381`), which the contract has no place for.
 
 ## Deviations from contract/ADR (file:line each)
+
+- P7.fix-1: none; a DPAPI timeout now reaches the existing transient path.
 
 - The row's gate `grep -rn "exec(" src/core` → 0 cannot hold: it also matches `RegExp.prototype.exec(`, called
   14 times in files of other items. By the ruling it is replaced with the three greps recorded above (N55).

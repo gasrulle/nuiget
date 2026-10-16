@@ -1,4 +1,4 @@
-# STATUS — src/core/cli   commit 9f218ea (P7.4 skipped by the owner; parent of the P7.5a commit 1)   2026-10-16T08:50:00Z
+# STATUS — src/core/cli   commit 756dcd1 (P7.5c; parent of the P7.fix-1 commit; earlier sections below as they were)   2026-10-16T12:30:00Z
 
 git status --porcelain --untracked-files=all (before commit 1): modified `docs/plans/STATUS.md`,
 `docs/plans/findings-ledger.md`, `scripts/probe-sdk.mjs`, `src/core/cli/__fixtures__/sdk-probes/10.0.401.json`,
@@ -11,6 +11,8 @@ the inherited duties"). Evidence only: P7.5b applies the ruling's pre-registered
 `SDK probe` job has passed on them. This note replaces the P7.2c note (in this file's history at `e898b91`).
 
 ## Verified by running
+
+P7.fix-1 (N83): `PowerShellResult.timedOut?` is set when the process was killed at `timeoutMs`; `powershell.test.ts` `describes a timeout when the process was killed without output` expects `timedOut: true` (no other assertion changed). Gates: see `src/core/sources/STATUS.md` (npm test 3435 passed | 2 skipped).
 
 ```text
 baseline at 9f218ea (CI run 38860198819 green, 13 of 13): tsc 0 · check-types 0 · eslint 0 · vitest 167 files,
@@ -64,6 +66,8 @@ npm run bench               → exit 0 · Test Files 20 passed (20) · Tests 119
 - P7.5b: the N74 decision from these rows (the ruling's DO 13) after the `SDK probe` job is green on 10.0.402.
 
 ## Deviations from contract/ADR (file:line each)
+
+- P7.fix-1: `PowerShellResult` gained the optional `timedOut` (not frozen; mirrors `DotnetResult.timedOut`).
 
 - None. ADR-004's SDK probe supplement (`docs/adr/004-sdk-probes.md`) does not list the two rows yet; P7.5b adds them
   behind the sentinel.

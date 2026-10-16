@@ -12,6 +12,8 @@ export interface PowerShellResult {
     exitCode: number;
     stdout: string;
     stderr: string;
+    /** Set when the process was killed at `timeoutMs`. */
+    timedOut?: boolean;
 }
 
 /** `child_process.execFile` shape used by the runner (tests inject a recorder). */
@@ -58,6 +60,7 @@ export function runPowerShellEncoded(script: string, options: PowerShellOptions 
                 exitCode: exitCodeFrom(error),
                 stdout,
                 stderr: stderr.length > 0 || !error ? stderr : describeFailure(error, timeoutMs),
+                ...(error?.killed === true ? { timedOut: true } : {}),
             });
         };
         try {

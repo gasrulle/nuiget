@@ -1,5 +1,5 @@
 import * as fs from 'fs';
-import { runPowerShellEncoded, type ExecFileFunction } from '../cli';
+import { DEFAULT_POWERSHELL_TIMEOUT_MS, runPowerShellEncoded, type ExecFileFunction } from '../cli';
 import { attribute, childrenNamed, parseConfigXml, type ConfigElement } from './configXml';
 
 /** The entries of one section in document order. `<clear />` discards what precedes it, in this file and in farther ones. */
@@ -144,12 +144,12 @@ export interface DecryptOptions {
 }
 
 const BASE64 = /^[A-Za-z0-9+/]+={0,2}$/;
-const DECRYPT_TIMEOUT_MS = 5_000;
 
 /**
  * Decrypt a `Password` value of a `nuget.config` with DPAPI. Windows only: elsewhere, and for a value
- * that is not base64 or that cannot be decrypted, the answer is `undefined`. Never rejects, and the
- * value is checked before it becomes part of a script.
+ * that is not base64 or that cannot be decrypted, the answer is `undefined`. Rejects only when PowerShell did not
+ * answer within the budget, so the credential provider treats that as transient; every other failure answers
+ * `undefined`. The value is checked before it becomes part of a script.
  */
 export async function decryptPassword(encrypted: string, options: DecryptOptions = {}): Promise<string | undefined> {
     const platform = options.platform ?? process.platform;
@@ -168,6 +168,9 @@ export async function decryptPassword(encrypted: string, options: DecryptOptions
         '[Console]::OutputEncoding = [System.Text.Encoding]::UTF8',
         '[Console]::Out.Write([System.Text.Encoding]::UTF8.GetString($plain))',
     ].join('; ');
-    const result = await runPowerShellEncoded(script, { platform, execFile: options.execFile, timeoutMs: options.timeoutMs ?? DECRYPT_TIMEOUT_MS });
+    const result = await runPowerShellEncoded(script, { platform, execFile: options.execFile, timeoutMs: options.timeoutMs });
+    if (result.timedOut) {
+        throw new Error(`DPAPI decryption timed out after ${options.timeoutMs ?? DEFAULT_POWERSHELL_TIMEOUT_MS} ms`);
+    }
     return result.exitCode === 0 && result.stdout.length > 0 ? result.stdout : undefined;
 }

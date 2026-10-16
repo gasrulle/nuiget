@@ -326,6 +326,19 @@ describe('DefaultCredentialProvider: URLs, cache and header', () => {
         expect(logger.warn).toHaveBeenCalledWith(`Credential lookup (nuget.config) failed for ${privateUrl}: listing failed, --password [REDACTED]`);
     });
 
+    it('config: a decryption that times out is not remembered and is asked again', async () => {
+        const logger = fakeLogger();
+        const decrypt = vi.fn<(encrypted: string) => Promise<string | undefined>>()
+            .mockRejectedValueOnce(new Error('PowerShell timed out after 10000 ms'))
+            .mockResolvedValueOnce('s3cret');
+        const instance = provider({ logger, decrypt, ...configured({ username: 'alice', password: 'RU5DUllQVEVE', passwordKind: 'encrypted' }) });
+        expect(await instance.getAuthHeader(privateUrl)).toBeUndefined();
+        expect(logger.warn).toHaveBeenCalledWith(`Credential lookup (nuget.config) failed for ${privateUrl}: PowerShell timed out after 10000 ms`);
+        expect(await instance.getAuthHeader(privateUrl)).toBe(basic('alice', 's3cret'));
+        expect(decrypt).toHaveBeenCalledTimes(2);
+        expect(logged(logger)).not.toContain('s3cret');
+    });
+
     it('cache: concurrent calls share one acquisition', async () => {
         let release!: () => void;
         const gate = new Promise<void>(resolve => { release = resolve; });

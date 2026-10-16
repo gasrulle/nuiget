@@ -77,7 +77,7 @@ describe('runPowerShellEncoded', () => {
     it('describes a timeout when the process was killed without output', async () => {
         const execFile = recordingExecFile({ error: { killed: true, signal: 'SIGTERM', message: 'Command failed' } });
         await expect(runPowerShellEncoded('Start-Sleep 60', { platform: 'win32', execFile, timeoutMs: 100 }))
-            .resolves.toEqual({ exitCode: -1, stdout: '', stderr: 'PowerShell timed out after 100 ms' });
+            .resolves.toEqual({ exitCode: -1, stdout: '', stderr: 'PowerShell timed out after 100 ms', timedOut: true });
     });
 
     it('describes output over the limit and a process that could not be started', async () => {

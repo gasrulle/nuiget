@@ -121,10 +121,10 @@ describe('NuGetConfigReader', () => {
 });
 
 describe('decryptPassword', () => {
-    function recorder(reply: { error?: Error & { code?: number }; stdout?: string; stderr?: string } = {}) {
-        const calls: Array<{ file: string; args: readonly string[] }> = [];
-        const execFile: ExecFileFunction = (execFile_file, args, _options, callback) => {
-            calls.push({ file: execFile_file, args });
+    function recorder(reply: { error?: Error & { code?: number; killed?: boolean; signal?: NodeJS.Signals }; stdout?: string; stderr?: string } = {}) {
+        const calls: Array<{ file: string; args: readonly string[]; options: { timeout?: number } }> = [];
+        const execFile: ExecFileFunction = (execFile_file, args, options, callback) => {
+            calls.push({ file: execFile_file, args, options });
             callback(reply.error ?? null, reply.stdout ?? '', reply.stderr ?? '');
             return undefined as never;
         };
@@ -144,6 +144,15 @@ describe('decryptPassword', () => {
         expect(script).toContain("GetBytes('NuGet')");
         expect(script).not.toContain('$null');
         expect(script).not.toContain('catch');
+        // The PowerShell module default budget (N83).
+        expect(calls[0].options.timeout).toBe(10_000);
+    });
+
+    it('dpapi: a timed-out PowerShell rejects instead of answering undefined (N83)', async () => {
+        const { execFile } = recorder({ error: Object.assign(new Error('Command failed'), { killed: true, signal: 'SIGTERM' as const }) });
+        const outcome = decryptPassword('QUJDRA==', { platform: 'win32', execFile });
+        await expect(outcome).rejects.toThrow(/timed out after 10000 ms/);
+        await expect(outcome).rejects.not.toThrow(/QUJDRA/);
     });
 
     it('dpapi: returns undefined off Windows without spawning', async () => {
