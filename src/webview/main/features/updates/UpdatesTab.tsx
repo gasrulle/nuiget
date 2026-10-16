@@ -3,6 +3,7 @@ import type React from 'react';
 import { ALL_PROJECTS, type PackageUpdate } from '../../../../protocol';
 import { IN_PROGRESS, isCentral as isCentralRow, whyNotUpdatable } from '../../../shared/installed/rules';
 import { ArrowUpIcon, Badge, Banner, EmptyState, IconButton, Listbox, Row, Skeleton, Toolbar } from '../../../shared/primitives';
+import { packageIconSrc } from '../../../shared/packageIcon';
 import { useDetailsActions } from '../../../shared/store/details';
 import { useInstalled } from '../../../shared/store/installed';
 import { useOps, useOpsActions } from '../../../shared/store/ops';
@@ -76,7 +77,8 @@ function ProjectUpdates({ filter, announce }: ListView): React.JSX.Element {
     const unsupported = installed.result?.unsupported;
 
     const needle = filter.trim().toLowerCase();
-    const items = useMemo<Item[]>(() => rows.filter(row => row.id.toLowerCase().includes(needle)).map(update => ({ id: update.id, update })), [rows, needle]);
+    // Alphabetical by id, as 1.x listed them (MU9); the stream's rows keep their place while more arrive.
+    const items = useMemo<Item[]>(() => rows.filter(row => row.id.toLowerCase().includes(needle)).sort((a, b) => a.id.localeCompare(b.id)).map(update => ({ id: update.id, update })), [rows, needle]);
     // A bulk update takes the rows shown that are neither centrally managed nor busy.
     const candidates = unsupported ? [] : items.filter(item => !changesCentral(item.id) && !isBusy(item.id)).map(item => item.update);
     const chosen = candidates.filter(update => selected.has(update.id));
@@ -155,7 +157,9 @@ function ProjectUpdates({ filter, announce }: ListView): React.JSX.Element {
         // Empty is not unknown: with a source that could not be checked, no row does not mean no update.
         const empty = updates.sourcesUnavailable
             ? 'Updates could not be checked: no package source answered.'
-            : rows.length === 0 ? 'No updates available.' : `No update matches "${filter.trim()}".`;
+            : rows.length > 0 ? `No update matches "${filter.trim()}".`
+                // Nothing installed is not "up to date" (MU10); an unsupported project lists no packages either.
+                : !unsupported && installed.result !== undefined && installed.result.packages.length === 0 ? 'No packages installed.' : 'No updates available.';
         body = (
             <Listbox
                 items={items}
@@ -177,18 +181,22 @@ function ProjectUpdates({ filter, announce }: ListView): React.JSX.Element {
                     const { update } = item;
                     const busy = isBusy(update.id);
                     const centrallyManaged = isCentral(update.id);
+                    const src = packageIconSrc(update.iconUrl);
                     return (
                         <Row
                             {...placement}
                             itemId={update.id}
                             name={update.id}
-                            version={`${update.installedVersion} → ${update.latestVersion}`}
+                            version={update.installedVersion}
+                            nextVersion={update.latestVersion}
+                            authors={update.authors}
+                            verified={update.verified}
+                            icon={src === undefined ? undefined : <img src={src} alt="" />}
                             density="comfortable"
                             busy={busy}
                             status={busy ? busyStatus(update.id) : undefined}
                             badges={<>
                                 {centrallyManaged ? <Badge label="CPM" title={entryOf(update.id)?.declaration === 'central-override' ? 'Centrally managed; this project overrides the version' : 'Centrally managed'} /> : null}
-                                {update.verified ? <Badge label="Verified" tone="info" title="The package id prefix is reserved by its owner" /> : null}
                             </>}
                             actions={unsupported ? undefined : (
                                 <IconButton label={`Update ${update.id} to ${update.latestVersion}`} tabIndex={-1} data-testid="row-action-update" onClick={() => updateOne(update)}><ArrowUpIcon /></IconButton>

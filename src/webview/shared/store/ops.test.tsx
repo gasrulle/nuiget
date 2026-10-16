@@ -191,6 +191,21 @@ describe('ops slice', () => {
         })).toEqual({ kind: 'update', projectPaths: [B], packageIds: ['Moq'] });
     });
 
+    it('a per-step report keeps every package of the operation busy', () => {
+        const asked = opsReducer(INITIAL_OPS, { type: 'asked', localId: 'local:1', progress: progress('local:1', 'queued', { kind: 'update', projectPaths: [A], packageIds: ['Serilog', 'Moq', 'Newtonsoft.Json'] }) });
+        const named = opsReducer(asked, { type: 'named', localId: 'local:1', opId: 'op1' });
+        // Each step of a bulk update reports the one package it works on.
+        const step = opsReducer(named, { type: 'progress', progress: progress('op1', 'running', { kind: 'update', projectPaths: [A], packageIds: ['moq'], current: 1, total: 3 }) });
+        const restoring = opsReducer(step, { type: 'progress', progress: progress('op1', 'restoring', { projectPaths: [A], packageIds: ['Moq'] }) });
+        for (const state of [step, restoring]) {
+            expect(busyPackages(state).size).toBe(3);
+            expect(state.active.get('op1')?.packageIds).toEqual(['Serilog', 'Moq', 'Newtonsoft.Json']);
+        }
+        expect(restoring.active.get('op1')).toMatchObject({ status: 'restoring', current: 1, total: 3 });
+        const done = opsReducer(restoring, { type: 'completed', outcome: { opId: 'op1', kind: 'update', status: 'completed', projectPath: A, packageId: 'Moq' } });
+        expect(busyPackages(done).size).toBe(0);
+    });
+
     it('naming moves the entry under the operation id and keeps what the host reported first', () => {
         const asked = opsReducer(INITIAL_OPS, { type: 'asked', localId: 'local:1', progress: progress('local:1', 'queued', { kind: 'remove', projectPaths: [A], packageIds: ['Serilog'] }) });
         const reported = opsReducer(asked, { type: 'progress', progress: progress('op9', 'running', { current: 1, total: 2 }) });

@@ -3,6 +3,7 @@ import type React from 'react';
 import type { InstalledResult, PackageUpdate, ProjectUpdatesChunk } from '../../../../protocol';
 import { IN_PROGRESS, isCentral as isCentralRow, whyNotUpdatable } from '../../../shared/installed/rules';
 import { ArrowUpIcon, Badge, Banner, EmptyState, IconButton, Listbox, Row, SectionHeader, Skeleton, Toolbar } from '../../../shared/primitives';
+import { packageIconSrc } from '../../../shared/packageIcon';
 import { useAllProjects } from '../../../shared/store/allProjects';
 import { useDetailsActions } from '../../../shared/store/details';
 import { useOps, useOpsActions } from '../../../shared/store/ops';
@@ -58,6 +59,8 @@ function ProjectUpdatesSection(props: ProjectUpdatesSectionProps): React.JSX.Ele
     const { section, level, rows, loading, sourcesUnavailable, filtered, selected, currentId, revalidating, onRetry, onToggle, onCurrent, onUpdate } = props;
     const { isPackageBusy, active } = useOps();
     const [expanded, setExpanded] = useState(true);
+    // The icons the stream sends after the project chunks; a row's own `iconUrl` comes first.
+    const { icons } = useAllProjects().updates;
     const baseId = useId();
     const titleId = `${baseId}-title`;
     const contentId = `${baseId}-content`;
@@ -106,12 +109,17 @@ function ProjectUpdatesSection(props: ProjectUpdatesSectionProps): React.JSX.Ele
                         const { update } = item;
                         const busy = isPackageBusy(section.projectPath, update.id);
                         const central = isCentralIn(section.installed, update.id);
+                        const src = packageIconSrc(update.iconUrl ?? icons.get(update.id.toLowerCase()));
                         return (
                             <Row
                                 {...placement}
                                 itemId={update.id}
                                 name={update.id}
-                                version={`${update.installedVersion} → ${update.latestVersion}`}
+                                version={update.installedVersion}
+                                nextVersion={update.latestVersion}
+                                authors={update.authors}
+                                verified={update.verified}
+                                icon={src === undefined ? undefined : <img src={src} alt="" />}
                                 density="comfortable"
                                 busy={busy}
                                 status={busy ? busyStatus(update.id) : undefined}
@@ -176,7 +184,8 @@ export function AllProjectsUpdates({ filter, announce }: ListView): React.JSX.El
         installed: all.chunks.get(project.path)?.result,
     }));
     const needle = filter.trim().toLowerCase();
-    const rowsOf = (section: Section): PackageUpdate[] => (section.chunk?.updates ?? []).filter(update => update.id.toLowerCase().includes(needle));
+    // Alphabetical by id, as 1.x listed them (MU9).
+    const rowsOf = (section: Section): PackageUpdate[] => (section.chunk?.updates ?? []).filter(update => update.id.toLowerCase().includes(needle)).sort((a, b) => a.id.localeCompare(b.id));
     const candidatesOf = (section: Section): PackageUpdate[] => (section.installed?.unsupported
         ? []
         : rowsOf(section).filter(update => !changesCentralIn(section.installed, update.id) && !isPackageBusy(section.projectPath, update.id)));

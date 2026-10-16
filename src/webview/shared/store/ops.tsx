@@ -37,6 +37,29 @@ export function isBulkOutcome(outcome: AnyOutcome): outcome is BulkOutcome {
     return 'results' in outcome;
 }
 
+/**
+ * A later report of an operation over what is known of it: status, steps and detail from the report, the projects
+ * and packages as the union of both. A bulk operation reports one package per step; the others stay busy (MU3).
+ * Paths are kept as the host sent them; ids are compared without case and keep their first spelling.
+ */
+function merge(previous: OperationProgress | undefined, report: OperationProgress): OperationProgress {
+    const merged: OperationProgress = { ...previous, ...report };
+    const paths = [...new Set([...(previous?.projectPaths ?? []), ...(report.projectPaths ?? [])])];
+    const ids = new Map<string, string>();
+    for (const id of [...(previous?.packageIds ?? []), ...(report.packageIds ?? [])]) {
+        if (!ids.has(id.toLowerCase())) {
+            ids.set(id.toLowerCase(), id);
+        }
+    }
+    if (previous?.projectPaths !== undefined || report.projectPaths !== undefined) {
+        merged.projectPaths = paths;
+    }
+    if (previous?.packageIds !== undefined || report.packageIds !== undefined) {
+        merged.packageIds = [...ids.values()];
+    }
+    return merged;
+}
+
 export function opsReducer(state: OpsState, action: OpsAction): OpsState {
     if (action.type === 'asked') {
         return { ...state, active: new Map(state.active).set(action.localId, action.progress) };
@@ -50,7 +73,8 @@ export function opsReducer(state: OpsState, action: OpsAction): OpsState {
         active.delete(action.localId);
         if (!state.ended.includes(action.opId)) {
             // Reports of the host may have come first: what they said stands, the call fills in the rest.
-            active.set(action.opId, { ...local, ...state.active.get(action.opId), opId: action.opId });
+            const reported = state.active.get(action.opId);
+            active.set(action.opId, { ...(reported === undefined ? local : merge(local, reported)), opId: action.opId });
         }
         return { ...state, active };
     }
@@ -68,8 +92,8 @@ export function opsReducer(state: OpsState, action: OpsAction): OpsState {
         }
         const active = new Map(state.active);
         if (IN_PROGRESS.has(progress.status)) {
-            // A later report may leave out what an earlier one said (which projects, which packages): keep it.
-            active.set(progress.opId, { ...state.active.get(progress.opId), ...progress });
+            // A later report may name fewer projects or packages than an earlier one (one step of a bulk): keep them all.
+            active.set(progress.opId, merge(state.active.get(progress.opId), progress));
         } else if (!active.delete(progress.opId)) {
             return state;
         }

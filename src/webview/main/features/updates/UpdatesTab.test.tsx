@@ -18,6 +18,11 @@ const installed = (packages: InstalledPackage[]): InstalledResult => ({ projectP
 const update = (id: string, installedVersion: string, latestVersion: string): PackageUpdate => ({ id, installedVersion, latestVersion, sourceUrl: FEED });
 const UPDATES = [update('Serilog', '3.0.0', '3.1.0'), update('Moq', '4.20.0', '4.20.72'), update('Newtonsoft.Json', '13.0.1', '13.0.3')];
 
+// The bundled default icon the host puts on the root; `defaultPackageIcon()` keeps the first value it finds.
+const DEFAULT_ICON = 'https://file+.vscode-resource.vscode-cdn.net/ext/resources/package-icon.png';
+const DATA = 'data:image/png;base64,AAAA';
+document.body.setAttribute('data-package-icon', DEFAULT_ICON);
+
 const hostSays = (say: () => void): Promise<void> => act(async () => {
     say();
     await Promise.resolve();
@@ -40,6 +45,7 @@ async function mountWith(answer: { updates: PackageUpdate[]; sourcesUnavailable?
 }
 
 const optionOf = (id: string): HTMLElement => within(screen.getByTestId(`package-row-${id.toLowerCase()}`)).getByRole('option');
+const iconOf = (row: HTMLElement): string | null | undefined => row.querySelector('.nuiget-row-icon img')?.getAttribute('src');
 const names = (): string[] => {
     const list = screen.queryByTestId('updates-list');
     return list === null ? [] : within(list).queryAllByRole('option').map(element => element.querySelector('.nuiget-row-name')?.textContent ?? '');
@@ -61,7 +67,7 @@ describe('main panel: Updates tab', () => {
         const list = screen.getByTestId('updates-list');
         expect(list).toHaveAttribute('aria-multiselectable', 'true');
         expect(list).toHaveAccessibleName('Updates');
-        expect(names()).toEqual(['Serilog', 'Moq', 'Newtonsoft.Json']);
+        expect(names()).toEqual(['Moq', 'Newtonsoft.Json', 'Serilog']);
         expect(screen.getByTestId('package-row-serilog')).toHaveTextContent('3.0.0 → 3.1.0');
         expect(optionOf('Newtonsoft.Json')).toHaveAccessibleDescription(/Centrally managed/);
         expect(screen.getByTestId('updates-tab')).toHaveAccessibleName(/Updates\s+3/);
@@ -103,8 +109,8 @@ describe('main panel: Updates tab', () => {
         expect(axeRuleOutcome(await axe(document.body), 'aria-dialog-name')).toBe('passes');
         await user.click(screen.getByTestId('confirm-dialog-confirm'));
         expect(host.requests('ops/bulkUpdate').map(sent => sent.payload)).toEqual([{ projectPath: A, packages: [
-            { id: 'Serilog', version: '3.1.0', sourceUrl: FEED },
             { id: 'Moq', version: '4.20.72', sourceUrl: FEED },
+            { id: 'Serilog', version: '3.1.0', sourceUrl: FEED },
         ] }]);
     });
 
@@ -172,7 +178,7 @@ describe('main panel: Updates tab', () => {
     it('says "No updates available" for a complete empty answer, and asks the user to pick a project in All Projects', async () => {
         await mountWith({ updates: [] });
         expect(screen.getByText('No updates available.')).toBeInTheDocument();
-        expect(screen.getByTestId('updates-tab')).toHaveAccessibleName(/Updates\s+0/);
+        expect(screen.getByTestId('updates-tab')).toHaveAccessibleName('Updates');
     });
 
     it('rows of an unsupported project have no action and cannot join a bulk update', async () => {
@@ -207,7 +213,7 @@ describe('main panel: Updates tab', () => {
     describe('All Projects', () => {
         const B = '/w/Lib/Lib.csproj';
 
-        async function mountAll(answer: { sourcesUnavailable?: boolean } = {}, lib: InstalledResult = { projectPath: B, fidelity: 'authoritative', isCpm: false, packages: [pkg('Moq', { version: '4.20.0' })] }): Promise<FakeHost> {
+        async function mountAll(answer: { sourcesUnavailable?: boolean } = {}, lib: InstalledResult = { projectPath: B, fidelity: 'authoritative', isCpm: false, packages: [pkg('Moq', { version: '4.20.0' })] }, icons?: Record<string, string>): Promise<FakeHost> {
             const host = createFakeHost();
             render(<StoreProvider bus={host.bus}><MainShell installed={view => <InstalledTab {...view} />} updates={view => <UpdatesTab {...view} />} /></StoreProvider>);
             await hostSays(() => host.respond(host.requests('session/get')[0], snapshot(1, ALL_PROJECTS)));
@@ -220,6 +226,10 @@ describe('main panel: Updates tab', () => {
             await hostSays(() => host.chunk(stream, { kind: 'start', projects: [{ name: 'App', path: A }, { name: 'Lib', path: B }] }));
             await hostSays(() => host.chunk(stream, { kind: 'project', chunk: { projectPath: A, projectName: 'App', updates: [update('Serilog', '3.0.0', '3.1.0'), update('Newtonsoft.Json', '13.0.1', '13.0.3')] } }));
             await hostSays(() => host.chunk(stream, { kind: 'project', chunk: { projectPath: B, projectName: 'Lib', updates: answer.sourcesUnavailable ? [] : [update('Moq', '4.20.0', '4.20.72')] } }));
+            if (icons !== undefined) {
+                // The icons follow the project chunks and count only before the answer of the request.
+                await hostSays(() => host.chunk(stream, { kind: 'icons', icons }));
+            }
             await hostSays(() => host.respond(stream, { projectPaths: [A, B], ...answer }));
             await userEvent.setup().click(screen.getByTestId('updates-tab'));
             return host;
@@ -255,6 +265,14 @@ describe('main panel: Updates tab', () => {
             expect(screen.getByTestId('cpm-preview-dialog')).toBeInTheDocument();
         });
 
+        it('All Projects: rows take the icon of the icons chunk when they carry none, and are sorted by id', async () => {
+            await mountAll({}, undefined, { serilog: DATA });
+            const row = (name: string, id: string): HTMLElement => within(listOf(name)).getByTestId(`package-row-${id.toLowerCase()}`);
+            expect(iconOf(row('app', 'Serilog'))).toBe(DATA);
+            expect(iconOf(row('lib', 'Moq'))).toBe(DEFAULT_ICON);
+            expect(within(listOf('app')).getAllByRole('option').map(option => option.querySelector('.nuiget-row-name')?.textContent)).toEqual(['Newtonsoft.Json', 'Serilog']);
+        });
+
         it('All Projects: an override row updates in its own project alone and is a bulk candidate', async () => {
             const user = userEvent.setup();
             const host = await mountAll({}, { projectPath: B, fidelity: 'authoritative', isCpm: true, packages: [pkg('Moq', { version: '4.20.0', declaration: 'central-override' })] });
@@ -284,5 +302,50 @@ describe('main panel: Updates tab', () => {
             expect(results).toHaveNoViolations();
             expect(axeRuleOutcome(results, 'aria-dialog-name')).toBe('passes');
         });
+    });
+
+    it('updates row shows icon and authors', async () => {
+        await mountWith({ updates: [
+            { ...update('Serilog', '3.0.0', '3.1.0'), iconUrl: DATA, authors: 'Serilog Contributors', verified: true },
+            update('Moq', '4.20.0', '4.20.72'),
+        ] });
+        expect(iconOf(screen.getByTestId('package-row-serilog'))).toBe(DATA);
+        expect(iconOf(screen.getByTestId('package-row-moq'))).toBe(DEFAULT_ICON);
+        expect(optionOf('Serilog')).toHaveTextContent('Serilog Contributors');
+        expect(optionOf('Serilog')).toHaveAccessibleDescription(/Verified: the package id prefix is reserved by its owner/);
+        expect(optionOf('Moq')).not.toHaveAccessibleDescription(/Verified/);
+        // The mark beside the authors says it: no Verified badge as well.
+        expect(screen.getByTestId('package-row-serilog').querySelector('.nuiget-row-badges')?.textContent ?? '').not.toContain('Verified');
+        expect(optionOf('Serilog')).toHaveTextContent('3.0.0 → 3.1.0');
+        expect(optionOf('Serilog').querySelector('.nuiget-row-version-new')).toHaveTextContent('3.1.0');
+    });
+
+    it('updates sorted by id', async () => {
+        await mountWith({ updates: [update('Serilog', '3.0.0', '3.1.0'), update('autofac', '6.0.0', '8.0.0'), update('Moq', '4.20.0', '4.20.72')] });
+        expect(names()).toEqual(['autofac', 'Moq', 'Serilog']);
+    });
+
+    it('all rows busy during update all', async () => {
+        const user = userEvent.setup();
+        const host = await mountWith();
+        await user.click(screen.getByTestId('update-all-button'));
+        await user.click(screen.getByTestId('confirm-dialog-confirm'));
+        const request = host.requests('ops/bulkUpdate')[0];
+        // The host names the operation with every package, then reports one package per step.
+        await hostSays(() => host.chunk(request, { opId: 'op1', status: 'queued', kind: 'update', projectPaths: [A], packageIds: ['Moq', 'Serilog'] }));
+        await hostSays(() => host.chunk(request, { opId: 'op1', status: 'running', kind: 'update', projectPaths: [A], packageIds: ['Moq'], current: 1, total: 2 }));
+        expect(optionOf('Serilog')).toHaveAttribute('aria-busy', 'true');
+        expect(optionOf('Moq')).toHaveAttribute('aria-busy', 'true');
+        expect(screen.getByTestId('update-all-button')).toBeDisabled();
+        expect(screen.getByTestId('update-all-button')).toHaveTextContent('Update all (0)');
+        await hostSays(() => host.respond(request, { opId: 'op1', status: 'completed', results: [], restores: [] }));
+        expect(optionOf('Serilog')).not.toHaveAttribute('aria-busy');
+        expect(optionOf('Moq')).not.toHaveAttribute('aria-busy');
+    });
+
+    it('says "No packages installed." when the project has none, not that it is up to date', async () => {
+        await mountWith({ updates: [] }, A, []);
+        expect(screen.getByText('No packages installed.')).toBeInTheDocument();
+        expect(screen.queryByText('No updates available.')).toBeNull();
     });
 });

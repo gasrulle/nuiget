@@ -55,6 +55,16 @@ describe('main panel shell', () => {
         expect(host.requests('perf/mark').map(request => request.payload.name)).toEqual(['webviewReady', 'firstUsefulRender']);
     });
 
+    it('the Updates tab shows no 0', async () => {
+        const { host } = await mountReady();
+        const row = (id: string) => ({ id, installedVersion: '1.0.0', latestVersion: '2.0.0' });
+        await hostSays(() => host.respond(host.requests('updates/get')[0], { projectPath: A, updates: [row('Serilog'), row('Moq')] }, 1));
+        expect(screen.getByRole('tab', { name: 'Updates 2' })).toBeInTheDocument();
+        await hostSays(() => host.event('resources/invalidated', { scope: { kind: 'project', projectPaths: [A] }, reason: 'file-watcher', generation: 2, keys: [{ key: resourceKeys.updates(A, false), generation: 2 }] }));
+        await hostSays(() => host.respond(host.requests('updates/get')[1], { projectPath: A, updates: [] }, 2));
+        expect(screen.getByRole('tab', { name: 'Updates' })).toBeInTheDocument();
+    });
+
     it('the Installed tab counts the listed packages once the list is ready, and shows no 0', async () => {
         const { host } = await mountReady();
         const listed = (packages: string[]) => ({ projectPath: A, fidelity: 'authoritative' as const, isCpm: false, packages: packages.map(id => ({ id, version: '1.0.0', versionType: 'standard' as const, declaration: 'project' as const })) });

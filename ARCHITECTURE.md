@@ -596,10 +596,14 @@ builds it into `dist/webview.js` and, because the entry imports `../shared/token
 
 `src/webview/main/features/updates` is the Updates tab (P5.5), handed to the shell as
 `updates={view => <UpdatesTab {...view} />}`; the shell shows the count on the tab only when the answer is
-complete (not while loading, not with `sourcesUnavailable`).
+complete (not while loading, not with `sourcesUnavailable`, never `0`).
 
-- **List.** One multi-selectable list (`updates-list`) of the `updates` slice's rows, `installed → latest` as
-  each row's version, the `CPM` and `Verified` badges, and `row-action-update` per row. Enter or the button sends
+- **List.** One multi-selectable list (`updates-list`) of the `updates` slice's rows, sorted by id: icon, authors
+  and the Verified mark from the answer (P9.4; in All Projects the `icons` chunk when a row carries no icon),
+  `installed → latest` with the new version marked (`nextVersion`), the `CPM` badge, and `row-action-update` per
+  row. A project with no packages says "No packages installed.", not "No updates available.". Every row of a bulk
+  update stays busy until it ends: the ops slice keeps the union of the projects and packages an operation
+  reported, so a per-step report does not drop the others. Enter or the button sends
   `ops/update` with the row's `sourceUrl`; the row is busy from the request on and leaves with the host's next
   list. `@updates <text>` filters by id.
 - **Bulk flow.** `select-all-button` and `update-all-button` ("Update all (n)" or "Update selected (n)", centrally

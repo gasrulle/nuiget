@@ -74,6 +74,8 @@ rm -rf /tmp/nuiget-ui/screenshots dist && npm run test:ui -- --storage /tmp/nuig
 - P9.3 (ruling in `src/webview/main/STATUS.md`): `Row` `selectable` (`false` draws `.nuiget-row-check--off`, a dashed
   muted empty mark) with the test `a row that cannot join a bulk action shows a muted check mark`;
   `installed/rules.ts` `versionCell` (additive) with `installed/rules.test.ts`.
+- P9.4 (ruling in `src/webview/main/STATUS.md`): `store/ops.tsx` `merge` keeps the union of an operation's projects
+  and packages across its reports (MU3), test `a per-step report keeps every package of the operation busy`.
 
 ## Done (untested)
 
