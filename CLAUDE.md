@@ -16,7 +16,7 @@ the tracker. This section is the short form; when they disagree, the plan and `R
   `npm --version` and `dotnet --list-sdks`; if a tool is missing, stop and report. Never download a toolchain.
 - **One item at a time.** The next item is the first `open` row of the tracker. Edit only the item's files
   (plan §2.1); anything else is a stop-and-ask.
-- **Fixed order per item:** baseline gates (`npx tsc --noEmit`, `npx eslint src`, `npx vitest run`) green
+- **Fixed order per item:** baseline gates (`npx tsc --noEmit`, `npm run check-types`, `npx eslint src`, `npx vitest run`) green
   before editing; do the item; gates again plus `npm test`, `npm run bench` and the item's own gate; docs
   duties; rewrite the directory's `STATUS.md` from the plan's §2.5 template; commit with the `git-commit`
   skill citing item, finding and ADR IDs; push to `labs/2.0`; wait for green CI before the next item.

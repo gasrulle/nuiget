@@ -43,6 +43,7 @@
       "Bash(npm run check:vsix)",
       "Bash(npm run docs:protocol)",
       "Bash(npm run docs:protocol:check)",
+      "Bash(npm run docs:check)",
       "Bash(node scripts/*)",
       "Bash(node esbuild.mjs --v2*)",
       "Bash(npm run watch:v2)",
