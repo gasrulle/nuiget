@@ -807,4 +807,26 @@ describe('SidebarHost', () => {
         expect([packageId, version]).toEqual(['X', '2.0.0']);
         sidebar.dispose();
     });
+
+    it('bulk install from the actions menu leaves out the projects where the package has a central entry and says so', async () => {
+        const { services, workflows } = makeServices();
+        const pick = vi.mocked(vscode.window.showQuickPick);
+        const info = vi.mocked(vscode.window.showInformationMessage);
+        info.mockClear();
+        const { sidebar, send } = resolvedSidebar(services);
+        const request = { packageId: 'X', context: 'browse', projectPath: ALL_PROJECTS, latestVersion: '2.0.0', installedProjects: [] };
+        vi.mocked(services.mutator.previewCpmImpact).mockImplementation(async context => (context.projectPath === libPath ? centralPreview([libPath]) : undefined));
+
+        pick.mockResolvedValueOnce({ label: 'Install latest', action: 'install-latest' } as never);
+        pick.mockImplementationOnce(async items => items as never);
+        expect(await send(request, 'bulk')).toEqual({ handled: true });
+
+        expect(services.mutator.previewCpmImpact).toHaveBeenCalledWith(expect.objectContaining({ projectPath: libPath }), 'X', '2.0.0');
+        expect(info).toHaveBeenCalledWith('Not installed in Lib.csproj: X has a central entry there; install it from the project to see the preview');
+        // One target remains: the single path, without a modal (no preview there), and no bulk install.
+        expect(workflows.bulkInstall).not.toHaveBeenCalled();
+        expect(vscode.window.showWarningMessage).not.toHaveBeenCalled();
+        expect(workflows.single).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ kind: 'install', projectPath: appPath, packageId: 'X', version: '2.0.0' }), expect.anything());
+        sidebar.dispose();
+    });
 });

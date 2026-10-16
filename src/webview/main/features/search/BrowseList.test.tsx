@@ -126,6 +126,21 @@ describe('main panel: browse', () => {
         expect(option('newtonsoft.json')).toHaveAttribute('aria-selected', 'true');
     });
 
+    it('an exact-match search asked with a version selects that version in the details', async () => {
+        const host = await mountReady();
+        await hostSays(() => host.event('ui/navigateToPackage', { packageId: 'Newtonsoft.Json', version: '12.0.1' }));
+        await hostSays(() => host.respond(queries(host)[0], { query: 'Newtonsoft.Json', results: [result('Newtonsoft.Json', '13.0.3')] }));
+
+        expect(option('newtonsoft.json')).toHaveAttribute('aria-selected', 'true');
+        // The details ask for the version the navigation named, not the latest the search found.
+        expect(host.requests('package/metadata').map(request => request.payload)).toEqual([{ packageId: 'Newtonsoft.Json', version: '12.0.1', sourceUrl: FEED }]);
+
+        // A navigation without a version shows the version the search found.
+        await hostSays(() => host.event('ui/navigateToPackage', { packageId: 'Serilog' }));
+        await hostSays(() => host.respond(queries(host)[1], { query: 'Serilog', results: [result('Serilog', '4.1.0')] }));
+        expect(host.requests('package/metadata').at(-1)?.payload).toEqual({ packageId: 'Serilog', version: '4.1.0', sourceUrl: FEED });
+    });
+
     it('an unreachable source is a banner over the results with Retry, never "no results"', async () => {
         const user = userEvent.setup();
         const host = await mountReady();

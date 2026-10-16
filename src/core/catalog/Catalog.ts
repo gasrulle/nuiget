@@ -108,8 +108,8 @@ export class IncompleteResultError<T> extends Error {
 }
 
 const ALL_PROJECTS_CONCURRENCY = 4;
-/** Results of a search that names no `take`; the host always passes one (`nuiget.searchResultLimit`, `handlers.ts:295`). */
-const DEFAULT_SEARCH_TAKE = 50;
+/** Results of a search that names no `take`: the contributed default of `nuiget.searchResultLimit`; the host always passes one (`handlers.ts:295`). */
+const DEFAULT_SEARCH_TAKE = 20;
 const STALE_ATTEMPTS = 3;
 
 export class Catalog {

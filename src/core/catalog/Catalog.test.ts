@@ -764,7 +764,7 @@ describe('Catalog feed reads', () => {
         await catalogWith(rig).catalog.search(appDir, { query: 'lib', includePrerelease: false, sourceUrls: [remote('off').url, 'https://unknown.example/v3/index.json'] }, () => undefined, new AbortController().signal);
 
         expect(rig.serviceIndex.resolve).toHaveBeenCalledWith([], expect.any(AbortSignal));
-        expect(rig.clients.search.search).toHaveBeenCalledWith([], [], expect.objectContaining({ take: 50 }), appDir);
+        expect(rig.clients.search.search).toHaveBeenCalledWith([], [], expect.objectContaining({ take: 20 }), appDir);
     });
 
     it('quickSearch: intersects the asked sources with the directory\'s and answers [] without one', async () => {

@@ -166,9 +166,13 @@ export class SidebarHost extends WebviewHost implements vscode.WebviewViewProvid
                 if (action === 'install-version' && !version) {
                     return false;
                 }
-                const targets = await pickProjectsForInstall(request.packageId, projects, installedIn);
-                if (!targets) {
+                const picked = await pickProjectsForInstall(request.packageId, projects, installedIn);
+                if (!picked) {
                     return false;
+                }
+                const targets = picked.length > 1 ? await this.withoutCentralEntries(picked, projects, request.packageId, version) : picked;
+                if (targets.length === 0) {
+                    return true;
                 }
                 if (targets.length === 1) {
                     if (!await this.confirmCentralChange(targets[0], request.packageId, version)) {
@@ -260,6 +264,35 @@ export class SidebarHost extends WebviewHost implements vscode.WebviewViewProvid
             'Update central version',
         );
         return choice === 'Update central version';
+    }
+
+    /**
+     * A bulk install shows no preview, so it leaves out every target where the package has a central entry, or where
+     * the preview could not be taken, and says which (N76): installing there changes the central version for every
+     * project that uses it, which the single install from that project shows first. Without a version the mutator
+     * refuses each CPM target on its own.
+     */
+    private async withoutCentralEntries(targets: string[], projects: ReadonlyArray<{ name: string; path: string }>, packageId: string, version: string | undefined): Promise<string[]> {
+        if (version === undefined) {
+            return targets;
+        }
+        const kept: string[] = [];
+        const left: string[] = [];
+        for (const target of targets) {
+            let preview;
+            try {
+                preview = await this.services.mutator.previewCpmImpact(await this.services.contextFor(target), packageId, version);
+            } catch (error) {
+                this.services.logger.warn(redact(`Central Package Management preview of ${packageId} failed: ${error instanceof Error ? error.message : String(error)}`));
+                preview = null;
+            }
+            (preview === undefined ? kept : left).push(target);
+        }
+        if (left.length > 0) {
+            const names = left.map(target => projects.find(project => project.path === target)?.name ?? path.basename(target));
+            void vscode.window.showInformationMessage(`Not installed in ${names.join(', ')}: ${packageId} has a central entry there; install it from the project to see the preview`);
+        }
+        return kept;
     }
 
     private async updateTitle(snapshot: SessionSnapshot): Promise<void> {

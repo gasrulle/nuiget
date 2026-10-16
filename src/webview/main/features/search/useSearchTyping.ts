@@ -33,7 +33,7 @@ export interface SearchTyping {
  * `quicksearch` asks the search slice for suggestions 150 ms after the last key from two characters on, while the box
  * has focus; `full` runs the search itself 300 ms after the last key; `off` runs nothing while typing. Enter always
  * searches at once. The timers are the feature's; the requests are the slice's. `ui/navigateToPackage` fills the box
- * with the id and searches for it exactly. On mount it enables the config and sources slices, whose answers the first
+ * with the id and searches for it exactly, carrying the version it names to the details. On mount it enables the config and sources slices, whose answers the first
  * keystroke needs.
  */
 export function useSearchTyping({ text, setText, browsing, focused }: SearchTypingInput): SearchTyping {
@@ -74,15 +74,15 @@ export function useSearchTyping({ text, setText, browsing, focused }: SearchTypi
         return () => clearTimeout(timer.current);
     }, [text, browsing, focused, mode, search, suggest, clearSuggestions]);
 
-    const goTo = useCallback((packageId: string): void => {
+    const goTo = useCallback((packageId: string, version?: string): void => {
         clearTimeout(timer.current);
         clearSuggestions();
         handled.current = packageId;
         setText(packageId);
-        search(packageId, { exactMatch: true });
+        search(packageId, { exactMatch: true, version });
     }, [clearSuggestions, setText, search]);
 
-    useEffect(() => bus.onEvent('ui/navigateToPackage', ({ packageId }) => goTo(packageId)), [bus, goTo]);
+    useEffect(() => bus.onEvent('ui/navigateToPackage', ({ packageId, version }) => goTo(packageId, version)), [bus, goTo]);
 
     const submit = useCallback((value: string): void => {
         clearTimeout(timer.current);

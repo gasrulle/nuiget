@@ -141,8 +141,21 @@ export function InstalledProjectSection(props: InstalledProjectSectionProps): Re
         );
     }
 
+    const badges = (
+        <>
+            {result?.unsupported ? <Badge label="Unsupported" tone="warning" title={result.unsupported.message} /> : null}
+            {result?.fidelity === 'provisional' ? <Badge label="provisional" tone="info" title="Versions come from the project files; a full evaluation is pending." /> : null}
+        </>
+    );
     if (!grouped) {
-        return <div className="nuiget-installed-project">{content}</div>;
+        // The single-project list has no header: the badges stand above it (interaction model §4).
+        const marked = result?.unsupported !== undefined || result?.fidelity === 'provisional';
+        return (
+            <div className="nuiget-installed-project">
+                {marked ? <div className="nuiget-installed-status">{badges}</div> : null}
+                {content}
+            </div>
+        );
     }
     return (
         <section className="nuiget-installed-project nuiget-installed-project--grouped">
@@ -156,12 +169,7 @@ export function InstalledProjectSection(props: InstalledProjectSectionProps): Re
                 level={level}
                 count={result === undefined || (result.unsupported !== undefined && result.packages.length === 0) ? undefined : result.packages.length}
                 busy={revalidating}
-                actions={(
-                    <>
-                        {result?.unsupported ? <Badge label="Unsupported" tone="warning" title={result.unsupported.message} /> : null}
-                        {result?.fidelity === 'provisional' ? <Badge label="provisional" tone="info" title="Versions come from the project files; a full evaluation is pending." /> : null}
-                    </>
-                )}
+                actions={badges}
             />
             <div id={contentId} hidden={!expanded} className="nuiget-installed-project-content">{content}</div>
         </section>

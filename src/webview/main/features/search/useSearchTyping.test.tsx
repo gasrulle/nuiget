@@ -83,6 +83,17 @@ describe('main panel: typing in the search box', () => {
         expect(screen.queryByRole('listbox', { name: 'Suggestions' })).toBeNull();
     });
 
+    it('ui/navigateToPackage with a version carries it to the exact-match search', async () => {
+        const host = await mountReady();
+        await hostSays(() => host.event('ui/navigateToPackage', { packageId: 'Serilog', version: '3.1.1' }));
+
+        expect(box()).toHaveValue('Serilog');
+        expect(queries(host).map(request => request.payload)).toEqual([{ query: 'Serilog', sourceUrls: undefined, includePrerelease: false, exactMatch: true }]);
+        expect(autocompletes(host)).toHaveLength(0);
+        await hostSays(() => host.respond(queries(host)[0], { query: 'Serilog', results: [{ id: 'Serilog', version: '4.1.0', description: '', authors: '', versions: ['4.1.0', '3.1.1'], sourceUrl: FEED }] }));
+        await waitFor(() => expect(host.requests('package/metadata').map(request => request.payload.version)).toEqual(['3.1.1']));
+    });
+
     it('Enter cancels the pending debounce and the suggestions', async () => {
         const user = userEvent.setup();
         const host = await mountReady();

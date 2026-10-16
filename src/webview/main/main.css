@@ -128,6 +128,14 @@ body {
     min-height: 0;
 }
 
+/* The badges of the single-project list, which has no header to carry them. */
+.nuiget-installed-status {
+    display: flex;
+    flex: none;
+    gap: var(--nuiget-space-1);
+    padding: var(--nuiget-space-1) var(--nuiget-space-4);
+}
+
 /*
  * All Projects: one scroll container for every section, and every list as high as its rows. The list is not its
  * own scroll element then, so the virtualizer renders all of its rows, as the 1.x panel did.

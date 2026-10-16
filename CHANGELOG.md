@@ -59,6 +59,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - **2.0 CPM install preview**
+- **2.0 bulk install leaves centrally managed targets to their own project's preview**
+- **2.0 View details from the sidebar opens the row's version**
+- **2.0 provisional badge in the single-project Installed tab**
 - **2.0 log redaction of quoted JSON credentials**
 - **2.0 DPAPI password decryption on Windows**
 - **2.0 evaluation survives a refresh**

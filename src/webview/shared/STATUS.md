@@ -1,46 +1,48 @@
-# STATUS — src/webview/shared   commit d01946d (P6.5 closed; parent of the P6.fix-1 commit)   2026-10-16T04:00:00Z
+# STATUS — src/webview/shared   commit f1c9c8d (P7.5a commit 1; parent of the P7.5a commit 2)   2026-10-16T09:10:00Z
 
 git status --porcelain --untracked-files=all (before the commit): modified `.github/copilot-instructions.md`,
 `ARCHITECTURE.md`, `CHANGELOG.md`, `docs/plans/{STATUS,findings-ledger}.md`, `docs/ux/interaction-model.md`,
-`src/webview/main/features/{details/DetailsPane,details/DetailsPane.test,updates/CentralUpdateDialog,updates/CentralUpdateDialog.test,updates/UpdatesTab,updates/AllProjectsUpdates}.tsx`,
-`src/webview/sidebar-next/{BrowseResults,BrowseResults.test}.tsx` and the STATUS notes of `src/webview/{shared,main,sidebar-next}`
+`src/core/catalog/{Catalog,Catalog.test}.ts`, `src/host/{SidebarHost,handlers.test}.ts`,
+`src/webview/main/features/details/MultiInstallDialog.tsx`, `src/webview/main/features/installed/{InstalledProjectSection,InstalledTab.test}.tsx`,
+`src/webview/main/features/search/{BrowseList,BrowseList.test,useSearchTyping.test}.tsx`, `useSearchTyping.ts`,
+`src/webview/main/main.css`, `src/webview/shared/store/search.tsx`, the STATUS notes of `src/host`, `src/webview/main`,
+`src/webview/shared`, `src/core/catalog`; new `src/webview/main/features/details/MultiInstallDialog.test.tsx`
 
-Item: **P6.fix-1** — a preview before an install that changes a central version (P6 phase review, blocking 1; N77).
-This note replaces the P6.4c note of this directory (in its history at `4d66bfb`).
+Item: **P7.5a, commit 2** — the product follow-ups of the P7.5 ruling (DO 4-10): N76 on both surfaces,
+`ui/navigateToPackage.version` read by the main panel (P5 review 6), `DEFAULT_SEARCH_TAKE` 20 (P5 review 8), the
+provisional badge in the single-project list (P6 review 6). This note replaces the P6.fix-1 note of this directory (in its history at `b168640`).
 
 ## Verified by running
 
 ```text
-baseline: d01946d, green locally (npm test 3398 passed with the SDK tests) and in CI run 38804278014
-npx tsc --noEmit             → exit 0
-npm run check-types          → exit 0
-npx eslint src               → exit 0
-npx vitest run --project frontend src/webview --reporter=verbose → Tests 1074 passed (1074), with the four new titles
-npx vitest run src/test/lint → Tests 153 passed (153)
-npm test                     → Tests 3396 passed | 6 skipped (3402)
-npm run bench                → Tests 119 passed | 1 skipped (120)
-rm -rf dist && NUIGET_V2=1 npm run package → exit 0 · npm run check:vsix → check:vsix: OK
-node esbuild.mjs --v2 --production --analyze → extension 291154 / 299921 (unchanged), webview 523296 / 600685 (+992),
-                               sidebar 318803 / 329122 (+498)
-grep "run('ops/install'" src/webview (tests excluded) → BrowseResults.tsx:101 and DetailsPane.tsx:137 only, each behind the
-                               `isCpm` check and the preview; the dialog's confirm runs the install through `run(verb, …)`
-npm run test:ui              → SKIPPED: CI runs UI 2.0
-CI                           → see the tracker row of P6.fix-1
+baseline at f1c9c8d (P7.5a commit 1): tsc 0 · check-types 0 · eslint 0 · npm test 3415 passed, 2 skipped (Windows-only)
+npx tsc --noEmit            → exit 0
+npm run check-types         → exit 2 at the first run (TS2561/TS2345: the new InstalledTab test's resources/invalidated
+                              literal), fixed in the test; then exit 0
+npx eslint src / npm run lint → exit 0 each
+npx vitest run --project backend src/core/catalog src/host src/test/lint → 17 files, 318 passed (318)
+npx vitest run --project frontend src/webview → 72 files, 1079 passed (1079), the six new titles among them
+npm test (DOTNET_ROOT set, NUIGET_SDK_TESTS=1) → exit 0 · Test Files 168 passed (168) · Tests 3421 passed | 2 skipped (3423)
+npm run bench               → exit 0 · Test Files 20 passed (20) · Tests 119 passed | 1 skipped (120)
+rm -rf dist && node esbuild.mjs --v2 --production --analyze → extension 292947 / 321341 · webview 524343 / 575626 ·
+                              sidebar 318871 / 350684 (dist/ and out/esbuild removed afterwards)
+npm run package:vsix        → exit 0 (its npm test: 168 files, 3414 passed | 9 skipped without the SDK variables); "Packaged: nuiget-v1.18.9.vsix (17 files, 534.45 KB)"
+npm run check:vsix          → "check:vsix: OK"
 ```
 
 ## Done (tested)
 
-- No change of `src/webview/shared` in this item; the note records P6.fix-1 for the webviews it serves (the dialog and the browse row use the bus's `cpm/preview`).
-- `docs/ux/interaction-model.md`: §5 "CPM central change" names the install case; the `browse` row of §2 says what Enter
-  does in a CPM project.
+- `store/search.tsx`: `SearchOptions.version` (with `exactMatch` only), kept in `Asked` and exposed as
+  `SearchState.version`; the request payload is unchanged (no protocol field). Covered through the two search tests
+  of `src/webview/main` named in that note.
 
 ## Done (untested)
 
-- The sidebar's CPM install ends in the host's `install-latest` QuickPick and modal, which the host tests cover (P6.4a).
+- None.
 
 ## Not started
 
-- N76: a multi-project install (`ops/bulkInstall`) runs CPM targets with no preview → P7.5.
+- P7.5b (contract wording, the N74 outcome) and P7.5c (docs pass, drift script).
 
 ## Deviations from contract/ADR (file:line each)
 
@@ -48,40 +50,12 @@ CI                           → see the tracker row of P6.fix-1
 
 ## Advisor decisions (date, item, question, answer verbatim)
 
-2026-10-16, PHASE REVIEW P6 (the ruling of this item is its blocking 1):
-
-`````text
-VERDICT: PASS WITH FIXES
-The brief matches the tree on every path it names (gate titles present, frozen paths changed only in 5e26252, 17805c4 and 0e814af under their recorded rulings, every removed test title named by a ruling or a follow-up ruling in a STATUS note, no stub, no `Thenable`/`vscode`/Node ≥ 20 API in the new core files, `child_process` confined to `src/core/cli`). One defect must be fixed before P7.
-
-BLOCKING:
-1. P6.fix-1 — an install that changes a central version runs with no preview, on both surfaces.
-   Evidence: `src/webview/main/features/details/DetailsPane.tsx:125-126` (`entry === undefined` → `run('ops/install', …)` at once, also when `ownResult.isCpm`) and `src/webview/sidebar-next/BrowseResults.tsx:93` (Enter or the row button → `run('ops/install', …)`); these are the only two `run('ops/install'` senders in the 2.0 webviews (grep; `shared/store/ops.tsx:92` is the verb map). The host's modal guards the QuickPick paths only (`src/host/SidebarHost.ts:172-176, 190-196, 203-206, 209-213, 216-220`), not the request. The mutator admits a CPM install of a package that has no row (`src/core/project/mutator.ts:48-57`); `PackageWorkflows.edit` takes the preview after admission and restores the consumers afterwards, so a package that already has a central entry used by other projects has its central version rewritten for every one of them, and the user learns it from the outcome ("also restored n other projects", `src/webview/shared/store/outcomes.ts:37-39`). ADR-004 tier 3 (`docs/adr/004-project-model.md:42-43`) and ADR-007 (`docs/adr/007-protocol.md:29`: the preview is shown "before `ops/update` or `ops/install`") require it before the edit; the P6.4 ruling anticipated it (DO 20, `docs/plans/STATUS.md:3087`: the dialog's owner runs "`ops/install` from the details pane when the package is not installed there"), and every `onConfirm` landed hard-coded to `ops/update` (`DetailsPane.tsx:215`, `UpdatesTab.tsx`, `AllProjectsUpdates.tsx`). Same class as N75 (Medium), which closed the host path only. Interaction model §5 row 73 says "Any update of a `central` package" (`docs/ux/interaction-model.md:73`), which is why the install case was missed.
-   DO (no frozen file, no new request; the item's files: the webview files below, their tests, `docs/ux/interaction-model.md`, ARCHITECTURE 2.0 section, CHANGELOG, `.github/copilot-instructions.md`, the STATUS notes, tracker, ledger):
-   a. Tracker: row `P6.fix-1` under P6; fill the empty Commit cell of row P6.5 (`docs/plans/STATUS.md:98`) with `d01946d`. Ledger: new `N77` (Medium): "From P6.3b, `DetailsPane.tsx:125-126` and `BrowseResults.tsx:93` submit `ops/install` of a package that has a central entry in a CPM project with no preview; the host's modal (N75) guards the QuickPick paths only" → closed in P6.fix-1. In the same commit reword N76 (`docs/plans/findings-ledger.md:173, 427`): bulk update and bulk uninstall exclude central rows, but bulk install runs CPM targets unpreviewed (`DetailsPane.tsx:226` → `ops/bulkInstall`; `SidebarHost.ts:179`); the decision stays P7.5.
-   b. `src/webview/main/features/updates/CentralUpdateDialog.tsx`: `CentralUpdateRequest` gains `kind: 'install' | 'update'` and `fromVersion` becomes optional; description for `install`: "Installing it sets the central version in Directory.Packages.props for every project that uses it" (append `: ${from} → ${to}` when `fromVersion` is known); the confirm label `Update central version` and `data-testid="cpm-preview-confirm"` stay for both kinds; the `preview: null` text becomes "The central entry was not found; the change reaches this project only." The three owners that open it today pass `kind: 'update'`.
-   c. `DetailsPane.tsx` `changeVersion`, the `entry === undefined` branch: `ownResult?.isCpm !== true` → install as today. Else ask `cpm/preview` first (`useMessageBus().request('cpm/preview', { projectPath: target, packageId: selection.packageId, version: chosen }, { signal })`, the controller aborted on a selection change and on unmount): `preview === null` → `run('ops/install', …)`; a preview → `setCentralPreview({ kind: 'install', projectPath: target, packageId, fromVersion: preview.fromVersion, toVersion: chosen, sourceUrl })`; a rejected ask → open the dialog the same way without `fromVersion` (its own error state and Retry decide; never install on an error). While a pre-ask is in flight the primary button is disabled and a second activation is ignored (this precedes `run()` and is not the pending set the ops gotcha forbids; busy from `run()` on stays the slice's). `onConfirm` runs `ops/install` for `kind === 'install'`, `ops/update` otherwise.
-   d. `BrowseResults.tsx` `install`, after the busy check: `installed.result?.isCpm !== true` → install as today. Else the same pre-ask: `null` → `run('ops/install', …)`; a preview or an error → `menu({ packageId: result.id, latestVersion: result.version, context: 'browse', projectPath, sourceUrl: result.sourceUrl })` (the request the row's Shift+F10 already builds at `:131`); the host's `install-latest` then confirms in the modal (`SidebarHost.ts:203-206`) and submits. Enter and the row button are ignored for an id whose pre-ask is in flight (two quick Enters must not become two `ops/install`: probe row `add-same-version` rewrites the props file and restores every consumer again). No `Dialog` in the sidebar bundle (P6.4 ruling, E-host). The list hint gains "(a package with a central entry in a CPM project: opens the actions menu)".
-   e. Tests, by title: `src/webview/main/features/details/DetailsPane.test.tsx` — `an install into a Central Package Management project asks for the preview first: with a central entry it opens the dialog and installs on confirm, without one it installs at once` (`mountReady(…, true)`; the fake host answers `cpm/preview` with a preview → dialog, `cpm-preview-confirm` → exactly one `ops/install` with the chosen version; then `null` → one `ops/install`, no dialog) and `a failed preview opens the dialog with Retry and installs nothing`; `src/webview/main/features/updates/CentralUpdateDialog.test.tsx` — `an install request says what the install sets`; `src/webview/sidebar-next/BrowseResults.test.tsx` — `Enter on a row of a CPM project asks for the preview; a central entry opens the actions menu, none installs, and a second Enter while asking sends nothing` (one `ui/contextMenu` with `context: 'browse'` and `latestVersion`, no `ops/install`; then the `null` case: one `ops/install`). `UpdatesTab`/`AllProjectsUpdates` tests keep their titles (behaviour unchanged).
-   f. `docs/ux/interaction-model.md`: §5 row 73 trigger → "Any update of a `central` package, or an install of a package that already has a central entry in a CPM project (main panel: the pane asks `cpm/preview` first and opens the dialog only when an entry exists; sidebar: the actions menu and the host's modal)"; the §2 browse-row Enter note. ARCHITECTURE 2.0 rows for `DetailsPane`, `BrowseResults`, `CentralUpdateDialog`; CHANGELOG `### Fixed` `**2.0 CPM install preview**`; the gotcha row `.github/copilot-instructions.md:156` gains "and never `run('ops/install')` into a CPM project before `cpm/preview` answered `null`".
-   g. Gates: `npx tsc --noEmit`, `npm run check-types`, `npx eslint src`, `npx vitest run --project frontend src/webview`, `npx vitest run src/test/lint`, `npm test`, `npm run bench`, `rm -rf dist && NUIGET_V2=1 npm run package && npm run check:vsix`, `node esbuild.mjs --v2 --production --analyze` (webview ≤ 600 685, sidebar ≤ 329 122; paste all three; the extension bundle must not move from 291 154). STATUS notes `src/webview/{main,sidebar-next,shared}/STATUS.md`. Commit `fix(webview): preview before an install that changes a central version (P6.fix-1, ADR-004, ADR-007, N77, N76)`; push; green CI on all 12 jobs; then the phase tag per RUN.md §6.
-   DO NOT: touch `src/protocol/**`, `src/core/contracts.ts` or `docs/adr/**`; add a modal inside the shared `ops/install` handler (the main panel has its own dialog); put `Dialog` into the sidebar; open the dialog for every CPM install (preview `null` is the common case); install silently when the pre-ask fails; change `bulkInstall`, `SidebarHost` or the mutator's `affectedProjects` here; keep a pending set past `run()`; weaken or retitle any existing test.
-   VERIFY: `grep -rn "run('ops/install'" src/webview --include='*.tsx' | grep -v "\.test\."` → exactly `DetailsPane.tsx` and `BrowseResults.tsx`, each on a path that checked `isCpm` and the preview; `npx vitest run --project frontend src/webview --reporter=verbose` lists the four new titles green; `grep -n "central entry" docs/ux/interaction-model.md` → row 73 names the install case; `npx vitest run src/test/lint/interaction-model-testids.test.ts` green; the three sizes pasted under their ceilings; CI green on all 12 jobs.
-   CONTRACT CHANGE: none.
-
-NON-BLOCKING:
-1. N76 misdescribes a live exposure (bulk install runs CPM targets with no preview; it does not exclude them): reworded in P6.fix-1 (DO a); P7.5 decides a per-target preview in `MultiInstallDialog`/`pickProjectsForInstall` or an exclusion.
-2. `src/core/project/evaluator.ts:53-68`: the cached promise is bound to the first caller's signal, and the coordinator aborts a stale computation's signal (`src/core/queries/QueryCoordinator.ts:114, 203, 251`); a same-revision invalidation during an evaluation can hand the next generation a promise about to reject as cancelled, so the key regresses to provisional until the next invalidation, with a `warn`. Only the Catalog calls it today. → P7.2: give the in-flight entry its own controller (joiners add their signals) or pass no caller signal and rely on the timeout; test `a cancellation by one caller does not cancel another caller of the same revision`.
-3. Cost: 1+N `msbuild` runs per project revision (`evaluator.ts:81-88`); `previewCpmImpact` inspects every workspace project per call (by ruling, no cache; a bulk of k central updates is k×N inspections); extension bundle 291 154 / 299 921 (97.1 %; P6.fix-1 touches the webview bundles only). → P7.2 (measure; ratchet the ceilings per the P3.6 ruling; a combined properties/items run needs a probe row first).
-4. Unprobed combination, admitted (`mutator.ts:48-57`) and after P6.fix-1 previewed: `install` of a package that has a central entry into a CPM project that does not reference it (`add-absent` has no entry, `add-newer-version` has a reference). → P7.5 with N74: rows `add-existing-entry` and `add-override` in `scripts/probe-sdk.mjs`, fixture regenerated, `--check` green.
-5. Contract wording → P7.5 (sentinel item): ADR-007:29 "the asking one included" holds only when the asker has a `central` row (`mutator.ts:102-105`); ADR-004:3 lists the P6.3 amendment before P6.2b; `ProjectEvaluator.cachedFidelity` (`src/core/contracts.ts:323`) has no consumer (grep) — ARCHITECTURE records it, P8.2 may delete it behind the sentinel.
-6. The main panel's single-project view carries no provisional badge (`src/webview/main/STATUS.md:52-53`; interaction model §4 puts it on the project header) → P7.5 amends §4, or P7.4's owner pass picks a placement.
-7. The harness evaluates in one scenario only (`evaluate: true`, `src/test/harness/scenarios.test.ts:392`); the other 21 pin `provisional` by ruling. → P7.3: confirm `evaluator.test.ts`, `mutator.test.ts` and that scenario pass on the windows job (`DefiningProjectFullPath` casing and separators compared through `normalizeProjectPath`, `definedIn` kept as printed).
-8. Unchanged owners: N72 (config-paths double walk) and the N65 diagnostic → P7.2; N74 → P7.5.
-
-CHECKED: commits 440b154, 058afb2, 5e26252, 17805c4, 232d54c, 0e814af, 58ad2dd, 4d66bfb, d01946d (`git log`, `git diff --stat labs/2.0-P5-done..HEAD`, `git show --stat` per commit over `src/protocol`, `src/core/contracts.ts`, `docs/adr`: frozen paths changed in 5e26252, 17805c4, 0e814af only). Diffs over the range of `src/core/contracts.ts`, `src/protocol/{domain,messages,guards,protocol.test}.ts`, `src/core/catalog/Catalog.ts`, `src/core/project/{context,inspector,index}.ts`, `src/core/ops/PackageWorkflows.ts`, `src/host/{services,handlers,SidebarHost}.ts`, `src/extension.next.ts`, `src/test/__mocks__/vscode.ts`, `.github/workflows/ci.yml`, `src/webview/shared/{store/installed.tsx,store/outcomes.ts,installed/rules.ts}`, `src/webview/main/features/{updates/UpdatesTab,updates/AllProjectsUpdates,details/DetailsPane}.tsx`, `src/webview/sidebar-next/ProjectUpdates.tsx`. Full reads: `src/core/project/{evaluator,mutator,rows}.ts`, `src/webview/main/features/updates/CentralUpdateDialog.tsx`, `src/webview/sidebar-next/BrowseResults.tsx:61-100,129-132`, `src/webview/sidebar-next/rowRequests.ts`, `src/core/catalog/Catalog.ts:120-345`, `src/host/handlers.ts:18-23,255-300`, `src/host/SidebarHost.ts:140-265`, `src/core/project/context.ts:1-80`, `src/core/cli/sdk.ts:50-72`, `scripts/probe-sdk.mjs` (I/O lines), the row ids of `src/core/cli/__fixtures__/sdk-probes/10.0.401.json`; the plan §1-§4 and lines 286-320; ADR-002, -003, -004, -007, -009; `docs/plans/STATUS.md` rows 87-107 and the P6.2, P6.3, P6.4 and P6.4a-N65 rulings (2891-3150); `docs/plans/findings-ledger.md` N72, N74-N76; `## Deviations` of `src/{host,core/ops,core/project,webview/main}/STATUS.md`; `src/core/ops/STATUS.md:46,113-121` (the follow-up ruling that renamed `asks for the SDK of the project directory` → `asks for the context of the edited project`, present at `PackageWorkflows.test.ts:378`); `ls src/webview/sidebar-next/*.test.tsx`. Commands: grep of the range diff for removed `it(` titles and added `.only(`/`.skip(` (none added; every removed title named by a ruling or a follow-up ruling); grep of the new core files for `findLast|structuredClone|toSorted|toReversed|fromAsync|groupBy|AbortSignal.any|Thenable|from 'vscode'` (none); `grep -rln child_process src/core --include='*.ts'` (cli only); the named gate tests by title (`never deletes central entry on single uninstall` `PackageWorkflows.test.ts:409`, the gated `cpm (SDK 10): …` `:482`, `cpm: unverified cases stay read-only` `mutator.test.ts:98`, `evaluates the multitfm fixture with the real SDK` `evaluator.test.ts:280`, `central version change affects several projects: …` `scenarios.test.ts:392`); every `ops/install` sender under `src/webview`; the `cpm/preview` row of §5 and the gotcha row `.github/copilot-instructions.md:156`. No file was created, edited, moved or deleted; shell use was inspection only. The advisor tool was consulted twice (before writing and on the draft); its corrections (the VERIFY grep, the named test file, the P6.5 Commit cell, the double-activation guard, the tag wording) are folded in.
-`````
+2026-10-16, P7.5 (stop-and-ask): verbatim in `docs/plans/STATUS.md` ("P7.5 — stop-and-ask: the split, the drift script
+and the inherited duties"). Decision line: P7.5 splits into P7.5a (CPM evidence, then the product follow-ups: N76 by
+exclusion on both surfaces, `ui/navigateToPackage.version` read by the webview, `DEFAULT_SEARCH_TAKE` 20, the
+provisional badge in the single-project list), P7.5b (contract wording and the N74 outcome, sentinel `P7.5b`) and
+P7.5c (docs, drift script, CI). No contract change in P7.5a.
 
 ## Exact next step (one item ID)
 
-The P6 phase tag after green CI, then P7.1.
+P7.5b.

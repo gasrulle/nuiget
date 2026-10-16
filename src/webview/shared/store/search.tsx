@@ -9,6 +9,8 @@ import { useSources } from './sources';
 export interface SearchOptions {
     /** Ask for the id exactly (navigation to a package), not for packages that match the text. */
     exactMatch?: boolean;
+    /** With `exactMatch`: the version the navigation names, for the details to select (`ui/navigateToPackage`). */
+    version?: string;
 }
 
 export interface SearchState {
@@ -16,6 +18,8 @@ export interface SearchState {
     query: string;
     /** The text was asked as an exact package id (a navigation to the package). */
     exactMatch: boolean;
+    /** The version an exact-match search was asked with; the browse list selects it in the details. */
+    version: string | undefined;
     /** `idle`: no search. `loading`: asked, nothing to show for this text yet. `ready`: `results` answer it. `error`: it failed. */
     status: 'idle' | 'loading' | 'ready' | 'error';
     /** The packages found, each with the lite metadata (icon, verification, authors) that came with the answer. */
@@ -43,6 +47,7 @@ export interface SearchState {
 interface Asked {
     query: string;
     exactMatch: boolean;
+    version?: string;
     /** Goes up with every `search` and `retry`, so that asking the same text again asks again. */
     attempt: number;
 }
@@ -154,7 +159,8 @@ export function SearchProvider({ children }: { children: React.ReactNode }): Rea
             setAsked(undefined);
             return;
         }
-        setAsked(previous => ({ query: text, exactMatch: options.exactMatch === true, attempt: (previous?.attempt ?? 0) + 1 }));
+        const exactMatch = options.exactMatch === true;
+        setAsked(previous => ({ query: text, exactMatch, version: exactMatch ? options.version : undefined, attempt: (previous?.attempt ?? 0) + 1 }));
     }, []);
     const clear = useCallback((): void => {
         setAsked(undefined);
@@ -194,7 +200,7 @@ export function SearchProvider({ children }: { children: React.ReactNode }): Rea
     const state = useMemo<SearchState>(() => {
         const quick = { suggestions: suggested.groups, suggesting: suggested.pending, suggest, clearSuggestions };
         if (asked === undefined) {
-            return { query: '', exactMatch: false, status: 'idle', results: NO_RESULTS, sourcesUnavailable: false, error: undefined, revalidating: false, search, clear, retry, ...quick };
+            return { query: '', exactMatch: false, version: undefined, status: 'idle', results: NO_RESULTS, sourcesUnavailable: false, error: undefined, revalidating: false, search, clear, retry, ...quick };
         }
         const shown = answered !== undefined && answered.query === asked.query ? answered : undefined;
         const error = failure?.attempt === asked.attempt ? failure.error : undefined;
@@ -207,6 +213,7 @@ export function SearchProvider({ children }: { children: React.ReactNode }): Rea
         return {
             query: asked.query,
             exactMatch: asked.exactMatch,
+            version: asked.version,
             status,
             results: shown?.results ?? NO_RESULTS,
             sourcesUnavailable: shown?.sourcesUnavailable ?? false,

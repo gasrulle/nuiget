@@ -36,9 +36,9 @@ export function BrowseList({ text, announce }: BrowseView): React.JSX.Element {
     const [currentId, setCurrentId] = useState<string | null>(null);
     const { select } = useDetailsActions();
     // The details pane follows the row made current by the user or by a navigation.
-    const makeCurrent = (result: PackageSearchResult): void => {
+    const makeCurrent = (result: PackageSearchResult, version = result.version): void => {
         setCurrentId(result.id);
-        select({ packageId: result.id, version: result.version, sourceUrl: result.sourceUrl, origin: 'browse', projectPath: null });
+        select({ packageId: result.id, version, sourceUrl: result.sourceUrl, origin: 'browse', projectPath: null });
     };
 
     const items = useMemo<Item[]>(() => search.results.map(result => ({ id: result.id, result })), [search.results]);
@@ -49,7 +49,7 @@ export function BrowseList({ text, announce }: BrowseView): React.JSX.Element {
 
     // A new text starts without a current row, except the package a navigation asked for; the same text asked again
     // (another source or prerelease flag, Retry) keeps the current row while the package is still found.
-    const { status, query, exactMatch, results, sourcesUnavailable } = search;
+    const { status, query, exactMatch, version, results, sourcesUnavailable } = search;
     const answeredQuery = useRef<string | null>(null);
     useEffect(() => {
         if (status !== 'ready') {
@@ -59,7 +59,8 @@ export function BrowseList({ text, announce }: BrowseView): React.JSX.Element {
         answeredQuery.current = query;
         const wanted = exactMatch ? results.find(result => result.id.toLowerCase() === query.toLowerCase()) : undefined;
         if (wanted !== undefined) {
-            makeCurrent(wanted);
+            // A navigation that names a version (View details of a sidebar row) shows that version.
+            makeCurrent(wanted, version ?? wanted.version);
         } else {
             setCurrentId(previous => (sameText && results.some(result => result.id === previous) ? previous : null));
         }

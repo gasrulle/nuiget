@@ -90,6 +90,20 @@ describe('main panel: Installed tab', () => {
         expect(within(header()).queryByText('provisional')).toBeNull();
     });
 
+    it('provisional: the single-project list carries the badge above it until the authoritative list replaces it', async () => {
+        const host = mount();
+        await hostSays(() => host.respond(host.requests('session/get')[0], snapshot(1)));
+        await hostSays(() => host.respond(host.requests('projects/list')[0], { projects: [{ name: 'App', path: A }, { name: 'Lib', path: B }] }, 1));
+        await hostSays(() => host.respond(host.requests('installed/get')[0], { ...installed(A, THREE), fidelity: 'provisional' }, 1));
+        expect(screen.getByText('provisional')).toBeInTheDocument();
+        expect(names()).toEqual(['Serilog', 'Moq', 'Newtonsoft.Json']);
+
+        // The evaluation finishes: the host invalidates the key and the authoritative list replaces the provisional one.
+        await hostSays(() => host.event('resources/invalidated', { scope: { kind: 'project', projectPaths: [A] }, reason: 'file-watcher', generation: 2, keys: [{ key: resourceKeys.installed(A), generation: 2 }] }));
+        await hostSays(() => host.respond(host.requests('installed/get')[1], installed(A, THREE), 2));
+        expect(screen.queryByText('provisional')).toBeNull();
+    });
+
     it('select all selects the removable rows only and the toolbar counts them', async () => {
         const user = userEvent.setup();
         await mountWith();

@@ -42,7 +42,11 @@ project whose SDK is below 10 lists its packages read-only.
 In this mode:
 - Installed and Updates group rows per project; row actions apply to that project.
 - Install from browse opens a multi-select project picker (QuickPick in the sidebar, in-panel
-  dialog in the main panel) showing where the package is already installed.
+  dialog in the main panel) showing where the package is already installed. A bulk install shows no preview, so it
+  leaves out every Central Package Management project where the package already has a central entry (N76): the main
+  panel's picker asks `cpm/preview` per CPM project when it opens and lists such a project as "centrally managed"
+  (or "preview failed") without a checkbox to tick; the sidebar asks the same after the QuickPick and names the
+  projects it left out. Installing there is a single install from that project, which shows the preview.
 - Transitive dependencies aggregate into one section, loaded lazily on expand.
 - With ≤ 1 project the mode is automatically downgraded to that project (host normalization).
 
@@ -52,7 +56,7 @@ In this mode:
 |---|---|---|
 | **Loading (first)** | Skeleton rows (3) + `role="status"` text "Loading …" | Only when there is no previous data for the key. |
 | **Revalidating** | Existing rows stay; subtle progress bar under the search box; rows `aria-busy` | When a displayed resource was invalidated and is being recomputed. Never blank the list. |
-| **Provisional** | Small "provisional" badge on the project header; tooltip explains evaluation is pending | `fidelity: 'provisional'`. Actions remain enabled except for `unresolved` packages. |
+| **Provisional** | Small "provisional" badge on the project header (All Projects sections, sidebar Installed section) or above the single-project list (main panel); tooltip explains evaluation is pending | `fidelity: 'provisional'`. Actions remain enabled except for `unresolved` packages. |
 | **Unresolved** | Version cell shows "unresolved" with tooltip; row actions disabled | `declaration: 'unresolved'`; excluded from update checks. |
 | **Centrally managed** | "CPM" badge on the row; version cell shows central version | `declaration: 'central' \| 'central-override'`. An update shows an impact preview first (main panel: dialog; sidebar: the actions menu and a VS Code modal); an uninstall removes the project's reference only and keeps the central entry (ADR-004), without a dialog; a `central-override` row is not updated from the UI until finding N74 is probed. |
 | **Pending op** | Row gets a spinner replacing its action button; details action buttons disabled | From `ops/*` `queued`/`running` chunks until the terminal outcome. |
