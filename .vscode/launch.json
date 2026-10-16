@@ -14,18 +14,6 @@
             "preLaunchTask": "watch"
         },
         {
-            "name": "Run 2.0",
-            "type": "extensionHost",
-            "request": "launch",
-            "args": [
-                "--extensionDevelopmentPath=${workspaceFolder}"
-            ],
-            "outFiles": [
-                "${workspaceFolder}/dist/**/*.js"
-            ],
-            "preLaunchTask": "watch:v2"
-        },
-        {
             "name": "Extension Tests",
             "type": "extensionHost",
             "request": "launch",

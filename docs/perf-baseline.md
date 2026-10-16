@@ -112,7 +112,7 @@ are tracked; `obj/` is not.
   `--out <file>` writes the file elsewhere, and `--summary <file>` appends a Markdown table. The CI job
   `Perf baseline (informational)` runs the script on every push and uploads the JSON as the artifact
   `perf-baseline`. Local numbers on other hardware are not comparable with the table above.
-- Search: `rm -rf dist && NUIGET_V2=1 npm run package`, then
-  `NUIGET_V2=1 npm run test:ui:v2 -- --storage /tmp/nuiget-ui-v2`. Read the `[P5.6] cold search` and
-  `[P7.2] warm search` lines in the output.
-- Bundles: `rm -rf dist && node esbuild.mjs --v2 --production --analyze`. The metafiles go to `out/esbuild/`.
+- Search: `rm -rf dist && npm run test:ui -- --storage /tmp/nuiget-ui` (ExTester packages the production build).
+  Read the `[P5.6] cold search` and `[P7.2] warm search` lines in the output. The tables above name the CI jobs as
+  they were called at the time: `UI 2.0` and `E2E 2.0` are `UI` and `E2E` since P8.1.
+- Bundles: `rm -rf dist && node esbuild.mjs --production --analyze`. The metafiles go to `out/esbuild/`.

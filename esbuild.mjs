@@ -4,42 +4,24 @@ import { mkdir, writeFile } from 'node:fs/promises';
 const isProduction = process.argv.includes('--production');
 const isWatch = process.argv.includes('--watch');
 const isAnalyze = process.argv.includes('--analyze');
-// NUIGET_V2=1 means the same as --v2. It exists for `vscode:prepublish`, which `vsce` and ExTester always run
-// and which takes no flag: with the variable set, the VSIX they package holds the 2.0 entries (CI jobs e2e-v2, ui-v2).
-const isV2 = process.argv.includes('--v2') || process.env.NUIGET_V2 === '1';
 
 // Extension code runs in the VS Code 1.85 extension host (Node 18); webviews run in its Chromium 114.
 const EXTENSION_TARGET = 'node18';
 const WEBVIEW_TARGET = ['chrome114'];
 
-// `--v2` builds the 2.0 entry points into the same three output files; the default builds 1.x.
-const ENTRIES = isV2
-    ? {
-          extension: 'src/extension.next.ts',
-          webview: 'src/webview/main/index.tsx',
-          sidebar: 'src/webview/sidebar-next/index.tsx',
-      }
-    : {
-          extension: 'src/extension.ts',
-          webview: 'src/webview/app/index.tsx',
-          sidebar: 'src/webview/sidebar/index.tsx',
-      };
-
-// Minified JavaScript size limits in bytes: the 1.18.9 bundles plus 10 %, Math.ceil(measured * 1.1).
-// Measured with `node esbuild.mjs --production --analyze` on the legacy entries at commit 24cf07b plus
-// these targets: 272655 (extension), 546077 (webview), 276451 (sidebar). Keyed by output file. CSS output is
-// not measured.
-const BUNDLE_CEILINGS = {
-    'dist/extension.js': 299_921,
-    'dist/webview.js': 600_685,
-    'dist/sidebar.js': 304_097,
+// The 2.0 entry points; the 1.x sources stay in the tree until P8.2 and are not built.
+const ENTRIES = {
+    extension: 'src/extension.next.ts',
+    webview: 'src/webview/main/index.tsx',
+    sidebar: 'src/webview/sidebar-next/index.tsx',
 };
 
-// Ceilings of the 2.0 entries: Math.ceil(measured * 1.1), the ratchet of the P3.6 ruling, reset at P7.2a. Measured with
-// `node esbuild.mjs --v2 --production --analyze` at 54885d4: 292128 (extension), 523296 (webview),
-// 318803 (sidebar). Checked in CI by the e2e-v2 build step; a crossing is a stop-and-ask with the metafile's top inputs,
-// never a raise without a new measurement. P8.1 collapses the two tables into one; P8.2 re-measures and resets.
-const V2_BUNDLE_CEILINGS = { 'dist/extension.js': 321_341, 'dist/webview.js': 575_626, 'dist/sidebar.js': 350_684 };
+// Minified JavaScript size limits in bytes, keyed by output file: Math.ceil(measured * 1.1), the ratchet of the P3.6
+// ruling, reset at P7.2a. Measured with `node esbuild.mjs --production --analyze` on the 2.0 entries (then built under
+// a flag, the default since P8.1) at 54885d4: 292128 (extension), 523296 (webview), 318803 (sidebar). Checked in CI by
+// the build steps of the E2E and Build & Package jobs; a crossing is a stop-and-ask with the metafile's top inputs,
+// never a raise without a new measurement. CSS output is not measured. P8.2 re-measures and resets.
+const BUNDLE_CEILINGS = { 'dist/extension.js': 321_341, 'dist/webview.js': 575_626, 'dist/sidebar.js': 350_684 };
 
 const ANALYSIS_DIR = 'out/esbuild';
 
@@ -127,7 +109,7 @@ function reportCeilings(results) {
     console.log('\n=== Bundle sizes (bytes / ceiling) ===');
     for (const [index, { config }] of bundles.entries()) {
         const bytes = results[index].metafile.outputs[config.outfile].bytes;
-        const ceiling = (isV2 ? V2_BUNDLE_CEILINGS : BUNDLE_CEILINGS)[config.outfile];
+        const ceiling = BUNDLE_CEILINGS[config.outfile];
         console.log(`${config.outfile} ${bytes} / ${ceiling}`);
         if (bytes > ceiling) {
             exceeded.push(config.outfile);

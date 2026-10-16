@@ -14,9 +14,10 @@ project model with its static inspection, MSBuild evaluation and edit gate, pack
 feed clients over one HTTP transport, the query coordinator and the Catalog of reads, the operation queue and
 workflows), a typed protocol between host and webviews (`src/protocol`), a host layer that adapts VS Code to the
 core (`src/host`), a composition root (`src/extension.next.ts`), and one shared webview code base for the main
-panel and the sidebar (`src/webview/{shared,main,sidebar-next}`). It is built next to 1.x with
-`node esbuild.mjs --v2` and replaces it in one step at the flip (plan item P8.1); the sections below describe the
-finished tree, and the module map names the item that brought each part.
+panel and the sidebar (`src/webview/{shared,main,sidebar-next}`). It was built next to 1.x under a build flag and
+replaced it in one step at the flip (plan item P8.1): since then the default build is 2.0, and the 1.x sources stay in
+the tree, unbuilt, until P8.2 deletes them. The sections below describe the finished tree, and the module map names
+the item that brought each part.
 
 ### Decisions and plans
 
@@ -490,7 +491,7 @@ project picker installs it. The host's version picker says "No package source co
 when no source answered, instead of an empty list.
 
 `src/webview/sidebar-next` is the 2.0 sidebar as far as it goes: one vertical slice from the entry to an
-uninstall. `node esbuild.mjs --v2` builds it into `dist/sidebar.js` and, because the entry imports
+uninstall. `node esbuild.mjs` builds it into `dist/sidebar.js` and, because the entry imports
 stylesheets, `dist/sidebar.css` (the tokens, the primitives' rules and `sidebar.css`), which `SidebarHost`
 links.
 
@@ -529,8 +530,8 @@ both surfaces with the same list of the generation the last event listed.
 
 ### Main panel shell
 
-`src/webview/main` is the frame of the 2.0 main panel (ADR-008: the shell is under 300 lines). `node esbuild.mjs
---v2` builds it into `dist/webview.js` and, because the entry imports `../shared/tokens.css` and `main.css`,
+`src/webview/main` is the frame of the 2.0 main panel (ADR-008: the shell is under 300 lines). `node esbuild.mjs`
+builds it into `dist/webview.js` and, because the entry imports `../shared/tokens.css` and `main.css`,
 `dist/webview.css`, which `MainPanelHost` links; `check:vsix` therefore passes on a 2.0 build too.
 
 - `index.tsx` does what the sidebar's entry does (API acquired once, inside the root check; bus; `StoreProvider`)
@@ -769,19 +770,12 @@ in `SidebarHost` after the pick and names the projects it left out. The Updates 
 
 ### Coexistence of 1.x and 2.0
 
-Both versions build into the same three output files, selected by entry set. There is no hybrid: a build is
-either 1.x or 2.0.
-
-| | 1.x (default) | 2.0 (`--v2`) |
-| --- | --- | --- |
-| Extension entry → `dist/extension.js` | `src/extension.ts` | `src/extension.next.ts` |
-| Main panel entry → `dist/webview.js` | `src/webview/app/index.tsx` | `src/webview/main/index.tsx` |
-| Sidebar entry → `dist/sidebar.js` | `src/webview/sidebar/index.tsx` | `src/webview/sidebar-next/index.tsx` |
-| Watch script | `npm run watch` | `npm run watch:v2` |
-| Launch configuration | "Run Extension" | "Run 2.0" |
-
-The two watch scripts write the same files and must not run together. Builds do not clean `dist/`, so delete
-it before packaging a different entry set. Packaging and CI build 1.x until the flip.
+There is one entry set since the flip (P8.1): `node esbuild.mjs` builds `src/extension.next.ts` into
+`dist/extension.js`, `src/webview/main/index.tsx` into `dist/webview.js` and `src/webview/sidebar-next/index.tsx`
+into `dist/sidebar.js`; `npm run watch` and the launch configuration "Run Extension" use the same entries. The 1.x
+sources (`src/extension.ts`, `src/webview/{app,sidebar}`, `src/services`, `src/webview/NuGet*.ts`) are no longer
+built; their unit tests still run in `npm test` until P8.2 deletes them with the sources and renames the 2.0 files.
+Rollback of the flip is the revert of its commit.
 
 ### Shared tooling
 
@@ -802,9 +796,9 @@ These parts serve both versions and are the current truth for the build, test an
   bench:save` rewrites `benchmarks/baseline.json` and `npm run bench:compare` compares a run with it. The CI
   job `Benchmark (informational)` compares on its own hardware and never fails the pipeline.
 - **Bundle size.** `node esbuild.mjs --production --analyze` fails when a bundle exceeds its ceiling. Metafiles go
-  to `out/esbuild/`. The ceilings are keyed by entry set: the 1.x table is the 1.18.9 size plus 10 %, the `--v2`
-  table the 2.0 size measured at P7.2a plus 10 %. They are checked only under `--production --analyze`, which CI
-  runs in the `E2E 2.0` build step (2.0 table, sizes in the job summary) and the `Build & Package` job (1.x table).
+  to `out/esbuild/`. The ceilings are the 2.0 sizes measured at P7.2a plus 10 % (one table since P8.1). They are
+  checked only under `--production --analyze`, which CI runs in the `E2E` build step (sizes in the job summary) and
+  the `Build & Package` job.
 - **Dotnet timings.** `npm run perf:baseline` (`scripts/perf-baseline.mjs`) times the `dotnet` commands the 2.0
   extension runs: SDK probe, `nuget config paths`, cold and warm restores, and the evaluator's msbuild runs on the
   e2e project and a multi-targeted copy of it. The CI job `Perf baseline (informational)` runs it on every push;
@@ -829,23 +823,18 @@ These parts serve both versions and are the current truth for the build, test an
   | --- | --- | --- |
   | Lint | — | `npm run lint`, the guard hook tests, then `npm run docs:check` |
   | Test (ubuntu, windows) | — | Unit tests with .NET SDK 10 installed; coverage on ubuntu |
-  | E2E (VS Code 1.85.0, stable) | — | Production build, then the extension-host suite under Xvfb; log artifact per version |
-  | UI | Lint, Test | ExTester suite under Xvfb; log and screenshot artifact |
-  | E2E 2.0 (VS Code 1.85.0, stable) | — | `NUIGET_V2=1`: production build of the 2.0 entries, then the `v2-*` extension-host suite |
-  | UI 2.0 | Lint, Test | `NUIGET_V2=1`: ExTester packages a VSIX of the 2.0 entries and runs `src/test/ui/v2` |
+  | E2E (VS Code 1.85.0, stable) | — | Production build with the ceiling check (sizes in the job summary), then the `v2-*` extension-host suite under Xvfb; log artifact per version |
+  | UI | Lint, Test | ExTester packages a VSIX and runs `src/test/ui/v2` under Xvfb, then `check:vsix` on that build; log and screenshot artifact |
   | Build & Package | Lint, Test, E2E | Type check, production build, `check:vsix`, VSIX uploaded as artifact `vsix` |
   | Benchmark (informational) | — | Compares against `benchmarks/baseline.json`; never fails the run |
 
   The end-to-end run on VS Code 1.85.0 is what proves the extension works on the minimum supported host. The
   owner downloads the `vsix` artifact and publishes it manually.
-- **The 2.0 entries under test.** One environment variable, `NUIGET_V2=1`, puts the 2.0 entries under the
-  end-to-end and UI suites while 1.x is what ships. `esbuild.mjs` reads it as `--v2`: `vsce` and ExTester
-  always run `vscode:prepublish`, which takes no flag, so the variable is the one switch that reaches the build
-  inside them, and the VSIX they package then holds the 2.0 entries. `.vscode-test.mjs` reads it to select the
-  suites: `out/test/e2e/v2-*.e2e.test.js` with it, every other e2e file without it, so `npm run test:e2e` is the
-  1.x suite unless the variable is set. `npm run test:ui:v2` runs `src/test/ui/v2` (the 1.x `test:ui` glob does
-  not reach that folder). The two suites divide the work by what each can see. The extension-host suite
-  (`src/test/e2e/v2-*.e2e.test.ts`, one file per legacy e2e file since P5.12a, shared steps in `v2Support.ts`)
+- **The suites under test.** `npm run test:e2e` runs the extension-host suite: `.vscode-test.mjs` selects
+  `out/test/e2e/v2-*.e2e.test.js` (the 1.x e2e files are compiled but selected by nothing until P8.2) against what
+  was last built into `dist/`. `npm run test:ui` runs `src/test/ui/v2` through ExTester, which packages its VSIX
+  through `vscode:prepublish`, the production build. The two suites divide the work by what each can see. The
+  extension-host suite (`src/test/e2e/v2-*.e2e.test.ts`, one file per legacy e2e file since P5.12a, shared steps in `v2Support.ts`)
   shows that the build under test is the 2.0 one (the commands only 1.x registers are absent), that it activates,
   that every contributed command answers, that the main panel is one tab that closes and opens again, and that
   noun-first `dotnet package add` and `remove` on the project file under both surfaces (an install, an update from
@@ -854,8 +843,8 @@ These parts serve both versions and are the current truth for the build, test an
   webview: the sidebar lists the fixture's packages, a row is as high as its token says and the second row lies
   under the first (stylesheet, tokens and the virtual offsets work under the Content Security Policy), the row
   action shows with focus, and Delete uninstalls a package, announced in the live region and gone from the
-  project file. `UI 2.0` runs `check:vsix` on the build ExTester packaged (N62, closed at P5.3); `E2E 2.0` builds
-  with `node esbuild.mjs --v2 --production`, packages nothing and runs no `check:vsix`. Which 2.0 test replaces each
+  project file. `UI` runs `check:vsix` on the build ExTester packaged (N62, closed at P5.3); `E2E` builds
+  with `node esbuild.mjs --production --analyze`, packages nothing and runs no `check:vsix`. Which 2.0 test replaces each
   legacy test file, and what P8.1 and P8.2 do with the legacy set, is `docs/plans/test-retirement-map.md` (P5.12b).
   `src/test/lint/interaction-model-testids.test.ts` holds the `data-testid` tables of `docs/ux/interaction-model.md`
   §8 to the ids the 2.0 webviews render.
@@ -2517,7 +2506,7 @@ of the `npm-run-all` executable.
 
 ### esbuild Configuration
 - Three separate builds: extension (Node.js/CJS, target `node18`), webview (browser/IIFE) and sidebar (browser/IIFE), both target `chrome114`
-- `node esbuild.mjs --v2` builds the 2.0 entry points into the same three files (see [Coexistence](#coexistence-of-1x-and-20))
+- Since P8.1 the three builds take the 2.0 entry points (see [Coexistence](#coexistence-of-1x-and-20))
 - esbuild `define` for `process.env.NODE_ENV` (required by React)
 - `jsx: 'automatic'` for React 17+ JSX transform
 - Source maps disabled in production builds

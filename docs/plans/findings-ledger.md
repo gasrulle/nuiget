@@ -127,12 +127,12 @@ one records itself here.
 | N24 | Low | Vitest backend `include` omits `src/core`; gates would pass vacuously. | — | P0.11 | closed (P0.11) |
 | N25 | Medium | SDK 10.0.401 rewrites `Directory.Packages.props` on every `dotnet package add --version`, even without a version change | — | P6.3 (dirty-file refusal, consumer invalidation) | closed (P6.3b: the mutator refuses an edit while the project or props file has unsaved changes, and every admitted CPM add restores and invalidates the projects that share the entry, version change or not) |
 | N26 | Low | The guard hook sees Edit, Write and simple shell forms only; other writing tools of a session are not matched. | — | accepted limit; the L1 consultation and phase reviews are the backstop | accepted |
-| N27 | Low | Builds do not clean `dist/`. | — | P8.1 | open |
+| N27 | Low | Builds do not clean `dist/`. | — | P8.1 | closed (P8.1: one entry set with the same five output files, so no residue of another set can remain; `check:vsix` refuses any other file in `dist/`) |
 | N28 | Low | `npm audit` reports four findings (1 high, 1 moderate, 2 low) through the Mocha 11 that `@vscode/test-cli` needs insid… | — | Dependabot pull requests for the owner | accepted |
 | N29 | Medium | Four legacy tests call production code with a signature it does not have, so they assert less than their titles say | — | P8.2 | open |
 | N30 | Low | 55 type errors in 1.x tests, benchmarks and integration helpers (14 files with the three fixed ones). | — | P8.2 | open |
 | N31 | Low | `.github/copilot-instructions.md` 1.x gotcha rows give the sidebar watcher debounce as about 5 s. | — | P8.2 | open |
-| N32 | Low | The CI UI job writes `ui-output.txt` into the repository root before `npm run test:ui` packages the VSIX, so that job'… | — | P8.1 | open |
+| N32 | Low | The CI UI job writes `ui-output.txt` into the repository root before `npm run test:ui` packages the VSIX, so that job'… | — | P8.1 | closed (P8.1: the 1.x `UI` job that wrote the log into the checkout is gone; the `UI` job writes it under `$RUNNER_TEMP`) |
 | N33 | Low | The main program type-checks against Node 18.19 declarations while the VS Code 1.85 host is Node 18.15; 18.15.x declar… | — | covered at runtime by the `E2E (1.85.0)` CI job (ADR-000) | accepted |
 | N34 | Low | The agent guidance that required `npm install` in CI cited `@emnapi/*` optional dependencies that had left the lockfil… | — | P0.8 (guidance rewritten, CI on `npm ci`) | closed (P0.8) |
 | N35 | Low | The id letter D is used twice: | — | convention in this ledger: write "finding D3" for the smells | accepted |
