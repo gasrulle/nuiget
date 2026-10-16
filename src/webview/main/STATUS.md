@@ -60,6 +60,8 @@ CI run 38974041895 (44c2980) → 10 jobs green; "13 named states; PNGs in the ar
   version selector, buttons or tabs.
 - viewed: main-transitive-expanded.png: same header and row, captured before the row's metadata (default icon, no
   authors line) → the test waits for the authors since (see Verified by running).
+- viewed: main-transitive-expanded.png (CI run 38974822833 on 0566166, 10 jobs green): `TRANSITIVE PACKAGES (1)`
+  with `net8.0`, the Serilog row with its icon and `4.0.0 ✓ Serilog Contributors`, no description.
 - viewed: main-installed-single.png: `DIRECT PACKAGES (2)`; the collapsed transitive header reads `TRANSITIVE
   PACKAGES` without its count: the capture comes right after the rows, before the 500 ms prefetch answered. Not a
   wrong rendering (the header's state before the result); `main-installed.ui.test.ts` is not changed for it.
