@@ -34,11 +34,15 @@ git ls-files of the 2.0 benches outside src/test/benchmarks (after git add) → 
 owner block arithmetic (generator, git ls-files only) → 60 legacy test files, none under a 2.0 root; 11 ExTester,
                               9 e2e, 13 benches; 130 files deleted, 60 of them tests; 17 sidebar-next files; 20 renames;
                               no path missing
+rm -rf dist && node esbuild.mjs --production --analyze → dist/extension.js 293183 / 321341 · dist/webview.js
+                              525241 / 575626 · dist/sidebar.js 319313 / 350684 (byte-identical to P8.1: no bench in a bundle)
 npm run package:vsix, npm run test:e2e, npm run test:ui → SKIPPED: no product file changed
 ```
 
 ## Done (tested)
 
+- Reading of D8 (P8.2 ruling DO 3): "move to core" means "next to the module measured"; the three webview subjects
+  (`Listbox`, `parseSearchQuery`, `markdown`) live next to their webview modules.
 - Six 2.0 benches moved next to their modules; seven added (`project`, `health`, `validate`, `topo`, `Listbox`,
   `parseSearchQuery`, `markdown`); `catalog.bench.ts` gained `Catalog.metadata`, `quickSearch` and
   `allProjectsTransitive`.
@@ -59,7 +63,10 @@ npm run package:vsix, npm run test:e2e, npm run test:ui → SKIPPED: no product 
 - None from a contract or ADR. From the ruling's text: `tsconfig.vitest.json` includes `src/core/**/*.bench.ts` and
   `src/webview/**/*.bench.ts` instead of `src/**/*.bench.ts` (the 1.x benches here are untyped, N30); the VERIFY
   counts over `src/**/*.bench.ts` include the 13 1.x benches until the block; the `--v2` grep keeps the two
-  `LEGACY_ONLY_COMMANDS` assertion messages (P8.2b DO 12 deletes them). Details in the tracker row P8.2a.
+  `LEGACY_ONLY_COMMANDS` assertion messages (P8.2b DO 12 deletes them). `grep -c "blocked (owner: run the block)"
+  docs/plans/STATUS.md` → 3, not 1: the verbatim ruling holds the phrase twice, the tracker row once. The eslint
+  relaxation block keeps `src/test/benchmarks/**/*.ts` beside `src/**/*.bench.ts` (DO 2 dropped it): the helper and the
+  1.x benches still live there until P8.2b. Details in the tracker row P8.2a.
 
 ## Advisor decisions (date, item, question, answer verbatim)
 
