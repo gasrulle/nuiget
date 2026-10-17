@@ -23,6 +23,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **The main panel reopens on the tab you chose last**
 - **The Installed tab shows how many packages have known vulnerabilities**
 
+### Fixed
+
+- **Package size in the details pane**
+
 ## [2.0.0] - 2026-10-16
 
 ### Breaking changes

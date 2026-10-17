@@ -52,12 +52,17 @@ describe('DefaultMetadataResolver.metadata', () => {
         const metadata = await resolver(transport).metadata([source('a'), source('b')], 'Contoso.Lib', '1.0.0');
 
         expect(metadata).toMatchObject({ description: 'From B', sourceUrl: 'https://b.example/v3/index.json' });
-        expect(transport.urls().map(url => url.replace(/\?.*$/, ''))).toEqual([
+        expect(transport.requests.filter(request => request.method !== 'HEAD').map(request => request.url.replace(/\?.*$/, ''))).toEqual([
             'https://a.example/reg/contoso.lib/1.0.0.json',
             'https://a.example/reg/contoso.lib/index.json',
             'https://a.example/flat/contoso.lib/1.0.0/contoso.lib.nuspec',
             'https://a.example/query',
             'https://b.example/reg/contoso.lib/1.0.0.json',
+        ]);
+        // One size request per source with a flat container, started beside its registration call.
+        expect(transport.requests.filter(request => request.method === 'HEAD').map(request => request.url)).toEqual([
+            'https://a.example/flat/contoso.lib/1.0.0/contoso.lib.1.0.0.nupkg',
+            'https://b.example/flat/contoso.lib/1.0.0/contoso.lib.1.0.0.nupkg',
         ]);
 
         const nuspecOnly = new FakeTransport(request => (request.url.endsWith('.nuspec') ? ok(NUSPEC) : fail('http-error', 404)));
@@ -99,7 +104,43 @@ describe('DefaultMetadataResolver.metadata', () => {
         await expect(resolver(transport, onlyB).metadata([source('a'), source('b')], 'Contoso.Lib', '1.0.0')).resolves.toMatchObject({ sourceUrl: 'https://b.example/v3/index.json' });
 
         expect(transport.urls().filter(url => url.startsWith('https://a.example'))).toEqual([]);
-        expect(transport.requests.filter(request => request.method === 'HEAD')).toEqual([]);
+        expect(transport.requests.filter(request => request.method === 'HEAD').map(request => request.url)).toEqual(['https://b.example/flat/contoso.lib/1.0.0/contoso.lib.1.0.0.nupkg']);
+    });
+
+    it('fills packageSize from the flat container of the source that answered', async () => {
+        const transport = new FakeTransport(request => {
+            if (request.url === 'https://b.example/reg/contoso.lib/1.0.0.json') {
+                return leaf('From B');
+            }
+            if (request.method === 'HEAD' && request.url.startsWith('https://b.example/flat/')) {
+                return ok('', { 'content-length': '2048' });
+            }
+            return fail('http-error', 404);
+        });
+        await expect(resolver(transport).metadata([source('a'), source('b')], 'Contoso.Lib', '1.0.0')).resolves.toMatchObject({ description: 'From B', packageSize: 2048 });
+
+        const nuspecOnly = new FakeTransport(request => {
+            if (request.method === 'HEAD') {
+                return ok('', { 'content-length': '4096' });
+            }
+            return request.url.endsWith('.nuspec') ? ok(NUSPEC) : fail('http-error', 404);
+        });
+        await expect(resolver(nuspecOnly).metadata([source('a')], 'Contoso.Lib', '1.0.0')).resolves.toMatchObject({ description: 'From the nuspec', packageSize: 4096 });
+    });
+
+    it('leaves packageSize absent when the HEAD fails', async () => {
+        const answer = (head: TransportResult) => new FakeTransport(request => {
+            if (request.method === 'HEAD') {
+                return head;
+            }
+            return request.url === 'https://a.example/reg/contoso.lib/1.0.0.json' ? leaf('From A') : fail('http-error', 404);
+        });
+        const failed = await resolver(answer(fail('network'))).metadata([source('a')], 'Contoso.Lib', '1.0.0');
+        expect(failed).toMatchObject({ description: 'From A' });
+        expect(failed?.packageSize).toBeUndefined();
+        const empty = await resolver(answer(ok('', { 'content-length': '0' }))).metadata([source('a')], 'Contoso.Lib', '1.0.0');
+        expect(empty).toMatchObject({ description: 'From A' });
+        expect(empty?.packageSize).toBeUndefined();
     });
 
     it('falls back to the offline nuspec when no allowed source produced metadata, also when none is allowed, and marks it offline', async () => {

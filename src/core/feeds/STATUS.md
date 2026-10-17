@@ -80,6 +80,19 @@ NUIGET_SDK_TESTS=1 run of src/core/cli → SKIPPED: nothing under src/core/cli c
 - 2026-10-16, P9.1: the ambient advisor before the edits (shape of the marker on `missing`, `liteLookup` as a named
   source, the `data:` reading, the memoized read). Not ⚑, no stop-and-ask trigger.
 
+## P9.8 addition (2026-10-17)
+
+- `metadataResolver.ts` `fromSource`: the package size is the flat container's HEAD of the same allowed source, started
+  beside the registration call under the same signal and the Transport's default budget (no `timeoutMs`, the worst case
+  1.x paid), and added to the answer when it is a positive number; a failed or empty HEAD leaves the optional field
+  absent inside a complete answer (no `IncompleteResultError`, no cache, no retry). Ruling verbatim in
+  `src/webview/main/STATUS.md`.
+- Tests: `fills packageSize from the flat container of the source that answered`, `leaves packageSize absent when the
+  HEAD fails`; named rewrites `:55-61` (the sequence over non-HEAD requests plus one HEAD per source) and `:103` (the
+  size request goes to the allowed source only, follow-up ruling). No bench: none covers the resolver
+  (`health.bench.ts` only) and the change is one HEAD with no parsing or cache.
+- `npx vitest run --project backend src/core/feeds` → Tests 178 passed | 1 skipped (179).
+
 ## Exact next step (one item ID)
 
 P9.2 (⚑: consult the `architecture-advisor` before coding).

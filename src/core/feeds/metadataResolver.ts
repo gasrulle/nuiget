@@ -4,6 +4,7 @@
  * When no allowed source produced metadata, for any reason, the global-packages folder answers (`offline: true`): the
  * clients do not tell a source that failed from one that does not know the package. Nothing is cached here, so the same
  * id and version from two sources never share an answer (F6); the coordinator caches under keys that carry the source.
+ * The size of the package is the flat container's HEAD of the same source, absent when it does not answer.
  */
 
 import type { PackageMetadata, PackageSearchResult } from '../../protocol/domain';
@@ -79,8 +80,24 @@ export class DefaultMetadataResolver implements MetadataResolver {
         return this.clients.readme.extract(filterAllowedSources(this.deps.policy, packageId, sources), packageId, version, signal);
     }
 
-    /** Registration, then the flat-container nuspec, then the search service of one allowed source. */
+    /**
+     * Registration, then the flat-container nuspec, then the search service of one allowed source; the package size is
+     * asked of the same source's flat container beside them and added to the answer when its HEAD gives one.
+     */
     private async fromSource(source: ResolvedSource, packageId: string, version: string, signal?: AbortSignal): Promise<PackageMetadata | undefined> {
+        // Never an unhandled rejection: a size that cannot be read is an absent field, not a failed answer.
+        const sizeTask = source.endpoints.packageBaseAddress ? this.clients.flat.packageSize(source, packageId, version, signal).catch(() => undefined) : undefined;
+        const found = await this.metadataOf(source, packageId, version, signal);
+        if (found !== undefined && sizeTask !== undefined) {
+            const size = await sizeTask;
+            if (size !== undefined && size > 0) {
+                found.packageSize = size;
+            }
+        }
+        return found;
+    }
+
+    private async metadataOf(source: ResolvedSource, packageId: string, version: string, signal?: AbortSignal): Promise<PackageMetadata | undefined> {
         const registered = await this.clients.registration.metadata(source, packageId, version, signal);
         if (registered) {
             return registered;
