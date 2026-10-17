@@ -27,7 +27,7 @@ shape defers every low). Screenshots of the closed states: CI run 39001101052, a
 | MI9 | closed | `9ea8a40` (P9.5) |
 | MI10 | open | no Collapse all / Expand all on the bulk toolbar |
 | MI11 | open | no hover prefetch |
-| MI12 | closed | `0e02690` (P9.11) |
+| MI12 | partly | `0e02690` (P9.11): project headers in normal case; the count shows whether expanded or not (deferred) and the hover background was left out on purpose (P9 phase review, NON-BLOCKING 1) |
 | MU1 | closed | `20a1a22` (P9.4) |
 | MU2 | closed | `20a1a22` (P9.4) |
 | MU3 | closed | `20a1a22` (P9.4) |

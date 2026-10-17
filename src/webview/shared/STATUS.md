@@ -55,10 +55,14 @@ npm run test:ui      → SKIPPED locally: CI runs the UI job on the push; the vi
 
 - Nothing.
 
+## Visual check (CI run 39017730043, push of cf9d794, artifact `ui-screenshots`, 15 PNGs)
+
+viewed: sidebar-sections.png: sidebar Installed (2) and Updates (2) rows as at 3f2a2e0; nothing in the sidebar depended on the prefetch
+viewed: main-transitive-expanded.png: the main panel still shows `TRANSITIVE PACKAGES (1)` with the `net8.0` badge and the Serilog card, so the main entry keeps the P9.5 prefetch
+
 ## Not started
 
-- The visual check of `sidebar-sections` and `main-transitive-expanded` in the CI run of this commit (recorded with
-  the P9 gate re-run).
+- Nothing of P9.fix-1.
 
 ## Deviations from contract/ADR (file:line each)
 

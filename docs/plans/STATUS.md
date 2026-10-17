@@ -133,7 +133,7 @@ therefore covers them, and the P5 review covers `labs/2.0-P4-done..HEAD`. The ph
 | P9.11 | P9 | Theme and focus polish: HC borders, VS Code control colours, chrome, focus ring | done | c946043, 0e02690, 952f610 | 2026-10-17 | By the P9.11 ruling (verbatim in `src/webview/main/STATUS.md`), two commits. (a): high-contrast lines on buttons, tabs and row icons through tokens unset outside HC (HC block unchanged), VS Code check-box and drop-down colours, the dialog scrim (`color-mix()`, one named rewrite of the tokens lint). (b): the separator under the search row, the list pane in the side-bar colour, All Projects headers in normal case (MI12; count-when-collapsed deferred), ArrowUp before the P9.0 theme captures so the focus ring shows. MH6, MH11, MH12, MI12 close here (P9.13 records them in the audit file). |
 | P9.12 | P9 | Tests that see content: row assertions, height measurement, harness enrichment, All Projects flake | done | eb68dbb, c9dffb7, dc70b60 | 2026-10-17 | By the P9.12 ruling (verbatim in `src/test/ui/v2/STATUS.md`), three commits. Run 38997325272 (33312b2, docs-only) red in UI with the TF8 signature beside green 38997321456 on the same SHA; no rerun; fixed by commit 1 (Refresh-pressing `untilProjects` through the new `refresh-button` hook). Also N86 (commit 2: announce `projects/changed` after `session.reconcile`); TF1/TF3/TF7 (commit 3; follow-up ruling: the TF7 scenario expects `vulnerabilities: []`, P4.8 Q6). Gate: run 39000089739 green and its one rerun (attempt 2) green, UI `42 passing` in both; four screenshots viewed. |
 | P9.13 | P9 | Docs: parity audit file, interaction model, CHANGELOG, ARCHITECTURE, README screenshots | done | 3f2a2e0 | 2026-10-17 | Ambient advisor before the edits (verdict in `.github/STATUS.md`). Parity audit: a `## Closure status` table after the intro, one row per gap id with the closing SHAs from the P9 commit messages; 64 closed, 2 met by the tree (TF2, TF4), 3 not a gap (MH9, SB12, TF5), 2 partly (MI7, DP3), 17 open for 2.0.1 (MI10, MI11, MU8, MB3, MB13, MB16-MB19, SB2, SB7, SB9, SB10, SB13, SB14, DP8, DP10) plus two critic items; MU5 closed by `3bfc748` after reading `MainShell.tsx:226-227,279`; the 88 entries unchanged. Interaction model §1: the two-line card and the name-first compact row; §4 failed-op row: warning toast with Show output, output channel, info toast, bulk progress (`src/host/feedback.ts:97-104,153`); §3, §7 and §8 already current (every hook a test reads is in §8). CHANGELOG `[Unreleased]` `### Changed`: one headline for what is not back from 1.x (the restored controls were already listed by P9.0-P9.12; recent searches stay in 2.0.0 `### Breaking changes`; folding into 2.0.0 is P10.1). ARCHITECTURE CI table: the `ui-screenshots` artifact. README: the 1.x gif replaced by three PNGs of run 39001101052 (`docs/images/nuiget-{browse-details,installed-readme,updates}.png`, raw URLs on `main` as before, so they show once PR #18 merges); `nuiget.gif` kept, unreferenced, for the owner to delete or keep. |
-| P9.fix-1 | P9 | Sidebar asks no transitive packages ahead of time (`TransitiveProvider` `prefetch`, N87) | done |  | 2026-10-17 | From the P9 phase review (BLOCKING 1) and its follow-up ruling on the test shape (both verbatim in `src/webview/shared/STATUS.md`). `TransitiveProvider` and `StoreProvider` take `prefetch` (default `true`); the sidebar entry passes `false`. Tests in three layers: the slice, `StoreProvider` (createFakeHost, both values) and both entries through a `vi.doMock` wrapper of `StoreProvider` (no `MessageEvent` on `window`; gotcha row extended). Negative controls fail as expected. N87 in the ledger. Bundles 297018 / 548791 / 333128 (+0, +45, +57). |
+| P9.fix-1 | P9 | Sidebar asks no transitive packages ahead of time (`TransitiveProvider` `prefetch`, N87) | done | cf9d794 | 2026-10-17 | From the P9 phase review (BLOCKING 1) and its follow-up ruling on the test shape (both verbatim in `src/webview/shared/STATUS.md`). `TransitiveProvider` and `StoreProvider` take `prefetch` (default `true`); the sidebar entry passes `false`. Tests in three layers: the slice, `StoreProvider` (createFakeHost, both values) and both entries through a `vi.doMock` wrapper of `StoreProvider` (no `MessageEvent` on `window`; gotcha row extended). Negative controls fail as expected. N87 in the ledger. Bundles 297018 / 548791 / 333128 (+0, +45, +57). |
 | P10.1 | P10 | Release refresh: CHANGELOG final, checklist, PR #18 updated; stop for owner merge | open |  |  |  |
 
 ## Phase gates
@@ -1095,6 +1095,23 @@ followed on that point (the ambient advisor agreed). The review goes here, under
 not under `## Advisor decisions`. NON-BLOCKING 1 (MI12 `partly`) and 2 (P9.13's Commit cell) are done in the commits
 that record the gate re-run, since P10.1's inputs are the CHANGELOG and PR #18; NON-BLOCKING 3-6 wait for P10.1 and
 2.0.1. The tag waits for P9.fix-1's green CI and the owner's `P9 approved`.
+
+Gate re-run after P9.fix-1 (2026-10-17):
+
+```text
+tracker                   → P9.0-P9.13 and P9.fix-1: 15 rows, all done (P9.13 3f2a2e0, P9.fix-1 cf9d794)
+local, at cf9d794         → npx tsc --noEmit 0 · npm run check-types 0 · npx eslint src 0 · npm run lint 0 ·
+                            npm run docs:check 0 · npm test 135 files, 2016 passed, 9 skipped · npm run bench 0 ·
+                            node esbuild.mjs --production --analyze 297018 / 548791 / 333128 under 322502 / 577766 /
+                            351245 · npm run package:vsix 0 · npm run check:vsix OK
+CI, run 39017730043       → push of cf9d794: success on all 10 jobs; UI "42 passing (2m)"; "15 named states; PNGs in the
+                            artifact: 15"; ui-screenshots downloaded, sidebar-sections and main-transitive-expanded viewed
+                            (src/webview/shared/STATUS.md)
+review NON-BLOCKING 1-2   → MI12 `partly` in the closure table (63 closed, 3 partly); P9.13's Commit cell 3f2a2e0
+```
+
+The P9 gate holds except the owner's review of the `ui-screenshots` artifact of run 39017730043. `labs/2.0-P9-done` is
+tagged after the owner's `P9 approved`.
 
 ## Advisor decisions
 
