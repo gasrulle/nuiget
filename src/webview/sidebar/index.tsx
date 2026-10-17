@@ -27,10 +27,11 @@ if (rootElement) {
         }
         void bus.request('ui/reportError', payload).catch(() => undefined);
     };
+    // The sidebar shows no transitive packages, so it never asks for them ahead of time (P9.fix-1, N87).
     ReactDOM.createRoot(rootElement).render(
         <StrictMode>
             <ErrorBoundary onError={report}>
-                <StoreProvider bus={bus}>
+                <StoreProvider bus={bus} prefetch={false}>
                     <SidebarView viewState={api} />
                 </StoreProvider>
             </ErrorBoundary>

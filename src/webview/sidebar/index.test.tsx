@@ -16,6 +16,7 @@ describe('sidebar 2.0 entry', () => {
         cleanup();
         document.body.replaceChildren();
         vi.doUnmock('./SidebarView');
+        vi.doUnmock('../shared/store/StoreProvider');
         vi.restoreAllMocks();
     });
 
@@ -68,5 +69,28 @@ describe('sidebar 2.0 entry', () => {
         expect(reports.length).toBeGreaterThan(0);
         expect(reports[0].payload?.message).toBe('boom');
         expect(reports[0].payload?.stack).toContain('boom');
+    });
+
+    it('the entry mounts the store without the transitive prefetch (P9.fix-1, N87)', async () => {
+        const seen: Array<{ prefetch?: boolean }> = [];
+        vi.doMock('../shared/store/StoreProvider', async importOriginal => {
+            const actual = await importOriginal<typeof import('../shared/store/StoreProvider')>();
+            return {
+                StoreProvider: (props: Parameters<typeof actual.StoreProvider>[0]) => {
+                    seen.push(props);
+                    return <actual.StoreProvider {...props} />;
+                },
+            };
+        });
+        const root = document.createElement('div');
+        root.id = 'sidebar-root';
+        document.body.append(root);
+
+        await act(async () => {
+            await import('./index');
+        });
+
+        expect(seen.length).toBeGreaterThan(0);
+        expect(seen[0]?.prefetch).toBe(false);
     });
 });

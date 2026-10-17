@@ -32,10 +32,10 @@ const hostSays = (say: () => void): Promise<void> => act(async () => {
 });
 const text = (): string => screen.getByTestId('transitive').textContent ?? '';
 
-async function mount(): Promise<FakeHost> {
+async function mount(prefetch?: boolean): Promise<FakeHost> {
     const host = createFakeHost();
     // The installed slice is above the transitive one, as in `StoreProvider`; its list stays unanswered unless a test answers it.
-    render(<MessageBusProvider bus={host.bus}><SessionProvider><InstalledProvider><TransitiveProvider><Probe /></TransitiveProvider></InstalledProvider></SessionProvider></MessageBusProvider>);
+    render(<MessageBusProvider bus={host.bus}><SessionProvider><InstalledProvider><TransitiveProvider prefetch={prefetch}><Probe /></TransitiveProvider></InstalledProvider></SessionProvider></MessageBusProvider>);
     await hostSays(() => host.respond(host.requests('session/get')[0], snapshot(1)));
     return host;
 }
@@ -146,6 +146,26 @@ describe('transitive slice', () => {
             await hostSays(() => current.enable());
             await wait(TRANSITIVE_PREFETCH_MS);
             expect(host.requests('transitive/get').filter(request => request.payload.projectPath === A)).toHaveLength(2);
+        } finally {
+            vi.useRealTimers();
+        }
+    });
+
+    it('prefetch false: the installed list ready asks nothing after the delay, and enable() still asks transitive/get', async () => {
+        vi.useFakeTimers();
+        try {
+            const wait = (ms: number): Promise<void> => act(async () => {
+                await vi.advanceTimersByTimeAsync(ms);
+            });
+            const host = await mount(false);
+            await hostSays(() => host.respond(host.requests('installed/get')[0], { projectPath: A, fidelity: 'authoritative', isCpm: false, packages: [] }, 1));
+            await wait(TRANSITIVE_PREFETCH_MS * 4);
+            expect(host.requests('transitive/get')).toHaveLength(0);
+            expect(host.requests('transitive/metadata')).toHaveLength(0);
+            expect(text()).toBe('false idle - false meta:0');
+
+            await hostSays(() => current.enable());
+            expect(host.requests('transitive/get').map(request => request.payload)).toEqual([{ projectPath: A }]);
         } finally {
             vi.useRealTimers();
         }

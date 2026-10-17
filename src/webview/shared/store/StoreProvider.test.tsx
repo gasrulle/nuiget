@@ -1,6 +1,6 @@
 import { act, render, screen } from '@testing-library/react';
 import { StrictMode } from 'react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type { SessionSnapshot } from '../../../protocol';
 import { createFakeHost } from '../bus/testSupport';
 import { useMessageBus } from '../bus/useMessageBus';
@@ -9,6 +9,7 @@ import { useOps } from './ops';
 import { useProjects } from './projects';
 import { useSession } from './session';
 import { StoreProvider } from './StoreProvider';
+import { TRANSITIVE_PREFETCH_MS } from './transitive';
 
 const A = '/w/A/A.csproj';
 const snapshot = (rev: number): SessionSnapshot => ({ rev, selectedProject: A, selectedSource: 'all', includePrerelease: false, restoreEnabled: true, origin: 'host' });
@@ -100,5 +101,33 @@ describe('StoreProvider: every slice (P5.2)', () => {
 
         expect(screen.getByTestId('every')).toHaveTextContent('session,sessionActions,projects,installed,updates,transitive,search,details,detailsActions,allProjects,sources,config,ops,opsActions');
         expect(host.sent.map(message => message.kind === 'request' ? message.type : message.kind).sort()).toEqual(['projects/list', 'session/get']);
+    });
+});
+
+describe('StoreProvider: the transitive prefetch (P9.fix-1, N87)', () => {
+    /** Mounts the store, answers the session, the projects and the installed list of A, and waits past the delay. */
+    async function transitiveAsked(prefetch?: boolean): Promise<number> {
+        vi.useFakeTimers();
+        try {
+            const host = createFakeHost();
+            render(<StoreProvider bus={host.bus} prefetch={prefetch}><Everything /></StoreProvider>);
+            await hostSays(() => host.respond(host.requests('session/get')[0], snapshot(1)));
+            await hostSays(() => host.respond(host.requests('projects/list')[0], { projects: [{ name: 'A', path: A }] }, 1));
+            await hostSays(() => host.respond(host.requests('installed/get')[0], { projectPath: A, fidelity: 'authoritative', isCpm: false, packages: [] }, 1));
+            await act(async () => {
+                await vi.advanceTimersByTimeAsync(TRANSITIVE_PREFETCH_MS + 1);
+            });
+            return host.requests('transitive/get').length;
+        } finally {
+            vi.useRealTimers();
+        }
+    }
+
+    it('prefetch false reaches the transitive slice: no transitive/get after the installed list', async () => {
+        expect(await transitiveAsked(false)).toBe(0);
+    });
+
+    it('without the prop the transitive slice asks transitive/get once after the installed list', async () => {
+        expect(await transitiveAsked()).toBe(1);
     });
 });

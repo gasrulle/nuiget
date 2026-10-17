@@ -16,16 +16,17 @@ import { UpdatesProvider } from './updates';
 /**
  * The store of a surface: the bus and the slices that exist so far, each with a context of its own, so that a
  * component renders for the slice it reads and no other. Mounting it is what makes the surface ask the host
- * for the session and the projects.
+ * for the session and the projects. `prefetch={false}` keeps the transitive slice from asking before a
+ * view opens it (the sidebar shows no transitive packages).
  */
-export function StoreProvider({ bus, children }: { bus: MessageBus; children: React.ReactNode }): React.JSX.Element {
+export function StoreProvider({ bus, children, prefetch = true }: { bus: MessageBus; children: React.ReactNode; prefetch?: boolean }): React.JSX.Element {
     return (
         <MessageBusProvider bus={bus}>
             <SessionProvider>
                 <ProjectsProvider>
                     <InstalledProvider>
                         <UpdatesProvider>
-                            <TransitiveProvider>
+                            <TransitiveProvider prefetch={prefetch}>
                                 <AllProjectsProvider>
                                     <ConfigProvider>
                                         <SourcesProvider>

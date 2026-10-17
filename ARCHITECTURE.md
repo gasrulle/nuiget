@@ -438,8 +438,9 @@ starts; the other slices ask when they have something to ask for.
   ADR-009 d.1): for the provisional list at once and for the response only when its rows differ, and writes the
   answer into the map; another project or other rows cancel the ask, and an error is no metadata (P5.10, P6.2b).
 - `transitive` (P5.4, P9.5): `useResource` for `transitive:<path>` of the committed project, asked 500 ms after
-  the project's installed list is ready (`TRANSITIVE_PREFETCH_MS`, never in All Projects) or at once when the section
-  is opened first (`enable()`); another project starts again. `restore()` asks the next `transitive/get` with
+  the project's installed list is ready (`TRANSITIVE_PREFETCH_MS`, never in All Projects; never in the sidebar, whose
+  entry passes `prefetch={false}` to `StoreProvider`, P9.fix-1, N87) or at once when the section is opened
+  first (`enable()`); another project starts again. `restore()` asks the next `transitive/get` with
   `forceRestore`, once. The rows' metadata comes from `transitive/metadata` by `id@version`; when the host cannot
   answer it (`unsupported` until the feeds of P4 exist) the rows show from `transitive/get` alone.
 - `allProjects` (P5.4): the stream of `allProjects/installed` while All Projects is committed, one chunk per

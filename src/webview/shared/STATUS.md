@@ -1,214 +1,155 @@
-# STATUS — src/webview/shared   commit 6df4567 (P9.1; parent of the P9.2 commit)   2026-10-16T20:00:00Z
+# STATUS — src/webview/shared   commit 3f2a2e0 (P9.13; parent of the P9.fix-1 commit)   2026-10-17T09:00:00Z
 
 git status --porcelain --untracked-files=all (before the commit): modified `.github/copilot-instructions.md`,
-`ARCHITECTURE.md`, `CHANGELOG.md`, `docs/plans/STATUS.md`, `src/test/lint/webview-tokens.test.ts`,
-`src/webview/shared/tokens.css`, `src/webview/shared/primitives/{Row.tsx,Row.test.tsx,Listbox.tsx,primitives.css,testSupport.ts}`,
-`src/webview/shared/STATUS.md`
+`ARCHITECTURE.md`, `CHANGELOG.md`, `docs/plans/STATUS.md`, `docs/plans/findings-ledger.md`,
+`src/webview/main/index.test.tsx`, `src/webview/shared/store/{StoreProvider.tsx,StoreProvider.test.tsx,transitive.tsx,transitive.test.tsx}`,
+`src/webview/sidebar/{index.tsx,index.test.tsx,STATUS.md}`, `src/webview/shared/STATUS.md`
 
-Item: **P9.2** ⚑ — the Row primitive as the 1.x card (D14, D15; parity audit MI3, MU11, MB1, DP7, MH5), by the ruling
-below. This note replaces the P7.5b note (history at `71cf359`).
+Item: **P9.fix-1** — the sidebar asks no transitive packages ahead of time (finding N87), from BLOCKING 1 of the P9
+phase review and the follow-up ruling on the test shape (both verbatim below). This note replaces the P9.2/P9.11 note
+(history at `c946043`).
 
 ## Verified by running
 
 ```text
-baseline (6df4567)          → npx tsc --noEmit 0 · npx eslint src 0 · npx vitest run exit 0
-npx tsc --noEmit            → exit 0
-npm run check-types         → exit 0
-npx eslint src              → exit 0
-npm run lint                → exit 0
-npx vitest run --project backend src/test/lint → Tests 131 passed (131) (before the two REQUIRED tokens were added)
-npx vitest run --project frontend src/webview/shared/primitives/Row.test.tsx → Tests 17 passed (17): the thirteen
-                              existing titles and the four of "Row layout (P9.2, D15)"
-npx vitest run --project frontend src/webview → Test Files 55 passed (55) · Tests 483 passed (483)
-git diff --name-only HEAD -- 'src/webview/**/*.test.tsx' 'src/webview/**/*.bench.ts' → src/webview/shared/primitives/Row.test.tsx only
-npm test                    → exit 0 · Test Files 130 passed (130) · Tests 1918 passed | 9 skipped (1927)
-npm run bench               → exit 0
-npm run docs:check          → exit 0
-rm -rf dist out/esbuild && node esbuild.mjs --production --analyze → exit 0 · dist/extension.js 293359 / 322502 ·
-                              dist/webview.js 526452 / 577766 (+1211) · dist/sidebar.js 320531 / 351245 (+1218)
-npm run package:vsix        → SKIPPED locally: no host or packaging change
-CI run 38958055306 (83afc1b) → 9 jobs green, UI red: the six theme tests, "color-contrast nodes that passed in the
-                              sidebar under <theme>: expected 5 to be at least 10" (P9.1's run: 13). Cause: the
-                              compact `.nuiget-row-line` is `display: contents` (a 0 by 0 box) and kept the base rule's
-                              `overflow: hidden`; axe takes text under a clipping ancestor with an empty box for hidden
-                              and measured neither name nor version of the four sidebar rows (8 nodes). Fix (attempt 1):
-                              `overflow: visible` on the compact line
-rm -rf /tmp/nuiget-ui/screenshots dist && npm run test:ui -- --storage /tmp/nuiget-ui → exit 0 · 37 passing (1m) ·
-                              "[theme] sidebar under <each of six themes>: passes {"color-contrast":13,"target-size":7};
-                              incomplete 0"
-CI run 38958869599 (57b8273) → 10 jobs green. Visual gate red (RUN.md §4): `main-updates.png` and
-                              `main-installed-single.png` show comfortable rows about 90 px high, a two-line update
-                              row included. Cause: the option inherits the 66 px minimum (`min-height: inherit`) and the
-                              12 px padding was added outside it (`content-box`). Fix (attempt 2): `box-sizing:
-                              border-box` on the comfortable option, as 1.x had; test `a comfortable row keeps its
-                              padding inside the 66 px minimum` (fails without the fix: negative control run)
-npx vitest run --project frontend src/webview/shared/primitives/Row.test.tsx → Tests 18 passed (18)
-rm -rf /tmp/nuiget-ui/screenshots dist && npm run test:ui -- --storage /tmp/nuiget-ui → exit 0 · 37 passing (1m);
-                              local `main-installed-single.png`: the three-line Installed rows (description still on
-                              line 3 until P9.3) about 78 px
+baseline (3f2a2e0)   → npx tsc --noEmit 0 · npm run check-types 0 · npx eslint src 0 · npx vitest run: 135 files,
+                       2011 passed, 9 skipped
+npx tsc --noEmit     → exit 0
+npm run check-types  → exit 0
+npx eslint src       → exit 0
+npm run lint         → exit 0
+npx vitest run --project frontend src/webview/shared/store src/webview/sidebar src/webview/main/index.test.tsx
+                     → Tests 193 passed (193)
+npm test             → exit 0; Test Files 135 passed (135); Tests 2016 passed | 9 skipped (2025)
+npm run bench        → exit 0; Test Files 14 passed (14); Tests 75 passed (75)
+npm run docs:check   → exit 0; docs:protocol:check — docs/protocol.md is up to date.
+node esbuild.mjs --production --analyze → exit 0; dist/extension.js 297018 / 322502, dist/webview.js 548791 / 577766,
+                       dist/sidebar.js 333128 / 351245 (run 39016052047 at 3f2a2e0: 297018, 548746, 333071; +45 and
+                       +57 bytes)
+npm run package:vsix → exit 0; DONE Packaged: nuiget-v2.0.0.vsix (17 files, 581.13 KB)
+npm run check:vsix   → check:vsix: OK
+negative control     → `prefetch={false}` removed from src/webview/sidebar/index.tsx: `the entry mounts the store
+                       without the transitive prefetch (P9.fix-1, N87)` fails, the StoreProvider tests pass (1 failed |
+                       9 passed); line restored. `!prefetch ||` removed from transitive.tsx: the slice test fails;
+                       restored.
+grep -rn "dispatchEvent(new MessageEvent" src/webview (tests) → MessageBus.test.ts:200 only
+npm run test:ui      → SKIPPED locally: CI runs the UI job on the push; the visual check follows in the gate re-run
 ```
 
 ## Done (tested)
 
-- `tokens.css`: `--nuiget-row-height-comfortable: 66px`; `--nuiget-icon-size-xl: 32px`; `--nuiget-color-version-new:
-  var(--vscode-gitDecoration-addedResourceForeground, var(--vscode-charts-green))` with the measured ratios in its
-  comment; `CanvasText` under forced colours. `--nuiget-row-height-compact` stays 24.
-- `Listbox.tsx`: `ROW_HEIGHT.comfortable` 66; it still measures rows.
-- `Row.tsx`: `version` narrowed to `string`; new `nextVersion`, `authors`, `verified`. Option = check, icon column
-  (comfortable, always there), `.nuiget-row-body[title]` with two `.nuiget-row-line`s (name + badges; version with
-  the text arrow and the new version, authors with the Verified mark, status) and the description. Name =
-  name + version ids; description = badges, authors, description, status ids. The Verified icon and the authors are
-  separated by a text space, not a margin: without it the description read "…by its ownerSerilog Contributors".
-- `primitives.css`: the card (12 px padding, 32 px icon column, `gap` 12 px, bottom border on the wrapper, inset 3 px
-  accent on the selected and the current row), the compact one-liner (`display: contents` on the lines; name
-  `flex-shrink: 0`, `max-width: 70%`; version `flex-shrink: 1`, `min-width: 0`, ellipsis; badges pushed right;
-  authors, description and status visually hidden). `.nuiget-row-title` and `.nuiget-row-desc` removed.
-- `testSupport.ts`: `installStylesheet()` puts `tokens.css` and `primitives.css` into the jsdom document.
-- `src/test/lint/webview-tokens.test.ts`: `--nuiget-icon-size-xl` and `--nuiget-color-version-new` added to
-  `REQUIRED` (additive, approved by the ruling).
-- Tests (`Row.test.tsx`, "Row layout (P9.2, D15)"): `comfortable row stacks name over version and authors`, `long
-  version never hides the name in compact density`, `an update row reads old → new as text and marks the new
-  version`, `the tooltip is on the body, not on the option`. The thirteen existing titles and bodies are unchanged.
-- Docs: ARCHITECTURE row block; CHANGELOG `[Unreleased]` `### Changed`; gotchas "A `title` on a row" and
-  "`display: contents` and axe" (the fix-forward).
-- P9.3 (ruling in `src/webview/main/STATUS.md`): `Row` `selectable` (`false` draws `.nuiget-row-check--off`, a dashed
-  muted empty mark) with the test `a row that cannot join a bulk action shows a muted check mark`;
-  `installed/rules.ts` `versionCell` (additive) with `installed/rules.test.ts`.
-- P9.4 (ruling in `src/webview/main/STATUS.md`): `store/ops.tsx` `merge` keeps the union of an operation's projects
-  and packages across its reports (MU3), test `a per-step report keeps every package of the operation busy`.
-- P9.4 fix-forward: the update arrow is a text node of `.nuiget-row-version`; `.nuiget-row-version-arrow` removed
-  (axe left the symbol-only span incomplete in the theme pass of CI run 38965520035).
-- P9.5 (ruling in `src/webview/main/STATUS.md`): `store/transitive.tsx` prefetches 500 ms after the installed list;
-  `store/details.tsx` origin `'transitive'` asks no feed request; `store/allProjects.tsx` asks `transitive/metadata`
-  once per answer of the aggregate stream (`transitive.metadata`). Tests: the prefetch, the transitive selection and
-  the aggregate metadata ask.
-- P9.6 (a) (ruling in `src/webview/main/STATUS.md`): `Row.meta` (Browse downloads after the version, in the
-  description); `store/details.tsx` one selection per view (`installed`, `updates`, `browse`) with a stable
-  `showView`.
-- P9.6 (b): `store/search.tsx` `suggest()` keeps the groups it shows while it asks (`suggesting`); `search/SearchBox.tsx`
-  groups suggestions per source (`role="group"` with a header from two sources on), a disabled `Searching…` row, the
-  versions level (ArrowRight, ArrowLeft, `‹ <id>` header, five versions, loading and error rows) and Ctrl/Cmd+Enter
-  (`onQuickInstall`); the popup wrapper and its rules in `search.css`.
-
-- P9.7 (a) (2026-10-17, ruling in `src/webview/main/STATUS.md`): `SearchBox` has Clear (with text) and Filters
-  buttons inside the box, `tabIndex={-1}`, focus kept in the input; the native search cancel button is hidden
-  (`search.css`); `IconButton` passes `onMouseDown` through. Test: `Clear empties the box and keeps focus; Filters
-  opens the prefix list`. Closes SB6 for the sidebar too (shared component).
-- P9.7 (b): `viewState.ts` (`ViewStateStore`, re-exported by `SidebarView.tsx`); `Tabs` `badge` (test `a tab with a
-  count and a badge names both`); `SearchBox` pads for the buttons it shows (`nuiget-search-box--clearable`).
-- P9.8 (b) (2026-10-17, ruling in `src/webview/main/STATUS.md`): `SectionHeader` `level` 4 (test `renders the heading
-  level asked`); `store/details.tsx` `DetailsSelection.known` (`verified`, `totalDownloads`); `store/allProjects.tsx`
-  exports `EMPTY_ALL_PROJECTS` and `AllProjectsStored` for the project picker's own stream (no logic change).
-- P9.8 (c): `tokens.css` README table and block-quote colours (`--nuiget-color-table-header-bg`,
-  `--nuiget-color-table-row-alt-bg`, `--nuiget-color-blockquote-bg`, `--nuiget-color-blockquote-border`), `Canvas`/`CanvasText`
-  under forced colours, not in the high-contrast block.
-
-- P9.9 (b) (2026-10-17, ruling in `src/host/STATUS.md`): `primitives/ErrorBoundary.tsx` (a class component; the error
-  state "Something went wrong in this view." with Reload, which remounts the tree under it; `onError` with the component
-  stack), exported from `index.ts`; both entries wrap `StoreProvider` in it and report through `ui/reportError`. Tests:
-  `error boundary renders reload`, `a boundary without an error renders its children only` (ErrorBoundary.test.tsx);
-  `a crash in the shell renders Reload and reports the error through the bus` (main and sidebar `index.test.tsx`).
-  No named state shows the fallback.
-
-- P9.11 (a) (2026-10-17, ruling in `src/webview/main/STATUS.md`): `tokens.css` the high-contrast line tokens
-  (`button-border`, `contrast-border`, transparent outside HC), check-box and drop-down tokens, the scrim (`color-mix()`);
-  `primitives.css` button and tab lines, the row icon's contrast outline, the dialog layer's scrim. The high-contrast
-  block stays three keys.
+- `store/transitive.tsx`: `TransitiveProvider` `prefetch?: boolean`, default `true`; the 500 ms timer does nothing when
+  it is `false`; `enable()` and `restore()` unchanged. Test `prefetch false: the installed list ready asks nothing after
+  the delay, and enable() still asks transitive/get`; the P9.5 prefetch test is unchanged.
+- `store/StoreProvider.tsx`: `prefetch?: boolean`, default `true`, passed to `TransitiveProvider` only. Tests `prefetch
+  false reaches the transitive slice: no transitive/get after the installed list` and `without the prop the transitive
+  slice asks transitive/get once after the installed list` (createFakeHost, fake timers).
+- `src/webview/sidebar/index.tsx`: `<StoreProvider bus={bus} prefetch={false}>`; test `the entry mounts the store
+  without the transitive prefetch (P9.fix-1, N87)` through a `vi.doMock` wrapper that records the props and renders
+  the real `StoreProvider`. `src/webview/main/index.test.tsx`: `the entry mounts the store with the transitive
+  prefetch (P9.fix-1, N87)` (main entry unchanged).
+- Ledger N87 in both tables; ARCHITECTURE store table (`transitive` bullet); CHANGELOG `### Fixed`; the gotcha row
+  "Host messages in a component test" gains the entry sentence.
 
 ## Done (untested)
 
-- None in jsdom. The rendering is checked in the UI job's screenshots after the push.
+- Nothing.
 
 ## Not started
 
-- Consumers pass `authors`, `verified`, `nextVersion` and the icon in P9.3 (Installed), P9.4 (Updates), P9.5
-  (transitive), P9.6 (Browse), P9.10 (sidebar).
-
-## Visual check of P9.2 (CI run 38959927494 on a9b30ef, 10 jobs green, 12 PNGs)
-
-- viewed: main-updates.png: two-line cards, 67 px apart (name bold + Verified; `13.0.2 → 13.0.4` muted, no
-  `nextVersion` yet), empty 32 px icon column, a line under each row. Details pane still NUnit (stale, P9.6).
-- viewed: main-installed-single.png: three-line cards (name, version, description until P9.3 drops it), 78 px;
-  the current row has the selection colour and the 3 px accent on the left.
-- viewed: main-browse-results.png (run 38958869599, unchanged since): cards with the 24 px data-URI icons in the
-  32 px column, "by … · downloads · description" on line 3 (BrowseList's own text until P9.6).
-- viewed: sidebar-sections.png (run 38958869599): compact rows 24 px, name first.
-- viewed: sidebar-narrow-200px.png: at 200 px the Updates row reads "Newtonsoft.Json 13.0.2…": the name stays whole,
-  the version gives way (before P9.2: "Newton… 13.0.2 → 13.0.4").
-
-## Visual check of P9.1 (RUN.md §4; P9.1 changed `src/webview/shared` without rendering anything)
-
-- viewed: main-browse-results.png (CI run 38953375673, P9.1): same as at P9.0; Browse rows with and without icons as
-  before. No rendered state affected: `packageIcon.ts` is imported by no entry yet.
+- The visual check of `sidebar-sections` and `main-transitive-expanded` in the CI run of this commit (recorded with
+  the P9 gate re-run).
 
 ## Deviations from contract/ADR (file:line each)
 
-- None. The ruling's VERIFY expects two `title=` hits in `Row.tsx`; there are three: the body, the version, and the
-  `VerifiedIcon`'s `title` prop that its DO 4 asks for (an SVG `<title>`, not an attribute of the option).
+- None. No file under `src/protocol/**`, `src/core/contracts.ts` or `docs/adr/**` changed.
 
 ## Advisor decisions (date, item, question, answer verbatim)
 
-2026-10-16, P9.2 ⚑, "Confirm or correct the 1.x measurements and their 2.0 token mapping …, and rule the Row
-structure (props, DOM order, accessible name and description, where `title` goes given the wrapper rule), what
-happens to the existing Row.test.tsx titles, and whether consumer tests outside Row.test.tsx may change in P9.2."
-Answer of the `architecture-advisor` subagent, verbatim:
+2026-10-17, P9 phase review (`PHASE REVIEW P9`, `architecture-advisor`), verbatim (also under `## Phase gates` of
+`docs/plans/STATUS.md`):
 
 `````text
-DECISION: Option 1, sharpened; not `OWNER MUST DECIDE`. The 1.x measurements in the brief are confirmed with five corrections (below). `Row` gains `authors`, `verified` and `nextVersion`, `version` narrows to `string`, the comfortable option becomes icon column + text column of two flex lines (name + badges / version · authors · status) with an optional third line (description), the compact option keeps one line (name, version, badges) by flattening the same DOM with `display: contents`; the accessible name is `aria-labelledby` of the name span and the version span (same computed text as today, so every consumer test that reads `Serilog 3.0.0` keeps passing), the description is `aria-describedby` of up to four ids (badges, authors, description, status), and the `id version` tooltip goes on the text column span (`.nuiget-row-body`), never on the option or the wrapper. Tokens: `--nuiget-row-height-comfortable: 66px`, new `--nuiget-icon-size-xl: 32px`, new `--nuiget-color-version-new` aliased to `--vscode-gitDecoration-addedResourceForeground` with `--vscode-charts-green` as fallback (measured: `charts.green` fails the theme gate in Light Modern); the Verified mark uses the existing `--nuiget-color-link`; name `--nuiget-font-size-md` + `font-weight: 600`, every secondary line `--nuiget-font-size-sm` muted without opacity. `Listbox.ROW_HEIGHT.comfortable` becomes 66. The thirteen existing `Row.test.tsx` titles stay; two named tests are added. No consumer, no consumer test and no primitive test other than `Row.test.tsx` changes in P9.2.
+VERDICT: PASS WITH FIXES
 
-WHY:
-- 1.x confirmed at `0457c75:src/webview/app/App.css`: `.package-item` :70-79 (flex, flex-start, gap 12, padding 12/16, 1 px `panel-border` bottom, border-box); `.selected` :85-90 (active selection bg/fg, `border-left: 3px solid focusBorder`, `padding-left: 13px`); icon :92-104 (32×32, `margin-top: 2px`, `object-fit: contain`, radius 4); info :106-110; name :112-116 (600, 14 px); version :118-121 (12 px, description fg); meta :123-128 (flex, gap 12, 11 px); arrow :134-139 (charts-green, bold) and `.package-version-new` :141-144 (charts-green, 500; the brief did not cite this one); authors :559-563 (11 px, description fg, `opacity: 0.7`); `.verified-badge` :565-574 and its svg override :3400-3402 (`textLink-foreground` wins by specificity); skeleton :3172-3180 (66 px); `InstalledTab.tsx:42` `ESTIMATED_ITEM_HEIGHT = 66`. Markup confirmed: `InstalledTab.tsx:182-245` (icon | info{name + badges; meta{version}; authors{Verified + authors}}), `UpdatesTab.tsx:689-709` single project (name; meta{v-old, arrow, v-new}; authors) and :600-625 All Projects (no authors), `App.tsx:3060-3083` browse (name; meta{version, downloads}; authors).
-- Corrections. (a) The 1.x body font is `var(--vscode-font-size)` = 13 px (`App.css:6`), so 14/12/11 px are 1.08/0.92/0.85 em: name = `--nuiget-font-size-md` + 600, version/authors/description = `--nuiget-font-size-sm` (0.85em); ADR-008 and `webview-stylesheets.test.ts` (`no px font size`) forbid px, and no new size token is needed. (b) 66 was 1.x's estimate and skeleton height, not a measured card; in 2.0 it is a `min-height` (D15 fixes the value) and the Listbox measures rows (`Listbox.tsx:96`); a Browse row with three lines may measure above 66. (c) `opacity: 0.7` on authors: Light Modern `descriptionForeground` #717171 on #ffffff measures 4.88:1 and at 0.7 alpha about 4.17:1, below the 4.5:1 `theme.ui.test.ts:53,170` enforces; no opacity anywhere. (d) No 1.x row had a tooltip (`InstalledTab.tsx:1318-1326`, `App.tsx:3040-3056`, `UpdatesTab.tsx:686-712`; `SidebarApp.tsx` has `title=` only at :1577, :1637, :1725, :1913, on headers and the Update-all button): the `id version` tooltip is the plan row's addition, kept as written. (e) `charts.green` in VS Code 1.85 (`workbench.desktop.main.js`) is light #388A34, dark #89D185, hcLight #374e06: on Light Modern's #ffffff it measures 4.33:1, on the sidebar's #f8f8f8 4.07:1, on the active-selection grey 3.53:1; `gitDecoration.addedResourceForeground` (the git extension's `package.json`: light #587c0c, dark #81b88b, hc #a1e3ad, hcLight #374e06) measures 4.88 / 4.60 / 7.19 / 9.31. The plan row says "`--vscode-charts-green`/token"; the token alias is the latitude, and the theme gate (P5.11, six themes at `theme.ui.test.ts:21-28`) is the owner's own rule, so the alias puts the git green first and charts-green as the fallback for a host without the git extension.
-- 2.0 facts checked: `Row.tsx` whole; `primitives.css:71-227`; `tokens.css:24-32,48-54,90-94`; `Listbox.tsx:7-8,59,96`; `webview-tokens.test.ts:26-35` (REQUIRED is a subset check, additive tokens pass) and :69-77 (the `ROW_HEIGHT` mirror); `webview-stylesheets.test.ts` (no px font size, `.nuiget-` prefix, pointer targets, the `.nuiget-row-actions` visibility rules); `webview-css-baseline.test.ts:37-62` (none of `display: contents`, `order`, inset `box-shadow`, `fit-content`, `margin-inline-start` is denied); `sidebar.ui.test.ts:106-128` asserts a compact row's height equals `--nuiget-row-height-compact` exactly, so compact rows get no border and no padding change; `theme.ui.test.ts:213-227` runs axe on whichever tab the earlier files left and on the sidebar. Consumer assertions that the new DOM must keep true, all verified compatible: `SidebarView.test.tsx:92,124-125,143-147,178-180,192` (`toHaveAccessibleName('Serilog 3.0.0')`, `'Broken unresolved'`, descriptions `'Centrally managed'`, `'Unresolved'`, and `:147 not.toHaveAccessibleDescription()`), `BrowseList.test.tsx:77-82`, `UpdatesSection.test.tsx:73-75`, `InstalledTab.test.tsx:43,67,196-197`, `UpdatesTab.test.tsx:45,65,239-240`, `AllProjectsView.test.tsx:81`, `Listbox.test.tsx:54` (name `^id `), :253, :272, `composed.test.tsx:35-44`, `Listbox.bench.ts:32`, `src/test/ui/v2/main-updates.ui.test.ts:46` (`textContent` contains `13.0.2 →`). All nine call sites pass a string `version` (`shownVersion` returns `string`, `rules.ts:13`), so narrowing the prop is checked by `tsc`.
-- `title` placement is settled by evidence, not taste: the accessible description falls back to the element's own `title` when `aria-describedby` is absent, which `toHaveAccessibleDescription` follows, so a title on the option turns `SidebarView.test.tsx:147` red; the wrapper may carry only `className`, `data-*` and the ref (P3.2 ruling, `ARCHITECTURE.md:277-283`, the gotcha table). A descendant span's `title` enters neither the name (labelledby wins) nor the description.
-- The `flex-shrink` gate needs the stylesheet in jsdom: `vitest.config.mts` sets no `css` option, so `import './primitives.css'` injects nothing. Probed with jsdom 30.1.2 (the installed one): a `<style>` holding the real `tokens.css` + `primitives.css` cascades the compound selector `.nuiget-row--compact .nuiget-row-description` to `position: absolute`, expands `flex: 0 1 auto` to `flex-shrink: 1`, and reports `display: contents`; `var()` values stay unresolved, which the gate does not need.
-- Contrast consequence stated plainly: nothing in P9.2 passes `nextVersion`, `authors` or `verified`, so P9.2's own UI job never renders the green or the authors line; the first measurement of `--nuiget-color-version-new` is P9.4's run (main panel) and P9.10's (sidebar). The alias above is chosen so that run is green without a retune.
+BLOCKING:
+1. P9.fix-1 — The sidebar runs the P9.5 transitive prefetch and its feed enrichment for a list it never shows. `src/webview/shared/store/StoreProvider.tsx:28` mounts `TransitiveProvider` for both entries; since 9ea8a40 the provider enables itself 500 ms after the committed project's installed list is ready (`src/webview/shared/store/transitive.tsx:50-62`, `TRANSITIVE_PREFETCH_MS`), with no consumer check, and `useTransitive` has consumers only in `src/webview/main` (`TransitiveSection.tsx:35`, `TransitiveDetails.tsx:21`; `grep -rn "useTransitive(" src/webview/sidebar` is empty). A sidebar-only session therefore sends `transitive/get` (assets read through the Catalog) and then `transitive/metadata` over the whole transitive set (`transitive.tsx:78-97`), which the enricher answers with a lookup, an icon fetch and a vulnerability check per package (`src/core/feeds/enricher.ts:54-56`); once enabled the key is live, so every `transitive:<project>` invalidation re-asks and re-enriches (`useResource.ts:53,105`). At `labs/2.0-P8-done` the slice had no timer (`git show labs/2.0-P8-done:src/webview/shared/store/transitive.tsx` has `enabledFor === projectPath` only), so this is a regression of the phase. No gate sees it: the harness drives `FakeWebview`, not the React tree, and no sidebar jsdom test counts `transitive/get` (`grep -rn "transitive/get" src/webview/sidebar src/test/e2e src/test/ui` is empty). This is distinct from DP10 (the sidebar's own `transitive/metadata` for its installed rows, an open row by design). Fix: `TransitiveProvider` gains `prefetch?: boolean` (default `true`, so no existing test changes), plumbed through `StoreProvider`; `src/webview/sidebar/index.tsx` passes `prefetch={false}`; the main entry is unchanged. Negative test in `src/webview/sidebar/index.test.tsx` (it mounts the entry, which is the only place that proves the entry's prop): after `await import('./index')`, answer `session/get`, `projects/list` and `installed/get` through the `acquireVsCodeApi` mock's message path the way `SidebarView.test.tsx:36-38` does, wait past `TRANSITIVE_PREFETCH_MS`, and assert that `api().postMessage.mock.calls` holds no request of type `transitive/get` (and no `transitive/metadata` beyond what `InstalledProvider` already sends for the installed rows). Record finding N87 in `docs/plans/findings-ledger.md` (class: a request a surface sends that no test of that surface counts, like N85/N86).
+
+NON-BLOCKING:
+1. Closure table row MI12 reads `closed` (`docs/plans/parity-audit-2026-10-16.md:30`) but one of its three parts landed: headers in normal case (`main.css:683`); the count is shown whether expanded or not (`InstalledProjectSection.tsx:178`, the P9.11 tracker note itself says "count-when-collapsed deferred"), and the hover background was declined deliberately (`main.css:675`). Row should read `partly` with that note. P10.1 (docs).
+2. Tracker row P9.13 (`docs/plans/STATUS.md:135`) has an empty Commit cell; P10.1 enters `3f2a2e0`, as RUN.md §5 step 1 directs for a closing commit.
+3. TF8: the plan row (:359) says "the host rescans on `.csproj` create; both fixed", but the commits are the test-side Refresh loop (eb68dbb, 44c2980) and N86 (c9dffb7); the watcher at `extension.ts:320` is unchanged and a create event VS Code never delivers is still undetected host-side. The closure row is defensible (N86 was the real bounce), but P10.1's CHANGELOG must not claim a watcher fix; the optional hardening of the audit's TF8 fix (5) stays a 2.0.1 candidate.
+4. README image URLs point at `raw.githubusercontent.com/.../main/docs/images/*.png` (`README.md:8,10,12`); the files exist on `labs/2.0` only until PR #18 merges, so the Marketplace listing of a VSIX published before the merge shows broken images. P10.1: the release checklist says merge first, then publish (D9).
+5. `metadataResolver.fromSource` (`src/core/feeds/metadataResolver.ts:88-96`) starts a flat-container HEAD for every allowed source it tries, also for a source whose metadata lookup then fails, and never aborts it; one wasted HEAD per missed source. Harmless (`.catch(() => undefined)`), 2.0.1 candidate.
+6. P9.9 (b) cites ADR-008 as the home of the ErrorBoundary but ADR-008 was not amended and has no error-handling text (`grep -i "error\|boundary" docs/adr/008-webview-architecture.md` is empty). A one-line amendment at the next contract item that opens the sentinel; not now.
 
 DO:
-1. Baseline gates at 6df4567 (`npx tsc --noEmit`, `npm run check-types`, `npx eslint src`, `npx vitest run`) green before editing.
-2. `tokens.css`: `--nuiget-row-height-comfortable: 66px` (comment: D15, the 1.x `.package-item` card); `--nuiget-icon-size-xl: 32px` after `-lg`; under "Colours: list rows" `--nuiget-color-version-new: var(--vscode-gitDecoration-addedResourceForeground, var(--vscode-charts-green));` with a comment carrying the measured ratios of WHY (e); in the forced-colours block `--nuiget-color-version-new: CanvasText;`. No other token changes; `--nuiget-row-height-compact` stays 24.
-3. `Listbox.tsx:8`: `const ROW_HEIGHT = { compact: 24, comfortable: 66 } as const;` (the exact regex of `webview-tokens.test.ts:72`). Nothing else in `Listbox.tsx` changes; it keeps measuring.
-4. `Row.tsx` props: `version?: string` (narrowed from `ReactNode`); new `nextVersion?: string` (an update's target; the cell then reads `version → nextVersion`), `authors?: string`, `verified?: boolean` (renders `VerifiedIcon` with `title="Verified: the package id prefix is reserved by its owner"` before the authors text; the line renders when either is set); `versionTitle`, `description`, `icon`, `badges`, `status`, `busy`, `disabled`, `actions`, `density` unchanged. JSDoc: `description` is for Browse rows only (D14).
-5. `Row.tsx` DOM, in this order inside the option: `span.nuiget-row-check` (checkable, as now) → `span.nuiget-row-icon[aria-hidden="true"]` rendered in comfortable density always, with `icon` inside when given (the column is reserved) and not at all in compact → `span.nuiget-row-body[title=<tooltip>]` → `span.nuiget-row-line` { `span.nuiget-row-name#<optionId>-name`, `span.nuiget-row-badges#<optionId>-badges` when badges } → `span.nuiget-row-line` { `span.nuiget-row-version#<optionId>-version[title=versionTitle]` when version, holding `{version}`, then when nextVersion `{' '}<span class="nuiget-row-version-arrow">→</span>{' '}<span class="nuiget-row-version-new">{nextVersion}</span>` (the arrow stays a text node: `main-updates.ui.test.ts:46` and `UpdatesTab.test.tsx:65` read `textContent`), `span.nuiget-row-authors#<optionId>-authors` when authors or verified, `span.nuiget-row-status#<optionId>-status` when status } → `span.nuiget-row-description#<optionId>-description` when description. The actions container stays the aria-hidden sibling. `aria-labelledby` = `<optionId>-name` plus ` <optionId>-version` when version is set; `aria-describedby` = the ids present among `-badges -authors -description -status` in that order, attribute absent when none. Tooltip = `name`, then ` version` when set, then ` → nextVersion` when set. No module-level call in the file (N63).
-6. `primitives.css`, comfortable: `.nuiget-row--comfortable { box-sizing: border-box; border-bottom: 1px solid var(--nuiget-color-border); }` (on the wrapper, so the line spans the actions; the measured row is 67 px against the 66 px estimate, which the virtualizer absorbs); `.nuiget-row--comfortable .nuiget-row-option { align-items: flex-start; gap: var(--nuiget-space-5); padding: var(--nuiget-space-5) var(--nuiget-space-6); }`; `.nuiget-row-icon { flex: none; inline-size: var(--nuiget-icon-size-xl); block-size: var(--nuiget-icon-size-xl); margin-block-start: var(--nuiget-space-1); }` and `.nuiget-row-icon img, .nuiget-row-icon svg { inline-size: 100%; block-size: 100%; object-fit: contain; border-radius: var(--nuiget-radius-md); }` (beats `main.css:200 .nuiget-browse-icon` by specificity; P9.6 deletes that rule); `.nuiget-row-body { display: flex; flex-direction: column; flex: 1; min-width: 0; gap: var(--nuiget-space-1); }`; `.nuiget-row-line { display: flex; align-items: baseline; gap: var(--nuiget-space-3); min-width: 0; overflow: hidden; }`; `.nuiget-row--comfortable .nuiget-row-name { font-weight: 600; flex: 0 1 auto; min-width: 40%; }` (keeps the base ellipsis rule :150-154); `.nuiget-row-badges { display: inline-flex; flex: none; gap: var(--nuiget-space-2); }`; `.nuiget-row-version-arrow, .nuiget-row-version-new { color: var(--nuiget-color-version-new); font-weight: 600; }`; `.nuiget-row-authors { color: var(--nuiget-color-fg-muted); font-size: var(--nuiget-font-size-sm); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }`; `.nuiget-row-authors svg { color: var(--nuiget-color-link); vertical-align: text-bottom; margin-inline-end: var(--nuiget-space-2); }`; `.nuiget-row-description { overflow: hidden; text-overflow: ellipsis; }` added to the existing muted/sm/nowrap rule. Delete the `.nuiget-row-title` rule (:143-148) and the `.nuiget-row-desc` rule (:177-183) with their spans. Selected accent mirrors the three background rules at :106-126: `.nuiget-row--comfortable .nuiget-row-option[aria-selected="true"] { box-shadow: inset 3px 0 0 var(--nuiget-color-focus); }`, `.nuiget-listbox[aria-multiselectable="true"] .nuiget-row--comfortable .nuiget-row-option[aria-selected="true"] { box-shadow: none; }`, `.nuiget-listbox[aria-multiselectable="true"] .nuiget-row--comfortable .nuiget-row-option[aria-current="true"] { box-shadow: inset 3px 0 0 var(--nuiget-color-focus); }` (inset shadow: no padding arithmetic, no reflow; `forced-color-adjust: none` is already on those rules). Add `.nuiget-row-version-new`, `.nuiget-row-version-arrow` and `.nuiget-row-authors` to the inherit-on-selected block at :168-175 (the green measures 3.53:1 on the selection grey).
-7. `primitives.css`, compact, placed after the comfortable rules so the cascade order is unambiguous: `.nuiget-row--compact .nuiget-row-body { flex-direction: row; align-items: baseline; gap: var(--nuiget-space-3); }`; `.nuiget-row--compact .nuiget-row-line { display: contents; }` (the body stays a box, so its `title` is unaffected); `.nuiget-row--compact .nuiget-row-name { flex-grow: 0; flex-shrink: 0; flex-basis: auto; max-width: 70%; }` and `.nuiget-row--compact .nuiget-row-version { flex-grow: 0; flex-shrink: 1; flex-basis: auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }` (longhands on purpose: the gate reads `flex-shrink`; a long version ellipsises before the name moves, a long name ellipsises at 70 % of the body; 70 % is a starting value P9.10 may retune from `sidebar-narrow-200px`); `.nuiget-row--compact .nuiget-row-badges { order: 1; margin-inline-start: auto; }` (today's right-pushed badges); extend the visually-hidden rule at :186-193 to `.nuiget-row--compact .nuiget-row-authors` and keep description and status in it (D14: no description in compact rows; still read out). No padding, height or border change for compact (`sidebar.ui.test.ts:121`).
-8. `testSupport.ts` (additive, approved here; P9.12 reuses it): `installStylesheet(): () => void` that reads `src/webview/shared/tokens.css` and `src/webview/shared/primitives/primitives.css` with `readFileSync` (paths from the repo root, as the lint tests do), appends one `<style>` to `document.head` and returns its remover. Not exported from `index.ts`.
-9. `Row.test.tsx`: keep the thirteen titles as they are; the bodies change only where the DOM did (`screen.getByText('3.0.0')` for the version title still works). Add, with `installStylesheet()` in `beforeEach` and its remover in `afterEach`: `comfortable row stacks name over version and authors` (render `density="comfortable"`, `authors`, `verified`, `badges`, `description`; assert `compareDocumentPosition` order name → version → authors → description inside `.nuiget-row-body`, the name span has non-empty text, the option's accessible name is `Serilog 3.0.0` and its description is `Centrally managed Verified: the package id prefix is reserved by its owner Serilog Contributors Structured logging` in that order, `.nuiget-row-icon` is present and `aria-hidden` without an `icon` prop, axe 0 with `aria-hidden-focus` and `nested-interactive` `'passes'`); `long version never hides the name in compact density` (render compact with a 60-character prerelease version; assert DOM order name before version, non-empty name text, and `Number(getComputedStyle(name).flexShrink) < Number(getComputedStyle(version).flexShrink)` with `getComputedStyle(version).minWidth === '0px'`, and that `.nuiget-row-authors` and `.nuiget-row-description` are absent or visually hidden). Recommended, short: `an update row reads old → new as text and marks the new version` (`nextVersion`; `toHaveTextContent('3.0.0 → 3.1.0')`, `.nuiget-row-version-new` text `3.1.0`, accessible name `Serilog 3.0.0 → 3.1.0`), `the tooltip is on the body, not on the option` (`title` on `.nuiget-row-body` equals `Serilog 3.0.0`; the option has no `title`; a row without badges/status has no accessible description).
-10. Docs duties in the same commit: `ARCHITECTURE.md:277-283` DOM block rewritten to the new tree (body, two lines, the four description ids, the tooltip's place); `CHANGELOG.md` `## [Unreleased]` `### Changed`: `- **Two-line package cards in the main panel, name-first rows in the sidebar**`; `.github/copilot-instructions.md` 2.0 gotchas, one row: `title` on a row lives on `.nuiget-row-body` only (on the option it becomes the accessible description when no `aria-describedby` exists, `SidebarView.test.tsx:147`; the wrapper carries nothing), and an update row's arrow stays the text `→` (`main-updates.ui.test.ts:46`, `UpdatesTab.test.tsx:65`); `src/webview/shared/STATUS.md` from the §2.5 template with this ruling verbatim, the three bundle sizes and the contrast numbers; `docs/plans/STATUS.md` row P9.2. Interaction model §1 density cell stays for P9.13 as the plan assigns it.
-11. Gates in the §2.2 order plus `npm run lint`, `npm run docs:check`, `node esbuild.mjs --production --analyze` (paste the three sizes; ceilings 322502 / 577766 / 351245). Push; after the green run apply RUN.md:84: download `ui-screenshots`, view `main-installed-single`, `main-updates`, `main-browse-results`, `sidebar-sections`, `sidebar-narrow-200px`. Expected intermediate state, not a red gate: comfortable rows 66 px with a bottom line, two lines, an empty 32 px icon column in Installed and Updates (icons arrive in P9.3/P9.4), the Installed description still on line 3 until P9.3 drops the prop (D14), Browse rows with 24 px data-URI icons inside the 32 px column (P9.6), no authors line yet, update rows still `old → new` in muted text (P9.4 passes `nextVersion`); compact rows unchanged at 24 px with the name no longer displaced.
-12. Commit with the `git-commit` skill citing P9.2, D14, D15, MI3, MU11, MB1, DP7, MH5, ADR-008; stage by explicit path after `git status --porcelain --untracked-files=all`.
+1. Paste this review verbatim under `## Advisor decisions` of `docs/plans/STATUS.md` (and `src/webview/shared/STATUS.md` for the fix's directory).
+2. Insert tracker row `P9.fix-1` (phase P9, status `open`) above P10.1 with the text of BLOCKING 1; its files: `src/webview/shared/store/transitive.tsx` + test, `src/webview/shared/store/StoreProvider.tsx`, `src/webview/sidebar/index.tsx` + `index.test.tsx`, ledger N87, ARCHITECTURE 2.0 store table (one clause), CHANGELOG `[Unreleased]` `### Fixed` headline `**The sidebar no longer asks for the transitive packages it does not show**`.
+3. Stop after recording, per plan :367-369 and RUN.md §7 (the P9 gate includes the owner's review of `ui-screenshots`, run 39016052047); report the run id and artifact name.
+4. The next session runs P9.fix-1 (gates of §2.2 step 5 plus the RUN.md §4 visual rule: view `sidebar-sections` and `main-transitive-expanded`; bundle sizes pasted, N63).
+5. Tag `labs/2.0-P9-done` only when both hold: P9.fix-1 green on CI and the owner's `P9 approved`. I agree with holding the tag.
 
 DO NOT:
-- Put `title` on the option or on the wrapper; put `aria-*` or `tabIndex` on the wrapper; render a button, input or `tabIndex` inside the option.
-- Replace the `→` text with an SVG alone, or hide it with `aria-hidden` (the name would read `3.0.0 3.1.0`).
-- Alias `--nuiget-color-version-new` to `--vscode-charts-green` alone, write a colour literal, a px font size, `!important`, `opacity` on text, or a `--nuiget-font-size-*` token for 14 px.
-- Change `--nuiget-row-height-compact`, give compact rows a border or padding, or let `.nuiget-row--compact` rows exceed 24 px (`sidebar.ui.test.ts:121`).
-- Edit any consumer (`InstalledProjectSection`, `UpdatesTab`, `AllProjectsUpdates`, `BrowseList`, `TransitiveSection`, `AllProjectsTransitiveSection`, `ProjectPackages`, `ProjectUpdates`, `BrowseResults`), `main.css`, `sidebar.css`, any consumer test, `Listbox.test.tsx`, `composed.test.tsx` or `Listbox.bench.ts`; if one of them goes red, stop and ask with the failing title, never adjust it.
-- Change the `installFakeLayout({ row: 44 })` numbers in consumer tests (they fake the measurement, not the token; P9.12 measures against the token).
-- Mock `@tanstack/react-virtual`, add a `style` prop beyond `cssVars()`, add a module-level call to `Row.tsx`, or remove the reserved icon column when `icon` is undefined.
-- Drop the `description` prop or the compact visually-hidden rule (Browse keeps its third line; compact still reads it out).
-- Touch `src/protocol/**`, `src/core/contracts.ts`, `docs/adr/**`, `docs/ux/interaction-model.md` §1 (P9.13) or create the sentinel.
+- Do not remove the prefetch from the main panel or lengthen the delay: the P9.5 ruling put the count in the collapsed header, and its tests (`transitive.test.tsx:124`) stay.
+- Do not drop `TransitiveProvider` from the sidebar's tree: `StoreProvider` is the one shared composition (ADR-008) and a `useTransitive` call without a provider would throw.
+- Do not prove the fix with a test that mounts `StoreProvider prefetch={false}` itself; only the entry test proves the entry.
+- Do not edit the 88 audit entries; only the closure table row.
+- Do not touch `src/protocol/**`, `contracts.ts` or `docs/adr/**` for P9.fix-1.
 
-CONTRACT CHANGE: none. Files of the item: `src/webview/shared/primitives/Row.tsx`, `src/webview/shared/primitives/primitives.css`, `src/webview/shared/tokens.css`, `src/webview/shared/primitives/Listbox.tsx`, `src/webview/shared/primitives/Row.test.tsx` (gate). Approved additions by this ruling: `src/webview/shared/primitives/testSupport.ts` (the `installStylesheet` helper), `src/test/lint/webview-tokens.test.ts` (only adding `--nuiget-icon-size-xl` and `--nuiget-color-version-new` to `REQUIRED`; optional, additive), `ARCHITECTURE.md`, `CHANGELOG.md`, `.github/copilot-instructions.md`, `src/webview/shared/STATUS.md`, `docs/plans/STATUS.md`. No other file.
+CONTRACT CHANGE: none. The phase's one contract change was lawful under D6: ruling recorded in `src/host/STATUS.md:121-175` before the sentinel; sentinel `P9.9` during the edit, absent now (`ls .claude/.contract-change` → No such file; the hook denies `git commit` while it exists); 7b3b3f0 changes `src/protocol/messages.ts` (+2), `src/protocol/guards.ts` (+1 key), `docs/adr/007-protocol.md` (amended date and the 45th-request bullet), `docs/protocol.md` regenerated ("Requests (45)"); handler at `src/host/handlers.ts:435-439` clips each field to 4000; `handlers.test.ts` 44→45 is a recorded named rewrite. `docs/protocol.md` has no later drift (`git log labs/2.0-P8-done..HEAD -- docs/protocol.md` is that one commit) and the Lint job of run 39016052047 (docs:protocol:check) is green.
 
 VERIFY:
-- `npx vitest run --project frontend src/webview/shared/primitives/Row.test.tsx` → exit 0; output lists the thirteen existing titles and `comfortable row stacks name over version and authors`, `long version never hides the name in compact density`.
-- `npx vitest run --project backend src/test/lint` → exit 0 (the `ROW_HEIGHT` mirror at 66, no px font size, `.nuiget-` prefix, Chromium 114 denylist, no colour literal).
-- `npx vitest run --project frontend src/webview` → exit 0, and `git diff --name-only HEAD -- 'src/webview/**/*.test.tsx' 'src/webview/**/*.bench.ts' | grep -v 'primitives/Row.test.tsx'` → empty.
-- `git diff --name-only HEAD` → a subset of the file list under CONTRACT CHANGE.
-- `grep -c 'comfortable: 66 }' src/webview/shared/primitives/Listbox.tsx` → 1; `grep -c -- '--nuiget-row-height-comfortable: 66px' src/webview/shared/tokens.css` → 1; `grep -c -- '--nuiget-color-version-new: var(--vscode-gitDecoration-addedResourceForeground, var(--vscode-charts-green))' src/webview/shared/tokens.css` → 1; `grep -c -- '--nuiget-icon-size-xl: 32px' src/webview/shared/tokens.css` → 1.
-- `grep -n 'title=' src/webview/shared/primitives/Row.tsx` → two hits, the body span and the version span; `grep -n 'role="option"' -A12 src/webview/shared/primitives/Row.tsx | grep -c title` → 0.
-- `grep -n "'→'\|>→<" src/webview/shared/primitives/Row.tsx` → 1 (a text arrow).
-- `npx tsc --noEmit`, `npm run check-types`, `npx eslint src`, `npm run lint`, `npm run docs:check`, `npm test`, `npm run bench` → exit 0 each; `node esbuild.mjs --production --analyze` → three sizes below 322502 / 577766 / 351245, pasted in the STATUS note.
-- `gh run watch <id> --exit-status` → 10 jobs green, the `UI` job included (compact height assertion and six-theme axe pass); `gh run download <id> -n ui-screenshots -D /tmp/nuiget-shots` → the PNGs of DO 11 viewed and recorded as `viewed:` lines in `src/webview/shared/STATUS.md`.
+- `grep -n "prefetch" src/webview/shared/store/transitive.tsx src/webview/shared/store/StoreProvider.tsx src/webview/sidebar/index.tsx` → the prop declared, plumbed and `prefetch={false}` in the sidebar entry only.
+- `npx vitest run --project frontend src/webview/sidebar/index.test.tsx src/webview/shared/store/transitive.test.tsx` → 0 failed, the new negative test present by title, `transitive.test.tsx:124` unchanged and green.
+- `grep -n "^| N87" docs/plans/findings-ledger.md` → one row.
+- `grep -n "^| MI12" docs/plans/parity-audit-2026-10-16.md` → `partly`; `grep -nE "^\| P9\.13 .*\| done \| 3f2a2e0" docs/plans/STATUS.md` → one line (after P10.1).
+- `grep -nE "^\| P9\.fix-1 \| P9 \|.*\| open \|" docs/plans/STATUS.md` → one line above P10.1; `git tag -l 'labs/2.0-P9-done'` → empty until P9.fix-1 is green and the owner wrote `P9 approved`.
 
-Files checked (absolute, under /Users/mattias/github/nuiget): .github/agents/architecture-advisor.agent.md; docs/plans/2026-10-11-nuiget-2.0-execution-plan.md:318-375; docs/plans/parity-audit-2026-10-16.md:7,53-72,187-191,347-397,629-655,727-739,1174-1233,1412-1442; docs/plans/STATUS.md:122-135,2016-2138 (P3.2 ruling, Row contract at its lines 21-22,26-27,32),2139-2200 (P3.6: compact stays 24 px); docs/plans/findings-ledger.md rows U5, U11, N63, N64; docs/plans/RUN.md:84,123; docs/adr/006-icons-and-csp.md, docs/adr/008-webview-architecture.md; docs/ux/interaction-model.md:1-60,136-138,164-165; ARCHITECTURE.md:262-300; src/webview/shared/primitives/{Row.tsx,Row.test.tsx,Listbox.tsx:1-110,composed.test.tsx:28-60,106-126,Listbox.bench.ts:12-32,Badge.tsx,icons.tsx:140-175,testSupport.ts:6-47,primitives.css:60-300}; src/webview/shared/tokens.css; src/webview/shared/packageIcon.ts; src/webview/shared/installed/rules.ts:13-16; src/webview/shared/STATUS.md:1-30; src/webview/main/main.css:200-202; the nine consumer call sites listed in WHY; src/test/lint/{webview-tokens,webview-stylesheets,webview-colours,webview-css-baseline}.test.ts; src/test/ui/v2/{sidebar.ui.test.ts:100-130,theme.ui.test.ts:21-28,42-55,160-175,195-262,main-updates.ui.test.ts:40-75}; vitest.config.mts:1-80; git show 0457c75: src/webview/app/App.css:1-25,60-145,147-192,240-275,540-580,3035-3075,3165-3185,3395-3405; src/webview/app/components/InstalledTab.tsx:38-46,180-250,1318-1326; src/webview/app/components/UpdatesTab.tsx:590-635,686-712; src/webview/app/App.tsx:3040-3090; src/webview/sidebar/SidebarApp.tsx (title sites), SidebarApp.css:324-331; .vscode-test/vscode-darwin-arm64-1.85.0 (workbench.desktop.main.js colour defaults; extensions/git/package.json `gitDecoration.addedResourceForeground`). Probes run (inspection only): WCAG contrast arithmetic in node; jsdom 30.1.2 cascade of an injected `<style>` holding the real tokens and primitives stylesheets.
+CHECKED:
+- Commits: `git log --oneline labs/2.0-P8-done..HEAD` (45, HEAD 3f2a2e0); `git diff --stat` (150 files, +8226/−1306); full diffs of `src/extension.ts`, `src/core/feeds/{icons,flatContainer,metadataResolver,search,types}.ts`, `src/core/catalog/feedClients.ts`, `src/webview/shared/store/{ops,details,allProjects,transitive,search}.tsx`, `src/webview/shared/installed/rules.ts`, `viewState.ts`, `MultiInstallDialog.tsx`, `sidebar/UpdatesSection.tsx`, `src/test/harness/{scenarios.test,fakeFeed,harness}.ts`, `src/test/ui/v2/{theme,main-search,main-all-projects,main-installed}.ui.test.ts`, `src/test/lint/webview-{css-baseline,tokens,stylesheets}.test.ts`, `.github/workflows/ci.yml`, `docs/plans/RUN.md`; `git show 7b3b3f0` (protocol, guards, ADR-007, protocol.md, handlers).
+- Files read: `src/host/feedback.ts` (whole), `ErrorBoundary.tsx`, both entries, `useInstallAction.ts`, `MainShell.tsx:220-300`, `metadataResolver.ts:1-80`, `handlers.ts:276-300`, `Catalog.ts:283-300`, `enricher.ts`, `useResource.ts`, `StoreProvider.tsx`, `tokens.css`, `CHANGELOG.md` head, `README.md` images, `docs/plans/parity-audit-2026-10-16.md:1-111` and the MI12/TF8 entries, the plan §1-§3 and P9/P10 rows, tracker rows P9.0-P9.13/P10.1, `src/host/STATUS.md` and `src/protocol/STATUS.md` rulings, `.github/STATUS.md`, ledger N85/N86, `src/webview/sidebar/index.test.tsx:1-44`.
+- Tests: all 28 plan-named titles present (grep by title, each in its named file); removed `it(` lines are three renames recorded as named rewrites (44→45 requests; the provisional header title; the grouped-suggestions title); no `.skip`/`.only`/`skipIf` added; no test file deleted or renamed.
+- Salvage gate: no `Thenable` outside `contracts.ts`; no `vscode` import in core; no core→host/webview/react import; no webview→core/host/vscode import; `child_process` only under `src/core/cli`; Node ≥ 20 API in added lines only `.at(-1)` in test files (Node 24 tests); `show*Message`/`withProgress` outside `feedback.ts` are the pre-submission messages the P9.9 ruling listed.
+- CI: `gh run view 39016052047 --json` → `success`, headSha 3f2a2e0, 10 of 10 jobs success; ci.yml uploads `ui-screenshots` with `if: always()` + `if-no-files-found: error` and checks every `ScreenshotState` name (15 states ≥ 12).
+- Gate claims not re-run here (read-only session): tsc/check-types/eslint/lint/docs:check 0, `npm test` 135 files 2011 passed 9 skipped, bench 0 — taken from the brief and consistent with the green Lint, Test, Build & Package and Benchmark jobs of the run.
 `````
 
-Acted on: DO 1-12 as written, with one change to DO 6: the Verified icon is followed by a text space instead of
-`margin-inline-end`, because the description the ruling's own test expects ("…by its owner Serilog Contributors…")
-reads "…ownerSerilog…" without it.
+2026-10-17, P9.fix-1, follow-up to the same agent: "the entry builds `createMessageBus(api)` on `window`, and the gotcha
+'Host messages in a component test' forbids dispatching `MessageEvent`s on `window`: which test shape proves the fix,
+and does the main entry's test need an assertion?" Answer, verbatim:
+
+`````text
+DECISION: Option 2, in three layers, and yes, the main entry's test asserts too. Not Option 1: no second exception to the "Host messages in a component test" gotcha. My earlier DO NOT ("only the entry test proves the entry") is refined, not reversed: the entry test proves what the entry passes, the StoreProvider test proves the plumbing and the behaviour on the real bus, the slice test proves the prop's semantics; the three together prove the fix. Noted that RUN.md §6.2 has the session run P9.fix-1 before the stop; my DO 3/4 yield to that.
+
+WHY: The brief is right about the tree: `src/webview/sidebar/index.tsx:21` builds `createMessageBus(api)` with the default `source = window` (`MessageBus.ts:67`), so answering the entry's `installed/get` means `window.dispatchEvent(new MessageEvent(...))`, which the gotcha reserves to `MessageBus.test.ts`; the gotcha exists because such a test couples itself to the bus's transport and bypasses `createFakeHost` (`testSupport.ts:43-49`), and a second named exception would invite a third. The entry test file already proves things about the entry by `vi.doMock` of a module the entry imports (`index.test.tsx:55`, `./SidebarView`; `main/index.test.tsx:55`, `./MainShell`) under `vi.resetModules()` (`:10`) and `vi.doUnmock` (`:18`), so a recording wrapper around `../shared/store/StoreProvider` that renders the real provider is the file's own pattern and keeps `:36-40` (the request set) true. The prop must stay default `true`: 15 test files mount `<StoreProvider` and the plan prefers the option that keeps tests intact; a required prop would be 15 named rewrites for no extra proof. With default `true` the main entry passes nothing, so the main test asserts `prefetch` is not `false` to stop the sidebar line from being copied there. `StoreProvider.test.tsx` exists and the plumbing (`StoreProvider` → `TransitiveProvider`) is otherwise untested; a `createFakeHost` test there is the one place that proves `prefetch={false}` on the store reaches the slice and silences the timer. `transitive.test.tsx:35-38` already mounts `TransitiveProvider prefetch={prefetch}` next to the existing prefetch test at `:124`, which stays as the default-`true` proof.
+
+DO:
+1. `src/webview/shared/store/transitive.tsx`: `TransitiveProvider` gets `prefetch?: boolean` (default `true`); the timer effect (`:50-62`) returns early when `prefetch === false`; `enable()` and `restore()` unchanged. `StoreProvider.tsx`: `prefetch?: boolean` passed through to `TransitiveProvider` only. `src/webview/sidebar/index.tsx`: `<StoreProvider bus={bus} prefetch={false}>`. `src/webview/main/index.tsx` unchanged.
+2. `src/webview/shared/store/transitive.test.tsx`: new test `prefetch false: the installed list ready asks nothing after the delay, and enable() still asks transitive/get` using `mount(false)`: answer `installed/get`, `wait(TRANSITIVE_PREFETCH_MS + 1)`, `host.requests('transitive/get')` is `[]`; then `enable()`, one `transitive/get`. The test at `:124` stays as it is (default).
+3. `src/webview/shared/store/StoreProvider.test.tsx`: new test `prefetch false reaches the transitive slice: no transitive/get after the installed list` with `createFakeHost`, `<StoreProvider bus={host.bus} prefetch={false}>`, answer `session/get`, `projects/list`, `installed/get` as `SidebarView.test.tsx:36-38` does, advance past `TRANSITIVE_PREFETCH_MS`, assert `host.requests('transitive/get')` is `[]`; a sibling test without the prop asserts one `transitive/get` after the delay (the plumbing of the default).
+4. `src/webview/sidebar/index.test.tsx`: new test `the entry mounts the store without the transitive prefetch`: `vi.doMock('../shared/store/StoreProvider', async importOriginal => { const actual = await importOriginal<typeof import('../shared/store/StoreProvider')>(); return { StoreProvider: (props) => { seen.push(props); return actual.StoreProvider(props); } }; })` (or render `<actual.StoreProvider {...props} />`), then `await import('./index')`, assert `seen[0].prefetch === false`; `vi.doUnmock('../shared/store/StoreProvider')` in `afterEach` beside `:18`. Same test in `src/webview/main/index.test.tsx` asserting `seen[0].prefetch` is not `false`.
+5. Ledger N87; ARCHITECTURE 2.0 store table clause ("the sidebar mounts the store with `prefetch={false}`"); CHANGELOG `[Unreleased]` `### Fixed` `**The sidebar no longer asks for the transitive packages it does not show**`; gotcha row under "Host messages in a component test" gains one sentence: "An entry's requests are proved by a `vi.doMock` wrapper of a module it imports, never by answering them on `window`." `src/webview/shared/STATUS.md` and `src/webview/sidebar/STATUS.md` rewritten; tracker row P9.fix-1 `done` with the SHA; then re-run the P9 gate line and stop for the owner.
+
+DO NOT:
+- Do not dispatch `MessageEvent`s on `window` in `index.test.tsx`, and do not add an exception for it to the gotcha.
+- Do not make `prefetch` required or default `false` (15 StoreProvider mounts; the main panel's P9.5 behaviour and `transitive.test.tsx:124` stay).
+- Do not mock the bus, `TransitiveProvider` or `useResource` in any of the three tests; only the StoreProvider module is wrapped, and it renders the real one.
+- Do not drop `TransitiveProvider` from the sidebar's tree or render a different `StoreProvider` composition per surface (ADR-008: one shared store).
+- Do not change the delay or the main entry.
+
+CONTRACT CHANGE: none.
+
+VERIFY:
+- `grep -n "prefetch" src/webview/shared/store/transitive.tsx src/webview/shared/store/StoreProvider.tsx src/webview/sidebar/index.tsx src/webview/main/index.tsx` → declared with default true in the slice, plumbed in the store, `prefetch={false}` in the sidebar entry, no match in the main entry.
+- `npx vitest run --project frontend src/webview/shared/store/transitive.test.tsx src/webview/shared/store/StoreProvider.test.tsx src/webview/sidebar/index.test.tsx src/webview/main/index.test.tsx` → 0 failed, the four new titles present, `transitive.test.tsx:124` and `sidebar/index.test.tsx:22` unchanged and green.
+- `grep -rn "dispatchEvent(new MessageEvent" src/webview --include='*.test.tsx' --include='*.test.ts'` → `MessageBus.test.ts` only.
+- Negative control before committing: revert the one line in `sidebar/index.tsx` (`prefetch={false}` removed) → the sidebar entry test and the StoreProvider default test still pass, the entry test fails; restore the line.
+- `npx tsc --noEmit`, `npm run check-types`, `npx eslint src`, `npm test`, `npm run bench`, `node esbuild.mjs --production --analyze` (three sizes in the STATUS note, N63), CI green, `ui-screenshots` viewed: `sidebar-sections`, `main-transitive-expanded`.
+`````
+
+Acted on: DO 1-5 of the follow-up; the review's DO 3 and DO 4 yield to RUN.md §6 step 2 (stated in the follow-up).
 
 ## Exact next step (one item ID)
 
-P9.3.
+P9 gate re-run and the visual check, then stop for the owner's `P9 approved`; after it, P10.1.

@@ -42,8 +42,9 @@ export const TRANSITIVE_PREFETCH_MS = 500;
  * asked for 500 ms after the project's installed list answered, so the collapsed header can show the count (1.x did
  * the same), or at once when the user opens the section first; another project starts again. The metadata of the
  * rows is asked for separately; when the host cannot answer it, the rows are shown from `transitive/get` alone.
+ * `prefetch={false}` (the sidebar, which shows no transitive packages) asks only once something calls `enable`.
  */
-export function TransitiveProvider({ children }: { children: React.ReactNode }): React.JSX.Element {
+export function TransitiveProvider({ children, prefetch = true }: { children: React.ReactNode; prefetch?: boolean }): React.JSX.Element {
     const bus = useMessageBus();
     const projectPath = singleProject(useSession().committed?.selectedProject);
     const installed = useInstalled();
@@ -56,12 +57,12 @@ export function TransitiveProvider({ children }: { children: React.ReactNode }):
     // The prefetch: once the project's installed list is ready, never for All Projects and never with a restore.
     const installedReady = installed.status === 'ready' && installed.projectPath === projectPath;
     useEffect(() => {
-        if (projectPath === null || enabled || !installedReady) {
+        if (!prefetch || projectPath === null || enabled || !installedReady) {
             return undefined;
         }
         const timer = setTimeout(() => setEnabledFor(projectPath), TRANSITIVE_PREFETCH_MS);
         return () => clearTimeout(timer);
-    }, [projectPath, enabled, installedReady]);
+    }, [prefetch, projectPath, enabled, installedReady]);
     // Set by `restore` for exactly the next request.
     const forceRestore = useRef(false);
     const [metadata, setMetadata] = useState<{ result: TransitiveResult; byKey: ReadonlyMap<string, PackageMetadataLite> }>();
