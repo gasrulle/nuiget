@@ -1,4 +1,4 @@
-# STATUS — src/host   commit 7b3b3f0 (P9.9 commit (b); parent of the UI fix)   2026-10-17T09:20:00Z
+# STATUS — src/host   commit d19cbe7 (P9.9 closed; parent of this docs commit)   2026-10-17T09:50:00Z
 
 git status --porcelain --untracked-files=all (before commit (a)): modified `.github/copilot-instructions.md`,
 `ARCHITECTURE.md`, `CHANGELOG.md`, `README.md`, `docs/plans/STATUS.md`, `docs/ux/interaction-model.md`, `src/extension.ts`,
@@ -100,6 +100,17 @@ rm -rf /tmp/nuiget-ui/screenshots dist && npm run test:ui -- --storage /tmp/nuig
   states the cap by name.
 - `feedback.ts`: a `failed` single outcome's text falls back to `edit.error` when the outcome has no `message`; a bulk
   `rejected` without a message says "the queue is full" (the queue's only reason).
+
+## Visual check (RUN.md §4)
+
+CI runs 38990826202 and 38990824172 on d19cbe7 → success (UI job `38 passing`); artifact `ui-screenshots` of 38990826202:
+
+- viewed: main-installed-single.png: the panel as before (header, Installed tab, Newtonsoft.Json's README); no error state.
+- viewed: sidebar-sections.png: the sidebar and the panel as before; three toasts at the bottom right: "nUIget: Uninstalled
+  Serilog from TestProject", "nUIget: NuGet HTTP cache cleared." and "nUIget: Updated Newtonsoft.Json to 13.0.4 in
+  TestProject" (the outcome toasts of earlier suites: the feature, not a contradiction).
+
+No named state shows the fallback.
 
 ## Advisor decisions (date, item, question, answer verbatim)
 
