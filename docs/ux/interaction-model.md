@@ -139,8 +139,8 @@ Tabs (`role="tablist"`): **Details** (description, then Version, Author(s) with 
 License, Downloads, Package size, Date published, Project URL and, for a nuget.org package, Report
 abuse; vulnerabilities with severity **text + icon**; dependencies per target framework, collapsed
 with their counts),
-**README** (rendered Markdown, sanitized; images fetched host-side; "No README available" empty
-state; failure shows an inline retry). Version dropdown (`version-selector`) lists versions with
+**README** (rendered Markdown, sanitized; images fetched host-side; code blocks with a copy button
+that shows Copied for two seconds; "No README available" empty state; failure shows an inline retry). Version dropdown (`version-selector`) lists versions with
 "(installed)" marker; the primary button reads **Install** / **Update** / **Downgrade** /
 **Uninstall** depending on the selection vs installed version. Loading of versions/metadata/README is
 per selection; a response for a different package/version is ignored.

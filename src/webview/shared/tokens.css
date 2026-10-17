@@ -81,6 +81,11 @@
     /* Colours: code blocks of a README and their syntax, as the editor's symbol and debug token colours */
     --nuiget-color-code-bg: var(--vscode-textCodeBlock-background);
     --nuiget-color-code-fg: var(--vscode-editor-foreground, var(--vscode-foreground));
+    /* Colours: README tables and block quotes, as the editor's keybinding table and Markdown preview */
+    --nuiget-color-table-header-bg: var(--vscode-keybindingTable-headerBackground, var(--vscode-editor-inactiveSelectionBackground));
+    --nuiget-color-table-row-alt-bg: var(--vscode-keybindingTable-rowsBackground, var(--vscode-editor-inactiveSelectionBackground));
+    --nuiget-color-blockquote-bg: var(--vscode-textBlockQuote-background);
+    --nuiget-color-blockquote-border: var(--vscode-textBlockQuote-border, var(--vscode-textLink-foreground));
     --nuiget-color-syntax-keyword: var(--vscode-symbolIcon-keywordForeground, var(--vscode-editor-foreground));
     --nuiget-color-syntax-type: var(--vscode-symbolIcon-classForeground, var(--vscode-editor-foreground));
     --nuiget-color-syntax-function: var(--vscode-symbolIcon-functionForeground, var(--vscode-editor-foreground));
@@ -146,6 +151,10 @@ body.vscode-high-contrast-light {
         --nuiget-color-widget-fg: CanvasText;
         --nuiget-color-code-bg: Canvas;
         --nuiget-color-code-fg: CanvasText;
+        --nuiget-color-table-header-bg: Canvas;
+        --nuiget-color-table-row-alt-bg: Canvas;
+        --nuiget-color-blockquote-bg: Canvas;
+        --nuiget-color-blockquote-border: CanvasText;
         --nuiget-color-syntax-keyword: CanvasText;
         --nuiget-color-syntax-type: CanvasText;
         --nuiget-color-syntax-function: CanvasText;

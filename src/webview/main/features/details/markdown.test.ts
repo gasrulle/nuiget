@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { addCopyButtons, copyCodeOf, IMAGE_CONCURRENCY, renderMarkdownToHtml, rewriteImages, upgradeHttpToHttps } from './markdown';
+import { addCopyButtons, clearCopied, copyButtonOf, copyCodeOf, IMAGE_CONCURRENCY, markCopied, renderMarkdownToHtml, rewriteImages, upgradeHttpToHttps } from './markdown';
 
 // Ported from 1.x `src/webview/app/markdownSetup.test.ts` (20 titles); the code-block and copy-button titles follow the
 // post-sanitize buttons of `addCopyButtons`.
@@ -73,13 +73,31 @@ describe('renderMarkdownToHtml', () => {
         const container = containerOf(renderMarkdownToHtml('```json\n{}\n```'));
         addCopyButtons(container);
         const button = container.querySelector('button.nuiget-readme-copy');
-        expect(button).toHaveTextContent('JSON');
+        // The copy and check icons, each in its own span, then the language.
+        expect(button?.querySelectorAll('.nuiget-readme-copy-icon > svg')).toHaveLength(2);
+        expect(button?.querySelector('.nuiget-readme-copy-icon--copy svg')).toHaveAttribute('aria-hidden', 'true');
+        expect(button?.querySelector('.nuiget-readme-copy-label')).toHaveTextContent('JSON');
         expect(button).toHaveAccessibleName('Copy JSON code');
         expect(copyCodeOf(button)).toBe('{}');
         // Once per block, however often it runs.
         addCopyButtons(container);
         expect(container.querySelectorAll('button')).toHaveLength(1);
         expect(copyCodeOf(container.querySelector('pre'))).toBeUndefined();
+    });
+
+    it('markCopied swaps the icon and the label and clearCopied restores them', () => {
+        const container = containerOf(renderMarkdownToHtml('```json\n{}\n```'));
+        addCopyButtons(container);
+        const button = copyButtonOf(container.querySelector('.nuiget-readme-copy-label'));
+        expect(button).toBeInstanceOf(HTMLButtonElement);
+        markCopied(button!);
+        expect(button).toHaveAttribute('data-copied');
+        expect(button?.querySelector('.nuiget-readme-copy-label')).toHaveTextContent('Copied');
+        expect(button).toHaveAccessibleName('Copy JSON code');
+        clearCopied(button!);
+        expect(button).not.toHaveAttribute('data-copied');
+        expect(button?.querySelector('.nuiget-readme-copy-label')).toHaveTextContent('JSON');
+        expect(copyButtonOf(container.querySelector('pre'))).toBeUndefined();
     });
 
     it('strips script tags (XSS prevention)', () => {

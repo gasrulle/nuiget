@@ -226,7 +226,7 @@ export function DetailsPane({ announce }: DetailsPaneProps): React.JSX.Element {
                 {versions.error ? <Banner severity="error" action={{ label: 'Retry', onClick: retryVersions }}>{`Versions could not be listed: ${versions.error.message}`}</Banner> : null}
             </div>
             <Tabs tabs={TABS} selected={tab} onSelect={selectTab} label="Details sections">
-                {tab === 'details' ? <DetailsInfo key={shownKey} /> : <ReadmeView />}
+                {tab === 'details' ? <DetailsInfo key={shownKey} /> : <ReadmeView announce={announce} />}
             </Tabs>
             <CentralUpdateDialog
                 request={centralPreview}

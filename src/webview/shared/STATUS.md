@@ -99,6 +99,9 @@ rm -rf /tmp/nuiget-ui/screenshots dist && npm run test:ui -- --storage /tmp/nuig
 - P9.8 (b) (2026-10-17, ruling in `src/webview/main/STATUS.md`): `SectionHeader` `level` 4 (test `renders the heading
   level asked`); `store/details.tsx` `DetailsSelection.known` (`verified`, `totalDownloads`); `store/allProjects.tsx`
   exports `EMPTY_ALL_PROJECTS` and `AllProjectsStored` for the project picker's own stream (no logic change).
+- P9.8 (c): `tokens.css` README table and block-quote colours (`--nuiget-color-table-header-bg`,
+  `--nuiget-color-table-row-alt-bg`, `--nuiget-color-blockquote-bg`, `--nuiget-color-blockquote-border`), `Canvas`/`CanvasText`
+  under forced colours, not in the high-contrast block.
 
 ## Done (untested)
 

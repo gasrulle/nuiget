@@ -313,14 +313,132 @@ body {
 
 .nuiget-readme img {
     max-width: 100%;
+    border-radius: var(--nuiget-radius-sm);
+}
+
+/* Typography of a README (1.x): headings marked on the left, inline code, tables, quotes, lists and rules on tokens. */
+.nuiget-readme h1,
+.nuiget-readme h2,
+.nuiget-readme h3,
+.nuiget-readme h4,
+.nuiget-readme h5,
+.nuiget-readme h6 {
+    margin: var(--nuiget-space-6) 0 var(--nuiget-space-4);
+    font-weight: 600;
+    line-height: 1.25;
+}
+
+.nuiget-readme h1 {
+    padding-left: var(--nuiget-space-5);
+    border-left: 4px solid var(--nuiget-color-link);
+    font-size: 1.6em;
+}
+
+.nuiget-readme h1:first-child {
+    margin-top: 0;
+}
+
+.nuiget-readme h2 {
+    padding-left: var(--nuiget-space-5);
+    border-left: 3px solid var(--nuiget-color-link);
+    font-size: 1.4em;
+}
+
+.nuiget-readme h3 {
+    padding-left: var(--nuiget-space-5);
+    border-left: 3px solid var(--nuiget-color-border);
+    font-size: 1.2em;
+}
+
+.nuiget-readme h4 {
+    font-size: 1.05em;
+}
+
+.nuiget-readme h5,
+.nuiget-readme h6 {
+    color: var(--nuiget-color-fg-muted);
+    font-size: 1em;
+}
+
+.nuiget-readme p,
+.nuiget-readme ul,
+.nuiget-readme ol {
+    margin: 0 0 var(--nuiget-space-5);
+}
+
+.nuiget-readme ul,
+.nuiget-readme ol {
+    padding-inline-start: 1.75em;
+}
+
+.nuiget-readme li + li {
+    margin-top: var(--nuiget-space-2);
+}
+
+.nuiget-readme code {
+    padding: 1px var(--nuiget-space-2);
+    border: 1px solid var(--nuiget-color-border);
+    border-radius: var(--nuiget-radius-sm);
+    background: var(--nuiget-color-code-bg);
+    font-family: var(--nuiget-font-family-mono);
+    font-size: var(--nuiget-font-size-sm);
+}
+
+.nuiget-readme pre code {
+    padding: 0;
+    border: 0;
+    background: none;
+}
+
+.nuiget-readme table {
+    width: 100%;
+    margin: 0 0 var(--nuiget-space-5);
+    border: 1px solid var(--nuiget-color-border);
+    border-collapse: collapse;
+}
+
+.nuiget-readme th,
+.nuiget-readme td {
+    padding: var(--nuiget-space-2) var(--nuiget-space-4);
+    border-bottom: 1px solid var(--nuiget-color-border);
+    text-align: left;
+}
+
+.nuiget-readme th {
+    background: var(--nuiget-color-table-header-bg);
+    font-weight: 600;
+}
+
+.nuiget-readme tbody tr:nth-child(even) {
+    background: var(--nuiget-color-table-row-alt-bg);
+}
+
+.nuiget-readme blockquote {
+    margin: 0 0 var(--nuiget-space-5);
+    padding: var(--nuiget-space-4) var(--nuiget-space-5);
+    border-left: 4px solid var(--nuiget-color-blockquote-border);
+    background: var(--nuiget-color-blockquote-bg);
+    color: var(--nuiget-color-fg-muted);
+}
+
+.nuiget-readme blockquote p:last-child {
+    margin-bottom: 0;
+}
+
+.nuiget-readme hr {
+    margin: var(--nuiget-space-6) 0;
+    border: 0;
+    border-top: 2px solid var(--nuiget-color-border);
 }
 
 .nuiget-readme-code {
     position: relative;
 }
 
+/* The first line starts below the copy button. */
 .nuiget-readme pre {
     padding: var(--nuiget-space-4);
+    padding-top: calc(var(--nuiget-target-min) + var(--nuiget-space-2));
     overflow-x: auto;
     border-radius: var(--nuiget-radius-sm);
     background: var(--nuiget-color-code-bg);
@@ -329,6 +447,9 @@ body {
 }
 
 .nuiget-readme-copy {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--nuiget-space-2);
     position: absolute;
     top: var(--nuiget-space-2);
     right: var(--nuiget-space-2);
@@ -345,6 +466,16 @@ body {
 
 .nuiget-readme-copy:focus-visible {
     outline: 1px solid var(--nuiget-color-focus);
+}
+
+.nuiget-readme-copy-icon {
+    display: inline-flex;
+}
+
+/* The copy icon until the code is copied, then the check mark for two seconds. */
+.nuiget-readme-copy[data-copied] .nuiget-readme-copy-icon--copy,
+.nuiget-readme-copy:not([data-copied]) .nuiget-readme-copy-icon--check {
+    display: none;
 }
 
 .nuiget-readme .nuiget-hljs-keyword,

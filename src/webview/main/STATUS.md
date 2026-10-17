@@ -1,4 +1,4 @@
-# STATUS — src/webview/main   commit dac4347 (P9.8 commit (a); parent of commit (b))   2026-10-17T05:40:00Z
+# STATUS — src/webview/main   commit b1ebfc7 (P9.8 commit (b); parent of commit (c))   2026-10-17T06:30:00Z
 
 git status --porcelain --untracked-files=all (before commit (a)): modified `ARCHITECTURE.md`, `CHANGELOG.md`,
 `docs/plans/STATUS.md`, `src/core/feeds/{metadataResolver.ts,metadataResolver.test.ts,STATUS.md}`, `src/webview/main/STATUS.md`
@@ -9,6 +9,11 @@ git status --porcelain --untracked-files=all (before commit (b)): modified `ARCH
 `src/webview/main/features/installed/InstalledTab.tsx`, `src/webview/main/features/search/BrowseList.tsx`,
 `src/webview/main/features/updates/{UpdatesTab.tsx,AllProjectsUpdates.tsx}`, `src/webview/shared/STATUS.md`,
 `src/webview/shared/primitives/{SectionHeader.tsx,SectionHeader.test.tsx}`, `src/webview/shared/store/{details.tsx,allProjects.tsx}`
+
+git status --porcelain --untracked-files=all (before commit (c)): modified `ARCHITECTURE.md`, `CHANGELOG.md`,
+`docs/plans/STATUS.md`, `docs/ux/interaction-model.md`, `src/webview/main/{main.css,STATUS.md}`,
+`src/webview/main/features/details/{DetailsPane.tsx,DetailsPane.test.tsx,ReadmeView.tsx,markdown.ts,markdown.test.ts}`,
+`src/webview/shared/STATUS.md`, `src/webview/shared/tokens.css`
 
 Item: **P9.8** ⚑ — Details pane parity (parity audit MB4, MB8, MB9, MB10, MB11, MB12, MB14, MB15, DP9), by the ⚑
 ruling below, in three commits: (a) the package size in the core; (b) the details pane; (c) README typography and the
@@ -37,6 +42,16 @@ rm -rf /tmp/nuiget-ui/screenshots dist && npm run test:ui -- --storage /tmp/nuig
                               (local main-browse-details: facts in order, Package size 2.4 MB, Report abuse, groups
                               collapsed with counts; before the moniker-case CSS fix)
 CI runs 38985635937, 38985634290 on dac4347 (commit (a)) → success
+CI runs 38986239109, 38986237261 on b1ebfc7 (commit (b)) → success (UI job: 14 PNGs in the artifact)
+commit (c):
+npx tsc --noEmit 0 · npm run check-types 0 · npx eslint src 0 · npm run lint 0 · npm run docs:check 0
+npx vitest run --project backend src/test/lint → Tests 131 passed (131)
+npx vitest run --project frontend src/webview/main/features/details → Tests 56 passed (56); DetailsPane.test.tsx 10 runs → green
+npm test                    → exit 0 · Tests 1982 passed | 9 skipped (1991) · npm run bench → exit 0
+rm -rf dist out/esbuild && node esbuild.mjs --production --analyze → dist/extension.js 293600 / 322502 ·
+                              dist/webview.js 548007 / 577766 · dist/sidebar.js 327034 / 351245
+rm -rf /tmp/nuiget-ui/screenshots dist && npm run test:ui -- --storage /tmp/nuiget-ui → exit 0 · 38 passing (1m) · 14 PNGs
+                              (local main-details-readme: headings marked on the left, copy buttons with icon and C#)
 ```
 
 ## Done (tested)
@@ -60,6 +75,16 @@ CI runs 38985635937, 38985634290 on dac4347 (commit (a)) → success
   dependency text).
 - Docs (b): interaction model §3 (Install in projects…), §7 (facts, groups, fixed header), §8 (`multi-install-button`);
   README All Projects bullet; ARCHITECTURE details feature paragraph; CHANGELOG Added and Changed.
+- Commit (c): README typography on tokens (`main.css`; four new tokens `--nuiget-color-table-header-bg`,
+  `--nuiget-color-table-row-alt-bg`, `--nuiget-color-blockquote-bg`, `--nuiget-color-blockquote-border`, `Canvas` and
+  `CanvasText` under forced colours); the copy button holds the copy and check icons (`createElementNS`) and the
+  language label, `markCopied`/`clearCopied`/`copyButtonOf`/`COPIED_MS` in `markdown.ts`; `ReadmeView` takes
+  `announce`, writes with `navigator.clipboard`, else `ui/copyToClipboard`, shows Copied for two seconds and says so.
+- Tests (c): `markCopied swaps the icon and the label and clearCopied restores them` (markdown.test.ts). Named
+  rewrites: markdown.test.ts 'adds copy icon and language label to code blocks' (two icons and the label span);
+  DetailsPane.test.tsx 'the README tab renders the README, fetches its images through the host and copies code'
+  extended (Copied state, the live region, the clearing after `COPIED_MS` under fake timers, the host fallback).
+- Docs (c): interaction model §7 README sentence; ARCHITECTURE README paragraph; CHANGELOG Changed.
 
 ## Done (untested)
 
@@ -67,7 +92,7 @@ CI runs 38985635937, 38985634290 on dac4347 (commit (a)) → success
 
 ## Not started
 
-- Commit (c): README typography and the copy button.
+- None of P9.8.
 
 ## Deviations from contract/ADR (file:line each)
 
@@ -83,6 +108,9 @@ CI runs 38985635937, 38985634290 on dac4347 (commit (a)) → success
 - (b) `main.css`: the dependency group toggles keep the moniker's case (`text-transform: none` on the level-4
   `SectionHeader` in `.nuiget-details-group`; the local capture showed "NET6.0", ".NETFRAMEWORK2.0") and the old `h4`
   margin is gone (the heading now holds the toggle).
+- (c) The README test sets the test's `navigator.clipboard` after `userEvent.setup()`: user-event puts its own clipboard
+  stub on `navigator` when it is set up, which replaced the test's.
+- (c) The Copied state is also cleared when the README changes or the tab unmounts (`useEffect(() => forgetCopied, [html])`).
 
 ## Advisor decisions (date, item, question, answer verbatim)
 
@@ -188,4 +216,4 @@ The main P9.8 ruling delivered earlier stands unchanged apart from this correcti
 
 ## Exact next step (one item ID)
 
-P9.8 commit (b), after commit (a)'s CI is green.
+P9.9, after P9.8's visual check.

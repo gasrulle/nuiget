@@ -1,7 +1,7 @@
 import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { axe } from 'jest-axe';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ALL_PROJECTS, type InstalledPackage, type NuGetSource, type PackageMetadata, type SessionSnapshot } from '../../../../protocol';
 import { createFakeHost, type FakeHost } from '../../../shared/bus/testSupport';
 import { axeRuleOutcome, installFakeLayout } from '../../../shared/primitives/testSupport';
@@ -11,6 +11,7 @@ import { InstalledTab } from '../installed/InstalledTab';
 import { BrowseList } from '../search/BrowseList';
 import { UpdatesTab } from '../updates/UpdatesTab';
 import { DetailsPane, primaryAction } from './DetailsPane';
+import { COPIED_MS } from './markdown';
 
 const A = '/w/App/App.csproj';
 const B = '/w/Lib/Lib.csproj';
@@ -368,9 +369,32 @@ describe('main panel: details', () => {
         await waitFor(() => expect(content.querySelector('img')).toHaveAttribute('src', 'data:image/svg+xml;base64,AAAA'));
 
         const copied: string[] = [];
-        Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: async (value: string) => { copied.push(value); } } });
-        await user.click(within(content).getByRole('button', { name: 'Copy C# code' }));
-        expect(copied).toEqual(['var log = 1;']);
+        const copy = (): HTMLElement => within(content).getByRole('button', { name: 'Copy C# code' });
+        vi.useFakeTimers({ shouldAdvanceTime: true });
+        try {
+            // user-event's setup puts its own clipboard on navigator: the test's goes in after it.
+            const clicker = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+            Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: async (value: string) => { copied.push(value); } } });
+            await clicker.click(copy());
+            expect(copied).toEqual(['var log = 1;']);
+            await waitFor(() => expect(copy()).toHaveAttribute('data-copied'));
+            expect(copy()).toHaveTextContent('Copied');
+            await waitFor(() => expect(screen.getByTestId('status-live')).toHaveTextContent('Copied the C# code.'));
+            act(() => {
+                vi.advanceTimersByTime(COPIED_MS);
+            });
+            expect(copy()).not.toHaveAttribute('data-copied');
+            expect(copy()).toHaveTextContent('C#');
+        } finally {
+            vi.useRealTimers();
+        }
+
+        // Without the webview's clipboard the host copies it.
+        Object.defineProperty(navigator, 'clipboard', { configurable: true, value: undefined });
+        await user.click(copy());
+        await waitFor(() => expect(host.requests('ui/copyToClipboard').map(request => request.payload)).toEqual([{ text: 'var log = 1;' }]));
+        await hostSays(() => host.respond(host.requests('ui/copyToClipboard')[0], {}));
+        await waitFor(() => expect(copy()).toHaveAttribute('data-copied'));
     });
 
     it('the same row made current again keeps the README tab and shows its README; another package starts on Details', async () => {

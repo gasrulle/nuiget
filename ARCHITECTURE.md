@@ -704,6 +704,11 @@ prefixed `nuiget-hljs-`, coloured by the `--nuiget-color-syntax-*` tokens), then
 form elements or `<button>`. Copy buttons are added to the sanitized DOM afterwards, and every image is fetched by the
 host (`readme/image`, `http:` URLs of known hosts upgraded first, four at a time, cancelled with the selection); an
 image the host cannot fetch is replaced by its alt text, because the CSP's `img-src` allows `data:` only.
+The README's typography (headings marked on the left, inline code, tables, block quotes, lists, rules) is `main.css` on
+tokens (`--nuiget-color-table-*`, `--nuiget-color-blockquote-*`). A copy button holds a copy and a check icon (built with
+`createElementNS`, no React) and the language label; a click writes the code with `navigator.clipboard`, else asks the
+host (`ui/copyToClipboard`), then the button shows the check and "Copied" for `COPIED_MS` and the live region says so
+(P9.8).
 
 ### Sources feature (main)
 
