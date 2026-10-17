@@ -2,7 +2,7 @@ import { expect } from 'chai';
 import * as fs from 'fs';
 import * as path from 'path';
 import { By } from 'vscode-extension-tester';
-import { chooseProjectUntilCommitted, enterMainWebview, openMainPanel, optionFor, untilProjects } from './mainWebview';
+import { chooseProjectCommitted, enterMainWebview, openMainPanel, optionFor, untilProjects } from './mainWebview';
 import { driverOf, findByTestId, leaveWebview, poll, screenshot, waitForText } from './sidebarWebview';
 
 /**
@@ -41,7 +41,7 @@ describe('2.0 main panel: transitive packages', () => {
             await openMainPanel();
             await enterMainWebview();
             const testProject = await optionFor('TestProject.csproj');
-            await chooseProjectUntilCommitted(testProject, 30_000);
+            await chooseProjectCommitted(testProject, 30_000);
             fs.rmSync(projectPath, { force: true });
             await untilProjects(values => (values.some(value => value.endsWith('Transitive.csproj')) ? undefined : true), 'Transitive.csproj gone from the selector');
             await (await findByTestId('installed-tab', 30_000)).click();
@@ -66,7 +66,7 @@ describe('2.0 main panel: transitive packages', () => {
         this.timeout(600_000);
         // The host discovers the new project; its option carries the path as the host sent it.
         const option = await optionFor('Transitive.csproj');
-        await chooseProjectUntilCommitted(option, 60_000);
+        await chooseProjectCommitted(option, 60_000);
         // An earlier file may have left the Updates tab shown.
         await (await findByTestId('installed-tab', 30_000)).click();
         await findByTestId('package-row-serilog.sinks.console', 120_000);

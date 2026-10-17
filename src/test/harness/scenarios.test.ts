@@ -238,6 +238,37 @@ describe('two-surface harness', () => {
         }
     });
 
+    it('N86: a surface is told of a new project only after the session knows it, so choosing it right away is committed', async () => {
+        h = await createHarness({ tree: TWO_PROJECTS, selectedProject: 'A/A.csproj' });
+        const [A, B, C] = [h.path('A/A.csproj'), h.path('B/B.csproj'), h.path('C/C.csproj')];
+        const main = await h.resolve('main');
+        const sidebar = await h.resolve('sidebar');
+        await h.expectState({ selectedProject: A, projects: [A, B], installed: ['Serilog@3.0.0'] });
+
+        // A rescan lists the sources of the kept project before it reconciles: hold that listing.
+        const listing = h.dotnet.hold(dotnetCalls.listSources(path.dirname(A)));
+        h.files.addProject(C, projectXml(['Moq', '4.20.0']));
+        const refresh = h.request('main', 'refresh/all', {});
+        await h.settle(() => expect(listing.seen).toBe(1));
+        for (const webview of [main, sidebar]) {
+            expect(webview.projects?.map(project => project.path), `${webview.surface}: projects while the listing runs`).toEqual([A, B]);
+            expect(webview.events('projects/changed').some(event => event.projects.some(project => project.path === C))).toBe(false);
+        }
+        listing.release();
+        await refresh.response;
+        await h.settle(() => {
+            for (const webview of [main, sidebar]) {
+                expect(webview.projects?.map(project => project.path)).toEqual([A, B, C]);
+            }
+        });
+
+        // One dispatch, no retry: the store knows C by the time a surface does.
+        const committed = await h.selectProject('main', C);
+        expect(committed.selectedProject).toBe(C);
+        await h.expectState({ selectedProject: C, projects: [A, B, C], installed: ['Moq@4.20.0'] });
+        [main, sidebar].forEach(expectOneResponsePerRequest);
+    });
+
     it('shared query with one subscriber cancelling: one computation, the other surface is still answered', async () => {
         h = await createHarness({ tree: TWO_PROJECTS, selectedProject: 'A/A.csproj' });
         const A = h.path('A/A.csproj');

@@ -69,6 +69,13 @@ test -e .claude/.contract-change → false (created with "P7.2c" for the ADR-004
 2026-10-16, P7.2c: the ⚑ ruling and its follow-up are verbatim in `docs/plans/STATUS.md` ("P7.2c — ⚑ ruling: …",
 "P7.2c — follow-up ruling: the root composition test's msbuild fake") and in `src/core/project/STATUS.md`.
 
+## P9.12 addition (2026-10-17)
+
+- `harness.ts` `files.addProject(path, xml)`: a project file without a watcher event (TF8). Scenario `N86: a surface is
+  told of a new project only after the session knows it, so choosing it right away is committed` (holds `nuget list
+  source` under `refresh/all`; one `session/set` for the new project is committed). Negative control on the unreordered
+  `extension.ts`: `AssertionError: main: projects while the listing runs: expected [ …(3) ] to deeply equal [ …(2) ] (+ "…/harness-qoAwVE/C/C.csproj")`. `npx vitest run --project integration src/test/harness` → Tests 24 passed (24).
+
 ## Exact next step (one item ID)
 
-P7.3.
+P9.12 commit 3.

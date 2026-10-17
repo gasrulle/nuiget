@@ -37,6 +37,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - **Package size in the details pane**
+- **A project chosen right after it was discovered is kept, not bounced to the previous one**
 
 ## [2.0.0] - 2026-10-16
 

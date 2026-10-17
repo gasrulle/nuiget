@@ -1,4 +1,4 @@
-# STATUS — src/test/ui/v2   commit 33312b2 (P9.11 closed; parent of the P9.12 commits)   2026-10-17T16:20:00Z
+# STATUS — src/test/ui/v2   commit eb68dbb (P9.12 commit 1; parent of commit 2)   2026-10-17T17:00:00Z
 
 git status --porcelain --untracked-files=all (before commit 1): modified `docs/plans/STATUS.md`,
 `docs/ux/interaction-model.md`, `src/test/ui/v2/{STATUS.md,main-all-projects.ui.test.ts,main-shell.ui.test.ts,main-transitive.ui.test.ts,mainWebview.ts}`,
@@ -23,6 +23,16 @@ npm test                    → exit 0 · Tests 2009 passed | 9 skipped (2018) �
 rm -rf dist out/esbuild && node esbuild.mjs --production --analyze → dist/extension.js 297016 / 322502 ·
                               dist/webview.js 548746 / 577766 · dist/sidebar.js 333071 / 351245
 rm -rf /tmp/nuiget-ui/screenshots dist && npm run test:ui -- --storage /tmp/nuiget-ui → exit 0 · 40 passing (1m)
+CI runs 38998896884, 38998895301 on eb68dbb (commit 1) → success (the branch is green again)
+commit 2:
+negative control (scenario before the reorder) → AssertionError: main: projects while the listing runs: expected [ …(3) ] to deeply equal [ …(2) ] (+ "…/harness-qoAwVE/C/C.csproj")
+npx vitest run --project integration src/test/harness → Tests 24 passed (24) · src/extension.test.ts → 38 passed (unchanged)
+npx tsc --noEmit 0 · npm run check-types 0 · npx eslint src 0 · npm run lint 0 · npm run docs:check 0
+npm test                    → exit 0 · Tests 2010 passed | 9 skipped (2019) · npm run bench → exit 0
+npm run package:vsix        → exit 0 · Packaged: nuiget-v2.0.0.vsix (17 files, 580.85 KB)
+rm -rf dist out/esbuild && node esbuild.mjs --production --analyze → dist/extension.js 297018 / 322502 ·
+                              dist/webview.js 548746 / 577766 · dist/sidebar.js 333071 / 351245
+rm -rf /tmp/nuiget-ui/screenshots dist && npm run test:ui -- --storage /tmp/nuiget-ui → exit 0 · 40 passing (1m)
 ```
 
 ## Done (tested)
@@ -34,13 +44,23 @@ rm -rf /tmp/nuiget-ui/screenshots dist && npm run test:ui -- --storage /tmp/nuig
   `refresh-button` under the CSP. The host side of TF8 (a create event invalidates `projects`, `extension.ts:316,323`)
   was already true.
 
+- Commit 2 (N86): the reorder in `extension.ts` (see `src/STATUS.md`); `chooseProjectUntilCommitted` replaced by
+  `chooseProjectCommitted` (one dispatch, then a poll; `main-transitive.ui.test.ts` two sites, `main-all-projects.ui.test.ts`
+  one); the harness scenario and `files.addProject` (see `src/test/harness/STATUS.md`); N86 closed in the ledger;
+  ARCHITECTURE `refreshProjectsAndSession` sentence; CHANGELOG Fixed; gotcha "`projects/changed` before `reconcile`".
+
+## Visual check of commit 1 (CI run 38998896884)
+
+- viewed: main-installed-all.png: unchanged (TestProject.csproj and Utility.csproj sections, All Projects (2)).
+- viewed: main-installed-single.png: unchanged (Installed tab, Newtonsoft.Json with its README).
+
 ## Done (untested)
 
 - None.
 
 ## Not started
 
-- Commit 2 (N86) and commit 3 (TF1, TF3, TF7); the gate's one rerun.
+- Commit 3 (TF1, TF3, TF7); the gate's one rerun.
 
 ## Deviations from contract/ADR (file:line each)
 
@@ -113,4 +133,4 @@ Files checked: docs/plans/2026-10-11-nuiget-2.0-execution-plan.md (§1-§4, :359
 
 ## Exact next step (one item ID)
 
-P9.12 commit 2, after commit 1's CI is green.
+P9.12 commit 3, after commit 2's CI is green.

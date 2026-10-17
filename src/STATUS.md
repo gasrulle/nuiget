@@ -102,6 +102,15 @@ grep -cE '^\| (N29|N30|N31|N44|N53|N58|N40) \|.*\| (closed|mitigated)' docs/plan
 The P8.2 ruling and both P8.2b follow-ups (2026-10-16) are verbatim under `## Advisor decisions` in
 `docs/plans/STATUS.md`. Not repeated here.
 
+## P9.12 addition (2026-10-17)
+
+- `extension.ts` `refreshProjectsAndSession` fires `events.projectsChanged` only after `session.reconcile` (N86): a
+  `session/set` for a project a surface was just told about finds it in the store's list; the early return fires
+  nothing (its rerun reconciles and announces); `setContext nuiget.hasProjectFiles` stays where it was. Ruling verbatim
+  in `src/test/ui/v2/STATUS.md`. Negative control on the unreordered tree, scenario 'N86: …': `AssertionError: main: projects while the listing runs: expected [ …(3) ] to deeply equal [ …(2) ] (+ "…/harness-qoAwVE/C/C.csproj")`; after the
+  reorder: harness `Tests 24 passed (24)`; `npx vitest run --project backend src/extension.test.ts` → `Tests 38 passed
+  (38)` (unchanged).
+
 ## Exact next step (one item ID)
 
 P8.2c

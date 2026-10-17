@@ -186,7 +186,6 @@ export async function activateWith(context: vscode.ExtensionContext, overrides: 
             logger.warn(`Project discovery failed: ${describe(error)}`);
             return;
         }
-        events.projectsChanged.fire(projects);
         await vscode.commands.executeCommand('setContext', 'nuiget.hasProjectFiles', projects.length > 0);
         // Sources belong to a project directory: list those of the project the store is going to keep or
         // pick, so that the selected source is judged against the right list. Set before `reconcile`, so
@@ -197,10 +196,15 @@ export async function activateWith(context: vscode.ExtensionContext, overrides: 
         const selected = session.snapshot.selectedProject;
         if (selected !== before && selected !== kept) {
             // The selection moved while the sources were listed: this list is another project's. The
-            // change has already asked for one more run, and that run reconciles.
+            // change has already asked for one more run, and that run reconciles. The rerun that change asked for
+            // (session.onDidChange below, `selectedProject !== lastReconciledProject`) reconciles and then
+            // announces: a surface is told of a project only once the store knows it (N86).
             return;
         }
         await session.reconcile(projects, urls);
+        // After `reconcile`, never before: a `session/set` for a project a surface was just told about must find it in
+        // the store's list (N86).
+        events.projectsChanged.fire(projects);
     };
 
     let inFlight: Promise<void> | undefined;

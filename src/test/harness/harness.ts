@@ -302,6 +302,15 @@ export async function createHarness(options: HarnessOptions) {
                 addPackageReference(projectPath, packageId, version);
                 watcher(PROJECT_GLOB).change(vscode.Uri.file(projectPath));
             },
+            /**
+             * A project file that appears without a watcher event, as on a runner whose watcher missed the create
+             * (TF8); listed on the next discovery.
+             */
+            addProject(projectPath: string, xml: string): void {
+                fs.mkdirSync(path.dirname(projectPath), { recursive: true });
+                fs.writeFileSync(projectPath, xml, 'utf8');
+                projectFiles.push(projectPath);
+            },
             deleteProject(projectPath: string): void {
                 fs.rmSync(projectPath);
                 projectFiles.splice(projectFiles.indexOf(projectPath), 1);

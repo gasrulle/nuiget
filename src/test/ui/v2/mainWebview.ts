@@ -49,23 +49,13 @@ export async function chooseProject(value: string): Promise<void> {
 }
 
 /**
- * A `projects/changed` arrives before the host's session knows the project (N86): an intent sent in that window is
- * answered with the previous project, so the choice is repeated until it is committed.
+ * One dispatch. Since P9.12 the host tells a surface of a project only after the session knows it (N86), so a choice
+ * that is not committed is a regression, never retried here.
  */
-export async function chooseProjectUntilCommitted(value: string, timeoutMs = 60_000): Promise<void> {
+export async function chooseProjectCommitted(value: string, timeoutMs = 60_000): Promise<void> {
     const selectorValue = async (): Promise<string> => (await driverOf().executeScript<string>('return document.querySelector(\'[data-testid="project-selector"]\')?.value ?? "";')) ?? '';
     await chooseProject(value);
-    let dispatched = Date.now();
-    await poll(async () => {
-        if ((await selectorValue()) === value) {
-            return true;
-        }
-        if (Date.now() - dispatched >= 2_000) {
-            await chooseProject(value);
-            dispatched = Date.now();
-        }
-        return undefined;
-    }, `the project selector committed on ${value}`, timeoutMs);
+    await poll(async () => ((await selectorValue()) === value ? true : undefined), `the project selector committed on ${value}`, timeoutMs);
 }
 
 /** The values of the project selector's options, as the host sent the paths. */

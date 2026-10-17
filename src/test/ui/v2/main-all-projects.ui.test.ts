@@ -2,7 +2,7 @@ import { expect } from 'chai';
 import * as fs from 'fs';
 import * as path from 'path';
 import { By } from 'vscode-extension-tester';
-import { chooseProjectUntilCommitted, enterMainWebview, openMainPanel, untilProjects } from './mainWebview';
+import { chooseProjectCommitted, enterMainWebview, openMainPanel, untilProjects } from './mainWebview';
 import { driverOf, findByTestId, leaveWebview, poll, screenshot } from './sidebarWebview';
 
 /** `ALL_PROJECTS` of `src/protocol/domain.ts`; the test reads the DOM, it imports nothing of the webview. */
@@ -82,7 +82,7 @@ describe('2.0 main panel: All Projects', () => {
     it('All Projects lists one section per project and the collapsed transitive aggregate', async function () {
         this.timeout(180_000);
         await untilProjects(values => (values.includes(ALL_PROJECTS) ? true : undefined), 'the All Projects option');
-        await chooseProjectUntilCommitted(ALL_PROJECTS, 30_000);
+        await chooseProjectCommitted(ALL_PROJECTS, 30_000);
 
         // The project names come from discovery; read the list ids from the DOM rather than assume them.
         const lists = await poll(async () => {
