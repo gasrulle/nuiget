@@ -1,4 +1,4 @@
-# STATUS — src/host   commit 2975739 (P9.9 commit (a); parent of commit (b))   2026-10-17T08:30:00Z
+# STATUS — src/host   commit 7b3b3f0 (P9.9 commit (b); parent of the UI fix)   2026-10-17T09:20:00Z
 
 git status --porcelain --untracked-files=all (before commit (a)): modified `.github/copilot-instructions.md`,
 `ARCHITECTURE.md`, `CHANGELOG.md`, `README.md`, `docs/plans/STATUS.md`, `docs/ux/interaction-model.md`, `src/extension.ts`,
@@ -74,6 +74,15 @@ rm -rf /tmp/nuiget-ui/screenshots dist && npm run test:ui -- --storage /tmp/nuig
   protocol' (follow-up ruling). The ErrorBoundary and the entries: `src/webview/shared/STATUS.md`.
 - Docs (b): ARCHITECTURE primitives paragraph (`ErrorBoundary`), `src/host/**` row, `RequestMap` 45; interaction model §4
   Error row; CHANGELOG Changed; gotcha "ErrorBoundary inside the provider"; ADR-007 amended (45th request).
+
+- Fix attempt 1 (RUN.md §4/§5, stop-and-ask ruling below): CI on 7b3b3f0 → run 38989840054 success, run 38989842872
+  `UI` failure (`37 passing · 1 failing`: `main-transitive.ui.test.ts` "Timed out after 30000 ms waiting for the
+  Transitive project committed"; the selector stayed on TestProject.csproj). Root cause N86 (product race, P9.12).
+  Named rewrites: `src/test/ui/v2/mainWebview.ts` `chooseProjectUntilCommitted` (re-dispatches the choice every 2 s
+  until committed); `main-transitive.ui.test.ts` the two choose-and-poll pairs (and its now unused local
+  `selectorValue`); `main-all-projects.ui.test.ts` the All Projects choice. `docs/plans/findings-ledger.md` N86 (both
+  tables); P9.12 tracker note. Local: `npx eslint src` 0, `npm run check-types` 0, `npm run docs:check` 0,
+  `npm run test:ui -- --storage /tmp/nuiget-ui` → 38 passing.
 
 ## Done (untested)
 
@@ -159,6 +168,36 @@ Files checked: `/Users/mattias/github/nuiget/.github/agents/architecture-advisor
 `````
 
 2026-10-17, P9.9 commit (b) follow-up: verbatim in `src/protocol/STATUS.md`.
+
+2026-10-17, P9.9 (b) red UI job (stop-and-ask: run 38989842872, the transitive suite's project choice never committed).
+Answer of the `architecture-advisor` subagent, verbatim:
+
+`````text
+DECISION: Option 1, widened to the helper: a named rewrite of P9.9 (b) as fix attempt 1 under RUN.md §4/§5, adding `chooseProjectUntilCommitted(value, timeoutMs)` to `src/test/ui/v2/mainWebview.ts` (dispatch, then re-dispatch the change every 2 s while the selector is not on the value, within one budget) and using it at `main-transitive.ui.test.ts:67-69` and `:94-95` and at `main-all-projects.ui.test.ts:84-85`, which has the same exposure. No product change in P9.9. The root cause is a product race, recorded as finding N86 and assigned to P9.12 (the item whose row owns the discovery flake, "the host rescans on `.csproj` create; both fixed"); the test rewrite is honest only with that record beside it. Not a rerun: a test ran and failed, so N37/N65 do not apply.
+
+WHY: Verified in the tree, the failure is not timing in the test but a window in the host. `extension.ts:188` fires `events.projectsChanged` (the webviews' `projects/changed`, from which `optionFor` takes the option) and only at `:202`, after `await enabledSourceUrls(directoryOf(kept))` (a `dotnet nuget list source` for the kept project's directory, `:160-176`), calls `session.reconcile`, which is the one place `knownProjects` is replaced (`SessionStore.ts:100-104`). An intent that arrives in that window is normalized against the old list: `normalizeProject` (`:119-131`) answers `firstProject(projects)` for a path it does not know and, for `ALL_PROJECTS`, for a list of one. The webview then clears its pending intent on its own answer (`session.tsx:106-110`) and the selector shows the host's project; nothing later re-sends the intent, so a 30 s poll on `selectorValue() === option` cannot succeed. The screenshot the brief describes (selector on `TestProject.csproj`, no notification, no error state) is exactly that outcome, and `untilProjects` pressing Refresh between its polls (P9.5, `44c2980`) makes the window recur rather than close it. Nothing of commit (b) touches this path (`ErrorBoundary` renders `<Fragment key={0}>` until an error; the entry sends `ui/reportError` only from `componentDidCatch`), and the same SHA was green in run 38989840054 and locally (38 passing), which fits a race that a slower `dotnet nuget list source` on the runner widens. The gotcha "Requests that follow a pending selection … the host may answer an intent with another project" (`copilot-instructions.md:196`) describes this bounce as the webview's contract, which is why it belongs in the ledger as a product finding and not as a test note alone. A user who picks a freshly discovered project during that window is bounced back once; a retry is what that user would do, so a test that retries asserts the product's steady state without hiding the window: the ledger row does the not-hiding. `main-all-projects.ui.test.ts:83-85` chooses `ALL_PROJECTS` right after the option appears and has the same window (`normalizeProject(ALL_PROJECTS)` with one known project → that project); fixing one and not the other leaves the next red for P9.10 or P9.12 to rediscover. The product fix is not for P9.9: it is either a reorder in `refreshProjectsAndSession` (announce the projects after `reconcile`, while still announcing on the early return at `:197-201`) or a store that learns the project list before the source listing, and `SessionStore` is a `src/core/contracts.ts` type, so the second needs the sentinel; both are P9.12's scope ("host watcher", discovery flake), with a `scenarios.test.ts` scenario that holds `nuget list source` (the harness holds walks by directory) and sends `session/set` for the new project in the window.
+
+DO:
+1. `src/test/ui/v2/mainWebview.ts`, after `chooseProject` (:44-49): `export async function chooseProjectUntilCommitted(value: string, timeoutMs = 60_000): Promise<void>` that calls `chooseProject(value)`, then `poll` with the same budget: when `selectorValue() === value` return true; otherwise, if at least 2 s passed since the last dispatch, `chooseProject(value)` again and return undefined. Doc comment: "A `projects/changed` arrives before the host's session knows the project (N86): an intent sent in that window is answered with the previous project, so the choice is repeated until it is committed." Keep `chooseProject` exported unchanged (the helper and no test else needs a single dispatch; if `chooseProject` ends with no caller, keep it anyway as the helper's step).
+2. `main-transitive.ui.test.ts:94-95` → `await chooseProjectUntilCommitted(option, 60_000);` (the poll line goes); `:67-69` → `await chooseProjectUntilCommitted(testProject, 30_000);`. `main-all-projects.ui.test.ts:84-85` → `await chooseProjectUntilCommitted(ALL_PROJECTS, 30_000);`. Import the helper in both files; drop `chooseProject` from the imports where it is no longer used (eslint).
+3. `docs/plans/findings-ledger.md`: row N86 (Medium): "`refreshProjectsAndSession` announces `projects/changed` (`extension.ts:188`) before `session.reconcile` (`:202`) replaces `knownProjects` (`SessionStore.ts:101`); between them `dotnet nuget list source` runs. A `session/set` for the newly discovered project, or for All Projects when the list grew to two, is normalized against the old list (`:119-131`) and answered with the previous project; the webview drops its pending intent on that answer and nothing re-sends it. Seen: run 38989842872 (`main-transitive.ui.test.ts:93-95`, 1 of 2 runs on 7b3b3f0; local 38 passing). P9.9 (b): UI tests retry the choice until committed (`chooseProjectUntilCommitted`). Product fix in P9.12: the store knows the projects before the webviews do (reorder in `extension.ts`, or a store method under the sentinel), with a harness scenario holding `nuget list source` while `session/set` names the new project." Add the same sentence to the P9.12 row's notes in `docs/plans/STATUS.md` ("also N86").
+4. Local UI run: `npm run test:ui -- --storage /tmp/nuiget-ui` → 38 passing (the all-projects suite included). Gates: `npx eslint src`, `npm run check-types` (the UI files are in `tsconfig.test.json`), `npm run docs:check`.
+5. Commit `test(ui): choose a project until the host commits it (P9.9, N86)` citing run 38989842872 in the body; push; wait for CI. Record in `src/host/STATUS.md` (and the P9.9 tracker row): the two red/green runs on 7b3b3f0, this ruling verbatim, the named rewrites (`mainWebview.ts`, `main-transitive.ui.test.ts:67-69, 94-95`, `main-all-projects.ui.test.ts:84-85`), "fix attempt 1". If the UI job is red again on the new commit with the same message, that is fix attempt 2 and a stop-and-ask with the new log; any other UI red is a new stop-and-ask.
+
+DO NOT:
+- Do not `gh run rerun` 38989842872; it is a test that ran and failed, not N37/N65.
+- Do not change `extension.ts`, `SessionStore.ts`, `session.tsx` or the handlers in P9.9 for this; the product fix has an owner (P9.12) and a contract question (`SessionStore` is in `contracts.ts`).
+- Do not lengthen the existing 30 s poll without the retry, and do not add a fixed sleep: the first intent is lost, not slow.
+- Do not make the webview re-send a dropped intent (the "clear pending on its own answer" rule stands, gotcha `copilot-instructions.md:196`).
+- Do not leave `main-all-projects.ui.test.ts:84-85` on the single dispatch.
+- Do not record this as a flake without the N86 row; a retry in a test without the finding is hiding a defect.
+
+CONTRACT CHANGE: none. Files approved for this follow-up: `src/test/ui/v2/mainWebview.ts`, `src/test/ui/v2/main-transitive.ui.test.ts:67-69, 94-95`, `src/test/ui/v2/main-all-projects.ui.test.ts:84-85` (named rewrites), `docs/plans/findings-ledger.md` (N86), `docs/plans/STATUS.md` (P9.9 and P9.12 rows), `src/host/STATUS.md`.
+
+VERIFY: `grep -n "chooseProjectUntilCommitted" src/test/ui/v2/*.ts` → the export in `mainWebview.ts` and three call sites (`main-transitive.ui.test.ts` two, `main-all-projects.ui.test.ts` one); `grep -c "await chooseProject(" src/test/ui/v2/main-transitive.ui.test.ts src/test/ui/v2/main-all-projects.ui.test.ts` → 0 each; `grep -n "^| N86" docs/plans/findings-ledger.md` → one row naming `extension.ts:188`, `:202` and P9.12; `npm run test:ui -- --storage /tmp/nuiget-ui` → 38 passing locally; the UI job of the new commit's run green, `gh run view <id> --log` → `38 passing`.
+
+Files checked: `/Users/mattias/github/nuiget/src/test/ui/v2/main-transitive.ui.test.ts:43, 60-110`; `/Users/mattias/github/nuiget/src/test/ui/v2/mainWebview.ts:30-49`; `/Users/mattias/github/nuiget/src/test/ui/v2/main-all-projects.ui.test.ts:76-96`; `/Users/mattias/github/nuiget/src/extension.ts:156-226` (read earlier in this consultation: `:188` fire, `:195` listing, `:197-201` early return, `:202` reconcile); `/Users/mattias/github/nuiget/src/core/session/SessionStore.ts:50-135`; `/Users/mattias/github/nuiget/src/webview/shared/store/session.tsx:14-53, 106-113`; `/Users/mattias/github/nuiget/src/webview/main/MainShell.tsx:243-254`; `/Users/mattias/github/nuiget/docs/plans/RUN.md:76-96`; `/Users/mattias/github/nuiget/docs/plans/findings-ledger.md` (last id N85, rows :182, :445); `/Users/mattias/github/nuiget/.github/copilot-instructions.md:196`; `git log --oneline -5 -- src/test/ui/v2/main-transitive.ui.test.ts` (`0566166`, `44c2980`, `9ea8a40`); `gh run view 38989842872 --log-failed` (`37 passing (3m)`, `1 failing`, "Timed out after 30000 ms waiting for the Transitive project committed").
+`````
 
 ## Exact next step (one item ID)
 
