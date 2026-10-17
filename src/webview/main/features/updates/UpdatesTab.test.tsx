@@ -243,6 +243,8 @@ describe('main panel: Updates tab', () => {
             const host = await mountAll();
             expect(listOf('app')).toHaveAccessibleName('App');
             expect(listOf('lib')).toHaveAccessibleName('Lib');
+            // The single-scroller layout of the Installed tab (P9.fix-2).
+            expect(listOf('app').closest('.nuiget-installed')).toHaveClass('nuiget-installed--sections');
             expect(screen.getByTestId('updates-tab')).toHaveAccessibleName(/Updates\s+3/);
             expect(host.requests('updates/get')).toHaveLength(0);
 

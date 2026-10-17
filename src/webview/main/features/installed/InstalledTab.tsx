@@ -210,7 +210,7 @@ export function InstalledTab({ filter, vulnerableOnly, announce }: ListView): Re
     }
 
     return (
-        <div className={allMode ? 'nuiget-installed nuiget-installed--all' : 'nuiget-installed'}>
+        <div className="nuiget-installed nuiget-installed--sections">
             <Toolbar label="Bulk actions">
                 <button type="button" className="nuiget-button nuiget-button--secondary" data-testid="select-all-button" aria-pressed={allSelected} disabled={candidateCount === 0} onClick={selectAll}>
                     Select all
@@ -219,8 +219,11 @@ export function InstalledTab({ filter, vulnerableOnly, announce }: ListView): Re
                     {`Uninstall selected (${count})`}
                 </button>
             </Toolbar>
-            <div className="nuiget-installed-lists">{body}</div>
-            {allMode ? <AllProjectsTransitiveSection onCurrent={showTransitive} /> : <TransitiveSection onCurrent={showTransitive} />}
+            {/* One scroller: the transitive packages follow the direct rows, as in 1.x (P9.fix-2). */}
+            <div className="nuiget-installed-lists">
+                {body}
+                {allMode ? <AllProjectsTransitiveSection onCurrent={showTransitive} /> : <TransitiveSection onCurrent={showTransitive} />}
+            </div>
             <BulkUninstallDialog open={confirming && count > 0} removals={removals} onConfirm={confirm} onCancel={() => setConfirming(false)} />
         </div>
     );

@@ -3,7 +3,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { By, Key } from 'vscode-extension-tester';
 import { enterMainWebview, measureLoadedRows, openMainPanel } from './mainWebview';
-import { findByTestId, leaveWebview, poll, screenshot, tokenPx, waitForTestIdGone } from './sidebarWebview';
+import { driverOf, findByTestId, leaveWebview, poll, screenshot, tokenPx, waitForTestIdGone } from './sidebarWebview';
 
 /**
  * The Installed tab of the 2.0 main panel in VS Code (plan item P5.4), on the VSIX that `npm run test:ui` packages: the
@@ -71,7 +71,7 @@ describe('2.0 main panel: Installed tab', () => {
         }, 'the authors and the Verified mark on the Newtonsoft.Json row', 120_000);
     });
 
-    it('the transitive section opens with what the project gets through its references (P9.0)', async function () {
+    it('the transitive section opens with what the project gets through its references, right under the last direct row (P9.0, P9.fix-2)', async function () {
         this.timeout(300_000);
         await findByTestId('package-row-serilog', 120_000);
         const header = await findByTestId('section-header-transitive');
@@ -95,6 +95,17 @@ describe('2.0 main panel: Installed tab', () => {
                 return now === 'banner' ? undefined : now;
             }, 'the transitive packages after the restore', 240_000);
         }
+        // One scroller: the transitive header follows the last direct row, with no gap of more than one row (P9.fix-2).
+        const edges = await driverOf().executeScript<{ lastRowBottom: number; headerTop: number }>(`
+            const rows = Array.from(document.querySelectorAll('[data-testid="installed-list"] [role="option"]'));
+            const header = document.querySelector('[data-testid="section-header-transitive"]').closest('.nuiget-section-header');
+            return {
+                lastRowBottom: Math.max(...rows.map(option => (option.closest('.nuiget-row') ?? option).getBoundingClientRect().bottom)),
+                headerTop: header.getBoundingClientRect().top,
+            };`);
+        console.warn('[P9.fix-2] transitive header: ' + JSON.stringify(edges));
+        const gap = edges.headerTop - edges.lastRowBottom;
+        expect(gap, 'from the last direct row to the transitive header (subpixel slack)').to.be.within(-1, tokenPx('--nuiget-row-height-comfortable'));
         // The files after this one measure the Installed tab with the section closed.
         await header.click();
         await poll(async () => ((await header.getAttribute('aria-expanded')) === 'false' ? true : undefined), 'the transitive section closed', 10_000);

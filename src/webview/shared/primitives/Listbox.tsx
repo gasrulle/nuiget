@@ -127,6 +127,9 @@ export function Listbox<T extends { id: string }>(props: ListboxProps<T>): React
     const moveTo = (index: number): void => {
         setActiveId(items[index].id);
         virtualizer.scrollToIndex(index, { align: 'auto' });
+        // A list as high as its rows inside an outer scroller cannot scroll itself, and the focus does not scroll
+        // (N88): the option asks its scrollers. Optional: jsdom has no `scrollIntoView`.
+        optionAt(index)?.scrollIntoView?.({ block: 'nearest' });
     };
 
     const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>): void => {

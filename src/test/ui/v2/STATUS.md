@@ -1,4 +1,4 @@
-# STATUS — src/test/ui/v2   commit dc70b60 (P9.12 commit 3; parent of the docs commit)   2026-10-17T04:05:00Z
+# STATUS — src/test/ui/v2   commit 80940aa (parent of the P9.fix-2 commit)   2026-10-17T10:00:00Z
 
 git status --porcelain --untracked-files=all (before commit 1): modified `docs/plans/STATUS.md`,
 `docs/ux/interaction-model.md`, `src/test/ui/v2/{STATUS.md,main-all-projects.ui.test.ts,main-shell.ui.test.ts,main-transitive.ui.test.ts,mainWebview.ts}`,
@@ -53,6 +53,12 @@ gate: gh run rerun 39000089739 → attempt 2 success; UI log: `42 passing (2m)` 
 ```
 
 ## Done (tested)
+
+- P9.fix-2 (by the ruling verbatim in `src/webview/main/STATUS.md`): named rewrite of `main-installed.ui.test.ts`
+  `the transitive section opens with what the project gets through its references (P9.0)` → `…, right under the last
+  direct row (P9.0, P9.fix-2)`: with the section open it measures the max `bottom` of the direct rows and the `top` of
+  the transitive header and asserts the gap within -1 (subpixel) and one comfortable row; logs `[P9.fix-2]`. Local run
+  42 passing, gap 0 (284/284).
 
 - Commit 1 (TF8, TF4): `MainShell` Refresh carries `data-testid="refresh-button"` (interaction model §8);
   `mainWebview.ts` exports `projectOptionValues`, `untilProjects` (presses `refresh-button` every 15 s, 180 s in all) and
@@ -203,4 +209,4 @@ Files read for this ruling: /Users/mattias/github/nuiget/src/core/feeds/vulnerab
 
 ## Exact next step (one item ID)
 
-P9.13.
+P9.fix-3.

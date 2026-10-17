@@ -40,6 +40,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Package size in the details pane**
 - **A project chosen right after it was discovered is kept, not bounced to the previous one**
 - **The sidebar no longer asks for the transitive packages it does not show**
+- **Transitive packages follow the direct packages in one scrolling list instead of being pinned to the bottom**
 
 ## [2.0.0] - 2026-10-16
 

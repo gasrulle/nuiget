@@ -593,9 +593,11 @@ builds it into `dist/webview.js` and, because the entry imports `../shared/token
 
 - **Sections.** For a single project one list (`installed-list`) under a collapsible `Direct packages (N)`
   header (`section-header-direct`; `(k of N)` while a filter is on, `(N)` while the vulnerability data of
-  `@vulnerable` is unknown) and, under it, the transitive section; in All Projects one `SectionHeader` and one
-  list per project from the `allProjects` slice (`installed-list-<name>`), inside one scroll container where every
-  list is as high as its rows. Each header carries the `provisional` and `Unsupported` badges. Folder headings,
+  `@vulnerable` is unknown) and, right after its last row, the transitive section; in All Projects one
+  `SectionHeader` and one list per project from the `allProjects` slice (`installed-list-<name>`), then the
+  aggregate. In both modes the tab is one scroll container (`nuiget-installed--sections`, shared with All Projects
+  Updates) where every list is as high as its rows (P9.fix-2); `Listbox` scrolls the active option into view with
+  `scrollIntoView({ block: 'nearest' })`, because such a list cannot scroll itself (N88). Each header carries the `provisional` and `Unsupported` badges. Folder headings,
   `Unsupported` sections and the all-projects transitive aggregate are P5.9's.
 - **Rows (P9.3).** A comfortable `Row` per package: the icon from the lite map (`packageIconSrc`: the `data:` URI
   or the bundled default), authors and the Verified mark from the same map, no description (D14); the version

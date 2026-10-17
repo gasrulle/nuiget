@@ -106,6 +106,17 @@ describe('Listbox', () => {
         expect(options().every(element => element.getAttribute('aria-selected') === 'false')).toBe(true);
     });
 
+    it('ArrowDown scrolls the active option into view (a list in an outer scroller cannot scroll itself)', async () => {
+        const user = userEvent.setup();
+        render(<PackageList items={three} />);
+        await user.tab();
+        const scrollIntoView = vi.fn();
+        Object.defineProperty(option('Beta'), 'scrollIntoView', { value: scrollIntoView, configurable: true });
+        await user.keyboard('{ArrowDown}');
+        expect(option('Beta')).toHaveFocus();
+        expect(scrollIntoView).toHaveBeenCalledWith({ block: 'nearest' });
+    });
+
     it('Enter activates, Ctrl+Enter and Meta+Enter are the secondary action', async () => {
         const user = userEvent.setup();
         const onActivate = vi.fn();

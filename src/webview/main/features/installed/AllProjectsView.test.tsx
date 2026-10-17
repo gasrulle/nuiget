@@ -127,6 +127,8 @@ describe('main panel: All Projects', () => {
         const user = userEvent.setup();
         const host = await mountAll(PROJECTS.slice(0, 2));
         expect(host.requests('allProjects/transitive')).toHaveLength(0);
+        // One scroller: the aggregate follows the project sections (P9.fix-2).
+        expect(screen.getByTestId('transitive-section').closest('.nuiget-installed-lists')).not.toBeNull();
 
         await user.click(screen.getByTestId('section-header-transitive'));
         const stream = host.requests('allProjects/transitive')[0];

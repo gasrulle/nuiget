@@ -1,4 +1,4 @@
-# STATUS — src/webview/shared   commit 3f2a2e0 (P9.13; parent of the P9.fix-1 commit)   2026-10-17T09:00:00Z
+# STATUS — src/webview/shared   commit 80940aa (parent of the P9.fix-2 commit)   2026-10-17T10:00:00Z
 
 git status --porcelain --untracked-files=all (before the commit): modified `.github/copilot-instructions.md`,
 `ARCHITECTURE.md`, `CHANGELOG.md`, `docs/plans/STATUS.md`, `docs/plans/findings-ledger.md`,
@@ -50,6 +50,12 @@ npm run test:ui      → SKIPPED locally: CI runs the UI job on the push; the vi
   prefetch (P9.fix-1, N87)` (main entry unchanged).
 - Ledger N87 in both tables; ARCHITECTURE store table (`transitive` bullet); CHANGELOG `### Fixed`; the gotcha row
   "Host messages in a component test" gains the entry sentence.
+
+- P9.fix-2 (N88, by the ruling verbatim in `src/webview/main/STATUS.md`): `primitives/Listbox.tsx` `moveTo` asks the
+  option to `scrollIntoView?.({ block: 'nearest' })` after `scrollToIndex`, because a list as high as its rows inside
+  an outer scroller cannot scroll itself and the focus is `preventScroll`; `Listbox.test.tsx` `ArrowDown scrolls the
+  active option into view (a list in an outer scroller cannot scroll itself)` (fails without the line). Gates in
+  `src/webview/main/STATUS.md`.
 
 ## Done (untested)
 
@@ -156,4 +162,4 @@ Acted on: DO 1-5 of the follow-up; the review's DO 3 and DO 4 yield to RUN.md §
 
 ## Exact next step (one item ID)
 
-P9 gate re-run and the visual check, then stop for the owner's `P9 approved`; after it, P10.1.
+P9.fix-3 (the Row card and the tokens part of the P9.fix-2..6 ruling).

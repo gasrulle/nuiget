@@ -304,7 +304,7 @@ export function AllProjectsUpdates({ filter, announce }: ListView): React.JSX.El
     }
 
     return (
-        <div className="nuiget-installed nuiget-installed--all nuiget-updates">
+        <div className="nuiget-installed nuiget-installed--sections nuiget-updates">
             <Toolbar label="Bulk actions">
                 <button type="button" className="nuiget-button nuiget-button--secondary" data-testid="select-all-button" aria-pressed={allSelected} disabled={candidateTotal === 0} onClick={selectAll}>
                     Select all

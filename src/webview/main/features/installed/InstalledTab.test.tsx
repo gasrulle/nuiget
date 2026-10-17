@@ -213,6 +213,8 @@ describe('main panel: Installed tab', () => {
         const user = userEvent.setup();
         const host = await mountWith();
         const section = screen.getByTestId('transitive-section');
+        // One scroller: the transitive section follows the direct rows (P9.fix-2).
+        expect(section.closest('.nuiget-installed-lists')).not.toBeNull();
         expect(host.requests('transitive/get')).toHaveLength(0);
         await user.click(within(section).getByRole('button', { name: /Transitive packages/ }));
         expect(host.requests('transitive/get').map(request => request.payload)).toEqual([{ projectPath: A }]);
