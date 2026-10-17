@@ -81,4 +81,9 @@ describe('SectionHeader', () => {
         expect(results).toHaveNoViolations();
         expect(axeRuleOutcome(results, 'nested-interactive')).toBe('passes');
     });
+
+    it('renders the heading level asked', () => {
+        render(<SectionHeader title="net8.0 (1)" titleId="t" contentId="c" testKey="k" expanded={false} onToggle={() => undefined} level={4} />);
+        expect(screen.getByRole('heading', { level: 4 })).toHaveTextContent('net8.0 (1)');
+    });
 });

@@ -14,8 +14,8 @@ export interface SectionHeaderProps {
     contentId: string;
     /** The section's name in its test id: `section-header-<testKey>`. */
     testKey: string;
-    /** The heading level: 2 under the title of the view, 3 inside another section. */
-    level?: 2 | 3;
+    /** The heading level: 2 under the title of the view, 3 inside another section, 4 for a group inside a section of the details pane. */
+    level?: 2 | 3 | 4;
     /** Shown as a badge after the title and read as part of the toggle's name. */
     count?: number;
     /** The section is loading or revalidating: a spinner turns next to the title. */
@@ -30,7 +30,7 @@ export interface SectionHeaderProps {
  * interactive content, which assistive technology cannot reach.
  */
 export function SectionHeader({ title, titleId, expanded, onToggle, contentId, testKey, level = 2, count, busy, actions }: SectionHeaderProps): React.JSX.Element {
-    const Heading = level === 2 ? 'h2' : 'h3';
+    const Heading = `h${level}` as const;
     return (
         <div className="nuiget-section-header">
             <Heading className="nuiget-section-heading">

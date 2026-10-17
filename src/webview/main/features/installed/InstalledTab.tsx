@@ -199,7 +199,7 @@ export function InstalledTab({ filter, vulnerableOnly, announce }: ListView): Re
                     // The details pane follows the row the user made current.
                     const entry = section.result?.packages.find(candidate => candidate.id === id);
                     if (entry !== undefined) {
-                        select({ packageId: entry.id, version: entry.resolvedVersion ?? entry.version, origin: 'installed', projectPath: section.projectPath });
+                        select({ packageId: entry.id, version: entry.resolvedVersion ?? entry.version, origin: 'installed', projectPath: section.projectPath, known: { verified: section.metadata.get(entry.id.toLowerCase())?.verified } });
                     }
                 }}
                 onUninstall={entry => uninstall(section, entry)}

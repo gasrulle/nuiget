@@ -48,7 +48,7 @@ export function BrowseList({ text, announce }: BrowseView): React.JSX.Element {
     // The details pane follows the row made current by the user or by a navigation.
     const makeCurrent = (result: PackageSearchResult, version = result.version): void => {
         setCurrentId(result.id);
-        select({ packageId: result.id, version, sourceUrl: result.sourceUrl, origin: 'browse', projectPath: null });
+        select({ packageId: result.id, version, sourceUrl: result.sourceUrl, origin: 'browse', projectPath: null, known: { verified: result.verified, totalDownloads: result.totalDownloads } });
     };
 
     const items = useMemo<Item[]>(() => search.results.map(result => ({ id: result.id, result })), [search.results]);

@@ -20,6 +20,8 @@ export interface DetailsSelection {
     origin: 'installed' | 'updates' | 'browse' | 'transitive';
     /** The project the row belongs to (its section's in All Projects); `null` for a row found by a search. */
     projectPath: string | null;
+    /** What the row that selected the package knew and the registration does not say. */
+    known?: { verified?: boolean; totalDownloads?: number };
 }
 
 export interface Loadable<T> {

@@ -180,7 +180,7 @@ function ProjectUpdates({ filter, announce }: ListView): React.JSX.Element {
                 onToggleSelected={item => toggle(item.update)}
                 onSelect={item => {
                     setCurrentId(item.id);
-                    select({ packageId: item.update.id, version: item.update.latestVersion, sourceUrl: item.update.sourceUrl, origin: 'updates', projectPath });
+                    select({ packageId: item.update.id, version: item.update.latestVersion, sourceUrl: item.update.sourceUrl, origin: 'updates', projectPath, known: { verified: item.update.verified } });
                 }}
                 onActivate={item => updateOne(item.update)}
                 empty={<EmptyState message={empty} />}

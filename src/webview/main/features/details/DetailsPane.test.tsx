@@ -229,7 +229,115 @@ describe('main panel: details', () => {
         expect(pane()).toHaveTextContent('2.0 MB');
         expect(within(pane()).getByRole('link', { name: 'https://serilog.net' })).toHaveAttribute('href', 'https://serilog.net');
         expect(within(pane()).getByRole('region', { name: 'Vulnerabilities' })).toHaveTextContent('High severity');
-        expect(within(pane()).getByRole('region', { name: 'Dependencies' })).toHaveTextContent('net8.0System.Diagnostics.DiagnosticSource >= 8.0.0net6.0No dependencies.');
+        // The groups start collapsed: their toggles name the framework and the count, and no dependency is shown.
+        const dependencies = within(pane()).getByRole('region', { name: 'Dependencies' });
+        expect(within(dependencies).getByRole('button', { name: 'net8.0 (1)' })).toHaveAttribute('aria-expanded', 'false');
+        expect(within(dependencies).getByRole('button', { name: 'net6.0 (0)' })).toHaveAttribute('aria-expanded', 'false');
+        expect(dependencies).not.toHaveTextContent('System.Diagnostics.DiagnosticSource');
+    });
+
+    it('details show size and downloads', async () => {
+        const user = userEvent.setup();
+        const host = await mountReady();
+        await user.type(screen.getByTestId('search-input'), 'polly{Enter}');
+        await hostSays(() => host.respond(host.requests('search/query')[0], { query: 'polly', results: [{ id: 'Polly', version: '8.4.2', description: '', authors: 'App vNext', versions: ['8.4.2'], sourceUrl: FEED, totalDownloads: 42_000, verified: true }] }));
+        await user.click(option('browse-list', 'Polly'));
+        await hostSays(() => host.respond(metadataOf(host)[0], { metadata: metadata('Polly', '8.4.2', { authors: 'App vNext', packageSize: 2_097_152, sourceUrl: FEED }) }));
+
+        const fact = (term: string): HTMLElement => within(pane()).getByText(term, { selector: 'dt' }).parentElement as HTMLElement;
+        expect(fact('Version')).toHaveTextContent('8.4.2');
+        expect(fact('Downloads')).toHaveTextContent('42,000');
+        expect(fact('Package size')).toHaveTextContent('2.0 MB');
+        expect(within(fact('Author(s)')).getByRole('img', { name: /Verified/ })).toBeInTheDocument();
+        expect([...pane().querySelectorAll('dt')].map(term => term.textContent)).toEqual(['Version', 'Author(s)', 'Downloads', 'Package size']);
+        expect(within(pane()).queryByText('Report abuse')).toBeNull();
+    });
+
+    it('the Details tab links Report abuse for a nuget.org package and not for a private feed', async () => {
+        const user = userEvent.setup();
+        const host = await mountReady();
+        const NUGET = 'https://api.nuget.org/v3/index.json';
+        await user.type(screen.getByTestId('search-input'), 'polly{Enter}');
+        await hostSays(() => host.respond(host.requests('search/query')[0], { query: 'polly', results: [
+            { id: 'Polly', version: '8.4.2', description: '', authors: '', versions: ['8.4.2'], sourceUrl: NUGET },
+            { id: 'Private.Lib', version: '1.0.0', description: '', authors: '', versions: ['1.0.0'], sourceUrl: FEED },
+        ] }));
+        await user.click(option('browse-list', 'Polly'));
+        await hostSays(() => host.respond(metadataOf(host)[0], { metadata: metadata('Polly', '8.4.2', { sourceUrl: NUGET }) }));
+        expect(within(pane()).getByRole('link', { name: 'Report this package' })).toHaveAttribute('href', 'https://www.nuget.org/packages/Polly/8.4.2/ReportAbuse');
+
+        await user.click(option('browse-list', 'Private.Lib'));
+        await hostSays(() => host.respond(metadataOf(host)[1], { metadata: metadata('Private.Lib', '1.0.0', { sourceUrl: FEED }) }));
+        expect(within(pane()).queryByRole('link', { name: 'Report this package' })).toBeNull();
+    });
+
+    it('dependency groups collapsed with counts', async () => {
+        const user = userEvent.setup();
+        const host = await mountReady([pkg('Serilog', '3.0.0'), pkg('Moq', '4.20.0')]);
+        await selectInstalled(host);
+        await hostSays(() => host.respond(metadataOf(host)[0], { metadata: metadata('Serilog', '3.0.0', {
+            dependencies: [{ targetFramework: 'net8.0', dependencies: [{ id: 'System.Diagnostics.DiagnosticSource', versionRange: '>= 8.0.0' }] }, { targetFramework: 'net6.0', dependencies: [] }],
+        }) }));
+        const dependencies = (): HTMLElement => within(pane()).getByRole('region', { name: 'Dependencies' });
+        const toggle = (name: string): HTMLElement => within(dependencies()).getByRole('button', { name });
+        expect(toggle('net8.0 (1)')).toHaveAttribute('aria-expanded', 'false');
+        expect(toggle('net6.0 (0)')).toHaveAttribute('aria-expanded', 'false');
+        expect(dependencies()).not.toHaveTextContent('System.Diagnostics.DiagnosticSource');
+
+        await user.click(toggle('net8.0 (1)'));
+        expect(toggle('net8.0 (1)')).toHaveAttribute('aria-expanded', 'true');
+        expect(dependencies()).toHaveTextContent('System.Diagnostics.DiagnosticSource >= 8.0.0');
+        await user.click(toggle('net6.0 (0)'));
+        expect(dependencies()).toHaveTextContent('No dependencies.');
+
+        // Another package starts collapsed, and so does this one made current again.
+        await selectInstalled(host, 'Moq', ['4.20.0']);
+        expect(within(pane()).getByRole('heading', { name: 'Moq' })).toBeInTheDocument();
+        await user.click(option('installed-list', 'Serilog'));
+        // Made current again, the package is asked for once more.
+        const asked = metadataOf(host).filter(request => request.payload.packageId === 'Serilog');
+        expect(asked).toHaveLength(2);
+        await hostSays(() => host.respond(asked[1], { metadata: metadata('Serilog', '3.0.0', {
+            dependencies: [{ targetFramework: 'net8.0', dependencies: [{ id: 'System.Diagnostics.DiagnosticSource', versionRange: '>= 8.0.0' }] }, { targetFramework: 'net6.0', dependencies: [] }],
+        }) }));
+        expect(toggle('net8.0 (1)')).toHaveAttribute('aria-expanded', 'false');
+    });
+
+    it('multi install offered in single project mode', async () => {
+        const user = userEvent.setup();
+        const host = await mountReady();
+        await user.type(screen.getByTestId('search-input'), 'polly{Enter}');
+        await hostSays(() => host.respond(host.requests('search/query')[0], { query: 'polly', results: [{ id: 'Polly', version: '8.4.2', description: '', authors: '', versions: ['8.4.2'], sourceUrl: FEED }] }));
+        await user.click(option('browse-list', 'Polly'));
+        expect(primary()).toHaveTextContent('Install');
+        await user.click(screen.getByTestId('multi-install-button'));
+
+        expect(host.requests('allProjects/installed')).toHaveLength(1);
+        const stream = host.requests('allProjects/installed')[0];
+        await hostSays(() => host.chunk(stream, { kind: 'start', projects: [{ name: 'App', path: A }, { name: 'Lib', path: B }] }));
+        await hostSays(() => host.chunk(stream, { kind: 'project', chunk: { projectPath: A, projectName: 'App', result: { projectPath: A, fidelity: 'authoritative', isCpm: false, packages: [] } } }));
+        await hostSays(() => host.chunk(stream, { kind: 'project', chunk: { projectPath: B, projectName: 'Lib', result: { projectPath: B, fidelity: 'authoritative', isCpm: true, packages: [] } } }));
+        await hostSays(() => host.respond(stream, { projectPaths: [A, B], errored: [] }));
+        await waitFor(() => expect(host.requests('cpm/preview').map(request => request.payload)).toEqual([{ projectPath: B, packageId: 'Polly', version: '8.4.2' }]));
+        await hostSays(() => host.respond(host.requests('cpm/preview')[0], { preview: null }));
+
+        const results = await axe(document.body);
+        expect(results).toHaveNoViolations();
+        expect(axeRuleOutcome(results, 'aria-dialog-name')).toBe('passes');
+        const dialog = screen.getByTestId('multi-install-dialog');
+        await user.click(within(dialog).getByRole('checkbox', { name: 'Lib' }));
+        await user.click(within(dialog).getByRole('button', { name: 'Install in 1 project' }));
+        expect(host.requests('ops/bulkInstall').map(request => request.payload)).toEqual([{ projectPaths: [B], packageId: 'Polly', version: '8.4.2' }]);
+        expect(screen.queryByTestId('multi-install-dialog')).toBeNull();
+    });
+
+    it('an installed package offers no Install in projects', async () => {
+        const user = userEvent.setup();
+        const host = await mountReady([pkg('Polly', '8.4.2')]);
+        await user.type(screen.getByTestId('search-input'), 'polly{Enter}');
+        await hostSays(() => host.respond(host.requests('search/query')[0], { query: 'polly', results: [{ id: 'Polly', version: '8.4.2', description: '', authors: '', versions: ['8.4.2'], sourceUrl: FEED }] }));
+        await user.click(option('browse-list', 'Polly'));
+        expect(screen.queryByTestId('multi-install-button')).toBeNull();
     });
 
     it('offline details say whether a source is down or no source knows the version', async () => {

@@ -115,8 +115,11 @@ body {
     min-width: 0;
 }
 
+/* A column: the details keep their header in view and scroll their tab; the transitive view and the empty state scroll here. */
 .nuiget-main-details {
+    display: flex;
     flex: 1;
+    flex-direction: column;
     min-width: 0;
     overflow: auto;
 }
@@ -202,11 +205,18 @@ body {
 
 .nuiget-details {
     display: flex;
+    flex: 1;
     flex-direction: column;
-    min-height: 100%;
+    min-height: 0;
+}
+
+/* The title, the installed row and the version row stay in view; the Details and README content scroll under them. */
+.nuiget-details .nuiget-tabpanel {
+    overflow: auto;
 }
 
 .nuiget-details-header {
+    flex: none;
     display: flex;
     flex-direction: column;
     gap: var(--nuiget-space-3);
@@ -271,11 +281,15 @@ body {
     font-size: var(--nuiget-font-size-md);
 }
 
+/* A dependency group's toggle (a level-4 SectionHeader): the framework moniker keeps its case, unlike a section title. */
 .nuiget-details-group h4 {
-    margin: var(--nuiget-space-4) 0 var(--nuiget-space-1);
+    margin: 0;
     font-size: var(--nuiget-font-size-md);
     font-weight: normal;
-    color: var(--nuiget-color-fg-muted);
+}
+
+.nuiget-details-group .nuiget-section-toggle {
+    text-transform: none;
 }
 
 .nuiget-details-list {

@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Install in several projects from a single project** — a search result not installed in the selected project offers Install in projects… when the workspace has more than one project
 - **Quick install from the Browse list and the search box** — Ctrl+Enter (Cmd+Enter) installs a Browse row's version, the highlighted quick-search suggestion's newest version or the version chosen after ArrowRight into the selected project, through the Central Package Management preview where one is needed
 
 ### Changed
@@ -22,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **The main panel's list starts at 35 % of the width and keeps the position you drag it to**
 - **The main panel reopens on the tab you chose last**
 - **The Installed tab shows how many packages have known vulnerabilities**
+- **Details pane: Version, Author(s) with the Verified mark, Downloads, Package size, Date published and Report abuse, dependency groups collapsed with counts, fixed header**
 
 ### Fixed
 

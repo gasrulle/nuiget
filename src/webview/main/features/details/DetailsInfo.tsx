@@ -1,8 +1,9 @@
-import { useEffect } from 'react';
+import { useEffect, useId, useState } from 'react';
 import type React from 'react';
-import type { PackageMetadata } from '../../../../protocol';
-import { Banner, EmptyState, Skeleton, WarningIcon } from '../../../shared/primitives';
-import { useDetails, useDetailsActions } from '../../../shared/store/details';
+import type { PackageDependencyGroup as Group, PackageMetadata } from '../../../../protocol';
+import { Banner, EmptyState, SectionHeader, Skeleton, VerifiedIcon, WarningIcon } from '../../../shared/primitives';
+import { useDetails, useDetailsActions, type DetailsSelection } from '../../../shared/store/details';
+import { useSession } from '../../../shared/store/session';
 import { useSources } from '../../../shared/store/sources';
 
 const formatSize = (bytes: number): string => {
@@ -20,25 +21,50 @@ const formatDate = (iso: string): string => {
 /** Only links a webview may hand to the browser. */
 const isWebLink = (url: string | undefined): url is string => url !== undefined && /^https?:\/\//i.test(url);
 
-function Facts({ metadata }: { metadata: PackageMetadata }): React.JSX.Element {
+/** A URL on nuget.org or one of its subdomains (`api.nuget.org`), where a package can be reported. */
+const isNuGetOrg = (url: string | undefined): boolean => {
+    if (url === undefined) {
+        return false;
+    }
+    try {
+        const host = new URL(url).hostname.toLowerCase();
+        return host === 'nuget.org' || host.endsWith('.nuget.org');
+    } catch {
+        return false;
+    }
+};
+
+interface FactsProps {
+    metadata: PackageMetadata;
+    known: DetailsSelection['known'];
+    reportAbuse: string | undefined;
+}
+
+/** The facts in the 1.x order: what the version is, who made it, under which license, how used and how big, when, where. */
+function Facts({ metadata, known, reportAbuse }: FactsProps): React.JSX.Element {
     const facts: Array<[string, React.ReactNode]> = [];
+    facts.push(['Version', metadata.version]);
     if (metadata.authors) {
-        facts.push(['Authors', metadata.authors]);
-    }
-    if (metadata.totalDownloads !== undefined) {
-        facts.push(['Downloads', metadata.totalDownloads.toLocaleString('en-US')]);
-    }
-    if (metadata.published) {
-        facts.push(['Published', formatDate(metadata.published)]);
+        facts.push(['Author(s)', known?.verified ? <><VerifiedIcon title="Verified: the package id prefix is reserved by its owner" />{' '}{metadata.authors}</> : metadata.authors]);
     }
     if (metadata.license || metadata.licenseUrl) {
         facts.push(['License', isWebLink(metadata.licenseUrl) ? <a href={metadata.licenseUrl}>{metadata.license ?? 'View license'}</a> : metadata.license]);
     }
+    const downloads = metadata.totalDownloads ?? known?.totalDownloads;
+    if (downloads !== undefined) {
+        facts.push(['Downloads', downloads.toLocaleString('en-US')]);
+    }
+    if (metadata.packageSize !== undefined) {
+        facts.push(['Package size', formatSize(metadata.packageSize)]);
+    }
+    if (metadata.published) {
+        facts.push(['Date published', formatDate(metadata.published)]);
+    }
     if (isWebLink(metadata.projectUrl)) {
         facts.push(['Project URL', <a href={metadata.projectUrl}>{metadata.projectUrl}</a>]);
     }
-    if (metadata.packageSize !== undefined) {
-        facts.push(['Size', formatSize(metadata.packageSize)]);
+    if (reportAbuse !== undefined) {
+        facts.push(['Report abuse', <a href={reportAbuse}>Report this package</a>]);
     }
     return (
         <dl className="nuiget-details-facts">
@@ -52,15 +78,43 @@ function Facts({ metadata }: { metadata: PackageMetadata }): React.JSX.Element {
     );
 }
 
+/** One target framework's dependencies under a toggle named with their count; nothing is rendered while it is closed. */
+function DependencyGroup({ group, expanded, onToggle }: { group: Group; expanded: boolean; onToggle: () => void }): React.JSX.Element {
+    const titleId = useId();
+    const contentId = useId();
+    return (
+        <div className="nuiget-details-group">
+            <SectionHeader
+                level={4}
+                title={`${group.targetFramework || 'Any framework'} (${group.dependencies.length})`}
+                titleId={titleId}
+                contentId={contentId}
+                testKey={`dependencies-${group.targetFramework.toLowerCase() || 'any'}`}
+                expanded={expanded}
+                onToggle={onToggle}
+            />
+            {!expanded ? null : group.dependencies.length === 0 ? <p id={contentId}>No dependencies.</p> : (
+                <ul id={contentId} aria-labelledby={titleId} className="nuiget-details-list">
+                    {group.dependencies.map(dependency => <li key={dependency.id}>{`${dependency.id} ${dependency.versionRange}`}</li>)}
+                </ul>
+            )}
+        </div>
+    );
+}
+
 /**
- * The Details tab (interaction model §7): description, authors, downloads, publication date, license, project URL,
- * size, vulnerabilities with their severity in words and an icon, and dependencies by target framework. Details read
- * from the local package cache are marked offline, saying whether a source is down or no source knows the version.
+ * The Details tab (interaction model §7): description, then Version, Author(s) with the Verified mark the row knew,
+ * License, Downloads (the registration's, else the row's), Package size, Date published, Project URL and Report abuse
+ * for a nuget.org package; vulnerabilities with their severity in words and an icon; dependencies per target framework,
+ * collapsed with their counts. Details read from the local package cache are marked offline, saying whether a source
+ * is down or no source knows the version. The pane keys it by package and version, so another package starts collapsed.
  */
 export function DetailsInfo(): React.JSX.Element {
-    const { metadata } = useDetails();
+    const { metadata, selection } = useDetails();
     const { retryMetadata } = useDetailsActions();
-    const { failed, enable } = useSources();
+    const { sources, failed, enable } = useSources();
+    const allSources = useSession().committed?.selectedSource === 'all';
+    const [expanded, setExpanded] = useState<ReadonlySet<string>>(() => new Set());
 
     useEffect(() => enable(), [enable]);
 
@@ -71,9 +125,20 @@ export function DetailsInfo(): React.JSX.Element {
         return <Banner severity="error" action={{ label: 'Retry', onClick: retryMetadata }}>{`Details could not be loaded: ${metadata.error?.message ?? 'unknown error'}`}</Banner>;
     }
     const value = metadata.value;
+    const toggle = (framework: string): void => setExpanded(previous => {
+        const next = new Set(previous);
+        if (!next.delete(framework)) {
+            next.add(framework);
+        }
+        return next;
+    });
     if (value === null || value === undefined) {
         return <EmptyState message={failed.length > 0 ? 'No details: a package source could not be reached.' : 'No package source has details for this version.'} />;
     }
+    // Report abuse is nuget.org's: the answering source, else the row's, else All sources with nuget.org among them.
+    const from = value.sourceUrl ?? selection?.sourceUrl;
+    const onNuGetOrg = from !== undefined ? isNuGetOrg(from) : allSources && (sources ?? []).some(source => source.enabled && isNuGetOrg(source.url));
+    const reportAbuse = onNuGetOrg ? `https://www.nuget.org/packages/${encodeURIComponent(value.id)}/${encodeURIComponent(value.version)}/ReportAbuse` : undefined;
     return (
         <div className="nuiget-details-info">
             {value.offline ? (
@@ -84,7 +149,7 @@ export function DetailsInfo(): React.JSX.Element {
                 </Banner>
             ) : null}
             {value.description ? <p className="nuiget-details-description">{value.description}</p> : null}
-            <Facts metadata={value} />
+            <Facts metadata={value} known={selection?.known} reportAbuse={reportAbuse} />
             {value.vulnerabilities !== undefined && value.vulnerabilities.length > 0 ? (
                 <section aria-label="Vulnerabilities" className="nuiget-details-section">
                     <h3>Vulnerabilities</h3>
@@ -102,14 +167,7 @@ export function DetailsInfo(): React.JSX.Element {
             <section aria-label="Dependencies" className="nuiget-details-section">
                 <h3>Dependencies</h3>
                 {value.dependencies.length === 0 ? <p>No dependencies.</p> : value.dependencies.map(group => (
-                    <div key={group.targetFramework} className="nuiget-details-group">
-                        <h4>{group.targetFramework || 'Any framework'}</h4>
-                        {group.dependencies.length === 0 ? <p>No dependencies.</p> : (
-                            <ul className="nuiget-details-list">
-                                {group.dependencies.map(dependency => <li key={dependency.id}>{`${dependency.id} ${dependency.versionRange}`}</li>)}
-                            </ul>
-                        )}
-                    </div>
+                    <DependencyGroup key={group.targetFramework} group={group} expanded={expanded.has(group.targetFramework)} onToggle={() => toggle(group.targetFramework)} />
                 ))}
             </section>
         </div>

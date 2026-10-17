@@ -107,6 +107,8 @@ export function DetailsPane({ announce }: DetailsPaneProps): React.JSX.Element {
     const fixedVersion = entry !== undefined && (entry.versionType === 'floating' || entry.versionType === 'range');
     const removalBlocked = entry !== undefined && ownResult !== undefined ? whyNotRemovable(entry, ownResult) : undefined;
     const ownerName = projects?.find(project => project.path === selection.projectPath)?.name ?? selection.projectPath ?? '';
+    // A search result not installed in the single project can also go to several projects of the workspace (MB4).
+    const offerPicker = !allMode && selection.origin === 'browse' && !stale && entry === undefined && (projects?.length ?? 0) > 1;
 
     let primaryWhy: string | undefined;
     if (pickProjects) {
@@ -197,6 +199,18 @@ export function DetailsPane({ announce }: DetailsPaneProps): React.JSX.Element {
                     >
                         {busy ? 'Working…' : pickProjects ? 'Install…' : action}
                     </button>
+                    {offerPicker ? (
+                        <button
+                            type="button"
+                            className="nuiget-button nuiget-button--secondary"
+                            data-testid="multi-install-button"
+                            disabled={busy || asking}
+                            title="Install this version into several projects"
+                            onClick={() => setPicking(true)}
+                        >
+                            Install in projects…
+                        </button>
+                    ) : null}
                 </div>
                 {primaryWhy !== undefined && primaryWhy !== 'This version is installed' ? <p className="nuiget-details-note">{`${primaryWhy}.`}</p> : null}
                 {entry !== undefined && isCentral(entry) ? (
@@ -212,7 +226,7 @@ export function DetailsPane({ announce }: DetailsPaneProps): React.JSX.Element {
                 {versions.error ? <Banner severity="error" action={{ label: 'Retry', onClick: retryVersions }}>{`Versions could not be listed: ${versions.error.message}`}</Banner> : null}
             </div>
             <Tabs tabs={TABS} selected={tab} onSelect={selectTab} label="Details sections">
-                {tab === 'details' ? <DetailsInfo /> : <ReadmeView />}
+                {tab === 'details' ? <DetailsInfo key={shownKey} /> : <ReadmeView />}
             </Tabs>
             <CentralUpdateDialog
                 request={centralPreview}

@@ -25,7 +25,7 @@ A Visual Studio-style NuGet package manager for VS Code with a modern split-pane
 - **All Projects.** With two or more projects, choose **All Projects (N)** in the project selector. Installed and
   Updates show one section per project, grouped by workspace folder when the workspace has several. Each row acts on
   its own project, Update all covers every project, and a search result can be installed into several projects at
-  once.
+  once. From a single project, the details pane of a search result also offers Install in projects….
 - **Transitive packages.** The Installed tab lists the transitive packages per target framework, each with the
   top-level packages that require it. A project that has not been restored shows a Restore banner instead.
 - **Bulk operations.** Select rows with Space, Ctrl+click (Cmd+click on macOS) or the check mark, then Update all,

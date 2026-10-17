@@ -1,7 +1,14 @@
-# STATUS — src/webview/main   commit e91d0ec (P9.7 closed; parent of the P9.8 commits)   2026-10-17T05:00:00Z
+# STATUS — src/webview/main   commit dac4347 (P9.8 commit (a); parent of commit (b))   2026-10-17T05:40:00Z
 
 git status --porcelain --untracked-files=all (before commit (a)): modified `ARCHITECTURE.md`, `CHANGELOG.md`,
 `docs/plans/STATUS.md`, `src/core/feeds/{metadataResolver.ts,metadataResolver.test.ts,STATUS.md}`, `src/webview/main/STATUS.md`
+
+git status --porcelain --untracked-files=all (before commit (b)): modified `ARCHITECTURE.md`, `CHANGELOG.md`, `README.md`,
+`docs/plans/STATUS.md`, `docs/ux/interaction-model.md`, `src/webview/main/{main.css,STATUS.md}`,
+`src/webview/main/features/details/{DetailsInfo.tsx,DetailsPane.tsx,DetailsPane.test.tsx,MultiInstallDialog.tsx}`,
+`src/webview/main/features/installed/InstalledTab.tsx`, `src/webview/main/features/search/BrowseList.tsx`,
+`src/webview/main/features/updates/{UpdatesTab.tsx,AllProjectsUpdates.tsx}`, `src/webview/shared/STATUS.md`,
+`src/webview/shared/primitives/{SectionHeader.tsx,SectionHeader.test.tsx}`, `src/webview/shared/store/{details.tsx,allProjects.tsx}`
 
 Item: **P9.8** ⚑ — Details pane parity (parity audit MB4, MB8, MB9, MB10, MB11, MB12, MB14, MB15, DP9), by the ⚑
 ruling below, in three commits: (a) the package size in the core; (b) the details pane; (c) README typography and the
@@ -19,6 +26,17 @@ npm test                    → exit 0 · Tests 1975 passed | 9 skipped (1984)
 npm run bench               → exit 0 (no bench added: ls src/core/feeds/*.bench.ts → health.bench.ts only)
 npm run package:vsix        → exit 0 · Packaged: nuiget-v2.0.0.vsix (17 files, 574.21 KB)
 ls .claude/.contract-change → no such file; no change under src/protocol, src/core/contracts.ts, docs/adr, src/host
+commit (b):
+npx tsc --noEmit 0 · npm run check-types 0 · npx eslint src 0 · npm run lint 0 · npm run docs:check 0
+npx vitest run --project backend src/test/lint → Tests 131 passed (131)
+npx vitest run --project frontend src/webview → Tests 543 passed (543); DetailsPane.test.tsx 5 runs in a loop → green
+npm test                    → exit 0 · Tests 1981 passed | 9 skipped (1990) · npm run bench → exit 0
+rm -rf dist out/esbuild && node esbuild.mjs --production --analyze → dist/extension.js 293600 / 322502 ·
+                              dist/webview.js 545911 / 577766 · dist/sidebar.js 327034 / 351245
+rm -rf /tmp/nuiget-ui/screenshots dist && npm run test:ui -- --storage /tmp/nuiget-ui → exit 0 · 38 passing (1m) · 14 PNGs
+                              (local main-browse-details: facts in order, Package size 2.4 MB, Report abuse, groups
+                              collapsed with counts; before the moniker-case CSS fix)
+CI runs 38985635937, 38985634290 on dac4347 (commit (a)) → success
 ```
 
 ## Done (tested)
@@ -28,6 +46,20 @@ ls .claude/.contract-change → no such file; no change under src/protocol, src/
   container of the source that answered`, `leaves packageSize absent when the HEAD fails`. Named rewrites:
   `metadataResolver.test.ts:55-61` (sequence over non-HEAD requests, plus one HEAD per source) and `:103` (the size
   request goes to the allowed source only, follow-up ruling). Docs: ARCHITECTURE resolver clause; CHANGELOG Fixed.
+- Commit (b): `DetailsSelection.known` filled by the Browse, Installed, Updates and All Projects updates rows; the
+  Details tab's facts in the 1.x order (Version, Author(s) with the Verified mark, License, Downloads, Package size, Date
+  published, Project URL, Report abuse for nuget.org); one level-4 `SectionHeader` per target framework, collapsed,
+  `DetailsInfo` keyed by package and version; the header fixed and the tab panel scrolling (`main.css`); Install in
+  projects… (`multi-install-button`) from a single project of a workspace with several, the dialog streaming
+  `allProjects/installed` itself outside All Projects (`EMPTY_ALL_PROJECTS`, `AllProjectsStored` exported).
+- Tests (b): `details show size and downloads`, `the Details tab links Report abuse for a nuget.org package and not for
+  a private feed`, `dependency groups collapsed with counts`, `multi install offered in single project mode`, `an
+  installed package offers no Install in projects` (DetailsPane.test.tsx); `renders the heading level asked`
+  (SectionHeader.test.tsx). Named rewrite: DetailsPane.test.tsx 'the Details tab: description, facts, vulnerabilities
+  in words and dependencies by framework' last assertion (the toggles `net8.0 (1)`, `net6.0 (0)` collapsed, no
+  dependency text).
+- Docs (b): interaction model §3 (Install in projects…), §7 (facts, groups, fixed header), §8 (`multi-install-button`);
+  README All Projects bullet; ARCHITECTURE details feature paragraph; CHANGELOG Added and Changed.
 
 ## Done (untested)
 
@@ -35,13 +67,22 @@ ls .claude/.contract-change → no such file; no change under src/protocol, src/
 
 ## Not started
 
-- Commit (b): details facts, dependency groups, fixed header, Install in projects….
 - Commit (c): README typography and the copy button.
 
 ## Deviations from contract/ADR (file:line each)
 
 - `metadataResolver.ts`: the per-source lookup moved into `metadataOf` so `fromSource` can add the size to whichever
   client answered; the order and the clients are unchanged.
+- (b) The ruling's "make another row current and back → collapsed again" also has the details slice ask the package's
+  metadata again; the test answers that second ask (`expect(asked).toHaveLength(2)`).
+- (b) The ruling's last case of `multi install offered in single project mode` (an installed Polly offers no button) is
+  its own test, `an installed package offers no Install in projects`, because it needs another mount.
+- (b) `multi-install-button` is added to interaction model §8: the gotcha "A `data-testid` hook in the interaction
+  model" asks for it once a product file renders it and a test reads it.
+- (b) `MultiInstallDialog` lists `useProjects().projects` while its own stream has not said `start`, as DO 8 writes.
+- (b) `main.css`: the dependency group toggles keep the moniker's case (`text-transform: none` on the level-4
+  `SectionHeader` in `.nuiget-details-group`; the local capture showed "NET6.0", ".NETFRAMEWORK2.0") and the old `h4`
+  margin is gone (the heading now holds the toggle).
 
 ## Advisor decisions (date, item, question, answer verbatim)
 

@@ -688,8 +688,15 @@ without a single project, while stale, for a floating or ranged reference or an 
 disabled with the reason. Every install of the main panel goes through `useInstallAction` (P9.6), the one sender of `ops/install`: it refuses without a single project, while the project's list has not answered (CPM unknown), for an installed package or a busy one, and names the version always; into a CPM project it asks `cpm/preview` first (the caller's control waits; a selection change cancels the ask): `null` installs at once, a preview or an error opens the caller's `CentralUpdateDialog` with `kind: 'install'` and its confirm runs `ops/install` (N77). A centrally managed package opens `CentralUpdateDialog`, which asks `cpm/preview`, lists the projects the central version applies to and runs `ops/update` on *Update central version*; a row with a `VersionOverride` updates in its project alone (no preview, N74); a central row uninstalls directly and the pane says that the central entry stays. Busy follows
 `isPackageBusy`.
 
-The Details tab shows description, authors, downloads, publication date, license, project URL, size, vulnerabilities
-(severity in words with an icon) and dependencies by framework; details from the local package cache are marked
+The Details tab (P9.8) shows the description, then Version, Author(s) with the Verified mark, License, Downloads,
+Package size (the resolver's HEAD of the answering source's flat container), Date published, Project URL and Report
+abuse (a nuget.org source only); the Verified mark and Downloads come from the row through `DetailsSelection.known`
+when the registration does not say them. Vulnerabilities show their severity in words with an icon; dependencies are
+one `SectionHeader` (level 4) per target framework named with its count, all collapsed at first (the pane keys
+`DetailsInfo` by package and version). The header of the pane is fixed and the tab panel scrolls. In a single project of
+a workspace with several, a browse row not installed there offers Install in projects… (`multi-install-button`): the
+`MultiInstallDialog` then streams `allProjects/installed` itself with the slice's reducer (the slice stays idle outside
+All Projects) and keeps the N76 per-project `cpm/preview`. Details from the local package cache are marked
 offline, saying whether a source is down (`sources/health`) or no source knows the version. An empty version list of a
 local source says that it cannot be listed. The README tab renders with `features/details/markdown.ts` (main panel
 only: its module-level imports would otherwise reach the sidebar bundle): marked with highlight.js (token classes

@@ -101,7 +101,12 @@ type Action =
     | { type: 'answered'; seq: number; result: RequestResult<'allProjects/installed'> }
     | { type: 'failed'; seq: number; error: ProtocolRequestError };
 
+/** The state of a stream of `allProjects/installed`; the project picker keeps one of its own outside All Projects. */
+export type AllProjectsStored = Stored;
+
 const EMPTY: Stored = { seq: 0, status: 'idle', projects: undefined, chunks: new Map(), metadata: new Map(), errored: [], error: undefined, requesting: false };
+
+export const EMPTY_ALL_PROJECTS: AllProjectsStored = EMPTY;
 
 export function allProjectsReducer(state: Stored, action: Action): Stored {
     if (action.type === 'reset') {

@@ -294,7 +294,7 @@ export function AllProjectsUpdates({ filter, announce }: ListView): React.JSX.El
                         onToggle={update => toggle(section, update)}
                         onCurrent={update => {
                             setCurrent({ projectPath: section.projectPath, id: update.id });
-                            select({ packageId: update.id, version: update.latestVersion, sourceUrl: update.sourceUrl, origin: 'updates', projectPath: section.projectPath });
+                            select({ packageId: update.id, version: update.latestVersion, sourceUrl: update.sourceUrl, origin: 'updates', projectPath: section.projectPath, known: { verified: update.verified } });
                         }}
                         onUpdate={update => updateOne(section, update)}
                     />

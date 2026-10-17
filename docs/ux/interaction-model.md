@@ -47,7 +47,9 @@ project whose SDK is below 10 lists its packages read-only.
 In this mode:
 - Installed and Updates group rows per project; row actions apply to that project.
 - Install from browse opens a multi-select project picker (QuickPick in the sidebar, in-panel
-  dialog in the main panel) showing where the package is already installed. A bulk install shows no preview, so it
+  dialog in the main panel; in a single project of a workspace with several, the details pane also offers Install in
+  projects…, the same picker, for a search result not installed there, and the picker lists every project itself
+  when All Projects is not selected) showing where the package is already installed. A bulk install shows no preview, so it
   leaves out every Central Package Management project where the package already has a central entry (N76): the main
   panel's picker asks `cpm/preview` per CPM project when it opens and lists such a project as "centrally managed"
   (or "preview failed") without a checkbox to tick; the sidebar asks the same after the QuickPick and names the
@@ -133,13 +135,19 @@ offers Install… with the project picker. The Installed and Updates lists of th
 
 ## 7. Details panel
 
-Tabs (`role="tablist"`): **Details** (description, authors, downloads, published, license,
-project URL, size, dependencies by framework, vulnerabilities with severity **text + icon**),
+Tabs (`role="tablist"`): **Details** (description, then Version, Author(s) with the Verified mark,
+License, Downloads, Package size, Date published, Project URL and, for a nuget.org package, Report
+abuse; vulnerabilities with severity **text + icon**; dependencies per target framework, collapsed
+with their counts),
 **README** (rendered Markdown, sanitized; images fetched host-side; "No README available" empty
 state; failure shows an inline retry). Version dropdown (`version-selector`) lists versions with
 "(installed)" marker; the primary button reads **Install** / **Update** / **Downgrade** /
 **Uninstall** depending on the selection vs installed version. Loading of versions/metadata/README is
 per selection; a response for a different package/version is ignored.
+
+The header (title, installed version with Uninstall, version selector with the primary button) stays in view; the
+Details and README content scrolls under it. In a single project of a workspace with several, a search result not
+installed there also offers **Install in projects…** (`multi-install-button`), the picker of §3.
 
 The pane shows the selection of the active view: Installed (direct and transitive rows), Updates or Browse. Each tab
 keeps its own selection and gets it back when it is shown again; Browse starts without one and shows the empty state
@@ -181,7 +189,7 @@ State markers (§4) and layer roots:
 | `updates-unavailable-banner`, `sidebar-updates-unavailable`, `browse-unavailable-banner`, `sidebar-browse-unavailable` | A source could not be read (updates, search) |
 | `sidebar-unsupported` | Banner of a project the 2.0 surfaces cannot change |
 | `sidebar-installed-provisional` | The "provisional" badge of the sidebar's installed section |
-| `cpm-preview-dialog`, `cpm-preview-confirm`, `multi-install-dialog` | Dialog roots (central package management preview, install into several projects) and the preview's *Update central version* button |
+| `cpm-preview-dialog`, `cpm-preview-confirm`, `multi-install-dialog`, `multi-install-button` | Dialog roots (central package management preview, install into several projects), the preview's *Update central version* button and the details pane's *Install in projects…* |
 
 All Projects (§3; `<name>` = project name lower-cased):
 

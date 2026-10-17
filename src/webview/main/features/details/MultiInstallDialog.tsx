@@ -1,8 +1,10 @@
-import { useEffect, useId, useState } from 'react';
+import { useEffect, useId, useReducer, useRef, useState } from 'react';
 import type React from 'react';
+import { ProtocolRequestError } from '../../../../protocol';
 import { useMessageBus } from '../../../shared/bus/useMessageBus';
 import { Dialog } from '../../../shared/primitives';
-import { useAllProjects } from '../../../shared/store/allProjects';
+import { allProjectsReducer, EMPTY_ALL_PROJECTS, useAllProjects } from '../../../shared/store/allProjects';
+import { useProjects } from '../../../shared/store/projects';
 
 export interface MultiInstallDialogProps {
     open: boolean;
@@ -23,25 +25,54 @@ type CentralBlock = 'central' | 'failed';
  * Management project where the package has a central entry (or whose preview fails) cannot be picked either (N76):
  * installing there changes the central version for every project that uses it, which the single install shows first.
  * A project whose installed list has not arrived, or carries an error, cannot be picked either (P7 phase review).
+ * Under All Projects it reads the slice's lists; from a single project (Install in projects…, P9.8) it streams
+ * `allProjects/installed` itself while it is open, with the slice's reducer, and never activates the slice.
  */
 export function MultiInstallDialog({ open, packageId, version, onClose, onInstall }: MultiInstallDialogProps): React.JSX.Element | null {
     const all = useAllProjects();
     const bus = useMessageBus();
+    const listedProjects = useProjects().projects;
+    const [own, dispatch] = useReducer(allProjectsReducer, EMPTY_ALL_PROJECTS);
+    const ownSeq = useRef(0);
+    const source = all.active ? all : own;
     const [picked, setPicked] = useState<ReadonlySet<string>>(new Set());
     const [central, setCentral] = useState<ReadonlyMap<string, CentralBlock>>(new Map());
     const [checking, setChecking] = useState(false);
     const baseId = useId();
 
-    const projects = all.projects ?? [...all.chunks.values()].map(chunk => ({ name: chunk.projectName, path: chunk.projectPath }));
+    // Outside All Projects the slice is idle: the dialog lists the projects itself while it is open.
+    useEffect(() => {
+        if (!open) {
+            dispatch({ type: 'reset' });
+            return undefined;
+        }
+        if (all.active) {
+            return undefined;
+        }
+        const seq = ++ownSeq.current;
+        const controller = new AbortController();
+        dispatch({ type: 'requested', seq });
+        bus.request('allProjects/installed', {}, { signal: controller.signal, onChunk: chunk => dispatch({ type: 'chunk', seq, chunk }) }).then(
+            answer => dispatch({ type: 'answered', seq, result: answer.result }),
+            (error: unknown) => {
+                if (!controller.signal.aborted) {
+                    dispatch({ type: 'failed', seq, error: error instanceof ProtocolRequestError ? error : new ProtocolRequestError('failed', error instanceof Error ? error.message : String(error)) });
+                }
+            },
+        );
+        return () => controller.abort();
+    }, [open, all.active, bus]);
+
+    const projects = source.projects ?? listedProjects ?? [...source.chunks.values()].map(chunk => ({ name: chunk.projectName, path: chunk.projectPath }));
     const installedIn = (projectPath: string): string | undefined => {
-        const entry = all.chunks.get(projectPath)?.result?.packages.find(candidate => candidate.id.toLowerCase() === packageId.toLowerCase());
+        const entry = source.chunks.get(projectPath)?.result?.packages.find(candidate => candidate.id.toLowerCase() === packageId.toLowerCase());
         return entry === undefined ? undefined : (entry.resolvedVersion ?? entry.version);
     };
-    const unsupported = (projectPath: string): boolean => all.chunks.get(projectPath)?.result?.unsupported !== undefined;
+    const unsupported = (projectPath: string): boolean => source.chunks.get(projectPath)?.result?.unsupported !== undefined;
     /** The project's installed list has arrived; without it nothing says whether the package has a central entry there. */
-    const listed = (projectPath: string): boolean => all.chunks.get(projectPath)?.result !== undefined;
+    const listed = (projectPath: string): boolean => source.chunks.get(projectPath)?.result !== undefined;
     const cpmTargets = open
-        ? projects.filter(project => all.chunks.get(project.path)?.result?.isCpm === true && !unsupported(project.path) && installedIn(project.path) !== version).map(project => project.path)
+        ? projects.filter(project => source.chunks.get(project.path)?.result?.isCpm === true && !unsupported(project.path) && installedIn(project.path) !== version).map(project => project.path)
         : [];
     const cpmKey = cpmTargets.join('\n');
 
@@ -115,7 +146,7 @@ export function MultiInstallDialog({ open, packageId, version, onClose, onInstal
                     if (unsupported(project.path)) {
                         note = 'unsupported';
                     } else if (!listed(project.path)) {
-                        note = all.chunks.get(project.path)?.error !== undefined ? 'could not be read' : 'not listed yet';
+                        note = source.chunks.get(project.path)?.error !== undefined ? 'could not be read' : 'not listed yet';
                     } else if (centralBlock === 'central') {
                         note = 'centrally managed: install it from the project to see the preview';
                     } else if (centralBlock === 'failed') {

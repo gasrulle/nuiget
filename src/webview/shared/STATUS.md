@@ -96,6 +96,9 @@ rm -rf /tmp/nuiget-ui/screenshots dist && npm run test:ui -- --storage /tmp/nuig
   opens the prefix list`. Closes SB6 for the sidebar too (shared component).
 - P9.7 (b): `viewState.ts` (`ViewStateStore`, re-exported by `SidebarView.tsx`); `Tabs` `badge` (test `a tab with a
   count and a badge names both`); `SearchBox` pads for the buttons it shows (`nuiget-search-box--clearable`).
+- P9.8 (b) (2026-10-17, ruling in `src/webview/main/STATUS.md`): `SectionHeader` `level` 4 (test `renders the heading
+  level asked`); `store/details.tsx` `DetailsSelection.known` (`verified`, `totalDownloads`); `store/allProjects.tsx`
+  exports `EMPTY_ALL_PROJECTS` and `AllProjectsStored` for the project picker's own stream (no logic change).
 
 ## Done (untested)
 
