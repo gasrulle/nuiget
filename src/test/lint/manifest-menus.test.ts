@@ -42,4 +42,16 @@ describe('package.json menus', () => {
             expect(pattern.test(file), file).toBe(false);
         }
     });
+
+    it('editor/title offers nuiget.openManager on project files only', () => {
+        const entry = entryOf('editor/title', 'nuiget.openManager');
+        expect(entry.group).toBe('navigation');
+        const pattern = filenamePattern(entry.when);
+        for (const file of PROJECT_FILES) {
+            expect(pattern.test(file), file).toBe(true);
+        }
+        for (const file of OTHER_FILES) {
+            expect(pattern.test(file), file).toBe(false);
+        }
+    });
 });
