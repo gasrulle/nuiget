@@ -1,40 +1,43 @@
-# STATUS — .github (agent resources and repo-level documents)   commit cb4dd43 (parent of the P10.0a commit)   2026-10-17T12:00:00Z
+# STATUS — .github (agent resources and repo-level documents)   commit df602e4 (parent of the P10.1 commit)   2026-10-17T15:00:00Z
 
-git status --porcelain --untracked-files=all (before the commit): see `src/test/lint/STATUS.md`.
+git status --porcelain --untracked-files=all (before the commit): modified `CHANGELOG.md`, `docs/release-checklist.md`,
+`docs/plans/STATUS.md`, `.github/STATUS.md`
 
-Item: **P10.0a** — regression coverage matrix, added to the plan (§5 P10, before P10.1) and the tracker by the owner on
-2026-10-17 with `P9 approved`. This note replaces the P9.13 note (history at `3f2a2e0`).
+Item: **P10.1** — release refresh (plan §5 P10), with the owner's addition of 2026-10-17 (the `manual-credentials` rows
+of the regression matrix as the only manual checks). This note replaces the P10.0a note (history at `65dc252`).
 
 ## Verified by running
 
 ```text
-npm run check:matrix → 168 rows: 158 covered, 7 gap, 3 manual-credentials; 0 finding(s)
+npx tsc --noEmit · npm run check-types · npx eslint src · npm run lint → 0 · 0 · 0 · 0
+npm test             → exit 0; Test Files 137 passed (137); Tests 2030 passed | 9 skipped (2039)
+npm run bench        → exit 0
 npm run docs:check   → exit 0
-npm test             → exit 0; Test Files 136 passed (136); Tests 2023 passed | 9 skipped (2032)
-(full gate list in src/test/lint/STATUS.md)
+npm run check:matrix → 168 rows: 165 covered, 0 gap, 3 manual-credentials; 0 finding(s)
+node esbuild.mjs --production --analyze → 297018 / 322502, 548943 / 577766, 333252 / 351245
+npm run package:vsix → exit 0; DONE Packaged: nuiget-v2.0.0.vsix (17 files, 581.31 KB)
+npm run check:vsix   → check:vsix: OK
+node -p version      → 2.0.0 (package.json, package-lock.json version and packages[""].version)
 ```
 
 ## Done (tested)
 
-- `docs/plans/regression-matrix.md`: 168 rows from `docs/ux/interaction-model.md` §1-§7 and `package.json`
-  `contributes` (12 commands, the menu placements, the view and its `when`, 4 settings), each with surface, kind, test
-  file and title, and status; the header defines the statuses and lists what is not a row (features 2.0.0 does not ship,
-  P7.4, the §5 header Restore no surface renders, the §8 hooks held by their own lint).
-- `scripts/check-regression-matrix.mjs`, `npm run check:matrix`, run by CI's Lint job after `npm run docs:check`
-  (`.github/workflows/ci.yml`, step "Check the docs").
-- Plan §5 P10 row P10.0a; tracker rows P10.0a (done) and P10.0b-P10.0h (one per gap: R5, R6, R13, R14, R15, R16, R17).
-- ARCHITECTURE (Shared tooling: the regression matrix bullet, the Lint row of the CI table); copilot-instructions
-  command list.
+- `CHANGELOG.md`: `## [2.0.0] - 2026-10-17`; the three `[Unreleased]` `### Added` and nineteen `### Changed` bullets at the
+  top of their 2.0.0 subsections; the seven `### Fixed` bullets left out (owner's P8.3 rule: fixes of code no version
+  shipped); empty `## [Unreleased]` above. The plan row P10.1 ("CHANGELOG 2.0.0 final (P9 entries; date)") authorizes
+  the edit of a section that is dated but not published.
+- `docs/release-checklist.md`: the session table refilled; "Manual checks before publishing — the only ones" with
+  R166-R168 verbatim; §5 corrected: it said the prerelease-version fix was not in the CHANGELOG, but the owner restored
+  it (736afa7).
 
 ## Done (untested)
 
-- `.claude/settings.json` does not pre-approve `npm run check:matrix`; sessions do not edit their own permissions, so the
-  owner applies the patch given in the session report.
+- Nothing.
 
 ## Not started
 
-- P10.0b-P10.0h, then P10.1 (which copies the three `manual-credentials` rows R166-R168 into `docs/release-checklist.md`
-  as the only manual checks).
+- The P10 phase review and the `labs/2.0-P10-done` tag; PR #18's description (after the review, so it cites the final
+  commit and run).
 
 ## Deviations from contract/ADR (file:line each)
 
@@ -42,8 +45,10 @@ npm test             → exit 0; Test Files 136 passed (136); Tests 2023 passed 
 
 ## Advisor decisions (date, item, question, answer verbatim)
 
-- See `src/test/lint/STATUS.md`.
+- 2026-10-17, P10.1: the ambient advisor before the edits (the CHANGELOG fold under the P8.3 rule, the checklist refill
+  and manual section, the PR body as a file, the phase-boundary order); its reply is not readable outside the session
+  (plan §2.3).
 
 ## Exact next step (one item ID)
 
-P10.0b.
+PHASE REVIEW P10, then the stop for the owner to merge PR #18 and publish.

@@ -6,24 +6,41 @@ publish, tag a release or merge the release pull request.
 
 ## Filled by the session
 
+Refilled at P10.1 (2026-10-17) after phase P9 (1.x parity, owner-approved) and P10.0 (regression matrix).
+
 | Check | Result |
 |---|---|
-| Version | `2.0.0` in `package.json`, `package-lock.json` (`version` and `packages[""].version`) |
-| CHANGELOG | `## [2.0.0] - 2026-10-16` with `### Breaking changes`, `### Added`, `### Changed`; empty `## [Unreleased]` above it |
-| Release commit | `91c6804` on `labs/2.0`; this table filled by the follow-up commit |
+| Version | `2.0.0` in `package.json`, `package-lock.json` (`version` and `packages[""].version`); unchanged since P8.3 |
+| CHANGELOG | `## [2.0.0] - 2026-10-17` with `### Breaking changes`, `### Added`, `### Changed`, `### Fixed`; the P9 entries folded in from `[Unreleased]`, which is empty above it |
+| Release commit | the P10.1 commit on `labs/2.0` (its SHA and CI run are in `docs/plans/STATUS.md`, row P10.1, and in the release pull request's description) |
 | `npx tsc --noEmit` | exit 0 |
 | `npm run check-types` | exit 0 |
 | `npx eslint src` | exit 0 |
 | `npm run lint` | exit 0 |
-| `npm test` | exit 0; 129 files, 1910 passed, 9 skipped (platform and `NUIGET_SDK_TESTS` predicates) |
+| `npm test` | exit 0; 137 files, 2030 passed, 9 skipped (platform and `NUIGET_SDK_TESTS` predicates) |
 | `npm run bench` | exit 0 |
 | `npm run docs:check` | exit 0 |
-| `node esbuild.mjs --production --analyze` | extension 293183, webview 525241, sidebar 319313 bytes, all under their ceilings |
-| `npm run package:vsix` | exit 0; `nuiget-v2.0.0.vsix`, 17 files, 564.82 KB |
+| `npm run check:matrix` | exit 0; 168 rows: 165 covered, 0 gap, 3 manual-credentials (`docs/plans/regression-matrix.md`) |
+| `node esbuild.mjs --production --analyze` | extension 297018, webview 548943, sidebar 333252 bytes, all under their ceilings (322502 / 577766 / 351245) |
+| `npm run package:vsix` | exit 0; `nuiget-v2.0.0.vsix`, 17 files, 581.31 KB |
 | `npm run check:vsix` | OK |
-| `npm run test:e2e`, `npm run test:ui` | SKIPPED locally: no product code changed; CI runs both on the push |
-| `labs/2.0` CI run and `vsix` artifact | push run 38910717999 on `91c6804`: all 10 jobs green; artifact `vsix` (577598 bytes); the follow-up commit re-runs CI |
+| `npm run test:e2e`, `npm run test:ui` | run by CI on every push; the UI job screenshots 15 named states |
+| Approved screenshots | CI run [39025149785](https://github.com/gasrulle/nuiget/actions/runs/39025149785), artifact `ui-screenshots`; the owner wrote "P9 approved" on 2026-10-17 |
 | Release pull request | [#18](https://github.com/gasrulle/nuiget/pull/18), `labs/2.0` → `main`, not a draft |
+
+## Manual checks before publishing — the only ones
+
+Everything else is automated (`docs/plans/regression-matrix.md`). These three rows need a real credentialed package
+source, which CI does not have; they are copied from the matrix verbatim. For each: configure the source as the row
+says, open a project that uses it, and check that search, the version list, the details, the icon and an install work
+with no authentication error in the nUIget output channel. The manual screen-reader pass (plan item P7.4) is a 2.0.1
+item, not a release check.
+
+| Matrix row | Check | Automated part |
+|---|---|---|
+| R166 | A private feed with a clear-text `nuget.config` credential: search, versions, details, icons and install against the real feed | `src/core/credentials/DefaultCredentialProvider.test.ts`: config: clear-text password becomes a Basic header |
+| R167 | A Windows `nuget.config` password encrypted by `dotnet nuget add source --password` (DPAPI): the real feed answers | `src/core/sources/NuGetConfigReader.test.ts`: dpapi (Windows, SDK 10): a password that dotnet nuget add source encrypted decrypts to the value that was stored |
+| R168 | An Azure Artifacts feed through the credential provider plugin: the real feed answers | `src/core/credentials/DefaultCredentialProvider.test.ts`: provider: runs the netcore plugin through the runner with the URL as one argv element |
 
 ## Owner
 
@@ -82,8 +99,9 @@ later release) and create the GitHub release with the CHANGELOG section. Open VS
 
 ### 5. Known after the release
 
-- 1.18.9 users have the truncation of long prerelease versions in CLI search; 2.0.0 does not (it reads
-  `dotnet package search --format json`), but its CHANGELOG does not say so: the bullet was removed with the eleven
-  fixes of unshipped 2.0 code.
+- The CHANGELOG lists no fix of a bug that only unreleased 2.0 code had (owner's rule, P8.3): the eleven of P8.3 and
+  the seven of P9 (package size, a project bounced after discovery, the sidebar's transitive prefetch, and the four
+  P9.fix layouts) were left out; their end state is in `### Changed`. The prerelease-version fix that 1.18.9 users lack
+  stays under `### Fixed` (owner, 2026-10-16).
 - Released CHANGELOG history has older inconsistencies, left as released: 1.15.0 is listed above 1.15.1, 1.12.0 and
   1.11.0 have no date, 1.13.0 is dated 2025-03-12.

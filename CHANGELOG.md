@@ -7,45 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
-
-- **Update all in the sidebar** — the arrow button of the Updates section header updates every update of the selected project, or of every project under All Projects, after an in-panel confirmation that lists them; centrally managed packages stay out
-- **Install in several projects from a single project** — a search result not installed in the selected project offers Install in projects… when the workspace has more than one project
-- **Quick install from the Browse list and the search box** — Ctrl+Enter (Cmd+Enter) installs a Browse row's version, the highlighted quick-search suggestion's newest version or the version chosen after ArrowRight into the selected project, through the Central Package Management preview where one is needed
-
-### Changed
-
-- **Three-line package cards in the main panel, name-first rows in the sidebar**
-- **Installed rows show icon, authors and Verified mark, SDK and floating badges, under a Direct packages header with the count**
-- **Updates rows show icon, authors and Verified mark with the new version marked, sorted by id; no 0 on the tab; every row of an Update all stays busy until it ends**
-- **Transitive packages: per-framework headers with counts, rows with icon, authors and Verified mark, and a details view with Required by (All Projects too)**
-- **Browse rows show icon, downloads, authors and Verified mark with the description; quick-search suggestions grouped per source with a loading row; the details pane follows the active tab and each tab keeps its own selection**
-- **The main panel header shows the title, the Restore after operations checkbox, an unreachable-source marker with Retry, a busy refresh button and a revalidation bar; the search box has Clear and Filters buttons**
-- **The main panel's list starts at 35 % of the width and keeps the position you drag it to**
-- **The main panel reopens on the tab you chose last**
-- **The Installed tab shows how many packages have known vulnerabilities**
-- **Details pane: Version, Author(s) with the Verified mark, Downloads, Package size, Date published and Report abuse, dependency groups collapsed with counts, fixed header**
-- **README typography (headings, inline code, tables, blockquotes, lists, rules) and a copy button with an icon and Copied feedback**
-- **Operations notify again: a progress notification for bulk operations, a toast with the outcome, Show output on a partial, failed or rejected operation, the output channel revealed on failure**
-- **A webview that stops working shows Reload and reports the error to the nUIget output channel**
-- **Sidebar rows sorted by package id**
-- **Sidebar project headers carry the project path as tooltip**
-- **Sidebar section headers in the side-bar section colours, rows indented to the section title, All Projects headers in normal case indented by workbench.tree.indent**
-- **High-contrast lines on buttons, tabs and row icons; VS Code check-box and drop-down colours; the page dimmed under a dialog**
-- **Header separator and side-bar-coloured list pane in the main panel; All Projects project headers in normal case**
-- **Not back from 1.x: recent searches, Collapse all and Expand all, details prefetched on hover, and ArrowLeft/ArrowRight between the Details and README tabs**
-
-### Fixed
-
-- **Package size in the details pane**
-- **A project chosen right after it was discovered is kept, not bounced to the previous one**
-- **The sidebar no longer asks for the transitive packages it does not show**
-- **Transitive packages follow the direct packages in one scrolling list instead of being pinned to the bottom**
-- **Update all and Uninstall selected sit at the right edge of the list, Select all at the left**
-- **Uninstall and Update line up in the details pane**
-- **Title, search box, tabs, toolbar, section headers and rows of the main panel start at one left edge**
-
-## [2.0.0] - 2026-10-16
+## [2.0.0] - 2026-10-17
 
 ### Breaking changes
 
@@ -55,6 +17,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **The `nuiget.noRestore` setting is no longer migrated to the restore toggle (set the toggle once if it was `true`), and the recent-searches list is gone**
 
 ### Added
+- **Update all in the sidebar** — the arrow button of the Updates section header updates every update of the selected project, or of every project under All Projects, after an in-panel confirmation that lists them; centrally managed packages stay out
+- **Install in several projects from a single project** — a search result not installed in the selected project offers Install in projects… when the workspace has more than one project
+- **Quick install from the Browse list and the search box** — Ctrl+Enter (Cmd+Enter) installs a Browse row's version, the highlighted quick-search suggestion's newest version or the version chosen after ArrowRight into the selected project, through the Central Package Management preview where one is needed
 - **2.0 updates of overridden central versions** — a package whose project overrides the central version updates in that project alone
 - **2.0 Central Package Management in the UI** — a centrally managed package updates through a preview of the projects its central version applies to, and uninstalls from its project while the central entry stays; an unresolved version says why in its tooltip
 - **2.0 Central Package Management preview** — the host previews which projects a central version change reaches (cpm/preview) and the sidebar's actions menu confirms it before the edit
@@ -106,6 +71,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **2.0 import fences** — ESLint keeps the 2.0 layers apart from each other and from the 1.x code, with a self-pruning allow-list, and `npm run lint` now also covers `scripts/` and the root configuration files
 
 ### Changed
+- **Three-line package cards in the main panel, name-first rows in the sidebar**
+- **Installed rows show icon, authors and Verified mark, SDK and floating badges, under a Direct packages header with the count**
+- **Updates rows show icon, authors and Verified mark with the new version marked, sorted by id; no 0 on the tab; every row of an Update all stays busy until it ends**
+- **Transitive packages: per-framework headers with counts, rows with icon, authors and Verified mark, and a details view with Required by (All Projects too)**
+- **Browse rows show icon, downloads, authors and Verified mark with the description; quick-search suggestions grouped per source with a loading row; the details pane follows the active tab and each tab keeps its own selection**
+- **The main panel header shows the title, the Restore after operations checkbox, an unreachable-source marker with Retry, a busy refresh button and a revalidation bar; the search box has Clear and Filters buttons**
+- **The main panel's list starts at 35 % of the width and keeps the position you drag it to**
+- **The main panel reopens on the tab you chose last**
+- **The Installed tab shows how many packages have known vulnerabilities**
+- **Details pane: Version, Author(s) with the Verified mark, Downloads, Package size, Date published and Report abuse, dependency groups collapsed with counts, fixed header**
+- **README typography (headings, inline code, tables, blockquotes, lists, rules) and a copy button with an icon and Copied feedback**
+- **Operations notify again: a progress notification for bulk operations, a toast with the outcome, Show output on a partial, failed or rejected operation, the output channel revealed on failure**
+- **A webview that stops working shows Reload and reports the error to the nUIget output channel**
+- **Sidebar rows sorted by package id**
+- **Sidebar project headers carry the project path as tooltip**
+- **Sidebar section headers in the side-bar section colours, rows indented to the section title, All Projects headers in normal case indented by workbench.tree.indent**
+- **High-contrast lines on buttons, tabs and row icons; VS Code check-box and drop-down colours; the page dimmed under a dialog**
+- **Header separator and side-bar-coloured list pane in the main panel; All Projects project headers in normal case**
+- **Not back from 1.x: recent searches, Collapse all and Expand all, details prefetched on hover, and ArrowLeft/ArrowRight between the Details and README tabs**
 - **Benchmarks live next to the 2.0 modules they measure**
 - **2.0 evaluation of a single-framework project is one msbuild run**
 - **Benchmarks for the 2.0 core (versioning, cache, operation queue, invalidation scopes) with a regenerated baseline**
