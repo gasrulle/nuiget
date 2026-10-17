@@ -137,8 +137,8 @@ therefore covers them, and the P5 review covers `labs/2.0-P4-done..HEAD`. The ph
 | P9.fix-2 | P9 | Installed layout: transitive sections follow the direct rows in one scrolling list, nothing pinned to the bottom | done | 1784642 | 2026-10-17 | By the P9.fix-2..6 ruling and its follow-up (verbatim in `src/webview/main/STATUS.md`). One scroller `nuiget-installed--sections` for the Installed tab in both modes and All Projects Updates; the transitive section inside it; N88 (`Listbox` scrolls the active option into view). Local UI 42 passing, gap 0. Owner review of the P9 screenshots (run 39017730043), 2026-10-17. Gate: UI test, the transitive header's top edge within one row height of the last direct row's bottom edge; visible in `main-transitive-expanded`. |
 | P9.fix-3 | P9 | Row card (D15 amended by the owner): Installed and Updates rows in three lines at 78 px, check box and icon centred | done | 8c1f643 | 2026-10-17 | By the P9.fix-2..6 ruling. Authors on a third line without a description; token and `ROW_HEIGHT` 78; check mark and icon centred; Appendix D row. Local UI: rows 79 px, centres 0.5 px off, Newtonsoft.Json authors fit. Owner review of the P9 screenshots (run 39017730043), 2026-10-17. Gate: UI test, the authors span of Newtonsoft.Json not ellipsized at the default split; the check box centre within 2 px of the card's vertical centre. |
 | P9.fix-4 | P9 | Toolbars: select-all at the left, Update all (N) / Uninstall selected (N) right-aligned to the list edge on both tabs | done | b83316d | 2026-10-17 | By the P9.fix-2..6 ruling. `nuiget-toolbar-end` on the three primary buttons; toolbar end padding 6 px. Local UI: 6 px from the list edge on both tabs. Owner review of the P9 screenshots (run 39017730043), 2026-10-17. Gate: UI test, the primary button's right edge within 8 px of the list's right edge on both tabs. |
-| P9.fix-5 | P9 | Details pane actions: Installed and Version rows in one grid; Uninstall and Update share the left edge and height | done | aacde06 | 2026-10-17 | By the P9.fix-2..6 ruling, two recorded deviations (`max-content` value column; `.nuiget-details-row` kept for `TransitiveDetails`). Local UI: equal left edges and heights. Owner review of the P9 screenshots (run 39017730043), 2026-10-17. Gate: UI test, equal left edges (±1 px) and heights of the two buttons. |
-| P9.fix-6 | P9 | Common left inset; every padding, margin and gap in `src/webview/**/*.css` from the `tokens.css` spacing scale | done |  | 2026-10-17 | By the P9.fix-2..6 ruling. `--nuiget-space-hairline`, `--nuiget-inset`; four literals replaced; lint `pxSpacing`; owner's grep 0. Local UI: six left edges at 16 px. Owner review of the P9 screenshots (run 39017730043), 2026-10-17. Gate: grep of hard-coded padding/margin/gap px values outside `tokens.css` = 0; UI test, the left edges of title, search box, tab bar, toolbar, section headers and row content within ±1 px. |
+| P9.fix-5 | P9 | Details pane actions: Installed and Version rows in one grid; Uninstall and Update share the left edge and height | done | aacde06 | 2026-10-17 | By the P9.fix-2..6 ruling, two recorded deviations (`max-content` value column; `.nuiget-details-row` kept for `TransitiveDetails`). Local UI: equal left edges and heights. Owner review of the P9 screenshots (run 39017730043), 2026-10-17. Gate: UI test, equal left edges (±1 px) and heights of the two buttons. 2.0.1 note (P9 phase review fix-2..6, NON-BLOCKING 1): the grid does not wrap, so below about 300 px, with the Install in projects… button offered, the version row scrolls the pane sideways. |
+| P9.fix-6 | P9 | Common left inset; every padding, margin and gap in `src/webview/**/*.css` from the `tokens.css` spacing scale | done | c50d335 | 2026-10-17 | By the P9.fix-2..6 ruling. `--nuiget-space-hairline`, `--nuiget-inset`; four literals replaced; lint `pxSpacing`; owner's grep 0. Local UI: six left edges at 16 px. Owner review of the P9 screenshots (run 39017730043), 2026-10-17. Gate: grep of hard-coded padding/margin/gap px values outside `tokens.css` = 0; UI test, the left edges of title, search box, tab bar, toolbar, section headers and row content within ±1 px. Note (NON-BLOCKING 3): with several workspace folders the folder caption now starts at the inset, level with its project headers; no named screenshot shows it. |
 | P10.1 | P10 | Release refresh: CHANGELOG final, checklist, PR #18 updated; stop for owner merge | open |  |  |  |
 
 ## Phase gates
@@ -1117,6 +1117,89 @@ review NON-BLOCKING 1-2   → MI12 `partly` in the closure table (63 closed, 3 p
 
 The P9 gate holds except the owner's review of the `ui-screenshots` artifact of run 39017730043. `labs/2.0-P9-done` is
 tagged after the owner's `P9 approved`.
+
+The owner's review of run 39017730043 (2026-10-17): "content parity is restored; these layout defects remain",
+listed as P9.fix-2 to P9.fix-6, run under the architecture-advisor's ruling (verbatim in `src/webview/main/STATUS.md`).
+
+Gate re-run after P9.fix-2 to P9.fix-6 (2026-10-17):
+
+```text
+tracker                   → grep -nE '^\| P9\.[^|]*\|[^|]*\|[^|]*\| (open|in-progress|blocked) \|' docs/plans/STATUS.md → 0 lines
+local, at c50d335         → npx tsc --noEmit 0 · npm run check-types 0 · npx eslint src 0 · npm run lint 0 ·
+                            npm run docs:check 0
+local, at c50d335         → npm test 135 files, 2019 passed, 9 skipped · npx vitest run --coverage: statements 95.71
+                            branches 89.77 functions 94.18 lines 96.16
+local, at c50d335         → npm run bench 0 · node esbuild.mjs --production --analyze 297018 / 548943 / 333252 under
+                            322502 / 577766 / 351245 · the owner's grep of padding/margin/gap lengths outside tokens.css → 0
+CI, one run per fix       → 39022785828 (1784642), 39023352495 (8c1f643), 39023954472 (b83316d), 39024538752 (aacde06),
+                            39025149785 (c50d335): success on all 10 jobs each
+CI, run 39025149785       → UI "45 passing (3m)"; "PNGs in the artifact: 15"; [P9.fix-2] transitive header 308/308;
+                            [P9.fix-3] Newtonsoft.Json authors 125/125, check box centres 0.5 px above the card centre;
+                            [P9.fix-4] both primary buttons 6 px inside the list's right edge; [P9.fix-5] Uninstall and
+                            Update left 566.95, height 24; [P9.fix-6] six left edges at 16 px
+```
+
+Phase review (`PHASE REVIEW P9 (fix-2..6)`, `architecture-advisor`, 2026-10-17), verbatim:
+
+`````text
+VERDICT: PASS
+
+BLOCKING: none. No `P9.fix-7` is created; the session records this review, makes the gate-record commit and stops for the owner's screenshot review of run 39025149785 (artifact `ui-screenshots`).
+
+Deviations, ruled on:
+1. fix-5 value column `minmax(0, max-content)` instead of `minmax(0, 1fr)`: accepted. The gate holds (CI `[P9.fix-5]` left 566.95 for both buttons, height 24), and the capture `main-browse-details.png` of 39025149785 shows Uninstall and Update in one column next to the values, which `1fr` would have pushed to the pane's right edge. `.nuiget-details-row` kept for `/Users/mattias/github/nuiget/src/webview/main/features/details/TransitiveDetails.tsx:51,56` is right; the ruling's VERIFY grep was written on the wrong premise that the class had one user, and the scoped `.nuiget-details-row > .nuiget-details-label { min-width: 5em }` (`/Users/mattias/github/nuiget/src/webview/main/main.css:299-309`) keeps the transitive facts as they were.
+2. fix-2 assertion in `UpdatesTab.test.tsx` (All Projects describe) instead of `AllProjectsUpdates.test.tsx`: accepted; no such file exists (`ls src/webview/main/features/updates/` lists `UpdatesTab.test.tsx` and `CentralUpdateDialog.test.tsx` only), and the assertion is the one the follow-up ruling asked for (`listOf('app').closest('.nuiget-installed')` has `nuiget-installed--sections`).
+3. fix-2 gap band `within(-1, rowHeight)` instead of `0..rowHeight`: accepted; the measured gap is 0 in CI (`{"headerTop":308,"lastRowBottom":308}`) and the 1 px slack is the `border-box` bottom border of the `.nuiget-row` wrapper the test measures, the same sub-pixel the ruling's fix-3 DO 12 describes.
+4. fix-6 All Projects header chevrons at the inset: accepted, nothing is lost. Before fix-6 `.nuiget-section-toggle` had `padding: 0 var(--nuiget-space-2)` (4 px, `/Users/mattias/github/nuiget/src/webview/shared/primitives/primitives.css:474`) and the folder caption a margin of `--nuiget-space-4` (8 px, `git show aacde06:src/webview/main/main.css:679`), so the caption sat to the right of the chevron under it: the inverse of a tree indent, not a cue. The P9.11 (b) ruling closed MI12 for the main panel by case and size only (`.nuiget-installed-project--grouped` rules at `main.css:702-709`, unchanged by fix-6), and the capture `main-installed-all.png` of 39025149785 keeps it: `TestProject.csproj 2` and `Utility.csproj 1` in normal case, `TRANSITIVE PACKAGES` in capitals, chevrons on the rows' check-box edge. The P9.10 indent by `workbench.tree.indent` is the sidebar's (`sidebar.css`, untouched by these commits). The 1.x reference `/Users/mattias/github/nuiget/docs/ux/reference-1.18.9/installed-all-projects.jpg` has the project header chevrons on the same edge as the row check boxes, so the main panel now matches 1.x here too.
+
+NON-BLOCKING:
+1. Details grid at a narrow pane (fix-5; picked up by the owner's screenshot review or a 2.0.1 item). The old `.nuiget-details-row` was `flex-wrap: wrap`; `.nuiget-details-actions` is a grid of four `max-content`-bounded tracks and never wraps, and `.nuiget-main-details { overflow: auto }` (`main.css:173-179`) turns an over-wide version row into a horizontal scroll of the whole pane. The split is clamped to 25-75 % (`/Users/mattias/github/nuiget/src/webview/main/MainShell.tsx:62`, `SPLIT = { min: 25, max: 75 }`), so the pane can be a quarter of the panel: with the `multi-install-button` offered (single project, more than one project in the workspace, a browse row not installed) the row needs about 300 px (label, select at its 0 minimum, Install…, Install in projects…, three gaps), which a panel under about 1200 px at the 75 % split cannot give. Without that fourth cell the row needs about 140 px and fits at every clamp. The same holds for `1fr`, so this is not caused by deviation 1. Content stays reachable (scroll), so it is not blocking.
+2. fix-6 `viewed:` record is incomplete against the ruling's DO 28 and the RUN.md P9.0 rule: `/Users/mattias/github/nuiget/src/webview/main/STATUS.md:99-100` records `main-installed-single` and `main-installed-single-hc` from a local run and nothing for `main-installed-single-light`; the CI artifact of 39025149785 was not cited for fix-6. I viewed the three from that run's artifact (directory `20261017T103410`, UI job attempt 1): one left edge for title, search box, Installed tab label, Select all, the DIRECT PACKAGES chevron and the row check boxes in Dark Modern, Light Modern (the Serilog accent, drawn check boxes) and Dark High Contrast (bordered controls, the outlined Newtonsoft icon); no contradiction. The gate-record commit adds the three `viewed (P9.fix-6, CI run 39025149785): …` lines (DO 3).
+3. Multi-folder caption: `.nuiget-installed-folder-title` now starts at the inset (`main.css:690-696`), level with the chevrons of the project headers under it. No named state renders a workspace with two folders, so nobody has viewed it; the owner's hands-on review is the first look. Not a defect on the evidence I have.
+4. Single-project Installed tab renders every row (ruling C-1, accepted knowingly); one line for the 2.0.1 performance backlog, nothing to do now.
+5. Tracker: the P9.fix-6 Commit cell is empty (`docs/plans/STATUS.md:141`); fill it with `c50d335` in the gate-record commit (DO 1).
+6. The ruling's fix-2 VERIFY `grep -rn "nuiget-installed--all" src` is not empty: it finds `src/webview/main/STATUS.md:30,174,175,177,234,237`, all the ruling's own quoted text; no product or test file names the class. Read it as satisfied; no edit.
+
+DO:
+1. Gate-record commit (docs only, no code or test): `docs/plans/STATUS.md` row P9.fix-6 Commit cell `c50d335`; this review verbatim under the existing `### P9 — 1.x parity and visual gates (2026-10-17)` heading of `## Phase gates` (line 1028) as a `PHASE REVIEW P9 (fix-2..6)` sub-block after the first review, preceded by the gate output of the brief (local lines named as local; the five CI run ids as the CI evidence).
+2. In the same commit, `src/webview/main/STATUS.md`: three lines `viewed (P9.fix-6, CI run 39025149785): main-installed-single.png / main-installed-single-light.png / main-installed-single-hc.png: <one-line observation each>`, viewed by the session with the Read tool from `gh run download 39025149785 -n ui-screenshots -D /tmp/nuiget-shots` (the RUN.md P9.0 rule; my observations above may be cited but the session views them itself).
+3. Add NON-BLOCKING 1 as a 2.0.1 note in the P9.fix-5 tracker row (one sentence: the grid does not wrap below about 300 px with the picker button) and NON-BLOCKING 3 as one sentence in the P9.fix-6 row.
+4. Commit with the `git-commit` skill citing P9.fix-2..6, P9 (phase review), D18, ADR-008; push to `labs/2.0`; wait for green CI (docs-only; a red UI job with the N37 or TF8 signature follows the gotcha rows, never a code change).
+5. Stop per RUN.md §7 with run id `39025149785`, artifact `ui-screenshots` (15 PNGs), and the report format of RUN.md §8; `labs/2.0-P9-done` waits for `P9 approved`.
+
+DO NOT:
+- Do not create a `P9.fix-7`; nothing here is blocking.
+- Do not set `labs/2.0-P9-done` before the owner writes `P9 approved`.
+- Do not change code, a stylesheet or a test before the owner's review; NON-BLOCKING 1 is the owner's call (wrap, a minimum select width, or leave it), not the session's.
+- Do not `gh run rerun` anything; do not edit `scripts/check-docs-drift.mjs` if `docs:check` objects to a name in the pasted review (fix the text).
+- Do not retitle or delete any test to make the fix-2 VERIFY grep empty; the STATUS mentions are the ruling's text.
+
+CONTRACT CHANGE: none. `git diff --stat cf9d794..HEAD -- src/protocol src/core/contracts.ts docs/adr` is empty; the plan file changed only by the Appendix D row `§5 P9, D15` the ruling allowed (`docs/plans/2026-10-11-nuiget-2.0-execution-plan.md:527`).
+
+VERIFY:
+- `grep -nE '^\| P9\.fix-6 \|' docs/plans/STATUS.md | grep -c c50d335` → 1.
+- `grep -c 'PHASE REVIEW P9 (fix-2..6)' docs/plans/STATUS.md` → at least 1, under line 1028's heading.
+- `grep -c 'viewed (P9.fix-6, CI run 39025149785)' src/webview/main/STATUS.md` → 3.
+- `grep -rn "nuiget-installed--all" src --include='*.ts' --include='*.tsx' --include='*.css'` → empty.
+- `grep -rniE "two-line|two lines|66 ?px" CHANGELOG.md ARCHITECTURE.md docs/ux/interaction-model.md src/webview` → empty (checked: already empty at c50d335).
+- `grep -nE '^\| P9\.[^|]*\|[^|]*\|[^|]*\| (open|in-progress|blocked) \|' docs/plans/STATUS.md` → empty.
+- `npm run docs:check` → 0 after the paste; `git tag -l 'labs/2.0-P9-done'` → empty.
+- CI green on the gate-record commit's 10 jobs.
+
+CHECKED:
+- Commits: `git log --oneline cf9d794..HEAD` (80940aa, 1784642, 8c1f643, b83316d, aacde06, c50d335) and `git show` of each: fix-2 (`InstalledTab.tsx`, `AllProjectsUpdates.tsx:307`, `main.css` `--all` → `--sections`, `.nuiget-transitive` without `max-height`/`min-height`/border, `.nuiget-transitive-content` rule gone, `Listbox.tsx:127-133` guarded `scrollIntoView` with `preventScroll` kept at :116, `Listbox.test.tsx` new test, `InstalledTab.test.tsx`/`AllProjectsView.test.tsx`/`UpdatesTab.test.tsx` assertions, `main-installed.ui.test.ts` measurement, ledger N88 twice, ARCHITECTURE); fix-3 (`Row.tsx:93-157` authors on a third `.nuiget-row-line` when no description, `primitives.css:236-255` centred option and icon, `tokens.css:27-29` 78 px, `Listbox.tsx:8` 78, `Row.test.tsx` retitle plus new test, both UI tests with the height band `within(token, token + 2)` kept, interaction model §1, ARCHITECTURE, CHANGELOG `### Changed`, plan Appendix D row); fix-4 (`primitives.css:841-844` `.nuiget-toolbar-end`, `Toolbar.tsx` JSDoc, the three primary buttons, `main.css:189-194` end padding, two new UI tests); fix-5 (`DetailsPane.tsx:160-213` one grid with the Banner and notes outside, `main.css:280-309`, `DetailsPane.test.tsx:86-88`, `main-details.ui.test.ts` retitle and measurement, ARCHITECTURE); fix-6 (`tokens.css:20-23`, `primitives.css:12,247`, `main.css` inset rules :160-170, :28, :111, :117, :191, :273, :318, :438, :446, :691, `webview-stylesheets.test.ts` `pxSpacing` and the two scanner self-tests, `webview-tokens.test.ts:27`, `main-shell.ui.test.ts` new test, gotcha row, ARCHITECTURE, CHANGELOG `### Fixed`).
+- Test integrity: `git diff cf9d794..HEAD -- 'src/**/*.test.ts' 'src/**/*.test.tsx'` has five removed `it(` lines, each a retitle whose assertions remain (verified in the diffs); no `.skip`/`.only` added.
+- Frozen paths: `git diff --stat cf9d794..HEAD -- src/protocol src/core/contracts.ts docs/adr` → empty.
+- Ruling and follow-up: `/Users/mattias/github/nuiget/src/webview/main/STATUS.md:1-242` (whole); plan `§1-§3` headings and `§5 P9` (:321-369), Appendix D :527; `docs/plans/STATUS.md` rows P9.0-P9.fix-6 (:122-141) and `## Phase gates` (:144, :1028); the P9.11 ruling via `git show 952f610:src/webview/main/STATUS.md` (MI12 = case and size, `.nuiget-installed-project--grouped`).
+- Tree: `primitives.css:187-234, 291-334, 440-503, 841-844`; `main.css:155-235, 262-309, 345-365, 686-712`; `git show aacde06:src/webview/main/main.css:678-697` and `git show cf9d794:src/webview/main/main.css:217-223` (pre-fix state); `SectionHeader.tsx:30-62`; `TransitiveSection.tsx:120-145`; `InstalledProjectSection.tsx:34-36, 168-190`; `DetailsPane.tsx:160-235`; `Listbox.tsx:103-170`; `MainShell.tsx:62, 93-112, 282-297`; `Sash.tsx:7-8, 30-40`; `.github/workflows/ci.yml:282-322`; `ls src/webview/main/features/updates/`, `ls src/webview/main/features/installed/`, `ls docs/ux/reference-1.18.9/`.
+- Greps: fix-2 VERIFY (`nuiget-installed--all` only in `src/webview/main/STATUS.md`); fix-3 VERIFY (empty); `grep -c "max-height: 50%" main.css` not re-run (STATUS :30 records 1, the sources dialog rule).
+- Captures of run 39025149785 (`ui-screenshots`, 1 572 246 bytes = 15 PNGs, UI attempt 1 10:33-10:36Z; downloaded to the session scratchpad `/private/tmp/claude-501/-Users-mattias-github-nuiget/92ad3611-a060-4f53-9258-b9744ab16038/scratchpad/shots/20261017T103410/`, nothing written in the repository), viewed: `main-installed-all`, `main-installed-single`, `main-installed-single-light`, `main-installed-single-hc`, `main-transitive-expanded`, `main-updates`, `main-browse-details`; 1.x references `installed-all-projects.jpg`, `installed-single-transitive-headers.jpg`. The CI measurements in the brief (`[P9.fix-2]` 308/308, `[P9.fix-3]` 125/125 and 0.5 px, `[P9.fix-4]` 320.19/326.19, `[P9.fix-5]` 566.95 both, `[P9.fix-6]` six at 16) were taken as given from the UI log; the `gh api` job listing confirms one UI attempt, success.
+- Not verified: the multi-folder caption rendering (no capture exists); the local gate lines of the brief (not re-run, as the review's business is the diff and the CI evidence).
+`````
+
+Acted on: DO 1-3 in the gate-record commit (P9.fix-6's Commit cell, this block, three `viewed (P9.fix-6, CI run
+39025149785)` lines, the two notes in the P9.fix-5 and P9.fix-6 rows). The P9 gate now waits only for the owner's review
+of the `ui-screenshots` artifact of run 39025149785; `labs/2.0-P9-done` is tagged after `P9 approved`.
 
 ## Advisor decisions
 

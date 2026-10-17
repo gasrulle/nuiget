@@ -98,6 +98,9 @@ viewed (P9.fix-5, CI run 39024538752): main-browse-details.png: Installed 13.0.2
 viewed (P9.fix-5): main-details-readme.png: the same grid for an installed row with the version (installed) selected; the README's two badge images did not load in this run (alt text shown; external images, not the layout)
 viewed (P9.fix-6, local run): main-installed-single.png: title, search box, Installed tab label, Select all, the DIRECT PACKAGES chevron and the row check boxes on one left edge
 viewed (P9.fix-6, local run): main-installed-single-hc.png: the same edge under Dark High Contrast; bordered controls unchanged
+viewed (P9.fix-6, CI run 39025149785): main-installed-single.png: title, search box, Installed tab label, Select all, DIRECT PACKAGES chevron and check boxes on one left edge (Dark Modern)
+viewed (P9.fix-6, CI run 39025149785): main-installed-single-light.png: the same edge under Light Modern; Serilog current with its accent, drawn check boxes
+viewed (P9.fix-6, CI run 39025149785): main-installed-single-hc.png: the same edge under Dark High Contrast; bordered tabs, buttons and rows, the outlined Newtonsoft icon
 
 viewed (P9.fix-4, CI run 39023954472): main-installed-single.png: Select all at the left, Uninstall selected (0) at the list's right edge
 viewed (P9.fix-4): main-updates.png: Select all at the left, Update all (2) at the list's right edge
