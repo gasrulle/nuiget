@@ -58,7 +58,11 @@ gate: gh run rerun 39000089739 → attempt 2 success; UI log: `42 passing (2m)` 
   `the transitive section opens with what the project gets through its references (P9.0)` → `…, right under the last
   direct row (P9.0, P9.fix-2)`: with the section open it measures the max `bottom` of the direct rows and the `top` of
   the transitive header and asserts the gap within -1 (subpixel) and one comfortable row; logs `[P9.fix-2]`. Local run
-  42 passing, gap 0 (284/284).
+  42 passing, gap 0 (284/284); CI run 39022785828 the same.
+- P9.fix-3: named rewrites `main-installed.ui.test.ts` (… the authors fit and the check box is centred (P9.fix-3)):
+  `.nuiget-row-authors` of Newtonsoft.Json `scrollWidth <= clientWidth`, every row's check box centre within 2 px of
+  the `.nuiget-row` centre; `main-updates.ui.test.ts` (…, check box centred) the same centre check. The height band
+  `token..token+2` is unchanged and reads 78 now. Local: 42 passing, rows 79 px, centres 0.5 px off.
 
 - Commit 1 (TF8, TF4): `MainShell` Refresh carries `data-testid="refresh-button"` (interaction model §8);
   `mainWebview.ts` exports `projectOptionValues`, `untilProjects` (presses `refresh-button` every 15 s, 180 s in all) and
@@ -209,4 +213,4 @@ Files read for this ruling: /Users/mattias/github/nuiget/src/core/feeds/vulnerab
 
 ## Exact next step (one item ID)
 
-P9.fix-3.
+P9.fix-4.

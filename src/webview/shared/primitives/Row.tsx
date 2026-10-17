@@ -68,8 +68,9 @@ export interface RowProps extends RowPlacement {
  * beside it, hidden from assistive technology and out of the tab order: a button inside an option is nested
  * interactive content, which a screen reader cannot reach.
  *
- * A comfortable row is the 1.x card (D15): an icon column, then name and badges over version, authors and status,
- * and for Browse a description below. A compact row shows the same spans on one line, name first. The name is the
+ * A comfortable row is the 1.x card (D15 as amended 2026-10-17): an icon column, then three lines: name and badges,
+ * version and status, authors with the Verified mark; a row with a description (Browse) keeps the authors beside the
+ * version and shows the description as its third line. A compact row shows the same spans on one line, name first. The name is the
  * name and the version; the badges, authors, description and status describe the option. The tooltip `id version`
  * sits on the text column: on the option a `title` would become its description.
  */
@@ -92,6 +93,13 @@ export function Row(props: RowProps): React.JSX.Element {
         .join(' ');
     const tooltip = [name, version, nextVersion === undefined ? undefined : `→ ${nextVersion}`].filter(Boolean).join(' ');
     const className = `nuiget-row nuiget-row--${density}${busy ? ' nuiget-row--busy' : ''}`;
+    const authorsSpan = hasAuthors ? (
+        <span className="nuiget-row-authors" id={ids.authors}>
+            {/* A space, not a margin: the icon's title and the authors are two words when read out. */}
+            {verified ? <><VerifiedIcon title="Verified: the package id prefix is reserved by its owner" />{' '}</> : null}
+            {authors}
+        </span>
+    ) : null;
 
     // A click on a button would move focus to it, and so into a subtree that assistive technology cannot see.
     const keepFocusOnOption = (event: React.MouseEvent): void => {
@@ -140,16 +148,12 @@ export function Row(props: RowProps): React.JSX.Element {
                             </span>
                         )}
                         {meta ? <span className="nuiget-row-meta" id={ids.meta}>{meta}</span> : null}
-                        {hasAuthors ? (
-                            <span className="nuiget-row-authors" id={ids.authors}>
-                                {/* A space, not a margin: the icon's title and the authors are two words when read out. */}
-                                {verified ? <><VerifiedIcon title="Verified: the package id prefix is reserved by its owner" />{' '}</> : null}
-                                {authors}
-                            </span>
-                        ) : null}
+                        {description ? authorsSpan : null}
                         {status ? <span className="nuiget-row-status" id={ids.status}>{status}</span> : null}
                     </span>
+                    {/* The third line: the description (Browse), else the authors (P9.fix-3). */}
                     {description ? <span className="nuiget-row-description" id={ids.description}>{description}</span> : null}
+                    {!description && authorsSpan ? <span className="nuiget-row-line">{authorsSpan}</span> : null}
                 </span>
             </div>
             {disabled ? null : (

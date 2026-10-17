@@ -233,7 +233,8 @@
     vertical-align: text-bottom;
 }
 
-/* Comfortable: the 1.x card (D15), 12 px around a 32 px icon column and a line between rows. */
+/* Comfortable: the 1.x card (D15 as amended 2026-10-17), three lines and a 32 px icon column, 12 px above and below,
+   the check mark and the icon centred, a line between rows. */
 .nuiget-row--comfortable {
     box-sizing: border-box;
     border-bottom: 1px solid var(--nuiget-color-border);
@@ -242,7 +243,6 @@
 /* `border-box`: the option inherits the row's minimum height, and the padding is inside it, as in 1.x. */
 .nuiget-row--comfortable .nuiget-row-option {
     box-sizing: border-box;
-    align-items: flex-start;
     gap: var(--nuiget-space-5);
     padding: var(--nuiget-space-5) var(--nuiget-space-6);
 }
@@ -252,7 +252,6 @@
     flex: none;
     inline-size: var(--nuiget-icon-size-xl);
     block-size: var(--nuiget-icon-size-xl);
-    margin-block-start: var(--nuiget-space-1);
 }
 
 /* The contrast outline keeps a dark icon visible on a high-contrast background; an outline takes no space. */

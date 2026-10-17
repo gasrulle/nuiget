@@ -233,13 +233,25 @@ describe('Row layout (P9.2, D15)', () => {
         expect(axeRuleOutcome(results, 'nested-interactive')).toBe('passes');
     });
 
-    it('a comfortable row keeps its padding inside the 66 px minimum', () => {
+    it('a comfortable row keeps its padding inside the 78 px minimum', () => {
         renderRow({ density: 'comfortable', description: 'Structured logging' });
         const option = screen.getByRole('option');
-        // The option inherits the row's minimum height; with the padding outside it a two-line row grew to 90 px.
+        // The option inherits the row's minimum height; with the padding outside it a row grew by 24 px.
         expect(getComputedStyle(option).minHeight).toBe('var(--nuiget-row-height-comfortable)');
         expect(getComputedStyle(option).boxSizing).toBe('border-box');
         expect(getComputedStyle(screen.getByTestId('package-row-serilog')).boxSizing).toBe('border-box');
+    });
+
+    it('a comfortable row without a description puts the authors on a third line', () => {
+        renderRow({ density: 'comfortable', authors: 'Serilog Contributors', verified: true });
+        const option = screen.getByRole('option', { name: 'Serilog 3.0.0' });
+        const body = option.querySelector('.nuiget-row-body');
+        const lines = body ? [...body.querySelectorAll(':scope > .nuiget-row-line')] : [];
+        expect(lines).toHaveLength(3);
+        expect(lines[1].querySelector('.nuiget-row-version')).not.toBeNull();
+        expect(lines[1].querySelector('.nuiget-row-authors')).toBeNull();
+        expect(lines[2].querySelector('.nuiget-row-authors')).toHaveTextContent('Serilog Contributors');
+        expect(option).toHaveAccessibleDescription('Verified: the package id prefix is reserved by its owner Serilog Contributors');
     });
 
     it('long version never hides the name in compact density', () => {

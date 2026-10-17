@@ -56,6 +56,9 @@ npm run test:ui      → SKIPPED locally: CI runs the UI job on the push; the vi
   an outer scroller cannot scroll itself and the focus is `preventScroll`; `Listbox.test.tsx` `ArrowDown scrolls the
   active option into view (a list in an outer scroller cannot scroll itself)` (fails without the line). Gates in
   `src/webview/main/STATUS.md`.
+- P9.fix-3 (D15 amended): `primitives/Row.tsx` third line for the authors when there is no description;
+  `primitives.css` comfortable option centred, icon without top margin; `tokens.css` `--nuiget-row-height-comfortable:
+  78px`; `Listbox.tsx` `ROW_HEIGHT.comfortable` 78 (the tokens lint pairs them). `Row.test.tsx` rewrite and new test.
 
 ## Done (untested)
 
@@ -162,4 +165,4 @@ Acted on: DO 1-5 of the follow-up; the review's DO 3 and DO 4 yield to RUN.md §
 
 ## Exact next step (one item ID)
 
-P9.fix-3 (the Row card and the tokens part of the P9.fix-2..6 ruling).
+P9.fix-4 (the Toolbar part of the P9.fix-2..6 ruling).

@@ -5,7 +5,7 @@ import type { RowPlacement } from './Row';
 import './primitives.css';
 
 /** Row heights in pixels. They repeat `--nuiget-row-height-*`: a script cannot read a token before layout. */
-const ROW_HEIGHT = { compact: 24, comfortable: 66 } as const;
+const ROW_HEIGHT = { compact: 24, comfortable: 78 } as const;
 
 interface ListboxBaseProps<T extends { id: string }> {
     items: readonly T[];

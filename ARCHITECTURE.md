@@ -304,8 +304,10 @@ div.nuiget-row[role="presentation"][data-index][data-testid="package-row-<id>"] 
       IconButton[tabIndex -1][data-testid="row-action-<name>"] … or a Spinner while the row is busy
 ```
 
-A comfortable row is the 1.x card (D15): a 32 px icon column and two lines, a third for a Browse description,
-at least `--nuiget-row-height-comfortable` (66 px) with a line under it and a 3 px accent on the selected row. A
+A comfortable row is the 1.x card (D15 as amended 2026-10-17, P9.fix-3): a 32 px icon column and three lines (name
+and badges; version, meta and status; authors with the Verified mark), or, for a row with a description (Browse),
+the authors beside the version and the description as the third line; at least `--nuiget-row-height-comfortable`
+(78 px) with a line under it, the check mark and the icon centred, and a 3 px accent on the selected row. A
 compact row shows the same spans on one line (`display: contents` on the lines), name first: the version shrinks
 with an ellipsis before the name does, and authors, description and status are read out, not shown. The arrow of
 an update stays the text `→`, so the name reads `3.0.0 → 3.1.0`. The tooltip sits on the body: on the option a

@@ -28,7 +28,27 @@ npm run test:ui -- --storage /tmp/nuiget-ui (local, macOS) → exit 0; 42 passin
                        [P9.fix-2] transitive header: {"headerTop":284,"lastRowBottom":284}
 negative control     → the `scrollIntoView` line removed: `ArrowDown scrolls the active option into view …` fails; restored
 grep -rn "nuiget-installed--all" src → empty; grep -c "max-height: 50%" src/webview/main/main.css → 1 (another rule)
+CI run 39022785828 (push of 1784642) → success on all 10 jobs; UI log [P9.fix-2] transitive header:
+                       {"headerTop":284,"lastRowBottom":284}
+
+P9.fix-3
+npx tsc --noEmit · npm run check-types · npx eslint src · npm run lint → 0 · 0 · 0 · 0
+npx vitest run --project frontend src/webview/shared/primitives/Row.test.tsx → 21 passed
+npx vitest run --project backend src/test/lint/webview-tokens.test.ts → 8 passed
+npm test             → exit 0; Test Files 135 passed (135); Tests 2018 passed | 9 skipped (2027)
+npm run bench        → exit 0
+npm run docs:check   → exit 0
+node esbuild.mjs --production --analyze → 297018 / 322502, 548907 / 577766, 333252 / 351245 (+0, +82, +82 bytes)
+npm run test:ui -- --storage /tmp/nuiget-ui (local) → exit 0; 42 passing (1m); [P9.12] comfortable rows height 79
+                       (token 78); [P9.fix-3] Newtonsoft.Json authors {"clientWidth":123,"scrollWidth":123};
+                       check box centres 0.5 px above the card centre on every row (Installed and Updates)
+grep -rniE "two-line|two lines|66 ?px" CHANGELOG.md ARCHITECTURE.md docs/ux/interaction-model.md src/webview → only
+                       this note's pasted ruling and released CHANGELOG history
 ```
+
+viewed (P9.fix-2, CI run 39022785828): main-transitive-expanded.png: TRANSITIVE PACKAGES (1) with net8.0 right under the Serilog.Sinks.Console card, no gap, nothing pinned to the bottom
+viewed (P9.fix-2): main-installed-single.png: DIRECT PACKAGES (2), then the collapsed TRANSITIVE PACKAGES header right under the Serilog card
+viewed (P9.fix-2): main-installed-all.png: TestProject and Utility sections, then the collapsed TRANSITIVE PACKAGES header right under the last card
 
 ## Done (tested)
 
@@ -41,13 +61,21 @@ grep -rn "nuiget-installed--all" src → empty; grep -c "max-height: 50%" src/we
   `main-installed.ui.test.ts` named rewrite with the edge measurement. The All Projects Updates layout is covered by the
   class rename and the jsdom assertion, not by a screenshot (no named state shows that tab).
 
+- P9.fix-3 (D15 as amended by the owner 2026-10-17): `Row` comfortable rows put the authors on a third line when
+  there is no description (Browse keeps them beside the version, the description as third line); the check mark and
+  the icon are centred (`align-items: flex-start` and the icon's top margin gone); `--nuiget-row-height-comfortable`
+  and `Listbox` `ROW_HEIGHT` 78. Tests: `Row.test.tsx` named rewrite `a comfortable row keeps its padding inside the
+  78 px minimum` and new `a comfortable row without a description puts the authors on a third line`; UI named
+  rewrites in `main-installed.ui.test.ts` (authors fit, check box centred) and `main-updates.ui.test.ts` (check box
+  centred). Docs: interaction model §1, ARCHITECTURE row anatomy, CHANGELOG headline, plan Appendix D row.
+
 ## Done (untested)
 
 - Nothing.
 
 ## Not started
 
-- P9.fix-3 to P9.fix-6.
+- P9.fix-4 to P9.fix-6.
 
 ## Deviations from contract/ADR (file:line each)
 
@@ -135,4 +163,4 @@ RULING (P9.fix-2 DO 1 correction): Option 1. Change `AllProjectsUpdates.tsx:307`
 
 ## Exact next step (one item ID)
 
-P9.fix-3.
+P9.fix-4.

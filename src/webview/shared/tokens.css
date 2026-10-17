@@ -24,8 +24,9 @@
 
     /* Rows: compact in the sidebar, comfortable in the main panel. A compact row is as high as the smallest pointer target. */
     --nuiget-row-height-compact: 24px;
-    /* D15: the 1.x `.package-item` card (12 px padding above and below a 32 px icon); a minimum, the list measures rows. */
-    --nuiget-row-height-comfortable: 66px;
+    /* D15 as amended 2026-10-17: the 1.x `.package-item` card, three lines with 12 px padding above and below; a minimum,
+       the list measures rows. */
+    --nuiget-row-height-comfortable: 78px;
 
     /* Icons and the smallest pointer target */
     --nuiget-icon-size-sm: 12px;

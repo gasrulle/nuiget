@@ -15,7 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- **Two-line package cards in the main panel, name-first rows in the sidebar**
+- **Three-line package cards in the main panel, name-first rows in the sidebar**
 - **Installed rows show icon, authors and Verified mark, SDK and floating badges, under a Direct packages header with the count**
 - **Updates rows show icon, authors and Verified mark with the new version marked, sorted by id; no 0 on the tab; every row of an Update all stays busy until it ends**
 - **Transitive packages: per-framework headers with counts, rows with icon, authors and Verified mark, and a details view with Required by (All Projects too)**

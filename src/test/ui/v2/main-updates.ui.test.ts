@@ -3,7 +3,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { By, Key } from 'vscode-extension-tester';
 import { enterMainWebview, measureLoadedRows, openMainPanel } from './mainWebview';
-import { findByTestId, leaveWebview, poll, screenshot, tokenPx, waitForTestIdGone } from './sidebarWebview';
+import { driverOf, findByTestId, leaveWebview, poll, screenshot, tokenPx, waitForTestIdGone } from './sidebarWebview';
 
 /**
  * The Updates tab of the 2.0 main panel in VS Code (plan item P5.5), on the VSIX that `npm run test:ui` packages: the
@@ -49,7 +49,7 @@ describe('2.0 main panel: Updates tab', () => {
         await screenshot('main-updates');
     });
 
-    it('update rows are comfortable cards with a loaded icon, as tall as the token (TF3)', async function () {
+    it('update rows are comfortable cards with a loaded icon, as tall as the token (TF3), check box centred', async function () {
         this.timeout(180_000);
         await findByTestId('package-row-newtonsoft.json', 120_000);
         const token = tokenPx('--nuiget-row-height-comfortable');
@@ -60,6 +60,18 @@ describe('2.0 main panel: Updates tab', () => {
             expect(row.minHeight, row.name).to.equal(`${token}px`);
             expect(row.height, row.name).to.be.within(token, token + 2);
             expect(row.iconSrc, row.name).to.not.equal('');
+        }
+        // The check box sits on the card's vertical centre (P9.fix-3): within 2 px of the row wrapper's centre.
+        const centres = await driverOf().executeScript<{ name: string; check: number; card: number }[]>(`
+            return Array.from(document.querySelectorAll('[data-testid="updates-list"] [role="option"]')).map(option => {
+                const card = (option.closest('.nuiget-row') ?? option).getBoundingClientRect();
+                const check = option.querySelector('.nuiget-row-check').getBoundingClientRect();
+                return { name: option.querySelector('.nuiget-row-name')?.textContent ?? '', check: check.top + check.height / 2, card: card.top + card.height / 2 };
+            });`);
+        console.warn('[P9.fix-3] check box centres: ' + JSON.stringify(centres));
+        expect(centres.length).to.be.at.least(2);
+        for (const row of centres) {
+            expect(Math.abs(row.check - row.card), row.name).to.be.at.most(2);
         }
     });
 

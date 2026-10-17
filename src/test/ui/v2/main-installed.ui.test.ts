@@ -49,7 +49,7 @@ describe('2.0 main panel: Installed tab', () => {
         await screenshot('main-installed-single');
     });
 
-    it('lays the rows out as comfortable cards with a loaded icon, as tall as the token, and shows the authors and the Verified mark (TF1, TF3)', async function () {
+    it('lays the rows out as comfortable cards with a loaded icon, as tall as the token, and shows the authors and the Verified mark (TF1, TF3), the authors fit and the check box is centred (P9.fix-3)', async function () {
         this.timeout(180_000);
         await findByTestId('package-row-serilog', 120_000);
         await findByTestId('package-row-newtonsoft.json');
@@ -69,6 +69,24 @@ describe('2.0 main panel: Installed tab', () => {
             const text = (await newtonsoft.getAttribute('textContent')) ?? '';
             return text.includes('James Newton-King') && text.includes('Verified: the package id prefix is reserved by its owner') ? true : undefined;
         }, 'the authors and the Verified mark on the Newtonsoft.Json row', 120_000);
+        // The authors have a line of their own and fit at the default split (P9.fix-3).
+        const authors = await driverOf().executeScript<{ scrollWidth: number; clientWidth: number }>(`
+            const span = document.querySelector('[data-testid="package-row-newtonsoft.json"] .nuiget-row-authors');
+            return { scrollWidth: span.scrollWidth, clientWidth: span.clientWidth };`);
+        console.warn('[P9.fix-3] Newtonsoft.Json authors: ' + JSON.stringify(authors));
+        expect(authors.scrollWidth, 'the authors span of Newtonsoft.Json is not ellipsized').to.be.at.most(authors.clientWidth);
+        // The check box sits on the card's vertical centre (P9.fix-3): within 2 px of the row wrapper's centre.
+        const centres = await driverOf().executeScript<{ name: string; check: number; card: number }[]>(`
+            return Array.from(document.querySelectorAll('[data-testid="installed-list"] [role="option"]')).map(option => {
+                const card = (option.closest('.nuiget-row') ?? option).getBoundingClientRect();
+                const check = option.querySelector('.nuiget-row-check').getBoundingClientRect();
+                return { name: option.querySelector('.nuiget-row-name')?.textContent ?? '', check: check.top + check.height / 2, card: card.top + card.height / 2 };
+            });`);
+        console.warn('[P9.fix-3] check box centres: ' + JSON.stringify(centres));
+        expect(centres.length).to.be.at.least(2);
+        for (const row of centres) {
+            expect(Math.abs(row.check - row.card), row.name).to.be.at.most(2);
+        }
     });
 
     it('the transitive section opens with what the project gets through its references, right under the last direct row (P9.0, P9.fix-2)', async function () {
