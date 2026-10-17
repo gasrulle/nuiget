@@ -1,6 +1,10 @@
 version: 2
 
-# Dependabot only opens pull requests. The owner reviews and merges them; automated sessions never do.
+# Dependabot only opens pull requests. CI decides what happens to them: the dependabot-auto-merge workflow arms
+# GitHub auto-merge on every pull request Dependabot opens, so a green one merges itself and a red one stays open
+# for the next dependency item of the current plan. npm majors are never opened (TypeScript 6, @types/node 24 and
+# MSW 2 are pinned on purpose; an agent item evaluates majors under the full gate list). Automated sessions never
+# merge anything.
 updates:
   - package-ecosystem: github-actions
     directory: /
@@ -21,3 +25,6 @@ updates:
         update-types:
           - minor
           - patch
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
