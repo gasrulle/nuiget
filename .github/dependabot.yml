@@ -28,3 +28,6 @@ updates:
     ignore:
       - dependency-name: "*"
         update-types: ["version-update:semver-major"]
+      # Pinned to the engines.vscode minimum (1.85); a newer @types/vscode fails check:vsix and lets code use APIs
+      # the supported hosts lack. Bumped only together with engines.vscode, by a plan item.
+      - dependency-name: "@types/vscode"
