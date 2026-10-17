@@ -31,6 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Sidebar rows sorted by package id**
 - **Sidebar project headers carry the project path as tooltip**
 - **Sidebar section headers in the side-bar section colours, rows indented to the section title, All Projects headers in normal case indented by workbench.tree.indent**
+- **High-contrast lines on buttons, tabs and row icons; VS Code check-box and drop-down colours; the page dimmed under a dialog**
 
 ### Fixed
 

@@ -33,10 +33,10 @@ body {
     max-width: 20em;
     min-height: var(--nuiget-target-min);
     padding: 0 var(--nuiget-space-3);
-    border: 1px solid var(--nuiget-color-input-border);
+    border: 1px solid var(--nuiget-color-dropdown-border);
     border-radius: var(--nuiget-radius-sm);
-    background: var(--nuiget-color-input-bg);
-    color: var(--nuiget-color-input-fg);
+    background: var(--nuiget-color-dropdown-bg);
+    color: var(--nuiget-color-dropdown-fg);
     font: inherit;
 }
 
@@ -51,7 +51,46 @@ body {
     min-height: var(--nuiget-target-min);
 }
 
-/* The refresh button stands at the end of the header. */
+/* Check boxes drawn as VS Code's own (MH11): the box in the check-box colours, the mark its foreground; every check box of the panel and its dialogs. */
+.nuiget-main input[type="checkbox"],
+.nuiget-dialog input[type="checkbox"] {
+    appearance: none;
+    display: inline-grid;
+    place-content: center;
+    flex: none;
+    inline-size: var(--nuiget-icon-size-md);
+    block-size: var(--nuiget-icon-size-md);
+    margin: 0;
+    border: 1px solid var(--nuiget-color-checkbox-border);
+    border-radius: var(--nuiget-radius-sm);
+    background: var(--nuiget-color-checkbox-bg);
+    forced-color-adjust: none;
+}
+
+/* The mark: a rotated border in the check-box foreground (1.x). */
+.nuiget-main input[type="checkbox"]:checked::after,
+.nuiget-dialog input[type="checkbox"]:checked::after {
+    content: "";
+    inline-size: var(--nuiget-space-2);
+    block-size: var(--nuiget-space-4);
+    margin-block-start: -2px;
+    border: solid var(--nuiget-color-checkbox-fg);
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+}
+
+.nuiget-main input[type="checkbox"]:disabled,
+.nuiget-dialog input[type="checkbox"]:disabled {
+    border-style: dashed;
+    border-color: var(--nuiget-color-fg-muted);
+}
+
+.nuiget-main input[type="checkbox"]:focus-visible,
+.nuiget-dialog input[type="checkbox"]:focus-visible {
+    outline: 1px solid var(--nuiget-color-focus);
+    outline-offset: 1px;
+}
+
 /* The heading takes the free space, so the controls sit at the end of the header (1.x). */
 .nuiget-main-title {
     margin: 0;
@@ -94,8 +133,7 @@ body {
 }
 
 .nuiget-main-select:focus-visible,
-.nuiget-main-search-input:focus,
-.nuiget-main-toggle input:focus-visible {
+.nuiget-main-search-input:focus {
     outline: 1px solid var(--nuiget-color-focus);
     outline-offset: -1px;
 }

@@ -255,11 +255,14 @@
     margin-block-start: var(--nuiget-space-1);
 }
 
+/* The contrast outline keeps a dark icon visible on a high-contrast background; an outline takes no space. */
 .nuiget-row-icon img,
 .nuiget-row-icon svg {
     inline-size: 100%;
     block-size: 100%;
     border-radius: var(--nuiget-radius-md);
+    outline: 1px solid var(--nuiget-color-contrast-border);
+    outline-offset: -1px;
     object-fit: contain;
 }
 
@@ -505,7 +508,7 @@
 .nuiget-button {
     min-height: var(--nuiget-target-min);
     padding: 0 var(--nuiget-space-5);
-    border: 1px solid transparent;
+    border: 1px solid var(--nuiget-color-button-border);
     border-radius: var(--nuiget-radius-sm);
     background: var(--nuiget-color-button-bg);
     color: var(--nuiget-color-button-fg);
@@ -691,8 +694,8 @@
 /* ── Dialog ── */
 
 /*
- * The layer covers the viewport and takes the pointer, so the page behind cannot be clicked. It is not dimmed:
- * no theme colour exists for a scrim; the dialog is set off by its border and the widget shadow.
+ * The layer covers the viewport, takes the pointer, so the page behind cannot be clicked, and dims the page with the
+ * scrim token (the editor background at 60 %); the dialog is set off by it, its border and the widget shadow.
  */
 .nuiget-dialog-layer {
     position: fixed;
@@ -702,6 +705,7 @@
     align-items: center;
     justify-content: center;
     padding: var(--nuiget-space-6);
+    background: var(--nuiget-color-scrim);
 }
 
 .nuiget-dialog {
@@ -799,7 +803,8 @@
     gap: var(--nuiget-space-2);
     min-height: var(--nuiget-target-min);
     padding: 0 var(--nuiget-space-4);
-    border: 0;
+    /* Boxed by the contrast line in a high-contrast theme (unset elsewhere); the selection's underline comes after it. */
+    border: 1px solid var(--nuiget-color-contrast-border);
     border-block-end: var(--nuiget-space-1) solid transparent;
     background: transparent;
     color: var(--nuiget-color-fg-muted);

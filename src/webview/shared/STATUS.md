@@ -110,6 +110,11 @@ rm -rf /tmp/nuiget-ui/screenshots dist && npm run test:ui -- --storage /tmp/nuig
   `a crash in the shell renders Reload and reports the error through the bus` (main and sidebar `index.test.tsx`).
   No named state shows the fallback.
 
+- P9.11 (a) (2026-10-17, ruling in `src/webview/main/STATUS.md`): `tokens.css` the high-contrast line tokens
+  (`button-border`, `contrast-border`, transparent outside HC), check-box and drop-down tokens, the scrim (`color-mix()`);
+  `primitives.css` button and tab lines, the row icon's contrast outline, the dialog layer's scrim. The high-contrast
+  block stays three keys.
+
 ## Done (untested)
 
 - None in jsdom. The rendering is checked in the UI job's screenshots after the push.

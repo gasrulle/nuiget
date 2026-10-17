@@ -109,6 +109,8 @@ describe('2.0 webview stylesheets and Chromium 114 (N64)', () => {
             '.nuiget-row::after { content: "a & b, light-dark(x)"; }',
             // text-wrap: balance entered in Chromium 114 (css.properties.text-wrap.balance).
             '.nuiget-empty { text-wrap: balance; }',
+            // color-mix() entered in Chromium 111 (css.types.color.color-mix, read 2026-10-17).
+            ':root { --x: color-mix(in srgb, var(--y) 60%, transparent); }',
             '.nuiget-list::-webkit-scrollbar-thumb { background: var(--nuiget-color-scrollbar); }',
             '.nuiget-row { overflow: auto; border-radius: var(--nuiget-radius-md); }',
         ].join('\n');

@@ -146,6 +146,41 @@ describe('2.0 webview stylesheets', () => {
         expect(shown).toContain('.nuiget-row:focus-within .nuiget-row-actions');
     });
 
+    it('the controls take their lines, colours and the dialog layer its scrim from the tokens', () => {
+        const primitives = parseRules(readFileSync(PRIMITIVES, 'utf8'));
+        const main = parseRules(readFileSync('src/webview/main/main.css', 'utf8'));
+        const declarationsOf = (rules: ReturnType<typeof parseRules>, match: (prelude: string) => boolean): string[] => rules.filter(rule => match(rule.prelude)).flatMap(rule => rule.declarations);
+        expect(declarationsOf(primitives, prelude => prelude === '.nuiget-button')).toContain('border: 1px solid var(--nuiget-color-button-border)');
+        expect(declarationsOf(primitives, prelude => prelude === '.nuiget-tab')).toContain('border: 1px solid var(--nuiget-color-contrast-border)');
+        expect(declarationsOf(primitives, prelude => prelude.includes('.nuiget-row-icon img'))).toContain('outline: 1px solid var(--nuiget-color-contrast-border)');
+        expect(declarationsOf(primitives, prelude => prelude === '.nuiget-dialog-layer')).toContain('background: var(--nuiget-color-scrim)');
+        expect(declarationsOf(main, prelude => prelude === '.nuiget-main-select')).toEqual(expect.arrayContaining([
+            'border: 1px solid var(--nuiget-color-dropdown-border)',
+            'background: var(--nuiget-color-dropdown-bg)',
+            'color: var(--nuiget-color-dropdown-fg)',
+        ]));
+        const checkbox = main.find(rule => rule.prelude.includes('input[type="checkbox"]') && !rule.prelude.includes(':'))?.declarations ?? [];
+        expect(checkbox).toEqual(expect.arrayContaining(['appearance: none', 'background: var(--nuiget-color-checkbox-bg)']));
+    });
+
+    it('every focus ring is the focus token at one pixel, on every control', () => {
+        const files = [PRIMITIVES, 'src/webview/main/main.css', 'src/webview/sidebar/sidebar.css'];
+        const rules = files.flatMap(file => parseRules(readFileSync(file, 'utf8')));
+        const ringed = new Set(rules
+            .filter(rule => rule.declarations.includes('outline: 1px solid var(--nuiget-color-focus)'))
+            .flatMap(rule => rule.prelude.split(',').map(selector => selector.trim())));
+        for (const selector of [
+            '.nuiget-row-option:focus-visible', '.nuiget-button:focus-visible', '.nuiget-tab:focus-visible', '.nuiget-icon-button:focus-visible',
+            '.nuiget-section-toggle:focus-visible', '.nuiget-sash:focus-visible', '.nuiget-main-select:focus-visible', '.nuiget-main-search-input:focus',
+            '.nuiget-input:focus', '.nuiget-readme-copy:focus-visible', '.nuiget-main input[type="checkbox"]:focus-visible',
+            '.nuiget-dialog input[type="checkbox"]:focus-visible', '.nuiget-sidebar-search:focus-visible',
+        ]) {
+            expect(ringed, selector).toContain(selector);
+        }
+        const outlines = rules.flatMap(rule => rule.declarations).filter(declaration => /^outline:/.test(declaration));
+        expect(outlines.filter(declaration => !['outline: none', 'outline: 1px solid var(--nuiget-color-focus)', 'outline: 1px solid var(--nuiget-color-contrast-border)'].includes(declaration))).toEqual([]);
+    });
+
     it('the scan covers the 2.0 stylesheets and leaves tokens.css out', () => {
         // An empty or misplaced glob must not pass for want of files.
         const files = stylesheets();

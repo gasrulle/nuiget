@@ -233,7 +233,11 @@ Every colour token is an alias of a `--vscode-*` variable, which VS Code sets on
 theme, so light and dark themes need no rule of their own. Three blocks cover the rest: the two
 high-contrast body classes (borders from `--vscode-contrastBorder`, no shadow), `@media (forced-colors:
 active)` with system colour keywords, and `@media (prefers-reduced-motion: reduce)`, which sets both
-durations to zero, so that anything timed with the tokens stops moving. The file holds no colour literal;
+durations to zero, so that anything timed with the tokens stops moving. A control's high-contrast line is a `:root`
+token on a VS Code key that is unset outside the high-contrast themes, with a `transparent` fallback
+(`--nuiget-color-button-border` on `button.border`, `--nuiget-color-contrast-border` on `contrastBorder`, P9.11), so
+the high-contrast block stays three keys; check boxes and drop-downs take `--vscode-checkbox-*` and
+`--vscode-dropdown-*`, and the scrim is the one derived colour (`color-mix()`). The file holds no colour literal;
 if one is ever needed, this is where it goes.
 
 Two lint tests in `src/test/lint` keep that true: `webview-tokens.test.ts` checks the shape of the file
@@ -365,8 +369,8 @@ and an Escape it handles does not reach the page. A confirmation opened from a d
 Source Settings) and a popover inside a dialog therefore close first and alone. A popover is placed by
 `placePopover()` (below its anchor, above when there is more room there, moved inside the viewport) and
 positioned with `--nuiget-popover-x` and `--nuiget-popover-y` through `cssVars()`; a popover that opens
-after a dialog is lifted to the dialog's z-index and stacks above it by document order. A dialog is not
-dimmed: no theme variable exists for a scrim; the layer takes the pointer, and the dialog's surface uses
+after a dialog is lifted to the dialog's z-index and stacks above it by document order. The layer dims the page
+with `--nuiget-color-scrim` (the editor background at 60 %, P9.11) and takes the pointer, and the dialog's surface uses
 `--nuiget-color-widget-bg` and `-fg` (aliases of `--vscode-editorWidget-*`) with a border.
 
 **Tabs and toolbars have one tab stop.** `Tabs` renders `tablist`, `tab` and one `tabpanel` (the selected

@@ -36,7 +36,8 @@ const REQUIRED = [
         'badge-bg', 'badge-fg', 'button-bg', 'button-fg', 'button-hover-bg', 'button-secondary-bg', 'button-secondary-fg',
         'input-bg', 'input-fg', 'input-border', 'input-placeholder', 'link', 'error', 'warning', 'info', 'progress', 'shadow',
         'widget-bg', 'widget-fg',
-        'scrollbar', 'scrollbar-hover', 'scrollbar-active'].map(name => `--nuiget-color-${name}`),
+        'scrollbar', 'scrollbar-hover', 'scrollbar-active',
+        'button-border', 'contrast-border', 'checkbox-bg', 'checkbox-fg', 'checkbox-border', 'dropdown-bg', 'dropdown-fg', 'dropdown-border', 'scrim'].map(name => `--nuiget-color-${name}`),
 ];
 
 describe('2.0 webview tokens', () => {
@@ -56,9 +57,11 @@ describe('2.0 webview tokens', () => {
         const referenced = [...code.matchAll(/var\(\s*([^,)\s]+)/g)].map(match => match[1]);
         expect(referenced.length).toBeGreaterThan(0);
         expect(referenced.filter(name => !name.startsWith('--vscode-') && !name.startsWith('--nuiget-'))).toEqual([]);
-        // In `:root` a colour token is nothing but such an alias.
+        // In `:root` a colour token is nothing but such an alias, and the one derived colour: a VS Code background mixed
+        // with transparent (the scrim; Chromium 111).
+        const SCRIM = /^color-mix\(in srgb, var\(--vscode-[a-zA-Z-]+\) \d{1,3}%, transparent\)$/;
         const colours = [...blockAfter(':root')].filter(([name]) => name.startsWith('--nuiget-color-'));
-        expect(colours.filter(([, value]) => !value.startsWith('var(--vscode-'))).toEqual([]);
+        expect(colours.filter(([, value]) => !value.startsWith('var(--vscode-') && !SCRIM.test(value))).toEqual([]);
     });
 
     it('declares in :root every token the primitives rely on', () => {

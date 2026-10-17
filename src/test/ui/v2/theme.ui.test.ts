@@ -209,6 +209,28 @@ describe('2.0 theme pass', () => {
         }
     });
 
+    /**
+     * In a high-contrast theme the buttons, the tabs, the project selector and the check boxes are drawn with the
+     * theme's contrast border (P9.11): read `--vscode-contrastBorder` through a probe and compare each control's line.
+     */
+    async function expectContrastBorders(where: string): Promise<void> {
+        await (await findByTestId('installed-tab', 30_000)).click();
+        await findByTestId('package-row-serilog', 120_000);
+        const lines = await driverOf().executeScript<Record<string, string>>(`
+            const probe = document.createElement('span');
+            document.body.appendChild(probe);
+            probe.style.color = 'var(--vscode-contrastBorder)';
+            const contrast = getComputedStyle(probe).color;
+            probe.remove();
+            const line = selector => getComputedStyle(document.querySelector(selector)).borderTopColor;
+            return { contrast, button: line('.nuiget-button'), tab: line('.nuiget-tab'), select: line('.nuiget-main-select'), checkbox: line('.nuiget-main-toggle input') };
+        `);
+        expect(lines.contrast, `${where}: the contrast border`).to.not.equal('rgba(0, 0, 0, 0)');
+        for (const control of ['button', 'tab', 'select', 'checkbox']) {
+            expect(lines[control], `${where}: ${control} border`).to.equal(lines.contrast);
+        }
+    }
+
     for (const theme of THEMES) {
         it(`${nameOf(theme)}: no contrast or target-size violation in the main panel and the sidebar`, async function () {
             this.timeout(300_000);
@@ -216,6 +238,9 @@ describe('2.0 theme pass', () => {
             await enterMainWebview();
             await waitForBodyClass(theme);
             const main = await runAxe();
+            if (theme.bodyClass.startsWith('vscode-high-contrast')) {
+                await expectContrastBorders(`main panel under ${nameOf(theme)}`);
+            }
             await leaveWebview();
             await openSidebarView();
             await enterSidebarWebview();
