@@ -1,4 +1,4 @@
-# STATUS — src/webview/main   commit b1ebfc7 (P9.8 commit (b); parent of commit (c))   2026-10-17T06:30:00Z
+# STATUS — src/webview/main   commit b61ada2 (P9.8 closed; parent of this docs commit)   2026-10-17T06:50:00Z
 
 git status --porcelain --untracked-files=all (before commit (a)): modified `ARCHITECTURE.md`, `CHANGELOG.md`,
 `docs/plans/STATUS.md`, `src/core/feeds/{metadataResolver.ts,metadataResolver.test.ts,STATUS.md}`, `src/webview/main/STATUS.md`
@@ -111,6 +111,24 @@ rm -rf /tmp/nuiget-ui/screenshots dist && npm run test:ui -- --storage /tmp/nuig
 - (c) The README test sets the test's `navigator.clipboard` after `userEvent.setup()`: user-event puts its own clipboard
   stub on `navigator` when it is set up, which replaced the test's.
 - (c) The Copied state is also cleared when the README changes or the tab unmounts (`useEffect(() => forgetCopied, [html])`).
+
+## Visual check (RUN.md §4)
+
+CI runs 38986900825 and 38986898493 on b61ada2 (commit (c)) → success; artifact `ui-screenshots` of 38986900825, 14 PNGs
+(the b1ebfc7 artifact's `main-browse-details.png` was viewed too: the same facts and groups):
+
+- viewed: main-browse-details.png: Newtonsoft.Json: description, then Version 13.0.4, Author(s) with the Verified mark
+  and James Newton-King, License MIT, Downloads 9,325,394,018, Package size 2.4 MB, Date published 2025-09-16, Project
+  URL, Report abuse "Report this package"; Dependencies as eight collapsed toggles with counts in the monikers' own case
+  (".NETFramework2.0 (0)" … ".NETStandard1.3 (6)", "net6.0 (0)"); header (title, Installed, Version, Update) on top.
+- viewed: main-details-readme.png: headings with the link-coloured left mark ("Serialize JSON", "Deserialize JSON"),
+  copy buttons with the copy icon and "C#", the first code line below the button; the header stays above the README.
+- viewed: main-transitive-details.png: the transitive view unchanged (Serilog, Transitive badge, Version, Authors with
+  the Verified mark, Required by Serilog.Sinks.Console).
+- viewed: main-installed-single.png: the Installed tab with Newtonsoft.Json's README; the details header in view.
+
+The UI fixture has one project, so no capture shows Install in projects…: `multi install offered in single project
+mode` covers it in jsdom.
 
 ## Advisor decisions (date, item, question, answer verbatim)
 
