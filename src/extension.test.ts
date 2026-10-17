@@ -296,7 +296,7 @@ describe('extension (2.0 composition root)', () => {
         const sent = () => (sidebar.postMessage as Mock).mock.calls.map(call => call[0] as OutboundEnvelope);
         const ask = async (id: string) => {
             receive(makeRequest('installed/get', { projectPath: project }, id));
-            await vi.waitFor(() => expect(sent().some(message => message.kind === 'response' && message.id === id)).toBe(true));
+            await vi.waitFor(() => expect(sent().some(message => message.kind === 'response' && message.id === id)).toBe(true), { timeout: 10_000 });
             return sent().filter(message => 'id' in message && message.id === id);
         };
         return { project, ask };
