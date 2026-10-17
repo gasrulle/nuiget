@@ -1,3 +1,5 @@
+import * as fs from 'fs';
+import * as path from 'path';
 import { ActivityBar, By, VSBrowser, type WebDriver, type WebElement } from 'vscode-extension-tester';
 
 /**
@@ -8,6 +10,16 @@ import { ActivityBar, By, VSBrowser, type WebDriver, type WebElement } from 'vsc
 const POLL_MS = 250;
 
 export const driverOf = (): WebDriver => VSBrowser.instance.driver;
+
+/** The px value of a token in `tokens.css`, the one place it is defined. */
+export function tokenPx(name: string): number {
+    const css = fs.readFileSync(path.resolve('src/webview/shared/tokens.css'), 'utf-8');
+    const match = new RegExp(`${name}:\\s*(\\d+)px;`).exec(css);
+    if (!match) {
+        throw new Error(`tokens.css has no px value for ${name}`);
+    }
+    return Number(match[1]);
+}
 
 /**
  * The named states the UI job screenshots (plan item P9.0, decision D18). CI uploads them as the `ui-screenshots`

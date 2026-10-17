@@ -1,12 +1,17 @@
 /**
  * A scripted NuGet V3 feed for the harness: the service index, the search service (`packageid:` lookups), the registration
- * and the flat container of `SHARED_FEED` and `PRIVATE_FEED`, answered from what a scenario `publish`es. While `down` is
- * true every request fails with a network error. Requests are recorded by URL. Nothing here reaches the network.
+ * and the flat container of `SHARED_FEED` and `PRIVATE_FEED`, answered from what a scenario `publish`es. Search rows are
+ * Verified, and the flat container serves one PNG icon (`FAKE_ICON`) for every published package. While `down` is true
+ * every request fails with a network error. Requests are recorded by URL. Nothing here reaches the network.
  */
 
 import type { TransportRequest, TransportResult } from '../../core/contracts';
-import { fail, json, type FakeHandler } from '../../core/feeds/testSupport';
+import { fail, json, ok, type FakeHandler } from '../../core/feeds/testSupport';
 import { normalizeId, sortDescending } from '../../core/versioning';
+
+/** The icon the flat container serves: the PNG signature and nothing else, enough for a content type and a data URI. */
+export const FAKE_ICON = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0]);
+export const FAKE_ICON_DATA_URI = `data:image/png;base64,${FAKE_ICON.toString('base64')}`;
 
 const FEED_INDEX = /^(https:\/\/[^/]+)\/v3\/index\.json$/;
 
@@ -57,7 +62,10 @@ export function createFakeFeed(): FakeFeed {
                 return json({ data: [] });
             }
             const versions = sortDescending(known.versions);
-            return json({ data: [{ id: known.id, version: versions[0], versions: versions.map(version => ({ version })), description: `${known.id} package`, authors: ['Harness'] }] });
+            return json({ data: [{ id: known.id, version: versions[0], versions: versions.map(version => ({ version })), description: `${known.id} package`, authors: ['Harness'], verified: true }] });
+        }
+        if (segments[0] === 'flat' && segments.length === 4 && segments[3] === 'icon') {
+            return published.get(normalizeId(segments[1])) ? ok(FAKE_ICON, { 'content-type': 'image/png' }) : fail('http-error', 404);
         }
         if (segments[0] === 'flat' && segments.length === 3 && segments[2] === 'index.json') {
             const known = published.get(normalizeId(segments[1]));

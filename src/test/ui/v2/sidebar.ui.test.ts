@@ -2,7 +2,7 @@ import { expect } from 'chai';
 import * as fs from 'fs';
 import * as path from 'path';
 import { By, Key, Origin, type WebElement } from 'vscode-extension-tester';
-import { driverOf, enterSidebarWebview, findByTestId, leaveWebview, openSidebarView, poll, screenshot, waitForTestIdGone, waitForText } from './sidebarWebview';
+import { driverOf, enterSidebarWebview, findByTestId, leaveWebview, openSidebarView, poll, screenshot, tokenPx, waitForTestIdGone, waitForText } from './sidebarWebview';
 
 /**
  * The 2.0 sidebar in VS Code (plan item P3.5), on the VSIX that `npm run test:ui` packages: the first time the 2.0
@@ -12,16 +12,6 @@ import { driverOf, enterSidebarWebview, findByTestId, leaveWebview, openSidebarV
 describe('2.0 sidebar', () => {
     const csprojPath = path.resolve('src/test/e2e/fixtures/e2e-workspace/TestProject.csproj');
     let originalCsproj: string | undefined;
-
-    /** The px value of a token in `tokens.css`, the one place it is defined. */
-    const tokenPx = (name: string): number => {
-        const css = fs.readFileSync(path.resolve('src/webview/shared/tokens.css'), 'utf-8');
-        const match = new RegExp(`${name}:\\s*(\\d+)px;`).exec(css);
-        if (!match) {
-            throw new Error(`tokens.css has no px value for ${name}`);
-        }
-        return Number(match[1]);
-    };
 
     const serilogOption = async () => (await findByTestId('package-row-serilog')).findElement(By.css('[role="option"]'));
 

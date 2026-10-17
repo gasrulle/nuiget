@@ -2,8 +2,8 @@ import { expect } from 'chai';
 import * as fs from 'fs';
 import * as path from 'path';
 import { By, Key } from 'vscode-extension-tester';
-import { enterMainWebview, openMainPanel } from './mainWebview';
-import { findByTestId, leaveWebview, poll, screenshot, waitForTestIdGone } from './sidebarWebview';
+import { enterMainWebview, measureLoadedRows, openMainPanel } from './mainWebview';
+import { findByTestId, leaveWebview, poll, screenshot, tokenPx, waitForTestIdGone } from './sidebarWebview';
 
 /**
  * The Updates tab of the 2.0 main panel in VS Code (plan item P5.5), on the VSIX that `npm run test:ui` packages: the
@@ -47,6 +47,20 @@ describe('2.0 main panel: Updates tab', () => {
         const tab = await findByTestId('updates-tab');
         await poll(async () => (/\d/.test((await tab.getAttribute('textContent')) ?? '') ? true : undefined), 'a count on the Updates tab', 30_000);
         await screenshot('main-updates');
+    });
+
+    it('update rows are comfortable cards with a loaded icon, as tall as the token (TF3)', async function () {
+        this.timeout(180_000);
+        await findByTestId('package-row-newtonsoft.json', 120_000);
+        const token = tokenPx('--nuiget-row-height-comfortable');
+        const rows = await measureLoadedRows('updates-list');
+        console.warn('[P9.12] comfortable rows: ' + JSON.stringify(rows));
+        expect(rows.length).to.be.at.least(2);
+        for (const row of rows) {
+            expect(row.minHeight, row.name).to.equal(`${token}px`);
+            expect(row.height, row.name).to.be.within(token, token + 2);
+            expect(row.iconSrc, row.name).to.not.equal('');
+        }
     });
 
     it('the Update all dialog lists the packages and cancels on Escape, leaving the project file as it was', async function () {

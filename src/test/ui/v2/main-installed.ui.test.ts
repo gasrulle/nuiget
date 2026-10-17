@@ -2,8 +2,8 @@ import { expect } from 'chai';
 import * as fs from 'fs';
 import * as path from 'path';
 import { By, Key } from 'vscode-extension-tester';
-import { enterMainWebview, openMainPanel } from './mainWebview';
-import { findByTestId, leaveWebview, poll, screenshot, waitForTestIdGone } from './sidebarWebview';
+import { enterMainWebview, measureLoadedRows, openMainPanel } from './mainWebview';
+import { findByTestId, leaveWebview, poll, screenshot, tokenPx, waitForTestIdGone } from './sidebarWebview';
 
 /**
  * The Installed tab of the 2.0 main panel in VS Code (plan item P5.4), on the VSIX that `npm run test:ui` packages: the
@@ -47,6 +47,28 @@ describe('2.0 main panel: Installed tab', () => {
         await findByTestId('package-row-serilog', 120_000);
         await findByTestId('package-row-newtonsoft.json');
         await screenshot('main-installed-single');
+    });
+
+    it('lays the rows out as comfortable cards with a loaded icon, as tall as the token, and shows the authors and the Verified mark (TF1, TF3)', async function () {
+        this.timeout(180_000);
+        await findByTestId('package-row-serilog', 120_000);
+        await findByTestId('package-row-newtonsoft.json');
+        const token = tokenPx('--nuiget-row-height-comfortable');
+        const rows = await measureLoadedRows('installed-list');
+        console.warn('[P9.12] comfortable rows: ' + JSON.stringify(rows));
+        expect(rows.length).to.be.at.least(2);
+        for (const row of rows) {
+            expect(row.minHeight, row.name).to.equal(`${token}px`);
+            expect(row.height, row.name).to.be.within(token, token + 2);
+            // The default icon is a `cspSource` URI: there with or without the feed.
+            expect(row.iconSrc, row.name).to.not.equal('');
+        }
+        // The one live part: the enrichment of nuget.org reaches the row (precedent: main-transitive's 60 s poll).
+        const newtonsoft = await findByTestId('package-row-newtonsoft.json');
+        await poll(async () => {
+            const text = (await newtonsoft.getAttribute('textContent')) ?? '';
+            return text.includes('James Newton-King') && text.includes('Verified: the package id prefix is reserved by its owner') ? true : undefined;
+        }, 'the authors and the Verified mark on the Newtonsoft.Json row', 120_000);
     });
 
     it('the transitive section opens with what the project gets through its references (P9.0)', async function () {

@@ -5,7 +5,7 @@ import { MainPanelHost } from '../../host/MainPanelHost';
 import { commands as mockCommands } from '../__mocks__/vscode';
 import { ALL_PROJECTS, makeEvent, makeOk, resourceKeys, type BulkOutcome, type InstalledResult, type OperationOutcome, type RequestType, type ResponseEnvelope } from '../../protocol';
 import { dotnetCalls } from './fakeDotnet';
-import { createFakeFeed } from './fakeFeed';
+import { FAKE_ICON_DATA_URI, createFakeFeed } from './fakeFeed';
 import { FakeWebview } from './FakeWebview';
 import {
     PRIVATE_FEED,
@@ -745,6 +745,27 @@ describe('two-surface harness', () => {
                 expect(webview.updates, webview.surface).toMatchObject({ projectPath: A, updates: [] });
             }
         });
+        await h.settle();
+        [main, sidebar].forEach(expectOneResponsePerRequest);
+    });
+
+    it('enrichment reaches both surfaces: updates/get and transitive/metadata carry authors, Verified and the icon the feed serves (TF7)', async () => {
+        const feed = createFakeFeed();
+        feed.publish('Serilog', ['3.0.0', '3.1.0']);
+        h = await createHarness({ tree: TWO_PROJECTS, selectedProject: 'A/A.csproj', feed });
+        const [A, B] = [h.path('A/A.csproj'), h.path('B/B.csproj')];
+        const main = await h.resolve('main');
+        const sidebar = await h.resolve('sidebar');
+        await h.expectState({ selectedProject: A, projects: [A, B], installed: ['Serilog@3.0.0'] });
+
+        for (const name of ['main', 'sidebar'] as const) {
+            const { updates } = resultOf(await h.checkUpdates(name).response);
+            expect(updates, name).toEqual([expect.objectContaining({ id: 'Serilog', latestVersion: '3.1.0', authors: 'Harness', verified: true, iconUrl: FAKE_ICON_DATA_URI })]);
+            const [lite] = resultOf(await h.request(name, 'transitive/metadata', { packages: [{ id: 'Serilog', version: '3.0.0' }] }).response).metadata;
+            expect(lite, name).toEqual(expect.objectContaining({ id: 'Serilog', version: '3.0.0', authors: 'Harness', description: 'Serilog package', verified: true, iconUrl: FAKE_ICON_DATA_URI }));
+            // The fake index has no VulnerabilityInfo resource: no source publishes advisories, so none (P4.8 Q6; vulnerability.test.ts:133). Unknown (absent) is a source whose data could not be read.
+            expect(lite.vulnerabilities, name).toEqual([]);
+        }
         await h.settle();
         [main, sidebar].forEach(expectOneResponsePerRequest);
     });

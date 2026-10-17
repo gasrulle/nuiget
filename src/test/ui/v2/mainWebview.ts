@@ -86,3 +86,31 @@ export async function untilProjects<T>(probe: (values: string[]) => T | undefine
 /** The value of the selector's option whose path ends with `file`, once the host lists it. */
 export const optionFor = (file: string): Promise<string> => untilProjects(values => values.find(value => value.endsWith(file)), `${file} in the project selector`);
 
+
+/** What a comfortable row measures in the webview: the wrapper carries `min-height`, the icon is the `<img>` it shows. */
+export interface MeasuredRow {
+    name: string;
+    minHeight: string;
+    height: number;
+    iconSrc: string;
+    iconLoaded: boolean;
+}
+
+/** The rows of the list `listTestId` measured once every icon has loaded (TF1, TF3); fails after `timeoutMs`. */
+export async function measureLoadedRows(listTestId: string, timeoutMs = 30_000): Promise<MeasuredRow[]> {
+    return poll(async () => {
+        const rows = await driverOf().executeScript<MeasuredRow[]>(`
+            return Array.from(document.querySelectorAll('[data-testid="${listTestId}"] [role="option"]')).map(option => {
+                const row = option.closest('.nuiget-row') ?? option;
+                const img = option.querySelector('.nuiget-row-icon img');
+                return {
+                    name: option.querySelector('.nuiget-row-name')?.textContent ?? '',
+                    minHeight: getComputedStyle(row).minHeight,
+                    height: row.getBoundingClientRect().height,
+                    iconSrc: img?.getAttribute('src') ?? '',
+                    iconLoaded: img ? img.complete && img.naturalWidth > 0 : false,
+                };
+            });`);
+        return rows.length > 0 && rows.every(row => row.iconLoaded) ? rows : undefined;
+    }, `every row of ${listTestId} with a loaded icon`, timeoutMs);
+}

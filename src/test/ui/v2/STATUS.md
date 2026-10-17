@@ -1,4 +1,4 @@
-# STATUS — src/test/ui/v2   commit eb68dbb (P9.12 commit 1; parent of commit 2)   2026-10-17T17:00:00Z
+# STATUS — src/test/ui/v2   commit c9dffb7 (P9.12 commit 2; parent of commit 3)   2026-10-17T18:00:00Z
 
 git status --porcelain --untracked-files=all (before commit 1): modified `docs/plans/STATUS.md`,
 `docs/ux/interaction-model.md`, `src/test/ui/v2/{STATUS.md,main-all-projects.ui.test.ts,main-shell.ui.test.ts,main-transitive.ui.test.ts,mainWebview.ts}`,
@@ -33,6 +33,20 @@ npm run package:vsix        → exit 0 · Packaged: nuiget-v2.0.0.vsix (17 files
 rm -rf dist out/esbuild && node esbuild.mjs --production --analyze → dist/extension.js 297018 / 322502 ·
                               dist/webview.js 548746 / 577766 · dist/sidebar.js 333071 / 351245
 rm -rf /tmp/nuiget-ui/screenshots dist && npm run test:ui -- --storage /tmp/nuiget-ui → exit 0 · 40 passing (1m)
+CI runs 38999383727, 38999382231 on c9dffb7 (commit 2) → success
+commit 3:
+npx vitest run --project integration src/test/harness → after step 18 alone: Tests 24 passed (24); with the TF7
+                              scenario as first written: 1 failed ("expected { id: 'Serilog', …(6) } to not have
+                              property "vulnerabilities"", received []) → stop-and-ask, follow-up ruling below →
+                              Tests 25 passed (25)
+npx tsc --noEmit 0 · npm run check-types 0 · npx eslint src 0 · npm run lint 0 · npm run docs:check 0
+npx vitest run              → exit 0 · Tests 2011 passed | 9 skipped (2020)
+npm test                    → exit 0 · Tests 2011 passed | 9 skipped (2020) · npm run bench → exit 0
+rm -rf dist out/esbuild && node esbuild.mjs --production --analyze → dist/extension.js 297018 / 322502 ·
+                              dist/webview.js 548746 / 577766 · dist/sidebar.js 333071 / 351245
+rm -rf /tmp/nuiget-ui/screenshots dist && npm run test:ui -- --storage /tmp/nuiget-ui → exit 0 · 42 passing (1m)
+[P9.12] comfortable rows (installed-list and updates-list): Newtonsoft.Json and Serilog, minHeight 66px, height 67,
+                              iconLoaded true, iconSrc data:image/png (token 66 → bound [66, 68])
 ```
 
 ## Done (tested)
@@ -49,6 +63,17 @@ rm -rf /tmp/nuiget-ui/screenshots dist && npm run test:ui -- --storage /tmp/nuig
   one); the harness scenario and `files.addProject` (see `src/test/harness/STATUS.md`); N86 closed in the ledger;
   ARCHITECTURE `refreshProjectsAndSession` sentence; CHANGELOG Fixed; gotcha "`projects/changed` before `reconcile`".
 
+- Commit 3 (TF1, TF3, TF7): `tokenPx` exported from `sidebarWebview.ts` (`sidebar.ui.test.ts` imports it);
+  `mainWebview.ts` `measureLoadedRows(listTestId)`; `main-installed.ui.test.ts` 'lays the rows out as comfortable cards
+  with a loaded icon, as tall as the token, and shows the authors and the Verified mark (TF1, TF3)';
+  `main-updates.ui.test.ts` 'update rows are comfortable cards with a loaded icon, as tall as the token (TF3)'; the
+  fake feed and the TF7 scenario (see `src/test/harness/STATUS.md`). Step 19's last assertion was corrected from absent
+  to `vulnerabilities: []` by the follow-up ruling below.
+- TF map: TF1, TF3 by commit 3 (the two UI tests); TF2 met by the tree (`InstalledTab.test.tsx:264`,
+  `UpdatesTab.test.tsx:268, :307`, `AllProjectsView.test.tsx:67`); TF4 met by the tree (the §8 lint) plus
+  `refresh-button` (commit 1); TF7 by commit 3 (the harness scenario); TF8 by commit 1, host side verified at
+  `extension.ts:316,323`.
+
 ## Visual check of commit 1 (CI run 38998896884)
 
 - viewed: main-installed-all.png: unchanged (TestProject.csproj and Utility.csproj sections, All Projects (2)).
@@ -60,11 +85,14 @@ rm -rf /tmp/nuiget-ui/screenshots dist && npm run test:ui -- --storage /tmp/nuig
 
 ## Not started
 
-- Commit 3 (TF1, TF3, TF7); the gate's one rerun.
+- The gate's one rerun of commit 3's run and its visual check; the docs commit.
 
 ## Deviations from contract/ADR (file:line each)
 
-- None.
+- None. One deviation from the wording of step 16: `min-height` is on the row's `role="presentation"` wrapper
+  (`.nuiget-row--comfortable`, `Row.tsx:94, :103`, `primitives.css:86-88`), not on the option, so
+  `measureLoadedRows` reads `minHeight` and `height` of `option.closest('.nuiget-row')`; the bound `[token, token + 2]`
+  is unchanged.
 
 ## Advisor decisions (date, item, question, answer verbatim)
 
@@ -131,6 +159,34 @@ VERIFY:
 Files checked: docs/plans/2026-10-11-nuiget-2.0-execution-plan.md (§1-§4, :359 and P9 preamble); docs/plans/parity-audit-2026-10-16.md:1244-1381 (TF1-TF8 with refuter notes), :1408-1440; docs/plans/findings-ledger.md:183, :447; docs/plans/STATUS.md:131-135; docs/plans/RUN.md:34-110; docs/adr/001-*.md:35; docs/ux/interaction-model.md:160-200 (§8); ARCHITECTURE.md:96-100, :430, :805; CHANGELOG.md (Unreleased); .github/agents/architecture-advisor.agent.md; .claude/settings.json:39; .github/workflows/ci.yml:261-285; package.json:54-58; src/extension.ts:150-283, :284-330, :347-359, :400-450; src/extension.test.ts:69-122, :505-620; src/core/session/SessionStore.ts:85-169; src/core/contracts.ts:57-77; src/core/queries/scopes.ts (whole); src/core/catalog/Catalog.ts:121, :130, :240-275, :285; src/core/feeds/enricher.ts:1-90; src/core/feeds/icons.ts:98-112, :131-220; src/core/feeds/flatContainer.ts:32-49, :170-185; src/core/feeds/search.ts:300-382; src/core/feeds/wire.ts:238-241; src/core/feeds/vulnerability.ts:122; src/core/feeds/serviceIndex.ts:122; src/core/feeds/testSupport.ts:7-21; src/core/project/discovery.ts:22-28; src/host/handlers.ts:241-298, :408-411; src/host/services.ts:100-116; src/host/MainPanelHost.ts:37, :84; src/host/STATUS.md:1-210 (P9.9 rulings); src/webview/main/MainShell.tsx:55-56, :232-300; src/webview/shared/primitives/IconButton.tsx:4-34; src/webview/shared/primitives/Row.tsx:42, :77-88, :146; src/webview/shared/primitives/icons.tsx:67-70, :151-152; src/webview/shared/primitives/Row.test.tsx:205-290; src/webview/shared/primitives/primitives.css:83-87; src/webview/shared/tokens.css:26-28; src/webview/shared/STATUS.md:1-60, :129, :157-162; src/webview/shared/store/installed.tsx:77; src/webview/main/features/installed/InstalledTab.test.tsx:100-130, :255-300; src/webview/main/features/installed/AllProjectsView.test.tsx:60-110; src/webview/main/features/updates/UpdatesTab.test.tsx:262-340; src/test/harness/harness.ts:129-377; src/test/harness/fakeDotnet.ts:17-120, :224-311; src/test/harness/fakeFeed.ts (whole); src/test/harness/FakeWebview.ts:1-30, :178-235; src/test/harness/scenarios.test.ts:1-60, :204-241, :680-720, :790-827; src/test/harness/STATUS.md:1-30; src/test/lint/interaction-model-testids.test.ts (whole); src/test/lint/webview-tokens.test.ts:29, :72-79; src/test/ui/v2/mainWebview.ts (whole); src/test/ui/v2/sidebarWebview.ts (exports); src/test/ui/v2/main-all-projects.ui.test.ts (whole); src/test/ui/v2/main-transitive.ui.test.ts:1-150; src/test/ui/v2/main-installed.ui.test.ts:1-100; src/test/ui/v2/main-shell.ui.test.ts:15-26; src/test/ui/v2/sidebar.ui.test.ts:1-55, :100-135; src/test/ui/v2/STATUS.md:1-3; vitest.config.mts:53-84; git log 33312b2..6678f0f (P9 commits).
 `````
 
+2026-10-17, P9.12 commit 3 (follow-up: the TF7 scenario's `vulnerabilities` assertion). Answer of the
+`architecture-advisor` subagent, verbatim:
+
+`````text
+DECISION: Option 1. Keep the product as it is; step 19's last assertion becomes `expect(lite.vulnerabilities, name).toEqual([]);`. The step-19 comment "unknown, never []" was wrong: it misread `vulnerability.ts:122`. Not OWNER MUST DECIDE.
+
+WHY: The brief is right about the tree, and the semantics it describes are a recorded ruling, not only a unit test: the P4.8 Q6 ruling (`docs/plans/STATUS.md:2496`) says verbatim "`vulnerabilities` absent when it answers `sourcesUnavailable`, `[]` when it answered with none", and `src/core/feeds/enricher.test.ts:84` pins it by title (`leaves vulnerabilities absent when the data was unavailable and [] when none apply`). `VulnerabilityOutcome.sourcesUnavailable` is documented as true only when "a source *with* vulnerability data could not be read completely" (`src/core/feeds/types.ts:125-129`); `forPackage` drops a source without the resource at `vulnerability.ts:108` before `data` is built, so it never counts as `undefined` at `:122`, and `vulnerability.test.ts:54-66` (`source('c', false)`, `sourcesUnavailable: false`, no request to c.example) and `:133` (`forPackage([], …)` → `{ vulnerabilities: [], sourcesUnavailable: false }`) assert exactly that. `enricher.ts:71-73` then writes `[]`. The gotcha row "Empty is not unknown" and `ARCHITECTURE.md:190` both say "read in part", which is the unavailable path; a source that publishes no `VulnerabilityInfo` resource has published no advisories, and this is the production configuration the P4.8 Q2 ruling named (every id mapped to a private proxy without the resource), so the fake feed models a real set-up, not an artefact. Option 3 would overturn P4.8 Q6 and edit `src/core/feeds/**`, which P9.12 does not own (plan row P9.12: `src/test/**`, host watcher); Option 2 adds a per-URL failure the fake feed has no mechanism for (`fakeFeed.ts:37` is all-or-nothing) and every `transitive/metadata` read in every scenario would then hit that URL, for a path `vulnerability.test.ts:103-134` and `enricher.test.ts:84` already pin; Option 4 weakens an assertion.
+
+DO:
+1. In `src/test/harness/scenarios.test.ts`, replace the two lines at :766-767 with the comment `// The fake index has no VulnerabilityInfo resource: no source publishes advisories, so none (P4.8 Q6; vulnerability.test.ts:133). Unknown (absent) is a source whose data could not be read.` and the assertion `expect(lite.vulnerabilities, name).toEqual([]);`. Nothing else in the scenario changes.
+2. Leave `src/test/harness/fakeFeed.ts` as it stands after step 18; leave `src/core/feeds/**`, the gotcha row and `ARCHITECTURE.md:190` unchanged (they describe "read in part" and are correct).
+3. In the TF7 entry of the STATUS notes (step 20: `src/test/harness/STATUS.md` and `src/test/ui/v2/STATUS.md`), record that step 19's last assertion was corrected from absent to `[]`, with this ruling pasted verbatim as the reason; do not edit the earlier ruling text.
+4. Resume step 20 (gates in plan order, `npm run bench`, `npm run docs:check`, the UI run, STATUS, commit `test(harness,ui): enrichment end to end, comfortable rows measured against the token (P9.12, TF1, TF3, TF7)`, push).
+
+DO NOT:
+Do not change `src/core/feeds/vulnerability.ts` or `enricher.ts` so that "no source with data" reads as unavailable; that reverses P4.8 Q6 and is outside the item's files.
+Do not add a `VulnerabilityInfo` resource to the fake feed, failing or empty, in this commit.
+Do not drop the vulnerabilities assertion; `[]` is the behaviour under test.
+Do not edit the step-19 text already pasted in `src/test/ui/v2/STATUS.md`; the new paste corrects it.
+Do not touch `vulnerability.test.ts`, `enricher.test.ts` or the "Empty is not unknown" gotcha row.
+
+CONTRACT CHANGE: none.
+
+VERIFY: `npx vitest run --project integration src/test/harness` → every scenario passes, the TF7 scenario included (25 passed if the count after step 18 alone was 24, as the brief reports), exit code 0. Then `npx tsc --noEmit`, `npm run check-types`, `npx eslint src` → 0 errors, and step 20's gates.
+
+Files read for this ruling: /Users/mattias/github/nuiget/src/core/feeds/vulnerability.ts, /Users/mattias/github/nuiget/src/core/feeds/enricher.ts, /Users/mattias/github/nuiget/src/core/feeds/vulnerability.test.ts, /Users/mattias/github/nuiget/src/core/feeds/enricher.test.ts:84, /Users/mattias/github/nuiget/src/core/feeds/types.ts:123-130, /Users/mattias/github/nuiget/src/core/catalog/feedClients.ts:40-84, /Users/mattias/github/nuiget/src/core/catalog/Catalog.ts:500-516, /Users/mattias/github/nuiget/src/test/harness/fakeFeed.ts, /Users/mattias/github/nuiget/src/test/harness/scenarios.test.ts:711-772, /Users/mattias/github/nuiget/src/test/ui/v2/STATUS.md (step 19), /Users/mattias/github/nuiget/docs/plans/STATUS.md:70, :2496, /Users/mattias/github/nuiget/ARCHITECTURE.md:188-191, /Users/mattias/github/nuiget/docs/plans/2026-10-11-nuiget-2.0-execution-plan.md:359.
+`````
+
 ## Exact next step (one item ID)
 
-P9.12 commit 3, after commit 2's CI is green.
+P9.12: the gate's one rerun of commit 3's green run, the visual check, then the docs commit.

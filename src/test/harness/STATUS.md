@@ -76,6 +76,15 @@ test -e .claude/.contract-change → false (created with "P7.2c" for the ADR-004
   source` under `refresh/all`; one `session/set` for the new project is committed). Negative control on the unreordered
   `extension.ts`: `AssertionError: main: projects while the listing runs: expected [ …(3) ] to deeply equal [ …(2) ] (+ "…/harness-qoAwVE/C/C.csproj")`. `npx vitest run --project integration src/test/harness` → Tests 24 passed (24).
 
+- Commit 3 (TF7): `fakeFeed.ts` exports `FAKE_ICON` (the PNG signature) and `FAKE_ICON_DATA_URI`, answers search rows
+  with `verified: true` and serves the icon at the flat `…/<id>/<ver>/icon` of a published package (404 otherwise).
+  Scenario `enrichment reaches both surfaces: updates/get and transitive/metadata carry authors, Verified and the icon
+  the feed serves (TF7)`: on both surfaces `updates/get` carries `authors: 'Harness'`, `verified: true`,
+  `iconUrl: FAKE_ICON_DATA_URI`, and `transitive/metadata` the same plus `description` and `vulnerabilities: []`.
+  Step 19's last assertion was corrected from absent to `[]` (a feed without a `VulnerabilityInfo` resource publishes
+  no advisories, P4.8 Q6); the follow-up ruling is verbatim in `src/test/ui/v2/STATUS.md`. With step 18 alone →
+  Tests 24 passed (24); with the scenario → Tests 25 passed (25).
+
 ## Exact next step (one item ID)
 
-P9.12 commit 3.
+P9.12: the gate's rerun and the docs commit.
