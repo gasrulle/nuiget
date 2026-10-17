@@ -21,6 +21,7 @@ import { DefaultQueryCoordinator } from './core/queries';
 import { DefaultSessionStore, firstProject } from './core/session';
 import { DotnetSourceProvider, NuGetConfigReader } from './core/sources';
 import { isPathInside, normalizeProjectPath } from './core/util/paths';
+import { registerOperationFeedback } from './host/feedback';
 import { MainPanelHost } from './host/MainPanelHost';
 import { HostEvents, createWorkflowDeps, loggerFor, readExtensionConfig, type HostServices } from './host/services';
 import { sweepLegacyState } from './host/legacyState';
@@ -277,6 +278,8 @@ export async function activateWith(context: vscode.ExtensionContext, overrides: 
             : '$(sync~spin) nUIget: operation running';
         statusBar.show();
     }));
+    // The progress notification of a bulk operation and one toast per outcome (P9.9).
+    context.subscriptions.push(registerOperationFeedback({ onProgress: queue.onProgress, onCompleted: events.operationCompleted.event, output }));
 
     // ── watchers → invalidation ──
     type ScopeFor = (fsPath: string) => InvalidationScope | undefined | Promise<InvalidationScope | undefined>;

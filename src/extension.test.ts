@@ -323,6 +323,65 @@ describe('extension (2.0 composition root)', () => {
         expect(dotnet.count(dotnetCalls.msbuild(project))).toBe(1);
     });
 
+    /** A scratch project App with Serilog 3.0.0 and Newtonsoft.Json 12.0.1, the sidebar and the panel open; `send` answers with the response. */
+    async function operationsFromSidebar() {
+        scratch = await createScratchDir('root-feedback');
+        const project = path.join(scratch.dir, 'App', 'App.csproj');
+        await writeTree(scratch.dir, {
+            'App/App.csproj': '<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><TargetFramework>net10.0</TargetFramework></PropertyGroup><ItemGroup><PackageReference Include="Serilog" Version="3.0.0" /><PackageReference Include="Newtonsoft.Json" Version="12.0.1" /></ItemGroup></Project>',
+        });
+        projectFiles = [project];
+        await start({ workspaceState: { 'nuiget.selectedProject': project } });
+        const sidebar = resolveSidebar();
+        await openPanel();
+        const [receive] = vi.mocked(sidebar.onDidReceiveMessage).mock.calls.at(-1) as unknown as [(message: unknown) => void];
+        const sent = () => (sidebar.postMessage as Mock).mock.calls.map(call => call[0] as OutboundEnvelope);
+        const send = async <T extends RequestType>(type: T, payload: RequestPayload<T>, id: string) => {
+            receive(makeRequest(type, payload, id));
+            await vi.waitFor(() => expect(sent().some(message => message.kind === 'response' && message.id === id)).toBe(true), { timeout: 10_000 });
+            return sent().find(message => message.kind === 'response' && message.id === id) as { ok: boolean; result: OperationOutcome | BulkOutcome };
+        };
+        return { project, send };
+    }
+
+    it('bulk update shows progress and a summary toast', async () => {
+        const { project, send } = await operationsFromSidebar();
+        const report = vi.fn();
+        mockWindow.withProgress.mockImplementationOnce(((_options: unknown, task: (progress: unknown, token: unknown) => Promise<unknown>) => task({ report }, { isCancellationRequested: false })) as never);
+        mockWindow.showInformationMessage.mockClear();
+        mockWindow.showWarningMessage.mockClear();
+
+        const response = await send('ops/bulkUpdate', { projectPath: project, packages: [{ id: 'Serilog', version: '4.0.0' }, { id: 'Newtonsoft.Json', version: '13.0.3' }] }, 'b1');
+        expect(response).toMatchObject({ ok: true, result: { status: 'completed' } });
+
+        expect(mockWindow.withProgress).toHaveBeenCalledTimes(1);
+        expect(mockWindow.withProgress.mock.calls[0][0]).toEqual(expect.objectContaining({ location: vscode.ProgressLocation.Notification, title: 'nUIget: Updating packages' }));
+        const messages = report.mock.calls.map(call => (call[0] as { message: string }).message);
+        expect(messages.some(message => message.startsWith('1 of 2:'))).toBe(true);
+        expect(messages.some(message => message.startsWith('2 of 2:'))).toBe(true);
+        // One toast with both surfaces open.
+        await vi.waitFor(() => expect(mockWindow.showInformationMessage).toHaveBeenCalledTimes(1));
+        expect(mockWindow.showInformationMessage).toHaveBeenCalledWith('nUIget: Updated 2 packages.');
+        expect(mockWindow.showWarningMessage).not.toHaveBeenCalled();
+    });
+
+    it('failed op shows warning and reveals output', async () => {
+        dotnet.fail(dotnetCalls.packageAdd('Serilog'));
+        const { project, send } = await operationsFromSidebar();
+        mockWindow.showInformationMessage.mockClear();
+        mockWindow.showWarningMessage.mockClear();
+        mockWindow.withProgress.mockClear();
+
+        const response = await send('ops/install', { projectPath: project, packageId: 'Serilog', version: '4.0.0' }, 'i1');
+        expect(response).toMatchObject({ ok: true, result: { status: 'failed' } });
+
+        await vi.waitFor(() => expect(mockWindow.showWarningMessage).toHaveBeenCalledTimes(1));
+        expect(mockWindow.showWarningMessage).toHaveBeenCalledWith(expect.stringContaining('nUIget: Install of Serilog in App failed'), 'Show output');
+        expect(channel().show).toHaveBeenCalledWith(true);
+        expect(mockWindow.showInformationMessage).not.toHaveBeenCalled();
+        expect(mockWindow.withProgress).not.toHaveBeenCalled();
+    });
+
     it('composes the mutator: an edit is refused while the project file is open with unsaved changes, and admitted once it is saved', async () => {
         scratch = await createScratchDir('root-mutator');
         const project = path.join(scratch.dir, 'App', 'App.csproj');

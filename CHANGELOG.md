@@ -25,6 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **The Installed tab shows how many packages have known vulnerabilities**
 - **Details pane: Version, Author(s) with the Verified mark, Downloads, Package size, Date published and Report abuse, dependency groups collapsed with counts, fixed header**
 - **README typography (headings, inline code, tables, blockquotes, lists, rules) and a copy button with an icon and Copied feedback**
+- **Operations notify again: a progress notification for bulk operations, a toast with the outcome, Show output on a partial, failed or rejected operation, the output channel revealed on failure**
 
 ### Fixed
 

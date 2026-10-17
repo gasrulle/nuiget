@@ -79,9 +79,9 @@ In this mode:
 
 | Action | Where | Confirmation |
 |---|---|---|
-| Install / Update to version | Details panel button, sidebar row hover/focus action, context menu | None (progress toast). |
+| Install / Update to version | Details panel button, sidebar row hover/focus action, context menu | None (the status bar shows the running operation; a toast reports the outcome). |
 | Uninstall (single) | Details button, row action, context menu | None; outcome toast. |
-| Bulk update / bulk uninstall | Updates/Installed toolbar | In-panel **Dialog** listing the packages (and projects in All Projects) with Confirm/Cancel. |
+| Bulk update / bulk uninstall | Updates/Installed toolbar | In-panel **Dialog** listing the packages (and projects in All Projects) with Confirm/Cancel; then a progress notification (N of M) and a summary toast. |
 | CPM central change | Any update of a `central` package, or an install of a package that already has a central entry in a CPM project (main panel: the pane asks `cpm/preview` first and opens the dialog only when an entry exists; sidebar: the actions menu and the host's modal) | Main panel: **Dialog** (`cpm-preview-dialog`) listing the projects the central version applies to; choice: *Update central version* / Cancel. Sidebar: the row's primary action opens the actions menu and the host confirms with a modal listing the same projects. *Override in this project only* is not offered: no `dotnet` command writes a `VersionOverride` (ADR-003); an existing override updates in place from the Updates lists and the details pane. An uninstall of a central row needs no confirmation (the central entry stays). |
 | Remove source | Source settings | In-dialog confirm row (existing pattern). |
 | Restore project(s) | Transitive banner, header | None. |

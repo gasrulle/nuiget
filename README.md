@@ -54,7 +54,8 @@ A Visual Studio-style NuGet package manager for VS Code with a modern split-pane
 - **One shared context.** The main panel and the sidebar show the same project, source, prerelease and restore
   choices. An operation started in either view shows its progress in both.
 - **Operation queue.** One operation runs at a time and up to five wait behind it; the status bar shows how many are
-  running and queued.
+  running and queued. A bulk operation shows a progress notification, and every operation ends with a toast that says
+  how it went.
 - **Restore after operations.** On by default, per workspace. Turn it off with the checkbox in the main panel header
   or the shield button in the sidebar's title bar (filled when on); it applies to operations from both views. In a Central Package Management project an
   install or update always restores.
@@ -65,7 +66,7 @@ A Visual Studio-style NuGet package manager for VS Code with a modern split-pane
 - **Accessible.** Every action has a key, lists and dialogs carry the roles screen readers expect, colours come from
   the VS Code theme (high-contrast themes included), and motion is reduced when the system asks for it.
 - **Output channel.** The "nUIget" channel logs every dotnet command with its exit code and duration. Credentials
-  are removed from everything it logs.
+  are removed from everything it logs. It opens by itself when an operation fails.
 
 ## 🚀 Quick Start
 
