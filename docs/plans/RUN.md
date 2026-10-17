@@ -77,8 +77,11 @@ Rules that override anything you would otherwise do:
 - Every ⚑ item and every stop-and-ask trigger (plan §2.3) means: launch the `architecture-advisor` subagent
   with the §2.4 brief, paste its answer into the directory's `STATUS.md`, then act on it. If the answer says
   the owner must decide, mark the item `blocked` and stop.
+  The subagent cannot read outside the repository: for salvage items paste the quarry excerpts (path:line and
+  text) into the brief. Consultations may take more than ten minutes; run them in the background.
 - Tests are never deleted, skipped or weakened except where the item names them by line or title.
 - If a gate is still red after two fix attempts, mark the item `blocked` with the pasted output and stop.
+- **Visual evidence** (items that change `src/webview/**`): after CI is green, `gh run download <run-id> -n ui-screenshots -D /tmp/nuiget-shots`, open with the Read tool every PNG whose state the item affects, record `viewed: <file>: <one-line observation>` in the directory `STATUS.md`; a screenshot that contradicts the intended rendering is a red gate.
 
 ## 5. Land the item
 
@@ -117,6 +120,7 @@ Stop, write the report in §8, and end the turn when any of these holds:
   P8.3 (publishing: open the release pull request `labs/2.0` → `main` with `gh pr create`, then stop; the
   owner merges and publishes).
 - P3.6 or P7.6 (acceptance cut) just completed.
+- The P9 gate just passed: stop so the owner can review the `ui-screenshots` artifact (report the run id and artifact name); the owner replies `P9 approved` or lists fixes, which become `P9.fix-n` rows.
 - A permission prompt was denied, a toolchain check failed, or a `main` merge needs the owner (§2.2).
 - The session's context was compacted twice (re-read this file and `STATUS.md` after each compaction; after
   the second, finish the current item, land it, and stop so a fresh session continues).

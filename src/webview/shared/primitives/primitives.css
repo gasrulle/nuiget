@@ -1,0 +1,844 @@
+/*
+ * The one stylesheet of the shared primitives (ADR-008). Every class starts with `nuiget-`; sizes, durations
+ * and colours are tokens of ../tokens.css. No colour literal, no important flag, no reduced-motion rule: motion
+ * is timed with the duration tokens, which tokens.css sets to zero when motion is to be reduced.
+ */
+
+/* In the document for assistive technology, not on the screen. */
+.nuiget-visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: calc(var(--nuiget-space-hairline) * -1);
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+}
+
+/*
+ * Scrollbars of every scrolling element of a surface. VS Code's webview defaults (`webview/browser/pre/index.html`)
+ * draw them 10 px thick in its slider colours; these rules put the tokens in their place, so that forced colours
+ * reach the scrollbars as well. Chromium 114 has no standard property for scrollbar colours (N64), hence these rules.
+ */
+::-webkit-scrollbar {
+    width: var(--nuiget-scrollbar-size);
+    height: var(--nuiget-scrollbar-size);
+}
+
+::-webkit-scrollbar-corner {
+    background-color: var(--nuiget-color-bg);
+}
+
+::-webkit-scrollbar-thumb {
+    background-color: var(--nuiget-color-scrollbar);
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background-color: var(--nuiget-color-scrollbar-hover);
+}
+
+::-webkit-scrollbar-thumb:active {
+    background-color: var(--nuiget-color-scrollbar-active);
+}
+
+/* ── Listbox ── */
+
+.nuiget-listbox-root {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+}
+
+.nuiget-listbox {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+}
+
+/* As high as all rows together; the rows in view are placed inside it. */
+.nuiget-listbox-sizer {
+    position: relative;
+    height: var(--nuiget-virtual-total);
+}
+
+.nuiget-listbox-empty {
+    outline: none;
+}
+
+/* ── Row ── */
+
+.nuiget-row {
+    position: absolute;
+    inset: 0 auto auto 0;
+    display: flex;
+    align-items: center;
+    width: 100%;
+    transform: translateY(var(--nuiget-virtual-offset));
+}
+
+.nuiget-row--compact {
+    min-height: var(--nuiget-row-height-compact);
+}
+
+.nuiget-row--comfortable {
+    min-height: var(--nuiget-row-height-comfortable);
+}
+
+.nuiget-row-option {
+    display: flex;
+    flex: 1;
+    align-items: center;
+    gap: var(--nuiget-space-3);
+    min-width: 0;
+    min-height: inherit;
+    padding: 0 var(--nuiget-space-4);
+    color: var(--nuiget-color-fg);
+    cursor: default;
+}
+
+.nuiget-row:hover .nuiget-row-option {
+    background: var(--nuiget-color-list-hover-bg);
+}
+
+.nuiget-row-option[aria-selected="true"] {
+    background: var(--nuiget-color-list-active-bg);
+    color: var(--nuiget-color-list-active-fg);
+    /* The tokens are system colours in forced-colours mode; keep them instead of the mode's own repainting. */
+    forced-color-adjust: none;
+}
+
+/*
+ * A multi-selectable list has two selections: the rows selected for a bulk action (`aria-selected`, the quieter
+ * colour and a check mark) and the current row whose details are shown (`aria-current`, the selection colour).
+ */
+.nuiget-listbox[aria-multiselectable="true"] .nuiget-row-option[aria-selected="true"] {
+    background: var(--nuiget-color-list-inactive-bg);
+    color: inherit;
+}
+
+.nuiget-listbox[aria-multiselectable="true"] .nuiget-row-option[aria-current="true"] {
+    background: var(--nuiget-color-list-active-bg);
+    color: var(--nuiget-color-list-active-fg);
+    forced-color-adjust: none;
+}
+
+.nuiget-row-check {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    inline-size: var(--nuiget-icon-size-sm);
+    block-size: var(--nuiget-icon-size-sm);
+    border: 1px solid var(--nuiget-color-border);
+    border-radius: var(--nuiget-radius-sm);
+}
+
+/* A row that cannot join a bulk action (an SDK or a props package): the mark is there, muted and empty. */
+.nuiget-row-check--off {
+    border-style: dashed;
+    border-color: var(--nuiget-color-fg-muted);
+}
+
+.nuiget-row-option[aria-disabled="true"] .nuiget-row-name {
+    color: var(--nuiget-color-fg-muted);
+}
+
+.nuiget-row-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.nuiget-row-version,
+.nuiget-row-description,
+.nuiget-row-status {
+    color: var(--nuiget-color-fg-muted);
+    font-size: var(--nuiget-font-size-sm);
+    white-space: nowrap;
+}
+
+.nuiget-row-description {
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/*
+ * On a selected or current row the secondary text takes the row's foreground, as VS Code's lists do: the muted
+ * colour is made for the list's background and falls below 4.5:1 on the selection colour (theme.ui.test.ts).
+ */
+.nuiget-row-option[aria-selected="true"] .nuiget-row-version,
+.nuiget-row-option[aria-selected="true"] .nuiget-row-description,
+.nuiget-row-option[aria-selected="true"] .nuiget-row-status,
+.nuiget-row-option[aria-current="true"] .nuiget-row-version,
+.nuiget-row-option[aria-current="true"] .nuiget-row-description,
+.nuiget-row-option[aria-current="true"] .nuiget-row-status,
+.nuiget-row-option[aria-selected="true"] .nuiget-row-version-new,
+.nuiget-row-option[aria-selected="true"] .nuiget-row-authors,
+.nuiget-row-option[aria-selected="true"] .nuiget-row-meta,
+.nuiget-row-option[aria-current="true"] .nuiget-row-version-new,
+.nuiget-row-option[aria-current="true"] .nuiget-row-authors,
+.nuiget-row-option[aria-current="true"] .nuiget-row-meta {
+    color: inherit;
+}
+
+/* The text column: one flex line per row of the card, or one line for a compact row (below). */
+.nuiget-row-body {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0;
+    gap: var(--nuiget-space-1);
+}
+
+.nuiget-row-line {
+    display: flex;
+    align-items: baseline;
+    gap: var(--nuiget-space-3);
+    min-width: 0;
+    overflow: hidden;
+}
+
+.nuiget-row-badges {
+    display: inline-flex;
+    flex: none;
+    gap: var(--nuiget-space-2);
+}
+
+.nuiget-row-version-new {
+    color: var(--nuiget-color-version-new);
+    font-weight: 600;
+}
+
+.nuiget-row-meta {
+    color: var(--nuiget-color-fg-muted);
+    font-size: var(--nuiget-font-size-sm);
+    white-space: nowrap;
+}
+
+/* No opacity: at 0.7 the muted colour falls below 4.5:1 on Light Modern (theme.ui.test.ts). */
+.nuiget-row-authors {
+    min-width: 0;
+    overflow: hidden;
+    color: var(--nuiget-color-fg-muted);
+    font-size: var(--nuiget-font-size-sm);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.nuiget-row-authors svg {
+    color: var(--nuiget-color-link);
+    vertical-align: text-bottom;
+}
+
+/* Comfortable: the 1.x card (D15 as amended 2026-10-17), three lines and a 32 px icon column, 12 px above and below,
+   the check mark and the icon centred, a line between rows. */
+.nuiget-row--comfortable {
+    box-sizing: border-box;
+    border-bottom: 1px solid var(--nuiget-color-border);
+}
+
+/* `border-box`: the option inherits the row's minimum height, and the padding is inside it, as in 1.x. */
+.nuiget-row--comfortable .nuiget-row-option {
+    box-sizing: border-box;
+    gap: var(--nuiget-space-5);
+    padding: var(--nuiget-space-5) var(--nuiget-inset);
+}
+
+.nuiget-row-icon {
+    display: inline-flex;
+    flex: none;
+    inline-size: var(--nuiget-icon-size-xl);
+    block-size: var(--nuiget-icon-size-xl);
+}
+
+/* The contrast outline keeps a dark icon visible on a high-contrast background; an outline takes no space. */
+.nuiget-row-icon img,
+.nuiget-row-icon svg {
+    inline-size: 100%;
+    block-size: 100%;
+    border-radius: var(--nuiget-radius-md);
+    outline: 1px solid var(--nuiget-color-contrast-border);
+    outline-offset: -1px;
+    object-fit: contain;
+}
+
+.nuiget-row--comfortable .nuiget-row-name {
+    flex: 0 1 auto;
+    min-width: 40%;
+    font-weight: 600;
+}
+
+/* The selected row's 3 px accent, as 1.x drew it; a shadow, so nothing moves. */
+.nuiget-row--comfortable .nuiget-row-option[aria-selected="true"] {
+    box-shadow: inset 3px 0 0 var(--nuiget-color-focus);
+}
+
+.nuiget-listbox[aria-multiselectable="true"] .nuiget-row--comfortable .nuiget-row-option[aria-selected="true"] {
+    box-shadow: none;
+}
+
+.nuiget-listbox[aria-multiselectable="true"] .nuiget-row--comfortable .nuiget-row-option[aria-current="true"] {
+    box-shadow: inset 3px 0 0 var(--nuiget-color-focus);
+}
+
+/*
+ * Compact: one line, name first. The version gives way before the name does, so a long prerelease version never
+ * hides the package; a long name stops at 70 % of the line. Height, padding and border stay those of a compact row.
+ */
+.nuiget-row--compact .nuiget-row-body {
+    flex-direction: row;
+    align-items: baseline;
+    gap: var(--nuiget-space-3);
+}
+
+/* `overflow: visible`: a 0 by 0 box that clips is what axe takes for hidden text, and it would measure no name. */
+.nuiget-row--compact .nuiget-row-line {
+    display: contents;
+    overflow: visible;
+}
+
+.nuiget-row--compact .nuiget-row-name {
+    flex-grow: 0;
+    flex-shrink: 0;
+    flex-basis: auto;
+    max-width: 70%;
+}
+
+.nuiget-row--compact .nuiget-row-version {
+    flex-grow: 0;
+    flex-shrink: 1;
+    flex-basis: auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.nuiget-row--compact .nuiget-row-badges {
+    order: 1;
+    margin-inline-start: auto;
+}
+
+/* A compact row has room for the name, the version and the badges; the rest is still read out (D14). */
+.nuiget-row--compact .nuiget-row-authors,
+.nuiget-row--compact .nuiget-row-meta,
+.nuiget-row--compact .nuiget-row-description,
+.nuiget-row--compact .nuiget-row-status {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+}
+
+/* Pointer actions: there when the pointer or the focus is on the row, and while the row is busy. */
+.nuiget-row-actions {
+    display: flex;
+    flex: none;
+    align-items: center;
+    visibility: hidden;
+}
+
+.nuiget-row:hover .nuiget-row-actions,
+.nuiget-row:focus-within .nuiget-row-actions,
+.nuiget-row--busy .nuiget-row-actions {
+    visibility: visible;
+}
+
+/* ── Focus ── */
+
+/* An outline, not a shadow: it is still drawn in forced-colours mode, where the token is `Highlight`. */
+.nuiget-row-option:focus-visible,
+.nuiget-icon-button:focus-visible,
+.nuiget-sash:focus-visible,
+.nuiget-section-toggle:focus-visible,
+.nuiget-button:focus-visible,
+.nuiget-tab:focus-visible,
+.nuiget-dialog:focus-visible,
+.nuiget-popover:focus-visible {
+    outline: 1px solid var(--nuiget-color-focus);
+    outline-offset: -1px;
+}
+
+/* ── IconButton ── */
+
+.nuiget-icon-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: var(--nuiget-target-min);
+    min-height: var(--nuiget-target-min);
+    padding: 0;
+    border: 0;
+    border-radius: var(--nuiget-radius-md);
+    background: transparent;
+    color: var(--nuiget-color-fg-muted);
+    cursor: pointer;
+    transition: color var(--nuiget-duration-fast) var(--nuiget-easing);
+}
+
+.nuiget-icon-button:hover,
+.nuiget-icon-button[aria-pressed="true"] {
+    color: var(--nuiget-color-fg);
+}
+
+.nuiget-icon-button:disabled {
+    color: var(--nuiget-color-fg-muted);
+    cursor: default;
+}
+
+.nuiget-icon-button-icon {
+    display: inline-flex;
+}
+
+/* ── Badge ── */
+
+.nuiget-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0 var(--nuiget-space-2);
+    border: 1px solid transparent;
+    border-radius: var(--nuiget-radius-md);
+    background: var(--nuiget-color-badge-bg);
+    color: var(--nuiget-color-badge-fg);
+    font-size: var(--nuiget-font-size-sm);
+    line-height: var(--nuiget-line-height);
+    white-space: nowrap;
+    forced-color-adjust: none;
+}
+
+/*
+ * A tone colours the border, as a banner does; the text keeps the badge's foreground. The info, warning and error
+ * colours are made for an editor's background, not for the badge's, where they fall below 4.5:1 (theme.ui.test.ts).
+ */
+.nuiget-badge--info {
+    border-color: var(--nuiget-color-info);
+}
+
+.nuiget-badge--warning {
+    border-color: var(--nuiget-color-warning);
+}
+
+.nuiget-badge--error {
+    border-color: var(--nuiget-color-error);
+}
+
+/* ── Spinner ── */
+
+.nuiget-spinner {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: var(--nuiget-target-min);
+    min-height: var(--nuiget-target-min);
+}
+
+/* One turn takes five normal durations: a second, or no time at all under reduced motion. */
+.nuiget-spinner svg {
+    animation: nuiget-spin calc(var(--nuiget-duration-normal) * 5) linear infinite;
+}
+
+@keyframes nuiget-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* ── SectionHeader ── */
+
+.nuiget-section-header {
+    display: flex;
+    align-items: center;
+    min-height: var(--nuiget-row-height-compact);
+}
+
+/* The heading is there for the outline of the page; it looks like the button it holds. */
+.nuiget-section-heading {
+    display: flex;
+    flex: 1;
+    min-width: 0;
+    margin: 0;
+    font-size: var(--nuiget-font-size-sm);
+    font-weight: 600;
+}
+
+.nuiget-section-toggle {
+    display: flex;
+    flex: 1;
+    align-items: center;
+    gap: var(--nuiget-space-2);
+    min-width: 0;
+    min-height: var(--nuiget-target-min);
+    padding: 0 var(--nuiget-space-2);
+    border: 0;
+    background: transparent;
+    color: var(--nuiget-color-fg);
+    font: inherit;
+    text-align: start;
+    text-transform: uppercase;
+    cursor: pointer;
+}
+
+.nuiget-section-title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.nuiget-section-chevron {
+    flex: none;
+    transition: transform var(--nuiget-duration-fast) var(--nuiget-easing);
+}
+
+.nuiget-section-toggle[aria-expanded="true"] .nuiget-section-chevron {
+    transform: rotate(90deg);
+}
+
+.nuiget-section-actions {
+    display: flex;
+    flex: none;
+    align-items: center;
+}
+
+/* ── Button (the action of an empty state or a banner) ── */
+
+.nuiget-button {
+    min-height: var(--nuiget-target-min);
+    padding: 0 var(--nuiget-space-5);
+    border: 1px solid var(--nuiget-color-button-border);
+    border-radius: var(--nuiget-radius-sm);
+    background: var(--nuiget-color-button-bg);
+    color: var(--nuiget-color-button-fg);
+    font: inherit;
+    cursor: pointer;
+}
+
+.nuiget-button:hover {
+    background: var(--nuiget-color-button-hover-bg);
+}
+
+.nuiget-button--secondary,
+.nuiget-button--secondary:hover {
+    background: var(--nuiget-color-button-secondary-bg);
+    color: var(--nuiget-color-button-secondary-fg);
+}
+
+/* Not by opacity: a disabled button keeps a readable label, and forced colours draw it as GrayText. */
+.nuiget-button:disabled,
+.nuiget-button:disabled:hover {
+    background: var(--nuiget-color-button-secondary-bg);
+    color: var(--nuiget-color-fg-muted);
+    cursor: default;
+}
+
+/* ── EmptyState ── */
+
+.nuiget-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--nuiget-space-4);
+    padding: var(--nuiget-space-6);
+    color: var(--nuiget-color-fg-muted);
+    text-align: center;
+}
+
+.nuiget-empty-text {
+    margin: 0;
+}
+
+/* ── Skeleton ── */
+
+.nuiget-skeleton {
+    display: flex;
+    flex-direction: column;
+    gap: var(--nuiget-space-1);
+    padding: var(--nuiget-space-1) var(--nuiget-space-4);
+}
+
+/* A row that is not there yet. It breathes for as long as the duration tokens allow. */
+.nuiget-skeleton-row {
+    border-radius: var(--nuiget-radius-sm);
+    background: var(--nuiget-color-list-hover-bg);
+    animation: nuiget-breathe calc(var(--nuiget-duration-normal) * 6) var(--nuiget-easing) infinite alternate;
+}
+
+.nuiget-skeleton-row--compact {
+    height: calc(var(--nuiget-row-height-compact) - var(--nuiget-space-1));
+}
+
+.nuiget-skeleton-row--comfortable {
+    height: calc(var(--nuiget-row-height-comfortable) - var(--nuiget-space-1));
+}
+
+@keyframes nuiget-breathe {
+    from {
+        opacity: 1;
+    }
+
+    to {
+        opacity: 0.5;
+    }
+}
+
+/* ── ProgressBar ── */
+
+.nuiget-progress {
+    height: var(--nuiget-space-1);
+    overflow: hidden;
+}
+
+.nuiget-progress-bar {
+    width: var(--nuiget-progress-value);
+    height: 100%;
+    background: var(--nuiget-color-progress);
+    transition: width var(--nuiget-duration-normal) var(--nuiget-easing);
+    /* The token is `Highlight` in forced-colours mode; a background would otherwise be dropped there. */
+    forced-color-adjust: none;
+}
+
+/* How much is done is not known: a stripe crosses the bar. Under reduced motion it stands at the start. */
+.nuiget-progress--indeterminate .nuiget-progress-bar {
+    width: 30%;
+    animation: nuiget-progress-cross calc(var(--nuiget-duration-normal) * 8) linear infinite;
+}
+
+@keyframes nuiget-progress-cross {
+    from {
+        transform: translateX(-100%);
+    }
+
+    to {
+        transform: translateX(334%);
+    }
+}
+
+/* ── Banner ── */
+
+.nuiget-banner {
+    display: flex;
+    align-items: center;
+    gap: var(--nuiget-space-4);
+    padding: var(--nuiget-space-2) var(--nuiget-space-4);
+    border-inline-start: var(--nuiget-space-1) solid var(--nuiget-color-info);
+    color: var(--nuiget-color-fg);
+}
+
+.nuiget-banner--warning {
+    border-inline-start-color: var(--nuiget-color-warning);
+}
+
+.nuiget-banner--error {
+    border-inline-start-color: var(--nuiget-color-error);
+}
+
+.nuiget-banner-icon {
+    flex: none;
+    color: var(--nuiget-color-info);
+}
+
+.nuiget-banner--warning .nuiget-banner-icon {
+    color: var(--nuiget-color-warning);
+}
+
+.nuiget-banner--error .nuiget-banner-icon {
+    color: var(--nuiget-color-error);
+}
+
+.nuiget-banner-text {
+    flex: 1;
+    min-width: 0;
+}
+
+/* ── Sash ── */
+
+/* A thin line to look at, a 24 px strip to grab. The owner sizes the panes from its own custom property. */
+.nuiget-sash {
+    position: relative;
+    flex: none;
+    background: var(--nuiget-color-border);
+    touch-action: none;
+}
+
+.nuiget-sash::after {
+    content: "";
+    position: absolute;
+}
+
+.nuiget-sash--vertical {
+    width: var(--nuiget-space-2);
+    cursor: col-resize;
+}
+
+.nuiget-sash--vertical::after {
+    inset: 0 calc((var(--nuiget-space-2) - var(--nuiget-target-min)) / 2);
+}
+
+.nuiget-sash--horizontal {
+    height: var(--nuiget-space-2);
+    cursor: row-resize;
+}
+
+.nuiget-sash--horizontal::after {
+    inset: calc((var(--nuiget-space-2) - var(--nuiget-target-min)) / 2) 0;
+}
+
+.nuiget-sash:hover,
+.nuiget-sash:focus-visible {
+    background: var(--nuiget-color-focus);
+}
+
+/* ── Dialog ── */
+
+/*
+ * The layer covers the viewport, takes the pointer, so the page behind cannot be clicked, and dims the page with the
+ * scrim token (the editor background at 60 %); the dialog is set off by it, its border and the widget shadow.
+ */
+.nuiget-dialog-layer {
+    position: fixed;
+    inset: 0;
+    z-index: var(--nuiget-z-dialog);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--nuiget-space-6);
+    background: var(--nuiget-color-scrim);
+}
+
+.nuiget-dialog {
+    display: flex;
+    flex-direction: column;
+    gap: var(--nuiget-space-5);
+    width: min(32em, 100%);
+    max-height: 100%;
+    overflow: auto;
+    padding: var(--nuiget-space-5) var(--nuiget-space-6);
+    border: 1px solid var(--nuiget-color-border);
+    border-radius: var(--nuiget-radius-md);
+    background: var(--nuiget-color-widget-bg);
+    color: var(--nuiget-color-widget-fg);
+    box-shadow: 0 0 var(--nuiget-space-4) var(--nuiget-color-shadow);
+}
+
+.nuiget-dialog-header {
+    display: flex;
+    align-items: center;
+    gap: var(--nuiget-space-4);
+}
+
+.nuiget-dialog-title {
+    flex: 1;
+    min-width: 0;
+    margin: 0;
+    font-size: var(--nuiget-font-size-lg);
+    font-weight: 600;
+}
+
+.nuiget-dialog-description,
+.nuiget-dialog-body {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.nuiget-dialog-footer {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: var(--nuiget-space-4);
+}
+
+/* ── Popover ── */
+
+/*
+ * Fixed in the viewport at the place the script computed, so that no parent with `overflow: hidden` clips it.
+ * Hidden until placed: it is measured at the origin first.
+ */
+.nuiget-popover {
+    position: fixed;
+    left: var(--nuiget-popover-x, 0);
+    top: var(--nuiget-popover-y, 0);
+    z-index: var(--nuiget-z-popover);
+    max-width: calc(100vw - 2 * var(--nuiget-space-2));
+    max-height: calc(100vh - 2 * var(--nuiget-space-2));
+    overflow: auto;
+    padding: var(--nuiget-space-2);
+    border: 1px solid var(--nuiget-color-border);
+    border-radius: var(--nuiget-radius-md);
+    background: var(--nuiget-color-widget-bg);
+    color: var(--nuiget-color-widget-fg);
+    box-shadow: 0 var(--nuiget-space-1) var(--nuiget-space-4) var(--nuiget-color-shadow);
+}
+
+.nuiget-popover:not([data-placed]) {
+    visibility: hidden;
+}
+
+/* A popover opened from a dialog comes after it in the body; at the dialog's level, the later one is on top. */
+.nuiget-dialog-layer ~ .nuiget-popover {
+    z-index: var(--nuiget-z-dialog);
+}
+
+/* ── Tabs ── */
+
+.nuiget-tabs {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+}
+
+.nuiget-tablist {
+    display: flex;
+    flex: none;
+    gap: var(--nuiget-space-1);
+    border-block-end: 1px solid var(--nuiget-color-border);
+}
+
+.nuiget-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--nuiget-space-2);
+    min-height: var(--nuiget-target-min);
+    padding: 0 var(--nuiget-space-4);
+    /* Boxed by the contrast line in a high-contrast theme (unset elsewhere); the selection's underline comes after it. */
+    border: 1px solid var(--nuiget-color-contrast-border);
+    border-block-end: var(--nuiget-space-1) solid transparent;
+    background: transparent;
+    color: var(--nuiget-color-fg-muted);
+    font: inherit;
+    cursor: pointer;
+    transition: color var(--nuiget-duration-fast) var(--nuiget-easing);
+}
+
+.nuiget-tab:hover {
+    color: var(--nuiget-color-fg);
+}
+
+/* Selected is said by the line and the colour together, so it is not told by colour alone. */
+.nuiget-tab[aria-selected="true"] {
+    border-block-end-color: var(--nuiget-color-focus);
+    color: var(--nuiget-color-fg);
+}
+
+.nuiget-tabpanel {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+}
+
+/* ── Toolbar ── */
+
+.nuiget-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--nuiget-space-2);
+}
+
+/* A control pushed to the end of the row, such as the primary action of a list's bulk toolbar (P9.fix-4). */
+.nuiget-toolbar-end {
+    margin-inline-start: auto;
+}

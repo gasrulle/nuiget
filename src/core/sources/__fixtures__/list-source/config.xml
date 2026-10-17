@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<configuration>
+  <packageSources>
+    <clear />
+    <add key="Private Feed" value="https://feed.example/v3/index.json" />
+    <add key="Disabled Feed" value="https://disabled.example/v3/index.json" />
+    <add key="Local Packages" value="./packages" />
+  </packageSources>
+  <disabledPackageSources>
+    <add key="Disabled Feed" value="true" />
+  </disabledPackageSources>
+</configuration>

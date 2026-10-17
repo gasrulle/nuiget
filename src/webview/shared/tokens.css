@@ -1,0 +1,231 @@
+/*
+ * Design tokens of the nUIget 2.0 webviews (ADR-008). Custom properties only: no element rules, no reset.
+ * The entry stylesheet of a surface sets fonts and colours on `body` from these.
+ *
+ * Colours are aliases of the `--vscode-*` variables that VS Code puts on a webview's root element, so the
+ * light and the dark themes are covered without a rule of their own. High contrast, forced colours and
+ * reduced motion have one block each below. This file holds no colour literal. A control's high-contrast line is a
+ * `:root` token on a VS Code key that is unset outside the high-contrast themes, with a `transparent` fallback, so the
+ * high-contrast block stays three keys; the scrim is the one derived colour (`color-mix()`, P9.11).
+ */
+
+:root {
+    /* Spacing */
+    --nuiget-space-1: 2px;
+    --nuiget-space-2: 4px;
+    --nuiget-space-3: 6px;
+    --nuiget-space-4: 8px;
+    --nuiget-space-5: 12px;
+    --nuiget-space-6: 16px;
+    /* The smallest step: a hairline offset, such as the inline code's padding or the visually hidden margin. */
+    --nuiget-space-hairline: 1px;
+    /* The common left inset of the main panel: title, search box, tabs, toolbar, section headers and rows (P9.fix-6). */
+    --nuiget-inset: var(--nuiget-space-6);
+
+    /* Radius */
+    --nuiget-radius-sm: 2px;
+    --nuiget-radius-md: 4px;
+
+    /* Rows: compact in the sidebar, comfortable in the main panel. A compact row is as high as the smallest pointer target. */
+    --nuiget-row-height-compact: 24px;
+    /* D15 as amended 2026-10-17: the 1.x `.package-item` card, three lines with 12 px padding above and below; a minimum,
+       the list measures rows. */
+    --nuiget-row-height-comfortable: 78px;
+
+    /* Icons and the smallest pointer target */
+    --nuiget-icon-size-sm: 12px;
+    --nuiget-icon-size-md: 16px;
+    --nuiget-icon-size-lg: 24px;
+    --nuiget-icon-size-xl: 32px;
+    --nuiget-target-min: 24px;
+
+    /* The indent of a nested tree level: VS Code's default of `workbench.tree.indent`; the sidebar writes the setting's value on its root. */
+    --nuiget-tree-indent: 8px;
+
+    /* Scrollbars: as thick as VS Code's webview defaults draw them */
+    --nuiget-scrollbar-size: 10px;
+
+    /* Stacking order */
+    --nuiget-z-sticky: 1;
+    --nuiget-z-popover: 10;
+    --nuiget-z-dialog: 20;
+    --nuiget-z-toast: 30;
+
+    /* Motion */
+    --nuiget-duration-fast: 100ms;
+    --nuiget-duration-normal: 200ms;
+    --nuiget-easing: ease-out;
+
+    /* Typography, relative to the font size of the editor's UI */
+    --nuiget-font-size-sm: 0.85em;
+    --nuiget-font-size-md: 1em;
+    --nuiget-font-size-lg: 1.15em;
+    --nuiget-line-height: 1.4;
+    --nuiget-font-family: var(--vscode-font-family);
+    --nuiget-font-family-mono: var(--vscode-editor-font-family);
+
+    /* Colours: surfaces. What VS Code paints behind each webview, painted by the root as well: without an opaque
+       background in the document, axe measures text against white (theme.ui.test.ts). */
+    --nuiget-color-bg: var(--vscode-editor-background);
+    --nuiget-color-bg-sidebar: var(--vscode-sideBar-background);
+
+    /* Colours: text */
+    --nuiget-color-fg: var(--vscode-foreground);
+    --nuiget-color-fg-muted: var(--vscode-descriptionForeground, var(--vscode-foreground));
+    --nuiget-color-link: var(--vscode-textLink-foreground);
+    --nuiget-color-error: var(--vscode-errorForeground);
+    --nuiget-color-warning: var(--vscode-editorWarning-foreground);
+    --nuiget-color-info: var(--vscode-editorInfo-foreground);
+
+    /* Colours: lines, focus, elevation */
+    --nuiget-color-border: var(--vscode-widget-border, var(--vscode-panel-border));
+    --nuiget-color-focus: var(--vscode-focusBorder);
+    --nuiget-color-shadow: var(--vscode-widget-shadow, transparent);
+    --nuiget-color-progress: var(--vscode-progressBar-background);
+
+    /* Colours: the surface of a dialog or a popover, above the page */
+    --nuiget-color-widget-bg: var(--vscode-editorWidget-background);
+    --nuiget-color-widget-fg: var(--vscode-editorWidget-foreground, var(--vscode-foreground));
+    /* The page under a dialog: the editor background at 60 % (1.x). `color-mix()` is Chromium 111 (css.types.color.color-mix), inside the 114 baseline (N64). */
+    --nuiget-color-scrim: color-mix(in srgb, var(--vscode-editor-background) 60%, transparent);
+
+    /* Colours: the sidebar's section headers, as VS Code's own side-bar panes */
+    --nuiget-color-section-header-bg: var(--vscode-sideBarSectionHeader-background);
+    --nuiget-color-section-header-fg: var(--vscode-sideBarSectionHeader-foreground, var(--vscode-foreground));
+    --nuiget-color-section-header-border: var(--vscode-sideBarSectionHeader-border, transparent);
+
+    /* Colours: code blocks of a README and their syntax, as the editor's symbol and debug token colours */
+    --nuiget-color-code-bg: var(--vscode-textCodeBlock-background);
+    --nuiget-color-code-fg: var(--vscode-editor-foreground, var(--vscode-foreground));
+    /* Colours: README tables and block quotes, as the editor's keybinding table and Markdown preview */
+    --nuiget-color-table-header-bg: var(--vscode-keybindingTable-headerBackground, var(--vscode-editor-inactiveSelectionBackground));
+    --nuiget-color-table-row-alt-bg: var(--vscode-keybindingTable-rowsBackground, var(--vscode-editor-inactiveSelectionBackground));
+    --nuiget-color-blockquote-bg: var(--vscode-textBlockQuote-background);
+    --nuiget-color-blockquote-border: var(--vscode-textBlockQuote-border, var(--vscode-textLink-foreground));
+    --nuiget-color-syntax-keyword: var(--vscode-symbolIcon-keywordForeground, var(--vscode-editor-foreground));
+    --nuiget-color-syntax-type: var(--vscode-symbolIcon-classForeground, var(--vscode-editor-foreground));
+    --nuiget-color-syntax-function: var(--vscode-symbolIcon-functionForeground, var(--vscode-editor-foreground));
+    --nuiget-color-syntax-variable: var(--vscode-symbolIcon-variableForeground, var(--vscode-editor-foreground));
+    --nuiget-color-syntax-string: var(--vscode-debugTokenExpression-string, var(--vscode-editor-foreground));
+    --nuiget-color-syntax-number: var(--vscode-debugTokenExpression-number, var(--vscode-editor-foreground));
+    --nuiget-color-syntax-comment: var(--vscode-editorLineNumber-activeForeground, var(--vscode-descriptionForeground));
+
+    /* Colours: list rows */
+    --nuiget-color-list-hover-bg: var(--vscode-list-hoverBackground);
+    --nuiget-color-list-active-bg: var(--vscode-list-activeSelectionBackground);
+    --nuiget-color-list-active-fg: var(--vscode-list-activeSelectionForeground);
+    --nuiget-color-list-inactive-bg: var(--vscode-list-inactiveSelectionBackground);
+    /* The new version of an update row. The git "added" colour first: `charts.green` measures 4.33:1 on Light Modern's
+       white (below 4.5:1), the git colour 4.88 (light), 4.60 (dark), 7.19 (high contrast) and 9.31 (light high
+       contrast); `charts.green` only where the git extension is absent. */
+    --nuiget-color-version-new: var(--vscode-gitDecoration-addedResourceForeground, var(--vscode-charts-green));
+
+    /* Colours: badges, buttons, inputs */
+    --nuiget-color-badge-bg: var(--vscode-badge-background);
+    --nuiget-color-badge-fg: var(--vscode-badge-foreground);
+    --nuiget-color-button-bg: var(--vscode-button-background);
+    --nuiget-color-button-fg: var(--vscode-button-foreground);
+    --nuiget-color-button-hover-bg: var(--vscode-button-hoverBackground);
+    --nuiget-color-button-secondary-bg: var(--vscode-button-secondaryBackground);
+    --nuiget-color-button-secondary-fg: var(--vscode-button-secondaryForeground);
+    /* `button.border` is the contrast border in both high-contrast themes and unset elsewhere. */
+    --nuiget-color-button-border: var(--vscode-button-border, transparent);
+    /* The line a high-contrast theme draws around a control that has no colour of its own: a tab, a row's icon; unset elsewhere. */
+    --nuiget-color-contrast-border: var(--vscode-contrastBorder, transparent);
+    /* Check boxes and drop-downs as VS Code's own; set in every theme kind. */
+    --nuiget-color-checkbox-bg: var(--vscode-checkbox-background);
+    --nuiget-color-checkbox-fg: var(--vscode-checkbox-foreground);
+    --nuiget-color-checkbox-border: var(--vscode-checkbox-border);
+    --nuiget-color-dropdown-bg: var(--vscode-dropdown-background);
+    --nuiget-color-dropdown-fg: var(--vscode-dropdown-foreground);
+    --nuiget-color-dropdown-border: var(--vscode-dropdown-border);
+    --nuiget-color-input-bg: var(--vscode-input-background);
+    --nuiget-color-input-fg: var(--vscode-input-foreground);
+    --nuiget-color-input-border: var(--vscode-input-border, transparent);
+    --nuiget-color-input-placeholder: var(--vscode-input-placeholderForeground);
+
+    /* Colours: scrollbars */
+    --nuiget-color-scrollbar: var(--vscode-scrollbarSlider-background);
+    --nuiget-color-scrollbar-hover: var(--vscode-scrollbarSlider-hoverBackground);
+    --nuiget-color-scrollbar-active: var(--vscode-scrollbarSlider-activeBackground);
+}
+
+/* High contrast, dark and light: lines carry what colour differences cannot; nothing casts a shadow. */
+body.vscode-high-contrast,
+body.vscode-high-contrast-light {
+    --nuiget-color-border: var(--vscode-contrastBorder);
+    --nuiget-color-focus: var(--vscode-contrastActiveBorder, var(--vscode-focusBorder));
+    --nuiget-color-shadow: transparent;
+}
+
+/* Forced colours (Windows contrast themes): the system's own palette, by keyword. */
+@media (forced-colors: active) {
+    :root {
+        --nuiget-color-bg: Canvas;
+        --nuiget-color-bg-sidebar: Canvas;
+        --nuiget-color-fg: CanvasText;
+        --nuiget-color-fg-muted: GrayText;
+        --nuiget-color-link: LinkText;
+        --nuiget-color-version-new: CanvasText;
+        --nuiget-color-error: CanvasText;
+        --nuiget-color-warning: CanvasText;
+        --nuiget-color-info: CanvasText;
+        --nuiget-color-border: CanvasText;
+        --nuiget-color-focus: Highlight;
+        --nuiget-color-shadow: transparent;
+        --nuiget-color-progress: Highlight;
+        --nuiget-color-widget-bg: Canvas;
+        --nuiget-color-widget-fg: CanvasText;
+        --nuiget-color-section-header-bg: Canvas;
+        --nuiget-color-section-header-fg: CanvasText;
+        --nuiget-color-section-header-border: CanvasText;
+        --nuiget-color-code-bg: Canvas;
+        --nuiget-color-code-fg: CanvasText;
+        --nuiget-color-table-header-bg: Canvas;
+        --nuiget-color-table-row-alt-bg: Canvas;
+        --nuiget-color-blockquote-bg: Canvas;
+        --nuiget-color-blockquote-border: CanvasText;
+        --nuiget-color-syntax-keyword: CanvasText;
+        --nuiget-color-syntax-type: CanvasText;
+        --nuiget-color-syntax-function: CanvasText;
+        --nuiget-color-syntax-variable: CanvasText;
+        --nuiget-color-syntax-string: CanvasText;
+        --nuiget-color-syntax-number: CanvasText;
+        --nuiget-color-syntax-comment: CanvasText;
+        --nuiget-color-list-hover-bg: Canvas;
+        --nuiget-color-list-active-bg: Highlight;
+        --nuiget-color-list-active-fg: HighlightText;
+        --nuiget-color-list-inactive-bg: Canvas;
+        --nuiget-color-badge-bg: Canvas;
+        --nuiget-color-badge-fg: CanvasText;
+        --nuiget-color-button-bg: ButtonFace;
+        --nuiget-color-button-fg: ButtonText;
+        --nuiget-color-button-hover-bg: Highlight;
+        --nuiget-color-button-secondary-bg: ButtonFace;
+        --nuiget-color-button-secondary-fg: ButtonText;
+        --nuiget-color-button-border: ButtonText;
+        --nuiget-color-contrast-border: CanvasText;
+        --nuiget-color-checkbox-bg: Field;
+        --nuiget-color-checkbox-fg: FieldText;
+        --nuiget-color-checkbox-border: FieldText;
+        --nuiget-color-dropdown-bg: Field;
+        --nuiget-color-dropdown-fg: FieldText;
+        --nuiget-color-dropdown-border: FieldText;
+        --nuiget-color-scrim: Canvas;
+        --nuiget-color-input-bg: Field;
+        --nuiget-color-input-fg: FieldText;
+        --nuiget-color-input-border: FieldText;
+        --nuiget-color-input-placeholder: GrayText;
+        --nuiget-color-scrollbar: ButtonText;
+        --nuiget-color-scrollbar-hover: Highlight;
+        --nuiget-color-scrollbar-active: Highlight;
+    }
+}
+
+/* Reduced motion: every transition and animation that uses the duration tokens stops moving. */
+@media (prefers-reduced-motion: reduce) {
+    :root {
+        --nuiget-duration-fast: 0ms;
+        --nuiget-duration-normal: 0ms;
+    }
+}

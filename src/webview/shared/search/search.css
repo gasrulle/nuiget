@@ -1,0 +1,108 @@
+/*
+ * The search box of both surfaces (SearchBox.tsx): the box keeps the class its surface gives it; the popup with the
+ * prefixes, the suggestions or the versions hangs under it, over the content, as wide as the box.
+ */
+
+.nuiget-search-box {
+    position: relative;
+}
+
+/* Clear and Filters sit inside the box at its end; the text stops before the buttons shown (Filters alone while empty). */
+.nuiget-search-box > input {
+    padding-inline-end: var(--nuiget-target-min);
+}
+
+.nuiget-search-box--clearable > input {
+    padding-inline-end: calc(2 * var(--nuiget-target-min));
+}
+
+.nuiget-search-box > input[type="search"]::-webkit-search-cancel-button {
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+.nuiget-search-actions {
+    position: absolute;
+    inset-inline-end: var(--nuiget-space-1);
+    top: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+}
+
+.nuiget-search-popup {
+    position: absolute;
+    z-index: var(--nuiget-z-popover);
+    top: 100%;
+    right: 0;
+    left: 0;
+    max-height: 16em;
+    margin: var(--nuiget-space-1) 0 0;
+    padding: var(--nuiget-space-1) 0;
+    overflow-y: auto;
+    border: 1px solid var(--nuiget-color-border);
+    border-radius: var(--nuiget-radius-sm);
+    background: var(--nuiget-color-widget-bg);
+    box-shadow: 0 2px 8px var(--nuiget-color-shadow);
+    color: var(--nuiget-color-widget-fg);
+}
+
+/* The versions level: the suggestion it belongs to; a click goes back to the suggestions. */
+.nuiget-search-popup-header {
+    display: flex;
+    align-items: center;
+    min-height: var(--nuiget-target-min);
+    padding: 0 var(--nuiget-space-3);
+    color: var(--nuiget-color-fg-muted);
+    font-weight: 600;
+    cursor: pointer;
+}
+
+/* The name of the source over its suggestions, when they come from two or more sources (1.x). */
+.nuiget-search-group-header {
+    padding: var(--nuiget-space-2) var(--nuiget-space-3) var(--nuiget-space-1);
+    color: var(--nuiget-color-fg-muted);
+    font-size: var(--nuiget-font-size-sm);
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.nuiget-search-option {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--nuiget-space-4);
+    min-height: var(--nuiget-target-min);
+    padding: 0 var(--nuiget-space-3);
+    cursor: pointer;
+}
+
+.nuiget-search-option:hover {
+    background: var(--nuiget-color-list-hover-bg);
+}
+
+.nuiget-search-option--active,
+.nuiget-search-option--active:hover {
+    background: var(--nuiget-color-list-active-bg);
+    color: var(--nuiget-color-list-active-fg);
+}
+
+/* A row that is no choice: searching, loading the versions, an error. */
+.nuiget-search-option--disabled,
+.nuiget-search-option--disabled:hover {
+    background: none;
+    color: var(--nuiget-color-fg-muted);
+    cursor: default;
+}
+
+.nuiget-search-option--version {
+    padding-inline-start: var(--nuiget-space-5);
+}
+
+.nuiget-search-option-expand {
+    color: var(--nuiget-color-fg-muted);
+}
+
+.nuiget-search-option--active .nuiget-search-option-expand {
+    color: inherit;
+}

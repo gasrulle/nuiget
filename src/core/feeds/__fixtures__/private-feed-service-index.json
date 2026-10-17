@@ -1,0 +1,10 @@
+{
+  "version": "3.0.0",
+  "resources": [
+    { "@id": "https://feed.example/nuget/v3/search", "@type": ["SearchQueryService", "SearchQueryService/3.0.0-beta"] },
+    { "@id": "https://feed.example/nuget/v3/autocomplete", "@type": "SearchAutocompleteService" },
+    { "@id": "https://feed.example/nuget/v3/registration-gz-semver2/", "@type": "RegistrationsBaseUrl/3.6.0" },
+    { "@id": "https://feed.example/nuget/v3/registration/", "@type": "RegistrationsBaseUrl" },
+    { "@id": "https://feed.example/nuget/v3/flatcontainer/", "@type": "PackageBaseAddress/3.0.0" }
+  ]
+}

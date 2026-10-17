@@ -1,0 +1,178 @@
+{
+  "sdk": "10.0.401",
+  "probedOn": "2026-10-15",
+  "platform": "darwin-arm64",
+  "commands": [
+    {
+      "id": "nuget-org-take-2",
+      "argv": [
+        "dotnet",
+        "package",
+        "search",
+        "Newtonsoft.Json",
+        "--format",
+        "json",
+        "--verbosity",
+        "normal",
+        "--source",
+        "https://api.nuget.org/v3/index.json",
+        "--take",
+        "2"
+      ],
+      "exitCode": 0,
+      "stdout": "{\n  \"version\": 2,\n  \"problems\": [],\n  \"searchResult\": [\n    {\n      \"sourceName\": \"nuget.org\",\n      \"packages\": [\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"latestVersion\": \"13.0.4\",\n          \"totalDownloads\": 9325394018,\n          \"owners\": \"dotnetfoundation, jamesnk, newtonsoft\"\n        },\n        {\n          \"id\": \"Newtonsoft.Json.Bson\",\n          \"latestVersion\": \"1.0.3\",\n          \"totalDownloads\": 1414154725,\n          \"owners\": \"dotnetfoundation, jamesnk, newtonsoft\"\n        }\n      ]\n    }\n  ]\n}\n",
+      "stderr": "",
+      "note": "Ordinary search: latestVersion, totalDownloads and owners per package; sourceName is the configured name of the source."
+    },
+    {
+      "id": "nuget-org-exact-match",
+      "argv": [
+        "dotnet",
+        "package",
+        "search",
+        "Newtonsoft.Json",
+        "--format",
+        "json",
+        "--verbosity",
+        "normal",
+        "--source",
+        "https://api.nuget.org/v3/index.json",
+        "--exact-match"
+      ],
+      "exitCode": 0,
+      "stdout": "{\n  \"version\": 2,\n  \"problems\": [],\n  \"searchResult\": [\n    {\n      \"sourceName\": \"nuget.org\",\n      \"packages\": [\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"version\": \"3.5.8\"\n        },\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"version\": \"4.0.1\"\n        },\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"version\": \"4.0.2\"\n        },\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"version\": \"4.0.3\"\n        },\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"version\": \"4.0.4\"\n        },\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"version\": \"4.0.5\"\n        },\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"version\": \"4.0.6\"\n        },\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"version\": \"4.0.7\"\n        },\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"version\": \"4.0.8\"\n        },\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"version\": \"4.5.1\"\n        },\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"version\": \"4.5.2\"\n        },\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"version\": \"4.5.3\"\n        },\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"version\": \"4.5.4\"\n        },\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"version\": \"4.5.5\"\n        },\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"version\": \"4.5.6\"\n        },\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"version\": \"4.5.7\"\n        },\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"version\": \"4.5.8\"\n        },\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"version\": \"4.5.9\"\n        },\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"version\": \"4.5.10\"\n        },\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"version\": \"4.5.11\"\n        },\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"version\": \"5.0.1\"\n        },\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"version\": \"5.0.2\"\n        },\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"version\": \"5.0.3\"\n        },\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"version\": \"5.0.4\"\n        },\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"version\": \"5.0.5\"\n        },\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"version\": \"5.0.6\"\n        },\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"version\": \"5.0.7\"\n        },\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"version\": \"5.0.8\"\n        },\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"version\": \"6.0.1\"\n        },\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"version\": \"6.0.2\"\n        },\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"version\": \"6.0.3\"\n        },\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"version\": \"6.0.4\"\n        },\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"version\": \"6.0.5\"\n        },\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"version\": \"6.0.6\"\n        },\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"version\": \"6.0.7\"\n        },\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"version\": \"6.0.8\"\n        },\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"version\": \"7.0.1\"\n        },\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"version\": \"8.0.1\"\n        },\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"version\": \"8.0.2\"\n        },\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"version\": \"8.0.3\"\n        },\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"version\": \"9.0.1\"\n        },\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"version\": \"10.0.1\"\n        },\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"version\": \"10.0.2\"\n        },\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"version\": \"10.0.3\"\n        },\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"version\": \"11.0.1\"\n        },\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"version\": \"11.0.2\"\n        },\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"version\": \"12.0.1\"\n        },\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"version\": \"12.0.2\"\n        },\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"version\": \"12.0.3\"\n        },\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"version\": \"13.0.1\"\n        },\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"version\": \"13.0.2\"\n        },\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"version\": \"13.0.3\"\n        },\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"version\": \"13.0.4\"\n        }\n      ]\n    }\n  ]\n}\n",
+      "stderr": "",
+      "note": "--exact-match: one entry per version, ascending, field version, no totalDownloads or owners."
+    },
+    {
+      "id": "exact-match-take-2",
+      "argv": [
+        "dotnet",
+        "package",
+        "search",
+        "Newtonsoft.Json",
+        "--format",
+        "json",
+        "--verbosity",
+        "normal",
+        "--source",
+        "https://api.nuget.org/v3/index.json",
+        "--exact-match",
+        "--take",
+        "2"
+      ],
+      "exitCode": 0,
+      "stdout": "{\n  \"version\": 2,\n  \"problems\": [],\n  \"searchResult\": [\n    {\n      \"sourceName\": \"nuget.org\",\n      \"packages\": [\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"version\": \"3.5.8\"\n        },\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"version\": \"4.0.1\"\n        },\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"version\": \"4.0.2\"\n        },\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"version\": \"4.0.3\"\n        },\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"version\": \"4.0.4\"\n        },\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"version\": \"4.0.5\"\n        },\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"version\": \"4.0.6\"\n        },\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"version\": \"4.0.7\"\n        },\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"version\": \"4.0.8\"\n        },\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"version\": \"4.5.1\"\n        },\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"version\": \"4.5.2\"\n        },\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"version\": \"4.5.3\"\n        },\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"version\": \"4.5.4\"\n        },\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"version\": \"4.5.5\"\n        },\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"version\": \"4.5.6\"\n        },\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"version\": \"4.5.7\"\n        },\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"version\": \"4.5.8\"\n        },\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"version\": \"4.5.9\"\n        },\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"version\": \"4.5.10\"\n        },\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"version\": \"4.5.11\"\n        },\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"version\": \"5.0.1\"\n        },\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"version\": \"5.0.2\"\n        },\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"version\": \"5.0.3\"\n        },\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"version\": \"5.0.4\"\n        },\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"version\": \"5.0.5\"\n        },\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"version\": \"5.0.6\"\n        },\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"version\": \"5.0.7\"\n        },\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"version\": \"5.0.8\"\n        },\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"version\": \"6.0.1\"\n        },\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"version\": \"6.0.2\"\n        },\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"version\": \"6.0.3\"\n        },\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"version\": \"6.0.4\"\n        },\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"version\": \"6.0.5\"\n        },\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"version\": \"6.0.6\"\n        },\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"version\": \"6.0.7\"\n        },\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"version\": \"6.0.8\"\n        },\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"version\": \"7.0.1\"\n        },\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"version\": \"8.0.1\"\n        },\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"version\": \"8.0.2\"\n        },\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"version\": \"8.0.3\"\n        },\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"version\": \"9.0.1\"\n        },\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"version\": \"10.0.1\"\n        },\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"version\": \"10.0.2\"\n        },\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"version\": \"10.0.3\"\n        },\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"version\": \"11.0.1\"\n        },\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"version\": \"11.0.2\"\n        },\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"version\": \"12.0.1\"\n        },\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"version\": \"12.0.2\"\n        },\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"version\": \"12.0.3\"\n        },\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"version\": \"13.0.1\"\n        },\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"version\": \"13.0.2\"\n        },\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"version\": \"13.0.3\"\n        },\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"version\": \"13.0.4\"\n        }\n      ]\n    }\n  ]\n}\n",
+      "stderr": "",
+      "note": "--take 2 together with --exact-match is ignored on this SDK: all 53 versions come back, oldest first, the same as without --take. search.ts never passes the two together."
+    },
+    {
+      "id": "nuget-org-plus-missing-path",
+      "argv": [
+        "dotnet",
+        "package",
+        "search",
+        "Newtonsoft.Json",
+        "--format",
+        "json",
+        "--verbosity",
+        "normal",
+        "--source",
+        "https://api.nuget.org/v3/index.json",
+        "--source",
+        "/nonexistent/feed",
+        "--take",
+        "2"
+      ],
+      "exitCode": 0,
+      "stdout": "{\n  \"version\": 2,\n  \"problems\": [],\n  \"searchResult\": [\n    {\n      \"sourceName\": \"/nonexistent/feed\",\n      \"problems\": [\n        {\n          \"text\": \"The path \\u0027/nonexistent/feed\\u0027 for the selected source could not be resolved.\",\n          \"problemType\": \"Error\"\n        }\n      ],\n      \"packages\": []\n    },\n    {\n      \"sourceName\": \"nuget.org\",\n      \"packages\": [\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"latestVersion\": \"13.0.4\",\n          \"totalDownloads\": 9325394018,\n          \"owners\": \"dotnetfoundation, jamesnk, newtonsoft\"\n        },\n        {\n          \"id\": \"Newtonsoft.Json.Bson\",\n          \"latestVersion\": \"1.0.3\",\n          \"totalDownloads\": 1414154725,\n          \"owners\": \"dotnetfoundation, jamesnk, newtonsoft\"\n        }\n      ]\n    }\n  ]\n}\n",
+      "stderr": "",
+      "note": "A local path that does not exist is a per-source problem with exit code 0; the other source still answers. sourceName is the --source value as given."
+    },
+    {
+      "id": "https-unresolvable-source",
+      "argv": [
+        "dotnet",
+        "package",
+        "search",
+        "Newtonsoft.Json",
+        "--format",
+        "json",
+        "--verbosity",
+        "normal",
+        "--source",
+        "https://does-not-exist.invalid/v3/index.json",
+        "--take",
+        "2"
+      ],
+      "exitCode": 0,
+      "stdout": "{\n  \"version\": 2,\n  \"problems\": [],\n  \"searchResult\": [\n    {\n      \"sourceName\": \"https://does-not-exist.invalid/v3/index.json\",\n      \"problems\": [\n        {\n          \"text\": \"Unable to load the service index for source https://does-not-exist.invalid/v3/index.json.\",\n          \"problemType\": \"Error\"\n        }\n      ],\n      \"packages\": []\n    }\n  ]\n}\n",
+      "stderr": "",
+      "note": "An https source whose host does not resolve: per-source problem, exit code 0, no packages."
+    },
+    {
+      "id": "http-source-refused-exit-1",
+      "argv": [
+        "dotnet",
+        "package",
+        "search",
+        "Newtonsoft.Json",
+        "--format",
+        "json",
+        "--verbosity",
+        "normal",
+        "--source",
+        "http://does-not-exist.invalid/v3/index.json",
+        "--take",
+        "2"
+      ],
+      "exitCode": 1,
+      "stdout": "{\n  \"version\": 2,\n  \"problems\": [\n    {\n      \"text\": \"You are running the \\u0027search\\u0027 operation with an \\u0027HTTP\\u0027 source, \\u0027http://does-not-exist.invalid/v3/index.json [http://does-not-exist.invalid/v3/index.json]\\u0027. NuGet requires HTTPS sources. To use HTTP sources, you must explicitly set \\u0027allowInsecureConnections\\u0027 to true in your NuGet.Config file. Refer to https://aka.ms/nuget-https-everywhere for more information.\",\n      \"problemType\": \"Error\"\n    }\n  ],\n  \"searchResult\": []\n}\n",
+      "stderr": "",
+      "note": "An http source without allowInsecureConnections: a top-level problem, exit code 1, a JSON document on stdout and an empty searchResult."
+    },
+    {
+      "id": "config-named-http-source",
+      "argv": [
+        "dotnet",
+        "package",
+        "search",
+        "Newtonsoft.Json",
+        "--format",
+        "json",
+        "--verbosity",
+        "normal",
+        "--take",
+        "2"
+      ],
+      "exitCode": 0,
+      "stdout": "{\n  \"version\": 2,\n  \"problems\": [],\n  \"searchResult\": [\n    {\n      \"sourceName\": \"plain\",\n      \"problems\": [\n        {\n          \"text\": \"Unable to load the service index for source http://does-not-exist.invalid/v3/index.json.\",\n          \"problemType\": \"Error\"\n        }\n      ],\n      \"packages\": []\n    }\n  ]\n}\n",
+      "stderr": "",
+      "note": "Run in a directory whose nuget.config has <clear/> and <add key=\"plain\" value=\"http://does-not-exist.invalid/v3/index.json\" allowInsecureConnections=\"true\"/>: sourceName is the configured name, the failure a per-source problem with exit code 0, and no warn line appears on stdout."
+    },
+    {
+      "id": "prefix-lines-synthetic",
+      "synthetic": true,
+      "argv": [
+        "dotnet",
+        "package",
+        "search",
+        "Newtonsoft.Json",
+        "--format",
+        "json",
+        "--verbosity",
+        "normal",
+        "--source",
+        "https://api.nuget.org/v3/index.json",
+        "--source",
+        "/nonexistent/feed",
+        "--take",
+        "2"
+      ],
+      "exitCode": 0,
+      "stdout": "info : X.509 certificate chain validation will use the fallback certificate bundle at '<dotnet-root>/sdk/10.0.401/trustedroots/codesignctl.pem'.\ninfo : X.509 certificate chain validation will use the fallback certificate bundle at '<dotnet-root>/sdk/10.0.401/trustedroots/timestampctl.pem'.\nwarn : --no-restore|-n flag was used. No compatibility check will be done and the added package reference will be unconditional.\n{\n  \"version\": 2,\n  \"problems\": [],\n  \"searchResult\": [\n    {\n      \"sourceName\": \"/nonexistent/feed\",\n      \"problems\": [\n        {\n          \"text\": \"The path \\u0027/nonexistent/feed\\u0027 for the selected source could not be resolved.\",\n          \"problemType\": \"Error\"\n        }\n      ],\n      \"packages\": []\n    },\n    {\n      \"sourceName\": \"nuget.org\",\n      \"packages\": [\n        {\n          \"id\": \"Newtonsoft.Json\",\n          \"latestVersion\": \"13.0.4\",\n          \"totalDownloads\": 9325394018,\n          \"owners\": \"dotnetfoundation, jamesnk, newtonsoft\"\n        },\n        {\n          \"id\": \"Newtonsoft.Json.Bson\",\n          \"latestVersion\": \"1.0.3\",\n          \"totalDownloads\": 1414154725,\n          \"owners\": \"dotnetfoundation, jamesnk, newtonsoft\"\n        }\n      ]\n    }\n  ]\n}\n",
+      "stderr": "",
+      "note": "Constructed, not captured: the three prefix lines are verbatim from src/core/cli/__fixtures__/sdk-probes/10.0.401.json:37 (the same SDK writing info and warn lines to stdout where the fallback certificate bundle applies), followed by the stdout of nuget-org-plus-missing-path. No capture above shows a prefix line on macOS; this case keeps the tolerant extraction tested."
+    }
+  ]
+}

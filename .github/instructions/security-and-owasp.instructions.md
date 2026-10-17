@@ -15,8 +15,8 @@ Do not apply browser-to-browser origin checks blindly to VS Code's host/webview
 messaging bridge; validate the bridge's message payloads in the backend.
 Server authentication, cookies, rate limiting, and framework-specific examples
 below apply only if such a server is explicitly introduced. They do not
-authorize dependencies, services, or infrastructure changes. The repository's
-documented `npm install` exception takes precedence over generic `npm ci` advice.
+authorize dependencies, services, or infrastructure changes. CI and packaging
+install with `npm ci`, so the committed lockfile is what gets built and tested.
 
 Comprehensive security rules for web application development. Every anti-pattern includes a severity classification, detection method, OWASP 2025 reference, and corrective code examples.
 

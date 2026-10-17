@@ -43,6 +43,7 @@
       "Bash(npm run check:vsix)",
       "Bash(npm run docs:protocol)",
       "Bash(npm run docs:protocol:check)",
+      "Bash(npm run docs:check)",
       "Bash(node scripts/*)",
       "Bash(node esbuild.mjs --v2*)",
       "Bash(npm run watch:v2)",
@@ -65,7 +66,10 @@
       "Bash(git push origin labs/*)",
       "Bash(gh pr create:*)",
       "Bash(gh pr list:*)",
-      "Bash(gh pr ready:*)"
+      "Bash(gh pr ready:*)",
+      "Bash(node scripts/perf-baseline.mjs:*)",
+      "Bash(npm run perf:baseline:*)",
+      "Bash(node scripts/probe-sdk.mjs:*)"
     ],
     "ask": [
       "Bash(npm version:*)"
@@ -80,6 +84,21 @@
       "Bash(git push origin HEAD:main)",
       "Bash(git push origin main)",
       "Bash(gh pr merge:*)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write|Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/scripts/hooks/guard.mjs\"",
+            "timeout": 10,
+            "onFailure": "block"
+          }
+        ]
+      }
     ]
   }
 }

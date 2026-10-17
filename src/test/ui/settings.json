@@ -3,5 +3,6 @@
     "workbench.colorTheme": "Default Dark Modern",
     "extensions.ignoreRecommendations": true,
     "telemetry.telemetryLevel": "off",
-    "update.mode": "none"
+    "update.mode": "none",
+    "git.openRepositoryInParentFolders": "never"
 }

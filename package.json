@@ -2,7 +2,7 @@
     "name": "nuiget",
     "displayName": "nUIget - A NuGet Package Manager",
     "description": "A NuGet package manager with Visual Studio-style UI. Search, install, update, and remove packages across multiple sources.",
-    "version": "1.18.9",
+    "version": "2.0.0",
     "publisher": "Gasrulle",
     "license": "MIT",
     "icon": "resources/icon.png",
@@ -264,17 +264,10 @@
                     "default": "quicksearch",
                     "enumDescriptions": [
                         "Show quick search suggestions as you type (fast, lightweight)",
-                        "Perform full search as you type (slower, shows full results)",
-                        "No automatic search while typing (only on Enter or button click)"
+                        "Main panel: perform the full search as you type (slower, shows full results)",
+                        "Main panel: no automatic search while typing; Enter searches"
                     ],
-                    "description": "Controls what happens when typing in the search box after a short delay."
-                },
-                "nuiget.recentSearchesLimit": {
-                    "type": "integer",
-                    "default": 5,
-                    "minimum": 0,
-                    "maximum": 10,
-                    "description": "Maximum number of recent searches to remember. Set to 0 to disable search history."
+                    "description": "Controls what typing in the main panel's search box does after a short delay. The sidebar searches as you type in every mode."
                 },
                 "nuiget.searchResultLimit": {
                     "type": "integer",
@@ -286,7 +279,7 @@
                 "nuiget.enablePerformanceLogging": {
                     "type": "boolean",
                     "default": false,
-                    "description": "Emit [perf] timing lines to the nUIget output channel for hot user-perceived flows (panel open, project switch, install/update/remove, search, update check). Use to diagnose slow operations or compare branches; keep off in normal use."
+                    "description": "Writes the webviews' [perf] marks (webview ready, first useful render) to the nUIget output channel at Info level instead of Debug. The duration of every dotnet command is always logged. Keep it off in normal use."
                 }
             }
         }
@@ -294,13 +287,19 @@
     "scripts": {
         "vscode:prepublish": "npm run package",
         "compile": "npm run check-types && npm run lint && node esbuild.mjs",
-        "watch": "npm-run-all -p watch:*",
+        "watch": "npm-run-all -p watch:esbuild watch:tsc",
         "watch:esbuild": "node esbuild.mjs --watch",
         "watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
         "package": "npm run check-types && npm run lint && node esbuild.mjs --production",
-        "check-types": "tsc --noEmit",
-        "package:vsix": "npm install && npm run check-types && npm test && npm run package && node -e \"const v=require('./package.json').version;require('child_process').execSync('npx vsce package --out nuiget-v'+v+'.vsix',{stdio:'inherit'})\"",
-        "lint": "eslint src",
+        "check-types": "tsc --noEmit && tsc -p tsconfig.test.json --noEmit && tsc -p tsconfig.vitest.json",
+        "check:vsix": "node scripts/check-vsix-contents.mjs",
+        "docs:protocol": "node scripts/gen-protocol-docs.mjs",
+        "docs:protocol:check": "node scripts/gen-protocol-docs.mjs --check",
+        "docs:check": "node scripts/check-docs-drift.mjs && npm run docs:protocol:check",
+        "check:matrix": "node scripts/check-regression-matrix.mjs",
+        "perf:baseline": "node scripts/perf-baseline.mjs",
+        "package:vsix": "npm ci --no-audit --no-fund && npm run check-types && npm test && npm run package && node -e \"const v=require('./package.json').version;require('child_process').execSync('npx vsce package --out nuiget-v'+v+'.vsix',{stdio:'inherit'})\"",
+        "lint": "eslint src scripts esbuild.mjs eslint.config.mjs vitest.config.mts .vscode-test.mjs",
         "test": "vitest run",
         "test:watch": "vitest",
         "test:backend": "vitest run --project backend",
@@ -308,7 +307,7 @@
         "test:integration": "vitest run --project integration",
         "test:coverage": "vitest run --coverage",
         "test:e2e": "tsc -p tsconfig.test.json && vscode-test",
-        "test:ui": "tsc -p tsconfig.test.json && npm run package:vsix && extest setup-and-run out/test/ui/*.ui.test.js --code_version max --code_settings src/test/ui/settings.json --open_resource src/test/e2e/fixtures/e2e-workspace",
+        "test:ui": "tsc -p tsconfig.test.json && extest setup-and-run out/test/ui/v2/*.ui.test.js --code_version max --code_settings src/test/ui/settings.json --open_resource src/test/e2e/fixtures/e2e-workspace",
         "bench": "node src/test/benchmarks/run.mjs run",
         "bench:save": "node src/test/benchmarks/run.mjs save",
         "bench:compare": "node src/test/benchmarks/run.mjs compare"
@@ -319,6 +318,7 @@
         "@testing-library/jest-dom": "^7.0.1",
         "@testing-library/react": "^16.3.3",
         "@testing-library/user-event": "^14.6.7",
+        "@types-host/node": "npm:@types/node@18.19.130",
         "@types/mocha": "^10.0.10",
         "@types/node": "^24.19.2",
         "@types/react": "^19.3.0",
@@ -334,6 +334,7 @@
         "eslint-plugin-react-hooks": "^7.1.1",
         "globals": "^17.13.0",
         "jsdom": "^30.1.2",
+        "jest-axe": "^11.0.0",
         "mocha": "^12.0.3",
         "msw": "^2.15.0",
         "npm-run-all2": "^9.0.3",
@@ -352,10 +353,5 @@
         "marked-highlight": "^2.2.4",
         "react": "^19.3.0",
         "react-dom": "^19.3.0"
-    },
-    "overrides": {
-        "@vscode/test-cli": {
-            "mocha": "$mocha"
-        }
     }
 }

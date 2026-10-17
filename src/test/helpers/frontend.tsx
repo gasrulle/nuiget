@@ -4,7 +4,7 @@
  */
 import { render, type RenderOptions } from '@testing-library/react';
 import React from 'react';
-import { vi } from 'vitest';
+import { vi, type Mock } from 'vitest';
 
 interface MockVsCodeApi {
     postMessage: ReturnType<typeof vi.fn>;
@@ -17,8 +17,8 @@ interface MockVsCodeApi {
  * Useful for asserting on postMessage calls.
  */
 export function getMockVsCodeApi(): MockVsCodeApi {
-    const acquireFn = globalThis.acquireVsCodeApi as ReturnType<typeof vi.fn>;
-    return acquireFn() as MockVsCodeApi;
+    const { acquireVsCodeApi } = globalThis as unknown as { acquireVsCodeApi: Mock<() => MockVsCodeApi> };
+    return acquireVsCodeApi();
 }
 
 /**

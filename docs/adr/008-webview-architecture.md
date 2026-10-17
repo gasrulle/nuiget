@@ -1,6 +1,6 @@
 # ADR-008: Webview architecture — shared slices, primitives, two entry points
 
-Status: accepted · Date: 2026-10-10
+Status: accepted · Date: 2026-10-10 · Amended: 2026-10-12 (plan item P1.1b: generation on responses; plan item P2.9: per-key generations on `resources/invalidated`)
 
 ## Context
 
@@ -8,13 +8,20 @@ Status: accepted · Date: 2026-10-10
 aggregation and sync; `InstalledTab` took 57 props; the sidebar re-implemented the same logic;
 4,200 lines of CSS with 71 hard-coded colours and no shared tokens; no dialog semantics.
 
+The amendment of 2026-10-12 records the contract changes of plan item P1.1b and plan decisions D7 and
+D13 (`docs/plans/2026-10-11-nuiget-2.0-execution-plan.md`, §1).
+
 ## Decision
 
 - Two entry points (`webview/main`, `webview/sidebar`) over **shared source modules**
   (`webview/shared`). Separate bundles stay (two JS environments); shared chunks only if a
   metafile shows a win.
 - `shared/bus/useMessageBus` wraps the protocol: `request(type, payload, { signal, onChunk })`,
-  `onEvent(type, handler)`; stale responses are discarded by id, stale resources by generation.
+  `onEvent(type, handler)`; stale responses are discarded by id, stale resources by generation:
+  `request` exposes the `generation` of the ok response, so `useResource` can discard a result whose
+  generation is below the one listed for its key in the latest `resources/invalidated` event
+  (`keys[].generation`; the event's own `generation` is a sequence number and is never compared with
+  a response). A key absent from `keys` has nothing to discard. Chunks are discarded by id only.
 - `shared/store`: reducer slices with narrow contexts — `session` (committed + pending),
   `projects`, `installed`, `updates`, `transitive`, `search`, `details`, `allProjects`, `sources`,
   `ops`. A `useResource(key, requester)` hook subscribes to `resources/invalidated` and re-requests.

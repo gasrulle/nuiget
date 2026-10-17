@@ -1,0 +1,7 @@
+Registered Sources:
+  1.  Private Feed [Enabled]
+      https://feed.example/v3/index.json
+  2.  Disabled Feed [Disabled]
+      https://disabled.example/v3/index.json
+  3.  Local Packages [Enabled]
+      {dir}/packages

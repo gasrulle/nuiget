@@ -1,0 +1,735 @@
+/*
+ * Layout of the 2.0 main panel. The primitives bring their own rules (../shared/primitives/primitives.css); sizes
+ * and colours are tokens of ../shared/tokens.css. VS Code styles the body of a webview itself (font, colour,
+ * a side padding); only the padding is taken back here.
+ */
+
+body {
+    margin: 0;
+    padding: 0;
+}
+
+.nuiget-main {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    background: var(--nuiget-color-bg);
+    color: var(--nuiget-color-fg);
+    font-family: var(--nuiget-font-family);
+    line-height: var(--nuiget-line-height);
+}
+
+.nuiget-main-header {
+    display: flex;
+    flex: none;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--nuiget-space-4);
+    padding: var(--nuiget-space-4) var(--nuiget-inset) var(--nuiget-space-2);
+}
+
+.nuiget-main-select {
+    min-width: 0;
+    max-width: 20em;
+    min-height: var(--nuiget-target-min);
+    padding: 0 var(--nuiget-space-3);
+    border: 1px solid var(--nuiget-color-dropdown-border);
+    border-radius: var(--nuiget-radius-sm);
+    background: var(--nuiget-color-dropdown-bg);
+    color: var(--nuiget-color-dropdown-fg);
+    font: inherit;
+}
+
+.nuiget-main-select:disabled {
+    color: var(--nuiget-color-fg-muted);
+}
+
+.nuiget-main-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--nuiget-space-2);
+    min-height: var(--nuiget-target-min);
+}
+
+/* Check boxes drawn as VS Code's own (MH11): the box in the check-box colours, the mark its foreground; every check box of the panel and its dialogs. */
+.nuiget-main input[type="checkbox"],
+.nuiget-dialog input[type="checkbox"] {
+    appearance: none;
+    display: inline-grid;
+    place-content: center;
+    flex: none;
+    inline-size: var(--nuiget-icon-size-md);
+    block-size: var(--nuiget-icon-size-md);
+    margin: 0;
+    border: 1px solid var(--nuiget-color-checkbox-border);
+    border-radius: var(--nuiget-radius-sm);
+    background: var(--nuiget-color-checkbox-bg);
+    forced-color-adjust: none;
+}
+
+/* The mark: a rotated border in the check-box foreground (1.x). */
+.nuiget-main input[type="checkbox"]:checked::after,
+.nuiget-dialog input[type="checkbox"]:checked::after {
+    content: "";
+    inline-size: var(--nuiget-space-2);
+    block-size: var(--nuiget-space-4);
+    margin-block-start: calc(var(--nuiget-space-1) * -1);
+    border: solid var(--nuiget-color-checkbox-fg);
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+}
+
+.nuiget-main input[type="checkbox"]:disabled,
+.nuiget-dialog input[type="checkbox"]:disabled {
+    border-style: dashed;
+    border-color: var(--nuiget-color-fg-muted);
+}
+
+.nuiget-main input[type="checkbox"]:focus-visible,
+.nuiget-dialog input[type="checkbox"]:focus-visible {
+    outline: 1px solid var(--nuiget-color-focus);
+    outline-offset: 1px;
+}
+
+/* The heading takes the free space, so the controls sit at the end of the header (1.x). */
+.nuiget-main-title {
+    margin: 0;
+    margin-inline-end: auto;
+    font-size: var(--nuiget-font-size-md);
+    font-weight: 600;
+}
+
+.nuiget-source-health {
+    color: var(--nuiget-color-warning);
+}
+
+/* The revalidation bar lies over the bottom edge, so the list does not move when it comes and goes. */
+/* A line under the search row separates the header from the lists (1.x); the revalidation bar lies above it, in the padding. */
+.nuiget-main-search {
+    position: relative;
+    flex: none;
+    padding: var(--nuiget-space-2) var(--nuiget-inset);
+    border-block-end: 1px solid var(--nuiget-color-border);
+}
+
+.nuiget-main-search .nuiget-progress {
+    position: absolute;
+    inset-inline: var(--nuiget-inset);
+    bottom: 0;
+}
+
+.nuiget-main-search-input {
+    box-sizing: border-box;
+    width: 100%;
+    min-height: var(--nuiget-target-min);
+    padding: 0 var(--nuiget-space-3);
+    border: 1px solid var(--nuiget-color-input-border);
+    border-radius: var(--nuiget-radius-sm);
+    background: var(--nuiget-color-input-bg);
+    color: var(--nuiget-color-input-fg);
+    font: inherit;
+}
+
+.nuiget-main-search-input::placeholder {
+    color: var(--nuiget-color-input-placeholder);
+}
+
+.nuiget-main-select:focus-visible,
+.nuiget-main-search-input:focus {
+    outline: 1px solid var(--nuiget-color-focus);
+    outline-offset: -1px;
+}
+
+/* The list takes the share the sash reports; the details take the rest. */
+.nuiget-main-split {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+}
+
+/* The list pane in the side-bar colour (1.x `.package-list-panel`); the tab list and toolbar sit in it. */
+.nuiget-main-list {
+    display: flex;
+    flex: none;
+    flex-direction: column;
+    width: var(--nuiget-split, 50%);
+    min-width: 0;
+    background: var(--nuiget-color-bg-sidebar);
+}
+
+/*
+ * The common left inset (P9.fix-6): the tab label starts at the inset (the tab has its own padding and a 1 px border),
+ * and so does the chevron of every section header of the list pane; the details pane and the sidebar keep theirs.
+ */
+.nuiget-main-list .nuiget-tablist {
+    padding-inline-start: calc(var(--nuiget-inset) - var(--nuiget-space-4) - var(--nuiget-space-hairline));
+}
+
+.nuiget-main-list .nuiget-section-toggle {
+    padding-inline-start: var(--nuiget-inset);
+}
+
+/* A column: the details keep their header in view and scroll their tab; the transitive view and the empty state scroll here. */
+.nuiget-main-details {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-width: 0;
+    overflow: auto;
+}
+
+/* ── Installed tab ── */
+
+.nuiget-installed {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.nuiget-installed > .nuiget-toolbar {
+    flex: none;
+    padding: var(--nuiget-space-2) var(--nuiget-inset);
+    /* The primary action ends at the list's right edge (P9.fix-4). */
+    padding-inline-end: var(--nuiget-space-3);
+}
+
+.nuiget-installed-lists,
+.nuiget-installed-project,
+.nuiget-installed-project-content {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-height: 0;
+}
+
+/*
+ * The Installed tab and All Projects Updates: one scroll container for every section, and every list as high as its
+ * rows. The list is not its own scroll element then, so the virtualizer renders all of its rows, as the 1.x panel did,
+ * and the transitive sections follow the last direct row (P9.fix-2). The Updates tab of one project keeps its list
+ * scrolling on its own.
+ */
+.nuiget-installed--sections .nuiget-installed-lists {
+    overflow: auto;
+}
+
+.nuiget-installed--sections .nuiget-installed-project,
+.nuiget-installed--sections .nuiget-installed-project-content,
+.nuiget-installed--sections .nuiget-listbox {
+    flex: none;
+    overflow: visible;
+}
+
+/* Transitive packages: after the direct rows, in the same scroller; the last direct row's own line separates them. */
+.nuiget-transitive {
+    display: flex;
+    flex: none;
+    flex-direction: column;
+}
+
+.nuiget-transitive .nuiget-listbox {
+    flex: none;
+    overflow: visible;
+}
+
+/* The bulk uninstall dialog: one short list per project. */
+.nuiget-bulk-lead {
+    margin: 0;
+}
+
+.nuiget-bulk-list {
+    margin: var(--nuiget-space-2) 0 var(--nuiget-space-4);
+    padding-inline-start: var(--nuiget-space-6);
+}
+
+/* ── Browse results ── */
+
+.nuiget-browse {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-height: 0;
+}
+
+/* ── Details pane ── */
+
+.nuiget-details {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-height: 0;
+}
+
+/* The title, the installed row and the version row stay in view; the Details and README content scroll under them. */
+.nuiget-details .nuiget-tabpanel {
+    overflow: auto;
+}
+
+.nuiget-details-header {
+    flex: none;
+    display: flex;
+    flex-direction: column;
+    gap: var(--nuiget-space-3);
+    padding: var(--nuiget-space-4) var(--nuiget-inset);
+}
+
+.nuiget-details-title {
+    margin: 0;
+    font-size: var(--nuiget-font-size-lg);
+    overflow-wrap: anywhere;
+}
+
+/*
+ * The installed and the version rows are one grid (P9.fix-5): label, value, action, optional second action, so
+ * Uninstall and Update share their left edge. A label starts a row; `align-items: center` keeps a button as high as
+ * its text, not as the select.
+ */
+.nuiget-details-actions {
+    display: grid;
+    grid-template-columns: max-content minmax(0, max-content) max-content max-content;
+    gap: var(--nuiget-space-3) var(--nuiget-space-4);
+    align-items: center;
+}
+
+.nuiget-details-label {
+    grid-column: 1;
+    color: var(--nuiget-color-fg-muted);
+}
+
+/* The facts rows of the transitive details view (`TransitiveDetails.tsx`) stay flex rows. */
+.nuiget-details-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--nuiget-space-4);
+}
+
+.nuiget-details-row > .nuiget-details-label {
+    min-width: 5em;
+}
+
+.nuiget-details-note {
+    margin: 0;
+    color: var(--nuiget-color-fg-muted);
+}
+
+.nuiget-details-info,
+.nuiget-readme {
+    padding: var(--nuiget-space-4) var(--nuiget-inset);
+    overflow-wrap: anywhere;
+}
+
+.nuiget-details-description {
+    margin-top: 0;
+}
+
+.nuiget-details-facts {
+    display: grid;
+    gap: var(--nuiget-space-2);
+    margin: 0;
+}
+
+.nuiget-details-fact {
+    display: flex;
+    gap: var(--nuiget-space-4);
+}
+
+.nuiget-details-fact dt {
+    min-width: 7em;
+    color: var(--nuiget-color-fg-muted);
+}
+
+.nuiget-details-fact dd {
+    margin: 0;
+}
+
+.nuiget-details-section h3 {
+    margin: var(--nuiget-space-6) 0 var(--nuiget-space-2);
+    font-size: var(--nuiget-font-size-md);
+}
+
+/* A dependency group's toggle (a level-4 SectionHeader): the framework moniker keeps its case, unlike a section title. */
+.nuiget-details-group h4 {
+    margin: 0;
+    font-size: var(--nuiget-font-size-md);
+    font-weight: normal;
+}
+
+.nuiget-details-group .nuiget-section-toggle {
+    text-transform: none;
+}
+
+.nuiget-details-list {
+    margin: 0;
+    padding-inline-start: var(--nuiget-space-6);
+}
+
+.nuiget-details-vulnerability {
+    display: flex;
+    align-items: center;
+    gap: var(--nuiget-space-2);
+    color: var(--nuiget-color-warning);
+}
+
+.nuiget-details a,
+.nuiget-readme a {
+    color: var(--nuiget-color-link);
+}
+
+/* ── README ── */
+
+.nuiget-readme img {
+    max-width: 100%;
+    border-radius: var(--nuiget-radius-sm);
+}
+
+/* Typography of a README (1.x): headings marked on the left, inline code, tables, quotes, lists and rules on tokens. */
+.nuiget-readme h1,
+.nuiget-readme h2,
+.nuiget-readme h3,
+.nuiget-readme h4,
+.nuiget-readme h5,
+.nuiget-readme h6 {
+    margin: var(--nuiget-space-6) 0 var(--nuiget-space-4);
+    font-weight: 600;
+    line-height: 1.25;
+}
+
+.nuiget-readme h1 {
+    padding-left: var(--nuiget-space-5);
+    border-left: 4px solid var(--nuiget-color-link);
+    font-size: 1.6em;
+}
+
+.nuiget-readme h1:first-child {
+    margin-top: 0;
+}
+
+.nuiget-readme h2 {
+    padding-left: var(--nuiget-space-5);
+    border-left: 3px solid var(--nuiget-color-link);
+    font-size: 1.4em;
+}
+
+.nuiget-readme h3 {
+    padding-left: var(--nuiget-space-5);
+    border-left: 3px solid var(--nuiget-color-border);
+    font-size: 1.2em;
+}
+
+.nuiget-readme h4 {
+    font-size: 1.05em;
+}
+
+.nuiget-readme h5,
+.nuiget-readme h6 {
+    color: var(--nuiget-color-fg-muted);
+    font-size: 1em;
+}
+
+.nuiget-readme p,
+.nuiget-readme ul,
+.nuiget-readme ol {
+    margin: 0 0 var(--nuiget-space-5);
+}
+
+.nuiget-readme ul,
+.nuiget-readme ol {
+    padding-inline-start: calc(var(--nuiget-space-6) + var(--nuiget-space-3));
+}
+
+.nuiget-readme li + li {
+    margin-top: var(--nuiget-space-2);
+}
+
+.nuiget-readme code {
+    padding: var(--nuiget-space-hairline) var(--nuiget-space-2);
+    border: 1px solid var(--nuiget-color-border);
+    border-radius: var(--nuiget-radius-sm);
+    background: var(--nuiget-color-code-bg);
+    font-family: var(--nuiget-font-family-mono);
+    font-size: var(--nuiget-font-size-sm);
+}
+
+.nuiget-readme pre code {
+    padding: 0;
+    border: 0;
+    background: none;
+}
+
+.nuiget-readme table {
+    width: 100%;
+    margin: 0 0 var(--nuiget-space-5);
+    border: 1px solid var(--nuiget-color-border);
+    border-collapse: collapse;
+}
+
+.nuiget-readme th,
+.nuiget-readme td {
+    padding: var(--nuiget-space-2) var(--nuiget-space-4);
+    border-bottom: 1px solid var(--nuiget-color-border);
+    text-align: left;
+}
+
+.nuiget-readme th {
+    background: var(--nuiget-color-table-header-bg);
+    font-weight: 600;
+}
+
+.nuiget-readme tbody tr:nth-child(even) {
+    background: var(--nuiget-color-table-row-alt-bg);
+}
+
+.nuiget-readme blockquote {
+    margin: 0 0 var(--nuiget-space-5);
+    padding: var(--nuiget-space-4) var(--nuiget-space-5);
+    border-left: 4px solid var(--nuiget-color-blockquote-border);
+    background: var(--nuiget-color-blockquote-bg);
+    color: var(--nuiget-color-fg-muted);
+}
+
+.nuiget-readme blockquote p:last-child {
+    margin-bottom: 0;
+}
+
+.nuiget-readme hr {
+    margin: var(--nuiget-space-6) 0;
+    border: 0;
+    border-top: 2px solid var(--nuiget-color-border);
+}
+
+.nuiget-readme-code {
+    position: relative;
+}
+
+/* The first line starts below the copy button. */
+.nuiget-readme pre {
+    padding: var(--nuiget-space-4);
+    padding-top: calc(var(--nuiget-target-min) + var(--nuiget-space-2));
+    overflow-x: auto;
+    border-radius: var(--nuiget-radius-sm);
+    background: var(--nuiget-color-code-bg);
+    color: var(--nuiget-color-code-fg);
+    font-family: var(--nuiget-font-family-mono);
+}
+
+.nuiget-readme-copy {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--nuiget-space-2);
+    position: absolute;
+    top: var(--nuiget-space-2);
+    right: var(--nuiget-space-2);
+    min-height: var(--nuiget-target-min);
+    padding: 0 var(--nuiget-space-3);
+    border: 1px solid var(--nuiget-color-border);
+    border-radius: var(--nuiget-radius-sm);
+    background: var(--nuiget-color-widget-bg);
+    color: var(--nuiget-color-widget-fg);
+    font: inherit;
+    font-size: var(--nuiget-font-size-sm);
+    cursor: pointer;
+}
+
+.nuiget-readme-copy:focus-visible {
+    outline: 1px solid var(--nuiget-color-focus);
+}
+
+.nuiget-readme-copy-icon {
+    display: inline-flex;
+}
+
+/* The copy icon until the code is copied, then the check mark for two seconds. */
+.nuiget-readme-copy[data-copied] .nuiget-readme-copy-icon--copy,
+.nuiget-readme-copy:not([data-copied]) .nuiget-readme-copy-icon--check {
+    display: none;
+}
+
+.nuiget-readme .nuiget-hljs-keyword,
+.nuiget-readme .nuiget-hljs-selector-tag,
+.nuiget-readme .nuiget-hljs-literal,
+.nuiget-readme .nuiget-hljs-section,
+.nuiget-readme .nuiget-hljs-link {
+    color: var(--nuiget-color-syntax-keyword);
+}
+
+.nuiget-readme .nuiget-hljs-type,
+.nuiget-readme .nuiget-hljs-built_in,
+.nuiget-readme .nuiget-hljs-meta,
+.nuiget-readme .nuiget-hljs-attribute {
+    color: var(--nuiget-color-syntax-type);
+}
+
+.nuiget-readme .nuiget-hljs-title {
+    color: var(--nuiget-color-syntax-function);
+}
+
+.nuiget-readme .nuiget-hljs-variable,
+.nuiget-readme .nuiget-hljs-params,
+.nuiget-readme .nuiget-hljs-property,
+.nuiget-readme .nuiget-hljs-attr {
+    color: var(--nuiget-color-syntax-variable);
+}
+
+.nuiget-readme .nuiget-hljs-string,
+.nuiget-readme .nuiget-hljs-template-variable,
+.nuiget-readme .nuiget-hljs-template-tag {
+    color: var(--nuiget-color-syntax-string);
+}
+
+.nuiget-readme .nuiget-hljs-number {
+    color: var(--nuiget-color-syntax-number);
+}
+
+.nuiget-readme .nuiget-hljs-comment,
+.nuiget-readme .nuiget-hljs-quote,
+.nuiget-readme .nuiget-hljs-doctag {
+    color: var(--nuiget-color-syntax-comment);
+    font-style: italic;
+}
+
+/* ── NuGet sources dialog ── */
+
+.nuiget-source-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--nuiget-space-2);
+    max-height: 50vh;
+    margin: 0;
+    padding: 0;
+    overflow-y: auto;
+    list-style: none;
+}
+
+.nuiget-source-row {
+    display: flex;
+    align-items: center;
+    gap: var(--nuiget-space-4);
+    min-height: var(--nuiget-target-min);
+    padding: var(--nuiget-space-2) 0;
+    border-bottom: 1px solid var(--nuiget-color-border);
+}
+
+.nuiget-source-text {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.nuiget-source-name--off {
+    color: var(--nuiget-color-fg-muted);
+}
+
+.nuiget-source-url,
+.nuiget-source-config {
+    color: var(--nuiget-color-fg-muted);
+    font-size: var(--nuiget-font-size-sm);
+    overflow-wrap: anywhere;
+}
+
+.nuiget-source-confirm {
+    display: flex;
+    align-items: center;
+    gap: var(--nuiget-space-3);
+}
+
+.nuiget-add-source {
+    display: flex;
+    flex-direction: column;
+    gap: var(--nuiget-space-4);
+    min-width: min(28em, 80vw);
+}
+
+.nuiget-field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--nuiget-space-1);
+}
+
+.nuiget-field--warning {
+    flex-direction: row;
+    align-items: center;
+    gap: var(--nuiget-space-2);
+    color: var(--nuiget-color-warning);
+}
+
+.nuiget-field-error {
+    margin: 0;
+    color: var(--nuiget-color-error);
+}
+
+.nuiget-input {
+    box-sizing: border-box;
+    min-height: var(--nuiget-target-min);
+    padding: 0 var(--nuiget-space-3);
+    border: 1px solid var(--nuiget-color-input-border);
+    border-radius: var(--nuiget-radius-sm);
+    background: var(--nuiget-color-input-bg);
+    color: var(--nuiget-color-input-fg);
+    font: inherit;
+}
+
+.nuiget-input::placeholder {
+    color: var(--nuiget-color-input-placeholder);
+}
+
+.nuiget-input:focus {
+    outline: 1px solid var(--nuiget-color-focus);
+    outline-offset: -1px;
+}
+
+.nuiget-add-source-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--nuiget-space-3);
+}
+
+/* ── All Projects: one heading per workspace folder ── */
+
+.nuiget-installed-folder-title {
+    margin: var(--nuiget-space-4) var(--nuiget-space-4) var(--nuiget-space-1) var(--nuiget-inset);
+    color: var(--nuiget-color-fg-muted);
+    font-size: var(--nuiget-font-size-sm);
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+/*
+ * An All Projects project header is a tree level (1.x, MI12): normal case at the body size, as the sidebar's; the
+ * folder caption above it stays in capitals. No hover: VS Code's pane headers have none (P9.10).
+ */
+.nuiget-installed-project--grouped > .nuiget-section-header .nuiget-section-heading {
+    font-size: var(--nuiget-font-size-md);
+    font-weight: normal;
+}
+
+.nuiget-installed-project--grouped > .nuiget-section-header .nuiget-section-toggle {
+    text-transform: none;
+}
+
+/* ── Install in several projects ── */
+
+.nuiget-multi-install {
+    display: flex;
+    flex-direction: column;
+    gap: var(--nuiget-space-2);
+    max-height: 50vh;
+    margin: 0;
+    padding: 0;
+    overflow-y: auto;
+    list-style: none;
+}
+
+.nuiget-multi-install-row {
+    display: flex;
+    align-items: center;
+    gap: var(--nuiget-space-3);
+    min-height: var(--nuiget-target-min);
+}
+
+.nuiget-multi-install-note {
+    margin-inline-start: auto;
+    color: var(--nuiget-color-fg-muted);
+    font-size: var(--nuiget-font-size-sm);
+}

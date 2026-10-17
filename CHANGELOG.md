@@ -7,12 +7,97 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Fixed
+## [2.0.0] - 2026-10-17
 
-- **Long NuGet prerelease versions and package IDs remain intact during CLI search and installation**
+### Breaking changes
+
+- **nUIget 2.0 replaces the 1.x extension: the 2.0 main panel, sidebar and host are what the package ships**
+- **nUIget 2.0 requires .NET SDK 10 or newer; projects that resolve an older SDK are read-only**
+- **2.0 resets the persisted 1.x state: the selected project and source, the prerelease and restore toggles and the split positions are chosen once more, the cached feed data and the SDK cache are rebuilt, and the 1.x entries are removed from workspace and global storage at the first activation**
+- **The `nuiget.noRestore` setting is no longer migrated to the restore toggle (set the toggle once if it was `true`), and the recent-searches list is gone**
+
+### Added
+- **Update all in the sidebar** — the arrow button of the Updates section header updates every update of the selected project, or of every project under All Projects, after an in-panel confirmation that lists them; centrally managed packages stay out
+- **Install in several projects from a single project** — a search result not installed in the selected project offers Install in projects… when the workspace has more than one project
+- **Quick install from the Browse list and the search box** — Ctrl+Enter (Cmd+Enter) installs a Browse row's version, the highlighted quick-search suggestion's newest version or the version chosen after ArrowRight into the selected project, through the Central Package Management preview where one is needed
+- **2.0 updates of overridden central versions** — a package whose project overrides the central version updates in that project alone
+- **2.0 Central Package Management in the UI** — a centrally managed package updates through a preview of the projects its central version applies to, and uninstalls from its project while the central entry stays; an unresolved version says why in its tooltip
+- **2.0 Central Package Management preview** — the host previews which projects a central version change reaches (cpm/preview) and the sidebar's actions menu confirms it before the edit
+- **2.0 Central Package Management edits** — on a verified .NET SDK 10 the 2.0 host installs and updates centrally managed packages through dotnet package add without --no-restore, previews which projects share the central entry, restores and refreshes them after the edit, refuses an edit while the project or props file has unsaved changes, and keeps the central entry when one project uninstalls
+- **2.0 project evaluation** — `src/core/project` reads what MSBuild evaluates for a project (its target frameworks, each framework's package references and central versions, version overrides and SDK-injected references) into the same rows as the static inspection, once per project and revision, and evaluates again after a failure instead of keeping it, and both 2.0 surfaces show a project's packages from the project files at once and the evaluated list when MSBuild has answered
+- **2.0 sidebar parity** — the sidebar shares its height between the Installed and Updates sections with a sash it remembers, opens a row's actions menu with Shift+F10 or a right-click and the package in the full view with Ctrl+Enter, catches up with the selection when it is shown again, groups All Projects by project and workspace folder with each row acting on its own project, installs a search result into the projects picked under All Projects, and says when no package source could be reached instead of offering an empty version list
+- **2.0 All Projects** — the Installed and Updates tabs group every discovered project under its workspace folder, show unsupported projects with the reason (an SDK below 10 lists its packages read-only), aggregate transitive packages across projects on expand, and install from the details pane into several projects through a picker
+- **2.0 package sources** — the main panel's header selects the package source among the enabled ones, and its NuGet sources dialog (also opened from the sidebar) lists every source with the config file that declares it, enables and disables a source, removes one after a confirmation in the dialog, and adds one to a chosen config file with optional credentials, an HTTP source only when the insecure connection is allowed; removing a source edits the config file that declares it
+- **2.0 package details** — the main panel shows the details of the package selected in any list: its versions with the installed one marked, Install, Update, Downgrade and Uninstall for the selected project, description, license, size, vulnerabilities and dependencies by framework, details from the local package cache marked offline, and the README with highlighted code, copy buttons and images fetched by the extension; switching projects keeps the details read-only until the new project confirms the package
+- **2.0 search** — the main panel searches the package sources from its search box, with suggestions while typing (or a search after a pause when `nuiget.searchDebounceMode` asks for it), results with icons, authors, downloads and Verified and Installed badges in place of the tabs, a warning with Retry when a source could not be searched, and navigation to a package that selects it; the sidebar searches as you type, installs a result with Enter or its row button, and filters its sections with `@installed` and `@updates`
+- **2.0 feed discovery** — `src/core/feeds` finds what each NuGet V3 source offers from its service index (search, registration, flat container, autocomplete, vulnerabilities, README; never nuget.org's gzip-only registration hive), shares one discovery between callers so that one that gives up does not cost the others their answer, keeps a source that does not answer out of use for two minutes while a background monitor re-checks it, reads version lists, nuspecs, package sizes and icons from the flat container (telling a missing icon from a feed that failed), and ranks search results merged from several feeds by how well the id matches
+- **2.0 package icons and README images** — `src/core/feeds` fetches package icons from the flat container of each source and delivers them as `data:` URIs, kept in the persistent cache within its byte budget; a feed that fails no longer leaves a package without its icon for a day, and a caller that gives up does not cancel the icon for another view waiting on it; README images are fetched by the extension over https from public hosts only, with a private source's credential sent only to that source's own server
+- **2.0 package manifests and offline details** — `src/core/feeds` reads a package's nuspec (description, authors, license expression, project URL and dependency groups, including frameworks that need no dependency) and, when no source answers, shows the details of a version restored on this machine from the NuGet global-packages folder, marked as offline
+- **2.0 package search** — `src/core/feeds` searches every selected source, through its search service or the dotnet CLI for local folders and feeds without one, merges the results by package id, ranks them by how well the name matches when several sources answered, and says when a source could not be searched instead of showing an empty result; quick search suggests ids per source and no longer falls back to nuget.org, and a search for an exact package id only reaches the sources that package is mapped to
+- **2.0 versions, details and vulnerabilities** — `src/core/feeds` lists the versions a source publishes, with a listed-only list that leaves unlisted versions out for update suggestions, reads package details from the registration, and checks versions against each source's vulnerability data, which is kept for an hour only when it was read completely, so a feed that failed half-way is read again rather than hiding advisories
+- **2.0 update check and package details** — `src/core/feeds` checks every installed package against all the sources it may come from and offers the newest version among them, never offers an update for an exact pin, says when a source could not be checked instead of reporting no update, fills in icons, authors and vulnerabilities per package, and takes package details from the source the package is mapped to; a configuration without nuget.org never contacts it, and a package mapped to a private feed never has its id sent to nuget.org
+- **2.0 feeds in the Catalog** — both 2.0 surfaces now search, list versions, show details, READMEs and README images, and check updates through the package feeds, each read using the sources, package source mapping and credentials of the project's own `nuget.config` chain; the HTTP connections follow VS Code's proxy settings and are rebuilt when an `http` setting changes, and an answer from a feed that could not be reached is shown but never kept
+- **2.0 source health** — both 2.0 surfaces hear when a package source becomes unreachable or comes back, the source list marks the failed ones, an update check against an unreachable source says so instead of showing an empty list, and the all-projects view fills in icons, authors and vulnerabilities per project as they arrive
+- **2.0 HTTP transport** — `src/core/http` opens every feed connection of the 2.0 core: HTTP/1.1 through the request functions VS Code patches, so proxies from `http.proxy`, the environment or the operating system's configuration (PAC included) and the operating-system certificates apply as they do for other extensions; HTTP/2 only for nuget.org and only without a known proxy, falling back to HTTP/1.1 for good after a failed connection; redirects capped at five and re-checked against the resolved address, compressed responses decoded within a size cap, and every request bounded by its deadline and cancellable
+- **2.0 Updates tab and sidebar Updates section** — the main panel and the sidebar list the updates of the selected project under the prerelease setting, show the rows as they are found, count them only when every source answered, update one package with Enter or its row button and several from the Update all dialog, show a read-only preview instead of updating a centrally managed package, and say that updates could not be checked, with Retry, when a source is unreachable; when the source comes back the updates are checked again
+- **2.0 Installed tab** — the main panel lists the installed packages of the selected project or of every project in All Projects, one section per project, with a transitive dependencies section loaded on expand and a Restore banner when the assets file is missing, a bulk toolbar (Select all, Uninstall selected) over a multi-selectable list, and a confirmation dialog listing exactly the packages that will be uninstalled
+- **2.0 main panel shell** — the main panel shows the selected project, source and prerelease setting in its header (project and prerelease can be changed there, for both surfaces), a refresh button, the unified search box that selects and filters the Installed or Updates tab with `@installed`, `@updates` and `@vulnerable`, and a resizable split between the list and the details; the 2.0 build now produces both stylesheets, and CI checks the contents of the 2.0 package
+- **2.0 dialogs, popovers, tabs and toolbars** — the 2.0 webview primitives gain a modal dialog and a confirmation dialog that keep focus inside, close on Escape and give focus back to where it was, a popover that floats above clipping parents and stays inside the window, tabs and toolbars with one tab stop and arrow-key navigation; a dialog opened from a dialog, or a popover inside one, closes first and alone, and every icon a 2.0 bundle does not use is now left out of it
+- **2.0 sidebar, first slice** — the sidebar lists the installed packages of the selected project with their state (provisional data, unresolved references, centrally managed packages, a project whose .NET SDK is too old), uninstalls a package from its row or with Enter or Delete, shows a spinner on the row until the operation has ended on either surface, keeps the list on screen while it is refreshed, and announces loading and every outcome to screen readers
+- **2.0 webview message bus and store** — `src/webview/shared/bus` and `src/webview/shared/store` connect a 2.0 webview to the host: every request has exactly one outcome and can be cancelled, a late or out-of-date answer is never shown, a list is asked for again when the host says it changed and stays on screen meanwhile, a toggle shows its new value at once and goes back if the host refuses it, and a row is marked busy on both surfaces while an operation on its package runs
+- **2.0 webview primitives** — `src/webview/shared/primitives` holds the building blocks of the 2.0 webviews: a virtualized list with one tab stop whose rows are options, with every row action on the keyboard (Enter, Ctrl+Enter, Delete, Shift+F10) and the pointer buttons kept out of the way of screen readers; a collapsible section header, icon button, badge, spinner, skeleton, progress bar, empty state, a banner that says its severity in words, a keyboard-operable split sash, and the one status region that announces outcomes; each is tested with a screen-reader rule check
+- **2.0 webview tokens and icons** — `src/webview/shared` holds the design tokens of the 2.0 webviews (spacing, radius, row heights, icon sizes, hit target, z-index, motion, em typography and colour aliases, with high-contrast, forced-colours and reduced-motion coverage in one file) and the icon set without inline styles; a lint test keeps colour literals out of every other 2.0 webview file, and the frontend tests check rendered markup with axe
+- **Two-surface harness** — `src/test/harness` drives the real 2.0 composition root with both webview hosts over fake webviews and an in-process fake dotnet that edits the scratch project files, and proves across the sidebar and the main panel: ordering of session changes, invalidation in every order, queue saturation and a throwing operation, project deletion during a request, one shared computation when a subscriber cancels, disposal with pending operations, and a central version change reaching several projects
+- **2.0 composition root** — `src/extension.ts` assembles the 2.0 core and both webview hosts: one dotnet runner with a persisted SDK cache, one query coordinator whose invalidations reach both surfaces unchanged, a session that is reconciled with the sources of the project it keeps or picks whenever projects, sources or the selection change, file watchers for project, props, `nuget.config`, `global.json`, lock and assets files, a status bar item for the operation queue, and a redacting logger for everything the core logs
+- **2.0 build** — `node esbuild.mjs` builds the 2.0 entry points into the three bundles, and `--production --analyze` checks them against size ceilings
+- **2.0 protocol and core contracts** — `src/protocol` and `src/core/contracts.ts` define the typed messages and interfaces of the 2.0 host and webviews; `npm run docs:protocol` generates `docs/protocol.md` from them and CI fails when that file is out of date
+- **2.0 webview hosts** — `src/host` answers every request of the 2.0 panel and sidebar with exactly one response, runs every package operation and forced restore through the operation queue, keeps a queued operation alive when the surface that asked for it closes, and serves both webviews under a Content Security Policy with a per-render script nonce and no remote origin, and every response that is a cached resource carries the generation it was computed for
+- **2.0 catalog** — `src/core/catalog` is the one place the 2.0 panel and sidebar read from: projects, sources, installed and transitive packages are each computed once for both, and the list of installed packages appears from the project files at once and is refined when a full evaluation is available
+- **2.0 credentials** — `src/core/credentials` finds the sign-in for an authenticated source in the environment, in `nuget.config` and through the Azure Artifacts Credential Provider, without a shell and without logging anything secret
+- **2.0 package sources** — `src/core/sources` lists the sources that apply to each project through the dotnet CLI, reads credentials and package source mapping from the `nuget.config` chain, and sends a package id only to the sources that are enabled for the project and that the mapping allows
+- **2.0 project context** — `src/core/project` works out for each project which .NET SDK, which `nuget.config` files and which sources apply to it, marks a project whose SDK is older than .NET 10 as read-only, and notices when one of its input files changes
+- **2.0 project inspection** — `src/core/project` lists the packages a project references without running MSBuild, says for each where its version is declared (project, props file, central, override), limits references to their target frameworks, and reports what it cannot decide as unresolved instead of guessing
+- **2.0 project references** — `src/core/project` reads the project references of a project and orders multi-project operations by them, also for backslash paths on macOS and Linux
+- **2.0 project files** — `src/core/project` reads project and props files, `project.assets.json` and `packages.lock.json` for the 2.0 project model: project discovery and classification, central package versions with conditioned entries marked, and resolved versions per target framework
+- **2.0 operation queue** — `src/core/ops` runs one package operation at a time with five waiting, answers every submission with exactly one outcome, including a refusal when the queue is full and a failure when the operation throws, and reports progress with the operation's id
+- **2.0 package workflows** — `src/core/ops` installs, updates, removes and restores packages through the dotnet runner, reports the project edit and the restore separately, refuses edits on projects below .NET SDK 10 and additions or updates on Central Package Management projects, and redacts command output before it is logged
+- **2.0 redirect guard** — `src/core/http` decides whether a redirect may be followed: no downgrade from HTTPS, no loopback, private or link-local target, also when the address is written as IPv4-mapped IPv6, NAT64 or 6to4, and a credential is forwarded to the same origin only
+- **2.0 query coordinator** — `src/core/queries` computes each resource once per generation however many surfaces ask, never caches a result that an invalidation has overtaken, and reports one invalidation event per tick with the new generation of every key
+- **2.0 dotnet runner** — `src/core/cli` runs `dotnet` without a shell and with a fixed English environment, builds the noun-first `dotnet package` commands of .NET SDK 10, validates every argument, and reports an older SDK as unsupported
+- **2.0 log redaction** — `src/core/logging` removes credentials from text and command lines before they are logged, including tokens in URLs, `Proxy-Authorization` and `Cookie` headers and quoted passwords
+- **2.0 core cache** — `src/core/cache` provides the two-tier cache of the 2.0 core with one table of lifetimes and key shapes; the persistent tier is limited to 8 MiB, and an invalidation that names packages drops only their version lists and metadata
+- **Core versioning module** — NuGet version parsing, comparison and version-spec classification for 2.0; exact pins are never reported as updatable.
+- **2.0 core utilities** — `src/core/util` provides the event emitter, bounded concurrency, file lookup, path normalization and dependency ordering that the 2.0 core modules build on, and coverage of `src/core` now has a floor of 85 % of the lines
+- **2.0 import fences** — ESLint keeps the 2.0 layers apart from each other and from the 1.x code, with a self-pruning allow-list, and `npm run lint` now also covers `scripts/` and the root configuration files
 
 ### Changed
-
+- **Three-line package cards in the main panel, name-first rows in the sidebar**
+- **Installed rows show icon, authors and Verified mark, SDK and floating badges, under a Direct packages header with the count**
+- **Updates rows show icon, authors and Verified mark with the new version marked, sorted by id; no 0 on the tab; every row of an Update all stays busy until it ends**
+- **Transitive packages: per-framework headers with counts, rows with icon, authors and Verified mark, and a details view with Required by (All Projects too)**
+- **Browse rows show icon, downloads, authors and Verified mark with the description; quick-search suggestions grouped per source with a loading row; the details pane follows the active tab and each tab keeps its own selection**
+- **The main panel header shows the title, the Restore after operations checkbox, an unreachable-source marker with Retry, a busy refresh button and a revalidation bar; the search box has Clear and Filters buttons**
+- **The main panel's list starts at 35 % of the width and keeps the position you drag it to**
+- **The main panel reopens on the tab you chose last**
+- **The Installed tab shows how many packages have known vulnerabilities**
+- **Details pane: Version, Author(s) with the Verified mark, Downloads, Package size, Date published and Report abuse, dependency groups collapsed with counts, fixed header**
+- **README typography (headings, inline code, tables, blockquotes, lists, rules) and a copy button with an icon and Copied feedback**
+- **Operations notify again: a progress notification for bulk operations, a toast with the outcome, Show output on a partial, failed or rejected operation, the output channel revealed on failure**
+- **A webview that stops working shows Reload and reports the error to the nUIget output channel**
+- **Sidebar rows sorted by package id**
+- **Sidebar project headers carry the project path as tooltip**
+- **Sidebar section headers in the side-bar section colours, rows indented to the section title, All Projects headers in normal case indented by workbench.tree.indent**
+- **High-contrast lines on buttons, tabs and row icons; VS Code check-box and drop-down colours; the page dimmed under a dialog**
+- **Header separator and side-bar-coloured list pane in the main panel; All Projects project headers in normal case**
+- **Not back from 1.x: recent searches, Collapse all and Expand all, details prefetched on hover, and ArrowLeft/ArrowRight between the Details and README tabs**
+- **Benchmarks live next to the 2.0 modules they measure**
+- **2.0 evaluation of a single-framework project is one msbuild run**
+- **Benchmarks for the 2.0 core (versioning, cache, operation queue, invalidation scopes) with a regenerated baseline**
+- **Benchmarks for the 2.0 transport and feed reads (updates, versions, search, nuspec parsing, relevance) with a regenerated baseline**
+- **resources/invalidated carries per-key generations**
+- **Webview CSP uses a script nonce and admits bundled fonts**
+- **Credential lookup order is environment, nuget.config, then credential provider**
+- **Azure Artifacts Credential Provider runs as the netcore plugin through dotnet (netfx plugin no longer used)**
 - **Refreshed and scoped Copilot instructions, agents, and skills for the current extension architecture**
 - **Added focused GitHub Actions skills and a repository-tailored Technical Writer agent**
 - **Made the Copilot instructions, skills, and agents available to Claude Code**
@@ -23,6 +108,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Migrated benchmarks to Vitest 5 with refreshed baselines and CI comparison reporting**
 - **Added the nUIget 2.0 execution plan, architecture decision records, and UX interaction model under docs/**
 - **Added the autonomous run protocol and item tracker for the 2.0 plan**
+- **Applied the P1.1b contract changes and amended ADR-002 to ADR-008 to match**
+- **Added the 2.0 session store and the matching of invalidation scopes to the core**
+- **InvalidationEvent.keys carries per-key generations**
+- **Recorded a .NET SDK 10 probe of package add and remove on Central Package Management projects**
+- **The SDK probe is a script that also records per-framework evaluations, and CI re-runs it on the newest SDK 10**
+- **Recorded the NuGet version conformance table and checked it with property tests**
+- **Split agent gotchas into 1.x and 2.0 sections and added 2.0 layer-boundary instructions**
+- **Added the architecture-advisor agent and the 2.0 execution protocol summary for Claude Code**
+- **Type-checked the extension against Node 18 declarations, the VS Code 1.85 host baseline**
+- **Added Claude Code guard hooks that protect frozen contracts, tests, and commit and push safety during the 2.0 work**
+- **Stopped shipping development configuration files in the extension package and added a package contents check**
+- **Rebuilt the CI pipeline: clean installs, pinned actions, Windows unit tests, end-to-end tests on the minimum supported VS Code, UI tests, and a downloadable package artifact**
+- **Let the end-to-end test runner use its own Mocha 11 so the tests can run on VS Code 1.85**
+- **Type-checked the 2.0 tests and shared test helpers as part of check-types and added a coverage floor for the webviews**
+- **Added a 2.0 section to ARCHITECTURE.md, marked the 1.x sections, and corrected statements that no longer matched the code**
+- **Added the findings ledger for the 2.0 work under docs/plans**
+- **2.0 theme pass**
+- **Ported the extension-host end-to-end suites to the 2.0 entry with noun-first dotnet commands and bounded waits**
+- **`nuiget.recentSearchesLimit` removed**
+- **Deleted the 1.x extension code; the 2.0 entry and sidebar moved to `src/extension.ts` and `src/webview/sidebar`**
+- **Removed the 1.x sections of ARCHITECTURE.md and the 1.x agent gotchas**
+
+### Fixed
+
+- **Long NuGet prerelease versions and package IDs remain intact during CLI search and installation**
 
 ## [1.18.9] - 2026-10-10
 

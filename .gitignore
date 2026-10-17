@@ -6,6 +6,8 @@
 # Keep test fixture obj/ directory (needed by integration tests)
 !src/test/fixtures/obj/
 !src/test/fixtures/obj/**
+# Restore output that the 2.0 project fixtures track on purpose (plan item P2.2)
+!src/core/project/__fixtures__/**/obj/
 
 # Dependencies
 node_modules/
@@ -50,6 +52,9 @@ coverage/
 
 # Benchmark ephemeral output (baseline.json is committed)
 benchmarks/latest.json
+
+# Contract-change sentinel for the 2.0 plan (D6): exists only while an approved contract edit is in progress
+.claude/.contract-change
 
 # Environment files
 .env

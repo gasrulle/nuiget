@@ -1,0 +1,45 @@
+{
+    // Type-checks the Vitest tests of the 2.0 code and the shared test infrastructure. Never emits.
+    // tsconfig.test.json stays the emitting configuration of the Mocha e2e and ExTester UI suites.
+    "compilerOptions": {
+        "module": "esnext",
+        "moduleResolution": "bundler",
+        "target": "ES2022",
+        "lib": [
+            "ES2022",
+            "DOM"
+        ],
+        "jsx": "react-jsx",
+        "strict": true,
+        "noImplicitReturns": true,
+        "noFallthroughCasesInSwitch": true,
+        "noImplicitOverride": true,
+        "esModuleInterop": true,
+        "skipLibCheck": true,
+        "forceConsistentCasingInFileNames": true,
+        "resolveJsonModule": true,
+        "noEmit": true,
+        // Lets tests import eslint.config.mjs and scripts/*.mjs with inferred types; the scripts are not checked.
+        "allowJs": true,
+        // No type roots on purpose: tests type-check against @types/node 24 (ADR-000, D10). The type roots of
+        // tsconfig.json would select the Node 18 declarations and break the resolution of vitest/globals.
+        "types": [
+            "node",
+            "vitest/globals"
+        ]
+    },
+    "include": [
+        "src/**/*.test.ts",
+        "src/**/*.test.tsx",
+        "src/**/*.bench.ts",
+        "src/test/**/*.ts",
+        "src/test/**/*.tsx",
+        "src/global.d.ts"
+    ],
+    "exclude": [
+        "node_modules",
+        "src/_wip/**",
+        "src/test/e2e/**",
+        "src/test/ui/**"
+    ]
+}

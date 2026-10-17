@@ -239,7 +239,10 @@ export const workspace = {
         update: vi.fn(),
     })),
     onDidChangeConfiguration: vi.fn(() => new Disposable(() => { })),
+    onDidChangeWorkspaceFolders: vi.fn(() => new Disposable(() => { })),
     findFiles: vi.fn(async () => []),
+    /** Open documents; a test pushes `{ uri, isDirty }` and empties the list afterwards. */
+    textDocuments: [] as Array<{ uri: Uri; isDirty: boolean }>,
     fs: {
         readFile: vi.fn(),
         writeFile: vi.fn(),
@@ -292,6 +295,7 @@ function createMockWebview() {
 function createMockWebviewPanel() {
     const disposeEmitter = new EventEmitter<void>();
     const webview = createMockWebview();
+    let disposed = false;
     return {
         webview,
         viewType: 'nuiget',
@@ -301,7 +305,14 @@ function createMockWebviewPanel() {
         active: true,
         visible: true,
         reveal: vi.fn(),
-        dispose: vi.fn(() => disposeEmitter.fire()),
+        // VS Code reports a disposal once; a listener that disposes the panel again must not recurse (N58).
+        dispose: vi.fn(() => {
+            if (disposed) {
+                return;
+            }
+            disposed = true;
+            disposeEmitter.fire();
+        }),
         onDidDispose: disposeEmitter.event,
         onDidChangeViewState: vi.fn(() => new Disposable(() => { })),
     };
@@ -364,6 +375,7 @@ export function createMockExtensionContext(overrides?: Record<string, unknown>) 
             setKeysForSync: vi.fn(),
         },
         asAbsolutePath: vi.fn((relativePath: string) => `/test-extension/${relativePath}`),
+        extension: { id: 'nuiget.nuiget', packageJSON: { version: '0.0.0-test' } },
         ...overrides,
     };
 }
