@@ -1,4 +1,4 @@
-# STATUS — src/webview/sidebar   commit fb4a0f9 (P9.10 commit (a); parent of commit (b))   2026-10-17T12:10:00Z
+# STATUS — src/webview/sidebar   commit 8388bff (P9.10 closed; parent of this docs commit)   2026-10-17T12:40:00Z
 
 git status --porcelain --untracked-files=all (before commit (a)): modified `.github/copilot-instructions.md`,
 `ARCHITECTURE.md`, `CHANGELOG.md`, `README.md`, `docs/plans/STATUS.md`, `docs/ux/interaction-model.md`,
@@ -113,6 +113,23 @@ rm -rf /tmp/nuiget-ui/screenshots dist && npm run test:ui -- --storage /tmp/nuig
   it reads the list from the option's listbox and logs the measured widths (`[P9.10] 200 px rows`).
 - (b) HC: the border of the section headers in a high-contrast theme comes from `sideBarSectionHeader.border`'s default
   (`contrastBorder`); gate: `main-installed-single-hc` shows the two header lines (follow-up 2).
+
+## Visual check (RUN.md §4)
+
+CI runs 38993886101 and 38993883918 on 8388bff → success (UI `40 passing`, "15 named states; PNGs in the artifact: 15");
+artifact `ui-screenshots` of 38993886101:
+
+- viewed: sidebar-sections.png: INSTALLED and UPDATES headers with their counts, the Update all arrow at the end of the
+  Updates header; rows start at the section titles' x (Newtonsoft.Json, Serilog, alphabetical); update rows read
+  `13.0.2 → 13.0.4` with the new version marked green.
+- viewed: sidebar-update-all-dialog.png: "Update 1 package?" over the sidebar with "Serilog: 3.1.1 → 4.4.0" (Newtonsoft.Json
+  was updated by an earlier file), Cancel and Update; readable.
+- viewed: sidebar-narrow-200px.png: at 200 px "Newtonsoft.J…" cut by its cap beside a whole `13.0.2`, "Serilog 3.1.1"
+  whole; the Updates row "Newtonsoft.J… 13.0…"; the search box reads "Search, or filter: @inst" with the Filters button
+  beside it, not over the text (SB6).
+- viewed: main-installed-single-hc.png: the sidebar's INSTALLED header has its top line (the HC border from
+  `sideBarSectionHeader.border`'s default); the UPDATES header sits right under the sash's line, whose own top line is
+  transparent by DO 10 (no double line); rows aligned with the titles.
 
 ## Advisor decisions (date, item, question, answer verbatim)
 
