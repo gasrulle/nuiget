@@ -1,4 +1,4 @@
-# STATUS — src/webview/main   commit c946043 (P9.11 commit (a); parent of commit (b))   2026-10-17T14:30:00Z
+# STATUS — src/webview/main   commit 0e02690 (P9.11 commit (b); parent of the focus fix)   2026-10-17T15:10:00Z
 
 git status --porcelain --untracked-files=all (before commit (a)): modified `.github/copilot-instructions.md`,
 `ARCHITECTURE.md`, `CHANGELOG.md`, `docs/plans/STATUS.md`, `src/test/lint/{webview-css-baseline,webview-stylesheets,webview-tokens}.test.ts`,
@@ -38,6 +38,12 @@ npm test                    → exit 0 · Tests 2009 passed | 9 skipped (2018) �
 rm -rf dist out/esbuild && node esbuild.mjs --production --analyze → dist/extension.js 297016 / 322502 ·
                               dist/webview.js 548715 / 577766 · dist/sidebar.js 333071 / 351245
 rm -rf /tmp/nuiget-ui/screenshots dist && npm run test:ui -- --storage /tmp/nuiget-ui → exit 0 · 40 passing (1m) · 15 PNGs
+CI runs 38996295977, 38996294205 on 0e02690 (commit (b)) → success; but the two theme captures showed no focus ring:
+  Serilog stayed current, so `driverOf().actions().sendKeys(Key.ARROW_UP)` never reached the list (red visual gate, fix
+  attempt 1 under RUN.md §4).
+fix: the key goes to `driverOf().switchTo().activeElement()` (as the sash test does) and the test polls until the focus
+  is on the Newtonsoft.Json row; local `npm run test:ui` → exit 0 · 40 passing (1m); the local captures show the ring on
+  the Newtonsoft.Json row (orange in Dark High Contrast, blue in Light Modern)
 ```
 
 ## Done (tested)

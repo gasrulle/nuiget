@@ -266,7 +266,9 @@ describe('2.0 theme pass', () => {
             // A pointer focus never matches `:focus-visible`; a key press does: the Newtonsoft.Json row holds keyboard
             // focus, so the capture shows the focus ring (P9.11).
             await (await driverOf().findElements(By.css('[data-testid="package-row-serilog"] [role="option"]')))[0].click();
-            await driverOf().actions().sendKeys(Key.ARROW_UP).perform();
+            // The key goes to the element that has the focus inside the webview (as the sash test does).
+            await (await driverOf().switchTo().activeElement()).sendKeys(Key.ARROW_UP);
+            await poll(async () => ((await driverOf().executeScript<string | null>('return document.activeElement?.closest(\'[data-testid^="package-row-"]\')?.getAttribute("data-testid") ?? null;')) === 'package-row-newtonsoft.json' ? true : undefined), 'the focus on the Newtonsoft.Json row', 10_000);
             await waitForSettledContent();
             await waitForTransitions();
             await screenshot(state);
