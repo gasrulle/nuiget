@@ -86,4 +86,12 @@ describe('SectionHeader', () => {
         render(<SectionHeader title="net8.0 (1)" titleId="t" contentId="c" testKey="k" expanded={false} onToggle={() => undefined} level={4} />);
         expect(screen.getByRole('heading', { level: 4 })).toHaveTextContent('net8.0 (1)');
     });
+
+    it('a tooltip goes on the toggle, none without one', () => {
+        const { unmount } = renderHeader({ tooltip: '/w/App/App.csproj' });
+        expect(screen.getByRole('button', { expanded: true })).toHaveAttribute('title', '/w/App/App.csproj');
+        unmount();
+        renderHeader();
+        expect(screen.getByRole('button', { expanded: true })).not.toHaveAttribute('title');
+    });
 });

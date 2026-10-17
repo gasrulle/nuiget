@@ -59,6 +59,7 @@ function ProjectSection({ chunk, filter, announce, revalidating, onRetry }: Proj
                 titleId={titleId}
                 contentId={contentId}
                 testKey={`project-${name}`}
+                tooltip={chunk.projectPath}
                 level={3}
                 expanded={expanded}
                 onToggle={() => setExpanded(previous => !previous)}

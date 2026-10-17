@@ -3,7 +3,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { By, Key, Workbench } from 'vscode-extension-tester';
 import { enterMainWebview } from './mainWebview';
-import { driverOf, enterSidebarWebview, findByTestId, leaveWebview, openSidebarView, poll, waitForText } from './sidebarWebview';
+import { driverOf, enterSidebarWebview, findByTestId, leaveWebview, openSidebarView, poll, screenshot, waitForText } from './sidebarWebview';
 
 /**
  * Sidebar parity of the 2.0 sidebar in VS Code (plan item P5.10), on the VSIX that `npm run test:ui` packages: the sash
@@ -42,6 +42,29 @@ describe('2.0 sidebar parity', () => {
 
     afterEach(async () => {
         await leaveWebview();
+    });
+
+    it('Update all in the Updates header opens the confirmation; Cancel leaves the project file as it was', async function () {
+        this.timeout(180_000);
+        await openSidebarView();
+        await enterSidebarWebview();
+        await poll(async () => ((await driverOf().findElements(By.css('[data-testid="sidebar-updates-list"] [role="option"]'))).length > 0 ? true : undefined), 'an update row', 120_000);
+        await (await findByTestId('sidebar-update-all-button', 30_000)).click();
+        try {
+            const dialog = await findByTestId('confirm-dialog', 10_000);
+            // Which updates join depends on what earlier files left (an update of Newtonsoft.Json runs before this file):
+            // every line is one package with the version it goes from and to.
+            expect(await dialog.getAttribute('textContent')).to.match(/^Update \d+ packages?\?(?:[\w.]+: \S+ → \S+)+/);
+            await screenshot('sidebar-update-all-dialog');
+        } finally {
+            // A dialog left open covers the sidebar for every later test.
+            const cancel = await driverOf().findElements(By.css('[data-testid="confirm-dialog-cancel"]'));
+            if (cancel.length > 0) {
+                await cancel[0].click();
+            }
+        }
+        await poll(async () => ((await driverOf().findElements(By.css('[data-testid="confirm-dialog"]'))).length === 0 ? true : undefined), 'the dialog closed', 10_000);
+        expect(fs.readFileSync(csprojPath, 'utf-8')).to.equal(originalCsproj);
     });
 
     it('the sash between the sections moves with the keyboard', async function () {

@@ -41,7 +41,8 @@ export function ProjectUpdates(props: ProjectUpdatesProps): React.JSX.Element {
     const { run } = useOpsActions();
     const { menu, viewDetails } = useRowRequests(announce);
     const needle = filter.trim().toLowerCase();
-    const items = useMemo<Item[]>(() => rows.filter(update => update.id.toLowerCase().includes(needle)).map(update => ({ id: update.id, update })), [rows, needle]);
+    // Sorted by id, as the main panel's lists are (MU9, P9.10).
+    const items = useMemo<Item[]>(() => rows.filter(update => update.id.toLowerCase().includes(needle)).sort((a, b) => a.id.localeCompare(b.id)).map(update => ({ id: update.id, update })), [rows, needle]);
     const centralIds = useMemo(() => new Set((installed?.packages ?? [])
         .filter(entry => entry.declaration === 'central' || entry.declaration === 'central-override')
         .map(entry => entry.id.toLowerCase())), [installed]);
@@ -109,7 +110,8 @@ export function ProjectUpdates(props: ProjectUpdatesProps): React.JSX.Element {
                         {...placement}
                         itemId={update.id}
                         name={update.id}
-                        version={`${update.installedVersion} → ${update.latestVersion}`}
+                        version={update.installedVersion}
+                        nextVersion={update.latestVersion}
                         density="compact"
                         busy={busy}
                         status={busy ? busyStatus(update.id) : undefined}

@@ -22,6 +22,8 @@ export interface SectionHeaderProps {
     busy?: boolean;
     /** `IconButton`s of the section. They are beside the toggle, never inside it. */
     actions?: React.ReactNode;
+    /** A tooltip on the toggle, for example a project's path. */
+    tooltip?: string;
 }
 
 /**
@@ -29,7 +31,7 @@ export interface SectionHeaderProps {
  * section. The section's own buttons are siblings of the heading, because a button inside a button is nested
  * interactive content, which assistive technology cannot reach.
  */
-export function SectionHeader({ title, titleId, expanded, onToggle, contentId, testKey, level = 2, count, busy, actions }: SectionHeaderProps): React.JSX.Element {
+export function SectionHeader({ title, titleId, expanded, onToggle, contentId, testKey, level = 2, count, busy, actions, tooltip }: SectionHeaderProps): React.JSX.Element {
     const Heading = `h${level}` as const;
     return (
         <div className="nuiget-section-header">
@@ -39,6 +41,7 @@ export function SectionHeader({ title, titleId, expanded, onToggle, contentId, t
                     className="nuiget-section-toggle"
                     aria-expanded={expanded}
                     aria-controls={contentId}
+                    title={tooltip}
                     data-testid={`section-header-${testKey}`}
                     onClick={onToggle}
                 >

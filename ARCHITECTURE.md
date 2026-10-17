@@ -683,6 +683,11 @@ is why it is not a `Popover`.
   `BrowseResults` (`sidebar-browse-list`) lists compact rows; Enter or the row's button installs the version found
   into the committed project with the row's `sourceUrl`. An installed package and a surface without a single project
   install nothing and say why. The sidebar never asks for suggestions, the source list or the settings.
+  Installed and Updates rows are sorted by id, as the main panel's (P9.10), and an update row passes `nextVersion`.
+  Update all in the Updates header (`sidebar-update-all-button`, an arrow `IconButton` beside the count) opens a
+  `ConfirmDialog` that lists the updates (per project under All Projects) and sends `ops/bulkUpdate`, or one
+  `ops/bulkUpdateAllProjects`; centrally managed (`central`) rows, busy rows and an unsupported project's rows stay
+  out (N76). A project header of All Projects carries the project's path as its tooltip (`SectionHeader.tooltip`).
 
 ### Details feature (main)
 

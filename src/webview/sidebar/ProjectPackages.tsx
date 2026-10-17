@@ -38,7 +38,8 @@ export function ProjectPackages({ projectPath, result, filter, announce, labelle
     const { menu, viewDetails } = useRowRequests(announce);
     const needle = filter.trim().toLowerCase();
     const items = useMemo<Item[]>(
-        () => result.packages.filter(entry => entry.id.toLowerCase().includes(needle)).map(entry => ({ id: entry.id, entry })),
+        // Sorted by id, as the main panel's lists are (P9.10).
+        () => result.packages.filter(entry => entry.id.toLowerCase().includes(needle)).sort((a, b) => a.id.localeCompare(b.id)).map(entry => ({ id: entry.id, entry })),
         [result, needle],
     );
     const isBusy = (packageId: string): boolean => isPackageBusy(projectPath, packageId);

@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Update all in the sidebar** — the arrow button of the Updates section header updates every update of the selected project, or of every project under All Projects, after an in-panel confirmation that lists them; centrally managed packages stay out
 - **Install in several projects from a single project** — a search result not installed in the selected project offers Install in projects… when the workspace has more than one project
 - **Quick install from the Browse list and the search box** — Ctrl+Enter (Cmd+Enter) installs a Browse row's version, the highlighted quick-search suggestion's newest version or the version chosen after ArrowRight into the selected project, through the Central Package Management preview where one is needed
 
@@ -27,6 +28,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **README typography (headings, inline code, tables, blockquotes, lists, rules) and a copy button with an icon and Copied feedback**
 - **Operations notify again: a progress notification for bulk operations, a toast with the outcome, Show output on a partial, failed or rejected operation, the output channel revealed on failure**
 - **A webview that stops working shows Reload and reports the error to the nUIget output channel**
+- **Sidebar rows sorted by package id**
+- **Sidebar project headers carry the project path as tooltip**
 
 ### Fixed
 

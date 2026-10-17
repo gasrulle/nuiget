@@ -88,7 +88,7 @@ describe('sidebar: Installed section', () => {
         await hostSays(() => host.respond(host.requests('installed/get')[0], installed(A, [pkg('Serilog', { version: '3.0.0' }), pkg('Moq', { version: '4.20.0' })]), 1));
         expect(skeletonRows()).toHaveLength(0);
         expect(screen.getByRole('listbox', { name: 'Installed' })).toBe(list());
-        expect(names()).toEqual(['Serilog', 'Moq']);
+        expect(names()).toEqual(['Moq', 'Serilog']);
         expect(option('Serilog')).toHaveAccessibleName('Serilog 3.0.0');
         // The section says how many, and the list says which keys act on a row.
         expect(screen.getByTestId('section-header-installed')).toHaveAccessibleName('Installed 2');
@@ -116,7 +116,7 @@ describe('sidebar: Installed section', () => {
         expect(names()).toEqual(['Serilog']);
         await hostSays(() => host.respond(request, installed(A, [pkg('Serilog'), pkg('Moq')]), 1));
         expect(screen.queryByTestId('sidebar-installed-provisional')).toBeNull();
-        expect(names()).toEqual(['Serilog', 'Moq']);
+        expect(names()).toEqual(['Moq', 'Serilog']);
     });
 
     it('unresolved: the row says so, is disabled and has no action', async () => {
@@ -159,7 +159,7 @@ describe('sidebar: Installed section', () => {
         const banner = screen.getByTestId('sidebar-unsupported');
         expect(banner).toHaveAttribute('role', 'status');
         expect(banner).toHaveTextContent('Warning: Unsupported project: requires .NET SDK 10 or newer');
-        expect(names()).toEqual(['Serilog', 'Moq']);
+        expect(names()).toEqual(['Moq', 'Serilog']);
         expect(screen.queryAllByTestId('row-action-uninstall')).toHaveLength(0);
         expect(list()).toHaveAccessibleDescription('Read-only. Ctrl+Enter (Cmd+Enter) opens the full view; Shift+F10 opens the actions menu.');
         await userEvent.click(option('Serilog'));
@@ -205,7 +205,7 @@ describe('sidebar: Installed section', () => {
         expect(option('Serilog')).not.toHaveAttribute('aria-busy');
         await waitFor(() => expect(said()).toBe('Uninstalled Serilog'));
         // Nothing was taken out of the list by guessing: the row goes when the host's new list says so.
-        expect(names()).toEqual(['Serilog', 'Moq']);
+        expect(names()).toEqual(['Moq', 'Serilog']);
         await hostSays(() => host.invalidate([[resourceKeys.installed(A), 2]]));
         await hostSays(() => host.respond(host.requests('installed/get').at(-1)!, installed(A, [pkg('Moq')]), 2));
         expect(names()).toEqual(['Moq']);
@@ -243,12 +243,12 @@ describe('sidebar: Installed section', () => {
         await userEvent.click(option('Moq'));
         await userEvent.keyboard('{Delete}');
         await userEvent.keyboard('{ArrowDown}{Enter}');
-        expect(removals(host).map(request => request.payload.packageId)).toEqual(['Moq', 'xunit']);
+        expect(removals(host).map(request => request.payload.packageId)).toEqual(['Moq', 'Serilog']);
         await hostSays(() => host.respond(removals(host)[0], removed('op1', 'Moq')));
-        await hostSays(() => host.respond(removals(host)[1], removed('op2', 'xunit')));
+        await hostSays(() => host.respond(removals(host)[1], removed('op2', 'Serilog')));
         await hostSays(() => host.invalidate([[resourceKeys.installed(A), 2]]));
-        await hostSays(() => host.respond(host.requests('installed/get').at(-1)!, installed(A, [pkg('Serilog')]), 2));
-        expect(option('Serilog')).toHaveFocus();
+        await hostSays(() => host.respond(host.requests('installed/get').at(-1)!, installed(A, [pkg('xunit')]), 2));
+        expect(option('xunit')).toHaveFocus();
     });
 
     it('a failed or refused uninstall leaves the row as it was and says why', async () => {
@@ -312,7 +312,7 @@ describe('sidebar: Installed section', () => {
 
         await hostSays(() => host.invalidate([[resourceKeys.installed(A), 2]]));
         expect(host.requests('installed/get')).toHaveLength(2);
-        expect(names()).toEqual(['Serilog', 'Moq']);
+        expect(names()).toEqual(['Moq', 'Serilog']);
         expect(list()).toHaveAttribute('aria-busy', 'true');
         expect(screen.getByRole('progressbar', { name: 'Refreshing installed packages' })).not.toHaveAttribute('aria-valuenow');
         expect(sectionSpinner()).not.toBeNull();
@@ -324,7 +324,7 @@ describe('sidebar: Installed section', () => {
         expect(said()).toBe('Uninstalled xunit');
 
         await hostSays(() => host.respond(host.requests('installed/get')[1], installed(A, [pkg('Serilog'), pkg('Moq'), pkg('xunit')]), 2));
-        expect(names()).toEqual(['Serilog', 'Moq', 'xunit']);
+        expect(names()).toEqual(['Moq', 'Serilog', 'xunit']);
         expect(list()).not.toHaveAttribute('aria-busy');
         expect(screen.queryByRole('progressbar')).toBeNull();
     });
@@ -412,7 +412,7 @@ describe('sidebar: Installed section', () => {
         await userEvent.type(search, 'x');
         expect(screen.getByTestId('sidebar-installed-empty')).toHaveTextContent('No installed packages match "SERIx".');
         await userEvent.clear(search);
-        expect(names()).toEqual(['Serilog', 'Serilog.Sinks.Console', 'Moq']);
+        expect(names()).toEqual(['Moq', 'Serilog', 'Serilog.Sinks.Console']);
 
         await userEvent.click(option('Moq'));
         expect(search).not.toHaveFocus();
@@ -431,7 +431,7 @@ describe('sidebar: Installed section', () => {
         expect(toggle).toHaveAttribute('aria-expanded', 'false');
         expect(screen.queryByRole('listbox')).toBeNull();
         await userEvent.click(toggle);
-        expect(names()).toEqual(['Serilog', 'Moq']);
+        expect(names()).toEqual(['Moq', 'Serilog']);
         expect(option('Moq')).toHaveAttribute('aria-selected', 'true');
     });
 

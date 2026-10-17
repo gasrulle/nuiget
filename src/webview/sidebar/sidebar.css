@@ -87,3 +87,13 @@ body {
 .nuiget-sidebar-section-content:has(.nuiget-sidebar-project) {
     overflow-y: auto;
 }
+
+/* The confirmation of Update all: one short list, per project under All Projects (as the main panel's bulk dialogs). */
+.nuiget-sidebar-bulk-lead {
+    margin: 0;
+}
+
+.nuiget-sidebar-bulk-list {
+    margin: var(--nuiget-space-2) 0 var(--nuiget-space-4);
+    padding-inline-start: var(--nuiget-space-6);
+}

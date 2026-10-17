@@ -9,7 +9,7 @@ document; when behaviour changes, change this document in the same pull request.
 | Surface | Purpose | Density |
 |---|---|---|
 | **Main panel** (`nUIget` editor tab) | Full package management: browse/search with details and README, installed list with transitive dependencies, updates with bulk actions, source settings. | Comfortable rows (icons, description, badges), split list/details layout. |
-| **Sidebar** (Activity Bar view) | At-a-glance installed/updates for the active project with quick actions; browse via the search box. | Compact rows (no icons, no descriptions); QuickPicks for choices. |
+| **Sidebar** (Activity Bar view) | At-a-glance installed/updates for the active project with quick actions; browse via the search box. | Compact rows (no icons, no descriptions); QuickPicks for choices; Update all in the Updates header, confirmed in-panel. |
 
 Both surfaces show the **same active context** — project, source, prerelease, restore toggle —
 owned by the host (`SessionStore`). Changing it in one surface changes it in the other within one
@@ -81,7 +81,7 @@ In this mode:
 |---|---|---|
 | Install / Update to version | Details panel button, sidebar row hover/focus action, context menu | None (the status bar shows the running operation; a toast reports the outcome). |
 | Uninstall (single) | Details button, row action, context menu | None; outcome toast. |
-| Bulk update / bulk uninstall | Updates/Installed toolbar | In-panel **Dialog** listing the packages (and projects in All Projects) with Confirm/Cancel; then a progress notification (N of M) and a summary toast. |
+| Bulk update / bulk uninstall | Updates/Installed toolbar; the sidebar's Updates header (Update all) | In-panel **Dialog** listing the packages (and projects in All Projects) with Confirm/Cancel; then a progress notification (N of M) and a summary toast. |
 | CPM central change | Any update of a `central` package, or an install of a package that already has a central entry in a CPM project (main panel: the pane asks `cpm/preview` first and opens the dialog only when an entry exists; sidebar: the actions menu and the host's modal) | Main panel: **Dialog** (`cpm-preview-dialog`) listing the projects the central version applies to; choice: *Update central version* / Cancel. Sidebar: the row's primary action opens the actions menu and the host confirms with a modal listing the same projects. *Override in this project only* is not offered: no `dotnet` command writes a `VersionOverride` (ADR-003); an existing override updates in place from the Updates lists and the details pane. An uninstall of a central row needs no confirmation (the central entry stays). |
 | Remove source | Source settings | In-dialog confirm row (existing pattern). |
 | Restore project(s) | Transitive banner, header | None. |
@@ -197,6 +197,7 @@ All Projects (§3; `<name>` = project name lower-cased):
 |---|---|
 | `installed-list-<name>`, `updates-list-<name>` | A project's list in the main panel |
 | `sidebar-installed-list-<name>`, `sidebar-updates-list-<name>` | A project's list in the sidebar |
+| `sidebar-update-all-button` | Update all in the sidebar's Updates header |
 | `section-header-project-<name>`, `section-header-updates-<name>` | The toggle of a project's section (Installed, Updates) |
 
 Removing or renaming a hook requires updating this table and the ExTester tests in the same change.

@@ -1,4 +1,4 @@
-import { act, render, screen, within } from '@testing-library/react';
+import { act, cleanup, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { axe } from 'jest-axe';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -70,8 +70,10 @@ describe('sidebar: Updates section', () => {
 
         await hostSays(() => host.respond(host.requests('updates/get')[0], { projectPath: A, updates: UPDATES }, 1));
         expect(screen.getByRole('listbox', { name: 'Updates' })).toBe(updatesList());
-        expect(within(updatesList()).getAllByRole('option').map(element => element.querySelector('.nuiget-row-name')?.textContent)).toEqual(['Serilog', 'Newtonsoft.Json']);
+        expect(within(updatesList()).getAllByRole('option').map(element => element.querySelector('.nuiget-row-name')?.textContent)).toEqual(['Newtonsoft.Json', 'Serilog']);
         expect(within(updatesList()).getByTestId('package-row-serilog')).toHaveTextContent('3.0.0 → 3.1.0');
+        // The `id version` tooltip of P9.2 on the row's body (SB15).
+        expect(within(updatesList()).getByTestId('package-row-serilog').querySelector('.nuiget-row-body')).toHaveAttribute('title', 'Serilog 3.0.0 → 3.1.0');
         expect(updateOption('Newtonsoft.Json')).toHaveAccessibleDescription(/Centrally managed/);
         expect(header()).toHaveAccessibleName('Updates 2');
         const results = await axe(document.body);
@@ -161,5 +163,72 @@ describe('sidebar: Updates section', () => {
         await user.click(header());
         expect(header()).toHaveAttribute('aria-expanded', 'false');
         expect(screen.queryByTestId('sidebar-updates-empty')).toBeNull();
+    });
+
+    it('update all button runs bulk update', async () => {
+        const user = userEvent.setup();
+        const host = await mountWith({ updates: UPDATES });
+        // Newtonsoft.Json is set centrally: it goes through its own preview, not Update all (N76).
+        const button = screen.getByTestId('sidebar-update-all-button');
+        expect(button).toHaveAccessibleName('Update all (1)');
+        await user.click(button);
+        const dialog = screen.getByTestId('confirm-dialog');
+        expect(dialog).toHaveTextContent('Serilog: 3.0.0 → 3.1.0');
+        expect(dialog).not.toHaveTextContent('Newtonsoft.Json');
+        const results = await axe(document.body);
+        expect(results).toHaveNoViolations();
+        expect(axeRuleOutcome(results, 'aria-dialog-name')).toBe('passes');
+        await user.click(screen.getByTestId('confirm-dialog-confirm'));
+        expect(host.requests('ops/bulkUpdate').map(request => request.payload)).toEqual([{ projectPath: A, packages: [{ id: 'Serilog', version: '3.1.0', sourceUrl: FEED }] }]);
+        expect(screen.queryByTestId('confirm-dialog')).toBeNull();
+    });
+
+    it('update all under All Projects sends one ops/bulkUpdateAllProjects grouped by project', async () => {
+        const user = userEvent.setup();
+        const host = await mountWith();
+        const B = '/w/Lib/Lib.csproj';
+        await hostSays(() => host.event('session/changed', { ...snapshot(2), selectedProject: ALL_PROJECTS }));
+        const installedStream = host.requests('allProjects/installed')[0];
+        await hostSays(() => host.chunk(installedStream, { kind: 'project', chunk: { projectPath: A, projectName: 'App', result: { projectPath: A, fidelity: 'authoritative', isCpm: false, packages: [pkg('Serilog', '3.0.0')] } } }));
+        await hostSays(() => host.chunk(installedStream, { kind: 'project', chunk: { projectPath: B, projectName: 'Lib', result: { projectPath: B, fidelity: 'authoritative', isCpm: false, packages: [pkg('Moq', '4.20.0')] } } }));
+        const stream = host.requests('allProjects/updates')[0];
+        await hostSays(() => host.chunk(stream, { kind: 'start', projects: [{ name: 'App', path: A }, { name: 'Lib', path: B }] }));
+        await hostSays(() => host.chunk(stream, { kind: 'project', chunk: { projectPath: A, projectName: 'App', updates: [update('Serilog', '3.0.0', '3.1.0')] } }));
+        await hostSays(() => host.chunk(stream, { kind: 'project', chunk: { projectPath: B, projectName: 'Lib', updates: [update('Moq', '4.20.0', '4.20.72')] } }));
+        await hostSays(() => host.respond(stream, { projectPaths: [A, B] }));
+
+        await user.click(screen.getByTestId('sidebar-update-all-button'));
+        const dialog = screen.getByTestId('confirm-dialog');
+        expect(dialog).toHaveTextContent('In App:Serilog: 3.0.0 → 3.1.0In Lib:Moq: 4.20.0 → 4.20.72');
+        await user.click(screen.getByTestId('confirm-dialog-confirm'));
+        expect(host.requests('ops/bulkUpdateAllProjects').map(request => request.payload)).toEqual([{ projectUpdates: [
+            { projectPath: A, projectName: 'App', packages: [{ id: 'Serilog', version: '3.1.0', sourceUrl: FEED }] },
+            { projectPath: B, projectName: 'Lib', packages: [{ id: 'Moq', version: '4.20.72', sourceUrl: FEED }] },
+        ] }]);
+    });
+
+    it('update all cancels without a request, and there is no button without an update', async () => {
+        const user = userEvent.setup();
+        const host = await mountWith({ updates: UPDATES });
+        await user.click(screen.getByTestId('sidebar-update-all-button'));
+        await user.click(screen.getByTestId('confirm-dialog-cancel'));
+        expect(screen.queryByTestId('confirm-dialog')).toBeNull();
+        expect(host.requests('ops/bulkUpdate')).toHaveLength(0);
+
+        // A complete empty answer: no button.
+        cleanup();
+        await mountWith({ updates: [] });
+        expect(screen.queryByTestId('sidebar-update-all-button')).toBeNull();
+    });
+
+    it('an unsupported project has no Update all', async () => {
+        const host = createFakeHost();
+        render(<StoreProvider bus={host.bus}><SidebarView /></StoreProvider>);
+        await hostSays(() => host.respond(host.requests('session/get')[0], snapshot(1)));
+        await hostSays(() => host.respond(host.requests('projects/list')[0], { projects: [{ name: 'App', path: A }] }, 1));
+        await hostSays(() => host.respond(host.requests('installed/get')[0], { projectPath: A, fidelity: 'authoritative', isCpm: false, packages: [pkg('Serilog', '3.0.0')], unsupported: { reason: 'sdk-too-old', message: 'requires .NET SDK 10 or newer' } }, 1));
+        await hostSays(() => host.respond(host.requests('updates/get')[0], { projectPath: A, updates: [update('Serilog', '3.0.0', '3.1.0')] }, 1));
+        expect(within(updatesList()).getAllByRole('option')).toHaveLength(1);
+        expect(screen.queryByTestId('sidebar-update-all-button')).toBeNull();
     });
 });

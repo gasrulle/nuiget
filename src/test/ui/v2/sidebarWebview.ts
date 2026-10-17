@@ -27,6 +27,7 @@ export type ScreenshotState =
     | 'main-quicksearch-versions'
     | 'main-details-readme'
     | 'sidebar-sections'
+    | 'sidebar-update-all-dialog'
     | 'sidebar-narrow-200px';
 
 /**
