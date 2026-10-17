@@ -1,7 +1,7 @@
 import { expect } from 'chai';
 import * as fs from 'fs';
 import * as path from 'path';
-import { By, InputBox, Workbench } from 'vscode-extension-tester';
+import { By, InputBox, Key, Workbench } from 'vscode-extension-tester';
 import { enterMainWebview, openMainPanel } from './mainWebview';
 import { driverOf, enterSidebarWebview, findByTestId, leaveWebview, openSidebarView, poll, screenshot } from './sidebarWebview';
 
@@ -263,6 +263,10 @@ describe('2.0 theme pass', () => {
             await waitForBodyClass(theme);
             await (await findByTestId('installed-tab', 30_000)).click();
             await findByTestId('package-row-serilog', 120_000);
+            // A pointer focus never matches `:focus-visible`; a key press does: the Newtonsoft.Json row holds keyboard
+            // focus, so the capture shows the focus ring (P9.11).
+            await (await driverOf().findElements(By.css('[data-testid="package-row-serilog"] [role="option"]')))[0].click();
+            await driverOf().actions().sendKeys(Key.ARROW_UP).perform();
             await waitForSettledContent();
             await waitForTransitions();
             await screenshot(state);

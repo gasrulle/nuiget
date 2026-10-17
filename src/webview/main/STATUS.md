@@ -1,9 +1,13 @@
-# STATUS — src/webview/main   commit 52baabc (P9.10 closed; parent of the P9.11 commits)   2026-10-17T13:40:00Z
+# STATUS — src/webview/main   commit c946043 (P9.11 commit (a); parent of commit (b))   2026-10-17T14:30:00Z
 
 git status --porcelain --untracked-files=all (before commit (a)): modified `.github/copilot-instructions.md`,
 `ARCHITECTURE.md`, `CHANGELOG.md`, `docs/plans/STATUS.md`, `src/test/lint/{webview-css-baseline,webview-stylesheets,webview-tokens}.test.ts`,
 `src/test/ui/v2/theme.ui.test.ts`, `src/webview/main/{main.css,STATUS.md}`, `src/webview/shared/{STATUS.md,tokens.css}`,
 `src/webview/shared/primitives/primitives.css`
+
+git status --porcelain --untracked-files=all (before commit (b)): modified `ARCHITECTURE.md`, `CHANGELOG.md`,
+`docs/plans/STATUS.md`, `src/test/ui/v2/theme.ui.test.ts`, `src/webview/main/{main.css,STATUS.md}`; new
+`src/webview/main/MainParity.test.tsx`
 
 Item: **P9.11** — Theme and focus polish (parity audit MH6, MH11, MH12, MI12, focus visuals), by the ruling below, in two
 commits: (a) high-contrast lines, check-box and drop-down colours, the scrim; (b) the header separator, the list pane's
@@ -25,6 +29,15 @@ rm -rf /tmp/nuiget-ui/screenshots dist && npm run test:ui -- --storage /tmp/nuig
                               (six theme passes green with the new high-contrast border check; local
                               main-installed-single-hc: buttons and tabs boxed, the Newtonsoft.Json icon outlined;
                               sidebar-update-all-dialog: the page dimmed)
+CI runs 38995838065, 38995836325 on c946043 (commit (a)) → success
+commit (b):
+npx tsc --noEmit 0 · npm run check-types 0 · npx eslint src 0 · npm run lint 0 · npm run docs:check 0
+npx vitest run --project backend src/test/lint → Tests 133 passed (133)
+npx vitest run --project frontend src/webview/main/MainParity.test.tsx → Tests 2 passed (2)
+npm test                    → exit 0 · Tests 2009 passed | 9 skipped (2018) · npm run bench → exit 0
+rm -rf dist out/esbuild && node esbuild.mjs --production --analyze → dist/extension.js 297016 / 322502 ·
+                              dist/webview.js 548715 / 577766 · dist/sidebar.js 333071 / 351245
+rm -rf /tmp/nuiget-ui/screenshots dist && npm run test:ui -- --storage /tmp/nuiget-ui → exit 0 · 40 passing (1m) · 15 PNGs
 ```
 
 ## Done (tested)
@@ -43,19 +56,30 @@ rm -rf /tmp/nuiget-ui/screenshots dist && npm run test:ui -- --storage /tmp/nuig
 - Docs (a): ARCHITECTURE tokens paragraph and the dialog sentence; CHANGELOG Changed; gotcha "A high-contrast override in
   `tokens.css`".
 
+- Commit (b): `main.css` a line under the search row (the revalidation bar above it), the list pane in the side-bar
+  colour, All Projects project headers in normal case at the body size (`.nuiget-installed-project--grouped`, MI12; the
+  count-when-collapsed half is TSX and stays out); the P9.0 theme captures press ArrowUp after a click, so the
+  Newtonsoft.Json row shows the focus ring.
+- Tests (b): `All Projects project headers are in normal case and the folder caption stays in capitals`, `the header
+  check boxes and the drop-down are sized and coloured by the tokens` (new `MainParity.test.tsx`).
+- Docs (b): ARCHITECTURE Split row (list pane colour, separator, headers); CHANGELOG Changed.
+
 ## Done (untested)
 
 - None.
 
 ## Not started
 
-- Commit (b): header separator, list pane colour, All Projects headers in normal case (MI12), keyboard focus in the
-  P9.0 theme captures.
+- None of P9.11.
 
 ## Deviations from contract/ADR (file:line each)
 
 - `main.css`: a stale comment "The refresh button stands at the end of the header." (left by P9.7) is removed with the
   check-box rule that now follows `.nuiget-main-toggle`.
+- (b) `MainParity.test.tsx` accepts `400` for `font-weight: normal` (jsdom computes the numeric weight) and checks that an
+  ungrouped section heading is not normal, so the assertion discriminates.
+- (b) The parity audit file is P9.13's: MH6, MH11, MH12 and MI12 (case and size) are recorded closed here and in the
+  tracker only.
 
 ## Advisor decisions (date, item, question, answer verbatim)
 
@@ -116,4 +140,4 @@ Files checked: `/Users/mattias/github/nuiget/.github/agents/architecture-advisor
 
 ## Exact next step (one item ID)
 
-P9.11 commit (b), after commit (a)'s CI is green.
+P9.12, after P9.11's visual check.

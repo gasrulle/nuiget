@@ -104,10 +104,12 @@ body {
 }
 
 /* The revalidation bar lies over the bottom edge, so the list does not move when it comes and goes. */
+/* A line under the search row separates the header from the lists (1.x); the revalidation bar lies above it, in the padding. */
 .nuiget-main-search {
     position: relative;
     flex: none;
     padding: var(--nuiget-space-2) var(--nuiget-space-6);
+    border-block-end: 1px solid var(--nuiget-color-border);
 }
 
 .nuiget-main-search .nuiget-progress {
@@ -145,12 +147,14 @@ body {
     min-height: 0;
 }
 
+/* The list pane in the side-bar colour (1.x `.package-list-panel`); the tab list and toolbar sit in it. */
 .nuiget-main-list {
     display: flex;
     flex: none;
     flex-direction: column;
     width: var(--nuiget-split, 50%);
     min-width: 0;
+    background: var(--nuiget-color-bg-sidebar);
 }
 
 /* A column: the details keep their header in view and scroll their tab; the transitive view and the empty state scroll here. */
@@ -664,6 +668,19 @@ body {
     font-size: var(--nuiget-font-size-sm);
     font-weight: 600;
     text-transform: uppercase;
+}
+
+/*
+ * An All Projects project header is a tree level (1.x, MI12): normal case at the body size, as the sidebar's; the
+ * folder caption above it stays in capitals. No hover: VS Code's pane headers have none (P9.10).
+ */
+.nuiget-installed-project--grouped > .nuiget-section-header .nuiget-section-heading {
+    font-size: var(--nuiget-font-size-md);
+    font-weight: normal;
+}
+
+.nuiget-installed-project--grouped > .nuiget-section-header .nuiget-section-toggle {
+    text-transform: none;
 }
 
 /* ── Install in several projects ── */
