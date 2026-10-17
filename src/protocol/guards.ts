@@ -29,7 +29,7 @@ const REQUEST_TYPE_RECORD = {
     'cpm/preview': true,
     'refresh/all': true,
     'ui/contextMenu': true, 'ui/openSourceSettings': true, 'ui/viewPackage': true, 'ui/copyToClipboard': true,
-    'ui/openExternal': true,
+    'ui/openExternal': true, 'ui/reportError': true,
     'perf/mark': true,
 } satisfies Record<RequestType, true>;
 

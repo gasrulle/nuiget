@@ -13,6 +13,9 @@ import { ALL_PROJECTS, type BulkOutcome, type OperationOutcome, type OperationPr
 import { ABORT_DISPOSED, HostRequestError, type WebviewHost } from './WebviewHost';
 import type { HostServices } from './services';
 
+/** How many characters of each field of a webview's error report reach the log. */
+export const REPORTED_ERROR_LIMIT = 4000;
+
 type Registrar = Pick<WebviewHost, 'surface' | 'on'>;
 
 export function requireProject(projectPath: string): string {
@@ -426,6 +429,12 @@ export function registerSharedHandlers(host: Registrar, services: HostServices):
         } else {
             services.logger.debug(line);
         }
+        return {};
+    });
+    // The guard checks only that the payload is a record: each field is coerced and capped before it is logged.
+    host.on('ui/reportError', async ({ message, stack, componentStack }) => {
+        const clip = (value: unknown): string => String(value ?? '').slice(0, REPORTED_ERROR_LIMIT);
+        services.logger.error(`[${host.surface}] webview error: ${clip(message)}${stack ? `\n${clip(stack)}` : ''}${componentStack ? `\n${clip(componentStack)}` : ''}`);
         return {};
     });
 }

@@ -15,6 +15,8 @@ describe('sidebar 2.0 entry', () => {
     afterEach(() => {
         cleanup();
         document.body.replaceChildren();
+        vi.doUnmock('./SidebarView');
+        vi.restoreAllMocks();
     });
 
     it('mounts the sidebar into its root, acquires the API once, asks the host for the session and the projects, and marks webviewReady', async () => {
@@ -44,5 +46,25 @@ describe('sidebar 2.0 entry', () => {
         // The API can be acquired once per page; a page that is not the sidebar's must not use that up.
         expect(acquire()).not.toHaveBeenCalled();
         expect(api().postMessage).not.toHaveBeenCalled();
+    });
+
+    it('a crash in the shell renders Reload and reports the error through the bus', async () => {
+        vi.spyOn(console, 'error').mockImplementation(() => undefined);
+        vi.doMock('./SidebarView', () => ({ SidebarView: () => { throw new Error('boom'); } }));
+        const root = document.createElement('div');
+        root.id = 'sidebar-root';
+        document.body.append(root);
+
+        await act(async () => {
+            await import('./index');
+        });
+
+        expect(screen.getByRole('button', { name: 'Reload' })).toBeInTheDocument();
+        const reports = api().postMessage.mock.calls
+            .map(([message]) => message as { kind: string; type?: string; payload?: { message?: string; stack?: string } })
+            .filter(message => message.kind === 'request' && message.type === 'ui/reportError');
+        expect(reports.length).toBeGreaterThan(0);
+        expect(reports[0].payload?.message).toBe('boom');
+        expect(reports[0].payload?.stack).toContain('boom');
     });
 });

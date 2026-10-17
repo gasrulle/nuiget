@@ -103,6 +103,13 @@ rm -rf /tmp/nuiget-ui/screenshots dist && npm run test:ui -- --storage /tmp/nuig
   `--nuiget-color-table-row-alt-bg`, `--nuiget-color-blockquote-bg`, `--nuiget-color-blockquote-border`), `Canvas`/`CanvasText`
   under forced colours, not in the high-contrast block.
 
+- P9.9 (b) (2026-10-17, ruling in `src/host/STATUS.md`): `primitives/ErrorBoundary.tsx` (a class component; the error
+  state "Something went wrong in this view." with Reload, which remounts the tree under it; `onError` with the component
+  stack), exported from `index.ts`; both entries wrap `StoreProvider` in it and report through `ui/reportError`. Tests:
+  `error boundary renders reload`, `a boundary without an error renders its children only` (ErrorBoundary.test.tsx);
+  `a crash in the shell renders Reload and reports the error through the bus` (main and sidebar `index.test.tsx`).
+  No named state shows the fallback.
+
 ## Done (untested)
 
 - None in jsdom. The rendering is checked in the UI job's screenshots after the push.

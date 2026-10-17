@@ -73,7 +73,7 @@ In this mode:
 | **Empty** | `EmptyState` primitive with one sentence and (optionally) one action | e.g. "No packages installed", "No updates available", "No results for …". |
 | **Offline / sources unreachable** | Warning banner under the search box with "Retry" | `sourcesUnavailable: true` on updates/search; never render as "no updates". |
 | **Unsupported project** | Row/banner "Unsupported project: <reason>" | From `InstalledResult.unsupported`. |
-| **Error** | Inline error text with "Retry"; details also logged to the output channel | Any error response. Loading indicators always clear. |
+| **Error** | Inline error text with "Retry"; details also logged to the output channel | Any error response. Loading indicators always clear. A rendering error in a view shows the error state ("Something went wrong in this view.") with Reload and is reported to the host as `ui/reportError`. |
 
 ## 5. Actions and confirmations
 

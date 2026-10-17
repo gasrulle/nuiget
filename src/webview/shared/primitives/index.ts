@@ -10,6 +10,7 @@ export { ConfirmDialog, type ConfirmDialogProps } from './ConfirmDialog';
 export { cssVars, type NuigetVar } from './cssVars';
 export { Dialog, type DialogProps } from './Dialog';
 export { EmptyState, type EmptyStateProps } from './EmptyState';
+export { ErrorBoundary, type ErrorBoundaryProps } from './ErrorBoundary';
 export { IconButton, type IconButtonProps } from './IconButton';
 export { Listbox, type ListboxProps } from './Listbox';
 export { LiveStatus, type LiveStatusProps } from './LiveStatus';

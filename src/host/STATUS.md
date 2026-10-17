@@ -1,8 +1,15 @@
-# STATUS — src/host   commit 428a060 (P9.8 closed; parent of the P9.9 commits)   2026-10-17T07:40:00Z
+# STATUS — src/host   commit 2975739 (P9.9 commit (a); parent of commit (b))   2026-10-17T08:30:00Z
 
 git status --porcelain --untracked-files=all (before commit (a)): modified `.github/copilot-instructions.md`,
 `ARCHITECTURE.md`, `CHANGELOG.md`, `README.md`, `docs/plans/STATUS.md`, `docs/ux/interaction-model.md`, `src/extension.ts`,
 `src/extension.test.ts`, `src/host/STATUS.md`; new `src/host/feedback.ts`, `src/host/feedback.test.ts`
+
+git status --porcelain --untracked-files=all (before commit (b)): modified `.github/copilot-instructions.md`,
+`ARCHITECTURE.md`, `CHANGELOG.md`, `docs/adr/007-protocol.md`, `docs/plans/STATUS.md`, `docs/protocol.md` (generated),
+`docs/ux/interaction-model.md`, `src/host/{handlers.ts,handlers.test.ts,STATUS.md}`,
+`src/protocol/{messages.ts,guards.ts,protocol.test.ts,STATUS.md}`, `src/webview/main/{index.tsx,index.test.tsx}`,
+`src/webview/sidebar/{index.tsx,index.test.tsx}`, `src/webview/shared/STATUS.md`, `src/webview/shared/primitives/index.ts`;
+new `src/webview/shared/primitives/{ErrorBoundary.tsx,ErrorBoundary.test.tsx}`
 
 Item: **P9.9** — Operation feedback (D17, MU4), by the stop-and-ask ruling below, in two commits: (a) progress
 notification, outcome toasts, output channel on failure (no contract change); (b) the `ui/reportError` request under the
@@ -34,6 +41,18 @@ rm -rf dist out/esbuild && node esbuild.mjs --production --analyze → dist/exte
                               dist/webview.js 548007 / 577766 · dist/sidebar.js 327034 / 351245
 npm run package:vsix        → exit 0 · Packaged: nuiget-v2.0.0.vsix (17 files, 577.53 KB)
 rm -rf /tmp/nuiget-ui/screenshots dist && npm run test:ui -- --storage /tmp/nuiget-ui → exit 0 · 38 passing (1m)
+CI runs 38989326544, 38989324756 on 2975739 (commit (a)) → success
+commit (b) (sentinel `.claude/.contract-change` = `P9.9` while editing, removed before the commit):
+npx tsc --noEmit 0 · npm run check-types 0 · npx eslint src 0 · npm run lint 0 · npm run docs:check 0
+npm run docs:protocol → wrote docs/protocol.md · npm run docs:protocol:check → up to date
+npx vitest run --project backend src/host src/protocol → Tests 122 passed (122)
+npx vitest run --project frontend ErrorBoundary.test.tsx main/index.test.tsx sidebar/index.test.tsx → Tests 8 passed (8)
+npx vitest run --project backend src/test/lint → Tests 131 passed (131)
+npm test                    → exit 0 · Tests 1997 passed | 9 skipped (2006) · npm run bench → exit 0
+rm -rf dist out/esbuild && node esbuild.mjs --production --analyze → dist/extension.js 297016 / 322502 ·
+                              dist/webview.js 548697 / 577766 · dist/sidebar.js 327723 / 351245
+npm run package:vsix        → exit 0 · Packaged: nuiget-v2.0.0.vsix (17 files, 578.25 KB)
+rm -rf /tmp/nuiget-ui/screenshots dist && npm run test:ui -- --storage /tmp/nuiget-ui → exit 0 · 38 passing (1m)
 ```
 
 ## Done (tested)
@@ -48,18 +67,28 @@ rm -rf /tmp/nuiget-ui/screenshots dist && npm run test:ui -- --storage /tmp/nuig
   README queue and output channel bullets; interaction model §5 rows; CHANGELOG Changed; gotcha "An outcome toast outside
   `src/host/feedback.ts`".
 
+- Commit (b): `handlers.ts` `ui/reportError` writes `[<surface>] webview error: <message>` with the stack and the
+  component stack at error level, each field coerced and capped at `REPORTED_ERROR_LIMIT` (4000), answers `{}`. Test:
+  `ui/reportError writes the webview's error to the log at error level with the surface and caps each field at 4000
+  characters`. Named rewrites: `handlers.test.ts` `payloads` gains `ui/reportError`; 'covers the 45 requests of the
+  protocol' (follow-up ruling). The ErrorBoundary and the entries: `src/webview/shared/STATUS.md`.
+- Docs (b): ARCHITECTURE primitives paragraph (`ErrorBoundary`), `src/host/**` row, `RequestMap` 45; interaction model §4
+  Error row; CHANGELOG Changed; gotcha "ErrorBoundary inside the provider"; ADR-007 amended (45th request).
+
 ## Done (untested)
 
 - None.
 
 ## Not started
 
-- Commit (b): `ui/reportError` under the sentinel, its handler, the ErrorBoundary in both entries.
+- None of P9.9.
 
 ## Deviations from contract/ADR (file:line each)
 
 - Intended consequence (ruling WHY): a one-project `ops/restore` (the transitive banner's forced restore) reports
   `total: 1`, so it opens a "Restoring projects" notification (`Restoring 1 of 1: …`) and ends with `Restored 1 project.`
+- `REPORTED_ERROR_LIMIT` is an exported constant of `handlers.ts` (the ruling's inline `clip` reads it) so the test
+  states the cap by name.
 - `feedback.ts`: a `failed` single outcome's text falls back to `edit.error` when the outcome has no `message`; a bulk
   `rejected` without a message says "the queue is full" (the queue's only reason).
 
@@ -129,6 +158,8 @@ VERIFY:
 Files checked: `/Users/mattias/github/nuiget/.github/agents/architecture-advisor.agent.md`; `/Users/mattias/github/nuiget/docs/plans/2026-10-11-nuiget-2.0-execution-plan.md:41-175, 321-380`; `/Users/mattias/github/nuiget/docs/plans/STATUS.md:121-136`; `/Users/mattias/github/nuiget/docs/plans/RUN.md:60-76`; `/Users/mattias/github/nuiget/docs/plans/parity-audit-2026-10-16.md:255-267, 1402, 1443`; `/Users/mattias/github/nuiget/docs/adr/003-operation-queue-and-dotnet-runner.md`, `007-protocol.md`, `008-webview-architecture.md` (whole); `/Users/mattias/github/nuiget/docs/ux/interaction-model.md:55-90, 160-166`; `/Users/mattias/github/nuiget/src/protocol/messages.ts` (whole), `domain.ts:255-339`, `guards.ts:1-67, 96-109`, `protocol.test.ts:76-100`, `STATUS.md:1-40`; `/Users/mattias/github/nuiget/src/extension.ts` (whole); `/Users/mattias/github/nuiget/src/extension.test.ts:1-150, 251-303, 326-352, 596-616, 774, 786`; `/Users/mattias/github/nuiget/src/host/services.ts`, `WebviewHost.ts`, `STATUS.md` (whole), `handlers.ts:120-210, 398-440`, `handlers.test.ts:92, 112-170, 189, 422-430, 453-520, 738-828` (titles and toast assertions), `SidebarHost.ts` (grep of :32-58, 120, 153, 181-233, 261, 293), `MainPanelHost.ts:83-85`, `pickers.ts:12, 54`; `/Users/mattias/github/nuiget/src/core/ops/OperationQueue.ts` (whole), `PackageWorkflows.ts:60-210` and the `ctx.report` sites `:288, :351`; `/Users/mattias/github/nuiget/src/core/catalog/Catalog.ts:292-299`; `/Users/mattias/github/nuiget/src/core/project/assets.ts:171-192`; `/Users/mattias/github/nuiget/src/webview/main/index.tsx`, `index.test.tsx`, `/Users/mattias/github/nuiget/src/webview/sidebar/index.tsx`, `index.test.tsx:20-26`, `outcomes.ts`; `/Users/mattias/github/nuiget/src/webview/shared/bus/MessageBus.ts`, `store/outcomes.ts`, `primitives/index.ts`, `primitives/EmptyState.tsx` (whole); `/Users/mattias/github/nuiget/src/test/__mocks__/vscode.ts:100-216, 321-328`; `/Users/mattias/github/nuiget/src/test/harness/fakeDotnet.ts:98-121, 226-311` (exports), `harness.ts:17, 154`, `scenarios.test.ts` (grep for toasts: none); `/Users/mattias/github/nuiget/src/test/ui/settings.json`; `/Users/mattias/github/nuiget/src/test/ui/v2/*.ui.test.ts` (grep: ten suites run operations, no notification handling); `/Users/mattias/github/nuiget/src/test/lint/interaction-model-testids.test.ts:6-134`, `webview-stylesheets.test.ts:1-22`; `/Users/mattias/github/nuiget/scripts/hooks/guard.mjs:1-90`; `/Users/mattias/github/nuiget/scripts/check-docs-drift.mjs:210-224`; `/Users/mattias/github/nuiget/.claude/settings.json`; `/Users/mattias/github/nuiget/.gitignore:57`; `/Users/mattias/github/nuiget/eslint.config.mjs:15-50`; `/Users/mattias/github/nuiget/.github/instructions/core-boundaries.instructions.md:16-33`; `/Users/mattias/github/nuiget/.github/instructions/reactjs.instructions.md` (grep for class components: none); `/Users/mattias/github/nuiget/ARCHITECTURE.md:5-110 (headings), 86-100, 110-128`; `/Users/mattias/github/nuiget/README.md:55, 67, 91`; `/Users/mattias/github/nuiget/CHANGELOG.md:1-30`; `/Users/mattias/github/nuiget/package.json:296-297`; `git show 0457c75:src/services/NuGetOperations.ts` (`:45-70` and the toast sites), `0457c75:src/services/OperationQueue.ts:20-50`.
 `````
 
+2026-10-17, P9.9 commit (b) follow-up: verbatim in `src/protocol/STATUS.md`.
+
 ## Exact next step (one item ID)
 
-P9.9 commit (b), after commit (a)'s CI is green.
+P9.10.

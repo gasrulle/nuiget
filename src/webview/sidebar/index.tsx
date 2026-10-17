@@ -1,6 +1,8 @@
 import { StrictMode } from 'react';
 import ReactDOM from 'react-dom/client';
+import type { RequestPayload } from '../../protocol';
 import { createMessageBus } from '../shared/bus/MessageBus';
+import { ErrorBoundary } from '../shared/primitives';
 import { StoreProvider } from '../shared/store/StoreProvider';
 import '../shared/tokens.css';
 import './sidebar.css';
@@ -14,11 +16,24 @@ const rootElement = document.getElementById('sidebar-root');
 if (rootElement) {
     const api = acquireVsCodeApi();
     const bus = createMessageBus(api);
+    // A rendering error reaches the host's output channel; the boundary shows Reload in place of the view.
+    const report = (error: Error, componentStack?: string): void => {
+        const payload: RequestPayload<'ui/reportError'> = { message: error.message };
+        if (error.stack) {
+            payload.stack = error.stack;
+        }
+        if (componentStack) {
+            payload.componentStack = componentStack;
+        }
+        void bus.request('ui/reportError', payload).catch(() => undefined);
+    };
     ReactDOM.createRoot(rootElement).render(
         <StrictMode>
-            <StoreProvider bus={bus}>
-                <SidebarView viewState={api} />
-            </StoreProvider>
+            <ErrorBoundary onError={report}>
+                <StoreProvider bus={bus}>
+                    <SidebarView viewState={api} />
+                </StoreProvider>
+            </ErrorBoundary>
         </StrictMode>
     );
 }

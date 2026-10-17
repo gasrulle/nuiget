@@ -19,7 +19,7 @@ import {
     type SessionSnapshot,
 } from '../protocol';
 import { createMockExtensionContext } from '../test/__mocks__/vscode';
-import { invalidateAfter, registerSharedHandlers } from './handlers';
+import { invalidateAfter, registerSharedHandlers, REPORTED_ERROR_LIMIT } from './handlers';
 import { createWorkflowDeps, HostEvents, renderWebviewHtml, type HostServices } from './services';
 import { SidebarHost } from './SidebarHost';
 import { WebviewHost, type WebviewLike } from './WebviewHost';
@@ -163,6 +163,7 @@ const payloads: { [T in RequestType]: RequestPayload<T> } = {
     'ui/copyToClipboard': { text: 'X' },
     'ui/openExternal': { url: 'https://example.test/' },
     'perf/mark': { name: 'webviewReady' },
+    'ui/reportError': { message: 'boom' },
 };
 
 /** Requests that only a concrete host registers, not the shared handlers. */
@@ -253,8 +254,8 @@ describe('shared handlers: every request of the protocol', () => {
         expect(services.contextFor).toHaveBeenCalledTimes(2);
     });
 
-    it('covers the 44 requests of the protocol', () => {
-        expect(REQUEST_TYPES).toHaveLength(44);
+    it('covers the 45 requests of the protocol', () => {
+        expect(REQUEST_TYPES).toHaveLength(45);
         expect(Object.keys(payloads).sort()).toEqual([...REQUEST_TYPES].sort());
     });
 
@@ -429,6 +430,22 @@ describe('shared handlers: reads', () => {
         services.config = () => ({ ...config, enablePerformanceLogging: true });
         await host.receiveRaw(makeRequest('perf/mark', { name: 'firstUsefulRender' }, 'b'));
         expect(logger.info).toHaveBeenCalledWith('[perf] main firstUsefulRender');
+    });
+
+    it("ui/reportError writes the webview's error to the log at error level with the surface and caps each field at 4000 characters", async () => {
+        const { services, logger } = makeServices();
+        const host = new TestHost(services);
+        await host.receiveRaw(makeRequest('ui/reportError', { message: 'boom', stack: 'Error: boom\n    at Shell', componentStack: '\n    in MainShell' }, 'a'));
+        expect(logger.error).toHaveBeenCalledWith('[main] webview error: boom\nError: boom\n    at Shell\n\n    in MainShell');
+        expect(host.responses().at(-1)).toMatchObject({ id: 'a', ok: true, result: {} });
+
+        await host.receiveRaw(makeRequest('ui/reportError', { message: 'x'.repeat(REPORTED_ERROR_LIMIT + 10), stack: 'y'.repeat(REPORTED_ERROR_LIMIT + 10) }, 'b'));
+        expect(logger.error).toHaveBeenLastCalledWith(`[main] webview error: ${'x'.repeat(REPORTED_ERROR_LIMIT)}\n${'y'.repeat(REPORTED_ERROR_LIMIT)}`);
+
+        // A payload that is no string is coerced, never answered with an error.
+        await host.receiveRaw(makeRequest('ui/reportError', { message: 42 } as never, 'c'));
+        expect(logger.error).toHaveBeenLastCalledWith('[main] webview error: 42');
+        expect(host.responses().at(-1)).toMatchObject({ id: 'c', ok: true });
     });
 
     it('resources/invalidated forwards the coordinator event unchanged', () => {

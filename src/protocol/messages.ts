@@ -178,6 +178,8 @@ export interface RequestMap {
 
     // Diagnostics
     'perf/mark': { payload: { name: 'webviewReady' | 'firstUsefulRender'; detail?: string }; result: Record<string, never> };
+    /** A rendering error a webview's ErrorBoundary caught (ADR-008): the host writes it to the output channel, redacted and capped; the fallback offers Reload. */
+    'ui/reportError': { payload: { message: string; stack?: string; componentStack?: string }; result: Record<string, never> };
 }
 
 export type RequestType = keyof RequestMap;

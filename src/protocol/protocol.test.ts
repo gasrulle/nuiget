@@ -82,6 +82,12 @@ describe('guards', () => {
         expect(isResponseEnvelope(makeOk('r1', 'readme/image', { url: 'https://example.test/a.png', dataUri: null }))).toBe(true);
     });
 
+    it('accepts the ui/reportError request', () => {
+        expect(REQUEST_TYPES).toContain('ui/reportError');
+        expect(isRequestEnvelope(makeRequest('ui/reportError', { message: 'boom', stack: 'Error: boom' }))).toBe(true);
+        expect(isResponseEnvelope(makeOk('r1', 'ui/reportError', {}))).toBe(true);
+    });
+
     it('recognizes every declared request and event type and nothing else', () => {
         for (const type of REQUEST_TYPES) {
             expect(isRequestType(type)).toBe(true);

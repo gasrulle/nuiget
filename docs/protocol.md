@@ -11,7 +11,7 @@ per id, optionally preceded by stream chunks of the listed chunk type. Events fl
 without correlation. Both webviews share the same maps; surface-specific requests are rejected with
 `unsupported` elsewhere. The Surface column names the webview a request belongs to (`both` for the shared ones).
 
-## Requests (44)
+## Requests (45)
 
 | Group | Request | Surface | Payload | Result | Chunk | Notes |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -59,6 +59,7 @@ without correlation. Both webviews share the same maps; surface-specific request
 | UI delegation to VS Code chrome | `ui/copyToClipboard` | both | `{ text: string; }` | `Record<string, never>` | — |  |
 | UI delegation to VS Code chrome | `ui/openExternal` | both | `{ url: string; }` | `Record<string, never>` | — |  |
 | Diagnostics | `perf/mark` | both | `{ name: "webviewReady" \| "firstUsefulRender"; detail?: string; }` | `Record<string, never>` | — |  |
+| Diagnostics | `ui/reportError` | both | `{ message: string; stack?: string; componentStack?: string; }` | `Record<string, never>` | — | A rendering error a webview's ErrorBoundary caught (ADR-008): the host writes it to the output channel, redacted and capped; the fallback offers Reload. |
 
 ## Events (11)
 
