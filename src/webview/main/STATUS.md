@@ -79,7 +79,25 @@ npm run docs:check   → exit 0
 node esbuild.mjs --production --analyze → 297018 / 322502, 548943 / 577766, 333252 / 351245 (+0, -21, +0 bytes)
 npm run test:ui -- --storage /tmp/nuiget-ui (local) → exit 0; 44 passing (1m); [P9.fix-5] details buttons:
                        {"uninstall":{"height":24,"left":1155.79},"update":{"height":24,"left":1155.79}}
+CI run 39024538752 (push of aacde06) → success on all 10 jobs; [P9.fix-5] {"uninstall":{"height":24,"left":566.95},
+                       "update":{"height":24,"left":566.95}}
+
+P9.fix-6
+npx tsc --noEmit · npm run check-types · npx eslint src · npm run lint → 0 · 0 · 0 · 0
+npm test             → exit 0; Test Files 135 passed (135); Tests 2019 passed | 9 skipped (2028)
+npm run bench        → exit 0
+npm run docs:check   → exit 0
+node esbuild.mjs --production --analyze → 297018 / 322502, 548943 / 577766, 333252 / 351245 (CSS only: unchanged)
+owner's grep of padding/margin/gap lengths outside tokens.css → 0
+npm run test:ui -- --storage /tmp/nuiget-ui (local) → exit 0; 45 passing (1m); [P9.fix-6] left edges:
+                       {"row":16,"search":16,"section":16,"tab":16,"title":16,"toolbar":16}; the fix-2..5 measurements
+                       unchanged (gap 0, centres 0.5 px, 6 px, equal buttons)
 ```
+
+viewed (P9.fix-5, CI run 39024538752): main-browse-details.png: Installed 13.0.2 / Uninstall over Version select / Update, the buttons in one column, equal height
+viewed (P9.fix-5): main-details-readme.png: the same grid for an installed row with the version (installed) selected; the README's two badge images did not load in this run (alt text shown; external images, not the layout)
+viewed (P9.fix-6, local run): main-installed-single.png: title, search box, Installed tab label, Select all, the DIRECT PACKAGES chevron and the row check boxes on one left edge
+viewed (P9.fix-6, local run): main-installed-single-hc.png: the same edge under Dark High Contrast; bordered controls unchanged
 
 viewed (P9.fix-4, CI run 39023954472): main-installed-single.png: Select all at the left, Uninstall selected (0) at the list's right edge
 viewed (P9.fix-4): main-updates.png: Select all at the left, Update all (2) at the list's right edge
@@ -115,13 +133,21 @@ viewed (P9.fix-5, local run): main-browse-details.png: Installed 13.0.2 / Uninst
   `align-items: center`), `.nuiget-details-label` starts a row. `DetailsPane.test.tsx` asserts the shared parent;
   `main-details.ui.test.ts` named rewrite measures equal left edges and heights.
 
+- P9.fix-6: `tokens.css` `--nuiget-space-hairline: 1px` and `--nuiget-inset: var(--nuiget-space-6)`; the four
+  literals replaced (`primitives.css` visually hidden margin, `main.css` check mark offset, README list indent, inline
+  code padding); `--nuiget-inset` for the header, search row, progress bar, toolbar start, details header and tab
+  content, comfortable row option, folder title; new `.nuiget-main-list .nuiget-tablist` and
+  `.nuiget-main-list .nuiget-section-toggle` start paddings. Lint `pxSpacing` (`src/test/lint/STATUS.md`); UI test
+  `the title, search box, tabs, toolbar, section header and row content share one left inset (P9.fix-6)`
+  (`main-shell.ui.test.ts`); gotcha row "Spacing literal in a 2.0 stylesheet".
+
 ## Done (untested)
 
 - Nothing.
 
 ## Not started
 
-- P9.fix-6.
+- Nothing of P9.fix-2..6.
 
 ## Deviations from contract/ADR (file:line each)
 
@@ -213,4 +239,4 @@ RULING (P9.fix-2 DO 1 correction): Option 1. Change `AllProjectsUpdates.tsx:307`
 
 ## Exact next step (one item ID)
 
-P9.fix-6.
+The P9 gate re-run and `PHASE REVIEW P9 (fix-2..6)`, then the stop for the owner's screenshot review.

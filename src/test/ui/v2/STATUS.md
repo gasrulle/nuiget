@@ -69,7 +69,10 @@ gate: gh run rerun 39000089739 → attempt 2 success; UI log: `42 passing (2m)` 
   Local: 44 passing, 6 px on both; CI run 39023954472 the same.
 - P9.fix-5: named rewrite `main-details.ui.test.ts` `shows the versions, the details and the README of the current
   row` → `…, with Uninstall and Update in one column (P9.fix-5)`: `|left(uninstall) - left(update)| <= 1` and heights
-  within 0.5 px. Local: 44 passing, equal (1155.79, 24 px).
+  within 0.5 px. Local: 44 passing, equal (1155.79, 24 px); CI run 39024538752 equal (566.95, 24 px).
+- P9.fix-6: new test in `main-shell.ui.test.ts` `the title, search box, tabs, toolbar, section header and row content
+  share one left inset (P9.fix-6)`: clicks the Installed tab (the test before leaves Updates selected), waits for a row,
+  measures six left edges against the title's (±1 px). Local: 45 passing, all at 16 px.
 
 - Commit 1 (TF8, TF4): `MainShell` Refresh carries `data-testid="refresh-button"` (interaction model §8);
   `mainWebview.ts` exports `projectOptionValues`, `untilProjects` (presses `refresh-button` every 15 s, 180 s in all) and
@@ -220,4 +223,4 @@ Files read for this ruling: /Users/mattias/github/nuiget/src/core/feeds/vulnerab
 
 ## Exact next step (one item ID)
 
-P9.fix-6.
+The P9 gate re-run after P9.fix-6.

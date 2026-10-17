@@ -25,7 +25,7 @@ body {
     flex-wrap: wrap;
     align-items: center;
     gap: var(--nuiget-space-4);
-    padding: var(--nuiget-space-4) var(--nuiget-space-6) var(--nuiget-space-2);
+    padding: var(--nuiget-space-4) var(--nuiget-inset) var(--nuiget-space-2);
 }
 
 .nuiget-main-select {
@@ -73,7 +73,7 @@ body {
     content: "";
     inline-size: var(--nuiget-space-2);
     block-size: var(--nuiget-space-4);
-    margin-block-start: -2px;
+    margin-block-start: calc(var(--nuiget-space-1) * -1);
     border: solid var(--nuiget-color-checkbox-fg);
     border-width: 0 2px 2px 0;
     transform: rotate(45deg);
@@ -108,13 +108,13 @@ body {
 .nuiget-main-search {
     position: relative;
     flex: none;
-    padding: var(--nuiget-space-2) var(--nuiget-space-6);
+    padding: var(--nuiget-space-2) var(--nuiget-inset);
     border-block-end: 1px solid var(--nuiget-color-border);
 }
 
 .nuiget-main-search .nuiget-progress {
     position: absolute;
-    inset-inline: var(--nuiget-space-6);
+    inset-inline: var(--nuiget-inset);
     bottom: 0;
 }
 
@@ -157,6 +157,18 @@ body {
     background: var(--nuiget-color-bg-sidebar);
 }
 
+/*
+ * The common left inset (P9.fix-6): the tab label starts at the inset (the tab has its own padding and a 1 px border),
+ * and so does the chevron of every section header of the list pane; the details pane and the sidebar keep theirs.
+ */
+.nuiget-main-list .nuiget-tablist {
+    padding-inline-start: calc(var(--nuiget-inset) - var(--nuiget-space-4) - var(--nuiget-space-hairline));
+}
+
+.nuiget-main-list .nuiget-section-toggle {
+    padding-inline-start: var(--nuiget-inset);
+}
+
 /* A column: the details keep their header in view and scroll their tab; the transitive view and the empty state scroll here. */
 .nuiget-main-details {
     display: flex;
@@ -177,7 +189,7 @@ body {
 
 .nuiget-installed > .nuiget-toolbar {
     flex: none;
-    padding: var(--nuiget-space-2) var(--nuiget-space-4);
+    padding: var(--nuiget-space-2) var(--nuiget-inset);
     /* The primary action ends at the list's right edge (P9.fix-4). */
     padding-inline-end: var(--nuiget-space-3);
 }
@@ -258,7 +270,7 @@ body {
     display: flex;
     flex-direction: column;
     gap: var(--nuiget-space-3);
-    padding: var(--nuiget-space-4) var(--nuiget-space-6);
+    padding: var(--nuiget-space-4) var(--nuiget-inset);
 }
 
 .nuiget-details-title {
@@ -303,7 +315,7 @@ body {
 
 .nuiget-details-info,
 .nuiget-readme {
-    padding: var(--nuiget-space-4) var(--nuiget-space-6);
+    padding: var(--nuiget-space-4) var(--nuiget-inset);
     overflow-wrap: anywhere;
 }
 
@@ -423,7 +435,7 @@ body {
 
 .nuiget-readme ul,
 .nuiget-readme ol {
-    padding-inline-start: 1.75em;
+    padding-inline-start: calc(var(--nuiget-space-6) + var(--nuiget-space-3));
 }
 
 .nuiget-readme li + li {
@@ -431,7 +443,7 @@ body {
 }
 
 .nuiget-readme code {
-    padding: 1px var(--nuiget-space-2);
+    padding: var(--nuiget-space-hairline) var(--nuiget-space-2);
     border: 1px solid var(--nuiget-color-border);
     border-radius: var(--nuiget-radius-sm);
     background: var(--nuiget-color-code-bg);
@@ -676,7 +688,7 @@ body {
 /* ── All Projects: one heading per workspace folder ── */
 
 .nuiget-installed-folder-title {
-    margin: var(--nuiget-space-4) var(--nuiget-space-4) var(--nuiget-space-1);
+    margin: var(--nuiget-space-4) var(--nuiget-space-4) var(--nuiget-space-1) var(--nuiget-inset);
     color: var(--nuiget-color-fg-muted);
     font-size: var(--nuiget-font-size-sm);
     font-weight: 600;

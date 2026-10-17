@@ -60,4 +60,26 @@ describe('2.0 main panel shell', () => {
         expect(await (await active()).getAttribute('data-testid')).to.equal('updates-tab');
         expect(await (await findByTestId('updates-tab')).getAttribute('aria-selected')).to.equal('true');
     });
+
+    it('the title, search box, tabs, toolbar, section header and row content share one left inset (P9.fix-6)', async function () {
+        this.timeout(180_000);
+        await openMainPanel();
+        await enterMainWebview();
+        await (await findByTestId('installed-tab')).click();
+        await findByTestId('package-row-newtonsoft.json', 120_000);
+        const edges = await driverOf().executeScript<Record<string, number>>(`
+            const left = selector => document.querySelector(selector).getBoundingClientRect().left;
+            return {
+                title: left('.nuiget-main-title'),
+                search: left('.nuiget-main-search-input'),
+                tab: left('[data-testid="installed-tab"] .nuiget-tab-label'),
+                toolbar: left('[data-testid="select-all-button"]'),
+                section: left('[data-testid="section-header-direct"] .nuiget-section-chevron'),
+                row: document.querySelector('[data-testid="installed-list"] [role="option"]').firstElementChild.getBoundingClientRect().left,
+            };`);
+        console.warn('[P9.fix-6] left edges: ' + JSON.stringify(edges));
+        for (const [name, x] of Object.entries(edges)) {
+            expect(Math.abs(x - edges.title), name).to.be.at.most(1);
+        }
+    });
 });

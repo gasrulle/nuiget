@@ -238,7 +238,10 @@ token on a VS Code key that is unset outside the high-contrast themes, with a `t
 (`--nuiget-color-button-border` on `button.border`, `--nuiget-color-contrast-border` on `contrastBorder`, P9.11), so
 the high-contrast block stays three keys; check boxes and drop-downs take `--vscode-checkbox-*` and
 `--vscode-dropdown-*`, and the scrim is the one derived colour (`color-mix()`). The file holds no colour literal;
-if one is ever needed, this is where it goes.
+if one is ever needed, this is where it goes. Spacing is the scale `--nuiget-space-1..6` (2 to 16 px) plus
+`--nuiget-space-hairline` (1 px); `--nuiget-inset` is the common left inset of the main panel, at which the title, the
+search box, the tab labels, the toolbar, the section chevrons and the row content start (P9.fix-6). Every padding,
+margin and gap of a 2.0 stylesheet is one of these (`webview-stylesheets.test.ts`, `pxSpacing`).
 
 Two lint tests in `src/test/lint` keep that true: `webview-tokens.test.ts` checks the shape of the file
 (only `--nuiget-*` declarations, `var()` only of `--vscode-*` or `--nuiget-*`, one block per mode, the token

@@ -17,9 +17,11 @@ export { parseRules, type CssRule } from './cssRules';
 const TIME = /(?<![\w-])\d*\.?\d+m?s\b/;
 const TIMED = /^(?:animation|transition)(?:-duration)?$/;
 const DELAYED = /^(?:animation|transition)-delay$/;
+const SPACING = /^(?:padding|margin|gap|row-gap|column-gap)(?:-[a-z-]+)?$/;
+const LENGTH = /(?<![\w.-])-?\d*\.?\d+(?:px|em|rem)\b/;
 
 /** What a stylesheet does that only `tokens.css` may do, one line per defect. */
-export function findStylesheetDefects(css: string): Record<'reducedMotion' | 'important' | 'pxFontSize' | 'duration' | 'classPrefix', string[]> {
+export function findStylesheetDefects(css: string): Record<'reducedMotion' | 'important' | 'pxFontSize' | 'duration' | 'classPrefix' | 'pxSpacing', string[]> {
     const rules = parseRules(css);
     const declarations = rules.flatMap(rule => rule.declarations.map(declaration => {
         const colon = declaration.indexOf(':');
@@ -49,6 +51,8 @@ export function findStylesheetDefects(css: string): Record<'reducedMotion' | 'im
             const bare = selector.replace(/\[[^\]]*\]/g, '').replace(/(["'])(?:\\.|(?!\1).)*\1/g, '');
             return [...bare.matchAll(/\.(-?[_a-zA-Z][\w-]*)/g)].filter(match => !match[1].startsWith('nuiget-')).map(match => `${selector}: .${match[1]}`);
         }),
+        // P9.fix-6: every padding, margin and gap comes from the spacing scale of tokens.css.
+        pxSpacing: declarations.filter(declaration => SPACING.test(declaration.property) && LENGTH.test(declaration.value)).map(declaration => declaration.text),
     };
 }
 
@@ -92,6 +96,10 @@ describe('2.0 webview stylesheets', () => {
         // The check has something to look at: the primitives move.
         const timed = parseRules(readFileSync(PRIMITIVES, 'utf8')).flatMap(rule => rule.declarations).filter(declaration => /^(?:animation|transition)/.test(declaration));
         expect(timed.length).toBeGreaterThanOrEqual(2);
+    });
+
+    it('every padding, margin and gap is a spacing token', () => {
+        expect(defectsOf('pxSpacing')).toEqual([]);
     });
 
     it('every class selector starts with .nuiget-', () => {
@@ -200,6 +208,7 @@ describe('2.0 webview stylesheets', () => {
             '.nuiget-banner { transition: opacity; animation-duration: .2s; transition-delay: 1s; }',
             '.nuiget-row.selected,\r\n.codicon-loading > .nuiget-row-option[data-file="a.b"] { margin: 0.5em; }',
             '@keyframes nuiget-spin { 12.5% { transform: rotate(45deg); } }',
+            '.nuiget-badge { padding: 1px 4px; }',
         ].join('\n');
         expect(findStylesheetDefects(planted)).toEqual({
             reducedMotion: ['@media (prefers-reduced-motion: reduce)'],
@@ -215,6 +224,10 @@ describe('2.0 webview stylesheets', () => {
                 '.nuiget-row.selected, .codicon-loading > .nuiget-row-option[data-file="a.b"]: .selected',
                 '.nuiget-row.selected, .codicon-loading > .nuiget-row-option[data-file="a.b"]: .codicon-loading',
             ],
+            pxSpacing: [
+                '.nuiget-row.selected, .codicon-loading > .nuiget-row-option[data-file="a.b"] { margin: 0.5em }',
+                '.nuiget-badge { padding: 1px 4px }',
+            ],
         });
     });
 
@@ -224,6 +237,7 @@ describe('2.0 webview stylesheets', () => {
             '.nuiget-spinner svg { animation: nuiget-spin calc(var(--nuiget-duration-normal) * 5) linear infinite; }',
             '.nuiget-banner { transition: none; font-size: var(--nuiget-font-size-sm); width: 1px; }',
             '@media (forced-colors: active) { .nuiget-row { outline: 1px solid; } }',
+            '.nuiget-checkbox::after { margin-block-start: calc(var(--nuiget-space-1) * -1); padding: 0; }',
         ].join('\n');
         expect(Object.values(findStylesheetDefects(allowed)).flat()).toEqual([]);
     });

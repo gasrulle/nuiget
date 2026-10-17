@@ -24,7 +24,7 @@ function blockAfter(opener: string): Map<string, string> {
 }
 
 const REQUIRED = [
-    ...[1, 2, 3, 4, 5, 6].map(step => `--nuiget-space-${step}`),
+    ...[1, 2, 3, 4, 5, 6].map(step => `--nuiget-space-${step}`), '--nuiget-space-hairline', '--nuiget-inset',
     '--nuiget-radius-sm', '--nuiget-radius-md',
     '--nuiget-row-height-compact', '--nuiget-row-height-comfortable',
     '--nuiget-icon-size-sm', '--nuiget-icon-size-md', '--nuiget-icon-size-lg', '--nuiget-icon-size-xl', '--nuiget-target-min', '--nuiget-scrollbar-size',

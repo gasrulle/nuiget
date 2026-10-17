@@ -61,6 +61,8 @@ npm run test:ui      → SKIPPED locally: CI runs the UI job on the push; the vi
   78px`; `Listbox.tsx` `ROW_HEIGHT.comfortable` 78 (the tokens lint pairs them). `Row.test.tsx` rewrite and new test.
 - P9.fix-4: `primitives.css` `.nuiget-toolbar-end` (`margin-inline-start: auto`); `Toolbar.tsx` JSDoc says a control
   with it is pushed to the end and the arrow keys keep the document order.
+- P9.fix-6: `tokens.css` `--nuiget-space-hairline` and `--nuiget-inset`; `primitives.css` visually hidden margin
+  `calc(var(--nuiget-space-hairline) * -1)` and the comfortable option's inline padding `--nuiget-inset`.
 
 ## Done (untested)
 
@@ -167,4 +169,4 @@ Acted on: DO 1-5 of the follow-up; the review's DO 3 and DO 4 yield to RUN.md §
 
 ## Exact next step (one item ID)
 
-P9.fix-6 (the tokens part of the P9.fix-2..6 ruling).
+The P9 gate re-run after P9.fix-6.

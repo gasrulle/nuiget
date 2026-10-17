@@ -17,6 +17,10 @@
     --nuiget-space-4: 8px;
     --nuiget-space-5: 12px;
     --nuiget-space-6: 16px;
+    /* The smallest step: a hairline offset, such as the inline code's padding or the visually hidden margin. */
+    --nuiget-space-hairline: 1px;
+    /* The common left inset of the main panel: title, search box, tabs, toolbar, section headers and rows (P9.fix-6). */
+    --nuiget-inset: var(--nuiget-space-6);
 
     /* Radius */
     --nuiget-radius-sm: 2px;
