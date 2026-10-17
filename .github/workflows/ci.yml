@@ -75,9 +75,10 @@ jobs:
         run: node --test scripts/hooks
 
       # The 2.0 documents name only messages, settings, commands and paths that exist (scripts/check-docs-drift.mjs),
-      # and docs/protocol.md, generated from src/protocol/messages.ts (ADR-007), has not drifted.
+      # and docs/protocol.md, generated from src/protocol/messages.ts (ADR-007), has not drifted; the regression matrix
+      # cites tests that exist (scripts/check-regression-matrix.mjs, plan item P10.0a).
       - name: Check the docs
-        run: npm run docs:check
+        run: npm run docs:check && npm run check:matrix
 
   test:
     name: Test (${{ matrix.os }})

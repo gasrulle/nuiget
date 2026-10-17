@@ -898,6 +898,11 @@ These parts are the current truth for the build, test and release pipeline.
   manifest, every module map path must exist with a row for each 2.0 module, and every path under `src/`,
   `scripts/`, `docs/` or `.github/` must exist. It reads no sizes or line counts; `src/test/lint/docs-drift.test.ts`
   holds its negative controls.
+- **Regression matrix.** `docs/plans/regression-matrix.md` (P10.0a) lists every feature, state, keyboard path, command,
+  menu placement and setting with the test that asserts it (`covered`), the test to write (`gap`) or the manual check a
+  credentialed feed needs (`manual-credentials`). `npm run check:matrix` (`scripts/check-regression-matrix.mjs`) fails
+  for a missing status, an unknown kind, a duplicate id, a cited file that does not exist or a cited title the file does
+  not declare; `src/test/lint/regression-matrix.test.ts` holds its negative controls.
 - **Packaging.** `npm run package:vsix` runs `npm ci` → `check-types` → tests → lint and production build →
   `vsce package`. `npm run check:vsix` fails when the VSIX would contain anything other than `dist/*.js`,
   `dist/*.css`, `resources/`, `package.json`, `README.md`, `CHANGELOG.md` and `LICENSE`, or would lack a required
@@ -907,7 +912,7 @@ These parts are the current truth for the build, test and release pipeline.
 
   | Job | Needs | What it does |
   | --- | --- | --- |
-  | Lint | — | `npm run lint`, the guard hook tests, then `npm run docs:check` |
+  | Lint | — | `npm run lint`, the guard hook tests, then `npm run docs:check` and `npm run check:matrix` |
   | Test (ubuntu, windows) | — | Unit tests with .NET SDK 10 installed; coverage on ubuntu |
   | E2E (VS Code 1.85.0, stable) | — | Production build with the ceiling check (sizes in the job summary), then the `v2-*` extension-host suite under Xvfb; log artifact per version |
   | UI | Lint, Test | ExTester packages a VSIX and runs `src/test/ui/v2` under Xvfb, then `check:vsix` on that build; log artifact, and `ui-screenshots` on every run: the named states of `ScreenshotState` (`src/test/ui/v2/sidebarWebview.ts`, D18) and the screenshots of failed tests; a named state without a PNG fails the job |

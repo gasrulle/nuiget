@@ -114,6 +114,7 @@ npm run watch        # Build (watch mode) — F5 to launch Extension Host
 npm run package:vsix # Runs: npm ci → check-types → test → lint+bundle → vsce package
 npm run check:vsix   # After a build: fails if the VSIX would contain an unexpected file or lack a required one
 npm run docs:check   # The 2.0 documents against the tree, then docs:protocol:check (CI's Lint job)
+npm run check:matrix # docs/plans/regression-matrix.md cites test files and titles that exist (CI's Lint job)
 ```
 
 ### Testing
