@@ -2,7 +2,7 @@ import { expect } from 'chai';
 import * as fs from 'fs';
 import * as path from 'path';
 import { By } from 'vscode-extension-tester';
-import { chooseProjectUntilCommitted, enterMainWebview, openMainPanel } from './mainWebview';
+import { chooseProjectUntilCommitted, enterMainWebview, openMainPanel, untilProjects } from './mainWebview';
 import { driverOf, findByTestId, leaveWebview, poll, screenshot } from './sidebarWebview';
 
 /** `ALL_PROJECTS` of `src/protocol/domain.ts`; the test reads the DOM, it imports nothing of the webview. */
@@ -50,6 +50,8 @@ describe('2.0 main panel: All Projects', () => {
         try {
             await openMainPanel();
             await enterMainWebview();
+            // A watcher may never report the deletion (TF8): Refresh until the host lists one project again.
+            await untilProjects(values => (values.includes(ALL_PROJECTS) ? undefined : true), 'the All Projects option gone');
             await poll(async () => ((await selectorValue()).endsWith('TestProject.csproj') ? true : undefined), 'the selection back on TestProject.csproj', 120_000);
             await findByTestId('installed-list', 120_000);
         } finally {
@@ -70,17 +72,16 @@ describe('2.0 main panel: All Projects', () => {
 
     it('the host offers All Projects once a second project appears', async function () {
         this.timeout(180_000);
+        // A watcher may never report the created project (TF8): Refresh until the host offers All Projects.
+        await untilProjects(values => (values.includes(ALL_PROJECTS) ? true : undefined), 'the All Projects option');
         const selector = await findByTestId('project-selector', 60_000);
-        const option = await poll(async () => {
-            const [found] = await selector.findElements(By.css(`option[value="${ALL_PROJECTS}"]`));
-            return found;
-        }, 'the All Projects option', 120_000);
+        const [option] = await selector.findElements(By.css(`option[value="${ALL_PROJECTS}"]`));
         expect(await option.getAttribute('textContent')).to.equal('All Projects (2)');
     });
 
     it('All Projects lists one section per project and the collapsed transitive aggregate', async function () {
         this.timeout(180_000);
-        await poll(async () => ((await driverOf().findElements(By.css(`[data-testid="project-selector"] option[value="${ALL_PROJECTS}"]`))).length > 0 ? true : undefined), 'the All Projects option', 120_000);
+        await untilProjects(values => (values.includes(ALL_PROJECTS) ? true : undefined), 'the All Projects option');
         await chooseProjectUntilCommitted(ALL_PROJECTS, 30_000);
 
         // The project names come from discovery; read the list ids from the DOM rather than assume them.

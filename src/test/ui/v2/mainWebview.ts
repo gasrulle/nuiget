@@ -1,5 +1,5 @@
 import { By, Workbench } from 'vscode-extension-tester';
-import { driverOf, poll } from './sidebarWebview';
+import { driverOf, findByTestId, poll } from './sidebarWebview';
 
 /** The title of `nuiget.openManager` in `package.json`; the Command Palette finds a command by its title. */
 const OPEN_MANAGER = 'nUIget: Manage NuGet Packages';
@@ -67,3 +67,32 @@ export async function chooseProjectUntilCommitted(value: string, timeoutMs = 60_
         return undefined;
     }, `the project selector committed on ${value}`, timeoutMs);
 }
+
+/** The values of the project selector's options, as the host sent the paths. */
+export async function projectOptionValues(): Promise<string[]> {
+    const selector = await findByTestId('project-selector', 60_000);
+    const values = await Promise.all((await selector.findElements(By.css('option'))).map(element => element.getAttribute('value')));
+    return values.filter((value): value is string => value !== null);
+}
+
+/**
+ * Waits for the host's project list to satisfy `probe`, pressing Refresh (a workspace rescan) every 15 s: a file
+ * watcher may never report a project file created or deleted by the test (parity audit TF8).
+ */
+export async function untilProjects<T>(probe: (values: string[]) => T | undefined, what: string, totalMs = 180_000): Promise<T> {
+    const deadline = Date.now() + totalMs;
+    for (;;) {
+        try {
+            return await poll(async () => probe(await projectOptionValues()), what, 15_000);
+        } catch (error) {
+            if (Date.now() > deadline) {
+                throw error;
+            }
+            await (await findByTestId('refresh-button')).click();
+        }
+    }
+}
+
+/** The value of the selector's option whose path ends with `file`, once the host lists it. */
+export const optionFor = (file: string): Promise<string> => untilProjects(values => values.find(value => value.endsWith(file)), `${file} in the project selector`);
+

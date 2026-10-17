@@ -165,6 +165,7 @@ project has several and one block per project in All Projects; no version select
 | `nuiget-sidebar` | Sidebar root |
 | `search-input` / `sidebar-search-input`, `search-suggestions` | Search boxes and the list of their prefixes, suggestions or versions |
 | `project-selector`, `source-selector` | Header selectors (main) |
+| `refresh-button` | The header's Refresh button (main): a workspace rescan |
 | `tab-bar`, `installed-tab`, `updates-tab` | Main tabs |
 | `installed-list`, `updates-list`, `browse-list`, `sidebar-installed-list`, `sidebar-updates-list`, `sidebar-browse-list`, `transitive-list`, `transitive-list-<tfm>` | Listboxes |
 | `package-row-<id>` | A row (id lower-cased): the wrapper around the option and its pointer actions; the option is the `role="option"` inside it (read `aria-selected` there; in a multi-selectable list `aria-current` marks the current row) |

@@ -253,7 +253,7 @@ export function MainShell({ installed, updates, browse, details, viewState }: Ma
                     {supported.map(project => <option key={project.path} value={project.path} title={project.path}>{project.name}</option>)}
                 </select>
                 <SourcesControl announce={announce} />
-                <IconButton label="Refresh" disabled={refreshing} onClick={refresh} className="nuiget-main-refresh">{refreshing ? <LoadingIcon /> : <SyncIcon />}</IconButton>
+                <IconButton label="Refresh" data-testid="refresh-button" disabled={refreshing} onClick={refresh} className="nuiget-main-refresh">{refreshing ? <LoadingIcon /> : <SyncIcon />}</IconButton>
             </header>
             <div className="nuiget-main-search" role="search">
                 <SearchBox

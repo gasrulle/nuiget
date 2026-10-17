@@ -17,7 +17,7 @@ describe('2.0 main panel shell', () => {
         this.timeout(180_000);
         await openMainPanel();
         await enterMainWebview();
-        for (const testId of ['nuiget-app', 'search-input', 'project-selector', 'source-selector', 'tab-bar', 'installed-tab', 'updates-tab', 'sash', 'package-details-panel', 'status-live']) {
+        for (const testId of ['nuiget-app', 'search-input', 'project-selector', 'source-selector', 'tab-bar', 'installed-tab', 'updates-tab', 'sash', 'package-details-panel', 'status-live', 'refresh-button']) {
             await findByTestId(testId);
         }
         // The session and the projects arrive: the project selector is enabled on the fixture project.

@@ -2,7 +2,7 @@ import { expect } from 'chai';
 import * as fs from 'fs';
 import * as path from 'path';
 import { By } from 'vscode-extension-tester';
-import { chooseProjectUntilCommitted, enterMainWebview, openMainPanel } from './mainWebview';
+import { chooseProjectUntilCommitted, enterMainWebview, openMainPanel, optionFor, untilProjects } from './mainWebview';
 import { driverOf, findByTestId, leaveWebview, poll, screenshot, waitForText } from './sidebarWebview';
 
 /**
@@ -17,29 +17,6 @@ describe('2.0 main panel: transitive packages', () => {
     const workspace = path.resolve('src/test/e2e/fixtures/e2e-workspace');
     const projectDir = path.join(workspace, 'Transitive');
     const projectPath = path.join(projectDir, 'Transitive.csproj');
-
-    const optionValues = async (): Promise<string[]> => (await Promise.all((await (await findByTestId('project-selector', 60_000)).findElements(By.css('option'))).map(element => element.getAttribute('value')))).filter((value): value is string => value !== null);
-
-    /**
-     * Waits for the host's project list to satisfy `probe`, pressing Refresh (a workspace rescan) every 15 s: a file
-     * watcher may never report a project file created or deleted by the test (parity audit TF8).
-     */
-    async function untilProjects<T>(probe: (values: string[]) => T | undefined, what: string): Promise<T> {
-        const deadline = Date.now() + 180_000;
-        for (;;) {
-            try {
-                return await poll(async () => probe(await optionValues()), what, 15_000);
-            } catch (error) {
-                if (Date.now() > deadline) {
-                    throw error;
-                }
-                await (await findByTestId('nuiget-app')).findElement(By.css('.nuiget-main-refresh')).click();
-            }
-        }
-    }
-
-    /** The value of the selector's option whose path ends with `file`, once the host lists it. */
-    const optionFor = (file: string): Promise<string> => untilProjects(values => values.find(value => value.endsWith(file)), `${file} in the project selector`);
 
     before(function () {
         this.timeout(30_000);

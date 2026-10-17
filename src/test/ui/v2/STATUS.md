@@ -1,180 +1,116 @@
-# STATUS — src/test/ui/v2   commit 2493ecc (parent of the P9.0 commit)   2026-10-16T18:40:00Z
+# STATUS — src/test/ui/v2   commit 33312b2 (P9.11 closed; parent of the P9.12 commits)   2026-10-17T16:20:00Z
 
-git status --porcelain --untracked-files=all (before the commit): modified `.github/workflows/ci.yml`,
-`src/test/ui/settings.json`, `src/test/ui/v2/{main-all-projects,main-details,main-installed,main-search,main-updates,sidebar,theme}.ui.test.ts`,
-`src/test/ui/v2/sidebarWebview.ts`, `src/test/ui/v2/STATUS.md`, `docs/plans/STATUS.md`, `docs/plans/findings-ledger.md`
+git status --porcelain --untracked-files=all (before commit 1): modified `docs/plans/STATUS.md`,
+`docs/ux/interaction-model.md`, `src/test/ui/v2/{STATUS.md,main-all-projects.ui.test.ts,main-shell.ui.test.ts,main-transitive.ui.test.ts,mainWebview.ts}`,
+`src/webview/main/{MainShell.tsx,STATUS.md}`
 
-Item: **P9.0** — visual evidence gate (D18; parity audit TF6, TF1/TF2 in part). Every v2 UI suite screenshots its
-named states; CI uploads them as the `ui-screenshots` artifact on every run and fails when a named state has no PNG.
-This note replaces the P7.2a note (history at `54885d4`).
+Item: **P9.12** — Tests that see content (parity audit TF1–TF4, TF7, TF8) and finding N86, by the ruling below, in three
+commits: (1) TF8, the shared Refresh-pressing wait (clears the red run 38997325272); (2) N86, the reorder in
+`extension.ts` with a harness scenario; (3) TF1, TF3, TF7. This note replaces the P9.6-era note (history at `eeef52d`).
 
 ## Verified by running
 
 ```text
-baseline (2493ecc)          → npx tsc --noEmit 0 · npm run check-types 0 · npx eslint src 0 · npx vitest run: 129 files,
-                              1910 passed, 9 skipped
-npx tsc --noEmit            → exit 0
-npm run check-types         → exit 0
-npx eslint src              → exit 0
-npm run lint                → exit 0
-npm test                    → exit 0 · Test Files 129 passed (129) · Tests 1910 passed | 9 skipped (1919)
-npm run bench               → exit 0 · Test Files 14 passed (14) · Tests 75 passed (75)
-rm -rf /tmp/nuiget-ui/screenshots dist && npm run test:ui -- --storage /tmp/nuiget-ui (macOS arm64, VS Code 1.140.0)
-                            → run 1: exit 0 · 37 passing (1m) · 12 PNGs in /tmp/nuiget-ui/screenshots/<ts>/, one per
-                              state of `ScreenshotState`
-                            → run 2 (after `git.openRepositoryInParentFolders: never`): exit 1 · 23 passing, 13 failing:
-                              the P5.12b install test timed out after 240000 ms on "NUnit in TestProject.csproj"; its
-                              `after` hook, main-shell (2), main-updates and the six theme passes followed (panel left in
-                              browse mode); the extension log has no `dotnet package add` → finding N85, stop-and-ask
-                            → run 3, same tree: exit 0 · 37 passing
-tally (each a full suite run; `adds` = `package add` lines in the extension log):
-                              P9.0 tree 5 more runs: 5 × exit 0, 37 passing, adds=2, fixture clean (7 of 8 in all)
-                              2493ecc (P9.0 changes stashed): 5 × exit 0, 32 passing, adds=2, fixture clean
-after the ruled rewrite of the P5.12b test (N85):
-npx tsc --noEmit 0 · npm run check-types 0 · npx eslint src 0 · npm run lint 0 · npm test exit 0 (129 files, 1910
-                              passed, 9 skipped) · npm run bench exit 0 (14 files, 75 passed)
-two full UI runs            → 2 × exit 0, 37 passing (1m), adds=2, fixture clean; 12 PNGs; the N85 poll never timed out
-"Check the named screenshots" step body under bash, against the run-1 directory → exit 0, "12 named states; PNGs in
-                              the artifact: 12"; against an empty directory (negative control) → exit 1, one
-                              "::error::no screenshot of the state …" line per state
-git status --short src/test/e2e/fixtures/e2e-workspace → clean after every run
-npm run docs:check, npm run package:vsix, npm run test:e2e → SKIPPED: no product, document or packaging change; CI
-                              runs E2E and Build & Package on the push
+baseline (33312b2)          → npx tsc --noEmit 0 · npm run check-types 0 · npx eslint src 0 · npx vitest run exit 0
+                              (Tests 2009 passed | 9 skipped (2018))
+CI on 33312b2 (docs only)  → run 38997321456 success; run 38997325272 `UI` failure: `38 passing (6m) · 2 failing`, both
+                              "Timed out after 120000 ms waiting for the All Projects option" (TF8; not N37: VS Code and
+                              ChromeDriver downloaded); no rerun, fixed by commit 1
+commit 1:
+npx tsc --noEmit 0 · npx eslint src 0 · npm run lint 0 · npm run docs:check 0
+npx vitest run --project backend src/test/lint/interaction-model-testids.test.ts → Tests 3 passed (3)
+npm test                    → exit 0 · Tests 2009 passed | 9 skipped (2018) · npm run bench → exit 0
+rm -rf dist out/esbuild && node esbuild.mjs --production --analyze → dist/extension.js 297016 / 322502 ·
+                              dist/webview.js 548746 / 577766 · dist/sidebar.js 333071 / 351245
+rm -rf /tmp/nuiget-ui/screenshots dist && npm run test:ui -- --storage /tmp/nuiget-ui → exit 0 · 40 passing (1m)
 ```
 
 ## Done (tested)
 
-- `sidebarWebview.ts`: `ScreenshotState` (the 12 names of the plan row) and `screenshot(state)`, a typed wrapper of
-  `VSBrowser.instance.takeScreenshot`. A misspelt state is a type error; the CI check reads its names from this union.
-- Captures, each after the waits that make the state true:
-  `main-installed-all` (`main-all-projects`, two project sections) · `main-details-readme` (`main-details`, README or
-  its empty state) · `main-installed-single` (`main-installed`, both rows) · `main-transitive-expanded` (new test in
-  `main-installed`: opens the section, clicks Restore when the runner has no assets file, waits for the list or the
-  empty state, closes the section again) · `main-browse-results` (`main-search`, after the cold-search line, so the
-  timing is unchanged) · `main-quicksearch-open` (new test in `main-search`, after the timed one: types `Serilog`,
-  waits for a suggestion, screenshots while the box has focus, clears) · `main-browse-details` (`main-search`, waits
-  for "Dependencies" first) · `main-updates` (`main-updates`, after the tab count) · `sidebar-sections` (`sidebar`,
-  waits for the update row too) · `sidebar-narrow-200px` (new test in `sidebar`: drags the side bar's sash to 200 px,
-  waits for the webview at ≤ 200 px, screenshots, drags back in `finally` so the theme pass measures at the usual
-  width) · `main-installed-single-light` / `-hc` (two new tests in `theme`, after the axe loop, which is unchanged:
-  Light Modern and Dark High Contrast, Installed tab).
-- `ci.yml`: `ui-log` uploads the log only; new `ui-screenshots` upload (`if: always()`, `if-no-files-found: error`);
-  new step "Check the named screenshots".
-- `src/test/ui/settings.json`: `git.openRepositoryInParentFolders: never`; the "A git repository was found in the
-  parent folders" toast covered the details pane in run 1.
-- Named rewrite (plan §2.1, by the stop-and-ask ruling below) of `installs a package from the details of its browse
-  row, and the project file follows (P5.12b)` in `main-search.ui.test.ts`: before the click it waits until
-  `version-selector` no longer reads "loading versions" (60 s); after the single click it polls 10 s until the button
-  is disabled or reads "Working…" (N85). Timing assumption: the first check runs milliseconds after the click, long
-  before `dotnet package add` and the restore could end and enable the button again. The file's `after` hook presses
-  Escape in `search-input` and waits for `tab-bar` before it clicks `installed-tab`. The csproj poll and the
-  "Installed NUnit" wait are unchanged.
+- Commit 1 (TF8, TF4): `MainShell` Refresh carries `data-testid="refresh-button"` (interaction model §8);
+  `mainWebview.ts` exports `projectOptionValues`, `untilProjects` (presses `refresh-button` every 15 s, 180 s in all) and
+  `optionFor`; `main-transitive.ui.test.ts` imports them; `main-all-projects.ui.test.ts` waits for the All Projects
+  option through `untilProjects` in both tests and for its removal in `after`; `main-shell.ui.test.ts` renders
+  `refresh-button` under the CSP. The host side of TF8 (a create event invalidates `projects`, `extension.ts:316,323`)
+  was already true.
 
 ## Done (untested)
 
 - None.
 
-## Visual check (local run 1, downscaled copies; the CI artifact is viewed after the push)
-
-- viewed: main-installed-single.png: Installed tab, Newtonsoft.Json selected, both rows single-line with the
-  description right-aligned; details pane on README; the git toast bottom right.
-- viewed: main-transitive-expanded.png: section open at the bottom, "No transitive dependencies." (the fixture's two
-  packages have none on net8.0, so P9.5 needs a fixture with transitive packages to show rows).
-- viewed: main-quicksearch-open.png: suggestion list under the box (Serilog, Serilog.Sinks.File, …); list pane
-  empty; details pane still shows Serilog from the earlier test.
-- viewed: main-installed-single-hc.png: Dark High Contrast, bordered panes, check boxes visible on the rows.
-- viewed: main-installed-all.png: two sections TESTPROJECT.CSPROJ (2) and UTILITY.CSPROJ (1) with a "provisional"
-  badge; transitive aggregate closed.
-- viewed: sidebar-narrow-200px.png: side bar at 200 px; Installed rows readable, Updates row name cut to
-  "Newtonso…" by the version (the overflow P9.10 fixes); main panel on Updates beside it.
-
-## Visual check (CI run 38951346180 on 1d76a1a, artifact `ui-screenshots`, 12 PNGs at 1280×900, all viewed)
-
-UI job: 37 passing (2m); "Check the named screenshots": "12 named states; PNGs in the artifact: 12". None contradicts
-the intended rendering of P9.0, which changes no webview; they are the baseline P9.1-P9.11 change.
-
-- viewed: main-installed-single.png: one-line rows, "Newtons…" cut while its description keeps the width (MI3), no
-  icon; details on the README of Newtonsoft.Json.
-- viewed: main-installed-all.png: TESTPROJECT.CSPROJ (2) and UTILITY.CSPROJ (1, "provisional"); no icons; transitive
-  aggregate closed.
-- viewed: main-transitive-expanded.png: section open at the bottom, "No transitive dependencies." (the fixture has
-  none on net8.0; P9.5 needs one that has).
-- viewed: main-updates.png: two rows `13.0.2 → 13.0.4`, `3.1.1 → 4.4.0` with Verified, Update all (2); the details
-  pane still shows NUnit from the Browse test before (stale details, P9.6).
-- viewed: main-browse-results.png: icons on most rows, names cut to "N…", "Newt…" (MB1); details show Serilog from
-  before (stale, P9.6).
-- viewed: main-browse-details.png: Newtonsoft.Json, Installed 13.0.2, version 13.0.4, Update; Details tab fields.
-- viewed: main-quicksearch-open.png: five suggestions under the box, no source grouping (MB6, MB7); list pane empty.
-- viewed: main-details-readme.png: README rendered; two badge images show their alt text (not loaded on the runner).
-- viewed: sidebar-sections.png: INSTALLED (2) and UPDATES (2) filled; main panel on Updates beside it.
-- viewed: sidebar-narrow-200px.png: side bar at 200 px; the Updates row reads "Newton… 13.0.2 → 13.0.4" (P9.10).
-- viewed: main-installed-single-light.png: Light Modern, Installed tab, grey buttons, sidebar beside it.
-- viewed: main-installed-single-hc.png: Dark High Contrast, bordered panes and tab, row check boxes visible.
-
 ## Not started
 
-- Parity audit TF6 closes with this item; `docs/plans/parity-audit-2026-10-16.md` is P9.13's file (plan row
-  "close gaps as items land"), so P9.13 records it.
-- Hand-off to P9.9: `DetailsPane.tsx:131` returns without a word when a click is refused (N85).
-- Gotcha table: a red "Upload UI screenshots" step after an N37 download failure is a consequence, not a separate
-  failure (no PNG exists when no test ran). `copilot-instructions.md` is not this item's file; hand-off to P9.13.
+- Commit 2 (N86) and commit 3 (TF1, TF3, TF7); the gate's one rerun.
 
 ## Deviations from contract/ADR (file:line each)
 
-- The ruling says "add row N85 to docs/plans/STATUS.md"; the ledger is `docs/plans/findings-ledger.md` (plan §6,
-  its own rule "a row in section 1 and an entry in section 4"), so N85 is there and the tracker row of P9.0 cites it.
-- `main-installed-single` and `main-details-readme` can be the same image: the Installed tab keeps the README
-  selection of the file before. Not a defect of the mechanism.
+- None.
 
 ## Advisor decisions (date, item, question, answer verbatim)
 
-- 2026-10-16, P9.0: the ambient advisor before the edits (placement of the 12 states, the cold-search timing, the
-  transitive banner, the 200 px drag).
-- 2026-10-16, P9.0, stop-and-ask (plan §2.3 "a failing test you did not write", local run 2). Question: "Which option,
-  and is one green CI run on the P9.0 commit enough to land P9.0 given a local 1-in-3 failure of this pre-existing
-  test?" Answer of the `architecture-advisor` subagent, verbatim:
+2026-10-17, P9.12 (TF1–TF8 against the tree, N86's fix, the red run on 33312b2). Answer of the `architecture-advisor`
+subagent, verbatim:
 
 `````text
-DECISION: Option 2, narrowed: a named rewrite of the P5.12b install test inside P9.0 that makes the click deterministic and fails fast, with no retry-click; the tally result is recorded as evidence whichever way it falls. Not option 1 (the flake would ride on every P9 item until P9.12, and each hit cascades into 13 failures), not option 3 (the new test is not the mechanism), not option 4 (nothing here is the owner's). One green CI run on the P9.0 commit is enough once two local full runs of the edited tree are green.
+DECISION: Option 1, sharpened into three green code commits plus one docs commit, and the addendum's plan confirmed: the TF8 fix is P9.12 commit 1 and its green run clears the red of run 38997325272 (a test ran and failed: not N37/N65, no `gh run rerun` of that run). N86 is fixed by reordering `refreshProjectsAndSession` in `src/extension.ts` (announce `projects/changed` only after `session.reconcile`, nothing on the early return), proved by a harness scenario that holds `nuget list source` under a `refresh/all`; `chooseProjectUntilCommitted` is removed in the same commit (its retry would hide an N86 regression). TF2 and TF4 are already met by the tree; TF1/TF3 become one measuring test each in `main-installed.ui.test.ts` and `main-updates.ui.test.ts`; TF7 becomes one harness scenario over a fake feed that serves `verified` and an icon; TF8's host half is already true (no host discovery change), its test half is the shared Refresh-pressing wait. No contract change. Not `OWNER MUST DECIDE`.
 
-WHY: The brief is wrong about the mechanism: `stale` is defined as `selection.origin !== 'browse' && …` (/Users/mattias/github/nuiget/src/webview/shared/store/details.tsx:137), so for a browse-row selection `primaryWhy` can never become "Checking the selected project", and `committed` only moves to a newer snapshot (/Users/mattias/github/nuiget/src/webview/shared/store/session.tsx:30), so `committedProject` cannot go null between the poll and the click; no in-code path disables that button in that window. The run-2 log proves the request never left the webview: an admitted install logs `dotnet package add`, a queue refusal logs `Operation "install NUnit" was not admitted` at warn (/Users/mattias/github/nuiget/src/core/ops/OperationQueue.ts:79), a throwing handler logs `[main] ops/install failed` at error (/Users/mattias/github/nuiget/src/host/WebviewHost.ts:158), and `loggerFor` forwards warn and error to the LogOutputChannel (/Users/mattias/github/nuiget/src/host/services.ts); none of the three lines is in the 8-line log. The one thing that changes under the button in exactly that window is layout: `.nuiget-main-select` is content-sized (`min-width: 0; max-width: 20em`, /Users/mattias/github/nuiget/src/webview/main/main.css:31-33), its only option reads `5.0.0 (loading versions…)` until the versions answer (/Users/mattias/github/nuiget/src/webview/main/features/details/DetailsPane.tsx:217), the `disabled` predicate at :224 ignores `versions.status`, and the Install button sits to its right in a wrapping flex row (`main.css:227-232`); the test's poll (/Users/mattias/github/nuiget/src/test/ui/v2/main-search.ui.test.ts:129) therefore passes while the select is still wide, and a WebDriver click whose centre was computed before the select narrows lands to the right of the button. The only unverified link is chromedriver's window between rect computation and mouse dispatch, which is why the rewrite adds a post-click assertion rather than a retry: if the pre-condition is the fix the assertion never fires; if something else is going on it fails in 10 s with a precise message instead of a 240 s timeout plus the `after`-hook cascade. Plan §2.1 lets an advisor-named test be rewritten inside the item, and the change is a strengthening (the versions list must load; the click must start an operation), not a weakening under RUN.md §4.
+WHY: Verified in the tree, with two corrections to the brief. (1) `SessionStore` lives at `src/core/session/SessionStore.ts` (not `src/host`): `reconcile` (:99-103) is the only writer of `knownProjects`, and `normalizeProject` (:118-129) answers the first project for an unknown path and for `ALL_PROJECTS` with one project known. `extension.ts` fires `events.projectsChanged` at :189, lists sources at :196 (`catalog.sources(dir)`, a coordinator resource `sources:<dir>`) and reconciles at :202, so a `session/set` for a project the webview was just told about lands on the old list: N86 as recorded. The order "announce, then reconcile" is prose of `ARCHITECTURE.md:100` only; ADR-001:35 says `reconcile` runs whenever a list changes and fixes no order, so the reorder is no contract deviation (D6 untouched). (2) The N86 window is not reproducible through the `.csproj` watcher: a `project` scope matches `projects`, `allProjects:*`, `installed:`, `updates:`, `transitive:` (`src/core/queries/scopes.ts:66-75`) and never `sources`, so after a create event `catalog.sources(dir)` is a cache hit and the window is a microtask; it is wide only under a `workspace` or `sources` invalidation (`refresh/all` → `handlers.ts:408-411`), which is exactly what `untilProjects` pressing Refresh (P9.5, `44c2980`) provokes and why commit 1 (more Refresh presses) makes commit 2 mandatory. Hence the scenario uses `refresh/all`, not the watcher. (3) TF2 is met: `InstalledTab.test.tsx:264` `installed row shows icon, authors and verified`, `UpdatesTab.test.tsx:307` `updates row shows icon and authors` and `:268` (All Projects icons chunk), `AllProjectsView.test.tsx:67` `all-projects installed row shows icon from metadata chunk`, each asserting `img src` (`data:` or `DEFAULT_ICON`), authors text and the Verified accessible description. TF4 is met as the lint stands: `hooksOf` reads §8 at run time (`interaction-model-testids.test.ts:22-38`), `npm test` was exit 0 on 952f610 with every P9.x hook (`search-suggestions`, `transitive-list-<tfm>`, `section-header-transitive-<tfm>`, `transitive-details`, `source-health-indicator`, `multi-install-button`, `sidebar-update-all-button`, `direct`) in the tables, and every id the UI/e2e suites read by test id is in §8; the one hook the admission rule (§8 last paragraph) demands and lacks is the header's Refresh button, which `main-transitive.ui.test.ts:36` reads by class `.nuiget-main-refresh` (`MainShell.tsx:256`; `IconButton` takes `data-testid`, `IconButton.tsx:18,32`). TF3: jsdom cannot resolve `var()` to pixels, so `Row.test.tsx:236` (`minHeight` is the token reference) is as far as jsdom goes; the measurement belongs in ExTester, modelled on `sidebar.ui.test.ts:17-24` (`tokenPx`) and its compact-row probe; P9.11's note measured the main cards "67 px apart" (66 px card + 1 px border), so the bound is `token ≤ h ≤ token + 2`, upper bound included because P9.2's padding bug (90 px rows) passed `min-height`. TF7: no scenario reads enrichment (`scenarios.test.ts` compares `packagesOf` id@version; `updates converge across surfaces`:680-704 uses `objectContaining`, and its `reads()` count at :692 is before/after relative, so new feed requests do not break it); the fake feed answers search with `authors: ['Harness']` and no `verified` (`fakeFeed.ts:60`; `entryVerified` reads `verified`/`Verified`, `wire.ts:238-241`), has no icon branch (flat `…/<id>/<ver>/icon`, `flatContainer.ts:49`; `toImageDataUri` sniffs the PNG signature `0x89504e47`, `icons.ts:101`), and no `VulnerabilityInfo` resource (`fakeFeed.ts:45-52`), so `vulnerabilities` comes out absent (`vulnerability.ts:122`). TF8: the host does rescan on create: `watcher.onDidCreate(fire)` (`extension.ts:316`), `watch(PROJECT_FILE_GLOB, projectScope, …)` (:323), project scope → `projects` key (scopes.ts) → `requestRefresh` (:256-259). What fails on the runner is the event never reaching the extension (audit TF8, now seen a second time: run 38997325272 on 33312b2, `38 passing · 2 failing`, both the 120 s All Projects wait, next to green run 38997321456 on the same SHA). `main-all-projects.ui.test.ts:78-84, :88-91` wait passively and its `after` (:49-50) polls 120 s for TestProject without any Refresh, so a lost delete event would leave `ALL_PROJECTS` selected for every following file.
 
 DO:
-1. Do not edit /Users/mattias/github/nuiget/src/test/ui/v2/main-search.ui.test.ts until the with/without tally has finished: each run compiles `tsconfig.test.json`, so a mid-tally edit corrupts the comparison. Record its counts (n/5 with, n/5 at 2493ecc) in N85 whatever they are. A failure at 2493ecc proves pre-existing; 0/5 at 2493ecc does not exonerate P9.0 ((2/3)^5 ≈ 0.13), and a with-only pattern does not implicate the quick-search test either: extra feed traffic before the install test only moves when the versions answer lands. Do not move the quick-search test on the tally alone.
-2. In the P5.12b install test, before the existing Install poll at :129, add a poll on `version-selector`: `textContent` must no longer contain `loading versions` (60 s, `what` = "the versions of NUnit"). Keep the Install-enabled poll and the single `install.click()` as they are.
-3. After the click, add a poll (10 s) until the button is disabled or its text matches `/Working/`; `what` names N85 (for example "the Install click to start an operation (N85)"). The first probe runs milliseconds after the click, long before `dotnet package add` plus restore could complete and briefly re-enable the button before the new list arrives; state that timing assumption in the STATUS note.
-4. Same file, same rewrite: in `after` (:34-47), before clicking `installed-tab`, click `search-input`, send Escape and wait for `tab-bar` (10 s), so a future failure of this test stays one failure instead of leaving every later file in browse mode.
-5. Ledger: add row N85 to /Users/mattias/github/nuiget/docs/plans/STATUS.md with the three absent log lines, the corrected mechanism (stale unreachable for browse; select narrows on versions ready; disabled ignores versions.status), the tally counts, and "named rewrite of `installs a package from the details of its browse row, and the project file follows (P5.12b)` in P9.0". The directory /Users/mattias/github/nuiget/src/test/ui/v2/STATUS.md lists that test by title under the named-rewrite rule (§2.1) and pastes this answer under Advisor decisions. Note the silent early return at DetailsPane.tsx:131 (no announce) as a hand-off observation for P9.9 (operation feedback), not a P9.0 edit.
-6. Gates: `npx tsc --noEmit`, `npm run check-types`, `npx eslint src`, `npm test`, `npm run bench`, then two full `rm -rf /tmp/nuiget-ui/screenshots dist && npm run test:ui -- --storage /tmp/nuiget-ui` runs, both exit 0 with 37 passing and 12 PNGs, and the N85 poll never timing out. Then commit (cite P9.0, D18, N85), push, one green CI run with the "12 named states" line, view the PNGs per the new RUN.md rule.
+
+Commit 1 — TF8 (clears the red branch; RUN.md §2.3 "fix that first as part of the item" applies to the item that owns the flake).
+1. Baseline gates on 33312b2 (`npx tsc --noEmit`, `npm run check-types`, `npx eslint src`, `npx vitest run` → all 0/green). Tracker row P9.12 → `in-progress`, note: "run 38997325272 (33312b2, docs-only) red in UI with the TF8 signature beside green 38997321456 on the same SHA; no rerun; fixed by commit 1".
+2. `src/webview/main/MainShell.tsx:256`: add `data-testid="refresh-button"` to the Refresh `IconButton`; keep `className="nuiget-main-refresh"`.
+3. `docs/ux/interaction-model.md` §8, first table, directly after the `project-selector`, `source-selector` row: `| \`refresh-button\` | The header's Refresh button (main): a workspace rescan |`. Nothing else enters §8 (admission rule: `bulk-toolbar`, `multi-install-popover`, `banner-*`, `row-action-toggle` are read by primitive tests only).
+4. `src/test/ui/v2/mainWebview.ts`: add and export `projectOptionValues(): Promise<string[]>` (the `optionValues` of `main-transitive.ui.test.ts:21`), `untilProjects<T>(probe, what, totalMs = 180_000)` (the body of `main-transitive.ui.test.ts:27-40`, pressing `findByTestId('refresh-button')` instead of the class selector, 15 s poll per round) and `optionFor(file)` (:42). Doc comment keeps the TF8 sentence ("a file watcher may never report a project file created or deleted by the test").
+5. `src/test/ui/v2/main-transitive.ui.test.ts`: delete the local `optionValues`, `untilProjects`, `optionFor` (:21-42) and import them; no other change in this commit.
+6. `src/test/ui/v2/main-all-projects.ui.test.ts`: test 1 (:78-84): replace the 120 s `poll` for the option with `await untilProjects(values => (values.includes(ALL_PROJECTS) ? true : undefined), 'the All Projects option')`, then the `option[value="__all_projects__"]` lookup and the `All Projects (2)` assertion as today; test 2 (:88-90): same `untilProjects` before the choice; `after` (:49-50): after `rmSync` and the csproj restore, `await untilProjects(values => (values.includes(ALL_PROJECTS) ? undefined : true), 'the All Projects option gone')`, then the existing poll for `TestProject.csproj` in the selector and `installed-list`. Keep `chooseProjectUntilCommitted` in this commit (N86 is still open until commit 2).
+7. `src/test/ui/v2/main-shell.ui.test.ts:20`: add `'refresh-button'` to the hook list it renders under the CSP.
+8. Gates in plan order; `npx vitest run --project backend src/test/lint/interaction-model-testids.test.ts` → 3 passed; `node esbuild.mjs --production --analyze` (paste the three sizes; one attribute in MainShell, no ceiling question); `rm -rf dist && npm run test:ui -- --storage /tmp/nuiget-ui` → 40 passing. STATUS notes: `src/test/ui/v2/STATUS.md`, `src/webview/main/STATUS.md`. Commit `test(ui): All Projects and transitive suites wait for a project through the Refresh hook (P9.12, TF8, TF4)`; push; wait for green. D18: `gh run download <id> -n ui-screenshots -D /tmp/nuiget-shots`, view `main-installed-all` and `main-installed-single`, record `viewed: …: unchanged`.
+
+Commit 2 — N86.
+9. `src/extension.ts` `refreshProjectsAndSession` (:179-203): remove `events.projectsChanged.fire(projects)` from :189 and place it immediately after `await session.reconcile(projects, urls);` at :202. Keep `await vscode.commands.executeCommand('setContext', 'nuiget.hasProjectFiles', …)` at :190 where it is (`extension.test.ts:121` counts refresh runs by it). The early return at :197-201 fires nothing; add to its comment: "The rerun that change asked for (session.onDidChange below, `selectedProject !== lastReconciledProject`) reconciles and then announces: a surface is told of a project only once the store knows it (N86)." Add one sentence above the fire: "After `reconcile`, never before: a `session/set` for a project a surface was just told about must find it in the store's list (N86)."
+10. `src/test/harness/harness.ts` `files` (:297-325): add `addProject(projectPath: string, xml: string): void` that `mkdirSync`/`writeFileSync` and `projectFiles.push(projectPath)` without touching the watcher (doc: "A project file that appears without a watcher event, as on a runner whose watcher missed the create (TF8); listed on the next discovery").
+11. `src/test/harness/scenarios.test.ts`, after `project deletion mid-request` (:204): `it('N86: a surface is told of a new project only after the session knows it, so choosing it right away is committed', …)`: `h = await createHarness({ tree: TWO_PROJECTS, selectedProject: 'A/A.csproj' })`; `[A, B, C] = [h.path('A/A.csproj'), h.path('B/B.csproj'), h.path('C/C.csproj')]`; resolve `main` and `sidebar`; `expectState({ selectedProject: A, projects: [A, B], installed: ['Serilog@3.0.0'] })`; `const listing = h.dotnet.hold(dotnetCalls.listSources(path.dirname(A)))`; `h.files.addProject(C, projectXml(['Moq', '4.20.0']))`; `const refresh = h.request('main', 'refresh/all', {})` (do not await `expectState` while held); `await h.settle(() => expect(listing.seen).toBe(1))`; the N86 assertion, for both webviews: `expect(webview.projects?.map(p => p.path), \`${webview.surface}: projects while the listing runs\`).toEqual([A, B])` and `expect(webview.events('projects/changed').some(e => e.projects.some(p => p.path === C))).toBe(false)`; `listing.release()`; `await refresh.response`; `await h.settle(() => { for (const webview of [main, sidebar]) expect(webview.projects?.map(p => p.path)).toEqual([A, B, C]); })`; `const committed = await h.selectProject('main', C)`; `expect(committed.selectedProject).toBe(C)` (one dispatch, no retry); `await h.expectState({ selectedProject: C, projects: [A, B, C], installed: ['Moq@4.20.0'] })`; `expectOneResponsePerRequest` on both. Run it first on the unreordered tree: it must fail at the "projects while the listing runs" assertion (`[A, B, C]` received) — paste that line into the STATUS note as the negative control, then apply step 9 and run it again.
+12. `src/test/ui/v2/mainWebview.ts`: delete `chooseProjectUntilCommitted` (:51-70); add `chooseProjectCommitted(value: string, timeoutMs = 60_000)`: one `chooseProject(value)` then `poll(selectorValue() === value → true, \`the project selector committed on ${value}\`, timeoutMs)`; doc: "One dispatch. Since P9.12 the host tells a surface of a project only after the session knows it (N86), so a choice that is not committed is a regression, never retried here." Call sites: `main-transitive.ui.test.ts:67` and `:92`, `main-all-projects.ui.test.ts:84`.
+13. Docs: `docs/plans/findings-ledger.md` N86 (both tables): status `closed (P9.12, commit 2: reorder in extension.ts; scenario "N86: a surface is told of a new project only after the session knows it…"; chooseProjectUntilCommitted removed)`. `ARCHITECTURE.md:100`: rewrite the `refreshProjectsAndSession` sentence to the new order: "discovers the projects, sets `nuiget.hasProjectFiles`, lists the enabled sources of the project the store will keep or pick, skips the reconcile when the selection moved during the listing (the coalesced rerun does it), otherwise calls `session.reconcile` and only then announces `projects/changed` (N86: a surface is told of a project only once the store knows it)". `CHANGELOG.md` `## [Unreleased]` `### Fixed`: `- **A project chosen right after it was discovered is kept, not bounced to the previous one**`. `.github/copilot-instructions.md` 2.0 gotcha table, one row: "`projects/changed` before `reconcile` | `refreshProjectsAndSession` announces the project list only after `session.reconcile` replaced the store's list (N86, P9.12); never fire `events.projectsChanged` before it, and never on the early return (the rerun announces). A `project` scope invalidation leaves `sources:<dir>` cached, so the window shows only under `refresh/all` or a sources change: a scenario that needs it holds `nuget list source` under `refresh/all`, not under a watcher event."
+14. Gates: `npx vitest run --project backend src/extension.test.ts` (expected unchanged: `refreshRuns` counts `setContext`; a red there is a stop-and-ask, not a rewrite), `npx vitest run --project integration src/test/harness`, then the full order, `npm run package:vsix`, `npm run docs:check`, bundle sizes, `rm -rf dist && npm run test:ui -- --storage /tmp/nuiget-ui` → 40 passing. STATUS: `src/STATUS.md`, `src/test/harness/STATUS.md`, `src/test/ui/v2/STATUS.md`. Commit `fix(extension): announce projects/changed only after the session reconciled the list (P9.12, N86, ADR-001)`; push; green.
+
+Commit 3 — TF1, TF3, TF7.
+15. `src/test/ui/v2/sidebarWebview.ts`: export `tokenPx(name)` (the body of `sidebar.ui.test.ts:17-24`); `sidebar.ui.test.ts`: delete the local const, import it (named rewrite, behaviour identical).
+16. `src/test/ui/v2/main-installed.ui.test.ts`, new test after `lists the installed packages…`: `it('lays the rows out as comfortable cards with a loaded icon, as tall as the token, and shows the authors and the Verified mark (TF1, TF3)', …)` (timeout 180 000): wait for `package-row-serilog` and `package-row-newtonsoft.json`; `const token = tokenPx('--nuiget-row-height-comfortable')`; `poll` (30 s) an `executeScript` over `[data-testid="installed-list"] [role="option"]` returning per option `{ name: .nuiget-row-name textContent, minHeight: getComputedStyle(option).minHeight, height: option.getBoundingClientRect().height, iconSrc: option.querySelector('.nuiget-row-icon img')?.getAttribute('src') ?? '', iconLoaded: img ? img.complete && img.naturalWidth > 0 : false }`, resolving once every `iconLoaded` is true; assert ≥ 2 rows, every `minHeight === \`${token}px\``, every `token <= height <= token + 2`, every `iconSrc` non-empty (the default icon is a `cspSource` URI, feed-independent), `console.warn('[P9.12] comfortable rows: ' + JSON.stringify(rows))`. Then the live part, one poll of 120 s on the Newtonsoft.Json row's `textContent`: contains `James Newton-King` and `Verified: the package id prefix is reserved by its owner` (the `<title>` of `VerifiedIcon`, `Row.tsx:146`, is part of `textContent`); precedent `main-transitive.ui.test.ts` ('Serilog Contributors', 60 s). If the runner measures a height outside `[token, token + 2]`, record the number and stop-and-ask; do not widen the bound.
+17. `src/test/ui/v2/main-updates.ui.test.ts`: the same measurement block over `[data-testid="updates-list"] [role="option"]` (test title `update rows are comfortable cards with a loaded icon, as tall as the token (TF3)`), without the live authors poll (that file already depends on nuget.org for `13.0.2 →`).
+18. `src/test/harness/fakeFeed.ts`: export `FAKE_ICON = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0])` and `FAKE_ICON_DATA_URI = \`data:image/png;base64,${FAKE_ICON.toString('base64')}\``; in the search answer (:60) add `verified: true`; before the flat `index.json` branch (:62) add `if (segments[0] === 'flat' && segments.length === 4 && segments[3] === 'icon') { return published.get(normalizeId(segments[1])) ? ok(FAKE_ICON, { 'content-type': 'image/png' }) : fail('http-error', 404); }` (`ok` from `../../core/feeds/testSupport`). Update the file's doc comment (search rows are Verified; the flat container serves one PNG icon).
+19. `scenarios.test.ts`, after `updates converge across surfaces`: `it('enrichment reaches both surfaces: updates/get and transitive/metadata carry authors, Verified and the icon the feed serves (TF7)', …)`: `createHarness({ tree: TWO_PROJECTS, selectedProject: 'A/A.csproj' })`; `h.feed.publish('Serilog', ['3.0.0', '3.1.0'])`; resolve both; `expectState`; for each surface: `resultOf(await h.checkUpdates(name).response).updates` `toEqual([expect.objectContaining({ id: 'Serilog', latestVersion: '3.1.0', authors: 'Harness', verified: true, iconUrl: FAKE_ICON_DATA_URI })])`; `const [lite] = resultOf(await h.request(name, 'transitive/metadata', { packages: [{ id: 'Serilog', version: '3.0.0' }] }).response).metadata`; `expect(lite).toEqual(expect.objectContaining({ id: 'Serilog', version: '3.0.0', authors: 'Harness', description: 'Serilog package', verified: true, iconUrl: FAKE_ICON_DATA_URI }))`; `expect(lite).not.toHaveProperty('vulnerabilities')` with the comment "the fake index has no VulnerabilityInfo resource: unknown, never []"; `await h.settle(); [main, sidebar].forEach(expectOneResponsePerRequest)`. Run `npx vitest run --project integration src/test/harness` after step 18 alone: every existing scenario must stay green (they use `packagesOf` or `objectContaining`); a scenario that goes red on the new fields is a stop-and-ask, not a rewrite.
+20. Gates in plan order; `npm run bench`; `npm run docs:check`; `rm -rf dist && npm run test:ui -- --storage /tmp/nuiget-ui` → 42 passing. STATUS: `src/test/ui/v2`, `src/test/harness`, and record the TF map (TF2, TF4 met by the tree with the titles above; TF1/TF3 by step 16-17; TF7 by step 19; TF8 by commit 1 with the host side verified at `extension.ts:316,323`). Commit `test(harness,ui): enrichment end to end, comfortable rows measured against the token (P9.12, TF1, TF3, TF7)`; push.
+21. The row's gate: when commit 3's run is green, `gh run rerun <run-id>` once (the whole green run; `.claude/settings.json:39` allows `gh run:*`), `gh run watch <id> --exit-status`; both UI logs `42 passing`. A red UI in either run is a stop-and-ask with `gh run view <id> --log-failed` pasted; no third run. D18: view `main-installed-single`, `main-installed-all`, `main-updates`, `main-transitive-expanded` of the rerun.
+22. Docs commit: `docs(test): record the P9.12 visual check and the two green UI runs (P9.12, D18)` with the run ids, the viewed lines, tracker row `done` listing the three commits; push; green.
 
 DO NOT:
-- Add a retry-click or any loop that clicks again while the button is still enabled.
-- `gh run rerun` a red UI run for this failure; it is not N37 or N65.
-- Edit DetailsPane.tsx or any webview file under P9.0.
-- Edit the plan's P9.12 row or the plan file; the hand-off goes in the tracker and the directory STATUS.
-- Move, reorder or rewrite the P9.0 quick-search test because of the tally alone.
-- Treat a with-only tally as proof of a cause; it is a timing amplifier and goes in N85 as such.
-- Weaken the csproj poll or the `status-live` "Installed NUnit" wait; both stay.
+- Do not add a `SessionStore` method or touch `src/core/contracts.ts`, `src/core/session/SessionStore.ts` or any ADR; the reorder needs no sentinel.
+- Do not fire `projectsChanged` on the early return at `extension.ts:197-201`, and do not move the `setContext` call.
+- Do not reproduce N86 through the watcher (`files.writeProject` + `advance`): a project scope leaves `sources:<dir>` cached and the hold is never reached.
+- Do not keep `chooseProjectUntilCommitted` after commit 2, and do not re-dispatch a choice anywhere.
+- Do not add host discovery behaviour for TF8 (no invalidation on `nuiget.openManager`, no second discovery pass, no `project` scope with `[]` paths: it bumps every `allProjects:*` key).
+- Do not `gh run rerun` 38997325272, and do not rerun a red UI job of P9.12's commits.
+- Do not assert a live icon `data:` src or any nuget.org field other than the one authors/Verified poll; do not loosen `[token, token + 2]` without the measured number in a stop-and-ask.
+- Do not add `row-icon`, `row-authors`, `badge-*`, `prerelease-toggle` or `restore-toggle` hooks (no test outside a component reads them), a `webview-density` lint, or assertions in `main-search.ui.test.ts`.
+- Do not edit `docs/plans/parity-audit-2026-10-16.md` (P9.13 closes the gap rows) or raise any poll timeout.
 
-CONTRACT CHANGE: none
+CONTRACT CHANGE: none. Files approved beyond the row's `src/test/**, host watcher` column: `src/extension.ts` (:189 → after :202, comments), `src/webview/main/MainShell.tsx:256` (one `data-testid`), `docs/ux/interaction-model.md` §8 (one row), `ARCHITECTURE.md:100` (one sentence), `CHANGELOG.md` (one Fixed headline), `.github/copilot-instructions.md` (one gotcha row), `docs/plans/findings-ledger.md` (N86 both tables), `docs/plans/STATUS.md`, the STATUS notes of `src`, `src/test/harness`, `src/test/ui/v2`, `src/webview/main`. Named test rewrites: `src/test/ui/v2/mainWebview.ts` (`chooseProjectUntilCommitted` → `chooseProjectCommitted`, shared `projectOptionValues`/`untilProjects`/`optionFor`), `src/test/ui/v2/main-transitive.ui.test.ts:21-42, 67, 92`, `src/test/ui/v2/main-all-projects.ui.test.ts:49-50, 78-84, 88-90`, `src/test/ui/v2/main-shell.ui.test.ts:20`, `src/test/ui/v2/sidebar.ui.test.ts:17-24` (import of `tokenPx`), `src/test/harness/fakeFeed.ts` (verified, icon). `src/extension.test.ts` stays as it is; a red there is a stop-and-ask.
 
-VERIFY: `grep -n "N85" docs/plans/STATUS.md` shows the ledger row and `grep -n "loading versions\|N85" src/test/ui/v2/main-search.ui.test.ts` shows the pre-click wait and the post-click poll; two local `npm run test:ui -- --storage /tmp/nuiget-ui` runs exit 0 with "37 passing" and `ls /tmp/nuiget-ui/screenshots/*/ | wc -l` = 12 each; `gh run view <id> --json jobs` shows the UI job `success` on the P9.0 commit and its "Check the named screenshots" step prints "12 named states; PNGs in the artifact: 12".
+VERIFY:
+- `awk '/const refreshProjectsAndSession/,/^    };/' src/extension.ts | grep -n "session.reconcile\|projectsChanged.fire"` → the `reconcile` line precedes the `fire` line and there is exactly one `fire`.
+- `npx vitest run --project integration src/test/harness --reporter=verbose` → exit 0, titles include `N86: a surface is told of a new project only after the session knows it…` and `enrichment reaches both surfaces…`; the STATUS note quotes the N86 scenario's red on the unreordered tree.
+- `grep -rn "chooseProjectUntilCommitted\|nuiget-main-refresh" src/test/ui/v2` → no match; `grep -n "refresh-button" src/webview/main/MainShell.tsx docs/ux/interaction-model.md src/test/ui/v2/mainWebview.ts src/test/ui/v2/main-shell.ui.test.ts` → one line each; `npx vitest run --project backend src/test/lint/interaction-model-testids.test.ts` → 3 passed.
+- `grep -c "tokenPx" src/test/ui/v2/sidebarWebview.ts src/test/ui/v2/main-installed.ui.test.ts src/test/ui/v2/main-updates.ui.test.ts` → ≥ 1 each; `grep -n "verified: true\|'icon'" src/test/harness/fakeFeed.ts` → both present.
+- `npx tsc --noEmit`, `npm run check-types`, `npx eslint src` → 0; `npm test` → exit 0; `npm run bench` → 0; `npm run docs:check` → 0; `npm run package:vsix` → VSIX built; `node esbuild.mjs --production --analyze` → three sizes under the ceilings, pasted.
+- `rm -rf dist && npm run test:ui -- --storage /tmp/nuiget-ui` → `42 passing`, `[P9.12] comfortable rows:` lines in the log with heights in `[66, 68]`.
+- `gh run list --branch labs/2.0 --limit 3` → commit 1's run green (the branch no longer red), commit 3's run green and its `gh run rerun` green; `gh run view <id> --log | grep -c "42 passing"` → 1 for each of the two UI logs; `grep -n "^| N86" docs/plans/findings-ledger.md` → status closed naming P9.12.
+
+Files checked: docs/plans/2026-10-11-nuiget-2.0-execution-plan.md (§1-§4, :359 and P9 preamble); docs/plans/parity-audit-2026-10-16.md:1244-1381 (TF1-TF8 with refuter notes), :1408-1440; docs/plans/findings-ledger.md:183, :447; docs/plans/STATUS.md:131-135; docs/plans/RUN.md:34-110; docs/adr/001-*.md:35; docs/ux/interaction-model.md:160-200 (§8); ARCHITECTURE.md:96-100, :430, :805; CHANGELOG.md (Unreleased); .github/agents/architecture-advisor.agent.md; .claude/settings.json:39; .github/workflows/ci.yml:261-285; package.json:54-58; src/extension.ts:150-283, :284-330, :347-359, :400-450; src/extension.test.ts:69-122, :505-620; src/core/session/SessionStore.ts:85-169; src/core/contracts.ts:57-77; src/core/queries/scopes.ts (whole); src/core/catalog/Catalog.ts:121, :130, :240-275, :285; src/core/feeds/enricher.ts:1-90; src/core/feeds/icons.ts:98-112, :131-220; src/core/feeds/flatContainer.ts:32-49, :170-185; src/core/feeds/search.ts:300-382; src/core/feeds/wire.ts:238-241; src/core/feeds/vulnerability.ts:122; src/core/feeds/serviceIndex.ts:122; src/core/feeds/testSupport.ts:7-21; src/core/project/discovery.ts:22-28; src/host/handlers.ts:241-298, :408-411; src/host/services.ts:100-116; src/host/MainPanelHost.ts:37, :84; src/host/STATUS.md:1-210 (P9.9 rulings); src/webview/main/MainShell.tsx:55-56, :232-300; src/webview/shared/primitives/IconButton.tsx:4-34; src/webview/shared/primitives/Row.tsx:42, :77-88, :146; src/webview/shared/primitives/icons.tsx:67-70, :151-152; src/webview/shared/primitives/Row.test.tsx:205-290; src/webview/shared/primitives/primitives.css:83-87; src/webview/shared/tokens.css:26-28; src/webview/shared/STATUS.md:1-60, :129, :157-162; src/webview/shared/store/installed.tsx:77; src/webview/main/features/installed/InstalledTab.test.tsx:100-130, :255-300; src/webview/main/features/installed/AllProjectsView.test.tsx:60-110; src/webview/main/features/updates/UpdatesTab.test.tsx:262-340; src/test/harness/harness.ts:129-377; src/test/harness/fakeDotnet.ts:17-120, :224-311; src/test/harness/fakeFeed.ts (whole); src/test/harness/FakeWebview.ts:1-30, :178-235; src/test/harness/scenarios.test.ts:1-60, :204-241, :680-720, :790-827; src/test/harness/STATUS.md:1-30; src/test/lint/interaction-model-testids.test.ts (whole); src/test/lint/webview-tokens.test.ts:29, :72-79; src/test/ui/v2/mainWebview.ts (whole); src/test/ui/v2/sidebarWebview.ts (exports); src/test/ui/v2/main-all-projects.ui.test.ts (whole); src/test/ui/v2/main-transitive.ui.test.ts:1-150; src/test/ui/v2/main-installed.ui.test.ts:1-100; src/test/ui/v2/main-shell.ui.test.ts:15-26; src/test/ui/v2/sidebar.ui.test.ts:1-55, :100-135; src/test/ui/v2/STATUS.md:1-3; vitest.config.mts:53-84; git log 33312b2..6678f0f (P9 commits).
 `````
-
-  Acted on: DO 1-6 as written, with the ledger deviation above.
-
-## P9.5 addition
-
-- `main-transitive.ui.test.ts` (P9.5, ruling in `src/webview/main/STATUS.md`): a run-time `Transitive/Transitive.csproj`
-  with Serilog.Sinks.Console 6.1.1, restored through the banner; captures `main-transitive-expanded` (moved here from
-  `main-installed.ui.test.ts`) and the 13th state `main-transitive-details`. `chooseProject` lives in `mainWebview.ts`.
-
-## P9.6 addition
-
-- `main-search.ui.test.ts` (P9.6, ruling in `src/webview/main/STATUS.md`): the suggestion poll skips disabled options
-  (the `Searching…` row), and the quick-search test presses ArrowDown, ArrowRight and captures the 14th state
-  `main-quicksearch-versions` before ArrowLeft.
 
 ## Exact next step (one item ID)
 
-P9.1.
+P9.12 commit 2, after commit 1's CI is green.
