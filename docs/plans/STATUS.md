@@ -1201,6 +1201,10 @@ Acted on: DO 1-3 in the gate-record commit (P9.fix-6's Commit cell, this block, 
 39025149785)` lines, the two notes in the P9.fix-5 and P9.fix-6 rows). The P9 gate now waits only for the owner's review
 of the `ui-screenshots` artifact of run 39025149785; `labs/2.0-P9-done` is tagged after `P9 approved`.
 
+Owner, 2026-10-17: "P9 approved". `labs/2.0-P9-done` tagged on `98341fc` (CI run 39026440342 green on all 10 jobs). With the
+approval the owner deferred five visual findings, recorded as V1-V5 in `findings-ledger.md` for the UX initiative, and
+added P10.0a (regression coverage matrix) before P10.1.
+
 ## Advisor decisions
 
 Answers of the `architecture-advisor` subagent that have to be on record before the sentinel
