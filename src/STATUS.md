@@ -121,4 +121,4 @@ gates per item are the plan §2.2 list plus `npm run check:matrix`.
 
 ## Exact next step (one item ID)
 
-P8.2c
+P10.1.

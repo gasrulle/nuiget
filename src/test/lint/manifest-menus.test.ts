@@ -74,4 +74,13 @@ describe('package.json menus', () => {
             expect(entryOf('view/title', command).when).toBe('view == nuiget.sidebarView');
         }
     });
+
+    it('the command palette hides the sidebar-only commands', () => {
+        const hidden = (menus.commandPalette ?? []).filter(entry => entry.when === 'false').map(entry => entry.command).sort();
+        const sidebarOnly = manifest.contributes.commands.map(entry => entry.command).filter(command => command.startsWith('nuiget.sidebar.'));
+        expect(hidden).toEqual([...sidebarOnly, 'nuiget.refreshPackages'].sort());
+        // What the palette offers: the manager and the two cache commands.
+        const offered = manifest.contributes.commands.map(entry => entry.command).filter(command => !hidden.includes(command));
+        expect(offered.sort()).toEqual(['nuiget.clearHttpCache', 'nuiget.clearSdkVersionCache', 'nuiget.openManager']);
+    });
 });
