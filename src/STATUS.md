@@ -111,6 +111,12 @@ The P8.2 ruling and both P8.2b follow-ups (2026-10-16) are verbatim under `## Ad
   reorder: harness `Tests 24 passed (24)`; `npx vitest run --project backend src/extension.test.ts` → `Tests 38 passed
   (38)` (unchanged).
 
+## P10.0 additions (2026-10-17)
+
+Regression gaps of the P10.0a matrix (`docs/plans/regression-matrix.md`), one tracker row and one commit each; the
+gates per item are the plan §2.2 list plus `npm run check:matrix`.
+- P10.0b (R5): `src/extension.test.ts` `nuiget.sidebar.selectSource commits the source chosen in the picker`: the command opens the source picker (All Sources and both enabled sources offered) and the session takes the choice; red with the `session.apply` of `SidebarHost.showSourcePicker` removed. Gates: tsc 0, check-types 0, eslint 0, lint 0, npm test, bench 0, docs:check 0, check:matrix 0 (counts in the tracker row).
+
 ## Exact next step (one item ID)
 
 P8.2c
