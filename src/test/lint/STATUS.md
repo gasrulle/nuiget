@@ -56,6 +56,7 @@ Regression gaps of the P10.0a matrix (`docs/plans/regression-matrix.md`), one tr
 gates per item are the plan §2.2 list plus `npm run check:matrix`.
 - P10.0d (R13): new `manifest-menus.test.ts` (helpers `filenamePattern`, `entryOf`) with `explorer/context offers nuiget.openManager on project files only`: one entry in group `navigation`, its pattern matches .csproj, .fsproj and .vbproj and not .cs, .props, .sln, .csproj.user or nuget.config; red with the pattern narrowed to .csproj.
 - P10.0e (R14): `manifest-menus.test.ts` `editor/title offers nuiget.openManager on project files only`: the same checks on the editor title entry.
+- P10.0g (R16): `manifest-menus.test.ts` `view/title shows the sidebar buttons in order and one command of each switch pair by its context key`; red with the full-view button moved to `navigation@1`.
 
 ## Exact next step (one item ID)
 

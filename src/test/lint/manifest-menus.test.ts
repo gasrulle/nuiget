@@ -54,4 +54,24 @@ describe('package.json menus', () => {
             expect(pattern.test(file), file).toBe(false);
         }
     });
+
+    it('view/title shows the sidebar buttons in order and one command of each switch pair by its context key', () => {
+        const entries = (menus['view/title'] ?? []).filter(entry => /\bview == nuiget\.sidebarView\b/.test(entry.when ?? ''));
+        const position = (entry: MenuEntry): number => Number(/^navigation@(\d+)$/.exec(entry.group ?? '')?.[1] ?? NaN);
+        // Restore, prerelease, project, source, refresh, full view: the order of the 1.x title bar.
+        const order = [...entries].sort((a, b) => position(a) - position(b)).map(entry => entry.command.replace(/Off$/, ''));
+        expect([...new Set(order)]).toEqual([
+            'nuiget.sidebar.toggleRestore', 'nuiget.sidebar.togglePrerelease', 'nuiget.sidebar.selectProject',
+            'nuiget.sidebar.selectSource', 'nuiget.sidebar.refresh', 'nuiget.sidebar.openFullView',
+        ]);
+        // Each switch shows one of its two commands: the one that turns it on while the key is false, and back.
+        for (const [on, key] of [['nuiget.sidebar.toggleRestore', 'nuiget.restoreEnabled'], ['nuiget.sidebar.togglePrerelease', 'nuiget.prereleaseEnabled']]) {
+            expect(entryOf('view/title', on).when).toBe(`view == nuiget.sidebarView && !${key}`);
+            expect(entryOf('view/title', `${on}Off`).when).toBe(`view == nuiget.sidebarView && ${key}`);
+            expect(entryOf('view/title', on).group).toBe(entryOf('view/title', `${on}Off`).group);
+        }
+        for (const command of ['nuiget.sidebar.selectProject', 'nuiget.sidebar.selectSource', 'nuiget.sidebar.refresh', 'nuiget.sidebar.openFullView']) {
+            expect(entryOf('view/title', command).when).toBe('view == nuiget.sidebarView');
+        }
+    });
 });
