@@ -1,4 +1,4 @@
-# STATUS — src/webview/main   commit 0e02690 (P9.11 commit (b); parent of the focus fix)   2026-10-17T15:10:00Z
+# STATUS — src/webview/main   commit 952f610 (P9.11 closed; parent of this docs commit)   2026-10-17T15:30:00Z
 
 git status --porcelain --untracked-files=all (before commit (a)): modified `.github/copilot-instructions.md`,
 `ARCHITECTURE.md`, `CHANGELOG.md`, `docs/plans/STATUS.md`, `src/test/lint/{webview-css-baseline,webview-stylesheets,webview-tokens}.test.ts`,
@@ -86,6 +86,23 @@ fix: the key goes to `driverOf().switchTo().activeElement()` (as the sash test d
   ungrouped section heading is not normal, so the assertion discriminates.
 - (b) The parity audit file is P9.13's: MH6, MH11, MH12 and MI12 (case and size) are recorded closed here and in the
   tracker only.
+
+## Visual check (RUN.md §4)
+
+CI runs 38996887856 and 38996884659 on 952f610 → success (UI `40 passing`, 15 PNGs); artifact `ui-screenshots` of
+38996887856 (the 0e02690 artifact was viewed too: `main-installed-all`, `sidebar-update-all-dialog`, and the two theme
+captures without a ring, which the fix addressed):
+
+- viewed: main-installed-single-hc.png: Select all, Uninstall selected (0), Uninstall and Update boxed by the contrast
+  line; the Installed and Updates tabs and the Details and README tabs boxed; the Newtonsoft.Json icon an outlined box on
+  black; the check boxes drawn 16 px with the contrast border and the mark on Restore after operations; the focus ring
+  (orange) on the Newtonsoft.Json row while Serilog stays current.
+- viewed: main-installed-single-light.png: the list pane in the side-bar grey beside the white details pane; the line under
+  the search row; the drawn check box with its mark on Restore after operations; the focus ring (blue) on Newtonsoft.Json.
+- viewed: sidebar-update-all-dialog.png (0e02690): the sidebar's lists dimmed under "Update 1 package?".
+- viewed: main-installed-all.png (0e02690): "TestProject.csproj" and "Utility.csproj" project headers in normal case at the
+  body size, counts beside them.
+- viewed: main-updates.png: Update all and the update rows unchanged.
 
 ## Advisor decisions (date, item, question, answer verbatim)
 
