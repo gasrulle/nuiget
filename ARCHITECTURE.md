@@ -667,7 +667,7 @@ is why it is not a `Popover`.
   searches 300 ms after the last key in every mode, as 1.x did. The main panel's search feature enables `config` and `sources` on mount,
   so the main panel's start requests are `session/get`, `projects/list`, `config/get`, `layout/get` (the kept split, P9.7) and one `perf/mark`
   (`webviewReady`, N81), with `sources/list` after the first snapshot; the sidebar's set is `session/get`,
-  `projects/list` and the same mark.
+  `projects/list`, `config/get` (once, for `workbench.tree.indent`) and the same mark.
   Picking a suggestion and `ui/navigateToPackage` fill the box with the id and search for it exactly; the package
   found becomes the current row. A navigation that names a version (View details of a sidebar row) carries it in
   the search slice (`version`), and the details select that version rather than the latest found (P7.5a). Leaving browse clears the search and cancels its request.
@@ -682,12 +682,16 @@ is why it is not a `Popover`.
   `@vulnerable`) is a browse search, 300 ms after the last key from two characters on, or at once on Enter.
   `BrowseResults` (`sidebar-browse-list`) lists compact rows; Enter or the row's button installs the version found
   into the committed project with the row's `sourceUrl`. An installed package and a surface without a single project
-  install nothing and say why. The sidebar never asks for suggestions, the source list or the settings.
+  install nothing and say why. The sidebar never asks for suggestions or the source list; it asks `config/get` once, for `workbench.tree.indent`.
   Installed and Updates rows are sorted by id, as the main panel's (P9.10), and an update row passes `nextVersion`.
   Update all in the Updates header (`sidebar-update-all-button`, an arrow `IconButton` beside the count) opens a
   `ConfirmDialog` that lists the updates (per project under All Projects) and sends `ops/bulkUpdate`, or one
   `ops/bulkUpdateAllProjects`; centrally managed (`central`) rows, busy rows and an unsupported project's rows stay
   out (N76). A project header of All Projects carries the project's path as its tooltip (`SectionHeader.tooltip`).
+  The Installed and Updates headers take VS Code's side-bar section colours (`--nuiget-color-section-header-*`), rows
+  start where the section title does, and an All Projects project header is a tree level in normal case: `SidebarView`
+  writes `ExtensionConfig.treeIndent` (`workbench.tree.indent`) as `--nuiget-tree-indent` on its root, which indents
+  the project headers and their rows (`sidebar.css`).
 
 ### Details feature (main)
 

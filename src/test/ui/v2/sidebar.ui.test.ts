@@ -102,6 +102,42 @@ describe('2.0 sidebar', () => {
         }
     });
 
+    it('narrow sidebar keeps package name visible', async function () {
+        this.timeout(180_000);
+        await openSidebarView();
+        const original = await sideBarWidth();
+        try {
+            await dragSideBarTo(200);
+            await enterSidebarWebview();
+            await poll(async () => ((await driverOf().executeScript<number>('return document.querySelector(\'[data-testid="nuiget-sidebar"]\').getBoundingClientRect().width;')) <= 200 ? true : undefined), 'the sidebar laid out at 200 px', 10_000);
+            await findByTestId('package-row-serilog', 60_000);
+            await poll(async () => ((await driverOf().findElements(By.css('[data-testid="sidebar-updates-list"] [role="option"]'))).length > 0 ? true : undefined), 'an update row', 60_000);
+            type Measured = { list: string; name: string; nameWidth: number; nameScroll: number; versionWidth: number };
+            const rows = await driverOf().executeScript<Measured[]>(`
+                return [...document.querySelectorAll('[data-testid="sidebar-installed-list"] [role="option"], [data-testid="sidebar-updates-list"] [role="option"]')].map(option => {
+                    const name = option.querySelector('.nuiget-row-name');
+                    const version = option.querySelector('.nuiget-row-version');
+                    return { list: option.closest('[role="listbox"]').getAttribute('data-testid'), name: name.textContent, nameWidth: name.clientWidth, nameScroll: name.scrollWidth, versionWidth: version ? version.clientWidth : 0 };
+                });
+            `);
+            expect(rows.filter(row => row.list === 'sidebar-installed-list').map(row => row.name)).to.deep.equal(['Newtonsoft.Json', 'Serilog']);
+            for (const row of rows) {
+                // The name is never the part that gives way to a long version (the owner's overflow bug, P9.2): it is
+                // whole, or it is cut only by its cap and still at least as wide as the version beside it.
+                expect(row.nameWidth, `${row.list} ${row.name}`).to.be.greaterThan(0);
+                if (row.nameScroll > row.nameWidth) {
+                    expect(row.nameWidth, `${row.list} ${row.name} is cut`).to.be.at.least(row.versionWidth);
+                }
+            }
+            const serilog = rows.find(row => row.list === 'sidebar-installed-list' && row.name === 'Serilog');
+            expect(serilog?.nameScroll, 'Serilog is not cut').to.be.at.most(serilog?.nameWidth ?? 0);
+            console.warn(`[P9.10] 200 px rows: ${JSON.stringify(rows)}`);
+        } finally {
+            await leaveWebview();
+            await dragSideBarTo(original);
+        }
+    });
+
     it('lays the rows out from the stylesheet under the CSP', async function () {
         this.timeout(120_000);
         await openSidebarView();

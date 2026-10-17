@@ -1,10 +1,15 @@
-# STATUS — src/webview/sidebar   commit 9dd20f1 (P9.9 closed; parent of the P9.10 commits)   2026-10-17T10:40:00Z
+# STATUS — src/webview/sidebar   commit fb4a0f9 (P9.10 commit (a); parent of commit (b))   2026-10-17T12:10:00Z
 
 git status --porcelain --untracked-files=all (before commit (a)): modified `.github/copilot-instructions.md`,
 `ARCHITECTURE.md`, `CHANGELOG.md`, `README.md`, `docs/plans/STATUS.md`, `docs/ux/interaction-model.md`,
 `src/test/ui/v2/{sidebarWebview.ts,sidebar-parity.ui.test.ts}`,
 `src/webview/shared/primitives/{SectionHeader.tsx,SectionHeader.test.tsx}`,
 `src/webview/sidebar/{InstalledSection.tsx,ProjectPackages.tsx,ProjectUpdates.tsx,UpdatesSection.tsx,UpdatesSection.test.tsx,SidebarView.test.tsx,sidebar.css,STATUS.md}`
+
+git status --porcelain --untracked-files=all (before commit (b)): modified `.github/copilot-instructions.md`,
+`ARCHITECTURE.md`, `CHANGELOG.md`, `docs/plans/STATUS.md`, `src/test/ui/v2/sidebar.ui.test.ts`,
+`src/webview/shared/tokens.css`, `src/webview/sidebar/{SidebarView.tsx,index.test.tsx,sidebar.css,STATUS.md}`;
+new `src/webview/sidebar/SidebarParity.test.tsx`
 
 Item: **P9.10** — Sidebar parity (parity audit SB1–SB6, SB8, SB11, SB15, the version overflow), by the stop-and-ask
 ruling below, in two commits: (a) behaviour (Update all, sort, `nextVersion`, the project path tooltip); (b) presentation
@@ -32,6 +37,23 @@ rm -rf /tmp/nuiget-ui/screenshots dist && npm run test:ui -- --storage /tmp/nuig
           "Timed out after 60000 ms waiting for the versions with the installed one marked" (feed latency; no file of (a)
           is on that path)
   run 3 → exit 0 · 39 passing (1m) · 15 PNGs
+CI runs 38993220342, 38993217034 on fb4a0f9 (commit (a)) → success
+commit (b):
+npx tsc --noEmit 0 · npm run check-types 0 · npx eslint src 0 · npm run lint 0 · npm run docs:check 0
+npx vitest run --project backend src/test/lint → Tests 131 passed (131) (webview-tokens.test.ts unchanged)
+npx vitest run --project frontend src/webview → Tests 556 passed (556)
+npm test                    → exit 0 · Tests 2005 passed | 9 skipped (2014) · npm run bench → exit 0
+rm -rf dist out/esbuild && node esbuild.mjs --production --analyze → dist/extension.js 297016 / 322502 ·
+                              dist/webview.js 548715 / 577766 · dist/sidebar.js 333071 / 351245
+rm -rf /tmp/nuiget-ui/screenshots dist && npm run test:ui -- --storage /tmp/nuiget-ui:
+  run 1 → 39 passing · 1 failing: the new narrow test read the row wrapper's test id instead of the list's (fixed)
+  run 2 → 39 passing · 1 failing: the ruling's "name at least as wide as the version" fails for a whole short name
+          (Updates `Serilog` 42 px beside `3.1.1 → 4.4.0` 68 px); the invariant became "whole, or cut only by the cap
+          and at least as wide as the version" (deviation below)
+  run 3 → exit 0 · 40 passing (1m) · 15 PNGs; `[P9.10] 200 px rows`: installed Newtonsoft.Json name 100/103 px beside
+          `13.0.2` 31 px, Serilog 42/42 beside 23; updates Newtonsoft.Json 100/103 beside 37 (ellipsised), Serilog 42/42
+          beside 68. Newtonsoft.Json is cut by 3 px while its version shows no more than `13.0.2…`: the 70 % cap stays
+          (DO 13, no retune).
 ```
 
 ## Done (tested)
@@ -54,14 +76,24 @@ rm -rf /tmp/nuiget-ui/screenshots dist && npm run test:ui -- --storage /tmp/nuig
 - Docs (a): interaction model §1, §5, §8 (`sidebar-update-all-button`); ARCHITECTURE sidebar paragraph; README sidebar
   bullet; CHANGELOG Added and Changed; gotcha "A `title` on a row" (`nextVersion` on both surfaces).
 
+- Commit (b): `tokens.css` `--nuiget-color-section-header-{bg,fg,border}` (aliases of `sideBarSectionHeader-*`;
+  forced colours `Canvas`/`CanvasText`; no high-contrast override, follow-up 2) and `--nuiget-tree-indent: 8px`;
+  `sidebar.css` the section chrome (background, top line, none after the sash), rows starting at the section title,
+  All Projects project headers in normal case indented by `--nuiget-tree-indent` with their rows; `SidebarView` asks
+  `config/get` once (`enable()`) and writes `workbench.tree.indent` on its root.
+- Tests (b): `the root carries workbench.tree.indent as --nuiget-tree-indent`, `rows start at the section title`, `All
+  Projects project headers are in normal case and name their path` (new `SidebarParity.test.tsx`); UI `narrow sidebar
+  keeps package name visible` (sidebar.ui.test.ts). Named rewrites (follow-up 2): `index.test.tsx:37-38` (`config/get`
+  in the start set, counted once); `ARCHITECTURE.md` the sidebar's start set and "never asks … the settings".
+- Docs (b): ARCHITECTURE sidebar paragraph (chrome, indent); CHANGELOG Changed; gotcha "The config slice is lazy".
+
 ## Done (untested)
 
 - None.
 
 ## Not started
 
-- Commit (b): section chrome, the indent with `workbench.tree.indent`, normal-case project headers, the narrow-width UI
-  assertion.
+- None of P9.10.
 
 ## Deviations from contract/ADR (file:line each)
 
@@ -76,6 +108,11 @@ rm -rf /tmp/nuiget-ui/screenshots dist && npm run test:ui -- --storage /tmp/nuig
 - The UI test asserts the dialog's shape (`Update N packages?` and `<id>: <from> → <to>` lines) instead of the ruling's
   `Newtonsoft.Json: 13.0.2 →`: an earlier file updates Newtonsoft.Json before this file runs, so which packages join
   depends on order (local run 1); it closes the dialog in a `finally` so a failure cannot cover later tests.
+- (b) `narrow sidebar keeps package name visible` checks that a name is whole, or cut only by its cap and at least as
+  wide as its version (the ruling's unconditional `>=` fails for a whole short name beside a long version, local run 2);
+  it reads the list from the option's listbox and logs the measured widths (`[P9.10] 200 px rows`).
+- (b) HC: the border of the section headers in a high-contrast theme comes from `sideBarSectionHeader.border`'s default
+  (`contrastBorder`); gate: `main-installed-single-hc` shows the two header lines (follow-up 2).
 
 ## Advisor decisions (date, item, question, answer verbatim)
 
@@ -166,6 +203,35 @@ VERIFY: `npx vitest run --project frontend src/webview/sidebar 2>&1 | grep -E "T
 Files checked: `src/webview/sidebar/SidebarView.test.tsx:405-418, 424-440`; `git status --short` (six modified files, nothing staged or committed).
 `````
 
+2026-10-17, P9.10 (b) follow-up (`index.test.tsx:37` and `webview-tokens.test.ts:96`), verbatim:
+
+`````text
+P9.10 (b) follow-up ruling — `index.test.tsx:37` and `webview-tokens.test.ts:96`.
+
+DECISION: (1) Named rewrite of `src/webview/sidebar/index.test.tsx:37` adding `'config/get'` to the start set, with a once-count, title unchanged; both ARCHITECTURE sentences corrected. (2) Option (b): drop the high-contrast override of `--nuiget-color-section-header-border` (`tokens.css:140`); `webview-tokens.test.ts:96` stays as written and the P9.8 note ("the high-contrast block stays exactly border, focus, shadow") stays true.
+
+WHY: (1) My ruling's "no test counts it" was wrong: `index.test.tsx:37` asserts the exact set of request types at mount (verified), and `ARCHITECTURE.md:669` and `:685` state that set and that the sidebar never asks for the settings; both become false with DO 11, which is the ruling's own consequence (the lazy slice, `config.tsx:9-38`; `SidebarHost.ts:41` sends `config/changed` on change only). P9.7 did the same for the main entry's `layout/get`. The title "asks the host for the session and the projects" stays true and is a title the plan's "never rename" rule covers. (2) `sideBarSectionHeader.border` is registered by VS Code with `contrastBorder` as its default for every theme kind (dark, light, hcDark, hcLight), so in the two HC themes `--vscode-sideBarSectionHeader-border` already resolves to the contrast border and the `transparent` fallback of `tokens.css:87` applies only where no theme sets either (the four default non-HC themes); the HC override is redundant, and removing it keeps the HC block the lint pins. Not verified against VS Code source in this repository (no theme data in `node_modules`); the gate that proves it is `theme.ui.test.ts`'s two HC passes plus the `main-installed-single-hc` capture, where the sidebar's two headers must show a border line.
+
+DO:
+1. `src/webview/sidebar/index.test.tsx:37` → `expect(new Set(asked)).toEqual(new Set(['session/get', 'projects/list', 'config/get', 'perf/mark']));` and after `:38` add `expect(asked.filter(type => type === 'config/get')).toHaveLength(1);` (one `enable()`, once under StrictMode too; if StrictMode yields 2, the slice's `known` guard is the thing to read, not the count to relax: stop-and-ask). Comment on the set, if there is one: "+ `config/get` for `workbench.tree.indent` (P9.10)".
+2. `ARCHITECTURE.md:669`: "…the sidebar's set is `session/get`, `projects/list`, `config/get` (once, for `workbench.tree.indent`) and the same mark"; `:685`: "The sidebar never asks for suggestions or the source list; it asks `config/get` once, for `workbench.tree.indent`."
+3. `src/webview/shared/tokens.css`: delete line 140 (`--nuiget-color-section-header-border: var(--vscode-contrastBorder);`) from the HC block; keep `:87` and the forced-colours `:163`. `npx vitest run src/test/lint/webview-tokens.test.ts` → 0 failed with the file unchanged.
+4. Record both in `src/webview/sidebar/STATUS.md` as (b)'s named rewrites: `index.test.tsx:37-38` (set and count), `ARCHITECTURE.md:669, 685`; and the HC decision with the sentence "border in HC comes from `sideBarSectionHeader.border`'s default (`contrastBorder`); gate: `main-installed-single-hc` shows the two header lines". Paste this follow-up verbatim under the (b) ruling.
+5. When viewing `main-installed-single-hc.png` (RUN.md:84; it is also a (b) capture now): the sidebar's Installed and Updates headers each have a visible top line. No line → a red gate: then re-add the override under a stop-and-ask naming `webview-tokens.test.ts:96` as the rewrite.
+
+DO NOT:
+- Retitle `index.test.tsx`'s test or loosen `:37` to a subset check.
+- Rewrite `webview-tokens.test.ts:96` to admit the token (option a): the HC block is pinned on purpose, and the override is redundant.
+- Call `enable()` anywhere but once in `SidebarView` (a second consumer would not add a request, but the count assertion is there to catch a loop).
+- Leave `ARCHITECTURE.md:669/685` as they are: `npm run docs:check` does not read those sentences, so only the rewrite keeps them true.
+
+CONTRACT CHANGE: none.
+
+VERIFY: `npx vitest run --project frontend src/webview/sidebar/index.test.tsx` → 0 failed; `npx vitest run src/test/lint/webview-tokens.test.ts` → 0 failed, `git diff --stat -- src/test/lint/webview-tokens.test.ts` → empty; `grep -c "section-header-border" src/webview/shared/tokens.css` → 2 (`:87` root alias, forced colours); `grep -n "config/get" ARCHITECTURE.md | grep -c sidebar` → ≥ 1; `grep -n "never asks for suggestions, the source list or the settings" ARCHITECTURE.md` → empty.
+
+Files checked: `src/webview/sidebar/index.test.tsx:28-42`; `src/test/lint/webview-tokens.test.ts:88-98`; `ARCHITECTURE.md:669, 685`; `src/webview/shared/tokens.css:87, 140, 163`; `git log --oneline -2` (fb4a0f9 is (a)).
+`````
+
 ## Exact next step (one item ID)
 
-P9.10 commit (b), after commit (a)'s CI is green.
+P9.11, after P9.10's visual check.

@@ -30,6 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **A webview that stops working shows Reload and reports the error to the nUIget output channel**
 - **Sidebar rows sorted by package id**
 - **Sidebar project headers carry the project path as tooltip**
+- **Sidebar section headers in the side-bar section colours, rows indented to the section title, All Projects headers in normal case indented by workbench.tree.indent**
 
 ### Fixed
 

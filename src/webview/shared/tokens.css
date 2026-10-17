@@ -33,6 +33,9 @@
     --nuiget-icon-size-xl: 32px;
     --nuiget-target-min: 24px;
 
+    /* The indent of a nested tree level: VS Code's default of `workbench.tree.indent`; the sidebar writes the setting's value on its root. */
+    --nuiget-tree-indent: 8px;
+
     /* Scrollbars: as thick as VS Code's webview defaults draw them */
     --nuiget-scrollbar-size: 10px;
 
@@ -77,6 +80,11 @@
     /* Colours: the surface of a dialog or a popover, above the page */
     --nuiget-color-widget-bg: var(--vscode-editorWidget-background);
     --nuiget-color-widget-fg: var(--vscode-editorWidget-foreground, var(--vscode-foreground));
+
+    /* Colours: the sidebar's section headers, as VS Code's own side-bar panes */
+    --nuiget-color-section-header-bg: var(--vscode-sideBarSectionHeader-background);
+    --nuiget-color-section-header-fg: var(--vscode-sideBarSectionHeader-foreground, var(--vscode-foreground));
+    --nuiget-color-section-header-border: var(--vscode-sideBarSectionHeader-border, transparent);
 
     /* Colours: code blocks of a README and their syntax, as the editor's symbol and debug token colours */
     --nuiget-color-code-bg: var(--vscode-textCodeBlock-background);
@@ -149,6 +157,9 @@ body.vscode-high-contrast-light {
         --nuiget-color-progress: Highlight;
         --nuiget-color-widget-bg: Canvas;
         --nuiget-color-widget-fg: CanvasText;
+        --nuiget-color-section-header-bg: Canvas;
+        --nuiget-color-section-header-fg: CanvasText;
+        --nuiget-color-section-header-border: CanvasText;
         --nuiget-color-code-bg: Canvas;
         --nuiget-color-code-fg: CanvasText;
         --nuiget-color-table-header-bg: Canvas;

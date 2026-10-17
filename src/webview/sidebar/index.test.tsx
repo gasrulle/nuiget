@@ -34,8 +34,10 @@ describe('sidebar 2.0 entry', () => {
         expect(screen.getByTestId('section-header-installed')).toBeInTheDocument();
         expect(screen.getByTestId('status-live')).toBeInTheDocument();
         const asked = api().postMessage.mock.calls.map(([message]) => message as { kind: string; type?: string }).filter(message => message.kind === 'request').map(message => message.type);
-        expect(new Set(asked)).toEqual(new Set(['session/get', 'projects/list', 'perf/mark']));
+        // + `config/get` for `workbench.tree.indent` (P9.10).
+        expect(new Set(asked)).toEqual(new Set(['session/get', 'projects/list', 'config/get', 'perf/mark']));
         expect(asked.filter(type => type === 'perf/mark')).toHaveLength(1);
+        expect(asked.filter(type => type === 'config/get')).toHaveLength(1);
         const mark = api().postMessage.mock.calls.map(([message]) => message as { kind: string; type?: string; payload?: { name?: string } }).find(message => message.kind === 'request' && message.type === 'perf/mark');
         expect(mark?.payload?.name).toBe('webviewReady');
     });

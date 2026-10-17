@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type React from 'react';
 import { useMessageBus } from '../shared/bus/useMessageBus';
-import { Banner, LiveStatus, ProgressBar, Sash } from '../shared/primitives';
+import { Banner, cssVars, LiveStatus, ProgressBar, Sash } from '../shared/primitives';
 import { parseSearchQuery } from '../shared/search/parseSearchQuery';
 import { SearchBox } from '../shared/search/SearchBox';
+import { useConfig } from '../shared/store/config';
 import { useInstalled } from '../shared/store/installed';
 import { useOps } from '../shared/store/ops';
 import { useSearch } from '../shared/store/search';
@@ -59,6 +60,9 @@ const BROWSE_MIN_LENGTH = 2;
 export function SidebarView({ viewState }: { viewState?: ViewStateStore } = {}): React.JSX.Element {
     const bus = useMessageBus();
     const installed = useInstalled();
+    // `workbench.tree.indent` indents the All Projects levels; the settings come once asked (the config slice is lazy).
+    const { config, enable: enableConfig } = useConfig();
+    useEffect(() => enableConfig(), [enableConfig]);
     const { last } = useOps();
     const { search: runSearch, clear: clearSearch } = useSearch();
     const [query, setQuery] = useState('');
@@ -139,7 +143,7 @@ export function SidebarView({ viewState }: { viewState?: ViewStateStore } = {}):
     // The sash stands between the two sections while both are shown and open.
     const bothOpen = mode === 'default' && layout.installedExpanded && layout.updatesExpanded;
     return (
-        <main className="nuiget-sidebar" data-testid="nuiget-sidebar">
+        <main className="nuiget-sidebar" data-testid="nuiget-sidebar" style={cssVars({ '--nuiget-tree-indent': `${config?.treeIndent ?? 8}px` })}>
             <div className="nuiget-sidebar-header" role="search">
                 <SearchBox
                     inputRef={searchRef}

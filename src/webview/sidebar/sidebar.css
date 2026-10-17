@@ -97,3 +97,40 @@ body {
     margin: var(--nuiget-space-2) 0 var(--nuiget-space-4);
     padding-inline-start: var(--nuiget-space-6);
 }
+
+/* The Installed and Updates headers in VS Code's side-bar section colours, with its top line (P9.10). */
+.nuiget-sidebar-section > .nuiget-section-header {
+    border-top: 1px solid var(--nuiget-color-section-header-border);
+    background: var(--nuiget-color-section-header-bg);
+    color: var(--nuiget-color-section-header-fg);
+}
+
+.nuiget-sidebar-section > .nuiget-section-header .nuiget-section-toggle {
+    color: inherit;
+}
+
+/* The sash draws the line between the sections already: no second one under it (1.x). */
+.nuiget-sash--horizontal + .nuiget-sidebar-section > .nuiget-section-header {
+    border-top-color: transparent;
+}
+
+/* Rows start where the section title does: after the toggle's padding, chevron and gap. Browse rows stay at the edge. */
+.nuiget-sidebar-section-content .nuiget-row-option {
+    padding-inline-start: calc(var(--nuiget-space-2) + var(--nuiget-icon-size-md) + var(--nuiget-space-2));
+}
+
+/* An All Projects project header is a tree level: normal case, indented by workbench.tree.indent, and its rows with it. */
+.nuiget-sidebar-project .nuiget-section-heading {
+    font-size: var(--nuiget-font-size-md);
+    font-weight: normal;
+}
+
+.nuiget-sidebar-project .nuiget-section-toggle {
+    padding-inline-start: calc(var(--nuiget-space-2) + var(--nuiget-tree-indent));
+    text-transform: none;
+}
+
+.nuiget-sidebar-project .nuiget-row-option {
+    padding-inline-start: calc(var(--nuiget-space-2) + var(--nuiget-icon-size-md) + var(--nuiget-space-2) + var(--nuiget-tree-indent));
+}
+
