@@ -117,6 +117,7 @@ Regression gaps of the P10.0a matrix (`docs/plans/regression-matrix.md`), one tr
 gates per item are the plan §2.2 list plus `npm run check:matrix`.
 - P10.0b (R5): `src/extension.test.ts` `nuiget.sidebar.selectSource commits the source chosen in the picker`: the command opens the source picker (All Sources and both enabled sources offered) and the session takes the choice; red with the `session.apply` of `SidebarHost.showSourcePicker` removed. Gates: tsc 0, check-types 0, eslint 0, lint 0, npm test, bench 0, docs:check 0, check:matrix 0 (counts in the tracker row).
 - P10.0c (R6): `src/extension.test.ts` `nuiget.sidebar.selectProject commits the project chosen in the picker`: the command opens the project QuickPick (both projects offered) and the session takes the choice; red with the `session.apply` of `SidebarHost.showProjectPicker` removed.
+- P10.0f (R15): `src/extension.test.ts` `nuiget.openManager from a Solution Explorer project item selects that project`: a tree item with `resourceUri` opens the panel on that project; red with the `resourceUri` branch of `projectPathFromCommandArg` disabled.
 
 ## Exact next step (one item ID)
 

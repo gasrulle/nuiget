@@ -506,6 +506,18 @@ describe('extension (2.0 composition root)', () => {
         expect(contextKeys()).toContainEqual(['nuiget.restoreEnabled', false]);
     });
 
+    it('nuiget.openManager from a Solution Explorer project item selects that project', async () => {
+        const { services } = await start({ workspaceState: { 'nuiget.selectedProject': appPath } });
+        const panel = createFakePanel(createMockWebview());
+        vi.mocked(vscode.window.createWebviewPanel).mockImplementationOnce(() => panel as unknown as vscode.WebviewPanel);
+
+        // C# Dev Kit's Solution Explorer hands its tree item, which names the project file by `resourceUri`.
+        await mockCommands.executeCommand('nuiget.openManager', { label: 'Lib', contextValue: 'Project', resourceUri: vscode.Uri.file(libPath) });
+
+        expect(MainPanelHost.instance).toBeDefined();
+        await vi.waitFor(() => expect(services.session.snapshot.selectedProject).toBe(libPath));
+    });
+
     it('nuiget.sidebar.selectSource commits the source chosen in the picker', async () => {
         dotnet.sources = () => [privateFeed, sharedFeed];
         const { services } = await start({ workspaceState: { 'nuiget.selectedProject': appPath } });
