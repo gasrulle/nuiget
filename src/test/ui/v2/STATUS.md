@@ -1,4 +1,4 @@
-# STATUS — src/test/ui/v2   commit c9dffb7 (P9.12 commit 2; parent of commit 3)   2026-10-17T18:00:00Z
+# STATUS — src/test/ui/v2   commit dc70b60 (P9.12 commit 3; parent of the docs commit)   2026-10-17T04:05:00Z
 
 git status --porcelain --untracked-files=all (before commit 1): modified `docs/plans/STATUS.md`,
 `docs/ux/interaction-model.md`, `src/test/ui/v2/{STATUS.md,main-all-projects.ui.test.ts,main-shell.ui.test.ts,main-transitive.ui.test.ts,mainWebview.ts}`,
@@ -47,6 +47,9 @@ rm -rf dist out/esbuild && node esbuild.mjs --production --analyze → dist/exte
 rm -rf /tmp/nuiget-ui/screenshots dist && npm run test:ui -- --storage /tmp/nuiget-ui → exit 0 · 42 passing (1m)
 [P9.12] comfortable rows (installed-list and updates-list): Newtonsoft.Json and Serilog, minHeight 66px, height 67,
                               iconLoaded true, iconSrc data:image/png (token 66 → bound [66, 68])
+CI runs 39000089739 (push), 39000093536 (pull_request) on dc70b60 → success; UI log of 39000089739 attempt 1:
+                              `42 passing (2m)`, `[P9.12] comfortable rows` 66px / 67 for both rows in both lists
+gate: gh run rerun 39000089739 → attempt 2 success; UI log: `42 passing (2m)` (grep -c "42 passing" → 1 per attempt)
 ```
 
 ## Done (tested)
@@ -79,13 +82,24 @@ rm -rf /tmp/nuiget-ui/screenshots dist && npm run test:ui -- --storage /tmp/nuig
 - viewed: main-installed-all.png: unchanged (TestProject.csproj and Utility.csproj sections, All Projects (2)).
 - viewed: main-installed-single.png: unchanged (Installed tab, Newtonsoft.Json with its README).
 
+## Visual check of commit 3 (CI run 39000089739, attempt 2)
+
+- viewed: main-installed-single.png: Newtonsoft.Json and Serilog as comfortable cards with their nuget.org icons,
+  `13.0.2 ✓ James Newton-King` and `3.1.1 ✓ Serilog Contributors`; README pane for Newtonsoft.Json. Agrees with the test.
+- viewed: main-installed-all.png: All Projects (2), TestProject.csproj (2) with icons, authors and Verified marks;
+  Utility.csproj (1) `provisional` with the default icon. Agrees.
+- viewed: main-updates.png: Updates (2), `13.0.2 → 13.0.4` and `3.1.1 → 4.4.0` with icons, Verified and authors
+  (ellipsised); Update all (2). Agrees.
+- viewed: main-transitive-expanded.png: Transitive.csproj, Serilog.Sinks.Console 6.1.1 direct, transitive Serilog 4.0.0
+  under `net8.0`, both with icon and `✓ Serilog Contributors`. Agrees.
+
 ## Done (untested)
 
 - None.
 
 ## Not started
 
-- The gate's one rerun of commit 3's run and its visual check; the docs commit.
+- None for P9.12.
 
 ## Deviations from contract/ADR (file:line each)
 
@@ -189,4 +203,4 @@ Files read for this ruling: /Users/mattias/github/nuiget/src/core/feeds/vulnerab
 
 ## Exact next step (one item ID)
 
-P9.12: the gate's one rerun of commit 3's green run, the visual check, then the docs commit.
+P9.13.

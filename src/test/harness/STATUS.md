@@ -87,4 +87,4 @@ test -e .claude/.contract-change → false (created with "P7.2c" for the ADR-004
 
 ## Exact next step (one item ID)
 
-P9.12: the gate's rerun and the docs commit.
+P9.13.
