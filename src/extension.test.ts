@@ -521,6 +521,29 @@ describe('extension (2.0 composition root)', () => {
         showQuickPick.mockReset();
     });
 
+    it('nuiget.sidebar.selectProject commits the project chosen in the picker', async () => {
+        const { services } = await start({ workspaceState: { 'nuiget.selectedProject': appPath } });
+        const createQuickPick = vi.mocked(vscode.window.createQuickPick);
+        const create = createQuickPick.getMockImplementation()!;
+        let offered: { value?: string }[] = [];
+        createQuickPick.mockImplementationOnce(() => {
+            const picker = create() as unknown as { items: { value?: string }[]; show: () => void; _autoSelect?: { value?: string } };
+            const show = picker.show;
+            picker.show = () => {
+                offered = picker.items;
+                picker._autoSelect = picker.items.find(item => item.value === libPath);
+                show();
+            };
+            return picker as never;
+        });
+
+        await mockCommands.executeCommand('nuiget.sidebar.selectProject');
+
+        // The picker offered both projects, and the choice is the session's.
+        expect(offered.map(item => item.value)).toEqual(expect.arrayContaining([appPath, libPath]));
+        await vi.waitFor(() => expect(services.session.snapshot.selectedProject).toBe(libPath));
+    });
+
     it("a selected-project change reconciles with the new project's sources (C-state-core-5)", async () => {
         dotnet.sources = cwd => sameDir(cwd, appDir) ? [privateFeed, sharedFeed] : [sharedFeed];
         const { services } = await start({ workspaceState: { 'nuiget.selectedProject': appPath, 'nuiget.selectedSource': privateFeed } });
