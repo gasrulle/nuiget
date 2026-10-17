@@ -900,7 +900,7 @@ These parts are the current truth for the build, test and release pipeline.
   | Lint | — | `npm run lint`, the guard hook tests, then `npm run docs:check` |
   | Test (ubuntu, windows) | — | Unit tests with .NET SDK 10 installed; coverage on ubuntu |
   | E2E (VS Code 1.85.0, stable) | — | Production build with the ceiling check (sizes in the job summary), then the `v2-*` extension-host suite under Xvfb; log artifact per version |
-  | UI | Lint, Test | ExTester packages a VSIX and runs `src/test/ui/v2` under Xvfb, then `check:vsix` on that build; log and screenshot artifact |
+  | UI | Lint, Test | ExTester packages a VSIX and runs `src/test/ui/v2` under Xvfb, then `check:vsix` on that build; log artifact, and `ui-screenshots` on every run: the named states of `ScreenshotState` (`src/test/ui/v2/sidebarWebview.ts`, D18) and the screenshots of failed tests; a named state without a PNG fails the job |
   | Build & Package | Lint, Test, E2E | Type check, production build, `check:vsix`, VSIX uploaded as artifact `vsix` |
   | Benchmark (informational) | — | Compares against `benchmarks/baseline.json`; never fails the run |
 

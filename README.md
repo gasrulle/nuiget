@@ -5,7 +5,11 @@
 
 A Visual Studio-style NuGet package manager for VS Code with a modern split-panel UI and Activity Bar sidebar.
 
-![nUIget demo](https://raw.githubusercontent.com/gasrulle/nuiget/main/docs/images/nuiget.gif)
+![Search results beside the details of Newtonsoft.Json in the nUIget main panel](https://raw.githubusercontent.com/gasrulle/nuiget/main/docs/images/nuiget-browse-details.png)
+
+![The Installed tab with two package cards and the README of the selected package](https://raw.githubusercontent.com/gasrulle/nuiget/main/docs/images/nuiget-installed-readme.png)
+
+![The Updates tab with Update all and each card showing the installed and the new version](https://raw.githubusercontent.com/gasrulle/nuiget/main/docs/images/nuiget-updates.png)
 
 ## ✨ Features
 

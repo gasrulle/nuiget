@@ -6,6 +6,109 @@ Verification column: **OK** = survived three independent refuters, **KILLED** = 
 
 The headline numbers double-count: the icon gap is filed seven times (MI1, MU1, MU2, MB2, DP1, DP2, DP5), the comfortable-row layout five times (MI3, MU11, MB1, MH5, DP7). The plan's P9 items de-duplicate them.
 
+## Closure status (kept current; last updated at P9.13, 2026-10-17)
+
+The entries below are the audit as written on 2026-10-16 and are not edited; this table records what happened to
+each gap on `labs/2.0`. Status values: **closed** (commit SHAs on `labs/2.0`; the commit message cites the id),
+**partly** (what is left in the note), **met by the tree** (no change was needed), **not a gap** (refuted, or a
+documented 2.0 decision) and **open** (not done in 2.0.0; candidates for 2.0.1, as the critic's recommended phase
+shape defers every low). Screenshots of the closed states: CI run 39001101052, artifact `ui-screenshots`.
+
+| Id | Status | Evidence or note |
+|---|---|---|
+| MI1 | closed | `df2dedb` (P9.3); default icon helper `6df4567` (P9.1) |
+| MI2 | closed | `df2dedb` (P9.3) |
+| MI3 | closed | `83afc1b`, `57b8273`, `a9b30ef` (P9.2) |
+| MI4 | closed | `9ea8a40` (P9.5) |
+| MI5 | closed | `df2dedb` (P9.3): SDK and props badges, muted check mark |
+| MI6 | closed | `df2dedb` (P9.3) |
+| MI7 | partly | Installed tab vulnerability count `3e6a622` (P9.7); severity stays words and icon, not colour (deliberate, see the Browse area's notes); no count on the row (open) |
+| MI8 | closed | `df2dedb` (P9.3): `Direct packages (N)`, `(k of N)`, tab count |
+| MI9 | closed | `9ea8a40` (P9.5) |
+| MI10 | open | no Collapse all / Expand all on the bulk toolbar |
+| MI11 | open | no hover prefetch |
+| MI12 | closed | `0e02690` (P9.11) |
+| MU1 | closed | `20a1a22` (P9.4) |
+| MU2 | closed | `20a1a22` (P9.4) |
+| MU3 | closed | `20a1a22` (P9.4) |
+| MU4 | closed | `2975739` (P9.9) |
+| MU5 | closed | `3bfc748` (P9.7): the revalidation bar under the search box covers the Updates tab (`MainShell.tsx:226-227,279`) |
+| MU6 | closed | `20a1a22` (P9.4) |
+| MU7 | closed | `20a1a22`, `803b93f` (P9.4) |
+| MU8 | open | no Collapse all / Expand all on the All Projects Updates toolbar |
+| MU9 | closed | `20a1a22` (P9.4) |
+| MU10 | closed | `20a1a22` (P9.4) |
+| MU11 | closed | `83afc1b` (P9.2) |
+| MB1 | closed | `83afc1b` (P9.2), `fc8b150` (P9.6) |
+| MB2 | closed | `6df4567` (P9.1), `fc8b150` (P9.6) |
+| MB3 | open | needs a protocol change (bare-row chunk or `search/metadata`) |
+| MB4 | closed | `b1ebfc7` (P9.8) |
+| MB5 | closed | `fc8b150` (P9.6) |
+| MB6 | closed | `eeef52d` (P9.6) |
+| MB7 | closed | `eeef52d` (P9.6) |
+| MB8 | closed | `dac4347` (P9.8) |
+| MB9 | closed | `b1ebfc7` (P9.8) |
+| MB10 | closed | `b61ada2` (P9.8) |
+| MB11 | closed | `b1ebfc7` (P9.8) |
+| MB12 | closed | `b1ebfc7` (P9.8) |
+| MB13 | open | no hover prefetch (`package/prewarm` still has no webview caller) |
+| MB14 | closed | `b61ada2` (P9.8) |
+| MB15 | closed | `b1ebfc7` (P9.8) |
+| MB16 | open | the version selector keeps its version after the prerelease toggle; the list is unbounded |
+| MB17 | open | search and registration descriptions are not entity-decoded (nuspec text is) |
+| MB18 | open | ArrowLeft/ArrowRight do not switch the Details/README tabs |
+| MB19 | open | Browse first load announces nothing |
+| MH1 | closed | `3bfc748` (P9.7) |
+| MH2 | closed | `3e6a622` (P9.7) |
+| MH3 | closed | `df2dedb` (P9.3), `3e6a622` (P9.7) |
+| MH4 | closed | `3bfc748` (P9.7) |
+| MH5 | closed | `83afc1b` (P9.2) |
+| MH6 | closed | `c946043` (P9.11) |
+| MH7 | closed | `3bfc748` (P9.7) |
+| MH8 | closed | `3bfc748` (P9.7) |
+| MH9 | not a gap | recent searches stay removed (D16); CHANGELOG 2.0.0 `### Breaking changes` |
+| MH10 | closed | `eeef52d` (P9.6) |
+| MH11 | closed | `c946043` (P9.11) |
+| MH12 | closed | `c946043`, `0e02690` (P9.11) |
+| MH13 | closed | `3e6a622` (P9.7) |
+| SB1 | closed | `fb4a0f9` (P9.10) |
+| SB2 | open | a collapsed section stays collapsed in `@installed` / `@updates` mode (`SidebarView.tsx:177,198`) |
+| SB3 | closed | `8388bff` (P9.10) |
+| SB4 | closed | `8388bff`, `fb4a0f9` (P9.10) |
+| SB5 | closed | `8388bff` (P9.10) |
+| SB6 | closed | `3bfc748` (P9.7, the shared search box) |
+| SB7 | open | no arrow-key bridge between the search box and the lists |
+| SB8 | closed | `fb4a0f9` (P9.10) |
+| SB9 | open | no Uninstall on an installed Browse row; `+` shown under All Projects when installed everywhere |
+| SB10 | open | no provisional badge on All Projects project headers |
+| SB11 | closed | `fb4a0f9` (P9.10) through `nextVersion`; the arrow stays a text glyph by the P9.4 ruling (axe measures it), not an SVG |
+| SB12 | not a gap | sidebar rows are compact and carry no description (D15, interaction model §1) |
+| SB13 | open | the count badge shows 0 and keeps beside the spinner (a 2.0 choice `UpdatesSection.test.tsx:157` asserts) |
+| SB14 | open | the search box is focused on `ui/focusSearch` only |
+| SB15 | closed | `fb4a0f9` (P9.10) |
+| DP1 | closed | `df2dedb` (P9.3) |
+| DP2 | closed | `20a1a22` (P9.4) |
+| DP3 | partly | `6df4567` (P9.1): the breaker counts only real 404s and resets on success; five real 404s still skip a source until Refresh (`src/core/feeds/STATUS.md`) |
+| DP4 | closed | `6df4567` (P9.1) |
+| DP5 | closed | `6df4567` (P9.1) |
+| DP6 | closed | `9ea8a40` (P9.5) |
+| DP7 | closed | `83afc1b` (P9.2) |
+| DP8 | open | severity is in words and icon (deliberate); no count on the badge |
+| DP9 | closed | `b1ebfc7` (P9.8) |
+| DP10 | open | the sidebar still asks `transitive/metadata` through the shared `InstalledProvider` |
+| TF1 | closed | `dc70b60` (P9.12), screenshots `1d76a1a` (P9.0) |
+| TF2 | met by the tree | `installed row shows icon, authors and verified` (`InstalledTab.test.tsx`), `updates row shows icon and authors` (`UpdatesTab.test.tsx`), `all-projects installed row shows icon from metadata chunk` (`AllProjectsView.test.tsx`) |
+| TF3 | closed | `dc70b60` (P9.12) |
+| TF4 | met by the tree | the §8 lint, plus the `refresh-button` hook `eb68dbb` (P9.12) |
+| TF5 | not a gap | refuted by its three verifiers |
+| TF6 | closed | `1d76a1a` (P9.0) |
+| TF7 | closed | `dc70b60` (P9.12) |
+| TF8 | closed | `eb68dbb` (P9.12), `44c2980` (P9.5); host side N86 `c9dffb7` |
+
+The critic's missing items: operation progress, toasts and the output channel `2975739` (P9.9); the webview
+ErrorBoundary `7b3b3f0` (P9.9); the Marketplace listing image replaced by 2.0 screenshots at P9.13; the header
+Restore action and the details-pane contrast tolerance stay open.
+
 ## Main panel — Installed tab (rows, sections, counts, selection, bulk actions, empty/loading states, transitive section)
 
 ### MI1 — Installed rows render no package icon (not even the bundled default) although the host sends one and Row accepts it
