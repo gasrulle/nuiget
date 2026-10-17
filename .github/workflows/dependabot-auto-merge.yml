@@ -1,20 +1,28 @@
 name: Dependabot auto-merge
 
-# Arms GitHub auto-merge (squash) on pull requests Dependabot opens. The pull request merges only once every
-# required check of the main ruleset is green; a red one stays open for the next dependency item. This workflow
-# never merges by itself and ignores every pull request a person opens.
+# Two paths, both squash merges of pull requests Dependabot opened and nothing else:
+# 1. On every Dependabot pull request event, arm GitHub auto-merge; the pull request merges once every required
+#    check of the main ruleset is green.
+# 2. Hourly catch-up: GitHub drops the armed auto-merge on the remaining Dependabot pull requests whenever one of
+#    them lands on main (observed 2026-10-17), so this job merges every open Dependabot pull request whose merge
+#    state is CLEAN (all requirements met) and leaves every other one alone.
+# A red or conflicting pull request stays open for the next dependency item. Pull requests opened by people are
+# never touched.
 
 on:
   pull_request:
+  schedule:
+    - cron: '23 * * * *'
+  workflow_dispatch:
 
 permissions:
   contents: write
   pull-requests: write
 
 jobs:
-  auto-merge:
-    name: Auto-merge
-    if: github.actor == 'dependabot[bot]'
+  arm:
+    name: Arm auto-merge
+    if: github.event_name == 'pull_request' && github.actor == 'dependabot[bot]'
     runs-on: ubuntu-latest
     steps:
       - name: Read the update metadata
@@ -29,3 +37,21 @@ jobs:
         env:
           PR_URL: ${{ github.event.pull_request.html_url }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  catch-up:
+    name: Merge green Dependabot pull requests
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Merge every open Dependabot pull request whose merge state is CLEAN
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          gh pr list --repo "$REPO" --author app/dependabot --state open \
+            --json number,isDraft,mergeStateStatus \
+            --jq '.[] | select(.isDraft | not) | select(.mergeStateStatus == "CLEAN") | .number' |
+          while read -r number; do
+            echo "merging #$number"
+            gh pr merge "$number" --repo "$REPO" --squash || echo "could not merge #$number; left open"
+          done
