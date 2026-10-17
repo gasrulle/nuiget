@@ -18,7 +18,8 @@ const TEXT_FIELD = 'input:not([type]), input[type="text"], input[type="search"],
  * field they move the caret, and an arrow leaves the field at the edge of the text. The
  * toolbar remembers the control that last had focus; when it is disabled or removed, the first one takes over.
  * The tab stop is kept on the controls themselves, so the controls are ordinary children: buttons that change,
- * appear or disappear do not have to know they are in a toolbar.
+ * appear or disappear do not have to know they are in a toolbar. A control with the class `nuiget-toolbar-end` is
+ * pushed to the end of the row; the arrow keys still visit the controls in document order.
  */
 export function Toolbar({ label, children, 'data-testid': testId }: ToolbarProps): React.JSX.Element {
     const ref = useRef<HTMLDivElement>(null);

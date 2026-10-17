@@ -62,7 +62,11 @@ gate: gh run rerun 39000089739 → attempt 2 success; UI log: `42 passing (2m)` 
 - P9.fix-3: named rewrites `main-installed.ui.test.ts` (… the authors fit and the check box is centred (P9.fix-3)):
   `.nuiget-row-authors` of Newtonsoft.Json `scrollWidth <= clientWidth`, every row's check box centre within 2 px of
   the `.nuiget-row` centre; `main-updates.ui.test.ts` (…, check box centred) the same centre check. The height band
-  `token..token+2` is unchanged and reads 78 now. Local: 42 passing, rows 79 px, centres 0.5 px off.
+  `token..token+2` is unchanged and reads 78 now. Local: 42 passing, rows 79 px, centres 0.5 px off; CI run 39023352495
+  the same.
+- P9.fix-4: new tests `the Uninstall selected button sits at the list's right edge (P9.fix-4)` (`main-installed`) and
+  `the Update all button sits at the list's right edge (P9.fix-4)` (`main-updates`): `|right(button) - right(list)| <= 8`.
+  Local: 44 passing, 6 px on both.
 
 - Commit 1 (TF8, TF4): `MainShell` Refresh carries `data-testid="refresh-button"` (interaction model §8);
   `mainWebview.ts` exports `projectOptionValues`, `untilProjects` (presses `refresh-button` every 15 s, 180 s in all) and
@@ -213,4 +217,4 @@ Files read for this ruling: /Users/mattias/github/nuiget/src/core/feeds/vulnerab
 
 ## Exact next step (one item ID)
 
-P9.fix-4.
+P9.fix-5.

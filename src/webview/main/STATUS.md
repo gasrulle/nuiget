@@ -50,6 +50,25 @@ viewed (P9.fix-2, CI run 39022785828): main-transitive-expanded.png: TRANSITIVE 
 viewed (P9.fix-2): main-installed-single.png: DIRECT PACKAGES (2), then the collapsed TRANSITIVE PACKAGES header right under the Serilog card
 viewed (P9.fix-2): main-installed-all.png: TestProject and Utility sections, then the collapsed TRANSITIVE PACKAGES header right under the last card
 
+CI run 39023352495 (push of 8c1f643, P9.fix-3) → success on all 10 jobs; [P9.fix-3] Newtonsoft.Json authors
+{"clientWidth":125,"scrollWidth":125}; check box centres 0.5 px above the card centre (Installed and Updates)
+viewed (P9.fix-3): main-installed-single.png: three-line cards (name / 13.0.2 / ✓ James Newton-King), check box and icon centred
+viewed (P9.fix-3): main-updates.png: three-line update cards (name / 13.0.2 → 13.0.4 marked / ✓ authors), check boxes centred
+viewed (P9.fix-3): main-browse-results.png: Browse cards keep name / version · downloads · ✓ authors / description
+
+```text
+P9.fix-4
+npx tsc --noEmit · npm run check-types · npx eslint src · npm run lint → 0 · 0 · 0 · 0
+npm test             → exit 0; Test Files 135 passed (135); Tests 2018 passed | 9 skipped (2027)
+npm run bench        → exit 0
+npm run docs:check   → exit 0
+node esbuild.mjs --production --analyze → 297018 / 322502, 548964 / 577766, 333252 / 351245 (+0, +57, +0 bytes)
+npm run test:ui -- --storage /tmp/nuiget-ui (local) → exit 0; 44 passing (1m); [P9.fix-4] uninstall-selected-button
+                       {"button":925,"list":931}; update-all-button {"button":925,"list":931} (the fix-5 edits made
+                       while this run built may be in its VSIX; neither measurement depends on them)
+grep -rn "nuiget-toolbar-end" src/webview → primitives.css, Toolbar.tsx JSDoc and the three primary buttons
+```
+
 ## Done (tested)
 
 - P9.fix-2: `InstalledTab.tsx`: root `nuiget-installed nuiget-installed--sections` in both modes; the transitive section
@@ -69,13 +88,18 @@ viewed (P9.fix-2): main-installed-all.png: TestProject and Utility sections, the
   rewrites in `main-installed.ui.test.ts` (authors fit, check box centred) and `main-updates.ui.test.ts` (check box
   centred). Docs: interaction model §1, ARCHITECTURE row anatomy, CHANGELOG headline, plan Appendix D row.
 
+- P9.fix-4: `primitives.css` `.nuiget-toolbar-end { margin-inline-start: auto }`, documented in `Toolbar.tsx`; the
+  primary buttons of `InstalledTab.tsx`, `UpdatesTab.tsx` and `AllProjectsUpdates.tsx` carry it (Select all stays
+  first, the arrow order is unchanged); `main.css` toolbar end padding `--nuiget-space-3`. Two new UI tests measure the
+  primary button against the list's right edge (≤ 8 px).
+
 ## Done (untested)
 
 - Nothing.
 
 ## Not started
 
-- P9.fix-4 to P9.fix-6.
+- P9.fix-5 and P9.fix-6.
 
 ## Deviations from contract/ADR (file:line each)
 
@@ -163,4 +187,4 @@ RULING (P9.fix-2 DO 1 correction): Option 1. Change `AllProjectsUpdates.tsx:307`
 
 ## Exact next step (one item ID)
 
-P9.fix-4.
+P9.fix-5.

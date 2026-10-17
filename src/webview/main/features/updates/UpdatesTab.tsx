@@ -221,7 +221,7 @@ function ProjectUpdates({ filter, announce }: ListView): React.JSX.Element {
                 <button type="button" className="nuiget-button nuiget-button--secondary" data-testid="select-all-button" aria-pressed={allSelected} disabled={candidates.length === 0} onClick={() => setSelected(allSelected ? new Set() : new Set(candidates.map(update => update.id)))}>
                     Select all
                 </button>
-                <button type="button" className="nuiget-button" data-testid="update-all-button" disabled={toUpdate.length === 0} onClick={() => setConfirming(true)}>
+                <button type="button" className="nuiget-button nuiget-toolbar-end" data-testid="update-all-button" disabled={toUpdate.length === 0} onClick={() => setConfirming(true)}>
                     {chosen.length > 0 ? `Update selected (${chosen.length})` : `Update all (${candidates.length})`}
                 </button>
             </Toolbar>

@@ -612,7 +612,8 @@ builds it into `dist/webview.js` and, because the entry imports `../shared/token
   check mark, `aria-selected`); a row that cannot be uninstalled (central, implicit, props, unresolved,
   unsupported) is not added, and the reason is announced.
 - **Bulk flow.** The `Toolbar` holds `select-all-button` (every removable row the filter shows; pressed again it
-  clears) and `uninstall-selected-button` with the count. The `ConfirmDialog` lists exactly the packages, under
+  clears) at the left and `uninstall-selected-button` with the count at the list's right edge (`nuiget-toolbar-end`,
+  P9.fix-4; the Updates toolbars place `update-all-button` the same way). The `ConfirmDialog` lists exactly the packages, under
   their project's name; Confirm sends `ops/bulkRemove` for one project or `ops/bulkRemoveAllProjects` with the
   project names, closes the dialog and empties the sent part of the set. The rows are busy from the request on
   (ops slice, N61), and leave only with the host's next list: nothing is removed by guessing, so a failed package

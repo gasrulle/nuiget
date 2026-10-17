@@ -837,3 +837,8 @@
     align-items: center;
     gap: var(--nuiget-space-2);
 }
+
+/* A control pushed to the end of the row, such as the primary action of a list's bulk toolbar (P9.fix-4). */
+.nuiget-toolbar-end {
+    margin-inline-start: auto;
+}

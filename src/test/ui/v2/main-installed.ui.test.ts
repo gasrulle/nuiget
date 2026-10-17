@@ -89,6 +89,18 @@ describe('2.0 main panel: Installed tab', () => {
         }
     });
 
+    it('the Uninstall selected button sits at the list\'s right edge (P9.fix-4)', async function () {
+        this.timeout(180_000);
+        await findByTestId('package-row-newtonsoft.json', 120_000);
+        const edges = await driverOf().executeScript<{ button: number; list: number }>(`
+            return {
+                button: document.querySelector('[data-testid="uninstall-selected-button"]').getBoundingClientRect().right,
+                list: document.querySelector('[data-testid="installed-list"]').getBoundingClientRect().right,
+            };`);
+        console.warn('[P9.fix-4] uninstall-selected-button right edge: ' + JSON.stringify(edges));
+        expect(Math.abs(edges.button - edges.list), 'from the primary button to the list\'s right edge').to.be.at.most(8);
+    });
+
     it('the transitive section opens with what the project gets through its references, right under the last direct row (P9.0, P9.fix-2)', async function () {
         this.timeout(300_000);
         await findByTestId('package-row-serilog', 120_000);

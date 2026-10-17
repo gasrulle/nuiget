@@ -178,6 +178,8 @@ body {
 .nuiget-installed > .nuiget-toolbar {
     flex: none;
     padding: var(--nuiget-space-2) var(--nuiget-space-4);
+    /* The primary action ends at the list's right edge (P9.fix-4). */
+    padding-inline-end: var(--nuiget-space-3);
 }
 
 .nuiget-installed-lists,

@@ -215,7 +215,7 @@ export function InstalledTab({ filter, vulnerableOnly, announce }: ListView): Re
                 <button type="button" className="nuiget-button nuiget-button--secondary" data-testid="select-all-button" aria-pressed={allSelected} disabled={candidateCount === 0} onClick={selectAll}>
                     Select all
                 </button>
-                <button type="button" className="nuiget-button" data-testid="uninstall-selected-button" disabled={count === 0} onClick={() => setConfirming(true)}>
+                <button type="button" className="nuiget-button nuiget-toolbar-end" data-testid="uninstall-selected-button" disabled={count === 0} onClick={() => setConfirming(true)}>
                     {`Uninstall selected (${count})`}
                 </button>
             </Toolbar>

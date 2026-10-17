@@ -309,7 +309,7 @@ export function AllProjectsUpdates({ filter, announce }: ListView): React.JSX.El
                 <button type="button" className="nuiget-button nuiget-button--secondary" data-testid="select-all-button" aria-pressed={allSelected} disabled={candidateTotal === 0} onClick={selectAll}>
                     Select all
                 </button>
-                <button type="button" className="nuiget-button" data-testid="update-all-button" disabled={total === 0} onClick={() => setConfirming(true)}>
+                <button type="button" className="nuiget-button nuiget-toolbar-end" data-testid="update-all-button" disabled={total === 0} onClick={() => setConfirming(true)}>
                     {chosenCount > 0 ? `Update selected (${chosenCount})` : `Update all (${candidateTotal})`}
                 </button>
             </Toolbar>
