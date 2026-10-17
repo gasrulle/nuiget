@@ -20,7 +20,7 @@ Refilled at P10.1 (2026-10-17) after phase P9 (1.x parity, owner-approved) and P
 | `npm test` | exit 0; 137 files, 2030 passed, 9 skipped (platform and `NUIGET_SDK_TESTS` predicates) |
 | `npm run bench` | exit 0 |
 | `npm run docs:check` | exit 0 |
-| `npm run check:matrix` | exit 0; 168 rows: 165 covered, 0 gap, 3 manual-credentials (`docs/plans/regression-matrix.md`) |
+| `npm run check:matrix` | exit 0; 169 rows: 166 covered, 0 gap, 3 manual-credentials (`docs/plans/regression-matrix.md`, after the P10 phase review) |
 | `node esbuild.mjs --production --analyze` | extension 297018, webview 548943, sidebar 333252 bytes, all under their ceilings (322502 / 577766 / 351245) |
 | `npm run package:vsix` | exit 0; `nuiget-v2.0.0.vsix`, 17 files, 581.31 KB |
 | `npm run check:vsix` | OK |

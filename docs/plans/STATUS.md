@@ -148,7 +148,7 @@ therefore covers them, and the P5 review covers `labs/2.0-P4-done..HEAD`. The ph
 | P10.0f | P10 | Regression gap R15: `view/item/context`: Manage NuGet Packages on a Solution Explorer project selects that project | done | 38e5b50 | 2026-10-17 | From P10.0a. Suite: unit (Vitest backend); file `src/extension.test.ts`; test to write: "nuiget.openManager from a Solution Explorer project item selects that project". Gate: named test green locally and in CI; matrix row R15 set to covered. Done: the test hands `nuiget.openManager` a Solution Explorer tree item (`label`, `contextValue`, `resourceUri`) and checks the panel opens with that project selected; red with the `resourceUri` branch of `projectPathFromCommandArg` disabled. |
 | P10.0g | P10 | Regression gap R16: `view/title`: the sidebar buttons in their order, each switch pair shown by its context key | done | 3d099f5 | 2026-10-17 | From P10.0a. Suite: unit (Vitest backend); file `src/test/lint/manifest-menus.test.ts`; test to write: "view/title shows the sidebar buttons in order and one command of each switch pair by its context key". Gate: named test green locally and in CI; matrix row R16 set to covered. Done: `manifest-menus.test.ts`: the sidebar title-bar entries in the order restore, prerelease, project, source, refresh, full view; each switch pair shows the command that turns it on while its key is false and the other while it is true, in one group; red with the full-view button moved to position 1. |
 | P10.0h | P10 | Regression gap R17: `commandPalette` hides the sidebar-only commands | done | df602e4 | 2026-10-17 | From P10.0a. Suite: unit (Vitest backend); file `src/test/lint/manifest-menus.test.ts`; test to write: "the command palette hides the sidebar-only commands". Gate: named test green locally and in CI; matrix row R17 set to covered. Done: `manifest-menus.test.ts`: the palette hides every `nuiget.sidebar.*` command and `nuiget.refreshPackages` (`when: false`) and offers exactly the manager and the two cache commands; red with `nuiget.sidebar.refresh` set to `when: true`. |
-| P10.1 | P10 | Release refresh: CHANGELOG final, checklist, PR #18 updated; stop for owner merge | done |  | 2026-10-17 | CHANGELOG: `[Unreleased]` folded into `## [2.0.0] - 2026-10-17` (3 Added, 19 Changed at the top of their 2.0.0 subsections; the 7 `### Fixed` bullets left out by the owner's P8.3 rule: they fix unreleased 2.0 code, and their end state is in Changed); the plan row authorizes editing the 2.0.0 section, which no version has published. Version stays 2.0.0 (`package.json`, both lock entries). `docs/release-checklist.md` refilled (gates, bundle sizes, VSIX, matrix counts, the approved screenshot run 39025149785) with the section "Manual checks before publishing — the only ones": R166-R168 copied from the matrix; §5 corrected (the prerelease-version fix is listed). PR #18 description updated after the P10 phase review. Gates: tsc 0 · check-types 0 · eslint 0 · lint 0 · npm test 137 files, 2030 passed, 9 skipped · bench 0 · docs:check 0 · check:matrix 0 (165 covered, 0 gap, 3 manual-credentials) · analyze 297018 / 548943 / 333252 · package:vsix 0 (17 files, 581.31 KB) · check:vsix OK. |
+| P10.1 | P10 | Release refresh: CHANGELOG final, checklist, PR #18 updated; stop for owner merge | done | 9fa9501 | 2026-10-17 | CHANGELOG: `[Unreleased]` folded into `## [2.0.0] - 2026-10-17` (3 Added, 19 Changed at the top of their 2.0.0 subsections; the 7 `### Fixed` bullets left out by the owner's P8.3 rule: they fix unreleased 2.0 code, and their end state is in Changed); the plan row authorizes editing the 2.0.0 section, which no version has published. Version stays 2.0.0 (`package.json`, both lock entries). `docs/release-checklist.md` refilled (gates, bundle sizes, VSIX, matrix counts, the approved screenshot run 39025149785) with the section "Manual checks before publishing — the only ones": R166-R168 copied from the matrix; §5 corrected (the prerelease-version fix is listed). PR #18 description updated after the P10 phase review. Gates: tsc 0 · check-types 0 · eslint 0 · lint 0 · npm test 137 files, 2030 passed, 9 skipped · bench 0 · docs:check 0 · check:matrix 0 (165 covered, 0 gap, 3 manual-credentials) · analyze 297018 / 548943 / 333252 · package:vsix 0 (17 files, 581.31 KB) · check:vsix OK. PR #18 description updated after the P10 phase review (PASS). Caveats for 2.0.1 from that review: R21 cites a test whose config equals the setting defaults; R15 asserts the Solution Explorer argument, not the manifest placement. |
 
 ## Phase gates
 
@@ -1213,6 +1213,80 @@ of the `ui-screenshots` artifact of run 39025149785; `labs/2.0-P9-done` is tagge
 Owner, 2026-10-17: "P9 approved". `labs/2.0-P9-done` tagged on `98341fc` (CI run 39026440342 green on all 10 jobs). With the
 approval the owner deferred five visual findings, recorded as V1-V5 in `findings-ledger.md` for the UX initiative, and
 added P10.0a (regression coverage matrix) before P10.1.
+
+### P10 — Release refresh (2026-10-17)
+
+The plan has no bold P10 gate paragraph; the per-item gates are the phase gate.
+
+```text
+tracker      → every P10 row done (P10.0a-P10.0h, P10.fix-1, P10.1); no P10 row open, in progress or blocked
+local, at 9fa9501 → tsc 0 · check-types 0 · eslint 0 · lint 0 · npm test 137 files, 2030 passed, 9 skipped · bench 0 ·
+                    docs:check 0 · check:matrix 168 rows: 165 covered, 0 gap, 3 manual-credentials, 0 findings ·
+                    analyze 297018 / 548943 / 333252 under 322502 / 577766 / 351245 · package:vsix 0 (17 files,
+                    581.31 KB) · check:vsix OK · version 2.0.0 in package.json and both lock entries
+CI           → 39028376636 (cb4dd43), 39029025297 (65dc252), 39029569019 (3fb5e38), 39030085137 (22fa4c6),
+               39030531613 (6ceb86d), 39031067428 (16b9960) red in Test (windows-latest) only (N89, fixed by 00d4e6d,
+               run 39031970968 green), 39032522939 (38e5b50), 39033068240 (3d099f5), 39033639323 (df602e4),
+               39034294876 (9fa9501): success on all 10 jobs
+negative controls → the checker: a duplicate id, a missing title and a missing file planted → 4 findings, exit 1;
+               each gap test red under a mutation of what it guards
+```
+
+Phase review (`PHASE REVIEW P10`, `architecture-advisor`, 2026-10-17), verbatim:
+
+`````text
+VERDICT: PASS
+
+BLOCKING: none
+
+NON-BLOCKING:
+1. Matrix R21 (docs/plans/regression-matrix.md:45) is labelled covered for "nuiget.searchResultLimit is the take; quickSearchResultsPerSource the suggestions per source", but the cited test (src/host/handlers.test.ts:262-275) feeds config values 20 and 5 (handlers.test.ts:114) that equal the manifest defaults (package.json: searchResultLimit 20, quickSearchResultsPerSource 5). The handler reads services.config() (src/host/handlers.ts:303,309), yet a mutation that hard-codes 20/5 passes this test, so the setting's effect is not what is asserted. 2.0.1: set non-default values in the fixture of one dedicated test and expect them in the Catalog calls; until then the row stays covered with that caveat in the P10.1 tracker note.
+2. Matrix R15 (regression-matrix.md:39): P10.0f's test (src/extension.test.ts:509-519) asserts the resourceUri argument, not the view/item/context placement; `grep -rn solutionExplorer src` finds no test of the manifest entry `when: view == solutionExplorer && viewItem == Project`, while R13/R14/R16/R17 all assert theirs in src/test/lint/manifest-menus.test.ts. 2.0.1: a fourth `it` in manifest-menus.test.ts for the entry, its when and its group; the row text then matches both halves.
+3. Matrix R4 (regression-matrix.md:28) is self-consistent only because its behaviour reads "resolve with and without a panel", which is what src/test/e2e/v2-commands.e2e.test.ts:37-44 asserts. The regression that matters (refresh invalidates both surfaces, reason manual-refresh) is asserted by src/extension.test.ts:678-690 ("resources/invalidated reaches both surfaces with keys", R130). Re-cite R4 to that test, or add its title as a second citation in the behaviour text. Docs-only; may ride in the review-recording commit (gate: npm run check:matrix → 0).
+4. Matrix R153 (regression-matrix.md:177) "Rows sorted by id" cites the Installed skeleton test, whose fixture [Serilog, Moq] yields ['Moq', 'Serilog'] (src/webview/sidebar/SidebarView.test.tsx:88-91): the sort is asserted, but implicitly and for Installed only. The Updates sort is asserted the same way in src/webview/sidebar/UpdatesSection.test.tsx:17,73 (fixture [Serilog, Newtonsoft.Json] → ['Newtonsoft.Json', 'Serilog']). Re-cite R153 to name both, or split into two rows (next free id R169). Docs-only; same commit as 3.
+5. Tracker row P10.1 (docs/plans/STATUS.md:151) has an empty Commit cell while docs/release-checklist.md:16 points at that cell for the release SHA. The review-recording commit fills it with 9fa9501 (RUN.md §5.1; same as P9.13 after the P9 review).
+6. P10.1 is `done` with one gate clause unmet: the plan row's gate (plan :376) includes "PR #18 updated" and the tracker note says it follows the review. The PR body at HEAD (gh pr view 18) is P8.3's: changelog anchor `#200---2026-10-16` (heading is now 2026-10-17), "Release commit 91c6804", gates 1910 passed / 564.82 KB, run 38910717999, "P0–P8", "(Breaking changes, Added, Changed)" without Fixed, and a "Note on the changelog" that is wrong twice (736afa7 restored the prerelease bullet; seven more Fixed bullets were dropped at P10.1). DO 3 lists the replacement.
+7. CHANGELOG fold (9fa9501): defensible, but it extends the owner's P8.3 decision (which named twelve specific bullets) to seven new ones. I checked each: N86 (project bounced), N87 (sidebar transitive prefetch) and the four P9.fix layouts are 2.0-only; "Package size in the details pane" closed a 1.18.9 parity gap before release (parity audit :614), so a 1.18.9 → 2.0.0 user sees no fix, and the end state is in `### Changed` ("Details pane: … Package size …"). No watcher fix is claimed (P9 review NON-BLOCKING 3): the nineteen folded Changed bullets have none. The PR body states the extension in one line so the owner sees it before merging.
+8. .claude/settings.json pre-approves `Bash(node scripts/*)` (:47), so the checker itself runs without a prompt; only the spelling `npm run check:matrix` is missing. Owner patch, one line after :46: `      "Bash(npm run check:matrix)",`. Sessions do not edit it.
+9. Checker semantics (my ruling, for the record): scripts/check-regression-matrix.mjs:88-90 exempts gap rows from the file and title checks. That is the only reading consistent with the owner's own "each naming the suite, file and the test title to write": R13-R17 cited src/test/lint/manifest-menus.test.ts before it existed, and a literal "every cited file exists" would have made gap rows impossible to express while the P10.0a gate had to read 0. Two small holes, 2.0.1 at most: a gap row whose title already exists is not flagged (moot at 0 gaps), and a row's kind is not checked against the file's suite directory.
+
+DO:
+1. Paste this review verbatim under `## Phase gates` in docs/plans/STATUS.md as "### P10 — Release refresh (2026-10-17)" with the gate output of the brief (the plan has no bold P10 gate paragraph; the per-item gates are the phase gate). Fill the P10.1 Commit cell with 9fa9501. Optionally re-cite R4 and R153 in docs/plans/regression-matrix.md (NON-BLOCKING 3-4), then `npm run check:matrix` → 168 rows, 165 covered, 0 gap, 3 manual-credentials, 0 findings, and `npm run docs:check` → 0.
+2. Commit docs-only with the git-commit skill (for example `docs(plans): P10 phase review, P10.1 commit recorded (P10)`), `git show --stat HEAD` lists docs/plans/STATUS.md (and the matrix if edited) and nothing else; push to labs/2.0; `gh run watch <id> --exit-status` green on all 10 jobs.
+3. Update PR #18's description (gh pr edit 18 --body-file <scratchpad>/pr18.md): title unchanged; changelog link anchor `#200---2026-10-17` and "(Breaking changes, Added, Changed, Fixed)"; "P0–P10, tags labs/2.0-P*-done"; Evidence: final commit = the review commit SHA, its run id, the P10.1 gates of the brief (137 files, 2030 passed, 9 skipped; bundles 297018 / 548943 / 333252; VSIX 17 files, 581.31 KB; check:vsix OK; check:matrix 165/0/3); "Approved screenshots: run 39025149785, artifact ui-screenshots (P9 approved, 2026-10-17)"; "Manual checks before publishing: docs/release-checklist.md R166-R168, the only ones"; replace the "Note on the changelog" with: the prerelease-version fix is listed under Fixed (736afa7); the eleven P8.3 and the seven P9 fixes of code no version shipped are left out under the owner's P8.3 rule, their end state is in Changed. Keep the Merging and Publishing sections.
+4. Tag `labs/2.0-P10-done` on the review commit after step 2 is green: `git tag labs/2.0-P10-done && git push origin labs/2.0-P10-done`. I agree with tagging before the owner's merge: every earlier labs/2.0-P*-done sits on labs/2.0 before any merge, the tag is navigation (RUN.md :19-20, §6 step 3), the checklist tells the owner to keep branch and tags, and P10 has no owner gate in the plan.
+5. Stop with the RUN.md §8 report: final commit, run id, PR #18 updated, the settings.json patch of NON-BLOCKING 8, the 2.0.1 notes of NON-BLOCKING 1-2 and 9, and the sentence that the owner merges and publishes (checklist §1-§4; merge before publishing so the README's raw.githubusercontent.com/main image URLs resolve).
+
+DO NOT:
+Open a P10.fix-2: nothing here is blocking.
+Change src/host/handlers.test.ts, src/test/lint/manifest-menus.test.ts or any product file in the review commit; test additions for R21 and R15 are 2.0.1 items.
+Mark R21 or R15 `gap`: that would append P10.0i/P10.0j and reopen the phase for rows the release does not depend on; the caveats go in the tracker note and the 2.0.1 list.
+Edit .claude/settings.json; give the owner the one-line patch.
+Re-date or edit anything under `## [1.` in CHANGELOG.md, or re-add the seven Fixed bullets without an owner decision.
+Tag before the review commit's CI run is green, or on any commit other than the last one of labs/2.0.
+Merge, publish or `gh pr merge`; the owner does both.
+
+CONTRACT CHANGE: none. `git diff labs/2.0-P9-done..HEAD --stat -- src/protocol src/core/contracts.ts docs/adr` is empty.
+
+VERIFY:
+- `grep -nE "^\| P10\.1 \| P10 \|.*\| done \| 9fa9501 \|" docs/plans/STATUS.md` → one line; `grep -c "PHASE REVIEW P10\|### P10 — Release refresh" docs/plans/STATUS.md` ≥ 1.
+- `npm run check:matrix; echo exit=$?` → `168 rows: 165 covered, 0 gap, 3 manual-credentials; 0 finding(s).` and `exit=0`; `npm run docs:check; echo exit=$?` → `exit=0`.
+- `gh run watch <review run id> --exit-status` → success on all 10 jobs.
+- `gh pr view 18 --json body --jq .body | grep -c "200---2026-10-17\|39025149785\|ui-screenshots\|R166"` ≥ 4 and `gh pr view 18 --json body --jq .body | grep -c "91c6804\|200---2026-10-16\|does not say so"` → 0.
+- `git tag -l 'labs/2.0-P10-done'` → one line, and `git rev-parse labs/2.0-P10-done` equals `git rev-parse labs/2.0` after the push.
+
+CHECKED:
+Commits: `git log --oneline --stat labs/2.0-P9-done..HEAD` (eleven commits cb4dd43..9fa9501); full diffs of cb4dd43 (ledger V1-V5, both tables), 65dc252 (matrix, checker, lint test, ci.yml :79-81, package.json :299, plan :375, ARCHITECTURE :898-918, copilot-instructions), 3fb5e38 and 22fa4c6 (picker tests), 6ceb86d/16b9960/3d099f5/df602e4 (manifest-menus.test.ts, whole file), 00d4e6d (one line at extension.test.ts:299, N89 in both ledger tables, gotcha row), 38e5b50 (extension.test.ts:509-519), 9fa9501 (CHANGELOG, release checklist, .github/STATUS.md, tracker).
+Tests: `git diff labs/2.0-P9-done..HEAD -- 'src/**/*.test.ts*' | grep '^-'` → no removed line; no `.skip`/`.only`/`.todo` added; frozen paths unchanged.
+Matrix spot-checks against the tree: R2 (extension.test.ts:160-176), R4 (v2-commands.e2e.test.ts:37-44; extension.test.ts:281, 678-690), R7 (:499-507), R12 (v2-extension.e2e.test.ts:19-23), R21 (handlers.test.ts:114, 262-275; handlers.ts:303,309; manifest defaults 20/5), R30 (scenarios.test.ts:813-833), R38 (MainShell.test.tsx:250-264), R82 (extension.test.ts:347-366), R112 (pickers.test.ts:117-123), R153 (SidebarView.test.tsx:77-98; sort at ProjectPackages.tsx:42, ProjectUpdates.tsx:45, UpdatesSection.tsx:49; UpdatesSection.test.tsx:17,73), R164 (:727). Completeness: package.json contributes (12 commands, 5 menus, 4 settings, the view and container) each have a row; interaction model §1-§7 states, actions, keyboard paths and cross-surface items each have a row.
+Checker: scripts/check-regression-matrix.mjs (whole), src/test/lint/regression-matrix.test.ts (whole), declaredTitles/titleDeclared forms (each, skipIf, templates, %s).
+Release: CHANGELOG head and 2.0.0 subsection order (:12,19,73,124); 736afa7; docs/release-checklist.md (whole); parity-audit :30 (MI12 partly), :614 (1.18.9 package size); PR #18 body; `gh run list` 39034294876/39034297077 success on 9fa9501; .claude/settings.json :40-50; RUN.md :19-20, §6; plan :365-376; tracker rows P8.3, P9.4-P9.13, P9.fix-1..6, P10.0a-P10.1, the P10.0e/P10.fix-1 ruling (:1219-1253).
+`````
+
+Acted on: DO 1 (this block; P10.1's Commit cell 9fa9501; NON-BLOCKING 4: R153 now reads "Installed rows sorted by id"
+and the new row R169 cites the Updates section's sort, so the matrix has 169 rows: 166 covered, 0 gap, 3
+manual-credentials; NON-BLOCKING 3 left as is, R4's text says what its test asserts), DO 2-5 in order. NON-BLOCKING 1,
+2 and 9 are 2.0.1 notes; NON-BLOCKING 8 is the owner's settings patch.
 
 ## Advisor decisions
 
