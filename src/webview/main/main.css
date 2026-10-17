@@ -267,6 +267,24 @@ body {
     overflow-wrap: anywhere;
 }
 
+/*
+ * The installed and the version rows are one grid (P9.fix-5): label, value, action, optional second action, so
+ * Uninstall and Update share their left edge. A label starts a row; `align-items: center` keeps a button as high as
+ * its text, not as the select.
+ */
+.nuiget-details-actions {
+    display: grid;
+    grid-template-columns: max-content minmax(0, max-content) max-content max-content;
+    gap: var(--nuiget-space-3) var(--nuiget-space-4);
+    align-items: center;
+}
+
+.nuiget-details-label {
+    grid-column: 1;
+    color: var(--nuiget-color-fg-muted);
+}
+
+/* The facts rows of the transitive details view (`TransitiveDetails.tsx`) stay flex rows. */
 .nuiget-details-row {
     display: flex;
     flex-wrap: wrap;
@@ -274,9 +292,8 @@ body {
     gap: var(--nuiget-space-4);
 }
 
-.nuiget-details-label {
+.nuiget-details-row > .nuiget-details-label {
     min-width: 5em;
-    color: var(--nuiget-color-fg-muted);
 }
 
 .nuiget-details-note {

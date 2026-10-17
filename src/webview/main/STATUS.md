@@ -67,7 +67,23 @@ npm run test:ui -- --storage /tmp/nuiget-ui (local) → exit 0; 44 passing (1m);
                        {"button":925,"list":931}; update-all-button {"button":925,"list":931} (the fix-5 edits made
                        while this run built may be in its VSIX; neither measurement depends on them)
 grep -rn "nuiget-toolbar-end" src/webview → primitives.css, Toolbar.tsx JSDoc and the three primary buttons
+CI run 39023954472 (push of b83316d) → success on all 10 jobs; [P9.fix-4] both buttons 6 px inside the list's edge
+                       ({"button":320.1875,"list":326.1875})
+
+P9.fix-5
+npx tsc --noEmit · npm run check-types · npx eslint src · npm run lint → 0 · 0 · 0 · 0
+npx vitest run --project frontend src/webview/main/features/details → 56 passed
+npm test             → exit 0; Test Files 135 passed (135); Tests 2018 passed | 9 skipped (2027)
+npm run bench        → exit 0
+npm run docs:check   → exit 0
+node esbuild.mjs --production --analyze → 297018 / 322502, 548943 / 577766, 333252 / 351245 (+0, -21, +0 bytes)
+npm run test:ui -- --storage /tmp/nuiget-ui (local) → exit 0; 44 passing (1m); [P9.fix-5] details buttons:
+                       {"uninstall":{"height":24,"left":1155.79},"update":{"height":24,"left":1155.79}}
 ```
+
+viewed (P9.fix-4, CI run 39023954472): main-installed-single.png: Select all at the left, Uninstall selected (0) at the list's right edge
+viewed (P9.fix-4): main-updates.png: Select all at the left, Update all (2) at the list's right edge
+viewed (P9.fix-5, local run): main-browse-details.png: Installed 13.0.2 / Uninstall and Version select / Update in one grid, the two buttons in one column
 
 ## Done (tested)
 
@@ -93,17 +109,27 @@ grep -rn "nuiget-toolbar-end" src/webview → primitives.css, Toolbar.tsx JSDoc 
   first, the arrow order is unchanged); `main.css` toolbar end padding `--nuiget-space-3`. Two new UI tests measure the
   primary button against the list's right edge (≤ 8 px).
 
+- P9.fix-5: `DetailsPane.tsx`: one `.nuiget-details-actions` grid holds the cells of the installed row (label, value,
+  Uninstall) and the version row (label, select, Update, optional Install in projects…); the stale banner and the notes
+  stay outside. `main.css`: the grid (`max-content minmax(0, max-content) max-content max-content`, gaps 6/8 px,
+  `align-items: center`), `.nuiget-details-label` starts a row. `DetailsPane.test.tsx` asserts the shared parent;
+  `main-details.ui.test.ts` named rewrite measures equal left edges and heights.
+
 ## Done (untested)
 
 - Nothing.
 
 ## Not started
 
-- P9.fix-5 and P9.fix-6.
+- P9.fix-6.
 
 ## Deviations from contract/ADR (file:line each)
 
-- None.
+- None from contracts or ADRs. From the ruling's P9.fix-5 DO 19: (1) the value column is `minmax(0, max-content)`, not
+  `minmax(0, 1fr)`: with `1fr` the select stretches over the pane and Update moves to its right edge, far from the value;
+  `max-content` keeps the 1.x look and the gate (same left edge and height) holds. (2) `.nuiget-details-row` is not
+  deleted: `TransitiveDetails.tsx:51,56` uses it for its facts, so the rule stays (`main.css`, scoped comment) and the
+  ruling's VERIFY grep finds those two lines.
 
 ## Advisor decisions (date, item, question, answer verbatim)
 
@@ -187,4 +213,4 @@ RULING (P9.fix-2 DO 1 correction): Option 1. Change `AllProjectsUpdates.tsx:307`
 
 ## Exact next step (one item ID)
 
-P9.fix-5.
+P9.fix-6.

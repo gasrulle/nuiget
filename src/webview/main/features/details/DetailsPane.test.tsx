@@ -83,6 +83,9 @@ describe('main panel: details', () => {
         expect(primary()).toHaveTextContent('Update');
         expect(primary()).toBeDisabled();
         expect(screen.getByTestId('uninstall-button')).toBeEnabled();
+        // One grid for both rows, so Uninstall and Update share a column (P9.fix-5).
+        expect(screen.getByTestId('uninstall-button').parentElement).toHaveClass('nuiget-details-actions');
+        expect(primary().parentElement).toBe(screen.getByTestId('uninstall-button').parentElement);
     });
 
     it('an override row changes its version in its project alone: ops/update without a preview', async () => {

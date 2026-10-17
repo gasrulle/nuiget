@@ -20,7 +20,7 @@ describe('2.0 main panel: details', () => {
         await leaveWebview();
     });
 
-    it('shows the versions, the details and the README of the current row', async function () {
+    it('shows the versions, the details and the README of the current row, with Uninstall and Update in one column (P9.fix-5)', async function () {
         this.timeout(240_000);
         const row = await findByTestId('package-row-newtonsoft.json', 120_000);
         await (await row.findElement(By.css('[role="option"]'))).click();
@@ -32,6 +32,16 @@ describe('2.0 main panel: details', () => {
         expect(await (await findByTestId('install-update-button')).getText()).to.match(/Update|Downgrade/);
         // An installed package can be uninstalled from its details (P5.12b, port of remove-flow.ui.test.ts).
         expect(await (await findByTestId('uninstall-button')).isDisplayed()).to.equal(true);
+        // The installed and the version rows are one grid: the two buttons share their left edge and height (P9.fix-5).
+        const buttons = await driverOf().executeScript<{ uninstall: { left: number; height: number }; update: { left: number; height: number } }>(`
+            const box = id => {
+                const rect = document.querySelector('[data-testid="' + id + '"]').getBoundingClientRect();
+                return { left: rect.left, height: rect.height };
+            };
+            return { uninstall: box('uninstall-button'), update: box('install-update-button') };`);
+        console.warn('[P9.fix-5] details buttons: ' + JSON.stringify(buttons));
+        expect(Math.abs(buttons.uninstall.left - buttons.update.left), 'left edges of Uninstall and Update').to.be.at.most(1);
+        expect(Math.abs(buttons.uninstall.height - buttons.update.height), 'heights of Uninstall and Update').to.be.at.most(0.5);
         await waitForText('package-details-panel', 'Dependencies', 60_000);
 
         await (await findByTestId('details-tab-readme')).click();

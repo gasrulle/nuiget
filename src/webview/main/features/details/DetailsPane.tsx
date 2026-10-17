@@ -160,23 +160,24 @@ export function DetailsPane({ announce }: DetailsPaneProps): React.JSX.Element {
             <div className="nuiget-details-header">
                 <h2 className="nuiget-details-title">{selection.packageId}</h2>
                 {stale ? <Banner severity="info">{`Showing ${selection.packageId} of ${ownerName} until the packages of the selected project are listed.`}</Banner> : null}
-                {entry !== undefined ? (
-                    <div className="nuiget-details-row">
-                        <span className="nuiget-details-label">Installed:</span>
-                        <span>{fixedVersion ? `${entry.version} → ${installedVersion}` : installedVersion}</span>
-                        <button
-                            type="button"
-                            className="nuiget-button nuiget-button--secondary"
-                            data-testid="uninstall-button"
-                            disabled={busy || removalBlocked !== undefined}
-                            title={removalBlocked}
-                            onClick={uninstall}
-                        >
-                            Uninstall
-                        </button>
-                    </div>
-                ) : null}
-                <div className="nuiget-details-row">
+                {/* One grid for the installed and the version rows: label, value, action (P9.fix-5). */}
+                <div className="nuiget-details-actions">
+                    {entry !== undefined ? (
+                        <>
+                            <span className="nuiget-details-label">Installed:</span>
+                            <span>{fixedVersion ? `${entry.version} → ${installedVersion}` : installedVersion}</span>
+                            <button
+                                type="button"
+                                className="nuiget-button nuiget-button--secondary"
+                                data-testid="uninstall-button"
+                                disabled={busy || removalBlocked !== undefined}
+                                title={removalBlocked}
+                                onClick={uninstall}
+                            >
+                                Uninstall
+                            </button>
+                        </>
+                    ) : null}
                     <label className="nuiget-details-label" htmlFor="nuiget-details-version">Version:</label>
                     <select
                         id="nuiget-details-version"

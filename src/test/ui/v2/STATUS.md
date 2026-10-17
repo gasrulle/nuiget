@@ -66,7 +66,10 @@ gate: gh run rerun 39000089739 → attempt 2 success; UI log: `42 passing (2m)` 
   the same.
 - P9.fix-4: new tests `the Uninstall selected button sits at the list's right edge (P9.fix-4)` (`main-installed`) and
   `the Update all button sits at the list's right edge (P9.fix-4)` (`main-updates`): `|right(button) - right(list)| <= 8`.
-  Local: 44 passing, 6 px on both.
+  Local: 44 passing, 6 px on both; CI run 39023954472 the same.
+- P9.fix-5: named rewrite `main-details.ui.test.ts` `shows the versions, the details and the README of the current
+  row` → `…, with Uninstall and Update in one column (P9.fix-5)`: `|left(uninstall) - left(update)| <= 1` and heights
+  within 0.5 px. Local: 44 passing, equal (1155.79, 24 px).
 
 - Commit 1 (TF8, TF4): `MainShell` Refresh carries `data-testid="refresh-button"` (interaction model §8);
   `mainWebview.ts` exports `projectOptionValues`, `untilProjects` (presses `refresh-button` every 15 s, 180 s in all) and
@@ -217,4 +220,4 @@ Files read for this ruling: /Users/mattias/github/nuiget/src/core/feeds/vulnerab
 
 ## Exact next step (one item ID)
 
-P9.fix-5.
+P9.fix-6.

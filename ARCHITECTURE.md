@@ -712,7 +712,8 @@ lists call `select()` when the user makes a row current (and the browse list aft
 resets its own row, so the stale-selection rule can keep the pane; the one exception is Browse, whose selection is never
 stale: a new text whose results lack the current row clears it. The header shows the installed version with
 Uninstall (`whyNotRemovable` decides) and the version selector (`version-selector`, newest first, `(installed)`
-marked) with one primary button (`install-update-button`): Install when the package is not installed in the target
+marked) with one primary button (`install-update-button`), both rows one grid (`nuiget-details-actions`: label, value,
+action, so Uninstall and Update share their left edge; P9.fix-5): Install when the package is not installed in the target
 project, otherwise Update or Downgrade by the order of the host's list (no comparator in the webview; a version missing
 from the list says Update). The target is the committed project for a browse row and the row's own project otherwise;
 without a single project, while stale, for a floating or ranged reference or an unresolved one, the button is
