@@ -50,6 +50,12 @@ negative control     → a duplicate id, a title the file lacks and a missing fi
   semantics, the eight-gap stop); its reply is not readable outside the session (plan §2.3), and its rules are written
   into the matrix's header.
 
+## P10.0 additions (2026-10-17)
+
+Regression gaps of the P10.0a matrix (`docs/plans/regression-matrix.md`), one tracker row and one commit each; the
+gates per item are the plan §2.2 list plus `npm run check:matrix`.
+- P10.0d (R13): new `manifest-menus.test.ts` (helpers `filenamePattern`, `entryOf`) with `explorer/context offers nuiget.openManager on project files only`: one entry in group `navigation`, its pattern matches .csproj, .fsproj and .vbproj and not .cs, .props, .sln, .csproj.user or nuget.config; red with the pattern narrowed to .csproj.
+
 ## Exact next step (one item ID)
 
 P10.0b.
