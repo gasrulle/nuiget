@@ -3,7 +3,7 @@ name: Dependabot auto-merge
 # Two paths, both squash merges of pull requests Dependabot opened and nothing else:
 # 1. On every Dependabot pull request event, arm GitHub auto-merge; the pull request merges once every required
 #    check of the main ruleset is green.
-# 2. Hourly catch-up: GitHub drops the armed auto-merge on the remaining Dependabot pull requests whenever one of
+# 2. Daily catch-up (06:23 UTC): GitHub drops the armed auto-merge on the remaining Dependabot pull requests whenever one of
 #    them lands on main (observed 2026-10-17), so this job merges every open Dependabot pull request whose merge
 #    state is CLEAN (all requirements met) and leaves every other one alone.
 # A red or conflicting pull request stays open for the next dependency item. Pull requests opened by people are
@@ -12,7 +12,7 @@ name: Dependabot auto-merge
 on:
   pull_request:
   schedule:
-    - cron: '23 * * * *'
+    - cron: '23 6 * * *'
   workflow_dispatch:
 
 permissions:
