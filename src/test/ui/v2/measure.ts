@@ -233,9 +233,12 @@ for (const el of [scope, ...scope.querySelectorAll('*')]) {
     if (!visible(el) || el.closest('.nuiget-visually-hidden, code, [data-testid="readme-content"]')) continue;
     examined++;
     const style = getComputedStyle(el);
+    // getComputedStyle resolves an auto margin to its used px; the typed computed value keeps the keyword.
+    const typed = el.computedStyleMap ? el.computedStyleMap() : null;
     for (const prop of props) {
         const raw = style.getPropertyValue(prop);
         if (raw === 'normal' || raw === 'auto' || raw === '') continue;
+        if (typed && String(typed.get(prop)) === 'auto') continue;
         const value = Math.abs(px(raw));
         if (prop.startsWith('margin') && value > 40) continue;
         if (!ramp.some(step => Math.abs(value - step) <= tolerance)) {
@@ -273,13 +276,24 @@ const lastEdgeAbove = box => {
     }
     return undefined;
 };
-const firstNameBelow = box => {
+// The first row name (or, without rows, the first content) below the title in what the header labels: the content its
+// toggle controls, absent while collapsed, or for a heading without a toggle the blocks after it.
+const firstNameBelow = (box, title) => {
+    const below = el => {
+        const names = [...el.querySelectorAll('.nuiget-row-name')].filter(visible);
+        const rects = (names.length > 0 ? names.flatMap(leafRects) : leafRects(el)).filter(r => r.top >= title.bottom - 0.5);
+        return rects.length > 0 ? Math.min(...rects.map(r => r.top)) : undefined;
+    };
+    const toggle = box.querySelector('[aria-controls]');
+    if (toggle) {
+        const content = document.getElementById(toggle.getAttribute('aria-controls'));
+        return content && visible(content) ? below(content) : undefined;
+    }
     for (let el = box; el && el !== scope; el = el.parentElement) {
         for (let next = el.nextElementSibling; next; next = next.nextElementSibling) {
             if (getComputedStyle(next).display === 'none') continue;
-            const name = next.matches('.nuiget-row-name') ? next : next.querySelector('.nuiget-row-name');
-            const rects = name ? leafRects(name) : leafRects(next);
-            if (rects.length > 0) return Math.min(...rects.map(r => r.top));
+            const top = below(next);
+            if (top !== undefined) return top;
         }
     }
     return undefined;
@@ -287,7 +301,7 @@ const firstNameBelow = box => {
 const sections = [...scope.querySelectorAll('[data-testid^="section-box-"]')].filter(visible).map(box => {
     const title = union(leafRects(box.querySelector('.nuiget-section-title') ?? box));
     const edge = title ? lastEdgeAbove(box) : undefined;
-    const name = title ? firstNameBelow(box) : undefined;
+    const name = title ? firstNameBelow(box, title) : undefined;
     return {
         id: box.dataset.testid.replace(/^section-box-/, ''),
         variant: box.dataset.variant ?? '',
