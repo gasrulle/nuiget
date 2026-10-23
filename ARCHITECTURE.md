@@ -909,8 +909,10 @@ These parts are the current truth for the build, test and release pipeline.
   `vsce package`. `npm run check:vsix` fails when the VSIX would contain anything other than `dist/*.js`,
   `dist/*.css`, `resources/`, `package.json`, `README.md`, `CHANGELOG.md` and `LICENSE`, or would lack a required
   file.
-- **Continuous integration.** `.github/workflows/ci.yml` runs on pushes to `main` and `labs/**` and on pull
-  requests to `main`. Every job installs with `npm ci`; actions are pinned by commit SHA.
+- **Continuous integration.** `.github/workflows/ci.yml` runs on pushes to `main` and `labs/**`, on pull
+  requests to `main` and on `workflow_dispatch`, whose `tier=B` adds the three lane jobs below (`negative_sha` is
+  reserved for the negative control); a dispatch and a push of one ref do not cancel each other. Every job installs
+  with `npm ci`; actions are pinned by commit SHA.
 
   | Job | Needs | What it does |
   | --- | --- | --- |
@@ -918,6 +920,9 @@ These parts are the current truth for the build, test and release pipeline.
   | Test (ubuntu, windows) | — | Unit tests with .NET SDK 10 installed; coverage on ubuntu |
   | E2E (VS Code 1.90.0, stable) | — | Production build with the ceiling check (sizes in the job summary), then the `v2-*` extension-host suite under Xvfb; log artifact per version |
   | UI | Lint, Test | Restores the dense workspace (SDK 10 and 8.0.425), then ExTester packages a VSIX and runs `src/test/ui/v2` under Xvfb (1920x1080), the capture suite of the named states and its classic pass, then `check:vsix` on that build; log artifact, and `ui-screenshots` on every run: the webview crops `<state>.<theme>.<width>.png` of the ready states of `src/test/ui/v2/states.ts`, the window PNGs of the v2 suites and the screenshots of failed tests; a missing crop, a crop of a pending state or a missing state of the 2.0 set fails the job |
+  | UI matrix (one per theme) | — | `workflow_dispatch` with `tier=B` only: the Tier B shard of one of six themes (every ready state at its surface's three widths, Modern UI), VS Code full screen (`settings.matrix.json`); `ui-screenshots-<theme>`, `ui-log-<theme>` |
+  | UI floor (1.90.0) | — | `workflow_dispatch` with `tier=B` only: every Tier A theme and width on VS Code 1.90.0 (Chromium 122) in the classic look; `ui-screenshots-floor`, `ui-log-floor` |
+  | UI macOS | — | `workflow_dispatch` with `tier=B` only: the Tier A capture suite in both looks on `macos-latest`; `ui-screenshots-macos`, `ui-log-macos`; never goldens |
   | Build & Package | Lint, Test, E2E | Type check, production build, `check:vsix`, VSIX uploaded as artifact `vsix` |
   | Benchmark (informational) | — | Compares against `benchmarks/baseline.json`; never fails the run |
 

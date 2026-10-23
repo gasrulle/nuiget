@@ -1,0 +1,12 @@
+{
+    "window.titleBarStyle": "custom",
+    "workbench.colorTheme": "Default Dark Modern",
+    "workbench.experimental.modernUI": true,
+    "window.density.layout": "default",
+    "workbench.experimental.modernUIUppercaseViewHeaders": false,
+    "extensions.ignoreRecommendations": true,
+    "telemetry.telemetryLevel": "off",
+    "update.mode": "none",
+    "git.openRepositoryInParentFolders": "never",
+    "window.newWindowDimensions": "fullscreen"
+}

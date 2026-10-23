@@ -4,7 +4,7 @@ import { By, EditorView, Key, VSBrowser } from 'vscode-extension-tester';
 import { selectTheme, setPanelWidth, setSidebarWidth, webviewRect, windowSize } from '../layout';
 import { chooseProjectCommitted, enterMainWebview, openMainPanel, optionFor, untilProjects } from '../mainWebview';
 import { driverOf, enterSidebarWebview, findByTestId, leaveWebview, openSidebarView, poll, waitForTestIdGone, waitForText } from '../sidebarWebview';
-import { type Capture, captureFile, isReady, type Look, type NamedState, PANEL_WIDTH, SIDEBAR_WIDTH, STATES, type Theme } from '../states';
+import { type Capture, captureFile, floorCaptures, isReady, type Lane, type Look, matrixCaptures, MATRIX_THEMES, type NamedState, PANEL_WIDTH, SIDEBAR_WIDTH, STATES, type Theme, THEMES } from '../states';
 
 /**
  * The capture suite of the named states (UX-P0.8), on the dense workspace (`npm run test:ui:capture`, and the classic
@@ -21,13 +21,9 @@ const LOOK: Look = process.env.NUIGET_UI_LOOK === 'classic' ? 'classic' : 'moder
 const MODIFIER = process.platform === 'darwin' ? Key.COMMAND : Key.CONTROL;
 const ALL_PROJECTS = '__all_projects__';
 
-/** The labels of the Color Theme picker per theme (newest VS Code first) and the body class VS Code gives the webviews. */
-const THEMES: Record<Theme, { labels: readonly string[]; bodyClass: string }> = {
-    'dark-modern': { labels: ['Dark Modern', 'Default Dark Modern'], bodyClass: 'vscode-dark' },
-    'light-modern': { labels: ['Light Modern', 'Default Light Modern'], bodyClass: 'vscode-light' },
-    'dark-high-contrast': { labels: ['Dark High Contrast', 'Default High Contrast'], bodyClass: 'vscode-high-contrast' },
-};
-const THEME_ORDER: readonly Theme[] = ['dark-modern', 'light-modern', 'dark-high-contrast'];
+/** The lane (`NUIGET_UI_LANE`, UX-P0.9): unset is the per-push `ui` job; `NUIGET_UI_THEME` names a matrix shard. */
+const LANE: Lane = (['matrix', 'floor', 'macos'] as const).find(lane => lane === process.env.NUIGET_UI_LANE) ?? 'ui';
+const SHARD_THEME = MATRIX_THEMES.find(theme => theme === process.env.NUIGET_UI_THEME) ?? 'dark-modern';
 
 /** Throws `not reachable` with what the readiness predicate waited for. */
 class NotReachable extends Error {}
@@ -309,11 +305,14 @@ async function applyTheme(theme: Theme): Promise<void> {
     }
     await openMainPanel();
     await enterMainWebview();
-    const expected = THEMES[theme].bodyClass;
+    const { labels, bodyClass } = THEMES[theme];
+    // The class tells the kind of theme; the name tells Modern from 2026, which share their class.
     await poll(async () => {
-        const classes = (await script<string>('return document.body.className;')).split(/\s+/);
-        return classes.includes(expected) && !(expected === 'vscode-high-contrast' && classes.includes('vscode-high-contrast-light')) ? true : undefined;
-    }, `the body class ${expected}`, 60_000);
+        const body = await script<{ classes: string; name: string }>('return { classes: document.body.className, name: document.body.dataset.vscodeThemeName ?? "" };');
+        const classes = body.classes.split(/\s+/);
+        const kind = classes.includes(bodyClass) && !(bodyClass === 'vscode-high-contrast' && classes.includes('vscode-high-contrast-light'));
+        return kind && labels.includes(body.name) ? true : undefined;
+    }, `the body class ${bodyClass} and the theme name ${labels[0]}`, 60_000);
 }
 
 async function applyWidth(state: NamedState, width: number): Promise<void> {
@@ -357,27 +356,40 @@ async function shoot(state: NamedState, capture: Capture): Promise<void> {
     console.warn(`[capture] ${file}: iframe.webview ${rect.x},${rect.y} ${rect.width}x${rect.height} (dpr ${dpr}), cropped ${capture.width}x${rect.height}`);
 }
 
-/** This run's captures, theme by theme, the default width of each surface first. */
-const jobs = STATES.filter(isReady)
-    .flatMap(state => state.captures.filter(capture => capture.look === LOOK).map(capture => ({ state, capture })))
+/** This run's captures: the lane's set (Tier A in this run's look for the `ui` job and macOS), theme by theme, the default width of each surface first. */
+const laneJobs = LANE === 'matrix'
+    ? matrixCaptures(SHARD_THEME)
+    : LANE === 'floor'
+        ? floorCaptures()
+        : STATES.filter(isReady).flatMap(state => state.captures.filter(capture => capture.look === LOOK).map(capture => ({ state, capture })));
+const isDefaultWidth = (job: { state: NamedState; capture: Capture }): boolean =>
+    job.capture.width === (job.state.surface === 'main' ? PANEL_WIDTH : SIDEBAR_WIDTH);
+const jobs = laneJobs
     .map((job, order) => ({ ...job, order }))
-    .sort((a, b) => THEME_ORDER.indexOf(a.capture.theme) - THEME_ORDER.indexOf(b.capture.theme)
-        || Number(a.capture.width !== (a.state.surface === 'main' ? PANEL_WIDTH : SIDEBAR_WIDTH)) - Number(b.capture.width !== (b.state.surface === 'main' ? PANEL_WIDTH : SIDEBAR_WIDTH))
+    .sort((a, b) => MATRIX_THEMES.indexOf(a.capture.theme) - MATRIX_THEMES.indexOf(b.capture.theme)
+        || Number(!isDefaultWidth(a)) - Number(!isDefaultWidth(b))
         || a.order - b.order);
 
-describe(`named states, Tier A (${LOOK} look)`, () => {
+/** The width and height of a PNG, from its IHDR chunk. */
+const pngSize = (png: Buffer): string => `${png.readUInt32BE(16)}x${png.readUInt32BE(20)}`;
+
+describe(`named states (${LANE} lane, ${LOOK} look)`, () => {
     before(async function () {
         this.timeout(300_000);
-        if (LOOK === 'modern') {
+        if (LANE === 'ui' && LOOK === 'modern') {
             for (const state of STATES) {
                 if (typeof state.status === 'object') {
                     console.warn(`[capture] ${state.name}: not captured (pending ${state.status.pending})`);
                 }
             }
         }
-        // The suite never sizes the window (ChromeDriver cannot on Electron): a change of VS Code's own window shows here.
+        // The provenance of every crop of this run. The suite never sizes the window (ChromeDriver cannot on Electron):
+        // the window VS Code opened, and the size of a window screenshot, show here.
         const window = await windowSize();
-        console.warn(`[capture] window ${window.width}x${window.height}`);
+        const chromium = /Chrome\/(\d+)/.exec(await script<string>('return navigator.userAgent;'))?.[1] ?? 'unknown';
+        const dpr = await script<number>('return window.devicePixelRatio;');
+        const png = Buffer.from(await driverOf().takeScreenshot(), 'base64');
+        console.warn(`[capture] lane ${LANE} vscode ${VSBrowser.instance.version} chromium ${chromium} ${process.platform} dpr ${dpr} look ${LOOK} window ${window.width}x${window.height} png ${pngSize(png)}`);
         await openSidebarView();
         await openMainPanel();
         await enterMainWebview();

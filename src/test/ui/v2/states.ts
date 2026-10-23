@@ -11,7 +11,30 @@
  * Plain data on purpose: `src/test/lint/named-states.test.ts` imports it without ExTester.
  */
 
-export type Theme = 'dark-modern' | 'light-modern' | 'dark-high-contrast';
+export type Theme = 'dark-modern' | 'light-modern' | 'dark-high-contrast' | 'light-high-contrast' | 'dark-2026' | 'light-2026';
+
+/**
+ * The built-in themes the captures use, by the labels of the Color Theme picker (newest VS Code first, as
+ * `theme.ui.test.ts` lists them), the body class VS Code gives the webviews, and the order a run visits them in.
+ * The body's `data-vscode-theme-name` is one of the labels: the 2026 themes share their body class with Modern.
+ */
+export const THEMES: Readonly<Record<Theme, { labels: readonly string[]; bodyClass: string }>> = {
+    'dark-modern': { labels: ['Dark Modern', 'Default Dark Modern'], bodyClass: 'vscode-dark' },
+    'light-modern': { labels: ['Light Modern', 'Default Light Modern'], bodyClass: 'vscode-light' },
+    'dark-high-contrast': { labels: ['Dark High Contrast', 'Default High Contrast'], bodyClass: 'vscode-high-contrast' },
+    'light-high-contrast': { labels: ['Light High Contrast', 'Default High Contrast Light'], bodyClass: 'vscode-high-contrast-light' },
+    'dark-2026': { labels: ['Dark 2026'], bodyClass: 'vscode-dark' },
+    'light-2026': { labels: ['Light 2026'], bodyClass: 'vscode-light' },
+};
+
+/** The six shards of the Tier B matrix (`ui-matrix` in `ci.yml`), one theme each. */
+export const MATRIX_THEMES: readonly Theme[] = ['dark-modern', 'light-modern', 'dark-high-contrast', 'light-high-contrast', 'dark-2026', 'light-2026'];
+
+/**
+ * The lanes of the capture suite (`NUIGET_UI_LANE`): the per-push `ui` job (unset), the Tier B matrix, the VS Code
+ * 1.90.0 floor and macOS, the last three on `workflow_dispatch` only (UX-P0.9).
+ */
+export type Lane = 'ui' | 'matrix' | 'floor' | 'macos';
 export type Look = 'modern' | 'classic';
 export type Surface = 'main' | 'sidebar';
 export type Tier = 'A' | 'B' | 'marketing' | 'hero';
@@ -44,6 +67,10 @@ export interface NamedState {
 /** The surface widths of a Tier A capture unless a state names others (plan P0.8). */
 export const PANEL_WIDTH = 1200;
 export const SIDEBAR_WIDTH = 300;
+
+/** The widths of a Tier B capture, per surface (plan P0.9). */
+export const PANEL_WIDTHS: readonly number[] = [800, 1200, 1600];
+export const SIDEBAR_WIDTHS: readonly number[] = [200, 300, 400];
 
 const primary = (surface: Surface): Capture => ({ theme: 'dark-modern', look: 'modern', width: surface === 'main' ? PANEL_WIDTH : SIDEBAR_WIDTH });
 
@@ -184,6 +211,63 @@ export function screenshotProblems(root: Iterable<string>, nested: Iterable<stri
     for (const state of LEGACY_STATES) {
         if (!windows.has(`${state}.png`)) {
             problems.push(`no window PNG of the 2.0 state ${state}`);
+        }
+    }
+    return problems;
+}
+
+/** The width a state's name fixes (`sidebar-narrow-200px`), or undefined. */
+const namedWidth = (state: NamedState): number | undefined => {
+    const match = /-(\d+)px$/.exec(state.name);
+    return match ? Number(match[1]) : undefined;
+};
+
+/**
+ * One Tier B shard: every ready state of tier A or B at each width of its surface (a state whose name fixes a width at
+ * that width only), in `theme`, Modern UI.
+ */
+export function matrixCaptures(theme: Theme): Array<{ state: NamedState; capture: Capture }> {
+    return STATES.filter(state => isReady(state) && (state.tier === 'A' || state.tier === 'B')).flatMap(state => {
+        const fixed = namedWidth(state);
+        const widths = fixed !== undefined ? [fixed] : state.surface === 'main' ? PANEL_WIDTHS : SIDEBAR_WIDTHS;
+        return widths.map(width => ({ state, capture: { theme, look: 'modern' as const, width } }));
+    });
+}
+
+/** The floor lane (VS Code 1.90.0, which has no Modern UI): every Tier A (theme, width) of a ready state, classic. */
+export function floorCaptures(): Array<{ state: NamedState; capture: Capture }> {
+    return STATES.filter(state => isReady(state) && state.tier === 'A').flatMap(state => {
+        const seen = new Set<string>();
+        return state.captures.flatMap(capture => {
+            const key = `${capture.theme}.${capture.width}`;
+            if (seen.has(key)) {
+                return [];
+            }
+            seen.add(key);
+            return [{ state, capture: { ...capture, look: 'classic' as const } }];
+        });
+    });
+}
+
+/** The crops a lane must write: `theme` names the matrix shard. */
+export function laneFiles(lane: Lane, theme?: Theme): string[] {
+    const jobs = lane === 'matrix'
+        ? matrixCaptures(theme ?? 'dark-modern')
+        : lane === 'floor'
+            ? floorCaptures()
+            : STATES.filter(isReady).flatMap(state => state.captures.map(capture => ({ state, capture })));
+    return jobs.map(({ state, capture }) => captureFile(state.name, capture));
+}
+
+/** What a lane's check step fails for: a missing crop, an extra crop and a crop of a pending state. */
+export function laneProblems(root: Iterable<string>, lane: Lane, theme?: Theme): string[] {
+    const expected = new Set(laneFiles(lane, theme));
+    const crops = [...root];
+    const problems = [...expected].filter(file => !crops.includes(file)).map(file => `no capture ${file}`);
+    for (const file of crops) {
+        if (!expected.has(file)) {
+            const pendingState = STATES.find(state => !isReady(state) && file.startsWith(`${state.name}.`));
+            problems.push(pendingState ? `a capture of the pending state ${pendingState.name}: ${file}` : `an unexpected capture ${file}`);
         }
     }
     return problems;

@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { captureFile, expectedFiles, isReady, LEGACY_STATES, screenshotProblems, STATES } from '../ui/v2/states';
+import { captureFile, expectedFiles, floorCaptures, isReady, laneFiles, laneProblems, LEGACY_STATES, matrixCaptures, MATRIX_THEMES, screenshotProblems, STATES, THEMES } from '../ui/v2/states';
 
 /**
  * UX-P0.8: the one list of named states (`src/test/ui/v2/states.ts`). A pending state names an item that is still
@@ -101,6 +101,88 @@ describe('the named states (UX-P0.8)', () => {
         expect(scripts['test:ui']).toMatch(/&& npm run test:ui:capture$/);
         expect(scripts['test:ui:classic']).toContain('NUIGET_UI_LOOK=classic');
         expect(scripts['test:ui:classic']).toContain('--code_settings src/test/ui/settings.classic.json');
+    });
+
+    it('gives each Tier B shard every ready state at its surface\'s three widths, Modern UI (UX-P0.9)', () => {
+        expect(MATRIX_THEMES).toEqual(Object.keys(THEMES));
+        for (const theme of MATRIX_THEMES) {
+            const files = laneFiles('matrix', theme);
+            expect(files, theme).toHaveLength(64);
+            expect(new Set(files).size).toBe(64);
+            expect(files.every(file => file.includes(`.${theme}.`) && !file.includes('-classic'))).toBe(true);
+        }
+        const widths = new Set(matrixCaptures('dark-modern').map(({ state, capture }) => `${state.surface}:${capture.width}`));
+        expect([...widths].sort()).toEqual(['main:1200', 'main:1600', 'main:800', 'sidebar:200', 'sidebar:300', 'sidebar:400']);
+        expect(laneFiles('matrix', 'light-2026').filter(file => file.startsWith('sidebar-narrow-200px.'))).toEqual(['sidebar-narrow-200px.light-2026.200.png']);
+    });
+
+    it('captures every Tier A theme and width once on the floor, in the classic look', () => {
+        const files = laneFiles('floor');
+        expect(files).toHaveLength(36);
+        expect(new Set(files).size).toBe(36);
+        expect(files.every(file => file.includes('-classic.'))).toBe(true);
+        expect(floorCaptures().every(({ capture }) => capture.look === 'classic')).toBe(true);
+        expect(laneFiles('macos')).toEqual(expectedFiles());
+    });
+
+    it('fails a lane for a missing, an extra and a pending crop', () => {
+        const files = laneFiles('matrix', 'dark-2026');
+        expect(laneProblems(files, 'matrix', 'dark-2026')).toEqual([]);
+        expect(laneProblems(files.slice(1), 'matrix', 'dark-2026')).toEqual([`no capture ${files[0]}`]);
+        expect(laneProblems([...files, 'main-installed-single.dark-modern.1200.png'], 'matrix', 'dark-2026')).toEqual(['an unexpected capture main-installed-single.dark-modern.1200.png']);
+        expect(laneProblems([...files, 'main-installed-error.dark-2026.800.png'], 'matrix', 'dark-2026')).toEqual(['a capture of the pending state main-installed-error: main-installed-error.dark-2026.800.png']);
+    });
+
+    it('opens the matrix full screen and nothing else differs from the primary settings', () => {
+        const settings = (file: string): Record<string, unknown> => JSON.parse(read(`src/test/ui/${file}`)) as Record<string, unknown>;
+        const { 'window.newWindowDimensions': dimensions, ...rest } = settings('settings.matrix.json');
+        expect(dimensions).toBe('fullscreen');
+        expect(rest).toEqual(settings('settings.json'));
+    });
+
+    it('runs the lane scripts on the storage of test:ui, the floor on 1.90.0 classic', () => {
+        const scripts = (JSON.parse(read('package.json')) as { scripts: Record<string, string> }).scripts;
+        const flag = (script: string, name: string): string | undefined => new RegExp(`--${name} (\\S+)`).exec(scripts[script])?.[1];
+        for (const script of ['test:ui:matrix', 'test:ui:floor', 'test:ui:macos']) {
+            for (const name of ['storage', 'extensions_dir']) {
+                expect(flag(script, name), `${script} --${name}`).toBe(flag('test:ui', name));
+            }
+            expect(scripts[script], script).toContain('--open_resource src/test/ui/fixtures/dense-workspace/dense.code-workspace');
+        }
+        expect(flag('test:ui:matrix', 'code_version')).toBe(flag('test:ui', 'code_version'));
+        expect(flag('test:ui:macos', 'code_version')).toBe(flag('test:ui', 'code_version'));
+        expect(flag('test:ui:matrix', 'code_settings')).toBe('src/test/ui/settings.matrix.json');
+        // The floor is the engines floor (D54, D55): it never moves with the capture pin.
+        expect(flag('test:ui:floor', 'code_version')).toBe('1.90.0');
+        expect(flag('test:ui:floor', 'code_settings')).toBe('src/test/ui/settings.classic.json');
+        expect(scripts['test:ui:macos']).toMatch(/&& npm run test:ui:classic$/);
+
+        // Each lane job caches the VS Code its script runs.
+        const workflow = read('.github/workflows/ci.yml');
+        const jobBlock = (job: string): string => {
+            const start = workflow.indexOf(`\n  ${job}:\n`);
+            const rest = workflow.slice(start + 1);
+            const end = rest.search(/\n {2}[a-z][\w-]*:\n/);
+            return end === -1 ? rest : rest.slice(0, end);
+        };
+        for (const [job, script] of [['ui-matrix', 'test:ui:matrix'], ['ui-floor', 'test:ui:floor'], ['ui-macos', 'test:ui:macos']] as const) {
+            expect(jobBlock(job), `${job} caches its VS Code`).toContain(`key: extester-vscode-${flag(script, 'code_version')}-`);
+            expect(jobBlock(job), `${job} runs ${script}`).toContain(`npm run ${script}`);
+        }
+    });
+
+    it('lists the themes as the theme pass does', () => {
+        const suite = read('src/test/ui/v2/theme.ui.test.ts');
+        const listed = [...suite.matchAll(/\{ labels: \[([^\]]+)\], bodyClass: '([a-z-]+)' \}/g)]
+            .map(match => ({ labels: match[1].split(',').map(label => label.trim().replace(/^'|'$/g, '')), bodyClass: match[2] }));
+        expect(listed).toEqual(MATRIX_THEMES.map(theme => ({ labels: [...THEMES[theme].labels], bodyClass: THEMES[theme].bodyClass })));
+    });
+
+    it('shards ci.yml\'s ui-matrix by the themes of states.ts', () => {
+        const workflow = read('.github/workflows/ci.yml');
+        const job = workflow.slice(workflow.indexOf('\n  ui-matrix:\n'));
+        const themes = /\n {8}theme: \[ ([^\]]+) \]/.exec(job)?.[1].split(',').map(theme => theme.trim());
+        expect(themes).toEqual([...MATRIX_THEMES]);
     });
 
     it('keeps the 15 states of the 2.0 set that the v2 suites screenshot', () => {
