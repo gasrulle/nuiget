@@ -567,12 +567,13 @@ jobs:
             process.exit(problems.length === 0 ? 0 : 1);'
 
   # macOS (UX-P0.9): the Tier A capture suite, both looks, on a real window manager; captures and measurements, never
-  # goldens (plan §2.6). The runner's display is 1024x768 by default, too narrow for a 1200 px panel: the display is
-  # set to 1440x900 (the per-push ui job's window) before the run.
+  # goldens (plan §2.6). macos-latest's display is 1024x768, too narrow for a 1200 px panel, and its Anka resolution
+  # call is refused (dispatch 39998544491), so the lane runs on the larger Intel runner (owner ruling of 2026-10-23, paid
+  # minutes) and sets the display to 1440x900 (the per-push ui job's window) before the run.
   ui-macos:
     name: UI macOS
     if: github.event_name == 'workflow_dispatch' && inputs.tier == 'B'
-    runs-on: macos-latest
+    runs-on: macos-latest-large
     timeout-minutes: 45
     env:
       NUIGET_UI_LANE: macos
