@@ -3,13 +3,14 @@ import { driverOf, leaveWebview, poll } from './sidebarWebview';
 
 /**
  * Layout helpers of the named states (UX-P0.8): the workbench theme, the width of the main panel and of the side bar,
- * and the rectangle of a webview. Widths are the widths of the webview's outer `iframe.webview`, reached within 1 px;
- * the capture suite crops exactly `<width>` CSS px from the webview's left edge, so a `<state>.<theme>.<width>.png` is
- * `<width>` CSS px wide.
+ * and the rectangle of a webview. Widths are the widths of the webview's outer `iframe.webview`, reached within 1 px
+ * by dragging the side bar's sash inside the window VS Code opens by itself (ChromeDriver cannot set an Electron
+ * window's rect); the capture suite crops exactly `<width>` CSS px from the webview's left edge, so a
+ * `<state>.<theme>.<width>.png` is `<width>` CSS px wide.
  */
 
-/** The window height of every capture; CI's xvfb screen is 1920x1080 (`ci.yml`), so 1200 px panels fit. */
-export const WINDOW_HEIGHT = 900;
+/** VS Code keeps the side bar at least this wide. */
+const SIDEBAR_MINIMUM = 170;
 
 export interface Rect {
     x: number;
@@ -88,14 +89,23 @@ async function settledWidth(rootTestId: string): Promise<number> {
     }, `the webview of ${rootTestId} to settle`, 15_000);
 }
 
-/** Sets the window's size; the main panel takes what the activity bar and the side bar leave. */
-async function setWindowWidth(width: number): Promise<void> {
-    await driverOf().manage().window().setRect({ x: 0, y: 0, width, height: WINDOW_HEIGHT });
+/** The inner size of the window, read from the top document. */
+export async function windowSize(): Promise<{ width: number; height: number }> {
+    await leaveWebview();
+    return driverOf().executeScript<{ width: number; height: number }>('return { width: window.innerWidth, height: window.innerHeight };');
+}
+
+/** Drags the side bar's sash by `delta` px (positive widens the side bar). */
+async function dragSideBar(delta: number): Promise<void> {
+    await leaveWebview();
+    const sash = await sideBarSash();
+    await driverOf().actions().move({ origin: sash }).press().move({ origin: Origin.POINTER, x: Math.round(delta), y: 0 }).release().perform();
 }
 
 /**
- * Resizes the window until the main panel's webview is `width` px wide (± 1 px), or fails: a width the window
- * cannot reach is a stop-and-ask of the capture suite, never a smaller capture.
+ * Drags the side bar's sash until the main panel's webview is `width` px wide (± 1 px), or fails: the side bar takes
+ * the slack, and a width that would leave it under its minimum is a stop-and-ask of the capture suite, never a
+ * smaller capture.
  */
 export async function setPanelWidth(width: number): Promise<void> {
     for (let attempt = 0; attempt < 5; attempt++) {
@@ -103,12 +113,18 @@ export async function setPanelWidth(width: number): Promise<void> {
         if (Math.abs(current - width) <= 1) {
             return;
         }
-        const window = await driverOf().manage().window().getRect();
-        await setWindowWidth(Math.round(window.width + width - current));
+        await leaveWebview();
+        const sideBar = (await driverOf().findElement(By.id('workbench.parts.sidebar')).getRect()).width;
+        const needed = Math.round(sideBar - (width - current));
+        if (needed < SIDEBAR_MINIMUM) {
+            const window = await windowSize();
+            throw new Error(`the main panel cannot reach ${width} px: the side bar would be ${needed} px, under its ${SIDEBAR_MINIMUM} px minimum, in a ${window.width} px window`);
+        }
+        await dragSideBar(current - width);
     }
     const reached = await settledWidth('nuiget-app');
     if (Math.abs(reached - width) > 1) {
-        throw new Error(`the main panel does not reach ${width} px: it is ${reached} px after five resizes`);
+        throw new Error(`the main panel does not reach ${width} px: it is ${reached} px after five drags`);
     }
 }
 
@@ -137,17 +153,10 @@ export async function setSidebarWidth(width: number): Promise<void> {
         if (Math.abs(current - width) <= 1) {
             return;
         }
-        await leaveWebview();
-        const sash = await sideBarSash();
-        await driverOf().actions().move({ origin: sash }).press().move({ origin: Origin.POINTER, x: Math.round(width - current), y: 0 }).release().perform();
+        await dragSideBar(width - current);
     }
     const reached = await settledWidth('nuiget-sidebar');
     if (Math.abs(reached - width) > 1) {
         throw new Error(`the sidebar does not reach ${width} px: it is ${reached} px after five drags`);
     }
-}
-
-/** The window size every capture run starts from: wide enough for a 300 px side bar beside a 1200 px panel. */
-export async function startWindow(): Promise<void> {
-    await setWindowWidth(1700);
 }

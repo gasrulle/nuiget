@@ -318,9 +318,11 @@ jobs:
 
       # The v2 suites on the e2e workspace, then the capture suite of the named states on the dense workspace
       # (test:ui:capture). The scripts carry --storage /tmp/nuiget-ui (a short path keeps the VS Code IPC socket under
-      # the Unix limit) and --extensions_dir under it. The screen is 1920x1080 so that a 1200 px panel fits beside a
-      # 300 px side bar (H77). The log is written outside the checkout: vsce packages the working directory, and
-      # check:vsix below refuses any file it does not allow.
+      # the Unix limit) and --extensions_dir under it. The 1920x1080 screen lets VS Code open its default window at
+      # 1440 px (clamped to 1280 on xvfb's default screen), inside which the side bar's sash reaches a 1200 px panel
+      # with the side bar above its 170 px minimum; the suite never sets the window size (ChromeDriver cannot on
+      # Electron, H77). The log is written outside the checkout: vsce packages the working directory, and check:vsix
+      # below refuses any file it does not allow.
       - name: Run UI tests
         run: xvfb-run -a -s "-screen 0 1920x1080x24" npm run test:ui 2>&1 | tee "$RUNNER_TEMP/ui-output.txt"
 

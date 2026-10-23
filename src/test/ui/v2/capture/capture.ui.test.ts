@@ -1,7 +1,7 @@
 import { execFileSync } from 'child_process';
 import * as path from 'path';
 import { By, EditorView, Key, VSBrowser } from 'vscode-extension-tester';
-import { selectTheme, setPanelWidth, setSidebarWidth, startWindow, webviewRect } from '../layout';
+import { selectTheme, setPanelWidth, setSidebarWidth, webviewRect, windowSize } from '../layout';
 import { chooseProjectCommitted, enterMainWebview, openMainPanel, optionFor, untilProjects } from '../mainWebview';
 import { driverOf, enterSidebarWebview, findByTestId, leaveWebview, openSidebarView, poll, waitForTestIdGone, waitForText } from '../sidebarWebview';
 import { type Capture, captureFile, isReady, type Look, type NamedState, PANEL_WIDTH, SIDEBAR_WIDTH, STATES, type Theme } from '../states';
@@ -317,10 +317,10 @@ async function applyTheme(theme: Theme): Promise<void> {
 }
 
 async function applyWidth(state: NamedState, width: number): Promise<void> {
+    // One sash sets the captured surface's width; the other part takes the slack (the P0.8 width ruling).
     await leaveWebview();
     await openSidebarView();
     if (state.surface === 'main') {
-        await setSidebarWidth(SIDEBAR_WIDTH);
         await openMainPanel();
         await setPanelWidth(width);
     } else {
@@ -375,7 +375,9 @@ describe(`named states, Tier A (${LOOK} look)`, () => {
                 }
             }
         }
-        await startWindow();
+        // The suite never sizes the window (ChromeDriver cannot on Electron): a change of VS Code's own window shows here.
+        const window = await windowSize();
+        console.warn(`[capture] window ${window.width}x${window.height}`);
         await openSidebarView();
         await openMainPanel();
         await enterMainWebview();
