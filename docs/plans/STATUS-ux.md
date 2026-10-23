@@ -23,7 +23,7 @@ only under per-section lists. A cut feature's P5 rows become `skipped`.
 
 | ID | Phase | Item | Status | Commit | Date | Notes |
 |---|---|---|---|---|---|---|
-| P0.0 | P0 | Owner action: apply the bundled settings patch; the first session commits it | owner action |  |  | `git -C ~/github/nuiget apply patches/settings-and-launch.patch`, then start a session (the patch includes `gh workflow run ci.yml` and `npm view`) |
+| P0.0 | P0 | Owner action: apply the bundled settings patch; the first session commits it | done |  | 2026-10-23 | `git -C ~/github/nuiget apply patches/settings-and-launch.patch`, then start a session (the patch includes `gh workflow run ci.yml` and `npm view`). Committed by the first session: `git apply --check -R patches/settings-and-launch.patch` passed (the patch is applied exactly); `grep -c 'code-server' .claude/settings.json` → 1; `grep -c 'gh workflow run' .claude/settings.json` → 1 |
 | P0.1 | P0 | Workflow-by-name probe: design-judge, precommit-review, phase-review in an Opus session, ultracode off | open |  |  |  |
 | P0.3 | P0 | Protocol replacement: CLAUDE.md UX section, copilot-instructions rows, advisor agent texts, ledger letters | open |  |  |  |
 | P0.2 | P0 | Hook: owner-only settings, `.claude/.test-retire`, read-only `gh api`, advisors' CONSULT text | open |  |  |  |
