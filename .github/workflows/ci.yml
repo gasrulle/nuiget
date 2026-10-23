@@ -567,13 +567,14 @@ jobs:
             process.exit(problems.length === 0 ? 0 : 1);'
 
   # macOS (UX-P0.9): the Tier A capture suite, both looks, on a real window manager; captures and measurements, never
-  # goldens (plan §2.6). macos-latest's display is 1024x768, too narrow for a 1200 px panel, and its Anka resolution
-  # call is refused (dispatch 39998544491), so the lane runs on the larger Intel runner (owner ruling of 2026-10-23, paid
-  # minutes) and sets the display to 1440x900 (the per-push ui job's window) before the run.
+  # goldens (plan §2.6). It runs on the free standard Intel runner and sets the display to 1440x900 (the per-push ui
+  # job's window) before the run: macos-latest (arm64) has a 1024x768 display and refuses Anka's resolution call
+  # (dispatch 39998544491), and macos-latest-large never started (dispatch 40011268413); the owner withdrew paid minutes
+  # on 2026-10-23.
   ui-macos:
     name: UI macOS
     if: github.event_name == 'workflow_dispatch' && inputs.tier == 'B'
-    runs-on: macos-latest-large
+    runs-on: macos-26-intel
     timeout-minutes: 45
     env:
       NUIGET_UI_LANE: macos
@@ -640,7 +641,7 @@ jobs:
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: /tmp/nuiget-ui/Visual Studio Code.app
-          key: extester-vscode-1.140.0-${{ runner.os }}
+          key: extester-vscode-1.140.0-${{ runner.os }}-${{ runner.arch }}
 
       - name: Capture Tier A on macOS
         run: npm run test:ui:macos 2>&1 | tee "$RUNNER_TEMP/ui-output.txt"
