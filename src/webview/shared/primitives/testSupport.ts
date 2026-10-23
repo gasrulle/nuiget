@@ -30,17 +30,23 @@ export function installFakeLayout({ viewport, row }: FakeLayout = { viewport: 12
         Object.defineProperty(target, name, { configurable: true, ...descriptor });
     };
 
-    // The virtualizer reads the size of its scroll element from these two.
-    define(HTMLElement.prototype, 'offsetHeight', {
-        get(this: HTMLElement) {
-            return this.matches(LIST) ? viewport : 0;
-        },
-    });
-    define(HTMLElement.prototype, 'offsetWidth', {
-        get(this: HTMLElement) {
-            return this.matches(LIST) ? LIST_WIDTH : 0;
-        },
-    });
+    // The virtualizer reads the size of its scroll element from the client box (virtual-core 3.19.6 and later) or
+    // the offset box (earlier versions); the list has no border or scrollbar here, so both are the same.
+    for (const [height, width] of [
+        ['offsetHeight', 'offsetWidth'],
+        ['clientHeight', 'clientWidth'],
+    ] as const) {
+        define(HTMLElement.prototype, height, {
+            get(this: HTMLElement) {
+                return this.matches(LIST) ? viewport : 0;
+            },
+        });
+        define(HTMLElement.prototype, width, {
+            get(this: HTMLElement) {
+                return this.matches(LIST) ? LIST_WIDTH : 0;
+            },
+        });
+    }
     // A row and everything in it has the row's box; the Listbox measures rows and anchors menus with it.
     define(Element.prototype, 'getBoundingClientRect', {
         writable: true,

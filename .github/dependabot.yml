@@ -2,9 +2,9 @@ version: 2
 
 # Dependabot only opens pull requests. CI decides what happens to them: the dependabot-auto-merge workflow arms
 # GitHub auto-merge on every pull request Dependabot opens, so a green one merges itself and a red one stays open
-# for the next dependency item of the current plan. npm majors are never opened (TypeScript 6, @types/node 24 and
-# MSW 2 are pinned on purpose; an agent item evaluates majors under the full gate list). Automated sessions never
-# merge anything.
+# for the next dependency item of the current plan. npm majors are never opened (TypeScript 6 and @types/node 24 are
+# pinned on purpose, msw is unused and awaits the dependency sweep; an agent item evaluates majors under the full
+# gate list). Automated sessions never merge anything.
 updates:
   - package-ecosystem: github-actions
     directory: /
@@ -31,6 +31,24 @@ updates:
     ignore:
       - dependency-name: "*"
         update-types: ["version-update:semver-major"]
+      # The majors below are pinned on purpose (UX plan D43). Each rule names its constraint, re-checked on
+      # 2026-10-23 (UX-P0.4); the blanket rule above covers them too, these say why and keep them when it changes.
+      # typescript-eslint 8.72.0 declares the peer typescript ">=4.8.4 <6.1.0" (npm view typescript-eslint
+      # peerDependencies; latest typescript 7.0.2), so TypeScript 7 cannot be parsed.
+      - dependency-name: "typescript"
+        versions: [">=7.0.0"]
+      # The toolchain and CI run Node 24 (.nvmrc); the types follow the runtime, not the newest major (latest 26.x).
+      - dependency-name: "@types/node"
+        versions: [">24"]
+      # No peer pins msw: @vitest/mocker 5.0.x declares msw "^2.4.9 || ^3.0.0" (the plan's premise of an MSW 2 peer
+      # no longer holds). msw has no importer, and a major of an unused development package is lock churn; the
+      # dependency sweep (post-release) removes the package and this rule together.
+      - dependency-name: "msw"
+        versions: [">=3.0.0"]
       # Pinned to the engines.vscode minimum (1.85); a newer @types/vscode fails check:vsix and lets code use APIs
       # the supported hosts lack. Bumped only together with engines.vscode, by a plan item.
       - dependency-name: "@types/vscode"
+      # The icons are generated from one exact-pinned release (ADR-012); a release bump is its own plan item, which
+      # regenerates the icons and re-checks the attribution. Every version is ignored; the rule may precede the
+      # package, which a later plan item adds.
+      - dependency-name: "@vscode/codicons"
