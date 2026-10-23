@@ -316,11 +316,17 @@ jobs:
           path: /tmp/nuiget-ui/VSCode-linux-x64
           key: extester-vscode-1.140.0-${{ runner.os }}
 
-      # A short storage path keeps the VS Code IPC socket under the Unix path limit, and the extensions directory under
-      # it keeps ExTester from installing into ~/.vscode/extensions. The log is written outside the checkout: vsce
-      # packages the working directory, and check:vsix below refuses any file it does not allow.
+      # The v2 suites on the e2e workspace, then the capture suite of the named states on the dense workspace
+      # (test:ui:capture). The scripts carry --storage /tmp/nuiget-ui (a short path keeps the VS Code IPC socket under
+      # the Unix limit) and --extensions_dir under it. The screen is 1920x1080 so that a 1200 px panel fits beside a
+      # 300 px side bar (H77). The log is written outside the checkout: vsce packages the working directory, and
+      # check:vsix below refuses any file it does not allow.
       - name: Run UI tests
-        run: xvfb-run -a npm run test:ui -- --storage /tmp/nuiget-ui --extensions_dir /tmp/nuiget-ui/extensions 2>&1 | tee "$RUNNER_TEMP/ui-output.txt"
+        run: xvfb-run -a -s "-screen 0 1920x1080x24" npm run test:ui 2>&1 | tee "$RUNNER_TEMP/ui-output.txt"
+
+      # The classic look's pass of the theme-sensitive states (settings.classic.json, NUIGET_UI_LOOK=classic).
+      - name: Capture the classic look
+        run: xvfb-run -a -s "-screen 0 1920x1080x24" npm run test:ui:classic 2>&1 | tee "$RUNNER_TEMP/ui-classic-output.txt"
 
       - name: Check VSIX contents
         run: npm run check:vsix
@@ -330,12 +336,14 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: ui-log
-          path: ${{ runner.temp }}/ui-output.txt
+          path: |
+            ${{ runner.temp }}/ui-output.txt
+            ${{ runner.temp }}/ui-classic-output.txt
           if-no-files-found: ignore
 
-      # The named states of the v2 UI tests (plan item P9.0, D18) and ExTester's screenshots of failed tests, under
-      # <run timestamp>/<state>.png. Uploaded on success too: an item that changes a webview is done only once its
-      # states were looked at. No screenshot at all is a failure of this step.
+      # The webview crops of the named states at the root (<state>.<theme>.<width>.png, UX-P0.8), the window PNGs of
+      # the v2 suites and of the capture runs under <run timestamp>/, and ExTester's screenshots of failed tests.
+      # Uploaded on success too. No screenshot at all is a failure of this step.
       - name: Upload UI screenshots
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -344,20 +352,23 @@ jobs:
           path: /tmp/nuiget-ui/screenshots
           if-no-files-found: error
 
-      # Every state of `ScreenshotState` in the helpers has its PNG; the names are read from that union, the one list.
+      # The one list of named states, src/test/ui/v2/states.ts (compiled by test:ui): every capture of a ready state is
+      # a crop at the root, no file exists for a pending state, and every state of the 2.0 set still has its window PNG
+      # under a timestamp folder, so none is dropped.
       - name: Check the named screenshots
         run: |
-          states=$(sed -n '/^export type ScreenshotState/,/;$/p' src/test/ui/v2/sidebarWebview.ts | grep -oE "'[a-z0-9-]+'" | tr -d "'")
-          count=$(echo "$states" | grep -c .)
-          missing=0
-          for state in $states; do
-            if ! ls /tmp/nuiget-ui/screenshots/*/"$state.png" > /dev/null 2>&1; then
-              echo "::error::no screenshot of the state $state"
-              missing=1
-            fi
-          done
-          echo "$count named states; PNGs in the artifact: $(find /tmp/nuiget-ui/screenshots -name '*.png' | wc -l)"
-          test "$count" -ge 12 && test "$missing" -eq 0
+          node -e '
+            const fs = require("fs");
+            const path = require("path");
+            const { LEGACY_STATES, expectedFiles, screenshotProblems } = require("./out/test/ui/v2/states.js");
+            const root = "/tmp/nuiget-ui/screenshots";
+            const entries = fs.readdirSync(root, { withFileTypes: true });
+            const crops = entries.filter(entry => entry.isFile() && entry.name.endsWith(".png")).map(entry => entry.name);
+            const windows = entries.filter(entry => entry.isDirectory()).flatMap(entry => fs.readdirSync(path.join(root, entry.name)));
+            const problems = screenshotProblems(crops, windows);
+            for (const problem of problems) console.log("::error::" + problem);
+            console.log(expectedFiles().length + " captures expected, " + crops.length + " crops at the root, " + LEGACY_STATES.length + " states of the 2.0 set");
+            process.exit(problems.length === 0 && LEGACY_STATES.length >= 15 ? 0 : 1);'
 
   build:
     name: Build & Package

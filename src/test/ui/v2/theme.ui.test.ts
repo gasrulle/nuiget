@@ -1,7 +1,8 @@
 import { expect } from 'chai';
 import * as fs from 'fs';
 import * as path from 'path';
-import { By, InputBox, Key, Workbench } from 'vscode-extension-tester';
+import { By, Key } from 'vscode-extension-tester';
+import { selectTheme as pickTheme } from './layout';
 import { enterMainWebview, openMainPanel } from './mainWebview';
 import { driverOf, enterSidebarWebview, findByTestId, leaveWebview, openSidebarView, poll, screenshot } from './sidebarWebview';
 
@@ -66,28 +67,9 @@ const RUN_AXE = `
 
 const nameOf = (theme: Theme): string => theme.labels[0];
 
-/** Picks `theme` in the Color Theme quick pick by an exact label (a filter for one label also shows longer ones). */
+/** Picks `theme` in the Color Theme quick pick by an exact label (`layout.ts`, shared with the capture suite). */
 async function selectTheme(theme: Theme): Promise<void> {
-    await poll(async () => {
-        await driverOf().switchTo().defaultContent();
-        await new Workbench().executeCommand('Preferences: Color Theme');
-        const input = await InputBox.create();
-        const offered: string[] = [];
-        for (const label of theme.labels) {
-            await input.setText(label);
-            for (const pick of await input.getQuickPicks()) {
-                const shown = await pick.getLabel();
-                if (shown === label) {
-                    await pick.select();
-                    return true;
-                }
-                offered.push(shown);
-            }
-        }
-        await input.cancel();
-        // Reported by poll as the last reason when the theme never shows up.
-        throw new Error(`offered: ${offered.map(label => JSON.stringify(label)).join(', ')}`);
-    }, `the theme "${nameOf(theme)}" in the quick pick`, 60_000);
+    await pickTheme(theme.labels);
 }
 
 /** Waits until the webview the driver is in carries the body class of `theme`, which VS Code sets with its variables. */

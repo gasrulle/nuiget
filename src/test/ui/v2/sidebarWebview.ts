@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { ActivityBar, By, VSBrowser, type WebDriver, type WebElement } from 'vscode-extension-tester';
+import type { LegacyState } from './states';
 
 /**
  * Helpers of the 2.0 UI suite. They share nothing with `src/test/ui/helpers`, which belongs to the 1.x
@@ -22,31 +23,11 @@ export function tokenPx(name: string): number {
 }
 
 /**
- * The named states the UI job screenshots (plan item P9.0, decision D18). CI uploads them as the `ui-screenshots`
- * artifact, and an item that changes a webview is done only once its states were looked at.
- */
-export type ScreenshotState =
-    | 'main-installed-single'
-    | 'main-installed-single-light'
-    | 'main-installed-single-hc'
-    | 'main-installed-all'
-    | 'main-transitive-expanded'
-    | 'main-transitive-details'
-    | 'main-updates'
-    | 'main-browse-results'
-    | 'main-browse-details'
-    | 'main-quicksearch-open'
-    | 'main-quicksearch-versions'
-    | 'main-details-readme'
-    | 'sidebar-sections'
-    | 'sidebar-update-all-dialog'
-    | 'sidebar-narrow-200px';
-
-/**
- * Screenshots the whole VS Code window into `<storage>/screenshots/<run timestamp>/<state>.png`. WebDriver captures
+ * Screenshots the whole VS Code window into `<storage>/screenshots/<run timestamp>/<state>.png`, one of the 2.0 set
+ * on the e2e workspace (`LEGACY_STATES` of `states.ts`, the one list of named states since UX-P0.8). WebDriver captures
  * the top-level window whatever frame the driver is in, so a test may call this from inside a webview.
  */
-export async function screenshot(state: ScreenshotState): Promise<void> {
+export async function screenshot(state: LegacyState): Promise<void> {
     await VSBrowser.instance.takeScreenshot(state);
 }
 

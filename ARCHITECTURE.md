@@ -917,7 +917,7 @@ These parts are the current truth for the build, test and release pipeline.
   | Lint | — | `npm run lint`, the guard hook tests, then `npm run docs:check` and `npm run check:matrix` |
   | Test (ubuntu, windows) | — | Unit tests with .NET SDK 10 installed; coverage on ubuntu |
   | E2E (VS Code 1.90.0, stable) | — | Production build with the ceiling check (sizes in the job summary), then the `v2-*` extension-host suite under Xvfb; log artifact per version |
-  | UI | Lint, Test | ExTester packages a VSIX and runs `src/test/ui/v2` under Xvfb, then `check:vsix` on that build; log artifact, and `ui-screenshots` on every run: the named states of `ScreenshotState` (`src/test/ui/v2/sidebarWebview.ts`, D18) and the screenshots of failed tests; a named state without a PNG fails the job |
+  | UI | Lint, Test | Restores the dense workspace (SDK 10 and 8.0.425), then ExTester packages a VSIX and runs `src/test/ui/v2` under Xvfb (1920x1080), the capture suite of the named states and its classic pass, then `check:vsix` on that build; log artifact, and `ui-screenshots` on every run: the webview crops `<state>.<theme>.<width>.png` of the ready states of `src/test/ui/v2/states.ts`, the window PNGs of the v2 suites and the screenshots of failed tests; a missing crop, a crop of a pending state or a missing state of the 2.0 set fails the job |
   | Build & Package | Lint, Test, E2E | Type check, production build, `check:vsix`, VSIX uploaded as artifact `vsix` |
   | Benchmark (informational) | — | Compares against `benchmarks/baseline.json`; never fails the run |
 
@@ -926,7 +926,10 @@ These parts are the current truth for the build, test and release pipeline.
 - **The suites under test.** `npm run test:e2e` runs the extension-host suite: `.vscode-test.mjs` selects
   `out/test/e2e/v2-*.e2e.test.js` against what
   was last built into `dist/`. `npm run test:ui` runs `src/test/ui/v2` through ExTester, which packages its VSIX
-  through `vscode:prepublish`, the production build. The two suites divide the work by what each can see. The
+  through `vscode:prepublish`, the production build, and then the capture suite (`src/test/ui/v2/capture`,
+  `npm run test:ui:capture`) on the installed VSIX: it opens the dense workspace, reaches each ready state of
+  `src/test/ui/v2/states.ts` and writes its webview crop with `scripts/crop-png.mjs`; a pending state names the item
+  that renders its markers and is never captured. The two suites divide the work by what each can see. The
   extension-host suite (`src/test/e2e/v2-*.e2e.test.ts`, one file per legacy e2e file since P5.12a, shared steps in `v2Support.ts`)
   shows that the extension activates,
   that every contributed command answers, that the main panel is one tab that closes and opens again, and that

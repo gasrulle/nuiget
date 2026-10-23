@@ -31,8 +31,8 @@ only under per-section lists. A cut feature's P5 rows become `skipped`.
 | P0.5 | P0 | Coverage floor 65/50/55/65 → 90/80/85/90 | done | 5e56cf8 | 2026-10-23 | `vitest.config.mts` at `edea0da` (totals 95.83/89.85/94.34/96.26). The Auto-mode classifier denied the Edit of `.github/workflows/ci.yml` and `.github/copilot-instructions.md` ("[Modify Shared Resources]"); the owner applied `patches/ux-p0.5-coverage-labels.patch` and the closing commit records it. Note `docs/plans/handoff/P0.5.md` |
 | P0.5b | P0 | Floor 1.90.0: engines, @types/vscode, esbuild targets and ceilings, E2E matrix, CSS-baseline lint at 122, ADR-000 | done | b2739b9 | 2026-10-23 | round 2 (D54). Deviation: `@types-host/node` is `npm:@types/node@20.19.43`, not D25's `20.9.5` (the 20.9 declarations fail under TypeScript 6; architecture-advisor ruling; owner ratifies the plan literal). Owner action for P7.5: replace the `main` ruleset's required check `E2E (1.85.0)` with `E2E (1.90.0)` before the release PR merges. Note `docs/plans/handoff/P0.5b.md` |
 | P0.6 | P0 | Dense static fixture workspace (three SDK projects, CPM, multi-TFM, Unsupported on SDK 8.0.425, two folders) | done | c088de9 | 2026-10-23 | Restores exit 0; `Newtonsoft.Json` 12.0.1 the only vulnerable pin; Unsupported resolves 8.0.425; Gateway opts out of the `app/` CPM props. Note `docs/plans/handoff/P0.6.md` |
-| P0.7 | P0 | UI job: SDK 8.0.425 + 10.0.x, fixture restore with cache, Unsupported check, VS Code 1.140.0 pin, look keys | done |  | 2026-10-23 | `f3e384c` + `a211ffc` (CRLF fix). Run 39964817340: VS Code 1.140.0, Unsupported 8.0.425, 45 passing under Modern UI; attempt 2 restored both caches. Note `docs/plans/handoff/P0.7.md` |
-| P0.8 | P0 | Named states Tier A: `states.ts`, capture suite, `crop-png.mjs`, width/theme helpers, new state cells | open |  |  |  |
+| P0.7 | P0 | UI job: SDK 8.0.425 + 10.0.x, fixture restore with cache, Unsupported check, VS Code 1.140.0 pin, look keys | done | 4c5c0b1 | 2026-10-23 | `f3e384c` + `a211ffc` (CRLF fix). Run 39964817340: VS Code 1.140.0, Unsupported 8.0.425, 45 passing under Modern UI; attempt 2 restored both caches. Note `docs/plans/handoff/P0.7.md` |
+| P0.8 | P0 | Named states Tier A: `states.ts`, capture suite, `crop-png.mjs`, width/theme helpers, new state cells | in-progress |  | 2026-10-23 | Ruling: capture what the dense workspace reaches; 9 states `pending` (P2.8b ×5, P3.1b, P3.10 ×3). Note `docs/plans/handoff/P0.8.md` |
 | P0.9 | P0 | Tier B matrix, the 1.90.0 floor lane (closes N64) and the macOS lane on `workflow_dispatch` | open |  |  | round 2 (D55) |
 | P0.10 | P0 | `measure.ts` (1): registry, hard/pending, gap membership, shared insets, PF-6, §8.1 P0 hooks | open |  |  |  |
 | P0.11 | P0 | `measure.ts` (2): heights with workbench parity, box centring, PF-3b, PF-5 | open |  |  |  |
@@ -216,3 +216,12 @@ the tag `labs/ux-<phase>-done`.
 ## Advisor decisions
 
 Rulings that span items, verbatim, with date and item. A ruling for one item goes into that item's handoff note.
+
+- 2026-10-23, UX-P0.8, architecture-advisor (state cells a static fixture can produce; the full ruling is in
+  `docs/plans/handoff/P0.8.md`): "a state cell that a static fixture can produce (an empty project; a project with a
+  `$(UndefinedVersion)` reference; a folder whose `nuget.config` names a `.invalid` source) is produced by the owning
+  item adding that fixture to `src/test/ui/fixtures/dense-workspace/` in its own commit, with `dense-fixture.test.ts`
+  and the `ci.yml` restore list and cache key following and the four existing projects byte-identical (§2.6: static,
+  never mutated at runtime; that item verifies `dotnet restore` of the new project and decides whether the restore
+  step excludes it); loading-first and revalidating have no static-fixture path, so P2.8b opens a stop-and-ask on its
+  hold mechanism before writing code; a product hook or a runtime settings write is never the mechanism."
