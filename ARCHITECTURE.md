@@ -939,7 +939,8 @@ These parts are the current truth for the build, test and release pipeline.
   with the pending list. Before the first state the run measures the workbench's own controls in its look (the
   Extensions view and an extension's editor, the Settings editor, the command palette; `src/test/ui/v2/workbench.ts`),
   prints one `[workbench]` line per control and writes `workbench.<look>.json` next to the crops: the height rules
-  compare a control with the workbench's of the same run. A pending state names the item that renders its markers and
+  compare a control with the workbench's of the same run, and the `ui` job's files are kept as
+  `docs/design/workbench/<look>.json`. A pending state names the item that renders its markers and
   is never captured. The two suites divide the work by what each can see. The
   extension-host suite (`src/test/e2e/v2-*.e2e.test.ts`, one file per legacy e2e file since P5.12a, shared steps in `v2Support.ts`)
   shows that the extension activates,

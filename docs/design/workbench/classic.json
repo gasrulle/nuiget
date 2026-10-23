@@ -1,0 +1,102 @@
+{
+  "look": "classic",
+  "lane": "ui",
+  "vscode": "1.140.0",
+  "chromium": "150",
+  "platform": "linux",
+  "dpr": 1,
+  "window": "1440x900",
+  "run": "40039425246",
+  "widgets": {
+    "extensionsRow": {
+      "fontSize": "13px",
+      "height": 72,
+      "lineHeight": "18.2px",
+      "padding": "0px 0px 0px 0px",
+      "radius": "0px",
+      "selector": ".extensions-viewlet .monaco-list-row",
+      "width": 300
+    },
+    "extensionsSearch": {
+      "fontSize": "13px",
+      "height": 26,
+      "lineHeight": "18.2px",
+      "padding": "2px 6px 2px 6px",
+      "radius": "4px",
+      "selector": ".extensions-viewlet .suggest-input-container",
+      "width": 268
+    },
+    "paneHeader": {
+      "fontSize": "11px",
+      "height": 22,
+      "lineHeight": "22px",
+      "padding": "0px 0px 0px 0px",
+      "radius": "0px",
+      "selector": ".part.sidebar .pane-header",
+      "width": 300
+    },
+    "extensionNavbar": {
+      "fontSize": "14px",
+      "height": 37,
+      "lineHeight": "36px",
+      "padding": "0px 0px 0px 20px",
+      "radius": "0px",
+      "selector": ".extension-editor .navbar",
+      "width": 1037.4
+    },
+    "settingsSelect": {
+      "fontSize": "13px",
+      "height": 26,
+      "lineHeight": "18.2px",
+      "padding": "2px 6px 2px 6px",
+      "radius": "4px",
+      "selector": ".settings-editor .setting-item-control .monaco-select-box",
+      "width": 320
+    },
+    "settingsInput": {
+      "fontSize": "13px",
+      "height": 25,
+      "lineHeight": "18.2px",
+      "padding": "0px 0px 0px 0px",
+      "radius": "4px",
+      "selector": ".settings-editor .setting-item-control .monaco-inputbox",
+      "width": 200
+    },
+    "settingsButton": {
+      "fontSize": "12px",
+      "height": 26,
+      "lineHeight": "16px",
+      "padding": "4px 8px 4px 8px",
+      "radius": "4px",
+      "selector": ".settings-editor .setting-list-addButton",
+      "width": 88.2
+    },
+    "editorTabs": {
+      "fontSize": "13px",
+      "height": 35,
+      "lineHeight": "18.2px",
+      "padding": "0px 0px 0px 0px",
+      "radius": "0px",
+      "selector": ".part.editor .title.tabs",
+      "width": 1092
+    },
+    "quickInputBox": {
+      "fontSize": "13px",
+      "height": 25,
+      "lineHeight": "18.2px",
+      "padding": "0px 0px 0px 0px",
+      "radius": "6px",
+      "selector": ".quick-input-widget .quick-input-box .monaco-inputbox",
+      "width": 588
+    },
+    "quickInputRow": {
+      "fontSize": "13px",
+      "height": 22,
+      "lineHeight": "22px",
+      "padding": "0px 0px 0px 0px",
+      "radius": "3px",
+      "selector": ".quick-input-widget .quick-input-list .monaco-list-row",
+      "width": 588
+    }
+  }
+}
