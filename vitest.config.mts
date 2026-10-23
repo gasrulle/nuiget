@@ -31,10 +31,10 @@ export default defineConfig({
                 'src/global.d.ts',
             ],
             thresholds: {
-                statements: 65,
-                branches: 50,
-                functions: 55,
-                lines: 65,
+                statements: 90,
+                branches: 80,
+                functions: 85,
+                lines: 90,
                 // Ratchet for the webviews at the values measured at P8.2b (2.0 only since then), floored; raise, never lower.
                 'src/webview/**': {
                     statements: 95,
