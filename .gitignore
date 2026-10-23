@@ -55,6 +55,10 @@ benchmarks/latest.json
 
 # Contract-change sentinel for the 2.0 plan (D6): exists only while an approved contract edit is in progress
 .claude/.contract-change
+# Test-retirement sentinel of the UX plan (D29): exists only while an item retires the test paths it lists
+.claude/.test-retire
+# CI captures downloaded by a session (RUN-ux.md §4): cited by run id and sha256, never committed
+captures/
 
 # Environment files
 .env
@@ -74,6 +78,12 @@ pnpm-lock.yaml
 !resources/*.png
 !docs/images/*.gif
 !docs/images/*.png
+# UX plan: committed artboard renders, goldens, probe evidence and the Marketplace captures
+!docs/design/**/*.png
+!src/test/ui/v2/golden/**/*.png
+!resources/readme/*.png
+!resources/readme/*.gif
+!docs/ux/reference-2.0/*.png
 
 # OS generated files
 Thumbs.db

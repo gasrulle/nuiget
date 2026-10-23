@@ -32,6 +32,8 @@ package-lock.json
 .claude/**
 CLAUDE.md
 .mcp.json
+# Owner settings patches of the UX plan (applied by the owner, never shipped)
+patches/**
 
 # Documentation that is not shown on the Marketplace page
 ARCHITECTURE.md

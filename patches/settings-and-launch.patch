@@ -1,0 +1,47 @@
+diff --git a/.claude/settings.json b/.claude/settings.json
+--- a/.claude/settings.json
++++ b/.claude/settings.json
+@@ -69,7 +69,26 @@
+       "Bash(gh pr ready:*)",
+       "Bash(node scripts/perf-baseline.mjs:*)",
+       "Bash(npm run perf:baseline:*)",
+-      "Bash(node scripts/probe-sdk.mjs:*)"
++      "Bash(node scripts/probe-sdk.mjs:*)",
++      "Bash(code-server *)",
++      "mcp__Claude_Browser__*",
++      "Bash(npx extest:*)",
++      "Bash(xvfb-run -a npx extest:*)",
++      "Bash(npm run check:*)",
++      "Bash(gh api:*)",
++      "Bash(gh workflow run ci.yml:*)",
++      "Bash(npm view:*)",
++      "Bash(shasum -a 256:*)",
++      "Bash(git worktree add:*)",
++      "Bash(git worktree list:*)",
++      "Bash(gh --version)",
++      "Bash(git apply --check:*)",
++      "Bash(npm ci --no-audit --no-fund)",
++      "Bash(cat:*)",
++      "Bash(head:*)",
++      "Bash(tail:*)",
++      "Bash(sed -n:*)",
++      "Bash(date:*)"
+     ],
+     "ask": [
+       "Bash(npm version:*)"
+diff --git a/.claude/launch.json b/.claude/launch.json
+new file mode 100644
+--- /dev/null
++++ b/.claude/launch.json
+@@ -0,0 +1,11 @@
++{
++  "version": "0.0.1",
++  "autoVerify": false,
++  "configurations": [
++    {
++      "name": "nuiget-web",
++      "port": 8000,
++      "url": "http://127.0.0.1:8000"
++    }
++  ]
++}

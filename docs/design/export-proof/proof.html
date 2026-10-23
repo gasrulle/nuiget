@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>export-proof</title>
+<link id="theme" rel="stylesheet" href="dark-modern.css">
+<script>
+    // ?theme=<slug> swaps the theme dump before first paint (the renderer's theme axis).
+    (function () {
+        var theme = new URLSearchParams(location.search).get('theme');
+        if (theme && /^[a-z0-9-]+$/.test(theme)) { document.getElementById('theme').href = theme + '.css'; }
+        document.documentElement.dataset.theme = theme || 'dark-modern';
+    })();
+</script>
+<style>
+html, body { margin: 0; background: var(--vscode-editor-background); }
+body { font-family: var(--vscode-font-family); font-size: var(--vscode-font-size); color: var(--vscode-foreground); }
+[data-artboard] {
+    position: relative;
+    box-sizing: border-box;
+    overflow: hidden;
+    background-color: var(--vscode-editor-background);
+    background-image:
+        linear-gradient(to right, var(--vscode-editorIndentGuide-background1) 1px, transparent 1px),
+        linear-gradient(to bottom, var(--vscode-editorIndentGuide-background1) 1px, transparent 1px);
+    background-size: 16px 16px;
+    box-shadow: inset 0 0 0 1px var(--vscode-textLink-foreground);
+}
+.block { position: absolute; left: 16px; box-sizing: border-box; padding-left: 8px; white-space: nowrap; }
+.header { top: 32px; width: 900px; height: 28px; line-height: 28px; background: var(--vscode-list-inactiveSelectionBackground); }
+.row { top: 80px; width: 900px; height: 72px; line-height: 72px; background: var(--vscode-list-activeSelectionBackground); color: var(--vscode-list-activeSelectionForeground); }
+.button { top: 176px; width: 120px; height: 26px; line-height: 26px; background: var(--vscode-button-background); color: var(--vscode-button-foreground); }
+.caption { position: absolute; left: 16px; top: 384px; height: 16px; line-height: 16px; color: var(--vscode-descriptionForeground); }
+</style>
+</head>
+<body>
+<div data-artboard style="width:932px;height:420px">
+    <div class="block header" data-block="header">header 28 px (900 × 28)</div>
+    <div class="block row" data-block="row">row 72 px (900 × 72)</div>
+    <div class="block button" data-block="button">button 26 px</div>
+    <div class="caption">artboard 932 × 420 px · grid 16 px · frame 1 px · blocks at x 16, y 32 / 80 / 176</div>
+</div>
+</body>
+</html>

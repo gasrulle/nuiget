@@ -1,0 +1,255 @@
+import * as fs from 'fs';
+import * as path from 'path';
+import { By, EditorView, InputBox, VSBrowser, Workbench } from 'vscode-extension-tester';
+import { driverOf, poll } from './sidebarWebview';
+
+/**
+ * One-off export proof for the UX initiative (2026-10-23). Not a test of the product: it opens an artboard served on
+ * 127.0.0.1 in VS Code's browser, records the artboard's rect and the device pixel ratio, and writes screenshots so a
+ * script can crop the artboard 1:1. Output goes to NUIGET_EXPORT_OUT. Run in a throwaway worktree only.
+ *
+ * On desktop 1.142 `simpleBrowser.show` is hidden from the palette (`when: isWeb`) and delegates to the integrated
+ * browser (`workbench.action.browser.open`), an Electron WebContentsView. Its page is a DevTools target of its own,
+ * so the proof looks for it among the window handles.
+ */
+
+const OUT = process.env.NUIGET_EXPORT_OUT ?? path.resolve('out/export');
+const TARGET = process.env.NUIGET_EXPORT_URL ?? 'http://127.0.0.1:8765/proof.html';
+const WIDTHS = (process.env.NUIGET_EXPORT_WIDTHS ?? '932,1280').split(',').map(Number);
+const THEMES = (process.env.NUIGET_EXPORT_THEMES ?? 'dark-modern,light-modern').split(',');
+
+interface PageProbe {
+    href: string;
+    readyState: string;
+    title: string;
+    innerWidth: number;
+    innerHeight: number;
+    dpr: number;
+    fonts: string | null;
+    rect: { x: number; y: number; w: number; h: number } | null;
+    workbench: boolean;
+}
+
+const PAGE_PROBE = `
+    const a = document.querySelector('[data-artboard]');
+    const r = a ? a.getBoundingClientRect() : null;
+    return JSON.stringify({
+        href: location.href, readyState: document.readyState, title: document.title,
+        innerWidth: window.innerWidth, innerHeight: window.innerHeight, dpr: window.devicePixelRatio,
+        fonts: document.fonts ? document.fonts.status : null,
+        rect: r ? { x: r.x, y: r.y, w: r.width, h: r.height } : null,
+        workbench: !!document.querySelector('.monaco-workbench'),
+    });
+`;
+
+const WORKBENCH_PROBE = `
+    const rectOf = n => { const r = n.getBoundingClientRect(); return { x: r.x, y: r.y, w: r.width, h: r.height, cls: typeof n.className === 'string' ? n.className : '' }; };
+    return JSON.stringify({
+        innerWidth: window.innerWidth, innerHeight: window.innerHeight, dpr: window.devicePixelRatio,
+        webviews: Array.from(document.querySelectorAll('iframe.webview')).map(rectOf),
+        containers: Array.from(document.querySelectorAll('.browser-container, .browser-container-wrapper, .browser-placeholder-contents, .browser-placeholder-screenshot, .browser-overlay-paused')).map(rectOf),
+        tabs: Array.from(document.querySelectorAll('.part.editor .tabs-container .tab .label-name')).map(n => n.textContent),
+    });
+`;
+
+const diag: Record<string, unknown> = { target: TARGET, startedAt: new Date().toISOString(), steps: [] };
+const step = (name: string, data?: unknown): void => {
+    (diag.steps as unknown[]).push({ t: new Date().toISOString(), name, data });
+    fs.writeFileSync(path.join(OUT, 'diag.json'), JSON.stringify(diag, null, 2));
+};
+
+async function probe<T>(script: string): Promise<T> {
+    return JSON.parse(await driverOf().executeScript<string>(script)) as T;
+}
+
+/** Opens the palette, types `>text`, and returns the labels it offers (then cancels). */
+async function paletteLabels(text: string): Promise<string[]> {
+    return poll(async () => {
+        await driverOf().switchTo().defaultContent();
+        const input = await new Workbench().openCommandPrompt();
+        await input.setText(`>${text}`);
+        await new Promise(resolve => setTimeout(resolve, 600));
+        const labels: string[] = [];
+        for (const pick of await input.getQuickPicks()) {
+            labels.push(await pick.getLabel());
+        }
+        await input.cancel();
+        return labels;
+    }, `the palette for "${text}"`, 60_000);
+}
+
+/** Runs the palette entry whose label is exactly `label` (no fuzzy Enter). */
+async function runPaletteEntry(text: string, label: string): Promise<void> {
+    await poll(async () => {
+        await driverOf().switchTo().defaultContent();
+        const input = await new Workbench().openCommandPrompt();
+        await input.setText(`>${text}`);
+        for (const pick of await input.getQuickPicks()) {
+            if ((await pick.getLabel()) === label) {
+                await pick.select();
+                return true;
+            }
+        }
+        await input.cancel();
+        return undefined;
+    }, `the palette entry "${label}"`, 60_000);
+}
+
+describe('Artboard export proof (not a product test)', () => {
+    it('opens the artboard in the VS Code browser and records its rect, DPR and screenshots', async function () {
+        this.timeout(300_000);
+        fs.mkdirSync(OUT, { recursive: true });
+        const driver = driverOf();
+        const t0 = Date.now();
+        await driver.switchTo().defaultContent();
+        const main = await driver.getWindowHandle();
+        step('handles-before', { main, all: await driver.getAllWindowHandles() });
+
+        step('palette-simple-browser', await paletteLabels('Simple Browser: Show'));
+        const browserLabels = await paletteLabels('Open Integrated Browser');
+        step('palette-integrated-browser', browserLabels);
+        const label = browserLabels.find(text => text.endsWith('Open Integrated Browser'));
+        if (!label) {
+            throw new Error(`no "Open Integrated Browser" entry; offered: ${browserLabels.join(' | ')}`);
+        }
+        await runPaletteEntry('Open Integrated Browser', label);
+        step('opened-browser', { label, ms: Date.now() - t0 });
+
+        // The URL picker is a quick pick anchored to the browser's URL bar.
+        const urlInput = await poll(async () => {
+            await driver.switchTo().defaultContent();
+            try {
+                return await InputBox.create(5_000);
+            } catch {
+                const display = await driver.findElements(By.css('.browser-url-display, .browser-url-container'));
+                if (display.length > 0) {
+                    await display[0].click();
+                }
+                return undefined;
+            }
+        }, 'the URL picker of the integrated browser', 60_000);
+        await urlInput.setText(TARGET);
+        await urlInput.confirm();
+        step('url-entered', { ms: Date.now() - t0 });
+
+        // Find the page among the window handles; always come back to the workbench.
+        const seen: Record<string, unknown> = {};
+        let page: { handle: string; probe: PageProbe } | undefined;
+        try {
+            page = await poll(async () => {
+                for (const handle of await driver.getAllWindowHandles()) {
+                    try {
+                        await driver.switchTo().window(handle);
+                        const result = await probe<PageProbe>(PAGE_PROBE);
+                        seen[handle] = result;
+                        if (result.href.startsWith(TARGET) && result.readyState === 'complete' && result.rect && result.fonts === 'loaded') {
+                            return { handle, probe: result };
+                        }
+                    } catch (error) {
+                        seen[handle] = { error: String(error) };
+                    }
+                }
+                await driver.switchTo().window(main);
+                return undefined;
+            }, 'a window handle showing the artboard', 60_000);
+        } finally {
+            step('handles-seen', seen);
+            if (!page) {
+                await driver.switchTo().window(main).catch(() => undefined);
+            }
+        }
+
+        // The page's own viewport screenshot: the artboard rect needs no ancestor offsets here.
+        await new Promise(resolve => setTimeout(resolve, 500));
+        const settled = await probe<PageProbe>(PAGE_PROBE);
+        fs.writeFileSync(path.join(OUT, 'page.png'), await driver.takeScreenshot(), 'base64');
+        const rect = { ...settled.rect!, dpr: settled.dpr, source: 'page.png', innerWidth: settled.innerWidth, innerHeight: settled.innerHeight };
+        fs.writeFileSync(path.join(OUT, 'rect.json'), JSON.stringify(rect, null, 2));
+        step('page-captured', { settled, ms: Date.now() - t0 });
+
+        // Controlled width and DPR 1 through DevTools on the page's own target, independent of the window size.
+        type Cdp = {
+            sendDevToolsCommand(cmd: string, params?: object): Promise<void>;
+            sendAndGetDevToolsCommand(cmd: string, params?: object): Promise<{ data: string }>;
+        };
+        const cdp = driver as unknown as Cdp;
+        try {
+            for (const width of WIDTHS) {
+                const t = Date.now();
+                await cdp.sendDevToolsCommand('Emulation.setDeviceMetricsOverride', { width, height: 900, deviceScaleFactor: 1, mobile: false });
+                const emulated = await poll(async () => {
+                    const result = await probe<PageProbe>(PAGE_PROBE);
+                    return result.innerWidth === width && result.dpr === 1 && result.rect ? result : undefined;
+                }, `the emulated viewport ${width}`, 15_000);
+                fs.writeFileSync(path.join(OUT, `page-dpr1-${width}.png`), await driver.takeScreenshot(), 'base64');
+                fs.writeFileSync(path.join(OUT, `rect-dpr1-${width}.json`), JSON.stringify({ ...emulated.rect!, dpr: 1, innerWidth: emulated.innerWidth, innerHeight: emulated.innerHeight }, null, 2));
+                const r = emulated.rect!;
+                const clip = await cdp.sendAndGetDevToolsCommand('Page.captureScreenshot', {
+                    format: 'png', clip: { x: r.x, y: r.y, width: r.w, height: r.h, scale: 1 }, captureBeyondViewport: true,
+                });
+                fs.writeFileSync(path.join(OUT, `clip-${width}.png`), clip.data, 'base64');
+                step(`emulated-${width}`, { emulated, ms: Date.now() - t });
+            }
+        } catch (error) {
+            step('emulation-error', String(error));
+        }
+
+        // The renderer's loop: navigate the same page target per theme, emulate each width, clip the artboard.
+        try {
+            for (const theme of THEMES) {
+                const tNav = Date.now();
+                const url = `${TARGET}?theme=${theme}`;
+                await driver.executeScript('location.assign(arguments[0]);', url);
+                await poll(async () => {
+                    const state = await driver.executeScript<string>(
+                        'return [location.href, document.readyState, document.documentElement.dataset.theme, document.fonts.status, !!document.querySelector("[data-artboard]")].join("|");');
+                    return state === `${url}|complete|${theme}|loaded|true` ? true : undefined;
+                }, `the artboard under ${theme}`, 15_000);
+                step(`navigated-${theme}`, { ms: Date.now() - tNav });
+                for (const width of WIDTHS) {
+                    const t = Date.now();
+                    await cdp.sendDevToolsCommand('Emulation.setDeviceMetricsOverride', { width, height: 900, deviceScaleFactor: 1, mobile: false });
+                    const emulated = await poll(async () => {
+                        const result = await probe<PageProbe>(PAGE_PROBE);
+                        return result.innerWidth === width && result.dpr === 1 && result.rect ? result : undefined;
+                    }, `the emulated viewport ${width} under ${theme}`, 15_000);
+                    const r = emulated.rect!;
+                    const clip = await cdp.sendAndGetDevToolsCommand('Page.captureScreenshot', {
+                        format: 'png', clip: { x: r.x, y: r.y, width: r.w, height: r.h, scale: 1 }, captureBeyondViewport: true,
+                    });
+                    fs.writeFileSync(path.join(OUT, `proof.${theme}.${width}.png`), clip.data, 'base64');
+                    step(`clip-${theme}-${width}`, { rect: r, ms: Date.now() - t });
+                }
+            }
+        } catch (error) {
+            step('loop-error', String(error));
+        } finally {
+            await cdp.sendDevToolsCommand('Emulation.clearDeviceMetricsOverride', {}).catch(() => undefined);
+        }
+
+        // The whole window, from the workbench handle.
+        await driver.switchTo().window(main);
+        await driver.switchTo().defaultContent();
+        const workbench = await probe<Record<string, unknown>>(WORKBENCH_PROBE);
+        await VSBrowser.instance.takeScreenshot('export-proof');
+        fs.writeFileSync(path.join(OUT, 'window.png'), await driver.takeScreenshot(), 'base64');
+        const containers = (workbench.containers as { x: number; y: number; w: number; h: number; cls: string }[]) ?? [];
+        const host = containers.find(c => c.cls.includes('browser-container') && !c.cls.includes('wrapper'));
+        if (host && page) {
+            fs.writeFileSync(path.join(OUT, 'rect-window.json'), JSON.stringify({
+                x: host.x + rect.x, y: host.y + rect.y, w: rect.w, h: rect.h, dpr: workbench.dpr, source: 'window.png', host,
+            }, null, 2));
+        }
+        step('window-captured', { workbench, screenshotsDir: VSBrowser.instance.getScreenshotsDir(), ms: Date.now() - t0 });
+
+        // Close the browser editor by its title (never a Ctrl+W chord).
+        const titles = await new EditorView().getOpenEditorTitles().catch(() => [] as string[]);
+        step('editor-titles', titles);
+        for (const title of titles) {
+            if (title.includes('export-proof') || title.includes('127.0.0.1') || title.toLowerCase().includes('browser')) {
+                await new EditorView().closeEditor(title).catch(() => undefined);
+            }
+        }
+        step('done', { ms: Date.now() - t0 });
+    });
+});

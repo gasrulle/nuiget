@@ -1,0 +1,158 @@
+/*
+ * Composition B · "Settings editor". The tokens this artboard's inline styles use; names follow
+ * src/webview/shared/tokens.css. Sizes alias VS Code's exported size tokens with the classic px value as fallback;
+ * row, header and strip heights stay literal (DECISIONS 2026-10-23, "Token source"). Modern UI numbers from
+ * probe/out-modern/workbench (VS Code 1.142.0, Dark Modern); the Settings numbers from settings.json of that probe
+ * and settingsEditor2.css. Colours are aliases of --vscode-* roles only, resolved by dark-modern.css.
+ */
+:root {
+    /* Spacing ramp (spacing.size*): 4 inside a group, 8 between groups */
+    --nuiget-space-hairline: var(--vscode-strokeThickness, 1px);
+    --nuiget-space-1: var(--vscode-spacing-size20, 2px);
+    --nuiget-space-2: var(--vscode-spacing-size40, 4px);
+    --nuiget-space-3: var(--vscode-spacing-size60, 6px);
+    --nuiget-space-4: var(--vscode-spacing-size80, 8px);
+    --nuiget-space-5: var(--vscode-spacing-size120, 12px);
+    --nuiget-space-6: var(--vscode-spacing-size160, 16px);
+    --nuiget-gap-group: var(--nuiget-space-2);
+    --nuiget-gap-between: var(--nuiget-space-4);
+
+    /* Insets: one start inset per surface, the end inset equal to it; the details pane uses the panel's 16 */
+    --nuiget-inset: var(--nuiget-space-6);
+    --nuiget-inset-sidebar: var(--nuiget-space-5);
+    --nuiget-inset-details: var(--nuiget-inset);
+    --nuiget-row-inset: var(--nuiget-space-2);
+    --nuiget-row-padding: calc(var(--nuiget-inset) - var(--nuiget-row-inset));
+    --nuiget-row-padding-sidebar: calc(var(--nuiget-inset-sidebar) - var(--nuiget-row-inset));
+    --nuiget-row-text-sidebar: calc(var(--nuiget-inset-sidebar) + var(--nuiget-icon-size) + var(--nuiget-space-2) - var(--nuiget-row-inset));
+    /* Settings scope tab: label padding 8 left and right */
+    --nuiget-tab-padding: var(--nuiget-space-4);
+    /* Settings item rhythm: 12 px above, 18 px below a block (setting-item-contents, probe) */
+    --nuiget-item-padding-top: var(--nuiget-space-5);
+    --nuiget-item-padding-bottom: 18px;
+    /* Property list label column */
+    --nuiget-label-width: 7em;
+
+    /* Heights, literal */
+    --nuiget-row-height-comfortable: 72px;
+    --nuiget-row-height-compact: 22px;
+    --nuiget-header-height: 28px;
+    --nuiget-title-height: 32px;
+    /* Settings scope-tab strip: 7 + 18.2 + 6.5 + 1 px underline (settingsEditor2.css:140-156) */
+    --nuiget-tab-height: 33px;
+    --nuiget-control-height: 26px;
+    --nuiget-control-line-height: 16px;
+    --nuiget-check-size: 18px;
+    --nuiget-badge-size: 19px;
+    --nuiget-action-size: 22px;
+    --nuiget-action-size-compact: 20px;
+    --nuiget-icon-size: var(--vscode-codiconFontSize, 16px);
+    --nuiget-icon-size-sm: var(--vscode-codiconFontSize-compact, 12px);
+    --nuiget-package-icon-size: 36px;
+    --nuiget-package-glyph-size: 20px;
+    --nuiget-scrollbar-size: 8px;
+    --nuiget-select-arrow-space: 22px;
+    --nuiget-search-action-space: 28px;
+    /* Layout state of this capture: the list pane's width (the 2.0 capture's split) and the sidebar's Installed pane */
+    --nuiget-list-width: 328px;
+    --nuiget-sidebar-split: 368px;
+
+    /* Radius */
+    --nuiget-radius-icon: var(--vscode-cornerRadius-xSmall, 2px);
+    --nuiget-radius-check: 3px;
+    --nuiget-radius-control: var(--vscode-cornerRadius-small, 4px);
+    --nuiget-radius-card: var(--vscode-cornerRadius-large, 8px);
+    --nuiget-radius-pill: var(--vscode-cornerRadius-circle, 9999px);
+
+    /* Type */
+    --nuiget-font-family: var(--vscode-font-family);
+    --nuiget-font-family-mono: var(--vscode-editor-font-family);
+    --nuiget-font-size-body: var(--vscode-fontSize-body1, 13px);
+    --nuiget-font-size-label: var(--vscode-fontSize-label1, 12px);
+    --nuiget-font-size-meta: var(--vscode-fontSize-label2, 11px);
+    --nuiget-font-size-badge: var(--vscode-fontSize-label3, 10px);
+    --nuiget-font-size-title: var(--vscode-fontSize-heading2, 18px);
+    --nuiget-font-size-section: var(--vscode-fontSize-heading3, 13px);
+    --nuiget-font-size-code: var(--vscode-editor-font-size, 12px);
+    --nuiget-font-weight-regular: var(--vscode-fontWeight-regular, 400);
+    --nuiget-font-weight-strong: var(--vscode-fontWeight-semiBold, 600);
+    --nuiget-line-height: 1.4;
+    --nuiget-code-line-height: 18px;
+    --nuiget-header-font-size: var(--nuiget-font-size-label);
+    --nuiget-header-transform: capitalize;
+    /* Tabs: the Settings scope tabs, 13 px labels, no transform */
+    --nuiget-tab-font-size: var(--nuiget-font-size-body);
+    --nuiget-tab-transform: none;
+    --nuiget-readme-h1: 2em;
+    --nuiget-readme-h2: 1.5em;
+    --nuiget-readme-badge-height: 20px;
+    --nuiget-opacity-disabled: 0.4;
+
+    /* Colours: surfaces and text */
+    --nuiget-color-bg: var(--vscode-editor-background);
+    --nuiget-color-bg-sidebar: var(--vscode-sideBar-background);
+    --nuiget-color-title-bg: var(--vscode-sideBarTitle-background);
+    --nuiget-color-title-fg: var(--vscode-sideBarTitle-foreground);
+    --nuiget-color-fg: var(--vscode-foreground);
+    --nuiget-color-fg-muted: var(--vscode-descriptionForeground);
+    --nuiget-color-fg-disabled: var(--vscode-disabledForeground);
+    --nuiget-color-link: var(--vscode-textLink-foreground);
+    --nuiget-color-icon: var(--vscode-icon-foreground);
+    --nuiget-color-icon-hover-bg: var(--vscode-toolbar-hoverBackground);
+    --nuiget-color-verified: var(--vscode-extensionIcon-verifiedForeground);
+    --nuiget-color-verified-mark: var(--vscode-editor-background);
+    --nuiget-color-icon-tile: var(--vscode-welcomePage-tileBackground);
+    --nuiget-color-version-new: var(--vscode-gitDecoration-addedResourceForeground, var(--vscode-charts-green));
+
+    /* Colours: lines. The panel's divider is the Settings editor's header border (same value as panelSection.border) */
+    --nuiget-color-divider: var(--vscode-settings-headerBorder, var(--vscode-panelSection-border));
+    --nuiget-color-section-header-bg: var(--vscode-sideBarSectionHeader-background);
+    --nuiget-color-section-header-fg: var(--vscode-sideBarSectionHeader-foreground);
+    --nuiget-color-section-header-border: var(--vscode-sideBarSectionHeader-border);
+
+    /* Colours: list rows */
+    --nuiget-color-list-hover-bg: var(--vscode-list-hoverBackground);
+    --nuiget-color-list-active-bg: var(--vscode-list-activeSelectionBackground);
+    --nuiget-color-list-active-fg: var(--vscode-list-activeSelectionForeground);
+    --nuiget-color-list-active-icon: var(--vscode-list-activeSelectionIconForeground);
+    --nuiget-color-list-focus-outline: var(--vscode-list-focusOutline);
+
+    /* Colours: tabs (panelTitle roles, where the Settings editor itself uses settings.headerForeground) */
+    --nuiget-color-tab-fg: var(--vscode-panelTitle-inactiveForeground);
+    --nuiget-color-tab-active-fg: var(--vscode-panelTitle-activeForeground);
+    --nuiget-color-tab-active-border: var(--vscode-panelTitle-activeBorder);
+
+    /* Colours: badges, buttons, inputs */
+    --nuiget-color-badge-bg: var(--vscode-badge-background);
+    --nuiget-color-badge-fg: var(--vscode-badge-foreground);
+    --nuiget-color-button-bg: var(--vscode-button-background);
+    --nuiget-color-button-fg: var(--vscode-button-foreground);
+    --nuiget-color-button-border: var(--vscode-button-border, transparent);
+    --nuiget-color-button-secondary-bg: var(--vscode-button-secondaryBackground);
+    --nuiget-color-button-secondary-fg: var(--vscode-button-secondaryForeground);
+    --nuiget-color-button-secondary-border: var(--vscode-button-secondaryBorder, var(--vscode-button-border, transparent));
+    --nuiget-color-checkbox-bg: var(--vscode-settings-checkboxBackground, var(--vscode-checkbox-background));
+    --nuiget-color-checkbox-fg: var(--vscode-settings-checkboxForeground, var(--vscode-checkbox-foreground));
+    --nuiget-color-checkbox-border: var(--vscode-settings-checkboxBorder, var(--vscode-checkbox-border));
+    --nuiget-color-dropdown-bg: var(--vscode-settings-dropdownBackground, var(--vscode-dropdown-background));
+    --nuiget-color-dropdown-fg: var(--vscode-settings-dropdownForeground, var(--vscode-dropdown-foreground));
+    --nuiget-color-dropdown-border: var(--vscode-settings-dropdownBorder, var(--vscode-dropdown-border));
+    --nuiget-color-input-bg: var(--vscode-input-background);
+    --nuiget-color-input-fg: var(--vscode-input-foreground);
+    --nuiget-color-input-border: var(--vscode-input-border, transparent);
+    --nuiget-color-scrollbar: var(--vscode-scrollbarSlider-background);
+
+    /* Colours: README code and badges */
+    --nuiget-color-code-bg: var(--vscode-textCodeBlock-background);
+    --nuiget-color-code-fg: var(--vscode-editor-foreground, var(--vscode-foreground));
+    --nuiget-color-syntax-type: var(--vscode-symbolIcon-classForeground, var(--vscode-editor-foreground));
+    --nuiget-color-syntax-string: var(--vscode-debugTokenExpression-string, var(--vscode-editor-foreground));
+    --nuiget-color-syntax-number: var(--vscode-debugTokenExpression-number, var(--vscode-editor-foreground));
+    --nuiget-color-syntax-comment: var(--vscode-editorLineNumber-activeForeground, var(--vscode-descriptionForeground));
+    --nuiget-color-readme-badge-label-bg: var(--vscode-badge-background);
+    --nuiget-color-readme-badge-label-fg: var(--vscode-badge-foreground);
+    --nuiget-color-readme-badge-info-bg: var(--vscode-button-background);
+    --nuiget-color-readme-badge-info-fg: var(--vscode-button-foreground);
+    --nuiget-color-readme-badge-ok-bg: var(--vscode-testing-iconPassed);
+    --nuiget-color-readme-badge-ok-fg: var(--vscode-editor-background);
+}

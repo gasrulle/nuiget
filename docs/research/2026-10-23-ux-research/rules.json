@@ -1,0 +1,1985 @@
+[
+ {
+  "id": "DS-GRID-1",
+  "text": "Every computed padding, margin and gap in both webview roots is a step of the workbench spacing ramp {0,2,4,6,8,10,12,16,20,24,28,32,36,40} px (1 px hairline only for inline code and visually hidden; README content exempt). = VS Code spacing ramp spacing.size* (cur), same literal values at 1.85.",
+  "measurement": "For every element under [data-testid=nuiget-app] and [data-testid=nuiget-sidebar]: getComputedStyle padding-*, margin-*, row-gap, column-gap each in the ramp set.",
+  "tolerance": "0 px",
+  "status": "measurable",
+  "catches": [
+   "V5"
+  ],
+  "evidence": [
+   {
+    "url": "https://raw.githubusercontent.com/microsoft/vscode/54d565d227f05c6b4dd9e109811128394125a753/src/vs/platform/theme/common/sizes/baseSizes.ts",
+    "line": 154,
+    "quote": "export const spacingSize160 = registerSize('spacing.size160'"
+   },
+   {
+    "path": "src/webview/shared/tokens.css",
+    "line": 14,
+    "quote": "--nuiget-space-1: 2px;"
+   }
+  ]
+ },
+ {
+  "id": "DS-GRID-2",
+  "text": "(a) Vertical gaps between stacked blocks of one column use at most two values, multiples of 4: 4 px inside a group, 8 px between groups. (b) A section header sits at least as close to the rows it labels as to the block above it (proximity). = native pane header: text centred in a 22 px header above 22 px rows (equal ink gaps above and below).",
+  "measurement": "(a) In .nuiget-main, .nuiget-main-list and .nuiget-installed children: gap = next.top - prev.bottom of consecutive block rects; distinct gaps subset of {4,8}. (b) For each section header: ink gap below (title text bottom -> first row name text top) <= ink gap above (previous block's last text/border bottom -> title text top) + 2 px, using Range.getBoundingClientRect on the text nodes. Today: 11 px above vs 22 px below (main-installed-single.png).",
+  "tolerance": "(a) 0 px; (b) 2 px",
+  "status": "measurable",
+  "catches": [
+   "V1",
+   "V4",
+   "V5"
+  ],
+  "evidence": [
+   {
+    "path": "/private/tmp/claude-501/-Users-mattias-github-nuiget/d222be63-cd0e-406f-80db-8a5a6aa9b485/scratchpad/captures/39025149785/20261017T103410/main-installed-single.png",
+    "quote": "button bottom 186, DIRECT PACKAGES ink 198-207, first row name ink top 230"
+   },
+   {
+    "url": "https://raw.githubusercontent.com/microsoft/vscode/54d565d227f05c6b4dd9e109811128394125a753/src/vs/workbench/contrib/extensions/browser/media/extensionsViewlet.css",
+    "line": 28,
+    "quote": "padding: 5px 12px 6px 20px;"
+   }
+  ]
+ },
+ {
+  "id": "DS-GRID-3",
+  "text": "Spacing, radius and font-size tokens alias the workbench size tokens with the classic value as fallback, e.g. --nuiget-space-6: var(--vscode-spacing-size160, 16px), so the webview follows Modern UI and theme sizes (GitLens pattern).",
+  "measurement": "Lint on tokens.css: each --nuiget-space-*, --nuiget-radius-*, --nuiget-font-size-* value matches var(--vscode-<size-id>, <px>). Probe: in a host that exports sizes, computed --nuiget-space-6 equals computed --vscode-spacing-size160.",
+  "tolerance": "exact",
+  "status": "measurable",
+  "evidence": [
+   {
+    "url": "https://raw.githubusercontent.com/microsoft/vscode/54d565d227f05c6b4dd9e109811128394125a753/src/vs/workbench/contrib/webview/browser/themeing.ts",
+    "line": 72,
+    "quote": "const sizeRegistry = getSizeRegistry();"
+   },
+   {
+    "url": "https://raw.githubusercontent.com/gitkraken/vscode-gitlens/a9bc0f000eb4221bfeff4a1b03e624f478c96141/src/webviews/apps/shared/styles/tokens.scss",
+    "line": 55,
+    "quote": "--gl-space-16: var(--vscode-spacing-size160, 1.6rem);"
+   }
+  ]
+ },
+ {
+  "id": "DS-INSET-1",
+  "text": "One horizontal content inset per surface; every left edge of the main list column (title, search box, tab label, first toolbar control, section chevron, row check box or icon, details title) starts at it. = Extensions view row padding-left: 1.85 16 px | cur var(--vscode-spacing-size160) = 16 px.",
+  "measurement": "Rect.left - pane.left for each listed element = 16. Sidebar: = Explorer content start (probe binds).",
+  "tolerance": "1 px",
+  "status": "measurable",
+  "evidence": [
+   {
+    "url": "https://raw.githubusercontent.com/microsoft/vscode/54d565d227f05c6b4dd9e109811128394125a753/src/vs/workbench/contrib/extensions/browser/media/extension.css",
+    "line": 18,
+    "quote": "padding: 0 0 0 var(--vscode-spacing-size160);"
+   },
+   {
+    "path": "src/webview/shared/tokens.css",
+    "line": 23,
+    "quote": "--nuiget-inset: var(--nuiget-space-6);"
+   }
+  ]
+ },
+ {
+  "id": "DS-INSET-2",
+  "text": "Symmetric insets: every header, toolbar and control row has equal start and end inset and equal top and bottom padding. = Settings editor header padding-left = padding-right = 24 px (C, M).",
+  "measurement": "For main header, search row, tab list, bulk toolbar, section header, details header, dialog footer, sidebar header: (firstChild.left - box.left) vs (box.right - lastChild.right - visible scrollbar), and (firstChild.top - box.top) vs (box.bottom - lastChild.bottom). Today toolbar 16/6, section header 16/0, main header 8 top/4 bottom.",
+  "tolerance": "1 px",
+  "status": "measurable",
+  "catches": [
+   "V2",
+   "V3",
+   "V5"
+  ],
+  "evidence": [
+   {
+    "url": "https://raw.githubusercontent.com/microsoft/vscode/54d565d227f05c6b4dd9e109811128394125a753/src/vs/workbench/contrib/preferences/browser/media/settingsEditor2.css",
+    "line": 28,
+    "quote": "padding-left: 24px;"
+   },
+   {
+    "path": "src/webview/main/main.css",
+    "line": 194,
+    "quote": "padding-inline-end: var(--nuiget-space-3);"
+   },
+   {
+    "path": "src/webview/main/main.css",
+    "line": 28,
+    "quote": "padding: var(--nuiget-space-4) var(--nuiget-inset) var(--nuiget-space-2);"
+   }
+  ]
+ },
+ {
+  "id": "DS-INSET-3",
+  "text": "A trailing badge, count or action keeps an end inset >= 12 px in the sidebar and = the surface inset (16 px) in the main list column; nothing touches the pane edge or the sash. = SCM row padding-right 12, Extensions pane header padding-right 12, custom tree rows padding-right 12 (C, M).",
+  "measurement": "container.right - lastChild.right >= 12 (sidebar) or = 16 (main). Today provisional badge right 673 = pane content right (end inset 0).",
+  "tolerance": "1 px",
+  "status": "measurable",
+  "catches": [
+   "V2",
+   "V3"
+  ],
+  "evidence": [
+   {
+    "url": "https://raw.githubusercontent.com/microsoft/vscode/54d565d227f05c6b4dd9e109811128394125a753/src/vs/workbench/contrib/scm/browser/media/scm.css",
+    "line": 21,
+    "quote": "padding-right: 12px;"
+   },
+   {
+    "url": "https://raw.githubusercontent.com/microsoft/vscode/54d565d227f05c6b4dd9e109811128394125a753/src/vs/workbench/contrib/extensions/browser/media/extensionsViewlet.css",
+    "line": 168,
+    "quote": "padding-right: 12px;"
+   },
+   {
+    "path": "src/webview/shared/primitives/primitives.css",
+    "line": 499,
+    "quote": ".nuiget-section-actions {"
+   }
+  ]
+ },
+ {
+  "id": "DS-INSET-4",
+  "text": "The details pane header uses one inset: top padding = side padding. = Extensions editor header padding 20 px (top, left; bottom 12) (C).",
+  "measurement": "Rect of .nuiget-details-header: padding-top = padding-inline-start.",
+  "tolerance": "1 px",
+  "status": "measurable",
+  "evidence": [
+   {
+    "url": "https://raw.githubusercontent.com/microsoft/vscode/54d565d227f05c6b4dd9e109811128394125a753/src/vs/workbench/contrib/extensions/browser/media/extensionEditor.css",
+    "line": 21,
+    "quote": "padding-top: 20px;"
+   },
+   {
+    "path": "src/webview/main/main.css",
+    "line": 273,
+    "quote": "padding: var(--nuiget-space-4) var(--nuiget-inset);"
+   }
+  ]
+ },
+ {
+  "id": "DS-HEIGHT-1",
+  "text": "A sidebar section header is exactly as high as a native pane header, border included. = pane header height: C 22 px | M 28 px.",
+  "measurement": "border-box height of .nuiget-sidebar-section > .nuiget-section-header = probe's .pane-header height. Today 25 (capture 97-121) vs native OUTLINE 834-855 = 22 in the same PNG set.",
+  "tolerance": "0 px",
+  "status": "measurable",
+  "evidence": [
+   {
+    "url": "https://raw.githubusercontent.com/microsoft/vscode/54d565d227f05c6b4dd9e109811128394125a753/src/vs/base/browser/ui/splitview/paneview.css",
+    "line": 10,
+    "quote": "--pane-header-size: 22px;"
+   },
+   {
+    "url": "https://raw.githubusercontent.com/microsoft/vscode/54d565d227f05c6b4dd9e109811128394125a753/src/vs/workbench/contrib/modernUI/browser/media/paneHeaders.css",
+    "line": 95,
+    "quote": "--pane-header-size: var(--vscode-spacing-size280, 28px);"
+   }
+  ]
+ },
+ {
+  "id": "DS-HEIGHT-2",
+  "text": "A compact row (sidebar, popups) is as high as a native list row. = Explorer/tree/quick pick row height 22 px (C, M). Owner decision against the 24 px pointer-target choice in tokens.css.",
+  "measurement": "Rect height of each sidebar .nuiget-row = 22. Today 24 (capture 122-145); native Explorer row pitch 22 (ink tops 92/114/136/158).",
+  "tolerance": "0 px",
+  "status": "measurable",
+  "evidence": [
+   {
+    "url": "https://raw.githubusercontent.com/microsoft/vscode/54d565d227f05c6b4dd9e109811128394125a753/src/vs/platform/quickinput/browser/media/quickInput.css",
+    "line": 224,
+    "quote": "line-height: 22px;"
+   },
+   {
+    "path": "src/webview/shared/tokens.css",
+    "line": 30,
+    "quote": "--nuiget-row-height-compact: 24px;"
+   }
+  ]
+ },
+ {
+  "id": "DS-HEIGHT-3",
+  "text": "A comfortable row (main panel list) is as high as an Extensions view row. = EXTENSION_LIST_ELEMENT_HEIGHT 72 px (1.85 and cur).",
+  "measurement": "Rect height of each .nuiget-row--comfortable = 72. Today 78.",
+  "tolerance": "0 px",
+  "status": "measurable",
+  "evidence": [
+   {
+    "url": "https://raw.githubusercontent.com/microsoft/vscode/54d565d227f05c6b4dd9e109811128394125a753/src/vs/workbench/contrib/extensions/browser/extensionsList.ts",
+    "line": 29,
+    "quote": "const EXTENSION_LIST_ELEMENT_HEIGHT = 72;"
+   },
+   {
+    "url": "https://raw.githubusercontent.com/microsoft/vscode/release/1.85/src/vs/workbench/contrib/extensions/browser/extensionsList.ts",
+    "line": 30,
+    "quote": "const EXTENSION_LIST_ELEMENT_HEIGHT = 72;"
+   },
+   {
+    "path": "src/webview/shared/tokens.css",
+    "line": 33,
+    "quote": "--nuiget-row-height-comfortable: 78px;"
+   }
+  ]
+ },
+ {
+  "id": "DS-HEIGHT-4",
+  "text": "The Installed/Updates tab strip is as high as the workbench's in-editor scope tabs. = Settings editor scope tab height, C about 33 px (13 px label, padding 7 + 6.5, 1 px border; same at 1.85; probe binds). V1 stated numerically: tab strip height >= bound value - 1 px; today 25 (24 + 1 px line).",
+  "measurement": "Rect height of [data-testid=tab-bar] including its bottom border.",
+  "tolerance": "-1 px",
+  "status": "measurable",
+  "catches": [
+   "V1"
+  ],
+  "evidence": [
+   {
+    "url": "https://raw.githubusercontent.com/microsoft/vscode/54d565d227f05c6b4dd9e109811128394125a753/src/vs/workbench/contrib/preferences/browser/media/settingsEditor2.css",
+    "line": 143,
+    "quote": "padding-bottom: 6.5px;"
+   },
+   {
+    "path": "src/webview/shared/primitives/primitives.css",
+    "line": 803,
+    "quote": "min-height: var(--nuiget-target-min);"
+   }
+  ]
+ },
+ {
+  "id": "DS-HEIGHT-5",
+  "text": "The details pane's Details/README strip is as high as the Extensions editor navbar. = navbar height 36 px (1.85 and cur).",
+  "measurement": "Rect height of the details role=tablist = 36. Today 25.",
+  "tolerance": "1 px",
+  "status": "measurable",
+  "evidence": [
+   {
+    "url": "https://raw.githubusercontent.com/microsoft/vscode/54d565d227f05c6b4dd9e109811128394125a753/src/vs/workbench/contrib/extensions/browser/media/extensionEditor.css",
+    "line": 373,
+    "quote": "height: 36px;"
+   },
+   {
+    "url": "https://raw.githubusercontent.com/microsoft/vscode/release/1.85/src/vs/workbench/contrib/extensions/browser/media/extensionEditor.css",
+    "line": 356,
+    "quote": "height: 36px;"
+   }
+  ]
+ },
+ {
+  "id": "DS-HEIGHT-6",
+  "text": "Text buttons are as high as the workbench text button. = .monaco-text-button: 1.85 28 px (padding 4, line-height 18, border 1+1) | cur 26 px (padding 4/8, line-height 16, 12 px font; not Modern-UI-gated). V1 stated numerically: button height >= bound value - 1 px; today 24.",
+  "measurement": "Rect height of every .nuiget-button and toolbar button.",
+  "tolerance": "0 px",
+  "status": "measurable",
+  "catches": [
+   "V1"
+  ],
+  "evidence": [
+   {
+    "url": "https://raw.githubusercontent.com/microsoft/vscode/54d565d227f05c6b4dd9e109811128394125a753/src/vs/base/browser/ui/button/button.css",
+    "line": 10,
+    "quote": "padding: 4px 8px;"
+   },
+   {
+    "url": "https://raw.githubusercontent.com/microsoft/vscode/release/1.85/src/vs/base/browser/ui/button/button.css",
+    "line": 17,
+    "quote": "line-height: 18px;"
+   },
+   {
+    "path": "src/webview/shared/primitives/primitives.css",
+    "line": 508,
+    "quote": "min-height: var(--nuiget-target-min);"
+   }
+  ]
+ },
+ {
+  "id": "DS-HEIGHT-7",
+  "text": "Text inputs and selects are as high as the workbench's: sidebar search = Extensions view search box 28 px (C); main search, project, source and version selectors = Settings editor select box 26 px (C).",
+  "measurement": "Rect heights of sidebar-search-input = 28; search-input, project-selector, source-selector, version-selector = 26. Today 24 each.",
+  "tolerance": "0 px",
+  "status": "measurable",
+  "evidence": [
+   {
+    "url": "https://raw.githubusercontent.com/microsoft/vscode/54d565d227f05c6b4dd9e109811128394125a753/src/vs/workbench/contrib/extensions/browser/media/extensionsViewlet.css",
+    "line": 37,
+    "quote": "height: 28px;"
+   },
+   {
+    "url": "https://raw.githubusercontent.com/microsoft/vscode/54d565d227f05c6b4dd9e109811128394125a753/src/vs/workbench/contrib/preferences/browser/media/settingsEditor2.css",
+    "line": 701,
+    "quote": "height: 26px;"
+   }
+  ]
+ },
+ {
+  "id": "DS-HEIGHT-8",
+  "text": "Icon buttons paint a 22 px hover box (16 px glyph + 3 px padding) and keep a >= 24 px pointer target through spacing or a pseudo-element. = .monaco-action-bar .action-label (C).",
+  "measurement": "Painted hover background rect = 22x22; hit area rect (element or ::after) >= 24.",
+  "tolerance": "0 px",
+  "status": "measurable",
+  "evidence": [
+   {
+    "url": "https://raw.githubusercontent.com/microsoft/vscode/54d565d227f05c6b4dd9e109811128394125a753/src/vs/base/browser/ui/actionbar/actionbar.css",
+    "line": 52,
+    "quote": "padding: 3px;"
+   },
+   {
+    "path": "src/webview/shared/primitives/primitives.css",
+    "line": 371,
+    "quote": "min-width: var(--nuiget-target-min);"
+   }
+  ]
+ },
+ {
+  "id": "DS-HEIGHT-9",
+  "text": "One check box size everywhere. = .monaco-checkbox 18x18, radius 3 px (1.85 and cur).",
+  "measurement": "Rect of every input[type=checkbox] and .nuiget-row-check = 18x18; computed border-radius 3 px. Today 14 (row mark) and 16 (header/dialog).",
+  "tolerance": "0 px",
+  "status": "measurable",
+  "evidence": [
+   {
+    "url": "https://raw.githubusercontent.com/microsoft/vscode/54d565d227f05c6b4dd9e109811128394125a753/src/vs/base/browser/ui/toggle/toggle.css",
+    "line": 55,
+    "quote": "height: 18px;"
+   },
+   {
+    "path": "src/webview/main/main.css",
+    "line": 61,
+    "quote": "inline-size: var(--nuiget-icon-size-md);"
+   }
+  ]
+ },
+ {
+  "id": "DS-HEIGHT-10",
+  "text": "A count badge is the workbench count badge. = .monaco-count-badge: min 18x18, 11 px (10 px Label3 under M), padding 3/5, radius 11 (pill).",
+  "measurement": "Rect of each count badge >= 18x18; computed border-radius >= height/2 - 1; font-size 11 (C) or 10 (M). Today radius 4, about 17x16.",
+  "tolerance": "0 px",
+  "status": "measurable",
+  "evidence": [
+   {
+    "url": "https://raw.githubusercontent.com/microsoft/vscode/54d565d227f05c6b4dd9e109811128394125a753/src/vs/base/browser/ui/countBadge/countBadge.css",
+    "line": 8,
+    "quote": "border-radius: 11px;"
+   },
+   {
+    "path": "src/webview/shared/primitives/primitives.css",
+    "line": 403,
+    "quote": "border-radius: var(--nuiget-radius-md);"
+   }
+  ]
+ },
+ {
+  "id": "DS-HEIGHT-11",
+  "text": "A progress bar is 2 px. = .monaco-progress-container 2 px (C).",
+  "measurement": "Rect height of .nuiget-progress = 2.",
+  "tolerance": "0 px",
+  "status": "measurable",
+  "evidence": [
+   {
+    "url": "https://raw.githubusercontent.com/microsoft/vscode/54d565d227f05c6b4dd9e109811128394125a753/src/vs/base/browser/ui/progressbar/progressbar.css",
+    "line": 8,
+    "quote": "height: 2px;"
+   }
+  ]
+ },
+ {
+  "id": "DS-ROW-1",
+  "text": "A comfortable row has the Extensions row anatomy: 16 px start padding, icon, gap, vertically centred text column; icon = Extensions icon size. = 1.85 42 px icon with 14 px gap | cur 36 px with 16 px gap.",
+  "measurement": "Rect of .nuiget-row-icon = bound size; name.left - icon.right = bound gap. Today 32 px icon, 12 px gap.",
+  "tolerance": "icon 0 px, gap 1 px",
+  "status": "measurable",
+  "evidence": [
+   {
+    "url": "https://raw.githubusercontent.com/microsoft/vscode/54d565d227f05c6b4dd9e109811128394125a753/src/vs/workbench/contrib/extensions/browser/media/extensionsWidgets.css",
+    "line": 7,
+    "quote": "width: 36px;"
+   },
+   {
+    "url": "https://raw.githubusercontent.com/microsoft/vscode/release/1.85/src/vs/workbench/contrib/extensions/browser/media/extension.css",
+    "line": 30,
+    "quote": "width: 42px;"
+   }
+  ]
+ },
+ {
+  "id": "DS-ROW-2",
+  "text": "Within one scroll container every row of a kind shares its icon x and text x, whatever its section (direct, transitive, per project). Gestalt alignment; the Extensions list has one column grid.",
+  "measurement": "For all comfortable rows in one .nuiget-installed-lists: max-min of icon.left = 0 and of name.left = 0. Today direct icon 390/name 435 vs transitive 364/409 (delta 26).",
+  "tolerance": "0 px",
+  "status": "measurable",
+  "evidence": [
+   {
+    "path": "/private/tmp/claude-501/-Users-mattias-github-nuiget/d222be63-cd0e-406f-80db-8a5a6aa9b485/scratchpad/captures/39025149785/20261017T103410/main-transitive-expanded.png",
+    "quote": "direct icon x 390, name x 435; transitive icon x 364, name x 409"
+   }
+  ]
+ },
+ {
+  "id": "DS-ROW-3",
+  "text": "A row's hover, selection and focus treatment covers the whole row, its action buttons included. = .monaco-list-row (full width, actions are children of the row).",
+  "measurement": "Painted background and focus-outline rect of a hovered/selected/focused row = rect of the [data-testid^=package-row-] wrapper horizontally. Today highlight ends at x 649 (main) / 323 (sidebar) with actions at 650-673 / 324-347.",
+  "tolerance": "0 px",
+  "status": "measurable",
+  "catches": [
+   "V2"
+  ],
+  "evidence": [
+   {
+    "url": "https://raw.githubusercontent.com/microsoft/vscode/54d565d227f05c6b4dd9e109811128394125a753/src/vs/workbench/contrib/scm/browser/media/scm.css",
+    "line": 336,
+    "quote": ".scm-view .monaco-list .monaco-list-row:hover .resource-group > .actions,"
+   },
+   {
+    "path": "src/webview/shared/primitives/primitives.css",
+    "line": 337,
+    "quote": ".nuiget-row-actions {"
+   }
+  ]
+ },
+ {
+  "id": "DS-ROW-4",
+  "text": "A row shows at most three actions, on hover and on keyboard focus (and on the focused row). = tree item guideline; SCM actions on :hover and .focused.",
+  "measurement": "Count of visible row action buttons <= 3; visible on :hover and :focus-within.",
+  "tolerance": "0",
+  "status": "measurable",
+  "evidence": [
+   {
+    "url": "https://raw.githubusercontent.com/microsoft/vscode-docs/fd64d64891a2e660bcc0d32ea402da905adfef7f/api/ux-guidelines/views.md",
+    "line": 64,
+    "quote": "Add more than three actions to an item"
+   }
+  ]
+ },
+ {
+  "id": "DS-ROW-5",
+  "text": "A name never yields to a version, badge or count: the name truncates last, with an ellipsis and the full id available. = Extensions name ellipsis with min-width 0 beside flex-shrink 0 meta.",
+  "measurement": "At sidebar widths 170/200/250: name.scrollWidth > name.clientWidth only after version and badges collapsed; computed text-overflow: ellipsis; full id in title or accessible name.",
+  "tolerance": "0",
+  "status": "measurable",
+  "evidence": [
+   {
+    "url": "https://raw.githubusercontent.com/microsoft/vscode/54d565d227f05c6b4dd9e109811128394125a753/src/vs/workbench/contrib/extensions/browser/media/extension.css",
+    "line": 77,
+    "quote": "text-overflow: ellipsis;"
+   }
+  ]
+ },
+ {
+  "id": "DS-ROW-6",
+  "text": "Rows hide parts by priority as the width shrinks, at the Extensions view breakpoints: <= 250 px icon 24 px, <= 200 px icon hidden.",
+  "measurement": "At list-pane widths 260/240/190: icon rect bound size / 24 / absent; no horizontal scroll.",
+  "tolerance": "0 px",
+  "status": "measurable",
+  "evidence": [
+   {
+    "url": "https://raw.githubusercontent.com/microsoft/vscode/54d565d227f05c6b4dd9e109811128394125a753/src/vs/workbench/contrib/extensions/browser/extensionsViewlet.ts",
+    "line": 740,
+    "quote": "this.root.classList.toggle('narrow', dimension.width <= 250);"
+   }
+  ]
+ },
+ {
+  "id": "DS-TYPE-1",
+  "text": "UI text uses --vscode-font-family; only code uses --vscode-editor-font-family.",
+  "measurement": "Computed font-family of every text node = body's, except code, pre and README code.",
+  "tolerance": "exact",
+  "status": "measurable",
+  "evidence": [
+   {
+    "url": "https://raw.githubusercontent.com/microsoft/vscode/54d565d227f05c6b4dd9e109811128394125a753/src/vs/workbench/contrib/webview/browser/themeing.ts",
+    "line": 82,
+    "quote": "'vscode-font-family': DEFAULT_FONT_FAMILY,"
+   }
+  ]
+ },
+ {
+  "id": "DS-TYPE-2",
+  "text": "Every font size is a step of the workbench ramp {10,11,12,13,18,26} px at the webview's fixed 13 px base (README body exempt). = fontSize.* tokens (registered in cur, applied by the M fontRamp module).",
+  "measurement": "Computed font-size of every text element outside .nuiget-readme in the set. Today --nuiget-font-size-lg = 14.95 px fails.",
+  "tolerance": "0.1 px",
+  "status": "measurable",
+  "evidence": [
+   {
+    "url": "https://raw.githubusercontent.com/microsoft/vscode/54d565d227f05c6b4dd9e109811128394125a753/src/vs/platform/theme/common/sizes/baseSizes.ts",
+    "line": 39,
+    "quote": "export const fontSizeHeading2 = registerSize('fontSize.heading2',"
+   },
+   {
+    "url": "https://raw.githubusercontent.com/microsoft/vscode/54d565d227f05c6b4dd9e109811128394125a753/src/vs/workbench/contrib/webview/browser/themeing.ts",
+    "line": 84,
+    "quote": "'vscode-font-size': '13px',"
+   },
+   {
+    "path": "src/webview/shared/tokens.css",
+    "line": 62,
+    "quote": "--nuiget-font-size-lg: 1.15em;"
+   }
+  ]
+ },
+ {
+  "id": "DS-TYPE-3",
+  "text": "Two weights, 400 and 600; 700 only on sidebar section titles while the classic pane header uses bold. = fontWeight.regular/semiBold (cur); pane header font-weight bold (C).",
+  "measurement": "Computed font-weight of all text in {400,600} (700 allowed on sidebar section titles under C).",
+  "tolerance": "exact",
+  "status": "measurable",
+  "evidence": [
+   {
+    "url": "https://raw.githubusercontent.com/microsoft/vscode/54d565d227f05c6b4dd9e109811128394125a753/src/vs/platform/theme/common/sizes/baseSizes.ts",
+    "line": 76,
+    "quote": "export const fontWeightSemiBold = registerSize('fontWeight.semiBold',"
+   },
+   {
+    "url": "https://raw.githubusercontent.com/microsoft/vscode/54d565d227f05c6b4dd9e109811128394125a753/src/vs/base/browser/ui/splitview/paneview.css",
+    "line": 29,
+    "quote": "font-weight: bold;"
+   }
+  ]
+ },
+ {
+  "id": "DS-TYPE-4",
+  "text": "Body line height is 1.4em; single-line rows and controls use a fixed line box equal to their height. = workbench line-height 1.4em.",
+  "measurement": "Computed line-height of each root = 1.4 x font-size.",
+  "tolerance": "0.5 px",
+  "status": "measurable",
+  "evidence": [
+   {
+    "url": "https://raw.githubusercontent.com/microsoft/vscode/54d565d227f05c6b4dd9e109811128394125a753/src/vs/workbench/browser/media/style.css",
+    "line": 50,
+    "quote": "line-height: 1.4em;"
+   }
+  ]
+ },
+ {
+  "id": "DS-TYPE-5",
+  "text": "Section headers follow the host's casing, size and weight: C = 11 px bold uppercase; M = Label1 12 px semibold capitalized unless modernUIUppercaseViewHeaders. In-list group headers (Direct packages, project, Transitive packages) are tree rows: body size, normal case. The host mirrors the settings onto <body> as GitLens does.",
+  "measurement": "Computed text-transform, font-size, font-weight of sidebar section titles = probe's .pane-header .title in the same VS Code session.",
+  "tolerance": "exact",
+  "status": "measurable",
+  "evidence": [
+   {
+    "url": "https://raw.githubusercontent.com/microsoft/vscode/54d565d227f05c6b4dd9e109811128394125a753/src/vs/workbench/contrib/modernUI/browser/media/fontRamp.css",
+    "line": 123,
+    "quote": "text-transform: capitalize;"
+   },
+   {
+    "url": "https://raw.githubusercontent.com/gitkraken/vscode-gitlens/a9bc0f000eb4221bfeff4a1b03e624f478c96141/src/webviews/hostEnvironment.ts",
+    "line": 25,
+    "quote": "const modernUI = configuration.getCore('workbench.experimental.modernUI') === true;"
+   },
+   {
+    "path": "src/webview/shared/primitives/primitives.css",
+    "line": 480,
+    "quote": "text-transform: uppercase;"
+   }
+  ]
+ },
+ {
+  "id": "DS-TYPE-6",
+  "text": "Secondary text is descriptionForeground at 11-12 px; metadata 11 px. = Extensions publisher 11 px semibold, install count 11 px (cur) | 90%/80% (1.85).",
+  "measurement": "Computed font-size of .nuiget-row-version/-authors/-meta in {11,12}.",
+  "tolerance": "0.1 px",
+  "status": "measurable",
+  "evidence": [
+   {
+    "url": "https://raw.githubusercontent.com/microsoft/vscode/54d565d227f05c6b4dd9e109811128394125a753/src/vs/workbench/contrib/extensions/browser/media/extension.css",
+    "line": 203,
+    "quote": "font-size: 11px;"
+   }
+  ]
+ },
+ {
+  "id": "DS-TYPE-7",
+  "text": "Panel title at 13 px semibold; details title at 18 px semibold (derived from the ramp's Heading2; no native details title below the Extensions editor's 26 px name, which is the upper bound).",
+  "measurement": "Computed font-size of .nuiget-main-title = 13 and .nuiget-details-title = 18. Today 13 and 14.95.",
+  "tolerance": "0.1 px",
+  "status": "measurable",
+  "evidence": [
+   {
+    "url": "https://raw.githubusercontent.com/microsoft/vscode/54d565d227f05c6b4dd9e109811128394125a753/src/vs/workbench/contrib/extensions/browser/media/extensionEditor.css",
+    "line": 74,
+    "quote": "font-size: 26px;"
+   },
+   {
+    "path": "src/webview/main/main.css",
+    "line": 278,
+    "quote": "font-size: var(--nuiget-font-size-lg);"
+   }
+  ]
+ },
+ {
+  "id": "DS-ICON-1",
+  "text": "Every glyph is a codicon from the same codicon release as the host; no custom glyph where a codicon exists.",
+  "measurement": "Lint: each icon in icons.tsx names its codicon and its path d equals @vscode/codicons src/icons/<name>.svg at a pinned version; zero '/** Custom:' entries. Today paths predate the 2025-10-07 and 2026-02-02 redraws; 2 custom glyphs.",
+  "tolerance": "exact",
+  "status": "measurable",
+  "evidence": [
+   {
+    "url": "https://raw.githubusercontent.com/microsoft/vscode-docs/fd64d64891a2e660bcc0d32ea402da905adfef7f/api/ux-guidelines/views.md",
+    "line": 16,
+    "quote": "Use existing icons when possible"
+   },
+   {
+    "path": "src/webview/shared/primitives/icons.tsx",
+    "line": 30,
+    "quote": "<path d=\"M5.7 13.7L5 13l4.6-4.6L5 3.7l.7-.7 5.3 5.3-5.3 5.4z\" />"
+   }
+  ]
+ },
+ {
+  "id": "DS-ICON-2",
+  "text": "Action and header glyphs are 16 px in icon.foreground; compact inline marks 12 px. = codiconFontSize 16 / compact 12; .monaco-workbench .codicon color icon.foreground.",
+  "measurement": "Rect 16x16 of .nuiget-icon-button svg; computed color = --vscode-icon-foreground. Today rests at descriptionForeground.",
+  "tolerance": "0 px / exact",
+  "status": "measurable",
+  "evidence": [
+   {
+    "url": "https://raw.githubusercontent.com/microsoft/vscode/54d565d227f05c6b4dd9e109811128394125a753/src/vs/workbench/browser/media/style.css",
+    "line": 211,
+    "quote": "color: var(--vscode-icon-foreground);"
+   },
+   {
+    "path": "src/webview/shared/primitives/primitives.css",
+    "line": 377,
+    "quote": "color: var(--nuiget-color-fg-muted);"
+   }
+  ]
+ },
+ {
+  "id": "DS-ICON-3",
+  "text": "Package icon size follows the Extensions view including its breakpoints. = Extensions icon 1.85 42 | cur 36; 24 at <= 250 px; hidden at <= 200 px.",
+  "measurement": "As DS-ROW-1 and DS-ROW-6.",
+  "tolerance": "0 px",
+  "status": "measurable",
+  "evidence": [
+   {
+    "url": "https://raw.githubusercontent.com/microsoft/vscode/54d565d227f05c6b4dd9e109811128394125a753/src/vs/workbench/contrib/extensions/browser/media/extensionsViewlet.css",
+    "line": 223,
+    "quote": "width: 24px;"
+   }
+  ]
+ },
+ {
+  "id": "DS-ICON-4",
+  "text": "The Verified mark is the Extensions verified-publisher mark: codicon verified-filled in extensionIcon.verifiedForeground.",
+  "measurement": "Icon identity in the DOM and computed colour = --vscode-extensionIcon-verifiedForeground. Today a check glyph in textLink.foreground.",
+  "tolerance": "exact",
+  "status": "measurable",
+  "evidence": [
+   {
+    "url": "https://raw.githubusercontent.com/microsoft/vscode/54d565d227f05c6b4dd9e109811128394125a753/src/vs/workbench/services/extensionManagement/common/extensionsIcons.ts",
+    "line": 12,
+    "quote": "registerIcon('extensions-verified-publisher', Codicon.verifiedFilled"
+   },
+   {
+    "path": "src/webview/shared/primitives/primitives.css",
+    "line": 232,
+    "quote": "color: var(--nuiget-color-link);"
+   }
+  ]
+ },
+ {
+  "id": "DS-ICON-5",
+  "text": "Icon delivery is a decision with two native precedents, either keeping DS-ICON-1: (a) inline SVG synced by a script (GitHub PR extension), (b) the codicon font under the existing CSP (official webview-codicons-sample, GitLens, NuGet Gallery). The icons.tsx premise that fonts are unavailable is false.",
+  "measurement": "(a) the DS-ICON-1 lint; (b) codicon.css and codicon.ttf load under font-src cspSource and pass check:vsix.",
+  "tolerance": "n/a",
+  "status": "judge-only",
+  "evidence": [
+   {
+    "path": "src/host/services.ts",
+    "line": 115,
+    "quote": "`font-src ${webview.cspSource}`,"
+   },
+   {
+    "path": "src/webview/shared/primitives/icons.tsx",
+    "line": 3,
+    "quote": "Codicon fonts are NOT available in webviews — inline SVGs are required."
+   },
+   {
+    "url": "https://github.com/microsoft/vscode-extension-samples/blob/main/webview-codicons-sample/src/extension.ts",
+    "line": 44,
+    "quote": "default-src 'none'; font-src ${webview.cspSource}; style-src ${webview.cspSource};"
+   }
+  ]
+ },
+ {
+  "id": "DS-COLOR-1",
+  "text": "Every painted colour resolves to the --vscode-* key of its role (role table in the report, section 5); tokens.css has an alias per role.",
+  "measurement": "Per role in all four theme kinds: computed colour of the role's element = computed value of its --vscode-* key; lint: tokens.css declares every role. Today 13 roles absent.",
+  "tolerance": "exact",
+  "status": "measurable",
+  "evidence": [
+   {
+    "url": "https://raw.githubusercontent.com/microsoft/vscode-docs/fd64d64891a2e660bcc0d32ea402da905adfef7f/api/ux-guidelines/webviews.md",
+    "line": 19,
+    "quote": "Ensure all elements in the view are themeable"
+   }
+  ]
+ },
+ {
+  "id": "DS-COLOR-2",
+  "text": "Selection colours depend on list focus: list.activeSelection* only while the listbox contains focus, list.inactiveSelection* otherwise.",
+  "measurement": "Focus outside the list: computed background of the current/selected option = --vscode-list-inactiveSelectionBackground; focus inside = active.",
+  "tolerance": "exact",
+  "status": "measurable",
+  "evidence": [
+   {
+    "url": "https://raw.githubusercontent.com/microsoft/vscode/54d565d227f05c6b4dd9e109811128394125a753/src/vs/base/browser/ui/list/listWidget.ts",
+    "line": 922,
+    "quote": "content.push(`.monaco-list${suffix}:focus .monaco-list-row.selected { background-color: ${styles.listActiveSelectionBackground}; }`);"
+   },
+   {
+    "path": "src/webview/shared/primitives/primitives.css",
+    "line": 107,
+    "quote": "background: var(--nuiget-color-list-active-bg);"
+   }
+  ]
+ },
+ {
+  "id": "DS-COLOR-3",
+  "text": "Icon buttons paint toolbar.hoverBackground on hover and toolbar.activeBackground when pressed or toggled on.",
+  "measurement": "Computed background of a hovered .nuiget-icon-button = --vscode-toolbar-hoverBackground.",
+  "tolerance": "exact",
+  "status": "measurable",
+  "evidence": [
+   {
+    "url": "https://raw.githubusercontent.com/microsoft/vscode/54d565d227f05c6b4dd9e109811128394125a753/src/vs/workbench/browser/media/style.css",
+    "line": 356,
+    "quote": "background-color: var(--vscode-toolbar-hoverBackground);"
+   }
+  ]
+ },
+ {
+  "id": "DS-COLOR-4",
+  "text": "Tabs use panelTitle.inactiveForeground / panelTitle.activeForeground with a 1 px panelTitle.activeBorder underline. = Extensions editor navbar; panel tabs.",
+  "measurement": "Computed colours and underline thickness of role=tab. Today descriptionForeground/foreground and 2 px focusBorder.",
+  "tolerance": "exact",
+  "status": "measurable",
+  "evidence": [
+   {
+    "url": "https://raw.githubusercontent.com/microsoft/vscode/54d565d227f05c6b4dd9e109811128394125a753/src/vs/workbench/contrib/extensions/browser/media/extensionEditor.css",
+    "line": 400,
+    "quote": "border-bottom: 1px solid var(--vscode-panelTitle-activeBorder);"
+   },
+   {
+    "path": "src/webview/shared/primitives/primitives.css",
+    "line": 821,
+    "quote": "border-block-end-color: var(--nuiget-color-focus);"
+   }
+  ]
+ },
+ {
+  "id": "DS-COLOR-5",
+  "text": "focusBorder marks keyboard focus and nothing else (no selection accent, no tab underline).",
+  "measurement": "Lint: --nuiget-color-focus only in outline declarations and the sash hover; probe: no unfocused element paints it.",
+  "tolerance": "0 occurrences",
+  "status": "measurable",
+  "evidence": [
+   {
+    "url": "https://raw.githubusercontent.com/microsoft/vscode/54d565d227f05c6b4dd9e109811128394125a753/src/vs/workbench/browser/media/style.css",
+    "line": 282,
+    "quote": "outline-color: var(--vscode-focusBorder);"
+   },
+   {
+    "path": "src/webview/shared/primitives/primitives.css",
+    "line": 276,
+    "quote": "box-shadow: inset 3px 0 0 var(--nuiget-color-focus);"
+   }
+  ]
+ },
+ {
+  "id": "DS-COLOR-6",
+  "text": "Disabled text uses disabledForeground, never opacity on text.",
+  "measurement": "Computed colour of disabled names and buttons = --vscode-disabledForeground.",
+  "tolerance": "exact",
+  "status": "measurable",
+  "evidence": [
+   {
+    "url": "https://raw.githubusercontent.com/microsoft/vscode/54d565d227f05c6b4dd9e109811128394125a753/src/vs/workbench/contrib/extensions/browser/media/extension.css",
+    "line": 248,
+    "quote": "color: var(--vscode-disabledForeground);"
+   },
+   {
+    "path": "src/webview/shared/primitives/primitives.css",
+    "line": 146,
+    "quote": "color: var(--nuiget-color-fg-muted);"
+   }
+  ]
+ },
+ {
+  "id": "DS-COLOR-7",
+  "text": "Secondary buttons have a hover state in button.secondaryHoverBackground.",
+  "measurement": "Computed background of a hovered .nuiget-button--secondary differs from rest and = the key. Today hover = rest.",
+  "tolerance": "exact",
+  "status": "measurable",
+  "evidence": [
+   {
+    "path": "src/webview/shared/primitives/primitives.css",
+    "line": 523,
+    "quote": ".nuiget-button--secondary:hover {"
+   },
+   {
+    "url": "https://raw.githubusercontent.com/microsoft/vscode-docs/fd64d64891a2e660bcc0d32ea402da905adfef7f/api/references/theme-color.md",
+    "quote": "button.secondaryHoverBackground"
+   }
+  ]
+ },
+ {
+  "id": "DS-DENSITY-1",
+  "text": "Density is a per-surface property, not a user toggle: sidebar compact (one-line 22 px rows, no icons), main list comfortable (Extensions rows), details pane editor spacing.",
+  "measurement": "Row heights per DS-HEIGHT-2/3; no density setting in package.json.",
+  "tolerance": "exact",
+  "status": "measurable",
+  "evidence": [
+   {
+    "url": "https://raw.githubusercontent.com/microsoft/vscode/54d565d227f05c6b4dd9e109811128394125a753/src/vs/workbench/contrib/extensions/browser/extensionsList.ts",
+    "line": 29,
+    "quote": "const EXTENSION_LIST_ELEMENT_HEIGHT = 72;"
+   }
+  ]
+ },
+ {
+  "id": "DS-DENSITY-2",
+  "text": "Under Modern UI with window.density.layout compact, the webviews follow the host's density (host mirrors the setting onto <body>, as GitLens does). Owner decision whether to follow.",
+  "measurement": "With compact, block gaps shrink to the host's compact values (probe binds).",
+  "tolerance": "n/a",
+  "status": "judge-only",
+  "evidence": [
+   {
+    "url": "https://raw.githubusercontent.com/gitkraken/vscode-gitlens/a9bc0f000eb4221bfeff4a1b03e624f478c96141/src/webviews/hostEnvironment.ts",
+    "line": 28,
+    "quote": "compact: modernUI && configuration.getCore('window.density.layout') === 'compact',"
+   }
+  ]
+ },
+ {
+  "id": "DS-OVERFLOW-1",
+  "text": "No surface scrolls horizontally at its host minimum width. = sidebar part minimumWidth 170 px; editor minimum 220 px.",
+  "measurement": "At sidebar widths {170,200,250,300} and main widths {220,400,600,800}: scrollWidth <= clientWidth for the root and every non-list container incl. .nuiget-main-details.",
+  "tolerance": "0 px",
+  "status": "measurable",
+  "evidence": [
+   {
+    "url": "https://raw.githubusercontent.com/microsoft/vscode/54d565d227f05c6b4dd9e109811128394125a753/src/vs/workbench/browser/parts/sidebar/sidebarPart.ts",
+    "line": 48,
+    "quote": "readonly minimumWidth: number = 170;"
+   },
+   {
+    "url": "https://raw.githubusercontent.com/microsoft/vscode/54d565d227f05c6b4dd9e109811128394125a753/src/vs/workbench/browser/parts/editor/editor.ts",
+    "line": 29,
+    "quote": "export const DEFAULT_EDITOR_MIN_DIMENSIONS = new Dimension(220, 70);"
+   }
+  ]
+ },
+ {
+  "id": "DS-OVERFLOW-2",
+  "text": "No sibling collision: inside every flex/grid row no two children's rects intersect and every child lies within the parent's content box.",
+  "measurement": "For each container of the overflow table: pairwise intersection area = 0; child.right <= parent.right - padding-right. Today the provisional and TFM badges reach the pane edge.",
+  "tolerance": "0 px",
+  "status": "measurable",
+  "catches": [
+   "V3"
+  ],
+  "evidence": [
+   {
+    "path": "/private/tmp/claude-501/-Users-mattias-github-nuiget/d222be63-cd0e-406f-80db-8a5a6aa9b485/scratchpad/captures/39025149785/20261017T103410/main-installed-all.png",
+    "quote": "provisional badge x 604-673, sash 674-677"
+   }
+  ]
+ },
+ {
+  "id": "DS-OVERFLOW-3",
+  "text": "Every container holding a row of controls declares a minimum width and one overflow behaviour (wrap, icon-only, overflow menu, hide by priority), per the report's section 7 table.",
+  "measurement": "At each container's declared min width all its controls are visible or in an overflow menu, and DS-OVERFLOW-1/2 hold.",
+  "tolerance": "0 px",
+  "status": "measurable",
+  "evidence": [
+   {
+    "url": "https://raw.githubusercontent.com/microsoft/vscode-docs/fd64d64891a2e660bcc0d32ea402da905adfef7f/api/ux-guidelines/sidebars.md",
+    "line": 50,
+    "quote": "be careful to not add too many actions to reduce clutter and confusion"
+   },
+   {
+    "path": "src/webview/shared/primitives/primitives.css",
+    "line": 792,
+    "quote": ".nuiget-tablist {"
+   }
+  ]
+ },
+ {
+  "id": "DS-OVERFLOW-4",
+  "text": "The sidebar view title shows at most four navigation actions; the rest go to the ... menu. = Explorer view title: 4 navigation actions.",
+  "measurement": "Count of view/title menu items in group navigation* visible at once for nuiget.sidebarView <= 4. Today 6.",
+  "tolerance": "0",
+  "status": "measurable",
+  "evidence": [
+   {
+    "url": "https://raw.githubusercontent.com/microsoft/vscode/54d565d227f05c6b4dd9e109811128394125a753/src/vs/workbench/contrib/files/browser/views/explorerView.ts",
+    "line": 1191,
+    "quote": "order: 40"
+   },
+   {
+    "path": "package.json",
+    "line": 243,
+    "quote": "\"group\": \"navigation@5\""
+   }
+  ]
+ },
+ {
+  "id": "DS-OVERFLOW-5",
+  "text": "Split bounds are in pixels: the list pane never goes below its toolbar's min-content width, the details pane never below its header's.",
+  "measurement": "layout/set clamps so listPane.width >= minContent(toolbar) and detailsPane.width >= minContent(details header). Today a 25-75 % clamp (55 px list at a 220 px editor).",
+  "tolerance": "0 px",
+  "status": "measurable",
+  "evidence": [
+   {
+    "path": "src/webview/main/MainShell.tsx",
+    "line": 62,
+    "quote": "const SPLIT = { min: 25, max: 75, initial: 35 };"
+   }
+  ]
+ },
+ {
+  "id": "DS-STATE-1",
+  "text": "Every screen has a defined loading-first, revalidating, empty, error, partial and unsupported state (matrix in report section 8), each with a state marker and an ExTester capture.",
+  "measurement": "Each matrix cell has a data-testid marker and a named capture. Today the 15 captures show no loading, empty, error, unsupported or narrow-main state.",
+  "tolerance": "0 missing cells",
+  "status": "measurable",
+  "evidence": [
+   {
+    "path": "docs/ux/interaction-model.md",
+    "line": 61,
+    "quote": "## 4. State vocabulary (every list/detail area uses exactly these)"
+   }
+  ]
+ },
+ {
+  "id": "DS-STATE-2",
+  "text": "Progress is shown where the work is: a 2 px indeterminate bar at the top of the list (view progress); no global progress notification for a single-package operation.",
+  "measurement": ".nuiget-progress present at the list top while loading or revalidating; no Notification progress for single operations.",
+  "tolerance": "exact",
+  "status": "measurable",
+  "evidence": [
+   {
+    "url": "https://raw.githubusercontent.com/microsoft/vscode-docs/fd64d64891a2e660bcc0d32ea402da905adfef7f/api/ux-guidelines/notifications.md",
+    "line": 55,
+    "quote": "progress is best kept within context (within a view or editor)"
+   },
+   {
+    "path": "docs/ux/interaction-model.md",
+    "line": 65,
+    "quote": "Skeleton rows (3) + `role=\"status\"` text \"Loading …\""
+   }
+  ]
+ },
+ {
+  "id": "DS-STATE-3",
+  "text": "Empty states follow welcome-view content: left-aligned sentence(s), 20 px side padding, 1em between blocks, at most one primary button (full width up to 300 px), links preferred.",
+  "measurement": "Computed text-align start; padding-inline 20; <= 1 button; button width = min(container - 40, 300).",
+  "tolerance": "1 px",
+  "status": "measurable",
+  "evidence": [
+   {
+    "url": "https://raw.githubusercontent.com/microsoft/vscode/54d565d227f05c6b4dd9e109811128394125a753/src/vs/workbench/browser/parts/views/media/views.css",
+    "line": 95,
+    "quote": "padding: 0 20px 1em 20px;"
+   },
+   {
+    "path": "src/webview/shared/primitives/primitives.css",
+    "line": 545,
+    "quote": "text-align: center;"
+   }
+  ]
+ },
+ {
+  "id": "DS-STATE-4",
+  "text": "Errors are inline in the area that failed: severity icon + one sentence + one action; toasts only for operation failures.",
+  "measurement": "Inline error element contains an error/warning codicon, text and <= 1 button.",
+  "tolerance": "exact",
+  "status": "measurable",
+  "evidence": [
+   {
+    "url": "https://raw.githubusercontent.com/microsoft/vscode/54d565d227f05c6b4dd9e109811128394125a753/src/vs/workbench/contrib/extensions/browser/media/extensionsViewlet.css",
+    "line": 179,
+    "quote": ".extensions-viewlet > .extensions .message-container {"
+   }
+  ]
+ },
+ {
+  "id": "DS-STATE-5",
+  "text": "A successful single operation is confirmed in place (row state, button label) and through the live region, not by a toast; toasts for failures, partial bulk results and long bulk runs only. = Extensions Install/Update success: aria alert, no notification.",
+  "measurement": "Information notifications after a successful single install/update/uninstall = 0; status-live text present.",
+  "tolerance": "0 toasts",
+  "status": "measurable",
+  "evidence": [
+   {
+    "url": "https://raw.githubusercontent.com/microsoft/vscode/54d565d227f05c6b4dd9e109811128394125a753/src/vs/workbench/contrib/extensions/browser/extensionsActions.ts",
+    "line": 611,
+    "quote": "alert(localize('installExtensionComplete', \"Installing extension {0} is completed.\""
+   },
+   {
+    "url": "https://raw.githubusercontent.com/microsoft/vscode-docs/fd64d64891a2e660bcc0d32ea402da905adfef7f/api/ux-guidelines/notifications.md",
+    "line": 42,
+    "quote": "Respect the user's attention by only sending notifications when absolutely necessary"
+   }
+  ]
+ },
+ {
+  "id": "DS-STATE-6",
+  "text": "A pending operation changes the control in place to its -ing label or a spinner, and the row is aria-busy. = Extensions 'Installing'/'Uninstalling' labels.",
+  "measurement": "Text or spinner on the busy row's action; aria-busy=true.",
+  "tolerance": "exact",
+  "status": "measurable",
+  "evidence": [
+   {
+    "url": "https://raw.githubusercontent.com/microsoft/vscode/54d565d227f05c6b4dd9e109811128394125a753/src/vs/workbench/contrib/extensions/browser/extensionsActions.ts",
+    "line": 894,
+    "quote": "localize('Uninstalling', \"Uninstalling\")"
+   }
+  ]
+ },
+ {
+  "id": "DS-STATE-7",
+  "text": "Every disabled affordance says why in text (Visual Studio: 'Implicitly referenced by an SDK...').",
+  "measurement": "Each aria-disabled row or disabled button has a visible or aria-describedby reason (non-empty).",
+  "tolerance": "0 missing",
+  "status": "measurable",
+  "evidence": [
+   {
+    "url": "https://learn.microsoft.com/en-us/nuget/consume-packages/install-use-packages-visual-studio",
+    "quote": "Implicitly referenced by an SDK. To update the package, update the SDK to which it belongs."
+   },
+   {
+    "path": "src/webview/shared/primitives/primitives.css",
+    "line": 140,
+    "quote": ".nuiget-row-check--off {"
+   }
+  ]
+ },
+ {
+  "id": "DS-FOCUS-1",
+  "text": "Focus rings are 1 px solid; outline-offset -1 px for rows, inputs, selects and tabs; +2 px for check boxes and text buttons.",
+  "measurement": "Computed outline-width 1 and outline-offset per control kind. Today check boxes +1, buttons -1.",
+  "tolerance": "exact",
+  "status": "measurable",
+  "evidence": [
+   {
+    "url": "https://raw.githubusercontent.com/microsoft/vscode/54d565d227f05c6b4dd9e109811128394125a753/src/vs/workbench/browser/media/style.css",
+    "line": 292,
+    "quote": "outline-offset: 2px;"
+   },
+   {
+    "url": "https://raw.githubusercontent.com/microsoft/vscode/54d565d227f05c6b4dd9e109811128394125a753/src/vs/base/browser/ui/button/button.css",
+    "line": 33,
+    "quote": "outline-offset: 2px !important;"
+   }
+  ]
+ },
+ {
+  "id": "DS-FOCUS-2",
+  "text": "The focused row's ring uses list.focusOutline (1 px, offset -1), not focusBorder.",
+  "measurement": "Computed outline colour of the focused option = --vscode-list-focusOutline.",
+  "tolerance": "exact",
+  "status": "measurable",
+  "evidence": [
+   {
+    "url": "https://raw.githubusercontent.com/microsoft/vscode/54d565d227f05c6b4dd9e109811128394125a753/src/vs/base/browser/ui/list/listWidget.ts",
+    "line": 990,
+    "quote": ".context-menu-visible .monaco-list${suffix}.last-focused .monaco-list-row.focused { outline: 1px solid ${styles.listFocusOutline}; outline-offset: -1px; }"
+   }
+  ]
+ },
+ {
+  "id": "DS-FOCUS-3",
+  "text": "Focus is drawn for keyboard focus only (:focus-visible), as Modern UI's keyboardFocusOnly module does.",
+  "measurement": "No outline after a pointer click on a row or tab.",
+  "tolerance": "exact",
+  "status": "measurable",
+  "evidence": [
+   {
+    "url": "https://raw.githubusercontent.com/microsoft/vscode/54d565d227f05c6b4dd9e109811128394125a753/src/vs/workbench/contrib/modernUI/browser/media/paneHeaders.css",
+    "line": 108,
+    "quote": ".modern-ui .monaco-pane-view .pane > .pane-header:focus:not(:focus-visible) {"
+   }
+  ]
+ },
+ {
+  "id": "DS-FOCUS-4",
+  "text": "High contrast draws selection as a 1 px dotted contrastActiveBorder outline and hover as a 1 px dashed outline.",
+  "measurement": "In the HC captures: selected row outline-style dotted, hovered row dashed.",
+  "tolerance": "exact",
+  "status": "measurable",
+  "evidence": [
+   {
+    "url": "https://raw.githubusercontent.com/microsoft/vscode/54d565d227f05c6b4dd9e109811128394125a753/src/vs/base/browser/ui/list/listWidget.ts",
+    "line": 1001,
+    "quote": "content.push(`.monaco-list${suffix} .monaco-list-row.selected { outline: 1px dotted ${styles.listSelectionOutline}; outline-offset: -1px; }`);"
+   },
+   {
+    "path": "src/test/lint/webview-tokens.test.ts",
+    "line": 99,
+    "quote": "expect([...contrast.keys()].sort()).toEqual(['--nuiget-color-border', '--nuiget-color-focus', '--nuiget-color-shadow']);"
+   }
+  ]
+ },
+ {
+  "id": "DS-MOTION-1",
+  "text": "UI transitions last 100-150 ms ease-out; loops use workbench timings: spinner 1.5 s steps(30), indeterminate progress 4 s linear.",
+  "measurement": "Computed transition-duration in {100,150} ms; spinner animation-duration 1.5 s; progress 4 s. Today 100/200 ms, spinner 1 s, progress 1.6 s.",
+  "tolerance": "exact",
+  "status": "measurable",
+  "evidence": [
+   {
+    "url": "https://raw.githubusercontent.com/microsoft/vscode/54d565d227f05c6b4dd9e109811128394125a753/src/vs/base/browser/ui/splitview/paneview.css",
+    "line": 122,
+    "quote": "transition-duration: 0.15s;"
+   },
+   {
+    "url": "https://raw.githubusercontent.com/microsoft/vscode/54d565d227f05c6b4dd9e109811128394125a753/src/vs/base/browser/ui/codicons/codicon/codicon-modifiers.css",
+    "line": 23,
+    "quote": "animation: codicon-spin 1.5s steps(30) infinite;"
+   },
+   {
+    "url": "https://raw.githubusercontent.com/microsoft/vscode/54d565d227f05c6b4dd9e109811128394125a753/src/vs/base/browser/ui/progressbar/progressbar.css",
+    "line": 35,
+    "quote": "animation-duration: 4s;"
+   }
+  ]
+ },
+ {
+  "id": "DS-MOTION-2",
+  "text": "Reduced motion follows both the OS (prefers-reduced-motion) and VS Code's workbench.reduceMotion, which the webview receives as body.vscode-reduce-motion.",
+  "measurement": "With workbench.reduceMotion on and the OS default: computed --nuiget-duration-normal = 0ms.",
+  "tolerance": "exact",
+  "status": "measurable",
+  "evidence": [
+   {
+    "url": "https://raw.githubusercontent.com/microsoft/vscode/54d565d227f05c6b4dd9e109811128394125a753/src/vs/workbench/contrib/webview/browser/pre/index.html",
+    "line": 512,
+    "quote": "body.classList.add('vscode-reduce-motion');"
+   },
+   {
+    "path": "src/webview/shared/tokens.css",
+    "line": 226,
+    "quote": "@media (prefers-reduced-motion: reduce) {"
+   }
+  ]
+ },
+ {
+  "id": "DS-COPY-1",
+  "text": "Button, tab and command labels are Title Case; tooltips and messages are sentence case. = Extensions action labels vs tooltips.",
+  "measurement": "Regex over rendered labels of button, role=tab and menu items: every word of 4+ letters capitalised (articles/prepositions excepted).",
+  "tolerance": "0 violations",
+  "status": "measurable",
+  "evidence": [
+   {
+    "url": "https://raw.githubusercontent.com/microsoft/vscode/54d565d227f05c6b4dd9e109811128394125a753/src/vs/workbench/contrib/extensions/browser/extensionsActions.ts",
+    "line": 1635,
+    "quote": "localize('selectVersion', \"Select Version to Install\")"
+   },
+   {
+    "path": "src/webview/main/features/installed/InstalledTab.tsx",
+    "line": 219,
+    "quote": "{`Uninstall selected (${count})`}"
+   }
+  ]
+ },
+ {
+  "id": "DS-COPY-2",
+  "text": "Label-value pairs have no colon and use one noun per field. = Extensions editor More Info labels.",
+  "measurement": "No details-pane label ends with ':'; 'Author(s)' and 'Authors' not both present.",
+  "tolerance": "0 violations",
+  "status": "measurable",
+  "evidence": [
+   {
+    "url": "https://raw.githubusercontent.com/microsoft/vscode/54d565d227f05c6b4dd9e109811128394125a753/src/vs/workbench/contrib/extensions/browser/extensionEditor.ts",
+    "line": 1148,
+    "quote": "$('div.more-info-entry-name', undefined, localize('id', \"Identifier\")),"
+   },
+   {
+    "path": "src/webview/main/features/details/DetailsPane.tsx",
+    "line": 167,
+    "quote": "<span className=\"nuiget-details-label\">Installed:</span>"
+   }
+  ]
+ },
+ {
+  "id": "DS-COPY-3",
+  "text": "Messages are whole sentences ending with a period; an empty state names the condition in one sentence.",
+  "measurement": "Regex on EmptyState messages and banners: ends with '.'.",
+  "tolerance": "0 violations",
+  "status": "measurable",
+  "evidence": [
+   {
+    "url": "https://raw.githubusercontent.com/microsoft/vscode-docs/fd64d64891a2e660bcc0d32ea402da905adfef7f/api/ux-guidelines/views.md",
+    "line": 78,
+    "quote": "Limit the length of the content"
+   }
+  ]
+ },
+ {
+  "id": "DS-COPY-4",
+  "text": "Labels of commands that open further UI end with '...' (three ASCII periods) as the workbench writes it.",
+  "measurement": "Regex: labels that open a dialog or picker end with '...'. Today U+2026 is used.",
+  "tolerance": "0 violations",
+  "status": "measurable",
+  "evidence": [
+   {
+    "url": "https://raw.githubusercontent.com/microsoft/vscode/54d565d227f05c6b4dd9e109811128394125a753/src/vs/workbench/contrib/extensions/browser/extensionsActions.ts",
+    "line": 232,
+    "quote": "localize('installVSIX', \"Install from VSIX...\")"
+   }
+  ]
+ },
+ {
+  "id": "DS-COPY-5",
+  "text": "Counts appear one way per surface: a count badge in pane and tab headers, 'N of M' only while filtering; never both a badge and '(N)' text.",
+  "measurement": "No header contains both a badge and a '(N)' text node; filtered headers show 'N of M'.",
+  "tolerance": "0 violations",
+  "status": "measurable",
+  "evidence": [
+   {
+    "url": "https://raw.githubusercontent.com/microsoft/vscode/54d565d227f05c6b4dd9e109811128394125a753/src/vs/workbench/contrib/extensions/browser/media/extensionsViewlet.css",
+    "line": 154,
+    "quote": ".extensions-viewlet > .extensions .extension-view-header .count-badge-wrapper {"
+   }
+  ]
+ },
+ {
+  "id": "DS-DIVIDER-1",
+  "text": "No line between rows; lines only between groups (pane headers, sections, quick-pick separators), none above the first group.",
+  "measurement": "Rows with non-zero border-bottom = 0; first section header has no top border.",
+  "tolerance": "0",
+  "status": "measurable",
+  "evidence": [
+   {
+    "url": "https://raw.githubusercontent.com/microsoft/vscode/54d565d227f05c6b4dd9e109811128394125a753/src/vs/workbench/browser/parts/views/media/paneviewlet.css",
+    "line": 7,
+    "quote": "border-top: none !important; /* less clutter: do not show any border for first views in a pane */"
+   },
+   {
+    "path": "src/webview/shared/primitives/primitives.css",
+    "line": 240,
+    "quote": "border-bottom: 1px solid var(--nuiget-color-border);"
+   }
+  ]
+ },
+ {
+  "id": "DS-DIVIDER-2",
+  "text": "Only layers above the page (dialog, popover, popup) are elevated, with widget.shadow and widget.border; hover-style shadow 0 2px 8px.",
+  "measurement": "Computed box-shadow non-none only on .nuiget-dialog, .nuiget-popover, .nuiget-search-popup.",
+  "tolerance": "exact",
+  "status": "measurable",
+  "evidence": [
+   {
+    "url": "https://raw.githubusercontent.com/gitkraken/vscode-gitlens/a9bc0f000eb4221bfeff4a1b03e624f478c96141/src/webviews/apps/shared/styles/tokens.scss",
+    "line": 111,
+    "quote": "--gl-shadow-tooltip: 0 2px 8px var(--vscode-widget-shadow); // single-layer, byte-identical to VS Code's native hover"
+   }
+  ]
+ },
+ {
+  "id": "DS-DIVIDER-3",
+  "text": "A popup groups items with quick-pick separators: a top line and a descriptionForeground label, not uppercase captions.",
+  "measurement": "Computed text-transform of .nuiget-search-group-header = none; border-top on every group but the first.",
+  "tolerance": "exact",
+  "status": "measurable",
+  "evidence": [
+   {
+    "url": "https://raw.githubusercontent.com/microsoft/vscode/54d565d227f05c6b4dd9e109811128394125a753/src/vs/platform/quickinput/browser/media/quickInput.css",
+    "line": 251,
+    "quote": "border-top-width: 1px;"
+   },
+   {
+    "path": "src/webview/shared/search/search.css",
+    "line": 67,
+    "quote": "text-transform: uppercase;"
+   }
+  ]
+ },
+ {
+  "id": "DS-DIVIDER-4",
+  "text": "The main header/body line and the tab strip line use one divider role = panelSection.border / settings.headerBorder (editor dividers).",
+  "measurement": "Computed border colour of .nuiget-main-search and .nuiget-tablist bottom borders equal and = the bound key.",
+  "tolerance": "exact",
+  "status": "measurable",
+  "evidence": [
+   {
+    "url": "https://raw.githubusercontent.com/microsoft/vscode/54d565d227f05c6b4dd9e109811128394125a753/src/vs/workbench/contrib/extensions/browser/media/extensionEditor.css",
+    "line": 378,
+    "quote": "border-bottom: 1px solid var(--vscode-panelSection-border);"
+   },
+   {
+    "path": "src/webview/shared/tokens.css",
+    "line": 81,
+    "quote": "--nuiget-color-border: var(--vscode-widget-border, var(--vscode-panel-border));"
+   }
+  ]
+ },
+ {
+  "id": "icons-match-pinned-codicons",
+  "text": "Every codicon icon in src/webview/shared/primitives/icons.tsx draws the path data and viewBox of the pinned @vscode/codicons src/icons/<name>.svg",
+  "measurement": "Lint test: for each '/** Codicon: <name> */' block, compare the path d attributes and viewBox with the pinned SVG file",
+  "status": "measurable",
+  "tolerance": "exact string equality after attribute-name mapping (fill-rule → fillRule)",
+  "evidence": [
+   {
+    "url": "https://github.com/microsoft/vscode-codicons/tree/main/src/icons",
+    "quote": "current drawings, e.g. chevron-right.svg"
+   }
+  ],
+  "catches": [
+   "2020 drawings shipped after a codicon redraw",
+   "hand-edited paths"
+  ]
+ },
+ {
+  "id": "spacing-on-workbench-ramp",
+  "text": "Every padding, margin and gap length that tokens.css resolves to lands on the workbench spacing ramp (0, 2, 4, 6, 8, 10, 12, 16, 20, 24, 28, 32, 36, 40 px)",
+  "measurement": "Extend webview-tokens.test.ts: each --nuiget-space-* token aliases var(--vscode-spacing-sizeN, Npx) with N on the ramp",
+  "status": "measurable",
+  "tolerance": "0 off-ramp values; the hairline 1px token is an explicit, documented exception or snaps to 2",
+  "evidence": [
+   {
+    "url": "https://github.com/microsoft/vscode/blob/main/.github/instructions/design-tokens.instructions.md",
+    "quote": "a raw px value is fine as long as it lands on the scale (0, 2, 4, 6, 8, 10, 12, 16, 20, 24, 28, 32, 36, 40)"
+   }
+  ],
+  "catches": [
+   "V5-type drift: spacing that follows no single scale"
+  ]
+ },
+ {
+  "id": "radius-and-type-from-workbench-tokens",
+  "text": "Control radii and font sizes in tokens.css alias the workbench tokens (--vscode-cornerRadius-*, --vscode-fontSize-*, --vscode-fontWeight-*), each with a literal fallback for hosts below 1.110",
+  "measurement": "webview-tokens.test.ts asserts the var() names and that every alias has a fallback",
+  "status": "measurable",
+  "tolerance": "exact",
+  "evidence": [
+   {
+    "url": "https://github.com/microsoft/vscode/blob/main/src/vs/platform/theme/common/sizes/baseSizes.ts",
+    "quote": "registerSize('cornerRadius.small', sizeForAllThemes(4, 'px'))"
+   }
+  ],
+  "catches": [
+   "2 px radius on controls where the workbench uses 4",
+   "em-based type off the workbench ramp"
+  ]
+ },
+ {
+  "id": "MS-1",
+  "text": "Edges meant to coincide coincide: the left inset of title, search, tabs, toolbar, section headers and row content; an end-aligned primary button and the edge it aligns with.",
+  "measurement": "getBoundingClientRect left/right in the webview frame via one executeScript per state",
+  "status": "measurable",
+  "tolerance": "≤ 1 px",
+  "catches": [
+   "V2",
+   "P9.fix-4",
+   "P9.fix-5",
+   "P9.fix-6"
+  ],
+  "evidence": [
+   {
+    "path": "src/test/ui/v2/main-shell.ui.test.ts",
+    "line": 82,
+    "quote": "to.be.at.most(1)"
+   },
+   {
+    "path": "src/test/ui/v2/main-installed.ui.test.ts",
+    "line": 101,
+    "quote": "to.be.at.most(8)"
+   }
+  ]
+ },
+ {
+  "id": "MS-2",
+  "text": "Check box, icon and text block are vertically centred on their card.",
+  "measurement": "centre of child rect vs centre of row wrapper rect",
+  "status": "measurable",
+  "tolerance": "≤ 1 px",
+  "catches": [
+   "P9.fix-3"
+  ],
+  "evidence": [
+   {
+    "path": "src/test/ui/v2/main-installed.ui.test.ts",
+    "line": 88,
+    "quote": "expect(Math.abs(row.check - row.card), row.name).to.be.at.most(2);"
+   }
+  ]
+ },
+ {
+  "id": "MS-3",
+  "text": "Visible children of a list (badges, actions, text) stay inside the scroll port with an inset of --nuiget-space-2 and never overlap the divider or scrollbar gutter.",
+  "measurement": "child.right ≤ scrollport content right − inset; elementFromPoint at the child's right corners returns the child",
+  "status": "measurable",
+  "tolerance": "≥ 0 px clearance after the inset (−0.5 px sub-pixel slack)",
+  "catches": [
+   "V3"
+  ],
+  "evidence": [
+   {
+    "url": "report §2.3: badge ink ends x=673, divider starts x=674 (main-installed-all.png, y=384)"
+   }
+  ]
+ },
+ {
+  "id": "MS-4",
+  "text": "Candidate: a section header sits closer to the content it labels than to the content before it.",
+  "measurement": "gap(header text Range rect → first icon/name rect) vs gap(previous content → header text)",
+  "status": "judge-only",
+  "tolerance": "rule (≤); confirm the box pair against the negative-control run before adopting",
+  "catches": [
+   "V4"
+  ],
+  "evidence": [
+   {
+    "path": "src/webview/shared/primitives/primitives.css",
+    "line": 454,
+    "quote": "min-height: var(--nuiget-row-height-compact);"
+   }
+  ]
+ },
+ {
+  "id": "MS-5",
+  "text": "Gaps with the same role (header→toolbar, toolbar→section header, section header→content, between groups) are equal everywhere in both tabs and both surfaces.",
+  "measurement": "vertical gaps between consecutive role-tagged content rects",
+  "status": "measurable",
+  "tolerance": "≤ 1 px",
+  "catches": [
+   "V5",
+   "V1"
+  ],
+  "evidence": [
+   {
+    "path": "src/webview/shared/tokens.css",
+    "line": 14,
+    "quote": "--nuiget-space-1: 2px;"
+   }
+  ]
+ },
+ {
+  "id": "MS-6",
+  "text": "Heights and computed colours of tab bar, toolbar buttons, inputs and section headers equal their workbench analogues measured in the same session.",
+  "measurement": "top-document getRect/getComputedStyle of workbench exemplars vs webview elements",
+  "status": "measurable",
+  "tolerance": "≤ 1 px heights; equal computed colours",
+  "catches": [
+   "V1"
+  ],
+  "evidence": [
+   {
+    "path": "src/test/ui/v2/sidebar.ui.test.ts",
+    "line": 54,
+    "quote": "findElement(By.id('workbench.parts.sidebar')).getRect()"
+   }
+  ]
+ },
+ {
+  "id": "MS-7",
+  "text": "Package names and authors are not cut at the default widths; at 200 px the name is cut only when it is still at least as wide as the version.",
+  "measurement": "scrollWidth vs clientWidth",
+  "status": "measurable",
+  "tolerance": "0 px at default widths",
+  "catches": [
+   "P9.fix-3",
+   "P9.10"
+  ],
+  "evidence": [
+   {
+    "path": "src/test/ui/v2/main-installed.ui.test.ts",
+    "line": 77,
+    "quote": "expect(authors.scrollWidth, 'the authors span of Newtonsoft.Json is not ellipsized').to.be.at.most(authors.clientWidth);"
+   }
+  ]
+ },
+ {
+  "id": "MS-8",
+  "text": "Persistent chrome (title, search box, tab bar, toolbar) does not move between named states.",
+  "measurement": "rects of persistent chrome recorded per state and compared",
+  "status": "measurable",
+  "tolerance": "≤ 0.5 px",
+  "catches": [
+   "P9.fix-2"
+  ],
+  "evidence": [
+   {
+    "path": "src/test/ui/v2/main-installed.ui.test.ts",
+    "line": 138,
+    "quote": "to.be.within(-1, tokenPx('--nuiget-row-height-comfortable'))"
+   }
+  ]
+ },
+ {
+  "id": "MS-9",
+  "text": "The masked webview crop of each named state matches its pinned baseline.",
+  "measurement": "pixelmatch(threshold 0.1, includeAA false, ignoreMask for live regions) on the iframe-rect crop of VSBrowser.takeScreenshot",
+  "status": "measurable",
+  "tolerance": "0 mismatched pixels (informational until masks and a pinned VS Code exist)",
+  "catches": [
+   "any unintended visual change"
+  ],
+  "evidence": [
+   {
+    "url": "report §3.2: 13/15 states 0 px across runs after crop at 16/255"
+   }
+  ]
+ },
+ {
+  "id": "MS-10",
+  "text": "No axe violation in the real webview: full WCAG A/AA plus best-practice per named state in the default theme; color-contrast and target-size per theme.",
+  "measurement": "axe-core injected into the webview frame via executeScriptAsync",
+  "status": "measurable",
+  "tolerance": "0 violations; incomplete only inside package-details-panel (existing ruling)",
+  "catches": [
+   "accessibility regressions"
+  ],
+  "evidence": [
+   {
+    "path": "src/test/ui/v2/theme.ui.test.ts",
+    "line": 53,
+    "quote": "runOnly: ['color-contrast', 'target-size'],"
+   }
+  ]
+ },
+ {
+  "id": "pxLength",
+  "text": "No literal px/em/rem length outside padding, margin and gap in a 2.0 stylesheet other than tokens.css.",
+  "measurement": "In primitives.css, main.css, sidebar.css and search.css: a declaration whose property is not a custom property and does not match /^(?:padding|margin|gap|row-gap|column-gap)(?:-[a-z-]+)?$/, and whose value matches /(?<![\\w.-])-?\\d*\\.?\\d+(?:px|em|rem)\\b/. One entry per declaration; selector = whole prelude with whitespace collapsed; line = declaration line. %, vh, vw, deg and unitless numbers are out.",
+  "status": "measurable",
+  "evidence": [
+   {
+    "path": "src/test/lint/webview-stylesheets.test.ts",
+    "line": 21,
+    "quote": "const LENGTH = /(?<![\\w.-])-?\\d*\\.?\\d+(?:px|em|rem)\\b/;"
+   }
+  ],
+  "catches": [
+   "58 hits: primitives.css 19, main.css 32, sidebar.css 4, search.css 3",
+   "34 of them are 1px lines pinned by webview-stylesheets.test.ts:161-163,166,178,189,238"
+  ],
+  "tolerance": "exact set match against the 58 pxLength entries of the 116-entry baseline"
+ },
+ {
+  "id": "duplicateSelector",
+  "text": "A whole selector prelude is declared once per bundle.",
+  "measurement": "Within a bundle in cascade order (main: primitives, tokens, main, search; sidebar: primitives, tokens, sidebar, search), a style rule outside @keyframes in a linted stylesheet whose whitespace-collapsed prelude and at-rule context equal an earlier rule's. One entry per later rule, deduplicated across bundles; property null; value = file:line of the first rule.",
+  "status": "measurable",
+  "evidence": [
+   {
+    "path": "src/webview/shared/primitives/primitives.css",
+    "line": 238,
+    "quote": ".nuiget-row--comfortable {"
+   }
+  ],
+  "catches": [
+   "1 hit: primitives.css:238 repeats primitives.css:86"
+  ],
+  "tolerance": "exact set match against the 1 duplicateSelector entry"
+ },
+ {
+  "id": "specificity",
+  "text": "No complex selector above (0,2,0).",
+  "measurement": "Every complex selector outside @keyframes in the linted stylesheets with specificity lexicographically greater than (0,2,0) per Selectors Level 4 (:not/:is/:has take the max argument, :where 0, pseudo-elements in c). One entry per complex selector; property null; value \"(a,b,c)\"; line = line the complex selector starts on.",
+  "status": "measurable",
+  "evidence": [
+   {
+    "path": "src/webview/shared/primitives/primitives.css",
+    "line": 279,
+    "quote": ".nuiget-listbox[aria-multiselectable=\"true\"] .nuiget-row--comfortable .nuiget-row-option[aria-selected=\"true\"] {"
+   }
+  ],
+  "catches": [
+   "41 hits: primitives.css 23, main.css 15, sidebar.css 2, search.css 1 (35 with b > 2)"
+  ],
+  "tolerance": "exact set match against the 41 specificity entries; cross-checked with @bramus/specificity"
+ },
+ {
+  "id": "override",
+  "text": "A stylesheet does not override a declaration that another stylesheet of the same bundle set on the same class.",
+  "measurement": "Top-level rules R1, R2 in different files of one bundle; S1's subject compound has a class and all its classes are in S2's subject compound; same pseudo-element; S2 wins by specificity or by later order; D1 and D2 share a physical longhand after shorthand and logical expansion (horizontal LTR). One entry per (D2, S2); selector = S2; property/value = D2; line = D2's line.",
+  "status": "measurable",
+  "evidence": [
+   {
+    "path": "src/webview/main/main.css",
+    "line": 169,
+    "quote": "    padding-inline-start: var(--nuiget-inset);"
+   }
+  ],
+  "catches": [
+   "16 hits: main.css 9, sidebar.css 7, all over primitives.css",
+   "12 of 16 introduced in P9.x or P9.fix"
+  ],
+  "tolerance": "exact set match against the 16 override entries; type-subject overrides (search.css:11, main.css:352) are out of scope by definition"
+ },
+ {
+  "id": "deadRule",
+  "text": "Every class a stylesheet styles is rendered by non-test webview source.",
+  "measurement": "A complex selector in a linted stylesheet with a class that does not occur as a whole word in any comment-stripped .ts/.tsx under src/webview (excluding *.test.ts(x), testSupport.ts, *.d.ts) and does not start with a template prefix (nuiget-x--${…}) or a quoted prefix string ('nuiget-hljs-') found there. One entry per complex selector; property null; value = dead class names.",
+  "status": "measurable",
+  "evidence": [
+   {
+    "path": "src/webview/main/features/details/markdown.ts",
+    "line": 51,
+    "quote": "        hljs.configure({ classPrefix: 'nuiget-hljs-' });"
+   }
+  ],
+  "catches": [
+   "0 hits; needs a planted sample such as .nuiget-not-rendered { color: inherit; }",
+   "a bundle-based variant would catch the 4 .nuiget-popover selectors"
+  ],
+  "tolerance": "exact: empty set on the current tree, planted sample reported"
+ },
+ {
+  "id": "disableComment",
+  "text": "No stylelint or eslint disable comment in a stylesheet.",
+  "measurement": "A comment in a linted stylesheet whose text matches /\\b(?:stylelint|eslint)-disable\\b/. One entry per comment; selector and property null; value = comment text; line = the comment's first line.",
+  "status": "measurable",
+  "evidence": [
+   {
+    "path": "src/test/lint/cssRules.ts",
+    "line": 14,
+    "quote": "    const text = css.replace(/\\r\\n/g, '\\n').replace(/\\/\\*[\\s\\S]*?\\*\\//g, '');"
+   }
+  ],
+  "catches": [
+   "0 hits; needs a planted sample such as /* stylelint-disable-next-line */",
+   "parseRules strips comments, so this rule needs a comment-aware reader"
+  ],
+  "tolerance": "exact: empty set on the current tree, planted sample reported"
+ },
+ {
+  "id": "CA-R1",
+  "text": "No feature stylesheet selector names a primitive class (main.css, sidebar.css, search.css).",
+  "measurement": "grep -nE \"\\.(<classes defined in primitives.css>)([^a-z0-9-]|$)\" src/webview/main/main.css src/webview/sidebar/sidebar.css src/webview/shared/search/search.css | wc -l",
+  "status": "measurable",
+  "tolerance": "0",
+  "catches": [
+   "V1",
+   "V3",
+   "V4",
+   "primitive variants defined by parents"
+  ],
+  "evidence": [
+   {
+    "path": "src/webview/main/main.css",
+    "line": 164,
+    "quote": "today: 14 rules in main.css, 7 in sidebar.css (21)"
+   }
+  ]
+ },
+ {
+  "id": "CA-R2",
+  "text": "Every export of shared/primitives/index.ts has a production importer.",
+  "measurement": "for each name exported by index.ts: grep -rlw <name> src/webview --include='*.tsx' --include='*.ts' excluding tests and shared/primitives",
+  "status": "measurable",
+  "tolerance": "0 unused exports",
+  "catches": [
+   "dead primitives"
+  ],
+  "evidence": [
+   {
+    "path": "src/webview/shared/primitives/index.ts",
+    "line": 17,
+    "quote": "today: Popover and 13 icons have no production importer"
+   }
+  ]
+ },
+ {
+  "id": "CA-R3",
+  "text": "The main-panel shell stays under 300 lines (ADR-008).",
+  "measurement": "wc -l < src/webview/main/MainShell.tsx",
+  "status": "measurable",
+  "tolerance": "< 300",
+  "catches": [
+   "logic accreting in the shell"
+  ],
+  "evidence": [
+   {
+    "path": "src/webview/main/MainShell.tsx",
+    "line": 308,
+    "quote": "today: 308 lines"
+   }
+  ]
+ },
+ {
+  "id": "CA-R4",
+  "text": "Listbox row heights equal the row-height tokens (one source of truth).",
+  "measurement": "compare ROW_HEIGHT in Listbox.tsx with --nuiget-row-height-compact/-comfortable in tokens.css",
+  "status": "measurable",
+  "tolerance": "equal",
+  "catches": [
+   "virtualizer estimate drift after a DS change of row height"
+  ],
+  "evidence": [
+   {
+    "path": "src/webview/shared/primitives/Listbox.tsx",
+    "line": 8,
+    "quote": "today equal (24/78) but duplicated by hand"
+   }
+  ]
+ },
+ {
+  "id": "CA-R5",
+  "text": "Every hook in interaction model §8 is rendered by a product file, and the row hook keeps the wrapper/option/actions triad.",
+  "measurement": "npx vitest run src/test/lint/interaction-model-testids.test.ts; ExTester reads of [data-testid=package-row-*] [role=option]",
+  "status": "measurable",
+  "tolerance": "lint green",
+  "catches": [
+   "a rebuild that drops a hook or flattens the row"
+  ],
+  "evidence": [
+   {
+    "path": "docs/ux/interaction-model.md",
+    "line": 171,
+    "quote": "today: all hooks rendered (lint green per tracker P9.12)"
+   }
+  ]
+ },
+ {
+  "id": "a11y-focus-after-close",
+  "text": "After any dialog or popover closes, by Confirm, Cancel or Escape, keyboard focus is on a focusable element of the surface, never on <body>.",
+  "measurement": "jsdom: document.activeElement !== document.body after each close; ExTester: executeScript('return document.activeElement === document.body') is false",
+  "status": "measurable",
+  "tolerance": "0 failures",
+  "evidence": [
+   {
+    "path": "src/webview/shared/primitives/layers.ts",
+    "line": 53
+   }
+  ],
+  "catches": [
+   "finding 1"
+  ]
+ },
+ {
+  "id": "a11y-enter-not-destructive",
+  "text": "Enter on a list row never runs an install, update or uninstall without a confirmation; it opens or shows the item.",
+  "measurement": "RTL: Enter on each list's active row sends no ops/* request",
+  "status": "measurable",
+  "tolerance": "0 lists",
+  "evidence": [
+   {
+    "path": "src/webview/sidebar/ProjectPackages.tsx",
+    "line": 91
+   }
+  ],
+  "catches": [
+   "finding 2"
+  ]
+ },
+ {
+  "id": "a11y-hint-truthful",
+  "text": "Every key named in a Listbox hint has a handler on that list.",
+  "measurement": "RTL: for each listed key in hint, pressing it calls the owner's callback (e.g. Shift+F10 -> onContextMenu)",
+  "status": "measurable",
+  "tolerance": "0 mismatches",
+  "evidence": [
+   {
+    "path": "src/webview/main/features/installed/InstalledProjectSection.tsx",
+    "line": 40
+   }
+  ],
+  "catches": [
+   "finding 3"
+  ]
+ },
+ {
+  "id": "a11y-reduced-motion-both-signals",
+  "text": "Durations are zero under prefers-reduced-motion and under body.vscode-reduce-motion.",
+  "measurement": "tokens lint for both selectors, plus ExTester with workbench.reduceMotion 'on': zero running animations",
+  "status": "measurable",
+  "tolerance": "0 running animations",
+  "evidence": [
+   {
+    "path": "src/webview/shared/tokens.css",
+    "line": 226
+   }
+  ],
+  "catches": [
+   "finding 4"
+  ]
+ },
+ {
+  "id": "a11y-text-contrast-all-states",
+  "text": "Text token pairs reach 4.5:1 on every surface they are drawn on, hover and open layers included, in the six default themes.",
+  "measurement": "offline theme lint plus axe color-contrast in hover, open-layer and README states",
+  "status": "measurable",
+  "tolerance": ">= 4.5:1 (3:1 for large text)",
+  "evidence": [
+   {
+    "path": "src/webview/shared/tokens.css",
+    "line": 118
+   }
+  ],
+  "catches": [
+   "finding 6",
+   "finding 7"
+  ]
+ },
+ {
+  "id": "a11y-nontext-contrast",
+  "text": "Control boundaries and state marks (check box, focus ring on the editor background, selected-tab line) reach 3:1 against their background.",
+  "measurement": "offline theme lint over the token pairs",
+  "status": "measurable",
+  "tolerance": ">= 3:1",
+  "evidence": [
+   {
+    "path": "src/webview/shared/primitives/primitives.css",
+    "line": 128
+   }
+  ],
+  "catches": [
+   "finding 5"
+  ]
+ },
+ {
+  "id": "a11y-first-load-announced",
+  "text": "Every list and details area that shows a skeleton also puts a 'Loading …' message in its surface's status-live region.",
+  "measurement": "RTL: status-live text while each slice is loading",
+  "status": "measurable",
+  "tolerance": "0 silent first loads",
+  "evidence": [
+   {
+    "path": "docs/ux/interaction-model.md",
+    "line": 65
+   }
+  ],
+  "catches": [
+   "finding 8"
+  ]
+ },
+ {
+  "id": "a11y-full-axe-real-page",
+  "text": "The real webview has zero axe violations with all default rules plus label-content-name-mismatch and target-size, at every named state and with every layer open.",
+  "measurement": "ExTester axe.run without runOnly per state",
+  "status": "measurable",
+  "tolerance": "0 violations; page-level rules in passes",
+  "evidence": [
+   {
+    "path": "src/test/ui/v2/theme.ui.test.ts",
+    "line": 53
+   }
+  ],
+  "catches": [
+   "finding 18"
+  ]
+ },
+ {
+  "id": "a11y-sr-speech",
+  "text": "What a screen reader speaks for rows, hints, busy lists, banners and outcomes is understandable and not repeated.",
+  "measurement": "manual NVDA/VoiceOver pass (P7.4)",
+  "status": "judge-only",
+  "evidence": [
+   {
+    "path": "docs/plans/STATUS.md",
+    "line": 106
+   }
+  ],
+  "catches": [
+   "finding 9",
+   "busy/banner hypotheses"
+  ]
+ },
+ {
+  "id": "LST-1",
+  "text": "The VSIX packages without vsce errors: no <svg> element or SVG data URI in README/CHANGELOG, every image HTTPS, .svg only from trusted hosts, icon and badges valid.",
+  "measurement": "npx vsce package (or npm run package:vsix) exits 0",
+  "status": "measurable",
+  "tolerance": "exit code 0",
+  "evidence": [
+   {
+    "path": "node_modules/@vscode/vsce/out/package.js",
+    "line": 668
+   }
+  ],
+  "catches": [
+   "SVG in README",
+   "http image",
+   "untrusted SVG badge"
+  ]
+ },
+ {
+  "id": "LST-2",
+  "text": "README image URLs are pinned to an immutable ref, never to a branch.",
+  "measurement": "after vsce rewriting, every non-badge image URL in extension/readme.md matches /\\/raw\\/(v[0-9]+\\.[0-9]+\\.[0-9]+|[0-9a-f]{40})\\//; none contains /main/ or /HEAD/",
+  "status": "measurable",
+  "tolerance": "0 unpinned images",
+  "evidence": [
+   {
+    "path": "README.md",
+    "line": 8
+   },
+   {
+    "path": "node_modules/@vscode/vsce/out/package.js",
+    "line": 721
+   }
+  ],
+  "catches": [
+   "listing changes when main changes",
+   "deleted image breaks a published listing"
+  ]
+ },
+ {
+  "id": "LST-3",
+  "text": "The README keeps the settings and commands tables in sync with the manifest and names only existing paths and nuiget.* names.",
+  "measurement": "npm run docs:check exits 0",
+  "status": "measurable",
+  "tolerance": "exit code 0",
+  "evidence": [
+   {
+    "path": "scripts/check-docs-drift.mjs",
+    "line": 105
+   }
+  ],
+  "catches": [
+   "dropped settings table",
+   "stale command title",
+   "dead path"
+  ]
+ },
+ {
+  "id": "LST-4",
+  "text": "The README renders in VS Code's Extensions view without losing content.",
+  "measurement": "render README with marked@14.0.0 + dompurify using VS Code's basicMarkupHtmlTags+input and allowedMarkdownHtmlAttributes; count nodes removed by the sanitizer",
+  "status": "measurable",
+  "tolerance": "0 removed elements or attributes",
+  "evidence": [
+   {
+    "url": "https://github.com/microsoft/vscode/blob/54d565d227/src/vs/base/browser/markdownRenderer.ts",
+    "line": 705
+   }
+  ],
+  "catches": [
+   "picture element",
+   "inline style",
+   "align on figure"
+  ]
+ },
+ {
+  "id": "LST-5",
+  "text": "The hero GIF stays within the peer range.",
+  "measurement": "scripts/gifinfo.mjs: total frame delay and file size of the hero GIF",
+  "status": "measurable",
+  "tolerance": "<= 15 s and <= 5 MB (derived from ten peer listings, median 12.05 s; not a platform limit)",
+  "evidence": [
+   {
+    "path": "/private/tmp/claude-501/-Users-mattias-github-nuiget/d222be63-cd0e-406f-80db-8a5a6aa9b485/scratchpad/scripts/gifinfo.mjs"
+   }
+  ],
+  "catches": [
+   "77.6 s 1.x-style demo"
+  ]
+ },
+ {
+  "id": "LST-6",
+  "text": "No developer-only content in the shipped README (build/test commands, agent files, plan or ledger ids).",
+  "measurement": "grep README.md for npm run |\\.github/|copilot|Claude|ADR-|\\bP[0-9]+\\.[0-9]|test suite",
+  "status": "measurable",
+  "tolerance": "0 matches",
+  "evidence": [
+   {
+    "path": "README.md",
+    "line": 257
+   }
+  ],
+  "catches": [
+   "Development with Copilot section"
+  ]
+ }
+]

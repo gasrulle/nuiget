@@ -1,0 +1,4620 @@
+{
+ "meta": {
+  "probe": "ExTester probe on VS Code 1.142.0 (macOS), DPR 2, CSS px; Dark Modern unless a theme is named",
+  "probeOut": "/private/tmp/claude-501/-Users-mattias-github-nuiget/d222be63-cd0e-406f-80db-8a5a6aa9b485/scratchpad/probe/out/",
+  "frames": {
+   "workbench": "top document, viewport [3008, 1600]",
+   "main webview": "origin x 348 y 67, size 2660x1511 (with-main-installed-single.json webviews[3])",
+   "sidebar webview": "origin x 48 y 67, size 300x1511 (with-main-installed-single.json webviews[2])",
+   "PNG": "device px = 2 x CSS px; greys and geometry only (saturated hues are colour-managed: JSON rgb(4,57,94) reads #1b395c in the PNG)"
+  },
+  "generatedBy": "/private/tmp/claude-501/-Users-mattias-github-nuiget/d222be63-cd0e-406f-80db-8a5a6aa9b485/scratchpad/rb-tools/bind.py",
+  "verdictCounts": {
+   "fail": 37,
+   "not-measurable-from-probe": 27,
+   "pass": 8
+  },
+  "shape": "top-level object: rules[] (the 72 DS rules), otherRules[] (the other 39 entries of sweep-result rules[]), colourRoles[], workbench{}, modernUI{}, v{}"
+ },
+ "rules": [
+  {
+   "id": "DS-GRID-1",
+   "measurement": "For every element under [data-testid=nuiget-app] and [data-testid=nuiget-sidebar]: getComputedStyle padding-*, margin-*, row-gap, column-gap each in the ramp set.",
+   "tolerance": "0 px",
+   "status": "measurable",
+   "workbenchRef": {
+    "file": "themes/dark-modern.json",
+    "selector": "vars --vscode-spacing-*",
+    "field": "values (px)",
+    "value": [
+     0.0,
+     2.0,
+     4.0,
+     6.0,
+     8.0,
+     10.0,
+     12.0,
+     16.0,
+     20.0,
+     24.0,
+     28.0,
+     32.0,
+     36.0,
+     40.0
+    ]
+   },
+   "nuigetRef": {
+    "state": "main-installed-single",
+    "selector": "all[20] div.nuiget-tablist[data-testid=tab-bar]",
+    "field": "padding-left",
+    "value": 7.0
+   },
+   "verdict": "fail",
+   "delta": "1 distinct off-ramp values: div.nuiget-tablist[data-testid=tab-bar] padding-left=7.0",
+   "catches": [
+    "V5"
+   ],
+   "note": "Exclusions: .nuiget-visually-hidden (1 px / -1 px), display:none boxes, and margins > 40 px (the computed used value of a flex `auto` margin: h1.nuiget-main-title margin-right 1832.62, .nuiget-toolbar-end margin-left 668.477 / 715.297). Ramp identical in all six themes."
+  },
+  {
+   "id": "DS-GRID-2",
+   "measurement": "(a) In .nuiget-main, .nuiget-main-list and .nuiget-installed children: gap = next.top - prev.bottom of consecutive block rects; distinct gaps subset of {4,8}. (b) For each section header: ink gap below (title text bottom -> first row name text top) <= ink gap above (previous block's last text/border bottom -> title text top) + 2 px, using Range.getBoundingClientRect on the text nodes. Today: 11 px above vs 22 px below (main-installed-single.png).",
+   "tolerance": "(a) 0 px; (b) 2 px",
+   "status": "measurable",
+   "workbenchRef": {
+    "file": "workbench/extensions.json + probe-workbench-extensions.png",
+    "selector": "Extensions view stack: sidebar_title[0], search box (PNG), pane_headers[0], ext_rows[0], ext_parts name",
+    "field": "block gaps (box)",
+    "value": {
+     "side-bar title -> search box": 5.0,
+     "search box -> pane header": 10.0,
+     "pane header -> first row": 0
+    }
+   },
+   "nuigetRef": {
+    "state": "main-installed-single / main-updates",
+    "selector": "project-selector, search-input, tab-bar, select-all-button, section-header-direct, nuiget-row-option",
+    "field": "block gaps (box)",
+    "value": {
+     "header controls -> search input": 8,
+     "search input -> tab": 5,
+     "tab strip (incl. line) -> toolbar button": 4,
+     "toolbar button -> section header": 4,
+     "section header -> first row": 0,
+     "Updates: toolbar button -> first row": 4
+    }
+   },
+   "verdict": "fail",
+   "delta": "(a) distinct gaps [0, 4, 5, 8], rule allows {4, 8}; (b) section header: above 4 / below 12.44 (box), 8.27 / 16.71 (text line boxes); workbench pane header: above 10.0 / below 6.4",
+   "catches": [
+    "V1",
+    "V4",
+    "V5"
+   ],
+   "note": "(a) fails on 0 and 5. The workbench reference itself measures gaps [0, 5.0, 10.0], i.e. not {4, 8}: the {4, 8} set is a design choice, not a measurement. (b) proximity: workbench header is closer to its rows (6.4) than to the block above (10.0); nUIget is the reverse (box 12.44 vs 4; text 16.71 vs 8.27). Text values are line-box rects (Range rects were not captured), not ink.",
+   "designRules": "design-rules: \"4 px inside a group, 8 px between groups\"; Extensions header padding 5/6 (C, M) -> probe padding 5px 12px 6px 20px"
+  },
+  {
+   "id": "DS-GRID-3",
+   "measurement": "Lint on tokens.css: each --nuiget-space-*, --nuiget-radius-*, --nuiget-font-size-* value matches var(--vscode-<size-id>, <px>). Probe: in a host that exports sizes, computed --nuiget-space-6 equals computed --vscode-spacing-size160.",
+   "tolerance": "exact",
+   "status": "measurable",
+   "workbenchRef": {
+    "file": "themes/*.json",
+    "selector": "vars",
+    "field": "size tokens exported to the webview",
+    "value": "30 keys (--vscode-cornerRadius-circle ... --vscode-spacing-sizeNone), identical in all six themes"
+   },
+   "nuigetRef": {
+    "state": "-",
+    "selector": "--nuiget-space-*, --nuiget-radius-*, --nuiget-font-size-*",
+    "field": "computed custom property",
+    "value": null
+   },
+   "verdict": "not-measurable-from-probe",
+   "delta": null,
+   "catches": [],
+   "note": "Host half verified: 1.142.0 exports every spacing/cornerRadius/fontSize/fontWeight token to webviews. nUIget half not in the probe: DUMP_VARS read only --vscode-* on :root. Design-rules: fail from source (tokens.css literals)."
+  },
+  {
+   "id": "DS-INSET-1",
+   "measurement": "Rect.left - pane.left for each listed element = 16. Sidebar: = Explorer content start (probe binds).",
+   "tolerance": "1 px",
+   "status": "measurable",
+   "workbenchRef": {
+    "file": "workbench/extensions.json",
+    "selector": "ext_rows[0] div.extension-list-item",
+    "field": "padding[3]",
+    "value": 16.0
+   },
+   "nuigetRef": {
+    "state": "main-installed-single",
+    "selector": "left - pane.left for 9 list/details edges",
+    "field": "rect.x",
+    "value": {
+     "main title": 16,
+     "search box": 16,
+     "tab label \"Installed\"": 16,
+     "toolbar \"Select all\"": 16,
+     "section chevron": 16,
+     "row check box": 16,
+     "details title": 16,
+     "details label \"Installed:\"": 16,
+     "details tab label \"Details\"": 9
+    }
+   },
+   "verdict": "fail",
+   "delta": "main: details tab label \"Details\" 9 (-7); sidebar: section title 24 vs pane-header title 20 (+4), search box 8 vs Extensions search box 20.0 (-12.0)",
+   "catches": [],
+   "note": "List column holds at 16 (8 of 9 edges). The details tab label sits at 9 because the tab-bar 7 px correction is scoped to the list. Workbench: Extensions icon x - row x = 16.",
+   "workbenchAlt": [
+    {
+     "file": "workbench/extensions.json",
+     "selector": "pane_headers[3] h3.title - pane_headers[0]",
+     "field": "rect.x offset",
+     "value": 20
+    },
+    {
+     "file": "screenshots/probe-workbench-extensions.png",
+     "selector": "Extensions search box",
+     "field": "left inset (CSS px)",
+     "value": 20.0
+    }
+   ],
+   "designRules": "16 (1.85 and cur) -> probe 16"
+  },
+  {
+   "id": "DS-INSET-2",
+   "measurement": "For main header, search row, tab list, bulk toolbar, section header, details header, dialog footer, sidebar header: (firstChild.left - box.left) vs (box.right - lastChild.right - visible scrollbar), and (firstChild.top - box.top) vs (box.bottom - lastChild.bottom). Today toolbar 16/6, section header 16/0, main header 8 top/4 bottom.",
+   "tolerance": "1 px",
+   "status": "measurable",
+   "workbenchRef": {
+    "file": "workbench/settings.json",
+    "selector": "settings[10] div.monaco-tl-contents.setting-item.setting-item-number",
+    "field": "padding[1]",
+    "value": 24.0
+   },
+   "nuigetRef": {
+    "state": "main-installed-single / sidebar-sections",
+    "selector": "8 containers",
+    "field": "padding [t r b l]",
+    "value": {
+     "main header": [
+      8.0,
+      16.0,
+      4.0,
+      16.0
+     ],
+     "main search row": [
+      4.0,
+      16.0,
+      4.0,
+      16.0
+     ],
+     "tab bar": [
+      0.0,
+      0.0,
+      0.0,
+      7.0
+     ],
+     "bulk toolbar": [
+      4.0,
+      6.0,
+      4.0,
+      16.0
+     ],
+     "list section header toggle": [
+      0.0,
+      4.0,
+      0.0,
+      16.0
+     ],
+     "details header": [
+      8.0,
+      16.0,
+      8.0,
+      16.0
+     ],
+     "sidebar header": [
+      4.0,
+      8.0,
+      4.0,
+      8.0
+     ],
+     "sidebar section toggle": [
+      0.0,
+      4.0,
+      0.0,
+      4.0
+     ]
+    }
+   },
+   "verdict": "fail",
+   "delta": "main header t/b 8.0/4.0 l/r 16.0/16.0; tab bar t/b 0.0/0.0 l/r 7.0/0.0; bulk toolbar t/b 4.0/4.0 l/r 16.0/6.0; list section header toggle t/b 0.0/0.0 l/r 16.0/4.0",
+   "catches": [
+    "V2",
+    "V3",
+    "V5"
+   ],
+   "note": "Child-based check of the toolbar: \"Select all\" at 16 from the left, \"Uninstall selected\" ends 6.0 from the right. Workbench containers are not symmetric either: Extensions header padding t/b 5.0/6.0 l/r 20.0/12.0, setting-item-contents t/b 12.0/18.0; only setting-item (l/r 24.0/24.0) is symmetric.",
+   "workbenchAlt": [
+    {
+     "file": "workbench/extensions.json",
+     "selector": "ext_search[0] div.header",
+     "field": "padding[1]",
+     "value": 12.0
+    },
+    {
+     "file": "workbench/extensions.json",
+     "selector": "ext_search[0] div.header",
+     "field": "padding[3]",
+     "value": 20.0
+    }
+   ],
+   "designRules": "Settings header 24/24 (C, M) -> setting-item 24/24 measured; the header widget itself was not captured"
+  },
+  {
+   "id": "DS-INSET-3",
+   "measurement": "container.right - lastChild.right >= 12 (sidebar) or = 16 (main). Today provisional badge right 673 = pane content right (end inset 0).",
+   "tolerance": "1 px",
+   "status": "measurable",
+   "workbenchRef": {
+    "file": "workbench/extensions.json",
+    "selector": "pane_headers[0] - pane_headers[4] div.monaco-count-badge",
+    "field": "end inset (rect.right difference)",
+    "value": 12
+   },
+   "nuigetRef": {
+    "state": "main-installed-single / sidebar-sections",
+    "selector": "6 trailing elements",
+    "field": "container.right - element.right",
+    "value": {
+     "main toolbar primary button": 6.0,
+     "main row actions": 0,
+     "main section-actions slot (empty)": 0,
+     "sidebar section action (Update all)": 0,
+     "sidebar row actions": 0,
+     "sidebar search box": 8
+    }
+   },
+   "verdict": "fail",
+   "delta": "main toolbar primary button 6.0 (want 16); main row actions 0 (want 16); main section-actions slot (empty) 0 (want 16); sidebar section action (Update all) 0 (want >=12); sidebar row actions 0 (want >=12); sidebar search box 8 (want >=12)",
+   "catches": [
+    "V2",
+    "V3"
+   ],
+   "note": "The main .nuiget-section-actions slot sits at x 931, w 0: whatever goes there (V3 provisional badge, TFM badge) ends on the pane edge. Workbench: side-bar title last action end inset 12; Extensions row manage action end inset 6 (rows do not keep 12).",
+   "workbenchAlt": [
+    {
+     "file": "workbench/extensions.json",
+     "selector": "ext_search[0] div.header",
+     "field": "padding[1]",
+     "value": 12.0
+    }
+   ],
+   "designRules": "SCM row 12, Extensions pane header 12, custom tree rows 12 -> pane header 12 and title actions 12 measured; Extensions row action 6"
+  },
+  {
+   "id": "DS-INSET-4",
+   "measurement": "Rect of .nuiget-details-header: padding-top = padding-inline-start.",
+   "tolerance": "1 px",
+   "status": "measurable",
+   "workbenchRef": {
+    "file": "-",
+    "selector": "Extensions editor header",
+    "field": "padding",
+    "value": null
+   },
+   "nuigetRef": {
+    "state": "main-installed-single",
+    "selector": "all[85] div.nuiget-details-header",
+    "field": "padding[0]",
+    "value": 8.0
+   },
+   "verdict": "fail",
+   "delta": "top 8.0 vs left 16.0 (\u0394 -8.0)",
+   "catches": [],
+   "note": "Verdict needs only the nUIget side (top = left). The Extensions editor header was not captured (its 20 px is CSS-read, design-rules).",
+   "nuigetAlt": [
+    {
+     "state": "main-installed-single",
+     "selector": "all[85] div.nuiget-details-header",
+     "field": "padding[3]",
+     "value": 16.0
+    }
+   ],
+   "designRules": "20 (top, left), 12 bottom (CSS) -> not in probe"
+  },
+  {
+   "id": "DS-HEIGHT-1",
+   "measurement": "border-box height of .nuiget-sidebar-section > .nuiget-section-header = probe's .pane-header height. Today 25 (capture 97-121) vs native OUTLINE 834-855 = 22 in the same PNG set.",
+   "tolerance": "0 px",
+   "status": "measurable",
+   "workbenchRef": {
+    "file": "workbench/extensions.json",
+    "selector": "pane_headers[0] div.pane-header.extension-view-header.expanded",
+    "field": "rect.h",
+    "value": 22
+   },
+   "nuigetRef": {
+    "state": "sidebar-sections",
+    "selector": "all[8] div.nuiget-section-header",
+    "field": "rect.h",
+    "value": 25
+   },
+   "verdict": "fail",
+   "delta": "+3",
+   "catches": [],
+   "note": "24 px min-height + 1 px top border. Explorer pane headers measure the same 22.",
+   "workbenchAlt": [
+    {
+     "file": "workbench/explorer.json",
+     "selector": "pane_headers[0] div.pane-header.expanded",
+     "field": "rect.h",
+     "value": 22
+    }
+   ],
+   "designRules": "C 22 | M 28 -> probe 22 (classic)"
+  },
+  {
+   "id": "DS-HEIGHT-2",
+   "measurement": "Rect height of each sidebar .nuiget-row = 22. Today 24 (capture 122-145); native Explorer row pitch 22 (ink tops 92/114/136/158).",
+   "tolerance": "0 px",
+   "status": "measurable",
+   "workbenchRef": {
+    "file": "workbench/explorer.json",
+    "selector": "list_rows[0] div.monaco-list-row",
+    "field": "rect.h",
+    "value": 22
+   },
+   "nuigetRef": {
+    "state": "sidebar-sections",
+    "selector": "all[18] div.nuiget-row.nuiget-row--compact[data-testid=package-row-newtonsoft.json]",
+    "field": "rect.h",
+    "value": 24
+   },
+   "verdict": "fail",
+   "delta": "+2",
+   "catches": [],
+   "note": "Quick input rows and Settings TOC rows also measure 22.",
+   "workbenchAlt": [
+    {
+     "file": "workbench/quickinput.json",
+     "selector": "quickinput[3] div.monaco-list-row.focused",
+     "field": "rect.h",
+     "value": 22
+    },
+    {
+     "file": "workbench/settings.json",
+     "selector": "settings[0] div.monaco-list-row.focused.selected",
+     "field": "rect.h",
+     "value": 22
+    }
+   ],
+   "designRules": "22 -> 22"
+  },
+  {
+   "id": "DS-HEIGHT-3",
+   "measurement": "Rect height of each .nuiget-row--comfortable = 72. Today 78.",
+   "tolerance": "0 px",
+   "status": "measurable",
+   "workbenchRef": {
+    "file": "workbench/extensions.json",
+    "selector": "ext_rows[0] div.extension-list-item",
+    "field": "rect.h",
+    "value": 72
+   },
+   "nuigetRef": {
+    "state": "main-installed-single",
+    "selector": "all[44] div.nuiget-row.nuiget-row--comfortable[data-testid=package-row-newtonsoft.json]",
+    "field": "rect.h",
+    "value": 79
+   },
+   "verdict": "fail",
+   "delta": "+7 (wrapper; option 78, +6)",
+   "catches": [],
+   "note": "Wrapper = 78 px option + 1 px bottom border.",
+   "nuigetAlt": [
+    {
+     "state": "main-installed-single",
+     "selector": "all[45] div.nuiget-row-option",
+     "field": "rect.h",
+     "value": 78
+    }
+   ],
+   "designRules": "72 (1.85 and cur) -> 72"
+  },
+  {
+   "id": "DS-HEIGHT-4",
+   "measurement": "Rect height of [data-testid=tab-bar] including its bottom border.",
+   "tolerance": "-1 px",
+   "status": "measurable",
+   "workbenchRef": {
+    "file": "screenshots/probe-workbench-settings.png",
+    "selector": "Settings scope tabs (User/Workspace): not in the DOM dump",
+    "field": "strip height",
+    "value": null
+   },
+   "nuigetRef": {
+    "state": "main-installed-single",
+    "selector": "all[20] div.nuiget-tablist[data-testid=tab-bar]",
+    "field": "rect.h",
+    "value": 25
+   },
+   "verdict": "not-measurable-from-probe",
+   "delta": "nUIget 25; nearest measured analogue, editor tab strip 35 (-10)",
+   "catches": [
+    "V1"
+   ],
+   "note": "PNG positions (CSS px, workbench frame): search box bottom 107.0, \"User\" ink 128.5-138.5, 1.0 px indicator at 148.5, 1.0 px #2b2b2b header border at 149.5. The tab box top is not painted, so the strip height cannot be read. Whatever the binding, 25 is below every measured workbench strip.",
+   "workbenchAlt": [
+    {
+     "file": "workbench/extensions.json",
+     "selector": "tabs[0] div.title.tab-actions-reserve-space.tabs",
+     "field": "rect.h",
+     "value": 35
+    }
+   ],
+   "nuigetAlt": [
+    {
+     "state": "main-installed-single",
+     "selector": "all[21] button.nuiget-tab[data-testid=installed-tab]",
+     "field": "rect.h",
+     "value": 24
+    }
+   ],
+   "designRules": "C \u224833 (CSS-read) -> not measurable from probe"
+  },
+  {
+   "id": "DS-HEIGHT-5",
+   "measurement": "Rect height of the details role=tablist = 36. Today 25.",
+   "tolerance": "1 px",
+   "status": "measurable",
+   "workbenchRef": {
+    "file": "screenshots/probe-workbench-quickinput.png",
+    "selector": "Extension editor navbar (behind the palette): not in the DOM dump",
+    "field": "height",
+    "value": null
+   },
+   "nuigetRef": {
+    "state": "main-installed-single",
+    "selector": "all[94] div.nuiget-tablist",
+    "field": "rect.h",
+    "value": 25
+   },
+   "verdict": "not-measurable-from-probe",
+   "delta": "nUIget 25; navbar height not readable",
+   "catches": [],
+   "note": "PNG (CSS px): label ink 241.0-249.5, 1.0 px bottom border at 263.0, 1.0 px active indicator; navbar top not painted.",
+   "designRules": "36 (CSS-read) -> not measurable from probe"
+  },
+  {
+   "id": "DS-HEIGHT-6",
+   "measurement": "Rect height of every .nuiget-button and toolbar button.",
+   "tolerance": "0 px",
+   "status": "measurable",
+   "workbenchRef": {
+    "file": "workbench/settings.json",
+    "selector": "buttons[0] a.monaco-button.monaco-text-button",
+    "field": "rect.h",
+    "value": 26
+   },
+   "nuigetRef": {
+    "state": "main-installed-single",
+    "selector": "all[30] button.nuiget-button.nuiget-button--secondary[data-testid=select-all-button]",
+    "field": "rect.h",
+    "value": 24
+   },
+   "verdict": "fail",
+   "delta": "-2",
+   "catches": [
+    "V1"
+   ],
+   "note": "All five nUIget text buttons measure [24] (select-all-button, uninstall-selected-button, uninstall-button, install-update-button, update-all-button). Workbench button: padding 4px/8px, font 12px, line-height 16px, radius 4px; nUIget: padding 0/12, font 13px, radius 2px.",
+   "workbenchAlt": [
+    {
+     "file": "workbench/scm.json",
+     "selector": "buttons[0] a.monaco-button.monaco-text-button",
+     "field": "rect.h",
+     "value": 26
+    }
+   ],
+   "designRules": "1.85 28 | cur 26 -> 26 (cur)"
+  },
+  {
+   "id": "DS-HEIGHT-7",
+   "measurement": "Rect heights of sidebar-search-input = 28; search-input, project-selector, source-selector, version-selector = 26. Today 24 each.",
+   "tolerance": "0 px",
+   "status": "measurable",
+   "workbenchRef": {
+    "file": "workbench/search.json",
+    "selector": "search[0] div.monaco-inputbox.idle.synthetic-focus",
+    "field": "rect.h",
+    "value": 26
+   },
+   "nuigetRef": {
+    "state": "sidebar-sections",
+    "selector": "all[3] input.nuiget-sidebar-search[data-testid=sidebar-search-input]",
+    "field": "rect.h",
+    "value": 24
+   },
+   "verdict": "fail",
+   "delta": "sidebar-search-input 24 vs Search view input box / Extensions search box (PNG) 26 (-2); search-input 24 vs Settings input box 25 (-1); project-selector 24 vs Settings select 26 (-2); source-selector 24 vs Settings select 26 (-2); version-selector 24 vs Settings select 26 (-2)",
+   "catches": [],
+   "note": "Workbench inputs are not one number: Search view input box 26, Extensions search box 26.0 (PNG), Settings input box 25 (inner input 23 + 2 border), quick input box 25, Settings select 26.",
+   "workbenchAlt": [
+    {
+     "file": "screenshots/probe-workbench-extensions.png",
+     "selector": "Extensions search box",
+     "field": "height (CSS px)",
+     "value": 26.0
+    },
+    {
+     "file": "workbench/settings.json",
+     "selector": "settings[17] div.monaco-inputbox.idle",
+     "field": "rect.h",
+     "value": 25
+    },
+    {
+     "file": "workbench/quickinput.json",
+     "selector": "quickinput[1] div.monaco-inputbox.idle.synthetic-focus",
+     "field": "rect.h",
+     "value": 25
+    },
+    {
+     "file": "workbench/settings.json",
+     "selector": "settings[33] select.monaco-select-box.setting-control-focus-target",
+     "field": "rect.h",
+     "value": 26
+    }
+   ],
+   "nuigetAlt": [
+    {
+     "state": "main-installed-single",
+     "selector": "all[13] input.nuiget-main-search-input[data-testid=search-input]",
+     "field": "rect.h",
+     "value": 24
+    },
+    {
+     "state": "main-installed-single",
+     "selector": "all[5] select.nuiget-main-select[data-testid=project-selector]",
+     "field": "rect.h",
+     "value": 24
+    },
+    {
+     "state": "main-installed-single",
+     "selector": "all[6] select.nuiget-main-select[data-testid=source-selector]",
+     "field": "rect.h",
+     "value": 24
+    },
+    {
+     "state": "main-installed-single",
+     "selector": "all[91] select.nuiget-main-select[data-testid=version-selector]",
+     "field": "rect.h",
+     "value": 24
+    }
+   ],
+   "designRules": "sidebar search 28 (extensionsViewlet.css .search-box), editor select 26 (CSS-read) -> Extensions search box renders 26 (PNG). The 28 px rule targets .search-box, which is not the rendered control: the box is a SuggestEnabledInput laid out at 20 px (extensionsViewlet.ts:743; lineHeight 20, suggestEnabledInput.ts:488) with a 1 px border (suggestEnabledInput.ts:319); the remaining 4 px are not accounted for by the local sources. Select 26 agrees; Settings input box 25"
+  },
+  {
+   "id": "DS-HEIGHT-8",
+   "measurement": "Painted hover background rect = 22x22; hit area rect (element or ::after) >= 24.",
+   "tolerance": "0 px",
+   "status": "measurable",
+   "workbenchRef": {
+    "file": "workbench/extensions.json",
+    "selector": "ext_parts[23] a.action-label.codicon.extension-action",
+    "field": "rect.h",
+    "value": 22
+   },
+   "nuigetRef": {
+    "state": "main-installed-single",
+    "selector": "all[9] button.nuiget-icon-button.nuiget-main-refresh[data-testid=refresh-button]",
+    "field": "rect.h",
+    "value": 24
+   },
+   "verdict": "not-measurable-from-probe",
+   "delta": "element 24x24 vs action label 22x22 (+2)",
+   "catches": [],
+   "note": "The rule measures the painted hover box; no hover state was captured (nUIget icon buttons rest with background rgba(0, 0, 0, 0)). The 24 px element meets the \u2265 24 hit-area half. Workbench has two boxes: 22 (pad 3: Extensions row action, side-bar title actions) and 20 (pad 2px: Explorer pane-header actions).",
+   "workbenchAlt": [
+    {
+     "file": "workbench/extensions.json",
+     "selector": "sidebar_title[2] li.action-item.menu-entry",
+     "field": "rect.h",
+     "value": 22
+    },
+    {
+     "file": "workbench/explorer.json",
+     "selector": "pane_headers[5] a.action-label.codicon.codicon-new-file",
+     "field": "rect.h",
+     "value": 20
+    }
+   ],
+   "designRules": "16 + pad 3 = 22 -> 22 (rows, title); 20 on pane headers"
+  },
+  {
+   "id": "DS-HEIGHT-9",
+   "measurement": "Rect of every input[type=checkbox] and .nuiget-row-check = 18x18; computed border-radius 3 px. Today 14 (row mark) and 16 (header/dialog).",
+   "tolerance": "0 px",
+   "status": "measurable",
+   "workbenchRef": {
+    "file": "workbench/settings.json",
+    "selector": "settings[24] div.monaco-custom-toggle.codicon.codicon-check",
+    "field": "rect.w",
+    "value": 18
+   },
+   "nuigetRef": {
+    "state": "main-installed-single",
+    "selector": "all[46] span.nuiget-row-check",
+    "field": "rect.w",
+    "value": 14
+   },
+   "verdict": "fail",
+   "delta": "row mark 14x14 r2.0, header 16x16 r2.0 vs 18x18 r3.0",
+   "catches": [],
+   "note": "Two nUIget sizes (14, 16), neither 18.",
+   "workbenchAlt": [
+    {
+     "file": "workbench/settings.json",
+     "selector": "settings[24] div.monaco-custom-toggle.codicon.codicon-check",
+     "field": "borderRadius",
+     "value": 3.0
+    }
+   ],
+   "nuigetAlt": [
+    {
+     "state": "main-installed-single",
+     "selector": "inputs[0] input",
+     "field": "rect.w",
+     "value": 16
+    }
+   ],
+   "designRules": "18x18 r3 -> 18x18 r3"
+  },
+  {
+   "id": "DS-HEIGHT-10",
+   "measurement": "Rect of each count badge >= 18x18; computed border-radius >= height/2 - 1; font-size 11 (C) or 10 (M). Today radius 4, about 17x16.",
+   "tolerance": "0 px",
+   "status": "measurable",
+   "workbenchRef": {
+    "file": "workbench/extensions.json",
+    "selector": "pane_headers[4] div.monaco-count-badge",
+    "field": "rect.h",
+    "value": 18
+   },
+   "nuigetRef": {
+    "state": "main-installed-single",
+    "selector": "all[23] span.nuiget-badge.nuiget-badge--neutral",
+    "field": "rect.h",
+    "value": 17.46
+   },
+   "verdict": "fail",
+   "delta": "tab badge 16.73x17.46 r4.0 11.05px; sidebar header badge 16.07x15.14 r4.0 9.3925px vs 18x18 r11.0 11px",
+   "catches": [],
+   "note": "Sidebar badge font is 0.85em of an 0.85em title (9.39 px).",
+   "nuigetAlt": [
+    {
+     "state": "sidebar-sections",
+     "selector": "all[13] span.nuiget-badge.nuiget-badge--neutral",
+     "field": "fontSize",
+     "value": 9.3925
+    }
+   ],
+   "designRules": "min 18x18, 11 px, r11 -> 18x18, 11 px, r11"
+  },
+  {
+   "id": "DS-HEIGHT-11",
+   "measurement": "Rect height of .nuiget-progress = 2.",
+   "tolerance": "0 px",
+   "status": "measurable",
+   "workbenchRef": {
+    "file": "-",
+    "selector": "monaco-progress-container",
+    "field": "height",
+    "value": null
+   },
+   "nuigetRef": {
+    "state": "-",
+    "selector": ".nuiget-progress",
+    "field": "rect.h",
+    "value": null
+   },
+   "verdict": "not-measurable-from-probe",
+   "delta": null,
+   "catches": [],
+   "note": "No progress bar in any probe state (workbench or nUIget).",
+   "designRules": "2 (CSS-read)"
+  },
+  {
+   "id": "DS-ROW-1",
+   "measurement": "Rect of .nuiget-row-icon = bound size; name.left - icon.right = bound gap. Today 32 px icon, 12 px gap.",
+   "tolerance": "icon 0 px, gap 1 px",
+   "status": "measurable",
+   "workbenchRef": {
+    "file": "workbench/extensions.json",
+    "selector": "ext_parts[1] img.icon",
+    "field": "rect.w",
+    "value": 36
+   },
+   "nuigetRef": {
+    "state": "main-installed-single",
+    "selector": "all[47] span.nuiget-row-icon",
+    "field": "rect.w",
+    "value": 32
+   },
+   "verdict": "fail",
+   "delta": "icon -4; gap 12 vs 16 (-4)",
+   "catches": [],
+   "note": "Start padding 16 holds on both. The nUIget row also has a 14 px check column before the icon (icon x 42 vs Extensions 16).",
+   "workbenchAlt": [
+    {
+     "file": "workbench/extensions.json",
+     "selector": "ext_parts[1] img.icon",
+     "field": "margin[1]",
+     "value": 16.0
+    }
+   ],
+   "designRules": "1.85 42 + 14 | cur 36 + 16 -> 36 + 16 (cur)"
+  },
+  {
+   "id": "DS-ROW-2",
+   "measurement": "For all comfortable rows in one .nuiget-installed-lists: max-min of icon.left = 0 and of name.left = 0. Today direct icon 390/name 435 vs transitive 364/409 (delta 26).",
+   "tolerance": "0 px",
+   "status": "measurable",
+   "workbenchRef": {
+    "file": "workbench/extensions.json",
+    "selector": "ext_rows",
+    "field": "one column grid",
+    "value": "one row captured"
+   },
+   "nuigetRef": {
+    "state": "main-installed-single",
+    "selector": "all .nuiget-row-icon",
+    "field": "rect.x",
+    "value": [
+     42,
+     42
+    ]
+   },
+   "verdict": "pass",
+   "delta": "\u0394 0",
+   "catches": [],
+   "note": "Only direct rows were on screen (Transitive packages collapsed), so the \u039426 transitive case of design-rules is not in this probe."
+  },
+  {
+   "id": "DS-ROW-3",
+   "measurement": "Painted background and focus-outline rect of a hovered/selected/focused row = rect of the [data-testid^=package-row-] wrapper horizontally. Today highlight ends at x 649 (main) / 323 (sidebar) with actions at 650-673 / 324-347.",
+   "tolerance": "0 px",
+   "status": "measurable",
+   "workbenchRef": {
+    "file": "workbench/extensions.json",
+    "selector": "ext_parts[10] div.monaco-action-bar within ext_rows[0]",
+    "field": "rect.x..right inside row",
+    "value": "314-342 inside 48-348"
+   },
+   "nuigetRef": {
+    "state": "main-installed-single",
+    "selector": "selected .nuiget-row-option (painted rgb(4,57,94)) vs row wrapper",
+    "field": "rect.right",
+    "value": {
+     "option": 907,
+     "wrapper": 931,
+     "actions": "907-931"
+    }
+   },
+   "verdict": "fail",
+   "delta": "main highlight stops 24 px short; sidebar option ends 276, wrapper 300 (24 px)",
+   "catches": [
+    "V2"
+   ],
+   "note": "Selected background is on the option (rgb(4, 57, 94)) while the wrapper is rgba(0, 0, 0, 0).",
+   "designRules": "-"
+  },
+  {
+   "id": "DS-ROW-4",
+   "measurement": "Count of visible row action buttons <= 3; visible on :hover and :focus-within.",
+   "tolerance": "0",
+   "status": "measurable",
+   "workbenchRef": {
+    "file": "workbench/extensions.json",
+    "selector": "ext_parts a.action-label with w>0",
+    "field": "count",
+    "value": 1
+   },
+   "nuigetRef": {
+    "state": "main-installed-single",
+    "selector": "row-action-* buttons in the first row",
+    "field": "count",
+    "value": 1
+   },
+   "verdict": "pass",
+   "delta": null,
+   "catches": [],
+   "note": "Visibility on hover/focus was not captured; the count holds in every probe state (one action per row)."
+  },
+  {
+   "id": "DS-ROW-5",
+   "measurement": "At sidebar widths 170/200/250: name.scrollWidth > name.clientWidth only after version and badges collapsed; computed text-overflow: ellipsis; full id in title or accessible name.",
+   "tolerance": "0",
+   "status": "measurable",
+   "workbenchRef": {
+    "file": "-",
+    "selector": "-",
+    "field": "-",
+    "value": null
+   },
+   "nuigetRef": {
+    "state": "-",
+    "selector": "row names at 170/200/250 px",
+    "field": "scroll",
+    "value": null
+   },
+   "verdict": "not-measurable-from-probe",
+   "delta": null,
+   "catches": [],
+   "note": "No narrow state in the probe (sidebar 300 px, main 2660 px). text-overflow is not a probe field."
+  },
+  {
+   "id": "DS-ROW-6",
+   "measurement": "At list-pane widths 260/240/190: icon rect bound size / 24 / absent; no horizontal scroll.",
+   "tolerance": "0 px",
+   "status": "measurable",
+   "workbenchRef": {
+    "file": "-",
+    "selector": "Extensions .narrow / .mini",
+    "field": "-",
+    "value": null
+   },
+   "nuigetRef": {
+    "state": "-",
+    "selector": "-",
+    "field": "-",
+    "value": null
+   },
+   "verdict": "not-measurable-from-probe",
+   "delta": null,
+   "catches": [],
+   "note": "No narrow main-panel state in the probe."
+  },
+  {
+   "id": "DS-TYPE-1",
+   "measurement": "Computed font-family of every text node = body's, except code, pre and README code.",
+   "tolerance": "exact",
+   "status": "measurable",
+   "workbenchRef": {
+    "file": "workbench/extensions.json",
+    "selector": "ext_rows[0] div.extension-list-item",
+    "field": "fontFamily",
+    "value": "-apple-system, \"system-ui\", sans-serif"
+   },
+   "nuigetRef": {
+    "state": "main-installed-single",
+    "selector": "all[0] main.nuiget-main[data-testid=nuiget-app]",
+    "field": "fontFamily",
+    "value": "-apple-system, \"system-ui\", sans-serif"
+   },
+   "verdict": "pass",
+   "delta": null,
+   "catches": [],
+   "note": "Every nUIget element with text uses ['-apple-system, \"system-ui\", sans-serif']. Arial 13.3333px appears only on text-less elements (icon buttons, check boxes: UA default, no font: inherit)."
+  },
+  {
+   "id": "DS-TYPE-2",
+   "measurement": "Computed font-size of every text element outside .nuiget-readme in the set. Today --nuiget-font-size-lg = 14.95 px fails.",
+   "tolerance": "0.1 px",
+   "status": "measurable",
+   "workbenchRef": {
+    "file": "themes/dark-modern.json",
+    "selector": "vars --vscode-fontSize-*",
+    "field": "values",
+    "value": [
+     10.0,
+     11.0,
+     12.0,
+     13.0,
+     18.0,
+     26.0
+    ]
+   },
+   "nuigetRef": {
+    "state": "main-installed-single / main-updates / sidebar-sections",
+    "selector": "elements with text",
+    "field": "fontSize set",
+    "value": [
+     9.3925,
+     11.05,
+     13.0,
+     14.95
+    ]
+   },
+   "verdict": "fail",
+   "delta": "9.3925 (all[13] span.nuiget-badge.nuiget-badge--neutral @sidebar-sections); 14.95 (all[86] h2.nuiget-details-title @main-installed-single)",
+   "catches": [],
+   "note": "11.05 is within \u00b10.1 of 11. 13.3333 (UA default) occurs only on text-less buttons and check boxes."
+  },
+  {
+   "id": "DS-TYPE-3",
+   "measurement": "Computed font-weight of all text in {400,600} (700 allowed on sidebar section titles under C).",
+   "tolerance": "exact",
+   "status": "measurable",
+   "workbenchRef": {
+    "file": "themes/dark-modern.json",
+    "selector": "vars --vscode-fontWeight-*",
+    "field": "values",
+    "value": [
+     "400",
+     "600"
+    ]
+   },
+   "nuigetRef": {
+    "state": "all states",
+    "selector": "elements with text",
+    "field": "fontWeight set",
+    "value": [
+     400,
+     600,
+     700
+    ]
+   },
+   "verdict": "fail",
+   "delta": "700 on all[86] h2.nuiget-details-title @main-installed-single; sidebar section title 600 where the classic pane header is 700",
+   "catches": [],
+   "note": "Design-rules listed the details title as 600; the probe reads 700.",
+   "workbenchAlt": [
+    {
+     "file": "workbench/extensions.json",
+     "selector": "pane_headers[3] h3.title",
+     "field": "fontWeight",
+     "value": 700
+    }
+   ],
+   "designRules": "current details title 600 -> probe 700"
+  },
+  {
+   "id": "DS-TYPE-4",
+   "measurement": "Computed line-height of each root = 1.4 x font-size.",
+   "tolerance": "0.5 px",
+   "status": "measurable",
+   "workbenchRef": {
+    "file": "workbench/extensions.json",
+    "selector": "ext_rows[0] div.extension-list-item",
+    "field": "lineHeight",
+    "value": 18.2
+   },
+   "nuigetRef": {
+    "state": "main-installed-single",
+    "selector": "all[0] main.nuiget-main[data-testid=nuiget-app]",
+    "field": "lineHeight",
+    "value": 18.2
+   },
+   "verdict": "pass",
+   "delta": "+0",
+   "catches": [],
+   "note": "Fixed line boxes: workbench list rows use line-height 22 (Explorer, quick input, Settings TOC); nUIget rows use 18.2 inside padded boxes."
+  },
+  {
+   "id": "DS-TYPE-5",
+   "measurement": "Computed text-transform, font-size, font-weight of sidebar section titles = probe's .pane-header .title in the same VS Code session.",
+   "tolerance": "exact",
+   "status": "measurable",
+   "workbenchRef": {
+    "file": "workbench/extensions.json",
+    "selector": "pane_headers[3] h3.title",
+    "field": "fontWeight",
+    "value": 700
+   },
+   "nuigetRef": {
+    "state": "sidebar-sections",
+    "selector": "all[12] span.nuiget-section-title",
+    "field": "fontWeight",
+    "value": 600
+   },
+   "verdict": "fail",
+   "delta": "sidebar title 11.05px/600/uppercase vs 11px/700/uppercase (weight -100); main group header 11.05px/600/uppercase where the rule wants body size, normal case",
+   "catches": [],
+   "note": "Size (11.05 vs 11) and transform (uppercase) match the classic pane header.",
+   "workbenchAlt": [
+    {
+     "file": "workbench/extensions.json",
+     "selector": "pane_headers[3] h3.title",
+     "field": "textTransform",
+     "value": "uppercase"
+    },
+    {
+     "file": "workbench/extensions.json",
+     "selector": "pane_headers[3] h3.title",
+     "field": "fontSize",
+     "value": 11.0
+    }
+   ],
+   "nuigetAlt": [
+    {
+     "state": "main-installed-single",
+     "selector": "all[38] span.nuiget-section-title",
+     "field": "textTransform",
+     "value": "uppercase"
+    }
+   ],
+   "designRules": "C 11 bold uppercase | M 12/600 capitalize -> 11/700/uppercase (classic)"
+  },
+  {
+   "id": "DS-TYPE-6",
+   "measurement": "Computed font-size of .nuiget-row-version/-authors/-meta in {11,12}.",
+   "tolerance": "0.1 px",
+   "status": "measurable",
+   "workbenchRef": {
+    "file": "workbench/extensions.json",
+    "selector": "ext_parts[9] div.publisher-name.ellipsis",
+    "field": "fontSize",
+    "value": 11.0
+   },
+   "nuigetRef": {
+    "state": "main-installed-single",
+    "selector": "all[53] span.nuiget-row-version",
+    "field": "fontSize",
+    "value": 11.05
+   },
+   "verdict": "pass",
+   "delta": "+0.05",
+   "catches": [],
+   "note": "Authors line the same (11.05px).",
+   "nuigetAlt": [
+    {
+     "state": "main-installed-single",
+     "selector": "all[55] span.nuiget-row-authors",
+     "field": "fontSize",
+     "value": 11.05
+    }
+   ],
+   "designRules": "11 -> 11"
+  },
+  {
+   "id": "DS-TYPE-7",
+   "measurement": "Computed font-size of .nuiget-main-title = 13 and .nuiget-details-title = 18. Today 13 and 14.95.",
+   "tolerance": "0.1 px",
+   "status": "measurable",
+   "workbenchRef": {
+    "file": "themes/dark-modern.json",
+    "selector": "vars --vscode-fontSize-heading2 / --vscode-fontWeight-semiBold",
+    "field": "value",
+    "value": "18px / 600"
+   },
+   "nuigetRef": {
+    "state": "main-installed-single",
+    "selector": "all[86] h2.nuiget-details-title",
+    "field": "fontSize",
+    "value": 14.95
+   },
+   "verdict": "fail",
+   "delta": "details title 14.95px/700 vs 18/600 (-3.05 px, +100 weight); main title 13px/600 holds",
+   "catches": [],
+   "note": "Workbench upper bound measured: Settings group title 26px/600.",
+   "workbenchAlt": [
+    {
+     "file": "workbench/settings.json",
+     "selector": "settings[9] div.settings-group-title-label.settings-row-inner-container.settings-group-level-1",
+     "field": "fontSize",
+     "value": 26.0
+    }
+   ],
+   "nuigetAlt": [
+    {
+     "state": "main-installed-single",
+     "selector": "all[86] h2.nuiget-details-title",
+     "field": "fontWeight",
+     "value": 700
+    }
+   ],
+   "designRules": "current 14.95/600 -> probe 14.95/700"
+  },
+  {
+   "id": "DS-ICON-1",
+   "measurement": "Lint: each icon in icons.tsx names its codicon and its path d equals @vscode/codicons src/icons/<name>.svg at a pinned version; zero '/** Custom:' entries. Today paths predate the 2025-10-07 and 2026-02-02 redraws; 2 custom glyphs.",
+   "tolerance": "exact",
+   "status": "measurable",
+   "workbenchRef": {
+    "file": "-",
+    "selector": "codicon glyph paths",
+    "field": "-",
+    "value": null
+   },
+   "nuigetRef": {
+    "state": "-",
+    "selector": "icons.tsx paths",
+    "field": "-",
+    "value": null
+   },
+   "verdict": "not-measurable-from-probe",
+   "delta": null,
+   "catches": [],
+   "note": "SVG path data is not a probe field; source lint."
+  },
+  {
+   "id": "DS-ICON-2",
+   "measurement": "Rect 16x16 of .nuiget-icon-button svg; computed color = --vscode-icon-foreground. Today rests at descriptionForeground.",
+   "tolerance": "0 px / exact",
+   "status": "measurable",
+   "workbenchRef": {
+    "file": "workbench/extensions.json",
+    "selector": "ext_parts[23] a.action-label (manage) color; themes --vscode-icon-foreground",
+    "field": "color",
+    "value": "#cccccc; key #cccccc"
+   },
+   "nuigetRef": {
+    "state": "main-installed-single",
+    "selector": "all[8] span.nuiget-icon-button-icon",
+    "field": "color",
+    "value": "rgb(157, 157, 157)"
+   },
+   "verdict": "fail",
+   "delta": "size 16x16 holds; colour: dark-modern #9d9d9d vs #cccccc MISMATCH; light-modern #3b3b3b vs #3b3b3b ok; dark-high-contrast #ffffff @0.70 vs #ffffff MISMATCH",
+   "catches": [],
+   "note": "nUIget glyphs rest at descriptionForeground; Light Modern passes only because both keys are #3b3b3b there.",
+   "designRules": "16 px in icon.foreground -> workbench action label #cccccc = icon.foreground"
+  },
+  {
+   "id": "DS-ICON-3",
+   "measurement": "As DS-ROW-1 and DS-ROW-6.",
+   "tolerance": "0 px",
+   "status": "measurable",
+   "workbenchRef": {
+    "file": "workbench/extensions.json",
+    "selector": "ext_parts[1] img.icon",
+    "field": "rect.w",
+    "value": 36
+   },
+   "nuigetRef": {
+    "state": "main-installed-single",
+    "selector": "all[47] span.nuiget-row-icon",
+    "field": "rect.w",
+    "value": 32
+   },
+   "verdict": "fail",
+   "delta": "-4",
+   "catches": [],
+   "note": "Breakpoint half (24 px at \u2264 250, hidden at \u2264 200) not measurable: no narrow state."
+  },
+  {
+   "id": "DS-ICON-4",
+   "measurement": "Icon identity in the DOM and computed colour = --vscode-extensionIcon-verifiedForeground. Today a check glyph in textLink.foreground.",
+   "tolerance": "exact",
+   "status": "measurable",
+   "workbenchRef": {
+    "file": "themes/*.json",
+    "selector": "--vscode-extensionIcon-verifiedForeground",
+    "field": "value",
+    "value": {
+     "dark-modern": "#4daafc",
+     "light-modern": "#005fb8",
+     "dark-high-contrast": "#21a6ff"
+    }
+   },
+   "nuigetRef": {
+    "state": "main-installed-single",
+    "selector": "images[5] svg",
+    "field": "color",
+    "value": "rgb(77, 170, 252)"
+   },
+   "verdict": "not-measurable-from-probe",
+   "delta": "colour matches in dark-modern, light-modern, dark-high-contrast",
+   "catches": [],
+   "note": "Glyph (check vs verified-filled) is not a probe field. The colour test cannot tell the keys apart: textLink.foreground has the same value in all three themes (dark-modern #4daafc, light-modern #005fb8, dark-high-contrast #21a6ff)."
+  },
+  {
+   "id": "DS-ICON-5",
+   "measurement": "(a) the DS-ICON-1 lint; (b) codicon.css and codicon.ttf load under font-src cspSource and pass check:vsix.",
+   "tolerance": "n/a",
+   "status": "judge-only",
+   "workbenchRef": {
+    "file": "-",
+    "selector": "-",
+    "field": "-",
+    "value": null
+   },
+   "nuigetRef": {
+    "state": "-",
+    "selector": "-",
+    "field": "-",
+    "value": null
+   },
+   "verdict": "not-measurable-from-probe",
+   "delta": null,
+   "catches": [],
+   "note": "Judge-only (delivery decision)."
+  },
+  {
+   "id": "DS-COLOR-1",
+   "measurement": "Per role in all four theme kinds: computed colour of the role's element = computed value of its --vscode-* key; lint: tokens.css declares every role. Today 13 roles absent.",
+   "tolerance": "exact",
+   "status": "measurable",
+   "workbenchRef": {
+    "file": "themes/{dark-modern,light-modern,dark-high-contrast}.json",
+    "selector": "vars --vscode-<role key>",
+    "field": "value",
+    "value": "67 role checks"
+   },
+   "nuigetRef": {
+    "state": "main-installed-single.{dark-modern,light-modern,dark-high-contrast}, main-installed-single, main-updates, sidebar-sections",
+    "selector": "role elements",
+    "field": "computed colour",
+    "value": "58 matched"
+   },
+   "verdict": "fail",
+   "delta": "8 mismatches: dark-modern/icon glyph (icon button) #9d9d9d vs #cccccc; dark-modern/row check mark border #313131 vs #3c3c3c; dark-modern/disabled button text (Uninstall selected (0)) #9d9d9d vs rgba(204, 204, 204, 0.5); light-modern/row check mark border #e5e5e5 vs #cecece; light-modern/disabled button text (Uninstall selected (0)) #3b3b3b vs rgba(97, 97, 97, 0.5); dark-high-contrast/icon glyph (icon button) #ffffff @0.70 vs #ffffff; dark-high-contrast/disabled button text (Uninstall selected (0)) #ffffff @0.70 vs #a5a5a5; dark-high-contrast/inactive tab text #ffffff @0.70 vs #ffffff",
+   "catches": [],
+   "note": "Keys absent in a theme (nUIget fallback not checkable): dark-high-contrast/--vscode-button-secondaryBackground. Full table in rules-bound.json -> colourRoles."
+  },
+  {
+   "id": "DS-COLOR-2",
+   "measurement": "Focus outside the list: computed background of the current/selected option = --vscode-list-inactiveSelectionBackground; focus inside = active.",
+   "tolerance": "exact",
+   "status": "measurable",
+   "workbenchRef": {
+    "file": "workbench/extensions-states.json",
+    "selector": "selected (monaco-list-row focused selected)",
+    "field": "background",
+    "value": "rgb(4, 57, 94)"
+   },
+   "nuigetRef": {
+    "state": "main-installed-single",
+    "selector": "all[45] div.nuiget-row-option",
+    "field": "background",
+    "value": "rgb(4, 57, 94)"
+   },
+   "verdict": "pass",
+   "delta": null,
+   "catches": [],
+   "note": "Only the focus-inside case is in the probe (the row was clicked; document.activeElement was not recorded). The inactive case (#37373d) was not captured."
+  },
+  {
+   "id": "DS-COLOR-3",
+   "measurement": "Computed background of a hovered .nuiget-icon-button = --vscode-toolbar-hoverBackground.",
+   "tolerance": "exact",
+   "status": "measurable",
+   "workbenchRef": {
+    "file": "themes/dark-modern.json",
+    "selector": "--vscode-toolbar-hoverBackground",
+    "field": "value",
+    "value": "rgba(90, 93, 94, 0.31)"
+   },
+   "nuigetRef": {
+    "state": "-",
+    "selector": "hovered .nuiget-icon-button",
+    "field": "background",
+    "value": null
+   },
+   "verdict": "not-measurable-from-probe",
+   "delta": null,
+   "catches": [],
+   "note": "No hover state captured for nUIget; rest background rgba(0, 0, 0, 0)."
+  },
+  {
+   "id": "DS-COLOR-4",
+   "measurement": "Computed colours and underline thickness of role=tab. Today descriptionForeground/foreground and 2 px focusBorder.",
+   "tolerance": "exact",
+   "status": "measurable",
+   "workbenchRef": {
+    "file": "screenshots/probe-workbench-settings.png + probe-workbench-quickinput.png",
+    "selector": "Settings scope tab and Extension editor navbar indicator",
+    "field": "thickness (CSS px)",
+    "value": 1.0
+   },
+   "nuigetRef": {
+    "state": "main-installed-single",
+    "selector": "all[21] button.nuiget-tab[data-testid=installed-tab]",
+    "field": "border[2]",
+    "value": 2.0
+   },
+   "verdict": "fail",
+   "delta": "underline 2.0 px vs 1.0 px; colours: dark-modern inactive tab text #9d9d9d vs #9d9d9d ok; dark-modern active tab text #cccccc vs #cccccc ok; light-modern inactive tab text #3b3b3b vs #3b3b3b ok; light-modern active tab text #3b3b3b vs #3b3b3b ok; dark-high-contrast inactive tab text #ffffff @0.70 vs #ffffff MISMATCH; dark-high-contrast active tab text #ffffff vs #ffffff ok",
+   "catches": [],
+   "note": "The underline colour is not in the JSON (borderColor is the top border only). Dark/Light Modern colours match only because descriptionForeground = panelTitle.inactiveForeground there.",
+   "workbenchAlt": [
+    {
+     "file": "screenshots/probe-workbench-quickinput.png",
+     "selector": "Extension editor navbar indicator",
+     "field": "thickness (CSS px)",
+     "value": 1.0
+    }
+   ]
+  },
+  {
+   "id": "DS-COLOR-5",
+   "measurement": "Lint: --nuiget-color-focus only in outline declarations and the sash hover; probe: no unfocused element paints it.",
+   "tolerance": "0 occurrences",
+   "status": "measurable",
+   "workbenchRef": {
+    "file": "themes/dark-modern.json",
+    "selector": "--vscode-focusBorder",
+    "field": "value",
+    "value": "#0078d4"
+   },
+   "nuigetRef": {
+    "state": "main-installed-single",
+    "selector": "all[45] div.nuiget-row-option",
+    "field": "boxShadow",
+    "value": "rgb(0, 120, 212) 3px 0px 0px 0px inset"
+   },
+   "verdict": "fail",
+   "delta": null,
+   "catches": [],
+   "note": "The selected (clicked, not keyboard-focused) row paints a 3 px inset accent in focusBorder; the tab underline colour is not captured."
+  },
+  {
+   "id": "DS-COLOR-6",
+   "measurement": "Computed colour of disabled names and buttons = --vscode-disabledForeground.",
+   "tolerance": "exact",
+   "status": "measurable",
+   "workbenchRef": {
+    "file": "workbench/extensions.json",
+    "selector": "ext_parts[11] a.action-label.disabled",
+    "field": "color",
+    "value": "rgba(204, 204, 204, 0.5)"
+   },
+   "nuigetRef": {
+    "state": "main-installed-single",
+    "selector": "all[31] button.nuiget-button.nuiget-toolbar-end[data-testid=uninstall-selected-button]",
+    "field": "color",
+    "value": "rgb(157, 157, 157)"
+   },
+   "verdict": "fail",
+   "delta": "dark-modern #9d9d9d vs rgba(204, 204, 204, 0.5); light-modern #3b3b3b vs rgba(97, 97, 97, 0.5); dark-high-contrast #ffffff @0.70 vs #a5a5a5",
+   "catches": [],
+   "note": "Workbench disabled action = disabledForeground (rgba(204, 204, 204, 0.5))."
+  },
+  {
+   "id": "DS-COLOR-7",
+   "measurement": "Computed background of a hovered .nuiget-button--secondary differs from rest and = the key. Today hover = rest.",
+   "tolerance": "exact",
+   "status": "measurable",
+   "workbenchRef": {
+    "file": "themes/dark-modern.json",
+    "selector": "--vscode-button-secondaryHoverBackground",
+    "field": "value",
+    "value": "#2b2b2b"
+   },
+   "nuigetRef": {
+    "state": "-",
+    "selector": "hovered .nuiget-button--secondary",
+    "field": "background",
+    "value": null
+   },
+   "verdict": "not-measurable-from-probe",
+   "delta": null,
+   "catches": [],
+   "note": "No hover state captured; rest background = button.secondaryBackground in Dark and Light Modern (see colourRoles)."
+  },
+  {
+   "id": "DS-DENSITY-1",
+   "measurement": "Row heights per DS-HEIGHT-2/3; no density setting in package.json.",
+   "tolerance": "exact",
+   "status": "measurable",
+   "workbenchRef": {
+    "file": "workbench/extensions.json / workbench/explorer.json",
+    "selector": "ext_rows[0] / list_rows[0]",
+    "field": "rect.h",
+    "value": "72 / 22"
+   },
+   "nuigetRef": {
+    "state": "main-installed-single / sidebar-sections",
+    "selector": "package-row-newtonsoft.json",
+    "field": "rect.h",
+    "value": "79 / 24"
+   },
+   "verdict": "fail",
+   "delta": "+7 / +2",
+   "catches": [],
+   "note": "The kind holds: sidebar rows have no icon element and one line; main rows are three-line comfortable rows."
+  },
+  {
+   "id": "DS-DENSITY-2",
+   "measurement": "With compact, block gaps shrink to the host's compact values (probe binds).",
+   "tolerance": "n/a",
+   "status": "judge-only",
+   "workbenchRef": {
+    "file": "-",
+    "selector": "window.density.layout compact",
+    "field": "-",
+    "value": null
+   },
+   "nuigetRef": {
+    "state": "-",
+    "selector": "-",
+    "field": "-",
+    "value": null
+   },
+   "verdict": "not-measurable-from-probe",
+   "delta": null,
+   "catches": [],
+   "note": "Judge-only until a Modern UI compact probe exists."
+  },
+  {
+   "id": "DS-OVERFLOW-1",
+   "measurement": "At sidebar widths {170,200,250,300} and main widths {220,400,600,800}: scrollWidth <= clientWidth for the root and every non-list container incl. .nuiget-main-details.",
+   "tolerance": "0 px",
+   "status": "measurable",
+   "workbenchRef": {
+    "file": "-",
+    "selector": "side bar 170 px, editor 220 px minimums",
+    "field": "-",
+    "value": null
+   },
+   "nuigetRef": {
+    "state": "main-installed-single / sidebar-sections",
+    "selector": "root",
+    "field": "scroll",
+    "value": [
+     [
+      "main-installed-single",
+      {
+       "sw": 2660,
+       "cw": 2660,
+       "sh": 1511,
+       "ch": 1511
+      }
+     ],
+     [
+      "sidebar-sections",
+      {
+       "sw": 300,
+       "cw": 300,
+       "sh": 1511,
+       "ch": 1511
+      }
+     ]
+    ]
+   },
+   "verdict": "not-measurable-from-probe",
+   "delta": null,
+   "catches": [],
+   "note": "Only the captured widths (main 2660, sidebar 300) are in the probe; at those widths root scrollWidth <= clientWidth ([('main-installed-single', {'sw': 2660, 'cw': 2660, 'sh': 1511, 'ch': 1511}), ('sidebar-sections', {'sw': 300, 'cw': 300, 'sh': 1511, 'ch': 1511})])."
+  },
+  {
+   "id": "DS-OVERFLOW-2",
+   "measurement": "For each container of the overflow table: pairwise intersection area = 0; child.right <= parent.right - padding-right. Today the provisional and TFM badges reach the pane edge.",
+   "tolerance": "0 px",
+   "status": "measurable",
+   "workbenchRef": {
+    "file": "-",
+    "selector": "-",
+    "field": "-",
+    "value": null
+   },
+   "nuigetRef": {
+    "state": "main-installed-single / sidebar-sections",
+    "selector": "4 containers (main header, bulk toolbar, row option, sidebar section header)",
+    "field": "pairwise rect intersection",
+    "value": 0
+   },
+   "verdict": "pass",
+   "delta": null,
+   "catches": [
+    "V3"
+   ],
+   "note": "Holds in the captured states. The V3 state (a badge in a project header) is not in the probe, and the main .nuiget-section-actions slot ends on the pane edge (DS-INSET-3)."
+  },
+  {
+   "id": "DS-OVERFLOW-3",
+   "measurement": "At each container's declared min width all its controls are visible or in an overflow menu, and DS-OVERFLOW-1/2 hold.",
+   "tolerance": "0 px",
+   "status": "measurable",
+   "workbenchRef": {
+    "file": "-",
+    "selector": "-",
+    "field": "-",
+    "value": null
+   },
+   "nuigetRef": {
+    "state": "-",
+    "selector": "-",
+    "field": "-",
+    "value": null
+   },
+   "verdict": "not-measurable-from-probe",
+   "delta": null,
+   "catches": [],
+   "note": "Needs states at each container minimum width."
+  },
+  {
+   "id": "DS-OVERFLOW-4",
+   "measurement": "Count of view/title menu items in group navigation* visible at once for nuiget.sidebarView <= 4. Today 6.",
+   "tolerance": "0",
+   "status": "measurable",
+   "workbenchRef": {
+    "file": "workbench/explorer.json",
+    "selector": "pane_headers li.action-item with w>0",
+    "field": "count",
+    "value": 4
+   },
+   "nuigetRef": {
+    "state": "with-main-installed-single (workbench)",
+    "selector": "sidebar_title li.action-item with w>0 (nUIget view title)",
+    "field": "count",
+    "value": 6
+   },
+   "verdict": "fail",
+   "delta": "+2",
+   "catches": [],
+   "note": "The PNG title reads \"NUIGET: TESTPRO...\" beside the six icons."
+  },
+  {
+   "id": "DS-OVERFLOW-5",
+   "measurement": "layout/set clamps so listPane.width >= minContent(toolbar) and detailsPane.width >= minContent(details header). Today a 25-75 % clamp (55 px list at a 220 px editor).",
+   "tolerance": "0 px",
+   "status": "measurable",
+   "workbenchRef": {
+    "file": "-",
+    "selector": "-",
+    "field": "-",
+    "value": null
+   },
+   "nuigetRef": {
+    "state": "-",
+    "selector": "layout/set clamp",
+    "field": "-",
+    "value": null
+   },
+   "verdict": "not-measurable-from-probe",
+   "delta": null,
+   "catches": [],
+   "note": "Behaviour, not a probe field. Captured split: list 931 of 2660 px."
+  },
+  {
+   "id": "DS-STATE-1",
+   "measurement": "Each matrix cell has a data-testid marker and a named capture. Today the 15 captures show no loading, empty, error, unsupported or narrow-main state.",
+   "tolerance": "0 missing cells",
+   "status": "measurable",
+   "workbenchRef": {
+    "file": "-",
+    "selector": "-",
+    "field": "-",
+    "value": null
+   },
+   "nuigetRef": {
+    "state": "probe/out/nuiget",
+    "selector": "states captured",
+    "field": "list",
+    "value": [
+     "main-installed-single (row selected, details loading)",
+     "main-installed-single x3 themes (no selection)",
+     "main-updates",
+     "sidebar-sections"
+    ]
+   },
+   "verdict": "fail",
+   "delta": null,
+   "catches": [],
+   "note": "No empty-list, error, unsupported, revalidating or narrow state. One loading state was caught by chance (details skeleton)."
+  },
+  {
+   "id": "DS-STATE-2",
+   "measurement": ".nuiget-progress present at the list top while loading or revalidating; no Notification progress for single operations.",
+   "tolerance": "exact",
+   "status": "measurable",
+   "workbenchRef": {
+    "file": "-",
+    "selector": "view progress (2 px)",
+    "field": "-",
+    "value": null
+   },
+   "nuigetRef": {
+    "state": "main-installed-single",
+    "selector": "all[101] div.nuiget-skeleton-row.nuiget-skeleton-row--comfortable",
+    "field": "rect.h",
+    "value": 76
+   },
+   "verdict": "fail",
+   "delta": null,
+   "catches": [],
+   "note": "Fails on the first-load half: details first load shows .nuiget-skeleton (3 rows of 76 px, background #2a2d2e = list.hoverBackground #2a2d2e); .nuiget-progress present in any captured state: False. The revalidation half (the 2 px bar at the list top) was never captured, so this says nothing about whether the product draws it."
+  },
+  {
+   "id": "DS-STATE-3",
+   "measurement": "Computed text-align start; padding-inline 20; <= 1 button; button width = min(container - 40, 300).",
+   "tolerance": "1 px",
+   "status": "measurable",
+   "workbenchRef": {
+    "file": "workbench/scm.json",
+    "selector": "buttons[0] a.monaco-text-button vs webviews[0] div.content",
+    "field": "x inset left/right, w",
+    "value": "20.0 / 20.0, w 260"
+   },
+   "nuigetRef": {
+    "state": "main-installed-single.dark-modern",
+    "selector": "all[84] div.nuiget-empty",
+    "field": "padding[3]",
+    "value": 16.0
+   },
+   "verdict": "fail",
+   "delta": "padding 16.0 vs 20; text centred (gaps 741.63 / 741.63)",
+   "catches": [],
+   "note": "text-align is not a probe field; centring is read from the rects of p.nuiget-empty-text.",
+   "nuigetAlt": [
+    {
+     "state": "main-installed-single.dark-modern",
+     "selector": "all[85] p.nuiget-empty-text",
+     "field": "rect.x",
+     "value": 1692.63
+    }
+   ],
+   "designRules": "20 px side padding, button \u2264 300 -> SCM welcome 20/20, w 260"
+  },
+  {
+   "id": "DS-STATE-4",
+   "measurement": "Inline error element contains an error/warning codicon, text and <= 1 button.",
+   "tolerance": "exact",
+   "status": "measurable",
+   "workbenchRef": {
+    "file": "-",
+    "selector": "-",
+    "field": "-",
+    "value": null
+   },
+   "nuigetRef": {
+    "state": "-",
+    "selector": "-",
+    "field": "-",
+    "value": null
+   },
+   "verdict": "not-measurable-from-probe",
+   "delta": null,
+   "catches": [],
+   "note": "No error state captured."
+  },
+  {
+   "id": "DS-STATE-5",
+   "measurement": "Information notifications after a successful single install/update/uninstall = 0; status-live text present.",
+   "tolerance": "0 toasts",
+   "status": "measurable",
+   "workbenchRef": {
+    "file": "-",
+    "selector": "-",
+    "field": "-",
+    "value": null
+   },
+   "nuigetRef": {
+    "state": "-",
+    "selector": "-",
+    "field": "-",
+    "value": null
+   },
+   "verdict": "not-measurable-from-probe",
+   "delta": null,
+   "catches": [],
+   "note": "No operation ran during the probe (notifications arrays empty in every workbench file)."
+  },
+  {
+   "id": "DS-STATE-6",
+   "measurement": "Text or spinner on the busy row's action; aria-busy=true.",
+   "tolerance": "exact",
+   "status": "measurable",
+   "workbenchRef": {
+    "file": "-",
+    "selector": "-",
+    "field": "-",
+    "value": null
+   },
+   "nuigetRef": {
+    "state": "-",
+    "selector": "-",
+    "field": "-",
+    "value": null
+   },
+   "verdict": "not-measurable-from-probe",
+   "delta": null,
+   "catches": [],
+   "note": "No pending operation captured."
+  },
+  {
+   "id": "DS-STATE-7",
+   "measurement": "Each aria-disabled row or disabled button has a visible or aria-describedby reason (non-empty).",
+   "tolerance": "0 missing",
+   "status": "measurable",
+   "workbenchRef": {
+    "file": "-",
+    "selector": "-",
+    "field": "-",
+    "value": null
+   },
+   "nuigetRef": {
+    "state": "-",
+    "selector": "-",
+    "field": "-",
+    "value": null
+   },
+   "verdict": "not-measurable-from-probe",
+   "delta": null,
+   "catches": [],
+   "note": "aria-* attributes are not probe fields."
+  },
+  {
+   "id": "DS-FOCUS-1",
+   "measurement": "Computed outline-width 1 and outline-offset per control kind. Today check boxes +1, buttons -1.",
+   "tolerance": "exact",
+   "status": "measurable",
+   "workbenchRef": {
+    "file": "workbench/quickinput.json",
+    "selector": "quickinput[1] div.monaco-inputbox.idle.synthetic-focus",
+    "field": "outline",
+    "value": "rgb(0, 120, 212) solid 1px"
+   },
+   "nuigetRef": {
+    "state": "-",
+    "selector": "keyboard-focused controls",
+    "field": "outline / outline-offset",
+    "value": null
+   },
+   "verdict": "not-measurable-from-probe",
+   "delta": null,
+   "catches": [],
+   "note": "No keyboard focus captured in nUIget; outline-offset is not a probe field. Workbench focused inputs: quick input rgb(0, 120, 212) solid 1px, Search view rgb(0, 120, 212) solid 1px."
+  },
+  {
+   "id": "DS-FOCUS-2",
+   "measurement": "Computed outline colour of the focused option = --vscode-list-focusOutline.",
+   "tolerance": "exact",
+   "status": "measurable",
+   "workbenchRef": {
+    "file": "workbench/extensions-states.json",
+    "selector": "selected",
+    "field": "outline",
+    "value": "rgb(0, 120, 212) solid 1px"
+   },
+   "nuigetRef": {
+    "state": "-",
+    "selector": "keyboard-focused option",
+    "field": "outline",
+    "value": null
+   },
+   "verdict": "not-measurable-from-probe",
+   "delta": null,
+   "catches": [],
+   "note": "Not capturable by colour in the default themes: list.focusOutline equals focusBorder in all four (dark-modern #0078d4/#0078d4; light-modern #005fb8/#005fb8; dark-high-contrast #f38518/#f38518; light-high-contrast #006bbd/#006bbd)."
+  },
+  {
+   "id": "DS-FOCUS-3",
+   "measurement": "No outline after a pointer click on a row or tab.",
+   "tolerance": "exact",
+   "status": "measurable",
+   "workbenchRef": {
+    "file": "workbench/extensions-states.json",
+    "selector": "selected (after WebDriver click)",
+    "field": "outline",
+    "value": "rgb(0, 120, 212) solid 1px"
+   },
+   "nuigetRef": {
+    "state": "main-installed-single",
+    "selector": "all[45] div.nuiget-row-option",
+    "field": "outline",
+    "value": "rgb(255, 255, 255) none 3px"
+   },
+   "verdict": "not-measurable-from-probe",
+   "delta": null,
+   "catches": [],
+   "note": "Contradiction: the classic 1.142.0 list paints its focus outline after a pointer click (Extensions row: \"rgb(0, 120, 212) solid 1px\"; rest \"rgb(204, 204, 204) none 3px\"); the rule binds to the Modern-UI-gated keyboardFocusOnly module. nUIget shows no outline after the click (\"rgb(255, 255, 255) none 3px\"), but whether the option held focus was not recorded.",
+   "designRules": "keyboard focus only (Modern UI keyboardFocusOnly) -> classic draws the outline after a click"
+  },
+  {
+   "id": "DS-FOCUS-4",
+   "measurement": "In the HC captures: selected row outline-style dotted, hovered row dashed.",
+   "tolerance": "exact",
+   "status": "measurable",
+   "workbenchRef": {
+    "file": "-",
+    "selector": "HC list styles",
+    "field": "-",
+    "value": null
+   },
+   "nuigetRef": {
+    "state": "main-installed-single.dark-high-contrast",
+    "selector": "selected/hovered option",
+    "field": "outline",
+    "value": null
+   },
+   "verdict": "not-measurable-from-probe",
+   "delta": null,
+   "catches": [],
+   "note": "The HC state has no selected or hovered row."
+  },
+  {
+   "id": "DS-MOTION-1",
+   "measurement": "Computed transition-duration in {100,150} ms; spinner animation-duration 1.5 s; progress 4 s. Today 100/200 ms, spinner 1 s, progress 1.6 s.",
+   "tolerance": "exact",
+   "status": "measurable",
+   "workbenchRef": {
+    "file": "-",
+    "selector": "-",
+    "field": "transition/animation durations",
+    "value": null
+   },
+   "nuigetRef": {
+    "state": "-",
+    "selector": "-",
+    "field": "-",
+    "value": null
+   },
+   "verdict": "not-measurable-from-probe",
+   "delta": null,
+   "catches": [],
+   "note": "Durations are not probe fields."
+  },
+  {
+   "id": "DS-MOTION-2",
+   "measurement": "With workbench.reduceMotion on and the OS default: computed --nuiget-duration-normal = 0ms.",
+   "tolerance": "exact",
+   "status": "measurable",
+   "workbenchRef": {
+    "file": "themes/*.json",
+    "selector": "bodyClass",
+    "field": "contains vscode-reduce-motion",
+    "value": true
+   },
+   "nuigetRef": {
+    "state": "main-installed-single",
+    "selector": "all[101] div.nuiget-skeleton-row.nuiget-skeleton-row--comfortable",
+    "field": "opacity",
+    "value": "0.994199"
+   },
+   "verdict": "fail",
+   "delta": null,
+   "catches": [],
+   "note": "The host set body.vscode-reduce-motion in all six themes, yet the skeleton rows read opacity ['0.994199'] mid-animation (nuiget-breathe 1 -> 0.5): nUIget animates under the host's reduce-motion signal. Why the class was set (OS setting vs workbench.reduceMotion) is not verified. The probe's waitForTransitions filters CSSTransition only, so CSS animations ran during every measurement."
+  },
+  {
+   "id": "DS-COPY-1",
+   "measurement": "Regex over rendered labels of button, role=tab and menu items: every word of 4+ letters capitalised (articles/prepositions excepted).",
+   "tolerance": "0 violations",
+   "status": "measurable",
+   "workbenchRef": {
+    "file": "workbench/settings.json / workbench/scm.json",
+    "selector": "buttons a.monaco-text-button (visible)",
+    "field": "text",
+    "value": [
+     "Backup and Sync Settings",
+     "Add Pattern",
+     "Open Repository"
+    ]
+   },
+   "nuigetRef": {
+    "state": "main-installed-single / main-updates",
+    "selector": "button text",
+    "field": "text",
+    "value": [
+     "Details",
+     "Installed 2",
+     "README",
+     "Select all",
+     "Uninstall",
+     "Uninstall selected (0)",
+     "Update",
+     "Update all (2)",
+     "Updates 2"
+    ]
+   },
+   "verdict": "fail",
+   "delta": "not Title Case: ['Uninstall selected (0)']",
+   "catches": [],
+   "note": "Check as written in the rule: every word of four or more letters capitalised. That check lets \"Select all\" and \"Update all (2)\" pass (\"all\" has three letters); a minor-word list (a, an, the, of, in, to, for, and, or) would catch them."
+  },
+  {
+   "id": "DS-COPY-2",
+   "measurement": "No details-pane label ends with ':'; 'Author(s)' and 'Authors' not both present.",
+   "tolerance": "0 violations",
+   "status": "measurable",
+   "workbenchRef": {
+    "file": "-",
+    "selector": "Extension editor More Info",
+    "field": "-",
+    "value": null
+   },
+   "nuigetRef": {
+    "state": "main-installed-single",
+    "selector": ".nuiget-details-label",
+    "field": "text",
+    "value": [
+     "Installed:",
+     "Version:"
+    ]
+   },
+   "verdict": "fail",
+   "delta": null,
+   "catches": [],
+   "note": "Workbench labels are not in the DOM dump (the quickinput PNG shows \"Identifier\", \"Version\", \"Last Updated\" without colons)."
+  },
+  {
+   "id": "DS-COPY-3",
+   "measurement": "Regex on EmptyState messages and banners: ends with '.'.",
+   "tolerance": "0 violations",
+   "status": "measurable",
+   "workbenchRef": {
+    "file": "-",
+    "selector": "-",
+    "field": "-",
+    "value": null
+   },
+   "nuigetRef": {
+    "state": "main-installed-single.dark-modern",
+    "selector": "all[85] p.nuiget-empty-text",
+    "field": "text",
+    "value": "Select a package to see its details."
+   },
+   "verdict": "pass",
+   "delta": null,
+   "catches": [],
+   "note": "One message captured."
+  },
+  {
+   "id": "DS-COPY-4",
+   "measurement": "Regex: labels that open a dialog or picker end with '...'. Today U+2026 is used.",
+   "tolerance": "0 violations",
+   "status": "measurable",
+   "workbenchRef": {
+    "file": "-",
+    "selector": "-",
+    "field": "-",
+    "value": null
+   },
+   "nuigetRef": {
+    "state": "-",
+    "selector": "-",
+    "field": "-",
+    "value": null
+   },
+   "verdict": "not-measurable-from-probe",
+   "delta": null,
+   "catches": [],
+   "note": "No label that opens further UI was captured."
+  },
+  {
+   "id": "DS-COPY-5",
+   "measurement": "No header contains both a badge and a '(N)' text node; filtered headers show 'N of M'.",
+   "tolerance": "0 violations",
+   "status": "measurable",
+   "workbenchRef": {
+    "file": "workbench/extensions.json",
+    "selector": "pane_headers[4] div.monaco-count-badge",
+    "field": "text",
+    "value": "1"
+   },
+   "nuigetRef": {
+    "state": "main-installed-single",
+    "selector": "all[38] span.nuiget-section-title",
+    "field": "text",
+    "value": "Direct packages (2)"
+   },
+   "verdict": "fail",
+   "delta": null,
+   "catches": [],
+   "note": "Main surface shows the count as a tab badge (\"2\") and as text (\"Direct packages (2)\"). The sidebar uses badges only (\"2\")."
+  },
+  {
+   "id": "DS-DIVIDER-1",
+   "measurement": "Rows with non-zero border-bottom = 0; first section header has no top border.",
+   "tolerance": "0",
+   "status": "measurable",
+   "workbenchRef": {
+    "file": "workbench/extensions.json",
+    "selector": "pane_headers[0] / pane_headers[5] div.pane-header",
+    "field": "border (t r b l) / top colour",
+    "value": "0px 0px 0px 0px / 1px 0px 0px 0px rgb(43, 43, 43)"
+   },
+   "nuigetRef": {
+    "state": "main-installed-single / sidebar-sections",
+    "selector": "comfortable rows; sidebar section headers 1 and 2",
+    "field": "border",
+    "value": {
+     "rows with bottom border": 2,
+     "sidebar header 1": "1px 0px 0px 0px rgb(43, 43, 43)",
+     "sidebar header 2": "1px 0px 0px 0px rgba(0, 0, 0, 0)"
+    }
+   },
+   "verdict": "fail",
+   "delta": null,
+   "catches": [],
+   "note": "Every comfortable row draws a 1 px bottom line (PNG grey #313131). Sidebar header borders are inverted against the workbench: the first header shows the line, the second is transparent."
+  },
+  {
+   "id": "DS-DIVIDER-2",
+   "measurement": "Computed box-shadow non-none only on .nuiget-dialog, .nuiget-popover, .nuiget-search-popup.",
+   "tolerance": "exact",
+   "status": "measurable",
+   "workbenchRef": {
+    "file": "workbench/quickinput.json",
+    "selector": "quickinput[0] div.quick-input-widget.show-file-icons",
+    "field": "boxShadow",
+    "value": "rgba(0, 0, 0, 0.15) 0px 0px 20px 0px"
+   },
+   "nuigetRef": {
+    "state": "all states",
+    "selector": "elements with box-shadow",
+    "field": "boxShadow",
+    "value": [
+     [
+      "all[45] div.nuiget-row-option",
+      "rgb(0, 120, 212) 3px 0px 0px 0px inset"
+     ]
+    ]
+   },
+   "verdict": "fail",
+   "delta": null,
+   "catches": [],
+   "note": "The only nUIget shadow is the inset selection accent (a stripe, not elevation). The workbench also shadows non-layers: Extensions row \"rgba(0, 0, 0, 0.08) 0px 0px 4px 0px\", active editor tab \"rgba(0, 0, 0, 0.02) 0px 8px 12px 0px inset\". Quick input measures \"rgba(0, 0, 0, 0.15) 0px 0px 20px 0px\", not the 0 2px 8px hover shadow.",
+   "designRules": "hover 0 2px 8px; quick input shadow-xl -> quick input 0 0 20px rgba(0,0,0,0.15)"
+  },
+  {
+   "id": "DS-DIVIDER-3",
+   "measurement": "Computed text-transform of .nuiget-search-group-header = none; border-top on every group but the first.",
+   "tolerance": "exact",
+   "status": "measurable",
+   "workbenchRef": {
+    "file": "workbench/quickinput.json",
+    "selector": "quickinput[16] div.quick-input-list-entry.has-actions.quick-input-list-separator-border",
+    "field": "border",
+    "value": "1px 0px 0px 0px"
+   },
+   "nuigetRef": {
+    "state": "-",
+    "selector": ".nuiget-search-group-header",
+    "field": "text-transform",
+    "value": null
+   },
+   "verdict": "not-measurable-from-probe",
+   "delta": null,
+   "catches": [],
+   "note": "Quick-search popup not captured. Workbench separator: border-top 1px #3c3c3c, label 11px #9d9d9d, no transform."
+  },
+  {
+   "id": "DS-DIVIDER-4",
+   "measurement": "Computed border colour of .nuiget-main-search and .nuiget-tablist bottom borders equal and = the bound key.",
+   "tolerance": "exact",
+   "status": "measurable",
+   "workbenchRef": {
+    "file": "screenshots/probe-workbench-settings.png",
+    "selector": "Settings header border (grey)",
+    "field": "colour",
+    "value": "#2b2b2b"
+   },
+   "nuigetRef": {
+    "state": "screenshots/probe-main-installed-single.png",
+    "selector": ".nuiget-main-search bottom border and tab-bar line (webview y 68.0, 93.0)",
+    "field": "colour",
+    "value": "#313131"
+   },
+   "verdict": "fail",
+   "delta": null,
+   "catches": [],
+   "note": "Both nUIget lines are #313131 (= --vscode-widget-border #313131); the bound role is settings.headerBorder / panelSection.border #2b2b2b / #2b2b2b. From PNG greys, not JSON (borderColor in the probe is the top border only)."
+  }
+ ],
+ "otherRules": [
+  {
+   "id": "icons-match-pinned-codicons",
+   "index": 72,
+   "owner": "component-base (inferred from rule order and content)",
+   "status": "measurable",
+   "text": "Every codicon icon in src/webview/shared/primitives/icons.tsx draws the path data and viewBox of the pinned @vscode/codicons src/icons/<name>.svg",
+   "measurement": "Lint test: for each '/** Codicon: <name> */' block, compare the path d attributes and viewBox with the pinned SVG file",
+   "verdict": "not-measurable-from-probe",
+   "catches": [
+    "2020 drawings shipped after a codicon redraw",
+    "hand-edited paths"
+   ],
+   "note": "Path data is not a probe field (twin DS-ICON-1)."
+  },
+  {
+   "id": "spacing-on-workbench-ramp",
+   "index": 73,
+   "owner": "component-base (inferred from rule order and content)",
+   "status": "measurable",
+   "text": "Every padding, margin and gap length that tokens.css resolves to lands on the workbench spacing ramp (0, 2, 4, 6, 8, 10, 12, 16, 20, 24, 28, 32, 36, 40 px)",
+   "measurement": "Extend webview-tokens.test.ts: each --nuiget-space-* token aliases var(--vscode-spacing-sizeN, Npx) with N on the ramp",
+   "verdict": "not-measurable-from-probe",
+   "catches": [
+    "V5-type drift: spacing that follows no single scale"
+   ],
+   "note": "Source lint on tokens.css. Computed twin DS-GRID-1: one off-ramp value in the DOM (tab bar padding-left 7)."
+  },
+  {
+   "id": "radius-and-type-from-workbench-tokens",
+   "index": 74,
+   "owner": "component-base (inferred from rule order and content)",
+   "status": "measurable",
+   "text": "Control radii and font sizes in tokens.css alias the workbench tokens (--vscode-cornerRadius-*, --vscode-fontSize-*, --vscode-fontWeight-*), each with a literal fallback for hosts below 1.110",
+   "measurement": "webview-tokens.test.ts asserts the var() names and that every alias has a fallback",
+   "verdict": "not-measurable-from-probe",
+   "catches": [
+    "2 px radius on controls where the workbench uses 4",
+    "em-based type off the workbench ramp"
+   ],
+   "note": "Source lint. Computed radii in the probe: {'nUIget button': '2px', 'nUIget input': '2px', 'nUIget select': '2px', 'workbench button': '4px', 'workbench input box': '4px', 'workbench select': '4px'}. No DS rule binds control radius; the probe gives 4 px for button, input box and select."
+  },
+  {
+   "id": "R1",
+   "index": 75,
+   "owner": "measurement",
+   "status": "measurable",
+   "text": "Edges meant to coincide coincide: the left inset of title, search, tabs, toolbar, section headers and row content; an end-aligned primary button and the edge it aligns with.",
+   "measurement": "getBoundingClientRect left/right in the webview frame via one executeScript per state",
+   "verdict": "fail",
+   "catches": [
+    "V2",
+    "P9.fix-4",
+    "P9.fix-5",
+    "P9.fix-6"
+   ],
+   "note": "Twin DS-INSET-2/3: left edges hold at 16; the end-aligned primary button ends 6 from the list edge while the search box ends 16 from the panel edge."
+  },
+  {
+   "id": "R2",
+   "index": 76,
+   "owner": "measurement",
+   "status": "measurable",
+   "text": "Check box, icon and text block are vertically centred on their card.",
+   "measurement": "centre of child rect vs centre of row wrapper rect",
+   "verdict": "pass",
+   "catches": [
+    "P9.fix-3"
+   ],
+   "note": "Centre offsets vs the row wrapper (79 px incl. 1 px border): {'check': -0.5, 'icon': -0.5, 'text block': -0.5} (\u2264 1 px)."
+  },
+  {
+   "id": "R3",
+   "index": 77,
+   "owner": "measurement",
+   "status": "measurable",
+   "text": "Visible children of a list (badges, actions, text) stay inside the scroll port with an inset of --nuiget-space-2 and never overlap the divider or scrollbar gutter.",
+   "measurement": "child.right \u2264 scrollport content right \u2212 inset; elementFromPoint at the child's right corners returns the child",
+   "verdict": "fail",
+   "catches": [
+    "V3"
+   ],
+   "note": "Row actions end at 931 = listbox right 931 (clearance 0 < 4); sidebar row and section actions end on the 300 px edge. The V3 badge state is not in the probe."
+  },
+  {
+   "id": "R4",
+   "index": 78,
+   "owner": "measurement",
+   "status": "judge-only",
+   "text": "Candidate: a section header sits closer to the content it labels than to the content before it.",
+   "measurement": "gap(header text Range rect \u2192 first icon/name rect) vs gap(previous content \u2192 header text)",
+   "verdict": "fail",
+   "catches": [
+    "V4"
+   ],
+   "note": "Judge-only in its source; measured by DS-GRID-2(b): header 4 px from the block above, 12.44 px from the first name (box)."
+  },
+  {
+   "id": "R5",
+   "index": 79,
+   "owner": "measurement",
+   "status": "measurable",
+   "text": "Gaps with the same role (header\u2192toolbar, toolbar\u2192section header, section header\u2192content, between groups) are equal everywhere in both tabs and both surfaces.",
+   "measurement": "vertical gaps between consecutive role-tagged content rects",
+   "verdict": "fail",
+   "catches": [
+    "V5",
+    "V1"
+   ],
+   "note": "Twin DS-GRID-2(a): role gaps 8, 5, 4, 4, 0 in Installed; Updates toolbar -> first row 4."
+  },
+  {
+   "id": "R6",
+   "index": 80,
+   "owner": "measurement",
+   "status": "measurable",
+   "text": "Heights and computed colours of tab bar, toolbar buttons, inputs and section headers equal their workbench analogues measured in the same session.",
+   "measurement": "top-document getRect/getComputedStyle of workbench exemplars vs webview elements",
+   "verdict": "fail",
+   "catches": [
+    "V1"
+   ],
+   "note": "Twins DS-HEIGHT-1/6/7 and DS-HEIGHT-4: section header 25 vs 22, buttons 24 vs 26, inputs 24 vs 25/26, tab strip 25 vs editor strip 35."
+  },
+  {
+   "id": "R7",
+   "index": 81,
+   "owner": "measurement",
+   "status": "measurable",
+   "text": "Package names and authors are not cut at the default widths; at 200 px the name is cut only when it is still at least as wide as the version.",
+   "measurement": "scrollWidth vs clientWidth",
+   "verdict": "pass",
+   "catches": [
+    "P9.fix-3",
+    "P9.10"
+   ],
+   "note": "At the captured widths (main 2660, sidebar 300) no row name has scrollWidth > clientWidth (none cut); the 200 px half is not in the probe."
+  },
+  {
+   "id": "R8",
+   "index": 82,
+   "owner": "measurement",
+   "status": "measurable",
+   "text": "Persistent chrome (title, search box, tab bar, toolbar) does not move between named states.",
+   "measurement": "rects of persistent chrome recorded per state and compared",
+   "verdict": "pass",
+   "catches": [
+    "P9.fix-2"
+   ],
+   "note": "Title, search box, tab bar and toolbar rects are identical across main-installed-single, its dark-modern variant and main-updates."
+  },
+  {
+   "id": "R9",
+   "index": 83,
+   "owner": "measurement",
+   "status": "measurable",
+   "text": "The masked webview crop of each named state matches its pinned baseline.",
+   "measurement": "pixelmatch(threshold 0.1, includeAA false, ignoreMask for live regions) on the iframe-rect crop of VSBrowser.takeScreenshot",
+   "verdict": "not-measurable-from-probe",
+   "catches": [
+    "any unintended visual change"
+   ],
+   "note": "Owned by its dimension; the measurement is a lint, source, VSIX, axe or screen-reader check, not a probe field."
+  },
+  {
+   "id": "R10",
+   "index": 84,
+   "owner": "measurement",
+   "status": "measurable",
+   "text": "No axe violation in the real webview: full WCAG A/AA plus best-practice per named state in the default theme; color-contrast and target-size per theme.",
+   "measurement": "axe-core injected into the webview frame via executeScriptAsync",
+   "verdict": "not-measurable-from-probe",
+   "catches": [
+    "accessibility regressions"
+   ],
+   "note": "Owned by its dimension; the measurement is a lint, source, VSIX, axe or screen-reader check, not a probe field."
+  },
+  {
+   "id": "pxLength",
+   "index": 85,
+   "owner": "css-audit",
+   "status": "measurable",
+   "text": "No literal px/em/rem length outside padding, margin and gap in a 2.0 stylesheet other than tokens.css.",
+   "measurement": "In primitives.css, main.css, sidebar.css and search.css: a declaration whose property is not a custom property and does not match /^(?:padding|margin|gap|row-gap|column-gap)(?:-[a-z-]+)?$/, and whose value matches /(?<![\\w.-])-?\\d*\\.?\\d+(?:px|em|rem)\\b/. One entry per declaration; selector = whole prelude with whitespace collapsed; line = declaration line. %, vh, vw, deg and unitless numbers are out.",
+   "verdict": "not-measurable-from-probe",
+   "catches": [
+    "58 hits: primitives.css 19, main.css 32, sidebar.css 4, search.css 3",
+    "34 of them are 1px lines pinned by webview-stylesheets.test.ts:161-163,166,178,189,238"
+   ],
+   "note": "Owned by its dimension; the measurement is a lint, source, VSIX, axe or screen-reader check, not a probe field."
+  },
+  {
+   "id": "duplicateSelector",
+   "index": 86,
+   "owner": "css-audit",
+   "status": "measurable",
+   "text": "A whole selector prelude is declared once per bundle.",
+   "measurement": "Within a bundle in cascade order (main: primitives, tokens, main, search; sidebar: primitives, tokens, sidebar, search), a style rule outside @keyframes in a linted stylesheet whose whitespace-collapsed prelude and at-rule context equal an earlier rule's. One entry per later rule, deduplicated across bundles; property null; value = file:line of the first rule.",
+   "verdict": "not-measurable-from-probe",
+   "catches": [
+    "1 hit: primitives.css:238 repeats primitives.css:86"
+   ],
+   "note": "Owned by its dimension; the measurement is a lint, source, VSIX, axe or screen-reader check, not a probe field."
+  },
+  {
+   "id": "specificity",
+   "index": 87,
+   "owner": "css-audit",
+   "status": "measurable",
+   "text": "No complex selector above (0,2,0).",
+   "measurement": "Every complex selector outside @keyframes in the linted stylesheets with specificity lexicographically greater than (0,2,0) per Selectors Level 4 (:not/:is/:has take the max argument, :where 0, pseudo-elements in c). One entry per complex selector; property null; value \"(a,b,c)\"; line = line the complex selector starts on.",
+   "verdict": "not-measurable-from-probe",
+   "catches": [
+    "41 hits: primitives.css 23, main.css 15, sidebar.css 2, search.css 1 (35 with b > 2)"
+   ],
+   "note": "Owned by its dimension; the measurement is a lint, source, VSIX, axe or screen-reader check, not a probe field."
+  },
+  {
+   "id": "override",
+   "index": 88,
+   "owner": "css-audit",
+   "status": "measurable",
+   "text": "A stylesheet does not override a declaration that another stylesheet of the same bundle set on the same class.",
+   "measurement": "Top-level rules R1, R2 in different files of one bundle; S1's subject compound has a class and all its classes are in S2's subject compound; same pseudo-element; S2 wins by specificity or by later order; D1 and D2 share a physical longhand after shorthand and logical expansion (horizontal LTR). One entry per (D2, S2); selector = S2; property/value = D2; line = D2's line.",
+   "verdict": "not-measurable-from-probe",
+   "catches": [
+    "16 hits: main.css 9, sidebar.css 7, all over primitives.css",
+    "12 of 16 introduced in P9.x or P9.fix"
+   ],
+   "note": "Owned by its dimension; the measurement is a lint, source, VSIX, axe or screen-reader check, not a probe field."
+  },
+  {
+   "id": "deadRule",
+   "index": 89,
+   "owner": "css-audit",
+   "status": "measurable",
+   "text": "Every class a stylesheet styles is rendered by non-test webview source.",
+   "measurement": "A complex selector in a linted stylesheet with a class that does not occur as a whole word in any comment-stripped .ts/.tsx under src/webview (excluding *.test.ts(x), testSupport.ts, *.d.ts) and does not start with a template prefix (nuiget-x--${\u2026}) or a quoted prefix string ('nuiget-hljs-') found there. One entry per complex selector; property null; value = dead class names.",
+   "verdict": "not-measurable-from-probe",
+   "catches": [
+    "0 hits; needs a planted sample such as .nuiget-not-rendered { color: inherit; }",
+    "a bundle-based variant would catch the 4 .nuiget-popover selectors"
+   ],
+   "note": "Owned by its dimension; the measurement is a lint, source, VSIX, axe or screen-reader check, not a probe field."
+  },
+  {
+   "id": "disableComment",
+   "index": 90,
+   "owner": "css-audit",
+   "status": "measurable",
+   "text": "No stylelint or eslint disable comment in a stylesheet.",
+   "measurement": "A comment in a linted stylesheet whose text matches /\\b(?:stylelint|eslint)-disable\\b/. One entry per comment; selector and property null; value = comment text; line = the comment's first line.",
+   "verdict": "not-measurable-from-probe",
+   "catches": [
+    "0 hits; needs a planted sample such as /* stylelint-disable-next-line */",
+    "parseRules strips comments, so this rule needs a comment-aware reader"
+   ],
+   "note": "Owned by its dimension; the measurement is a lint, source, VSIX, axe or screen-reader check, not a probe field."
+  },
+  {
+   "id": "CA-R1",
+   "index": 91,
+   "owner": "component-audit",
+   "status": "measurable",
+   "text": "No feature stylesheet selector names a primitive class (main.css, sidebar.css, search.css).",
+   "measurement": "grep -nE \"\\.(<classes defined in primitives.css>)([^a-z0-9-]|$)\" src/webview/main/main.css src/webview/sidebar/sidebar.css src/webview/shared/search/search.css | wc -l",
+   "verdict": "not-measurable-from-probe",
+   "catches": [
+    "V1",
+    "V3",
+    "V4",
+    "primitive variants defined by parents"
+   ],
+   "note": "Owned by its dimension; the measurement is a lint, source, VSIX, axe or screen-reader check, not a probe field."
+  },
+  {
+   "id": "CA-R2",
+   "index": 92,
+   "owner": "component-audit",
+   "status": "measurable",
+   "text": "Every export of shared/primitives/index.ts has a production importer.",
+   "measurement": "for each name exported by index.ts: grep -rlw <name> src/webview --include='*.tsx' --include='*.ts' excluding tests and shared/primitives",
+   "verdict": "not-measurable-from-probe",
+   "catches": [
+    "dead primitives"
+   ],
+   "note": "Owned by its dimension; the measurement is a lint, source, VSIX, axe or screen-reader check, not a probe field."
+  },
+  {
+   "id": "CA-R3",
+   "index": 93,
+   "owner": "component-audit",
+   "status": "measurable",
+   "text": "The main-panel shell stays under 300 lines (ADR-008).",
+   "measurement": "wc -l < src/webview/main/MainShell.tsx",
+   "verdict": "not-measurable-from-probe",
+   "catches": [
+    "logic accreting in the shell"
+   ],
+   "note": "Owned by its dimension; the measurement is a lint, source, VSIX, axe or screen-reader check, not a probe field."
+  },
+  {
+   "id": "CA-R4",
+   "index": 94,
+   "owner": "component-audit",
+   "status": "measurable",
+   "text": "Listbox row heights equal the row-height tokens (one source of truth).",
+   "measurement": "compare ROW_HEIGHT in Listbox.tsx with --nuiget-row-height-compact/-comfortable in tokens.css",
+   "verdict": "not-measurable-from-probe",
+   "catches": [
+    "virtualizer estimate drift after a DS change of row height"
+   ],
+   "note": "Owned by its dimension; the measurement is a lint, source, VSIX, axe or screen-reader check, not a probe field."
+  },
+  {
+   "id": "CA-R5",
+   "index": 95,
+   "owner": "component-audit",
+   "status": "measurable",
+   "text": "Every hook in interaction model \u00a78 is rendered by a product file, and the row hook keeps the wrapper/option/actions triad.",
+   "measurement": "npx vitest run src/test/lint/interaction-model-testids.test.ts; ExTester reads of [data-testid=package-row-*] [role=option]",
+   "verdict": "not-measurable-from-probe",
+   "catches": [
+    "a rebuild that drops a hook or flattens the row"
+   ],
+   "note": "Owned by its dimension; the measurement is a lint, source, VSIX, axe or screen-reader check, not a probe field."
+  },
+  {
+   "id": "a11y-focus-after-close",
+   "index": 96,
+   "owner": "accessibility",
+   "status": "measurable",
+   "text": "After any dialog or popover closes, by Confirm, Cancel or Escape, keyboard focus is on a focusable element of the surface, never on <body>.",
+   "measurement": "jsdom: document.activeElement !== document.body after each close; ExTester: executeScript('return document.activeElement === document.body') is false",
+   "verdict": "not-measurable-from-probe",
+   "catches": [
+    "finding 1"
+   ],
+   "note": "Owned by its dimension; the measurement is a lint, source, VSIX, axe or screen-reader check, not a probe field."
+  },
+  {
+   "id": "a11y-enter-not-destructive",
+   "index": 97,
+   "owner": "accessibility",
+   "status": "measurable",
+   "text": "Enter on a list row never runs an install, update or uninstall without a confirmation; it opens or shows the item.",
+   "measurement": "RTL: Enter on each list's active row sends no ops/* request",
+   "verdict": "not-measurable-from-probe",
+   "catches": [
+    "finding 2"
+   ],
+   "note": "Owned by its dimension; the measurement is a lint, source, VSIX, axe or screen-reader check, not a probe field."
+  },
+  {
+   "id": "a11y-hint-truthful",
+   "index": 98,
+   "owner": "accessibility",
+   "status": "measurable",
+   "text": "Every key named in a Listbox hint has a handler on that list.",
+   "measurement": "RTL: for each listed key in hint, pressing it calls the owner's callback (e.g. Shift+F10 -> onContextMenu)",
+   "verdict": "not-measurable-from-probe",
+   "catches": [
+    "finding 3"
+   ],
+   "note": "Owned by its dimension; the measurement is a lint, source, VSIX, axe or screen-reader check, not a probe field."
+  },
+  {
+   "id": "a11y-reduced-motion-both-signals",
+   "index": 99,
+   "owner": "accessibility",
+   "status": "measurable",
+   "text": "Durations are zero under prefers-reduced-motion and under body.vscode-reduce-motion.",
+   "measurement": "tokens lint for both selectors, plus ExTester with workbench.reduceMotion 'on': zero running animations",
+   "verdict": "fail",
+   "catches": [
+    "finding 4"
+   ],
+   "note": "Twin DS-MOTION-2: body.vscode-reduce-motion set in all six themes while the skeleton rows animate (opacity 0.994199)."
+  },
+  {
+   "id": "a11y-text-contrast-all-states",
+   "index": 100,
+   "owner": "accessibility",
+   "status": "measurable",
+   "text": "Text token pairs reach 4.5:1 on every surface they are drawn on, hover and open layers included, in the six default themes.",
+   "measurement": "offline theme lint plus axe color-contrast in hover, open-layer and README states",
+   "verdict": "not-measurable-from-probe",
+   "catches": [
+    "finding 6",
+    "finding 7"
+   ],
+   "note": "Owned by its dimension; the measurement is a lint, source, VSIX, axe or screen-reader check, not a probe field."
+  },
+  {
+   "id": "a11y-nontext-contrast",
+   "index": 101,
+   "owner": "accessibility",
+   "status": "measurable",
+   "text": "Control boundaries and state marks (check box, focus ring on the editor background, selected-tab line) reach 3:1 against their background.",
+   "measurement": "offline theme lint over the token pairs",
+   "verdict": "not-measurable-from-probe",
+   "catches": [
+    "finding 5"
+   ],
+   "note": "Owned by its dimension; the measurement is a lint, source, VSIX, axe or screen-reader check, not a probe field."
+  },
+  {
+   "id": "a11y-first-load-announced",
+   "index": 102,
+   "owner": "accessibility",
+   "status": "measurable",
+   "text": "Every list and details area that shows a skeleton also puts a 'Loading \u2026' message in its surface's status-live region.",
+   "measurement": "RTL: status-live text while each slice is loading",
+   "verdict": "fail",
+   "catches": [
+    "finding 8"
+   ],
+   "note": "Main panel shows the details skeleton while its status-live is \"\"; the sidebar status-live still reads \"Loading installed packages\" with both lists loaded. A live region may have been cleared after announcing; the probe is one instant."
+  },
+  {
+   "id": "a11y-full-axe-real-page",
+   "index": 103,
+   "owner": "accessibility",
+   "status": "measurable",
+   "text": "The real webview has zero axe violations with all default rules plus label-content-name-mismatch and target-size, at every named state and with every layer open.",
+   "measurement": "ExTester axe.run without runOnly per state",
+   "verdict": "not-measurable-from-probe",
+   "catches": [
+    "finding 18"
+   ],
+   "note": "Owned by its dimension; the measurement is a lint, source, VSIX, axe or screen-reader check, not a probe field."
+  },
+  {
+   "id": "a11y-sr-speech",
+   "index": 104,
+   "owner": "accessibility",
+   "status": "judge-only",
+   "text": "What a screen reader speaks for rows, hints, busy lists, banners and outcomes is understandable and not repeated.",
+   "measurement": "manual NVDA/VoiceOver pass (P7.4)",
+   "verdict": "not-measurable-from-probe",
+   "catches": [
+    "finding 9",
+    "busy/banner hypotheses"
+   ],
+   "note": "Owned by its dimension; the measurement is a lint, source, VSIX, axe or screen-reader check, not a probe field."
+  },
+  {
+   "id": "R1",
+   "index": 105,
+   "owner": "listing",
+   "status": "measurable",
+   "text": "The VSIX packages without vsce errors: no <svg> element or SVG data URI in README/CHANGELOG, every image HTTPS, .svg only from trusted hosts, icon and badges valid.",
+   "measurement": "npx vsce package (or npm run package:vsix) exits 0",
+   "verdict": "not-measurable-from-probe",
+   "catches": [
+    "SVG in README",
+    "http image",
+    "untrusted SVG badge"
+   ],
+   "note": "Listing/README rule (VSIX and README content), outside the probe."
+  },
+  {
+   "id": "R2",
+   "index": 106,
+   "owner": "listing",
+   "status": "measurable",
+   "text": "README image URLs are pinned to an immutable ref, never to a branch.",
+   "measurement": "after vsce rewriting, every non-badge image URL in extension/readme.md matches /\\/raw\\/(v[0-9]+\\.[0-9]+\\.[0-9]+|[0-9a-f]{40})\\//; none contains /main/ or /HEAD/",
+   "verdict": "not-measurable-from-probe",
+   "catches": [
+    "listing changes when main changes",
+    "deleted image breaks a published listing"
+   ],
+   "note": "Listing/README rule (VSIX and README content), outside the probe."
+  },
+  {
+   "id": "R3",
+   "index": 107,
+   "owner": "listing",
+   "status": "measurable",
+   "text": "The README keeps the settings and commands tables in sync with the manifest and names only existing paths and nuiget.* names.",
+   "measurement": "npm run docs:check exits 0",
+   "verdict": "not-measurable-from-probe",
+   "catches": [
+    "dropped settings table",
+    "stale command title",
+    "dead path"
+   ],
+   "note": "Listing/README rule (VSIX and README content), outside the probe."
+  },
+  {
+   "id": "R4",
+   "index": 108,
+   "owner": "listing",
+   "status": "measurable",
+   "text": "The README renders in VS Code's Extensions view without losing content.",
+   "measurement": "render README with marked@14.0.0 + dompurify using VS Code's basicMarkupHtmlTags+input and allowedMarkdownHtmlAttributes; count nodes removed by the sanitizer",
+   "verdict": "not-measurable-from-probe",
+   "catches": [
+    "picture element",
+    "inline style",
+    "align on figure"
+   ],
+   "note": "Listing/README rule (VSIX and README content), outside the probe."
+  },
+  {
+   "id": "R5",
+   "index": 109,
+   "owner": "listing",
+   "status": "measurable",
+   "text": "The hero GIF stays within the peer range.",
+   "measurement": "scripts/gifinfo.mjs: total frame delay and file size of the hero GIF",
+   "verdict": "not-measurable-from-probe",
+   "catches": [
+    "77.6 s 1.x-style demo"
+   ],
+   "note": "Listing/README rule (VSIX and README content), outside the probe."
+  },
+  {
+   "id": "R6",
+   "index": 110,
+   "owner": "listing",
+   "status": "measurable",
+   "text": "No developer-only content in the shipped README (build/test commands, agent files, plan or ledger ids).",
+   "measurement": "grep README.md for npm run |\\.github/|copilot|Claude|ADR-|\\bP[0-9]+\\.[0-9]|test suite",
+   "verdict": "not-measurable-from-probe",
+   "catches": [
+    "Development with Copilot section"
+   ],
+   "note": "Listing/README rule (VSIX and README content), outside the probe."
+  }
+ ],
+ "duplicateIdsInOtherRules": [
+  "R1",
+  "R2",
+  "R3",
+  "R4",
+  "R5",
+  "R6"
+ ],
+ "colourRoles": [
+  {
+   "theme": "dark-modern",
+   "role": "page surface",
+   "state": "main-installed-single.dark-modern",
+   "selector": "all[0] main.nuiget-main[data-testid=nuiget-app]",
+   "field": "background",
+   "value": "rgb(31, 31, 31)",
+   "key": "--vscode-editor-background",
+   "keyValue": "#1f1f1f",
+   "match": true
+  },
+  {
+   "theme": "dark-modern",
+   "role": "list pane surface",
+   "state": "main-installed-single.dark-modern",
+   "selector": "all[18] div.nuiget-main-list",
+   "field": "background",
+   "value": "rgb(24, 24, 24)",
+   "key": "--vscode-sideBar-background",
+   "keyValue": "#181818",
+   "match": true
+  },
+  {
+   "theme": "dark-modern",
+   "role": "text",
+   "state": "main-installed-single.dark-modern",
+   "selector": "all[0] main.nuiget-main[data-testid=nuiget-app]",
+   "field": "color",
+   "value": "rgb(204, 204, 204)",
+   "key": "--vscode-foreground",
+   "keyValue": "#cccccc",
+   "match": true
+  },
+  {
+   "theme": "dark-modern",
+   "role": "secondary text (row version)",
+   "state": "main-installed-single.dark-modern",
+   "selector": "all[53] span.nuiget-row-version",
+   "field": "color",
+   "value": "rgb(157, 157, 157)",
+   "key": "--vscode-descriptionForeground",
+   "keyValue": "#9d9d9d",
+   "match": true
+  },
+  {
+   "theme": "dark-modern",
+   "role": "icon glyph (icon button)",
+   "state": "main-installed-single.dark-modern",
+   "selector": "all[8] span.nuiget-icon-button-icon",
+   "field": "color",
+   "value": "rgb(157, 157, 157)",
+   "key": "--vscode-icon-foreground",
+   "keyValue": "#cccccc",
+   "match": false
+  },
+  {
+   "theme": "dark-modern",
+   "role": "count badge background",
+   "state": "main-installed-single.dark-modern",
+   "selector": "all[23] span.nuiget-badge.nuiget-badge--neutral",
+   "field": "background",
+   "value": "rgb(97, 97, 97)",
+   "key": "--vscode-badge-background",
+   "keyValue": "#616161",
+   "match": true
+  },
+  {
+   "theme": "dark-modern",
+   "role": "count badge foreground",
+   "state": "main-installed-single.dark-modern",
+   "selector": "all[23] span.nuiget-badge.nuiget-badge--neutral",
+   "field": "color",
+   "value": "rgb(248, 248, 248)",
+   "key": "--vscode-badge-foreground",
+   "keyValue": "#f8f8f8",
+   "match": true
+  },
+  {
+   "theme": "dark-modern",
+   "role": "input background",
+   "state": "main-installed-single.dark-modern",
+   "selector": "all[13] input.nuiget-main-search-input[data-testid=search-input]",
+   "field": "background",
+   "value": "rgb(49, 49, 49)",
+   "key": "--vscode-input-background",
+   "keyValue": "#313131",
+   "match": true
+  },
+  {
+   "theme": "dark-modern",
+   "role": "input border",
+   "state": "main-installed-single.dark-modern",
+   "selector": "all[13] input.nuiget-main-search-input[data-testid=search-input]",
+   "field": "borderColor",
+   "value": "rgb(60, 60, 60)",
+   "key": "--vscode-input-border",
+   "keyValue": "#3c3c3c",
+   "match": true
+  },
+  {
+   "theme": "dark-modern",
+   "role": "drop-down background",
+   "state": "main-installed-single.dark-modern",
+   "selector": "all[5] select.nuiget-main-select[data-testid=project-selector]",
+   "field": "background",
+   "value": "rgb(49, 49, 49)",
+   "key": "--vscode-dropdown-background",
+   "keyValue": "#313131",
+   "match": true
+  },
+  {
+   "theme": "dark-modern",
+   "role": "drop-down border",
+   "state": "main-installed-single.dark-modern",
+   "selector": "all[5] select.nuiget-main-select[data-testid=project-selector]",
+   "field": "borderColor",
+   "value": "rgb(60, 60, 60)",
+   "key": "--vscode-dropdown-border",
+   "keyValue": "#3c3c3c",
+   "match": true
+  },
+  {
+   "theme": "dark-modern",
+   "role": "header check box background",
+   "state": "main-installed-single.dark-modern",
+   "selector": "inputs[0] input",
+   "field": "background",
+   "value": "rgb(49, 49, 49)",
+   "key": "--vscode-checkbox-background",
+   "keyValue": "#313131",
+   "match": true
+  },
+  {
+   "theme": "dark-modern",
+   "role": "header check box border",
+   "state": "main-installed-single.dark-modern",
+   "selector": "inputs[0] input",
+   "field": "borderColor",
+   "value": "rgb(60, 60, 60)",
+   "key": "--vscode-checkbox-border",
+   "keyValue": "#3c3c3c",
+   "match": true
+  },
+  {
+   "theme": "dark-modern",
+   "role": "row check mark border",
+   "state": "main-installed-single.dark-modern",
+   "selector": "all[46] span.nuiget-row-check",
+   "field": "borderColor",
+   "value": "rgb(49, 49, 49)",
+   "key": "--vscode-checkbox-border",
+   "keyValue": "#3c3c3c",
+   "match": false
+  },
+  {
+   "theme": "dark-modern",
+   "role": "secondary button background",
+   "state": "main-installed-single.dark-modern",
+   "selector": "all[30] button.nuiget-button.nuiget-button--secondary[data-testid=select-all-button]",
+   "field": "background",
+   "value": "rgba(0, 0, 0, 0)",
+   "key": "--vscode-button-secondaryBackground",
+   "keyValue": "rgba(0, 0, 0, 0)",
+   "match": true
+  },
+  {
+   "theme": "dark-modern",
+   "role": "button border",
+   "state": "main-installed-single.dark-modern",
+   "selector": "all[30] button.nuiget-button.nuiget-button--secondary[data-testid=select-all-button]",
+   "field": "borderColor",
+   "value": "rgba(255, 255, 255, 0.1)",
+   "key": "--vscode-button-border",
+   "keyValue": "rgba(255, 255, 255, 0.1)",
+   "match": true
+  },
+  {
+   "theme": "dark-modern",
+   "role": "disabled button text (Uninstall selected (0))",
+   "state": "main-installed-single.dark-modern",
+   "selector": "all[31] button.nuiget-button.nuiget-toolbar-end[data-testid=uninstall-selected-button]",
+   "field": "color",
+   "value": "rgb(157, 157, 157)",
+   "key": "--vscode-disabledForeground",
+   "keyValue": "rgba(204, 204, 204, 0.5)",
+   "match": false
+  },
+  {
+   "theme": "dark-modern",
+   "role": "inactive tab text",
+   "state": "main-installed-single.dark-modern",
+   "selector": "all[24] button.nuiget-tab[data-testid=updates-tab]",
+   "field": "color",
+   "value": "rgb(157, 157, 157)",
+   "key": "--vscode-panelTitle-inactiveForeground",
+   "keyValue": "#9d9d9d",
+   "match": true
+  },
+  {
+   "theme": "dark-modern",
+   "role": "active tab text",
+   "state": "main-installed-single.dark-modern",
+   "selector": "all[21] button.nuiget-tab[data-testid=installed-tab]",
+   "field": "color",
+   "value": "rgb(204, 204, 204)",
+   "key": "--vscode-panelTitle-activeForeground",
+   "keyValue": "#cccccc",
+   "match": true
+  },
+  {
+   "theme": "dark-modern",
+   "role": "verified mark",
+   "state": "main-installed-single.dark-modern",
+   "selector": "images[5] svg",
+   "field": "color",
+   "value": "rgb(77, 170, 252)",
+   "key": "--vscode-extensionIcon-verifiedForeground",
+   "keyValue": "#4daafc",
+   "match": true
+  },
+  {
+   "theme": "light-modern",
+   "role": "page surface",
+   "state": "main-installed-single.light-modern",
+   "selector": "all[0] main.nuiget-main[data-testid=nuiget-app]",
+   "field": "background",
+   "value": "rgb(255, 255, 255)",
+   "key": "--vscode-editor-background",
+   "keyValue": "#ffffff",
+   "match": true
+  },
+  {
+   "theme": "light-modern",
+   "role": "list pane surface",
+   "state": "main-installed-single.light-modern",
+   "selector": "all[18] div.nuiget-main-list",
+   "field": "background",
+   "value": "rgb(248, 248, 248)",
+   "key": "--vscode-sideBar-background",
+   "keyValue": "#f8f8f8",
+   "match": true
+  },
+  {
+   "theme": "light-modern",
+   "role": "text",
+   "state": "main-installed-single.light-modern",
+   "selector": "all[0] main.nuiget-main[data-testid=nuiget-app]",
+   "field": "color",
+   "value": "rgb(59, 59, 59)",
+   "key": "--vscode-foreground",
+   "keyValue": "#3b3b3b",
+   "match": true
+  },
+  {
+   "theme": "light-modern",
+   "role": "secondary text (row version)",
+   "state": "main-installed-single.light-modern",
+   "selector": "all[53] span.nuiget-row-version",
+   "field": "color",
+   "value": "rgb(59, 59, 59)",
+   "key": "--vscode-descriptionForeground",
+   "keyValue": "#3b3b3b",
+   "match": true
+  },
+  {
+   "theme": "light-modern",
+   "role": "icon glyph (icon button)",
+   "state": "main-installed-single.light-modern",
+   "selector": "all[8] span.nuiget-icon-button-icon",
+   "field": "color",
+   "value": "rgb(59, 59, 59)",
+   "key": "--vscode-icon-foreground",
+   "keyValue": "#3b3b3b",
+   "match": true
+  },
+  {
+   "theme": "light-modern",
+   "role": "count badge background",
+   "state": "main-installed-single.light-modern",
+   "selector": "all[23] span.nuiget-badge.nuiget-badge--neutral",
+   "field": "background",
+   "value": "rgb(204, 204, 204)",
+   "key": "--vscode-badge-background",
+   "keyValue": "#cccccc",
+   "match": true
+  },
+  {
+   "theme": "light-modern",
+   "role": "count badge foreground",
+   "state": "main-installed-single.light-modern",
+   "selector": "all[23] span.nuiget-badge.nuiget-badge--neutral",
+   "field": "color",
+   "value": "rgb(59, 59, 59)",
+   "key": "--vscode-badge-foreground",
+   "keyValue": "#3b3b3b",
+   "match": true
+  },
+  {
+   "theme": "light-modern",
+   "role": "input background",
+   "state": "main-installed-single.light-modern",
+   "selector": "all[13] input.nuiget-main-search-input[data-testid=search-input]",
+   "field": "background",
+   "value": "rgb(255, 255, 255)",
+   "key": "--vscode-input-background",
+   "keyValue": "#ffffff",
+   "match": true
+  },
+  {
+   "theme": "light-modern",
+   "role": "input border",
+   "state": "main-installed-single.light-modern",
+   "selector": "all[13] input.nuiget-main-search-input[data-testid=search-input]",
+   "field": "borderColor",
+   "value": "rgb(206, 206, 206)",
+   "key": "--vscode-input-border",
+   "keyValue": "#cecece",
+   "match": true
+  },
+  {
+   "theme": "light-modern",
+   "role": "drop-down background",
+   "state": "main-installed-single.light-modern",
+   "selector": "all[5] select.nuiget-main-select[data-testid=project-selector]",
+   "field": "background",
+   "value": "rgb(255, 255, 255)",
+   "key": "--vscode-dropdown-background",
+   "keyValue": "#ffffff",
+   "match": true
+  },
+  {
+   "theme": "light-modern",
+   "role": "drop-down border",
+   "state": "main-installed-single.light-modern",
+   "selector": "all[5] select.nuiget-main-select[data-testid=project-selector]",
+   "field": "borderColor",
+   "value": "rgb(206, 206, 206)",
+   "key": "--vscode-dropdown-border",
+   "keyValue": "#cecece",
+   "match": true
+  },
+  {
+   "theme": "light-modern",
+   "role": "header check box background",
+   "state": "main-installed-single.light-modern",
+   "selector": "inputs[0] input",
+   "field": "background",
+   "value": "rgb(248, 248, 248)",
+   "key": "--vscode-checkbox-background",
+   "keyValue": "#f8f8f8",
+   "match": true
+  },
+  {
+   "theme": "light-modern",
+   "role": "header check box border",
+   "state": "main-installed-single.light-modern",
+   "selector": "inputs[0] input",
+   "field": "borderColor",
+   "value": "rgb(206, 206, 206)",
+   "key": "--vscode-checkbox-border",
+   "keyValue": "#cecece",
+   "match": true
+  },
+  {
+   "theme": "light-modern",
+   "role": "row check mark border",
+   "state": "main-installed-single.light-modern",
+   "selector": "all[46] span.nuiget-row-check",
+   "field": "borderColor",
+   "value": "rgb(229, 229, 229)",
+   "key": "--vscode-checkbox-border",
+   "keyValue": "#cecece",
+   "match": false
+  },
+  {
+   "theme": "light-modern",
+   "role": "secondary button background",
+   "state": "main-installed-single.light-modern",
+   "selector": "all[30] button.nuiget-button.nuiget-button--secondary[data-testid=select-all-button]",
+   "field": "background",
+   "value": "rgb(229, 229, 229)",
+   "key": "--vscode-button-secondaryBackground",
+   "keyValue": "#e5e5e5",
+   "match": true
+  },
+  {
+   "theme": "light-modern",
+   "role": "button border",
+   "state": "main-installed-single.light-modern",
+   "selector": "all[30] button.nuiget-button.nuiget-button--secondary[data-testid=select-all-button]",
+   "field": "borderColor",
+   "value": "rgba(0, 0, 0, 0.1)",
+   "key": "--vscode-button-border",
+   "keyValue": "rgba(0, 0, 0, 0.1)",
+   "match": true
+  },
+  {
+   "theme": "light-modern",
+   "role": "disabled button text (Uninstall selected (0))",
+   "state": "main-installed-single.light-modern",
+   "selector": "all[31] button.nuiget-button.nuiget-toolbar-end[data-testid=uninstall-selected-button]",
+   "field": "color",
+   "value": "rgb(59, 59, 59)",
+   "key": "--vscode-disabledForeground",
+   "keyValue": "rgba(97, 97, 97, 0.5)",
+   "match": false
+  },
+  {
+   "theme": "light-modern",
+   "role": "inactive tab text",
+   "state": "main-installed-single.light-modern",
+   "selector": "all[24] button.nuiget-tab[data-testid=updates-tab]",
+   "field": "color",
+   "value": "rgb(59, 59, 59)",
+   "key": "--vscode-panelTitle-inactiveForeground",
+   "keyValue": "#3b3b3b",
+   "match": true
+  },
+  {
+   "theme": "light-modern",
+   "role": "active tab text",
+   "state": "main-installed-single.light-modern",
+   "selector": "all[21] button.nuiget-tab[data-testid=installed-tab]",
+   "field": "color",
+   "value": "rgb(59, 59, 59)",
+   "key": "--vscode-panelTitle-activeForeground",
+   "keyValue": "#3b3b3b",
+   "match": true
+  },
+  {
+   "theme": "light-modern",
+   "role": "verified mark",
+   "state": "main-installed-single.light-modern",
+   "selector": "images[5] svg",
+   "field": "color",
+   "value": "rgb(0, 95, 184)",
+   "key": "--vscode-extensionIcon-verifiedForeground",
+   "keyValue": "#005fb8",
+   "match": true
+  },
+  {
+   "theme": "dark-high-contrast",
+   "role": "page surface",
+   "state": "main-installed-single.dark-high-contrast",
+   "selector": "all[0] main.nuiget-main[data-testid=nuiget-app]",
+   "field": "background",
+   "value": "rgb(0, 0, 0)",
+   "key": "--vscode-editor-background",
+   "keyValue": "#000000",
+   "match": true
+  },
+  {
+   "theme": "dark-high-contrast",
+   "role": "list pane surface",
+   "state": "main-installed-single.dark-high-contrast",
+   "selector": "all[18] div.nuiget-main-list",
+   "field": "background",
+   "value": "rgb(0, 0, 0)",
+   "key": "--vscode-sideBar-background",
+   "keyValue": "#000000",
+   "match": true
+  },
+  {
+   "theme": "dark-high-contrast",
+   "role": "text",
+   "state": "main-installed-single.dark-high-contrast",
+   "selector": "all[0] main.nuiget-main[data-testid=nuiget-app]",
+   "field": "color",
+   "value": "rgb(255, 255, 255)",
+   "key": "--vscode-foreground",
+   "keyValue": "#ffffff",
+   "match": true
+  },
+  {
+   "theme": "dark-high-contrast",
+   "role": "secondary text (row version)",
+   "state": "main-installed-single.dark-high-contrast",
+   "selector": "all[53] span.nuiget-row-version",
+   "field": "color",
+   "value": "rgba(255, 255, 255, 0.7)",
+   "key": "--vscode-descriptionForeground",
+   "keyValue": "rgba(255, 255, 255, 0.7)",
+   "match": true
+  },
+  {
+   "theme": "dark-high-contrast",
+   "role": "icon glyph (icon button)",
+   "state": "main-installed-single.dark-high-contrast",
+   "selector": "all[8] span.nuiget-icon-button-icon",
+   "field": "color",
+   "value": "rgba(255, 255, 255, 0.7)",
+   "key": "--vscode-icon-foreground",
+   "keyValue": "#ffffff",
+   "match": false
+  },
+  {
+   "theme": "dark-high-contrast",
+   "role": "count badge background",
+   "state": "main-installed-single.dark-high-contrast",
+   "selector": "all[23] span.nuiget-badge.nuiget-badge--neutral",
+   "field": "background",
+   "value": "rgb(0, 0, 0)",
+   "key": "--vscode-badge-background",
+   "keyValue": "#000000",
+   "match": true
+  },
+  {
+   "theme": "dark-high-contrast",
+   "role": "count badge foreground",
+   "state": "main-installed-single.dark-high-contrast",
+   "selector": "all[23] span.nuiget-badge.nuiget-badge--neutral",
+   "field": "color",
+   "value": "rgb(255, 255, 255)",
+   "key": "--vscode-badge-foreground",
+   "keyValue": "#ffffff",
+   "match": true
+  },
+  {
+   "theme": "dark-high-contrast",
+   "role": "input background",
+   "state": "main-installed-single.dark-high-contrast",
+   "selector": "all[13] input.nuiget-main-search-input[data-testid=search-input]",
+   "field": "background",
+   "value": "rgb(0, 0, 0)",
+   "key": "--vscode-input-background",
+   "keyValue": "#000000",
+   "match": true
+  },
+  {
+   "theme": "dark-high-contrast",
+   "role": "input border",
+   "state": "main-installed-single.dark-high-contrast",
+   "selector": "all[13] input.nuiget-main-search-input[data-testid=search-input]",
+   "field": "borderColor",
+   "value": "rgb(111, 195, 223)",
+   "key": "--vscode-input-border",
+   "keyValue": "#6fc3df",
+   "match": true
+  },
+  {
+   "theme": "dark-high-contrast",
+   "role": "drop-down background",
+   "state": "main-installed-single.dark-high-contrast",
+   "selector": "all[5] select.nuiget-main-select[data-testid=project-selector]",
+   "field": "background",
+   "value": "rgb(0, 0, 0)",
+   "key": "--vscode-dropdown-background",
+   "keyValue": "#000000",
+   "match": true
+  },
+  {
+   "theme": "dark-high-contrast",
+   "role": "drop-down border",
+   "state": "main-installed-single.dark-high-contrast",
+   "selector": "all[5] select.nuiget-main-select[data-testid=project-selector]",
+   "field": "borderColor",
+   "value": "rgb(111, 195, 223)",
+   "key": "--vscode-dropdown-border",
+   "keyValue": "#6fc3df",
+   "match": true
+  },
+  {
+   "theme": "dark-high-contrast",
+   "role": "header check box background",
+   "state": "main-installed-single.dark-high-contrast",
+   "selector": "inputs[0] input",
+   "field": "background",
+   "value": "rgb(0, 0, 0)",
+   "key": "--vscode-checkbox-background",
+   "keyValue": "#000000",
+   "match": true
+  },
+  {
+   "theme": "dark-high-contrast",
+   "role": "header check box border",
+   "state": "main-installed-single.dark-high-contrast",
+   "selector": "inputs[0] input",
+   "field": "borderColor",
+   "value": "rgb(111, 195, 223)",
+   "key": "--vscode-checkbox-border",
+   "keyValue": "#6fc3df",
+   "match": true
+  },
+  {
+   "theme": "dark-high-contrast",
+   "role": "row check mark border",
+   "state": "main-installed-single.dark-high-contrast",
+   "selector": "all[46] span.nuiget-row-check",
+   "field": "borderColor",
+   "value": "rgb(111, 195, 223)",
+   "key": "--vscode-checkbox-border",
+   "keyValue": "#6fc3df",
+   "match": true
+  },
+  {
+   "theme": "dark-high-contrast",
+   "role": "secondary button background",
+   "state": "main-installed-single.dark-high-contrast",
+   "selector": "all[30] button.nuiget-button.nuiget-button--secondary[data-testid=select-all-button]",
+   "field": "background",
+   "value": "rgba(0, 0, 0, 0)",
+   "key": "--vscode-button-secondaryBackground",
+   "keyValue": null,
+   "match": null
+  },
+  {
+   "theme": "dark-high-contrast",
+   "role": "button border",
+   "state": "main-installed-single.dark-high-contrast",
+   "selector": "all[30] button.nuiget-button.nuiget-button--secondary[data-testid=select-all-button]",
+   "field": "borderColor",
+   "value": "rgb(111, 195, 223)",
+   "key": "--vscode-button-border",
+   "keyValue": "#6fc3df",
+   "match": true
+  },
+  {
+   "theme": "dark-high-contrast",
+   "role": "disabled button text (Uninstall selected (0))",
+   "state": "main-installed-single.dark-high-contrast",
+   "selector": "all[31] button.nuiget-button.nuiget-toolbar-end[data-testid=uninstall-selected-button]",
+   "field": "color",
+   "value": "rgba(255, 255, 255, 0.7)",
+   "key": "--vscode-disabledForeground",
+   "keyValue": "#a5a5a5",
+   "match": false
+  },
+  {
+   "theme": "dark-high-contrast",
+   "role": "inactive tab text",
+   "state": "main-installed-single.dark-high-contrast",
+   "selector": "all[24] button.nuiget-tab[data-testid=updates-tab]",
+   "field": "color",
+   "value": "rgba(255, 255, 255, 0.7)",
+   "key": "--vscode-panelTitle-inactiveForeground",
+   "keyValue": "#ffffff",
+   "match": false
+  },
+  {
+   "theme": "dark-high-contrast",
+   "role": "active tab text",
+   "state": "main-installed-single.dark-high-contrast",
+   "selector": "all[21] button.nuiget-tab[data-testid=installed-tab]",
+   "field": "color",
+   "value": "rgb(255, 255, 255)",
+   "key": "--vscode-panelTitle-activeForeground",
+   "keyValue": "#ffffff",
+   "match": true
+  },
+  {
+   "theme": "dark-high-contrast",
+   "role": "verified mark",
+   "state": "main-installed-single.dark-high-contrast",
+   "selector": "images[5] svg",
+   "field": "color",
+   "value": "rgb(33, 166, 255)",
+   "key": "--vscode-extensionIcon-verifiedForeground",
+   "keyValue": "#21a6ff",
+   "match": true
+  },
+  {
+   "theme": "dark-modern",
+   "role": "selected row background (list focused)",
+   "state": "main-installed-single",
+   "selector": "all[45] div.nuiget-row-option",
+   "field": "background",
+   "value": "rgb(4, 57, 94)",
+   "key": "--vscode-list-activeSelectionBackground",
+   "keyValue": "#04395e",
+   "match": true
+  },
+  {
+   "theme": "dark-modern",
+   "role": "selected row foreground",
+   "state": "main-installed-single",
+   "selector": "all[45] div.nuiget-row-option",
+   "field": "color",
+   "value": "rgb(255, 255, 255)",
+   "key": "--vscode-list-activeSelectionForeground",
+   "keyValue": "#ffffff",
+   "match": true
+  },
+  {
+   "theme": "dark-modern",
+   "role": "primary button background (Update all)",
+   "state": "main-updates",
+   "selector": "all[31] button.nuiget-button.nuiget-toolbar-end[data-testid=update-all-button]",
+   "field": "background",
+   "value": "rgb(0, 120, 212)",
+   "key": "--vscode-button-background",
+   "keyValue": "#0078d4",
+   "match": true
+  },
+  {
+   "theme": "dark-modern",
+   "role": "new version text",
+   "state": "main-updates",
+   "selector": "all[46] span.nuiget-row-version-new",
+   "field": "color",
+   "value": "rgb(129, 184, 139)",
+   "key": "--vscode-gitDecoration-addedResourceForeground",
+   "keyValue": "#81b88b",
+   "match": true
+  },
+  {
+   "theme": "dark-modern",
+   "role": "sidebar surface",
+   "state": "sidebar-sections",
+   "selector": "all[0] main.nuiget-sidebar[data-testid=nuiget-sidebar]",
+   "field": "background",
+   "value": "rgb(24, 24, 24)",
+   "key": "--vscode-sideBar-background",
+   "keyValue": "#181818",
+   "match": true
+  },
+  {
+   "theme": "dark-modern",
+   "role": "sidebar section header background",
+   "state": "sidebar-sections",
+   "selector": "all[8] div.nuiget-section-header",
+   "field": "background",
+   "value": "rgb(24, 24, 24)",
+   "key": "--vscode-sideBarSectionHeader-background",
+   "keyValue": "#181818",
+   "match": true
+  },
+  {
+   "theme": "dark-modern",
+   "role": "sidebar first section header top border",
+   "state": "sidebar-sections",
+   "selector": "all[8] div.nuiget-section-header",
+   "field": "borderColor",
+   "value": "rgb(43, 43, 43)",
+   "key": "--vscode-sideBarSectionHeader-border",
+   "keyValue": "#2b2b2b",
+   "match": true
+  }
+ ],
+ "workbench": {
+  "rows": [
+   {
+    "label": "Extensions view row height",
+    "value": 72,
+    "unit": "px",
+    "source": "extensions.json ext_rows[0] div.extension-list-item .rect.h"
+   },
+   {
+    "label": "Explorer tree row height",
+    "value": 22,
+    "unit": "px",
+    "source": "explorer.json list_rows[0] div.monaco-list-row .rect.h"
+   },
+   {
+    "label": "Explorer tree row line-height",
+    "value": 22.0,
+    "unit": "px",
+    "source": "explorer.json list_rows[0] div.monaco-list-row .lineHeight"
+   },
+   {
+    "label": "Quick input row height",
+    "value": 22,
+    "unit": "px",
+    "source": "quickinput.json quickinput[3] div.monaco-list-row.focused .rect.h"
+   },
+   {
+    "label": "Quick input row radius",
+    "value": 3.0,
+    "unit": "px",
+    "source": "quickinput.json quickinput[3] div.monaco-list-row.focused .borderRadius"
+   },
+   {
+    "label": "Quick input entry padding (left/right)",
+    "value": 6.0,
+    "unit": "px",
+    "source": "quickinput.json quickinput[4] div.quick-input-list-entry.has-actions.quick-input-list-separator-border .padding[3]"
+   },
+   {
+    "label": "Settings TOC row height",
+    "value": 22,
+    "unit": "px",
+    "source": "settings.json settings[0] div.monaco-list-row.focused.selected .rect.h"
+   }
+  ],
+  "extensionsRow": [
+   {
+    "label": "row padding-left",
+    "value": 16.0,
+    "unit": "px",
+    "source": "extensions.json ext_rows[0] div.extension-list-item .padding[3]"
+   },
+   {
+    "label": "row border",
+    "value": "0px 0px 0px 0px",
+    "unit": "",
+    "source": "extensions.json ext_rows[0] div.extension-list-item .border"
+   },
+   {
+    "label": "row box-shadow",
+    "value": "rgba(0, 0, 0, 0.08) 0px 0px 4px 0px",
+    "unit": "",
+    "source": "extensions.json ext_rows[0] div.extension-list-item .boxShadow"
+   },
+   {
+    "label": "icon-container width",
+    "value": 52,
+    "unit": "px",
+    "source": "extensions.json ext_parts[0] div.icon-container .rect.w"
+   },
+   {
+    "label": "icon size",
+    "value": 36,
+    "unit": "px",
+    "source": "extensions.json ext_parts[1] img.icon .rect.w"
+   },
+   {
+    "label": "icon radius",
+    "value": 2.0,
+    "unit": "px",
+    "source": "extensions.json ext_parts[1] img.icon .borderRadius"
+   },
+   {
+    "label": "icon margin-right (icon to text gap)",
+    "value": 16.0,
+    "unit": "px",
+    "source": "extensions.json ext_parts[1] img.icon .margin[1]"
+   },
+   {
+    "label": "icon top offset in row",
+    "value": 18,
+    "unit": "px",
+    "source": "ext_parts icon rect.y - ext_rows[0] rect.y"
+   },
+   {
+    "label": "name font",
+    "value": "13px/600",
+    "unit": "",
+    "source": "extensions.json ext_parts[3] span.name .fontSize"
+   },
+   {
+    "label": "name top offset in row",
+    "value": 6.4,
+    "unit": "px",
+    "source": "ext_parts name rect.y - ext_rows[0] rect.y"
+   },
+   {
+    "label": "description font / colour",
+    "value": "13px #9d9d9d",
+    "unit": "",
+    "source": "extensions.json ext_parts[6] div.description.ellipsis .color"
+   },
+   {
+    "label": "description padding-right",
+    "value": 8.0,
+    "unit": "px",
+    "source": "extensions.json ext_parts[6] div.description.ellipsis .padding[1]"
+   },
+   {
+    "label": "footer height (incl. padding-top 2)",
+    "value": 26,
+    "unit": "px",
+    "source": "extensions.json ext_parts[7] div.footer .rect.h"
+   },
+   {
+    "label": "publisher font / colour",
+    "value": "11px/600 #9d9d9d",
+    "unit": "",
+    "source": "extensions.json ext_parts[9] div.publisher-name.ellipsis .fontSize"
+   },
+   {
+    "label": "manage action box",
+    "value": "22x22 pad 3px radius 6px",
+    "unit": "",
+    "source": "extensions.json ext_parts[23] a.action-label.codicon.extension-action .rect.w"
+   },
+   {
+    "label": "manage action end inset (row right - action right)",
+    "value": 6,
+    "unit": "px",
+    "source": "ext_rows[0] rect.right - manage rect.right"
+   }
+  ],
+  "headers": [
+   {
+    "label": "pane header height",
+    "value": 22,
+    "unit": "px",
+    "source": "extensions.json pane_headers[0] div.pane-header.extension-view-header.expanded .rect.h"
+   },
+   {
+    "label": "pane header title font",
+    "value": "11px/700 uppercase",
+    "unit": "",
+    "source": "extensions.json pane_headers[3] h3.title .textTransform"
+   },
+   {
+    "label": "pane header title line-height",
+    "value": 22.0,
+    "unit": "px",
+    "source": "extensions.json pane_headers[3] h3.title .lineHeight"
+   },
+   {
+    "label": "pane header title x offset (title.x - header.x)",
+    "value": 20,
+    "unit": "px",
+    "source": "pane_headers title rect.x - pane-header rect.x"
+   },
+   {
+    "label": "pane header twisty",
+    "value": "16x16 at +2 (margin 2px 2px)",
+    "unit": "",
+    "source": "extensions.json pane_headers[1] div.twisty-container.codicon-view-pane-container-expanded.codicon .rect.x"
+   },
+   {
+    "label": "pane header count badge end inset",
+    "value": 12,
+    "unit": "px",
+    "source": "pane-header rect.right - monaco-count-badge rect.right"
+   },
+   {
+    "label": "pane header border-top: first / later header",
+    "value": "0px 0px 0px 0px / 1px 0px 0px 0px #2b2b2b",
+    "unit": "",
+    "source": "extensions.json pane_headers[5] div.pane-header.extension-view-header.expanded .border"
+   },
+   {
+    "label": "pane header background",
+    "value": "#181818",
+    "unit": "",
+    "source": "extensions.json pane_headers[0] div.pane-header.extension-view-header.expanded .background"
+   },
+   {
+    "label": "side-bar title height",
+    "value": 35,
+    "unit": "px",
+    "source": "extensions.json sidebar_title[0] div.composite.title.has-actions .rect.h"
+   },
+   {
+    "label": "side-bar title padding (left/right) + label padding-left",
+    "value": "8px + 12px",
+    "unit": "",
+    "source": "extensions.json sidebar_title[1] div.title-label .padding[3]"
+   },
+   {
+    "label": "side-bar title font",
+    "value": "13px/400",
+    "unit": "",
+    "source": "extensions.json sidebar_title[1] div.title-label .fontSize"
+   },
+   {
+    "label": "side-bar title action box / pitch",
+    "value": "22x22 / 26",
+    "unit": "",
+    "source": "extensions.json sidebar_title[2] li.action-item.menu-entry .rect.w"
+   },
+   {
+    "label": "side-bar title last action end inset",
+    "value": 12,
+    "unit": "px",
+    "source": "composite.title rect.right - last action-item rect.right"
+   },
+   {
+    "label": "Explorer pane-header action box (padding)",
+    "value": "20x20 (pad 2px)",
+    "unit": "",
+    "source": "explorer.json pane_headers[5] a.action-label.codicon.codicon-new-file .rect.w"
+   },
+   {
+    "label": "Extensions view header (search) height",
+    "value": 41,
+    "unit": "px",
+    "source": "extensions.json ext_search[0] div.header .rect.h"
+   },
+   {
+    "label": "Extensions view header padding (t r b l)",
+    "value": "5px 12px 6px 20px",
+    "unit": "",
+    "source": "extensions.json ext_search[0] div.header .padding[0]"
+   },
+   {
+    "label": "editor tab strip height",
+    "value": 35,
+    "unit": "px",
+    "source": "extensions.json tabs[0] div.title.tab-actions-reserve-space.tabs .rect.h"
+   },
+   {
+    "label": "editor tab: padding-left / radius / border",
+    "value": "10px / 0px / 0px 1px 0px 0px",
+    "unit": "",
+    "source": "extensions.json tabs[1] div.tab.tab-actions-right.sizing-fit .borderRadius"
+   },
+   {
+    "label": "editor tab active bg / fg",
+    "value": "#1f1f1f / #ffffff",
+    "unit": "",
+    "source": "extensions.json tabs[1] div.tab.tab-actions-right.sizing-fit .background"
+   },
+   {
+    "label": "editor tab inactive bg / fg",
+    "value": "#181818 / #9d9d9d",
+    "unit": "",
+    "source": "settings.json tabs[1] div.tab.tab-actions-right.sizing-fit .color"
+   },
+   {
+    "label": "activity bar item",
+    "value": "48x48",
+    "unit": "",
+    "source": "extensions.json activitybar[0] li.action-item.icon .rect.w"
+   },
+   {
+    "label": "status bar height / font",
+    "value": "22 / 12px",
+    "unit": "",
+    "source": "extensions.json statusbar[0] footer.part.statusbar.status-border-top .rect.h"
+   },
+   {
+    "label": "Settings scope tab strip (PNG, not in DOM dump)",
+    "value": "search box 81.0-107.0, \"User\" ink 128.5-138.5, indicator 1.0 px at 148.5, header border 1.0 px #2b2b2b at 149.5",
+    "unit": "",
+    "source": "probe-workbench-settings.png pixel scan (CSS px, workbench frame)",
+    "note": "tab box top is not painted: strip height not measurable"
+   },
+   {
+    "label": "Extension editor navbar (PNG, not in DOM dump)",
+    "value": "bottom border 1.0 px at 263.0, indicator 1.0 px, label ink 241.0-249.5",
+    "unit": "",
+    "source": "probe-workbench-quickinput.png pixel scan (CSS px, workbench frame)",
+    "note": "navbar top is not painted: height not measurable"
+   }
+  ],
+  "controls": [
+   {
+    "label": "select (Settings editor)",
+    "value": "26 h, pad 2px/6px, radius 4px, border 1px #3c3c3c, bg #313131",
+    "unit": "",
+    "source": "settings.json settings[33] select.monaco-select-box.setting-control-focus-target .rect.h"
+   },
+   {
+    "label": "input box (Settings editor)",
+    "value": "25 h (inner input 23, pad 4px/6px), radius 4px, border #3c3c3c",
+    "unit": "",
+    "source": "settings.json settings[17] div.monaco-inputbox.idle .rect.h"
+   },
+   {
+    "label": "input box (Search view, side bar)",
+    "value": "26 h, radius 4px",
+    "unit": "",
+    "source": "search.json search[0] div.monaco-inputbox.idle.synthetic-focus .rect.h"
+   },
+   {
+    "label": "input box (quick input)",
+    "value": "25 h, radius 6px",
+    "unit": "",
+    "source": "quickinput.json quickinput[1] div.monaco-inputbox.idle.synthetic-focus .rect.h"
+   },
+   {
+    "label": "Extensions view search box (PNG; SuggestEnabledInput, not .search-box)",
+    "value": "26.0 h, x 68.0-336.0 (inset 20.0 left, 12.0 right of the side-bar content 48-348)",
+    "unit": "",
+    "source": "probe-workbench-extensions.png pixel scan; extensions.json webviews[0] div.content rect"
+   },
+   {
+    "label": "text button",
+    "value": "26 h, pad 4px/8px, font 12px, lh 16px, radius 4px, border 1px rgba(255, 255, 255, 0.1)",
+    "unit": "",
+    "source": "settings.json buttons[0] a.monaco-button.monaco-text-button .rect.h"
+   },
+   {
+    "label": "check box",
+    "value": "18x18, radius 3px, border #3c3c3c, margin-right 9px",
+    "unit": "",
+    "source": "settings.json settings[24] div.monaco-custom-toggle.codicon.codicon-check .rect.w"
+   },
+   {
+    "label": "toggle (Search view option)",
+    "value": "20x20, radius 3px, pad 1px",
+    "unit": "",
+    "source": "search.json search[1] div.monaco-custom-toggle.codicon.codicon-case-sensitive .rect.w"
+   },
+   {
+    "label": "count badge",
+    "value": "18x18, radius 11px, font 11px, pad 3px/5px",
+    "unit": "",
+    "source": "extensions.json pane_headers[4] div.monaco-count-badge .rect.w"
+   },
+   {
+    "label": "action label (row, title)",
+    "value": "22x22, pad 3px, radius 6px",
+    "unit": "",
+    "source": "extensions.json ext_parts[23] a.action-label.codicon.extension-action .rect.w"
+   }
+  ],
+  "layers": [
+   {
+    "label": "quick input widget",
+    "value": "w 602, radius 12px, border 1px #313131, bg #222222, shadow rgba(0, 0, 0, 0.15) 0px 0px 20px 0px",
+    "unit": "",
+    "source": "quickinput.json quickinput[0] div.quick-input-widget.show-file-icons .borderRadius"
+   },
+   {
+    "label": "quick pick separator",
+    "value": "border-top 1px #3c3c3c; label 11px #9d9d9d, transform none",
+    "unit": "",
+    "source": "quickinput.json quickinput[16] div.quick-input-list-entry.has-actions.quick-input-list-separator-border .border"
+   },
+   {
+    "label": "welcome view (SCM) button",
+    "value": "x inset 20.0 / 20.0, w 260, h 26",
+    "unit": "",
+    "source": "scm.json buttons[0] a.monaco-button.monaco-text-button .rect.x minus scm.json webviews[0] div.content rect (x 47.5 w 300)"
+   }
+  ],
+  "fonts": [
+   {
+    "label": "UI font family (theme var)",
+    "value": "-apple-system, BlinkMacSystemFont, sans-serif",
+    "unit": "",
+    "source": "themes/dark-modern.json vars --vscode-font-family"
+   },
+   {
+    "label": "webview body font",
+    "value": "-apple-system, \"system-ui\", sans-serif 13px/400 lh normal",
+    "unit": "",
+    "source": "themes/dark-modern.json bodyFont"
+   },
+   {
+    "label": "workbench body line-height (13 px x 1.4)",
+    "value": 18.2,
+    "unit": "px",
+    "source": "extensions.json ext_rows[0] div.extension-list-item .lineHeight"
+   },
+   {
+    "label": "font ramp (theme vars)",
+    "value": "heading1 26px, heading2 18px, heading3 13px, body1 13px, body2 11px, label1 12px, label2 11px, label3 10px",
+    "unit": "",
+    "source": "themes/dark-modern.json vars --vscode-fontSize-*"
+   },
+   {
+    "label": "weights (theme vars)",
+    "value": "regular 400, semiBold 600",
+    "unit": "",
+    "source": "themes/dark-modern.json vars --vscode-fontWeight-*"
+   },
+   {
+    "label": "body sizes (theme vars)",
+    "value": "bodyFontSize 13px, small 12px, xSmall 11px; codicon 16px, compact 12px",
+    "unit": "",
+    "source": "themes/dark-modern.json vars"
+   },
+   {
+    "label": "Settings group title",
+    "value": "26px/600 pad 10px 10px 10px 15px",
+    "unit": "",
+    "source": "settings.json settings[9] div.settings-group-title-label.settings-row-inner-container.settings-group-level-1 .fontSize"
+   },
+   {
+    "label": "Settings item padding / contents padding",
+    "value": "0px 24px 0px 24px / 12px 14px 18px 14px",
+    "unit": "",
+    "source": "settings.json settings[10] div.monaco-tl-contents.setting-item.setting-item-number .padding[1]; settings.json settings[11] div.setting-item-contents.settings-row-inner-container .padding[0]"
+   }
+  ],
+  "colours": [
+   {
+    "label": "Extensions row rest",
+    "value": "bg transparent, fg #cccccc, outline rgb(204, 204, 204) none 3px",
+    "unit": "",
+    "source": "extensions-states.json rest (monaco-list-row)"
+   },
+   {
+    "label": "Extensions row hover",
+    "value": "bg #2a2d2e, fg #cccccc, outline rgb(204, 204, 204) none 3px",
+    "unit": "",
+    "source": "extensions-states.json hover (monaco-list-row)"
+   },
+   {
+    "label": "Extensions row selected",
+    "value": "bg #04395e, fg #ffffff, outline rgb(0, 120, 212) solid 1px",
+    "unit": "",
+    "source": "extensions-states.json selected (monaco-list-row focused selected)"
+   },
+   {
+    "label": "--vscode-foreground",
+    "value": "#cccccc",
+    "unit": "",
+    "source": "themes/dark-modern.json vars"
+   },
+   {
+    "label": "--vscode-descriptionForeground",
+    "value": "#9d9d9d",
+    "unit": "",
+    "source": "themes/dark-modern.json vars"
+   },
+   {
+    "label": "--vscode-disabledForeground",
+    "value": "rgba(204, 204, 204, 0.5)",
+    "unit": "",
+    "source": "themes/dark-modern.json vars"
+   },
+   {
+    "label": "--vscode-icon-foreground",
+    "value": "#cccccc",
+    "unit": "",
+    "source": "themes/dark-modern.json vars"
+   },
+   {
+    "label": "--vscode-focusBorder",
+    "value": "#0078d4",
+    "unit": "",
+    "source": "themes/dark-modern.json vars"
+   },
+   {
+    "label": "--vscode-editor-background",
+    "value": "#1f1f1f",
+    "unit": "",
+    "source": "themes/dark-modern.json vars"
+   },
+   {
+    "label": "--vscode-sideBar-background",
+    "value": "#181818",
+    "unit": "",
+    "source": "themes/dark-modern.json vars"
+   },
+   {
+    "label": "--vscode-sideBarSectionHeader-background",
+    "value": "#181818",
+    "unit": "",
+    "source": "themes/dark-modern.json vars"
+   },
+   {
+    "label": "--vscode-sideBarSectionHeader-border",
+    "value": "#2b2b2b",
+    "unit": "",
+    "source": "themes/dark-modern.json vars"
+   },
+   {
+    "label": "--vscode-list-hoverBackground",
+    "value": "#2a2d2e",
+    "unit": "",
+    "source": "themes/dark-modern.json vars"
+   },
+   {
+    "label": "--vscode-list-activeSelectionBackground",
+    "value": "#04395e",
+    "unit": "",
+    "source": "themes/dark-modern.json vars"
+   },
+   {
+    "label": "--vscode-list-activeSelectionForeground",
+    "value": "#ffffff",
+    "unit": "",
+    "source": "themes/dark-modern.json vars"
+   },
+   {
+    "label": "--vscode-list-inactiveSelectionBackground",
+    "value": "#37373d",
+    "unit": "",
+    "source": "themes/dark-modern.json vars"
+   },
+   {
+    "label": "--vscode-list-focusOutline",
+    "value": "#0078d4",
+    "unit": "",
+    "source": "themes/dark-modern.json vars"
+   },
+   {
+    "label": "--vscode-toolbar-hoverBackground",
+    "value": "rgba(90, 93, 94, 0.31)",
+    "unit": "",
+    "source": "themes/dark-modern.json vars"
+   },
+   {
+    "label": "--vscode-toolbar-activeBackground",
+    "value": "rgba(99, 102, 103, 0.31)",
+    "unit": "",
+    "source": "themes/dark-modern.json vars"
+   },
+   {
+    "label": "--vscode-panelTitle-activeForeground",
+    "value": "#cccccc",
+    "unit": "",
+    "source": "themes/dark-modern.json vars"
+   },
+   {
+    "label": "--vscode-panelTitle-inactiveForeground",
+    "value": "#9d9d9d",
+    "unit": "",
+    "source": "themes/dark-modern.json vars"
+   },
+   {
+    "label": "--vscode-panelTitle-activeBorder",
+    "value": "#0078d4",
+    "unit": "",
+    "source": "themes/dark-modern.json vars"
+   },
+   {
+    "label": "--vscode-widget-border",
+    "value": "#313131",
+    "unit": "",
+    "source": "themes/dark-modern.json vars"
+   },
+   {
+    "label": "--vscode-settings-headerBorder",
+    "value": "#2b2b2b",
+    "unit": "",
+    "source": "themes/dark-modern.json vars"
+   },
+   {
+    "label": "--vscode-panelSection-border",
+    "value": "#2b2b2b",
+    "unit": "",
+    "source": "themes/dark-modern.json vars"
+   },
+   {
+    "label": "--vscode-badge-background",
+    "value": "#616161",
+    "unit": "",
+    "source": "themes/dark-modern.json vars"
+   },
+   {
+    "label": "--vscode-badge-foreground",
+    "value": "#f8f8f8",
+    "unit": "",
+    "source": "themes/dark-modern.json vars"
+   },
+   {
+    "label": "--vscode-button-background",
+    "value": "#0078d4",
+    "unit": "",
+    "source": "themes/dark-modern.json vars"
+   },
+   {
+    "label": "--vscode-button-hoverBackground",
+    "value": "#026ec1",
+    "unit": "",
+    "source": "themes/dark-modern.json vars"
+   },
+   {
+    "label": "--vscode-button-secondaryBackground",
+    "value": "rgba(0, 0, 0, 0)",
+    "unit": "",
+    "source": "themes/dark-modern.json vars"
+   },
+   {
+    "label": "--vscode-button-secondaryHoverBackground",
+    "value": "#2b2b2b",
+    "unit": "",
+    "source": "themes/dark-modern.json vars"
+   },
+   {
+    "label": "--vscode-button-border",
+    "value": "rgba(255, 255, 255, 0.1)",
+    "unit": "",
+    "source": "themes/dark-modern.json vars"
+   },
+   {
+    "label": "--vscode-checkbox-background",
+    "value": "#313131",
+    "unit": "",
+    "source": "themes/dark-modern.json vars"
+   },
+   {
+    "label": "--vscode-checkbox-border",
+    "value": "#3c3c3c",
+    "unit": "",
+    "source": "themes/dark-modern.json vars"
+   },
+   {
+    "label": "--vscode-input-background",
+    "value": "#313131",
+    "unit": "",
+    "source": "themes/dark-modern.json vars"
+   },
+   {
+    "label": "--vscode-input-border",
+    "value": "#3c3c3c",
+    "unit": "",
+    "source": "themes/dark-modern.json vars"
+   },
+   {
+    "label": "--vscode-dropdown-background",
+    "value": "#313131",
+    "unit": "",
+    "source": "themes/dark-modern.json vars"
+   },
+   {
+    "label": "--vscode-dropdown-border",
+    "value": "#3c3c3c",
+    "unit": "",
+    "source": "themes/dark-modern.json vars"
+   },
+   {
+    "label": "--vscode-textLink-foreground",
+    "value": "#4daafc",
+    "unit": "",
+    "source": "themes/dark-modern.json vars"
+   },
+   {
+    "label": "--vscode-extensionIcon-verifiedForeground",
+    "value": "#4daafc",
+    "unit": "",
+    "source": "themes/dark-modern.json vars"
+   },
+   {
+    "label": "--vscode-progressBar-background",
+    "value": "#0078d4",
+    "unit": "",
+    "source": "themes/dark-modern.json vars"
+   },
+   {
+    "label": "--vscode-gitDecoration-addedResourceForeground",
+    "value": "#81b88b",
+    "unit": "",
+    "source": "themes/dark-modern.json vars"
+   }
+  ],
+  "tokens": {
+   "--vscode-spacing*": {
+    "--vscode-spacing-size100": "10px",
+    "--vscode-spacing-size120": "12px",
+    "--vscode-spacing-size160": "16px",
+    "--vscode-spacing-size20": "2px",
+    "--vscode-spacing-size200": "20px",
+    "--vscode-spacing-size240": "24px",
+    "--vscode-spacing-size280": "28px",
+    "--vscode-spacing-size320": "32px",
+    "--vscode-spacing-size360": "36px",
+    "--vscode-spacing-size40": "4px",
+    "--vscode-spacing-size400": "40px",
+    "--vscode-spacing-size60": "6px",
+    "--vscode-spacing-size80": "8px",
+    "--vscode-spacing-sizeNone": "0px"
+   },
+   "--vscode-cornerRadius*": {
+    "--vscode-cornerRadius-circle": "9999px",
+    "--vscode-cornerRadius-large": "8px",
+    "--vscode-cornerRadius-medium": "6px",
+    "--vscode-cornerRadius-small": "4px",
+    "--vscode-cornerRadius-xLarge": "12px",
+    "--vscode-cornerRadius-xSmall": "2px"
+   },
+   "--vscode-fontSize*": {
+    "--vscode-fontSize-body1": "13px",
+    "--vscode-fontSize-body2": "11px",
+    "--vscode-fontSize-heading1": "26px",
+    "--vscode-fontSize-heading2": "18px",
+    "--vscode-fontSize-heading3": "13px",
+    "--vscode-fontSize-label1": "12px",
+    "--vscode-fontSize-label2": "11px",
+    "--vscode-fontSize-label3": "10px"
+   },
+   "--vscode-fontWeight*": {
+    "--vscode-fontWeight-regular": "400",
+    "--vscode-fontWeight-semiBold": "600"
+   },
+   "--vscode-codicon*": {
+    "--vscode-codiconFontSize": "16px",
+    "--vscode-codiconFontSize-compact": "12px"
+   },
+   "--vscode-stroke*": {
+    "--vscode-strokeThickness": "1px"
+   },
+   "--vscode-lineHeight*": "absent in all six themes",
+   "--vscode-bodyFontSize*": {
+    "--vscode-bodyFontSize": "13px",
+    "--vscode-bodyFontSize-small": "12px",
+    "--vscode-bodyFontSize-xSmall": "11px"
+   }
+  },
+  "themeSummary": {
+   "dark-modern": {
+    "count": 932,
+    "themeName": "Dark Modern"
+   },
+   "light-modern": {
+    "count": 934,
+    "themeName": "Light Modern"
+   },
+   "dark-high-contrast": {
+    "count": 796,
+    "themeName": "Dark High Contrast"
+   },
+   "light-high-contrast": {
+    "count": 830,
+    "themeName": "Light High Contrast"
+   },
+   "dark-2026": {
+    "count": 952,
+    "themeName": "Dark 2026"
+   },
+   "light-2026": {
+    "count": 952,
+    "themeName": "Light 2026"
+   }
+  },
+  "png": {
+   "extSearchBox": {
+    "top": 72.0,
+    "bottom": 98.0,
+    "h": 26.0,
+    "left": 68.0,
+    "right": 336.0,
+    "w": 268.0,
+    "source": "probe-workbench-extensions.png scan v x=500 y130-220 runs [(130, 143, '#181818'), (144, 145, '#3e78ce'), (146, 164, '#313131'), (165, 165, '#4b4b4b'), (166, 167, '#989898'), (168, 168, '#474747'), (169, 176, '#313131'), (177, 177, '#454545'), (178, 179, '#989898'), (180, 180, '#4a4a4a'), (181, 193, '#313131'), (194, 195, '#3e78ce'), (196, 220, '#181818')]; scan h y=180 x120-720 first/last focus-border runs (136, 137, '#3e78ce')/(670, 671, '#3e78ce')"
+   },
+   "settingsHeader": {
+    "searchTop": 81.0,
+    "searchBottom": 107.0,
+    "searchH": 26.0,
+    "userInkTop": 128.5,
+    "userInkBottom": 138.5,
+    "indicatorTop": 148.5,
+    "indicatorH": 1.0,
+    "borderTop": 149.5,
+    "borderH": 1.0,
+    "borderColour": "#2b2b2b",
+    "source": "probe-workbench-settings.png scan v x=3000 y140-320 [(140, 161, '#1f1f1f'), (162, 163, '#3e78ce'), (164, 211, '#313131'), (212, 213, '#3e78ce'), (214, 298, '#1f1f1f'), (299, 300, '#2b2b2b'), (301, 320, '#1f1f1f')]; scan v x=2010 [(140, 161, '#1f1f1f'), (162, 162, '#3d6fb9'), (163, 163, '#3e78ce'), (164, 164, '#354051'), (165, 210, '#313131'), (211, 211, '#354051'), (212, 212, '#3e78ce'), (213, 213, '#3d6fb9'), (214, 296, '#1f1f1f'), (297, 298, '#ffffff'), (299, 300, '#2b2b2b'), (301, 320, '#1f1f1f')]; ink 2000,215-2090,296 {'bg': '31,31,31', 'minx': 2022, 'miny': 257, 'maxx': 2076, 'maxy': 276, 'w': 55, 'h': 20}"
+   },
+   "extEditorNavbar": {
+    "borderTop": 263.0,
+    "borderH": 1.0,
+    "indicatorH": 1.0,
+    "labelInkTop": 241.0,
+    "labelInkBottom": 249.5,
+    "source": "probe-workbench-quickinput.png scan v x=1500 y400-560 [(400, 405, '#313131'), (406, 407, '#3c3c3c'), (408, 525, '#1f1f1f'), (526, 527, '#2b2b2b'), (528, 560, '#1f1f1f')]; scan v x=900 [(400, 482, '#1f1f1f'), (483, 483, '#bababa'), (484, 485, '#cccccc'), (486, 486, '#aeaeae'), (487, 487, '#2f2f2f'), (488, 491, '#1f1f1f'), (492, 492, '#242424'), (493, 493, '#858585'), (494, 495, '#cccccc'), (496, 496, '#cac9ca'), (497, 497, '#303030'), (498, 525, '#1f1f1f'), (526, 527, '#3e78ce'), (528, 560, '#1f1f1f')]; ink 870,460-1000,515 {'bg': '31,31,31', 'minx': 890, 'miny': 482, 'maxx': 976, 'maxy': 498, 'w': 87, 'h': 17}"
+   },
+   "nuigetDividers": {
+    "runs": [
+     [
+      270,
+      271,
+      "#313131"
+     ],
+     [
+      320,
+      321,
+      "#313131"
+     ],
+     [
+      590,
+      591,
+      "#313131"
+     ],
+     [
+      748,
+      749,
+      "#313131"
+     ]
+    ],
+    "webviewY": [
+     68.0,
+     93.0,
+     228.0,
+     307.0
+    ],
+    "colour": "#313131",
+    "source": "probe-main-installed-single.png scan v x=2400 y250-780 [(250, 259, '#313131'), (260, 261, '#3c3c3c'), (262, 269, '#1f1f1f'), (270, 271, '#313131'), (272, 319, '#181818'), (320, 321, '#313131'), (322, 329, '#181818'), (330, 331, '#303030'), (332, 352, '#181818'), (353, 353, '#1d1d1d'), (354, 354, '#3c3c3c'), (355, 355, '#5d5d5d'), (356, 356, '#7a7a7a'), (357, 357, '#6a6a6a'), (358, 359, '#181818'), (360, 360, '#4d4d4d'), (361, 361, '#222222'), (362, 375, '#181818'), (376, 377, '#303030'), (378, 433, '#181818'), (434, 589, '#1b395c'), (590, 591, '#313131'), (592, 747, '#181818'), (748, 749, '#313131'), (750, 780, '#181818')] (webview origin y=67 from with-main-installed-single.json webviews[3])"
+   }
+  }
+ },
+ "modernUI": {
+  "verdict": "classic",
+  "vscodeVersion": "1.142.0",
+  "evidence": [
+   {
+    "marker": "pane header height",
+    "measured": 22,
+    "classic": "22 (paneview.css --pane-header-size)",
+    "modernUI": "28 (modernUI/paneHeaders.css:94-96 spacing.size280)",
+    "reads": "classic",
+    "source": "extensions.json pane_headers[0] rect.h"
+   },
+   {
+    "marker": "pane header title type",
+    "measured": "11px/700 uppercase",
+    "classic": "11px bold uppercase (paneview.css:25-43)",
+    "modernUI": "12px 600 capitalize unless modernUIUppercaseViewHeaders (modernUI/fontRamp.css:56-60,111-125)",
+    "reads": "classic",
+    "source": "extensions.json pane_headers[3] fontSize/fontWeight/textTransform"
+   },
+   {
+    "marker": "editor tab",
+    "measured": "strip 35, tab radius 0px, classes \"tab-border-top tab-border-bottom\"",
+    "classic": "35 px strip, square tab, tab-border-top accent",
+    "modernUI": "connected/pill tabs: 4 px Control radius, 28 px hitboxes (modernUI/README.md \"Editor tab style\")",
+    "reads": "classic",
+    "source": "extensions.json tabs[0] rect.h, tabs[1] borderRadius/classes"
+   },
+   {
+    "marker": "floating panels / gutters",
+    "measured": "activity bar 0-48, side bar content x 48 w 300, editor container x 348",
+    "classic": "parts flush (48 + 300 = 348)",
+    "modernUI": "default density: floating cards, outer gutters, rounded corners (modernUI/README.md \"Layout density\")",
+    "reads": "classic",
+    "source": "extensions.json activitybar[0], webviews[0] (.part.sidebar .content), webviews[1] (.editor-container)"
+   },
+   {
+    "marker": "quick input radius",
+    "measured": "12px",
+    "classic": "12px = var(--vscode-cornerRadius-xLarge), ungated quickInput.css:12",
+    "modernUI": "8px = var(--vscode-cornerRadius-large), .modern-ui .quick-input-widget (modernUI/roundedCorners.css:192-193)",
+    "reads": "classic (contradicts the task premise that 12 px marks Modern UI)",
+    "source": "quickinput.json quickinput[0] borderRadius; themes/dark-modern.json --vscode-cornerRadius-xLarge=12px, -large=8px"
+   },
+   {
+    "marker": "26 px controls",
+    "measured": "button 26, select 26",
+    "classic": "ungated button.css (padding 4/8, lh 16, radius 4) and selectBox.css",
+    "modernUI": "same",
+    "reads": "does not discriminate",
+    "source": "settings.json buttons[0] rect.h, settings[33] rect.h"
+   },
+   {
+    "marker": "codicon redraw",
+    "measured": "not assessable",
+    "classic": "-",
+    "modernUI": "-",
+    "reads": "not assessable: glyph paths are not in the probe, and the codicon font ships with the build whatever the setting",
+    "source": "-"
+   },
+   {
+    "marker": "workbench body class .modern-ui",
+    "measured": "not captured",
+    "classic": "-",
+    "modernUI": "-",
+    "reads": "not assessable: the probe recorded the webview body class only (themes/*.json bodyClass)",
+    "source": "probe MEASURE script: __document holds dpr, viewport, bodyFont only"
+   }
+  ],
+  "designTarget": "the classic look of 1.142.0 is what the probe measured; Modern UI values (28 px headers, 12/600 titles, 8 px overlay radius) remain unmeasured"
+ },
+ "v": {
+  "V1": {
+   "nuiget": {
+    "tab-bar": {
+     "rect.y": 69,
+     "rect.h": 25,
+     "padding": [
+      "0px",
+      "0px",
+      "0px",
+      "7px"
+     ],
+     "border": "0px 0px 1px 0px"
+    },
+    "installed-tab": {
+     "rect.h": 24,
+     "padding": [
+      "0px",
+      "8px",
+      "0px",
+      "8px"
+     ],
+     "border": "1px 1px 2px 1px",
+     "fontSize": "13px"
+    },
+    "toolbar": {
+     "rect.y": 94,
+     "rect.h": 32,
+     "padding": [
+      "4px",
+      "6px",
+      "4px",
+      "16px"
+     ],
+     "gap": "4px"
+    },
+    "select-all-button": {
+     "rect.h": 24,
+     "padding": [
+      "0px",
+      "12px",
+      "0px",
+      "12px"
+     ],
+     "fontSize": "13px",
+     "borderRadius": "2px"
+    },
+    "space above / below the buttons": [
+     4,
+     4
+    ]
+   },
+   "workbench": {
+    "editor tab strip h": 35,
+    "text button": {
+     "h": 26,
+     "padding": [
+      "4px",
+      "8px",
+      "4px",
+      "8px"
+     ],
+     "fontSize": "12px",
+     "lineHeight": "16px",
+     "borderRadius": "4px"
+    },
+    "Settings scope tab strip": "not in DOM dump; PNG: indicator 1.0 px at 148.5, border at 149.5",
+    "Extensions view block gaps": [
+     5.0,
+     10.0
+    ]
+   },
+   "delta": {
+    "tab strip vs editor strip": -10,
+    "button": -2,
+    "button font": 1.0
+   },
+   "rules": {
+    "fail": [
+     "DS-HEIGHT-6",
+     "DS-GRID-2"
+    ],
+    "not-measurable": [
+     "DS-HEIGHT-4"
+    ]
+   }
+  },
+  "V2": {
+   "nuiget": {
+    "select-all x": [
+     16,
+     97.2
+    ],
+    "uninstall-selected x": [
+     769.67,
+     925.0
+    ],
+    "list right": 931,
+    "start / end inset": [
+     16,
+     6.0
+    ],
+    "toolbar padding": [
+     "4px",
+     "6px",
+     "4px",
+     "16px"
+    ],
+    "row option right / actions": [
+     907,
+     "907-931"
+    ],
+    "update-all x (Updates)": [
+     816.49,
+     925.0
+    ],
+    "search box end inset (panel)": 16
+   },
+   "workbench": {
+    "Extensions search box insets (PNG) left/right": [
+     20.0,
+     12.0
+    ],
+    "pane header badge end inset": 12,
+    "setting-item padding l/r": [
+     "24px",
+     "24px"
+    ]
+   },
+   "delta": {
+    "end inset vs start inset": -10.0,
+    "row highlight short of row": 24
+   },
+   "rules": {
+    "fail": [
+     "DS-INSET-2",
+     "DS-INSET-3",
+     "DS-ROW-3"
+    ]
+   }
+  },
+  "V3": {
+   "nuiget": {
+    "state": "main-installed-all with a provisional badge: NOT CAPTURED",
+    "mechanism visible in main-installed-single": {
+     ".nuiget-section-actions rect": {
+      "x": 931,
+      "y": 138,
+      "w": 0,
+      "h": 0
+     },
+     "list right": 931,
+     "section toggle padding": [
+      "0px",
+      "4px",
+      "0px",
+      "16px"
+     ]
+    },
+    "same mechanism in sidebar-sections": {
+     "sidebar-update-all-button right": 300,
+     "sidebar right": 300
+    }
+   },
+   "workbench": {
+    "pane header count badge end inset": 12
+   },
+   "capture": "Add a probe state main-installed-all (project selector = All Projects, at least one project header carrying the provisional badge) and main-transitive-expanded (TFM badge). Measure section.nuiget-installed-project > .nuiget-section-header .nuiget-badge: rect.right vs .nuiget-main-list rect.right and #sash rect.x (want end inset 16, i.e. right <= 915 here), rect intersection with .nuiget-section-toggle (want 0), and the badge padding/fontSize/borderRadius for DS-HEIGHT-10.",
+   "rules": {
+    "fail (by proxy)": [
+     "DS-INSET-3",
+     "DS-INSET-2"
+    ],
+    "pass in captured states, V3 state missing": [
+     "DS-OVERFLOW-2"
+    ]
+   }
+  },
+  "V4": {
+   "nuiget": {
+    "section header box": [
+     126,
+     150
+    ],
+    "title line box": [
+     130.27,
+     145.73
+    ],
+    "title font": "11.05px/600 uppercase lh 15.47px",
+    "block above ends (button bottom)": 122,
+    "first row name top": 162.44,
+    "row option padding": [
+     "12px",
+     "16px",
+     "12px",
+     "16px"
+    ],
+    "above / below (box)": [
+     4,
+     12.44
+    ],
+    "above / below (text line boxes)": [
+     8.27,
+     16.71
+    ]
+   },
+   "workbench": {
+    "search box bottom (PNG)": 98.0,
+    "pane header": [
+     108,
+     130
+    ],
+    "first name top": 136.4,
+    "above / below": [
+     10.0,
+     6.4
+    ]
+   },
+   "delta": {
+    "below - above (box)": 8.44,
+    "below - above (text)": 8.44,
+    "workbench below - above": -3.6
+   },
+   "rules": {
+    "fail": [
+     "DS-GRID-2 (b)",
+     "DS-HEIGHT-3 (12 px row padding stacks under the header)"
+    ]
+   }
+  },
+  "V5": {
+   "nuiget": {
+    "stack": [
+     [
+      "main header",
+      0,
+      36,
+      [
+       "8px",
+       "16px",
+       "4px",
+       "16px"
+      ]
+     ],
+     [
+      "search row",
+      36,
+      69,
+      [
+       "4px",
+       "16px",
+       "4px",
+       "16px"
+      ]
+     ],
+     [
+      "tab bar",
+      69,
+      94,
+      [
+       "0px",
+       "0px",
+       "0px",
+       "7px"
+      ]
+     ],
+     [
+      "toolbar",
+      94,
+      126,
+      [
+       "4px",
+       "6px",
+       "4px",
+       "16px"
+      ]
+     ],
+     [
+      "section header",
+      126,
+      150,
+      [
+       "0px",
+       "4px",
+       "0px",
+       "16px"
+      ]
+     ],
+     [
+      "first row option",
+      150,
+      228,
+      [
+       "12px",
+       "16px",
+       "12px",
+       "16px"
+      ]
+     ]
+    ],
+    "control gaps": {
+     "header controls -> search input": 8,
+     "search input -> tab": 5,
+     "tab strip (incl. line) -> toolbar button": 4,
+     "toolbar button -> section header": 4,
+     "section header -> first row": 0,
+     "Updates: toolbar button -> first row": 4
+    },
+    "off-ramp": "tab bar padding-left 7"
+   },
+   "workbench": {
+    "stack": [
+     [
+      "side-bar title",
+      32,
+      67
+     ],
+     [
+      "header (search)",
+      67,
+      108
+     ],
+     [
+      "search box (PNG)",
+      72.0,
+      98.0
+     ],
+     [
+      "pane header",
+      108,
+      130
+     ],
+     [
+      "first row",
+      130,
+      202
+     ]
+    ],
+    "gaps": {
+     "side-bar title -> search box": 5.0,
+     "search box -> pane header": 10.0,
+     "pane header -> first row": 0
+    },
+    "Settings item contents padding": [
+     "12px",
+     "14px",
+     "18px",
+     "14px"
+    ]
+   },
+   "rules": {
+    "fail": [
+     "DS-GRID-2 (a)",
+     "DS-INSET-2",
+     "DS-GRID-1"
+    ]
+   }
+  }
+ }
+}

@@ -1,0 +1,1020 @@
+[
+ {
+  "id": "N19",
+  "source": "docs/plans/findings-ledger.md:123 (also :384; docs/plans/STATUS.md:4188)",
+  "what": "In the provisional list of a multi-target project, a .NET Standard framework's resolved version is not found by framework and falls back to another framework's version.",
+  "bucket": "post-release-backlog",
+  "reason": "Non-visual. It affects the provisional list only; the evaluated list is right. The P7.6 ruling accepted it 'for 2.0.0', which is still the first publication, and there is no new evidence. The ledger's assets.ts:241 is stale: the lookup is now inspector.ts:142-155 over assets.ts:145-165. The netstandard key format was not re-verified (no tracked fixture has a netstandard target). Cost 0.5-1 d (estimate). No contract change.",
+  "evidence": [
+   {
+    "path": "docs/plans/findings-ledger.md",
+    "line": 123,
+    "quote": "the `targets` key of a .NET Standard framework is not mapped in the provisional list"
+   },
+   {
+    "path": "src/core/project/inspector.ts",
+    "line": 151,
+    "quote": "let resolved = framework === undefined ? undefined : byFramework.get(framework)?.get(id);"
+   },
+   {
+    "path": "src/core/project/assets.ts",
+    "line": 151,
+    "quote": "const framework = target.split('/')[0];"
+   },
+   {
+    "path": "docs/plans/STATUS.md",
+    "line": 4188,
+    "quote": "Low, ships as known → `accepted for 2.0.0; 2.0.1`."
+   }
+  ]
+ },
+ {
+  "id": "N64",
+  "source": "docs/plans/findings-ledger.md:168 (also :434; docs/plans/STATUS.md:4189)",
+  "what": "No CI job renders the webviews in the Chromium of the minimum supported VS Code (1.85, Chromium 114); only a CSS denylist lint guards it.",
+  "bucket": "owner-decides",
+  "screen": "all webview screens (P0 measurement harness)",
+  "reason": "ExTester 8.28.1 supports VS Code 1.138.0-1.140.0 only, and the UI job runs --code_version max (VS Code 1.140.0, ChromeDriver 150 in the capture run), so no WebDriver route renders the floor's Chromium. The options differ materially. (A) A P0 harness item that renders the webview bundles under a fake host in a pinned Chromium matching the chosen floor: about 1-2 d (estimate), plus a new browser binary and its settings patch; which builds can be pinned is not verified. (B) Keep webview-css-baseline.test.ts as the only guard: 0 d, while the overhaul rewrites most CSS. (C) Raise the floor: the owner allows this only when a technique is blocked, and raising it to ExTester's 1.138 would drop users. Recommended: (A) if the floor ADR keeps an old Chromium and the design uses CSS near that line; otherwise (B). An ADR change is needed only if the floor moves.",
+  "evidence": [
+   {
+    "path": "docs/plans/findings-ledger.md",
+    "line": 168,
+    "quote": "open; owner's 2.0.1 check with P7.4 (skipped); the CSS-baseline lint is the 2.0.0 guard"
+   },
+   {
+    "path": "node_modules/vscode-extension-tester/package.json",
+    "line": 60,
+    "quote": "\"vscode-min\": \"1.138.0\" (vscode-max 1.140.0; locked version 8.28.1)"
+   },
+   {
+    "path": "package.json",
+    "line": 310,
+    "quote": "extest setup-and-run out/test/ui/v2/*.ui.test.js --code_version max"
+   },
+   {
+    "path": "/private/tmp/claude-501/-Users-mattias-github-nuiget/d222be63-cd0e-406f-80db-8a5a6aa9b485/scratchpad/research/ui-job.log",
+    "line": 223,
+    "quote": "Downloading VS Code: 1.140.0 / stable (line 231: Downloading ChromeDriver 150.0.7871.124)"
+   }
+  ]
+ },
+ {
+  "id": "N81 (a)",
+  "source": "docs/plans/findings-ledger.md:179; docs/plans/STATUS.md:908",
+  "what": "The firstUsefulRender perf mark is never sent when a session opens in All Projects.",
+  "bucket": "ux-item",
+  "screen": "main panel shell and sidebar shell under All Projects",
+  "reason": "Both shells key the mark on the single-project slice, which is null under All Projects, while the manifest and README promise the mark. The overhaul rebuilds the shells, and a perceived-speed measurement may read the mark. Contract-free. Polish, not cuttable. Cost about 0.25 d (estimate). The cited MainShell.tsx:92 and SidebarView.tsx:82 have moved.",
+  "evidence": [
+   {
+    "path": "src/webview/main/MainShell.tsx",
+    "line": 130,
+    "quote": "const firstListShown = installedSlice.status === 'ready' && installedSlice.result !== undefined;"
+   },
+   {
+    "path": "src/webview/sidebar/SidebarView.tsx",
+    "line": 83,
+    "quote": "const firstListShown = installed.status === 'ready' && installed.result !== undefined;"
+   },
+   {
+    "path": "src/webview/shared/store/installed.tsx",
+    "line": 39,
+    "quote": "const projectPath = singleProject(useSession().committed?.selectedProject);"
+   },
+   {
+    "path": "package.json",
+    "line": 282,
+    "quote": "Writes the webviews' [perf] marks (webview ready, first useful render) to the nUIget output channel"
+   }
+  ]
+ },
+ {
+  "id": "N81 (b)",
+  "source": "docs/plans/findings-ledger.md:179, :451; docs/plans/STATUS.md:4187",
+  "what": "No perf marks are sent for project switch, operations, search and update check.",
+  "bucket": "post-release-backlog",
+  "reason": "New mark names are a contract change: the name is a closed union in the frozen protocol. The shipped setting text names only the two existing marks, so nothing misleads users. Promote it to a P0 item with its own ⚑ only if the measurement dimension uses in-product marks as its perceived-speed probe. Cost about 0.5 d plus a ⚑ (estimate). The cited handler handlers.ts:422-430 is now at :425.",
+  "evidence": [
+   {
+    "path": "src/protocol/messages.ts",
+    "line": 180,
+    "quote": "'perf/mark': { payload: { name: 'webviewReady' | 'firstUsefulRender'; detail?: string }"
+   },
+   {
+    "path": "docs/plans/STATUS.md",
+    "line": 4187,
+    "quote": "N81 residue (marks for project switch, operations, search, update check): a 2.0.1 contract item"
+   }
+  ]
+ },
+ {
+  "id": "N82",
+  "source": "docs/plans/findings-ledger.md:180 (also :452; docs/plans/STATUS.md:910)",
+  "what": "On Windows, a password with a placeholder inside a longer value (prefix%VAR%) is stored DPAPI-encrypted by default and never expanded.",
+  "bucket": "ux-item",
+  "screen": "main panel: NuGet sources dialog (add source)",
+  "reason": "The dialog forces clear text only for a whole-value placeholder, while the reader expands a placeholder anywhere in a clear-text value. The result is a silently wrong credential (401 from a private feed). The dialog is a designed screen. The fix is one expression and one test, about 0.1 d. Credential correctness: rides with the dialog's polish item, not cuttable. No contract change.",
+  "evidence": [
+   {
+    "path": "src/webview/main/features/sources/SourceSettingsDialog.tsx",
+    "line": 65,
+    "quote": "const ENVIRONMENT_PLACEHOLDER = /^%[^%\\s]+%$/;"
+   },
+   {
+    "path": "src/core/sources/NuGetConfigReader.ts",
+    "line": 32,
+    "quote": "const ENVIRONMENT_PLACEHOLDER = /%([^%\\s]+)%/g;"
+   },
+   {
+    "path": "docs/plans/findings-ledger.md",
+    "line": 180,
+    "quote": "2.0.1: a value with a placeholder inside (`prefix%VAR%`) is still encrypted by default on Windows"
+   }
+  ]
+ },
+ {
+  "id": "N84",
+  "source": "docs/plans/findings-ledger.md:182, :454; src/core/sources/STATUS.md:104",
+  "what": "Nothing warms credentials, so on a cold Windows machine the first private-feed request with a DPAPI password can go unauthenticated, and the source shows unavailable until the health monitor's next pass (120 s).",
+  "bucket": "post-release-backlog",
+  "reason": "package/prewarm has a handler and Catalog.prewarm exists, but no webview sends it. The consequence was 'accepted for 2.0.0', the same first publication the overhaul becomes, and it was accepted knowing both CI measurements: 10 346 ms (killed at the 10 s budget, under contention, run 38873696417) and 6865 ms (run 38876762482). Nothing has been measured since. Recovery is automatic, and R167 is a manual DPAPI check before publishing. Promote it if the perceived-speed research wants credentials and service indexes warmed at activation. Cost about 0.5 d (estimate; start-set pin tests change). No contract change. The ledger's extension.next.ts:245 is now extension.ts:250.",
+  "evidence": [
+   {
+    "path": "src/host/handlers.ts",
+    "line": 321,
+    "quote": "host.on('package/prewarm', async ({ sourceUrl }) => {"
+   },
+   {
+    "path": "src/extension.ts",
+    "line": 250,
+    "quote": "startHealthMonitor(serviceIndex, probeSources, { failedIntervalMs: 120_000, healthyIntervalMs: 300_000, logger })"
+   },
+   {
+    "path": "docs/plans/findings-ledger.md",
+    "line": 454,
+    "quote": "test A × 10 346 ms with `DPAPI decryption timed out after 10000 ms`"
+   },
+   {
+    "path": "docs/plans/findings-ledger.md",
+    "line": 182,
+    "quote": "cold start 6865 ms, product decrypt 524 ms); product consequence accepted for 2.0.0; residue 2.0.1"
+   }
+  ]
+ },
+ {
+  "id": "DP10",
+  "source": "docs/plans/parity-audit-2026-10-16.md:98, :1307-1316; docs/plans/findings-ledger.md:457 (the N87 entry names it); src/webview/sidebar/STATUS.md:32",
+  "what": "The sidebar asks transitive/metadata (a lookup, an icon and the vulnerabilities per package) for its installed rows, and renders none of it.",
+  "bucket": "ux-item",
+  "screen": "sidebar: Installed section rows",
+  "reason": "The shared InstalledProvider asks on every list change, and no sidebar file reads the metadata. Whether this is waste depends on the sidebar row design: if the redesigned rows show an icon or a vulnerability mark (today the sidebar has no vulnerability signal), the ask is needed and DP10 closes as a no-op; otherwise make the ask opt-in. N87 itself is closed and is not a candidate. Cost 0.5 d or 0 (audit :1309). No contract change.",
+  "evidence": [
+   {
+    "path": "src/webview/shared/store/installed.tsx",
+    "line": 77,
+    "quote": "bus.request('transitive/metadata', { packages }, { signal: controller.signal })"
+   },
+   {
+    "path": "src/webview/shared/store/StoreProvider.tsx",
+    "line": 27,
+    "quote": "<InstalledProvider>"
+   },
+   {
+    "path": "docs/plans/parity-audit-2026-10-16.md",
+    "line": 98,
+    "quote": "DP10 | open | the sidebar still asks `transitive/metadata` through the shared `InstalledProvider`"
+   },
+   {
+    "path": "docs/plans/findings-ledger.md",
+    "line": 185,
+    "quote": "N87 ... closed (P9.fix-1"
+   }
+  ]
+ },
+ {
+  "id": "MI7",
+  "source": "docs/plans/parity-audit-2026-10-16.md:25, :215-223",
+  "what": "Installed and transitive rows show a generic 'Vulnerable' badge with no severity or count; the Installed tab count has landed.",
+  "bucket": "ux-item",
+  "screen": "main Installed tab rows (single project and All Projects) and transitive rows",
+  "reason": "The rows still render the generic badge. The closure note keeps severity as 'words and icon, not colour', but VS Code defines severity colour keys (problemsErrorIcon/WarningIcon/InfoIcon.foreground), so the design's colour-role table decides. Row anatomy: polish, not cuttable. Cost 0.5 d including DP8 (audit :217). No contract change.",
+  "evidence": [
+   {
+    "path": "src/webview/main/features/installed/InstalledProjectSection.tsx",
+    "line": 147,
+    "quote": "<Badge label=\"Vulnerable\" tone=\"error\" title=\"Has known vulnerabilities\" />"
+   },
+   {
+    "path": "src/webview/main/features/installed/TransitiveSection.tsx",
+    "line": 159,
+    "quote": "<Badge label=\"Vulnerable\" tone=\"error\" title=\"Has known vulnerabilities\" />"
+   },
+   {
+    "url": "https://raw.githubusercontent.com/microsoft/vscode-docs/main/api/references/theme-color.md",
+    "quote": "lines 611-613: `problemsErrorIcon.foreground`, `problemsWarningIcon.foreground`, `problemsInfoIcon.foreground`"
+   }
+  ]
+ },
+ {
+  "id": "DP8",
+  "source": "docs/plans/parity-audit-2026-10-16.md:96, :1287-1295",
+  "what": "Same defect as MI7, filed by the metadata-pipeline area: the vulnerable badge carries no severity or count.",
+  "bucket": "ux-item",
+  "screen": "main Installed tab rows and transitive rows",
+  "reason": "A duplicate of MI7 (the critic's double-count note, audit :1519). Same verdict and same item. Cost included in MI7 (audit :1289: 0.25 d). No contract change.",
+  "evidence": [
+   {
+    "path": "docs/plans/parity-audit-2026-10-16.md",
+    "line": 96,
+    "quote": "DP8 | open | severity is in words and icon (deliberate); no count on the badge"
+   },
+   {
+    "path": "docs/plans/parity-audit-2026-10-16.md",
+    "line": 1519,
+    "quote": "the vulnerability badge twice (MI7, DP8)"
+   }
+  ]
+ },
+ {
+  "id": "MI10",
+  "source": "docs/plans/parity-audit-2026-10-16.md:28, :245-253; docs/plans/regression-matrix.md:18; CHANGELOG.md:92",
+  "what": "The Installed bulk toolbar has no Collapse all / Expand all, and Uninstall selected is no longer a danger button.",
+  "bucket": "ux-item",
+  "screen": "main Installed tab toolbar (All Projects)",
+  "reason": "The icons exist but no file renders them, and the toolbar holds Select all and Uninstall selected only. The danger-button half is moot: VS Code defines no danger-button colour. This toolbar is the container V1 and V2 name, so its overflow rule must budget the two icon buttons. Feature, cuttable. Cost 0.5 d, shared with MU8 (audit :247). No contract change; add §8 test ids; a restoration edits CHANGELOG.md:92.",
+  "evidence": [
+   {
+    "path": "src/webview/shared/primitives/icons.tsx",
+    "line": 221,
+    "quote": "export const CollapseAllIcon = /* @__PURE__ */ React.memo<IconProps>("
+   },
+   {
+    "path": "src/webview/main/features/installed/InstalledTab.tsx",
+    "line": 214,
+    "quote": "<Toolbar label=\"Bulk actions\">"
+   },
+   {
+    "url": "https://raw.githubusercontent.com/microsoft/vscode-docs/main/api/references/theme-color.md",
+    "quote": "lines 129-137: button.background, button.foreground, button.border, button.separator, button.hoverBackground, button.secondary*; no danger key"
+   },
+   {
+    "path": "CHANGELOG.md",
+    "line": 92,
+    "quote": "Not back from 1.x: recent searches, Collapse all and Expand all, details prefetched on hover, and ArrowLeft/ArrowRight between the Details and README tabs"
+   }
+  ]
+ },
+ {
+  "id": "MU8",
+  "source": "docs/plans/parity-audit-2026-10-16.md:38, :420-428; docs/plans/regression-matrix.md:18; CHANGELOG.md:92",
+  "what": "The All Projects Updates toolbar has no Collapse all / Expand all.",
+  "bucket": "ux-item",
+  "screen": "main Updates tab toolbar (All Projects)",
+  "reason": "The toolbar holds Select all and Update all only. Same item as MI10, and the same toolbar overflow rule (V1). Feature, cuttable. Cost included in MI10 (audit :422: 0.5 d). No contract change.",
+  "evidence": [
+   {
+    "path": "src/webview/main/features/updates/AllProjectsUpdates.tsx",
+    "line": 308,
+    "quote": "<Toolbar label=\"Bulk actions\">"
+   },
+   {
+    "path": "docs/plans/parity-audit-2026-10-16.md",
+    "line": 38,
+    "quote": "MU8 | open | no Collapse all / Expand all on the All Projects Updates toolbar"
+   }
+  ]
+ },
+ {
+  "id": "MI11",
+  "source": "docs/plans/parity-audit-2026-10-16.md:29, :255-263; docs/plans/regression-matrix.md:18; CHANGELOG.md:92",
+  "what": "Hovering an Installed row no longer prefetches its versions and metadata.",
+  "bucket": "post-release-backlog",
+  "reason": "The behaviour is invisible and the design would not specify it. No measurement of details-open latency exists (the perf baseline has dotnet, search and bundle rows only). A pointer-only prefetch gives keyboard users nothing, and the CHANGELOG already says it is not back. Reopen if the perceived-speed research measures a details-open latency above its target. Cost 0.5 d (audit :257). No contract change.",
+  "evidence": [
+   {
+    "path": "docs/plans/parity-audit-2026-10-16.md",
+    "line": 29,
+    "quote": "MI11 | open | no hover prefetch"
+   },
+   {
+    "path": "docs/perf-baseline.md",
+    "line": 34,
+    "quote": "Cold search: Enter to the first row, main panel | 1086 ms | target 1700 ms (no details-open metric in the table)"
+   },
+   {
+    "path": "CHANGELOG.md",
+    "line": 92,
+    "quote": "details prefetched on hover"
+   }
+  ]
+ },
+ {
+  "id": "MI12",
+  "source": "docs/plans/parity-audit-2026-10-16.md:30, :265-273; docs/plans/STATUS.md:1067",
+  "what": "All Projects project headers show their count while expanded; the hover background was declined on purpose.",
+  "bucket": "ux-item",
+  "screen": "main Installed and Updates tabs: All Projects project headers",
+  "reason": "The count is passed whether the section is expanded or not, and the missing hover is deliberate. This is the header V3 names, and SB10 names its sidebar twin: one header-anatomy decision. Polish, not cuttable. Cost 0.25 d (audit :267). No contract change.",
+  "evidence": [
+   {
+    "path": "src/webview/main/features/installed/InstalledProjectSection.tsx",
+    "line": 178,
+    "quote": "count={empty ? undefined : result.packages.length}"
+   },
+   {
+    "path": "src/webview/main/main.css",
+    "line": 700,
+    "quote": "No hover: VS Code's pane headers have none (P9.10)."
+   }
+  ]
+ },
+ {
+  "id": "MB3",
+  "source": "docs/plans/parity-audit-2026-10-16.md:44, :521-552; docs/perf-baseline.md:49-50",
+  "what": "Browse shows a skeleton until every result is enriched (a lookup and an icon fetch per row), instead of rows first and enrichment after.",
+  "bucket": "owner-decides",
+  "screen": "main Browse list (loading state)",
+  "reason": "The buckets differ in cost and in a pre-registered rule. (A) A ux-item on Browse's loading state with a ⚑ protocol change (a results chunk before enrichment), about 1 d (audit :523), if the design makes 'rows before icons' a rule. (B) Backlog under the P7.2d rule, which opens the row only after two consecutive cold searches over 1700 ms; CI measured 1086, 819 and 1058 ms. Recommended: (B) unless the design research makes progressive rows a rule. Step 1 (skip the redundant lookup for API rows, core only) is backlog either way. Contract change: yes for (A).",
+  "evidence": [
+   {
+    "path": "docs/perf-baseline.md",
+    "line": 49,
+    "quote": "When a cold search goes over its target on two consecutive runs, open a ⚑ row P7.2d for a lite `found` chunk on `search/query`."
+   },
+   {
+    "path": "docs/perf-baseline.md",
+    "line": 77,
+    "quote": "cold search 819 ms (run 38866154469) and 1058 ms (run 38870091917) against the 1700 ms target"
+   },
+   {
+    "path": "docs/plans/parity-audit-2026-10-16.md",
+    "line": 44,
+    "quote": "MB3 | open | needs a protocol change (bare-row chunk or `search/metadata`)"
+   }
+  ]
+ },
+ {
+  "id": "MB13",
+  "source": "docs/plans/parity-audit-2026-10-16.md:54, :661-669; docs/plans/regression-matrix.md:18; CHANGELOG.md:92",
+  "what": "Hovering a Browse row no longer prefetches versions and metadata.",
+  "bucket": "post-release-backlog",
+  "reason": "The same reasoning as MI11: invisible, no latency measurement, pointer-only, already documented as not back. package/prewarm warms sources, not packages. Cost 0.5 d (audit :663). No contract change.",
+  "evidence": [
+   {
+    "path": "docs/plans/parity-audit-2026-10-16.md",
+    "line": 54,
+    "quote": "MB13 | open | no hover prefetch (`package/prewarm` still has no webview caller)"
+   },
+   {
+    "path": "src/core/catalog/Catalog.ts",
+    "line": 535,
+    "quote": "this.deps.feeds.credentials.prewarm(urls);"
+   }
+  ]
+ },
+ {
+  "id": "MB16",
+  "source": "docs/plans/parity-audit-2026-10-16.md:57, :691-699",
+  "what": "After the prerelease toggle the details version selector stays on the previously newest version, and the version list is unbounded.",
+  "bucket": "ux-item",
+  "screen": "main details pane header: version selector",
+  "reason": "The version is set at a selection, at a view switch and by chooseVersion only, and package/versions is asked without take. The version control belongs to the details header the design rebuilds (see DETAILS-GRID). Polish, not cuttable. Cost 0.25 d (audit :693). No contract change.",
+  "evidence": [
+   {
+    "path": "src/webview/shared/store/details.tsx",
+    "line": 257,
+    "quote": "chooseVersion: next => setVersion(next),"
+   },
+   {
+    "path": "src/webview/shared/store/details.tsx",
+    "line": 234,
+    "quote": "bus.request('package/versions', { packageId: packageId as string, sourceUrl, includePrerelease }, { signal })"
+   }
+  ]
+ },
+ {
+  "id": "MB17",
+  "source": "docs/plans/parity-audit-2026-10-16.md:58, :701-709",
+  "what": "HTML entities in search and registration descriptions are shown literally.",
+  "bucket": "post-release-backlog",
+  "reason": "The design would not specify text decoding, and the case is rare. Probe: the top 1000 nuget.org search results for seven queries gave 6553 unique packages; 1 description carries an entity (InheritDocTool: &lt; &gt;). Registration text was not probed. Cosmetic; it can ride along if the Browse-row item touches description rendering. Cost 0.25 d (audit :703). No contract change.",
+  "evidence": [
+   {
+    "path": "/private/tmp/claude-501/-Users-mattias-github-nuiget/d222be63-cd0e-406f-80db-8a5a6aa9b485/scratchpad/research/triage-src/probe-mb17",
+    "quote": "unique packages 6553 with entity in description 1; InheritDocTool -> &lt; &gt;"
+   },
+   {
+    "path": "docs/plans/parity-audit-2026-10-16.md",
+    "line": 58,
+    "quote": "MB17 | open | search and registration descriptions are not entity-decoded (nuspec text is)"
+   }
+  ]
+ },
+ {
+  "id": "MB18",
+  "source": "docs/plans/parity-audit-2026-10-16.md:59, :711-719; docs/plans/regression-matrix.md:18; CHANGELOG.md:92",
+  "what": "ArrowLeft/ArrowRight in a package list no longer switch the Details/README tabs.",
+  "bucket": "ux-item",
+  "screen": "main panel lists and details tabs (keyboard model, interaction model §5)",
+  "reason": "Listbox handles only ArrowUp/ArrowDown, and Tabs handles left and right only while a tab has focus. The design owns the list keyboard model: if All Projects groups become tree-like, ArrowLeft and ArrowRight are the workbench's collapse and expand keys (not verified here), which conflicts with the 1.x binding. Recommended outcome: not restored (0 d); restoring it costs 0.5 d (audit :713) and edits CHANGELOG.md:92. Feature, cuttable. No contract change.",
+  "evidence": [
+   {
+    "path": "src/webview/shared/primitives/Listbox.tsx",
+    "line": 143,
+    "quote": "if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {"
+   },
+   {
+    "path": "src/webview/shared/primitives/Tabs.tsx",
+    "line": 40,
+    "quote": "const next = { ArrowRight: index >= last ? 0 : index + 1, ArrowLeft: index <= 0 ? last : index - 1, Home: 0, End: last }[event.key];"
+   }
+  ]
+ },
+ {
+  "id": "MB19",
+  "source": "docs/plans/parity-audit-2026-10-16.md:60, :721-729; docs/ux/interaction-model.md:65",
+  "what": "Browse's first load shows skeleton rows but announces nothing, although interaction model §4 requires a role=status 'Loading …'.",
+  "bucket": "ux-item",
+  "screen": "main Browse list and details pane (loading states)",
+  "reason": "BrowseList returns a Skeleton while loading and announces only the answer. The design defines every screen's loading state, and this is an accessibility contract: polish, not cuttable. Cost 0.25 d (audit :723). No contract change.",
+  "evidence": [
+   {
+    "path": "src/webview/main/features/search/BrowseList.tsx",
+    "line": 93,
+    "quote": "return <Skeleton density=\"comfortable\" />;"
+   },
+   {
+    "path": "src/webview/main/features/search/BrowseList.tsx",
+    "line": 84,
+    "quote": "announce(results.length === 0 ? `No results for \"${query}\"` : ..."
+   },
+   {
+    "path": "docs/ux/interaction-model.md",
+    "line": 65,
+    "quote": "| **Loading (first)** | Skeleton rows (3) + `role=\"status\"` text \"Loading …\""
+   }
+  ]
+ },
+ {
+  "id": "SB2",
+  "source": "docs/plans/parity-audit-2026-10-16.md:75, :970-983 (verified by three refuters)",
+  "what": "In @installed / @updates mode a collapsed section stays collapsed, so the filter shows an empty header.",
+  "bucket": "ux-item",
+  "screen": "sidebar: Installed and Updates sections in filter mode",
+  "reason": "The persisted expanded flags are passed in every mode, and the collapse survives reloads in the view state. Medium severity and verified. A 0.1 d correctness fix (audit :972) that must ride with the sidebar polish item: not cuttable. No contract change.",
+  "evidence": [
+   {
+    "path": "src/webview/sidebar/SidebarView.tsx",
+    "line": 177,
+    "quote": "expanded={layout.installedExpanded}"
+   },
+   {
+    "path": "src/webview/sidebar/SidebarView.tsx",
+    "line": 198,
+    "quote": "expanded={layout.updatesExpanded}"
+   }
+  ]
+ },
+ {
+  "id": "SB7",
+  "source": "docs/plans/parity-audit-2026-10-16.md:80, :1050-1058",
+  "what": "No keyboard bridge from the search box to the lists and back.",
+  "bucket": "ux-item",
+  "screen": "sidebar search box and lists (also the main panel search box)",
+  "reason": "The search box moves only inside its own dropdown. The workbench's Extensions view bridges with Ctrl+DownArrow (Cmd on macOS) through SuggestEnabledInput.onShouldFocusResults, plus a navigable-container next/previous pair, not with plain ArrowDown as 1.x did. Following the owner's direction, the item should specify the workbench binding. Keyboard reachability: not cuttable. Cost 0.5 d (audit :1052). No contract change. Source: vscode main at 54d565d2; VS Code 1.85 not checked.",
+  "evidence": [
+   {
+    "path": "src/webview/shared/search/SearchBox.tsx",
+    "line": 178,
+    "quote": "if (open) {"
+   },
+   {
+    "url": "https://raw.githubusercontent.com/microsoft/vscode/main/src/vs/workbench/contrib/codeEditor/browser/suggestEnabledInput/suggestEnabledInput.ts",
+    "quote": "line 213 (main 54d565d2): filter(e => e.keyCode === KeyCode.DownArrow && (isMacintosh ? e.metaKey : e.ctrlKey)))(() => this._onShouldFocusResults.fire()"
+   },
+   {
+    "url": "https://raw.githubusercontent.com/microsoft/vscode/main/src/vs/workbench/contrib/extensions/browser/extensionsViewlet.ts",
+    "quote": "line 664 (main 54d565d2): this.searchBox.onShouldFocusResults(() => this.focusListView(), this)"
+   }
+  ]
+ },
+ {
+  "id": "SB9",
+  "source": "docs/plans/parity-audit-2026-10-16.md:82, :1070-1078",
+  "what": "An installed package in the sidebar's Browse results has no Uninstall action or Delete key; under All Projects the row shows '+' even when the package is installed everywhere.",
+  "bucket": "ux-item",
+  "screen": "sidebar: Browse results row actions",
+  "reason": "Enter on an installed row only announces 'already installed', and the row shows a badge but no Uninstall action. Row actions are part of the row design. Feature parity, cuttable. Cost 0.5 d (audit :1072). No contract change.",
+  "evidence": [
+   {
+    "path": "src/webview/sidebar/BrowseResults.tsx",
+    "line": 93,
+    "quote": "announce(`${result.id} is already installed (${installedVersion}).`);"
+   },
+   {
+    "path": "src/webview/sidebar/BrowseResults.tsx",
+    "line": 166,
+    "quote": "badge = <Badge label=\"Installed\" title={`Installed: ${installedVersion}`} />;"
+   }
+  ]
+ },
+ {
+  "id": "SB10",
+  "source": "docs/plans/parity-audit-2026-10-16.md:83, :1080-1088; docs/ux/interaction-model.md:67",
+  "what": "Under All Projects the sidebar's project headers carry no 'provisional' badge, contrary to interaction model §4.",
+  "bucket": "ux-item",
+  "screen": "sidebar: All Projects project headers",
+  "reason": "The badge renders only when All Projects is off. The same badge collides with the list border in the main panel (V3), so badge placement is one decision for both surfaces. Contradicts the model: not cuttable (change the badge or amend §4). Cost 0.25 d (audit :1082) plus a §8 hook. No contract change.",
+  "evidence": [
+   {
+    "path": "src/webview/sidebar/InstalledSection.tsx",
+    "line": 135,
+    "quote": "actions={!all.active && result?.fidelity === 'provisional'"
+   },
+   {
+    "path": "docs/ux/interaction-model.md",
+    "line": 67,
+    "quote": "Small \"provisional\" badge on the section header (All Projects sections, the main panel's `Direct packages` header, sidebar Installed section)"
+   }
+  ]
+ },
+ {
+  "id": "SB13",
+  "source": "docs/plans/parity-audit-2026-10-16.md:86, :1110-1118",
+  "what": "The sidebar's section count shows '0' and stays beside the loading spinner.",
+  "bucket": "ux-item",
+  "screen": "sidebar: section headers",
+  "reason": "SectionHeader renders any defined count, and a test asserts 'counts 0', while the main panel's Installed tab 'shows no 0' (matrix R40). The surfaces disagree; the design picks one rule. The workbench's zero-count behaviour was not verified. Polish, not cuttable. Cost 0.1 d (audit :1112); the test changes with the behaviour. No contract change.",
+  "evidence": [
+   {
+    "path": "src/webview/shared/primitives/SectionHeader.tsx",
+    "line": 51,
+    "quote": "{count === undefined ? null : <>{' '}<Badge label={String(count)} /></>}"
+   },
+   {
+    "path": "src/webview/sidebar/UpdatesSection.test.tsx",
+    "line": 157,
+    "quote": "a complete empty answer says \"No updates available\" and counts 0"
+   },
+   {
+    "path": "docs/plans/regression-matrix.md",
+    "line": 64,
+    "quote": "R40 | Layout | The Installed tab counts the packages and shows no 0"
+   }
+  ]
+ },
+ {
+  "id": "SB14",
+  "source": "docs/plans/parity-audit-2026-10-16.md:87, :1120-1128",
+  "what": "The sidebar's search box is not focused when the view first renders.",
+  "bucket": "ux-item",
+  "screen": "sidebar: search box",
+  "reason": "The host sends ui/focusSearch on a visibility change only. The Extensions view focuses its search box whenever the view takes focus. Polish, not cuttable. Cost 0.1 d (audit :1122). No contract change (ui/focusSearch exists).",
+  "evidence": [
+   {
+    "path": "src/host/SidebarHost.ts",
+    "line": 58,
+    "quote": "webviewView.onDidChangeVisibility(() => {"
+   },
+   {
+    "path": "src/webview/sidebar/SidebarView.tsx",
+    "line": 108,
+    "quote": "useEffect(() => bus.onEvent('ui/focusSearch', () => searchRef.current?.focus()), [bus]);"
+   },
+   {
+    "url": "https://raw.githubusercontent.com/microsoft/vscode/main/src/vs/workbench/contrib/extensions/browser/extensionsViewlet.ts",
+    "quote": "lines 731-733 (main 54d565d2): override focus(): void { super.focus(); this.searchBox?.focus(); }"
+   }
+  ]
+ },
+ {
+  "id": "DP3",
+  "source": "docs/plans/parity-audit-2026-10-16.md:91, :1205-1224",
+  "what": "After five consecutive real 404s, the icon breaker skips a source until a sources or workspace refresh, so un-mapped private package ids can silence nuget.org icons.",
+  "bucket": "pre-release-blocker",
+  "reason": "The breaker is unchanged since P9.1 (threshold 5, skip without fetch, cleared only by reset()). The P9.1 acceptance and the refuter's downgrade ('Browse-only today since no other list renders icons') predate P9.3-P9.5: package icons now render in five main-panel lists fed by the same per-chain resolver. A first-publication user with private feeds and no package-source mapping can therefore see the default icon in every list the redesign shows, until Refresh. Core-only, address-neutral fix (no nuget.org exemption, ledger M2), at most 0.5 d (audit :1207), no contract change. Mechanism verified; frequency unknown.",
+  "evidence": [
+   {
+    "path": "src/core/feeds/icons.ts",
+    "line": 27,
+    "quote": "export const ICON_SOURCE_MISS_THRESHOLD = 5;"
+   },
+   {
+    "path": "src/core/feeds/icons.ts",
+    "line": 198,
+    "quote": "if (this.isSourceSuppressed(sourceUrl)) {"
+   },
+   {
+    "path": "src/core/feeds/icons.ts",
+    "line": 219,
+    "quote": "this.consecutiveMisses.set(sourceUrl, (this.consecutiveMisses.get(sourceUrl) ?? 0) + 1);"
+   },
+   {
+    "path": "docs/plans/parity-audit-2026-10-16.md",
+    "line": 1524,
+    "quote": "DP3 high → medium (Browse-only today since no other list renders icons"
+   },
+   {
+    "path": "src/webview/main/features/installed/InstalledProjectSection.tsx",
+    "quote": "grep -rln packageIconSrc src/webview --include='*.tsx' (non-test): InstalledProjectSection, TransitiveSection, BrowseList, UpdatesTab, AllProjectsUpdates"
+   }
+  ]
+ },
+ {
+  "id": "MH9 (recent searches)",
+  "source": "docs/plans/regression-matrix.md:18; docs/plans/parity-audit-2026-10-16.md:69; docs/plans/2026-10-11-nuiget-2.0-execution-plan.md:335-338 (D16, reopened); CHANGELOG.md:16, :92",
+  "what": "The 1.x recent-searches list stays removed.",
+  "bucket": "post-release-backlog",
+  "reason": "D16 is reopened, so the plan's decision table needs a row, and the closest workbench exemplar decides it: the Extensions view's search box is a SuggestEnabledInput with '@' suggestions and no history, while history belongs to the Search view. nUIget's box mirrors the Extensions view's '@' prefixes. Record 'not restored' (0 d). Restoring it would be a feature item (about 1 d, estimate). No contract change.",
+  "evidence": [
+   {
+    "url": "https://raw.githubusercontent.com/microsoft/vscode/main/src/vs/workbench/contrib/extensions/browser/extensionsViewlet.ts",
+    "quote": "lines 639-647 (main 54d565d2): this.instantiationService.createInstance(SuggestEnabledInput, `${VIEWLET_ID}.searchbox`, ... triggerCharacters: ['@']"
+   },
+   {
+    "url": "https://raw.githubusercontent.com/microsoft/vscode/main/src/vs/workbench/contrib/search/browser/searchWidget.ts",
+    "quote": "line 58: searchHistory?: string[];"
+   },
+   {
+    "path": "CHANGELOG.md",
+    "line": 16,
+    "quote": "and the recent-searches list is gone"
+   }
+  ]
+ },
+ {
+  "id": "V1",
+  "source": "docs/plans/findings-ledger.md:188, :469; docs/plans/regression-matrix.md:19",
+  "what": "The main panel's tab bar and bulk toolbar look squeezed.",
+  "bucket": "ux-item",
+  "screen": "main panel tab bar and the Installed/Updates bulk toolbars",
+  "reason": "Deferred to this initiative as the negative control of its measurement harness: the P0 harness must report it on the unchanged tree before any item fixes it. Judge-only per the owner's brief (no numeric rule yet). Polish, not cuttable. Cost is part of the screen items.",
+  "evidence": [
+   {
+    "path": "docs/plans/findings-ledger.md",
+    "line": 188,
+    "quote": "UX initiative (negative control for its measurement harness) | open (deferred, no code change"
+   }
+  ]
+ },
+ {
+  "id": "V2",
+  "source": "docs/plans/findings-ledger.md:189, :470",
+  "what": "'Select all' and 'Uninstall selected' are misaligned with each other and with the list.",
+  "bucket": "ux-item",
+  "screen": "main Installed tab bulk toolbar",
+  "reason": "Negative control. Measurable from bounding rectangles (left edges, baselines). Shares the toolbar item with MI10, MU8 and V1. Polish, not cuttable.",
+  "evidence": [
+   {
+    "path": "docs/plans/findings-ledger.md",
+    "line": 189,
+    "quote": "\"Select all\" and \"Uninstall selected\" are misaligned with each other and with the list"
+   },
+   {
+    "path": "src/webview/main/features/installed/InstalledTab.tsx",
+    "line": 214,
+    "quote": "<Toolbar label=\"Bulk actions\">"
+   }
+  ]
+ },
+ {
+  "id": "V3",
+  "source": "docs/plans/findings-ledger.md:190, :471",
+  "what": "The 'provisional' badge of an All Projects project header overlaps the list's right border.",
+  "bucket": "ux-item",
+  "screen": "main Installed tab: All Projects project header",
+  "reason": "Negative control. Measurable (badge rectangle against the list border). It belongs to the one header decision with SB10 and MI12. In main-installed-all.png the badge's right edge sits on the pane border (a judge-only observation that supplements the ledger). Polish, not cuttable.",
+  "evidence": [
+   {
+    "path": "docs/plans/findings-ledger.md",
+    "line": 190,
+    "quote": "The \"provisional\" badge of an All Projects project header overlaps the list's right border"
+   },
+   {
+    "path": "/private/tmp/claude-501/-Users-mattias-github-nuiget/d222be63-cd0e-406f-80db-8a5a6aa9b485/scratchpad/captures/39025149785/20261017T103410/main-installed-all.png",
+    "quote": "Utility.csproj header: 'provisional' badge flush with the list pane's right border"
+   }
+  ]
+ },
+ {
+  "id": "V4",
+  "source": "docs/plans/findings-ledger.md:191, :472",
+  "what": "Section headers have a small top margin and a large bottom margin.",
+  "bucket": "ux-item",
+  "screen": "main Installed tab section headers (direct and transitive)",
+  "reason": "Negative control. Measurable (top against bottom margin). Polish, not cuttable.",
+  "evidence": [
+   {
+    "path": "docs/plans/findings-ledger.md",
+    "line": 191,
+    "quote": "Section headers have a small top margin and a large bottom margin"
+   }
+  ]
+ },
+ {
+  "id": "V5",
+  "source": "docs/plans/findings-ledger.md:192, :473",
+  "what": "The spacing between the header, the toolbar, the section headers and the rows follows no single scale.",
+  "bucket": "ux-item",
+  "screen": "main panel vertical rhythm (Installed and Updates tabs)",
+  "reason": "Negative control. Measurable against the Design System's spacing scale. Polish, not cuttable.",
+  "evidence": [
+   {
+    "path": "docs/plans/findings-ledger.md",
+    "line": 192,
+    "quote": "The spacing between the header, the toolbar, the section headers and the rows follows no single scale"
+   }
+  ]
+ },
+ {
+  "id": "P7.4",
+  "source": "docs/plans/regression-matrix.md:19-20; docs/plans/2026-10-11-nuiget-2.0-execution-plan.md:519; docs/plans/STATUS.md:106; docs/release-checklist.md:36-37",
+  "what": "The manual VoiceOver/NVDA screen-reader pass was skipped.",
+  "bucket": "post-release-backlog",
+  "reason": "The owner's brief keeps the screen-reader pass out of this initiative, and the release checklist calls it a 2.0.1 item, not a release check. The pass is owner-run; the accessibility dimension supplies automated substitutes.",
+  "evidence": [
+   {
+    "path": "/Users/mattias/github/nuiget-ux-initiative-prompt.md",
+    "line": 158,
+    "quote": "the screen-reader pass stays out of scope and is recorded as such."
+   },
+   {
+    "path": "docs/release-checklist.md",
+    "line": 36,
+    "quote": "The manual screen-reader pass (plan item P7.4) is a 2.0.1 item, not a release check."
+   }
+  ]
+ },
+ {
+  "id": "RESTORE-HEADER",
+  "source": "docs/plans/regression-matrix.md:20; docs/plans/parity-audit-2026-10-16.md:110, :1512; docs/ux/interaction-model.md:87",
+  "what": "Interaction model §5 lists 'Restore project(s)' in the header, but only the transitive banners offer Restore.",
+  "bucket": "ux-item",
+  "screen": "main panel header",
+  "reason": "Restore is offered only by the transitive banners, and 1.x had no header Restore either. The header's action set is redesigned (V1). Decide: add the action (about 0.5 d, estimate; ops/restore exists) or drop 'header' from §5 (0.1 d). Doc and code must agree: not cuttable. No contract change.",
+  "evidence": [
+   {
+    "path": "docs/ux/interaction-model.md",
+    "line": 87,
+    "quote": "| Restore project(s) | Transitive banner, header | None. |"
+   },
+   {
+    "path": "src/webview/main/features/installed/TransitiveSection.tsx",
+    "line": 84,
+    "quote": "<Banner severity=\"warning\" data-testid=\"transitive-restore-banner\" action={{ label: 'Restore', onClick: transitive.restore }}>"
+   },
+   {
+    "path": "src/webview/shared/store/ops.tsx",
+    "line": 119,
+    "quote": "'ops/restore': 'restore',"
+   }
+  ]
+ },
+ {
+  "id": "DETAILS-CONTRAST",
+  "source": "docs/plans/parity-audit-2026-10-16.md:110, :1510 (outside the three named sources)",
+  "what": "The theme UI test lets incomplete colour-contrast nodes inside the details pane pass, so the pane's contrast is never measured.",
+  "bucket": "ux-item",
+  "screen": "main details pane (all six themes)",
+  "reason": "The tolerance is in theme.ui.test.ts. The critic found such nodes under every theme, and the closure footer keeps the item open. The redesigned details typography should remove the tolerance (an accessibility and harness gate): not cuttable. Cost about 0.5 d (estimate). No contract change.",
+  "evidence": [
+   {
+    "path": "src/test/ui/v2/theme.ui.test.ts",
+    "line": 167,
+    "quote": "expect(node.insideDetails, `incomplete node outside the details pane in the ${where}: ...`).to.equal(true);"
+   },
+   {
+    "path": "docs/plans/parity-audit-2026-10-16.md",
+    "line": 110,
+    "quote": "Restore action and the details-pane contrast tolerance stay open."
+   }
+  ]
+ },
+ {
+  "id": "DETAILS-GRID",
+  "source": "docs/plans/STATUS.md:1165, :1175 (outside the three named sources)",
+  "what": "The details actions grid never wraps; below about 300 px the whole pane scrolls sideways.",
+  "bucket": "ux-item",
+  "screen": "main details pane header: actions",
+  "reason": "The grid uses max-content tracks and the split goes down to 25 %. The brief requires every row of controls, details actions included, to have a minimum width and an overflow behaviour. Polish, not cuttable. Cost is part of the details header item. No contract change.",
+  "evidence": [
+   {
+    "path": "src/webview/main/main.css",
+    "line": 289,
+    "quote": "grid-template-columns: max-content minmax(0, max-content) max-content max-content;"
+   },
+   {
+    "path": "src/webview/main/MainShell.tsx",
+    "line": 62,
+    "quote": "const SPLIT = { min: 25, max: 75, initial: 35 };"
+   },
+   {
+    "path": "docs/plans/STATUS.md",
+    "line": 1165,
+    "quote": "Details grid at a narrow pane (fix-5; picked up by the owner's screenshot review or a 2.0.1 item)."
+   }
+  ]
+ },
+ {
+  "id": "MULTI-FOLDER",
+  "source": "docs/plans/STATUS.md:1167 (outside the three named sources)",
+  "what": "No named state renders a workspace with two folders, so the All Projects folder caption has never been seen.",
+  "bucket": "ux-item",
+  "screen": "main Installed and Updates tabs: All Projects with two workspace folders (P0 fixture and capture list)",
+  "reason": "A harness gap: the P0 fixture workspace and the capture list should include a two-folder state before the design is judged on it. Not cuttable. Cost is part of the P0 fixture item.",
+  "evidence": [
+   {
+    "path": "docs/plans/STATUS.md",
+    "line": 1167,
+    "quote": "No named state renders a workspace with two folders, so nobody has viewed it"
+   }
+  ]
+ },
+ {
+  "id": "LIST-RENDER-ALL",
+  "source": "docs/plans/STATUS.md:1168 (outside the three named sources)",
+  "what": "The single-project Installed list renders every row (ruling C-1, accepted knowingly).",
+  "bucket": "post-release-backlog",
+  "reason": "Performance only, and accepted. Reopen if the design changes the list structure or the performance research measures the scroll cost on a large project. Cost not estimated. No contract change.",
+  "evidence": [
+   {
+    "path": "docs/plans/STATUS.md",
+    "line": 1168,
+    "quote": "Single-project Installed tab renders every row (ruling C-1, accepted knowingly); one line for the 2.0.1 performance backlog"
+   }
+  ]
+ },
+ {
+  "id": "TF8-WATCHER",
+  "source": "docs/plans/STATUS.md:1069 (outside the three named sources)",
+  "what": "A .csproj create event that VS Code never delivers is still undetected host-side.",
+  "bucket": "post-release-backlog",
+  "reason": "Host hardening with no screen; the test side was fixed. Marked a 2.0.1 candidate by the P9 review. Cost not estimated. No contract change.",
+  "evidence": [
+   {
+    "path": "docs/plans/STATUS.md",
+    "line": 1069,
+    "quote": "a create event VS Code never delivers is still undetected host-side"
+   }
+  ]
+ },
+ {
+  "id": "METADATA-HEAD",
+  "source": "docs/plans/STATUS.md:1071 (outside the three named sources)",
+  "what": "metadataResolver.fromSource starts a flat-container HEAD for every source it tries, even when the metadata lookup then fails.",
+  "bucket": "post-release-backlog",
+  "reason": "One wasted HEAD per missed source; harmless (.catch). Core only. Cost at most 0.25 d (estimate). No contract change.",
+  "evidence": [
+   {
+    "path": "src/core/feeds/metadataResolver.ts",
+    "line": 89,
+    "quote": "const sizeTask = source.endpoints.packageBaseAddress ? this.clients.flat.packageSize(source, packageId, version, signal).catch(() => undefined) : undefined;"
+   }
+  ]
+ },
+ {
+  "id": "ADR-008-AMEND",
+  "source": "docs/plans/STATUS.md:1072 (outside the three named sources)",
+  "what": "ADR-008 does not mention the ErrorBoundary that P9.9 names it as the home of.",
+  "bucket": "post-release-backlog",
+  "reason": "A one-line ADR amendment behind the sentinel. Fold it into the first UX commit that opens docs/adr (the plan commits ADR-010+ at approval), where it costs nothing. Contract change: yes (ADR).",
+  "evidence": [
+   {
+    "path": "docs/adr/008-webview-architecture.md",
+    "quote": "grep -ci 'error\\|boundary' → 0"
+   },
+   {
+    "path": "docs/plans/STATUS.md",
+    "line": 1072,
+    "quote": "A one-line amendment at the next contract item that opens the sentinel; not now."
+   }
+  ]
+ },
+ {
+  "id": "R21-TEST",
+  "source": "docs/plans/STATUS.md:1243, :1262 (outside the three named sources)",
+  "what": "Matrix row R21 counts as covered by a test that feeds the manifest defaults, so a hard-coded 20/5 would also pass.",
+  "bucket": "post-release-backlog",
+  "reason": "A test-strength caveat on a covered row, rated a 2.0.1 item by the P10 review. Cost at most 0.25 d (estimate). No contract change.",
+  "evidence": [
+   {
+    "path": "docs/plans/STATUS.md",
+    "line": 1243,
+    "quote": "2.0.1: set non-default values in the fixture of one dedicated test and expect them in the Catalog calls"
+   }
+  ]
+ },
+ {
+  "id": "R15-TEST",
+  "source": "docs/plans/STATUS.md:1244, :1262 (outside the three named sources)",
+  "what": "Matrix row R15 has no test of the Solution Explorer menu placement.",
+  "bucket": "post-release-backlog",
+  "reason": "A test addition, rated 2.0.1 by the P10 review. Cost at most 0.25 d (estimate). No contract change.",
+  "evidence": [
+   {
+    "path": "docs/plans/STATUS.md",
+    "line": 1244,
+    "quote": "2.0.1: a fourth `it` in manifest-menus.test.ts for the entry, its when and its group"
+   }
+  ]
+ },
+ {
+  "id": "MATRIX-HOLES",
+  "source": "docs/plans/STATUS.md:1251 (outside the three named sources)",
+  "what": "check-regression-matrix.mjs does not flag a gap row whose title already exists, and does not check a row's kind against its suite directory.",
+  "bucket": "post-release-backlog",
+  "reason": "Rated '2.0.1 at most' by the P10 review; moot at 0 gap rows. Cost at most 0.25 d (estimate). No contract change.",
+  "evidence": [
+   {
+    "path": "docs/plans/STATUS.md",
+    "line": 1251,
+    "quote": "Two small holes, 2.0.1 at most"
+   }
+  ]
+ },
+ {
+  "id": "DEP-SWEEP",
+  "source": "docs/plans/STATUS.md:1016, :1030, :4426 (outside the three named sources)",
+  "what": "msw and the integration setup's devDependencies have no importer left.",
+  "bucket": "post-release-backlog",
+  "reason": "Dev-only; never in the VSIX. The sweep was deferred to 2.0.1 by the P8.2 ruling. Cost at most 0.25 d (estimate). No contract change.",
+  "evidence": [
+   {
+    "path": "docs/plans/STATUS.md",
+    "line": 1016,
+    "quote": "`msw` has no importer left ... The sweep stays a 2.0.1 item as the P8.2 ruling said"
+   },
+   {
+    "path": "package.json",
+    "quote": "devDependencies.msw = ^2.15.0; grep -rl msw src scripts vitest.config.mts → empty"
+   }
+  ]
+ },
+ {
+  "id": "CACHED-FIDELITY",
+  "source": "docs/plans/2026-10-11-nuiget-2.0-execution-plan.md:526; docs/plans/STATUS.md:4430 (outside the three named sources)",
+  "what": "cachedFidelity stays in the frozen contract; its deletion is a contract item.",
+  "bucket": "post-release-backlog",
+  "reason": "Dead-surface cleanup behind the sentinel, with no user effect. Cost at most 0.5 d plus a ⚑ (estimate). Contract change: yes (src/core/contracts.ts).",
+  "evidence": [
+   {
+    "path": "src/core/contracts.ts",
+    "line": 323,
+    "quote": "cachedFidelity(projectPath: string): Fidelity | undefined;"
+   },
+   {
+    "path": "docs/plans/2026-10-11-nuiget-2.0-execution-plan.md",
+    "line": 526,
+    "quote": "Stays in 2.0.0; its deletion is a 2.0.1 contract item behind the sentinel (P8.2 ruling)."
+   }
+  ]
+ },
+ {
+  "id": "PR-TEMPLATE",
+  "source": "docs/plans/STATUS.md:4534 (outside the three named sources)",
+  "what": "The pull-request template names only deleted 1.x files.",
+  "bucket": "post-release-backlog",
+  "reason": "Repository hygiene with no user effect; the overhaul's only pull request is the release one. Cost at most 0.1 d (estimate). No contract change.",
+  "evidence": [
+   {
+    "path": ".github/pull_request_template.md",
+    "line": 44,
+    "quote": "| Main Panel | `src/webview/NuGetPanel.ts` | |"
+   },
+   {
+    "path": "docs/plans/STATUS.md",
+    "line": 4534,
+    "quote": "`.github/pull_request_template.md` names only deleted 1.x files"
+   }
+  ]
+ },
+ {
+  "id": "RELEASE-MECHANICS",
+  "source": "docs/plans/STATUS.md:4534; docs/release-checklist.md:1-28, :62-97 (outside the three named sources)",
+  "what": "The release checklist is filled for the P10.1 build and its P9-approved screenshots, and CI packages no pre-release VSIX, while the overhaul ships as the 2.0.0 pre-release.",
+  "bucket": "pre-release-blocker",
+  "reason": "The overhaul replaces the UI that the checklist's screenshot approval (run 39025149785) covers. vsce refuses --pre-release for a VSIX not packaged as one, so route A needs a local package by the owner, or a one-step ci.yml change that the owner lands. This must be settled before the first publication: a last-phase item (about 0.5 d, estimate) plus an owner patch for ci.yml. No contract change.",
+  "evidence": [
+   {
+    "path": "docs/release-checklist.md",
+    "line": 28,
+    "quote": "| Approved screenshots | CI run [39025149785]"
+   },
+   {
+    "path": "docs/release-checklist.md",
+    "line": 64,
+    "quote": "vsce 4.0.0 refuses `vsce publish --pre-release` for a VSIX that was not packaged as a pre-release"
+   },
+   {
+    "path": "docs/plans/STATUS.md",
+    "line": 4534,
+    "quote": "a `--pre-release` CI artifact is a one-step `ci.yml` addition if the owner wants pre-releases from CI"
+   },
+   {
+    "path": "/Users/mattias/github/nuiget-ux-initiative-prompt.md",
+    "line": 46,
+    "quote": "it ships as the 2.0.0 pre-release"
+   }
+  ]
+ }
+]

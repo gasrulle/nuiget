@@ -1,0 +1,344 @@
+import * as fs from 'fs';
+import * as path from 'path';
+import { ActivityBar, By, EditorView, InputBox, Key, VSBrowser, Workbench } from 'vscode-extension-tester';
+import { enterMainWebview, measureLoadedRows, openMainPanel } from './mainWebview';
+import { driverOf, enterSidebarWebview, findByTestId, leaveWebview, openSidebarView, poll } from './sidebarWebview';
+
+/**
+ * One-off probe for the UX initiative (planning session, 2026-10-22). Not a test of the product: it writes
+ * (1) the resolved `--vscode-*` custom properties of the main-panel webview under six themes, (2) measurements of
+ * native workbench views (Extensions, Settings editor, Source Control, Search, pane headers, tabs, quick input) and
+ * (3) the bounding rects and computed styles of every nUIget element in three named states. Output goes to
+ * NUIGET_PROBE_OUT (default out/probe). Run in a throwaway worktree only.
+ */
+
+const OUT = process.env.NUIGET_PROBE_OUT ?? path.resolve('out/probe');
+
+const THEMES = [
+    { slug: 'dark-modern', labels: ['Dark Modern', 'Default Dark Modern'], bodyClass: 'vscode-dark' },
+    { slug: 'light-modern', labels: ['Light Modern', 'Default Light Modern'], bodyClass: 'vscode-light' },
+    { slug: 'dark-high-contrast', labels: ['Dark High Contrast', 'Default High Contrast'], bodyClass: 'vscode-high-contrast' },
+    { slug: 'light-high-contrast', labels: ['Light High Contrast', 'Default High Contrast Light'], bodyClass: 'vscode-high-contrast-light' },
+    { slug: 'dark-2026', labels: ['Dark 2026'], bodyClass: 'vscode-dark' },
+    { slug: 'light-2026', labels: ['Light 2026'], bodyClass: 'vscode-light' },
+] as const;
+type Theme = (typeof THEMES)[number];
+
+/** Runs in a webview: every `--vscode-*` property VS Code put on the root, plus the theme attributes and fonts. */
+const DUMP_VARS = `
+    const style = document.documentElement.style;
+    const vars = {};
+    for (let i = 0; i < style.length; i++) {
+        const name = style[i];
+        if (name.startsWith('--vscode-')) { vars[name] = style.getPropertyValue(name).trim(); }
+    }
+    const body = document.body;
+    const cs = getComputedStyle(body);
+    return JSON.stringify({
+        vars,
+        bodyClass: body.className,
+        themeKind: body.dataset.vscodeThemeKind ?? null,
+        themeName: body.dataset.vscodeThemeName ?? null,
+        bodyFont: { family: cs.fontFamily, size: cs.fontSize, weight: cs.fontWeight, lineHeight: cs.lineHeight, color: cs.color, background: cs.backgroundColor },
+        dpr: window.devicePixelRatio,
+        viewport: [window.innerWidth, window.innerHeight],
+    });
+`;
+
+/** Runs in any document: rect + computed styles of every element matching the selectors given (capped). */
+const MEASURE = `
+    const specs = arguments[0];
+    const cap = arguments[1] || 400;
+    const num = v => Math.round(v * 100) / 100;
+    const describe = n => {
+        const r = n.getBoundingClientRect();
+        const s = getComputedStyle(n);
+        return {
+            tag: n.tagName.toLowerCase(),
+            classes: typeof n.className === 'string' ? n.className : '',
+            testId: n.getAttribute('data-testid'),
+            role: n.getAttribute('role'),
+            rect: { x: num(r.x), y: num(r.y), w: num(r.width), h: num(r.height) },
+            padding: [s.paddingTop, s.paddingRight, s.paddingBottom, s.paddingLeft],
+            margin: [s.marginTop, s.marginRight, s.marginBottom, s.marginLeft],
+            gap: s.gap, columnGap: s.columnGap, rowGap: s.rowGap,
+            display: s.display, position: s.position, alignItems: s.alignItems, justifyContent: s.justifyContent,
+            height: s.height, minHeight: s.minHeight, lineHeight: s.lineHeight,
+            fontSize: s.fontSize, fontWeight: s.fontWeight, fontFamily: s.fontFamily, letterSpacing: s.letterSpacing, textTransform: s.textTransform,
+            border: [s.borderTopWidth, s.borderRightWidth, s.borderBottomWidth, s.borderLeftWidth].join(' '),
+            borderColor: s.borderTopColor, borderRadius: s.borderRadius, outline: s.outline, boxShadow: s.boxShadow,
+            background: s.backgroundColor, color: s.color, opacity: s.opacity,
+            scroll: { sw: n.scrollWidth, cw: n.clientWidth, sh: n.scrollHeight, ch: n.clientHeight },
+            text: (n.textContent || '').trim().replace(/\\s+/g, ' ').slice(0, 60),
+        };
+    };
+    const out = {};
+    for (const spec of specs) {
+        const nodes = Array.from(document.querySelectorAll(spec.css)).slice(0, spec.max || cap);
+        out[spec.name] = nodes.map(describe);
+    }
+    out.__document = { dpr: window.devicePixelRatio, viewport: [window.innerWidth, window.innerHeight], bodyFont: getComputedStyle(document.body).font, workbenchClass: (document.querySelector('.monaco-workbench') || {}).className || null, bodyClass: document.body.className };
+    return JSON.stringify(out);
+`;
+
+const NUIGET_SPECS = [
+    { name: 'all', css: '[class*="nuiget-"], [data-testid]', max: 600 },
+    { name: 'options', css: '[role="option"]' },
+    { name: 'buttons', css: 'button' },
+    { name: 'inputs', css: 'input, select' },
+    { name: 'headings', css: 'h1, h2, h3, h4' },
+    { name: 'images', css: 'img, svg' },
+];
+
+const WORKBENCH_SPECS = [
+    { name: 'activitybar', css: '.part.activitybar .action-item', max: 8 },
+    { name: 'sidebar_title', css: '.part.sidebar .composite.title, .part.sidebar .composite.title .title-label, .part.sidebar .composite.title .title-actions .action-item', max: 12 },
+    { name: 'pane_headers', css: '.part.sidebar .pane-header, .part.sidebar .pane-header .title, .part.sidebar .pane-header .codicon, .part.sidebar .pane-header .monaco-count-badge, .part.sidebar .pane-header .actions .action-item', max: 40 },
+    { name: 'list_rows', css: '.part.sidebar .monaco-list-row', max: 20 },
+    { name: 'ext_rows', css: '.extensions-viewlet .extension-list-item', max: 8 },
+    { name: 'ext_parts', css: '.extensions-viewlet .extension-list-item .icon-container, .extensions-viewlet .extension-list-item .icon, .extensions-viewlet .extension-list-item .name, .extensions-viewlet .extension-list-item .description, .extensions-viewlet .extension-list-item .publisher, .extensions-viewlet .extension-list-item .publisher-name, .extensions-viewlet .extension-list-item .footer, .extensions-viewlet .extension-list-item .header, .extensions-viewlet .extension-list-item .monaco-action-bar, .extensions-viewlet .extension-list-item .monaco-action-bar .action-label, .extensions-viewlet .extension-list-item .ratings, .extensions-viewlet .extension-list-item .install-count, .extensions-viewlet .extension-list-item .verified-publisher', max: 60 },
+    { name: 'ext_search', css: '.extensions-viewlet .header, .extensions-viewlet .monaco-inputbox, .extensions-viewlet .monaco-inputbox input, .extensions-viewlet .extensions-list', max: 10 },
+    { name: 'badges', css: '.monaco-count-badge, .monaco-badge', max: 20 },
+    { name: 'scm', css: '.scm-view .monaco-list-row, .scm-view .scm-editor, .scm-view .scm-editor .monaco-inputbox, .scm-view .pane-header, .scm-view .scm-provider, .scm-view .monaco-button, .scm-view .monaco-text-button', max: 30 },
+    { name: 'search', css: '.search-view .search-widget .monaco-inputbox, .search-view .search-widget .monaco-inputbox input, .search-view .monaco-list-row, .search-view .messages, .search-view .search-widget .input-box .controls .monaco-custom-toggle', max: 30 },
+    { name: 'settings', css: '.settings-editor .setting-item, .settings-editor .setting-item-title, .settings-editor .setting-item-label, .settings-editor .setting-item-category, .settings-editor .setting-item-description, .settings-editor .setting-item-control, .settings-editor .setting-item-control .monaco-select-box, .settings-editor .setting-item-control .monaco-inputbox, .settings-editor .setting-item-control .monaco-inputbox input, .settings-editor .setting-value-checkbox, .settings-editor .setting-item-control .monaco-button, .settings-editor .setting-item-control .monaco-text-button, .settings-editor .settings-header-widget, .settings-editor .search-container .monaco-inputbox, .settings-editor .settings-toc-container .monaco-list-row, .settings-editor .settings-group-title-label, .settings-editor .setting-item-contents', max: 120 },
+    { name: 'tabs', css: '.part.editor .title.tabs, .part.editor .tabs-container .tab, .part.editor .tab .tab-label, .part.editor .tab .tab-actions, .part.editor .editor-actions .action-item', max: 20 },
+    { name: 'quickinput', css: '.quick-input-widget, .quick-input-widget .quick-input-box .monaco-inputbox, .quick-input-widget .quick-input-box input, .quick-input-widget .quick-input-list .monaco-list-row, .quick-input-widget .quick-input-list .quick-input-list-entry, .quick-input-widget .quick-input-list .label-name, .quick-input-widget .quick-input-list .label-description, .quick-input-widget .quick-input-list .quick-input-list-separator', max: 40 },
+    { name: 'statusbar', css: '.part.statusbar, .part.statusbar .statusbar-item', max: 10 },
+    { name: 'panel', css: '.part.panel .title, .part.panel .panel-switcher-container .action-item', max: 10 },
+    { name: 'webviews', css: 'iframe.webview, .webview, .editor-group-container .editor-container, .part.sidebar .content', max: 10 },
+    { name: 'notifications', css: '.notifications-toasts .notification-toast, .notification-list-item, .notification-list-item-message, .notification-list-item-toolbar-container .action-item', max: 20 },
+    { name: 'buttons', css: '.monaco-text-button, .monaco-button', max: 20 },
+    { name: 'links', css: '.monaco-link, a.monaco-link', max: 10 },
+];
+
+function write(name: string, data: unknown): void {
+    fs.mkdirSync(path.dirname(path.join(OUT, name)), { recursive: true });
+    fs.writeFileSync(path.join(OUT, name), typeof data === 'string' ? data : JSON.stringify(data, null, 2));
+}
+
+async function executeJson<T>(script: string, ...args: unknown[]): Promise<T> {
+    const text = await driverOf().executeScript<string>(script, ...args);
+    return JSON.parse(text) as T;
+}
+
+async function selectTheme(theme: Theme): Promise<void> {
+    await poll(async () => {
+        await driverOf().switchTo().defaultContent();
+        await new Workbench().executeCommand('Preferences: Color Theme');
+        const input = await InputBox.create();
+        const offered: string[] = [];
+        for (const label of theme.labels) {
+            await input.setText(label);
+            for (const pick of await input.getQuickPicks()) {
+                const shown = await pick.getLabel();
+                if (shown === label) {
+                    await pick.select();
+                    return true;
+                }
+                offered.push(shown);
+            }
+        }
+        await input.cancel();
+        throw new Error(`offered: ${offered.map(label => JSON.stringify(label)).join(', ')}`);
+    }, `the theme "${theme.labels[0]}" in the quick pick`, 60_000);
+}
+
+async function waitForBodyClass(theme: Theme): Promise<void> {
+    await poll(async () => {
+        const classes = await driverOf().executeScript<string>('return document.body.className;');
+        const list = classes.split(/\s+/);
+        const other = theme.bodyClass === 'vscode-high-contrast' && list.includes('vscode-high-contrast-light');
+        return list.includes(theme.bodyClass) && !other ? true : undefined;
+    }, `the body class ${theme.bodyClass}`, 60_000);
+}
+
+async function waitForTransitions(): Promise<void> {
+    await poll(async () => {
+        const running = await driverOf().executeScript<number>(
+            'return document.getAnimations().filter(animation => animation instanceof CSSTransition && animation.playState === "running").length;');
+        return running === 0 ? true : undefined;
+    }, 'the colour transitions to end', 30_000);
+}
+
+async function measureWorkbench(name: string, extra: Record<string, unknown> = {}): Promise<void> {
+    await driverOf().switchTo().defaultContent();
+    const data = await executeJson<Record<string, unknown>>(MEASURE, WORKBENCH_SPECS, 400);
+    write(`workbench/${name}.json`, { ...data, ...extra });
+}
+
+async function measureNuiget(name: string): Promise<void> {
+    const data = await executeJson<Record<string, unknown>>(MEASURE, NUIGET_SPECS, 600);
+    write(`nuiget/${name}.json`, data);
+}
+
+async function screenshotTo(name: string): Promise<void> {
+    await VSBrowser.instance.takeScreenshot(`probe-${name}`);
+}
+
+describe('UX probe (not a product test)', () => {
+    before(async function () {
+        this.timeout(300_000);
+        fs.mkdirSync(OUT, { recursive: true });
+        await openSidebarView();
+        await openMainPanel();
+        await enterMainWebview();
+        // Rows with loaded icons: the first list needs the SDK probe, the sources and a feed read per package.
+        await findByTestId('installed-list', 120_000);
+        await measureLoadedRows('installed-list', 120_000);
+        await leaveWebview();
+    });
+
+    it('dumps the --vscode-* variables of the main webview under six themes', async function () {
+        this.timeout(600_000);
+        const summary: Record<string, unknown> = {};
+        for (const theme of THEMES) {
+            try {
+                await selectTheme(theme);
+                await enterMainWebview();
+                await waitForBodyClass(theme);
+                await waitForTransitions();
+                const dump = await executeJson<{ vars: Record<string, string>; themeName: string | null }>(DUMP_VARS);
+                write(`themes/${theme.slug}.json`, dump);
+                summary[theme.slug] = { count: Object.keys(dump.vars).length, themeName: dump.themeName };
+                if (theme.slug === 'dark-modern' || theme.slug === 'light-modern' || theme.slug === 'dark-high-contrast') {
+                    await measureNuiget(`main-installed-single.${theme.slug}`);
+                }
+                await leaveWebview();
+                await screenshotTo(`main-installed-single.${theme.slug}`);
+            } catch (error) {
+                summary[theme.slug] = { error: String(error) };
+                await leaveWebview();
+            }
+        }
+        await selectTheme(THEMES[0]);
+        await enterMainWebview();
+        await waitForBodyClass(THEMES[0]);
+        await waitForTransitions();
+        await leaveWebview();
+        write('themes/summary.json', summary);
+    });
+
+    it('measures the nUIget surfaces in three states (Dark Modern)', async function () {
+        this.timeout(600_000);
+        // State 1: main panel, Installed tab, single project, first row selected.
+        await enterMainWebview();
+        await measureLoadedRows('installed-list', 120_000);
+        const firstOption = await driverOf().findElements(By.css('[data-testid="installed-list"] [role="option"]'));
+        if (firstOption.length > 0) {
+            await firstOption[0].click();
+        }
+        await findByTestId('package-details-panel', 60_000);
+        await waitForTransitions();
+        await measureNuiget('main-installed-single');
+        await leaveWebview();
+        await measureWorkbench('with-main-installed-single');
+        await screenshotTo('main-installed-single');
+
+        // State 2: main panel, Updates tab.
+        await enterMainWebview();
+        await (await findByTestId('updates-tab')).click();
+        await findByTestId('updates-list', 120_000);
+        await findByTestId('package-row-newtonsoft.json', 120_000);
+        const tab = await findByTestId('updates-tab');
+        await poll(async () => (/\d/.test((await tab.getAttribute('textContent')) ?? '') ? true : undefined), 'a count on the Updates tab', 30_000);
+        await waitForTransitions();
+        await measureNuiget('main-updates');
+        await screenshotTo('main-updates');
+        await (await findByTestId('installed-tab')).click();
+        await leaveWebview();
+
+        // State 3: sidebar sections.
+        await enterSidebarWebview();
+        await findByTestId('sidebar-installed-list', 120_000);
+        await findByTestId('package-row-newtonsoft.json', 120_000);
+        await poll(async () => ((await driverOf().findElements(By.css('[data-testid="sidebar-updates-list"] [role="option"]'))).length > 0 ? true : undefined), 'the update row', 120_000);
+        await waitForTransitions();
+        await measureNuiget('sidebar-sections');
+        await leaveWebview();
+        await screenshotTo('sidebar-sections');
+    });
+
+    it('measures the native workbench views (Dark Modern)', async function () {
+        this.timeout(600_000);
+        const driver = driverOf();
+        await driver.switchTo().defaultContent();
+        const bar = new ActivityBar();
+
+        // Extensions view: rows of the Installed section, then hover and select the first row.
+        const extensions = await bar.getViewControl('Extensions');
+        if (extensions) {
+            await extensions.openView();
+            await poll(async () => ((await driver.findElements(By.css('.extensions-viewlet .extension-list-item'))).length > 0 ? true : undefined), 'extension rows', 60_000);
+            await measureWorkbench('extensions');
+            await screenshotTo('workbench-extensions');
+            const rows = await driver.findElements(By.css('.extensions-viewlet .extension-list-item'));
+            if (rows.length > 0) {
+                const stateOf = async (label: string): Promise<unknown> => executeJson(
+                    `const n = document.querySelectorAll(arguments[0])[0]; const row = n ? n.closest('.monaco-list-row') : null; const s = row ? getComputedStyle(row) : null;
+                     return JSON.stringify({ label: arguments[1], rowClasses: row ? row.className : null, background: s ? s.backgroundColor : null, outline: s ? s.outline : null, color: s ? s.color : null });`,
+                    '.extensions-viewlet .extension-list-item', label);
+                const rest = await stateOf('rest');
+                await driver.actions({ async: true, bridge: true }).move({ origin: rows[0] }).perform();
+                await new Promise(resolve => setTimeout(resolve, 300));
+                const hover = await stateOf('hover');
+                await rows[0].click();
+                await new Promise(resolve => setTimeout(resolve, 300));
+                const selected = await stateOf('selected-focused');
+                await screenshotTo('workbench-extensions-selected');
+                write('workbench/extensions-states.json', { rest, hover, selected });
+                await driver.actions({ async: true, bridge: true }).sendKeys(Key.ESCAPE).perform();
+            }
+        }
+
+        // Source Control view (no repository: the "open folder / initialize" state still has buttons and a header).
+        const scm = await bar.getViewControl('Source Control');
+        if (scm) {
+            await scm.openView();
+            await new Promise(resolve => setTimeout(resolve, 1500));
+            await measureWorkbench('scm');
+            await screenshotTo('workbench-scm');
+        }
+
+        // Search view: the input and its toggles.
+        const search = await bar.getViewControl('Search');
+        if (search) {
+            await search.openView();
+            await new Promise(resolve => setTimeout(resolve, 1500));
+            await measureWorkbench('search');
+            await screenshotTo('workbench-search');
+        }
+
+        // Explorer: pane headers (Outline, Timeline) and tree rows.
+        const explorer = await bar.getViewControl('Explorer');
+        if (explorer) {
+            await explorer.openView();
+            await new Promise(resolve => setTimeout(resolve, 1500));
+            await measureWorkbench('explorer');
+            await screenshotTo('workbench-explorer');
+        }
+
+        // Settings editor: items, controls, TOC, search.
+        await new Workbench().executeCommand('Preferences: Open Settings (UI)');
+        await poll(async () => ((await driver.findElements(By.css('.settings-editor .setting-item'))).length > 0 ? true : undefined), 'settings items', 60_000);
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        await measureWorkbench('settings');
+        await screenshotTo('workbench-settings');
+        await new EditorView().closeEditor('Settings').catch(() => undefined);
+
+        // Quick input (command palette) rows and input.
+        await poll(async () => {
+            await driver.switchTo().defaultContent();
+            await new Workbench().openCommandPrompt();
+            return true;
+        }, 'the command palette', 60_000);
+        await new Promise(resolve => setTimeout(resolve, 800));
+        await measureWorkbench('quickinput');
+        await screenshotTo('workbench-quickinput');
+        await driver.actions({ async: true, bridge: true }).sendKeys(Key.ESCAPE).perform();
+
+        // Back to nUIget so the window ends where it started.
+        await openSidebarView();
+        await openMainPanel();
+    });
+});
