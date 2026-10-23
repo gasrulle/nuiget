@@ -9,7 +9,9 @@ import { describe, expect, it } from 'vitest';
  * one package pinned to a version with a permanent advisory, and a project that resolves SDK 8 (Unsupported).
  */
 const ROOT = path.join(process.cwd(), 'src/test/ui/fixtures/dense-workspace');
-const read = (relative: string): string => readFileSync(path.join(ROOT, relative), 'utf8');
+// Windows runners check text files out with CRLF line endings.
+const text = (file: string): string => readFileSync(file, 'utf8').replace(/\r\n/g, '\n');
+const read = (relative: string): string => text(path.join(ROOT, relative));
 
 interface Reference { id: string; version: string | undefined }
 
@@ -90,7 +92,7 @@ describe('the dense fixture workspace (UX-P0.6)', () => {
 
 /** The `ui` job of the CI workflow, from its key to the next job. */
 function uiJob(): string {
-    const workflow = readFileSync(path.join(process.cwd(), '.github/workflows/ci.yml'), 'utf8');
+    const workflow = text(path.join(process.cwd(), '.github/workflows/ci.yml'));
     const start = workflow.indexOf('\n  ui:\n');
     expect(start, 'the ui job').toBeGreaterThan(-1);
     const end = workflow.slice(start + 1).search(/\n {2}[a-z][\w-]*:\n/);
