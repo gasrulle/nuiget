@@ -114,6 +114,19 @@ describe('the measurement rules (UX-P0.10)', () => {
         expect(close.find(line => line.name === 'DS-GRID-2b@main-installed-single')).toMatchObject({ pass: true });
     });
 
+    it('reads WebDriver\'s null as absent: not measurable, never "null" and never a throw', () => {
+        // executeScript returns the collector's undefined as null.
+        const fromDriver = JSON.parse(JSON.stringify({
+            ...layout({ mainLefts: { ...at16, row: undefined }, mainRegionLeft: 0, toolbars: [{ id: 'installed-toolbar', insets: undefined }], sections: [{ id: 'transitive', variant: 'group', insets: undefined, above: 20, below: undefined }] }),
+        }, (_key, value: unknown) => (value === undefined ? null : value))) as Layout;
+        expect(fromDriver.mainLefts.row).toBeNull();
+        const lines = measureLines('main-installed-single', fromDriver, 'modern');
+        expect(lines.find(line => line.name === 'PF-6@main-installed-single')).toMatchObject({ pass: false, value: 'not measurable (row)' });
+        expect(lines.find(line => line.name === 'DS-GRID-2b@main-installed-single')).toMatchObject({ pass: false, value: 'not measurable' });
+        expect(lines.find(line => line.name === 'DS-INSET-2@main-installed-single/toolbars')).toMatchObject({ value: 'not measurable' });
+        expect(lines.some(line => line.value.includes('null'))).toBe(false);
+    });
+
     it('measures the sidebar\'s insets against its look', () => {
         const sidebar = { rootLeft: 0, titles: [28], names: [28], search: 8 };
         const modern = measureLines('sidebar-sections', layout({ sidebar }), 'modern').find(line => line.name === 'DS-INSET-1@sidebar-sections');

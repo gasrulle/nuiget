@@ -298,10 +298,21 @@ const firstNameBelow = (box, title) => {
     }
     return undefined;
 };
+// A title scrolled out of a clipping ancestor (or the viewport) is not on screen: its gaps are not measured.
+const inView = (rect, el) => {
+    for (let a = el.parentElement; a; a = a.parentElement) {
+        if (/auto|scroll|hidden|clip/.test(getComputedStyle(a).overflowY)) {
+            const clip = a.getBoundingClientRect();
+            if (rect.bottom <= clip.top + 0.5 || rect.top >= clip.bottom - 0.5) return false;
+        }
+    }
+    return rect.bottom > 0 && rect.top < window.innerHeight;
+};
 const sections = [...scope.querySelectorAll('[data-testid^="section-box-"]')].filter(visible).map(box => {
     const title = union(leafRects(box.querySelector('.nuiget-section-title') ?? box));
-    const edge = title ? lastEdgeAbove(box) : undefined;
-    const name = title ? firstNameBelow(box, title) : undefined;
+    const shown = title && inView(title, box);
+    const edge = shown ? lastEdgeAbove(box) : undefined;
+    const name = shown ? firstNameBelow(box, title) : undefined;
     return {
         id: box.dataset.testid.replace(/^section-box-/, ''),
         variant: box.dataset.variant ?? '',
@@ -479,8 +490,23 @@ function evaluate(definition: RuleDefinition, scope: Scope, layout: Layout, look
     }
 }
 
+/** WebDriver returns the collector's `undefined` as `null`; the rules read absent as `undefined`. */
+function withoutNulls<T>(value: T): T {
+    if (value === null) {
+        return undefined as T;
+    }
+    if (Array.isArray(value)) {
+        return value.map(withoutNulls) as T;
+    }
+    if (typeof value === 'object') {
+        return Object.fromEntries(Object.entries(value as object).map(([key, entry]) => [key, withoutNulls(entry)])) as T;
+    }
+    return value;
+}
+
 /** Every line of a state: one per rule and scope that applies, in `RULES` order. */
-export function measureLines(state: string, layout: Layout, look: 'modern' | 'classic'): MeasureLine[] {
+export function measureLines(state: string, collected: Layout, look: 'modern' | 'classic'): MeasureLine[] {
+    const layout = withoutNulls(collected);
     const group = stateGroup(state);
     const lines: MeasureLine[] = [];
     for (const definition of RULES) {
