@@ -936,7 +936,11 @@ These parts are the current truth for the build, test and release pipeline.
   `src/test/ui/v2/states.ts`, measures it with the rules of `src/test/ui/v2/measure.ts` (one `[measure]` line per
   rule and scope that applies) and writes its webview crop with `scripts/crop-png.mjs`; a red `hard` rule fails the
   state after its crop is written, a `pending` rule names the item that flips it and is only printed, and the run ends
-  with the pending list. A pending state names the item that renders its markers and is never captured. The two suites divide the work by what each can see. The
+  with the pending list. Before the first state the run measures the workbench's own controls in its look (the
+  Extensions view and an extension's editor, the Settings editor, the command palette; `src/test/ui/v2/workbench.ts`),
+  prints one `[workbench]` line per control and writes `workbench.<look>.json` next to the crops: the height rules
+  compare a control with the workbench's of the same run. A pending state names the item that renders its markers and
+  is never captured. The two suites divide the work by what each can see. The
   extension-host suite (`src/test/e2e/v2-*.e2e.test.ts`, one file per legacy e2e file since P5.12a, shared steps in `v2Support.ts`)
   shows that the extension activates,
   that every contributed command answers, that the main panel is one tab that closes and opens again, and that

@@ -1,10 +1,12 @@
 import { execFileSync } from 'child_process';
+import * as fs from 'fs';
 import * as path from 'path';
 import { By, EditorView, Key, VSBrowser } from 'vscode-extension-tester';
 import { selectTheme, setPanelWidth, setSidebarWidth, webviewRect, windowSize } from '../layout';
-import { COLLECT_LAYOUT, formatLine, type Layout, measureLines, RAMP, TOLERANCES } from '../measure';
+import { COLLECT_LAYOUT, formatLine, type Layout, measureLines, RAMP, TOLERANCES, type WorkbenchHeights } from '../measure';
 import { chooseProjectCommitted, enterMainWebview, openMainPanel, optionFor, untilProjects } from '../mainWebview';
 import { driverOf, enterSidebarWebview, findByTestId, leaveWebview, openSidebarView, poll, waitForTestIdGone, waitForText } from '../sidebarWebview';
+import { measureWorkbench } from '../workbench';
 import { type Capture, captureFile, floorCaptures, isReady, type Lane, type Look, matrixCaptures, MATRIX_THEMES, type NamedState, PANEL_WIDTH, SIDEBAR_WIDTH, STATES, type Theme, THEMES } from '../states';
 
 /**
@@ -360,6 +362,9 @@ async function shoot(state: NamedState, capture: Capture): Promise<void> {
 /** The pending lines of this run, printed again at its end. */
 const pendingLines: string[] = [];
 
+/** The workbench's own controls, measured once at the start of the run (UX-P0.11): helper 3's parity. */
+let workbench: WorkbenchHeights = {};
+
 /**
  * Measures the state the driver has just reached (UX-P0.10, `measure.ts`): one `[measure]` line per rule that applies;
  * returns the names of the red `hard` rules.
@@ -368,7 +373,7 @@ async function measure(state: NamedState, capture: Capture): Promise<string[]> {
     await (state.surface === 'main' ? enterMainWebview() : enterSidebarWebview());
     const layout = await script<Layout>(COLLECT_LAYOUT, state.surface === 'main' ? 'nuiget-app' : 'nuiget-sidebar', RAMP, TOLERANCES.gapMembership);
     const red: string[] = [];
-    for (const line of measureLines(state.name, layout, capture.look)) {
+    for (const line of measureLines(state.name, layout, capture.look, workbench)) {
         const text = formatLine(line);
         console.warn(text);
         if (line.status === 'hard') {
@@ -401,7 +406,8 @@ const pngSize = (png: Buffer): string => `${png.readUInt32BE(16)}x${png.readUInt
 
 describe(`named states (${LANE} lane, ${LOOK} look)`, () => {
     before(async function () {
-        this.timeout(300_000);
+        // The workbench phases (at most about 3 minutes when every control is absent) and the panel's first list.
+        this.timeout(600_000);
         if (LANE === 'ui' && LOOK === 'modern') {
             for (const state of STATES) {
                 if (typeof state.status === 'object') {
@@ -416,6 +422,19 @@ describe(`named states (${LANE} lane, ${LOOK} look)`, () => {
         const dpr = await script<number>('return window.devicePixelRatio;');
         const png = Buffer.from(await driverOf().takeScreenshot(), 'base64');
         console.warn(`[capture] lane ${LANE} vscode ${VSBrowser.instance.version} chromium ${chromium} ${process.platform} dpr ${dpr} look ${LOOK} window ${window.width}x${window.height} png ${pngSize(png)}`);
+        // The workbench of this run, in its look (UX-P0.11): written next to the crops as workbench.<look>.json, the
+        // file docs/design/workbench/<look>.json is copied from.
+        const widgets = await measureWorkbench();
+        for (const [name, widget] of Object.entries(widgets)) {
+            console.warn(`[workbench] ${name}: ${widget === null ? 'absent' : `${widget.height} (${widget.selector})`}`);
+        }
+        workbench = Object.fromEntries(Object.entries(widgets).flatMap(([name, widget]) => (widget === null ? [] : [[name, widget.height]])));
+        const crops = path.dirname(VSBrowser.instance.getScreenshotsDir());
+        fs.mkdirSync(crops, { recursive: true });
+        fs.writeFileSync(path.join(crops, `workbench.${LOOK}.json`), JSON.stringify({
+            look: LOOK, lane: LANE, vscode: VSBrowser.instance.version, chromium, platform: process.platform, dpr, window: `${window.width}x${window.height}`,
+            run: process.env.GITHUB_RUN_ID ?? 'local', widgets,
+        }, null, 2) + '\n');
         await openSidebarView();
         await openMainPanel();
         await enterMainWebview();
