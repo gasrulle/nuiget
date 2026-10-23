@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Breaking:** nUIget 2.0 requires Visual Studio Code 1.90 or newer; VS Code 1.85 to 1.89 keep nUIget 1.18.9
+
 ## [2.0.0] - 2026-10-17
 
 ### Breaking changes

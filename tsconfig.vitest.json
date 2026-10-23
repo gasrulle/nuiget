@@ -22,7 +22,7 @@
         // Lets tests import eslint.config.mjs and scripts/*.mjs with inferred types; the scripts are not checked.
         "allowJs": true,
         // No type roots on purpose: tests type-check against @types/node 24 (ADR-000, D10). The type roots of
-        // tsconfig.json would select the Node 18 declarations and break the resolution of vitest/globals.
+        // tsconfig.json would select the Node 20 declarations and break the resolution of vitest/globals.
         "types": [
             "node",
             "vitest/globals"

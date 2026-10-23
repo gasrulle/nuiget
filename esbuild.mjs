@@ -5,9 +5,9 @@ const isProduction = process.argv.includes('--production');
 const isWatch = process.argv.includes('--watch');
 const isAnalyze = process.argv.includes('--analyze');
 
-// Extension code runs in the VS Code 1.85 extension host (Node 18); webviews run in its Chromium 114.
-const EXTENSION_TARGET = 'node18';
-const WEBVIEW_TARGET = ['chrome114'];
+// Extension code runs in the VS Code 1.90 extension host (Node 20.9); webviews run in its Chromium 122.
+const EXTENSION_TARGET = 'node20';
+const WEBVIEW_TARGET = ['chrome122'];
 
 // The entry points of the extension and its two webviews.
 const ENTRIES = {
@@ -17,11 +17,11 @@ const ENTRIES = {
 };
 
 // Minified JavaScript size limits in bytes, keyed by output file: Math.ceil(measured * 1.1), the ratchet of the P3.6
-// ruling. Measured with `node esbuild.mjs --production --analyze` at 999948e with the P8.2 deletions and renames
-// applied (P8.2b): 293183 (extension), 525241 (webview), 319313 (sidebar). Checked in CI by the build steps of the E2E
-// and Build & Package jobs; a crossing is a stop-and-ask with the metafile's top inputs, never a raise without a new
+// ruling. Measured with `node esbuild.mjs --production --analyze` at 5e56cf8 with the UX-P0.5b targets applied:
+// 297018 (extension), 557964 (webview), 340483 (sidebar). Checked in CI by the build steps of the E2E and Build &
+// Package jobs; a crossing is a stop-and-ask with the metafile's top inputs, never a raise without a new
 // measurement. CSS output is not measured.
-const BUNDLE_CEILINGS = { 'dist/extension.js': 322_502, 'dist/webview.js': 577_766, 'dist/sidebar.js': 351_245 };
+const BUNDLE_CEILINGS = { 'dist/extension.js': 326_720, 'dist/webview.js': 613_761, 'dist/sidebar.js': 374_532 };
 
 const ANALYSIS_DIR = 'out/esbuild';
 

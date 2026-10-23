@@ -2,7 +2,7 @@
 
 Status: accepted · Date: 2026-10-23 · Amends: ADR-008 (its typography bullet: type moves from `em` to px) and ADR-000
 (its floor sentence: `engines.vscode` is raised from `^1.85.0` to `^1.90.0` by the owner's round-2 pick of
-2026-10-23; a P0 item edits ADR-000 under the D6 sentinel).
+2026-10-23; ADR-000 edited by UX-P0.5b on 2026-10-23 under the D6 sentinel).
 
 ## Context
 
@@ -108,7 +108,8 @@ workbench is the exemplar for every rule. The research of 2026-10-23 (`docs/rese
   `package.json` `engines.vscode` `^1.90.0` and `@types/vscode` pinned to `1.90.0` (`check:vsix` enforces that it is
   not newer than the engine); `esbuild.mjs` targets `node20` and `chrome122`, and the three bundle ceilings are
   re-measured; the host's Node declarations move from `@types/node` 18 to 20 (the `@types-host/node` alias,
-  `npm:@types/node@20.9.5`, and the `tsconfig.json` comment); the E2E matrix's minimum moves from `1.85.0` to
+  `npm:@types/node@20.19.43`, the newest 20.x, since 20.9.5 does not compile under TypeScript 6, as ADR-000
+  records, and the `tsconfig.json` comment); the E2E matrix's minimum moves from `1.85.0` to
   `1.90.0`; `webview-css-baseline.test.ts` raises its threshold from 114 to 122 and retires the 16 of its 26 denylist
   entries at or below 122 (its own test requires every entry to be newer than the threshold); ADR-000 gains the
   amendment and the "Extension-host baseline" decision (D10) is restated for 1.90. Users on VS Code 1.85 to 1.89 are

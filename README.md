@@ -245,7 +245,7 @@ See [Microsoft's security best practices](https://learn.microsoft.com/en-us/nuge
 
 ## Requirements
 
-- Visual Studio Code 1.85.0 or newer.
+- Visual Studio Code 1.90.0 or newer (VS Code 1.85 to 1.89 keep nUIget 1.18.9).
 - .NET SDK 10 or newer, with `dotnet` on PATH or in `DOTNET_ROOT`. A project whose directory resolves an older SDK
   is shown read-only.
 - SDK-style .NET projects (`.csproj`, `.fsproj` or `.vbproj`).

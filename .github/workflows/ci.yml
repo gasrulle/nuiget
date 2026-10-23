@@ -172,8 +172,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # The minimum supported VS Code (engines.vscode, the only Node 18 host that runs 2.0 code) and current stable.
-        vscode: [ '1.85.0', 'stable' ]
+        # The minimum supported VS Code (engines.vscode, the only Node 20.9 host that runs 2.0 code) and current stable.
+        vscode: [ '1.90.0', 'stable' ]
     env:
       VSCODE_TEST_VERSION: ${{ matrix.vscode }}
     steps:

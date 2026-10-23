@@ -19,7 +19,7 @@ describe the tree, and the module map names the item that brought each part.
 | --- | --- |
 | [Execution plan](docs/plans/2026-10-11-nuiget-2.0-execution-plan.md) | Decisions D1–D13, work items, gates |
 | [Item tracker](docs/plans/STATUS.md) | State of every work item |
-| [ADR-000](docs/adr/000-release-and-compatibility-policy.md) | Release and compatibility policy: clean break, .NET SDK 10 floor, VS Code 1.85 / Node 18 baseline |
+| [ADR-000](docs/adr/000-release-and-compatibility-policy.md) | Release and compatibility policy: clean break, .NET SDK 10 floor, VS Code 1.90 / Node 20.9 baseline (amended 2026-10-23) |
 | [ADR-001](docs/adr/001-session-store.md) | Host-owned session state (`SessionStore`) |
 | [ADR-002](docs/adr/002-query-coordinator.md) | Resource queries, generations and invalidation (`QueryCoordinator`) |
 | [ADR-003](docs/adr/003-operation-queue-and-dotnet-runner.md) | Operation queue outcomes and shell-free CLI execution |
@@ -254,15 +254,17 @@ paints the surface behind the iframe; the two roots now paint it themselves, `.n
 (`--vscode-sideBar-background`), both `Canvas` under forced colours, so the document says what its text stands
 on. The scrollbars of every scrolling element are `::-webkit-scrollbar` rules in `primitives.css`, 10 px thick like
 VS Code's webview defaults and coloured with the `--nuiget-color-scrollbar*` tokens, so that forced colours reach
-them; `scrollbar-color` is not available in Chromium 114. A badge's tone colours its border and leaves its text in
+them. Chromium 122 has `scrollbar-color`, and a value other than `auto` switches the `::-webkit-scrollbar` rules
+off; VS Code's default webview stylesheet sets one on `html` (V15), so UX-P0.22 adds `scrollbar-color: auto` beside
+the WebKit rules as the reset (ADR-011 Decision 6). A badge's tone colours its border and leaves its text in
 the badge foreground, since the info, warning and error colours fall below 4.5:1 on the badge background; for the
 same reason the secondary text of a selected or current row (version, description, status) takes the row's
 foreground instead of the muted colour. Every
 rule that gives the pointer cursor sets `min-height: var(--nuiget-target-min)` (24 px, WCAG 2.5.8), and the sash,
 drawn 4 px thin, takes the pointer over a 24 px wide `::after` (`webview-stylesheets.test.ts`).
-`webview-css-baseline.test.ts` fails for a CSS feature that Chromium 114, the browser of VS Code 1.85, lacks: a
-denylist of 26 features, each with its key in MDN browser-compat-data and the Chromium version that key gives
-(finding N64); JavaScript APIs are held by the ES2022 `lib` of `tsconfig.json`. Contrast and target size are
+`webview-css-baseline.test.ts` fails for a CSS feature that Chromium 122, the browser of VS Code 1.90, lacks: a
+denylist of 10 features, each with its key in MDN browser-compat-data and the Chromium version that key gives
+(finding N64: no CI job renders Chromium 122 until the floor lane of UX-P0.9); JavaScript APIs are held by the ES2022 `lib` of `tsconfig.json`. Contrast and target size are
 measured where the colours exist: `src/test/ui/v2/theme.ui.test.ts` injects axe-core into the main panel and the
 sidebar in VS Code under six built-in themes (Dark and Light Modern, both high-contrast themes, Dark and Light 2026),
 with a row selected in each, and requires no `color-contrast` or `target-size` violation, with the contrast rule
@@ -869,7 +871,7 @@ Extension" use the same entries.
 These parts are the current truth for the build, test and release pipeline.
 
 - **Type-checking.** `npm run check-types` runs three programs: `tsconfig.json` (the extension and webviews,
-  against Node 18 declarations through the `@types-host/node` alias, see ADR-000), `tsconfig.test.json` (Mocha
+  against Node 20 declarations through the `@types-host/node` alias, see ADR-000), `tsconfig.test.json` (Mocha
   end-to-end and ExTester UI suites) and `tsconfig.vitest.json` (every Vitest test and benchmark and the shared
   test helpers under `src/test`, against Node 24 declarations).
 - **Linting.** `npm run lint` covers `src`, `scripts`, `esbuild.mjs` and the root configuration files.
@@ -882,7 +884,7 @@ These parts are the current truth for the build, test and release pipeline.
   bench:save` rewrites `benchmarks/baseline.json` and `npm run bench:compare` compares a run with it. The CI
   job `Benchmark (informational)` compares on its own hardware and never fails the pipeline.
 - **Bundle size.** `node esbuild.mjs --production --analyze` fails when a bundle exceeds its ceiling. Metafiles go
-  to `out/esbuild/`. The ceilings are the sizes measured at P8.2b plus 10 %. They are
+  to `out/esbuild/`. The ceilings are the sizes measured at UX-P0.5b (`node20`/`chrome122`) plus 10 %. They are
   checked only under `--production --analyze`, which CI runs in the `E2E` build step (sizes in the job summary) and
   the `Build & Package` job.
 - **Dotnet timings.** `npm run perf:baseline` (`scripts/perf-baseline.mjs`) times the `dotnet` commands the 2.0
@@ -914,12 +916,12 @@ These parts are the current truth for the build, test and release pipeline.
   | --- | --- | --- |
   | Lint | — | `npm run lint`, the guard hook tests, then `npm run docs:check` and `npm run check:matrix` |
   | Test (ubuntu, windows) | — | Unit tests with .NET SDK 10 installed; coverage on ubuntu |
-  | E2E (VS Code 1.85.0, stable) | — | Production build with the ceiling check (sizes in the job summary), then the `v2-*` extension-host suite under Xvfb; log artifact per version |
+  | E2E (VS Code 1.90.0, stable) | — | Production build with the ceiling check (sizes in the job summary), then the `v2-*` extension-host suite under Xvfb; log artifact per version |
   | UI | Lint, Test | ExTester packages a VSIX and runs `src/test/ui/v2` under Xvfb, then `check:vsix` on that build; log artifact, and `ui-screenshots` on every run: the named states of `ScreenshotState` (`src/test/ui/v2/sidebarWebview.ts`, D18) and the screenshots of failed tests; a named state without a PNG fails the job |
   | Build & Package | Lint, Test, E2E | Type check, production build, `check:vsix`, VSIX uploaded as artifact `vsix` |
   | Benchmark (informational) | — | Compares against `benchmarks/baseline.json`; never fails the run |
 
-  The end-to-end run on VS Code 1.85.0 is what proves the extension works on the minimum supported host. The
+  The end-to-end run on VS Code 1.90.0 is what proves the extension works on the minimum supported host. The
   owner downloads the `vsix` artifact and publishes it manually.
 - **The suites under test.** `npm run test:e2e` runs the extension-host suite: `.vscode-test.mjs` selects
   `out/test/e2e/v2-*.e2e.test.js` against what
@@ -930,7 +932,7 @@ These parts are the current truth for the build, test and release pipeline.
   that every contributed command answers, that the main panel is one tab that closes and opens again, and that
   noun-first `dotnet package add` and `remove` on the project file under both surfaces (an install, an update from
   3.13.3 to 3.14.0 by name, an edit and its write-back) do no harm; every wait is a bounded poll on the workbench or
-  the file, and it runs on VS Code 1.85.0 too, the only Node 18 host that executes 2.0 code. The ExTester suite (`src/test/ui/v2/sidebar.ui.test.ts`) is the one that sees the
+  the file, and it runs on VS Code 1.90.0 too, the only Node 20.9 host that executes 2.0 code. The ExTester suite (`src/test/ui/v2/sidebar.ui.test.ts`) is the one that sees the
   webview: the sidebar lists the fixture's packages, a row is as high as its token says and the second row lies
   under the first (stylesheet, tokens and the virtual offsets work under the Content Security Policy), the row
   action shows with focus, and Delete uninstalls a package, announced in the live region and gone from the

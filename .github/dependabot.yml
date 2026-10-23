@@ -45,9 +45,13 @@ updates:
       # dependency sweep (post-release) removes the package and this rule together.
       - dependency-name: "msw"
         versions: [">=3.0.0"]
-      # Pinned to the engines.vscode minimum (1.85); a newer @types/vscode fails check:vsix and lets code use APIs
+      # Pinned to the engines.vscode minimum (1.90.0); a newer @types/vscode fails check:vsix and lets code use APIs
       # the supported hosts lack. Bumped only together with engines.vscode, by a plan item.
       - dependency-name: "@types/vscode"
+      # npm alias of @types/node pinned exactly to a 20.x release for the host's Node 20.9 (ADR-000 names it and its
+      # residual); re-pinned only together with engines.vscode, by a plan item. Whether Dependabot matches an npm alias is unverified; the rule is inert if it
+      # does not.
+      - dependency-name: "@types-host/node"
       # The icons are generated from one exact-pinned release (ADR-012); a release bump is its own plan item, which
       # regenerates the icons and re-checks the attribution. Every version is ignored; the rule may precede the
       # package, which a later plan item adds.

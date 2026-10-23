@@ -30,7 +30,7 @@ The 2.0 layers import each other in one direction only. Source of truth: §3 of
 
 ## Rules ESLint does not catch
 
-- Core runs in the VS Code 1.85 extension host: Node 18.15. Do not use an API that needs Node 20 or newer.
+- Core runs in the VS Code 1.90 extension host: Node 20.9. Do not use an API newer than Node 20.9.
 - Core uses `PromiseLike`. `Thenable` appears only in `src/core/contracts.ts`.
 - `src/protocol/**`, `src/core/contracts.ts` and `docs/adr/**` are frozen. Change them only in a plan item
   that names them, behind the `.claude/.contract-change` sentinel. Never widen a contract to fix a type error.
