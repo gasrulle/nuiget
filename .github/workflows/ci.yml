@@ -386,8 +386,9 @@ jobs:
             process.exit(problems.length === 0 && LEGACY_STATES.length >= 15 ? 0 : 1);'
 
   # Tier B (UX-P0.9, dispatch with tier=B): every ready named state at the three widths of its surface, one shard per
-  # theme, Modern UI. settings.matrix.json opens VS Code full screen so that a 1600 px panel fits beside the side bar;
-  # the per-push ui job keeps VS Code's own 1440x900 window.
+  # theme, Modern UI. Under a window manager inside xvfb-run, ExTester's window.newWindowDimensions: maximized default takes the
+  # 1920x1080 screen, so a 1600 px panel fits beside the side bar (the fullscreen key left the window at 1448 px in run
+  # 39992434105); the per-push ui job keeps VS Code's own 1440x900 window.
   ui-matrix:
     name: UI matrix (${{ matrix.theme }})
     if: github.event_name == 'workflow_dispatch' && inputs.tier == 'B'
@@ -418,6 +419,9 @@ jobs:
 
       - run: npm ci --no-audit --no-fund
 
+      - name: Install a window manager
+        run: sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends fluxbox
+
       - name: Cache the dense workspace's packages
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
@@ -443,7 +447,7 @@ jobs:
           key: extester-vscode-1.140.0-${{ runner.os }}
 
       - name: Capture the Tier B shard
-        run: xvfb-run -a -s "-screen 0 1920x1080x24" npm run test:ui:matrix 2>&1 | tee "$RUNNER_TEMP/ui-output.txt"
+        run: xvfb-run -a -s "-screen 0 1920x1080x24" bash -c 'fluxbox >/dev/null 2>&1 & sleep 2; npm run test:ui:matrix' 2>&1 | tee "$RUNNER_TEMP/ui-output.txt"
 
       - name: Upload the shard's log
         if: always()
@@ -475,7 +479,8 @@ jobs:
             process.exit(problems.length === 0 ? 0 : 1);'
 
   # The floor (UX-P0.9, D55, closes N64): VS Code 1.90.0, Chromium 122, outside ExTester's declared range (a warning);
-  # it has no Modern UI, so every Tier A (theme, width) is captured in the classic look.
+  # it has no Modern UI, so every Tier A (theme, width) is captured in the classic look. Maximized under fluxbox, as the
+  # matrix: VS Code 1.90 opens a 1024x768 window by itself.
   ui-floor:
     name: UI floor (1.90.0)
     if: github.event_name == 'workflow_dispatch' && inputs.tier == 'B'
@@ -502,6 +507,9 @@ jobs:
 
       - run: npm ci --no-audit --no-fund
 
+      - name: Install a window manager
+        run: sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends fluxbox
+
       - name: Cache the dense workspace's packages
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
@@ -527,7 +535,7 @@ jobs:
           key: extester-vscode-1.90.0-${{ runner.os }}
 
       - name: Capture the floor
-        run: xvfb-run -a -s "-screen 0 1920x1080x24" npm run test:ui:floor 2>&1 | tee "$RUNNER_TEMP/ui-output.txt"
+        run: xvfb-run -a -s "-screen 0 1920x1080x24" bash -c 'fluxbox >/dev/null 2>&1 & sleep 2; npm run test:ui:floor' 2>&1 | tee "$RUNNER_TEMP/ui-output.txt"
 
       - name: Upload the floor's log
         if: always()
@@ -559,7 +567,8 @@ jobs:
             process.exit(problems.length === 0 ? 0 : 1);'
 
   # macOS (UX-P0.9): the Tier A capture suite, both looks, on a real window manager; captures and measurements, never
-  # goldens (plan §2.6).
+  # goldens (plan §2.6). The runner's display is 1024x768 by default, too narrow for a 1200 px panel: the display is
+  # set to 1440x900 (the per-push ui job's window) before the run.
   ui-macos:
     name: UI macOS
     if: github.event_name == 'workflow_dispatch' && inputs.tier == 'B'
@@ -571,6 +580,29 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+
+      # A probe: the first mechanism the image has, then the resolution again. It never fails the job; the capture
+      # step's [capture] lane header is the evidence.
+      - name: Set the display to 1440x900 (probe, UX-P0.9)
+        run: |
+          system_profiler SPDisplaysDataType | grep -i resolution || true
+          anka="/Library/Application Support/Veertu/Anka/addons/change_res"
+          vmware="/Library/Application Support/VMware Tools/vmware-resolutionSet"
+          if [ -x "$anka" ]; then
+            echo "mechanism: Anka change_res"
+            "$anka" 1440x900x32@30 || true
+          elif [ -x "$vmware" ]; then
+            echo "mechanism: VMware vmware-resolutionSet"
+            "$vmware" 1440 900 || true
+          elif brew install displayplacer >/dev/null 2>&1 && displayplacer list | grep -q 'res:1440x900'; then
+            screen=$(displayplacer list | sed -n 's/^Persistent screen id: //p' | head -1)
+            echo "mechanism: displayplacer on screen $screen"
+            displayplacer "id:$screen res:1440x900" || true
+          else
+            echo "no display mechanism on this image"
+          fi
+          sleep 2
+          system_profiler SPDisplaysDataType | grep -i resolution || true
 
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:

@@ -133,11 +133,17 @@ describe('the named states (UX-P0.8)', () => {
         expect(laneProblems([...files, 'main-installed-error.dark-2026.800.png'], 'matrix', 'dark-2026')).toEqual(['a capture of the pending state main-installed-error: main-installed-error.dark-2026.800.png']);
     });
 
-    it('opens the matrix full screen and nothing else differs from the primary settings', () => {
-        const settings = (file: string): Record<string, unknown> => JSON.parse(read(`src/test/ui/${file}`)) as Record<string, unknown>;
-        const { 'window.newWindowDimensions': dimensions, ...rest } = settings('settings.matrix.json');
-        expect(dimensions).toBe('fullscreen');
-        expect(rest).toEqual(settings('settings.json'));
+    it('runs the Linux lanes under a window manager and the ui job without one', () => {
+        const workflow = read('.github/workflows/ci.yml');
+        const between = (from: string, to: string): string => workflow.slice(workflow.indexOf(`\n  ${from}:\n`), workflow.indexOf(`\n  ${to}:\n`));
+        for (const [job, next, script] of [['ui-matrix', 'ui-floor', 'test:ui:matrix'], ['ui-floor', 'ui-macos', 'test:ui:floor']] as const) {
+            const block = between(job, next);
+            expect(block, `${job} installs fluxbox`).toContain('apt-get install -y --no-install-recommends fluxbox');
+            expect(block, `${job} runs under fluxbox`).toContain(`bash -c 'fluxbox >/dev/null 2>&1 & sleep 2; npm run ${script}'`);
+        }
+        // The ui job (its comment block included) and the macOS lane keep their own windows.
+        expect(between('ui', 'ui-matrix')).not.toContain('fluxbox');
+        expect(between('ui-macos', 'build')).not.toContain('fluxbox');
     });
 
     it('runs the lane scripts on the storage of test:ui, the floor on 1.90.0 classic', () => {
@@ -151,7 +157,7 @@ describe('the named states (UX-P0.8)', () => {
         }
         expect(flag('test:ui:matrix', 'code_version')).toBe(flag('test:ui', 'code_version'));
         expect(flag('test:ui:macos', 'code_version')).toBe(flag('test:ui', 'code_version'));
-        expect(flag('test:ui:matrix', 'code_settings')).toBe('src/test/ui/settings.matrix.json');
+        expect(flag('test:ui:matrix', 'code_settings')).toBe(flag('test:ui', 'code_settings'));
         // The floor is the engines floor (D54, D55): it never moves with the capture pin.
         expect(flag('test:ui:floor', 'code_version')).toBe('1.90.0');
         expect(flag('test:ui:floor', 'code_settings')).toBe('src/test/ui/settings.classic.json');
