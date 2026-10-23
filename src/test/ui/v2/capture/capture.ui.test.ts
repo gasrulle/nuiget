@@ -2,6 +2,7 @@ import { execFileSync } from 'child_process';
 import * as path from 'path';
 import { By, EditorView, Key, VSBrowser } from 'vscode-extension-tester';
 import { selectTheme, setPanelWidth, setSidebarWidth, webviewRect, windowSize } from '../layout';
+import { COLLECT_LAYOUT, formatLine, type Layout, measureLines, RAMP, TOLERANCES } from '../measure';
 import { chooseProjectCommitted, enterMainWebview, openMainPanel, optionFor, untilProjects } from '../mainWebview';
 import { driverOf, enterSidebarWebview, findByTestId, leaveWebview, openSidebarView, poll, waitForTestIdGone, waitForText } from '../sidebarWebview';
 import { type Capture, captureFile, floorCaptures, isReady, type Lane, type Look, matrixCaptures, MATRIX_THEMES, type NamedState, PANEL_WIDTH, SIDEBAR_WIDTH, STATES, type Theme, THEMES } from '../states';
@@ -356,6 +357,31 @@ async function shoot(state: NamedState, capture: Capture): Promise<void> {
     console.warn(`[capture] ${file}: iframe.webview ${rect.x},${rect.y} ${rect.width}x${rect.height} (dpr ${dpr}), cropped ${capture.width}x${rect.height}`);
 }
 
+/** The pending lines of this run, printed again at its end. */
+const pendingLines: string[] = [];
+
+/**
+ * Measures the state the driver has just reached (UX-P0.10, `measure.ts`): one `[measure]` line per rule that applies;
+ * returns the names of the red `hard` rules.
+ */
+async function measure(state: NamedState, capture: Capture): Promise<string[]> {
+    await (state.surface === 'main' ? enterMainWebview() : enterSidebarWebview());
+    const layout = await script<Layout>(COLLECT_LAYOUT, state.surface === 'main' ? 'nuiget-app' : 'nuiget-sidebar', RAMP, TOLERANCES.gapMembership);
+    const red: string[] = [];
+    for (const line of measureLines(state.name, layout, capture.look)) {
+        const text = formatLine(line);
+        console.warn(text);
+        if (line.status === 'hard') {
+            if (!line.pass) {
+                red.push(`${line.name}: ${line.value}`);
+            }
+        } else {
+            pendingLines.push(text);
+        }
+    }
+    return red;
+}
+
 /** This run's captures: the lane's set (Tier A in this run's look for the `ui` job and macOS), theme by theme, the default width of each surface first. */
 const laneJobs = LANE === 'matrix'
     ? matrixCaptures(SHARD_THEME)
@@ -420,11 +446,24 @@ describe(`named states (${LANE} lane, ${LOOK} look)`, () => {
                 console.warn(`[capture] ${captureFile(state.name, capture)}: not reachable (${reason})`);
                 throw new Error(`${state.name} is not reachable: ${reason}`, { cause: error });
             }
+            const red = await measure(state, capture);
             await shoot(state, capture);
             if (reach.leave) {
                 await (state.surface === 'main' ? enterMainWebview() : enterSidebarWebview());
                 await reach.leave();
             }
+            // The PNG is written first: a red hard rule leaves its evidence.
+            if (red.length > 0) {
+                throw new Error(`hard measurement red: ${red.join('; ')}`);
+            }
         });
     }
+
+    after(() => {
+        // The pending list (plan §2.7): the rules each pending item flips, at the end of the run.
+        console.warn(`[measure] pending list: ${pendingLines.length} lines`);
+        for (const line of pendingLines) {
+            console.warn(line);
+        }
+    });
 });

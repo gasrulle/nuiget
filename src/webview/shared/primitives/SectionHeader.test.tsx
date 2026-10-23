@@ -94,4 +94,15 @@ describe('SectionHeader', () => {
         renderHeader();
         expect(screen.getByRole('button', { expanded: true })).not.toHaveAttribute('title');
     });
+
+    it('its box carries section-box-<testKey> and the variant, group by default (UX-P0.10)', () => {
+        const { unmount } = renderHeader();
+        const box = screen.getByTestId('section-box-installed');
+        expect(box).toHaveAttribute('data-variant', 'group');
+        // The box holds the heading's toggle and the actions; the toggle keeps its own hook.
+        expect(within(box).getByTestId('section-header-installed')).toBeInTheDocument();
+        unmount();
+        renderHeader({ variant: 'pane' });
+        expect(screen.getByTestId('section-box-installed')).toHaveAttribute('data-variant', 'pane');
+    });
 });

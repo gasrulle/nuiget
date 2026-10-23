@@ -92,6 +92,8 @@ describe('sidebar: Installed section', () => {
         expect(option('Serilog')).toHaveAccessibleName('Serilog 3.0.0');
         // The section says how many, and the list says which keys act on a row.
         expect(screen.getByTestId('section-header-installed')).toHaveAccessibleName('Installed 2');
+        // A pane box of the measurements (UX-P0.10).
+        expect(screen.getByTestId('section-box-installed')).toHaveAttribute('data-variant', 'pane');
         expect(list()).toHaveAccessibleDescription('Enter or Delete uninstalls; Ctrl+Enter (Cmd+Enter) opens the full view; Shift+F10 opens the actions menu.');
         expect(screen.queryByTestId('sidebar-installed-provisional')).toBeNull();
         expect(sectionSpinner()).toBeNull();

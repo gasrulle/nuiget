@@ -224,6 +224,7 @@ export function UpdatesSection({ announce, filter = '', expanded: controlled, on
                 titleId={titleId}
                 contentId={contentId}
                 testKey="updates"
+                variant="pane"
                 expanded={expanded}
                 onToggle={onToggle ?? (() => setOwn(previous => !previous))}
                 count={count}

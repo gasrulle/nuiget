@@ -67,6 +67,8 @@ describe('sidebar: Updates section', () => {
         expect(host.requests('updates/get').map(request => request.payload)).toEqual([{ projectPath: A, includePrerelease: false }]);
         // Unknown until answered: no count.
         expect(header()).toHaveAccessibleName('Updates');
+        // A pane box of the measurements (UX-P0.10).
+        expect(screen.getByTestId('section-box-updates')).toHaveAttribute('data-variant', 'pane');
 
         await hostSays(() => host.respond(host.requests('updates/get')[0], { projectPath: A, updates: UPDATES }, 1));
         expect(screen.getByRole('listbox', { name: 'Updates' })).toBe(updatesList());

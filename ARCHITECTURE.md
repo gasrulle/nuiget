@@ -919,7 +919,7 @@ These parts are the current truth for the build, test and release pipeline.
   | Lint | — | `npm run lint`, the guard hook tests, then `npm run docs:check` and `npm run check:matrix` |
   | Test (ubuntu, windows) | — | Unit tests with .NET SDK 10 installed; coverage on ubuntu |
   | E2E (VS Code 1.90.0, stable) | — | Production build with the ceiling check (sizes in the job summary), then the `v2-*` extension-host suite under Xvfb; log artifact per version |
-  | UI | Lint, Test | Restores the dense workspace (SDK 10 and 8.0.425), then ExTester packages a VSIX and runs `src/test/ui/v2` under Xvfb (1920x1080), the capture suite of the named states and its classic pass, then `check:vsix` on that build; log artifact, and `ui-screenshots` on every run: the webview crops `<state>.<theme>.<width>.png` of the ready states of `src/test/ui/v2/states.ts`, the window PNGs of the v2 suites and the screenshots of failed tests; a missing crop, a crop of a pending state or a missing state of the 2.0 set fails the job |
+  | UI | Lint, Test | Restores the dense workspace (SDK 10 and 8.0.425), then ExTester packages a VSIX and runs `src/test/ui/v2` under Xvfb (1920x1080), the capture suite of the named states and its classic pass, then `check:vsix` on that build; log artifact, and `ui-screenshots` on every run: the webview crops `<state>.<theme>.<width>.png` of the ready states of `src/test/ui/v2/states.ts`, the window PNGs of the v2 suites and the screenshots of failed tests; a missing crop, a crop of a pending state, a missing state of the 2.0 set or a red `hard` measurement fails the job, and the log ends with the list of `pending` measurements |
   | UI matrix (one per theme) | — | `workflow_dispatch` with `tier=B` only: the Tier B shard of one of six themes (every ready state at its surface's three widths, Modern UI), VS Code maximized under a window manager (fluxbox inside `xvfb-run`); `ui-screenshots-<theme>`, `ui-log-<theme>` |
   | UI floor (1.90.0) | — | `workflow_dispatch` with `tier=B` only: every Tier A theme and width on VS Code 1.90.0 (Chromium 122) in the classic look; `ui-screenshots-floor`, `ui-log-floor` |
   | UI macOS | — | `workflow_dispatch` with `tier=B` only: the Tier A capture suite in both looks on the free Intel runner `macos-26-intel`, its display set to 1440x900 first; `ui-screenshots-macos`, `ui-log-macos`; never goldens |
@@ -933,8 +933,10 @@ These parts are the current truth for the build, test and release pipeline.
   was last built into `dist/`. `npm run test:ui` runs `src/test/ui/v2` through ExTester, which packages its VSIX
   through `vscode:prepublish`, the production build, and then the capture suite (`src/test/ui/v2/capture`,
   `npm run test:ui:capture`) on the installed VSIX: it opens the dense workspace, reaches each ready state of
-  `src/test/ui/v2/states.ts` and writes its webview crop with `scripts/crop-png.mjs`; a pending state names the item
-  that renders its markers and is never captured. The two suites divide the work by what each can see. The
+  `src/test/ui/v2/states.ts`, measures it with the rules of `src/test/ui/v2/measure.ts` (one `[measure]` line per
+  rule and scope that applies) and writes its webview crop with `scripts/crop-png.mjs`; a red `hard` rule fails the
+  state after its crop is written, a `pending` rule names the item that flips it and is only printed, and the run ends
+  with the pending list. A pending state names the item that renders its markers and is never captured. The two suites divide the work by what each can see. The
   extension-host suite (`src/test/e2e/v2-*.e2e.test.ts`, one file per legacy e2e file since P5.12a, shared steps in `v2Support.ts`)
   shows that the extension activates,
   that every contributed command answers, that the main panel is one tab that closes and opens again, and that

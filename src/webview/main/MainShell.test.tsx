@@ -81,6 +81,10 @@ describe('main panel shell', () => {
     it('renders the header, the search box, the tabs, the split and one live region', async () => {
         await mountReady();
         expect(screen.getByRole('main')).toHaveAttribute('data-testid', 'nuiget-app');
+        // The header box of the measurements (UX-P0.10) holds the title and the selectors; the search box is below it.
+        expect(screen.getByTestId('main-header').tagName).toBe('HEADER');
+        expect(screen.getByTestId('main-header')).toContainElement(screen.getByRole('heading', { level: 1 }));
+        expect(screen.getByTestId('main-header')).not.toContainElement(search());
         expect(screen.getByRole('search')).toContainElement(search());
         expect(screen.getByRole('checkbox', { name: 'Restore after operations' })).toBeChecked();
         expect(screen.getByRole('checkbox', { name: 'Include prerelease' })).not.toBeChecked();

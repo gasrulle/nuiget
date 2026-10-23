@@ -86,6 +86,7 @@ function DependencyGroup({ group, expanded, onToggle }: { group: Group; expanded
         <div className="nuiget-details-group">
             <SectionHeader
                 level={4}
+                variant="level"
                 title={`${group.targetFramework || 'Any framework'} (${group.dependencies.length})`}
                 titleId={titleId}
                 contentId={contentId}

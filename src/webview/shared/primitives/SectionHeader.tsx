@@ -24,6 +24,11 @@ export interface SectionHeaderProps {
     actions?: React.ReactNode;
     /** A tooltip on the toggle, for example a project's path. */
     tooltip?: string;
+    /**
+     * What the header heads, written as `data-variant` on its box (`section-box-<testKey>`): `pane` for a sidebar
+     * section, `group` for a project or a group of a list, `level` for a nested level such as a target framework.
+     */
+    variant?: 'pane' | 'group' | 'level';
 }
 
 /**
@@ -31,10 +36,10 @@ export interface SectionHeaderProps {
  * section. The section's own buttons are siblings of the heading, because a button inside a button is nested
  * interactive content, which assistive technology cannot reach.
  */
-export function SectionHeader({ title, titleId, expanded, onToggle, contentId, testKey, level = 2, count, busy, actions, tooltip }: SectionHeaderProps): React.JSX.Element {
+export function SectionHeader({ title, titleId, expanded, onToggle, contentId, testKey, level = 2, count, busy, actions, tooltip, variant = 'group' }: SectionHeaderProps): React.JSX.Element {
     const Heading = `h${level}` as const;
     return (
-        <div className="nuiget-section-header">
+        <div className="nuiget-section-header" data-testid={`section-box-${testKey}`} data-variant={variant}>
             <Heading className="nuiget-section-heading">
                 <button
                     type="button"

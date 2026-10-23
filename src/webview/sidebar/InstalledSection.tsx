@@ -128,6 +128,7 @@ export function InstalledSection({ filter, announce, expanded: controlled, onTog
                 titleId={titleId}
                 contentId={contentId}
                 testKey="installed"
+                variant="pane"
                 expanded={expanded}
                 onToggle={onToggle ?? (() => setOwn(previous => !previous))}
                 count={count}

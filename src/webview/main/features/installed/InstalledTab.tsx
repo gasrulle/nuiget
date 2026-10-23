@@ -211,7 +211,7 @@ export function InstalledTab({ filter, vulnerableOnly, announce }: ListView): Re
 
     return (
         <div className="nuiget-installed nuiget-installed--sections">
-            <Toolbar label="Bulk actions">
+            <Toolbar label="Bulk actions" data-testid="installed-toolbar">
                 <button type="button" className="nuiget-button nuiget-button--secondary" data-testid="select-all-button" aria-pressed={allSelected} disabled={candidateCount === 0} onClick={selectAll}>
                     Select all
                 </button>

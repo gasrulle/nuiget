@@ -267,6 +267,9 @@ project has several and one block per project in All Projects; no version select
 | `confirm-dialog`, `confirm-dialog-confirm`, `confirm-dialog-cancel` | Dialog primitive |
 | `status-live` | `role="status"` live region |
 | `sash` | Split sash |
+| `main-header` | The main panel's header bar (title, check boxes, selectors, gear, refresh): its insets, height and wrapping are measured on it |
+| `installed-toolbar`, `updates-toolbar` | The bulk toolbars of the Installed and Updates tabs: their start and end edges are measured against the list's (V2) |
+| `section-box-<name>` | The box of a section header (chevron, title, count, badges, actions), one per `section-header-<name>` with the same `<name>`, and the heading of each Required by block of the details pane (`required-by-<framework or project>`, which has no toggle); it carries `data-variant`: `pane` (sidebar sections), `group` (a project or framework group in a list) or `level` (a nested level such as a target framework). Its top and bottom gaps (V4) and its badges' end inset (V3) are measured on it |
 
 State markers (§4) and layer roots:
 
@@ -312,9 +315,6 @@ is a project or section name lower-cased, as above.
 
 | Added by | Test id or attribute | Element |
 |---|---|---|
-| P0 (harness) | `main-header` | The main panel's header bar (title, check boxes, selectors, gear, refresh): its insets, height and wrapping are measured on it |
-| P0 (harness) | `installed-toolbar`, `updates-toolbar` | The bulk toolbars of the Installed and Updates tabs: their start and end edges are measured against the list's (V2) |
-| P0 (harness) | `section-box-<name>` | The box of a section header (chevron, title, count, badges, actions), one per `section-header-<name>` with the same `<name>`; it carries `data-variant`: `pane` (sidebar sections), `group` (a project or framework group in a list) or `level` (a nested level such as a target framework). Its top and bottom gaps (V4) and its badges' end inset (V3) are measured on it |
 | Design System | `data-look`, `data-density`, `data-uppercase-headers` | Attributes on the document element of both webviews: `modern` or `classic`, `default` or `compact`, and present when the host capitalises view headers (ADR-011). The harness reads the look of a capture here |
 | Installed slice | `section-box-<name>` with `data-variant` `pane` under `data-look` `modern` | The Modern UI header: a pane-style section header at 28 px with a 12 px semibold title, the hover tint and rounded corners; the same box is 22 px with an 11 px bold uppercase title under `classic` |
 | Installed slice | `data-vscode-context` on `package-row-<id>` | The context-menu anchor on both surfaces: the row wrapper's context object (`webviewSection` = `installedRow`, `updateRow`, `browseRow` or `transitiveRow`, the row's ids and versions, `preventDefaultContextMenuItems`), which the menu items' `when` clauses read (ADR-013) |

@@ -66,7 +66,7 @@ export function TransitiveDetails({ selection }: { selection: DetailsSelection }
                         <h3>Required by</h3>
                         {blocks.map((block, index) => (
                             <div key={block.heading ?? index} className="nuiget-details-group">
-                                {block.heading === undefined ? null : <h4>{block.heading}</h4>}
+                                {block.heading === undefined ? null : <h4 data-testid={`section-box-required-by-${block.heading.toLowerCase()}`} data-variant="level">{block.heading}</h4>}
                                 {block.roots.length === 0 ? <p>No traceable top-level package</p> : (
                                     <ul className="nuiget-details-list">
                                         {block.roots.map(root => <li key={root}>{root}</li>)}

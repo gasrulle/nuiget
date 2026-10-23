@@ -111,6 +111,10 @@ describe('main panel: All Projects', () => {
         const details = screen.getByTestId('transitive-details');
         const blocks = within(details).getAllByRole('heading', { level: 4 }).map(heading => heading.textContent);
         expect(blocks).toEqual(['App', 'Lib', 'Tool']);
+        // Each block's heading is a level box of the measurements (UX-P0.10).
+        expect(within(details).getAllByRole('heading', { level: 4 }).map(heading => [heading.dataset.testid, heading.dataset.variant])).toEqual([
+            ['section-box-required-by-app', 'level'], ['section-box-required-by-lib', 'level'], ['section-box-required-by-tool', 'level'],
+        ]);
         expect(details).toHaveTextContent('AppSerilog');
         expect(details).toHaveTextContent('LibSerilog.Sinks.File');
         expect(details).toHaveTextContent('ToolNo traceable top-level package');

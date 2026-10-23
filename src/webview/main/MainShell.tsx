@@ -230,7 +230,7 @@ export function MainShell({ installed, updates, browse, details, viewState }: Ma
     const hasSession = session !== undefined;
     return (
         <main className="nuiget-main" data-testid="nuiget-app">
-            <header className="nuiget-main-header">
+            <header className="nuiget-main-header" data-testid="main-header">
                 <h1 className="nuiget-main-title">Manage NuGet packages</h1>
                 <label className="nuiget-main-toggle">
                     <input type="checkbox" checked={session?.restoreEnabled ?? true} disabled={!hasSession} onChange={event => set({ restoreEnabled: event.target.checked })} />

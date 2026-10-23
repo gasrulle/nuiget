@@ -217,7 +217,7 @@ function ProjectUpdates({ filter, announce }: ListView): React.JSX.Element {
 
     return (
         <div className="nuiget-installed nuiget-updates">
-            <Toolbar label="Bulk actions">
+            <Toolbar label="Bulk actions" data-testid="updates-toolbar">
                 <button type="button" className="nuiget-button nuiget-button--secondary" data-testid="select-all-button" aria-pressed={allSelected} disabled={candidates.length === 0} onClick={() => setSelected(allSelected ? new Set() : new Set(candidates.map(update => update.id)))}>
                     Select all
                 </button>

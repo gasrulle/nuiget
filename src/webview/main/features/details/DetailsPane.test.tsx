@@ -286,6 +286,9 @@ describe('main panel: details', () => {
         const toggle = (name: string): HTMLElement => within(dependencies()).getByRole('button', { name });
         expect(toggle('net8.0 (1)')).toHaveAttribute('aria-expanded', 'false');
         expect(toggle('net6.0 (0)')).toHaveAttribute('aria-expanded', 'false');
+        // Each framework's header is a level box of the measurements (UX-P0.10).
+        expect(within(dependencies()).getByTestId('section-box-dependencies-net8.0')).toHaveAttribute('data-variant', 'level');
+        expect(within(dependencies()).getByTestId('section-box-dependencies-net6.0')).toHaveAttribute('data-variant', 'level');
         expect(dependencies()).not.toHaveTextContent('System.Diagnostics.DiagnosticSource');
 
         await user.click(toggle('net8.0 (1)'));

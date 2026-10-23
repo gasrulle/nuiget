@@ -101,6 +101,8 @@ describe('main panel: Updates tab', () => {
     it('Update all confirms the packages and their versions, and leaves the centrally managed ones out', async () => {
         const user = userEvent.setup();
         const host = await mountWith();
+        // The toolbar box of the measurements (UX-P0.10).
+        expect(screen.getByTestId('updates-toolbar')).toContainElement(screen.getByTestId('update-all-button'));
         expect(screen.getByTestId('update-all-button')).toHaveTextContent('Update all (2)');
         await user.click(screen.getByTestId('update-all-button'));
         const dialog = screen.getByRole('alertdialog', { name: 'Update 2 packages?' });
@@ -243,6 +245,8 @@ describe('main panel: Updates tab', () => {
             const host = await mountAll();
             expect(listOf('app')).toHaveAccessibleName('App');
             expect(listOf('lib')).toHaveAccessibleName('Lib');
+            // All Projects has its own toolbar, the same box of the measurements (UX-P0.10).
+            expect(screen.getByTestId('updates-toolbar')).toContainElement(screen.getByTestId('update-all-button'));
             // The single-scroller layout of the Installed tab (P9.fix-2).
             expect(listOf('app').closest('.nuiget-installed')).toHaveClass('nuiget-installed--sections');
             expect(screen.getByTestId('updates-tab')).toHaveAccessibleName(/Updates\s+3/);

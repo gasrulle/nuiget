@@ -112,6 +112,9 @@ describe('main panel: Installed tab', () => {
     it('select all selects the removable rows only and the toolbar counts them', async () => {
         const user = userEvent.setup();
         await mountWith();
+        // The toolbar box of the measurements (UX-P0.10).
+        expect(screen.getByTestId('installed-toolbar')).toHaveAttribute('role', 'toolbar');
+        expect(screen.getByTestId('installed-toolbar')).toContainElement(screen.getByTestId('select-all-button'));
         expect(uninstallSelected()).toBeDisabled();
         expect(uninstallSelected()).toHaveTextContent('Uninstall selected (0)');
         await user.click(screen.getByTestId('select-all-button'));
