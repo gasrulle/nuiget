@@ -34,6 +34,8 @@ CLAUDE.md
 .mcp.json
 # Owner settings patches of the UX plan (applied by the owner, never shipped)
 patches/**
+# CI captures a session downloads (RUN-ux.md §4): gitignored, never shipped
+captures/**
 
 # Documentation that is not shown on the Marketplace page
 ARCHITECTURE.md

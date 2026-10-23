@@ -22,7 +22,7 @@
 # Agent Guidelines
 - **Use Context7 for Documentation:** Discover the current host's tools, then use `resolve-library-id` and `query-docs` for version-specific library documentation.
 - **Use Context7 for VS Code, .NET, and NuGet docs too:** Query `/websites/code_visualstudio_api` for the VS Code extension API, `/dotnet/docs` for the dotnet CLI, and `/websites/learn_microsoft_en-us_nuget` for NuGet; resolve the ID again if one is missing. No Microsoft Learn MCP server is configured, and its search does not index the VS Code extension API. Fetch a known documentation URL directly when a full page is needed.
-- **2.0 plan in progress:** `docs/plans/2026-10-11-nuiget-2.0-execution-plan.md` is the execution plan for the 2.0 re-architecture, run on the `labs/2.0` branch under `docs/plans/RUN.md` with one tracker row per item in `docs/plans/STATUS.md`. Work one item at a time, cite item, finding and ADR IDs in commits, and read the plan's §1–§4 before starting. `ARCHITECTURE.md` describes the 2.0 tree; verify its claims against code before relying on them.
+- **UX plan in progress:** `docs/plans/2026-10-23-nuiget-ux-execution-plan.md` is the execution plan for the UX overhaul, run on the `labs/ux` branch under `docs/plans/RUN-ux.md` with one tracker row per item in `docs/plans/STATUS-ux.md`. Work one item at a time, cite item, finding, rule and ADR IDs in commits, and read the plan's §1–§4 before starting. The 2.0 plan and its protocol are history. `ARCHITECTURE.md` describes the 2.0 tree; verify its claims against code before relying on them.
 
 ## Agent Resource Maintenance
 
@@ -88,10 +88,11 @@ After completing ANY feature, fix, or change, update these files:
 | **copilot-instructions.md** | New gotchas or common issues |
 
 ### CHANGELOG.md Rules
+- **Write for the user, not the repository.** `CHANGELOG.md` is the Marketplace's Changelog tab. An entry says what the user can now do, or what stopped going wrong, in the user's words; a change the user cannot notice gets no entry. Never name an item, finding, rule or ADR id, a source path, a module, a test or an internal name (bus, store, slice, Catalog, harness). The test for every entry: would someone who has never opened the repository understand it and care? For example, "2.0 webview message bus and store — `src/webview/shared/bus` … every request has exactly one outcome …" becomes no entry, or "Lists no longer show stale data after a change".
 - Always add entries under an `## [Unreleased]` section at the top of the changelog (below the header). If the section already exists, append to it.
 - For `### Added` entries: write the **bold headline** followed by a brief description (e.g., `- **New Feature** — Short explanation of what it does`).
 - For `### Fixed` and `### Changed` entries: only write the **bold headline** per bullet (e.g., `- **Some Fix**`). Do NOT add descriptions, explanations, or details after the headline.
-- Never edit or modify content under previously released version sections — only the `## [Unreleased]` section may be changed.
+- Never edit or modify content under a published version's section. `## [2.0.0]` counts as unreleased until the owner publishes it and may be rewritten until then; every 1.x section stays byte-identical. Only `## [Unreleased]` and, until its publication, `## [2.0.0]` may be changed.
 
 ### ARCHITECTURE.md vs copilot-instructions.md — What Goes Where
 These two files serve different purposes. **Never duplicate content between them.**
@@ -145,8 +146,8 @@ Seeded from the execution plan (decisions D1–D13, Appendix B). Item IDs name w
 | Issue | Solution |
 |-------|----------|
 | "Tests pass" is not "compiles" | Vitest transpiles without type-checking. `npx tsc --noEmit` → 0 is a separate gate for every item; never infer it from a green test run. That command reads the root `tsconfig.json` only, which leaves the test files out: also run `npm run check-types` (adds `tsconfig.test.json` and `tsconfig.vitest.json`), which CI's Build & Package and UI jobs run first (N69). |
-| Missing neighbour module | Never stub a module that a later item creates so `tsc` passes. Mark the item `blocked` in `docs/plans/STATUS.md` and stop. |
-| Frozen contracts | `src/protocol/**`, `src/core/contracts.ts` and `docs/adr/**` change only in the items that name them, behind the `.claude/.contract-change` sentinel (D6). Never widen a contract to fix a type error. |
+| Missing neighbour module | Never stub a module that a later item creates so `tsc` passes. Mark the item `blocked` in `docs/plans/STATUS-ux.md` and stop. |
+| Frozen contracts | `src/protocol/**`, `src/core/contracts.ts` and `docs/adr/**` change only in the items that name them, behind the `.claude/.contract-change` sentinel (D6, kept by the UX plan). The procedure: the advisor's approval pasted into `STATUS.md`; create the sentinel; edit with the Edit or Write tool only (a shell redirect or here-document goes around the guard); for a protocol change regenerate `docs/protocol.md` (`npm run docs:protocol`) and add the new keys to the records of `src/protocol/guards.ts`; delete the sentinel; then commit (`git commit` is denied while it exists). Never widen a contract to fix a type error, and never widen the guard or the frozen set to make an item easier. |
 | Import boundaries | Follow `.github/instructions/core-boundaries.instructions.md`. Core never imports host, extension, webview, React or `vscode` values; the sidebar is not exempt (P0.7). |
 | Extension host is Node 18.15 | VS Code 1.85 baseline (D10). No Node ≥ 20 API in 2.0 code; core uses `PromiseLike`, and `Thenable` appears only in `contracts.ts`. |
 | .NET SDK floor is 10 | Noun-first `dotnet package add/remove/list --project` only; no verb-first builders or SDK capability table. A project that resolves SDK < 10 is `unsupported` and read-only (D13). |

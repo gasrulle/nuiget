@@ -1,6 +1,6 @@
 ---
 name: architecture-advisor
-description: 'Read-only reviewer for the nUIget 2.0 plan: answers stop-and-ask briefs and reviews finished phases against the ADRs and contracts.'
+description: 'Read-only reviewer for the nUIget plans (the 2.0 re-architecture and the UX overhaul): answers stop-and-ask briefs on contracts, ADRs, the guard hook and tests, and reviews finished phases against the ADRs and contracts. Design questions go to design-advisor.'
 tools: Read, Grep, Glob, Bash
 model: fable
 ---
