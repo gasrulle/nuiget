@@ -951,10 +951,15 @@ extension's existing build formats. CI efficiency and hardening skills and a
 Technical Writer profile complement the application-focused resources.
 
 Claude Code reads the same resources through `CLAUDE.md` and `.claude/` (rule pointers, skill links,
-agent pointers). Two parts exist for the 2.0 work only: the `architecture-advisor` agent, a read-only reviewer
-that implementing sessions consult, and the guard hook `scripts/hooks/guard.mjs`, registered in
-`.claude/settings.json`, which blocks edits to frozen contract files, focused or skipped tests, unverified
-commits and forced pushes.
+agent pointers). Three parts exist for the plan-driven work only: the `architecture-advisor` and `design-advisor`
+agents, read-only reviewers that implementing sessions consult, and the guard hook `scripts/hooks/guard.mjs`,
+registered in `.claude/settings.json`. The guard blocks edits to frozen contract files unless the contract sentinel
+`.claude/.contract-change` exists; edits of the owner's configuration (`.claude/settings.json`,
+`.claude/settings.local.json`, `.claude/launch.json`, `.mcp.json`), which no sentinel unlocks, together with shell
+writes to those files and a `git apply` or `patch` that touches them; focused or skipped tests; deleting or renaming a
+test file that the sentinel `.claude/.test-retire` does not list; any commit while either sentinel exists; unverified
+commits; forced pushes; `gh api` requests other than GET; and, while the owner's applied settings change is not yet
+committed, the git commands that would discard it.
 
 These files affect development assistance, not extension runtime behavior.
 Upstream-derived additions record their pinned Awesome Copilot source; local

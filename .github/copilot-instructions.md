@@ -41,8 +41,9 @@
   (pointers to `.github/agents/`). When adding, renaming, or rescoping an
   instruction, skill, prompt, or agent, update the matching `.claude/` entry.
   `.claude/settings.json` pre-approves the build, test and bench commands and
-  denies publishing and force-push; extend its allowlist when adding a new
-  verification script.
+  denies publishing and force-push; it is the owner's file: a new verification
+  script that needs an allow rule goes to the owner as a patch (gotcha row
+  "Settings files are frozen").
 - The obsolete offline-support implementation prompt has been retired. Base new
   offline work on `ARCHITECTURE.md` and the current package-service implementation.
 
@@ -148,6 +149,8 @@ Seeded from the execution plan (decisions D1–D13, Appendix B). Item IDs name w
 | "Tests pass" is not "compiles" | Vitest transpiles without type-checking. `npx tsc --noEmit` → 0 is a separate gate for every item; never infer it from a green test run. That command reads the root `tsconfig.json` only, which leaves the test files out: also run `npm run check-types` (adds `tsconfig.test.json` and `tsconfig.vitest.json`), which CI's Build & Package and UI jobs run first (N69). |
 | Missing neighbour module | Never stub a module that a later item creates so `tsc` passes. Mark the item `blocked` in `docs/plans/STATUS-ux.md` and stop. |
 | Frozen contracts | `src/protocol/**`, `src/core/contracts.ts` and `docs/adr/**` change only in the items that name them, behind the `.claude/.contract-change` sentinel (D6, kept by the UX plan). The procedure: the advisor's approval pasted into `STATUS.md`; create the sentinel; edit with the Edit or Write tool only (a shell redirect or here-document goes around the guard); for a protocol change regenerate `docs/protocol.md` (`npm run docs:protocol`) and add the new keys to the records of `src/protocol/guards.ts`; delete the sentinel; then commit (`git commit` is denied while it exists). Never widen a contract to fix a type error, and never widen the guard or the frozen set to make an item easier. |
+| Settings files are frozen | A session never edits `.claude/settings.json`, `.claude/settings.local.json`, `.claude/launch.json` or `.mcp.json`, with or without the contract sentinel; the guard denies it (`scripts/hooks/guard.mjs`). When a gate or a tool needs a new allow rule or launch entry, write the patch to `patches/<name>.patch` with the one command that applies it, add an owner-action row to `docs/plans/STATUS-ux.md` naming it, and continue with work that does not need it (RUN-ux.md §4). A new gate runs as `node scripts/<name>.mjs` or an existing `npm run` script, never as an `npx` tool that is not pre-approved. |
+| Test retirement | The guard denies deleting or renaming a `*.test.ts(x)` file (`rm`, `mv`, `unlink`, `git rm`, `git mv`). A rebuild rewrites its tests in place and names the titles it replaces (ADR-010). Only when a file must go: after the `design-advisor` ruling is pasted, write the exact paths the item names, one per line, into the gitignored sentinel `.claude/.test-retire`; delete or rename exactly those paths; delete the sentinel; then commit (`git commit` is denied while it exists). Never list a path the item does not name, and never retire a test because it fails. |
 | Import boundaries | Follow `.github/instructions/core-boundaries.instructions.md`. Core never imports host, extension, webview, React or `vscode` values; the sidebar is not exempt (P0.7). |
 | Extension host is Node 18.15 | VS Code 1.85 baseline (D10). No Node ≥ 20 API in 2.0 code; core uses `PromiseLike`, and `Thenable` appears only in `contracts.ts`. |
 | .NET SDK floor is 10 | Noun-first `dotnet package add/remove/list --project` only; no verb-first builders or SDK capability table. A project that resolves SDK < 10 is `unsupported` and read-only (D13). |
