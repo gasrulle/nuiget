@@ -125,10 +125,10 @@ jobs:
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "| Metric | Coverage | Threshold |" >> $GITHUB_STEP_SUMMARY
             echo "|--------|----------|-----------|" >> $GITHUB_STEP_SUMMARY
-            echo "| Lines | ${LINES}% | 65% |" >> $GITHUB_STEP_SUMMARY
-            echo "| Branches | ${BRANCHES}% | 50% |" >> $GITHUB_STEP_SUMMARY
-            echo "| Functions | ${FUNCTIONS}% | 55% |" >> $GITHUB_STEP_SUMMARY
-            echo "| Statements | ${STATEMENTS}% | 65% |" >> $GITHUB_STEP_SUMMARY
+            echo "| Lines | ${LINES}% | 90% |" >> $GITHUB_STEP_SUMMARY
+            echo "| Branches | ${BRANCHES}% | 80% |" >> $GITHUB_STEP_SUMMARY
+            echo "| Functions | ${FUNCTIONS}% | 85% |" >> $GITHUB_STEP_SUMMARY
+            echo "| Statements | ${STATEMENTS}% | 90% |" >> $GITHUB_STEP_SUMMARY
           fi
 
   # Re-runs the CPM probe of src/core/cli/__fixtures__/sdk-probes on the newest SDK 10 and fails when its exit codes,

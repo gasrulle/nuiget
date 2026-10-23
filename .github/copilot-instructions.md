@@ -70,7 +70,7 @@ Tests are **NOT OPTIONAL**. Every code change must satisfy all of the following:
 2. **Update existing tests.** When changing behavior, update every test that covers the changed code path so it reflects the new behavior. Do NOT delete or skip tests to make the suite pass.
 3. **Add new tests.** When adding new functions, message handlers, React components, hooks, or non-trivial logic, write tests for them. Follow the existing patterns in the codebase (see `src/test/` helpers and fixtures). At minimum, cover the happy path and one error/edge case.
 4. **Maintain benchmark suite.** When adding or changing performance-sensitive code (core, caching, HTTP, parsing), add or update the `<module>.bench.ts` next to the module it measures, built on `runBenchmark` from `src/test/benchmarks/benchmark.ts`. Feed and transport benchmarks use `FakeTransport` (`src/core/feeds/testSupport.ts`) or tracked fixtures, never the network. After performance-affecting changes, regenerate the baseline: `npm run bench:save` and commit `benchmarks/baseline.json`.
-5. **Maintain coverage thresholds.** The CI pipeline enforces minimum coverage (65% lines, 50% branches, 55% functions). New code must not drop coverage below these thresholds. Run `npm run test:coverage` to verify.
+5. **Maintain coverage thresholds.** The CI pipeline enforces minimum coverage (90% statements, 80% branches, 85% functions, 90% lines). New code must not drop coverage below these thresholds. Run `npm run test:coverage` to verify.
 6. **Never skip, `.only`, or comment-out tests** as a workaround. If a test is flaky or blocking, fix the root cause.
 
 Test infrastructure details are in the **Testing** section of ARCHITECTURE.md.
