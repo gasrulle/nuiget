@@ -274,16 +274,53 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
 
+      # SDK 10 for the product, and the exact SDK that the dense workspace's Unsupported project pins in its
+      # global.json (never 8.0.x: a different patch would not resolve, and the project would read as supported).
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
-          dotnet-version: 10.0.x
+          dotnet-version: |
+            10.0.x
+            8.0.425
 
       - run: npm ci --no-audit --no-fund
 
-      # A short storage path keeps the VS Code IPC socket under the Unix path limit. The log is written outside the
-      # checkout: vsce packages the working directory, and check:vsix below refuses any file it does not allow.
+      - name: Cache the dense workspace's packages
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.nuget/packages
+          key: nuget-dense-${{ runner.os }}-${{ hashFiles('src/test/ui/fixtures/dense-workspace/**/*.csproj', 'src/test/ui/fixtures/dense-workspace/**/*.props', 'src/test/ui/fixtures/dense-workspace/**/global.json', 'src/test/ui/fixtures/dense-workspace/nuget.config') }}
+
+      # The capture states read the restored projects. Unsupported restores from its own directory, so its global.json
+      # selects SDK 8.0.425 as it does for the extension.
+      - name: Restore the dense workspace
+        working-directory: src/test/ui/fixtures/dense-workspace
+        run: |
+          dotnet restore app/Gateway/Gateway.csproj
+          dotnet restore app/Catalog/Catalog.csproj
+          dotnet restore tools/Utility/Utility.csproj
+          (cd tools/Unsupported && dotnet restore Unsupported.csproj)
+
+      # A failed SDK resolution would make the Unsupported project read as supported, and its states would pass.
+      - name: Check that the Unsupported project resolves SDK 8.0.425
+        working-directory: src/test/ui/fixtures/dense-workspace/tools/Unsupported
+        run: |
+          version=$(dotnet --version)
+          echo "Unsupported resolves .NET SDK $version"
+          test "$version" = "8.0.425"
+
+      # The VS Code that test:ui pins (--code_version), unpacked into the storage folder; ExTester skips the download
+      # when the folder holds that version.
+      - name: Cache the VS Code of the UI tests
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: /tmp/nuiget-ui/VSCode-linux-x64
+          key: extester-vscode-1.140.0-${{ runner.os }}
+
+      # A short storage path keeps the VS Code IPC socket under the Unix path limit, and the extensions directory under
+      # it keeps ExTester from installing into ~/.vscode/extensions. The log is written outside the checkout: vsce
+      # packages the working directory, and check:vsix below refuses any file it does not allow.
       - name: Run UI tests
-        run: xvfb-run -a npm run test:ui -- --storage /tmp/nuiget-ui 2>&1 | tee "$RUNNER_TEMP/ui-output.txt"
+        run: xvfb-run -a npm run test:ui -- --storage /tmp/nuiget-ui --extensions_dir /tmp/nuiget-ui/extensions 2>&1 | tee "$RUNNER_TEMP/ui-output.txt"
 
       - name: Check VSIX contents
         run: npm run check:vsix

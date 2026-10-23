@@ -87,3 +87,39 @@ describe('the dense fixture workspace (UX-P0.6)', () => {
         expect(property(read('tools/Unsupported/Unsupported.csproj'), 'TargetFramework')).toBe('net8.0');
     });
 });
+
+/** The `ui` job of the CI workflow, from its key to the next job. */
+function uiJob(): string {
+    const workflow = readFileSync(path.join(process.cwd(), '.github/workflows/ci.yml'), 'utf8');
+    const start = workflow.indexOf('\n  ui:\n');
+    expect(start, 'the ui job').toBeGreaterThan(-1);
+    const end = workflow.slice(start + 1).search(/\n {2}[a-z][\w-]*:\n/);
+    return end === -1 ? workflow.slice(start) : workflow.slice(start, start + 1 + end);
+}
+
+describe('the UI job and the dense fixture agree (UX-P0.7)', () => {
+    it('installs the exact SDK that the Unsupported global.json pins, beside SDK 10', () => {
+        const pinned = (JSON.parse(read('tools/Unsupported/global.json')) as { sdk: { version: string } }).sdk.version;
+        const block = /dotnet-version: \|\n((?: {12}\S+\n)+)/.exec(uiJob());
+        expect(block, 'a multi-line dotnet-version in the ui job').not.toBeNull();
+        expect(block![1].trim().split(/\s+/)).toEqual(['10.0.x', pinned]);
+        expect(uiJob()).toContain(`test "$version" = "${pinned}"`);
+    });
+
+    it('caches the VS Code version that test:ui pins', () => {
+        const scripts = (JSON.parse(readFileSync(path.join(process.cwd(), 'package.json'), 'utf8')) as { scripts: Record<string, string> }).scripts;
+        const version = /--code_version (\d+\.\d+\.\d+)/.exec(scripts['test:ui'])?.[1];
+        expect(version, 'test:ui pins an exact VS Code').toBeDefined();
+        expect(uiJob()).toContain(`key: extester-vscode-${version}-`);
+    });
+
+    it('keeps the classic settings equal to the primary ones except for the Modern UI key', () => {
+        const settings = (file: string): Record<string, unknown> =>
+            JSON.parse(readFileSync(path.join(process.cwd(), 'src/test/ui', file), 'utf8')) as Record<string, unknown>;
+        const primary = settings('settings.json');
+        const classic = settings('settings.classic.json');
+        expect(primary['workbench.experimental.modernUI']).toBe(true);
+        expect(classic['workbench.experimental.modernUI']).toBe(false);
+        expect({ ...classic, 'workbench.experimental.modernUI': true }).toEqual(primary);
+    });
+});
