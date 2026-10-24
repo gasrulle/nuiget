@@ -98,6 +98,8 @@ const pending = (name: string, surface: Surface, item: string, setup: string): N
 const LIVE_RESULTS: Mask = { selector: '[data-testid="browse-list"]', reason: 'nuget.org search results change between runs' };
 const LIVE_DETAILS: Mask = { selector: '[data-testid="package-details-panel"]', reason: 'nuget.org metadata (downloads, versions) changes between runs' };
 const LIVE_SUGGESTIONS: Mask = { selector: '[data-testid="search-suggestions"]', reason: 'nuget.org suggestions change between runs' };
+/** The search box of a state whose setup leaves the focus in it (UX-P0.15, design-advisor ruling). */
+const LIVE_CARET: Mask = { selector: '[data-testid="search-input"]', reason: 'the caret blinks and the selection differs between runs (H27)' };
 
 export const STATES: readonly NamedState[] = [
     ready('main-installed-single', 'main', [
@@ -113,23 +115,23 @@ export const STATES: readonly NamedState[] = [
     ready('main-installed-all', 'main', themeSensitive('main'),
         'All Projects selected; four project sections, the Unsupported section header shows "Unsupported" and "provisional". The provisional badge is the Unsupported project\'s permanent one (an SDK-8 project is never evaluated), not the SDK-10 provisional window.'),
     ready('main-installed-unsupported', 'main', [primary('main')],
-        'Unsupported selected; the Unsupported banner, the read-only list and both header badges.'),
+        'Unsupported selected; the Unsupported banner, the read-only list and both header badges; the transitive header shows its count and framework badge (the prefetch settled).'),
     ready('main-installed-cpm', 'main', [primary('main')],
-        'Catalog selected (Central Package Management); its rows are listed (package-row-mapster present).'),
+        'Catalog selected (Central Package Management); its rows are listed (package-row-mapster present); the transitive header shows its count and framework badge (the prefetch settled).'),
     // DS-OVERFLOW-5's split at 400 px: at the editor's 220 px minimum the setup cannot select a row in the 77 px list pane
     // (V50; UX-P0.14 design-advisor ruling).
     ready('main-installed-details', 'main', [...themeSensitive('main'), { theme: 'dark-modern', look: 'modern', width: 400 }],
         'Gateway selected, Newtonsoft.Json 12.0.1 (an update exists) made current; the details panel shows "Dependencies".', [LIVE_DETAILS]),
     ready('main-installed-filter', 'main', [primary('main')],
-        'Gateway selected, "@installed Microsoft.Extensions" in the search box; every listed option is a Microsoft.Extensions id.'),
+        'Gateway selected, "@installed Microsoft.Extensions" in the search box; every listed option is a Microsoft.Extensions id.', [LIVE_CARET]),
     ready('main-installed-filter-nomatch', 'main', [primary('main')],
-        'Gateway selected, "@installed zz-no-such-package" in the search box; the list has no option and says "No installed package matches".'),
+        'Gateway selected, "@installed zz-no-such-package" in the search box; the list has no option and says "No installed package matches".', [LIVE_CARET]),
     ready('main-installed-hover', 'main', [primary('main')],
         'Gateway selected, the pointer on the Serilog row; the row matches :hover.'),
     ready('main-installed-focus', 'main', themeSensitive('main'),
         'Gateway selected, the list reached from the keyboard; the active option matches :focus-visible.'),
     ready('main-installed-unfocused', 'main', [primary('main')],
-        'Gateway selected, a row selected, then the focus in the search box; document.activeElement is outside the list and a row is aria-selected.'),
+        'Gateway selected, a row selected, then the focus in the search box; document.activeElement is outside the list and a row is aria-selected.', [LIVE_CARET]),
     ready('main-installed-bulk-dialog', 'main', [primary('main')],
         'Gateway selected, one row in the bulk selection, Uninstall selected pressed; the confirm dialog is open and is cancelled after the capture, never confirmed.'),
     ready('main-transitive-expanded', 'main', [primary('main')],
@@ -139,13 +141,13 @@ export const STATES: readonly NamedState[] = [
     ready('main-updates', 'main', [primary('main')],
         'Gateway selected, the Updates tab; its list has rows.', [{ selector: '[data-testid="updates-list"]', reason: 'the newest versions on nuget.org change' }]),
     ready('main-browse-results', 'main', [primary('main')],
-        '"Newtonsoft.Json" searched with Enter; the Browse list shows package-row-newtonsoft.json.', [LIVE_RESULTS]),
+        '"Newtonsoft.Json" searched with Enter; the Browse list shows package-row-newtonsoft.json.', [LIVE_RESULTS, LIVE_CARET]),
     ready('main-browse-details', 'main', [primary('main')],
         'The Newtonsoft.Json Browse row made current; the details panel shows "Dependencies".', [LIVE_RESULTS, LIVE_DETAILS]),
     ready('main-quicksearch-open', 'main', [primary('main')],
-        '"Serilog" typed in the search box; the suggestions have an enabled option.', [LIVE_SUGGESTIONS]),
+        '"Serilog" typed in the search box; the suggestions have an enabled option.', [LIVE_SUGGESTIONS, LIVE_CARET]),
     ready('main-quicksearch-versions', 'main', [primary('main')],
-        'The first suggestion opened with ArrowRight; the versions level is listed.', [LIVE_SUGGESTIONS]),
+        'The first suggestion opened with ArrowRight; the versions level is listed.', [LIVE_SUGGESTIONS, LIVE_CARET]),
     ready('main-details-readme', 'main', [primary('main')],
         'Gateway selected, Newtonsoft.Json made current, the README tab; the README or its empty state is shown.', [LIVE_DETAILS]),
     ready('sidebar-sections', 'sidebar', [

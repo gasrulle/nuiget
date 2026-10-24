@@ -181,6 +181,7 @@ const REACH: Record<string, Reach> = {
             // The banner primitive's class: the main panel renders this banner without a test id.
             await until('[...document.querySelectorAll(".nuiget-banner--warning")].some(banner => banner.textContent.includes("Unsupported project"))', 'the Unsupported banner');
             await until('document.body.textContent.includes("provisional")', 'the provisional badge');
+            await until('(() => { const header = document.querySelector(\'[data-testid="section-header-transitive"]\'); return header !== null && /\\(\\d+\\)/.test(header.textContent ?? "") && header.querySelector(".nuiget-spinner") === null; })()', 'the transitive section settled (count, no spinner)', 60_000);
         },
     },
     'main-installed-cpm': {
@@ -188,6 +189,7 @@ const REACH: Record<string, Reach> = {
             await chooseFixtureProject('Catalog.csproj');
             await clickVisible('installed-tab');
             await findByTestId('package-row-mapster', 120_000);
+            await until('(() => { const header = document.querySelector(\'[data-testid="section-header-transitive"]\'); return header !== null && /\\(\\d+\\)/.test(header.textContent ?? "") && header.querySelector(".nuiget-spinner") === null; })()', 'the transitive section settled (count, no spinner)', 60_000);
         },
     },
     'main-installed-details': {
