@@ -1,0 +1,18 @@
+{
+  "state": "main-installed-single",
+  "theme": "dark-modern",
+  "look": "modern",
+  "width": 220,
+  "tolerance": 0.5,
+  "masks": [],
+  "fingerprint": {
+    "fontFamily": "system-ui, Ubuntu, \"Droid Sans\", sans-serif",
+    "font": "13px system-ui, Ubuntu, \"Droid Sans\", sans-serif",
+    "referenceWidth": 379.23,
+    "dpr": 1,
+    "vscode": "1.140.0",
+    "chromium": "150",
+    "image": "ubuntu26 20261023.163.3"
+  },
+  "run": "40091010301"
+}

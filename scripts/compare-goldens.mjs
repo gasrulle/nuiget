@@ -1,6 +1,7 @@
 // Compares the capture suite's webview crops with their goldens, one `[diff]` line per crop:
 //   node scripts/compare-goldens.mjs <screenshots dir> [--golden <dir>] [--diff <dir>]
-// Adopts a green CI run's crops as goldens (their sidecars beside them, `index.json` recording status, run and sha256):
+// Adopts a green CI run's crops as goldens (their sidecars beside them, `index.json` recording status, run and the
+// sha256 of each PNG and its sidecar, whose masks the diff applies):
 //   node scripts/compare-goldens.mjs --adopt <screenshots dir> --run <run id> --status baseline|approved [--golden <dir>]
 //
 // UX-P0.15 (plan MS-9; H27, H76, H78). A crop is `<state>.<theme>.<width>.png` at the root of the screenshots folder with
@@ -169,7 +170,7 @@ export function adopt(dir, goldenDir, { run, status }) {
     for (const file of files) {
         copyFileSync(path.join(dir, file), path.join(goldenDir, file));
         copyFileSync(path.join(dir, file.replace(/\.png$/, '.json')), path.join(goldenDir, file.replace(/\.png$/, '.json')));
-        index[file] = { status, run, sha256: sha256(path.join(goldenDir, file)) };
+        index[file] = { status, run, sha256: sha256(path.join(goldenDir, file)), sidecarSha256: sha256(path.join(goldenDir, file.replace(/\.png$/, '.json'))) };
     }
     const sorted = Object.fromEntries(Object.keys(index).sort().map(key => [key, index[key]]));
     writeFileSync(indexPath, JSON.stringify(sorted, null, 2) + '\n');

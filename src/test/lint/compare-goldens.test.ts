@@ -1,4 +1,5 @@
 import { execFileSync } from 'child_process';
+import { createHash } from 'crypto';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
@@ -178,24 +179,35 @@ describe('scripts/compare-goldens.mjs (UX-P0.15)', () => {
         writeCrop(crops, FILE);
         expect(adopt(crops, goldens, { run: '42', status: 'baseline' })).toEqual([FILE]);
         expect(fs.readdirSync(goldens).sort()).toEqual([FILE.replace(/\.png$/, '.json'), FILE, 'index.json'].sort());
-        const index = JSON.parse(fs.readFileSync(path.join(goldens, 'index.json'), 'utf8')) as Record<string, { status: string; run: string; sha256: string }>;
+        const index = JSON.parse(fs.readFileSync(path.join(goldens, 'index.json'), 'utf8')) as Record<string, { status: string; run: string; sha256: string; sidecarSha256: string }>;
         expect(index[FILE]).toMatchObject({ status: 'baseline', run: '42' });
         expect(index[FILE].sha256).toMatch(/^[0-9a-f]{64}$/);
+        expect(index[FILE].sidecarSha256).toMatch(/^[0-9a-f]{64}$/);
         writeCrop(crops, 'main-updates.dark-modern.20.png', { width: 40 });
         expect(() => adopt(crops, goldens, { run: '43', status: 'approved' })).toThrow('main-updates.dark-modern.20.png (40 px wide, not 20: not a crop)');
     });
 
-    it('keeps the committed goldens to the captures states.ts names, each with its sidecar and an index entry', () => {
+    it('keeps the committed goldens to CI crops of the captures states.ts names, each recorded in index.json by run and sha256', () => {
         const dir = path.join(root, 'src/test/ui/v2/golden');
-        if (!fs.existsSync(dir)) {
-            return;
-        }
         const expected = new Set(expectedFiles());
-        const index = JSON.parse(fs.readFileSync(path.join(dir, 'index.json'), 'utf8')) as Record<string, { status: string }>;
-        for (const file of fs.readdirSync(dir).filter(name => name.endsWith('.png'))) {
+        const index = JSON.parse(fs.readFileSync(path.join(dir, 'index.json'), 'utf8')) as Record<string, { status: string; run: string; sha256: string; sidecarSha256: string }>;
+        const pngs = fs.readdirSync(dir).filter(name => name.endsWith('.png')).sort();
+        expect(pngs.length).toBeGreaterThan(0);
+        // Every index entry has its PNG, every PNG its entry, and every sidecar its PNG.
+        expect(Object.keys(index).sort()).toEqual(pngs);
+        expect(fs.readdirSync(dir).filter(name => name.endsWith('.json') && name !== 'index.json').sort()).toEqual(pngs.map(file => file.replace(/\.png$/, '.json')));
+        const hash = (file: string) => createHash('sha256').update(fs.readFileSync(path.join(dir, file))).digest('hex');
+        for (const file of pngs) {
             expect(expected.has(file), `${file} is a capture of states.ts`).toBe(true);
-            expect(fs.existsSync(path.join(dir, file.replace(/\.png$/, '.json'))), `${file} has its sidecar`).toBe(true);
-            expect(['baseline', 'approved'], `${file} in index.json`).toContain(index[file]?.status);
+            const golden = readCapture(dir, file);
+            // A sidecar, DPR 1 and the width of its name: a crop of a CI run, never a window PNG or a local capture.
+            expect(refusal(golden), file).toBeUndefined();
+            expect(['baseline', 'approved'], `${file} in index.json`).toContain(index[file].status);
+            expect(index[file].sha256, `${file}'s bytes are the ones adopted`).toBe(hash(file));
+            // The diff applies the golden sidecar's masks: a widened mask would hide pixels without a CSS reason.
+            expect(index[file].sidecarSha256, `${file}'s sidecar is the one adopted`).toBe(hash(file.replace(/\.png$/, '.json')));
+            expect(index[file].run, `${file} comes from a CI run`).toMatch(/^\d+$/);
+            expect(golden.sidecar.run, `${file}'s sidecar names the same run`).toBe(index[file].run);
         }
     });
 });

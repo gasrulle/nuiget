@@ -1,0 +1,31 @@
+{
+  "state": "main-quicksearch-open",
+  "theme": "dark-modern",
+  "look": "modern",
+  "width": 1200,
+  "tolerance": 0.5,
+  "masks": [
+    {
+      "selector": "[data-testid=\"search-suggestions\"]",
+      "reason": "nuget.org suggestions change between runs",
+      "rects": [
+        {
+          "h": 120,
+          "w": 1166,
+          "x": 17,
+          "y": 69
+        }
+      ]
+    }
+  ],
+  "fingerprint": {
+    "fontFamily": "system-ui, Ubuntu, \"Droid Sans\", sans-serif",
+    "font": "13px system-ui, Ubuntu, \"Droid Sans\", sans-serif",
+    "referenceWidth": 379.23,
+    "dpr": 1,
+    "vscode": "1.140.0",
+    "chromium": "150",
+    "image": "ubuntu26 20261023.163.3"
+  },
+  "run": "40091010301"
+}

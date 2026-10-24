@@ -936,7 +936,8 @@ These parts are the current truth for the build, test and release pipeline.
   `src/test/ui/v2/states.ts`, measures it with the rules of `src/test/ui/v2/measure.ts` (one `[measure]` line per
   rule and scope that applies; MS-8 compares the persistent chrome with the first state measured at the same surface,
   theme, width and look) and writes its webview crop with `scripts/crop-png.mjs` and the crop's sidecar for the pixel
-  diff (UX-P0.15); a red `hard` rule fails the
+  diff (UX-P0.15; the goldens are `src/test/ui/v2/golden/`, adopted from a green run's artifact with their sidecars and
+  recorded in its `index.json` as `baseline` or `approved`); a red `hard` rule fails the
   state after its crop is written, a `pending` rule names the item that flips it and is only printed, and the run ends
   with the pending list. Before the first state the run measures the workbench's own controls in its look (the
   Extensions view and an extension's editor, the Settings editor, the command palette; `src/test/ui/v2/workbench.ts`),
