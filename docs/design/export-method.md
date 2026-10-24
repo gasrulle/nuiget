@@ -36,8 +36,9 @@ ubuntu UI job, because the route is verified on macOS only.
   `#0078d4` → `#3e78ce`); greys are exact. The Chromium switch `--force-color-profile=srgb` cannot be passed through
   ExTester, and the portable `argv.json` route crashed the session. CI on Linux is expected to be sRGB but is
   unverified: the renderer samples one saturated token pixel per capture and fails loudly on a mismatch.
-- **Fonts.** The theme dumps carry `-apple-system, BlinkMacSystemFont, …`; Linux renders another face.
-  Reproducibility is CI-to-CI, never local-to-CI (same rule as the goldens).
+- **Fonts.** The theme dumps carry the measuring host's own family (VS Code 1.140.0 on the ubuntu `ui` job, UX-P0.14:
+  `system-ui, "Ubuntu", "Droid Sans", sans-serif`), so the artboard and the product render in one face on the `ui` job; a
+  local render still differs. Reproducibility is CI-to-CI, never local-to-CI (same rule as the goldens).
 - **Upgrade risk.** The route depends on ChromeDriver listing the `WebContentsView` page as a window handle; a VS Code
   or ChromeDriver bump can change that. The fallback is a tiny test extension that opens the artboard in a webview
   panel (frames inside the workbench renderer, the real `--vscode-*` variables injected), not implemented.

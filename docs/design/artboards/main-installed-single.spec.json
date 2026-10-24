@@ -6,17 +6,17 @@
   "vscode": "1.140.0",
   "chromium": "150",
   "platform": "linux",
-  "run": "40055485738",
+  "run": "40086847213",
   "looks": {
     "modern": {
       "project-selector": {
         "rect": {
-          "x": 625,
+          "x": 607,
           "y": 8,
-          "w": 133,
+          "w": 144,
           "h": 26
         },
-        "inset": 632,
+        "inset": 614,
         "padding": "0px 22px 0px 6px",
         "gap": "normal normal",
         "tokens": [
@@ -31,12 +31,12 @@
       },
       "source-selector": {
         "rect": {
-          "x": 766,
+          "x": 759,
           "y": 8,
-          "w": 94,
+          "w": 101,
           "h": 26
         },
-        "inset": 773,
+        "inset": 766,
         "padding": "0px 22px 0px 6px",
         "gap": "normal normal",
         "tokens": [
@@ -122,7 +122,7 @@
         "rect": {
           "x": 6,
           "y": 77,
-          "w": 104.1,
+          "w": 104.5,
           "h": 35
         },
         "inset": 16,
@@ -139,12 +139,12 @@
       },
       "updates-tab": {
         "rect": {
-          "x": 110.1,
+          "x": 110.5,
           "y": 77,
-          "w": 96.1,
+          "w": 95.3,
           "h": 35
         },
-        "inset": 120.1,
+        "inset": 120.5,
         "padding": "0px 10px 0px 10px",
         "gap": "6px 6px",
         "tokens": [
@@ -159,7 +159,7 @@
         "rect": {
           "x": 16,
           "y": 117,
-          "w": 67.4,
+          "w": 73.7,
           "h": 26
         },
         "inset": 25,
@@ -178,12 +178,12 @@
       },
       "uninstall-selected-button": {
         "rect": {
-          "x": 178.9,
+          "x": 164,
           "y": 117,
-          "w": 132.1,
+          "w": 147,
           "h": 26
         },
-        "inset": 187.9,
+        "inset": 173,
         "padding": "0px 8px 0px 8px",
         "gap": "normal normal",
         "tokens": [
@@ -313,12 +313,12 @@
       },
       "uninstall-button": {
         "rect": {
-          "x": 539.4,
+          "x": 560.4,
           "y": 130.2,
-          "w": 64,
+          "w": 70.3,
           "h": 26
         },
-        "inset": 548.4,
+        "inset": 569.4,
         "padding": "0px 8px 0px 8px",
         "gap": "normal normal",
         "tokens": [
@@ -334,12 +334,12 @@
       },
       "version-selector": {
         "rect": {
-          "x": 404.4,
+          "x": 411.4,
           "y": 160.2,
-          "w": 127,
+          "w": 141,
           "h": 26
         },
-        "inset": 411.4,
+        "inset": 418.4,
         "padding": "0px 22px 0px 6px",
         "gap": "normal normal",
         "tokens": [
@@ -354,12 +354,12 @@
       },
       "install-update-button": {
         "rect": {
-          "x": 539.4,
+          "x": 560.4,
           "y": 160.2,
-          "w": 64,
+          "w": 70.3,
           "h": 26
         },
-        "inset": 548.4,
+        "inset": 569.4,
         "padding": "0px 8px 0px 8px",
         "gap": "normal normal",
         "tokens": [
@@ -378,7 +378,7 @@
         "rect": {
           "x": 338,
           "y": 206.2,
-          "w": 65,
+          "w": 65.2,
           "h": 35
         },
         "inset": 348,
@@ -393,12 +393,12 @@
       },
       "details-tab-readme": {
         "rect": {
-          "x": 403,
+          "x": 403.2,
           "y": 206.2,
-          "w": 67.1,
+          "w": 67,
           "h": 35
         },
-        "inset": 413,
+        "inset": 413.2,
         "padding": "0px 10px 0px 10px",
         "gap": "normal normal",
         "tokens": [
@@ -427,12 +427,12 @@
     "classic": {
       "project-selector": {
         "rect": {
-          "x": 625,
+          "x": 607,
           "y": 8,
-          "w": 133,
+          "w": 144,
           "h": 26
         },
-        "inset": 632,
+        "inset": 614,
         "padding": "0px 22px 0px 6px",
         "gap": "normal normal",
         "tokens": [
@@ -447,12 +447,12 @@
       },
       "source-selector": {
         "rect": {
-          "x": 766,
+          "x": 759,
           "y": 8,
-          "w": 94,
+          "w": 101,
           "h": 26
         },
-        "inset": 773,
+        "inset": 766,
         "padding": "0px 22px 0px 6px",
         "gap": "normal normal",
         "tokens": [
@@ -538,7 +538,7 @@
         "rect": {
           "x": 6,
           "y": 77,
-          "w": 103.2,
+          "w": 104.5,
           "h": 35
         },
         "inset": 16,
@@ -555,12 +555,12 @@
       },
       "updates-tab": {
         "rect": {
-          "x": 109.2,
+          "x": 110.5,
           "y": 77,
           "w": 95.3,
           "h": 35
         },
-        "inset": 119.2,
+        "inset": 120.5,
         "padding": "0px 10px 0px 10px",
         "gap": "6px 6px",
         "tokens": [
@@ -575,7 +575,7 @@
         "rect": {
           "x": 16,
           "y": 117,
-          "w": 67.4,
+          "w": 73.7,
           "h": 26
         },
         "inset": 25,
@@ -594,12 +594,12 @@
       },
       "uninstall-selected-button": {
         "rect": {
-          "x": 178.9,
+          "x": 164,
           "y": 117,
-          "w": 132.1,
+          "w": 147,
           "h": 26
         },
-        "inset": 187.9,
+        "inset": 173,
         "padding": "0px 8px 0px 8px",
         "gap": "normal normal",
         "tokens": [
@@ -630,7 +630,7 @@
         "rect": {
           "x": 16,
           "y": 147,
-          "w": 272.9,
+          "w": 272,
           "h": 22
         },
         "inset": 16,
@@ -729,12 +729,12 @@
       },
       "uninstall-button": {
         "rect": {
-          "x": 539.4,
+          "x": 560.4,
           "y": 130.2,
-          "w": 64,
+          "w": 70.3,
           "h": 26
         },
-        "inset": 548.4,
+        "inset": 569.4,
         "padding": "0px 8px 0px 8px",
         "gap": "normal normal",
         "tokens": [
@@ -750,12 +750,12 @@
       },
       "version-selector": {
         "rect": {
-          "x": 404.4,
+          "x": 411.4,
           "y": 160.2,
-          "w": 127,
+          "w": 141,
           "h": 26
         },
-        "inset": 411.4,
+        "inset": 418.4,
         "padding": "0px 22px 0px 6px",
         "gap": "normal normal",
         "tokens": [
@@ -770,12 +770,12 @@
       },
       "install-update-button": {
         "rect": {
-          "x": 539.4,
+          "x": 560.4,
           "y": 160.2,
-          "w": 64,
+          "w": 70.3,
           "h": 26
         },
-        "inset": 548.4,
+        "inset": 569.4,
         "padding": "0px 8px 0px 8px",
         "gap": "normal normal",
         "tokens": [
@@ -794,7 +794,7 @@
         "rect": {
           "x": 338,
           "y": 206.2,
-          "w": 65,
+          "w": 65.2,
           "h": 35
         },
         "inset": 348,
@@ -809,12 +809,12 @@
       },
       "details-tab-readme": {
         "rect": {
-          "x": 403,
+          "x": 403.2,
           "y": 206.2,
-          "w": 67.1,
+          "w": 67,
           "h": 35
         },
-        "inset": 413,
+        "inset": 413.2,
         "padding": "0px 10px 0px 10px",
         "gap": "normal normal",
         "tokens": [
