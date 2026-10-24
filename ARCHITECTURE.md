@@ -248,6 +248,14 @@ Two lint tests in `src/test/lint` keep that true: `webview-tokens.test.ts` check
 names the primitives rely on), and `webview-colours.test.ts` fails for a hex colour or a colour function in
 any other file under `src/webview`, tests included.
 
+The CSS audit gate (UX-P0.20, ADR-010) holds the four stylesheets beside `tokens.css` to the audit of their debt:
+`css-audit.test.ts` runs the rules of `src/test/lint/cssAudit.ts` (`pxLength`, a px/em/rem length outside the spacing
+properties; `duplicateSelector`, a prelude declared twice in a bundle or in two stylesheets, `body` and `:root` exempt;
+`specificity` above (0,2,0); `override`, a feature stylesheet's declaration that wins over a primitive's on a shared
+longhand) over the two bundles in cascade order and compares the hits with `__fixtures__/css-audit-baseline.json`,
+whose entries each name the plan item that removes them. The baseline only shrinks: a new hit fails, and so does an
+entry whose hit is gone until the change that removed the hit removes the entry.
+
 The theme pass (P5.11) adds what the tokens alone did not settle. VS Code leaves a webview's `body` transparent and
 paints the surface behind the iframe; the two roots now paint it themselves, `.nuiget-main` with
 `--nuiget-color-bg` (`--vscode-editor-background`) and `.nuiget-sidebar` with `--nuiget-color-bg-sidebar`
