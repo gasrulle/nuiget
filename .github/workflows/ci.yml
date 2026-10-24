@@ -330,7 +330,7 @@ jobs:
           key: extester-vscode-1.140.0-${{ runner.os }}
 
       # The v2 suites on the e2e workspace, then the capture suite of the named states on the dense workspace
-      # (test:ui:capture). The scripts carry --storage /tmp/nuiget-ui (a short path keeps the VS Code IPC socket under
+      # (test:ui:capture: scripts/ui-harness.mjs --installed, on the VSIX the v2 suites installed). The scripts carry --storage /tmp/nuiget-ui (a short path keeps the VS Code IPC socket under
       # the Unix limit) and --extensions_dir under it. The 1920x1080 screen lets VS Code open its default window at
       # 1440 px (clamped to 1280 on xvfb's default screen), inside which the side bar's sash reaches a 1200 px panel
       # with the side bar above its 170 px minimum; the suite never sets the window size (ChromeDriver cannot on
@@ -339,7 +339,8 @@ jobs:
       - name: Run UI tests
         run: xvfb-run -a -s "-screen 0 1920x1080x24" npm run test:ui 2>&1 | tee "$RUNNER_TEMP/ui-output.txt"
 
-      # The classic look's pass of the theme-sensitive states (settings.classic.json, NUIGET_UI_LOOK=classic).
+      # The classic look's pass of the theme-sensitive states (settings.classic.json, NUIGET_UI_LOOK=classic), through the
+      # harness on the same installed VSIX.
       - name: Capture the classic look
         run: xvfb-run -a -s "-screen 0 1920x1080x24" npm run test:ui:classic 2>&1 | tee "$RUNNER_TEMP/ui-classic-output.txt"
 
@@ -682,6 +683,96 @@ jobs:
             for (const problem of problems) console.log("::error::" + problem);
             console.log(laneFiles(lane, theme).length + " captures expected, " + crops.length + " crops at the root");
             process.exit(problems.length === 0 ? 0 : 1);'
+
+  # The negative control (UX-P0.16, plan D36; run by P0.17 and P0.18): HEAD's harness measures the VSIX of another commit.
+  # scripts/ui-harness.mjs builds that commit in a worktree beside the checkout (/tmp/nuiget-<sha>: npm ci, vsce package),
+  # installs its VSIX and runs HEAD's compiled capture suites on the dense workspace, in the ui job's window. A tree from
+  # before a fix is expected to fail its hard rules: the job records the harness's exit code and fails only when the
+  # harness did not measure (no VSIX line, no lane header or no [measure] line), so a dispatch never reads as a red branch.
+  negative-control:
+    name: Negative control
+    if: github.event_name == 'workflow_dispatch' && inputs.negative_sha != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      # The whole history, so the worktree can check out the commit under test.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          dotnet-version: |
+            10.0.x
+            8.0.425
+
+      - run: npm ci --no-audit --no-fund
+
+      - name: Cache the dense workspace's packages
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.nuget/packages
+          key: nuget-dense-${{ runner.os }}-${{ hashFiles('src/test/ui/fixtures/dense-workspace/**/*.csproj', 'src/test/ui/fixtures/dense-workspace/**/*.props', 'src/test/ui/fixtures/dense-workspace/**/global.json', 'src/test/ui/fixtures/dense-workspace/nuget.config') }}
+
+      - name: Restore the dense workspace
+        working-directory: src/test/ui/fixtures/dense-workspace
+        run: |
+          dotnet restore app/Gateway/Gateway.csproj
+          dotnet restore app/Catalog/Catalog.csproj
+          dotnet restore tools/Utility/Utility.csproj
+          (cd tools/Unsupported && dotnet restore Unsupported.csproj)
+
+      - name: Check that the Unsupported project resolves SDK 8.0.425
+        working-directory: src/test/ui/fixtures/dense-workspace/tools/Unsupported
+        run: test "$(dotnet --version)" = "8.0.425"
+
+      - name: Cache the VS Code of the UI tests
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: /tmp/nuiget-ui/VSCode-linux-x64
+          key: extester-vscode-1.140.0-${{ runner.os }}
+
+      # The input reaches the shell as an environment variable, never inside the script; the harness refuses anything but
+      # a hex SHA.
+      - name: Measure the commit with HEAD's harness
+        env:
+          NEGATIVE_SHA: ${{ inputs.negative_sha }}
+        run: |
+          set +e
+          xvfb-run -a -s "-screen 0 1920x1080x24" node scripts/ui-harness.mjs --build-sha "$NEGATIVE_SHA" --tier A 2>&1 | tee "$RUNNER_TEMP/negative-output.txt"
+          status=${PIPESTATUS[0]}
+          echo "Harness on $NEGATIVE_SHA: exit $status; $(grep -c 'hard measurement red' "$RUNNER_TEMP/negative-output.txt") captures with a red hard rule, $(grep -c 'not reachable' "$RUNNER_TEMP/negative-output.txt") not reachable" | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Check that the harness measured
+        run: |
+          log="$RUNNER_TEMP/negative-output.txt"
+          grep -m 1 '^\[harness\] vsix ' "$log"
+          grep -m 1 '^\[capture\] lane ' "$log"
+          count=$(grep -c '^\[measure\] ' "$log" || true)
+          echo "$count [measure] lines"
+          test "$count" -gt 0
+
+      - name: Upload the negative control's log
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: negative-log
+          path: ${{ runner.temp }}/negative-output.txt
+          if-no-files-found: ignore
+
+      - name: Upload the negative control's screenshots
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: negative-screenshots
+          path: /tmp/nuiget-ui/screenshots
+          if-no-files-found: ignore
 
   build:
     name: Build & Package

@@ -923,6 +923,7 @@ These parts are the current truth for the build, test and release pipeline.
   | UI matrix (one per theme) | — | `workflow_dispatch` with `tier=B` only: the Tier B shard of one of six themes (every ready state at its surface's three widths, Modern UI), VS Code maximized under a window manager (fluxbox inside `xvfb-run`); `ui-screenshots-<theme>`, `ui-log-<theme>` |
   | UI floor (1.90.0) | — | `workflow_dispatch` with `tier=B` only: every Tier A theme and width on VS Code 1.90.0 (Chromium 122) in the classic look; `ui-screenshots-floor`, `ui-log-floor` |
   | UI macOS | — | `workflow_dispatch` with `tier=B` only: the Tier A capture suite in both looks on the free Intel runner `macos-26-intel`, its display set to 1440x900 first; `ui-screenshots-macos`, `ui-log-macos`; never goldens |
+  | Negative control | — | `workflow_dispatch` with `negative_sha` only: `node scripts/ui-harness.mjs --build-sha <sha> --tier A` builds that commit's VSIX in a worktree beside the checkout and runs HEAD's capture suite on it in the `ui` job's window; the harness's exit code goes to the job summary and the job fails only when the harness did not measure (a tree from before a fix fails its hard rules by design); `negative-log`, `negative-screenshots` |
   | Build & Package | Lint, Test, E2E | Type check, production build, `check:vsix`, VSIX uploaded as artifact `vsix` |
   | Benchmark (informational) | — | Compares against `benchmarks/baseline.json`; never fails the run |
 
@@ -932,7 +933,10 @@ These parts are the current truth for the build, test and release pipeline.
   `out/test/e2e/v2-*.e2e.test.js` against what
   was last built into `dist/`. `npm run test:ui` runs `src/test/ui/v2` through ExTester, which packages its VSIX
   through `vscode:prepublish`, the production build, and then the capture suite (`src/test/ui/v2/capture`,
-  `npm run test:ui:capture`) on the installed VSIX: it opens the dense workspace, reaches each ready state of
+  `npm run test:ui:capture`) on the installed VSIX through `scripts/ui-harness.mjs`, the one entry that installs a VSIX
+  into the UI tests' VS Code with ExTester's split commands and runs HEAD's compiled capture suites on it (the working
+  tree packaged once, a given VSIX, the installed one, or another commit's built in `/tmp/nuiget-<sha>`; Tier A, Tier B or
+  named states; either look): it opens the dense workspace, reaches each ready state of
   `src/test/ui/v2/states.ts`, measures it with the rules of `src/test/ui/v2/measure.ts` (one `[measure]` line per
   rule and scope that applies; MS-8 compares the persistent chrome with the first state measured at the same surface,
   theme, width and look) and writes its webview crop with `scripts/crop-png.mjs` and the crop's sidecar for the pixel
