@@ -173,11 +173,39 @@ describe('the in-page collector on stubbed geometry (UX-P0.10, UX-P0.11)', () =>
         // MS-8's Browse view and DS-OVERFLOW-6's document sizes (jsdom has no layout: the shape, not the numbers).
         expect(layout.browsing).toBe(false);
         expect(layout.documentOverflow).toMatchObject({ clientWidth: expect.any(Number), clientHeight: expect.any(Number), scrollWidth: expect.any(Number), scrollHeight: expect.any(Number) });
-        (document.querySelector('[data-testid="nuiget-app"]') as HTMLElement).insertAdjacentHTML('beforeend', '<div class="nuiget-browse" data-rect="0,70,420,500"></div>');
-        expect(collect().browsing).toBe(true);
         // A listbox that scrolls itself is its own scroll port.
         (document.querySelector('[data-testid="installed-list"]') as HTMLElement).style.overflowY = 'auto';
         expect(collect().primaryEdges).toEqual([{ list: 'installed-list', button: 594, listRight: 590, listboxRight: 590 }]);
+    });
+
+    it('finds what extends the document along the containing-block chain, and the Browse view in place of the tabs', () => {
+        const size = (name: string, value: number) => Object.defineProperty(document.documentElement, name, { value, configurable: true });
+        size('clientWidth', 600);
+        size('clientHeight', 500);
+        size('scrollWidth', 600);
+        size('scrollHeight', 900);
+        try {
+            document.body.innerHTML = `
+                <main data-testid="nuiget-app" data-rect="0,0,600,500">
+                  <div class="nuiget-main-list" data-rect="0,0,600,500"><div class="nuiget-empty" data-rect="0,0,600,40" data-text="16,8,300,24">Press Enter</div></div>
+                  <div class="list" style="overflow-y: auto" data-rect="0,40,600,500">
+                    <div data-rect="0,40,600,500"><span class="nuiget-visually-hidden" style="position: absolute" data-rect="0,700,1,701">hint</span></div>
+                  </div>
+                </main>`;
+            // An absolutely placed span with no positioned ancestor: the list's overflow does not hold it, so the document grows.
+            expect(collect().documentOverflow?.outside).toBe('.nuiget-visually-hidden 0,700 1×1');
+            // Under a positioned scroller it is held, and nothing else is past the viewport.
+            (document.querySelector('.list') as HTMLElement).style.position = 'relative';
+            expect(collect().documentOverflow?.outside).toBeUndefined();
+            // The list pane shows the idle Browse view (an empty state), not the Tabs root.
+            expect(collect().browsing).toBe(true);
+            (document.querySelector('.nuiget-main-list') as HTMLElement).innerHTML = '<div class="nuiget-tabs" data-rect="0,0,600,500"></div>';
+            expect(collect().browsing).toBe(false);
+        } finally {
+            for (const name of ['clientWidth', 'clientHeight', 'scrollWidth', 'scrollHeight']) {
+                delete (document.documentElement as unknown as Record<string, unknown>)[name];
+            }
+        }
     });
 
     it('answers a missing root with an empty layout', () => {

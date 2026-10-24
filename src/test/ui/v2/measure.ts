@@ -661,24 +661,49 @@ const edgePair = (button, list) => {
     return [{ list, button: round(rectOf(b).right), listRight: round(rectOf(port).right), listboxRight: round(rectOf(l).right) }];
 };
 const primaryEdges = [...edgePair('uninstall-selected-button', 'installed-list'), ...edgePair('update-all-button', 'updates-list')];
-// MS-8: MainShell renders the Browse view instead of the tab strip while it shows Browse results.
-const browsing = root.querySelector('.nuiget-browse') !== null;
+// MS-8: MainShell renders the Browse view in place of the Tabs root inside the list pane (MainShell.tsx:284), its idle
+// status included (an empty state, no .nuiget-browse); if the tabs vanish and nothing takes their place, this is false.
+const pane = rootTestId === 'nuiget-app' ? root.querySelector('.nuiget-main-list') : null;
+const paneChildren = pane ? [...pane.children].filter(visible) : [];
+const browsing = paneChildren.length > 0 && paneChildren.every(child => !child.classList.contains('nuiget-tabs'));
 // DS-OVERFLOW-6: the document's sizes and the deepest element past the viewport that no scroller holds.
 const doc = document.documentElement;
 const depth = el => { let n = 0; for (let a = el; a; a = a.parentElement) n++; return n; };
+// What clips an element below the document: an ancestor that does not let overflow show, on its containing-block chain
+// (an absolutely placed element starts at its nearest positioned or transformed ancestor; with none, nothing holds it).
+const belowDocument = a => a && a !== document.body && a !== document.documentElement;
+const containingBlockOf = el => {
+    for (let a = el.parentElement; belowDocument(a); a = a.parentElement) {
+        const style = getComputedStyle(a);
+        if (style.position !== 'static' || (style.transform && style.transform !== 'none')) return a;
+    }
+    return null;
+};
+const heldBelowDocument = el => {
+    const position = getComputedStyle(el).position;
+    if (position === 'fixed') return true;
+    for (let a = position === 'absolute' ? containingBlockOf(el) : el.parentElement; belowDocument(a); a = a.parentElement) {
+        const style = getComputedStyle(a);
+        if (style.overflowY !== 'visible' || style.overflowX !== 'visible') return true;
+    }
+    return false;
+};
 let outside;
+let past = 0;
 if (doc.scrollHeight > doc.clientHeight || doc.scrollWidth > doc.clientWidth) {
     // The cheap rect test first; the computed-style walks only for the elements past the viewport.
     for (const el of document.body.querySelectorAll('*')) {
         const r = rectOf(el);
         if (r.width === 0 || r.height === 0 || (r.bottom <= doc.clientHeight + 0.5 && r.right <= doc.clientWidth + 0.5)) continue;
-        if (outside && depth(el) <= depth(outside)) continue;
-        if (visible(el) && scrollerOf(el) === null) outside = el;
+        if (heldBelowDocument(el)) continue;
+        past++;
+        if (visible(el) && (!outside || depth(el) > depth(outside))) outside = el;
     }
 }
 const documentOverflow = {
     clientWidth: doc.clientWidth, clientHeight: doc.clientHeight, scrollWidth: doc.scrollWidth, scrollHeight: doc.scrollHeight,
-    outside: outside ? label(outside) + ' ' + round(rectOf(outside).left) + ',' + round(rectOf(outside).top) + ' ' + round(rectOf(outside).width) + '×' + round(rectOf(outside).height) : undefined,
+    outside: outside ? label(outside) + ' ' + round(rectOf(outside).left) + ',' + round(rectOf(outside).top) + ' ' + round(rectOf(outside).width) + '×' + round(rectOf(outside).height)
+        : past > 0 ? 'none visible (' + past + ' past the viewport)' : undefined,
 };
 return { root: true, examined, offRamp, offRampCount, blockGaps, sections, toolbars, mainHeader: contentInsets(header), sidebarHeader: sidebarHeader ? contentInsets(sidebarHeader) : undefined, mainLefts, mainRegionLeft, details, sidebar, heights, centring, detailsButtons, width, rows, chrome, firstRow, overflow, transitiveGap, primaryEdges, browsing, documentOverflow };
 `;
@@ -1101,7 +1126,7 @@ function evaluateOverflow(definition: RuleDefinition, scope: Scope, layout: Layo
             const fits = page.scrollHeight <= page.clientHeight + tolerance && page.scrollWidth <= page.clientWidth + tolerance;
             const size = `document ${page.clientWidth}×${page.clientHeight}`;
             return {
-                value: fits ? `${size} fits` : `${size}, scroll ${page.scrollWidth}×${page.scrollHeight} (+${page.scrollHeight - page.clientHeight}); outside: ${page.outside ?? 'none found'}`,
+                value: fits ? `${size} fits` : `${size}, scroll ${page.scrollWidth}×${page.scrollHeight} (+${page.scrollHeight - page.clientHeight}); outside: ${page.outside ?? 'none past the viewport'}`,
                 pass: fits,
             };
         }

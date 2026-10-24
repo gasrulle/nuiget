@@ -344,6 +344,8 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         const fitting = layout({ documentOverflow: { clientWidth: 1200, clientHeight: 803, scrollWidth: 1200, scrollHeight: 803, outside: undefined } });
         expect(lineOf('sidebar-sections', fitting, 'DS-OVERFLOW-6@sidebar-sections')).toMatchObject({ pass: true, status: 'hard', value: 'document 1200×803 fits' });
         expect(lineOf('main-installed-single', layout(), 'DS-OVERFLOW-6@main-installed-single')).toMatchObject({ pass: false, value: 'not measurable' });
+        const unseen = layout({ documentOverflow: { clientWidth: 1185, clientHeight: 803, scrollWidth: 1185, scrollHeight: 900, outside: undefined } });
+        expect(lineOf('main-installed-all', unseen, 'DS-OVERFLOW-6@main-installed-all')?.value).toBe('document 1185×803, scroll 1185×900 (+97); outside: none past the viewport');
     });
 
     it('checks DS-INSET-3\'s trailing ends, DS-OVERFLOW-2\'s collisions and DS-ROW-5\'s truncation order', () => {
