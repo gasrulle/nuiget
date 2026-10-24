@@ -319,7 +319,7 @@ Resolved hex per theme: `tokens.json` (`resolved`), and the artifact's colour li
 | Panel title | 13 (Body1) | 600 | 1.4 | none | `font-size-md` |
 | Row name | 13 | 600 | 1.4 | none | `font-size-md`, `font-weight-semibold` |
 | Body, inputs, selects | 13 | 400 | 1.4 (controls: their height) | none | `font-size-md` |
-| Tab labels | pending the Extensions editor navbar measurement (P0.14); artboard A's 11 uppercase until then | 400 | — | uppercase until P0.14 | `font-size-sm` until P0.14 |
+| Tab labels | 11 (Body2), 10 px side padding; the active label marked by a 1 px bottom border (DS-COLOR-4): the Extensions editor navbar's labels measured on VS Code 1.140.0 in both looks (UX-P0.14, `workbench/<look>.json` `exemplar.editor.navbarLabels`), artboard A's values | 400 | 36 (the strip) | uppercase (both looks) | `font-size-sm` |
 | Main-list group header (one grouped list per view) | M 12 / C 11 | M 600 / C 700 | M 28 / C 22 | M capitalize / C uppercase | `font-size-section-title`, `font-weight-section-title`, `text-transform-section-title` |
 | Details group header | 13 | 600 | 22 | none (Title Case text) | `font-size-md` |
 | Text button | 12 (Label1) | 400 | 16 | none | `font-size-label`, `line-height-button` |
@@ -648,4 +648,4 @@ three places. The lead's rulings (2026-10-23):
 |---|---|---|
 | Main-panel rows and group headers under Modern UI | rows and pane headers inset 4 px, row start padding 12 (`--nuiget-row-inset`, `--nuiget-row-padding`) | The Design System wins: neither inset (an editor list), row start padding 16 (T-2, T-29, DS-ROW-3). Artboard A is corrected to the system before its `spec.json` is written (plan P0.27 / P2) |
 | Sidebar inset under Modern UI | 12 (`--nuiget-inset-sidebar`, the part title's text x) | The Design System wins: header 8 / 8, titles and rows at 28 (T-3, DS-INSET-1). Same correction before `spec.json` |
-| Tab labels | 11 px uppercase, 10 px padding (`--nuiget-tab-font-size`, `--nuiget-tab-transform`, `--nuiget-tab-padding`; the navbar's labels, CSS-read by the artboard) | Pending the Extensions editor navbar measurement in P0.14 (the probe did not bind it); artboard A's 11 px uppercase stays until then (Tabs component) |
+| Tab labels | 11 px uppercase, 10 px padding (`--nuiget-tab-font-size`, `--nuiget-tab-transform`, `--nuiget-tab-padding`; the navbar's labels, CSS-read by the artboard) | Bound by UX-P0.14's measurement of the Extensions editor navbar on VS Code 1.140.0: 11 px, weight 400, uppercase, 10 px side padding and a 1 px indicator in both looks, artboard A's values; no look switch (Tabs component) |
