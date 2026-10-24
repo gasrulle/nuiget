@@ -11,7 +11,8 @@
  * section toggle or an icon button, is a container and its content is measured. Helper 1 is gap membership
  * (DS-GRID-1, DS-GRID-2a, DS-GRID-2b), helper 2 shared insets (DS-INSET-1, DS-INSET-2, PF-6), helper 3 heights against
  * the Design System and the workbench measured in the same run (DS-HEIGHT-1..11, PF-5; UX-P0.11), helper 4 box centring
- * (PF-3b).
+ * (PF-3b), helper 5 truncation of named text (PF-3a, DS-ROW-5; UX-P0.12), helper 6 overlap, containment, clipping and
+ * still chrome (PF-2, PF-4, MS-8, DS-INSET-3, DS-OVERFLOW-2); helper 7, the 24 px target, is DS-HEIGHT-8's hit check.
  *
  * Plain data and string scripts: the module needs no DOM types (tsconfig.test.json has none) and no ExTester import, so
  * `src/test/lint` can import its registry.
@@ -23,7 +24,7 @@ export type RuleStatus = 'hard' | { pending: string };
 export type StateGroup = 'main-installed' | 'main-updates' | 'browse' | 'details' | 'dialogs' | 'sources' | 'sidebar';
 
 /** The element groups Appendix B names for DS-INSET-2 (the sidebar is a state group there). */
-export type ElementGroup = 'toolbars' | 'headers' | 'main-header';
+export type ElementGroup = 'toolbars' | 'headers' | 'main-header' | 'rows' | 'chrome' | 'first-row';
 
 export type Scope = StateGroup | ElementGroup;
 
@@ -41,6 +42,12 @@ export const TOLERANCES = {
     centring: 1,
     /** A height against the workbench's own control, measured in the same run (D34). */
     parity: 1,
+    /** Clearance for containment: a child inside its parent's content box, no two siblings intersecting (D34). */
+    containment: 0,
+    /** Persistent chrome: the same rectangle in every state of a surface, theme, width and look (D34). */
+    chrome: 0.5,
+    /** PF-4: P9.fix-4's own tolerance for the primary toolbar button's right edge against the list's (H9). */
+    primaryEdge: 8,
 } as const;
 
 /** The spacing ramp of DS-GRID-1, in px. */
@@ -71,6 +78,9 @@ export const HEIGHTS = {
     progress: 2,
 } as const;
 
+/** DS-INSET-3's trailing ends: a row's last action, a sidebar section header's trailing count or action, a surface. */
+export const TRAILING = { rowAction: 6, sidebarHeader: { modern: 6, classic: 12 }, surface: 16 } as const;
+
 /** DS-HEIGHT-6's text button, DS-HEIGHT-9's check box and DS-HEIGHT-10's badges: computed styles per look. */
 export const CONTROL_STYLES = {
     button: { fontSize: '12px', lineHeight: '16px', padding: '4px 8px 4px 8px', radius: '4px' },
@@ -82,18 +92,21 @@ export const CONTROL_STYLES = {
 /** A rule of the registry: its helper, a status per scope (Appendix B) and its tolerance. */
 export interface RuleDefinition {
     id: string;
-    helper: 1 | 2 | 3 | 4;
+    helper: 1 | 2 | 3 | 4 | 5 | 6;
     scopes: Partial<Record<Scope, RuleStatus>>;
     tolerance: number;
     /** States the rule is limited to (PF-6), or undefined for every state of its scopes. */
     states?: readonly string[];
     /** A pattern the state's name must match (DS-HEIGHT-11's loading states), or undefined. */
     statePattern?: RegExp;
+    /** Webview widths the rule is limited to (PF-3a at 1200), or undefined for every width. */
+    widths?: readonly number[];
 }
 
-/** Whether a rule measures a state at all; its scopes then say for which state group. */
-export const appliesTo = (definition: RuleDefinition, state: string): boolean =>
-    (definition.states === undefined || definition.states.includes(state)) && (definition.statePattern === undefined || definition.statePattern.test(state));
+/** Whether a rule measures a state (at a webview width) at all; its scopes then say for which state group. */
+export const appliesTo = (definition: RuleDefinition, state: string, width?: number): boolean =>
+    (definition.states === undefined || definition.states.includes(state)) && (definition.statePattern === undefined || definition.statePattern.test(state))
+    && (definition.widths === undefined || (width !== undefined && definition.widths.some(candidate => Math.abs(candidate - width) <= 1)));
 
 export function rule(id: string, options: Omit<RuleDefinition, 'id'>): RuleDefinition {
     return { id, ...options };
@@ -128,6 +141,15 @@ export const RULES: readonly RuleDefinition[] = [
     rule('DS-HEIGHT-9', { helper: 3, scopes: on('P2.3', ...MAIN, 'dialogs', 'sources'), tolerance: TOLERANCES.height }),
     rule('DS-HEIGHT-10', { helper: 3, scopes: on('P2.6', ...MAIN, 'sidebar'), tolerance: TOLERANCES.height }),
     rule('DS-HEIGHT-11', { helper: 3, scopes: { 'main-installed': { pending: 'P2.8b' }, ...on('P3.10', 'main-updates', 'browse', 'details', 'sidebar') }, tolerance: TOLERANCES.height, statePattern: /loading|revalidating/ }),
+    // UX-P0.12: P9.fix-2, -3 (authors) and -4 at their own measures, in the states their tests cover; MS-8 for every state.
+    rule('PF-2', { helper: 6, scopes: { 'main-installed': 'hard' }, tolerance: TOLERANCES.coincide, states: ['main-installed-single'] }),
+    rule('PF-3a', { helper: 5, scopes: { 'main-installed': 'hard' }, tolerance: TOLERANCES.containment, states: ['main-installed-single'], widths: [1200] }),
+    rule('PF-4', { helper: 6, scopes: { 'main-installed': 'hard', 'main-updates': 'hard' }, tolerance: TOLERANCES.primaryEdge, states: ['main-installed-single', 'main-updates'] }),
+    rule('MS-8', { helper: 6, scopes: { chrome: 'hard', 'first-row': { pending: 'P3.1b' } }, tolerance: TOLERANCES.chrome }),
+    rule('DS-INSET-3', { helper: 6, scopes: { rows: { pending: 'P2.2' }, headers: { pending: 'P2.6' }, sidebar: { pending: 'P3.7a' } }, tolerance: TOLERANCES.coincide }),
+    // DS-OVERFLOW-2 over the section headers, the tracker's `headers` and P2.6's files (SectionHeader, Badge).
+    rule('DS-OVERFLOW-2', { helper: 6, scopes: on('P2.6', 'main-installed', 'details', 'sidebar'), tolerance: TOLERANCES.containment }),
+    rule('DS-ROW-5', { helper: 5, scopes: { ...on('P2.2', ...MAIN), sidebar: { pending: 'P3.7a' } }, tolerance: TOLERANCES.containment }),
 ];
 
 /** The state group of a named state, by its name. */
@@ -153,18 +175,22 @@ export function stateGroup(state: string): StateGroup {
     return 'main-installed';
 }
 
-/** The element groups DS-INSET-2 measures in a state group. */
-export function elementGroups(group: StateGroup): ElementGroup[] {
+/** The states whose first row MS-8 compares (Installed and Updates, P3.1b). */
+const FIRST_ROW_STATES: readonly string[] = ['main-installed-single', 'main-updates'];
+
+/** The element groups measured in a state group (DS-INSET-2, DS-INSET-3, MS-8), and MS-8's first row in its two states. */
+export function elementGroups(group: StateGroup, state?: string): ElementGroup[] {
+    const firstRow: ElementGroup[] = state !== undefined && FIRST_ROW_STATES.includes(state) ? ['first-row'] : [];
     switch (group) {
         case 'main-installed':
         case 'main-updates':
-            return ['toolbars', 'headers', 'main-header'];
+            return ['toolbars', 'headers', 'main-header', 'rows', 'chrome', ...firstRow];
         case 'browse':
-            return ['main-header'];
+            return ['main-header', 'rows', 'chrome'];
         case 'details':
-            return ['headers', 'main-header'];
+            return ['headers', 'main-header', 'rows', 'chrome'];
         default:
-            return [];
+            return ['chrome'];
     }
 }
 
@@ -195,6 +221,8 @@ export interface SectionBox {
     id: string;
     variant: string;
     insets: Insets | undefined;
+    /** DS-INSET-3: the box's right minus its trailing count, badge or action's right; undefined without one. */
+    trailingEnd?: number;
     /** DS-GRID-2b on text line boxes: the last text or border above to the title's top, and the title's bottom to the first row name below. */
     above: number | undefined;
     below: number | undefined;
@@ -217,6 +245,41 @@ export interface Heights {
     checkSelect: { fill: string; border: string };
     badges: Array<{ count: boolean; width: number; height: number; fontSize: string; padding: string; radius: string }>;
     progress: number[];
+}
+
+/** Helpers 5 and 6 for one row (UX-P0.12). */
+export interface RowFacts {
+    /** The `data-testid` of the row's list. */
+    list: string;
+    compact: boolean;
+    name: string;
+    nameCut: boolean;
+    nameEllipsis: boolean;
+    /** Undefined when the row shows no authors. */
+    authorsCut: boolean | undefined;
+    versionShown: boolean;
+    /** The version ellipsized itself (it collapses before the name, DS-ROW-5). */
+    versionCut: boolean;
+    badgesShown: number;
+    /** The row band's right minus its last visible action's right; undefined without a visible action. */
+    actionsEnd: number | undefined;
+}
+
+export interface ChromeRect {
+    left: number;
+    top: number;
+    width: number;
+    height: number;
+}
+
+/** MS-8's persistent chrome of a surface, by name; undefined where the state does not show it. */
+export type Chrome = Record<string, ChromeRect | undefined>;
+
+/** The chrome (and first row) of the first state measured at a surface, theme, width and look: MS-8's reference. */
+export interface ChromeReference {
+    state: string;
+    chrome: Chrome;
+    firstRow: number | undefined;
 }
 
 export interface Layout {
@@ -246,16 +309,28 @@ export interface Layout {
     centring: Array<{ name: string; row: number; check: number | undefined; icon: number | undefined }>;
     /** PF-5: the details pane's Uninstall and Update buttons. */
     detailsButtons: { uninstall: { left: number; height: number } | undefined; update: { left: number; height: number } | undefined };
+    /** The webview's width (PF-3a's 1200). */
+    width: number;
+    rows: RowFacts[];
+    chrome: Chrome;
+    /** The top of the first Installed or Updates row (MS-8's first-row y). */
+    firstRow: number | undefined;
+    /** DS-OVERFLOW-2 over the section-header boxes: offenders (at most 8 of each kind, their total in `count`) and every badge's rect. */
+    overflow: { containers: number; collisions: string[]; outside: string[]; clipped: string[]; count: number; badges: string[] };
+    /** PF-2: the last direct row's bottom, the transitive header's top, and whether one element scrolls both. */
+    transitiveGap: { lastRowBottom: number; headerTop: number; sameScroller: boolean } | undefined;
+    /** PF-4: the primary toolbar button's right and its list's right. */
+    primaryEdges: Array<{ list: string; button: number; listRight: number }>;
 }
 
 /**
  * Runs in the webview: `arguments[0]` is the root's test id, `arguments[1]` the ramp, `arguments[2]` the gap
- * tolerance. Returns `Layout`.
+ * tolerance, `arguments[3]` the containment tolerance (DS-OVERFLOW-2). Returns `Layout`.
  */
 export const COLLECT_LAYOUT = `
-const [rootTestId, ramp, tolerance] = arguments;
+const [rootTestId, ramp, tolerance, containment = 0] = arguments;
 const root = document.querySelector('[data-testid="' + rootTestId + '"]');
-if (!root) return { root: false, examined: 0, offRamp: [], offRampCount: 0, blockGaps: [], sections: [], toolbars: [], mainHeader: undefined, sidebarHeader: undefined, mainLefts: {}, mainRegionLeft: undefined, details: undefined, sidebar: undefined, heights: { headers: [], compactRows: [], comfortableRows: [], comfortablePitches: [], tabStrip: undefined, detailsTabs: undefined, buttons: [], inputs: [], iconButtons: [], checkBoxes: [], checkSelect: { fill: '', border: '' }, badges: [], progress: [] }, centring: [], detailsButtons: { uninstall: undefined, update: undefined } };
+if (!root) return { root: false, examined: 0, offRamp: [], offRampCount: 0, blockGaps: [], sections: [], toolbars: [], mainHeader: undefined, sidebarHeader: undefined, mainLefts: {}, mainRegionLeft: undefined, details: undefined, sidebar: undefined, heights: { headers: [], compactRows: [], comfortableRows: [], comfortablePitches: [], tabStrip: undefined, detailsTabs: undefined, buttons: [], inputs: [], iconButtons: [], checkBoxes: [], checkSelect: { fill: '', border: '' }, badges: [], progress: [] }, centring: [], detailsButtons: { uninstall: undefined, update: undefined }, width: 0, rows: [], chrome: {}, firstRow: undefined, overflow: { containers: 0, collisions: [], outside: [], clipped: [], count: 0, badges: [] }, transitiveGap: undefined, primaryEdges: [] };
 const dialog = document.querySelector('.nuiget-dialog');
 const visible = el => {
     if (!el || !el.isConnected) return false;
@@ -401,6 +476,10 @@ const sections = [...scope.querySelectorAll('[data-testid^="section-box-"]')].fi
         id: box.dataset.testid.replace(/^section-box-/, ''),
         variant: box.dataset.variant ?? '',
         insets: contentInsets(box),
+        trailingEnd: (() => {
+            const trailing = [...box.querySelectorAll('.nuiget-badge, .nuiget-section-actions > *')].filter(visible);
+            return trailing.length > 0 ? round(box.getBoundingClientRect().right - Math.max(...trailing.map(el => el.getBoundingClientRect().right))) : undefined;
+        })(),
         above: edge === undefined ? undefined : round(title.top - edge),
         below: name === undefined ? undefined : round(name - title.bottom),
     };
@@ -487,7 +566,81 @@ const centring = shown('[data-testid="installed-list"] [role="option"], [data-te
 });
 const buttonBox = id => { const el = scope.querySelector('[data-testid="' + id + '"]'); if (!visible(el)) return undefined; const rect = rectOf(el); return { left: round(rect.left), height: round(rect.height) }; };
 const detailsButtons = { uninstall: buttonBox('uninstall-button'), update: buttonBox('install-update-button') };
-return { root: true, examined, offRamp, offRampCount, blockGaps, sections, toolbars, mainHeader: contentInsets(header), sidebarHeader: sidebarHeader ? contentInsets(sidebarHeader) : undefined, mainLefts, mainRegionLeft, details, sidebar, heights, centring, detailsButtons };
+// Helpers 5 and 6 (UX-P0.12): named text, rows' trailing actions, still chrome, collisions and containment.
+const width = round(document.documentElement.clientWidth);
+const ownText = el => [...el.childNodes].filter(node => node.nodeType === Node.TEXT_NODE).map(node => node.textContent).join('').trim();
+const rows = shown('.nuiget-row').map(row => {
+    const option = row.querySelector('[role="option"]') ?? row;
+    const name = option.querySelector('.nuiget-row-name');
+    const authors = option.querySelector('.nuiget-row-authors');
+    const version = option.querySelector('.nuiget-row-version');
+    const actions = [...row.querySelectorAll('.nuiget-row-actions > *')].filter(visible);
+    const list = row.closest('[role="listbox"]');
+    return {
+        list: list && list.dataset.testid ? list.dataset.testid : '',
+        compact: row.classList.contains('nuiget-row--compact'),
+        name: name ? name.textContent : '',
+        nameCut: visible(name) && name.scrollWidth > name.clientWidth,
+        nameEllipsis: Boolean(name) && getComputedStyle(name).textOverflow === 'ellipsis',
+        authorsCut: visible(authors) ? authors.scrollWidth > authors.clientWidth : undefined,
+        versionShown: visible(version),
+        versionCut: visible(version) && version.scrollWidth > version.clientWidth,
+        badgesShown: [...option.querySelectorAll('.nuiget-badge')].filter(visible).length,
+        actionsEnd: actions.length > 0 ? round(rectOf(row).right - Math.max(...actions.map(action => rectOf(action).right))) : undefined,
+    };
+});
+const boxOf = el => { const r = rectOf(el); return { left: round(r.left), top: round(r.top), width: round(r.width), height: round(r.height) }; };
+const chromeOf = selector => { const el = root.querySelector(selector); return visible(el) ? boxOf(el) : undefined; };
+const chrome = rootTestId === 'nuiget-app'
+    ? { 'main-header': chromeOf('[data-testid="main-header"]'), search: chromeOf('[data-testid="search-input"]'), 'tab-bar': chromeOf('[data-testid="tab-bar"]') }
+    : { 'sidebar-header': chromeOf('.nuiget-sidebar-header') };
+const firstListed = root.querySelector('[data-testid="installed-list"] [role="option"], [data-testid="updates-list"] [role="option"]');
+const firstRow = visible(firstListed) ? round(rectOf(firstListed.closest('.nuiget-row') ?? firstListed).top) : undefined;
+// DS-OVERFLOW-2 over the section-header boxes of the Design System's overflow table (section 8), on rects in tenths.
+const overflow = { containers: 0, collisions: [], outside: [], clipped: [], count: 0, badges: [] };
+const note = (list, text) => { overflow.count++; if (list.length < 8) list.push(text); };
+const extent = r => round(r.left) + '–' + round(r.right);
+const overflowContainers = '[data-testid^="section-box-"]';
+for (const container of shown(overflowContainers)) {
+    overflow.containers++;
+    const style = getComputedStyle(container);
+    const r = rectOf(container);
+    const left = r.left + px(style.borderLeftWidth) + px(style.paddingLeft);
+    const right = r.right - px(style.borderRightWidth) - px(style.paddingRight);
+    const children = [...container.children].filter(visible).filter(child => !['absolute', 'fixed'].includes(getComputedStyle(child).position));
+    for (let i = 0; i < children.length; i++) {
+        const a = rectOf(children[i]);
+        for (let j = i + 1; j < children.length; j++) {
+            const b = rectOf(children[j]);
+            const area = Math.max(0, Math.min(round(a.right), round(b.right)) - Math.max(round(a.left), round(b.left))) * Math.max(0, Math.min(round(a.bottom), round(b.bottom)) - Math.max(round(a.top), round(b.top)));
+            if (area > containment) note(overflow.collisions, label(container) + ' ' + label(children[i]) + ' × ' + label(children[j]));
+        }
+    }
+    for (const child of new Set([...children, ...[...container.querySelectorAll('.nuiget-badge')].filter(visible)])) {
+        const c = rectOf(child);
+        if (round(c.left) < round(left) - containment || round(c.right) > round(right) + containment) note(overflow.outside, label(container) + ' ' + label(child) + ' ' + extent(c) + ' outside ' + round(left) + '–' + round(right));
+    }
+    if (/hidden|clip/.test(style.overflowX + ' ' + style.overflowY) && (container.scrollWidth > container.clientWidth || container.scrollHeight > container.clientHeight)) note(overflow.clipped, label(container));
+}
+overflow.badges = shown('[data-testid^="section-box-"] .nuiget-badge').map(badge => {
+    const box = badge.closest('[data-testid^="section-box-"]');
+    return box.dataset.testid.replace(/^section-box-/, '') + ' "' + (ownText(badge) || badge.textContent.trim()) + '" ' + extent(rectOf(badge)) + ' (box right ' + round(rectOf(box).right) + ')';
+});
+// PF-2: the first transitive header after the last direct row, in one scroller.
+const scrollerOf = el => { for (let a = el ? el.parentElement : null; a; a = a.parentElement) if (/auto|scroll/.test(getComputedStyle(a).overflowY)) return a; return null; };
+const directRows = [...root.querySelectorAll('[data-testid="installed-list"] .nuiget-row')].filter(visible);
+const transitiveBox = root.querySelector('[data-testid="section-box-transitive"]');
+const transitiveGap = directRows.length > 0 && visible(transitiveBox)
+    ? { lastRowBottom: round(Math.max(...directRows.map(row => rectOf(row).bottom))), headerTop: round(rectOf(transitiveBox).top), sameScroller: scrollerOf(transitiveBox) === scrollerOf(directRows[directRows.length - 1]) }
+    : undefined;
+// PF-4: the primary toolbar button against its list's right edge.
+const edgePair = (button, list) => {
+    const b = root.querySelector('[data-testid="' + button + '"]');
+    const l = root.querySelector('[data-testid="' + list + '"]');
+    return visible(b) && visible(l) ? [{ list, button: round(rectOf(b).right), listRight: round(rectOf(l).right) }] : [];
+};
+const primaryEdges = [...edgePair('uninstall-selected-button', 'installed-list'), ...edgePair('update-all-button', 'updates-list')];
+return { root: true, examined, offRamp, offRampCount, blockGaps, sections, toolbars, mainHeader: contentInsets(header), sidebarHeader: sidebarHeader ? contentInsets(sidebarHeader) : undefined, mainLefts, mainRegionLeft, details, sidebar, heights, centring, detailsButtons, width, rows, chrome, firstRow, overflow, transitiveGap, primaryEdges };
 `;
 
 // ---- the workbench of the same run (helper 3's parity) --------------------------------------------------------------
@@ -787,13 +940,145 @@ function evaluateHeights(definition: RuleDefinition, layout: Layout, look: 'mode
     }
 }
 
+/** Helpers 5 and 6 (UX-P0.12): the value and the verdict of a truncation, overlap or chrome rule, or undefined for another. */
+function evaluateOverflow(definition: RuleDefinition, scope: Scope, group: StateGroup, layout: Layout, look: 'modern' | 'classic', reference: ChromeReference | undefined): { value: string; pass: boolean } | undefined {
+    const tolerance = definition.tolerance;
+    switch (definition.id) {
+        case 'PF-2': {
+            const gap = layout.transitiveGap;
+            if (gap === undefined) {
+                return { value: `${NOT_MEASURABLE} (no direct row or transitive header)`, pass: false };
+            }
+            // At most two block gaps below the last direct row; P9.fix-2's subpixel slack above it.
+            const below = tenth(gap.headerTop - gap.lastRowBottom);
+            const most = 2 * Math.max(...BLOCK_GAPS);
+            return {
+                value: `gap ${below} (at most ${most}; last direct row ${gap.lastRowBottom}, transitive header ${gap.headerTop}, ${gap.sameScroller ? 'one scroller' : 'two scrollers'})`,
+                pass: gap.sameScroller && below >= -tolerance && below <= most,
+            };
+        }
+        case 'PF-3a': {
+            const rows = layout.rows.filter(row => row.list === 'installed-list' && row.authorsCut !== undefined);
+            if (rows.length === 0) {
+                return { value: `${NOT_MEASURABLE} (no authors)`, pass: false };
+            }
+            const cut = rows.filter(row => row.authorsCut).map(row => row.name);
+            return { value: cut.length === 0 ? `${rows.length} authors, none cut` : `cut: ${cut.join(', ')} (of ${rows.length})`, pass: cut.length === 0 };
+        }
+        case 'PF-4': {
+            if (layout.primaryEdges.length === 0) {
+                return { value: `${NOT_MEASURABLE} (no primary toolbar button)`, pass: false };
+            }
+            return {
+                value: layout.primaryEdges.map(pair => `${pair.list}: button ${pair.button}, list ${pair.listRight} (${tenth(pair.listRight - pair.button)})`).join('; '),
+                pass: layout.primaryEdges.every(pair => Math.abs(pair.listRight - pair.button) <= tolerance),
+            };
+        }
+        case 'MS-8': {
+            if (scope === 'first-row') {
+                if (layout.firstRow === undefined) {
+                    return { value: `${NOT_MEASURABLE} (no first row)`, pass: false };
+                }
+                // The first state of its surface, theme, width and look is the reference.
+                if (reference === undefined || reference.firstRow === undefined) {
+                    return { value: `reference ${layout.firstRow}`, pass: true };
+                }
+                return { value: `${layout.firstRow} (${reference.state} ${reference.firstRow})`, pass: near(layout.firstRow, reference.firstRow, tolerance) };
+            }
+            const rectText = (rect: ChromeRect): string => `${rect.left},${rect.top} ${rect.width}×${rect.height}`;
+            const present = Object.entries(layout.chrome).filter((entry): entry is [string, ChromeRect] => entry[1] !== undefined);
+            if (present.length === 0) {
+                return { value: NOT_MEASURABLE, pass: false };
+            }
+            if (reference === undefined) {
+                return { value: `reference (${present.map(([name, rect]) => `${name} ${rectText(rect)}`).join('; ')})`, pass: true };
+            }
+            // An element the reference lacks is new here: the capture suite adds it to the reference.
+            const moved = present.flatMap(([name, rect]) => {
+                const before = reference.chrome[name];
+                if (before === undefined) {
+                    return [];
+                }
+                const delta = Math.max(Math.abs(rect.left - before.left), Math.abs(rect.top - before.top), Math.abs(rect.width - before.width), Math.abs(rect.height - before.height));
+                return delta > tolerance ? [`${name} ${rectText(before)} → ${rectText(rect)}`] : [];
+            });
+            // Chrome that disappears fails too, but for the tab strip while Browse shows its results (MainShell's `browsing`).
+            const absent = Object.keys(reference.chrome).filter(name => reference.chrome[name] !== undefined && layout.chrome[name] === undefined);
+            const missing = absent.filter(name => !(name === 'tab-bar' && group === 'browse'));
+            const gone = absent.length > 0 ? `; not shown: ${absent.join(', ')}` : '';
+            return { value: moved.length === 0 ? `still (as ${reference.state})${gone}` : `moved against ${reference.state}: ${moved.join('; ')}${gone}`, pass: moved.length === 0 && missing.length === 0 };
+        }
+        case 'DS-INSET-3': {
+            const check = (label: string, ends: readonly number[], target: number) => ({ text: `${label} ${tally(ends)} (target ${target})`, pass: ends.every(end => near(end, target, tolerance)) });
+            const parts: Array<{ text: string; pass: boolean }> = [];
+            const actions = (compact: boolean) => layout.rows.filter(row => row.compact === compact && row.actionsEnd !== undefined).map(row => row.actionsEnd as number);
+            if (scope === 'rows' && actions(false).length > 0) {
+                parts.push(check('row actions', actions(false), TRAILING.rowAction));
+            }
+            if (scope === 'headers') {
+                const groups = layout.sections.filter(section => section.variant === 'group' && section.trailingEnd !== undefined).map(section => section.trailingEnd as number);
+                const surfaces = [...(layout.mainHeader === undefined ? [] : [layout.mainHeader.end]), ...layout.toolbars.flatMap(toolbar => (toolbar.insets === undefined ? [] : [toolbar.insets.end]))];
+                if (groups.length > 0) {
+                    parts.push(check('group headers', groups, TRAILING.surface));
+                }
+                if (surfaces.length > 0) {
+                    parts.push(check('header and toolbars', surfaces, TRAILING.surface));
+                }
+            }
+            if (scope === 'sidebar') {
+                const panes = layout.sections.filter(section => section.variant === 'pane' && section.trailingEnd !== undefined).map(section => section.trailingEnd as number);
+                if (panes.length > 0) {
+                    parts.push(check('section headers', panes, TRAILING.sidebarHeader[look]));
+                }
+                if (actions(true).length > 0) {
+                    parts.push(check('row actions', actions(true), TRAILING.rowAction));
+                }
+            }
+            if (parts.length === 0) {
+                return { value: NOT_MEASURABLE, pass: false };
+            }
+            return { value: parts.map(part => part.text).join('; '), pass: parts.every(part => part.pass) };
+        }
+        case 'DS-OVERFLOW-2': {
+            const overflow = layout.overflow;
+            if (overflow.containers === 0) {
+                return { value: NOT_MEASURABLE, pass: false };
+            }
+            const found = [
+                ...(overflow.collisions.length > 0 ? [`collisions: ${overflow.collisions.join('; ')}`] : []),
+                ...(overflow.outside.length > 0 ? [`outside: ${overflow.outside.join('; ')}`] : []),
+                ...(overflow.clipped.length > 0 ? [`clipped: ${overflow.clipped.join(', ')}`] : []),
+            ];
+            const badges = overflow.badges.length > 0 ? `; badges: ${overflow.badges.join('; ')}` : '';
+            return { value: `${overflow.count} offending in ${overflow.containers} containers${found.length > 0 ? ` (${found.join('; ')})` : ''}${badges}`, pass: overflow.count === 0 };
+        }
+        case 'DS-ROW-5': {
+            const rows = layout.rows.filter(row => row.compact === (scope === 'sidebar'));
+            if (rows.length === 0) {
+                return { value: NOT_MEASURABLE, pass: false };
+            }
+            // The name truncates last: never while the row still shows its version or a badge, and always with an ellipsis.
+            // The version shares the name's line in a compact row only; a comfortable row's version is on its second line.
+            const early = rows.filter(row => row.nameCut && (row.badgesShown > 0 || (row.compact && row.versionShown && !row.versionCut))).map(row => row.name);
+            const plain = rows.filter(row => !row.nameEllipsis).length;
+            const cut = rows.filter(row => row.nameCut).length;
+            return {
+                value: `${rows.length} rows, ${cut} names cut${early.length > 0 ? `; cut before the version or badges: ${early.join(', ')}` : ''}${plain > 0 ? `; no ellipsis ${plain}` : ''}`,
+                pass: early.length === 0 && plain === 0,
+            };
+        }
+        default:
+            return undefined;
+    }
+}
+
 /** The value and the verdict of one rule in one scope, or undefined when no helper measures that scope. */
-function evaluate(definition: RuleDefinition, scope: Scope, layout: Layout, look: 'modern' | 'classic', workbench: WorkbenchHeights): { value: string; pass: boolean } | undefined {
+function evaluate(definition: RuleDefinition, scope: Scope, group: StateGroup, layout: Layout, look: 'modern' | 'classic', workbench: WorkbenchHeights, reference: ChromeReference | undefined): { value: string; pass: boolean } | undefined {
     const tolerance = definition.tolerance;
     if (!layout.root) {
         return { value: `${NOT_MEASURABLE} (no root)`, pass: false };
     }
-    const heightVerdict = evaluateHeights(definition, layout, look, workbench);
+    const heightVerdict = evaluateHeights(definition, layout, look, workbench) ?? evaluateOverflow(definition, scope, group, layout, look, reference);
     if (heightVerdict !== undefined) {
         return heightVerdict;
     }
@@ -909,21 +1194,23 @@ function withoutNulls<T>(value: T): T {
 }
 
 /** Every line of a state: one per rule and scope that applies, in `RULES` order. */
-export function measureLines(state: string, collected: Layout, look: 'modern' | 'classic', workbench: WorkbenchHeights = {}): MeasureLine[] {
+export function measureLines(state: string, collected: Layout, look: 'modern' | 'classic', workbench: WorkbenchHeights = {}, reference?: ChromeReference, width?: number): MeasureLine[] {
     const layout = withoutNulls(collected);
+    const chromeReference = reference === undefined ? undefined : withoutNulls(reference);
     const group = stateGroup(state);
     const lines: MeasureLine[] = [];
     for (const definition of RULES) {
-        if (!appliesTo(definition, state)) {
+        // The capture's own width when given (PF-3a at 1200), else the webview's.
+        if (!appliesTo(definition, state, width ?? layout.width)) {
             continue;
         }
-        for (const scope of [group, ...elementGroups(group)] as Scope[]) {
+        for (const scope of [group, ...elementGroups(group, state)] as Scope[]) {
             const status = definition.scopes[scope];
             if (status === undefined) {
                 continue;
             }
             // A scope with a status and no helper is never silent: it prints, and a hard one fails.
-            const result = evaluate(definition, scope, layout, look, workbench) ?? { value: `${NOT_MEASURABLE} (no helper)`, pass: false };
+            const result = evaluate(definition, scope, group, layout, look, workbench, chromeReference) ?? { value: `${NOT_MEASURABLE} (no helper)`, pass: false };
             const name = scope === group ? `${definition.id}@${state}` : `${definition.id}@${state}/${scope}`;
             lines.push({ name, value: result.value, status, pass: result.pass });
         }

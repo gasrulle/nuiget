@@ -20,6 +20,8 @@ button { background-color: rgba(0, 0, 0, 0); }
 .nuiget-section-toggle { border: 0; background-color: rgba(0, 0, 0, 0); }
 .nuiget-badge { font-size: 11px; padding: 0 4px; }
 .nuiget-list { overflow-y: auto; }
+.nuiget-section-header { padding: 0 16px; }
+.nuiget-row-name { text-overflow: ellipsis; }
 `;
 
 const PAGE = `
@@ -29,10 +31,10 @@ const PAGE = `
   <div class="nuiget-list" data-rect="0,70,600,500">
     <div role="toolbar" data-testid="installed-toolbar" data-rect="0,70,600,104">
       <button class="nuiget-button" data-testid="select-all-button" data-rect="16,74,100,100" data-text="29,76,87,98">Select all</button>
-      <button class="nuiget-button" data-rect="400,74,594,100" data-text="413,76,581,98">Uninstall selected (0)</button>
+      <button class="nuiget-button" data-testid="uninstall-selected-button" data-rect="400,74,594,100" data-text="413,76,581,98">Uninstall selected (0)</button>
     </div>
     <div class="nuiget-section-header" data-testid="section-box-direct" data-variant="group" data-rect="0,110,600,132">
-      <h2 data-rect="0,110,584,132"><button class="nuiget-section-toggle" aria-controls="direct-content" data-rect="16,110,584,132">
+      <h2 data-rect="16,110,584,132"><button class="nuiget-section-toggle" aria-controls="direct-content" data-rect="16,110,584,132">
         <svg data-rect="16,113,32,129"></svg><span class="nuiget-section-title" data-rect="36,113,80,129" data-text="36,113,80,129">Direct</span>
         <span class="nuiget-visually-hidden" data-rect="0,0,1,1" data-text="0,0,900,20">a hidden description</span>
       </button></h2>
@@ -42,16 +44,19 @@ const PAGE = `
         <span class="nuiget-row-check" data-rect="16,167,32,183"></span><span class="nuiget-row-icon" data-rect="40,159,72,191"></span>
         <span class="nuiget-row-name" data-rect="80,150,200,166" data-text="80,150,200,166">Serilog</span>
         <span class="nuiget-badge" data-rect="210,150,240,166" data-text="212,151,238,165">CPM<span class="nuiget-visually-hidden">Central</span></span>
-      </div></div>
+        <span class="nuiget-row-version" data-rect="80,170,120,184" data-text="80,170,120,184">3.1.1</span>
+        <span class="nuiget-row-authors" data-rect="80,190,200,204" data-text="80,190,200,204">Serilog Contributors</span>
+      </div><div class="nuiget-row-actions" data-rect="560,160,594,190"><button class="nuiget-icon-button" data-rect="566,163,590,187"></button></div></div>
       <div class="nuiget-row nuiget-row--comfortable" data-rect="0,214,600,292"><div role="option" data-rect="0,214,600,291">
         <span class="nuiget-row-check" data-rect="16,245,32,261"></span><span class="nuiget-row-icon" data-rect="40,237,72,269"></span>
         <span class="nuiget-row-name" data-rect="80,228,200,244" data-text="80,228,200,244">Moq</span>
       </div></div>
     </div>
     <div class="nuiget-section-header" data-testid="section-box-transitive" data-variant="group" data-rect="0,300,600,322">
-      <h2 data-rect="0,300,584,322"><button class="nuiget-section-toggle" aria-controls="transitive-content" data-rect="16,300,584,322">
+      <h2 data-rect="16,300,540,322"><button class="nuiget-section-toggle" aria-controls="transitive-content" data-rect="16,300,540,322">
         <span class="nuiget-section-title" data-rect="36,303,180,319" data-text="36,303,180,319">Transitive packages</span>
       </button></h2>
+      <div class="nuiget-section-actions" data-rect="540,303,598,319"><span class="nuiget-badge" data-rect="560,304,598,318" data-text="562,305,596,317">provisional</span></div>
     </div>
   </div>
   <div data-testid="package-details-panel" data-rect="600,70,900,700">
@@ -62,7 +67,7 @@ const PAGE = `
 </main>`;
 
 const collect = (rootTestId = 'nuiget-app'): Layout =>
-    new Function(COLLECT_LAYOUT).apply(null, [rootTestId, RAMP, TOLERANCES.gapMembership]) as Layout;
+    new Function(COLLECT_LAYOUT).apply(null, [rootTestId, RAMP, TOLERANCES.gapMembership, TOLERANCES.containment]) as Layout;
 
 describe('the in-page collector on stubbed geometry (UX-P0.10, UX-P0.11)', () => {
     const saved = {
@@ -137,10 +142,33 @@ describe('the in-page collector on stubbed geometry (UX-P0.10, UX-P0.11)', () =>
             ],
         });
         // The badge's own text tells a count from a label; a title in a hidden child does not count.
-        expect(layout.heights.badges.map(badge => [badge.count, badge.width, badge.height])).toEqual([[true, 15, 18], [false, 30, 16]]);
+        expect(layout.heights.badges.map(badge => [badge.count, badge.width, badge.height])).toEqual([[true, 15, 18], [false, 30, 16], [false, 38, 14]]);
         expect(layout.heights.checkBoxes.map(box => [box.width, box.height, box.selected === undefined])).toEqual([[16, 16, false], [16, 16, true]]);
         expect(layout.centring).toEqual([{ name: 'Serilog', row: 175, check: 175, icon: 175 }, { name: 'Moq', row: 253, check: 253, icon: 253 }]);
         expect(layout.detailsButtons).toEqual({ uninstall: { left: 800, height: 24 }, update: { left: 800, height: 24 } });
+    });
+
+    it('collects the rows, the chrome, the overflow offenders and the PF-2 and PF-4 edges (helpers 5 and 6)', () => {
+        const layout = collect();
+        expect(layout.rows.map(row => [row.list, row.compact, row.name, row.nameEllipsis, row.authorsCut, row.versionShown, row.versionCut, row.badgesShown, row.actionsEnd])).toEqual([
+            ['installed-list', false, 'Serilog', true, false, true, false, 1, 10], ['installed-list', false, 'Moq', true, undefined, false, false, 0, undefined],
+        ]);
+        // Authors wider than their box are cut (PF-3a's input).
+        const authors = document.querySelector('.nuiget-row-authors') as HTMLElement;
+        Object.defineProperty(authors, 'scrollWidth', { value: 150 });
+        Object.defineProperty(authors, 'clientWidth', { value: 120 });
+        expect(collect().rows[0].authorsCut).toBe(true);
+        expect(layout.chrome).toEqual({ 'main-header': { left: 0, top: 0, width: 600, height: 40 }, search: undefined, 'tab-bar': { left: 0, top: 40, width: 600, height: 30 } });
+        expect(layout.firstRow).toBe(136);
+        // Only section headers are DS-OVERFLOW-2's containers here: the tab label and its count overlapping is not counted.
+        // The transitive header's badge reaches past the box's 16 px end padding.
+        expect(layout.overflow.containers).toBe(2);
+        expect(layout.overflow.collisions).toEqual([]);
+        expect(layout.overflow.outside).toEqual(['[section-box-transitive] .nuiget-section-actions 540–598 outside 16–584', '[section-box-transitive] .nuiget-badge 560–598 outside 16–584']);
+        expect(layout.overflow.badges).toEqual(['transitive "provisional" 560–598 (box right 600)']);
+        expect(layout.sections.find(section => section.id === 'transitive')?.trailingEnd).toBe(2);
+        expect(layout.transitiveGap).toEqual({ lastRowBottom: 292, headerTop: 300, sameScroller: true });
+        expect(layout.primaryEdges).toEqual([{ list: 'installed-list', button: 594, listRight: 600 }]);
     });
 
     it('answers a missing root with an empty layout', () => {

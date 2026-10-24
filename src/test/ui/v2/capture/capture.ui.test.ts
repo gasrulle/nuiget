@@ -3,7 +3,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { By, EditorView, Key, VSBrowser } from 'vscode-extension-tester';
 import { selectTheme, setPanelWidth, setSidebarWidth, webviewRect, windowSize } from '../layout';
-import { COLLECT_LAYOUT, formatLine, type Layout, measureLines, RAMP, TOLERANCES, type WorkbenchHeights } from '../measure';
+import { type ChromeReference, COLLECT_LAYOUT, formatLine, type Layout, measureLines, RAMP, TOLERANCES, type WorkbenchHeights } from '../measure';
 import { chooseProjectCommitted, enterMainWebview, openMainPanel, optionFor, untilProjects } from '../mainWebview';
 import { driverOf, enterSidebarWebview, findByTestId, leaveWebview, openSidebarView, poll, waitForTestIdGone, waitForText } from '../sidebarWebview';
 import { measureWorkbench } from '../workbench';
@@ -365,15 +365,31 @@ const pendingLines: string[] = [];
 /** The workbench's own controls, measured once at the start of the run (UX-P0.11): helper 3's parity. */
 let workbench: WorkbenchHeights = {};
 
+/** MS-8's reference: the chrome of the first state measured at each surface, theme, width and look (UX-P0.12). */
+const chromeReferences = new Map<string, ChromeReference>();
+
 /**
  * Measures the state the driver has just reached (UX-P0.10, `measure.ts`): one `[measure]` line per rule that applies;
  * returns the names of the red `hard` rules.
  */
 async function measure(state: NamedState, capture: Capture): Promise<string[]> {
     await (state.surface === 'main' ? enterMainWebview() : enterSidebarWebview());
-    const layout = await script<Layout>(COLLECT_LAYOUT, state.surface === 'main' ? 'nuiget-app' : 'nuiget-sidebar', RAMP, TOLERANCES.gapMembership);
+    const layout = await script<Layout>(COLLECT_LAYOUT, state.surface === 'main' ? 'nuiget-app' : 'nuiget-sidebar', RAMP, TOLERANCES.gapMembership, TOLERANCES.containment);
+    const key = `${state.surface} ${capture.theme} ${capture.width} ${capture.look}`;
+    const before = chromeReferences.get(key);
+    // Measured against the reference as it stood; then an element (or first row) the reference lacked joins it.
+    const reference = before === undefined ? undefined : { ...before, chrome: { ...before.chrome } };
     const red: string[] = [];
-    for (const line of measureLines(state.name, layout, capture.look, workbench)) {
+    const lines = measureLines(state.name, layout, capture.look, workbench, reference, capture.width);
+    if (layout.root) {
+        const merged = before ?? { state: state.name, chrome: {}, firstRow: undefined };
+        for (const [name, rect] of Object.entries(layout.chrome)) {
+            merged.chrome[name] ??= rect ?? undefined;
+        }
+        merged.firstRow ??= layout.firstRow ?? undefined;
+        chromeReferences.set(key, merged);
+    }
+    for (const line of lines) {
         const text = formatLine(line);
         console.warn(text);
         if (line.status === 'hard') {

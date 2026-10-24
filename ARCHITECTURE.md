@@ -934,7 +934,8 @@ These parts are the current truth for the build, test and release pipeline.
   through `vscode:prepublish`, the production build, and then the capture suite (`src/test/ui/v2/capture`,
   `npm run test:ui:capture`) on the installed VSIX: it opens the dense workspace, reaches each ready state of
   `src/test/ui/v2/states.ts`, measures it with the rules of `src/test/ui/v2/measure.ts` (one `[measure]` line per
-  rule and scope that applies) and writes its webview crop with `scripts/crop-png.mjs`; a red `hard` rule fails the
+  rule and scope that applies; MS-8 compares the persistent chrome with the first state measured at the same surface,
+  theme, width and look) and writes its webview crop with `scripts/crop-png.mjs`; a red `hard` rule fails the
   state after its crop is written, a `pending` rule names the item that flips it and is only printed, and the run ends
   with the pending list. Before the first state the run measures the workbench's own controls in its look (the
   Extensions view and an extension's editor, the Settings editor, the command palette; `src/test/ui/v2/workbench.ts`),
