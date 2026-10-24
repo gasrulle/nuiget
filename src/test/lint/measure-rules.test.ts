@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { appliesTo, COLLECT_LAYOUT, elementGroups, formatLine, type Heights, type Layout, MEASURE_WIDGETS, measureLines, parseColour, RAMP, RULES, type Scope, stateGroup, TOLERANCES, WORKBENCH_WIDGETS } from '../ui/v2/measure';
+import { appliesTo, COLLECT_LAYOUT, elementGroups, formatLine, type Heights, type Layout, MEASURE_WIDGETS, measureLines, parseColour, RAMP, RULES, type Scope, type SpecElement, type SpecLook, stateGroup, TOLERANCES, WORKBENCH_WIDGETS } from '../ui/v2/measure';
 import { STATES } from '../ui/v2/states';
 
 /**
@@ -21,6 +21,7 @@ const layout = (overrides: Partial<Layout> = {}, heights: Partial<Heights> = {})
         rows: [], listPaneWidth: undefined, detailsHeader: undefined, sideways: [], controlsOut: [], minContent: { toolbar: undefined, header: undefined },
         factLefts: [], fonts: { root: '', others: [] }, rootLineHeight: undefined, compactLineHeights: [], metaText: [], descriptionForeground: '', copyEnds: [],
     },
+    testIds: {},
     ...overrides, heights: { ...noHeights, ...heights },
 });
 
@@ -46,7 +47,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
             ...Array.from({ length: 11 }, (_, i) => `DS-HEIGHT-${i + 1}`),
             'PF-2', 'PF-3a', 'PF-4', 'MS-8', 'DS-OVERFLOW-6', 'DS-INSET-3', 'DS-OVERFLOW-2', 'DS-ROW-5',
             'DS-INSET-4', 'DS-ROW-1', 'DS-ROW-2', 'DS-ROW-3', 'DS-ROW-6', 'DS-ICON-3', 'DS-DENSITY-1', 'DS-OVERFLOW-1', 'DS-OVERFLOW-3', 'DS-OVERFLOW-5', 'DS-ALIGN-1',
-            'DS-TYPE-1', 'DS-TYPE-4', 'DS-TYPE-6', 'DS-ROW-4', 'DS-COPY-3',
+            'DS-TYPE-1', 'DS-TYPE-4', 'DS-TYPE-6', 'DS-ROW-4', 'DS-COPY-3', 'SPEC',
         ]);
         const scopes = (id: string): unknown => RULES.find(rule => rule.id === id)?.scopes;
         expect(scopes('PF-6')).toEqual({ 'main-installed': 'hard' });
@@ -107,13 +108,14 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(scopes('DS-TYPE-6')).toEqual({ 'main-installed': probe, 'main-updates': probe, browse: probe, details: probe, sidebar: probe });
         expect(scopes('DS-ROW-4')).toEqual({ 'main-installed': probe, 'main-updates': probe, browse: probe, details: probe, sidebar: probe });
         expect(scopes('DS-COPY-3')).toEqual({ 'main-installed': probe, 'main-updates': probe, browse: probe, sidebar: probe });
+        expect(scopes('SPEC')).toEqual({ 'main-installed': { pending: 'P2.8a' } });
         // Each rule's tolerance is one of D34's.
         expect(Object.fromEntries(RULES.map(rule => [rule.id, rule.tolerance]))).toEqual({
             'PF-6': 1, 'DS-GRID-1': 0.5, 'DS-GRID-2a': 0.5, 'DS-GRID-2b': 2, 'DS-INSET-1': 1, 'DS-INSET-2': 1, 'PF-3b': 1, 'PF-5': 1,
             ...Object.fromEntries(Array.from({ length: 11 }, (_, i) => [`DS-HEIGHT-${i + 1}`, 1])),
             'PF-2': 1, 'PF-3a': 0, 'PF-4': 8, 'MS-8': 0.5, 'DS-OVERFLOW-6': 0, 'DS-INSET-3': 1, 'DS-OVERFLOW-2': 0, 'DS-ROW-5': 0,
             'DS-INSET-4': 1, 'DS-ROW-1': 1, 'DS-ROW-2': 1, 'DS-ROW-3': 0, 'DS-ROW-6': 0, 'DS-ICON-3': 0, 'DS-DENSITY-1': 1, 'DS-OVERFLOW-1': 0, 'DS-OVERFLOW-3': 0,
-            'DS-OVERFLOW-5': 0, 'DS-ALIGN-1': 0, 'DS-TYPE-1': 0, 'DS-TYPE-4': 0.5, 'DS-TYPE-6': 0, 'DS-ROW-4': 0, 'DS-COPY-3': 0,
+            'DS-OVERFLOW-5': 0, 'DS-ALIGN-1': 0, 'DS-TYPE-1': 0, 'DS-TYPE-4': 0.5, 'DS-TYPE-6': 0, 'DS-ROW-4': 0, 'DS-COPY-3': 0, SPEC: 1,
         });
     });
 
@@ -141,12 +143,13 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
     it('never stays silent: every scope with a status prints not measurable on an empty layout, and so does a missing root', () => {
         for (const rule of RULES) {
             for (const scope of Object.keys(rule.scopes) as Scope[]) {
-                // A state the rule applies to (at 1200, PF-3a's width) whose group or element groups hold the scope.
-                const state = CANDIDATES.find(candidate => appliesTo(rule, candidate, 1200)
+                // A state the rule applies to (at its first width, else at 1200, PF-3a's) whose group or element groups hold the scope.
+                const width = rule.widths?.[0] ?? 1200;
+                const state = CANDIDATES.find(candidate => appliesTo(rule, candidate, width)
                     && (stateGroup(candidate) === scope || elementGroups(stateGroup(candidate), candidate).includes(scope as never))) as string;
                 expect(state, `a state for ${rule.id}/${scope}`).toBeDefined();
                 const name = stateGroup(state) === scope ? `${rule.id}@${state}` : `${rule.id}@${state}/${scope}`;
-                const line = measureLines(state, layout(), 'modern').find(candidate => candidate.name === name);
+                const line = measureLines(state, layout(), 'modern', {}, undefined, width).find(candidate => candidate.name === name);
                 expect(line, name).toMatchObject({ pass: false, value: expect.stringMatching(/^not measurable/) });
             }
         }
@@ -467,6 +470,24 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(value('main-installed-empty', facts({ copyEnds: [{ kind: 'empty', text: 'No packages installed' }] }), 'DS-COPY-3@main-installed-empty')).toMatchObject({ pass: false, value: 'no full stop: empty "No packages installed"' });
         expect(value('main-installed-empty', facts({ copyEnds: [{ kind: 'empty', text: 'No packages installed.' }] }), 'DS-COPY-3@main-installed-empty')).toMatchObject({ pass: true });
         expect(value('main-installed-single', facts({}), 'DS-COPY-3@main-installed-single')).toBeUndefined();
+    });
+
+    it('compares a state\'s elements with its artboard spec within 1 px at the spec\'s width (helper 8, UX-P0.13)', () => {
+        const element = (x: number, y: number, w: number, h: number, padding = '0px 0px 0px 0px'): SpecElement => ({ rect: { x, y, w, h }, inset: x, padding, gap: 'normal normal' });
+        const spec: SpecLook = { 'tab-bar': { ...element(0, 40, 932, 35), tokens: ['--nuiget-inset'] }, 'installed-list': element(0, 110, 932, 693), 'package-row-serilog#2': element(0, 182, 932, 72, '0px 16px 0px 16px') };
+        const at = (testIds: Record<string, SpecElement>, given: SpecLook | undefined, width = 932) =>
+            measureLines('main-installed-single', layout({ testIds }), 'modern', {}, undefined, width, given).find(line => line.name === 'SPEC@main-installed-single');
+        // Every element within 1 px, tokens not compared: pending on the screen item.
+        expect(at({ 'tab-bar': element(0.5, 40, 932, 35), 'installed-list': element(0, 110, 932, 693.8), 'package-row-serilog#2': element(0, 182, 932, 72, '0px 16px 0px 16px') }, spec))
+            .toMatchObject({ pass: true, status: { pending: 'P2.8a' }, value: '3/3 within 1' });
+        // A missing id, a rect 2 px off and a padding off are each named.
+        expect(at({ 'tab-bar': element(0, 40, 932, 35), 'installed-list': element(0, 110, 932, 683), 'package-row-serilog#2': element(0, 182, 932, 72) }, spec)).toMatchObject({
+            pass: false, value: '2/3 within 1; off: installed-list Δh -10; style: package-row-serilog#2 padding 0px 0px 0px 0px (spec 0px 16px 0px 16px)',
+        });
+        expect(at({ 'tab-bar': element(2, 40, 932, 35) }, spec)).toMatchObject({ pass: false, value: '0/3 within 1; missing: installed-list, package-row-serilog#2; off: tab-bar Δx 2 Δinset 2' });
+        // A capture without a spec for its theme and width is never a pass; another width does not apply.
+        expect(at({}, undefined)).toMatchObject({ pass: false, value: "not measurable (no artboard spec for this capture's theme and width)" });
+        expect(at({}, spec, 800)).toBeUndefined();
     });
 
     it('reads theme colours in hex and computed colours alike', () => {

@@ -203,6 +203,7 @@ P0 item provides.
 | DS-DIVIDER-1 / -2 / -3 / -4 | computed borders, shadows | rows / layers / popup / main | — | P2.2 / P3.5 / P3.2 / P2.7 | pending |
 | MS-8 first-row y Installed ↔ Updates | 6 | main | — | P3.1b | pending |
 | DS-ROW-4, DS-TYPE-1, DS-TYPE-4, DS-TYPE-6, DS-COPY-3 | 3, 5, 6 computed styles and text | all | — | P0.18 | pending (pass on the probe) |
+| SPEC (spec conformance against `docs/design/artboards/<state>.spec.json`) | 8 | main-installed (`main-installed-single` at 932, both looks) | V45 | P2.8a | pending |
 | DS-ALIGN-1 | 2 | details | V59 | P3.3a | pending |
 | DS-TYPE-8 | lint (`em`/`%` font-size) and computed badge size | all | V17 | lint: P1.1 · badges: P2.6 | later |
 | DS-TYPE-9 | computed styles | main, details, dialogs | V61 | details headings: P3.3a · panel title: P2.7 · details title: P3.3b · dialog titles: P3.5 | later |

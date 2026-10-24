@@ -188,6 +188,9 @@ export const RULES: readonly RuleDefinition[] = [
     rule('DS-ROW-4', { helper: 6, scopes: inGroups({ pending: 'P0.18' }, ...MAIN, 'sidebar'), tolerance: TOLERANCES.containment }),
     // An empty state or a banner is rendered in these states only.
     rule('DS-COPY-3', { helper: 5, scopes: inGroups({ pending: 'P0.18' }, 'main-installed', 'main-updates', 'browse', 'sidebar'), tolerance: TOLERANCES.containment, statePattern: /empty|error|unavailable|unsupported|nomatch|unresolved/ }),
+    // Helper 8 (UX-P0.13): the states with an artboard spec (`docs/design/artboards/<state>.spec.json`), at the spec's width;
+    // pending on the screen item that builds the state (P2.8a: `main-installed-single`, UX-P0.27a's artboard A).
+    rule('SPEC', { helper: 8, scopes: { 'main-installed': { pending: 'P2.8a' } }, tolerance: TOLERANCES.coincide, states: ['main-installed-single'], widths: [932] }),
 ];
 
 /** The state group of a named state, by its name. */
@@ -372,6 +375,29 @@ export interface Layout {
     /** DS-OVERFLOW-6: the document's client and scroll sizes, and the deepest element outside the viewport no scroller holds. */
     documentOverflow: { clientWidth: number; clientHeight: number; scrollWidth: number; scrollHeight: number; outside: string | undefined } | undefined;
     endOfP0: EndOfP0;
+    /** Every element under the root with a test id, read as the artboard export reads its panel (helper 8). */
+    testIds: Record<string, SpecElement>;
+}
+
+/** One element of an artboard spec, or of a capture: rect and content inset relative to the root, padding, gap. */
+export interface SpecElement {
+    rect: { x: number; y: number; w: number; h: number };
+    inset: number;
+    padding: string;
+    gap: string;
+    /** The artboard's `--nuiget-*` names; not compared (UX-P0.27a's ruling, DO 10). */
+    tokens?: string[];
+}
+
+/** The elements of one look of an artboard spec, by test id (a repeated id as `id#2`). */
+export type SpecLook = Readonly<Record<string, SpecElement>>;
+
+/** `docs/design/artboards/<state>.spec.json`, written by the artboard export (UX-P0.27a). */
+export interface ArtboardSpec {
+    state: string;
+    theme: string;
+    width: number;
+    looks: Partial<Record<'modern' | 'classic', SpecLook>>;
 }
 
 /** UX-P0.13: the facts the rules registered at the end of P0 read (design-advisor ruling of 2026-10-24). */
@@ -411,7 +437,7 @@ export interface EndOfP0 {
 export const COLLECT_LAYOUT = `
 const [rootTestId, ramp, tolerance, containment = 0] = arguments;
 const root = document.querySelector('[data-testid="' + rootTestId + '"]');
-if (!root) return { root: false, examined: 0, offRamp: [], offRampCount: 0, blockGaps: [], sections: [], toolbars: [], mainHeader: undefined, sidebarHeader: undefined, mainLefts: {}, mainRegionLeft: undefined, details: undefined, sidebar: undefined, heights: { headers: [], compactRows: [], comfortableRows: [], comfortablePitches: [], tabStrip: undefined, detailsTabs: undefined, buttons: [], inputs: [], iconButtons: [], checkBoxes: [], checkSelect: { fill: '', border: '' }, badges: [], progress: [] }, centring: [], detailsButtons: { uninstall: undefined, update: undefined }, width: 0, rows: [], chrome: {}, firstRow: undefined, overflow: { containers: 0, collisions: [], outside: [], clipped: [], count: 0, badges: [] }, transitiveGap: undefined, primaryEdges: [], browsing: false, documentOverflow: undefined, endOfP0: { rows: [], listPaneWidth: undefined, detailsHeader: undefined, sideways: [], controlsOut: [], minContent: { toolbar: undefined, header: undefined }, factLefts: [], fonts: { root: '', others: [] }, rootLineHeight: undefined, compactLineHeights: [], metaText: [], descriptionForeground: '', copyEnds: [] } };
+if (!root) return { root: false, examined: 0, offRamp: [], offRampCount: 0, blockGaps: [], sections: [], toolbars: [], mainHeader: undefined, sidebarHeader: undefined, mainLefts: {}, mainRegionLeft: undefined, details: undefined, sidebar: undefined, heights: { headers: [], compactRows: [], comfortableRows: [], comfortablePitches: [], tabStrip: undefined, detailsTabs: undefined, buttons: [], inputs: [], iconButtons: [], checkBoxes: [], checkSelect: { fill: '', border: '' }, badges: [], progress: [] }, centring: [], detailsButtons: { uninstall: undefined, update: undefined }, width: 0, rows: [], chrome: {}, firstRow: undefined, overflow: { containers: 0, collisions: [], outside: [], clipped: [], count: 0, badges: [] }, transitiveGap: undefined, primaryEdges: [], browsing: false, documentOverflow: undefined, endOfP0: { rows: [], listPaneWidth: undefined, detailsHeader: undefined, sideways: [], controlsOut: [], minContent: { toolbar: undefined, header: undefined }, factLefts: [], fonts: { root: '', others: [] }, rootLineHeight: undefined, compactLineHeights: [], metaText: [], descriptionForeground: '', copyEnds: [] }, testIds: {} };
 const dialog = document.querySelector('.nuiget-dialog');
 const visible = el => {
     if (!el || !el.isConnected) return false;
@@ -866,7 +892,23 @@ const endOfP0 = {
     descriptionForeground: rootVars.getPropertyValue('--vscode-descriptionForeground').trim(),
     copyEnds,
 };
-return { root: true, examined, offRamp, offRampCount, blockGaps, sections, toolbars, mainHeader: contentInsets(header), sidebarHeader: sidebarHeader ? contentInsets(sidebarHeader) : undefined, mainLefts, mainRegionLeft, details, sidebar, heights, centring, detailsButtons, width, rows, chrome, firstRow, overflow, transitiveGap, primaryEdges, browsing, documentOverflow, endOfP0 };
+// UX-P0.13 helper 8: every element under the root with a test id, read as the artboard export reads its panel
+// (zz-artboards.ui.test.ts, SPEC): document order, a repeated id numbered #2, #3, rects relative to the root.
+const rootBox = root.getBoundingClientRect();
+const testIds = {};
+for (const el of root.querySelectorAll('[data-testid]')) {
+    const r = el.getBoundingClientRect();
+    const s = getComputedStyle(el);
+    let key = el.dataset.testid;
+    for (let n = 2; key in testIds; n++) key = el.dataset.testid + '#' + n;
+    testIds[key] = {
+        rect: { x: round(r.left - rootBox.left), y: round(r.top - rootBox.top), w: round(r.width), h: round(r.height) },
+        inset: round(r.left - rootBox.left + px(s.borderLeftWidth) + px(s.paddingLeft)),
+        padding: [s.paddingTop, s.paddingRight, s.paddingBottom, s.paddingLeft].join(' '),
+        gap: [s.rowGap, s.columnGap].join(' '),
+    };
+}
+return { root: true, examined, offRamp, offRampCount, blockGaps, sections, toolbars, mainHeader: contentInsets(header), sidebarHeader: sidebarHeader ? contentInsets(sidebarHeader) : undefined, mainLefts, mainRegionLeft, details, sidebar, heights, centring, detailsButtons, width, rows, chrome, firstRow, overflow, transitiveGap, primaryEdges, browsing, documentOverflow, endOfP0, testIds };
 `;
 
 // ---- the workbench of the same run (helper 3's parity) --------------------------------------------------------------
@@ -1494,11 +1536,68 @@ function evaluateEndOfP0(definition: RuleDefinition, scope: Scope, state: string
     }
 }
 
+/** Whether two computed lengths agree within a tolerance; a keyword (`normal`) agrees only with itself. */
+function sameLength(actual: string, expected: string, tolerance: number): boolean {
+    const [a, e] = [Number.parseFloat(actual), Number.parseFloat(expected)];
+    return Number.isNaN(a) || Number.isNaN(e) ? actual === expected : near(a, e, tolerance);
+}
+
+/**
+ * Helper 8, spec conformance (UX-P0.13): every element of the artboard's spec rendered with its rect and content inset
+ * within the tolerance, and its padding and gap equal within it. The spec's `tokens` are the artboard's names, not the
+ * token file's, and are not compared (UX-P0.27a's ruling, DO 10).
+ */
+function evaluateSpec(layout: Layout, spec: SpecLook | undefined, tolerance: number): { value: string; pass: boolean } {
+    if (spec === undefined) {
+        return { value: `${NOT_MEASURABLE} (no artboard spec for this capture's theme and width)`, pass: false };
+    }
+    const ids = Object.keys(spec);
+    const missing = ids.filter(id => layout.testIds[id] === undefined);
+    const off: string[] = [];
+    const styleOff: string[] = [];
+    for (const id of ids) {
+        const actual = layout.testIds[id];
+        if (actual === undefined) {
+            continue;
+        }
+        const expected = spec[id];
+        const deltas = {
+            x: tenth(actual.rect.x - expected.rect.x), y: tenth(actual.rect.y - expected.rect.y), w: tenth(actual.rect.w - expected.rect.w),
+            h: tenth(actual.rect.h - expected.rect.h), inset: tenth(actual.inset - expected.inset),
+        };
+        const named = Object.entries(deltas).filter(([, delta]) => Math.abs(delta) > tolerance);
+        if (named.length > 0) {
+            off.push(`${id} ${named.map(([key, delta]) => `Δ${key} ${delta}`).join(' ')}`);
+        }
+        const lengths = (text: string) => text.split(' ');
+        const padding = lengths(actual.padding).every((length, index) => sameLength(length, lengths(expected.padding)[index] ?? '', tolerance));
+        const gap = lengths(actual.gap).every((length, index) => sameLength(length, lengths(expected.gap)[index] ?? '', tolerance));
+        if (!padding || !gap) {
+            styleOff.push(`${id}${padding ? '' : ` padding ${actual.padding} (spec ${expected.padding})`}${gap ? '' : ` gap ${actual.gap} (spec ${expected.gap})`}`);
+        }
+    }
+    const within = ids.length - missing.length - off.length;
+    const parts = [`${within}/${ids.length} within ${tolerance}`];
+    if (missing.length > 0) {
+        parts.push(`missing: ${missing.join(', ')}`);
+    }
+    if (off.length > 0) {
+        parts.push(`off: ${off.join('; ')}`);
+    }
+    if (styleOff.length > 0) {
+        parts.push(`style: ${styleOff.join('; ')}`);
+    }
+    return { value: parts.join('; '), pass: missing.length === 0 && off.length === 0 && styleOff.length === 0 };
+}
+
 /** The value and the verdict of one rule in one scope, or undefined when no helper measures that scope. */
-function evaluate(definition: RuleDefinition, scope: Scope, state: string, layout: Layout, look: 'modern' | 'classic', workbench: WorkbenchHeights, reference: ChromeReference | undefined): { value: string; pass: boolean } | undefined {
+function evaluate(definition: RuleDefinition, scope: Scope, state: string, layout: Layout, look: 'modern' | 'classic', workbench: WorkbenchHeights, reference: ChromeReference | undefined, spec: SpecLook | undefined): { value: string; pass: boolean } | undefined {
     const tolerance = definition.tolerance;
     if (!layout.root) {
         return { value: `${NOT_MEASURABLE} (no root)`, pass: false };
+    }
+    if (definition.helper === 8) {
+        return evaluateSpec(layout, spec, tolerance);
     }
     const heightVerdict = evaluateHeights(definition, layout, look, workbench) ?? evaluateOverflow(definition, scope, layout, look, reference) ?? evaluateEndOfP0(definition, scope, state, layout);
     if (heightVerdict !== undefined) {
@@ -1615,8 +1714,11 @@ function withoutNulls<T>(value: T): T {
     return value;
 }
 
-/** Every line of a state: one per rule and scope that applies, in `RULES` order. */
-export function measureLines(state: string, collected: Layout, look: 'modern' | 'classic', workbench: WorkbenchHeights = {}, reference?: ChromeReference, width?: number): MeasureLine[] {
+/**
+ * Every line of a state: one per rule and scope that applies, in `RULES` order. `spec` is the look's elements of the state's
+ * artboard spec when the capture has the spec's theme and width (helper 8), else undefined.
+ */
+export function measureLines(state: string, collected: Layout, look: 'modern' | 'classic', workbench: WorkbenchHeights = {}, reference?: ChromeReference, width?: number, spec?: SpecLook): MeasureLine[] {
     const layout = withoutNulls(collected);
     const chromeReference = reference === undefined ? undefined : withoutNulls(reference);
     const group = stateGroup(state);
@@ -1635,7 +1737,7 @@ export function measureLines(state: string, collected: Layout, look: 'modern' | 
             const later = definition.pendingStates?.[state];
             const status: RuleStatus = declared === 'hard' && later !== undefined ? { pending: later } : declared;
             // A scope with a status and no helper is never silent: it prints, and a hard one fails.
-            const result = evaluate(definition, scope, state, layout, look, workbench, chromeReference) ?? { value: `${NOT_MEASURABLE} (no helper)`, pass: false };
+            const result = evaluate(definition, scope, state, layout, look, workbench, chromeReference, spec) ?? { value: `${NOT_MEASURABLE} (no helper)`, pass: false };
             const name = scope === group ? `${definition.id}@${state}` : `${definition.id}@${state}/${scope}`;
             lines.push({ name, value: result.value, status, pass: result.pass });
         }

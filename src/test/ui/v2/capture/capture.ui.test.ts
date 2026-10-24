@@ -3,7 +3,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { By, EditorView, Key, VSBrowser } from 'vscode-extension-tester';
 import { selectTheme, setPanelWidth, setSidebarWidth, webviewRect, windowSize } from '../layout';
-import { type ChromeReference, COLLECT_LAYOUT, formatLine, type Layout, measureLines, RAMP, TOLERANCES, type WorkbenchHeights } from '../measure';
+import { type ArtboardSpec, type ChromeReference, COLLECT_LAYOUT, formatLine, type Layout, measureLines, RAMP, type SpecLook, TOLERANCES, type WorkbenchHeights } from '../measure';
 import { chooseProjectCommitted, enterMainWebview, openMainPanel, optionFor, untilProjects } from '../mainWebview';
 import { driverOf, enterSidebarWebview, findByTestId, leaveWebview, openSidebarView, poll, waitForTestIdGone, waitForText } from '../sidebarWebview';
 import { measureWorkbench } from '../workbench';
@@ -369,6 +369,19 @@ let workbench: WorkbenchHeights = {};
 const chromeReferences = new Map<string, ChromeReference>();
 
 /**
+ * The look's elements of the state's artboard spec (`docs/design/artboards/<state>.spec.json`, UX-P0.27a) when the
+ * capture has the spec's theme and width, else undefined: helper 8's input (UX-P0.13).
+ */
+function specFor(state: NamedState, capture: Capture): SpecLook | undefined {
+    const file = path.resolve('docs/design/artboards', `${state.name}.spec.json`);
+    if (!fs.existsSync(file)) {
+        return undefined;
+    }
+    const spec = JSON.parse(fs.readFileSync(file, 'utf8')) as ArtboardSpec;
+    return spec.theme === capture.theme && spec.width === capture.width ? spec.looks[capture.look] : undefined;
+}
+
+/**
  * Measures the state the driver has just reached (UX-P0.10, `measure.ts`): one `[measure]` line per rule that applies;
  * returns the names of the red `hard` rules.
  */
@@ -380,7 +393,7 @@ async function measure(state: NamedState, capture: Capture): Promise<string[]> {
     // Measured against the reference as it stood; then an element (or first row) the reference lacked joins it.
     const reference = before === undefined ? undefined : { ...before, chrome: { ...before.chrome } };
     const red: string[] = [];
-    const lines = measureLines(state.name, layout, capture.look, workbench, reference, capture.width);
+    const lines = measureLines(state.name, layout, capture.look, workbench, reference, capture.width, specFor(state, capture));
     if (layout.root) {
         const merged = before ?? { state: state.name, chrome: {}, firstRow: undefined };
         for (const [name, rect] of Object.entries(layout.chrome)) {

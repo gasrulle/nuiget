@@ -252,6 +252,19 @@ describe('the in-page collector on stubbed geometry (UX-P0.10, UX-P0.11)', () =>
         }
     });
 
+    it('reads every element with a test id relative to the root, a repeated id numbered, as the artboard export does (helper 8, UX-P0.13)', () => {
+        const testIds = collect().testIds;
+        expect(testIds['tab-bar']).toMatchObject({ rect: { x: 0, y: 40, w: 600, h: 30 }, inset: 0 });
+        // Padding as the four computed sides, top first (jsdom writes the stylesheet's own values).
+        expect(testIds['select-all-button']).toMatchObject({ rect: { x: 16, y: 74, w: 84, h: 26 }, inset: 29 });
+        expect(testIds['select-all-button'].padding.split(' ')).toHaveLength(4);
+        expect(testIds['select-all-button'].padding.split(' ')[1]).toBe('12px');
+        // The root itself is not listed; its rect is the origin.
+        expect(testIds['nuiget-app']).toBeUndefined();
+        document.querySelector('[data-testid="installed-toolbar"]')?.insertAdjacentHTML('beforeend', '<button class="nuiget-button" data-testid="select-all-button" data-rect="120,74,200,100"></button>');
+        expect(collect().testIds['select-all-button#2']).toMatchObject({ rect: { x: 120, y: 74, w: 80, h: 26 }, inset: 133 });
+    });
+
     it('answers a missing root with an empty layout', () => {
         expect(collect('nuiget-sidebar')).toMatchObject({ root: false, sections: [], centring: [] });
     });
