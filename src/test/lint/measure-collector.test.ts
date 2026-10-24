@@ -208,6 +208,50 @@ describe('the in-page collector on stubbed geometry (UX-P0.10, UX-P0.11)', () =>
         }
     });
 
+    it('collects the facts of the rules registered at the end of P0 (UX-P0.13)', () => {
+        const panel = document.querySelector('[data-testid="package-details-panel"]') as HTMLElement;
+        panel.insertAdjacentHTML('beforeend', '<dl class="nuiget-details-facts" data-rect="620,200,880,260"><div class="nuiget-details-fact" data-rect="620,200,880,220"><dt data-rect="620,200,690,220" data-text="620,200,680,220">Owner</dt><dd data-rect="700,200,880,220" data-text="700,200,760,220">Microsoft</dd></div><div class="nuiget-details-fact" data-rect="620,230,880,250"><dt data-rect="620,230,690,250" data-text="620,230,670,250">License</dt><dd data-rect="704,230,880,250" data-text="704,230,750,250">MIT</dd></div></dl><p class="nuiget-empty-text" data-rect="620,300,880,320" data-text="620,300,800,320">Select a package</p>');
+        const facts = collect().endOfP0;
+        expect(facts.rows.map(row => [row.list, row.compact, row.icon?.w, row.nameLeft, row.actions])).toEqual([['installed-list', false, 32, 80, 1], ['installed-list', false, 32, 80, 0]]);
+        expect(facts.rows[0].band).toEqual({ left: 0, top: 136, right: 600, bottom: 214 });
+        expect(facts.factLefts).toEqual([[700, 704]]);
+        expect(facts.copyEnds).toEqual([{ kind: 'empty', text: 'Select a package' }]);
+        expect(facts.controlsOut.map(entry => [entry.container, entry.out, entry.total])).toEqual([['toolbars', 0, 2], ['tabs', 0, 0]]);
+
+        // The type, the details header, the list pane, overflow menus and min-content widths.
+        document.head.insertAdjacentHTML('beforeend', '<style id="end-of-p0">main, main * { font-family: sans-serif; } main { line-height: 18.2px; } .nuiget-row--compact { line-height: 22px; } .nuiget-row-version, .nuiget-row-authors { font-size: 11px; color: rgb(157, 157, 157); }</style>');
+        document.documentElement.style.setProperty('--vscode-descriptionForeground', '#9d9d9d');
+        try {
+            (document.querySelector('.nuiget-list') as HTMLElement).classList.add('nuiget-main-list');
+            const tabBar = document.querySelector('[data-testid="tab-bar"]') as HTMLElement;
+            tabBar.insertAdjacentHTML('beforeend', '<button aria-haspopup="menu" data-rect="560,45,580,65"></button><button style="display: none"></button>');
+            panel.insertAdjacentHTML('afterbegin', '<div class="nuiget-details-header" data-rect="600,100,900,180"><h2 class="nuiget-details-title" data-rect="620,120,800,140" data-text="620,120,760,140">Serilog</h2></div><div role="tab" data-rect="616,75,680,95" data-text="620,77,670,93">Readme</div>');
+            panel.insertAdjacentHTML('beforeend', '<span class="odd" style="font-family: serif" data-rect="620,400,700,420" data-text="620,400,690,420">Odd</span>');
+            document.querySelector('.nuiget-list')?.insertAdjacentHTML('beforeend', '<div class="nuiget-row nuiget-row--compact" data-rect="0,300,300,322"><div role="option" data-rect="0,300,300,322"><span class="nuiget-row-name" data-rect="20,303,100,319" data-text="20,303,90,319">Polly</span></div></div>');
+            const toolbar = document.querySelector('[data-testid="installed-toolbar"]') as HTMLElement;
+            Object.defineProperties(toolbar, { scrollWidth: { value: 620, configurable: true }, clientWidth: { value: 600, configurable: true } });
+            const more = collect().endOfP0;
+            expect(more.listPaneWidth).toBe(600);
+            expect(more.detailsHeader).toMatchObject({ insets: { start: 20, top: 20 }, titleLeft: 620, tabLabelLeft: 620 });
+            expect(more.controlsOut.find(entry => entry.container === 'tabs')).toMatchObject({ out: 0, hidden: 1, menu: true, total: 2 });
+            expect(more.minContent).toEqual({ toolbar: { scroll: 620, client: 600 }, header: { scroll: 0, client: 0 } });
+            expect(more.rootLineHeight).toBe(18.2);
+            expect(more.compactLineHeights).toEqual([22]);
+            expect(more.fonts.others).toEqual(['serif']);
+            expect(more.descriptionForeground).toBe('#9d9d9d');
+            expect(more.metaText).toEqual([
+                { kind: 'meta', fontSize: 11, colour: 'rgb(157, 157, 157)', selected: true },
+                { kind: 'meta', fontSize: 11, colour: 'rgb(157, 157, 157)', selected: true },
+            ]);
+            // Without a menu the hidden tab control is out of reach.
+            tabBar.querySelector('[aria-haspopup]')?.remove();
+            expect(collect().endOfP0.controlsOut.find(entry => entry.container === 'tabs')).toMatchObject({ out: 1, hidden: 1, menu: false, total: 1 });
+        } finally {
+            document.getElementById('end-of-p0')?.remove();
+            document.documentElement.style.removeProperty('--vscode-descriptionForeground');
+        }
+    });
+
     it('answers a missing root with an empty layout', () => {
         expect(collect('nuiget-sidebar')).toMatchObject({ root: false, sections: [], centring: [] });
     });

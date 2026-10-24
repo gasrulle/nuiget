@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { classify, coverage, expandIds, groupOf, readAppendixB } from '../../../scripts/check-rule-coverage.mjs';
+import { classify, coverage, expandIds, groupOf, groupsOf, readAppendixB, readTracker } from '../../../scripts/check-rule-coverage.mjs';
 
 /** UX-P0.13: `scripts/check-rule-coverage.mjs`, which lists the Design System rules the states exercise and no rule asserts. */
 describe('scripts/check-rule-coverage.mjs', () => {
@@ -14,6 +14,8 @@ describe('scripts/check-rule-coverage.mjs', () => {
         '| DS-ICON-1 | lint | — | P1.4a |',
         '| DS-STATE-1/2/3 | markers + captures | — | P2.8b |',
         '| DS-INSET-1 | 2 | — | main: P2.7 · sidebar: P3.7a |',
+        '| DS-OVERFLOW-5 | 6 at 220 px | — | P3.3b |',
+        '| DS-ROW-2 | 2 | — | transitive: P2.8a · browse: P3.2 |',
         '',
     ].join('\n');
 
@@ -38,16 +40,46 @@ describe('scripts/check-rule-coverage.mjs', () => {
             .toEqual(['gap', 'later', 'later', 'hard at P0', 'judge-only', 'gap']);
     });
 
+    it('classes a helper cell by its leading P0 helper numbers and reads unqualified segments as every group', () => {
+        const appendix = readAppendixB(plan);
+        // "6 at 220 px" is helper 6; the 220 is a width.
+        expect(classify('DS-OVERFLOW-5', appendix)).toBe('gap');
+        // "transitive: P2.8a" names no state group, so DS-ROW-2 is exercised by every group.
+        expect(appendix.rows.get('DS-ROW-2')?.groups).toHaveLength(7);
+        expect(groupsOf('main: P2.6 · then as DS-GRID-1')).toHaveLength(7);
+        expect(groupsOf('main: P2.7 · details: P3.3b')).toEqual(['main', 'details']);
+    });
+
+    it('reads the tracker as the second source for a rule Appendix B does not list, by the same classes', () => {
+        const tracker = [
+            '| Rule | Helper | State group | Catches | Flipped by | Status |',
+            '|---|---|---|---|---|---|',
+            '| DS-SCROLL-2 | computed box-shadow in a scrolled state | main, sidebar | — | P3.9 | later |',
+            '| DS-ALIGN-1 | 2 | details | V59 | details: P3.3a | pending |',
+            '',
+        ].join('\n');
+        const rows = readTracker(tracker);
+        expect(rows.get('DS-SCROLL-2')?.helper).toBe('computed box-shadow in a scrolled state');
+        expect(classify('DS-SCROLL-2', readAppendixB(plan), rows)).toBe('later');
+        // A P0 helper number in the tracker still fails the gate.
+        expect(classify('DS-ALIGN-1', readAppendixB(plan), rows)).toBe('gap');
+        const designSystem = ['DS-SCROLL-2', 'DS-ALIGN-1'].map(id => `| ${id} | text |`).join('\n');
+        expect(coverage(['main-installed-details'], { designSystem, plan, measure: '', tracker })).toEqual([
+            { id: 'DS-SCROLL-2', helper: 'computed box-shadow in a scrolled state (tracker)', class: 'later' },
+            { id: 'DS-ALIGN-1', helper: '2 (tracker)', class: 'gap' },
+        ]);
+    });
+
     it('lists the ids the states exercise that no rule asserts, a split rule covering its parent', () => {
         const designSystem = ['DS-GRID-2', 'DS-ROW-1', 'DS-ROW-3', 'DS-ICON-1', 'DS-INSET-1', 'DS-ALIGN-1'].map(id => `| ${id} | text |`).join('\n');
         const measure = "rule('DS-GRID-2a', {}); rule('DS-GRID-2b', {}); rule('DS-ROW-3', {});";
-        const rows = coverage(['main-updates'], { designSystem, plan, measure });
+        const rows = coverage(['main-updates'], { designSystem, plan, measure, tracker: '' });
         // DS-GRID-2 is covered by 2a/2b; DS-ROW-3 is asserted; DS-INSET-1 is not exercised by an Updates state.
         expect(rows).toEqual([
             { id: 'DS-ROW-1', helper: '2, 4, 6', class: 'gap' },
             { id: 'DS-ICON-1', helper: 'lint', class: 'later' },
             { id: 'DS-ALIGN-1', helper: '(not in Appendix B)', class: 'gap' },
         ]);
-        expect(coverage(['main-installed-single'], { designSystem, plan, measure }).map(row => row.id)).toContain('DS-INSET-1');
+        expect(coverage(['main-installed-single'], { designSystem, plan, measure, tracker: '' }).map(row => row.id)).toContain('DS-INSET-1');
     });
 });

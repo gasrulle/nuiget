@@ -17,6 +17,10 @@ const layout = (overrides: Partial<Layout> = {}, heights: Partial<Heights> = {})
     centring: [], detailsButtons: { uninstall: undefined, update: undefined }, width: 1200, rows: [], chrome: {}, firstRow: undefined,
     overflow: { containers: 0, collisions: [], outside: [], clipped: [], count: 0, badges: [] }, transitiveGap: undefined, primaryEdges: [],
     browsing: false, documentOverflow: undefined,
+    endOfP0: {
+        rows: [], listPaneWidth: undefined, detailsHeader: undefined, sideways: [], controlsOut: [], minContent: { toolbar: undefined, header: undefined },
+        factLefts: [], fonts: { root: '', others: [] }, rootLineHeight: undefined, compactLineHeights: [], metaText: [], descriptionForeground: '', copyEnds: [],
+    },
     ...overrides, heights: { ...noHeights, ...heights },
 });
 
@@ -41,6 +45,8 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
             'PF-6', 'DS-GRID-1', 'DS-GRID-2a', 'DS-GRID-2b', 'DS-INSET-1', 'DS-INSET-2', 'PF-3b', 'PF-5',
             ...Array.from({ length: 11 }, (_, i) => `DS-HEIGHT-${i + 1}`),
             'PF-2', 'PF-3a', 'PF-4', 'MS-8', 'DS-OVERFLOW-6', 'DS-INSET-3', 'DS-OVERFLOW-2', 'DS-ROW-5',
+            'DS-INSET-4', 'DS-ROW-1', 'DS-ROW-2', 'DS-ROW-3', 'DS-ROW-6', 'DS-ICON-3', 'DS-DENSITY-1', 'DS-OVERFLOW-1', 'DS-OVERFLOW-3', 'DS-OVERFLOW-5', 'DS-ALIGN-1',
+            'DS-TYPE-1', 'DS-TYPE-4', 'DS-TYPE-6', 'DS-ROW-4', 'DS-COPY-3',
         ]);
         const scopes = (id: string): unknown => RULES.find(rule => rule.id === id)?.scopes;
         expect(scopes('PF-6')).toEqual({ 'main-installed': 'hard' });
@@ -82,11 +88,32 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(scopes('DS-INSET-3')).toEqual({ rows: { pending: 'P2.2' }, headers: { pending: 'P2.6' }, sidebar: { pending: 'P3.7a' } });
         expect(scopes('DS-OVERFLOW-2')).toEqual({ 'main-installed': { pending: 'P2.6' }, details: { pending: 'P2.6' }, sidebar: { pending: 'P2.6' } });
         expect(scopes('DS-ROW-5')).toEqual({ ...main('P2.2'), sidebar: { pending: 'P3.7a' } });
+        // UX-P0.13 (design-advisor ruling of 2026-10-24): every Appendix B rule of a P0 helper, and the five on P0.18.
+        expect(scopes('DS-INSET-4')).toEqual({ details: { pending: 'P3.3b' } });
+        expect(scopes('DS-ROW-1')).toEqual(main('P2.2'));
+        expect(scopes('DS-ROW-2')).toEqual({ 'main-installed': { pending: 'P2.8a' }, details: { pending: 'P2.8a' }, browse: { pending: 'P3.2' } });
+        expect(scopes('DS-ROW-3')).toEqual({ ...main('P2.2'), sidebar: { pending: 'P3.7a' } });
+        expect(scopes('DS-ROW-6')).toEqual(main('P2.2'));
+        expect(scopes('DS-ICON-3')).toEqual(main('P2.2'));
+        expect(scopes('DS-DENSITY-1')).toEqual({ ...main('P2.2'), sidebar: { pending: 'P3.7a' } });
+        expect(scopes('DS-OVERFLOW-1')).toEqual({ 'main-installed': { pending: 'P2.7' }, 'main-updates': { pending: 'P2.7' }, browse: { pending: 'P2.7' }, details: { pending: 'P3.3b' }, sidebar: { pending: 'P3.7a' } });
+        expect(scopes('DS-OVERFLOW-3')).toEqual({ toolbars: { pending: 'P2.5' }, tabs: { pending: 'P2.5' }, details: { pending: 'P3.3b' } });
+        expect(scopes('DS-OVERFLOW-5')).toEqual({ details: { pending: 'P3.3b' } });
+        expect(scopes('DS-ALIGN-1')).toEqual({ details: { pending: 'P3.3a' } });
+        const probe = { pending: 'P0.18' };
+        const all = { 'main-installed': probe, 'main-updates': probe, browse: probe, details: probe, dialogs: probe, sources: probe, sidebar: probe };
+        expect(scopes('DS-TYPE-1')).toEqual(all);
+        expect(scopes('DS-TYPE-4')).toEqual(all);
+        expect(scopes('DS-TYPE-6')).toEqual({ 'main-installed': probe, 'main-updates': probe, browse: probe, details: probe, sidebar: probe });
+        expect(scopes('DS-ROW-4')).toEqual({ 'main-installed': probe, 'main-updates': probe, browse: probe, details: probe, sidebar: probe });
+        expect(scopes('DS-COPY-3')).toEqual({ 'main-installed': probe, 'main-updates': probe, browse: probe, sidebar: probe });
         // Each rule's tolerance is one of D34's.
         expect(Object.fromEntries(RULES.map(rule => [rule.id, rule.tolerance]))).toEqual({
             'PF-6': 1, 'DS-GRID-1': 0.5, 'DS-GRID-2a': 0.5, 'DS-GRID-2b': 2, 'DS-INSET-1': 1, 'DS-INSET-2': 1, 'PF-3b': 1, 'PF-5': 1,
             ...Object.fromEntries(Array.from({ length: 11 }, (_, i) => [`DS-HEIGHT-${i + 1}`, 1])),
             'PF-2': 1, 'PF-3a': 0, 'PF-4': 8, 'MS-8': 0.5, 'DS-OVERFLOW-6': 0, 'DS-INSET-3': 1, 'DS-OVERFLOW-2': 0, 'DS-ROW-5': 0,
+            'DS-INSET-4': 1, 'DS-ROW-1': 1, 'DS-ROW-2': 1, 'DS-ROW-3': 0, 'DS-ROW-6': 0, 'DS-ICON-3': 0, 'DS-DENSITY-1': 1, 'DS-OVERFLOW-1': 0, 'DS-OVERFLOW-3': 0,
+            'DS-OVERFLOW-5': 0, 'DS-ALIGN-1': 0, 'DS-TYPE-1': 0, 'DS-TYPE-4': 0.5, 'DS-TYPE-6': 0, 'DS-ROW-4': 0, 'DS-COPY-3': 0,
         });
     });
 
@@ -373,6 +400,73 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         ] });
         expect(lineOf('main-installed-single', truncation, 'DS-ROW-5@main-installed-single')).toMatchObject({ pass: false, value: '2 rows, 2 names cut; cut before the version or badges: Microsoft.Extensions.Logging' });
         expect(lineOf('sidebar-sections', truncation, 'DS-ROW-5@sidebar-sections')).toMatchObject({ pass: false, status: { pending: 'P3.7a' }, value: '3 rows, 3 names cut; cut before the version or badges: Newtonsoft.Json' });
+    });
+
+    it('checks the rules registered at the end of P0 (UX-P0.13)', () => {
+        const band = { left: 0, top: 100, right: 400, bottom: 172 };
+        const row = (overrides: Record<string, unknown> = {}) => ({
+            list: 'installed-list', compact: false, band, painted: undefined, state: 'rest', icon: { left: 46, right: 82, w: 36, h: 36, centre: 136, radius: '2px' },
+            nameLeft: 98, textCentre: 136, lines: 2, actions: 1, ...overrides,
+        });
+        const facts = (overrides: Record<string, unknown>) => layout({ endOfP0: { ...layout().endOfP0, fonts: { root: 'sans', others: [] }, ...overrides } as Layout['endOfP0'] });
+        const value = (state: string, built: Layout, name: string) => lineOf(state, built, name);
+        // DS-ROW-1: icon 36, name 16 after it, centred, two lines (three in Browse).
+        expect(value('main-installed-single', facts({ rows: [row()] }), 'DS-ROW-1@main-installed-single')).toMatchObject({ pass: true, status: { pending: 'P2.2' } });
+        expect(value('main-browse-results', facts({ rows: [row()] }), 'DS-ROW-1@main-browse-results')).toMatchObject({ pass: false });
+        expect(value('main-installed-single', facts({ rows: [row({ nameLeft: 94 })] }), 'DS-ROW-1@main-installed-single')).toMatchObject({ pass: false });
+        // DS-ROW-2: one icon and name column.
+        expect(value('main-transitive-expanded', facts({ rows: [row(), row({ nameLeft: 100 })] }), 'DS-ROW-2@main-transitive-expanded')).toMatchObject({ pass: false, value: 'icon left spread 0, name left spread 2 (2 rows)' });
+        expect(value('main-transitive-expanded', facts({ rows: [row(), row()] }), 'DS-ROW-2@main-transitive-expanded')).toMatchObject({ pass: true });
+        // DS-ROW-3: the painted box of a selected row is the band.
+        expect(value('main-installed-details', facts({ rows: [row({ state: 'current', painted: { ...band, left: 4, right: 396 } })] }), 'DS-ROW-3@main-installed-details')).toMatchObject({ pass: false, value: 'current painted 4 from the band' });
+        expect(value('main-installed-hover', facts({ rows: [row({ state: 'hover', painted: band })] }), 'DS-ROW-3@main-installed-hover')).toMatchObject({ pass: true });
+        // DS-ROW-6 and DS-ICON-3.
+        expect(value('main-installed-single', facts({ rows: [row()], listPaneWidth: 240 }), 'DS-ROW-6@main-installed-single')).toMatchObject({ pass: false, value: 'pane 240: icon 36 (target 24)' });
+        expect(value('main-installed-single', facts({ rows: [row()], listPaneWidth: 400 }), 'DS-ROW-6@main-installed-single')).toMatchObject({ pass: true });
+        expect(value('main-installed-single', facts({ rows: [row({ icon: { left: 46, right: 70, w: 24, h: 24, centre: 136, radius: '2px' } })], listPaneWidth: 250 }), 'DS-ROW-6@main-installed-single')).toMatchObject({ pass: true });
+        expect(value('main-installed-single', facts({ rows: [row()] }), 'DS-ICON-3@main-installed-single')).toMatchObject({ pass: true, value: '36×36 (target 36×36)' });
+        expect(value('main-installed-single', facts({ rows: [row({ icon: { left: 46, right: 78, w: 32, h: 32, centre: 136, radius: '4px' } })] }), 'DS-ICON-3@main-installed-single'))
+            .toMatchObject({ pass: false, value: '32×32 (target 36×36); radius 4px (target 2px)' });
+        // DS-DENSITY-1 per surface.
+        expect(lineOf('sidebar-sections', layout({}, { compactRows: [24, 24] }), 'DS-DENSITY-1@sidebar-sections')).toMatchObject({ pass: false, value: 'compact 24 ×2 (target 22)' });
+        expect(lineOf('sidebar-sections', layout({}, { compactRows: [22, 22] }), 'DS-DENSITY-1@sidebar-sections')).toMatchObject({ pass: true });
+        // DS-OVERFLOW-1, -3, -5.
+        expect(value('main-installed-single', facts({ sideways: ['document 1300>1200'] }), 'DS-OVERFLOW-1@main-installed-single')).toMatchObject({ pass: false });
+        expect(value('main-installed-single', facts({}), 'DS-OVERFLOW-1@main-installed-single')).toMatchObject({ pass: true, value: 'no sideways scroll' });
+        const controls = (out: number, hidden: number, menu: boolean) => [{ container: 'toolbars', label: '[installed-toolbar]', out, hidden, menu, total: 3 }];
+        expect(value('main-installed-single', facts({ controlsOut: controls(1, 1, false) }), 'DS-OVERFLOW-3@main-installed-single/toolbars'))
+            .toMatchObject({ pass: false, value: '[installed-toolbar] 2/3 reachable, 1 hidden and no menu' });
+        // A control hidden behind an overflow menu is reachable.
+        expect(value('main-installed-single', facts({ controlsOut: controls(0, 1, true) }), 'DS-OVERFLOW-3@main-installed-single/toolbars'))
+            .toMatchObject({ pass: true, value: '[installed-toolbar] 3/3 reachable, 1 hidden behind a menu' });
+        expect(value('main-installed-details', facts({ minContent: { toolbar: { scroll: 320, client: 300 }, header: { scroll: 500, client: 600 } } }), 'DS-OVERFLOW-5@main-installed-details'))
+            .toMatchObject({ pass: false, value: 'toolbar min-content 320 in 300; header min-content 500 in 600' });
+        expect(value('main-installed-details', facts({ minContent: { toolbar: { scroll: 301, client: 301 }, header: { scroll: 600, client: 600 } } }), 'DS-OVERFLOW-5@main-installed-details')).toMatchObject({ pass: true });
+        // DS-INSET-4 and DS-ALIGN-1 in the details pane.
+        expect(value('main-installed-details', facts({ detailsHeader: { insets: { start: 20, end: 20, top: 20, bottom: 20 }, titleLeft: 620, tabLabelLeft: 620 } }), 'DS-INSET-4@main-installed-details')).toMatchObject({ pass: true, status: { pending: 'P3.3b' } });
+        expect(value('main-installed-details', facts({ detailsHeader: { insets: { start: 16, end: 20, top: 20, bottom: 20 }, titleLeft: 620, tabLabelLeft: 620 } }), 'DS-INSET-4@main-installed-details')).toMatchObject({ pass: false });
+        expect(value('main-installed-details', facts({ detailsHeader: { insets: { start: 20, end: 20, top: 20, bottom: 20 }, titleLeft: 620, tabLabelLeft: 632 } }), 'DS-INSET-4@main-installed-details')).toMatchObject({ pass: false });
+        expect(value('main-installed-details', facts({ factLefts: [[700, 700, 712]] }), 'DS-ALIGN-1@main-installed-details')).toMatchObject({ pass: false, status: { pending: 'P3.3a' } });
+        expect(value('main-installed-details', facts({ factLefts: [[700, 700], [640, 640]] }), 'DS-ALIGN-1@main-installed-details')).toMatchObject({ pass: true });
+        // The five of P0.18.
+        expect(value('main-installed-single', facts({ fonts: { root: 'sans', others: ['monospace'] } }), 'DS-TYPE-1@main-installed-single')).toMatchObject({ pass: false, status: { pending: 'P0.18' } });
+        expect(value('main-installed-single', facts({ fonts: { root: 'sans', others: [] } }), 'DS-TYPE-1@main-installed-single')).toMatchObject({ pass: true, value: 'one family' });
+        expect(value('main-installed-single', facts({ rootLineHeight: 18.2 }), 'DS-TYPE-4@main-installed-single')).toMatchObject({ pass: true });
+        expect(value('main-installed-single', facts({ rootLineHeight: 19 }), 'DS-TYPE-4@main-installed-single')).toMatchObject({ pass: false });
+        // Compact rows by their computed line-height, within the rule's 0.5.
+        expect(value('sidebar-sections', facts({ rootLineHeight: 18.2, compactLineHeights: [22.4, 22] }), 'DS-TYPE-4@sidebar-sections')).toMatchObject({ pass: true });
+        expect(value('sidebar-sections', facts({ rootLineHeight: 18.2, compactLineHeights: [18.2] }), 'DS-TYPE-4@sidebar-sections'))
+            .toMatchObject({ pass: false, value: 'line height 18.2 (target 18.2); compact rows 18.2 (target 22)' });
+        const meta = (fontSize: number, colour = 'rgb(157, 157, 157)') => [{ kind: 'meta', fontSize, colour, selected: false }];
+        expect(value('main-installed-single', facts({ metaText: meta(11), descriptionForeground: '#9d9d9d' }), 'DS-TYPE-6@main-installed-single')).toMatchObject({ pass: true });
+        expect(value('main-installed-single', facts({ metaText: meta(11.5), descriptionForeground: '#9d9d9d' }), 'DS-TYPE-6@main-installed-single')).toMatchObject({ pass: false });
+        expect(value('main-installed-single', facts({ metaText: meta(11, 'rgb(204, 204, 204)'), descriptionForeground: '#9d9d9d' }), 'DS-TYPE-6@main-installed-single'))
+            .toMatchObject({ pass: false, value: 'meta 11 (target 11); 1 meta off descriptionForeground' });
+        expect(value('main-installed-hover', facts({ rows: [row({ actions: 4 })] }), 'DS-ROW-4@main-installed-hover')).toMatchObject({ pass: false });
+        expect(value('main-installed-hover', facts({ rows: [row({ actions: 3 })] }), 'DS-ROW-4@main-installed-hover')).toMatchObject({ pass: true });
+        expect(value('main-installed-empty', facts({ copyEnds: [{ kind: 'empty', text: 'No packages installed' }] }), 'DS-COPY-3@main-installed-empty')).toMatchObject({ pass: false, value: 'no full stop: empty "No packages installed"' });
+        expect(value('main-installed-empty', facts({ copyEnds: [{ kind: 'empty', text: 'No packages installed.' }] }), 'DS-COPY-3@main-installed-empty')).toMatchObject({ pass: true });
+        expect(value('main-installed-single', facts({}), 'DS-COPY-3@main-installed-single')).toBeUndefined();
     });
 
     it('reads theme colours in hex and computed colours alike', () => {

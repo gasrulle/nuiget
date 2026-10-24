@@ -146,7 +146,10 @@ only under per-section lists. A cut feature's P5 rows become `skipped`.
 
 Written at P0 (plan Appendix B is the source); each flip updates its row in the item's commit. A rule is `pending`
 until the item named for its state group flips it; only that item may (plan §2.7). P0.18 sets `hard` any rule found
-green on the unchanged tree and records it here.
+green on the unchanged tree and records it here. The rule-coverage gate (`node scripts/check-rule-coverage.mjs --states
+<list>`, design trigger 6, UX-P0.13) reads this table for a rule Appendix B does not list: write such a row with full,
+comma-separated ids (the `-3`, `…` and `/ -2` shorthands do not expand); `later` is the status of a rule whose helper no
+P0 item provides.
 
 | Rule | Helper | State group | Catches | Flipped by | Status |
 |---|---|---|---|---|---|
@@ -170,7 +173,7 @@ green on the unchanged tree and records it here.
 | DS-HEIGHT-9 | 3 | check boxes | — | P2.3 | pending |
 | DS-HEIGHT-10 | 3 | badges | — | P2.6 | pending |
 | DS-HEIGHT-11 | 3 | main / rest | — | P2.8b / P3.10 | pending |
-| DS-ROW-1, -3, -6 | 2, 4, 6 | main rows | V2 (ROW-3) | P2.2 | pending |
+| DS-ROW-1, -3, -6 | 2, 4, 6 | main rows; DS-ROW-3 also sidebar rows | V2 (ROW-3) | P2.2 / sidebar (DS-ROW-3): P3.7a | pending |
 | DS-ROW-2 | 2 | transitive / browse | — | P2.8a / P3.2 | pending |
 | DS-ROW-5 | 5 truncation | comfortable / compact | — | P2.2 / P3.7a | pending |
 | DS-TYPE-2, -3 | computed styles | all; details headings | — | P1.1; P3.3a | pending |
@@ -199,6 +202,18 @@ green on the unchanged tree and records it here.
 | DS-COPY-5 | text | main / sidebar | — | P2.6 / P3.7b | pending |
 | DS-DIVIDER-1 / -2 / -3 / -4 | computed borders, shadows | rows / layers / popup / main | — | P2.2 / P3.5 / P3.2 / P2.7 | pending |
 | MS-8 first-row y Installed ↔ Updates | 6 | main | — | P3.1b | pending |
+| DS-ROW-4, DS-TYPE-1, DS-TYPE-4, DS-TYPE-6, DS-COPY-3 | 3, 5, 6 computed styles and text | all | — | P0.18 | pending (pass on the probe) |
+| DS-ALIGN-1 | 2 | details | V59 | P3.3a | pending |
+| DS-TYPE-8 | lint (`em`/`%` font-size) and computed badge size | all | V17 | lint: P1.1 · badges: P2.6 | later |
+| DS-TYPE-9 | computed styles | main, details, dialogs | V61 | details headings: P3.3a · panel title: P2.7 · details title: P3.3b · dialog titles: P3.5 | later |
+| DS-RADIUS-1 | computed styles | all | V20 | buttons: P2.3 · selects and text fields: P2.4 | later |
+| DS-RADIUS-2 | computed styles | all | V47 | rows and package icon: P2.2 · check box: P2.3 · icon buttons: P2.5 · badges: P2.6 · popup: P3.2 · layers: P3.5 · sidebar headers: P3.7a · scrollbar: P3.9 | later |
+| DS-DIVIDER-5 | computed colours | dialogs | V19 | P3.5 | later |
+| DS-DIVIDER-6 | computed styles and a 300 ms runtime check | details | V16 | P3.9 | later |
+| DS-SCROLL-1 | P0.22's scrollbar probe (`offsetWidth − clientWidth`, thumb colour, `scrollbar-color` of `:root`) | all | V15 | registered by P0.22 as `pending: P3.9` (classic 10 px from P0.22; Modern UI 8 px needs P1.1's look token) | later |
+| DS-SCROLL-2 | computed box-shadow in a scrolled state | main, sidebar | — | P3.9 (adds the scrolled state) | later |
+| DS-LOOK-1 | the §6 look table against the per-look token dumps of P0.14 | all | — | registered by P1.1 as `pending: P1.3` · flipped by P1.3 | later |
+| DS-HC-1 | computed borders in the two HC themes | main, sidebar | V33, V56 | badges: P2.6 · tabs: P2.5 · both HC themes: P3.9 | later |
 | a11y-focus-after-close | jsdom guard | dialogs | A6 | P4.4 | pending |
 | a11y-enter-not-destructive | keyboard paths | main lists / sidebar lists | A1, A2 | P4.2a / P4.2b | pending |
 | a11y-hint-truthful | text | main lists | A3 | P2.9a | pending |

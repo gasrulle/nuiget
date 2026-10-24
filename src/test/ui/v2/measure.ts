@@ -24,7 +24,7 @@ export type RuleStatus = 'hard' | { pending: string };
 export type StateGroup = 'main-installed' | 'main-updates' | 'browse' | 'details' | 'dialogs' | 'sources' | 'sidebar';
 
 /** The element groups Appendix B names for DS-INSET-2 (the sidebar is a state group there). */
-export type ElementGroup = 'toolbars' | 'headers' | 'main-header' | 'rows' | 'chrome' | 'first-row';
+export type ElementGroup = 'toolbars' | 'headers' | 'main-header' | 'rows' | 'chrome' | 'first-row' | 'tabs';
 
 export type Scope = StateGroup | ElementGroup;
 
@@ -92,7 +92,7 @@ export const CONTROL_STYLES = {
 /** A rule of the registry: its helper, a status per scope (Appendix B) and its tolerance. */
 export interface RuleDefinition {
     id: string;
-    helper: 1 | 2 | 3 | 4 | 5 | 6;
+    helper: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
     scopes: Partial<Record<Scope, RuleStatus>>;
     tolerance: number;
     /** States the rule is limited to (PF-6), or undefined for every state of its scopes. */
@@ -123,6 +123,11 @@ const asGrid1 = { 'main-updates': { pending: 'P3.1b' }, browse: { pending: 'P3.2
 const on = (item: string, ...groups: StateGroup[]): Partial<Record<Scope, RuleStatus>> => Object.fromEntries(groups.map(group => [group, { pending: item }]));
 
 const MAIN: StateGroup[] = ['main-installed', 'main-updates', 'browse', 'details'];
+
+const ALL: StateGroup[] = [...MAIN, 'dialogs', 'sources', 'sidebar'];
+
+/** One status for the state groups where a rule's elements are rendered. */
+const inGroups = (status: RuleStatus, ...groups: StateGroup[]): Partial<Record<Scope, RuleStatus>> => Object.fromEntries(groups.map(group => [group, status]));
 
 /**
  * V72's states, whose document scrolls today: the Listbox's visually hidden hint, absolutely placed with no positioned
@@ -164,6 +169,25 @@ export const RULES: readonly RuleDefinition[] = [
     // DS-OVERFLOW-2 over the section headers, the tracker's `headers` and P2.6's files (SectionHeader, Badge).
     rule('DS-OVERFLOW-2', { helper: 6, scopes: on('P2.6', 'main-installed', 'details', 'sidebar'), tolerance: TOLERANCES.containment }),
     rule('DS-ROW-5', { helper: 5, scopes: { ...on('P2.2', ...MAIN), sidebar: { pending: 'P3.7a' } }, tolerance: TOLERANCES.containment }),
+    // UX-P0.13 (design-advisor ruling of 2026-10-24, design trigger 6): every Appendix B rule of a P0 helper, pending on its
+    // item per state group, and the five Appendix B calls hard at P0 ("pass on the probe"), pending on P0.18.
+    rule('DS-INSET-4', { helper: 2, scopes: on('P3.3b', 'details'), tolerance: TOLERANCES.coincide }),
+    rule('DS-ROW-1', { helper: 2, scopes: on('P2.2', ...MAIN), tolerance: TOLERANCES.coincide }),
+    rule('DS-ROW-2', { helper: 2, scopes: { 'main-installed': { pending: 'P2.8a' }, details: { pending: 'P2.8a' }, browse: { pending: 'P3.2' } }, tolerance: TOLERANCES.coincide }),
+    rule('DS-ROW-3', { helper: 6, scopes: { ...on('P2.2', ...MAIN), sidebar: { pending: 'P3.7a' } }, tolerance: TOLERANCES.containment }),
+    rule('DS-ROW-6', { helper: 3, scopes: on('P2.2', ...MAIN), tolerance: TOLERANCES.containment }),
+    rule('DS-ICON-3', { helper: 3, scopes: on('P2.2', ...MAIN), tolerance: TOLERANCES.containment }),
+    rule('DS-DENSITY-1', { helper: 3, scopes: { ...on('P2.2', ...MAIN), sidebar: { pending: 'P3.7a' } }, tolerance: TOLERANCES.height }),
+    rule('DS-OVERFLOW-1', { helper: 6, scopes: { ...on('P2.7', 'main-installed', 'main-updates', 'browse'), details: { pending: 'P3.3b' }, sidebar: { pending: 'P3.7a' } }, tolerance: TOLERANCES.containment }),
+    rule('DS-OVERFLOW-3', { helper: 6, scopes: { toolbars: { pending: 'P2.5' }, tabs: { pending: 'P2.5' }, details: { pending: 'P3.3b' } }, tolerance: TOLERANCES.containment }),
+    rule('DS-OVERFLOW-5', { helper: 6, scopes: on('P3.3b', 'details'), tolerance: TOLERANCES.containment }),
+    rule('DS-ALIGN-1', { helper: 2, scopes: on('P3.3a', 'details'), tolerance: TOLERANCES.containment }),
+    rule('DS-TYPE-1', { helper: 3, scopes: inGroups({ pending: 'P0.18' }, ...ALL), tolerance: TOLERANCES.containment }),
+    rule('DS-TYPE-4', { helper: 3, scopes: inGroups({ pending: 'P0.18' }, ...ALL), tolerance: TOLERANCES.gapMembership }),
+    rule('DS-TYPE-6', { helper: 3, scopes: inGroups({ pending: 'P0.18' }, ...MAIN, 'sidebar'), tolerance: TOLERANCES.containment }),
+    rule('DS-ROW-4', { helper: 6, scopes: inGroups({ pending: 'P0.18' }, ...MAIN, 'sidebar'), tolerance: TOLERANCES.containment }),
+    // An empty state or a banner is rendered in these states only.
+    rule('DS-COPY-3', { helper: 5, scopes: inGroups({ pending: 'P0.18' }, 'main-installed', 'main-updates', 'browse', 'sidebar'), tolerance: TOLERANCES.containment, statePattern: /empty|error|unavailable|unsupported|nomatch|unresolved/ }),
 ];
 
 /** The state group of a named state, by its name. */
@@ -198,11 +222,11 @@ export function elementGroups(group: StateGroup, state?: string): ElementGroup[]
     switch (group) {
         case 'main-installed':
         case 'main-updates':
-            return ['toolbars', 'headers', 'main-header', 'rows', 'chrome', ...firstRow];
+            return ['toolbars', 'headers', 'main-header', 'rows', 'chrome', 'tabs', ...firstRow];
         case 'browse':
             return ['main-header', 'rows', 'chrome'];
         case 'details':
-            return ['headers', 'main-header', 'rows', 'chrome'];
+            return ['headers', 'main-header', 'rows', 'chrome', 'tabs'];
         default:
             return ['chrome'];
     }
@@ -222,6 +246,14 @@ export function formatLine(line: MeasureLine): string {
 }
 
 // ---- the in-page collector ------------------------------------------------------------------------------------------
+
+/** A rectangle by its edges, in px. */
+export interface Box {
+    left: number;
+    top: number;
+    right: number;
+    bottom: number;
+}
 
 /** The content insets of a box: start, end, top and bottom, in px; undefined when it shows no content. */
 export interface Insets {
@@ -339,6 +371,36 @@ export interface Layout {
     browsing: boolean;
     /** DS-OVERFLOW-6: the document's client and scroll sizes, and the deepest element outside the viewport no scroller holds. */
     documentOverflow: { clientWidth: number; clientHeight: number; scrollWidth: number; scrollHeight: number; outside: string | undefined } | undefined;
+    endOfP0: EndOfP0;
+}
+
+/** UX-P0.13: the facts the rules registered at the end of P0 read (design-advisor ruling of 2026-10-24). */
+export interface EndOfP0 {
+    rows: Array<{
+        list: string; compact: boolean; band: Box; painted: Box | undefined; state: 'current' | 'selected' | 'focus' | 'hover' | 'rest';
+        icon: { left: number; right: number; w: number; h: number; centre: number; radius: string } | undefined;
+        nameLeft: number | undefined; textCentre: number | undefined; lines: number; actions: number;
+    }>;
+    listPaneWidth: number | undefined;
+    detailsHeader: { insets: Insets | undefined; titleLeft: number | undefined; tabLabelLeft: number | undefined } | undefined;
+    /** The root and the scroll containers outside a list that scroll sideways: `label scrollWidth>clientWidth`. */
+    sideways: string[];
+    /**
+     * Per container, its controls: `out` counts a visible one outside its rect and, when no visible control opens a menu
+     * (`aria-haspopup`), a hidden one; `hidden` counts the hidden ones.
+     */
+    controlsOut: Array<{ container: 'toolbars' | 'tabs' | 'details'; label: string; out: number; hidden: number; menu: boolean; total: number }>;
+    /** The list toolbar's and the details header's `scrollWidth` (min-content when it overflows) and `clientWidth`. */
+    minContent: { toolbar: { scroll: number; client: number } | undefined; header: { scroll: number; client: number } | undefined };
+    /** Per facts block of the details pane, the lefts of its values. */
+    factLefts: number[][];
+    fonts: { root: string; others: string[] };
+    rootLineHeight: number | undefined;
+    /** The computed line-height of each compact row. */
+    compactLineHeights: number[];
+    metaText: Array<{ kind: 'meta' | 'description'; fontSize: number; colour: string; selected: boolean }>;
+    descriptionForeground: string;
+    copyEnds: Array<{ kind: 'empty' | 'banner'; text: string }>;
 }
 
 /**
@@ -349,7 +411,7 @@ export interface Layout {
 export const COLLECT_LAYOUT = `
 const [rootTestId, ramp, tolerance, containment = 0] = arguments;
 const root = document.querySelector('[data-testid="' + rootTestId + '"]');
-if (!root) return { root: false, examined: 0, offRamp: [], offRampCount: 0, blockGaps: [], sections: [], toolbars: [], mainHeader: undefined, sidebarHeader: undefined, mainLefts: {}, mainRegionLeft: undefined, details: undefined, sidebar: undefined, heights: { headers: [], compactRows: [], comfortableRows: [], comfortablePitches: [], tabStrip: undefined, detailsTabs: undefined, buttons: [], inputs: [], iconButtons: [], checkBoxes: [], checkSelect: { fill: '', border: '' }, badges: [], progress: [] }, centring: [], detailsButtons: { uninstall: undefined, update: undefined }, width: 0, rows: [], chrome: {}, firstRow: undefined, overflow: { containers: 0, collisions: [], outside: [], clipped: [], count: 0, badges: [] }, transitiveGap: undefined, primaryEdges: [], browsing: false, documentOverflow: undefined };
+if (!root) return { root: false, examined: 0, offRamp: [], offRampCount: 0, blockGaps: [], sections: [], toolbars: [], mainHeader: undefined, sidebarHeader: undefined, mainLefts: {}, mainRegionLeft: undefined, details: undefined, sidebar: undefined, heights: { headers: [], compactRows: [], comfortableRows: [], comfortablePitches: [], tabStrip: undefined, detailsTabs: undefined, buttons: [], inputs: [], iconButtons: [], checkBoxes: [], checkSelect: { fill: '', border: '' }, badges: [], progress: [] }, centring: [], detailsButtons: { uninstall: undefined, update: undefined }, width: 0, rows: [], chrome: {}, firstRow: undefined, overflow: { containers: 0, collisions: [], outside: [], clipped: [], count: 0, badges: [] }, transitiveGap: undefined, primaryEdges: [], browsing: false, documentOverflow: undefined, endOfP0: { rows: [], listPaneWidth: undefined, detailsHeader: undefined, sideways: [], controlsOut: [], minContent: { toolbar: undefined, header: undefined }, factLefts: [], fonts: { root: '', others: [] }, rootLineHeight: undefined, compactLineHeights: [], metaText: [], descriptionForeground: '', copyEnds: [] } };
 const dialog = document.querySelector('.nuiget-dialog');
 const visible = el => {
     if (!el || !el.isConnected) return false;
@@ -710,7 +772,101 @@ const documentOverflow = {
     outside: outside ? label(outside) + ' ' + round(rectOf(outside).left) + ',' + round(rectOf(outside).top) + ' ' + round(rectOf(outside).width) + '×' + round(rectOf(outside).height)
         : past > 0 ? 'none visible (' + past + ' past the viewport)' : undefined,
 };
-return { root: true, examined, offRamp, offRampCount, blockGaps, sections, toolbars, mainHeader: contentInsets(header), sidebarHeader: sidebarHeader ? contentInsets(sidebarHeader) : undefined, mainLefts, mainRegionLeft, details, sidebar, heights, centring, detailsButtons, width, rows, chrome, firstRow, overflow, transitiveGap, primaryEdges, browsing, documentOverflow };
+// UX-P0.13: the facts of the rules registered at the end of P0 (design-advisor ruling of 2026-10-24).
+const opaque = colour => colour !== 'transparent' && !/^rgba\\(.*,\\s*0\\)$/.test(colour);
+const edgesOf = el => { const r = rectOf(el); return { left: round(r.left), top: round(r.top), right: round(r.right), bottom: round(r.bottom) }; };
+const endRows = shown('.nuiget-row').map(row => {
+    const option = row.querySelector('[role="option"]') ?? row;
+    const icon = option.querySelector('.nuiget-row-icon');
+    const glyph = icon ? icon.querySelector('img, svg') : null;
+    const name = option.querySelector('.nuiget-row-name');
+    const body = option.querySelector('.nuiget-row-body');
+    const style = getComputedStyle(option);
+    const list = row.closest('[role="listbox"]');
+    const focused = option === document.activeElement || option.contains(document.activeElement);
+    const iconRect = visible(icon) ? rectOf(icon) : null;
+    return {
+        list: list && list.dataset.testid ? list.dataset.testid : '',
+        compact: row.classList.contains('nuiget-row--compact'),
+        band: edgesOf(row),
+        painted: opaque(style.backgroundColor) || (style.outlineStyle !== 'none' && px(style.outlineWidth) > 0) ? edgesOf(option) : undefined,
+        state: option.getAttribute('aria-current') === 'true' ? 'current' : option.getAttribute('aria-selected') === 'true' ? 'selected' : focused ? 'focus' : row.matches(':hover') ? 'hover' : 'rest',
+        icon: iconRect ? { left: round(iconRect.left), right: round(iconRect.right), w: round(iconRect.width), h: round(iconRect.height), centre: round(iconRect.top + iconRect.height / 2), radius: glyph ? getComputedStyle(glyph).borderTopLeftRadius : '' } : undefined,
+        nameLeft: visible(name) ? round(rectOf(name).left) : undefined,
+        textCentre: visible(body) ? round(rectOf(body).top + rectOf(body).height / 2) : undefined,
+        lines: body ? [...body.children].filter(child => visible(child)).length : 0,
+        actions: [...row.querySelectorAll('.nuiget-row-actions > *')].filter(visible).length,
+    };
+});
+const detailsHeaderEl = scope.querySelector('.nuiget-details-header');
+const detailsTitleEl = scope.querySelector('.nuiget-details-title');
+const detailsTab = scope.querySelector('[data-testid="package-details-panel"] [role="tab"]');
+const detailsTabLabel = detailsTab ? union(leafRects(detailsTab)) : undefined;
+const detailsTitleText = visible(detailsTitleEl) ? union(leafRects(detailsTitleEl)) : undefined;
+// The root and every scroll container outside a list, scrolled sideways (DS-OVERFLOW-1).
+const sideways = [document.documentElement, ...scope.querySelectorAll('*')]
+    .filter(el => el === document.documentElement || (/auto|scroll/.test(getComputedStyle(el).overflowX) && !el.closest('[role="listbox"]')))
+    .filter(el => el.scrollWidth > el.clientWidth + 0.5)
+    .map(el => (el === document.documentElement ? 'document' : label(el)) + ' ' + el.scrollWidth + '>' + el.clientWidth);
+// Every control of a toolbar, tab strip or details header reachable: visible and inside it, or hidden behind a visible
+// control that opens a menu (DS-OVERFLOW-3).
+const controlsIn = (kind, container) => {
+    const r = edgesOf(container);
+    const controls = [...container.querySelectorAll('button, select, input')];
+    const menu = controls.some(control => visible(control) && control.hasAttribute('aria-haspopup'));
+    const hidden = controls.filter(control => !visible(control)).length;
+    const outside = controls.filter(control => {
+        if (!visible(control)) return false;
+        const c = edgesOf(control);
+        return c.left < r.left || c.right > r.right || c.top < r.top || c.bottom > r.bottom;
+    }).length;
+    return { container: kind, label: label(container), out: outside + (menu ? 0 : hidden), hidden, menu, total: controls.length };
+};
+const controlsOut = [
+    ...shown('[data-testid="installed-toolbar"], [data-testid="updates-toolbar"]').map(el => controlsIn('toolbars', el)),
+    ...shown('[data-testid="tab-bar"]').map(el => controlsIn('tabs', el)),
+    ...shown('.nuiget-details-actions').map(el => controlsIn('details', el)),
+];
+const toolbarEl = scope.querySelector('[data-testid="installed-toolbar"], [data-testid="updates-toolbar"]');
+const factLefts = shown('.nuiget-details-facts, .nuiget-details-info')
+    .map(block => [...block.querySelectorAll(':scope > .nuiget-details-fact > dd, :scope > .nuiget-details-row > :nth-child(2)')].filter(visible).map(el => round(rectOf(el).left)))
+    .filter(lefts => lefts.length > 1);
+// The font families of the visible text other than the root's, code and README excepted (DS-TYPE-1).
+const rootFont = getComputedStyle(scope).fontFamily;
+const otherFonts = new Set();
+const fontWalker = document.createTreeWalker(scope, NodeFilter.SHOW_TEXT);
+for (let node = fontWalker.nextNode(); node; node = fontWalker.nextNode()) {
+    const parent = node.parentElement;
+    if (!node.textContent.trim() || !parent || !visible(parent) || parent.closest('code, pre, [data-testid="readme-content"], .nuiget-visually-hidden')) continue;
+    const family = getComputedStyle(parent).fontFamily;
+    if (family !== rootFont) otherFonts.add(family);
+}
+const rootLine = px(getComputedStyle(root).lineHeight);
+const metaText = shown('.nuiget-row-version, .nuiget-row-authors, .nuiget-row-meta, .nuiget-row-description').map(el => {
+    const style = getComputedStyle(el);
+    return { kind: el.classList.contains('nuiget-row-description') ? 'description' : 'meta', fontSize: px(style.fontSize), colour: style.color, selected: Boolean(el.closest('[aria-selected="true"], [aria-current="true"]')) };
+});
+const copyEnds = [
+    ...shown('.nuiget-empty-text').map(el => ({ kind: 'empty', text: el.textContent.trim() })),
+    ...shown('.nuiget-banner-text').map(el => ({ kind: 'banner', text: el.textContent.trim() })),
+];
+const endOfP0 = {
+    rows: endRows,
+    listPaneWidth: pane && visible(pane) ? round(rectOf(pane).width) : undefined,
+    detailsHeader: visible(detailsHeaderEl) ? { insets: contentInsets(detailsHeaderEl), titleLeft: detailsTitleText ? round(detailsTitleText.left) : undefined, tabLabelLeft: detailsTabLabel ? round(detailsTabLabel.left) : undefined } : undefined,
+    sideways,
+    controlsOut,
+    // Both integers, so a fractional pane width cannot read as an overflow (DS-OVERFLOW-5).
+    minContent: { toolbar: visible(toolbarEl) ? { scroll: toolbarEl.scrollWidth, client: toolbarEl.clientWidth } : undefined, header: visible(detailsHeaderEl) ? { scroll: detailsHeaderEl.scrollWidth, client: detailsHeaderEl.clientWidth } : undefined },
+    factLefts,
+    fonts: { root: rootFont, others: [...otherFonts] },
+    rootLineHeight: rootLine > 0 ? round(rootLine) : undefined,
+    compactLineHeights: shown('.nuiget-row--compact').map(el => round(px(getComputedStyle(el).lineHeight))),
+    metaText,
+    descriptionForeground: rootVars.getPropertyValue('--vscode-descriptionForeground').trim(),
+    copyEnds,
+};
+return { root: true, examined, offRamp, offRampCount, blockGaps, sections, toolbars, mainHeader: contentInsets(header), sidebarHeader: sidebarHeader ? contentInsets(sidebarHeader) : undefined, mainLefts, mainRegionLeft, details, sidebar, heights, centring, detailsButtons, width, rows, chrome, firstRow, overflow, transitiveGap, primaryEdges, browsing, documentOverflow, endOfP0 };
 `;
 
 // ---- the workbench of the same run (helper 3's parity) --------------------------------------------------------------
@@ -1155,13 +1311,196 @@ function evaluateOverflow(definition: RuleDefinition, scope: Scope, layout: Layo
     }
 }
 
+/** The Design System's numbers the rules registered at the end of P0 hold (UX-P0.13). */
+const END_OF_P0 = {
+    icon: 36, iconSmall: 24, iconRadius: '2px', nameAfterIcon: 16, linesInstalled: 2, linesBrowse: 3,
+    iconSmallBelow: 250, iconHiddenBelow: 200, lineHeight: 18.2, compactRow: 22, metaFont: 11, descriptionFont: 13,
+    actionsAtMost: 3,
+} as const;
+
+/**
+ * DS-TYPE-6's font sizes are exact to 0.1 px, the rule's own tolerance; D34 has no such value, so it is kept here and the
+ * rule's declared tolerance (0) is not the one applied (named in the P0.13 note for P0.18).
+ */
+const FONT_EXACT = 0.1;
+
+/** The rules registered at the end of P0 (design-advisor ruling of 2026-10-24): value and verdict, or undefined for another. */
+function evaluateEndOfP0(definition: RuleDefinition, scope: Scope, state: string, layout: Layout): { value: string; pass: boolean } | undefined {
+    const tolerance = definition.tolerance;
+    const facts = layout.endOfP0;
+    const comfortable = facts.rows.filter(row => !row.compact);
+    const notMeasurable = (why?: string) => ({ value: why === undefined ? NOT_MEASURABLE : `${NOT_MEASURABLE} (${why})`, pass: false });
+    switch (definition.id) {
+        case 'DS-INSET-4': {
+            const header = facts.detailsHeader;
+            if (header === undefined || header.insets === undefined) {
+                return notMeasurable('no details header');
+            }
+            const { start, end, top, bottom } = header.insets;
+            const aligned = header.titleLeft !== undefined && header.tabLabelLeft !== undefined ? near(header.titleLeft, header.tabLabelLeft, tolerance) : false;
+            return {
+                value: `header ${start}/${end} ${top}/${bottom} (target ${DETAILS_INSET}); title ${header.titleLeft ?? 'absent'}, tab label ${header.tabLabelLeft ?? 'absent'}`,
+                pass: [start, end, top, bottom].every(inset => near(inset, DETAILS_INSET, tolerance)) && aligned,
+            };
+        }
+        case 'DS-ROW-1': {
+            const rows = comfortable.filter(row => row.icon !== undefined);
+            if (rows.length === 0) {
+                return notMeasurable('no comfortable row with an icon');
+            }
+            const lines = stateGroup(state) === 'browse' ? END_OF_P0.linesBrowse : END_OF_P0.linesInstalled;
+            const icons = rows.map(row => `${row.icon?.w}×${row.icon?.h}`);
+            const gaps = rows.flatMap(row => (row.nameLeft === undefined ? [] : [tenth(row.nameLeft - (row.icon?.right ?? 0))]));
+            const centres = rows.flatMap(row => {
+                const band = (row.band.top + row.band.bottom) / 2;
+                return [tenth((row.icon?.centre ?? band) - band), ...(row.textCentre === undefined ? [] : [tenth(row.textCentre - band)])];
+            });
+            const lineCounts = rows.map(row => row.lines);
+            return {
+                value: `icon ${tally(icons)} (target ${END_OF_P0.icon}×${END_OF_P0.icon}); name after icon ${tally(gaps)} (target ${END_OF_P0.nameAfterIcon}); centre offsets ${tally(centres)}; lines ${tally(lineCounts)} (target ${lines})`,
+                pass: rows.every(row => row.icon?.w === END_OF_P0.icon && row.icon?.h === END_OF_P0.icon)
+                    && gaps.every(gap => near(gap, END_OF_P0.nameAfterIcon, tolerance)) && centres.every(offset => Math.abs(offset) <= tolerance)
+                    && lineCounts.every(count => count === lines),
+            };
+        }
+        case 'DS-ROW-2': {
+            const rows = comfortable.filter(row => row.icon !== undefined && row.nameLeft !== undefined);
+            if (rows.length < 2) {
+                return notMeasurable('fewer than 2 comfortable rows');
+            }
+            const spread = (values: number[]) => tenth(Math.max(...values) - Math.min(...values));
+            const icon = spread(rows.map(row => row.icon?.left ?? 0));
+            const name = spread(rows.map(row => row.nameLeft ?? 0));
+            return { value: `icon left spread ${icon}, name left spread ${name} (${rows.length} rows)`, pass: icon <= tolerance && name <= tolerance };
+        }
+        case 'DS-ROW-3': {
+            const rows = facts.rows.filter(row => row.state !== 'rest' && row.painted !== undefined && row.compact === (scope === 'sidebar'));
+            if (rows.length === 0) {
+                return notMeasurable('no hovered, selected or focused row');
+            }
+            const deltas = rows.map(row => {
+                const painted = row.painted as Box;
+                const delta = Math.max(Math.abs(painted.left - row.band.left), Math.abs(painted.right - row.band.right), Math.abs(painted.top - row.band.top), Math.abs(painted.bottom - row.band.bottom));
+                return { state: row.state, delta: tenth(delta) };
+            });
+            return { value: deltas.map(entry => `${entry.state} painted ${entry.delta} from the band`).join('; '), pass: deltas.every(entry => entry.delta <= tolerance) };
+        }
+        case 'DS-ROW-6': {
+            const width = facts.listPaneWidth;
+            const rows = comfortable;
+            if (width === undefined || rows.length === 0) {
+                return notMeasurable(width === undefined ? 'no list pane' : 'no comfortable row');
+            }
+            const target = width <= END_OF_P0.iconHiddenBelow ? 0 : width <= END_OF_P0.iconSmallBelow ? END_OF_P0.iconSmall : END_OF_P0.icon;
+            const sizes = rows.map(row => row.icon?.w ?? 0);
+            return { value: `pane ${width}: icon ${tally(sizes)} (target ${target === 0 ? 'none' : target})`, pass: sizes.every(size => near(size, target, tolerance)) };
+        }
+        case 'DS-ICON-3': {
+            const icons = comfortable.flatMap(row => (row.icon === undefined ? [] : [row.icon]));
+            if (icons.length === 0) {
+                return notMeasurable('no row icon');
+            }
+            const radii = icons.map(icon => icon.radius).filter(radius => radius !== END_OF_P0.iconRadius);
+            return {
+                value: `${tally(icons.map(icon => `${icon.w}×${icon.h}`))} (target ${END_OF_P0.icon}×${END_OF_P0.icon})${radii.length > 0 ? `; radius ${tally(radii)} (target ${END_OF_P0.iconRadius})` : ''}`,
+                pass: icons.every(icon => near(icon.w, END_OF_P0.icon, tolerance) && near(icon.h, END_OF_P0.icon, tolerance)) && radii.length === 0,
+            };
+        }
+        case 'DS-DENSITY-1': {
+            const sidebar = scope === 'sidebar';
+            const heights = sidebar ? layout.heights.compactRows : layout.heights.comfortableRows;
+            if (heights.length === 0) {
+                return notMeasurable(sidebar ? 'no compact row' : 'no comfortable row');
+            }
+            const target = sidebar ? HEIGHTS.compactRow : HEIGHTS.comfortableRow;
+            return { value: `${sidebar ? 'compact' : 'comfortable'} ${tally(heights)} (target ${target})`, pass: heights.every(height => near(height, target, tolerance)) };
+        }
+        case 'DS-OVERFLOW-1':
+            // An empty font family means the collector read no page.
+            if (facts.fonts.root === '') {
+                return notMeasurable();
+            }
+            return { value: facts.sideways.length === 0 ? 'no sideways scroll' : `sideways: ${facts.sideways.join('; ')}`, pass: facts.sideways.length === 0 };
+        case 'DS-OVERFLOW-3': {
+            const kind = scope === 'details' ? 'details' : scope === 'tabs' ? 'tabs' : 'toolbars';
+            const containers = facts.controlsOut.filter(entry => entry.container === kind);
+            if (containers.length === 0) {
+                return notMeasurable(`no ${kind}`);
+            }
+            return {
+                value: containers.map(entry => `${entry.label} ${entry.total - entry.out}/${entry.total} reachable${entry.hidden > 0 ? `, ${entry.hidden} hidden${entry.menu ? ' behind a menu' : ' and no menu'}` : ''}`).join('; '),
+                pass: containers.every(entry => entry.out === 0),
+            };
+        }
+        case 'DS-OVERFLOW-5': {
+            const { toolbar, header } = facts.minContent;
+            if (toolbar === undefined || header === undefined) {
+                return notMeasurable('no list toolbar or details header');
+            }
+            return {
+                value: `toolbar min-content ${toolbar.scroll} in ${toolbar.client}; header min-content ${header.scroll} in ${header.client}`,
+                pass: toolbar.scroll <= toolbar.client + tolerance && header.scroll <= header.client + tolerance,
+            };
+        }
+        case 'DS-ALIGN-1': {
+            if (facts.factLefts.length === 0) {
+                return notMeasurable('no facts block');
+            }
+            const spreads = facts.factLefts.map(lefts => tenth(Math.max(...lefts) - Math.min(...lefts)));
+            return { value: `value left spread ${tally(spreads)} (${facts.factLefts.length} blocks)`, pass: spreads.every(spread => spread <= tolerance) };
+        }
+        case 'DS-TYPE-1':
+            if (facts.fonts.root === '') {
+                return notMeasurable();
+            }
+            return { value: facts.fonts.others.length === 0 ? 'one family' : `other families: ${facts.fonts.others.join(' | ')}`, pass: facts.fonts.others.length === 0 };
+        case 'DS-TYPE-4': {
+            if (facts.rootLineHeight === undefined) {
+                return notMeasurable('no line height');
+            }
+            const compact = facts.compactLineHeights;
+            const value = `line height ${facts.rootLineHeight} (target ${END_OF_P0.lineHeight})${compact.length > 0 ? `; compact rows ${tally(compact)} (target ${END_OF_P0.compactRow})` : ''}`;
+            return { value, pass: near(facts.rootLineHeight, END_OF_P0.lineHeight, tolerance) && compact.every(height => near(height, END_OF_P0.compactRow, tolerance)) };
+        }
+        case 'DS-TYPE-6': {
+            if (facts.metaText.length === 0) {
+                return notMeasurable('no row metadata');
+            }
+            const meta = facts.metaText.filter(text => text.kind === 'meta');
+            const description = facts.metaText.filter(text => text.kind === 'description');
+            const offColour = meta.filter(text => !text.selected && !sameColour(text.colour, facts.descriptionForeground)).length;
+            const sizes = (texts: typeof meta) => tally(texts.map(text => text.fontSize));
+            return {
+                value: `meta ${sizes(meta)} (target ${END_OF_P0.metaFont})${description.length > 0 ? `; description ${sizes(description)} (target ${END_OF_P0.descriptionFont})` : ''}; ${offColour} meta off descriptionForeground`,
+                pass: meta.every(text => Math.abs(text.fontSize - END_OF_P0.metaFont) <= FONT_EXACT) && description.every(text => Math.abs(text.fontSize - END_OF_P0.descriptionFont) <= FONT_EXACT) && offColour === 0,
+            };
+        }
+        case 'DS-ROW-4': {
+            if (facts.rows.length === 0) {
+                return notMeasurable('no row');
+            }
+            const counts = facts.rows.map(row => row.actions);
+            return { value: `visible actions per row ${tally(counts)} (at most ${END_OF_P0.actionsAtMost})`, pass: counts.every(count => count <= END_OF_P0.actionsAtMost) };
+        }
+        case 'DS-COPY-3': {
+            if (facts.copyEnds.length === 0) {
+                return notMeasurable('no empty state or banner');
+            }
+            const open = facts.copyEnds.filter(entry => !entry.text.endsWith('.'));
+            return { value: open.length === 0 ? `${facts.copyEnds.length} end with a full stop` : `no full stop: ${open.map(entry => `${entry.kind} "${entry.text}"`).join('; ')}`, pass: open.length === 0 };
+        }
+        default:
+            return undefined;
+    }
+}
+
 /** The value and the verdict of one rule in one scope, or undefined when no helper measures that scope. */
-function evaluate(definition: RuleDefinition, scope: Scope, layout: Layout, look: 'modern' | 'classic', workbench: WorkbenchHeights, reference: ChromeReference | undefined): { value: string; pass: boolean } | undefined {
+function evaluate(definition: RuleDefinition, scope: Scope, state: string, layout: Layout, look: 'modern' | 'classic', workbench: WorkbenchHeights, reference: ChromeReference | undefined): { value: string; pass: boolean } | undefined {
     const tolerance = definition.tolerance;
     if (!layout.root) {
         return { value: `${NOT_MEASURABLE} (no root)`, pass: false };
     }
-    const heightVerdict = evaluateHeights(definition, layout, look, workbench) ?? evaluateOverflow(definition, scope, layout, look, reference);
+    const heightVerdict = evaluateHeights(definition, layout, look, workbench) ?? evaluateOverflow(definition, scope, layout, look, reference) ?? evaluateEndOfP0(definition, scope, state, layout);
     if (heightVerdict !== undefined) {
         return heightVerdict;
     }
@@ -1296,7 +1635,7 @@ export function measureLines(state: string, collected: Layout, look: 'modern' | 
             const later = definition.pendingStates?.[state];
             const status: RuleStatus = declared === 'hard' && later !== undefined ? { pending: later } : declared;
             // A scope with a status and no helper is never silent: it prints, and a hard one fails.
-            const result = evaluate(definition, scope, layout, look, workbench, chromeReference) ?? { value: `${NOT_MEASURABLE} (no helper)`, pass: false };
+            const result = evaluate(definition, scope, state, layout, look, workbench, chromeReference) ?? { value: `${NOT_MEASURABLE} (no helper)`, pass: false };
             const name = scope === group ? `${definition.id}@${state}` : `${definition.id}@${state}/${scope}`;
             lines.push({ name, value: result.value, status, pass: result.pass });
         }

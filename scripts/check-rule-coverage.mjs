@@ -5,10 +5,14 @@
 // the `rule('<id>'` calls of `src/test/ui/v2/measure.ts` (an id the registry splits, `DS-GRID-2a`/`DS-GRID-2b`, covers
 // `DS-GRID-2`). A state exercises a rule when plan Appendix B's "Flipped by" cell names the state's group (`main`,
 // `updates`, `browse`, `details`, `dialogs`, `sources`, `sidebar`) or names none of them (the rule applies to every state);
-// a rule Appendix B does not list is exercised by every state. Each printed id carries its Appendix B helper cell and its
-// class: `judge-only` (Appendix B's judge-only sentence), `later` (owned by a helper no P0 item provides: lint, computed
-// styles, axe, keyboard paths, …), `hard at P0` (Appendix B's "pass on the probe" list) or `gap` (a P0 helper, 1 to 8,
-// and no rule). The exit code is 1 when any `gap` or `hard at P0` id prints. The groups follow `stateGroup` in measure.ts.
+// a "Flipped by" segment without a state-group qualifier (`P2.2`, `then as DS-GRID-1`, `toolbars: P2.5`) means every
+// group. A rule Appendix B does not list is looked up in the tracker's "Pending measurement rules" table
+// (`docs/plans/STATUS-ux.md`, Appendix B's second source under plan section 2.7) and marked `(tracker)`; one in neither is
+// exercised by every state. Each printed id carries its helper cell and its class: `judge-only` (Appendix B's judge-only
+// sentence), `hard at P0` (Appendix B's "pass on the probe" list), `gap` (the helper cell begins with P0 helper numbers,
+// each 1 to 8, whatever follows: "6 at 220 px"; or no source names the rule) or `later` (a helper no P0 item provides:
+// lint, computed styles, axe, keyboard paths, …). The exit code is 1 when any `gap` or `hard at P0` id prints. The groups
+// follow `stateGroup` in measure.ts.
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -47,44 +51,85 @@ export function groupOf(state) {
 
 const GROUPS = ['main', 'updates', 'browse', 'details', 'dialogs', 'sources', 'sidebar'];
 
+/** The state groups a "Flipped by" cell names: every group as soon as one segment names none. */
+export function groupsOf(flipped) {
+    const named = [];
+    for (const segment of flipped.split('·')) {
+        const qualifier = /^\s*([a-z][a-z ]*?):/.exec(segment)?.[1]?.trim();
+        if (qualifier === undefined || !GROUPS.includes(qualifier)) {
+            return GROUPS;
+        }
+        named.push(qualifier);
+    }
+    return named;
+}
+
+/** The rows of a rule table (`| ids | helper | … |`) by expanded id, with their helper cell and state groups. */
+function tableRows(lines, helperColumn, flippedColumn) {
+    const rows = new Map();
+    for (const line of lines) {
+        const cells = line.split('|').map(cell => cell.trim());
+        for (const id of expandIds(cells[1])) {
+            rows.set(id, { helper: cells[helperColumn], flipped: cells[flippedColumn], groups: groupsOf(cells[flippedColumn]) });
+        }
+    }
+    return rows;
+}
+
+/** The tracker's "Pending measurement rules" table: `| Rule | Helper | State group | Catches | Flipped by | Status |`. */
+export function readTracker(tracker) {
+    const start = tracker.indexOf('| Rule | Helper | State group | Catches | Flipped by | Status |');
+    if (start < 0) {
+        return new Map();
+    }
+    const lines = tracker.slice(start, tracker.indexOf('\n\n', start) < 0 ? undefined : tracker.indexOf('\n\n', start)).split('\n').filter(line => /^\| (?!Rule |---)/.test(line));
+    return tableRows(lines, 2, 5);
+}
+
 /** Appendix B: its table rows by id, the hard-at-P0 ids and the judge-only ids. */
 export function readAppendixB(plan) {
     const start = plan.indexOf('| Rule | Helper | Catches | Flipped by |');
     // The paragraph before the table: from the blank line before it, or the start of the text.
     const intro = plan.slice(Math.max(0, plan.lastIndexOf('\n\n', plan.lastIndexOf('\n\n', start) - 1)), start);
     const table = plan.slice(start, plan.indexOf('\n\n', start)).split('\n').filter(line => /^\| (?!Rule |---)/.test(line));
-    const rows = new Map();
-    for (const line of table) {
-        const [, ids, helper, , flipped] = line.split('|').map(cell => cell.trim());
-        // Group qualifiers are the words before a colon, `main: P2.7 · updates: P3.1b`.
-        const named = [...flipped.matchAll(/(?:^|·)\s*([a-z][a-z ]*?):/g)].map(match => match[1].trim()).filter(word => GROUPS.includes(word));
-        for (const id of expandIds(ids)) {
-            rows.set(id, { helper, flipped, groups: named.length > 0 ? named : GROUPS });
-        }
-    }
+    const rows = tableRows(table, 2, 4);
     const hardSentence = /`hard` at P0:([\s\S]*?)Every other rule/.exec(intro)?.[1] ?? '';
     const judgeSentence = /Judge-only:([\s\S]*?)\n\n/.exec(intro + '\n\n')?.[1] ?? '';
     return { rows, hardAtP0: new Set(expandIds(hardSentence)), judgeOnly: new Set(expandIds(judgeSentence)) };
 }
 
-/** The class of an unasserted id: judge-only, hard at P0, gap (a P0 helper owns it) or later. */
-export function classify(id, appendix) {
+/** Whether a helper cell names P0 helpers: a leading list of numbers, each 1 to 8, whatever follows ("6 at 220 px"). */
+export const isP0Helper = helper => {
+    const list = /^\d+(?:\s*,\s*\d+)*/.exec(helper)?.[0];
+    return list !== undefined && list.split(',').every(number => Number(number) >= 1 && Number(number) <= 8);
+};
+
+/** The class of an unasserted id: judge-only, hard at P0, gap (a P0 helper owns it, or no source does) or later. */
+export function classify(id, appendix, tracker = new Map()) {
     if (appendix.judgeOnly.has(id)) return 'judge-only';
     if (appendix.hardAtP0.has(id)) return 'hard at P0';
-    const row = appendix.rows.get(id);
+    const row = appendix.rows.get(id) ?? tracker.get(id);
     if (row === undefined) return 'gap';
-    return /^\d/.test(row.helper) && [...row.helper.matchAll(/\d+/g)].every(match => Number(match[0]) <= 8) ? 'gap' : 'later';
+    return isP0Helper(row.helper) ? 'gap' : 'later';
 }
 
-export function coverage(states, sources = { designSystem: read('docs/design/design-system.md'), plan: read('docs/plans/2026-10-23-nuiget-ux-execution-plan.md'), measure: read('src/test/ui/v2/measure.ts') }) {
+export function coverage(states, sources = { designSystem: read('docs/design/design-system.md'), plan: read('docs/plans/2026-10-23-nuiget-ux-execution-plan.md'), measure: read('src/test/ui/v2/measure.ts'), tracker: read('docs/plans/STATUS-ux.md') }) {
     const ids = [...new Set([...sources.designSystem.matchAll(/^\| (DS-[A-Z]+-\d+)[a-z]? \|/gm)].map(match => match[1]))];
     const asserted = [...sources.measure.matchAll(/rule\('([A-Z0-9-]+[a-z]?)'/g)].map(match => match[1]);
     const appendix = readAppendixB(sources.plan);
+    // The tracker is read only for the ids Appendix B does not list.
+    const trackerRows = readTracker(sources.tracker ?? '');
+    const tracker = new Map([...trackerRows].filter(([id]) => !appendix.rows.has(id)));
+    const rowOf = id => appendix.rows.get(id) ?? tracker.get(id);
     const groups = new Set(states.map(groupOf));
     return ids
         .filter(id => !asserted.some(rule => rule === id || (rule.startsWith(id) && /^[a-z]$/.test(rule.slice(id.length)))))
-        .filter(id => (appendix.rows.get(id)?.groups ?? GROUPS).some(group => groups.has(group)))
-        .map(id => ({ id, helper: appendix.rows.get(id)?.helper ?? '(not in Appendix B)', class: classify(id, appendix) }));
+        .filter(id => (rowOf(id)?.groups ?? GROUPS).some(group => groups.has(group)))
+        .map(id => ({
+            id,
+            helper: appendix.rows.get(id)?.helper ?? (tracker.has(id) ? `${tracker.get(id).helper} (tracker)` : '(not in Appendix B)'),
+            class: classify(id, appendix, tracker),
+        }));
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
