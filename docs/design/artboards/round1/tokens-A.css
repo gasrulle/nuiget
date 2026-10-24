@@ -3,7 +3,10 @@
  * src/webview/shared/tokens.css. Sizes alias VS Code's exported size tokens with the classic px value as fallback;
  * row, header and strip heights stay literal (DECISIONS 2026-10-23, "Token source"). Modern UI numbers from
  * probe/out-modern/workbench (VS Code 1.142.0, Dark Modern); colours are aliases of --vscode-* roles only
- * (design-rules section 5), resolved by dark-modern.css.
+ * (design-rules section 5), resolved by the theme dump the page loads (docs/design/themes/<slug>.css, ?theme=<slug>).
+ * Corrected to design-system.md section 16 for UX-P0.27a: main-panel rows and group headers are not inset (an editor
+ * list) and start at the surface inset; the Modern UI sidebar header sits 8 px from the pane edges and its titles and
+ * row names at 28. The classic look (?look=classic) overrides the values the looks do not share at the end.
  */
 :root {
     /* Spacing ramp (spacing.size*): 4 inside a group, 8 between groups */
@@ -20,16 +23,19 @@
 
     /* Insets: one start inset per surface, the end inset equal to it */
     --nuiget-inset: var(--nuiget-space-6);
-    /* Sidebar: the part title's text x under Modern UI (title padding 4 + label padding 8) */
-    --nuiget-inset-sidebar: var(--nuiget-space-5);
+    /* Sidebar header row under Modern UI: 8 / 8 (T-3, DS-INSET-1); titles and row names follow at 28 */
+    --nuiget-inset-sidebar: var(--nuiget-space-4);
     /* Details header and README: the Extensions editor's 20 px */
     --nuiget-inset-details: var(--nuiget-space-7);
-    /* Modern UI rows and pane headers sit 4 px inside the list's edges */
+    /* Modern UI sidebar rows and pane headers sit 4 px inside the list's edges; main-panel lists are not inset */
     --nuiget-row-inset: var(--nuiget-space-2);
-    --nuiget-row-padding: calc(var(--nuiget-inset) - var(--nuiget-row-inset));
-    --nuiget-row-padding-sidebar: calc(var(--nuiget-inset-sidebar) - var(--nuiget-row-inset));
-    /* Sidebar row text aligns with the section title: inset 12 + twistie 16 + 4 */
+    /* Sidebar row text aligns with the section title: inset 8 + twistie 16 + 4 = 28 from the pane edge */
     --nuiget-row-text-sidebar: calc(var(--nuiget-inset-sidebar) + var(--nuiget-icon-size) + var(--nuiget-space-2) - var(--nuiget-row-inset));
+    /* A row's last action ends 6 inside its band, both looks (DS-INSET-3 a, T-5) */
+    --nuiget-row-action-end-inset: var(--nuiget-space-3);
+    /* Sidebar section header: chevron 4 inside the box, trailing count or action 6 from its end (DS-INSET-3 b) */
+    --nuiget-pane-header-padding-start: var(--nuiget-space-2);
+    --nuiget-pane-header-padding-end: var(--nuiget-space-3);
     /* Tab label padding of the Extensions editor navbar */
     --nuiget-tab-padding: var(--vscode-spacing-size100, 10px);
 
@@ -62,6 +68,11 @@
     --nuiget-radius-control: var(--vscode-cornerRadius-small, 4px);
     --nuiget-radius-card: var(--vscode-cornerRadius-large, 8px);
     --nuiget-radius-pill: var(--vscode-cornerRadius-circle, 9999px);
+    /* Per role, so the classic look can square rows and headers (DS-ROW-3, DS-RADIUS-2, T-29) */
+    --nuiget-radius-row: var(--nuiget-radius-control);
+    --nuiget-radius-section-header: var(--nuiget-radius-control);
+    --nuiget-radius-badge: var(--nuiget-radius-pill);
+    --nuiget-radius-action: var(--nuiget-radius-control);
 
     /* Type */
     --nuiget-font-family: var(--vscode-font-family);
@@ -74,6 +85,8 @@
     --nuiget-font-size-code: var(--vscode-editor-font-size, 12px);
     --nuiget-font-weight-regular: var(--vscode-fontWeight-regular, 400);
     --nuiget-font-weight-strong: var(--vscode-fontWeight-semiBold, 600);
+    /* Section titles and main-list group headers: 600, 700 in classic (DS-TYPE-3) */
+    --nuiget-font-weight-section-title: var(--vscode-fontWeight-semiBold, 600);
     --nuiget-line-height: 1.4;
     --nuiget-code-line-height: 18px;
     /* Pane and group headers: Modern UI Label1 semibold, capitalised */
@@ -156,4 +169,32 @@
     --nuiget-color-readme-badge-info-fg: var(--vscode-button-foreground);
     --nuiget-color-readme-badge-ok-bg: var(--vscode-testing-iconPassed);
     --nuiget-color-readme-badge-ok-fg: var(--vscode-editor-background);
+}
+
+/*
+ * The classic look (?look=classic): what the Design System sets apart from Modern UI. Pane and group headers 22 px with
+ * 11 px uppercase titles at 700 (DS-HEIGHT-1, DS-TYPE-3, DS-TYPE-5; the panel title and row names stay 600); lists not
+ * inset and separators full width (DS-DIVIDER-1); rows and section headers square, badges radius 11, icon buttons 6
+ * (DS-ROW-3, DS-RADIUS-2, T-29); the sidebar header 20 / 20, its titles and row names at 20, the trailing count 12 from
+ * the header's end (T-3, DS-INSET-1, DS-INSET-3 b); the count badge 18 px, 11 px type (DS-HEIGHT-10); the scrollbar 10
+ * (DS-SCROLL-1); the host's title bar 35.
+ */
+:root[data-look="classic"] {
+    --nuiget-header-height: 22px;
+    --nuiget-header-font-size: var(--nuiget-font-size-meta);
+    --nuiget-header-transform: uppercase;
+    --nuiget-font-weight-section-title: 700;
+    --nuiget-row-inset: 0px;
+    --nuiget-inset-sidebar: var(--nuiget-space-7);
+    --nuiget-pane-header-padding-start: 0px;
+    --nuiget-pane-header-padding-end: var(--nuiget-space-5);
+    --nuiget-row-text-sidebar: var(--nuiget-space-7);
+    --nuiget-radius-row: 0px;
+    --nuiget-radius-section-header: 0px;
+    --nuiget-radius-badge: 11px;
+    --nuiget-radius-action: var(--vscode-cornerRadius-medium, 6px);
+    --nuiget-scrollbar-size: 10px;
+    --nuiget-title-height: 35px;
+    --nuiget-badge-size: 18px;
+    --nuiget-font-size-badge: var(--nuiget-font-size-meta);
 }
