@@ -62,10 +62,35 @@ const until = async (predicate: string, what: string, timeoutMs = 120_000): Prom
 
 const optionOf = async (rowTestId: string, timeoutMs = 120_000) => (await findByTestId(rowTestId, timeoutMs)).findElement(By.css('[role="option"]'));
 
+/**
+ * Clicks a tab at the centre of its visible part, the intersection of its rect with its tab list's (and the viewport):
+ * the tab's centre where it fits its strip; at the editor's 220 px minimum, where the centre lies under the list/details
+ * sash's 24 px pointer target, a point the user can see inside the list pane (V50; UX-P0.14 design-advisor ruling). No
+ * visible part, or a click still intercepted, fails as not reachable.
+ */
+async function clickVisible(testId: string, timeoutMs = 30_000): Promise<void> {
+    const element = await findByTestId(testId, timeoutMs);
+    // WebDriver's offset is from the element's in-view centre, the centre of its rect within the viewport.
+    const offset = await script<{ dx: number; dy: number } | null>(`
+        const el = arguments[0];
+        const clip = (a, b) => ({ left: Math.max(a.left, b.left), top: Math.max(a.top, b.top), right: Math.min(a.right, b.right), bottom: Math.min(a.bottom, b.bottom) });
+        const viewport = { left: 0, top: 0, right: window.innerWidth, bottom: window.innerHeight };
+        const own = clip(el.getBoundingClientRect(), viewport);
+        const list = el.closest('[role="tablist"]');
+        const shown = list ? clip(own, list.getBoundingClientRect()) : own;
+        if (shown.right <= shown.left || shown.bottom <= shown.top) return null;
+        return { dx: (shown.left + shown.right) / 2 - (own.left + own.right) / 2, dy: (shown.top + shown.bottom) / 2 - (own.top + own.bottom) / 2 };
+    `, element);
+    if (offset === null) {
+        throw new NotReachable(`${testId} has no visible part`);
+    }
+    await driverOf().actions().move({ origin: element, x: Math.round(offset.dx), y: Math.round(offset.dy) }).click().perform();
+}
+
 /** Gateway's Installed list with its rows and their lite metadata (the authors of Serilog). */
 async function gatewayInstalled(): Promise<void> {
     await chooseFixtureProject('Gateway.csproj');
-    await (await findByTestId('installed-tab', 30_000)).click();
+    await clickVisible('installed-tab');
     await findByTestId('installed-list', 120_000);
     await findByTestId('package-row-fluentvalidation', 120_000);
     await poll(async () => (((await (await findByTestId('package-row-serilog')).getAttribute('textContent')) ?? '').includes('Serilog Contributors') ? true : undefined), 'the authors of the Serilog row', 60_000);
@@ -142,7 +167,7 @@ const REACH: Record<string, Reach> = {
     'main-installed-all': {
         reach: async () => {
             await chooseFixtureProject(ALL_PROJECTS);
-            await (await findByTestId('installed-tab', 30_000)).click();
+            await clickVisible('installed-tab');
             await until('document.querySelectorAll(\'[role="listbox"][data-testid^="installed-list-"]\').length >= 4', 'four project sections');
             await until('[...document.querySelectorAll(".nuiget-section-header")].some(header => header.textContent.includes("Unsupported") && header.textContent.includes("provisional"))', 'the Unsupported and provisional badges on the Unsupported section');
         },
@@ -150,7 +175,7 @@ const REACH: Record<string, Reach> = {
     'main-installed-unsupported': {
         reach: async () => {
             await chooseFixtureProject('Unsupported.csproj');
-            await (await findByTestId('installed-tab', 30_000)).click();
+            await clickVisible('installed-tab');
             await findByTestId('package-row-polly', 120_000);
             // The banner primitive's class: the main panel renders this banner without a test id.
             await until('[...document.querySelectorAll(".nuiget-banner--warning")].some(banner => banner.textContent.includes("Unsupported project"))', 'the Unsupported banner');
@@ -160,7 +185,7 @@ const REACH: Record<string, Reach> = {
     'main-installed-cpm': {
         reach: async () => {
             await chooseFixtureProject('Catalog.csproj');
-            await (await findByTestId('installed-tab', 30_000)).click();
+            await clickVisible('installed-tab');
             await findByTestId('package-row-mapster', 120_000);
         },
     },
@@ -243,7 +268,7 @@ const REACH: Record<string, Reach> = {
     'main-updates': {
         reach: async () => {
             await chooseFixtureProject('Gateway.csproj');
-            await (await findByTestId('updates-tab', 30_000)).click();
+            await clickVisible('updates-tab');
             await findByTestId('updates-list', 120_000);
             await until('document.querySelectorAll(\'[data-testid="updates-list"] [role="option"]\').length > 0', 'an update row', 120_000);
         },
@@ -282,7 +307,7 @@ const REACH: Record<string, Reach> = {
         reach: async () => {
             await gatewayInstalled();
             await currentDetails('package-row-newtonsoft.json');
-            await (await findByTestId('details-tab-readme', 30_000)).click();
+            await clickVisible('details-tab-readme');
             await until('document.querySelector(\'[data-testid="readme-content"], [data-testid="readme-empty"]\') !== null', 'the README or its empty state', 60_000);
         },
     },
