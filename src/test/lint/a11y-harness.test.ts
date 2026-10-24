@@ -18,7 +18,7 @@ afterEach(() => {
 /** A rule's result; `outsideDetails` counts the given nodes unless set (a capped list leaves nodes out). */
 const rule = (id: string, nodes: Array<Partial<AxeRule['nodes'][number]>>, count = nodes.length, outsideDetails?: number): AxeRule => {
     const full = nodes.map(node => ({ target: '.x', summary: '', insideDetails: false, ...node }));
-    return { id, impact: 'serious', count, outsideDetails: outsideDetails ?? full.filter(node => !node.insideDetails).length, nodes: full };
+    return { id, impact: 'serious', count, outsideDetails: outsideDetails ?? full.filter(node => !node.insideDetails).length, reasons: [], nodes: full };
 };
 const result = (overrides: Partial<FullAxe> = {}): FullAxe => ({ violations: [], incomplete: [], passes: 40, inapplicable: 50, ...overrides });
 
@@ -58,6 +58,9 @@ describe('the accessibility harness (UX-P0.23)', () => {
         expect(elsewhere.failures).toEqual(['violation aria-hidden-focus ×1', 'incomplete aria-hidden-focus ×1']);
         // While pending, the lines say so; the capture suite fails nothing until the rule is hard.
         expect(axeLines('main-updates', result({ violations: [rule('region', [{}])] }), { pending: 'P0.23' }, []).lines[1]).toBe('[axe] main-updates: violation region (serious) ×1: .x (pending P0.23)');
+        // Axe's reasons follow the sample.
+        const reasoned = { ...rule('color-contrast', [{ target: '.row' }]), reasons: [{ text: 'Element is outside the viewport', count: 30 }] };
+        expect(axeLines('main-updates', result({ incomplete: [reasoned] }), 'hard', []).lines[1]).toBe('[axe] main-updates: incomplete color-contrast ×1: .row; "Element is outside the viewport" ×30 (hard)');
         expect(axeLines('main-updates', result({ error: 'Axe is already running' }), 'hard', [])).toEqual({
             lines: ['[axe] main-updates: axe.run failed: Axe is already running (hard)'], failures: ['axe.run failed: Axe is already running'],
         });
@@ -69,6 +72,11 @@ describe('the accessibility harness (UX-P0.23)', () => {
         expect(answer.error).toBeUndefined();
         const buttonName = answer.violations.find(entry => entry.id === 'button-name');
         expect(buttonName).toMatchObject({ id: 'button-name', impact: 'critical', count: 10, outsideDetails: 10 });
+        // Axe's reasons over every node, not only the capped ones.
+        expect(buttonName?.reasons.length).toBeGreaterThanOrEqual(1);
+        expect(buttonName?.reasons.length).toBeLessThanOrEqual(3);
+        expect(buttonName?.reasons.reduce((sum, reason) => sum + reason.count, 0)).toBe(10);
+        expect(buttonName?.reasons[0].text).toMatch(/text|label|title|name/i);
         expect(buttonName?.nodes.map(node => node.target)).toEqual(['.b0', '.b1', '.b2']);
         expect(buttonName?.nodes[0]).toMatchObject({ insideDetails: false });
         expect(answer.passes).toBeGreaterThan(0);

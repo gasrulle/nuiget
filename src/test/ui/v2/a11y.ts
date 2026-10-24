@@ -39,6 +39,8 @@ export interface AxeRule {
     count: number;
     /** The nodes of all `count` outside `package-details-panel`, counted before the cap. */
     outsideDetails: number;
+    /** Axe's messages over all `count` nodes, most frequent first, at most three: why a node failed or stayed undecided. */
+    reasons: Array<{ text: string; count: number }>;
     nodes: AxeNode[];
 }
 
@@ -71,7 +73,13 @@ const rules = list => list.map(result => {
         const target = node.target.map(String).join(' ');
         return { target, summary: node.failureSummary || node.any.map(check => check.message).join('; '), insideDetails: inside(target) };
     });
-    return { id: result.id, impact: result.impact || null, count: nodes.length, outsideDetails: nodes.filter(node => !node.insideDetails).length, nodes: nodes.slice(0, cap) };
+    const tally = new Map();
+    for (const node of result.nodes) {
+        const text = [...node.any, ...node.all, ...node.none].map(check => check.message).filter(Boolean).join(' | ').slice(0, 160) || 'no message';
+        tally.set(text, (tally.get(text) || 0) + 1);
+    }
+    const reasons = [...tally].sort((a, b) => b[1] - a[1]).slice(0, 3).map(([text, count]) => ({ text, count }));
+    return { id: result.id, impact: result.impact || null, count: nodes.length, outsideDetails: nodes.filter(node => !node.insideDetails).length, reasons, nodes: nodes.slice(0, cap) };
 });
 axe.run(document, {
     rules: Object.fromEntries(extra.map(id => [id, { enabled: true }])),
@@ -110,7 +118,8 @@ export function axeLines(state: string, result: FullAxe, status: RuleStatus = FU
     }
     const lines: string[] = [];
     const failures: string[] = [];
-    const sample = (rule: AxeRule): string => rule.nodes.slice(0, 2).map(node => node.target).join(', ');
+    const sample = (rule: AxeRule): string =>
+        `${rule.nodes.slice(0, 2).map(node => node.target).join(', ')}${rule.reasons.length > 0 ? `; ${rule.reasons.map(reason => `"${reason.text}" ×${reason.count}`).join('; ')}` : ''}`;
     for (const rule of result.violations) {
         const pending = pendingFor(state, 'violation', rule.id, registry);
         lines.push(`[axe] ${state}: violation ${rule.id} (${rule.impact ?? 'no impact'}) ×${rule.count}: ${sample(rule)} (${pending ? `pending ${pending.item}` : statusText(status)})`);
