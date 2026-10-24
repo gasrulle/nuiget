@@ -87,8 +87,9 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(pf4?.widths).toEqual([800, 932, 1200, 1600]);
         expect([800, 932, 1200, 1600, 220, 400, 600].map(width => appliesTo(pf4!, 'main-installed-single', width))).toEqual([true, true, true, true, false, false, false]);
         expect(scopes('MS-8')).toEqual({ chrome: 'hard', 'first-row': { pending: 'P3.1b' } });
-        // V72 (design-advisor ruling of 2026-10-24): the document never scrolls, hard everywhere but V72's three states.
-        const v72 = { 'main-transitive-expanded': 'P2.1a', 'main-transitive-details': 'P2.1a', 'main-installed-all': 'P2.1a' };
+        // V72 (design-advisor ruling of 2026-10-24): the document never scrolls, hard everywhere but V72's states (the fourth,
+        // main-installed-cpm, by the UX-P0.15 ruling's DO 5).
+        const v72 = { 'main-transitive-expanded': 'P2.1a', 'main-transitive-details': 'P2.1a', 'main-installed-all': 'P2.1a', 'main-installed-cpm': 'P2.1a' };
         expect(RULES.find(rule => rule.id === 'MS-8')?.pendingStates).toEqual(v72);
         expect(scopes('DS-OVERFLOW-6')).toEqual({ 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: 'hard', dialogs: 'hard', sources: 'hard', sidebar: 'hard' });
         expect(RULES.find(rule => rule.id === 'DS-OVERFLOW-6')?.pendingStates).toEqual(v72);

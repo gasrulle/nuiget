@@ -142,7 +142,12 @@ const inGroups = (status: RuleStatus, ...groups: StateGroup[]): Partial<Record<S
  * ancestor, extends the document (DS-OVERFLOW-6 names it, CI run 40048739947). MS-8's chrome and DS-OVERFLOW-6 wait for
  * P2.1a, whose files own the span and its rule (design-advisor follow-up of 2026-10-24, step 4).
  */
-const V72_STATES: Readonly<Record<string, string>> = { 'main-transitive-expanded': 'P2.1a', 'main-transitive-details': 'P2.1a', 'main-installed-all': 'P2.1a' };
+const V72_STATES: Readonly<Record<string, string>> = {
+    'main-transitive-expanded': 'P2.1a', 'main-transitive-details': 'P2.1a', 'main-installed-all': 'P2.1a',
+    // Once its setup waits for the transitive prefetch, Catalog's collapsed section adds the hint below the fold (CI run
+    // 40096010674: `outside: .nuiget-visually-hidden 358,1188.5 1×1`; UX-P0.15 design-advisor ruling, DO 5).
+    'main-installed-cpm': 'P2.1a',
+};
 
 /**
  * V50: at the editor minimum the tab strip's count badge extends the document sideways (CI run 40084340281,
