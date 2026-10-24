@@ -109,6 +109,9 @@ export function formatDiff(name, result) {
 const crops = dir => readdirSync(dir).filter(file => file.endsWith('.png') && parseCapture(file) !== undefined).sort();
 const sha256 = file => createHash('sha256').update(readFileSync(file)).digest('hex');
 
+/** The sha256 of a text file with its line ends as LF: the Windows checkout writes the sidecars with CRLF. */
+export const textSha256 = file => createHash('sha256').update(readFileSync(file, 'utf8').replace(/\r\n/g, '\n')).digest('hex');
+
 /**
  * Compares every crop of `dir`; returns the lines and the counts. Writes a diff PNG per mismatching crop into `diffDir`.
  * @param {string} dir
@@ -170,7 +173,7 @@ export function adopt(dir, goldenDir, { run, status }) {
     for (const file of files) {
         copyFileSync(path.join(dir, file), path.join(goldenDir, file));
         copyFileSync(path.join(dir, file.replace(/\.png$/, '.json')), path.join(goldenDir, file.replace(/\.png$/, '.json')));
-        index[file] = { status, run, sha256: sha256(path.join(goldenDir, file)), sidecarSha256: sha256(path.join(goldenDir, file.replace(/\.png$/, '.json'))) };
+        index[file] = { status, run, sha256: sha256(path.join(goldenDir, file)), sidecarSha256: textSha256(path.join(goldenDir, file.replace(/\.png$/, '.json'))) };
     }
     const sorted = Object.fromEntries(Object.keys(index).sort().map(key => [key, index[key]]));
     writeFileSync(indexPath, JSON.stringify(sorted, null, 2) + '\n');

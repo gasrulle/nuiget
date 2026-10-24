@@ -4,7 +4,7 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { adopt, compare, compareAll, formatDiff, MATCH, maskOf, parseCapture, readCapture, refusal } from '../../../scripts/compare-goldens.mjs';
+import { adopt, compare, compareAll, formatDiff, MATCH, maskOf, parseCapture, readCapture, refusal, textSha256 } from '../../../scripts/compare-goldens.mjs';
 import { encodePng } from '../../../scripts/crop-png.mjs';
 import { expectedFiles } from '../ui/v2/states';
 
@@ -183,6 +183,10 @@ describe('scripts/compare-goldens.mjs (UX-P0.15)', () => {
         expect(index[FILE]).toMatchObject({ status: 'baseline', run: '42' });
         expect(index[FILE].sha256).toMatch(/^[0-9a-f]{64}$/);
         expect(index[FILE].sidecarSha256).toMatch(/^[0-9a-f]{64}$/);
+        // The same hash for a sidecar the Windows checkout wrote with CRLF.
+        const sidecar = path.join(goldens, FILE.replace(/\.png$/, '.json'));
+        fs.writeFileSync(sidecar, fs.readFileSync(sidecar, 'utf8').replace(/\n/g, '\r\n'));
+        expect(textSha256(sidecar)).toBe(index[FILE].sidecarSha256);
         writeCrop(crops, 'main-updates.dark-modern.20.png', { width: 40 });
         expect(() => adopt(crops, goldens, { run: '43', status: 'approved' })).toThrow('main-updates.dark-modern.20.png (40 px wide, not 20: not a crop)');
     });
@@ -205,7 +209,7 @@ describe('scripts/compare-goldens.mjs (UX-P0.15)', () => {
             expect(['baseline', 'approved'], `${file} in index.json`).toContain(index[file].status);
             expect(index[file].sha256, `${file}'s bytes are the ones adopted`).toBe(hash(file));
             // The diff applies the golden sidecar's masks: a widened mask would hide pixels without a CSS reason.
-            expect(index[file].sidecarSha256, `${file}'s sidecar is the one adopted`).toBe(hash(file.replace(/\.png$/, '.json')));
+            expect(index[file].sidecarSha256, `${file}'s sidecar is the one adopted`).toBe(textSha256(path.join(dir, file.replace(/\.png$/, '.json'))));
             expect(index[file].run, `${file} comes from a CI run`).toMatch(/^\d+$/);
             expect(golden.sidecar.run, `${file}'s sidecar names the same run`).toBe(index[file].run);
         }
