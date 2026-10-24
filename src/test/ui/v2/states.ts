@@ -62,7 +62,15 @@ export interface NamedState {
     setup: string;
     masks: readonly Mask[];
     status: StateStatus;
+    /**
+     * The share of a crop's pixels the pixel diff may find different from its golden, in percent (UX-P0.15):
+     * `DIFF_TOLERANCE_START` to start, 0 once the state's live regions are masked.
+     */
+    diffTolerance: number;
 }
+
+/** A state's pixel-diff tolerance until its live regions are masked, in percent of the crop (plan P0.15). */
+export const DIFF_TOLERANCE_START = 0.5;
 
 /** The surface widths of a Tier A capture unless a state names others (plan P0.8). */
 export const PANEL_WIDTH = 1200;
@@ -81,10 +89,10 @@ const themeSensitive = (surface: Surface): Capture[] => {
 };
 
 const ready = (name: string, surface: Surface, captures: Capture[], setup: string, masks: Mask[] = []): NamedState =>
-    ({ name, surface, tier: 'A', captures, setup, masks, status: 'ready' });
+    ({ name, surface, tier: 'A', captures, setup, masks, status: 'ready', diffTolerance: DIFF_TOLERANCE_START });
 
 const pending = (name: string, surface: Surface, item: string, setup: string): NamedState =>
-    ({ name, surface, tier: 'A', captures: [primary(surface)], setup, masks: [], status: { pending: item } });
+    ({ name, surface, tier: 'A', captures: [primary(surface)], setup, masks: [], status: { pending: item }, diffTolerance: DIFF_TOLERANCE_START });
 
 /** Live nuget.org content (download counts, newest versions, descriptions) that differs between runs. */
 const LIVE_RESULTS: Mask = { selector: '[data-testid="browse-list"]', reason: 'nuget.org search results change between runs' };

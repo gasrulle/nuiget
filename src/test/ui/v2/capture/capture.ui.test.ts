@@ -9,6 +9,7 @@ import { driverOf, enterSidebarWebview, findByTestId, leaveWebview, openSidebarV
 import { measureExemplar, measureWorkbench } from '../workbench';
 import { type Capture, captureFile, floorCaptures, isReady, type Lane, type Look, matrixCaptures, MATRIX_THEMES, type NamedState, PANEL_WIDTH, SIDEBAR_WIDTH, STATES, type Theme, THEMES } from '../states';
 import { declaredTokens, DUMP_THEME, formatThemeDump, formatTokenDump, type ThemeDump, themeDumpFile, tokenDumpFile } from '../themeDump';
+import { CAPTURE_FACTS, type CropRect, type Sidecar, sidecarFile } from '../golden';
 
 /**
  * The capture suite of the named states (UX-P0.8), on the dense workspace (`npm run test:ui:capture`, and the classic
@@ -385,6 +386,36 @@ async function shoot(state: NamedState, capture: Capture): Promise<void> {
     console.warn(`[capture] ${file}: iframe.webview ${rect.x},${rect.y} ${rect.width}x${rect.height} (dpr ${dpr}), cropped ${capture.width}x${rect.height}`);
 }
 
+/** The run's host, for each capture's fingerprint (UX-P0.15): set in `before`. */
+const host = { chromium: 'unknown', image: process.env.ImageOS ? `${process.env.ImageOS} ${process.env.ImageVersion ?? ''}`.trim() : process.platform };
+
+/** What the webview says about a capture before its screenshot: the root's font facts and the masks' rectangles. */
+interface CaptureFacts {
+    fontFamily: string;
+    font: string;
+    referenceWidth: number;
+    dpr: number;
+    masks: Array<{ selector: string; rects: CropRect[] }>;
+}
+
+/**
+ * Writes the crop's sidecar `<state>.<theme>.<width>.json` beside it (UX-P0.15, `golden.ts`): the masks as rectangles in
+ * the crop, the state's tolerance and the fingerprint `scripts/compare-goldens.mjs` reads.
+ */
+function writeSidecar(state: NamedState, capture: Capture, facts: CaptureFacts): void {
+    const file = captureFile(state.name, capture);
+    const sidecar: Sidecar = {
+        state: state.name, theme: capture.theme, look: capture.look, width: capture.width, tolerance: state.diffTolerance,
+        masks: state.masks.map((mask, index) => ({ selector: mask.selector, reason: mask.reason, rects: facts.masks[index]?.rects ?? [] })),
+        fingerprint: {
+            fontFamily: facts.fontFamily, font: facts.font, referenceWidth: facts.referenceWidth, dpr: facts.dpr,
+            vscode: VSBrowser.instance.version, chromium: host.chromium, image: host.image,
+        },
+        run: process.env.GITHUB_RUN_ID ?? 'local',
+    };
+    fs.writeFileSync(path.join(path.dirname(VSBrowser.instance.getScreenshotsDir()), sidecarFile(file)), JSON.stringify(sidecar, null, 2) + '\n');
+}
+
 /** The pending lines of this run, printed again at its end. */
 const pendingLines: string[] = [];
 
@@ -474,6 +505,7 @@ describe(`named states (${LANE} lane, ${LOOK} look)`, () => {
         // the window VS Code opened, and the size of a window screenshot, show here.
         const window = await windowSize();
         const chromium = /Chrome\/(\d+)/.exec(await script<string>('return navigator.userAgent;'))?.[1] ?? 'unknown';
+        host.chromium = chromium;
         const dpr = await script<number>('return window.devicePixelRatio;');
         const png = Buffer.from(await driverOf().takeScreenshot(), 'base64');
         console.warn(`[capture] lane ${LANE} vscode ${VSBrowser.instance.version} chromium ${chromium} ${process.platform} dpr ${dpr} look ${LOOK} window ${window.width}x${window.height} png ${pngSize(png)}`);
@@ -553,7 +585,10 @@ describe(`named states (${LANE} lane, ${LOOK} look)`, () => {
                 throw new Error(`${state.name} is not reachable: ${reason}`, { cause: error });
             }
             const red = await measure(state, capture);
+            // In the webview still (measure entered it): the masks are read before the shot moves the pointer.
+            const facts = await script<CaptureFacts>(CAPTURE_FACTS, state.surface === 'main' ? 'nuiget-app' : 'nuiget-sidebar', state.masks.map(mask => ({ selector: mask.selector })), capture.width);
             await shoot(state, capture);
+            writeSidecar(state, capture, facts);
             if (reach.leave) {
                 await (state.surface === 'main' ? enterMainWebview() : enterSidebarWebview());
                 await reach.leave();

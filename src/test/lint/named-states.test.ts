@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { captureFile, expectedFiles, floorCaptures, isReady, laneFiles, laneProblems, LEGACY_STATES, matrixCaptures, MATRIX_THEMES, screenshotProblems, STATES, THEMES } from '../ui/v2/states';
+import { captureFile, DIFF_TOLERANCE_START, expectedFiles, floorCaptures, isReady, laneFiles, laneProblems, LEGACY_STATES, MATRIX_THEMES, matrixCaptures, screenshotProblems, STATES, THEMES } from '../ui/v2/states';
 
 /**
  * UX-P0.8: the one list of named states (`src/test/ui/v2/states.ts`). A pending state names an item that is still
@@ -118,6 +118,13 @@ describe('the named states (UX-P0.8)', () => {
         const widths = new Set(matrixCaptures('dark-modern').map(({ state, capture }) => `${state.surface}:${capture.width}`));
         expect([...widths].sort()).toEqual(['main:1200', 'main:1600', 'main:800', 'sidebar:200', 'sidebar:300', 'sidebar:400']);
         expect(laneFiles('matrix', 'light-2026').filter(file => file.startsWith('sidebar-narrow-200px.'))).toEqual(['sidebar-narrow-200px.light-2026.200.png']);
+    });
+
+    it('gives every state the start tolerance of the pixel diff or 0 once masked (UX-P0.15)', () => {
+        expect(DIFF_TOLERANCE_START).toBe(0.5);
+        for (const state of STATES) {
+            expect([0, DIFF_TOLERANCE_START], state.name).toContain(state.diffTolerance);
+        }
     });
 
     it('captures every Tier A theme and width once on the floor, in the classic look', () => {

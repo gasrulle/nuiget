@@ -343,6 +343,12 @@ jobs:
       - name: Capture the classic look
         run: xvfb-run -a -s "-screen 0 1920x1080x24" npm run test:ui:classic 2>&1 | tee "$RUNNER_TEMP/ui-classic-output.txt"
 
+      # The pixel diff of every crop against its golden in src/test/ui/v2/golden (UX-P0.15): one [diff] line per crop,
+      # the diff image of a crop that differs under diff/ in the screenshots artifact. Informational: the script exits 0.
+      - name: Compare the crops with their goldens
+        if: always()
+        run: node scripts/compare-goldens.mjs /tmp/nuiget-ui/screenshots --diff /tmp/nuiget-ui/screenshots/diff 2>&1 | tee "$RUNNER_TEMP/ui-diff.txt"
+
       - name: Check VSIX contents
         run: npm run check:vsix
 
@@ -354,10 +360,12 @@ jobs:
           path: |
             ${{ runner.temp }}/ui-output.txt
             ${{ runner.temp }}/ui-classic-output.txt
+            ${{ runner.temp }}/ui-diff.txt
           if-no-files-found: ignore
 
-      # The webview crops of the named states at the root (<state>.<theme>.<width>.png, UX-P0.8), the window PNGs of
-      # the v2 suites and of the capture runs under <run timestamp>/, and ExTester's screenshots of failed tests.
+      # The webview crops of the named states at the root (<state>.<theme>.<width>.png, UX-P0.8) with their sidecars
+      # (<state>.<theme>.<width>.json, UX-P0.15), the pixel diff's images under diff/, the window PNGs of the v2 suites
+      # and of the capture runs under <run timestamp>/, and ExTester's screenshots of failed tests.
       # Uploaded on success too. No screenshot at all is a failure of this step.
       - name: Upload UI screenshots
         if: always()
