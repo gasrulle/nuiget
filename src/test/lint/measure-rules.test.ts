@@ -16,6 +16,7 @@ const layout = (overrides: Partial<Layout> = {}, heights: Partial<Heights> = {})
     sidebarHeader: undefined, mainLefts: {}, mainRegionLeft: undefined, details: undefined, sidebar: undefined,
     centring: [], detailsButtons: { uninstall: undefined, update: undefined }, width: 1200, rows: [], chrome: {}, firstRow: undefined,
     overflow: { containers: 0, collisions: [], outside: [], clipped: [], count: 0, badges: [] }, transitiveGap: undefined, primaryEdges: [],
+    browsing: false, documentOverflow: undefined,
     ...overrides, heights: { ...noHeights, ...heights },
 });
 
@@ -39,7 +40,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(RULES.map(rule => rule.id)).toEqual([
             'PF-6', 'DS-GRID-1', 'DS-GRID-2a', 'DS-GRID-2b', 'DS-INSET-1', 'DS-INSET-2', 'PF-3b', 'PF-5',
             ...Array.from({ length: 11 }, (_, i) => `DS-HEIGHT-${i + 1}`),
-            'PF-2', 'PF-3a', 'PF-4', 'MS-8', 'DS-INSET-3', 'DS-OVERFLOW-2', 'DS-ROW-5',
+            'PF-2', 'PF-3a', 'PF-4', 'MS-8', 'DS-OVERFLOW-6', 'DS-INSET-3', 'DS-OVERFLOW-2', 'DS-ROW-5',
         ]);
         const scopes = (id: string): unknown => RULES.find(rule => rule.id === id)?.scopes;
         expect(scopes('PF-6')).toEqual({ 'main-installed': 'hard' });
@@ -73,6 +74,11 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(RULES.find(rule => rule.id === 'PF-3a')).toMatchObject({ states: ['main-installed-single'], widths: [1200] });
         expect(scopes('PF-4')).toEqual({ 'main-installed': 'hard', 'main-updates': 'hard' });
         expect(scopes('MS-8')).toEqual({ chrome: 'hard', 'first-row': { pending: 'P3.1b' } });
+        // V72 (design-advisor ruling of 2026-10-24): the document never scrolls, hard everywhere but V72's three states.
+        const v72 = { 'main-transitive-expanded': 'P2.8a', 'main-transitive-details': 'P2.8a', 'main-installed-all': 'P2.8b' };
+        expect(RULES.find(rule => rule.id === 'MS-8')?.pendingStates).toEqual(v72);
+        expect(scopes('DS-OVERFLOW-6')).toEqual({ 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: 'hard', dialogs: 'hard', sources: 'hard', sidebar: 'hard' });
+        expect(RULES.find(rule => rule.id === 'DS-OVERFLOW-6')?.pendingStates).toEqual(v72);
         expect(scopes('DS-INSET-3')).toEqual({ rows: { pending: 'P2.2' }, headers: { pending: 'P2.6' }, sidebar: { pending: 'P3.7a' } });
         expect(scopes('DS-OVERFLOW-2')).toEqual({ 'main-installed': { pending: 'P2.6' }, details: { pending: 'P2.6' }, sidebar: { pending: 'P2.6' } });
         expect(scopes('DS-ROW-5')).toEqual({ ...main('P2.2'), sidebar: { pending: 'P3.7a' } });
@@ -80,7 +86,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(Object.fromEntries(RULES.map(rule => [rule.id, rule.tolerance]))).toEqual({
             'PF-6': 1, 'DS-GRID-1': 0.5, 'DS-GRID-2a': 0.5, 'DS-GRID-2b': 2, 'DS-INSET-1': 1, 'DS-INSET-2': 1, 'PF-3b': 1, 'PF-5': 1,
             ...Object.fromEntries(Array.from({ length: 11 }, (_, i) => [`DS-HEIGHT-${i + 1}`, 1])),
-            'PF-2': 1, 'PF-3a': 0, 'PF-4': 8, 'MS-8': 0.5, 'DS-INSET-3': 1, 'DS-OVERFLOW-2': 0, 'DS-ROW-5': 0,
+            'PF-2': 1, 'PF-3a': 0, 'PF-4': 8, 'MS-8': 0.5, 'DS-OVERFLOW-6': 0, 'DS-INSET-3': 1, 'DS-OVERFLOW-2': 0, 'DS-ROW-5': 0,
         });
     });
 
@@ -282,9 +288,10 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
     });
 
     it('holds PF-4 to P9.fix-4\'s 8 px between the primary button and the list\'s right edge', () => {
-        const edges = (button: number) => layout({ primaryEdges: [{ list: 'installed-list', button, listRight: 378.7 }] });
-        expect(lineOf('main-installed-single', edges(372.7), 'PF-4@main-installed-single')).toMatchObject({ pass: true, status: 'hard', value: 'installed-list: button 372.7, list 378.7 (6)' });
-        expect(lineOf('main-updates', edges(370.6), 'PF-4@main-updates')).toMatchObject({ pass: false });
+        // The list's edge is its scroll port's; the listbox's own edge is printed beside it (design-advisor ruling of 2026-10-24).
+        const edges = (button: number) => layout({ primaryEdges: [{ list: 'installed-list', button, listRight: 420, listboxRight: 405 }] });
+        expect(lineOf('main-installed-single', edges(414), 'PF-4@main-installed-single')).toMatchObject({ pass: true, status: 'hard', value: 'installed-list: button 414, scroll port 420 (6; listbox 405)' });
+        expect(lineOf('main-updates', edges(411.9), 'PF-4@main-updates')).toMatchObject({ pass: false });
         expect(lineOf('main-updates', layout(), 'PF-4@main-updates')).toMatchObject({ pass: false, value: 'not measurable (no primary toolbar button)' });
     });
 
@@ -299,11 +306,16 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
             .toMatchObject({ pass: true, value: 'still (as main-installed-single)' });
         expect(measureLines('main-installed-details', now({ 'main-header': { ...header, height: 60 }, 'tab-bar': tabs }), 'modern', {}, reference).find(line => line.name === 'MS-8@main-installed-details/chrome'))
             .toMatchObject({ pass: false, value: 'moved against main-installed-single: main-header 0,0 1200×56 → 0,0 1200×60' });
-        // Chrome that disappears fails, but the tab strip while Browse shows its results.
+        // Chrome that disappears fails, but the tab strip while the Browse view is shown (keyed on the DOM, not on names).
         expect(measureLines('main-installed-details', now({ 'main-header': header }), 'modern', {}, reference).find(line => line.name === 'MS-8@main-installed-details/chrome'))
             .toMatchObject({ pass: false, value: 'still (as main-installed-single); not shown: tab-bar' });
+        const browsing = layout({ chrome: { 'main-header': header }, browsing: true });
+        for (const state of ['main-browse-results', 'main-browse-details', 'main-quicksearch-open']) {
+            expect(measureLines(state, browsing, 'modern', {}, reference).find(line => line.name === `MS-8@${state}/chrome`))
+                .toMatchObject({ pass: true, value: 'still (as main-installed-single); not shown: tab-bar (browsing)' });
+        }
         expect(measureLines('main-browse-results', now({ 'main-header': header }), 'modern', {}, reference).find(line => line.name === 'MS-8@main-browse-results/chrome'))
-            .toMatchObject({ pass: true, value: 'still (as main-installed-single); not shown: tab-bar' });
+            .toMatchObject({ pass: false });
         // The reference state passes its own first row.
         expect(measureLines('main-installed-single', now({ 'main-header': header }, 160), 'modern').find(line => line.name === 'MS-8@main-installed-single/first-row'))
             .toMatchObject({ pass: true, value: 'reference 160' });
@@ -315,6 +327,23 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         const fromDriver = JSON.parse(JSON.stringify(reference, (_key, value: unknown) => (value === undefined ? null : value)));
         expect(measureLines('main-installed-details', now({ 'main-header': header, search: header, 'tab-bar': tabs }), 'modern', {}, fromDriver).find(line => line.name === 'MS-8@main-installed-details/chrome'))
             .toMatchObject({ pass: true });
+    });
+
+    it('pends MS-8\'s chrome and DS-OVERFLOW-6 in V72\'s three states only, and asserts the document never scrolls', () => {
+        const scrolling = layout({ chrome: { 'main-header': { left: 0, top: 0, width: 1185, height: 36 } }, documentOverflow: { clientWidth: 1185, clientHeight: 803, scrollWidth: 1185, scrollHeight: 2410, outside: '.nuiget-installed-lists 0,135 420×2275' } });
+        const reference = { state: 'main-installed-single', chrome: { 'main-header': { left: 0, top: 0, width: 1200, height: 36 } }, firstRow: undefined };
+        const status = (state: string, name: string) => measureLines(state, scrolling, 'modern', {}, reference).find(line => line.name === `${name}@${state}${name === 'MS-8' ? '/chrome' : ''}`)?.status;
+        expect(status('main-transitive-expanded', 'MS-8')).toEqual({ pending: 'P2.8a' });
+        expect(status('main-transitive-details', 'DS-OVERFLOW-6')).toEqual({ pending: 'P2.8a' });
+        expect(status('main-installed-all', 'MS-8')).toEqual({ pending: 'P2.8b' });
+        expect(status('main-installed-all', 'DS-OVERFLOW-6')).toEqual({ pending: 'P2.8b' });
+        expect(status('main-installed-single', 'DS-OVERFLOW-6')).toBe('hard');
+        expect(status('main-installed-details', 'MS-8')).toBe('hard');
+        expect(lineOf('main-installed-all', scrolling, 'DS-OVERFLOW-6@main-installed-all'))
+            .toMatchObject({ pass: false, value: 'document 1185×803, scroll 1185×2410 (+1607); outside: .nuiget-installed-lists 0,135 420×2275' });
+        const fitting = layout({ documentOverflow: { clientWidth: 1200, clientHeight: 803, scrollWidth: 1200, scrollHeight: 803, outside: undefined } });
+        expect(lineOf('sidebar-sections', fitting, 'DS-OVERFLOW-6@sidebar-sections')).toMatchObject({ pass: true, status: 'hard', value: 'document 1200×803 fits' });
+        expect(lineOf('main-installed-single', layout(), 'DS-OVERFLOW-6@main-installed-single')).toMatchObject({ pass: false, value: 'not measurable' });
     });
 
     it('checks DS-INSET-3\'s trailing ends, DS-OVERFLOW-2\'s collisions and DS-ROW-5\'s truncation order', () => {

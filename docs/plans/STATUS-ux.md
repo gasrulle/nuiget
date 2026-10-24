@@ -151,7 +151,8 @@ green on the unchanged tree and records it here.
 | Rule | Helper | State group | Catches | Flipped by | Status |
 |---|---|---|---|---|---|
 | PF-2, PF-3a, PF-3b, PF-4, PF-5, PF-6 | 1–6 | main | P9.fix-2…6 | P0.10–P0.12 | hard at P0 |
-| MS-8 chrome still | 6 | main header, search box, tab strip; sidebar header | P9.fix-2 class | P0.12 | hard at P0 |
+| MS-8 chrome still | 6 | main header, search box, tab strip; sidebar header | P9.fix-2 class | P0.12 | hard at P0; three states pending V72: `main-transitive-expanded`, `main-transitive-details` (P2.8a), `main-installed-all` (P2.8b) |
+| DS-OVERFLOW-6 | 6 | every group | V72 | P2.8a / P2.8b for the three states | hard at P0, three states pending |
 | DS-GRID-1 | 1 gap membership | main / updates / browse / details / dialogs / sources / sidebar | V5 | P2.7 / P3.1b / P3.2 / P3.3b / P3.5 / P3.6 / P3.7a | pending |
 | DS-GRID-2a | 1 | main, then as DS-GRID-1 | V1, V5 | P2.7 | pending |
 | DS-GRID-2b | 1 | main headers, then as DS-GRID-1 | V4 | P2.6 | pending |

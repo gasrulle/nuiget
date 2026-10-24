@@ -39,7 +39,7 @@ const PAGE = `
         <span class="nuiget-visually-hidden" data-rect="0,0,1,1" data-text="0,0,900,20">a hidden description</span>
       </button></h2>
     </div>
-    <div id="direct-content" data-testid="installed-list" role="listbox" data-rect="0,136,600,300">
+    <div id="direct-content" data-testid="installed-list" role="listbox" data-rect="0,136,590,300">
       <div class="nuiget-row nuiget-row--comfortable" data-rect="0,136,600,214"><div role="option" aria-selected="true" data-rect="0,136,600,213">
         <span class="nuiget-row-check" data-rect="16,167,32,183"></span><span class="nuiget-row-icon" data-rect="40,159,72,191"></span>
         <span class="nuiget-row-name" data-rect="80,150,200,166" data-text="80,150,200,166">Serilog</span>
@@ -56,7 +56,7 @@ const PAGE = `
       <h2 data-rect="16,300,540,322"><button class="nuiget-section-toggle" aria-controls="transitive-content" data-rect="16,300,540,322">
         <span class="nuiget-section-title" data-rect="36,303,180,319" data-text="36,303,180,319">Transitive packages</span>
       </button></h2>
-      <div class="nuiget-section-actions" data-rect="540,303,598,319"><span class="nuiget-badge" data-rect="560,304,598,318" data-text="562,305,596,317">provisional</span></div>
+      <div class="nuiget-section-actions" data-rect="540,303,598,319"><span class="nuiget-badge" data-rect="560,304,598,318"><span aria-hidden="true" data-rect="562,305,596,317" data-text="562,305,596,317">provisional</span><span class="nuiget-visually-hidden">Versions come from the project file</span></span></div>
     </div>
   </div>
   <div data-testid="package-details-panel" data-rect="600,70,900,700">
@@ -168,7 +168,16 @@ describe('the in-page collector on stubbed geometry (UX-P0.10, UX-P0.11)', () =>
         expect(layout.overflow.badges).toEqual(['transitive "provisional" 560–598 (box right 600)']);
         expect(layout.sections.find(section => section.id === 'transitive')?.trailingEnd).toBe(2);
         expect(layout.transitiveGap).toEqual({ lastRowBottom: 292, headerTop: 300, sameScroller: true });
-        expect(layout.primaryEdges).toEqual([{ list: 'installed-list', button: 594, listRight: 600 }]);
+        // PF-4: the listbox does not scroll itself, so the list's edge is its scroller's (the list column), the listbox's beside it.
+        expect(layout.primaryEdges).toEqual([{ list: 'installed-list', button: 594, listRight: 600, listboxRight: 590 }]);
+        // MS-8's Browse view and DS-OVERFLOW-6's document sizes (jsdom has no layout: the shape, not the numbers).
+        expect(layout.browsing).toBe(false);
+        expect(layout.documentOverflow).toMatchObject({ clientWidth: expect.any(Number), clientHeight: expect.any(Number), scrollWidth: expect.any(Number), scrollHeight: expect.any(Number) });
+        (document.querySelector('[data-testid="nuiget-app"]') as HTMLElement).insertAdjacentHTML('beforeend', '<div class="nuiget-browse" data-rect="0,70,420,500"></div>');
+        expect(collect().browsing).toBe(true);
+        // A listbox that scrolls itself is its own scroll port.
+        (document.querySelector('[data-testid="installed-list"]') as HTMLElement).style.overflowY = 'auto';
+        expect(collect().primaryEdges).toEqual([{ list: 'installed-list', button: 594, listRight: 590, listboxRight: 590 }]);
     });
 
     it('answers a missing root with an empty layout', () => {
