@@ -85,7 +85,8 @@ describe('theme dump (UX-P0.14)', () => {
         const dir = path.join(root, 'docs/design/themes');
         for (const file of fs.readdirSync(dir).filter(name => name.endsWith('.css'))) {
             const text = fs.readFileSync(path.join(dir, file), 'utf8');
-            const lines = text.split('\n');
+            // A Windows checkout ends the committed lines with CRLF.
+            const lines = text.split(/\r?\n/);
             expect(lines[1], file).toMatch(/^\/\* body class: .* \| data-vscode-theme-kind: .* \| data-vscode-theme-name: .* \*\/$/);
             if (file.endsWith('.tokens.css')) {
                 expect(lines[0], file).toMatch(/^\/\* Computed --nuiget-\* tokens of src\/webview\/shared\/tokens\.css on the body of the nUIget main-panel webview under the theme "[^"]+" on VS Code \d+\.\d+\.\d+ /);
