@@ -92,6 +92,8 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(RULES.find(rule => rule.id === 'MS-8')?.pendingStates).toEqual(v72);
         expect(scopes('DS-OVERFLOW-6')).toEqual({ 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: 'hard', dialogs: 'hard', sources: 'hard', sidebar: 'hard' });
         expect(RULES.find(rule => rule.id === 'DS-OVERFLOW-6')?.pendingStates).toEqual(v72);
+        // UX-P0.14 (design-advisor ruling): the main panel's 220 px width pending on P2.7 (V50), the width axis of pendingStates.
+        expect(RULES.find(rule => rule.id === 'DS-OVERFLOW-6')?.pendingWidths).toEqual({ 220: 'P2.7' });
         expect(scopes('DS-INSET-3')).toEqual({ rows: { pending: 'P2.2' }, headers: { pending: 'P2.6' }, sidebar: { pending: 'P3.7a' } });
         expect(scopes('DS-OVERFLOW-2')).toEqual({ 'main-installed': { pending: 'P2.6' }, details: { pending: 'P2.6' }, sidebar: { pending: 'P2.6' } });
         expect(scopes('DS-ROW-5')).toEqual({ ...main('P2.2'), sidebar: { pending: 'P3.7a' } });
@@ -393,6 +395,20 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(lineOf('main-installed-single', layout(), 'DS-OVERFLOW-6@main-installed-single')).toMatchObject({ pass: false, value: 'not measurable' });
         const unseen = layout({ documentOverflow: { clientWidth: 1185, clientHeight: 803, scrollWidth: 1185, scrollHeight: 900, outside: undefined } });
         expect(lineOf('main-installed-all', unseen, 'DS-OVERFLOW-6@main-installed-all')?.value).toBe('document 1185×803, scroll 1185×900 (+97); outside: none past the viewport');
+    });
+
+    it('pends DS-OVERFLOW-6 at the main panel\'s 220 px width on P2.7 (V50), a state\'s pending first (UX-P0.14)', () => {
+        const sideways = layout({ documentOverflow: { clientWidth: 205, clientHeight: 788, scrollWidth: 231, scrollHeight: 803, outside: '.nuiget-badge 198.3,224.5 24.1×17.5' } });
+        const at = (state: string, width: number) => measureLines(state, sideways, 'modern', {}, undefined, width).find(line => line.name === `DS-OVERFLOW-6@${state}`);
+        expect(at('main-installed-single', 220)).toMatchObject({ status: { pending: 'P2.7' }, pass: false, value: 'document 205×788, scroll 231×803 (+15); outside: .nuiget-badge 198.3,224.5 24.1×17.5' });
+        expect(at('main-installed-single', 220.6)?.status).toEqual({ pending: 'P2.7' });
+        expect(at('main-installed-single', 400)?.status).toBe('hard');
+        expect(at('main-installed-single', 1200)?.status).toBe('hard');
+        expect(at('main-installed-single', 1600)?.status).toBe('hard');
+        // V72's state pending comes first.
+        expect(at('main-installed-all', 220)?.status).toEqual({ pending: 'P2.1a' });
+        // No other rule waits at 220: PF-6 stays hard there.
+        expect(measureLines('main-installed-single', sideways, 'modern', {}, undefined, 220).find(line => line.name === 'PF-6@main-installed-single')?.status).toBe('hard');
     });
 
     it('checks DS-INSET-3\'s trailing ends, DS-OVERFLOW-2\'s collisions and DS-ROW-5\'s truncation order', () => {

@@ -108,6 +108,11 @@ export interface RuleDefinition {
      * not satisfy lands as pending with that item; design-advisor ruling of 2026-10-24, V72).
      */
     pendingStates?: Readonly<Record<string, string>>;
+    /**
+     * Capture widths a `hard` scope does not hold at yet, with the item that makes it hold: the width axis of
+     * `pendingStates` (design-advisor ruling of 2026-10-24, UX-P0.14, V50). A width matches within 1 px.
+     */
+    pendingWidths?: Readonly<Record<number, string>>;
 }
 
 /** Whether a rule measures a state (at a webview width, in a theme) at all; its scopes then say for which state group. */
@@ -139,6 +144,12 @@ const inGroups = (status: RuleStatus, ...groups: StateGroup[]): Partial<Record<S
  */
 const V72_STATES: Readonly<Record<string, string>> = { 'main-transitive-expanded': 'P2.1a', 'main-transitive-details': 'P2.1a', 'main-installed-all': 'P2.1a' };
 
+/**
+ * V50: at the editor minimum the tab strip's count badge extends the document sideways (CI run 40084340281,
+ * `.nuiget-badge 198.3,224.5 24.1×17.5`); P2.7 flips it with DS-OVERFLOW-1@main (UX-P0.14 ruling).
+ */
+const V50_WIDTHS: Readonly<Record<number, string>> = { 220: 'P2.7' };
+
 export const RULES: readonly RuleDefinition[] = [
     rule('PF-6', { helper: 2, scopes: { 'main-installed': 'hard' }, tolerance: TOLERANCES.coincide, states: ['main-installed-single'] }),
     rule('DS-GRID-1', { helper: 1, scopes: { 'main-installed': { pending: 'P2.7' }, ...asGrid1 }, tolerance: TOLERANCES.gapMembership }),
@@ -169,7 +180,7 @@ export const RULES: readonly RuleDefinition[] = [
     rule('PF-4', { helper: 6, scopes: { 'main-installed': 'hard', 'main-updates': 'hard' }, tolerance: TOLERANCES.primaryEdge, states: ['main-installed-single', 'main-updates'], widths: [800, 932, 1200, 1600] }),
     rule('MS-8', { helper: 6, scopes: { chrome: 'hard', 'first-row': { pending: 'P3.1b' } }, tolerance: TOLERANCES.chrome, pendingStates: V72_STATES }),
     // The document never scrolls (V72, design-advisor ruling of 2026-10-24).
-    rule('DS-OVERFLOW-6', { helper: 6, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: 'hard', dialogs: 'hard', sources: 'hard', sidebar: 'hard' }, tolerance: TOLERANCES.containment, pendingStates: V72_STATES }),
+    rule('DS-OVERFLOW-6', { helper: 6, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: 'hard', dialogs: 'hard', sources: 'hard', sidebar: 'hard' }, tolerance: TOLERANCES.containment, pendingStates: V72_STATES, pendingWidths: V50_WIDTHS }),
     rule('DS-INSET-3', { helper: 6, scopes: { rows: { pending: 'P2.2' }, headers: { pending: 'P2.6' }, sidebar: { pending: 'P3.7a' } }, tolerance: TOLERANCES.coincide }),
     // DS-OVERFLOW-2 over the section headers, the tracker's `headers` and P2.6's files (SectionHeader, Badge).
     rule('DS-OVERFLOW-2', { helper: 6, scopes: on('P2.6', 'main-installed', 'details', 'sidebar'), tolerance: TOLERANCES.containment }),
@@ -1941,6 +1952,12 @@ function evaluate(definition: RuleDefinition, scope: Scope, state: string, layou
     }
 }
 
+/** The item a `hard` scope waits for at a capture width (`pendingWidths`, within 1 px), or undefined. */
+function pendingWidth(definition: RuleDefinition, width: number): string | undefined {
+    const listed = Object.entries(definition.pendingWidths ?? {}).find(([candidate]) => Math.abs(Number(candidate) - width) <= 1);
+    return listed?.[1];
+}
+
 /** WebDriver returns the collector's `undefined` as `null`; the rules read absent as `undefined`. */
 function withoutNulls<T>(value: T): T {
     if (value === null) {
@@ -1976,7 +1993,7 @@ export function measureLines(state: string, collected: Layout, look: 'modern' | 
                 continue;
             }
             // A hard scope that a state does not hold in yet prints as pending on the item named for that state.
-            const later = definition.pendingStates?.[state];
+            const later = definition.pendingStates?.[state] ?? pendingWidth(definition, width ?? layout.width);
             const status: RuleStatus = declared === 'hard' && later !== undefined ? { pending: later } : declared;
             // A scope with a status and no helper is never silent: it prints, and a hard one fails.
             const result = evaluate(definition, scope, state, layout, look, workbench, chromeReference, spec) ?? { value: `${NOT_MEASURABLE} (no helper)`, pass: false };
