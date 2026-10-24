@@ -242,8 +242,10 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
 
     it('holds PF-3b to P9.fix-3\'s centring of the check box and the icon within 1 px (helper 4)', () => {
         const rows = (offset: number, icon: number | null = 0) => layout({ centring: [{ name: 'Serilog', row: 100, check: 100.5, icon: icon === null ? undefined : 100 + icon }, { name: 'Moq', row: 180, check: 180 + offset, icon: 180 }] });
-        expect(lineOf('main-installed-single', rows(0.5), 'PF-3b@main-installed-single')).toMatchObject({ pass: true, status: 'hard', value: 'check box 0.5 ×2; icon 0 ×2 (centre offsets, 2 rows)' });
+        expect(lineOf('main-installed-single', rows(0.5), 'PF-3b@main-installed-single')).toMatchObject({ pass: true, status: 'hard', value: 'check box 0.5 ×2; icon 0 ×2 (centre offsets, 2 rows; first Serilog: row 100, check 100.5, icon 100)' });
         expect(lineOf('main-updates', rows(1.5), 'PF-3b@main-updates')).toMatchObject({ pass: false, status: 'hard' });
+        // A red line locates its defect too: the first row's absolute centres (UX-P0.17).
+        expect(lineOf('main-updates', rows(1.5), 'PF-3b@main-updates')?.value).toContain('first Serilog: row 100, check 100.5, icon 100');
         // As P9.fix-3: two rows at least, each with its check box (and here its icon).
         expect(lineOf('main-installed-single', layout(), 'PF-3b@main-installed-single')).toMatchObject({ pass: false, value: 'not measurable (fewer than 2 rows)' });
         expect(lineOf('main-installed-single', layout({ centring: [{ name: 'Moq', row: 10, check: 10, icon: 10 }] }), 'PF-3b@main-installed-single')).toMatchObject({ pass: false, value: 'not measurable (fewer than 2 rows)' });

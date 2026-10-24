@@ -168,6 +168,18 @@ describe('the in-page collector on stubbed geometry (UX-P0.10, UX-P0.11)', () =>
         expect(layout.overflow.badges).toEqual(['transitive "provisional" 560–598 (box right 600)']);
         expect(layout.sections.find(section => section.id === 'transitive')?.trailingEnd).toBe(2);
         expect(layout.transitiveGap).toEqual({ lastRowBottom: 292, headerTop: 300, sameScroller: true });
+        // A tree from before the P0.10 hook (the negative control's 80940aa): the header box is found by P9.fix-2's toggle,
+        // here pinned below the list's own scroll port (UX-P0.17); with neither selector PF-2 has nothing to measure.
+        const box = document.querySelector('[data-testid="section-box-transitive"]') as HTMLElement;
+        box.removeAttribute('data-testid');
+        box.dataset.rect = '0,520,600,542';
+        (box.querySelector('.nuiget-section-toggle') as HTMLElement).dataset.testid = 'section-header-transitive';
+        (document.querySelector('[data-testid="installed-list"]') as HTMLElement).style.overflowY = 'auto';
+        document.querySelector('.nuiget-list')?.after(box);
+        expect(collect().transitiveGap).toEqual({ lastRowBottom: 292, headerTop: 520, sameScroller: false });
+        (box.querySelector('.nuiget-section-toggle') as HTMLElement).removeAttribute('data-testid');
+        expect(collect().transitiveGap).toBeUndefined();
+        document.body.innerHTML = PAGE;
         // PF-4: the listbox does not scroll itself, so the list's edge is its scroller's (the list column), the listbox's beside it.
         expect(layout.primaryEdges).toEqual([{ list: 'installed-list', button: 594, listRight: 600, listboxRight: 590 }]);
         // MS-8's Browse view and DS-OVERFLOW-6's document sizes (jsdom has no layout: the shape, not the numbers).

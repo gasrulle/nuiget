@@ -797,7 +797,10 @@ overflow.badges = shown('[data-testid^="section-box-"] .nuiget-badge').map(badge
 // PF-2: the first transitive header after the last direct row, in one scroller.
 const scrollerOf = el => { for (let a = el ? el.parentElement : null; a; a = a.parentElement) if (/auto|scroll/.test(getComputedStyle(a).overflowY)) return a; return null; };
 const directRows = [...root.querySelectorAll('[data-testid="installed-list"] .nuiget-row')].filter(visible);
-const transitiveBox = root.querySelector('[data-testid="section-box-transitive"]');
+// The P0.10 hook, else P9.fix-2's own selector: the same header box, which a tree from before the hook (the negative
+// control's 80940aa) renders without the hook (UX-P0.17, D36).
+const transitiveToggle = root.querySelector('[data-testid="section-header-transitive"]');
+const transitiveBox = root.querySelector('[data-testid="section-box-transitive"]') ?? (transitiveToggle ? transitiveToggle.closest('.nuiget-section-header') : null);
 const transitiveGap = directRows.length > 0 && visible(transitiveBox)
     ? { lastRowBottom: round(Math.max(...directRows.map(row => rectOf(row).bottom))), headerTop: round(rectOf(transitiveBox).top), sameScroller: scrollerOf(transitiveBox) === scrollerOf(directRows[directRows.length - 1]) }
     : undefined;
@@ -1235,7 +1238,8 @@ function evaluateHeights(definition: RuleDefinition, layout: Layout, look: 'mode
             }
             const offsets = (part: 'check' | 'icon') => rows.map(row => tenth((row[part] as number) - row.row));
             const [check, icon] = [offsets('check'), offsets('icon')];
-            return { value: `check box ${tally(check)}; icon ${tally(icon)} (centre offsets, ${rows.length} rows)`, pass: [...check, ...icon].every(offset => Math.abs(offset) <= tolerance) };
+            // The first row's absolute centres locate the defect (the negative control's coordinates, UX-P0.17).
+            return { value: `check box ${tally(check)}; icon ${tally(icon)} (centre offsets, ${rows.length} rows; first ${rows[0].name}: row ${rows[0].row}, check ${rows[0].check}, icon ${rows[0].icon})`, pass: [...check, ...icon].every(offset => Math.abs(offset) <= tolerance) };
         }
         case 'PF-5': {
             const { uninstall, update } = layout.detailsButtons;
