@@ -75,7 +75,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(scopes('PF-4')).toEqual({ 'main-installed': 'hard', 'main-updates': 'hard' });
         expect(scopes('MS-8')).toEqual({ chrome: 'hard', 'first-row': { pending: 'P3.1b' } });
         // V72 (design-advisor ruling of 2026-10-24): the document never scrolls, hard everywhere but V72's three states.
-        const v72 = { 'main-transitive-expanded': 'P2.8a', 'main-transitive-details': 'P2.8a', 'main-installed-all': 'P2.8b' };
+        const v72 = { 'main-transitive-expanded': 'P2.1a', 'main-transitive-details': 'P2.1a', 'main-installed-all': 'P2.1a' };
         expect(RULES.find(rule => rule.id === 'MS-8')?.pendingStates).toEqual(v72);
         expect(scopes('DS-OVERFLOW-6')).toEqual({ 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: 'hard', dialogs: 'hard', sources: 'hard', sidebar: 'hard' });
         expect(RULES.find(rule => rule.id === 'DS-OVERFLOW-6')?.pendingStates).toEqual(v72);
@@ -333,10 +333,10 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         const scrolling = layout({ chrome: { 'main-header': { left: 0, top: 0, width: 1185, height: 36 } }, documentOverflow: { clientWidth: 1185, clientHeight: 803, scrollWidth: 1185, scrollHeight: 2410, outside: '.nuiget-installed-lists 0,135 420×2275' } });
         const reference = { state: 'main-installed-single', chrome: { 'main-header': { left: 0, top: 0, width: 1200, height: 36 } }, firstRow: undefined };
         const status = (state: string, name: string) => measureLines(state, scrolling, 'modern', {}, reference).find(line => line.name === `${name}@${state}${name === 'MS-8' ? '/chrome' : ''}`)?.status;
-        expect(status('main-transitive-expanded', 'MS-8')).toEqual({ pending: 'P2.8a' });
-        expect(status('main-transitive-details', 'DS-OVERFLOW-6')).toEqual({ pending: 'P2.8a' });
-        expect(status('main-installed-all', 'MS-8')).toEqual({ pending: 'P2.8b' });
-        expect(status('main-installed-all', 'DS-OVERFLOW-6')).toEqual({ pending: 'P2.8b' });
+        expect(status('main-transitive-expanded', 'MS-8')).toEqual({ pending: 'P2.1a' });
+        expect(status('main-transitive-details', 'DS-OVERFLOW-6')).toEqual({ pending: 'P2.1a' });
+        expect(status('main-installed-all', 'MS-8')).toEqual({ pending: 'P2.1a' });
+        expect(status('main-installed-all', 'DS-OVERFLOW-6')).toEqual({ pending: 'P2.1a' });
         expect(status('main-installed-single', 'DS-OVERFLOW-6')).toBe('hard');
         expect(status('main-installed-details', 'MS-8')).toBe('hard');
         expect(lineOf('main-installed-all', scrolling, 'DS-OVERFLOW-6@main-installed-all'))

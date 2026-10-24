@@ -124,8 +124,12 @@ const on = (item: string, ...groups: StateGroup[]): Partial<Record<Scope, RuleSt
 
 const MAIN: StateGroup[] = ['main-installed', 'main-updates', 'browse', 'details'];
 
-/** V72's states, whose document scrolls today: MS-8's chrome and DS-OVERFLOW-6 wait for the items that fix them. */
-const V72_STATES: Readonly<Record<string, string>> = { 'main-transitive-expanded': 'P2.8a', 'main-transitive-details': 'P2.8a', 'main-installed-all': 'P2.8b' };
+/**
+ * V72's states, whose document scrolls today: the Listbox's visually hidden hint, absolutely placed with no positioned
+ * ancestor, extends the document (DS-OVERFLOW-6 names it, CI run 40048739947). MS-8's chrome and DS-OVERFLOW-6 wait for
+ * P2.1a, whose files own the span and its rule (design-advisor follow-up of 2026-10-24, step 4).
+ */
+const V72_STATES: Readonly<Record<string, string>> = { 'main-transitive-expanded': 'P2.1a', 'main-transitive-details': 'P2.1a', 'main-installed-all': 'P2.1a' };
 
 export const RULES: readonly RuleDefinition[] = [
     rule('PF-6', { helper: 2, scopes: { 'main-installed': 'hard' }, tolerance: TOLERANCES.coincide, states: ['main-installed-single'] }),
