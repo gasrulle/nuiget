@@ -343,7 +343,8 @@ export interface Layout {
 
 /**
  * Runs in the webview: `arguments[0]` is the root's test id, `arguments[1]` the ramp, `arguments[2]` the gap
- * tolerance, `arguments[3]` the containment tolerance (DS-OVERFLOW-2). Returns `Layout`.
+ * tolerance, `arguments[3]` the containment tolerance (DS-OVERFLOW-2). Returns `Layout`. The script is a template string: a
+ * backtick in it, comments included, ends it (the registry test's parse check fails on that).
  */
 export const COLLECT_LAYOUT = `
 const [rootTestId, ramp, tolerance, containment = 0] = arguments;
