@@ -24,7 +24,7 @@ export type RuleStatus = 'hard' | { pending: string };
 export type StateGroup = 'main-installed' | 'main-updates' | 'browse' | 'details' | 'dialogs' | 'sources' | 'sidebar';
 
 /** The element groups Appendix B names for DS-INSET-2 (the sidebar is a state group there). */
-export type ElementGroup = 'toolbars' | 'headers' | 'main-header' | 'rows' | 'chrome' | 'first-row' | 'tabs';
+export type ElementGroup = 'toolbars' | 'headers' | 'main-header' | 'rows' | 'chrome' | 'first-row' | 'tabs' | 'controls';
 
 export type Scope = StateGroup | ElementGroup;
 
@@ -101,6 +101,8 @@ export interface RuleDefinition {
     statePattern?: RegExp;
     /** Webview widths the rule is limited to (PF-3a at 1200), or undefined for every width. */
     widths?: readonly number[];
+    /** Themes the rule is limited to (DS-FOCUS-4 in the two high-contrast themes), or undefined for every theme. */
+    themes?: readonly string[];
     /**
      * States a `hard` scope does not hold in yet, with the item that makes them hold (plan §2.7: a rule today's tree does
      * not satisfy lands as pending with that item; design-advisor ruling of 2026-10-24, V72).
@@ -108,10 +110,11 @@ export interface RuleDefinition {
     pendingStates?: Readonly<Record<string, string>>;
 }
 
-/** Whether a rule measures a state (at a webview width) at all; its scopes then say for which state group. */
-export const appliesTo = (definition: RuleDefinition, state: string, width?: number): boolean =>
+/** Whether a rule measures a state (at a webview width, in a theme) at all; its scopes then say for which state group. */
+export const appliesTo = (definition: RuleDefinition, state: string, width?: number, theme?: string): boolean =>
     (definition.states === undefined || definition.states.includes(state)) && (definition.statePattern === undefined || definition.statePattern.test(state))
-    && (definition.widths === undefined || (width !== undefined && definition.widths.some(candidate => Math.abs(candidate - width) <= 1)));
+    && (definition.widths === undefined || (width !== undefined && definition.widths.some(candidate => Math.abs(candidate - width) <= 1)))
+    && (definition.themes === undefined || (theme !== undefined && definition.themes.includes(theme)));
 
 export function rule(id: string, options: Omit<RuleDefinition, 'id'>): RuleDefinition {
     return { id, ...options };
@@ -161,7 +164,9 @@ export const RULES: readonly RuleDefinition[] = [
     // UX-P0.12: P9.fix-2, -3 (authors) and -4 at their own measures, in the states their tests cover; MS-8 for every state.
     rule('PF-2', { helper: 6, scopes: { 'main-installed': 'hard' }, tolerance: TOLERANCES.coincide, states: ['main-installed-single'] }),
     rule('PF-3a', { helper: 5, scopes: { 'main-installed': 'hard' }, tolerance: TOLERANCES.containment, states: ['main-installed-single'], widths: [1200] }),
-    rule('PF-4', { helper: 6, scopes: { 'main-installed': 'hard', 'main-updates': 'hard' }, tolerance: TOLERANCES.primaryEdge, states: ['main-installed-single', 'main-updates'] }),
+    // The `ui` lane's 800/932/1200 and the matrix lane's 800/1200/1600, the widths P0.12 asserted it at; narrower widths are
+    // V50's and DS-OVERFLOW-1/3/5's (UX-P0.14 rulings, design trigger 1).
+    rule('PF-4', { helper: 6, scopes: { 'main-installed': 'hard', 'main-updates': 'hard' }, tolerance: TOLERANCES.primaryEdge, states: ['main-installed-single', 'main-updates'], widths: [800, 932, 1200, 1600] }),
     rule('MS-8', { helper: 6, scopes: { chrome: 'hard', 'first-row': { pending: 'P3.1b' } }, tolerance: TOLERANCES.chrome, pendingStates: V72_STATES }),
     // The document never scrolls (V72, design-advisor ruling of 2026-10-24).
     rule('DS-OVERFLOW-6', { helper: 6, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: 'hard', dialogs: 'hard', sources: 'hard', sidebar: 'hard' }, tolerance: TOLERANCES.containment, pendingStates: V72_STATES }),
@@ -191,6 +196,15 @@ export const RULES: readonly RuleDefinition[] = [
     // Helper 8 (UX-P0.13): the states with an artboard spec (`docs/design/artboards/<state>.spec.json`), at the spec's width;
     // pending on the screen item that builds the state (P2.8a: `main-installed-single`, UX-P0.27a's artboard A).
     rule('SPEC', { helper: 8, scopes: { 'main-installed': { pending: 'P2.8a' } }, tolerance: TOLERANCES.coincide, states: ['main-installed-single'], widths: [932] }),
+    // UX-P0.14 (design-advisor rulings of 2026-10-24): the rules of the research's 27 not measurable on the probe whose
+    // condition a ready state renders, pending on their Appendix B items. DS-FOCUS-1's buttons and check boxes are P2.3's
+    // share; P2.4, the later item, flips the controls scope once both kinds are green.
+    rule('DS-FOCUS-1', { helper: 6, scopes: { controls: { pending: 'P2.4' }, tabs: { pending: 'P2.5' } }, tolerance: TOLERANCES.containment }),
+    rule('DS-FOCUS-2', { helper: 6, scopes: { rows: { pending: 'P2.2' } }, tolerance: TOLERANCES.containment }),
+    // The main-panel branch of the premise P-3: the states whose setup clicked a row or a tab.
+    rule('DS-FOCUS-3', { helper: 6, scopes: { rows: { pending: 'P2.2' }, tabs: { pending: 'P2.5' } }, tolerance: TOLERANCES.containment, states: ['main-installed-details', 'main-updates'] }),
+    rule('DS-FOCUS-4', { helper: 6, scopes: { rows: { pending: 'P2.2' } }, tolerance: TOLERANCES.containment, themes: ['dark-high-contrast', 'light-high-contrast'] }),
+    rule('DS-STATE-7', { helper: 5, scopes: { ...on('P2.8a', 'main-installed', 'main-updates', 'browse'), details: { pending: 'P3.3b' } }, tolerance: TOLERANCES.containment }),
 ];
 
 /** The state group of a named state, by its name. */
@@ -225,11 +239,11 @@ export function elementGroups(group: StateGroup, state?: string): ElementGroup[]
     switch (group) {
         case 'main-installed':
         case 'main-updates':
-            return ['toolbars', 'headers', 'main-header', 'rows', 'chrome', 'tabs', ...firstRow];
+            return ['toolbars', 'headers', 'main-header', 'rows', 'chrome', 'tabs', 'controls', ...firstRow];
         case 'browse':
-            return ['main-header', 'rows', 'chrome'];
+            return ['main-header', 'rows', 'chrome', 'controls'];
         case 'details':
-            return ['headers', 'main-header', 'rows', 'chrome', 'tabs'];
+            return ['headers', 'main-header', 'rows', 'chrome', 'tabs', 'controls'];
         default:
             return ['chrome'];
     }
@@ -406,6 +420,8 @@ export interface EndOfP0 {
         list: string; compact: boolean; band: Box; painted: Box | undefined; state: 'current' | 'selected' | 'focus' | 'hover' | 'rest';
         icon: { left: number; right: number; w: number; h: number; centre: number; radius: string } | undefined;
         nameLeft: number | undefined; textCentre: number | undefined; lines: number; actions: number;
+        /** UX-P0.14: the option's outline and whether it holds the focus (DS-FOCUS-4). */
+        outline: Outline; focused: boolean;
     }>;
     listPaneWidth: number | undefined;
     detailsHeader: { insets: Insets | undefined; titleLeft: number | undefined; tabLabelLeft: number | undefined } | undefined;
@@ -427,6 +443,31 @@ export interface EndOfP0 {
     metaText: Array<{ kind: 'meta' | 'description'; fontSize: number; colour: string; selected: boolean }>;
     descriptionForeground: string;
     copyEnds: Array<{ kind: 'empty' | 'banner'; text: string }>;
+    /** UX-P0.14: the focused element (`document.activeElement`, the body excepted) and its outline (DS-FOCUS-1..3). */
+    focus: FocusFacts | undefined;
+    /** The theme's focus colours as VS Code put them on the root (hex, or empty when the theme leaves the key unset). */
+    focusColours: { focusBorder: string; listFocusOutline: string; contrastActiveBorder: string };
+    /** Every visible disabled affordance (`aria-disabled` or a disabled button) and its reason in text (DS-STATE-7). */
+    disabled: Array<{ label: string; reason: string }>;
+}
+
+/** An outline as computed: width and offset in px. */
+export interface Outline {
+    width: number;
+    style: string;
+    colour: string;
+    offset: number;
+}
+
+export interface FocusFacts {
+    kind: 'option' | 'tab' | 'checkbox' | 'input' | 'select' | 'header' | 'icon-button' | 'button' | 'other';
+    label: string;
+    outline: Outline;
+    /** The section header's `data-variant` (`pane`, `group`, `level`) of a focused header toggle, else empty. */
+    variant: string;
+    box: Box;
+    /** The row band (`.nuiget-row`) around a focused option. */
+    band: Box | undefined;
 }
 
 /**
@@ -437,7 +478,7 @@ export interface EndOfP0 {
 export const COLLECT_LAYOUT = `
 const [rootTestId, ramp, tolerance, containment = 0] = arguments;
 const root = document.querySelector('[data-testid="' + rootTestId + '"]');
-if (!root) return { root: false, examined: 0, offRamp: [], offRampCount: 0, blockGaps: [], sections: [], toolbars: [], mainHeader: undefined, sidebarHeader: undefined, mainLefts: {}, mainRegionLeft: undefined, details: undefined, sidebar: undefined, heights: { headers: [], compactRows: [], comfortableRows: [], comfortablePitches: [], tabStrip: undefined, detailsTabs: undefined, buttons: [], inputs: [], iconButtons: [], checkBoxes: [], checkSelect: { fill: '', border: '' }, badges: [], progress: [] }, centring: [], detailsButtons: { uninstall: undefined, update: undefined }, width: 0, rows: [], chrome: {}, firstRow: undefined, overflow: { containers: 0, collisions: [], outside: [], clipped: [], count: 0, badges: [] }, transitiveGap: undefined, primaryEdges: [], browsing: false, documentOverflow: undefined, endOfP0: { rows: [], listPaneWidth: undefined, detailsHeader: undefined, sideways: [], controlsOut: [], minContent: { toolbar: undefined, header: undefined }, factLefts: [], fonts: { root: '', others: [] }, rootLineHeight: undefined, compactLineHeights: [], metaText: [], descriptionForeground: '', copyEnds: [] }, testIds: {} };
+if (!root) return { root: false, examined: 0, offRamp: [], offRampCount: 0, blockGaps: [], sections: [], toolbars: [], mainHeader: undefined, sidebarHeader: undefined, mainLefts: {}, mainRegionLeft: undefined, details: undefined, sidebar: undefined, heights: { headers: [], compactRows: [], comfortableRows: [], comfortablePitches: [], tabStrip: undefined, detailsTabs: undefined, buttons: [], inputs: [], iconButtons: [], checkBoxes: [], checkSelect: { fill: '', border: '' }, badges: [], progress: [] }, centring: [], detailsButtons: { uninstall: undefined, update: undefined }, width: 0, rows: [], chrome: {}, firstRow: undefined, overflow: { containers: 0, collisions: [], outside: [], clipped: [], count: 0, badges: [] }, transitiveGap: undefined, primaryEdges: [], browsing: false, documentOverflow: undefined, endOfP0: { rows: [], listPaneWidth: undefined, detailsHeader: undefined, sideways: [], controlsOut: [], minContent: { toolbar: undefined, header: undefined }, factLefts: [], fonts: { root: '', others: [] }, rootLineHeight: undefined, compactLineHeights: [], metaText: [], descriptionForeground: '', copyEnds: [], focus: undefined, focusColours: { focusBorder: '', listFocusOutline: '', contrastActiveBorder: '' }, disabled: [] }, testIds: {} };
 const dialog = document.querySelector('.nuiget-dialog');
 const visible = el => {
     if (!el || !el.isConnected) return false;
@@ -822,6 +863,8 @@ const endRows = shown('.nuiget-row').map(row => {
         textCentre: visible(body) ? round(rectOf(body).top + rectOf(body).height / 2) : undefined,
         lines: body ? [...body.children].filter(child => visible(child)).length : 0,
         actions: [...row.querySelectorAll('.nuiget-row-actions > *')].filter(visible).length,
+        outline: { width: px(style.outlineWidth), style: style.outlineStyle, colour: style.outlineColor, offset: px(style.outlineOffset) },
+        focused,
     };
 });
 const detailsHeaderEl = scope.querySelector('.nuiget-details-header');
@@ -876,6 +919,36 @@ const copyEnds = [
     ...shown('.nuiget-empty-text').map(el => ({ kind: 'empty', text: el.textContent.trim() })),
     ...shown('.nuiget-banner-text').map(el => ({ kind: 'banner', text: el.textContent.trim() })),
 ];
+// UX-P0.14: the facts of the six rules registered with the theme dump (design-advisor ruling of 2026-10-24).
+const activeEl = document.activeElement && document.activeElement !== document.body && document.activeElement !== document.documentElement ? document.activeElement : null;
+const focusKind = el => {
+    const role = el.getAttribute('role');
+    if (role === 'option') return 'option';
+    if (role === 'tab') return 'tab';
+    if (role === 'checkbox' || (el.tagName === 'INPUT' && el.type === 'checkbox')) return 'checkbox';
+    if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') return 'input';
+    if (el.tagName === 'SELECT') return 'select';
+    if (el.tagName === 'BUTTON' && el.closest('.nuiget-section-header')) return 'header';
+    if (el.tagName === 'BUTTON' && el.classList.contains('nuiget-icon-button')) return 'icon-button';
+    if (el.tagName === 'BUTTON') return 'button';
+    return 'other';
+};
+let focus;
+if (activeEl) {
+    const style = getComputedStyle(activeEl);
+    const headerBox = activeEl.closest('[data-variant]');
+    const bandEl = activeEl.closest('.nuiget-row');
+    focus = {
+        kind: focusKind(activeEl), label: label(activeEl),
+        outline: { width: px(style.outlineWidth), style: style.outlineStyle, colour: style.outlineColor, offset: px(style.outlineOffset) },
+        variant: headerBox ? headerBox.dataset.variant || '' : '', box: edgesOf(activeEl), band: bandEl ? edgesOf(bandEl) : undefined,
+    };
+}
+const disabled = [...new Set([...scope.querySelectorAll('[aria-disabled="true"]'), ...scope.querySelectorAll('button:disabled')])].filter(visible).map(el => {
+    const ids = (el.getAttribute('aria-describedby') || '').split(/\\s+/).filter(Boolean);
+    const described = ids.map(id => { const target = document.getElementById(id); return target ? target.textContent.trim() : ''; }).join(' ').trim();
+    return { label: label(el), reason: described || (el.getAttribute('title') || '').trim() };
+});
 const endOfP0 = {
     rows: endRows,
     listPaneWidth: pane && visible(pane) ? round(rectOf(pane).width) : undefined,
@@ -891,6 +964,13 @@ const endOfP0 = {
     metaText,
     descriptionForeground: rootVars.getPropertyValue('--vscode-descriptionForeground').trim(),
     copyEnds,
+    focus,
+    focusColours: {
+        focusBorder: rootVars.getPropertyValue('--vscode-focusBorder').trim(),
+        listFocusOutline: rootVars.getPropertyValue('--vscode-list-focusOutline').trim(),
+        contrastActiveBorder: rootVars.getPropertyValue('--vscode-contrastActiveBorder').trim(),
+    },
+    disabled,
 };
 // UX-P0.13 helper 8: every element under the root with a test id, read as the artboard export reads its panel
 // (zz-artboards.ui.test.ts, SPEC): document order, a repeated id numbered #2, #3, rects relative to the root.
@@ -964,6 +1044,79 @@ for (const [name, selectors] of specs) {
         const rect = el.getBoundingClientRect();
         const style = getComputedStyle(el);
         out[name] = { selector, height: round(rect.height), width: round(rect.width), fontSize: style.fontSize, lineHeight: style.lineHeight, padding: [style.paddingTop, style.paddingRight, style.paddingBottom, style.paddingLeft].join(' '), radius: style.borderTopLeftRadius };
+        break;
+    }
+}
+return out;
+`;
+
+/** A workbench element's box and paint as `MEASURE_LOOK` returns it (the exemplar's states and widths, UX-P0.14). */
+export interface LookMeasure {
+    selector: string;
+    classes: string;
+    rect: { x: number; y: number; w: number; h: number };
+    background: string;
+    color: string;
+    outline: string;
+    outlineOffset: string;
+    boxShadow: string;
+    border: string;
+    radius: string;
+    opacity: string;
+    /** `scrollWidth > clientWidth`: the element's content overflows it sideways. */
+    overflowsX: boolean;
+    fontSize: string;
+    fontWeight: string;
+    textTransform: string;
+    lineHeight: string;
+    padding: string;
+    /** `width style colour` of the bottom border (a tab's indicator). */
+    borderBottom: string;
+    /** The `::before` and `::after` boxes when they render (`content` other than none): an indicator drawn by a pseudo-element. */
+    pseudo: Partial<Record<'before' | 'after', { height: string; width: string; background: string; borderBottom: string; bottom: string }>>;
+}
+
+/**
+ * Runs in the workbench (top) document: `arguments[0]` is a list of `[name, selectors]`, `arguments[1]` an optional
+ * index into the visible matches (default 0). Returns, per name, the visible element's `LookMeasure`, or `null`.
+ */
+export const MEASURE_LOOK = `
+const [specs, index] = arguments;
+const round = n => Math.round(n * 10) / 10;
+const visible = el => {
+    const style = getComputedStyle(el);
+    const rect = el.getBoundingClientRect();
+    return style.display !== 'none' && style.visibility !== 'hidden' && rect.width > 0 && rect.height > 0;
+};
+const out = {};
+for (const [name, selectors] of specs) {
+    out[name] = null;
+    for (const selector of selectors) {
+        const el = [...document.querySelectorAll(selector)].filter(visible)[index || 0];
+        if (!el) continue;
+        const r = el.getBoundingClientRect();
+        const s = getComputedStyle(el);
+        out[name] = {
+            selector,
+            classes: typeof el.className === 'string' ? el.className : '',
+            rect: { x: round(r.left), y: round(r.top), w: round(r.width), h: round(r.height) },
+            background: s.backgroundColor, color: s.color,
+            outline: [s.outlineWidth, s.outlineStyle, s.outlineColor].join(' '), outlineOffset: s.outlineOffset,
+            boxShadow: s.boxShadow,
+            border: [s.borderTopWidth, s.borderRightWidth, s.borderBottomWidth, s.borderLeftWidth].join(' ') + ' ' + s.borderTopStyle + ' ' + s.borderTopColor,
+            radius: s.borderTopLeftRadius, opacity: s.opacity,
+            overflowsX: el.scrollWidth > el.clientWidth,
+            fontSize: s.fontSize, fontWeight: s.fontWeight, textTransform: s.textTransform, lineHeight: s.lineHeight,
+            padding: [s.paddingTop, s.paddingRight, s.paddingBottom, s.paddingLeft].join(' '),
+            borderBottom: [s.borderBottomWidth, s.borderBottomStyle, s.borderBottomColor].join(' '),
+            pseudo: {},
+        };
+        for (const which of ['before', 'after']) {
+            const p = getComputedStyle(el, '::' + which);
+            if (p && p.content && p.content !== 'none' && p.content !== 'normal') {
+                out[name].pseudo[which] = { height: p.height, width: p.width, background: p.backgroundColor, borderBottom: [p.borderBottomWidth, p.borderBottomStyle, p.borderBottomColor].join(' '), bottom: p.bottom };
+            }
+        }
         break;
     }
 }
@@ -1536,6 +1689,93 @@ function evaluateEndOfP0(definition: RuleDefinition, scope: Scope, state: string
     }
 }
 
+/** DS-FOCUS-1's ring offset per control kind (design-system.md). */
+const FOCUS = { inside: -1, sidebarHeaderModern: -2, outside: 2, width: 1 } as const;
+
+const outlineText = (outline: Outline): string => `outline ${outline.width} ${outline.style} ${outline.colour} offset ${outline.offset}`;
+const isRing = (outline: Outline, style: string, colour: string, tolerance: number): boolean =>
+    near(outline.width, FOCUS.width, tolerance) && outline.style === style && sameColour(outline.colour, colour);
+
+/**
+ * The rules registered with the theme dump (UX-P0.14, design-advisor rulings of 2026-10-24): value and verdict, or
+ * undefined for another rule.
+ */
+function evaluateFocusAndState(definition: RuleDefinition, scope: Scope, layout: Layout, look: 'modern' | 'classic'): { value: string; pass: boolean } | undefined {
+    const tolerance = definition.tolerance;
+    const facts = layout.endOfP0;
+    const notMeasurable = (why: string) => ({ value: `${NOT_MEASURABLE} (${why})`, pass: false });
+    const { focus, focusColours } = facts;
+    switch (definition.id) {
+        case 'DS-FOCUS-1': {
+            const kinds: ReadonlyArray<FocusFacts['kind']> = scope === 'tabs' ? ['tab'] : ['input', 'select', 'button', 'checkbox', 'header'];
+            // The rule names the offsets of inputs, selects, tabs, headers, check boxes and text buttons, not icon buttons.
+            if (scope !== 'tabs' && focus?.kind === 'icon-button') {
+                return notMeasurable(`icon button ${focus.label}: DS-FOCUS-1 names no offset for it`);
+            }
+            if (focus === undefined || !kinds.includes(focus.kind)) {
+                return notMeasurable(scope === 'tabs' ? 'no focused tab' : 'no focused control');
+            }
+            const offset = focus.kind === 'checkbox' || focus.kind === 'button' ? FOCUS.outside
+                : focus.kind === 'header' && focus.variant === 'pane' && look === 'modern' ? FOCUS.sidebarHeaderModern : FOCUS.inside;
+            const colour = focusColours.focusBorder;
+            return {
+                value: `${focus.kind} ${focus.label}: ${outlineText(focus.outline)} (target 1 solid ${colour || 'unset'} offset ${offset})`,
+                pass: isRing(focus.outline, 'solid', colour, tolerance) && near(focus.outline.offset, offset, tolerance),
+            };
+        }
+        case 'DS-FOCUS-2': {
+            if (focus === undefined || focus.kind !== 'option' || focus.band === undefined) {
+                return notMeasurable('no focused row');
+            }
+            // The ring's outer edge lies offset + width outside the option's border box.
+            const grow = focus.outline.offset + focus.outline.width;
+            const band = focus.band;
+            const delta = tenth(Math.max(Math.abs(focus.box.left - grow - band.left), Math.abs(focus.box.right + grow - band.right), Math.abs(focus.box.top - grow - band.top), Math.abs(focus.box.bottom + grow - band.bottom)));
+            const colour = focusColours.listFocusOutline;
+            return {
+                value: `${focus.label}: ${outlineText(focus.outline)} (target 1 solid ${colour || 'unset'} offset ${FOCUS.inside}); ring ${delta} from the band`,
+                pass: isRing(focus.outline, 'solid', colour, tolerance) && near(focus.outline.offset, FOCUS.inside, tolerance) && delta <= tolerance,
+            };
+        }
+        case 'DS-FOCUS-3': {
+            const kind = scope === 'tabs' ? 'tab' : 'option';
+            if (focus === undefined || focus.kind !== kind) {
+                return notMeasurable(`no focused ${scope === 'tabs' ? 'tab' : 'row'} after the click`);
+            }
+            const drawn = focus.outline.style !== 'none' && focus.outline.width > 0;
+            return { value: `${focus.label} after a click: ${drawn ? outlineText(focus.outline) : 'no ring'} (target a ring, main panel, ${look})`, pass: drawn };
+        }
+        case 'DS-FOCUS-4': {
+            const colour = focusColours.contrastActiveBorder;
+            const marked = facts.rows.filter(row => !row.focused && (row.state === 'current' || row.state === 'selected'));
+            const focused = facts.rows.filter(row => row.focused);
+            if (marked.length === 0 && focused.length === 0) {
+                return notMeasurable('no selected or focused row');
+            }
+            const rings = (rows: typeof focused) => (rows.length === 0 ? 'none' : tally(rows.map(row => `${row.outline.width} ${row.outline.style} ${row.outline.colour}`)));
+            return {
+                value: `selected ${rings(marked)} (target 1 dotted ${colour || 'unset'}); focused ${rings(focused)} (target 1 solid); hovered not measurable (no high-contrast hover state)`,
+                pass: marked.every(row => isRing(row.outline, 'dotted', colour, tolerance)) && focused.every(row => isRing(row.outline, 'solid', colour, tolerance)),
+            };
+        }
+        case 'DS-STATE-7': {
+            if (facts.fonts.root === '') {
+                return notMeasurable('no page');
+            }
+            if (facts.disabled.length === 0) {
+                return notMeasurable('no disabled affordance');
+            }
+            const silent = facts.disabled.filter(entry => entry.reason === '');
+            return {
+                value: `${facts.disabled.length} disabled, ${silent.length} without a reason${silent.length > 0 ? `: ${tally(silent.map(entry => entry.label))}` : ''}`,
+                pass: silent.length === 0,
+            };
+        }
+        default:
+            return undefined;
+    }
+}
+
 /** Whether two computed lengths agree within a tolerance; a keyword (`normal`) agrees only with itself. */
 function sameLength(actual: string, expected: string, tolerance: number): boolean {
     const [a, e] = [Number.parseFloat(actual), Number.parseFloat(expected)];
@@ -1599,7 +1839,8 @@ function evaluate(definition: RuleDefinition, scope: Scope, state: string, layou
     if (definition.helper === 8) {
         return evaluateSpec(layout, spec, tolerance);
     }
-    const heightVerdict = evaluateHeights(definition, layout, look, workbench) ?? evaluateOverflow(definition, scope, layout, look, reference) ?? evaluateEndOfP0(definition, scope, state, layout);
+    const heightVerdict = evaluateHeights(definition, layout, look, workbench) ?? evaluateOverflow(definition, scope, layout, look, reference) ?? evaluateEndOfP0(definition, scope, state, layout)
+        ?? evaluateFocusAndState(definition, scope, layout, look);
     if (heightVerdict !== undefined) {
         return heightVerdict;
     }
@@ -1716,16 +1957,17 @@ function withoutNulls<T>(value: T): T {
 
 /**
  * Every line of a state: one per rule and scope that applies, in `RULES` order. `spec` is the look's elements of the state's
- * artboard spec when the capture has the spec's theme and width (helper 8), else undefined.
+ * artboard spec when the capture has the spec's theme and width (helper 8), else undefined; `theme` is the capture's
+ * (DS-FOCUS-4 in the high-contrast themes only).
  */
-export function measureLines(state: string, collected: Layout, look: 'modern' | 'classic', workbench: WorkbenchHeights = {}, reference?: ChromeReference, width?: number, spec?: SpecLook): MeasureLine[] {
+export function measureLines(state: string, collected: Layout, look: 'modern' | 'classic', workbench: WorkbenchHeights = {}, reference?: ChromeReference, width?: number, spec?: SpecLook, theme?: string): MeasureLine[] {
     const layout = withoutNulls(collected);
     const chromeReference = reference === undefined ? undefined : withoutNulls(reference);
     const group = stateGroup(state);
     const lines: MeasureLine[] = [];
     for (const definition of RULES) {
         // The capture's own width when given (PF-3a at 1200), else the webview's.
-        if (!appliesTo(definition, state, width ?? layout.width)) {
+        if (!appliesTo(definition, state, width ?? layout.width, theme)) {
             continue;
         }
         for (const scope of [group, ...elementGroups(group, state)] as Scope[]) {

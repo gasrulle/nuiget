@@ -39,7 +39,7 @@ only under per-section lists. A cut feature's P5 rows become `skipped`.
 | P0.12 | P0 | `measure.ts` (3): truncation, overlap/clipping, chrome still, target size, PF-2, PF-3a, PF-4 | done | 1a608e4 | 2026-10-24 | PF-2 (`gap 0`), PF-3a, PF-4 (6 px against the scroll port, ruling) and MS-8's chrome hard and green; V72 found (the webview document scrolls in All Projects and with the transitive section expanded: the Listbox's hidden hint), DS-OVERFLOW-6 added (design-advisor ruling and follow-up), its three states pending on P2.1a; `DS-OVERFLOW-2@main-installed-all` prints the badge rects. UI run 40049782712. Note `docs/plans/handoff/P0.12.md` |
 | P0.27a | P0 | Artboard A corrected to the Design System, rendered (modern, classic, 932 px) and specified (`spec.json`) | done | c17da00 | 2026-10-24 | Note `docs/plans/handoff/P0.27a.md`; design-advisor approval with changes; rendered by UI run 40055485738 (the route works on Linux, VS Code 1.140.0); the spec meets the ruling's VERIFY and `measure.mjs` within 1 px; round 1: A; runs before P0.13; outputs `main-installed-single.dark-modern.932.png`, `main-installed-single.dark-modern-classic.932.png`, `main-installed-single.spec.json` (capture naming) |
 | P0.13 | P0 | `measure.ts` (4): spec conformance, `check-rule-coverage.mjs` | done | d50e603 | 2026-10-24 | Note `docs/plans/handoff/P0.13.md`. Design trigger 6 ruled (design-advisor, 2026-10-24): 16 rules registered pending (11 on their Appendix B items, 5 on P0.18), ten Design-System-added rules as tracker rows the gate reads as Appendix B's second source; `node scripts/check-rule-coverage.mjs --states all` exit 0 (49 ids, 0 gap or hard at P0). Helper 8 `SPEC@main-installed-single` pending P2.8a, both looks (UI run 40062365597: `0/23 within 1`, the six details-pane ids missing until P2.8a's setup selects a row). Commits 114cda9, 4028c07, eda6028, 5fca190, f53da53 (lint fix: CI lints `scripts/`), d50e603. For P0.18: DS-TYPE-4's compact rows (18.2, target 22) and DS-COPY-3's Unsupported banner are red today. Tolerance questions for the flipping items in the note's Deviations. |
-| P0.14 | P0 | Theme dump (six themes, both looks, 1.140.0, CI) and the missing exemplar states | open |  |  |  |
+| P0.14 | P0 | Theme dump (six themes, both looks, 1.140.0, CI) and the missing exemplar states | in-progress |  | 2026-10-24 | Note `docs/plans/handoff/P0.14.md` |
 | P0.15 | P0 | Goldens and pixel diff: `compare-goldens.mjs`, masks, text-metrics fingerprint | open |  |  |  |
 | P0.16 | P0 | `scripts/ui-harness.mjs` (`--vsix`, split ExTester commands, `--build-sha`) and the negative-control job | open |  |  |  |
 | P0.17 | P0 | Negative control (a): the pre-fix tree `80940aa` reports PF-2…PF-6 with coordinates | open |  |  |  |
@@ -194,13 +194,13 @@ P0 item provides.
 | DS-OVERFLOW-5 | 6 at 220 px | details split | — | P3.3b | pending |
 | DS-STATE-1…4 | markers, captures | main / updates / rest | — | P2.8b / P3.1b / P3.10 | pending |
 | DS-STATE-5, -6 | outcome states | rows | — | P4.7 | pending |
-| DS-STATE-7 | text present | installed / details | — | P2.8a / P3.3b | pending |
-| DS-FOCUS-1…4 | focus states | rows / controls / tabs | — | P2.2 / P2.3, P2.4 / P2.5 | pending |
+| DS-STATE-7 | text present | installed / details | — | P2.8a / P3.3b | pending; registered by P0.14 (helper 5: every visible `aria-disabled` element and disabled button has a reason in text) in `main-installed`, `main-updates`, `browse` (P2.8a) and `details` (P3.3b) |
+| DS-FOCUS-1…4 | focus states | rows / controls / tabs | — | P2.2 / P2.3, P2.4 / P2.5 | pending; registered by P0.14 (helper 6, the focused element): DS-FOCUS-1 `controls` P2.4 (P2.3's buttons and check boxes are its share; P2.4 flips once both kinds are green) and `tabs` P2.5; DS-FOCUS-2 `rows` P2.2; DS-FOCUS-3 `rows` P2.2 and `tabs` P2.5 in `main-installed-details` and `main-updates` (the sidebar branch waits for a sidebar click state); DS-FOCUS-4 `rows` P2.2 in the two high-contrast themes only (the hover clause waits for an HC hover state) |
 | DS-MOTION-1, -2 | runtime check | all | — | P4.5 | pending |
 | DS-COPY-1, -4 | microcopy lint | all | — | P3.11 | pending |
 | DS-COPY-2 | text | details | — | P3.3a | pending |
 | DS-COPY-5 | text | main / sidebar | — | P2.6 / P3.7b | pending |
-| DS-DIVIDER-1 / -2 / -3 / -4 | computed borders, shadows | rows / layers / popup / main | — | P2.2 / P3.5 / P3.2 / P2.7 | pending |
+| DS-DIVIDER-1 / -2 / -3 / -4 | computed borders, shadows | rows / layers / popup / main | — | P2.2 / P3.5 / P3.2 / P2.7 | pending; DS-DIVIDER-3 has no subject in the dense workspace (the grouped popup needs two or more sources, `SearchBox.tsx:103`; P0.6's `nuget.config` has one): P3.2 adds the source or a scenario when it flips (UX-P0.14 ruling) |
 | MS-8 first-row y Installed ↔ Updates | 6 | main | — | P3.1b | pending |
 | DS-ROW-4, DS-TYPE-1, DS-TYPE-4, DS-TYPE-6, DS-COPY-3 | 3, 5, 6 computed styles and text | all | — | P0.18 | pending (pass on the probe) |
 | SPEC (spec conformance against `docs/design/artboards/<state>.spec.json`) | 8 | main-installed (`main-installed-single` at 932, both looks) | V45 | P2.8a | pending |

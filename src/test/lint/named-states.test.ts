@@ -67,6 +67,10 @@ describe('the named states (UX-P0.8)', () => {
             'main-installed-single.dark-modern.932.png',
             'main-installed-single.dark-modern-classic.932.png',
             'main-installed-single.dark-modern.800.png',
+            'main-installed-single.dark-modern.600.png',
+            'main-installed-single.dark-modern.400.png',
+            'main-installed-single.dark-modern.220.png',
+            'main-installed-details.dark-modern.400.png',
             'sidebar-sections.dark-modern.300.png',
             'sidebar-sections.dark-modern.250.png',
             'sidebar-sections.dark-modern.170.png',
@@ -118,8 +122,9 @@ describe('the named states (UX-P0.8)', () => {
 
     it('captures every Tier A theme and width once on the floor, in the classic look', () => {
         const files = laneFiles('floor');
-        expect(files).toHaveLength(36);
-        expect(new Set(files).size).toBe(36);
+        // 36 at UX-P0.9, and UX-P0.14's four narrow widths (main-installed-single at 600/400/220, main-installed-details at 400).
+        expect(files).toHaveLength(40);
+        expect(new Set(files).size).toBe(40);
         expect(files.every(file => file.includes('-classic.'))).toBe(true);
         expect(floorCaptures().every(({ capture }) => capture.look === 'classic')).toBe(true);
         expect(laneFiles('macos')).toEqual(expectedFiles());

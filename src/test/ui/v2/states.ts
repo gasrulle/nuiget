@@ -97,6 +97,10 @@ export const STATES: readonly NamedState[] = [
         { theme: 'dark-modern', look: 'modern', width: 932 },
         { theme: 'dark-modern', look: 'classic', width: 932 },
         { theme: 'dark-modern', look: 'modern', width: 800 },
+        // The narrow widths of DS-ROW-6, DS-OVERFLOW-1 and DS-OVERFLOW-3, down to the editor's 220 px minimum (UX-P0.14).
+        { theme: 'dark-modern', look: 'modern', width: 600 },
+        { theme: 'dark-modern', look: 'modern', width: 400 },
+        { theme: 'dark-modern', look: 'modern', width: 220 },
     ], 'Gateway selected; the Installed list shows its direct rows (package-row-newtonsoft.json present).'),
     ready('main-installed-all', 'main', themeSensitive('main'),
         'All Projects selected; four project sections, the Unsupported section header shows "Unsupported" and "provisional". The provisional badge is the Unsupported project\'s permanent one (an SDK-8 project is never evaluated), not the SDK-10 provisional window.'),
@@ -104,7 +108,9 @@ export const STATES: readonly NamedState[] = [
         'Unsupported selected; the Unsupported banner, the read-only list and both header badges.'),
     ready('main-installed-cpm', 'main', [primary('main')],
         'Catalog selected (Central Package Management); its rows are listed (package-row-mapster present).'),
-    ready('main-installed-details', 'main', themeSensitive('main'),
+    // DS-OVERFLOW-5's split at 400 px: at the editor's 220 px minimum the setup cannot select a row in the 77 px list pane
+    // (V50; UX-P0.14 design-advisor ruling).
+    ready('main-installed-details', 'main', [...themeSensitive('main'), { theme: 'dark-modern', look: 'modern', width: 400 }],
         'Gateway selected, Newtonsoft.Json 12.0.1 (an update exists) made current; the details panel shows "Dependencies".', [LIVE_DETAILS]),
     ready('main-installed-filter', 'main', [primary('main')],
         'Gateway selected, "@installed Microsoft.Extensions" in the search box; every listed option is a Microsoft.Extensions id.'),

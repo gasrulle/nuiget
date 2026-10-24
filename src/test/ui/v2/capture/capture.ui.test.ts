@@ -3,11 +3,12 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { By, EditorView, Key, VSBrowser } from 'vscode-extension-tester';
 import { selectTheme, setPanelWidth, setSidebarWidth, webviewRect, windowSize } from '../layout';
-import { type ArtboardSpec, type ChromeReference, COLLECT_LAYOUT, formatLine, type Layout, measureLines, RAMP, type SpecLook, TOLERANCES, type WorkbenchHeights } from '../measure';
+import { type ArtboardSpec, type ChromeReference, COLLECT_LAYOUT, formatLine, type Layout, type LookMeasure, measureLines, RAMP, type SpecLook, TOLERANCES, type WorkbenchHeights } from '../measure';
 import { chooseProjectCommitted, enterMainWebview, openMainPanel, optionFor, untilProjects } from '../mainWebview';
 import { driverOf, enterSidebarWebview, findByTestId, leaveWebview, openSidebarView, poll, waitForTestIdGone, waitForText } from '../sidebarWebview';
-import { measureWorkbench } from '../workbench';
+import { measureExemplar, measureWorkbench } from '../workbench';
 import { type Capture, captureFile, floorCaptures, isReady, type Lane, type Look, matrixCaptures, MATRIX_THEMES, type NamedState, PANEL_WIDTH, SIDEBAR_WIDTH, STATES, type Theme, THEMES } from '../states';
+import { declaredTokens, DUMP_THEME, formatThemeDump, formatTokenDump, type ThemeDump, themeDumpFile, tokenDumpFile } from '../themeDump';
 
 /**
  * The capture suite of the named states (UX-P0.8), on the dense workspace (`npm run test:ui:capture`, and the classic
@@ -393,7 +394,7 @@ async function measure(state: NamedState, capture: Capture): Promise<string[]> {
     // Measured against the reference as it stood; then an element (or first row) the reference lacked joins it.
     const reference = before === undefined ? undefined : { ...before, chrome: { ...before.chrome } };
     const red: string[] = [];
-    const lines = measureLines(state.name, layout, capture.look, workbench, reference, capture.width, specFor(state, capture));
+    const lines = measureLines(state.name, layout, capture.look, workbench, reference, capture.width, specFor(state, capture), capture.theme);
     if (layout.root) {
         const merged = before ?? { state: state.name, chrome: {}, firstRow: undefined };
         for (const [name, rect] of Object.entries(layout.chrome)) {
@@ -475,6 +476,38 @@ describe(`named states (${LANE} lane, ${LOOK} look)`, () => {
         await leaveWebview();
     });
 
+    if (LANE === 'ui') {
+        // First, so the captures start from the side bar width it restores. A probe that logs and goes on, as the heights
+        // of the `before` do: a step that fails prints `[exemplar] <step>: <reason>` and leaves its entries out; a test of
+        // its own, so its time is its own and not the `before`'s (UX-P0.14).
+        it(`workbench exemplar, ${LOOK} look (UX-P0.14)`, async function () {
+            this.timeout(300_000);
+            const started = Date.now();
+            const exemplar = await measureExemplar();
+            const paint = (look: LookMeasure | null): string => (look === null ? 'absent' : `background ${look.background}, outline ${look.outline} ${look.outlineOffset}`);
+            for (const [name, state] of Object.entries(exemplar.rowStates)) {
+                console.warn(`[exemplar] row ${name}: ${paint(state.row)}, list focused ${state.listFocused}, classes "${state.row?.classes ?? ''}"`);
+            }
+            for (const label of exemplar.editor.navbarLabels) {
+                const indicator = Object.entries(label.pseudo).map(([which, box]) => `::${which} ${box?.height} ${box?.background} ${box?.borderBottom}`).join(', ');
+                console.warn(`[exemplar] navbar label "${label.classes}": ${label.fontSize}/${label.fontWeight} ${label.textTransform}, line ${label.lineHeight}, padding ${label.padding}, colour ${label.color}, border-bottom ${label.borderBottom}${indicator ? `, ${indicator}` : ''}`);
+            }
+            console.warn(`[exemplar] editor header: ${exemplar.editor.header === null ? 'absent' : `padding ${exemplar.editor.header.padding}, ${exemplar.editor.header.rect.w}x${exemplar.editor.header.rect.h}`}`);
+            for (const [width, parts] of Object.entries(exemplar.sideBarWidths)) {
+                console.warn(`[exemplar] side bar ${width}: viewlet "${parts.viewlet?.classes ?? ''}", row ${parts.row?.rect.h ?? 'absent'}, icon ${parts.icon === null ? 'hidden' : `${parts.icon.rect.w}x${parts.icon.rect.h}`}`);
+            }
+            for (const [width, parts] of Object.entries(exemplar.editorWidths)) {
+                console.warn(`[exemplar] editor ${width}: header ${parts.header === null ? 'absent' : `${parts.header.rect.w}x${parts.header.rect.h} padding ${parts.header.padding}${parts.header.overflowsX ? ' overflows' : ''}`}, navbar ${parts.navbar?.rect.h ?? 'absent'}, actions ${parts.actions === null ? 'absent' : `${parts.actions.rect.w}${parts.actions.overflowsX ? ' overflow' : ''}`}`);
+            }
+            const { widget, separator, separatorLabel } = exemplar.layer;
+            console.warn(`[exemplar] layer: ${widget === null ? 'absent' : `radius ${widget.radius}, shadow ${widget.boxShadow}, border ${widget.border}`}; separator ${separator === null ? 'absent' : separator.border}, label ${separatorLabel === null ? 'absent' : `${separatorLabel.fontSize} ${separatorLabel.textTransform} ${separatorLabel.color}`}`);
+            console.warn(`[exemplar] measured in ${Math.round((Date.now() - started) / 1000)} s`);
+            // Beside the heights of the run's `before`, in the file docs/design/workbench/<look>.json is copied from.
+            const file = path.join(path.dirname(VSBrowser.instance.getScreenshotsDir()), `workbench.${LOOK}.json`);
+            fs.writeFileSync(file, JSON.stringify({ ...JSON.parse(fs.readFileSync(file, 'utf8')), exemplar }, null, 2) + '\n');
+        });
+    }
+
     for (const { state, capture } of jobs) {
         const reach = REACH[state.name];
         it(captureFile(state.name, capture), async function () {
@@ -504,6 +537,35 @@ describe(`named states (${LANE} lane, ${LOOK} look)`, () => {
             if (red.length > 0) {
                 throw new Error(`hard measurement red: ${red.join('; ')}`);
             }
+        });
+    }
+
+    if (LANE === 'ui') {
+        // Last, so the captures above keep their theme order.
+        it(`theme dump, six themes, ${LOOK} look (UX-P0.14)`, async function () {
+            this.timeout(600_000);
+            const names = declaredTokens(fs.readFileSync(path.resolve('src/webview/shared/tokens.css'), 'utf8'));
+            const dir = path.join(path.dirname(VSBrowser.instance.getScreenshotsDir()), 'themes');
+            fs.mkdirSync(dir, { recursive: true });
+            const provenance = {
+                look: LOOK, vscode: VSBrowser.instance.version, platform: process.platform,
+                run: process.env.GITHUB_RUN_ID ?? 'local', date: new Date().toISOString().slice(0, 10),
+            };
+            const started = Date.now();
+            for (const theme of MATRIX_THEMES) {
+                await applyTheme(theme);
+                // A colour read during a transition is a mix of two themes (the gotcha of theme.ui.test.ts).
+                await until('document.getAnimations().every(animation => !(animation instanceof CSSTransition) || animation.playState !== "running")', 'the colour transitions to end', 30_000);
+                const dump = await script<ThemeDump>(DUMP_THEME, names);
+                const unresolved = names.filter(name => dump.tokens[name] === '');
+                fs.writeFileSync(path.join(dir, themeDumpFile(theme, LOOK)), formatThemeDump(THEMES[theme].labels[0], dump, provenance));
+                fs.writeFileSync(path.join(dir, tokenDumpFile(theme, LOOK)), formatTokenDump(THEMES[theme].labels[0], dump, provenance));
+                console.warn(`[theme] ${themeDumpFile(theme, LOOK)}: ${Object.keys(dump.vars).length} --vscode-* properties, ${names.length - unresolved.length}/${names.length} --nuiget-* tokens resolved${unresolved.length > 0 ? ` (empty: ${unresolved.join(', ')})` : ''}; body "${dump.bodyClass}", theme name "${dump.themeName ?? ''}"`);
+            }
+            console.warn(`[theme] six themes in ${Math.round((Date.now() - started) / 1000)} s`);
+            // The artboard export runs next in the same window, in the theme the captures started in.
+            await applyTheme('dark-modern');
+            await leaveWebview();
         });
     }
 

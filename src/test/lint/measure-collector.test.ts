@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { COLLECT_LAYOUT, type Layout, MEASURE_WIDGETS, RAMP, TOLERANCES, type WidgetMeasure } from '../ui/v2/measure';
+import { COLLECT_LAYOUT, type Layout, type LookMeasure, MEASURE_LOOK, MEASURE_WIDGETS, RAMP, TOLERANCES, type WidgetMeasure } from '../ui/v2/measure';
 
 /**
  * UX-P0.10 and UX-P0.11: the in-page collector of `src/test/ui/v2/measure.ts` on a page with stubbed geometry. jsdom
@@ -252,6 +252,47 @@ describe('the in-page collector on stubbed geometry (UX-P0.10, UX-P0.11)', () =>
         }
     });
 
+    it('collects the focused element and its ring and the disabled affordances (UX-P0.14)', () => {
+        document.head.insertAdjacentHTML('beforeend', '<style id="p014">.nuiget-button:focus { outline-width: 1px; outline-style: solid; outline-color: rgb(0, 120, 212); outline-offset: 2px; } [role="option"] { outline-width: 1px; outline-style: dotted; outline-color: rgb(243, 133, 24); outline-offset: -1px; }</style>');
+        document.documentElement.style.setProperty('--vscode-focusBorder', '#0078d4');
+        document.documentElement.style.setProperty('--vscode-contrastActiveBorder', '#f38518');
+        try {
+            const toolbar = document.querySelector('[data-testid="installed-toolbar"]') as HTMLElement;
+            toolbar.insertAdjacentHTML('beforeend', '<span id="why" class="nuiget-visually-hidden">Select packages first.</span>');
+            const uninstall = document.querySelector('[data-testid="uninstall-selected-button"]') as HTMLButtonElement;
+            uninstall.disabled = true;
+            // Two ids, one of them missing: the list splits on white space.
+            uninstall.setAttribute('aria-describedby', 'missing why');
+            const select = document.querySelector('[data-testid="select-all-button"]') as HTMLButtonElement;
+            select.setAttribute('aria-disabled', 'true');
+            select.removeAttribute('disabled');
+            (document.querySelector('[data-testid="package-details-panel"] [data-testid="uninstall-button"]') as HTMLButtonElement).focus();
+            const facts = collect().endOfP0;
+            expect(facts.focus).toMatchObject({ kind: 'button', label: '[uninstall-button]', outline: { width: 1, style: 'solid', colour: 'rgb(0, 120, 212)', offset: 2 }, band: undefined });
+            expect(facts.focusColours).toEqual({ focusBorder: '#0078d4', listFocusOutline: '', contrastActiveBorder: '#f38518' });
+            expect(facts.disabled).toEqual([{ label: '[select-all-button]', reason: '' }, { label: '[uninstall-selected-button]', reason: 'Select packages first.' }]);
+            expect(facts.rows[0]).toMatchObject({ outline: { width: 1, style: 'dotted', colour: 'rgb(243, 133, 24)', offset: -1 }, focused: false });
+            // A focused option is the focus, inside its row band.
+            const option = document.querySelector('[role="option"]') as HTMLElement;
+            option.tabIndex = 0;
+            option.focus();
+            const onRow = collect().endOfP0;
+            expect(onRow.focus).toMatchObject({ kind: 'option', band: { left: 0, top: 136, right: 600, bottom: 214 } });
+            expect(onRow.rows[0].focused).toBe(true);
+            // An icon button is a kind of its own (DS-FOCUS-1 names no offset for it).
+            (document.querySelector('.nuiget-row-actions .nuiget-icon-button') as HTMLButtonElement).focus();
+            expect(collect().endOfP0.focus?.kind).toBe('icon-button');
+            // Nothing focused: no subject.
+            (document.activeElement as HTMLElement).blur();
+            option.blur();
+            expect(collect().endOfP0.focus).toBeUndefined();
+        } finally {
+            document.getElementById('p014')?.remove();
+            document.documentElement.style.removeProperty('--vscode-focusBorder');
+            document.documentElement.style.removeProperty('--vscode-contrastActiveBorder');
+        }
+    });
+
     it('reads every element with a test id relative to the root, a repeated id numbered, as the artboard export does (helper 8, UX-P0.13)', () => {
         const testIds = collect().testIds;
         expect(testIds['tab-bar']).toMatchObject({ rect: { x: 0, y: 40, w: 600, h: 30 }, inset: 0 });
@@ -273,5 +314,13 @@ describe('the in-page collector on stubbed geometry (UX-P0.10, UX-P0.11)', () =>
         const widgets = new Function(MEASURE_WIDGETS).apply(null, [[['tabs', ['.nope', '[data-testid="tab-bar"]']], ['absent', ['.nope']]]]) as Record<string, WidgetMeasure | null>;
         expect(widgets.tabs).toMatchObject({ selector: '[data-testid="tab-bar"]', height: 30, width: 600 });
         expect(widgets.absent).toBeNull();
+    });
+
+    it('measures the box and paint of a workbench element by visible match, and null for none (the exemplar, UX-P0.14)', () => {
+        const looks = new Function(MEASURE_LOOK).apply(null, [[['button', ['.nope', '.nuiget-button']], ['absent', ['.nope']]], 1]) as Record<string, LookMeasure | null>;
+        expect(looks.button).toMatchObject({ selector: '.nuiget-button', classes: 'nuiget-button', rect: { x: 400, y: 74, w: 194, h: 26 }, background: 'rgb(14, 99, 156)', overflowsX: false });
+        expect(looks.button?.border).toBe('1px 1px 1px 1px solid rgba(0, 0, 0, 0)');
+        expect(looks.button).toMatchObject({ fontSize: '13px', padding: '0px 12px 0px 12px' });
+        expect(looks.absent).toBeNull();
     });
 });

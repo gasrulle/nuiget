@@ -20,6 +20,7 @@ const layout = (overrides: Partial<Layout> = {}, heights: Partial<Heights> = {})
     endOfP0: {
         rows: [], listPaneWidth: undefined, detailsHeader: undefined, sideways: [], controlsOut: [], minContent: { toolbar: undefined, header: undefined },
         factLefts: [], fonts: { root: '', others: [] }, rootLineHeight: undefined, compactLineHeights: [], metaText: [], descriptionForeground: '', copyEnds: [],
+        focus: undefined, focusColours: { focusBorder: '', listFocusOutline: '', contrastActiveBorder: '' }, disabled: [],
     },
     testIds: {},
     ...overrides, heights: { ...noHeights, ...heights },
@@ -48,6 +49,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
             'PF-2', 'PF-3a', 'PF-4', 'MS-8', 'DS-OVERFLOW-6', 'DS-INSET-3', 'DS-OVERFLOW-2', 'DS-ROW-5',
             'DS-INSET-4', 'DS-ROW-1', 'DS-ROW-2', 'DS-ROW-3', 'DS-ROW-6', 'DS-ICON-3', 'DS-DENSITY-1', 'DS-OVERFLOW-1', 'DS-OVERFLOW-3', 'DS-OVERFLOW-5', 'DS-ALIGN-1',
             'DS-TYPE-1', 'DS-TYPE-4', 'DS-TYPE-6', 'DS-ROW-4', 'DS-COPY-3', 'SPEC',
+            'DS-FOCUS-1', 'DS-FOCUS-2', 'DS-FOCUS-3', 'DS-FOCUS-4', 'DS-STATE-7',
         ]);
         const scopes = (id: string): unknown => RULES.find(rule => rule.id === id)?.scopes;
         expect(scopes('PF-6')).toEqual({ 'main-installed': 'hard' });
@@ -80,6 +82,10 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(scopes('PF-3a')).toEqual({ 'main-installed': 'hard' });
         expect(RULES.find(rule => rule.id === 'PF-3a')).toMatchObject({ states: ['main-installed-single'], widths: [1200] });
         expect(scopes('PF-4')).toEqual({ 'main-installed': 'hard', 'main-updates': 'hard' });
+        // UX-P0.14 (design trigger 1): PF-4 holds at every width it was asserted at in any lane, not at P0.14's narrow ones (V50).
+        const pf4 = RULES.find(rule => rule.id === 'PF-4');
+        expect(pf4?.widths).toEqual([800, 932, 1200, 1600]);
+        expect([800, 932, 1200, 1600, 220, 400, 600].map(width => appliesTo(pf4!, 'main-installed-single', width))).toEqual([true, true, true, true, false, false, false]);
         expect(scopes('MS-8')).toEqual({ chrome: 'hard', 'first-row': { pending: 'P3.1b' } });
         // V72 (design-advisor ruling of 2026-10-24): the document never scrolls, hard everywhere but V72's three states.
         const v72 = { 'main-transitive-expanded': 'P2.1a', 'main-transitive-details': 'P2.1a', 'main-installed-all': 'P2.1a' };
@@ -109,6 +115,14 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(scopes('DS-ROW-4')).toEqual({ 'main-installed': probe, 'main-updates': probe, browse: probe, details: probe, sidebar: probe });
         expect(scopes('DS-COPY-3')).toEqual({ 'main-installed': probe, 'main-updates': probe, browse: probe, sidebar: probe });
         expect(scopes('SPEC')).toEqual({ 'main-installed': { pending: 'P2.8a' } });
+        // UX-P0.14 (design-advisor ruling of 2026-10-24): the six of the research's 27 a ready state renders.
+        expect(scopes('DS-FOCUS-1')).toEqual({ controls: { pending: 'P2.4' }, tabs: { pending: 'P2.5' } });
+        expect(scopes('DS-FOCUS-2')).toEqual({ rows: { pending: 'P2.2' } });
+        expect(scopes('DS-FOCUS-3')).toEqual({ rows: { pending: 'P2.2' }, tabs: { pending: 'P2.5' } });
+        expect(RULES.find(rule => rule.id === 'DS-FOCUS-3')?.states).toEqual(['main-installed-details', 'main-updates']);
+        expect(scopes('DS-FOCUS-4')).toEqual({ rows: { pending: 'P2.2' } });
+        expect(RULES.find(rule => rule.id === 'DS-FOCUS-4')?.themes).toEqual(['dark-high-contrast', 'light-high-contrast']);
+        expect(scopes('DS-STATE-7')).toEqual({ 'main-installed': { pending: 'P2.8a' }, 'main-updates': { pending: 'P2.8a' }, browse: { pending: 'P2.8a' }, details: { pending: 'P3.3b' } });
         // Each rule's tolerance is one of D34's.
         expect(Object.fromEntries(RULES.map(rule => [rule.id, rule.tolerance]))).toEqual({
             'PF-6': 1, 'DS-GRID-1': 0.5, 'DS-GRID-2a': 0.5, 'DS-GRID-2b': 2, 'DS-INSET-1': 1, 'DS-INSET-2': 1, 'PF-3b': 1, 'PF-5': 1,
@@ -116,6 +130,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
             'PF-2': 1, 'PF-3a': 0, 'PF-4': 8, 'MS-8': 0.5, 'DS-OVERFLOW-6': 0, 'DS-INSET-3': 1, 'DS-OVERFLOW-2': 0, 'DS-ROW-5': 0,
             'DS-INSET-4': 1, 'DS-ROW-1': 1, 'DS-ROW-2': 1, 'DS-ROW-3': 0, 'DS-ROW-6': 0, 'DS-ICON-3': 0, 'DS-DENSITY-1': 1, 'DS-OVERFLOW-1': 0, 'DS-OVERFLOW-3': 0,
             'DS-OVERFLOW-5': 0, 'DS-ALIGN-1': 0, 'DS-TYPE-1': 0, 'DS-TYPE-4': 0.5, 'DS-TYPE-6': 0, 'DS-ROW-4': 0, 'DS-COPY-3': 0, SPEC: 1,
+            'DS-FOCUS-1': 0, 'DS-FOCUS-2': 0, 'DS-FOCUS-3': 0, 'DS-FOCUS-4': 0, 'DS-STATE-7': 0,
         });
     });
 
@@ -143,13 +158,15 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
     it('never stays silent: every scope with a status prints not measurable on an empty layout, and so does a missing root', () => {
         for (const rule of RULES) {
             for (const scope of Object.keys(rule.scopes) as Scope[]) {
-                // A state the rule applies to (at its first width, else at 1200, PF-3a's) whose group or element groups hold the scope.
+                // A state the rule applies to (at its first width, else at 1200, PF-3a's; in its first theme, DS-FOCUS-4's) whose
+                // group or element groups hold the scope.
                 const width = rule.widths?.[0] ?? 1200;
-                const state = CANDIDATES.find(candidate => appliesTo(rule, candidate, width)
+                const theme = rule.themes?.[0] ?? 'dark-modern';
+                const state = CANDIDATES.find(candidate => appliesTo(rule, candidate, width, theme)
                     && (stateGroup(candidate) === scope || elementGroups(stateGroup(candidate), candidate).includes(scope as never))) as string;
                 expect(state, `a state for ${rule.id}/${scope}`).toBeDefined();
                 const name = stateGroup(state) === scope ? `${rule.id}@${state}` : `${rule.id}@${state}/${scope}`;
-                const line = measureLines(state, layout(), 'modern', {}, undefined, width).find(candidate => candidate.name === name);
+                const line = measureLines(state, layout(), 'modern', {}, undefined, width, undefined, theme).find(candidate => candidate.name === name);
                 expect(line, name).toMatchObject({ pass: false, value: expect.stringMatching(/^not measurable/) });
             }
         }
@@ -470,6 +487,50 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(value('main-installed-empty', facts({ copyEnds: [{ kind: 'empty', text: 'No packages installed' }] }), 'DS-COPY-3@main-installed-empty')).toMatchObject({ pass: false, value: 'no full stop: empty "No packages installed"' });
         expect(value('main-installed-empty', facts({ copyEnds: [{ kind: 'empty', text: 'No packages installed.' }] }), 'DS-COPY-3@main-installed-empty')).toMatchObject({ pass: true });
         expect(value('main-installed-single', facts({}), 'DS-COPY-3@main-installed-single')).toBeUndefined();
+    });
+
+    it('checks the rules registered with the theme dump: focus rings and disabled reasons (UX-P0.14)', () => {
+        const colours = { focusBorder: '#0078d4', listFocusOutline: '#0078d4', contrastActiveBorder: '#f38518' };
+        const ring = (width: number, style: string, colour: string, offset: number) => ({ width, style, colour, offset });
+        const box = { left: 10, top: 100, right: 410, bottom: 172 };
+        const focused = (kind: string, outline: ReturnType<typeof ring>, extra: Record<string, unknown> = {}) => ({ kind, label: '[x]', outline, variant: '', box, band: undefined, ...extra });
+        const facts = (overrides: Record<string, unknown>) => layout({ endOfP0: { ...layout().endOfP0, fonts: { root: 'sans', others: [] }, focusColours: colours, ...overrides } as Layout['endOfP0'] });
+        const at = (state: string, built: Layout, name: string, look: 'modern' | 'classic' = 'modern', theme = 'dark-modern') =>
+            measureLines(state, built, look, {}, undefined, 1200, undefined, theme).find(line => line.name === name);
+        const blue = 'rgb(0, 120, 212)';
+        const orange = 'rgb(243, 133, 24)';
+        // DS-FOCUS-1: 1 px solid focusBorder, offset -1 on inputs and tabs, +2 on text buttons; a focused row is not its subject.
+        expect(at('main-installed-unfocused', facts({ focus: focused('input', ring(1, 'solid', blue, -1)) }), 'DS-FOCUS-1@main-installed-unfocused/controls')).toMatchObject({ pass: true, status: { pending: 'P2.4' } });
+        expect(at('main-installed-unfocused', facts({ focus: focused('button', ring(1, 'solid', blue, -1)) }), 'DS-FOCUS-1@main-installed-unfocused/controls'))
+            .toMatchObject({ pass: false, value: 'button [x]: outline 1 solid rgb(0, 120, 212) offset -1 (target 1 solid #0078d4 offset 2)' });
+        expect(at('main-updates', facts({ focus: focused('tab', ring(1, 'solid', blue, -1)) }), 'DS-FOCUS-1@main-updates/tabs')).toMatchObject({ pass: true, status: { pending: 'P2.5' } });
+        expect(at('main-updates', facts({ focus: focused('tab', ring(2, 'solid', blue, -1)) }), 'DS-FOCUS-1@main-updates/tabs')).toMatchObject({ pass: false });
+        expect(at('main-installed-focus', facts({ focus: focused('option', ring(1, 'solid', blue, -1)) }), 'DS-FOCUS-1@main-installed-focus/controls')).toMatchObject({ pass: false, value: 'not measurable (no focused control)' });
+        expect(at('main-installed-single', facts({ focus: focused('icon-button', ring(1, 'solid', blue, 2)) }), 'DS-FOCUS-1@main-installed-single/controls'))
+            .toMatchObject({ pass: false, value: 'not measurable (icon button [x]: DS-FOCUS-1 names no offset for it)' });
+        // DS-FOCUS-2: list.focusOutline around the whole band.
+        const band = { left: 10, top: 100, right: 410, bottom: 172 };
+        expect(at('main-installed-focus', facts({ focus: focused('option', ring(1, 'solid', blue, -1), { band }) }), 'DS-FOCUS-2@main-installed-focus/rows'))
+            .toMatchObject({ pass: true, value: '[x]: outline 1 solid rgb(0, 120, 212) offset -1 (target 1 solid #0078d4 offset -1); ring 0 from the band', status: { pending: 'P2.2' } });
+        expect(at('main-installed-focus', facts({ focus: focused('option', ring(1, 'solid', blue, -1), { band: { ...band, left: 6 } }) }), 'DS-FOCUS-2@main-installed-focus/rows')).toMatchObject({ pass: false });
+        expect(at('main-installed-focus', facts({ focus: focused('option', ring(3, 'none', blue, 0), { band }) }), 'DS-FOCUS-2@main-installed-focus/rows')).toMatchObject({ pass: false });
+        // DS-FOCUS-3: a ring after a click on a row or a tab, in the states whose setup clicked one.
+        expect(at('main-installed-details', facts({ focus: focused('option', ring(1, 'solid', blue, -1)) }), 'DS-FOCUS-3@main-installed-details/rows')).toMatchObject({ pass: true });
+        expect(at('main-installed-details', facts({ focus: focused('option', ring(3, 'none', blue, 0)) }), 'DS-FOCUS-3@main-installed-details/rows'))
+            .toMatchObject({ pass: false, value: '[x] after a click: no ring (target a ring, main panel, modern)' });
+        expect(at('main-installed-single', facts({ focus: focused('option', ring(1, 'solid', blue, -1)) }), 'DS-FOCUS-3@main-installed-single/rows')).toBeUndefined();
+        // DS-FOCUS-4: high contrast only; the selected row dotted, the focused row solid, in contrastActiveBorder.
+        const row = (state: string, outline: ReturnType<typeof ring>, isFocused = false) => ({ list: 'installed-list', compact: false, band, painted: undefined, state, icon: undefined, nameLeft: undefined, textCentre: undefined, lines: 2, actions: 0, outline, focused: isFocused });
+        const hc = facts({ rows: [row('current', ring(1, 'dotted', orange, -1)), row('focus', ring(1, 'solid', orange, -1), true)] });
+        expect(at('main-installed-details', hc, 'DS-FOCUS-4@main-installed-details/rows', 'modern', 'dark-high-contrast')).toMatchObject({ pass: true, status: { pending: 'P2.2' } });
+        expect(at('main-installed-details', hc, 'DS-FOCUS-4@main-installed-details/rows')).toBeUndefined();
+        expect(at('main-installed-details', facts({ rows: [row('current', ring(0, 'none', orange, 0))] }), 'DS-FOCUS-4@main-installed-details/rows', 'modern', 'dark-high-contrast'))
+            .toMatchObject({ pass: false, value: 'selected 0 none rgb(243, 133, 24) (target 1 dotted #f38518); focused none (target 1 solid); hovered not measurable (no high-contrast hover state)' });
+        // DS-STATE-7: every disabled affordance says why.
+        expect(at('main-installed-single', facts({ disabled: [{ label: '[uninstall-selected-button]', reason: 'Select packages first.' }] }), 'DS-STATE-7@main-installed-single')).toMatchObject({ pass: true, status: { pending: 'P2.8a' } });
+        expect(at('main-installed-single', facts({ disabled: [{ label: '[uninstall-selected-button]', reason: '' }, { label: '.nuiget-row-option', reason: 'Implicitly referenced by an SDK.' }] }), 'DS-STATE-7@main-installed-single'))
+            .toMatchObject({ pass: false, value: '2 disabled, 1 without a reason: [uninstall-selected-button]' });
+        expect(at('main-installed-details', facts({}), 'DS-STATE-7@main-installed-details')).toMatchObject({ pass: false, value: 'not measurable (no disabled affordance)', status: { pending: 'P3.3b' } });
     });
 
     it('compares a state\'s elements with its artboard spec within 1 px at the spec\'s width (helper 8, UX-P0.13)', () => {

@@ -128,6 +128,34 @@ export async function setPanelWidth(width: number): Promise<void> {
     }
 }
 
+/**
+ * Drags the side bar's sash until the workbench part (`sidebar` or `editor`) is `width` px wide (± 1 px), or fails:
+ * the workbench's own views (the exemplar of UX-P0.14), which have no nUIget webview to measure.
+ */
+export async function setPartWidth(part: 'sidebar' | 'editor', width: number): Promise<void> {
+    // Settled once two reads 250 ms apart agree: the workbench lays out after a drag.
+    let last = -1;
+    const partWidth = async (): Promise<number> => poll(async () => {
+        await leaveWebview();
+        const width = (await driverOf().findElement(By.id(`workbench.parts.${part}`)).getRect()).width;
+        const settled = width === last;
+        last = width;
+        return settled ? width : undefined;
+    }, `the ${part} part to settle`, 15_000);
+    for (let attempt = 0; attempt < 5; attempt++) {
+        const current = await partWidth();
+        if (Math.abs(current - width) <= 1) {
+            return;
+        }
+        // The side bar takes what the editor gives up.
+        await dragSideBar(part === 'sidebar' ? width - current : current - width);
+    }
+    const reached = await partWidth();
+    if (Math.abs(reached - width) > 1) {
+        throw new Error(`the ${part} part does not reach ${width} px: it is ${reached} px after five drags`);
+    }
+}
+
 /** The vertical sash on the right edge of the side bar part. */
 async function sideBarSash(): Promise<WebElement> {
     const driver = driverOf();
