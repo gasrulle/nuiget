@@ -11,7 +11,8 @@ user sees in the webviews; cite its rule ids in commits and tests.
 | `tokens.json` | Every `--nuiget-*` token (173) with its declaration, its Modern UI declaration where the looks differ, its `--vscode-*` role and fallback chain, and its value resolved per theme from the probe dumps; the schema is in its `$comment` | Generated, never by hand |
 | `tokens.css.draft` | The proposed `src/webview/shared/tokens.css`, generated from the same spec as `tokens.json` (`.draft` so no lint reads it) | Generated; the implementation item copies it into `src/` and widens the lints as `design-system.md` §12 lists |
 | `tools/spec.mjs`, `tools/build.mjs` | The token generator: the spec (one entry per token: declaration, Modern UI declaration, forced colour, usage, rule ids) and the build that writes `tokens.json`, `tokens.css.draft` and the artifact's token lists | By hand (the spec); the build is run, never its outputs edited |
-| `themes/<slug>.css` | The resolved `--vscode-*` variables of the main-panel webview under the six default themes (Dark and Light Modern, Dark and Light High Contrast, Dark and Light 2026), as CSS for artboards and previews | Generated from the theme dumps |
+| `themes/<slug>.css`, `themes/<slug>.modern.css` | The resolved `--vscode-*` variables of the main-panel webview under the six default themes (Dark and Light Modern, Dark and Light High Contrast, Dark and Light 2026), classic and Modern UI, on VS Code 1.140.0 (UX-P0.14), as CSS for artboards and previews | Copied from the `ui` job's `ui-screenshots` artifact (`themes/`), never by hand and never from a lane's or a local run |
+| `themes/<slug>.tokens.css`, `themes/<slug>.modern.tokens.css` | The computed `--nuiget-*` tokens of the product on the same host, per theme and look; a record for P1.1 and P0.25; no artboard loads it | Copied with the theme files; a `tokens.css` change re-copies the token records alone |
 | `workbench/<look>.json` | The workbench's own controls the Design System's heights stand for, per look: the Extensions row and search box, a pane header, the extension editor's navbar, the Settings select, input and button, the editor tab strip, the quick input box and row; each with its selector, height, width, font size, line height, padding and radius, measured by the capture suite on VS Code 1.140.0 (UX-P0.11) | Copied from the `ui` job's `ui-screenshots` artifact (`workbench.<look>.json`), never by hand and never from a lane's |
 | `artboards/round1/` | The round-1 compositions (A, B, C) and their token files; A is corrected to the Design System (§16, UX-P0.27a) and switches look and theme by `?look=classic` and `?theme=<slug>` | By hand, with a design-advisor approval |
 | `artboards/<state>.<theme>[-classic].<width>.png`, `artboards/<state>.spec.json` | Artboard A's main panel rendered at 932 px in both looks, and its spec (per look, each element by test id: rect and inset relative to the panel, padding, gap, the artboard's `--nuiget-*` names), named as the captures are so a compare pairs them by file name | Copied from the `ui` job's `ui-screenshots` artifact (`artboards/`), never by hand, never edited after the run |
@@ -30,14 +31,17 @@ The table lists the files present when the Design System was written; later step
   disagree, these files win and the artifact is republished.
 - `design-system.md` states the rules and cites tokens by name; `tokens.json` gives each token's value and resolution;
   `tokens.css.draft` is the CSS form of `tokens.json`. Rule ids are stable: a rule changes its text, never its id.
-- `themes/*.css` and `tokens.json` come from the same theme dumps; artboards load a theme file and `tokens.css` to
-  render in a given theme without VS Code.
+- `themes/<slug>.css` and `tokens.json` come from the same theme dumps; artboards load a theme file (never a token
+  record) and their own token file to render in a given theme without VS Code.
 
 ## Regenerating the theme dumps
 
-The dumps came from a one-off ExTester probe (`probe/zz-probe.ui.test.ts.txt` in this folder, stored as `.txt` so no
-suite runs it; `docs/research/2026-10-23-ux-research.md` §3 describes the runs); the plan's P0 harness item turns it into a
-committed step. Until then:
+The capture suite dumps them (UX-P0.14): in the `ui` job its last test, in both passes, visits the six themes and writes
+`themes/<slug>.css` (classic) or `themes/<slug>.modern.css` and the token record beside it at the root of the
+`ui-screenshots` artifact; copy the 24 files from a green run's artifact (`gh run download <run-id> -n ui-screenshots -D
+captures/<run-id>`) and record their sha256. The planning dumps came from a one-off ExTester probe
+(`probe/zz-probe.ui.test.ts.txt` in this folder, stored as `.txt` so no suite runs it; `docs/research/2026-10-23-ux-research.md`
+§3 describes the runs); its steps, kept for history:
 
 1. In a throwaway worktree (never on `labs/2.0`), copy the probe test into `src/test/ui/v2/` and run it:
    `NUIGET_PROBE_OUT=/tmp/nuiget-probe npm run test:ui -- --storage /tmp/nuiget-ui` (the short storage path avoids
