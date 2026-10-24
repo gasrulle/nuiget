@@ -48,6 +48,8 @@ export const TOLERANCES = {
     chrome: 0.5,
     /** PF-4: P9.fix-4's own tolerance for the primary toolbar button's right edge against the list's (H9). */
     primaryEdge: 8,
+    /** A computed font size against its ramp step: the Design System's own 0.1 (DS-TYPE-2/6/7/8, DS-HEIGHT-10's font). */
+    fontExact: 0.1,
 } as const;
 
 /** The spacing ramp of DS-GRID-1, in px. */
@@ -113,13 +115,19 @@ export interface RuleDefinition {
      * `pendingStates` (design-advisor ruling of 2026-10-24, UX-P0.14, V50). A width matches within 1 px.
      */
     pendingWidths?: Readonly<Record<number, string>>;
+    /**
+     * States the rule has no subject in by design (an empty list, a popup over the list), so it prints nothing there
+     * instead of `not measurable`; never a state the rule fails in (design-advisor ruling of 2026-10-24, UX-P0.18).
+     */
+    exceptStates?: readonly string[];
 }
 
 /** Whether a rule measures a state (at a webview width, in a theme) at all; its scopes then say for which state group. */
 export const appliesTo = (definition: RuleDefinition, state: string, width?: number, theme?: string): boolean =>
     (definition.states === undefined || definition.states.includes(state)) && (definition.statePattern === undefined || definition.statePattern.test(state))
     && (definition.widths === undefined || (width !== undefined && definition.widths.some(candidate => Math.abs(candidate - width) <= 1)))
-    && (definition.themes === undefined || (theme !== undefined && definition.themes.includes(theme)));
+    && (definition.themes === undefined || (theme !== undefined && definition.themes.includes(theme)))
+    && !(definition.exceptStates ?? []).includes(state);
 
 export function rule(id: string, options: Omit<RuleDefinition, 'id'>): RuleDefinition {
     return { id, ...options };
@@ -136,6 +144,9 @@ const ALL: StateGroup[] = [...MAIN, 'dialogs', 'sources', 'sidebar'];
 
 /** One status for the state groups where a rule's elements are rendered. */
 const inGroups = (status: RuleStatus, ...groups: StateGroup[]): Partial<Record<Scope, RuleStatus>> => Object.fromEntries(groups.map(group => [group, status]));
+
+/** The states without a row by design on this tree; P3.2 removes the quick-search entries if its popup shows rows (D56). */
+const NO_ROW_STATES: readonly string[] = ['main-installed-filter-nomatch', 'main-quicksearch-open', 'main-quicksearch-versions'];
 
 /**
  * V72's states, whose document scrolls today: the Listbox's visually hidden hint, absolutely placed with no positioned
@@ -203,12 +214,17 @@ export const RULES: readonly RuleDefinition[] = [
     rule('DS-OVERFLOW-3', { helper: 6, scopes: { toolbars: { pending: 'P2.5' }, tabs: { pending: 'P2.5' }, details: { pending: 'P3.3b' } }, tolerance: TOLERANCES.containment }),
     rule('DS-OVERFLOW-5', { helper: 6, scopes: on('P3.3b', 'details'), tolerance: TOLERANCES.containment }),
     rule('DS-ALIGN-1', { helper: 2, scopes: on('P3.3a', 'details'), tolerance: TOLERANCES.containment }),
-    rule('DS-TYPE-1', { helper: 3, scopes: inGroups({ pending: 'P0.18' }, ...ALL), tolerance: TOLERANCES.containment }),
-    rule('DS-TYPE-4', { helper: 3, scopes: inGroups({ pending: 'P0.18' }, ...ALL), tolerance: TOLERANCES.gapMembership }),
-    rule('DS-TYPE-6', { helper: 3, scopes: inGroups({ pending: 'P0.18' }, ...MAIN, 'sidebar'), tolerance: TOLERANCES.containment }),
-    rule('DS-ROW-4', { helper: 6, scopes: inGroups({ pending: 'P0.18' }, ...MAIN, 'sidebar'), tolerance: TOLERANCES.containment }),
+    // UX-P0.18 (negative control (b), design-advisor ruling of 2026-10-24): hard where run 40111706433 and the UX-P0.15 rerun
+    // pair read green in every capture of the group; the red groups to the items that make them hold.
+    rule('DS-TYPE-1', { helper: 3, scopes: { ...inGroups('hard', ...MAIN, 'dialogs', 'sidebar'), sources: { pending: 'P3.6' } }, tolerance: TOLERANCES.containment }),
+    rule('DS-TYPE-4', { helper: 3, scopes: { ...inGroups('hard', ...MAIN, 'dialogs'), sidebar: { pending: 'P3.7a' }, sources: { pending: 'P3.6' } }, tolerance: TOLERANCES.gapMembership }),
+    rule('DS-TYPE-6', { helper: 3, scopes: { ...inGroups('hard', 'main-installed', 'main-updates', 'details', 'sidebar'), browse: { pending: 'P3.2' } }, tolerance: TOLERANCES.fontExact, exceptStates: NO_ROW_STATES }),
+    rule('DS-ROW-4', { helper: 6, scopes: inGroups('hard', ...MAIN, 'sidebar'), tolerance: TOLERANCES.containment, exceptStates: NO_ROW_STATES }),
     // An empty state or a banner is rendered in these states only.
-    rule('DS-COPY-3', { helper: 5, scopes: inGroups({ pending: 'P0.18' }, 'main-installed', 'main-updates', 'browse', 'sidebar'), tolerance: TOLERANCES.containment, statePattern: /empty|error|unavailable|unsupported|nomatch|unresolved/ }),
+    rule('DS-COPY-3', {
+        helper: 5, scopes: { 'main-installed': 'hard', 'main-updates': { pending: 'P3.1b' }, browse: { pending: 'P3.10' }, sidebar: { pending: 'P3.10' } },
+        tolerance: TOLERANCES.containment, statePattern: /empty|error|unavailable|unsupported|nomatch|unresolved/, pendingStates: { 'main-installed-unsupported': 'P2.8b' },
+    }),
     // Helper 8 (UX-P0.13): the states with an artboard spec (`docs/design/artboards/<state>.spec.json`), at the spec's width;
     // pending on the screen item that builds the state (P2.8a: `main-installed-single`, UX-P0.27a's artboard A).
     rule('SPEC', { helper: 8, scopes: { 'main-installed': { pending: 'P2.8a' } }, tolerance: TOLERANCES.coincide, states: ['main-installed-single'], widths: [932] }),
@@ -1533,12 +1549,6 @@ const END_OF_P0 = {
     actionsAtMost: 3,
 } as const;
 
-/**
- * DS-TYPE-6's font sizes are exact to 0.1 px, the rule's own tolerance; D34 has no such value, so it is kept here and the
- * rule's declared tolerance (0) is not the one applied (named in the P0.13 note for P0.18).
- */
-const FONT_EXACT = 0.1;
-
 /** The rules registered at the end of P0 (design-advisor ruling of 2026-10-24): value and verdict, or undefined for another. */
 function evaluateEndOfP0(definition: RuleDefinition, scope: Scope, state: string, layout: Layout): { value: string; pass: boolean } | undefined {
     const tolerance = definition.tolerance;
@@ -1687,7 +1697,7 @@ function evaluateEndOfP0(definition: RuleDefinition, scope: Scope, state: string
             const sizes = (texts: typeof meta) => tally(texts.map(text => text.fontSize));
             return {
                 value: `meta ${sizes(meta)} (target ${END_OF_P0.metaFont})${description.length > 0 ? `; description ${sizes(description)} (target ${END_OF_P0.descriptionFont})` : ''}; ${offColour} meta off descriptionForeground`,
-                pass: meta.every(text => Math.abs(text.fontSize - END_OF_P0.metaFont) <= FONT_EXACT) && description.every(text => Math.abs(text.fontSize - END_OF_P0.descriptionFont) <= FONT_EXACT) && offColour === 0,
+                pass: meta.every(text => Math.abs(text.fontSize - END_OF_P0.metaFont) <= tolerance) && description.every(text => Math.abs(text.fontSize - END_OF_P0.descriptionFont) <= tolerance) && offColour === 0,
             };
         }
         case 'DS-ROW-4': {

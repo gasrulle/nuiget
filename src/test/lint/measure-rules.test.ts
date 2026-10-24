@@ -38,7 +38,7 @@ const CANDIDATES = [...STATES.map(state => state.name), 'main-sources-list', 'ma
 
 describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
     it('writes D34\'s tolerances and the ramp once', () => {
-        expect(TOLERANCES).toEqual({ coincide: 1, gapMembership: 0.5, proximity: 2, height: 1, centring: 1, parity: 1, containment: 0, chrome: 0.5, primaryEdge: 8 });
+        expect(TOLERANCES).toEqual({ coincide: 1, gapMembership: 0.5, proximity: 2, height: 1, centring: 1, parity: 1, containment: 0, chrome: 0.5, primaryEdge: 8, fontExact: 0.1 });
         expect(RAMP).toEqual([0, 2, 4, 6, 8, 10, 12, 16, 20, 24, 28, 32, 36, 40]);
     });
 
@@ -110,13 +110,23 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(scopes('DS-OVERFLOW-3')).toEqual({ toolbars: { pending: 'P2.5' }, tabs: { pending: 'P2.5' }, details: { pending: 'P3.3b' } });
         expect(scopes('DS-OVERFLOW-5')).toEqual({ details: { pending: 'P3.3b' } });
         expect(scopes('DS-ALIGN-1')).toEqual({ details: { pending: 'P3.3a' } });
-        const probe = { pending: 'P0.18' };
-        const all = { 'main-installed': probe, 'main-updates': probe, browse: probe, details: probe, dialogs: probe, sources: probe, sidebar: probe };
-        expect(scopes('DS-TYPE-1')).toEqual(all);
-        expect(scopes('DS-TYPE-4')).toEqual(all);
-        expect(scopes('DS-TYPE-6')).toEqual({ 'main-installed': probe, 'main-updates': probe, browse: probe, details: probe, sidebar: probe });
-        expect(scopes('DS-ROW-4')).toEqual({ 'main-installed': probe, 'main-updates': probe, browse: probe, details: probe, sidebar: probe });
-        expect(scopes('DS-COPY-3')).toEqual({ 'main-installed': probe, 'main-updates': probe, browse: probe, sidebar: probe });
+        // UX-P0.18 (design-advisor ruling of 2026-10-24): hard where the unchanged tree read green in every capture of the
+        // group; the red groups and the groups no state measures yet to the items that make them hold.
+        const hard = (...groups: string[]) => Object.fromEntries(groups.map(group => [group, 'hard']));
+        expect(scopes('DS-TYPE-1')).toEqual({ ...hard('main-installed', 'main-updates', 'browse', 'details', 'dialogs', 'sidebar'), sources: { pending: 'P3.6' } });
+        expect(scopes('DS-TYPE-4')).toEqual({ ...hard('main-installed', 'main-updates', 'browse', 'details', 'dialogs'), sidebar: { pending: 'P3.7a' }, sources: { pending: 'P3.6' } });
+        expect(scopes('DS-TYPE-6')).toEqual({ ...hard('main-installed', 'main-updates', 'details', 'sidebar'), browse: { pending: 'P3.2' } });
+        expect(scopes('DS-ROW-4')).toEqual(hard('main-installed', 'main-updates', 'browse', 'details', 'sidebar'));
+        expect(scopes('DS-COPY-3')).toEqual({ 'main-installed': 'hard', 'main-updates': { pending: 'P3.1b' }, browse: { pending: 'P3.10' }, sidebar: { pending: 'P3.10' } });
+        expect(RULES.find(rule => rule.id === 'DS-COPY-3')?.pendingStates).toEqual({ 'main-installed-unsupported': 'P2.8b' });
+        // The states without a row by design: DS-TYPE-6 and DS-ROW-4 print nothing there, never a pass.
+        const noRow = ['main-installed-filter-nomatch', 'main-quicksearch-open', 'main-quicksearch-versions'];
+        for (const id of ['DS-TYPE-6', 'DS-ROW-4']) {
+            const definition = RULES.find(rule => rule.id === id)!;
+            expect(definition.exceptStates, id).toEqual(noRow);
+            expect(noRow.map(state => appliesTo(definition, state)), id).toEqual([false, false, false]);
+            expect(appliesTo(definition, 'main-installed-single'), id).toBe(true);
+        }
         expect(scopes('SPEC')).toEqual({ 'main-installed': { pending: 'P2.8a' } });
         // UX-P0.14 (design-advisor ruling of 2026-10-24): the six of the research's 27 a ready state renders.
         expect(scopes('DS-FOCUS-1')).toEqual({ controls: { pending: 'P2.4' }, tabs: { pending: 'P2.5' } });
@@ -132,7 +142,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
             ...Object.fromEntries(Array.from({ length: 11 }, (_, i) => [`DS-HEIGHT-${i + 1}`, 1])),
             'PF-2': 1, 'PF-3a': 0, 'PF-4': 8, 'MS-8': 0.5, 'DS-OVERFLOW-6': 0, 'DS-INSET-3': 1, 'DS-OVERFLOW-2': 0, 'DS-ROW-5': 0,
             'DS-INSET-4': 1, 'DS-ROW-1': 1, 'DS-ROW-2': 1, 'DS-ROW-3': 0, 'DS-ROW-6': 0, 'DS-ICON-3': 0, 'DS-DENSITY-1': 1, 'DS-OVERFLOW-1': 0, 'DS-OVERFLOW-3': 0,
-            'DS-OVERFLOW-5': 0, 'DS-ALIGN-1': 0, 'DS-TYPE-1': 0, 'DS-TYPE-4': 0.5, 'DS-TYPE-6': 0, 'DS-ROW-4': 0, 'DS-COPY-3': 0, SPEC: 1,
+            'DS-OVERFLOW-5': 0, 'DS-ALIGN-1': 0, 'DS-TYPE-1': 0, 'DS-TYPE-4': 0.5, 'DS-TYPE-6': 0.1, 'DS-ROW-4': 0, 'DS-COPY-3': 0, SPEC: 1,
             'DS-FOCUS-1': 0, 'DS-FOCUS-2': 0, 'DS-FOCUS-3': 0, 'DS-FOCUS-4': 0, 'DS-STATE-7': 0,
         });
     });
@@ -487,8 +497,8 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(value('main-installed-details', facts({ detailsHeader: { insets: { start: 20, end: 20, top: 20, bottom: 20 }, titleLeft: 620, tabLabelLeft: 632 } }), 'DS-INSET-4@main-installed-details')).toMatchObject({ pass: false });
         expect(value('main-installed-details', facts({ factLefts: [[700, 700, 712]] }), 'DS-ALIGN-1@main-installed-details')).toMatchObject({ pass: false, status: { pending: 'P3.3a' } });
         expect(value('main-installed-details', facts({ factLefts: [[700, 700], [640, 640]] }), 'DS-ALIGN-1@main-installed-details')).toMatchObject({ pass: true });
-        // The five of P0.18.
-        expect(value('main-installed-single', facts({ fonts: { root: 'sans', others: ['monospace'] } }), 'DS-TYPE-1@main-installed-single')).toMatchObject({ pass: false, status: { pending: 'P0.18' } });
+        // The five UX-P0.18 flipped.
+        expect(value('main-installed-single', facts({ fonts: { root: 'sans', others: ['monospace'] } }), 'DS-TYPE-1@main-installed-single')).toMatchObject({ pass: false, status: 'hard' });
         expect(value('main-installed-single', facts({ fonts: { root: 'sans', others: [] } }), 'DS-TYPE-1@main-installed-single')).toMatchObject({ pass: true, value: 'one family' });
         expect(value('main-installed-single', facts({ rootLineHeight: 18.2 }), 'DS-TYPE-4@main-installed-single')).toMatchObject({ pass: true });
         expect(value('main-installed-single', facts({ rootLineHeight: 19 }), 'DS-TYPE-4@main-installed-single')).toMatchObject({ pass: false });
@@ -499,6 +509,10 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         const meta = (fontSize: number, colour = 'rgb(157, 157, 157)') => [{ kind: 'meta', fontSize, colour, selected: false }];
         expect(value('main-installed-single', facts({ metaText: meta(11), descriptionForeground: '#9d9d9d' }), 'DS-TYPE-6@main-installed-single')).toMatchObject({ pass: true });
         expect(value('main-installed-single', facts({ metaText: meta(11.5), descriptionForeground: '#9d9d9d' }), 'DS-TYPE-6@main-installed-single')).toMatchObject({ pass: false });
+        // The computed 11.05 of the run is within the rule's own 0.1.
+        expect(value('main-installed-single', facts({ metaText: meta(11.05), descriptionForeground: '#9d9d9d' }), 'DS-TYPE-6@main-installed-single')).toMatchObject({ pass: true, status: 'hard' });
+        expect(value('main-installed-unsupported', facts({ copyEnds: [{ kind: 'banner', text: 'Unsupported project: requires .NET SDK 10 or newer' }] }), 'DS-COPY-3@main-installed-unsupported'))
+            .toMatchObject({ pass: false, status: { pending: 'P2.8b' } });
         expect(value('main-installed-single', facts({ metaText: meta(11, 'rgb(204, 204, 204)'), descriptionForeground: '#9d9d9d' }), 'DS-TYPE-6@main-installed-single'))
             .toMatchObject({ pass: false, value: 'meta 11 (target 11); 1 meta off descriptionForeground' });
         expect(value('main-installed-hover', facts({ rows: [row({ actions: 4 })] }), 'DS-ROW-4@main-installed-hover')).toMatchObject({ pass: false });
