@@ -8,7 +8,7 @@ differ, the Modern UI value comes first (it is the compiled default from 1.139) 
 | Item | Value |
 |---|---|
 | Status | Proposed by the UX initiative, 2026-10-23. The plan's items implement it; this file is the reference they cite. |
-| Rules | 84: the 72 `DS-*` rules of the research (ids kept) and 11 added (`DS-TYPE-8`, `DS-TYPE-9`, `DS-RADIUS-1`, `DS-RADIUS-2`, `DS-DIVIDER-5`, `DS-DIVIDER-6`, `DS-SCROLL-1`, `DS-SCROLL-2`, `DS-LOOK-1`, `DS-HC-1`, `DS-ALIGN-1`) |
+| Rules | 84: the 72 `DS-*` rules of the research (ids kept) and 12 added (`DS-TYPE-8`, `DS-TYPE-9`, `DS-RADIUS-1`, `DS-RADIUS-2`, `DS-DIVIDER-5`, `DS-DIVIDER-6`, `DS-SCROLL-1`, `DS-SCROLL-2`, `DS-LOOK-1`, `DS-HC-1`, `DS-ALIGN-1`, `DS-OVERFLOW-6` (2026-10-24, V72)) |
 | Tokens | 173 `--nuiget-*` custom properties (`tokens.json`, `tokens.css.draft`), 26 of them switched by the look |
 | Exemplar | The workbench: Extensions view (rows, pane headers, search), Explorer (tree rows, pane-header actions), Settings editor (controls, scope tabs), quick input (popup), Extensions editor (details header, navbar) |
 | Floor | VS Code `^1.90.0` (Chromium 122, Node 20.9; owner round 2, D54); every rule renders correctly there through token fallbacks (1.90 exports none of the size tokens) |
