@@ -78,6 +78,8 @@ export const HEIGHTS = {
     checkBox: 18,
     countBadge: { modern: 19, classic: 18 },
     progress: 2,
+    /** DS-SCROLL-1's scrollbar thickness. */
+    scrollbar: { modern: 8, classic: 10 },
 } as const;
 
 /** DS-INSET-3's trailing ends: a row's last action, a sidebar section header's trailing count or action, a surface. */
@@ -242,6 +244,8 @@ export const RULES: readonly RuleDefinition[] = [
     rule('DS-FOCUS-3', { helper: 6, scopes: { rows: { pending: 'P2.2' }, tabs: { pending: 'P2.5' } }, tolerance: TOLERANCES.containment, states: ['main-installed-details', 'main-updates'] }),
     rule('DS-FOCUS-4', { helper: 6, scopes: { rows: { pending: 'P2.2' } }, tolerance: TOLERANCES.containment, themes: ['dark-high-contrast', 'light-high-contrast'] }),
     rule('DS-STATE-7', { helper: 5, scopes: { ...on('P2.8a', 'main-installed', 'main-updates', 'browse'), details: { pending: 'P3.3b' } }, tolerance: TOLERANCES.containment }),
+    // UX-P0.22 (V15): the token scrollbars, 10 px from P0.22; Modern UI's 8 px is P1.1's look token, the radius P3.9's.
+    rule('DS-SCROLL-1', { helper: 3, scopes: on('P3.9', ...ALL), tolerance: TOLERANCES.containment }),
 ];
 
 /** The state group of a named state, by its name. */
@@ -428,6 +432,31 @@ export interface Layout {
     endOfP0: EndOfP0;
     /** Every element under the root with a test id, read as the artboard export reads its panel (helper 8). */
     testIds: Record<string, SpecElement>;
+    /** DS-SCROLL-1 (UX-P0.22): the root's computed `scrollbar-color`, the slider token, and every list that scrolls. */
+    scrollbar: Scrollbars;
+}
+
+/** A visible element with a vertical scrollbar: its border box, its track's right edge, the bar's thickness, the thumb's length at rest. */
+export interface Scroller {
+    label: string;
+    left: number;
+    top: number;
+    width: number;
+    height: number;
+    /** The padding box's right edge, where the track ends. */
+    right: number;
+    /** `offsetWidth − clientWidth` less the side borders. */
+    size: number;
+    /** The thumb's length at `scrollTop` 0: the client height scaled by the visible fraction. */
+    thumb: number;
+    /** The first painted background from the scroller up: what a transparent track shows. */
+    backdrop: string;
+}
+
+export interface Scrollbars {
+    rootColor: string;
+    slider: string;
+    scrollers: Scroller[];
 }
 
 /** One element of an artboard spec, or of a capture: rect and content inset relative to the root, padding, gap. */
@@ -515,7 +544,7 @@ export interface FocusFacts {
 export const COLLECT_LAYOUT = `
 const [rootTestId, ramp, tolerance, containment = 0] = arguments;
 const root = document.querySelector('[data-testid="' + rootTestId + '"]');
-if (!root) return { root: false, examined: 0, offRamp: [], offRampCount: 0, blockGaps: [], sections: [], toolbars: [], mainHeader: undefined, sidebarHeader: undefined, mainLefts: {}, mainRegionLeft: undefined, details: undefined, sidebar: undefined, heights: { headers: [], compactRows: [], comfortableRows: [], comfortablePitches: [], tabStrip: undefined, detailsTabs: undefined, buttons: [], inputs: [], iconButtons: [], checkBoxes: [], checkSelect: { fill: '', border: '' }, badges: [], progress: [] }, centring: [], detailsButtons: { uninstall: undefined, update: undefined }, width: 0, rows: [], chrome: {}, firstRow: undefined, overflow: { containers: 0, collisions: [], outside: [], clipped: [], count: 0, badges: [] }, transitiveGap: undefined, primaryEdges: [], browsing: false, documentOverflow: undefined, endOfP0: { rows: [], listPaneWidth: undefined, detailsHeader: undefined, sideways: [], controlsOut: [], minContent: { toolbar: undefined, header: undefined }, factLefts: [], fonts: { root: '', others: [] }, rootLineHeight: undefined, compactLineHeights: [], metaText: [], descriptionForeground: '', copyEnds: [], focus: undefined, focusColours: { focusBorder: '', listFocusOutline: '', contrastActiveBorder: '' }, disabled: [] }, testIds: {} };
+if (!root) return { root: false, scrollbar: { rootColor: '', slider: '', scrollers: [] }, examined: 0, offRamp: [], offRampCount: 0, blockGaps: [], sections: [], toolbars: [], mainHeader: undefined, sidebarHeader: undefined, mainLefts: {}, mainRegionLeft: undefined, details: undefined, sidebar: undefined, heights: { headers: [], compactRows: [], comfortableRows: [], comfortablePitches: [], tabStrip: undefined, detailsTabs: undefined, buttons: [], inputs: [], iconButtons: [], checkBoxes: [], checkSelect: { fill: '', border: '' }, badges: [], progress: [] }, centring: [], detailsButtons: { uninstall: undefined, update: undefined }, width: 0, rows: [], chrome: {}, firstRow: undefined, overflow: { containers: 0, collisions: [], outside: [], clipped: [], count: 0, badges: [] }, transitiveGap: undefined, primaryEdges: [], browsing: false, documentOverflow: undefined, endOfP0: { rows: [], listPaneWidth: undefined, detailsHeader: undefined, sideways: [], controlsOut: [], minContent: { toolbar: undefined, header: undefined }, factLefts: [], fonts: { root: '', others: [] }, rootLineHeight: undefined, compactLineHeights: [], metaText: [], descriptionForeground: '', copyEnds: [], focus: undefined, focusColours: { focusBorder: '', listFocusOutline: '', contrastActiveBorder: '' }, disabled: [] }, testIds: {} };
 const dialog = document.querySelector('.nuiget-dialog');
 const visible = el => {
     if (!el || !el.isConnected) return false;
@@ -1028,7 +1057,22 @@ for (const el of root.querySelectorAll('[data-testid]')) {
         gap: [s.rowGap, s.columnGap].join(' '),
     };
 }
-return { root: true, examined, offRamp, offRampCount, blockGaps, sections, toolbars, mainHeader: contentInsets(header), sidebarHeader: sidebarHeader ? contentInsets(sidebarHeader) : undefined, mainLefts, mainRegionLeft, details, sidebar, heights, centring, detailsButtons, width, rows, chrome, firstRow, overflow, transitiveGap, primaryEdges, browsing, documentOverflow, endOfP0, testIds };
+// UX-P0.22 (DS-SCROLL-1): every visible element with a vertical scrollbar, the root's scrollbar-color and the slider token.
+// The whole body: a Dialog or a Popover is portaled out of the root and scrolls itself.
+const backdrop = el => { for (let at = el; at; at = at.parentElement) { const colour = getComputedStyle(at).backgroundColor; if (opaque(colour)) return colour; } return ''; };
+const scrollers = [];
+for (const el of document.body.querySelectorAll('*')) {
+    const s = getComputedStyle(el);
+    if (!visible(el) || !/auto|scroll/.test(s.overflowY) || el.scrollHeight <= el.clientHeight + 1 || el.clientHeight === 0) continue;
+    const r = rectOf(el);
+    scrollers.push({
+        label: label(el), left: round(r.left), top: round(r.top), width: round(r.width), height: round(r.height), right: round(r.right - px(s.borderRightWidth)),
+        size: round(el.offsetWidth - el.clientWidth - px(s.borderLeftWidth) - px(s.borderRightWidth)), thumb: round(el.clientHeight * el.clientHeight / el.scrollHeight), backdrop: backdrop(el),
+    });
+}
+const rootStyle = getComputedStyle(document.documentElement);
+const scrollbar = { rootColor: rootStyle.scrollbarColor || '', slider: rootStyle.getPropertyValue('--nuiget-color-scrollbar').trim(), scrollers };
+return { root: true, examined, offRamp, offRampCount, blockGaps, sections, toolbars, mainHeader: contentInsets(header), sidebarHeader: sidebarHeader ? contentInsets(sidebarHeader) : undefined, mainLefts, mainRegionLeft, details, sidebar, heights, centring, detailsButtons, width, rows, chrome, firstRow, overflow, transitiveGap, primaryEdges, browsing, documentOverflow, endOfP0, testIds, scrollbar };
 `;
 
 // ---- the workbench of the same run (helper 3's parity) --------------------------------------------------------------
@@ -1237,6 +1281,19 @@ export function parseColour(text: string): [number, number, number, number] | un
     return rgb ? [Number(rgb[1]), Number(rgb[2]), Number(rgb[3]), rgb[4] === undefined ? 1 : Math.round(Number(rgb[4]) * 100) / 100] : undefined;
 }
 
+/**
+ * UX-P0.22's `[probe] scrollbar` verdict: the slider token's alpha over the track's opaque backdrop (the track is
+ * transparent), as the compositor blends it, against the thumb's pixel, each channel within 2.
+ */
+export function thumbVerdict(slider: string, backdrop: string, pixel: readonly number[]): { expected: string | undefined; match: boolean } {
+    const [fill, under] = [parseColour(slider), parseColour(backdrop)];
+    if (fill === undefined || under === undefined) {
+        return { expected: undefined, match: false };
+    }
+    const expected = [0, 1, 2].map(channel => Math.round(fill[channel] * fill[3] + under[channel] * (1 - fill[3])));
+    return { expected: `rgb(${expected.join(', ')})`, match: expected.every((channel, index) => Math.abs(channel - (pixel[index] ?? Number.NaN)) <= 2) };
+}
+
 const sameColour = (a: string, b: string): boolean => {
     const [x, y] = [parseColour(a), parseColour(b)];
     return x !== undefined && y !== undefined && x.every((channel, i) => Math.abs(channel - y[i]) <= (i === 3 ? 0.01 : 0));
@@ -1250,6 +1307,18 @@ function evaluateHeights(definition: RuleDefinition, layout: Layout, look: 'mode
     const tolerance = definition.tolerance;
     const heights = layout.heights;
     switch (definition.id) {
+        case 'DS-SCROLL-1': {
+            // The bar's thickness in every list that scrolls, and the root's reset that keeps the WebKit rules on (V15).
+            const { rootColor, slider, scrollers } = layout.scrollbar;
+            if (scrollers.length === 0) {
+                return { value: `${NOT_MEASURABLE} (no scrolling list)`, pass: false };
+            }
+            const target = HEIGHTS.scrollbar[look];
+            return {
+                value: `${scrollers.map(scroller => `${scroller.label} ${scroller.size}`).join(', ')} (target ${target}); :root scrollbar-color ${rootColor || 'unset'}; slider ${slider || 'unset'}`,
+                pass: rootColor === 'auto' && scrollers.every(scroller => near(scroller.size, target, tolerance)),
+            };
+        }
         case 'PF-3b': {
             // As P9.fix-3: at least two rows, and a check box (and here an icon) in every one.
             const rows = layout.centring;

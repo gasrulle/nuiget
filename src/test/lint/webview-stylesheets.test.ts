@@ -130,6 +130,11 @@ describe('2.0 webview stylesheets', () => {
     it('the scrollbars are drawn with the scrollbar tokens', () => {
         const rules = parseRules(readFileSync(PRIMITIVES, 'utf8'));
         const declarationsOf = (prelude: string): string[] => rules.find(rule => rule.prelude === prelude)?.declarations ?? [];
+        // UX-P0.22 (ADR-011 Decision 6, V15): the reset that keeps the host's `html { scrollbar-color }` from switching
+        // the WebKit rules off; a colour pair here would switch them off the same way.
+        expect(declarationsOf(':root')).toEqual(['scrollbar-color: auto']);
+        expect(stylesheets().flatMap(file => parseRules(readFileSync(file, 'utf8')).flatMap(rule => rule.declarations.filter(declaration => declaration.startsWith('scrollbar-color'))
+            .map(declaration => `${file} ${rule.prelude} { ${declaration} }`)))).toEqual([`${PRIMITIVES} :root { scrollbar-color: auto }`]);
         expect(declarationsOf('::-webkit-scrollbar')).toEqual(['width: var(--nuiget-scrollbar-size)', 'height: var(--nuiget-scrollbar-size)']);
         expect(declarationsOf('::-webkit-scrollbar-corner')).toEqual(['background-color: var(--nuiget-color-bg)']);
         expect(declarationsOf('::-webkit-scrollbar-thumb')).toEqual(['background-color: var(--nuiget-color-scrollbar)']);

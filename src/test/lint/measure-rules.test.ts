@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { appliesTo, COLLECT_LAYOUT, elementGroups, formatLine, type Heights, type Layout, MEASURE_WIDGETS, measureLines, parseColour, RAMP, RULES, type Scope, type SpecElement, type SpecLook, stateGroup, TOLERANCES, WORKBENCH_WIDGETS } from '../ui/v2/measure';
+import { appliesTo, COLLECT_LAYOUT, elementGroups, formatLine, type Heights, type Layout, MEASURE_WIDGETS, measureLines, parseColour, RAMP, RULES, type Scope, type SpecElement, type SpecLook, stateGroup, thumbVerdict, TOLERANCES, WORKBENCH_WIDGETS } from '../ui/v2/measure';
 import { STATES } from '../ui/v2/states';
 
 /**
@@ -23,6 +23,7 @@ const layout = (overrides: Partial<Layout> = {}, heights: Partial<Heights> = {})
         focus: undefined, focusColours: { focusBorder: '', listFocusOutline: '', contrastActiveBorder: '' }, disabled: [],
     },
     testIds: {},
+    scrollbar: { rootColor: '', slider: '', scrollers: [] },
     ...overrides, heights: { ...noHeights, ...heights },
 });
 
@@ -49,7 +50,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
             'PF-2', 'PF-3a', 'PF-4', 'MS-8', 'DS-OVERFLOW-6', 'DS-INSET-3', 'DS-OVERFLOW-2', 'DS-ROW-5',
             'DS-INSET-4', 'DS-ROW-1', 'DS-ROW-2', 'DS-ROW-3', 'DS-ROW-6', 'DS-ICON-3', 'DS-DENSITY-1', 'DS-OVERFLOW-1', 'DS-OVERFLOW-3', 'DS-OVERFLOW-5', 'DS-ALIGN-1',
             'DS-TYPE-1', 'DS-TYPE-4', 'DS-TYPE-6', 'DS-ROW-4', 'DS-COPY-3', 'SPEC',
-            'DS-FOCUS-1', 'DS-FOCUS-2', 'DS-FOCUS-3', 'DS-FOCUS-4', 'DS-STATE-7',
+            'DS-FOCUS-1', 'DS-FOCUS-2', 'DS-FOCUS-3', 'DS-FOCUS-4', 'DS-STATE-7', 'DS-SCROLL-1',
         ]);
         const scopes = (id: string): unknown => RULES.find(rule => rule.id === id)?.scopes;
         expect(scopes('PF-6')).toEqual({ 'main-installed': 'hard' });
@@ -138,6 +139,8 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(scopes('DS-FOCUS-4')).toEqual({ rows: { pending: 'P2.2' } });
         expect(RULES.find(rule => rule.id === 'DS-FOCUS-4')?.themes).toEqual(['dark-high-contrast', 'light-high-contrast']);
         expect(scopes('DS-STATE-7')).toEqual({ 'main-installed': { pending: 'P2.8a' }, 'main-updates': { pending: 'P2.8a' }, browse: { pending: 'P2.8a' }, details: { pending: 'P3.3b' } });
+        // UX-P0.22 (V15): the token scrollbars in every group, pending on P3.9 (Modern UI's 8 px needs P1.1's look token).
+        expect(scopes('DS-SCROLL-1')).toEqual(Object.fromEntries(['main-installed', 'main-updates', 'browse', 'details', 'dialogs', 'sources', 'sidebar'].map(group => [group, { pending: 'P3.9' }])));
         // Each rule's tolerance is one of D34's.
         expect(Object.fromEntries(RULES.map(rule => [rule.id, rule.tolerance]))).toEqual({
             'PF-6': 1, 'DS-GRID-1': 0.5, 'DS-GRID-2a': 0.5, 'DS-GRID-2b': 2, 'DS-INSET-1': 1, 'DS-INSET-2': 1, 'PF-3b': 1, 'PF-5': 1,
@@ -145,7 +148,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
             'PF-2': 1, 'PF-3a': 0, 'PF-4': 8, 'MS-8': 0.5, 'DS-OVERFLOW-6': 0, 'DS-INSET-3': 1, 'DS-OVERFLOW-2': 0, 'DS-ROW-5': 0,
             'DS-INSET-4': 1, 'DS-ROW-1': 1, 'DS-ROW-2': 1, 'DS-ROW-3': 0, 'DS-ROW-6': 0, 'DS-ICON-3': 0, 'DS-DENSITY-1': 1, 'DS-OVERFLOW-1': 0, 'DS-OVERFLOW-3': 0,
             'DS-OVERFLOW-5': 0, 'DS-ALIGN-1': 0, 'DS-TYPE-1': 0, 'DS-TYPE-4': 0.5, 'DS-TYPE-6': 0.1, 'DS-ROW-4': 0, 'DS-COPY-3': 0, SPEC: 1,
-            'DS-FOCUS-1': 0, 'DS-FOCUS-2': 0, 'DS-FOCUS-3': 0, 'DS-FOCUS-4': 0, 'DS-STATE-7': 0,
+            'DS-FOCUS-1': 0, 'DS-FOCUS-2': 0, 'DS-FOCUS-3': 0, 'DS-FOCUS-4': 0, 'DS-STATE-7': 0, 'DS-SCROLL-1': 0,
         });
     });
 
@@ -587,6 +590,28 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         // A capture without a spec for its theme and width is never a pass; another width does not apply.
         expect(at({}, undefined)).toMatchObject({ pass: false, value: "not measurable (no artboard spec for this capture's theme and width)" });
         expect(at({}, spec, 800)).toBeUndefined();
+    });
+
+    it('holds DS-SCROLL-1 to the look\'s bar thickness in every scrolling list and the root\'s scrollbar-color reset (UX-P0.22)', () => {
+        const scroller = (label: string, size: number) => ({ label, left: 0, top: 0, width: 300, height: 200, right: 300, size, thumb: 50, backdrop: 'rgb(30, 30, 30)' });
+        const bars = (rootColor: string, ...scrollers: Array<ReturnType<typeof scroller>>) => layout({ scrollbar: { rootColor, slider: '#79797966', scrollers } });
+        const name = 'DS-SCROLL-1@main-installed-all';
+        expect(lineOf('main-installed-all', bars('auto', scroller('[installed-list]', 10)), name, 'classic')).toMatchObject({
+            value: '[installed-list] 10 (target 10); :root scrollbar-color auto; slider #79797966', status: { pending: 'P3.9' }, pass: true,
+        });
+        // Modern UI's 8 px is a look token (P1.1): 10 px reads red there until then.
+        expect(lineOf('main-installed-all', bars('auto', scroller('[installed-list]', 10)), name, 'modern')).toMatchObject({ pass: false });
+        // The host's colour pair switches the WebKit rules off (V15), whatever the thickness reads.
+        expect(lineOf('main-installed-all', bars('rgba(121, 121, 121, 0.4) rgb(30, 30, 30)', scroller('[installed-list]', 10)), name, 'classic')).toMatchObject({ pass: false });
+        expect(lineOf('main-installed-all', bars('auto', scroller('[installed-list]', 10), scroller('.nuiget-details', 15)), name, 'classic')).toMatchObject({ pass: false });
+        expect(lineOf('main-installed-all', bars('auto'), name, 'classic')).toMatchObject({ value: 'not measurable (no scrolling list)', pass: false });
+        // The `[probe] scrollbar` verdict: the slider's alpha over the backdrop, each channel within 2 of the thumb's pixel.
+        expect(thumbVerdict('#79797966', 'rgb(30, 30, 30)', [66, 66, 66])).toEqual({ expected: 'rgb(66, 66, 66)', match: true });
+        expect(thumbVerdict('rgba(121, 121, 121, 0.4)', 'rgb(30, 30, 30)', [68, 64, 66])).toEqual({ expected: 'rgb(66, 66, 66)', match: true });
+        expect(thumbVerdict('rgba(121, 121, 121, 0.4)', 'rgb(30, 30, 30)', [70, 66, 66])).toMatchObject({ match: false });
+        expect(thumbVerdict('rgb(10, 20, 30)', 'rgb(250, 250, 250)', [10, 20, 30])).toEqual({ expected: 'rgb(10, 20, 30)', match: true });
+        expect(thumbVerdict('var(--vscode-scrollbarSlider-background)', 'rgb(30, 30, 30)', [66, 66, 66])).toEqual({ expected: undefined, match: false });
+        expect(thumbVerdict('#79797966', '', [66, 66, 66])).toEqual({ expected: undefined, match: false });
     });
 
     it('reads theme colours in hex and computed colours alike', () => {

@@ -1,9 +1,10 @@
 import { execFileSync } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
+import { pathToFileURL } from 'url';
 import { By, EditorView, Key, VSBrowser } from 'vscode-extension-tester';
 import { selectTheme, setPanelWidth, setSidebarWidth, webviewRect, windowSize } from '../layout';
-import { type ArtboardSpec, type ChromeReference, COLLECT_LAYOUT, formatLine, type Layout, type LookMeasure, measureLines, RAMP, type SpecLook, TOLERANCES, type WorkbenchHeights } from '../measure';
+import { type ArtboardSpec, type ChromeReference, COLLECT_LAYOUT, formatLine, type Layout, type LookMeasure, measureLines, RAMP, type SpecLook, thumbVerdict, TOLERANCES, type WorkbenchHeights } from '../measure';
 import { chooseProjectCommitted, enterMainWebview, openMainPanel, optionFor, untilProjects } from '../mainWebview';
 import { driverOf, enterSidebarWebview, findByTestId, leaveWebview, openSidebarView, poll, waitForTestIdGone, waitForText } from '../sidebarWebview';
 import { measureExemplar, measureWorkbench } from '../workbench';
@@ -359,12 +360,20 @@ async function applyWidth(state: NamedState, width: number): Promise<void> {
     }
 }
 
+/** A window PNG of a capture, the webview's offset in it in CSS px, and the device pixels per CSS px. */
+interface Shot {
+    png: string;
+    x: number;
+    y: number;
+    dpr: number;
+}
+
 /**
  * Writes the window PNG and the webview crop of `capture`, exactly `capture.width` CSS px wide from the webview's left
  * edge, and logs the rectangle. The pointer is moved to the window's corner first, outside both webviews, except for
  * the state that is about its hover.
  */
-async function shoot(state: NamedState, capture: Capture): Promise<void> {
+async function shoot(state: NamedState, capture: Capture): Promise<Shot> {
     const file = captureFile(state.name, capture);
     if (state.name !== 'main-installed-hover') {
         await leaveWebview();
@@ -386,6 +395,40 @@ async function shoot(state: NamedState, capture: Capture): Promise<void> {
         String(dpr),
     ], { stdio: 'pipe' });
     console.warn(`[capture] ${file}: iframe.webview ${rect.x},${rect.y} ${rect.width}x${rect.height} (dpr ${dpr}), cropped ${capture.width}x${rect.height}`);
+    return { png: path.join(dir, `${windowName}.png`), x: rect.x, y: rect.y, dpr };
+}
+
+/** Prints the RGBA of one device pixel of a PNG, read with the decoder of `scripts/crop-png.mjs`. */
+const PIXEL_AT = 'const { decodePng } = await import(process.argv[1]); const [file, x, y] = process.argv.slice(2); const png = decodePng(file); '
+    + 'const at = (Number(y) * png.width + Number(x)) * 4; console.log(JSON.stringify([...png.pixels.subarray(at, at + 4)]));';
+
+/** The RGBA of the device pixel at `x`, `y` of a PNG. */
+function pixelAt(png: string, x: number, y: number): number[] {
+    const decoder = pathToFileURL(path.resolve('scripts/crop-png.mjs')).href;
+    return JSON.parse(execFileSync(process.execPath, ['--input-type=module', '-e', PIXEL_AT, decoder, png, String(Math.round(x)), String(Math.round(y))], { encoding: 'utf8' })) as number[];
+}
+
+/** Whether this run has printed its `[probe] scrollbar` line. */
+let scrollbarProbed = false;
+
+/**
+ * UX-P0.22 (V15, ADR-011 Decision 6): once per run, at the first capture with a list that scrolls, the bar's thickness, the
+ * root's `scrollbar-color` and the thumb's pixel in the window PNG against the slider token over the track's backdrop
+ * (the track is transparent). The thumb is sampled at the bar's centre line, near its top: at `scrollTop` 0 it starts there.
+ */
+function probeScrollbar(state: NamedState, capture: Capture, layout: Layout, shot: Shot): void {
+    const scroller = layout.root ? layout.scrollbar.scrollers.find(candidate => candidate.size > 0) ?? layout.scrollbar.scrollers[0] : undefined;
+    if (scrollbarProbed || scroller === undefined) {
+        return;
+    }
+    scrollbarProbed = true;
+    const x = shot.x + scroller.right - scroller.size / 2;
+    const y = shot.y + scroller.top + Math.min(scroller.thumb / 2, 6);
+    const [r, g, b] = pixelAt(shot.png, x * shot.dpr, y * shot.dpr);
+    const { expected, match } = thumbVerdict(layout.scrollbar.slider, scroller.backdrop, [r, g, b]);
+    const verdict = expected === undefined ? 'no expected colour' : `${match ? 'the token colour' : 'not the token colour'} ${expected}`;
+    console.warn(`[probe] scrollbar ${captureFile(state.name, capture)}: ${scroller.label} ${scroller.size} px, :root scrollbar-color ${layout.scrollbar.rootColor || 'unset'}, `
+        + `thumb rgb(${r}, ${g}, ${b}) at ${Math.round(x)},${Math.round(y)}, slider ${layout.scrollbar.slider || 'unset'} over ${scroller.backdrop || 'nothing'}: ${verdict}`);
 }
 
 /** The run's host, for each capture's fingerprint (UX-P0.15): set in `before`. */
@@ -444,7 +487,7 @@ function specFor(state: NamedState, capture: Capture): SpecLook | undefined {
  * Measures the state the driver has just reached (UX-P0.10, `measure.ts`): one `[measure]` line per rule that applies;
  * returns the names of the red `hard` rules.
  */
-async function measure(state: NamedState, capture: Capture): Promise<string[]> {
+async function measure(state: NamedState, capture: Capture): Promise<{ red: string[]; layout: Layout }> {
     await (state.surface === 'main' ? enterMainWebview() : enterSidebarWebview());
     const layout = await script<Layout>(COLLECT_LAYOUT, state.surface === 'main' ? 'nuiget-app' : 'nuiget-sidebar', RAMP, TOLERANCES.gapMembership, TOLERANCES.containment);
     const key = `${state.surface} ${capture.theme} ${capture.width} ${capture.look}`;
@@ -472,7 +515,7 @@ async function measure(state: NamedState, capture: Capture): Promise<string[]> {
             pendingLines.push(text);
         }
     }
-    return red;
+    return { red, layout };
 }
 
 /** This run's captures: the lane's set (Tier A in this run's look for the `ui` job and macOS), theme by theme, the default width of each surface first. */
@@ -586,11 +629,12 @@ describe(`named states (${LANE} lane, ${LOOK} look)`, () => {
                 console.warn(`[capture] ${captureFile(state.name, capture)}: not reachable (${reason})`);
                 throw new Error(`${state.name} is not reachable: ${reason}`, { cause: error });
             }
-            const red = await measure(state, capture);
+            const { red, layout } = await measure(state, capture);
             // In the webview still (measure entered it): the masks are read before the shot moves the pointer.
             const facts = await script<CaptureFacts>(CAPTURE_FACTS, state.surface === 'main' ? 'nuiget-app' : 'nuiget-sidebar', state.masks.map(mask => ({ selector: mask.selector })), capture.width);
-            await shoot(state, capture);
+            const shot = await shoot(state, capture);
             writeSidecar(state, capture, facts);
+            probeScrollbar(state, capture, layout, shot);
             if (reach.leave) {
                 await (state.surface === 'main' ? enterMainWebview() : enterSidebarWebview());
                 await reach.leave();
@@ -632,6 +676,9 @@ describe(`named states (${LANE} lane, ${LOOK} look)`, () => {
     }
 
     after(() => {
+        if (!scrollbarProbed) {
+            console.warn('[probe] scrollbar: no capture of this run had a list that scrolls');
+        }
         // The pending list (plan §2.7): the rules each pending item flips, at the end of the run.
         console.warn(`[measure] pending list: ${pendingLines.length} lines`);
         for (const line of pendingLines) {

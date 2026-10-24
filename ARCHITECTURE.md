@@ -268,8 +268,10 @@ paints the surface behind the iframe; the two roots now paint it themselves, `.n
 on. The scrollbars of every scrolling element are `::-webkit-scrollbar` rules in `primitives.css`, 10 px thick like
 VS Code's webview defaults and coloured with the `--nuiget-color-scrollbar*` tokens, so that forced colours reach
 them. Chromium 122 has `scrollbar-color`, and a value other than `auto` switches the `::-webkit-scrollbar` rules
-off; VS Code's default webview stylesheet sets one on `html` (V15), so UX-P0.22 adds `scrollbar-color: auto` beside
-the WebKit rules as the reset (ADR-011 Decision 6). A badge's tone colours its border and leaves its text in
+off; VS Code's default webview stylesheet sets one on `html` (V15), so UX-P0.22 declares `:root { scrollbar-color:
+auto }` beside the WebKit rules as the reset, inherited by every scroller (ADR-011 Decision 6). The capture suite
+prints one `[probe] scrollbar` line per run: the bar's thickness in the first list that scrolls, the root's
+`scrollbar-color` and the thumb's pixel against the slider token over the track's backdrop. A badge's tone colours its border and leaves its text in
 the badge foreground, since the info, warning and error colours fall below 4.5:1 on the badge background; for the
 same reason the secondary text of a selected or current row (version, description, status) takes the row's
 foreground instead of the muted colour. Every

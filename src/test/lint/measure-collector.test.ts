@@ -119,6 +119,31 @@ describe('the in-page collector on stubbed geometry (UX-P0.10, UX-P0.11)', () =>
         expect(layout.sections.find(section => section.id === 'transitive')?.below).toBeUndefined();
     });
 
+    it('reads every list that scrolls, its bar\'s thickness and thumb, the root\'s scrollbar-color and the slider token (UX-P0.22)', () => {
+        const list = document.querySelector<HTMLElement>('[data-testid="installed-list"]')!;
+        list.style.overflowY = 'auto';
+        list.style.backgroundColor = 'rgb(30, 30, 30)';
+        // A 164 px list of 656 px content, its bar 10 px wide: offsetWidth 590 against clientWidth 580.
+        Object.defineProperties(list, { scrollHeight: { value: 656 }, clientHeight: { value: 164 }, offsetWidth: { value: 590 }, clientWidth: { value: 580 } });
+        document.documentElement.style.setProperty('--nuiget-color-scrollbar', 'rgba(121, 121, 121, 0.4)');
+        try {
+            const { scrollbar } = collect();
+            expect(scrollbar.scrollers).toEqual([{ label: '[installed-list]', left: 0, top: 136, width: 590, height: 164, right: 590, size: 10, thumb: 41, backdrop: 'rgb(30, 30, 30)' }]);
+            expect(scrollbar.slider).toBe('rgba(121, 121, 121, 0.4)');
+            expect(typeof scrollbar.rootColor).toBe('string');
+        } finally {
+            document.documentElement.style.removeProperty('--nuiget-color-scrollbar');
+        }
+        // A dialog is portaled to the body, outside the root, and scrolls itself: its bar counts too.
+        const dialog = document.createElement('div');
+        dialog.className = 'nuiget-dialog';
+        dialog.dataset.rect = '100,100,400,300';
+        dialog.style.overflowY = 'auto';
+        Object.defineProperties(dialog, { scrollHeight: { value: 400 }, clientHeight: { value: 200 }, offsetWidth: { value: 300 }, clientWidth: { value: 290 } });
+        document.body.append(dialog);
+        expect(collect().scrollbar.scrollers.map(scroller => `${scroller.label} ${scroller.size} ${scroller.thumb}`)).toEqual(['[installed-list] 10 41', '.nuiget-dialog 10 100']);
+    });
+
     it('gives a header scrolled out of its list no gaps, and keeps its insets', () => {
         const box = document.querySelector<HTMLElement>('[data-testid="section-box-direct"]') as HTMLElement;
         for (const element of [box, ...box.querySelectorAll<HTMLElement>('[data-rect]')]) {

@@ -18,10 +18,15 @@
 }
 
 /*
- * Scrollbars of every scrolling element of a surface. VS Code's webview defaults (`webview/browser/pre/index.html`)
- * draw them 10 px thick in its slider colours; these rules put the tokens in their place, so that forced colours
- * reach the scrollbars as well. Chromium 114 has no standard property for scrollbar colours (N64), hence these rules.
+ * Scrollbars of every scrolling element of a surface: 10 px thick, the thumb in the slider tokens, so that forced
+ * colours reach the scrollbars as well (DS-SCROLL-1). `scrollbar-color` alone sets no thickness and no hover colour.
+ * VS Code's webview defaults (`webview/browser/pre/index.html`) declare `html { scrollbar-color }`, which switches every
+ * `::-webkit-scrollbar` rule off from Chromium 121 (V15); the root resets it to `auto`, inherited by every scroller.
  */
+:root {
+    scrollbar-color: auto;
+}
+
 ::-webkit-scrollbar {
     width: var(--nuiget-scrollbar-size);
     height: var(--nuiget-scrollbar-size);
