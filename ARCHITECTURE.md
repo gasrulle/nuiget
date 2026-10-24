@@ -958,7 +958,14 @@ These parts are the current truth for the build, test and release pipeline.
   diff (UX-P0.15; the goldens are `src/test/ui/v2/golden/`, adopted from a green run's artifact with their sidecars and
   recorded in its `index.json` as `baseline` or `approved`); a red `hard` rule fails the
   state after its crop is written, a `pending` rule names the item that flips it and is only printed, and the run ends
-  with the pending list. Before the first state the run measures the workbench's own controls in its look (the
+  with the pending list. In the `ui` lane each state is also audited once per run, at its first capture, after the crop
+  and before its setup closes a layer (UX-P0.23, `src/test/ui/v2/a11y.ts`): the full axe ruleset over the page, with
+  `target-size` and `label-content-name-mismatch` turned on (`[axe]` lines; a violation, or an `incomplete` result other
+  than contrast inside the details pane, fails the state once the rule `a11y-full-axe-real-page` is `hard`, unless
+  `AXE_PENDING` names the item that removes it), and in
+  the Modern UI pass a snapshot of the accessible tree read with axe's own role and name functions, digits masked,
+  written to `aria/<state>.json` beside the crops and compared with `src/test/ui/v2/aria/<state>.json` (`[aria]` lines;
+  a snapshot is adopted from a green run's artifact, like a golden). Before the first state the run measures the workbench's own controls in its look (the
   Extensions view and an extension's editor, the Settings editor, the command palette; `src/test/ui/v2/workbench.ts`),
   prints one `[workbench]` line per control and writes `workbench.<look>.json` next to the crops: the height rules
   compare a control with the workbench's of the same run, and the `ui` job's files are kept as

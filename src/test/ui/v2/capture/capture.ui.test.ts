@@ -11,6 +11,7 @@ import { measureExemplar, measureWorkbench } from '../workbench';
 import { type Capture, captureFile, floorCaptures, isReady, type Lane, type Look, matrixCaptures, MATRIX_THEMES, type NamedState, PANEL_WIDTH, SIDEBAR_WIDTH, STATES, type Theme, THEMES } from '../states';
 import { declaredTokens, DUMP_THEME, formatThemeDump, formatTokenDump, type ThemeDump, themeDumpFile, tokenDumpFile } from '../themeDump';
 import { CAPTURE_FACTS, type CropRect, type Sidecar, sidecarFile } from '../golden';
+import { ARIA_SNAPSHOT, type AriaNode, type AriaSnapshot, ariaLineFor, ariaSnapshot, AXE_EXTRA_RULES, AXE_NODES_PER_RULE, axeLines, FULL_AXE_STATUS, type FullAxe, RUN_FULL_AXE } from '../a11y';
 
 /**
  * The capture suite of the named states (UX-P0.8), on the dense workspace (`npm run test:ui:capture`, and the classic
@@ -408,6 +409,60 @@ function pixelAt(png: string, x: number, y: number): number[] {
     return JSON.parse(execFileSync(process.execPath, ['--input-type=module', '-e', PIXEL_AT, decoder, png, String(Math.round(x)), String(Math.round(y))], { encoding: 'utf8' })) as number[];
 }
 
+/** The axe-core the harness injects into a webview, as `theme.ui.test.ts` does. */
+const AXE_SOURCE = fs.readFileSync(path.resolve('node_modules/axe-core/axe.min.js'), 'utf8');
+
+/** The states this run has audited (UX-P0.23): once per state, at its first capture. */
+const audited = new Set<string>();
+
+/**
+ * UX-P0.23 (`a11y.ts`): the full axe ruleset over the page the state shows, layers open, and in the Modern UI pass the
+ * snapshot of its accessible tree, written to `aria/<state>.json` beside the crops and compared with the committed one.
+ * Prints the `[axe]` and `[aria]` lines; returns the axe failures, which fail the capture once the rule is `hard`.
+ */
+async function auditAccessibility(state: NamedState): Promise<string[]> {
+    await (state.surface === 'main' ? enterMainWebview() : enterSidebarWebview());
+    const driver = driverOf();
+    if (!(await script<boolean>('return typeof window.axe !== "undefined";'))) {
+        await script(AXE_SOURCE);
+    }
+    if (LOOK === 'modern') {
+        const tree = await script<{ nodes?: AriaNode[]; error?: string }>(ARIA_SNAPSHOT);
+        if (tree.nodes === undefined) {
+            console.warn(`[aria] ${state.name}: not read (${tree.error ?? 'no answer'})`);
+        } else {
+            const snapshot = ariaSnapshot(state.name, tree.nodes);
+            const dir = path.join(path.dirname(VSBrowser.instance.getScreenshotsDir()), 'aria');
+            fs.mkdirSync(dir, { recursive: true });
+            fs.writeFileSync(path.join(dir, `${state.name}.json`), JSON.stringify(snapshot, null, 2) + '\n');
+            const committedFile = path.resolve('src/test/ui/v2/aria', `${state.name}.json`);
+            const committed = fs.existsSync(committedFile) ? JSON.parse(fs.readFileSync(committedFile, 'utf8')) as AriaSnapshot : undefined;
+            console.warn(ariaLineFor(state.name, snapshot, committed));
+        }
+    }
+    await driver.manage().setTimeouts({ script: 120_000 });
+    const result = JSON.parse(await driver.executeAsyncScript<string>(RUN_FULL_AXE, AXE_EXTRA_RULES, AXE_NODES_PER_RULE)) as FullAxe;
+    const { lines, failures } = axeLines(state.name, result);
+    for (const line of lines) {
+        console.warn(line);
+        if (/\(pending [^)]+\)$/.test(line)) {
+            pendingLines.push(line);
+        }
+    }
+    return FULL_AXE_STATUS === 'hard' ? failures : [];
+}
+
+/** The audit with its own errors caught: an error is a failure, which fails the capture only once the rule is `hard`. */
+async function auditSafely(state: NamedState): Promise<string[]> {
+    try {
+        return await auditAccessibility(state);
+    } catch (error) {
+        const reason = error instanceof Error ? error.message : String(error);
+        console.warn(`[axe] ${state.name}: the audit failed: ${reason}`);
+        return FULL_AXE_STATUS === 'hard' ? [`the audit failed: ${reason}`] : [];
+    }
+}
+
 /** Whether this run has printed its `[probe] scrollbar` line. */
 let scrollbarProbed = false;
 
@@ -635,6 +690,9 @@ describe(`named states (${LANE} lane, ${LOOK} look)`, () => {
             const shot = await shoot(state, capture);
             writeSidecar(state, capture, facts);
             probeScrollbar(state, capture, layout, shot);
+            // Once per state in the `ui` lane, after the PNG and before the setup's layer closes.
+            const inaccessible = LANE === 'ui' && !audited.has(state.name) ? await auditSafely(state) : [];
+            audited.add(state.name);
             if (reach.leave) {
                 await (state.surface === 'main' ? enterMainWebview() : enterSidebarWebview());
                 await reach.leave();
@@ -642,6 +700,9 @@ describe(`named states (${LANE} lane, ${LOOK} look)`, () => {
             // The PNG is written first: a red hard rule leaves its evidence.
             if (red.length > 0) {
                 throw new Error(`hard measurement red: ${red.join('; ')}`);
+            }
+            if (inaccessible.length > 0) {
+                throw new Error(`axe (a11y-full-axe-real-page): ${inaccessible.join('; ')}`);
             }
         });
     }

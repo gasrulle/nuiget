@@ -219,7 +219,15 @@ describe('2.0 theme pass', () => {
             await selectTheme(theme);
             await enterMainWebview();
             await waitForBodyClass(theme);
-            const main = await runAxe();
+            // UX-P0.23 (H30): every theme measures the same states, the Updates tab and then the Installed tab, each with
+            // its first row selected. Before, the high-contrast check's click on the Installed tab made the themes after
+            // it measure another tab than the themes before it (53 against 25 contrast nodes).
+            await (await findByTestId('updates-tab', 30_000)).click();
+            await selectFirstRow('[data-testid="updates-list"] [role="option"]', 'update rows in the main panel');
+            const updates = await runAxe();
+            await (await findByTestId('installed-tab', 30_000)).click();
+            await selectFirstRow('[data-testid="installed-list"] [role="option"]', 'installed rows in the main panel');
+            const installed = await runAxe();
             if (theme.bodyClass.startsWith('vscode-high-contrast')) {
                 await expectContrastBorders(`main panel under ${nameOf(theme)}`);
             }
@@ -227,15 +235,18 @@ describe('2.0 theme pass', () => {
             await openSidebarView();
             await enterSidebarWebview();
             await waitForBodyClass(theme);
+            await selectFirstRow('[data-testid="sidebar-installed-list"] [role="option"]', 'rows in the sidebar');
             const sidebar = await runAxe();
             await leaveWebview();
-            expectNoViolations('main panel', theme, main);
+            expectNoViolations('main panel (Updates)', theme, updates);
+            expectNoViolations('main panel (Installed)', theme, installed);
             expectNoViolations('sidebar', theme, sidebar);
         });
     }
 
-    // After the axe pass, which measures whichever tab an earlier file left: the Installed tab under a light and a
-    // high-contrast theme, for the screenshots of plan item P9.0. The `after` hook puts the first theme back.
+    // After the axe pass, which measures the Updates and the Installed tab in every theme (UX-P0.23): the
+    // Installed tab under a light and a high-contrast theme, for the screenshots of plan item P9.0. The `after` hook
+    // puts the first theme back.
     for (const [theme, state] of [[THEMES[1], 'main-installed-single-light'], [THEMES[2], 'main-installed-single-hc']] as const) {
         it(`${nameOf(theme)}: the Installed tab is screenshot (P9.0)`, async function () {
             this.timeout(180_000);
