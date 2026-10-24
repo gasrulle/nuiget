@@ -24,12 +24,13 @@ export const BUNDLES: readonly (readonly string[])[] = [
     [STYLESHEETS.primitives, STYLESHEETS.tokens, STYLESHEETS.sidebar, STYLESHEETS.search],
 ];
 
-export type AuditRule = 'pxLength' | 'duplicateSelector' | 'specificity' | 'override';
+export type AuditRule = 'pxLength' | 'duplicateSelector' | 'specificity' | 'override' | 'deadRule' | 'disableComment' | 'inlineStyle';
 
 export interface AuditHit {
     file: string;
     rule: AuditRule;
-    selector: string;
+    /** Null for a comment (`disableComment`) and a `style` prop (`inlineStyle`). */
+    selector: string | null;
     property: string | null;
     value: string;
     line: number;
@@ -442,8 +443,137 @@ function override(sheets: Record<string, StyleRule[]>): AuditHit[] {
     return [...hits.values()];
 }
 
-/** Every hit of the four rules over the stylesheets, read with `read(file)`. */
+/** Every hit of the four rules of UX-P0.20 over the stylesheets, read with `read(file)`. */
 export function auditStylesheets(read: (file: string) => string): AuditHit[] {
     const sheets = Object.fromEntries(Object.values(STYLESHEETS).map(file => [file, parseStylesheet(read(file))]));
     return [...pxLength(sheets), ...duplicateSelector(sheets), ...specificityHits(sheets), ...override(sheets)];
+}
+
+// ---- UX-P0.21: dead rules, disable comments, inline styles -----------------------------------------------------------
+
+/** A webview source file: its path and its text. */
+export interface Source {
+    file: string;
+    text: string;
+}
+
+/** A TypeScript source without its comments, its lines kept (a `//` inside a URL, after no whitespace, is kept). */
+const withoutComments = (text: string): string =>
+    text.replace(/\/\*[\s\S]*?\*\//g, comment => comment.replace(/[^\n]/g, ' ')).replace(/(^|\s)\/\/.*$/gm, '$1');
+
+/** The class names a selector names, attribute values and strings left out. */
+export const classesOf = (selector: string): string[] =>
+    [...selector.replace(/\[[^\]]*\]/g, '').replace(/(["'])(?:(?!\1).)*\1/g, '').matchAll(/\.(-?[_a-zA-Z][\w-]*)/g)].map(match => match[1]);
+
+/**
+ * §8: a complex selector naming a class no non-test source renders, as a whole word after comments are removed, or
+ * through a template prefix (`nuiget-x--${…}`) or a quoted prefix string (`'nuiget-hljs-'`) those sources build.
+ * A prefix starts a token and names at least one segment after `nuiget-`: `--nuiget-${string}` (a custom property)
+ * is no class prefix, and a bare `nuiget-` would render every class. Of `sources` (the `.ts`/`.tsx` files under
+ * `src/webview`) tests, `testSupport.ts` and `.d.ts` files do not count.
+ */
+export function deadRules(read: (file: string) => string, sources: readonly Source[]): AuditHit[] {
+    const code = sources.filter(source => !/(?:\.test\.tsx?|\.d\.ts|\/testSupport\.ts)$/.test(source.file)).map(source => withoutComments(source.text)).join('\n');
+    const prefixes = new Set([
+        ...[...code.matchAll(/(?<![\w-])(nuiget-\w[\w-]*)\$\{/g)].map(match => match[1]),
+        ...[...code.matchAll(/['"`](nuiget-\w[\w-]*-)['"`]/g)].map(match => match[1]),
+    ]);
+    const rendered = (name: string): boolean =>
+        new RegExp(`(?<![\\w-])${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![\\w-])`).test(code) || [...prefixes].some(prefix => name.startsWith(prefix));
+    return LINTED.flatMap(file => parseStylesheet(read(file)).filter(rule => !rule.atRule && !rule.inKeyframes).flatMap(rule => rule.items.flatMap(item => {
+        const dead = classesOf(item.text).filter(name => !rendered(name));
+        return dead.length === 0 ? [] : [{ file, rule: 'deadRule' as const, selector: item.text, property: null, value: [...new Set(dead)].join(', '), line: item.line }];
+    })));
+}
+
+/** §10: a comment in a linted stylesheet that disables a linter. */
+export function disableComments(read: (file: string) => string): AuditHit[] {
+    return LINTED.flatMap(file => {
+        const text = read(file).replace(/\r\n/g, '\n');
+        return [...text.matchAll(/\/\*[\s\S]*?\*\//g)]
+            .filter(match => /\b(?:stylelint|eslint)-disable\b/.test(match[0]))
+            .map(match => ({ file, rule: 'disableComment' as const, selector: null, property: null, value: collapse(match[0]), line: text.slice(0, match.index).split('\n').length }));
+    });
+}
+
+/** The expression of a JSX attribute value `{…}` that opens at `start` (the `{`), braces, strings and templates balanced. */
+function jsxExpression(text: string, start: number): string {
+    let depth = 0;
+    let quote: string | undefined;
+    for (let k = start; k < text.length; k++) {
+        const char = text[k];
+        if (quote !== undefined) {
+            if (char === '\\') {
+                k++;
+            } else if (char === quote) {
+                quote = undefined;
+            }
+            continue;
+        }
+        if (char === '"' || char === "'" || char === '`') {
+            quote = char;
+        } else if (char === '{') {
+            depth++;
+        } else if (char === '}' && --depth === 0) {
+            return text.slice(start + 1, k).trim();
+        }
+    }
+    return text.slice(start + 1).trim();
+}
+
+/** The branches of a top-level conditional `a ? b : c`, or the expression itself. */
+function branches(expression: string): string[] {
+    let depth = 0;
+    let quote: string | undefined;
+    let question = -1;
+    for (let k = 0; k < expression.length; k++) {
+        const char = expression[k];
+        if (quote !== undefined) {
+            quote = char === quote ? undefined : quote;
+            continue;
+        }
+        if (char === '"' || char === "'" || char === '`') {
+            quote = char;
+        } else if ('({['.includes(char)) {
+            depth++;
+        } else if (')}]'.includes(char)) {
+            depth--;
+        } else if (depth === 0 && char === '?' && expression[k + 1] !== '.' && expression[k + 1] !== '?' && question < 0) {
+            question = k;
+        } else if (depth === 0 && char === ':' && question >= 0) {
+            return [...branches(expression.slice(question + 1, k).trim()), ...branches(expression.slice(k + 1).trim())];
+        }
+    }
+    return [expression];
+}
+
+/** Whether a `style` branch is `undefined` or a `cssVars({ '--nuiget-…': … })` call naming custom properties only. */
+const cssVarsOnly = (branch: string): boolean => {
+    if (branch === 'undefined') {
+        return true;
+    }
+    const body = /^cssVars\(\{([\s\S]*)\}\)$/.exec(branch)?.[1];
+    if (body === undefined) {
+        return false;
+    }
+    const keys = [...body.matchAll(/(?:^|,)\s*(?:(['"])([^'"]+)\1|([A-Za-z_$][\w$]*))\s*:/g)].map(match => match[2] ?? match[3]);
+    return keys.length > 0 && keys.every(key => key.startsWith('--nuiget-'));
+};
+
+/** ADR-010 Decision 5: every `style` prop of a `.tsx` file, tests included, is a `cssVars({ '--nuiget-…': value })` call (or none). */
+export function inlineStyles(sources: readonly Source[]): AuditHit[] {
+    return sources.filter(source => source.file.endsWith('.tsx')).flatMap(source => {
+        const text = withoutComments(source.text.replace(/\r\n/g, '\n'));
+        return [...text.matchAll(/\bstyle=\{/g)].flatMap(match => {
+            const expression = jsxExpression(text, (match.index ?? 0) + match[0].length - 1);
+            return branches(expression).every(cssVarsOnly)
+                ? []
+                : [{ file: source.file, rule: 'inlineStyle' as const, selector: null, property: 'style', value: collapse(expression), line: text.slice(0, match.index).split('\n').length }];
+        });
+    });
+}
+
+/** Every hit of the six stylesheet rules and the inline-style rule. */
+export function auditWebview(read: (file: string) => string, sources: readonly Source[]): AuditHit[] {
+    return [...auditStylesheets(read), ...deadRules(read, sources), ...disableComments(read), ...inlineStyles(sources)];
 }

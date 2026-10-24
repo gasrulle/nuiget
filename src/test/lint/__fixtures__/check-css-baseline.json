@@ -1,0 +1,5 @@
+[
+    { "file": "src/webview/main/main.css", "rule": "pxLength", "selector": ".nuiget-a", "property": "width", "value": "3px", "item": "P9.1" },
+    { "file": "src/webview/main/main.css", "rule": "specificity", "selector": ".nuiget-a .nuiget-b .nuiget-c", "property": null, "value": "(0,3,0)", "item": "P9.1" },
+    { "file": "src/webview/sidebar/sidebar.css", "rule": "pxLength", "selector": ".nuiget-d", "property": "height", "value": "2px", "item": "P9.2" }
+]

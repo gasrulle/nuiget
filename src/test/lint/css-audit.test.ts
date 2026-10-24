@@ -1,11 +1,12 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { describe, expect, it } from 'vitest';
-import { type AuditHit, auditStylesheets, LINTED, STYLESHEETS } from './cssAudit';
+import { type AuditHit, auditStylesheets, auditWebview, classesOf, deadRules, disableComments, inlineStyles, LINTED, type Source, STYLESHEETS } from './cssAudit';
 
 /**
- * UX-P0.20: the CSS lint gate (1) (D28, CA-R1). The four rules of the CSS audit (`cssAudit.ts`) run over the linted
- * stylesheets, and their hits must equal `__fixtures__/css-audit-baseline.json`, the audit's 116 places, each labelled
+ * UX-P0.20 and UX-P0.21: the CSS lint gate (D28, ADR-010 Decisions 5–7, CA-R1). The six rules of the CSS audit
+ * (`cssAudit.ts`) run over the linted stylesheets and the inline-style rule over the webview's TSX, and their hits must
+ * equal `__fixtures__/css-audit-baseline.json`, the audit's 116 places, each labelled
  * with the plan item that removes it (design-advisor ruling of 2026-10-24, `docs/plans/handoff/P0.20.md`). A hit and an
  * entry match on file, rule, selector, property and value (a duplicate's value by the earlier rule's file only).
  *
@@ -20,7 +21,7 @@ const read = (file: string): string => fs.readFileSync(path.join(root, file), 'u
 interface Entry {
     file: string;
     rule: AuditHit['rule'];
-    selector: string;
+    selector: string | null;
     property: string | null;
     value: string;
     item: string;
@@ -54,6 +55,39 @@ function compare(hits: readonly AuditHit[], entries: readonly Omit<Entry, 'item'
     return { added, stale: [...open.values()].flat() };
 }
 
+/** The `.ts`/`.tsx` files under `src/webview`, tests included (each rule decides which it reads). */
+function webviewSources(): Source[] {
+    const sources: Source[] = [];
+    const walk = (dir: string): void => {
+        for (const entry of fs.readdirSync(path.join(root, dir), { withFileTypes: true })) {
+            const child = `${dir}/${entry.name}`;
+            if (entry.isDirectory()) {
+                walk(child);
+            } else if (/\.tsx?$/.test(entry.name)) {
+                sources.push({ file: child, text: read(child) });
+            }
+        }
+    };
+    walk('src/webview');
+    return sources;
+}
+
+/** The status of each tracker row, by item id. */
+function trackerStatus(tracker: string): Map<string, string> {
+    const status = new Map<string, string>();
+    for (const line of tracker.split(/\r?\n/)) {
+        const match = /^\| (P[0-9][0-9a-z.-]*) \|[^|]*\|[^|]*\| ([a-z -]+) \|/.exec(line);
+        if (match !== null) {
+            status.set(match[1], match[2]);
+        }
+    }
+    return status;
+}
+
+/** The done rule (UX-P0.21): the entries whose item's tracker row is `done`. */
+const doneEntries = (entries: readonly Entry[], status: ReadonlyMap<string, string>): string[] =>
+    entries.filter(entry => status.get(entry.item) === 'done').map(entry => `${entry.item}: ${describeHit(entry)}`);
+
 /** A reader over in-memory stylesheets: the named roles, every other stylesheet empty. */
 const sample = (sheets: Partial<Record<keyof typeof STYLESHEETS, string>>) => {
     const byFile = new Map(Object.entries(STYLESHEETS).map(([role, file]) => [file as string, sheets[role as keyof typeof STYLESHEETS] ?? '']));
@@ -61,7 +95,7 @@ const sample = (sheets: Partial<Record<keyof typeof STYLESHEETS, string>>) => {
 };
 const rulesOf = (hits: readonly AuditHit[]): string[] => hits.map(hit => `${hit.rule} ${hit.selector}${hit.property === null ? '' : ` ${hit.property}`}`);
 
-describe('the CSS lint gate (UX-P0.20)', () => {
+describe('the CSS lint gate (UX-P0.20, UX-P0.21)', () => {
     it('lints every stylesheet under src/webview but tokens.css', () => {
         const found: string[] = [];
         const walk = (dir: string): void => {
@@ -79,12 +113,32 @@ describe('the CSS lint gate (UX-P0.20)', () => {
     });
 
     it('finds exactly the baselined places in the stylesheets, no new hit and no stale entry', () => {
-        const hits = auditStylesheets(read);
+        const hits = auditWebview(read, webviewSources());
         const { added, stale } = compare(hits, BASELINE);
         const counts = BASELINE.reduce<Record<string, number>>((total, entry) => ({ ...total, [entry.rule]: (total[entry.rule] ?? 0) + 1 }), {});
         console.warn(`[css-audit] baseline ${BASELINE.length}: ${Object.entries(counts).map(([rule, count]) => `${rule} ${count}`).join(', ')}`);
         expect.soft(added.map(describeHit), 'new hits: clear them in this change, never baseline them (design trigger 3)').toEqual([]);
         expect.soft(stale.map(describeHit), 'stale entries: remove them in the change that removed their hit').toEqual([]);
+    });
+
+    it('fails for an entry whose item is done: the item that removes it has closed (UX-P0.21)', () => {
+        const status = trackerStatus(read('docs/plans/STATUS-ux.md'));
+        expect(status.get('P0.20')).toBe('done');
+        expect(doneEntries(BASELINE, status)).toEqual([]);
+        // Planted: an entry fails once its item is done, and stays while its item is open.
+        const planted = trackerStatus('| P1.1 | P1 | tokens | done | abc1234 | 2026-11-01 | |\r\n| P2.2 | P2 | Row | open |  |  | |');
+        const entry = (item: string): Entry => ({ file: 'a.css', rule: 'pxLength', selector: '.a', property: 'width', value: '3px', item });
+        expect(doneEntries([entry('P1.1'), entry('P2.2'), entry('P9.9')], planted)).toEqual(['P1.1: a.css  pxLength  .a  width: 3px']);
+    });
+
+    it('negative control: with the baseline emptied in memory, the gate reports exactly the baseline\'s places, all of them audited (UX-P0.21)', () => {
+        const { added, stale } = compare(auditWebview(read, webviewSources()), []);
+        const places = (list: readonly { file: string; rule: string }[]): string[] => list.map(entry => `${entry.file} ${entry.rule}`).sort();
+        console.warn(`[css-audit] negative control: ${added.length} hits with the baseline emptied, ${RESEARCH.length} audited`);
+        expect(stale).toEqual([]);
+        expect(places(added)).toEqual(places(BASELINE));
+        const research = new Set(RESEARCH.map(keyOf));
+        expect(added.filter(hit => !research.has(keyOf(hit))).map(describeHit)).toEqual([]);
     });
 
     it('keeps the baseline a subset of the audit, each entry labelled with a plan item', () => {
@@ -139,5 +193,38 @@ describe('the CSS lint gate (UX-P0.20)', () => {
         expect(hits.filter(hit => hit.rule === 'override').map(hit => `${hit.selector} ${hit.property}`)).toEqual([
             '.nuiget-m .nuiget-p flex', '.nuiget-m .nuiget-p padding-inline-start',
         ]);
+    });
+
+    it('deadRule: a class no non-test source renders, literally or through a template or quoted prefix (UX-P0.21)', () => {
+        const css = '.nuiget-live, .nuiget-gone .nuiget-live, .nuiget-tone--warn, .nuiget-hljs-keyword, .nuiget-live[data-x=".nuiget-no"] { color: inherit; }';
+        const sources: Source[] = [
+            { file: 'src/webview/main/A.tsx', text: 'const a = <div className="nuiget-live" />; // nuiget-gone in a comment\nconst b = `nuiget-tone--${tone}`; const p = \'nuiget-hljs-\';' },
+            { file: 'src/webview/main/A.test.tsx', text: 'render(<div className="nuiget-gone" />);' },
+            // A custom property's template and a bare prefix render no class.
+            { file: 'src/webview/shared/B.ts', text: 'export type V = `--nuiget-${string}`; const c = `nuiget-${name}`; const q = \'nuiget-\';' },
+        ];
+        expect(classesOf('.a:not(.b) > .c[data-x=".d"]::after')).toEqual(['a', 'b', 'c']);
+        expect(deadRules(sample({ sidebar: css }), sources)).toEqual([
+            { file: STYLESHEETS.sidebar, rule: 'deadRule', selector: '.nuiget-gone .nuiget-live', property: null, value: 'nuiget-gone', line: 1 },
+        ]);
+    });
+
+    it('disableComment: a stylelint or eslint disable comment in a stylesheet (UX-P0.21)', () => {
+        const hits = disableComments(sample({ search: '/* the popup */\n.a { color: inherit; }\n/* stylelint-disable-next-line declaration-no-important */\n/* eslint-disable */' }));
+        expect(hits.map(hit => `${hit.line} ${hit.value}`)).toEqual(['3 /* stylelint-disable-next-line declaration-no-important */', '4 /* eslint-disable */']);
+        // Comment-aware: the same words outside a comment are no directive.
+        expect(disableComments(sample({ search: '.a::after { content: "eslint-disable"; }\n.b { grid-area: stylelint-disable; }' }))).toEqual([]);
+    });
+
+    it('inlineStyle: every style prop is a cssVars call of --nuiget-* properties, or undefined (UX-P0.21)', () => {
+        const tsx = [
+            '<div style={cssVars({ \'--nuiget-a\': `${x}px` })} />',
+            '<div style={on ? cssVars({ \'--nuiget-b\': n, "--nuiget-c": m }) : undefined} />',
+            '<div style={{ height: 3 }} />',
+            '<div style={cssVars({ height: 3 })} />',
+            '<div style={on ? cssVars({ \'--nuiget-d\': 1 }) : { width: 2 }} />',
+        ].join('\n');
+        const hits = inlineStyles([{ file: 'src/webview/main/A.tsx', text: tsx }, { file: 'src/webview/main/a.ts', text: 'style={{ height: 3 }}' }]);
+        expect(hits.map(hit => `${hit.line} ${hit.value}`)).toEqual(['3 { height: 3 }', '4 cssVars({ height: 3 })', '5 on ? cssVars({ \'--nuiget-d\': 1 }) : { width: 2 }']);
     });
 });

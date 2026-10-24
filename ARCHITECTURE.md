@@ -252,9 +252,14 @@ The CSS audit gate (UX-P0.20, ADR-010) holds the four stylesheets beside `tokens
 `css-audit.test.ts` runs the rules of `src/test/lint/cssAudit.ts` (`pxLength`, a px/em/rem length outside the spacing
 properties; `duplicateSelector`, a prelude declared twice in a bundle or in two stylesheets, `body` and `:root` exempt;
 `specificity` above (0,2,0); `override`, a feature stylesheet's declaration that wins over a primitive's on a shared
-longhand) over the two bundles in cascade order and compares the hits with `__fixtures__/css-audit-baseline.json`,
-whose entries each name the plan item that removes them. The baseline only shrinks: a new hit fails, and so does an
-entry whose hit is gone until the change that removed the hit removes the entry.
+longhand) over the two bundles in cascade order, and since UX-P0.21 `deadRule` (a class that no non-test source under
+`src/webview` renders, literally or through a template or quoted prefix), `disableComment` (a `stylelint-disable` or
+`eslint-disable` comment in a stylesheet; directives in TypeScript are ESLint's) and `inlineStyle` (a `style` prop in a
+`.tsx` with a branch that is neither `undefined` nor a `cssVars` call of `--nuiget-*` properties), and compares the
+hits with `__fixtures__/css-audit-baseline.json`, whose entries each name the plan item that removes them. The
+baseline only shrinks: a new hit fails, so does an entry whose hit is gone until the change that removed the hit
+removes the entry, and so does an entry whose item the tracker lists as `done`. `scripts/check-css-baseline.mjs
+--item <ID>` lists the entries an item still owns and exits 0 only at none.
 
 The theme pass (P5.11) adds what the tokens alone did not settle. VS Code leaves a webview's `body` transparent and
 paints the surface behind the iframe; the two roots now paint it themselves, `.nuiget-main` with
