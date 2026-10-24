@@ -919,7 +919,7 @@ These parts are the current truth for the build, test and release pipeline.
   | Lint | — | `npm run lint`, the guard hook tests, then `npm run docs:check` and `npm run check:matrix` |
   | Test (ubuntu, windows) | — | Unit tests with .NET SDK 10 installed; coverage on ubuntu |
   | E2E (VS Code 1.90.0, stable) | — | Production build with the ceiling check (sizes in the job summary), then the `v2-*` extension-host suite under Xvfb; log artifact per version |
-  | UI | Lint, Test | Restores the dense workspace (SDK 10 and 8.0.425), then ExTester packages a VSIX and runs `src/test/ui/v2` under Xvfb (1920x1080), the capture suite of the named states and its classic pass, then `check:vsix` on that build; log artifact, and `ui-screenshots` on every run: the webview crops `<state>.<theme>.<width>.png` of the ready states of `src/test/ui/v2/states.ts`, the window PNGs of the v2 suites and the screenshots of failed tests; a missing crop, a crop of a pending state, a missing state of the 2.0 set or a red `hard` measurement fails the job, and the log ends with the list of `pending` measurements |
+  | UI | Lint, Test | Restores the dense workspace (SDK 10 and 8.0.425), then ExTester packages a VSIX and runs `src/test/ui/v2` under Xvfb (1920x1080), the capture suite of the named states and its classic pass, then `check:vsix` on that build; log artifact, and `ui-screenshots` on every run: the webview crops `<state>.<theme>.<width>.png` of the ready states of `src/test/ui/v2/states.ts`, the window PNGs of the v2 suites, the screenshots of failed tests and, from the Modern UI pass, `artboards/` (artboard A's two renders and `main-installed-single.spec.json`); a missing crop, a crop of a pending state, a missing state of the 2.0 set or a red `hard` measurement fails the job, and the log ends with the list of `pending` measurements |
   | UI matrix (one per theme) | — | `workflow_dispatch` with `tier=B` only: the Tier B shard of one of six themes (every ready state at its surface's three widths, Modern UI), VS Code maximized under a window manager (fluxbox inside `xvfb-run`); `ui-screenshots-<theme>`, `ui-log-<theme>` |
   | UI floor (1.90.0) | — | `workflow_dispatch` with `tier=B` only: every Tier A theme and width on VS Code 1.90.0 (Chromium 122) in the classic look; `ui-screenshots-floor`, `ui-log-floor` |
   | UI macOS | — | `workflow_dispatch` with `tier=B` only: the Tier A capture suite in both looks on the free Intel runner `macos-26-intel`, its display set to 1440x900 first; `ui-screenshots-macos`, `ui-log-macos`; never goldens |
@@ -941,7 +941,10 @@ These parts are the current truth for the build, test and release pipeline.
   Extensions view and an extension's editor, the Settings editor, the command palette; `src/test/ui/v2/workbench.ts`),
   prints one `[workbench]` line per control and writes `workbench.<look>.json` next to the crops: the height rules
   compare a control with the workbench's of the same run, and the `ui` job's files are kept as
-  `docs/design/workbench/<look>.json`. A pending state names the item that renders its markers and
+  `docs/design/workbench/<look>.json`. After the capture suite, in the `ui` lane's Modern UI pass only, the artboard export
+  (`src/test/ui/v2/capture/zz-artboards.ui.test.ts`) starts `scripts/serve-artboards.mjs` on `docs/design`, opens artboard A
+  in VS Code's integrated browser (`docs/design/export-method.md`) and writes the main panel in both looks at 932 px and its
+  spec into `artboards/`; the copies kept are in `docs/design/artboards/`. A pending state names the item that renders its markers and
   is never captured. The two suites divide the work by what each can see. The
   extension-host suite (`src/test/e2e/v2-*.e2e.test.ts`, one file per legacy e2e file since P5.12a, shared steps in `v2Support.ts`)
   shows that the extension activates,
