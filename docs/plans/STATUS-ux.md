@@ -62,7 +62,7 @@ only under per-section lists. A cut feature's P5 rows become `skipped`.
 | P1.4a | P1 | Codicon sync script, path lint, attribution | open |  |  |  |
 | P1.4b | P1 | Icons regenerated, Verified mark, captures re-approved | open |  |  |  |
 | P1.5 | P1 | Design reference check (`check-design-tokens.mjs`) | open |  |  |  |
-| P2.1a | P2 | Listbox: the grouped list's model (one listbox per view, group rows, real virtualization) | open |  |  | round 1: A. Sets `main-installed-all`'s `diffTolerance` from 0.5 to 0 in `states.ts` after its own run-and-rerun pair at 0 px (UX-P0.15 Ask: V72's document scrollbar), and adds the pre-shot `documentOverflow` re-read if the P0 phase review assigns it here |
+| P2.1a | P2 | Listbox: the grouped list's model (one listbox per view, group rows, real virtualization) | open |  |  | round 1: A. Sets `main-installed-all`'s `diffTolerance` from 0.5 to 0 in `states.ts` after its own run-and-rerun pair at 0 px (UX-P0.15 Ask: V72's document scrollbar), and adds the pre-shot `documentOverflow` re-read if the P0 phase review assigns it here From UX-P0.23 (design-advisor follow-up): `main-installed-all`'s readiness waits for no project's metadata and no count; its crop differs between runs within the 0.5 % tolerance. |
 | P2.1b | P2 | Typed row adapter | open |  |  |  |
 | P2.1c | P2 | Grouped list: keyboard model and group rows | open |  |  | round 1: A |
 | P2.1d | P2 | Grouped list: Installed consumers | open |  |  | round 1: A |
@@ -74,7 +74,7 @@ only under per-section lists. A cut feature's P5 rows become `skipped`.
 | P2.5 | P2 | Toolbar, IconButton and Tabs (V1, V2) | open |  |  | From UX-P0.23 (design-advisor DEFECTS): the Installed tab's accessible name reads its count twice (`tab "Installed # # package with known vulnerabilities"` in the main-installed-* ARIA snapshots: the badge and its title); a tab names its count once; the snapshots change with the fix (G-UI step 5). |
 | P2.6 | P2 | SectionHeader and Badge (V3, V4) | open |  |  |  |
 | P2.7 | P2 | Main shell chrome (V5) | open |  |  |  |
-| P2.8a | P2 | Installed tab: single project and transitive | open |  |  | Before approving goldens against artboard A: its list pane is corrected from `editor.background` to the side-bar surface role in a separate commit (UX-P0.19 design-advisor ruling, DECISIONS.md) |
+| P2.8a | P2 | Installed tab: single project and transitive | open |  |  | Before approving goldens against artboard A: its list pane is corrected from `editor.background` to the side-bar surface role in a separate commit (UX-P0.19 design-advisor ruling, DECISIONS.md) From UX-P0.23 (design-advisor follow-up): pin `main-installed-single`'s data state (its readiness leaves the provisional → authoritative transition unpinned; the crop has been provisional in three runs at tolerance 0); a golden re-baseline under a ruling; P4.8a is the product change that moves the window. |
 | P2.8b | P2 | Installed tab: All Projects and state cells; V1–V5 hard | open |  |  |  |
 | P2.9a | P2 | Native actions menu on both surfaces (`webview/context`) | open |  |  |  |
 | P2.9b | P2 | Queued operations busy everywhere; menu proven on VS Code 1.90.0 | open |  |  |  |

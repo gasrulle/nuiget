@@ -9,8 +9,9 @@
  *   tolerated until P3.4 (A5, the ruling of P5.12b), or `AXE_PENDING` names the item that removes it;
  * - a snapshot of the accessible tree, read from inside the webview with axe's own role and name functions (no CDP:
  *   whether ChromeDriver reaches the webview's out-of-process frame is unverified, H31), compared with
- *   `src/test/ui/v2/aria/<state>.json` and written beside the crops for adoption. Digits are masked (versions, counts,
- *   sizes), so a fixture's new release does not change a snapshot.
+ *   `src/test/ui/v2/aria/<state>.json` and written beside the crops for adoption. It is read once the state's data has
+ *   settled (no busy element, the tabs' counts, every comfortable row's authors; a bounded wait after the shot). Digits are
+ *   masked (versions, counts, sizes), so a fixture's new release does not change a snapshot; their presence is not.
  *
  * Plain data and string scripts, like `measure.ts`: `src/test/lint` imports it without ExTester.
  */

@@ -412,6 +412,25 @@ function pixelAt(png: string, x: number, y: number): number[] {
 /** The axe-core the harness injects into a webview, as `theme.ui.test.ts` does. */
 const AXE_SOURCE = fs.readFileSync(path.resolve('node_modules/axe-core/axe.min.js'), 'utf8');
 
+/**
+ * Runs in the webview: why the state's data is still arriving, or `''` once it is all there (UX-P0.23 design-advisor follow-up):
+ * no busy element; each visible tab with its count (the slice is `ready`); every comfortable row with its authors (its
+ * metadata arrived). The snapshot reads counts and marks that arrive after the crop.
+ */
+const UNSETTLED = `
+const clauses = [];
+if (document.querySelector('[aria-busy="true"]')) clauses.push('a busy element');
+for (const id of ['installed-tab', 'updates-tab']) {
+    const tab = document.querySelector('[data-testid="' + id + '"]');
+    if (tab && tab.offsetParent !== null && !/[0-9]/.test(tab.textContent || '')) clauses.push(id + ' without a count');
+}
+if ([...document.querySelectorAll('.nuiget-row--comfortable')].some(row => !row.querySelector('.nuiget-row-authors'))) clauses.push('a comfortable row without authors');
+return clauses.join('; ');
+`;
+
+/** The settle wait's budget: bounded and never fatal. */
+const SETTLE_MS = 120_000;
+
 /** The states this run has audited (UX-P0.23): once per state, at its first capture. */
 const audited = new Set<string>();
 
@@ -425,6 +444,12 @@ async function auditAccessibility(state: NamedState): Promise<string[]> {
     const driver = driverOf();
     if (!(await script<boolean>('return typeof window.axe !== "undefined";'))) {
         await script(AXE_SOURCE);
+    }
+    // After the shot and the measurements, never before them: the snapshot and axe read the state's settled data.
+    try {
+        await poll(async () => ((await script<string>(UNSETTLED)) === '' ? true : undefined), 'the state\'s data to settle', SETTLE_MS);
+    } catch {
+        console.warn(`[aria] ${state.name}: not settled after ${SETTLE_MS / 1000} s (${await script<string>(UNSETTLED)})`);
     }
     if (LOOK === 'modern') {
         const tree = await script<{ nodes?: AriaNode[]; error?: string }>(ARIA_SNAPSHOT);
