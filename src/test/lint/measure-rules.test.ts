@@ -119,6 +119,8 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(scopes('DS-ROW-4')).toEqual(hard('main-installed', 'main-updates', 'browse', 'details', 'sidebar'));
         expect(scopes('DS-COPY-3')).toEqual({ 'main-installed': 'hard', 'main-updates': { pending: 'P3.1b' }, browse: { pending: 'P3.10' }, sidebar: { pending: 'P3.10' } });
         expect(RULES.find(rule => rule.id === 'DS-COPY-3')?.pendingStates).toEqual({ 'main-installed-unsupported': 'P2.8b' });
+        // The Browse list under the details pane is a details-group state; its description waits for P3.2 (run 40114517304).
+        expect(RULES.find(rule => rule.id === 'DS-TYPE-6')?.pendingStates).toEqual({ 'main-browse-details': 'P3.2' });
         // The states without a row by design: DS-TYPE-6 and DS-ROW-4 print nothing there, never a pass.
         const noRow = ['main-installed-filter-nomatch', 'main-quicksearch-open', 'main-quicksearch-versions'];
         for (const id of ['DS-TYPE-6', 'DS-ROW-4']) {
@@ -165,6 +167,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(groups['main-installed-bulk-dialog']).toBe('dialogs');
         expect(groups['sidebar-update-all-dialog']).toBe('dialogs');
         expect(groups['sidebar-sections']).toBe('sidebar');
+        expect(groups['main-browse-details']).toBe('details');
         expect(stateGroup('main-sources-list')).toBe('sources');
     });
 
@@ -511,6 +514,8 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(value('main-installed-single', facts({ metaText: meta(11.5), descriptionForeground: '#9d9d9d' }), 'DS-TYPE-6@main-installed-single')).toMatchObject({ pass: false });
         // The computed 11.05 of the run is within the rule's own 0.1.
         expect(value('main-installed-single', facts({ metaText: meta(11.05), descriptionForeground: '#9d9d9d' }), 'DS-TYPE-6@main-installed-single')).toMatchObject({ pass: true, status: 'hard' });
+        expect(value('main-browse-details', facts({ metaText: [...meta(11), { kind: 'description', fontSize: 11.05, colour: 'rgb(157, 157, 157)', selected: false }], descriptionForeground: '#9d9d9d' }), 'DS-TYPE-6@main-browse-details'))
+            .toMatchObject({ pass: false, status: { pending: 'P3.2' } });
         expect(value('main-installed-unsupported', facts({ copyEnds: [{ kind: 'banner', text: 'Unsupported project: requires .NET SDK 10 or newer' }] }), 'DS-COPY-3@main-installed-unsupported'))
             .toMatchObject({ pass: false, status: { pending: 'P2.8b' } });
         expect(value('main-installed-single', facts({ metaText: meta(11, 'rgb(204, 204, 204)'), descriptionForeground: '#9d9d9d' }), 'DS-TYPE-6@main-installed-single'))

@@ -219,7 +219,7 @@ green in every capture of the group; the red groups to the items that make them 
 |---|---|---|
 | DS-TYPE-1 | `one family` in 80 + 12 lines | hard in main-installed, main-updates, browse, details, dialogs, sidebar; sources pending P3.6 (no state) |
 | DS-TYPE-4 | `line height 18.2 (target 18.2)` in 80 + 12 lines; 14 sidebar lines add `compact rows 18.2 ×29 (target 22)` (red) | hard in main-installed, main-updates, browse, details, dialogs; sidebar pending P3.7a (V36, V14, D47); sources pending P3.6 |
-| DS-TYPE-6 | `meta 11.05 ×N (target 11)` green at the rule's own 0.1 in 78 lines; browse `description 11.05 ×15 (target 13)` red in 4; `not measurable (no row metadata)` in the 6 lines of the three no-row states | tolerance declared `TOLERANCES.fontExact` 0.1 (the applied value, unchanged); hard in main-installed, main-updates, details, sidebar; browse pending P3.2 (T-27, DS-ROW-1); the three no-row states excepted |
+| DS-TYPE-6 | `meta 11.05 ×N (target 11)` green at the rule's own 0.1 in 78 lines; the two Browse-list states (`main-browse-results`, group browse; `main-browse-details`, group details by `stateGroup`'s `-details` test) read `description 11.05 ×15 (target 13)`, red in 4 lines; `not measurable (no row metadata)` in the 6 lines of the three no-row states | tolerance declared `TOLERANCES.fontExact` 0.1 (the applied value, unchanged); hard in main-installed, main-updates, details, sidebar; browse and `main-browse-details` (through `pendingStates`) pending P3.2 (T-27, DS-ROW-1); the three no-row states excepted |
 | DS-ROW-4 | `visible actions per row 0 ×N` or `0 ×N, 1` (at most 3) everywhere it measures; `not measurable (no row)` in the 6 lines of the no-row states | hard in main-installed, main-updates, browse, details, sidebar; the three no-row states excepted |
 | DS-COPY-3 | `main-installed-filter-nomatch: 2 end with a full stop` (green); `main-installed-unsupported: no full stop: banner "Unsupported project: requires .NET SDK 10 or newer"` (red) | hard in main-installed with `main-installed-unsupported` pending P2.8b (Design System §9, §10 item 2); main-updates pending P3.1b, browse and sidebar pending P3.10 (no ready state shows their empty, error or unavailable cells) |
 
@@ -229,6 +229,11 @@ measurable` (`exceptStates`), never a pass. None of the three reds is at blockin
 line box off the spec and a secondary text one size step off are major or minor, punctuation against the copy rules is major) and
 each is classified, so no V-row is added. Every other blocking-class pending value of the run is classified: DS-OVERFLOW-6 and MS-8's
 chrome by V72 on P2.1a, DS-OVERFLOW-1 and -6 at 220 and 400 by V50 on P2.7 and P3.3b.
+
+The item's own run 40114517304 (on `63cbc67`) went red on one line, `DS-TYPE-6@main-browse-details: meta 11.05 ×45 (target 11);
+description 11.05 ×15 (target 13); 0 meta off descriptionForeground (hard)` (`42 passing`, `1 failing`; `[diff] 40 compared, 40 at 0
+px`, the classic pass not run): the first ruling had filed `main-browse-details` under browse, and the design-advisor's follow-up of
+2026-10-24 sends that state to P3.2 through `pendingStates`, the details scope staying hard (fix-forward commit).
 
 ### The reference set
 

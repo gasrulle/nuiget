@@ -218,7 +218,12 @@ export const RULES: readonly RuleDefinition[] = [
     // pair read green in every capture of the group; the red groups to the items that make them hold.
     rule('DS-TYPE-1', { helper: 3, scopes: { ...inGroups('hard', ...MAIN, 'dialogs', 'sidebar'), sources: { pending: 'P3.6' } }, tolerance: TOLERANCES.containment }),
     rule('DS-TYPE-4', { helper: 3, scopes: { ...inGroups('hard', ...MAIN, 'dialogs'), sidebar: { pending: 'P3.7a' }, sources: { pending: 'P3.6' } }, tolerance: TOLERANCES.gapMembership }),
-    rule('DS-TYPE-6', { helper: 3, scopes: { ...inGroups('hard', 'main-installed', 'main-updates', 'details', 'sidebar'), browse: { pending: 'P3.2' } }, tolerance: TOLERANCES.fontExact, exceptStates: NO_ROW_STATES }),
+    rule('DS-TYPE-6', {
+        helper: 3, scopes: { ...inGroups('hard', 'main-installed', 'main-updates', 'details', 'sidebar'), browse: { pending: 'P3.2' } }, tolerance: TOLERANCES.fontExact, exceptStates: NO_ROW_STATES,
+        // The Browse list under the details pane: a details-group state by `stateGroup` (`-details`), its description to P3.2
+        // with the browse scope (design-advisor follow-up of 2026-10-24, UX-P0.18, run 40114517304).
+        pendingStates: { 'main-browse-details': 'P3.2' },
+    }),
     rule('DS-ROW-4', { helper: 6, scopes: inGroups('hard', ...MAIN, 'sidebar'), tolerance: TOLERANCES.containment, exceptStates: NO_ROW_STATES }),
     // An empty state or a banner is rendered in these states only.
     rule('DS-COPY-3', {
