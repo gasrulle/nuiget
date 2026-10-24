@@ -40,12 +40,24 @@ export function expandIds(text) {
 
 /** The state group of a named state, as `stateGroup` in src/test/ui/v2/measure.ts. */
 export function groupOf(state) {
-    if (state.endsWith('-dialog')) return 'dialogs';
-    if (state.startsWith('sidebar-')) return 'sidebar';
-    if (state.startsWith('main-sources')) return 'sources';
-    if (state.endsWith('-details') || state === 'main-details-readme') return 'details';
-    if (state.startsWith('main-browse-') || state.startsWith('main-quicksearch-')) return 'browse';
-    if (state.startsWith('main-updates')) return 'updates';
+    if (state.endsWith('-dialog')) {
+        return 'dialogs';
+    }
+    if (state.startsWith('sidebar-')) {
+        return 'sidebar';
+    }
+    if (state.startsWith('main-sources')) {
+        return 'sources';
+    }
+    if (state.endsWith('-details') || state === 'main-details-readme') {
+        return 'details';
+    }
+    if (state.startsWith('main-browse-') || state.startsWith('main-quicksearch-')) {
+        return 'browse';
+    }
+    if (state.startsWith('main-updates')) {
+        return 'updates';
+    }
     return 'main';
 }
 
@@ -106,10 +118,16 @@ export const isP0Helper = helper => {
 
 /** The class of an unasserted id: judge-only, hard at P0, gap (a P0 helper owns it, or no source does) or later. */
 export function classify(id, appendix, tracker = new Map()) {
-    if (appendix.judgeOnly.has(id)) return 'judge-only';
-    if (appendix.hardAtP0.has(id)) return 'hard at P0';
+    if (appendix.judgeOnly.has(id)) {
+        return 'judge-only';
+    }
+    if (appendix.hardAtP0.has(id)) {
+        return 'hard at P0';
+    }
     const row = appendix.rows.get(id) ?? tracker.get(id);
-    if (row === undefined) return 'gap';
+    if (row === undefined) {
+        return 'gap';
+    }
     return isP0Helper(row.helper) ? 'gap' : 'later';
 }
 
