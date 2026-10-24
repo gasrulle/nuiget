@@ -1,0 +1,33 @@
+{
+  "state": "main-quicksearch-open",
+  "lines": [
+    "main \"\" {nuiget-app}",
+    "  heading \"Manage NuGet packages\"",
+    "  checkbox \"Restore after operations\" [checked]",
+    "  checkbox \"Include prerelease\" [unchecked]",
+    "  combobox \"Project\" {project-selector}",
+    "    option \"All Projects (#)\"",
+    "    option \"Catalog.csproj\"",
+    "    option \"Gateway.csproj\"",
+    "    option \"Unsupported.csproj\"",
+    "    option \"Utility.csproj\"",
+    "  combobox \"Package source\" {source-selector}",
+    "    option \"All sources\"",
+    "    option \"nuget.org\"",
+    "  button \"NuGet sources\" {source-settings}",
+    "  button \"Refresh\" {refresh-button}",
+    "  search \"\"",
+    "    combobox \"Search packages, or filter with @installed, @updates or @vulnerable\" [expanded, focused] {search-input}",
+    "    button \"Clear search\"",
+    "    button \"Filters\"",
+    "    listbox \"Suggestions\" {search-suggestions}",
+    "      option \"Serilog\"",
+    "      option \"Serilog.Sinks.File\"",
+    "      option \"Serilog.Sinks.Console\"",
+    "      option \"Serilog.Extensions.Logging\"",
+    "      option \"Serilog.Settings.Configuration\"",
+    "  separator \"Resize the package list\" {sash}",
+    "  region \"Package details\" {package-details-panel}",
+    "  status \"\" {status-live}"
+  ]
+}

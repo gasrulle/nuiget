@@ -11,7 +11,7 @@ import { measureExemplar, measureWorkbench } from '../workbench';
 import { type Capture, captureFile, floorCaptures, isReady, type Lane, type Look, matrixCaptures, MATRIX_THEMES, type NamedState, PANEL_WIDTH, SIDEBAR_WIDTH, STATES, type Theme, THEMES } from '../states';
 import { declaredTokens, DUMP_THEME, formatThemeDump, formatTokenDump, type ThemeDump, themeDumpFile, tokenDumpFile } from '../themeDump';
 import { CAPTURE_FACTS, type CropRect, type Sidecar, sidecarFile } from '../golden';
-import { ARIA_SNAPSHOT, type AriaNode, type AriaSnapshot, ariaLineFor, ariaSnapshot, AXE_EXTRA_RULES, AXE_NODES_PER_RULE, axeLines, FULL_AXE_STATUS, type FullAxe, RUN_FULL_AXE } from '../a11y';
+import { acceptedSelectors, ARIA_SNAPSHOT, type AriaNode, type AriaSnapshot, ariaLineFor, ariaSnapshot, AXE_EXTRA_RULES, AXE_NODES_PER_RULE, axeLines, FULL_AXE_STATUS, type FullAxe, RUN_FULL_AXE } from '../a11y';
 
 /**
  * The capture suite of the named states (UX-P0.8), on the dense workspace (`npm run test:ui:capture`, and the classic
@@ -441,8 +441,8 @@ async function auditAccessibility(state: NamedState): Promise<string[]> {
         }
     }
     await driver.manage().setTimeouts({ script: 120_000 });
-    const result = JSON.parse(await driver.executeAsyncScript<string>(RUN_FULL_AXE, AXE_EXTRA_RULES, AXE_NODES_PER_RULE)) as FullAxe;
-    const { lines, failures } = axeLines(state.name, result);
+    const result = JSON.parse(await driver.executeAsyncScript<string>(RUN_FULL_AXE, AXE_EXTRA_RULES, AXE_NODES_PER_RULE, acceptedSelectors())) as FullAxe;
+    const { lines, failures } = axeLines(state.name, state.surface, result);
     for (const line of lines) {
         console.warn(line);
         if (/\(pending [^)]+\)$/.test(line)) {

@@ -4,8 +4,9 @@
  *
  * - the full axe ruleset over the whole page with the state's layers open: every rule axe enables by default,
  *   best-practice included, plus `target-size` and `label-content-name-mismatch`, which axe 4.12 leaves off. A violation
- *   fails the capture unless `AXE_PENDING` names the item that removes it; an `incomplete` result is tolerated only for
- *   `color-contrast` inside the details pane, until P3.4 (A5, the ruling of P5.12b);
+ *   fails the capture unless `AXE_PENDING` names the item that removes it or `AXE_ACCEPTED` the decision that declares it
+ *   (scoped to a selector or a surface); an `incomplete` result fails unless it is `color-contrast` inside the details pane,
+ *   tolerated until P3.4 (A5, the ruling of P5.12b), or `AXE_PENDING` names the item that removes it;
  * - a snapshot of the accessible tree, read from inside the webview with axe's own role and name functions (no CDP:
  *   whether ChromeDriver reaches the webview's out-of-process frame is unverified, H31), compared with
  *   `src/test/ui/v2/aria/<state>.json` and written beside the crops for adoption. Digits are masked (versions, counts,
@@ -18,8 +19,8 @@ import type { RuleStatus } from './measure';
 /** The rule of the tracker's a11y table this harness holds (`a11y-full-axe-real-page`, A5). */
 export const FULL_AXE_RULE = 'a11y-full-axe-real-page';
 
-/** Its status: `pending` on this item until its run's results are triaged, then `hard` (the hard/pending flip rule). */
-export const FULL_AXE_STATUS: RuleStatus = { pending: 'P0.23' };
+/** Its status: `hard` since the closing commit of P0.23, which triaged the first run's results (design-advisor ruling). */
+export const FULL_AXE_STATUS: RuleStatus = 'hard';
 
 /** The rules axe 4.12 leaves off that the harness turns on (H47). */
 export const AXE_EXTRA_RULES: readonly string[] = ['target-size', 'label-content-name-mismatch'];
@@ -41,6 +42,8 @@ export interface AxeRule {
     outsideDetails: number;
     /** Axe's messages over all `count` nodes, most frequent first, at most three: why a node failed or stayed undecided. */
     reasons: Array<{ text: string; count: number }>;
+    /** Per selector of `AXE_ACCEPTED`, the nodes of all `count` whose element matches it, counted before the cap. */
+    accepted: Record<string, number>;
     nodes: AxeNode[];
 }
 
@@ -53,12 +56,20 @@ export interface FullAxe {
 }
 
 /**
- * Runs in the webview, asynchronously (`executeAsyncScript`): `arguments[0]` the extra rules, `arguments[1]` the node cap.
- * Answers a `FullAxe` as JSON, small enough for the WebDriver channel.
+ * Runs in the webview, asynchronously (`executeAsyncScript`): `arguments[0]` the extra rules, `arguments[1]` the node cap,
+ * `arguments[2]` the selectors of `AXE_ACCEPTED`. Answers a `FullAxe` as JSON, small enough for the WebDriver channel.
  */
 export const RUN_FULL_AXE = `
 const done = arguments[arguments.length - 1];
-const [extra, cap] = arguments;
+const [extra, cap, selectors] = arguments;
+const matching = (target, selector) => {
+    try {
+        const element = document.querySelector(target);
+        return element !== null && element.matches(selector);
+    } catch (error) {
+        return false;
+    }
+};
 const details = document.querySelector('[data-testid="package-details-panel"]');
 const inside = target => {
     try {
@@ -79,7 +90,8 @@ const rules = list => list.map(result => {
         tally.set(text, (tally.get(text) || 0) + 1);
     }
     const reasons = [...tally].sort((a, b) => b[1] - a[1]).slice(0, 3).map(([text, count]) => ({ text, count }));
-    return { id: result.id, impact: result.impact || null, count: nodes.length, outsideDetails: nodes.filter(node => !node.insideDetails).length, reasons, nodes: nodes.slice(0, cap) };
+    const accepted = Object.fromEntries(selectors.map(selector => [selector, nodes.filter(node => matching(node.target, selector)).length]));
+    return { id: result.id, impact: result.impact || null, count: nodes.length, outsideDetails: nodes.filter(node => !node.insideDetails).length, reasons, accepted, nodes: nodes.slice(0, cap) };
 });
 axe.run(document, {
     rules: Object.fromEntries(extra.map(id => [id, { enabled: true }])),
@@ -100,8 +112,67 @@ export interface AxePending {
     states?: readonly string[];
 }
 
-/** The axe results of today's tree that later items remove (filled from the run that flips the rule, with its ruling). */
-export const AXE_PENDING: readonly AxePending[] = [];
+/**
+ * The axe results of today's tree that later items remove (design-advisor ruling of 2026-10-25, UX-P0.23; run 40136298952).
+ * Each `incomplete` below is "axe could not decide", which P0.25 turns into a measurement: it scrolls each scroll container
+ * that holds undecided nodes in steps of its `clientHeight`, re-runs `color-contrast` with `include` on it, unions the
+ * decided nodes and restores `scrollTop` (the state's later captures stay at `[diff]` 0 px), failing what stays undecided in
+ * view; text under or inside an open layer is measured against the layer's own opaque background, or proven decided in the
+ * state without the layer. The state lists are exact: never widened, never a wildcard.
+ */
+export const AXE_PENDING: readonly AxePending[] = [
+    // elmPartiallyObscured: rows beyond a scroller's fold (`overflow: auto`; the only opaque ancestor is `.nuiget-main`).
+    {
+        rule: 'color-contrast', kind: 'incomplete', item: 'P0.25',
+        states: [
+            'main-installed-single', 'main-installed-all', 'main-installed-cpm', 'main-installed-details', 'main-installed-hover', 'main-installed-focus',
+            'main-installed-unfocused', 'main-installed-bulk-dialog', 'main-transitive-expanded', 'main-transitive-details', 'main-updates',
+            'main-browse-results', 'main-browse-details', 'main-details-readme',
+        ],
+    },
+    // bgOverlap: the empty messages under the open quick-search popup.
+    { rule: 'color-contrast', kind: 'incomplete', item: 'P0.25', states: ['main-quicksearch-open', 'main-quicksearch-versions'] },
+    // elmPartiallyObscuring: the Update-all dialog's wrapped bullets over the varying content beneath the dialog.
+    { rule: 'color-contrast', kind: 'incomplete', item: 'P0.25', states: ['sidebar-update-all-dialog'] },
+];
+
+/** A violation a decision declares by design, on the nodes of one selector or on one surface; `ruling` names the decision. */
+export interface AxeAccepted {
+    rule: string;
+    kind: 'violation';
+    selector?: string;
+    surface?: 'main' | 'sidebar';
+    ruling: string;
+}
+
+/** The violations declared by design (design-advisor ruling of 2026-10-25, UX-P0.23; `docs/design/DECISIONS.md`). */
+export const AXE_ACCEPTED: readonly AxeAccepted[] = [
+    // The row is named by id and version and described by its other spans (DS §7, T-27, DS-ROW-5, CA-R5); the experimental
+    // rule reads every visible span as the label. A button or tab whose name drops its visible text still fails.
+    { rule: 'label-content-name-mismatch', kind: 'violation', selector: '.nuiget-row-option', ruling: 'DECISIONS.md 2026-10-25: the row keeps its triad' },
+    // The view's title is the host's pane header, as for every native pane; the main panel keeps its h1.
+    { rule: 'page-has-heading-one', kind: 'violation', surface: 'sidebar', ruling: 'DECISIONS.md 2026-10-25: the sidebar view has no h1' },
+];
+
+/** The selectors `RUN_FULL_AXE` counts nodes against. */
+export const acceptedSelectors = (accepted: readonly AxeAccepted[] = AXE_ACCEPTED): string[] =>
+    accepted.flatMap(entry => (entry.selector === undefined ? [] : [entry.selector]));
+
+/** The acceptance that covers a violation: every node on its selector, or the state's surface. */
+const acceptedFor = (rule: AxeRule, surface: 'main' | 'sidebar', accepted: readonly AxeAccepted[]): { entry: AxeAccepted; where: string } | undefined => {
+    for (const entry of accepted) {
+        if (entry.rule !== rule.id) {
+            continue;
+        }
+        if (entry.selector !== undefined && (rule.accepted?.[entry.selector] ?? 0) === rule.count) {
+            return { entry, where: entry.selector };
+        }
+        if (entry.surface !== undefined && entry.surface === surface) {
+            return { entry, where: `the ${surface}` };
+        }
+    }
+    return undefined;
+};
 
 const pendingFor = (state: string, kind: AxePending['kind'], rule: string, registry: readonly AxePending[]): AxePending | undefined =>
     registry.find(entry => entry.rule === rule && entry.kind === kind && (entry.states === undefined || entry.states.includes(state)));
@@ -110,9 +181,10 @@ const statusText = (status: RuleStatus): string => (status === 'hard' ? 'hard' :
 
 /**
  * The `[axe]` lines of a state and the failures among them: one summary line, then one line per violation or incomplete
- * rule. A failure is a result neither tolerated nor pending; it fails the capture only while `status` is `hard`.
+ * rule. A failure is a result neither tolerated, accepted nor pending; it fails the capture only while `status` is `hard`.
+ * `surface` is the state's own (`NamedState.surface`), never read from its name.
  */
-export function axeLines(state: string, result: FullAxe, status: RuleStatus = FULL_AXE_STATUS, registry: readonly AxePending[] = AXE_PENDING): { lines: string[]; failures: string[] } {
+export function axeLines(state: string, surface: 'main' | 'sidebar', result: FullAxe, status: RuleStatus = FULL_AXE_STATUS, registry: readonly AxePending[] = AXE_PENDING, accepted: readonly AxeAccepted[] = AXE_ACCEPTED): { lines: string[]; failures: string[] } {
     if (result.error !== undefined) {
         return { lines: [`[axe] ${state}: axe.run failed: ${result.error} (${statusText(status)})`], failures: [`axe.run failed: ${result.error}`] };
     }
@@ -121,6 +193,11 @@ export function axeLines(state: string, result: FullAxe, status: RuleStatus = FU
     const sample = (rule: AxeRule): string =>
         `${rule.nodes.slice(0, 2).map(node => node.target).join(', ')}${rule.reasons.length > 0 ? `; ${rule.reasons.map(reason => `"${reason.text}" ×${reason.count}`).join('; ')}` : ''}`;
     for (const rule of result.violations) {
+        const declared = acceptedFor(rule, surface, accepted);
+        if (declared !== undefined) {
+            lines.push(`[axe] ${state}: violation ${rule.id} ×${rule.count} on ${declared.where} (accepted-as-design: ${declared.entry.ruling})`);
+            continue;
+        }
         const pending = pendingFor(state, 'violation', rule.id, registry);
         lines.push(`[axe] ${state}: violation ${rule.id} (${rule.impact ?? 'no impact'}) ×${rule.count}: ${sample(rule)} (${pending ? `pending ${pending.item}` : statusText(status)})`);
         if (pending === undefined) {

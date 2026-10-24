@@ -961,8 +961,9 @@ These parts are the current truth for the build, test and release pipeline.
   with the pending list. In the `ui` lane each state is also audited once per run, at its first capture, after the crop
   and before its setup closes a layer (UX-P0.23, `src/test/ui/v2/a11y.ts`): the full axe ruleset over the page, with
   `target-size` and `label-content-name-mismatch` turned on (`[axe]` lines; a violation, or an `incomplete` result other
-  than contrast inside the details pane, fails the state once the rule `a11y-full-axe-real-page` is `hard`, unless
-  `AXE_PENDING` names the item that removes it), and in
+  than contrast inside the details pane, fails the state, since the rule `a11y-full-axe-real-page` is `hard`, unless
+  `AXE_PENDING` names the item that removes it or `AXE_ACCEPTED` the decision that declares it on one selector or one
+  surface), and in
   the Modern UI pass a snapshot of the accessible tree read with axe's own role and name functions, digits masked,
   written to `aria/<state>.json` beside the crops and compared with `src/test/ui/v2/aria/<state>.json` (`[aria]` lines;
   a snapshot is adopted from a green run's artifact, like a golden). Before the first state the run measures the workbench's own controls in its look (the
