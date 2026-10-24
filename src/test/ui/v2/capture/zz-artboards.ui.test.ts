@@ -95,7 +95,9 @@ if (LANE === 'ui' && LOOK === 'modern') {
         let server: ChildProcess | undefined;
         let main: string | undefined;
 
-        after(async () => {
+        after(async function () {
+            // Closing the browser editor and the emulation take longer than mocha's default 2 s.
+            this.timeout(60_000);
             const driver = driverOf();
             await (driver as unknown as Cdp).sendDevToolsCommand('Emulation.clearDeviceMetricsOverride', {}).catch(() => undefined);
             if (main !== undefined) {
