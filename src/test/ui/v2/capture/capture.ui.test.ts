@@ -11,7 +11,7 @@ import { measureExemplar, measureWorkbench } from '../workbench';
 import { type Capture, captureFile, floorCaptures, isReady, type Lane, type Look, matrixCaptures, MATRIX_THEMES, type NamedState, PANEL_WIDTH, SIDEBAR_WIDTH, STATES, type Theme, THEMES } from '../states';
 import { declaredTokens, DUMP_THEME, formatThemeDump, formatTokenDump, type ThemeDump, themeDumpFile, tokenDumpFile } from '../themeDump';
 import { CAPTURE_FACTS, type CropRect, type Sidecar, sidecarFile } from '../golden';
-import { acceptedSelectors, ARIA_SNAPSHOT, type AriaNode, type AriaSnapshot, ariaLineFor, ariaSnapshot, AXE_EXTRA_RULES, AXE_NODES_PER_RULE, axeLines, DESCRIBE_FOCUS, type FocusFacts, FULL_AXE_STATUS, type FullAxe, type KeyOutcome, type KeyScreen, KEYS_STATUS, keysLines, MOTION_STATUS, type MotionFacts, motionLines, RUN_FULL_AXE, RUNNING_ANIMATIONS } from '../a11y';
+import { acceptedSelectors, ARIA_SNAPSHOT, CONTRAST_STATUS, LAYER_SELECTOR, type Resolved, RESOLVE_CONTRAST, resolvedLines, type AriaNode, type AriaSnapshot, ariaLineFor, ariaSnapshot, AXE_EXTRA_RULES, AXE_NODES_PER_RULE, axeLines, DESCRIBE_FOCUS, type FocusFacts, FULL_AXE_STATUS, type FullAxe, type KeyOutcome, type KeyScreen, KEYS_STATUS, keysLines, MOTION_STATUS, type MotionFacts, motionLines, RUN_FULL_AXE, RUNNING_ANIMATIONS } from '../a11y';
 
 /**
  * The capture suite of the named states (UX-P0.8), on the dense workspace (`npm run test:ui:capture`, and the classic
@@ -467,14 +467,30 @@ async function auditAccessibility(state: NamedState): Promise<string[]> {
     }
     await driver.manage().setTimeouts({ script: 120_000 });
     const result = JSON.parse(await driver.executeAsyncScript<string>(RUN_FULL_AXE, AXE_EXTRA_RULES, AXE_NODES_PER_RULE, acceptedSelectors())) as FullAxe;
-    const { lines, failures } = axeLines(state.name, state.surface, result);
-    for (const line of lines) {
+    // UX-P0.25: what axe left undecided outside the details pane is decided by scrolling or measured as pairs; no layer is
+    // closed and every scroll is restored, so the state's later captures stay as they were.
+    const undecided = result.undecidedContrast ?? [];
+    let resolved: Resolved | undefined;
+    if (undecided.length > 0) {
+        try {
+            resolved = JSON.parse(await driver.executeAsyncScript<string>(RESOLVE_CONTRAST, undecided, LAYER_SELECTOR)) as Resolved;
+        } catch (error) {
+            // A script timeout or a bad answer belongs to the resolve pass (CONTRAST_STATUS), not to the full run.
+            resolved = { targets: undecided.length, decided: 0, violations: [], pairs: [], unresolved: undecided, error: error instanceof Error ? error.message : String(error) };
+        }
+    }
+    const contrast = resolved === undefined ? { lines: [], failures: [] } : resolvedLines(state.name, 'dark-modern', resolved);
+    // The full run's undecided contrast stands (with its AXE_PENDING owner) unless the resolve pass decided all of it with no
+    // failure of its own: a violation, a pair below threshold, an unresolved node or an error keeps it.
+    const unresolved = resolved === undefined ? undefined : { unresolved: contrast.failures.length };
+    const { lines, failures } = axeLines(state.name, state.surface, result, undefined, undefined, undefined, unresolved);
+    for (const line of [...lines, ...contrast.lines]) {
         console.warn(line);
         if (/\(pending [^)]+\)$/.test(line)) {
             pendingLines.push(line);
         }
     }
-    return FULL_AXE_STATUS === 'hard' ? failures : [];
+    return [...(FULL_AXE_STATUS === 'hard' ? failures : []), ...(CONTRAST_STATUS === 'hard' ? contrast.failures : [])];
 }
 
 /** The audit with its own errors caught: an error is a failure, which fails the capture only once the rule is `hard`. */

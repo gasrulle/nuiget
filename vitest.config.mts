@@ -74,6 +74,7 @@ export default defineConfig({
                     environment: 'jsdom',
                     include: ['src/webview/**/*.test.{ts,tsx}'],
                     setupFiles: ['src/test/setup-frontend.ts'],
+                    globalSetup: ['src/test/axeCoverage.ts'],
                 },
             },
             {

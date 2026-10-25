@@ -20,6 +20,7 @@
  *
  * Plain data and string scripts, like `measure.ts`: `src/test/lint` imports it without ExTester.
  */
+import { composite, contrastRatio, parseCssColor, thresholdFor } from './contrast';
 import type { RuleStatus } from './measure';
 
 /** The rule of the tracker's a11y table this harness holds (`a11y-full-axe-real-page`, A5). */
@@ -58,6 +59,8 @@ export interface FullAxe {
     incomplete: AxeRule[];
     passes: number;
     inapplicable: number;
+    /** Every `color-contrast` target axe left undecided outside the details pane, uncapped: the resolve pass's input (UX-P0.25). */
+    undecidedContrast?: string[];
     error?: string;
 }
 
@@ -107,6 +110,7 @@ axe.run(document, {
     incomplete: rules(results.incomplete),
     passes: results.passes.length,
     inapplicable: results.inapplicable.length,
+    undecidedContrast: results.incomplete.filter(result => result.id === 'color-contrast').flatMap(result => result.nodes).map(node => node.target.map(String).join(' ')).filter(target => !inside(target)),
 })), error => done(JSON.stringify({ violations: [], incomplete: [], passes: 0, inapplicable: 0, error: String(error) })));
 `;
 
@@ -190,7 +194,7 @@ const statusText = (status: RuleStatus): string => (status === 'hard' ? 'hard' :
  * rule. A failure is a result neither tolerated, accepted nor pending; it fails the capture only while `status` is `hard`.
  * `surface` is the state's own (`NamedState.surface`), never read from its name.
  */
-export function axeLines(state: string, surface: 'main' | 'sidebar', result: FullAxe, status: RuleStatus = FULL_AXE_STATUS, registry: readonly AxePending[] = AXE_PENDING, accepted: readonly AxeAccepted[] = AXE_ACCEPTED): { lines: string[]; failures: string[] } {
+export function axeLines(state: string, surface: 'main' | 'sidebar', result: FullAxe, status: RuleStatus = FULL_AXE_STATUS, registry: readonly AxePending[] = AXE_PENDING, accepted: readonly AxeAccepted[] = AXE_ACCEPTED, resolvedContrast?: { unresolved: number }): { lines: string[]; failures: string[] } {
     if (result.error !== undefined) {
         return { lines: [`[axe] ${state}: axe.run failed: ${result.error} (${statusText(status)})`], failures: [`axe.run failed: ${result.error}`] };
     }
@@ -214,6 +218,11 @@ export function axeLines(state: string, surface: 'main' | 'sidebar', result: Ful
         // A5: what axe cannot decide in the details pane is its content below the fold (P5.12b), until P3.4.
         if (rule.id === 'color-contrast' && rule.outsideDetails === 0) {
             lines.push(`[axe] ${state}: incomplete color-contrast ×${rule.count} in the details pane (tolerated until P3.4)`);
+            continue;
+        }
+        // UX-P0.25: the resolve pass decided or measured every undecided node outside the pane; its `[contrast]` lines judge them.
+        if (rule.id === 'color-contrast' && resolvedContrast !== undefined && resolvedContrast.unresolved === 0) {
+            lines.push(`[axe] ${state}: color-contrast left ${rule.outsideDetails} undecided outside the details pane, all decided by the resolve pass ([contrast] lines)`);
             continue;
         }
         const pending = pendingFor(state, 'incomplete', rule.id, registry);
@@ -535,4 +544,272 @@ export function motionLines(where: string, facts: MotionFacts, status: RuleStatu
     const line = `[motion] ${where}: body.vscode-reduce-motion ${facts.reduceMotion ? 'set' : 'absent'}, ${facts.running} running${moving ? ` (${moving})` : ''}; durations fast ${facts.fast || 'unset'}, normal ${facts.normal || 'unset'} (${statusText(status)})`;
     const failures = [...(facts.reduceMotion ? [] : ['body.vscode-reduce-motion absent']), ...(facts.running === 0 ? [] : [`${facts.running} running animations`])];
     return { lines: [line], failures };
+}
+
+// ---- UX-P0.25: contrast axe could not decide, and the theme pass's moments ------------------------------------------
+
+/** The roots of a layer: text inside one is measured against the layer's own background. */
+export const LAYER_SELECTOR = '.nuiget-dialog, .nuiget-popover, [role="dialog"], [role="alertdialog"]';
+
+/** A text measured directly: its colour over the backgrounds from the element up to the first opaque one. */
+export interface ContrastPair {
+    target: string;
+    color: string;
+    /** Non-transparent backgrounds from the element upward, the last one opaque (empty when none was found). */
+    backgrounds: string[];
+    fontPx: number;
+    weight: number;
+    layer: boolean;
+}
+
+/** What `RESOLVE_CONTRAST` decided of the undecided targets. */
+export interface Resolved {
+    targets: number;
+    decided: number;
+    violations: Array<{ target: string; summary: string }>;
+    pairs: ContrastPair[];
+    unresolved: string[];
+    error?: string;
+}
+
+/**
+ * Runs in the webview, asynchronously: `arguments[0]` the `color-contrast` targets axe left undecided. A target in a list
+ * that scrolls is decided by scrolling its container one `clientHeight` at a time and re-running `color-contrast` scoped to
+ * it, the scroll position restored exactly after; a target inside a layer, under one, or still undecided becomes a pair
+ * measured directly (P0.23 design-advisor ruling; UX-P0.25).
+ */
+export const RESOLVE_CONTRAST = `
+const done = arguments[arguments.length - 1];
+const [targets, layerSelector] = arguments;
+const find = target => { try { return document.querySelector(target); } catch (error) { return null; } };
+const frame = () => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+const scrollerOf = el => {
+    for (let at = el.parentElement; at; at = at.parentElement) {
+        const style = getComputedStyle(at);
+        if (/auto|scroll/.test(style.overflowY) && at.scrollHeight > at.clientHeight + 1) return at;
+    }
+    return null;
+};
+const transparent = colour => !colour || colour === 'transparent' || /^rgba\\(.*,\\s*0\\)$/.test(colour);
+const opaque = colour => !/^rgba\\(/.test(colour) || /,\\s*1\\)$/.test(colour);
+(async () => {
+    const wanted = new Set(targets);
+    const decided = new Set();
+    const violations = [];
+    const containers = new Map();
+    for (const target of targets) {
+        const el = find(target);
+        const container = el && !el.closest(layerSelector) ? scrollerOf(el) : null;
+        if (container) containers.set(container, true);
+    }
+    for (const container of containers.keys()) {
+        const start = container.scrollTop;
+        try {
+            for (let top = 0; ; top += Math.max(1, container.clientHeight)) {
+                container.scrollTop = top;
+                await frame();
+                const results = await axe.run({ include: [container] }, { runOnly: ['color-contrast'], resultTypes: ['violations', 'passes', 'incomplete'] });
+                for (const rule of results.passes) for (const node of rule.nodes) decided.add(node.target.map(String).join(' '));
+                for (const rule of results.violations) for (const node of rule.nodes) {
+                    const target = node.target.map(String).join(' ');
+                    decided.add(target);
+                    if (wanted.has(target)) violations.push({ target, summary: node.failureSummary || '' });
+                }
+                if (top + container.clientHeight >= container.scrollHeight) break;
+            }
+        } finally {
+            container.scrollTop = start;
+            await frame();
+        }
+    }
+    const pairs = [];
+    const unresolved = [];
+    for (const target of targets) {
+        if (decided.has(target)) continue;
+        const el = find(target);
+        if (!el) { unresolved.push(target); continue; }
+        const layer = el.closest(layerSelector);
+        const backgrounds = [];
+        for (let at = el; at; at = at.parentElement) {
+            const colour = getComputedStyle(at).backgroundColor;
+            if (!transparent(colour)) {
+                backgrounds.push(colour);
+                if (opaque(colour)) break;
+            }
+            if (at === layer) break;
+        }
+        const style = getComputedStyle(el);
+        pairs.push({ target, color: style.color, backgrounds, fontPx: Number.parseFloat(style.fontSize) || 13, weight: Number(style.fontWeight) || 400, layer: Boolean(layer) });
+    }
+    done(JSON.stringify({ targets: targets.length, decided: targets.filter(target => decided.has(target)).length, violations, pairs, unresolved }));
+})().catch(error => done(JSON.stringify({ targets: targets.length, decided: 0, violations: [], pairs: [], unresolved: [], error: String(error) })));
+`;
+
+/** A pair's ratio and threshold: its backgrounds composited from the opaque one down, its colour over that; null without an opaque background. */
+export function pairContrast(pair: ContrastPair): { ratio: number; threshold: number } | null {
+    const layers = pair.backgrounds.map(parseCssColor);
+    const base = layers.at(-1);
+    if (base === undefined || base === null || base.a < 1 || layers.some(layer => layer === null)) {
+        return null;
+    }
+    let surface = base;
+    for (let index = layers.length - 2; index >= 0; index--) {
+        surface = composite(layers[index] as NonNullable<(typeof layers)[number]>, surface);
+    }
+    const fg = parseCssColor(pair.color);
+    if (fg === null) {
+        return null;
+    }
+    return { ratio: contrastRatio(fg.a < 1 ? composite(fg, surface) : fg, surface), threshold: thresholdFor(pair.fontPx, pair.weight, 'text') };
+}
+
+/**
+ * Runs in the webview, asynchronously: the theme pass's two rules (`color-contrast`, `target-size`) over `arguments[0]` (a
+ * selector, or the whole document when null), answering the violations, the number of `color-contrast` nodes that passed and
+ * the targets it left undecided (those inside the details pane left out when `arguments[1]`, the A5 tolerance until P3.4).
+ */
+export const RUN_CONTRAST = `
+const done = arguments[arguments.length - 1];
+const [scope, outsideDetailsOnly] = arguments;
+const details = document.querySelector('[data-testid="package-details-panel"]');
+const inDetails = target => { try { const el = document.querySelector(target); return details !== null && el !== null && details.contains(el); } catch (error) { return false; } };
+axe.run(scope ? { include: [scope] } : document, {
+    runOnly: ['color-contrast', 'target-size'],
+    rules: { 'target-size': { enabled: true } },
+    resultTypes: ['violations', 'passes', 'incomplete'],
+}).then(results => done(JSON.stringify({
+    violations: results.violations.map(rule => ({ rule: rule.id, count: rule.nodes.length, sample: rule.nodes.slice(0, 2).map(node => node.target.map(String).join(' ')).join(', ') })),
+    passes: results.passes.filter(rule => rule.id === 'color-contrast').reduce((sum, rule) => sum + rule.nodes.length, 0),
+    undecided: results.incomplete.filter(rule => rule.id === 'color-contrast').flatMap(rule => rule.nodes).map(node => node.target.map(String).join(' ')).filter(target => !outsideDetailsOnly || !inDetails(target)),
+})), error => done(JSON.stringify({ violations: [], passes: 0, undecided: [], error: String(error) })));
+`;
+
+/**
+ * The targets of `targets` drawn under the layer `layerSelector` (their box meets the layer's, outside it): the texts an
+ * open popup covers, which the theme pass hands to `RESOLVE_CONTRAST` with the popup's own undecided nodes (UX-P0.25, DO 5).
+ * An `executeScript` body: arguments `[layerSelector, targets]`.
+ */
+export const TEXTS_UNDER = `
+const [layerSelector, targets] = arguments;
+const layer = document.querySelector(layerSelector);
+if (layer === null) return [];
+const box = layer.getBoundingClientRect();
+return targets.filter(target => {
+    let el = null;
+    try { el = document.querySelector(target); } catch (error) { return false; }
+    if (el === null || layer.contains(el)) return false;
+    const rect = el.getBoundingClientRect();
+    return rect.right > box.left && rect.left < box.right && rect.bottom > box.top && rect.top < box.bottom;
+});
+`;
+
+/** What `RUN_CONTRAST` answers. */
+export interface ContrastRun {
+    violations: Array<{ rule: 'color-contrast' | 'target-size'; count: number; sample: string }>;
+    passes: number;
+    undecided: string[];
+    error?: string;
+}
+
+/** The theme pass's moments (UX-P0.25): a hovered row in each surface, the open ConfirmDialog, the search popup, the README. */
+export const MOMENTS = ['hover-main', 'readme', 'dialog', 'popup', 'hover-sidebar'] as const;
+export type Moment = (typeof MOMENTS)[number];
+
+/** The moments' and the resolve pass's status: pending on this item until its first run's red lines are ruled on, then `hard`. */
+export const CONTRAST_STATUS: RuleStatus = { pending: 'P0.25' };
+
+/** A red contrast line of today's tree: where (a moment or a capture state), the theme, the rule, the item that fixes it. */
+export interface ContrastPending {
+    where: string;
+    theme: string;
+    rule: 'color-contrast' | 'target-size' | 'pair' | 'unresolved';
+    item: string;
+}
+
+/** The red lines of today's tree (filled from the run that flips `CONTRAST_STATUS`, with its ruling). */
+export const CONTRAST_PENDING: readonly ContrastPending[] = [];
+
+const pendingContrast = (where: string, theme: string, rule: ContrastPending['rule'], registry: readonly ContrastPending[]): ContrastPending | undefined =>
+    registry.find(entry => entry.where === where && entry.theme === theme && entry.rule === rule);
+
+/**
+ * The `[contrast]` lines of a capture state's resolve pass and their failures: a violation found by scrolling, a pair below
+ * its threshold or a target neither decided nor measurable fails, unless an exact `CONTRAST_PENDING` entry names its item.
+ */
+export function resolvedLines(state: string, theme: string, resolved: Resolved, status: RuleStatus = CONTRAST_STATUS, registry: readonly ContrastPending[] = CONTRAST_PENDING): { lines: string[]; failures: string[] } {
+    const lines: string[] = [];
+    const failures: string[] = [];
+    const suffix = (rule: ContrastPending['rule']): string => {
+        const owner = pendingContrast(state, theme, rule, registry);
+        return owner ? `pending ${owner.item}` : statusText(status);
+    };
+    if (resolved.error !== undefined) {
+        return { lines: [`[contrast] ${state}: the resolve pass failed: ${resolved.error} (${statusText(status)})`], failures: [`resolve pass failed: ${resolved.error}`] };
+    }
+    const measured = resolved.pairs.map(pair => ({ pair, value: pairContrast(pair) }));
+    const below = measured.filter(entry => entry.value !== null && entry.value.ratio < entry.value.threshold);
+    const unmeasured = [...resolved.unresolved, ...measured.filter(entry => entry.value === null).map(entry => entry.pair.target)];
+    lines.push(`[contrast] ${state}: ${resolved.targets} undecided: ${resolved.decided} decided by scrolling, ${resolved.violations.length} violations, ${measured.filter(entry => entry.value !== null).length} measured as pairs, ${below.length} below, ${unmeasured.length} unresolved (${statusText(status)})`);
+    if (resolved.violations.length > 0) {
+        lines.push(`[contrast] ${state}: violation color-contrast ×${resolved.violations.length}: ${resolved.violations.slice(0, 2).map(entry => entry.target).join(', ')} (${suffix('color-contrast')})`);
+        if (pendingContrast(state, theme, 'color-contrast', registry) === undefined) {
+            failures.push(`contrast violation ×${resolved.violations.length}`);
+        }
+    }
+    if (below.length > 0) {
+        lines.push(`[contrast] ${state}: pairs below threshold ×${below.length}: ${below.slice(0, 3).map(entry => `${entry.pair.target} ${Math.round((entry.value?.ratio ?? 0) * 100) / 100} vs ${entry.value?.threshold}`).join(', ')} (${suffix('pair')})`);
+        if (pendingContrast(state, theme, 'pair', registry) === undefined) {
+            failures.push(`pairs below threshold ×${below.length}`);
+        }
+    }
+    if (unmeasured.length > 0) {
+        lines.push(`[contrast] ${state}: unresolved ×${unmeasured.length}: ${unmeasured.slice(0, 3).join(', ')} (${suffix('unresolved')})`);
+        if (pendingContrast(state, theme, 'unresolved', registry) === undefined) {
+            failures.push(`unresolved ×${unmeasured.length}`);
+        }
+    }
+    return { lines, failures };
+}
+
+/** What the theme pass read at a moment: the two rules' violations and passes, and the pairs of what stayed undecided. */
+export interface MomentFacts {
+    violations: Array<{ rule: 'color-contrast' | 'target-size'; count: number; sample: string }>;
+    passes: number;
+    resolved?: Resolved;
+    /** Why the moment could not be measured (a README the network did not deliver), or undefined. */
+    notMeasurable?: string;
+}
+
+/** The `[contrast] <moment>@<theme>` lines and their failures; "the rule ran" holds when a node passed or a pair was measured. */
+export function momentLines(moment: Moment, theme: string, facts: MomentFacts, status: RuleStatus = CONTRAST_STATUS, registry: readonly ContrastPending[] = CONTRAST_PENDING): { lines: string[]; failures: string[] } {
+    const where = `${moment}@${theme}`;
+    const suffix = (rule: ContrastPending['rule']): string => {
+        const owner = pendingContrast(moment, theme, rule, registry);
+        return owner ? `pending ${owner.item}` : statusText(status);
+    };
+    if (facts.notMeasurable !== undefined) {
+        return { lines: [`[contrast] ${where}: not measurable (${facts.notMeasurable}) (${suffix('unresolved')})`], failures: pendingContrast(moment, theme, 'unresolved', registry) ? [] : [`${where} not measurable`] };
+    }
+    const lines: string[] = [];
+    const failures: string[] = [];
+    const pairs = facts.resolved?.pairs.length ?? 0;
+    lines.push(`[contrast] ${where}: ${facts.passes} nodes passed, ${facts.violations.reduce((sum, entry) => sum + entry.count, 0)} violations, ${pairs} pairs measured (${statusText(status)})`);
+    for (const violation of facts.violations) {
+        lines.push(`[contrast] ${where}: violation ${violation.rule} ×${violation.count}: ${violation.sample} (${suffix(violation.rule)})`);
+        if (pendingContrast(moment, theme, violation.rule, registry) === undefined) {
+            failures.push(`${where} ${violation.rule} ×${violation.count}`);
+        }
+    }
+    if (facts.resolved !== undefined) {
+        const resolved = resolvedLines(moment, theme, facts.resolved, status, registry);
+        // The resolve pass's summary is the moment's own first line; an error is its only line and is kept.
+        const kept = facts.resolved.error !== undefined ? resolved.lines : resolved.lines.slice(1);
+        lines.push(...kept.map(line => line.replace(`[contrast] ${moment}:`, `[contrast] ${where}:`)));
+        failures.push(...resolved.failures.map(failure => `${where} ${failure}`));
+    }
+    if (facts.passes === 0 && pairs === 0) {
+        lines.push(`[contrast] ${where}: the rule decided nothing (${statusText(status)})`);
+        failures.push(`${where} decided nothing`);
+    }
+    return { lines, failures };
 }

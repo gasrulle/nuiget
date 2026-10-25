@@ -283,7 +283,13 @@ denylist of 10 features, each with its key in MDN browser-compat-data and the Ch
 measured where the colours exist: `src/test/ui/v2/theme.ui.test.ts` injects axe-core into the main panel and the
 sidebar in VS Code under six built-in themes (Dark and Light Modern, both high-contrast themes, Dark and Light 2026),
 with a row selected in each, and requires no `color-contrast` or `target-size` violation, with the contrast rule
-having checked text.
+having checked text. Since UX-P0.25 it also measures five moments in every theme: a hovered row that is not selected in
+each surface, the open bulk-uninstall `ConfirmDialog`, the search popup with the texts it covers, and a README with code.
+What axe leaves undecided there goes to the resolve pass of `src/test/ui/v2/a11y.ts`: each scroll container is stepped
+through and restored, and what stays undecided is measured as a colour pair over its composited backgrounds (a layer's
+own background for its text). The capture suite's audit runs the same pass on each state's undecided contrast, and
+`src/test/lint/theme-contrast.test.ts` measures a curated table of token pairs (`src/test/ui/v2/contrast.ts`) offline in
+the twelve token records of the theme dump.
 
 `src/webview/shared/primitives/icons.tsx` is the icon set (codicon paths as inline SVG). An icon takes
 `size`, `className` and `title` and renders no `style` attribute, which the Content Security Policy would
@@ -291,7 +297,11 @@ refuse (ADR-006); without a title it is hidden from assistive technology, with o
 name. Every icon is a `/* @__PURE__ */ React.memo(…)` call, so a bundle keeps only the icons it uses
 (`src/test/lint/webview-icons-pure.test.ts`; finding N63). The frontend test setup
 (`src/test/setup-frontend.ts`) registers the `toHaveNoViolations` matcher of
-`jest-axe`, so a component test can end with `expect(await axe(container)).toHaveNoViolations()`.
+`jest-axe`, so a component test can end with `expect(await axe(container)).toHaveNoViolations()`. It also records the
+rule ids of every axe run per test file; the frontend project's global setup (`src/test/axeCoverage.ts`) aggregates them
+after the run and fails it when a rule of `src/test/lint/__fixtures__/axe-rule-coverage.json` passed in no file, so a
+property a test pinned cannot vanish while every assertion still passes (UX-P0.25). A run that did not reach every
+frontend test file is skipped and says so.
 
 ### Primitives and the listbox contract
 

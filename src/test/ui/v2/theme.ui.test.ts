@@ -2,9 +2,10 @@ import { expect } from 'chai';
 import * as fs from 'fs';
 import * as path from 'path';
 import { By, Key } from 'vscode-extension-tester';
+import { CONTRAST_STATUS, type ContrastRun, LAYER_SELECTOR, type Moment, type MomentFacts, momentLines, type Resolved, RESOLVE_CONTRAST, RUN_CONTRAST, TEXTS_UNDER } from './a11y';
 import { selectTheme as pickTheme } from './layout';
 import { enterMainWebview, openMainPanel } from './mainWebview';
-import { driverOf, enterSidebarWebview, findByTestId, leaveWebview, openSidebarView, poll, screenshot } from './sidebarWebview';
+import { driverOf, enterSidebarWebview, findByTestId, leaveWebview, openSidebarView, poll, screenshot, waitForTestIdGone } from './sidebarWebview';
 
 /**
  * The theme pass of the 2.0 webviews (plan item P5.11, ruling of 2026-10-16), on the VSIX that `npm run test:ui` packages:
@@ -66,6 +67,128 @@ const RUN_AXE = `
 `;
 
 const nameOf = (theme: Theme): string => theme.labels[0];
+
+/** The theme's id as the capture suite and the contrast registry name it (`Dark High Contrast` → `dark-high-contrast`). */
+const slugOf = (theme: Theme): string => nameOf(theme).toLowerCase().replace(/ /g, '-');
+
+const MODIFIER = process.platform === 'darwin' ? Key.COMMAND : Key.CONTROL;
+
+// ---- UX-P0.25: the contrast moments (H49; A8, A14), each restoring what it changed before the next ----------------
+
+/**
+ * The two rules over `scope` (or the document), then the pairs of what axe left undecided (`a11y.ts`); with `textsUnder`, also
+ * the texts the layer `scope` covers, which an unscoped run leaves undecided.
+ */
+async function contrastAt(scope: string | null, outsideDetailsOnly: boolean, textsUnder = false): Promise<MomentFacts> {
+    const driver = driverOf();
+    if (!(await driver.executeScript<boolean>('return typeof window.axe !== "undefined";'))) {
+        await driver.executeScript(AXE_SOURCE);
+    }
+    await waitForTransitions();
+    await driver.manage().setTimeouts({ script: 120_000 });
+    const run = JSON.parse(await driver.executeAsyncScript<string>(RUN_CONTRAST, scope, outsideDetailsOnly)) as ContrastRun;
+    if (run.error !== undefined) {
+        return { violations: [], passes: 0, notMeasurable: `axe.run failed: ${run.error}` };
+    }
+    let undecided = run.undecided;
+    if (textsUnder && scope !== null) {
+        const page = JSON.parse(await driver.executeAsyncScript<string>(RUN_CONTRAST, null, true)) as ContrastRun;
+        if (page.error !== undefined) {
+            return { violations: [], passes: 0, notMeasurable: `axe.run over the page failed: ${page.error}` };
+        }
+        undecided = [...new Set([...undecided, ...(await driver.executeScript<string[]>(TEXTS_UNDER, scope, page.undecided))])];
+    }
+    const resolved = undecided.length > 0 ? JSON.parse(await driver.executeAsyncScript<string>(RESOLVE_CONTRAST, undecided, LAYER_SELECTOR)) as Resolved : undefined;
+    return { violations: run.violations, passes: run.passes, resolved };
+}
+
+/** Prints a moment's `[contrast]` lines and collects its failures. */
+function report(moment: Moment, theme: Theme, facts: MomentFacts, failures: string[]): void {
+    const { lines, failures: found } = momentLines(moment, slugOf(theme), facts);
+    for (const line of lines) {
+        console.warn(line);
+    }
+    failures.push(...found);
+}
+
+/** The rows of a list by their test ids, the current one marked. */
+async function rowsOf(listTestId: string): Promise<Array<{ id: string; current: boolean }>> {
+    return driverOf().executeScript<Array<{ id: string; current: boolean }>>(`
+        return Array.from(document.querySelectorAll('[data-testid="${listTestId}"] [role="option"]')).map(option => ({
+            id: option.closest('[data-testid^="package-row-"]').getAttribute('data-testid'),
+            current: option.getAttribute('aria-current') === 'true' || option.getAttribute('aria-selected') === 'true',
+        }));`);
+}
+
+const optionOf = async (rowTestId: string) => (await findByTestId(rowTestId, 30_000)).findElement(By.css('[role="option"]'));
+
+/** A pointer on the row, until it matches `:hover`. */
+async function hover(rowTestId: string): Promise<void> {
+    const option = await optionOf(rowTestId);
+    await driverOf().actions().move({ origin: option }).perform();
+    await poll(async () => ((await driverOf().executeScript<boolean>('return arguments[0].matches(":hover");', option)) ? true : undefined), `${rowTestId} under the pointer`, 10_000);
+}
+
+/** The row in or out of the bulk set, as a Ctrl/Cmd+click does. */
+async function toggle(rowTestId: string, selected: boolean): Promise<void> {
+    const option = await optionOf(rowTestId);
+    await driverOf().actions().keyDown(MODIFIER).click(option).keyUp(MODIFIER).perform();
+    await poll(async () => (((await option.getAttribute('aria-selected')) === 'true') === selected ? true : undefined), `${rowTestId} ${selected ? 'in' : 'out of'} the bulk set`, 10_000);
+}
+
+/** The main panel's four moments, from the Installed tab with its first row current; the tab is left as it was found. */
+async function mainMoments(theme: Theme, failures: string[]): Promise<void> {
+    const rows = await rowsOf('installed-list');
+    const current = rows.find(row => row.current) ?? rows[0];
+    const other = rows.find(row => row.id !== current.id) ?? rows[0];
+    // A hovered row that is not selected: the hover band under secondary text (A14).
+    await hover(other.id);
+    report('hover-main', theme, await contrastAt(null, true), failures);
+    await hover(current.id);
+    // The README of a package with code blocks (A8); the details pane's incompletes stay tolerated until P3.4.
+    await (await optionOf('package-row-newtonsoft.json')).click();
+    await (await findByTestId('details-tab-readme', 30_000)).click();
+    const readme = await poll(async () => (await driverOf().executeScript<string | null>(`
+        const content = document.querySelector('[data-testid="readme-content"]');
+        if (content) return content.querySelector('code, pre') ? 'content' : 'no code';
+        return document.querySelector('[data-testid="readme-empty"]') ? 'empty' : null;`)) ?? undefined, 'the README or its empty state', 60_000);
+    report('readme', theme, readme === 'content' ? await contrastAt(null, true) : { violations: [], passes: 0, notMeasurable: readme === 'empty' ? 'the README did not load (readme-empty)' : 'the README has no code element' }, failures);
+    await (await findByTestId('details-tab-details', 30_000)).click();
+    await (await optionOf(current.id)).click();
+    // The open ConfirmDialog of a bulk uninstall of one row, cancelled; never confirmed.
+    await toggle(other.id, true);
+    await (await findByTestId('uninstall-selected-button', 10_000)).click();
+    await findByTestId('confirm-dialog', 10_000);
+    report('dialog', theme, await contrastAt('[data-testid="confirm-dialog"]', false), failures);
+    await (await findByTestId('confirm-dialog-cancel', 10_000)).click();
+    await waitForTestIdGone('confirm-dialog', 10_000);
+    await toggle(other.id, false);
+    // The search popup with its suggestions; closed with Escape and the box cleared.
+    const search = await findByTestId('search-input', 30_000);
+    await search.click();
+    await search.sendKeys(Key.chord(MODIFIER, 'a'), Key.BACK_SPACE, 'Serilog');
+    await poll(async () => ((await driverOf().findElements(By.css('[data-testid="search-suggestions"] [role="option"]:not([aria-disabled="true"])'))).length > 0 ? true : undefined), 'an enabled suggestion', 60_000);
+    report('popup', theme, await contrastAt('[data-testid="search-suggestions"]', false, true), failures);
+    await poll(async () => {
+        if ((await driverOf().findElements(By.css('[data-testid="search-suggestions"]'))).length === 0) {
+            return true;
+        }
+        await (await findByTestId('search-input')).sendKeys(Key.ESCAPE);
+        return undefined;
+    }, 'the popup closed', 10_000);
+    await (await findByTestId('search-input')).sendKeys(Key.chord(MODIFIER, 'a'), Key.BACK_SPACE);
+    await (await findByTestId('installed-tab', 30_000)).click();
+}
+
+/** The sidebar's hovered row that is not selected, the pointer put back on the selected one. */
+async function sidebarMoment(theme: Theme, failures: string[]): Promise<void> {
+    const rows = await rowsOf('sidebar-installed-list');
+    const current = rows.find(row => row.current) ?? rows[0];
+    const other = rows.find(row => row.id !== current.id) ?? rows[0];
+    await hover(other.id);
+    report('hover-sidebar', theme, await contrastAt(null, false), failures);
+    await hover(current.id);
+}
 
 /** Picks `theme` in the Color Theme quick pick by an exact label (`layout.ts`, shared with the capture suite). */
 async function selectTheme(theme: Theme): Promise<void> {
@@ -228,6 +351,9 @@ describe('2.0 theme pass', () => {
             await (await findByTestId('installed-tab', 30_000)).click();
             await selectFirstRow('[data-testid="installed-list"] [role="option"]', 'installed rows in the main panel');
             const installed = await runAxe();
+            // UX-P0.25: the contrast moments, the same ordered set in every theme (H30).
+            const contrastFailures: string[] = [];
+            await mainMoments(theme, contrastFailures);
             if (theme.bodyClass.startsWith('vscode-high-contrast')) {
                 await expectContrastBorders(`main panel under ${nameOf(theme)}`);
             }
@@ -236,8 +362,12 @@ describe('2.0 theme pass', () => {
             await enterSidebarWebview();
             await waitForBodyClass(theme);
             await selectFirstRow('[data-testid="sidebar-installed-list"] [role="option"]', 'rows in the sidebar');
+            await sidebarMoment(theme, contrastFailures);
             const sidebar = await runAxe();
             await leaveWebview();
+            if (CONTRAST_STATUS === 'hard') {
+                expect(contrastFailures, `contrast moments under ${nameOf(theme)}`).to.deep.equal([]);
+            }
             expectNoViolations('main panel (Updates)', theme, updates);
             expectNoViolations('main panel (Installed)', theme, installed);
             expectNoViolations('sidebar', theme, sidebar);

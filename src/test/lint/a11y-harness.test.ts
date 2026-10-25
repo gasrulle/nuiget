@@ -3,7 +3,7 @@ import axe from 'axe-core';
 import { afterEach, beforeAll, describe, expect, it } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
-import { acceptedSelectors, ARIA_SNAPSHOT, type AriaNode, ariaLine, ariaLineFor, ariaSnapshot, AXE_ACCEPTED, AXE_EXTRA_RULES, AXE_PENDING, type AxeRule, axeLines, compareAria, DESCRIBE_FOCUS, type FocusFacts, focusLine, FULL_AXE_RULE, FULL_AXE_STATUS, type FullAxe, KEYS_EXPECTED, KEYS_PENDING, KEYS_STATUS, keysLines, maskDigits, MOTION_STATUS, type MotionFacts, motionLines, RUN_FULL_AXE, RUNNING_ANIMATIONS, showsRing } from '../ui/v2/a11y';
+import { acceptedSelectors, ARIA_SNAPSHOT, CONTRAST_PENDING, CONTRAST_STATUS, type ContrastPair, type ContrastRun, LAYER_SELECTOR, momentLines, MOMENTS, pairContrast, type Resolved, RESOLVE_CONTRAST, resolvedLines, RUN_CONTRAST, TEXTS_UNDER, type AriaNode, ariaLine, ariaLineFor, ariaSnapshot, AXE_ACCEPTED, AXE_EXTRA_RULES, AXE_PENDING, type AxeRule, axeLines, compareAria, DESCRIBE_FOCUS, type FocusFacts, focusLine, FULL_AXE_RULE, FULL_AXE_STATUS, type FullAxe, KEYS_EXPECTED, KEYS_PENDING, KEYS_STATUS, keysLines, maskDigits, MOTION_STATUS, type MotionFacts, motionLines, RUN_FULL_AXE, RUNNING_ANIMATIONS, showsRing } from '../ui/v2/a11y';
 
 /**
  * UX-P0.23: the accessibility harness of the capture suite (`src/test/ui/v2/a11y.ts`). The scripts run inside VS Code
@@ -253,5 +253,105 @@ describe('the accessibility harness (UX-P0.23)', () => {
             const lines = (JSON.parse(fs.readFileSync(path.resolve(__dirname, '../ui/v2/aria', `${snapshotOf[screen]}.json`), 'utf8')) as { lines: string[] }).lines.map(stripped);
             expect((expected ?? []).filter(stop => !lines.includes(stop)), screen).toEqual([]);
         }
+    });
+    it('holds the contrast moments and the resolve pass pending on UX-P0.25 until its run is ruled on (UX-P0.25)', () => {
+        expect(CONTRAST_STATUS).toEqual({ pending: 'P0.25' });
+        expect(CONTRAST_PENDING).toEqual([]);
+        expect(MOMENTS).toEqual(['hover-main', 'readme', 'dialog', 'popup', 'hover-sidebar']);
+    });
+
+    it('resolves undecided contrast: a list that scrolls is scrolled and restored, text in a layer is measured on the layer\'s background (UX-P0.25)', async () => {
+        document.body.innerHTML = `
+            <main style="background-color: rgb(31, 31, 31)">
+              <div class="list" style="overflow-y: auto"><span id="row" style="color: rgb(204, 204, 204)">Serilog</span></div>
+              <div role="dialog" aria-label="Uninstall" style="background-color: rgb(37, 37, 38)"><p id="text" style="color: rgb(150, 150, 150)">From App:</p></div>
+            </main>`;
+        const list = document.querySelector<HTMLElement>('.list')!;
+        let top = 50;
+        const seen: number[] = [];
+        Object.defineProperties(list, {
+            scrollHeight: { value: 300 }, clientHeight: { value: 100 },
+            scrollTop: { get: () => top, set: (value: number) => { top = value; seen.push(value); } },
+        });
+        const answer = JSON.parse(await runAsync(RESOLVE_CONTRAST, ['#row', '#text', '#gone'], LAYER_SELECTOR)) as Resolved;
+        expect(answer.error).toBeUndefined();
+        // Every step of the container, then back where it was.
+        expect(seen).toEqual([0, 100, 200, 50]);
+        expect(top).toBe(50);
+        expect(answer.unresolved).toEqual(['#gone']);
+        const byTarget = Object.fromEntries(answer.pairs.map(pair => [pair.target, pair]));
+        expect(byTarget['#row']).toMatchObject({ color: 'rgb(204, 204, 204)', backgrounds: ['rgb(31, 31, 31)'], layer: false });
+        expect(byTarget['#text']).toMatchObject({ color: 'rgb(150, 150, 150)', backgrounds: ['rgb(37, 37, 38)'], layer: true });
+    });
+
+    it('hands the resolve pass the contrast axe left undecided, outside the details pane only when asked, and scoped to a layer (UX-P0.25)', async () => {
+        const text = 'style="color: rgb(150, 150, 150); background-color: rgb(31, 31, 31)"';
+        // Axe on jsdom leaves the first text of a context undecided (no layout): enough to see what each script passes on.
+        document.body.innerHTML = `<main><div data-testid="package-details-panel"><p id="in" ${text}>README</p></div></main>`;
+        expect((JSON.parse(await runAsync(RUN_FULL_AXE, [], 8, [])) as FullAxe).undecidedContrast).toEqual([]);
+        const outsideOnly = JSON.parse(await runAsync(RUN_CONTRAST, null, true)) as ContrastRun;
+        expect(outsideOnly).toMatchObject({ undecided: [], passes: 0 });
+        expect(outsideOnly.error).toBeUndefined();
+        expect((JSON.parse(await runAsync(RUN_CONTRAST, null, false)) as ContrastRun).undecided).toEqual(['#in']);
+        document.body.innerHTML = `<main><p id="out" ${text}>Serilog</p><div id="pop" role="listbox"><p id="suggestion" ${text}>Serilog.Sinks</p></div></main>`;
+        expect((JSON.parse(await runAsync(RUN_FULL_AXE, [], 8, [])) as FullAxe).undecidedContrast).toEqual(['#out']);
+        expect((JSON.parse(await runAsync(RUN_CONTRAST, '#pop', false)) as ContrastRun).undecided).toEqual(['#suggestion']);
+    });
+
+    it('picks the texts an open layer covers: outside it, their box meeting its box (UX-P0.25)', () => {
+        document.body.innerHTML = '<div id="pop"><span id="own">Serilog</span></div><span id="under">Newtonsoft.Json</span><span id="beside">13.0.2</span>';
+        const box = (left: number, top: number, width: number, height: number) => () => ({ left, top, right: left + width, bottom: top + height, width, height, x: left, y: top, toJSON: () => ({}) }) as DOMRect;
+        document.querySelector('#pop')!.getBoundingClientRect = box(10, 30, 300, 120);
+        document.querySelector('#under')!.getBoundingClientRect = box(20, 60, 100, 18);
+        document.querySelector('#beside')!.getBoundingClientRect = box(320, 60, 40, 18);
+        const under = (...args: unknown[]): string[] => new Function(TEXTS_UNDER)(...args) as string[];
+        expect(under('#pop', ['#own', '#under', '#beside', '#gone', '['])).toEqual(['#under']);
+        expect(under('#closed', ['#under'])).toEqual([]);
+    });
+
+    it('measures a pair over its composited backgrounds and judges the resolve pass, hard or pending (UX-P0.25)', () => {
+        const pair = (target: string, color: string, backgrounds: string[]): ContrastPair => ({ target, color, backgrounds, fontPx: 13, weight: 400, layer: false });
+        expect(pairContrast(pair('#a', 'rgb(204, 204, 204)', ['rgb(31, 31, 31)']))?.ratio).toBeCloseTo(10.26, 1);
+        // A translucent hover band over the editor: composited before the text is measured.
+        const hovered = pairContrast(pair('#b', 'rgb(157, 157, 157)', ['rgba(255, 255, 255, 0.1)', 'rgb(31, 31, 31)']));
+        expect(hovered?.threshold).toBe(4.5);
+        expect(hovered!.ratio).toBeLessThan(pairContrast(pair('#b', 'rgb(157, 157, 157)', ['rgb(31, 31, 31)']))!.ratio);
+        expect(pairContrast(pair('#c', 'rgb(0, 0, 0)', []))).toBeNull();
+        const resolved: Resolved = { targets: 4, decided: 1, violations: [], pairs: [pair('#a', 'rgb(204, 204, 204)', ['rgb(31, 31, 31)']), pair('#d', 'rgb(100, 100, 100)', ['rgb(31, 31, 31)'])], unresolved: ['#e'] };
+        const hard = resolvedLines('main-installed-single', 'dark-modern', resolved, 'hard', []);
+        expect(hard.lines[0]).toBe('[contrast] main-installed-single: 4 undecided: 1 decided by scrolling, 0 violations, 2 measured as pairs, 1 below, 1 unresolved (hard)');
+        expect(hard.failures).toEqual(['pairs below threshold ×1', 'unresolved ×1']);
+        const owned = resolvedLines('main-installed-single', 'dark-modern', resolved, 'hard', [{ where: 'main-installed-single', theme: 'dark-modern', rule: 'pair', item: 'P4.6' }]);
+        expect(owned.failures).toEqual(['unresolved ×1']);
+        expect(owned.lines.find(line => line.includes('pairs below'))).toMatch(/\(pending P4\.6\)$/);
+    });
+
+    it('reports a theme pass moment: its violations, its pairs, and a moment that decided nothing or could not be measured (UX-P0.25)', () => {
+        const facts = { violations: [{ rule: 'color-contrast' as const, count: 2, sample: '.a, .b' }], passes: 12 };
+        expect(momentLines('hover-main', 'light-2026', facts, 'hard', [])).toEqual({
+            lines: ['[contrast] hover-main@light-2026: 12 nodes passed, 2 violations, 0 pairs measured (hard)', '[contrast] hover-main@light-2026: violation color-contrast ×2: .a, .b (hard)'],
+            failures: ['hover-main@light-2026 color-contrast ×2'],
+        });
+        expect(momentLines('hover-main', 'light-2026', facts, 'hard', [{ where: 'hover-main', theme: 'light-2026', rule: 'color-contrast', item: 'P4.6' }]).failures).toEqual([]);
+        expect(momentLines('popup', 'dark-modern', { violations: [], passes: 0 }, 'hard', []).failures).toEqual(['popup@dark-modern decided nothing']);
+        // A resolve pass that failed keeps its line: the moment's summary does not stand in for it.
+        const failed = momentLines('popup', 'dark-modern', { violations: [], passes: 3, resolved: { targets: 2, decided: 0, violations: [], pairs: [], unresolved: ['#a', '#b'], error: 'script timeout' } }, { pending: 'P0.25' }, []);
+        expect(failed.lines).toEqual(['[contrast] popup@dark-modern: 3 nodes passed, 0 violations, 0 pairs measured (pending P0.25)', '[contrast] popup@dark-modern: the resolve pass failed: script timeout (pending P0.25)']);
+        expect(failed.failures).toEqual(['popup@dark-modern resolve pass failed: script timeout']);
+        expect(momentLines('readme', 'dark-modern', { violations: [], passes: 0, notMeasurable: 'the README did not load (readme-empty)' }, { pending: 'P0.25' }, [])).toEqual({
+            lines: ['[contrast] readme@dark-modern: not measurable (the README did not load (readme-empty)) (pending P0.25)'], failures: ['readme@dark-modern not measurable'],
+        });
+    });
+
+    it('lets the resolve pass stand in for the contrast axe left undecided outside the details pane (UX-P0.25)', () => {
+        const undecided = { violations: [], incomplete: [rule('color-contrast', [{ target: '#r' }], 21, 21)], passes: 40, inapplicable: 50 };
+        expect(axeLines('main-installed-single', 'main', undecided, 'hard', [], [], { unresolved: 0 })).toEqual({
+            lines: [
+                '[axe] main-installed-single: 0 violations, 1 incomplete, 40 rules passed, 50 inapplicable (a11y-full-axe-real-page, hard)',
+                '[axe] main-installed-single: color-contrast left 21 undecided outside the details pane, all decided by the resolve pass ([contrast] lines)',
+            ],
+            failures: [],
+        });
+        expect(axeLines('main-installed-single', 'main', undecided, 'hard', [], [], { unresolved: 1 }).failures).toEqual(['incomplete color-contrast ×21']);
     });
 });
