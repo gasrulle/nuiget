@@ -150,7 +150,8 @@ async function mainMoments(theme: Theme, failures: string[]): Promise<void> {
     await (await findByTestId('details-tab-readme', 30_000)).click();
     const readme = await poll(async () => (await driverOf().executeScript<string | null>(`
         const content = document.querySelector('[data-testid="readme-content"]');
-        if (content) return content.querySelector('code, pre') ? 'content' : 'no code';
+        // ReadmeView mounts the container empty and fills it in an effect: decide once it holds the rendered README.
+        if (content && content.childElementCount > 0) return content.querySelector('code, pre') ? 'content' : 'no code';
         return document.querySelector('[data-testid="readme-empty"]') ? 'empty' : null;`)) ?? undefined, 'the README or its empty state', 60_000);
     report('readme', theme, readme === 'content' ? await contrastAt(null, true) : { violations: [], passes: 0, notMeasurable: readme === 'empty' ? 'the README did not load (readme-empty)' : 'the README has no code element' }, failures);
     await (await findByTestId('details-tab-details', 30_000)).click();
