@@ -337,8 +337,8 @@ export function ariaLineFor(state: string, actual: AriaSnapshot, committed: Aria
 
 // ---- UX-P0.24: keyboard paths and reduced motion -------------------------------------------------------------------
 
-/** The keyboard walks' status: pending on this item until its first run's stops are recorded, then `hard`. */
-export const KEYS_STATUS: RuleStatus = { pending: 'P0.24' };
+/** The keyboard walks' status: `hard` since the closing commit of P0.24; recorded from run 40146274455. */
+export const KEYS_STATUS: RuleStatus = 'hard';
 
 /** The reduced-motion check's status: P4.5 makes the tokens honour `body.vscode-reduce-motion` (A4, H29, H87). */
 export const MOTION_STATUS: RuleStatus = { pending: 'P4.5' };
@@ -406,8 +406,43 @@ export interface KeyOutcome {
     skipped?: string;
 }
 
-/** The tab sequence each screen's walk records, as `focusLine`s (filled from the run that flips `KEYS_STATUS`). */
-export const KEYS_EXPECTED: Readonly<Partial<Record<KeyScreen, readonly string[]>>> = {};
+/**
+ * The tab sequence each screen's walk records, as `focusLine`s, copied from run 40146274455 (design-advisor ruling of
+ * 2026-10-25; interaction model §5 has no Tab-order table, H48). Only the item whose change moves a stop updates its screen
+ * here, in the same commit, with the reason in its note (P2.5 the tab stops' names, P3.7a the main Installed row order).
+ */
+export const KEYS_EXPECTED: Readonly<Partial<Record<KeyScreen, readonly string[]>>> = {
+    'main-installed': [
+        'combobox "Search packages, or filter with @installed, @updates or @vulnerable" {search-input}',
+        'tab "Installed # # package with known vulnerabilities" {installed-tab}',
+        'button "Select all" {select-all-button}',
+        'button "Direct packages (#)" {section-header-direct}',
+        'option "Microsoft.Extensions.DependencyInjection.Abstractions #"',
+        'button "Transitive packages" {section-header-transitive}',
+        'separator "Resize the package list" {sash}',
+    ],
+    'main-updates': [
+        'combobox "Search packages, or filter with @installed, @updates or @vulnerable" {search-input}',
+        'tab "Updates #" {updates-tab}',
+        'button "Select all" {select-all-button}',
+        'option "Dapper # → #"',
+        'separator "Resize the package list" {sash}',
+    ],
+    'main-browse': [
+        'combobox "Search packages, or filter with @installed, @updates or @vulnerable" {search-input}',
+        'option "Newtonsoft.Json #"',
+        'separator "Resize the package list" {sash}',
+    ],
+    'sidebar': [
+        'combobox "Search packages, or filter with @installed or @updates" {sidebar-search-input}',
+        'button "Installed #" {section-header-installed}',
+        'option "Dapper #"',
+        'separator "Resize the Installed and Updates sections" {sash}',
+        'button "Updates #" {section-header-updates}',
+        'button "Update all (#)" {sidebar-update-all-button}',
+        'option "Dapper # → #"',
+    ],
+};
 
 /** The key paths today's tree fails, by `<screen> <path>`, with the item that fixes them (each under a ruling). */
 export const KEYS_PENDING: Readonly<Record<string, string>> = {
@@ -415,13 +450,24 @@ export const KEYS_PENDING: Readonly<Record<string, string>> = {
     // the walks record it and never press it.
     'main-updates rows Enter': 'P4.2a',
     'sidebar rows Enter': 'P4.2b',
+    // ADR-013 Decision 6 (SB7, X21, A11), P4.3: the search box ↔ list bridge. Today the search box handles ArrowDown only
+    // while its popup is open (`SearchBox.tsx:176-191`) and the list moves on ArrowUp whatever the modifier (`Listbox.tsx:144`).
+    'main-installed search Ctrl+DownArrow': 'P4.3',
+    'main-installed rows Ctrl+UpArrow': 'P4.3',
+    'main-updates search Ctrl+DownArrow': 'P4.3',
+    'main-updates rows Ctrl+UpArrow': 'P4.3',
+    'main-browse search Ctrl+DownArrow': 'P4.3',
+    'main-browse rows Ctrl+UpArrow': 'P4.3',
+    'sidebar search Ctrl+DownArrow': 'P4.3',
+    'sidebar rows Ctrl+UpArrow': 'P4.3',
 };
 
 /**
  * The `[keys]` lines of a screen and their failures: the tab sequence against `KEYS_EXPECTED`, a ring at every stop, and
  * each key outcome against its expectation. A failure fails the walk only while `status` is `hard`.
  */
-export function keysLines(screen: KeyScreen, stops: readonly FocusFacts[], outcomes: readonly KeyOutcome[], status: RuleStatus = KEYS_STATUS, expected: readonly string[] | undefined = KEYS_EXPECTED[screen], pending: Readonly<Record<string, string>> = KEYS_PENDING): { lines: string[]; failures: string[] } {
+export function keysLines(screen: KeyScreen, stops: readonly FocusFacts[], outcomes: readonly KeyOutcome[], status: RuleStatus = KEYS_STATUS, expectations: Readonly<Partial<Record<KeyScreen, readonly string[]>>> = KEYS_EXPECTED, pending: Readonly<Record<string, string>> = KEYS_PENDING): { lines: string[]; failures: string[] } {
+    const expected = expectations[screen];
     const lines: string[] = [];
     const failures: string[] = [];
     const suffix = (path: string): string => {

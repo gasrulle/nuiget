@@ -625,6 +625,12 @@ function printLines(lines: readonly string[]): void {
 
 /** A screen's walk: the tab sequence from its search box, then its keys; fails only once `KEYS_STATUS` is `hard`. */
 async function walkScreen(screen: KeyScreen, rootTestId: string, searchTestId: string, keys: () => Promise<KeyOutcome[]>): Promise<void> {
+    // The settled state the ARIA snapshot reads: a tab's name arrives with its count (design-advisor ruling of 2026-10-25).
+    try {
+        await poll(async () => ((await script<string>(UNSETTLED)) === '' ? true : undefined), 'the screen\'s data to settle', SETTLE_MS);
+    } catch {
+        console.warn(`[keys] ${screen}: not settled after ${SETTLE_MS / 1000} s (${await script<string>(UNSETTLED)})`);
+    }
     const stops = await walkTab(rootTestId, searchTestId);
     const { lines, failures } = keysLines(screen, stops, await keys());
     printLines(lines);

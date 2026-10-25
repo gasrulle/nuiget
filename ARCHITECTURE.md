@@ -972,8 +972,8 @@ These parts are the current truth for the build, test and release pipeline.
   the keyboard paths of interaction model §5 on four screens (main Installed, Updates and Browse, the sidebar), each from
   scratch: Tab from the search box (each stop recorded as a line of the screen's ARIA snapshot, with whether it shows a
   ring), the row keys that write nothing and the bulk dialog's trap, Escape and focus restore (`[keys]` lines against
-  `KEYS_EXPECTED`); and it reads once what moves while the panel's first list loads under VS Code's reduce-motion signal
-  (`[motion]`; UX-P0.24). Before the first state the run measures the workbench's own controls in its look (the
+  `KEYS_EXPECTED`, recorded from run 40146274455; a walk starts once the snapshot's settle predicate holds); and it
+  reads once what moves while the panel's first list loads under VS Code's reduce-motion signal (`[motion]`; UX-P0.24). Before the first state the run measures the workbench's own controls in its look (the
   Extensions view and an extension's editor, the Settings editor, the command palette; `src/test/ui/v2/workbench.ts`),
   prints one `[workbench]` line per control and writes `workbench.<look>.json` next to the crops: the height rules
   compare a control with the workbench's of the same run, and the `ui` job's files are kept as

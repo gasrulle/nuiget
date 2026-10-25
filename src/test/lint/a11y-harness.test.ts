@@ -167,10 +167,17 @@ describe('the accessibility harness (UX-P0.23)', () => {
         expect(ariaLineFor('main-updates', snapshot, { state: 'main-updates', lines: ['listbox "Installed"'] }))
             .toBe('[aria] main-updates: 1 nodes, differs (-1 +1; first removed: listbox "Installed"; first added: listbox "Updates")');
     });
-    it('holds the keyboard walks pending on UX-P0.24 and the motion check on P4.5, and never presses an Enter that writes (UX-P0.24)', () => {
-        expect(KEYS_STATUS).toEqual({ pending: 'P0.24' });
+    it('holds the keyboard walks hard since their first run, the motion check pending on P4.5, and never presses an Enter that writes (UX-P0.24)', () => {
+        expect(KEYS_STATUS).toBe('hard');
         expect(MOTION_STATUS).toEqual({ pending: 'P4.5' });
-        expect(KEYS_PENDING).toEqual({ 'main-updates rows Enter': 'P4.2a', 'sidebar rows Enter': 'P4.2b' });
+        const bridge = ['main-installed', 'main-updates', 'main-browse', 'sidebar'].flatMap(screen => [[`${screen} search Ctrl+DownArrow`, 'P4.3'], [`${screen} rows Ctrl+UpArrow`, 'P4.3']]);
+        expect(KEYS_PENDING).toEqual({ 'main-updates rows Enter': 'P4.2a', 'sidebar rows Enter': 'P4.2b', ...Object.fromEntries(bridge) });
+        expect(Object.entries(KEYS_EXPECTED).map(([screen, stops]) => `${screen} ${stops?.length} ${stops?.[0]}`)).toEqual([
+            'main-installed 7 combobox "Search packages, or filter with @installed, @updates or @vulnerable" {search-input}',
+            'main-updates 5 combobox "Search packages, or filter with @installed, @updates or @vulnerable" {search-input}',
+            'main-browse 3 combobox "Search packages, or filter with @installed, @updates or @vulnerable" {search-input}',
+            'sidebar 7 combobox "Search packages, or filter with @installed or @updates" {sidebar-search-input}',
+        ]);
     });
 
     it('describes the focused element as a line of the screen\'s ARIA snapshot, with what would draw its ring (UX-P0.24)', () => {
@@ -200,7 +207,7 @@ describe('the accessibility harness (UX-P0.23)', () => {
             { path: 'rows End', observed: 'row 14', expected: 'row 15' },
             { path: 'rows Enter', observed: '', expected: '', skipped: 'Enter uninstalls' },
         ];
-        const hard = keysLines('sidebar', stops, outcomes, 'hard', expected, { 'sidebar rows Enter': 'P4.2b' });
+        const hard = keysLines('sidebar', stops, outcomes, 'hard', { sidebar: expected }, { 'sidebar rows Enter': 'P4.2b' });
         expect(hard.lines).toEqual([
             '[keys] sidebar tab: 3 stops: combobox "Search" {search-input} → tab "Installed #" {installed-tab} → option "Serilog #"; as expected (hard)',
             '[keys] sidebar ring: no visible ring at option "Serilog #" (hard)',
@@ -210,8 +217,8 @@ describe('the accessibility harness (UX-P0.23)', () => {
         ]);
         expect(hard.failures).toEqual(['sidebar ring ×1', 'sidebar rows End']);
         // Another order, or none recorded yet, fails the sequence; a pending status prints it and fails nothing in the suite.
-        expect(keysLines('sidebar', stops.slice(0, 2), [], 'hard', expected, {}).failures).toEqual(['sidebar tab order']);
-        const pending = keysLines('main-browse', stops.slice(0, 2), [], { pending: 'P0.24' }, undefined, {});
+        expect(keysLines('sidebar', stops.slice(0, 2), [], 'hard', { sidebar: expected }, {}).failures).toEqual(['sidebar tab order']);
+        const pending = keysLines('main-browse', stops.slice(0, 2), [], { pending: 'P0.24' }, {}, {});
         expect(pending.lines[0]).toBe('[keys] main-browse tab: 2 stops: combobox "Search" {search-input} → tab "Installed #" {installed-tab}; no expected sequence (pending P0.24)');
         expect(pending.failures).toEqual(['main-browse tab order']);
     });
