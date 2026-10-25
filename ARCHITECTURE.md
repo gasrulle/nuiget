@@ -408,7 +408,9 @@ jsdom lays nothing out, so a test that renders a `Listbox` installs a layout fir
 and axe skips its `aria-hidden-focus` rule instead of failing it. `axeRuleOutcome()` lets a test assert that
 a rule ran and passed. The virtualizer itself is never mocked. A dialog or popover is not inside the
 container that `render()` returns: its tests run `axe(document.body)`, and `installFakeViewport()` gives the
-window a size and chosen elements a box for placement.
+window a size and chosen elements a box for placement. A feature test that opens a dialog calls
+`expectFocusAfterClose('<case>')` (same file) after each close: focus on `<body>` fails, unless
+`FOCUS_AFTER_CLOSE_PENDING` names the case and the item that fixes it (UX-P0.24; A6, P4.4).
 
 ### Message bus and store slices
 
@@ -966,7 +968,12 @@ These parts are the current truth for the build, test and release pipeline.
   surface), and in
   the Modern UI pass a snapshot of the accessible tree read with axe's own role and name functions, digits masked,
   written to `aria/<state>.json` beside the crops and compared with `src/test/ui/v2/aria/<state>.json` (`[aria]` lines;
-  a snapshot is adopted from a green run's artifact, like a golden). Before the first state the run measures the workbench's own controls in its look (the
+  a snapshot is adopted from a green run's artifact, like a golden). After the captures, in that pass, the suite walks
+  the keyboard paths of interaction model §5 on four screens (main Installed, Updates and Browse, the sidebar), each from
+  scratch: Tab from the search box (each stop recorded as a line of the screen's ARIA snapshot, with whether it shows a
+  ring), the row keys that write nothing and the bulk dialog's trap, Escape and focus restore (`[keys]` lines against
+  `KEYS_EXPECTED`); and it reads once what moves while the panel's first list loads under VS Code's reduce-motion signal
+  (`[motion]`; UX-P0.24). Before the first state the run measures the workbench's own controls in its look (the
   Extensions view and an extension's editor, the Settings editor, the command palette; `src/test/ui/v2/workbench.ts`),
   prints one `[workbench]` line per control and writes `workbench.<look>.json` next to the crops: the height rules
   compare a control with the workbench's of the same run, and the `ui` job's files are kept as

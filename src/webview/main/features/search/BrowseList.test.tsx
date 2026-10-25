@@ -4,7 +4,7 @@ import { axe } from 'jest-axe';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { ALL_PROJECTS, type PackageSearchResult, type SessionSnapshot } from '../../../../protocol';
 import { createFakeHost, type FakeHost } from '../../../shared/bus/testSupport';
-import { installFakeLayout } from '../../../shared/primitives/testSupport';
+import { expectFocusAfterClose, installFakeLayout } from '../../../shared/primitives/testSupport';
 import { StoreProvider } from '../../../shared/store/StoreProvider';
 import { MainShell } from '../../MainShell';
 import { DetailsPane } from '../details/DetailsPane';
@@ -289,6 +289,7 @@ describe('main panel: browse', () => {
         // The dialog asks for its own preview before it can be confirmed.
         await hostSays(() => host.respond(host.requests('cpm/preview')[2], { preview: { centralPropsPath: '/w/Directory.Packages.props', packageId: 'Moq', fromVersion: '4.20.0', toVersion: '4.20.72', affectedProjects: [A] } }));
         await user.click(within(dialog).getByTestId('cpm-preview-confirm'));
+        expectFocusAfterClose('browse-cpm-install-confirm');
         expect(host.requests('ops/install').map(request => request.payload)).toEqual([
             { projectPath: A, packageId: 'Polly', version: '8.4.2', sourceUrl: FEED },
             { projectPath: A, packageId: 'Moq', version: '4.20.72', sourceUrl: FEED },

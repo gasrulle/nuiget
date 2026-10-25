@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { ALL_PROJECTS, type ExtensionConfig, type NuGetSource, type SessionSnapshot } from '../../../../protocol';
 import { createFakeHost, type FakeHost } from '../../../shared/bus/testSupport';
-import { installFakeLayout } from '../../../shared/primitives/testSupport';
+import { expectFocusAfterClose, installFakeLayout } from '../../../shared/primitives/testSupport';
 import { StoreProvider } from '../../../shared/store/StoreProvider';
 import { MainShell } from '../../MainShell';
 import { BrowseList } from './BrowseList';
@@ -237,6 +237,7 @@ describe('main panel: typing in the search box', () => {
         // The dialog asks for its own preview before it can be confirmed.
         await hostSays(() => host.respond(host.requests('cpm/preview')[1], { preview }));
         await user.click(within(dialog).getByTestId('cpm-preview-confirm'));
+        expectFocusAfterClose('quicksearch-cpm-install-confirm');
         expect(installs(host).map(request => request.payload)).toEqual([{ projectPath: A, packageId: 'Serilog', version: '4.2.0', sourceUrl: FEED }]);
     });
 

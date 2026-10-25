@@ -1,7 +1,9 @@
 // @vitest-environment jsdom
 import axe from 'axe-core';
 import { afterEach, beforeAll, describe, expect, it } from 'vitest';
-import { acceptedSelectors, ARIA_SNAPSHOT, type AriaNode, ariaLine, ariaLineFor, ariaSnapshot, AXE_ACCEPTED, AXE_EXTRA_RULES, AXE_PENDING, type AxeRule, axeLines, compareAria, FULL_AXE_RULE, FULL_AXE_STATUS, type FullAxe, maskDigits, RUN_FULL_AXE } from '../ui/v2/a11y';
+import * as fs from 'fs';
+import * as path from 'path';
+import { acceptedSelectors, ARIA_SNAPSHOT, type AriaNode, ariaLine, ariaLineFor, ariaSnapshot, AXE_ACCEPTED, AXE_EXTRA_RULES, AXE_PENDING, type AxeRule, axeLines, compareAria, DESCRIBE_FOCUS, type FocusFacts, focusLine, FULL_AXE_RULE, FULL_AXE_STATUS, type FullAxe, KEYS_EXPECTED, KEYS_PENDING, KEYS_STATUS, keysLines, maskDigits, MOTION_STATUS, type MotionFacts, motionLines, RUN_FULL_AXE, RUNNING_ANIMATIONS, showsRing } from '../ui/v2/a11y';
 
 /**
  * UX-P0.23: the accessibility harness of the capture suite (`src/test/ui/v2/a11y.ts`). The scripts run inside VS Code
@@ -164,5 +166,85 @@ describe('the accessibility harness (UX-P0.23)', () => {
         expect(ariaLineFor('main-updates', snapshot, snapshot)).toBe('[aria] main-updates: 1 nodes, equal');
         expect(ariaLineFor('main-updates', snapshot, { state: 'main-updates', lines: ['listbox "Installed"'] }))
             .toBe('[aria] main-updates: 1 nodes, differs (-1 +1; first removed: listbox "Installed"; first added: listbox "Updates")');
+    });
+    it('holds the keyboard walks pending on UX-P0.24 and the motion check on P4.5, and never presses an Enter that writes (UX-P0.24)', () => {
+        expect(KEYS_STATUS).toEqual({ pending: 'P0.24' });
+        expect(MOTION_STATUS).toEqual({ pending: 'P4.5' });
+        expect(KEYS_PENDING).toEqual({ 'main-updates rows Enter': 'P4.2a', 'sidebar rows Enter': 'P4.2b' });
+    });
+
+    it('describes the focused element as a line of the screen\'s ARIA snapshot, with what would draw its ring (UX-P0.24)', () => {
+        document.body.innerHTML = '<main data-testid="nuiget-app"><button data-testid="refresh-button" aria-label="Refresh 2">R</button></main><div role="dialog" aria-label="Sources"><button>Close</button></div>';
+        document.querySelector<HTMLButtonElement>('[data-testid="refresh-button"]')!.focus();
+        const focus = new Function(DESCRIBE_FOCUS).apply(null, ['nuiget-app']) as FocusFacts;
+        expect(focus).toMatchObject({ role: 'button', name: 'Refresh 2', testid: 'refresh-button', inRoot: true });
+        expect(focusLine(focus)).toBe('button "Refresh #" {refresh-button}');
+        // A layer portaled out of the root still counts as inside; the page itself does not.
+        document.querySelector<HTMLButtonElement>('[role="dialog"] button')!.focus();
+        expect((new Function(DESCRIBE_FOCUS).apply(null, ['nuiget-app']) as FocusFacts).inRoot).toBe(true);
+        (document.activeElement as HTMLElement).blur();
+        expect(new Function(DESCRIBE_FOCUS).apply(null, ['nuiget-app'])).toMatchObject({ role: 'body', inRoot: false });
+        expect(() => axe.setup(document)).not.toThrow();
+        axe.teardown();
+    });
+
+    it('reports the tab order, a ring at every stop and each key against interaction model §5, pending or hard (UX-P0.24)', () => {
+        const stop = (role: string, name: string, testid: string | null, ring = true): FocusFacts => ({ role, name, testid, focusVisible: ring, outline: ring ? '1px solid rgb(0, 120, 212)' : 'none', boxShadow: 'none', inRoot: true });
+        const stops = [stop('combobox', 'Search', 'search-input'), stop('tab', 'Installed 15', 'installed-tab'), stop('option', 'Serilog 3.1.1', null, false)];
+        expect(showsRing(stops[0])).toBe(true);
+        expect(showsRing({ ...stops[0], outline: 'none', boxShadow: 'rgb(0, 120, 212) 0px 0px 0px 1px inset' })).toBe(true);
+        expect(showsRing(stops[2])).toBe(false);
+        const expected = ['combobox "Search" {search-input}', 'tab "Installed #" {installed-tab}', 'option "Serilog #"'];
+        const outcomes = [
+            { path: 'rows Home', observed: 'row 1', expected: 'row 1' },
+            { path: 'rows End', observed: 'row 14', expected: 'row 15' },
+            { path: 'rows Enter', observed: '', expected: '', skipped: 'Enter uninstalls' },
+        ];
+        const hard = keysLines('sidebar', stops, outcomes, 'hard', expected, { 'sidebar rows Enter': 'P4.2b' });
+        expect(hard.lines).toEqual([
+            '[keys] sidebar tab: 3 stops: combobox "Search" {search-input} → tab "Installed #" {installed-tab} → option "Serilog #"; as expected (hard)',
+            '[keys] sidebar ring: no visible ring at option "Serilog #" (hard)',
+            '[keys] sidebar rows Home: row 1 (hard)',
+            '[keys] sidebar rows End: row 14; expected row 15 (hard)',
+            '[keys] sidebar rows Enter: not pressed (Enter uninstalls) (pending P4.2b)',
+        ]);
+        expect(hard.failures).toEqual(['sidebar ring ×1', 'sidebar rows End']);
+        // Another order, or none recorded yet, fails the sequence; a pending status prints it and fails nothing in the suite.
+        expect(keysLines('sidebar', stops.slice(0, 2), [], 'hard', expected, {}).failures).toEqual(['sidebar tab order']);
+        const pending = keysLines('main-browse', stops.slice(0, 2), [], { pending: 'P0.24' }, undefined, {});
+        expect(pending.lines[0]).toBe('[keys] main-browse tab: 2 stops: combobox "Search" {search-input} → tab "Installed #" {installed-tab}; no expected sequence (pending P0.24)');
+        expect(pending.failures).toEqual(['main-browse tab order']);
+    });
+
+    it('reads what moves under VS Code\'s reduce-motion signal and holds it to nothing running (UX-P0.24)', () => {
+        document.body.classList.add('vscode-reduce-motion');
+        document.body.innerHTML = '<div class="nuiget-spinner"></div>';
+        const spinner = document.querySelector('.nuiget-spinner')!;
+        const animations = [{ playState: 'running', effect: { target: spinner }, animationName: 'nuiget-spin' }, { playState: 'finished', effect: { target: spinner }, animationName: 'nuiget-spin' }];
+        (document as unknown as { getAnimations: () => unknown[] }).getAnimations = () => animations;
+        try {
+            const facts = new Function(RUNNING_ANIMATIONS)() as MotionFacts;
+            // jsdom loads no stylesheet: the duration tokens resolve to nothing.
+            expect(facts).toEqual({ reduceMotion: true, running: 1, groups: { '.nuiget-spinner nuiget-spin': 1 }, fast: '', normal: '' });
+            expect(motionLines('main panel at open', facts)).toEqual({
+                lines: ['[motion] main panel at open: body.vscode-reduce-motion set, 1 running (.nuiget-spinner nuiget-spin ×1); durations fast unset, normal unset (pending P4.5)'],
+                failures: ['1 running animations'],
+            });
+        } finally {
+            delete (document as unknown as { getAnimations?: unknown }).getAnimations;
+            document.body.classList.remove('vscode-reduce-motion');
+        }
+        const still: MotionFacts = { reduceMotion: true, running: 0, groups: {}, fast: '0ms', normal: '0ms' };
+        expect(motionLines('main panel at open', still, 'hard')).toEqual({ lines: ['[motion] main panel at open: body.vscode-reduce-motion set, 0 running; durations fast 0ms, normal 0ms (hard)'], failures: [] });
+        expect(motionLines('sidebar', { ...still, reduceMotion: false }, 'hard').failures).toEqual(['body.vscode-reduce-motion absent']);
+    });
+
+    it('expects only tab stops that the screen\'s committed ARIA snapshot holds (UX-P0.24)', () => {
+        const snapshotOf: Record<string, string> = { 'main-installed': 'main-installed-single', 'main-updates': 'main-updates', 'main-browse': 'main-browse-results', sidebar: 'sidebar-sections' };
+        const stripped = (line: string): string => line.trim().replace(/ \[[^\]]*\]/, '');
+        for (const [screen, expected] of Object.entries(KEYS_EXPECTED)) {
+            const lines = (JSON.parse(fs.readFileSync(path.resolve(__dirname, '../ui/v2/aria', `${snapshotOf[screen]}.json`), 'utf8')) as { lines: string[] }).lines.map(stripped);
+            expect((expected ?? []).filter(stop => !lines.includes(stop)), screen).toEqual([]);
+        }
     });
 });

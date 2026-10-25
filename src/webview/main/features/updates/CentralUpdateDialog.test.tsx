@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createFakeHost, type FakeHost } from '../../../shared/bus/testSupport';
 import { MessageBusProvider } from '../../../shared/bus/useMessageBus';
-import { axeRuleOutcome, installFakeLayout } from '../../../shared/primitives/testSupport';
+import { axeRuleOutcome, expectFocusAfterClose, installFakeLayout } from '../../../shared/primitives/testSupport';
 import { ProjectsProvider } from '../../../shared/store/projects';
 import { CentralUpdateDialog, type CentralUpdateRequest } from './CentralUpdateDialog';
 
@@ -27,15 +27,22 @@ afterEach(() => {
     restoreLayout();
 });
 
+/** The dialog with an opener, as in the product: a focused control opens it (UX-P0.24 design-advisor ruling). */
 function Owner({ onConfirm }: { onConfirm: () => void }) {
-    const [request, setRequest] = useState<CentralUpdateRequest | null>(REQUEST);
-    return <CentralUpdateDialog request={request} onClose={() => setRequest(null)} onConfirm={onConfirm} />;
+    const [request, setRequest] = useState<CentralUpdateRequest | null>(null);
+    return (
+        <>
+            <button type="button" data-testid="opener" onClick={() => setRequest(REQUEST)}>Update</button>
+            <CentralUpdateDialog request={request} onClose={() => setRequest(null)} onConfirm={onConfirm} />
+        </>
+    );
 }
 
 async function mount(): Promise<{ host: FakeHost; onConfirm: ReturnType<typeof vi.fn> }> {
     const host = createFakeHost();
     const onConfirm = vi.fn();
     render(<MessageBusProvider bus={host.bus}><ProjectsProvider><Owner onConfirm={onConfirm} /></ProjectsProvider></MessageBusProvider>);
+    await userEvent.setup().click(screen.getByTestId('opener'));
     await hostSays(() => host.respond(host.requests('projects/list')[0], { projects: [{ name: 'App', path: A }] }, 1));
     return { host, onConfirm };
 }
@@ -102,6 +109,7 @@ describe('CentralUpdateDialog', () => {
         const pending = host.requests('cpm/preview')[0];
         await user.click(within(dialog()).getByRole('button', { name: 'Cancel' }));
         expect(screen.queryByTestId('cpm-preview-dialog')).toBeNull();
+        expectFocusAfterClose('central-update-cancel');
         expect(host.cancelled()).toContain(pending.id);
         expect(onConfirm).not.toHaveBeenCalled();
     });

@@ -4,7 +4,7 @@ import { axe } from 'jest-axe';
 import { describe, expect, it } from 'vitest';
 import type { NuGetSource, SessionSnapshot } from '../../../../protocol';
 import { createFakeHost, type FakeHost } from '../../../shared/bus/testSupport';
-import { axeRuleOutcome } from '../../../shared/primitives/testSupport';
+import { axeRuleOutcome, expectFocusAfterClose } from '../../../shared/primitives/testSupport';
 import { StoreProvider } from '../../../shared/store/StoreProvider';
 import { MainShell } from '../../MainShell';
 
@@ -179,6 +179,7 @@ describe('main panel: sources', () => {
         expect(dialog()).toBeInTheDocument();
         await user.keyboard('{Escape}');
         expect(screen.queryByTestId('source-settings-modal')).toBeNull();
+        expectFocusAfterClose('sources-host-opened-escape');
     });
 
     it('has no axe violations with the dialog open', async () => {

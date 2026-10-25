@@ -4,7 +4,7 @@ import { axe } from 'jest-axe';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { ALL_PROJECTS, type InstalledPackage, type PackageUpdate, type SessionSnapshot } from '../../protocol';
 import { createFakeHost, type FakeHost } from '../shared/bus/testSupport';
-import { axeRuleOutcome, installFakeLayout } from '../shared/primitives/testSupport';
+import { axeRuleOutcome, expectFocusAfterClose, installFakeLayout } from '../shared/primitives/testSupport';
 import { StoreProvider } from '../shared/store/StoreProvider';
 import { SidebarView } from './SidebarView';
 
@@ -183,6 +183,7 @@ describe('sidebar: Updates section', () => {
         await user.click(screen.getByTestId('confirm-dialog-confirm'));
         expect(host.requests('ops/bulkUpdate').map(request => request.payload)).toEqual([{ projectPath: A, packages: [{ id: 'Serilog', version: '3.1.0', sourceUrl: FEED }] }]);
         expect(screen.queryByTestId('confirm-dialog')).toBeNull();
+        expectFocusAfterClose('sidebar-update-all-confirm');
     });
 
     it('update all under All Projects sends one ops/bulkUpdateAllProjects grouped by project', async () => {
@@ -203,6 +204,7 @@ describe('sidebar: Updates section', () => {
         const dialog = screen.getByTestId('confirm-dialog');
         expect(dialog).toHaveTextContent('In App:Serilog: 3.0.0 → 3.1.0In Lib:Moq: 4.20.0 → 4.20.72');
         await user.click(screen.getByTestId('confirm-dialog-confirm'));
+        expectFocusAfterClose('sidebar-all-projects-update-all-confirm');
         expect(host.requests('ops/bulkUpdateAllProjects').map(request => request.payload)).toEqual([{ projectUpdates: [
             { projectPath: A, projectName: 'App', packages: [{ id: 'Serilog', version: '3.1.0', sourceUrl: FEED }] },
             { projectPath: B, projectName: 'Lib', packages: [{ id: 'Moq', version: '4.20.72', sourceUrl: FEED }] },
@@ -215,6 +217,7 @@ describe('sidebar: Updates section', () => {
         await user.click(screen.getByTestId('sidebar-update-all-button'));
         await user.click(screen.getByTestId('confirm-dialog-cancel'));
         expect(screen.queryByTestId('confirm-dialog')).toBeNull();
+        expectFocusAfterClose('sidebar-update-all-cancel');
         expect(host.requests('ops/bulkUpdate')).toHaveLength(0);
 
         // A complete empty answer: no button.

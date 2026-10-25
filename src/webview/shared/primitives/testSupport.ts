@@ -145,3 +145,48 @@ export function installStylesheet(): () => void {
     document.head.appendChild(style);
     return () => style.remove();
 }
+
+/**
+ * UX-P0.24 (`a11y-focus-after-close`, A6, H86): the cases of feature tests whose dialog closes with focus on `<body>` today,
+ * with the item that fixes them. Interaction model §5: a dialog returns focus to its opener, or, when the opener is gone or
+ * disabled, to the list's active row or the toolbar's first enabled control, never to the page.
+ */
+export const FOCUS_AFTER_CLOSE_PENDING: Readonly<Record<string, { pending: string }>> = {
+    // A6: Confirm empties the selection or the candidates, which disables the opener, and focus has no fallback.
+    'installed-bulk-uninstall-confirm': { pending: 'P4.4' },
+    'updates-update-all-confirm': { pending: 'P4.4' },
+    // A6's mechanism at other close sites (design-advisor ruling of 2026-10-25): the confirm's own update disables the opener.
+    'installed-bulk-uninstall-partial-confirm': { pending: 'P4.4' },
+    'installed-all-projects-uninstall-confirm': { pending: 'P4.4' },
+    'updates-busy-update-all-confirm': { pending: 'P4.4' },
+    'updates-all-projects-update-confirm': { pending: 'P4.4' },
+    'sidebar-update-all-confirm': { pending: 'P4.4' },
+    'sidebar-all-projects-update-all-confirm': { pending: 'P4.4' },
+    'details-cpm-install-confirm': { pending: 'P4.4' },
+    'details-cpm-update-confirm': { pending: 'P4.4' },
+    // No opener: the host opened the dialog with nothing focused; the target is the `source-settings` button.
+    'sources-host-opened-escape': { pending: 'P4.4' },
+};
+
+/** The focused element as a test prints it: tag, test id or id. */
+const describeFocus = (element: Element): string => {
+    const testId = element.getAttribute('data-testid');
+    return `${element.tagName.toLowerCase()}${testId ? `[data-testid="${testId}"]` : element.id ? `#${element.id}` : ''}`;
+};
+
+/**
+ * Called by a feature test right after its dialog closes: fails when focus fell to `<body>`, unless the registry names the
+ * case `pending`, which prints `[focus] <case>: … (pending <item>)` and asserts nothing (the gate's printed pending cases).
+ */
+export function expectFocusAfterClose(caseId: string, registry: Readonly<Record<string, { pending: string }>> = FOCUS_AFTER_CLOSE_PENDING): void {
+    const active = document.activeElement;
+    const where = active === null || active === document.body ? '<body>' : describeFocus(active);
+    const pending = registry[caseId];
+    if (pending !== undefined) {
+        console.warn(`[focus] ${caseId}: focus on ${where} after the dialog closed (pending ${pending.pending})`);
+        return;
+    }
+    if (where === '<body>') {
+        throw new Error(`[focus] ${caseId}: focus fell to <body> after the dialog closed (a11y-focus-after-close)`);
+    }
+}

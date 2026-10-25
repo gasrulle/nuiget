@@ -4,7 +4,7 @@ import { axe } from 'jest-axe';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { ALL_PROJECTS, resourceKeys, type BulkOutcome, type InstalledPackage, type InstalledResult, type OperationOutcome, type SessionSnapshot, type TransitiveResult } from '../../../../protocol';
 import { createFakeHost, type FakeHost } from '../../../shared/bus/testSupport';
-import { axeRuleOutcome, installFakeLayout } from '../../../shared/primitives/testSupport';
+import { axeRuleOutcome, expectFocusAfterClose, installFakeLayout } from '../../../shared/primitives/testSupport';
 import { StoreProvider } from '../../../shared/store/StoreProvider';
 import { MainShell } from '../../MainShell';
 import { DetailsPane } from '../details/DetailsPane';
@@ -144,9 +144,11 @@ describe('main panel: Installed tab', () => {
         expect(dialog).toHaveTextContent('From App:');
         await user.keyboard('{Escape}');
         expect(screen.queryByRole('alertdialog')).toBeNull();
+        expectFocusAfterClose('installed-bulk-uninstall-escape');
         await user.click(uninstallSelected());
         await user.click(screen.getByTestId('confirm-dialog-cancel'));
         expect(screen.queryByRole('alertdialog')).toBeNull();
+        expectFocusAfterClose('installed-bulk-uninstall-cancel');
         expect(host.requests('ops/bulkRemove')).toHaveLength(0);
         expect(uninstallSelected()).toHaveTextContent('Uninstall selected (3)');
     });
@@ -158,6 +160,7 @@ describe('main panel: Installed tab', () => {
         await user.click(uninstallSelected());
         await user.click(screen.getByTestId('confirm-dialog-confirm'));
         expect(screen.queryByRole('alertdialog')).toBeNull();
+        expectFocusAfterClose('installed-bulk-uninstall-confirm');
         expect(host.requests('ops/bulkRemove').map(request => request.payload)).toEqual([{ projectPath: A, packages: ['Serilog', 'Moq', 'Newtonsoft.Json'] }]);
         // Busy from the request on, before the host reports anything (N61), and nothing left the list.
         expect(optionOf('Serilog')).toHaveAttribute('aria-busy', 'true');
@@ -178,6 +181,7 @@ describe('main panel: Installed tab', () => {
         await user.click(screen.getByTestId('select-all-button'));
         await user.click(uninstallSelected());
         await user.click(screen.getByTestId('confirm-dialog-confirm'));
+        expectFocusAfterClose('installed-bulk-uninstall-partial-confirm');
         const removed = (packageId: string, status: OperationOutcome['status']): OperationOutcome => ({ opId: `op-${packageId}`, kind: 'remove', status, projectPath: A, packageId, message: status === 'failed' ? 'Moq could not be removed' : undefined });
         const partial: BulkOutcome = { opId: 'op2', status: 'partial', results: [removed('Serilog', 'completed'), removed('Moq', 'failed')], restores: [{ projectPath: A, ok: true }] };
         await hostSays(() => host.respond(host.requests('ops/bulkRemove')[0], partial));
@@ -207,6 +211,7 @@ describe('main panel: Installed tab', () => {
         await user.click(uninstallSelected());
         expect(screen.getByRole('alertdialog')).toHaveTextContent('From App:SerilogFrom Lib:xunit');
         await user.click(screen.getByTestId('confirm-dialog-confirm'));
+        expectFocusAfterClose('installed-all-projects-uninstall-confirm');
         expect(host.requests('ops/bulkRemoveAllProjects').map(entry => entry.payload)).toEqual([{
             projectRemovals: [{ projectPath: A, projectName: 'App', packages: ['Serilog'] }, { projectPath: B, projectName: 'Lib', packages: ['xunit'] }],
         }]);
@@ -257,6 +262,7 @@ describe('main panel: Installed tab', () => {
         expect(results).toHaveNoViolations();
         expect(['aria-dialog-name', 'nested-interactive', 'aria-allowed-attr'].map(rule => axeRuleOutcome(results, rule))).toEqual(['passes', 'passes', 'passes']);
         await user.keyboard('{Escape}');
+        expectFocusAfterClose('installed-axe-dialog-escape');
         await hostSays(() => host.event('session/changed', snapshot(2, ALL_PROJECTS)));
         const request = host.requests('allProjects/installed')[0];
         await hostSays(() => host.chunk(request, { kind: 'project', chunk: { projectPath: A, projectName: 'App', result: installed(A, [pkg('Serilog')]) } }));

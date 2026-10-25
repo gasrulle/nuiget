@@ -13,6 +13,11 @@
  *   settled (no busy element, the tabs' counts, every comfortable row's authors; a bounded wait after the shot). Digits are
  *   masked (versions, counts, sizes), so a fixture's new release does not change a snapshot; their presence is not.
  *
+ * UX-P0.24 (H48, H86, H87; `a11y-reduced-motion-both-signals`) adds the keyboard walks' and the motion check's scripts,
+ * expectations and verdicts: the capture suite walks Tab from the search box on four screens and presses the row and dialog
+ * keys of interaction model §5 that write nothing (`[keys]` lines; a stop is recorded as a line of the screen's ARIA
+ * snapshot), and reads what moves under VS Code's reduce-motion signal (`[motion]` lines).
+ *
  * Plain data and string scripts, like `measure.ts`: `src/test/lint` imports it without ExTester.
  */
 import type { RuleStatus } from './measure';
@@ -328,4 +333,160 @@ export function ariaLineFor(state: string, actual: AriaSnapshot, committed: Aria
     return diff.equal
         ? `[aria] ${state}: ${actual.lines.length} nodes, equal`
         : `[aria] ${state}: ${actual.lines.length} nodes, differs (-${diff.removed} +${diff.added}; first removed: ${diff.firstRemoved ?? 'none'}; first added: ${diff.firstAdded ?? 'none'})`;
+}
+
+// ---- UX-P0.24: keyboard paths and reduced motion -------------------------------------------------------------------
+
+/** The keyboard walks' status: pending on this item until its first run's stops are recorded, then `hard`. */
+export const KEYS_STATUS: RuleStatus = { pending: 'P0.24' };
+
+/** The reduced-motion check's status: P4.5 makes the tokens honour `body.vscode-reduce-motion` (A4, H29, H87). */
+export const MOTION_STATUS: RuleStatus = { pending: 'P4.5' };
+
+/** The screens the capture suite walks, each from scratch. */
+export type KeyScreen = 'main-installed' | 'main-updates' | 'main-browse' | 'sidebar';
+
+/** The focused element as the webview reports it (`DESCRIBE_FOCUS`). */
+export interface FocusFacts {
+    role: string;
+    name: string;
+    testid: string | null;
+    focusVisible: boolean;
+    /** The computed outline (`<width> <style> <colour>`) or `none`. */
+    outline: string;
+    /** The computed box shadow or `none`: a ring may be drawn with it. */
+    boxShadow: string;
+    /** Inside the webview root, or inside a layer portaled out of it. */
+    inRoot: boolean;
+    error?: string;
+}
+
+/**
+ * Runs in the webview (synchronously; axe injected): the focused element's role and name by axe's own functions (the
+ * snapshot's path), its test id, whether it matches `:focus-visible`, and what would draw its ring. `arguments[0]` is the
+ * root's test id.
+ */
+export const DESCRIBE_FOCUS = `
+const el = document.activeElement;
+if (!el || el === document.body) return { role: 'body', name: '', testid: null, focusVisible: false, outline: 'none', boxShadow: 'none', inRoot: false };
+if (typeof axe === 'undefined') return { role: el.tagName.toLowerCase(), name: '', testid: null, focusVisible: false, outline: 'none', boxShadow: 'none', inRoot: false, error: 'axe is not injected' };
+const root = document.querySelector('[data-testid="' + arguments[0] + '"]');
+axe.setup(document);
+try {
+    const vNode = axe.utils.getNodeFromTree(el);
+    const role = (vNode && axe.commons.aria.getRole(vNode, { noPresentational: true })) || el.tagName.toLowerCase();
+    const style = getComputedStyle(el);
+    const width = Number.parseFloat(style.outlineWidth) || 0;
+    return {
+        role,
+        name: (vNode && axe.commons.text.accessibleText(el)) || '',
+        testid: (el.dataset && el.dataset.testid) || null,
+        focusVisible: el.matches(':focus-visible'),
+        outline: style.outlineStyle === 'none' || width === 0 ? 'none' : style.outlineWidth + ' ' + style.outlineStyle + ' ' + style.outlineColor,
+        boxShadow: style.boxShadow || 'none',
+        inRoot: Boolean((root && root.contains(el)) || el.closest('.nuiget-dialog, .nuiget-popover, [role="dialog"], [role="alertdialog"]')),
+    };
+} finally {
+    axe.teardown();
+}
+`;
+
+/** A focus stop as a line of the screen's ARIA snapshot without its states: role, quoted name, test id. */
+export const focusLine = (focus: FocusFacts): string =>
+    `${focus.role} "${maskDigits(focus.name)}"${focus.testid ? ` {${maskDigits(focus.testid)}}` : ''}`;
+
+/** Whether a stop shows a ring: it matches `:focus-visible` and an outline or a box shadow paints it. */
+export const showsRing = (focus: FocusFacts): boolean => focus.focusVisible && (focus.outline !== 'none' || focus.boxShadow !== 'none');
+
+/** What a key the walk pressed did, against what interaction model §5 makes it do; `skipped` when the walk did not press it. */
+export interface KeyOutcome {
+    path: string;
+    observed: string;
+    expected: string;
+    skipped?: string;
+}
+
+/** The tab sequence each screen's walk records, as `focusLine`s (filled from the run that flips `KEYS_STATUS`). */
+export const KEYS_EXPECTED: Readonly<Partial<Record<KeyScreen, readonly string[]>>> = {};
+
+/** The key paths today's tree fails, by `<screen> <path>`, with the item that fixes them (each under a ruling). */
+export const KEYS_PENDING: Readonly<Record<string, string>> = {
+    // A1/A2 (R127): Enter on a main Updates row updates and on a sidebar row uninstalls, without asking, on today's tree;
+    // the walks record it and never press it.
+    'main-updates rows Enter': 'P4.2a',
+    'sidebar rows Enter': 'P4.2b',
+};
+
+/**
+ * The `[keys]` lines of a screen and their failures: the tab sequence against `KEYS_EXPECTED`, a ring at every stop, and
+ * each key outcome against its expectation. A failure fails the walk only while `status` is `hard`.
+ */
+export function keysLines(screen: KeyScreen, stops: readonly FocusFacts[], outcomes: readonly KeyOutcome[], status: RuleStatus = KEYS_STATUS, expected: readonly string[] | undefined = KEYS_EXPECTED[screen], pending: Readonly<Record<string, string>> = KEYS_PENDING): { lines: string[]; failures: string[] } {
+    const lines: string[] = [];
+    const failures: string[] = [];
+    const suffix = (path: string): string => {
+        const item = pending[`${screen} ${path}`];
+        return item !== undefined ? `pending ${item}` : statusText(status);
+    };
+    const sequence = stops.map(focusLine);
+    const sameOrder = expected !== undefined && expected.length === sequence.length && expected.every((line, index) => line === sequence[index]);
+    lines.push(`[keys] ${screen} tab: ${sequence.length} stops: ${sequence.join(' → ')}${expected === undefined ? '; no expected sequence' : sameOrder ? '; as expected' : `; expected ${expected.join(' → ')}`} (${suffix('tab')})`);
+    if (!sameOrder && pending[`${screen} tab`] === undefined) {
+        failures.push(`${screen} tab order`);
+    }
+    const ringless = stops.filter(stop => !showsRing(stop)).map(focusLine);
+    lines.push(`[keys] ${screen} ring: ${ringless.length === 0 ? 'a visible ring at every stop' : `no visible ring at ${ringless.join(', ')}`} (${suffix('ring')})`);
+    if (ringless.length > 0 && pending[`${screen} ring`] === undefined) {
+        failures.push(`${screen} ring ×${ringless.length}`);
+    }
+    for (const outcome of outcomes) {
+        if (outcome.skipped !== undefined) {
+            lines.push(`[keys] ${screen} ${outcome.path}: not pressed (${outcome.skipped}) (${suffix(outcome.path)})`);
+            continue;
+        }
+        const pass = outcome.observed === outcome.expected;
+        lines.push(`[keys] ${screen} ${outcome.path}: ${outcome.observed}${pass ? '' : `; expected ${outcome.expected}`} (${suffix(outcome.path)})`);
+        if (!pass && pending[`${screen} ${outcome.path}`] === undefined) {
+            failures.push(`${screen} ${outcome.path}`);
+        }
+    }
+    return { lines, failures };
+}
+
+/** What moves in the webview (`RUNNING_ANIMATIONS`). */
+export interface MotionFacts {
+    reduceMotion: boolean;
+    running: number;
+    /** Running animations by the animated element's first class (or tag) and the animation's name. */
+    groups: Record<string, number>;
+    fast: string;
+    normal: string;
+}
+
+/** Runs in the webview: VS Code's reduce-motion body class, the running animations and transitions, the duration tokens. */
+export const RUNNING_ANIMATIONS = `
+const running = document.getAnimations().filter(animation => animation.playState === 'running');
+const groups = {};
+for (const animation of running) {
+    const target = animation.effect && animation.effect.target;
+    const element = target ? (typeof target.className === 'string' && target.className.trim() ? '.' + target.className.trim().split(/\\s+/)[0] : target.tagName.toLowerCase()) : 'unknown';
+    const key = element + ' ' + (typeof CSSTransition !== 'undefined' && animation instanceof CSSTransition ? 'transition ' + animation.transitionProperty : animation.animationName || 'animation');
+    groups[key] = (groups[key] || 0) + 1;
+}
+const root = getComputedStyle(document.documentElement);
+return {
+    reduceMotion: document.body.classList.contains('vscode-reduce-motion'),
+    running: running.length,
+    groups,
+    fast: root.getPropertyValue('--nuiget-duration-fast').trim(),
+    normal: root.getPropertyValue('--nuiget-duration-normal').trim(),
+};
+`;
+
+/** The `[motion]` line of a moment and its failure: the body class set and nothing moving. */
+export function motionLines(where: string, facts: MotionFacts, status: RuleStatus = MOTION_STATUS): { lines: string[]; failures: string[] } {
+    const moving = Object.entries(facts.groups).map(([key, count]) => `${key} ×${count}`).join(', ');
+    const line = `[motion] ${where}: body.vscode-reduce-motion ${facts.reduceMotion ? 'set' : 'absent'}, ${facts.running} running${moving ? ` (${moving})` : ''}; durations fast ${facts.fast || 'unset'}, normal ${facts.normal || 'unset'} (${statusText(status)})`;
+    const failures = [...(facts.reduceMotion ? [] : ['body.vscode-reduce-motion absent']), ...(facts.running === 0 ? [] : [`${facts.running} running animations`])];
+    return { lines: [line], failures };
 }

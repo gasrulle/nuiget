@@ -11,7 +11,7 @@ import { measureExemplar, measureWorkbench } from '../workbench';
 import { type Capture, captureFile, floorCaptures, isReady, type Lane, type Look, matrixCaptures, MATRIX_THEMES, type NamedState, PANEL_WIDTH, SIDEBAR_WIDTH, STATES, type Theme, THEMES } from '../states';
 import { declaredTokens, DUMP_THEME, formatThemeDump, formatTokenDump, type ThemeDump, themeDumpFile, tokenDumpFile } from '../themeDump';
 import { CAPTURE_FACTS, type CropRect, type Sidecar, sidecarFile } from '../golden';
-import { acceptedSelectors, ARIA_SNAPSHOT, type AriaNode, type AriaSnapshot, ariaLineFor, ariaSnapshot, AXE_EXTRA_RULES, AXE_NODES_PER_RULE, axeLines, FULL_AXE_STATUS, type FullAxe, RUN_FULL_AXE } from '../a11y';
+import { acceptedSelectors, ARIA_SNAPSHOT, type AriaNode, type AriaSnapshot, ariaLineFor, ariaSnapshot, AXE_EXTRA_RULES, AXE_NODES_PER_RULE, axeLines, DESCRIBE_FOCUS, type FocusFacts, FULL_AXE_STATUS, type FullAxe, type KeyOutcome, type KeyScreen, KEYS_STATUS, keysLines, MOTION_STATUS, type MotionFacts, motionLines, RUN_FULL_AXE, RUNNING_ANIMATIONS } from '../a11y';
 
 /**
  * The capture suite of the named states (UX-P0.8), on the dense workspace (`npm run test:ui:capture`, and the classic
@@ -488,6 +488,160 @@ async function auditSafely(state: NamedState): Promise<string[]> {
     }
 }
 
+// ---- UX-P0.24: the keyboard walks and the motion check ---------------------------------------------------------------
+
+/** Sends keys to the focused element of the webview the driver is in: the driver's action queue does not reach it (H48). */
+const press = async (...keys: string[]): Promise<void> => {
+    await (await driverOf().switchTo().activeElement()).sendKeys(...keys);
+};
+
+/** The focused element of the webview the driver is in (`DESCRIBE_FOCUS`), axe injected first. */
+async function focused(rootTestId: string): Promise<FocusFacts> {
+    if (!(await script<boolean>('return typeof window.axe !== "undefined";'))) {
+        await script(AXE_SOURCE);
+    }
+    return script<FocusFacts>(DESCRIBE_FOCUS, rootTestId);
+}
+
+/** Tab from the search box: every stop until focus leaves the webview root, comes back to the search box, or 40 stops. */
+async function walkTab(rootTestId: string, searchTestId: string): Promise<FocusFacts[]> {
+    await (await findByTestId(searchTestId, 30_000)).click();
+    const stops = [await focused(rootTestId)];
+    for (let step = 0; step < 40; step++) {
+        await press(Key.TAB);
+        const stop = await focused(rootTestId);
+        if (!stop.inRoot || stop.testid === searchTestId) {
+            break;
+        }
+        stops.push(stop);
+    }
+    return stops;
+}
+
+/**
+ * Runs in the webview: the focused option of the list `arguments[0]` as `row <posinset>` (`current row …` when it is the
+ * row whose details show: `aria-current` in a multi-selectable list, `aria-selected` in a single-select one), else what has
+ * focus.
+ */
+const ACTIVE_ROW = `
+const el = document.activeElement;
+if (!el || el === document.body) return 'body';
+if (!el.matches('[data-testid="' + arguments[0] + '"] [role="option"]')) return el.getAttribute('data-testid') || el.tagName.toLowerCase();
+const list = el.closest('[role="listbox"]');
+const current = list && list.getAttribute('aria-multiselectable') === 'true' ? el.getAttribute('aria-current') === 'true' : el.getAttribute('aria-selected') === 'true';
+return (current ? 'current ' : '') + 'row ' + el.getAttribute('aria-posinset');
+`;
+
+const activeRow = (listTestId: string): Promise<string> => script<string>(ACTIVE_ROW, listTestId);
+
+const focusedTestId = async (): Promise<string> => (await script<string | null>('const el = document.activeElement; return el && el !== document.body ? el.getAttribute("data-testid") || el.tagName.toLowerCase() : "body";')) ?? 'body';
+
+/**
+ * The row keys of interaction model §5 that write nothing, on the list reached from the search box: Ctrl+DownArrow, Home,
+ * ArrowDown, ArrowUp, End, Enter where it only shows the details (else `enter` says why it is not pressed), Ctrl+UpArrow.
+ */
+async function rowKeys(listTestId: string, searchTestId: string, enter: 'press' | { skipped: string }): Promise<KeyOutcome[]> {
+    const outcomes: KeyOutcome[] = [];
+    await (await findByTestId(searchTestId, 30_000)).click();
+    await press(Key.chord(MODIFIER, Key.ARROW_DOWN));
+    const landed = await activeRow(listTestId);
+    outcomes.push({ path: 'search Ctrl+DownArrow', observed: /row /.test(landed) ? 'a row of the list' : landed, expected: 'a row of the list' });
+    if (!/row /.test(landed)) {
+        // The list reached with Tab instead, as the focus state's setup does, so that the row keys are still read.
+        await poll(async () => {
+            if (/row /.test(await activeRow(listTestId))) {
+                return true;
+            }
+            await press(Key.TAB);
+            return undefined;
+        }, `${listTestId} reached with Tab`, 15_000);
+    }
+    const size = await script<number>('return Number(document.activeElement.getAttribute("aria-setsize"));');
+    const step = async (path: string, key: string, expected: string): Promise<void> => {
+        await press(key);
+        outcomes.push({ path, observed: (await activeRow(listTestId)).replace(/^current /, ''), expected });
+    };
+    await step('rows Home', Key.HOME, 'row 1');
+    await step('rows ArrowDown', Key.ARROW_DOWN, size > 1 ? 'row 2' : 'row 1');
+    await step('rows ArrowUp', Key.ARROW_UP, 'row 1');
+    await step('rows End', Key.END, `row ${size}`);
+    if (enter === 'press') {
+        await press(Key.ENTER);
+        const current = await poll(async () => {
+            const now = await activeRow(listTestId);
+            return now.startsWith('current ') ? now : undefined;
+        }, 'the row made current', 10_000).catch(() => activeRow(listTestId));
+        outcomes.push({ path: 'rows Enter', observed: current, expected: `current row ${size}` });
+    } else {
+        outcomes.push({ path: 'rows Enter', observed: '', expected: '', skipped: enter.skipped });
+    }
+    await press(Key.chord(MODIFIER, Key.ARROW_UP));
+    outcomes.push({ path: 'rows Ctrl+UpArrow', observed: await focusedTestId(), expected: searchTestId });
+    return outcomes;
+}
+
+/** Runs in the webview: whether focus is inside an open dialog. */
+const FOCUS_IN_DIALOG = 'const el = document.activeElement; return Boolean(el && el.closest(\'[role="alertdialog"], [role="dialog"]\'));';
+
+/**
+ * The bulk dialog of the Installed list by keyboard (`main-installed-bulk-dialog`'s path, never confirmed): opened with
+ * Enter on its button, Tab kept inside, closed with Escape, focus back on the opener; the selection is put back after.
+ */
+async function dialogKeys(): Promise<KeyOutcome[]> {
+    const outcomes: KeyOutcome[] = [];
+    await toggleIntoSelection('package-row-serilog');
+    await script('document.querySelector(\'[data-testid="uninstall-selected-button"]\').focus();');
+    await press(Key.ENTER);
+    await findByTestId('confirm-dialog', 10_000);
+    outcomes.push({ path: 'dialog open', observed: (await script<boolean>(FOCUS_IN_DIALOG)) ? 'focus inside the dialog' : 'focus outside the dialog', expected: 'focus inside the dialog' });
+    let inside = true;
+    for (let step = 0; step < 6; step++) {
+        await press(Key.TAB);
+        inside = inside && (await script<boolean>(FOCUS_IN_DIALOG));
+    }
+    outcomes.push({ path: 'dialog Tab ×6', observed: inside ? 'focus stays inside' : 'focus left the dialog', expected: 'focus stays inside' });
+    await press(Key.ESCAPE);
+    const closed = await poll(async () => ((await driverOf().findElements(By.css('[data-testid="confirm-dialog"]'))).length === 0 ? true : undefined), 'the dialog closed', 10_000).then(() => true, () => false);
+    outcomes.push({ path: 'dialog Escape', observed: closed ? 'closed' : 'still open', expected: 'closed' });
+    if (!closed) {
+        await cancelDialog();
+    }
+    outcomes.push({ path: 'dialog restore', observed: await focusedTestId(), expected: 'uninstall-selected-button' });
+    const option = await optionOf('package-row-serilog');
+    await driverOf().actions().keyDown(MODIFIER).click(option).keyUp(MODIFIER).perform();
+    await poll(async () => ((await option.getAttribute('aria-selected')) !== 'true' ? true : undefined), 'package-row-serilog out of the selection', 10_000);
+    return outcomes;
+}
+
+/** Prints a walk's or a check's lines, the pending ones into the run's pending list. */
+function printLines(lines: readonly string[]): void {
+    for (const line of lines) {
+        console.warn(line);
+        if (/\(pending [^)]+\)$/.test(line)) {
+            pendingLines.push(line);
+        }
+    }
+}
+
+/** A screen's walk: the tab sequence from its search box, then its keys; fails only once `KEYS_STATUS` is `hard`. */
+async function walkScreen(screen: KeyScreen, rootTestId: string, searchTestId: string, keys: () => Promise<KeyOutcome[]>): Promise<void> {
+    const stops = await walkTab(rootTestId, searchTestId);
+    const { lines, failures } = keysLines(screen, stops, await keys());
+    printLines(lines);
+    if (KEYS_STATUS === 'hard' && failures.length > 0) {
+        throw new Error(`[keys] ${screen}: ${failures.join('; ')}`);
+    }
+}
+
+/** The state whose default capture a walk's screen is set up like. */
+const stateNamed = (name: string): NamedState => {
+    const state = STATES.find(candidate => candidate.name === name);
+    if (state === undefined) {
+        throw new Error(`no named state ${name}`);
+    }
+    return state;
+};
+
 /** Whether this run has printed its `[probe] scrollbar` line. */
 let scrollbarProbed = false;
 
@@ -729,6 +883,52 @@ describe(`named states (${LANE} lane, ${LOOK} look)`, () => {
             if (inaccessible.length > 0) {
                 throw new Error(`axe (a11y-full-axe-real-page): ${inaccessible.join('; ')}`);
             }
+        });
+    }
+
+    if (LANE === 'ui' && LOOK === 'modern') {
+        // UX-P0.24 (H48): the keyboard paths of interaction model §5, each screen from scratch in Dark Modern at its default
+        // width; a key that writes on today's tree (Enter on a main Updates row, Enter or Delete on a sidebar or Installed row,
+        // Ctrl+Enter, Confirm) is never pressed. Before the theme dump, after every capture.
+        it('keyboard paths: main panel, Installed (UX-P0.24)', async function () {
+            this.timeout(300_000);
+            await applyTheme('dark-modern');
+            await applyWidth(stateNamed('main-installed-single'), PANEL_WIDTH);
+            await freshMainPanel();
+            // The motion check, once per run, while the panel's first list is still loading (H87; pending P4.5).
+            const motion = motionLines('main panel at open', await script<MotionFacts>(RUNNING_ANIMATIONS));
+            printLines(motion.lines);
+            await gatewayInstalled();
+            await walkScreen('main-installed', 'nuiget-app', 'search-input', async () => [...await rowKeys('installed-list', 'search-input', 'press'), ...await dialogKeys()]);
+            if (MOTION_STATUS === 'hard' && motion.failures.length > 0) {
+                throw new Error(`[motion] ${motion.failures.join('; ')}`);
+            }
+        });
+
+        it('keyboard paths: main panel, Updates (UX-P0.24)', async function () {
+            this.timeout(300_000);
+            await applyTheme('dark-modern');
+            await applyWidth(stateNamed('main-updates'), PANEL_WIDTH);
+            await freshMainPanel();
+            await REACH['main-updates'].reach();
+            await walkScreen('main-updates', 'nuiget-app', 'search-input', () => rowKeys('updates-list', 'search-input', { skipped: 'Enter updates the package on today\'s tree (A1)' }));
+        });
+
+        it('keyboard paths: main panel, Browse (UX-P0.24)', async function () {
+            this.timeout(300_000);
+            await applyTheme('dark-modern');
+            await applyWidth(stateNamed('main-browse-results'), PANEL_WIDTH);
+            await freshMainPanel();
+            await REACH['main-browse-results'].reach();
+            await walkScreen('main-browse', 'nuiget-app', 'search-input', () => rowKeys('browse-list', 'search-input', 'press'));
+        });
+
+        it('keyboard paths: sidebar (UX-P0.24)', async function () {
+            this.timeout(300_000);
+            await applyTheme('dark-modern');
+            await applyWidth(stateNamed('sidebar-sections'), SIDEBAR_WIDTH);
+            await sidebarSections();
+            await walkScreen('sidebar', 'nuiget-sidebar', 'sidebar-search-input', () => rowKeys('sidebar-installed-list', 'sidebar-search-input', { skipped: 'Enter uninstalls the package on today\'s tree (A2, R127)' }));
         });
     }
 

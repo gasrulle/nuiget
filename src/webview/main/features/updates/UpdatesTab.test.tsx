@@ -4,7 +4,7 @@ import { axe } from 'jest-axe';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { ALL_PROJECTS, type InstalledPackage, type InstalledResult, type PackageUpdate, type SessionSnapshot } from '../../../../protocol';
 import { createFakeHost, type FakeHost } from '../../../shared/bus/testSupport';
-import { axeRuleOutcome, installFakeLayout } from '../../../shared/primitives/testSupport';
+import { axeRuleOutcome, expectFocusAfterClose, installFakeLayout } from '../../../shared/primitives/testSupport';
 import { StoreProvider } from '../../../shared/store/StoreProvider';
 import { MainShell } from '../../MainShell';
 import { InstalledTab } from '../installed/InstalledTab';
@@ -110,6 +110,7 @@ describe('main panel: Updates tab', () => {
         expect(within(dialog).queryByText(/Newtonsoft/)).toBeNull();
         expect(axeRuleOutcome(await axe(document.body), 'aria-dialog-name')).toBe('passes');
         await user.click(screen.getByTestId('confirm-dialog-confirm'));
+        expectFocusAfterClose('updates-update-all-confirm');
         expect(host.requests('ops/bulkUpdate').map(sent => sent.payload)).toEqual([{ projectPath: A, packages: [
             { id: 'Moq', version: '4.20.72', sourceUrl: FEED },
             { id: 'Serilog', version: '3.1.0', sourceUrl: FEED },
@@ -127,6 +128,7 @@ describe('main panel: Updates tab', () => {
         await waitFor(() => expect(screen.getByTestId('status-live')).toHaveTextContent('Newtonsoft.Json is centrally managed'));
         await user.click(screen.getByTestId('update-all-button'));
         await user.click(screen.getByTestId('confirm-dialog-confirm'));
+        expectFocusAfterClose('updates-update-selected-confirm');
         expect(host.requests('ops/bulkUpdate')[0].payload.packages.map(entry => entry.id)).toEqual(['Moq']);
     });
 
@@ -144,12 +146,14 @@ describe('main panel: Updates tab', () => {
         // Cancel sends nothing.
         await user.click(within(dialog).getByRole('button', { name: 'Cancel' }));
         expect(screen.queryByTestId('cpm-preview-dialog')).toBeNull();
+        expectFocusAfterClose('updates-cpm-preview-cancel');
         expect(host.requests('ops/update')).toHaveLength(0);
         // Confirm sends the one update.
         await user.click(optionOf('Newtonsoft.Json'));
         await user.keyboard('{Enter}');
         await hostSays(() => host.respond(host.requests('cpm/preview')[1], { preview: { centralPropsPath: '/w/Directory.Packages.props', packageId: 'Newtonsoft.Json', fromVersion: '13.0.1', toVersion: '13.0.3', affectedProjects: [A] } }));
         await user.click(screen.getByTestId('cpm-preview-confirm'));
+        expectFocusAfterClose('updates-cpm-preview-confirm');
         expect(host.requests('ops/update').map(request => request.payload)).toEqual([{ projectPath: A, packageId: 'Newtonsoft.Json', version: '13.0.3', sourceUrl: FEED }]);
     });
 
@@ -258,6 +262,7 @@ describe('main panel: Updates tab', () => {
             await user.click(screen.getByTestId('update-all-button'));
             expect(screen.getByRole('alertdialog')).toHaveTextContent('In App:Serilog: 3.0.0 → 3.1.0In Lib:Moq: 4.20.0 → 4.20.72');
             await user.click(screen.getByTestId('confirm-dialog-confirm'));
+            expectFocusAfterClose('updates-all-projects-update-confirm');
             expect(host.requests('ops/bulkUpdateAllProjects').map(request => request.payload)).toEqual([{
                 projectUpdates: [
                     { projectPath: A, projectName: 'App', packages: [{ id: 'Serilog', version: '3.1.0', sourceUrl: FEED }] },
@@ -336,6 +341,7 @@ describe('main panel: Updates tab', () => {
         const host = await mountWith();
         await user.click(screen.getByTestId('update-all-button'));
         await user.click(screen.getByTestId('confirm-dialog-confirm'));
+        expectFocusAfterClose('updates-busy-update-all-confirm');
         const request = host.requests('ops/bulkUpdate')[0];
         // The host names the operation with every package, then reports one package per step.
         await hostSays(() => host.chunk(request, { opId: 'op1', status: 'queued', kind: 'update', projectPaths: [A], packageIds: ['Moq', 'Serilog'] }));

@@ -4,7 +4,7 @@ import { axe } from 'jest-axe';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ALL_PROJECTS, type InstalledPackage, type NuGetSource, type PackageMetadata, type SessionSnapshot } from '../../../../protocol';
 import { createFakeHost, type FakeHost } from '../../../shared/bus/testSupport';
-import { axeRuleOutcome, installFakeLayout } from '../../../shared/primitives/testSupport';
+import { axeRuleOutcome, expectFocusAfterClose, installFakeLayout } from '../../../shared/primitives/testSupport';
 import { StoreProvider } from '../../../shared/store/StoreProvider';
 import { MainShell } from '../../MainShell';
 import { InstalledTab } from '../installed/InstalledTab';
@@ -138,6 +138,7 @@ describe('main panel: details', () => {
         // The dialog asks for its own preview.
         await hostSays(() => host.respond(host.requests('cpm/preview')[1], { preview: { centralPropsPath: '/w/Directory.Packages.props', packageId: 'Polly', fromVersion: '8.0.0', toVersion: '8.4.2', affectedProjects: [A, B] } }));
         await user.click(within(dialog).getByTestId('cpm-preview-confirm'));
+        expectFocusAfterClose('details-cpm-install-confirm');
         expect(host.requests('ops/install').map(request => request.payload)).toEqual([{ projectPath: A, packageId: 'Polly', version: '8.4.2', sourceUrl: FEED }]);
 
         // Without a central entry: no dialog, the install runs at once.
@@ -200,6 +201,7 @@ describe('main panel: details', () => {
         expect(host.requests('ops/update')).toHaveLength(0);
         await user.click(within(dialog).getByTestId('cpm-preview-confirm'));
         expect(screen.queryByTestId('cpm-preview-dialog')).toBeNull();
+        expectFocusAfterClose('details-cpm-update-confirm');
         expect(host.requests('ops/update').map(request => request.payload)).toEqual([{ projectPath: A, packageId: 'Newtonsoft.Json', version: '13.0.3', sourceUrl: FEED }]);
     });
 
@@ -336,6 +338,7 @@ describe('main panel: details', () => {
         await user.click(within(dialog).getByRole('button', { name: 'Install in 1 project' }));
         expect(host.requests('ops/bulkInstall').map(request => request.payload)).toEqual([{ projectPaths: [B], packageId: 'Polly', version: '8.4.2' }]);
         expect(screen.queryByTestId('multi-install-dialog')).toBeNull();
+        expectFocusAfterClose('details-multi-install-confirm');
     });
 
     it('an installed package offers no Install in projects', async () => {
@@ -473,6 +476,7 @@ describe('main panel: details', () => {
 
         expect(host.requests('ops/bulkInstall').map(request => request.payload)).toEqual([{ projectPaths: [B], packageId: 'Polly', version: '8.4.2' }]);
         expect(screen.queryByTestId('multi-install-dialog')).toBeNull();
+        expectFocusAfterClose('details-all-projects-multi-install-confirm');
     });
 
     it('an installed row under All Projects changes its own project', async () => {

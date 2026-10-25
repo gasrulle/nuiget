@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { ALL_PROJECTS, type InstalledPackage, type SessionSnapshot } from '../../../../protocol';
 import { createFakeHost, type FakeHost } from '../../../shared/bus/testSupport';
-import { installFakeLayout } from '../../../shared/primitives/testSupport';
+import { expectFocusAfterClose, installFakeLayout } from '../../../shared/primitives/testSupport';
 import { StoreProvider } from '../../../shared/store/StoreProvider';
 import { MainShell } from '../../MainShell';
 import { InstalledTab } from '../installed/InstalledTab';
@@ -92,6 +92,7 @@ describe('main panel: Install in All Projects', () => {
         expect(within(dialog).getByRole('checkbox', { name: 'Web' })).toBeEnabled();
         await user.click(within(dialog).getByRole('checkbox', { name: 'Web' }));
         await user.click(within(dialog).getByRole('button', { name: 'Install in 2 projects' }));
+        expectFocusAfterClose('multi-install-two-projects');
 
         expect(host.requests('ops/bulkInstall').map(request => request.payload)).toEqual([{ projectPaths: [A, C], packageId: 'Polly', version: '8.4.2' }]);
     });
@@ -109,6 +110,7 @@ describe('main panel: Install in All Projects', () => {
         expect(dialog).toHaveTextContent('preview failed');
         await user.click(within(dialog).getByRole('checkbox', { name: 'App' }));
         await user.click(within(dialog).getByRole('button', { name: 'Install in 1 project' }));
+        expectFocusAfterClose('multi-install-one-project');
 
         expect(host.requests('ops/bulkInstall')).toHaveLength(1);
         expect(host.requests('ops/bulkInstall')[0].payload).toEqual({ projectPaths: [A], packageId: 'Polly', version: '8.4.2' });
@@ -139,6 +141,7 @@ describe('main panel: Install in All Projects', () => {
         await waitFor(() => expect(within(dialog).getByRole('checkbox', { name: 'Web' })).toBeEnabled());
         await user.click(within(dialog).getByRole('checkbox', { name: 'Web' }));
         await user.click(within(dialog).getByRole('button', { name: 'Install in 2 projects' }));
+        expectFocusAfterClose('multi-install-after-retry');
         expect(host.requests('ops/bulkInstall').map(request => request.payload.projectPaths)).toEqual([[A, C]]);
     });
 
@@ -152,6 +155,7 @@ describe('main panel: Install in All Projects', () => {
         expect(host.requests('cpm/preview').filter(request => request.payload.projectPath === C)).toHaveLength(0);
         await user.click(within(dialog).getByRole('checkbox', { name: 'App' }));
         await user.click(within(dialog).getByRole('button', { name: 'Install in 1 project' }));
+        expectFocusAfterClose('multi-install-errored-project');
         expect(host.requests('ops/bulkInstall').map(request => request.payload.projectPaths)).toEqual([[A]]);
     });
 });
