@@ -73,40 +73,51 @@ export interface TokenPair {
     /** The opaque surface a translucent background sits on (the hover band over the editor). */
     over?: string;
     kind: 'text' | 'non-text';
-    /** A design-advisor ruling that the pair is held to the workbench's own value, not to the threshold. */
-    exempt?: { reason: string };
+    /** A design-advisor ruling that the pair is held to the workbench's own value, not to the threshold; in `themes` only, or in all. */
+    exempt?: { reason: string; themes?: readonly string[] };
 }
 
 const text = (fg: string, ...bgs: string[]): TokenPair[] => bgs.map(bg => ({ fg, bg, kind: 'text' as const }));
 const nonText = (fg: string, ...bgs: string[]): TokenPair[] => bgs.map(bg => ({ fg, bg, kind: 'non-text' as const }));
 
+const INPUT_BORDER_PARITY = {
+    reason: 'workbench parity (D22, H49): input.border of the four default themes (1.15–1.57), the Settings editor and quick input fields',
+    themes: ['dark-2026', 'dark-modern', 'light-2026', 'light-modern'],
+};
+
 /**
  * The curated pairs (architecture-advisor ruling of 2026-10-25, UX-P0.25): text roles against the surfaces they are drawn
  * on, at 4.5:1; check boxes, the row check's line (A7), the focus ring and input borders against theirs, at 3:1. Token names
- * without the `--nuiget-color-` prefix.
+ * without the `--nuiget-color-` prefix. The design-advisor ruling of 2026-10-25 (UX-P0.25, DECISIONS) took out the pairs the
+ * design never paints (secondary text on a selection inherits the row's foreground, `primitives.css:177-189`, DS §4; a
+ * selected row's check is `checkbox.selectBorder`, D52), added the sidebar's hover band (A14) and gave the parity exemptions.
  */
 export const TOKEN_PAIRS: readonly TokenPair[] = [
     ...text('fg', 'bg', 'bg-sidebar', 'widget-bg', 'dropdown-bg'),
-    ...text('fg-muted', 'bg', 'bg-sidebar', 'list-active-bg', 'list-inactive-bg'),
+    ...text('fg-muted', 'bg', 'bg-sidebar'),
     { fg: 'fg', bg: 'list-hover-bg', over: 'bg', kind: 'text' },
     { fg: 'fg-muted', bg: 'list-hover-bg', over: 'bg', kind: 'text' },
     { fg: 'version-new', bg: 'list-hover-bg', over: 'bg', kind: 'text' },
+    { fg: 'fg-muted', bg: 'list-hover-bg', over: 'bg-sidebar', kind: 'text' },
+    { fg: 'version-new', bg: 'list-hover-bg', over: 'bg-sidebar', kind: 'text' },
     ...text('link', 'bg', 'bg-sidebar'),
-    ...text('version-new', 'bg', 'bg-sidebar', 'list-active-bg', 'list-inactive-bg'),
+    ...text('version-new', 'bg', 'bg-sidebar'),
     ...text('list-active-fg', 'list-active-bg'),
     ...text('badge-fg', 'badge-bg'),
-    ...text('input-placeholder', 'input-bg'),
+    { fg: 'input-placeholder', bg: 'input-bg', kind: 'text', exempt: { reason: 'workbench parity (D22, H49): input.placeholderForeground of the 2026 themes reads 2.34 / 2.85', themes: ['dark-2026', 'light-2026'] } },
     ...text('code-fg', 'code-bg'),
     ...['comment', 'function', 'keyword', 'number', 'string', 'type', 'variable'].flatMap(role => text(`syntax-${role}`, 'code-bg')),
-    ...nonText('checkbox-border', 'bg', 'list-active-bg'),
-    ...nonText('checkbox-bg', 'bg', 'list-active-bg'),
+    { fg: 'checkbox-border', bg: 'bg', kind: 'non-text', exempt: { reason: 'D52/F1a (owner round 2): unselected rows keep the exemplar\'s 1.5:1 checkbox.border', themes: ['dark-modern', 'light-modern'] } },
+    { fg: 'checkbox-bg', bg: 'bg', kind: 'non-text', exempt: { reason: 'the fill is not the 1.4.11 boundary (checkbox-border carries it, D52); the exemplar\'s checkbox.background equals its input surface and the HC themes draw the box by border alone' } },
     ...nonText('border', 'bg', 'list-active-bg'),
-    ...nonText('focus', 'bg', 'list-active-bg'),
-    ...nonText('input-border', 'input-bg', 'bg'),
+    ...nonText('focus', 'bg'),
+    { fg: 'focus', bg: 'list-active-bg', kind: 'non-text', exempt: { reason: 'workbench parity (D22, H49): the focused selected row rings in focusBorder/list.focusOutline on list.activeSelectionBackground at 2.65 (Dark Modern) and 2.58 (Dark 2026)', themes: ['dark-2026', 'dark-modern'] } },
+    { fg: 'input-border', bg: 'input-bg', kind: 'non-text', exempt: INPUT_BORDER_PARITY },
+    { fg: 'input-border', bg: 'bg', kind: 'non-text', exempt: INPUT_BORDER_PARITY },
 ];
 
-/** The lint's status: pending on this item until its first run's red pairs are ruled on, then `hard`. */
-export const CONTRAST_LINT_STATUS: RuleStatus = { pending: 'P0.25' };
+/** The lint's status: `hard` since the design-advisor ruled on its first printout (2026-10-25, UX-P0.25). */
+export const CONTRAST_LINT_STATUS: RuleStatus = 'hard';
 
 /** A pair today's tokens fail in one theme and look, with the item that fixes it (each under a ruling). */
 export interface PairPending {
@@ -116,8 +127,25 @@ export interface PairPending {
     item: string;
 }
 
-/** The red pairs of today's tokens (filled from the run that flips `CONTRAST_LINT_STATUS`, with its ruling). */
-export const CONTRAST_PAIRS_PENDING: readonly PairPending[] = [];
+/** Every cell of `pairs` × `themes` in both looks, owned by `item`. */
+const cells = (pairs: readonly string[], themes: readonly string[], item: string): PairPending[] =>
+    pairs.flatMap(pair => themes.flatMap(theme => (['classic', 'modern'] as const).map(look => ({ pair, theme, look, item }))));
+
+/**
+ * The red or unmeasurable cells of today's tokens, each with the item that fixes it (design-advisor ruling of 2026-10-25,
+ * UX-P0.25; Appendix B: A7 → P2.3, A8 → P3.4, A14 → P4.6; the high-contrast records' empty selection tokens → P1.1, T-21).
+ */
+export const CONTRAST_PAIRS_PENDING: readonly PairPending[] = [
+    ...cells(['border/bg', 'border/list-active-bg'], ['dark-2026', 'dark-modern', 'light-2026', 'light-modern'], 'P2.3'),
+    ...cells(['syntax-number/code-bg', 'syntax-type/code-bg', 'syntax-variable/code-bg'], ['light-2026', 'light-high-contrast', 'light-modern'], 'P3.4'),
+    ...cells(['version-new/list-hover-bg over bg', 'version-new/list-hover-bg over bg-sidebar'], ['light-2026', 'light-modern'], 'P4.6'),
+    ...cells(['fg-muted/list-hover-bg over bg-sidebar'], ['dark-2026'], 'P4.6'),
+    ...cells(['list-active-fg/list-active-bg'], ['dark-high-contrast', 'light-high-contrast'], 'P1.1'),
+    ...cells(['border/list-active-bg', 'focus/list-active-bg'], ['dark-high-contrast'], 'P1.1'),
+];
+
+/** Whether the pair is exempt in this theme. */
+export const exemptIn = (pair: TokenPair, theme: string): boolean => pair.exempt !== undefined && (pair.exempt.themes === undefined || pair.exempt.themes.includes(theme));
 
 /** A pair's name as the lint prints it: `fg/bg`, or `fg/bg over over`. */
 export const pairName = (pair: TokenPair): string => `${pair.fg}/${pair.bg}${pair.over ? ` over ${pair.over}` : ''}`;
@@ -129,15 +157,16 @@ export function contrastPairLine(pair: TokenPair, theme: string, look: 'classic'
     const name = pairName(pair);
     const threshold = thresholdFor(13, 400, pair.kind);
     const owner = pending.find(entry => entry.pair === name && entry.theme === theme && entry.look === look);
-    const suffix = pair.exempt ? `exempt: ${pair.exempt.reason}` : owner ? `pending ${owner.item}` : statusText(status);
+    const exempt = exemptIn(pair, theme);
+    const suffix = exempt ? `exempt: ${pair.exempt?.reason}` : owner ? `pending ${owner.item}` : statusText(status);
     if (ratio === null) {
-        return { line: `[contrast] ${name}@${theme}/${look}: not measurable (a token is missing or not a colour) (${suffix})`, failure: pair.exempt || owner ? undefined : `${name}@${theme}/${look} not measurable` };
+        return { line: `[contrast] ${name}@${theme}/${look}: not measurable (a token is missing or not a colour) (${suffix})`, failure: exempt || owner ? undefined : `${name}@${theme}/${look} not measurable` };
     }
     const value = Math.round(ratio * 100) / 100;
     const pass = ratio >= threshold;
     return {
         line: `[contrast] ${name}@${theme}/${look}: ${value} vs ${threshold}${pass ? '' : ' (below)'} (${suffix})`,
-        failure: pass || pair.exempt || owner ? undefined : `${name}@${theme}/${look} ${value} < ${threshold}`,
+        failure: pass || exempt || owner ? undefined : `${name}@${theme}/${look} ${value} < ${threshold}`,
     };
 }
 

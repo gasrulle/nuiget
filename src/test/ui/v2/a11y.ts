@@ -64,6 +64,18 @@ export interface FullAxe {
     error?: string;
 }
 
+/** In-page: axe's check messages over a result's nodes, most frequent first, at most three (shared by the scripts below). */
+const REASONS_OF = `
+const reasonsOf = nodes => {
+    const tally = new Map();
+    for (const node of nodes) {
+        const text = [...node.any, ...node.all, ...node.none].map(check => check.message).filter(Boolean).join(' | ').slice(0, 160) || 'no message';
+        tally.set(text, (tally.get(text) || 0) + 1);
+    }
+    return [...tally].sort((a, b) => b[1] - a[1]).slice(0, 3).map(([text, count]) => ({ text, count }));
+};
+`;
+
 /**
  * Runs in the webview, asynchronously (`executeAsyncScript`): `arguments[0]` the extra rules, `arguments[1]` the node cap,
  * `arguments[2]` the selectors of `AXE_ACCEPTED`. Answers a `FullAxe` as JSON, small enough for the WebDriver channel.
@@ -79,6 +91,7 @@ const matching = (target, selector) => {
         return false;
     }
 };
+${REASONS_OF}
 const details = document.querySelector('[data-testid="package-details-panel"]');
 const inside = target => {
     try {
@@ -93,12 +106,7 @@ const rules = list => list.map(result => {
         const target = node.target.map(String).join(' ');
         return { target, summary: node.failureSummary || node.any.map(check => check.message).join('; '), insideDetails: inside(target) };
     });
-    const tally = new Map();
-    for (const node of result.nodes) {
-        const text = [...node.any, ...node.all, ...node.none].map(check => check.message).filter(Boolean).join(' | ').slice(0, 160) || 'no message';
-        tally.set(text, (tally.get(text) || 0) + 1);
-    }
-    const reasons = [...tally].sort((a, b) => b[1] - a[1]).slice(0, 3).map(([text, count]) => ({ text, count }));
+    const reasons = reasonsOf(result.nodes);
     const accepted = Object.fromEntries(selectors.map(selector => [selector, nodes.filter(node => matching(node.target, selector)).length]));
     return { id: result.id, impact: result.impact || null, count: nodes.length, outsideDetails: nodes.filter(node => !node.insideDetails).length, reasons, accepted, nodes: nodes.slice(0, cap) };
 });
@@ -123,28 +131,13 @@ export interface AxePending {
 }
 
 /**
- * The axe results of today's tree that later items remove (design-advisor ruling of 2026-10-25, UX-P0.23; run 40136298952).
- * Each `incomplete` below is "axe could not decide", which P0.25 turns into a measurement: it scrolls each scroll container
- * that holds undecided nodes in steps of its `clientHeight`, re-runs `color-contrast` with `include` on it, unions the
- * decided nodes and restores `scrollTop` (the state's later captures stay at `[diff]` 0 px), failing what stays undecided in
- * view; text under or inside an open layer is measured against the layer's own opaque background, or proven decided in the
- * state without the layer. The state lists are exact: never widened, never a wildcard.
+ * The axe results of today's tree that later items remove, each with its item; the state lists are exact, never widened,
+ * never a wildcard. Empty since UX-P0.25: the three undecided `color-contrast` cases of UX-P0.23 (rows beyond a scroller's
+ * fold, the empty messages under the quick-search popup, the Update-all dialog's bullets over the content beneath it) are
+ * decided by the resolve pass (`RESOLVE_CONTRAST`), which decided every node of their 17 states in run 40152178889, in both
+ * looks (design-advisor ruling of 2026-10-25, UX-P0.25). A state that prints an unresolved node again fails hard.
  */
-export const AXE_PENDING: readonly AxePending[] = [
-    // elmPartiallyObscured: rows beyond a scroller's fold (`overflow: auto`; the only opaque ancestor is `.nuiget-main`).
-    {
-        rule: 'color-contrast', kind: 'incomplete', item: 'P0.25',
-        states: [
-            'main-installed-single', 'main-installed-all', 'main-installed-cpm', 'main-installed-details', 'main-installed-hover', 'main-installed-focus',
-            'main-installed-unfocused', 'main-installed-bulk-dialog', 'main-transitive-expanded', 'main-transitive-details', 'main-updates',
-            'main-browse-results', 'main-browse-details', 'main-details-readme',
-        ],
-    },
-    // bgOverlap: the empty messages under the open quick-search popup.
-    { rule: 'color-contrast', kind: 'incomplete', item: 'P0.25', states: ['main-quicksearch-open', 'main-quicksearch-versions'] },
-    // elmPartiallyObscuring: the Update-all dialog's wrapped bullets over the varying content beneath the dialog.
-    { rule: 'color-contrast', kind: 'incomplete', item: 'P0.25', states: ['sidebar-update-all-dialog'] },
-];
+export const AXE_PENDING: readonly AxePending[] = [];
 
 /** A violation a decision declares by design, on the nodes of one selector or on one surface; `ruling` names the decision. */
 export interface AxeAccepted {
@@ -670,6 +663,7 @@ export function pairContrast(pair: ContrastPair): { ratio: number; threshold: nu
  */
 export const RUN_CONTRAST = `
 const done = arguments[arguments.length - 1];
+${REASONS_OF}
 const [scope, outsideDetailsOnly] = arguments;
 const details = document.querySelector('[data-testid="package-details-panel"]');
 const inDetails = target => { try { const el = document.querySelector(target); return details !== null && el !== null && details.contains(el); } catch (error) { return false; } };
@@ -678,7 +672,7 @@ axe.run(scope ? { include: [scope] } : document, {
     rules: { 'target-size': { enabled: true } },
     resultTypes: ['violations', 'passes', 'incomplete'],
 }).then(results => done(JSON.stringify({
-    violations: results.violations.map(rule => ({ rule: rule.id, count: rule.nodes.length, sample: rule.nodes.slice(0, 2).map(node => node.target.map(String).join(' ')).join(', ') })),
+    violations: results.violations.map(rule => ({ rule: rule.id, count: rule.nodes.length, sample: rule.nodes.slice(0, 2).map(node => node.target.map(String).join(' ')).join(', '), reasons: reasonsOf(rule.nodes) })),
     passes: results.passes.filter(rule => rule.id === 'color-contrast').reduce((sum, rule) => sum + rule.nodes.length, 0),
     undecided: results.incomplete.filter(rule => rule.id === 'color-contrast').flatMap(rule => rule.nodes).map(node => node.target.map(String).join(' ')).filter(target => !outsideDetailsOnly || !inDetails(target)),
 })), error => done(JSON.stringify({ violations: [], passes: 0, undecided: [], error: String(error) })));
@@ -705,7 +699,7 @@ return targets.filter(target => {
 
 /** What `RUN_CONTRAST` answers. */
 export interface ContrastRun {
-    violations: Array<{ rule: 'color-contrast' | 'target-size'; count: number; sample: string }>;
+    violations: MomentFacts['violations'];
     passes: number;
     undecided: string[];
     error?: string;
@@ -715,8 +709,8 @@ export interface ContrastRun {
 export const MOMENTS = ['hover-main', 'readme', 'dialog', 'popup', 'hover-sidebar'] as const;
 export type Moment = (typeof MOMENTS)[number];
 
-/** The moments' and the resolve pass's status: pending on this item until its first run's red lines are ruled on, then `hard`. */
-export const CONTRAST_STATUS: RuleStatus = { pending: 'P0.25' };
+/** The moments' and the resolve pass's status: `hard` since the design-advisor ruled on their first run (2026-10-25, UX-P0.25). */
+export const CONTRAST_STATUS: RuleStatus = 'hard';
 
 /** A red contrast line of today's tree: where (a moment or a capture state), the theme, the rule, the item that fixes it. */
 export interface ContrastPending {
@@ -726,8 +720,23 @@ export interface ContrastPending {
     item: string;
 }
 
-/** The red lines of today's tree (filled from the run that flips `CONTRAST_STATUS`, with its ruling). */
-export const CONTRAST_PENDING: readonly ContrastPending[] = [];
+/**
+ * The red lines of today's tree, run 40152178889's and no others (design-advisor ruling of 2026-10-25, UX-P0.25; Appendix B:
+ * README → P3.4 (A8, and the README's link list under 2.5.8, DECISIONS), hover → P4.6 (A14)).
+ */
+export const CONTRAST_PENDING: readonly ContrastPending[] = [
+    { where: 'readme', theme: 'light-modern', rule: 'color-contrast', item: 'P3.4' },
+    { where: 'readme', theme: 'light-high-contrast', rule: 'color-contrast', item: 'P3.4' },
+    { where: 'readme', theme: 'light-2026', rule: 'color-contrast', item: 'P3.4' },
+    { where: 'readme', theme: 'dark-modern', rule: 'target-size', item: 'P3.4' },
+    { where: 'readme', theme: 'light-modern', rule: 'target-size', item: 'P3.4' },
+    { where: 'readme', theme: 'dark-high-contrast', rule: 'target-size', item: 'P3.4' },
+    { where: 'readme', theme: 'light-high-contrast', rule: 'target-size', item: 'P3.4' },
+    { where: 'readme', theme: 'dark-2026', rule: 'target-size', item: 'P3.4' },
+    { where: 'readme', theme: 'light-2026', rule: 'target-size', item: 'P3.4' },
+    { where: 'hover-main', theme: 'dark-2026', rule: 'color-contrast', item: 'P4.6' },
+    { where: 'hover-sidebar', theme: 'dark-2026', rule: 'color-contrast', item: 'P4.6' },
+];
 
 const pendingContrast = (where: string, theme: string, rule: ContrastPending['rule'], registry: readonly ContrastPending[]): ContrastPending | undefined =>
     registry.find(entry => entry.where === where && entry.theme === theme && entry.rule === rule);
@@ -773,7 +782,7 @@ export function resolvedLines(state: string, theme: string, resolved: Resolved, 
 
 /** What the theme pass read at a moment: the two rules' violations and passes, and the pairs of what stayed undecided. */
 export interface MomentFacts {
-    violations: Array<{ rule: 'color-contrast' | 'target-size'; count: number; sample: string }>;
+    violations: Array<{ rule: 'color-contrast' | 'target-size'; count: number; sample: string; reasons?: Array<{ text: string; count: number }> }>;
     passes: number;
     resolved?: Resolved;
     /** Why the moment could not be measured (a README the network did not deliver), or undefined. */
@@ -795,7 +804,8 @@ export function momentLines(moment: Moment, theme: string, facts: MomentFacts, s
     const pairs = facts.resolved?.pairs.length ?? 0;
     lines.push(`[contrast] ${where}: ${facts.passes} nodes passed, ${facts.violations.reduce((sum, entry) => sum + entry.count, 0)} violations, ${pairs} pairs measured (${statusText(status)})`);
     for (const violation of facts.violations) {
-        lines.push(`[contrast] ${where}: violation ${violation.rule} ×${violation.count}: ${violation.sample} (${suffix(violation.rule)})`);
+        const reasons = (violation.reasons ?? []).map(reason => `; "${reason.text}" ×${reason.count}`).join('');
+        lines.push(`[contrast] ${where}: violation ${violation.rule} ×${violation.count}: ${violation.sample}${reasons} (${suffix(violation.rule)})`);
         if (pendingContrast(moment, theme, violation.rule, registry) === undefined) {
             failures.push(`${where} ${violation.rule} ×${violation.count}`);
         }

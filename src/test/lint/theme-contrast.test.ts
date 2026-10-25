@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { describe, expect, it } from 'vitest';
-import { composite, CONTRAST_LINT_STATUS, CONTRAST_PAIRS_PENDING, contrastPairLine, contrastRatio, pairName, pairRatio, parseCssColor, thresholdFor, TOKEN_PAIRS } from '../ui/v2/contrast';
+import { composite, CONTRAST_LINT_STATUS, CONTRAST_PAIRS_PENDING, contrastPairLine, contrastRatio, exemptIn, pairName, pairRatio, parseCssColor, thresholdFor, TOKEN_PAIRS } from '../ui/v2/contrast';
 
 /**
  * UX-P0.25 (H49; `a11y-text-contrast-all-states`, `a11y-nontext-contrast`): the curated token pairs of
@@ -52,6 +52,11 @@ describe('theme contrast (UX-P0.25)', () => {
             line: '[contrast] border/bg@dark-modern/classic: 1.26 vs 3 (below) (pending P2.3)', failure: undefined,
         });
         expect(contrastPairLine({ fg: 'fg', bg: 'bg', kind: 'text' }, 'light-2026', 'modern', 3.98, 'hard', []).failure).toBe('fg/bg@light-2026/modern 3.98 < 4.5');
+        // An exemption scoped to themes holds there only; elsewhere the cell is judged.
+        const scoped = { fg: 'input-border', bg: 'bg', kind: 'non-text' as const, exempt: { reason: 'parity', themes: ['dark-modern'] } };
+        expect(contrastPairLine(scoped, 'dark-modern', 'modern', 1.2, 'hard', [])).toEqual({ line: '[contrast] input-border/bg@dark-modern/modern: 1.2 vs 3 (below) (exempt: parity)', failure: undefined });
+        expect(contrastPairLine(scoped, 'dark-high-contrast', 'modern', 1.2, 'hard', []).failure).toBe('input-border/bg@dark-high-contrast/modern 1.2 < 3');
+        expect(contrastPairLine({ ...scoped, exempt: { reason: 'parity' } }, 'dark-high-contrast', 'modern', null, 'hard', []).failure).toBeUndefined();
     });
 
     it('reads the twelve token records of the theme dump, six themes in two looks', () => {
@@ -80,17 +85,30 @@ describe('theme contrast (UX-P0.25)', () => {
         }
     });
 
-    it('names in its pending entries only pairs, themes and looks the records have, each on an open tracker row', () => {
+    it('names in its pending entries and exemptions only pairs, themes and looks the records have, each entry on an open tracker row and on a cell that fails', () => {
         const names = new Set(TOKEN_PAIRS.map(pairName));
         const cells = new Set(records.map(record => `${record.theme}/${record.look}`));
         const status = new Map(fs.readFileSync(path.join(root, 'docs/plans/STATUS-ux.md'), 'utf8').split(/\r?\n/).flatMap(line => {
             const match = /^\| (P[0-9][0-9a-z.-]*) \|[^|]*\|[^|]*\| ([a-z -]+) \|/.exec(line);
             return match ? [[match[1], match[2]]] : [];
         }));
+        const themes = new Set(records.map(record => record.theme));
         for (const entry of CONTRAST_PAIRS_PENDING) {
             expect(names.has(entry.pair), entry.pair).toBe(true);
             expect(cells.has(`${entry.theme}/${entry.look}`), `${entry.theme}/${entry.look}`).toBe(true);
             expect(status.has(entry.item) && status.get(entry.item) !== 'done', entry.item).toBe(true);
+            // A cell its item fixed (it now meets its threshold) leaves the registry in that item's change.
+            const pair = TOKEN_PAIRS.find(candidate => pairName(candidate) === entry.pair)!;
+            const record = records.find(candidate => candidate.theme === entry.theme && candidate.look === entry.look)!;
+            const ratio = pairRatio(pair, record.tokens);
+            expect(exemptIn(pair, entry.theme), `${entry.pair}@${entry.theme} is exempt and pending`).toBe(false);
+            expect(ratio === null || ratio < thresholdFor(13, 400, pair.kind), `${entry.pair}@${entry.theme}/${entry.look} meets its threshold: a stale entry`).toBe(true);
+        }
+        expect(new Set(CONTRAST_PAIRS_PENDING.map(entry => `${entry.pair}@${entry.theme}/${entry.look}`)).size).toBe(CONTRAST_PAIRS_PENDING.length);
+        for (const pair of TOKEN_PAIRS) {
+            for (const theme of pair.exempt?.themes ?? []) {
+                expect(themes.has(theme), `${pairName(pair)} exempt in ${theme}`).toBe(true);
+            }
         }
     });
 });

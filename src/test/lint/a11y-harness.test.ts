@@ -35,10 +35,9 @@ describe('the accessibility harness (UX-P0.23)', () => {
         expect(FULL_AXE_RULE).toBe('a11y-full-axe-real-page');
         expect(FULL_AXE_STATUS).toBe('hard');
         expect(AXE_EXTRA_RULES).toEqual(['target-size', 'label-content-name-mismatch']);
-        // The design-advisor ruling of 2026-10-25: the three undecided contrast cases are P0.25's to measure, state by state.
-        expect(AXE_PENDING.map(entry => `${entry.rule} ${entry.kind} ${entry.item} ${entry.states?.length}`)).toEqual([
-            'color-contrast incomplete P0.25 14', 'color-contrast incomplete P0.25 2', 'color-contrast incomplete P0.25 1',
-        ]);
+        // The design-advisor ruling of 2026-10-25 (UX-P0.25): the resolve pass decided the three undecided contrast cases of
+        // UX-P0.23 in every state (run 40152178889), so no result is pending.
+        expect(AXE_PENDING).toEqual([]);
         expect(AXE_ACCEPTED.map(entry => `${entry.rule} ${entry.selector ?? entry.surface}`)).toEqual(['label-content-name-mismatch .nuiget-row-option', 'page-has-heading-one sidebar']);
         expect(acceptedSelectors()).toEqual(['.nuiget-row-option']);
     });
@@ -254,9 +253,14 @@ describe('the accessibility harness (UX-P0.23)', () => {
             expect((expected ?? []).filter(stop => !lines.includes(stop)), screen).toEqual([]);
         }
     });
-    it('holds the contrast moments and the resolve pass pending on UX-P0.25 until its run is ruled on (UX-P0.25)', () => {
-        expect(CONTRAST_STATUS).toEqual({ pending: 'P0.25' });
-        expect(CONTRAST_PENDING).toEqual([]);
+    it('holds the contrast moments and the resolve pass hard since UX-P0.25\'s run was ruled on, with run 40152178889\'s red lines on their owners (UX-P0.25)', () => {
+        expect(CONTRAST_STATUS).toBe('hard');
+        expect(CONTRAST_PENDING.map(entry => `${entry.where}@${entry.theme} ${entry.rule} ${entry.item}`)).toEqual([
+            'readme@light-modern color-contrast P3.4', 'readme@light-high-contrast color-contrast P3.4', 'readme@light-2026 color-contrast P3.4',
+            'readme@dark-modern target-size P3.4', 'readme@light-modern target-size P3.4', 'readme@dark-high-contrast target-size P3.4',
+            'readme@light-high-contrast target-size P3.4', 'readme@dark-2026 target-size P3.4', 'readme@light-2026 target-size P3.4',
+            'hover-main@dark-2026 color-contrast P4.6', 'hover-sidebar@dark-2026 color-contrast P4.6',
+        ]);
         expect(MOMENTS).toEqual(['hover-main', 'readme', 'dialog', 'popup', 'hover-sidebar']);
     });
 
@@ -333,6 +337,10 @@ describe('the accessibility harness (UX-P0.23)', () => {
             failures: ['hover-main@light-2026 color-contrast ×2'],
         });
         expect(momentLines('hover-main', 'light-2026', facts, 'hard', [{ where: 'hover-main', theme: 'light-2026', rule: 'color-contrast', item: 'P4.6' }]).failures).toEqual([]);
+        // Axe's check messages follow the sample, as the full run's lines carry them.
+        const withReasons = { violations: [{ rule: 'target-size' as const, count: 3, sample: 'li:nth-child(2) > a', reasons: [{ text: 'Target has insufficient size (16px by 16px, should be at least 24px by 24px)', count: 3 }] }], passes: 5 };
+        expect(momentLines('readme', 'dark-modern', withReasons, 'hard', [{ where: 'readme', theme: 'dark-modern', rule: 'target-size', item: 'P3.4' }]).lines[1])
+            .toBe('[contrast] readme@dark-modern: violation target-size ×3: li:nth-child(2) > a; "Target has insufficient size (16px by 16px, should be at least 24px by 24px)" ×3 (pending P3.4)');
         expect(momentLines('popup', 'dark-modern', { violations: [], passes: 0 }, 'hard', []).failures).toEqual(['popup@dark-modern decided nothing']);
         // A resolve pass that failed keeps its line: the moment's summary does not stand in for it.
         const failed = momentLines('popup', 'dark-modern', { violations: [], passes: 3, resolved: { targets: 2, decided: 0, violations: [], pairs: [], unresolved: ['#a', '#b'], error: 'script timeout' } }, { pending: 'P0.25' }, []);
