@@ -115,19 +115,22 @@ P5.9a "`[perf] search → first result` below its baseline"). The lines come fro
 capture and keyboard walk; the job log's artifact `ui-log`, file `ui-output.txt`. Every run below ran on GitHub-hosted
 `ubuntu-26.04`, image version `20261026.180.1`, VS Code 1.140.0, Chromium 150. Times in ms.
 
-| Mark | 41023390081 (`48dd773`) | 41025682652 (`7386a58`) | 41027778946 (`5c16a70`) |
-|---|---:|---:|---:|
-| `panel open again → first row` | ≤ 147 | ≤ 181 | ≤ 142 |
-| `panel open again → authoritative list` | ≤ 147 | ≤ 181 | ≤ 142 |
-| `panel open again → icons` | ≤ 147 | ≤ 181 | ≤ 142 |
-| `refresh → list settled` | 198 | 237 | 197 |
-| `project chosen → first row` | 252 | 349 | 246 |
-| `project chosen → authoritative list` | 257 | 359 | 248 |
-| `project chosen → icons` | 370 | 1142 | 513 |
-| `select → details` | 4 | 6 | 3 |
-| `select → dependencies` | 196 | 228 | 200 |
-| `search → first result` | 593 | 672 | 1067 |
-| `search again → first result` | 196 | 173 | 607 |
+| Mark | 41023390081 (`48dd773`) | 41025682652 (`7386a58`) | 41027778946 (`5c16a70`) | Median |
+|---|---:|---:|---:|---:|
+| `panel open again → first row` | ≤ 147 | ≤ 181 | ≤ 142 | ≤ 147 |
+| `panel open again → authoritative list` | ≤ 147 | ≤ 181 | ≤ 142 | ≤ 147 |
+| `panel open again → icons` | ≤ 147 | ≤ 181 | ≤ 142 | ≤ 147 |
+| `refresh → list settled` | 198 | 237 | 197 | 198 |
+| `project chosen → first row` | 252 | 349 | 246 | 252 |
+| `project chosen → authoritative list` | 257 | 359 | 248 | 257 |
+| `project chosen → icons` | 370 | 1142 | 513 | 513 |
+| `select → details` | 4 | 6 | 3 | 4 |
+| `select → dependencies` | 196 | 228 | 200 | 200 |
+| `search → first result` | 593 | 672 | 1067 | 672 |
+| `search again → first result` | 196 | 173 | 607 | 196 |
+
+The median is descriptive, not a rule: the values vary between runs of one commit, and the items that compare with them
+set their own comparison rule.
 
 The run of `48dd773` printed the reopen as `panel open`; the label became `panel open again` at `7386a58`. The run of
 `7386a58` also tried to time the session's first panel: its recorder was armed in the suite's `before` hook and was to be
