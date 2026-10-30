@@ -2,34 +2,34 @@ import { type ChildProcess, spawn } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
 import { By, EditorView, InputBox, VSBrowser, Workbench } from 'vscode-extension-tester';
+import { artboardFile, artboardFilter, artboardJobs, ARTBOARDS, type ColourSample, isSpecRender, pixelAt, SAMPLE_COLOUR, sampleVerdict, SATURATION_MIN } from '../artboards';
 import { driverOf, poll } from '../sidebarWebview';
 
 /**
- * The artboard export (UX-P0.27a): renders artboard A in VS Code's integrated browser by the route of
- * `docs/design/export-method.md` and writes, next to the crops, `artboards/main-installed-single.dark-modern.932.png`
- * (Modern UI), `artboards/main-installed-single.dark-modern-classic.932.png` (classic) and
- * `artboards/main-installed-single.spec.json` (the main panel's elements by test id: rect and content inset relative to
- * the panel, padding, gap, and the artboard's `--nuiget-*` names their inline style uses). The files are copied into `docs/design/artboards/` from the `ui` job's artifact. It runs in the
- * `ui` lane's Modern UI pass only, after the capture suite (the file name sorts last), and leaves no editor open.
+ * The artboard export (UX-P0.27a, generalized by UX-P0.27): renders each artboard of `ARTBOARDS` (`../artboards.ts`) in VS
+ * Code's integrated browser by the route of `docs/design/export-method.md` and writes, next to the crops,
+ * `artboards/<state>.<theme>.<width>.png` per width, theme and look (`<theme>-classic` for the classic look; artboard A:
+ * `main-installed-single.dark-modern.932.png` and `main-installed-single.dark-modern-classic.932.png`) and
+ * `artboards/<state>.spec.json` for the entry's first theme and width (the panel's elements by test id: rect and content
+ * inset relative to the panel, padding, gap, and the artboard's `--nuiget-*` names their inline style uses). Each render's
+ * colour sample is read back from its PNG; a mismatch fails the test once every PNG is written. The files are copied into
+ * `docs/design/artboards/` from the `ui` job's artifact. It runs in the `ui` lane's Modern UI pass only, after the capture
+ * suite (the file name sorts last), or alone through `scripts/render-artboards.mjs`, and leaves no editor open.
  */
 
 const LANE = process.env.NUIGET_UI_LANE ?? 'ui';
 const LOOK = process.env.NUIGET_UI_LOOK === 'classic' ? 'classic' : 'modern';
-const ARTBOARD = 'artboards/round1/A-Extensions.dc.html';
-const STATE = 'main-installed-single';
-const THEME = 'dark-modern';
-/** The artboard is 1252 px wide (sidebar 300, gap 20, main panel 932); the viewport holds it at DPR 1. */
-const VIEWPORT = { width: 1280, height: 900 };
-const PANEL = 'nuiget-app';
+/** The viewport's height; its width is the render's (artboard A: 1280, which holds its 1252 px at DPR 1). */
+const VIEWPORT_HEIGHT = 900;
 
 type Cdp = {
     sendDevToolsCommand(cmd: string, params?: object): Promise<void>;
     sendAndGetDevToolsCommand(cmd: string, params?: object): Promise<{ data: string }>;
 };
 
-/** The main panel's rect in the page and every element under it with a test id. */
+/** The panel's rect in the page (its test id is `arguments[0]`) and every element under it with a test id. */
 const SPEC = `
-const panel = document.querySelector('[data-testid="${PANEL}"]');
+const panel = document.querySelector('[data-testid="' + arguments[0] + '"]');
 if (!panel) return JSON.stringify(null);
 const base = panel.getBoundingClientRect();
 const round = n => Math.round(n * 10) / 10;
@@ -108,13 +108,17 @@ if (LANE === 'ui' && LOOK === 'modern') {
             server?.kill();
         });
 
-        it('renders artboard A in both looks at 932 px and writes its spec', async function () {
+        it('renders the artboards of the manifest and writes their specs', async function () {
             this.timeout(300_000);
+            const jobs = artboardJobs(ARTBOARDS, artboardFilter(process.env));
+            if (jobs.length === 0) {
+                throw new Error('no artboard render selected (NUIGET_ARTBOARD_STATES, _THEMES, _LOOKS)');
+            }
             const out = path.join(path.dirname(VSBrowser.instance.getScreenshotsDir()), 'artboards');
             fs.mkdirSync(out, { recursive: true });
             const started = await startServer();
             server = started.child;
-            const target = started.url + ARTBOARD;
+            const target = started.url + jobs[0].entry.source;
             const driver = driverOf();
             await driver.switchTo().defaultContent();
             const workbench = await driver.getWindowHandle();
@@ -157,34 +161,65 @@ if (LANE === 'ui' && LOOK === 'modern') {
             }, 'a window handle showing the artboard', 60_000);
 
             const cdp = driver as unknown as Cdp;
-            await cdp.sendDevToolsCommand('Emulation.setDeviceMetricsOverride', { ...VIEWPORT, deviceScaleFactor: 1, mobile: false });
-            const specs: Record<string, Spec> = {};
-            for (const look of ['modern', 'classic'] as const) {
-                const url = `${target}?theme=${THEME}&look=${look}`;
-                await driver.executeScript('location.assign(arguments[0]);', url);
+            /** Each entry's spec, by look, from its first width and theme. */
+            const specs = new Map<string, Record<string, Spec>>();
+            const failures: string[] = [];
+            let viewport: number | undefined;
+            for (const job of jobs) {
+                const { entry, width, theme, look } = job;
+                if (width.viewport !== viewport) {
+                    await cdp.sendDevToolsCommand('Emulation.setDeviceMetricsOverride', { width: width.viewport, height: VIEWPORT_HEIGHT, deviceScaleFactor: 1, mobile: false });
+                    viewport = width.viewport;
+                }
+                const url = `${started.url}${entry.source}?theme=${theme}&look=${look}`;
+                // The marker goes with the old document: two jobs on one URL (two widths) wait for the new one too.
+                await driver.executeScript('window.__nuigetLeaving = true; location.assign(arguments[0]);', url);
                 await poll(async () => {
                     const state = await driver.executeScript<string>(
-                        'return [location.href, document.readyState, document.documentElement.dataset.look, document.fonts.status, window.innerWidth, window.devicePixelRatio].join("|");');
-                    return state === `${url}|complete|${look}|loaded|${VIEWPORT.width}|1` ? true : undefined;
-                }, `the artboard in the ${look} look`, 30_000);
-                const spec = JSON.parse(await driver.executeScript<string>(SPEC)) as Spec | null;
+                        'return [location.href, document.readyState, document.documentElement.dataset.look, document.fonts.status, window.innerWidth, window.devicePixelRatio, window.__nuigetLeaving === true].join("|");');
+                    return state === `${url}|complete|${look}|loaded|${width.viewport}|1|false` ? true : undefined;
+                }, `${entry.source} in ${theme}, the ${look} look`, 30_000);
+                const spec = JSON.parse(await driver.executeScript<string>(SPEC, entry.panel)) as Spec | null;
                 if (spec === null) {
-                    throw new Error(`no [data-testid="${PANEL}"] in ${url}`);
+                    throw new Error(`no [data-testid="${entry.panel}"] in ${url}`);
                 }
                 const { x, y, w, h } = spec.rect;
+                const file = artboardFile(job);
+                if (Math.abs(w - width.panel) > 0.5) {
+                    throw new Error(`${file}: the panel of ${entry.source} is ${w} px wide at viewport ${width.viewport}, not ${width.panel}`);
+                }
+                const sample = await driver.executeScript<ColourSample>(SAMPLE_COLOUR, entry.panel, entry.sample, SATURATION_MIN);
                 const clip = await cdp.sendAndGetDevToolsCommand('Page.captureScreenshot', { format: 'png', clip: { x, y, width: w, height: h, scale: 1 }, captureBeyondViewport: true });
-                const file = `${STATE}.${THEME}${look === 'classic' ? '-classic' : ''}.${Math.round(w)}.png`;
-                fs.writeFileSync(path.join(out, file), clip.data, 'base64');
-                console.warn(`[artboard] ${file}: ${ARTBOARD} panel ${x},${y} ${w}x${h} (dpr 1, viewport ${VIEWPORT.width}x${VIEWPORT.height})`);
-                specs[look] = spec;
+                const png = path.join(out, file);
+                fs.writeFileSync(png, clip.data, 'base64');
+                // The PNG first: a mismatch leaves its evidence.
+                const verdict = sampleVerdict(sample, 'error' in sample ? undefined : pixelAt(png, sample.x - x, sample.y - y));
+                console.warn(`[artboard] ${file}: ${entry.source} panel ${x},${y} ${w}x${h} (dpr 1, viewport ${width.viewport}x${VIEWPORT_HEIGHT}); ${verdict.text}`);
+                if (verdict.failure !== undefined) {
+                    failures.push(`${file}: ${verdict.failure}`);
+                }
+                if (isSpecRender(job)) {
+                    specs.set(entry.state, { ...specs.get(entry.state), [look]: spec });
+                }
             }
             const chromium = /Chrome\/(\d+)/.exec(await driver.executeScript<string>('return navigator.userAgent;'))?.[1] ?? 'unknown';
-            fs.writeFileSync(path.join(out, `${STATE}.spec.json`), JSON.stringify({
-                state: STATE, theme: THEME, width: 932, source: `docs/design/${ARTBOARD}`, vscode: VSBrowser.instance.version, chromium,
-                platform: process.platform, run: process.env.GITHUB_RUN_ID ?? 'local',
-                looks: Object.fromEntries(Object.entries(specs).map(([look, spec]) => [look, spec.elements])),
-            }, null, 2) + '\n');
-            console.warn(`[artboard] ${STATE}.spec.json: ${Object.keys(specs.modern.elements).length} elements per look`);
+            for (const entry of ARTBOARDS) {
+                const looks = specs.get(entry.state);
+                // A run narrowed to some looks leaves the entry's spec as it was: helper 8 reads every look from it.
+                if (looks === undefined || entry.looks.some(look => !(look in looks))) {
+                    continue;
+                }
+                fs.writeFileSync(path.join(out, `${entry.state}.spec.json`), JSON.stringify({
+                    state: entry.state, theme: entry.themes[0], width: entry.widths[0].panel, source: `docs/design/${entry.source}`, vscode: VSBrowser.instance.version, chromium,
+                    platform: process.platform, run: process.env.GITHUB_RUN_ID ?? 'local',
+                    looks: Object.fromEntries(Object.entries(looks).map(([look, spec]) => [look, spec.elements])),
+                }, null, 2) + '\n');
+                const counts = [...new Set(Object.values(looks).map(spec => Object.keys(spec.elements).length))];
+                console.warn(`[artboard] ${entry.state}.spec.json: ${counts.join('/')} elements per look`);
+            }
+            if (failures.length > 0) {
+                throw new Error(failures.join('; '));
+            }
         });
     });
 }
