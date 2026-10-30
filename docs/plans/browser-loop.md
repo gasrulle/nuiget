@@ -14,15 +14,17 @@ local probes); nothing outside the repository is needed to follow it apart from 
   `javascript_tool` see only the top document; nUIget's webviews are cross-origin iframes (`*.vscode-cdn.net`) and
   their DOM is opaque. Screenshots, `zoom` and clicks by coordinate work across the frame boundary. DOM-level
   assertions stay with ExTester, which switches into the webview frame.
-- The output is a set of **named interactive states** (§6). Their PNGs are scored by the `design-judge` workflow, and
-  the item records the judge's JSON in its `STATUS.md` marked "browser loop, informational", never the session's own
-  impression of a screenshot.
+- The output is a set of **named interactive states** (§6) as candidates: since probe step 9 (below) no pane capture
+  is a file the judge can score, so a candidate becomes a named state of `states.ts` that ExTester captures, and the
+  judge scores that capture; the session records what the pane showed as notes, never its own impression as evidence.
 - A defect found this way becomes first a harness rule that fails on the current captures (a named state in
   `src/test/ui/v2/states.ts` and a measurement), then a fix item. The loop finds candidates; the harness proves them.
-- **Open problem, settled by probe step 9 (§5):** the pane's `screenshot` returns an image to the conversation, not a
-  file, and the judge reads PNG files. Until that step proves a way to write a pane screenshot under
-  `captures/explore-<item>/`, the interactive states the judge scores are captured by ExTester instead (hover with
-  `driver.actions().move()`, dialogs and menus as named states in `states.ts`), and the loop only finds candidates.
+- **Settled by probe step 9 (§5, UX-P0.28, 2026-10-30): no file the judge can read.** The app saves each pane
+  `screenshot` as an 800×600 JPEG under the session's `tool-results/` folder (the path is printed with the image) and each
+  `zoom` as a PNG cropped from that same frame, while the viewport is 1024×768 CSS px at DPR 2: every file is downscaled
+  (0.78 of a CSS px) and the screenshot lossy, so no pane capture is 1:1 and none goes under `captures/explore-<item>/`.
+  The interactive states the judge scores are captured by ExTester instead (hover with `driver.actions().move()`, dialogs
+  and menus as named states in `states.ts`), and the loop only finds candidates.
 
 ## 2. Why the server bundle
 
@@ -39,13 +41,13 @@ web client never reads the server's `data/User/settings.json`.
 
 | Item | Value |
 |---|---|
-| Server | `~/github/Tools/vscode-server/unpacked/vscode-server-darwin-arm64-web/bin/code-server`, VS Code 1.142.0, commit `6d62b1d5`: the version the harness pins with `--code_version 1.142.0` |
+| Server | `~/github/Tools/vscode-server/unpacked/vscode-server-darwin-arm64-web/bin/code-server`, VS Code 1.142.0, commit `6d62b1d5`; the harness pins 1.140.0 (`--code_version`, plan D35), so the loop runs a newer workbench than the captures (exploratory only, plan §4) |
 | PATH | `~/.zprofile` puts its `bin` first; check with `code-server --version` (the Bash tool is a zsh login shell) |
 | Data directory | `~/github/Tools/vscode-server/data`: `server-data/` (extensions and the Machine settings file) and `fixture/` (the workspace copy). Never inside the repository |
 | Machine settings file | `~/github/Tools/vscode-server/data/server-data/data/Machine/settings.json`, the only server-side settings file the web client reads |
 | Launch entry | `.claude/launch.json`, `nuiget-web`: port 8000, URL `http://127.0.0.1:8000` (from the owner's bundled patch, `patches/settings-and-launch.patch`) |
 | Allow rules | `Bash(code-server *)` and `mcp__Claude_Browser__*` (same patch). The 2026-10-17 probe ran pane calls in Auto mode without the second rule |
-| Wrapper | `node scripts/browser-loop.mjs` with the steps `prepare`, `theme`, `wait` and `stop`, written by P0's browser item; `curl`, `lsof`, `rm` and `cp` are not pre-approved, so the steps that need them go through it. Until it exists those steps go to the Auto-mode classifier |
+| Wrapper | `node scripts/browser-loop.mjs` with the steps `prepare`, `theme`, `wait` and `stop` (UX-P0.28); `curl`, `lsof`, `rm` and `cp` are not pre-approved, so the steps that need them go through it. Its data directory defaults to `~/github/Tools/vscode-server/data` (`--data` moves it) |
 
 A different VS Code version is its own item (re-capture goldens, re-run the negative control); §9 has the owner's
 install commands. coder's fork is also called `code-server`: never put both on PATH.
@@ -63,11 +65,11 @@ start the server from a VS Code integrated terminal.
    npm run package:vsix
    ```
 2. Prepare the data directory (fixture copy, restore of every supported project, VSIX install, Machine settings;
-   the dense fixture `src/test/ui/fixtures/dense-workspace/` is created by P0):
+   the dense fixture `src/test/ui/fixtures/dense-workspace/` is the default `--fixture`):
    ```
    node scripts/browser-loop.mjs prepare --vsix <path to the .vsix> --fixture src/test/ui/fixtures/dense-workspace
    ```
-   What it does, for reference and for the time before the wrapper exists:
+   What it does, for reference:
    - copy the fixture to `~/github/Tools/vscode-server/data/fixture` (fresh copy every run, never the repository
      path) and run `dotnet restore` on each project except `Unsupported/`;
    - `code-server --server-data-dir ~/github/Tools/vscode-server/data/server-data --install-extension <vsix> --force`
@@ -99,12 +101,16 @@ start the server from a VS Code integrated terminal.
    ```
    node scripts/browser-loop.mjs wait
    ```
-5. Open the pane: `preview_start` with name `nuiget-web`, or `navigate` to `http://127.0.0.1:8000/`.
-6. The first time only: the probe checklist of §5.
+5. Open the pane: `preview_start` with name `nuiget-web`, or `navigate` to `http://127.0.0.1:8000/`. The first load of a
+   webview takes seconds (UX-P0.28: the side bar's body was still blank 5 s after its title bar showed): wait with a
+   screenshot of the webview's rect, never with page text, which never sees inside it (step 6 of §5).
+6. The first time only: the probe checklist of §5 (run by UX-P0.28 on 2026-10-30; its verdicts are in the tracker's
+   P0.28 row, so later sessions skip it).
 7. Capture the item's named interactive states (§6). Themes: `node scripts/browser-loop.mjs theme "<theme id>"`
    rewrites the Machine file (`Dark Modern`, `Light Modern`, `Dark High Contrast`, `Light High Contrast`,
    `Dark 2026`, `Light 2026`; the high-contrast pair may be labelled `Default High Contrast` and
-   `Default High Contrast Light`, so `theme.ui.test.ts` tries both labels and probe step 1 records which one applied);
+   `Default High Contrast Light`, so `theme.ui.test.ts` tries both labels; the first run of the probe used Dark Modern
+   only, so a session that switches to a high-contrast theme records which label applied);
    restart the server if a change does not apply. Widths: drag the side-bar sash
    with `left_click_drag` for a narrow sidebar; `resize_window` only at 768 px or wider (below 768 the pane switches to
    an Android user agent with touch emulation), then `preset: desktop`.
@@ -132,16 +138,16 @@ Run once, by P0's browser item after the owner's patch is applied; record each v
 | 5 | Frame geometry | `javascript_tool` on the top document: list `iframe.webview` with `src` origin and bounding rect | Rects recorded; they are the crop and click offsets of §6 |
 | 6 | Tree opacity | `find "Installed"`, then `read_page` (it truncates at 50k characters, which can look like opacity: `find` first) | Expected: the tree ends at the iframe, as in the 2026-10-17 probe; record what it shows |
 | 7 | Second round-trip | After the installed list renders, open a version selector or run a search (upstream #319896) | The webview answers |
-| 8 | Look keys | `javascript_tool` on the top document: the class list of `.monaco-workbench` | It carries `modern-ui` (the Machine file's `workbench.experimental.modernUI` applies) and a reduced-motion class while `workbench.reduceMotion` is `on`; record the class names seen. Unverified until run |
+| 8 | Look keys | `javascript_tool` on the top document: the class list of `.monaco-workbench` | It carries `modern-ui` (the Machine file's `workbench.experimental.modernUI` applies) and a reduced-motion class while `workbench.reduceMotion` is `on`; record the class names seen. Seen by UX-P0.28: `modern-ui` and `monaco-reduce-motion` |
 | 9 | PNG to a file | Find out whether a pane screenshot can be written to `captures/explore-<item>/` (no tool option is documented) | Record the method, or "not available": then §1's ExTester route captures the interactive states the judge scores |
-| 10 | Version parity | `code-server --version`; Help, About | 1.142.0, the harness's `--code_version` |
+| 10 | Version | `code-server --version`; Help, About | Both read 1.142.0 (the server's own version; the harness pins 1.140.0, so this is a known difference, not parity) |
 
 ## 6. Exploratory script: named interactive states
 
 Each state starts from a named state of `src/test/ui/v2/states.ts`, is reached by the pane steps listed, and is
 captured as the webview's iframe rect (probe step 5); the context menu, which the workbench draws outside the
-webview, is captured as the window. Name: `explore-<surface>-<what>`; file
-`captures/explore-<item>/<state>.<theme>.<width>.png` (gitignored; no decision cites it). Before each capture move the
+webview, is captured as the window. Name: `explore-<surface>-<what>`. A pane capture is a downscaled JPEG under the
+session's `tool-results/` (probe step 9): a note, never a file under `captures/` and never cited. Before each capture move the
 pointer to a neutral point unless the state is about hover, and wait for transitions to finish unless the state is
 about motion.
 
@@ -167,9 +173,9 @@ about motion.
 
 Theme pass: repeat the hover, focus and selection states under Light Modern and Dark High Contrast.
 
-Scoring: run the `design-judge` workflow with `runId` `explore-<item>`, one `states` entry per capture, and the
-artboard and `spec.json` of the state it starts from (the judge reads the interaction from the state's name). The
-item's `STATUS.md` records the returned JSON as informational.
+Scoring: a state worth scoring becomes a named state of `src/test/ui/v2/states.ts` with an ExTester setup (hover with
+`driver.actions().move()`, a dialog or menu opened by keys), and `design-judge` scores its CI capture with the artboard
+and `spec.json` of the state it starts from (the judge reads the interaction from the state's name).
 
 ## 7. Caveats: what the browser instance does not prove
 
@@ -179,7 +185,7 @@ The CI ExTester captures remain the gate of record.
 |---|---|---|
 | Webview origin | The web build loads each webview as an `https://<hash>.vscode-cdn.net` iframe with a service worker; Electron uses its own scheme; both use the same `WebviewElement` class | A webview rendering in the pane proves the `asWebviewUri` and CSP wiring, not Electron resource loading; it needs internet; a pane that blocks third-party storage would blank every webview |
 | Pane tooling | nUIget's UI is two nested cross-origin iframes; the pane tools have no frame selector | Pixel-only: screenshots and coordinates; ExTester for the DOM |
-| Screenshots | A pane screenshot is an image in the conversation, not a file (probe step 9) | Until a file route is proven, the judge scores ExTester captures |
+| Screenshots | The app saves a pane screenshot as an 800×600 JPEG under the session's `tool-results/`, and a `zoom` as a PNG cropped from that frame; the viewport is 1024×768 CSS px at DPR 2 (probe step 9, UX-P0.28) | Nothing is 1:1 or lossless: the judge scores ExTester captures only |
 | Theme parity | Body classes are identical in web and desktop; the web default theme is Light 2026; `src/test/ui/settings.json` names `Default Dark Modern`, which works through a migration rewrite | Use the 1.142.0 theme ids; `@media (forced-colors: active)` follows the OS, never a VS Code theme |
 | Look | ExTester writes `workbench.experimental.modernUI: false`; the plan's harness writes the key explicitly (Modern UI primary, one classic pass) | Set the same key in the Machine file, or the pane and the captures show different looks |
 | Native chrome | No Toggle Developer Tools, no `window.zoomLevel`, simple file dialogs, no native menus; the host app may intercept keyboard chords | Dialog and menu parity unproven; zoom only through `resize_window` and the sash |
@@ -188,7 +194,7 @@ The CI ExTester captures remain the gate of record.
 | Trust | Only `--disable-workspace-trust` on a directly started server works | Restricted Mode looks exactly like a broken VSIX: check Running Extensions |
 | Network | `*.vscode-cdn.net` on every load, `api.nuget.org` for the fixture | Offline, the extension host runs and the webviews stay blank |
 | Security | No connection token: any local process can drive the server | Acceptable on a single-user Mac; keep the bind at `127.0.0.1` |
-| Permissions | `Bash(code-server *)` matches commands that start with `code-server`; whether `mcp__Claude_Browser__*` covers the app's built-in pane server is unverified | Expect classifier reviews, not prompts, for anything else |
+| Permissions | `Bash(code-server *)` matches commands that start with `code-server`; UX-P0.28 opened `http://127.0.0.1:8000/` with `preview_start nuiget-web` and drove the pane with no approval card or prompt | Expect classifier reviews, not prompts, for anything else |
 | Lifecycle | The background server dies with the session; port 8000 can collide across sessions; `--host localhost` may resolve to `::1` | Always stop the server; always pass `127.0.0.1` |
 | Upstream bugs | #319896 messaging stall; #326544 service worker loses interception (one tab per server; reload on `ERR_NAME_NOT_RESOLVED`); #341226 an extension with `onFileSystem:file` breaks activation on macOS 27 (keep the extensions directory nUIget-only); #299425 NLS blank page (never change the display language); #339621 (never F5) | Checklist items, not blockers |
 | Gatekeeper | A curl-fetched zip carries no quarantine attribute | Unverified on macOS 27; report any dialog |
