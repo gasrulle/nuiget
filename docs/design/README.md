@@ -9,8 +9,8 @@ user sees in the webviews; cite its rule ids in commits and tests.
 |---|---|---|
 | `design-system.md` | The reference: 84 rules (`DS-*`) bound to the ExTester probe of VS Code 1.142.0, the colour roles, type scale, iconography, density, the look switch, the overflow table, the state matrix with its test-id markers, microcopy, motion, each component's accessibility contract, the CSS baseline and the lint changes the implementation needs, and the decisions taken by the closest-to-the-workbench rule | By hand, in the change that alters a rule; a new number needs its probe field first |
 | `tokens.json` | Every `--nuiget-*` token (173) with its declaration, its Modern UI declaration where the looks differ, its `--vscode-*` role and fallback chain, and its value resolved per theme from the probe dumps; the schema is in its `$comment` | Generated, never by hand |
-| `tokens.css.draft` | The proposed `src/webview/shared/tokens.css`, generated from the same spec as `tokens.json` (`.draft` so no lint reads it) | Generated; the implementation item copies it into `src/` and widens the lints as `design-system.md` §12 lists |
-| `tools/spec.mjs`, `tools/build.mjs` | The token generator: the spec (one entry per token: declaration, Modern UI declaration, forced colour, usage, rule ids) and the build that writes `tokens.json`, `tokens.css.draft` and the artifact's token lists | By hand (the spec); the build is run, never its outputs edited |
+| `src/webview/shared/tokens.css` | The tokens themselves, copied from the same spec as `tokens.json` at UX-P1.1 | By hand, under design trigger 2; `tokens.json` follows |
+| `tools/spec.mjs`, `tools/build.mjs` | The token generator: the spec (one entry per token: declaration, Modern UI declaration, forced colour, usage, rule ids) and the build that writes `tokens.json` and the artifact's token lists | By hand (the spec); the build is run, never its outputs edited |
 | `themes/<slug>.css`, `themes/<slug>.modern.css` | The resolved `--vscode-*` variables of the main-panel webview under the six default themes (Dark and Light Modern, Dark and Light High Contrast, Dark and Light 2026), classic and Modern UI, on VS Code 1.140.0 (UX-P0.14), as CSS for artboards and previews | Copied from the `ui` job's `ui-screenshots` artifact (`themes/`), never by hand and never from a lane's or a local run |
 | `themes/<slug>.tokens.css`, `themes/<slug>.modern.tokens.css` | The computed `--nuiget-*` tokens of the product on the same host, per theme and look; a record for P1.1 and P0.25; no artboard loads it | Copied with the theme files; a `tokens.css` change re-copies the token records alone |
 | `workbench/<look>.json` | The workbench's own controls the Design System's heights stand for, per look: the Extensions row and search box, a pane header, the extension editor's navbar, the Settings select, input and button, the editor tab strip, the quick input box and row; each with its selector, height, width, font size, line height, padding and radius, measured by the capture suite on VS Code 1.140.0 (UX-P0.11) | Copied from the `ui` job's `ui-screenshots` artifact (`workbench.<look>.json`), never by hand and never from a lane's |
@@ -30,7 +30,7 @@ The table lists the files present when the Design System was written; later step
   writes `tokens.json`; its README, type styles and component cards were written from these files. When the two
   disagree, these files win and the artifact is republished.
 - `design-system.md` states the rules and cites tokens by name; `tokens.json` gives each token's value and resolution;
-  `tokens.css.draft` is the CSS form of `tokens.json`. Rule ids are stable: a rule changes its text, never its id.
+  `src/webview/shared/tokens.css` is the CSS form of `tokens.json`. Rule ids are stable: a rule changes its text, never its id.
 - `themes/<slug>.css` and `tokens.json` come from the same theme dumps; artboards load a theme file (never a token
   record) and their own token file to render in a given theme without VS Code.
 
@@ -53,13 +53,13 @@ captures/<run-id>`) and record their sha256. The planning dumps came from a one-
 3. Record the VS Code version the run used (`--code_version max` resolves to the newest ExTester supports) and pin it
    in the file headers.
 4. Convert each `themes/<slug>.json` into `themes/<slug>.css` (one `--vscode-*: value;` per line in `:root`, the body
-   class and theme kind in the header comment), then regenerate `tokens.json`, `tokens.css.draft` and the artifact
+   class and theme kind in the header comment), then regenerate `tokens.json` and the artifact
    lists, and diff: a changed value is a theme change to review, never a hand edit.
 
 The generator is committed: `docs/design/tools/spec.mjs` holds one entry per token (declaration, Modern UI declaration,
 forced colour, usage, rule ids) and `docs/design/tools/build.mjs` writes the outputs:
 `node docs/design/tools/build.mjs <dir> <timestamp>` reads `<dir>/probe/out/themes/*.json` and
-`<dir>/probe/out-modern/themes/*.json`, then writes `<dir>/repo/docs/design/tokens.json`, `tokens.css.draft` and
+`<dir>/probe/out-modern/themes/*.json`, then writes `<dir>/repo/docs/design/tokens.json` and
 `<dir>/design/ds-artifact/project/tokens.json` (the layout of the design session's scratch directory; adjust the four
 `join(S, …)` paths in `build.mjs` when running it elsewhere). A token change is made in the spec, never in the outputs.
 

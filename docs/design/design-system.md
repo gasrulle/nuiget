@@ -9,11 +9,11 @@ differ, the Modern UI value comes first (it is the compiled default from 1.139) 
 |---|---|
 | Status | Proposed by the UX initiative, 2026-10-23. The plan's items implement it; this file is the reference they cite. |
 | Rules | 84: the 72 `DS-*` rules of the research (ids kept) and 12 added (`DS-TYPE-8`, `DS-TYPE-9`, `DS-RADIUS-1`, `DS-RADIUS-2`, `DS-DIVIDER-5`, `DS-DIVIDER-6`, `DS-SCROLL-1`, `DS-SCROLL-2`, `DS-LOOK-1`, `DS-HC-1`, `DS-ALIGN-1`, `DS-OVERFLOW-6` (2026-10-24, V72)) |
-| Tokens | 173 `--nuiget-*` custom properties (`tokens.json`, `tokens.css.draft`), 26 of them switched by the look |
+| Tokens | 171 `--nuiget-*` custom properties (`tokens.json`, `src/webview/shared/tokens.css`), 26 of them switched by the look |
 | Exemplar | The workbench: Extensions view (rows, pane headers, search), Explorer (tree rows, pane-header actions), Settings editor (controls, scope tabs), quick input (popup), Extensions editor (details header, navbar) |
 | Floor | VS Code `^1.90.0` (Chromium 122, Node 20.9; owner round 2, D54); every rule renders correctly there through token fallbacks (1.90 exports none of the size tokens) |
 | Owner rounds | Round 1: composition A, the Extensions view. Round 2: D51 disabled text buttons, D52 row check mark, D54 floor, D56 Browse loading. Applied throughout; §14 lists what each changed |
-| Generator | `docs/design/tools/spec.mjs` and `build.mjs` (committed) write `tokens.json`, `tokens.css.draft` and the artifact's token lists |
+| Generator | `docs/design/tools/spec.mjs` and `build.mjs` (committed) write `tokens.json` and the artifact's token lists |
 
 How to read the citations:
 
@@ -231,7 +231,7 @@ The exemplar fails three rule premises in the classic look; the closest-to-the-w
 ## 3. Tokens
 
 `tokens.json` is the reference (171 tokens: space 19, radius 17, size 23, type 12, weight 4, motion 7, opacity 1, z 2,
-colour 86; 26 switched by the look). `tokens.css.draft` is the proposed `src/webview/shared/tokens.css`. Both are written
+colour 86; 26 switched by the look). `src/webview/shared/tokens.css` was copied from the generator's CSS at UX-P1.1 and differs in the five values `docs/plans/STATUS-ux.md` names for P1.5. `tokens.json` is written
 by the committed generator, `docs/design/tools/build.mjs` from the spec `docs/design/tools/spec.mjs`, and resolve every
 colour per theme from the probe dumps (`node docs/design/tools/build.mjs <dir holding probe/out and probe/out-modern> <timestamp>`).
 
