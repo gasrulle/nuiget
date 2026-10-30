@@ -89,7 +89,8 @@ workspace is long enough to be cut, on either tree, so this is a true measuremen
 018ce01e8652e6ded838c53473de3132d468c063436abc94ca2ed3cd95a9bfd9). PF-3a is not bound at 932 and gains no own-line clause:
 composition A (D46) and DS-ROW-1 / T-27 put the version and the authors on one line, so either would be red by design after
 UX-P2.2; truncation at narrow widths is DS-ROW-5's (pending UX-P2.2), DS-ROW-1's and DS-OVERFLOW-1's. Design-advisor and
-architecture-advisor rulings of 2026-10-24 (`docs/plans/handoff/P0.17.md`); the owner ratifies at the P0 gate.
+architecture-advisor rulings of 2026-10-24 (`docs/plans/handoff/P0.17.md`); the owner ratifies at the P0 gate. Ratified
+2026-10-30 (tracker `## Phase gates`, the P0 gate on 2fa38d6).
 
 **Cell not reached.** `main-installed-single.dark-modern.220.png` on `80940aa`: `not reachable (Timed out after 120000 ms
 waiting for data-testid="package-row-fluentvalidation")`, so no PF line exists for that cell; HEAD measures PF-2, PF-3b and
