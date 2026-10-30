@@ -1,5 +1,6 @@
 // Resolves the token spec against the six probe theme dumps and writes the committed tokens.json, the artifact's
 // tokens.json and tokens.css.draft. Usage: node build.mjs <scratchpad>
+// The probe dumps it reads are not tracked: a regeneration runs from the research scratchpad only.
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { GROUPS, TOKENS } from './spec.mjs';
@@ -137,7 +138,7 @@ const committed = {
         'nUIget Design System token reference (docs/design/tokens.json). Generated from the token spec of the design session; tokens.css.draft is generated from the same spec, so the two never disagree.',
         'Schema: tokens[] has one entry per --nuiget-* custom property of the proposed src/webview/shared/tokens.css.',
         '  name: the custom property. kind: space | radius | size | type | weight | motion | opacity | z | color. group: the tokens.css section.',
-        '  value: the declaration in :root (the classic look, and every host from the 1.90 floor below VS Code 1.139). modernValue: the declaration in :root[data-nuiget-look="modern"] when Modern UI differs.',
+        '  value: the declaration in :root (the classic look, and every host from the 1.90 floor below VS Code 1.139). modernValue: the declaration in :root[data-look="modern"] when Modern UI differs.',
         '  resolved (non-colour): { all } when both looks agree, else { classic, modern }, evaluated with the probe dumps of VS Code 1.142.0 (size tokens are identical in all six themes and both looks).',
         '  role (colour): the --vscode-* key the token stands for, written as VS Code writes it (list.activeSelectionBackground).',
         '  fallbackChain (colour): the keys tried in order and the final literal; modernFallbackChain when the Modern UI declaration differs.',
@@ -151,7 +152,7 @@ const committed = {
     themes: THEMES.map(([id, name]) => ({ id, name })),
     looks: {
         classic: ':root (default; every host below 1.139 and every host with workbench.experimental.modernUI false)',
-        modern: ':root[data-nuiget-look="modern"] (the host mirrors workbench.experimental.modernUI: true onto <html>; DS-LOOK-1)',
+        modern: ':root[data-look="modern"] (the host mirrors workbench.experimental.modernUI: true onto <html>; DS-LOOK-1)',
     },
     counts: {
         total: resolvedTokens.length,
@@ -255,14 +256,19 @@ lines.pop();
 P('}');
 P('');
 P('/* Modern UI (DS-LOOK-1): the metrics that differ between the two workbench looks, measured on VS Code 1.142.0');
-P('   (probe/out-modern). The host writes data-nuiget-look="modern" on <html> when workbench.experimental.modernUI is true. */');
-P(':root[data-nuiget-look="modern"] {');
+P('   (probe/out-modern). The host writes data-look="modern" on <html> when workbench.experimental.modernUI is true. */');
+P(':root[data-look="modern"] {');
 for (const t of TOKENS.filter(t => t.modern)) P(`    --nuiget-${t.name}: ${t.modern};`);
 P('}');
 P('');
 P('/* Modern UI with workbench.experimental.modernUIUppercaseViewHeaders: section titles stay uppercase (fontRamp.css). */');
-P(':root[data-nuiget-look="modern"][data-nuiget-headers="uppercase"] {');
+P(':root[data-look="modern"][data-uppercase-headers] {');
 P('    --nuiget-text-transform-section-title: uppercase;');
+P('}');
+P('');
+P('/* Modern UI with compact density (D53, ADR-011 Decision 3): the sidebar row inset; judge-only until a compact capture exists (DS-DENSITY-2). */');
+P(':root[data-look="modern"][data-density="compact"] {');
+P('    --nuiget-row-inset-x: var(--nuiget-space-1);');
 P('}');
 P('');
 P('/* High contrast, dark and light: lines carry what colour differences cannot; nothing casts a shadow. The new outlines of');

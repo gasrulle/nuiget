@@ -1,6 +1,6 @@
 // The token spec of the nUIget Design System: one entry per `--nuiget-*` custom property of the proposed tokens.css.
 // `value` is the declaration in `:root` (the classic look and every host below 1.139), `modern` the declaration in
-// `:root[data-nuiget-look="modern"]` when the Modern UI value differs, `forced` the system colour under
+// `:root[data-look="modern"]` when the Modern UI value differs, `forced` the system colour under
 // `@media (forced-colors: active)`, `role` the `--vscode-*` key a colour stands for. Numbers cite the probe
 // (`probe/out*/workbench/<file> <group>[i] .<field>`) or the rule id that binds them.
 
@@ -117,10 +117,8 @@ export const TOKENS = [
     // ---------------------------------------------------------------- state
     { name: 'opacity-disabled', kind: 'opacity', group: 'state', value: '0.4', usage: 'A disabled text button, as the workbench draws it (`.monaco-button.disabled { opacity: 0.4 }`, button.css:40-43; owner round 2, D51). Only text buttons: action labels and icon buttons use color-fg-disabled.', rules: ['DS-COLOR-6'] },
     // ---------------------------------------------------------------- z
-    { name: 'z-sticky', kind: 'z', group: 'z', value: '1', usage: 'A sticky header inside a list.', rules: [] },
     { name: 'z-popover', kind: 'z', group: 'z', value: '10', usage: 'Popover, quick-search popup.', rules: [] },
     { name: 'z-dialog', kind: 'z', group: 'z', value: '20', usage: 'Dialog and its scrim.', rules: [] },
-    { name: 'z-toast', kind: 'z', group: 'z', value: '30', usage: 'Reserved (no in-webview toast exists).', rules: [] },
     // ---------------------------------------------------------------- colours: surfaces
     { name: 'color-bg', group: 'color-surface', value: 'var(--vscode-editor-background)', forced: 'Canvas', usage: 'The main panel root (an editor).', rules: ['DS-COLOR-1'] },
     { name: 'color-bg-sidebar', group: 'color-surface', value: 'var(--vscode-sideBar-background)', forced: 'Canvas', usage: 'The sidebar root and the main panel list pane.', rules: ['DS-COLOR-1'] },

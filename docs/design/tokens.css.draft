@@ -110,10 +110,8 @@
     --nuiget-opacity-disabled: 0.4;
 
     /* Stacking order */
-    --nuiget-z-sticky: 1;
     --nuiget-z-popover: 10;
     --nuiget-z-dialog: 20;
-    --nuiget-z-toast: 30;
 
     /* Colours: surfaces */
     --nuiget-color-bg: var(--vscode-editor-background);
@@ -219,8 +217,8 @@
 }
 
 /* Modern UI (DS-LOOK-1): the metrics that differ between the two workbench looks, measured on VS Code 1.142.0
-   (probe/out-modern). The host writes data-nuiget-look="modern" on <html> when workbench.experimental.modernUI is true. */
-:root[data-nuiget-look="modern"] {
+   (probe/out-modern). The host writes data-look="modern" on <html> when workbench.experimental.modernUI is true. */
+:root[data-look="modern"] {
     --nuiget-inset-sidebar: var(--nuiget-space-4);
     --nuiget-popup-row-padding-x: var(--nuiget-space-2);
     --nuiget-pane-header-margin-x: var(--nuiget-space-2);
@@ -250,8 +248,13 @@
 }
 
 /* Modern UI with workbench.experimental.modernUIUppercaseViewHeaders: section titles stay uppercase (fontRamp.css). */
-:root[data-nuiget-look="modern"][data-nuiget-headers="uppercase"] {
+:root[data-look="modern"][data-uppercase-headers] {
     --nuiget-text-transform-section-title: uppercase;
+}
+
+/* Modern UI with compact density (D53, ADR-011 Decision 3): the sidebar row inset; judge-only until a compact capture exists (DS-DENSITY-2). */
+:root[data-look="modern"][data-density="compact"] {
+    --nuiget-row-inset-x: var(--nuiget-space-1);
 }
 
 /* High contrast, dark and light: lines carry what colour differences cannot; nothing casts a shadow. The new outlines of

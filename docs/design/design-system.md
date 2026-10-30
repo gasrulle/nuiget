@@ -82,7 +82,7 @@ One rule per line. Status is `measurable` (a script decides) or `judge-only`. To
 |---|---|---|---|---|---|---|
 | DS-TYPE-1 | UI text uses the workbench font (`--vscode-font-family`); only code uses the editor font. | Computed font-family of every text node = the root's, except `code`, `pre` and README code. | exact | measurable | — | M = C: `extensions.json ext_rows[0] .fontFamily` = the webview body font (`vars` bodyFont) |
 | DS-TYPE-2 | Every font size is a step of the ramp {10, 11, 12, 13, 18, 26} px; README body text follows the Markdown preview and is exempt. | Computed font-size of every text element outside `.nuiget-readme`. | 0.1 | measurable | V17, V25, V49 | M = C: `--vscode-fontSize-*` heading1 26, heading2 18, body1 13, label1 12, body2 11, label3 10 (`vars`) |
-| DS-TYPE-3 | Two weights, 400 and 600; 700 only on classic section titles and main-list group headers. | Computed font-weight ∈ {400, 600}; 700 only on `.nuiget-section-title` and main-list group headers without the Modern UI attribute. | exact | measurable | V49, V61 | M 600 / C 700 on pane-header titles (`extensions.json pane_headers[3] .fontWeight`); `--vscode-fontWeight-*` 400/600 (`vars`) |
+| DS-TYPE-3 | Two weights, 400 and 600; 700 only on classic section titles and main-list group headers. | Computed font-weight outside `.nuiget-readme` ∈ {400, 600}; 700 only on `.nuiget-section-title` and main-list group headers without the Modern UI attribute. | exact | measurable | V49, V61 | M 600 / C 700 on pane-header titles (`extensions.json pane_headers[3] .fontWeight`); `--vscode-fontWeight-*` 400/600 (`vars`) |
 | DS-TYPE-4 | Body line height is 1.4 (18.2 px at 13 px); a single-line row, header or control sets a fixed line box equal to its content height (row 22, pane header M 28 / C 22, text button 16). | Computed line-height of the roots = 18.2; of compact rows = 22. | 0.5 | measurable | — | M = C 18.2 (`extensions.json ext_rows[0] .lineHeight`); rows 22 (`explorer.json list_rows[0] .lineHeight`); pane header M 28 / C 22 (`pane_headers[3] .lineHeight`) |
 | DS-TYPE-5 | Casing follows the host. Sidebar section titles and main-list group headers (Direct Packages, Transitive Packages, a project; one grouped list per view, owner round 1) take the pane-header type: M 12 px, 600, capitalize in a 28 px header (uppercase when the host mirrors `modernUIUppercaseViewHeaders`) / C 11 px, 700, uppercase in 22 px. Details group headers: 13 px, 600, no transform. | Computed text-transform, font-size and font-weight of `.nuiget-section-title` and of every main-list group header = the probe's `.pane-header .title` of the same look; details group headers 13/600/none. | exact | measurable | V49 | M 12px/600/capitalize / C 11px/700/uppercase (`extensions.json pane_headers[3]`) |
 | DS-TYPE-6 | Secondary text is `descriptionForeground`: versions, authors and metadata at 11 px, a publisher or author emphasis at 11/600, a Browse description at 13 px. | Computed size and colour of `.nuiget-row-version`, `-authors`, `-meta` (11), `-description` (13). | 0.1 | measurable | — | M = C: publisher 11px/600 #9d9d9d (`extensions.json ext_parts[9]`); description 13px #9d9d9d (`ext_parts[6]`) |
@@ -124,7 +124,7 @@ One rule per line. Status is `measurable` (a script decides) or `judge-only`. To
 | Id | Rule | Measurement | Tolerance | Status | Catches | Workbench reference (M / C, probe field) |
 |---|---|---|---|---|---|---|
 | DS-DENSITY-1 | Density belongs to the surface, with no user toggle: the sidebar is compact (22 px one-line rows, no icons, no descriptions), the main list comfortable (72 px Extensions rows), the details pane uses editor spacing (20 px header inset). | Row heights per DS-HEIGHT-2/3; no density setting in `package.json`. | exact | measurable | V68 | M = C 22 / 72 (`explorer.json list_rows[0]`, `extensions.json ext_rows[0]`) |
-| DS-DENSITY-2 | When the host runs Modern UI with `window.density.layout: compact`, the webviews may follow it (an attribute from the host; rows inset 2, outer margins 0). Not adopted until a compact probe exists. | Judge-only until a compact run is probed. | — | judge-only | — | M compact: rows inset `size20`, margins 0 (`padding.css:71-74`, CSS-read); C: none |
+| DS-DENSITY-2 | When the host runs Modern UI with `window.density.layout: compact`, the webviews follow it: adopted as one token under `data-density="compact"` (sidebar row inset 2). | Judge-only until a compact capture exists. | — | judge-only | — | M compact: rows inset `size20`, margins 0 (`padding.css:71-74`, CSS-read); C: none |
 
 ### OVERFLOW
 
@@ -197,7 +197,7 @@ One rule per line. Status is `measurable` (a script decides) or `judge-only`. To
 
 | Id | Rule | Measurement | Tolerance | Status | Catches | Workbench reference (M / C, probe field) |
 |---|---|---|---|---|---|---|
-| DS-LOOK-1 | The webviews follow the host's look. The host writes `data-nuiget-look="modern"` on `<html>` when `workbench.experimental.modernUI` is true, and `data-nuiget-headers="uppercase"` when `workbench.experimental.modernUIUppercaseViewHeaders` is also true; `tokens.css` switches only the tokens of the look table (§6) on those attributes; no component reads the setting. Without the attributes every token computes its classic value. | For each row of §6: the computed value under each attribute = the measured value of that look. | exact | measurable | — | `modernUI.contribution.ts` toggles `modern-ui*` on `.monaco-workbench` only, never inside a webview (modern-ui.md §1.2); `M: extensions.json __document.workbenchClass` holds `modern-ui` |
+| DS-LOOK-1 | The webviews follow the host's look. The host writes `data-look` on `<html>` (`modern` when `workbench.experimental.modernUI` is true, otherwise `classic`), `data-density` (`compact` or `default`, from `window.density.layout`) and `data-uppercase-headers` when `workbench.experimental.modernUIUppercaseViewHeaders` is true (ADR-011 Decision 2); `tokens.css` switches only the tokens of the look table (§6) on those attributes; no component reads the setting. Without the attributes every token computes its classic value. | For each row of §6: the computed value under each attribute = the measured value of that look. | exact | measurable | — | `modernUI.contribution.ts` toggles `modern-ui*` on `.monaco-workbench` only, never inside a webview (modern-ui.md §1.2); `M: extensions.json __document.workbenchClass` holds `modern-ui` |
 
 ### HC
 
@@ -230,7 +230,7 @@ The exemplar fails three rule premises in the classic look; the closest-to-the-w
 
 ## 3. Tokens
 
-`tokens.json` is the reference (173 tokens: space 19, radius 17, size 23, type 12, weight 4, motion 7, opacity 1, z 4,
+`tokens.json` is the reference (171 tokens: space 19, radius 17, size 23, type 12, weight 4, motion 7, opacity 1, z 2,
 colour 86; 26 switched by the look). `tokens.css.draft` is the proposed `src/webview/shared/tokens.css`. Both are written
 by the committed generator, `docs/design/tools/build.mjs` from the spec `docs/design/tools/spec.mjs`, and resolve every
 colour per theme from the probe dumps (`node docs/design/tools/build.mjs <dir holding probe/out and probe/out-modern> <timestamp>`).
@@ -268,8 +268,7 @@ New tokens (83): `space-7`; `inset-details`, `inset-sidebar`, `block-gap-inner`,
 `checkbox-size`, `badge-size`, `tab-strip-height`, `details-tab-strip-height`, `progress-height`, `sash-size`,
 `welcome-button-max`, `focus-pointer-width`; `opacity-disabled` (D51); `font-size-xs`, `-label`, `-badge`, `-section-title`,
 `font-weight-regular`, `-semibold`, `-bold`, `-section-title`, `text-transform-section-title`, `line-height-button`;
-`duration-spin`, `easing-spin`, `duration-progress`, `delay-sash-hover`; and 28 colour roles (§4). No existing token
-name is removed: every name `webview-tokens.test.ts` requires stays.
+`duration-spin`, `easing-spin`, `duration-progress`, `delay-sash-hover`; and 28 colour roles (§4). `--nuiget-z-sticky` and `--nuiget-z-toast` are removed (V64); every other name stays.
 
 ## 4. Colour roles
 
@@ -526,7 +525,7 @@ versions are the MDN browser-compat-data keys the lint already records.
 
 | Test | Today | Change |
 |---|---|---|
-| `webview-tokens.test.ts:53` selector allowlist | `:root`, the two HC body classes, the two media queries | add `:root[data-nuiget-look="modern"] {`, `:root[data-nuiget-look="modern"][data-nuiget-headers="uppercase"] {`, `body.vscode-reduce-motion {` |
+| `webview-tokens.test.ts:53` selector allowlist | `:root`, the two HC body classes, the two media queries | add `:root[data-look="modern"] {`, `:root[data-look="modern"][data-density="compact"] {`, `:root[data-look="modern"][data-uppercase-headers] {`, `body.vscode-reduce-motion {` |
 | `webview-tokens.test.ts:56-65` colours are aliases | admits `var(--vscode-…)` and the `color-mix()` scrim | admit the scrim literal `rgba(0, 0, 0, 0.5)` on `--nuiget-color-scrim` only (one line); check the Modern UI block's colours the same way |
 | `webview-tokens.test.ts:26-41` REQUIRED | 52 names | add the new names the primitives come to rely on (at least the semantic radius, size and colour tokens of §3) |
 | `webview-tokens.test.ts:72-80` ROW_HEIGHT | 24 / 78 | `Listbox.tsx` `ROW_HEIGHT = { compact: 22, comfortable: 72 }` |
@@ -618,7 +617,7 @@ T-27..T-29 follow from them.
 | T-7 | Radius names | `--nuiget-radius-xs/sm/md/lg/xl/circle` follow the workbench tiers 2/4/6/8/12/9999 (sm 2 → 4, md 4 → 6); components use semantic tokens (`radius-control`, `-action`, `-row`, `-layer`, …) | `vars --vscode-cornerRadius-*` |
 | T-8 | Type tokens | px aliases of the font ramp: xs 10, sm 11, label 12, md 13, lg 18 | `vars --vscode-fontSize-*`; DECISIONS.md "Token source" (em → px) |
 | T-9 | Loops under reduced motion | Adopted (DECISIONS.md "Reduced motion stops everything"). every animation stops, loops included: the spinner shows the still `loading` glyph and the indeterminate stripe stands at the start, as nUIget does today. The workbench keeps its loops moving, but `a11y-reduced-motion-both-signals` (owned by the accessibility plan) requires every duration at zero and the harness proposal H5 expects no running animation, so the accessibility rule wins over parity. The loops get their own tokens (1.5 s, 4 s) zeroed in both reduced-motion blocks | `codicon-modifiers.css`, `progressbar.css` (no reduce-motion rule), `paneview.css:126`; `Spinner.tsx` and `primitives.css:602-606` (today); accessibility.md H5 |
-| T-10 | Look attributes | `data-nuiget-look="modern"` and `data-nuiget-headers="uppercase"` on `<html>`, written by `renderWebviewHtml` and updated live once a contract item adds a config field; `window.density.layout` is not mirrored (DS-DENSITY-2) | modern-ui.md §1.1, §7; DECISIONS.md "Which workbench look" |
+| T-10 | Look attributes | `data-look`, `data-density` and `data-uppercase-headers` on `<html>` (ADR-011 Decision 2), written by `renderWebviewHtml` and updated live once a contract item adds a config field; `data-density="compact"` re-values `--nuiget-row-inset-x` to `--nuiget-space-1` (ADR-011 Decision 3, D53) | modern-ui.md §1.1, §7; DECISIONS.md "Which workbench look" |
 | T-11 | Label badge shape | padding and radius of the probe's text count badge: M 4/6 pill, C 2/4 radius 2 | `extensions.json badges[3]` (hidden element: computed style only) |
 | T-12 | Tab strip heights | Changed by owner round 1: both strips are 36 px, the Extensions editor navbar, as composition A draws them (was 33 for Installed/Updates, the Settings scope tabs of composition B); CSS-read and PNG-consistent, unbound until P0 | `png.extEditorNavbar`; DECISIONS.md round 1 (A: "36 px tab strip") |
 | T-13 | Group header variants | Changed by owner round 1: main-list group headers take the pane-header metrics (M 28, 12/600 capitalize, radius 4, hover tint, not inset / C 22, 11/700 uppercase), as composition A draws them in one grouped list per view; details group headers stay 13/600, no transform, 22 px; Title Case text; a divider above every one but the first | DS-TYPE-5, DS-DIVIDER-1; DECISIONS.md round 1 (A: "28 px capitalised group headers") |
