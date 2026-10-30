@@ -9,7 +9,10 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
-/** Reference values that wait for the item that builds what uses them: token → that item. */
+/**
+ * Reference values that wait for the item that builds what uses them: token → that item.
+ * @type {Record<string, string>}
+ */
 export const ALLOWANCE = {
     '--nuiget-row-height-compact': 'P3.7a',
     '--nuiget-row-height-comfortable': 'P2.2',
@@ -85,7 +88,10 @@ export function tokenDefects(reference, css, statuses, allowance = ALLOWANCE) {
     return defects;
 }
 
-/** The rule rows of the Design System's §1, as `{ id, measurement }`. */
+/**
+ * The rule rows of the Design System's §1.
+ * @returns {Array<{ id: string; measurement: string }>}
+ */
 export function ruleRows(markdown) {
     const text = markdown.replace(/\r\n/g, '\n');
     const start = text.indexOf('\n## 1. Rules');
