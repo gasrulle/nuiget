@@ -2,7 +2,8 @@
 
 The baseline that the acceptance cut (plan item P7.6) checks the 2.0 extension against. It was written once by plan
 item P7.2a, from one CI run. Every number below comes from that run's jobs and artifacts. None comes from a local
-machine or from an untracked capture.
+machine or from an untracked capture. The section "In-page timings of the main panel" was added by UX plan item P0.26
+from the UI jobs of its own runs, under the same rule.
 
 ## Source
 
@@ -106,6 +107,58 @@ warm 282, 295 and 287 ms against 900 ms. Bundles at P8.2b: 293 183, 525 241 and 
 ceilings in `esbuild.mjs` were reset to `Math.ceil(measured × 1.1)`: 322 502, 577 766 and 351 245 bytes. Verdict: no row
 beyond tolerance.
 
+## In-page timings of the main panel (UX-P0.26)
+
+Informational, with no tolerance: a later item compares its own `[perf]` lines with these (UX plan P4.9 "not worse",
+P5.9a "`[perf] search → first result` below its baseline"). The lines come from the capture suite's test "in-page timings
+(UX-P0.26)" in the `UI` job's Modern UI pass, on the dense workspace (`src/test/ui/fixtures/dense-workspace/`), after every
+capture and keyboard walk; the job log's artifact `ui-log`, file `ui-output.txt`. Every run below ran on GitHub-hosted
+`ubuntu-26.04`, image version `20261026.180.1`, VS Code 1.140.0, Chromium 150. Times in ms.
+
+| Mark | 41023390081 (`48dd773`) | 41025682652 (`7386a58`) | 41027778946 (`5c16a70`) |
+|---|---:|---:|---:|
+| `panel open again → first row` | ≤ 147 | ≤ 181 | ≤ 142 |
+| `panel open again → authoritative list` | ≤ 147 | ≤ 181 | ≤ 142 |
+| `panel open again → icons` | ≤ 147 | ≤ 181 | ≤ 142 |
+| `refresh → list settled` | 198 | 237 | 197 |
+| `project chosen → first row` | 252 | 349 | 246 |
+| `project chosen → authoritative list` | 257 | 359 | 248 |
+| `project chosen → icons` | 370 | 1142 | 513 |
+| `select → details` | 4 | 6 | 3 |
+| `select → dependencies` | 196 | 228 | 200 |
+| `search → first result` | 593 | 672 | 1067 |
+| `search again → first result` | 196 | 173 | 607 |
+
+The run of `48dd773` printed the reopen as `panel open`; the label became `panel open again` at `7386a58`. The run of
+`7386a58` also tried to time the session's first panel: its recorder was armed in the suite's `before` hook and was to be
+read at the end of the exemplar test, but the exemplar closes every editor group, so no recorder was left to read
+(`[perf] panel open: not measured …`), and the failed entry delayed every capture by 60 s. `5c16a70` removed the attempt.
+The timed test's own code is the same in the three runs.
+
+What each chain measures:
+
+- **Clock.** Every number is the difference of two `performance.now()` readings in the main panel's webview document: no
+  WebDriver round trip and no poll interval is in it. A mark is stamped by a `MutationObserver` in the task that changed
+  the DOM, before that change is painted (`src/test/ui/v2/perf.ts`).
+- **`panel open again`**: the panel closed and opened again on Gateway, whose lists the captures had read; timed from the
+  time origin of the panel's content document (the webview began loading). The recorder can start only once the driver
+  reaches that document, 142 to 181 ms after load, and every mark was already there, so each value is an upper bound
+  (`≤`), never a measurement. The session's first open is not timed (above).
+- **`refresh`**: the Refresh button (every resource invalidated) to Gateway's list settled again: rows, nothing busy, no
+  `provisional` badge, every row with its authors, after a revalidation was seen. A provisional list came first in every
+  run.
+- **`project chosen`**: Utility chosen in the project selector, its list not read since the Refresh, so the host walks
+  its configuration and evaluates it again; the SDK probe is cached, and the lite metadata may come from the cache. `first
+  row` is the first Utility row, `authoritative list` the `provisional` badge gone, `icons` every row with its authors and
+  one with its own icon (the lite metadata answer, which carries both). The icons vary most (370 to 1142 ms): the answer
+  waits for the vulnerability data set, which expires after one hour (research finding X33).
+- **`select`**: a press on a Utility row (`System.CommandLine`, never opened before) to its details header (`details`,
+  drawn from the row's own data) and to the dependency groups the host answers (`dependencies`).
+- **`search`**: Enter in the search box on a text the session has not searched before ("Humanizer") to the first Browse
+  row. The feeds are already connected: this is not the session's first search and is not comparable with the
+  `[P5.6] cold search` row above. **`search again`**: the same text again after Escape. Both read nuget.org live and vary
+  with it.
+
 ## Definitions
 
 - **Cold restore**: the first `dotnet restore` into empty folders for `NUGET_PACKAGES` and `NUGET_HTTP_CACHE_PATH`.
@@ -144,3 +197,5 @@ are tracked; `obj/` is not.
   Read the `[P5.6] cold search` and `[P7.2] warm search` lines in the output. The tables above name the CI jobs as
   they were called at the time: `UI 2.0` and `E2E 2.0` are `UI` and `E2E` since P8.1.
 - Bundles: `rm -rf dist && node esbuild.mjs --production --analyze`. The metafiles go to `out/esbuild/`.
+- In-page timings: the `[perf]` lines of the `UI` job's `ui-output.txt` (`gh run download <run-id> -n ui-log`), or of a
+  local `npm run test:ui`. Local numbers on other hardware are not comparable with the table above.
