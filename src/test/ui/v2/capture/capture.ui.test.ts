@@ -883,6 +883,8 @@ let workbench: WorkbenchHeights = {};
 
 let lookReported = false;
 
+const READ_DOCUMENT = 'const doc = document.documentElement; return { width: doc.clientWidth, height: doc.clientHeight, scrollWidth: doc.scrollWidth, scrollHeight: doc.scrollHeight };';
+
 /** MS-8's reference: the chrome of the first state measured at each surface, theme, width and look (UX-P0.12). */
 const chromeReferences = new Map<string, ChromeReference>();
 
@@ -903,7 +905,7 @@ function specFor(state: NamedState, capture: Capture): SpecLook | undefined {
  * Measures the state the driver has just reached (UX-P0.10, `measure.ts`): one `[measure]` line per rule that applies;
  * returns the names of the red `hard` rules.
  */
-async function measure(state: NamedState, capture: Capture): Promise<{ red: string[]; layout: Layout }> {
+async function measure(state: NamedState, capture: Capture): Promise<{ red: string[]; layout: Layout; overflowHard: boolean }> {
     await (state.surface === 'main' ? enterMainWebview() : enterSidebarWebview());
     await until(NO_RUNNING_TRANSITION, 'the CSS transitions to end', 30_000);
     const layout = await script<Layout>(COLLECT_LAYOUT, state.surface === 'main' ? 'nuiget-app' : 'nuiget-sidebar', RAMP, TOLERANCES.gapMembership, TOLERANCES.containment);
@@ -942,7 +944,7 @@ async function measure(state: NamedState, capture: Capture): Promise<{ red: stri
             pendingLines.push(text);
         }
     }
-    return { red, layout };
+    return { red, layout, overflowHard: lines.some(line => line.name.startsWith('DS-OVERFLOW-6@') && line.status === 'hard') };
 }
 
 /** This run's captures: the lane's set (Tier A in this run's look for the `ui` job and macOS), theme by theme, the default width of each surface first. */
@@ -1057,9 +1059,15 @@ describe(`named states (${LANE} lane, ${LOOK} look)`, () => {
                 console.warn(`[capture] ${captureFile(state.name, capture)}: not reachable (${reason})`);
                 throw new Error(`${state.name} is not reachable: ${reason}`, { cause: error });
             }
-            const { red, layout } = await measure(state, capture);
+            const { red, layout, overflowHard } = await measure(state, capture);
             // In the webview still (measure entered it): the masks are read before the shot moves the pointer.
             const facts = await script<CaptureFacts>(CAPTURE_FACTS, state.surface === 'main' ? 'nuiget-app' : 'nuiget-sidebar', state.masks.map(mask => ({ selector: mask.selector })), capture.width);
+            // UX-P2.1a: the document as it stands immediately before the shot; a state whose DS-OVERFLOW-6 is hard fails as the rule does.
+            const page = await script<{ width: number; height: number; scrollWidth: number; scrollHeight: number }>(READ_DOCUMENT);
+            console.warn(`[overflow] ${captureFile(state.name, capture)}: document ${page.width}×${page.height}, scroll ${page.scrollWidth}×${page.scrollHeight}`);
+            if (overflowHard && (page.scrollWidth > page.width || page.scrollHeight > page.height)) {
+                red.push(`[overflow] the document scrolls before the shot: ${page.scrollWidth}×${page.scrollHeight} in ${page.width}×${page.height}`);
+            }
             const shot = await shoot(state, capture);
             writeSidecar(state, capture, facts);
             probeScrollbar(state, capture, layout, shot);

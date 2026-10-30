@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { axe } from 'jest-axe';
 import type React from 'react';
@@ -294,6 +294,100 @@ describe('Listbox', () => {
     it('an empty listbox has no axe violations', async () => {
         const { container } = render(<PackageList items={[]} empty={<p>No packages installed</p>} />);
         expect(await axe(container)).toHaveNoViolations();
+    });
+});
+
+describe('Listbox group rows (UX-P2.1a)', () => {
+    let removeLayout: () => void;
+
+    beforeEach(() => {
+        removeLayout = installFakeLayout({ viewport: 120, row: 24 });
+    });
+
+    afterEach(() => {
+        removeLayout();
+    });
+
+    const mixed: Package[] = [{ id: 'Group', version: '' }, { id: 'Alpha', version: '1.0.0' }, { id: 'Beta', version: '2.0.0' }];
+    const handlers = () => ({ onSelect: vi.fn(), onActivate: vi.fn(), onSecondaryActivate: vi.fn(), onDelete: vi.fn(), onContextMenu: vi.fn(), onToggleSelected: vi.fn() });
+
+    function Grouped({ items = mixed, group = true, content, ...rest }: { items?: Package[]; group?: boolean; content?: React.ReactNode } & Partial<ReturnType<typeof handlers>>): React.JSX.Element {
+        return (
+            <Listbox
+                {...rest}
+                items={items}
+                label="Installed packages"
+                hint={HINT}
+                testId="grouped-list"
+                density="compact"
+                selectedIds={rest.onToggleSelected ? new Set<string>() : undefined}
+                isGroup={group ? item => item.id === 'Group' : undefined}
+                renderGroup={(item, placement) => content ?? <span data-testid="group-content">{item.id} {placement.index} {String(placement.active)}</span>}
+                renderRow={(item, placement) => <Row {...placement} density="compact" itemId={item.id} name={item.id} version={item.version} />}
+            />
+        );
+    }
+
+    it('group rows render through renderGroup with a data-row-kind marker, in order and at their offsets', () => {
+        render(<Grouped items={[{ id: 'Alpha', version: '1.0.0' }, { id: 'Group', version: '' }, { id: 'Beta', version: '2.0.0' }]} />);
+        const list = screen.getByTestId('grouped-list');
+        const marked = list.querySelectorAll<HTMLElement>('[data-row-kind="group"]');
+        expect(marked).toHaveLength(1);
+        expect(marked[0]).toHaveAttribute('data-index', '1');
+        expect(marked[0].getAttribute('style')).toMatch(INLINE_STYLE);
+        expect(marked[0].getAttribute('style')).toContain('--nuiget-virtual-offset: 24px');
+        expect(within(marked[0]).getByTestId('group-content')).toHaveTextContent('Group 1 false');
+        expect(within(list).getAllByRole('option').map(option => option.closest('[data-index]')?.getAttribute('data-index'))).toEqual(['0', '2']);
+    });
+
+    it('ArrowDown, ArrowUp, Home and End stop on group rows', async () => {
+        const user = userEvent.setup();
+        render(<Grouped />);
+        const list = screen.getByTestId('grouped-list');
+        const group = list.querySelector<HTMLElement>('[data-row-kind="group"]')!;
+        const options = within(list).getAllByRole('option');
+        await user.click(options[0]);
+        expect(screen.getByTestId('group-content')).toHaveTextContent('Group 0 false');
+        await user.keyboard('{ArrowUp}');
+        expect(document.activeElement).toBe(group);
+        expect(screen.getByTestId('group-content')).toHaveTextContent('Group 0 true');
+        await user.keyboard('{ArrowDown}');
+        expect(document.activeElement).toBe(options[0]);
+        await user.keyboard('{End}');
+        expect(document.activeElement).toBe(options[1]);
+        await user.keyboard('{Home}');
+        expect(document.activeElement).toBe(group);
+    });
+
+    it('an arrow key puts focus on the first enabled control of a group row', async () => {
+        const user = userEvent.setup();
+        render(<Grouped content={<><button type="button" disabled>Off</button><button type="button">Toggle</button></>} />);
+        const list = screen.getByTestId('grouped-list');
+        await user.click(within(list).getAllByRole('option')[0]);
+        await user.keyboard('{ArrowUp}');
+        expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Toggle' }));
+    });
+
+    it('Enter, Ctrl+Enter, Delete, Space, Shift+F10 and a click on a group row report nothing', async () => {
+        const user = userEvent.setup();
+        const spies = handlers();
+        render(<Grouped {...spies} />);
+        const list = screen.getByTestId('grouped-list');
+        const group = list.querySelector<HTMLElement>('[data-row-kind="group"]')!;
+        await user.click(screen.getByTestId('group-content'));
+        fireEvent.contextMenu(screen.getByTestId('group-content'));
+        group.focus();
+        await user.keyboard('{Enter}{Control>}{Enter}{/Control}{Delete} {Shift>}{F10}{/Shift}');
+        for (const spy of Object.values(spies)) {
+            expect(spy).not.toHaveBeenCalled();
+        }
+    });
+
+    it('a list without isGroup renders every item as an option', () => {
+        render(<Grouped group={false} />);
+        const list = screen.getByTestId('grouped-list');
+        expect(list.querySelector('[data-row-kind="group"]')).toBeNull();
+        expect(within(list).getAllByRole('option')).toHaveLength(3);
     });
 });
 

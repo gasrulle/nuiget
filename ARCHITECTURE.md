@@ -374,6 +374,8 @@ nothing in the option can take focus), and `selectedId` becomes the current row,
 details are shown. Without `selectedIds` nothing of this exists and Space is not handled. Shift ranges, Ctrl+A,
 PageUp/PageDown and type-ahead are not handled.
 
+A `Listbox` item for which `isGroup` holds is a group row (`renderGroup`, `data-row-kind="group"`): an arrow stop and never an
+option, the model of one grouped list per view (D48); its keys and role land with UX-P2.1c and its consumers with UX-P2.1d/e.
 `Listbox` is always virtualized (`@tanstack/react-virtual`): only the rows in view and an overscan are in the
 document, every option says its place among all (`aria-posinset`, `aria-setsize`), and the active row stays
 mounted when it is scrolled out of view, so focus never falls out of the list. The active row is remembered

@@ -2,22 +2,6 @@
   {
     "file": "src/webview/shared/primitives/primitives.css",
     "rule": "pxLength",
-    "selector": ".nuiget-visually-hidden",
-    "property": "width",
-    "value": "1px",
-    "item": "P2.1a"
-  },
-  {
-    "file": "src/webview/shared/primitives/primitives.css",
-    "rule": "pxLength",
-    "selector": ".nuiget-visually-hidden",
-    "property": "height",
-    "value": "1px",
-    "item": "P2.1a"
-  },
-  {
-    "file": "src/webview/shared/primitives/primitives.css",
-    "rule": "pxLength",
     "selector": ".nuiget-row--comfortable .nuiget-row-option[aria-selected=\"true\"]",
     "property": "box-shadow",
     "value": "inset 3px 0 0 var(--nuiget-color-focus)",

@@ -4,13 +4,31 @@ import { cssVars } from './cssVars';
 import type { RowPlacement } from './Row';
 import './primitives.css';
 
-/** Row heights in pixels. They repeat `--nuiget-row-height-*`: a script cannot read a token before layout. */
+/** Row heights in pixels. They repeat `--nuiget-row-height-*`: a script cannot read a token before layout (CA-R4, `webview-tokens.test.ts`). */
 const ROW_HEIGHT = { compact: 24, comfortable: 78 } as const;
+
+/** Where a group row of the list goes; `renderGroup` draws what is inside it. */
+export interface GroupPlacement {
+    /** Zero-based position among all items of the list, rendered or not. */
+    index: number;
+    /** The row that holds the list's active position. */
+    active: boolean;
+    /** Offset of the row from the top of the list, in pixels. */
+    offset: number;
+    /** Measures the row; the list has placed it on the row's wrapper already. */
+    measureRef?: (element: HTMLElement | null) => void;
+}
+
+/** What can take focus inside a group row; without any the row's wrapper does. */
+const FOCUSABLE = 'button:not(:disabled), [href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]';
 
 interface ListboxBaseProps<T extends { id: string }> {
     items: readonly T[];
     /** Returns a `Row` with `placement` spread into it. */
     renderRow: (item: T, placement: RowPlacement) => React.ReactNode;
+    /** An item that is a group row: rendered by `renderGroup`, an arrow stop, never an option. Its keys and role are UX-P2.1c's. */
+    isGroup?: (item: T) => boolean;
+    renderGroup?: (item: T, placement: GroupPlacement) => React.ReactNode;
     /** One sentence that names the keys of this list, for example "Enter uninstalls. Shift+F10 opens the actions menu." It is read as the list's description. */
     hint: string;
     testId: string;
@@ -55,7 +73,7 @@ export type ListboxProps<T extends { id: string }> = ListboxBaseProps<T> & ({ la
  * active row always is, so focus never falls out of the list.
  */
 export function Listbox<T extends { id: string }>(props: ListboxProps<T>): React.JSX.Element {
-    const { items, renderRow, hint, testId, density, overscan = 5, selectedId = null, selectedIds, onToggleSelected, onSelect, onActivate, onSecondaryActivate, onDelete, onContextMenu, busy, empty } = props;
+    const { items, renderRow, isGroup, renderGroup, hint, testId, density, overscan = 5, selectedId = null, selectedIds, onToggleSelected, onSelect, onActivate, onSecondaryActivate, onDelete, onContextMenu, busy, empty } = props;
     const estimateSize = props.estimateSize ?? ROW_HEIGHT[density];
     const baseId = useId();
     const hintId = `${baseId}-hint`;
@@ -103,6 +121,15 @@ export function Listbox<T extends { id: string }>(props: ListboxProps<T>): React
     const optionAt = (index: number): HTMLElement | null =>
         scrollRef.current?.querySelector<HTMLElement>(`[data-index="${index}"] > [role="option"]`) ?? null;
 
+    const isGroupAt = (index: number): boolean => items[index] !== undefined && isGroup?.(items[index]) === true;
+    const focusTargetAt = (index: number): HTMLElement | null => {
+        if (!isGroupAt(index)) {
+            return optionAt(index);
+        }
+        const wrapper = scrollRef.current?.querySelector<HTMLElement>(`[data-index="${index}"]`) ?? null;
+        return wrapper?.querySelector<HTMLElement>(FOCUSABLE) ?? wrapper;
+    };
+
     useLayoutEffect(() => {
         if (!hadFocus) {
             return;
@@ -111,9 +138,9 @@ export function Listbox<T extends { id: string }>(props: ListboxProps<T>): React
             emptyRef.current?.focus();
             return;
         }
-        const option = optionAt(activeIndex);
-        if (option && document.activeElement !== option) {
-            option.focus({ preventScroll: true });
+        const target = focusTargetAt(activeIndex);
+        if (target && document.activeElement !== target) {
+            target.focus({ preventScroll: true });
         }
         // `hadFocus` belongs to the render that changed the active row or the items, which is the one that matters.
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -129,7 +156,7 @@ export function Listbox<T extends { id: string }>(props: ListboxProps<T>): React
         virtualizer.scrollToIndex(index, { align: 'auto' });
         // A list as high as its rows inside an outer scroller cannot scroll itself, and the focus does not scroll
         // (N88): the option asks its scrollers. Optional: jsdom has no `scrollIntoView`.
-        optionAt(index)?.scrollIntoView?.({ block: 'nearest' });
+        focusTargetAt(index)?.scrollIntoView?.({ block: 'nearest' });
     };
 
     const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>): void => {
@@ -149,6 +176,8 @@ export function Listbox<T extends { id: string }>(props: ListboxProps<T>): React
         } else if (event.key === 'Home' || event.key === 'End') {
             handled();
             moveTo(event.key === 'Home' ? 0 : items.length - 1);
+        } else if (isGroupAt(activeIndex)) {
+            // A group row is an arrow stop; the keys below act on package rows.
         } else if (event.key === 'Enter') {
             handled();
             if (!disabled) {
@@ -217,7 +246,7 @@ export function Listbox<T extends { id: string }>(props: ListboxProps<T>): React
                 }}
                 onContextMenu={event => {
                     const index = indexOf(event.target);
-                    if (index >= 0 && items[index]) {
+                    if (index >= 0 && items[index] && !isGroupAt(index)) {
                         event.preventDefault();
                         onContextMenu?.(items[index], { x: event.clientX, y: event.clientY });
                     }
@@ -226,6 +255,22 @@ export function Listbox<T extends { id: string }>(props: ListboxProps<T>): React
                 <div className="nuiget-listbox-sizer" style={cssVars({ '--nuiget-virtual-total': `${virtualizer.getTotalSize()}px` })}>
                     {virtualizer.getVirtualItems().map(virtual => {
                         const item = items[virtual.index];
+                        if (isGroupAt(virtual.index)) {
+                            return (
+                                <div
+                                    key={item.id}
+                                    className="nuiget-row"
+                                    role="presentation"
+                                    data-index={virtual.index}
+                                    data-row-kind="group"
+                                    tabIndex={-1}
+                                    ref={virtualizer.measureElement}
+                                    style={cssVars({ '--nuiget-virtual-offset': `${virtual.start}px` })}
+                                >
+                                    {renderGroup?.(item, { index: virtual.index, active: virtual.index === activeIndex, offset: virtual.start, measureRef: virtualizer.measureElement })}
+                                </div>
+                            );
+                        }
                         return (
                             <React.Fragment key={item.id}>
                                 {renderRow(item, {

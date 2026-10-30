@@ -91,7 +91,7 @@ describe('2.0 webview tokens', () => {
         expect(Object.fromEntries(blockAfter(LOOK_UPPERCASE))).toEqual({ '--nuiget-text-transform-section-title': 'uppercase' });
     });
 
-    it('the row heights that Listbox estimates with are the row-height tokens', () => {
+    it('the row heights that Listbox estimates with are the row-height tokens (CA-R4: ROW_HEIGHT equals the token)', () => {
         // The virtualizer needs numbers before layout, so Listbox.tsx repeats the tokens; this keeps the two equal.
         const listbox = readFileSync('src/webview/shared/primitives/Listbox.tsx', 'utf8');
         const repeated = listbox.match(/const ROW_HEIGHT = \{ compact: (\d+), comfortable: (\d+) \}/);

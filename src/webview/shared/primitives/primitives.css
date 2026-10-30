@@ -7,8 +7,8 @@
 /* In the document for assistive technology, not on the screen. */
 .nuiget-visually-hidden {
     position: absolute;
-    width: 1px;
-    height: 1px;
+    width: var(--nuiget-space-hairline);
+    height: var(--nuiget-space-hairline);
     margin: calc(var(--nuiget-space-hairline) * -1);
     padding: 0;
     overflow: hidden;
@@ -50,7 +50,9 @@
 
 /* ── Listbox ── */
 
+/* Positioned: the containing block of the hidden hint, which otherwise extends the document below the rows (V72). */
 .nuiget-listbox-root {
+    position: relative;
     display: flex;
     flex-direction: column;
     flex: 1;
