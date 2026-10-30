@@ -332,8 +332,7 @@ Resolved hex per theme: `tokens.json` (`resolved`), and the artifact's colour li
 ### Iconography
 
 - One set: codicons of the pinned `@vscode/codicons` release, generated as inline SVG by a script, compared by a lint
-  (path `d`, viewBox, name) and attributed under CC-BY-4.0 (DS-ICON-1, DS-ICON-5). The two custom glyphs map to
-  codicons; the quick-search chevrons become `chevron-right` / `chevron-left` (V62); Verified is `verified-filled`.
+  (path `d`, viewBox, name) and attributed under CC-BY-4.0 (DS-ICON-1, DS-ICON-5). The icon plan is `docs/design/icons.json` (export name → codicon file, release pinned in `package.json`): a glyph enters it in the change that renders it, with its user, and leaves it when nothing renders it (CA-R2); `scripts/sync-codicons.mjs` writes `src/webview/shared/primitives/icons.tsx` from it and the DS-ICON-1 lint compares both with the release. The two custom glyphs are removed (no user); a project glyph, if one is ever rendered, is `project` or `root-folder`; the quick-search chevrons become `chevron-right` / `chevron-left` (V62); Verified is `verified-filled`.
 - Sizes: 16 px for actions, headers, twisties and severity glyphs (`icon-size-md`); 12 px for compact inline marks,
   the Verified mark beside an author included (`icon-size-sm`); package icons 36 px, 24 px narrow (`icon-size-xl`,
   `icon-size-lg`).
