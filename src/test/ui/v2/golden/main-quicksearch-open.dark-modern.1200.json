@@ -3,7 +3,7 @@
   "theme": "dark-modern",
   "look": "modern",
   "width": 1200,
-  "tolerance": 0.5,
+  "tolerance": 0,
   "masks": [
     {
       "selector": "[data-testid=\"search-suggestions\"]",
@@ -16,6 +16,18 @@
           "y": 69
         }
       ]
+    },
+    {
+      "selector": "[data-testid=\"search-input\"]",
+      "reason": "the caret blinks and the selection differs between runs (H27)",
+      "rects": [
+        {
+          "h": 24,
+          "w": 1168,
+          "x": 16,
+          "y": 40
+        }
+      ]
     }
   ],
   "fingerprint": {
@@ -25,7 +37,7 @@
     "dpr": 1,
     "vscode": "1.140.0",
     "chromium": "150",
-    "image": "ubuntu26 20261023.163.3"
+    "image": "ubuntu26 20261026.180.1"
   },
-  "run": "40091010301"
+  "run": "41105326572"
 }

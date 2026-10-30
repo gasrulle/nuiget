@@ -111,6 +111,8 @@ export const TOKEN_PAIRS: readonly TokenPair[] = [
     { fg: 'checkbox-bg', bg: 'bg', kind: 'non-text', exempt: { reason: 'the fill is not the 1.4.11 boundary (checkbox-border carries it, D52); the exemplar\'s checkbox.background equals its input surface and the HC themes draw the box by border alone' } },
     ...nonText('border', 'bg', 'list-active-bg'),
     ...nonText('focus', 'bg'),
+    // D52: a selected row's check mark (UX-P1.1, T-23).
+    ...nonText('checkbox-select-border', 'list-active-bg'),
     { fg: 'focus', bg: 'list-active-bg', kind: 'non-text', exempt: { reason: 'workbench parity (D22, H49): the focused selected row rings in focusBorder/list.focusOutline on list.activeSelectionBackground at 2.65 (Dark Modern) and 2.58 (Dark 2026)', themes: ['dark-2026', 'dark-modern'] } },
     { fg: 'input-border', bg: 'input-bg', kind: 'non-text', exempt: INPUT_BORDER_PARITY },
     { fg: 'input-border', bg: 'bg', kind: 'non-text', exempt: INPUT_BORDER_PARITY },
@@ -140,8 +142,6 @@ export const CONTRAST_PAIRS_PENDING: readonly PairPending[] = [
     ...cells(['syntax-number/code-bg', 'syntax-type/code-bg', 'syntax-variable/code-bg'], ['light-2026', 'light-high-contrast', 'light-modern'], 'P3.4'),
     ...cells(['version-new/list-hover-bg over bg', 'version-new/list-hover-bg over bg-sidebar'], ['light-2026', 'light-modern'], 'P4.6'),
     ...cells(['fg-muted/list-hover-bg over bg-sidebar'], ['dark-2026'], 'P4.6'),
-    ...cells(['list-active-fg/list-active-bg'], ['dark-high-contrast', 'light-high-contrast'], 'P1.1'),
-    ...cells(['border/list-active-bg', 'focus/list-active-bg'], ['dark-high-contrast'], 'P1.1'),
 ];
 
 /** Whether the pair is exempt in this theme. */
