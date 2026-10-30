@@ -7,11 +7,17 @@
 // section of .github/copilot-instructions.md, and README.md. The code half (the `ExtensionConfig` keys and the
 // contributed enum against the manifest) is `src/test/lint/extension-config-settings.test.ts`; it is not repeated here.
 //
+// The UX documents (UX-P0.30): the paths of docs/plans/RUN-ux.md, docs/design/design-system.md and
+// docs/design/judge-rubric.md exist (`FUTURE_PATHS` names the ones a later item creates), and every `DS-*` id that the
+// UX plan, RUN-ux.md, src/test/ui/v2/measure.ts or the rubric cites is a rule row of the Design System.
+//
 // Usage: node scripts/check-docs-drift.mjs
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import ts from 'typescript';
+import { expandIds } from './check-rule-coverage.mjs';
+import { OWNER_SETTINGS, OWNER_SETTINGS_COMMITTED, RETIRE_SENTINEL, SENTINEL } from './hooks/guard.mjs';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -47,7 +53,21 @@ export function pathsOf(token) {
         .map(candidate => candidate.replace(/\/\*\*?$/, '').replace(/\/$/, ''));
 }
 
-const PATH_PREFIXES = ['src/', 'scripts/', 'docs/', '.github/'];
+const PATH_PREFIXES = ['src/', 'scripts/', 'docs/', '.github/', '.claude/'];
+
+/**
+ * The paths no tree holds at rest (plan D6, D29, D44): the two sentinels an item creates and deletes, and the owner's
+ * local settings file, never committed. Read from the guard, so a renamed one makes its old name in a document fail.
+ */
+export const NEVER_IN_TREE = new Set([SENTINEL, RETIRE_SENTINEL, ...OWNER_SETTINGS.filter(file => !OWNER_SETTINGS_COMMITTED.includes(file))]);
+
+/**
+ * Paths a document names before the item that creates them lands (UX-P0.30), as `{ path, item }`: skipped while the
+ * item's row in docs/plans/STATUS-ux.md is not `done`, reported once it is and the path is still absent. A path under
+ * `captures/` (gitignored CI downloads) is never checked: it is no prefix of `PATH_PREFIXES`.
+ * @type {ReadonlyArray<{ path: string, item: string }>}
+ */
+export const FUTURE_PATHS = [];
 
 /** M1: a backticked `group/name` whose group is a message group must be a request or an event. */
 export function checkMessageNames(document, name, messages) {
@@ -237,23 +257,50 @@ export function checkModuleMap(architecture, exists, required) {
     return findings;
 }
 
-/** P3: every backticked path under `src/`, `scripts/`, `docs/` or `.github/` exists; patterns and placeholders are skipped. */
-export function checkPaths(document, name, exists) {
+/**
+ * P3: every backticked path under `src/`, `scripts/`, `docs/`, `.github/` or `.claude/` exists; patterns, placeholders and
+ * the paths of `NEVER_IN_TREE` are skipped, and so is a `future` path while `statuses` has its item other than `done`.
+ * @param {string} document
+ * @param {string} name
+ * @param {(file: string) => boolean} exists
+ * @param {{ future?: ReadonlyArray<{ path: string, item: string }>, statuses?: Map<string, string> }} [planned]
+ * @returns {string[]}
+ */
+export function checkPaths(document, name, exists, { future = [], statuses = new Map() } = {}) {
     const findings = [];
     for (const span of new Set(codeSpans(document))) {
         if (!PATH_PREFIXES.some(prefix => span.startsWith(prefix)) || /\s/.test(span)) {
             continue;
         }
         for (const candidate of pathsOf(span)) {
-            if (/[*<>?]/.test(candidate) || candidate.includes('…')) {
+            if (/[*<>?]/.test(candidate) || candidate.includes('…') || NEVER_IN_TREE.has(candidate) || exists(candidate)) {
                 continue;
             }
-            if (!exists(candidate)) {
+            const planned = future.find(entry => entry.path === candidate);
+            if (planned === undefined) {
                 findings.push(`${name}: \`${span}\` names ${candidate}, which does not exist`);
+            } else if (statuses.get(planned.item) === 'done') {
+                findings.push(`${name}: \`${span}\` names ${candidate}, which ${planned.item} creates; ${planned.item} is done and the path does not exist`);
             }
         }
     }
     return findings;
+}
+
+/** The rule ids the Design System defines: its `| DS-…-n |` rows (a row `DS-GRID-2` covers the cited parts `DS-GRID-2a`, `-2b`). */
+export const ruleIds = designSystem => new Set([...designSystem.matchAll(/^\| (DS-[A-Z]+-\d+)[a-z]? \|/gm)].map(match => match[1]));
+
+/** R1: every `DS-*` id a document cites (`DS-HEIGHT-1..11` and `DS-STATE-1/2` expanded) is a rule row of the Design System. */
+export function checkRuleIds(document, name, defined) {
+    return [...new Set(expandIds(document))]
+        .filter(id => !defined.has(id.replace(/[a-z]$/, '')))
+        .map(id => `${name}: \`${id}\` is no rule of docs/design/design-system.md`);
+}
+
+/** The status of each item row of the UX tracker (`| ID | Phase | Item | Status | … |`), by item id. */
+export function trackerStatuses(tracker) {
+    const rows = tableRows(tracker, '| ID | Phase | Item | Status | Commit | Date | Notes |') ?? [];
+    return new Map(rows.map(cells => [cells[0], cells[3]]));
 }
 
 /** The request and event names of `src/protocol/messages.ts`, read with the TypeScript compiler. */
@@ -306,6 +353,17 @@ export function checkRepository(root = repoRoot) {
             ...checkNuigetNames(text, name, manifest),
             ...checkPaths(text, name, exists),
         );
+    }
+    // The UX documents (UX-P0.30): their paths, with the planned ones of FUTURE_PATHS, and the rule ids they cite. The
+    // plan's own paths are not checked (most name outputs of later items); its rule ids are.
+    const designSystem = read('docs/design/design-system.md');
+    const defined = ruleIds(designSystem);
+    const planned = { future: FUTURE_PATHS, statuses: trackerStatuses(read('docs/plans/STATUS-ux.md')) };
+    for (const file of ['docs/plans/RUN-ux.md', 'docs/design/design-system.md', 'docs/design/judge-rubric.md']) {
+        findings.push(...checkPaths(read(file), file, exists, planned));
+    }
+    for (const file of ['docs/plans/2026-10-23-nuiget-ux-execution-plan.md', 'docs/plans/RUN-ux.md', 'src/test/ui/v2/measure.ts', 'docs/design/judge-rubric.md']) {
+        findings.push(...checkRuleIds(read(file), file, defined));
     }
     const readme = read('README.md');
     findings.push(...checkSettingsTable(readme, manifest), ...checkCommandsTable(readme, manifest));

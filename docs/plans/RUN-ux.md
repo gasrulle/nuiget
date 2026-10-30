@@ -75,7 +75,7 @@ Read docs/plans/RUN-ux.md and follow it exactly until a stop condition is reache
    `git push -u origin labs/ux`.
 2. If `git log --oneline labs/ux..origin/main` is not empty: `git merge --no-edit origin/main`. If the merge
    conflicts, resolve, run the full gate list (plan §2.2 step 5), commit the merge and push before starting any item.
-   If the merge touches an OWNER-ONLY FILE, `.claude/hooks/**` or `.claude/skills/**` and the guard or the sandbox
+   If the merge touches an OWNER-ONLY FILE, `scripts/hooks/**` or `.claude/skills/**` and the guard or the sandbox
    refuses to write it, stop and ask the owner to merge `main` into BRANCH.
 3. If the branch's last CI run is red (`gh run list --branch labs/ux --limit 1`), fix that first as part of the item
    that caused it (the last `done` row); never start a new item on a red branch.
