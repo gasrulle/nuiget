@@ -151,18 +151,6 @@ const inGroups = (status: RuleStatus, ...groups: StateGroup[]): Partial<Record<S
 const NO_ROW_STATES: readonly string[] = ['main-installed-filter-nomatch', 'main-quicksearch-open', 'main-quicksearch-versions'];
 
 /**
- * V72's states, whose document scrolls today: the Listbox's visually hidden hint, absolutely placed with no positioned
- * ancestor, extends the document (DS-OVERFLOW-6 names it, CI run 40048739947). MS-8's chrome and DS-OVERFLOW-6 wait for
- * P2.1a, whose files own the span and its rule (design-advisor follow-up of 2026-10-24, step 4).
- */
-const V72_STATES: Readonly<Record<string, string>> = {
-    'main-transitive-expanded': 'P2.1a', 'main-transitive-details': 'P2.1a', 'main-installed-all': 'P2.1a',
-    // Once its setup waits for the transitive prefetch, Catalog's collapsed section adds the hint below the fold (CI run
-    // 40096010674: `outside: .nuiget-visually-hidden 358,1188.5 1×1`; UX-P0.15 design-advisor ruling, DO 5).
-    'main-installed-cpm': 'P2.1a',
-};
-
-/**
  * V50: at the editor minimum the tab strip's count badge extends the document sideways (CI run 40084340281,
  * `.nuiget-badge 198.3,224.5 24.1×17.5`); P2.7 flips it with DS-OVERFLOW-1@main (UX-P0.14 ruling).
  */
@@ -196,9 +184,9 @@ export const RULES: readonly RuleDefinition[] = [
     // The `ui` lane's 800/932/1200 and the matrix lane's 800/1200/1600, the widths P0.12 asserted it at; narrower widths are
     // V50's and DS-OVERFLOW-1/3/5's (UX-P0.14 rulings, design trigger 1).
     rule('PF-4', { helper: 6, scopes: { 'main-installed': 'hard', 'main-updates': 'hard' }, tolerance: TOLERANCES.primaryEdge, states: ['main-installed-single', 'main-updates'], widths: [800, 932, 1200, 1600] }),
-    rule('MS-8', { helper: 6, scopes: { chrome: 'hard', 'first-row': { pending: 'P3.1b' } }, tolerance: TOLERANCES.chrome, pendingStates: V72_STATES }),
+    rule('MS-8', { helper: 6, scopes: { chrome: 'hard', 'first-row': { pending: 'P3.1b' } }, tolerance: TOLERANCES.chrome }),
     // The document never scrolls (V72, design-advisor ruling of 2026-10-24).
-    rule('DS-OVERFLOW-6', { helper: 6, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: 'hard', dialogs: 'hard', sources: 'hard', sidebar: 'hard' }, tolerance: TOLERANCES.containment, pendingStates: V72_STATES, pendingWidths: V50_WIDTHS }),
+    rule('DS-OVERFLOW-6', { helper: 6, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: 'hard', dialogs: 'hard', sources: 'hard', sidebar: 'hard' }, tolerance: TOLERANCES.containment, pendingWidths: V50_WIDTHS }),
     rule('DS-INSET-3', { helper: 6, scopes: { rows: { pending: 'P2.2' }, headers: { pending: 'P2.6' }, sidebar: { pending: 'P3.7a' } }, tolerance: TOLERANCES.coincide }),
     // DS-OVERFLOW-2 over the section headers, the tracker's `headers` and P2.6's files (SectionHeader, Badge).
     rule('DS-OVERFLOW-2', { helper: 6, scopes: on('P2.6', 'main-installed', 'details', 'sidebar'), tolerance: TOLERANCES.containment }),

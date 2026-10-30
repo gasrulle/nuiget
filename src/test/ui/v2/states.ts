@@ -113,7 +113,7 @@ const LIVE_POPUP_HEADER: Mask = { selector: '.nuiget-search-popup-header', reaso
 
 /**
  * A state at 0 px on a run and its rerun of one SHA compares with a zero `diffTolerance` (UX-P0.15, CI run 40097664968 and its
- * UI rerun). `main-installed-all` keeps the start value: its document scrollbar (V72) differs between runs until P2.1a.
+ * UI rerun; `main-installed-all` from UX-P2.1a, run 41140772255 and its UI rerun).
  */
 export const STATES: readonly NamedState[] = [
     { ...ready('main-installed-single', 'main', [
@@ -126,8 +126,8 @@ export const STATES: readonly NamedState[] = [
         { theme: 'dark-modern', look: 'modern', width: 400 },
         { theme: 'dark-modern', look: 'modern', width: 220 },
     ], 'Gateway selected; the Installed list shows its direct rows (package-row-newtonsoft.json present).', [LIVE_ICONS]), diffTolerance: 0 },
-    ready('main-installed-all', 'main', themeSensitive('main'),
-        'All Projects selected; four project sections, the Unsupported section header shows "Unsupported" and "provisional". The provisional badge is the Unsupported project\'s permanent one (an SDK-8 project is never evaluated), not the SDK-10 provisional window.', [LIVE_ICONS]),
+    { ...ready('main-installed-all', 'main', themeSensitive('main'),
+        'All Projects selected; four project sections, the Unsupported section header shows "Unsupported" and "provisional". The provisional badge is the Unsupported project\'s permanent one (an SDK-8 project is never evaluated), not the SDK-10 provisional window.', [LIVE_ICONS]), diffTolerance: 0 },
     { ...ready('main-installed-unsupported', 'main', [primary('main')],
         'Unsupported selected; the Unsupported banner, the read-only list and both header badges; the transitive header shows its count and framework badge (the prefetch settled).', [LIVE_ICONS]), diffTolerance: 0 },
     { ...ready('main-installed-cpm', 'main', [primary('main')],

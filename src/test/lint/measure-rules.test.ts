@@ -89,12 +89,10 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(pf4?.widths).toEqual([800, 932, 1200, 1600]);
         expect([800, 932, 1200, 1600, 220, 400, 600].map(width => appliesTo(pf4!, 'main-installed-single', width))).toEqual([true, true, true, true, false, false, false]);
         expect(scopes('MS-8')).toEqual({ chrome: 'hard', 'first-row': { pending: 'P3.1b' } });
-        // V72 (design-advisor ruling of 2026-10-24): the document never scrolls, hard everywhere but V72's states (the fourth,
-        // main-installed-cpm, by the UX-P0.15 ruling's DO 5).
-        const v72 = { 'main-transitive-expanded': 'P2.1a', 'main-transitive-details': 'P2.1a', 'main-installed-all': 'P2.1a', 'main-installed-cpm': 'P2.1a' };
-        expect(RULES.find(rule => rule.id === 'MS-8')?.pendingStates).toEqual(v72);
+        // V72 closed at UX-P2.1a: the document never scrolls and the chrome holds still, hard in every state.
+        expect(RULES.find(rule => rule.id === 'MS-8')?.pendingStates).toBeUndefined();
         expect(scopes('DS-OVERFLOW-6')).toEqual({ 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: 'hard', dialogs: 'hard', sources: 'hard', sidebar: 'hard' });
-        expect(RULES.find(rule => rule.id === 'DS-OVERFLOW-6')?.pendingStates).toEqual(v72);
+        expect(RULES.find(rule => rule.id === 'DS-OVERFLOW-6')?.pendingStates).toBeUndefined();
         // UX-P0.14 (design-advisor ruling): the main panel's 220 px width pending on P2.7 (V50), the width axis of pendingStates.
         expect(RULES.find(rule => rule.id === 'DS-OVERFLOW-6')?.pendingWidths).toEqual({ 220: 'P2.7' });
         expect(scopes('DS-INSET-3')).toEqual({ rows: { pending: 'P2.2' }, headers: { pending: 'P2.6' }, sidebar: { pending: 'P3.7a' } });
@@ -401,14 +399,15 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
             .toMatchObject({ pass: true });
     });
 
-    it('pends MS-8\'s chrome and DS-OVERFLOW-6 in V72\'s three states only, and asserts the document never scrolls', () => {
+    it('holds MS-8\'s chrome and DS-OVERFLOW-6 hard in V72\'s four states too, and asserts the document never scrolls (UX-P2.1a)', () => {
         const scrolling = layout({ chrome: { 'main-header': { left: 0, top: 0, width: 1185, height: 36 } }, documentOverflow: { clientWidth: 1185, clientHeight: 803, scrollWidth: 1185, scrollHeight: 2410, outside: '.nuiget-installed-lists 0,135 420×2275' } });
         const reference = { state: 'main-installed-single', chrome: { 'main-header': { left: 0, top: 0, width: 1200, height: 36 } }, firstRow: undefined };
         const status = (state: string, name: string) => measureLines(state, scrolling, 'modern', {}, reference).find(line => line.name === `${name}@${state}${name === 'MS-8' ? '/chrome' : ''}`)?.status;
-        expect(status('main-transitive-expanded', 'MS-8')).toEqual({ pending: 'P2.1a' });
-        expect(status('main-transitive-details', 'DS-OVERFLOW-6')).toEqual({ pending: 'P2.1a' });
-        expect(status('main-installed-all', 'MS-8')).toEqual({ pending: 'P2.1a' });
-        expect(status('main-installed-all', 'DS-OVERFLOW-6')).toEqual({ pending: 'P2.1a' });
+        expect(status('main-transitive-expanded', 'MS-8')).toBe('hard');
+        expect(status('main-transitive-details', 'DS-OVERFLOW-6')).toBe('hard');
+        expect(status('main-installed-all', 'MS-8')).toBe('hard');
+        expect(status('main-installed-all', 'DS-OVERFLOW-6')).toBe('hard');
+        expect(status('main-installed-cpm', 'DS-OVERFLOW-6')).toBe('hard');
         expect(status('main-installed-single', 'DS-OVERFLOW-6')).toBe('hard');
         expect(status('main-installed-details', 'MS-8')).toBe('hard');
         expect(lineOf('main-installed-all', scrolling, 'DS-OVERFLOW-6@main-installed-all'))
@@ -420,7 +419,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(lineOf('main-installed-all', unseen, 'DS-OVERFLOW-6@main-installed-all')?.value).toBe('document 1185×803, scroll 1185×900 (+97); outside: none past the viewport');
     });
 
-    it('pends DS-OVERFLOW-6 at the main panel\'s 220 px width on P2.7 (V50), a state\'s pending first (UX-P0.14)', () => {
+    it('pends DS-OVERFLOW-6 at the main panel\'s 220 px width on P2.7 (V50) in every state that has that width (UX-P0.14)', () => {
         const sideways = layout({ documentOverflow: { clientWidth: 205, clientHeight: 788, scrollWidth: 231, scrollHeight: 803, outside: '.nuiget-badge 198.3,224.5 24.1×17.5' } });
         const at = (state: string, width: number) => measureLines(state, sideways, 'modern', {}, undefined, width).find(line => line.name === `DS-OVERFLOW-6@${state}`);
         expect(at('main-installed-single', 220)).toMatchObject({ status: { pending: 'P2.7' }, pass: false, value: 'document 205×788, scroll 231×803 (+15); outside: .nuiget-badge 198.3,224.5 24.1×17.5' });
@@ -428,8 +427,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(at('main-installed-single', 400)?.status).toBe('hard');
         expect(at('main-installed-single', 1200)?.status).toBe('hard');
         expect(at('main-installed-single', 1600)?.status).toBe('hard');
-        // V72's state pending comes first.
-        expect(at('main-installed-all', 220)?.status).toEqual({ pending: 'P2.1a' });
+        expect(at('main-installed-all', 220)?.status).toEqual({ pending: 'P2.7' });
         // No other rule waits at 220: PF-6 stays hard there.
         expect(measureLines('main-installed-single', sideways, 'modern', {}, undefined, 220).find(line => line.name === 'PF-6@main-installed-single')?.status).toBe('hard');
     });
