@@ -5,7 +5,8 @@ import { pathToFileURL } from 'url';
 import { By, EditorView, Key, VSBrowser } from 'vscode-extension-tester';
 import { selectTheme, setPanelWidth, setSidebarWidth, webviewRect, windowSize } from '../layout';
 import { type ArtboardSpec, type ChromeReference, COLLECT_LAYOUT, formatLine, type Layout, type LookMeasure, measureLines, RAMP, type SpecLook, thumbVerdict, TOLERANCES, type WorkbenchHeights } from '../measure';
-import { chooseProjectCommitted, enterMainWebview, openMainPanel, optionFor, untilProjects } from '../mainWebview';
+import { chooseProject, chooseProjectCommitted, enterMainWebview, openMainPanel, optionFor, untilProjects } from '../mainWebview';
+import { authoritative, BROWSE_ROW, dependencies, details, icons, INSTALLED_ROW, installedRowOf, type PerfChain, perfComplete, perfLines, perfRecorder, type PerfResult, PROVISIONAL, READ_PERF, REVALIDATING, SETTLED, STOP_PERF } from '../perf';
 import { driverOf, enterSidebarWebview, findByTestId, leaveWebview, openSidebarView, poll, waitForTestIdGone, waitForText } from '../sidebarWebview';
 import { measureExemplar, measureWorkbench } from '../workbench';
 import { type Capture, captureFile, floorCaptures, isReady, type Lane, type Look, matrixCaptures, MATRIX_THEMES, type NamedState, PANEL_WIDTH, SIDEBAR_WIDTH, STATES, type Theme, THEMES } from '../states';
@@ -664,6 +665,148 @@ const stateNamed = (name: string): NamedState => {
     return state;
 };
 
+// ---- UX-P0.26: the in-page timings -----------------------------------------------------------------------------------
+
+/** Utility's packages that Gateway lacks: its own rows, told apart from the rows the list showed before. */
+const UTILITY_ROW = installedRowOf(['system.commandline', 'spectre.console', 'csvhelper', 'yamldotnet', 'nodatime']);
+/** A Utility row whose details no earlier test opens. */
+const DETAILS_ID = 'system.commandline';
+/** A text no earlier test searches for with Enter: the host has no answer for it yet. */
+const SEARCH_TEXT = 'Humanizer';
+
+const PROVISIONAL_FLAG = { name: 'provisional', predicate: PROVISIONAL, seen: 'a provisional list came first', unseen: 'no provisional list (the first answer was the evaluated one)' };
+
+const PANEL_OPEN: PerfChain = {
+    label: 'panel open',
+    context: 'Gateway, its lists cached by the captures',
+    start: { kind: 'load' },
+    marks: [
+        { name: 'first row', predicate: INSTALLED_ROW },
+        { name: 'authoritative list', predicate: authoritative(INSTALLED_ROW) },
+        { name: 'icons', predicate: icons(INSTALLED_ROW) },
+    ],
+    flags: [PROVISIONAL_FLAG],
+};
+
+const REFRESH: PerfChain = {
+    label: 'refresh',
+    context: 'Gateway, every resource invalidated by the Refresh button',
+    start: { kind: 'event', type: 'pointerdown', selector: '[data-testid="refresh-button"]' },
+    marks: [{ name: 'list settled', predicate: SETTLED, after: 'revalidating' }],
+    flags: [{ name: 'revalidating', predicate: REVALIDATING, seen: 'the list revalidated', unseen: 'no revalidation seen' }, PROVISIONAL_FLAG],
+};
+
+const PROJECT_CHOSEN: PerfChain = {
+    label: 'project chosen',
+    context: 'Utility, not read since the Refresh',
+    start: { kind: 'event', type: 'change', selector: '[data-testid="project-selector"]' },
+    marks: [
+        { name: 'first row', predicate: UTILITY_ROW },
+        { name: 'authoritative list', predicate: authoritative(UTILITY_ROW) },
+        { name: 'icons', predicate: icons(UTILITY_ROW) },
+    ],
+    flags: [PROVISIONAL_FLAG],
+};
+
+const SELECT: PerfChain = {
+    label: 'select',
+    context: `${DETAILS_ID} in Utility's Installed list, its details not read before`,
+    start: { kind: 'event', type: 'pointerdown', selector: `[data-testid="package-row-${DETAILS_ID}"] [role="option"]` },
+    marks: [{ name: 'details', predicate: details(DETAILS_ID) }, { name: 'dependencies', predicate: dependencies(DETAILS_ID) }],
+};
+
+/** `search` (a new text: the line P5.9a's gate reads) and `search again` (the same text, its answer cached). */
+const searchChain = (label: 'search' | 'search again'): PerfChain => ({
+    label,
+    context: `"${SEARCH_TEXT}"${label === 'search' ? ', not searched before' : ' again'}, Enter in the search box`,
+    start: { kind: 'event', type: 'keydown', selector: '[data-testid="search-input"]', key: 'Enter' },
+    marks: [{ name: 'first result', predicate: BROWSE_ROW }],
+});
+
+/** Waits at most `timeoutMs` for the marks of the armed `chain`, disarms its recorder and prints its lines. */
+async function finishChain(chain: PerfChain, timeoutMs: number): Promise<void> {
+    let result: PerfResult | null;
+    try {
+        result = await poll(async () => {
+            const read = await script<PerfResult | null>(READ_PERF);
+            return perfComplete(chain, read) ? read : undefined;
+        }, `the marks of ${chain.label}`, timeoutMs);
+    } catch {
+        result = await script<PerfResult | null>(READ_PERF).catch(() => null);
+    }
+    await script(STOP_PERF).catch(() => undefined);
+    printLines(perfLines(chain, result, timeoutMs));
+}
+
+/** Arms `chain` in the webview the driver is in, acts, and prints the chain. */
+async function timeChain(chain: PerfChain, act: () => Promise<void>, timeoutMs = 60_000): Promise<void> {
+    await script(perfRecorder(chain));
+    await act();
+    await finishChain(chain, timeoutMs);
+}
+
+/**
+ * A new main panel with the recorder of a `load` chain armed as soon as the driver reaches the content frame: the
+ * outer frame's pending frame as well as its active one, once the static `#root` is written and before the bundle has
+ * rendered, when the driver is that quick. A mark already shown is then an upper bound.
+ */
+async function openMainPanelTimed(chain: PerfChain): Promise<void> {
+    await leaveWebview();
+    const editors = new EditorView();
+    if ((await editors.getOpenEditorTitles()).includes('nUIget')) {
+        await editors.closeEditor('nUIget');
+    }
+    await openMainPanel();
+    const driver = driverOf();
+    const install = perfRecorder(chain, '#root');
+    const deadline = Date.now() + 60_000;
+    // No pause between tries: each costs a few WebDriver round trips, and the first rows can follow the bundle closely.
+    for (;;) {
+        try {
+            await driver.switchTo().defaultContent();
+            for (const outer of await driver.findElements(By.css('iframe.webview'))) {
+                await driver.switchTo().frame(outer);
+                for (const inner of await driver.findElements(By.css('iframe#active-frame, iframe#pending-frame'))) {
+                    await driver.switchTo().frame(inner);
+                    if (await script<boolean>(install)) {
+                        return;
+                    }
+                    await driver.switchTo().parentFrame();
+                }
+                await driver.switchTo().defaultContent();
+            }
+        } catch {
+            // A frame that went away while it was entered is "not yet".
+        }
+        if (Date.now() > deadline) {
+            throw new Error('the new main panel\'s content frame was not reached in 60 s');
+        }
+    }
+}
+
+/** Clears the search box with Escape until the tabs are back (a first Escape may close the suggestions only). */
+async function clearSearch(): Promise<void> {
+    const box = await findByTestId('search-input', 30_000);
+    await poll(async () => {
+        if ((await driverOf().findElements(By.css('[data-testid="tab-bar"]'))).length > 0 && (await box.getAttribute('value')) === '') {
+            return true;
+        }
+        await box.click();
+        await box.sendKeys(Key.ESCAPE);
+        return undefined;
+    }, 'the tabs back after Escape', 10_000);
+    await waitForTestIdGone('browse-list', 10_000);
+}
+
+/** One step of the timings: a step that throws prints why it was not measured, and the next one runs. */
+async function perfStep(label: string, run: () => Promise<void>): Promise<void> {
+    try {
+        await run();
+    } catch (error) {
+        console.warn(`[perf] ${label}: not measured (${error instanceof Error ? error.message : String(error)})`);
+    }
+}
+
 /** Whether this run has printed its `[probe] scrollbar` line. */
 let scrollbarProbed = false;
 
@@ -951,6 +1094,54 @@ describe(`named states (${LANE} lane, ${LOOK} look)`, () => {
             await applyWidth(stateNamed('sidebar-sections'), SIDEBAR_WIDTH);
             await sidebarSections();
             await walkScreen('sidebar', 'nuiget-sidebar', 'sidebar-search-input', () => rowKeys('sidebar-installed-list', 'sidebar-search-input', { skipped: 'Enter uninstalls the package on today\'s tree (A2, R127)' }));
+        });
+
+        // UX-P0.26 (H57–H59): informational `[perf]` lines, timed in page; after the walks, so no capture's data state
+        // moves, and before the theme dump, which reuses the panel in Dark Modern. Nothing is written or confirmed.
+        it('in-page timings (UX-P0.26)', async function () {
+            // Above the sum of the chains' waits (540 s), so a mark never stamped prints `not measured` and fails nothing.
+            this.timeout(900_000);
+            await applyTheme('dark-modern');
+            await applyWidth(stateNamed('main-installed-single'), PANEL_WIDTH);
+            await freshMainPanel();
+            // Gateway is the session's project, and its lists are settled, before the panel is opened again.
+            await gatewayInstalled();
+            await perfStep(PANEL_OPEN.label, async () => {
+                await openMainPanelTimed(PANEL_OPEN);
+                await finishChain(PANEL_OPEN, 60_000);
+            });
+            await perfStep(REFRESH.label, async () => {
+                await enterMainWebview();
+                await timeChain(REFRESH, async () => (await findByTestId('refresh-button', 30_000)).click());
+            });
+            await perfStep(PROJECT_CHOSEN.label, async () => {
+                await enterMainWebview();
+                const utility = await optionFor('Utility.csproj');
+                await timeChain(PROJECT_CHOSEN, () => chooseProject(utility), 120_000);
+            });
+            await perfStep(SELECT.label, async () => {
+                await enterMainWebview();
+                await timeChain(SELECT, async () => (await optionOf(`package-row-${DETAILS_ID}`, 30_000)).click());
+            });
+            for (const label of ['search', 'search again'] as const) {
+                const chain = searchChain(label);
+                await perfStep(chain.label, async () => {
+                    await enterMainWebview();
+                    await clearSearch();
+                    await typeInSearch(SEARCH_TEXT);
+                    await waitForTestIdGone('tab-bar', 10_000);
+                    const box = await findByTestId('search-input', 10_000);
+                    await timeChain(chain, () => box.sendKeys(Key.ENTER), 120_000);
+                });
+            }
+            // Back to the panel the captures left: no search, Gateway.
+            try {
+                await enterMainWebview();
+                await clearSearch();
+                await chooseFixtureProject('Gateway.csproj');
+            } catch (error) {
+                console.warn(`[perf] the panel was not restored: ${error instanceof Error ? error.message : String(error)}`);
+            }
         });
     }
 
