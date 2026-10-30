@@ -406,7 +406,9 @@
 
 /* ── Badge ── */
 
+/* Positioned: the containing block of its hidden title, which otherwise extends the document from inside a scroller (V72). */
 .nuiget-badge {
+    position: relative;
     display: inline-flex;
     align-items: center;
     padding: 0 var(--nuiget-space-2);
@@ -628,7 +630,9 @@
 
 /* ── Banner ── */
 
+/* Positioned for its hidden severity word, as the badge for its title (V72). */
 .nuiget-banner {
+    position: relative;
     display: flex;
     align-items: center;
     gap: var(--nuiget-space-4);
