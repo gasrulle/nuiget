@@ -19,3 +19,12 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+Third-party notices
+
+The icons in the extension's webviews are drawings of the Visual Studio Code
+Codicons (https://github.com/microsoft/vscode-codicons), release 0.0.46-49,
+Copyright (c) Microsoft Corporation, licensed under the Creative Commons
+Attribution 4.0 International license, CC-BY-4.0
+(https://creativecommons.org/licenses/by/4.0/). The drawings are used as they
+are; the code that embeds them is under the MIT license above.

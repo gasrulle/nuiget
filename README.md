@@ -277,4 +277,4 @@ Commit, push, and publish actions still require explicit authorization.
 
 ## License
 
-[MIT](LICENSE)
+[MIT](LICENSE). Icons: [Visual Studio Code Codicons](https://github.com/microsoft/vscode-codicons), CC-BY-4.0.

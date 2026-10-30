@@ -296,7 +296,10 @@ own background for its text). The capture suite's audit runs the same pass on ea
 `src/test/lint/theme-contrast.test.ts` measures a curated table of token pairs (`src/test/ui/v2/contrast.ts`) offline in
 the twelve token records of the theme dump.
 
-`src/webview/shared/primitives/icons.tsx` is the icon set (codicon paths as inline SVG). An icon takes
+`src/webview/shared/primitives/icons.tsx` is the icon set (codicon paths as inline SVG). The list
+`docs/design/icons.json` names its drawings in the exact-pinned `@vscode/codicons`, and a glyph enters the list in the
+change that renders it (ADR-012). `scripts/sync-codicons.mjs --check` and `webview-icons-codicons.test.ts` hold the list
+against the release today; from UX-P1.4b the script writes the module and both compare it. An icon takes
 `size`, `className` and `title` and renders no `style` attribute, which the Content Security Policy would
 refuse (ADR-006); without a title it is hidden from assistive technology, with one it is an image with that
 name. Every icon is a `/* @__PURE__ */ React.memo(…)` call, so a bundle keeps only the icons it uses

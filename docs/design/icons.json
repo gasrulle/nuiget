@@ -1,0 +1,18 @@
+{
+  "release": "0.0.46-49",
+  "icons": {
+    "ChevronRightIcon": "chevron-right",
+    "SettingsGearIcon": "settings-gear",
+    "WarningIcon": "warning",
+    "CloseIcon": "close",
+    "CheckIcon": "check",
+    "InfoIcon": "info",
+    "SyncIcon": "sync",
+    "LoadingIcon": "loading",
+    "TrashIcon": "trash",
+    "VerifiedIcon": "verified-filled",
+    "PlusIcon": "add",
+    "ArrowUpIcon": "arrow-up",
+    "FilterIcon": "filter"
+  }
+}
