@@ -250,6 +250,8 @@ export const RULES: readonly RuleDefinition[] = [
     // README; the details pane's headings set their weight at P3.3a; the look's tokens hard since UX-P1.3 writes the attributes.
     rule('DS-TYPE-2', { helper: 3, scopes: inGroups('hard', ...ALL), tolerance: TOLERANCES.fontExact }),
     rule('DS-TYPE-3', { helper: 3, scopes: { ...inGroups('hard', 'main-installed', 'main-updates', 'browse', 'dialogs', 'sources', 'sidebar'), details: { pending: 'P3.3a' } }, tolerance: TOLERANCES.containment }),
+    // UX-P1.4b: the Verified mark in the states whose readiness holds it; a row list of another state may still be provisional.
+    rule('DS-ICON-4', { helper: 3, scopes: { details: 'hard' }, tolerance: TOLERANCES.containment, states: ['main-installed-details', 'main-transitive-details'] }),
     rule('DS-LOOK-1', { helper: 3, scopes: inGroups('hard', ...ALL), tolerance: TOLERANCES.containment }),
 ];
 
@@ -510,6 +512,9 @@ export interface EndOfP0 {
     fonts: { root: string; others: string[] };
     /** UX-P1.1: per visible text outside the README, its computed size and weight, and whether it is a section title or group header (DS-TYPE-2, DS-TYPE-3). */
     textStyles: Array<{ fontSize: number; fontWeight: number; header: boolean }>;
+    /** UX-P1.4b: each Verified mark's box and colour, and the colour it stands for (DS-ICON-4). */
+    verifiedMarks: Array<{ w: number; h: number; colour: string }>;
+    verifiedForeground: string;
     /** UX-P1.1: `data-look` of the document element, and the look table's tokens as computed there (DS-TYPE-3, DS-LOOK-1). */
     dataLook: string | undefined;
     lookTokens: Record<string, string>;
@@ -569,7 +574,7 @@ const FONT_RAMP: readonly number[] = [10, 11, 12, 13, 18, 26];
 export const COLLECT_LAYOUT = `
 const [rootTestId, ramp, tolerance, containment = 0] = arguments;
 const root = document.querySelector('[data-testid="' + rootTestId + '"]');
-if (!root) return { root: false, scrollbar: { rootColor: '', slider: '', scrollers: [] }, examined: 0, offRamp: [], offRampCount: 0, blockGaps: [], sections: [], toolbars: [], mainHeader: undefined, sidebarHeader: undefined, mainLefts: {}, mainRegionLeft: undefined, details: undefined, sidebar: undefined, heights: { headers: [], compactRows: [], comfortableRows: [], comfortablePitches: [], tabStrip: undefined, detailsTabs: undefined, buttons: [], inputs: [], iconButtons: [], checkBoxes: [], checkSelect: { fill: '', border: '' }, badges: [], progress: [] }, centring: [], detailsButtons: { uninstall: undefined, update: undefined }, width: 0, rows: [], chrome: {}, firstRow: undefined, overflow: { containers: 0, collisions: [], outside: [], clipped: [], count: 0, badges: [] }, transitiveGap: undefined, primaryEdges: [], browsing: false, documentOverflow: undefined, endOfP0: { rows: [], listPaneWidth: undefined, detailsHeader: undefined, sideways: [], controlsOut: [], minContent: { toolbar: undefined, header: undefined }, factLefts: [], fonts: { root: '', others: [] }, textStyles: [], dataLook: undefined, lookTokens: {}, rootLineHeight: undefined, compactLineHeights: [], metaText: [], descriptionForeground: '', copyEnds: [], focus: undefined, focusColours: { focusBorder: '', listFocusOutline: '', contrastActiveBorder: '' }, disabled: [] }, testIds: {} };
+if (!root) return { root: false, scrollbar: { rootColor: '', slider: '', scrollers: [] }, examined: 0, offRamp: [], offRampCount: 0, blockGaps: [], sections: [], toolbars: [], mainHeader: undefined, sidebarHeader: undefined, mainLefts: {}, mainRegionLeft: undefined, details: undefined, sidebar: undefined, heights: { headers: [], compactRows: [], comfortableRows: [], comfortablePitches: [], tabStrip: undefined, detailsTabs: undefined, buttons: [], inputs: [], iconButtons: [], checkBoxes: [], checkSelect: { fill: '', border: '' }, badges: [], progress: [] }, centring: [], detailsButtons: { uninstall: undefined, update: undefined }, width: 0, rows: [], chrome: {}, firstRow: undefined, overflow: { containers: 0, collisions: [], outside: [], clipped: [], count: 0, badges: [] }, transitiveGap: undefined, primaryEdges: [], browsing: false, documentOverflow: undefined, endOfP0: { rows: [], listPaneWidth: undefined, detailsHeader: undefined, sideways: [], controlsOut: [], minContent: { toolbar: undefined, header: undefined }, factLefts: [], fonts: { root: '', others: [] }, textStyles: [], verifiedMarks: [], verifiedForeground: '', dataLook: undefined, lookTokens: {}, rootLineHeight: undefined, compactLineHeights: [], metaText: [], descriptionForeground: '', copyEnds: [], focus: undefined, focusColours: { focusBorder: '', listFocusOutline: '', contrastActiveBorder: '' }, disabled: [] }, testIds: {} };
 const dialog = document.querySelector('.nuiget-dialog');
 const visible = el => {
     if (!el || !el.isConnected) return false;
@@ -1065,6 +1070,8 @@ const endOfP0 = {
     factLefts,
     fonts: { root: rootFont, others: [...otherFonts] },
     textStyles,
+    verifiedMarks: shown('[data-codicon="verified-filled"]').map(el => { const box = rectOf(el); return { w: round(box.width), h: round(box.height), colour: getComputedStyle(el).color }; }),
+    verifiedForeground: rootVars.getPropertyValue('--vscode-extensionIcon-verifiedForeground').trim(),
     dataLook: document.documentElement.dataset.look,
     lookTokens,
     rootLineHeight: rootLine > 0 ? round(rootLine) : undefined,
@@ -1850,6 +1857,14 @@ function evaluateType(definition: RuleDefinition, layout: Layout, look: 'modern'
             }
             const off = facts.textStyles.filter(text => ![400, 600].includes(text.fontWeight) && !(text.fontWeight === 700 && text.header && facts.dataLook !== 'modern'));
             return { value: off.length === 0 ? `weights ${tally(facts.textStyles.map(text => text.fontWeight))}` : `off: ${tally(off.map(text => text.fontWeight))}`, pass: off.length === 0 };
+        }
+        case 'DS-ICON-4': {
+            if (facts.verifiedMarks.length === 0) {
+                return notMeasurable('no Verified mark');
+            }
+            const offSize = facts.verifiedMarks.filter(mark => mark.w !== mark.h || ![12, 16].includes(mark.w));
+            const offColour = facts.verifiedMarks.filter(mark => !sameColour(mark.colour, facts.verifiedForeground));
+            return { value: `${facts.verifiedMarks.length} marks, ${tally(facts.verifiedMarks.map(mark => `${mark.w}×${mark.h}`))}; ${offColour.length} off ${facts.verifiedForeground}`, pass: offSize.length === 0 && offColour.length === 0 };
         }
         case 'DS-LOOK-1': {
             if (Object.keys(facts.lookTokens).length === 0) {

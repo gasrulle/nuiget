@@ -19,7 +19,7 @@ const layout = (overrides: Partial<Layout> = {}, heights: Partial<Heights> = {})
     browsing: false, documentOverflow: undefined,
     endOfP0: {
         rows: [], listPaneWidth: undefined, detailsHeader: undefined, sideways: [], controlsOut: [], minContent: { toolbar: undefined, header: undefined },
-        factLefts: [], fonts: { root: '', others: [] }, textStyles: [], dataLook: undefined, lookTokens: {}, rootLineHeight: undefined, compactLineHeights: [], metaText: [], descriptionForeground: '', copyEnds: [],
+        factLefts: [], fonts: { root: '', others: [] }, textStyles: [], verifiedMarks: [], verifiedForeground: '', dataLook: undefined, lookTokens: {}, rootLineHeight: undefined, compactLineHeights: [], metaText: [], descriptionForeground: '', copyEnds: [],
         focus: undefined, focusColours: { focusBorder: '', listFocusOutline: '', contrastActiveBorder: '' }, disabled: [],
     },
     testIds: {},
@@ -51,7 +51,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
             'DS-INSET-4', 'DS-ROW-1', 'DS-ROW-2', 'DS-ROW-3', 'DS-ROW-6', 'DS-ICON-3', 'DS-DENSITY-1', 'DS-OVERFLOW-1', 'DS-OVERFLOW-3', 'DS-OVERFLOW-5', 'DS-ALIGN-1',
             'DS-TYPE-1', 'DS-TYPE-4', 'DS-TYPE-6', 'DS-ROW-4', 'DS-COPY-3', 'SPEC',
             'DS-FOCUS-1', 'DS-FOCUS-2', 'DS-FOCUS-3', 'DS-FOCUS-4', 'DS-STATE-7', 'DS-SCROLL-1',
-            'DS-TYPE-2', 'DS-TYPE-3', 'DS-LOOK-1',
+            'DS-TYPE-2', 'DS-TYPE-3', 'DS-ICON-4', 'DS-LOOK-1',
         ]);
         const scopes = (id: string): unknown => RULES.find(rule => rule.id === id)?.scopes;
         expect(scopes('PF-6')).toEqual({ 'main-installed': 'hard' });
@@ -107,6 +107,9 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(scopes('DS-ROW-3')).toEqual({ ...main('P2.2'), sidebar: { pending: 'P3.7a' } });
         expect(scopes('DS-ROW-6')).toEqual(main('P2.2'));
         expect(scopes('DS-ICON-3')).toEqual(main('P2.2'));
+        // UX-P1.4b: the two states whose readiness holds a Verified mark.
+        expect(scopes('DS-ICON-4')).toEqual({ details: 'hard' });
+        expect(RULES.find(rule => rule.id === 'DS-ICON-4')?.states).toEqual(['main-installed-details', 'main-transitive-details']);
         expect(scopes('DS-DENSITY-1')).toEqual({ ...main('P2.2'), sidebar: { pending: 'P3.7a' } });
         expect(scopes('DS-OVERFLOW-1')).toEqual({ 'main-installed': { pending: 'P2.7' }, 'main-updates': { pending: 'P2.7' }, browse: { pending: 'P2.7' }, details: { pending: 'P3.3b' }, sidebar: { pending: 'P3.7a' } });
         expect(scopes('DS-OVERFLOW-3')).toEqual({ toolbars: { pending: 'P2.5' }, tabs: { pending: 'P2.5' }, details: { pending: 'P3.3b' } });
@@ -149,7 +152,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
             'PF-2': 1, 'PF-3a': 0, 'PF-4': 8, 'MS-8': 0.5, 'DS-OVERFLOW-6': 0, 'DS-INSET-3': 1, 'DS-OVERFLOW-2': 0, 'DS-ROW-5': 0,
             'DS-INSET-4': 1, 'DS-ROW-1': 1, 'DS-ROW-2': 1, 'DS-ROW-3': 0, 'DS-ROW-6': 0, 'DS-ICON-3': 0, 'DS-DENSITY-1': 1, 'DS-OVERFLOW-1': 0, 'DS-OVERFLOW-3': 0,
             'DS-OVERFLOW-5': 0, 'DS-ALIGN-1': 0, 'DS-TYPE-1': 0, 'DS-TYPE-4': 0.5, 'DS-TYPE-6': 0.1, 'DS-ROW-4': 0, 'DS-COPY-3': 0, SPEC: 1,
-            'DS-FOCUS-1': 0, 'DS-FOCUS-2': 0, 'DS-FOCUS-3': 0, 'DS-FOCUS-4': 0, 'DS-STATE-7': 0, 'DS-SCROLL-1': 0, 'DS-TYPE-2': 0.1, 'DS-TYPE-3': 0, 'DS-LOOK-1': 0,
+            'DS-FOCUS-1': 0, 'DS-FOCUS-2': 0, 'DS-FOCUS-3': 0, 'DS-FOCUS-4': 0, 'DS-STATE-7': 0, 'DS-SCROLL-1': 0, 'DS-TYPE-2': 0.1, 'DS-TYPE-3': 0, 'DS-ICON-4': 0, 'DS-LOOK-1': 0,
         });
     });
 
@@ -514,6 +517,12 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(value('main-installed-single', facts({ textStyles: [text(13, 700)] }), 'DS-TYPE-3@main-installed-single')).toMatchObject({ pass: false });
         expect(value('main-installed-details', facts({ textStyles: [text(13, 700)] }), 'DS-TYPE-3@main-installed-details')).toMatchObject({ pass: false, status: { pending: 'P3.3a' } });
         expect(value('main-installed-single', facts({ lookTokens: { '--nuiget-scrollbar-size': '10px' } }), 'DS-LOOK-1@main-installed-single')).toMatchObject({ pass: false, status: 'hard' });
+        // UX-P1.4b: the Verified mark, 12 or 16 px in its role's colour; never a pass without one.
+        const mark = (overrides: Record<string, unknown> = {}) => ({ w: 12, h: 12, colour: 'rgb(77, 170, 252)', ...overrides });
+        expect(value('main-installed-details', facts({ verifiedMarks: [mark(), mark({ w: 16, h: 16 })], verifiedForeground: '#4daafc' }), 'DS-ICON-4@main-installed-details')).toMatchObject({ pass: true, status: 'hard' });
+        expect(value('main-installed-details', facts({ verifiedMarks: [mark({ w: 14, h: 14 })], verifiedForeground: '#4daafc' }), 'DS-ICON-4@main-installed-details')).toMatchObject({ pass: false });
+        expect(value('main-installed-details', facts({ verifiedMarks: [mark({ colour: 'rgb(0, 0, 0)' })], verifiedForeground: '#4daafc' }), 'DS-ICON-4@main-installed-details')).toMatchObject({ pass: false });
+        expect(value('main-installed-details', facts({}), 'DS-ICON-4@main-installed-details')).toMatchObject({ pass: false, value: expect.stringContaining('not measurable') });
         // The five UX-P0.18 flipped.
         expect(value('main-installed-single', facts({ fonts: { root: 'sans', others: ['monospace'] } }), 'DS-TYPE-1@main-installed-single')).toMatchObject({ pass: false, status: 'hard' });
         expect(value('main-installed-single', facts({ fonts: { root: 'sans', others: [] } }), 'DS-TYPE-1@main-installed-single')).toMatchObject({ pass: true, value: 'one family' });

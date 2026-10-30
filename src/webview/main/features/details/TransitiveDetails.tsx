@@ -56,7 +56,7 @@ export function TransitiveDetails({ selection }: { selection: DetailsSelection }
                     <div className="nuiget-details-row">
                         <span className="nuiget-details-label">Authors:</span>
                         <span>
-                            {lite.verified ? <><VerifiedIcon title="Verified: the package id prefix is reserved by its owner" />{' '}</> : null}
+                            {lite.verified ? <><VerifiedIcon size={12} className="nuiget-verified" title="Verified: the package id prefix is reserved by its owner" />{' '}</> : null}
                             {lite.authors}
                         </span>
                     </div>

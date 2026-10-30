@@ -251,6 +251,10 @@ describe('Row layout (P9.2, D15)', () => {
         expect(lines[1].querySelector('.nuiget-row-version')).not.toBeNull();
         expect(lines[1].querySelector('.nuiget-row-authors')).toBeNull();
         expect(lines[2].querySelector('.nuiget-row-authors')).toHaveTextContent('Serilog Contributors');
+        const mark = screen.getByRole('img', { name: /^Verified/, hidden: true });
+        expect(mark).toHaveAttribute('data-codicon', 'verified-filled');
+        expect(mark).toHaveAttribute('width', '12');
+        expect(mark).toHaveClass('nuiget-verified');
         expect(option).toHaveAccessibleDescription('Verified: the package id prefix is reserved by its owner Serilog Contributors');
     });
 

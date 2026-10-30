@@ -185,7 +185,8 @@ P0 item provides.
 | DS-GRID-3 | lint on `tokens.css` | — | H6 | P1.1 | hard at P1.1 (`webview-tokens.test.ts`) |
 | DS-TYPE-5 | computed styles | groups / sidebar | — | P2.6 / P3.7a | pending |
 | DS-TYPE-7 | computed styles | panel title / details title | — | P2.7 / P3.3b | pending |
-| DS-ICON-2, -3, -4 | computed styles, 3 | icon buttons / package icons / Verified | — | P2.5 / P2.2 / P1.4b | pending |
+| DS-ICON-2, -3 | computed styles, 3 | icon buttons / package icons | — | P2.5 / P2.2 | pending |
+| DS-ICON-4 | 3 computed styles | `main-installed-details`, `main-transitive-details` | V51, V62 | P1.4b | hard at P1.4b |
 | DS-COLOR-1 | computed colours | main / each screen | — | P2.8b / its P3 item | pending |
 | DS-COLOR-2 | unfocused-list state | rows | — | P2.2 | pending (vacuous on the probe) |
 | DS-COLOR-3, -4 | hover, computed colours | icon buttons, tabs | — | P2.5 | pending |

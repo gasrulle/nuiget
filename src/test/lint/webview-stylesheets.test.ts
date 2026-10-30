@@ -184,6 +184,13 @@ describe('2.0 webview stylesheets', () => {
         expect(checkbox).toEqual(expect.arrayContaining(['appearance: none', 'background: var(--nuiget-color-checkbox-bg)']));
     });
 
+    it('the Verified mark takes its colour from its own class, nothing outranks it (DS-ICON-4)', () => {
+        const primitives = parseRules(readFileSync(PRIMITIVES, 'utf8'));
+        expect(primitives.find(rule => rule.prelude === '.nuiget-verified')?.declarations).toEqual(['color: var(--nuiget-color-verified)']);
+        // The six dumped themes give the link and the verified role one value, so a capture cannot see this cascade.
+        expect(primitives.filter(rule => rule.prelude.includes(' svg') && rule.prelude.includes('authors')).flatMap(rule => rule.declarations).filter(declaration => declaration.startsWith('color:'))).toEqual([]);
+    });
+
     it('every focus ring is the focus token at one pixel, on every control', () => {
         const files = [PRIMITIVES, 'src/webview/main/main.css', 'src/webview/sidebar/sidebar.css'];
         const rules = files.flatMap(file => parseRules(readFileSync(file, 'utf8')));

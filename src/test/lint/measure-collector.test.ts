@@ -294,6 +294,9 @@ describe('the in-page collector on stubbed geometry (UX-P0.10, UX-P0.11)', () =>
         const panel = document.querySelector('[data-testid="package-details-panel"]') as HTMLElement;
         panel.insertAdjacentHTML('beforeend', '<div class="nuiget-readme" data-rect="620,300,880,340"><h1 data-rect="620,300,880,340" data-text="620,300,880,340">A README title</h1></div>');
         document.documentElement.dataset.look = 'modern';
+        document.documentElement.style.setProperty('--vscode-extensionIcon-verifiedForeground', '#4daafc');
+        document.head.insertAdjacentHTML('beforeend', '<style id="verified-facts">.verified { color: rgb(77, 170, 252); }</style>');
+        panel.insertAdjacentHTML('beforeend', '<svg class="verified" data-codicon="verified-filled" data-rect="620,350,632,362"></svg>');
         document.documentElement.style.setProperty('--nuiget-scrollbar-size', '8px');
         try {
             const facts = collect().endOfP0;
@@ -305,10 +308,14 @@ describe('the in-page collector on stubbed geometry (UX-P0.10, UX-P0.11)', () =>
             // A badge inside a section header is no title: only the title may be 700 (DS-TYPE-3).
             expect(facts.textStyles.filter(text => text.header).every(text => text.fontSize === 11)).toBe(true);
             expect(facts.dataLook).toBe('modern');
+            expect(facts.verifiedMarks).toEqual([{ w: 12, h: 12, colour: 'rgb(77, 170, 252)' }]);
+            expect(facts.verifiedForeground).toBe('#4daafc');
             expect(facts.lookTokens['--nuiget-scrollbar-size']).toBe('8px');
             expect(Object.keys(facts.lookTokens)).toHaveLength(8);
         } finally {
             document.getElementById('type-facts')?.remove();
+            document.getElementById('verified-facts')?.remove();
+            document.documentElement.style.removeProperty('--vscode-extensionIcon-verifiedForeground');
             delete document.documentElement.dataset.look;
             document.documentElement.style.removeProperty('--nuiget-scrollbar-size');
         }

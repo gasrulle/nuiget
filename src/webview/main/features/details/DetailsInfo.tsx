@@ -45,7 +45,7 @@ function Facts({ metadata, known, reportAbuse }: FactsProps): React.JSX.Element 
     const facts: Array<[string, React.ReactNode]> = [];
     facts.push(['Version', metadata.version]);
     if (metadata.authors) {
-        facts.push(['Author(s)', known?.verified ? <><VerifiedIcon title="Verified: the package id prefix is reserved by its owner" />{' '}{metadata.authors}</> : metadata.authors]);
+        facts.push(['Author(s)', known?.verified ? <><VerifiedIcon size={12} className="nuiget-verified" title="Verified: the package id prefix is reserved by its owner" />{' '}{metadata.authors}</> : metadata.authors]);
     }
     if (metadata.license || metadata.licenseUrl) {
         facts.push(['License', isWebLink(metadata.licenseUrl) ? <a href={metadata.licenseUrl}>{metadata.license ?? 'View license'}</a> : metadata.license]);

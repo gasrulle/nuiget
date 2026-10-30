@@ -233,8 +233,12 @@
     white-space: nowrap;
 }
 
+/* The Verified mark, wherever it stands beside an author (DS-ICON-4). */
+.nuiget-verified {
+    color: var(--nuiget-color-verified);
+}
+
 .nuiget-row-authors svg {
-    color: var(--nuiget-color-link);
     vertical-align: text-bottom;
 }
 

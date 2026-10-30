@@ -291,7 +291,7 @@ All Projects (§3; `<name>` = project name lower-cased):
 | `sidebar-update-all-button` | Update all in the sidebar's Updates header |
 | `section-header-project-<name>`, `section-header-updates-<name>` | The toggle of a project's section (Installed, Updates) |
 
-Attributes of the document element of both webviews, which the host writes in `renderWebviewHtml` (so no webview file renders them and they are no table row): `data-look` (`modern` or `classic`), `data-density` (`default` or `compact`) and `data-uppercase-headers` (present when the host capitalises view headers) (ADR-011). The harness reads the look of a capture here.
+Attributes of the document element of both webviews, which the host writes in `renderWebviewHtml` (so no webview file renders them and they are no table row): `data-look` (`modern` or `classic`), `data-density` (`default` or `compact`) and `data-uppercase-headers` (present when the host capitalises view headers) (ADR-011). The harness reads the look of a capture here. Every icon carries `data-codicon` with the name of its drawing (`src/webview/shared/primitives/icons.tsx`, generated).
 
 Removing or renaming a hook requires updating this table and the ExTester tests in the same change.
 

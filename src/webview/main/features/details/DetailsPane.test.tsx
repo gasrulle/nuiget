@@ -254,7 +254,11 @@ describe('main panel: details', () => {
         expect(fact('Version')).toHaveTextContent('8.4.2');
         expect(fact('Downloads')).toHaveTextContent('42,000');
         expect(fact('Package size')).toHaveTextContent('2.0 MB');
-        expect(within(fact('Author(s)')).getByRole('img', { name: /Verified/ })).toBeInTheDocument();
+        const mark = within(fact('Author(s)')).getByRole('img', { name: /Verified/ });
+        // DS-ICON-4: the drawing, the compact size beside an author, the class that paints its role.
+        expect(mark).toHaveAttribute('data-codicon', 'verified-filled');
+        expect(mark).toHaveAttribute('width', '12');
+        expect(mark).toHaveClass('nuiget-verified');
         expect([...pane().querySelectorAll('dt')].map(term => term.textContent)).toEqual(['Version', 'Author(s)', 'Downloads', 'Package size']);
         expect(within(pane()).queryByText('Report abuse')).toBeNull();
     });

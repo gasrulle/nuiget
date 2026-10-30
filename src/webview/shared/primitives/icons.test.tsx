@@ -4,6 +4,7 @@ import type React from 'react';
 import { describe, expect, it } from 'vitest';
 import * as icons from './icons';
 import type { IconProps } from './icons';
+import iconPlan from '../../../../docs/design/icons.json';
 
 // Every export of the module, so that an icon added later is tested without a change here.
 const entries = Object.entries(icons) as Array<[string, React.ComponentType<IconProps>]>;
@@ -18,7 +19,7 @@ const svgOf = (container: HTMLElement): SVGSVGElement => {
 
 describe('icons', () => {
     it('every export of the module is an icon component', () => {
-        expect(entries.length).toBeGreaterThanOrEqual(26);
+        expect(entries.map(([name]) => name).sort()).toEqual(Object.keys(iconPlan.icons).sort());
         for (const [name, Icon] of entries) {
             expect(name, 'export name').toMatch(/^[A-Z][A-Za-z]*Icon$/);
             const { container, unmount } = render(<Icon />);

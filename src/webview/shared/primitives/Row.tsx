@@ -96,7 +96,7 @@ export function Row(props: RowProps): React.JSX.Element {
     const authorsSpan = hasAuthors ? (
         <span className="nuiget-row-authors" id={ids.authors}>
             {/* A space, not a margin: the icon's title and the authors are two words when read out. */}
-            {verified ? <><VerifiedIcon title="Verified: the package id prefix is reserved by its owner" />{' '}</> : null}
+            {verified ? <><VerifiedIcon size={12} className="nuiget-verified" title="Verified: the package id prefix is reserved by its owner" />{' '}</> : null}
             {authors}
         </span>
     ) : null;
