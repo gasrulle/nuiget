@@ -164,6 +164,9 @@ interface Reach {
 /** The transitive header is not revalidating: its insets are measured on a still header (UX-P0.15 DO 5; UX-P0.fix-2). */
 const TRANSITIVE_HEADER_STILL = 'document.querySelector(\'[data-testid="section-header-transitive"]\')?.querySelector(\'.nuiget-spinner\') === null';
 
+/** No CSS transition runs in the webview: a measurement reads a still subject (the chevron rotates for 100 ms; UX-P0.fix-4). */
+const NO_RUNNING_TRANSITION = 'document.getAnimations().every(animation => !(animation instanceof CSSTransition) || animation.playState !== "running")';
+
 const cancelDialog = async (): Promise<void> => {
     await (await findByTestId('confirm-dialog-cancel', 10_000)).click();
     await waitForTestIdGone('confirm-dialog', 10_000);
@@ -900,6 +903,7 @@ function specFor(state: NamedState, capture: Capture): SpecLook | undefined {
  */
 async function measure(state: NamedState, capture: Capture): Promise<{ red: string[]; layout: Layout }> {
     await (state.surface === 'main' ? enterMainWebview() : enterSidebarWebview());
+    await until(NO_RUNNING_TRANSITION, 'the CSS transitions to end', 30_000);
     const layout = await script<Layout>(COLLECT_LAYOUT, state.surface === 'main' ? 'nuiget-app' : 'nuiget-sidebar', RAMP, TOLERANCES.gapMembership, TOLERANCES.containment);
     const key = `${state.surface} ${capture.theme} ${capture.width} ${capture.look}`;
     const before = chromeReferences.get(key);
@@ -1173,7 +1177,7 @@ describe(`named states (${LANE} lane, ${LOOK} look)`, () => {
             for (const theme of MATRIX_THEMES) {
                 await applyTheme(theme);
                 // A colour read during a transition is a mix of two themes (the gotcha of theme.ui.test.ts).
-                await until('document.getAnimations().every(animation => !(animation instanceof CSSTransition) || animation.playState !== "running")', 'the colour transitions to end', 30_000);
+                await until(NO_RUNNING_TRANSITION, 'the colour transitions to end', 30_000);
                 const dump = await script<ThemeDump>(DUMP_THEME, names);
                 const unresolved = names.filter(name => dump.tokens[name] === '');
                 fs.writeFileSync(path.join(dir, themeDumpFile(theme, LOOK)), formatThemeDump(THEMES[theme].labels[0], dump, provenance));
