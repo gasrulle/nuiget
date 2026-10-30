@@ -1016,7 +1016,8 @@ describe(`named states (${LANE} lane, ${LOOK} look)`, () => {
 
     for (const { state, capture } of jobs) {
         const reach = REACH[state.name];
-        it(captureFile(state.name, capture), async function () {
+        // The title spelled out, not captureFile(): scripts/check-regression-matrix.mjs reads a test's title from the source and keeps a template's placeholders (the matrix rows of the named states, UX-P0.29; the format is states.ts captureFile).
+        it(`${state.name}.${capture.theme}${capture.look === 'classic' ? '-classic' : ''}.${capture.width}.png`, async function () {
             this.timeout(300_000);
             if (reach === undefined) {
                 throw new Error(`no setup for the ready state ${state.name}`);
