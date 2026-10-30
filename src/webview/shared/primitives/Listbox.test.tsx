@@ -33,6 +33,7 @@ function PackageList({ items, onAction, ...rest }: { items: Package[]; onAction?
             hint={HINT}
             testId="sidebar-installed-list"
             density="compact"
+            isDisabled={item => item.disabled === true}
             renderRow={(item, placement) => (
                 <Row
                     {...placement}
@@ -40,7 +41,6 @@ function PackageList({ items, onAction, ...rest }: { items: Package[]; onAction?
                     name={item.id}
                     version={item.version}
                     density="compact"
-                    disabled={item.disabled}
                     status={item.disabled ? 'Unresolved' : undefined}
                     badges={item.central ? <Badge label="CPM" title="Centrally managed" /> : undefined}
                     actions={<IconButton label={`Uninstall ${item.id}`} tabIndex={-1} data-testid="row-action-uninstall" onClick={() => onAction?.(item.id)}><TrashIcon /></IconButton>}
@@ -383,6 +383,49 @@ describe('Listbox group rows (UX-P2.1a)', () => {
         }
     });
 
+    it('the list reads nothing from the row\'s markup: a renderRow that is not Row still gets focus, keys, disabled and the toggle through placement', async () => {
+        const user = userEvent.setup();
+        const onActivate = vi.fn();
+        const onToggleSelected = vi.fn();
+        const plain: Package[] = [{ id: 'Plain', version: '' }, { id: 'Off', version: '', disabled: true }];
+        render(
+            <Listbox
+                items={plain}
+                label="Plain rows"
+                hint={HINT}
+                testId="plain-list"
+                density="compact"
+                selectedIds={new Set<string>()}
+                isDisabled={item => item.disabled === true}
+                onActivate={onActivate}
+                onToggleSelected={onToggleSelected}
+                renderRow={(item, placement) => (
+                    <div data-index={placement.index}>
+                        <div data-testid={`plain-${item.id}`} tabIndex={placement.active ? 0 : -1} data-disabled={String(placement.disabled)}>
+                            {item.id}
+                            <button type="button" tabIndex={-1} onClick={placement.onToggle}>Toggle {item.id}</button>
+                        </div>
+                    </div>
+                )}
+            />,
+        );
+        const first = screen.getByTestId('plain-Plain');
+        const second = screen.getByTestId('plain-Off');
+        expect(first).toHaveAttribute('data-disabled', 'false');
+        expect(second).toHaveAttribute('data-disabled', 'true');
+        await user.click(screen.getByRole('button', { name: 'Toggle Plain' }));
+        expect(onToggleSelected).toHaveBeenCalledTimes(1);
+        await user.click(screen.getByRole('button', { name: 'Toggle Off' }));
+        expect(onToggleSelected).toHaveBeenCalledTimes(1);
+        first.focus();
+        await user.keyboard('{Enter}');
+        expect(onActivate).toHaveBeenCalledTimes(1);
+        await user.keyboard('{ArrowDown}');
+        expect(document.activeElement).toBe(second);
+        await user.keyboard('{Enter}');
+        expect(onActivate).toHaveBeenCalledTimes(1);
+    });
+
     it('a list without isGroup renders every item as an option', () => {
         render(<Grouped group={false} />);
         const list = screen.getByTestId('grouped-list');
@@ -456,6 +499,7 @@ describe('Listbox multi-selection', () => {
                     selectedId={selectedId}
                     onToggleSelected={onToggleSelected}
                     onSelect={onSelect}
+                    isDisabled={item => item.disabled === true}
                     renderRow={(item, placement) => (
                         <Row
                             {...placement}
@@ -463,7 +507,6 @@ describe('Listbox multi-selection', () => {
                             name={item.id}
                             version={item.version}
                             density="comfortable"
-                            disabled={item.disabled}
                             actions={<IconButton label={`Uninstall ${item.id}`} tabIndex={-1} data-testid="row-action-uninstall"><TrashIcon /></IconButton>}
                         />
                     )}

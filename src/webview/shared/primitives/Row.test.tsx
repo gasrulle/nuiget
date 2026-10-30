@@ -101,6 +101,15 @@ describe('Row', () => {
         expect(container.querySelector('.nuiget-row-actions .nuiget-spinner')).not.toBeNull();
     });
 
+    it('a click on the check mark calls onToggle and does not reach the option\'s click', async () => {
+        const onToggle = vi.fn();
+        const onClick = vi.fn();
+        const { container } = render(<div role="listbox" aria-label="Installed packages" onClick={onClick}><Row itemId="Serilog" name="Serilog" density="compact" index={0} setSize={1} active selected={false} optionId="o" offset={0} checkable onToggle={onToggle} /></div>);
+        fireEvent.click(container.querySelector('.nuiget-row-check')!);
+        expect(onToggle).toHaveBeenCalledTimes(1);
+        expect(onClick).not.toHaveBeenCalled();
+    });
+
     it('a disabled row renders no actions', () => {
         const { container } = renderRow({ actions: uninstall(), disabled: true, status: 'Unresolved' });
         const option = screen.getByRole('option');

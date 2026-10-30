@@ -93,6 +93,7 @@ export function ProjectPackages({ projectPath, result, filter, announce, labelle
             onSecondaryActivate={({ entry }) => viewDetails(entry.id, entry.resolvedVersion ?? entry.version)}
             onContextMenu={({ entry }) => menu({ packageId: entry.id, installedVersion: entry.resolvedVersion ?? entry.version, context: 'installed', projectPath, versionType: entry.versionType })}
             empty={<EmptyState data-testid="sidebar-installed-empty" message={nothing} />}
+            isDisabled={({ entry }) => entry.declaration === 'unresolved'}
             renderRow={(item, placement) => {
                 const { entry } = item;
                 const busy = isBusy(entry.id);
@@ -107,7 +108,6 @@ export function ProjectPackages({ projectPath, result, filter, announce, labelle
                         versionTitle={unresolved ? UNRESOLVED_HINT : undefined}
                         density="compact"
                         busy={busy}
-                        disabled={unresolved}
                         status={busy ? busyStatus(entry.id) : unresolved ? 'Unresolved' : undefined}
                         badges={central ? <Badge label="CPM" title="Centrally managed" /> : undefined}
                         actions={whyNotRemovable(entry, result) === undefined

@@ -113,6 +113,7 @@ export function InstalledProjectSection(props: InstalledProjectSectionProps): Re
                     onActivate={item => onCurrent(item.id)}
                     onDelete={item => onUninstall(item.entry)}
                     empty={<EmptyState message={empty} />}
+                    isDisabled={({ entry }) => entry.declaration === 'unresolved'}
                     renderRow={(item, placement) => {
                         const { entry } = item;
                         const busy = isPackageBusy(projectPath, entry.id);
@@ -134,7 +135,6 @@ export function InstalledProjectSection(props: InstalledProjectSectionProps): Re
                                 icon={src === undefined ? undefined : <img src={src} alt="" />}
                                 density="comfortable"
                                 busy={busy}
-                                disabled={unresolved}
                                 selectable={!readOnly}
                                 status={busy ? busyStatus(entry.id) : unresolved ? 'Unresolved' : undefined}
                                 badges={<>

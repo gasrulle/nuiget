@@ -19,6 +19,9 @@ export interface GroupPlacement {
     measureRef?: (element: HTMLElement | null) => void;
 }
 
+/** The rows kept in the document above and below the view. */
+const OVERSCAN = 5;
+
 /** What can take focus inside a group row; without any the row's wrapper does. */
 const FOCUSABLE = 'button:not(:disabled), [href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]';
 
@@ -28,13 +31,13 @@ interface ListboxBaseProps<T extends { id: string }> {
     renderRow: (item: T, placement: RowPlacement) => React.ReactNode;
     /** An item that is a group row: rendered by `renderGroup`, an arrow stop, never an option. Its keys and role are UX-P2.1c's. */
     isGroup?: (item: T) => boolean;
+    /** The row can be focused and selected but its actions do not apply: the keys and the check mark read it here, the row draws it. */
+    isDisabled?: (item: T) => boolean;
     renderGroup?: (item: T, placement: GroupPlacement) => React.ReactNode;
     /** One sentence that names the keys of this list, for example "Enter uninstalls. Shift+F10 opens the actions menu." It is read as the list's description. */
     hint: string;
     testId: string;
     density: 'compact' | 'comfortable';
-    estimateSize?: number;
-    overscan?: number;
     selectedId?: string | null;
     /**
      * Multi-selection for bulk actions. When given, the list is `aria-multiselectable="true"`, the rows in the set
@@ -73,8 +76,8 @@ export type ListboxProps<T extends { id: string }> = ListboxBaseProps<T> & ({ la
  * active row always is, so focus never falls out of the list.
  */
 export function Listbox<T extends { id: string }>(props: ListboxProps<T>): React.JSX.Element {
-    const { items, renderRow, isGroup, renderGroup, hint, testId, density, overscan = 5, selectedId = null, selectedIds, onToggleSelected, onSelect, onActivate, onSecondaryActivate, onDelete, onContextMenu, busy, empty } = props;
-    const estimateSize = props.estimateSize ?? ROW_HEIGHT[density];
+    const { items, renderRow, isGroup, isDisabled, renderGroup, hint, testId, density, selectedId = null, selectedIds, onToggleSelected, onSelect, onActivate, onSecondaryActivate, onDelete, onContextMenu, busy, empty } = props;
+    const rowHeight = ROW_HEIGHT[density];
     const baseId = useId();
     const hintId = `${baseId}-hint`;
     const rootRef = useRef<HTMLDivElement>(null);
@@ -108,25 +111,26 @@ export function Listbox<T extends { id: string }>(props: ListboxProps<T>): React
     const virtualizer = useVirtualizer<HTMLDivElement, HTMLElement>({
         count: items.length,
         getScrollElement: () => scrollRef.current,
-        estimateSize: () => estimateSize,
-        overscan,
+        estimateSize: () => rowHeight,
+        overscan: OVERSCAN,
         getItemKey: index => items[index].id,
-        measureElement: element => element.getBoundingClientRect().height || estimateSize,
+        measureElement: element => element.getBoundingClientRect().height || rowHeight,
         rangeExtractor,
     });
 
     // Whether focus was inside the list when this render began, that is before the document changed. Only then
     // does the list take focus back after a change: it never pulls focus in from elsewhere.
     const hadFocus = rootRef.current?.contains(document.activeElement) ?? false;
-    const optionAt = (index: number): HTMLElement | null =>
-        scrollRef.current?.querySelector<HTMLElement>(`[data-index="${index}"] > [role="option"]`) ?? null;
+    // All the list reads of a row's markup: its `[data-index]` wrapper and the focusable element inside it. Every row fact crosses as `RowPlacement`.
+    const wrapperAt = (index: number): HTMLElement | null => scrollRef.current?.querySelector<HTMLElement>(`[data-index="${index}"]`) ?? null;
+    const rowFocusAt = (index: number): HTMLElement | null => wrapperAt(index)?.querySelector<HTMLElement>('[tabindex]') ?? null;
 
     const isGroupAt = (index: number): boolean => items[index] !== undefined && isGroup?.(items[index]) === true;
     const focusTargetAt = (index: number): HTMLElement | null => {
         if (!isGroupAt(index)) {
-            return optionAt(index);
+            return rowFocusAt(index);
         }
-        const wrapper = scrollRef.current?.querySelector<HTMLElement>(`[data-index="${index}"]`) ?? null;
+        const wrapper = wrapperAt(index);
         return wrapper?.querySelector<HTMLElement>(FOCUSABLE) ?? wrapper;
     };
 
@@ -165,7 +169,7 @@ export function Listbox<T extends { id: string }>(props: ListboxProps<T>): React
             return;
         }
         const command = event.ctrlKey || event.metaKey;
-        const disabled = optionAt(activeIndex)?.getAttribute('aria-disabled') === 'true';
+        const disabled = isDisabled?.(item) === true;
         const handled = (): void => event.preventDefault();
         if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
             handled();
@@ -196,7 +200,7 @@ export function Listbox<T extends { id: string }>(props: ListboxProps<T>): React
             }
         } else if (event.key === 'ContextMenu' || (event.key === 'F10' && event.shiftKey)) {
             handled();
-            const rect = optionAt(activeIndex)?.getBoundingClientRect();
+            const rect = rowFocusAt(activeIndex)?.getBoundingClientRect();
             onContextMenu?.(item, { x: rect?.left ?? 0, y: rect?.bottom ?? 0 });
         }
     };
@@ -230,14 +234,13 @@ export function Listbox<T extends { id: string }>(props: ListboxProps<T>): React
                     }
                 }}
                 onClick={event => {
-                    const target = event.target as HTMLElement;
-                    const option = target.closest('[role="option"]');
-                    const index = option ? indexOf(event.target) : -1;
-                    if (index < 0 || !items[index]) {
+                    const index = indexOf(event.target);
+                    // A click on an action stays with the action: the row's focusable element is what a click on the row lands in.
+                    if (index < 0 || !items[index] || isGroupAt(index) || !rowFocusAt(index)?.contains(event.target as Node)) {
                         return;
                     }
-                    if (selectedIds !== undefined && (event.ctrlKey || event.metaKey || target.closest('.nuiget-row-check'))) {
-                        if (option?.getAttribute('aria-disabled') !== 'true') {
+                    if (selectedIds !== undefined && (event.ctrlKey || event.metaKey)) {
+                        if (isDisabled?.(items[index]) !== true) {
                             onToggleSelected?.(items[index]);
                         }
                     } else {
@@ -255,6 +258,7 @@ export function Listbox<T extends { id: string }>(props: ListboxProps<T>): React
                 <div className="nuiget-listbox-sizer" style={cssVars({ '--nuiget-virtual-total': `${virtualizer.getTotalSize()}px` })}>
                     {virtualizer.getVirtualItems().map(virtual => {
                         const item = items[virtual.index];
+                        const disabled = isDisabled?.(item) === true;
                         if (isGroupAt(virtual.index)) {
                             return (
                                 <div
@@ -280,6 +284,12 @@ export function Listbox<T extends { id: string }>(props: ListboxProps<T>): React
                                     selected: selectedIds ? selectedIds.has(item.id) : item.id === selectedId,
                                     current: selectedIds ? item.id === selectedId : undefined,
                                     checkable: selectedIds !== undefined,
+                                    disabled,
+                                    onToggle: selectedIds === undefined ? undefined : () => {
+                                        if (!disabled) {
+                                            onToggleSelected?.(item);
+                                        }
+                                    },
                                     optionId: `${baseId}-option-${virtual.index}`,
                                     offset: virtual.start,
                                     measureRef: virtualizer.measureElement,
