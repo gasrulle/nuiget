@@ -984,8 +984,7 @@ These parts are the current truth for the build, test and release pipeline.
   ring), the row keys that write nothing and the bulk dialog's trap, Escape and focus restore (`[keys]` lines against
   `KEYS_EXPECTED`, recorded from run 40146274455; a walk starts once the snapshot's settle predicate holds); and it
   reads once what moves while the panel's first list loads under VS Code's reduce-motion signal (`[motion]`; UX-P0.24).
-  Then it times, in the webview's own clock, the panel's first open (armed before the first state) and a reopen to their
-  first row, evaluated list and icons, a Refresh, a
+  Then it times, in the webview's own clock, a reopen of the panel to its first row, evaluated list and icons, a Refresh, a
   project change, a row's details and a search, new and repeated (`[perf]` lines, informational; a recorder armed
   through `executeScript` stamps each mark with `performance.now()` from a `MutationObserver`,
   `src/test/ui/v2/perf.ts`, UX-P0.26; the numbers are kept in `docs/perf-baseline.md`). Before the first state the run measures the workbench's own controls in its look (the

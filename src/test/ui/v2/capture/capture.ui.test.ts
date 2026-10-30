@@ -676,31 +676,22 @@ const SEARCH_TEXT = 'Humanizer';
 
 const PROVISIONAL_FLAG = { name: 'provisional', predicate: PROVISIONAL, seen: 'a provisional list came first', unseen: 'no provisional list (the first answer was the evaluated one)' };
 
-const OPEN_MARKS = [
-    { name: 'first row', predicate: INSTALLED_ROW },
-    { name: 'authoritative list', predicate: authoritative(INSTALLED_ROW) },
-    { name: 'icons', predicate: icons(INSTALLED_ROW) },
-];
-
-/** The session's first panel, armed in the suite's `before` and read at the end of the exemplar test, with no wait of its own. */
+/**
+ * A reopen, its lists cached: the recorder starts once the driver reaches the content frame, and every mark may be there
+ * by then (an upper bound). The session's first open is not timed: the exemplar test closes every editor before a read
+ * could wait for it, and a wait there would move the captures (run 41025682652).
+ */
 const PANEL_OPEN: PerfChain = {
-    label: 'panel open',
-    context: 'the session\'s first panel on its default project; the side bar opened first and asked for the same project, so the panel may join its answer',
-    start: { kind: 'load' },
-    marks: OPEN_MARKS,
-    flags: [PROVISIONAL_FLAG],
-};
-
-const PANEL_OPEN_AGAIN: PerfChain = {
     label: 'panel open again',
     context: 'Gateway, its lists cached by the captures',
     start: { kind: 'load' },
-    marks: OPEN_MARKS,
+    marks: [
+        { name: 'first row', predicate: INSTALLED_ROW },
+        { name: 'authoritative list', predicate: authoritative(INSTALLED_ROW) },
+        { name: 'icons', predicate: icons(INSTALLED_ROW) },
+    ],
     flags: [PROVISIONAL_FLAG],
 };
-
-/** When the first panel's recorder was armed (the test process's clock: for the `not reached` text only). */
-let panelOpenArmedAt: number | undefined;
 
 const REFRESH: PerfChain = {
     label: 'refresh',
@@ -737,11 +728,8 @@ const searchChain = (label: 'search' | 'search again'): PerfChain => ({
     marks: [{ name: 'first result', predicate: BROWSE_ROW }],
 });
 
-/**
- * Waits at most `timeoutMs` for the marks of the armed `chain` (0: reads once), disarms its recorder and prints its lines;
- * `waitedMs` is what a mark not reached says it waited.
- */
-async function finishChain(chain: PerfChain, timeoutMs: number, waitedMs = timeoutMs): Promise<void> {
+/** Waits at most `timeoutMs` for the marks of the armed `chain`, disarms its recorder and prints its lines. */
+async function finishChain(chain: PerfChain, timeoutMs: number): Promise<void> {
     let result: PerfResult | null;
     try {
         result = await poll(async () => {
@@ -752,7 +740,7 @@ async function finishChain(chain: PerfChain, timeoutMs: number, waitedMs = timeo
         result = await script<PerfResult | null>(READ_PERF).catch(() => null);
     }
     await script(STOP_PERF).catch(() => undefined);
-    printLines(perfLines(chain, result, waitedMs));
+    printLines(perfLines(chain, result, timeoutMs));
 }
 
 /** Arms `chain` in the webview the driver is in, acts, and prints the chain. */
@@ -984,16 +972,7 @@ describe(`named states (${LANE} lane, ${LOOK} look)`, () => {
             run: process.env.GITHUB_RUN_ID ?? 'local', widgets,
         }, null, 2) + '\n');
         await openSidebarView();
-        if (LANE === 'ui' && LOOK === 'modern') {
-            // UX-P0.26: the session's first panel, timed in page; read at the end of the exemplar test.
-            await perfStep(PANEL_OPEN.label, async () => {
-                await openMainPanelTimed(PANEL_OPEN);
-                panelOpenArmedAt = Date.now();
-            });
-        }
-        if (panelOpenArmedAt === undefined) {
-            await openMainPanel();
-        }
+        await openMainPanel();
         await enterMainWebview();
         // The dense workspace's four projects, discovered across its two folders.
         await optionFor('Unsupported.csproj');
@@ -1032,14 +1011,6 @@ describe(`named states (${LANE} lane, ${LOOK} look)`, () => {
             // Beside the heights of the run's `before`, in the file docs/design/workbench/<look>.json is copied from.
             const file = path.join(path.dirname(VSBrowser.instance.getScreenshotsDir()), `workbench.${LOOK}.json`);
             fs.writeFileSync(file, JSON.stringify({ ...JSON.parse(fs.readFileSync(file, 'utf8')), exemplar }, null, 2) + '\n');
-            // UX-P0.26: the first panel's marks as they stand, read once (no wait: the captures' timing stays as it was).
-            const armedAt = panelOpenArmedAt;
-            if (armedAt !== undefined) {
-                await perfStep(PANEL_OPEN.label, async () => {
-                    await enterMainWebview();
-                    await finishChain(PANEL_OPEN, 0, Date.now() - armedAt);
-                });
-            }
         });
     }
 
@@ -1140,9 +1111,9 @@ describe(`named states (${LANE} lane, ${LOOK} look)`, () => {
             await freshMainPanel();
             // Gateway is the session's project, and its lists are settled, before the panel is opened again.
             await gatewayInstalled();
-            await perfStep(PANEL_OPEN_AGAIN.label, async () => {
-                await openMainPanelTimed(PANEL_OPEN_AGAIN);
-                await finishChain(PANEL_OPEN_AGAIN, 60_000);
+            await perfStep(PANEL_OPEN.label, async () => {
+                await openMainPanelTimed(PANEL_OPEN);
+                await finishChain(PANEL_OPEN, 60_000);
             });
             await perfStep(REFRESH.label, async () => {
                 await enterMainWebview();
