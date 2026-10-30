@@ -1,6 +1,6 @@
 # ADR-012: Icons are inline SVG generated from a pinned codicon release
 
-Status: accepted · Date: 2026-10-23
+Status: accepted · Date: 2026-10-23 · Amended: 2026-10-30 (UX plan item UX-P1.4b: Decision 3's two custom glyphs removed for want of a user, Design System §13 CA-R2, instead of mapped; the Consequences line follows)
 
 ## Context
 
@@ -33,8 +33,11 @@ Status: accepted · Date: 2026-10-23
    and the count pinned by `webview-icons-pure.test.ts` follows that list.
 2. **A lint holds it.** A Vitest lint in `src/test/lint/` compares every generated icon's name, viewBox and path data
    with the pinned release's SVG. A hand-edited path, an unknown name or a drift from the release fails.
-3. **No hand-drawn glyph remains.** The two custom glyphs map to codicons the icon plan names; the Verified mark is
-   `verified-filled`, coloured with the `extensionIcon.verifiedForeground` role (ADR-011), at a codicon size.
+3. **No hand-drawn glyph remains.** The two custom glyphs (`SingleProjectIcon`, `AllProjectsIcon`) are removed: nothing
+   renders them, and a primitives export without a production importer is a defect (Design System §13 CA-R2); a project
+   glyph, if one is ever rendered, enters the icon plan (`docs/design/icons.json`) as `project` or `root-folder` in the
+   change that renders it. The Verified mark is `verified-filled`, coloured with the
+   `extensionIcon.verifiedForeground` role (ADR-011), at a codicon size.
 4. **The shape stays.** Every icon remains a `/* @__PURE__ */ React.memo(…)` component taking `size`, `className` and
    `title`, rendering no `style`, hidden from assistive technology without a title and an image with that name with
    one. Glyphs are 16 px in rows, toolbars and headers and 12 px inline, the two codicon sizes; their colour is the
@@ -65,7 +68,7 @@ font route proven in a live webview at the floor first.
 
 ## Consequences
 
-- One item of about one session-day: the script, the lint, the regenerated module, the mapped custom glyphs, the
+- One item of about one session-day: the script, the lint, the regenerated module, the two custom glyphs removed, the
   Verified mark, the attribution, and the captures that show icons re-approved.
 - Bundle sizes grow by the measured delta, inside both ceilings; any further icon is paid per bundle that uses it.
 - `package.json` gains the pinned devDependency; the Dependabot policy item adds it to the ignore list so that a bump
