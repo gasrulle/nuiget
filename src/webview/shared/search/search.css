@@ -40,8 +40,8 @@
     margin: var(--nuiget-space-1) 0 0;
     padding: var(--nuiget-space-1) 0;
     overflow-y: auto;
-    border: 1px solid var(--nuiget-color-border);
-    border-radius: var(--nuiget-radius-sm);
+    border: var(--nuiget-line-width) solid var(--nuiget-color-border);
+    border-radius: var(--nuiget-radius-xs);
     background: var(--nuiget-color-widget-bg);
     box-shadow: 0 2px 8px var(--nuiget-color-shadow);
     color: var(--nuiget-color-widget-fg);

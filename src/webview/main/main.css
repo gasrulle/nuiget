@@ -33,8 +33,8 @@ body {
     max-width: 20em;
     min-height: var(--nuiget-target-min);
     padding: 0 var(--nuiget-space-3);
-    border: 1px solid var(--nuiget-color-dropdown-border);
-    border-radius: var(--nuiget-radius-sm);
+    border: var(--nuiget-line-width) solid var(--nuiget-color-dropdown-border);
+    border-radius: var(--nuiget-radius-xs);
     background: var(--nuiget-color-dropdown-bg);
     color: var(--nuiget-color-dropdown-fg);
     font: inherit;
@@ -61,8 +61,8 @@ body {
     inline-size: var(--nuiget-icon-size-md);
     block-size: var(--nuiget-icon-size-md);
     margin: 0;
-    border: 1px solid var(--nuiget-color-checkbox-border);
-    border-radius: var(--nuiget-radius-sm);
+    border: var(--nuiget-line-width) solid var(--nuiget-color-checkbox-border);
+    border-radius: var(--nuiget-radius-xs);
     background: var(--nuiget-color-checkbox-bg);
     forced-color-adjust: none;
 }
@@ -87,8 +87,8 @@ body {
 
 .nuiget-main input[type="checkbox"]:focus-visible,
 .nuiget-dialog input[type="checkbox"]:focus-visible {
-    outline: 1px solid var(--nuiget-color-focus);
-    outline-offset: 1px;
+    outline: var(--nuiget-line-width) solid var(--nuiget-color-focus);
+    outline-offset: var(--nuiget-line-width);
 }
 
 /* The heading takes the free space, so the controls sit at the end of the header (1.x). */
@@ -109,7 +109,7 @@ body {
     position: relative;
     flex: none;
     padding: var(--nuiget-space-2) var(--nuiget-inset);
-    border-block-end: 1px solid var(--nuiget-color-border);
+    border-block-end: var(--nuiget-line-width) solid var(--nuiget-color-border);
 }
 
 .nuiget-main-search .nuiget-progress {
@@ -123,8 +123,8 @@ body {
     width: 100%;
     min-height: var(--nuiget-target-min);
     padding: 0 var(--nuiget-space-3);
-    border: 1px solid var(--nuiget-color-input-border);
-    border-radius: var(--nuiget-radius-sm);
+    border: var(--nuiget-line-width) solid var(--nuiget-color-input-border);
+    border-radius: var(--nuiget-radius-xs);
     background: var(--nuiget-color-input-bg);
     color: var(--nuiget-color-input-fg);
     font: inherit;
@@ -136,8 +136,8 @@ body {
 
 .nuiget-main-select:focus-visible,
 .nuiget-main-search-input:focus {
-    outline: 1px solid var(--nuiget-color-focus);
-    outline-offset: -1px;
+    outline: var(--nuiget-line-width) solid var(--nuiget-color-focus);
+    outline-offset: calc(var(--nuiget-line-width) * -1);
 }
 
 /* The list takes the share the sash reports; the details take the rest. */
@@ -380,7 +380,7 @@ body {
 
 .nuiget-readme img {
     max-width: 100%;
-    border-radius: var(--nuiget-radius-sm);
+    border-radius: var(--nuiget-radius-xs);
 }
 
 /* Typography of a README (1.x): headings marked on the left, inline code, tables, quotes, lists and rules on tokens. */
@@ -444,8 +444,8 @@ body {
 
 .nuiget-readme code {
     padding: var(--nuiget-space-hairline) var(--nuiget-space-2);
-    border: 1px solid var(--nuiget-color-border);
-    border-radius: var(--nuiget-radius-sm);
+    border: var(--nuiget-line-width) solid var(--nuiget-color-border);
+    border-radius: var(--nuiget-radius-xs);
     background: var(--nuiget-color-code-bg);
     font-family: var(--nuiget-font-family-mono);
     font-size: var(--nuiget-font-size-sm);
@@ -460,14 +460,14 @@ body {
 .nuiget-readme table {
     width: 100%;
     margin: 0 0 var(--nuiget-space-5);
-    border: 1px solid var(--nuiget-color-border);
+    border: var(--nuiget-line-width) solid var(--nuiget-color-border);
     border-collapse: collapse;
 }
 
 .nuiget-readme th,
 .nuiget-readme td {
     padding: var(--nuiget-space-2) var(--nuiget-space-4);
-    border-bottom: 1px solid var(--nuiget-color-border);
+    border-bottom: var(--nuiget-line-width) solid var(--nuiget-color-border);
     text-align: left;
 }
 
@@ -507,7 +507,7 @@ body {
     padding: var(--nuiget-space-4);
     padding-top: calc(var(--nuiget-target-min) + var(--nuiget-space-2));
     overflow-x: auto;
-    border-radius: var(--nuiget-radius-sm);
+    border-radius: var(--nuiget-radius-xs);
     background: var(--nuiget-color-code-bg);
     color: var(--nuiget-color-code-fg);
     font-family: var(--nuiget-font-family-mono);
@@ -522,8 +522,8 @@ body {
     right: var(--nuiget-space-2);
     min-height: var(--nuiget-target-min);
     padding: 0 var(--nuiget-space-3);
-    border: 1px solid var(--nuiget-color-border);
-    border-radius: var(--nuiget-radius-sm);
+    border: var(--nuiget-line-width) solid var(--nuiget-color-border);
+    border-radius: var(--nuiget-radius-xs);
     background: var(--nuiget-color-widget-bg);
     color: var(--nuiget-color-widget-fg);
     font: inherit;
@@ -532,7 +532,7 @@ body {
 }
 
 .nuiget-readme-copy:focus-visible {
-    outline: 1px solid var(--nuiget-color-focus);
+    outline: var(--nuiget-line-width) solid var(--nuiget-color-focus);
 }
 
 .nuiget-readme-copy-icon {
@@ -607,7 +607,7 @@ body {
     gap: var(--nuiget-space-4);
     min-height: var(--nuiget-target-min);
     padding: var(--nuiget-space-2) 0;
-    border-bottom: 1px solid var(--nuiget-color-border);
+    border-bottom: var(--nuiget-line-width) solid var(--nuiget-color-border);
 }
 
 .nuiget-source-text {
@@ -663,8 +663,8 @@ body {
     box-sizing: border-box;
     min-height: var(--nuiget-target-min);
     padding: 0 var(--nuiget-space-3);
-    border: 1px solid var(--nuiget-color-input-border);
-    border-radius: var(--nuiget-radius-sm);
+    border: var(--nuiget-line-width) solid var(--nuiget-color-input-border);
+    border-radius: var(--nuiget-radius-xs);
     background: var(--nuiget-color-input-bg);
     color: var(--nuiget-color-input-fg);
     font: inherit;
@@ -675,8 +675,8 @@ body {
 }
 
 .nuiget-input:focus {
-    outline: 1px solid var(--nuiget-color-focus);
-    outline-offset: -1px;
+    outline: var(--nuiget-line-width) solid var(--nuiget-color-focus);
+    outline-offset: calc(var(--nuiget-line-width) * -1);
 }
 
 .nuiget-add-source-actions {

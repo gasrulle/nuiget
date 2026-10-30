@@ -227,25 +227,29 @@ workflows refuse to edit it (plan decision D13).
 
 `src/webview/shared/tokens.css` is the one place where the 2.0 webviews define what a size, a duration or a
 colour is ([ADR-008](docs/adr/008-webview-architecture.md)). It holds custom properties with the prefix
-`--nuiget-` and nothing else: spacing, radius, row heights, icon sizes, the smallest pointer target, a
-z-index scale, two durations and an easing, and typography in `em` on the font size of the editor's UI.
-Every colour token is an alias of a `--vscode-*` variable, which VS Code sets on a webview for the active
-theme, so light and dark themes need no rule of their own. Three blocks cover the rest: the two
+`--nuiget-` and nothing else: spacing, insets, radius, heights, icon sizes, the smallest pointer target, a
+z-index scale, the durations and easings, and typography in px. A size with a workbench counterpart aliases the token
+VS Code exports, with the same value as a literal fallback for hosts that export none (`--nuiget-space-6:
+var(--vscode-spacing-size160, 16px)`, `--nuiget-line-width: var(--vscode-strokeThickness, 1px)`, ADR-011); row and header
+heights stay literal. Every colour token is an alias of a `--vscode-*` variable, which VS Code sets on a webview for the active
+theme, so light and dark themes need no rule of their own. Further blocks cover the rest: the two
 high-contrast body classes (borders from `--vscode-contrastBorder`, no shadow), `@media (forced-colors:
-active)` with system colour keywords, and `@media (prefers-reduced-motion: reduce)`, which sets both
-durations to zero, so that anything timed with the tokens stops moving. A control's high-contrast line is a `:root`
+active)` with system colour keywords, `@media (prefers-reduced-motion: reduce)` and `body.vscode-reduce-motion`, which
+each set the four durations to zero, so that anything timed with the tokens stops moving under either signal, and three
+blocks under `:root[data-look="modern"]` (itself, `[data-density="compact"]`, `[data-uppercase-headers]`) that re-value
+only the metrics that differ between the host's two looks (ADR-011). A control's high-contrast line is a `:root`
 token on a VS Code key that is unset outside the high-contrast themes, with a `transparent` fallback
 (`--nuiget-color-button-border` on `button.border`, `--nuiget-color-contrast-border` on `contrastBorder`, P9.11), so
 the high-contrast block stays three keys; check boxes and drop-downs take `--vscode-checkbox-*` and
 `--vscode-dropdown-*`, and the scrim is the one derived colour (`color-mix()`). The file holds no colour literal;
-if one is ever needed, this is where it goes. Spacing is the scale `--nuiget-space-1..6` (2 to 16 px) plus
+if one is ever needed, this is where it goes. Spacing is the scale `--nuiget-space-1..7` (2 to 20 px) plus
 `--nuiget-space-hairline` (1 px); `--nuiget-inset` is the common left inset of the main panel, at which the title, the
 search box, the tab labels, the toolbar, the section chevrons and the row content start (P9.fix-6). Every padding,
 margin and gap of a 2.0 stylesheet is one of these (`webview-stylesheets.test.ts`, `pxSpacing`).
 
 Two lint tests in `src/test/lint` keep that true: `webview-tokens.test.ts` checks the shape of the file
-(only `--nuiget-*` declarations, `var()` only of `--vscode-*` or `--nuiget-*`, one block per mode, the token
-names the primitives rely on), and `webview-colours.test.ts` fails for a hex colour or a colour function in
+(only `--nuiget-*` declarations, `var()` only of `--vscode-*` or `--nuiget-*`, one block per mode, the alias form of
+the size tokens against the theme dumps, and `:root` declaring exactly the names of `docs/design/tokens.json`), and `webview-colours.test.ts` fails for a hex colour or a colour function in
 any other file under `src/webview`, tests included.
 
 The CSS audit gate (UX-P0.20, ADR-010) holds the four stylesheets beside `tokens.css` to the audit of their debt:

@@ -289,6 +289,34 @@ describe('the in-page collector on stubbed geometry (UX-P0.10, UX-P0.11)', () =>
         }
     });
 
+    it('collects the size, the weight and the header flag of the visible text, the README and hidden text left out, and the look (UX-P1.1)', () => {
+        document.head.insertAdjacentHTML('beforeend', '<style id="type-facts">main { font-size: 13px; font-weight: 400; } .nuiget-section-title { font-size: 11px; font-weight: 700; } .nuiget-row-name { font-weight: 600; } .nuiget-readme, .nuiget-readme * { font-size: 21px; font-weight: 700; }</style>');
+        const panel = document.querySelector('[data-testid="package-details-panel"]') as HTMLElement;
+        panel.insertAdjacentHTML('beforeend', '<div class="nuiget-readme" data-rect="620,300,880,340"><h1 data-rect="620,300,880,340" data-text="620,300,880,340">A README title</h1></div>');
+        document.documentElement.dataset.look = 'modern';
+        document.documentElement.style.setProperty('--nuiget-scrollbar-size', '8px');
+        try {
+            const facts = collect().endOfP0;
+            expect(facts.textStyles.length).toBeGreaterThan(0);
+            // The README's 21 px and every hidden description stay out; a title and a row name are read.
+            expect(facts.textStyles.filter(text => text.fontSize === 21)).toEqual([]);
+            expect(facts.textStyles).toContainEqual({ fontSize: 11, fontWeight: 700, header: true });
+            expect(facts.textStyles).toContainEqual({ fontSize: 13, fontWeight: 600, header: false });
+            // A badge inside a section header is no title: only the title may be 700 (DS-TYPE-3).
+            expect(facts.textStyles.filter(text => text.header).every(text => text.fontSize === 11)).toBe(true);
+            expect(facts.dataLook).toBe('modern');
+            expect(facts.lookTokens['--nuiget-scrollbar-size']).toBe('8px');
+            expect(Object.keys(facts.lookTokens)).toHaveLength(8);
+        } finally {
+            document.getElementById('type-facts')?.remove();
+            delete document.documentElement.dataset.look;
+            document.documentElement.style.removeProperty('--nuiget-scrollbar-size');
+        }
+        // The missing root's layout has the empty values, so each of the three rules prints not measurable.
+        const empty = collect('no-such-root').endOfP0;
+        expect(empty).toMatchObject({ textStyles: [], dataLook: undefined, lookTokens: {} });
+    });
+
     it('collects the focused element and its ring and the disabled affordances (UX-P0.14)', () => {
         document.head.insertAdjacentHTML('beforeend', '<style id="p014">.nuiget-button:focus { outline-width: 1px; outline-style: solid; outline-color: rgb(0, 120, 212); outline-offset: 2px; } [role="option"] { outline-width: 1px; outline-style: dotted; outline-color: rgb(243, 133, 24); outline-offset: -1px; }</style>');
         document.documentElement.style.setProperty('--vscode-focusBorder', '#0078d4');

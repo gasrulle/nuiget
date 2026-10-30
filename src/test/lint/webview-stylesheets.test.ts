@@ -21,7 +21,7 @@ const SPACING = /^(?:padding|margin|gap|row-gap|column-gap)(?:-[a-z-]+)?$/;
 const LENGTH = /(?<![\w.-])-?\d*\.?\d+(?:px|em|rem)\b/;
 
 /** What a stylesheet does that only `tokens.css` may do, one line per defect. */
-export function findStylesheetDefects(css: string): Record<'reducedMotion' | 'important' | 'pxFontSize' | 'duration' | 'classPrefix' | 'pxSpacing', string[]> {
+export function findStylesheetDefects(css: string): Record<'reducedMotion' | 'important' | 'pxFontSize' | 'relativeFontSize' | 'duration' | 'classPrefix' | 'pxSpacing', string[]> {
     const rules = parseRules(css);
     const declarations = rules.flatMap(rule => rule.declarations.map(declaration => {
         const colon = declaration.indexOf(':');
@@ -34,6 +34,10 @@ export function findStylesheetDefects(css: string): Record<'reducedMotion' | 'im
         important: declarations.filter(declaration => /!\s*important/i.test(declaration.value)).map(declaration => declaration.text),
         pxFontSize: declarations
             .filter(declaration => (declaration.property === 'font-size' || declaration.property === 'font') && /\d\s*px\b/i.test(declaration.value))
+            .map(declaration => declaration.text),
+        // DS-TYPE-8: a relative size compounds (V17); the README follows the Markdown preview and is exempt.
+        relativeFontSize: declarations
+            .filter(declaration => (declaration.property === 'font-size' || declaration.property === 'font') && /\d\s*(?:r?em|%)/i.test(declaration.value) && !declaration.rule.includes('.nuiget-readme'))
             .map(declaration => declaration.text),
         duration: declarations
             .filter(declaration => {
@@ -89,6 +93,10 @@ describe('2.0 webview stylesheets', () => {
 
     it('no px font size', () => {
         expect(defectsOf('pxFontSize')).toEqual([]);
+    });
+
+    it('no relative font size outside the README', () => {
+        expect(defectsOf('relativeFontSize')).toEqual([]);
     });
 
     it('every animation and transition duration is a duration token', () => {
@@ -163,12 +171,12 @@ describe('2.0 webview stylesheets', () => {
         const primitives = parseRules(readFileSync(PRIMITIVES, 'utf8'));
         const main = parseRules(readFileSync('src/webview/main/main.css', 'utf8'));
         const declarationsOf = (rules: ReturnType<typeof parseRules>, match: (prelude: string) => boolean): string[] => rules.filter(rule => match(rule.prelude)).flatMap(rule => rule.declarations);
-        expect(declarationsOf(primitives, prelude => prelude === '.nuiget-button')).toContain('border: 1px solid var(--nuiget-color-button-border)');
-        expect(declarationsOf(primitives, prelude => prelude === '.nuiget-tab')).toContain('border: 1px solid var(--nuiget-color-contrast-border)');
-        expect(declarationsOf(primitives, prelude => prelude.includes('.nuiget-row-icon img'))).toContain('outline: 1px solid var(--nuiget-color-contrast-border)');
+        expect(declarationsOf(primitives, prelude => prelude === '.nuiget-button')).toContain('border: var(--nuiget-line-width) solid var(--nuiget-color-button-border)');
+        expect(declarationsOf(primitives, prelude => prelude === '.nuiget-tab')).toContain('border: var(--nuiget-line-width) solid var(--nuiget-color-contrast-border)');
+        expect(declarationsOf(primitives, prelude => prelude.includes('.nuiget-row-icon img'))).toContain('outline: var(--nuiget-line-width) solid var(--nuiget-color-contrast-border)');
         expect(declarationsOf(primitives, prelude => prelude === '.nuiget-dialog-layer')).toContain('background: var(--nuiget-color-scrim)');
         expect(declarationsOf(main, prelude => prelude === '.nuiget-main-select')).toEqual(expect.arrayContaining([
-            'border: 1px solid var(--nuiget-color-dropdown-border)',
+            'border: var(--nuiget-line-width) solid var(--nuiget-color-dropdown-border)',
             'background: var(--nuiget-color-dropdown-bg)',
             'color: var(--nuiget-color-dropdown-fg)',
         ]));
@@ -180,7 +188,7 @@ describe('2.0 webview stylesheets', () => {
         const files = [PRIMITIVES, 'src/webview/main/main.css', 'src/webview/sidebar/sidebar.css'];
         const rules = files.flatMap(file => parseRules(readFileSync(file, 'utf8')));
         const ringed = new Set(rules
-            .filter(rule => rule.declarations.includes('outline: 1px solid var(--nuiget-color-focus)'))
+            .filter(rule => rule.declarations.includes('outline: var(--nuiget-line-width) solid var(--nuiget-color-focus)'))
             .flatMap(rule => rule.prelude.split(',').map(selector => selector.trim())));
         for (const selector of [
             '.nuiget-row-option:focus-visible', '.nuiget-button:focus-visible', '.nuiget-tab:focus-visible', '.nuiget-icon-button:focus-visible',
@@ -191,7 +199,7 @@ describe('2.0 webview stylesheets', () => {
             expect(ringed, selector).toContain(selector);
         }
         const outlines = rules.flatMap(rule => rule.declarations).filter(declaration => /^outline:/.test(declaration));
-        expect(outlines.filter(declaration => !['outline: none', 'outline: 1px solid var(--nuiget-color-focus)', 'outline: 1px solid var(--nuiget-color-contrast-border)'].includes(declaration))).toEqual([]);
+        expect(outlines.filter(declaration => !['outline: none', 'outline: var(--nuiget-line-width) solid var(--nuiget-color-focus)', 'outline: var(--nuiget-line-width) solid var(--nuiget-color-contrast-border)'].includes(declaration))).toEqual([]);
     });
 
     it('the scan covers the 2.0 stylesheets and leaves tokens.css out', () => {
@@ -209,6 +217,7 @@ describe('2.0 webview stylesheets', () => {
             '}',
             '.nuiget-row { color: var(--nuiget-color-fg) !important; }',
             '.nuiget-badge { font-size: 11px; font: 12px/1.4 sans-serif; }',
+            '.nuiget-banner { font-size: 0.85em; }',
             '.nuiget-icon-button { transition: color 100ms linear; }',
             '.nuiget-banner { transition: opacity; animation-duration: .2s; transition-delay: 1s; }',
             '.nuiget-row.selected,\r\n.codicon-loading > .nuiget-row-option[data-file="a.b"] { margin: 0.5em; }',
@@ -219,6 +228,7 @@ describe('2.0 webview stylesheets', () => {
             reducedMotion: ['@media (prefers-reduced-motion: reduce)'],
             important: ['.nuiget-row { color: var(--nuiget-color-fg) !important }'],
             pxFontSize: ['.nuiget-badge { font-size: 11px }', '.nuiget-badge { font: 12px/1.4 sans-serif }'],
+            relativeFontSize: ['.nuiget-banner { font-size: 0.85em }'],
             duration: [
                 '.nuiget-icon-button { transition: color 100ms linear }',
                 '.nuiget-banner { transition: opacity }',
@@ -241,6 +251,7 @@ describe('2.0 webview stylesheets', () => {
             '.nuiget-icon-button { transition: color var(--nuiget-duration-fast) var(--nuiget-easing); }',
             '.nuiget-spinner svg { animation: nuiget-spin calc(var(--nuiget-duration-normal) * 5) linear infinite; }',
             '.nuiget-banner { transition: none; font-size: var(--nuiget-font-size-sm); width: 1px; }',
+            '.nuiget-readme h1 { font-size: 1.6em; }',
             '@media (forced-colors: active) { .nuiget-row { outline: 1px solid; } }',
             '.nuiget-checkbox::after { margin-block-start: calc(var(--nuiget-space-1) * -1); padding: 0; }',
         ].join('\n');

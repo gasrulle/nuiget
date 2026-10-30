@@ -69,7 +69,7 @@ A Visual Studio-style NuGet package manager for VS Code with a modern split-pane
 - **Update suggestions skip unlisted versions.**
 - **Verified badges** where the feed marks a package as verified.
 - **Accessible.** Every action has a key, lists and dialogs carry the roles screen readers expect, colours come from
-  the VS Code theme (high-contrast themes included), and motion is reduced when the system asks for it.
+  the VS Code theme (high-contrast themes included), and motion is reduced when the system or VS Code asks for it.
 - **Output channel.** The "nUIget" channel logs every dotnet command with its exit code and duration. Credentials
   are removed from everything it logs. It opens by itself when an operation fails.
 

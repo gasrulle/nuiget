@@ -18,38 +18,6 @@
   {
     "file": "src/webview/shared/primitives/primitives.css",
     "rule": "pxLength",
-    "selector": ".nuiget-row-check",
-    "property": "border",
-    "value": "1px solid var(--nuiget-color-border)",
-    "item": "P1.1"
-  },
-  {
-    "file": "src/webview/shared/primitives/primitives.css",
-    "rule": "pxLength",
-    "selector": ".nuiget-row--comfortable",
-    "property": "border-bottom",
-    "value": "1px solid var(--nuiget-color-border)",
-    "item": "P1.1"
-  },
-  {
-    "file": "src/webview/shared/primitives/primitives.css",
-    "rule": "pxLength",
-    "selector": ".nuiget-row-icon img, .nuiget-row-icon svg",
-    "property": "outline",
-    "value": "1px solid var(--nuiget-color-contrast-border)",
-    "item": "P1.1"
-  },
-  {
-    "file": "src/webview/shared/primitives/primitives.css",
-    "rule": "pxLength",
-    "selector": ".nuiget-row-icon img, .nuiget-row-icon svg",
-    "property": "outline-offset",
-    "value": "-1px",
-    "item": "P1.1"
-  },
-  {
-    "file": "src/webview/shared/primitives/primitives.css",
-    "rule": "pxLength",
     "selector": ".nuiget-row--comfortable .nuiget-row-option[aria-selected=\"true\"]",
     "property": "box-shadow",
     "value": "inset 3px 0 0 var(--nuiget-color-focus)",
@@ -82,74 +50,10 @@
   {
     "file": "src/webview/shared/primitives/primitives.css",
     "rule": "pxLength",
-    "selector": ".nuiget-row-option:focus-visible, .nuiget-icon-button:focus-visible, .nuiget-sash:focus-visible, .nuiget-section-toggle:focus-visible, .nuiget-button:focus-visible, .nuiget-tab:focus-visible, .nuiget-dialog:focus-visible, .nuiget-popover:focus-visible",
-    "property": "outline",
-    "value": "1px solid var(--nuiget-color-focus)",
-    "item": "P1.1"
-  },
-  {
-    "file": "src/webview/shared/primitives/primitives.css",
-    "rule": "pxLength",
-    "selector": ".nuiget-row-option:focus-visible, .nuiget-icon-button:focus-visible, .nuiget-sash:focus-visible, .nuiget-section-toggle:focus-visible, .nuiget-button:focus-visible, .nuiget-tab:focus-visible, .nuiget-dialog:focus-visible, .nuiget-popover:focus-visible",
-    "property": "outline-offset",
-    "value": "-1px",
-    "item": "P1.1"
-  },
-  {
-    "file": "src/webview/shared/primitives/primitives.css",
-    "rule": "pxLength",
-    "selector": ".nuiget-badge",
-    "property": "border",
-    "value": "1px solid transparent",
-    "item": "P1.1"
-  },
-  {
-    "file": "src/webview/shared/primitives/primitives.css",
-    "rule": "pxLength",
-    "selector": ".nuiget-button",
-    "property": "border",
-    "value": "1px solid var(--nuiget-color-button-border)",
-    "item": "P1.1"
-  },
-  {
-    "file": "src/webview/shared/primitives/primitives.css",
-    "rule": "pxLength",
     "selector": ".nuiget-dialog",
     "property": "width",
     "value": "min(32em, 100%)",
     "item": "P3.5"
-  },
-  {
-    "file": "src/webview/shared/primitives/primitives.css",
-    "rule": "pxLength",
-    "selector": ".nuiget-dialog",
-    "property": "border",
-    "value": "1px solid var(--nuiget-color-border)",
-    "item": "P1.1"
-  },
-  {
-    "file": "src/webview/shared/primitives/primitives.css",
-    "rule": "pxLength",
-    "selector": ".nuiget-popover",
-    "property": "border",
-    "value": "1px solid var(--nuiget-color-border)",
-    "item": "P1.1"
-  },
-  {
-    "file": "src/webview/shared/primitives/primitives.css",
-    "rule": "pxLength",
-    "selector": ".nuiget-tablist",
-    "property": "border-block-end",
-    "value": "1px solid var(--nuiget-color-border)",
-    "item": "P1.1"
-  },
-  {
-    "file": "src/webview/shared/primitives/primitives.css",
-    "rule": "pxLength",
-    "selector": ".nuiget-tab",
-    "property": "border",
-    "value": "1px solid var(--nuiget-color-contrast-border)",
-    "item": "P1.1"
   },
   {
     "file": "src/webview/main/main.css",
@@ -162,74 +66,10 @@
   {
     "file": "src/webview/main/main.css",
     "rule": "pxLength",
-    "selector": ".nuiget-main-select",
-    "property": "border",
-    "value": "1px solid var(--nuiget-color-dropdown-border)",
-    "item": "P1.1"
-  },
-  {
-    "file": "src/webview/main/main.css",
-    "rule": "pxLength",
-    "selector": ".nuiget-main input[type=\"checkbox\"], .nuiget-dialog input[type=\"checkbox\"]",
-    "property": "border",
-    "value": "1px solid var(--nuiget-color-checkbox-border)",
-    "item": "P1.1"
-  },
-  {
-    "file": "src/webview/main/main.css",
-    "rule": "pxLength",
     "selector": ".nuiget-main input[type=\"checkbox\"]:checked::after, .nuiget-dialog input[type=\"checkbox\"]:checked::after",
     "property": "border-width",
     "value": "0 2px 2px 0",
     "item": "P2.3"
-  },
-  {
-    "file": "src/webview/main/main.css",
-    "rule": "pxLength",
-    "selector": ".nuiget-main input[type=\"checkbox\"]:focus-visible, .nuiget-dialog input[type=\"checkbox\"]:focus-visible",
-    "property": "outline",
-    "value": "1px solid var(--nuiget-color-focus)",
-    "item": "P1.1"
-  },
-  {
-    "file": "src/webview/main/main.css",
-    "rule": "pxLength",
-    "selector": ".nuiget-main input[type=\"checkbox\"]:focus-visible, .nuiget-dialog input[type=\"checkbox\"]:focus-visible",
-    "property": "outline-offset",
-    "value": "1px",
-    "item": "P1.1"
-  },
-  {
-    "file": "src/webview/main/main.css",
-    "rule": "pxLength",
-    "selector": ".nuiget-main-search",
-    "property": "border-block-end",
-    "value": "1px solid var(--nuiget-color-border)",
-    "item": "P1.1"
-  },
-  {
-    "file": "src/webview/main/main.css",
-    "rule": "pxLength",
-    "selector": ".nuiget-main-search-input",
-    "property": "border",
-    "value": "1px solid var(--nuiget-color-input-border)",
-    "item": "P1.1"
-  },
-  {
-    "file": "src/webview/main/main.css",
-    "rule": "pxLength",
-    "selector": ".nuiget-main-select:focus-visible, .nuiget-main-search-input:focus",
-    "property": "outline",
-    "value": "1px solid var(--nuiget-color-focus)",
-    "item": "P1.1"
-  },
-  {
-    "file": "src/webview/main/main.css",
-    "rule": "pxLength",
-    "selector": ".nuiget-main-select:focus-visible, .nuiget-main-search-input:focus",
-    "property": "outline-offset",
-    "value": "-1px",
-    "item": "P1.1"
   },
   {
     "file": "src/webview/main/main.css",
@@ -314,30 +154,6 @@
   {
     "file": "src/webview/main/main.css",
     "rule": "pxLength",
-    "selector": ".nuiget-readme code",
-    "property": "border",
-    "value": "1px solid var(--nuiget-color-border)",
-    "item": "P1.1"
-  },
-  {
-    "file": "src/webview/main/main.css",
-    "rule": "pxLength",
-    "selector": ".nuiget-readme table",
-    "property": "border",
-    "value": "1px solid var(--nuiget-color-border)",
-    "item": "P1.1"
-  },
-  {
-    "file": "src/webview/main/main.css",
-    "rule": "pxLength",
-    "selector": ".nuiget-readme th, .nuiget-readme td",
-    "property": "border-bottom",
-    "value": "1px solid var(--nuiget-color-border)",
-    "item": "P1.1"
-  },
-  {
-    "file": "src/webview/main/main.css",
-    "rule": "pxLength",
     "selector": ".nuiget-readme blockquote",
     "property": "border-left",
     "value": "4px solid var(--nuiget-color-blockquote-border)",
@@ -354,90 +170,10 @@
   {
     "file": "src/webview/main/main.css",
     "rule": "pxLength",
-    "selector": ".nuiget-readme-copy",
-    "property": "border",
-    "value": "1px solid var(--nuiget-color-border)",
-    "item": "P1.1"
-  },
-  {
-    "file": "src/webview/main/main.css",
-    "rule": "pxLength",
-    "selector": ".nuiget-readme-copy:focus-visible",
-    "property": "outline",
-    "value": "1px solid var(--nuiget-color-focus)",
-    "item": "P1.1"
-  },
-  {
-    "file": "src/webview/main/main.css",
-    "rule": "pxLength",
-    "selector": ".nuiget-source-row",
-    "property": "border-bottom",
-    "value": "1px solid var(--nuiget-color-border)",
-    "item": "P1.1"
-  },
-  {
-    "file": "src/webview/main/main.css",
-    "rule": "pxLength",
     "selector": ".nuiget-add-source",
     "property": "min-width",
     "value": "min(28em, 80vw)",
     "item": "P3.6"
-  },
-  {
-    "file": "src/webview/main/main.css",
-    "rule": "pxLength",
-    "selector": ".nuiget-input",
-    "property": "border",
-    "value": "1px solid var(--nuiget-color-input-border)",
-    "item": "P1.1"
-  },
-  {
-    "file": "src/webview/main/main.css",
-    "rule": "pxLength",
-    "selector": ".nuiget-input:focus",
-    "property": "outline",
-    "value": "1px solid var(--nuiget-color-focus)",
-    "item": "P1.1"
-  },
-  {
-    "file": "src/webview/main/main.css",
-    "rule": "pxLength",
-    "selector": ".nuiget-input:focus",
-    "property": "outline-offset",
-    "value": "-1px",
-    "item": "P1.1"
-  },
-  {
-    "file": "src/webview/sidebar/sidebar.css",
-    "rule": "pxLength",
-    "selector": ".nuiget-sidebar-search",
-    "property": "border",
-    "value": "1px solid var(--nuiget-color-input-border)",
-    "item": "P1.1"
-  },
-  {
-    "file": "src/webview/sidebar/sidebar.css",
-    "rule": "pxLength",
-    "selector": ".nuiget-sidebar-search:focus-visible",
-    "property": "outline",
-    "value": "1px solid var(--nuiget-color-focus)",
-    "item": "P1.1"
-  },
-  {
-    "file": "src/webview/sidebar/sidebar.css",
-    "rule": "pxLength",
-    "selector": ".nuiget-sidebar-search:focus-visible",
-    "property": "outline-offset",
-    "value": "-1px",
-    "item": "P1.1"
-  },
-  {
-    "file": "src/webview/sidebar/sidebar.css",
-    "rule": "pxLength",
-    "selector": ".nuiget-sidebar-section > .nuiget-section-header",
-    "property": "border-top",
-    "value": "1px solid var(--nuiget-color-section-header-border)",
-    "item": "P1.1"
   },
   {
     "file": "src/webview/shared/search/search.css",
@@ -446,14 +182,6 @@
     "property": "max-height",
     "value": "16em",
     "item": "P3.2"
-  },
-  {
-    "file": "src/webview/shared/search/search.css",
-    "rule": "pxLength",
-    "selector": ".nuiget-search-popup",
-    "property": "border",
-    "value": "1px solid var(--nuiget-color-border)",
-    "item": "P1.1"
   },
   {
     "file": "src/webview/shared/search/search.css",

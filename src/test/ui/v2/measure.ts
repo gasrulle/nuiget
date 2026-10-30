@@ -246,6 +246,11 @@ export const RULES: readonly RuleDefinition[] = [
     rule('DS-STATE-7', { helper: 5, scopes: { ...on('P2.8a', 'main-installed', 'main-updates', 'browse'), details: { pending: 'P3.3b' } }, tolerance: TOLERANCES.containment }),
     // UX-P0.22 (V15): the token scrollbars, 10 px from P0.22; Modern UI's 8 px is P1.1's look token, the radius P3.9's.
     rule('DS-SCROLL-1', { helper: 3, scopes: on('P3.9', ...ALL), tolerance: TOLERANCES.containment }),
+    // UX-P1.1 (design-advisor ruling of 2026-10-30): the font ramp and the two weights, read off the visible text outside the
+    // README; the details pane's headings set their weight at P3.3a; the look's tokens are read once P1.3 writes the attributes.
+    rule('DS-TYPE-2', { helper: 3, scopes: inGroups('hard', ...ALL), tolerance: TOLERANCES.fontExact }),
+    rule('DS-TYPE-3', { helper: 3, scopes: { ...inGroups('hard', 'main-installed', 'main-updates', 'browse', 'dialogs', 'sources', 'sidebar'), details: { pending: 'P3.3a' } }, tolerance: TOLERANCES.containment }),
+    rule('DS-LOOK-1', { helper: 3, scopes: on('P1.3', ...ALL), tolerance: TOLERANCES.containment }),
 ];
 
 /** The state group of a named state, by its name. */
@@ -503,6 +508,11 @@ export interface EndOfP0 {
     /** Per facts block of the details pane, the lefts of its values. */
     factLefts: number[][];
     fonts: { root: string; others: string[] };
+    /** UX-P1.1: per visible text outside the README, its computed size and weight, and whether it is a section title or group header (DS-TYPE-2, DS-TYPE-3). */
+    textStyles: Array<{ fontSize: number; fontWeight: number; header: boolean }>;
+    /** UX-P1.1: `data-look` of the document element, and the look table's tokens as computed there (DS-TYPE-3, DS-LOOK-1). */
+    dataLook: string | undefined;
+    lookTokens: Record<string, string>;
     rootLineHeight: number | undefined;
     /** The computed line-height of each compact row. */
     compactLineHeights: number[];
@@ -536,6 +546,21 @@ export interface FocusFacts {
     band: Box | undefined;
 }
 
+/** DS-LOOK-1: the look table's tokens as they compute under each look (design-system.md §6). */
+const LOOK_TABLE: Record<string, { modern: string; classic: string }> = {
+    '--nuiget-pane-header-height': { modern: '28px', classic: '22px' },
+    '--nuiget-scrollbar-size': { modern: '8px', classic: '10px' },
+    '--nuiget-font-size-section-title': { modern: '12px', classic: '11px' },
+    '--nuiget-font-weight-section-title': { modern: '600', classic: '700' },
+    '--nuiget-text-transform-section-title': { modern: 'capitalize', classic: 'uppercase' },
+    '--nuiget-radius-row': { modern: '4px', classic: '0px' },
+    '--nuiget-badge-size': { modern: '19px', classic: '18px' },
+    '--nuiget-font-size-badge': { modern: '10px', classic: '11px' },
+};
+const LOOK_TOKENS = Object.keys(LOOK_TABLE);
+/** DS-TYPE-2's font ramp, in px. */
+const FONT_RAMP: readonly number[] = [10, 11, 12, 13, 18, 26];
+
 /**
  * Runs in the webview: `arguments[0]` is the root's test id, `arguments[1]` the ramp, `arguments[2]` the gap
  * tolerance, `arguments[3]` the containment tolerance (DS-OVERFLOW-2). Returns `Layout`. The script is a template string: a
@@ -544,7 +569,7 @@ export interface FocusFacts {
 export const COLLECT_LAYOUT = `
 const [rootTestId, ramp, tolerance, containment = 0] = arguments;
 const root = document.querySelector('[data-testid="' + rootTestId + '"]');
-if (!root) return { root: false, scrollbar: { rootColor: '', slider: '', scrollers: [] }, examined: 0, offRamp: [], offRampCount: 0, blockGaps: [], sections: [], toolbars: [], mainHeader: undefined, sidebarHeader: undefined, mainLefts: {}, mainRegionLeft: undefined, details: undefined, sidebar: undefined, heights: { headers: [], compactRows: [], comfortableRows: [], comfortablePitches: [], tabStrip: undefined, detailsTabs: undefined, buttons: [], inputs: [], iconButtons: [], checkBoxes: [], checkSelect: { fill: '', border: '' }, badges: [], progress: [] }, centring: [], detailsButtons: { uninstall: undefined, update: undefined }, width: 0, rows: [], chrome: {}, firstRow: undefined, overflow: { containers: 0, collisions: [], outside: [], clipped: [], count: 0, badges: [] }, transitiveGap: undefined, primaryEdges: [], browsing: false, documentOverflow: undefined, endOfP0: { rows: [], listPaneWidth: undefined, detailsHeader: undefined, sideways: [], controlsOut: [], minContent: { toolbar: undefined, header: undefined }, factLefts: [], fonts: { root: '', others: [] }, rootLineHeight: undefined, compactLineHeights: [], metaText: [], descriptionForeground: '', copyEnds: [], focus: undefined, focusColours: { focusBorder: '', listFocusOutline: '', contrastActiveBorder: '' }, disabled: [] }, testIds: {} };
+if (!root) return { root: false, scrollbar: { rootColor: '', slider: '', scrollers: [] }, examined: 0, offRamp: [], offRampCount: 0, blockGaps: [], sections: [], toolbars: [], mainHeader: undefined, sidebarHeader: undefined, mainLefts: {}, mainRegionLeft: undefined, details: undefined, sidebar: undefined, heights: { headers: [], compactRows: [], comfortableRows: [], comfortablePitches: [], tabStrip: undefined, detailsTabs: undefined, buttons: [], inputs: [], iconButtons: [], checkBoxes: [], checkSelect: { fill: '', border: '' }, badges: [], progress: [] }, centring: [], detailsButtons: { uninstall: undefined, update: undefined }, width: 0, rows: [], chrome: {}, firstRow: undefined, overflow: { containers: 0, collisions: [], outside: [], clipped: [], count: 0, badges: [] }, transitiveGap: undefined, primaryEdges: [], browsing: false, documentOverflow: undefined, endOfP0: { rows: [], listPaneWidth: undefined, detailsHeader: undefined, sideways: [], controlsOut: [], minContent: { toolbar: undefined, header: undefined }, factLefts: [], fonts: { root: '', others: [] }, textStyles: [], dataLook: undefined, lookTokens: {}, rootLineHeight: undefined, compactLineHeights: [], metaText: [], descriptionForeground: '', copyEnds: [], focus: undefined, focusColours: { focusBorder: '', listFocusOutline: '', contrastActiveBorder: '' }, disabled: [] }, testIds: {} };
 const dialog = document.querySelector('.nuiget-dialog');
 const visible = el => {
     if (!el || !el.isConnected) return false;
@@ -979,6 +1004,17 @@ for (let node = fontWalker.nextNode(); node; node = fontWalker.nextNode()) {
     const family = getComputedStyle(parent).fontFamily;
     if (family !== rootFont) otherFonts.add(family);
 }
+// UX-P1.1: the size and weight of the visible text outside the README (DS-TYPE-2, DS-TYPE-3).
+const textStyles = [];
+const styleWalker = document.createTreeWalker(scope, NodeFilter.SHOW_TEXT);
+for (let node = styleWalker.nextNode(); node; node = styleWalker.nextNode()) {
+    const parent = node.parentElement;
+    if (!node.textContent.trim() || !parent || !visible(parent) || parent.closest('[data-testid="readme-content"], .nuiget-readme, .nuiget-visually-hidden')) continue;
+    const style = getComputedStyle(parent);
+    textStyles.push({ fontSize: px(style.fontSize), fontWeight: Number(style.fontWeight), header: Boolean(parent.closest('.nuiget-section-title')) });
+}
+const lookStyle = getComputedStyle(document.documentElement);
+const lookTokens = Object.fromEntries(${JSON.stringify(LOOK_TOKENS)}.map(name => [name, lookStyle.getPropertyValue(name).trim()]));
 const rootLine = px(getComputedStyle(root).lineHeight);
 const metaText = shown('.nuiget-row-version, .nuiget-row-authors, .nuiget-row-meta, .nuiget-row-description').map(el => {
     const style = getComputedStyle(el);
@@ -1028,6 +1064,9 @@ const endOfP0 = {
     minContent: { toolbar: visible(toolbarEl) ? { scroll: toolbarEl.scrollWidth, client: toolbarEl.clientWidth } : undefined, header: visible(detailsHeaderEl) ? { scroll: detailsHeaderEl.scrollWidth, client: detailsHeaderEl.clientWidth } : undefined },
     factLefts,
     fonts: { root: rootFont, others: [...otherFonts] },
+    textStyles,
+    dataLook: document.documentElement.dataset.look,
+    lookTokens,
     rootLineHeight: rootLine > 0 ? round(rootLine) : undefined,
     compactLineHeights: shown('.nuiget-row--compact').map(el => round(px(getComputedStyle(el).lineHeight))),
     metaText,
@@ -1793,6 +1832,37 @@ function evaluateEndOfP0(definition: RuleDefinition, scope: Scope, state: string
     }
 }
 
+/** UX-P1.1: the font ramp, the two weights and the look table. */
+function evaluateType(definition: RuleDefinition, layout: Layout, look: 'modern' | 'classic'): { value: string; pass: boolean } | undefined {
+    const facts = layout.endOfP0;
+    const notMeasurable = (why: string) => ({ value: `${NOT_MEASURABLE} (${why})`, pass: false });
+    switch (definition.id) {
+        case 'DS-TYPE-2': {
+            if (facts.textStyles.length === 0) {
+                return notMeasurable('no text');
+            }
+            const off = facts.textStyles.map(text => text.fontSize).filter(size => !FONT_RAMP.some(step => Math.abs(step - size) <= definition.tolerance));
+            return { value: off.length === 0 ? `${tally(facts.textStyles.map(text => text.fontSize))} on the ramp` : `off the ramp: ${tally(off)}`, pass: off.length === 0 };
+        }
+        case 'DS-TYPE-3': {
+            if (facts.textStyles.length === 0) {
+                return notMeasurable('no text');
+            }
+            const off = facts.textStyles.filter(text => ![400, 600].includes(text.fontWeight) && !(text.fontWeight === 700 && text.header && facts.dataLook !== 'modern'));
+            return { value: off.length === 0 ? `weights ${tally(facts.textStyles.map(text => text.fontWeight))}` : `off: ${tally(off.map(text => text.fontWeight))}`, pass: off.length === 0 };
+        }
+        case 'DS-LOOK-1': {
+            if (Object.keys(facts.lookTokens).length === 0) {
+                return notMeasurable('no root');
+            }
+            const off = LOOK_TOKENS.filter(name => facts.lookTokens[name] !== LOOK_TABLE[name][look]);
+            return { value: off.length === 0 ? `${LOOK_TOKENS.length} tokens as ${look}` : `${look}: ${off.map(name => `${name} ${facts.lookTokens[name] ?? ''} (target ${LOOK_TABLE[name][look]})`).join('; ')}`, pass: off.length === 0 };
+        }
+        default:
+            return undefined;
+    }
+}
+
 /** DS-FOCUS-1's ring offset per control kind (design-system.md). */
 const FOCUS = { inside: -1, sidebarHeaderModern: -2, outside: 2, width: 1 } as const;
 
@@ -1944,7 +2014,7 @@ function evaluate(definition: RuleDefinition, scope: Scope, state: string, layou
         return evaluateSpec(layout, spec, tolerance);
     }
     const heightVerdict = evaluateHeights(definition, layout, look, workbench) ?? evaluateOverflow(definition, scope, layout, look, reference) ?? evaluateEndOfP0(definition, scope, state, layout)
-        ?? evaluateFocusAndState(definition, scope, layout, look);
+        ?? evaluateFocusAndState(definition, scope, layout, look) ?? evaluateType(definition, layout, look);
     if (heightVerdict !== undefined) {
         return heightVerdict;
     }

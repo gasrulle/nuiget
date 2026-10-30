@@ -137,8 +137,8 @@
     justify-content: center;
     inline-size: var(--nuiget-icon-size-sm);
     block-size: var(--nuiget-icon-size-sm);
-    border: 1px solid var(--nuiget-color-border);
-    border-radius: var(--nuiget-radius-sm);
+    border: var(--nuiget-line-width) solid var(--nuiget-color-border);
+    border-radius: var(--nuiget-radius-xs);
 }
 
 /* A row that cannot join a bulk action (an SDK or a props package): the mark is there, muted and empty. */
@@ -242,7 +242,7 @@
    the check mark and the icon centred, a line between rows. */
 .nuiget-row--comfortable {
     box-sizing: border-box;
-    border-bottom: 1px solid var(--nuiget-color-border);
+    border-bottom: var(--nuiget-line-width) solid var(--nuiget-color-border);
 }
 
 /* `border-box`: the option inherits the row's minimum height, and the padding is inside it, as in 1.x. */
@@ -264,9 +264,9 @@
 .nuiget-row-icon svg {
     inline-size: 100%;
     block-size: 100%;
-    border-radius: var(--nuiget-radius-md);
-    outline: 1px solid var(--nuiget-color-contrast-border);
-    outline-offset: -1px;
+    border-radius: var(--nuiget-radius-sm);
+    outline: var(--nuiget-line-width) solid var(--nuiget-color-contrast-border);
+    outline-offset: calc(var(--nuiget-line-width) * -1);
     object-fit: contain;
 }
 
@@ -363,8 +363,8 @@
 .nuiget-tab:focus-visible,
 .nuiget-dialog:focus-visible,
 .nuiget-popover:focus-visible {
-    outline: 1px solid var(--nuiget-color-focus);
-    outline-offset: -1px;
+    outline: var(--nuiget-line-width) solid var(--nuiget-color-focus);
+    outline-offset: calc(var(--nuiget-line-width) * -1);
 }
 
 /* ── IconButton ── */
@@ -377,7 +377,7 @@
     min-height: var(--nuiget-target-min);
     padding: 0;
     border: 0;
-    border-radius: var(--nuiget-radius-md);
+    border-radius: var(--nuiget-radius-sm);
     background: transparent;
     color: var(--nuiget-color-fg-muted);
     cursor: pointer;
@@ -404,8 +404,8 @@
     display: inline-flex;
     align-items: center;
     padding: 0 var(--nuiget-space-2);
-    border: 1px solid transparent;
-    border-radius: var(--nuiget-radius-md);
+    border: var(--nuiget-line-width) solid transparent;
+    border-radius: var(--nuiget-radius-sm);
     background: var(--nuiget-color-badge-bg);
     color: var(--nuiget-color-badge-fg);
     font-size: var(--nuiget-font-size-sm);
@@ -512,8 +512,8 @@
 .nuiget-button {
     min-height: var(--nuiget-target-min);
     padding: 0 var(--nuiget-space-5);
-    border: 1px solid var(--nuiget-color-button-border);
-    border-radius: var(--nuiget-radius-sm);
+    border: var(--nuiget-line-width) solid var(--nuiget-color-button-border);
+    border-radius: var(--nuiget-radius-xs);
     background: var(--nuiget-color-button-bg);
     color: var(--nuiget-color-button-fg);
     font: inherit;
@@ -565,7 +565,7 @@
 
 /* A row that is not there yet. It breathes for as long as the duration tokens allow. */
 .nuiget-skeleton-row {
-    border-radius: var(--nuiget-radius-sm);
+    border-radius: var(--nuiget-radius-xs);
     background: var(--nuiget-color-list-hover-bg);
     animation: nuiget-breathe calc(var(--nuiget-duration-normal) * 6) var(--nuiget-easing) infinite alternate;
 }
@@ -720,8 +720,8 @@
     max-height: 100%;
     overflow: auto;
     padding: var(--nuiget-space-5) var(--nuiget-space-6);
-    border: 1px solid var(--nuiget-color-border);
-    border-radius: var(--nuiget-radius-md);
+    border: var(--nuiget-line-width) solid var(--nuiget-color-border);
+    border-radius: var(--nuiget-radius-sm);
     background: var(--nuiget-color-widget-bg);
     color: var(--nuiget-color-widget-fg);
     box-shadow: 0 0 var(--nuiget-space-4) var(--nuiget-color-shadow);
@@ -769,8 +769,8 @@
     max-height: calc(100vh - 2 * var(--nuiget-space-2));
     overflow: auto;
     padding: var(--nuiget-space-2);
-    border: 1px solid var(--nuiget-color-border);
-    border-radius: var(--nuiget-radius-md);
+    border: var(--nuiget-line-width) solid var(--nuiget-color-border);
+    border-radius: var(--nuiget-radius-sm);
     background: var(--nuiget-color-widget-bg);
     color: var(--nuiget-color-widget-fg);
     box-shadow: 0 var(--nuiget-space-1) var(--nuiget-space-4) var(--nuiget-color-shadow);
@@ -798,7 +798,7 @@
     display: flex;
     flex: none;
     gap: var(--nuiget-space-1);
-    border-block-end: 1px solid var(--nuiget-color-border);
+    border-block-end: var(--nuiget-line-width) solid var(--nuiget-color-border);
 }
 
 .nuiget-tab {
@@ -808,7 +808,7 @@
     min-height: var(--nuiget-target-min);
     padding: 0 var(--nuiget-space-4);
     /* Boxed by the contrast line in a high-contrast theme (unset elsewhere); the selection's underline comes after it. */
-    border: 1px solid var(--nuiget-color-contrast-border);
+    border: var(--nuiget-line-width) solid var(--nuiget-color-contrast-border);
     border-block-end: var(--nuiget-space-1) solid transparent;
     background: transparent;
     color: var(--nuiget-color-fg-muted);
