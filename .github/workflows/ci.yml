@@ -89,9 +89,10 @@ jobs:
 
       # The 2.0 documents name only messages, settings, commands and paths that exist (scripts/check-docs-drift.mjs),
       # and docs/protocol.md, generated from src/protocol/messages.ts (ADR-007), has not drifted; the regression matrix
-      # cites tests that exist (scripts/check-regression-matrix.mjs, plan item P10.0a).
+      # cites tests that exist (scripts/check-regression-matrix.mjs, plan item P10.0a); tokens.css follows the design
+      # reference and every Design System rule has a measurement line (scripts/check-design-tokens.mjs, UX-P1.5).
       - name: Check the docs
-        run: npm run docs:check && npm run check:matrix
+        run: npm run docs:check && npm run check:matrix && node scripts/check-design-tokens.mjs
 
   test:
     name: Test (${{ matrix.os }})
