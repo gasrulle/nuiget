@@ -56,3 +56,9 @@ updates:
       # regenerates the icons and re-checks the attribution. Every version is ignored; the rule may precede the
       # package, which a later plan item adds.
       - dependency-name: "@vscode/codicons"
+      # The accessibility harness's ruleset (UX-P0.23): the ARIA snapshots, AXE_ACCEPTED, CONTRAST_PENDING and the
+      # rule-coverage ledger are taken under axe-core 4.12.1, pinned exactly (UX-P0.fix-3). A bump is its own plan item,
+      # which re-adopts the ARIA snapshots from a green run and regenerates axe-rule-coverage.json with
+      # NUIGET_AXE_COVERAGE_WRITE=1. A later jest-axe re-pin nests its own copy under node_modules/jest-axe/node_modules/
+      # while the harness keeps this one.
+      - dependency-name: "axe-core"
