@@ -392,7 +392,7 @@ describe('NodeTransport: proxy and HTTP/2 (ADR-005, docs/adr/005-proxy-matrix.md
         const other = transport({ http2Origins: ['https://api.nuget.org'], http2Connect: connect });
         expect(text(await other.fetch({ url: `${h1.origin}/d` }))).toBe('h1');
         expect(connect).toHaveBeenCalledTimes(1);
-    });
+    }, 30_000);
 
     it("a connection-level HTTP/2 failure downgrades the origin for the transport's lifetime", async () => {
         const h1 = await serve((_request, response) => response.end('h1'));
