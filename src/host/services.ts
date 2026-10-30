@@ -99,6 +99,15 @@ export function readExtensionConfig(): ExtensionConfig {
     };
 }
 
+/** The host's look as attributes of the document element (ADR-011 Decision 2), so a portalled dialog inherits them; fixed values, nothing to escape. */
+function lookAttributes(): string {
+    const experimental = vscode.workspace.getConfiguration('workbench.experimental');
+    const look = experimental.get<boolean>('modernUI', false) ? 'modern' : 'classic';
+    const density = vscode.workspace.getConfiguration('window.density').get<string>('layout', 'default') === 'compact' ? 'compact' : 'default';
+    const uppercase = experimental.get<boolean>('modernUIUppercaseViewHeaders', false) ? ' data-uppercase-headers' : '';
+    return `data-look="${look}" data-density="${density}"${uppercase}`;
+}
+
 /** Build the webview HTML with a hardened CSP (ADR-006: no remote origins; images are `data:` URIs). */
 export function renderWebviewHtml(webview: vscode.Webview, extensionUri: vscode.Uri, options: { script: string; style: string; rootId: string; title: string; dataset?: Record<string, string> }): string {
     const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'dist', options.script));
@@ -117,7 +126,7 @@ export function renderWebviewHtml(webview: vscode.Webview, extensionUri: vscode.
         "connect-src 'none'",
     ].join('; ');
     return `<!DOCTYPE html>
-<html lang="en">
+<html lang="en" ${lookAttributes()}>
 <head>
     <meta charset="UTF-8">
     <meta http-equiv="Content-Security-Policy" content="${csp}">

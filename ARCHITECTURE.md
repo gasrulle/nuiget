@@ -237,7 +237,8 @@ high-contrast body classes (borders from `--vscode-contrastBorder`, no shadow), 
 active)` with system colour keywords, `@media (prefers-reduced-motion: reduce)` and `body.vscode-reduce-motion`, which
 each set the four durations to zero, so that anything timed with the tokens stops moving under either signal, and three
 blocks under `:root[data-look="modern"]` (itself, `[data-density="compact"]`, `[data-uppercase-headers]`) that re-value
-only the metrics that differ between the host's two looks (ADR-011). A control's high-contrast line is a `:root`
+only the metrics that differ between the host's two looks (ADR-011); the host writes those attributes on `<html>` in
+`renderWebviewHtml`, so the first paint is right and a portalled dialog inherits them. A control's high-contrast line is a `:root`
 token on a VS Code key that is unset outside the high-contrast themes, with a `transparent` fallback
 (`--nuiget-color-button-border` on `button.border`, `--nuiget-color-contrast-border` on `contrastBorder`, P9.11), so
 the high-contrast block stays three keys; check boxes and drop-downs take `--vscode-checkbox-*` and

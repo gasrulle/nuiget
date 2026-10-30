@@ -881,6 +881,8 @@ const pendingLines: string[] = [];
 /** The workbench's own controls, measured once at the start of the run (UX-P0.11): helper 3's parity. */
 let workbench: WorkbenchHeights = {};
 
+let lookReported = false;
+
 /** MS-8's reference: the chrome of the first state measured at each surface, theme, width and look (UX-P0.12). */
 const chromeReferences = new Map<string, ChromeReference>();
 
@@ -910,6 +912,16 @@ async function measure(state: NamedState, capture: Capture): Promise<{ red: stri
     // Measured against the reference as it stood; then an element (or first row) the reference lacked joins it.
     const reference = before === undefined ? undefined : { ...before, chrome: { ...before.chrome } };
     const red: string[] = [];
+    // The look of a capture is the document's (UX-P1.3): a run whose host shows another look than its name measures nothing true.
+    if (layout.root) {
+        if (!lookReported) {
+            console.warn(`[capture] data-look "${layout.endOfP0.dataLook}" on the document element (${state.name})`);
+            lookReported = true;
+        }
+        if (layout.endOfP0.dataLook !== capture.look) {
+            red.push(`data-look "${layout.endOfP0.dataLook}" in a ${capture.look} capture`);
+        }
+    }
     const lines = measureLines(state.name, layout, capture.look, workbench, reference, capture.width, specFor(state, capture), capture.theme);
     if (layout.root) {
         const merged = before ?? { state: state.name, chrome: {}, firstRow: undefined };

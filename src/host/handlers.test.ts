@@ -609,6 +609,35 @@ describe('services', () => {
         expect(/<script nonce="([^"]+)"/.exec(render())?.[1]).not.toBe(nonce);
     });
 
+    describe('the look attributes', () => {
+        const webview = { cspSource: 'https://mock-csp-source', asWebviewUri: (uri: vscode.Uri) => uri } as unknown as vscode.Webview;
+        const htmlTag = (settings: Record<string, unknown>): string => {
+            const reads = vi.mocked(vscode.workspace.getConfiguration);
+            const original = reads.getMockImplementation();
+            reads.mockImplementation(((section?: string) => ({
+                get: <T>(key: string, fallback?: T) => (settings[`${section}.${key}`] as T | undefined) ?? fallback,
+            })) as unknown as typeof vscode.workspace.getConfiguration);
+            try {
+                return /<html[^>]*>/.exec(renderWebviewHtml(webview, vscode.Uri.file('/extension'), { script: 'webview.js', style: 'webview.css', rootId: 'root', title: 'nUIget' }))?.[0] ?? '';
+            } finally {
+                reads.mockImplementation(original!);
+            }
+        };
+
+        it('writes the look attributes on the document element', () => {
+            expect(htmlTag({
+                'workbench.experimental.modernUI': true,
+                'window.density.layout': 'compact',
+                'workbench.experimental.modernUIUppercaseViewHeaders': true,
+            })).toBe('<html lang="en" data-look="modern" data-density="compact" data-uppercase-headers>');
+        });
+
+        it('reads classic and default density on a host without the settings, and leaves the uppercase attribute out', () => {
+            expect(htmlTag({})).toBe('<html lang="en" data-look="classic" data-density="default">');
+            expect(htmlTag({ 'workbench.experimental.modernUI': true, 'window.density.layout': 'an unknown value' })).toBe('<html lang="en" data-look="modern" data-density="default">');
+        });
+    });
+
     it('createWorkflowDeps: the execution context is asked once per project per operation, without the config chain', async () => {
         const { services, catalog, queue } = makeServices();
         const contextOf = (projectPath: string): ProjectExecutionContext => ({ projectPath, projectDir: path.dirname(projectPath), configFiles: [], sourceUrls: [], revision: 'r' });

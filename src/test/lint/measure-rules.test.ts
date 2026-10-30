@@ -504,7 +504,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(value('main-installed-details', facts({ detailsHeader: { insets: { start: 20, end: 20, top: 20, bottom: 20 }, titleLeft: 620, tabLabelLeft: 632 } }), 'DS-INSET-4@main-installed-details')).toMatchObject({ pass: false });
         expect(value('main-installed-details', facts({ factLefts: [[700, 700, 712]] }), 'DS-ALIGN-1@main-installed-details')).toMatchObject({ pass: false, status: { pending: 'P3.3a' } });
         expect(value('main-installed-details', facts({ factLefts: [[700, 700], [640, 640]] }), 'DS-ALIGN-1@main-installed-details')).toMatchObject({ pass: true });
-        // UX-P1.1: the font ramp and the two weights, hard; the look's tokens, pending P1.3.
+        // UX-P1.1: the font ramp and the two weights, hard; UX-P1.3: the look's tokens, hard.
         const text = (fontSize: number, fontWeight: number, header = false) => ({ fontSize, fontWeight, header });
         expect(value('main-installed-single', facts({ textStyles: [text(13, 600), text(11, 400)] }), 'DS-TYPE-2@main-installed-single')).toMatchObject({ pass: true, status: 'hard' });
         expect(value('main-installed-single', facts({ textStyles: [text(14.95, 600)] }), 'DS-TYPE-2@main-installed-single')).toMatchObject({ pass: false, value: 'off the ramp: 14.95' });
@@ -513,7 +513,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(value('main-installed-single', facts({ textStyles: [text(11, 700, true)], dataLook: 'modern' }), 'DS-TYPE-3@main-installed-single')).toMatchObject({ pass: false });
         expect(value('main-installed-single', facts({ textStyles: [text(13, 700)] }), 'DS-TYPE-3@main-installed-single')).toMatchObject({ pass: false });
         expect(value('main-installed-details', facts({ textStyles: [text(13, 700)] }), 'DS-TYPE-3@main-installed-details')).toMatchObject({ pass: false, status: { pending: 'P3.3a' } });
-        expect(value('main-installed-single', facts({ lookTokens: { '--nuiget-scrollbar-size': '10px' } }), 'DS-LOOK-1@main-installed-single')).toMatchObject({ pass: false, status: { pending: 'P1.3' } });
+        expect(value('main-installed-single', facts({ lookTokens: { '--nuiget-scrollbar-size': '10px' } }), 'DS-LOOK-1@main-installed-single')).toMatchObject({ pass: false, status: 'hard' });
         // The five UX-P0.18 flipped.
         expect(value('main-installed-single', facts({ fonts: { root: 'sans', others: ['monospace'] } }), 'DS-TYPE-1@main-installed-single')).toMatchObject({ pass: false, status: 'hard' });
         expect(value('main-installed-single', facts({ fonts: { root: 'sans', others: [] } }), 'DS-TYPE-1@main-installed-single')).toMatchObject({ pass: true, value: 'one family' });

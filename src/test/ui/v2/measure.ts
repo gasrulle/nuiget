@@ -247,10 +247,10 @@ export const RULES: readonly RuleDefinition[] = [
     // UX-P0.22 (V15): the token scrollbars, 10 px from P0.22; Modern UI's 8 px is P1.1's look token, the radius P3.9's.
     rule('DS-SCROLL-1', { helper: 3, scopes: on('P3.9', ...ALL), tolerance: TOLERANCES.containment }),
     // UX-P1.1 (design-advisor ruling of 2026-10-30): the font ramp and the two weights, read off the visible text outside the
-    // README; the details pane's headings set their weight at P3.3a; the look's tokens are read once P1.3 writes the attributes.
+    // README; the details pane's headings set their weight at P3.3a; the look's tokens hard since UX-P1.3 writes the attributes.
     rule('DS-TYPE-2', { helper: 3, scopes: inGroups('hard', ...ALL), tolerance: TOLERANCES.fontExact }),
     rule('DS-TYPE-3', { helper: 3, scopes: { ...inGroups('hard', 'main-installed', 'main-updates', 'browse', 'dialogs', 'sources', 'sidebar'), details: { pending: 'P3.3a' } }, tolerance: TOLERANCES.containment }),
-    rule('DS-LOOK-1', { helper: 3, scopes: on('P1.3', ...ALL), tolerance: TOLERANCES.containment }),
+    rule('DS-LOOK-1', { helper: 3, scopes: inGroups('hard', ...ALL), tolerance: TOLERANCES.containment }),
 ];
 
 /** The state group of a named state, by its name. */
