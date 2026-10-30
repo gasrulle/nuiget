@@ -102,6 +102,12 @@ const LIVE_SUGGESTIONS: Mask = { selector: '[data-testid="search-suggestions"]',
 const LIVE_CARET: Mask = { selector: '[data-testid="search-input"]', reason: 'the caret blinks and the selection differs between runs (H27)' };
 /** The package icon of every comfortable row (UX-P0.15, design-advisor ruling of CI run 40097664968). */
 const LIVE_ICONS: Mask = { selector: '.nuiget-row-icon', reason: 'nuget.org icons are resolved by the host per run: the breaker race (X2, V31; P7.1) and any failed fetch leave the default icon, so which rows show one differs between runs' };
+/**
+ * The side bar's Updates list and the Update-all dialog's list show the newest versions on nuget.org, as `main-updates`'
+ * list does: masked whole, since a version of another length moves the name's ellipsis point (UX-P0.fix-2, P0 phase review).
+ */
+const LIVE_SIDEBAR_UPDATES: Mask = { selector: '[data-testid="sidebar-updates-list"]', reason: 'the newest versions on nuget.org change' };
+const LIVE_BULK_LIST: Mask = { selector: '.nuiget-sidebar-bulk-list', reason: 'the dialog lists the newest versions on nuget.org' };
 /** The versions level's `‹ <id>` header above the suggestions (UX-P0.15, design-advisor ruling of CI run 40097664968). */
 const LIVE_POPUP_HEADER: Mask = { selector: '.nuiget-search-popup-header', reason: 'the popup text renders with greyscale or subpixel anti-aliasing from run to run (H27, corrected); the options are under LIVE_SUGGESTIONS' };
 
@@ -162,11 +168,11 @@ export const STATES: readonly NamedState[] = [
         ...themeSensitive('sidebar'),
         { theme: 'dark-modern', look: 'modern', width: 250 },
         { theme: 'dark-modern', look: 'modern', width: 170 },
-    ], 'The nUIget side bar view with Gateway selected; the Installed section lists package-row-serilog and the Updates section has a row.'), diffTolerance: 0 },
+    ], 'The nUIget side bar view with Gateway selected; the Installed section lists package-row-serilog and the Updates section has a row.', [LIVE_SIDEBAR_UPDATES]), diffTolerance: 0 },
     { ...ready('sidebar-narrow-200px', 'sidebar', [{ theme: 'dark-modern', look: 'modern', width: 200 }],
-        'The side bar at 200 px with Gateway selected; both sections keep their rows.'), diffTolerance: 0 },
+        'The side bar at 200 px with Gateway selected; both sections keep their rows.', [LIVE_SIDEBAR_UPDATES]), diffTolerance: 0 },
     { ...ready('sidebar-update-all-dialog', 'sidebar', [primary('sidebar')],
-        'Gateway selected, Update all pressed in the Updates section header; the confirmation is open and is cancelled after the capture, never confirmed.'), diffTolerance: 0 },
+        'Gateway selected, Update all pressed in the Updates section header; the confirmation is open and is cancelled after the capture, never confirmed.', [LIVE_SIDEBAR_UPDATES, LIVE_BULK_LIST]), diffTolerance: 0 },
     pending('main-installed-loading', 'main', 'P2.8b', 'The first list loading: skeleton rows and the 2 px bar (marker installed-progress).'),
     pending('main-installed-revalidating', 'main', 'P2.8b', 'A shown list revalidating under the 2 px bar.'),
     pending('main-installed-empty', 'main', 'P2.8b', 'A project without packages: the welcome-style "No packages installed." (marker installed-empty).'),

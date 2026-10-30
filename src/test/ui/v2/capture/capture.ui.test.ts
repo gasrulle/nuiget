@@ -161,6 +161,9 @@ interface Reach {
     leave?: () => Promise<void>;
 }
 
+/** The transitive header is not revalidating: its insets are measured on a still header (UX-P0.15 DO 5; UX-P0.fix-2). */
+const TRANSITIVE_HEADER_STILL = 'document.querySelector(\'[data-testid="section-header-transitive"]\')?.querySelector(\'.nuiget-spinner\') === null';
+
 const cancelDialog = async (): Promise<void> => {
     await (await findByTestId('confirm-dialog-cancel', 10_000)).click();
     await waitForTestIdGone('confirm-dialog', 10_000);
@@ -174,6 +177,8 @@ const REACH: Record<string, Reach> = {
             await clickVisible('installed-tab');
             await until('document.querySelectorAll(\'[role="listbox"][data-testid^="installed-list-"]\').length >= 4', 'four project sections');
             await until('[...document.querySelectorAll(".nuiget-section-header")].some(header => header.textContent.includes("Unsupported") && header.textContent.includes("provisional"))', 'the Unsupported and provisional badges on the Unsupported section');
+            // UX-P0.fix-2 (P0 phase review, design-2): the settled data before the shot, P0.23's predicate (its goldens show it).
+            await poll(async () => ((await script<string>(UNSETTLED)) === '' ? true : undefined), 'every project\'s counts and authors', 120_000);
         },
     },
     'main-installed-unsupported': {
@@ -260,6 +265,7 @@ const REACH: Record<string, Reach> = {
         reach: async () => {
             await gatewayInstalled();
             await expandTransitive();
+            await until(TRANSITIVE_HEADER_STILL, 'the transitive header without its spinner', 60_000);
         },
     },
     'main-transitive-details': {
@@ -269,6 +275,7 @@ const REACH: Record<string, Reach> = {
             const [first] = await (await findByTestId('transitive-section')).findElements(By.css('[role="option"]'));
             await first.click();
             await waitForText('transitive-details', 'Required by', 30_000);
+            await until(TRANSITIVE_HEADER_STILL, 'the transitive header without its spinner', 60_000);
         },
     },
     'main-updates': {
