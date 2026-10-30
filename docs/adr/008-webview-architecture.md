@@ -1,6 +1,6 @@
 # ADR-008: Webview architecture — shared slices, primitives, two entry points
 
-Status: accepted · Date: 2026-10-10 · Amended: 2026-10-12 (plan item P1.1b: generation on responses; plan item P2.9: per-key generations on `resources/invalidated`)
+Status: accepted · Date: 2026-10-10 · Amended: 2026-10-12 (plan item P1.1b: generation on responses; plan item P2.9: per-key generations on `resources/invalidated`) · Amended: 2026-10-30 (UX plan item UX-P1.2: ADR-011 replaces the typography bullet, type in px since UX-P1.1; the `ErrorBoundary` of both entries, 2.0 plan item P9.9)
 
 ## Context
 
@@ -37,6 +37,9 @@ D13 (`docs/plans/2026-10-11-nuiget-2.0-execution-plan.md`, §1).
   `all-projects`, `transitive`) own their view + hooks; the shell is < 300 lines.
 - Interaction model is documented in `docs/ux/interaction-model.md` before features migrate.
 - `data-testid` hooks are stable, documented in the interaction model, and used by ExTester tests.
+- Both entries (`src/webview/main/index.tsx`, `src/webview/sidebar/index.tsx`) wrap `StoreProvider`
+  in the `ErrorBoundary` primitive, outside it, so Reload remounts the store; its `onError` is the
+  one sender of `ui/reportError` and never throws (plan item P9.9).
 
 ## Consequences
 

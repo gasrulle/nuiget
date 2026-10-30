@@ -1,6 +1,6 @@
 # ADR-010: No layering: a rebuild or refactor replaces rules, never overrides them
 
-Status: accepted · Date: 2026-10-23
+Status: accepted · Date: 2026-10-23 · Amended: 2026-10-30 (UX plan item UX-P1.2: Decision 6 bounded to stylesheets, the `disableComment` reading of UX-P0.21; the `react-hooks/exhaustive-deps` directives in TS/TSX leave with the items that rewrite their hooks)
 
 ## Context
 
@@ -55,7 +55,7 @@ the 2.0 stylesheets already are from that:
    which repeats the row-height tokens for the virtualizer and is held equal to them by `webview-tokens.test.ts`. A
    1 px line is a token, not a literal.
 6. **Selectors.** Specificity stays at or below (0,2,0); no selector is declared in more than one stylesheet except
-   `body` and `:root`; no `stylelint-disable` or `eslint-disable` comment under `src/webview/**`.
+   `body` and `:root`; no `stylelint-disable` or `eslint-disable` comment in a stylesheet under `src/webview/**`.
 7. **The gate.** Decisions 3 to 6 are Vitest lints in `src/test/lint/`, extending `webview-stylesheets.test.ts` and its
    siblings; no parallel stylelint setup. Rules: `pxLength` (a `px`/`em`/`rem` length outside `tokens.css` in a width,
    height, minimum or maximum size, inset, border, outline, radius or line height), `duplicateSelector`,
