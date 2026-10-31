@@ -3,7 +3,7 @@ import { Badge, VerifiedIcon } from '../../../shared/primitives';
 import { useAllProjects } from '../../../shared/store/allProjects';
 import type { DetailsSelection } from '../../../shared/store/details';
 import { metadataKey, useTransitive } from '../../../shared/store/transitive';
-import { aggregateTransitive, rootsByProject } from '../installed/AllProjectsTransitiveSection';
+import { aggregateTransitive, rootsByProject } from '../installed/transitiveAggregate';
 
 /** One block of the Required by section: a heading (a framework or a project) when there are several, and its roots. */
 interface Block {

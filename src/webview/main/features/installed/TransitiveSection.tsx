@@ -1,15 +1,11 @@
-import { useId, useState } from 'react';
 import type React from 'react';
-import type { PackageMetadataLite, TransitiveFrameworkSection, TransitivePackage } from '../../../../protocol';
+import type { PackageMetadataLite, TransitivePackage } from '../../../../protocol';
 import { packageIconSrc } from '../../../shared/packageIcon';
-import { Badge, Banner, EmptyState, Listbox, Row, SectionHeader, Skeleton, type RowPlacement } from '../../../shared/primitives';
-import { useDetails, type DetailsSelection } from '../../../shared/store/details';
-import { metadataKey, useTransitive } from '../../../shared/store/transitive';
+import { Badge, Banner, EmptyState, Row, SectionHeader, Skeleton, type GroupPlacement, type RowPlacement } from '../../../shared/primitives';
+import { metadataKey, type TransitiveState } from '../../../shared/store/transitive';
+import { rowId, type TreeItem } from './installedTree';
 
-interface Item {
-    id: string;
-    entry: TransitivePackage;
-}
+type GroupItem = Extract<TreeItem, { kind: 'group' }>;
 
 const ERRORS: Record<string, string> = {
     'parse-failed': 'The assets file of the project could not be read',
@@ -17,127 +13,77 @@ const ERRORS: Record<string, string> = {
     unknown: 'The transitive packages could not be listed',
 };
 
-const HINT = 'Arrow keys move between the packages. Enter shows the details of one.';
-
-export interface TransitiveSectionProps {
-    /** A row was made current: its details show what the transitive slice knows of it. */
-    onCurrent: (selection: DetailsSelection) => void;
-}
-
 /**
- * The packages the project gets through its references (interaction model §7 and the transitive section of the
- * Installed tab), asked for shortly after the installed list. The collapsed header reads `Transitive packages (N)`
- * with the target framework; a project with several frameworks has one collapsible header per framework inside. Rows
- * show the icon, authors and Verified mark of the lite metadata and no description (D14); a row opens a read-only
- * details view with what requires it. When the project has not been restored, a banner offers Restore.
+ * The packages the project gets through its references (interaction model §7), as rows of the tab's tree, asked for
+ * shortly after the installed list. The collapsed group row reads `Transitive packages (N)` with the target framework; a
+ * project with several frameworks has a group row per framework inside. Rows show the icon, authors and Verified mark of
+ * the lite metadata and no description (D14) and open a read-only details view with what requires them. When the project
+ * has not been restored, a banner above the tree offers Restore.
  */
-export function TransitiveSection({ onCurrent }: TransitiveSectionProps): React.JSX.Element | null {
-    const transitive = useTransitive();
-    const { selection } = useDetails();
-    const [open, setOpen] = useState(false);
-    const baseId = useId();
-    const titleId = `${baseId}-title`;
-    const contentId = `${baseId}-content`;
-
-    if (transitive.projectPath === null) {
-        return null;
+export function transitiveTree(state: TransitiveState, expanded: boolean, collapsed: ReadonlySet<string>): { items: TreeItem[]; message: React.ReactNode } {
+    if (state.projectPath === null) {
+        return { items: [], message: null };
     }
-    const projectPath = transitive.projectPath;
-    const expanded = open && transitive.enabled;
-    const toggle = (): void => {
-        if (!expanded) {
-            transitive.enable();
-        }
-        setOpen(!expanded);
-    };
-
-    const { result } = transitive;
+    const { projectPath, result } = state;
     const usable = result !== undefined && result.dataSourceAvailable && result.errorKind === undefined;
     const frameworks = usable ? result.frameworks : [];
     const several = frameworks.length > 1;
     const total = frameworks.reduce((count, framework) => count + framework.packages.length, 0);
-    const selectedId = selection?.origin === 'transitive' && selection.projectPath === projectPath ? `${selection.packageId.toLowerCase()}@${selection.version}` : null;
-
-    const list = (framework: TransitiveFrameworkSection, naming: { label: string } | { labelledBy: string }): React.ReactNode => (
-        <Listbox<Item>
-            items={framework.packages.map(entry => ({ id: metadataKey(entry.id, entry.version), entry }))}
-            {...naming}
-            hint={HINT}
-            testId={several ? `transitive-list-${framework.targetFramework}` : 'transitive-list'}
-            density="comfortable"
-            busy={transitive.revalidating}
-            selectedId={selectedId}
-            onSelect={item => onCurrent({ packageId: item.entry.id, version: item.entry.version, origin: 'transitive', projectPath })}
-            onActivate={item => onCurrent({ packageId: item.entry.id, version: item.entry.version, origin: 'transitive', projectPath })}
-            renderRow={(item, placement) => transitiveRow(item.entry, transitive.metadata.get(item.id), placement)}
-        />
-    );
-
-    let content: React.ReactNode = null;
-    if (expanded) {
-        if (result === undefined) {
-            content = transitive.error
-                ? <Banner severity="error" action={{ label: 'Retry', onClick: transitive.refresh }}>{`The transitive packages could not be listed: ${transitive.error.message}`}</Banner>
-                : <Skeleton density="comfortable" />;
-        } else if (!result.dataSourceAvailable) {
-            content = (
-                <Banner severity="warning" data-testid="transitive-restore-banner" action={{ label: 'Restore', onClick: transitive.restore }}>
-                    The project has not been restored, so its transitive packages are not known.
-                </Banner>
-            );
-        } else if (result.errorKind !== undefined) {
-            content = <Banner severity="error" action={{ label: 'Retry', onClick: transitive.refresh }}>{ERRORS[result.errorKind]}</Banner>;
-        } else if (total === 0) {
-            content = <EmptyState message="No transitive dependencies." />;
-        } else if (several) {
-            content = frameworks.map(framework => <FrameworkSection key={framework.targetFramework} framework={framework} render={list} />);
-        } else {
-            content = list(frameworks[0], { label: 'Transitive packages' });
+    const items: TreeItem[] = [{
+        kind: 'group',
+        id: 'transitive',
+        level: 1,
+        title: usable && !several ? `Transitive packages (${total})` : 'Transitive packages',
+        variant: 'group',
+        tfm: !several && frameworks.length === 1 ? frameworks[0].targetFramework : undefined,
+    }];
+    if (!expanded) {
+        return { items, message: null };
+    }
+    for (const framework of frameworks) {
+        const tfm = framework.targetFramework;
+        const groupId = `transitive-${tfm}`;
+        if (several) {
+            items.push({ kind: 'group', id: groupId, level: 2, title: `Transitive packages (${framework.packages.length})`, variant: 'level', tfm });
+        }
+        if (!several || !collapsed.has(groupId)) {
+            for (const entry of framework.packages) {
+                const key = metadataKey(entry.id, entry.version);
+                items.push({ kind: 'transitive', id: rowId(`transitive:${tfm}`, key), scope: { projectPath, tfm }, entry: { id: entry.id, version: entry.version }, key });
+            }
         }
     }
-
-    const tfm = !several && frameworks.length === 1 ? frameworks[0].targetFramework : undefined;
-    return (
-        <section className="nuiget-transitive" data-testid="transitive-section">
-            <SectionHeader
-                title={usable && !several ? `Transitive packages (${total})` : 'Transitive packages'}
-                titleId={titleId}
-                expanded={expanded}
-                onToggle={toggle}
-                contentId={contentId}
-                testKey="transitive"
-                busy={transitive.status === 'loading' || transitive.revalidating}
-                actions={tfm === undefined ? undefined : <Badge label={tfm} title={`Target framework ${tfm}`} />}
-            />
-            <div id={contentId} hidden={!expanded} className="nuiget-transitive-content">{content}</div>
-        </section>
-    );
+    let message: React.ReactNode = null;
+    if (result === undefined) {
+        message = state.error
+            ? <Banner severity="error" action={{ label: 'Retry', onClick: state.refresh }}>{`The transitive packages could not be listed: ${state.error.message}`}</Banner>
+            : <Skeleton density="comfortable" />;
+    } else if (!result.dataSourceAvailable) {
+        message = (
+            <Banner severity="warning" data-testid="transitive-restore-banner" action={{ label: 'Restore', onClick: state.restore }}>
+                The project has not been restored, so its transitive packages are not known.
+            </Banner>
+        );
+    } else if (result.errorKind !== undefined) {
+        message = <Banner severity="error" action={{ label: 'Retry', onClick: state.refresh }}>{ERRORS[result.errorKind]}</Banner>;
+    } else if (total === 0) {
+        message = <EmptyState message="No transitive dependencies." />;
+    }
+    return { items, message };
 }
 
-/** One target framework of a project that has several: its own collapsible header with the count and the framework. */
-function FrameworkSection({ framework, render }: {
-    framework: TransitiveFrameworkSection;
-    render: (framework: TransitiveFrameworkSection, naming: { labelledBy: string }) => React.ReactNode;
-}): React.JSX.Element {
-    const [expanded, setExpanded] = useState(true);
-    const baseId = useId();
-    const titleId = `${baseId}-title`;
-    const contentId = `${baseId}-content`;
-    const tfm = framework.targetFramework;
+/** The content of a transitive group row: the framework as a badge where the row stands for one. */
+export function transitiveGroupContent(item: GroupItem, placement: GroupPlacement, state: TransitiveState): React.JSX.Element {
     return (
-        <section className="nuiget-transitive-framework">
-            <SectionHeader
-                title={`Transitive packages (${framework.packages.length})`}
-                titleId={titleId}
-                expanded={expanded}
-                onToggle={() => setExpanded(value => !value)}
-                contentId={contentId}
-                testKey={`transitive-${tfm}`}
-                level={3}
-                actions={<Badge label={tfm} title={`Target framework ${tfm}`} />}
-            />
-            <div id={contentId} hidden={!expanded}>{render(framework, { labelledBy: titleId })}</div>
-        </section>
+        <SectionHeader
+            presentation="content"
+            title={item.title}
+            testKey={item.level === 1 ? 'transitive' : `transitive-${item.tfm ?? ''}`}
+            expanded={placement.expanded}
+            variant={item.level === 1 ? 'group' : 'level'}
+            busy={state.status === 'loading' || state.revalidating}
+            badges={item.tfm === undefined ? undefined : <Badge label={item.tfm} title={`Target framework ${item.tfm}`} />}
+        />
     );
 }
 
@@ -154,6 +100,7 @@ export function transitiveRow(entry: Pick<TransitivePackage, 'id' | 'version'>, 
             verified={lite?.verified}
             icon={src === undefined ? undefined : <img src={src} alt="" />}
             density="comfortable"
+            selectable={false}
             badges={<>
                 {badges}
                 {lite?.vulnerabilities?.length ? <Badge label="Vulnerable" tone="error" title="Has known vulnerabilities" /> : null}

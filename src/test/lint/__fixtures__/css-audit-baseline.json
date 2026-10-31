@@ -522,38 +522,6 @@
   {
     "file": "src/webview/main/main.css",
     "rule": "override",
-    "selector": ".nuiget-installed--sections .nuiget-listbox",
-    "property": "flex",
-    "value": "none",
-    "item": "P2.1e"
-  },
-  {
-    "file": "src/webview/main/main.css",
-    "rule": "override",
-    "selector": ".nuiget-installed--sections .nuiget-listbox",
-    "property": "overflow",
-    "value": "visible",
-    "item": "P2.1e"
-  },
-  {
-    "file": "src/webview/main/main.css",
-    "rule": "override",
-    "selector": ".nuiget-transitive .nuiget-listbox",
-    "property": "flex",
-    "value": "none",
-    "item": "P2.1e"
-  },
-  {
-    "file": "src/webview/main/main.css",
-    "rule": "override",
-    "selector": ".nuiget-transitive .nuiget-listbox",
-    "property": "overflow",
-    "value": "visible",
-    "item": "P2.1e"
-  },
-  {
-    "file": "src/webview/main/main.css",
-    "rule": "override",
     "selector": ".nuiget-details-group .nuiget-section-toggle",
     "property": "text-transform",
     "value": "none",

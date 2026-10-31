@@ -179,7 +179,7 @@ export const RULES: readonly RuleDefinition[] = [
     rule('DS-HEIGHT-10', { helper: 3, scopes: on('P2.6', ...MAIN, 'sidebar'), tolerance: TOLERANCES.height }),
     rule('DS-HEIGHT-11', { helper: 3, scopes: { 'main-installed': { pending: 'P2.8b' }, ...on('P3.10', 'main-updates', 'browse', 'details', 'sidebar') }, tolerance: TOLERANCES.height, statePattern: /loading|revalidating/ }),
     // UX-P0.12: P9.fix-2, -3 (authors) and -4 at their own measures, in the states their tests cover; MS-8 for every state.
-    rule('PF-2', { helper: 6, scopes: { 'main-installed': 'hard' }, tolerance: TOLERANCES.coincide, states: ['main-installed-single'] }),
+    rule('PF-2', { helper: 6, scopes: { 'main-installed': 'hard' }, tolerance: TOLERANCES.coincide, states: ['main-transitive-expanded'] }),
     rule('PF-3a', { helper: 5, scopes: { 'main-installed': 'hard' }, tolerance: TOLERANCES.containment, states: ['main-installed-single'], widths: [1200] }),
     // The `ui` lane's 800/932/1200 and the matrix lane's 800/1200/1600, the widths P0.12 asserted it at; narrower widths are
     // V50's and DS-OVERFLOW-1/3/5's (UX-P0.14 rulings, design trigger 1).
@@ -762,8 +762,9 @@ const heights = {
     compactRows: shown('.nuiget-row--compact:not([data-row-kind="group"])').map(heightOf),
     comfortableRows: shown('.nuiget-row--comfortable:not([data-row-kind="group"])').map(heightOf),
     comfortablePitches: [...scope.querySelectorAll('.nuiget-listbox')].flatMap(list => {
-        const tops = [...list.querySelectorAll('.nuiget-row--comfortable:not([data-row-kind="group"])')].filter(visible).map(el => rectOf(el).top).sort((a, b) => a - b);
-        return tops.slice(1).map((top, i) => round(top - tops[i]));
+        // Pitches between consecutive package rows: a group row restarts the count.
+        const rows = [...list.querySelectorAll('.nuiget-row--comfortable')].filter(visible).sort((a, b) => rectOf(a).top - rectOf(b).top);
+        return rows.flatMap((row, i) => (i > 0 && !row.matches('[data-row-kind="group"]') && !rows[i - 1].matches('[data-row-kind="group"]') ? [round(rectOf(row).top - rectOf(rows[i - 1]).top)] : []));
     }),
     tabStrip: visibleHeight('[data-testid="tab-bar"]'),
     detailsTabs: visibleHeight('[data-testid="package-details-panel"] [role="tablist"]'),
@@ -864,7 +865,9 @@ overflow.badges = shown('[data-testid^="section-box-"] .nuiget-badge').map(badge
 });
 // PF-2: the first transitive header after the last direct row, in one scroller.
 const scrollerOf = el => { for (let a = el ? el.parentElement : null; a; a = a.parentElement) if (/auto|scroll/.test(getComputedStyle(a).overflowY)) return a; return null; };
-const directRows = [...root.querySelectorAll('[data-testid="installed-list"] .nuiget-row:not([data-row-kind="group"])')].filter(visible);
+const transitiveRow = root.querySelector('[data-testid="group-row-transitive"]');
+const directRows = [...root.querySelectorAll('[data-testid="installed-list"] .nuiget-row:not([data-row-kind="group"])')].filter(visible)
+    .filter(row => !transitiveRow || (row.compareDocumentPosition(transitiveRow) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0);
 // The P0.10 hook, else P9.fix-2's own selector: the same header box, which a tree from before the hook (the negative
 // control's 80940aa) renders without the hook (UX-P0.17, D36).
 const transitiveToggle = root.querySelector('[data-testid="section-header-transitive"]');

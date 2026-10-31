@@ -194,6 +194,13 @@ describe('the in-page collector on stubbed geometry (UX-P0.10, UX-P0.11)', () =>
         expect(layout.overflow.badges).toEqual(['transitive "provisional" 560–598 (box right 600)']);
         expect(layout.sections.find(section => section.id === 'transitive')?.trailingEnd).toBe(2);
         expect(layout.transitiveGap).toEqual({ lastRowBottom: 292, headerTop: 300, sameScroller: true });
+        // A tree that holds the Transitive group: the direct rows end at its group row, and no pitch crosses one (UX-P2.1e).
+        const sizer = document.querySelector('[data-testid="installed-list"]') as HTMLElement;
+        sizer.insertAdjacentHTML('beforeend', '<div class="nuiget-row nuiget-row--comfortable" data-row-kind="group" data-testid="group-row-transitive" data-rect="0,292,600,314"></div><div class="nuiget-row nuiget-row--comfortable" data-rect="0,314,600,392"><div class="nuiget-row-option" role="treeitem" data-rect="0,314,600,391"></div></div>');
+        const grouped = collect();
+        expect(grouped.transitiveGap?.lastRowBottom).toBe(292);
+        expect(grouped.heights.comfortablePitches).toEqual([78]);
+        sizer.querySelectorAll('[data-testid="group-row-transitive"], [data-testid="group-row-transitive"] ~ *').forEach(el => el.remove());
         // A tree from before the P0.10 hook (the negative control's 80940aa): the header box is found by P9.fix-2's toggle,
         // here pinned below the list's own scroll port (UX-P0.17); with neither selector PF-2 has nothing to measure.
         const box = document.querySelector('[data-testid="section-box-transitive"]') as HTMLElement;

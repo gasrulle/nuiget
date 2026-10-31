@@ -114,16 +114,25 @@ async function currentDetails(rowTestId: string): Promise<void> {
     await waitForText('package-details-panel', 'Dependencies', 60_000);
 }
 
+/** The rows under the Transitive group row, its last level-1 group (UX-P2.1e). */
+const TRANSITIVE_ROWS = '[data-testid="group-row-transitive"] ~ .nuiget-row:not([data-row-kind="group"]) .nuiget-row-option';
+
 async function expandTransitive(): Promise<void> {
+    // The tree is virtualized: at its end, with the group still collapsed, the last direct rows sit above the group row,
+    // and expanding grows the content below this offset (PF-2's picture).
+    await findByTestId('installed-list', 60_000);
+    await poll(async () => {
+        await script<void>('document.querySelector(\'[data-testid="installed-list"]\').scrollTop = 1e9;');
+        return (await driverOf().findElements(By.css('[data-testid="section-header-transitive"]'))).length > 0 ? true : undefined;
+    }, 'the Transitive group row at the end of the list', 60_000);
     const header = await findByTestId('section-header-transitive', 60_000);
     await header.click();
-    await poll(async () => ((await header.getAttribute('aria-expanded')) === 'true' ? true : undefined), 'the transitive section open', 10_000);
+    await until('document.querySelector(\'[data-testid="group-row-transitive"] [role="treeitem"]\').getAttribute("aria-expanded") === "true"', 'the Transitive group open', 10_000);
     const listed = await poll(async () => {
-        const section = await findByTestId('transitive-section');
-        if ((await section.findElements(By.css('[data-testid="transitive-restore-banner"]'))).length > 0) {
+        if ((await driverOf().findElements(By.css('[data-testid="transitive-restore-banner"]'))).length > 0) {
             return 'banner';
         }
-        return (await section.findElements(By.css('[role="option"]'))).length > 0 ? 'rows' : undefined;
+        return (await driverOf().findElements(By.css(TRANSITIVE_ROWS))).length > 0 ? 'rows' : undefined;
     }, 'the transitive rows', 120_000);
     if (listed === 'banner') {
         // The dense workspace is restored by the UI job; a restore from the suite would write its obj folders.
@@ -178,8 +187,9 @@ const REACH: Record<string, Reach> = {
         reach: async () => {
             await chooseFixtureProject(ALL_PROJECTS);
             await clickVisible('installed-tab');
-            await until('document.querySelectorAll(\'[data-testid="installed-list"] [data-testid^="group-row-project-"]\').length >= 4', 'four project group rows');
-            await until('[...document.querySelectorAll(".nuiget-section-header")].some(header => header.textContent.includes("Unsupported") && header.textContent.includes("provisional"))', 'the Unsupported and provisional badges on the Unsupported section');
+            // The tree is virtualized: the fan-out settled is the tab's count, shown once every project answered, and the
+            // level-1 groups in the tree, the two folders and Transitive (UX-P2.1e).
+            await until('/\\d/.test(document.querySelector(\'[data-testid="installed-tab"]\').textContent) && Number(document.querySelector(\'[data-testid^="group-row-"] [role="treeitem"]\')?.getAttribute("aria-setsize")) >= 3', 'the settled fan-out');
             // UX-P0.fix-2 (P0 phase review, design-2): the settled data before the shot, P0.23's predicate (its goldens show it).
             await poll(async () => ((await script<string>(UNSETTLED)) === '' ? true : undefined), 'every project\'s counts and authors', 120_000);
         },
@@ -192,7 +202,7 @@ const REACH: Record<string, Reach> = {
             // The banner primitive's class: the main panel renders this banner without a test id.
             await until('[...document.querySelectorAll(".nuiget-banner--warning")].some(banner => banner.textContent.includes("Unsupported project"))', 'the Unsupported banner');
             await until('document.body.textContent.includes("provisional")', 'the provisional badge');
-            await until('(() => { const header = document.querySelector(\'[data-testid="section-header-transitive"]\'); return header !== null && /\\(\\d+\\)/.test(header.textContent ?? "") && header.querySelector(".nuiget-spinner") === null; })()', 'the transitive section settled (count, no spinner)', 60_000);
+            await until('(() => { const row = document.querySelector(\'[data-testid="group-row-transitive"]\'); return row === null || (/\\(\\d+\\)/.test(row.textContent ?? "") && row.querySelector(".nuiget-spinner") === null); })()', 'the transitive section settled (count, no spinner)', 60_000);
         },
     },
     'main-installed-cpm': {
@@ -200,7 +210,7 @@ const REACH: Record<string, Reach> = {
             await chooseFixtureProject('Catalog.csproj');
             await clickVisible('installed-tab');
             await findByTestId('package-row-mapster', 120_000);
-            await until('(() => { const header = document.querySelector(\'[data-testid="section-header-transitive"]\'); return header !== null && /\\(\\d+\\)/.test(header.textContent ?? "") && header.querySelector(".nuiget-spinner") === null; })()', 'the transitive section settled (count, no spinner)', 60_000);
+            await until('(() => { const row = document.querySelector(\'[data-testid="group-row-transitive"]\'); return row === null || (/\\(\\d+\\)/.test(row.textContent ?? "") && row.querySelector(".nuiget-spinner") === null); })()', 'the transitive section settled (count, no spinner)', 60_000);
         },
     },
     'main-installed-details': {
@@ -277,7 +287,7 @@ const REACH: Record<string, Reach> = {
         reach: async () => {
             await gatewayInstalled();
             await expandTransitive();
-            const [first] = await (await findByTestId('transitive-section')).findElements(By.css('[role="option"]'));
+            const [first] = await driverOf().findElements(By.css(TRANSITIVE_ROWS));
             await first.click();
             await waitForText('transitive-details', 'Required by', 30_000);
             await until(TRANSITIVE_HEADER_STILL, 'the transitive header without its spinner', 60_000);
@@ -605,7 +615,13 @@ async function rowKeys(listTestId: string, searchTestId: string, enter: 'press' 
         await step('rows ArrowDown', Key.ARROW_DOWN, size > 1 ? 'row 2' : 'row 1');
         await step('rows ArrowUp', Key.ARROW_UP, 'row 1');
     }
-    await step('rows End', Key.END, `row ${size}`);
+    // The Transitive group row is the tree's last row (D48): End lands on it and the last package row is one up.
+    if (tree) {
+        await step('rows End', Key.END, 'group 2');
+        await step('rows ArrowUp from End', Key.ARROW_UP, `row ${size}`);
+    } else {
+        await step('rows End', Key.END, `row ${size}`);
+    }
     if (enter === 'press') {
         await press(Key.ENTER);
         const current = await poll(async () => {

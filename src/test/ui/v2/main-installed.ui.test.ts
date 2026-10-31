@@ -101,22 +101,23 @@ describe('2.0 main panel: Installed tab', () => {
         expect(Math.abs(edges.button - edges.list), 'from the primary button to the list\'s right edge').to.be.at.most(8);
     });
 
-    it('the transitive section opens with what the project gets through its references, right under the last direct row (P9.0, P9.fix-2)', async function () {
+    it('the Transitive group row opens with what the project gets through its references, right under the last direct row (P9.0, P9.fix-2, UX-P2.1e)', async function () {
         this.timeout(300_000);
         await findByTestId('package-row-serilog', 120_000);
-        const header = await findByTestId('section-header-transitive');
+        await driverOf().executeScript('document.querySelector(\'[data-testid="installed-list"]\').scrollTop = 1e9;');
+        const header = await findByTestId('section-header-transitive', 30_000);
+        const expanded = (): Promise<string> => driverOf().executeScript<string>('return document.querySelector(\'[data-testid="group-row-transitive"] [role="treeitem"]\').getAttribute("aria-expanded");');
         await header.click();
-        await poll(async () => ((await header.getAttribute('aria-expanded')) === 'true' ? true : undefined), 'the transitive section open', 10_000);
-        const section = await findByTestId('transitive-section');
-        // The list, the empty state or, on a runner that has not restored the fixture, the banner that offers Restore.
+        await poll(async () => ((await expanded()) === 'true' ? true : undefined), 'the Transitive group open', 10_000);
+        // The rows, the empty state or, on a runner that has not restored the fixture, the banner that offers Restore.
         const shown = async (): Promise<'list' | 'empty' | 'banner' | undefined> => {
-            if ((await section.findElements(By.css('[data-testid^="transitive-list"]'))).length > 0) {
+            if ((await driverOf().findElements(By.css('[data-testid="group-row-transitive"] ~ .nuiget-row'))).length > 0) {
                 return 'list';
             }
-            if (((await section.getAttribute('textContent')) ?? '').includes('No transitive dependencies')) {
+            if (((await (await findByTestId('nuiget-app')).getAttribute('textContent')) ?? '').includes('No transitive dependencies')) {
                 return 'empty';
             }
-            return (await section.findElements(By.css('[data-testid="transitive-restore-banner"]'))).length > 0 ? 'banner' : undefined;
+            return (await driverOf().findElements(By.css('[data-testid="transitive-restore-banner"]'))).length > 0 ? 'banner' : undefined;
         };
         if ((await poll(shown, 'the transitive packages, their empty state or the restore banner', 120_000)) === 'banner') {
             await (await (await findByTestId('transitive-restore-banner')).findElement(By.css('button'))).click();
@@ -127,7 +128,8 @@ describe('2.0 main panel: Installed tab', () => {
         }
         // One scroller: the transitive header follows the last direct row, with no gap of more than one row (P9.fix-2).
         const edges = await driverOf().executeScript<{ lastRowBottom: number; headerTop: number }>(`
-            const rows = Array.from(document.querySelectorAll('[data-testid="installed-list"] .nuiget-row-option'));
+            const group = document.querySelector('[data-testid="group-row-transitive"]');
+            const rows = Array.from(document.querySelectorAll('[data-testid="installed-list"] .nuiget-row-option')).filter(row => (row.compareDocumentPosition(group) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0);
             const header = document.querySelector('[data-testid="section-header-transitive"]').closest('.nuiget-section-header');
             return {
                 lastRowBottom: Math.max(...rows.map(option => (option.closest('.nuiget-row') ?? option).getBoundingClientRect().bottom)),
@@ -136,9 +138,9 @@ describe('2.0 main panel: Installed tab', () => {
         console.warn('[P9.fix-2] transitive header: ' + JSON.stringify(edges));
         const gap = edges.headerTop - edges.lastRowBottom;
         expect(gap, 'from the last direct row to the transitive header (subpixel slack)').to.be.within(-1, tokenPx('--nuiget-row-height-comfortable'));
-        // The files after this one measure the Installed tab with the section closed.
+        // The files after this one measure the Installed tab with the group closed.
         await header.click();
-        await poll(async () => ((await header.getAttribute('aria-expanded')) === 'false' ? true : undefined), 'the transitive section closed', 10_000);
+        await poll(async () => ((await expanded()) === 'false' ? true : undefined), 'the Transitive group closed', 10_000);
     });
 
     it('selects a row and marks it for a bulk action', async function () {

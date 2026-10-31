@@ -420,7 +420,6 @@ export const KEYS_EXPECTED: Readonly<Partial<Record<KeyScreen, readonly string[]
         'tab "Installed # # package with known vulnerabilities" {installed-tab}',
         'button "Select all" {select-all-button}',
         'treeitem "Direct packages (#)"',
-        'button "Transitive packages" {section-header-transitive}',
         'separator "Resize the package list" {sash}',
     ],
     'main-updates': [

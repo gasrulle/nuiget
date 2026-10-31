@@ -8,7 +8,7 @@ import { axeRuleOutcome, installFakeLayout } from '../../../shared/primitives/te
 import { StoreProvider } from '../../../shared/store/StoreProvider';
 import { MainShell } from '../../MainShell';
 import { DetailsPane } from '../details/DetailsPane';
-import { aggregateTransitive, describeOrigins } from './AllProjectsTransitiveSection';
+import { aggregateTransitive, describeOrigins } from './transitiveAggregate';
 import { InstalledTab } from './InstalledTab';
 
 const A = '/w1/App/App.csproj';
@@ -69,7 +69,7 @@ describe('main panel: All Projects', () => {
         }
         expect(within(screen.getByTestId('installed-list')).getAllByRole('treeitem', { name: /^Serilog/ }).map(row => row.getAttribute('aria-level'))).toEqual(['3', '3', '3']);
         // Membership is the tree's order: each folder over its own projects.
-        expect(groupRows()).toEqual(['folder-w1', 'project-app', 'project-lib', 'folder-w2', 'project-tool']);
+        expect(groupRows()).toEqual(['folder-w1', 'project-app', 'project-lib', 'folder-w2', 'project-tool', 'transitive']);
     });
 
     it('collapsing a folder group row hides its projects and packages; a project name repeated gets its own group row', async () => {
@@ -77,11 +77,11 @@ describe('main panel: All Projects', () => {
         const D = '/w1/Other/App.csproj';
         const E = '/w1/Third/App.csproj';
         await mountAll([...PROJECTS, { name: 'App', path: D, workspaceFolder: 'w1' }, { name: 'App', path: E, workspaceFolder: 'w1' }]);
-        expect(groupRows()).toEqual(['folder-w1', 'project-app', 'project-lib', 'project-w1/app', `project-${E.toLowerCase()}`, 'folder-w2', 'project-tool']);
+        expect(groupRows()).toEqual(['folder-w1', 'project-app', 'project-lib', 'project-w1/app', `project-${E.toLowerCase()}`, 'folder-w2', 'project-tool', 'transitive']);
         (treeitem('group-row-folder-w1') as HTMLElement).focus();
         await user.keyboard('{Enter}');
         expect(treeitem('group-row-folder-w1')).toHaveAttribute('aria-expanded', 'false');
-        expect(groupRows()).toEqual(['folder-w1', 'folder-w2', 'project-tool']);
+        expect(groupRows()).toEqual(['folder-w1', 'folder-w2', 'project-tool', 'transitive']);
         expect(within(screen.getByTestId('installed-list')).getAllByRole('treeitem', { name: /^Serilog/ })).toHaveLength(1);
     });
 
@@ -119,13 +119,13 @@ describe('main panel: All Projects', () => {
         await hostSays(() => host.chunk(stream, { kind: 'project', chunk: transitiveChunk(C, 'Tool', core([])) }));
         await hostSays(() => host.respond(stream, { projectPaths: [A, B, C], errored: [] }));
 
-        const row = within(screen.getByTestId('transitive-list')).getByTestId('package-row-serilog.core');
+        const row = screen.getByTestId('package-row-serilog.core');
         expect(row.querySelector('.nuiget-row-badges')).toHaveTextContent('3 projects');
         const asks = host.requests('transitive/metadata').filter(request => request.payload.packages.some(entry => entry.id === 'Serilog.Core'));
         expect(asks.map(request => request.payload)).toEqual([{ packages: [{ id: 'Serilog.Core', version: '1.0.0' }] }]);
         await hostSays(() => host.respond(asks[0], { metadata: [{ id: 'Serilog.Core', version: '1.0.0', iconUrl: 'data:image/png;base64,AAAA', authors: 'Serilog Contributors', verified: true }] }));
         expect(row.querySelector('.nuiget-row-icon img')).toHaveAttribute('src', 'data:image/png;base64,AAAA');
-        const option = within(row).getByRole('option');
+        const option = within(row).getByRole('treeitem');
         expect(option).toHaveAccessibleDescription(/Verified/);
 
         await user.click(option);
@@ -148,12 +148,12 @@ describe('main panel: All Projects', () => {
         expect(treeitem('group-row-project-app')).toHaveAttribute('aria-level', '1');
     });
 
-    it('the transitive section aggregates every project once opened, and offers Restore for the projects not restored', async () => {
+    it('the Transitive group row aggregates every project once expanded, and the banner above the tree offers Restore for the projects not restored', async () => {
         const user = userEvent.setup();
         const host = await mountAll(PROJECTS.slice(0, 2));
         expect(host.requests('allProjects/transitive')).toHaveLength(0);
-        // One scroller: the aggregate follows the project sections (P9.fix-2).
-        expect(screen.getByTestId('transitive-section').closest('.nuiget-installed-lists')).not.toBeNull();
+        // One tree: the aggregate's group row follows the project group rows (P9.fix-2, D48).
+        expect(groupRows()).toEqual(['project-app', 'project-lib', 'transitive']);
 
         await user.click(screen.getByTestId('section-header-transitive'));
         const stream = host.requests('allProjects/transitive')[0];
@@ -161,10 +161,12 @@ describe('main panel: All Projects', () => {
         await hostSays(() => host.chunk(stream, { kind: 'project', chunk: transitiveChunk(B, 'Lib', [], false) }));
         await hostSays(() => host.respond(stream, { projectPaths: [A, B], errored: [] }));
 
-        const list = screen.getByTestId('transitive-list');
-        expect(within(list).getAllByRole('option')).toHaveLength(1);
-        expect(within(list).getByRole('option')).toHaveAccessibleDescription(/App: required by Serilog/);
+        const rows = screen.getByTestId('installed-list').querySelectorAll('[data-testid="group-row-transitive"] ~ .nuiget-row:not([data-row-kind="group"]) .nuiget-row-option');
+        expect(rows).toHaveLength(1);
+        expect(rows[0]).toHaveAccessibleDescription(/App: required by Serilog/);
         expect(screen.getByTestId('transitive-restore-banner')).toHaveTextContent('Not restored, so their transitive packages are not known: Lib.');
+        expect(screen.getByTestId('installed-list').contains(screen.getByTestId('transitive-restore-banner'))).toBe(false);
+        expect(screen.getByTestId('transitive-restore-banner').compareDocumentPosition(screen.getByTestId('installed-list')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
         await user.click(within(screen.getByTestId('transitive-restore-banner')).getByRole('button', { name: 'Restore' }));
         expect(host.requests('ops/restore').map(request => request.payload)).toEqual([{ projectPaths: [B] }]);
 
@@ -215,7 +217,7 @@ describe('main panel: All Projects', () => {
         expect(screen.queryByText('No packages installed.')).toBeNull();
     });
 
-    it('has no axe violations with folders and the transitive section open', async () => {
+    it('has no axe violations with folders and the Transitive group row expanded', async () => {
         const user = userEvent.setup();
         const host = await mountAll();
         await user.click(screen.getByTestId('section-header-transitive'));

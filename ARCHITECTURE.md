@@ -653,10 +653,10 @@ builds it into `dist/webview.js` and, because the entry imports `../shared/token
   Left and Right expand and collapse a group row, and the list's hint says so. A project's status (count, spinner,
   `Unsupported` and `provisional` badges) is decoration on its group row, through `SectionHeader`'s `content`
   presentation; its messages (the Unsupported sentence, an error with Retry) are `Banner`s above the tree, because a
-  tree owns treeitems only. The transitive section follows the tree until P2.1e. In both modes the tab is one scroll
-  container (`nuiget-installed--sections`, shared with All Projects Updates) where the list is as high as its rows
-  (P9.fix-2); `Listbox` scrolls the active row into view with `scrollIntoView({ block: 'nearest' })`, because such a
-  list cannot scroll itself (N88).
+  tree owns treeitems only. The Transitive group comes last. The tree is the tab's scroller, with real virtualization
+  (UX-P2.1e); a group row past the rendered window is not in the document until the list scrolls to it. A list as high as its rows
+  (All Projects Updates) cannot scroll itself, so `Listbox` scrolls the active row into view with
+  `scrollIntoView({ block: 'nearest' })` (N88).
 - **Rows (P9.3).** A comfortable `Row` per package: the icon from the lite map (`packageIconSrc`: the `data:` URI
   or the bundled default), authors and the Verified mark from the same map, no description (D14); the version
   cell of `versionCell` (`10.* (10.2.0)`, `(run restore)`, `* (always latest: …)`); badges `SDK`, `props`, `CPM`,
@@ -676,12 +676,14 @@ builds it into `dist/webview.js` and, because the entry imports `../shared/token
   of a `partial` batch stays where it is. The shell announces every outcome once, from either surface.
 - **Filter modes.** `@installed <text>` filters by id; `@vulnerable` keeps the rows whose metadata lists
   vulnerabilities, and says that the data is not there yet while no metadata has arrived (empty is not unknown).
-- **Transitive.** Collapsed; the list is prefetched after the installed list, so the header reads
-  `Transitive packages (N)` with the target framework as a badge, or, for several frameworks, one collapsible
-  level-3 header per framework (`section-header-transitive-<tfm>`, `transitive-list-<tfm>`). Comfortable rows with
-  the icon, authors and Verified mark of the lite metadata and no description; a row opens `TransitiveDetails`. A
-  Restore banner (`transitive-restore-banner`) when the assets file is missing. In All Projects the aggregate is
-  asked on expand, its rows carry an `N projects` badge whose title names each project's roots.
+- **Transitive.** A collapsed level-1 `transitive` group row after every other group; the list is prefetched after the
+  installed list, so the row reads `Transitive packages (N)` with the target framework as a badge, or, for several
+  frameworks, holds a level-2 `transitive-<tfm>` group row per framework. `TransitiveSection.tsx` and
+  `AllProjectsTransitiveSection.tsx` build these rows and their messages for `InstalledTab`; the aggregation is in
+  `transitiveAggregate.ts`. Comfortable rows with the icon, authors and Verified mark of the lite metadata, no description
+  and a muted check mark (a transitive row is current, never selected); a row opens `TransitiveDetails`. A Restore banner
+  (`transitive-restore-banner`) above the tree when the assets file is missing. In All Projects the aggregate is asked on
+  expand, its rows carry an `N projects` badge whose title names each project's roots.
 
 ### Updates feature (main and sidebar)
 
@@ -825,7 +827,7 @@ With All Projects committed, the Installed and Updates tabs show one section per
 `shared/allProjects/folderGroups.tsx` under a heading per workspace folder when there are two or more (sections one
 heading level down). An unsupported project keeps its section in its folder with an `Unsupported` badge and the banner
 "Unsupported project: <message>"; a project whose SDK is below 10 lists its packages read-only (D13), the other reasons
-have no packages and show no list. The Installed tab's transitive section aggregates `allProjects/transitive` on
+have no packages and show no list. The Installed tab's Transitive group row aggregates `allProjects/transitive` on
 expand: one row per lower-cased id and version, with each project's top-level roots ("no traceable top-level package"
 for none) and Restore for the projects not restored. In the details pane an installed or update row changes its own
 project; a search result offers Install…, whose dialog (`MultiInstallDialog`) shows where the package is installed and

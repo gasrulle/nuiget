@@ -93,7 +93,9 @@ describe('2.0 main panel: All Projects', () => {
         expect(ids).to.have.length(2);
         expect(ids.some(id => id.toLowerCase().includes('utility'))).to.equal(true);
         expect(ids.some(id => id.toLowerCase().includes('testproject'))).to.equal(true);
-        expect(await (await findByTestId('section-header-transitive')).getAttribute('aria-expanded')).to.equal('false');
+        await driverOf().executeScript('document.querySelector(\'[data-testid="installed-list"]\').scrollTop = 1e9;');
+        await findByTestId('section-header-transitive', 30_000);
+        expect(await driverOf().executeScript<string>('return document.querySelector(\'[data-testid="group-row-transitive"] [role="treeitem"]\').getAttribute("aria-expanded");')).to.equal('false');
         await screenshot('main-installed-all');
     });
 });

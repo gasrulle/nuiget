@@ -204,30 +204,16 @@ body {
 }
 
 /*
- * The Installed tab and All Projects Updates: one scroll container for every section, and every list as high as its
- * rows. The list is not its own scroll element then, so the virtualizer renders all of its rows, as the 1.x panel did,
- * and the transitive sections follow the last direct row (P9.fix-2). The Updates tab of one project keeps its list
- * scrolling on its own.
+ * All Projects Updates: one scroll container for every section, and every list as high as its rows. The list is not its
+ * own scroll element then, so the virtualizer renders all of its rows (P9.fix-2). The Updates tab of one project keeps
+ * its list scrolling on its own.
  */
 .nuiget-installed--sections .nuiget-installed-lists {
     overflow: auto;
 }
 
 .nuiget-installed--sections .nuiget-installed-project,
-.nuiget-installed--sections .nuiget-installed-project-content,
-.nuiget-installed--sections .nuiget-listbox {
-    flex: none;
-    overflow: visible;
-}
-
-/* Transitive packages: after the direct rows, in the same scroller; the last direct row's own line separates them. */
-.nuiget-transitive {
-    display: flex;
-    flex: none;
-    flex-direction: column;
-}
-
-.nuiget-transitive .nuiget-listbox {
+.nuiget-installed--sections .nuiget-installed-project-content {
     flex: none;
     overflow: visible;
 }

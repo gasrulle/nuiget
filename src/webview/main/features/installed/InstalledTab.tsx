@@ -5,54 +5,31 @@ import { whyNotRemovable } from '../../../shared/installed/rules';
 import { Banner, EmptyState, Listbox, SectionHeader, Skeleton, Toolbar, type ListboxGroups } from '../../../shared/primitives';
 import { useBulkSelection } from '../../../shared/selection/useBulkSelection';
 import { useAllProjects } from '../../../shared/store/allProjects';
-import { useDetails, useDetailsActions, type DetailsSelection } from '../../../shared/store/details';
+import { useDetails, useDetailsActions } from '../../../shared/store/details';
 import { useInstalled } from '../../../shared/store/installed';
 import { useOps, useOpsActions } from '../../../shared/store/ops';
 import { useProjects } from '../../../shared/store/projects';
 import { useSession } from '../../../shared/store/session';
+import { metadataKey, useTransitive } from '../../../shared/store/transitive';
 import type { ListView } from '../../MainShell';
 import { groupByFolder } from '../../../shared/allProjects/folderGroups';
 import { BulkUninstallDialog, type Removal } from './BulkUninstallDialog';
 import { directTitle, InstalledRow, statusBadges, visibleRows } from './InstalledProjectSection';
-import { TransitiveSection } from './TransitiveSection';
-import { AllProjectsTransitiveSection } from './AllProjectsTransitiveSection';
-
-/** What a section of the tab shows: one project's list, from the installed slice or from an All Projects chunk. */
-interface Section {
-    projectPath: string;
-    projectName: string;
-    /** The workspace folder of the project, in All Projects. */
-    workspaceFolder?: string;
-    result: InstalledResult | undefined;
-    status: 'idle' | 'loading' | 'ready' | 'error';
-    error: string | undefined;
-    metadata: ReadonlyMap<string, PackageMetadataLite>;
-    revalidating: boolean;
-    onRetry: () => void;
-}
+import { parseRowId, rowId, type Section, type TreeItem } from './installedTree';
+import { transitiveGroupContent, transitiveRow, transitiveTree } from './TransitiveSection';
+import { allProjectsTransitiveGroupContent, allProjectsTransitiveTree } from './AllProjectsTransitiveSection';
 
 const NO_METADATA: ReadonlyMap<string, PackageMetadataLite> = new Map();
 const NOT_COLLAPSED: ReadonlySet<string> = new Set();
 
-/** A row of the tab's one tree (D48, ADR-013 Decision 8): a group, or a package of a project. */
-type TreeItem =
-    | { kind: 'group'; id: string; level: number; title: string; section?: Section; variant: 'group' | 'level' }
-    | { kind: 'package'; id: string; section: Section; result: InstalledResult; entry: InstalledPackage };
-
 const HINT = 'Space selects the package for a bulk action. Enter shows its details. Delete uninstalls it. Shift+F10 opens the actions menu. On a group row, Enter, Left and Right expand and collapse it.';
 
-/** A package's row id: unique across projects, whose paths and ids cannot hold a line break. */
-const rowId = (projectPath: string, packageId: string): string => `${projectPath}\n${packageId}`;
-const parseRowId = (id: string): { projectPath: string; packageId: string } => {
-    const at = id.lastIndexOf('\n');
-    return { projectPath: id.slice(0, at), packageId: id.slice(at + 1) };
-};
 const nameOf = (projectPath: string): string => projectPath.split(/[\\/]/).pop()?.replace(/\.[^.]+$/, '') ?? projectPath;
 
 /**
- * The Installed tab of the main panel: one tree (D48) of the selected project's packages under its group row, or under a
- * group row per project in All Projects, with the bulk toolbar over it and the transitive packages under it. A project's
- * status is on its group row; its messages sit above the tree, which owns treeitems only. The
+ * The Installed tab of the main panel: one tree (D48), the tab's scroller, of the selected project's packages under its
+ * group row, or under a group row per project in All Projects, then the Transitive group, with the bulk toolbar over it. A
+ * group's status is on its row; messages sit above the tree, which owns treeitems only. The
  * current row (`aria-current`) is the one whose details are shown; the rows selected for a bulk action are
  * `aria-selected`. Nothing is removed from a list here: a row is busy from the request on (ops slice) and leaves
  * when the host's next list no longer has it.
@@ -60,13 +37,16 @@ const nameOf = (projectPath: string): string => projectPath.split(/[\\/]/).pop()
 export function InstalledTab({ filter, vulnerableOnly, announce }: ListView): React.JSX.Element {
     const { committed } = useSession();
     const installed = useInstalled();
+    const transitive = useTransitive();
     const all = useAllProjects();
     const { projects } = useProjects();
     const { isPackageBusy } = useOps();
     const { run } = useOpsActions();
     const { select } = useDetailsActions();
-    const [current, setCurrent] = useState<{ projectPath: string; id: string } | null>(null);
+    // The current row, as its id in the tree.
+    const [current, setCurrent] = useState<string | null>(null);
     const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(NOT_COLLAPSED);
+    const [transitiveOpen, setTransitiveOpen] = useState(false);
     const [confirming, setConfirming] = useState(false);
 
     const selection = committed?.selectedProject;
@@ -74,17 +54,9 @@ export function InstalledTab({ filter, vulnerableOnly, announce }: ListView): Re
     // Another selection starts with nothing selected and no dialog.
     useEffect(() => {
         setCurrent(null);
+        setTransitiveOpen(false);
         setConfirming(false);
     }, [selection]);
-    // A selection of this tab that comes back (the tab shown again) makes its row current again.
-    const detailsSelection = useDetails().selection;
-    useEffect(() => {
-        if (detailsSelection?.origin === 'installed' && detailsSelection.projectPath !== null) {
-            const { projectPath, packageId } = detailsSelection;
-            setCurrent(previous => (previous?.projectPath === projectPath && previous.id === packageId ? previous : { projectPath, id: packageId }));
-        }
-    }, [detailsSelection]);
-
     const sections = useMemo((): Section[] => {
         if (allMode) {
             const listed: ReadonlyArray<{ name: string; path: string; workspaceFolder?: string }> = all.projects ?? [...all.chunks.values()].map(chunk => ({ name: chunk.projectName, path: chunk.projectPath, workspaceFolder: chunk.workspaceFolder }));
@@ -175,15 +147,21 @@ export function InstalledTab({ filter, vulnerableOnly, announce }: ListView): Re
 
     // The details pane follows the row the user made current.
     const makeCurrent = (section: Section, entry: InstalledPackage): void => {
-        setCurrent({ projectPath: section.projectPath, id: entry.id });
+        setCurrent(rowId(section.projectPath, entry.id));
         select({ packageId: entry.id, version: entry.resolvedVersion ?? entry.version, origin: 'installed', projectPath: section.projectPath, known: { verified: section.metadata.get(entry.id.toLowerCase())?.verified } });
     };
 
-    // A transitive row made current: no direct row stays current, and the details show the transitive view.
-    const showTransitive = (transitiveSelection: DetailsSelection): void => {
-        setCurrent(null);
-        select(transitiveSelection);
+    // A transitive row made current: the details show the read-only transitive view.
+    const makeTransitiveCurrent = (item: Extract<TreeItem, { kind: 'transitive' }>): void => {
+        setCurrent(item.id);
+        select({ packageId: item.entry.id, version: item.entry.version, origin: 'transitive', projectPath: item.scope.projectPath });
     };
+
+    const transitiveExpanded = transitiveOpen && (allMode ? all.transitive.enabled : transitive.enabled);
+    const transitivePart = useMemo(
+        () => (allMode ? allProjectsTransitiveTree(all, transitiveExpanded, projectPaths => { run('ops/restore', { projectPaths }).catch(() => undefined); }) : transitiveTree(transitive, transitiveExpanded, collapsed)),
+        [allMode, all, transitive, transitiveExpanded, collapsed, run],
+    );
 
     const items = useMemo((): TreeItem[] => {
         const list: TreeItem[] = [];
@@ -206,6 +184,7 @@ export function InstalledTab({ filter, vulnerableOnly, announce }: ListView): Re
                 list.push({ kind: 'group', id: 'direct', level: 1, title, section, variant: 'group' });
                 packagesOf(section, 'direct');
             }
+            list.push(...transitivePart.items);
             return list;
         }
         const seen = new Set<string>();
@@ -220,6 +199,7 @@ export function InstalledTab({ filter, vulnerableOnly, announce }: ListView): Re
         const folders = groupByFolder(sections);
         if (folders.length < 2) {
             sections.forEach(section => project(section, 1, undefined));
+            list.push(...transitivePart.items);
             return list;
         }
         for (const [folder, members] of folders) {
@@ -229,25 +209,58 @@ export function InstalledTab({ filter, vulnerableOnly, announce }: ListView): Re
                 members.forEach(section => project(section, 2, folder));
             }
         }
+        list.push(...transitivePart.items);
         return list;
-    }, [allMode, sections, collapsed, filter, vulnerableOnly]);
+    }, [allMode, sections, collapsed, filter, vulnerableOnly, transitivePart.items]);
 
+    // A selection of this tab that comes back (the tab shown again) makes its row current again.
+    const detailsSelection = useDetails().selection;
+    useEffect(() => {
+        if (detailsSelection?.origin === 'installed' && detailsSelection.projectPath !== null) {
+            setCurrent(rowId(detailsSelection.projectPath, detailsSelection.packageId));
+        } else if (detailsSelection?.origin === 'transitive') {
+            const key = metadataKey(detailsSelection.packageId, detailsSelection.version);
+            setCurrent(previous => {
+                const isTransitive = (item: TreeItem | undefined): boolean => item?.kind === 'transitive' && item.key === key;
+                return isTransitive(items.find(item => item.id === previous)) ? previous : items.find(isTransitive)?.id ?? previous;
+            });
+        }
+    }, [detailsSelection, items]);
+
+    const { enableTransitive: enableAllTransitive } = all;
+    const { enable: enableTransitive } = transitive;
     const groups = useMemo((): ListboxGroups<TreeItem> => ({
         is: item => item.kind === 'group',
         level: item => (item.kind === 'group' ? item.level : 1),
-        isExpanded: item => !collapsed.has(item.id),
-        onToggle: (item, expanded) => setCollapsed(previous => {
-            const next = new Set(previous);
-            if (expanded) {
-                next.delete(item.id);
-            } else {
-                next.add(item.id);
+        isExpanded: item => (item.id === 'transitive' ? transitiveExpanded : !collapsed.has(item.id)),
+        onToggle: (item, expanded) => {
+            if (item.id === 'transitive') {
+                if (expanded) {
+                    if (allMode) {
+                        enableAllTransitive();
+                    } else {
+                        enableTransitive();
+                    }
+                }
+                setTransitiveOpen(expanded);
+                return;
             }
-            return next;
-        }),
+            setCollapsed(previous => {
+                const next = new Set(previous);
+                if (expanded) {
+                    next.delete(item.id);
+                } else {
+                    next.add(item.id);
+                }
+                return next;
+            });
+        },
         render: (item, placement) => {
             if (item.kind !== 'group') {
                 return null;
+            }
+            if (item.id === 'transitive' || item.id.startsWith('transitive-')) {
+                return allMode ? allProjectsTransitiveGroupContent(item, placement, all) : transitiveGroupContent(item, placement, transitive);
             }
             const { section } = item;
             const result = section?.result;
@@ -265,7 +278,7 @@ export function InstalledTab({ filter, vulnerableOnly, announce }: ListView): Re
                 />
             );
         },
-    }), [allMode, collapsed]);
+    }), [allMode, all, collapsed, enableAllTransitive, enableTransitive, transitive, transitiveExpanded]);
 
     let body: React.ReactNode;
     if (sections.length === 0) {
@@ -286,7 +299,9 @@ export function InstalledTab({ filter, vulnerableOnly, announce }: ListView): Re
                         {failed(section) ? <Banner severity="error" action={{ label: 'Retry', onClick: section.onRetry }}>{`Installed packages of ${section.projectName} could not be loaded: ${section.error ?? 'unknown error'}`}</Banner> : null}
                     </Fragment>
                 ))}
-                <div className="nuiget-installed-project-content">
+                {single && open && single.result === undefined && !failed(single) ? <Skeleton density="comfortable" /> : null}
+                {open && listed && shown?.items.length === 0 ? <EmptyState message={shown.empty} /> : null}
+                {transitivePart.message}
                 <Listbox
                     items={items}
                     groups={groups}
@@ -295,26 +310,50 @@ export function InstalledTab({ filter, vulnerableOnly, announce }: ListView): Re
                     testId="installed-list"
                     density="comfortable"
                     busy={sections.some(section => section.revalidating)}
-                    selectedId={current ? rowId(current.projectPath, current.id) : null}
+                    selectedId={current}
                     selectedIds={bulk.selected}
                     isDisabled={item => item.kind === 'package' && item.entry.declaration === 'unresolved'}
-                    onToggleSelected={item => { if (item.kind === 'package') { toggle(item.section, item.entry); } }}
-                    onSelect={item => { if (item.kind === 'package') { makeCurrent(item.section, item.entry); } }}
-                    onActivate={item => { if (item.kind === 'package') { makeCurrent(item.section, item.entry); } }}
-                    onDelete={item => { if (item.kind === 'package') { uninstall(item.section, item.entry); } }}
-                    renderRow={(item, placement) => (item.kind === 'package'
-                        ? <InstalledRow placement={placement} projectPath={item.section.projectPath} entry={item.entry} result={item.result} metadata={item.section.metadata} onUninstall={entry => uninstall(item.section, entry)} />
-                        : null)}
+                    onToggleSelected={item => {
+                        if (item.kind === 'package') {
+                            toggle(item.section, item.entry);
+                        } else if (item.kind === 'transitive') {
+                            announce('Transitive packages cannot be selected: they come with the packages that require them.');
+                        }
+                    }}
+                    onSelect={item => {
+                        if (item.kind === 'package') {
+                            makeCurrent(item.section, item.entry);
+                        } else if (item.kind === 'transitive') {
+                            makeTransitiveCurrent(item);
+                        }
+                    }}
+                    onActivate={item => {
+                        if (item.kind === 'package') {
+                            makeCurrent(item.section, item.entry);
+                        } else if (item.kind === 'transitive') {
+                            makeTransitiveCurrent(item);
+                        }
+                    }}
+                    onDelete={item => {
+                        if (item.kind === 'package') {
+                            uninstall(item.section, item.entry);
+                        } else if (item.kind === 'transitive') {
+                            announce('Transitive packages cannot be uninstalled: uninstall the package that requires them.');
+                        }
+                    }}
+                    renderRow={(item, placement) => {
+                        if (item.kind === 'package') {
+                            return <InstalledRow placement={placement} projectPath={item.section.projectPath} entry={item.entry} result={item.result} metadata={item.section.metadata} onUninstall={entry => uninstall(item.section, entry)} />;
+                        }
+                        return item.kind === 'transitive' ? transitiveRow(item.entry, (allMode ? all.transitive.metadata : transitive.metadata).get(item.key), placement, item.badges) : null;
+                    }}
                 />
-                </div>
-                {single && open && single.result === undefined && !failed(single) ? <Skeleton density="comfortable" /> : null}
-                {open && listed && shown?.items.length === 0 ? <EmptyState message={shown.empty} /> : null}
             </>
         );
     }
 
     return (
-        <div className="nuiget-installed nuiget-installed--sections">
+        <div className="nuiget-installed">
             <Toolbar label="Bulk actions" data-testid="installed-toolbar">
                 <button type="button" className="nuiget-button nuiget-button--secondary" data-testid="select-all-button" aria-pressed={allSelected} disabled={candidateCount === 0} onClick={selectAll}>
                     Select all
@@ -323,10 +362,9 @@ export function InstalledTab({ filter, vulnerableOnly, announce }: ListView): Re
                     {`Uninstall selected (${count})`}
                 </button>
             </Toolbar>
-            {/* One scroller: the transitive packages follow the direct rows, as in 1.x (P9.fix-2). */}
+            {/* The tree is the tab's scroller (D48, UX-P2.1e). */}
             <div className="nuiget-installed-lists">
                 {body}
-                {allMode ? <AllProjectsTransitiveSection onCurrent={showTransitive} /> : <TransitiveSection onCurrent={showTransitive} />}
             </div>
             <BulkUninstallDialog open={confirming && count > 0} removals={removals} onConfirm={confirm} onCancel={() => setConfirming(false)} />
         </div>

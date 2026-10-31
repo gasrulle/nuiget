@@ -174,7 +174,7 @@ describe('the accessibility harness (UX-P0.23)', () => {
         expect(KEYS_PENDING).toEqual({ 'main-updates rows Enter': 'P4.2a', 'sidebar rows Enter': 'P4.2b', ...Object.fromEntries(bridge) });
         expect(KEYS_AWAITING_ARIA).toEqual({});
         expect(Object.entries(KEYS_EXPECTED).map(([screen, stops]) => `${screen} ${stops?.length} ${stops?.[0]}`)).toEqual([
-            'main-installed 6 combobox "Search packages, or filter with @installed, @updates or @vulnerable" {search-input}',
+            'main-installed 5 combobox "Search packages, or filter with @installed, @updates or @vulnerable" {search-input}',
             'main-updates 5 combobox "Search packages, or filter with @installed, @updates or @vulnerable" {search-input}',
             'main-browse 3 combobox "Search packages, or filter with @installed, @updates or @vulnerable" {search-input}',
             'sidebar 7 combobox "Search packages, or filter with @installed or @updates" {sidebar-search-input}',

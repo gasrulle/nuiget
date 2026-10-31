@@ -255,15 +255,15 @@ project has several and one block per project in All Projects; no version select
 | `project-selector`, `source-selector` | Header selectors (main) |
 | `refresh-button` | The header's Refresh button (main): a workspace rescan |
 | `tab-bar`, `installed-tab`, `updates-tab` | Main tabs |
-| `installed-list`, `updates-list`, `browse-list`, `sidebar-installed-list`, `sidebar-updates-list`, `sidebar-browse-list`, `transitive-list`, `transitive-list-<tfm>` | Lists (a grouped list, such as the main panel's Installed list, is a tree) |
+| `installed-list`, `updates-list`, `browse-list`, `sidebar-installed-list`, `sidebar-updates-list`, `sidebar-browse-list` | Lists (a grouped list, such as the main panel's Installed list, is a tree) |
 | `package-row-<id>` | A row (id lower-cased): the wrapper around the option and its pointer actions; the option is the `role="option"`, or in a tree the `role="treeitem"`, inside it (read `aria-selected` there; in a multi-selectable list `aria-current` marks the current row) |
 | `row-action-<name>` | A pointer action button inside a row (`install`, `update`, `uninstall`); hidden from assistive technology, mirrored by the keys of §5 |
 | `section-header-<name>` | The toggle button of a collapsible section (`installed`, `updates`, `transitive`); in a group row, the same hook on the row's title, named by the group's id |
-| `section-header-transitive-<tfm>` | The toggle of one target framework's transitive packages (a project with several) |
+| `section-header-transitive-<tfm>` | The title of one target framework's group row under Transitive (a project with several) |
 | `package-details-panel`, `details-tab-details`, `details-tab-readme`, `readme-content`, `readme-empty`, `transitive-details` | Details panel |
 | `version-selector`, `install-update-button`, `uninstall-button` | Details actions |
 | `select-all-button`, `update-all-button`, `uninstall-selected-button` | Bulk toolbar |
-| `transitive-section`, `transitive-restore-banner` | Transitive |
+| `transitive-restore-banner` | Transitive |
 | `source-settings`, `source-settings-modal`, `add-source-panel`, `source-row-<name>`, `source-health-indicator` | Sources (`<name>` = source name lower-cased; the indicator shows while a source is unreachable) |
 | `confirm-dialog`, `confirm-dialog-confirm`, `confirm-dialog-cancel` | Dialog primitive |
 | `status-live` | `role="status"` live region |
@@ -288,7 +288,7 @@ All Projects (§3; `<name>` = project name lower-cased):
 | Test id | Element |
 |---|---|
 | `updates-list-<name>` | A project's list in the main panel |
-| `group-row-<id>` | The wrapper of a group row in a grouped list; the id is the group's: direct, project-<name>, folder-<folder> (P2.1e adds the transitive groups) |
+| `group-row-<id>` | The wrapper of a group row in a grouped list; the id is the group's: direct, project-<name>, folder-<folder>, transitive, transitive-<tfm> |
 | `sidebar-installed-list-<name>`, `sidebar-updates-list-<name>` | A project's list in the sidebar |
 | `sidebar-update-all-button` | Update all in the sidebar's Updates header |
 | `section-header-project-<name>`, `section-header-updates-<name>` | The title of a project's group row (Installed); the toggle of a project's section (Updates) |
@@ -339,6 +339,6 @@ of the tables above, `installed-list-<name>`, `updates-list-<name>` and `sidebar
 (`sidebar-installed-list-<name>`, `sidebar-updates-list-<name>`), no longer name listboxes: they become the ids of the
 projects' group rows inside the view's one listbox. Plan item P2.1f, which builds the grouped list, moves those rows
 in the same change, together with the ExTester tests that read them. `transitive-list` and `transitive-list-<tfm>`
-follow the same rule for the Transitive group row and its target-framework group rows. The `section-header-<name>`
+left at UX-P2.1e for the Transitive group row and its target-framework group rows. The `section-header-<name>`
 toggles of the same groups and the `section-box-<name>` hook of this table describe the same group rows; P2.1f
 reconciles the three in that change.

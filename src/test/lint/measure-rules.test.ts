@@ -80,7 +80,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(scopes('DS-HEIGHT-11')).toEqual({ 'main-installed': { pending: 'P2.8b' }, 'main-updates': { pending: 'P3.10' }, browse: { pending: 'P3.10' }, details: { pending: 'P3.10' }, sidebar: { pending: 'P3.10' } });
         // UX-P0.12: PF-2, PF-3a and PF-4 where P9.fix-2, -3 and -4 measured; MS-8 hard for chrome (Appendix B).
         expect(scopes('PF-2')).toEqual({ 'main-installed': 'hard' });
-        expect(RULES.find(rule => rule.id === 'PF-2')?.states).toEqual(['main-installed-single']);
+        expect(RULES.find(rule => rule.id === 'PF-2')?.states).toEqual(['main-transitive-expanded']);
         expect(scopes('PF-3a')).toEqual({ 'main-installed': 'hard' });
         expect(RULES.find(rule => rule.id === 'PF-3a')).toMatchObject({ states: ['main-installed-single'], widths: [1200] });
         expect(scopes('PF-4')).toEqual({ 'main-installed': 'hard', 'main-updates': 'hard' });
@@ -337,12 +337,12 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
 
     it('holds PF-2 to P9.fix-2\'s one scroller and at most two block gaps under the last direct row', () => {
         const gap = (headerTop: number, sameScroller = true) => layout({ transitiveGap: { lastRowBottom: 308, headerTop, sameScroller } });
-        expect(lineOf('main-installed-single', gap(308), 'PF-2@main-installed-single')).toMatchObject({ pass: true, status: 'hard', value: 'gap 0 (at most 16; last direct row 308, transitive header 308, one scroller)' });
-        expect(lineOf('main-installed-single', gap(324), 'PF-2@main-installed-single')).toMatchObject({ pass: true });
-        expect(lineOf('main-installed-single', gap(325), 'PF-2@main-installed-single')).toMatchObject({ pass: false });
-        expect(lineOf('main-installed-single', gap(306), 'PF-2@main-installed-single')).toMatchObject({ pass: false });
-        expect(lineOf('main-installed-single', gap(308, false), 'PF-2@main-installed-single')).toMatchObject({ pass: false });
-        expect(lineOf('main-installed-single', layout(), 'PF-2@main-installed-single')).toMatchObject({ pass: false, value: 'not measurable (no direct row or transitive header)' });
+        expect(lineOf('main-transitive-expanded', gap(308), 'PF-2@main-transitive-expanded')).toMatchObject({ pass: true, status: 'hard', value: 'gap 0 (at most 16; last direct row 308, transitive header 308, one scroller)' });
+        expect(lineOf('main-transitive-expanded', gap(324), 'PF-2@main-transitive-expanded')).toMatchObject({ pass: true });
+        expect(lineOf('main-transitive-expanded', gap(325), 'PF-2@main-transitive-expanded')).toMatchObject({ pass: false });
+        expect(lineOf('main-transitive-expanded', gap(306), 'PF-2@main-transitive-expanded')).toMatchObject({ pass: false });
+        expect(lineOf('main-transitive-expanded', gap(308, false), 'PF-2@main-transitive-expanded')).toMatchObject({ pass: false });
+        expect(lineOf('main-transitive-expanded', layout(), 'PF-2@main-transitive-expanded')).toMatchObject({ pass: false, value: 'not measurable (no direct row or transitive header)' });
     });
 
     it('holds PF-3a to authors that are not cut, at the 1200 px panel only', () => {

@@ -127,7 +127,7 @@ A Visual Studio-style NuGet package manager for VS Code with a modern split-pane
 | `↑` / `↓` | Move to the previous or next row |
 | `Home` / `End` | Jump to the first or last row |
 | `Enter` | Main panel: show the details (Installed, search results) or update the package (Updates). Sidebar: the row's action (Uninstall in Installed, Update in Updates, Install in search results); on a centrally managed update, or a search result with a central entry, it opens the actions menu |
-| `Enter`, `←` / `→` on a group row | Main panel: expand or collapse the group (Direct packages) |
+| `Enter`, `←` / `→` on a group row | Main panel: expand or collapse the group (Direct packages, Transitive packages and a target framework inside it, a project under All Projects) |
 | `Ctrl+Enter` (`Cmd+Enter` on macOS) | Main panel: install the search result into the selected project. Sidebar: open the package in the main panel |
 | `Delete` (`Cmd+Backspace` on macOS) | Uninstall (Installed lists) |
 | `Space` | Main panel: select the row for a bulk action, or clear it |
@@ -240,7 +240,7 @@ See [Microsoft's security best practices](https://learn.microsoft.com/en-us/nuge
 | "Unsupported project" | nUIget manages SDK-style projects with `PackageReference`. `packages.config` and non-SDK-style projects are listed as unsupported. |
 | An install or update is refused because of unsaved changes | Save or close the project file or `Directory.Packages.props` in the editor. |
 | A version shows "unresolved" | nUIget could not determine the version from the project files. Edit that reference by hand. |
-| Transitive packages are missing | Click **Restore** in the banner of the transitive section; the project has not been restored. |
+| Transitive packages are missing | Expand **Transitive packages** and click **Restore** in the banner above the list; the project has not been restored. |
 | Sidebar not showing | It appears only when the workspace contains a `.csproj`, `.fsproj` or `.vbproj` file. |
 | Nothing happens at all | nUIget does not run in Restricted Mode or in a virtual workspace. Trust the workspace and open it from disk. |
 

@@ -47,6 +47,9 @@ const names = (): string[] => {
     const list = screen.queryByTestId('installed-list');
     return list === null ? [] : [...list.querySelectorAll('.nuiget-row-option')].map(element => element.querySelector('.nuiget-row-name')?.textContent ?? '');
 };
+/** The rows under the Transitive group row, its last level-1 group. */
+const transitiveRows = (): HTMLElement[] => [...screen.getByTestId('installed-list').querySelectorAll<HTMLElement>('[data-testid="group-row-transitive"] ~ .nuiget-row:not([data-row-kind="group"]) .nuiget-row-option')];
+const groupItem = (id: string): HTMLElement => screen.getByTestId(`group-row-${id}`).querySelector('[role="treeitem"]') as HTMLElement;
 const uninstallSelected = (): HTMLElement => screen.getByTestId('uninstall-selected-button');
 const said = (): string => screen.getByTestId('status-live').textContent ?? '';
 
@@ -243,7 +246,7 @@ describe('main panel: Installed tab', () => {
         expect(tree).toHaveAttribute('data-testid', 'installed-list');
         expect(within(tree).getByTestId('group-row-project-app').querySelector('[role="treeitem"]')).toHaveAttribute('aria-level', '1');
         expect(within(tree).getByTestId('group-row-project-lib').querySelector('[role="treeitem"]')).toHaveAttribute('aria-level', '1');
-        expect(screen.getByTestId('section-header-transitive')).toHaveAttribute('aria-expanded', 'false'); expect(host.requests('allProjects/transitive')).toHaveLength(0);
+        expect(groupItem('transitive')).toHaveAttribute('aria-expanded', 'false'); expect(host.requests('allProjects/transitive')).toHaveLength(0);
         await user.click(optionOf('Serilog').querySelector('.nuiget-row-check') as Element);
         await user.click(optionOf('xunit').querySelector('.nuiget-row-check') as Element);
         expect(uninstallSelected()).toHaveTextContent('Uninstall selected (2)');
@@ -256,28 +259,92 @@ describe('main panel: Installed tab', () => {
         }]);
     });
 
-    it('the transitive section asks on first expand, shows the restore banner when the assets file is missing, and Restore asks with forceRestore', async () => {
+    it('the Transitive group row asks on first expand, shows the restore banner above the tree when the assets file is missing, and Restore asks with forceRestore', async () => {
         const user = userEvent.setup();
         const host = await mountWith();
-        const section = screen.getByTestId('transitive-section');
-        // One scroller: the transitive section follows the direct rows (P9.fix-2).
-        expect(section.closest('.nuiget-installed-lists')).not.toBeNull();
+        // One tree: the Transitive group row follows the direct rows (P9.fix-2, D48).
+        expect(screen.getByTestId('installed-list')).toContainElement(screen.getByTestId('group-row-transitive'));
         expect(host.requests('transitive/get')).toHaveLength(0);
-        await user.click(within(section).getByRole('button', { name: /Transitive packages/ }));
+        await user.click(screen.getByTestId('section-header-transitive'));
+        expect(groupItem('transitive')).toHaveAttribute('aria-expanded', 'true');
         expect(host.requests('transitive/get').map(request => request.payload)).toEqual([{ projectPath: A }]);
         const missing: TransitiveResult = { projectPath: A, frameworks: [], dataSourceAvailable: false };
         await hostSays(() => host.respond(host.requests('transitive/get')[0], missing, 1));
         const banner = screen.getByTestId('transitive-restore-banner');
+        expect(screen.getByTestId('installed-list').contains(banner)).toBe(false);
+        expect(banner.compareDocumentPosition(screen.getByTestId('installed-list')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
         await user.click(within(banner).getByRole('button', { name: 'Restore' }));
         expect(host.requests('transitive/get')[1].payload).toEqual({ projectPath: A, forceRestore: true });
         const restored: TransitiveResult = { projectPath: A, dataSourceAvailable: true, frameworks: [{ targetFramework: 'net10.0', packages: [{ id: 'Microsoft.Extensions.Logging', version: '9.0.0', requiredByChain: ['Serilog'] }] }] };
         await hostSays(() => host.respond(host.requests('transitive/get')[1], restored, 2));
         expect(screen.queryByTestId('transitive-restore-banner')).toBeNull();
-        expect(screen.getByRole('listbox', { name: 'Transitive packages' })).toBeInTheDocument();
-        expect(within(screen.getByRole('listbox', { name: 'Transitive packages' })).getByRole('option')).not.toHaveAccessibleDescription(/Required by/);
+        expect(transitiveRows()).toHaveLength(1);
+        expect(transitiveRows()[0]).not.toHaveAccessibleDescription(/Required by/);
         // The metadata request of the rows is answered `unsupported` until the feeds exist: still the rows.
         await hostSays(() => host.fail(host.requests('transitive/metadata')[0], 'unsupported', 'not yet available'));
-        expect(within(screen.getByRole('listbox', { name: 'Transitive packages' })).getAllByRole('option')).toHaveLength(1);
+        expect(transitiveRows()).toHaveLength(1);
+    });
+
+    it('Space and Delete on a transitive row change nothing and the live region says why', async () => {
+        const user = userEvent.setup();
+        const host = await mountWith();
+        await user.click(screen.getByTestId('section-header-transitive'));
+        await hostSays(() => host.respond(host.requests('transitive/get')[0], { projectPath: A, dataSourceAvailable: true, frameworks: [{ targetFramework: 'net8.0', packages: [{ id: 'Core', version: '1.0.0', requiredByChain: ['Serilog'] }] }] }, 1));
+        transitiveRows()[0].focus();
+        await user.keyboard(' ');
+        await waitFor(() => expect(said()).toBe('Transitive packages cannot be selected: they come with the packages that require them.'));
+        expect(uninstallSelected()).toHaveTextContent('Uninstall selected (0)');
+        expect(transitiveRows()[0]).toHaveAttribute('aria-selected', 'false');
+        await user.keyboard('{Delete}');
+        await waitFor(() => expect(said()).toBe('Transitive packages cannot be uninstalled: uninstall the package that requires them.'));
+        expect(host.requests('ops/remove')).toHaveLength(0);
+    });
+
+    it('the transitive messages stand above the tree: a failed read, an unreadable assets file and no packages', async () => {
+        const user = userEvent.setup();
+        const host = await mountWith();
+        await user.click(screen.getByTestId('section-header-transitive'));
+        const aboveTree = (element: HTMLElement): void => {
+            expect(screen.getByTestId('installed-list').contains(element)).toBe(false);
+            expect(element.compareDocumentPosition(screen.getByTestId('installed-list')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+        };
+        await hostSays(() => host.fail(host.requests('transitive/get')[0], 'unsupported', 'broken'));
+        aboveTree(screen.getByText('The transitive packages could not be listed: broken'));
+        await user.click(screen.getByRole('button', { name: 'Retry' }));
+        await hostSays(() => host.respond(host.requests('transitive/get')[1], { projectPath: A, dataSourceAvailable: true, frameworks: [], errorKind: 'parse-failed' }, 2));
+        aboveTree(screen.getByText('The assets file of the project could not be read'));
+        await user.click(screen.getByRole('button', { name: 'Retry' }));
+        await hostSays(() => host.respond(host.requests('transitive/get')[2], { projectPath: A, dataSourceAvailable: true, frameworks: [] }, 3));
+        aboveTree(screen.getByText('No transitive dependencies.'));
+    });
+
+    it('another project closes Transitive, and a transitive selection that comes back is the current row', async () => {
+        const user = userEvent.setup();
+        const host = await mountWith(THREE, true);
+        await user.click(screen.getByTestId('section-header-transitive'));
+        await hostSays(() => host.respond(host.requests('transitive/get')[0], { projectPath: A, dataSourceAvailable: true, frameworks: [{ targetFramework: 'net8.0', packages: [{ id: 'Core', version: '1.0.0', requiredByChain: ['Serilog'] }] }] }, 1));
+        await user.click(transitiveRows()[0]);
+        expect(transitiveRows()[0]).toHaveAttribute('aria-current', 'true');
+        // Collapsed and open again: the rows are new, the selection the same.
+        await user.click(screen.getByTestId('section-header-transitive'));
+        await user.click(screen.getByTestId('section-header-transitive'));
+        expect(transitiveRows()[0]).toHaveAttribute('aria-current', 'true');
+        await hostSays(() => host.event('session/changed', snapshot(2, B)));
+        expect(groupItem('transitive')).toHaveAttribute('aria-expanded', 'false');
+    });
+
+    it('collapsing Transitive keeps what was listed', async () => {
+        const user = userEvent.setup();
+        const host = await mountWith();
+        await user.click(screen.getByTestId('section-header-transitive'));
+        await hostSays(() => host.respond(host.requests('transitive/get')[0], { projectPath: A, dataSourceAvailable: true, frameworks: [{ targetFramework: 'net8.0', packages: [{ id: 'Core', version: '1.0.0', requiredByChain: ['Serilog'] }] }] }, 1));
+        await user.click(screen.getByTestId('section-header-transitive'));
+        expect(groupItem('transitive')).toHaveAttribute('aria-expanded', 'false');
+        expect(transitiveRows()).toHaveLength(0);
+        expect(screen.getByTestId('section-header-transitive')).toHaveTextContent('Transitive packages (1)');
+        await user.click(screen.getByTestId('section-header-transitive'));
+        expect(transitiveRows()).toHaveLength(1);
+        expect(host.requests('transitive/get')).toHaveLength(1);
     });
 
     it('@vulnerable shows the vulnerable rows, or says that the data is not there yet', async () => {
@@ -377,7 +444,7 @@ describe('main panel: Installed tab', () => {
         expect(screen.getByRole('treeitem', { name: 'Ranged [1,2) (run restore)' })).toHaveAccessibleDescription(/Version range/);
     });
 
-    it('transitive row opens details with required-by', async () => {
+    it('a transitive row under its framework group opens the read-only details with Required by and is current, not selected', async () => {
         const user = userEvent.setup();
         const host = await mountWith(THREE, true);
         await user.click(screen.getByTestId('section-header-transitive'));
@@ -389,15 +456,18 @@ describe('main panel: Installed tab', () => {
         // The installed rows ask their own metadata too: answer the ask of the transitive rows.
         const ask = host.requests('transitive/metadata').find(request => request.payload.packages.some(entry => entry.id === 'Microsoft.Extensions.Logging'))!;
         await hostSays(() => host.respond(ask, { metadata: [{ id: 'Microsoft.Extensions.Logging', version: '9.0.0', iconUrl: 'data:image/png;base64,AAAA', authors: 'Microsoft', verified: true }] }));
-        const row = within(screen.getByTestId('transitive-list')).getByTestId('package-row-microsoft.extensions.logging');
-        const option = within(row).getByRole('option');
+        const row = screen.getByTestId('package-row-microsoft.extensions.logging');
+        const option = (): HTMLElement => within(screen.getByTestId('package-row-microsoft.extensions.logging')).getByRole('treeitem');
+        expect(transitiveRows()).toEqual([option()]);
         expect(row.querySelector('.nuiget-row-icon img')).toHaveAttribute('src', 'data:image/png;base64,AAAA');
-        expect(option).toHaveTextContent('Microsoft');
-        expect(option).toHaveAccessibleDescription(/Verified: the package id prefix/);
-        expect(option).not.toHaveAccessibleDescription(/Required by/);
+        expect(option()).toHaveTextContent('Microsoft');
+        expect(option()).toHaveAccessibleDescription(/Verified: the package id prefix/);
+        expect(option()).not.toHaveAccessibleDescription(/Required by/);
+        expect(option().querySelector('.nuiget-row-check')).toHaveClass('nuiget-row-check--off');
 
-        await user.click(option);
-        expect(option).toHaveAttribute('aria-selected', 'true');
+        await user.click(option());
+        expect(option()).toHaveAttribute('aria-current', 'true');
+        expect(option()).toHaveAttribute('aria-selected', 'false');
         expect(optionOf('Serilog')).not.toHaveAttribute('aria-current');
         const details = screen.getByTestId('transitive-details');
         for (const text of ['Transitive', '9.0.0', 'Microsoft', 'Required by', 'Serilog']) {
@@ -408,11 +478,11 @@ describe('main panel: Installed tab', () => {
 
         // A direct row made current takes the details back.
         await user.click(optionOf('Serilog'));
-        expect(option).toHaveAttribute('aria-selected', 'false');
+        expect(option()).not.toHaveAttribute('aria-current');
         expect(screen.getByTestId('install-update-button')).toBeInTheDocument();
     });
 
-    it('several frameworks: one collapsible header per framework with its count and badge', async () => {
+    it('several target frameworks: a level-2 group row per framework under Transitive, expanded by default, with its count and framework badge', async () => {
         const user = userEvent.setup();
         const host = await mountWith();
         await user.click(screen.getByTestId('section-header-transitive'));
@@ -426,9 +496,12 @@ describe('main panel: Installed tab', () => {
             const header = screen.getByTestId(`section-header-transitive-${tfm}`);
             expect(header).toHaveTextContent('Transitive packages (1)');
             expect(header.closest('.nuiget-section-header')).toHaveTextContent(tfm);
+            expect(groupItem(`transitive-${tfm}`)).toHaveAttribute('aria-level', '2');
+            expect(groupItem(`transitive-${tfm}`)).toHaveAttribute('aria-expanded', 'true');
         }
+        expect(within(screen.getByTestId('package-row-a.core')).getByRole('treeitem')).toHaveAttribute('aria-level', '3');
         await user.click(screen.getByTestId('section-header-transitive-net8.0'));
-        expect(screen.getByTestId('transitive-list-net8.0')).not.toBeVisible();
-        expect(screen.getByTestId('transitive-list-net6.0')).toBeVisible();
+        expect(screen.queryByTestId('package-row-a.core')).toBeNull();
+        expect(screen.getByTestId('package-row-b.core')).toBeInTheDocument();
     });
 });

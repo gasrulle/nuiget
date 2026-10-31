@@ -73,14 +73,13 @@ describe('2.0 main panel: transitive packages', () => {
 
         const header = await findByTestId('section-header-transitive', 60_000);
         await header.click();
-        await poll(async () => ((await header.getAttribute('aria-expanded')) === 'true' ? true : undefined), 'the transitive section open', 10_000);
-        const section = await findByTestId('transitive-section');
+        await poll(async () => ((await driverOf().executeScript<string>('return document.querySelector(\'[data-testid="group-row-transitive"] [role="treeitem"]\').getAttribute("aria-expanded");')) === 'true' ? true : undefined), 'the Transitive group open', 10_000);
         // A new project has no assets file: the banner offers Restore, which lists the packages afterwards.
         const listed = async (): Promise<'rows' | 'banner' | undefined> => {
-            if ((await section.findElements(By.css('[data-testid="package-row-serilog"]'))).length > 0) {
+            if ((await driverOf().findElements(By.css('[data-testid="group-row-transitive"] ~ [data-testid="package-row-serilog"]'))).length > 0) {
                 return 'rows';
             }
-            return (await section.findElements(By.css('[data-testid="transitive-restore-banner"]'))).length > 0 ? 'banner' : undefined;
+            return (await driverOf().findElements(By.css('[data-testid="transitive-restore-banner"]'))).length > 0 ? 'banner' : undefined;
         };
         if ((await poll(listed, 'the transitive rows or the restore banner', 120_000)) === 'banner') {
             await (await (await findByTestId('transitive-restore-banner')).findElement(By.css('button'))).click();
@@ -90,11 +89,11 @@ describe('2.0 main panel: transitive packages', () => {
         const headerRow = await driverOf().executeScript<string>('return document.querySelector(\'[data-testid="section-header-transitive"]\').closest(".nuiget-section-header").textContent;');
         expect(headerRow).to.contain('net8.0');
         // The row's lite metadata (icon, authors, Verified) follows the list: the screenshot waits for it.
-        const row = await findByTestId('package-row-serilog', 10_000, section);
+        const row = await findByTestId('package-row-serilog', 10_000);
         await poll(async () => (((await row.getAttribute('textContent')) ?? '').includes('Serilog Contributors') ? true : undefined), 'the authors of the transitive row', 60_000);
         await screenshot('main-transitive-expanded');
 
-        await (await row.findElement(By.css('[role="option"]'))).click();
+        await (await row.findElement(By.css('.nuiget-row-option'))).click();
         await waitForText('transitive-details', 'Required by', 30_000);
         await waitForText('transitive-details', 'Serilog.Sinks.Console', 30_000);
         await screenshot('main-transitive-details');
