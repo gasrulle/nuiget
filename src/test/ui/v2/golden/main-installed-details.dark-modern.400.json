@@ -10,10 +10,10 @@
       "reason": "nuget.org metadata (downloads, versions) changes between runs",
       "rects": [
         {
-          "h": 670,
+          "h": 676,
           "w": 256,
           "x": 144,
-          "y": 133
+          "y": 127
         }
       ]
     },
@@ -32,5 +32,5 @@
     "chromium": "150",
     "image": "ubuntu26 20261026.180.1"
   },
-  "run": "41197540756"
+  "run": "41204462784"
 }
