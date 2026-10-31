@@ -1,0 +1,655 @@
+{
+  "item": "P2.5",
+  "runs": [
+    {
+      "runId": "41221059301",
+      "rubric": "4fc363ad5a7d0dd749f37df4c0271554c8e07f64",
+      "tree": "f3a00a0",
+      "look": "modern",
+      "workflow": "wf_5226963b-38d",
+      "note": "main-installed-details has no artboard of its own: it was judged against main-installed-single's 932 artboard and spec.",
+      "captures": {
+        "main-installed-single": {
+          "png": "captures/41221059301/main-installed-single.dark-modern.932.png",
+          "sha256": "95cf977e8d7d3533f163affb0b9954ea7406572af43e55ddc9b52a22d1b83286",
+          "artboard": "docs/design/artboards/main-installed-single.dark-modern.932.png"
+        },
+        "main-installed-details": {
+          "png": "captures/41221059301/main-installed-details.dark-modern.1200.png",
+          "sha256": "cffd53bb1bf48e6997c5cd7f4e68f32360c2afe77f977758ce12f734e4315b9e",
+          "artboard": "docs/design/artboards/main-installed-single.dark-modern.932.png"
+        }
+      },
+      "panel": {
+        "states": 2,
+        "candidates": 68,
+        "standing": 20,
+        "blocking": 2,
+        "refuted": 4,
+        "singleJudge": 11,
+        "incomplete": 0
+      },
+      "singleJudge": [
+        {
+          "id": "main-installed-single#D6",
+          "state": "main-installed-single",
+          "finding": "[native] The Vulnerable label badge is a rounded rectangle with a radius of about 4 px, which is neither the Modern UI pill nor the classic 2 px radius the rule gives a label badge.",
+          "severity": "minor",
+          "box": [
+            214,
+            617,
+            68,
+            18
+          ],
+          "rule": "DS-HEIGHT-10"
+        },
+        {
+          "id": "main-installed-single#D10",
+          "state": "main-installed-single",
+          "finding": "[native] The header and tab-strip divider lines paint #313131 where the artboard and the rule's Dark Modern value paint #2b2b2b, so they do not resolve to the main-panel divider role.",
+          "severity": "minor",
+          "box": [
+            0,
+            72,
+            932,
+            37
+          ],
+          "rule": "DS-DIVIDER-4"
+        },
+        {
+          "id": "main-installed-single#D11",
+          "state": "main-installed-single",
+          "finding": "[native] The author text on rows is regular weight, one step lighter than the 11/600 publisher emphasis of the artboard's rows and the Extensions view.",
+          "severity": "minor",
+          "box": [
+            157,
+            206,
+            51,
+            12
+          ],
+          "rule": "DS-TYPE-6"
+        },
+        {
+          "id": "main-installed-single#D12",
+          "state": "main-installed-single",
+          "finding": "[native] The list pane paints the side-bar surface (#181818), as the colour-role table's list-pane row says, while the artboard paints it on the editor surface (#1f1f1f); the artboard and the Design System disagree on this region.",
+          "severity": "minor",
+          "box": [
+            0,
+            73,
+            326,
+            730
+          ],
+          "rule": "spec-conflict"
+        },
+        {
+          "id": "main-installed-single#D13",
+          "state": "main-installed-single",
+          "finding": "[geometry] The gear and refresh actions sit further apart than the redline: their glyph centres are 30 px apart (x 874.5 and 904.5) against 26 px in the spec and artboard (buttons at x 868 and 894, a 4 px gap), which leaves about an 8 px gap and moves the gear and the selects 4 px left of the spec.",
+          "severity": "major",
+          "box": [
+            864,
+            10,
+            52,
+            22
+          ],
+          "rule": "judge-only",
+          "disposition": "fixed",
+          "evidence": "Ordered to UX-P2.7.",
+          "ruling": "the header's 4/8 gap set (P2.7); UX-P2.5 sized the two buttons to 22 and left the header's gap"
+        },
+        {
+          "id": "main-installed-details#D6",
+          "state": "main-installed-details",
+          "finding": "[native] The main-panel divider lines (header/body at y 72, and likewise the tab-strip lines at y 108 and y 213) paint #313131, the input-fill grey, instead of the settings.headerBorder role that resolves to #2b2b2b in this theme and that the artboard draws, so they stand out more than a workbench divider.",
+          "severity": "major",
+          "box": [
+            0,
+            72,
+            1200,
+            1
+          ],
+          "rule": "DS-DIVIDER-4"
+        },
+        {
+          "id": "main-installed-details#D14",
+          "state": "main-installed-details",
+          "finding": "[native] The list pane is painted #181818 (the side-bar surface role the Design System colour table gives the list pane) while the artboard draws the list column on the editor surface #1f1f1f; the capture follows the rule, so the artboard and the rule disagree.",
+          "severity": "minor",
+          "box": [
+            0,
+            73,
+            420,
+            730
+          ],
+          "rule": "spec-conflict"
+        },
+        {
+          "id": "main-installed-details#D15",
+          "state": "main-installed-details",
+          "finding": "[geometry] The details body starts at the 16 px inset (x 440 in a pane at x 424) with about 8 px above the first line under the tab strip's line at y 213, against the details pane's 20 px inset and the spec's readme-content padding of 20 px (x 348 in a pane at x 328).",
+          "severity": "major",
+          "box": [
+            424,
+            214,
+            440,
+            24
+          ],
+          "rule": "DS-INSET-1"
+        },
+        {
+          "id": "main-installed-details#D16",
+          "state": "main-installed-details",
+          "finding": "[geometry] The Installed and Version control rows are 6 px apart (y 112-137 and y 144-169), against 4 px in the artboard and spec (uninstall-button bottom y 156.2, version-selector top y 160.2), breaking the 4 px gap inside a group.",
+          "severity": "major",
+          "box": [
+            440,
+            112,
+            287,
+            58
+          ],
+          "rule": "DS-GRID-2"
+        },
+        {
+          "id": "main-installed-details#D17",
+          "state": "main-installed-details",
+          "finding": "[geometry] The installed value text starts at x 508, the select's box edge, while the select's text starts at x 515, so the two values in the column are 7 px out of line; in the artboard the value (x 418) coincides with the select's text inset (spec version-selector inset 418.4).",
+          "severity": "major",
+          "box": [
+            508,
+            114,
+            141,
+            56
+          ],
+          "rule": "judge-only"
+        },
+        {
+          "id": "main-installed-details#D18",
+          "state": "main-installed-details",
+          "finding": "[states] The dependency groups in the details pane show their counts as inline \"(N)\" text, while the same surface's tab headers use count badges, giving two count styles on one surface.",
+          "severity": "minor",
+          "box": [
+            448,
+            503,
+            215,
+            208
+          ],
+          "rule": "DS-COPY-5"
+        }
+      ],
+      "refuted": [
+        {
+          "id": "native-3",
+          "state": "main-installed-single",
+          "finding": "The only focus ring is a 1 px focusBorder box around the Installed tab, where the artboard draws no ring on the tab and puts the focus outline on the selected row, so focus reads as resting on the wrong element.",
+          "reason": "The ring is visible, but hard DS-FOCUS-1 reads 'outline 1 solid rgb(0, 120, 212) offset -1 (target 1 solid #0078d4 offset -1)' and DS-FOCUS-3 keeps rings after a click in the main panel, so it correctly marks the focused tab; the row's missing ring is already D2."
+        },
+        {
+          "id": "states-3",
+          "state": "main-installed-single",
+          "finding": "Keyboard focus sits on the Installed tab as a blue ring around the whole tab, which also hides the artboard's 1 px active underline; the artboard has no ring on the tab and draws focus on the selected row.",
+          "reason": "Hard DS-FOCUS-1 reads 'outline 1 solid rgb(0, 120, 212) offset -1' at target and hard DS-COLOR-4 reads 'line 1 panelTitle.activeBorder', so the post-click ring DS-FOCUS-3 requires is correct and the underline exists; the row's missing ring is already D2."
+        },
+        {
+          "id": "states-9",
+          "state": "main-installed-single",
+          "finding": "The Installed tab carries a second, red-outlined \"1\" badge next to its count, an element the artboard's tab does not draw, and no rule defines it for the tab strip.",
+          "reason": "The red-outlined '1' is visible, but the interaction model's default row says the Installed tab also shows the count of packages with known vulnerabilities, and the artboard's data has no vulnerable package while the capture's Newtonsoft.Json 12.0.1 is flagged, so this is live data."
+        },
+        {
+          "id": "states-10",
+          "state": "main-installed-single",
+          "finding": "At-rest row text stops near x 270-279, about 40 px short of the scrollbar at x 318, although no action is shown on these rows; six names therefore all read \"Microsoft.Extensions....\" and row 6's author line shrinks to a Verified mark and an ellipsis, while the artboard's text column runs up to the action slot at x 299.",
+          "reason": "The text column ends near x 279-282 in the crop, which matches the artboard's column up to its action slot once the 8 px scrollbar is taken off; the repeated names and shortened author are live content, and hard DS-ROW-5 reads '14 rows, 7 names cut; badges clipped 0'."
+        }
+      ],
+      "closedFromEarlierLogs": [
+        [
+          "P2.4 main-installed-single#D5",
+          "the tab strip height"
+        ],
+        [
+          "P2.4 main-installed-single#D6",
+          "the tab labels"
+        ],
+        [
+          "P2.4 main-installed-single#D11",
+          "the toolbar end inset"
+        ],
+        [
+          "P2.4 main-installed-details#D1",
+          "the tab strip height"
+        ],
+        [
+          "P2.4 main-installed-details#D2",
+          "the tab indicator"
+        ],
+        [
+          "P2.4 main-installed-details#D3",
+          "the tab labels"
+        ],
+        [
+          "P2.4 main-installed-details#D7",
+          "the toolbar end inset"
+        ],
+        [
+          "P2.4 main-installed-details#D10",
+          "the row action glyph on the band"
+        ]
+      ],
+      "findings": [
+        {
+          "id": "main-installed-single#D1",
+          "state": "main-installed-single",
+          "finding": "[native] The details pane shows only the line \"Select a package to see its details.\", while the artboard draws the package title, Installed and Version facts, version select, Uninstall and Update buttons, Details/README tabs and README (spec package-details-panel, uninstall-button, version-selector, details-tab-readme, readme-content). | [geometry] The details pane holds only the centred line 'Select a package to see its details.', while the artboard and spec draw the details title, Installed and Version rows, uninstall-button (y 130), version-selector and install-update-button (y 160), the Details/README tab strip (y 206, h 35) and readme-content (y 242). | [states] The details pane shows only the empty message \"Select a package to see its details.\", while the artboard and spec draw package-details-panel filled: package title, Installed and Version rows, uninstall-button, version-selector, install-update-button, Details/README tabs and readme-content.",
+          "severity": "blocking",
+          "box": [
+            328,
+            73,
+            604,
+            730
+          ],
+          "rule": "judge-only",
+          "lenses": [
+            "native",
+            "geometry",
+            "states"
+          ],
+          "disposition": "fixed",
+          "evidence": "Ordered to UX-P2.8a. The state shows no selection by its definition and the artboard composes one; repeats the P2.4 entry.",
+          "ruling": "The judge-log rule of docs/plans/STATUS-ux.md (design-advisor, UX-P2.1b); earlier entry main-installed-single#D1 (P2.4)"
+        },
+        {
+          "id": "main-installed-single#D2",
+          "state": "main-installed-single",
+          "finding": "[native] No row is selected: the artboard's package-row-newtonsoft.json draws a full-width list.activeSelection band with a focus outline, select-coloured check mark and row-action-uninstall at x 299, but the capture has plain rows here and Newtonsoft.Json sits unselected lower in the list. | [geometry] No row is selected: the first row has no selection band, focus outline or row-action-uninstall, while the artboard and spec draw package-row-newtonsoft.json as a selected, ringed 327 x 72 band with a 22 px action at x 299 (6 px end inset); the only ring in the capture is on the Installed tab. | [states] No row is selected: the artboard draws the first row with the active selection band, the 1 px focus ring, the select-state check mark and row-action-uninstall (spec package-row-newtonsoft.json, tokens --nuiget-color-list-active-bg and --nuiget-color-list-focus-outline), and every row in the capture is at rest with no action visible.",
+          "severity": "blocking",
+          "box": [
+            0,
+            167,
+            327,
+            80
+          ],
+          "rule": "DS-COLOR-2, DS-ROW-3",
+          "lenses": [
+            "native",
+            "geometry",
+            "states"
+          ],
+          "disposition": "fixed",
+          "evidence": "Ordered to UX-P2.8a. The state shows no selection by its definition and the artboard composes one; repeats the P2.4 entry.",
+          "ruling": "The judge-log rule of docs/plans/STATUS-ux.md (design-advisor, UX-P2.1b); earlier entry main-installed-single#D2 (P2.4)"
+        },
+        {
+          "id": "main-installed-single#D3",
+          "state": "main-installed-single",
+          "finding": "[native] The group header title reads \"DIRECT PACKAGES\" in small heavy uppercase, while the artboard draws the pane-header type \"Direct Packages\", capitalised at 12/600, so it does not match the approved Modern UI header. | [native] The group header looks squeezed: the first row starts about 28 px below the toolbar (toolbar bottom y 138, row top about y 167 from its centred 36 px icon) against 32 px in the artboard, leaving about 24 px for the header, which is neither the Modern UI 28 nor the classic 22. | [geometry] The group header reads as the classic look in a Modern UI capture (sidecar look: modern): an uppercase, heavier, smaller title, and the first row starts about 24 px below the header top (band top inferred from the 36 px icon at y 185), where the spec's modern section-header-direct is 28 px high in 12 px/600 capitalised type. | [states] The group header reads \"DIRECT PACKAGES\" in uppercase 11 px bold on a header about 22 px high, while this Modern UI capture and the artboard call for capitalised \"Direct Packages\" at 12/600 on 28 px (spec section-header-direct h 28), so it shows the classic look's type.",
+          "severity": "major",
+          "box": [
+            16,
+            139,
+            295,
+            28
+          ],
+          "rule": "DS-TYPE-5, DS-HEIGHT-1",
+          "lenses": [
+            "native",
+            "geometry",
+            "states"
+          ],
+          "disposition": "fixed",
+          "evidence": "Ordered to UX-P2.6. Repeats the earlier finding on an element this item did not restyle.",
+          "ruling": "The judge-log rule of docs/plans/STATUS-ux.md (design-advisor, UX-P2.1b); earlier entry main-installed-single#D3 (P2.4)"
+        },
+        {
+          "id": "main-installed-single#D4",
+          "state": "main-installed-single",
+          "finding": "[native] The group header carries its count as the text \"(15)\" beside the title, while the artboard draws a round count badge at the header's end, ending at the 16 px inset; the end of the header is empty. | [geometry] The Direct Packages header has no trailing count badge: the count is inline title text '(15)' ending near x 179, while the artboard draws a 19 px circular badge ending at x 311, on the 16 px end inset. | [states] The group header shows its count as the text \"(15)\" beside the title, while the artboard draws a round count badge at the header's end inset, so the header has no trailing badge and the surface mixes two count styles (badges on the tabs, parentheses here).",
+          "severity": "major",
+          "box": [
+            36,
+            146,
+            275,
+            20
+          ],
+          "rule": "DS-COPY-5, DS-INSET-3",
+          "lenses": [
+            "native",
+            "geometry",
+            "states"
+          ],
+          "disposition": "fixed",
+          "evidence": "Ordered to UX-P2.6. Repeats the earlier finding on an element this item did not restyle.",
+          "ruling": "The judge-log rule of docs/plans/STATUS-ux.md (design-advisor, UX-P2.1b); earlier entry main-installed-single#D4 (P2.4)"
+        },
+        {
+          "id": "main-installed-single#D5",
+          "state": "main-installed-single",
+          "finding": "[native] The tab count badges are 18 px high rounded rectangles with a corner radius of about 4 px, while the artboard draws circular workbench count badges (spec'd M circle / C radius 11), so they do not read as VS Code's count badge. | [geometry] The tab count badges are 18 px high rounded rectangles (Installed '15' spans y 81-98, x 82-105, with a small radius), where the modern look and the artboard draw a 19 px circle (artboard y 85-103). | [states] The tab count badges are rounded rectangles with a small radius, while the artboard and the Modern UI rule draw circular or pill badges (M radius circle, min 19 px).",
+          "severity": "major",
+          "box": [
+            82,
+            80,
+            147,
+            19
+          ],
+          "rule": "DS-HEIGHT-10",
+          "lenses": [
+            "native",
+            "geometry",
+            "states"
+          ],
+          "disposition": "fixed",
+          "evidence": "Ordered to UX-P2.6. Repeats the earlier finding on an element this item did not restyle.",
+          "ruling": "The judge-log rule of docs/plans/STATUS-ux.md (design-advisor, UX-P2.1b); earlier entry main-installed-single#D8 (P2.4)"
+        },
+        {
+          "id": "main-installed-single#D7",
+          "state": "main-installed-single",
+          "finding": "[native] The bulk toolbar labels are sentence case (\"Select all\", \"Uninstall selected (0)\"), while the artboard and the copy rule require Title Case (\"Select All\", \"Uninstall Selected (0)\"). | [states] The button label reads \"Select all\" in sentence case, while the artboard and the microcopy list say \"Select All\" in Title Case. | [states] The button label reads \"Uninstall selected (0)\" in sentence case, while the artboard and the microcopy list say \"Uninstall Selected (0)\" in Title Case.",
+          "severity": "major",
+          "box": [
+            16,
+            113,
+            294,
+            26
+          ],
+          "rule": "DS-COPY-1",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "fixed",
+          "evidence": "Ordered to UX-P3.11. Repeats the earlier finding on an element this item did not restyle.",
+          "ruling": "The judge-log rule of docs/plans/STATUS-ux.md (design-advisor, UX-P2.1b); earlier entry main-installed-single#D10 (P2.4)"
+        },
+        {
+          "id": "main-installed-single#D8",
+          "state": "main-installed-single",
+          "finding": "[native] The split between list and details paints a 4 px solid band (x 326-329, #313131) at rest, while the artboard draws a 1 px line at x 327 and the rule requires a 1 px separator with a transparent sash; it reads as a heavy bar butting against the scrollbar thumb. | [geometry] The separator between list and details is a 4 px solid band at x 326-329 over the full height from y 72, where the artboard draws a 1 px line at x 327 and the spec starts the details pane at x 328 (capture: x 330); the rule wants a 1 px separator with a transparent sash at rest.",
+          "severity": "major",
+          "box": [
+            326,
+            72,
+            4,
+            731
+          ],
+          "rule": "DS-DIVIDER-6",
+          "lenses": [
+            "native",
+            "geometry"
+          ],
+          "disposition": "fixed",
+          "evidence": "Ordered to UX-P3.9. Repeats the earlier finding on an element this item did not restyle.",
+          "ruling": "The judge-log rule of docs/plans/STATUS-ux.md (design-advisor, UX-P2.1b); earlier entry main-installed-single#D12 (P2.4)"
+        },
+        {
+          "id": "main-installed-single#D9",
+          "state": "main-installed-single",
+          "finding": "[native] The main header looks squeezed at the bottom: 4 px separates the search box bottom (y 67) from the divider (y 72) against 8 px above the first control row and 8 px in the artboard (divider y 76), which moves the whole body 4 px up. | [geometry] The main header's vertical padding is asymmetric: 8 px above the selects (ink from y 8) but only 4 px between the search box bottom (y 67) and the divider (y 72), against 8 and 8 in the artboard (divider y 76, tab-bar y 77), which moves everything below 4 px above the spec.",
+          "severity": "major",
+          "box": [
+            16,
+            42,
+            900,
+            31
+          ],
+          "rule": "DS-INSET-2",
+          "lenses": [
+            "native",
+            "geometry"
+          ],
+          "disposition": "fixed",
+          "evidence": "Ordered to UX-P2.7. Repeats the earlier finding on an element this item did not restyle.",
+          "ruling": "The judge-log rule of docs/plans/STATUS-ux.md (design-advisor, UX-P2.1b); earlier entry main-installed-single#D13 (P2.4)"
+        },
+        {
+          "id": "main-installed-details#D1",
+          "state": "main-installed-details",
+          "finding": "[native] The group header reads 'DIRECT PACKAGES' in the classic pane-header type (about 11 px bold uppercase) in a band about 24 px high (toolbar bottom plus 4 to first row top at y 167), although the capture is Modern UI (8 px scrollbar, rounded row band); the artboard and spec draw 'Direct Packages' at 12/600 capitalised in a 28 px header. | [geometry] The main-list group header 'Direct Packages' is 24 px high (list top y 143, first row y 167), against 28 px for the Modern UI look in the rule and the spec's section-header-direct (y 147, h 28). | [states] The group header reads \"DIRECT PACKAGES\" in uppercase, where the artboard's section-header-direct reads \"Direct Packages\" in Title Case with capitalised Modern UI pane-header type.",
+          "severity": "major",
+          "box": [
+            0,
+            143,
+            412,
+            24
+          ],
+          "rule": "DS-TYPE-5, DS-HEIGHT-1",
+          "lenses": [
+            "native",
+            "geometry",
+            "states"
+          ],
+          "disposition": "fixed",
+          "evidence": "Ordered to UX-P2.6. Repeats the earlier finding on an element this item did not restyle.",
+          "ruling": "The judge-log rule of docs/plans/STATUS-ux.md (design-advisor, UX-P2.1b); earlier entry main-installed-single#D3 (P2.4)"
+        },
+        {
+          "id": "main-installed-details#D2",
+          "state": "main-installed-details",
+          "finding": "[native] The group header carries its count as the text '(15)' beside the title, and the end of the header has no count badge; the artboard draws a round count badge at the header's end (x 292-311), so it does not read as a pane header. | [geometry] The group header has no trailing count badge at the 16 px end inset, as the artboard draws (ink x 292-310, 16 px from the 327 px pane edge); the count is inline text '(15)' right after the title, ending at x 178, and the header's end is empty. | [states] The Direct Packages header carries its count as the inline text \"(15)\" and has no trailing count badge at the end inset, where the artboard draws a round count badge at the header's end; this also mixes \"(N)\" with the badges on the tabs above.",
+          "severity": "major",
+          "box": [
+            36,
+            145,
+            368,
+            19
+          ],
+          "rule": "DS-COPY-5",
+          "lenses": [
+            "native",
+            "geometry",
+            "states"
+          ],
+          "disposition": "fixed",
+          "evidence": "Ordered to UX-P2.6. Repeats the earlier finding on an element this item did not restyle.",
+          "ruling": "The judge-log rule of docs/plans/STATUS-ux.md (design-advisor, UX-P2.1b); earlier entry main-installed-single#D4 (P2.4)"
+        },
+        {
+          "id": "main-installed-details#D3",
+          "state": "main-installed-details",
+          "finding": "[native] The tab count badges are 18 px high rounded rectangles with a radius of about 4 px, where the artboard and Modern UI's count badge are a 19 px circle, so they do not read as the workbench's count badge. | [geometry] The tab count badges are 18 px high rounded rectangles with a small radius (y 81-98; '15' spans x 82-105), against the Modern UI count badge's 19 px minimum and circular radius, as the artboard's round tab badges draw it. | [states] The Installed and Updates tab count badges are rounded rectangles with a radius of about 4 px, where the artboard draws circular count badges.",
+          "severity": "major",
+          "box": [
+            82,
+            81,
+            147,
+            18
+          ],
+          "rule": "DS-HEIGHT-10",
+          "lenses": [
+            "native",
+            "geometry",
+            "states"
+          ],
+          "disposition": "fixed",
+          "evidence": "Ordered to UX-P2.6. Repeats the earlier finding on an element this item did not restyle.",
+          "ruling": "The judge-log rule of docs/plans/STATUS-ux.md (design-advisor, UX-P2.1b); earlier entry main-installed-single#D8 (P2.4)"
+        },
+        {
+          "id": "main-installed-details#D4",
+          "state": "main-installed-details",
+          "finding": "[native] The Vulnerable label badge has a radius of about 4 px, where the Modern UI label badge is a pill. | [geometry] The 'Vulnerable' label badge on the selected row has a small corner radius of about 4 px, against the Modern UI label badge's pill radius. | [states] The Vulnerable label badge on the selected row is a small-radius rectangle rather than the pill shape the Modern UI label badge takes.",
+          "severity": "major",
+          "box": [
+            224,
+            618,
+            69,
+            17
+          ],
+          "rule": "DS-RADIUS-2, DS-HEIGHT-10",
+          "lenses": [
+            "native",
+            "geometry",
+            "states"
+          ],
+          "disposition": "fixed",
+          "evidence": "Ordered to UX-P2.6. Repeats the earlier finding on an element this item did not restyle.",
+          "ruling": "The judge-log rule of docs/plans/STATUS-ux.md (design-advisor, UX-P2.1b); earlier entry main-installed-single#D8 (P2.4)"
+        },
+        {
+          "id": "main-installed-details#D5",
+          "state": "main-installed-details",
+          "finding": "[native] The split between list and details is a solid 4 px band of #313131 (x 420-423) running the full pane height, and it reads as a heavy bar beside the scrollbar; the artboard draws a 1 px #2b2b2b separator (x 327) and the rule wants a 1 px separator with a transparent sash at rest. | [geometry] The pane separator between the list and details columns is painted as a solid 4 px band (x 420-423), where the spec (list ends x 327, details starts x 328) and the artboard draw a 1 px line with a transparent sash at rest. | [states] The split between list and details paints a lighter band about 4 px wide over the full height (x 420 to 424), where the artboard draws a hairline and the rule asks for a 1 px separator with a transparent sash at rest.",
+          "severity": "major",
+          "box": [
+            420,
+            73,
+            4,
+            730
+          ],
+          "rule": "DS-DIVIDER-6",
+          "lenses": [
+            "native",
+            "geometry",
+            "states"
+          ],
+          "disposition": "fixed",
+          "evidence": "Ordered to UX-P3.9. Repeats the earlier finding on an element this item did not restyle.",
+          "ruling": "The judge-log rule of docs/plans/STATUS-ux.md (design-advisor, UX-P2.1b); earlier entry main-installed-single#D12 (P2.4)"
+        },
+        {
+          "id": "main-installed-details#D7",
+          "state": "main-installed-details",
+          "finding": "[native] The details header looks squeezed against the artboard: about 10 px above the title (the artboard has 20), a 16 px start inset (title x 440 in a pane starting at x 424, spec 20), and about 8 px from the Version row to the tab strip (the artboard has 20). | [geometry] The details header is too tight and starts at the wrong inset: start inset 16 px (title x 440, pane x 424), about 8 px above the title and 8 px between the Update button (bottom y 170) and the tab strip (top y 178), against 20 px on all sides in the rule and the artboard (title x 348 in a pane at x 328; 20 px from the buttons to the strip); the DETAILS label follows the title to the 16 px inset, so the whole header reads squeezed.",
+          "severity": "major",
+          "box": [
+            424,
+            73,
+            320,
+            141
+          ],
+          "rule": "DS-INSET-4",
+          "lenses": [
+            "native",
+            "geometry"
+          ],
+          "disposition": "fixed",
+          "evidence": "Ordered to UX-P2.8a. Repeats the earlier finding on an element this item did not restyle.",
+          "ruling": "The judge-log rule of docs/plans/STATUS-ux.md (design-advisor, UX-P2.1b); earlier entry main-installed-details#D15 (P2.4)"
+        },
+        {
+          "id": "main-installed-details#D8",
+          "state": "main-installed-details",
+          "finding": "[native] The panel header is asymmetric and tighter than the artboard: 8 px above the selectors but only 4 px between the search box bottom (y 68) and the header line (y 72), where the artboard has 8 px (line at y 76). | [geometry] The search row has asymmetric vertical padding: the search input (y 42-67) has 8 px above it to the toolbar row but only 4 px below it to the divider at y 72, against the artboard's 8 px with the divider at y 76 and the tab bar at y 77 in the spec, so everything below sits 4 px too high.",
+          "severity": "major",
+          "box": [
+            0,
+            0,
+            1200,
+            73
+          ],
+          "rule": "DS-INSET-2",
+          "lenses": [
+            "native",
+            "geometry"
+          ],
+          "disposition": "fixed",
+          "evidence": "Ordered to UX-P2.7. Repeats the earlier finding on an element this item did not restyle.",
+          "ruling": "The judge-log rule of docs/plans/STATUS-ux.md (design-advisor, UX-P2.1b); earlier entry main-installed-single#D13 (P2.4)"
+        },
+        {
+          "id": "main-installed-details#D9",
+          "state": "main-installed-details",
+          "finding": "[native] The toolbar buttons read 'Select all' and 'Uninstall selected (0)' in sentence case; the artboard and workbench command labels use Title Case, 'Select All' and 'Uninstall Selected (0)'. | [states] The bulk toolbar buttons read \"Select all\" and \"Uninstall selected (0)\" in sentence case, where the artboard's select-all-button and uninstall-selected-button read \"Select All\" and \"Uninstall Selected (0)\" in Title Case.",
+          "severity": "major",
+          "box": [
+            16,
+            113,
+            388,
+            26
+          ],
+          "rule": "DS-COPY-1",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "fixed",
+          "evidence": "Ordered to UX-P3.11. Repeats the earlier finding on an element this item did not restyle.",
+          "ruling": "The judge-log rule of docs/plans/STATUS-ux.md (design-advisor, UX-P2.1b); earlier entry main-installed-single#D10 (P2.4)"
+        },
+        {
+          "id": "main-installed-details#D10",
+          "state": "main-installed-details",
+          "finding": "[native] The details header labels read 'Installed:' and 'Version:' with colons; the artboard draws 'Installed' and 'Version' without them. | [states] The details header labels read \"Installed:\" and \"Version:\" with colons, where the artboard draws \"Installed\" and \"Version\" without them.",
+          "severity": "major",
+          "box": [
+            440,
+            117,
+            60,
+            47
+          ],
+          "rule": "DS-COPY-2",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "fixed",
+          "evidence": "Ordered to UX-P3.3a. Repeats the earlier finding on an element this item did not restyle.",
+          "ruling": "The judge-log rule of docs/plans/STATUS-ux.md (design-advisor, UX-P2.1b); earlier entry main-installed-details#D20 (P2.4)"
+        },
+        {
+          "id": "main-installed-details#D11",
+          "state": "main-installed-details",
+          "finding": "[native] The facts label reads 'Author(s)', where the rule requires one noun per field ('Authors'), as in the Extensions editor's More Info table. | [states] The facts label reads \"Author(s)\", which the rule names as forbidden; it must read \"Authors\".",
+          "severity": "major",
+          "box": [
+            440,
+            277,
+            60,
+            15
+          ],
+          "rule": "DS-COPY-2",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "fixed",
+          "evidence": "Ordered to UX-P3.3a. Repeats the earlier finding on an element this item did not restyle.",
+          "ruling": "The judge-log rule of docs/plans/STATUS-ux.md (design-advisor, UX-P2.1b); earlier entry main-installed-details#D20 (P2.4)"
+        },
+        {
+          "id": "main-installed-details#D12",
+          "state": "main-installed-details",
+          "finding": "[native] The facts block has no single value column: the 'Date published' value starts at x 547 while every other value starts at x 539, unlike the Extensions editor's two-column More Info table. | [geometry] The facts values do not share one column: the 'Date published' value starts at x 546-547 because its label overflows the label column, while every other value starts at x 539, a 7-8 px jag against a required spread of 0. | [states] The facts values do not share one value column: the \"Date published\" value 2018-11-27 starts at about x 547, while every other value starts at about x 539, so the block is ragged.",
+          "severity": "major",
+          "box": [
+            440,
+            254,
+            316,
+            150
+          ],
+          "rule": "DS-ALIGN-1",
+          "lenses": [
+            "native",
+            "geometry",
+            "states"
+          ],
+          "disposition": "fixed",
+          "evidence": "Ordered to UX-P3.3a. Repeats the earlier finding on an element this item did not restyle.",
+          "ruling": "The judge-log rule of docs/plans/STATUS-ux.md (design-advisor, UX-P2.1b); earlier entry main-installed-details#D22 (P2.4)"
+        },
+        {
+          "id": "main-installed-details#D13",
+          "state": "main-installed-details",
+          "finding": "[native] The author name in the row's second line is regular weight, where the artboard and rule draw the author emphasis at 11/600. | [states] The author name on the row's second line is regular weight, where the artboard's package-row-newtonsoft.json draws the author in the 11/600 emphasis.",
+          "severity": "minor",
+          "box": [
+            149,
+            639,
+            124,
+            14
+          ],
+          "rule": "DS-TYPE-6",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "fixed",
+          "evidence": "Ordered to UX-P2.8a. Repeats the earlier finding on an element this item did not restyle.",
+          "ruling": "The judge-log rule of docs/plans/STATUS-ux.md (design-advisor, UX-P2.1b); earlier entry main-installed-single#D15 (P2.4)"
+        }
+      ]
+    }
+  ]
+}

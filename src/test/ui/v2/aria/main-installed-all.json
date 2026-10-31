@@ -22,7 +22,7 @@
     "  tablist \"Package lists\" {tab-bar}",
     "    tab \"Installed # # package with known vulnerabilities\" [selected, focused] {installed-tab}",
     "    tab \"Updates #\" {updates-tab}",
-    "  tabpanel \"Installed # # package with known vulnerabilities\"",
+    "  tabpanel \"Installed #\"",
     "    toolbar \"Bulk actions\" {installed-toolbar}",
     "      button \"Select all\" [not pressed] {select-all-button}",
     "      button \"Uninstall selected (#)\" [disabled] {uninstall-selected-button}",
@@ -54,7 +54,6 @@
     "      treeitem \"StackExchange.Redis #\" [level 3]",
     "        img \"Verified: the package id prefix is reserved by its owner\"",
     "      treeitem \"Mapster #\" [level 3]",
-    "      treeitem \"Gateway.csproj #\" [expanded, level 2]",
     "  separator \"Resize the package list\" {sash}",
     "  region \"Package details\" {package-details-panel}",
     "  status \"\" {status-live}"

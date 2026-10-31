@@ -23,7 +23,7 @@
     "  tablist \"Package lists\" {tab-bar}",
     "    tab \"Installed # # package with known vulnerabilities\" [selected] {installed-tab}",
     "    tab \"Updates #\" {updates-tab}",
-    "  tabpanel \"Installed # # package with known vulnerabilities\"",
+    "  tabpanel \"Installed #\"",
     "    toolbar \"Bulk actions\" {installed-toolbar}",
     "      button \"Select all\" [not pressed] {select-all-button}",
     "      button \"Uninstall selected (#)\" [disabled] {uninstall-selected-button}",
