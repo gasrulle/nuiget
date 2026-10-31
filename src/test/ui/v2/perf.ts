@@ -191,4 +191,4 @@ export const details = (id: string): string => `(() => {
 export const dependencies = (id: string): string => `(${details(id)}) && document.querySelector('[data-testid="package-details-panel"]').textContent.includes('Dependencies')`;
 
 /** A row in the Browse results (the skeleton has none: it is `aria-hidden` and has no option). */
-export const BROWSE_ROW = `document.querySelector('[data-testid="browse-list"] [role="option"]') !== null`;
+export const BROWSE_ROW = `document.querySelector('[data-testid="browse-list"] .nuiget-row-option') !== null`;

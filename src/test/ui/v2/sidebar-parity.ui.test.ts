@@ -48,7 +48,7 @@ describe('2.0 sidebar parity', () => {
         this.timeout(180_000);
         await openSidebarView();
         await enterSidebarWebview();
-        await poll(async () => ((await driverOf().findElements(By.css('[data-testid="sidebar-updates-list"] [role="option"]'))).length > 0 ? true : undefined), 'an update row', 120_000);
+        await poll(async () => ((await driverOf().findElements(By.css('[data-testid="sidebar-updates-list"] .nuiget-row-option'))).length > 0 ? true : undefined), 'an update row', 120_000);
         await (await findByTestId('sidebar-update-all-button', 30_000)).click();
         try {
             const dialog = await findByTestId('confirm-dialog', 10_000);
@@ -97,7 +97,7 @@ describe('2.0 sidebar parity', () => {
         this.timeout(300_000);
         await openSidebarView();
         await enterSidebarWebview();
-        const option = await (await findByTestId('package-row-serilog', 120_000)).findElement(By.css('[role="option"]'));
+        const option = await (await findByTestId('package-row-serilog', 120_000)).findElement(By.css('.nuiget-row-option'));
         await option.click();
         await option.sendKeys(Key.DELETE);
         await waitForText('status-live', 'Uninstalled Serilog', 180_000);

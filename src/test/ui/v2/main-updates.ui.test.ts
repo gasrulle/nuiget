@@ -14,7 +14,7 @@ describe('2.0 main panel: Updates tab', () => {
     const csprojPath = path.resolve('src/test/e2e/fixtures/e2e-workspace/TestProject.csproj');
     let originalCsproj = '';
 
-    const optionOf = async (testId: string) => (await findByTestId(testId, 120_000)).findElement(By.css('[role="option"]'));
+    const optionOf = async (testId: string) => (await findByTestId(testId, 120_000)).findElement(By.css('.nuiget-row-option'));
 
     before(() => {
         originalCsproj = fs.readFileSync(csprojPath, 'utf-8');
@@ -63,7 +63,7 @@ describe('2.0 main panel: Updates tab', () => {
         }
         // The check box sits on the card's vertical centre (P9.fix-3): within 2 px of the row wrapper's centre.
         const centres = await driverOf().executeScript<{ name: string; check: number; card: number }[]>(`
-            return Array.from(document.querySelectorAll('[data-testid="updates-list"] [role="option"]')).map(option => {
+            return Array.from(document.querySelectorAll('[data-testid="updates-list"] .nuiget-row-option')).map(option => {
                 const card = (option.closest('.nuiget-row') ?? option).getBoundingClientRect();
                 const check = option.querySelector('.nuiget-row-check').getBoundingClientRect();
                 return { name: option.querySelector('.nuiget-row-name')?.textContent ?? '', check: check.top + check.height / 2, card: card.top + card.height / 2 };

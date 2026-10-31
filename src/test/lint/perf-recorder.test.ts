@@ -85,7 +85,7 @@ describe('the perf recorder (UX-P0.26)', () => {
         input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
         const started = read()!.start;
         expect(started).not.toBeNull();
-        document.getElementById('results')!.innerHTML = '<div data-testid="browse-list"><div role="option">Humanizer</div></div>';
+        document.getElementById('results')!.innerHTML = '<div data-testid="browse-list"><div class="nuiget-row-option" role="option">Humanizer</div></div>';
         await settle();
         const result = read()!;
         expect(result.start).toBe(started);
@@ -203,7 +203,7 @@ describe('the perf predicates (UX-P0.26)', () => {
     it('sees no Browse row in the skeleton', () => {
         document.body.innerHTML = '<div class="nuiget-skeleton" aria-hidden="true"><div class="nuiget-skeleton-row"></div></div>';
         expect(holds(BROWSE_ROW)).toBe(false);
-        document.body.innerHTML = '<div data-testid="browse-list" role="listbox"><div role="option">Humanizer</div></div>';
+        document.body.innerHTML = '<div data-testid="browse-list" role="listbox"><div class="nuiget-row-option" role="option">Humanizer</div></div>';
         expect(holds(BROWSE_ROW)).toBe(true);
     });
 });

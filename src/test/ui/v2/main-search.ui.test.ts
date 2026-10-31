@@ -120,7 +120,7 @@ describe('2.0 main panel: browse', () => {
     it('a browse row opens its details, and clearing the box brings the tabs back (P5.12b)', async function () {
         this.timeout(180_000);
         const { search, row } = await browse('Newtonsoft.Json', 'package-row-newtonsoft.json');
-        await (await row.findElement(By.css('[role="option"]'))).click();
+        await (await row.findElement(By.css('.nuiget-row-option'))).click();
         await waitForText('package-details-panel', 'Newtonsoft.Json', 30_000);
         await waitForText('package-details-panel', 'Dependencies', 60_000);
         await screenshot('main-browse-details');
@@ -135,7 +135,7 @@ describe('2.0 main panel: browse', () => {
         this.timeout(420_000);
         expect(originalCsproj).not.to.contain('Include="NUnit"');
         const { search, row } = await browse('NUnit', 'package-row-nunit');
-        await (await row.findElement(By.css('[role="option"]'))).click();
+        await (await row.findElement(By.css('.nuiget-row-option'))).click();
         await waitForText('package-details-panel', 'NUnit', 30_000);
         // The version selector is as wide as its one option until the versions arrive, and the Install button beside it
         // moves when it narrows: a click aimed before that lands next to the button (N85).

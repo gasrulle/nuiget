@@ -205,7 +205,7 @@ async function sidebarSections(): Promise<void> {
     await enterSidebarWebview();
     await findByTestId('sidebar-installed-list', 120_000);
     await findByTestId('package-row-serilog', 120_000);
-    await poll(async () => ((await driverOf().findElements(By.css('[data-testid="sidebar-updates-list"] [role="option"]'))).length > 0 ? true : undefined), 'an update row in the sidebar', 120_000);
+    await poll(async () => ((await driverOf().findElements(By.css('[data-testid="sidebar-updates-list"] .nuiget-row-option'))).length > 0 ? true : undefined), 'an update row in the sidebar', 120_000);
 }
 
 // ---- the states ------------------------------------------------------------------------------------------------------
@@ -350,7 +350,7 @@ const REACH: Record<string, Reach> = {
             await chooseFixtureProject('Gateway.csproj');
             await clickVisible('updates-tab');
             await findByTestId('updates-list', 120_000);
-            await until('document.querySelectorAll(\'[data-testid="updates-list"] [role="option"]\').length > 0', 'an update row', 120_000);
+            await until('document.querySelectorAll(\'[data-testid="updates-list"] .nuiget-row-option\').length > 0', 'an update row', 120_000);
         },
     },
     'main-browse-results': {

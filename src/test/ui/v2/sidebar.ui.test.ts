@@ -13,7 +13,7 @@ describe('2.0 sidebar', () => {
     const csprojPath = path.resolve('src/test/e2e/fixtures/e2e-workspace/TestProject.csproj');
     let originalCsproj: string | undefined;
 
-    const serilogOption = async () => (await findByTestId('package-row-serilog')).findElement(By.css('[role="option"]'));
+    const serilogOption = async () => (await findByTestId('package-row-serilog')).findElement(By.css('.nuiget-row-option'));
 
     before(() => {
         originalCsproj = fs.readFileSync(csprojPath, 'utf-8');
@@ -44,7 +44,7 @@ describe('2.0 sidebar', () => {
         const serilog = await serilogOption();
         expect(await serilog.getText()).to.contain('Serilog').and.to.contain('3.1.1');
         // Both sections filled before the screenshot: the fixture project has one update.
-        await poll(async () => ((await driverOf().findElements(By.css('[data-testid="sidebar-updates-list"] [role="option"]'))).length > 0 ? true : undefined), 'the update row', 120_000);
+        await poll(async () => ((await driverOf().findElements(By.css('[data-testid="sidebar-updates-list"] .nuiget-row-option'))).length > 0 ? true : undefined), 'the update row', 120_000);
         await screenshot('sidebar-sections');
     });
 
@@ -101,10 +101,10 @@ describe('2.0 sidebar', () => {
             await enterSidebarWebview();
             await poll(async () => ((await driverOf().executeScript<number>('return document.querySelector(\'[data-testid="nuiget-sidebar"]\').getBoundingClientRect().width;')) <= 200 ? true : undefined), 'the sidebar laid out at 200 px', 10_000);
             await findByTestId('package-row-serilog', 60_000);
-            await poll(async () => ((await driverOf().findElements(By.css('[data-testid="sidebar-updates-list"] [role="option"]'))).length > 0 ? true : undefined), 'an update row', 60_000);
+            await poll(async () => ((await driverOf().findElements(By.css('[data-testid="sidebar-updates-list"] .nuiget-row-option'))).length > 0 ? true : undefined), 'an update row', 60_000);
             type Measured = { list: string; name: string; nameWidth: number; nameScroll: number; versionWidth: number };
             const rows = await driverOf().executeScript<Measured[]>(`
-                return [...document.querySelectorAll('[data-testid="sidebar-installed-list"] [role="option"], [data-testid="sidebar-updates-list"] [role="option"]')].map(option => {
+                return [...document.querySelectorAll('[data-testid="sidebar-installed-list"] .nuiget-row-option, [data-testid="sidebar-updates-list"] .nuiget-row-option')].map(option => {
                     const name = option.querySelector('.nuiget-row-name');
                     const version = option.querySelector('.nuiget-row-version');
                     return { list: option.closest('[role="listbox"]').getAttribute('data-testid'), name: name.textContent, nameWidth: name.clientWidth, nameScroll: name.scrollWidth, versionWidth: version ? version.clientWidth : 0 };

@@ -287,9 +287,9 @@ describe('2.0 theme pass', () => {
             await openSidebarView();
             await enterSidebarWebview();
             // The fixture project has two packages and one update; both sections are filled before anything is measured.
-            await poll(async () => ((await driverOf().findElements(By.css('[data-testid="sidebar-installed-list"] [role="option"]'))).length >= 2 ? true : undefined), 'both installed rows in the sidebar', 120_000);
-            await poll(async () => ((await driverOf().findElements(By.css('[data-testid="sidebar-updates-list"] [role="option"]'))).length >= 1 ? true : undefined), 'the update row in the sidebar', 120_000);
-            await selectFirstRow('[data-testid="sidebar-installed-list"] [role="option"]', 'rows in the sidebar');
+            await poll(async () => ((await driverOf().findElements(By.css('[data-testid="sidebar-installed-list"] .nuiget-row-option'))).length >= 2 ? true : undefined), 'both installed rows in the sidebar', 120_000);
+            await poll(async () => ((await driverOf().findElements(By.css('[data-testid="sidebar-updates-list"] .nuiget-row-option'))).length >= 1 ? true : undefined), 'the update row in the sidebar', 120_000);
+            await selectFirstRow('[data-testid="sidebar-installed-list"] .nuiget-row-option', 'rows in the sidebar');
             await leaveWebview();
             await openMainPanel();
             await enterMainWebview();
@@ -347,7 +347,7 @@ describe('2.0 theme pass', () => {
             // its first row selected. Before, the high-contrast check's click on the Installed tab made the themes after
             // it measure another tab than the themes before it (53 against 25 contrast nodes).
             await (await findByTestId('updates-tab', 30_000)).click();
-            await selectFirstRow('[data-testid="updates-list"] [role="option"]', 'update rows in the main panel');
+            await selectFirstRow('[data-testid="updates-list"] .nuiget-row-option', 'update rows in the main panel');
             const updates = await runAxe();
             await (await findByTestId('installed-tab', 30_000)).click();
             await selectFirstRow('[data-testid="installed-list"] .nuiget-row-option', 'installed rows in the main panel');
@@ -362,7 +362,7 @@ describe('2.0 theme pass', () => {
             await openSidebarView();
             await enterSidebarWebview();
             await waitForBodyClass(theme);
-            await selectFirstRow('[data-testid="sidebar-installed-list"] [role="option"]', 'rows in the sidebar');
+            await selectFirstRow('[data-testid="sidebar-installed-list"] .nuiget-row-option', 'rows in the sidebar');
             await sidebarMoment(theme, contrastFailures);
             const sidebar = await runAxe();
             await leaveWebview();

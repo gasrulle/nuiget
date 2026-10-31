@@ -258,8 +258,8 @@ project has several and one block per project in All Projects; no version select
 | `installed-list`, `updates-list`, `browse-list`, `sidebar-installed-list`, `sidebar-updates-list`, `sidebar-browse-list` | Lists (a grouped list, such as the main panel's Installed list, is a tree) |
 | `package-row-<id>` | A row (id lower-cased): the wrapper around the option and its pointer actions; the option is the `role="option"`, or in a tree the `role="treeitem"`, inside it (read `aria-selected` there; in a multi-selectable list `aria-current` marks the current row) |
 | `row-action-<name>` | A pointer action button inside a row (`install`, `update`, `uninstall`); hidden from assistive technology, mirrored by the keys of §5 |
-| `section-header-<name>` | The toggle button of a collapsible section (`installed`, `updates`, `transitive`); in a group row, the same hook on the row's title, named by the group's id |
-| `section-header-transitive-<tfm>` | The title of one target framework's group row under Transitive (a project with several) |
+| `section-header-<name>` | The toggle button of a collapsible section (`installed`, `updates`, the sidebar's two and the Updates tab's projects until their lists become trees); in a group row, the title inside the treeitem, with no button, named by the group's id |
+| `section-header-transitive-<tfm>` | The title inside one target framework's group row under Transitive (a project with several) |
 | `package-details-panel`, `details-tab-details`, `details-tab-readme`, `readme-content`, `readme-empty`, `transitive-details` | Details panel |
 | `version-selector`, `install-update-button`, `uninstall-button` | Details actions |
 | `select-all-button`, `update-all-button`, `uninstall-selected-button` | Bulk toolbar |
@@ -287,9 +287,9 @@ All Projects (§3; `<name>` = project name lower-cased):
 
 | Test id | Element |
 |---|---|
-| `updates-list-<name>` | A project's list in the main panel |
-| `group-row-<id>` | The wrapper of a group row in a grouped list; the id is the group's: direct, project-<name>, folder-<folder>, transitive, transitive-<tfm> |
-| `sidebar-installed-list-<name>`, `sidebar-updates-list-<name>` | A project's list in the sidebar |
+| `updates-list-<name>` | A project's list in the main panel's Updates tab, until UX-P3.1b makes it a group row |
+| `group-row-<id>` | The wrapper of a group row in a grouped list, one of three hooks on one row: this wrapper, `section-box-<id>` (its header box, measured) and `section-header-<id>` (its title); the state and the keys are on the `role="treeitem"` inside the wrapper; the id is the group's: direct, project-<name>, folder-<folder>, transitive, transitive-<tfm> |
+| `sidebar-installed-list-<name>`, `sidebar-updates-list-<name>` | A project's list in the sidebar, until UX-P3.7c and UX-P3.7d make them group rows |
 | `sidebar-update-all-button` | Update all in the sidebar's Updates header |
 | `section-header-project-<name>`, `section-header-updates-<name>` | The title of a project's group row (Installed); the toggle of a project's section (Updates) |
 
@@ -301,7 +301,7 @@ A hook enters a table when a test outside its component reads it (ExTester, e2e,
 documented state (§4) or the root of a layer; adding one needs no consultation. Names listed in parentheses after a
 pattern hook are the ones the product renders. `src/test/lint/interaction-model-testids.test.ts` fails for a hook in
 these tables that no 2.0 webview file renders, and for a listed name that is not rendered with its pattern's prefix.
-The per-project list hooks above change with the grouped list of D-C; the note under §8.1 says how.
+The per-project list hooks above leave with the items that make their lists trees; the note under §8.1 says which.
 
 ### 8.1 Hooks added by the UX plan (not yet rendered)
 
@@ -334,11 +334,4 @@ is a project or section name lower-cased, as above.
 | Sidebar | `sidebar-installed-progress`, `sidebar-updates-progress`, `sidebar-browse-progress` | The 2 px progress bar of each sidebar list (loading and revalidating) |
 | Sidebar | `sidebar-updates-error`, `sidebar-browse-empty`, `sidebar-browse-error` | The sidebar's missing state markers: the Updates error and the Browse empty and error states |
 
-**Hooks that change with the grouped list** (D-C, round 1). Under one grouped list per view, the per-project list ids
-of the tables above, `installed-list-<name>`, `updates-list-<name>` and `sidebar-*-list-<name>`
-(`sidebar-installed-list-<name>`, `sidebar-updates-list-<name>`), no longer name listboxes: they become the ids of the
-projects' group rows inside the view's one listbox. Plan item P2.1f, which builds the grouped list, moves those rows
-in the same change, together with the ExTester tests that read them. `transitive-list` and `transitive-list-<tfm>`
-left at UX-P2.1e for the Transitive group row and its target-framework group rows. The `section-header-<name>`
-toggles of the same groups and the `section-box-<name>` hook of this table describe the same group rows; P2.1f
-reconciles the three in that change.
+**Hooks that change with the grouped list** (D-C, round 1). A grouped list has one id, the view's, and every group in it is a row with the three hooks of the `group-row-<id>` row above. The Installed tab has been one since UX-P2.1d and UX-P2.1e: `installed-list-<name>`, `transitive-list` and `transitive-list-<tfm>` have left. UX-P2.1f reconciled the three hooks and moved the readers of a row to `.nuiget-row-option`, which holds in a listbox and in a tree. The per-project ids still in the table, `updates-list-<name>` and `sidebar-*-list-<name>`, name real listboxes until their lists move: `updates-list-<name>` becomes `group-row-project-<name>` at UX-P3.1b, `sidebar-installed-list-<name>` at UX-P3.7c and `sidebar-updates-list-<name>` at UX-P3.7d, each with its readers in that change.
