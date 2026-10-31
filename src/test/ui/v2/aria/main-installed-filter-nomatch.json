@@ -28,7 +28,7 @@
     "      button \"Select all\" [disabled, not pressed] {select-all-button}",
     "      button \"Uninstall selected (#)\" [disabled] {uninstall-selected-button}",
     "    tree \"Installed packages\" [multiselectable] {installed-list}",
-    "      treeitem \"Direct packages (# of #)\" [expanded, level 1]",
+    "      treeitem \"Direct packages # of #\" [expanded, level 1]",
     "      treeitem \"Transitive packages\" [collapsed, level 1]",
     "  separator \"Resize the package list\" {sash}",
     "  region \"Package details\" {package-details-panel}",

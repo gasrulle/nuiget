@@ -10,10 +10,10 @@
       "reason": "the newest versions on nuget.org change",
       "rects": [
         {
-          "h": 356,
+          "h": 353,
           "w": 250,
           "x": 0,
-          "y": 443
+          "y": 446
         }
       ]
     }
@@ -27,5 +27,5 @@
     "chromium": "150",
     "image": "ubuntu26 20261026.180.1"
   },
-  "run": "41221059301"
+  "run": "41237104975"
 }

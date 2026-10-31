@@ -27,7 +27,7 @@
     "      button \"Select all\" [not pressed] {select-all-button}",
     "      button \"Uninstall selected (#)\" [disabled] {uninstall-selected-button}",
     "    tree \"Installed packages\" [multiselectable] {installed-list}",
-    "      treeitem \"Direct packages (#)\" [expanded, level 1]",
+    "      treeitem \"Direct packages #\" [expanded, level 1]",
     "      treeitem \"Microsoft.EntityFrameworkCore #\" [level 2]",
     "        img \"Verified: the package id prefix is reserved by its owner\"",
     "      treeitem \"Microsoft.EntityFrameworkCore.Sqlite #\" [level 2]",
@@ -52,7 +52,7 @@
     "      treeitem \"StackExchange.Redis #\" [level 2]",
     "        img \"Verified: the package id prefix is reserved by its owner\"",
     "      treeitem \"Mapster #\" [level 2]",
-    "      treeitem \"Transitive packages (#) Target framework net#\" [collapsed, level 1]",
+    "      treeitem \"Transitive packages Target framework net# #\" [collapsed, level 1]",
     "  separator \"Resize the package list\" {sash}",
     "  region \"Package details\" {package-details-panel}",
     "  status \"\" {status-live}"

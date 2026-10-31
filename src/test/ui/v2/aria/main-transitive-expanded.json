@@ -56,7 +56,7 @@
     "      treeitem \"NETStandard.Library #\" [level 2]",
     "        img \"Verified: the package id prefix is reserved by its owner\"",
     "      treeitem \"Transitive packages\" [expanded, level 1, focused]",
-    "      treeitem \"Transitive packages (#) Target framework net#\" [expanded, level 2]",
+    "      treeitem \"Transitive packages Target framework net# #\" [expanded, level 2]",
     "      treeitem \"Microsoft.Extensions.Configuration #\" [level 3]",
     "        img \"Verified: the package id prefix is reserved by its owner\"",
     "      treeitem \"Microsoft.Extensions.Configuration.Abstractions #\" [level 3]",

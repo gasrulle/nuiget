@@ -485,7 +485,7 @@ export const KEYS_PENDING: Readonly<Record<string, string>> = {
  * A screen whose moved stops are not yet in its committed ARIA snapshot, with the item whose green run adopts it; that
  * item's closing commit removes the entry (UX-P2.1d).
  */
-export const KEYS_AWAITING_ARIA: Readonly<Partial<Record<KeyScreen, string>>> = { 'main-installed': 'P2.6' };
+export const KEYS_AWAITING_ARIA: Readonly<Partial<Record<KeyScreen, string>>> = {};
 
 /**
  * The `[keys]` lines of a screen and their failures: the tab sequence against `KEYS_EXPECTED`, a ring at every stop, and
