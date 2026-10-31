@@ -125,6 +125,12 @@
     "sha256": "39ba9c8e3e77078d6c8b321e09386af01cd63a15bd5de1c9d29a878d361f74f3",
     "sidecarSha256": "1ac5c6de2a1540873d9f41d8867edb5c1fb299dae8a18de29ba8e8dafd10fed3"
   },
+  "main-installed-refresh-hover.dark-modern.1200.png": {
+    "status": "baseline",
+    "run": "41225068991",
+    "sha256": "d70f1932a01344a74176658c16fa5b068fc3a70a4da840d43b7ed95541e1815c",
+    "sidecarSha256": "eb1ad85a3107fbddbb0513b2399719a8e7e112cfdbc03a3d0cba0ce549a6e1f5"
+  },
   "main-installed-single.dark-high-contrast.1200.png": {
     "status": "baseline",
     "run": "41221059301",
