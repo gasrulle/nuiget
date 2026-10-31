@@ -13,7 +13,7 @@
           "h": 120,
           "w": 1166,
           "x": 17,
-          "y": 69
+          "y": 73
         }
       ]
     },
@@ -22,10 +22,10 @@
       "reason": "the caret blinks and the selection differs between runs (H27)",
       "rects": [
         {
-          "h": 24,
+          "h": 26,
           "w": 1168,
           "x": 16,
-          "y": 40
+          "y": 42
         }
       ]
     }
@@ -39,5 +39,5 @@
     "chromium": "150",
     "image": "ubuntu26 20261026.180.1"
   },
-  "run": "41204462784"
+  "run": "41211547868"
 }
