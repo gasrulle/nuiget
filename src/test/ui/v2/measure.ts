@@ -163,8 +163,8 @@ const DISABLED_BUTTON_STATES: readonly string[] = ['main-installed-single', 'mai
 const V50_WIDTHS: Readonly<Record<number, string>> = { 220: 'P2.7' };
 
 export const RULES: readonly RuleDefinition[] = [
-    // The tab label has no box at the 220 cell until P2.7's pane minimum.
-    rule('PF-6', { helper: 2, scopes: { 'main-installed': 'hard' }, tolerance: TOLERANCES.coincide, states: ['main-installed-single'], pendingWidths: { 220: 'P2.7' } }),
+    // The tab label has no box at the 220 and 400 cells until P2.7's pane minimum.
+    rule('PF-6', { helper: 2, scopes: { 'main-installed': 'hard' }, tolerance: TOLERANCES.coincide, states: ['main-installed-single'], pendingWidths: { 220: 'P2.7', 400: 'P2.7' } }),
     rule('DS-GRID-1', { helper: 1, scopes: { 'main-installed': { pending: 'P2.7' }, ...asGrid1 }, tolerance: TOLERANCES.gapMembership }),
     rule('DS-GRID-2a', { helper: 1, scopes: { 'main-installed': { pending: 'P2.7' }, ...asGrid1 }, tolerance: TOLERANCES.gapMembership }),
     rule('DS-GRID-2b', { helper: 1, scopes: { 'main-installed': { pending: 'P2.6' }, ...asGrid1 }, tolerance: TOLERANCES.proximity }),

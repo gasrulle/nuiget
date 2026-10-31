@@ -467,7 +467,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(at('main-installed-single', 1200)?.status).toBe('hard');
         expect(at('main-installed-single', 1600)?.status).toBe('hard');
         expect(at('main-installed-all', 220)?.status).toEqual({ pending: 'P2.7' });
-        // PF-6 waits there too since UX-P2.5: the tab label has no box until P2.7's pane minimum.
+        // PF-6 waits there, and at 400, since UX-P2.5: the tab label has no box until P2.7's pane minimum.
         expect(measureLines('main-installed-single', sideways, 'modern', {}, undefined, 220).find(line => line.name === 'PF-6@main-installed-single')?.status).toEqual({ pending: 'P2.7' });
     });
 
@@ -804,7 +804,8 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
             expect(lineOf('main-browse-details', layout(), name)).toMatchObject({ pass: false });
         }
         expect(measureLines('main-installed-single', layout(), 'modern', {}, undefined, 220).find(line => line.name === 'PF-6@main-installed-single')).toMatchObject({ status: { pending: 'P2.7' } });
-        expect(measureLines('main-installed-single', layout(), 'modern', {}, undefined, 400).find(line => line.name === 'PF-6@main-installed-single')).toMatchObject({ status: 'hard' });
+        expect(measureLines('main-installed-single', layout(), 'modern', {}, undefined, 400).find(line => line.name === 'PF-6@main-installed-single')).toMatchObject({ status: { pending: 'P2.7' } });
+        expect(measureLines('main-installed-single', layout(), 'modern', {}, undefined, 600).find(line => line.name === 'PF-6@main-installed-single')).toMatchObject({ status: 'hard' });
         const hits = layout({}, { iconButtons: [iconButton(), iconButton({ inHeader: true, width: 20, height: 20 })] });
         expect(lineOf('sidebar-sections', hits, 'DS-HEIGHT-8@sidebar-sections')).toMatchObject({ pass: true, status: 'hard', value: 'painted 22×22 (target 22×22); section header 20×20 (target 20×20); hit 24 ×2 (at least 24)' });
         expect(measureLines('main-installed-single', layout(), 'modern', {}, undefined, 400).find(line => line.name === 'DS-OVERFLOW-3@main-installed-single/toolbars')).toMatchObject({ status: { pending: 'P2.7' } });
