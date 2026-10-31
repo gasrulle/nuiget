@@ -35,8 +35,7 @@
     "        img \"Verified: the package id prefix is reserved by its owner\"",
     "      treeitem \"Polly #\" [level 2]",
     "        img \"Verified: the package id prefix is reserved by its owner\"",
-    "    heading \"Transitive packages (#)\"",
-    "      button \"Transitive packages (#)\" [collapsed] {section-header-transitive}",
+    "      treeitem \"Transitive packages (#) Target framework net#\" [collapsed, level 1]",
     "  separator \"Resize the package list\" {sash}",
     "  region \"Package details\" {package-details-panel}",
     "  status \"\" {status-live}"

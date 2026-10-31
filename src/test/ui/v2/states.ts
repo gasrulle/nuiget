@@ -149,7 +149,7 @@ export const STATES: readonly NamedState[] = [
     { ...ready('main-installed-bulk-dialog', 'main', [primary('main')],
         'Gateway selected, one row in the bulk selection, Uninstall selected pressed; the confirm dialog is open and is cancelled after the capture, never confirmed.', [LIVE_ICONS]), diffTolerance: 0 },
     { ...ready('main-transitive-expanded', 'main', [primary('main')],
-        'Gateway selected, the transitive section expanded; its list has rows.', [LIVE_ICONS]), diffTolerance: 0 },
+        'Gateway selected, the Transitive group row expanded; its rows are rendered below the crop\'s edge, PF-2\'s picture.', [LIVE_ICONS]), diffTolerance: 0 },
     { ...ready('main-transitive-details', 'main', [primary('main')],
         'Gateway selected, a transitive row made current; the details panel shows its id.', [LIVE_DETAILS, LIVE_ICONS]), diffTolerance: 0 },
     { ...ready('main-updates', 'main', [primary('main')],

@@ -41,8 +41,7 @@
     "        img \"Verified: the package id prefix is reserved by its owner\"",
     "      treeitem \"Microsoft.Extensions.AI.Abstractions #-preview.#\" [level 2]",
     "        img \"Verified: the package id prefix is reserved by its owner\"",
-    "    heading \"Transitive packages\"",
-    "      button \"Transitive packages\" [collapsed] {section-header-transitive}",
+    "      treeitem \"Transitive packages\" [collapsed, level 1]",
     "  separator \"Resize the package list\" {sash}",
     "  region \"Package details\" {package-details-panel}",
     "  status \"\" {status-live}"

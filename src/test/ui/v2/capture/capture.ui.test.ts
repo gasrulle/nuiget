@@ -926,6 +926,35 @@ let lookReported = false;
 
 const READ_DOCUMENT = 'const doc = document.documentElement; return { width: doc.clientWidth, height: doc.clientHeight, scrollWidth: doc.scrollWidth, scrollHeight: doc.scrollHeight };';
 
+/**
+ * The virtualized tree's numbers (design-advisor, UX-P2.1e; informational): the scroller, its sizer, the rendered rows and
+ * their heights, and the items of the sets a rendered row belongs to (an unrendered group's children are not counted).
+ */
+const READ_VIRTUAL = `
+const list = document.querySelector('[data-testid="installed-list"]');
+if (list === null) return null;
+const scroller = list.matches('.nuiget-listbox') ? list : list.querySelector('.nuiget-listbox');
+const sizer = list.querySelector('.nuiget-listbox-sizer');
+const rows = sizer === null ? [] : [...sizer.children].filter(row => row.hasAttribute('data-index'));
+const sets = new Map();
+let parent = '';
+for (const row of rows) {
+    const item = row.querySelector('[role="treeitem"]') ?? row;
+    const level = Number(item.getAttribute('aria-level'));
+    const size = Number(item.getAttribute('aria-setsize'));
+    if (row.getAttribute('data-row-kind') === 'group') parent = row.getAttribute('data-index');
+    sets.set(level === 1 ? 'root' : parent + '/' + level, size);
+}
+return {
+    client: scroller.clientHeight,
+    scroll: scroller.scrollHeight,
+    sizer: sizer === null ? 0 : sizer.getBoundingClientRect().height,
+    rendered: rows.length,
+    heights: rows.reduce((sum, row) => sum + row.getBoundingClientRect().height, 0),
+    items: [...sets.values()].reduce((sum, size) => sum + size, 0),
+};
+`;
+
 /** MS-8's reference: the chrome of the first state measured at each surface, theme, width and look (UX-P0.12). */
 const chromeReferences = new Map<string, ChromeReference>();
 
@@ -1108,6 +1137,10 @@ describe(`named states (${LANE} lane, ${LOOK} look)`, () => {
             console.warn(`[overflow] ${captureFile(state.name, capture)}: document ${page.width}×${page.height}, scroll ${page.scrollWidth}×${page.scrollHeight}`);
             if (overflowHard && (page.scrollWidth > page.width || page.scrollHeight > page.height)) {
                 red.push(`[overflow] the document scrolls before the shot: ${page.scrollWidth}×${page.scrollHeight} in ${page.width}×${page.height}`);
+            }
+            const virtual = await script<{ client: number; scroll: number; sizer: number; rendered: number; heights: number; items: number } | null>(READ_VIRTUAL);
+            if (virtual !== null) {
+                console.warn(`[virtual] ${captureFile(state.name, capture).replace(/\.png$/, '')}: client ${virtual.client}, scroll ${virtual.scroll}, sizer ${virtual.sizer}, rendered ${virtual.rendered} of ${virtual.items}, rendered heights ${virtual.heights}`);
             }
             const shot = await shoot(state, capture);
             writeSidecar(state, capture, facts);
