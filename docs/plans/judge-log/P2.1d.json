@@ -1,0 +1,1735 @@
+{
+  "item": "P2.1d",
+  "runs": [
+    {
+      "runId": "41160244824",
+      "rubric": "aaec14b88b334d27334f33a0b68c38925fbae8a3",
+      "tree": "ebf0d1e",
+      "look": "modern",
+      "workflow": "wf_f9c795f3-22d",
+      "captures": {
+        "main-installed-single": {
+          "png": "captures/41160244824/main-installed-single.dark-modern.932.png",
+          "sha256": "fb3d0d1092f53b76b0080239f1f72eb1100785c7e363522706eb8ea7d9be8aa3",
+          "artboard": "docs/design/artboards/main-installed-single.dark-modern.932.png",
+          "artboardSha256": "e199e21c2c661be5f33449324dd6d9a26f88b8ef0298449fc9c063ac3391952b"
+        }
+      },
+      "panel": {
+        "states": 1,
+        "candidates": 64,
+        "standing": 22,
+        "blocking": 2,
+        "refuted": 4,
+        "singleJudge": 3,
+        "incomplete": 0
+      },
+      "singleJudge": [
+        {
+          "id": "main-installed-single#D15",
+          "state": "main-installed-single",
+          "finding": "[native] The Vulnerable label badge has a small-radius rectangular shape where the Modern UI label badge is a pill.",
+          "severity": "major",
+          "box": [
+            210,
+            637,
+            68,
+            18
+          ],
+          "rule": "DS-HEIGHT-10",
+          "lenses": [
+            "native"
+          ],
+          "members": [
+            {
+              "id": "native-15",
+              "lens": "native",
+              "state": "main-installed-single",
+              "finding": "The Vulnerable label badge has a small-radius rectangular shape where the Modern UI label badge is a pill.",
+              "severity": "minor",
+              "box": [
+                210,
+                637,
+                68,
+                18
+              ],
+              "rule": "DS-HEIGHT-10",
+              "verdict": "confirmed",
+              "reason": "The Vulnerable badge in the crop has small rounded corners; DS-HEIGHT-10 measures 'label radius 4px (target pill)', a visible rule contradiction, so major rather than the judge's minor.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            }
+          ]
+        },
+        {
+          "id": "main-installed-single#D23",
+          "state": "main-installed-single",
+          "finding": "[native] The main panel's divider lines are #313131 where the artboard's divider role paints #2b2b2b (settings.headerBorder in Dark Modern).",
+          "severity": "major",
+          "box": [
+            0,
+            68,
+            932,
+            1
+          ],
+          "rule": "DS-DIVIDER-4",
+          "lenses": [
+            "native"
+          ],
+          "members": [
+            {
+              "id": "native-24",
+              "lens": "native",
+              "state": "main-installed-single",
+              "finding": "The main panel's divider lines are #313131 where the artboard's divider role paints #2b2b2b (settings.headerBorder in Dark Modern).",
+              "severity": "minor",
+              "box": [
+                0,
+                68,
+                932,
+                1
+              ],
+              "rule": "DS-DIVIDER-4",
+              "verdict": "confirmed",
+              "reason": "The line at y 68 probes #313131 against the artboard's #2b2b2b in the same theme; the Dark Modern dump resolves widget.border to #313131 and settings.headerBorder to #2b2b2b, so this is a wrong divider role under DS-DIVIDER-4, which §3 rates major.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            }
+          ]
+        },
+        {
+          "id": "main-installed-single#D24",
+          "state": "main-installed-single",
+          "finding": "[geometry] The header check boxes for Restore after operations and Include prerelease are 16 x 16 px (y 12-28), where the rule requires 18 x 18 px, and they differ from the 14 px row check boxes.",
+          "severity": "major",
+          "box": [
+            244,
+            12,
+            202,
+            16
+          ],
+          "rule": "DS-HEIGHT-9",
+          "lenses": [
+            "geometry"
+          ],
+          "members": [
+            {
+              "id": "geometry-16",
+              "lens": "geometry",
+              "state": "main-installed-single",
+              "finding": "The header check boxes for Restore after operations and Include prerelease are 16 x 16 px (y 12-28), where the rule requires 18 x 18 px, and they differ from the 14 px row check boxes.",
+              "severity": "major",
+              "box": [
+                244,
+                12,
+                202,
+                16
+              ],
+              "rule": "DS-HEIGHT-9",
+              "verdict": "confirmed",
+              "reason": "The crop shows the header check box at its measured size; DS-HEIGHT-9 reads '16x16 x2 (target 18x18)', a separate element and size from the 14 px row check mark.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            }
+          ]
+        }
+      ],
+      "refuted": [
+        {
+          "id": "native-23",
+          "lens": "native",
+          "state": "main-installed-single",
+          "finding": "The list column paints a darker side-bar background (#181818) than the header and details pane (#1f1f1f), where the artboard's list shares the one editor background, so the region is in a different colour role and splits the panel into two surfaces.",
+          "severity": "major",
+          "box": [
+            0,
+            69,
+            326,
+            734
+          ],
+          "rule": "DS-COLOR-1",
+          "verdict": "refuted",
+          "reason": "The list column is #181818 in the crop, but the Design System colour-role table assigns the list pane to sideBar.background (color-bg-sidebar), so DS-COLOR-1 holds; the artboard's single surface is a drawing difference the spec states no token for, and the role is what §6 judges.",
+          "method": "crop",
+          "refuterSeverity": "minor"
+        },
+        {
+          "id": "native-25",
+          "lens": "native",
+          "state": "main-installed-single",
+          "finding": "The select text starts about 11 px inside the select (Gateway.csproj at x 589, select at x 578) against the 7 px text inset of the spec, leaving the selects looser at the start.",
+          "severity": "minor",
+          "box": [
+            578,
+            8,
+            161,
+            24
+          ],
+          "rule": "judge-only",
+          "verdict": "refuted",
+          "reason": "Ink to border is 11 px in the capture (578 to 589) and already 9 px in the artboard (607 to 616), so about 2 px differs and not 4; SPEC (pending P2.8a) gives delta inset equal to delta x, -29, and left padding 6 as specified, and the difference is not visible at 1:1.",
+          "method": "crop",
+          "refuterSeverity": "minor"
+        },
+        {
+          "id": "states-16",
+          "lens": "states",
+          "state": "main-installed-single",
+          "finding": "Packages without their own icon appear to fall back to a saturated orange box glyph, where the artboard draws the fallback as a neutral monochrome package glyph on a muted tile; the same glyph on several different packages is what suggests a fallback rather than live content.",
+          "severity": "major",
+          "box": [
+            42,
+            647,
+            32,
+            32
+          ],
+          "rule": "judge-only",
+          "verdict": "refuted",
+          "reason": "The crop does show an orange box glyph, but the capture's sidecar masks .nuiget-row-icon at exactly 42,647 32x32 as live icons resolved per run that may leave the default icon, so §6 excludes it, and no rule names the fallback's colour.",
+          "method": "crop",
+          "refuterSeverity": "minor"
+        },
+        {
+          "id": "states-18",
+          "lens": "states",
+          "state": "main-installed-single",
+          "finding": "The Installed tab has a second, red-outlined badge \"1\" beside its count, which the artboard and spec do not draw; it may come from the capture's vulnerable package, but the artboard offers no such element to compare with.",
+          "severity": "minor",
+          "box": [
+            103,
+            72,
+            17,
+            17
+          ],
+          "rule": "judge-only",
+          "verdict": "refuted",
+          "reason": "The red-outlined '1' is visible in the crop, but it reports the capture workspace's vulnerable Newtonsoft.Json 12.0.1, which the artboard's two-package data lacks, so it is live count content under §6 and has no artboard element to contradict.",
+          "method": "crop",
+          "refuterSeverity": "minor"
+        }
+      ],
+      "findings": [
+        {
+          "id": "main-installed-single#D1",
+          "state": "main-installed-single",
+          "finding": "[native] The details pane shows only the placeholder \"Select a package to see its details.\", where the artboard draws the title, Installed and Version rows, Uninstall and Update buttons, the Details/README tabs and the README, so the state lacks the content its name promises. | [geometry] The right pane shows only a 'Select a package' placeholder, where the artboard and spec draw the package-details-panel from y 77 (title, version-selector, uninstall-button, install-update-button, the 36 px Details/README strip, readme-content); the whole details layout is missing. | [states] The details pane shows the empty message \"Select a package to see its details.\" where the artboard draws the populated details: the Newtonsoft.Json title, Installed and Version facts, the Uninstall and Update buttons, the Details/README tabs and the README (spec package-details-panel, uninstall-button, version-selector, install-update-button, details-tab-*, readme-content), so the capture shows the details-empty state's content.",
+          "severity": "blocking",
+          "box": [
+            328,
+            69,
+            604,
+            734
+          ],
+          "rule": "judge-only, DS-STATE-1",
+          "lenses": [
+            "native",
+            "geometry",
+            "states"
+          ],
+          "members": [
+            {
+              "id": "native-1",
+              "lens": "native",
+              "state": "main-installed-single",
+              "finding": "The details pane shows only the placeholder \"Select a package to see its details.\", where the artboard draws the title, Installed and Version rows, Uninstall and Update buttons, the Details/README tabs and the README, so the state lacks the content its name promises.",
+              "severity": "blocking",
+              "box": [
+                330,
+                69,
+                602,
+                734
+              ],
+              "rule": "judge-only",
+              "verdict": "confirmed",
+              "reason": "The crop shows only 'Select a package to see its details.' on an empty pane; the artboard draws the populated details and SPEC reports missing uninstall-button, version-selector, install-update-button, details tabs and readme-content, with no declared exception.",
+              "method": "crop",
+              "refuterSeverity": "blocking"
+            },
+            {
+              "id": "geometry-1",
+              "lens": "geometry",
+              "state": "main-installed-single",
+              "finding": "The right pane shows only a 'Select a package' placeholder, where the artboard and spec draw the package-details-panel from y 77 (title, version-selector, uninstall-button, install-update-button, the 36 px Details/README strip, readme-content); the whole details layout is missing.",
+              "severity": "blocking",
+              "box": [
+                330,
+                69,
+                602,
+                734
+              ],
+              "rule": "judge-only",
+              "verdict": "confirmed",
+              "reason": "The crop shows only the placeholder message; SPEC lists uninstall-button, version-selector, install-update-button, details-tab-details, details-tab-readme and readme-content as missing.",
+              "method": "crop",
+              "refuterSeverity": "blocking"
+            },
+            {
+              "id": "states-1",
+              "lens": "states",
+              "state": "main-installed-single",
+              "finding": "The details pane shows the empty message \"Select a package to see its details.\" where the artboard draws the populated details: the Newtonsoft.Json title, Installed and Version facts, the Uninstall and Update buttons, the Details/README tabs and the README (spec package-details-panel, uninstall-button, version-selector, install-update-button, details-tab-*, readme-content), so the capture shows the details-empty state's content.",
+              "severity": "blocking",
+              "box": [
+                328,
+                77,
+                604,
+                726
+              ],
+              "rule": "DS-STATE-1",
+              "verdict": "confirmed",
+              "reason": "The crop shows the empty message beside a populated list, the content of another state; SPEC lists the details controls, tabs and readme-content as missing.",
+              "method": "crop",
+              "refuterSeverity": "blocking"
+            }
+          ],
+          "disposition": "fixed",
+          "evidence": "Ordered to UX-P2.8a. Repeats the earlier finding on an element this item did not touch.",
+          "ruling": "The judge-log rule of docs/plans/STATUS-ux.md (design-advisor, UX-P2.1b); earlier entry docs/plans/judge-log/P2.1c.json, the entry of rule judge-only, DS-STATE-1"
+        },
+        {
+          "id": "main-installed-single#D2",
+          "state": "main-installed-single",
+          "finding": "[native] No row is selected: the artboard draws Newtonsoft.Json with the active selection band, the 1 px focus ring and the row's trash action, while every row in the capture is at rest and Newtonsoft.Json sits unselected at y 624. | [geometry] No row is selected: the Newtonsoft.Json row has no selection band, focus ring or the row-action-uninstall button that the artboard and spec draw on package-row-newtonsoft.json (22 px action ending 6 px inside the band). | [states] No row is selected: the artboard's first package row has the active selection band, the 1 px focus ring and the trash action at its end (spec package-row-newtonsoft.json with list-active tokens, row-action-uninstall at 299,200), while the capture has only unselected rows and no visible row action.",
+          "severity": "blocking",
+          "box": [
+            0,
+            150,
+            327,
+            97
+          ],
+          "rule": "DS-COLOR-2, DS-INSET-3",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "members": [
+            {
+              "id": "native-2",
+              "lens": "native",
+              "state": "main-installed-single",
+              "finding": "No row is selected: the artboard draws Newtonsoft.Json with the active selection band, the 1 px focus ring and the row's trash action, while every row in the capture is at rest and Newtonsoft.Json sits unselected at y 624.",
+              "severity": "blocking",
+              "box": [
+                0,
+                175,
+                327,
+                72
+              ],
+              "rule": "DS-COLOR-2",
+              "verdict": "confirmed",
+              "reason": "The box holds an unselected first row in the capture where the artboard crop shows the blue selection band, focus ring and trash action; DS-ROW-3 reads 'not measurable (no hovered, selected or focused row)'.",
+              "method": "crop",
+              "refuterSeverity": "blocking"
+            },
+            {
+              "id": "geometry-2",
+              "lens": "geometry",
+              "state": "main-installed-single",
+              "finding": "No row is selected: the Newtonsoft.Json row has no selection band, focus ring or the row-action-uninstall button that the artboard and spec draw on package-row-newtonsoft.json (22 px action ending 6 px inside the band).",
+              "severity": "blocking",
+              "box": [
+                0,
+                624,
+                318,
+                78
+              ],
+              "rule": "DS-INSET-3",
+              "verdict": "confirmed",
+              "reason": "The crop shows the Newtonsoft.Json row at rest with no band, ring or trash action, where the artboard and spec draw them; DS-ROW-3 reads 'not measurable (no hovered, selected or focused row)'.",
+              "method": "crop",
+              "refuterSeverity": "blocking"
+            },
+            {
+              "id": "states-2",
+              "lens": "states",
+              "state": "main-installed-single",
+              "finding": "No row is selected: the artboard's first package row has the active selection band, the 1 px focus ring and the trash action at its end (spec package-row-newtonsoft.json with list-active tokens, row-action-uninstall at 299,200), while the capture has only unselected rows and no visible row action.",
+              "severity": "blocking",
+              "box": [
+                0,
+                150,
+                327,
+                79
+              ],
+              "rule": "DS-COLOR-2",
+              "verdict": "confirmed",
+              "reason": "The crop shows the first row at rest with no band, ring or action; the artboard's first row has all three, and DS-ROW-3 reads 'not measurable (no hovered, selected or focused row)'.",
+              "method": "crop",
+              "refuterSeverity": "blocking"
+            }
+          ],
+          "disposition": "fixed",
+          "evidence": "Ordered to UX-P2.8a. Repeats the earlier finding on an element this item did not touch.",
+          "ruling": "The judge-log rule of docs/plans/STATUS-ux.md (design-advisor, UX-P2.1b); earlier entry docs/plans/judge-log/P2.1c.json, the entry of rule DS-COLOR-2, DS-INSET-3"
+        },
+        {
+          "id": "main-installed-single#D3",
+          "state": "main-installed-single",
+          "finding": "[native] Rows have a 79 px pitch (dividers at y 228 and 307) against the 72 px Extensions row of the spec and artboard, so the list looks loose and shows fewer rows. | [geometry] Row pitch is 79 px (row lines at y 228, 307, 386, 465 and on; first band y 150-229), where the spec's package rows and the rule give 72 px, so the list looks loose against the artboard.",
+          "severity": "major",
+          "box": [
+            0,
+            150,
+            318,
+            79
+          ],
+          "rule": "DS-HEIGHT-3",
+          "lenses": [
+            "native",
+            "geometry"
+          ],
+          "members": [
+            {
+              "id": "native-3",
+              "lens": "native",
+              "state": "main-installed-single",
+              "finding": "Rows have a 79 px pitch (dividers at y 228 and 307) against the 72 px Extensions row of the spec and artboard, so the list looks loose and shows fewer rows.",
+              "severity": "major",
+              "box": [
+                0,
+                150,
+                318,
+                79
+              ],
+              "rule": "DS-HEIGHT-3",
+              "verdict": "confirmed",
+              "reason": "The crop shows the row band with its line at y 228 and the measurement agrees: DS-HEIGHT-3 'rows 79 x15 (target 72); pitch 79 x14 (target 72)'.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            },
+            {
+              "id": "geometry-3",
+              "lens": "geometry",
+              "state": "main-installed-single",
+              "finding": "Row pitch is 79 px (row lines at y 228, 307, 386, 465 and on; first band y 150-229), where the spec's package rows and the rule give 72 px, so the list looks loose against the artboard.",
+              "severity": "major",
+              "box": [
+                0,
+                150,
+                318,
+                79
+              ],
+              "rule": "DS-HEIGHT-3",
+              "verdict": "confirmed",
+              "reason": "The crop covers the row band up to its line at y 228; DS-HEIGHT-3 measures 'rows 79 x15 (target 72); pitch 79 x14 (target 72)'.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            }
+          ],
+          "disposition": "fixed",
+          "evidence": "Ordered to UX-P2.2. Repeats the earlier finding on an element this item did not touch.",
+          "ruling": "The judge-log rule of docs/plans/STATUS-ux.md (design-advisor, UX-P2.1b); earlier entry docs/plans/judge-log/P2.1c.json, the entry of rule DS-HEIGHT-3"
+        },
+        {
+          "id": "main-installed-single#D4",
+          "state": "main-installed-single",
+          "finding": "[native] A 1 px #313131 line sits under every row, where the artboard has no line between rows and separates groups only, so the list reads as cards and not as an Extensions list. | [geometry] A 1 px line is drawn under every row (y 228, 307, 386, 465, 544, 623, 702, 781, x 0-318), where the artboard has no line between rows and the rule allows lines only between groups. | [states] A hairline runs under every package row, which the artboard does not draw between Newtonsoft.Json and Serilog and the rule forbids (lines only between groups).",
+          "severity": "major",
+          "box": [
+            0,
+            226,
+            318,
+            556
+          ],
+          "rule": "DS-DIVIDER-1",
+          "lenses": [
+            "native",
+            "geometry",
+            "states"
+          ],
+          "members": [
+            {
+              "id": "native-4",
+              "lens": "native",
+              "state": "main-installed-single",
+              "finding": "A 1 px #313131 line sits under every row, where the artboard has no line between rows and separates groups only, so the list reads as cards and not as an Extensions list.",
+              "severity": "major",
+              "box": [
+                0,
+                228,
+                318,
+                396
+              ],
+              "rule": "DS-DIVIDER-1",
+              "verdict": "confirmed",
+              "reason": "A hairline runs under every row in the crop (probe x=3 finds one #313131 pixel at y 228) while the artboard has no line between Newtonsoft.Json and Serilog, against DS-DIVIDER-1.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            },
+            {
+              "id": "geometry-5",
+              "lens": "geometry",
+              "state": "main-installed-single",
+              "finding": "A 1 px line is drawn under every row (y 228, 307, 386, 465, 544, 623, 702, 781, x 0-318), where the artboard has no line between rows and the rule allows lines only between groups.",
+              "severity": "major",
+              "box": [
+                0,
+                228,
+                318,
+                554
+              ],
+              "rule": "DS-DIVIDER-1",
+              "verdict": "confirmed",
+              "reason": "The crop shows a hairline under each row down the list while the artboard has none between rows, against DS-DIVIDER-1.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            },
+            {
+              "id": "states-5",
+              "lens": "states",
+              "state": "main-installed-single",
+              "finding": "A hairline runs under every package row, which the artboard does not draw between Newtonsoft.Json and Serilog and the rule forbids (lines only between groups).",
+              "severity": "major",
+              "box": [
+                0,
+                226,
+                318,
+                162
+              ],
+              "rule": "DS-DIVIDER-1",
+              "verdict": "confirmed",
+              "reason": "The capture crop shows hairlines between rows at the place where the artboard crop shows none between Newtonsoft.Json and Serilog, against DS-DIVIDER-1.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            }
+          ],
+          "disposition": "fixed",
+          "evidence": "Ordered to UX-P2.2. Repeats the earlier finding on an element this item did not touch.",
+          "ruling": "The judge-log rule of docs/plans/STATUS-ux.md (design-advisor, UX-P2.1b); earlier entry docs/plans/judge-log/P2.1c.json, the entry of rule DS-DIVIDER-1"
+        },
+        {
+          "id": "main-installed-single#D5",
+          "state": "main-installed-single",
+          "finding": "[native] Installed rows stack three text lines (name, version, author) where the artboard and the rule draw two (name, then version · author with the Verified mark). | [geometry] Installed rows stack three text lines (name, version, author at about y 171, 189, 207), where the artboard and the rule draw two lines with version and authors sharing the second line. | [states] Rows have three stacked text lines (name, version, authors) at a 79 px pitch, where the artboard and spec draw two lines (name, then version · authors on one line) in a 72 px row.",
+          "severity": "major",
+          "box": [
+            0,
+            150,
+            318,
+            79
+          ],
+          "rule": "DS-ROW-1",
+          "lenses": [
+            "native",
+            "geometry",
+            "states"
+          ],
+          "members": [
+            {
+              "id": "native-5",
+              "lens": "native",
+              "state": "main-installed-single",
+              "finding": "Installed rows stack three text lines (name, version, author) where the artboard and the rule draw two (name, then version · author with the Verified mark).",
+              "severity": "major",
+              "box": [
+                86,
+                163,
+                185,
+                52
+              ],
+              "rule": "DS-ROW-1",
+              "verdict": "confirmed",
+              "reason": "The crop shows name, version and author on three lines; DS-ROW-1 measures 'lines 3 x15 (target 2)'.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            },
+            {
+              "id": "geometry-4",
+              "lens": "geometry",
+              "state": "main-installed-single",
+              "finding": "Installed rows stack three text lines (name, version, author at about y 171, 189, 207), where the artboard and the rule draw two lines with version and authors sharing the second line.",
+              "severity": "major",
+              "box": [
+                86,
+                163,
+                190,
+                52
+              ],
+              "rule": "DS-ROW-1",
+              "verdict": "confirmed",
+              "reason": "The crop shows three stacked text lines; DS-ROW-1 measures 'lines 3 x15 (target 2)'.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            },
+            {
+              "id": "states-4",
+              "lens": "states",
+              "state": "main-installed-single",
+              "finding": "Rows have three stacked text lines (name, version, authors) at a 79 px pitch, where the artboard and spec draw two lines (name, then version · authors on one line) in a 72 px row.",
+              "severity": "major",
+              "box": [
+                0,
+                150,
+                318,
+                79
+              ],
+              "rule": "DS-ROW-1",
+              "verdict": "confirmed",
+              "reason": "The crop shows three text lines in the tall band; DS-ROW-1 measures 'lines 3 x15 (target 2)' and DS-HEIGHT-3 '79 x15 (target 72)'.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            }
+          ],
+          "disposition": "fixed",
+          "evidence": "Ordered to UX-P2.2. Repeats the earlier finding on an element this item did not touch.",
+          "ruling": "The judge-log rule of docs/plans/STATUS-ux.md (design-advisor, UX-P2.1b); earlier entry docs/plans/judge-log/P2.1c.json, the entry of rule DS-ROW-1"
+        },
+        {
+          "id": "main-installed-single#D6",
+          "state": "main-installed-single",
+          "finding": "[native] The package icon is 32 px with a 12 px gap to the name (x 42-73, name at x 86), against the Extensions anatomy of a 36 px icon and a 16 px gap. | [geometry] The row icon is 32 x 32 px (x 42-74) with a 12 px gap to the name (x 86), where the artboard's icon column is 36 px and the rule requires a 36 px icon and a 16 px gap.",
+          "severity": "major",
+          "box": [
+            42,
+            163,
+            229,
+            42
+          ],
+          "rule": "DS-ROW-1",
+          "lenses": [
+            "native",
+            "geometry"
+          ],
+          "members": [
+            {
+              "id": "native-6",
+              "lens": "native",
+              "state": "main-installed-single",
+              "finding": "The package icon is 32 px with a 12 px gap to the name (x 42-73, name at x 86), against the Extensions anatomy of a 36 px icon and a 16 px gap.",
+              "severity": "major",
+              "box": [
+                42,
+                163,
+                229,
+                42
+              ],
+              "rule": "DS-ROW-1",
+              "verdict": "confirmed",
+              "reason": "The crop shows the smaller icon and tighter gap; DS-ROW-1 measures 'icon 32x32 x15 (target 36x36); name after icon 12 x15 (target 16)'.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            },
+            {
+              "id": "geometry-14",
+              "lens": "geometry",
+              "state": "main-installed-single",
+              "finding": "The row icon is 32 x 32 px (x 42-74) with a 12 px gap to the name (x 86), where the artboard's icon column is 36 px and the rule requires a 36 px icon and a 16 px gap.",
+              "severity": "major",
+              "box": [
+                42,
+                173,
+                44,
+                32
+              ],
+              "rule": "DS-ROW-1",
+              "verdict": "confirmed",
+              "reason": "The crop covers the icon and its gap to the name; DS-ROW-1 measures 'icon 32x32 x15 (target 36x36); name after icon 12 x15 (target 16)'.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            }
+          ],
+          "disposition": "fixed",
+          "evidence": "Ordered to UX-P2.2. Repeats the earlier finding on an element this item did not touch.",
+          "ruling": "The judge-log rule of docs/plans/STATUS-ux.md (design-advisor, UX-P2.1b); earlier entry docs/plans/judge-log/P2.1c.json, the entry of rule DS-ROW-1"
+        },
+        {
+          "id": "main-installed-single#D7",
+          "state": "main-installed-single",
+          "finding": "[native] The row check box is 14 x 14 px (x 16-29, y 182-195) and the header check boxes look about as small, against the workbench's 18 x 18 px check box that the artboard draws. | [geometry] The row check box is 14 x 14 px (x 16-30, y 182-196), where the artboard's check box is about 18 px and the rule requires 18 x 18 px. | [states] The row check boxes are about 14 px, where the artboard and rule draw an 18 px check mark.",
+          "severity": "major",
+          "box": [
+            16,
+            182,
+            14,
+            14
+          ],
+          "rule": "DS-HEIGHT-9",
+          "lenses": [
+            "native",
+            "geometry"
+          ],
+          "members": [
+            {
+              "id": "native-7",
+              "lens": "native",
+              "state": "main-installed-single",
+              "finding": "The row check box is 14 x 14 px (x 16-29, y 182-195) and the header check boxes look about as small, against the workbench's 18 x 18 px check box that the artboard draws.",
+              "severity": "major",
+              "box": [
+                16,
+                182,
+                14,
+                14
+              ],
+              "rule": "DS-HEIGHT-9",
+              "verdict": "confirmed",
+              "reason": "The crop shows a small row check box against the artboard's larger one; DS-HEIGHT-9 measures '14x14 x15 ... (target 18x18)'.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            },
+            {
+              "id": "geometry-15",
+              "lens": "geometry",
+              "state": "main-installed-single",
+              "finding": "The row check box is 14 x 14 px (x 16-30, y 182-196), where the artboard's check box is about 18 px and the rule requires 18 x 18 px.",
+              "severity": "major",
+              "box": [
+                16,
+                182,
+                14,
+                14
+              ],
+              "rule": "DS-HEIGHT-9",
+              "verdict": "confirmed",
+              "reason": "The crop shows the small row check box; DS-HEIGHT-9 measures '14x14 x15 ... (target 18x18)'.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            },
+            {
+              "id": "states-14",
+              "lens": "states",
+              "state": "main-installed-single",
+              "finding": "The row check boxes are about 14 px, where the artboard and rule draw an 18 px check mark.",
+              "severity": "major",
+              "box": [
+                16,
+                656,
+                14,
+                14
+              ],
+              "rule": "DS-HEIGHT-9",
+              "verdict": "confirmed",
+              "reason": "The crop shows the small check box of the Newtonsoft.Json row; DS-HEIGHT-9 measures '14x14 x15 ... (target 18x18)'.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            }
+          ],
+          "disposition": "fixed",
+          "evidence": "Ordered to UX-P2.3. Repeats the earlier finding on an element this item did not touch.",
+          "ruling": "The judge-log rule of docs/plans/STATUS-ux.md (design-advisor, UX-P2.1b); earlier entry docs/plans/judge-log/P2.1c.json, the entry of rule DS-HEIGHT-9"
+        },
+        {
+          "id": "main-installed-single#D8",
+          "state": "main-installed-single",
+          "finding": "[native] Package names cut off with an ellipsis at about x 270 while the row band runs on empty to x 317 (\"Microsoft.Extensions.D...\", \"Newtonsoft.Js...\" beside its badge), so the name gives way to reserved blank space, unlike the artboard's name column. | [geometry] Package names end in an ellipsis at about x 268, leaving about 50 px empty before the scrollbar at x 318, so long names are cut much earlier than the row's width requires (the spec's row action starts only at x 299). | [states] The Microsoft.Extensions.* names cut off at about x 268 while the row stays empty up to the scrollbar at x 317, so about 49 px of the text column is unused and more of each package id is hidden than the row width requires.",
+          "severity": "major",
+          "box": [
+            86,
+            163,
+            232,
+            18
+          ],
+          "rule": "DS-ROW-5",
+          "lenses": [
+            "native",
+            "geometry",
+            "states"
+          ],
+          "members": [
+            {
+              "id": "native-8",
+              "lens": "native",
+              "state": "main-installed-single",
+              "finding": "Package names cut off with an ellipsis at about x 270 while the row band runs on empty to x 317 (\"Microsoft.Extensions.D...\", \"Newtonsoft.Js...\" beside its badge), so the name gives way to reserved blank space, unlike the artboard's name column.",
+              "severity": "major",
+              "box": [
+                86,
+                163,
+                232,
+                17
+              ],
+              "rule": "DS-ROW-5",
+              "verdict": "confirmed",
+              "reason": "The crop shows 'Microsoft.Extensions.D...' ending near x 268 with blank row out to the scrollbar at x 318; DS-ROW-5 measures 8 of 15 names cut and no spec line declares the reserved space.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            },
+            {
+              "id": "geometry-18",
+              "lens": "geometry",
+              "state": "main-installed-single",
+              "finding": "Package names end in an ellipsis at about x 268, leaving about 50 px empty before the scrollbar at x 318, so long names are cut much earlier than the row's width requires (the spec's row action starts only at x 299).",
+              "severity": "major",
+              "box": [
+                86,
+                163,
+                232,
+                18
+              ],
+              "rule": "DS-ROW-5",
+              "verdict": "confirmed",
+              "reason": "The crop shows the name ending in an ellipsis near x 268 with blank row beyond; DS-ROW-5 measures 8 names cut out of 15.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            },
+            {
+              "id": "states-11",
+              "lens": "states",
+              "state": "main-installed-single",
+              "finding": "The Microsoft.Extensions.* names cut off at about x 268 while the row stays empty up to the scrollbar at x 317, so about 49 px of the text column is unused and more of each package id is hidden than the row width requires.",
+              "severity": "major",
+              "box": [
+                86,
+                163,
+                231,
+                18
+              ],
+              "rule": "DS-ROW-5",
+              "verdict": "confirmed",
+              "reason": "The crop shows the name cut near x 268 with empty row up to the scrollbar; DS-ROW-5 measures 8 names cut out of 15.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            }
+          ],
+          "disposition": "fixed",
+          "evidence": "Ordered to UX-P2.2. Repeats the earlier finding on an element this item did not touch.",
+          "ruling": "The judge-log rule of docs/plans/STATUS-ux.md (design-advisor, UX-P2.1b); earlier entry docs/plans/judge-log/P2.1a.json D20"
+        },
+        {
+          "id": "main-installed-single#D9",
+          "state": "main-installed-single",
+          "finding": "[native] The group header reads as the classic pane title (\"DIRECT PACKAGES\", uppercase, small and bold, about 24 px tall from y 126 to the first row at y 150) where the artboard and the Modern UI spec draw \"Direct Packages\" capitalised at 12/600 in a 28 px header. | [geometry] The Direct Packages group header is about 24 px high (y 126-150), where the spec's section-header-direct and the rule give 28 px in the Modern UI look. | [states] The group header reads \"DIRECT PACKAGES\" in uppercase where the Modern UI artboard and rule draw the capitalised \"Direct Packages\" at 12 px/600.",
+          "severity": "major",
+          "box": [
+            16,
+            126,
+            300,
+            24
+          ],
+          "rule": "DS-TYPE-5, DS-HEIGHT-1",
+          "lenses": [
+            "native",
+            "geometry",
+            "states"
+          ],
+          "members": [
+            {
+              "id": "native-9",
+              "lens": "native",
+              "state": "main-installed-single",
+              "finding": "The group header reads as the classic pane title (\"DIRECT PACKAGES\", uppercase, small and bold, about 24 px tall from y 126 to the first row at y 150) where the artboard and the Modern UI spec draw \"Direct Packages\" capitalised at 12/600 in a 28 px header.",
+              "severity": "major",
+              "box": [
+                16,
+                126,
+                170,
+                24
+              ],
+              "rule": "DS-TYPE-5",
+              "verdict": "confirmed",
+              "reason": "The crop reads 'DIRECT PACKAGES' uppercase in a header SPEC measures 4 px short of 28 (section-header-direct delta h -4), while the UI settings set modernUIUppercaseViewHeaders false, so DS-TYPE-5 expects capitalised text in 28 px as the artboard draws it.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            },
+            {
+              "id": "geometry-12",
+              "lens": "geometry",
+              "state": "main-installed-single",
+              "finding": "The Direct Packages group header is about 24 px high (y 126-150), where the spec's section-header-direct and the rule give 28 px in the Modern UI look.",
+              "severity": "major",
+              "box": [
+                16,
+                126,
+                300,
+                24
+              ],
+              "rule": "DS-HEIGHT-1",
+              "verdict": "confirmed",
+              "reason": "The header in the crop is short against the artboard's; SPEC gives section-header-direct delta h -4, that is 24 px against the 28 px of DS-HEIGHT-1 and DS-TYPE-5.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            },
+            {
+              "id": "states-7",
+              "lens": "states",
+              "state": "main-installed-single",
+              "finding": "The group header reads \"DIRECT PACKAGES\" in uppercase where the Modern UI artboard and rule draw the capitalised \"Direct Packages\" at 12 px/600.",
+              "severity": "major",
+              "box": [
+                36,
+                130,
+                144,
+                14
+              ],
+              "rule": "DS-TYPE-5",
+              "verdict": "confirmed",
+              "reason": "The crop reads 'DIRECT PACKAGES' uppercase while the UI settings set modernUIUppercaseViewHeaders false, so DS-TYPE-5 and the artboard expect 'Direct Packages'.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            }
+          ],
+          "disposition": "fixed",
+          "evidence": "Ordered to UX-P2.6. Repeats the earlier finding: this item moved the header into a group row and kept its type and its count text (ruling, DO 2 and DO 6: the look is P2.6's).",
+          "ruling": "The judge-log rule of docs/plans/STATUS-ux.md (design-advisor, UX-P2.1b); earlier entry docs/plans/judge-log/P2.1c.json, the entry of rule DS-TYPE-5, DS-HEIGHT-1; the main ruling of docs/plans/handoff/P2.1d.md, DO 2 and DO 6"
+        },
+        {
+          "id": "main-installed-single#D10",
+          "state": "main-installed-single",
+          "finding": "[native] The group header's count is the text \"(15)\" beside the title, where the artboard draws a count badge at the header's end inset, so the surface mixes \"(N)\" text with the tabs' count badges. | [geometry] The group header's count is inline text '(15)' right after the title, where the artboard draws a count badge at the trailing end of the header, 16 px from the list edge (about x 292-311). | [states] The group header carries its count as \"(15)\" text and has no trailing count badge, where the artboard draws a round badge at the header's end; headers must use the badge count style like the tabs above it.",
+          "severity": "major",
+          "box": [
+            36,
+            130,
+            283,
+            14
+          ],
+          "rule": "DS-COPY-5",
+          "lenses": [
+            "native",
+            "geometry",
+            "states"
+          ],
+          "members": [
+            {
+              "id": "native-10",
+              "lens": "native",
+              "state": "main-installed-single",
+              "finding": "The group header's count is the text \"(15)\" beside the title, where the artboard draws a count badge at the header's end inset, so the surface mixes \"(N)\" text with the tabs' count badges.",
+              "severity": "major",
+              "box": [
+                153,
+                130,
+                30,
+                14
+              ],
+              "rule": "DS-COPY-5",
+              "verdict": "confirmed",
+              "reason": "The crop shows the count as '(15)' text beside the title where the artboard draws a trailing round badge, and the tabs on the same surface use badges, against DS-COPY-5.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            },
+            {
+              "id": "geometry-13",
+              "lens": "geometry",
+              "state": "main-installed-single",
+              "finding": "The group header's count is inline text '(15)' right after the title, where the artboard draws a count badge at the trailing end of the header, 16 px from the list edge (about x 292-311).",
+              "severity": "major",
+              "box": [
+                36,
+                130,
+                144,
+                14
+              ],
+              "rule": "DS-COPY-5",
+              "verdict": "confirmed",
+              "reason": "The crop shows '(15)' straight after the title with no trailing badge, where the artboard has a round badge at the header's end.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            },
+            {
+              "id": "states-8",
+              "lens": "states",
+              "state": "main-installed-single",
+              "finding": "The group header carries its count as \"(15)\" text and has no trailing count badge, where the artboard draws a round badge at the header's end; headers must use the badge count style like the tabs above it.",
+              "severity": "major",
+              "box": [
+                36,
+                130,
+                283,
+                14
+              ],
+              "rule": "DS-COPY-5",
+              "verdict": "confirmed",
+              "reason": "The crop shows '(15)' as text and an empty header end, where the artboard draws a round badge, against DS-COPY-5.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            }
+          ],
+          "disposition": "fixed",
+          "evidence": "Ordered to UX-P2.6. Repeats the earlier finding: this item moved the header into a group row and kept its type and its count text (ruling, DO 2 and DO 6: the look is P2.6's).",
+          "ruling": "The judge-log rule of docs/plans/STATUS-ux.md (design-advisor, UX-P2.1b); earlier entry docs/plans/judge-log/P2.1c.json, the entry of rule DS-COPY-5; the main ruling of docs/plans/handoff/P2.1d.md, DO 2 and DO 6"
+        },
+        {
+          "id": "main-installed-single#D11",
+          "state": "main-installed-single",
+          "finding": "[native] The tab strip is 25 px with its line (y 69-93) against the 36 px navbar strip of the spec and artboard, and it looks squeezed between the search row and the toolbar. | [geometry] The Installed/Updates tab strip is 25 px high including its line (y 69-94), where the spec's tab-bar and the rule give 36 px, so the tabs look squeezed against the artboard. | [states] The tab strip is about 24 px high (y 69 to 93) with cramped labels, where the spec's tab-bar is 36 px and the artboard's tabs have generous height.",
+          "severity": "major",
+          "box": [
+            0,
+            69,
+            327,
+            25
+          ],
+          "rule": "DS-HEIGHT-4",
+          "lenses": [
+            "native",
+            "geometry",
+            "states"
+          ],
+          "members": [
+            {
+              "id": "native-11",
+              "lens": "native",
+              "state": "main-installed-single",
+              "finding": "The tab strip is 25 px with its line (y 69-93) against the 36 px navbar strip of the spec and artboard, and it looks squeezed between the search row and the toolbar.",
+              "severity": "major",
+              "box": [
+                0,
+                69,
+                326,
+                25
+              ],
+              "rule": "DS-HEIGHT-4",
+              "verdict": "confirmed",
+              "reason": "The crop shows a tight strip above the toolbar; DS-HEIGHT-4 measures '25 (target 36, workbench 37)'.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            },
+            {
+              "id": "geometry-6",
+              "lens": "geometry",
+              "state": "main-installed-single",
+              "finding": "The Installed/Updates tab strip is 25 px high including its line (y 69-94), where the spec's tab-bar and the rule give 36 px, so the tabs look squeezed against the artboard.",
+              "severity": "major",
+              "box": [
+                0,
+                69,
+                326,
+                25
+              ],
+              "rule": "DS-HEIGHT-4",
+              "verdict": "confirmed",
+              "reason": "The crop shows the short strip; DS-HEIGHT-4 measures '25 (target 36, workbench 37)' and SPEC gives tab-bar delta h -11.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            },
+            {
+              "id": "states-12",
+              "lens": "states",
+              "state": "main-installed-single",
+              "finding": "The tab strip is about 24 px high (y 69 to 93) with cramped labels, where the spec's tab-bar is 36 px and the artboard's tabs have generous height.",
+              "severity": "major",
+              "box": [
+                0,
+                69,
+                327,
+                25
+              ],
+              "rule": "DS-HEIGHT-4",
+              "verdict": "confirmed",
+              "reason": "The crop shows the cramped strip; DS-HEIGHT-4 measures '25 (target 36, workbench 37)', one pixel above the judge's estimate of about 24.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            }
+          ],
+          "disposition": "fixed",
+          "evidence": "Ordered to UX-P2.5. Repeats the earlier finding on an element this item did not touch.",
+          "ruling": "The judge-log rule of docs/plans/STATUS-ux.md (design-advisor, UX-P2.1b); earlier entry docs/plans/judge-log/P2.1c.json, the entry of rule DS-HEIGHT-4"
+        },
+        {
+          "id": "main-installed-single#D12",
+          "state": "main-installed-single",
+          "finding": "[native] The active tab's underline is 2 px thick (y 91-92) where the rule and the artboard draw a 1 px indicator. | [geometry] The active tab's underline is 2 px thick (y 91-92), where the rule and the artboard draw 1 px directly above the strip's line.",
+          "severity": "major",
+          "box": [
+            7,
+            91,
+            122,
+            2
+          ],
+          "rule": "DS-COLOR-4",
+          "lenses": [
+            "native",
+            "geometry"
+          ],
+          "members": [
+            {
+              "id": "native-12",
+              "lens": "native",
+              "state": "main-installed-single",
+              "finding": "The active tab's underline is 2 px thick (y 91-92) where the rule and the artboard draw a 1 px indicator.",
+              "severity": "major",
+              "box": [
+                7,
+                91,
+                122,
+                2
+              ],
+              "rule": "DS-COLOR-4",
+              "verdict": "confirmed",
+              "reason": "The underline is visibly thicker than the artboard's; a pixel probe at x 60 reads #0078d4 for 2 px (y 91-92) in the capture and 1 px in the artboard, against DS-COLOR-4's 1 px.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            },
+            {
+              "id": "geometry-21",
+              "lens": "geometry",
+              "state": "main-installed-single",
+              "finding": "The active tab's underline is 2 px thick (y 91-92), where the rule and the artboard draw 1 px directly above the strip's line.",
+              "severity": "minor",
+              "box": [
+                7,
+                91,
+                122,
+                2
+              ],
+              "rule": "DS-COLOR-4",
+              "verdict": "confirmed",
+              "reason": "The crop shows the thick underline; the probe at x 60 reads #0078d4 for 2 px against 1 px in the artboard, a rule contradiction visible when looking for it, so major rather than the judge's minor.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            }
+          ],
+          "disposition": "fixed",
+          "evidence": "Ordered to UX-P2.5. Repeats the earlier finding on an element this item did not touch.",
+          "ruling": "The judge-log rule of docs/plans/STATUS-ux.md (design-advisor, UX-P2.1b); earlier entry docs/plans/judge-log/P2.1c.json, the entry of rule DS-COLOR-4"
+        },
+        {
+          "id": "main-installed-single#D13",
+          "state": "main-installed-single",
+          "finding": "[native] The tab labels are 13 px mixed case (\"Installed\", \"Updates\") where the artboard draws small uppercase labels through the tab font-size and transform tokens, so the strip does not read as the Extensions editor navbar. | [states] The tab labels are mixed-case \"Installed\" and \"Updates\" at body size, where the artboard draws small uppercase INSTALLED and UPDATES, although DS-COPY-1 and the microcopy section require Title Case for tabs, so the artboard drawing and the rule disagree.",
+          "severity": "major",
+          "box": [
+            16,
+            71,
+            206,
+            18
+          ],
+          "rule": "judge-only, spec-conflict",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "members": [
+            {
+              "id": "native-13",
+              "lens": "native",
+              "state": "main-installed-single",
+              "finding": "The tab labels are 13 px mixed case (\"Installed\", \"Updates\") where the artboard draws small uppercase labels through the tab font-size and transform tokens, so the strip does not read as the Extensions editor navbar.",
+              "severity": "major",
+              "box": [
+                16,
+                71,
+                206,
+                18
+              ],
+              "rule": "judge-only",
+              "verdict": "confirmed",
+              "reason": "The crop shows mixed-case 'Installed' and 'Updates' where the artboard shows small uppercase labels and the Design System type table gives tab labels 11 px uppercase in both looks through the spec's tab tokens.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            },
+            {
+              "id": "states-17",
+              "lens": "states",
+              "state": "main-installed-single",
+              "finding": "The tab labels are mixed-case \"Installed\" and \"Updates\" at body size, where the artboard draws small uppercase INSTALLED and UPDATES, although DS-COPY-1 and the microcopy section require Title Case for tabs, so the artboard drawing and the rule disagree.",
+              "severity": "minor",
+              "box": [
+                16,
+                72,
+                178,
+                16
+              ],
+              "rule": "spec-conflict",
+              "verdict": "confirmed",
+              "reason": "The crop shows mixed-case labels against the artboard's uppercase; the claimed conflict does not exist, since the Design System type table and the spec's tab tokens agree with the artboard (11 px uppercase, both looks), so the same defect as native-13 stands.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            }
+          ],
+          "disposition": "fixed",
+          "evidence": "Ordered to UX-P2.5. Repeats the earlier finding on an element this item did not touch.",
+          "ruling": "The judge-log rule of docs/plans/STATUS-ux.md (design-advisor, UX-P2.1b); earlier entry docs/plans/judge-log/P2.1c.json, the entry of rule judge-only, spec-conflict"
+        },
+        {
+          "id": "main-installed-single#D14",
+          "state": "main-installed-single",
+          "finding": "[native] The tab count badges are rounded rectangles about 17 px tall with a small radius, where the Modern UI count badge is a 19 px circle or pill as the artboard draws it. | [geometry] The tab count badges are 17 px high (y 72-89) with a rounded-rectangle shape, where the rule gives a minimum of 19 px and a circular radius in the Modern UI look and the artboard draws round badges. | [states] The tab count badges are rounded rectangles with a small radius, where the Modern UI artboard and rule draw round count badges.",
+          "severity": "major",
+          "box": [
+            75,
+            72,
+            147,
+            17
+          ],
+          "rule": "DS-HEIGHT-10",
+          "lenses": [
+            "native",
+            "geometry",
+            "states"
+          ],
+          "members": [
+            {
+              "id": "native-14",
+              "lens": "native",
+              "state": "main-installed-single",
+              "finding": "The tab count badges are rounded rectangles about 17 px tall with a small radius, where the Modern UI count badge is a 19 px circle or pill as the artboard draws it.",
+              "severity": "major",
+              "box": [
+                75,
+                72,
+                147,
+                17
+              ],
+              "rule": "DS-HEIGHT-10",
+              "verdict": "confirmed",
+              "reason": "The crop shows rounded-rectangle badges against the artboard's round ones; DS-HEIGHT-10 measures 'count 17x17.4, 24x17.4 x2 (at least 19x19)' and 'count radius 4px x3 (target round)'.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            },
+            {
+              "id": "geometry-20",
+              "lens": "geometry",
+              "state": "main-installed-single",
+              "finding": "The tab count badges are 17 px high (y 72-89) with a rounded-rectangle shape, where the rule gives a minimum of 19 px and a circular radius in the Modern UI look and the artboard draws round badges.",
+              "severity": "major",
+              "box": [
+                75,
+                72,
+                45,
+                17
+              ],
+              "rule": "DS-HEIGHT-10",
+              "verdict": "confirmed",
+              "reason": "The crop shows rounded-rectangle badges; DS-HEIGHT-10 measures 'count 17x17.4' against at least 19x19 and 'count radius 4px x3 (target round)'.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            },
+            {
+              "id": "states-13",
+              "lens": "states",
+              "state": "main-installed-single",
+              "finding": "The tab count badges are rounded rectangles with a small radius, where the Modern UI artboard and rule draw round count badges.",
+              "severity": "major",
+              "box": [
+                75,
+                72,
+                147,
+                17
+              ],
+              "rule": "DS-HEIGHT-10",
+              "verdict": "confirmed",
+              "reason": "The crop shows small-radius badges; DS-HEIGHT-10 measures 'count radius 4px x3 (target round)'.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            }
+          ],
+          "disposition": "fixed",
+          "evidence": "Ordered to UX-P2.6. Repeats the earlier finding on an element this item did not touch.",
+          "ruling": "The judge-log rule of docs/plans/STATUS-ux.md (design-advisor, UX-P2.1b); earlier entry docs/plans/judge-log/P2.1c.json, the entry of rule DS-HEIGHT-10"
+        },
+        {
+          "id": "main-installed-single#D16",
+          "state": "main-installed-single",
+          "finding": "[native] The toolbar buttons are 24 px tall (y 98-121) against the workbench's 26 px text button in the spec, and their text reads larger than the artboard's 12 px labels. | [geometry] The Select all and Uninstall selected buttons are 24 px high (y 98-122) with about 12 px side padding, where the spec's buttons are 26 px high with 8 px side padding.",
+          "severity": "major",
+          "box": [
+            16,
+            98,
+            304,
+            24
+          ],
+          "rule": "DS-HEIGHT-6",
+          "lenses": [
+            "native",
+            "geometry"
+          ],
+          "members": [
+            {
+              "id": "native-16",
+              "lens": "native",
+              "state": "main-installed-single",
+              "finding": "The toolbar buttons are 24 px tall (y 98-121) against the workbench's 26 px text button in the spec, and their text reads larger than the artboard's 12 px labels.",
+              "severity": "major",
+              "box": [
+                16,
+                98,
+                304,
+                24
+              ],
+              "rule": "DS-HEIGHT-6",
+              "verdict": "confirmed",
+              "reason": "The buttons in the crop look shorter with larger text than the artboard's; DS-HEIGHT-6 measures '24 x2 (target 26, workbench 26); fontSize 13px x2 (target 12px)'.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            },
+            {
+              "id": "geometry-11",
+              "lens": "geometry",
+              "state": "main-installed-single",
+              "finding": "The Select all and Uninstall selected buttons are 24 px high (y 98-122) with about 12 px side padding, where the spec's buttons are 26 px high with 8 px side padding.",
+              "severity": "major",
+              "box": [
+                16,
+                98,
+                304,
+                24
+              ],
+              "rule": "DS-HEIGHT-6",
+              "verdict": "confirmed",
+              "reason": "The buttons in the crop measure '24 x2 (target 26)' in DS-HEIGHT-6, and SPEC's style lines give padding 0px 12px against the spec's 0px 8px.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            }
+          ],
+          "disposition": "fixed",
+          "evidence": "Ordered to UX-P2.3. Repeats the earlier finding on an element this item did not touch.",
+          "ruling": "The judge-log rule of docs/plans/STATUS-ux.md (design-advisor, UX-P2.1b); earlier entry docs/plans/judge-log/P2.1c.json, the entry of rule DS-HEIGHT-6"
+        },
+        {
+          "id": "main-installed-single#D17",
+          "state": "main-installed-single",
+          "finding": "[native] The button labels \"Select all\" and \"Uninstall selected (0)\" are sentence case where the rule and the artboard use Title Case (\"Select All\", \"Uninstall Selected (0)\"). | [states] The bulk toolbar labels read \"Select all\" and \"Uninstall selected (0)\" where the artboard and microcopy rule require the Title Case \"Select All\" and \"Uninstall Selected (0)\".",
+          "severity": "major",
+          "box": [
+            16,
+            98,
+            304,
+            24
+          ],
+          "rule": "DS-COPY-1",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "members": [
+            {
+              "id": "native-17",
+              "lens": "native",
+              "state": "main-installed-single",
+              "finding": "The button labels \"Select all\" and \"Uninstall selected (0)\" are sentence case where the rule and the artboard use Title Case (\"Select All\", \"Uninstall Selected (0)\").",
+              "severity": "major",
+              "box": [
+                16,
+                98,
+                304,
+                24
+              ],
+              "rule": "DS-COPY-1",
+              "verdict": "confirmed",
+              "reason": "The crop reads 'Select all' and 'Uninstall selected (0)' where the artboard reads 'Select All' and 'Uninstall Selected (0)', against DS-COPY-1.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            },
+            {
+              "id": "states-6",
+              "lens": "states",
+              "state": "main-installed-single",
+              "finding": "The bulk toolbar labels read \"Select all\" and \"Uninstall selected (0)\" where the artboard and microcopy rule require the Title Case \"Select All\" and \"Uninstall Selected (0)\".",
+              "severity": "major",
+              "box": [
+                16,
+                98,
+                304,
+                24
+              ],
+              "rule": "DS-COPY-1",
+              "verdict": "confirmed",
+              "reason": "The crop reads 'Select all' and 'Uninstall selected (0)', sentence case against DS-COPY-1 and the artboard's Title Case.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            }
+          ],
+          "disposition": "fixed",
+          "evidence": "Ordered to UX-P3.11. Repeats the earlier finding on an element this item did not touch.",
+          "ruling": "The judge-log rule of docs/plans/STATUS-ux.md (design-advisor, UX-P2.1b); earlier entry docs/plans/judge-log/P2.1c.json, the entry of rule DS-COPY-1"
+        },
+        {
+          "id": "main-installed-single#D18",
+          "state": "main-installed-single",
+          "finding": "[native] The disabled bulk button is drawn as a transparent outlined secondary button, where the spec and artboard draw the primary button role (button background) at disabled opacity. | [states] The disabled Uninstall Selected button is drawn as a dark outlined secondary button, where the artboard and spec give the primary button role (--nuiget-color-button-bg at disabled opacity, a blue fill).",
+          "severity": "major",
+          "box": [
+            156,
+            98,
+            164,
+            24
+          ],
+          "rule": "DS-COLOR-6",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "members": [
+            {
+              "id": "native-18",
+              "lens": "native",
+              "state": "main-installed-single",
+              "finding": "The disabled bulk button is drawn as a transparent outlined secondary button, where the spec and artboard draw the primary button role (button background) at disabled opacity.",
+              "severity": "major",
+              "box": [
+                156,
+                98,
+                164,
+                24
+              ],
+              "rule": "DS-COLOR-6",
+              "verdict": "confirmed",
+              "reason": "The disabled button in the crop is a dark outlined control where the artboard shows a dimmed blue fill and the spec's uninstall-selected-button tokens name the primary button-bg, button-fg and button-border.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            },
+            {
+              "id": "states-9",
+              "lens": "states",
+              "state": "main-installed-single",
+              "finding": "The disabled Uninstall Selected button is drawn as a dark outlined secondary button, where the artboard and spec give the primary button role (--nuiget-color-button-bg at disabled opacity, a blue fill).",
+              "severity": "major",
+              "box": [
+                156,
+                98,
+                164,
+                24
+              ],
+              "rule": "DS-COLOR-6",
+              "verdict": "confirmed",
+              "reason": "The crop shows a dark outlined disabled button; the artboard shows the dimmed blue fill and the spec's tokens name the primary button role.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            }
+          ],
+          "disposition": "fixed",
+          "evidence": "Ordered to UX-P2.3. Repeats the earlier finding on an element this item did not touch.",
+          "ruling": "The judge-log rule of docs/plans/STATUS-ux.md (design-advisor, UX-P2.1b); earlier entry docs/plans/judge-log/P2.1c.json, the entry of rule DS-COLOR-6"
+        },
+        {
+          "id": "main-installed-single#D19",
+          "state": "main-installed-single",
+          "finding": "[native] The toolbar's trailing button ends at x 320, about 6 px from the pane's edge at x 326, while its first control starts at the 16 px inset, so the toolbar insets are asymmetric against the spec's end at x 311. | [geometry] The bulk toolbar's end edge is at x 320, only 6 px from the list column's right edge at x 326, while its start inset is 16 px; the spec's uninstall-selected-button ends at x 311, a 16 px end inset. | [states] Uninstall Selected ends at x 320, 7 px from the list pane's edge, where the spec ends it at x 311 on the 16 px surface inset.",
+          "severity": "major",
+          "box": [
+            156,
+            98,
+            171,
+            24
+          ],
+          "rule": "DS-INSET-3",
+          "lenses": [
+            "native",
+            "geometry",
+            "states"
+          ],
+          "members": [
+            {
+              "id": "native-19",
+              "lens": "native",
+              "state": "main-installed-single",
+              "finding": "The toolbar's trailing button ends at x 320, about 6 px from the pane's edge at x 326, while its first control starts at the 16 px inset, so the toolbar insets are asymmetric against the spec's end at x 311.",
+              "severity": "major",
+              "box": [
+                156,
+                98,
+                171,
+                24
+              ],
+              "rule": "DS-INSET-3",
+              "verdict": "confirmed",
+              "reason": "The crop shows the button ending close to the pane edge with the start at 16 px; DS-INSET-2 toolbars measures '16/6', and hard PF-4 (button 320.2, scroll port 326.2) confirms the 6 px rather than contradicting it, against the spec's end at x 311.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            },
+            {
+              "id": "geometry-7",
+              "lens": "geometry",
+              "state": "main-installed-single",
+              "finding": "The bulk toolbar's end edge is at x 320, only 6 px from the list column's right edge at x 326, while its start inset is 16 px; the spec's uninstall-selected-button ends at x 311, a 16 px end inset.",
+              "severity": "major",
+              "box": [
+                156,
+                98,
+                164,
+                24
+              ],
+              "rule": "DS-INSET-3",
+              "verdict": "confirmed",
+              "reason": "The crop shows the button's end near the pane edge; DS-INSET-2 toolbars measures '16/6' and the spec's uninstall-selected-button ends at x 311.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            },
+            {
+              "id": "states-10",
+              "lens": "states",
+              "state": "main-installed-single",
+              "finding": "Uninstall Selected ends at x 320, 7 px from the list pane's edge, where the spec ends it at x 311 on the 16 px surface inset.",
+              "severity": "major",
+              "box": [
+                156,
+                98,
+                171,
+                24
+              ],
+              "rule": "DS-INSET-3",
+              "verdict": "confirmed",
+              "reason": "The crop shows the button stopping short of the pane edge by far less than 16 px; DS-INSET-2 toolbars measures '16/6' and the spec ends the button at x 311.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            }
+          ],
+          "disposition": "fixed",
+          "evidence": "Ordered to UX-P2.5. Repeats the earlier finding on an element this item did not touch.",
+          "ruling": "The judge-log rule of docs/plans/STATUS-ux.md (design-advisor, UX-P2.1b); earlier entry docs/plans/judge-log/P2.1c.json, the entry of rule DS-INSET-3"
+        },
+        {
+          "id": "main-installed-single#D20",
+          "state": "main-installed-single",
+          "finding": "[native] The two header selects and the search box are 24 px tall (y 8-31 and y 40-63) against the 26 px of the spec, so the top controls look tighter than the artboard's. | [geometry] The search box is 24 px high (y 40-64), where the spec's search-input and the rule give 26 px. | [geometry] The project and source selects are 24 px high (y 8-32), where the spec's project-selector and source-selector and the rule give 26 px. | [states] The project and source selects show a heavy browser-default arrow and are about 24 px high, where the artboard draws a thin chevron and the spec a 26 px select.",
+          "severity": "major",
+          "box": [
+            16,
+            8,
+            900,
+            56
+          ],
+          "rule": "DS-HEIGHT-7",
+          "lenses": [
+            "native",
+            "geometry",
+            "states"
+          ],
+          "members": [
+            {
+              "id": "native-20",
+              "lens": "native",
+              "state": "main-installed-single",
+              "finding": "The two header selects and the search box are 24 px tall (y 8-31 and y 40-63) against the 26 px of the spec, so the top controls look tighter than the artboard's.",
+              "severity": "major",
+              "box": [
+                16,
+                8,
+                900,
+                56
+              ],
+              "rule": "DS-HEIGHT-7",
+              "verdict": "confirmed",
+              "reason": "The crop's selects and search box are shorter than the artboard's; DS-HEIGHT-7 measures 'search 24 (target 26, workbench 26); select 24 x2 (target 26, workbench 26)'.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            },
+            {
+              "id": "geometry-9",
+              "lens": "geometry",
+              "state": "main-installed-single",
+              "finding": "The search box is 24 px high (y 40-64), where the spec's search-input and the rule give 26 px.",
+              "severity": "major",
+              "box": [
+                16,
+                40,
+                900,
+                24
+              ],
+              "rule": "DS-HEIGHT-7",
+              "verdict": "confirmed",
+              "reason": "The search box in the crop measures 'search 24 (target 26, workbench 26)' in DS-HEIGHT-7, and SPEC gives search-input delta h -2.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            },
+            {
+              "id": "geometry-10",
+              "lens": "geometry",
+              "state": "main-installed-single",
+              "finding": "The project and source selects are 24 px high (y 8-32), where the spec's project-selector and source-selector and the rule give 26 px.",
+              "severity": "major",
+              "box": [
+                578,
+                8,
+                274,
+                24
+              ],
+              "rule": "DS-HEIGHT-7",
+              "verdict": "confirmed",
+              "reason": "The selects in the crop measure 'select 24 x2 (target 26, workbench 26)' in DS-HEIGHT-7, and SPEC gives both selectors delta h -2.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            },
+            {
+              "id": "states-15",
+              "lens": "states",
+              "state": "main-installed-single",
+              "finding": "The project and source selects show a heavy browser-default arrow and are about 24 px high, where the artboard draws a thin chevron and the spec a 26 px select.",
+              "severity": "major",
+              "box": [
+                578,
+                8,
+                274,
+                24
+              ],
+              "rule": "DS-HEIGHT-7",
+              "verdict": "confirmed",
+              "reason": "The selects in the crop measure 'select 24 x2 (target 26)' in DS-HEIGHT-7, and their arrow is heavier than the artboard's thin chevron; the box is themed, so this stays major on the height defect and not a whole browser-default control.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            }
+          ],
+          "disposition": "fixed",
+          "evidence": "Ordered to UX-P2.4. Repeats the earlier finding on an element this item did not touch.",
+          "ruling": "The judge-log rule of docs/plans/STATUS-ux.md (design-advisor, UX-P2.1b); earlier entry docs/plans/judge-log/P2.1c.json, the entry of rule DS-HEIGHT-7"
+        },
+        {
+          "id": "main-installed-single#D21",
+          "state": "main-installed-single",
+          "finding": "[native] The header block has 8 px above its controls and only 4 px below the search box (y 64 to the line at y 68), where the artboard keeps 8 px on both sides, so the search row looks squeezed against the line. | [geometry] The main header's padding is uneven: 8 px above the selects (y 8) but 4 px between the search box bottom (y 64) and the header line (y 68), where the artboard has 8 px (search bottom y 68, line y 76).",
+          "severity": "major",
+          "box": [
+            0,
+            0,
+            932,
+            69
+          ],
+          "rule": "DS-INSET-2",
+          "lenses": [
+            "native",
+            "geometry"
+          ],
+          "members": [
+            {
+              "id": "native-21",
+              "lens": "native",
+              "state": "main-installed-single",
+              "finding": "The header block has 8 px above its controls and only 4 px below the search box (y 64 to the line at y 68), where the artboard keeps 8 px on both sides, so the search row looks squeezed against the line.",
+              "severity": "major",
+              "box": [
+                0,
+                0,
+                932,
+                69
+              ],
+              "rule": "DS-INSET-2",
+              "verdict": "confirmed",
+              "reason": "The crop shows the search box close to the line below it; DS-INSET-2 main-header measures top/bottom '8/4' and a probe at x 800 finds 4 px under the search box in the capture and 8 px in the artboard.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            },
+            {
+              "id": "geometry-8",
+              "lens": "geometry",
+              "state": "main-installed-single",
+              "finding": "The main header's padding is uneven: 8 px above the selects (y 8) but 4 px between the search box bottom (y 64) and the header line (y 68), where the artboard has 8 px (search bottom y 68, line y 76).",
+              "severity": "major",
+              "box": [
+                16,
+                40,
+                900,
+                29
+              ],
+              "rule": "DS-INSET-2",
+              "verdict": "confirmed",
+              "reason": "The crop shows little room under the search box; DS-INSET-2 main-header measures '8/4' and the artboard probe finds 8 px below the box.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            }
+          ],
+          "disposition": "fixed",
+          "evidence": "Ordered to UX-P2.7. Repeats the earlier finding on an element this item did not touch.",
+          "ruling": "The judge-log rule of docs/plans/STATUS-ux.md (design-advisor, UX-P2.1b); earlier entry docs/plans/judge-log/P2.1a.json D23"
+        },
+        {
+          "id": "main-installed-single#D22",
+          "state": "main-installed-single",
+          "finding": "[native] The split between list and details is a solid 4 px band of #313131 (x 326-329), where the artboard draws a 1 px separator and the rule keeps the 4 px sash transparent at rest. | [geometry] The list and details panes are split by a 4 px painted band (x 326-329, from y 69 to the bottom), where the spec has a 1 px separator between x 327 and x 328 and the rule keeps the sash transparent at rest.",
+          "severity": "major",
+          "box": [
+            326,
+            69,
+            4,
+            734
+          ],
+          "rule": "DS-DIVIDER-6",
+          "lenses": [
+            "native",
+            "geometry"
+          ],
+          "members": [
+            {
+              "id": "native-22",
+              "lens": "native",
+              "state": "main-installed-single",
+              "finding": "The split between list and details is a solid 4 px band of #313131 (x 326-329), where the artboard draws a 1 px separator and the rule keeps the 4 px sash transparent at rest.",
+              "severity": "major",
+              "box": [
+                326,
+                69,
+                4,
+                734
+              ],
+              "rule": "DS-DIVIDER-6",
+              "verdict": "confirmed",
+              "reason": "The crop shows a solid band between the panes; a probe at y 400 reads #313131 for 4 px at x 326-329 in the capture against a single #2b2b2b pixel in the artboard, against DS-DIVIDER-6's transparent sash at rest.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            },
+            {
+              "id": "geometry-17",
+              "lens": "geometry",
+              "state": "main-installed-single",
+              "finding": "The list and details panes are split by a 4 px painted band (x 326-329, from y 69 to the bottom), where the spec has a 1 px separator between x 327 and x 328 and the rule keeps the sash transparent at rest.",
+              "severity": "major",
+              "box": [
+                326,
+                69,
+                4,
+                734
+              ],
+              "rule": "DS-DIVIDER-6",
+              "verdict": "confirmed",
+              "reason": "The crop shows a painted band from the top of the pane to the bottom; a probe at y 400 reads #313131 for 4 px at x 326-329 against 1 px in the artboard.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            }
+          ],
+          "disposition": "fixed",
+          "evidence": "Ordered to UX-P3.9. Repeats the earlier finding on an element this item did not touch.",
+          "ruling": "The judge-log rule of docs/plans/STATUS-ux.md (design-advisor, UX-P2.1b); earlier entry docs/plans/judge-log/P2.1c.json, the entry of rule DS-DIVIDER-6"
+        },
+        {
+          "id": "main-installed-single#D25",
+          "state": "main-installed-single",
+          "finding": "[geometry] Newtonsoft.Json is truncated to 'Newtonsoft.Js...' while its Vulnerable badge keeps its full width (x 210-278), though the rule says badges collapse first and the name truncates last. | [states] The name \"Newtonsoft.Js...\" is truncated while the Vulnerable badge beside it stays at full width, leaving about 39 px free before the scrollbar; the rule makes badges collapse before the name, and the spec declares no truncation of this row's name, which the artboard draws in full.",
+          "severity": "major",
+          "box": [
+            86,
+            636,
+            192,
+            20
+          ],
+          "rule": "DS-ROW-5",
+          "lenses": [
+            "geometry",
+            "states"
+          ],
+          "members": [
+            {
+              "id": "geometry-19",
+              "lens": "geometry",
+              "state": "main-installed-single",
+              "finding": "Newtonsoft.Json is truncated to 'Newtonsoft.Js...' while its Vulnerable badge keeps its full width (x 210-278), though the rule says badges collapse first and the name truncates last.",
+              "severity": "major",
+              "box": [
+                86,
+                636,
+                192,
+                19
+              ],
+              "rule": "DS-ROW-5",
+              "verdict": "confirmed",
+              "reason": "The crop shows 'Newtonsoft.Js...' beside a full-width Vulnerable badge; DS-ROW-5 measures 'cut before the version or badges: Newtonsoft.Json, NETStandard.Library'.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            },
+            {
+              "id": "states-3",
+              "lens": "states",
+              "state": "main-installed-single",
+              "finding": "The name \"Newtonsoft.Js...\" is truncated while the Vulnerable badge beside it stays at full width, leaving about 39 px free before the scrollbar; the rule makes badges collapse before the name, and the spec declares no truncation of this row's name, which the artboard draws in full.",
+              "severity": "blocking",
+              "box": [
+                86,
+                636,
+                192,
+                20
+              ],
+              "rule": "DS-ROW-5",
+              "verdict": "confirmed",
+              "reason": "The crop shows 'Newtonsoft.Js...' next to the full badge and DS-ROW-5 names this row as cut before its badges; major and not blocking because the badge is capture data the artboard lacks and the rule's tooltip route keeps the full id reachable.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            }
+          ],
+          "disposition": "fixed",
+          "evidence": "Ordered to UX-P2.2. Repeats the earlier finding on an element this item did not touch.",
+          "ruling": "The judge-log rule of docs/plans/STATUS-ux.md (design-advisor, UX-P2.1b); earlier entry docs/plans/judge-log/P2.1c.json, the entry of rule DS-ROW-5"
+        }
+      ]
+    }
+  ]
+}

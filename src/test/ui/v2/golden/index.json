@@ -19,27 +19,27 @@
   },
   "main-installed-all.dark-high-contrast.1200.png": {
     "status": "baseline",
-    "run": "41140772255",
-    "sha256": "fdc0b57baf66d18c82d5cf40fd51835424853e4a9eecf29b0aae2ed2d5d2e9e0",
-    "sidecarSha256": "a9da7660fa7c6d55d9aefa8fea4ad81300aa82cb046b8be154c1d205605afff0"
+    "run": "41160244824",
+    "sha256": "2caceb2c728af75c81c006f030e3803d4e0f474ccd7817685cc90d2b186cd7fa",
+    "sidecarSha256": "2b99ff2340f04397f7ae67e38373ea51da346a40e22dea94f1c8509d73bd2a71"
   },
   "main-installed-all.dark-modern-classic.1200.png": {
     "status": "baseline",
-    "run": "41140772255",
-    "sha256": "934647e72a4d5cfc625c7b3f44f269be90d84eafaa6108c9351807809f7e7629",
-    "sidecarSha256": "dc9c7fb481df427a567975d925eb97fda507d16a87312dd4f29866fd80d25bf6"
+    "run": "41160244824",
+    "sha256": "c3d1add5ddea4ec6ed536aceb6371ccd61baf69c7b5049d6650840bb60fde4db",
+    "sidecarSha256": "9b408109458462b4db1ee1bae1f82691a075545471ed7c3f3f551fba8b8f66e9"
   },
   "main-installed-all.dark-modern.1200.png": {
     "status": "baseline",
-    "run": "41140772255",
-    "sha256": "707140c0f070a27653ba25c9d97e9c71680d3adf4c09c31c4a8a1a203de57c34",
-    "sidecarSha256": "4d14cf831756e3d0115b9136b38271833214314e243c79fc34363d0c19c14142"
+    "run": "41160244824",
+    "sha256": "6c7db23ab489ea82d4b5a739fbce42fa9b9a24ab73726ea94ebfc6307a5e35d7",
+    "sidecarSha256": "e077e81c7cc90bbb54f02b2ab30e5263b3a19ef583140592186c24f88a2ad4c0"
   },
   "main-installed-all.light-modern.1200.png": {
     "status": "baseline",
-    "run": "41140772255",
-    "sha256": "aaa04177b32da28d29520c9a6c6e99efd46707d6fa21f76bec9ec9d0a0afbadd",
-    "sidecarSha256": "808902f492f77fbaa2f44f31b0568b43a8e4611856f49acc3c7dd368124420ac"
+    "run": "41160244824",
+    "sha256": "5e3abcacd95ea75de1bc533d864484b18cc9d71ece6c48d64bfc77eecb916397",
+    "sidecarSha256": "0fe948276ba514aaee4d6405c6fcf89373b516903ed3962dcb70f0e0d9e49c9a"
   },
   "main-installed-bulk-dialog.dark-modern.1200.png": {
     "status": "baseline",
@@ -193,9 +193,9 @@
   },
   "main-installed-unsupported.dark-modern.1200.png": {
     "status": "baseline",
-    "run": "41123887054",
-    "sha256": "57fcab8b9a664d1ff3abcaa344b5896eb0599ffbd3b25b69d8d265e1e085eaee",
-    "sidecarSha256": "aad383ba4b616166a07e1d65566ec51a613849553891c25311fa26f7facf971b"
+    "run": "41160244824",
+    "sha256": "97346bd8ab7dd14398882ac07f4c026d1f96ac8984e94ca5f786b13a3c4ba55a",
+    "sidecarSha256": "0976bd165aac4ecf56522f61859c194590370c8b4df61404134a58f7d8dac9da"
   },
   "main-quicksearch-open.dark-modern.1200.png": {
     "status": "baseline",
