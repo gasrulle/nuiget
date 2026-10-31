@@ -162,7 +162,7 @@ P0 item provides.
 | DS-OVERFLOW-6 | 6 | every group | V72 | P2.1a for the four states | hard at P0, V72's four states at P2.1a; the main panel's 220 px width pending on P2.7 (V50; UX-P0.14 ruling, `pendingWidths`) |
 | DS-GRID-1 | 1 gap membership | main / updates / browse / details / dialogs / sources / sidebar | V5 | P2.7 / P3.1b / P3.2 / P3.3b / P3.5 / P3.6 / P3.7a | pending |
 | DS-GRID-2a | 1 | main, then as DS-GRID-1 | V1, V5 | P2.7 | pending |
-| DS-GRID-2b | 1 | main headers, then as DS-GRID-1 | V4 | P2.6 | pending |
+| DS-GRID-2b | 1 | main headers, then as DS-GRID-1 | V4 | P2.6 | `main-installed` hard since UX-P2.6b, clause (b) corrected to border boxes; the rest as DS-GRID-1 |
 | DS-INSET-1 | 2 shared insets | main / details / sidebar | — | P2.7 / P3.3b / P3.7a | pending |
 | DS-INSET-2 | 2 | toolbars / headers / main header / sidebar | V2, V3, V5 | P2.5 / P2.6 / P2.7 / P3.7a | `toolbars` hard since UX-P2.5, `headers` hard since UX-P2.6a (a header's end inset is its trailing element's border box, or the slot's padding when nothing trails); main header P2.7, sidebar P3.7a pending |
 | DS-INSET-3 | 6 containment | rows / headers / sidebar | V2, V3 | P2.2 / P2.6 / P3.7a | rows hard since UX-P2.2, `toolbars` hard since UX-P2.5, `headers` hard since UX-P2.6a (group headers); `main-header` pending P2.7, sidebar P3.7a pending |
@@ -183,7 +183,7 @@ P0 item provides.
 | DS-TYPE-2 | 3 computed styles | all | V17, V25, V49 | P1.1 | hard at P1.1 (run 41105326572) |
 | DS-TYPE-3 | 3 computed styles | all but details / details | V49, V61 | P1.1 / P3.3a | hard at P1.1 (run 41105326572); details pending P3.3a (700 on its headings) |
 | DS-GRID-3 | lint on `tokens.css` | — | H6 | P1.1 | hard at P1.1 (`webview-tokens.test.ts`) |
-| DS-TYPE-5 | computed styles | groups / sidebar | — | P2.6 / P3.7a | pending |
+| DS-TYPE-5 | computed styles | groups / sidebar | — | P2.6 / P3.7a | `headers` hard since UX-P2.6b; sidebar P3.7a |
 | DS-TYPE-7 | computed styles | panel title / details title | — | P2.7 / P3.3b | pending |
 | DS-ICON-2, -3 | computed styles, 3 | icon buttons / package icons | — | P2.5 / P2.2 | DS-ICON-3 hard since UX-P2.2; DS-ICON-2 hard since UX-P2.5 |
 | DS-ICON-4 | 3 computed styles | `main-installed-details`, `main-transitive-details` | V51, V62 | P1.4b | hard at P1.4b |
@@ -206,8 +206,8 @@ P0 item provides.
 | DS-MOTION-1, -2 | runtime check | all | — | P4.5 | pending |
 | DS-COPY-1, -4 | microcopy lint | all | — | P3.11 | pending |
 | DS-COPY-2 | text | details | — | P3.3a | pending |
-| DS-COPY-5 | text | main / sidebar | — | P2.6 / P3.7b | pending |
-| DS-DIVIDER-1 / -2 / -3 / -4 | computed borders, shadows | rows / layers / popup / main | — | P2.2 / P3.5 / P3.2 / P2.7 | DS-DIVIDER-1 `rows` hard since UX-P2.2, its `headers` pending P2.6; the rest pending; DS-DIVIDER-3 has no subject in the dense workspace (the grouped popup needs two or more sources, `SearchBox.tsx:103`; P0.6's `nuget.config` has one): P3.2 adds the source or a scenario when it flips (UX-P0.14 ruling) |
+| DS-COPY-5 | text | main / sidebar | — | P2.6 / P3.7b | `main` hard since UX-P2.6b; sidebar P3.7b |
+| DS-DIVIDER-1 / -2 / -3 / -4 | computed borders, shadows | rows / layers / popup / main | — | P2.2 / P3.5 / P3.2 / P2.7 | DS-DIVIDER-1 `rows` hard since UX-P2.2, its `headers` hard since UX-P2.6b, `sidebar` P3.7a; the rest pending; DS-DIVIDER-3 has no subject in the dense workspace (the grouped popup needs two or more sources, `SearchBox.tsx:103`; P0.6's `nuget.config` has one): P3.2 adds the source or a scenario when it flips (UX-P0.14 ruling) |
 | MS-8 first-row y Installed ↔ Updates | 6 | main | — | P3.1b | pending |
 | DS-TYPE-1 | 3 computed styles | main-installed, main-updates, browse, details, dialogs, sidebar / sources | — | P0.18 / P3.6 | hard at P0.18 (run 40111706433) in the six groups; sources pending P3.6 (no state measures it yet) |
 | DS-TYPE-4 | 3 computed styles | main-installed, main-updates, browse, details, dialogs / sidebar / sources | V36, V14 (sidebar) | P0.18 / P3.7a / P3.6 | hard at P0.18 (run 40111706433) in the five groups; sidebar pending P3.7a (compact rows 18.2, target 22; D47); sources pending P3.6 |
@@ -216,7 +216,7 @@ P0 item provides.
 | DS-COPY-3 | 5 text | main-installed / main-updates / browse, sidebar | — | P0.18 / P3.1b / P3.10 | hard at P0.18 (run 40111706433) in main-installed, `main-installed-unsupported` pending P2.8b (the banner lacks its full stop); main-updates pending P3.1b, browse and sidebar pending P3.10 (no ready state shows their empty, error or unavailable cells yet) |
 | SPEC (spec conformance against `docs/design/artboards/<state>.spec.json`) | 8 | main-installed (`main-installed-single` at 932, both looks) | V45 | P2.8a | pending |
 | DS-ALIGN-1 | 2 | details | V59 | P3.3a | pending |
-| DS-TYPE-8 | lint (`em`/`%` font-size) and computed badge size | all | V17 | lint: P1.1 · badges: P2.6 | lint hard at P1.1 (`webview-stylesheets.test.ts`, `relativeFontSize`); badges later |
+| DS-TYPE-8 | lint (`em`/`%` font-size) and computed badge size | all | V17 | lint: P1.1 · badges: P2.6 | lint hard at P1.1 (`webview-stylesheets.test.ts`, `relativeFontSize`); badges hard since UX-P2.6b |
 | DS-TYPE-9 | computed styles | main, details, dialogs | V61 | details headings: P3.3a · panel title: P2.7 · details title: P3.3b · dialog titles: P3.5 | later |
 | DS-RADIUS-1 | computed styles | all | V20 | buttons: P2.3 · selects and text fields: P2.4 | buttons hard since UX-P2.3; selects, text fields and search boxes, `browse` and `sidebar` included, hard since UX-P2.4; sources pending P3.6 |
 | DS-RADIUS-2 | computed styles | all | V47 | rows and package icon: P2.2 · check box: P2.3 · icon buttons: P2.5 · badges: P2.6 · popup: P3.2 · layers: P3.5 · sidebar headers: P3.7a · scrollbar: P3.9 | `rows` (band, package icon, since UX-P2.3 check box, since UX-P2.5 icon buttons, since UX-P2.6 badges) hard since UX-P2.2; later |
@@ -225,7 +225,7 @@ P0 item provides.
 | DS-SCROLL-1 | P0.22's scrollbar probe (`offsetWidth − clientWidth`, thumb colour, `scrollbar-color` of `:root`) | all | V15 | registered by P0.22 as `pending: P3.9` (classic 10 px from P0.22; Modern UI 8 px needs P1.1's look token) | pending P3.9 (helper 3 in `measure.ts` reads the thickness and `:root`'s `scrollbar-color`; the thumb's pixel is the `[probe] scrollbar` line) |
 | DS-SCROLL-2 | computed box-shadow in a scrolled state | main, sidebar | — | P3.9 (adds the scrolled state) | pending (state exists since P2.1e; helper at P3.9) |
 | DS-LOOK-1 | the §6 look table against the per-look token dumps of P0.14 | all | — | registered by P1.1 as `pending: P1.3` · flipped by P1.3 | hard at P1.3 (run 41115359566), registered by P1.1 |
-| DS-HC-1 | computed borders in the two HC themes | main, sidebar | V33, V56 | badges: P2.6 · tabs: P2.5 · both HC themes: P3.9 | tabs unboxed at UX-P2.5; the selected and hovered lines and both HC themes P3.9; badges P2.6 |
+| DS-HC-1 | computed borders in the two HC themes | main, sidebar | V33, V56 | badges: P2.6 · tabs: P2.5 · both HC themes: P3.9 | tabs unboxed at UX-P2.5; the selected and hovered lines and both HC themes' tabs P3.9; badges hard since UX-P2.6b |
 | a11y-focus-after-close | jsdom guard | dialogs | A6 | P4.4 | pending P4.4, guard wired at P0.24 (`expectFocusAfterClose`, 27 close sites in nine feature tests): 11 pending sites in `FOCUS_AFTER_CLOSE_PENDING`. A6's mechanism (the confirm's own update disables the opener): `installed-bulk-uninstall-confirm`, `installed-bulk-uninstall-partial-confirm`, `installed-all-projects-uninstall-confirm`, `updates-update-all-confirm`, `updates-busy-update-all-confirm`, `updates-all-projects-update-confirm`, `sidebar-update-all-confirm`, `sidebar-all-projects-update-all-confirm`, `details-cpm-install-confirm`, `details-cpm-update-confirm`; no opener: `sources-host-opened-escape`. P4.4 is the one flipping item; an item that removes a site before P4.4 (e.g. the sidebar's X9 ruling at P3.7a) deletes that id's entry in the same change, noted "cleared ahead of P4.4", and flips nothing else (design-advisor ruling of 2026-10-25). |
 | a11y-enter-not-destructive | keyboard paths | main lists / sidebar lists | A1, A2 | P4.2a / P4.2b | pending (since UX-P0.24 the capture suite records Enter on a main Updates row and on a sidebar row as not pressed, `KEYS_PENDING` `main-updates rows Enter` → P4.2a and `sidebar rows Enter` → P4.2b in `src/test/ui/v2/a11y.ts`; P4.2a/P4.2b remove their entry and make the walk press the key in `capture.ui.test.ts`) |
 | a11y-hint-truthful | text | main lists | A3 | P2.9a | pending |

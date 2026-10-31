@@ -54,7 +54,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
             'PF-6', 'DS-GRID-1', 'DS-GRID-2a', 'DS-GRID-2b', 'DS-INSET-1', 'DS-INSET-2', 'PF-3b', 'PF-5',
             ...Array.from({ length: 11 }, (_, i) => `DS-HEIGHT-${i + 1}`),
             'PF-2', 'PF-3a', 'PF-4', 'MS-8', 'DS-OVERFLOW-6', 'DS-INSET-3', 'DS-OVERFLOW-2', 'DS-ROW-5',
-            'DS-INSET-4', 'DS-ROW-1', 'DS-ROW-2', 'DS-ROW-3', 'DS-RADIUS-1', 'DS-COLOR-6', 'DS-ICON-2', 'DS-COLOR-4', 'DS-COLOR-7', 'DS-COLOR-3', 'DS-COLOR-2', 'DS-DIVIDER-1', 'DS-RADIUS-2', 'DS-COLOR-5', 'DS-ROW-6', 'DS-ICON-3', 'DS-DENSITY-1', 'DS-OVERFLOW-1', 'DS-OVERFLOW-3', 'DS-OVERFLOW-5', 'DS-ALIGN-1',
+            'DS-INSET-4', 'DS-ROW-1', 'DS-ROW-2', 'DS-ROW-3', 'DS-RADIUS-1', 'DS-COLOR-6', 'DS-ICON-2', 'DS-COLOR-4', 'DS-TYPE-5', 'DS-COPY-5', 'DS-TYPE-8', 'DS-HC-1', 'DS-COLOR-7', 'DS-COLOR-3', 'DS-COLOR-2', 'DS-DIVIDER-1', 'DS-RADIUS-2', 'DS-COLOR-5', 'DS-ROW-6', 'DS-ICON-3', 'DS-DENSITY-1', 'DS-OVERFLOW-1', 'DS-OVERFLOW-3', 'DS-OVERFLOW-5', 'DS-ALIGN-1',
             'DS-TYPE-1', 'DS-TYPE-4', 'DS-TYPE-6', 'DS-ROW-4', 'DS-COPY-3', 'SPEC',
             'DS-FOCUS-1', 'DS-FOCUS-2', 'DS-FOCUS-3', 'DS-FOCUS-4', 'DS-STATE-7', 'DS-SCROLL-1',
             'DS-TYPE-2', 'DS-TYPE-3', 'DS-ICON-4', 'DS-LOOK-1',
@@ -79,7 +79,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(definition('DS-FOCUS-4')?.states).toEqual(['main-installed-details', 'main-installed-focus']);
         expect(scopes('DS-GRID-1')).toEqual({ 'main-installed': { pending: 'P2.7' }, ...asGrid1 });
         expect(scopes('DS-GRID-2a')).toEqual({ 'main-installed': { pending: 'P2.7' }, ...asGrid1 });
-        expect(scopes('DS-GRID-2b')).toEqual({ 'main-installed': { pending: 'P2.6' }, ...asGrid1 });
+        expect(scopes('DS-GRID-2b')).toEqual({ 'main-installed': 'hard', ...asGrid1 });
         expect(scopes('DS-INSET-1')).toEqual({ 'main-installed': { pending: 'P2.7' }, details: { pending: 'P3.3b' }, sidebar: { pending: 'P3.7a' } });
         expect(scopes('DS-INSET-2')).toEqual({ toolbars: 'hard', headers: 'hard', 'main-header': { pending: 'P2.7' }, sidebar: { pending: 'P3.7a' } });
         // UX-P0.11: PF-3b and PF-5 hard where P9.fix-3 and P9.fix-5 measured; the heights pending on Appendix B's items.
@@ -172,7 +172,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
             'PF-6': 1, 'DS-GRID-1': 0.5, 'DS-GRID-2a': 0.5, 'DS-GRID-2b': 2, 'DS-INSET-1': 1, 'DS-INSET-2': 1, 'PF-3b': 1, 'PF-5': 1,
             ...Object.fromEntries(Array.from({ length: 11 }, (_, i) => [`DS-HEIGHT-${i + 1}`, 1])),
             'PF-2': 1, 'PF-3a': 0, 'PF-4': 1, 'MS-8': 0.5, 'DS-OVERFLOW-6': 0, 'DS-INSET-3': 1, 'DS-OVERFLOW-2': 0, 'DS-ROW-5': 0,
-            'DS-INSET-4': 1, 'DS-ROW-1': 1, 'DS-ROW-2': 1, 'DS-ROW-3': 0, 'DS-RADIUS-1': 0, 'DS-COLOR-6': 0, 'DS-ICON-2': 0, 'DS-COLOR-4': 0, 'DS-COLOR-7': 0, 'DS-COLOR-3': 0, 'DS-COLOR-2': 0, 'DS-DIVIDER-1': 0, 'DS-RADIUS-2': 0, 'DS-COLOR-5': 0, 'DS-ROW-6': 0, 'DS-ICON-3': 0, 'DS-DENSITY-1': 1, 'DS-OVERFLOW-1': 0, 'DS-OVERFLOW-3': 0,
+            'DS-INSET-4': 1, 'DS-ROW-1': 1, 'DS-ROW-2': 1, 'DS-ROW-3': 0, 'DS-RADIUS-1': 0, 'DS-COLOR-6': 0, 'DS-ICON-2': 0, 'DS-COLOR-4': 0, 'DS-TYPE-5': 0.1, 'DS-COPY-5': 0, 'DS-TYPE-8': 0.1, 'DS-HC-1': 0, 'DS-COLOR-7': 0, 'DS-COLOR-3': 0, 'DS-COLOR-2': 0, 'DS-DIVIDER-1': 0, 'DS-RADIUS-2': 0, 'DS-COLOR-5': 0, 'DS-ROW-6': 0, 'DS-ICON-3': 0, 'DS-DENSITY-1': 1, 'DS-OVERFLOW-1': 0, 'DS-OVERFLOW-3': 0,
             'DS-OVERFLOW-5': 0, 'DS-ALIGN-1': 0, 'DS-TYPE-1': 0, 'DS-TYPE-4': 0.5, 'DS-TYPE-6': 0.1, 'DS-ROW-4': 0, 'DS-COPY-3': 0, SPEC: 1,
             'DS-FOCUS-1': 0, 'DS-FOCUS-2': 0, 'DS-FOCUS-3': 0, 'DS-FOCUS-4': 0, 'DS-STATE-7': 0, 'DS-SCROLL-1': 0, 'DS-TYPE-2': 0.1, 'DS-TYPE-3': 0, 'DS-ICON-4': 0, 'DS-LOOK-1': 0,
         });
@@ -854,5 +854,50 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(lineOf('main-installed-single', mainHeaderEnd(35.5), 'DS-INSET-3@main-installed-single/main-header')).toMatchObject({ pass: false, value: 'header end 35.5 (target 16)' });
         expect(headers('main-updates', layout({ flatList: true }))).toMatchObject({ pass: true, value: 'no group header (flat list)' });
         expect(headers('main-updates', layout())).toMatchObject({ pass: false, value: 'not measurable' });
+
+        // UX-P2.6b. DS-TYPE-5: the pane-header type on group headers, 13/600/none on a level; uppercase under the setting.
+        const titled = (variant: string, fontSize: string, fontWeight: string, textTransform: string, uppercaseHeaders = false) => {
+            const built = layout({ sections: [{ id: 'direct', variant, insets: undefined, above: undefined, below: undefined, hasTitle: true, title: { fontSize, fontWeight, textTransform } }] });
+            return { ...built, endOfP0: { ...built.endOfP0, uppercaseHeaders } };
+        };
+        const type5 = (built: Layout) => lineOf('main-installed-single', built, 'DS-TYPE-5@main-installed-single/headers');
+        expect(type5(titled('group', '12px', '600', 'capitalize'))).toMatchObject({ pass: true, status: 'hard', value: 'group ×1: 12px/600/capitalize (target 12px/600/capitalize)' });
+        expect(type5(titled('group', '13px', '400', 'none'))).toMatchObject({ pass: false, value: expect.stringContaining('off: direct 13px/400/none') });
+        expect(type5(titled('group', '12px', '600', 'uppercase', true))).toMatchObject({ pass: true });
+        expect(type5(titled('level', '13px', '600', 'none'))).toMatchObject({ pass: true });
+        // DS-COPY-5: one count style per surface.
+        const copy5 = (built: Layout) => lineOf('main-installed-single', built, 'DS-COPY-5@main-installed-single');
+        const counted = (titleText: string, tabText = 'Installed 15') => layout({ sections: [{ id: 'direct', variant: 'group', insets: undefined, above: undefined, below: undefined, titleText, countBadges: 1 }] }, { tabs: [{ id: 'installed-tab', selected: true, colour: '', lineWidth: 1, lineColour: '', text: tabText, countBadges: 1 }] });
+        expect(copy5(counted('Direct packages'))).toMatchObject({ pass: true, status: 'hard', value: 'headers 1: count badges 1, "(N)" texts 0; tabs 1: count badges 1' });
+        expect(copy5(counted('Direct packages (3)'))).toMatchObject({ pass: false });
+        expect(copy5(counted('Direct packages', 'Installed (3)'))).toMatchObject({ pass: false });
+        expect(lineOf('main-browse-results', layout({ browsing: true }), 'DS-COPY-5@main-browse-results')).toMatchObject({ pass: true, value: 'no header; tab strip not shown (browsing)' });
+        // DS-DIVIDER-1 headers: the first level-1 group unlined, later ones lined, nested levels unlined.
+        const divider = (first: boolean, second: boolean) => layout({ sections: [
+            { id: 'direct', variant: 'group', insets: undefined, above: undefined, below: undefined, inList: true, level: 1, posInSet: 1, lineAbove: first },
+            { id: 'transitive', variant: 'group', insets: undefined, above: undefined, below: undefined, inList: true, level: 1, posInSet: 2, lineAbove: second },
+            { id: 'transitive-net8.0', variant: 'level', insets: undefined, above: undefined, below: undefined, inList: true, level: 2, posInSet: 1, lineAbove: false },
+        ] });
+        const divide = (built: Layout) => lineOf('main-transitive-expanded', built, 'DS-DIVIDER-1@main-transitive-expanded/headers');
+        expect(divide(divider(false, true))).toMatchObject({ pass: true, status: 'hard', value: 'group rows 3: first unlined, 1 lined, 1 level row unlined' });
+        expect(divide(divider(true, true))).toMatchObject({ pass: false });
+        expect(divide(divider(false, false))).toMatchObject({ pass: false });
+        expect(lineOf('main-updates', layout({ flatList: true }), 'DS-DIVIDER-1@main-updates/headers')).toMatchObject({ pass: true, value: 'no group header (flat list)' });
+        // DS-TYPE-8 and DS-HC-1 on the badges.
+        expect(lineOf('sidebar-sections', layout({}, { badges: [badge()] }), 'DS-TYPE-8@sidebar-sections')).toMatchObject({ pass: true, status: 'hard', value: 'badges 1: 10px (target 10px)' });
+        expect(lineOf('sidebar-sections', layout({}, { badges: [badge({ fontSize: '12px' })] }), 'DS-TYPE-8@sidebar-sections')).toMatchObject({ pass: false });
+        const contrast = (overrides: Partial<Heights['badges'][number]>, line = 'rgb(111, 195, 223)') => {
+            const built = layout({}, { badges: [badge(overrides)] });
+            return { ...built, endOfP0: { ...built.endOfP0, contrastBorder: line } };
+        };
+        const hc = (built: Layout) => lineOf('main-installed-single', built, 'DS-HC-1@main-installed-single');
+        expect(hc(contrast({}, ''))).toMatchObject({ pass: true, status: 'hard', value: 'not a high-contrast theme' });
+        expect(hc(contrast({ borderWidth: 1, borderColor: 'rgb(111, 195, 223)' }))).toMatchObject({ pass: true, value: 'badges 1: 1 px contrastBorder ×1' });
+        expect(hc(contrast({ borderWidth: 0, borderColor: 'rgb(111, 195, 223)' }))).toMatchObject({ pass: false });
+        expect(hc(contrast({ borderWidth: 1, borderColor: 'rgb(1, 1, 1)', toned: true }))).toMatchObject({ pass: true, value: 'badges 1: 1 px contrastBorder ×0; toned 1 px ×1' });
+        // DS-GRID-2b on border boxes.
+        const grid = (above: number, below: number) => layout({ sections: [{ id: 'direct', variant: 'group', insets: undefined, above, below }] });
+        expect(lineOf('main-installed-single', grid(0, 0), 'DS-GRID-2b@main-installed-single')).toMatchObject({ pass: true, status: 'hard', value: 'direct 0/0' });
+        expect(lineOf('main-installed-single', grid(4, 8), 'DS-GRID-2b@main-installed-single')).toMatchObject({ pass: false });
     });
 });

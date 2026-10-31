@@ -167,7 +167,7 @@ export const RULES: readonly RuleDefinition[] = [
     rule('PF-6', { helper: 2, scopes: { 'main-installed': 'hard' }, tolerance: TOLERANCES.coincide, states: ['main-installed-single'], pendingWidths: { 220: 'P2.7', 400: 'P2.7' } }),
     rule('DS-GRID-1', { helper: 1, scopes: { 'main-installed': { pending: 'P2.7' }, ...asGrid1 }, tolerance: TOLERANCES.gapMembership }),
     rule('DS-GRID-2a', { helper: 1, scopes: { 'main-installed': { pending: 'P2.7' }, ...asGrid1 }, tolerance: TOLERANCES.gapMembership }),
-    rule('DS-GRID-2b', { helper: 1, scopes: { 'main-installed': { pending: 'P2.6' }, ...asGrid1 }, tolerance: TOLERANCES.proximity }),
+    rule('DS-GRID-2b', { helper: 1, scopes: { 'main-installed': 'hard', ...asGrid1 }, tolerance: TOLERANCES.proximity }),
     rule('DS-INSET-1', { helper: 2, scopes: { 'main-installed': { pending: 'P2.7' }, details: { pending: 'P3.3b' }, sidebar: { pending: 'P3.7a' } }, tolerance: TOLERANCES.coincide }),
     rule('DS-INSET-2', { helper: 2, scopes: { toolbars: 'hard', headers: 'hard', 'main-header': { pending: 'P2.7' }, sidebar: { pending: 'P3.7a' } }, tolerance: TOLERANCES.coincide }),
     // UX-P0.11: P9.fix-3's centring and P9.fix-5's shared column, in the states their tests cover.
@@ -213,11 +213,17 @@ export const RULES: readonly RuleDefinition[] = [
     // UX-P2.5 (design trigger 6). No named state disables an icon button until P3.10's sidebar Updates empty cell.
     rule('DS-ICON-2', { helper: 3, scopes: inGroups('hard', ...MAIN, 'sidebar'), tolerance: TOLERANCES.containment }),
     rule('DS-COLOR-4', { helper: 6, scopes: { tabs: 'hard' }, tolerance: TOLERANCES.containment }),
+    // UX-P2.6b (design trigger 6).
+    rule('DS-TYPE-5', { helper: 3, scopes: { headers: 'hard', sidebar: { pending: 'P3.7a' } }, tolerance: TOLERANCES.fontExact }),
+    rule('DS-COPY-5', { helper: 6, scopes: { ...inGroups('hard', ...MAIN), sidebar: { pending: 'P3.7b' } }, tolerance: TOLERANCES.containment }),
+    rule('DS-TYPE-8', { helper: 3, scopes: inGroups('hard', ...MAIN, 'sidebar'), exceptStates: ['main-quicksearch-open', 'main-quicksearch-versions'], tolerance: TOLERANCES.fontExact }),
+    // The tab's high-contrast lines are P3.9's.
+    rule('DS-HC-1', { helper: 6, scopes: inGroups('hard', ...MAIN, 'sidebar'), exceptStates: ['main-quicksearch-open', 'main-quicksearch-versions'], tolerance: TOLERANCES.containment }),
     rule('DS-COLOR-7', { helper: 3, scopes: { 'text-buttons': 'hard' }, tolerance: TOLERANCES.containment, states: ['main-installed-toolbar-hover'] }),
     rule('DS-COLOR-3', { helper: 3, scopes: { 'icon-buttons': 'hard' }, tolerance: TOLERANCES.containment, states: ['main-installed-refresh-hover'] }),
     // UX-P2.2b (design trigger 6): the row parts of the four rules no helper asserted.
     rule('DS-COLOR-2', { helper: 6, scopes: { rows: 'hard' }, tolerance: TOLERANCES.containment, states: ['main-installed-details', 'main-details-readme', 'main-installed-unfocused'] }),
-    rule('DS-DIVIDER-1', { helper: 6, scopes: { rows: 'hard', headers: { pending: 'P2.6' } }, tolerance: TOLERANCES.containment, exceptStates: NO_ROW_STATES }),
+    rule('DS-DIVIDER-1', { helper: 6, scopes: { rows: 'hard', headers: 'hard', sidebar: { pending: 'P3.7a' } }, tolerance: TOLERANCES.containment, exceptStates: NO_ROW_STATES }),
     rule('DS-RADIUS-2', { helper: 6, scopes: { rows: 'hard' }, tolerance: TOLERANCES.containment, exceptStates: NO_ROW_STATES }),
     rule('DS-COLOR-5', { helper: 6, scopes: { rows: 'hard', tabs: 'hard', sash: { pending: 'P3.9' } }, tolerance: TOLERANCES.containment, exceptStates: NO_ROW_STATES }),
     rule('DS-ROW-6', { helper: 3, scopes: inGroups('hard', ...MAIN), tolerance: TOLERANCES.containment, exceptStates: NO_ROW_STATES }),
@@ -357,7 +363,7 @@ export interface SectionBox {
     lineAbove?: boolean;
     level?: number | undefined;
     posInSet?: number | undefined;
-    /** DS-GRID-2b on text line boxes: the last text or border above to the title's top, and the title's bottom to the first row name below. */
+    /** DS-GRID-2b on border boxes: the previous block's bottom to the box's top, and the box's bottom to the first block it labels. */
     above: number | undefined;
     below: number | undefined;
 }
@@ -375,7 +381,7 @@ export interface Heights {
     inputs: Array<{ kind: 'search' | 'select' | 'field'; id: string; height: number; radius: string }>;
     iconButtons: Array<{ inHeader: boolean; width: number; height: number; hit: { width: number; height: number }; label: string; glyph: { w: number; h: number } | undefined; colour: string; background: string; radius: string; disabled: boolean; hovered: boolean; band: 'current' | 'selected' | undefined; listFocused: boolean; multi: boolean; severity: boolean }>;
     toggles: Array<{ label: string; height: number; hit: { width: number; height: number } }>;
-    tabs: Array<{ id: string; selected: boolean; colour: string; lineWidth: number; lineColour: string }>;
+    tabs: Array<{ id: string; selected: boolean; colour: string; lineWidth: number; lineColour: string; text?: string; countBadges?: number }>;
     checkBoxes: Array<{ width: number; height: number; radius: string; selected: { fill: string; border: string } | undefined; /** A mark that cannot join a bulk action, on a banded row: its line stays disabledForeground. */ off?: boolean }>;
     /** The theme's `checkbox.selectBackground` and `checkbox.selectBorder` as VS Code put them on the root (hex, or empty). */
     checkSelect: { fill: string; border: string };
@@ -724,48 +730,7 @@ for (const container of containers) {
         if (gap >= -0.5) blockGaps.push(round(gap));
     }
 }
-// Section boxes: content insets, and DS-GRID-2b on the title's line box.
-const lastEdgeAbove = box => {
-    for (let el = box; el && el !== scope; el = el.parentElement) {
-        for (let prev = el.previousElementSibling; prev; prev = prev.previousElementSibling) {
-            if (getComputedStyle(prev).display === 'none') continue;
-            const text = union(leafRects(prev));
-            const style = getComputedStyle(prev);
-            const border = visible(prev) && px(style.borderBottomWidth) > 0 && style.borderBottomStyle !== 'none' ? prev.getBoundingClientRect().bottom : undefined;
-            const edge = Math.max(text ? text.bottom : -Infinity, border ?? -Infinity);
-            if (edge > -Infinity) return edge;
-        }
-        const parent = el.parentElement;
-        if (parent && parent !== scope) {
-            const style = getComputedStyle(parent);
-            if (px(style.borderTopWidth) > 0 && style.borderTopStyle !== 'none') return parent.getBoundingClientRect().top + px(style.borderTopWidth);
-        }
-    }
-    return undefined;
-};
-// The first row name (or, without rows, the first content) below the title in what the header labels: the content its
-// toggle controls, absent while collapsed, or for a heading without a toggle the blocks after it.
-const firstNameBelow = (box, title) => {
-    const below = el => {
-        const names = [...el.querySelectorAll('.nuiget-row-name')].filter(visible);
-        const rects = (names.length > 0 ? names.flatMap(leafRects) : leafRects(el)).filter(r => r.top >= title.bottom - 0.5);
-        return rects.length > 0 ? Math.min(...rects.map(r => r.top)) : undefined;
-    };
-    const toggle = box.querySelector('[aria-controls]');
-    if (toggle) {
-        const content = document.getElementById(toggle.getAttribute('aria-controls'));
-        return content && visible(content) ? below(content) : undefined;
-    }
-    for (let el = box; el && el !== scope; el = el.parentElement) {
-        for (let next = el.nextElementSibling; next; next = next.nextElementSibling) {
-            if (getComputedStyle(next).display === 'none') continue;
-            const top = below(next);
-            if (top !== undefined) return top;
-        }
-    }
-    return undefined;
-};
-// A title scrolled out of a clipping ancestor (or the viewport) is not on screen: its gaps are not measured.
+// Section boxes: content insets, and DS-GRID-2b on border boxes.
 const inView = (rect, el) => {
     for (let a = el.parentElement; a; a = a.parentElement) {
         if (/auto|scroll|hidden|clip/.test(getComputedStyle(a).overflowY)) {
@@ -773,7 +738,28 @@ const inView = (rect, el) => {
             if (rect.bottom <= clip.top + 0.5 || rect.top >= clip.bottom - 0.5) return false;
         }
     }
-    return rect.bottom > 0 && rect.top < window.innerHeight;
+    return true;
+};
+// DS-GRID-2b on border boxes: the previous block's bottom, and the first block the header labels.
+const isBlock = el => visible(el) && !el.classList.contains('nuiget-visually-hidden');
+const blockAbove = box => {
+    for (let el = box.closest('[data-row-kind="group"]') ?? box; el && el !== scope; el = el.parentElement) {
+        for (let prev = el.previousElementSibling; prev; prev = prev.previousElementSibling) {
+            if (isBlock(prev)) return prev.getBoundingClientRect().bottom;
+        }
+    }
+    return undefined;
+};
+const blockBelow = box => {
+    const toggle = box.querySelector('[aria-controls]');
+    if (toggle) {
+        const content = document.getElementById(toggle.getAttribute('aria-controls'));
+        return content && visible(content) ? content.getBoundingClientRect().top : undefined;
+    }
+    for (let next = (box.closest('[data-row-kind="group"]') ?? box).nextElementSibling; next; next = next.nextElementSibling) {
+        if (isBlock(next)) return next.getBoundingClientRect().top;
+    }
+    return undefined;
 };
 const headerFacts = box => {
     const titleEl = box.querySelector('.nuiget-section-title');
@@ -795,10 +781,10 @@ const headerFacts = box => {
     };
 };
 const sections = [...scope.querySelectorAll('[data-testid^="section-box-"]')].filter(visible).map(box => {
-    const title = union(leafRects(box.querySelector('.nuiget-section-title') ?? box));
-    const shown = title && inView(title, box);
-    const edge = shown ? lastEdgeAbove(box) : undefined;
-    const name = shown ? firstNameBelow(box, title) : undefined;
+    const rect = box.getBoundingClientRect();
+    const shown = inView(rect, box);
+    const edge = shown ? blockAbove(box) : undefined;
+    const next = shown ? blockBelow(box) : undefined;
     return {
         id: box.dataset.testid.replace(/^section-box-/, ''),
         variant: box.dataset.variant ?? '',
@@ -807,8 +793,8 @@ const sections = [...scope.querySelectorAll('[data-testid^="section-box-"]')].fi
             const trailing = [...box.querySelectorAll('.nuiget-badge, .nuiget-section-actions > *, .nuiget-section-count > *')].filter(visible);
             return trailing.length > 0 ? round(box.getBoundingClientRect().right - Math.max(...trailing.map(el => el.getBoundingClientRect().right))) : undefined;
         })(),
-        above: edge === undefined ? undefined : round(title.top - edge),
-        below: name === undefined ? undefined : round(name - title.bottom),
+        above: edge === undefined ? undefined : round(rect.top - edge),
+        below: next === undefined ? undefined : round(next - rect.bottom),
         ...headerFacts(box),
     };
 });
@@ -895,7 +881,7 @@ const heights = {
     toggles: shown('button.nuiget-section-toggle').map(el => ({ label: el.dataset.testid ?? '', height: round(rectOf(el).height), hit: hitOf(el) })),
     tabs: shown('[role="tab"]').map(el => {
         const style = getComputedStyle(el);
-        return { id: el.dataset.testid ?? label(el), selected: el.getAttribute('aria-selected') === 'true', colour: style.color, lineWidth: px(style.borderBottomWidth), lineColour: style.borderBottomColor };
+        return { id: el.dataset.testid ?? label(el), selected: el.getAttribute('aria-selected') === 'true', colour: style.color, lineWidth: px(style.borderBottomWidth), lineColour: style.borderBottomColor, text: el.textContent ?? '', countBadges: el.querySelectorAll('.nuiget-badge--count').length };
     }),
     checkBoxes: shown('input[type="checkbox"], .nuiget-row-check').map(el => {
         const style = getComputedStyle(el);
@@ -2017,8 +2003,21 @@ function evaluateEndOfP0(definition: RuleDefinition, scope: Scope, state: string
             };
         }
         case 'DS-DIVIDER-1': {
+            if (scope === 'sidebar') {
+                return notMeasurable('no helper until P3.7a');
+            }
             if (scope === 'headers') {
-                return notMeasurable('no helper until P2.6');
+                const rows = layout.sections.filter(section => section.inList === true);
+                if (rows.length === 0) {
+                    return layout.flatList ? { value: 'no group header (flat list)', pass: true } : notMeasurable('no group row');
+                }
+                const firsts = rows.filter(row => row.level === 1 && row.posInSet === 1);
+                const later = rows.filter(row => row.level === 1 && row.posInSet !== 1);
+                const levels = rows.filter(row => row.level !== 1);
+                return {
+                    value: `group rows ${rows.length}: ${firsts.length === 0 ? 'first not rendered' : 'first unlined'}, ${later.filter(row => row.lineAbove).length} lined, ${levels.length} level row${levels.length === 1 ? '' : 's'} unlined`,
+                    pass: firsts.every(row => !row.lineAbove) && later.every(row => row.lineAbove) && levels.every(row => !row.lineAbove),
+                };
             }
             if (facts.rows.length === 0) {
                 return notMeasurable('no row');
@@ -2246,6 +2245,66 @@ function evaluateFocusAndState(definition: RuleDefinition, scope: Scope, layout:
     const notMeasurable = (why: string) => ({ value: `${NOT_MEASURABLE} (${why})`, pass: false });
     const { focus, focusColours } = facts;
     switch (definition.id) {
+        case 'DS-TYPE-5': {
+            const titled = layout.sections.filter(section => section.hasTitle === true && section.title !== undefined && (scope === 'sidebar' || section.variant !== 'pane'));
+            if (titled.length === 0) {
+                return layout.flatList ? { value: 'no group header (flat list)', pass: true } : notMeasurable('no header');
+            }
+            const pane = look === 'classic' ? { size: 11, weight: '700', transform: 'uppercase' } : { size: 12, weight: '600', transform: facts.uppercaseHeaders ? 'uppercase' : 'capitalize' };
+            const target = (section: SectionBox) => (section.variant === 'level' ? { size: 13, weight: '600', transform: 'none' } : pane);
+            const describe = (title: { fontSize: string; fontWeight: string; textTransform: string }) => `${title.fontSize}/${title.fontWeight}/${title.textTransform}`;
+            const named = (spec: { size: number; weight: string; transform: string }) => `${spec.size}px/${spec.weight}/${spec.transform}`;
+            const off = titled.filter(section => {
+                const spec = target(section);
+                const title = section.title as NonNullable<SectionBox['title']>;
+                return !near(Number.parseFloat(title.fontSize), spec.size, tolerance) || title.fontWeight !== spec.weight || title.textTransform !== spec.transform;
+            });
+            const groups = ['group', 'pane', 'level'].flatMap(variant => {
+                const list = titled.filter(section => section.variant === variant);
+                return list.length === 0 ? [] : [`${variant} ×${list.length}: ${tally(list.map(section => describe(section.title as NonNullable<SectionBox['title']>)))} (target ${named(target(list[0]))})`];
+            });
+            return { value: `${groups.join('; ')}${off.length === 0 ? '' : `; off: ${off.map(section => `${section.id} ${describe(section.title as NonNullable<SectionBox['title']>)} (target ${named(target(section))})`).join(', ')}`}`, pass: off.length === 0 };
+        }
+        case 'DS-COPY-5': {
+            const headers = layout.sections.filter(section => section.variant === 'pane' || section.variant === 'group' || section.inList === true);
+            const tabs = layout.heights.tabs;
+            if (headers.length === 0 && tabs.length === 0) {
+                return layout.browsing ? { value: 'no header; tab strip not shown (browsing)', pass: true } : notMeasurable('no header');
+            }
+            const textCount = /\(\d+( of \d+)?\)/;
+            const texts = headers.filter(section => textCount.test(section.titleText ?? ''));
+            const tabTexts = tabs.filter(tab => /\(\d+\)/.test(tab.text ?? ''));
+            const badges = headers.reduce((sum, section) => sum + (section.countBadges ?? 0), 0);
+            const tabBadges = tabs.reduce((sum, tab) => sum + (tab.countBadges ?? 0), 0);
+            return {
+                value: `headers ${headers.length}: count badges ${badges}, "(N)" texts ${texts.length}${tabs.length === 0 ? '' : `; tabs ${tabs.length}: count badges ${tabBadges}${tabTexts.length === 0 ? '' : `, "(N)" texts ${tabTexts.length}`}`}`,
+                pass: texts.length === 0 && tabTexts.length === 0,
+            };
+        }
+        case 'DS-TYPE-8': {
+            const badges = layout.heights.badges;
+            if (badges.length === 0) {
+                return notMeasurable('no badge');
+            }
+            const target = CONTROL_STYLES.countBadge[look].fontSize;
+            return { value: `badges ${badges.length}: ${tally(badges.map(badge => badge.fontSize))} (target ${target})`, pass: badges.every(badge => near(Number.parseFloat(badge.fontSize), Number.parseFloat(target), tolerance)) };
+        }
+        case 'DS-HC-1': {
+            const badges = layout.heights.badges;
+            if (badges.length === 0) {
+                return notMeasurable('no badge');
+            }
+            const line = facts.contrastBorder;
+            if (line === '' || line === 'rgba(0, 0, 0, 0)' || line === 'transparent') {
+                return { value: 'not a high-contrast theme', pass: true };
+            }
+            const untoned = badges.filter(badge => badge.toned !== true);
+            const toned = badges.filter(badge => badge.toned === true);
+            return {
+                value: `badges ${badges.length}: 1 px contrastBorder ×${untoned.filter(badge => badge.borderWidth === 1 && badge.borderColor === line).length}${toned.length === 0 ? '' : `; toned 1 px ×${toned.filter(badge => badge.borderWidth === 1).length}`}`,
+                pass: untoned.every(badge => badge.borderWidth === 1 && badge.borderColor === line) && toned.every(badge => badge.borderWidth === 1),
+            };
+        }
         case 'DS-FOCUS-1': {
             const kinds: ReadonlyArray<FocusFacts['kind']> = scope === 'tabs' ? ['tab'] : ['input', 'select', 'button', 'checkbox', 'header'];
             // The rule names the offsets of inputs, selects, tabs, headers, check boxes and text buttons, not icon buttons.

@@ -220,10 +220,13 @@ describe('the in-page collector on stubbed geometry (UX-P0.10, UX-P0.11)', () =>
         expect(layout.sections.find(section => section.id === 'direct')?.insets).toEqual({ start: 16, end: 520, top: 3, bottom: 3 });
     });
 
-    it('measures header proximity on the title line box and the content the header controls', () => {
+    it('measures header proximity on border boxes and the content the header controls (UX-P2.6b)', () => {
         const layout = collect();
-        // Above: the title top 113 minus the buttons' bottom 100; below: the first row name 150 minus the title bottom 129.
-        expect(layout.sections.find(section => section.id === 'direct')).toMatchObject({ above: 13, below: 21 });
+        // Above: the box's top minus the toolbar's bottom; below: the content's top minus the box's bottom.
+        const direct = document.querySelector('[data-testid="section-box-direct"]') as HTMLElement;
+        const content = document.getElementById('direct-content') as HTMLElement;
+        const toolbar = document.querySelector('[data-testid="installed-toolbar"]') as HTMLElement;
+        expect(layout.sections.find(section => section.id === 'direct')).toMatchObject({ above: rect(direct.dataset.rect as string).top - rect(toolbar.dataset.rect as string).bottom, below: rect(content.dataset.rect as string).top - rect(direct.dataset.rect as string).bottom });
         // A collapsed header (its content is absent) labels nothing.
         expect(layout.sections.find(section => section.id === 'transitive')?.below).toBeUndefined();
     });
@@ -528,12 +531,15 @@ describe('the in-page collector on stubbed geometry (UX-P0.10, UX-P0.11)', () =>
             { inHeader: true, width: 20, height: 20, label: 'refresh-button', glyph: { w: 16, h: 16 }, band: undefined, multi: false },
             { inHeader: false, width: 22, height: 22, label: 'Uninstall', glyph: { w: 16, h: 16 }, band: 'current', multi: false },
         ]);
-        expect(facts.tabs.map(tab => [tab.id, tab.selected])).toEqual([['installed-tab', true], ['updates-tab', false]]);
+        expect(facts.tabs.map(tab => [tab.id, tab.selected, tab.text, tab.countBadges])).toEqual([['installed-tab', true, 'Installed', 0], ['updates-tab', false, 'Updates', 0]]);
         // UX-P2.6: a badge's kind, and what a header box reads.
         const app = document.querySelector('[data-testid="nuiget-app"]') as HTMLElement;
         app.insertAdjacentHTML('beforeend', '<div class="nuiget-row" data-row-kind="group" data-rect="0,100,600,128"><div class="nuiget-row-group nuiget-row-group--divided" role="treeitem" aria-level="1" aria-posinset="2" data-rect="0,100,600,128"><div class="nuiget-section-header" data-testid="section-box-direct" data-variant="group" data-rect="0,100,600,128"><span class="nuiget-section-title" data-rect="16,106,120,122" data-text="16,106,120,122">Direct packages</span><span class="nuiget-section-count" data-rect="565,104,584,123"><span class="nuiget-badge nuiget-badge--count nuiget-badge--neutral" data-rect="565,104,584,123" data-text="570,108,580,119">3</span></span></div></div></div>');
         const header = collect().sections.find(section => section.id === 'direct');
         expect(header).toMatchObject({ inList: true, hasTitle: true, countBadges: 1, titleText: 'Direct packages', level: 1, posInSet: 2, trailingEnd: 16, paddingEnd: expect.any(Number) });
+        // In a list: the block above is the last block before the group row; nothing follows it here.
+        expect(header?.below).toBeUndefined();
+        expect(header?.above).toEqual(expect.any(Number));
         expect(collect().heights.badges.at(-1)).toMatchObject({ count: true, toned: false });
         // DS-COLOR-3 (UX-P2.5b): the hovered icon button and the toolbar's hover fill the rule compares it with.
         expect(facts.iconButtons.map(button => button.hovered)).toEqual([false, false]);
