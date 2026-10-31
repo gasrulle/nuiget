@@ -87,10 +87,10 @@ export async function untilProjects<T>(probe: (values: string[]) => T | undefine
 export const optionFor = (file: string): Promise<string> => untilProjects(values => values.find(value => value.endsWith(file)), `${file} in the project selector`);
 
 
-/** What a comfortable row measures in the webview: the wrapper carries `min-height`, the icon is the `<img>` it shows. */
+/** What a comfortable row measures in the webview: the wrapper carries the fixed `block-size`, the icon is the `<img>` it shows. */
 export interface MeasuredRow {
     name: string;
-    minHeight: string;
+    blockSize: string;
     height: number;
     iconSrc: string;
     iconLoaded: boolean;
@@ -105,7 +105,7 @@ export async function measureLoadedRows(listTestId: string, timeoutMs = 30_000):
                 const img = option.querySelector('.nuiget-row-icon img');
                 return {
                     name: option.querySelector('.nuiget-row-name')?.textContent ?? '',
-                    minHeight: getComputedStyle(row).minHeight,
+                    blockSize: getComputedStyle(row).blockSize,
                     height: row.getBoundingClientRect().height,
                     iconSrc: img?.getAttribute('src') ?? '',
                     iconLoaded: img ? img.complete && img.naturalWidth > 0 : false,

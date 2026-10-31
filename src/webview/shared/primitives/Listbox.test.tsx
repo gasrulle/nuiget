@@ -40,7 +40,6 @@ function PackageList({ items, onAction, ...rest }: { items: Package[]; onAction?
                     itemId={item.id}
                     name={item.id}
                     version={item.version}
-                    density="compact"
                     status={item.disabled ? 'Unresolved' : undefined}
                     badges={item.central ? <Badge label="CPM" title="Centrally managed" /> : undefined}
                     actions={<IconButton label={`Uninstall ${item.id}`} tabIndex={-1} data-testid="row-action-uninstall" onClick={() => onAction?.(item.id)}><TrashIcon /></IconButton>}
@@ -336,7 +335,6 @@ describe('Listbox group rows (UX-P2.1a, UX-P2.1c)', () => {
                 renderRow={(item, placement) => (
                     <Row
                         {...placement}
-                        density="compact"
                         itemId={item.id}
                         name={item.id}
                         version={item.version}
@@ -541,6 +539,32 @@ describe('Listbox group rows (UX-P2.1a, UX-P2.1c)', () => {
     });
 });
 
+describe('Listbox estimates', () => {
+    // No fake layout: without a client box nothing renders or is measured, so the sizer is the estimates alone.
+    it('a group row is estimated at the compact height and a package row at its density\'s height', () => {
+        const items = ['group-a', 'Alpha', 'Beta', 'group-b', 'Gamma'].map(id => ({ id }));
+        const { container } = render(
+            <Listbox
+                items={items}
+                label="Packages"
+                hint="Arrow keys move."
+                testId="estimated-list"
+                density="comfortable"
+                groups={{
+                    is: item => item.id.startsWith('group-'),
+                    level: () => 1,
+                    isExpanded: () => true,
+                    onToggle: () => undefined,
+                    render: item => <span>{item.id}</span>,
+                }}
+                renderRow={(item, placement) => <Row {...placement} itemId={item.id} name={item.id} />}
+            />,
+        );
+        const sizer = container.querySelector('.nuiget-listbox-sizer') as HTMLElement;
+        expect(sizer.style.getPropertyValue('--nuiget-virtual-total')).toBe(`${2 * 24 + 3 * 72}px`);
+    });
+});
+
 // What the markup of Row and Listbox avoids, shown to fail: "no axe violations" above is not vacuous.
 describe('Listbox: the markup it must not have', () => {
     let removeLayout: () => void;
@@ -613,7 +637,6 @@ describe('Listbox multi-selection', () => {
                             itemId={item.id}
                             name={item.id}
                             version={item.version}
-                            density="comfortable"
                             actions={<IconButton label={`Uninstall ${item.id}`} tabIndex={-1} data-testid="row-action-uninstall"><TrashIcon /></IconButton>}
                         />
                     )}

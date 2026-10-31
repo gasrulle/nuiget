@@ -72,7 +72,6 @@ export function InstalledRow({ placement, projectPath, entry, result, metadata, 
             authors={lite?.authors}
             verified={lite?.verified}
             icon={src === undefined ? undefined : <img src={src} alt="" />}
-            density="comfortable"
             busy={busy}
             selectable={!readOnly}
             status={busy ? busyStatus(entry.id) : unresolved ? 'Unresolved' : undefined}

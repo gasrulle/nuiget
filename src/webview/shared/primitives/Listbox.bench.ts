@@ -29,7 +29,7 @@ function list() {
         hint: 'Enter uninstalls.',
         testId: 'bench-list',
         density: 'compact',
-        renderRow: (item: Item, placement: RowPlacement) => createElement(Row, { ...placement, itemId: item.id, name: item.id, version: item.version, density: 'compact' }),
+        renderRow: (item: Item, placement: RowPlacement) => createElement(Row, { ...placement, itemId: item.id, name: item.id, version: item.version }),
     });
 }
 

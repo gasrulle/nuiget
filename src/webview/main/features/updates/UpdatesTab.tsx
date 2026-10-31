@@ -199,7 +199,6 @@ function ProjectUpdates({ filter, announce }: ListView): React.JSX.Element {
                             authors={update.authors}
                             verified={update.verified}
                             icon={src === undefined ? undefined : <img src={src} alt="" />}
-                            density="comfortable"
                             busy={busy}
                             status={busy ? busyStatus(update.id) : undefined}
                             badges={<>

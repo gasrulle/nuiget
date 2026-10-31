@@ -104,6 +104,29 @@ describe('the in-page collector on stubbed geometry (UX-P0.10, UX-P0.11)', () =>
         document.body.innerHTML = '';
     });
 
+    it('a hidden icon leaves its row\'s check box measurable (PF-3b, DS-ROW-6, UX-P2.2)', () => {
+        const before = collect().centring[0];
+        expect(before.check).toEqual(expect.any(Number));
+        expect(before.icon).toEqual(expect.any(Number));
+        (document.querySelector('.nuiget-row-option .nuiget-row-icon') as HTMLElement).setAttribute('data-rect', '40,159,40,159');
+        const after = collect().centring[0];
+        expect(after.check).toEqual(expect.any(Number));
+        expect(after.icon).toBeUndefined();
+    });
+
+    it('a badge inside a collapsed wrapper is not shown; in a wrapper of its width it is (DS-ROW-5, UX-P2.2)', () => {
+        const name = document.querySelector('.nuiget-row-name') as HTMLElement;
+        const badge = document.querySelector('.nuiget-row-option .nuiget-badge') as HTMLElement;
+        const wrapper = document.createElement('span');
+        wrapper.style.overflowX = 'hidden';
+        wrapper.setAttribute('data-rect', '210,150,240,166');
+        name.after(wrapper);
+        wrapper.append(badge);
+        expect(collect().rows[0].badgesShown).toBe(1);
+        wrapper.setAttribute('data-rect', '210,150,210,166');
+        expect(collect().rows[0].badgesShown).toBe(0);
+    });
+
     it('measures a toolbar to its painted buttons and leaves hidden text out of a header box', () => {
         const layout = collect();
         expect(layout.root).toBe(true);

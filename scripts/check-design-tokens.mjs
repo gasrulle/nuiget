@@ -15,8 +15,6 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
  */
 export const ALLOWANCE = {
     '--nuiget-row-height-compact': 'P3.7a',
-    '--nuiget-row-height-comfortable': 'P2.2',
-    '--nuiget-icon-size-xl': 'P2.2',
     '--nuiget-color-scrim': 'P3.5',
     '--nuiget-duration-normal': 'P4.5',
 };

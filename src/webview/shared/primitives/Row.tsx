@@ -31,6 +31,8 @@ export interface RowPlacement {
     offset: number;
     /** Lets the list measure the rendered row. */
     measureRef?: (element: HTMLElement | null) => void;
+    /** The list's density: it belongs to the surface, never to a call site (DS-DENSITY-1). */
+    density: 'compact' | 'comfortable';
 }
 
 export interface RowProps extends RowPlacement {
@@ -48,7 +50,7 @@ export interface RowProps extends RowPlacement {
     authors?: string;
     /** The package id prefix is reserved by its owner: a check mark before the authors. */
     verified?: boolean;
-    /** The third line of a comfortable row, for Browse rows only (D14); read out, not shown, in compact rows. */
+    /** The middle line of a comfortable row, for Browse rows only (D14); read out, not shown, in compact rows. */
     description?: string;
     /** Shown in comfortable rows only, in a column that is there with or without it. Decoration: the name is the text. */
     icon?: React.ReactNode;
@@ -65,7 +67,6 @@ export interface RowProps extends RowPlacement {
     selectable?: boolean;
     /** `IconButton`s with `tabIndex={-1}` and `data-testid="row-action-<name>"`. Pointer only: the list has a key for each. */
     actions?: React.ReactNode;
-    density: 'compact' | 'comfortable';
 }
 
 /**
@@ -74,10 +75,10 @@ export interface RowProps extends RowPlacement {
  * beside it, hidden from assistive technology and out of the tab order: a button inside an option is nested
  * interactive content, which a screen reader cannot reach.
  *
- * A comfortable row is the 1.x card (D15 as amended 2026-10-17): an icon column, then three lines: name and badges,
- * version and status, authors with the Verified mark; a row with a description (Browse) keeps the authors beside the
- * version and shows the description as its third line. A compact row shows the same spans on one line, name first. The name is the
- * name and the version; the badges, authors, description and status describe the option. The tooltip `id version`
+ * A comfortable row is the Extensions row (D46): 72 px, an icon column, then two lines: name and badges, then version
+ * and status with the authors and the Verified mark; a row with a description (Browse) has it as a line between the two.
+ * A compact row shows the same spans on one line, name first. The option is the band; a comfortable row's actions lie
+ * over its end. The name is the name and the version; the badges, authors, description and status describe the option. The tooltip `id version`
  * sits on the text column: on the option a `title` would become its description.
  */
 export function Row(props: RowProps): React.JSX.Element {
@@ -99,8 +100,27 @@ export function Row(props: RowProps): React.JSX.Element {
         .join(' ');
     const tooltip = [name, version, nextVersion === undefined ? undefined : `→ ${nextVersion}`].filter(Boolean).join(' ');
     const className = `nuiget-row nuiget-row--${density}${busy ? ' nuiget-row--busy' : ''}`;
+    // A part after another on its line starts with the separator, as generated content: the description text stays as it was.
+    const separated = (present: boolean, before: boolean): string => (present && before ? ' nuiget-row-sep' : '');
+    const metaSep = separated(Boolean(meta), version !== undefined);
+    const authorsSep = separated(hasAuthors, version !== undefined || Boolean(meta));
+    const statusSep = separated(Boolean(status), version !== undefined || Boolean(meta) || hasAuthors);
+    const factsLine = (authorsSpan: React.ReactNode): React.ReactNode => (
+        <span className="nuiget-row-line">
+            {version === undefined ? null : (
+                <span className="nuiget-row-version" id={ids.version} title={versionTitle}>
+                    {version}
+                    {/* The arrow stays text: the name reads "3.0.0 → 3.1.0". A text node of the version, never an element of its own: axe cannot measure a symbol-only element (theme.ui.test.ts). */}
+                    {nextVersion === undefined ? null : <>{' → '}<span className="nuiget-row-version-new">{nextVersion}</span></>}
+                </span>
+            )}
+            {meta ? <span className={`nuiget-row-meta${metaSep}`} id={ids.meta}>{meta}</span> : null}
+            {authorsSpan}
+            {status ? <span className={`nuiget-row-status${statusSep}`} id={ids.status}>{status}</span> : null}
+        </span>
+    );
     const authorsSpan = hasAuthors ? (
-        <span className="nuiget-row-authors" id={ids.authors}>
+        <span className={`nuiget-row-authors${authorsSep}`} id={ids.authors}>
             {/* A space, not a margin: the icon's title and the authors are two words when read out. */}
             {verified ? <><VerifiedIcon size={12} className="nuiget-verified" title="Verified: the package id prefix is reserved by its owner" />{' '}</> : null}
             {authors}
@@ -124,7 +144,7 @@ export function Row(props: RowProps): React.JSX.Element {
             style={cssVars({ '--nuiget-virtual-offset': `${offset}px` })}
         >
             <div
-                className="nuiget-row-option"
+                className={`nuiget-row-option nuiget-row-option--${density}`}
                 role={level === undefined ? 'option' : 'treeitem'}
                 id={optionId}
                 ref={optionRef}
@@ -147,21 +167,8 @@ export function Row(props: RowProps): React.JSX.Element {
                         <span className="nuiget-row-name" id={ids.name}>{name}</span>
                         {badges ? <span className="nuiget-row-badges" id={ids.badges}>{badges}</span> : null}
                     </span>
-                    <span className="nuiget-row-line">
-                        {version === undefined ? null : (
-                            <span className="nuiget-row-version" id={ids.version} title={versionTitle}>
-                                {version}
-                                {/* The arrow stays text: the name reads "3.0.0 → 3.1.0". A text node of the version, never an element of its own: axe cannot measure a symbol-only element (theme.ui.test.ts). */}
-                                {nextVersion === undefined ? null : <>{' → '}<span className="nuiget-row-version-new">{nextVersion}</span></>}
-                            </span>
-                        )}
-                        {meta ? <span className="nuiget-row-meta" id={ids.meta}>{meta}</span> : null}
-                        {description ? authorsSpan : null}
-                        {status ? <span className="nuiget-row-status" id={ids.status}>{status}</span> : null}
-                    </span>
-                    {/* The third line: the description (Browse), else the authors (P9.fix-3). */}
                     {description ? <span className="nuiget-row-description" id={ids.description}>{description}</span> : null}
-                    {!description && authorsSpan ? <span className="nuiget-row-line">{authorsSpan}</span> : null}
+                    {factsLine(authorsSpan)}
                 </span>
             </div>
             {disabled ? null : (

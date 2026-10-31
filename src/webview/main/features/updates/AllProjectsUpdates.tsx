@@ -120,7 +120,6 @@ function ProjectUpdatesSection(props: ProjectUpdatesSectionProps): React.JSX.Ele
                                 authors={update.authors}
                                 verified={update.verified}
                                 icon={src === undefined ? undefined : <img src={src} alt="" />}
-                                density="comfortable"
                                 busy={busy}
                                 status={busy ? busyStatus(update.id) : undefined}
                                 badges={central ? <Badge label="CPM" title={entryIn(section.installed, update.id)?.declaration === 'central-override' ? 'Centrally managed; this project overrides the version' : 'Centrally managed'} /> : undefined}

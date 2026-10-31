@@ -106,7 +106,6 @@ export function ProjectPackages({ projectPath, result, filter, announce, labelle
                         name={entry.id}
                         version={shownVersion(entry)}
                         versionTitle={unresolved ? UNRESOLVED_HINT : undefined}
-                        density="compact"
                         busy={busy}
                         status={busy ? busyStatus(entry.id) : unresolved ? 'Unresolved' : undefined}
                         badges={central ? <Badge label="CPM" title="Centrally managed" /> : undefined}

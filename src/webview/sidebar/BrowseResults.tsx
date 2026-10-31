@@ -175,7 +175,6 @@ export function BrowseResults({ announce }: BrowseResultsProps): React.JSX.Eleme
                             itemId={result.id}
                             name={result.id}
                             version={result.version}
-                            density="compact"
                             busy={busy}
                             status={busy ? 'Installing' : undefined}
                             badges={badge}

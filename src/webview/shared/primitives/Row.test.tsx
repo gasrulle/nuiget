@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { axe } from 'jest-axe';
 import type React from 'react';
@@ -141,8 +142,10 @@ describe('Row', () => {
         const comfortable = renderRow({ density: 'comfortable', icon: <PlusIcon /> });
         expect(screen.getByTestId('package-row-serilog')).toHaveClass('nuiget-row--comfortable');
         expect(comfortable.container.querySelector('.nuiget-row-icon')).toHaveAttribute('aria-hidden', 'true');
+        expect(screen.getByRole('option')).toHaveClass('nuiget-row-option--comfortable');
         comfortable.unmount();
         const compact = renderRow({ density: 'compact', icon: <PlusIcon /> });
+        expect(screen.getByRole('option')).toHaveClass('nuiget-row-option--compact');
         expect(compact.container.querySelector('.nuiget-row-icon')).toBeNull();
     });
 
@@ -211,7 +214,7 @@ describe('Row in a multi-selectable list', () => {
     });
 });
 
-describe('Row layout (P9.2, D15)', () => {
+describe('Row layout (P9.2, D46)', () => {
     let removeLayout: () => void;
     let removeStylesheet: () => void;
 
@@ -227,22 +230,23 @@ describe('Row layout (P9.2, D15)', () => {
 
     const follows = (first: Element, second: Element): boolean => Boolean(first.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING);
 
-    it('comfortable row stacks name over version and authors', async () => {
+    it('a Browse row shows three lines: name and badges, the description, then version · downloads · authors', async () => {
         const { container } = renderRow({
-            density: 'comfortable', authors: 'Serilog Contributors', verified: true,
+            density: 'comfortable', meta: '2.5M downloads', authors: 'Serilog Contributors', verified: true,
             badges: <Badge label="CPM" title="Centrally managed" />, description: 'Structured logging',
         });
         const option = screen.getByRole('option', { name: 'Serilog 3.0.0' });
-        const body = option.querySelector('.nuiget-row-body');
-        const [name, version, authors, description] = ['.nuiget-row-name', '.nuiget-row-version', '.nuiget-row-authors', '.nuiget-row-description']
-            .map(selector => body?.querySelector(selector));
-        expect(name?.textContent).toBe('Serilog');
-        // Name and badges on the first line, version and authors on the second, the description below.
-        const [first, second] = body ? [...body.querySelectorAll(':scope > .nuiget-row-line')] : [];
-        expect(first.contains(name ?? null)).toBe(true);
-        expect(second.contains(version ?? null) && second.contains(authors ?? null)).toBe(true);
-        expect(follows(name!, version!) && follows(version!, authors!) && follows(authors!, description!)).toBe(true);
-        expect(option).toHaveAccessibleDescription('Centrally managed Verified: the package id prefix is reserved by its owner Serilog Contributors Structured logging');
+        const body = option.querySelector('.nuiget-row-body') as Element;
+        const [first, description, third] = [...body.children];
+        expect(body.children).toHaveLength(3);
+        expect(first.querySelector('.nuiget-row-name')?.textContent).toBe('Serilog');
+        expect(first.querySelector('.nuiget-row-badges')).not.toBeNull();
+        expect(description).toHaveClass('nuiget-row-description');
+        const [version, meta, authors] = ['.nuiget-row-version', '.nuiget-row-meta', '.nuiget-row-authors'].map(selector => third.querySelector(selector) as Element);
+        expect(follows(version, meta) && follows(meta, authors)).toBe(true);
+        expect(meta).toHaveClass('nuiget-row-sep');
+        expect(authors).toHaveClass('nuiget-row-sep');
+        expect(option).toHaveAccessibleDescription('Centrally managed 2.5M downloads Verified: the package id prefix is reserved by its owner Serilog Contributors Structured logging');
         // The icon column is there without an icon, so names line up.
         expect(option.querySelector('.nuiget-row-icon')).toHaveAttribute('aria-hidden', 'true');
         const results = await axe(container);
@@ -251,29 +255,64 @@ describe('Row layout (P9.2, D15)', () => {
         expect(axeRuleOutcome(results, 'nested-interactive')).toBe('passes');
     });
 
-    it('a comfortable row keeps its padding inside the 78 px minimum', () => {
+    it('a comfortable row is the 72 px Extensions row: a fixed block size, border-box, no line under it', () => {
         renderRow({ density: 'comfortable', description: 'Structured logging' });
-        const option = screen.getByRole('option');
-        // The option inherits the row's minimum height; with the padding outside it a row grew by 24 px.
-        expect(getComputedStyle(option).minHeight).toBe('var(--nuiget-row-height-comfortable)');
-        expect(getComputedStyle(option).boxSizing).toBe('border-box');
-        expect(getComputedStyle(screen.getByTestId('package-row-serilog')).boxSizing).toBe('border-box');
+        const row = getComputedStyle(screen.getByTestId('package-row-serilog'));
+        expect(row.blockSize).toBe('var(--nuiget-row-height-comfortable)');
+        expect(row.boxSizing).toBe('border-box');
+        expect(row.borderBottomWidth === '' || row.borderBottomWidth === '0px').toBe(true);
+        expect(screen.getByRole('option')).toHaveClass('nuiget-row-option--comfortable');
     });
 
-    it('a comfortable row without a description puts the authors on a third line', () => {
+    it('an Installed row shows two lines: name and badges, then version · authors with the Verified mark', () => {
         renderRow({ density: 'comfortable', authors: 'Serilog Contributors', verified: true });
         const option = screen.getByRole('option', { name: 'Serilog 3.0.0' });
         const body = option.querySelector('.nuiget-row-body');
         const lines = body ? [...body.querySelectorAll(':scope > .nuiget-row-line')] : [];
-        expect(lines).toHaveLength(3);
+        expect(lines).toHaveLength(2);
         expect(lines[1].querySelector('.nuiget-row-version')).not.toBeNull();
-        expect(lines[1].querySelector('.nuiget-row-authors')).toBeNull();
-        expect(lines[2].querySelector('.nuiget-row-authors')).toHaveTextContent('Serilog Contributors');
+        expect(lines[1].querySelector('.nuiget-row-authors')).toHaveTextContent('Serilog Contributors');
+        expect(lines[1].querySelector('.nuiget-row-authors')).toHaveClass('nuiget-row-sep');
         const mark = screen.getByRole('img', { name: /^Verified/, hidden: true });
         expect(mark).toHaveAttribute('data-codicon', 'verified-filled');
         expect(mark).toHaveAttribute('width', '12');
         expect(mark).toHaveClass('nuiget-verified');
         expect(option).toHaveAccessibleDescription('Verified: the package id prefix is reserved by its owner Serilog Contributors');
+    });
+
+    it('the option is the band: it paints the hover, selection and focus carriers and the comfortable actions sit over its end', () => {
+        renderRow({ density: 'comfortable', actions: uninstall() });
+        const stylesheet = readFileSync('src/webview/shared/primitives/primitives.css', 'utf8');
+        const optionRule = /(?:^|\n)\.nuiget-row-option \{([^}]*)\}/.exec(stylesheet)?.[1] ?? '';
+        expect(optionRule).toContain('background: var(--nuiget-row-band-bg, transparent);');
+        expect(optionRule).toContain('outline: var(--nuiget-line-width) var(--nuiget-row-outline-style, none) var(--nuiget-row-outline-color, transparent);');
+        const actions = screen.getByTestId('package-row-serilog').querySelector('.nuiget-row-actions') as Element;
+        expect(getComputedStyle(actions).position).toBe('absolute');
+    });
+
+    it('the name truncates last: the badges collapse before it', () => {
+        renderRow({ density: 'comfortable', badges: <Badge label="CPM" title="Centrally managed" /> });
+        const name = getComputedStyle(screen.getByRole('option').querySelector('.nuiget-row-name') as Element);
+        const badges = getComputedStyle(screen.getByRole('option').querySelector('.nuiget-row-badges') as Element);
+        expect(Number(name.flexShrink)).toBe(0);
+        expect(Number(badges.flexShrink)).toBe(1);
+        expect(name.textOverflow).toBe('ellipsis');
+    });
+
+    it('only a part after another on its line starts with the separator', () => {
+        const first = renderRow({ density: 'comfortable', version: undefined, meta: '2.5M downloads', authors: 'Ada' });
+        expect(screen.getByRole('option').querySelector('.nuiget-row-meta')).not.toHaveClass('nuiget-row-sep');
+        expect(screen.getByRole('option').querySelector('.nuiget-row-authors')).toHaveClass('nuiget-row-sep');
+        first.unmount();
+        renderRow({ density: 'comfortable', status: 'Updating' });
+        expect(screen.getByRole('option').querySelector('.nuiget-row-status')).toHaveClass('nuiget-row-sep');
+    });
+
+    it('no element of the row holds a separator as its only text', () => {
+        renderRow({ density: 'comfortable', meta: '2.5M downloads', authors: 'Ada', status: 'Updating', description: 'A library' });
+        const row = screen.getByTestId('package-row-serilog');
+        expect([...row.querySelectorAll('*')].every(element => element.textContent?.trim() !== '·')).toBe(true);
+        expect(row.textContent).not.toContain('·');
     });
 
     it('long version never hides the name in compact density', () => {
@@ -293,15 +332,9 @@ describe('Row layout (P9.2, D15)', () => {
         }
     });
 
-    it('a comfortable row shows its meta after the version and reads it in the description', () => {
-        const comfortable = renderRow({
-            density: 'comfortable', meta: '2.5M downloads', authors: 'Serilog Contributors', verified: true,
-            badges: <Badge label="CPM" title="Centrally managed" />, description: 'Structured logging',
-        });
-        const option = screen.getByRole('option', { name: 'Serilog 3.0.0' });
-        const [version, meta, authors] = ['.nuiget-row-version', '.nuiget-row-meta', '.nuiget-row-authors'].map(selector => option.querySelector(selector) as Element);
-        expect(follows(version, meta) && follows(meta, authors)).toBe(true);
-        expect(option).toHaveAccessibleDescription('Centrally managed 2.5M downloads Verified: the package id prefix is reserved by its owner Serilog Contributors Structured logging');
+    it('a comfortable row reads its meta in the description, a compact row hides it visually', () => {
+        const comfortable = renderRow({ density: 'comfortable', meta: '2.5M downloads' });
+        expect(screen.getByRole('option')).toHaveAccessibleDescription('2.5M downloads');
         comfortable.unmount();
         renderRow({ density: 'compact', meta: '2.5M downloads' });
         expect(getComputedStyle(screen.getByRole('option').querySelector('.nuiget-row-meta') as Element).position).toBe('absolute');

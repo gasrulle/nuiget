@@ -336,17 +336,20 @@ div.nuiget-row[role="presentation"][data-index][data-testid="package-row-<id>"] 
 │  ├─ span.nuiget-row-icon[aria-hidden]       (comfortable rows, with or without an icon)
 │  └─ span.nuiget-row-body[title="<id> <version>"]                                  ← the tooltip
 │     ├─ span.nuiget-row-line   name, badges
-│     ├─ span.nuiget-row-line   version (`old → new` for an update), meta (Browse: downloads), authors with the Verified mark, status
-│     └─ span.nuiget-row-description   (Browse)
+│     ├─ span.nuiget-row-description   (Browse)
+│     └─ span.nuiget-row-line   version (`old → new` for an update), meta (Browse: downloads), authors with the Verified mark, status
 └─ div.nuiget-row-actions[aria-hidden="true"]                                       ← pointer only
       IconButton[tabIndex -1][data-testid="row-action-<name>"] … or a Spinner while the row is busy
 ```
 
-A comfortable row is the 1.x card (D15 as amended 2026-10-17, P9.fix-3): a 32 px icon column and three lines (name
-and badges; version, meta and status; authors with the Verified mark), or, for a row with a description (Browse),
-the authors beside the version and the description as the third line; at least `--nuiget-row-height-comfortable`
-(78 px) with a line under it, the check mark and the icon centred, and a 3 px accent on the selected row. A
-compact row shows the same spans on one line (`display: contents` on the lines), name first: the version shrinks
+A comfortable row is the Extensions row (D46): a fixed 72 px (`--nuiget-row-height-comfortable`), no line under it, a
+36 px icon (24 px and hidden at list-pane widths of 250 and 200 px, through a container query on `.nuiget-listbox-root`)
+and two lines (name and badges; version, meta, authors and status), or three in Browse, with the description between
+them. The option is the band that hover, selection and focus paint; a row's one action overlays its reserved end slot.
+A row's state reaches its text through `--nuiget-row-*` custom properties, set by the state's own rule and read by each
+child, so no selector carries a state into a child. The list estimates a group row at the compact height and a package
+row at its density's, which is what a comfortable row measures, so the sizer does not depend on what has been rendered.
+A compact row shows the same spans on one line (`display: contents` on the lines), name first: the version shrinks
 with an ellipsis before the name does, and authors, description and status are read out, not shown. The arrow of
 an update stays the text `→`, so the name reads `3.0.0 → 3.1.0`. The tooltip sits on the body: on the option a
 `title` would become its description whenever no `aria-describedby` exists.

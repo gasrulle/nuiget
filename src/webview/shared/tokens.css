@@ -59,8 +59,8 @@
     --nuiget-line-width: var(--vscode-strokeThickness, 1px);
     /* 22 px with the compact row (P3.7a, D47), with `ROW_HEIGHT` in Listbox.tsx. */
     --nuiget-row-height-compact: 24px;
-    /* 72 px with the Extensions row (P2.2, D46), with `ROW_HEIGHT` in Listbox.tsx. */
-    --nuiget-row-height-comfortable: 78px;
+    /* The Extensions row (D46), with `ROW_HEIGHT` in Listbox.tsx. */
+    --nuiget-row-height-comfortable: 72px;
     --nuiget-pane-header-height: 22px;
     --nuiget-control-height: 26px;
     --nuiget-input-height: 25px;
@@ -75,8 +75,8 @@
     --nuiget-icon-size-sm: var(--vscode-codiconFontSize-compact, 12px);
     --nuiget-icon-size-md: var(--vscode-codiconFontSize, 16px);
     --nuiget-icon-size-lg: 24px;
-    /* 36 px with the Extensions row (P2.2, DS-ICON-3). */
-    --nuiget-icon-size-xl: 32px;
+    /* The Extensions row (DS-ICON-3). */
+    --nuiget-icon-size-xl: 36px;
     --nuiget-scrollbar-size: 10px;
     --nuiget-sash-size: 4px;
     --nuiget-tree-indent: 8px;

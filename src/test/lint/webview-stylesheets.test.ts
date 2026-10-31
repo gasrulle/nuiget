@@ -156,15 +156,16 @@ describe('2.0 webview stylesheets', () => {
         expect(background('src/webview/sidebar/sidebar.css', '.nuiget-sidebar')).toEqual(['background: var(--nuiget-color-bg-sidebar)']);
     });
 
-    it('row actions are shown on hover and focus-within of the row', () => {
+    it('row actions are shown on hover and focus-within of the row, and while it is busy', () => {
         const rules = parseRules(readFileSync(PRIMITIVES, 'utf8'));
         const hidden = rules.find(rule => rule.prelude === '.nuiget-row-actions');
         // Hidden but laid out: `display: none` would move the row's content when the pointer arrives.
-        expect(hidden?.declarations).toContain('visibility: hidden');
+        expect(hidden?.declarations).toContain('visibility: var(--nuiget-row-actions-visibility, hidden)');
         expect(hidden?.declarations.some(declaration => /^display:\s*none/.test(declaration))).toBe(false);
-        const shown = rules.filter(rule => rule.declarations.includes('visibility: visible')).flatMap(rule => rule.prelude.split(',').map(selector => selector.trim()));
-        expect(shown).toContain('.nuiget-row:hover .nuiget-row-actions');
-        expect(shown).toContain('.nuiget-row:focus-within .nuiget-row-actions');
+        const shown = rules.filter(rule => rule.declarations.includes('--nuiget-row-actions-visibility: visible')).flatMap(rule => rule.prelude.split(',').map(selector => selector.trim()));
+        expect(shown).toContain('.nuiget-row:hover');
+        expect(shown).toContain('.nuiget-row:focus-within');
+        expect(shown).toContain('.nuiget-row--busy');
     });
 
     it('the controls take their lines, colours and the dialog layer its scrim from the tokens', () => {
@@ -198,7 +199,7 @@ describe('2.0 webview stylesheets', () => {
             .filter(rule => rule.declarations.includes('outline: var(--nuiget-line-width) solid var(--nuiget-color-focus)'))
             .flatMap(rule => rule.prelude.split(',').map(selector => selector.trim())));
         for (const selector of [
-            '.nuiget-row-option:focus-visible', '.nuiget-button:focus-visible', '.nuiget-tab:focus-visible', '.nuiget-icon-button:focus-visible',
+            '.nuiget-button:focus-visible', '.nuiget-tab:focus-visible', '.nuiget-icon-button:focus-visible',
             '.nuiget-section-toggle:focus-visible', '.nuiget-sash:focus-visible', '.nuiget-main-select:focus-visible', '.nuiget-main-search-input:focus',
             '.nuiget-input:focus', '.nuiget-readme-copy:focus-visible', '.nuiget-main input[type="checkbox"]:focus-visible',
             '.nuiget-dialog input[type="checkbox"]:focus-visible', '.nuiget-sidebar-search:focus-visible',
@@ -206,7 +207,11 @@ describe('2.0 webview stylesheets', () => {
             expect(ringed, selector).toContain(selector);
         }
         const outlines = rules.flatMap(rule => rule.declarations).filter(declaration => /^outline:/.test(declaration));
-        expect(outlines.filter(declaration => !['outline: none', 'outline: var(--nuiget-line-width) solid var(--nuiget-color-focus)', 'outline: var(--nuiget-line-width) solid var(--nuiget-color-contrast-border)'].includes(declaration))).toEqual([]);
+        expect(outlines.filter(declaration => !['outline: none', 'outline: var(--nuiget-line-width) solid var(--nuiget-color-focus)', 'outline: var(--nuiget-line-width) solid var(--nuiget-color-contrast-border)', 'outline: var(--nuiget-line-width) var(--nuiget-row-outline-style, none) var(--nuiget-row-outline-color, transparent)'].includes(declaration))).toEqual([]);
+        // A row rings in `list.focusOutline` through its carriers (DS-FOCUS-2).
+        const rowRing = rules.find(rule => rule.declarations.includes('--nuiget-row-outline-color: var(--nuiget-color-list-focus-outline)'));
+        expect(rowRing?.prelude.split(',').map(selector => selector.trim())).toEqual(['.nuiget-row-option--compact:focus-visible', '.nuiget-row-option--comfortable:focus']);
+        expect(rowRing?.declarations).toContain('--nuiget-row-outline-style: solid');
     });
 
     it('the scan covers the 2.0 stylesheets and leaves tokens.css out', () => {

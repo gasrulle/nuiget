@@ -49,7 +49,7 @@ describe('2.0 main panel: Updates tab', () => {
         await screenshot('main-updates');
     });
 
-    it('update rows are comfortable cards with a loaded icon, as tall as the token (TF3), check box centred', async function () {
+    it('update rows are comfortable rows with a loaded icon, as tall as the token (TF3, UX-P2.2), check box centred', async function () {
         this.timeout(180_000);
         await findByTestId('package-row-newtonsoft.json', 120_000);
         const token = tokenPx('--nuiget-row-height-comfortable');
@@ -57,7 +57,7 @@ describe('2.0 main panel: Updates tab', () => {
         console.warn('[P9.12] comfortable rows: ' + JSON.stringify(rows));
         expect(rows.length).to.be.at.least(2);
         for (const row of rows) {
-            expect(row.minHeight, row.name).to.equal(`${token}px`);
+            expect(row.blockSize, row.name).to.equal(`${token}px`);
             expect(row.height, row.name).to.be.within(token, token + 2);
             expect(row.iconSrc, row.name).to.not.equal('');
         }

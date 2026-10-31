@@ -49,7 +49,7 @@ describe('2.0 main panel: Installed tab', () => {
         await screenshot('main-installed-single');
     });
 
-    it('lays the rows out as comfortable cards with a loaded icon, as tall as the token, and shows the authors and the Verified mark (TF1, TF3), the authors fit and the check box is centred (P9.fix-3)', async function () {
+    it('lays the rows out as comfortable rows with a loaded icon, as tall as the token, and shows the authors and the Verified mark (TF1, TF3), the authors fit and the check box is centred (P9.fix-3, UX-P2.2)', async function () {
         this.timeout(180_000);
         await findByTestId('package-row-serilog', 120_000);
         await findByTestId('package-row-newtonsoft.json');
@@ -58,7 +58,7 @@ describe('2.0 main panel: Installed tab', () => {
         console.warn('[P9.12] comfortable rows: ' + JSON.stringify(rows));
         expect(rows.length).to.be.at.least(2);
         for (const row of rows) {
-            expect(row.minHeight, row.name).to.equal(`${token}px`);
+            expect(row.blockSize, row.name).to.equal(`${token}px`);
             expect(row.height, row.name).to.be.within(token, token + 2);
             // The default icon is a `cspSource` URI: there with or without the feed.
             expect(row.iconSrc, row.name).to.not.equal('');
@@ -69,7 +69,7 @@ describe('2.0 main panel: Installed tab', () => {
             const text = (await newtonsoft.getAttribute('textContent')) ?? '';
             return text.includes('James Newton-King') && text.includes('Verified: the package id prefix is reserved by its owner') ? true : undefined;
         }, 'the authors and the Verified mark on the Newtonsoft.Json row', 120_000);
-        // The authors have a line of their own and fit at the default split (P9.fix-3).
+        // The authors fit on the row's second line at the default split (P9.fix-3).
         const authors = await driverOf().executeScript<{ scrollWidth: number; clientWidth: number }>(`
             const span = document.querySelector('[data-testid="package-row-newtonsoft.json"] .nuiget-row-authors');
             return { scrollWidth: span.scrollWidth, clientWidth: span.clientWidth };`);

@@ -38,7 +38,6 @@ function Section() {
                             itemId={item.id}
                             name={item.id}
                             version={item.version}
-                            density="compact"
                             badges={item.central ? <Badge label="CPM" title="Centrally managed" /> : undefined}
                             actions={<IconButton label={`Uninstall ${item.id}`} tabIndex={-1} data-testid="row-action-uninstall"><TrashIcon /></IconButton>}
                         />

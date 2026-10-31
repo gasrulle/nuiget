@@ -135,7 +135,6 @@ export function BrowseList({ text, announce }: BrowseView): React.JSX.Element {
                             authors={result.authors || undefined}
                             verified={result.verified}
                             description={result.description || undefined}
-                            density="comfortable"
                             icon={src === undefined ? undefined : <img src={src} alt="" />}
                             busy={installed.projectPath !== null && isPackageBusy(installed.projectPath, result.id)}
                             badges={installedVersion !== undefined ? <Badge label="Installed" title={`Installed: ${installedVersion}`} /> : undefined}

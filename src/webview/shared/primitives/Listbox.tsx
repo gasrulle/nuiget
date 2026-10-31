@@ -5,7 +5,7 @@ import type { RowPlacement } from './Row';
 import './primitives.css';
 
 /** Row heights in pixels. They repeat `--nuiget-row-height-*`: a script cannot read a token before layout (CA-R4, `webview-tokens.test.ts`). */
-const ROW_HEIGHT = { compact: 24, comfortable: 78 } as const;
+const ROW_HEIGHT = { compact: 24, comfortable: 72 } as const;
 
 /** Where a group row of the list goes; `groups.render` draws what is inside it. */
 export interface GroupPlacement {
@@ -161,10 +161,12 @@ export function Listbox<T extends { id: string }>(props: ListboxProps<T>): React
         return [...indexes].sort((a, b) => a - b);
     }, [activeIndex]);
 
+    const isGroupAt = (index: number): boolean => items[index] !== undefined && groups?.is(items[index]) === true;
+
     const virtualizer = useVirtualizer<HTMLDivElement, HTMLElement>({
         count: items.length,
         getScrollElement: () => scrollRef.current,
-        estimateSize: () => rowHeight,
+        estimateSize: index => (isGroupAt(index) ? ROW_HEIGHT.compact : rowHeight),
         overscan: OVERSCAN,
         getItemKey: index => items[index].id,
         measureElement: element => element.getBoundingClientRect().height || rowHeight,
@@ -178,7 +180,6 @@ export function Listbox<T extends { id: string }>(props: ListboxProps<T>): React
     const wrapperAt = (index: number): HTMLElement | null => scrollRef.current?.querySelector<HTMLElement>(`[data-index="${index}"]`) ?? null;
     const rowFocusAt = (index: number): HTMLElement | null => wrapperAt(index)?.querySelector<HTMLElement>('[tabindex]') ?? null;
 
-    const isGroupAt = (index: number): boolean => items[index] !== undefined && groups?.is(items[index]) === true;
 
     useLayoutEffect(() => {
         if (!hadFocus) {
@@ -365,6 +366,7 @@ export function Listbox<T extends { id: string }>(props: ListboxProps<T>): React
                         return (
                             <React.Fragment key={item.id}>
                                 {renderRow(item, {
+                                    density,
                                     index: virtual.index,
                                     setSize: place?.setSize ?? items.length,
                                     level: place?.level,

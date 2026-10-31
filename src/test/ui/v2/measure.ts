@@ -122,6 +122,8 @@ export interface RuleDefinition {
      * instead of `not measurable`; never a state the rule fails in (design-advisor ruling of 2026-10-24, UX-P0.18).
      */
     exceptStates?: readonly string[];
+    /** The states a scope is measured in, for a rule with several owners; a scope not listed follows `states` (UX-P2.2). */
+    scopeStates?: Partial<Record<Scope, readonly string[]>>;
 }
 
 /** Whether a rule measures a state (at a webview width, in a theme) at all; its scopes then say for which state group. */
@@ -169,7 +171,7 @@ export const RULES: readonly RuleDefinition[] = [
     // The tracker's state group for DS-HEIGHT-1 and -2 is the sidebar (P3.7a's files: the sidebar and the compact Row).
     rule('DS-HEIGHT-1', { helper: 3, scopes: on('P3.7a', 'sidebar'), tolerance: TOLERANCES.height }),
     rule('DS-HEIGHT-2', { helper: 3, scopes: on('P3.7a', 'sidebar'), tolerance: TOLERANCES.height }),
-    rule('DS-HEIGHT-3', { helper: 3, scopes: on('P2.2', ...MAIN), tolerance: TOLERANCES.height }),
+    rule('DS-HEIGHT-3', { helper: 3, scopes: inGroups('hard', ...MAIN), tolerance: TOLERANCES.height, exceptStates: NO_ROW_STATES }),
     rule('DS-HEIGHT-4', { helper: 3, scopes: on('P2.5', ...MAIN), tolerance: TOLERANCES.height }),
     rule('DS-HEIGHT-5', { helper: 3, scopes: on('P3.3b', 'details'), tolerance: TOLERANCES.height }),
     rule('DS-HEIGHT-6', { helper: 3, scopes: on('P2.3', 'main-installed', 'main-updates', 'details', 'dialogs', 'sources'), tolerance: TOLERANCES.height }),
@@ -187,19 +189,19 @@ export const RULES: readonly RuleDefinition[] = [
     rule('MS-8', { helper: 6, scopes: { chrome: 'hard', 'first-row': { pending: 'P3.1b' } }, tolerance: TOLERANCES.chrome }),
     // The document never scrolls (V72, design-advisor ruling of 2026-10-24).
     rule('DS-OVERFLOW-6', { helper: 6, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: 'hard', dialogs: 'hard', sources: 'hard', sidebar: 'hard' }, tolerance: TOLERANCES.containment, pendingWidths: V50_WIDTHS }),
-    rule('DS-INSET-3', { helper: 6, scopes: { rows: { pending: 'P2.2' }, headers: { pending: 'P2.6' }, sidebar: { pending: 'P3.7a' } }, tolerance: TOLERANCES.coincide }),
+    rule('DS-INSET-3', { helper: 6, scopes: { rows: 'hard', headers: { pending: 'P2.6' }, sidebar: { pending: 'P3.7a' } }, tolerance: TOLERANCES.coincide, scopeStates: { rows: ['main-installed-hover', 'main-installed-focus', 'main-installed-details'] } }),
     // DS-OVERFLOW-2 over the section headers, the tracker's `headers` and P2.6's files (SectionHeader, Badge).
     rule('DS-OVERFLOW-2', { helper: 6, scopes: on('P2.6', 'main-installed', 'details', 'sidebar'), tolerance: TOLERANCES.containment }),
-    rule('DS-ROW-5', { helper: 5, scopes: { ...on('P2.2', ...MAIN), sidebar: { pending: 'P3.7a' } }, tolerance: TOLERANCES.containment }),
+    rule('DS-ROW-5', { helper: 5, scopes: { ...inGroups('hard', ...MAIN), sidebar: { pending: 'P3.7a' } }, tolerance: TOLERANCES.containment, exceptStates: NO_ROW_STATES }),
     // UX-P0.13 (design-advisor ruling of 2026-10-24, design trigger 6): every Appendix B rule of a P0 helper, pending on its
     // item per state group, and the five Appendix B calls hard at P0 ("pass on the probe"), pending on P0.18.
     rule('DS-INSET-4', { helper: 2, scopes: on('P3.3b', 'details'), tolerance: TOLERANCES.coincide }),
-    rule('DS-ROW-1', { helper: 2, scopes: on('P2.2', ...MAIN), tolerance: TOLERANCES.coincide }),
+    rule('DS-ROW-1', { helper: 2, scopes: inGroups('hard', ...MAIN), tolerance: TOLERANCES.coincide, widths: [800, 932, 1200, 1600], exceptStates: NO_ROW_STATES }),
     rule('DS-ROW-2', { helper: 2, scopes: { 'main-installed': { pending: 'P2.8a' }, details: { pending: 'P2.8a' }, browse: { pending: 'P3.2' } }, tolerance: TOLERANCES.coincide }),
-    rule('DS-ROW-3', { helper: 6, scopes: { ...on('P2.2', ...MAIN), sidebar: { pending: 'P3.7a' } }, tolerance: TOLERANCES.containment }),
-    rule('DS-ROW-6', { helper: 3, scopes: on('P2.2', ...MAIN), tolerance: TOLERANCES.containment }),
-    rule('DS-ICON-3', { helper: 3, scopes: on('P2.2', ...MAIN), tolerance: TOLERANCES.containment }),
-    rule('DS-DENSITY-1', { helper: 3, scopes: { ...on('P2.2', ...MAIN), sidebar: { pending: 'P3.7a' } }, tolerance: TOLERANCES.height }),
+    rule('DS-ROW-3', { helper: 6, scopes: { 'main-installed': 'hard', details: 'hard', 'main-updates': { pending: 'P3.1b' }, browse: { pending: 'P3.2' }, sidebar: { pending: 'P3.7a' } }, tolerance: TOLERANCES.containment, scopeStates: { 'main-installed': ['main-installed-hover', 'main-installed-focus', 'main-installed-unfocused'], details: ['main-installed-details', 'main-details-readme', 'main-transitive-details', 'main-browse-details'] } }),
+    rule('DS-ROW-6', { helper: 3, scopes: inGroups('hard', ...MAIN), tolerance: TOLERANCES.containment, exceptStates: NO_ROW_STATES }),
+    rule('DS-ICON-3', { helper: 3, scopes: inGroups('hard', ...MAIN), tolerance: TOLERANCES.containment, exceptStates: NO_ROW_STATES }),
+    rule('DS-DENSITY-1', { helper: 3, scopes: { ...inGroups('hard', ...MAIN), sidebar: { pending: 'P3.7a' } }, tolerance: TOLERANCES.height, exceptStates: NO_ROW_STATES }),
     rule('DS-OVERFLOW-1', { helper: 6, scopes: { ...on('P2.7', 'main-installed', 'main-updates', 'browse'), details: { pending: 'P3.3b' }, sidebar: { pending: 'P3.7a' } }, tolerance: TOLERANCES.containment }),
     rule('DS-OVERFLOW-3', { helper: 6, scopes: { toolbars: { pending: 'P2.5' }, tabs: { pending: 'P2.5' }, details: { pending: 'P3.3b' } }, tolerance: TOLERANCES.containment }),
     rule('DS-OVERFLOW-5', { helper: 6, scopes: on('P3.3b', 'details'), tolerance: TOLERANCES.containment }),
@@ -227,10 +229,10 @@ export const RULES: readonly RuleDefinition[] = [
     // condition a ready state renders, pending on their Appendix B items. DS-FOCUS-1's buttons and check boxes are P2.3's
     // share; P2.4, the later item, flips the controls scope once both kinds are green.
     rule('DS-FOCUS-1', { helper: 6, scopes: { controls: { pending: 'P2.4' }, tabs: { pending: 'P2.5' } }, tolerance: TOLERANCES.containment }),
-    rule('DS-FOCUS-2', { helper: 6, scopes: { rows: { pending: 'P2.2' } }, tolerance: TOLERANCES.containment }),
+    rule('DS-FOCUS-2', { helper: 6, scopes: { rows: 'hard' }, tolerance: TOLERANCES.containment, states: ['main-installed-focus', 'main-installed-details', 'main-transitive-details', 'main-browse-details', 'main-transitive-expanded'], pendingStates: { 'main-transitive-expanded': 'P2.6' } }),
     // The main-panel branch of the premise P-3: the states whose setup clicked a row or a tab.
-    rule('DS-FOCUS-3', { helper: 6, scopes: { rows: { pending: 'P2.2' }, tabs: { pending: 'P2.5' } }, tolerance: TOLERANCES.containment, states: ['main-installed-details', 'main-updates'] }),
-    rule('DS-FOCUS-4', { helper: 6, scopes: { rows: { pending: 'P2.2' } }, tolerance: TOLERANCES.containment, themes: ['dark-high-contrast', 'light-high-contrast'] }),
+    rule('DS-FOCUS-3', { helper: 6, scopes: { rows: 'hard', tabs: { pending: 'P2.5' } }, tolerance: TOLERANCES.containment, scopeStates: { rows: ['main-installed-details'] }, states: ['main-installed-details', 'main-updates'] }),
+    rule('DS-FOCUS-4', { helper: 6, scopes: { rows: 'hard' }, tolerance: TOLERANCES.containment, states: ['main-installed-details', 'main-installed-focus'], themes: ['dark-high-contrast', 'light-high-contrast'] }),
     rule('DS-STATE-7', { helper: 5, scopes: { ...on('P2.8a', 'main-installed', 'main-updates', 'browse'), details: { pending: 'P3.3b' } }, tolerance: TOLERANCES.containment }),
     // UX-P0.22 (V15): the token scrollbars, 10 px from P0.22; Modern UI's 8 px is P1.1's look token, the radius P3.9's.
     rule('DS-SCROLL-1', { helper: 3, scopes: on('P3.9', ...ALL), tolerance: TOLERANCES.containment }),
@@ -571,6 +573,16 @@ const visible = el => {
     const rect = el.getBoundingClientRect();
     return rect.width > 0 && rect.height > 0;
 };
+/** Not clipped away: the element's box meets the box of every clipping ancestor up to top (a collapsed wrapper hides a badge). */
+const unclipped = (el, top) => {
+    const rect = el.getBoundingClientRect();
+    for (let a = el.parentElement; a && a !== top.parentElement; a = a.parentElement) {
+        if (getComputedStyle(a).overflowX === 'visible') continue;
+        const clip = a.getBoundingClientRect();
+        if (clip.width <= 0 || rect.right <= clip.left + 0.5 || rect.left >= clip.right - 0.5) return false;
+    }
+    return true;
+};
 const px = value => Number.parseFloat(value) || 0;
 const round = n => Math.round(n * 10) / 10;
 const paintsBox = el => {
@@ -822,7 +834,7 @@ const rows = shown('.nuiget-row:not([data-row-kind="group"])').map(row => {
         authorsCut: visible(authors) ? authors.scrollWidth > authors.clientWidth : undefined,
         versionShown: visible(version),
         versionCut: visible(version) && version.scrollWidth > version.clientWidth,
-        badgesShown: [...option.querySelectorAll('.nuiget-badge')].filter(visible).length,
+        badgesShown: [...option.querySelectorAll('.nuiget-badge')].filter(badge => visible(badge) && unclipped(badge, option)).length,
         actionsEnd: actions.length > 0 ? round(rectOf(row).right - Math.max(...actions.map(action => rectOf(action).right))) : undefined,
     };
 });
@@ -1359,14 +1371,15 @@ function evaluateHeights(definition: RuleDefinition, layout: Layout, look: 'mode
         case 'PF-3b': {
             // As P9.fix-3: at least two rows, and a check box (and here an icon) in every one.
             const rows = layout.centring;
-            const missing = rows.filter(row => row.check === undefined || row.icon === undefined).map(row => row.name);
+            // A row with a check box alone is measurable: DS-ROW-6 hides the icon in a narrow pane (UX-P2.2).
+            const missing = rows.filter(row => row.check === undefined).map(row => row.name);
             if (rows.length < 2 || missing.length > 0) {
-                return { value: `${NOT_MEASURABLE} (${rows.length < 2 ? `fewer than 2 rows` : `no check box or icon in ${missing.join(', ')}`})`, pass: false };
+                return { value: `${NOT_MEASURABLE} (${rows.length < 2 ? `fewer than 2 rows` : `no check box in ${missing.join(', ')}`})`, pass: false };
             }
-            const offsets = (part: 'check' | 'icon') => rows.map(row => tenth((row[part] as number) - row.row));
+            const offsets = (part: 'check' | 'icon') => rows.flatMap(row => (row[part] === undefined ? [] : [tenth((row[part] as number) - row.row)]));
             const [check, icon] = [offsets('check'), offsets('icon')];
             // The first row's absolute centres locate the defect (the negative control's coordinates, UX-P0.17).
-            return { value: `check box ${tally(check)}; icon ${tally(icon)} (centre offsets, ${rows.length} rows; first ${rows[0].name}: row ${rows[0].row}, check ${rows[0].check}, icon ${rows[0].icon})`, pass: [...check, ...icon].every(offset => Math.abs(offset) <= tolerance) };
+            return { value: `check box ${tally(check)}; icon ${icon.length === 0 ? 'hidden' : tally(icon)} (centre offsets, ${rows.length} rows; first ${rows[0].name}: row ${rows[0].row}, check ${rows[0].check}, icon ${rows[0].icon})`, pass: [...check, ...icon].every(offset => Math.abs(offset) <= tolerance) };
         }
         case 'PF-5': {
             const { uninstall, update } = layout.detailsButtons;
@@ -1684,7 +1697,8 @@ function evaluateEndOfP0(definition: RuleDefinition, scope: Scope, state: string
             if (rows.length === 0) {
                 return notMeasurable('no comfortable row with an icon');
             }
-            const lines = stateGroup(state) === 'browse' ? END_OF_P0.linesBrowse : END_OF_P0.linesInstalled;
+            const linesOf = (row: (typeof rows)[number]) => (row.list === 'browse-list' ? END_OF_P0.linesBrowse : END_OF_P0.linesInstalled);
+            const lines = linesOf(rows[0]);
             const icons = rows.map(row => `${row.icon?.w}×${row.icon?.h}`);
             const gaps = rows.flatMap(row => (row.nameLeft === undefined ? [] : [tenth(row.nameLeft - (row.icon?.right ?? 0))]));
             const centres = rows.flatMap(row => {
@@ -1696,7 +1710,7 @@ function evaluateEndOfP0(definition: RuleDefinition, scope: Scope, state: string
                 value: `icon ${tally(icons)} (target ${END_OF_P0.icon}×${END_OF_P0.icon}); name after icon ${tally(gaps)} (target ${END_OF_P0.nameAfterIcon}); centre offsets ${tally(centres)}; lines ${tally(lineCounts)} (target ${lines})`,
                 pass: rows.every(row => row.icon?.w === END_OF_P0.icon && row.icon?.h === END_OF_P0.icon)
                     && gaps.every(gap => near(gap, END_OF_P0.nameAfterIcon, tolerance)) && centres.every(offset => Math.abs(offset) <= tolerance)
-                    && lineCounts.every(count => count === lines),
+                    && rows.every(row => row.lines === linesOf(row)),
             };
         }
         case 'DS-ROW-2': {
@@ -1732,14 +1746,22 @@ function evaluateEndOfP0(definition: RuleDefinition, scope: Scope, state: string
             return { value: `pane ${width}: icon ${tally(sizes)} (target ${target === 0 ? 'none' : target})`, pass: sizes.every(size => near(size, target, tolerance)) };
         }
         case 'DS-ICON-3': {
+            const pane = facts.listPaneWidth;
             const icons = comfortable.flatMap(row => (row.icon === undefined ? [] : [row.icon]));
+            if (pane !== undefined && pane <= END_OF_P0.iconHiddenBelow && comfortable.length > 0 && icons.length === 0) {
+                return { value: `hidden (pane ≤ ${END_OF_P0.iconHiddenBelow})`, pass: true };
+            }
             if (icons.length === 0) {
                 return notMeasurable('no row icon');
             }
+            if (pane !== undefined && pane <= END_OF_P0.iconHiddenBelow) {
+                return { value: `${tally(icons.map(icon => `${icon.w}×${icon.h}`))} (target none, pane ≤ ${END_OF_P0.iconHiddenBelow})`, pass: false };
+            }
+            const target = pane !== undefined && pane <= END_OF_P0.iconSmallBelow ? END_OF_P0.iconSmall : END_OF_P0.icon;
             const radii = icons.map(icon => icon.radius).filter(radius => radius !== END_OF_P0.iconRadius);
             return {
-                value: `${tally(icons.map(icon => `${icon.w}×${icon.h}`))} (target ${END_OF_P0.icon}×${END_OF_P0.icon})${radii.length > 0 ? `; radius ${tally(radii)} (target ${END_OF_P0.iconRadius})` : ''}`,
-                pass: icons.every(icon => near(icon.w, END_OF_P0.icon, tolerance) && near(icon.h, END_OF_P0.icon, tolerance)) && radii.length === 0,
+                value: `${tally(icons.map(icon => `${icon.w}×${icon.h}`))} (target ${target}×${target})${radii.length > 0 ? `; radius ${tally(radii)} (target ${END_OF_P0.iconRadius})` : ''}`,
+                pass: icons.every(icon => near(icon.w, target, tolerance) && near(icon.h, target, tolerance)) && radii.length === 0,
             };
         }
         case 'DS-DENSITY-1': {
@@ -2158,7 +2180,7 @@ export function measureLines(state: string, collected: Layout, look: 'modern' | 
         }
         for (const scope of [group, ...elementGroups(group, state)] as Scope[]) {
             const declared = definition.scopes[scope];
-            if (declared === undefined) {
+            if (declared === undefined || definition.scopeStates?.[scope]?.includes(state) === false) {
                 continue;
             }
             // A hard scope that a state does not hold in yet prints as pending on the item named for that state.

@@ -99,7 +99,6 @@ export function transitiveRow(entry: Pick<TransitivePackage, 'id' | 'version'>, 
             authors={lite?.authors}
             verified={lite?.verified}
             icon={src === undefined ? undefined : <img src={src} alt="" />}
-            density="comfortable"
             selectable={false}
             badges={<>
                 {badges}

@@ -112,7 +112,6 @@ export function ProjectUpdates(props: ProjectUpdatesProps): React.JSX.Element {
                         name={update.id}
                         version={update.installedVersion}
                         nextVersion={update.latestVersion}
-                        density="compact"
                         busy={busy}
                         status={busy ? busyStatus(update.id) : undefined}
                         badges={central ? <Badge label="CPM" title={installed?.packages.find(entry => entry.id.toLowerCase() === update.id.toLowerCase())?.declaration === 'central-override' ? 'Centrally managed; this project overrides the version' : 'Centrally managed'} /> : undefined}
