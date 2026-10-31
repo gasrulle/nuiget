@@ -176,6 +176,23 @@ describe('the in-page collector on stubbed geometry (UX-P0.10, UX-P0.11)', () =>
         expect(collect().endOfP0.rows[0]).toMatchObject({ check: undefined, checkOff: true });
     });
 
+    it('a search box carrying the text field class counts once, as search, with its radius (UX-P2.4)', () => {
+        const app = document.querySelector('[data-testid="nuiget-app"]') as HTMLElement;
+        const box = document.createElement('input');
+        box.type = 'search';
+        box.className = 'nuiget-text-field';
+        box.dataset.testid = 'search-input';
+        box.style.borderTopLeftRadius = '4px';
+        box.setAttribute('data-rect', '16,40,500,66');
+        const field = document.createElement('input');
+        field.className = 'nuiget-text-field';
+        field.setAttribute('data-rect', '16,70,500,95');
+        app.append(box, field);
+        const inputs = collect().heights.inputs.filter(input => input.id === 'search-input' || input.kind === 'field');
+        expect(inputs.map(input => input.kind).sort()).toEqual(['field', 'search']);
+        expect(inputs.find(input => input.kind === 'search')?.radius).toBe('4px');
+    });
+
     it('a hidden badge is not counted (DS-ROW-6, UX-P2.2)', () => {
         (document.querySelector('.nuiget-row-option .nuiget-badge') as HTMLElement).style.display = 'none';
         expect(collect().rows[0].badgesShown).toBe(0);

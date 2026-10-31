@@ -1,24 +1,16 @@
 /*
- * The search box of both surfaces (SearchBox.tsx): the box keeps the class its surface gives it; the popup with the
+ * The search box of both surfaces (SearchBox.tsx): the popup with the
  * prefixes, the suggestions or the versions hangs under it, over the content, as wide as the box.
  */
 
+/* Clear and Filters sit inside the box at its end; the text stops before the buttons shown (Filters alone while empty). */
 .nuiget-search-box {
+    --nuiget-text-field-end-space: var(--nuiget-target-min);
     position: relative;
 }
 
-/* Clear and Filters sit inside the box at its end; the text stops before the buttons shown (Filters alone while empty). */
-.nuiget-search-box > input {
-    padding-inline-end: var(--nuiget-target-min);
-}
-
-.nuiget-search-box--clearable > input {
-    padding-inline-end: calc(2 * var(--nuiget-target-min));
-}
-
-.nuiget-search-box > input[type="search"]::-webkit-search-cancel-button {
-    -webkit-appearance: none;
-    appearance: none;
+.nuiget-search-box--clearable {
+    --nuiget-text-field-end-space: calc(2 * var(--nuiget-target-min));
 }
 
 .nuiget-search-actions {

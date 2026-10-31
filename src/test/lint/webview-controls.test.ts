@@ -20,6 +20,14 @@ describe('the webviews\' controls', () => {
         expect(holders('nuiget-button')).toEqual(['Button.tsx']);
     });
 
+    it('every select renders through Select: no <select outside Select.tsx', () => {
+        expect(holders('<select')).toEqual(['Select.tsx']);
+    });
+
+    it('every text input renders through TextField: no <input outside Checkbox.tsx and TextField.tsx', () => {
+        expect(holders('<input').sort()).toEqual(['Checkbox.tsx', 'TextField.tsx']);
+    });
+
     it('every check box renders through Checkbox: no input type=checkbox outside Checkbox.tsx', () => {
         expect(holders('type="checkbox"')).toEqual(['Checkbox.tsx']);
     });

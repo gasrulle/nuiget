@@ -147,7 +147,6 @@ export function SidebarView({ viewState }: { viewState?: ViewStateStore } = {}):
             <div className="nuiget-sidebar-header" role="search">
                 <SearchBox
                     inputRef={searchRef}
-                    className="nuiget-sidebar-search"
                     testId="sidebar-search-input"
                     label="Search packages, or filter with @installed or @updates"
                     placeholder="Search, or filter: @installed, @updates"

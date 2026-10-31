@@ -26,14 +26,6 @@
   {
     "file": "src/webview/main/main.css",
     "rule": "pxLength",
-    "selector": ".nuiget-main-select",
-    "property": "max-width",
-    "value": "20em",
-    "item": "P2.4"
-  },
-  {
-    "file": "src/webview/main/main.css",
-    "rule": "pxLength",
     "selector": ".nuiget-details-row > .nuiget-details-label",
     "property": "min-width",
     "value": "5em",
@@ -230,14 +222,6 @@
     "property": null,
     "value": "(0,3,0)",
     "item": "P3.7a"
-  },
-  {
-    "file": "src/webview/shared/search/search.css",
-    "rule": "specificity",
-    "selector": ".nuiget-search-box > input[type=\"search\"]::-webkit-search-cancel-button",
-    "property": null,
-    "value": "(0,2,2)",
-    "item": "P2.4"
   },
   {
     "file": "src/webview/main/main.css",

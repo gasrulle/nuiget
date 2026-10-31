@@ -27,27 +27,6 @@ body {
     padding: var(--nuiget-space-2) var(--nuiget-space-4);
 }
 
-.nuiget-sidebar-search {
-    box-sizing: border-box;
-    width: 100%;
-    min-height: var(--nuiget-target-min);
-    padding: 0 var(--nuiget-space-3);
-    border: var(--nuiget-line-width) solid var(--nuiget-color-input-border);
-    border-radius: var(--nuiget-radius-xs);
-    background: var(--nuiget-color-input-bg);
-    color: var(--nuiget-color-input-fg);
-    font: inherit;
-}
-
-.nuiget-sidebar-search::placeholder {
-    color: var(--nuiget-color-input-placeholder);
-}
-
-.nuiget-sidebar-search:focus-visible {
-    outline: var(--nuiget-line-width) solid var(--nuiget-color-focus);
-    outline-offset: calc(var(--nuiget-line-width) * -1);
-}
-
 /* The section takes the height that is left; its list scrolls inside it. */
 .nuiget-sidebar-section,
 .nuiget-sidebar-section-content {

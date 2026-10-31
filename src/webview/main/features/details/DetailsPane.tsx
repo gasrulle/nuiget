@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import type React from 'react';
 import { ALL_PROJECTS } from '../../../../protocol';
 import { isCentral, whyNotRemovable } from '../../../shared/installed/rules';
-import { Banner, Button, EmptyState, Tabs, type TabItem } from '../../../shared/primitives';
+import { Banner, Button, EmptyState, Select, Tabs, type TabItem } from '../../../shared/primitives';
 import { useAllProjects } from '../../../shared/store/allProjects';
 import { useDetails, useDetailsActions } from '../../../shared/store/details';
 import { useInstalled } from '../../../shared/store/installed';
@@ -178,17 +178,16 @@ export function DetailsPane({ announce }: DetailsPaneProps): React.JSX.Element {
                         </>
                     ) : null}
                     <label className="nuiget-details-label" htmlFor="nuiget-details-version">Version:</label>
-                    <select
+                    <Select
                         id="nuiget-details-version"
-                        className="nuiget-main-select"
                         data-testid="version-selector"
                         value={chosen}
                         disabled={versions.status === 'loading' && list.length === 0}
-                        onChange={event => chooseVersion(event.target.value)}
+                        onChange={chooseVersion}
                     >
                         {list.includes(chosen) ? null : <option value={chosen}>{versions.status === 'loading' ? `${chosen} (loading versions…)` : chosen}</option>}
                         {list.map(candidate => <option key={candidate} value={candidate}>{candidate === installedVersion ? `${candidate} (installed)` : candidate}</option>)}
-                    </select>
+                    </Select>
                     <Button
                         data-testid="install-update-button"
                         disabled={busy || asking || primaryWhy !== undefined}

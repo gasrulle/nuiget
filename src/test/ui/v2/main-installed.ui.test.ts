@@ -49,6 +49,32 @@ describe('2.0 main panel: Installed tab', () => {
         await screenshot('main-installed-single');
     });
 
+    it('a select and the search box ring in focusBorder at offset -1 on keyboard focus (DS-FOCUS-1, UX-P2.4)', async function () {
+        this.timeout(180_000);
+        await findByTestId('select-all-button', 120_000);
+        const ring = (): Promise<{ width: string; style: string; offset: string; colour: string; focus: string }> => driverOf().executeScript(`
+            const style = getComputedStyle(document.activeElement);
+            const probe = document.createElement('span');
+            probe.style.color = 'var(--vscode-focusBorder)';
+            document.body.append(probe);
+            const focus = getComputedStyle(probe).color;
+            probe.remove();
+            return { width: style.outlineWidth, style: style.outlineStyle, offset: style.outlineOffset, colour: style.outlineColor, focus };`);
+        await (await findByTestId('search-input', 30_000)).click();
+        const search = await ring();
+        expect([search.width, search.style, search.offset, search.colour]).to.deep.equal(['1px', 'solid', '-1px', search.focus]);
+        // Reached by Shift+Tab, never a click: a click opens the native list.
+        await poll(async () => {
+            if (await driverOf().executeScript<boolean>('return document.activeElement?.matches?.(".nuiget-select-input") === true;')) {
+                return true;
+            }
+            await (await driverOf().switchTo().activeElement()).sendKeys(Key.chord(Key.SHIFT, Key.TAB));
+            return undefined;
+        }, 'a select reached with Shift+Tab', 30_000);
+        const select = await ring();
+        expect([select.width, select.style, select.offset, select.colour]).to.deep.equal(['1px', 'solid', '-1px', select.focus]);
+    });
+
     it('a text button and a check box ring in focusBorder at offset 2 on keyboard focus (DS-FOCUS-1, UX-P2.3)', async function () {
         this.timeout(180_000);
         await findByTestId('select-all-button', 120_000);

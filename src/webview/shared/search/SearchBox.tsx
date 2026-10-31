@@ -1,6 +1,6 @@
 import { useEffect, useId, useState } from 'react';
 import type React from 'react';
-import { CloseIcon, FilterIcon, IconButton } from '../primitives';
+import { CloseIcon, FilterIcon, IconButton, TextField } from '../primitives';
 import './search.css';
 
 /** A package id the quick-search offers while the user types, with the source that knows it. */
@@ -45,7 +45,6 @@ export interface SearchBoxProps {
     label: string;
     placeholder: string;
     testId: string;
-    className: string;
     inputRef?: React.Ref<HTMLInputElement>;
     /** The box gained or lost focus. */
     onFocusChange?: (focused: boolean) => void;
@@ -85,7 +84,7 @@ function groupsOf(suggestions: readonly Suggestion[]): Array<{ sourceName: strin
  * layer stack nor a listener on the document.
  */
 export function SearchBox(props: SearchBoxProps): React.JSX.Element {
-    const { value, onChange, onSubmit, prefixes, suggestions = [], onPickSuggestion, pending = false, versions, onExpandSuggestion, onCollapseVersions, onPickVersion, onQuickInstall, label, placeholder, testId, className, inputRef, onFocusChange } = props;
+    const { value, onChange, onSubmit, prefixes, suggestions = [], onPickSuggestion, pending = false, versions, onExpandSuggestion, onCollapseVersions, onPickVersion, onQuickInstall, label, placeholder, testId, inputRef, onFocusChange } = props;
     const listId = `${useId()}-options`;
     const [active, setActive] = useState(-1);
     const [versionActive, setVersionActive] = useState(0);
@@ -305,9 +304,8 @@ export function SearchBox(props: SearchBoxProps): React.JSX.Element {
 
     return (
         <div className={value === '' ? 'nuiget-search-box' : 'nuiget-search-box nuiget-search-box--clearable'}>
-            <input
+            <TextField
                 ref={inputRef}
-                className={className}
                 type="search"
                 role="combobox"
                 data-testid={testId}
@@ -320,7 +318,7 @@ export function SearchBox(props: SearchBoxProps): React.JSX.Element {
                 value={value}
                 autoComplete="off"
                 spellCheck={false}
-                onChange={event => change(event.target.value)}
+                onChange={change}
                 onKeyDown={onKeyDown}
                 onFocus={() => onFocusChange?.(true)}
                 onBlur={() => {

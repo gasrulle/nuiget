@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import type React from 'react';
 import type { NuGetSource, RequestPayload } from '../../../../protocol';
-import { Banner, Button, Checkbox, Dialog, EmptyState, IconButton, TrashIcon, WarningIcon } from '../../../shared/primitives';
+import { Banner, Button, Checkbox, Dialog, EmptyState, IconButton, Select, TextField, TrashIcon, WarningIcon } from '../../../shared/primitives';
 import { useConfig } from '../../../shared/store/config';
 import { useSources } from '../../../shared/store/sources';
 
@@ -127,14 +127,14 @@ function AddSourcePanel({ onDone, announce }: { onDone: () => void; announce: (m
             {configFiles !== undefined && configFiles.length > 0 ? (
                 <div className="nuiget-field">
                     <label htmlFor={`${ids}-file`}>Add to config file</label>
-                    <select id={`${ids}-file`} className="nuiget-main-select" value={chosenFile} onChange={event => setConfigFile(event.target.value)}>
+                    <Select id={`${ids}-file`} value={chosenFile} onChange={setConfigFile}>
                         {configFiles.map(file => <option key={file.path} value={file.path}>{file.label}</option>)}
-                    </select>
+                    </Select>
                 </div>
             ) : null}
             <div className="nuiget-field">
                 <label htmlFor={`${ids}-url`}>URL</label>
-                <input ref={urlRef} id={`${ids}-url`} className="nuiget-input" type="url" required value={url} placeholder="https://api.nuget.org/v3/index.json" aria-invalid={error !== null || undefined} aria-describedby={error ? `${ids}-error` : undefined} onChange={event => { setUrl(event.target.value); setError(null); }} />
+                <TextField ref={urlRef} id={`${ids}-url`} type="url" required value={url} placeholder="https://api.nuget.org/v3/index.json" aria-invalid={error !== null || undefined} aria-describedby={error ? `${ids}-error` : undefined} onChange={value => { setUrl(value); setError(null); }} />
             </div>
             {insecure ? (
                 <div className="nuiget-field nuiget-field--warning">
@@ -148,18 +148,18 @@ function AddSourcePanel({ onDone, announce }: { onDone: () => void; announce: (m
             {error ? <p id={`${ids}-error`} className="nuiget-field-error" role="alert">{error}</p> : null}
             <div className="nuiget-field">
                 <label htmlFor={`${ids}-name`}>Name (optional)</label>
-                <input id={`${ids}-name`} className="nuiget-input" value={name} placeholder="Made from the URL when empty" onChange={event => setName(event.target.value)} />
+                <TextField id={`${ids}-name`} value={name} placeholder="Made from the URL when empty" onChange={setName} />
             </div>
             <Button variant="secondary" aria-expanded={advanced} onClick={() => setAdvanced(previous => !previous)}>Credentials</Button>
             {advanced ? (
                 <>
                     <div className="nuiget-field">
                         <label htmlFor={`${ids}-user`}>Username</label>
-                        <input id={`${ids}-user`} className="nuiget-input" autoComplete="off" value={username} onChange={event => setUsername(event.target.value)} />
+                        <TextField id={`${ids}-user`} autoComplete="off" value={username} onChange={setUsername} />
                     </div>
                     <div className="nuiget-field">
                         <label htmlFor={`${ids}-password`}>Password</label>
-                        <input id={`${ids}-password`} className="nuiget-input" type="password" autoComplete="off" value={password} placeholder="Password, or %ENV_VAR% (stored in clear text and read from the environment)" onChange={event => setPassword(event.target.value)} />
+                        <TextField id={`${ids}-password`} type="password" autoComplete="off" value={password} placeholder="Password, or %ENV_VAR% (stored in clear text and read from the environment)" onChange={setPassword} />
                     </div>
                     {password ? (
                         <label className="nuiget-field">

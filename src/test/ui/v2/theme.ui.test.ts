@@ -329,7 +329,7 @@ describe('2.0 theme pass', () => {
             const contrast = getComputedStyle(probe).color;
             probe.remove();
             const line = selector => getComputedStyle(document.querySelector(selector)).borderTopColor;
-            return { contrast, button: line('.nuiget-button'), tab: line('.nuiget-tab'), select: line('.nuiget-main-select'), checkbox: line('.nuiget-main-toggle input') };
+            return { contrast, button: line('.nuiget-button'), tab: line('.nuiget-tab'), select: line('.nuiget-select-input'), checkbox: line('.nuiget-main-toggle input') };
         `);
         expect(lines.contrast, `${where}: the contrast border`).to.not.equal('rgba(0, 0, 0, 0)');
         for (const control of ['button', 'tab', 'select', 'checkbox']) {

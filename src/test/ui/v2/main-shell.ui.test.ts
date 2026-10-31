@@ -71,7 +71,7 @@ describe('2.0 main panel shell', () => {
             const left = selector => document.querySelector(selector).getBoundingClientRect().left;
             return {
                 title: left('.nuiget-main-title'),
-                search: left('.nuiget-main-search-input'),
+                search: left('[data-testid="search-input"]'),
                 tab: left('[data-testid="installed-tab"] .nuiget-tab-label'),
                 toolbar: left('[data-testid="select-all-button"]'),
                 section: left('[data-testid="section-header-direct"] .nuiget-section-chevron'),

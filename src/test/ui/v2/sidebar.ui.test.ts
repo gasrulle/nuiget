@@ -30,6 +30,22 @@ describe('2.0 sidebar', () => {
         await leaveWebview();
     });
 
+    it('the sidebar search box rings in focusBorder at offset -1 (DS-FOCUS-1, UX-P2.4)', async function () {
+        this.timeout(120_000);
+        await openSidebarView();
+        await enterSidebarWebview();
+        await (await findByTestId('sidebar-search-input', 60_000)).click();
+        const ring = await driverOf().executeScript<{ width: string; style: string; offset: string; colour: string; focus: string }>(`
+            const style = getComputedStyle(document.activeElement);
+            const probe = document.createElement('span');
+            probe.style.color = 'var(--vscode-focusBorder)';
+            document.body.append(probe);
+            const focus = getComputedStyle(probe).color;
+            probe.remove();
+            return { width: style.outlineWidth, style: style.outlineStyle, offset: style.outlineOffset, colour: style.outlineColor, focus };`);
+        expect([ring.width, ring.style, ring.offset, ring.colour]).to.deep.equal(['1px', 'solid', '-1px', ring.focus]);
+    });
+
     it('renders the installed packages of the fixture project', async function () {
         this.timeout(180_000);
         await openSidebarView();

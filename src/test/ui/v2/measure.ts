@@ -151,6 +151,8 @@ const inGroups = (status: RuleStatus, ...groups: StateGroup[]): Partial<Record<S
 
 /** The states without a row by design on this tree; P3.2 removes the quick-search entries if its popup shows rows (D56). */
 const NO_ROW_STATES: readonly string[] = ['main-installed-filter-nomatch', 'main-quicksearch-open', 'main-quicksearch-versions'];
+/** The states that focus a control: today the search box (run 41207195990's DS-FOCUS-1 lines, UX-P2.4). */
+const FOCUSED_CONTROL_STATES: readonly string[] = ['main-browse-results', 'main-installed-filter', 'main-installed-filter-nomatch', 'main-installed-unfocused', 'main-quicksearch-open', 'main-quicksearch-versions'];
 /** The states that show a disabled text button (the run's DS-STATE-7 lines, UX-P2.3). */
 const DISABLED_BUTTON_STATES: readonly string[] = ['main-installed-single', 'main-installed-all', 'main-installed-unsupported', 'main-installed-cpm', 'main-installed-details', 'main-installed-filter', 'main-installed-filter-nomatch', 'main-installed-hover', 'main-installed-focus', 'main-transitive-expanded', 'main-transitive-details', 'main-details-readme'];
 
@@ -177,7 +179,7 @@ export const RULES: readonly RuleDefinition[] = [
     rule('DS-HEIGHT-4', { helper: 3, scopes: on('P2.5', ...MAIN), tolerance: TOLERANCES.height }),
     rule('DS-HEIGHT-5', { helper: 3, scopes: on('P3.3b', 'details'), tolerance: TOLERANCES.height }),
     rule('DS-HEIGHT-6', { helper: 3, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', details: 'hard', dialogs: 'hard', sources: { pending: 'P3.6' } }, tolerance: TOLERANCES.height }),
-    rule('DS-HEIGHT-7', { helper: 3, scopes: on('P2.4', ...MAIN, 'dialogs', 'sources', 'sidebar'), tolerance: TOLERANCES.height }),
+    rule('DS-HEIGHT-7', { helper: 3, scopes: { ...inGroups('hard', ...MAIN, 'sidebar'), dialogs: { pending: 'P3.6' }, sources: { pending: 'P3.6' } }, tolerance: TOLERANCES.height }),
     rule('DS-HEIGHT-8', { helper: 3, scopes: on('P2.5', ...MAIN, 'sources', 'sidebar'), tolerance: TOLERANCES.height }),
     rule('DS-HEIGHT-9', { helper: 3, scopes: { ...inGroups('hard', ...MAIN), dialogs: { pending: 'P3.5' }, sources: { pending: 'P3.6' } }, tolerance: TOLERANCES.height }),
     rule('DS-HEIGHT-10', { helper: 3, scopes: on('P2.6', ...MAIN, 'sidebar'), tolerance: TOLERANCES.height }),
@@ -201,8 +203,8 @@ export const RULES: readonly RuleDefinition[] = [
     rule('DS-ROW-1', { helper: 2, scopes: inGroups('hard', ...MAIN), tolerance: TOLERANCES.coincide, widths: [800, 932, 1200, 1600], exceptStates: NO_ROW_STATES }),
     rule('DS-ROW-2', { helper: 2, scopes: { 'main-installed': { pending: 'P2.8a' }, details: { pending: 'P2.8a' }, browse: { pending: 'P3.2' } }, tolerance: TOLERANCES.coincide }),
     rule('DS-ROW-3', { helper: 6, scopes: { 'main-installed': 'hard', details: 'hard', 'main-updates': { pending: 'P3.1b' }, browse: { pending: 'P3.2' }, sidebar: { pending: 'P3.7a' } }, tolerance: TOLERANCES.containment, scopeStates: { 'main-installed': ['main-installed-hover', 'main-installed-focus', 'main-installed-unfocused'], details: ['main-installed-details', 'main-details-readme', 'main-transitive-details', 'main-browse-details'] } }),
-    // UX-P2.3 (design trigger 6). DS-RADIUS-1's selects and text fields are P2.4's.
-    rule('DS-RADIUS-1', { helper: 3, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', details: 'hard', dialogs: 'hard', browse: { pending: 'P2.4' }, sidebar: { pending: 'P2.4' }, sources: { pending: 'P3.6' } }, tolerance: TOLERANCES.containment }),
+    // UX-P2.3 and UX-P2.4 (design trigger 6): DS-RADIUS-1 reads the buttons and the inputs.
+    rule('DS-RADIUS-1', { helper: 3, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', details: 'hard', dialogs: 'hard', browse: 'hard', sidebar: 'hard', sources: { pending: 'P3.6' } }, tolerance: TOLERANCES.containment }),
     rule('DS-COLOR-6', { helper: 3, scopes: { 'text-buttons': 'hard', 'icon-buttons': { pending: 'P2.5' } }, tolerance: TOLERANCES.containment, scopeStates: { 'text-buttons': DISABLED_BUTTON_STATES } }),
     rule('DS-COLOR-7', { helper: 3, scopes: { 'text-buttons': 'hard' }, tolerance: TOLERANCES.containment, states: ['main-installed-toolbar-hover'] }),
     // UX-P2.2b (design trigger 6): the row parts of the four rules no helper asserted.
@@ -237,9 +239,9 @@ export const RULES: readonly RuleDefinition[] = [
     // pending on the screen item that builds the state (P2.8a: `main-installed-single`, UX-P0.27a's artboard A).
     rule('SPEC', { helper: 8, scopes: { 'main-installed': { pending: 'P2.8a' } }, tolerance: TOLERANCES.coincide, states: ['main-installed-single'], widths: [932] }),
     // UX-P0.14 (design-advisor rulings of 2026-10-24): the rules of the research's 27 not measurable on the probe whose
-    // condition a ready state renders, pending on their Appendix B items. DS-FOCUS-1's buttons and check boxes are P2.3's
-    // share; P2.4, the later item, flips the controls scope once both kinds are green.
-    rule('DS-FOCUS-1', { helper: 6, scopes: { controls: { pending: 'P2.4' }, tabs: { pending: 'P2.5' } }, tolerance: TOLERANCES.containment }),
+    // condition a ready state renders, pending on their Appendix B items. DS-FOCUS-1's `controls` is hard where a state focuses
+    // a control (the search box); a select and the sidebar box are proved by the stylesheet lint and two UI tests (UX-P2.4).
+    rule('DS-FOCUS-1', { helper: 6, scopes: { controls: 'hard', tabs: { pending: 'P2.5' } }, tolerance: TOLERANCES.containment, scopeStates: { controls: FOCUSED_CONTROL_STATES } }),
     rule('DS-FOCUS-2', { helper: 6, scopes: { rows: 'hard' }, tolerance: TOLERANCES.containment, states: ['main-installed-focus', 'main-installed-details', 'main-transitive-details', 'main-browse-details', 'main-transitive-expanded'], pendingStates: { 'main-transitive-expanded': 'P2.6' } }),
     // The main-panel branch of the premise P-3: the states whose setup clicked a row or a tab.
     rule('DS-FOCUS-3', { helper: 6, scopes: { rows: 'hard', tabs: { pending: 'P2.5' } }, tolerance: TOLERANCES.containment, scopeStates: { rows: ['main-installed-details'] }, states: ['main-installed-details', 'main-updates'] }),
@@ -350,7 +352,7 @@ export interface Heights {
     tabStrip: number | undefined;
     detailsTabs: number | undefined;
     buttons: Array<{ height: number; fontSize: string; lineHeight: string; padding: string; radius: string; disabled: boolean; opacity: string; hovered: boolean; secondary: boolean; background: string }>;
-    inputs: Array<{ kind: 'search' | 'select' | 'field'; id: string; height: number }>;
+    inputs: Array<{ kind: 'search' | 'select' | 'field'; id: string; height: number; radius: string }>;
     iconButtons: Array<{ inHeader: boolean; width: number; height: number; hit: { width: number; height: number } }>;
     checkBoxes: Array<{ width: number; height: number; radius: string; selected: { fill: string; border: string } | undefined; /** A mark that cannot join a bulk action, on a banded row: its line stays disabledForeground. */ off?: boolean }>;
     /** The theme's `checkbox.selectBackground` and `checkbox.selectBorder` as VS Code put them on the root (hex, or empty). */
@@ -758,7 +760,7 @@ const left = selector => { const el = scope.querySelector(selector); return visi
 const firstOption = scope.querySelector('[data-testid="installed-list"] .nuiget-row-option');
 const mainLefts = rootTestId !== 'nuiget-app' ? {} : {
     title: left('.nuiget-main-title'),
-    search: left('.nuiget-main-search-input'),
+    search: left('[data-testid="search-input"]'),
     tab: left('[data-testid="installed-tab"] .nuiget-tab-label'),
     toolbar: left('[data-testid="select-all-button"]'),
     section: left('[data-testid="section-header-direct"] .nuiget-section-chevron'),
@@ -784,7 +786,7 @@ const shown = selector => [...scope.querySelectorAll(selector)].filter(visible);
 const heightOf = el => round(rectOf(el).height);
 const paddingOf = style => [style.paddingTop, style.paddingRight, style.paddingBottom, style.paddingLeft].join(' ');
 const visibleHeight = selector => { const el = scope.querySelector(selector); return visible(el) ? heightOf(el) : undefined; };
-const inputKinds = [['search', '[data-testid="search-input"], [data-testid="sidebar-search-input"]'], ['select', '[data-testid="project-selector"], [data-testid="source-selector"], [data-testid="version-selector"]'], ['field', '.nuiget-input, .nuiget-text-field']];
+const inputKinds = [['search', '[data-testid="search-input"], [data-testid="sidebar-search-input"]'], ['select', '.nuiget-select-input'], ['field', '.nuiget-text-field:not([type="search"])']];
 const rootVars = document.documentElement.style;
 // A badge's visible label: its own text, or its aria-hidden child's when it has a title in a visually hidden one.
 const badgeLabel = el => {
@@ -804,7 +806,7 @@ const heights = {
     tabStrip: visibleHeight('[data-testid="tab-bar"]'),
     detailsTabs: visibleHeight('[data-testid="package-details-panel"] [role="tablist"]'),
     buttons: shown('.nuiget-button').map(el => { const style = getComputedStyle(el); return { height: heightOf(el), disabled: el.matches(':disabled'), opacity: style.opacity, hovered: el.matches(':hover'), secondary: el.classList.contains('nuiget-button--secondary'), background: style.backgroundColor, fontSize: style.fontSize, lineHeight: style.lineHeight, padding: paddingOf(style), radius: style.borderTopLeftRadius }; }),
-    inputs: inputKinds.flatMap(([kind, selector]) => shown(selector).map(el => ({ kind, id: el.dataset.testid ?? label(el), height: heightOf(el) }))),
+    inputs: inputKinds.flatMap(([kind, selector]) => shown(selector).map(el => ({ kind, id: el.dataset.testid ?? label(el), height: heightOf(el), radius: getComputedStyle(el).borderTopLeftRadius }))),
     iconButtons: shown('.nuiget-icon-button').map(el => {
         const rect = rectOf(el);
         // A pointer target widened by an absolutely placed ::after (DS-HEIGHT-8).
@@ -1799,11 +1801,17 @@ function evaluateEndOfP0(definition: RuleDefinition, scope: Scope, state: string
             return { value: deltas.map(entry => `${entry.state} painted ${entry.delta} from the band`).join('; '), pass: deltas.every(entry => entry.delta <= tolerance) };
         }
         case 'DS-RADIUS-1': {
-            const buttons = layout.heights.buttons;
-            if (buttons.length === 0) {
-                return notMeasurable('no text button');
+            const { buttons, inputs } = layout.heights;
+            if (buttons.length === 0 && inputs.length === 0) {
+                return notMeasurable('no control');
             }
-            return { value: `buttons ${tally(buttons.map(button => button.radius))} (target ${CONTROL_STYLES.button.radius})`, pass: buttons.every(button => button.radius === CONTROL_STYLES.button.radius) };
+            const target = CONTROL_STYLES.button.radius;
+            const groups: Array<[string, string[]]> = [['buttons', buttons.map(button => button.radius)], ...(['search', 'select', 'field'] as const).map((kind): [string, string[]] => [kind, inputs.filter(input => input.kind === kind).map(input => input.radius)])];
+            const shownGroups = groups.filter(([, radii]) => radii.length > 0);
+            return {
+                value: `${shownGroups.map(([name, radii]) => `${name} ${tally(radii)}`).join('; ')} (target ${target})`,
+                pass: shownGroups.every(([, radii]) => radii.every(radius => radius === target)),
+            };
         }
         case 'DS-COLOR-6': {
             if (scope === 'icon-buttons') {

@@ -62,6 +62,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         for (const id of ['DS-HEIGHT-3', 'DS-ROW-1', 'DS-ROW-5', 'DS-ROW-6', 'DS-ICON-3', 'DS-DENSITY-1']) {
             expect(definition(id)?.exceptStates, id).toEqual(definition('DS-ROW-4')?.exceptStates);
         }
+        expect(definition('DS-FOCUS-1')?.scopeStates).toEqual({ controls: ['main-browse-results', 'main-installed-filter', 'main-installed-filter-nomatch', 'main-installed-unfocused', 'main-quicksearch-open', 'main-quicksearch-versions'] });
         expect(definition('DS-INSET-3')?.scopeStates).toEqual({ rows: ['main-installed-hover', 'main-installed-focus', 'main-installed-details'] });
         expect(definition('DS-ROW-3')?.scopeStates).toEqual({ 'main-installed': ['main-installed-hover', 'main-installed-focus', 'main-installed-unfocused'], details: ['main-installed-details', 'main-details-readme', 'main-transitive-details', 'main-browse-details'] });
         expect(definition('DS-FOCUS-2')?.states).toEqual(['main-installed-focus', 'main-installed-details', 'main-transitive-details', 'main-browse-details', 'main-transitive-expanded']);
@@ -87,10 +88,10 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(scopes('DS-HEIGHT-4')).toEqual(main('P2.5'));
         expect(scopes('DS-HEIGHT-5')).toEqual({ details: { pending: 'P3.3b' } });
         expect(scopes('DS-HEIGHT-6')).toEqual({ 'main-installed': 'hard', 'main-updates': 'hard', details: 'hard', dialogs: 'hard', sources: { pending: 'P3.6' } });
-        expect(scopes('DS-HEIGHT-7')).toEqual({ ...main('P2.4'), dialogs: { pending: 'P2.4' }, sources: { pending: 'P2.4' }, sidebar: { pending: 'P2.4' } });
+        expect(scopes('DS-HEIGHT-7')).toEqual({ ...mainHard(), sidebar: 'hard', dialogs: { pending: 'P3.6' }, sources: { pending: 'P3.6' } });
         expect(scopes('DS-HEIGHT-8')).toEqual({ ...main('P2.5'), sources: { pending: 'P2.5' }, sidebar: { pending: 'P2.5' } });
         expect(scopes('DS-HEIGHT-9')).toEqual({ ...mainHard(), dialogs: { pending: 'P3.5' }, sources: { pending: 'P3.6' } });
-        expect(scopes('DS-RADIUS-1')).toEqual({ 'main-installed': 'hard', 'main-updates': 'hard', details: 'hard', dialogs: 'hard', browse: { pending: 'P2.4' }, sidebar: { pending: 'P2.4' }, sources: { pending: 'P3.6' } });
+        expect(scopes('DS-RADIUS-1')).toEqual({ 'main-installed': 'hard', 'main-updates': 'hard', details: 'hard', dialogs: 'hard', browse: 'hard', sidebar: 'hard', sources: { pending: 'P3.6' } });
         expect(scopes('DS-COLOR-6')).toEqual({ 'text-buttons': 'hard', 'icon-buttons': { pending: 'P2.5' } });
         expect(scopes('DS-HEIGHT-10')).toEqual({ ...main('P2.6'), sidebar: { pending: 'P2.6' } });
         expect(scopes('DS-HEIGHT-11')).toEqual({ 'main-installed': { pending: 'P2.8b' }, 'main-updates': { pending: 'P3.10' }, browse: { pending: 'P3.10' }, details: { pending: 'P3.10' }, sidebar: { pending: 'P3.10' } });
@@ -150,7 +151,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         }
         expect(scopes('SPEC')).toEqual({ 'main-installed': { pending: 'P2.8a' } });
         // UX-P0.14 (design-advisor ruling of 2026-10-24): the six of the research's 27 a ready state renders.
-        expect(scopes('DS-FOCUS-1')).toEqual({ controls: { pending: 'P2.4' }, tabs: { pending: 'P2.5' } });
+        expect(scopes('DS-FOCUS-1')).toEqual({ controls: 'hard', tabs: { pending: 'P2.5' } });
         expect(scopes('DS-FOCUS-2')).toEqual({ rows: 'hard' });
         expect(scopes('DS-FOCUS-3')).toEqual({ rows: 'hard', tabs: { pending: 'P2.5' } });
         expect(RULES.find(rule => rule.id === 'DS-FOCUS-3')?.states).toEqual(['main-installed-details', 'main-updates']);
@@ -315,7 +316,11 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         // Without the workbench's value a parity rule cannot pass.
         expect(lineOf('main-installed-details', layout({}, { buttons: [button] }), 'DS-HEIGHT-6@main-installed-details')).toMatchObject({ pass: false, value: '26 (target 26, workbench absent)' });
         // DS-HEIGHT-7 per kind of control.
-        const inputs = layout({}, { inputs: [{ kind: 'search', id: 'search-input', height: 24 }, { kind: 'select', id: 'project-selector', height: 26 }, { kind: 'select', id: 'source-selector', height: 26 }] });
+        const inputs = layout({}, { inputs: [{ kind: 'search', id: 'search-input', height: 24, radius: '4px' }, { kind: 'select', id: 'project-selector', height: 26, radius: '4px' }, { kind: 'select', id: 'source-selector', height: 26, radius: '4px' }] });
+        // A text field other than a search box is 25 px, the Settings editor's (UX-P2.4).
+        const field = (height: number) => layout({}, { inputs: [{ kind: 'field', id: 'url', height, radius: '4px' }] });
+        expect(lineOf('main-installed-single', field(25), 'DS-HEIGHT-7@main-installed-single', 'modern', { settingsInput: 25 })).toMatchObject({ pass: true });
+        expect(lineOf('main-installed-single', field(27), 'DS-HEIGHT-7@main-installed-single', 'modern', { settingsInput: 25 })).toMatchObject({ pass: false });
         expect(lineOf('main-installed-single', inputs, 'DS-HEIGHT-7@main-installed-single', 'modern', { extensionsSearch: 26, settingsSelect: 26 }))
             .toMatchObject({ pass: false, value: 'search 24 (target 26, workbench 26); select 26 ×2 (target 26, workbench 26)' });
         // DS-HEIGHT-1 by look, on the sidebar's pane headers.
@@ -517,7 +522,10 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(lineOf('main-installed-single', withButtons([button({ radius: '2px' })]), 'DS-RADIUS-1@main-installed-single')).toMatchObject({ pass: false });
         expect(lineOf('main-installed-single', withButtons([button({ disabled: true, opacity: '0.4' })]), 'DS-COLOR-6@main-installed-single/text-buttons')).toMatchObject({ pass: true, value: 'disabled 1: opacity 0.4 (target 0.4)' });
         expect(lineOf('main-installed-single', withButtons([button({ disabled: true })]), 'DS-COLOR-6@main-installed-single/text-buttons')).toMatchObject({ pass: false });
-        expect(lineOf('main-installed-single', withButtons([]), 'DS-RADIUS-1@main-installed-single')).toMatchObject({ pass: false, value: 'not measurable (no text button)' });
+        expect(lineOf('main-installed-single', withButtons([]), 'DS-RADIUS-1@main-installed-single')).toMatchObject({ pass: false, value: 'not measurable (no control)' });
+        const onlyInputs = (radius: string) => layout({}, { buttons: [], inputs: [{ kind: 'search', id: 'search-input', height: 26, radius }, { kind: 'select', id: 'project-selector', height: 26, radius }, { kind: 'field', id: 'url', height: 25, radius }] } as never);
+        expect(lineOf('sidebar-sections', onlyInputs('4px'), 'DS-RADIUS-1@sidebar-sections')).toMatchObject({ pass: true, status: 'hard', value: 'search 4px; select 4px; field 4px (target 4px)' });
+        expect(lineOf('sidebar-sections', onlyInputs('2px'), 'DS-RADIUS-1@sidebar-sections')).toMatchObject({ pass: false });
         expect(lineOf('main-installed-single', withButtons([]), 'DS-COLOR-6@main-installed-single/icon-buttons')).toMatchObject({ status: { pending: 'P2.5' }, value: 'not measurable (no helper until P2.5)' });
         expect(lineOf('main-installed-single', withButtons([]), 'DS-COLOR-6@main-installed-single/text-buttons')).toMatchObject({ pass: false, value: 'not measurable (no disabled text button)' });
         expect(lineOf('main-installed-unfocused', withButtons([]), 'DS-COLOR-6@main-installed-unfocused/text-buttons')).toBeUndefined();
@@ -650,13 +658,14 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         const blue = 'rgb(0, 120, 212)';
         const orange = 'rgb(243, 133, 24)';
         // DS-FOCUS-1: 1 px solid focusBorder, offset -1 on inputs and tabs, +2 on text buttons; a focused row is not its subject.
-        expect(at('main-installed-unfocused', facts({ focus: focused('input', ring(1, 'solid', blue, -1)) }), 'DS-FOCUS-1@main-installed-unfocused/controls')).toMatchObject({ pass: true, status: { pending: 'P2.4' } });
+        expect(at('main-installed-unfocused', facts({ focus: focused('input', ring(1, 'solid', blue, -1)) }), 'DS-FOCUS-1@main-installed-unfocused/controls')).toMatchObject({ pass: true, status: 'hard' });
         expect(at('main-installed-unfocused', facts({ focus: focused('button', ring(1, 'solid', blue, -1)) }), 'DS-FOCUS-1@main-installed-unfocused/controls'))
             .toMatchObject({ pass: false, value: 'button [x]: outline 1 solid rgb(0, 120, 212) offset -1 (target 1 solid #0078d4 offset 2)' });
         expect(at('main-updates', facts({ focus: focused('tab', ring(1, 'solid', blue, -1)) }), 'DS-FOCUS-1@main-updates/tabs')).toMatchObject({ pass: true, status: { pending: 'P2.5' } });
         expect(at('main-updates', facts({ focus: focused('tab', ring(2, 'solid', blue, -1)) }), 'DS-FOCUS-1@main-updates/tabs')).toMatchObject({ pass: false });
-        expect(at('main-installed-focus', facts({ focus: focused('option', ring(1, 'solid', blue, -1)) }), 'DS-FOCUS-1@main-installed-focus/controls')).toMatchObject({ pass: false, value: 'not measurable (no focused control)' });
-        expect(at('main-installed-single', facts({ focus: focused('icon-button', ring(1, 'solid', blue, 2)) }), 'DS-FOCUS-1@main-installed-single/controls'))
+        expect(at('main-installed-focus', facts({ focus: focused('option', ring(1, 'solid', blue, -1)) }), 'DS-FOCUS-1@main-installed-focus/controls')).toBeUndefined();
+        expect(at('main-installed-filter', facts({ focus: focused('option', ring(1, 'solid', blue, -1)) }), 'DS-FOCUS-1@main-installed-filter/controls')).toMatchObject({ pass: false, value: 'not measurable (no focused control)' });
+        expect(at('main-installed-filter', facts({ focus: focused('icon-button', ring(1, 'solid', blue, 2)) }), 'DS-FOCUS-1@main-installed-filter/controls'))
             .toMatchObject({ pass: false, value: 'not measurable (icon button [x]: DS-FOCUS-1 names no offset for it)' });
         // DS-FOCUS-2: list.focusOutline around the whole band.
         const band = { left: 10, top: 100, right: 410, bottom: 172 };

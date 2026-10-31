@@ -28,22 +28,6 @@ body {
     padding: var(--nuiget-space-4) var(--nuiget-inset) var(--nuiget-space-2);
 }
 
-.nuiget-main-select {
-    min-width: 0;
-    max-width: 20em;
-    min-height: var(--nuiget-target-min);
-    padding: 0 var(--nuiget-space-3);
-    border: var(--nuiget-line-width) solid var(--nuiget-color-dropdown-border);
-    border-radius: var(--nuiget-radius-xs);
-    background: var(--nuiget-color-dropdown-bg);
-    color: var(--nuiget-color-dropdown-fg);
-    font: inherit;
-}
-
-.nuiget-main-select:disabled {
-    color: var(--nuiget-color-fg-muted);
-}
-
 .nuiget-main-toggle {
     display: inline-flex;
     align-items: center;
@@ -76,28 +60,6 @@ body {
     position: absolute;
     inset-inline: var(--nuiget-inset);
     bottom: 0;
-}
-
-.nuiget-main-search-input {
-    box-sizing: border-box;
-    width: 100%;
-    min-height: var(--nuiget-target-min);
-    padding: 0 var(--nuiget-space-3);
-    border: var(--nuiget-line-width) solid var(--nuiget-color-input-border);
-    border-radius: var(--nuiget-radius-xs);
-    background: var(--nuiget-color-input-bg);
-    color: var(--nuiget-color-input-fg);
-    font: inherit;
-}
-
-.nuiget-main-search-input::placeholder {
-    color: var(--nuiget-color-input-placeholder);
-}
-
-.nuiget-main-select:focus-visible,
-.nuiget-main-search-input:focus {
-    outline: var(--nuiget-line-width) solid var(--nuiget-color-focus);
-    outline-offset: calc(var(--nuiget-line-width) * -1);
 }
 
 /* The list takes the share the sash reports; the details take the rest. */
@@ -603,26 +565,6 @@ body {
 .nuiget-field-error {
     margin: 0;
     color: var(--nuiget-color-error);
-}
-
-.nuiget-input {
-    box-sizing: border-box;
-    min-height: var(--nuiget-target-min);
-    padding: 0 var(--nuiget-space-3);
-    border: var(--nuiget-line-width) solid var(--nuiget-color-input-border);
-    border-radius: var(--nuiget-radius-xs);
-    background: var(--nuiget-color-input-bg);
-    color: var(--nuiget-color-input-fg);
-    font: inherit;
-}
-
-.nuiget-input::placeholder {
-    color: var(--nuiget-color-input-placeholder);
-}
-
-.nuiget-input:focus {
-    outline: var(--nuiget-line-width) solid var(--nuiget-color-focus);
-    outline-offset: calc(var(--nuiget-line-width) * -1);
 }
 
 .nuiget-add-source-actions {

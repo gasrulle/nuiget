@@ -2,7 +2,7 @@ import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import type React from 'react';
 import { ALL_PROJECTS, type PackageMetadataLite } from '../../protocol';
 import { useMessageBus } from '../shared/bus/useMessageBus';
-import { Banner, Checkbox, cssVars, EmptyState, IconButton, LiveStatus, LoadingIcon, ProgressBar, Sash, SyncIcon, Tabs, type TabItem } from '../shared/primitives';
+import { Banner, Checkbox, cssVars, EmptyState, IconButton, LiveStatus, LoadingIcon, ProgressBar, Sash, Select, SyncIcon, Tabs, type TabItem } from '../shared/primitives';
 import { FILTER_PREFIXES, parseSearchQuery, type SearchMode } from '../shared/search/parseSearchQuery';
 import { SearchBox } from '../shared/search/SearchBox';
 import { useAllProjects } from '../shared/store/allProjects';
@@ -240,25 +240,23 @@ export function MainShell({ installed, updates, browse, details, viewState }: Ma
                     <Checkbox checked={session?.includePrerelease ?? false} disabled={!hasSession} onChange={checked => set({ includePrerelease: checked })} />
                     Include prerelease
                 </label>
-                <select
-                    className="nuiget-main-select"
+                <Select
                     data-testid="project-selector"
                     aria-label="Project"
                     value={session?.selectedProject ?? ''}
                     disabled={!hasSession || supported.length === 0}
-                    onChange={event => set({ selectedProject: event.target.value })}
+                    onChange={value => set({ selectedProject: value })}
                 >
                     {supported.length === 0 ? <option value={session?.selectedProject ?? ''}>{projects === undefined ? 'Loading projects…' : 'No projects'}</option> : null}
                     {supported.length > 1 ? <option value={ALL_PROJECTS}>{`All Projects (${supported.length})`}</option> : null}
                     {supported.map(project => <option key={project.path} value={project.path} title={project.path}>{project.name}</option>)}
-                </select>
+                </Select>
                 <SourcesControl announce={announce} />
                 <IconButton label="Refresh" data-testid="refresh-button" disabled={refreshing} onClick={refresh} className="nuiget-main-refresh">{refreshing ? <LoadingIcon /> : <SyncIcon />}</IconButton>
             </header>
             <div className="nuiget-main-search" role="search">
                 <SearchBox
                     inputRef={searchRef}
-                    className="nuiget-main-search-input"
                     testId="search-input"
                     label="Search packages, or filter with @installed, @updates or @vulnerable"
                     placeholder="Search packages, or filter: @installed, @updates, @vulnerable"

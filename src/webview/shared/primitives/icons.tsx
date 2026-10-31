@@ -25,6 +25,14 @@ export const ChevronRightIcon = /* @__PURE__ */ React.memo<IconProps>(({ size = 
     </svg>
 ));
 
+/** Codicon: chevron-down */
+export const ChevronDownIcon = /* @__PURE__ */ React.memo<IconProps>(({ size = defaultSize, className, title }) => (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="currentColor" data-codicon="chevron-down" className={className} aria-hidden={title ? undefined : true} role={title ? 'img' : undefined}>
+        {title && <title>{title}</title>}
+        <path d="M3.14598 5.85423L7.64598 10.3542C7.84098 10.5492 8.15798 10.5492 8.35298 10.3542L12.853 5.85423C13.048 5.65923 13.048 5.34223 12.853 5.14723C12.658 4.95223 12.341 4.95223 12.146 5.14723L7.99998 9.29323L3.85398 5.14723C3.65898 4.95223 3.34198 4.95223 3.14698 5.14723C2.95198 5.34223 2.95098 5.65923 3.14598 5.85423Z" />
+    </svg>
+));
+
 /** Codicon: settings-gear */
 export const SettingsGearIcon = /* @__PURE__ */ React.memo<IconProps>(({ size = defaultSize, className, title }) => (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" data-codicon="settings-gear" className={className} aria-hidden={title ? undefined : true} role={title ? 'img' : undefined}>

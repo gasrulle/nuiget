@@ -22,7 +22,6 @@ function Harness({ suggestions, onSubmit = vi.fn(), onPick = vi.fn(), extra = {}
                 label="Search packages"
                 placeholder="Search"
                 testId="box"
-                className="box"
                 {...extra}
             />
             <button type="button">elsewhere</button>

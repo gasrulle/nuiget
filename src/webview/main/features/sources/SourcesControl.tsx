@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type React from 'react';
 import { useMessageBus } from '../../../shared/bus/useMessageBus';
-import { IconButton, SettingsGearIcon, WarningIcon } from '../../../shared/primitives';
+import { IconButton, Select, SettingsGearIcon, WarningIcon } from '../../../shared/primitives';
 import { useSession, useSessionActions } from '../../../shared/store/session';
 import { useSources } from '../../../shared/store/sources';
 import { SourceSettingsDialog } from './SourceSettingsDialog';
@@ -34,13 +34,12 @@ export function SourcesControl({ announce }: SourcesControlProps): React.JSX.Ele
     const failedByUrl = new Map(failed.map(source => [source.url, source.error]));
     return (
         <>
-            <select
-                className="nuiget-main-select"
+            <Select
                 data-testid="source-selector"
                 aria-label="Package source"
                 value={selected}
                 disabled={session === undefined || status !== 'ready'}
-                onChange={event => set({ selectedSource: event.target.value })}
+                onChange={value => set({ selectedSource: value })}
             >
                 <option value="all">All sources</option>
                 {selected !== 'all' && !known ? <option value={selected}>{selected}</option> : null}
@@ -49,7 +48,7 @@ export function SourcesControl({ announce }: SourcesControlProps): React.JSX.Ele
                         {failedByUrl.has(source.url) ? `${source.name} (unreachable)` : source.name}
                     </option>
                 ))}
-            </select>
+            </Select>
             <IconButton label="NuGet sources" data-testid="source-settings" onClick={() => setOpen(true)}><SettingsGearIcon /></IconButton>
             {failed.length > 0 ? (
                 <IconButton

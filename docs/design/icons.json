@@ -2,6 +2,7 @@
   "release": "0.0.46-49",
   "icons": {
     "ChevronRightIcon": "chevron-right",
+    "ChevronDownIcon": "chevron-down",
     "SettingsGearIcon": "settings-gear",
     "WarningIcon": "warning",
     "CloseIcon": "close",

@@ -316,7 +316,7 @@ frontend test file is skipped and says so.
 `src/webview/shared/primitives/index.ts` exports the building blocks both 2.0 webviews are made of
 ([ADR-008](docs/adr/008-webview-architecture.md)): `Listbox`, `Row`, `SectionHeader`, `IconButton`, `Badge`,
 `LiveStatus`, `EmptyState`, `Skeleton`, `Spinner`, `ProgressBar`, `Banner`, `Sash`, `Dialog`, `ConfirmDialog`,
-`Popover`, `Tabs`, `Toolbar`, `Button`, `Checkbox`, `ErrorBoundary`, the icons and `cssVars`. Each has a test with React Testing Library
+`Popover`, `Tabs`, `Toolbar`, `Button`, `Checkbox`, `Select`, `TextField`, `ErrorBoundary`, the icons and `cssVars`. Each has a test with React Testing Library
 that ends in an axe run. `ErrorBoundary` (P9.9) is the one class component: each entry wraps its `StoreProvider` in it,
 so a rendering error shows the empty state "Something went wrong in this view." with Reload, which remounts the store
 and the view, and the entry reports the error to the host as `ui/reportError`, which the host writes to the output

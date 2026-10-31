@@ -85,6 +85,8 @@ const INPUT_BORDER_PARITY = {
     themes: ['dark-2026', 'dark-modern', 'light-2026', 'light-modern'],
 };
 
+const DROPDOWN_BORDER_PARITY = { reason: 'workbench parity (D22, H49): dropdown.border of the four default themes (1.18–1.57), the Settings editor select', themes: ['dark-2026', 'dark-modern', 'light-2026', 'light-modern'] };
+
 /**
  * The curated pairs (architecture-advisor ruling of 2026-10-25, UX-P0.25): text roles against the surfaces they are drawn
  * on, at 4.5:1; check boxes, the row check's line (A7), the focus ring and input borders against theirs, at 3:1. Token names
@@ -117,6 +119,13 @@ export const TOKEN_PAIRS: readonly TokenPair[] = [
     ...nonText('checkbox-fg', 'checkbox-bg', 'checkbox-select-bg'),
     { fg: 'checkbox-border', bg: 'widget-bg', kind: 'non-text', exempt: { reason: 'workbench parity (D22, H49; F1a): checkbox.border on the dialog surface reads 1.5 / 1.6 in Dark and Light Modern', themes: ['dark-modern', 'light-modern'] } },
     ...text('button-fg', 'button-bg'),
+    // UX-P2.4: the select and the text field, on their fills and on the surface.
+    ...text('dropdown-fg', 'dropdown-bg'),
+    ...text('input-fg', 'input-bg'),
+    ...nonText('icon', 'dropdown-bg'),
+    { fg: 'dropdown-border', bg: 'bg', kind: 'non-text', exempt: DROPDOWN_BORDER_PARITY },
+    { fg: 'dropdown-border', bg: 'dropdown-bg', kind: 'non-text', exempt: DROPDOWN_BORDER_PARITY },
+    { fg: 'input-error-border', bg: 'widget-bg', kind: 'non-text', exempt: { reason: 'workbench parity (D22, H49): inputValidation.errorBorder of the two dark default themes reads below 3:1 (2.57 / 2.90 over the editor background)', themes: ['dark-2026', 'dark-modern'] } },
     { fg: 'button-secondary-fg', bg: 'button-secondary-bg', over: 'bg', kind: 'text' },
     { fg: 'focus', bg: 'list-active-bg', kind: 'non-text', exempt: { reason: 'workbench parity (D22, H49): the focused selected row rings in focusBorder/list.focusOutline on list.activeSelectionBackground at 2.65 (Dark Modern) and 2.58 (Dark 2026)', themes: ['dark-2026', 'dark-modern'] } },
     { fg: 'input-border', bg: 'input-bg', kind: 'non-text', exempt: INPUT_BORDER_PARITY },

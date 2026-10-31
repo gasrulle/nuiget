@@ -170,13 +170,12 @@ describe('2.0 webview stylesheets', () => {
 
     it('the controls take their lines, colours and the dialog layer its scrim from the tokens', () => {
         const primitives = parseRules(readFileSync(PRIMITIVES, 'utf8'));
-        const main = parseRules(readFileSync('src/webview/main/main.css', 'utf8'));
         const declarationsOf = (rules: ReturnType<typeof parseRules>, match: (prelude: string) => boolean): string[] => rules.filter(rule => match(rule.prelude)).flatMap(rule => rule.declarations);
         expect(declarationsOf(primitives, prelude => prelude === '.nuiget-button')).toContain('border: var(--nuiget-line-width) solid var(--nuiget-color-button-border)');
         expect(declarationsOf(primitives, prelude => prelude === '.nuiget-tab')).toContain('border: var(--nuiget-line-width) solid var(--nuiget-color-contrast-border)');
         expect(declarationsOf(primitives, prelude => prelude.includes('.nuiget-row-icon img'))).toContain('outline: var(--nuiget-line-width) solid var(--nuiget-color-contrast-border)');
         expect(declarationsOf(primitives, prelude => prelude === '.nuiget-dialog-layer')).toContain('background: var(--nuiget-color-scrim)');
-        expect(declarationsOf(main, prelude => prelude === '.nuiget-main-select')).toEqual(expect.arrayContaining([
+        expect(declarationsOf(primitives, prelude => prelude === '.nuiget-select-input')).toEqual(expect.arrayContaining([
             'border: var(--nuiget-line-width) solid var(--nuiget-color-dropdown-border)',
             'background: var(--nuiget-color-dropdown-bg)',
             'color: var(--nuiget-color-dropdown-fg)',
@@ -205,6 +204,12 @@ describe('2.0 webview stylesheets', () => {
         }
     });
 
+    it('selects and text fields ring at offset one stroke inside (DS-FOCUS-1)', () => {
+        const shared = parseRules(readFileSync(PRIMITIVES, 'utf8')).find(rule => rule.prelude.includes('.nuiget-select-input:focus-visible'));
+        expect(shared?.prelude).toContain('.nuiget-text-field:focus-visible');
+        expect(shared?.declarations).toContain('outline-offset: calc(var(--nuiget-line-width) * -1)');
+    });
+
     it('text buttons and check boxes ring at offset two strokes (DS-FOCUS-1)', () => {
         const rules = parseRules(readFileSync(PRIMITIVES, 'utf8'));
         const ring = rules.find(rule => rule.prelude.replace(/\s+/g, ' ') === '.nuiget-button:focus-visible, .nuiget-checkbox-input:focus-visible');
@@ -221,8 +226,8 @@ describe('2.0 webview stylesheets', () => {
             .flatMap(rule => rule.prelude.split(',').map(selector => selector.trim())));
         for (const selector of [
             '.nuiget-button:focus-visible', '.nuiget-tab:focus-visible', '.nuiget-icon-button:focus-visible',
-            '.nuiget-section-toggle:focus-visible', '.nuiget-sash:focus-visible', '.nuiget-main-select:focus-visible', '.nuiget-main-search-input:focus',
-            '.nuiget-input:focus', '.nuiget-readme-copy:focus-visible', '.nuiget-checkbox-input:focus-visible', '.nuiget-sidebar-search:focus-visible',
+            '.nuiget-section-toggle:focus-visible', '.nuiget-sash:focus-visible', '.nuiget-select-input:focus-visible', '.nuiget-text-field:focus-visible',
+            '.nuiget-readme-copy:focus-visible', '.nuiget-checkbox-input:focus-visible',
         ]) {
             expect(ringed, selector).toContain(selector);
         }
