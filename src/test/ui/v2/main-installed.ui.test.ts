@@ -49,6 +49,33 @@ describe('2.0 main panel: Installed tab', () => {
         await screenshot('main-installed-single');
     });
 
+    it('a text button and a check box ring in focusBorder at offset 2 on keyboard focus (DS-FOCUS-1, UX-P2.3)', async function () {
+        this.timeout(180_000);
+        await findByTestId('select-all-button', 120_000);
+        const tabUntil = async (keys: string, predicate: string, what: string): Promise<{ width: string; style: string; offset: string; colour: string; focus: string }> => {
+            await (await findByTestId('search-input', 30_000)).click();
+            await poll(async () => {
+                if (await driverOf().executeScript<boolean>(`return ${predicate};`)) {
+                    return true;
+                }
+                await (await driverOf().switchTo().activeElement()).sendKeys(keys);
+                return undefined;
+            }, what, 30_000);
+            return driverOf().executeScript(`
+                const style = getComputedStyle(document.activeElement);
+                const probe = document.createElement('span');
+                probe.style.color = 'var(--vscode-focusBorder)';
+                document.body.append(probe);
+                const focus = getComputedStyle(probe).color;
+                probe.remove();
+                return { width: style.outlineWidth, style: style.outlineStyle, offset: style.outlineOffset, colour: style.outlineColor, focus };`);
+        };
+        const button = await tabUntil(Key.TAB, 'document.activeElement?.dataset?.testid === "select-all-button"', 'Select all reached with Tab');
+        expect([button.width, button.style, button.offset, button.colour]).to.deep.equal(['1px', 'solid', '2px', button.focus]);
+        const box = await tabUntil(Key.chord(Key.SHIFT, Key.TAB), 'document.activeElement?.matches?.(".nuiget-checkbox-input") === true', 'a check box reached with Shift+Tab');
+        expect([box.width, box.style, box.offset, box.colour]).to.deep.equal(['1px', 'solid', '2px', box.focus]);
+    });
+
     it('lays the rows out as comfortable rows with a loaded icon, as tall as the token, and shows the authors and the Verified mark (TF1, TF3), the authors fit and the check box is centred (P9.fix-3, UX-P2.2)', async function () {
         this.timeout(180_000);
         await findByTestId('package-row-serilog', 120_000);

@@ -91,6 +91,7 @@ const INPUT_BORDER_PARITY = {
  * without the `--nuiget-color-` prefix. The design-advisor ruling of 2026-10-25 (UX-P0.25, DECISIONS) took out the pairs the
  * design never paints (secondary text on a selection inherits the row's foreground, `primitives.css:177-189`, DS §4; a
  * selected row's check is `checkbox.selectBorder`, D52), added the sidebar's hover band (A14) and gave the parity exemptions.
+ * UX-P2.3 retired the `border` pairs: `border` draws no control boundary once the row check is in the `checkbox.*` roles.
  */
 export const TOKEN_PAIRS: readonly TokenPair[] = [
     ...text('fg', 'bg', 'bg-sidebar', 'widget-bg', 'dropdown-bg'),
@@ -109,10 +110,14 @@ export const TOKEN_PAIRS: readonly TokenPair[] = [
     ...['comment', 'function', 'keyword', 'number', 'string', 'type', 'variable'].flatMap(role => text(`syntax-${role}`, 'code-bg')),
     { fg: 'checkbox-border', bg: 'bg', kind: 'non-text', exempt: { reason: 'D52/F1a (owner round 2): unselected rows keep the exemplar\'s 1.5:1 checkbox.border', themes: ['dark-modern', 'light-modern'] } },
     { fg: 'checkbox-bg', bg: 'bg', kind: 'non-text', exempt: { reason: 'the fill is not the 1.4.11 boundary (checkbox-border carries it, D52); the exemplar\'s checkbox.background equals its input surface and the HC themes draw the box by border alone' } },
-    ...nonText('border', 'bg', 'list-active-bg'),
     ...nonText('focus', 'bg'),
     // D52: a selected row's check mark (UX-P1.1, T-23).
-    ...nonText('checkbox-select-border', 'list-active-bg'),
+    ...nonText('checkbox-select-border', 'list-active-bg', 'list-inactive-bg'),
+    // UX-P2.3: the glyph on the box, a check box on a dialog's surface, and the text buttons.
+    ...nonText('checkbox-fg', 'checkbox-bg', 'checkbox-select-bg'),
+    { fg: 'checkbox-border', bg: 'widget-bg', kind: 'non-text', exempt: { reason: 'workbench parity (D22, H49; F1a): checkbox.border on the dialog surface reads 1.5 / 1.6 in Dark and Light Modern', themes: ['dark-modern', 'light-modern'] } },
+    ...text('button-fg', 'button-bg'),
+    { fg: 'button-secondary-fg', bg: 'button-secondary-bg', over: 'bg', kind: 'text' },
     { fg: 'focus', bg: 'list-active-bg', kind: 'non-text', exempt: { reason: 'workbench parity (D22, H49): the focused selected row rings in focusBorder/list.focusOutline on list.activeSelectionBackground at 2.65 (Dark Modern) and 2.58 (Dark 2026)', themes: ['dark-2026', 'dark-modern'] } },
     { fg: 'input-border', bg: 'input-bg', kind: 'non-text', exempt: INPUT_BORDER_PARITY },
     { fg: 'input-border', bg: 'bg', kind: 'non-text', exempt: INPUT_BORDER_PARITY },
@@ -135,10 +140,9 @@ const cells = (pairs: readonly string[], themes: readonly string[], item: string
 
 /**
  * The red or unmeasurable cells of today's tokens, each with the item that fixes it (design-advisor ruling of 2026-10-25,
- * UX-P0.25; Appendix B: A7 → P2.3, A8 → P3.4, A14 → P4.6; the high-contrast records' empty selection tokens → P1.1, T-21).
+ * UX-P0.25; Appendix B: A8 → P3.4, A14 → P4.6; the high-contrast records' empty selection tokens → P1.1, T-21).
  */
 export const CONTRAST_PAIRS_PENDING: readonly PairPending[] = [
-    ...cells(['border/bg', 'border/list-active-bg'], ['dark-2026', 'dark-modern', 'light-2026', 'light-modern'], 'P2.3'),
     ...cells(['syntax-number/code-bg', 'syntax-type/code-bg', 'syntax-variable/code-bg'], ['light-2026', 'light-high-contrast', 'light-modern'], 'P3.4'),
     ...cells(['version-new/list-hover-bg over bg', 'version-new/list-hover-bg over bg-sidebar'], ['light-2026', 'light-modern'], 'P4.6'),
     ...cells(['fg-muted/list-hover-bg over bg-sidebar'], ['dark-2026'], 'P4.6'),

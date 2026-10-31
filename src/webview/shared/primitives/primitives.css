@@ -190,6 +190,8 @@
     --nuiget-row-fg-secondary: var(--nuiget-row-selected-fg, var(--nuiget-row-selection-fg));
     --nuiget-row-outline-style: dotted;
     --nuiget-row-outline-color: var(--nuiget-color-contrast-active-border);
+    --nuiget-row-check-bg: var(--nuiget-color-checkbox-select-bg);
+    --nuiget-row-check-border: var(--nuiget-color-checkbox-select-border);
     forced-color-adjust: none;
 }
 
@@ -199,6 +201,8 @@
     --nuiget-row-fg-secondary: var(--nuiget-row-selection-fg);
     --nuiget-row-outline-style: dotted;
     --nuiget-row-outline-color: var(--nuiget-color-contrast-active-border);
+    --nuiget-row-check-bg: var(--nuiget-color-checkbox-select-bg);
+    --nuiget-row-check-border: var(--nuiget-color-checkbox-select-border);
     forced-color-adjust: none;
 }
 
@@ -221,14 +225,15 @@
     box-sizing: border-box;
     inline-size: var(--nuiget-checkbox-size);
     block-size: var(--nuiget-checkbox-size);
-    border: var(--nuiget-line-width) solid var(--nuiget-color-border);
-    border-radius: var(--nuiget-radius-xs);
+    border: var(--nuiget-line-width) solid var(--nuiget-row-check-border, var(--nuiget-color-checkbox-border));
+    border-radius: var(--nuiget-radius-checkbox);
+    background: var(--nuiget-row-check-bg, var(--nuiget-color-checkbox-bg));
+    color: var(--nuiget-color-checkbox-fg);
 }
 
-/* A row that cannot join a bulk action (an SDK or a props package): the mark is there, muted and empty. */
+/* A row that cannot join a bulk action: the mark is there, empty, its line in disabledForeground as the workbench's disabled check box (DS-COLOR-6; UX-P2.3). */
 .nuiget-row-check--off {
-    border-style: dashed;
-    border-color: var(--nuiget-color-fg-muted);
+    --nuiget-row-check-border: var(--nuiget-color-fg-disabled);
 }
 
 /* The name ellipsizes beside its badges, which keep their width, as the Extensions name does (DS-ROW-5). */
@@ -426,12 +431,18 @@
 .nuiget-icon-button:focus-visible,
 .nuiget-sash:focus-visible,
 .nuiget-section-toggle:focus-visible,
-.nuiget-button:focus-visible,
 .nuiget-tab:focus-visible,
 .nuiget-dialog:focus-visible,
 .nuiget-popover:focus-visible {
     outline: var(--nuiget-line-width) solid var(--nuiget-color-focus);
     outline-offset: calc(var(--nuiget-line-width) * -1);
+}
+
+/* DS-FOCUS-1: text buttons and check boxes ring at offset two strokes. */
+.nuiget-button:focus-visible,
+.nuiget-checkbox-input:focus-visible {
+    outline: var(--nuiget-line-width) solid var(--nuiget-color-focus);
+    outline-offset: calc(var(--nuiget-line-width) * 2);
 }
 
 /* ── IconButton ── */
@@ -580,32 +591,75 @@
 /* ── Button (the action of an empty state or a banner) ── */
 
 .nuiget-button {
+    --nuiget-button-rest-bg: var(--nuiget-color-button-bg);
+    --nuiget-button-hover-bg: var(--nuiget-color-button-hover-bg);
+    box-sizing: border-box;
     min-height: var(--nuiget-target-min);
-    padding: 0 var(--nuiget-space-5);
+    block-size: var(--nuiget-control-height);
+    min-inline-size: 0;
+    padding: var(--nuiget-space-2) var(--nuiget-space-4);
+    overflow: hidden;
     border: var(--nuiget-line-width) solid var(--nuiget-color-button-border);
-    border-radius: var(--nuiget-radius-xs);
-    background: var(--nuiget-color-button-bg);
+    border-radius: var(--nuiget-radius-control);
+    background: var(--nuiget-button-bg, var(--nuiget-button-rest-bg));
     color: var(--nuiget-color-button-fg);
     font: inherit;
+    font-size: var(--nuiget-font-size-label);
+    line-height: var(--nuiget-line-height-button);
+    text-overflow: ellipsis;
+    white-space: nowrap;
     cursor: pointer;
 }
 
-.nuiget-button:hover {
-    background: var(--nuiget-color-button-hover-bg);
-}
-
-.nuiget-button--secondary,
-.nuiget-button--secondary:hover {
-    background: var(--nuiget-color-button-secondary-bg);
+.nuiget-button--secondary {
+    --nuiget-button-rest-bg: var(--nuiget-color-button-secondary-bg);
+    --nuiget-button-hover-bg: var(--nuiget-color-button-secondary-hover-bg);
     color: var(--nuiget-color-button-secondary-fg);
 }
 
-/* Not by opacity: a disabled button keeps a readable label, and forced colours draw it as GrayText. */
-.nuiget-button:disabled,
-.nuiget-button:disabled:hover {
-    background: var(--nuiget-color-button-secondary-bg);
-    color: var(--nuiget-color-fg-muted);
+.nuiget-button:hover {
+    --nuiget-button-bg: var(--nuiget-button-hover-bg);
+}
+
+/* After :hover at equal specificity, so a disabled button keeps its rest fill; opacity 0.4 is the workbench's (D51). */
+.nuiget-button:disabled {
+    --nuiget-button-bg: var(--nuiget-button-rest-bg);
+    opacity: var(--nuiget-opacity-disabled);
     cursor: default;
+}
+
+/* ── Checkbox ── */
+
+.nuiget-checkbox {
+    position: relative;
+    display: inline-flex;
+    flex: none;
+}
+
+.nuiget-checkbox-input {
+    box-sizing: border-box;
+    appearance: none;
+    inline-size: var(--nuiget-checkbox-size);
+    block-size: var(--nuiget-checkbox-size);
+    margin: 0;
+    border: var(--nuiget-line-width) solid var(--nuiget-color-checkbox-border);
+    border-radius: var(--nuiget-radius-checkbox);
+    background: var(--nuiget-color-checkbox-bg);
+    forced-color-adjust: none;
+}
+
+.nuiget-checkbox-input:disabled {
+    border-color: var(--nuiget-color-fg-disabled);
+}
+
+.nuiget-checkbox-mark {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--nuiget-color-checkbox-fg);
+    pointer-events: none;
 }
 
 /* ── EmptyState ── */

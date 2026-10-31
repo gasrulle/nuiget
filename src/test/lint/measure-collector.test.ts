@@ -149,6 +149,25 @@ describe('the in-page collector on stubbed geometry (UX-P0.10, UX-P0.11)', () =>
         option.blur();
     });
 
+    it('reads a disabled button and the check mark of a current row; a mark that cannot join stays out (UX-P2.3)', () => {
+        const row = document.querySelector('.nuiget-row-option') as HTMLElement;
+        const check = row.querySelector('.nuiget-row-check') as HTMLElement;
+        const button = document.createElement('button');
+        button.className = 'nuiget-button';
+        button.disabled = true;
+        button.style.opacity = '0.4';
+        button.setAttribute('data-rect', '16,80,100,106');
+        (document.querySelector('[data-testid="nuiget-app"]') as HTMLElement).append(button);
+        expect(collect().heights.buttons.at(-1)).toMatchObject({ disabled: true, opacity: '0.4' });
+        row.setAttribute('aria-selected', 'false');
+        row.setAttribute('aria-current', 'true');
+        const marks = () => collect().heights.checkBoxes.filter(box => box.selected !== undefined).length;
+        expect(marks()).toBe(1);
+        check.classList.add('nuiget-row-check--off');
+        expect(marks()).toBe(0);
+        expect(collect().heights.checkBoxes.filter(box => box.off === true)).toHaveLength(1);
+    });
+
     it('a hidden badge is not counted (DS-ROW-6, UX-P2.2)', () => {
         (document.querySelector('.nuiget-row-option .nuiget-badge') as HTMLElement).style.display = 'none';
         expect(collect().rows[0].badgesShown).toBe(0);

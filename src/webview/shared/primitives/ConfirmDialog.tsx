@@ -1,4 +1,5 @@
 import React, { useRef } from 'react';
+import { Button } from './Button';
 import { Dialog } from './Dialog';
 import './primitives.css';
 
@@ -35,8 +36,8 @@ export function ConfirmDialog({ open, title, children, confirmLabel, cancelLabel
             initialFocus={cancelRef}
             data-testid="confirm-dialog"
             footer={<>
-                <button ref={cancelRef} type="button" className="nuiget-button nuiget-button--secondary" data-testid="confirm-dialog-cancel" onClick={onCancel}>{cancelLabel}</button>
-                <button type="button" className="nuiget-button" data-testid="confirm-dialog-confirm" disabled={busy} onClick={onConfirm}>{confirmLabel}</button>
+                <Button variant="secondary" ref={cancelRef} data-testid="confirm-dialog-cancel" onClick={onCancel}>{cancelLabel}</Button>
+                <Button data-testid="confirm-dialog-confirm" disabled={busy} onClick={onConfirm}>{confirmLabel}</Button>
             </>}
         />
     );

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type React from 'react';
 import { ALL_PROJECTS, type PackageUpdate } from '../../../../protocol';
 import { IN_PROGRESS, isCentral as isCentralRow, whyNotUpdatable } from '../../../shared/installed/rules';
-import { ArrowUpIcon, Badge, Banner, EmptyState, IconButton, Listbox, Row, Skeleton, Toolbar } from '../../../shared/primitives';
+import { ArrowUpIcon, Badge, Banner, Button, EmptyState, IconButton, Listbox, Row, Skeleton, Toolbar } from '../../../shared/primitives';
 import { packageIconSrc } from '../../../shared/packageIcon';
 import { useDetails, useDetailsActions } from '../../../shared/store/details';
 import { useInstalled } from '../../../shared/store/installed';
@@ -217,12 +217,12 @@ function ProjectUpdates({ filter, announce }: ListView): React.JSX.Element {
     return (
         <div className="nuiget-installed nuiget-updates">
             <Toolbar label="Bulk actions" data-testid="updates-toolbar">
-                <button type="button" className="nuiget-button nuiget-button--secondary" data-testid="select-all-button" aria-pressed={allSelected} disabled={candidates.length === 0} onClick={() => setSelected(allSelected ? new Set() : new Set(candidates.map(update => update.id)))}>
+                <Button variant="secondary" data-testid="select-all-button" aria-pressed={allSelected} disabled={candidates.length === 0} onClick={() => setSelected(allSelected ? new Set() : new Set(candidates.map(update => update.id)))}>
                     Select all
-                </button>
-                <button type="button" className="nuiget-button nuiget-toolbar-end" data-testid="update-all-button" disabled={toUpdate.length === 0} onClick={() => setConfirming(true)}>
+                </Button>
+                <span className="nuiget-toolbar-end"><Button data-testid="update-all-button" disabled={toUpdate.length === 0} onClick={() => setConfirming(true)}>
                     {chosen.length > 0 ? `Update selected (${chosen.length})` : `Update all (${candidates.length})`}
-                </button>
+                </Button></span>
             </Toolbar>
             {updates.sourcesUnavailable
                 ? <Banner severity="warning" data-testid="updates-unavailable-banner" action={{ label: 'Retry', onClick: updates.refresh }}>Some package sources could not be checked; the list may be incomplete.</Banner>

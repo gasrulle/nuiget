@@ -160,7 +160,7 @@ export function Row(props: RowProps): React.JSX.Element {
                 aria-describedby={describedBy === '' ? undefined : describedBy}
             >
                 {/* Decoration: the state is `aria-selected`; a click on it calls the list's `onToggle`, nothing here takes focus. */}
-                {checkable ? <span className={`nuiget-row-check${selectable === false ? ' nuiget-row-check--off' : ''}`} aria-hidden="true" onClick={event => { event.stopPropagation(); onToggle?.(); }}>{selected && selectable !== false ? <CheckIcon size={12} /> : null}</span> : null}
+                {checkable ? <span className={`nuiget-row-check${selectable === false ? ' nuiget-row-check--off' : ''}`} aria-hidden="true" onClick={event => { event.stopPropagation(); onToggle?.(); }}>{selected && selectable !== false ? <CheckIcon size={16} /> : null}</span> : null}
                 {density === 'comfortable' ? <span className="nuiget-row-icon" aria-hidden="true">{icon}</span> : null}
                 <span className="nuiget-row-body" title={tooltip}>
                     <span className="nuiget-row-line">

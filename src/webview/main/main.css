@@ -51,46 +51,6 @@ body {
     min-height: var(--nuiget-target-min);
 }
 
-/* Check boxes drawn as VS Code's own (MH11): the box in the check-box colours, the mark its foreground; every check box of the panel and its dialogs. */
-.nuiget-main input[type="checkbox"],
-.nuiget-dialog input[type="checkbox"] {
-    appearance: none;
-    display: inline-grid;
-    place-content: center;
-    flex: none;
-    inline-size: var(--nuiget-icon-size-md);
-    block-size: var(--nuiget-icon-size-md);
-    margin: 0;
-    border: var(--nuiget-line-width) solid var(--nuiget-color-checkbox-border);
-    border-radius: var(--nuiget-radius-xs);
-    background: var(--nuiget-color-checkbox-bg);
-    forced-color-adjust: none;
-}
-
-/* The mark: a rotated border in the check-box foreground (1.x). */
-.nuiget-main input[type="checkbox"]:checked::after,
-.nuiget-dialog input[type="checkbox"]:checked::after {
-    content: "";
-    inline-size: var(--nuiget-space-2);
-    block-size: var(--nuiget-space-4);
-    margin-block-start: calc(var(--nuiget-space-1) * -1);
-    border: solid var(--nuiget-color-checkbox-fg);
-    border-width: 0 2px 2px 0;
-    transform: rotate(45deg);
-}
-
-.nuiget-main input[type="checkbox"]:disabled,
-.nuiget-dialog input[type="checkbox"]:disabled {
-    border-style: dashed;
-    border-color: var(--nuiget-color-fg-muted);
-}
-
-.nuiget-main input[type="checkbox"]:focus-visible,
-.nuiget-dialog input[type="checkbox"]:focus-visible {
-    outline: var(--nuiget-line-width) solid var(--nuiget-color-focus);
-    outline-offset: var(--nuiget-line-width);
-}
-
 /* The heading takes the free space, so the controls sit at the end of the header (1.x). */
 .nuiget-main-title {
     margin: 0;

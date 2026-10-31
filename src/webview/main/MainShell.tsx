@@ -2,7 +2,7 @@ import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import type React from 'react';
 import { ALL_PROJECTS, type PackageMetadataLite } from '../../protocol';
 import { useMessageBus } from '../shared/bus/useMessageBus';
-import { Banner, cssVars, EmptyState, IconButton, LiveStatus, LoadingIcon, ProgressBar, Sash, SyncIcon, Tabs, type TabItem } from '../shared/primitives';
+import { Banner, Checkbox, cssVars, EmptyState, IconButton, LiveStatus, LoadingIcon, ProgressBar, Sash, SyncIcon, Tabs, type TabItem } from '../shared/primitives';
 import { FILTER_PREFIXES, parseSearchQuery, type SearchMode } from '../shared/search/parseSearchQuery';
 import { SearchBox } from '../shared/search/SearchBox';
 import { useAllProjects } from '../shared/store/allProjects';
@@ -233,11 +233,11 @@ export function MainShell({ installed, updates, browse, details, viewState }: Ma
             <header className="nuiget-main-header" data-testid="main-header">
                 <h1 className="nuiget-main-title">Manage NuGet packages</h1>
                 <label className="nuiget-main-toggle">
-                    <input type="checkbox" checked={session?.restoreEnabled ?? true} disabled={!hasSession} onChange={event => set({ restoreEnabled: event.target.checked })} />
+                    <Checkbox checked={session?.restoreEnabled ?? true} disabled={!hasSession} onChange={checked => set({ restoreEnabled: checked })} />
                     Restore after operations
                 </label>
                 <label className="nuiget-main-toggle">
-                    <input type="checkbox" checked={session?.includePrerelease ?? false} disabled={!hasSession} onChange={event => set({ includePrerelease: event.target.checked })} />
+                    <Checkbox checked={session?.includePrerelease ?? false} disabled={!hasSession} onChange={checked => set({ includePrerelease: checked })} />
                     Include prerelease
                 </label>
                 <select

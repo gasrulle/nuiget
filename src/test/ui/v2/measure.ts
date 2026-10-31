@@ -24,7 +24,7 @@ export type RuleStatus = 'hard' | { pending: string };
 export type StateGroup = 'main-installed' | 'main-updates' | 'browse' | 'details' | 'dialogs' | 'sources' | 'sidebar';
 
 /** The element groups Appendix B names for DS-INSET-2 (the sidebar is a state group there). */
-export type ElementGroup = 'toolbars' | 'headers' | 'main-header' | 'rows' | 'chrome' | 'first-row' | 'tabs' | 'controls' | 'sash';
+export type ElementGroup = 'toolbars' | 'headers' | 'main-header' | 'rows' | 'chrome' | 'first-row' | 'tabs' | 'controls' | 'sash' | 'text-buttons' | 'icon-buttons';
 
 export type Scope = StateGroup | ElementGroup;
 
@@ -151,6 +151,8 @@ const inGroups = (status: RuleStatus, ...groups: StateGroup[]): Partial<Record<S
 
 /** The states without a row by design on this tree; P3.2 removes the quick-search entries if its popup shows rows (D56). */
 const NO_ROW_STATES: readonly string[] = ['main-installed-filter-nomatch', 'main-quicksearch-open', 'main-quicksearch-versions'];
+/** The states that show a disabled text button (the run's DS-STATE-7 lines, UX-P2.3). */
+const DISABLED_BUTTON_STATES: readonly string[] = ['main-installed-single', 'main-installed-all', 'main-installed-unsupported', 'main-installed-cpm', 'main-installed-details', 'main-installed-filter', 'main-installed-filter-nomatch', 'main-installed-hover', 'main-installed-focus', 'main-transitive-expanded', 'main-transitive-details', 'main-details-readme'];
 
 /**
  * V50: at the editor minimum the tab strip's count badge extends the document sideways (CI run 40084340281,
@@ -174,10 +176,10 @@ export const RULES: readonly RuleDefinition[] = [
     rule('DS-HEIGHT-3', { helper: 3, scopes: inGroups('hard', ...MAIN), tolerance: TOLERANCES.height, exceptStates: NO_ROW_STATES }),
     rule('DS-HEIGHT-4', { helper: 3, scopes: on('P2.5', ...MAIN), tolerance: TOLERANCES.height }),
     rule('DS-HEIGHT-5', { helper: 3, scopes: on('P3.3b', 'details'), tolerance: TOLERANCES.height }),
-    rule('DS-HEIGHT-6', { helper: 3, scopes: on('P2.3', 'main-installed', 'main-updates', 'details', 'dialogs', 'sources'), tolerance: TOLERANCES.height }),
+    rule('DS-HEIGHT-6', { helper: 3, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', details: 'hard', dialogs: 'hard', sources: { pending: 'P3.6' } }, tolerance: TOLERANCES.height }),
     rule('DS-HEIGHT-7', { helper: 3, scopes: on('P2.4', ...MAIN, 'dialogs', 'sources', 'sidebar'), tolerance: TOLERANCES.height }),
     rule('DS-HEIGHT-8', { helper: 3, scopes: on('P2.5', ...MAIN, 'sources', 'sidebar'), tolerance: TOLERANCES.height }),
-    rule('DS-HEIGHT-9', { helper: 3, scopes: on('P2.3', ...MAIN, 'dialogs', 'sources'), tolerance: TOLERANCES.height }),
+    rule('DS-HEIGHT-9', { helper: 3, scopes: { ...inGroups('hard', ...MAIN), dialogs: { pending: 'P3.5' }, sources: { pending: 'P3.6' } }, tolerance: TOLERANCES.height }),
     rule('DS-HEIGHT-10', { helper: 3, scopes: on('P2.6', ...MAIN, 'sidebar'), tolerance: TOLERANCES.height }),
     rule('DS-HEIGHT-11', { helper: 3, scopes: { 'main-installed': { pending: 'P2.8b' }, ...on('P3.10', 'main-updates', 'browse', 'details', 'sidebar') }, tolerance: TOLERANCES.height, statePattern: /loading|revalidating/ }),
     // UX-P0.12: P9.fix-2, -3 (authors) and -4 at their own measures, in the states their tests cover; MS-8 for every state.
@@ -199,6 +201,9 @@ export const RULES: readonly RuleDefinition[] = [
     rule('DS-ROW-1', { helper: 2, scopes: inGroups('hard', ...MAIN), tolerance: TOLERANCES.coincide, widths: [800, 932, 1200, 1600], exceptStates: NO_ROW_STATES }),
     rule('DS-ROW-2', { helper: 2, scopes: { 'main-installed': { pending: 'P2.8a' }, details: { pending: 'P2.8a' }, browse: { pending: 'P3.2' } }, tolerance: TOLERANCES.coincide }),
     rule('DS-ROW-3', { helper: 6, scopes: { 'main-installed': 'hard', details: 'hard', 'main-updates': { pending: 'P3.1b' }, browse: { pending: 'P3.2' }, sidebar: { pending: 'P3.7a' } }, tolerance: TOLERANCES.containment, scopeStates: { 'main-installed': ['main-installed-hover', 'main-installed-focus', 'main-installed-unfocused'], details: ['main-installed-details', 'main-details-readme', 'main-transitive-details', 'main-browse-details'] } }),
+    // UX-P2.3 (design trigger 6). DS-RADIUS-1's selects and text fields are P2.4's.
+    rule('DS-RADIUS-1', { helper: 3, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', details: 'hard', dialogs: 'hard', browse: { pending: 'P2.4' }, sidebar: { pending: 'P2.4' }, sources: { pending: 'P3.6' } }, tolerance: TOLERANCES.containment }),
+    rule('DS-COLOR-6', { helper: 3, scopes: { 'text-buttons': 'hard', 'icon-buttons': { pending: 'P2.5' } }, tolerance: TOLERANCES.containment, scopeStates: { 'text-buttons': DISABLED_BUTTON_STATES } }),
     // UX-P2.2b (design trigger 6): the row parts of the four rules no helper asserted.
     rule('DS-COLOR-2', { helper: 6, scopes: { rows: 'hard' }, tolerance: TOLERANCES.containment, states: ['main-installed-details', 'main-details-readme', 'main-installed-unfocused'] }),
     rule('DS-DIVIDER-1', { helper: 6, scopes: { rows: 'hard', headers: { pending: 'P2.6' } }, tolerance: TOLERANCES.containment, exceptStates: NO_ROW_STATES }),
@@ -282,11 +287,11 @@ export function elementGroups(group: StateGroup, state?: string): ElementGroup[]
     switch (group) {
         case 'main-installed':
         case 'main-updates':
-            return ['toolbars', 'headers', 'main-header', 'rows', 'chrome', 'tabs', 'controls', 'sash', ...firstRow];
+            return ['toolbars', 'headers', 'main-header', 'rows', 'chrome', 'tabs', 'controls', 'sash', 'text-buttons', 'icon-buttons', ...firstRow];
         case 'browse':
-            return ['main-header', 'rows', 'chrome', 'controls'];
+            return ['main-header', 'rows', 'chrome', 'controls', 'text-buttons', 'icon-buttons'];
         case 'details':
-            return ['headers', 'main-header', 'rows', 'chrome', 'tabs', 'controls', 'sash'];
+            return ['headers', 'main-header', 'rows', 'chrome', 'tabs', 'controls', 'sash', 'text-buttons', 'icon-buttons'];
         default:
             return ['chrome'];
     }
@@ -343,10 +348,10 @@ export interface Heights {
     comfortablePitches: number[];
     tabStrip: number | undefined;
     detailsTabs: number | undefined;
-    buttons: Array<{ height: number; fontSize: string; lineHeight: string; padding: string; radius: string }>;
+    buttons: Array<{ height: number; fontSize: string; lineHeight: string; padding: string; radius: string; disabled: boolean; opacity: string }>;
     inputs: Array<{ kind: 'search' | 'select' | 'field'; id: string; height: number }>;
     iconButtons: Array<{ inHeader: boolean; width: number; height: number; hit: { width: number; height: number } }>;
-    checkBoxes: Array<{ width: number; height: number; radius: string; selected: { fill: string; border: string } | undefined }>;
+    checkBoxes: Array<{ width: number; height: number; radius: string; selected: { fill: string; border: string } | undefined; /** A mark that cannot join a bulk action, on a banded row: its line stays disabledForeground. */ off?: boolean }>;
     /** The theme's `checkbox.selectBackground` and `checkbox.selectBorder` as VS Code put them on the root (hex, or empty). */
     checkSelect: { fill: string; border: string };
     badges: Array<{ count: boolean; width: number; height: number; fontSize: string; padding: string; radius: string }>;
@@ -791,7 +796,7 @@ const heights = {
     }),
     tabStrip: visibleHeight('[data-testid="tab-bar"]'),
     detailsTabs: visibleHeight('[data-testid="package-details-panel"] [role="tablist"]'),
-    buttons: shown('.nuiget-button').map(el => { const style = getComputedStyle(el); return { height: heightOf(el), fontSize: style.fontSize, lineHeight: style.lineHeight, padding: paddingOf(style), radius: style.borderTopLeftRadius }; }),
+    buttons: shown('.nuiget-button').map(el => { const style = getComputedStyle(el); return { height: heightOf(el), disabled: el.matches(':disabled'), opacity: style.opacity, fontSize: style.fontSize, lineHeight: style.lineHeight, padding: paddingOf(style), radius: style.borderTopLeftRadius }; }),
     inputs: inputKinds.flatMap(([kind, selector]) => shown(selector).map(el => ({ kind, id: el.dataset.testid ?? label(el), height: heightOf(el) }))),
     iconButtons: shown('.nuiget-icon-button').map(el => {
         const rect = rectOf(el);
@@ -804,8 +809,10 @@ const heights = {
     checkBoxes: shown('input[type="checkbox"], .nuiget-row-check').map(el => {
         const style = getComputedStyle(el);
         const rect = rectOf(el);
-        const selected = el.matches('.nuiget-row-check') && el.closest('[aria-selected="true"]');
-        return { width: round(rect.width), height: round(rect.height), radius: style.borderTopLeftRadius, selected: selected ? { fill: style.backgroundColor, border: style.borderTopColor } : undefined };
+        const banded = el.matches('.nuiget-row-check') && el.closest('[aria-selected="true"], [aria-current="true"]');
+        const off = Boolean(banded) && el.classList.contains('nuiget-row-check--off');
+        const selected = banded && !off;
+        return { width: round(rect.width), height: round(rect.height), radius: style.borderTopLeftRadius, selected: selected ? { fill: style.backgroundColor, border: style.borderTopColor } : undefined, off };
     }),
     checkSelect: { fill: rootVars.getPropertyValue('--vscode-checkbox-selectBackground').trim(), border: rootVars.getPropertyValue('--vscode-checkbox-selectBorder').trim() },
     badges: shown('.nuiget-badge').map(el => {
@@ -1510,6 +1517,10 @@ function evaluateHeights(definition: RuleDefinition, layout: Layout, look: 'mode
             if (selected.length > 0) {
                 parts.push(`selected ${offColour.length === 0 ? 'in' : 'not in'} checkbox.selectBackground/selectBorder (${fill || 'unset'}/${border || 'unset'})`);
             }
+            const off = heights.checkBoxes.filter(box => box.off === true).length;
+            if (off > 0) {
+                parts.push(`off ${off} (line in disabledForeground, not read for checkbox.select*)`);
+            }
             return { value: parts.join('; '), pass: sizePass && radii.length === 0 && offColour.length === 0 };
         }
         case 'DS-HEIGHT-10': {
@@ -1770,6 +1781,23 @@ function evaluateEndOfP0(definition: RuleDefinition, scope: Scope, state: string
                 return { state: row.state, delta: tenth(delta) };
             });
             return { value: deltas.map(entry => `${entry.state} painted ${entry.delta} from the band`).join('; '), pass: deltas.every(entry => entry.delta <= tolerance) };
+        }
+        case 'DS-RADIUS-1': {
+            const buttons = layout.heights.buttons;
+            if (buttons.length === 0) {
+                return notMeasurable('no text button');
+            }
+            return { value: `buttons ${tally(buttons.map(button => button.radius))} (target ${CONTROL_STYLES.button.radius})`, pass: buttons.every(button => button.radius === CONTROL_STYLES.button.radius) };
+        }
+        case 'DS-COLOR-6': {
+            if (scope === 'icon-buttons') {
+                return notMeasurable('no helper until P2.5');
+            }
+            const disabled = layout.heights.buttons.filter(button => button.disabled);
+            if (disabled.length === 0) {
+                return notMeasurable('no disabled text button');
+            }
+            return { value: `disabled ${disabled.length}: opacity ${tally(disabled.map(button => button.opacity))} (target 0.4)`, pass: disabled.every(button => button.opacity === '0.4') };
         }
         case 'DS-COLOR-2': {
             // Hovered-selected: not measurable until P2.8a's state; the check-mark clause (D52) waits for P2.3.

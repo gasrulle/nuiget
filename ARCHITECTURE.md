@@ -316,7 +316,7 @@ frontend test file is skipped and says so.
 `src/webview/shared/primitives/index.ts` exports the building blocks both 2.0 webviews are made of
 ([ADR-008](docs/adr/008-webview-architecture.md)): `Listbox`, `Row`, `SectionHeader`, `IconButton`, `Badge`,
 `LiveStatus`, `EmptyState`, `Skeleton`, `Spinner`, `ProgressBar`, `Banner`, `Sash`, `Dialog`, `ConfirmDialog`,
-`Popover`, `Tabs`, `Toolbar`, `ErrorBoundary`, the icons and `cssVars`. Each has a test with React Testing Library
+`Popover`, `Tabs`, `Toolbar`, `Button`, `Checkbox`, `ErrorBoundary`, the icons and `cssVars`. Each has a test with React Testing Library
 that ends in an axe run. `ErrorBoundary` (P9.9) is the one class component: each entry wraps its `StoreProvider` in it,
 so a rendering error shows the empty state "Something went wrong in this view." with Reload, which remounts the store
 and the view, and the entry reports the error to the host as `ui/reportError`, which the host writes to the output
@@ -347,7 +347,7 @@ A comfortable row is the Extensions row (D46): a fixed 72 px (`--nuiget-row-heig
 and two lines (name and badges; version, meta, authors and status), or three in Browse, with the description between
 them. The option is the band that hover, selection and focus paint; a row's one action overlays its reserved end slot.
 A row's state reaches its text through `--nuiget-row-*` custom properties, set by the state's own rule and read by each
-child, so no selector carries a state into a child. The list estimates a group row at the compact height and a package
+child, so no selector carries a state into a child; the row's check mark, decoration by the listbox's rules, takes `checkbox.select*` through `--nuiget-row-check-*` on a current or selected row. The list estimates a group row at the compact height and a package
 row at its density's, which is what a comfortable row measures, so the sizer does not depend on what has been rendered.
 A compact row shows the same spans on one line (`display: contents` on the lines), name first: the version shrinks
 with an ellipsis before the name does, and authors, description and status are read out, not shown. The arrow of

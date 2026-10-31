@@ -1,4 +1,5 @@
 import type React from 'react';
+import { Button } from './Button';
 import { InfoIcon, WarningIcon } from './icons';
 import './primitives.css';
 
@@ -28,7 +29,7 @@ export function Banner({ severity, children, action, 'data-testid': testId }: Ba
             <Icon className="nuiget-banner-icon" />
             <span className="nuiget-visually-hidden">{`${SPOKEN[severity]}: `}</span>
             <span className="nuiget-banner-text">{children}</span>
-            {action ? <button type="button" className="nuiget-button nuiget-button--secondary" onClick={action.onClick}>{action.label}</button> : null}
+            {action ? <Button variant="secondary" onClick={action.onClick}>{action.label}</Button> : null}
         </div>
     );
 }

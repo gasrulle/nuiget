@@ -181,7 +181,7 @@ describe('2.0 webview stylesheets', () => {
             'background: var(--nuiget-color-dropdown-bg)',
             'color: var(--nuiget-color-dropdown-fg)',
         ]));
-        const checkbox = main.find(rule => rule.prelude.includes('input[type="checkbox"]') && !rule.prelude.includes(':'))?.declarations ?? [];
+        const checkbox = primitives.find(rule => rule.prelude === '.nuiget-checkbox-input')?.declarations ?? [];
         expect(checkbox).toEqual(expect.arrayContaining(['appearance: none', 'background: var(--nuiget-color-checkbox-bg)']));
     });
 
@@ -205,6 +205,14 @@ describe('2.0 webview stylesheets', () => {
         }
     });
 
+    it('text buttons and check boxes ring at offset two strokes (DS-FOCUS-1)', () => {
+        const rules = parseRules(readFileSync(PRIMITIVES, 'utf8'));
+        const ring = rules.find(rule => rule.prelude.replace(/\s+/g, ' ') === '.nuiget-button:focus-visible, .nuiget-checkbox-input:focus-visible');
+        expect(ring?.declarations).toContain('outline-offset: calc(var(--nuiget-line-width) * 2)');
+        const shared = rules.find(rule => rule.prelude.includes('.nuiget-row-group:focus-visible'));
+        expect(shared?.prelude).not.toContain('.nuiget-button');
+    });
+
     it('every focus ring is the focus token at one pixel, on every control', () => {
         const files = [PRIMITIVES, 'src/webview/main/main.css', 'src/webview/sidebar/sidebar.css'];
         const rules = files.flatMap(file => parseRules(readFileSync(file, 'utf8')));
@@ -214,8 +222,7 @@ describe('2.0 webview stylesheets', () => {
         for (const selector of [
             '.nuiget-button:focus-visible', '.nuiget-tab:focus-visible', '.nuiget-icon-button:focus-visible',
             '.nuiget-section-toggle:focus-visible', '.nuiget-sash:focus-visible', '.nuiget-main-select:focus-visible', '.nuiget-main-search-input:focus',
-            '.nuiget-input:focus', '.nuiget-readme-copy:focus-visible', '.nuiget-main input[type="checkbox"]:focus-visible',
-            '.nuiget-dialog input[type="checkbox"]:focus-visible', '.nuiget-sidebar-search:focus-visible',
+            '.nuiget-input:focus', '.nuiget-readme-copy:focus-visible', '.nuiget-checkbox-input:focus-visible', '.nuiget-sidebar-search:focus-visible',
         ]) {
             expect(ringed, selector).toContain(selector);
         }

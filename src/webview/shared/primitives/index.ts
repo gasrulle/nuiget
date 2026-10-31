@@ -6,6 +6,8 @@ import './primitives.css';
 
 export { Badge, type BadgeProps, type BadgeTone } from './Badge';
 export { Banner, type BannerProps, type BannerSeverity } from './Banner';
+export { Button, type ButtonProps } from './Button';
+export { Checkbox, type CheckboxProps } from './Checkbox';
 export { ConfirmDialog, type ConfirmDialogProps } from './ConfirmDialog';
 export { cssVars, type NuigetVar } from './cssVars';
 export { Dialog, type DialogProps } from './Dialog';

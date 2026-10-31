@@ -48,7 +48,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
             'PF-6', 'DS-GRID-1', 'DS-GRID-2a', 'DS-GRID-2b', 'DS-INSET-1', 'DS-INSET-2', 'PF-3b', 'PF-5',
             ...Array.from({ length: 11 }, (_, i) => `DS-HEIGHT-${i + 1}`),
             'PF-2', 'PF-3a', 'PF-4', 'MS-8', 'DS-OVERFLOW-6', 'DS-INSET-3', 'DS-OVERFLOW-2', 'DS-ROW-5',
-            'DS-INSET-4', 'DS-ROW-1', 'DS-ROW-2', 'DS-ROW-3', 'DS-COLOR-2', 'DS-DIVIDER-1', 'DS-RADIUS-2', 'DS-COLOR-5', 'DS-ROW-6', 'DS-ICON-3', 'DS-DENSITY-1', 'DS-OVERFLOW-1', 'DS-OVERFLOW-3', 'DS-OVERFLOW-5', 'DS-ALIGN-1',
+            'DS-INSET-4', 'DS-ROW-1', 'DS-ROW-2', 'DS-ROW-3', 'DS-RADIUS-1', 'DS-COLOR-6', 'DS-COLOR-2', 'DS-DIVIDER-1', 'DS-RADIUS-2', 'DS-COLOR-5', 'DS-ROW-6', 'DS-ICON-3', 'DS-DENSITY-1', 'DS-OVERFLOW-1', 'DS-OVERFLOW-3', 'DS-OVERFLOW-5', 'DS-ALIGN-1',
             'DS-TYPE-1', 'DS-TYPE-4', 'DS-TYPE-6', 'DS-ROW-4', 'DS-COPY-3', 'SPEC',
             'DS-FOCUS-1', 'DS-FOCUS-2', 'DS-FOCUS-3', 'DS-FOCUS-4', 'DS-STATE-7', 'DS-SCROLL-1',
             'DS-TYPE-2', 'DS-TYPE-3', 'DS-ICON-4', 'DS-LOOK-1',
@@ -86,10 +86,12 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(scopes('DS-HEIGHT-3')).toEqual(mainHard());
         expect(scopes('DS-HEIGHT-4')).toEqual(main('P2.5'));
         expect(scopes('DS-HEIGHT-5')).toEqual({ details: { pending: 'P3.3b' } });
-        expect(scopes('DS-HEIGHT-6')).toEqual({ 'main-installed': { pending: 'P2.3' }, 'main-updates': { pending: 'P2.3' }, details: { pending: 'P2.3' }, dialogs: { pending: 'P2.3' }, sources: { pending: 'P2.3' } });
+        expect(scopes('DS-HEIGHT-6')).toEqual({ 'main-installed': 'hard', 'main-updates': 'hard', details: 'hard', dialogs: 'hard', sources: { pending: 'P3.6' } });
         expect(scopes('DS-HEIGHT-7')).toEqual({ ...main('P2.4'), dialogs: { pending: 'P2.4' }, sources: { pending: 'P2.4' }, sidebar: { pending: 'P2.4' } });
         expect(scopes('DS-HEIGHT-8')).toEqual({ ...main('P2.5'), sources: { pending: 'P2.5' }, sidebar: { pending: 'P2.5' } });
-        expect(scopes('DS-HEIGHT-9')).toEqual({ ...main('P2.3'), dialogs: { pending: 'P2.3' }, sources: { pending: 'P2.3' } });
+        expect(scopes('DS-HEIGHT-9')).toEqual({ ...mainHard(), dialogs: { pending: 'P3.5' }, sources: { pending: 'P3.6' } });
+        expect(scopes('DS-RADIUS-1')).toEqual({ 'main-installed': 'hard', 'main-updates': 'hard', details: 'hard', dialogs: 'hard', browse: { pending: 'P2.4' }, sidebar: { pending: 'P2.4' }, sources: { pending: 'P3.6' } });
+        expect(scopes('DS-COLOR-6')).toEqual({ 'text-buttons': 'hard', 'icon-buttons': { pending: 'P2.5' } });
         expect(scopes('DS-HEIGHT-10')).toEqual({ ...main('P2.6'), sidebar: { pending: 'P2.6' } });
         expect(scopes('DS-HEIGHT-11')).toEqual({ 'main-installed': { pending: 'P2.8b' }, 'main-updates': { pending: 'P3.10' }, browse: { pending: 'P3.10' }, details: { pending: 'P3.10' }, sidebar: { pending: 'P3.10' } });
         // UX-P0.12: PF-2, PF-3a and PF-4 where P9.fix-2, -3 and -4 measured; MS-8 hard for chrome (Appendix B).
@@ -162,7 +164,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
             'PF-6': 1, 'DS-GRID-1': 0.5, 'DS-GRID-2a': 0.5, 'DS-GRID-2b': 2, 'DS-INSET-1': 1, 'DS-INSET-2': 1, 'PF-3b': 1, 'PF-5': 1,
             ...Object.fromEntries(Array.from({ length: 11 }, (_, i) => [`DS-HEIGHT-${i + 1}`, 1])),
             'PF-2': 1, 'PF-3a': 0, 'PF-4': 8, 'MS-8': 0.5, 'DS-OVERFLOW-6': 0, 'DS-INSET-3': 1, 'DS-OVERFLOW-2': 0, 'DS-ROW-5': 0,
-            'DS-INSET-4': 1, 'DS-ROW-1': 1, 'DS-ROW-2': 1, 'DS-ROW-3': 0, 'DS-COLOR-2': 0, 'DS-DIVIDER-1': 0, 'DS-RADIUS-2': 0, 'DS-COLOR-5': 0, 'DS-ROW-6': 0, 'DS-ICON-3': 0, 'DS-DENSITY-1': 1, 'DS-OVERFLOW-1': 0, 'DS-OVERFLOW-3': 0,
+            'DS-INSET-4': 1, 'DS-ROW-1': 1, 'DS-ROW-2': 1, 'DS-ROW-3': 0, 'DS-RADIUS-1': 0, 'DS-COLOR-6': 0, 'DS-COLOR-2': 0, 'DS-DIVIDER-1': 0, 'DS-RADIUS-2': 0, 'DS-COLOR-5': 0, 'DS-ROW-6': 0, 'DS-ICON-3': 0, 'DS-DENSITY-1': 1, 'DS-OVERFLOW-1': 0, 'DS-OVERFLOW-3': 0,
             'DS-OVERFLOW-5': 0, 'DS-ALIGN-1': 0, 'DS-TYPE-1': 0, 'DS-TYPE-4': 0.5, 'DS-TYPE-6': 0.1, 'DS-ROW-4': 0, 'DS-COPY-3': 0, SPEC: 1,
             'DS-FOCUS-1': 0, 'DS-FOCUS-2': 0, 'DS-FOCUS-3': 0, 'DS-FOCUS-4': 0, 'DS-STATE-7': 0, 'DS-SCROLL-1': 0, 'DS-TYPE-2': 0.1, 'DS-TYPE-3': 0, 'DS-ICON-4': 0, 'DS-LOOK-1': 0,
         });
@@ -305,7 +307,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(lineOf('main-installed-single', rows, 'DS-HEIGHT-3@main-installed-single')).toMatchObject({ pass: false, status: 'hard', value: 'rows 78 ×3 (target 72); pitch 79 ×2 (target 72)' });
         expect(lineOf('main-installed-single', layout({}, { comfortableRows: [72, 72], comfortablePitches: [72] }), 'DS-HEIGHT-3@main-installed-single')).toMatchObject({ pass: true });
         // DS-HEIGHT-6: the height, the workbench's button and the computed styles.
-        const button = { height: 26, fontSize: '12px', lineHeight: '16px', padding: '4px 8px 4px 8px', radius: '4px' };
+        const button = { height: 26, fontSize: '12px', lineHeight: '16px', padding: '4px 8px 4px 8px', radius: '4px', disabled: false, opacity: '1' };
         const buttons = layout({}, { buttons: [button, { ...button, height: 24, fontSize: '13px' }] });
         expect(lineOf('main-installed-details', buttons, 'DS-HEIGHT-6@main-installed-details', 'modern', { settingsButton: 26 }))
             .toMatchObject({ pass: false, value: '24, 26 (target 26, workbench 26); fontSize 13px (target 12px)' });
@@ -345,6 +347,9 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         const selected = (fill: string) => layout({}, { checkBoxes: [{ width: 18, height: 18, radius: '3px', selected: { fill, border: 'rgba(0, 120, 212, 0.5)' } }], checkSelect: { fill: '#0078d4', border: '#0078d480' } });
         expect(lineOf('main-installed-single', selected('rgb(0, 120, 212)'), 'DS-HEIGHT-9@main-installed-single')).toMatchObject({ pass: true });
         expect(lineOf('main-installed-single', selected('rgb(49, 49, 49)'), 'DS-HEIGHT-9@main-installed-single')).toMatchObject({ pass: false, value: expect.stringContaining('selected not in checkbox.selectBackground/selectBorder') });
+        // A current off mark keeps its disabledForeground line and still counts for size and radius (UX-P2.3).
+        const offMark = layout({}, { checkBoxes: [{ width: 18, height: 18, radius: '3px', selected: undefined, off: true }], checkSelect: { fill: '#0078d4', border: '#0078d480' } });
+        expect(lineOf('main-installed-single', offMark, 'DS-HEIGHT-9@main-installed-single')).toMatchObject({ pass: true, value: expect.stringContaining('off 1 (line in disabledForeground, not read for checkbox.select*)') });
         const badges = layout({}, { badges: [{ count: true, width: 19, height: 19, fontSize: '10px', padding: '4px 6px 4px 6px', radius: '9999px' }, { count: false, width: 30, height: 18, fontSize: '11px', padding: '0px 4px 0px 4px', radius: '2px' }] });
         expect(lineOf('main-installed-single', badges, 'DS-HEIGHT-10@main-installed-single')).toMatchObject({ pass: false, value: expect.stringContaining('label fontSize 11px (target 10px)') });
         const modernBadges = layout({}, { badges: [{ count: true, width: 19, height: 19, fontSize: '10px', padding: '4px 6px 4px 6px', radius: '9999px' }, { count: false, width: 40, height: 18, fontSize: '10px', padding: '4px 6px 4px 6px', radius: '9999px' }] });
@@ -505,6 +510,17 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(value('main-installed-single', facts({ rows: [row()] }), 'DS-ICON-3@main-installed-single')).toMatchObject({ pass: true, value: '36×36 (target 36×36)' });
         expect(value('main-installed-single', facts({ rows: [row({ icon: { left: 46, right: 78, w: 32, h: 32, centre: 136, radius: '4px' } })] }), 'DS-ICON-3@main-installed-single'))
             .toMatchObject({ pass: false, value: '32×32 (target 36×36); radius 4px (target 2px)' });
+        // UX-P2.3. DS-RADIUS-1 and DS-COLOR-6 on the text buttons.
+        const button = (overrides: Record<string, unknown> = {}) => ({ height: 26, fontSize: '12px', lineHeight: '16px', padding: '4px 8px 4px 8px', radius: '4px', disabled: false, opacity: '1', ...overrides });
+        const withButtons = (buttons: unknown[]) => layout({}, { buttons } as never);
+        expect(lineOf('main-installed-single', withButtons([button()]), 'DS-RADIUS-1@main-installed-single')).toMatchObject({ pass: true, status: 'hard', value: 'buttons 4px (target 4px)' });
+        expect(lineOf('main-installed-single', withButtons([button({ radius: '2px' })]), 'DS-RADIUS-1@main-installed-single')).toMatchObject({ pass: false });
+        expect(lineOf('main-installed-single', withButtons([button({ disabled: true, opacity: '0.4' })]), 'DS-COLOR-6@main-installed-single/text-buttons')).toMatchObject({ pass: true, value: 'disabled 1: opacity 0.4 (target 0.4)' });
+        expect(lineOf('main-installed-single', withButtons([button({ disabled: true })]), 'DS-COLOR-6@main-installed-single/text-buttons')).toMatchObject({ pass: false });
+        expect(lineOf('main-installed-single', withButtons([]), 'DS-RADIUS-1@main-installed-single')).toMatchObject({ pass: false, value: 'not measurable (no text button)' });
+        expect(lineOf('main-installed-single', withButtons([]), 'DS-COLOR-6@main-installed-single/icon-buttons')).toMatchObject({ status: { pending: 'P2.5' }, value: 'not measurable (no helper until P2.5)' });
+        expect(lineOf('main-installed-single', withButtons([]), 'DS-COLOR-6@main-installed-single/text-buttons')).toMatchObject({ pass: false, value: 'not measurable (no disabled text button)' });
+        expect(lineOf('main-installed-unfocused', withButtons([]), 'DS-COLOR-6@main-installed-unfocused/text-buttons')).toBeUndefined();
         // UX-P2.2b. DS-COLOR-2: selection follows the list's focus; a bulk row stays inactive.
         const select = (state: string, background: string, listFocused: boolean, multi = true) => row({ state, background, listFocused, multi, radius: '4px', lineWidth: 0, focusPainted: 0 });
         expect(value('main-installed-details', facts({ rows: [select('current', 'rgb(4, 57, 94)', true)] }), 'DS-COLOR-2@main-installed-details/rows')).toMatchObject({ pass: true, status: 'hard' });

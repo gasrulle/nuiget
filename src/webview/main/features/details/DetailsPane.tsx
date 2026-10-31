@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import type React from 'react';
 import { ALL_PROJECTS } from '../../../../protocol';
 import { isCentral, whyNotRemovable } from '../../../shared/installed/rules';
-import { Banner, EmptyState, Tabs, type TabItem } from '../../../shared/primitives';
+import { Banner, Button, EmptyState, Tabs, type TabItem } from '../../../shared/primitives';
 import { useAllProjects } from '../../../shared/store/allProjects';
 import { useDetails, useDetailsActions } from '../../../shared/store/details';
 import { useInstalled } from '../../../shared/store/installed';
@@ -166,16 +166,15 @@ export function DetailsPane({ announce }: DetailsPaneProps): React.JSX.Element {
                         <>
                             <span className="nuiget-details-label">Installed:</span>
                             <span>{fixedVersion ? `${entry.version} → ${installedVersion}` : installedVersion}</span>
-                            <button
-                                type="button"
-                                className="nuiget-button nuiget-button--secondary"
+                            <Button
+                                variant="secondary"
                                 data-testid="uninstall-button"
                                 disabled={busy || removalBlocked !== undefined}
                                 title={removalBlocked}
                                 onClick={uninstall}
                             >
                                 Uninstall
-                            </button>
+                            </Button>
                         </>
                     ) : null}
                     <label className="nuiget-details-label" htmlFor="nuiget-details-version">Version:</label>
@@ -190,27 +189,24 @@ export function DetailsPane({ announce }: DetailsPaneProps): React.JSX.Element {
                         {list.includes(chosen) ? null : <option value={chosen}>{versions.status === 'loading' ? `${chosen} (loading versions…)` : chosen}</option>}
                         {list.map(candidate => <option key={candidate} value={candidate}>{candidate === installedVersion ? `${candidate} (installed)` : candidate}</option>)}
                     </select>
-                    <button
-                        type="button"
-                        className="nuiget-button"
+                    <Button
                         data-testid="install-update-button"
                         disabled={busy || asking || primaryWhy !== undefined}
                         title={primaryWhy}
                         onClick={changeVersion}
                     >
                         {busy ? 'Working…' : pickProjects ? 'Install…' : action}
-                    </button>
+                    </Button>
                     {offerPicker ? (
-                        <button
-                            type="button"
-                            className="nuiget-button nuiget-button--secondary"
+                        <Button
+                            variant="secondary"
                             data-testid="multi-install-button"
                             disabled={busy || asking}
                             title="Install this version into several projects"
                             onClick={() => setPicking(true)}
                         >
                             Install in projects…
-                        </button>
+                        </Button>
                     ) : null}
                 </div>
                 {primaryWhy !== undefined && primaryWhy !== 'This version is installed' ? <p className="nuiget-details-note">{`${primaryWhy}.`}</p> : null}

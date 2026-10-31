@@ -2,7 +2,7 @@ import { useEffect, useId, useReducer, useRef, useState } from 'react';
 import type React from 'react';
 import { ProtocolRequestError } from '../../../../protocol';
 import { useMessageBus } from '../../../shared/bus/useMessageBus';
-import { Dialog } from '../../../shared/primitives';
+import { Button, Checkbox, Dialog } from '../../../shared/primitives';
 import { allProjectsReducer, EMPTY_ALL_PROJECTS, useAllProjects } from '../../../shared/store/allProjects';
 import { useProjects } from '../../../shared/store/projects';
 
@@ -131,8 +131,8 @@ export function MultiInstallDialog({ open, packageId, version, onClose, onInstal
             data-testid="multi-install-dialog"
             footer={(
                 <>
-                    <button type="button" className="nuiget-button nuiget-button--secondary" onClick={onClose}>Cancel</button>
-                    <button type="button" className="nuiget-button" disabled={picked.size === 0 || checking} onClick={() => onInstall([...picked])}>{`Install in ${picked.size} ${picked.size === 1 ? 'project' : 'projects'}`}</button>
+                    <Button variant="secondary" onClick={onClose}>Cancel</Button>
+                    <Button disabled={picked.size === 0 || checking} onClick={() => onInstall([...picked])}>{`Install in ${picked.size} ${picked.size === 1 ? 'project' : 'projects'}`}</Button>
                 </>
             )}
         >
@@ -156,7 +156,7 @@ export function MultiInstallDialog({ open, packageId, version, onClose, onInstal
                     }
                     return (
                         <li key={project.path} className="nuiget-multi-install-row">
-                            <input id={id} type="checkbox" checked={picked.has(project.path)} disabled={blocked} onChange={() => toggle(project.path)} />
+                            <Checkbox id={id} checked={picked.has(project.path)} disabled={blocked} onChange={() => toggle(project.path)} />
                             <label htmlFor={id} title={project.path}>{project.name}</label>
                             {note ? <span className="nuiget-multi-install-note">{note}</span> : null}
                         </li>

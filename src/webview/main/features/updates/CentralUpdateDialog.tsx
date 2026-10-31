@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type React from 'react';
 import type { CpmImpactPreview } from '../../../../protocol';
 import { useMessageBus } from '../../../shared/bus/useMessageBus';
-import { Dialog } from '../../../shared/primitives';
+import { Button, Dialog } from '../../../shared/primitives';
 import { useProjects } from '../../../shared/store/projects';
 
 /** The central change the user asked for; the owner of the dialog runs it on confirm. */
@@ -80,7 +80,7 @@ export function CentralUpdateDialog({ request, onClose, onConfirm }: CentralUpda
         body = (
             <div role="alert">
                 <p className="nuiget-bulk-lead">{`The projects this change reaches could not be listed: ${state.message}`}</p>
-                <button type="button" className="nuiget-button nuiget-button--secondary" onClick={() => setAttempt(value => value + 1)}>Retry</button>
+                <Button variant="secondary" onClick={() => setAttempt(value => value + 1)}>Retry</Button>
             </div>
         );
     } else if (state.preview === null) {
@@ -106,8 +106,8 @@ export function CentralUpdateDialog({ request, onClose, onConfirm }: CentralUpda
             initialFocus={cancelRef}
             data-testid="cpm-preview-dialog"
             footer={<>
-                <button ref={cancelRef} type="button" className="nuiget-button nuiget-button--secondary" onClick={onClose}>Cancel</button>
-                <button type="button" className="nuiget-button" data-testid="cpm-preview-confirm" disabled={state.status !== 'ready'} onClick={onConfirm}>Update central version</button>
+                <Button variant="secondary" ref={cancelRef} onClick={onClose}>Cancel</Button>
+                <Button data-testid="cpm-preview-confirm" disabled={state.status !== 'ready'} onClick={onConfirm}>Update central version</Button>
             </>}
         >
             {body}

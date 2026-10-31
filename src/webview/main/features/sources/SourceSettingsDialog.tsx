@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import type React from 'react';
 import type { NuGetSource, RequestPayload } from '../../../../protocol';
-import { Banner, Dialog, EmptyState, IconButton, TrashIcon, WarningIcon } from '../../../shared/primitives';
+import { Banner, Button, Checkbox, Dialog, EmptyState, IconButton, TrashIcon, WarningIcon } from '../../../shared/primitives';
 import { useConfig } from '../../../shared/store/config';
 import { useSources } from '../../../shared/store/sources';
 
@@ -39,7 +39,7 @@ function SourceRow({ source, announce }: { source: NuGetSource; announce: (messa
 
     return (
         <li className="nuiget-source-row" data-testid={sourceRowId(source.name)} aria-busy={busy || undefined}>
-            <input id={toggleId} type="checkbox" checked={source.enabled} disabled={busy} onChange={toggle} />
+            <Checkbox id={toggleId} checked={source.enabled} disabled={busy} onChange={toggle} />
             <label htmlFor={toggleId} className="nuiget-source-text">
                 <span className={source.enabled ? 'nuiget-source-name' : 'nuiget-source-name nuiget-source-name--off'}>{source.name}</span>
                 <span className="nuiget-source-url">{source.url}</span>
@@ -48,8 +48,8 @@ function SourceRow({ source, announce }: { source: NuGetSource; announce: (messa
             {confirming ? (
                 <span className="nuiget-source-confirm" role="group" aria-label={`Remove ${source.name}?`}>
                     <span>{`Remove ${source.name} from ${source.configFile ?? 'the nearest config file'}?`}</span>
-                    <button type="button" className="nuiget-button" onClick={confirmRemove}>Remove</button>
-                    <button type="button" className="nuiget-button nuiget-button--secondary" onClick={() => setConfirming(false)}>Cancel</button>
+                    <Button onClick={confirmRemove}>Remove</Button>
+                    <Button variant="secondary" onClick={() => setConfirming(false)}>Cancel</Button>
                 </span>
             ) : (
                 <IconButton label={`Remove ${source.name}`} disabled={busy} onClick={() => setConfirming(true)}><TrashIcon /></IconButton>
@@ -140,7 +140,7 @@ function AddSourcePanel({ onDone, announce }: { onDone: () => void; announce: (m
                 <div className="nuiget-field nuiget-field--warning">
                     <WarningIcon />
                     <label>
-                        <input type="checkbox" checked={allowInsecure} onChange={event => setAllowInsecure(event.target.checked)} />
+                        <Checkbox checked={allowInsecure} onChange={checked => setAllowInsecure(checked)} />
                         Allow an insecure (HTTP) connection to this source
                     </label>
                 </div>
@@ -150,7 +150,7 @@ function AddSourcePanel({ onDone, announce }: { onDone: () => void; announce: (m
                 <label htmlFor={`${ids}-name`}>Name (optional)</label>
                 <input id={`${ids}-name`} className="nuiget-input" value={name} placeholder="Made from the URL when empty" onChange={event => setName(event.target.value)} />
             </div>
-            <button type="button" className="nuiget-button nuiget-button--secondary" aria-expanded={advanced} onClick={() => setAdvanced(previous => !previous)}>Credentials</button>
+            <Button variant="secondary" aria-expanded={advanced} onClick={() => setAdvanced(previous => !previous)}>Credentials</Button>
             {advanced ? (
                 <>
                     <div className="nuiget-field">
@@ -163,7 +163,7 @@ function AddSourcePanel({ onDone, announce }: { onDone: () => void; announce: (m
                     </div>
                     {password ? (
                         <label className="nuiget-field">
-                            <input type="checkbox" checked={isWindows && storeEncrypted && !placeholder} disabled={!isWindows || placeholder} onChange={event => setStoreEncrypted(event.target.checked)} />
+                            <Checkbox checked={isWindows && storeEncrypted && !placeholder} disabled={!isWindows || placeholder} onChange={checked => setStoreEncrypted(checked)} />
                             {placeholder
                                 ? 'Stored in clear text: %VAR% is read from the environment when the source is used'
                                 : isWindows ? 'Store the password encrypted' : 'Store the password encrypted (Windows only); it is stored in clear text'}
@@ -172,8 +172,8 @@ function AddSourcePanel({ onDone, announce }: { onDone: () => void; announce: (m
                 </>
             ) : null}
             <div className="nuiget-add-source-actions">
-                <button type="button" className="nuiget-button nuiget-button--secondary" onClick={onDone}>Back</button>
-                <button type="submit" className="nuiget-button" disabled={adding}>{adding ? 'Adding…' : 'Add source'}</button>
+                <Button variant="secondary" onClick={onDone}>Back</Button>
+                <Button type="submit" disabled={adding}>{adding ? 'Adding…' : 'Add source'}</Button>
             </div>
         </form>
     );
@@ -227,7 +227,7 @@ export function SourceSettingsDialog({ open, onClose, announce }: SourceSettings
             description={adding ? undefined : 'Sources of the selected project\'s config files. Remove deletes a source from the file that declares it.'}
             closeLabel="Close NuGet sources"
             data-testid="source-settings-modal"
-            footer={adding ? undefined : <button ref={addButton} type="button" className="nuiget-button" onClick={() => setAdding(true)}>Add source</button>}
+            footer={adding ? undefined : <Button ref={addButton} onClick={() => setAdding(true)}>Add source</Button>}
         >
             {body}
         </Dialog>

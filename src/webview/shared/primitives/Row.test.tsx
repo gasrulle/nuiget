@@ -205,6 +205,15 @@ describe('Row in a multi-selectable list', () => {
         const mark = screen.getByRole('option').querySelector('.nuiget-row-check');
         expect(mark).toHaveClass('nuiget-row-check--off');
         expect(mark).toHaveAttribute('aria-hidden', 'true');
+        const stylesheet = readFileSync('src/webview/shared/primitives/primitives.css', 'utf8');
+        const off = /(?:^|\n)\.nuiget-row-check--off \{([^}]*)\}/.exec(stylesheet)?.[1] ?? '';
+        expect(off).toContain('--nuiget-row-check-border: var(--nuiget-color-fg-disabled);');
+        expect(off).not.toContain('dashed');
+        for (const selector of ['aria-selected', 'aria-current']) {
+            const state = new RegExp(`(?:^|\\n)\\.nuiget-row-option\\[${selector}="true"\\] \\{([^}]*)\\}`).exec(stylesheet)?.[1] ?? '';
+            expect(state, selector).toContain('--nuiget-row-check-bg: var(--nuiget-color-checkbox-select-bg);');
+            expect(state, selector).toContain('--nuiget-row-check-border: var(--nuiget-color-checkbox-select-border);');
+        }
         // Never a mark, even when the list calls the row selected; nothing in it can take focus.
         expect(mark?.querySelector('svg')).toBeNull();
         expect(mark?.querySelectorAll('button, input, [tabindex]')).toHaveLength(0);

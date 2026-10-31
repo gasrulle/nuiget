@@ -1,4 +1,5 @@
 import type React from 'react';
+import { Button } from './Button';
 import './primitives.css';
 
 export interface EmptyStateProps {
@@ -17,7 +18,7 @@ export function EmptyState({ message, action, 'data-testid': testId }: EmptyStat
     return (
         <div className="nuiget-empty" data-testid={testId}>
             <p className="nuiget-empty-text">{message}</p>
-            {action ? <button type="button" className="nuiget-button" onClick={action.onClick}>{action.label}</button> : null}
+            {action ? <Button onClick={action.onClick}>{action.label}</Button> : null}
         </div>
     );
 }
