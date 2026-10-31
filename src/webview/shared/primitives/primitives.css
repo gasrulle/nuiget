@@ -632,10 +632,11 @@
     min-height: var(--nuiget-row-height-compact);
 }
 
-/* The heading is there for the outline of the page; it looks like the button it holds. It sets its own weight (DS-TYPE-9). */
+/* The heading is there for the outline of the page; it looks like the button it holds. It sets its own weight (DS-TYPE-9). The toggle is as high as its header, the artboard's `height:100%`; 28 is a target on its own, 22 in classic keeps the `::after` hit. */
 .nuiget-section-heading {
     display: flex;
     flex: 1;
+    align-self: stretch;
     min-width: 0;
     margin: 0;
     font-size: var(--nuiget-section-title-size, var(--nuiget-font-size-section-title));

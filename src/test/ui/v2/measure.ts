@@ -374,6 +374,7 @@ export interface Heights {
     buttons: Array<{ height: number; fontSize: string; lineHeight: string; padding: string; radius: string; disabled: boolean; opacity: string; hovered: boolean; secondary: boolean; background: string }>;
     inputs: Array<{ kind: 'search' | 'select' | 'field'; id: string; height: number; radius: string }>;
     iconButtons: Array<{ inHeader: boolean; width: number; height: number; hit: { width: number; height: number }; label: string; glyph: { w: number; h: number } | undefined; colour: string; background: string; radius: string; disabled: boolean; hovered: boolean; band: 'current' | 'selected' | undefined; listFocused: boolean; multi: boolean; severity: boolean }>;
+    toggles: Array<{ label: string; height: number; hit: { width: number; height: number } }>;
     tabs: Array<{ id: string; selected: boolean; colour: string; lineWidth: number; lineColour: string }>;
     checkBoxes: Array<{ width: number; height: number; radius: string; selected: { fill: string; border: string } | undefined; /** A mark that cannot join a bulk action, on a banded row: its line stays disabledForeground. */ off?: boolean }>;
     /** The theme's `checkbox.selectBackground` and `checkbox.selectBorder` as VS Code put them on the root (hex, or empty). */
@@ -852,6 +853,13 @@ const badgeLabel = el => {
     const shownLabel = el.querySelector('[aria-hidden="true"]');
     return own || (shownLabel ? shownLabel.textContent.trim() : '');
 };
+// A pointer target widened by an absolutely placed ::after (DS-HEIGHT-8).
+const hitOf = el => {
+    const rect = rectOf(el);
+    const after = getComputedStyle(el, '::after');
+    const widened = after.content && after.content !== 'none' && after.position === 'absolute';
+    return widened ? { width: round(rect.width - px(after.left) - px(after.right)), height: round(rect.height - px(after.top) - px(after.bottom)) } : { width: round(rect.width), height: round(rect.height) };
+};
 const heights = {
     headers: shown('[data-testid^="section-box-"]').map(el => ({ id: el.dataset.testid.replace(/^section-box-/, ''), variant: el.dataset.variant ?? '', height: heightOf(el) })),
     compactRows: shown('.nuiget-row--compact:not([data-row-kind="group"])').map(heightOf),
@@ -867,10 +875,7 @@ const heights = {
     inputs: inputKinds.flatMap(([kind, selector]) => shown(selector).map(el => ({ kind, id: el.dataset.testid ?? label(el), height: heightOf(el), radius: getComputedStyle(el).borderTopLeftRadius }))),
     iconButtons: shown('.nuiget-icon-button').map(el => {
         const rect = rectOf(el);
-        // A pointer target widened by an absolutely placed ::after (DS-HEIGHT-8).
-        const after = getComputedStyle(el, '::after');
-        const widened = after.content && after.content !== 'none' && after.position === 'absolute';
-        const hit = widened ? { width: round(rect.width - px(after.left) - px(after.right)), height: round(rect.height - px(after.top) - px(after.bottom)) } : { width: round(rect.width), height: round(rect.height) };
+        const hit = hitOf(el);
         const style = getComputedStyle(el);
         const svg = el.querySelector('svg');
         const glyph = svg ? rectOf(svg) : undefined;
@@ -886,6 +891,8 @@ const heights = {
             severity: Boolean(el.closest('.nuiget-source-health')),
         };
     }),
+    // Section mode's buttons: a group row's toggle is a span, whose target is its treeitem.
+    toggles: shown('button.nuiget-section-toggle').map(el => ({ label: el.dataset.testid ?? '', height: round(rectOf(el).height), hit: hitOf(el) })),
     tabs: shown('[role="tab"]').map(el => {
         const style = getComputedStyle(el);
         return { id: el.dataset.testid ?? label(el), selected: el.getAttribute('aria-selected') === 'true', colour: style.color, lineWidth: px(style.borderBottomWidth), lineColour: style.borderBottomColor };
@@ -1600,8 +1607,11 @@ function evaluateHeights(definition: RuleDefinition, layout: Layout, look: 'mode
             return { value: checks.map(check => check.text).join('; '), pass: checks.every(check => check.pass) };
         }
         case 'DS-HEIGHT-8': {
+            const toggles = heights.toggles.map(toggle => Math.min(toggle.hit.width, toggle.hit.height));
+            const toggleText = toggles.length === 0 ? [] : [`section toggles hit ${tally(toggles)} (at least ${HEIGHTS.target})`];
+            const togglesPass = toggles.every(hit => hit >= HEIGHTS.target);
             if (heights.iconButtons.length === 0) {
-                return { value: NOT_MEASURABLE, pass: false };
+                return toggles.length === 0 ? { value: NOT_MEASURABLE, pass: false } : { value: toggleText.join('; '), pass: togglesPass };
             }
             const painted = (inHeader: boolean, target: number) => {
                 const buttons = heights.iconButtons.filter(button => button.inHeader === inHeader);
@@ -1614,7 +1624,7 @@ function evaluateHeights(definition: RuleDefinition, layout: Layout, look: 'mode
             const hits = heights.iconButtons.map(button => Math.min(button.hit.width, button.hit.height));
             // A minimum: the ± 1 px of the painted box does not apply to the pointer target.
             const hitPass = hits.every(hit => hit >= HEIGHTS.target);
-            return { value: [...parts.map(part => part.text), `hit ${tally(hits)} (at least ${HEIGHTS.target})`].join('; '), pass: parts.every(part => part.pass) && hitPass };
+            return { value: [...parts.map(part => part.text), `hit ${tally(hits)} (at least ${HEIGHTS.target})`, ...toggleText].join('; '), pass: parts.every(part => part.pass) && hitPass && togglesPass };
         }
         case 'DS-HEIGHT-9': {
             if (heights.checkBoxes.length === 0) {

@@ -160,6 +160,12 @@ export const AXE_ACCEPTED: readonly AxeAccepted[] = [
     { rule: 'target-size', kind: 'violation', selector: '.nuiget-icon-button', ruling: 'DECISIONS.md 2026-10-31: an icon button paints 22 (20 in a pane header) and hits 24 through its ::after, which axe cannot read; DS-HEIGHT-8 measures the hit in every state' },
     // A tabindex=-1 icon button makes axe ask whether it is a target; it is, by pointer, and its hit is DS-HEIGHT-8's.
     { rule: 'target-size', kind: 'incomplete', selector: '.nuiget-icon-button', ruling: 'DECISIONS.md 2026-10-31: an icon button paints 22 (20 in a pane header) and hits 24 through its ::after, which axe cannot read; DS-HEIGHT-8 measures the hit in every state' },
+    // A section toggle paints its header's height; its 24 px hit is an ::after axe cannot read, and DS-HEIGHT-8 measures it.
+    { rule: 'target-size', kind: 'violation', selector: '.nuiget-section-toggle', ruling: 'DECISIONS.md 2026-10-31: a section toggle is as high as its header (DS-HEIGHT-1, 22 in classic) and hits 24 through its ::after, which axe cannot read; DS-HEIGHT-8 measures the hit in every state' },
+    { rule: 'target-size', kind: 'incomplete', selector: '.nuiget-section-toggle', ruling: 'DECISIONS.md 2026-10-31: a section toggle is as high as its header (DS-HEIGHT-1, 22 in classic) and hits 24 through its ::after, which axe cannot read; DS-HEIGHT-8 measures the hit in every state' },
+    // A group row's height is DS-HEIGHT-1's; its band cannot grow a hit without covering its neighbours.
+    { rule: 'target-size', kind: 'violation', selector: '.nuiget-row-group', ruling: 'DECISIONS.md 2026-10-31: a group row is a pane header\'s height (DS-HEIGHT-1, M 28 / C 22), the workbench\'s own tree row; its band is the target and no ::after may overlap its neighbours' },
+    { rule: 'target-size', kind: 'incomplete', selector: '.nuiget-row-group', ruling: 'DECISIONS.md 2026-10-31: a group row is a pane header\'s height (DS-HEIGHT-1, M 28 / C 22), the workbench\'s own tree row; its band is the target and no ::after may overlap its neighbours' },
 ];
 
 /** The selectors `RUN_FULL_AXE` counts nodes against. */
@@ -170,19 +176,18 @@ export const acceptedSelectors = (accepted: readonly AxeAccepted[] = AXE_ACCEPTE
 export const acceptedTargetSelectors = (): string[] => acceptedSelectors(AXE_ACCEPTED.filter(entry => entry.rule === 'target-size'));
 
 /** The acceptance that covers a result: every node on its selector, or the state's surface. */
-const acceptedFor = (rule: AxeRule, surface: 'main' | 'sidebar', accepted: readonly AxeAccepted[], kind: AxeAccepted['kind']): { entry: AxeAccepted; where: string } | undefined => {
-    for (const entry of accepted) {
-        if (entry.rule !== rule.id || entry.kind !== kind) {
-            continue;
-        }
-        if (entry.selector !== undefined && (rule.accepted?.[entry.selector] ?? 0) === rule.count) {
-            return { entry, where: entry.selector };
-        }
-        if (entry.surface !== undefined && entry.surface === surface) {
-            return { entry, where: `the ${surface}` };
-        }
+const acceptedFor = (rule: AxeRule, surface: 'main' | 'sidebar', accepted: readonly AxeAccepted[], kind: AxeAccepted['kind']): { ruling: string; where: string } | undefined => {
+    const entries = accepted.filter(entry => entry.rule === rule.id && entry.kind === kind);
+    const bySelector = entries.filter(entry => entry.selector !== undefined);
+    const countOf = (entry: AxeAccepted): number => rule.accepted?.[entry.selector as string] ?? 0;
+    // The sum, so a rule whose nodes span two declared selectors is accepted, and a node on none of them still fails.
+    if (bySelector.length > 0 && bySelector.reduce((sum, entry) => sum + countOf(entry), 0) === rule.count) {
+        const hit = bySelector.filter(entry => countOf(entry) > 0);
+        const where = hit.length === 1 ? hit[0].selector as string : hit.map(entry => `${entry.selector} ×${countOf(entry)}`).join(', ');
+        return { ruling: hit.map(entry => entry.ruling).join('; '), where };
     }
-    return undefined;
+    const bySurface = entries.find(entry => entry.surface !== undefined && entry.surface === surface);
+    return bySurface === undefined ? undefined : { ruling: bySurface.ruling, where: `the ${surface}` };
 };
 
 const pendingFor = (state: string, kind: AxePending['kind'], rule: string, registry: readonly AxePending[]): AxePending | undefined =>
@@ -206,7 +211,7 @@ export function axeLines(state: string, surface: 'main' | 'sidebar', result: Ful
     for (const rule of result.violations) {
         const declared = acceptedFor(rule, surface, accepted, 'violation');
         if (declared !== undefined) {
-            lines.push(`[axe] ${state}: violation ${rule.id} ×${rule.count} on ${declared.where} (accepted-as-design: ${declared.entry.ruling})`);
+            lines.push(`[axe] ${state}: violation ${rule.id} ×${rule.count} on ${declared.where} (accepted-as-design: ${declared.ruling})`);
             continue;
         }
         const pending = pendingFor(state, 'violation', rule.id, registry);
@@ -228,7 +233,7 @@ export function axeLines(state: string, surface: 'main' | 'sidebar', result: Ful
         }
         const declared = acceptedFor(rule, surface, accepted, 'incomplete');
         if (declared !== undefined) {
-            lines.push(`[axe] ${state}: incomplete ${rule.id} ×${rule.count} on ${declared.where} (accepted-as-design: ${declared.entry.ruling})`);
+            lines.push(`[axe] ${state}: incomplete ${rule.id} ×${rule.count} on ${declared.where} (accepted-as-design: ${declared.ruling})`);
             continue;
         }
         const pending = pendingFor(state, 'incomplete', rule.id, registry);

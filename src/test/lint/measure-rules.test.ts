@@ -8,7 +8,7 @@ import { STATES } from '../ui/v2/states';
  */
 const noHeights: Heights = {
     headers: [], compactRows: [], comfortableRows: [], comfortablePitches: [], tabStrip: undefined, detailsTabs: undefined, buttons: [], inputs: [],
-    iconButtons: [], tabs: [], checkBoxes: [], checkSelect: { fill: '', border: '' }, badges: [], progress: [],
+    iconButtons: [], toggles: [], tabs: [], checkBoxes: [], checkSelect: { fill: '', border: '' }, badges: [], progress: [],
 };
 
 const layout = (overrides: Partial<Layout> = {}, heights: Partial<Heights> = {}): Layout => ({
@@ -352,6 +352,11 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         const target = (hit: number) => layout({}, { iconButtons: [iconButton({ hit: { width: hit, height: hit } })] });
         expect(lineOf('sidebar-sections', target(24), 'DS-HEIGHT-8@sidebar-sections')).toMatchObject({ pass: true });
         expect(lineOf('sidebar-sections', target(23), 'DS-HEIGHT-8@sidebar-sections')).toMatchObject({ pass: false });
+        // UX-P2.6a: a section toggle's hit, the measurement behind its axe acceptance; measurable through toggles alone.
+        const toggle = (hit: number) => ({ label: 'section-header-installed', height: 22, hit: { width: 200, height: hit } });
+        expect(lineOf('sidebar-sections', { ...target(24), heights: { ...target(24).heights, toggles: [toggle(24)] } }, 'DS-HEIGHT-8@sidebar-sections')).toMatchObject({ pass: true, value: expect.stringContaining('section toggles hit 24 (at least 24)') });
+        expect(lineOf('sidebar-sections', { ...target(24), heights: { ...target(24).heights, toggles: [toggle(22)] } }, 'DS-HEIGHT-8@sidebar-sections')).toMatchObject({ pass: false });
+        expect(lineOf('sidebar-sections', layout({}, { toggles: [toggle(24)] }), 'DS-HEIGHT-8@sidebar-sections')).toMatchObject({ pass: true, value: 'section toggles hit 24 (at least 24)' });
         const boxes = layout({}, {
             checkBoxes: [{ width: 18, height: 18, radius: '3px', selected: { fill: 'rgb(0, 120, 212)', border: 'rgba(0, 120, 212, 0.5)' } }, { width: 13, height: 13, radius: '2px', selected: undefined }],
             checkSelect: { fill: '#0078d4', border: '#0078d480' },

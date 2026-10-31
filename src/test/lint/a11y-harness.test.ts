@@ -39,9 +39,9 @@ describe('the accessibility harness (UX-P0.23)', () => {
         // The design-advisor ruling of 2026-10-25 (UX-P0.25): the resolve pass decided the three undecided contrast cases of
         // UX-P0.23 in every state (run 40152178889), so no result is pending.
         expect(AXE_PENDING).toEqual([]);
-        expect(AXE_ACCEPTED.map(entry => `${entry.rule} ${entry.selector ?? entry.surface}`)).toEqual(['label-content-name-mismatch .nuiget-row-option', 'page-has-heading-one sidebar', 'target-size .nuiget-icon-button', 'target-size .nuiget-icon-button']);
-        expect(acceptedSelectors()).toEqual(['.nuiget-row-option', '.nuiget-icon-button']);
-        expect(acceptedTargetSelectors()).toEqual(['.nuiget-icon-button']);
+        expect(AXE_ACCEPTED.map(entry => `${entry.rule} ${entry.selector ?? entry.surface}`)).toEqual(['label-content-name-mismatch .nuiget-row-option', 'page-has-heading-one sidebar', 'target-size .nuiget-icon-button', 'target-size .nuiget-icon-button', 'target-size .nuiget-section-toggle', 'target-size .nuiget-section-toggle', 'target-size .nuiget-row-group', 'target-size .nuiget-row-group']);
+        expect(acceptedSelectors()).toEqual(['.nuiget-row-option', '.nuiget-icon-button', '.nuiget-section-toggle', '.nuiget-row-group']);
+        expect(acceptedTargetSelectors()).toEqual(['.nuiget-icon-button', '.nuiget-section-toggle', '.nuiget-row-group']);
     });
 
     it('accepts a violation a decision declares only on its selector or its surface', () => {
@@ -53,6 +53,15 @@ describe('the accessibility harness (UX-P0.23)', () => {
             '[axe] sidebar-sections: violation page-has-heading-one ×1 on the sidebar (accepted-as-design: DECISIONS.md 2026-10-25: the sidebar view has no h1)',
         ]);
         expect(accepted.failures).toEqual([]);
+        // UX-P2.6a: a rule whose nodes span two declared selectors; a node on none of them still fails.
+        const spanning = (count: number) => rule('target-size', [{ target: '.a' }], count, count, { '.nuiget-section-toggle': 2, '.nuiget-icon-button': 1 });
+        const spans = axeLines('sidebar-sections', 'sidebar', result({ violations: [spanning(3)] }), 'hard', []);
+        expect(spans.failures).toEqual([]);
+        expect(spans.lines[1]).toContain('violation target-size ×3 on .nuiget-icon-button ×1, .nuiget-section-toggle ×2 (accepted-as-design:');
+        expect(axeLines('sidebar-sections', 'sidebar', result({ violations: [spanning(4)] }), 'hard', []).failures).toEqual(['violation target-size ×4']);
+        const groups = axeLines('main-installed-single', 'main', result({ incomplete: [rule('target-size', [{ target: '.a' }], 2, 2, { '.nuiget-row-group': 1, '.nuiget-icon-button': 1 })] }), 'hard', []);
+        expect(groups.failures).toEqual([]);
+        expect(groups.lines[1]).toContain('incomplete target-size ×2 on .nuiget-icon-button ×1, .nuiget-row-group ×1');
         // Not a pending line: the capture suite's pending list leaves it out.
         expect(accepted.lines.filter(line => /\(pending [^)]+\)$/.test(line))).toEqual([]);
         // One node off a row option, or the heading rule on the main panel, fails.
@@ -356,7 +365,7 @@ describe('the accessibility harness (UX-P0.23)', () => {
         });
         expect(momentLines('hover-main', 'light-2026', facts, 'hard', [{ where: 'hover-main', theme: 'light-2026', rule: 'color-contrast', item: 'P4.6' }]).failures).toEqual([]);
         // Axe's check messages follow the sample, as the full run's lines carry them.
-        expect(momentLines('hover-sidebar', 'dark-modern', { violations: [], passes: 15, acceptedTargets: 1 }, 'hard', []).lines[0]).toBe('[contrast] hover-sidebar@dark-modern: 15 nodes passed, 0 violations, 0 pairs measured, accepted target-size 1 on .nuiget-icon-button (hard)');
+        expect(momentLines('hover-sidebar', 'dark-modern', { violations: [], passes: 15, acceptedTargets: 1 }, 'hard', []).lines[0]).toBe('[contrast] hover-sidebar@dark-modern: 15 nodes passed, 0 violations, 0 pairs measured, accepted target-size 1 on .nuiget-icon-button, .nuiget-section-toggle, .nuiget-row-group (hard)');
         const withReasons = { violations: [{ rule: 'target-size' as const, count: 3, sample: 'li:nth-child(2) > a', reasons: [{ text: 'Target has insufficient size (16px by 16px, should be at least 24px by 24px)', count: 3 }] }], passes: 5 };
         expect(momentLines('readme', 'dark-modern', withReasons, 'hard', [{ where: 'readme', theme: 'dark-modern', rule: 'target-size', item: 'P3.4' }]).lines[1])
             .toBe('[contrast] readme@dark-modern: violation target-size ×3: li:nth-child(2) > a; "Target has insufficient size (16px by 16px, should be at least 24px by 24px)" ×3 (pending P3.4)');

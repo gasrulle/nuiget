@@ -520,6 +520,10 @@ describe('the in-page collector on stubbed geometry (UX-P0.10, UX-P0.11)', () =>
         </main>`;
         const facts = collect().heights;
         expect(collect().flatList).toBe(true);
+        expect(facts.toggles).toEqual([]);
+        // UX-P2.6a: a section toggle's hit is read on the button alone; jsdom's ::after has no box, so the hit reads its rect.
+        (document.querySelector('[data-testid="nuiget-app"]') as HTMLElement).insertAdjacentHTML('beforeend', '<button class="nuiget-section-toggle" data-testid="section-header-installed" data-rect="0,100,200,124"></button><span class="nuiget-section-toggle" data-testid="section-header-direct" data-rect="0,130,200,150"></span>');
+        expect(collect().heights.toggles).toEqual([{ label: 'section-header-installed', height: 24, hit: { width: 200, height: 24 } }]);
         expect(facts.iconButtons).toMatchObject([
             { inHeader: true, width: 20, height: 20, label: 'refresh-button', glyph: { w: 16, h: 16 }, band: undefined, multi: false },
             { inHeader: false, width: 22, height: 22, label: 'Uninstall', glyph: { w: 16, h: 16 }, band: 'current', multi: false },
