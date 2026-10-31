@@ -97,6 +97,43 @@ async function installedListAtTop(): Promise<void> {
     await script<void>('document.querySelector(\'[data-testid="installed-list"]\').scrollTop = 0;');
 }
 
+const READ_TREE = `
+const list = document.querySelector('[data-testid="installed-list"]');
+const indexes = [...list.querySelectorAll('.nuiget-listbox-sizer > [data-index]')].map(row => Number(row.getAttribute('data-index')));
+return { top: list.scrollTop, client: list.clientHeight, scroll: list.scrollHeight, last: Math.max(-1, ...indexes) };
+`;
+
+/**
+ * Steps the tree to its end so every item has been measured once: the sizer holds measured heights for rendered items and
+ * estimates for the others, so without this its height depends on what the window held as the answers streamed (UX-P2.1e,
+ * design-advisor ruling; P2.2's per-kind estimate may retire it). Ends with `scrollHeight` stable and the last row rendered.
+ */
+async function measureTree(): Promise<void> {
+    type Tree = { top: number; client: number; scroll: number; last: number };
+    const read = () => script<Tree>(READ_TREE);
+    const atEnd = (tree: Tree) => tree.top + tree.client >= tree.scroll - 1;
+    const first = await read();
+    for (let step = Math.ceil(first.scroll / first.client) + 2; step > 0; step--) {
+        const before = await read();
+        if (atEnd(before)) {
+            break;
+        }
+        await script<void>('const list = document.querySelector(\'[data-testid="installed-list"]\'); list.scrollTop += list.clientHeight;');
+        await poll(async () => {
+            const now = await read();
+            return now.last > before.last || atEnd(now) ? true : undefined;
+        }, 'the next rows of the tree rendered', 10_000);
+    }
+    let previous = -1;
+    let unchanged = 0;
+    await poll(async () => {
+        const now = await read();
+        unchanged = now.scroll === previous ? unchanged + 1 : 0;
+        previous = now.scroll;
+        return unchanged >= 2 && atEnd(now) ? true : undefined;
+    }, 'the tree\'s scrollHeight stable at its end', 30_000);
+}
+
 /**
  * Gateway's Installed list with its rows and their lite metadata. The rendered window shrinks with the pane's width: the
  * wait is on what every width renders, never on a row by position (UX-P2.1e).
@@ -130,6 +167,7 @@ async function expandTransitive(): Promise<void> {
     // The tree is virtualized: at its end, with the group still collapsed, the last direct rows sit above the group row,
     // and expanding grows the content below this offset (PF-2's picture).
     await findByTestId('installed-list', 60_000);
+    await measureTree();
     await poll(async () => {
         await script<void>('document.querySelector(\'[data-testid="installed-list"]\').scrollTop = 1e9;');
         return (await driverOf().findElements(By.css('[data-testid="section-header-transitive"]'))).length > 0 ? true : undefined;
@@ -201,6 +239,9 @@ const REACH: Record<string, Reach> = {
             await until('/\\d/.test(document.querySelector(\'[data-testid="installed-tab"]\').textContent) && Number(document.querySelector(\'[data-testid^="group-row-"] [role="treeitem"]\')?.getAttribute("aria-setsize")) >= 3', 'the settled fan-out');
             // UX-P0.fix-2 (P0 phase review, design-2): the settled data before the shot, P0.23's predicate (its goldens show it).
             await poll(async () => ((await script<string>(UNSETTLED)) === '' ? true : undefined), 'every project\'s counts and authors', 120_000);
+            await measureTree();
+            await script<void>('document.querySelector(\'[data-testid="installed-list"]\').scrollTop = 0;');
+            await poll(async () => ((await script<string>(UNSETTLED)) === '' ? true : undefined), 'every project\'s counts and authors after the measure pass', 120_000);
         },
     },
     'main-installed-unsupported': {
