@@ -1021,7 +1021,7 @@ const copyEnds = [
 const activeEl = document.activeElement && document.activeElement !== document.body && document.activeElement !== document.documentElement ? document.activeElement : null;
 const focusKind = el => {
     const role = el.getAttribute('role');
-    if (role === 'option') return 'option';
+    if (role === 'option' || role === 'treeitem') return 'option';
     if (role === 'tab') return 'tab';
     if (role === 'checkbox' || (el.tagName === 'INPUT' && el.type === 'checkbox')) return 'checkbox';
     if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') return 'input';

@@ -42,7 +42,7 @@ describe('2.0 main panel: Installed tab', () => {
         this.timeout(180_000);
         // The first list needs the SDK probe and the project's sources: generous, and still bounded.
         const list = await findByTestId('installed-list', 120_000);
-        expect(await list.getAttribute('role')).to.equal('listbox');
+        expect(await list.getAttribute('role')).to.equal('tree');
         expect(await list.getAttribute('aria-multiselectable')).to.equal('true');
         await findByTestId('package-row-serilog', 120_000);
         await findByTestId('package-row-newtonsoft.json');
