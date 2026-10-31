@@ -47,6 +47,8 @@
     "      img \"Verified: the package id prefix is reserved by its owner\"",
     "    option \"ZiggyCreatures.FusionCache.Serialization.NewtonsoftJson #\"",
     "      img \"Verified: the package id prefix is reserved by its owner\"",
+    "    option \"Quartz.Serialization.Json #\"",
+    "      img \"Verified: the package id prefix is reserved by its owner\"",
     "  separator \"Resize the package list\" {sash}",
     "  region \"Package details\" {package-details-panel}",
     "  status \"\" {status-live}"

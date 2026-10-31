@@ -54,6 +54,7 @@
     "      treeitem \"StackExchange.Redis #\" [level 3]",
     "        img \"Verified: the package id prefix is reserved by its owner\"",
     "      treeitem \"Mapster #\" [level 3]",
+    "      treeitem \"Gateway.csproj #\" [expanded, level 2]",
     "  separator \"Resize the package list\" {sash}",
     "  region \"Package details\" {package-details-panel}",
     "  status \"\" {status-live}"

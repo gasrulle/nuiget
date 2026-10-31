@@ -27,6 +27,8 @@
     "      button \"Select all\" [not pressed] {select-all-button}",
     "      button \"Uninstall selected (#)\" [disabled] {uninstall-selected-button}",
     "    tree \"Installed packages\" [multiselectable] {installed-list}",
+    "      treeitem \"Microsoft.Extensions.Options.ConfigurationExtensions #\" [level 2]",
+    "        img \"Verified: the package id prefix is reserved by its owner\"",
     "      treeitem \"Microsoft.Extensions.Logging.Abstractions #\" [level 2]",
     "        img \"Verified: the package id prefix is reserved by its owner\"",
     "      treeitem \"Microsoft.Extensions.Http #\" [level 2]",
