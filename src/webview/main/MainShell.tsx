@@ -190,10 +190,7 @@ export function MainShell({ installed, updates, browse, details, viewState }: Ma
                             {supported.length > 1 ? <option value={ALL_PROJECTS}>{`All Projects (${supported.length})`}</option> : null}
                             {supported.map(project => <option key={project.path} value={project.path} title={project.path}>{project.name}</option>)}
                         </Select>
-                        <span className="nuiget-main-actions">
-                            <SourcesControl announce={announce} />
-                            <IconButton label="Refresh" data-testid="refresh-button" disabled={refreshing} onClick={refresh}>{refreshing ? <LoadingIcon /> : <SyncIcon />}</IconButton>
-                        </span>
+                        <SourcesControl announce={announce} end={<IconButton label="Refresh" data-testid="refresh-button" disabled={refreshing} onClick={refresh}>{refreshing ? <LoadingIcon /> : <SyncIcon />}</IconButton>} />
                     </div>
                 </div>
                 <div className="nuiget-main-search" role="search">

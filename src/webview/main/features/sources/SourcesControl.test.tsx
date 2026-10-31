@@ -7,6 +7,7 @@ import { createFakeHost, type FakeHost } from '../../../shared/bus/testSupport';
 import { axeRuleOutcome, expectFocusAfterClose } from '../../../shared/primitives/testSupport';
 import { StoreProvider } from '../../../shared/store/StoreProvider';
 import { MainShell } from '../../MainShell';
+import { SourcesControl } from './SourcesControl';
 
 const A = '/w/App/App.csproj';
 const NUGET = 'https://api.nuget.org/v3/index.json';
@@ -210,5 +211,19 @@ describe('main panel: sources', () => {
         await hostSays(() => host.event('sources/health', { failed: [] }));
         expect([...selector().options].map(option => option.textContent)).toEqual(['All sources', 'nuget.org', 'Contoso']);
         expect(screen.queryByTestId('source-health-indicator')).toBeNull();
+    });
+
+    it('the gear, the health indicator and the shell\'s end control share the 4 px action group; the select stands outside it', async () => {
+        const host = createFakeHost();
+        render(<StoreProvider bus={host.bus}><SourcesControl announce={() => undefined} end={<button type="button" data-testid="end">End</button>} /></StoreProvider>);
+        await hostSays(() => host.respond(host.requests('session/get')[0], snapshot(1)));
+        await hostSays(() => host.respond(host.requests('sources/list')[0], { sources: SOURCES, failed: [{ url: SOURCES[0].url, error: 'ECONNREFUSED' }] }, 1));
+        const group = screen.getByTestId('source-settings').parentElement as HTMLElement;
+        expect(group).toHaveClass('nuiget-main-actions');
+        expect(group).not.toContainElement(screen.getByTestId('source-selector'));
+        const order = [screen.getByTestId('source-settings'), screen.getByTestId('source-health-indicator'), screen.getByTestId('end')];
+        expect(order.every(element => group.contains(element))).toBe(true);
+        expect(order[0].compareDocumentPosition(order[1]) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+        expect(order[1].compareDocumentPosition(order[2]) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     });
 });

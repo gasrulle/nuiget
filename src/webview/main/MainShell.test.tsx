@@ -89,6 +89,7 @@ describe('main panel shell', () => {
         expect(screen.getByTestId('main-header').tagName).toBe('HEADER');
         expect(screen.getByTestId('main-header')).toContainElement(screen.getByRole('heading', { level: 1 }));
         expect(screen.getByTestId('main-header')).toContainElement(search());
+        expect(screen.getByTestId('refresh-button').parentElement).toHaveClass('nuiget-main-actions');
         expect(screen.getByRole('search')).toContainElement(search());
         expect(screen.getByRole('checkbox', { name: 'Restore after operations' })).toBeChecked();
         expect(screen.getByRole('checkbox', { name: 'Include prerelease' })).not.toBeChecked();

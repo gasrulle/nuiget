@@ -8,6 +8,8 @@ import { SourceSettingsDialog } from './SourceSettingsDialog';
 
 export interface SourcesControlProps {
     announce: (message: string) => void;
+    /** The control after the gear and the health indicator in the header's action group, 4 px apart (DS-GRID-1 group gap): the shell's Refresh button. */
+    end?: React.ReactNode;
 }
 
 /**
@@ -17,7 +19,7 @@ export interface SourcesControlProps {
  * reach is marked "(unreachable)" with its error as the tooltip, and a warning button retries through `sources/refresh`,
  * which resets the health tracker; the list follows through `sources/health`.
  */
-export function SourcesControl({ announce }: SourcesControlProps): React.JSX.Element {
+export function SourcesControl({ announce, end }: SourcesControlProps): React.JSX.Element {
     const bus = useMessageBus();
     const { session } = useSession();
     const { set } = useSessionActions();
@@ -49,18 +51,21 @@ export function SourcesControl({ announce }: SourcesControlProps): React.JSX.Ele
                     </option>
                 ))}
             </Select>
-            <IconButton label="NuGet sources" data-testid="source-settings" onClick={() => setOpen(true)}><SettingsGearIcon /></IconButton>
-            {failed.length > 0 ? (
-                <span className="nuiget-source-health"><IconButton
-                    label={`${failed.length} source${failed.length === 1 ? '' : 's'} unreachable. Retry`}
-                    data-testid="source-health-indicator"
-                    onClick={() => {
-                        bus.request('sources/refresh', {}).catch(() => undefined);
-                    }}
-                >
-                    <WarningIcon />
-                </IconButton></span>
-            ) : null}
+            <span className="nuiget-main-actions">
+                <IconButton label="NuGet sources" data-testid="source-settings" onClick={() => setOpen(true)}><SettingsGearIcon /></IconButton>
+                {failed.length > 0 ? (
+                    <span className="nuiget-source-health"><IconButton
+                        label={`${failed.length} source${failed.length === 1 ? '' : 's'} unreachable. Retry`}
+                        data-testid="source-health-indicator"
+                        onClick={() => {
+                            bus.request('sources/refresh', {}).catch(() => undefined);
+                        }}
+                    >
+                        <WarningIcon />
+                    </IconButton></span>
+                ) : null}
+                {end}
+            </span>
             <SourceSettingsDialog open={open} onClose={() => setOpen(false)} announce={announce} />
         </>
     );
