@@ -215,7 +215,7 @@ const REACH: Record<string, Reach> = {
             // The banner primitive's class: the main panel renders this banner without a test id.
             await until('[...document.querySelectorAll(".nuiget-banner--warning")].some(banner => banner.textContent.includes("Unsupported project"))', 'the Unsupported banner');
             await until('document.body.textContent.includes("provisional")', 'the provisional badge');
-            await until('(() => { const row = document.querySelector(\'[data-testid="group-row-transitive"]\'); return row === null || (/\\(\\d+\\)/.test(row.textContent ?? "") && row.querySelector(".nuiget-spinner") === null); })()', 'the transitive section settled (count, no spinner)', 60_000);
+            await until('(() => { const row = document.querySelector(\'[data-testid="group-row-transitive"]\'); return row === null || (/^\\d+$/.test(row.querySelector(".nuiget-badge--count")?.textContent ?? "") && row.querySelector(".nuiget-spinner") === null); })()', 'the transitive section settled (count, no spinner)', 60_000);
         },
     },
     'main-installed-cpm': {
@@ -224,7 +224,7 @@ const REACH: Record<string, Reach> = {
             await clickVisible('installed-tab');
             await installedListAtTop();
             await findByTestId('package-row-mapster', 120_000);
-            await until('(() => { const row = document.querySelector(\'[data-testid="group-row-transitive"]\'); return row === null || (/\\(\\d+\\)/.test(row.textContent ?? "") && row.querySelector(".nuiget-spinner") === null); })()', 'the transitive section settled (count, no spinner)', 60_000);
+            await until('(() => { const row = document.querySelector(\'[data-testid="group-row-transitive"]\'); return row === null || (/^\\d+$/.test(row.querySelector(".nuiget-badge--count")?.textContent ?? "") && row.querySelector(".nuiget-spinner") === null); })()', 'the transitive section settled (count, no spinner)', 60_000);
         },
     },
     'main-installed-details': {

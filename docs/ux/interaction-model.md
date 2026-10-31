@@ -270,7 +270,8 @@ project has several and one block per project in All Projects; no version select
 | `sash` | Split sash |
 | `main-header` | The main panel's header bar (title, check boxes, selectors, gear, refresh): its insets, height and wrapping are measured on it |
 | `installed-toolbar`, `updates-toolbar` | The bulk toolbars of the Installed and Updates tabs: their start and end edges are measured against the list's (V2) |
-| `section-box-<name>` | The box of a section header (chevron, title, count, badges, actions), one per `section-header-<name>` with the same `<name>`, and the heading of each Required by block of the details pane (`required-by-<framework or project>`, which has no toggle); it carries `data-variant`: `pane` (sidebar sections), `group` (a project or framework group in a list) or `level` (a nested level such as a target framework). Its top and bottom gaps (V4) and its badges' end inset (V3) are measured on it |
+| `section-box-<name>` | The box of a section header (chevron, title, spinner, badges, actions, count), one per `section-header-<name>` with the same `<name>`, and the heading of each Required by block of the details pane (`required-by-<framework or project>`, which has no toggle); it carries `data-variant`: `pane` (sidebar sections), `group` (a project or framework group in a list) or `level` (a nested level such as a target framework). Its top and bottom gaps (V4) and its badges' end inset (V3) are measured on it |
+| `section-box-<name>`, the pane and group forms | The pane-header form: 28 px with a 12 px semibold capitalised title and the count badge at the end; 22 px with an 11 px bold uppercase title under classic; the hover tint and corners of the pane variant at P3.7a |
 
 State markers (§4) and layer roots:
 
@@ -319,7 +320,6 @@ is a project or section name lower-cased, as above.
 
 | Added by | Test id or attribute | Element |
 |---|---|---|
-| Installed slice | `section-box-<name>` with `data-variant` `pane` under `data-look` `modern` | The Modern UI header: a pane-style section header at 28 px with a 12 px semibold title, the hover tint and rounded corners; the same box is 22 px with an 11 px bold uppercase title under `classic` |
 | Installed slice | `data-vscode-context` on `package-row-<id>` | The context-menu anchor on both surfaces: the row wrapper's context object (`webviewSection` = `installedRow`, `updateRow`, `browseRow` or `transitiveRow`, the row's ids and versions, `preventDefaultContextMenuItems`), which the menu items' `when` clauses read (ADR-013) |
 | Installed slice | `confirm-dialog-do-not-ask` | The "Do not ask me again" check box of the Delete key's confirmation |
 | Installed slice | `installed-progress`, `installed-empty`, `installed-error`, `installed-unsupported`, `installed-provisional` | The Installed tab's 2 px progress bar (loading and revalidating), empty state, inline error, unsupported banner, and the provisional badge of the Direct packages header |

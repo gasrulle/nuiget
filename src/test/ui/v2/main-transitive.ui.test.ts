@@ -85,7 +85,7 @@ describe('2.0 main panel: transitive packages', () => {
             await (await (await findByTestId('transitive-restore-banner')).findElement(By.css('button'))).click();
             await poll(async () => ((await listed()) === 'rows' ? true : undefined), 'the transitive rows after the restore', 240_000);
         }
-        await poll(async () => (((await header.getAttribute('textContent')) ?? '').includes('Transitive packages (1)') ? true : undefined), 'the counted header', 30_000);
+        await poll(async () => ((await driverOf().executeScript<string | null>('return document.querySelector(\'[data-testid="section-box-transitive"] .nuiget-badge--count\')?.textContent ?? null;')) === '1' && ((await header.getAttribute('textContent')) ?? '').includes('Transitive packages') ? true : undefined), 'the counted header', 30_000);
         const headerRow = await driverOf().executeScript<string>('return document.querySelector(\'[data-testid="section-header-transitive"]\').closest(".nuiget-section-header").textContent;');
         expect(headerRow).to.contain('net8.0');
         // The row's lite metadata (icon, authors, Verified) follows the list: the screenshot waits for it.

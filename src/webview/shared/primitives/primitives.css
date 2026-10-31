@@ -125,28 +125,38 @@
 }
 
 .nuiget-row-group {
+    position: relative;
     display: flex;
     flex: 1;
     align-items: center;
-    gap: var(--nuiget-space-3);
     min-width: 0;
     min-height: inherit;
-    padding: 0 var(--nuiget-space-4);
+    padding: 0;
+    border-radius: var(--nuiget-radius-section-header);
+    outline: var(--nuiget-line-width) var(--nuiget-row-outline-style, none) var(--nuiget-row-outline-color, transparent);
+    outline-offset: calc(var(--nuiget-line-width) * -1);
     color: var(--nuiget-color-fg);
     cursor: default;
 }
 
-/* UX-P2.1d; the look is P2.6's. Fixed at the compact height so the estimate equals the row (UX-P2.2). */
+/* Modern UI's hover tint, none in classic: the token is the section-header colour there. */
+.nuiget-row-group:hover {
+    background: var(--nuiget-color-section-header-hover-bg);
+}
+
+/* M a 1 px separator inset 4 / C full width (paneHeaders.css, DS-DIVIDER-1), above every level-1 group but the first. A border: axe cannot read the contrast of text over a pseudo element with a background. */
+.nuiget-row-group--divided::before {
+    content: '';
+    position: absolute;
+    inset: 0 var(--nuiget-pane-header-margin-x) auto;
+    border-block-start: var(--nuiget-line-width) solid var(--nuiget-color-section-header-border);
+}
+
+/* Fixed at the pane-header height so the estimate equals the row (UX-P2.2). */
 .nuiget-row[data-row-kind="group"] {
-    block-size: var(--nuiget-row-height-compact);
+    block-size: var(--nuiget-pane-header-height);
 }
 
-/* UX-P2.1d; the look is P2.6's. */
-[data-row-kind="group"] > .nuiget-row-group {
-    padding: 0;
-}
-
-/* UX-P2.1d; the look is P2.6's. */
 .nuiget-row-group > .nuiget-section-header {
     flex: 1;
     min-width: 0;
@@ -214,7 +224,9 @@
 
 /* Last, so a focused row keeps its ring whatever else it is. The main panel rings after a click too (DS-FOCUS-3). */
 .nuiget-row-option--compact:focus-visible,
-.nuiget-row-option--comfortable:focus {
+.nuiget-row-option--comfortable:focus,
+.nuiget-row-group--compact:focus-visible,
+.nuiget-row-group--comfortable:focus {
     --nuiget-row-outline-style: solid;
     --nuiget-row-outline-color: var(--nuiget-color-list-focus-outline);
 }
@@ -438,7 +450,6 @@
 /* ── Focus ── */
 
 /* An outline, not a shadow: it is still drawn in forced-colours mode, where the token is `Highlight`. */
-.nuiget-row-group:focus-visible,
 .nuiget-select-input:focus-visible,
 .nuiget-text-field:focus-visible,
 .nuiget-icon-button:focus-visible,
@@ -517,15 +528,29 @@
     position: relative;
     display: inline-flex;
     align-items: center;
-    padding: 0 var(--nuiget-space-2);
-    border: var(--nuiget-line-width) solid transparent;
-    border-radius: var(--nuiget-radius-sm);
+    justify-content: center;
+    box-sizing: border-box;
+    border: var(--nuiget-line-width) solid var(--nuiget-color-contrast-border);
     background: var(--nuiget-color-badge-bg);
     color: var(--nuiget-color-badge-fg);
-    font-size: var(--nuiget-font-size-sm);
-    line-height: var(--nuiget-line-height);
+    font-size: var(--nuiget-font-size-badge);
+    line-height: 1;
     white-space: nowrap;
     forced-color-adjust: none;
+}
+
+/* The workbench's count badge (DS-HEIGHT-10): round in Modern UI, 11 px corners in classic. The line is high contrast's (DS-HC-1). */
+.nuiget-badge--count {
+    min-inline-size: var(--nuiget-badge-size);
+    min-block-size: var(--nuiget-badge-size);
+    padding: var(--nuiget-badge-padding-block) var(--nuiget-badge-padding-inline);
+    border-radius: var(--nuiget-radius-badge);
+}
+
+/* A badge of words (DS-HEIGHT-10, DS-RADIUS-2): a pill in Modern UI, 2 px corners in classic. */
+.nuiget-badge--label {
+    padding: var(--nuiget-label-badge-padding-block) var(--nuiget-label-badge-padding-inline);
+    border-radius: var(--nuiget-radius-label-badge);
 }
 
 /*
@@ -568,49 +593,84 @@
 /* ── SectionHeader ── */
 
 /* DS-HEIGHT-8's 20 px box in a sidebar section header. */
-/* The hit stays inside the document (DS-OVERFLOW-6) until P3.7a's 6 px end inset. */
-.nuiget-section-header[data-variant="pane"] {
-    --nuiget-icon-button-size: var(--nuiget-action-size-compact);
-    padding-inline-end: calc((var(--nuiget-target-min) - var(--nuiget-action-size-compact)) / 2);
-}
-
+/* One anatomy for both surfaces (X36): chevron, title, spinner, then badges, actions and the count at the end inset. The carrier is the inset a caller's context sets. */
 .nuiget-section-header {
+    position: relative;
     display: flex;
     align-items: center;
+    gap: var(--nuiget-space-2);
+    box-sizing: border-box;
+    padding-inline: var(--nuiget-section-header-inset, var(--nuiget-inset));
+    border-radius: var(--nuiget-radius-section-header);
+}
+
+/* DS-HEIGHT-1, DS-TYPE-5, DS-INSET-3 b; the 20 px button's 24 px hit stays inside the document (DS-OVERFLOW-6). The start x, the colours and the top line are P3.7a's in sidebar.css. */
+.nuiget-section-header[data-variant="pane"] {
+    --nuiget-icon-button-size: var(--nuiget-action-size-compact);
+    --nuiget-section-header-inset: 0;
+    --nuiget-section-title-size: var(--nuiget-font-size-section-title);
+    --nuiget-section-title-weight: var(--nuiget-font-weight-section-title);
+    --nuiget-section-title-transform: var(--nuiget-text-transform-section-title);
+    block-size: var(--nuiget-pane-header-height);
+    padding-inline-start: var(--nuiget-space-2);
+    padding-inline-end: var(--nuiget-pane-header-padding-end);
+}
+
+/* A main-list group header is a pane header (T-13, DECISIONS round 1). */
+.nuiget-section-header[data-variant="group"] {
+    --nuiget-section-title-size: var(--nuiget-font-size-section-title);
+    --nuiget-section-title-weight: var(--nuiget-font-weight-section-title);
+    --nuiget-section-title-transform: var(--nuiget-group-title-transform, var(--nuiget-text-transform-section-title));
+    block-size: var(--nuiget-pane-header-height);
+}
+
+/* A nested level reads at the body size in normal case (DS-TYPE-5's details clause). */
+.nuiget-section-header[data-variant="level"] {
+    --nuiget-section-title-size: var(--nuiget-font-size-md);
+    --nuiget-section-title-weight: var(--nuiget-font-weight-semibold);
+    --nuiget-section-title-transform: none;
     min-height: var(--nuiget-row-height-compact);
 }
 
-/* The heading is there for the outline of the page; it looks like the button it holds. */
+/* The heading is there for the outline of the page; it looks like the button it holds. It sets its own weight (DS-TYPE-9). */
 .nuiget-section-heading {
     display: flex;
     flex: 1;
     min-width: 0;
     margin: 0;
-    font-size: var(--nuiget-font-size-sm);
-    font-weight: 600;
+    font-size: var(--nuiget-section-title-size, var(--nuiget-font-size-section-title));
+    font-weight: var(--nuiget-section-title-weight, var(--nuiget-font-weight-section-title));
 }
 
 .nuiget-section-toggle {
+    position: relative;
     display: flex;
     flex: 1;
     align-items: center;
     gap: var(--nuiget-space-2);
     min-width: 0;
-    min-height: var(--nuiget-target-min);
-    padding: 0 var(--nuiget-space-2);
+    padding: 0;
     border: 0;
     background: transparent;
-    color: var(--nuiget-color-fg);
+    color: inherit;
     font: inherit;
     text-align: start;
-    text-transform: uppercase;
     cursor: pointer;
 }
 
+/* The toggle is as tall as its content: its 24 px pointer target in every header (DS-HEIGHT-8's form). */
+.nuiget-section-toggle::after {
+    content: '';
+    position: absolute;
+    inset: calc((100% - var(--nuiget-target-min)) / 2) 0;
+}
+
+/* The transform is the title's alone: badges and the count text keep their case. */
 .nuiget-section-title {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    text-transform: var(--nuiget-section-title-transform, var(--nuiget-text-transform-section-title));
 }
 
 .nuiget-section-chevron {
@@ -618,15 +678,35 @@
     transition: transform var(--nuiget-duration-fast) var(--nuiget-easing);
 }
 
-.nuiget-section-toggle[aria-expanded="true"] .nuiget-section-chevron,
 .nuiget-section-chevron--expanded {
     transform: rotate(90deg);
 }
 
+.nuiget-section-badges,
 .nuiget-section-actions {
     display: flex;
     flex: none;
     align-items: center;
+    gap: var(--nuiget-space-2);
+}
+
+.nuiget-section-count {
+    display: inline-flex;
+    flex: none;
+    margin-inline-start: auto;
+}
+
+.nuiget-section-count-text {
+    color: var(--nuiget-color-fg-muted);
+    font-size: var(--nuiget-font-size-sm);
+    font-weight: var(--nuiget-font-weight-regular);
+    white-space: nowrap;
+}
+
+/* A spinner is no pointer target; it must fit a 22 px header. */
+.nuiget-section-header .nuiget-spinner {
+    min-width: 0;
+    min-height: 0;
 }
 
 /* ── Button (the action of an empty state or a banner) ── */

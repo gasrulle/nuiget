@@ -38,7 +38,6 @@ body {
 
 .nuiget-sidebar-fidelity {
     display: inline-flex;
-    padding-inline-end: var(--nuiget-space-4);
 }
 
 /* Browse results take the place of the sections; their list scrolls inside. */
@@ -99,6 +98,12 @@ body {
 }
 
 /* An All Projects project header is a tree level: normal case, indented by workbench.tree.indent, and its rows with it. */
+/* A project header's chevron and title keep their own x and normal case (P3.7c). */
+.nuiget-sidebar-project {
+    --nuiget-section-header-inset: 0;
+    --nuiget-group-title-transform: none;
+}
+
 .nuiget-sidebar-project .nuiget-section-heading {
     font-size: var(--nuiget-font-size-md);
     font-weight: normal;
@@ -106,7 +111,6 @@ body {
 
 .nuiget-sidebar-project .nuiget-section-toggle {
     padding-inline-start: calc(var(--nuiget-space-2) + var(--nuiget-tree-indent));
-    text-transform: none;
 }
 
 .nuiget-sidebar-project .nuiget-row-option {

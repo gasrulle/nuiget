@@ -72,7 +72,9 @@ describe('sidebar parity: chrome and indent (P9.10)', () => {
     it('rows start at the section title', async () => {
         await mountWith([pkg('Serilog')]);
         expect(getComputedStyle(option('Serilog')).paddingInlineStart).toBe(SECTION_ROW_START);
-        expect(getComputedStyle(screen.getByTestId('section-header-installed')).textTransform).toBe('uppercase');
+        // jsdom resolves no var(): the title reads the section-title type through the pane header's carrier.
+        expect(screen.getByTestId('section-box-installed')).toHaveAttribute('data-variant', 'pane');
+        expect(getComputedStyle(screen.getByTestId('section-header-installed').querySelector('.nuiget-section-title') as HTMLElement).textTransform).toContain('--nuiget-section-title-transform');
     });
 
     it('All Projects project headers are in normal case and name their path', async () => {
@@ -86,7 +88,12 @@ describe('sidebar parity: chrome and indent (P9.10)', () => {
 
         const header = screen.getByTestId('section-header-project-app');
         expect(header).toHaveAttribute('title', A);
-        expect(getComputedStyle(header).textTransform).toBe('none');
+        // The project's context switches the group look's transform off through its carrier (DS-TYPE-5's sidebar clause is P3.7a's).
+        const box = header.closest('.nuiget-section-header') as HTMLElement;
+        expect(box).toHaveAttribute('data-variant', 'group');
+        expect(getComputedStyle(header.querySelector('.nuiget-section-title') as HTMLElement).textTransform).toContain('--nuiget-section-title-transform');
+        expect(getComputedStyle(box).getPropertyValue('--nuiget-section-title-transform')).toContain('--nuiget-group-title-transform');
+        expect(getComputedStyle(header.closest('.nuiget-sidebar-project') as HTMLElement).getPropertyValue('--nuiget-group-title-transform')).toBe('none');
         const appOption = within(screen.getByTestId('sidebar-installed-list-app')).getByRole('option');
         expect(getComputedStyle(appOption).paddingInlineStart).toBe(PROJECT_ROW_START);
     });

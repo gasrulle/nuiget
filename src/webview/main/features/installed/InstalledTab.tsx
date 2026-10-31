@@ -14,7 +14,7 @@ import { metadataKey, useTransitive } from '../../../shared/store/transitive';
 import type { ListView } from '../../MainShell';
 import { groupByFolder } from '../../../shared/allProjects/folderGroups';
 import { BulkUninstallDialog, type Removal } from './BulkUninstallDialog';
-import { directTitle, InstalledRow, statusBadges, visibleRows } from './InstalledProjectSection';
+import { directCount, InstalledRow, statusBadges, visibleRows } from './InstalledProjectSection';
 import { parseRowId, rowId, type Section, type TreeItem } from './installedTree';
 import { transitiveGroupContent, transitiveRow, transitiveTree } from './TransitiveSection';
 import { allProjectsTransitiveGroupContent, allProjectsTransitiveTree } from './AllProjectsTransitiveSection';
@@ -180,8 +180,8 @@ export function InstalledTab({ filter, vulnerableOnly, announce }: ListView): Re
                 const { result, metadata } = section;
                 const shown = result === undefined ? undefined : visibleRows(result, metadata, filter, vulnerableOnly);
                 const nothing = result === undefined || (result.unsupported !== undefined && result.packages.length === 0);
-                const title = nothing ? 'Direct packages' : directTitle(result.packages.length, shown?.items.length ?? 0, (filter.trim() !== '' || vulnerableOnly) && !(vulnerableOnly && metadata.size === 0));
-                list.push({ kind: 'group', id: 'direct', level: 1, title, section, variant: 'group' });
+                const count = nothing ? undefined : directCount(result.packages.length, shown?.items.length ?? 0, (filter.trim() !== '' || vulnerableOnly) && !(vulnerableOnly && metadata.size === 0));
+                list.push({ kind: 'group', id: 'direct', level: 1, title: 'Direct packages', count, section, variant: 'group' });
                 packagesOf(section, 'direct');
             }
             list.push(...transitivePart.items);
@@ -272,7 +272,7 @@ export function InstalledTab({ filter, vulnerableOnly, announce }: ListView): Re
                     testKey={item.id}
                     expanded={placement.expanded}
                     variant={item.variant}
-                    count={counted ? result.packages.length : undefined}
+                    count={item.count ?? (counted ? result.packages.length : undefined)}
                     busy={section !== undefined && (section.revalidating || (allMode && result === undefined && section.error === undefined))}
                     badges={statusBadges(result)}
                 />

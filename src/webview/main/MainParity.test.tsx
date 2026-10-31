@@ -31,11 +31,11 @@ describe('main panel parity: header controls and All Projects headers (P9.11)', 
         removeLayout();
     });
 
-    it('All Projects project headers are in normal case and the folder caption stays in capitals', () => {
+    it('All Projects project headers take the pane-header type and the folder caption stays in capitals (DS-TYPE-5, UX-P2.6)', () => {
         render(
             <>
                 <h2 className="nuiget-installed-folder-title">src</h2>
-                <section className="nuiget-installed-project nuiget-installed-project--grouped">
+                <section className="nuiget-installed-project">
                     <SectionHeader title="App.csproj" titleId="t" level={3} expanded onToggle={() => undefined} contentId="c" testKey="app" />
                 </section>
                 <section className="nuiget-installed-project">
@@ -43,13 +43,14 @@ describe('main panel parity: header controls and All Projects headers (P9.11)', 
                 </section>
             </>,
         );
-        const toggle = screen.getByTestId('section-header-app');
-        expect(getComputedStyle(toggle).textTransform).toBe('none');
-        // jsdom computes `normal` as its numeric weight.
-        expect(getComputedStyle(toggle.closest('h3') as HTMLElement).fontWeight).toMatch(/^(?:normal|400)$/);
+        // jsdom resolves no var(): the title reads the carrier and the box sets it as the direct header's does.
+        for (const key of ['app', 'direct']) {
+            const box = screen.getByTestId(`section-box-${key}`);
+            expect(box).toHaveAttribute('data-variant', 'group');
+            expect(getComputedStyle(box.querySelector('.nuiget-section-title') as HTMLElement).textTransform).toContain('--nuiget-section-title-transform');
+            expect(getComputedStyle(box.querySelector('h3') as HTMLElement).fontWeight).toContain('--nuiget-section-title-weight');
+        }
         expect(getComputedStyle(screen.getByText('src')).textTransform).toBe('uppercase');
-        expect(getComputedStyle(screen.getByTestId('section-header-direct')).textTransform).toBe('uppercase');
-        expect(getComputedStyle(screen.getByTestId('section-header-direct').closest('h3') as HTMLElement).fontWeight).not.toMatch(/^(?:normal|400)$/);
     });
 
     it('the header check boxes and the drop-down are sized and coloured by the tokens', () => {

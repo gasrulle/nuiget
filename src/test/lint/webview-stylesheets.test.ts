@@ -231,7 +231,7 @@ describe('2.0 webview stylesheets', () => {
         const rules = parseRules(readFileSync(PRIMITIVES, 'utf8'));
         const ring = rules.find(rule => rule.prelude.replace(/\s+/g, ' ') === '.nuiget-button:focus-visible, .nuiget-checkbox-input:focus-visible');
         expect(ring?.declarations).toContain('outline-offset: calc(var(--nuiget-line-width) * 2)');
-        const shared = rules.find(rule => rule.prelude.includes('.nuiget-row-group:focus-visible'));
+        const shared = rules.find(rule => rule.prelude.includes('.nuiget-select-input:focus-visible'));
         expect(shared?.prelude).not.toContain('.nuiget-button');
     });
 
@@ -252,7 +252,7 @@ describe('2.0 webview stylesheets', () => {
         expect(outlines.filter(declaration => !['outline: none', 'outline: var(--nuiget-line-width) solid var(--nuiget-color-focus)', 'outline: var(--nuiget-line-width) solid var(--nuiget-color-contrast-border)', 'outline: var(--nuiget-line-width) var(--nuiget-row-outline-style, none) var(--nuiget-row-outline-color, transparent)'].includes(declaration))).toEqual([]);
         // A row rings in `list.focusOutline` through its carriers (DS-FOCUS-2).
         const rowRing = rules.find(rule => rule.declarations.includes('--nuiget-row-outline-color: var(--nuiget-color-list-focus-outline)'));
-        expect(rowRing?.prelude.split(',').map(selector => selector.trim())).toEqual(['.nuiget-row-option--compact:focus-visible', '.nuiget-row-option--comfortable:focus']);
+        expect(rowRing?.prelude.split(',').map(selector => selector.trim())).toEqual(['.nuiget-row-option--compact:focus-visible', '.nuiget-row-option--comfortable:focus', '.nuiget-row-group--compact:focus-visible', '.nuiget-row-group--comfortable:focus']);
         expect(rowRing?.declarations).toContain('--nuiget-row-outline-style: solid');
     });
 

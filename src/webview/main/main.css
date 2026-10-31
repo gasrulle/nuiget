@@ -80,11 +80,6 @@ body {
     background: var(--nuiget-color-bg-sidebar);
 }
 
-/* The common left inset (P9.fix-6): the chevron of every section header of the list pane starts at it; the details pane and the sidebar keep theirs. */
-.nuiget-main-list .nuiget-section-toggle {
-    padding-inline-start: var(--nuiget-inset);
-}
-
 /* A column: the details keep their header in view and scroll their tab; the transitive view and the empty state scroll here. */
 .nuiget-main-details {
     display: flex;
@@ -247,15 +242,9 @@ body {
     font-size: var(--nuiget-font-size-md);
 }
 
-/* A dependency group's toggle (a level-4 SectionHeader): the framework moniker keeps its case, unlike a section title. */
-.nuiget-details-group h4 {
-    margin: 0;
-    font-size: var(--nuiget-font-size-md);
-    font-weight: normal;
-}
-
-.nuiget-details-group .nuiget-section-toggle {
-    text-transform: none;
+/* A dependency group's header starts at today's 4 px; P3.3a moves it. */
+.nuiget-details-group {
+    --nuiget-section-header-inset: var(--nuiget-space-2);
 }
 
 .nuiget-details-list {
@@ -572,19 +561,6 @@ body {
     font-size: var(--nuiget-font-size-sm);
     font-weight: 600;
     text-transform: uppercase;
-}
-
-/*
- * An All Projects project header is a tree level (1.x, MI12): normal case at the body size, as the sidebar's; the
- * folder caption above it stays in capitals. No hover: VS Code's pane headers have none (P9.10).
- */
-.nuiget-installed-project--grouped > .nuiget-section-header .nuiget-section-heading {
-    font-size: var(--nuiget-font-size-md);
-    font-weight: normal;
-}
-
-.nuiget-installed-project--grouped > .nuiget-section-header .nuiget-section-toggle {
-    text-transform: none;
 }
 
 /* ── Install in several projects ── */

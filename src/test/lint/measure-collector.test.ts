@@ -427,7 +427,7 @@ describe('the in-page collector on stubbed geometry (UX-P0.10, UX-P0.11)', () =>
             expect(facts.verifiedMarks).toEqual([{ w: 12, h: 12, colour: 'rgb(77, 170, 252)' }]);
             expect(facts.verifiedForeground).toBe('#4daafc');
             expect(facts.lookTokens['--nuiget-scrollbar-size']).toBe('8px');
-            expect(Object.keys(facts.lookTokens)).toHaveLength(8);
+            expect(Object.keys(facts.lookTokens)).toHaveLength(16);
         } finally {
             document.getElementById('type-facts')?.remove();
             document.getElementById('verified-facts')?.remove();
@@ -519,11 +519,18 @@ describe('the in-page collector on stubbed geometry (UX-P0.10, UX-P0.11)', () =>
           <div class="nuiget-listbox" role="listbox" data-rect="0,70,600,300"><div class="nuiget-row-actions nuiget-row-actions--current" data-rect="560,70,600,92"><button class="nuiget-icon-button" aria-label="Uninstall" data-rect="572,70,594,92"><svg data-rect="575,73,591,89"></svg></button></div></div>
         </main>`;
         const facts = collect().heights;
+        expect(collect().flatList).toBe(true);
         expect(facts.iconButtons).toMatchObject([
             { inHeader: true, width: 20, height: 20, label: 'refresh-button', glyph: { w: 16, h: 16 }, band: undefined, multi: false },
             { inHeader: false, width: 22, height: 22, label: 'Uninstall', glyph: { w: 16, h: 16 }, band: 'current', multi: false },
         ]);
         expect(facts.tabs.map(tab => [tab.id, tab.selected])).toEqual([['installed-tab', true], ['updates-tab', false]]);
+        // UX-P2.6: a badge's kind, and what a header box reads.
+        const app = document.querySelector('[data-testid="nuiget-app"]') as HTMLElement;
+        app.insertAdjacentHTML('beforeend', '<div class="nuiget-row" data-row-kind="group" data-rect="0,100,600,128"><div class="nuiget-row-group nuiget-row-group--divided" role="treeitem" aria-level="1" aria-posinset="2" data-rect="0,100,600,128"><div class="nuiget-section-header" data-testid="section-box-direct" data-variant="group" data-rect="0,100,600,128"><span class="nuiget-section-title" data-rect="16,106,120,122" data-text="16,106,120,122">Direct packages</span><span class="nuiget-section-count" data-rect="565,104,584,123"><span class="nuiget-badge nuiget-badge--count nuiget-badge--neutral" data-rect="565,104,584,123" data-text="570,108,580,119">3</span></span></div></div></div>');
+        const header = collect().sections.find(section => section.id === 'direct');
+        expect(header).toMatchObject({ inList: true, hasTitle: true, countBadges: 1, titleText: 'Direct packages', level: 1, posInSet: 2, trailingEnd: 16, paddingEnd: expect.any(Number) });
+        expect(collect().heights.badges.at(-1)).toMatchObject({ count: true, toned: false });
         // DS-COLOR-3 (UX-P2.5b): the hovered icon button and the toolbar's hover fill the rule compares it with.
         expect(facts.iconButtons.map(button => button.hovered)).toEqual([false, false]);
         const refresh = document.querySelector('[data-testid="refresh-button"]') as HTMLElement;

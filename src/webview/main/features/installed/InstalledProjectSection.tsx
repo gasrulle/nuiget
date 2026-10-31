@@ -105,9 +105,9 @@ export function statusBadges(result: InstalledResult | undefined): React.ReactNo
 }
 
 /**
- * The single-project group row's title, as 1.x wrote it: `Direct packages (N)`, `(k of N)` while a filter is on. While the
- * vulnerability data is unknown `@vulnerable` counts nothing, so the title keeps `(N)`.
+ * The single-project group row's count: the total, `k of N` while a filter is on. While the vulnerability data is unknown
+ * `@vulnerable` counts nothing, so the count stays the total.
  */
-export function directTitle(total: number, shown: number, filtering: boolean): string {
-    return filtering ? `Direct packages (${shown} of ${total})` : `Direct packages (${total})`;
+export function directCount(total: number, shown: number, filtering: boolean): number | string {
+    return filtering ? `${shown} of ${total}` : total;
 }

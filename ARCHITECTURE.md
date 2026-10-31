@@ -317,7 +317,7 @@ frontend test file is skipped and says so.
 ([ADR-008](docs/adr/008-webview-architecture.md)): `Listbox`, `Row`, `SectionHeader`, `IconButton`, `Badge`,
 `LiveStatus`, `EmptyState`, `Skeleton`, `Spinner`, `ProgressBar`, `Banner`, `Sash`, `Dialog`, `ConfirmDialog`,
 `Popover`, `Tabs`, `Toolbar`, `Button`, `Checkbox`, `Select`, `TextField`, `ErrorBoundary`, the icons and `cssVars`. Each has a test with React Testing Library
-that ends in an axe run. `Toolbar` owns its insets and places a bulk toolbar's primary in its `end` slot; `IconButton` takes its size, colour and fill from the `--nuiget-icon-button-*` carriers, which a section header and a row's actions set for it (UX-P2.5). `ErrorBoundary` (P9.9) is the one class component: each entry wraps its `StoreProvider` in it,
+that ends in an axe run. `Toolbar` owns its insets and places a bulk toolbar's primary in its `end` slot; `IconButton` takes its size, colour and fill from the `--nuiget-icon-button-*` carriers, which a section header and a row's actions set for it (UX-P2.5). `SectionHeader` has one anatomy on both surfaces (chevron, title, spinner, badges, actions, count at the end inset), and `Badge`'s `kind` tells a count from a label (UX-P2.6). `ErrorBoundary` (P9.9) is the one class component: each entry wraps its `StoreProvider` in it,
 so a rendering error shows the empty state "Something went wrong in this view." with Reload, which remounts the store
 and the view, and the entry reports the error to the host as `ui/reportError`, which the host writes to the output
 channel (each field capped at 4000 characters, redacted by the logger).
@@ -650,7 +650,7 @@ builds it into `dist/webview.js` and, because the entry imports `../shared/token
 `installed={view => <InstalledTab {...view} />}`, so the shell did not grow.
 
 - **One tree.** Each view is one `Listbox` with `groups` (`installed-list`, `role="tree"`, D48, UX-P2.1d): for a
-  single project the `direct` group row (`Direct packages (N)`; `(k of N)` while a filter is on, `(N)` while the
+  single project the `direct` group row (`Direct packages`, its count badge at the end inset; the text `k of N` while a filter is on, the total while the
   vulnerability data of `@vulnerable` is unknown) over its packages; in All Projects a `project-<name>` group row per
   project from the `allProjects` slice, under a `folder-<folder>` group row with two or more workspace folders. Enter,
   Left and Right expand and collapse a group row, and the list's hint says so. A project's status (count, spinner,
@@ -680,7 +680,7 @@ builds it into `dist/webview.js` and, because the entry imports `../shared/token
 - **Filter modes.** `@installed <text>` filters by id; `@vulnerable` keeps the rows whose metadata lists
   vulnerabilities, and says that the data is not there yet while no metadata has arrived (empty is not unknown).
 - **Transitive.** A collapsed level-1 `transitive` group row after every other group; the list is prefetched after the
-  installed list, so the row reads `Transitive packages (N)` with the target framework as a badge, or, for several
+  installed list, so the row reads `Transitive packages` with the target framework as a badge and the count badge at its end, or, for several
   frameworks, holds a level-2 `transitive-<tfm>` group row per framework. `TransitiveSection.tsx` and
   `AllProjectsTransitiveSection.tsx` build these rows and their messages for `InstalledTab`; the aggregation is in
   `transitiveAggregate.ts`. Comfortable rows with the icon, authors and Verified mark of the lite metadata, no description

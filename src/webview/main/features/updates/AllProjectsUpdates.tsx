@@ -135,7 +135,7 @@ function ProjectUpdatesSection(props: ProjectUpdatesSectionProps): React.JSX.Ele
     }
 
     return (
-        <section className="nuiget-installed-project nuiget-installed-project--grouped">
+        <section className="nuiget-installed-project">
             <SectionHeader
                 title={section.projectName}
                 titleId={titleId}
@@ -146,7 +146,7 @@ function ProjectUpdatesSection(props: ProjectUpdatesSectionProps): React.JSX.Ele
                 level={level}
                 count={known && !sourcesUnavailable ? section.chunk?.updates.length : undefined}
                 busy={loading && section.chunk === undefined}
-                actions={unsupported ? <Badge label="Unsupported" tone="warning" title={unsupported.message} /> : undefined}
+                badges={unsupported ? <Badge label="Unsupported" tone="warning" title={unsupported.message} /> : undefined}
             />
             <div id={contentId} hidden={!expanded} className="nuiget-installed-project-content">{content}</div>
         </section>

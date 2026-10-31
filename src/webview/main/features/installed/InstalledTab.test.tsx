@@ -341,7 +341,8 @@ describe('main panel: Installed tab', () => {
         await user.click(screen.getByTestId('section-header-transitive'));
         expect(groupItem('transitive')).toHaveAttribute('aria-expanded', 'false');
         expect(transitiveRows()).toHaveLength(0);
-        expect(screen.getByTestId('section-header-transitive')).toHaveTextContent('Transitive packages (1)');
+        expect(screen.getByTestId('section-header-transitive')).toHaveTextContent(/^Transitive packages$/);
+        expect(screen.getByTestId('section-box-transitive').querySelector('.nuiget-badge--count')).toHaveTextContent('1');
         await user.click(screen.getByTestId('section-header-transitive'));
         expect(transitiveRows()).toHaveLength(1);
         expect(host.requests('transitive/get')).toHaveLength(1);
@@ -404,18 +405,27 @@ describe('main panel: Installed tab', () => {
     it('the Direct packages group row shows k of N while filtering', async () => {
         const user = userEvent.setup();
         const host = await mountWith();
-        const header = (): HTMLElement => screen.getByTestId('section-header-direct');
-        expect(header()).toHaveTextContent('Direct packages (3)');
+        const box = (): HTMLElement => screen.getByTestId('section-box-direct');
+        const counted = (): void => {
+            expect(box().querySelector('.nuiget-badge--count')).toHaveTextContent('3');
+            expect(box().querySelector('.nuiget-section-count-text')).toBeNull();
+        };
+        const filtered = (): void => {
+            expect(box().querySelector('.nuiget-section-count-text')).toHaveTextContent('1 of 3');
+            expect(box().querySelector('.nuiget-badge--count')).toBeNull();
+        };
+        expect(screen.getByTestId('section-header-direct')).toHaveTextContent(/^Direct packages$/);
+        counted();
         await user.type(screen.getByTestId('search-input'), '@installed ser');
-        expect(header()).toHaveTextContent('Direct packages (1 of 3)');
+        filtered();
         await user.clear(screen.getByTestId('search-input'));
-        expect(header()).toHaveTextContent('Direct packages (3)');
+        counted();
         // Without vulnerability data `@vulnerable` counts nothing.
         await user.type(screen.getByTestId('search-input'), '@vulnerable');
-        expect(header()).toHaveTextContent('Direct packages (3)');
+        counted();
         expect(screen.getByText('Vulnerability data is not available for this project yet.')).toBeInTheDocument();
         await hostSays(() => host.respond(host.requests('transitive/metadata')[0], { metadata: [{ id: 'Moq', version: '4.20.0', vulnerabilities: [{ severity: 'High', advisoryUrl: 'https://github.com/advisories/x' }] }] }));
-        expect(header()).toHaveTextContent('Direct packages (1 of 3)');
+        filtered();
     });
 
     it('SDK and props rows carry their badge and a muted check mark, and Space says why', async () => {
@@ -451,7 +461,8 @@ describe('main panel: Installed tab', () => {
         const result: TransitiveResult = { projectPath: A, dataSourceAvailable: true, frameworks: [{ targetFramework: 'net8.0', packages: [{ id: 'Microsoft.Extensions.Logging', version: '9.0.0', requiredByChain: ['Serilog'] }] }] };
         await hostSays(() => host.respond(host.requests('transitive/get')[0], result, 1));
         const header = screen.getByTestId('section-header-transitive');
-        expect(header).toHaveTextContent('Transitive packages (1)');
+        expect(header).toHaveTextContent(/^Transitive packages$/);
+        expect(screen.getByTestId('section-box-transitive').querySelector('.nuiget-badge--count')).toHaveTextContent('1');
         expect(header.closest('.nuiget-section-header')).toHaveTextContent('net8.0');
         // The installed rows ask their own metadata too: answer the ask of the transitive rows.
         const ask = host.requests('transitive/metadata').find(request => request.payload.packages.some(entry => entry.id === 'Microsoft.Extensions.Logging'))!;
@@ -494,7 +505,8 @@ describe('main panel: Installed tab', () => {
         expect(screen.getByTestId('section-header-transitive')).toHaveTextContent(/^Transitive packages$/);
         for (const tfm of ['net8.0', 'net6.0']) {
             const header = screen.getByTestId(`section-header-transitive-${tfm}`);
-            expect(header).toHaveTextContent('Transitive packages (1)');
+            expect(header).toHaveTextContent(/^Transitive packages$/);
+            expect(screen.getByTestId(`section-box-transitive-${tfm}`).querySelector('.nuiget-badge--count')).toHaveTextContent('1');
             expect(header.closest('.nuiget-section-header')).toHaveTextContent(tfm);
             expect(groupItem(`transitive-${tfm}`)).toHaveAttribute('aria-level', '2');
             expect(groupItem(`transitive-${tfm}`)).toHaveAttribute('aria-expanded', 'true');

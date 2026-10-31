@@ -71,8 +71,8 @@ export function Tabs<K extends string>({ tabs, selected, onSelect, label, childr
                         >
                             <span id={`${tabId(tab.id)}-label`} className="nuiget-tab-label">{tab.label}</span>
                             {/* A flex item of white space is not drawn; the tab is named by its content, whose visible text the name must hold (WCAG 2.5.3). */}
-                            {tab.count === undefined ? null : <>{' '}<span id={`${tabId(tab.id)}-count`} className="nuiget-tab-count"><Badge label={String(tab.count)} /></span></>}
-                            {tab.badge === undefined ? null : <>{' '}<span id={`${tabId(tab.id)}-badge`} className="nuiget-tab-badge"><Badge label={tab.badge.label} title={tab.badge.title} tone={tab.badge.tone} /></span></>}
+                            {tab.count === undefined ? null : <>{' '}<span id={`${tabId(tab.id)}-count`} className="nuiget-tab-count"><Badge kind="count" label={String(tab.count)} /></span></>}
+                            {tab.badge === undefined ? null : <>{' '}<span id={`${tabId(tab.id)}-badge`} className="nuiget-tab-badge"><Badge kind="count" label={tab.badge.label} title={tab.badge.title} tone={tab.badge.tone} /></span></>}
                         </button>
                     );
                 })}

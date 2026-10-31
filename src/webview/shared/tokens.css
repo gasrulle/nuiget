@@ -34,6 +34,10 @@
     --nuiget-pane-header-margin-x: 0px;
     --nuiget-pane-header-padding-start: 0px;
     --nuiget-pane-header-padding-end: var(--nuiget-space-5);
+    --nuiget-badge-padding-block: calc(var(--nuiget-space-2) - var(--nuiget-space-hairline));
+    --nuiget-badge-padding-inline: calc(var(--nuiget-space-3) - var(--nuiget-space-hairline));
+    --nuiget-label-badge-padding-block: var(--nuiget-space-1);
+    --nuiget-label-badge-padding-inline: var(--nuiget-space-2);
     --nuiget-row-inset-x: 0px;
 
     /* Radius: the workbench corner tiers (`--vscode-cornerRadius-*`, exported from 1.110.1) (DS-RADIUS-1, DS-RADIUS-2) */
@@ -230,6 +234,10 @@
     --nuiget-pane-header-margin-x: var(--nuiget-space-2);
     --nuiget-pane-header-padding-start: var(--nuiget-space-2);
     --nuiget-pane-header-padding-end: var(--nuiget-space-3);
+    --nuiget-badge-padding-block: var(--nuiget-space-2);
+    --nuiget-badge-padding-inline: var(--nuiget-space-3);
+    --nuiget-label-badge-padding-block: var(--nuiget-space-2);
+    --nuiget-label-badge-padding-inline: var(--nuiget-space-3);
     --nuiget-row-inset-x: var(--nuiget-space-2);
     --nuiget-radius-action: var(--nuiget-radius-sm);
     --nuiget-radius-row: var(--nuiget-radius-sm);

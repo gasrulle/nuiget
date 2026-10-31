@@ -6,6 +6,13 @@ import './primitives.css';
 
 /** Row heights in pixels. They repeat `--nuiget-row-height-*`: a script cannot read a token before layout (CA-R4, `webview-tokens.test.ts`). */
 const ROW_HEIGHT = { compact: 24, comfortable: 72 } as const;
+const GROUP_ROW_HEIGHT_FALLBACK = 22;
+
+/** The group row's height is the look's token, the one source (CA-R4). */
+function groupRowHeight(): number {
+    const token = Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--nuiget-pane-header-height'));
+    return Number.isFinite(token) && token > 0 ? token : GROUP_ROW_HEIGHT_FALLBACK;
+}
 
 /** Where a group row of the list goes; `groups.render` draws what is inside it. */
 export interface GroupPlacement {
@@ -130,6 +137,7 @@ export type ListboxProps<T extends { id: string }> = ListboxBaseProps<T> & ({ la
 export function Listbox<T extends { id: string }>(props: ListboxProps<T>): React.JSX.Element {
     const { items, renderRow, groups, isDisabled, hint, testId, density, selectedId = null, selectedIds, onToggleSelected, onSelect, onActivate, onSecondaryActivate, onDelete, onContextMenu, busy, empty } = props;
     const rowHeight = ROW_HEIGHT[density];
+    const groupHeight = groupRowHeight();
     const tree = useMemo(() => (groups === undefined ? undefined : treeOf(items, groups)), [items, groups]);
     const baseId = useId();
     const hintId = `${baseId}-hint`;
@@ -166,7 +174,7 @@ export function Listbox<T extends { id: string }>(props: ListboxProps<T>): React
     const virtualizer = useVirtualizer<HTMLDivElement, HTMLElement>({
         count: items.length,
         getScrollElement: () => scrollRef.current,
-        estimateSize: index => (isGroupAt(index) ? ROW_HEIGHT.compact : rowHeight),
+        estimateSize: index => (isGroupAt(index) ? groupHeight : rowHeight),
         overscan: OVERSCAN,
         getItemKey: index => items[index].id,
         measureElement: element => element.getBoundingClientRect().height || rowHeight,
@@ -350,7 +358,7 @@ export function Listbox<T extends { id: string }>(props: ListboxProps<T>): React
                                     style={cssVars({ '--nuiget-virtual-offset': `${virtual.start}px` })}
                                 >
                                     <div
-                                        className="nuiget-row-group"
+                                        className={`nuiget-row-group nuiget-row-group--${density}${place.level === 1 && place.posInSet > 1 ? ' nuiget-row-group--divided' : ''}`}
                                         role="treeitem"
                                         tabIndex={active ? 0 : -1}
                                         aria-level={place.level}

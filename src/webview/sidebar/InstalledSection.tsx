@@ -133,7 +133,7 @@ export function InstalledSection({ filter, announce, expanded: controlled, onTog
                 onToggle={onToggle ?? (() => setOwn(previous => !previous))}
                 count={count}
                 busy={all.active ? all.status === 'loading' || all.revalidating : installed.status === 'loading' || installed.revalidating}
-                actions={!all.active && result?.fidelity === 'provisional'
+                badges={!all.active && result?.fidelity === 'provisional'
                     ? <span className="nuiget-sidebar-fidelity" title="Versions come from the project files; a full evaluation is pending." data-testid="sidebar-installed-provisional"><Badge label="provisional" tone="info" /></span>
                     : undefined}
             />

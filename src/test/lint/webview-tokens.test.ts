@@ -96,6 +96,10 @@ describe('2.0 webview tokens', () => {
         const listbox = readFileSync('src/webview/shared/primitives/Listbox.tsx', 'utf8');
         const repeated = listbox.match(/const ROW_HEIGHT = \{ compact: (\d+), comfortable: (\d+) \}/);
         expect(repeated, 'ROW_HEIGHT in Listbox.tsx').not.toBeNull();
+        // The group row's fallback is the classic look's pane-header height (UX-P2.6).
+        const fallback = listbox.match(/const GROUP_ROW_HEIGHT_FALLBACK = (\d+);/);
+        expect(fallback?.[1]).toBe('22');
+        expect(readFileSync('src/webview/shared/tokens.css', 'utf8')).toContain('--nuiget-pane-header-height: 22px;');
         const declared = blockAfter(':root');
         expect(`${repeated![1]}px`).toBe(declared.get('--nuiget-row-height-compact'));
         expect(`${repeated![2]}px`).toBe(declared.get('--nuiget-row-height-comfortable'));

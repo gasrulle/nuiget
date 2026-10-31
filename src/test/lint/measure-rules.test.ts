@@ -16,9 +16,9 @@ const layout = (overrides: Partial<Layout> = {}, heights: Partial<Heights> = {})
     sidebarHeader: undefined, mainLefts: {}, mainRegionLeft: undefined, details: undefined, sidebar: undefined,
     centring: [], detailsButtons: { uninstall: undefined, update: undefined }, width: 1200, rows: [], chrome: {}, firstRow: undefined,
     overflow: { containers: 0, collisions: [], outside: [], clipped: [], count: 0, badges: [] }, transitiveGap: undefined, primaryEdges: [],
-    browsing: false, documentOverflow: undefined,
+    browsing: false, flatList: false, documentOverflow: undefined,
     endOfP0: {
-        rows: [], listSelection: { active: 'rgb(4, 57, 94)', inactive: 'rgb(55, 55, 61)' }, buttonSecondary: { hover: '', rest: '' }, iconColours: { icon: 'rgb(204, 204, 204)', active: 'rgb(255, 255, 255)', disabled: 'rgb(90, 90, 90)', warning: 'rgb(204, 167, 0)', hoverBg: 'rgba(90, 93, 94, 0.31)' }, tabColours: { active: 'rgb(231, 231, 231)', inactive: 'rgb(157, 157, 157)', indicator: 'rgb(0, 120, 212)' }, actionRadius: '4px', listPaneWidth: undefined, detailsHeader: undefined, sideways: [], controlsOut: [], minContent: { toolbar: undefined, header: undefined },
+        rows: [], listSelection: { active: 'rgb(4, 57, 94)', inactive: 'rgb(55, 55, 61)' }, buttonSecondary: { hover: '', rest: '' }, iconColours: { icon: 'rgb(204, 204, 204)', active: 'rgb(255, 255, 255)', disabled: 'rgb(90, 90, 90)', warning: 'rgb(204, 167, 0)', hoverBg: 'rgba(90, 93, 94, 0.31)' }, tabColours: { active: 'rgb(231, 231, 231)', inactive: 'rgb(157, 157, 157)', indicator: 'rgb(0, 120, 212)' }, actionRadius: '4px', contrastBorder: '', uppercaseHeaders: false, listPaneWidth: undefined, detailsHeader: undefined, sideways: [], controlsOut: [], minContent: { toolbar: undefined, header: undefined },
         factLefts: [], fonts: { root: '', others: [] }, textStyles: [], verifiedMarks: [], verifiedForeground: '', dataLook: undefined, lookTokens: {}, rootLineHeight: undefined, compactLineHeights: [], metaText: [], descriptionForeground: '', copyEnds: [],
         focus: undefined, focusColours: { focusBorder: '', listFocusOutline: '', contrastActiveBorder: '' }, disabled: [],
     },
@@ -74,17 +74,16 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(definition('DS-INSET-3')?.scopeStates).toEqual({ rows: ['main-installed-hover', 'main-installed-focus', 'main-installed-details'] });
         expect(definition('DS-ROW-3')?.scopeStates).toEqual({ 'main-installed': ['main-installed-hover', 'main-installed-focus', 'main-installed-unfocused'], details: ['main-installed-details', 'main-details-readme', 'main-transitive-details', 'main-browse-details'] });
         expect(definition('DS-FOCUS-2')?.states).toEqual(['main-installed-focus', 'main-installed-details', 'main-transitive-details', 'main-browse-details', 'main-transitive-expanded']);
-        expect(definition('DS-FOCUS-2')?.pendingStates).toEqual({ 'main-transitive-expanded': 'P2.6' });
+        expect(definition('DS-FOCUS-2')?.pendingStates).toBeUndefined();
         expect(definition('DS-FOCUS-3')?.scopeStates).toEqual({ rows: ['main-installed-details'], tabs: ['main-updates'] });
         expect(definition('DS-FOCUS-4')?.states).toEqual(['main-installed-details', 'main-installed-focus']);
         expect(scopes('DS-GRID-1')).toEqual({ 'main-installed': { pending: 'P2.7' }, ...asGrid1 });
         expect(scopes('DS-GRID-2a')).toEqual({ 'main-installed': { pending: 'P2.7' }, ...asGrid1 });
         expect(scopes('DS-GRID-2b')).toEqual({ 'main-installed': { pending: 'P2.6' }, ...asGrid1 });
         expect(scopes('DS-INSET-1')).toEqual({ 'main-installed': { pending: 'P2.7' }, details: { pending: 'P3.3b' }, sidebar: { pending: 'P3.7a' } });
-        expect(scopes('DS-INSET-2')).toEqual({ toolbars: 'hard', headers: { pending: 'P2.6' }, 'main-header': { pending: 'P2.7' }, sidebar: { pending: 'P3.7a' } });
+        expect(scopes('DS-INSET-2')).toEqual({ toolbars: 'hard', headers: 'hard', 'main-header': { pending: 'P2.7' }, sidebar: { pending: 'P3.7a' } });
         // UX-P0.11: PF-3b and PF-5 hard where P9.fix-3 and P9.fix-5 measured; the heights pending on Appendix B's items.
         const mainHard = () => ({ 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: 'hard' });
-        const main = (item: string) => ({ 'main-installed': { pending: item }, 'main-updates': { pending: item }, browse: { pending: item }, details: { pending: item } });
         expect(scopes('PF-3b')).toEqual({ 'main-installed': 'hard', 'main-updates': 'hard' });
         expect(RULES.find(rule => rule.id === 'PF-3b')?.states).toEqual(['main-installed-single', 'main-updates']);
         expect(scopes('PF-5')).toEqual({ details: 'hard' });
@@ -101,7 +100,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(scopes('DS-HEIGHT-9')).toEqual({ ...mainHard(), dialogs: { pending: 'P3.5' }, sources: { pending: 'P3.6' } });
         expect(scopes('DS-RADIUS-1')).toEqual({ 'main-installed': 'hard', 'main-updates': 'hard', details: 'hard', dialogs: 'hard', browse: 'hard', sidebar: 'hard', sources: { pending: 'P3.6' } });
         expect(scopes('DS-COLOR-6')).toEqual({ 'text-buttons': 'hard', 'icon-buttons': { pending: 'P3.10' } });
-        expect(scopes('DS-HEIGHT-10')).toEqual({ ...main('P2.6'), sidebar: { pending: 'P2.6' } });
+        expect(scopes('DS-HEIGHT-10')).toEqual({ ...mainHard(), sidebar: 'hard' });
         expect(scopes('DS-HEIGHT-11')).toEqual({ 'main-installed': { pending: 'P2.8b' }, 'main-updates': { pending: 'P3.10' }, browse: { pending: 'P3.10' }, details: { pending: 'P3.10' }, sidebar: { pending: 'P3.10' } });
         // UX-P0.12: PF-2, PF-3a and PF-4 where P9.fix-2, -3 and -4 measured; MS-8 hard for chrome (Appendix B).
         expect(scopes('PF-2')).toEqual({ 'main-installed': 'hard' });
@@ -120,8 +119,8 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(RULES.find(rule => rule.id === 'DS-OVERFLOW-6')?.pendingStates).toBeUndefined();
         // UX-P0.14 (design-advisor ruling): the main panel's 220 px width pending on P2.7 (V50), the width axis of pendingStates.
         expect(RULES.find(rule => rule.id === 'DS-OVERFLOW-6')?.pendingWidths).toEqual({ 220: 'P2.7' });
-        expect(scopes('DS-INSET-3')).toEqual({ rows: 'hard', toolbars: 'hard', headers: { pending: 'P2.6' }, sidebar: { pending: 'P3.7a' } });
-        expect(scopes('DS-OVERFLOW-2')).toEqual({ 'main-installed': { pending: 'P2.6' }, details: { pending: 'P2.6' }, sidebar: { pending: 'P2.6' } });
+        expect(scopes('DS-INSET-3')).toEqual({ rows: 'hard', toolbars: 'hard', headers: 'hard', 'main-header': { pending: 'P2.7' }, sidebar: { pending: 'P3.7a' } });
+        expect(scopes('DS-OVERFLOW-2')).toEqual({ 'main-installed': 'hard', details: 'hard', sidebar: 'hard' });
         expect(scopes('DS-ROW-5')).toEqual({ ...mainHard(), sidebar: { pending: 'P3.7a' } });
         // UX-P0.13 (design-advisor ruling of 2026-10-24): every Appendix B rule of a P0 helper, and the five on P0.18.
         expect(scopes('DS-INSET-4')).toEqual({ details: { pending: 'P3.3b' } });
@@ -479,14 +478,18 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
             toolbars: [{ id: 'installed-toolbar', insets: { start: 16, end: 6, top: 4, bottom: 4 } }],
         });
         expect(lineOf('main-installed-hover', built, 'DS-INSET-3@main-installed-hover/rows')).toMatchObject({ pass: false, status: 'hard', value: 'row actions 2, 6 (target 6)' });
-        expect(lineOf('main-installed-single', built, 'DS-INSET-3@main-installed-single/headers')).toMatchObject({ pass: true, status: { pending: 'P2.6' }, value: 'group headers 16 (target 16)' });
+        expect(lineOf('main-installed-single', built, 'DS-INSET-3@main-installed-single/headers')).toMatchObject({ pass: true, status: 'hard', value: 'group headers 16 (target 16)' });
+        // A box inside a group row is a group header whatever its variant; a flat list has none to read.
+        const nested = layout({ sections: [{ id: 'transitive-net8.0', variant: 'level', inList: true, insets: undefined, above: undefined, below: undefined, trailingEnd: 6 }] });
+        expect(lineOf('main-transitive-expanded', nested, 'DS-INSET-3@main-transitive-expanded/headers')).toMatchObject({ pass: false, value: 'group headers 6 (target 16)' });
+        expect(lineOf('main-updates', layout({ flatList: true, mainHeader: undefined }), 'DS-INSET-3@main-updates/headers')).toMatchObject({ pass: true, value: 'no group header (flat list)' });
         expect(lineOf('main-installed-single', built, 'DS-INSET-3@main-installed-single/toolbars')).toMatchObject({ pass: false, status: 'hard', value: 'toolbar end 6 (target 16)' });
         expect(lineOf('main-installed-single', layout({ toolbars: [{ id: 'installed-toolbar', insets: { start: 16, end: 16, top: 4, bottom: 4 } }] }), 'DS-INSET-3@main-installed-single/toolbars')).toMatchObject({ pass: true, value: 'toolbar end 16 (target 16)' });
         expect(lineOf('sidebar-sections', built, 'DS-INSET-3@sidebar-sections', 'classic')).toMatchObject({ pass: false, value: 'section headers 2 (target 12); row actions 6 (target 6)' });
         // DS-OVERFLOW-2 prints every section-header badge's rect, offending or not, and passes no empty page.
         const overflow = layout({ overflow: { containers: 9, collisions: [], outside: ['[section-box-project-unsupported.csproj] .nuiget-badge 1171–1195 outside 16–1184'], clipped: [], count: 1, badges: ['project-unsupported.csproj "Unsupported" 1171–1195 (box right 1200)'] } });
         expect(lineOf('main-installed-all', overflow, 'DS-OVERFLOW-2@main-installed-all')).toMatchObject({
-            pass: false, status: { pending: 'P2.6' },
+            pass: false, status: 'hard',
             value: '1 offending in 9 containers (outside: [section-box-project-unsupported.csproj] .nuiget-badge 1171–1195 outside 16–1184); badges: project-unsupported.csproj "Unsupported" 1171–1195 (box right 1200)',
         });
         expect(lineOf('main-installed-all', layout(), 'DS-OVERFLOW-2@main-installed-all')).toMatchObject({ pass: false, value: 'not measurable' });
@@ -815,5 +818,36 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         const hits = layout({}, { iconButtons: [iconButton(), iconButton({ inHeader: true, width: 20, height: 20 })] });
         expect(lineOf('sidebar-sections', hits, 'DS-HEIGHT-8@sidebar-sections')).toMatchObject({ pass: true, status: 'hard', value: 'painted 22×22 (target 22×22); section header 20×20 (target 20×20); hit 24 ×2 (at least 24)' });
         expect(measureLines('main-installed-single', layout(), 'modern', {}, undefined, 400).find(line => line.name === 'DS-OVERFLOW-3@main-installed-single/toolbars')).toMatchObject({ status: { pending: 'P2.7' } });
+    });
+
+    it('holds the headers and the badges to the workbench (UX-P2.6)', () => {
+        const badge = (overrides: Partial<Heights['badges'][number]> = {}): Heights['badges'][number] => ({ count: true, width: 20, height: 20, fontSize: '10px', padding: '4px 6px 4px 6px', radius: '9999px', ...overrides });
+        expect(lineOf('main-installed-single', layout({}, { badges: [badge()] }), 'DS-HEIGHT-10@main-installed-single')).toMatchObject({ pass: true, status: 'hard' });
+        expect(lineOf('main-installed-single', layout({}, { badges: [badge({ width: 17, height: 17 })] }), 'DS-HEIGHT-10@main-installed-single')).toMatchObject({ pass: false });
+        expect(lineOf('main-quicksearch-open', layout({}, { badges: [badge()] }), 'DS-HEIGHT-10@main-quicksearch-open')).toBeUndefined();
+        // DS-RADIUS-2's badge clause, against the look's tokens.
+        const banded = (radius: string) => {
+            const built = layout({ endOfP0: { ...layout().endOfP0, fonts: { root: 'sans', others: [] }, lookTokens: { '--nuiget-radius-row': '4px', '--nuiget-radius-badge': '9999px', '--nuiget-radius-label-badge': '9999px' }, rows: [{ state: 'rest', compact: false, radius: '4px', lineWidth: 0, focusPainted: 0, background: '', listFocused: false, multi: false, check: undefined, checkOff: false } as never] } as Layout['endOfP0'] });
+            return { ...built, heights: { ...built.heights, badges: [badge(), badge({ count: false, radius })] } };
+        };
+        expect(lineOf('main-installed-single', banded('9999px'), 'DS-RADIUS-2@main-installed-single/rows')).toMatchObject({ pass: true, value: expect.stringContaining('count badge 9999px (target 9999px); label badge 9999px (target 9999px)') });
+        expect(lineOf('main-installed-single', banded('4px'), 'DS-RADIUS-2@main-installed-single/rows')).toMatchObject({ pass: false });
+        const inset = { start: 16, end: 16, top: 4, bottom: 4 };
+        const box = { above: undefined, below: undefined };
+        const headers = (name: string, built: Layout) => lineOf(name, built, `DS-INSET-2@${name}/headers`);
+        const direct = (insets: Partial<typeof inset>, trailingEnd: number | undefined, paddingEnd = 16) => layout({ sections: [{ id: 'direct', variant: 'group', insets: { ...inset, top: 6, bottom: 6, ...insets }, trailingEnd, paddingEnd, ...box }] });
+        expect(headers('main-installed-single', direct({ end: 23 }, 16))).toMatchObject({ pass: true, status: 'hard', value: 'direct 16/16 6/6' });
+        expect(headers('main-installed-single', direct({ end: 23 }, 10))).toMatchObject({ pass: false });
+        expect(headers('main-installed-single', direct({ end: 258.3 }, undefined))).toMatchObject({ pass: true, value: 'direct 16/16 (pad 16) 6/6' });
+        expect(headers('main-installed-single', direct({ end: 258.3 }, undefined, 20))).toMatchObject({ pass: false });
+        // The 400 cell: a clipped title's range reaches past the box; the trailing element holds.
+        expect(headers('main-installed-single', direct({ end: 0.4 }, 16))).toMatchObject({ pass: true });
+        // A level box outside a list is no group header.
+        expect(headers('main-installed-single', layout({ sections: [{ id: 'direct', variant: 'group', insets: inset, trailingEnd: 16, ...box }, { id: 'loose', variant: 'level', insets: { ...inset, start: 2 }, ...box }] }))).toMatchObject({ pass: true, value: 'direct 16/16 4/4' });
+        const mainHeaderEnd = (end: number) => layout({ mainHeader: { start: 16, end, top: 8, bottom: 8 } });
+        expect(lineOf('main-installed-single', mainHeaderEnd(16), 'DS-INSET-3@main-installed-single/main-header')).toMatchObject({ pass: true, status: { pending: 'P2.7' }, value: 'header end 16 (target 16)' });
+        expect(lineOf('main-installed-single', mainHeaderEnd(35.5), 'DS-INSET-3@main-installed-single/main-header')).toMatchObject({ pass: false, value: 'header end 35.5 (target 16)' });
+        expect(headers('main-updates', layout({ flatList: true }))).toMatchObject({ pass: true, value: 'no group header (flat list)' });
+        expect(headers('main-updates', layout())).toMatchObject({ pass: false, value: 'not measurable' });
     });
 });

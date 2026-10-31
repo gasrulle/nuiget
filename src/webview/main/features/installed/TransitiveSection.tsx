@@ -33,7 +33,8 @@ export function transitiveTree(state: TransitiveState, expanded: boolean, collap
         kind: 'group',
         id: 'transitive',
         level: 1,
-        title: usable && !several ? `Transitive packages (${total})` : 'Transitive packages',
+        title: 'Transitive packages',
+        count: usable && !several ? total : undefined,
         variant: 'group',
         tfm: !several && frameworks.length === 1 ? frameworks[0].targetFramework : undefined,
     }];
@@ -44,7 +45,7 @@ export function transitiveTree(state: TransitiveState, expanded: boolean, collap
         const tfm = framework.targetFramework;
         const groupId = `transitive-${tfm}`;
         if (several) {
-            items.push({ kind: 'group', id: groupId, level: 2, title: `Transitive packages (${framework.packages.length})`, variant: 'level', tfm });
+            items.push({ kind: 'group', id: groupId, level: 2, title: 'Transitive packages', count: framework.packages.length, variant: 'level', tfm });
         }
         if (!several || !collapsed.has(groupId)) {
             for (const entry of framework.packages) {
@@ -81,6 +82,7 @@ export function transitiveGroupContent(item: GroupItem, placement: GroupPlacemen
             testKey={item.level === 1 ? 'transitive' : `transitive-${item.tfm ?? ''}`}
             expanded={placement.expanded}
             variant={item.level === 1 ? 'group' : 'level'}
+            count={item.count}
             busy={state.status === 'loading' || state.revalidating}
             badges={item.tfm === undefined ? undefined : <Badge label={item.tfm} title={`Target framework ${item.tfm}`} />}
         />

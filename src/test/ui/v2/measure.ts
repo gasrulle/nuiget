@@ -169,7 +169,7 @@ export const RULES: readonly RuleDefinition[] = [
     rule('DS-GRID-2a', { helper: 1, scopes: { 'main-installed': { pending: 'P2.7' }, ...asGrid1 }, tolerance: TOLERANCES.gapMembership }),
     rule('DS-GRID-2b', { helper: 1, scopes: { 'main-installed': { pending: 'P2.6' }, ...asGrid1 }, tolerance: TOLERANCES.proximity }),
     rule('DS-INSET-1', { helper: 2, scopes: { 'main-installed': { pending: 'P2.7' }, details: { pending: 'P3.3b' }, sidebar: { pending: 'P3.7a' } }, tolerance: TOLERANCES.coincide }),
-    rule('DS-INSET-2', { helper: 2, scopes: { toolbars: 'hard', headers: { pending: 'P2.6' }, 'main-header': { pending: 'P2.7' }, sidebar: { pending: 'P3.7a' } }, tolerance: TOLERANCES.coincide }),
+    rule('DS-INSET-2', { helper: 2, scopes: { toolbars: 'hard', headers: 'hard', 'main-header': { pending: 'P2.7' }, sidebar: { pending: 'P3.7a' } }, tolerance: TOLERANCES.coincide }),
     // UX-P0.11: P9.fix-3's centring and P9.fix-5's shared column, in the states their tests cover.
     rule('PF-3b', { helper: 4, scopes: { 'main-installed': 'hard', 'main-updates': 'hard' }, tolerance: TOLERANCES.centring, states: ['main-installed-single', 'main-updates'] }),
     rule('PF-5', { helper: 3, scopes: { details: 'hard' }, tolerance: TOLERANCES.height, states: ['main-installed-details'] }),
@@ -184,7 +184,8 @@ export const RULES: readonly RuleDefinition[] = [
     rule('DS-HEIGHT-7', { helper: 3, scopes: { ...inGroups('hard', ...MAIN, 'sidebar'), dialogs: { pending: 'P3.6' }, sources: { pending: 'P3.6' } }, tolerance: TOLERANCES.height }),
     rule('DS-HEIGHT-8', { helper: 3, scopes: { ...inGroups('hard', ...MAIN, 'sidebar'), sources: { pending: 'P3.6' } }, tolerance: TOLERANCES.height }),
     rule('DS-HEIGHT-9', { helper: 3, scopes: { ...inGroups('hard', ...MAIN), dialogs: { pending: 'P3.5' }, sources: { pending: 'P3.6' } }, tolerance: TOLERANCES.height }),
-    rule('DS-HEIGHT-10', { helper: 3, scopes: on('P2.6', ...MAIN, 'sidebar'), tolerance: TOLERANCES.height }),
+    // The popup covers the strip and the list: no badge is shown.
+    rule('DS-HEIGHT-10', { helper: 3, scopes: inGroups('hard', ...MAIN, 'sidebar'), tolerance: TOLERANCES.height, exceptStates: ['main-quicksearch-open', 'main-quicksearch-versions'] }),
     rule('DS-HEIGHT-11', { helper: 3, scopes: { 'main-installed': { pending: 'P2.8b' }, ...on('P3.10', 'main-updates', 'browse', 'details', 'sidebar') }, tolerance: TOLERANCES.height, statePattern: /loading|revalidating/ }),
     // UX-P0.12: P9.fix-2, -3 (authors) and -4 at their own measures, in the states their tests cover; MS-8 for every state.
     rule('PF-2', { helper: 6, scopes: { 'main-installed': 'hard' }, tolerance: TOLERANCES.coincide, states: ['main-transitive-expanded'] }),
@@ -195,9 +196,10 @@ export const RULES: readonly RuleDefinition[] = [
     rule('MS-8', { helper: 6, scopes: { chrome: 'hard', 'first-row': { pending: 'P3.1b' } }, tolerance: TOLERANCES.chrome }),
     // The document never scrolls (V72, design-advisor ruling of 2026-10-24).
     rule('DS-OVERFLOW-6', { helper: 6, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: 'hard', dialogs: 'hard', sources: 'hard', sidebar: 'hard' }, tolerance: TOLERANCES.containment, pendingWidths: V50_WIDTHS }),
-    rule('DS-INSET-3', { helper: 6, scopes: { rows: 'hard', toolbars: 'hard', headers: { pending: 'P2.6' }, sidebar: { pending: 'P3.7a' } }, tolerance: TOLERANCES.coincide, scopeStates: { rows: ['main-installed-hover', 'main-installed-focus', 'main-installed-details'] } }),
+    // The main header's trailing control ends on the inset once P2.7 gives the header its rhythm; printed here, flipped there.
+    rule('DS-INSET-3', { helper: 6, scopes: { rows: 'hard', toolbars: 'hard', headers: 'hard', 'main-header': { pending: 'P2.7' }, sidebar: { pending: 'P3.7a' } }, tolerance: TOLERANCES.coincide, scopeStates: { rows: ['main-installed-hover', 'main-installed-focus', 'main-installed-details'] } }),
     // DS-OVERFLOW-2 over the section headers, the tracker's `headers` and P2.6's files (SectionHeader, Badge).
-    rule('DS-OVERFLOW-2', { helper: 6, scopes: on('P2.6', 'main-installed', 'details', 'sidebar'), tolerance: TOLERANCES.containment }),
+    rule('DS-OVERFLOW-2', { helper: 6, scopes: inGroups('hard', 'main-installed', 'details', 'sidebar'), tolerance: TOLERANCES.containment }),
     rule('DS-ROW-5', { helper: 5, scopes: { ...inGroups('hard', ...MAIN), sidebar: { pending: 'P3.7a' } }, tolerance: TOLERANCES.containment, exceptStates: NO_ROW_STATES }),
     // UX-P0.13 (design-advisor ruling of 2026-10-24, design trigger 6): every Appendix B rule of a P0 helper, pending on its
     // item per state group, and the five Appendix B calls hard at P0 ("pass on the probe"), pending on P0.18.
@@ -249,7 +251,7 @@ export const RULES: readonly RuleDefinition[] = [
     // condition a ready state renders, pending on their Appendix B items. DS-FOCUS-1's `controls` is hard where a state focuses
     // a control (the search box); a select and the sidebar box are proved by the stylesheet lint and two UI tests (UX-P2.4).
     rule('DS-FOCUS-1', { helper: 6, scopes: { controls: 'hard', tabs: 'hard' }, tolerance: TOLERANCES.containment, scopeStates: { controls: FOCUSED_CONTROL_STATES, tabs: FOCUSED_TAB_STATES } }),
-    rule('DS-FOCUS-2', { helper: 6, scopes: { rows: 'hard' }, tolerance: TOLERANCES.containment, states: ['main-installed-focus', 'main-installed-details', 'main-transitive-details', 'main-browse-details', 'main-transitive-expanded'], pendingStates: { 'main-transitive-expanded': 'P2.6' } }),
+    rule('DS-FOCUS-2', { helper: 6, scopes: { rows: 'hard' }, tolerance: TOLERANCES.containment, states: ['main-installed-focus', 'main-installed-details', 'main-transitive-details', 'main-browse-details', 'main-transitive-expanded'] }),
     // The main-panel branch of the premise P-3: the states whose setup clicked a row or a tab.
     rule('DS-FOCUS-3', { helper: 6, scopes: { rows: 'hard', tabs: 'hard' }, tolerance: TOLERANCES.containment, scopeStates: { rows: ['main-installed-details'], tabs: ['main-updates'] }, states: ['main-installed-details', 'main-updates'] }),
     rule('DS-FOCUS-4', { helper: 6, scopes: { rows: 'hard' }, tolerance: TOLERANCES.containment, states: ['main-installed-details', 'main-installed-focus'], themes: ['dark-high-contrast', 'light-high-contrast'] }),
@@ -344,6 +346,17 @@ export interface SectionBox {
     insets: Insets | undefined;
     /** DS-INSET-3: the box's right minus its trailing count, badge or action's right; undefined without one. */
     trailingEnd?: number;
+    /** UX-P2.6: the box is the content of a group row; its title's facts and what a header check reads. */
+    /** The box's own end padding: the end inset of a header with nothing trailing. */
+    paddingEnd?: number;
+    inList?: boolean;
+    hasTitle?: boolean;
+    countBadges?: number;
+    titleText?: string;
+    title?: { fontSize: string; fontWeight: string; textTransform: string } | undefined;
+    lineAbove?: boolean;
+    level?: number | undefined;
+    posInSet?: number | undefined;
     /** DS-GRID-2b on text line boxes: the last text or border above to the title's top, and the title's bottom to the first row name below. */
     above: number | undefined;
     below: number | undefined;
@@ -365,7 +378,7 @@ export interface Heights {
     checkBoxes: Array<{ width: number; height: number; radius: string; selected: { fill: string; border: string } | undefined; /** A mark that cannot join a bulk action, on a banded row: its line stays disabledForeground. */ off?: boolean }>;
     /** The theme's `checkbox.selectBackground` and `checkbox.selectBorder` as VS Code put them on the root (hex, or empty). */
     checkSelect: { fill: string; border: string };
-    badges: Array<{ count: boolean; width: number; height: number; fontSize: string; padding: string; radius: string }>;
+    badges: Array<{ count: boolean; width: number; height: number; fontSize: string; padding: string; radius: string; borderWidth?: number; borderColor?: string; toned?: boolean }>;
     progress: number[];
 }
 
@@ -447,6 +460,8 @@ export interface Layout {
     primaryEdges: Array<{ list: string; button: number; listRight: number; listboxRight: number }>;
     /** MS-8: the Browse view is shown instead of the tab strip (`.nuiget-browse`). */
     browsing: boolean;
+    /** UX-P2.6: the list of this state is a flat listbox, no tree: it has no group header to read. */
+    flatList: boolean;
     /** DS-OVERFLOW-6: the document's client and scroll sizes, and the deepest element outside the viewport no scroller holds. */
     documentOverflow: { clientWidth: number; clientHeight: number; scrollWidth: number; scrollHeight: number; outside: string | undefined } | undefined;
     endOfP0: EndOfP0;
@@ -523,6 +538,9 @@ export interface EndOfP0 {
     iconColours: { icon: string; active: string; disabled: string; warning: string; hoverBg: string };
     tabColours: { active: string; inactive: string; indicator: string };
     actionRadius: string;
+    /** UX-P2.6: DS-HC-1's line, and DS-TYPE-5's uppercase headers. */
+    contrastBorder: string;
+    uppercaseHeaders: boolean;
     listPaneWidth: number | undefined;
     detailsHeader: { insets: Insets | undefined; titleLeft: number | undefined; tabLabelLeft: number | undefined } | undefined;
     /** The root and the scroll containers outside a list that scroll sideways: `label scrollWidth>clientWidth`. */
@@ -588,6 +606,14 @@ const LOOK_TABLE: Record<string, { modern: string; classic: string }> = {
     '--nuiget-radius-row': { modern: '4px', classic: '0px' },
     '--nuiget-badge-size': { modern: '19px', classic: '18px' },
     '--nuiget-font-size-badge': { modern: '10px', classic: '11px' },
+    '--nuiget-radius-badge': { modern: '9999px', classic: '11px' },
+    '--nuiget-radius-label-badge': { modern: '9999px', classic: '2px' },
+    '--nuiget-radius-section-header': { modern: '4px', classic: '0px' },
+    '--nuiget-pane-header-padding-end': { modern: '6px', classic: '12px' },
+    '--nuiget-badge-padding-block': { modern: '4px', classic: '3px' },
+    '--nuiget-badge-padding-inline': { modern: '6px', classic: '5px' },
+    '--nuiget-label-badge-padding-block': { modern: '4px', classic: '2px' },
+    '--nuiget-label-badge-padding-inline': { modern: '6px', classic: '4px' },
 };
 const LOOK_TOKENS = Object.keys(LOOK_TABLE);
 /** DS-TYPE-2's font ramp, in px. */
@@ -748,6 +774,25 @@ const inView = (rect, el) => {
     }
     return rect.bottom > 0 && rect.top < window.innerHeight;
 };
+const headerFacts = box => {
+    const titleEl = box.querySelector('.nuiget-section-title');
+    const titleStyle = titleEl ? getComputedStyle(titleEl) : undefined;
+    const row = box.closest('[data-row-kind="group"]');
+    const group = row ? row.querySelector('.nuiget-row-group') : null;
+    const before = group ? getComputedStyle(group, '::before') : undefined;
+    const lineAbove = parseFloat(getComputedStyle(box).borderTopWidth) > 0 || (before !== undefined && before.content !== 'none' && parseFloat(before.borderTopWidth) === 1 && before.borderTopColor !== 'rgba(0, 0, 0, 0)');
+    return {
+        paddingEnd: round(px(getComputedStyle(box).paddingInlineEnd || getComputedStyle(box).paddingRight)),
+        inList: row !== null,
+        hasTitle: titleEl !== null,
+        countBadges: box.querySelectorAll('.nuiget-badge--count').length,
+        titleText: titleEl ? titleEl.textContent ?? '' : '',
+        title: titleStyle ? { fontSize: titleStyle.fontSize, fontWeight: titleStyle.fontWeight, textTransform: titleStyle.textTransform } : undefined,
+        lineAbove,
+        level: group ? Number(group.getAttribute('aria-level')) : undefined,
+        posInSet: group ? Number(group.getAttribute('aria-posinset')) : undefined,
+    };
+};
 const sections = [...scope.querySelectorAll('[data-testid^="section-box-"]')].filter(visible).map(box => {
     const title = union(leafRects(box.querySelector('.nuiget-section-title') ?? box));
     const shown = title && inView(title, box);
@@ -758,11 +803,12 @@ const sections = [...scope.querySelectorAll('[data-testid^="section-box-"]')].fi
         variant: box.dataset.variant ?? '',
         insets: contentInsets(box),
         trailingEnd: (() => {
-            const trailing = [...box.querySelectorAll('.nuiget-badge, .nuiget-section-actions > *')].filter(visible);
+            const trailing = [...box.querySelectorAll('.nuiget-badge, .nuiget-section-actions > *, .nuiget-section-count > *')].filter(visible);
             return trailing.length > 0 ? round(box.getBoundingClientRect().right - Math.max(...trailing.map(el => el.getBoundingClientRect().right))) : undefined;
         })(),
         above: edge === undefined ? undefined : round(title.top - edge),
         below: name === undefined ? undefined : round(name - title.bottom),
+        ...headerFacts(box),
     };
 });
 const toolbars = [...scope.querySelectorAll('[data-testid="installed-toolbar"], [data-testid="updates-toolbar"]')].filter(visible).map(box => ({ id: box.dataset.testid, insets: contentInsets(box) }));
@@ -857,7 +903,11 @@ const heights = {
         const style = getComputedStyle(el);
         const rect = rectOf(el);
         const text = badgeLabel(el);
-        return { count: /^[0-9]+$/.test(text), width: round(rect.width), height: round(rect.height), fontSize: style.fontSize, padding: paddingOf(style), radius: style.borderTopLeftRadius };
+        return {
+            count: el.classList.contains('nuiget-badge--count') || (!el.classList.contains('nuiget-badge--label') && /^[0-9]+$/.test(text)),
+            width: round(rect.width), height: round(rect.height), fontSize: style.fontSize, padding: paddingOf(style), radius: style.borderTopLeftRadius,
+            borderWidth: px(style.borderTopWidth), borderColor: style.borderTopColor, toned: /nuiget-badge--(?:info|warning|error)/.test(el.className),
+        };
     }),
     progress: shown('.nuiget-progress').map(heightOf),
 };
@@ -1109,7 +1159,18 @@ for (let node = styleWalker.nextNode(); node; node = styleWalker.nextNode()) {
     textStyles.push({ fontSize: px(style.fontSize), fontWeight: Number(style.fontWeight), header: Boolean(parent.closest('.nuiget-section-title')) });
 }
 const lookStyle = getComputedStyle(document.documentElement);
-const lookTokens = Object.fromEntries(${JSON.stringify(LOOK_TOKENS)}.map(name => [name, lookStyle.getPropertyValue(name).trim()]));
+// A calc() token reads through a probe: its custom property comes back as text.
+const lookValue = name => {
+    const value = lookStyle.getPropertyValue(name).trim();
+    if (!value.startsWith('calc(')) return value;
+    const probe = document.createElement('span');
+    probe.style.paddingLeft = 'var(' + name + ')';
+    document.documentElement.appendChild(probe);
+    const resolved = getComputedStyle(probe).paddingLeft;
+    probe.remove();
+    return resolved;
+};
+const lookTokens = Object.fromEntries(${JSON.stringify(LOOK_TOKENS)}.map(name => [name, lookValue(name)]));
 const rootLine = px(getComputedStyle(root).lineHeight);
 const metaText = shown('.nuiget-row-version, .nuiget-row-authors, .nuiget-row-meta, .nuiget-row-description').map(el => {
     const style = getComputedStyle(el);
@@ -1156,6 +1217,8 @@ const endOfP0 = {
     iconColours: { icon: computedColour('--nuiget-color-icon'), active: computedColour('--nuiget-color-list-active-icon'), disabled: computedColour('--nuiget-color-fg-disabled'), warning: computedColour('--nuiget-color-icon-warning'), hoverBg: computedColour('--nuiget-color-toolbar-hover-bg') },
     tabColours: { active: computedColour('--nuiget-color-tab-active-fg'), inactive: computedColour('--nuiget-color-tab-inactive-fg'), indicator: computedColour('--nuiget-color-tab-indicator') },
     actionRadius: getComputedStyle(root).getPropertyValue('--nuiget-radius-action').trim(),
+    contrastBorder: computedColour('--vscode-contrastBorder'),
+    uppercaseHeaders: document.documentElement.hasAttribute('data-uppercase-headers'),
     listPaneWidth: pane && visible(pane) ? round(rectOf(pane).width) : undefined,
     detailsHeader: visible(detailsHeaderEl) ? { insets: contentInsets(detailsHeaderEl), titleLeft: detailsTitleText ? round(detailsTitleText.left) : undefined, tabLabelLeft: detailsTabLabel ? round(detailsTabLabel.left) : undefined } : undefined,
     sideways,
@@ -1213,7 +1276,7 @@ for (const el of document.body.querySelectorAll('*')) {
 }
 const rootStyle = getComputedStyle(document.documentElement);
 const scrollbar = { rootColor: rootStyle.scrollbarColor || '', slider: rootStyle.getPropertyValue('--nuiget-color-scrollbar').trim(), scrollers };
-return { root: true, examined, offRamp, offRampCount, blockGaps, sections, toolbars, mainHeader: contentInsets(header), sidebarHeader: sidebarHeader ? contentInsets(sidebarHeader) : undefined, mainLefts, mainRegionLeft, details, sidebar, heights, centring, detailsButtons, width, rows, chrome, firstRow, overflow, transitiveGap, primaryEdges, browsing, documentOverflow, endOfP0, testIds, scrollbar };
+return { root: true, flatList: Boolean(scope.querySelector('[role="listbox"]')) && !scope.querySelector('[role="tree"]'), examined, offRamp, offRampCount, blockGaps, sections, toolbars, mainHeader: contentInsets(header), sidebarHeader: sidebarHeader ? contentInsets(sidebarHeader) : undefined, mainLefts, mainRegionLeft, details, sidebar, heights, centring, detailsButtons, width, rows, chrome, firstRow, overflow, transitiveGap, primaryEdges, browsing, documentOverflow, endOfP0, testIds, scrollbar };
 `;
 
 // ---- the workbench of the same run (helper 3's parity) --------------------------------------------------------------
@@ -1703,14 +1766,13 @@ function evaluateOverflow(definition: RuleDefinition, scope: Scope, layout: Layo
                     parts.push(check('toolbar end', ends, TRAILING.surface));
                 }
             }
+            if (scope === 'main-header' && layout.mainHeader !== undefined) {
+                parts.push(check('header end', [layout.mainHeader.end], TRAILING.surface));
+            }
             if (scope === 'headers') {
-                const groups = layout.sections.filter(section => section.variant === 'group' && section.trailingEnd !== undefined).map(section => section.trailingEnd as number);
-                const surfaces = layout.mainHeader === undefined ? [] : [layout.mainHeader.end];
+                const groups = layout.sections.filter(section => isGroupHeader(section) && section.trailingEnd !== undefined).map(section => section.trailingEnd as number);
                 if (groups.length > 0) {
                     parts.push(check('group headers', groups, TRAILING.surface));
-                }
-                if (surfaces.length > 0) {
-                    parts.push(check('header and toolbars', surfaces, TRAILING.surface));
                 }
             }
             if (scope === 'sidebar') {
@@ -1723,6 +1785,9 @@ function evaluateOverflow(definition: RuleDefinition, scope: Scope, layout: Layo
                 }
             }
             if (parts.length === 0) {
+                if (scope === 'headers' && layout.flatList) {
+                    return { value: 'no group header (flat list)', pass: true };
+                }
                 return { value: NOT_MEASURABLE, pass: false };
             }
             return { value: parts.map(part => part.text).join('; '), pass: parts.every(part => part.pass) };
@@ -1960,9 +2025,14 @@ function evaluateEndOfP0(definition: RuleDefinition, scope: Scope, state: string
             const icons = comfortable.flatMap(row => (row.icon === undefined ? [] : [row.icon.radius]));
             const checks = layout.heights.checkBoxes.map(box => box.radius);
             const actions = layout.heights.iconButtons.map(button => button.radius);
+            const countRadius = facts.lookTokens['--nuiget-radius-badge'];
+            const labelRadius = facts.lookTokens['--nuiget-radius-label-badge'];
+            const counts = layout.heights.badges.filter(badge => badge.count).map(badge => badge.radius);
+            const labels = layout.heights.badges.filter(badge => !badge.count).map(badge => badge.radius);
+            const badgeClause = `${counts.length === 0 ? '' : `; count badge ${tally(counts)} (target ${countRadius})`}${labels.length === 0 ? '' : `; label badge ${tally(labels)} (target ${labelRadius})`}`;
             return {
-                value: `band ${tally(bands)} (target ${target}); icon ${icons.length === 0 ? 'hidden' : tally(icons)} (target ${END_OF_P0.iconRadius})${checks.length === 0 ? '' : `; check ${tally(checks)} (target ${CONTROL_STYLES.checkBoxRadius})`}${actions.length === 0 ? '' : `; icon-button ${tally(actions)} (target ${facts.actionRadius})`}`,
-                pass: bands.every(radius => radius === target) && icons.every(radius => radius === END_OF_P0.iconRadius) && checks.every(radius => radius === CONTROL_STYLES.checkBoxRadius) && actions.every(radius => radius === facts.actionRadius),
+                value: `band ${tally(bands)} (target ${target}); icon ${icons.length === 0 ? 'hidden' : tally(icons)} (target ${END_OF_P0.iconRadius})${checks.length === 0 ? '' : `; check ${tally(checks)} (target ${CONTROL_STYLES.checkBoxRadius})`}${actions.length === 0 ? '' : `; icon-button ${tally(actions)} (target ${facts.actionRadius})`}${badgeClause}`,
+                pass: bands.every(radius => radius === target) && icons.every(radius => radius === END_OF_P0.iconRadius) && checks.every(radius => radius === CONTROL_STYLES.checkBoxRadius) && actions.every(radius => radius === facts.actionRadius) && counts.every(radius => radius === countRadius) && labels.every(radius => radius === labelRadius),
             };
         }
         case 'DS-COLOR-5': {
@@ -2372,13 +2442,23 @@ function evaluate(definition: RuleDefinition, scope: Scope, state: string, layou
         }
         case 'DS-INSET-2': {
             const sectionBoxes = layout.sections.map(section => [section.id, section.variant, section.insets] as [string, string, Insets | undefined]);
+            // A header's end inset is its trailing element's border box (the rule's `last.right`), or the slot's padding when nothing
+            // trails; the leaf union would read a badge's text or a clipped title's range (UX-P2.6a).
+            const groupBoxes = layout.sections.filter(isGroupHeader).map(section => [
+                section.trailingEnd === undefined ? `${section.id}\u0000${section.paddingEnd ?? 0}` : section.id,
+                section.variant,
+                section.insets === undefined ? undefined : { ...section.insets, end: section.trailingEnd ?? section.paddingEnd ?? 0 },
+            ] as [string, string, Insets | undefined]);
             let boxes: Array<[string, string, Insets | undefined]>;
             switch (scope) {
                 case 'toolbars':
                     boxes = layout.toolbars.map(toolbar => [toolbar.id, '', toolbar.insets]);
                     break;
                 case 'headers':
-                    boxes = sectionBoxes;
+                    if (groupBoxes.length === 0 && layout.flatList) {
+                        return { value: 'no group header (flat list)', pass: true };
+                    }
+                    boxes = groupBoxes;
                     break;
                 case 'main-header':
                     boxes = [['main-header', '', layout.mainHeader]];
@@ -2393,13 +2473,19 @@ function evaluate(definition: RuleDefinition, scope: Scope, state: string, layou
             if (measured.length === 0) {
                 return { value: NOT_MEASURABLE, pass: false };
             }
-            const value = measured.length === 1 && scope !== 'headers' ? insetText(measured[0][2]) : measured.map(([id, , insets]) => `${id} ${insetText(insets)}`).join('; ');
+            const value = measured.length === 1 && scope !== 'headers' ? insetText(measured[0][2]) : measured.map(([id, , insets]) => {
+                const [name, pad] = id.split('\u0000');
+                return pad === undefined ? `${name} ${insetText(insets)}` : `${name} ${insets.start}/${insets.end} (pad ${pad}) ${insets.top}/${insets.bottom}`;
+            }).join('; ');
             return { value, pass: measured.every(([id, variant, insets]) => meetsInset(insets, insetTarget(scope, id, variant, look), tolerance)) };
         }
         default:
             return undefined;
     }
 }
+
+/** A header of a list's tree (DS-INSET-2, DS-INSET-3 `headers`): a group box, or any box inside a group row. */
+const isGroupHeader = (section: SectionBox): boolean => section.variant === 'group' || section.inList === true;
 
 /** The item a `hard` scope waits for at a capture width (`pendingWidths`, within 1 px), or undefined. */
 function pendingWidth(definition: RuleDefinition, width: number): string | undefined {

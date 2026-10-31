@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { axe } from 'jest-axe';
 import type React from 'react';
@@ -357,6 +357,7 @@ describe('Listbox group rows (UX-P2.1a, UX-P2.1c)', () => {
         expect(marked[0]).toHaveAttribute('role', 'presentation');
         expect(marked[0]).not.toHaveAttribute('tabindex');
         expect(marked[0].getAttribute('style')).toMatch(INLINE_STYLE);
+        expect(marked[0].querySelector('.nuiget-row-group')).toHaveClass('nuiget-row-group--compact');
         expect(marked[0].getAttribute('style')).toContain('--nuiget-virtual-offset: 24px');
         expect(within(treeitem('Group')).getByTestId('group-content-Group')).toHaveTextContent('Group 1 false 1');
         expect(within(list).getAllByRole('treeitem').map(item => item.closest('[data-index]')?.getAttribute('data-index'))).toEqual(['0', '1', '2']);
@@ -447,6 +448,11 @@ describe('Listbox group rows (UX-P2.1a, UX-P2.1c)', () => {
     it('in a tree aria-level, aria-posinset and aria-setsize count among siblings, aria-expanded is on group rows only, and a nested group is one level deeper', () => {
         const nested: Package[] = [{ id: 'Group', version: '' }, { id: 'Inner', version: '' }, { id: 'Alpha', version: '1.0.0' }, { id: 'Beta', version: '2.0.0' }, { id: 'Second', version: '' }, { id: 'Gamma', version: '3.0.0' }];
         render(<Grouped items={nested} levels={{ Group: 1, Inner: 2, Second: 1 }} />);
+        // The separator is above a later level-1 group alone; the density is on every group element.
+        const groupElements = [...screen.getByTestId('grouped-list').querySelectorAll<HTMLElement>('.nuiget-row-group')];
+        expect(groupElements.map(group => group.classList.contains('nuiget-row-group--divided'))).toEqual(groupElements.map(group => group.getAttribute('aria-level') === '1' && group.getAttribute('aria-posinset') !== '1'));
+        expect(groupElements.filter(group => group.classList.contains('nuiget-row-group--divided'))).toHaveLength(1);
+        expect(groupElements.every(group => group.classList.contains('nuiget-row-group--compact'))).toBe(true);
         const read = (element: HTMLElement) => ['aria-level', 'aria-posinset', 'aria-setsize', 'aria-expanded'].map(name => element.getAttribute(name));
         expect(read(treeitem('Group'))).toEqual(['1', '1', '2', 'true']);
         expect(read(treeitem('Inner'))).toEqual(['2', '1', '1', 'true']);
@@ -541,7 +547,7 @@ describe('Listbox group rows (UX-P2.1a, UX-P2.1c)', () => {
 
 describe('Listbox estimates', () => {
     // No fake layout: without a client box nothing renders or is measured, so the sizer is the estimates alone.
-    it('a group row is estimated at the compact height and a package row at its density\'s height', () => {
+    it('a group row is estimated at the pane-header height and a package row at its density\'s height', () => {
         const items = ['group-a', 'Alpha', 'Beta', 'group-b', 'Gamma'].map(id => ({ id }));
         const { container } = render(
             <Listbox
@@ -561,7 +567,13 @@ describe('Listbox estimates', () => {
             />,
         );
         const sizer = container.querySelector('.nuiget-listbox-sizer') as HTMLElement;
-        expect(sizer.style.getPropertyValue('--nuiget-virtual-total')).toBe(`${2 * 24 + 3 * 72}px`);
+        expect(sizer.style.getPropertyValue('--nuiget-virtual-total')).toBe(`${2 * 22 + 3 * 72}px`);
+        // Under Modern UI the token is 28.
+        cleanup();
+        document.documentElement.style.setProperty('--nuiget-pane-header-height', '28px');
+        const modern = render(<Listbox items={items} label="Packages" hint="Arrow keys move." testId="estimated-list" density="comfortable" groups={{ is: item => item.id.startsWith('group-'), level: () => 1, isExpanded: () => true, onToggle: () => undefined, render: item => <span>{item.id}</span> }} renderRow={(item, placement) => <Row {...placement} itemId={item.id} name={item.id} />} />);
+        expect((modern.container.querySelector('.nuiget-listbox-sizer') as HTMLElement).style.getPropertyValue('--nuiget-virtual-total')).toBe(`${2 * 28 + 3 * 72}px`);
+        document.documentElement.style.removeProperty('--nuiget-pane-header-height');
     });
 });
 
