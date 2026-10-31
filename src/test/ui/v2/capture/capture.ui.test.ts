@@ -97,13 +97,16 @@ async function installedListAtTop(): Promise<void> {
     await script<void>('document.querySelector(\'[data-testid="installed-list"]\').scrollTop = 0;');
 }
 
-/** Gateway's Installed list with its rows and their lite metadata (the authors of Serilog). */
+/**
+ * Gateway's Installed list with its rows and their lite metadata. The rendered window shrinks with the pane's width: the
+ * wait is on what every width renders, never on a row by position (UX-P2.1e).
+ */
 async function gatewayInstalled(): Promise<void> {
     await chooseFixtureProject('Gateway.csproj');
     await clickVisible('installed-tab');
     await installedListAtTop();
-    await findByTestId('package-row-fluentvalidation', 120_000);
-    await poll(async () => (((await (await findByTestId('package-row-serilog')).getAttribute('textContent')) ?? '').includes('Serilog Contributors') ? true : undefined), 'the authors of the Serilog row', 60_000);
+    await until('document.querySelector(\'[data-testid="installed-list"] .nuiget-row:not([data-row-kind="group"])\') !== null', 'the first package row of the list');
+    await poll(async () => ((await script<string>(UNSETTLED)) === '' ? true : undefined), 'the rendered rows\' authors and the tab counts', 120_000);
 }
 
 async function typeInSearch(text: string): Promise<void> {
