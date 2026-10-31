@@ -189,7 +189,7 @@ P0 item provides.
 | DS-ICON-4 | 3 computed styles | `main-installed-details`, `main-transitive-details` | V51, V62 | P1.4b | hard at P1.4b |
 | DS-COLOR-1 | computed colours | main / each screen | — | P2.8b / its P3 item | pending |
 | DS-COLOR-2 | unfocused-list state | rows | — | P2.2 | `rows` hard since UX-P2.2; the hovered-selected clause waits for P2.8a's state, the check-mark clause hard since UX-P2.3 |
-| DS-COLOR-3, -4 | hover, computed colours | icon buttons, tabs | — | P2.5 | DS-COLOR-4 hard since UX-P2.5; DS-COLOR-3 hard at P2.5b in `main-installed-refresh-hover` |
+| DS-COLOR-3, -4 | hover, computed colours | icon buttons, tabs | — | P2.5 | DS-COLOR-4 hard since UX-P2.5; DS-COLOR-3 hard since UX-P2.5b in `main-installed-refresh-hover` |
 | DS-COLOR-5 | computed colours | rows / tabs | — | P2.2 / P2.5 | `rows` hard since UX-P2.2 (probe and lint), `tabs` hard since UX-P2.5; `sash` pending P3.9 |
 | DS-COLOR-6 | computed opacity and colours | text buttons / icon buttons and action labels | V38 | P2.3 / P2.5 | text buttons hard since UX-P2.3; icon buttons' verdict written at UX-P2.5, scope pending P3.10 (no named state disables one until the sidebar Updates empty cell) |
 | DS-COLOR-7 | computed colours | buttons | — | P2.3 | hard since UX-P2.3 in `main-installed-toolbar-hover` |

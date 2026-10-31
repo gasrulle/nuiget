@@ -191,7 +191,7 @@ const cancelDialog = async (): Promise<void> => {
 };
 
 /** The states whose subject is the pointer: the shot leaves it where it is. */
-const HOVER_STATES = ['main-installed-hover', 'main-installed-toolbar-hover'];
+const HOVER_STATES = ['main-installed-hover', 'main-installed-toolbar-hover', 'main-installed-refresh-hover'];
 
 const REACH: Record<string, Reach> = {
     'main-installed-single': { reach: gatewayInstalled },
@@ -260,6 +260,13 @@ const REACH: Record<string, Reach> = {
             await gatewayInstalled();
             await driverOf().actions().move({ origin: await findByTestId('select-all-button', 30_000) }).perform();
             await until('document.querySelector(\'[data-testid="select-all-button"]\').matches(":hover")', 'the Select all button under the pointer', 10_000);
+        },
+    },
+    'main-installed-refresh-hover': {
+        reach: async () => {
+            await gatewayInstalled();
+            await driverOf().actions().move({ origin: await findByTestId('refresh-button', 30_000) }).perform();
+            await until('document.querySelector(\'[data-testid="refresh-button"]\').matches(":hover")', 'the Refresh button under the pointer', 10_000);
         },
     },
     'main-installed-focus': {

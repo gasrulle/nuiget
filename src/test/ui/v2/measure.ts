@@ -212,6 +212,7 @@ export const RULES: readonly RuleDefinition[] = [
     rule('DS-ICON-2', { helper: 3, scopes: inGroups('hard', ...MAIN, 'sidebar'), tolerance: TOLERANCES.containment }),
     rule('DS-COLOR-4', { helper: 6, scopes: { tabs: 'hard' }, tolerance: TOLERANCES.containment }),
     rule('DS-COLOR-7', { helper: 3, scopes: { 'text-buttons': 'hard' }, tolerance: TOLERANCES.containment, states: ['main-installed-toolbar-hover'] }),
+    rule('DS-COLOR-3', { helper: 3, scopes: { 'icon-buttons': 'hard' }, tolerance: TOLERANCES.containment, states: ['main-installed-refresh-hover'] }),
     // UX-P2.2b (design trigger 6): the row parts of the four rules no helper asserted.
     rule('DS-COLOR-2', { helper: 6, scopes: { rows: 'hard' }, tolerance: TOLERANCES.containment, states: ['main-installed-details', 'main-details-readme', 'main-installed-unfocused'] }),
     rule('DS-DIVIDER-1', { helper: 6, scopes: { rows: 'hard', headers: { pending: 'P2.6' } }, tolerance: TOLERANCES.containment, exceptStates: NO_ROW_STATES }),
@@ -519,7 +520,7 @@ export interface EndOfP0 {
     /** UX-P2.3b: the secondary button's hover and rest fills, as computed colours. */
     buttonSecondary: { hover: string; rest: string };
     /** UX-P2.5: the icon and tab roles, as computed colours. */
-    iconColours: { icon: string; active: string; disabled: string; warning: string };
+    iconColours: { icon: string; active: string; disabled: string; warning: string; hoverBg: string };
     tabColours: { active: string; inactive: string; indicator: string };
     actionRadius: string;
     listPaneWidth: number | undefined;
@@ -1152,7 +1153,7 @@ const endOfP0 = {
     rows: endRows,
     listSelection: { active: computedColour('--vscode-list-activeSelectionBackground'), inactive: computedColour('--vscode-list-inactiveSelectionBackground') },
     buttonSecondary: { hover: computedColour('--nuiget-color-button-secondary-hover-bg'), rest: computedColour('--nuiget-color-button-secondary-bg') },
-    iconColours: { icon: computedColour('--nuiget-color-icon'), active: computedColour('--nuiget-color-list-active-icon'), disabled: computedColour('--nuiget-color-fg-disabled'), warning: computedColour('--nuiget-color-icon-warning') },
+    iconColours: { icon: computedColour('--nuiget-color-icon'), active: computedColour('--nuiget-color-list-active-icon'), disabled: computedColour('--nuiget-color-fg-disabled'), warning: computedColour('--nuiget-color-icon-warning'), hoverBg: computedColour('--nuiget-color-toolbar-hover-bg') },
     tabColours: { active: computedColour('--nuiget-color-tab-active-fg'), inactive: computedColour('--nuiget-color-tab-inactive-fg'), indicator: computedColour('--nuiget-color-tab-indicator') },
     actionRadius: getComputedStyle(root).getPropertyValue('--nuiget-radius-action').trim(),
     listPaneWidth: pane && visible(pane) ? round(rectOf(pane).width) : undefined,
@@ -1908,6 +1909,14 @@ function evaluateEndOfP0(definition: RuleDefinition, scope: Scope, state: string
                 return notMeasurable('no disabled text button');
             }
             return { value: `disabled ${disabled.length}: opacity ${tally(disabled.map(button => button.opacity))} (target 0.4)`, pass: disabled.every(button => button.opacity === '0.4') };
+        }
+        case 'DS-COLOR-3': {
+            const hovered = layout.heights.iconButtons.find(button => button.hovered);
+            if (hovered === undefined) {
+                return notMeasurable('no hovered icon button');
+            }
+            const target = facts.iconColours.hoverBg;
+            return { value: `hovered [${hovered.label}] ${hovered.background} (target ${target}, rest rgba(0, 0, 0, 0))`, pass: hovered.background === target && hovered.background !== 'rgba(0, 0, 0, 0)' };
         }
         case 'DS-COLOR-7': {
             const hovered = layout.heights.buttons.find(button => button.hovered && button.secondary);

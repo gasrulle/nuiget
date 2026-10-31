@@ -144,6 +144,8 @@ export const STATES: readonly NamedState[] = [
         'Gateway selected, the pointer on the Serilog row; the row matches :hover.', [LIVE_ICONS]), diffTolerance: 0 },
     { ...ready('main-installed-toolbar-hover', 'main', [primary('main')],
         'Gateway selected, the Select all button under the pointer (DS-COLOR-7).', [LIVE_ICONS]), diffTolerance: 0 },
+    { ...ready('main-installed-refresh-hover', 'main', [primary('main')],
+        'Gateway selected, the header\'s Refresh button under the pointer (DS-COLOR-3).', [LIVE_ICONS]), diffTolerance: 0 },
     { ...ready('main-installed-focus', 'main', themeSensitive('main'),
         'Gateway selected, the list reached from the keyboard; the active option matches :focus-visible.', [LIVE_ICONS]), diffTolerance: 0 },
     { ...ready('main-installed-unfocused', 'main', [primary('main')],
@@ -259,8 +261,9 @@ const namedWidth = (state: NamedState): number | undefined => {
  * that width only), in `theme`, Modern UI.
  */
 export function matrixCaptures(theme: Theme): Array<{ state: NamedState; capture: Capture }> {
-    // A secondary button's hover equals its rest in high contrast: the toolbar hover state has no subject there (DS-COLOR-7).
-    const shown = (state: NamedState) => !(state.name === 'main-installed-toolbar-hover' && theme.includes('high-contrast'));
+    // A secondary button's hover equals its rest in high contrast and an icon button's hover fill is transparent there (the
+    // dashed line is P3.9's): the two hover states have no subject there (DS-COLOR-7, DS-COLOR-3).
+    const shown = (state: NamedState) => !((state.name === 'main-installed-toolbar-hover' || state.name === 'main-installed-refresh-hover') && theme.includes('high-contrast'));
     return STATES.filter(state => isReady(state) && (state.tier === 'A' || state.tier === 'B') && shown(state)).flatMap(state => {
         const fixed = namedWidth(state);
         const widths = fixed !== undefined ? [fixed] : state.surface === 'main' ? PANEL_WIDTHS : SIDEBAR_WIDTHS;

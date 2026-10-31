@@ -524,5 +524,13 @@ describe('the in-page collector on stubbed geometry (UX-P0.10, UX-P0.11)', () =>
             { inHeader: false, width: 22, height: 22, label: 'Uninstall', glyph: { w: 16, h: 16 }, band: 'current', multi: false },
         ]);
         expect(facts.tabs.map(tab => [tab.id, tab.selected])).toEqual([['installed-tab', true], ['updates-tab', false]]);
+        // DS-COLOR-3 (UX-P2.5b): the hovered icon button and the toolbar's hover fill the rule compares it with.
+        expect(facts.iconButtons.map(button => button.hovered)).toEqual([false, false]);
+        const refresh = document.querySelector('[data-testid="refresh-button"]') as HTMLElement;
+        const matches = refresh.matches.bind(refresh);
+        Object.defineProperty(refresh, 'matches', { value: (selector: string) => selector === ':hover' || matches(selector) });
+        const hovered = collect();
+        expect(hovered.heights.iconButtons.map(button => button.hovered)).toEqual([true, false]);
+        expect(Object.keys(hovered.endOfP0.iconColours)).toContain('hoverBg');
     });
 });
