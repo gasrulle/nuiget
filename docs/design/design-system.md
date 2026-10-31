@@ -430,10 +430,10 @@ Every container that holds a row of controls, its minimum width and its behaviou
 | Sidebar section header | 170 | title ellipsis; the count badge and the actions stay | title ellipsis holds; Update all touches the edge (V3) |
 | Sidebar compact row | 170 | version ellipsis first, then the name (DS-ROW-5); actions stay | holds |
 | Main header (title, check boxes, selects, gear, refresh) | 220 (editor minimum) | wraps; every control line ends at the inset | wraps (UX-P2.7a) |
-| Tab strip (Installed/Updates) | list-pane minimum | count badges hide first, then labels ellipsize; never a sideways scroll | no rule |
-| Bulk toolbar | list-pane minimum | the primary action stays at the end; Select All becomes an icon button | wraps |
-| Main-list group header | list-pane minimum | title ellipsis; badges keep the 16 px end inset and may ellipsize their text | badges reach the edge (V3) |
-| Comfortable row | list-pane minimum | ≤ 250 px icon 24, ≤ 200 px icon hidden; name ellipsis last; actions stay | no breakpoint |
+| Tab strip (Installed/Updates) | 170 (`--nuiget-list-pane-min`) | count badges hide below 250 first, then labels ellipsize; never a sideways scroll | badges hide below 250 (UX-P2.7b) |
+| Bulk toolbar | 170 (`--nuiget-list-pane-min`) | the primary action stays at the end; Select All collapses to its glyph below 250 | Select all collapses below 250 (UX-P2.7b) |
+| Main-list group header | 170 (`--nuiget-list-pane-min`) | title ellipsis; badges keep the 16 px end inset and may ellipsize their text | badges reach the edge (V3) |
+| Comfortable row | 170 (`--nuiget-list-pane-min`) | ≤ 250 px icon 24, ≤ 200 px icon hidden; name ellipsis last; actions stay | no breakpoint |
 | Details header (installed version, version select, buttons) | details-pane minimum | the grid becomes a wrapping flex row: label and value, then the buttons on their own line | a 4-column grid that cannot wrap |
 | Details/README tabs | details-pane minimum | as the tab strip | as the tab strip |
 | Details facts (DS-ALIGN-1) | details-pane minimum | the value column wraps under the label | ragged (V59) |
