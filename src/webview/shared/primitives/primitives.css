@@ -231,10 +231,9 @@
     border-color: var(--nuiget-color-fg-muted);
 }
 
-/* The name truncates last: the badges collapse first (DS-ROW-5). */
+/* The name ellipsizes beside its badges, which keep their width, as the Extensions name does (DS-ROW-5). */
 .nuiget-row-name {
-    flex: 0 0 auto;
-    max-width: 100%;
+    flex: 0 1 auto;
     min-width: 0;
     overflow: hidden;
     color: var(--nuiget-row-fg-name, inherit);
@@ -274,10 +273,8 @@
 
 .nuiget-row-badges {
     display: inline-flex;
-    flex: 0 1 auto;
+    flex: none;
     gap: var(--nuiget-space-2);
-    min-width: 0;
-    overflow: hidden;
 }
 
 .nuiget-row-version-new {
@@ -329,6 +326,11 @@
     .nuiget-row-icon {
         inline-size: var(--nuiget-icon-size-lg);
         block-size: var(--nuiget-icon-size-lg);
+    }
+
+    /* Too narrow for a whole badge: it collapses rather than clips; the description still carries it. */
+    .nuiget-row--comfortable .nuiget-row-badges {
+        display: none;
     }
 }
 
@@ -386,9 +388,7 @@
 }
 
 .nuiget-row--compact .nuiget-row-badges {
-    flex: none;
     order: 1;
-    overflow: visible;
     margin-inline-start: auto;
 }
 

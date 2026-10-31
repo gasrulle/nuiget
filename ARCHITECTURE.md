@@ -343,7 +343,7 @@ div.nuiget-row[role="presentation"][data-index][data-testid="package-row-<id>"] 
 ```
 
 A comfortable row is the Extensions row (D46): a fixed 72 px (`--nuiget-row-height-comfortable`), no line under it, a
-36 px icon (24 px and hidden at list-pane widths of 250 and 200 px, through a container query on `.nuiget-listbox-root`)
+36 px icon (24 px and hidden at list-pane widths of 250 and 200 px, through a container query on `.nuiget-listbox-root`; label badges keep their width beside an ellipsized name and are hidden from 250 px)
 and two lines (name and badges; version, meta, authors and status), or three in Browse, with the description between
 them. The option is the band that hover, selection and focus paint; a row's one action overlays its reserved end slot.
 A row's state reaches its text through `--nuiget-row-*` custom properties, set by the state's own rule and read by each

@@ -114,6 +114,25 @@ describe('the in-page collector on stubbed geometry (UX-P0.10, UX-P0.11)', () =>
         expect(after.icon).toBeUndefined();
     });
 
+    it('a badge past the end of its line counts as clipped; a whole one does not (DS-ROW-5, UX-P2.2)', () => {
+        const name = document.querySelector('.nuiget-row-option .nuiget-row-name') as HTMLElement;
+        const badge = document.querySelector('.nuiget-row-option .nuiget-badge') as HTMLElement;
+        const line = document.createElement('span');
+        line.className = 'nuiget-row-line';
+        line.setAttribute('data-rect', '80,150,240,166');
+        name.before(line);
+        line.append(name, badge);
+        expect(collect().rows[0].badgesClipped).toBe(0);
+        line.setAttribute('data-rect', '80,150,230,166');
+        expect(collect().rows[0].badgesClipped).toBe(1);
+    });
+
+    it('a hidden badge is not counted (DS-ROW-6, UX-P2.2)', () => {
+        (document.querySelector('.nuiget-row-option .nuiget-badge') as HTMLElement).style.display = 'none';
+        expect(collect().rows[0].badgesShown).toBe(0);
+        expect(collect().rows[0].badgesClipped).toBe(0);
+    });
+
     it('a badge inside a collapsed wrapper is not shown; in a wrapper of its width it is (DS-ROW-5, UX-P2.2)', () => {
         const name = document.querySelector('.nuiget-row-name') as HTMLElement;
         const badge = document.querySelector('.nuiget-row-option .nuiget-badge') as HTMLElement;

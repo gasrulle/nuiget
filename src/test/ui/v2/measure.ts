@@ -362,6 +362,8 @@ export interface RowFacts {
     /** The version ellipsized itself (it collapses before the name, DS-ROW-5). */
     versionCut: boolean;
     badgesShown: number;
+    /** Comfortable rows: badges that overrun the content of their line (DS-ROW-5: a badge is never clipped). */
+    badgesClipped: number;
     /** The row band's right minus its last visible action's right; undefined without a visible action. */
     actionsEnd: number | undefined;
 }
@@ -835,6 +837,7 @@ const rows = shown('.nuiget-row:not([data-row-kind="group"])').map(row => {
         versionShown: visible(version),
         versionCut: visible(version) && version.scrollWidth > version.clientWidth,
         badgesShown: [...option.querySelectorAll('.nuiget-badge')].filter(badge => visible(badge) && unclipped(badge, option)).length,
+        badgesClipped: [...option.querySelectorAll('.nuiget-row-line .nuiget-badge')].filter(badge => visible(badge) && badge.getBoundingClientRect().right > badge.closest('.nuiget-row-line').getBoundingClientRect().right + 0.5).length,
         actionsEnd: actions.length > 0 ? round(rectOf(row).right - Math.max(...actions.map(action => rectOf(action).right))) : undefined,
     };
 });
@@ -1651,14 +1654,15 @@ function evaluateOverflow(definition: RuleDefinition, scope: Scope, layout: Layo
             if (rows.length === 0) {
                 return { value: NOT_MEASURABLE, pass: false };
             }
-            // The name truncates last: never while the row still shows its version or a badge, and always with an ellipsis.
-            // The version shares the name's line in a compact row only; a comfortable row's version is on its second line.
-            const early = rows.filter(row => row.nameCut && (row.badgesShown > 0 || (row.compact && row.versionShown && !row.versionCut))).map(row => row.name);
+            // A compact row's name truncates after its version. A comfortable row's name ellipsizes beside its whole badges:
+            // a badge is never clipped (UX-P2.2, the rule corrected to its exemplar).
+            const early = rows.filter(row => row.nameCut && row.compact && row.versionShown && !row.versionCut).map(row => row.name);
+            const clipped = rows.reduce((sum, row) => sum + (row.compact ? 0 : row.badgesClipped), 0);
             const plain = rows.filter(row => !row.nameEllipsis).length;
             const cut = rows.filter(row => row.nameCut).length;
             return {
-                value: `${rows.length} rows, ${cut} names cut${early.length > 0 ? `; cut before the version or badges: ${early.join(', ')}` : ''}${plain > 0 ? `; no ellipsis ${plain}` : ''}`,
-                pass: early.length === 0 && plain === 0,
+                value: `${rows.length} rows, ${cut} names cut${early.length > 0 ? `; cut before the version: ${early.join(', ')}` : ''}${plain > 0 ? `; no ellipsis ${plain}` : ''}${scope === 'sidebar' ? '' : `; badges clipped ${clipped}`}`,
+                pass: early.length === 0 && plain === 0 && clipped === 0,
             };
         }
         default:
@@ -1743,7 +1747,10 @@ function evaluateEndOfP0(definition: RuleDefinition, scope: Scope, state: string
             }
             const target = width <= END_OF_P0.iconHiddenBelow ? 0 : width <= END_OF_P0.iconSmallBelow ? END_OF_P0.iconSmall : END_OF_P0.icon;
             const sizes = rows.map(row => row.icon?.w ?? 0);
-            return { value: `pane ${width}: icon ${tally(sizes)} (target ${target === 0 ? 'none' : target})`, pass: sizes.every(size => near(size, target, tolerance)) };
+            const narrow = width <= END_OF_P0.iconSmallBelow;
+            const badgesShown = layout.rows.reduce((sum, row) => sum + (row.compact ? 0 : row.badgesShown), 0);
+            const badges = badgesShown === 0 ? `badges hidden ×${layout.rows.filter(row => !row.compact).length}` : `badges shown ${badgesShown}`;
+            return { value: `pane ${width}: icon ${tally(sizes)} (target ${target === 0 ? 'none' : target}); ${badges}`, pass: sizes.every(size => near(size, target, tolerance)) && (!narrow || badgesShown === 0) };
         }
         case 'DS-ICON-3': {
             const pane = facts.listPaneWidth;

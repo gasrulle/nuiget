@@ -290,12 +290,13 @@ describe('Row layout (P9.2, D46)', () => {
         expect(getComputedStyle(actions).position).toBe('absolute');
     });
 
-    it('the name truncates last: the badges collapse before it', () => {
+    it('the name ellipsizes beside its badges, which keep their width', () => {
         renderRow({ density: 'comfortable', badges: <Badge label="CPM" title="Centrally managed" /> });
         const name = getComputedStyle(screen.getByRole('option').querySelector('.nuiget-row-name') as Element);
         const badges = getComputedStyle(screen.getByRole('option').querySelector('.nuiget-row-badges') as Element);
-        expect(Number(name.flexShrink)).toBe(0);
-        expect(Number(badges.flexShrink)).toBe(1);
+        expect(Number(name.flexShrink)).toBe(1);
+        expect(name.minWidth).toBe('0px');
+        expect(badges.flex === 'none' || Number(badges.flexShrink) === 0).toBe(true);
         expect(name.textOverflow).toBe('ellipsis');
     });
 

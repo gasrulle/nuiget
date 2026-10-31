@@ -365,7 +365,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
     });
 
     it('holds PF-3a to authors that are not cut, at the 1200 px panel only', () => {
-        const row = (name: string, authorsCut: boolean | undefined, list = 'installed-list') => ({ list, compact: false, name, nameCut: false, nameEllipsis: true, authorsCut, versionShown: true, versionCut: false, badgesShown: 0, actionsEnd: undefined });
+        const row = (name: string, authorsCut: boolean | undefined, list = 'installed-list') => ({ list, compact: false, name, nameCut: false, nameEllipsis: true, authorsCut, versionShown: true, versionCut: false, badgesShown: 0, badgesClipped: 0, actionsEnd: undefined });
         const rows = (cut: boolean, width = 1200) => layout({ width, rows: [row('Serilog', false), row('Dapper', cut), row('Moq', undefined), row('Polly', true, 'updates-list')] });
         expect(lineOf('main-installed-single', rows(false), 'PF-3a@main-installed-single')).toMatchObject({ pass: true, status: 'hard', value: '2 authors, none cut' });
         expect(lineOf('main-installed-single', rows(true), 'PF-3a@main-installed-single')).toMatchObject({ pass: false, value: 'cut: Dapper (of 2)' });
@@ -452,7 +452,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
     });
 
     it('checks DS-INSET-3\'s trailing ends, DS-OVERFLOW-2\'s collisions and DS-ROW-5\'s truncation order', () => {
-        const row = (name: string, overrides: Record<string, unknown> = {}) => ({ list: 'installed-list', compact: false, name, nameCut: false, nameEllipsis: true, authorsCut: undefined, versionShown: true, versionCut: false, badgesShown: 0, actionsEnd: undefined, ...overrides });
+        const row = (name: string, overrides: Record<string, unknown> = {}) => ({ list: 'installed-list', compact: false, name, nameCut: false, nameEllipsis: true, authorsCut: undefined, versionShown: true, versionCut: false, badgesShown: 0, badgesClipped: 0, actionsEnd: undefined, ...overrides });
         const built = layout({
             rows: [row('Serilog', { actionsEnd: 6 }), row('Moq', { actionsEnd: 2 }), row('Polly', { compact: true, actionsEnd: 6 })],
             sections: [{ id: 'direct', variant: 'group', insets: undefined, above: undefined, below: undefined, trailingEnd: 16 }, { id: 'installed', variant: 'pane', insets: undefined, above: undefined, below: undefined, trailingEnd: 2 }],
@@ -468,14 +468,15 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
             value: '1 offending in 9 containers (outside: [section-box-project-unsupported.csproj] .nuiget-badge 1171–1195 outside 16–1184); badges: project-unsupported.csproj "Unsupported" 1171–1195 (box right 1200)',
         });
         expect(lineOf('main-installed-all', layout(), 'DS-OVERFLOW-2@main-installed-all')).toMatchObject({ pass: false, value: 'not measurable' });
-        // DS-ROW-5: a name cut while a badge (or, on a compact row's one line, an uncut version) still shows is cut too early.
+        // DS-ROW-5: on a compact row's one line a name cut beside an uncut version is cut too early; a comfortable name ellipsizes beside whole badges.
         const truncation = layout({ rows: [
             row('Microsoft.Extensions.Logging', { nameCut: true, badgesShown: 1 }), row('Microsoft.Extensions.Hosting', { nameCut: true }),
             row('Polly', { compact: true, nameCut: true, versionShown: false }), row('Serilog.Sinks.Console', { compact: true, nameCut: true, versionCut: true }),
             row('Newtonsoft.Json', { compact: true, nameCut: true }),
         ] });
-        expect(lineOf('main-installed-single', truncation, 'DS-ROW-5@main-installed-single')).toMatchObject({ pass: false, value: '2 rows, 2 names cut; cut before the version or badges: Microsoft.Extensions.Logging' });
-        expect(lineOf('sidebar-sections', truncation, 'DS-ROW-5@sidebar-sections')).toMatchObject({ pass: false, status: { pending: 'P3.7a' }, value: '3 rows, 3 names cut; cut before the version or badges: Newtonsoft.Json' });
+        expect(lineOf('main-installed-single', truncation, 'DS-ROW-5@main-installed-single')).toMatchObject({ pass: true, value: '2 rows, 2 names cut; badges clipped 0' });
+        expect(lineOf('main-installed-single', layout({ rows: [row('Newtonsoft.Json', { badgesShown: 1, badgesClipped: 1 })] }), 'DS-ROW-5@main-installed-single')).toMatchObject({ pass: false, value: '1 rows, 0 names cut; badges clipped 1' });
+        expect(lineOf('sidebar-sections', truncation, 'DS-ROW-5@sidebar-sections')).toMatchObject({ pass: false, status: { pending: 'P3.7a' }, value: '3 rows, 3 names cut; cut before the version: Newtonsoft.Json' });
     });
 
     it('checks the rules registered at the end of P0 (UX-P0.13)', () => {
@@ -497,12 +498,22 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(value('main-installed-details', facts({ rows: [row({ state: 'current', painted: { ...band, left: 4, right: 396 } })] }), 'DS-ROW-3@main-installed-details')).toMatchObject({ pass: false, value: 'current painted 4 from the band' });
         expect(value('main-installed-hover', facts({ rows: [row({ state: 'hover', painted: band })] }), 'DS-ROW-3@main-installed-hover')).toMatchObject({ pass: true });
         // DS-ROW-6 and DS-ICON-3.
-        expect(value('main-installed-single', facts({ rows: [row()], listPaneWidth: 240 }), 'DS-ROW-6@main-installed-single')).toMatchObject({ pass: false, value: 'pane 240: icon 36 (target 24)' });
+        expect(value('main-installed-single', facts({ rows: [row()], listPaneWidth: 240 }), 'DS-ROW-6@main-installed-single')).toMatchObject({ pass: false, value: 'pane 240: icon 36 (target 24); badges hidden ×0' });
         expect(value('main-installed-single', facts({ rows: [row()], listPaneWidth: 400 }), 'DS-ROW-6@main-installed-single')).toMatchObject({ pass: true });
         expect(value('main-installed-single', facts({ rows: [row({ icon: { left: 46, right: 70, w: 24, h: 24, centre: 136, radius: '2px' } })], listPaneWidth: 250 }), 'DS-ROW-6@main-installed-single')).toMatchObject({ pass: true });
         expect(value('main-installed-single', facts({ rows: [row()] }), 'DS-ICON-3@main-installed-single')).toMatchObject({ pass: true, value: '36×36 (target 36×36)' });
         expect(value('main-installed-single', facts({ rows: [row({ icon: { left: 46, right: 78, w: 32, h: 32, centre: 136, radius: '4px' } })] }), 'DS-ICON-3@main-installed-single'))
             .toMatchObject({ pass: false, value: '32×32 (target 36×36); radius 4px (target 2px)' });
+        // DS-ROW-6 hides the label badges at most 250; DS-ROW-5 fails a clipped one above (UX-P2.2).
+        const small = { left: 46, right: 70, w: 24, h: 24, centre: 136, radius: '2px' };
+        const clipFacts = (badgesShown: number, badgesClipped: number) => ({ list: 'installed-list', compact: false, name: 'Newtonsoft.Json', nameCut: false, nameEllipsis: true, authorsCut: undefined, versionShown: true, versionCut: false, badgesShown, badgesClipped, actionsEnd: undefined });
+        const narrowHidden = { ...facts({ rows: [row({ icon: small })], listPaneWidth: 210 }), rows: [clipFacts(0, 0)] };
+        expect(value('main-installed-single', narrowHidden, 'DS-ROW-6@main-installed-single')).toMatchObject({ pass: true, value: 'pane 210: icon 24 (target 24); badges hidden ×1' });
+        expect(value('main-installed-single', narrowHidden, 'DS-ROW-5@main-installed-single')).toMatchObject({ pass: true, value: '1 rows, 0 names cut; badges clipped 0' });
+        const narrowShown = { ...narrowHidden, rows: [clipFacts(1, 0)] };
+        expect(value('main-installed-single', narrowShown, 'DS-ROW-6@main-installed-single')).toMatchObject({ pass: false });
+        const wideClipped = { ...facts({ rows: [row()], listPaneWidth: 420 }), rows: [clipFacts(1, 1)] };
+        expect(value('main-installed-single', wideClipped, 'DS-ROW-5@main-installed-single')).toMatchObject({ pass: false });
         // DS-ICON-3 follows the list pane: 24 at most 250, hidden at most 200 (UX-P2.2).
         expect(value('main-installed-single', facts({ rows: [row({ icon: { left: 46, right: 70, w: 24, h: 24, centre: 136, radius: '2px' } })], listPaneWidth: 210 }), 'DS-ICON-3@main-installed-single')).toMatchObject({ pass: true, value: '24×24 (target 24×24)' });
         expect(value('main-installed-single', facts({ rows: [row({ icon: undefined })], listPaneWidth: 140 }), 'DS-ICON-3@main-installed-single')).toMatchObject({ pass: true, value: 'hidden (pane ≤ 200)' });
