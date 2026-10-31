@@ -91,11 +91,17 @@ async function clickVisible(testId: string, timeoutMs = 30_000): Promise<void> {
     await driverOf().actions().move({ origin: element, x: Math.round(offset.dx), y: Math.round(offset.dy) }).click().perform();
 }
 
+/** The tree is virtualized and keeps its offset: a state starts at the list's top, where its rows are rendered (UX-P2.1e). */
+async function installedListAtTop(): Promise<void> {
+    await findByTestId('installed-list', 120_000);
+    await script<void>('document.querySelector(\'[data-testid="installed-list"]\').scrollTop = 0;');
+}
+
 /** Gateway's Installed list with its rows and their lite metadata (the authors of Serilog). */
 async function gatewayInstalled(): Promise<void> {
     await chooseFixtureProject('Gateway.csproj');
     await clickVisible('installed-tab');
-    await findByTestId('installed-list', 120_000);
+    await installedListAtTop();
     await findByTestId('package-row-fluentvalidation', 120_000);
     await poll(async () => (((await (await findByTestId('package-row-serilog')).getAttribute('textContent')) ?? '').includes('Serilog Contributors') ? true : undefined), 'the authors of the Serilog row', 60_000);
 }
@@ -198,6 +204,7 @@ const REACH: Record<string, Reach> = {
         reach: async () => {
             await chooseFixtureProject('Unsupported.csproj');
             await clickVisible('installed-tab');
+            await installedListAtTop();
             await findByTestId('package-row-polly', 120_000);
             // The banner primitive's class: the main panel renders this banner without a test id.
             await until('[...document.querySelectorAll(".nuiget-banner--warning")].some(banner => banner.textContent.includes("Unsupported project"))', 'the Unsupported banner');
@@ -209,6 +216,7 @@ const REACH: Record<string, Reach> = {
         reach: async () => {
             await chooseFixtureProject('Catalog.csproj');
             await clickVisible('installed-tab');
+            await installedListAtTop();
             await findByTestId('package-row-mapster', 120_000);
             await until('(() => { const row = document.querySelector(\'[data-testid="group-row-transitive"]\'); return row === null || (/\\(\\d+\\)/.test(row.textContent ?? "") && row.querySelector(".nuiget-spinner") === null); })()', 'the transitive section settled (count, no spinner)', 60_000);
         },
