@@ -157,7 +157,7 @@ P0 item provides.
 
 | Rule | Helper | State group | Catches | Flipped by | Status |
 |---|---|---|---|---|---|
-| PF-2, PF-3a, PF-3b, PF-4, PF-5, PF-6 | 1–6 | main | P9.fix-2…6 | P0.10–P0.12 | hard at P0; PF-4 at coincide (MS-1) since UX-P2.5; PF-6 at 220 and 400 pending P2.7 |
+| PF-2, PF-3a, PF-3b, PF-4, PF-5, PF-6 | 1–6 | main | P9.fix-2…6 | P0.10–P0.12 | hard at P0; PF-4 at coincide (MS-1) since UX-P2.5; PF-6 hard at every width since UX-P2.7b |
 | MS-8 chrome still | 6 | main header, search box, tab strip; sidebar header | P9.fix-2 class | P0.12 | hard at P0; V72's four states hard at P2.1a |
 | DS-OVERFLOW-6 | 6 | every group | V72 | P2.1a for the four states | hard at P0, V72's four states at P2.1a; the main panel's 220 px width hard since UX-P2.7a (V50) |
 | DS-GRID-1 | 1 gap membership | main / updates / browse / details / dialogs / sources / sidebar | V5 | P2.7 / P3.1b / P3.2 / P3.3b / P3.5 / P3.6 / P3.7a | `main-installed` hard since UX-P2.7a, with its slot clause; the rest pending |
@@ -196,7 +196,7 @@ P0 item provides.
 | DS-DENSITY-1 | 3 | main / sidebar | — | P2.2 / P3.7a | main hard since UX-P2.2; sidebar P3.7a pending |
 | DS-OVERFLOW-1 | 5, 6 at minimum widths | main / details / sidebar | — | P2.7 / P3.3b / P3.7a | `main-installed`, `main-updates`, `browse` hard since UX-P2.7a; the rest pending |
 | DS-OVERFLOW-2 | 6 | headers (section-header boxes in main, details, sidebar) | V3 | P2.6 | hard since UX-P2.6 |
-| DS-OVERFLOW-3 | 6 at narrow widths | toolbars, tabs / details actions | — | P2.5 / P3.3b | `toolbars` and `tabs` hard since UX-P2.5, at 220 and 400 pending P2.7; `main-header` hard since UX-P2.7a; details P3.3b pending |
+| DS-OVERFLOW-3 | 6 at narrow widths | toolbars, tabs / details actions | — | P2.5 / P3.3b | `toolbars` and `tabs` hard since UX-P2.5, at 220 and 400 since UX-P2.7b; `main-header` hard since UX-P2.7a; details P3.3b pending |
 | DS-OVERFLOW-4 | workbench DOM | sidebar title | — | P3.7b | pending |
 | DS-OVERFLOW-5 | 6 at 220 px | details split | — | P3.3b | pending |
 | DS-STATE-1…4 | markers, captures | main / updates / rest | — | P2.8b / P3.1b / P3.10 | pending |

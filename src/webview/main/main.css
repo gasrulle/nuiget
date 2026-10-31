@@ -100,6 +100,8 @@ body {
     flex-direction: column;
     width: var(--nuiget-split, 50%);
     min-width: 0;
+    /* The px floor under the sash's 25–75 %; the sash's px bounds are P3.3b's. */
+    min-inline-size: var(--nuiget-list-pane-min);
     background: var(--nuiget-color-bg-sidebar);
 }
 

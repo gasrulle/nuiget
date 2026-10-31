@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Tabs, toolbars and icon buttons look like VS Code's own**
 - **Section headers and badges look like VS Code's own**
 - **The header of the package manager lines up with VS Code's spacing and dividers**
+- **Narrow package lists keep their tabs and buttons readable**
 
 ### Fixed
 - **Scrollbars in the package manager are thin again**

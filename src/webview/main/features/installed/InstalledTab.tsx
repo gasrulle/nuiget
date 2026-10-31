@@ -2,7 +2,7 @@ import { Fragment, useEffect, useMemo, useState } from 'react';
 import type React from 'react';
 import { ALL_PROJECTS, type InstalledPackage, type InstalledResult, type PackageMetadataLite } from '../../../../protocol';
 import { whyNotRemovable } from '../../../shared/installed/rules';
-import { Banner, Button, EmptyState, Listbox, SectionHeader, Skeleton, Toolbar, type ListboxGroups } from '../../../shared/primitives';
+import { Banner, Button, CheckAllIcon, EmptyState, Listbox, SectionHeader, Skeleton, Toolbar, type ListboxGroups } from '../../../shared/primitives';
 import { useBulkSelection } from '../../../shared/selection/useBulkSelection';
 import { useAllProjects } from '../../../shared/store/allProjects';
 import { useDetails, useDetailsActions } from '../../../shared/store/details';
@@ -357,7 +357,7 @@ export function InstalledTab({ filter, vulnerableOnly, announce }: ListView): Re
             <Toolbar label="Bulk actions" data-testid="installed-toolbar" end={<Button data-testid="uninstall-selected-button" disabled={count === 0} onClick={() => setConfirming(true)}>
                 {`Uninstall selected (${count})`}
             </Button>}>
-                <Button variant="secondary" data-testid="select-all-button" aria-pressed={allSelected} disabled={candidateCount === 0} onClick={selectAll}>
+                <Button variant="secondary" icon={<CheckAllIcon />} data-testid="select-all-button" aria-pressed={allSelected} disabled={candidateCount === 0} onClick={selectAll}>
                     Select all
                 </Button>
             </Toolbar>

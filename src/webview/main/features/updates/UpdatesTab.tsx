@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type React from 'react';
 import { ALL_PROJECTS, type PackageUpdate } from '../../../../protocol';
 import { IN_PROGRESS, isCentral as isCentralRow, whyNotUpdatable } from '../../../shared/installed/rules';
-import { ArrowUpIcon, Badge, Banner, Button, EmptyState, IconButton, Listbox, Row, Skeleton, Toolbar } from '../../../shared/primitives';
+import { ArrowUpIcon, Badge, Banner, Button, CheckAllIcon, EmptyState, IconButton, Listbox, Row, Skeleton, Toolbar } from '../../../shared/primitives';
 import { packageIconSrc } from '../../../shared/packageIcon';
 import { useDetails, useDetailsActions } from '../../../shared/store/details';
 import { useInstalled } from '../../../shared/store/installed';
@@ -219,7 +219,7 @@ function ProjectUpdates({ filter, announce }: ListView): React.JSX.Element {
             <Toolbar label="Bulk actions" data-testid="updates-toolbar" end={<Button data-testid="update-all-button" disabled={toUpdate.length === 0} onClick={() => setConfirming(true)}>
                 {chosen.length > 0 ? `Update selected (${chosen.length})` : `Update all (${candidates.length})`}
             </Button>}>
-                <Button variant="secondary" data-testid="select-all-button" aria-pressed={allSelected} disabled={candidates.length === 0} onClick={() => setSelected(allSelected ? new Set() : new Set(candidates.map(update => update.id)))}>
+                <Button variant="secondary" icon={<CheckAllIcon />} data-testid="select-all-button" aria-pressed={allSelected} disabled={candidates.length === 0} onClick={() => setSelected(allSelected ? new Set() : new Set(candidates.map(update => update.id)))}>
                     Select all
                 </Button>
             </Toolbar>

@@ -2,7 +2,7 @@ import { useEffect, useId, useState } from 'react';
 import type React from 'react';
 import type { InstalledResult, PackageUpdate, ProjectUpdatesChunk } from '../../../../protocol';
 import { IN_PROGRESS, isCentral as isCentralRow, whyNotUpdatable } from '../../../shared/installed/rules';
-import { ArrowUpIcon, Badge, Banner, Button, EmptyState, IconButton, Listbox, Row, SectionHeader, Skeleton, Toolbar } from '../../../shared/primitives';
+import { ArrowUpIcon, Badge, Banner, Button, CheckAllIcon, EmptyState, IconButton, Listbox, Row, SectionHeader, Skeleton, Toolbar } from '../../../shared/primitives';
 import { packageIconSrc } from '../../../shared/packageIcon';
 import { useAllProjects } from '../../../shared/store/allProjects';
 import { useDetails, useDetailsActions } from '../../../shared/store/details';
@@ -307,7 +307,7 @@ export function AllProjectsUpdates({ filter, announce }: ListView): React.JSX.El
             <Toolbar label="Bulk actions" data-testid="updates-toolbar" end={<Button data-testid="update-all-button" disabled={total === 0} onClick={() => setConfirming(true)}>
                 {chosenCount > 0 ? `Update selected (${chosenCount})` : `Update all (${candidateTotal})`}
             </Button>}>
-                <Button variant="secondary" data-testid="select-all-button" aria-pressed={allSelected} disabled={candidateTotal === 0} onClick={selectAll}>
+                <Button variant="secondary" icon={<CheckAllIcon />} data-testid="select-all-button" aria-pressed={allSelected} disabled={candidateTotal === 0} onClick={selectAll}>
                     Select all
                 </Button>
             </Toolbar>

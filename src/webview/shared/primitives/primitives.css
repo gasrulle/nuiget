@@ -342,6 +342,25 @@
 
 /* The Extensions breakpoints of the list pane (DS-ROW-6). css.at-rules.container: Chrome 105, inside the floor's 122. */
 @container (max-width: 250px) {
+    /* §8's narrow pane: the tab strip's badges hide first, Select all gives way to its glyph and keeps its name. */
+    .nuiget-tab-count,
+    .nuiget-tab-badge {
+        display: none;
+    }
+
+    .nuiget-button-icon {
+        display: inline-flex;
+    }
+
+    .nuiget-button-icon + .nuiget-button-label {
+        position: absolute;
+        inline-size: var(--nuiget-line-width);
+        block-size: var(--nuiget-line-width);
+        overflow: hidden;
+        clip-path: inset(50%);
+        white-space: nowrap;
+    }
+
     .nuiget-row-icon {
         inline-size: var(--nuiget-icon-size-lg);
         block-size: var(--nuiget-icon-size-lg);
@@ -712,8 +731,17 @@
 
 /* ── Button (the action of an empty state or a banner) ── */
 
+.nuiget-button-icon {
+    display: none;
+}
+
+.nuiget-button-label {
+    min-inline-size: 0;
+}
+
 .nuiget-button {
     --nuiget-button-rest-bg: var(--nuiget-color-button-bg);
+    position: relative;
     --nuiget-button-hover-bg: var(--nuiget-color-button-hover-bg);
     box-sizing: border-box;
     min-height: var(--nuiget-target-min);
@@ -873,6 +901,7 @@
 }
 
 .nuiget-empty-text {
+    overflow-wrap: anywhere;
     margin: 0;
 }
 
@@ -1113,6 +1142,7 @@
 /* ── Tabs ── */
 
 .nuiget-tabs {
+    container-type: inline-size;
     display: flex;
     flex-direction: column;
     flex: 1;
@@ -1183,6 +1213,7 @@
 
 /* DS-INSET-2: 4 above and below its 26 px controls, the surface inset at both ends; the below-minimum behaviours land with the pane's minimum, P2.7. */
 .nuiget-toolbar {
+    container-type: inline-size;
     display: flex;
     flex-wrap: wrap;
     align-items: center;

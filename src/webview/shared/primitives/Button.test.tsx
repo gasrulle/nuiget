@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createRef } from 'react';
@@ -33,5 +34,24 @@ describe('Button', () => {
         // @ts-expect-error A feature places a button and never styles it (ADR-010).
         render(<Button className="x">A</Button>);
         expect(screen.getByRole('button', { name: 'A' })).toBeInTheDocument();
+    });
+
+    it('a button with an icon keeps its label as its name and shows the glyph only in a narrow toolbar', () => {
+        render(<Button icon={<span data-testid="glyph" />} data-testid="b">Select all</Button>);
+        expect(screen.getByRole('button', { name: 'Select all' })).toBe(screen.getByTestId('b'));
+        const icon = screen.getByTestId('glyph').parentElement as HTMLElement;
+        expect(icon).toHaveClass('nuiget-button-icon');
+        expect(icon).toHaveAttribute('aria-hidden', 'true');
+        expect(icon.nextElementSibling).toHaveClass('nuiget-button-label');
+        const css = readFileSync('src/webview/shared/primitives/primitives.css', 'utf8').replace(/\r\n/g, '\n');
+        const narrow = css.slice(css.indexOf('@container (max-width: 250px)'));
+        expect(narrow).toMatch(/\.nuiget-button-icon \{\n\s+display: inline-flex;/);
+        expect(narrow).toMatch(/\.nuiget-button-icon \+ \.nuiget-button-label \{[^}]*clip-path: inset\(50%\)/);
+        expect(narrow).toMatch(/\.nuiget-tab-count,\n\s+\.nuiget-tab-badge \{\n\s+display: none;/);
+    });
+
+    it('a button without an icon renders its children alone', () => {
+        render(<Button data-testid="b">Plain</Button>);
+        expect(screen.getByTestId('b').children).toHaveLength(0);
     });
 });

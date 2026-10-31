@@ -157,8 +157,7 @@ const FOCUSED_CONTROL_STATES: readonly string[] = ['main-browse-results', 'main-
 const DISABLED_BUTTON_STATES: readonly string[] = ['main-installed-single', 'main-installed-all', 'main-installed-unsupported', 'main-installed-cpm', 'main-installed-details', 'main-installed-filter', 'main-installed-filter-nomatch', 'main-installed-hover', 'main-installed-focus', 'main-transitive-expanded', 'main-transitive-details', 'main-details-readme'];
 
 export const RULES: readonly RuleDefinition[] = [
-    // The tab label has no box at the 220 and 400 cells until P2.7's pane minimum.
-    rule('PF-6', { helper: 2, scopes: { 'main-installed': 'hard' }, tolerance: TOLERANCES.coincide, states: ['main-installed-single'], pendingWidths: { 220: 'P2.7', 400: 'P2.7' } }),
+    rule('PF-6', { helper: 2, scopes: { 'main-installed': 'hard' }, tolerance: TOLERANCES.coincide, states: ['main-installed-single'] }),
     rule('DS-GRID-1', { helper: 1, scopes: { 'main-installed': 'hard', ...asGrid1 }, tolerance: TOLERANCES.gapMembership }),
     rule('DS-GRID-2a', { helper: 1, scopes: { 'main-installed': 'hard', ...asGrid1 }, tolerance: TOLERANCES.gapMembership }),
     rule('DS-GRID-2b', { helper: 1, scopes: { 'main-installed': 'hard', ...asGrid1 }, tolerance: TOLERANCES.proximity }),
@@ -227,8 +226,7 @@ export const RULES: readonly RuleDefinition[] = [
     rule('DS-ICON-3', { helper: 3, scopes: inGroups('hard', ...MAIN), tolerance: TOLERANCES.containment, exceptStates: NO_ROW_STATES }),
     rule('DS-DENSITY-1', { helper: 3, scopes: { ...inGroups('hard', ...MAIN), sidebar: { pending: 'P3.7a' } }, tolerance: TOLERANCES.height, exceptStates: NO_ROW_STATES }),
     rule('DS-OVERFLOW-1', { helper: 6, scopes: { ...inGroups('hard', 'main-installed', 'main-updates', 'browse'), details: { pending: 'P3.3b' }, sidebar: { pending: 'P3.7a' } }, tolerance: TOLERANCES.containment }),
-    // The list pane's declared minimum and the below-minimum behaviours of §8 land with P2.7's DS-OVERFLOW-1 `main`.
-    rule('DS-OVERFLOW-3', { helper: 6, scopes: { toolbars: 'hard', tabs: 'hard', 'main-header': 'hard', details: { pending: 'P3.3b' } }, tolerance: TOLERANCES.containment, pendingWidths: { 220: 'P2.7', 400: 'P2.7' } }),
+    rule('DS-OVERFLOW-3', { helper: 6, scopes: { toolbars: 'hard', tabs: 'hard', 'main-header': 'hard', details: { pending: 'P3.3b' } }, tolerance: TOLERANCES.containment }),
     rule('DS-OVERFLOW-5', { helper: 6, scopes: on('P3.3b', 'details'), tolerance: TOLERANCES.containment }),
     rule('DS-ALIGN-1', { helper: 2, scopes: on('P3.3a', 'details'), tolerance: TOLERANCES.containment }),
     // UX-P0.18 (negative control (b), design-advisor ruling of 2026-10-24): hard where run 40111706433 and the UX-P0.15 rerun
