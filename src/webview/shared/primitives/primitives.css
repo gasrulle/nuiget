@@ -118,6 +118,12 @@
     padding: 0;
 }
 
+/* UX-P2.1d; the look is P2.6's. */
+.nuiget-row-group > .nuiget-section-header {
+    flex: 1;
+    min-width: 0;
+}
+
 .nuiget-row:hover .nuiget-row-option {
     background: var(--nuiget-color-list-hover-bg);
 }
