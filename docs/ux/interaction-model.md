@@ -77,7 +77,7 @@ project whose SDK is below 10 lists its packages read-only.
 
 In this mode:
 - Each view is one grouped list (D-C, round 1, composition A; §5): in the main panel's Installed and Updates tabs
-  every project is a group row of the tab's one listbox, with its packages under it, and the transitive aggregate is
+  every project is a group row of the tab's one list, with its packages under it, and the transitive aggregate is
   the last group row; in the sidebar each pane (Installed, Updates) stays a pane and its list is one grouped list with
   a group row per project. One tab stop and one scroller per view; ArrowUp and ArrowDown cross groups; ArrowLeft and
   ArrowRight collapse and expand a group row as the workbench's trees do. The per-project lists of 2.0 are retired.
@@ -147,8 +147,7 @@ also offers View Package Details. Items act on the row's project (under All Proj
 group). A command started from the menu marks its row busy on both surfaces from the moment it is queued.
 
 Keyboard: every pointer action is reachable by keyboard, and each list names its keys in a visually hidden sentence
-it is described by (`aria-describedby`). A list is a `role="listbox"` whose rows are `role="option"` with roving
-`tabIndex` (the active row has `tabIndex=0`). Each view is one grouped list (D-C, round 1): one tab stop and one
+it is described by (`aria-describedby`). A flat list (Browse, the quick-search suggestions) is a `role="listbox"` whose rows are `role="option"`; a grouped list is a `role="tree"` whose rows, group rows and package rows alike, are `role="treeitem"` with `aria-level`, the group rows carrying `aria-expanded` (ADR-013 Decision 8); both have roving `tabIndex` (the active row has `tabIndex=0`). Each view is one grouped list (D-C, round 1): one tab stop and one
 scroller per view (the main panel's visible tab or the Browse results; each sidebar pane), with group rows (the Direct
 and Transitive groups, a target framework inside Transitive, a project under All Projects) and the package rows under
 them. A group row names its group and its count, says whether it is expanded, and can be neither selected for a bulk
@@ -166,6 +165,8 @@ row; moving changes the active row, not the selection.
 | Ctrl+DownArrow (Cmd+DownArrow) in the search box | Focus moves to the active row of the visible list (the tab's list, or the Browse results) | Focus moves to the active row of the first visible pane's list |
 | Ctrl+UpArrow (Cmd+UpArrow) in a list | Focus returns to the search box | The same |
 | Space, Ctrl+click, Cmd+click, a click on the check mark | In a list with bulk actions: the package row joins or leaves the bulk set | *(no bulk set)* |
+
+A click on a group row toggles it, as Enter does.
 
 ArrowLeft and ArrowRight belong to the group rows: in a list they never switch the details pane's tabs, so the 1.x
 binding that moved between Details and README with them (MB18) is not restored. A tab strip keeps its own arrow keys

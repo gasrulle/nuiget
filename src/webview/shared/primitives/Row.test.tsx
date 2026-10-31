@@ -110,6 +110,15 @@ describe('Row', () => {
         expect(onClick).not.toHaveBeenCalled();
     });
 
+    it('in a tree the row is a treeitem with its level and its position among its siblings', () => {
+        renderRow({ level: 2, posInSet: 3, setSize: 4, index: 7 });
+        const item = screen.getByRole('treeitem', { hidden: true });
+        expect(item).toHaveAttribute('aria-level', '2');
+        expect(item).toHaveAttribute('aria-posinset', '3');
+        expect(item).toHaveAttribute('aria-setsize', '4');
+        expect(item.closest('[data-index]')).toHaveAttribute('data-level', '2');
+    });
+
     it('a disabled row renders no actions', () => {
         const { container } = renderRow({ actions: uninstall(), disabled: true, status: 'Unresolved' });
         const option = screen.getByRole('option');

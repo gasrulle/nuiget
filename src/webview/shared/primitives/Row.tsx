@@ -8,8 +8,12 @@ import './primitives.css';
 export interface RowPlacement {
     /** Zero-based position among all items of the list, rendered or not. */
     index: number;
-    /** The number of items of the list. */
+    /** The rows of the row's set: the list, or in a tree its parent's children. */
     setSize: number;
+    /** In a tree, the row's depth; absent in a listbox. */
+    level?: number;
+    /** In a tree, the row's position among its siblings. */
+    posInSet?: number;
     /** The row that holds the list's tab stop (roving `tabIndex`). */
     active: boolean;
     selected: boolean;
@@ -77,7 +81,7 @@ export interface RowProps extends RowPlacement {
  * sits on the text column: on the option a `title` would become its description.
  */
 export function Row(props: RowProps): React.JSX.Element {
-    const { itemId, name, version, nextVersion, versionTitle, meta, authors, verified, description, icon, badges, status, busy, disabled, selectable, actions, density, index, setSize, active, selected, current, checkable, optionId, offset, measureRef, onToggle } = props;
+    const { itemId, name, version, nextVersion, versionTitle, meta, authors, verified, description, icon, badges, status, busy, disabled, selectable, actions, density, index, setSize, active, selected, current, checkable, optionId, offset, measureRef, onToggle, level, posInSet } = props;
     const optionRef = useRef<HTMLDivElement>(null);
     const ids = {
         name: `${optionId}-name`,
@@ -116,17 +120,19 @@ export function Row(props: RowProps): React.JSX.Element {
             data-index={index}
             data-testid={`package-row-${itemId.toLowerCase()}`}
             ref={measureRef}
+            data-level={level}
             style={cssVars({ '--nuiget-virtual-offset': `${offset}px` })}
         >
             <div
                 className="nuiget-row-option"
-                role="option"
+                role={level === undefined ? 'option' : 'treeitem'}
                 id={optionId}
                 ref={optionRef}
                 tabIndex={active ? 0 : -1}
                 aria-selected={selected}
                 aria-current={current ? true : undefined}
-                aria-posinset={index + 1}
+                aria-level={level}
+                aria-posinset={posInSet ?? index + 1}
                 aria-setsize={setSize}
                 aria-busy={busy ? true : undefined}
                 aria-disabled={disabled ? true : undefined}

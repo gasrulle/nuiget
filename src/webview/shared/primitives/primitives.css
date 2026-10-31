@@ -94,7 +94,8 @@
     min-height: var(--nuiget-row-height-comfortable);
 }
 
-.nuiget-row-option {
+.nuiget-row-option,
+.nuiget-row-group {
     display: flex;
     flex: 1;
     align-items: center;
@@ -362,6 +363,7 @@
 
 /* An outline, not a shadow: it is still drawn in forced-colours mode, where the token is `Highlight`. */
 .nuiget-row-option:focus-visible,
+.nuiget-row-group:focus-visible,
 .nuiget-icon-button:focus-visible,
 .nuiget-sash:focus-visible,
 .nuiget-section-toggle:focus-visible,

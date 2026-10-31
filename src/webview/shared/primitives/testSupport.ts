@@ -12,13 +12,13 @@ import { resolve } from 'path';
 
 /** The layout a browser would compute: lists `viewport` pixels high, rows `row` pixels high, one under the other. */
 export interface FakeLayout {
-    /** Height of every `role="listbox"` element. */
+    /** Height of every `role="listbox"` or `role="tree"` element. */
     viewport: number;
     /** Height of every row (`[data-index]`). */
     row: number;
 }
 
-const LIST = '[role="listbox"]';
+const LIST = '[role="listbox"], [role="tree"]';
 const ROW = '[data-index]';
 const LIST_WIDTH = 300;
 

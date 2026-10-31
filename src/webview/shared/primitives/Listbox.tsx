@@ -1,5 +1,5 @@
 import { defaultRangeExtractor, useVirtualizer, type Range } from '@tanstack/react-virtual';
-import React, { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { cssVars } from './cssVars';
 import type { RowPlacement } from './Row';
 import './primitives.css';
@@ -7,7 +7,7 @@ import './primitives.css';
 /** Row heights in pixels. They repeat `--nuiget-row-height-*`: a script cannot read a token before layout (CA-R4, `webview-tokens.test.ts`). */
 const ROW_HEIGHT = { compact: 24, comfortable: 78 } as const;
 
-/** Where a group row of the list goes; `renderGroup` draws what is inside it. */
+/** Where a group row of the list goes; `groups.render` draws what is inside it. */
 export interface GroupPlacement {
     /** Zero-based position among all items of the list, rendered or not. */
     index: number;
@@ -17,23 +17,75 @@ export interface GroupPlacement {
     offset: number;
     /** Measures the row; the list has placed it on the row's wrapper already. */
     measureRef?: (element: HTMLElement | null) => void;
+    /** The group's depth, 1 at the top. */
+    level: number;
+    expanded: boolean;
+}
+
+/** What makes a list a tree (ADR-013 Decision 8, UX-P2.1c): sections and projects as group rows of one list. */
+export interface ListboxGroups<T> {
+    is: (item: T) => boolean;
+    /** 1 when absent; a group of level n nests under the nearest preceding group of level n−1. */
+    level?: (item: T) => number;
+    /** The consumer's state: the children of an expanded group follow it in `items`. */
+    isExpanded: (item: T) => boolean;
+    /** Enter, ArrowRight on a collapsed group, ArrowLeft on an expanded one, and a click. */
+    onToggle: (item: T, expanded: boolean) => void;
+    /** Text and decoration only: the list owns the treeitem, its name and its states. */
+    render: (item: T, placement: GroupPlacement) => React.ReactNode;
+}
+
+/** A row's place in the tree: its depth, its parent and first child (indexes, or −1) and its position among its siblings. */
+interface TreePlace {
+    level: number;
+    parent: number;
+    firstChild: number;
+    posInSet: number;
+    setSize: number;
+}
+
+function treeOf<T>(items: readonly T[], groups: ListboxGroups<T>): TreePlace[] {
+    const places: TreePlace[] = [];
+    const open: number[] = [];
+    const siblings = new Map<number, number[]>();
+    items.forEach((item, index) => {
+        const isGroup = groups.is(item);
+        const wanted = isGroup ? groups.level?.(item) ?? 1 : Number.POSITIVE_INFINITY;
+        while (open.length > 0 && places[open[open.length - 1]].level >= wanted) {
+            open.pop();
+        }
+        const parent = open[open.length - 1] ?? -1;
+        const level = isGroup ? wanted : (parent < 0 ? 1 : places[parent].level + 1);
+        const set = siblings.get(parent) ?? [];
+        set.push(index);
+        siblings.set(parent, set);
+        places.push({ level, parent, firstChild: -1, posInSet: set.length, setSize: 0 });
+        if (parent >= 0 && places[parent].firstChild < 0) {
+            places[parent].firstChild = index;
+        }
+        if (isGroup) {
+            open.push(index);
+        }
+    });
+    for (const set of siblings.values()) {
+        for (const index of set) {
+            places[index].setSize = set.length;
+        }
+    }
+    return places;
 }
 
 /** The rows kept in the document above and below the view. */
 const OVERSCAN = 5;
 
-/** What can take focus inside a group row; without any the row's wrapper does. */
-const FOCUSABLE = 'button:not(:disabled), [href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]';
-
 interface ListboxBaseProps<T extends { id: string }> {
     items: readonly T[];
     /** Returns a `Row` with `placement` spread into it. */
     renderRow: (item: T, placement: RowPlacement) => React.ReactNode;
-    /** An item that is a group row: rendered by `renderGroup`, an arrow stop, never an option. Its keys and role are UX-P2.1c's. */
-    isGroup?: (item: T) => boolean;
+    /** Given, the list is a `role="tree"` whose rows are treeitems; absent, a `role="listbox"` of options. A property of the consumer, never of the data. Memoize the object: the tree is computed again when it changes. */
+    groups?: ListboxGroups<T>;
     /** The row can be focused and selected but its actions do not apply: the keys and the check mark read it here, the row draws it. */
     isDisabled?: (item: T) => boolean;
-    renderGroup?: (item: T, placement: GroupPlacement) => React.ReactNode;
     /** One sentence that names the keys of this list, for example "Enter uninstalls. Shift+F10 opens the actions menu." It is read as the list's description. */
     hint: string;
     testId: string;
@@ -70,14 +122,15 @@ interface ListboxBaseProps<T extends { id: string }> {
 export type ListboxProps<T extends { id: string }> = ListboxBaseProps<T> & ({ label: string; labelledBy?: undefined } | { labelledBy: string; label?: undefined });
 
 /**
- * A virtualized single-selection list (`role="listbox"`) with one tab stop. Arrow keys, Home and End move the
+ * A virtualized list with one tab stop: a `role="listbox"`, or with `groups` a `role="tree"` (UX-P2.1c). Arrow keys, Home and End move the
  * active row; the keys that act on a row are reported to the owner, so that everything a pointer can do with
  * the action buttons of a row is also on the keyboard. Only the rows in view are in the document, and the
  * active row always is, so focus never falls out of the list.
  */
 export function Listbox<T extends { id: string }>(props: ListboxProps<T>): React.JSX.Element {
-    const { items, renderRow, isGroup, isDisabled, renderGroup, hint, testId, density, selectedId = null, selectedIds, onToggleSelected, onSelect, onActivate, onSecondaryActivate, onDelete, onContextMenu, busy, empty } = props;
+    const { items, renderRow, groups, isDisabled, hint, testId, density, selectedId = null, selectedIds, onToggleSelected, onSelect, onActivate, onSecondaryActivate, onDelete, onContextMenu, busy, empty } = props;
     const rowHeight = ROW_HEIGHT[density];
+    const tree = useMemo(() => (groups === undefined ? undefined : treeOf(items, groups)), [items, groups]);
     const baseId = useId();
     const hintId = `${baseId}-hint`;
     const rootRef = useRef<HTMLDivElement>(null);
@@ -125,14 +178,7 @@ export function Listbox<T extends { id: string }>(props: ListboxProps<T>): React
     const wrapperAt = (index: number): HTMLElement | null => scrollRef.current?.querySelector<HTMLElement>(`[data-index="${index}"]`) ?? null;
     const rowFocusAt = (index: number): HTMLElement | null => wrapperAt(index)?.querySelector<HTMLElement>('[tabindex]') ?? null;
 
-    const isGroupAt = (index: number): boolean => items[index] !== undefined && isGroup?.(items[index]) === true;
-    const focusTargetAt = (index: number): HTMLElement | null => {
-        if (!isGroupAt(index)) {
-            return rowFocusAt(index);
-        }
-        const wrapper = wrapperAt(index);
-        return wrapper?.querySelector<HTMLElement>(FOCUSABLE) ?? wrapper;
-    };
+    const isGroupAt = (index: number): boolean => items[index] !== undefined && groups?.is(items[index]) === true;
 
     useLayoutEffect(() => {
         if (!hadFocus) {
@@ -142,7 +188,7 @@ export function Listbox<T extends { id: string }>(props: ListboxProps<T>): React
             emptyRef.current?.focus();
             return;
         }
-        const target = focusTargetAt(activeIndex);
+        const target = rowFocusAt(activeIndex);
         if (target && document.activeElement !== target) {
             target.focus({ preventScroll: true });
         }
@@ -160,7 +206,7 @@ export function Listbox<T extends { id: string }>(props: ListboxProps<T>): React
         virtualizer.scrollToIndex(index, { align: 'auto' });
         // A list as high as its rows inside an outer scroller cannot scroll itself, and the focus does not scroll
         // (N88): the option asks its scrollers. Optional: jsdom has no `scrollIntoView`.
-        focusTargetAt(index)?.scrollIntoView?.({ block: 'nearest' });
+        rowFocusAt(index)?.scrollIntoView?.({ block: 'nearest' });
     };
 
     const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>): void => {
@@ -180,8 +226,32 @@ export function Listbox<T extends { id: string }>(props: ListboxProps<T>): React
         } else if (event.key === 'Home' || event.key === 'End') {
             handled();
             moveTo(event.key === 'Home' ? 0 : items.length - 1);
-        } else if (isGroupAt(activeIndex)) {
-            // A group row is an arrow stop; the keys below act on package rows.
+        } else if (tree && groups && (event.key === 'ArrowRight' || event.key === 'ArrowLeft')) {
+            // Handled on every row, so the scroller does not pan (ADR-013 Decision 8).
+            handled();
+            const place = tree[activeIndex];
+            const expanded = isGroupAt(activeIndex) && groups.isExpanded(item);
+            if (event.key === 'ArrowRight' && isGroupAt(activeIndex)) {
+                if (!expanded) {
+                    groups.onToggle(item, true);
+                } else if (place.firstChild >= 0) {
+                    moveTo(place.firstChild);
+                }
+            } else if (event.key === 'ArrowLeft') {
+                if (expanded) {
+                    groups.onToggle(item, false);
+                } else if (place.parent >= 0) {
+                    moveTo(place.parent);
+                }
+            }
+        } else if (groups && isGroupAt(activeIndex)) {
+            // The keys below act on package rows; Enter is a group row's own. Space reports nothing, and does not page the scroller.
+            if (event.key === 'Enter' && !command) {
+                handled();
+                groups.onToggle(item, !groups.isExpanded(item));
+            } else if (event.key === ' ') {
+                handled();
+            }
         } else if (event.key === 'Enter') {
             handled();
             if (!disabled) {
@@ -213,12 +283,11 @@ export function Listbox<T extends { id: string }>(props: ListboxProps<T>): React
         );
     }
 
-    const setSize = items.length;
     return (
         <div className="nuiget-listbox-root" ref={rootRef}>
             <div
                 className="nuiget-listbox"
-                role="listbox"
+                role={groups === undefined ? 'listbox' : 'tree'}
                 ref={scrollRef}
                 aria-label={props.label}
                 aria-labelledby={props.labelledBy}
@@ -236,7 +305,11 @@ export function Listbox<T extends { id: string }>(props: ListboxProps<T>): React
                 onClick={event => {
                     const index = indexOf(event.target);
                     // A click on an action stays with the action: the row's focusable element is what a click on the row lands in.
-                    if (index < 0 || !items[index] || isGroupAt(index) || !rowFocusAt(index)?.contains(event.target as Node)) {
+                    if (index < 0 || !items[index] || !rowFocusAt(index)?.contains(event.target as Node)) {
+                        return;
+                    }
+                    if (groups && isGroupAt(index)) {
+                        groups.onToggle(items[index], !groups.isExpanded(items[index]));
                         return;
                     }
                     if (selectedIds !== undefined && (event.ctrlKey || event.metaKey)) {
@@ -259,19 +332,33 @@ export function Listbox<T extends { id: string }>(props: ListboxProps<T>): React
                     {virtualizer.getVirtualItems().map(virtual => {
                         const item = items[virtual.index];
                         const disabled = isDisabled?.(item) === true;
-                        if (isGroupAt(virtual.index)) {
+                        const place = tree?.[virtual.index];
+                        const active = virtual.index === activeIndex;
+                        if (groups && place && isGroupAt(virtual.index)) {
+                            const expanded = groups.isExpanded(item);
                             return (
                                 <div
                                     key={item.id}
-                                    className="nuiget-row"
+                                    className={`nuiget-row nuiget-row--${density}`}
                                     role="presentation"
                                     data-index={virtual.index}
                                     data-row-kind="group"
-                                    tabIndex={-1}
+                                    data-level={place.level}
+                                    data-testid={`group-row-${item.id.toLowerCase()}`}
                                     ref={virtualizer.measureElement}
                                     style={cssVars({ '--nuiget-virtual-offset': `${virtual.start}px` })}
                                 >
-                                    {renderGroup?.(item, { index: virtual.index, active: virtual.index === activeIndex, offset: virtual.start, measureRef: virtualizer.measureElement })}
+                                    <div
+                                        className="nuiget-row-group"
+                                        role="treeitem"
+                                        tabIndex={active ? 0 : -1}
+                                        aria-level={place.level}
+                                        aria-expanded={expanded}
+                                        aria-posinset={place.posInSet}
+                                        aria-setsize={place.setSize}
+                                    >
+                                        {groups.render(item, { index: virtual.index, active, offset: virtual.start, measureRef: virtualizer.measureElement, level: place.level, expanded })}
+                                    </div>
                                 </div>
                             );
                         }
@@ -279,8 +366,10 @@ export function Listbox<T extends { id: string }>(props: ListboxProps<T>): React
                             <React.Fragment key={item.id}>
                                 {renderRow(item, {
                                     index: virtual.index,
-                                    setSize,
-                                    active: virtual.index === activeIndex,
+                                    setSize: place?.setSize ?? items.length,
+                                    level: place?.level,
+                                    posInSet: place?.posInSet,
+                                    active,
                                     selected: selectedIds ? selectedIds.has(item.id) : item.id === selectedId,
                                     current: selectedIds ? item.id === selectedId : undefined,
                                     checkable: selectedIds !== undefined,
