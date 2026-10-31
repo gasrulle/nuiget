@@ -185,6 +185,12 @@
     "sha256": "fa2b1bf0cf1a6e1a1567ea66d2b9c944ee120633e230d06ce3abe1e5fc651734",
     "sidecarSha256": "3b7db78b3d3de3fbe95e068f3353dc4f4773a80c6ff9e580c672e573b39ed68c"
   },
+  "main-installed-toolbar-hover.dark-modern.1200.png": {
+    "status": "baseline",
+    "run": "41207195990",
+    "sha256": "afaa51ed32105dc95268f3c99ecbe1cebef4c576ffe483f57ab6eef27a29530a",
+    "sidecarSha256": "17e589297da704ff91a3ee5af75f22d6aad535546be19c0e37410f1f7db77616"
+  },
   "main-installed-unfocused.dark-modern.1200.png": {
     "status": "baseline",
     "run": "41204462784",
