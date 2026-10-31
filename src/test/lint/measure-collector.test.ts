@@ -127,6 +127,28 @@ describe('the in-page collector on stubbed geometry (UX-P0.10, UX-P0.11)', () =>
         expect(collect().rows[0].badgesClipped).toBe(1);
     });
 
+    it('reads the row facts of DS-COLOR-2, DS-DIVIDER-1, DS-RADIUS-2 and DS-COLOR-5 (UX-P2.2b)', () => {
+        // jsdom does not resolve var(): the probe's colour stays the declaration, which is what these facts compare.
+        const focusBorder = 'var(--vscode-focusBorder, transparent)';
+        const option = document.querySelector('.nuiget-row-option') as HTMLElement;
+        const row = option.closest('.nuiget-row') as HTMLElement;
+        const base = collect().endOfP0;
+        expect(base.listSelection.active).toBe('var(--vscode-list-activeSelectionBackground, transparent)');
+        expect(base.rows[0]).toMatchObject({ lineWidth: 0, focusPainted: 0, multi: false, listFocused: false });
+        row.style.borderBottomWidth = '1px';
+        row.style.borderBottomStyle = 'solid';
+        option.style.setProperty('background-color', focusBorder);
+        const painted = collect().endOfP0;
+        expect(painted.rows[0].lineWidth).toBe(1);
+        expect(painted.rows[0].focusPainted).toBeGreaterThan(0);
+        option.tabIndex = 0;
+        option.focus();
+        const focused = collect().endOfP0;
+        expect(focused.rows[0].focusPainted).toBe(0);
+        expect(focused.rows[0].listFocused).toBe(true);
+        option.blur();
+    });
+
     it('a hidden badge is not counted (DS-ROW-6, UX-P2.2)', () => {
         (document.querySelector('.nuiget-row-option .nuiget-badge') as HTMLElement).style.display = 'none';
         expect(collect().rows[0].badgesShown).toBe(0);

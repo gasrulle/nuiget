@@ -192,6 +192,19 @@ describe('2.0 webview stylesheets', () => {
         expect(primitives.filter(rule => rule.prelude.includes(' svg') && rule.prelude.includes('authors')).flatMap(rule => rule.declarations).filter(declaration => declaration.startsWith('color:'))).toEqual([]);
     });
 
+    it('the focus colour marks keyboard focus and nothing else (DS-COLOR-5), but for the two uses their items remove', () => {
+        const files = [PRIMITIVES, 'src/webview/main/main.css', 'src/webview/sidebar/sidebar.css'];
+        const elsewhere = files.flatMap(file => parseRules(readFileSync(file, 'utf8')))
+            .filter(rule => rule.declarations.some(declaration => declaration.includes('--nuiget-color-focus') && !/^outline/.test(declaration)))
+            .map(rule => rule.prelude.replace(/\s+/g, ' '));
+        expect(elsewhere).toEqual(['.nuiget-sash:hover, .nuiget-sash:focus-visible', '.nuiget-tab[aria-selected="true"]']);
+        // Each use names its owner; when the owner is done the use must be gone.
+        const tracker = readFileSync('docs/plans/STATUS-ux.md', 'utf8');
+        for (const owner of ['P3.9', 'P2.5']) {
+            expect(new RegExp(`^\\| ${owner.replace('.', '\\.')} \\|[^|]*\\|[^|]*\\| done \\|`, 'm').test(tracker), `${owner} is done: remove its use of the focus colour`).toBe(false);
+        }
+    });
+
     it('every focus ring is the focus token at one pixel, on every control', () => {
         const files = [PRIMITIVES, 'src/webview/main/main.css', 'src/webview/sidebar/sidebar.css'];
         const rules = files.flatMap(file => parseRules(readFileSync(file, 'utf8')));

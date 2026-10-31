@@ -24,7 +24,7 @@ export type RuleStatus = 'hard' | { pending: string };
 export type StateGroup = 'main-installed' | 'main-updates' | 'browse' | 'details' | 'dialogs' | 'sources' | 'sidebar';
 
 /** The element groups Appendix B names for DS-INSET-2 (the sidebar is a state group there). */
-export type ElementGroup = 'toolbars' | 'headers' | 'main-header' | 'rows' | 'chrome' | 'first-row' | 'tabs' | 'controls';
+export type ElementGroup = 'toolbars' | 'headers' | 'main-header' | 'rows' | 'chrome' | 'first-row' | 'tabs' | 'controls' | 'sash';
 
 export type Scope = StateGroup | ElementGroup;
 
@@ -199,6 +199,11 @@ export const RULES: readonly RuleDefinition[] = [
     rule('DS-ROW-1', { helper: 2, scopes: inGroups('hard', ...MAIN), tolerance: TOLERANCES.coincide, widths: [800, 932, 1200, 1600], exceptStates: NO_ROW_STATES }),
     rule('DS-ROW-2', { helper: 2, scopes: { 'main-installed': { pending: 'P2.8a' }, details: { pending: 'P2.8a' }, browse: { pending: 'P3.2' } }, tolerance: TOLERANCES.coincide }),
     rule('DS-ROW-3', { helper: 6, scopes: { 'main-installed': 'hard', details: 'hard', 'main-updates': { pending: 'P3.1b' }, browse: { pending: 'P3.2' }, sidebar: { pending: 'P3.7a' } }, tolerance: TOLERANCES.containment, scopeStates: { 'main-installed': ['main-installed-hover', 'main-installed-focus', 'main-installed-unfocused'], details: ['main-installed-details', 'main-details-readme', 'main-transitive-details', 'main-browse-details'] } }),
+    // UX-P2.2b (design trigger 6): the row parts of the four rules no helper asserted.
+    rule('DS-COLOR-2', { helper: 6, scopes: { rows: 'hard' }, tolerance: TOLERANCES.containment, states: ['main-installed-details', 'main-details-readme', 'main-installed-unfocused'] }),
+    rule('DS-DIVIDER-1', { helper: 6, scopes: { rows: 'hard', headers: { pending: 'P2.6' } }, tolerance: TOLERANCES.containment, exceptStates: NO_ROW_STATES }),
+    rule('DS-RADIUS-2', { helper: 6, scopes: { rows: 'hard' }, tolerance: TOLERANCES.containment, exceptStates: NO_ROW_STATES }),
+    rule('DS-COLOR-5', { helper: 6, scopes: { rows: 'hard', tabs: { pending: 'P2.5' }, sash: { pending: 'P3.9' } }, tolerance: TOLERANCES.containment, exceptStates: NO_ROW_STATES }),
     rule('DS-ROW-6', { helper: 3, scopes: inGroups('hard', ...MAIN), tolerance: TOLERANCES.containment, exceptStates: NO_ROW_STATES }),
     rule('DS-ICON-3', { helper: 3, scopes: inGroups('hard', ...MAIN), tolerance: TOLERANCES.containment, exceptStates: NO_ROW_STATES }),
     rule('DS-DENSITY-1', { helper: 3, scopes: { ...inGroups('hard', ...MAIN), sidebar: { pending: 'P3.7a' } }, tolerance: TOLERANCES.height, exceptStates: NO_ROW_STATES }),
@@ -277,11 +282,11 @@ export function elementGroups(group: StateGroup, state?: string): ElementGroup[]
     switch (group) {
         case 'main-installed':
         case 'main-updates':
-            return ['toolbars', 'headers', 'main-header', 'rows', 'chrome', 'tabs', 'controls', ...firstRow];
+            return ['toolbars', 'headers', 'main-header', 'rows', 'chrome', 'tabs', 'controls', 'sash', ...firstRow];
         case 'browse':
             return ['main-header', 'rows', 'chrome', 'controls'];
         case 'details':
-            return ['headers', 'main-header', 'rows', 'chrome', 'tabs', 'controls'];
+            return ['headers', 'main-header', 'rows', 'chrome', 'tabs', 'controls', 'sash'];
         default:
             return ['chrome'];
     }
@@ -487,7 +492,11 @@ export interface EndOfP0 {
         nameLeft: number | undefined; textCentre: number | undefined; lines: number; actions: number;
         /** UX-P0.14: the option's outline and whether it holds the focus (DS-FOCUS-4). */
         outline: Outline; focused: boolean;
+        /** UX-P2.2b: the facts of DS-COLOR-2, DS-DIVIDER-1, DS-RADIUS-2 and DS-COLOR-5 on this row. */
+        background: string; radius: string; lineWidth: number; multi: boolean; listFocused: boolean; focusPainted: number;
     }>;
+    /** UX-P2.2b: the theme's selection colours, as computed colours. */
+    listSelection: { active: string; inactive: string };
     listPaneWidth: number | undefined;
     detailsHeader: { insets: Insets | undefined; titleLeft: number | undefined; tabLabelLeft: number | undefined } | undefined;
     /** The root and the scroll containers outside a list that scroll sideways: `label scrollWidth>clientWidth`. */
@@ -947,6 +956,22 @@ const documentOverflow = {
 // UX-P0.13: the facts of the rules registered at the end of P0 (design-advisor ruling of 2026-10-24).
 const opaque = colour => colour !== 'transparent' && !/^rgba\\(.*,\\s*0\\)$/.test(colour);
 const edgesOf = el => { const r = rectOf(el); return { left: round(r.left), top: round(r.top), right: round(r.right), bottom: round(r.bottom) }; };
+// The computed form of a --vscode-* colour; a probe element, removed at once.
+const computedColour = name => {
+    const probe = document.createElement('span');
+    probe.style.color = 'var(' + name + ', transparent)';
+    root.append(probe);
+    const colour = getComputedStyle(probe).color;
+    probe.remove();
+    return colour;
+};
+const focusBorder = computedColour('--vscode-focusBorder');
+const paintsFocus = el => {
+    const style = getComputedStyle(el);
+    return (style.outlineStyle !== 'none' && px(style.outlineWidth) > 0 && style.outlineColor === focusBorder)
+        || style.boxShadow.includes(focusBorder) || style.backgroundColor === focusBorder
+        || ['Top', 'Right', 'Bottom', 'Left'].some(side => px(style['border' + side + 'Width']) > 0 && style['border' + side + 'Color'] === focusBorder);
+};
 const endRows = shown('.nuiget-row:not([data-row-kind="group"])').map(row => {
     const option = row.querySelector('.nuiget-row-option') ?? row;
     const icon = option.querySelector('.nuiget-row-icon');
@@ -970,6 +995,12 @@ const endRows = shown('.nuiget-row:not([data-row-kind="group"])').map(row => {
         actions: [...row.querySelectorAll('.nuiget-row-actions > *')].filter(visible).length,
         outline: { width: px(style.outlineWidth), style: style.outlineStyle, colour: style.outlineColor, offset: px(style.outlineOffset) },
         focused,
+        background: style.backgroundColor,
+        radius: style.borderRadius,
+        lineWidth: Math.max(...[row, option].flatMap(el => { const own = getComputedStyle(el); return [px(own.borderTopWidth), px(own.borderBottomWidth)]; })),
+        multi: Boolean(list) && list.getAttribute('aria-multiselectable') === 'true',
+        listFocused: Boolean(list) && list.contains(document.activeElement),
+        focusPainted: focused ? 0 : [row, ...row.querySelectorAll('*')].filter(el => visible(el) && paintsFocus(el)).length,
     };
 });
 const detailsHeaderEl = scope.querySelector('.nuiget-details-header');
@@ -1067,6 +1098,7 @@ const disabled = [...new Set([...scope.querySelectorAll('[aria-disabled="true"]'
 });
 const endOfP0 = {
     rows: endRows,
+    listSelection: { active: computedColour('--vscode-list-activeSelectionBackground'), inactive: computedColour('--vscode-list-inactiveSelectionBackground') },
     listPaneWidth: pane && visible(pane) ? round(rectOf(pane).width) : undefined,
     detailsHeader: visible(detailsHeaderEl) ? { insets: contentInsets(detailsHeaderEl), titleLeft: detailsTitleText ? round(detailsTitleText.left) : undefined, tabLabelLeft: detailsTabLabel ? round(detailsTabLabel.left) : undefined } : undefined,
     sideways,
@@ -1738,6 +1770,50 @@ function evaluateEndOfP0(definition: RuleDefinition, scope: Scope, state: string
                 return { state: row.state, delta: tenth(delta) };
             });
             return { value: deltas.map(entry => `${entry.state} painted ${entry.delta} from the band`).join('; '), pass: deltas.every(entry => entry.delta <= tolerance) };
+        }
+        case 'DS-COLOR-2': {
+            // Hovered-selected: not measurable until P2.8a's state; the check-mark clause (D52) waits for P2.3.
+            const rows = comfortable.filter(row => row.state === 'current' || row.state === 'selected');
+            if (rows.length === 0) {
+                return notMeasurable('no selected or current row');
+            }
+            const targetOf = (row: (typeof rows)[number]) => (row.state === 'selected' && row.multi ? facts.listSelection.inactive : row.listFocused ? facts.listSelection.active : facts.listSelection.inactive);
+            return {
+                value: rows.map(row => `${row.state} ${row.background} (target ${targetOf(row)}, list ${row.listFocused ? 'focused' : 'not focused'})`).join('; '),
+                pass: rows.every(row => row.background === targetOf(row)),
+            };
+        }
+        case 'DS-DIVIDER-1': {
+            if (scope === 'headers') {
+                return notMeasurable('no helper until P2.6');
+            }
+            if (facts.rows.length === 0) {
+                return notMeasurable('no row');
+            }
+            const lined = facts.rows.filter(row => row.lineWidth > 0).length;
+            return { value: `${lined} of ${facts.rows.length} rows with a line`, pass: lined === 0 };
+        }
+        case 'DS-RADIUS-2': {
+            if (comfortable.length === 0) {
+                return notMeasurable('no comfortable row');
+            }
+            const target = facts.lookTokens['--nuiget-radius-row'];
+            const bands = comfortable.map(row => row.radius);
+            const icons = comfortable.flatMap(row => (row.icon === undefined ? [] : [row.icon.radius]));
+            return {
+                value: `band ${tally(bands)} (target ${target}); icon ${icons.length === 0 ? 'hidden' : tally(icons)} (target ${END_OF_P0.iconRadius})`,
+                pass: bands.every(radius => radius === target) && icons.every(radius => radius === END_OF_P0.iconRadius),
+            };
+        }
+        case 'DS-COLOR-5': {
+            if (scope === 'tabs' || scope === 'sash') {
+                return notMeasurable(`no helper until ${scope === 'tabs' ? 'P2.5' : 'P3.9'}`);
+            }
+            if (facts.rows.length === 0) {
+                return notMeasurable('no row');
+            }
+            const painted = facts.rows.reduce((sum, row) => sum + row.focusPainted, 0);
+            return { value: `${painted} elements of an unfocused row in focusBorder`, pass: painted === 0 };
         }
         case 'DS-ROW-6': {
             const width = facts.listPaneWidth;
