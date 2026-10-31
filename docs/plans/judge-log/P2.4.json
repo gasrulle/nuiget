@@ -509,8 +509,8 @@
             "states"
           ],
           "disposition": "fixed",
-          "evidence": "Ordered to UX-P2.2. Repeats the earlier finding on an element this item did not restyle.",
-          "ruling": "The judge-log rule of docs/plans/STATUS-ux.md (design-advisor, UX-P2.1b); earlier entry main-installed-single#D33 (P0.19)"
+          "evidence": "Ordered to UX-P2.8a. A real defect: the artboard draws the author at the strong weight, DS-TYPE-6 gives the author emphasis 11/600, and `.nuiget-row-authors` sets size and colour only, while the helper reads no weight; UX-P2.8a adds the declaration and the clause.",
+          "ruling": "docs/plans/handoff/P2.4.md, second trigger-4 follow-up"
         },
         {
           "id": "main-installed-details#D1",
