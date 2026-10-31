@@ -23,7 +23,7 @@ describe('2.0 main panel: details', () => {
     it('shows the versions, the details and the README of the current row, with Uninstall and Update in one column (P9.fix-5)', async function () {
         this.timeout(240_000);
         const row = await findByTestId('package-row-newtonsoft.json', 120_000);
-        await (await row.findElement(By.css('[role="option"]'))).click();
+        await (await row.findElement(By.css('.nuiget-row-option'))).click();
 
         await waitForText('package-details-panel', 'Newtonsoft.Json', 30_000);
         const selector = await findByTestId('version-selector', 30_000);

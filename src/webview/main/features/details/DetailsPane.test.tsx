@@ -47,7 +47,7 @@ async function mountReady(packages: InstalledPackage[] = [pkg('Serilog', '3.0.0'
 }
 
 const pane = (): HTMLElement => screen.getByTestId('package-details-panel');
-const option = (listId: string, id: string): HTMLElement => within(within(screen.getByTestId(listId)).getByTestId(`package-row-${id.toLowerCase()}`)).getByRole('option');
+const option = (listId: string, id: string): HTMLElement => within(within(screen.getByTestId(listId)).getByTestId(`package-row-${id.toLowerCase()}`)).getByRole(listId === 'installed-list' ? 'treeitem' : 'option');
 const selector = (): HTMLSelectElement => screen.getByTestId('version-selector');
 const primary = (): HTMLButtonElement => screen.getByTestId('install-update-button');
 const versionsOf = (host: FakeHost) => host.requests('package/versions');
@@ -491,7 +491,7 @@ describe('main panel: details', () => {
         await hostSays(() => host.chunk(stream, { kind: 'start', projects: [{ name: 'App', path: A }, { name: 'Lib', path: B }] }));
         await hostSays(() => host.chunk(stream, { kind: 'project', chunk: { projectPath: B, projectName: 'Lib', result: { projectPath: B, fidelity: 'authoritative', isCpm: false, packages: [pkg('Moq', '4.18.0')] } } }));
         await hostSays(() => host.respond(stream, { projectPaths: [A, B], errored: [] }));
-        await user.click(option('installed-list-lib', 'Moq'));
+        await user.click(option('installed-list', 'Moq'));
         await hostSays(() => host.respond(versionsOf(host)[0], { packageId: 'Moq', versions: ['4.20.0', '4.18.0'] }));
 
         expect([...selector().options].map(element => element.textContent)).toContain('4.18.0 (installed)');

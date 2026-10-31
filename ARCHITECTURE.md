@@ -646,14 +646,17 @@ builds it into `dist/webview.js` and, because the entry imports `../shared/token
 `src/webview/main/features/installed` is the Installed tab (P5.4); `index.tsx` hands it to the shell as
 `installed={view => <InstalledTab {...view} />}`, so the shell did not grow.
 
-- **Sections.** For a single project one list (`installed-list`) under a collapsible `Direct packages (N)`
-  header (`section-header-direct`; `(k of N)` while a filter is on, `(N)` while the vulnerability data of
-  `@vulnerable` is unknown) and, right after its last row, the transitive section; in All Projects one
-  `SectionHeader` and one list per project from the `allProjects` slice (`installed-list-<name>`), then the
-  aggregate. In both modes the tab is one scroll container (`nuiget-installed--sections`, shared with All Projects
-  Updates) where every list is as high as its rows (P9.fix-2); `Listbox` scrolls the active option into view with
-  `scrollIntoView({ block: 'nearest' })`, because such a list cannot scroll itself (N88). Each header carries the `provisional` and `Unsupported` badges. Folder headings,
-  `Unsupported` sections and the all-projects transitive aggregate are P5.9's.
+- **One tree.** Each view is one `Listbox` with `groups` (`installed-list`, `role="tree"`, D48, UX-P2.1d): for a
+  single project the `direct` group row (`Direct packages (N)`; `(k of N)` while a filter is on, `(N)` while the
+  vulnerability data of `@vulnerable` is unknown) over its packages; in All Projects a `project-<name>` group row per
+  project from the `allProjects` slice, under a `folder-<folder>` group row with two or more workspace folders. Enter,
+  Left and Right expand and collapse a group row, and the list's hint says so. A project's status (count, spinner,
+  `Unsupported` and `provisional` badges) is decoration on its group row, through `SectionHeader`'s `content`
+  presentation; its messages (the Unsupported sentence, an error with Retry) are `Banner`s above the tree, because a
+  tree owns treeitems only. The transitive section follows the tree until P2.1e. In both modes the tab is one scroll
+  container (`nuiget-installed--sections`, shared with All Projects Updates) where the list is as high as its rows
+  (P9.fix-2); `Listbox` scrolls the active row into view with `scrollIntoView({ block: 'nearest' })`, because such a
+  list cannot scroll itself (N88).
 - **Rows (P9.3).** A comfortable `Row` per package: the icon from the lite map (`packageIconSrc`: the `data:` URI
   or the bundled default), authors and the Verified mark from the same map, no description (D14); the version
   cell of `versionCell` (`10.* (10.2.0)`, `(run restore)`, `* (always latest: …)`); badges `SDK`, `props`, `CPM`,
@@ -661,7 +664,7 @@ builds it into `dist/webview.js` and, because the entry imports `../shared/token
   (`selectable={false}`) and no uninstall action; Enter still shows its details. The Installed tab counts the
   listed packages (no number while loading or at zero; All Projects once every project answered).
 - **Two selections.** The current row is the tab's own state (click or Enter, `aria-current`); the details pane
-  of P5.7 will read it. The bulk set is kept by project path as the host sent it (Space, Ctrl/Cmd+click or the
+  of P5.7 will read it. The bulk set is `useBulkSelection` over composite row ids of project path and package id (Space, Ctrl/Cmd+click or the
   check mark, `aria-selected`); a row that cannot be uninstalled (central, implicit, props, unresolved,
   unsupported) is not added, and the reason is announced.
 - **Bulk flow.** The `Toolbar` holds `select-all-button` (every removable row the filter shows; pressed again it

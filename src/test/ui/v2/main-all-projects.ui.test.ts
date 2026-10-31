@@ -79,16 +79,16 @@ describe('2.0 main panel: All Projects', () => {
         expect(await option.getAttribute('textContent')).to.equal('All Projects (2)');
     });
 
-    it('All Projects lists one section per project and the collapsed transitive aggregate', async function () {
+    it('All Projects lists one group row per project in one tree and the collapsed transitive aggregate', async function () {
         this.timeout(180_000);
         await untilProjects(values => (values.includes(ALL_PROJECTS) ? true : undefined), 'the All Projects option');
         await chooseProjectCommitted(ALL_PROJECTS, 30_000);
 
-        // The project names come from discovery; read the list ids from the DOM rather than assume them.
+        // The project names come from discovery; read the group row ids from the DOM rather than assume them.
         const lists = await poll(async () => {
-            const found = await driverOf().findElements(By.css('[role="listbox"][data-testid^="installed-list-"]'));
+            const found = await driverOf().findElements(By.css('[data-testid="installed-list"] [data-testid^="group-row-project-"]'));
             return found.length >= 2 ? found : undefined;
-        }, 'two project sections in the Installed tab', 120_000);
+        }, 'two project group rows in the Installed tab', 120_000);
         const ids = (await Promise.all(lists.map(list => list.getAttribute('data-testid')))).map(id => id ?? '');
         expect(ids).to.have.length(2);
         expect(ids.some(id => id.toLowerCase().includes('utility'))).to.equal(true);

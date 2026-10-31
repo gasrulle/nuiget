@@ -255,10 +255,10 @@ project has several and one block per project in All Projects; no version select
 | `project-selector`, `source-selector` | Header selectors (main) |
 | `refresh-button` | The header's Refresh button (main): a workspace rescan |
 | `tab-bar`, `installed-tab`, `updates-tab` | Main tabs |
-| `installed-list`, `updates-list`, `browse-list`, `sidebar-installed-list`, `sidebar-updates-list`, `sidebar-browse-list`, `transitive-list`, `transitive-list-<tfm>` | Listboxes |
-| `package-row-<id>` | A row (id lower-cased): the wrapper around the option and its pointer actions; the option is the `role="option"` inside it (read `aria-selected` there; in a multi-selectable list `aria-current` marks the current row) |
+| `installed-list`, `updates-list`, `browse-list`, `sidebar-installed-list`, `sidebar-updates-list`, `sidebar-browse-list`, `transitive-list`, `transitive-list-<tfm>` | Lists (a grouped list, such as the main panel's Installed list, is a tree) |
+| `package-row-<id>` | A row (id lower-cased): the wrapper around the option and its pointer actions; the option is the `role="option"`, or in a tree the `role="treeitem"`, inside it (read `aria-selected` there; in a multi-selectable list `aria-current` marks the current row) |
 | `row-action-<name>` | A pointer action button inside a row (`install`, `update`, `uninstall`); hidden from assistive technology, mirrored by the keys of §5 |
-| `section-header-<name>` | The toggle button of a collapsible section (`installed`, `updates`, `transitive`, `direct`) |
+| `section-header-<name>` | The toggle button of a collapsible section (`installed`, `updates`, `transitive`); in a group row, the same hook on the row's title, named by the group's id |
 | `section-header-transitive-<tfm>` | The toggle of one target framework's transitive packages (a project with several) |
 | `package-details-panel`, `details-tab-details`, `details-tab-readme`, `readme-content`, `readme-empty`, `transitive-details` | Details panel |
 | `version-selector`, `install-update-button`, `uninstall-button` | Details actions |
@@ -287,10 +287,11 @@ All Projects (§3; `<name>` = project name lower-cased):
 
 | Test id | Element |
 |---|---|
-| `installed-list-<name>`, `updates-list-<name>` | A project's list in the main panel |
+| `updates-list-<name>` | A project's list in the main panel |
+| `group-row-<id>` | The wrapper of a group row in a grouped list; the id is the group's: direct, project-<name>, folder-<folder> (P2.1e adds the transitive groups) |
 | `sidebar-installed-list-<name>`, `sidebar-updates-list-<name>` | A project's list in the sidebar |
 | `sidebar-update-all-button` | Update all in the sidebar's Updates header |
-| `section-header-project-<name>`, `section-header-updates-<name>` | The toggle of a project's section (Installed, Updates) |
+| `section-header-project-<name>`, `section-header-updates-<name>` | The title of a project's group row (Installed); the toggle of a project's section (Updates) |
 
 Attributes of the document element of both webviews, which the host writes in `renderWebviewHtml` (so no webview file renders them and they are no table row): `data-look` (`modern` or `classic`), `data-density` (`default` or `compact`) and `data-uppercase-headers` (present when the host capitalises view headers) (ADR-011). The harness reads the look of a capture here. Every icon carries `data-codicon` with the name of its drawing (`src/webview/shared/primitives/icons.tsx`, generated).
 

@@ -13,7 +13,7 @@ const read = (): PerfResult | null => run<PerfResult | null>(READ_PERF);
 const settle = (): Promise<void> => new Promise(resolve => setTimeout(resolve, 0));
 
 const row = (id: string, extra = ''): string =>
-    `<div class="nuiget-row nuiget-row--comfortable" data-testid="package-row-${id}"><div role="option"><span class="nuiget-row-icon"><img src="${extra || 'data:default'}"></span><span class="nuiget-row-name">${id}</span></div></div>`;
+    `<div class="nuiget-row nuiget-row--comfortable" data-testid="package-row-${id}"><div class="nuiget-row-option" role="option"><span class="nuiget-row-icon"><img src="${extra || 'data:default'}"></span><span class="nuiget-row-name">${id}</span></div></div>`;
 
 const PANEL_OPEN: PerfChain = {
     label: 'panel open',
@@ -46,7 +46,7 @@ describe('the perf recorder (UX-P0.26)', () => {
     });
 
     it('records a mark present when it starts as an upper bound, and a flag that held', async () => {
-        document.body.innerHTML = `<div id="root" data-package-icon="data:default"><div data-testid="section-box-direct"><span class="nuiget-badge">provisional</span></div><div data-testid="installed-list">${row('serilog')}</div></div>`;
+        document.body.innerHTML = `<div id="root" data-package-icon="data:default"><div data-testid="section-box-direct"><span class="nuiget-badge">provisional</span></div><div data-testid="installed-list"><div class="nuiget-row nuiget-row--comfortable" data-row-kind="group"></div>${row('serilog')}</div></div>`;
         run(perfRecorder(PANEL_OPEN, '#root'));
         expect(read()!.marks['first row']?.when).toBe('install');
         expect(read()!.flags.provisional).toBeDefined();

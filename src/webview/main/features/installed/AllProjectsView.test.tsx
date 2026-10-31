@@ -4,7 +4,7 @@ import { axe } from 'jest-axe';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { ALL_PROJECTS, resourceKeys, type InstalledPackage, type InstalledResult, type ProjectTransitiveChunk, type SessionSnapshot } from '../../../../protocol';
 import { createFakeHost, type FakeHost } from '../../../shared/bus/testSupport';
-import { installFakeLayout } from '../../../shared/primitives/testSupport';
+import { axeRuleOutcome, installFakeLayout } from '../../../shared/primitives/testSupport';
 import { StoreProvider } from '../../../shared/store/StoreProvider';
 import { MainShell } from '../../MainShell';
 import { DetailsPane } from '../details/DetailsPane';
@@ -55,13 +55,34 @@ describe('main panel: All Projects', () => {
         removeLayout();
     });
 
-    it('several workspace folders: a heading per folder over its projects, the project headers one level down', async () => {
+    const treeitem = (testId: string): Element | null | undefined => screen.queryByTestId(testId)?.querySelector('[role="treeitem"]');
+
+    const groupRows = (): string[] => [...screen.getByTestId('installed-list').querySelectorAll<HTMLElement>('[data-row-kind="group"]')].map(row => (row.dataset.testid ?? '').replace('group-row-', ''));
+
+    it('several workspace folders: a level-1 group row per folder, the project group rows at level 2 and their packages at level 3', async () => {
         await mountAll();
-        const w1 = screen.getByRole('region', { name: 'Workspace folder w1' });
-        const w2 = screen.getByRole('region', { name: 'Workspace folder w2' });
-        expect(within(w1).getByRole('heading', { level: 2, name: 'w1' })).toBeInTheDocument();
-        expect(within(w1).getAllByRole('heading', { level: 3 }).map(heading => heading.textContent)).toEqual([expect.stringContaining('App'), expect.stringContaining('Lib')]);
-        expect(within(w2).getAllByRole('heading', { level: 3 }).map(heading => heading.textContent)).toEqual([expect.stringContaining('Tool')]);
+        for (const folder of ['w1', 'w2']) {
+            expect(treeitem(`group-row-folder-${folder}`)).toHaveAttribute('aria-level', '1');
+        }
+        for (const project of ['app', 'lib', 'tool']) {
+            expect(treeitem(`group-row-project-${project}`)).toHaveAttribute('aria-level', '2');
+        }
+        expect(within(screen.getByTestId('installed-list')).getAllByRole('treeitem', { name: /^Serilog/ }).map(row => row.getAttribute('aria-level'))).toEqual(['3', '3', '3']);
+        // Membership is the tree's order: each folder over its own projects.
+        expect(groupRows()).toEqual(['folder-w1', 'project-app', 'project-lib', 'folder-w2', 'project-tool']);
+    });
+
+    it('collapsing a folder group row hides its projects and packages; a project name repeated gets its own group row', async () => {
+        const user = userEvent.setup();
+        const D = '/w1/Other/App.csproj';
+        const E = '/w1/Third/App.csproj';
+        await mountAll([...PROJECTS, { name: 'App', path: D, workspaceFolder: 'w1' }, { name: 'App', path: E, workspaceFolder: 'w1' }]);
+        expect(groupRows()).toEqual(['folder-w1', 'project-app', 'project-lib', 'project-w1/app', `project-${E.toLowerCase()}`, 'folder-w2', 'project-tool']);
+        (treeitem('group-row-folder-w1') as HTMLElement).focus();
+        await user.keyboard('{Enter}');
+        expect(treeitem('group-row-folder-w1')).toHaveAttribute('aria-expanded', 'false');
+        expect(groupRows()).toEqual(['folder-w1', 'folder-w2', 'project-tool']);
+        expect(within(screen.getByTestId('installed-list')).getAllByRole('treeitem', { name: /^Serilog/ })).toHaveLength(1);
     });
 
     it('all-projects installed row shows icon from metadata chunk', async () => {
@@ -80,11 +101,11 @@ describe('main panel: All Projects', () => {
         await hostSays(() => host.chunk(stream, { kind: 'metadata', projectPath: A, packages: [{ id: 'Serilog', version: '1.0.0', iconUrl: DATA, authors: 'Serilog Contributors', verified: true }] }));
         await hostSays(() => host.respond(stream, { projectPaths: projects.map(project => project.path), errored: [] }));
 
-        const row = (list: string): HTMLElement => within(screen.getByTestId(`installed-list-${list}`)).getByTestId('package-row-serilog');
-        expect(row('app').querySelector('.nuiget-row-icon img')).toHaveAttribute('src', DATA);
-        expect(within(row('app')).getByRole('option')).toHaveAccessibleDescription(/Verified/);
-        expect(row('lib').querySelector('.nuiget-row-icon img')).toHaveAttribute('src', DEFAULT_ICON);
-        expect(within(row('lib')).getByRole('option')).not.toHaveAccessibleDescription(/Verified/);
+        const [app, lib] = within(screen.getByTestId('installed-list')).getAllByTestId('package-row-serilog');
+        expect(app.querySelector('.nuiget-row-icon img')).toHaveAttribute('src', DATA);
+        expect(within(app).getByRole('treeitem')).toHaveAccessibleDescription(/Verified/);
+        expect(lib.querySelector('.nuiget-row-icon img')).toHaveAttribute('src', DEFAULT_ICON);
+        expect(within(lib).getByRole('treeitem')).not.toHaveAccessibleDescription(/Verified/);
     });
 
     it('all-projects transitive details lists one block per project', async () => {
@@ -121,10 +142,10 @@ describe('main panel: All Projects', () => {
         expect(host.requests('package/metadata')).toHaveLength(0);
     });
 
-    it('one workspace folder: no folder heading, the project headers stay at level 2', async () => {
+    it('one workspace folder: no folder group row; the project group rows are level 1', async () => {
         await mountAll(PROJECTS.slice(0, 2));
-        expect(screen.queryByRole('region', { name: /Workspace folder/ })).toBeNull();
-        expect(screen.getByTestId('section-header-project-app').closest('h2')).not.toBeNull();
+        expect(screen.queryByTestId('group-row-folder-w1')).toBeNull();
+        expect(treeitem('group-row-project-app')).toHaveAttribute('aria-level', '1');
     });
 
     it('the transitive section aggregates every project once opened, and offers Restore for the projects not restored', async () => {
@@ -163,13 +184,13 @@ describe('main panel: All Projects', () => {
 
         expect(screen.getByText('Unsupported project: requires .NET SDK 10 or newer')).toBeInTheDocument();
         const list = screen.getByTestId('installed-list');
-        expect(within(list).getAllByRole('option')).toHaveLength(2);
+        expect(list.querySelectorAll('.nuiget-row-option')).toHaveLength(2);
         expect(within(list).queryAllByTestId('row-action-uninstall')).toHaveLength(0);
         await user.click(screen.getByTestId('select-all-button'));
         expect(screen.getByTestId('uninstall-selected-button')).toHaveTextContent('Uninstall selected (0)');
     });
 
-    it('a packages.config project is a section with the banner and no list, in its folder', async () => {
+    it('a packages.config project is a group row with the Unsupported badge and no rows; its banner names it above the tree', async () => {
         const host = createFakeHost();
         render(<StoreProvider bus={host.bus}><MainShell installed={view => <InstalledTab {...view} />} /></StoreProvider>);
         await hostSays(() => host.respond(host.requests('session/get')[0], snapshot(1)));
@@ -181,15 +202,17 @@ describe('main panel: All Projects', () => {
         await hostSays(() => host.chunk(stream, { kind: 'project', chunk: { projectPath: C, projectName: 'Tool', workspaceFolder: 'w2', result: installed(C, [pkg('xunit')]) } }));
         await hostSays(() => host.respond(stream, { projectPaths: [A, B, C], errored: [] }));
 
-        const w1 = screen.getByRole('region', { name: 'Workspace folder w1' });
-        const lib = within(w1).getByTestId('section-header-project-lib');
-        // The badge is in the header's actions beside the toggle; the toggle carries no count of 0.
-        expect(lib.closest('.nuiget-section-header')).toHaveTextContent('Unsupported');
-        expect(lib).toHaveAccessibleName('Lib');
-        expect(within(w1).getByText('Unsupported project: packages.config projects are not supported')).toBeInTheDocument();
-        expect(screen.queryByTestId('installed-list-lib')).toBeNull();
+        const tree = screen.getByTestId('installed-list');
+        const lib = within(tree).getByTestId('group-row-project-lib');
+        // The badge is on the group row; the row carries no count of 0.
+        expect(lib).toHaveTextContent('Unsupported');
+        expect(lib.querySelector('[role="treeitem"]')).toHaveAccessibleName(/^Lib(?! 0)/);
+        expect(within(lib).queryByText('0')).toBeNull();
+        const banner = screen.getByText('Unsupported project Lib: packages.config projects are not supported');
+        expect(tree.contains(banner)).toBe(false);
+        expect(banner.compareDocumentPosition(tree) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+        expect(tree.querySelectorAll('.nuiget-row-option')).toHaveLength(2);
         expect(screen.queryByText('No packages installed.')).toBeNull();
-        expect(screen.getByTestId('installed-list-app')).toBeInTheDocument();
     });
 
     it('has no axe violations with folders and the transitive section open', async () => {
@@ -197,7 +220,9 @@ describe('main panel: All Projects', () => {
         const host = await mountAll();
         await user.click(screen.getByTestId('section-header-transitive'));
         await hostSays(() => host.respond(host.requests('allProjects/transitive')[0], { projectPaths: [], errored: [] }));
-        expect(await axe(document.body)).toHaveNoViolations();
+        const results = await axe(document.body);
+        expect(results).toHaveNoViolations();
+        expect(['aria-allowed-attr', 'aria-required-children', 'aria-required-parent', 'nested-interactive'].map(rule => axeRuleOutcome(results, rule))).toEqual(['passes', 'passes', 'passes', 'passes']);
     });
 });
 

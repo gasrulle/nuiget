@@ -14,7 +14,7 @@ describe('2.0 main panel: Installed tab', () => {
     const csprojPath = path.resolve('src/test/e2e/fixtures/e2e-workspace/TestProject.csproj');
     let originalCsproj = '';
 
-    const serilogOption = async () => (await findByTestId('package-row-serilog', 120_000)).findElement(By.css('[role="option"]'));
+    const serilogOption = async () => (await findByTestId('package-row-serilog', 120_000)).findElement(By.css('.nuiget-row-option'));
     const attribute = async (testId: string, name: string): Promise<string | null> => (await findByTestId(testId)).getAttribute(name);
 
     before(() => {
@@ -77,7 +77,7 @@ describe('2.0 main panel: Installed tab', () => {
         expect(authors.scrollWidth, 'the authors span of Newtonsoft.Json is not ellipsized').to.be.at.most(authors.clientWidth);
         // The check box sits on the card's vertical centre (P9.fix-3): within 2 px of the row wrapper's centre.
         const centres = await driverOf().executeScript<{ name: string; check: number; card: number }[]>(`
-            return Array.from(document.querySelectorAll('[data-testid="installed-list"] [role="option"]')).map(option => {
+            return Array.from(document.querySelectorAll('[data-testid="installed-list"] .nuiget-row-option')).map(option => {
                 const card = (option.closest('.nuiget-row') ?? option).getBoundingClientRect();
                 const check = option.querySelector('.nuiget-row-check').getBoundingClientRect();
                 return { name: option.querySelector('.nuiget-row-name')?.textContent ?? '', check: check.top + check.height / 2, card: card.top + card.height / 2 };
@@ -127,7 +127,7 @@ describe('2.0 main panel: Installed tab', () => {
         }
         // One scroller: the transitive header follows the last direct row, with no gap of more than one row (P9.fix-2).
         const edges = await driverOf().executeScript<{ lastRowBottom: number; headerTop: number }>(`
-            const rows = Array.from(document.querySelectorAll('[data-testid="installed-list"] [role="option"]'));
+            const rows = Array.from(document.querySelectorAll('[data-testid="installed-list"] .nuiget-row-option'));
             const header = document.querySelector('[data-testid="section-header-transitive"]').closest('.nuiget-section-header');
             return {
                 lastRowBottom: Math.max(...rows.map(option => (option.closest('.nuiget-row') ?? option).getBoundingClientRect().bottom)),
@@ -158,7 +158,7 @@ describe('2.0 main panel: Installed tab', () => {
         this.timeout(120_000);
         const list = await findByTestId('installed-list', 120_000);
         await findByTestId('package-row-serilog', 120_000);
-        const selection = async (): Promise<string[]> => Promise.all((await list.findElements(By.css('[role="option"]'))).map(option => option.getAttribute('aria-selected').then(value => value ?? '')));
+        const selection = async (): Promise<string[]> => Promise.all((await list.findElements(By.css('.nuiget-row-option'))).map(option => option.getAttribute('aria-selected').then(value => value ?? '')));
         const button = await findByTestId('select-all-button');
 
         await button.click();

@@ -75,6 +75,16 @@ describe('SectionHeader', () => {
         expect(screen.getByRole('button', { name: 'Installed' })).toBeInTheDocument();
     });
 
+    it('content presentation renders text and decoration only: no heading, button, focusable element or ARIA attribute, both hooks kept', () => {
+        const { container } = render(<SectionHeader presentation="content" title="Direct packages" testKey="direct" expanded count={3} variant="group" badges={<span>provisional</span>} />);
+        expect(container.querySelector('h1, h2, h3, h4, h5, h6, button, [tabindex]')).toBeNull();
+        expect(container.querySelector('[aria-expanded], [aria-controls], [aria-labelledby], [role="button"]')).toBeNull();
+        expect(screen.getByTestId('section-box-direct')).toHaveAttribute('data-variant', 'group');
+        expect(screen.getByTestId('section-header-direct')).toHaveTextContent('Direct packages');
+        expect(screen.getByTestId('section-box-direct')).toHaveTextContent('provisional');
+        expect(container.querySelector('.nuiget-section-chevron')).toHaveClass('nuiget-section-chevron--expanded');
+    });
+
     it('has no axe violations', async () => {
         const { container } = renderHeader({ count: 3, busy: true, actions: <IconButton label="Refresh installed packages"><SyncIcon /></IconButton> });
         const results = await axe(container);

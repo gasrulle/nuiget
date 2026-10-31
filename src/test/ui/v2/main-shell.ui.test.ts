@@ -75,7 +75,7 @@ describe('2.0 main panel shell', () => {
                 tab: left('[data-testid="installed-tab"] .nuiget-tab-label'),
                 toolbar: left('[data-testid="select-all-button"]'),
                 section: left('[data-testid="section-header-direct"] .nuiget-section-chevron'),
-                row: document.querySelector('[data-testid="installed-list"] [role="option"]').firstElementChild.getBoundingClientRect().left,
+                row: document.querySelector('[data-testid="installed-list"] .nuiget-row-option').firstElementChild.getBoundingClientRect().left,
             };`);
         console.warn('[P9.fix-6] left edges: ' + JSON.stringify(edges));
         for (const [name, x] of Object.entries(edges)) {

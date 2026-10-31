@@ -412,14 +412,14 @@ export interface KeyOutcome {
  * The tab sequence each screen's walk records, as `focusLine`s, copied from run 40146274455 (design-advisor ruling of
  * 2026-10-25; interaction model §5 has no Tab-order table, H48). Only the item whose change moves a stop updates its screen
  * here, in the same commit, with the reason in its note (P2.5 the tab stops' names, P3.7a the main Installed row order).
+ * A stop the snapshot cannot hold before the item's green run is named by `KEYS_AWAITING_ARIA`.
  */
 export const KEYS_EXPECTED: Readonly<Partial<Record<KeyScreen, readonly string[]>>> = {
     'main-installed': [
         'combobox "Search packages, or filter with @installed, @updates or @vulnerable" {search-input}',
         'tab "Installed # # package with known vulnerabilities" {installed-tab}',
         'button "Select all" {select-all-button}',
-        'button "Direct packages (#)" {section-header-direct}',
-        'option "Microsoft.Extensions.DependencyInjection.Abstractions #"',
+        'treeitem "Direct packages (#)"',
         'button "Transitive packages" {section-header-transitive}',
         'separator "Resize the package list" {sash}',
     ],
@@ -463,6 +463,12 @@ export const KEYS_PENDING: Readonly<Record<string, string>> = {
     'sidebar search Ctrl+DownArrow': 'P4.3',
     'sidebar rows Ctrl+UpArrow': 'P4.3',
 };
+
+/**
+ * A screen whose moved stops are not yet in its committed ARIA snapshot, with the item whose green run adopts it; that
+ * item's closing commit removes the entry (UX-P2.1d).
+ */
+export const KEYS_AWAITING_ARIA: Readonly<Partial<Record<KeyScreen, string>>> = { 'main-installed': 'P2.1d' };
 
 /**
  * The `[keys]` lines of a screen and their failures: the tab sequence against `KEYS_EXPECTED`, a ring at every stop, and

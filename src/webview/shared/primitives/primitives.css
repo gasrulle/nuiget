@@ -107,6 +107,17 @@
     cursor: default;
 }
 
+/* UX-P2.1d; the look is P2.6's. */
+.nuiget-row[data-row-kind="group"] {
+    min-height: var(--nuiget-row-height-compact);
+    border-bottom: 0;
+}
+
+/* UX-P2.1d; the look is P2.6's. */
+[data-row-kind="group"] > .nuiget-row-group {
+    padding: 0;
+}
+
 .nuiget-row:hover .nuiget-row-option {
     background: var(--nuiget-color-list-hover-bg);
 }
@@ -507,7 +518,8 @@
     transition: transform var(--nuiget-duration-fast) var(--nuiget-easing);
 }
 
-.nuiget-section-toggle[aria-expanded="true"] .nuiget-section-chevron {
+.nuiget-section-toggle[aria-expanded="true"] .nuiget-section-chevron,
+.nuiget-section-chevron--expanded {
     transform: rotate(90deg);
 }
 

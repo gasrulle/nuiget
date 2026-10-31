@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Package and dialog titles are larger, and text sizes follow VS Code**
 - **Scrollbars and sidebar section headers follow VS Code's Modern UI look**
 - **Icons match VS Code's current set**
+- **The Installed tab's project and section headers are rows of one list, expanded and collapsed with Enter, Left and Right**
 
 ### Fixed
 - **Scrollbars in the package manager are thin again**

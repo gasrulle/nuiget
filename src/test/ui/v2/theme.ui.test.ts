@@ -114,13 +114,13 @@ function report(moment: Moment, theme: Theme, facts: MomentFacts, failures: stri
 /** The rows of a list by their test ids, the current one marked. */
 async function rowsOf(listTestId: string): Promise<Array<{ id: string; current: boolean }>> {
     return driverOf().executeScript<Array<{ id: string; current: boolean }>>(`
-        return Array.from(document.querySelectorAll('[data-testid="${listTestId}"] [role="option"]')).map(option => ({
+        return Array.from(document.querySelectorAll('[data-testid="${listTestId}"] .nuiget-row-option')).map(option => ({
             id: option.closest('[data-testid^="package-row-"]').getAttribute('data-testid'),
             current: option.getAttribute('aria-current') === 'true' || option.getAttribute('aria-selected') === 'true',
         }));`);
 }
 
-const optionOf = async (rowTestId: string) => (await findByTestId(rowTestId, 30_000)).findElement(By.css('[role="option"]'));
+const optionOf = async (rowTestId: string) => (await findByTestId(rowTestId, 30_000)).findElement(By.css('.nuiget-row-option'));
 
 /** A pointer on the row, until it matches `:hover`. */
 async function hover(rowTestId: string): Promise<void> {
@@ -294,7 +294,7 @@ describe('2.0 theme pass', () => {
             await openMainPanel();
             await enterMainWebview();
             // Whichever tab an earlier file left selected, the panel lists rows.
-            await selectFirstRow('[data-testid="nuiget-app"] [role="option"]', 'rows in the main panel');
+            await selectFirstRow('[data-testid="nuiget-app"] .nuiget-row-option', 'rows in the main panel');
         } finally {
             await leaveWebview();
         }
@@ -350,7 +350,7 @@ describe('2.0 theme pass', () => {
             await selectFirstRow('[data-testid="updates-list"] [role="option"]', 'update rows in the main panel');
             const updates = await runAxe();
             await (await findByTestId('installed-tab', 30_000)).click();
-            await selectFirstRow('[data-testid="installed-list"] [role="option"]', 'installed rows in the main panel');
+            await selectFirstRow('[data-testid="installed-list"] .nuiget-row-option', 'installed rows in the main panel');
             const installed = await runAxe();
             // UX-P0.25: the contrast moments, the same ordered set in every theme (H30).
             const contrastFailures: string[] = [];
@@ -389,7 +389,7 @@ describe('2.0 theme pass', () => {
             await findByTestId('package-row-serilog', 120_000);
             // A pointer focus never matches `:focus-visible`; a key press does: the Newtonsoft.Json row holds keyboard
             // focus, so the capture shows the focus ring (P9.11).
-            await (await driverOf().findElements(By.css('[data-testid="package-row-serilog"] [role="option"]')))[0].click();
+            await (await driverOf().findElements(By.css('[data-testid="package-row-serilog"] .nuiget-row-option')))[0].click();
             // The key goes to the element that has the focus inside the webview (as the sash test does).
             await (await driverOf().switchTo().activeElement()).sendKeys(Key.ARROW_UP);
             await poll(async () => ((await driverOf().executeScript<string | null>('return document.activeElement?.closest(\'[data-testid^="package-row-"]\')?.getAttribute("data-testid") ?? null;')) === 'package-row-newtonsoft.json' ? true : undefined), 'the focus on the Newtonsoft.Json row', 10_000);

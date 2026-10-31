@@ -720,7 +720,7 @@ const toolbars = [...scope.querySelectorAll('[data-testid="installed-toolbar"], 
 const header = scope.querySelector('[data-testid="main-header"]');
 const sidebarHeader = rootTestId === 'nuiget-sidebar' ? root.querySelector('.nuiget-sidebar-header') : null;
 const left = selector => { const el = scope.querySelector(selector); return visible(el) ? el.getBoundingClientRect().left : undefined; };
-const firstOption = scope.querySelector('[data-testid="installed-list"] [role="option"]');
+const firstOption = scope.querySelector('[data-testid="installed-list"] .nuiget-row-option');
 const mainLefts = rootTestId !== 'nuiget-app' ? {} : {
     title: left('.nuiget-main-title'),
     search: left('.nuiget-main-search-input'),
@@ -759,10 +759,10 @@ const badgeLabel = el => {
 };
 const heights = {
     headers: shown('[data-testid^="section-box-"]').map(el => ({ id: el.dataset.testid.replace(/^section-box-/, ''), variant: el.dataset.variant ?? '', height: heightOf(el) })),
-    compactRows: shown('.nuiget-row--compact').map(heightOf),
-    comfortableRows: shown('.nuiget-row--comfortable').map(heightOf),
-    comfortablePitches: [...scope.querySelectorAll('[role="listbox"]')].flatMap(list => {
-        const tops = [...list.querySelectorAll('.nuiget-row--comfortable')].filter(visible).map(el => rectOf(el).top).sort((a, b) => a - b);
+    compactRows: shown('.nuiget-row--compact:not([data-row-kind="group"])').map(heightOf),
+    comfortableRows: shown('.nuiget-row--comfortable:not([data-row-kind="group"])').map(heightOf),
+    comfortablePitches: [...scope.querySelectorAll('.nuiget-listbox')].flatMap(list => {
+        const tops = [...list.querySelectorAll('.nuiget-row--comfortable:not([data-row-kind="group"])')].filter(visible).map(el => rectOf(el).top).sort((a, b) => a - b);
         return tops.slice(1).map((top, i) => round(top - tops[i]));
     }),
     tabStrip: visibleHeight('[data-testid="tab-bar"]'),
@@ -794,7 +794,7 @@ const heights = {
 };
 // Helper 4: box centres of the rows of the Installed and Updates lists.
 const centreOf = el => { const rect = rectOf(el); return round(rect.top + rect.height / 2); };
-const centring = shown('[data-testid="installed-list"] [role="option"], [data-testid="updates-list"] [role="option"]').map(option => {
+const centring = shown('[data-testid="installed-list"] .nuiget-row-option, [data-testid="updates-list"] .nuiget-row-option').map(option => {
     const row = option.closest('.nuiget-row') ?? option;
     const check = option.querySelector('.nuiget-row-check');
     const icon = option.querySelector('.nuiget-row-icon');
@@ -805,13 +805,13 @@ const buttonBox = id => { const el = scope.querySelector('[data-testid="' + id +
 const detailsButtons = { uninstall: buttonBox('uninstall-button'), update: buttonBox('install-update-button') };
 // Helpers 5 and 6 (UX-P0.12): named text, rows' trailing actions, still chrome, collisions and containment.
 const width = round(document.documentElement.clientWidth);
-const rows = shown('.nuiget-row').map(row => {
-    const option = row.querySelector('[role="option"]') ?? row;
+const rows = shown('.nuiget-row:not([data-row-kind="group"])').map(row => {
+    const option = row.querySelector('.nuiget-row-option') ?? row;
     const name = option.querySelector('.nuiget-row-name');
     const authors = option.querySelector('.nuiget-row-authors');
     const version = option.querySelector('.nuiget-row-version');
     const actions = [...row.querySelectorAll('.nuiget-row-actions > *')].filter(visible);
-    const list = row.closest('[role="listbox"]');
+    const list = row.closest('.nuiget-listbox');
     return {
         list: list && list.dataset.testid ? list.dataset.testid : '',
         compact: row.classList.contains('nuiget-row--compact'),
@@ -830,7 +830,7 @@ const chromeOf = selector => { const el = root.querySelector(selector); return v
 const chrome = rootTestId === 'nuiget-app'
     ? { 'main-header': chromeOf('[data-testid="main-header"]'), search: chromeOf('[data-testid="search-input"]'), 'tab-bar': chromeOf('[data-testid="tab-bar"]') }
     : { 'sidebar-header': chromeOf('.nuiget-sidebar-header') };
-const firstListed = root.querySelector('[data-testid="installed-list"] [role="option"], [data-testid="updates-list"] [role="option"]');
+const firstListed = root.querySelector('[data-testid="installed-list"] .nuiget-row-option, [data-testid="updates-list"] .nuiget-row-option');
 const firstRow = visible(firstListed) ? round(rectOf(firstListed.closest('.nuiget-row') ?? firstListed).top) : undefined;
 // DS-OVERFLOW-2 over the section-header boxes of the Design System's overflow table (section 8), on rects in tenths.
 const overflow = { containers: 0, collisions: [], outside: [], clipped: [], count: 0, badges: [] };
@@ -864,7 +864,7 @@ overflow.badges = shown('[data-testid^="section-box-"] .nuiget-badge').map(badge
 });
 // PF-2: the first transitive header after the last direct row, in one scroller.
 const scrollerOf = el => { for (let a = el ? el.parentElement : null; a; a = a.parentElement) if (/auto|scroll/.test(getComputedStyle(a).overflowY)) return a; return null; };
-const directRows = [...root.querySelectorAll('[data-testid="installed-list"] .nuiget-row')].filter(visible);
+const directRows = [...root.querySelectorAll('[data-testid="installed-list"] .nuiget-row:not([data-row-kind="group"])')].filter(visible);
 // The P0.10 hook, else P9.fix-2's own selector: the same header box, which a tree from before the hook (the negative
 // control's 80940aa) renders without the hook (UX-P0.17, D36).
 const transitiveToggle = root.querySelector('[data-testid="section-header-transitive"]');
@@ -929,14 +929,14 @@ const documentOverflow = {
 // UX-P0.13: the facts of the rules registered at the end of P0 (design-advisor ruling of 2026-10-24).
 const opaque = colour => colour !== 'transparent' && !/^rgba\\(.*,\\s*0\\)$/.test(colour);
 const edgesOf = el => { const r = rectOf(el); return { left: round(r.left), top: round(r.top), right: round(r.right), bottom: round(r.bottom) }; };
-const endRows = shown('.nuiget-row').map(row => {
-    const option = row.querySelector('[role="option"]') ?? row;
+const endRows = shown('.nuiget-row:not([data-row-kind="group"])').map(row => {
+    const option = row.querySelector('.nuiget-row-option') ?? row;
     const icon = option.querySelector('.nuiget-row-icon');
     const glyph = icon ? icon.querySelector('img, svg') : null;
     const name = option.querySelector('.nuiget-row-name');
     const body = option.querySelector('.nuiget-row-body');
     const style = getComputedStyle(option);
-    const list = row.closest('[role="listbox"]');
+    const list = row.closest('.nuiget-listbox');
     const focused = option === document.activeElement || option.contains(document.activeElement);
     const iconRect = visible(icon) ? rectOf(icon) : null;
     return {
@@ -961,7 +961,7 @@ const detailsTabLabel = detailsTab ? union(leafRects(detailsTab)) : undefined;
 const detailsTitleText = visible(detailsTitleEl) ? union(leafRects(detailsTitleEl)) : undefined;
 // The root and every scroll container outside a list, scrolled sideways (DS-OVERFLOW-1).
 const sideways = [document.documentElement, ...scope.querySelectorAll('*')]
-    .filter(el => el === document.documentElement || (/auto|scroll/.test(getComputedStyle(el).overflowX) && !el.closest('[role="listbox"]')))
+    .filter(el => el === document.documentElement || (/auto|scroll/.test(getComputedStyle(el).overflowX) && !el.closest('.nuiget-listbox')))
     .filter(el => el.scrollWidth > el.clientWidth + 0.5)
     .map(el => (el === document.documentElement ? 'document' : label(el)) + ' ' + el.scrollWidth + '>' + el.clientWidth);
 // Every control of a toolbar, tab strip or details header reachable: visible and inside it, or hidden behind a visible

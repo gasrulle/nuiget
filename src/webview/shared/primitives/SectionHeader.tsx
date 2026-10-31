@@ -4,7 +4,9 @@ import { ChevronRightIcon } from './icons';
 import { Spinner } from './Spinner';
 import './primitives.css';
 
-export interface SectionHeaderProps {
+/** The header of a collapsible section. */
+interface SectionModeProps {
+    presentation?: 'section';
     title: string;
     /** The id of the title text. A `Listbox` in the section is named by it (`labelledBy`). */
     titleId: string;
@@ -31,12 +33,44 @@ export interface SectionHeaderProps {
     variant?: 'pane' | 'group' | 'level';
 }
 
+/** The content of a group row's treeitem (UX-P2.1c, UX-P2.1d); the list owns the role, the name and `aria-expanded`. */
+interface ContentModeProps {
+    presentation: 'content';
+    title: string;
+    testKey: string;
+    expanded: boolean;
+    count?: number;
+    busy?: boolean;
+    variant?: 'pane' | 'group' | 'level';
+    /** `Badge`s after the title; text, never a control. */
+    badges?: React.ReactNode;
+}
+
+export type SectionHeaderProps = SectionModeProps | ContentModeProps;
+
 /**
  * The header of a collapsible section: a heading whose content is one button that expands and collapses the
  * section. The section's own buttons are siblings of the heading, because a button inside a button is nested
  * interactive content, which assistive technology cannot reach.
  */
-export function SectionHeader({ title, titleId, expanded, onToggle, contentId, testKey, level = 2, count, busy, actions, tooltip, variant = 'group' }: SectionHeaderProps): React.JSX.Element {
+export function SectionHeader(props: SectionHeaderProps): React.JSX.Element {
+    if (props.presentation === 'content') {
+        const { title, testKey, expanded, count, busy, variant, badges } = props;
+        return (
+            <div className="nuiget-section-header" data-testid={`section-box-${testKey}`} data-variant={variant}>
+                <span className="nuiget-section-heading">
+                    <span className="nuiget-section-toggle" data-testid={`section-header-${testKey}`}>
+                        <ChevronRightIcon className={`nuiget-section-chevron${expanded ? ' nuiget-section-chevron--expanded' : ''}`} />
+                        <span className="nuiget-section-title">{title}</span>
+                        {count === undefined ? null : <>{' '}<Badge label={String(count)} /></>}
+                        {busy ? <Spinner /> : null}
+                    </span>
+                </span>
+                {badges ? <div className="nuiget-section-actions">{badges}</div> : null}
+            </div>
+        );
+    }
+    const { title, titleId, expanded, onToggle, contentId, testKey, level = 2, count, busy, actions, tooltip, variant = 'group' } = props;
     const Heading = `h${level}` as const;
     return (
         <div className="nuiget-section-header" data-testid={`section-box-${testKey}`} data-variant={variant}>

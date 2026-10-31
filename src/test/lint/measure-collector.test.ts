@@ -39,15 +39,16 @@ const PAGE = `
         <span class="nuiget-visually-hidden" data-rect="0,0,1,1" data-text="0,0,900,20">a hidden description</span>
       </button></h2>
     </div>
-    <div id="direct-content" data-testid="installed-list" role="listbox" data-rect="0,136,590,300">
-      <div class="nuiget-row nuiget-row--comfortable" data-rect="0,136,600,214"><div role="option" aria-selected="true" data-rect="0,136,600,213">
+    <div id="direct-content" data-testid="installed-list" class="nuiget-listbox" role="listbox" data-rect="0,136,590,300">
+      <div class="nuiget-row nuiget-row--comfortable" data-row-kind="group" data-rect="0,136,600,158"></div>
+      <div class="nuiget-row nuiget-row--comfortable" data-rect="0,136,600,214"><div class="nuiget-row-option" role="option" aria-selected="true" data-rect="0,136,600,213">
         <span class="nuiget-row-check" data-rect="16,167,32,183"></span><span class="nuiget-row-icon" data-rect="40,159,72,191"></span>
         <span class="nuiget-row-name" data-rect="80,150,200,166" data-text="80,150,200,166">Serilog</span>
         <span class="nuiget-badge" data-rect="210,150,240,166" data-text="212,151,238,165">CPM<span class="nuiget-visually-hidden">Central</span></span>
         <span class="nuiget-row-version" data-rect="80,170,120,184" data-text="80,170,120,184">3.1.1</span>
         <span class="nuiget-row-authors" data-rect="80,190,200,204" data-text="80,190,200,204">Serilog Contributors</span>
       </div><div class="nuiget-row-actions" data-rect="560,160,594,190"><button class="nuiget-icon-button" data-rect="566,163,590,187"></button></div></div>
-      <div class="nuiget-row nuiget-row--comfortable" data-rect="0,214,600,292"><div role="option" data-rect="0,214,600,291">
+      <div class="nuiget-row nuiget-row--comfortable" data-rect="0,214,600,292"><div class="nuiget-row-option" role="option" data-rect="0,214,600,291">
         <span class="nuiget-row-check" data-rect="16,245,32,261"></span><span class="nuiget-row-icon" data-rect="40,237,72,269"></span>
         <span class="nuiget-row-name" data-rect="80,228,200,244" data-text="80,228,200,244">Moq</span>
       </div></div>
@@ -264,7 +265,7 @@ describe('the in-page collector on stubbed geometry (UX-P0.10, UX-P0.11)', () =>
             tabBar.insertAdjacentHTML('beforeend', '<button aria-haspopup="menu" data-rect="560,45,580,65"></button><button style="display: none"></button>');
             panel.insertAdjacentHTML('afterbegin', '<div class="nuiget-details-header" data-rect="600,100,900,180"><h2 class="nuiget-details-title" data-rect="620,120,800,140" data-text="620,120,760,140">Serilog</h2></div><div role="tab" data-rect="616,75,680,95" data-text="620,77,670,93">Readme</div>');
             panel.insertAdjacentHTML('beforeend', '<span class="odd" style="font-family: serif" data-rect="620,400,700,420" data-text="620,400,690,420">Odd</span>');
-            document.querySelector('.nuiget-list')?.insertAdjacentHTML('beforeend', '<div class="nuiget-row nuiget-row--compact" data-rect="0,300,300,322"><div role="option" data-rect="0,300,300,322"><span class="nuiget-row-name" data-rect="20,303,100,319" data-text="20,303,90,319">Polly</span></div></div>');
+            document.querySelector('.nuiget-list')?.insertAdjacentHTML('beforeend', '<div class="nuiget-row nuiget-row--compact" data-rect="0,300,300,322"><div class="nuiget-row-option" role="option" data-rect="0,300,300,322"><span class="nuiget-row-name" data-rect="20,303,100,319" data-text="20,303,90,319">Polly</span></div></div>');
             const toolbar = document.querySelector('[data-testid="installed-toolbar"]') as HTMLElement;
             Object.defineProperties(toolbar, { scrollWidth: { value: 620, configurable: true }, clientWidth: { value: 600, configurable: true } });
             const more = collect().endOfP0;

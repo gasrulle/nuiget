@@ -64,7 +64,7 @@ const until = async (predicate: string, what: string, timeoutMs = 120_000): Prom
     await poll(async () => ((await script<boolean>(`return (${predicate});`)) ? true : undefined), what, timeoutMs);
 };
 
-const optionOf = async (rowTestId: string, timeoutMs = 120_000) => (await findByTestId(rowTestId, timeoutMs)).findElement(By.css('[role="option"]'));
+const optionOf = async (rowTestId: string, timeoutMs = 120_000) => (await findByTestId(rowTestId, timeoutMs)).findElement(By.css('.nuiget-row-option'));
 
 /**
  * Clicks a tab at the centre of its visible part, the intersection of its rect with its tab list's (and the viewport):
@@ -178,7 +178,7 @@ const REACH: Record<string, Reach> = {
         reach: async () => {
             await chooseFixtureProject(ALL_PROJECTS);
             await clickVisible('installed-tab');
-            await until('document.querySelectorAll(\'[role="listbox"][data-testid^="installed-list-"]\').length >= 4', 'four project sections');
+            await until('document.querySelectorAll(\'[data-testid="installed-list"] [data-testid^="group-row-project-"]\').length >= 4', 'four project group rows');
             await until('[...document.querySelectorAll(".nuiget-section-header")].some(header => header.textContent.includes("Unsupported") && header.textContent.includes("provisional"))', 'the Unsupported and provisional badges on the Unsupported section');
             // UX-P0.fix-2 (P0 phase review, design-2): the settled data before the shot, P0.23's predicate (its goldens show it).
             await poll(async () => ((await script<string>(UNSETTLED)) === '' ? true : undefined), 'every project\'s counts and authors', 120_000);
@@ -220,7 +220,7 @@ const REACH: Record<string, Reach> = {
         reach: async () => {
             await gatewayInstalled();
             await typeInSearch('@installed zz-no-such-package');
-            await until('document.querySelectorAll(\'[data-testid="installed-list"] [role="option"]\').length === 0 && document.body.textContent.includes("No installed package matches")', 'the no-match text and no option', 30_000);
+            await until('document.querySelectorAll(\'[data-testid="installed-list"] .nuiget-row-option\').length === 0 && document.body.textContent.includes("No installed package matches")', 'the no-match text and no option', 30_000);
         },
     },
     'main-installed-hover': {
@@ -228,7 +228,7 @@ const REACH: Record<string, Reach> = {
             await gatewayInstalled();
             const option = await optionOf('package-row-serilog');
             await driverOf().actions().move({ origin: option }).perform();
-            await until('document.querySelector(\'[data-testid="package-row-serilog"] [role="option"]\').matches(":hover")', 'the Serilog row under the pointer', 10_000);
+            await until('document.querySelector(\'[data-testid="package-row-serilog"] .nuiget-row-option\').matches(":hover")', 'the Serilog row under the pointer', 10_000);
         },
     },
     'main-installed-focus': {
@@ -237,14 +237,16 @@ const REACH: Record<string, Reach> = {
             const search = await findByTestId('search-input', 30_000);
             await search.click();
             await poll(async () => {
-                if (await script<boolean>('const active = document.activeElement; return active !== null && active.matches(\'[data-testid="installed-list"] [role="option"]\');')) {
+                if (await script<boolean>('const active = document.activeElement; return active !== null && active.closest(\'[data-testid="installed-list"]\') !== null;')) {
                     return true;
                 }
                 await (await driverOf().switchTo().activeElement()).sendKeys(Key.TAB);
                 return undefined;
             }, 'the list reached with Tab', 15_000);
+            // The tab stop is the group row: twice keeps the ring on the second package row.
             await (await driverOf().switchTo().activeElement()).sendKeys(Key.ARROW_DOWN);
-            await until('document.activeElement.matches(\'[data-testid="installed-list"] [role="option"]:focus-visible\')', 'a focus-visible option', 10_000);
+            await (await driverOf().switchTo().activeElement()).sendKeys(Key.ARROW_DOWN);
+            await until('document.activeElement.matches(\'[data-testid="installed-list"] .nuiget-row-option:focus-visible\')', 'a focus-visible option', 10_000);
         },
     },
     'main-installed-unfocused': {
@@ -252,7 +254,7 @@ const REACH: Record<string, Reach> = {
             await gatewayInstalled();
             await toggleIntoSelection('package-row-serilog');
             await (await findByTestId('search-input', 30_000)).click();
-            await until('!document.querySelector(\'[data-testid="installed-list"]\').contains(document.activeElement) && document.querySelector(\'[data-testid="installed-list"] [role="option"][aria-selected="true"]\') !== null', 'a selected row in an unfocused list', 10_000);
+            await until('!document.querySelector(\'[data-testid="installed-list"]\').contains(document.activeElement) && document.querySelector(\'[data-testid="installed-list"] .nuiget-row-option[aria-selected="true"]\') !== null', 'a selected row in an unfocused list', 10_000);
         },
     },
     'main-installed-bulk-dialog': {
@@ -435,7 +437,7 @@ for (const id of ['installed-tab', 'updates-tab']) {
     const tab = document.querySelector('[data-testid="' + id + '"]');
     if (tab && tab.offsetParent !== null && !/[0-9]/.test(tab.textContent || '')) clauses.push(id + ' without a count');
 }
-if ([...document.querySelectorAll('.nuiget-row--comfortable')].some(row => !row.querySelector('.nuiget-row-authors'))) clauses.push('a comfortable row without authors');
+if ([...document.querySelectorAll('.nuiget-row--comfortable:not([data-row-kind="group"])')].some(row => !row.querySelector('.nuiget-row-authors'))) clauses.push('a comfortable row without authors');
 return clauses.join('; ');
 `;
 
@@ -553,12 +555,14 @@ async function walkTab(rootTestId: string, searchTestId: string): Promise<FocusF
 const ACTIVE_ROW = `
 const el = document.activeElement;
 if (!el || el === document.body) return 'body';
-if (!el.matches('[data-testid="' + arguments[0] + '"] [role="option"]')) return el.getAttribute('data-testid') || el.tagName.toLowerCase();
-const list = el.closest('[role="listbox"]');
+if (!el.closest('[data-testid="' + arguments[0] + '"]') || !el.matches('.nuiget-row-option, .nuiget-row-group')) return el.getAttribute('data-testid') || el.tagName.toLowerCase();
+if (el.matches('.nuiget-row-group')) return 'group ' + el.getAttribute('aria-posinset');
+const list = el.closest('.nuiget-listbox');
 const current = list && list.getAttribute('aria-multiselectable') === 'true' ? el.getAttribute('aria-current') === 'true' : el.getAttribute('aria-selected') === 'true';
 return (current ? 'current ' : '') + 'row ' + el.getAttribute('aria-posinset');
 `;
 
+const A_ROW = /^(current )?(row|group) /;
 const activeRow = (listTestId: string): Promise<string> => script<string>(ACTIVE_ROW, listTestId);
 
 const focusedTestId = async (): Promise<string> => (await script<string | null>('const el = document.activeElement; return el && el !== document.body ? el.getAttribute("data-testid") || el.tagName.toLowerCase() : "body";')) ?? 'body';
@@ -572,25 +576,35 @@ async function rowKeys(listTestId: string, searchTestId: string, enter: 'press' 
     await (await findByTestId(searchTestId, 30_000)).click();
     await press(Key.chord(MODIFIER, Key.ARROW_DOWN));
     const landed = await activeRow(listTestId);
-    outcomes.push({ path: 'search Ctrl+DownArrow', observed: /row /.test(landed) ? 'a row of the list' : landed, expected: 'a row of the list' });
-    if (!/row /.test(landed)) {
+    outcomes.push({ path: 'search Ctrl+DownArrow', observed: A_ROW.test(landed) ? 'a row of the list' : landed, expected: 'a row of the list' });
+    if (!A_ROW.test(landed)) {
         // The list reached with Tab instead, as the focus state's setup does, so that the row keys are still read.
         await poll(async () => {
-            if (/row /.test(await activeRow(listTestId))) {
+            if (A_ROW.test(await activeRow(listTestId))) {
                 return true;
             }
             await press(Key.TAB);
             return undefined;
         }, `${listTestId} reached with Tab`, 15_000);
     }
-    const size = await script<number>('return Number(document.activeElement.getAttribute("aria-setsize"));');
+    const tree = await script<boolean>('return document.querySelector(\'[data-testid="\' + arguments[0] + \'"]\').getAttribute("role") === "tree";', listTestId);
+    const readSize = (): Promise<number> => script<number>('return Number(document.activeElement.getAttribute("aria-setsize"));');
+    let size = await readSize();
     const step = async (path: string, key: string, expected: string): Promise<void> => {
         await press(key);
         outcomes.push({ path, observed: (await activeRow(listTestId)).replace(/^current /, ''), expected });
     };
-    await step('rows Home', Key.HOME, 'row 1');
-    await step('rows ArrowDown', Key.ARROW_DOWN, size > 1 ? 'row 2' : 'row 1');
-    await step('rows ArrowUp', Key.ARROW_UP, 'row 1');
+    if (tree) {
+        // A grouped list (D48): the group row comes first and the package rows count among themselves.
+        await step('rows Home', Key.HOME, 'group 1');
+        await step('rows ArrowDown', Key.ARROW_DOWN, 'row 1');
+        size = await readSize();
+        await step('rows ArrowUp', Key.ARROW_UP, 'group 1');
+    } else {
+        await step('rows Home', Key.HOME, 'row 1');
+        await step('rows ArrowDown', Key.ARROW_DOWN, size > 1 ? 'row 2' : 'row 1');
+        await step('rows ArrowUp', Key.ARROW_UP, 'row 1');
+    }
     await step('rows End', Key.END, `row ${size}`);
     if (enter === 'press') {
         await press(Key.ENTER);
@@ -726,7 +740,7 @@ const PROJECT_CHOSEN: PerfChain = {
 const SELECT: PerfChain = {
     label: 'select',
     context: `${DETAILS_ID} in Utility's Installed list, its details not read before`,
-    start: { kind: 'event', type: 'pointerdown', selector: `[data-testid="package-row-${DETAILS_ID}"] [role="option"]` },
+    start: { kind: 'event', type: 'pointerdown', selector: `[data-testid="package-row-${DETAILS_ID}"] .nuiget-row-option` },
     marks: [{ name: 'details', predicate: details(DETAILS_ID) }, { name: 'dependencies', predicate: dependencies(DETAILS_ID) }],
 };
 

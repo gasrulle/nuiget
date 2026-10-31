@@ -151,7 +151,7 @@ export function perfLines(chain: PerfChain, result: PerfResult | null, waitedMs:
 const INSTALLED_LIST = '[data-testid="installed-list"]';
 
 /** A row in the single project's Installed list. */
-export const INSTALLED_ROW = `document.querySelector('${INSTALLED_LIST} [role="option"]') !== null`;
+export const INSTALLED_ROW = `document.querySelector('${INSTALLED_LIST} .nuiget-row-option') !== null`;
 
 /** A row of one of `ids` (lower-case package ids) in the Installed list: a project's own rows, not the last project's. */
 export const installedRowOf = (ids: readonly string[]): string =>
@@ -171,7 +171,7 @@ export const authoritative = (present: string): string => `(${present}) && !(${P
  * `data-package-icon`): the lite metadata answer, which carries the icons and the authors together (X33), has arrived.
  */
 export const icons = (present: string): string => `(${present}) && (() => {
-    const rows = [...document.querySelectorAll('${INSTALLED_LIST} .nuiget-row--comfortable')];
+    const rows = [...document.querySelectorAll('${INSTALLED_LIST} .nuiget-row--comfortable:not([data-row-kind="group"])')];
     const fallback = document.querySelector('[data-package-icon]')?.getAttribute('data-package-icon') ?? '';
     return rows.length > 0 && rows.every(row => row.querySelector('.nuiget-row-authors') !== null)
         && rows.some(row => { const img = row.querySelector('.nuiget-row-icon img'); return img !== null && img.getAttribute('src') !== fallback; });
@@ -179,7 +179,7 @@ export const icons = (present: string): string => `(${present}) && (() => {
 
 /** The list after a revalidation: rows, nothing busy, no `provisional` badge, every row with its authors. */
 export const SETTLED = `(${INSTALLED_ROW}) && !(${REVALIDATING}) && !(${PROVISIONAL})
-    && [...document.querySelectorAll('${INSTALLED_LIST} .nuiget-row--comfortable')].every(row => row.querySelector('.nuiget-row-authors') !== null)`;
+    && [...document.querySelectorAll('${INSTALLED_LIST} .nuiget-row--comfortable:not([data-row-kind="group"])')].every(row => row.querySelector('.nuiget-row-authors') !== null)`;
 
 /** The details pane shows `id` (lower case) with its version selector. */
 export const details = (id: string): string => `(() => {

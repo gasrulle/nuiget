@@ -41,11 +41,11 @@ async function mountWith(packages: InstalledPackage[] = THREE, withDetails = fal
     return host;
 }
 
-const optionOf = (id: string): HTMLElement => within(screen.getByTestId(`package-row-${id.toLowerCase()}`)).getByRole('option');
-/** The rows of the single-project list; the header's selects have options of their own. */
+const optionOf = (id: string): HTMLElement => within(screen.getByTestId(`package-row-${id.toLowerCase()}`)).getByRole('treeitem');
+/** The package rows of the tree; its group rows are treeitems too. */
 const names = (): string[] => {
     const list = screen.queryByTestId('installed-list');
-    return list === null ? [] : within(list).queryAllByRole('option').map(element => element.querySelector('.nuiget-row-name')?.textContent ?? '');
+    return list === null ? [] : [...list.querySelectorAll('.nuiget-row-option')].map(element => element.querySelector('.nuiget-row-name')?.textContent ?? '');
 };
 const uninstallSelected = (): HTMLElement => screen.getByTestId('uninstall-selected-button');
 const said = (): string => screen.getByTestId('status-live').textContent ?? '';
@@ -61,11 +61,12 @@ describe('main panel: Installed tab', () => {
         removeLayout();
     });
 
-    it("lists the committed project's packages as a multi-selectable list with the filter applied", async () => {
+    it("lists the committed project's packages as a multi-selectable tree under the Direct packages group row, with the filter applied", async () => {
         const user = userEvent.setup();
         await mountWith();
         const list = screen.getByTestId('installed-list');
-        expect(list).toHaveAttribute('role', 'listbox');
+        expect(list).toHaveAttribute('role', 'tree');
+        expect(within(list).getByTestId('group-row-direct').querySelector('[role="treeitem"]')).toHaveAttribute('aria-expanded', 'true');
         expect(list).toHaveAttribute('aria-multiselectable', 'true');
         expect(list).toHaveAccessibleName('Installed packages');
         expect(names()).toEqual(['Serilog', 'Moq', 'Newtonsoft.Json']);
@@ -95,12 +96,12 @@ describe('main panel: Installed tab', () => {
         expect(within(header()).queryByText('provisional')).toBeNull();
     });
 
-    it('provisional: the single-project header carries the badge until the authoritative list replaces it', async () => {
+    it('provisional: the Direct packages group row carries the badge until the authoritative list replaces it', async () => {
         const host = mount();
         await hostSays(() => host.respond(host.requests('session/get')[0], snapshot(1)));
         await hostSays(() => host.respond(host.requests('projects/list')[0], { projects: [{ name: 'App', path: A }, { name: 'Lib', path: B }] }, 1));
         await hostSays(() => host.respond(host.requests('installed/get')[0], { ...installed(A, THREE), fidelity: 'provisional' }, 1));
-        expect(screen.getByText('provisional')).toBeInTheDocument();
+        expect(within(screen.getByTestId('group-row-direct')).getByText('provisional')).toBeInTheDocument();
         expect(names()).toEqual(['Serilog', 'Moq', 'Newtonsoft.Json']);
 
         // The evaluation finishes: the host invalidates the key and the authoritative list replaces the provisional one.
@@ -132,6 +133,42 @@ describe('main panel: Installed tab', () => {
         optionOf('Moq').focus();
         await user.keyboard(' ');
         expect(uninstallSelected()).toHaveTextContent('Uninstall selected (2)');
+    });
+
+    it('Enter, ArrowLeft and ArrowRight collapse and expand a group row; its rows leave and return and the bulk set survives', async () => {
+        const user = userEvent.setup();
+        await mountWith();
+        await user.click(screen.getByTestId('select-all-button'));
+        const group = (): HTMLElement => screen.getByTestId('group-row-direct').querySelector('[role="treeitem"]') as HTMLElement;
+        group().focus();
+        await user.keyboard('{Enter}');
+        expect(group()).toHaveAttribute('aria-expanded', 'false');
+        expect(names()).toEqual([]);
+        expect(uninstallSelected()).toHaveTextContent('Uninstall selected (3)');
+        await user.keyboard('{ArrowRight}');
+        expect(group()).toHaveAttribute('aria-expanded', 'true');
+        expect(names()).toEqual(['Serilog', 'Moq', 'Newtonsoft.Json']);
+        await user.keyboard('{ArrowLeft}');
+        expect(group()).toHaveAttribute('aria-expanded', 'false');
+        await user.keyboard('{ArrowRight}');
+        expect(optionOf('Moq')).toHaveAttribute('aria-selected', 'true');
+    });
+
+    it('the tree is described by the hint that names the group keys', async () => {
+        await mountWith();
+        expect(screen.getByTestId('installed-list')).toHaveAccessibleDescription('Space selects the package for a bulk action. Enter shows its details. Delete uninstalls it. Shift+F10 opens the actions menu. On a group row, Enter, Left and Right expand and collapse it.');
+    });
+
+    it('a busy row cannot join the bulk set and Space says why', async () => {
+        const user = userEvent.setup();
+        await mountWith();
+        await user.click(within(screen.getByTestId('package-row-moq')).getByTestId('row-action-uninstall'));
+        expect(optionOf('Moq')).toHaveAttribute('aria-busy', 'true');
+        optionOf('Moq').focus();
+        await user.keyboard(' ');
+        expect(optionOf('Moq')).toHaveAttribute('aria-selected', 'false');
+        await waitFor(() => expect(said()).toBe('An operation on this package is running.'));
+        expect(uninstallSelected()).toHaveTextContent('Uninstall selected (0)');
     });
 
     it('the dialog lists the selected packages; Escape and Cancel send nothing', async () => {
@@ -193,7 +230,7 @@ describe('main panel: Installed tab', () => {
         expect(names()).toEqual(['Moq', 'Newtonsoft.Json']);
     });
 
-    it('All Projects: one section per project, selections across them become ops/bulkRemoveAllProjects with the project names', async () => {
+    it('All Projects: one tree with a group row per project; selections across projects become ops/bulkRemoveAllProjects with the project names', async () => {
         const user = userEvent.setup();
         const host = await mountWith();
         await hostSays(() => host.event('session/changed', snapshot(2, ALL_PROJECTS)));
@@ -202,11 +239,13 @@ describe('main panel: Installed tab', () => {
         await hostSays(() => host.chunk(request, { kind: 'project', chunk: { projectPath: A, projectName: 'App', result: installed(A, [pkg('Serilog')]) } }));
         await hostSays(() => host.chunk(request, { kind: 'project', chunk: { projectPath: B, projectName: 'Lib', result: installed(B, [pkg('Moq'), pkg('xunit')]) } }));
         await hostSays(() => host.respond(request, { projectPaths: [A, B], errored: [] }));
-        expect(screen.getByRole('listbox', { name: 'App' })).toHaveAttribute('data-testid', 'installed-list-app');
-        expect(screen.getByRole('listbox', { name: 'Lib' })).toHaveAttribute('data-testid', 'installed-list-lib');
+        const tree = screen.getByRole('tree', { name: 'Installed packages' });
+        expect(tree).toHaveAttribute('data-testid', 'installed-list');
+        expect(within(tree).getByTestId('group-row-project-app').querySelector('[role="treeitem"]')).toHaveAttribute('aria-level', '1');
+        expect(within(tree).getByTestId('group-row-project-lib').querySelector('[role="treeitem"]')).toHaveAttribute('aria-level', '1');
         expect(screen.getByTestId('section-header-transitive')).toHaveAttribute('aria-expanded', 'false'); expect(host.requests('allProjects/transitive')).toHaveLength(0);
-        await user.click(within(screen.getByRole('listbox', { name: 'App' })).getByRole('option').querySelector('.nuiget-row-check') as Element);
-        await user.click(within(screen.getByRole('listbox', { name: 'Lib' })).getAllByRole('option')[1].querySelector('.nuiget-row-check') as Element);
+        await user.click(optionOf('Serilog').querySelector('.nuiget-row-check') as Element);
+        await user.click(optionOf('xunit').querySelector('.nuiget-row-check') as Element);
         expect(uninstallSelected()).toHaveTextContent('Uninstall selected (2)');
         await user.click(uninstallSelected());
         expect(screen.getByRole('alertdialog')).toHaveTextContent('From App:SerilogFrom Lib:xunit');
@@ -253,7 +292,7 @@ describe('main panel: Installed tab', () => {
         expect(optionOf('Moq')).toHaveAccessibleDescription(/Has known vulnerabilities/);
     });
 
-    it('has no axe violations with the dialog open and with All Projects sections', async () => {
+    it("has no axe violations with the dialog open, with All Projects group rows and an errored project's banner", async () => {
         const user = userEvent.setup();
         const host = await mountWith();
         await user.click(screen.getByTestId('select-all-button'));
@@ -270,6 +309,13 @@ describe('main panel: Installed tab', () => {
         results = await axe(document.body);
         expect(results).toHaveNoViolations();
         expect(screen.getByRole('alert')).toHaveTextContent('Installed packages of Lib could not be loaded: assets file unreadable');
+        // The tree holds no control: its rows' actions are hidden siblings, and the errored project's Retry is above it.
+        const tree = screen.getByTestId('installed-list');
+        expect(tree.contains(screen.getByRole('alert'))).toBe(false);
+        expect(within(tree).getAllByRole('treeitem').filter(item => item.querySelector('button, a[href], input, select, textarea, [tabindex]') !== null)).toEqual([]);
+        await user.click(within(screen.getByRole('alert')).getByRole('button', { name: 'Retry' }));
+        expect(host.requests('allProjects/installed').length).toBeGreaterThan(1);
+        expect(['aria-allowed-attr', 'aria-required-children', 'aria-required-parent', 'nested-interactive'].map(rule => axeRuleOutcome(results, rule))).toEqual(['passes', 'passes', 'passes', 'passes']);
     });
 
     it('installed row shows icon, authors and verified', async () => {
@@ -288,7 +334,7 @@ describe('main panel: Installed tab', () => {
         expect(screen.queryByText('Logging')).toBeNull();
     });
 
-    it('filter header shows k of N', async () => {
+    it('the Direct packages group row shows k of N while filtering', async () => {
         const user = userEvent.setup();
         const host = await mountWith();
         const header = (): HTMLElement => screen.getByTestId('section-header-direct');
@@ -327,8 +373,8 @@ describe('main panel: Installed tab', () => {
 
     it('floating and range rows show the declared pattern with the resolved version and a badge', async () => {
         await mountWith([pkg('Pattern', { version: '10.*', versionType: 'floating', resolvedVersion: '10.2.0' }), pkg('Ranged', { version: '[1,2)', versionType: 'range' })]);
-        expect(screen.getByRole('option', { name: 'Pattern 10.* (10.2.0)' })).toHaveAccessibleDescription(/Floating version pattern/);
-        expect(screen.getByRole('option', { name: 'Ranged [1,2) (run restore)' })).toHaveAccessibleDescription(/Version range/);
+        expect(screen.getByRole('treeitem', { name: 'Pattern 10.* (10.2.0)' })).toHaveAccessibleDescription(/Floating version pattern/);
+        expect(screen.getByRole('treeitem', { name: 'Ranged [1,2) (run restore)' })).toHaveAccessibleDescription(/Version range/);
     });
 
     it('transitive row opens details with required-by', async () => {

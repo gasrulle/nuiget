@@ -3,7 +3,8 @@ import axe from 'axe-core';
 import { afterEach, beforeAll, describe, expect, it } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
-import { acceptedSelectors, ARIA_SNAPSHOT, CONTRAST_PENDING, CONTRAST_STATUS, type ContrastPair, type ContrastRun, LAYER_SELECTOR, momentLines, MOMENTS, pairContrast, type Resolved, RESOLVE_CONTRAST, resolvedLines, RUN_CONTRAST, TEXTS_UNDER, type AriaNode, ariaLine, ariaLineFor, ariaSnapshot, AXE_ACCEPTED, AXE_EXTRA_RULES, AXE_PENDING, type AxeRule, axeLines, compareAria, DESCRIBE_FOCUS, type FocusFacts, focusLine, FULL_AXE_RULE, FULL_AXE_STATUS, type FullAxe, KEYS_EXPECTED, KEYS_PENDING, KEYS_STATUS, keysLines, maskDigits, MOTION_STATUS, type MotionFacts, motionLines, RUN_FULL_AXE, RUNNING_ANIMATIONS, showsRing } from '../ui/v2/a11y';
+import { acceptedSelectors, ARIA_SNAPSHOT, CONTRAST_PENDING, CONTRAST_STATUS, type ContrastPair, type ContrastRun, LAYER_SELECTOR, momentLines, MOMENTS, pairContrast, type Resolved, RESOLVE_CONTRAST, resolvedLines, RUN_CONTRAST, TEXTS_UNDER, type AriaNode, ariaLine, ariaLineFor, ariaSnapshot, AXE_ACCEPTED, AXE_EXTRA_RULES, AXE_PENDING, type AxeRule, axeLines, compareAria, DESCRIBE_FOCUS, type FocusFacts, focusLine, FULL_AXE_RULE, FULL_AXE_STATUS, type FullAxe, KEYS_AWAITING_ARIA, KEYS_EXPECTED, KEYS_PENDING, KEYS_STATUS, keysLines, maskDigits, MOTION_STATUS, type MotionFacts, motionLines, RUN_FULL_AXE, RUNNING_ANIMATIONS, showsRing } from '../ui/v2/a11y';
+import { trackerStatuses } from '../../../scripts/check-design-tokens.mjs';
 
 /**
  * UX-P0.23: the accessibility harness of the capture suite (`src/test/ui/v2/a11y.ts`). The scripts run inside VS Code
@@ -171,8 +172,9 @@ describe('the accessibility harness (UX-P0.23)', () => {
         expect(MOTION_STATUS).toEqual({ pending: 'P4.5' });
         const bridge = ['main-installed', 'main-updates', 'main-browse', 'sidebar'].flatMap(screen => [[`${screen} search Ctrl+DownArrow`, 'P4.3'], [`${screen} rows Ctrl+UpArrow`, 'P4.3']]);
         expect(KEYS_PENDING).toEqual({ 'main-updates rows Enter': 'P4.2a', 'sidebar rows Enter': 'P4.2b', ...Object.fromEntries(bridge) });
+        expect(KEYS_AWAITING_ARIA).toEqual({ 'main-installed': 'P2.1d' });
         expect(Object.entries(KEYS_EXPECTED).map(([screen, stops]) => `${screen} ${stops?.length} ${stops?.[0]}`)).toEqual([
-            'main-installed 7 combobox "Search packages, or filter with @installed, @updates or @vulnerable" {search-input}',
+            'main-installed 6 combobox "Search packages, or filter with @installed, @updates or @vulnerable" {search-input}',
             'main-updates 5 combobox "Search packages, or filter with @installed, @updates or @vulnerable" {search-input}',
             'main-browse 3 combobox "Search packages, or filter with @installed, @updates or @vulnerable" {search-input}',
             'sidebar 7 combobox "Search packages, or filter with @installed or @updates" {sidebar-search-input}',
@@ -245,12 +247,21 @@ describe('the accessibility harness (UX-P0.23)', () => {
         expect(motionLines('sidebar', { ...still, reduceMotion: false }, 'hard').failures).toEqual(['body.vscode-reduce-motion absent']);
     });
 
-    it('expects only tab stops that the screen\'s committed ARIA snapshot holds (UX-P0.24)', () => {
+    it('expects only tab stops that the screen\'s committed ARIA snapshot holds, or that KEYS_AWAITING_ARIA names for the item adopting the snapshot (UX-P0.24, UX-P2.1d)', () => {
+        const statuses = trackerStatuses(fs.readFileSync(path.resolve(__dirname, '../../../docs/plans/STATUS-ux.md'), 'utf8'));
         const snapshotOf: Record<string, string> = { 'main-installed': 'main-installed-single', 'main-updates': 'main-updates', 'main-browse': 'main-browse-results', sidebar: 'sidebar-sections' };
         const stripped = (line: string): string => line.trim().replace(/ \[[^\]]*\]/, '');
         for (const [screen, expected] of Object.entries(KEYS_EXPECTED)) {
             const lines = (JSON.parse(fs.readFileSync(path.resolve(__dirname, '../ui/v2/aria', `${snapshotOf[screen]}.json`), 'utf8')) as { lines: string[] }).lines.map(stripped);
-            expect((expected ?? []).filter(stop => !lines.includes(stop)), screen).toEqual([]);
+            const missing = (expected ?? []).filter(stop => !lines.includes(stop));
+            const item = KEYS_AWAITING_ARIA[screen as keyof typeof KEYS_AWAITING_ARIA];
+            if (item === undefined) {
+                expect(missing, screen).toEqual([]);
+            } else {
+                expect(missing.length, screen).toBeGreaterThan(0);
+                expect(statuses.get(item), item).toBeDefined();
+                expect(statuses.get(item), item).not.toBe('done');
+            }
         }
     });
     it('holds the contrast moments and the resolve pass hard since UX-P0.25\'s run was ruled on, with run 40152178889\'s red lines on their owners (UX-P0.25)', () => {

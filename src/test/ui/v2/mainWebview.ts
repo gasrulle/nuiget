@@ -100,7 +100,7 @@ export interface MeasuredRow {
 export async function measureLoadedRows(listTestId: string, timeoutMs = 30_000): Promise<MeasuredRow[]> {
     return poll(async () => {
         const rows = await driverOf().executeScript<MeasuredRow[]>(`
-            return Array.from(document.querySelectorAll('[data-testid="${listTestId}"] [role="option"]')).map(option => {
+            return Array.from(document.querySelectorAll('[data-testid="${listTestId}"] .nuiget-row-option')).map(option => {
                 const row = option.closest('.nuiget-row') ?? option;
                 const img = option.querySelector('.nuiget-row-icon img');
                 return {
